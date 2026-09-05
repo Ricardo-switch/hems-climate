@@ -9,7 +9,7 @@ REM   sync-logs /L         alleen tonen wat er zou gebeuren, niets kopieren
 
 setlocal
 
-set "BRON=\NAS\docker\hems-climate\logs"
+set "BRON=\\NAS\docker\hems-climate\logs"
 set "DOEL=%~dp0backend\data\shadow"
 
 echo Bron : %BRON%
@@ -37,7 +37,7 @@ set "RC=%ERRORLEVEL%"
 if %RC% GEQ 8 (
   echo.
   echo MISLUKT ^(robocopy-code %RC%^).
-  echo   Staat de NAS aan en is \NAS\docker bereikbaar in Verkenner?
+  echo   Staat de NAS aan en is \\NAS\docker bereikbaar in Verkenner?
   echo   Netwerkschijven zijn per gebruiker; open de map eenmalig in Verkenner
   echo   zodat Windows de verbinding kent.
   exit /b 1
