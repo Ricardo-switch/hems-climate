@@ -1,0 +1,35 @@
+{
+  "name": "@hems/backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Smart Climate OS - pure decision core plus adapters",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "export:history": "tsx tools/export-history.ts",
+    "replay": "tsx src/replay/run.ts",
+    "sweep": "tsx src/replay/sweep.ts",
+    "shadow": "tsx src/main.ts",
+    "config:check": "tsx tools/check-config.ts",
+    "shadow:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 start",
+    "shadow:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 stop",
+    "shadow:restart": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 restart",
+    "shadow:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 status",
+    "shadow:watch": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 watch",
+    "divergence": "tsx src/divergence/run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "ws": "^8.21.3"
+  }
+}

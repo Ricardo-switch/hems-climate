@@ -1,0 +1,2038 @@
+- id: '1739097981551'
+  alias: Entree bewegingssensor (hotel niveau + scene)
+  description: Schakelt de entree lamp in met de Hue Natuurlijk Licht scène bij beweging.  Na
+    30 seconden geen beweging dimt de lamp zachtjes en gaat hij uit.
+  triggers:
+  - entity_id: binary_sensor.bewegingssensor_entree_bezetting
+    from: 'off'
+    to: 'on'
+    trigger: state
+  conditions:
+  - condition: numeric_state
+    entity_id: sensor.bewegingssensor_entree_licht
+    below: 80
+  actions:
+  - action: scene.turn_on
+    target:
+      entity_id: scene.entree_natuurlijk_licht_8
+    data:
+      transition: 2
+  - wait_for_trigger:
+    - entity_id: binary_sensor.bewegingssensor_entree_bezetting
+      to: 'off'
+      for: 00:00:30
+      trigger: state
+  - action: light.turn_on
+    target:
+      entity_id: light.entree
+    data:
+      brightness_pct: 5
+      transition: 10
+  - delay: 00:00:10
+  - action: light.turn_off
+    target:
+      entity_id: light.entree
+    data:
+      transition: 5
+  mode: restart
+- id: '1763299121092'
+  alias: Ambilight uit met plafondlamp
+  description: ''
+  mode: single
+  trigger:
+  - platform: device
+    device_id: 36f1e79960d3b1e6114cd637feff908a
+    domain: light
+    entity_id: d3fe9911f282463728701ee4e1c9a453
+    type: turned_off
+  condition: []
+  action:
+  - type: turn_off
+    device_id: 5c7e96fe7697796999b88ab3acf66216
+    entity_id: 0810021c3377252f8935d658079d62b1
+    domain: light
+- id: '1759077541053'
+  alias: Tuinverlichting
+  description: Zet tuinverlichting aan bij donker/thuiskomst en uit om 22:00 (tenzij
+    tuinhuis aan is) of bij vertrek
+  triggers:
+  - trigger: sun
+    event: sunset
+    offset: +00:10:00
+    id: turn_on_event
+  - trigger: state
+    entity_id:
+    - person.ricardo_cornelissen
+    - person.shira
+    to: home
+    id: turn_on_event
+  - trigger: time
+    at: '22:00:00'
+    id: turn_off_event
+  - trigger: state
+    entity_id:
+    - person.ricardo_cornelissen
+    - person.shira
+    to: not_home
+    id: turn_off_away
+  - trigger: state
+    entity_id: light.tuinhuis_binnen
+    to: 'off'
+    for: 00:01:00
+    id: turn_off_delayed
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: turn_on_event
+      - condition: sun
+        after: sunset
+        after_offset: +00:10:00
+      - condition: time
+        before: '22:00:00'
+      - condition: or
+        conditions:
+        - condition: state
+          entity_id: person.ricardo_cornelissen
+          state: home
+        - condition: state
+          entity_id: person.shira
+          state: home
+      sequence:
+      - action: scene.turn_on
+        target:
+          entity_id:
+          - scene.border_soho
+          - scene.tuinhuis_overstek_soho
+      - action: notify.mobile_app_pixel_10_pro
+        data:
+          message: "\U0001F305 Tuinverlichting is aan (het is donker en iemand is
+            thuis)."
+    - conditions:
+      - condition: trigger
+        id: turn_off_event
+      - condition: state
+        entity_id: light.tuinhuis_binnen
+        state: 'off'
+      - condition: or
+        conditions:
+        - condition: state
+          entity_id: light.tuinhuis_overstek
+          state: 'on'
+        - condition: state
+          entity_id: light.border
+          state: 'on'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id:
+          - light.tuinhuis_overstek
+          - light.border
+        data:
+          transition: 30
+      - action: notify.mobile_app_pixel_10_pro
+        data:
+          message: "\U0001F319 Tuinverlichting uitgezet (het is 22:00)."
+    - conditions:
+      - condition: trigger
+        id: turn_off_away
+      - condition: state
+        entity_id: person.ricardo_cornelissen
+        state: not_home
+      - condition: state
+        entity_id: person.shira
+        state: not_home
+      - condition: time
+        before: '22:00:00'
+      - condition: or
+        conditions:
+        - condition: state
+          entity_id: light.tuinhuis_overstek
+          state: 'on'
+        - condition: state
+          entity_id: light.border
+          state: 'on'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id:
+          - light.tuinhuis_overstek
+          - light.border
+        data:
+          transition: 30
+      - action: notify.mobile_app_pixel_10_pro
+        data:
+          message: "\U0001F3C3‍♂️ Tuinverlichting uitgezet (iedereen is van huis)."
+    - conditions:
+      - condition: trigger
+        id: turn_off_delayed
+      - condition: time
+        after: '22:00:00'
+        before: 06:00:00
+      - condition: or
+        conditions:
+        - condition: state
+          entity_id: light.tuinhuis_overstek
+          state: 'on'
+        - condition: state
+          entity_id: light.border
+          state: 'on'
+      sequence:
+      - action: light.turn_off
+        target:
+          entity_id:
+          - light.tuinhuis_overstek
+          - light.border
+        data:
+          transition: 30
+      - action: notify.mobile_app_pixel_10_pro
+        data:
+          message: "\U0001F319 Verlichting uitgeschakeld na afsluiten tuinhuis."
+  mode: single
+- id: bewegingssensor_zolder
+  alias: Zolder verlichting (logisch alles-in-1)
+  description: 'Beweging + donker (lux < 30) => licht aan (alleen als het uit is).
+    Timer per tijdvak. Overdag & avond: directe reset bij beweging. Nacht: reset pas
+    na 5 minuten. Daarna automatisch uit met fade.
+
+    '
+  mode: restart
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.hue_motion_sensor_zolder_beweging
+    to: 'on'
+  condition:
+  - condition: numeric_state
+    entity_id: sensor.hue_motion_sensor_1_licht
+    below: 30
+  action:
+  - variables:
+      hour: '{{ now().hour }}'
+      period: '{% if 7 <= hour < 18 %}day {% elif 18 <= hour < 22 %}evening {% else
+        %}night {% endif %}'
+      brightness: '{% if period == ''day'' %}100 {% elif period == ''evening'' %}40
+        {% else %}10 {% endif %}'
+      duration: '{% if period == ''day'' %}00:10:00 {% elif period == ''evening''
+        %}00:07:00 {% else %}00:02:00 {% endif %}'
+      night_reset_delay: 300
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: light.zolder
+        state: 'off'
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id: light.zolder
+        data:
+          brightness_pct: '{{ brightness | int }}'
+          transition: 1
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ period == 'night'\n   and (states('timer.zolder_licht')
+          != 'active'\n        or (as_timestamp(now()) - as_timestamp(states.timer.zolder_licht.last_changed))
+          >= night_reset_delay) }}"
+      sequence:
+      - service: timer.start
+        target:
+          entity_id: timer.zolder_licht
+        data:
+          duration: '{{ duration }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ period != ''night'' }}'
+      sequence:
+      - service: timer.start
+        target:
+          entity_id: timer.zolder_licht
+        data:
+          duration: '{{ duration }}'
+  - wait_for_trigger:
+    - platform: event
+      event_type: timer.finished
+      event_data:
+        entity_id: timer.zolder_licht
+  - service: light.turn_off
+    target:
+      entity_id: light.zolder
+    data:
+      transition: 5
+- id: '1769507423353'
+  alias: Klimaat controller - runner
+  description: Roept de centrale klimaat controller aan bij relevante wijzigingen  (Aangepast
+    voor koel_strategie en slimme afwezigheid).
+  triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: time
+    at:
+    - 06:00:00
+    - 08:00:00
+    - '22:00:00'
+  - trigger: time_pattern
+    minutes: /3
+  - trigger: numeric_state
+    entity_id: sensor.pv_overschot_w
+    above: input_number.pv_klimaat_start_overschot_w
+    for:
+      minutes: 3
+  - trigger: numeric_state
+    entity_id: sensor.p1_meter_power
+    above: input_number.pv_klimaat_stop_import_w
+    for:
+      minutes: 3
+  - trigger: state
+    entity_id:
+    - person.ricardo_cornelissen
+    - person.shira
+    - binary_sensor.saskia_thuis_gestabiliseerd
+    - binary_sensor.rob_thuis_gestabiliseerd
+    - binary_sensor.dini_thuis_gestabiliseerd
+    - input_select.verwarming_modus
+    - input_boolean.voorverwarmen_aan
+    - input_number.temp_nest_dag
+    - input_number.temp_nest_voorwarm
+    - input_number.temp_nest_eco
+    - input_number.badkamer_heat_off_temp_dag
+    - input_select.koel_strategie
+    - input_boolean.pv_verwarmen_actief
+    - input_boolean.airco_toestaan
+    - input_boolean.status_airco_assist_actief
+    - input_boolean.airco_assist_start_pending
+    - input_number.airco_assist_start_na_min
+    - input_number.airco_assist_min_on_min
+    - input_number.airco_assist_delta_min
+    - input_number.temp_airco_woonkamer
+    - input_number.temp_airco_zolder
+    - input_number.temp_airco_woonkamer_koelen
+    - input_number.temp_airco_zolder_koelen
+    - timer.airco_assist_start_delay
+    - timer.airco_assist_min_on
+    - timer.pv_stabilisatie
+    - light.sfeerverlichting
+    - light.woonkamer_plafonniere
+  - trigger: state
+    entity_id: climate.beneden
+    attribute: hvac_action
+  - trigger: state
+    entity_id: climate.thermostaat_badkamer
+  - trigger: state
+    entity_id: climate.thermostaat_badkamer
+    attribute: current_temperature
+  - trigger: state
+    entity_id: input_select.verwarming_modus
+    to: afwezig
+    id: check_huis_verlaten
+  - trigger: state
+    entity_id: input_select.koel_strategie
+    to:
+    - Handmatig koelen
+    - Automatisch koelen
+    id: check_strategie_gewijzigd
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: check_huis_verlaten
+      - condition: state
+        entity_id: input_select.koel_strategie
+        state:
+        - Handmatig koelen
+        - Automatisch koelen
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.koel_strategie
+        data:
+          option: Pv koelen
+    - conditions:
+      - condition: trigger
+        id: check_strategie_gewijzigd
+      - condition: state
+        entity_id: input_select.verwarming_modus
+        state: afwezig
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.verwarming_modus
+        data:
+          option: handmatig
+  - delay: 00:00:01
+  - if:
+    - condition: state
+      entity_id: input_select.koel_strategie
+      state: Automatisch koelen
+    then:
+    - action: script.turn_on
+      target:
+        entity_id: script.koelen_apply_per_ruimte
+  - action: script.turn_on
+    target:
+      entity_id: script.klimaat_controller_apply
+  mode: restart
+- id: '1769423238948'
+  alias: FAILSAFE - Klimaat totaal (airco guard bij onbetrouwbare entiteiten)
+  description: 'Failsafe: kapt airco-assist en zet airco''s hard uit als kritieke
+    inputs onbetrouwbaar zijn (unknown/unavailable). Laat badkamer met rust.  Hervat
+    automatisch de vorige strategie wanneer sensoren herstellen.
+
+    '
+  triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id:
+    - climate.beneden
+    - climate.thermostaat_badkamer
+    - sensor.hue_motion_sensor_zolder_temperatuur
+    - climate.air_conditioning_woonkamer
+    - climate.air_conditioning_zolder
+    - sensor.p1_meter_power
+    to:
+    - unknown
+    - unavailable
+    for: 00:00:30
+  - trigger: state
+    entity_id:
+    - climate.beneden
+    - climate.thermostaat_badkamer
+    - sensor.hue_motion_sensor_zolder_temperatuur
+    - climate.air_conditioning_woonkamer
+    - climate.air_conditioning_zolder
+    - sensor.p1_meter_power
+    from:
+    - unknown
+    - unavailable
+  - trigger: state
+    entity_id: input_boolean.status_airco_assist_actief
+  actions:
+  - variables:
+      nest_state: '{{ states(''climate.beneden'') }}'
+      bad_state: '{{ states(''climate.thermostaat_badkamer'') }}'
+      zolder_state: '{{ states(''sensor.hue_motion_sensor_zolder_temperatuur'') }}'
+      ac_living_state: '{{ states(''climate.air_conditioning_woonkamer'') }}'
+      ac_attic_state: '{{ states(''climate.air_conditioning_zolder'') }}'
+      p1_state: '{{ states(''sensor.p1_meter_power'') }}'
+      nest_bad: '{{ nest_state in [''unknown'',''unavailable''] }}'
+      badkamer_bad: '{{ bad_state in [''unknown'',''unavailable''] }}'
+      zolder_bad: '{{ zolder_state in [''unknown'',''unavailable''] }}'
+      ac_living_bad: '{{ ac_living_state in [''unknown'',''unavailable''] }}'
+      ac_attic_bad: '{{ ac_attic_state in [''unknown'',''unavailable''] }}'
+      p1_bad: '{{ p1_state in [''unknown'',''unavailable''] }}'
+      airco_must_cut: '{{ nest_bad or zolder_bad or ac_living_bad or ac_attic_bad
+        or p1_bad }}'
+      any_critical_bad: '{{ airco_must_cut or badkamer_bad }}'
+      assist_actief: '{{ is_state(''input_boolean.status_airco_assist_actief'',''on'')
+        }}'
+      airco_any_on: '{{ ac_living_state != ''off'' or ac_attic_state != ''off'' }}'
+      something_running: '{{ assist_actief or airco_any_on }}'
+      notif_gate_exists: '{{ states(''input_boolean.failsafe_klimaat_melding_actief'')
+        not in [''unknown'',''unavailable''] }}'
+      notif_already_sent: '{{ notif_gate_exists and is_state(''input_boolean.failsafe_klimaat_melding_actief'',''on'')
+        }}'
+      issues: '{% set i = [] %}   {% if nest_bad %}{% set i = i + [''Nest (beneden)'']
+        %}{% endif %}   {% if badkamer_bad %}{% set i = i + [''Badkamer thermostaat'']
+        %}{% endif %}   {% if zolder_bad %}{% set i = i + [''Zolder temp sensor'']
+        %}{% endif %}   {% if ac_living_bad %}{% set i = i + [''Airco woonkamer'']
+        %}{% endif %}   {% if ac_attic_bad %}{% set i = i + [''Airco zolder''] %}{%
+        endif %}   {% if p1_bad %}{% set i = i + [''P1 Meter''] %}{% endif %}   {{
+        i | join('', '') }}'
+      melding_tekst: "{% if airco_must_cut and something_running %}\n  Failsafe actief:
+        {{ issues }} is/zijn onbetrouwbaar. De airco is uit veiligheid hard uitgezet!\n{%
+        elif airco_must_cut %}\n  Failsafe actief: {{ issues }} is/zijn onbetrouwbaar.
+        Airco was al uit, dus er is niets aangepast.\n{% else %}\n  Netwerkdip gedetecteerd:
+        {{ issues }} is/zijn tijdelijk onbereikbaar. Dit heeft géén invloed op de
+        airco.\n{% endif %}"
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ airco_must_cut and something_running }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.status_airco_assist_actief
+      - action: climate.turn_off
+        target:
+          entity_id:
+          - climate.air_conditioning_woonkamer
+          - climate.air_conditioning_zolder
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ any_critical_bad and (not notif_already_sent) }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ notif_gate_exists }}'
+          sequence:
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.failsafe_klimaat_melding_actief
+      - action: persistent_notification.create
+        data:
+          title: "{% if airco_must_cut %}FAILSAFE Klimaat \U0001F6A8{% else %}Klimaat
+            Info ℹ️{% endif %}"
+          message: '{{ melding_tekst }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ (not any_critical_bad) and notif_already_sent }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.failsafe_klimaat_melding_actief
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.status_airco_assist_actief
+      - action: automation.trigger
+        target:
+          entity_id: automation.klimaat_controller_runner
+      - action: persistent_notification.create
+        data:
+          title: Failsafe Opgeheven ✅
+          message: Alle klimaatsensoren zijn weer betrouwbaar. De airco assist is
+            weer ingeschakeld en hervat direct zijn ingestelde strategie.
+  mode: restart
+- id: '1769644186200'
+  alias: Setpoints dagelijks terug naar standaard
+  description: Reset setpoints naar standaard en herstelt de koel-strategie (Handmatig/Auto)
+    netjes naar de basis.
+  triggers:
+  - at: 03:00:00
+    trigger: time
+  actions:
+  - if:
+    - condition: template
+      value_template: '{{ states(''input_select.koel_strategie'') in [''Handmatig
+        koelen'', ''Automatisch koelen''] }}'
+    then:
+    - if:
+      - condition: state
+        entity_id: input_boolean.zomer_modus_actief
+        state: 'on'
+      then:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.koel_strategie
+        data:
+          option: Pv koelen
+      else:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.koel_strategie
+        data:
+          option: Uit
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_airco_woonkamer')|float(0)\n
+          \ != states('input_number.temp_airco_woonkamer_standaard')|float(0) }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_airco_woonkamer
+        data:
+          value: '{{ states(''input_number.temp_airco_woonkamer_standaard'') | float(0)
+            }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_airco_zolder')|float(0)\n   !=
+          states('input_number.temp_airco_zolder_standaard')|float(0) }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_airco_zolder
+        data:
+          value: '{{ states(''input_number.temp_airco_zolder_standaard'') | float(0)
+            }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_nest_dag')|float(0)\n   != states('input_number.temp_nest_dag_standaard')|float(0)
+          }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_nest_dag
+        data:
+          value: '{{ states(''input_number.temp_nest_dag_standaard'') | float(0) }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_nest_eco')|float(0)\n   != states('input_number.temp_nest_eco_standaard')|float(0)
+          }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_nest_eco
+        data:
+          value: '{{ states(''input_number.temp_nest_eco_standaard'') | float(0) }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_nest_voorwarm')|float(0)\n   !=
+          states('input_number.temp_nest_voorwarm_standaard')|float(0) }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_nest_voorwarm
+        data:
+          value: '{{ states(''input_number.temp_nest_voorwarm_standaard'') | float(0)
+            }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.badkamer_heat_off_temp_dag')|float(0)\n
+          \ != states('input_number.badkamer_heat_off_temp_dag_standaard')|float(0)
+          }}"
+      sequence:
+      - target:
+          entity_id: input_number.badkamer_heat_off_temp_dag
+        data:
+          value: '{{ states(''input_number.badkamer_heat_off_temp_dag_standaard'')
+            | float(0) }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_airco_woonkamer_koelen')|float(0)\n
+          \ != states('input_number.temp_airco_woonkamer_koelen_standaard')|float(0)
+          }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_airco_woonkamer_koelen
+        data:
+          value: '{{ states(''input_number.temp_airco_woonkamer_koelen_standaard'')
+            | float(0) }}'
+        action: input_number.set_value
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ states('input_number.temp_airco_zolder_koelen')|float(0)\n
+          \ != states('input_number.temp_airco_zolder_koelen_standaard')|float(0)
+          }}"
+      sequence:
+      - target:
+          entity_id: input_number.temp_airco_zolder_koelen
+        data:
+          value: '{{ states(''input_number.temp_airco_zolder_koelen_standaard'') |
+            float(0) }}'
+        action: input_number.set_value
+  mode: single
+- id: '1769500194818'
+  alias: Verwarming niet-automatisch -> reset naar automatisch
+  description: Zet niet-automatisch terug naar automatisch bij timer-einde, thuiskomst
+    of om 22:00.
+  triggers:
+  - entity_id: timer.verwarming_handmatig
+    from: active
+    to: idle
+    trigger: state
+  - at: '22:00:00'
+    trigger: time
+  - entity_id:
+    - person.ricardo_cornelissen
+    - person.shira
+    - binary_sensor.saskia_thuis_gestabiliseerd
+    - binary_sensor.rob_thuis_gestabiliseerd
+    - binary_sensor.dini_thuis_gestabiliseerd
+    to: home
+    trigger: state
+  conditions:
+  - condition: template
+    value_template: "{{ states('input_select.verwarming_modus') != 'automatisch'\n
+      \  and states('input_select.verwarming_modus') != 'vakantie' }}"
+  actions:
+  - target:
+      entity_id: input_select.verwarming_modus
+    data:
+      option: automatisch
+    action: input_select.select_option
+  mode: single
+- id: '1769442945077'
+  alias: F1 Vlagkleur Sfeerverlichting
+  description: Past sfeerverlichting aan op F1-trackstatus (start, pulseren, auto-herstel).
+    Start alleen tijdens F1-sessies.
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.f1_track_status
+    - sensor.f1_session_status
+  - trigger: state
+    entity_id: media_player.samsung_oled_2
+    from: 'on'
+  conditions:
+  - condition: template
+    value_template: "{{ trigger.entity_id == 'media_player.samsung_oled_2' or \n   (trigger.from_state
+      is not none and trigger.to_state is not none and trigger.from_state.state !=
+      trigger.to_state.state) }}"
+  - condition: template
+    value_template: '{{ states(''sensor.f1_session_status'') | lower in [''pre'',
+      ''waiting'', ''formation'', ''warmup'', ''live'', ''finished'', ''finalised'',
+      ''ended''] }}'
+  - condition: or
+    conditions:
+    - condition: template
+      value_template: '{{ trigger.entity_id == ''media_player.samsung_oled_2'' }}'
+    - condition: template
+      value_template: '{{ states(''sensor.f1_session_status'') | lower in [''finished'',
+        ''finalised'', ''ended''] }}'
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: person.ricardo_cornelissen
+        state: home
+      - condition: state
+        entity_id: media_player.samsung_oled_2
+        state: 'on'
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ trigger.entity_id == 'media_player.samsung_oled_2' and\n
+          \  trigger.to_state.state != 'on' }}"
+      sequence:
+      - if:
+        - condition: state
+          entity_id: light.sfeerlamp
+          state: 'on'
+        then:
+        - action: light.turn_on
+          target:
+            entity_id: light.hue_color_spot_8
+          data:
+            rgb_color:
+            - 255
+            - 214
+            - 170
+            brightness_pct: 50
+        else:
+        - action: light.turn_off
+          target:
+            entity_id: light.hue_color_spot_8
+      - stop: 'Automatisering gestopt: TV is uitgezet'
+    - conditions:
+      - condition: template
+        value_template: "{{ trigger.entity_id == 'sensor.f1_session_status'\n   and
+          trigger.from_state is not none\n   and trigger.from_state.state | lower
+          in ['pre','waiting','formation','warmup']\n   and trigger.to_state.state
+          | lower == 'live'\n   and states('sensor.f1_track_status') == 'CLEAR' }}"
+      sequence:
+      - repeat:
+          count: 5
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 0
+              - 0
+              transition: 0.2
+          - delay: '00:00:00.5'
+          - action: light.turn_off
+            target:
+              entity_id: light.hue_color_spot_8
+          - delay: '00:00:00.5'
+      - delay: 00:00:01
+      - action: light.turn_on
+        target:
+          entity_id: light.hue_color_spot_8
+        data:
+          transition: 1
+          brightness_pct: 100
+          rgb_color:
+          - 0
+          - 255
+          - 0
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'CLEAR' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: light.hue_color_spot_8
+        data:
+          transition: 2
+          brightness_pct: 100
+          rgb_color:
+          - 0
+          - 255
+          - 0
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'YELLOW' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''YELLOW'' }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 255
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 40
+              rgb_color:
+              - 120
+              - 120
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') in ['SC','VSC'] and\n
+          \  states('sensor.f1_session_status') | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') not in [''SC'',''VSC'']
+              }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 165
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 50
+              rgb_color:
+              - 120
+              - 80
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'VSC_ENDING' and\n
+          \  states('sensor.f1_session_status') | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''VSC_ENDING''
+              }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 165
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 0
+              - 255
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'RED' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''RED'' }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 0
+              - 0
+              transition: 1
+          - delay: '00:00:01.5'
+          - action: light.turn_on
+            target:
+              entity_id: light.hue_color_spot_8
+            data:
+              brightness_pct: 30
+              rgb_color:
+              - 120
+              - 0
+              - 0
+              transition: 1
+          - delay: '00:00:01.5'
+    - conditions:
+      - condition: template
+        value_template: '{{ states(''sensor.f1_session_status'') | lower in [''finished'',''finalised'',''ended'']
+          }}'
+      sequence:
+      - if:
+        - condition: state
+          entity_id: light.sfeerlamp
+          state: 'on'
+        then:
+        - action: light.turn_on
+          target:
+            entity_id: light.hue_color_spot_8
+          data:
+            rgb_color:
+            - 255
+            - 214
+            - 170
+            brightness_pct: 50
+        else:
+        - action: light.turn_off
+          target:
+            entity_id: light.hue_color_spot_8
+  mode: restart
+- id: '1746443417419'
+  alias: "\U0001F3C1 F1 Update - 1 dag voor race"
+  triggers:
+  - trigger: time
+    at: '10:00:00'
+  conditions:
+  - condition: template
+    value_template: "{% set race_time = as_datetime(state_attr('sensor.f1_next_race',
+      'race_start')) %}  {% if race_time %}\n  {{ (race_time.date() - now().date()).days
+      == 1 }}\n{% else %}\n  false\n{% endif %}"
+  actions:
+  - action: notify.mobile_app_pixel_10_pro
+    data:
+      title: "\U0001F3C1 Formula 1 - Morgen is het zover!"
+      message: "{% set race = state_attr('sensor.f1_next_race', 'race_name') %}  {%
+        set city = state_attr('sensor.f1_next_race', 'circuit_locality') %}  {% set
+        country = state_attr('sensor.f1_next_race', 'circuit_country') %}  {% set
+        drivers = state_attr('sensor.f1_driver_standings', 'driver_standings') %}
+        \ {% set constructors = state_attr('sensor.f1_constructor_standings', 'constructor_standings')
+        %}  Morgen is de {{ race }} in {{ city }}, {{ country }}! \n\U0001F3C6 Top
+        drivers: 1. {{ drivers[0].Driver.familyName }} ({{ drivers[0].points }} pts)
+        \ 2. {{ drivers[1].Driver.familyName }} ({{ drivers[1].points }} pts)  3.
+        {{ drivers[2].Driver.familyName }} ({{ drivers[2].points }} pts) \n\U0001F3CE️
+        Top constructors: 1. {{ constructors[0].Constructor.name }} ({{ constructors[0].points
+        }} pts)  2. {{ constructors[1].Constructor.name }} ({{ constructors[1].points
+        }} pts)  3. {{ constructors[2].Constructor.name }} ({{ constructors[2].points
+        }} pts)"
+  mode: single
+- id: '1741595480065'
+  alias: Airco filters reinigen melding
+  description: Melding + todo als filterlife onder 20% komt, en automatisch afvinken
+    bij reset (zolder/woonkamer).
+  triggers:
+  - id: zolder
+    trigger: numeric_state
+    entity_id:
+    - sensor.air_conditioning_zolder_filter_remaining_life
+    below: 20
+    for:
+      hours: 0
+      minutes: 5
+      seconds: 0
+  - id: woonkamer
+    trigger: numeric_state
+    entity_id: sensor.air_conditioning_woonkamer_filter_remaining_life
+    below: 20
+    for: 00:05:00
+  - id: zolder_reset
+    trigger: numeric_state
+    entity_id: sensor.air_conditioning_zolder_filter_remaining_life
+    above: 90
+  - id: woonkamer_reset
+    trigger: numeric_state
+    entity_id: sensor.air_conditioning_woonkamer_filter_remaining_life
+    above: 90
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: zolder
+      sequence:
+      - data:
+          title: Airco onderhoud
+          message: "\U0001F9FD Filter airco zolder reinigen (filterlife < 20%)."
+        action: notify.mobile_app_pixel_10_pro
+      - target:
+          entity_id: todo.to_do
+        data:
+          item: Filter airco zolder reinigen
+        action: todo.add_item
+    - conditions:
+      - condition: trigger
+        id: woonkamer
+      sequence:
+      - data:
+          title: Airco onderhoud
+          message: "\U0001F9FD Filter airco woonkamer reinigen (filterlife < 20%)."
+        action: notify.mobile_app_pixel_10_pro
+      - target:
+          entity_id: todo.to_do
+        data:
+          item: Filter airco woonkamer reinigen
+        action: todo.add_item
+    - conditions:
+      - condition: trigger
+        id: zolder_reset
+      sequence:
+      - target:
+          entity_id: todo.to_do
+        data:
+          item: Filter airco zolder reinigen
+          status: completed
+        action: todo.update_item
+      - data:
+          title: Airco onderhoud voltooid
+          message: ✅ Filter airco zolder is gereset! De taak is afgevinkt.
+        action: notify.mobile_app_pixel_10_pro
+    - conditions:
+      - condition: trigger
+        id: woonkamer_reset
+      sequence:
+      - target:
+          entity_id: todo.to_do
+        data:
+          item: Filter airco woonkamer reinigen
+          status: completed
+        action: todo.update_item
+      - data:
+          title: Airco onderhoud voltooid
+          message: ✅ Filter airco woonkamer is gereset! De taak is afgevinkt.
+        action: notify.mobile_app_pixel_10_pro
+  mode: single
+- id: '1768231124525'
+  alias: Nachtlampen automatisch dimmen en uit
+  description: Zet nachtlampen slaapkamers op 20%. Badkamer behoudt eigen scène. Na
+    5 min alles dimmen naar 10% en uit.
+  triggers:
+  - trigger: state
+    entity_id:
+    - light.slaapkamer_matts
+    - light.slaapkamer_mylan
+    - light.badkamer
+    to: 'on'
+  conditions:
+  - condition: time
+    after: '21:30:00'
+    before: 07:00:00
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.entity_id != ''light.badkamer'' }}'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: '{{ trigger.entity_id }}'
+        data:
+          brightness_pct: 20
+  - delay: 00:05:00
+  - condition: template
+    value_template: "{{ is_state('light.slaapkamer_matts','on') or \n   is_state('light.slaapkamer_mylan','on')
+      or \n   is_state('light.badkamer','on') }}\n"
+  - action: light.turn_on
+    target:
+      entity_id: "{{ expand('light.slaapkamer_matts', 'light.slaapkamer_mylan', 'light.badkamer')\n
+        \  | selectattr('state', 'eq', 'on')\n   | map(attribute='entity_id')\n   |
+        list }}\n"
+    data:
+      brightness_pct: 10
+      transition: 10
+  - delay: 00:00:10
+  - action: light.turn_off
+    target:
+      entity_id:
+      - light.slaapkamer_matts
+      - light.slaapkamer_mylan
+      - light.badkamer
+  mode: restart
+- id: '1771237869438'
+  alias: Klimaat - Totale Fysieke Sync naar Helpers
+  description: Synchroniseert fysieke thermostaatwijzigingen terug naar de dashboard
+    sliders. Negeren bij 18.0 en 25.0 (PV-standby grenzen). Inclusief zomer/koelen.
+  triggers:
+  - entity_id: climate.thermostaat_badkamer
+    attribute: temperature
+    trigger: state
+    id: badkamer
+  - entity_id: climate.beneden
+    attribute: temperature
+    trigger: state
+    id: nest
+  - entity_id: climate.air_conditioning_woonkamer
+    attribute: temperature
+    trigger: state
+    id: airco_woon
+  - entity_id: climate.air_conditioning_zolder
+    attribute: temperature
+    trigger: state
+    id: airco_zolder
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: badkamer
+      - condition: template
+        value_template: '{{ states(''input_select.verwarming_modus_actief'') in [''dag'',
+          ''voorverwarmen''] }}'
+      - condition: template
+        value_template: '{{ state_attr(''climate.thermostaat_badkamer'', ''temperature'')
+          != none }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.badkamer_heat_off_temp_dag
+        data:
+          value: '{{ state_attr(''climate.thermostaat_badkamer'', ''temperature'')
+            | float(18) }}'
+    - conditions:
+      - condition: trigger
+        id: nest
+      - condition: state
+        entity_id: input_select.verwarming_modus_actief
+        state: dag
+      - condition: template
+        value_template: '{{ state_attr(''climate.beneden'', ''temperature'') != none
+          }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_nest_dag
+        data:
+          value: '{{ state_attr(''climate.beneden'', ''temperature'') | float(20)
+            }}'
+    - conditions:
+      - condition: trigger
+        id: nest
+      - condition: state
+        entity_id: input_select.verwarming_modus_actief
+        state: voorverwarmen
+      - condition: template
+        value_template: '{{ state_attr(''climate.beneden'', ''temperature'') != none
+          }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_nest_voorwarm
+        data:
+          value: '{{ state_attr(''climate.beneden'', ''temperature'') | float(19)
+            }}'
+    - conditions:
+      - condition: trigger
+        id: airco_woon
+      - condition: state
+        entity_id: input_boolean.status_airco_assist_actief
+        state: 'on'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+          != none }}'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+          | float(0) not in [18.0, 25.0] }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_airco_woonkamer
+        data:
+          value: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+            | float(21) }}'
+    - conditions:
+      - condition: trigger
+        id: airco_zolder
+      - condition: state
+        entity_id: input_boolean.status_airco_assist_actief
+        state: 'on'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+          != none }}'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+          | float(0) not in [18.0, 25.0] }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_airco_zolder
+        data:
+          value: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+            | float(21) }}'
+    - conditions:
+      - condition: trigger
+        id: airco_woon
+      - condition: state
+        entity_id: input_boolean.zomer_modus_actief
+        state: 'on'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+          != none }}'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+          | float(0) not in [18.0, 25.0] }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_airco_woonkamer_koelen
+        data:
+          value: '{{ state_attr(''climate.air_conditioning_woonkamer'', ''temperature'')
+            | float(21) }}'
+    - conditions:
+      - condition: trigger
+        id: airco_zolder
+      - condition: state
+        entity_id: input_boolean.zomer_modus_actief
+        state: 'on'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+          != none }}'
+      - condition: template
+        value_template: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+          | float(0) not in [18.0, 25.0] }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.temp_airco_zolder_koelen
+        data:
+          value: '{{ state_attr(''climate.air_conditioning_zolder'', ''temperature'')
+            | float(21) }}'
+  mode: parallel
+- id: '1771526165534'
+  alias: Klimaat - Automatische Zomer/Winter wissel
+  description: Schakelt de zomer/winter layout en zet de strategie veilig op PV koelen
+    of Uit.
+  triggers:
+  - id: zomer_modus
+    trigger: numeric_state
+    entity_id: sensor.temperatuur
+    above: 20
+    for:
+      minutes: 10
+  - id: zomer_modus_zon_door_raam
+    trigger: numeric_state
+    entity_id: sensor.beneden_temperatuur
+    above: 22.5
+    for:
+      minutes: 30
+  - id: winter_modus
+    trigger: numeric_state
+    entity_id: sensor.beneden_temperatuur
+    below: 21
+    for:
+      minutes: 30
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id:
+        - zomer_modus
+        - zomer_modus_zon_door_raam
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.koel_strategie
+        data:
+          option: Pv koelen
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.zomer_modus_actief
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.pv_verwarmen_actief
+    - conditions:
+      - condition: trigger
+        id: winter_modus
+      - condition: template
+        value_template: '{{ states(''input_select.koel_strategie'') != ''Handmatig
+          koelen'' }}'
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.koel_strategie
+        data:
+          option: Uit
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.zomer_modus_actief
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.pv_verwarmen_actief
+  mode: single
+- id: '1772025487128'
+  alias: 'Verwarming: Auto-schakelen (Geoptimaliseerd)'
+  description: Schakelt verwarming modus op basis van aanwezigheid met ingebouwde
+    stabilisatie.
+  triggers:
+  - trigger: template
+    id: thuiskomst
+    value_template: "{{ is_state('person.ricardo_cornelissen', 'home') or\n   is_state('person.shira',
+      'home') or\n   is_state('binary_sensor.saskia_thuis_gestabiliseerd', 'on') }}"
+  - trigger: template
+    id: vertrek
+    value_template: "{{ is_state('person.ricardo_cornelissen', 'not_home') and\n   is_state('person.shira',
+      'not_home') and\n   is_state('binary_sensor.saskia_thuis_gestabiliseerd', 'off')
+      }}"
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: thuiskomst
+      - condition: not
+        conditions:
+        - condition: state
+          entity_id: input_select.verwarming_modus
+          state: automatisch
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.verwarming_modus
+        data:
+          option: automatisch
+    - conditions:
+      - condition: trigger
+        id: vertrek
+      - condition: not
+        conditions:
+        - condition: state
+          entity_id: input_select.verwarming_modus
+          state: vakantie
+      - condition: not
+        conditions:
+        - condition: state
+          entity_id: input_select.verwarming_modus
+          state: afwezig
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.verwarming_modus
+        data:
+          option: afwezig
+  mode: single
+- id: '1772310032235'
+  alias: 'Verlichting: Alles uit bij afwezigheid'
+  description: Zet light.alles uit zodra er 2 minuten lang niemand meer thuis is.
+  triggers:
+  - value_template: "{{ not is_state('person.ricardo_cornelissen', 'home') and \n
+      \  not is_state('person.shira', 'home') and \n   is_state('binary_sensor.saskia_thuis_gestabiliseerd',
+      'off') and \n   is_state('binary_sensor.rob_thuis_gestabiliseerd', 'off') and
+      \n   is_state('binary_sensor.dini_thuis_gestabiliseerd', 'off') }}\n"
+    for:
+      minutes: 2
+    trigger: template
+  conditions: []
+  actions:
+  - action: light.turn_off
+    target:
+      entity_id: light.alles
+  mode: single
+- id: '1772361340332'
+  alias: Sliders direct naar Airco (Manuele Override)
+  triggers:
+  - entity_id: input_number.temp_airco_woonkamer_koelen
+    trigger: state
+  - entity_id: input_number.temp_airco_zolder_koelen
+    trigger: state
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.entity_id == ''input_number.temp_airco_woonkamer_koelen''
+          }}'
+      - condition: template
+        value_template: '{{ states(''climate.air_conditioning_woonkamer'') != ''off''
+          }}'
+      sequence:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.air_conditioning_woonkamer
+        data:
+          temperature: '{{ states(''input_number.temp_airco_woonkamer_koelen'') |
+            float(21) }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.entity_id == ''input_number.temp_airco_zolder_koelen''
+          }}'
+      - condition: template
+        value_template: '{{ states(''climate.air_conditioning_zolder'') != ''off''
+          }}'
+      sequence:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.air_conditioning_zolder
+        data:
+          temperature: '{{ states(''input_number.temp_airco_zolder_koelen'') | float(21)
+            }}'
+  mode: restart
+- id: '1773042929925'
+  alias: Reset Droger Auto-Start Status
+  description: Zet de auto-start schakelaar weer uit als de deur open gaat of de droger
+    uit staat.
+  triggers:
+  - entity_id: binary_sensor.bosch_wtx87mwin_68a40e64ae22_bsh_common_status_doorstate
+    to: 'on'
+    trigger: state
+  - entity_id: select.bosch_wtx87mwin_68a40e64ae22_bsh_common_setting_powerstate
+    to: 'off'
+    trigger: state
+  actions:
+  - target:
+      entity_id: input_boolean.droger_auto_gestart
+    action: input_boolean.turn_off
+  mode: single
+- id: '1773042965473'
+  alias: Droger starten bij zonne-energie of uiterlijk 15:00
+  description: Start de droger automatisch bij zon (checkt ook voorspelling) of om
+    15:00, en is beveiligd tegen dubbel starten.
+  triggers:
+  - entity_id: sensor.pv_overschot_w
+    above: 600
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+    trigger: numeric_state
+  - at: '15:00:00'
+    trigger: time
+  - entity_id: binary_sensor.bosch_wtx87mwin_68a40e64ae22_bsh_common_status_remotecontrolstartallowed
+    to: 'on'
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: input_boolean.droger_auto_gestart
+    state: 'off'
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: sensor.droger_status
+      state: voltooid
+    - condition: state
+      entity_id: sensor.droger_status
+      state: finished
+  - condition: state
+    entity_id: binary_sensor.bosch_wtx87mwin_68a40e64ae22_bsh_common_status_remotecontrolstartallowed
+    state: 'on'
+  - condition: or
+    conditions:
+    - condition: time
+      after: '15:00:00'
+    - condition: and
+      conditions:
+      - condition: numeric_state
+        entity_id: sensor.pv_overschot_w
+        above: 600
+      - condition: numeric_state
+        entity_id: sensor.power_production_next_hour
+        above: 600
+  actions:
+  - target:
+      entity_id: input_boolean.droger_auto_gestart
+    action: input_boolean.turn_on
+  - target:
+      entity_id: button.bosch_wtx87mwin_68a40e64ae22_start_pause
+    action: button.press
+  mode: single
+- id: '1774336936251'
+  alias: 'Afval: Aan to-do lijst toevoegen'
+  description: ''
+  triggers:
+  - entity_id: sensor.afval_vandaag_namen
+    trigger: state
+  conditions:
+  - condition: template
+    value_template: '{{ trigger.to_state.state not in [''unknown'', ''unavailable'',
+      '''', ''geen''] }}
+
+      '
+  actions:
+  - target:
+      entity_id: input_boolean.afval_buiten_gezet
+    action: input_boolean.turn_off
+  - target:
+      entity_id: todo.to_do
+    data:
+      item: 'Afval aan de straat: {{ trigger.to_state.state }}'
+    action: todo.add_item
+  mode: single
+- id: '1774336982931'
+  alias: 'Afval: Taak afgevinkt'
+  triggers:
+  - entity_id: sensor.to_do_lijst_items
+    trigger: state
+  conditions:
+  - condition: state
+    entity_id: input_boolean.afval_buiten_gezet
+    state: 'off'
+  - condition: template
+    value_template: '{% set oud = trigger.from_state.attributes.taken_lijst | default([])
+      | join('' '') | lower %} {% set nieuw = trigger.to_state.attributes.taken_lijst
+      | default([]) | join('' '') | lower %} {{ ''afval'' in oud and ''afval'' not
+      in nieuw }}
+
+      '
+  actions:
+  - target:
+      entity_id: input_boolean.afval_buiten_gezet
+    action: input_boolean.turn_on
+  mode: single
+- id: '1781866098346'
+  alias: 'Voetbal: Oranje Scoort! (Dynamisch)'
+  description: Knipperen en golf-wave met instelbare vertraging
+  triggers:
+  - entity_id: sensor.wc_netherlands
+    attribute: team_score
+    trigger: state
+  conditions:
+  - condition: template
+    value_template: "{{ trigger.to_state.attributes.team_score | int(0) > \n   trigger.from_state.attributes.team_score
+      | int(0) }}\n   "
+  - condition: state
+    entity_id: media_player.tv_in_tuinhuis_2
+    state: 'on'
+  actions:
+  - delay:
+      seconds: '{{ states(''input_number.voetbal_vertraging'') | int(0) }}'
+  - action: scene.create
+    data:
+      scene_id: verlichting_voor_doelpunt
+      snapshot_entities:
+      - light.achtertuin
+      - light.spot_tuinhuis_1
+      - light.spot_tuinhuis_2
+      - light.spot_tuinhuis_3
+      - light.spot_tuinhuis_4
+      - light.spot_tuinhuis_5
+      - light.spot_tuinhuis_6
+  - action: light.turn_on
+    data:
+      brightness_pct: 10
+      transition: 1
+    target:
+      entity_id:
+      - light.spot_tuinhuis_1
+      - light.spot_tuinhuis_2
+      - light.spot_tuinhuis_3
+      - light.spot_tuinhuis_4
+      - light.spot_tuinhuis_5
+      - light.spot_tuinhuis_6
+  - parallel:
+    - sequence:
+      - repeat:
+          count: 4
+          sequence:
+          - action: light.turn_on
+            data:
+              color_name: orange
+              transition: 0
+              brightness_pct: 100
+            target:
+              entity_id: light.achtertuin
+          - delay: 00:00:01
+          - action: light.turn_on
+            data:
+              color_name: red
+              transition: 0
+              brightness_pct: 100
+            target:
+              entity_id: light.achtertuin
+          - delay: 00:00:01
+          - action: light.turn_on
+            data:
+              color_name: white
+              transition: 0
+              brightness_pct: 100
+            target:
+              entity_id: light.achtertuin
+          - delay: 00:00:01
+          - action: light.turn_on
+            data:
+              color_name: blue
+              transition: 0
+              brightness_pct: 100
+            target:
+              entity_id: light.achtertuin
+          - delay: 00:00:01
+    - sequence:
+      - repeat:
+          count: 7
+          sequence:
+          - repeat:
+              for_each:
+              - '1'
+              - '3'
+              - '5'
+              - '6'
+              - '4'
+              - '2'
+              sequence:
+              - action: light.turn_on
+                data:
+                  brightness_pct: 100
+                  transition: 0.3
+                target:
+                  entity_id: light.spot_tuinhuis_{{ repeat.item }}
+              - delay: '00:00:00.3'
+              - action: light.turn_on
+                data:
+                  brightness_pct: 10
+                  transition: 0.8
+                target:
+                  entity_id: light.spot_tuinhuis_{{ repeat.item }}
+              - delay: '00:00:00.1'
+  - action: scene.turn_on
+    target:
+      entity_id: scene.verlichting_voor_doelpunt
+  mode: single
+- id: '1782651374140'
+  alias: F1 Vlagkleur Tuinhuis
+  description: Past sfeerverlichting aan op F1-trackstatus (start, pulseren, auto-herstel).
+    Start alleen tijdens F1-sessies.
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.f1_track_status
+    - sensor.f1_session_status
+  - trigger: state
+    entity_id: media_player.tv_in_tuinhuis_2
+    from: 'on'
+  conditions:
+  - condition: template
+    value_template: "{{ trigger.entity_id == 'media_player.tv_in_tuinhuis_2' or \n
+      \  (trigger.from_state is not none and trigger.to_state is not none and trigger.from_state.state
+      != trigger.to_state.state) }}"
+  - condition: template
+    value_template: '{{ states(''sensor.f1_session_status'') | lower in [''pre'',
+      ''waiting'', ''formation'', ''warmup'', ''live'', ''finished'', ''finalised'',
+      ''ended''] }}'
+  - condition: or
+    conditions:
+    - condition: template
+      value_template: '{{ trigger.entity_id == ''media_player.tv_in_tuinhuis_2'' }}'
+    - condition: template
+      value_template: '{{ states(''sensor.f1_session_status'') | lower in [''finished'',
+        ''finalised'', ''ended''] }}'
+    - condition: and
+      conditions:
+      - condition: state
+        entity_id: person.ricardo_cornelissen
+        state: home
+      - condition: state
+        entity_id: media_player.tv_in_tuinhuis_2
+        state: 'on'
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ trigger.entity_id == 'media_player.tv_in_tuinhuis_2' and\n
+          \  trigger.to_state.state != 'on' }}"
+      sequence:
+      - if:
+        - condition: state
+          entity_id: light.tuinhuis_overstek
+          state: 'on'
+        then:
+        - action: light.turn_on
+          target:
+            entity_id: light.tuinhuis_overstek
+          data:
+            rgb_color:
+            - 255
+            - 214
+            - 170
+            brightness_pct: 50
+        else:
+        - action: light.turn_off
+          target:
+            entity_id: light.tuinhuis_overstek
+      - stop: 'Automatisering gestopt: TV is uitgezet'
+    - conditions:
+      - condition: template
+        value_template: "{{ trigger.entity_id == 'sensor.f1_session_status'\n   and
+          trigger.from_state is not none\n   and trigger.from_state.state | lower
+          in ['pre','waiting','formation','warmup']\n   and trigger.to_state.state
+          | lower == 'live'\n   and states('sensor.f1_track_status') == 'CLEAR' }}"
+      sequence:
+      - repeat:
+          count: 5
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 0
+              - 0
+              transition: 0.2
+          - delay: '00:00:00.5'
+          - action: light.turn_off
+            target:
+              entity_id: light.tuinhuis_overstek
+          - delay: '00:00:00.5'
+      - delay: 00:00:01
+      - action: light.turn_on
+        target:
+          entity_id: light.tuinhuis_overstek
+        data:
+          transition: 1
+          brightness_pct: 100
+          rgb_color:
+          - 0
+          - 255
+          - 0
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'CLEAR' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: light.tuinhuis_overstek
+        data:
+          transition: 2
+          brightness_pct: 100
+          rgb_color:
+          - 0
+          - 255
+          - 0
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'YELLOW' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''YELLOW'' }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 255
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 40
+              rgb_color:
+              - 120
+              - 120
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') in ['SC','VSC'] and\n
+          \  states('sensor.f1_session_status') | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') not in [''SC'',''VSC'']
+              }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 165
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 50
+              rgb_color:
+              - 120
+              - 80
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'VSC_ENDING' and\n
+          \  states('sensor.f1_session_status') | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''VSC_ENDING''
+              }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 165
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 0
+              - 255
+              - 0
+              transition: 1.5
+          - delay: 00:00:02
+    - conditions:
+      - condition: template
+        value_template: "{{ states('sensor.f1_track_status') == 'RED' and\n   states('sensor.f1_session_status')
+          | lower == 'live' }}"
+      sequence:
+      - repeat:
+          until:
+          - condition: template
+            value_template: '{{ states(''sensor.f1_track_status'') != ''RED'' }}'
+          sequence:
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 100
+              rgb_color:
+              - 255
+              - 0
+              - 0
+              transition: 1
+          - delay: '00:00:01.5'
+          - action: light.turn_on
+            target:
+              entity_id: light.tuinhuis_overstek
+            data:
+              brightness_pct: 30
+              rgb_color:
+              - 120
+              - 0
+              - 0
+              transition: 1
+          - delay: '00:00:01.5'
+    - conditions:
+      - condition: template
+        value_template: '{{ states(''sensor.f1_session_status'') | lower in [''finished'',''finalised'',''ended'']
+          }}'
+      sequence:
+      - if:
+        - condition: state
+          entity_id: light.tuinhuis_overstek
+          state: 'on'
+        then:
+        - action: light.turn_on
+          target:
+            entity_id: light.tuinhuis_overstek
+          data:
+            rgb_color:
+            - 255
+            - 214
+            - 170
+            brightness_pct: 50
+        else:
+        - action: light.turn_off
+          target:
+            entity_id: light.tuinhuis_overstek
+  mode: restart
+- id: '1787932452261'
+  alias: Badkamer verlichting + spiegel (Vloeiend Dimmen met Helper)
+  description: Kort drukken = 's Nachts nachtlampje, overdag Natuurlijk licht. (Of
+    alles uit). Vasthouden = Vloeiend ping-pong dimmen. Spiegel-uit bug na dimmen
+    verholpen!
+  triggers:
+  - trigger: state
+    entity_id: event.verlichtingschakelaar_badkamer_button_1
+    id: knop_1
+    not_to:
+    - unknown
+    - unavailable
+  - trigger: state
+    entity_id: light.badkamer
+    to: 'off'
+    id: badkamer_off
+  actions:
+  - variables:
+      event_type: '{{ trigger.to_state.attributes.event_type if trigger.id == ''knop_1''
+        else ''none'' }}'
+      previous_event: '{{ trigger.from_state.attributes.event_type if (trigger.id
+        == ''knop_1'' and trigger.from_state is not none) else ''none'' }}'
+      is_light_on: '{{ is_state(''light.badkamer'', ''on'') }}'
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: badkamer_off
+      sequence:
+      - variables:
+          desired: 'off'
+          current: '{{ states(''switch.spiegel_badkamer_schakelaar_1'') }}'
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ current != desired }}'
+          sequence:
+          - action: switch.turn_off
+            target:
+              entity_id: switch.spiegel_badkamer_schakelaar_1
+          - delay: 00:00:01
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: '{{ states(''switch.spiegel_badkamer_schakelaar_1'')
+                  != desired }}'
+              sequence:
+              - action: switch.turn_off
+                target:
+                  entity_id: switch.spiegel_badkamer_schakelaar_1
+    - conditions:
+      - condition: trigger
+        id: knop_1
+      - condition: template
+        value_template: '{{ event_type == ''short_release'' }}'
+      - condition: template
+        value_template: '{{ previous_event not in [''long_press'', ''repeat''] }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_light_on }}'
+          sequence:
+          - action: light.turn_off
+            target:
+              entity_id: light.badkamer
+            data:
+              transition: 2
+          - variables:
+              desired: 'off'
+              current: '{{ states(''switch.spiegel_badkamer_schakelaar_1'') }}'
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: '{{ current != desired }}'
+              sequence:
+              - action: switch.turn_off
+                target:
+                  entity_id: switch.spiegel_badkamer_schakelaar_1
+              - delay: 00:00:01
+              - choose:
+                - conditions:
+                  - condition: template
+                    value_template: '{{ states(''switch.spiegel_badkamer_schakelaar_1'')
+                      != desired }}'
+                  sequence:
+                  - action: switch.turn_off
+                    target:
+                      entity_id: switch.spiegel_badkamer_schakelaar_1
+        - conditions:
+          - condition: template
+            value_template: '{{ not is_light_on }}'
+          sequence:
+          - choose:
+            - conditions:
+              - condition: time
+                after: '23:00:00'
+                before: 06:00:00
+              sequence:
+              - action: scene.turn_on
+                target:
+                  entity_id: scene.badkamer_nachtlampje
+                data:
+                  transition: 2
+            default:
+            - action: scene.turn_on
+              target:
+                entity_id: scene.badkamer_natuurlijk_licht_6
+              data:
+                transition: 2
+            - variables:
+                desired: 'on'
+                current: '{{ states(''switch.spiegel_badkamer_schakelaar_1'') }}'
+            - choose:
+              - conditions:
+                - condition: template
+                  value_template: '{{ current != desired }}'
+                sequence:
+                - action: switch.turn_on
+                  target:
+                    entity_id: switch.spiegel_badkamer_schakelaar_1
+                - delay: 00:00:01
+                - choose:
+                  - conditions:
+                    - condition: template
+                      value_template: '{{ states(''switch.spiegel_badkamer_schakelaar_1'')
+                        != desired }}'
+                    sequence:
+                    - action: switch.turn_on
+                      target:
+                        entity_id: switch.spiegel_badkamer_schakelaar_1
+    - conditions:
+      - condition: trigger
+        id: knop_1
+      - condition: template
+        value_template: '{{ event_type in [''long_press'', ''repeat''] }}'
+      sequence:
+      - action: light.turn_on
+        target:
+          entity_id: light.badkamer
+        data:
+          brightness_step_pct: '{{ 20 if is_state(''input_boolean.dim_richting_badkamer'',
+            ''on'') else -20 }}'
+          transition: 1
+    - conditions:
+      - condition: trigger
+        id: knop_1
+      - condition: template
+        value_template: '{{ event_type == ''long_release'' }}'
+      sequence:
+      - action: input_boolean.toggle
+        target:
+          entity_id: input_boolean.dim_richting_badkamer
+  mode: restart

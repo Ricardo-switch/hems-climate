@@ -1,0 +1,99 @@
+alias Koelen — apply per ruimte
+description -
+  Automatisch koelen obv setpoints + hysterese. Inclusief Standby-overrule en
+  min-on timers.
+mode restart
+sequence
+  - condition state
+    entity_id input_select.koel_strategie
+    state Automatisch koelen
+  - variables
+      set_living -
+        {{
+        states('input_number.temp_airco_woonkamer_koelen')float(states('input_number.temp_airco_woonkamer_koelen_standaard')float(22.0))
+        }}
+      set_attic -
+        {{
+        states('input_number.temp_airco_zolder_koelen')float(states('input_number.temp_airco_zolder_koelen_standaard')float(22.5))
+        }}
+      tol_on '{{ states(''input_number.koelen_hyst_on'')float(0.3) }}'
+      tol_off '{{ states(''input_number.koelen_hyst_off'')float(0.2) }}'
+      t_living '{{ state_attr(''climate.beneden'',''current_temperature'')float(0) }}'
+      t_attic '{{ states(''sensor.hue_motion_sensor_zolder_temperatuur'')float(0) }}'
+      ac_living climate.air_conditioning_woonkamer
+      ac_attic climate.air_conditioning_zolder
+      living_on '{{ states(ac_living) != ''off'' }}'
+      attic_on '{{ states(ac_attic) != ''off'' }}'
+      living_wrong_temp '{{ state_attr(ac_living, ''temperature'')  float(0) != set_living }}'
+      attic_wrong_temp '{{ state_attr(ac_attic, ''temperature'')  float(0) != set_attic }}'
+      min_on_active '{{ is_state(''timer.airco_assist_min_on'', ''active'') }}'
+      living_should_on '{{ t_living  (set_living + tol_on) }}'
+      living_should_off '{{ t_living  (set_living - tol_off) and not min_on_active }}'
+      attic_should_on '{{ t_attic  (set_attic + tol_on) }}'
+      attic_should_off '{{ t_attic  (set_attic - tol_off) and not min_on_active }}'
+  - choose
+      - conditions
+          - condition template
+            value_template '{{ living_should_on and (not living_on or living_wrong_temp) }}'
+        sequence
+          - action climate.set_hvac_mode
+            target
+              entity_id '{{ ac_living }}'
+            data
+              hvac_mode cool
+          - action climate.set_temperature
+            target
+              entity_id '{{ ac_living }}'
+            data
+              temperature '{{ set_living }}'
+          - if
+              - condition template
+                value_template '{{ not living_on }}'
+            then
+              - action timer.start
+                target
+                  entity_id timer.airco_assist_min_on
+                data
+                  duration -
+                    {{ states('input_number.airco_assist_min_on_min')  int(15)
+                     60 }}
+      - conditions
+          - condition template
+            value_template '{{ living_on and living_should_off }}'
+        sequence
+          - action climate.turn_off
+            target
+              entity_id '{{ ac_living }}'
+  - choose
+      - conditions
+          - condition template
+            value_template '{{ attic_should_on and (not attic_on or attic_wrong_temp) }}'
+        sequence
+          - action climate.set_hvac_mode
+            target
+              entity_id '{{ ac_attic }}'
+            data
+              hvac_mode cool
+          - action climate.set_temperature
+            target
+              entity_id '{{ ac_attic }}'
+            data
+              temperature '{{ set_attic }}'
+          - if
+              - condition template
+                value_template '{{ not attic_on }}'
+            then
+              - action timer.start
+                target
+                  entity_id timer.airco_assist_min_on
+                data
+                  duration -
+                    {{ states('input_number.airco_assist_min_on_min')  int(15)
+                     60 }}
+      - conditions
+          - condition template
+            value_template '{{ attic_on and attic_should_off }}'
+        sequence
+          - action climate.turn_off
+            target
+              entity_id '{{ ac_attic }}'

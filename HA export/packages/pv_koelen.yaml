@@ -1,0 +1,134 @@
+###############################################################################
+# PV-KOELEN — gebruikt aparte KOEL setpoints
+###############################################################################
+
+input_boolean:
+  pv_koelen_actief:
+    name: PV-koelen actief
+    icon: mdi:solar-power
+
+# Verwacht dat jij al hebt:
+# - sensor.pv_overschot_w
+# - binary_sensor.gratis_stroom_voor_koelen_stabiel
+
+script:
+  pv_koelen_apply_per_ruimte:
+    alias: PV koelen — apply per ruimte
+    mode: restart
+    sequence:
+      - condition: state
+        entity_id: input_boolean.pv_koelen_actief
+        state: "on"
+
+      - condition: state
+        entity_id: binary_sensor.gratis_stroom_voor_koelen_stabiel
+        state: "on"
+
+      - variables:
+          ac_living: climate.air_conditioning_woonkamer
+          ac_attic: climate.air_conditioning_zolder
+          set_living: "{{ states('input_number.temp_airco_woonkamer_koelen')|float(22.0) }}"
+          set_attic: "{{ states('input_number.temp_airco_zolder_koelen')|float(22.5) }}"
+
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: "{{ ac_living }}"
+        data:
+          hvac_mode: cool
+      - action: climate.set_temperature
+        target:
+          entity_id: "{{ ac_living }}"
+        data:
+          temperature: "{{ set_living }}"
+
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: "{{ ac_attic }}"
+        data:
+          hvac_mode: cool
+      - action: climate.set_temperature
+        target:
+          entity_id: "{{ ac_attic }}"
+        data:
+          temperature: "{{ set_attic }}"
+
+automation:
+  - alias: PV koelen — START/STOP sessie
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id:
+          - binary_sensor.gratis_stroom_voor_koelen_stabiel
+          - input_boolean.airco_toestaan
+          - input_select.verwarming_modus
+          - input_select.verwarming_modus_actief
+
+    actions:
+      - variables:
+          modus: "{{ states('input_select.verwarming_modus') }}"
+          actief: "{{ states('input_select.verwarming_modus_actief') }}"
+          vakantie: "{{ (modus == 'vakantie') or (actief == 'vakantie') }}"
+          nacht: "{{ actief == 'nacht' }}"
+          toegestaan: "{{ is_state('input_boolean.airco_toestaan','on') }}"
+          gratis: "{{ is_state('binary_sensor.gratis_stroom_voor_koelen_stabiel','on') }}"
+          mag_pv_koelen: "{{ toegestaan and (not vakantie) and (not nacht) and gratis }}"
+
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ mag_pv_koelen }}"
+            sequence:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id:
+                    - input_boolean.pv_koelen_actief
+                    - input_boolean.status_airco_assist_actief  # UI-indicator
+              - action: script.turn_on
+                target:
+                  entity_id: script.pv_koelen_apply_per_ruimte
+
+          - conditions:
+              - condition: template
+                value_template: "{{ not mag_pv_koelen }}"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.pv_koelen_actief
+              - action: climate.turn_off
+                target:
+                  entity_id:
+                    - climate.air_conditioning_woonkamer
+                    - climate.air_conditioning_zolder
+
+              # UI-indicator alleen uit als handmatig koelen ook niet actief is
+              - choose:
+                  - conditions:
+                      - condition: state
+                        entity_id: input_boolean.koelen_actief
+                        state: "off"
+                    sequence:
+                      - action: input_boolean.turn_off
+                        target:
+                          entity_id: input_boolean.status_airco_assist_actief
+
+  - alias: PV koelen — APPLY (bij wijzigingen)
+    mode: restart
+    triggers:
+      - trigger: time_pattern
+        minutes: "/2"
+      - trigger: state
+        entity_id:
+          - input_boolean.pv_koelen_actief
+          - binary_sensor.gratis_stroom_voor_koelen_stabiel
+          - input_number.temp_airco_woonkamer_koelen
+          - input_number.temp_airco_zolder_koelen
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.pv_koelen_actief
+        state: "on"
+
+    actions:
+      - action: script.turn_on
+        target:
+          entity_id: script.pv_koelen_apply_per_ruimte

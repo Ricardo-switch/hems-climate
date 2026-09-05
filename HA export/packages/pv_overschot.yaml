@@ -1,0 +1,95 @@
+###############################################################################
+# PV OVERSCHOT (Stap 1) + STABIELE GRATIS STROOM VOOR KOELEN (Stap 2)
+#
+# Basis:
+# - sensor.p1_meter_power is negatief bij teruglevering (export)
+# - PV overschot = max(0, -p1_meter_power)
+#
+# Stap 2:
+# - Start/Stop drempels + hysterese + 5 min delay_on/off
+###############################################################################
+
+input_number:
+  pv_koelen_start_overschot_w:
+    name: PV koelen start overschot (W)
+    min: 0
+    max: 4000
+    step: 50
+    unit_of_measurement: W
+    mode: slider
+    initial: 800
+
+  pv_koelen_stop_overschot_w:
+    name: PV koelen stop overschot (W)
+    min: 0
+    max: 4000
+    step: 50
+    unit_of_measurement: W
+    mode: slider
+    initial: 300
+
+template:
+  - sensor:
+      # 1) Net import (W) - altijd >= 0
+      - name: Net import (W)
+        unique_id: net_import_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}
+        state: >
+          {% set p1 = states('sensor.p1_meter_power')|float(0) %}
+          {{ p1 if p1 > 0 else 0 }}
+
+      # 2) PV overschot / net export (W) - altijd >= 0
+      - name: PV overschot (W)
+        unique_id: pv_overschot_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}
+        state: >
+          {% set p1 = states('sensor.p1_meter_power')|float(0) %}
+          {{ (-p1) if p1 < 0 else 0 }}
+
+      # 3) Zonnepanelen vermogen (W) (optioneel: inzicht/debug)
+      - name: Zonnepanelen vermogen (W)
+        unique_id: zonnepanelen_vermogen_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        availability: >
+          {{ states('sensor.solaredge_huidig_vermogen') not in ['unknown','unavailable','none'] }}
+        state: >
+          {{ states('sensor.solaredge_huidig_vermogen')|float(0) | round(0) }}
+
+  - binary_sensor:
+      # 4) Simpele "gratis stroom nu" (zonder drempels)
+      - name: Gratis stroom nu
+        unique_id: gratis_stroom_nu
+        availability: >
+          {{ states('sensor.pv_overschot_w') not in ['unknown','unavailable','none'] }}
+        state: >
+          {{ states('sensor.pv_overschot_w')|float(0) > 0 }}
+
+      # 5) Stabiele "gratis stroom voor koelen"
+      #    - hysterese: ON bij start-drempel, OFF bij stop-drempel
+      #    - delay_on/off: moet 5 minuten stabiel blijven om te schakelen
+      - name: Gratis stroom voor koelen (stabiel)
+        unique_id: gratis_stroom_voor_koelen_stabiel
+        availability: >
+          {{ states('sensor.pv_overschot_w') not in ['unknown','unavailable','none'] }}
+        state: >
+          {% set overschot = states('sensor.pv_overschot_w')|float(0) %}
+          {% set start = states('input_number.pv_koelen_start_overschot_w')|float(800) %}
+          {% set stop  = states('input_number.pv_koelen_stop_overschot_w')|float(300) %}
+          {% set was_on = is_state('binary_sensor.gratis_stroom_voor_koelen_stabiel','on') %}
+          {% if was_on %}
+            {{ overschot > stop }}
+          {% else %}
+            {{ overschot > start }}
+          {% endif %}
+        delay_on: "00:05:00"
+        delay_off: "00:05:00"

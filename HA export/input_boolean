@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "input_boolean",
+  "data": {
+    "items": [
+      {
+        "id": "airco_toestaan",
+        "name": "Airco toestaan (Hoofdschakelaar Airco Assist)",
+        "icon": "mdi:light-switch"
+      },
+      {
+        "id": "voorverwarmen_aan",
+        "name": "Voorverwarmen aan schakelaar (Huis opwarmen voor 08:00)",
+        "icon": "mdi:light-switch"
+      },
+      {
+        "id": "nest_regeling_actief",
+        "name": "Nest regeling actief"
+      },
+      {
+        "id": "airco_assist_actief",
+        "name": "Airco assist actief"
+      },
+      {
+        "id": "voorverwarmen_actief",
+        "name": "Voorverwarmen actief"
+      },
+      {
+        "id": "kiosk_mode",
+        "name": "kiosk_mode",
+        "icon": "mdi:page-layout-sidebar-left"
+      },
+      {
+        "id": "failsafe_klimaat_melding_actief",
+        "name": "Rate-limit voor failsafe notificaties (1 per “bad episode”)"
+      },
+      {
+        "id": "airco_assist_start_pending",
+        "name": "Airco Assist startvertraging actief"
+      },
+      {
+        "id": "gratis_pv_verwarmen",
+        "name": "gratis pv verwarmen"
+      },
+      {
+        "id": "pv_verwarmen_actief",
+        "name": "pv verwarmen actief",
+        "icon": "mdi:sun-snowflake"
+      },
+      {
+        "id": "status_pv_actief",
+        "name": "Systeemstatus: PV regeling actief"
+      },
+      {
+        "id": "zomer_modus",
+        "name": "Zomer modus (Visueel dashboard)",
+        "icon": "mdi:white-balance-sunny"
+      },
+      {
+        "id": "droger_auto_gestart",
+        "name": "Droger auto gestart",
+        "icon": "mdi:tumble-dryer"
+      },
+      {
+        "id": "afval_buiten_gezet",
+        "name": "Afval buiten gezet",
+        "icon": "mdi:delete-empty"
+      },
+      {
+        "id": "dim_richting_badkamer",
+        "name": "Dim Richting Badkamer"
+      }
+    ]
+  }
+}

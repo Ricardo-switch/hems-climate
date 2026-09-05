@@ -1,0 +1,31 @@
+- sensor:
+      - name: Airco totaal vermogen (W)
+        unique_id: airco_totaal_vermogen_w
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set wk = states('sensor.air_conditioning_woonkamer_energy_current') | float(0) %}
+          {% set zd = states('sensor.air_conditioning_zolder_energy_current') | float(0) %}
+          {{ (wk + zd) | round(0) }}
+
+      - name: PV overschot (W)
+        unique_id: pv_overschot_w_1
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}"
+        state: >
+          {% set p1 = states('sensor.p1_meter_power') | float(0) %}
+          {% if p1 < 0 %}{{ (p1 * -1) | round(0) }}
+          {% else %}0{% endif %}
+
+      - name: Net import (W)
+        unique_id: net_import_w
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}"
+        state: >
+          {% set p1 = states('sensor.p1_meter_power') | float(0) %}
+          {{ p1 if p1 > 0 else 0 }}

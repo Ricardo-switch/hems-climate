@@ -1,0 +1,46 @@
+template:
+  - sensor:
+      # 1) Totaal actueel airco-verbruik (W)
+      - name: "Airco totaal vermogen (W)"
+        unique_id: airco_totaal_vermogen_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% set w1 = states('sensor.air_conditioning_woonkamer_energy_current')|float(0) %}
+          {% set w2 = states('sensor.air_conditioning_zolder_energy_current')|float(0) %}
+          {{ (w1 + w2) | round(0) }}
+
+      # 2) Gratis airco-vermogen (W) = min(overschot, airco verbruik)
+      - name: "Gratis stroom naar airco (W)"
+        unique_id: gratis_stroom_naar_airco_w
+        unit_of_measurement: "W"
+        device_class: power
+        state_class: measurement
+        state: >-
+          {% set overs = states('sensor.pv_overschot_w')|float(0) %}
+          {% set ac = states('sensor.airco_totaal_vermogen_w')|float(0) %}
+          {% set overs_pos = overs if overs > 0 else 0 %}
+          {{ [overs_pos, ac] | min | round(0) }}
+
+sensor:
+  # 3) Integreren naar kWh (teller)
+  - platform: integration
+    source: sensor.gratis_stroom_naar_airco_w
+    name: Gratis stroom airco energie (kWh)
+    unit_prefix: k
+    round: 3
+    method: trapezoidal
+    unit_time: h
+
+utility_meter:
+  # 4) Dag/maand/jaar meters (optioneel maar handig)
+  gratis_airco_kwh_dag:
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: daily
+  gratis_airco_kwh_maand:
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: monthly
+  gratis_airco_kwh_jaar:
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: yearly

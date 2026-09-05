@@ -1,0 +1,15 @@
+- platform: integration
+    source: sensor.gratis_stroom_naar_airco_w
+    name: Gratis stroom airco energie (kWh)
+    unique_id: gratis_stroom_airco_energie_kwh_integ
+    unit_prefix: k
+    round: 3
+    method: left
+    unit_time: h
+
+utility_meter:
+  gratis_airco_kwh_dag:
+    unique_id: gratis_airco_kwh_dag_meter
+    name: gratis_airco_kwh_dag
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: daily

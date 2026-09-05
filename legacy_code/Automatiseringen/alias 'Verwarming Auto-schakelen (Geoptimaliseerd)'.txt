@@ -1,0 +1,58 @@
+alias 'Verwarming Auto-schakelen (Geoptimaliseerd)'
+description -
+  Schakelt verwarming modus op basis van aanwezigheid met ingebouwde
+  stabilisatie.
+triggers
+  - trigger template
+    id thuiskomst
+    value_template -
+      {{ is_state('person.ricardo_cornelissen', 'home') or
+         is_state('person.shira', 'home') or
+         is_state('binary_sensor.saskia_thuis_gestabiliseerd', 'on') }}
+  - trigger template
+    id vertrek
+    value_template -
+      {{ is_state('person.ricardo_cornelissen', 'not_home') and
+         is_state('person.shira', 'not_home') and
+         is_state('binary_sensor.saskia_thuis_gestabiliseerd', 'off') }}
+    for
+      hours 0
+      minutes 10
+      seconds 0
+conditions []
+actions
+  - choose
+      - conditions
+          - condition trigger
+            id thuiskomst
+          - condition not
+            conditions
+              - condition state
+                entity_id input_select.verwarming_modus
+                state automatisch
+        sequence
+          - action input_select.select_option
+            target
+              entity_id input_select.verwarming_modus
+            data
+              option automatisch
+      - conditions
+          - condition trigger
+            id vertrek
+          - condition not
+            conditions
+              - condition state
+                entity_id input_select.verwarming_modus
+                state vakantie
+          - condition not
+            conditions
+              - condition state
+                entity_id input_select.verwarming_modus
+                state afwezig
+        sequence
+          - action input_select.select_option
+            target
+              entity_id input_select.verwarming_modus
+            data
+              option afwezig
+mode single

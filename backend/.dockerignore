@@ -1,0 +1,11 @@
+# Alles wat niet in de build-context hoort. Houdt het overzetten naar de NAS
+# snel en voorkomt dat er per ongeluk een .env of een logboek in het image komt.
+node_modules
+dist
+data
+.env
+*.log
+scripts
+tools
+*.bat
+README.md

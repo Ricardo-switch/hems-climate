@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "minor_version": 2,
+  "key": "input_select",
+  "data": {
+    "items": [
+      {
+        "id": "verwarming_modus",
+        "name": "Verwarming modus (Automatisch, Handmatig, Vakantie)",
+        "options": [
+          "automatisch",
+          "dag",
+          "nacht",
+          "voorverwarmen",
+          "afwezig",
+          "koelen",
+          "vakantie"
+        ]
+      },
+      {
+        "id": "verwarming_modus_actief",
+        "name": "Verwarming modus (actief)",
+        "options": [
+          "dag",
+          "voorverwarmen",
+          "koelen",
+          "nacht",
+          "afwezig",
+          "vakantie"
+        ]
+      },
+      {
+        "id": "koel_strategie",
+        "name": "Koel strategie",
+        "icon": "mdi:strategy",
+        "options": [
+          "Pv koelen",
+          "Automatisch koelen",
+          "Handmatig koelen",
+          "Uit "
+        ]
+      }
+    ]
+  }
+}

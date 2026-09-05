@@ -1,0 +1,226 @@
+###############################################################################
+# HANDMATIG KOELEN (Modus: koelen) — met aparte setpoints
+###############################################################################
+
+input_boolean:
+  koelen_actief:
+    name: Koelen actief (handmatig)
+    icon: mdi:snowflake
+
+input_number:
+  temp_airco_woonkamer_koelen:
+    name: Airco woonkamer (koelen) doeltemp
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 22.0
+
+  temp_airco_woonkamer_koelen_standaard:
+    name: Airco woonkamer (koelen) standaard
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+    initial: 22.0
+
+  temp_airco_zolder_koelen:
+    name: Airco zolder (koelen) doeltemp
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 22.5
+
+  temp_airco_zolder_koelen_standaard:
+    name: Airco zolder (koelen) standaard
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+    initial: 22.5
+
+  # (niet in UI, maar wel bruikbaar)
+  koelen_hyst_on:
+    name: Koelen hysterese aan (°C)
+    min: 0.1
+    max: 1.0
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 0.3
+
+  koelen_hyst_off:
+    name: Koelen hysterese uit (°C)
+    min: 0.1
+    max: 1.0
+    step: 0.1
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 0.2
+
+script:
+  koelen_apply_per_ruimte:
+    alias: Koelen — apply per ruimte
+    description: >
+      Stuurt woonkamer en zolder onafhankelijk in koelmodus op basis van
+      setpoints + hysterese. Zet airco per ruimte aan/uit.
+    mode: restart
+    sequence:
+      - condition: state
+        entity_id: input_boolean.koelen_actief
+        state: "on"
+
+      - variables:
+          set_living: "{{ states('input_number.temp_airco_woonkamer_koelen')|float(22.0) }}"
+          set_attic: "{{ states('input_number.temp_airco_zolder_koelen')|float(22.5) }}"
+          tol_on: "{{ states('input_number.koelen_hyst_on')|float(0.3) }}"
+          tol_off: "{{ states('input_number.koelen_hyst_off')|float(0.2) }}"
+
+          # Temperatuurbronnen
+          t_living: "{{ state_attr('climate.beneden','current_temperature')|float(0) }}"
+          t_attic: "{{ states('sensor.hue_motion_sensor_zolder_temperatuur')|float(0) }}"
+
+          ac_living: climate.air_conditioning_woonkamer
+          ac_attic: climate.air_conditioning_zolder
+          living_on: "{{ states(ac_living) != 'off' }}"
+          attic_on: "{{ states(ac_attic) != 'off' }}"
+
+          # Schakel-logica per ruimte
+          living_should_on: "{{ t_living > (set_living + tol_on) }}"
+          living_should_off: "{{ t_living < (set_living - tol_off) }}"
+          attic_should_on: "{{ t_attic > (set_attic + tol_on) }}"
+          attic_should_off: "{{ t_attic < (set_attic - tol_off) }}"
+
+      # ---- Woonkamer ----
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ living_should_on }}"
+            sequence:
+              - action: climate.set_hvac_mode
+                target:
+                  entity_id: "{{ ac_living }}"
+                data:
+                  hvac_mode: cool
+              - action: climate.set_temperature
+                target:
+                  entity_id: "{{ ac_living }}"
+                data:
+                  temperature: "{{ set_living }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ living_on and living_should_off }}"
+            sequence:
+              - action: climate.turn_off
+                target:
+                  entity_id: "{{ ac_living }}"
+
+      # ---- Zolder ----
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ attic_should_on }}"
+            sequence:
+              - action: climate.set_hvac_mode
+                target:
+                  entity_id: "{{ ac_attic }}"
+                data:
+                  hvac_mode: cool
+              - action: climate.set_temperature
+                target:
+                  entity_id: "{{ ac_attic }}"
+                data:
+                  temperature: "{{ set_attic }}"
+          - conditions:
+              - condition: template
+                value_template: "{{ attic_on and attic_should_off }}"
+            sequence:
+              - action: climate.turn_off
+                target:
+                  entity_id: "{{ ac_attic }}"
+
+automation:
+  - alias: Koelen modus — START/STOP
+    description: Zet koelen_actief aan/uit obv modus en guards.
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id:
+          - input_select.verwarming_modus_actief
+          - input_select.verwarming_modus
+          - input_boolean.airco_toestaan
+
+    actions:
+      - variables:
+          actief: "{{ states('input_select.verwarming_modus_actief') }}"
+          vakantie: "{{ states('input_select.verwarming_modus') == 'vakantie' or actief == 'vakantie' }}"
+          nacht: "{{ actief == 'nacht' }}"
+          toegestaan: "{{ is_state('input_boolean.airco_toestaan','on') }}"
+          moet_koelen: "{{ (actief == 'koelen') and toegestaan and (not vakantie) and (not nacht) }}"
+
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ moet_koelen }}"
+            sequence:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id:
+                    - input_boolean.koelen_actief
+                    - input_boolean.status_airco_assist_actief  # UI-indicator
+              - action: script.turn_on
+                target:
+                  entity_id: script.koelen_apply_per_ruimte
+
+          - conditions:
+              - condition: template
+                value_template: "{{ not moet_koelen }}"
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.koelen_actief
+              - action: climate.turn_off
+                target:
+                  entity_id:
+                    - climate.air_conditioning_woonkamer
+                    - climate.air_conditioning_zolder
+
+              # UI-indicator alleen uitzetten als PV-koelen ook niet actief is
+              - choose:
+                  - conditions:
+                      - condition: state
+                        entity_id: input_boolean.pv_koelen_actief
+                        state: "off"
+                    sequence:
+                      - action: input_boolean.turn_off
+                        target:
+                          entity_id: input_boolean.status_airco_assist_actief
+
+  - alias: Koelen modus — APPLY (bij wijzigingen)
+    description: Past koeling toe zolang koelen_actief aan staat.
+    mode: restart
+    triggers:
+      - trigger: time_pattern
+        minutes: "/2"
+      - trigger: state
+        entity_id:
+          - input_boolean.koelen_actief
+          - input_number.temp_airco_woonkamer_koelen
+          - input_number.temp_airco_zolder_koelen
+          - sensor.hue_motion_sensor_zolder_temperatuur
+          - climate.beneden
+
+    conditions:
+      - condition: state
+        entity_id: input_boolean.koelen_actief
+        state: "on"
+
+    actions:
+      - action: script.turn_on
+        target:
+          entity_id: script.koelen_apply_per_ruimte

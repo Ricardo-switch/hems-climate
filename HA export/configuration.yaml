@@ -1,0 +1,515 @@
+# Home Assistant configuration.yaml
+# Alles zonder packages; automations/scripts blijven UI-bewerkbaar.
+
+default_config:
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+input_number:
+  temp_airco_woonkamer_koelen:
+    name: Airco woonkamer (koelen) doeltemp
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 22.0
+  temp_airco_woonkamer_koelen_standaard:
+    name: Airco woonkamer (koelen) standaard
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+    initial: 22.0
+  temp_airco_zolder_koelen:
+    name: Airco zolder (koelen) doeltemp
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: slider
+    initial: 22.5
+  temp_airco_zolder_koelen_standaard:
+    name: Airco zolder (koelen) standaard
+    min: 18
+    max: 26
+    step: 0.5
+    unit_of_measurement: "°C"
+    mode: box
+    initial: 22.5
+
+  pv_klimaat_start_overschot_w:
+    name: PV Klimaat start overschot (W)
+    min: 0
+    max: 4000
+    step: 50
+    unit_of_measurement: "W"
+    mode: slider
+    initial: 1000
+  pv_klimaat_stop_import_w:
+    name: PV Klimaat stop import (W)
+    min: 0
+    max: 1000
+    step: 10
+    unit_of_measurement: "W"
+    mode: slider
+    initial: 50
+
+command_line:
+  - sensor:
+      name: Neerslag_Buienalarm_Regen_Data
+      unique_id: neerslag_buienalarm_regen_data_sensor
+      command: >
+        python3 -c "import requests, json, random;
+        dataRequest = requests.get('https://cdn-secure.buienalarm.nl/api/3.4/forecast.php?lat=51.9093838&lon=5.8297673&region=nl&c='+str(random.randint(0,999999999999999))).text;
+        dataRequest = dataRequest.replace('\r\n',' ');
+        data = '{\"data\":'+dataRequest+'}';
+        print(data);"
+      json_attributes:
+        - data
+      value_template: "{{ now() }}"
+      scan_interval: 240
+
+  - sensor:
+      name: Neerslag_Buienradar_Regen_Data
+      unique_id: neerslag_buienradar_regen_data_sensor
+      command: >
+        python3 -c "import requests, json, random;
+        dataRequest = requests.get('https://gpsgadget.buienradar.nl/data/raintext?lat=51.9093838&lon=5.8297673&c='+str(random.randint(0,999999999999999))).text;
+        dataRequest = dataRequest.replace('\r\n',' ');
+        data = '{\"data\":\"'+dataRequest+'\"}';
+        print(data);"
+      json_attributes:
+        - data
+      value_template: "{{ now() }}"
+      scan_interval: 240
+
+sensor:
+  # Let op: time_date ondersteunt geen unique_id vanuit Home Assistant
+  - platform: time_date
+    display_options:
+      - time
+      - date
+      - date_time
+      - date_time_utc
+      - date_time_iso
+      - time_date
+      - time_utc
+
+  - platform: integration
+    source: sensor.air_conditioning_woonkamer_energy_current
+    name: Airconditioning Woonkamer Energie (kWh)
+    unique_id: airconditioning_woonkamer_energie_kwh_integ
+    unit_prefix: k
+    round: 2
+    method: trapezoidal
+    unit_time: h
+
+  - platform: integration
+    source: sensor.air_conditioning_zolder_energy_current
+    name: Airconditioning Zolder Energie (kWh)
+    unique_id: airconditioning_zolder_energie_kwh_integ
+    unit_prefix: k
+    round: 2
+    method: trapezoidal
+    unit_time: h
+
+  - platform: integration
+    source: sensor.gratis_stroom_naar_airco_w
+    name: Gratis stroom airco energie (kWh)
+    unique_id: gratis_stroom_airco_energie_kwh_integ
+    unit_prefix: k
+    round: 3
+    method: left
+    unit_time: h
+
+utility_meter:
+  gratis_airco_kwh_dag:
+    unique_id: gratis_airco_kwh_dag_meter
+    name: gratis_airco_kwh_dag
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: daily
+  gratis_airco_kwh_maand:
+    unique_id: gratis_airco_kwh_maand_meter
+    name: gratis_airco_kwh_maand
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: monthly
+  gratis_airco_kwh_jaar:
+    unique_id: gratis_airco_kwh_jaar_meter
+    name: gratis_airco_kwh_jaar
+    source: sensor.gratis_stroom_airco_energie_kwh
+    cycle: yearly
+
+template:
+  # --- 1. DE AGENDA SENSOR ---
+  - trigger:
+      - platform: time_pattern
+        minutes: "/15"
+      - platform: homeassistant
+        event: start
+    action:
+      - service: calendar.get_events
+        target:
+          entity_id:
+            - calendar.gezin
+            - calendar.ric060589_gmail_com
+            - calendar.shiradejong_gmail_com
+            - calendar.feestdagen_in_nederland
+            - calendar.formula_1
+            - calendar.birthdays
+        data:
+          start_date_time: "{{ today_at('00:00:00') }}"
+          end_date_time: "{{ (today_at('23:59:59') + timedelta(days=1)) }}"
+        response_variable: agenda_events
+    sensor:
+      - name: "Agenda en Werk Data"
+        unique_id: agenda_werk_data_geoptimaliseerd
+        state: "{{ now().isoformat() }}"
+        attributes:
+          events_today: >
+            {% set ns = namespace(events=[]) %}
+            {% if agenda_events is defined %}
+              {% for cal_id, cal_data in agenda_events.items() %}
+                {% if cal_data.events is defined %}
+                  {% for event in cal_data.events %}
+                    {% set title = event.summary | default('Afspraak') %}
+                    {% set title_lower = title | lower %}
+                    {% set is_speciaal = false %}
+                    {% set is_vandaag = (as_timestamp(event.start) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d')) %}
+                    
+                    {% if 'vroege dienst' in title_lower or 'late dienst' in title_lower or 'weekenddienst' in title_lower or 'springdag' in title_lower or ('werken' in title_lower and cal_id == 'calendar.shiradejong_gmail_com') or 'formula 1' in title_lower or 'formule 1' in title_lower %}
+                      {% set is_speciaal = true %}
+                    {% endif %}
+                    
+                    {% if not is_speciaal and is_vandaag %}
+                      {% set is_verstreken = false %}
+                      {% if not event.get('all_day', false) and event.end is defined %}
+                        {% if as_timestamp(event.end) < as_timestamp(now()) %}
+                          {% set is_verstreken = true %}
+                        {% endif %}
+                      {% endif %}
+                      {% if not is_verstreken %}
+                        {% if event.get('all_day', false) %}
+                          {% set display_str = title ~ ' (Hele dag)' %}
+                        {% else %}
+                          {% set start_time = as_timestamp(event.start) | timestamp_custom('%H:%M') %}
+                          {% set display_str = start_time ~ ' - ' ~ title %}
+                        {% endif %}
+                        {% if display_str not in ns.events %}
+                          {% set ns.events = ns.events + [display_str] %}
+                        {% endif %}
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.events | sort | list }}
+          werk_dienst: >
+            {% set ns = namespace(dienst='') %}
+            {% if agenda_events is defined %}
+              {% for cal_id, cal_data in agenda_events.items() %}
+                {% if cal_data.events is defined %}
+                  {% for event in cal_data.events %}
+                    {% if as_timestamp(event.start) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') %}
+                      {% set title_lower = (event.summary | default('')) | lower %}
+                      {% if 'vroege dienst' in title_lower %}{% set ns.dienst = 'vroege dienst' %}
+                      {% elif 'late dienst' in title_lower %}{% set ns.dienst = 'late dienst' %}
+                      {% elif 'weekenddienst' in title_lower %}{% set ns.dienst = 'weekenddienst' %}{% endif %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.dienst }}
+          shira_werkt: >
+            {% set ns = namespace(werkt=false) %}
+            {% if agenda_events is defined and agenda_events['calendar.shiradejong_gmail_com'] is defined %}
+              {% for event in agenda_events['calendar.shiradejong_gmail_com'].events %}
+                 {% if as_timestamp(event.start) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') and 'werken' in (event.summary | default('')) | lower %}
+                    {% set ns.werkt = true %}
+                 {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.werkt }}
+          ricardo_springdag: >
+            {% set ns = namespace(spring=false) %}
+            {% if agenda_events is defined %}
+              {% for cal_id, cal_data in agenda_events.items() %}
+                {% if cal_data.events is defined %}
+                  {% for event in cal_data.events %}
+                     {% if as_timestamp(event.start) | timestamp_custom('%Y-%m-%d') == now().strftime('%Y-%m-%d') and 'springdag' in (event.summary | default('')) | lower %}
+                        {% set ns.spring = true %}
+                     {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            {{ ns.spring }}
+          f1_events: >
+            {% set ns = namespace(morgen=[], vandaag=[], loc='') %}
+            {% if agenda_events is defined %}
+              {% for cal_id, cal_data in agenda_events.items() %}
+                {% if cal_data.events is defined %}
+                  {% for event in cal_data.events %}
+                    {% set title = event.summary | default('') %}
+                    {% set title_lower = title | lower %}
+                    {% if 'formula 1' in title_lower or 'formule 1' in title_lower %}
+                      {% set start_ts = as_timestamp(event.start) %}
+                      {% set event_date = start_ts | timestamp_custom('%Y-%m-%d') %}
+                      {% set is_vandaag = (event_date == now().strftime('%Y-%m-%d')) %}
+                      {% set is_morgen = (event_date == (now() + timedelta(days=1)).strftime('%Y-%m-%d')) %}
+                      {% set is_verstreken = false %}
+                      {% if not event.get('all_day', false) and event.end is defined %}
+                        {% if as_timestamp(event.end) < as_timestamp(now()) %}{% set is_verstreken = true %}{% endif %}
+                      {% endif %}
+                      {% if not is_verstreken and (is_vandaag or is_morgen) %}
+                        {% set sessie = title.split('-') | last | trim | replace('Practice', 'Vrije Training') | replace('Qualifying', 'Kwalificatie') %}
+                        {% set loc = event.location | default('') %}
+                        {% if loc != '' %}{% set ns.loc = loc %}{% endif %}
+                        {% set tijd = start_ts | timestamp_custom('%H:%M') %}
+                        {% set sessie_str = sessie ~ ' (' ~ tijd ~ ')' %}
+                        {% if is_vandaag %}
+                          {% set ns.vandaag = ns.vandaag + [sessie_str] %}
+                        {% elif is_morgen %}
+                          {% set ns.morgen = ns.morgen + [sessie_str] %}
+                        {% endif %}
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+            
+            {% set loc_str = ' in ' ~ ns.loc if ns.loc != '' else '' %}
+            {% set result = [] %}
+            
+            {% if ns.vandaag | length > 0 %}
+              {% set result = result + ['&nbsp;&nbsp;&nbsp;&nbsp;• <b>Vandaag:</b> ' ~ (ns.vandaag | join(' & '))] %}
+            {% endif %}
+            {% if ns.morgen | length > 0 %}
+              {% set result = result + ['&nbsp;&nbsp;&nbsp;&nbsp;• <b>Morgen:</b> ' ~ (ns.morgen | join(' & '))] %}
+            {% endif %}
+            
+            {% if result | length > 0 %}
+              {{ ['🏎️ <b>Formule 1' ~ loc_str ~ ':</b><br>' ~ (result | join('<br>'))] | list }}
+            {% else %}
+              {{ [] | list }}
+            {% endif %}
+
+  # --- 2. DE TO DO LIJST SENSOR ---
+  - trigger:
+      - platform: state
+        entity_id: todo.to_do
+      - platform: homeassistant
+        event: start
+    action:
+      - action: todo.get_items
+        target:
+          entity_id: todo.to_do
+        data:
+          status: needs_action
+        response_variable: my_todos
+    sensor:
+      - name: "To Do Lijst Items"
+        unique_id: to_do_lijst_items_voor_dashboard
+        state: "{{ my_todos['todo.to_do']['items'] | length }}"
+        attributes:
+          taken_lijst: >
+            {{ my_todos['todo.to_do']['items'] | map(attribute='summary') | list }}
+
+  - binary_sensor:
+      - name: Saskia thuis (gestabiliseerd)
+        unique_id: saskia_thuis_gestabiliseerd
+        device_class: presence
+        state: "{{ is_state('person.saskia','home') }}"
+        delay_on: "00:02:00"
+        delay_off: "00:07:00"
+        
+  - binary_sensor:
+      - name: Rob thuis (gestabiliseerd)
+        unique_id: Rob_thuis_gestabiliseerd
+        device_class: presence
+        state: "{{ is_state('person.rob','home') }}"
+        delay_on: "00:02:00"
+        delay_off: "00:07:00"
+        
+  - binary_sensor:
+      - name: Dini thuis (gestabiliseerd)
+        unique_id: Dini_thuis_gestabiliseerd
+        device_class: presence
+        state: "{{ is_state('person.dini','home') }}"
+        delay_on: "00:02:00"
+        delay_off: "00:07:00"
+        
+      - name: Setpoints afwijkend van standaard
+        unique_id: setpoints_afwijkend_van_standaard
+        icon: mdi:alert-circle-outline
+        state: >
+          {% set pairs = [
+            ('input_number.temp_airco_woonkamer','input_number.temp_airco_woonkamer_standaard'),
+            ('input_number.temp_airco_zolder','input_number.temp_airco_zolder_standaard'),
+            ('input_number.temp_airco_woonkamer_koelen','input_number.temp_airco_woonkamer_koelen_standaard'),
+            ('input_number.temp_airco_zolder_koelen','input_number.temp_airco_zolder_koelen_standaard'),
+            ('input_number.temp_nest_dag','input_number.temp_nest_dag_standaard'),
+            ('input_number.temp_nest_eco','input_number.temp_nest_eco_standaard'),
+            ('input_number.temp_nest_voorwarm','input_number.temp_nest_voorwarm_standaard'),
+            ('input_number.badkamer_heat_off_temp_dag','input_number.badkamer_heat_off_temp_dag_standaard')
+          ] %}
+          {% set ns = namespace(diff=false) %}
+          {% for cur_id, std_id in pairs %}
+            {% set cur = states(cur_id) | float(none) %}{% set std = states(std_id) | float(none) %}
+            {% if cur is number and std is number and (cur - std) | abs > 0.01 %}{% set ns.diff = true %}{% endif %}
+          {% endfor %}
+      
+          {{ ns.diff }}
+          
+      - name: Airco temps tijdelijk aangepast
+        unique_id: airco_temps_tijdelijk_aangepast
+        state: >
+          {% set pairs = [
+            ('input_number.temp_airco_woonkamer','input_number.temp_airco_woonkamer_standaard'),
+            ('input_number.temp_airco_zolder','input_number.temp_airco_zolder_standaard'),
+            ('input_number.temp_airco_woonkamer_koelen','input_number.temp_airco_woonkamer_koelen_standaard'),
+            ('input_number.temp_airco_zolder_koelen','input_number.temp_airco_zolder_koelen_standaard')
+          ] %}
+          {% set ns = namespace(diff=false) %}
+          {% for cur_id, std_id in pairs %}
+            {% set cur = states(cur_id) | float(none) %}{% set std = states(std_id) | float(none) %}
+            {% if cur is number and std is number and (cur - std) | abs > 0.01 %}{% set ns.diff = true %}{% endif %}
+          {% endfor %}
+          {{ ns.diff }}
+        icon: >
+          {% if is_state('binary_sensor.airco_temps_tijdelijk_aangepast','on') %}mdi:progress-alert
+          {% else %}mdi:progress-check{% endif %}
+
+  - sensor:
+      - name: Airco totaal vermogen (W)
+        unique_id: airco_totaal_vermogen_w
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set wk = states('sensor.air_conditioning_woonkamer_energy_current') | float(0) %}
+          {% set zd = states('sensor.air_conditioning_zolder_energy_current') | float(0) %}
+          {{ (wk + zd) | round(0) }}
+
+      - name: Entree temperatuur
+        unique_id: entree_temperatuur_1_decimaal
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: >
+          {% set v = states('sensor.bewegingssensor_entree_temperatuur') %}
+          {% if v not in ['unknown','unavailable',''] %}{{ (v | float) | round(1) }}
+          {% else %}{{ none }}{% endif %}
+
+      - name: Verwarming – uitleg
+        unique_id: verwarming_uitleg
+        state: >
+          {% set keuze = states('input_select.verwarming_modus') %}
+          {% set actief = states('input_select.verwarming_modus_actief') %}
+          {% set thuis = is_state('person.ricardo_cornelissen','home') or is_state('person.shira','home') %}
+          {% if keuze != 'automatisch' %}Handmatig: {{ keuze }} (actief: {{ actief }}). Reset naar automatisch bij thuiskomst of om 22:00.
+          {% else %}
+            Automatisch: {{ actief }}
+            {% if actief == 'afwezig' %}(niemand thuis)
+            {% elif actief == 'nacht' %}(nachtvenster)
+            {% elif actief == 'voorverwarmen' %}(06:00-08:00 en voorverwarmen aan)
+            {% elif actief == 'dag' %}({% if thuis %}iemand thuis{% else %}niemand thuis{% endif %}, dagvenster)
+            {% endif %}
+          {% endif %}
+        icon: >
+          {% set actief = states('input_select.verwarming_modus_actief') %}
+          {% if actief == 'afwezig' %} mdi:car-outline
+          {% elif actief == 'nacht' %} mdi:weather-night
+          {% elif actief == 'voorverwarmen' %} mdi:fire
+          {% else %} mdi:white-balance-sunny{% endif %}
+
+      - name: Airconditioning totaal energie
+        unique_id: airco_totaal_energie
+        unit_of_measurement: kWh
+        state_class: total_increasing
+        device_class: energy
+        state: >
+          {% set woonkamer = states('sensor.airconditioning_woonkamer_energie_kwh') | float(0) %}
+          {% set zolder = states('sensor.airconditioning_zolder_energie_kwh') | float(0) %}
+          {{ (woonkamer + zolder) | round(2) }}
+
+      - name: PV overschot (W)
+        unique_id: pv_overschot_w_1
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}"
+        state: >
+          {% set p1 = states('sensor.p1_meter_power') | float(0) %}
+          {% if p1 < 0 %}{{ (p1 * -1) | round(0) }}
+          {% else %}0{% endif %}
+
+      - name: Gratis stroom naar airco (W)
+        unique_id: gratis_stroom_naar_airco_w
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        state: >
+          {% set ac = states('sensor.airco_totaal_vermogen_w') | float(0) %}
+          {% set import = states('sensor.net_import_w') | float(0) %}
+      
+          {# Bereken gratis deel: verbruik minus wat we inkopen #}
+          {% set gratis = ac - import %}
+      
+          {# Als de uitkomst negatief is, maken we er 0 van #}
+          {{ [gratis, 0] | max | round(0) }}
+
+      - name: Net import (W)
+        unique_id: net_import_w
+        unit_of_measurement: W
+        device_class: power
+        state_class: measurement
+        availability: "{{ states('sensor.p1_meter_power') not in ['unknown','unavailable','none'] }}"
+        state: >
+          {% set p1 = states('sensor.p1_meter_power') | float(0) %}
+          {{ p1 if p1 > 0 else 0 }}
+
+customize_glob:
+  # Standaard scènes vertaling en plaatjes
+  "scene.*energie":
+    entity_picture: /local/hue_scene_icons/energize.png
+    friendly_name: "Energie"
+  "scene.*lezen":
+    entity_picture: /local/hue_scene_icons/read.png
+    friendly_name: "Lezen"
+  "scene.*concentreren":
+    entity_picture: /local/hue_scene_icons/concentrate.png
+    friendly_name: "Concentreren"
+  "scene.*ontspannen":
+    entity_picture: /local/hue_scene_icons/relax.png
+    friendly_name: "Ontspannen"
+  "scene.*helder":
+    entity_picture: /local/hue_scene_icons/bright.png
+    friendly_name: "Helder"
+  "scene.*gedimd":
+    entity_picture: /local/hue_scene_icons/dimmed.png
+    friendly_name: "Gedimd"
+  "scene.*nachtlampje":
+    entity_picture: /local/hue_scene_icons/nightlight.png
+    friendly_name: "Nachtlampje"
+  "scene.*dromerige_schemering":
+    entity_picture: /local/hue_scene_icons/dreamy_dusk.png
+    friendly_name: "Dromerige schemering"
+  "scene.*natuurlijk_licht":
+    entity_picture: /local/hue_scene_icons/first_light.png
+    friendly_name: "Natuurlijk licht"
+    
+    wake_on_lan:
+
+switch:
+  - platform: wake_on_lan
+    mac: "a0:ad:9f:bf:09:ea"
+    name: "PC THUIS"
+    host: "192.168.67.30"
+    

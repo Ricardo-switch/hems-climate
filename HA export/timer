@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "timer",
+  "data": {
+    "items": [
+      {
+        "id": "timer_zolder_licht",
+        "name": "zolder licht",
+        "duration": "0:00:00",
+        "restore": false
+      },
+      {
+        "id": "verwarming_handmatig",
+        "name": "Verwarming handmatig",
+        "duration": "2:00:00",
+        "restore": false
+      },
+      {
+        "id": "airco_assist_min_on",
+        "name": "Minimum-aan-tijd airco assist",
+        "duration": "0:00:00",
+        "restore": true
+      },
+      {
+        "id": "airco_assist_start_delay",
+        "duration": "0:05:00",
+        "name": "Timer airco vertraging",
+        "icon": "mdi:timer",
+        "restore": true
+      },
+      {
+        "id": "timer_pv_stabilisatie",
+        "name": "Timer PV Stabilisatie",
+        "duration": "0:05:00",
+        "restore": true
+      }
+    ]
+  }
+}

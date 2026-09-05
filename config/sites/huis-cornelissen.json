@@ -1,0 +1,264 @@
+{
+  "schemaVersion": 1,
+  "id": "huis-cornelissen",
+  "timezone": "Europe/Amsterdam",
+  "defaultAdapter": "homeassistant",
+  "power": {
+    "gridPower": "sensor.p1_meter_power",
+    "startSurplusW": 1000,
+    "stopImportW": 50,
+    "resumeSurplusW": 600,
+    "stabilisationMinutes": 5
+  },
+  "schedule": {
+    "preheatFromHour": 6,
+    "dayFromHour": 8,
+    "nightFromHour": 22,
+    "eveningExtensionLights": [
+      "light.sfeerverlichting",
+      "light.woonkamer_plafonniere"
+    ]
+  },
+  "occupancy": [
+    {
+      "id": "ricardo",
+      "ref": "person.ricardo_cornelissen"
+    },
+    {
+      "id": "shira",
+      "ref": "person.shira"
+    },
+    {
+      "id": "saskia",
+      "ref": "binary_sensor.saskia_thuis_gestabiliseerd"
+    },
+    {
+      "id": "rob",
+      "ref": "binary_sensor.rob_thuis_gestabiliseerd"
+    },
+    {
+      "id": "dini",
+      "ref": "binary_sensor.dini_thuis_gestabiliseerd"
+    }
+  ],
+  "actuators": [
+    {
+      "id": "nest",
+      "name": "Nest (beneden)",
+      "ref": "climate.beneden",
+      "role": "primary",
+      "capabilities": {
+        "canHeat": true,
+        "canCool": false,
+        "setpointRange": [
+          12,
+          24
+        ]
+      },
+      "power": {
+        "estimatedW": 0
+      },
+      "timing": {
+        "minRunMinutes": 10,
+        "minRestMinutes": 5,
+        "settleMinutes": 2
+      }
+    },
+    {
+      "id": "badkamer",
+      "name": "Thermostaat badkamer",
+      "ref": "climate.thermostaat_badkamer",
+      "role": "primary",
+      "capabilities": {
+        "canHeat": true,
+        "canCool": false,
+        "setpointRange": [
+          16,
+          22
+        ]
+      },
+      "power": {
+        "estimatedW": 0
+      },
+      "timing": {
+        "minRunMinutes": 10,
+        "minRestMinutes": 5,
+        "settleMinutes": 2
+      }
+    },
+    {
+      "id": "ac-woonkamer",
+      "name": "Airco woonkamer",
+      "ref": "climate.air_conditioning_woonkamer",
+      "role": "assist",
+      "capabilities": {
+        "canHeat": true,
+        "canCool": true,
+        "setpointRange": [
+          16,
+          30
+        ],
+        "standby": {
+          "heat": 18,
+          "cool": 25
+        }
+      },
+      "power": {
+        "sensor": "sensor.air_conditioning_woonkamer_energy_current",
+        "estimatedW": 900
+      },
+      "timing": {
+        "minRunMinutes": 15,
+        "minRestMinutes": 5,
+        "settleMinutes": 3
+      }
+    },
+    {
+      "id": "ac-zolder",
+      "name": "Airco zolder",
+      "ref": "climate.air_conditioning_zolder",
+      "role": "assist",
+      "capabilities": {
+        "canHeat": true,
+        "canCool": true,
+        "setpointRange": [
+          16,
+          30
+        ],
+        "standby": {
+          "heat": 18,
+          "cool": 25
+        }
+      },
+      "power": {
+        "sensor": "sensor.air_conditioning_zolder_energy_current",
+        "estimatedW": 750
+      },
+      "timing": {
+        "minRunMinutes": 15,
+        "minRestMinutes": 5,
+        "settleMinutes": 3
+      }
+    }
+  ],
+  "zones": [
+    {
+      "id": "woonkamer",
+      "name": "Woonkamer",
+      "temperature": "sensor.beneden_temperatuur",
+      "humidity": "sensor.beneden_luchtvochtigheid",
+      "actuatorIds": [
+        "nest",
+        "ac-woonkamer"
+      ],
+      "priority": 1,
+      "thermalMass": "high",
+      "hysteresis": {
+        "onDelta": 0.3,
+        "offDelta": 0.2
+      },
+      "buffering": {
+        "enabled": true,
+        "bandC": 1
+      },
+      "setpoints": {
+        "dag": {
+          "heat": 20,
+          "cool": 22
+        },
+        "nacht": {},
+        "voorverwarmen": {
+          "heat": 19
+        },
+        "afwezig": {
+          "heat": 16,
+          "cool": 22
+        },
+        "vakantie": {
+          "heat": 12
+        },
+        "handmatig": {}
+      }
+    },
+    {
+      "id": "badkamer",
+      "name": "Badkamer",
+      "temperature": "sensor.badkamer_huidige_temperatuur",
+      "actuatorIds": [
+        "badkamer"
+      ],
+      "priority": 2,
+      "thermalMass": "low",
+      "hysteresis": {
+        "onDelta": 0.3,
+        "offDelta": 0.2
+      },
+      "buffering": {
+        "enabled": false,
+        "bandC": 0
+      },
+      "setpoints": {
+        "dag": {
+          "heat": 18
+        },
+        "nacht": {
+          "heat": 16
+        },
+        "voorverwarmen": {
+          "heat": 18
+        },
+        "afwezig": {},
+        "vakantie": {},
+        "handmatig": {}
+      }
+    },
+    {
+      "id": "zolder",
+      "name": "Zolder",
+      "temperature": "sensor.hue_motion_sensor_zolder_temperatuur",
+      "actuatorIds": [
+        "ac-zolder"
+      ],
+      "priority": 3,
+      "thermalMass": "low",
+      "hysteresis": {
+        "onDelta": 0,
+        "offDelta": 0.5
+      },
+      "buffering": {
+        "enabled": true,
+        "bandC": 1
+      },
+      "setpoints": {
+        "dag": {
+          "heat": 18,
+          "cool": 22.5
+        },
+        "nacht": {},
+        "voorverwarmen": {
+          "heat": 18
+        },
+        "afwezig": {
+          "cool": 22.5
+        },
+        "vakantie": {},
+        "handmatig": {}
+      }
+    }
+  ],
+  "enabledStrategies": [
+    "comfort",
+    "heat-assist",
+    "pv-surplus"
+  ],
+  "criticalInputs": [
+    "climate.beneden",
+    "climate.air_conditioning_woonkamer",
+    "climate.air_conditioning_zolder",
+    "sensor.hue_motion_sensor_zolder_temperatuur",
+    "sensor.p1_meter_power"
+  ],
+  "migration": {
+    "legacyExplanation": "sensor.airco_assist_reden"
+  }
+}

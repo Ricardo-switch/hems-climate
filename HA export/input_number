@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "input_number",
+  "data": {
+    "items": [
+      {
+        "id": "nest_voorverwarmen",
+        "min": 17.0,
+        "max": 22.0,
+        "name": "Nest voorverwarmen",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "nest_eco",
+        "min": 15.0,
+        "max": 20.0,
+        "name": "Nest eco",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "airco_woonkamer",
+        "min": 18.0,
+        "max": 24.0,
+        "name": "Airco woonkamer (verwarmen) doeltemp",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "airco_zolder",
+        "min": 17.0,
+        "max": 22.0,
+        "name": "Airco zolder (verwarmen) doeltemp",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "nest_dagtemperatuur",
+        "min": 15.0,
+        "max": 22.0,
+        "name": "Nest dagtemperatuur",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "badkamer_comfort_max_uit_temp",
+        "min": 17.0,
+        "max": 22.0,
+        "name": "Badkamer comfort (max / uit-temp)",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "standaard_airco_woonkamer",
+        "min": 16.0,
+        "max": 26.0,
+        "name": "Airco woonkamer (verwarmen) standaard",
+        "step": 0.5,
+        "unit_of_measurement": "°C",
+        "mode": "slider"
+      },
+      {
+        "id": "standaard_airco_zolder",
+        "min": 16.0,
+        "max": 26.0,
+        "name": "Airco Zolder (Verwarmen) standaard",
+        "step": 0.5,
+        "unit_of_measurement": "°C",
+        "mode": "slider"
+      },
+      {
+        "id": "airco_assist_start_na_min",
+        "min": 0.0,
+        "max": 60.0,
+        "name": "Minuten continu Nest-heating vóór airco assist start",
+        "step": 1.0,
+        "mode": "slider"
+      },
+      {
+        "id": "airco_assist_min_on_min",
+        "min": 0.0,
+        "max": 180.0,
+        "name": "Minimum-aan-tijd airco assist (minuten)",
+        "step": 1.0,
+        "mode": "slider"
+      },
+      {
+        "id": "airco_assist_delta_min",
+        "min": 0.0,
+        "max": 3.0,
+        "step": 0.1,
+        "mode": "slider",
+        "name": "Minimale warmtevraag airco (setpoint − current) voor assist"
+      },
+      {
+        "id": "temp_nest_dag_standaard",
+        "min": 18.0,
+        "max": 22.0,
+        "name": "Nest dagtemperatuur standaard",
+        "step": 0.5,
+        "mode": "slider"
+      },
+      {
+        "id": "temp_nest_eco_standaard",
+        "min": 16.0,
+        "max": 18.0,
+        "name": "Nest eco standaard",
+        "mode": "slider",
+        "step": 1.0
+      },
+      {
+        "id": "temp_nest_voorverwarm_standaard",
+        "min": 17.0,
+        "max": 20.0,
+        "name": "Nest voorverwarm standaard",
+        "mode": "slider",
+        "step": 1.0
+      },
+      {
+        "id": "badkamer_heat_off_dag_standaard",
+        "min": 16.0,
+        "max": 20.0,
+        "name": "Badkamer standaard setpoint",
+        "mode": "slider",
+        "step": 1.0
+      },
+      {
+        "id": "voetbal_vertraging",
+        "min": 0.0,
+        "max": 60.0,
+        "name": "Voetbal vertraging",
+        "mode": "slider",
+        "step": 1.0,
+        "unit_of_measurement": "s"
+      }
+    ]
+  }
+}
