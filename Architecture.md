@@ -1,39 +1,145 @@
-# Project: Smart Climate OS (met HEMS roadmap)
+# Project: Smart Climate OS (met HEMS-roadmap)
 
-## 1. De Visie (Think Big)
-We bouwen een onafhankelijk, predictief besturingssysteem voor autonoom klimaatbeheer, dat in een latere fase schaalt naar een volwaardig Home Energy Management System (HEMS). 
-Home Assistant fungeert uitsluitend als 'Hardware Abstraction Layer' (HAL) en doorgeefluik. 
-De logica, AI-predictie en de interface draaien in een losse Node.js / web-stack. De datastromen (P1-meter, weer, temperatuur) worden modulair binnengehaald, zodat ze eerst voor klimaat en later voor energiebalancering gebruikt kunnen worden.
+*Bijgewerkt 5 september 2026.*
 
-## 2. De Architectuur
-- **Hardware Laag (Driver):** Home Assistant (headless). Communicatie verloopt strikt via de officiële WebSocket API.
-- **Backend (Het Brein):** Node.js applicatie. Ontworpen in modulaire blokken (bijv. `climate_controller.js`, en later `energy_balancer.js`). 
-- **Frontend (Kiosk UI):** Ultralichte, single-page applicatie (HTML/Tailwind/Vanilla JS). Geoptimaliseerd voor een low-end display (Samsung Tab A7 Lite). Visuele intelligentie zit in CSS/SVG-animaties, DOM-manipulatie is minimaal.
+## 1. De visie
 
-## 3. Ontwerpprincipes (Lean)
-- **Eliminatie van verspilling:** Geen UI-logica in de frontend, de Node.js backend berekent alles. 
-- **Gedeelde Databronnen:** Zowel klimaat als HEMS leunen op dezelfde sensoren (netto verbruik via P1, weersvoorspelling via Open-Meteo, lokale temperatuur).
-- **Harde Failsafes:** Ingebouwde wiskundige limieten in de backend om pendelen van apparatuur (zoals airco's) te voorkomen.
+Een onafhankelijk, voorspellend besturingssysteem voor autonoom klimaatbeheer,
+dat later doorgroeit naar een volwaardig Home Energy Management System. Home
+Assistant is uitsluitend de hardwarelaag; de logica, de voorspelling en de
+interface draaien in een losse Node.js-stack.
 
-## 4. Roadmap & Fases
-- **Fase 1 (Huidige focus): Autonoom Klimaatbeheer.** Het vertalen van de huidige 'Zomer/Winter' en 'PV-Koelen' logica naar Node.js. Aanvoelen van de thermische inertie en autonoom sturen van airco's/verwarming.
-- **Fase 2 (Toekomst): HEMS.** Toevoegen van energie-balancering (EV, thuisbatterij, dynamische tarieven) op basis van exact dezelfde datastromen, plus visuele uitbreiding van de energiestromen in de UI.
+Die visie staat nog steeds. Wat er sinds de eerste versie van dit document bij
+is gekomen, is het inzicht dat **de moeilijkheid niet in de regellogica zit maar
+in het aantoonbaar maken ervan**. Het YAML-systeem dat we vervangen werkte
+grotendeels; wat ontbrak was de mogelijkheid om te zien of het klopte. Vier van
+de zes fouten die we vonden waren jarenlang onzichtbaar geweest.
 
-## 5. Huidige Taak (Start Small)
-Start met de Proof of Concept voor Fase 1 in een Docker-sandbox:
-1. Initialiseer de Node.js backend (`package.json`).
-2. Bouw de WebSocket verbinding met de Home Assistant driver.
-3. Lees succesvol de state van één demo temperatuursensor en de P1-meter uit.
+## 2. De architectuur
 
-## 6. Repository & Infrastructuur (Monorepo)
-Het project wordt beheerd als een Monorepo om frontend en backend naadloos op elkaar te laten aansluiten. De Home Assistant (HAL) code wordt **niet** in deze repository ontwikkeld, maar behandeld als een externe dependency.
+**Kern (`backend/src/core`).** Eén pure functie:
 
-**Mappenstructuur:**
-- `/backend`: Node.js applicatie (bevat de logica, websockets, en het abstracte device registry).
-- `/frontend`: HTML/Tailwind/JS Kiosk UI.
-- `/docs`: Referentiemateriaal en legacy code.
+```ts
+decide(state, config, now) -> Decision
+```
 
-**Deployment & Docker:**
-- Het project gebruikt uiteindelijk een `docker-compose.yml` in de root.
-- **SaaS Type A (Bring your own HAL):** Gebruikers draaien onze backend/frontend containers en verbinden met hun eigen, bestaande Home Assistant via een token.
-- **SaaS Type B (Plug & Play):** De `docker-compose.yml` rolt een onzichtbare, lege Home Assistant container uit die puur fungeert als Zigbee/Matter antenne voor de Node.js backend.
+Geen I/O, geen klok, geen netwerk. Gelijke invoer geeft gelijke uitvoer. Timers
+zijn invoer en komen als commando terug. Dat is wat de replay-harness en de
+divergentietool mogelijk maakt.
+
+De kern kent geen entity-ID's, geen kamernamen en geen bewonersnamen. Een zone
+heeft een temperatuurbron, actuatoren, setpoints per modus en een prioriteit;
+een actuator heeft capaciteiten, vermogen en timing. Wat huisspecifiek is, staat
+in configuratie.
+
+**Het vermogensbudget.** Strategieën stellen voor, een arbiter beslist. Elk
+voorstel draagt een `budgetW`; het overschot is een pot die leegloopt. Een
+draaiend apparaat rekent zijn gemeten opname, een stilstaand apparaat zijn
+schatting — zo kost bijschakelen alleen het verschil. Dit verving de vlag
+`zolder_started_now` uit de YAML-versie, die door een scopingfout nooit werkte.
+
+**Adapterlaag (`backend/src/adapters/homeassistant`).** WebSocket-client,
+schaduwmodus, en één gedeelde vertaling van HA naar het domeinmodel die zowel de
+live-adapter als de replay-harness gebruiken. Twee losse vertalingen zouden
+uiteenlopen, en dat is precies de bugklasse waar dit project vandaan komt.
+
+**Configuratie als data (`config/sites/*.json`).** Gevalideerd bij het opstarten,
+met controle op samenhang: verwijst een zone naar een apparaat dat niet bestaat,
+eisen twee zones hetzelfde apparaat op, is een doeltemperatuur onbereikbaar. De
+parser stopt niet bij de eerste fout maar levert de hele lijst met pad.
+
+**Frontend.** Nog niet gebouwd. Blijft: ultralichte PWA, HTML met Tailwind en
+vanilla JS, zonder zwaar framework. Leest `Explanation` en herberekent niets.
+
+## 3. Ontwerpprincipes
+
+De oorspronkelijke drie staan overeind. Wat we er in de praktijk bij hebben
+geleerd:
+
+- **Geen logica in de frontend.** Het oude dashboard bevatte ~500 regels JS die
+  de state machine dupliceerden. Die zijn de bron van divergentie.
+- **Afwezigheid van vraag is niet de taak van een strategie.** Strategieën
+  drukken vraag uit; de arbiter regelt het afbouwen, omdat alleen die weet wat
+  een apparaat nú doet.
+- **Tijd is invoer.** Zowel in de kern als in de laag eromheen. Een test die
+  afhangt van het uur waarop hij draait, toetst niets.
+- **Een fout hoort luid te falen, niet stil terug te vallen.** Een setpoint
+  buiten bereik wordt afgewezen, niet begrensd.
+- **Wat je niet kunt meten, weet je niet.** Elke bewering over besparing in dit
+  project komt uit een harness, met de beperkingen erbij vermeld.
+
+## 4. Roadmap
+
+| Fase | Wat | Status |
+| --- | --- | --- |
+| 0 | Brondata herstellen en de state machine vastleggen | **klaar** |
+| 1 | Pure kern + replay-harness op eigen historie | **klaar** |
+| 2 | HA-adapter in schaduwmodus | **klaar**, draait op de NAS |
+| 3 | Configuratie als data | **klaar** |
+| 4 | Divergentietool | **klaar**, wacht op winterdata |
+| 5 | Read-only webweergave | volgende |
+| 6 | Onboarding voor andermans huis | later |
+| 7 | Vooruitkijken: PV-prognose, weer, dynamische tarieven | later |
+
+De eerdere nummering is hier samengevoegd: configuratie als data en de
+divergentietool bleken beide voorwaarden voor de frontend, niet erna.
+
+## 5. Waar we nu staan
+
+De schaduwmodus draait onbewaakt op de Synology, verbonden met Home Assistant,
+en schrijft elk besluit weg. Hij schakelt niets: `HaClient` werpt bij elke
+`callService` zolang schrijven uit staat, en een test bewijst dat er in een
+volledige sessie geen enkele dienst wordt aangeroepen.
+
+Wat gemeten is op tien dagen eigen historie:
+
+- 91,7% van alle HA-events gaat ons niet aan en wordt genegeerd; de slimme meter
+  is 88% van wat overblijft, vandaar een ondergrens van 15 seconden tussen
+  evaluaties
+- 15 uur waarin het oude systeem een airco liet draaien terwijl het huis
+  netstroom kocht, goed voor 3,73 kWh
+- het beslislogboek is ~1 MB per dag
+
+Nog niet aangetoond: of de arbiter het in de praktijk beter doet. Daarvoor is
+winterdata nodig, en dat is precies wat er nu wordt opgebouwd.
+
+## 6. Repository en infrastructuur
+
+Monorepo op `github.com/Ricardo-switch/hems-climate` (privé).
+
+```
+backend/        Node.js: kern, adapters, replay, divergentie
+config/sites/   Configuratie per installatie
+deploy/         Dockerfile-omgeving, compose, uitrolscript
+legacy_code/    Het YAML-systeem dat vervangen wordt
+HA export/      Referentie: helpers, entity-register, dashboards
+```
+
+**Uitrol.** De NAS haalt de code uit git via `deploy/deploy.sh`, ingepland in de
+Synology Taakplanner. Het script bouwt alleen wanneer er iets in `backend/`
+wijzigde, bouwt éérst en wisselt pas daarna om, en houdt in `.deployed` bij welke
+commit er werkelijk draait — anders wordt een mislukte uitrol nooit opnieuw
+geprobeerd.
+
+**De Taakplanner is een andere omgeving dan een shell.** Dat heeft dit project
+vier keer laten struikelen, en het is de moeite waard om te onthouden:
+
+1. Geen `PATH` naar docker en git — die worden expliciet gezocht.
+2. Geen `HOME=/root` — de SSH-sleutel wordt expliciet meegegeven.
+3. Aangeroepen als `sh script`, waardoor bash in POSIX-modus draait en een deel
+   van de syntaxis wegvalt — het script start zichzelf opnieuw met een echte
+   bash.
+4. Regeleindes — `.gitattributes` legt LF vast voor alles wat op Linux draait.
+
+Toets een wijziging in het uitrolscript altijd via *Uitvoeren* in de Taakplanner,
+niet vanaf de commandoregel. Alleen zo draai je in dezelfde omgeving.
+
+**Wat buiten git blijft:** het HA-token (`.env`), de logboeken, en
+`config/sites/*.json` op de NAS. Dat laatste hoort bij de installatie, niet bij
+de code — en het is meteen de vorm die nodig is zodra er een tweede huis bij komt.
+
+## 7. Volgende stap
+
+De read-only webweergave: modus, budget, vraag per zone, en wat de arbiter zou
+doen. Die leest alleen het bestaande `Explanation`-contract, dus dat werk gaat
+niet verloren wanneer de rest van de frontend erbij komt.
