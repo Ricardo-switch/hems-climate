@@ -1,0 +1,28 @@
+# Regeleindes vastleggen in plaats van aan de instellingen van elke machine
+# over te laten.
+#
+# Zonder dit bestand bepaalt `core.autocrlf` per computer wat er in de werkmap
+# belandt. Een shellscript dat met CRLF op een Linux-machine terechtkomt geeft
+# `$'\r': command not found` — een foutmelding die niets met de code te maken
+# heeft en lastig te herleiden is.
+
+# Shellscripts, Dockerfiles en configuratie draaien op Linux. Altijd LF,
+# ongeacht op welke machine ze zijn bewerkt.
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+.dockerignore text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.json      text eol=lf
+*.ts        text eol=lf
+*.md        text eol=lf
+.gitignore  text eol=lf
+
+# Deze draaien juist op Windows en houden CRLF.
+*.bat       text eol=crlf
+*.ps1       text eol=crlf
+
+# Hier nooit aankomen.
+*.gz        binary
+*.tar       binary
+*.ndjson    binary
