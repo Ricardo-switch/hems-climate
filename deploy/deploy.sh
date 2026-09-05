@@ -26,6 +26,8 @@ LOCKDIR="$ROOT/.deploy.lock"
 STATEFILE="$ROOT/.deployed"
 CONTAINER="hems-shadow"
 IMAGE="hems-climate/shadow"
+# De SSH-sleutel waarmee de NAS bij GitHub mag. Zie de uitleg hieronder.
+GIT_SSH_KEY="${GIT_SSH_KEY:-/root/.ssh/id_ed25519}"
 
 FORCE=0
 DRY_RUN=0
@@ -116,6 +118,15 @@ DOCKER="$(find_bin docker /usr/local/bin/docker /usr/bin/docker)" || {
   log "  Draait Container Manager?"
   exit 1
 }
+
+# De Taakplanner draait niet in een gewone loginshell. HOME kan daardoor ergens
+# anders wijzen dan /root, en dan zoekt ssh de sleutel op de verkeerde plek —
+# met een "Permission denied (publickey)" die niets met GitHub te maken heeft.
+# Daarom de sleutel expliciet meegeven in plaats van erop vertrouwen dat ssh hem
+# vanzelf vindt.
+if [ -f "$GIT_SSH_KEY" ]; then
+  export GIT_SSH_COMMAND="ssh -i $GIT_SSH_KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+fi
 
 # Compose v2 zit in docker zelf; oudere DSM heeft een los docker-compose.
 if "$DOCKER" compose version >/dev/null 2>&1; then
@@ -315,6 +326,16 @@ done
 
 # Pas hier vastleggen: nu weten we dat deze versie ook echt draait.
 echo "$AFTER" > "$STATEFILE"
+
+# Dit script draait vanuit de wortel en niet uit src/, zodat een pull het niet
+# onder je voeten kan wijzigen. De keerzijde is dat een nieuwe versie niet
+# vanzelf wordt overgenomen; dat melden we dan maar.
+if [ -f "$SRC/deploy/deploy.sh" ] && ! cmp -s "$SRC/deploy/deploy.sh" "$0"; then
+  log ""
+  log "LET OP: er staat een nieuwere versie van dit script in de repository."
+  log "  Overnemen doe je zelf, zodat een pull nooit het draaiende script raakt:"
+  log "    cp $SRC/deploy/deploy.sh $ROOT/deploy.sh && chmod +x $ROOT/deploy.sh"
+fi
 
 log "Klaar op $(echo "$AFTER" | cut -c1-8) — container $STATE, gezondheid $HEALTH"
 
