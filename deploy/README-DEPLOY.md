@@ -81,6 +81,20 @@ dat er niets te doen valt. De mislukte uitrol wordt dan nooit meer geprobeerd.
 overlappende runs tegen; een slot dat ouder is dan een uur wordt als restant
 van een afgebroken run opgeruimd.
 
+## De sleutel en de Taakplanner
+
+Een geplande taak draait niet in een loginshell. `HOME` kan daardoor ergens
+anders wijzen dan `/root`, en dan zoekt ssh de sleutel op de verkeerde plek —
+met een `Permission denied (publickey)` die niets met GitHub te maken heeft.
+
+Het script geeft de sleutel daarom expliciet mee via `GIT_SSH_COMMAND`, en gaat
+uit van `/root/.ssh/id_ed25519`. Staat die ergens anders, zet dan bovenin het
+script `GIT_SSH_KEY` op het juiste pad.
+
+**Toets de taak altijd via de Taakplanner zelf** en niet alleen vanaf de
+commandoregel. Alleen zo draai je in dezelfde omgeving als straks. Selecteer de
+taak, kies *Uitvoeren*, en kijk daarna in `deploy.log`.
+
 ## Als het misgaat
 
 Komt de nieuwe container niet op, dan stopt het script met een foutcode, toont
