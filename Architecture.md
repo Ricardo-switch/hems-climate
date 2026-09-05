@@ -138,7 +138,14 @@ niet vanaf de commandoregel. Alleen zo draai je in dezelfde omgeving.
 `config/sites/*.json` op de NAS. Dat laatste hoort bij de installatie, niet bij
 de code — en het is meteen de vorm die nodig is zodra er een tweede huis bij komt.
 
-## 7. Volgende stap
+## 7. Waarom het zo is
+
+Dit document beschrijft de huidige stand. Waaróm er zo gekozen is — welke
+alternatieven zijn afgevallen en wat een besluit heeft gekost — staat in
+[DECISIONS.md](DECISIONS.md). Dat is het document dat je over een half jaar
+nodig hebt, want de code vertelt het wat en niet het waarom.
+
+## 8. Volgende stap
 
 De read-only webweergave: modus, budget, vraag per zone, en wat de arbiter zou
 doen. Die leest alleen het bestaande `Explanation`-contract, dus dat werk gaat
