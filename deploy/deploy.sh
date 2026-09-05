@@ -65,9 +65,26 @@ if [ ! -d "$ROOT" ]; then
   exit 1
 fi
 
+# Handmatig of gepland?
+#
+# In het logboek zagen die twee er precies hetzelfde uit, en dan kun je achteraf
+# niet vaststellen of de Taakplanner nu werkelijk gedraaid heeft. Een geplande
+# taak heeft geen terminal aan zijn uitvoer hangen; dat is het verschil. Deze
+# controle moet vóór de omleiding naar het logboek staan, want daarna is de
+# uitvoer sowieso een pijp en geen terminal meer.
+if [ -t 1 ]; then
+  RUNMODE="handmatig"
+else
+  RUNMODE="gepland"
+fi
+
 # Alles wat dit script zegt gaat naar het scherm én naar het logboek, zodat de
 # uitvoer van de Taakplanner en het bestand hetzelfde verhaal vertellen.
 exec > >(tee -a "$LOGFILE") 2>&1
+# Het PID van die tee. Zonder erop te wachten kan de laatste regel verdwijnen:
+# het script eindigt dan eerder dan de schrijver klaar is. Dat verklaarde waarom
+# de afsluitende regel soms pas ná de prompt verscheen, of helemaal niet.
+LOGGER_PID=$!
 
 # Logboek kort houden: de laatste 2000 regels volstaan.
 trim_log() {
@@ -97,6 +114,12 @@ fi
 cleanup() {
   rm -rf "$LOCKDIR"
   trim_log
+  # Uitvoer sluiten en tee laten uitschrijven voordat het proces verdwijnt.
+  exec 1>&- 2>&-
+  if [ -n "${LOGGER_PID:-}" ]; then
+    wait "$LOGGER_PID" 2>/dev/null || true
+  fi
+  return 0
 }
 trap cleanup EXIT
 
@@ -187,7 +210,7 @@ if [ -n "$("$GIT" status --porcelain)" ]; then
 fi
 
 BRANCH="$("$GIT" rev-parse --abbrev-ref HEAD)"
-log "Tak $BRANCH in $SRC"
+log "Start ($RUNMODE) — tak $BRANCH in $SRC"
 
 # ------------------------------------------------------------- ophalen ------
 
