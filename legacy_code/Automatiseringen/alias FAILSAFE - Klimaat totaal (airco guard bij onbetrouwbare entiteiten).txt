@@ -1,0 +1,126 @@
+alias: FAILSAFE - Klimaat totaal (airco guard bij onbetrouwbare entiteiten)
+description: >
+  Failsafe: kapt airco-assist en zet airco's hard uit als kritieke inputs
+  onbetrouwbaar zijn (unknown/unavailable). Laat badkamer met rust.  Hervat
+  automatisch de vorige strategie wanneer sensoren herstellen.
+triggers:
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id:
+      - climate.beneden
+      - climate.thermostaat_badkamer
+      - sensor.hue_motion_sensor_zolder_temperatuur
+      - climate.air_conditioning_woonkamer
+      - climate.air_conditioning_zolder
+      - sensor.p1_meter_power
+    to:
+      - unknown
+      - unavailable
+    for: '00:00:30'
+  - trigger: state
+    entity_id:
+      - climate.beneden
+      - climate.thermostaat_badkamer
+      - sensor.hue_motion_sensor_zolder_temperatuur
+      - climate.air_conditioning_woonkamer
+      - climate.air_conditioning_zolder
+      - sensor.p1_meter_power
+    from:
+      - unknown
+      - unavailable
+  - trigger: state
+    entity_id: input_boolean.status_airco_assist_actief
+actions:
+  - variables:
+      nest_state: '{{ states(''climate.beneden'') }}'
+      bad_state: '{{ states(''climate.thermostaat_badkamer'') }}'
+      zolder_state: '{{ states(''sensor.hue_motion_sensor_zolder_temperatuur'') }}'
+      ac_living_state: '{{ states(''climate.air_conditioning_woonkamer'') }}'
+      ac_attic_state: '{{ states(''climate.air_conditioning_zolder'') }}'
+      p1_state: '{{ states(''sensor.p1_meter_power'') }}'
+      nest_bad: '{{ nest_state in [''unknown'',''unavailable''] }}'
+      badkamer_bad: '{{ bad_state in [''unknown'',''unavailable''] }}'
+      zolder_bad: '{{ zolder_state in [''unknown'',''unavailable''] }}'
+      ac_living_bad: '{{ ac_living_state in [''unknown'',''unavailable''] }}'
+      ac_attic_bad: '{{ ac_attic_state in [''unknown'',''unavailable''] }}'
+      p1_bad: '{{ p1_state in [''unknown'',''unavailable''] }}'
+      airco_must_cut: '{{ nest_bad or zolder_bad or ac_living_bad or ac_attic_bad or p1_bad }}'
+      any_critical_bad: '{{ airco_must_cut or badkamer_bad }}'
+      assist_actief: '{{ is_state(''input_boolean.status_airco_assist_actief'',''on'') }}'
+      airco_any_on: '{{ ac_living_state != ''off'' or ac_attic_state != ''off'' }}'
+      something_running: '{{ assist_actief or airco_any_on }}'
+      notif_gate_exists: >-
+        {{ states('input_boolean.failsafe_klimaat_melding_actief') not in
+        ['unknown','unavailable'] }}
+      notif_already_sent: >-
+        {{ notif_gate_exists and
+        is_state('input_boolean.failsafe_klimaat_melding_actief','on') }}
+      issues: >-
+        {% set i = [] %}   {% if nest_bad %}{% set i = i + ['Nest (beneden)']
+        %}{% endif %}   {% if badkamer_bad %}{% set i = i + ['Badkamer
+        thermostaat'] %}{% endif %}   {% if zolder_bad %}{% set i = i + ['Zolder
+        temp sensor'] %}{% endif %}   {% if ac_living_bad %}{% set i = i +
+        ['Airco woonkamer'] %}{% endif %}   {% if ac_attic_bad %}{% set i = i +
+        ['Airco zolder'] %}{% endif %}   {% if p1_bad %}{% set i = i + ['P1
+        Meter'] %}{% endif %}   {{ i | join(', ') }}
+      melding_tekst: |-
+        {% if airco_must_cut and something_running %}
+          Failsafe actief: {{ issues }} is/zijn onbetrouwbaar. De airco is uit veiligheid hard uitgezet!
+        {% elif airco_must_cut %}
+          Failsafe actief: {{ issues }} is/zijn onbetrouwbaar. Airco was al uit, dus er is niets aangepast.
+        {% else %}
+          Netwerkdip gedetecteerd: {{ issues }} is/zijn tijdelijk onbereikbaar. Dit heeft géén invloed op de airco.
+        {% endif %}
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ airco_must_cut and something_running }}'
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.status_airco_assist_actief
+          - action: climate.turn_off
+            target:
+              entity_id:
+                - climate.air_conditioning_woonkamer
+                - climate.air_conditioning_zolder
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: '{{ any_critical_bad and (not notif_already_sent) }}'
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: '{{ notif_gate_exists }}'
+                sequence:
+                  - action: input_boolean.turn_on
+                    target:
+                      entity_id: input_boolean.failsafe_klimaat_melding_actief
+          - action: persistent_notification.create
+            data:
+              title: >-
+                {% if airco_must_cut %}FAILSAFE Klimaat 🚨{% else %}Klimaat Info
+                ℹ️{% endif %}
+              message: '{{ melding_tekst }}'
+      - conditions:
+          - condition: template
+            value_template: '{{ (not any_critical_bad) and notif_already_sent }}'
+        sequence:
+          - action: input_boolean.turn_off
+            target:
+              entity_id: input_boolean.failsafe_klimaat_melding_actief
+          - action: input_boolean.turn_on
+            target:
+              entity_id: input_boolean.status_airco_assist_actief
+          - action: automation.trigger
+            target:
+              entity_id: automation.klimaat_controller_runner
+          - action: persistent_notification.create
+            data:
+              title: Failsafe Opgeheven ✅
+              message: >-
+                Alle klimaatsensoren zijn weer betrouwbaar. De airco assist is
+                weer ingeschakeld en hervat direct zijn ingestelde strategie.
+mode: restart

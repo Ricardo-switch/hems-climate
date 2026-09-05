@@ -1,0 +1,139 @@
+alias Setpoints dagelijks terug naar standaard
+description -
+  Reset setpoints naar standaard en herstelt de koel-strategie (HandmatigAuto)
+  netjes naar de basis.
+triggers
+  - at '030000'
+    trigger time
+actions
+  - if
+      - condition template
+        value_template -
+          {{ states('input_select.koel_strategie') in ['Handmatig koelen',
+          'Automatisch koelen'] }}
+    then
+      - if
+          - condition state
+            entity_id input_boolean.zomer_modus_actief
+            state 'on'
+        then
+          - action input_select.select_option
+            target
+              entity_id input_select.koel_strategie
+            data
+              option Pv koelen
+        else
+          - action input_select.select_option
+            target
+              entity_id input_select.koel_strategie
+            data
+              option Uit
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_airco_woonkamer')float(0)
+                != states('input_number.temp_airco_woonkamer_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_airco_woonkamer
+            data
+              value -
+                {{ states('input_number.temp_airco_woonkamer_standaard') 
+                float(0) }}
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_airco_zolder')float(0)
+                 != states('input_number.temp_airco_zolder_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_airco_zolder
+            data
+              value -
+                {{ states('input_number.temp_airco_zolder_standaard')  float(0)
+                }}
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_nest_dag')float(0)
+                 != states('input_number.temp_nest_dag_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_nest_dag
+            data
+              value '{{ states(''input_number.temp_nest_dag_standaard'')  float(0) }}'
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_nest_eco')float(0)
+                 != states('input_number.temp_nest_eco_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_nest_eco
+            data
+              value '{{ states(''input_number.temp_nest_eco_standaard'')  float(0) }}'
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_nest_voorwarm')float(0)
+                 != states('input_number.temp_nest_voorwarm_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_nest_voorwarm
+            data
+              value -
+                {{ states('input_number.temp_nest_voorwarm_standaard') 
+                float(0) }}
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.badkamer_heat_off_temp_dag')float(0)
+                != states('input_number.badkamer_heat_off_temp_dag_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.badkamer_heat_off_temp_dag
+            data
+              value -
+                {{ states('input_number.badkamer_heat_off_temp_dag_standaard') 
+                float(0) }}
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_airco_woonkamer_koelen')float(0)
+                != states('input_number.temp_airco_woonkamer_koelen_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_airco_woonkamer_koelen
+            data
+              value -
+                {{ states('input_number.temp_airco_woonkamer_koelen_standaard')
+                 float(0) }}
+            action input_number.set_value
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ states('input_number.temp_airco_zolder_koelen')float(0)
+                != states('input_number.temp_airco_zolder_koelen_standaard')float(0) }}
+        sequence
+          - target
+              entity_id input_number.temp_airco_zolder_koelen
+            data
+              value -
+                {{ states('input_number.temp_airco_zolder_koelen_standaard') 
+                float(0) }}
+            action input_number.set_value
+mode single

@@ -1,0 +1,18 @@
+template
+  - binary_sensor
+      - name Setpoints afwijkend van standaard
+        unique_id setpoints_afwijkend_van_standaard
+        # Deze logica kijkt of iemand handmatig aan de knoppen heeft gedraaid
+        
+      - name Airco temps tijdelijk aangepast
+        unique_id airco_temps_tijdelijk_aangepast
+        # Controleert specifiek de airco setpoints
+
+  - sensor
+      - name Verwarming – uitleg
+        unique_id verwarming_uitleg
+        # Dit is een hele belangrijke! Dit is jouw virtuele Thermostaat Display
+        
+      - name Gratis stroom naar airco (W)
+        unique_id gratis_stroom_naar_airco_w
+        # De wiskunde Airco verbruik minus wat we inkopen = de gratis PV-stroom

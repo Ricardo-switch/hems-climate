@@ -1,0 +1,31 @@
+alias Verwarming niet-automatisch - reset naar automatisch
+description -
+  Zet niet-automatisch terug naar automatisch bij timer-einde, thuiskomst of om
+  2200.
+triggers
+  - entity_id timer.verwarming_handmatig
+    from active
+    to idle
+    trigger state
+  - at '220000'
+    trigger time
+  - entity_id
+      - person.ricardo_cornelissen
+      - person.shira
+      - binary_sensor.saskia_thuis_gestabiliseerd
+      - binary_sensor.rob_thuis_gestabiliseerd
+      - binary_sensor.dini_thuis_gestabiliseerd
+    to home
+    trigger state
+conditions
+  - condition template
+    value_template -
+      {{ states('input_select.verwarming_modus') != 'automatisch'
+         and states('input_select.verwarming_modus') != 'vakantie' }}
+actions
+  - target
+      entity_id input_select.verwarming_modus
+    data
+      option automatisch
+    action input_select.select_option
+mode single

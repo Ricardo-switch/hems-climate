@@ -1,0 +1,1664 @@
+title: Smart Home AI
+path: smarthome-ai
+icon: mdi:home-thermometer
+type: sections
+max_columns: 3
+background:
+  opacity: 0
+  alignment: center
+  size: cover
+  repeat: no-repeat
+  attachment: fixed
+  image:
+    media_content_id: media-source://image_upload/e3eab0a4f18d1f11dd57efd491c1d11d
+    media_content_type: image/png
+    metadata:
+      title: Gemini_Generated_Image_rjsvz5rjsvz5rjsv.png
+      thumbnail: /api/image/serve/e3eab0a4f18d1f11dd57efd491c1d11d/256x256
+      media_class: image
+      navigateIds:
+        - {}
+        - media_content_type: app
+          media_content_id: media-source://image_upload
+sections:
+  - type: grid
+    columns: 1
+    cards:
+      - type: markdown
+        content: >
+          {% set uur = now().hour %} {% if uur < 6 %} {% set groet =
+          'Goedenacht' %} {% elif uur < 12 %} {% set groet = 'Goedemorgen' %} {%
+          elif uur < 18 %} {% set groet = 'Goedemiddag' %} {% else %} {% set
+          groet = 'Goedenavond' %} {% endif %}
+
+          {% set namen = [] %} {% if is_state('person.ricardo_cornelissen',
+          'home') %} {% set namen = namen + ['Ricardo'] %} {% endif %} {% if
+          is_state('person.shira', 'home') %} {% set namen = namen + ['Shira']
+          %} {% endif %} {% if
+          is_state('binary_sensor.saskia_thuis_gestabiliseerd', 'on') %} {% set
+          namen = namen + ['Saskia'] %} {% endif %} {% if
+          is_state('binary_sensor.rob_thuis_gestabiliseerd', 'on') %} {% set
+          namen = namen + ['Rob'] %} {% endif %} {% if
+          is_state('binary_sensor.dini_thuis_gestabiliseerd', 'on') %} {% set
+          namen = namen + ['Dini'] %} {% endif %}
+
+          {% set namen_string = '' %} {% if namen | length > 1 %}
+            {% set namen_string = ' ' ~ namen[:-1] | join(', ') ~ ' & ' ~ namen[-1] %}
+          {% elif namen | length == 1 %}
+            {% set namen_string = ' ' ~ namen[0] %}
+          {% endif %}
+
+          {% set modus = states('input_select.verwarming_modus') %} {% set
+          actief = states('input_select.verwarming_modus_actief') %} {% set
+          reden = states('sensor.airco_assist_reden') %} {% set zomer_modus =
+          is_state('input_boolean.zomer_modus_actief', 'on') %} {% set
+          koel_strategie = states('input_select.koel_strategie') %}
+
+          {% set mode_text = "" %} {% set mode_icon = "✨" %} {% set status_addon
+          = "" %} {% set reason_text = reden %} {% set reason_icon = "🌤️" %}
+
+          {% if modus == 'vakantie' %}
+            {% set mode_text = "Vakantiemodus actief" %}{% set mode_icon = "🏝️" %}
+            {% set reason_text = "Huis op pauze" %}{% set reason_icon = "🏝️" %}
+          {% elif modus != 'automatisch' %}
+            {% set mode_text = "Handmatige regie" %}{% set mode_icon = "🛠️" %}
+            {% set reason_icon = "⚙️" %}
+          {% elif actief == 'voorverwarmen' %}
+            {% set mode_text = "Woning warmt op" %}{% set mode_icon = "☕" %}
+            {% set reason_text = "Nest brengt huis op temperatuur" %}{% set reason_icon = "✅" %}
+          {% elif actief == 'nacht' %}
+            {% set mode_text = "Nachtmodus actief" %}{% set mode_icon = "🌙" %}
+            {% set reason_text = "Slaap lekker" %}{% set reason_icon = "💤" %}
+          {% else %}
+            {% set mode_text = "Eco-modus actief" if actief == 'afwezig' else ("Zomermodus actief" if zomer_modus else "Dagmodus actief") %}
+            {% set mode_icon = "🚗" if actief == 'afwezig' else ("🌴" if zomer_modus else "🛋️") %}
+            
+            {% set r = reden | lower %}
+            {% if '<br>' in r %} 
+              {# Als er een line-break in de sensor zit, is het een lijstje en hebben we het hoofdicoon uit de sensor nodig #}
+              {% set reason_icon = "❄️" if 'koelen' in r else ("☀️" if 'verwarmen' in r else "🔥") %}
+            {% else %}
+              {% if 'uit' in r %}
+                {% set reason_text = "Airco's staan momenteel uit" %}
+                {% set reason_icon = "✅" %}
+              {% elif 'zon is onder' in r %}
+                {% set reason_icon = "🌙" %}
+              {% elif 'import' in r or 'overschot' in r or 'wacht' in r %}
+                {% set reason_icon = "🌤️" %}
+              {% else %}
+                {% set reason_icon = "🌤️" %}
+              {% endif %}
+            {% endif %}
+          {% endif %}
+
+          {% set afwijkend =
+          is_state('binary_sensor.setpoints_afwijkend_van_standaard', 'on') %}
+          {% set afwijkend_html = "" %} {% if afwijkend %}
+            {% set afwijkend_html = "<br><span style='color: #ff9800;'>⚠️ Let op: Er is een afwijkende temperatuur ingesteld</span>" %}
+          {% endif %}
+
+          {# --- FAILSAFE LOGICA VOOR BANNER --- #} {% set failsafe_html = "" %}
+          {% if is_state('input_boolean.failsafe_klimaat_melding_actief', 'on')
+          %}
+            {% set nest_bad = states('climate.beneden') in ['unknown','unavailable','none'] %}
+            {% set badkamer_bad = states('climate.thermostaat_badkamer') in ['unknown','unavailable','none'] %}
+            {% set zolder_bad = states('sensor.hue_motion_sensor_zolder_temperatuur') in ['unknown','unavailable','none'] %}
+            {% set ac_living_bad = states('climate.air_conditioning_woonkamer') in ['unknown','unavailable','none'] %}
+            {% set ac_attic_bad = states('climate.air_conditioning_zolder') in ['unknown','unavailable','none'] %}
+            {% set p1_bad = states('sensor.p1_meter_power') in ['unknown','unavailable','none'] %}
+            
+            {% set issues_list = [] %}
+            {% if nest_bad %}{% set issues_list = issues_list + ['Nest'] %}{% endif %}
+            {% if zolder_bad %}{% set issues_list = issues_list + ['Zolder sensor'] %}{% endif %}
+            {% if ac_living_bad %}{% set issues_list = issues_list + ['Airco woonkamer'] %}{% endif %}
+            {% if ac_attic_bad %}{% set issues_list = issues_list + ['Airco zolder'] %}{% endif %}
+            {% if p1_bad %}{% set issues_list = issues_list + ['P1 Meter'] %}{% endif %}
+            
+            {% set is_critical = issues_list | length > 0 %}
+            
+            {% if is_critical %}
+              {% set issues_str = issues_list | join(', ') %}
+              {% set failsafe_html = "<br><span style='color: #f44336;'>🚨 Failsafe actief (" ~ issues_str ~ "). Airco is uit veiligheid gestopt!</span>" %}
+            {% elif badkamer_bad %}
+              {% set failsafe_html = "<br><span style='color: #2196f3;'>ℹ️ Info: Badkamer thermostaat tijdelijk onbereikbaar.</span>" %}
+            {% endif %}
+          {% endif %}
+
+          <h1>{{ groet }}{{ namen_string }}!</h1> <h2>{{ mode_icon }} {{
+          mode_text }}{{ status_addon }}</h2> <hr> <p>{{ reason_icon }} {{
+          reason_text }}{{ afwijkend_html }}{{ failsafe_html }}</p>
+        card_mod:
+          style:
+            ha-markdown:
+              $: |
+                h1 { 
+                  font-size: 22px !important; 
+                  font-weight: 700 !important; 
+                  margin: 0 0 8px 0 !important; 
+                  line-height: 1.2 !important;
+                  letter-spacing: -0.5px !important;
+                  border-bottom: none !important;
+                }  
+                h2 { 
+                  font-size: 17px !important; 
+                  font-weight: 500 !important; 
+                  margin: 0 !important; 
+                  opacity: 0.9 !important;
+                  border-bottom: none !important;
+                }  
+                hr {
+                  border: none !important;
+                  border-top: 1px solid rgba(255,255,255,0.2) !important;
+                  margin: 12px 0 !important;
+                }
+                p { 
+                  font-size: 14px !important; 
+                  opacity: 0.8 !important; 
+                  margin: 0 !important;
+                  line-height: 1.6 !important;
+                }
+            .: |
+              ha-card {
+                background-color: transparent !important;
+                background-image: linear-gradient(135deg, rgba(30, 40, 50, 0.4) 0%, rgba(10, 15, 20, 0.2) 100%) !important;
+                backdrop-filter: blur(24px) !important;
+                -webkit-backdrop-filter: blur(24px) !important;
+                border-radius: 32px !important;
+                border: 1px solid rgba(255, 255, 255, 0.15) !important;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+                padding: 24px !important;
+                color: white !important;
+              }
+      - type: grid
+        columns: 3
+        cards:
+          - type: custom:button-card
+            entity: input_select.verwarming_modus_actief
+            name: Thuis
+            icon: mdi:sofa
+            tap_action:
+              action: call-service
+              service: input_select.select_option
+              target:
+                entity_id: input_select.verwarming_modus
+              data:
+                option: |
+                  [[[
+                    var p1 = states['person.ricardo_cornelissen'].state;
+                    var p2 = states['person.shira'].state;
+                    var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                    var p4 = states['binary_sensor.rob_thuis_gestabiliseerd'].state;
+                    var p5 = states['binary_sensor.dini_thuis_gestabiliseerd'].state;
+                    var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on' || p4 === 'on' || p5 === 'on');
+                    
+                    if (iemand_thuis) return 'automatisch'; 
+                    return 'dag'; 
+                  ]]]
+            styles:
+              card:
+                - backdrop-filter: blur(12px)
+                - border-radius: 20px
+                - padding: 12px 4px
+                - border: 1px solid rgba(255,255,255,0.05)
+                - background: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      // GROEN: Modus is Automatisch EN er is iemand thuis
+                      if (modus == 'automatisch' && iemand_thuis) return 'rgba(76, 175, 80, 0.5)';
+                      
+                      // ORANJE: Handmatige override (Dag, Nacht, Voorverwarmen)
+                      if (['dag', 'nacht', 'voorverwarmen'].includes(modus)) return 'rgba(255, 152, 0, 0.5)';
+                      
+                      // STANDAARD (Uit)
+                      return 'rgba(255,255,255,0.05)';
+                    ]]]
+              icon:
+                - color: '#fff'
+                - opacity: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      // Als actief (Groen of Oranje), volle opacity
+                      if ((modus == 'automatisch' && iemand_thuis) || ['dag', 'nacht', 'voorverwarmen'].includes(modus)) return '1';
+                      return '0.5';
+                    ]]]
+              name:
+                - color: '#fff'
+                - font-weight: '600'
+                - font-size: 13px
+                - margin-top: 6px
+                - opacity: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      if ((modus == 'automatisch' && iemand_thuis) || ['dag', 'nacht', 'voorverwarmen'].includes(modus)) return '1';
+                      return '0.5';
+                    ]]]
+          - type: custom:button-card
+            entity: input_select.verwarming_modus_actief
+            name: Weg
+            icon: mdi:car
+            tap_action:
+              action: call-service
+              service: input_select.select_option
+              target:
+                entity_id: input_select.verwarming_modus
+              data:
+                option: |
+                  [[[
+                    var p1 = states['person.ricardo_cornelissen'].state;
+                    var p2 = states['person.shira'].state;
+                    var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                    var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+                    
+                    if (!iemand_thuis) return 'automatisch'; 
+                    return 'afwezig';
+                  ]]]
+            styles:
+              card:
+                - backdrop-filter: blur(12px)
+                - border-radius: 20px
+                - padding: 12px 4px
+                - border: 1px solid rgba(255,255,255,0.05)
+                - background: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      // GROEN: Niemand thuis, en systeem staat op automatisch of afwezig
+                      if (!iemand_thuis && (modus == 'automatisch' || modus == 'afwezig')) return 'rgba(76, 175, 80, 0.5)';
+                      
+                      // ORANJE: Iemand thuis, maar knop is handmatig op 'afwezig' geforceerd
+                      if (iemand_thuis && modus == 'afwezig') return 'rgba(255, 152, 0, 0.5)';
+                      
+                      // STANDAARD
+                      return 'rgba(255,255,255,0.05)';
+                    ]]]
+              icon:
+                - color: '#fff'
+                - opacity: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      if (!iemand_thuis || modus == 'afwezig') return '1';
+                      return '0.5';
+                    ]]]
+              name:
+                - color: '#fff'
+                - font-weight: '600'
+                - font-size: 13px
+                - margin-top: 6px
+                - opacity: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      var p1 = states['person.ricardo_cornelissen'].state;
+                      var p2 = states['person.shira'].state;
+                      var p3 = states['binary_sensor.saskia_thuis_gestabiliseerd'].state;
+                      var iemand_thuis = (p1 === 'home' || p2 === 'home' || p3 === 'on');
+
+                      if (!iemand_thuis || modus == 'afwezig') return '1';
+                      return '0.5';
+                    ]]]
+          - type: custom:button-card
+            entity: input_select.verwarming_modus_actief
+            name: Vakantie
+            icon: mdi:palm-tree
+            tap_action:
+              action: call-service
+              service: input_select.select_option
+              target:
+                entity_id: input_select.verwarming_modus
+              data:
+                option: vakantie
+            styles:
+              card:
+                - backdrop-filter: blur(12px)
+                - border-radius: 20px
+                - padding: 12px 4px
+                - border: 1px solid rgba(255,255,255,0.05)
+                - background: |
+                    [[[
+                      var modus = states['input_select.verwarming_modus'].state;
+                      // ORANJE: Vakantie is altijd een handmatige keuze
+                      if (modus == 'vakantie') return 'rgba(255, 152, 0, 0.5)';
+                      return 'rgba(255,255,255,0.05)';
+                    ]]]
+              icon:
+                - color: '#fff'
+                - opacity: >-
+                    [[[ return states['input_select.verwarming_modus'].state ==
+                    'vakantie' ? '1' : '0.5' ]]]
+              name:
+                - color: '#fff'
+                - font-weight: '600'
+                - font-size: 13px
+                - margin-top: 6px
+                - opacity: >-
+                    [[[ return states['input_select.verwarming_modus'].state ==
+                    'vakantie' ? '1' : '0.5' ]]]
+      - type: vertical-stack
+        cards:
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_boolean.zomer_modus_actief
+                state: 'off'
+            card:
+              type: grid
+              columns: 3
+              square: false
+              cards:
+                - type: custom:button-card
+                  entity: input_boolean.airco_toestaan
+                  name: A/C Assist
+                  icon: mdi:fan-auto
+                  show_state: false
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'on' ?
+                          'rgba(255,255,255,0.15)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: '[[[ return entity.state === ''on'' ? ''#fff'' : ''#555'' ]]]'
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: '[[[ return entity.state === ''on'' ? ''#fff'' : ''#777'' ]]]'
+                      - margin-top: 8px
+                - type: custom:button-card
+                  entity: input_boolean.pv_verwarmen_actief
+                  name: Zonne-verwarmen
+                  icon: mdi:weather-sunny
+                  show_state: false
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'on' ?
+                          'rgba(255,152,0,0.2)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: >-
+                          [[[ return entity.state === 'on' ? '#ff9800' : '#555'
+                          ]]]
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: >-
+                          [[[ return entity.state === 'on' ? '#ff9800' : '#777'
+                          ]]]
+                      - margin-top: 8px
+                - type: custom:button-card
+                  entity: input_boolean.voorverwarmen_aan
+                  name: Voorverwarmen
+                  icon: mdi:fire
+                  show_state: false
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'on' ?
+                          'rgba(255,87,34,0.2)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: >-
+                          [[[ return entity.state === 'on' ? '#ff5722' : '#555'
+                          ]]]
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: >-
+                          [[[ return entity.state === 'on' ? '#ff5722' : '#777'
+                          ]]]
+                      - margin-top: 8px
+          - type: conditional
+            conditions:
+              - condition: or
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'on'
+                  - condition: state
+                    entity: input_select.koel_strategie
+                    state: Handmatig koelen
+                  - condition: state
+                    entity: input_select.koel_strategie
+                    state: Automatisch koelen
+            card:
+              type: grid
+              columns: 3
+              square: false
+              cards:
+                - type: custom:button-card
+                  entity: input_select.koel_strategie
+                  name: Auto-zon
+                  icon: mdi:solar-power
+                  show_state: false
+                  tap_action:
+                    action: call-service
+                    service: input_select.select_option
+                    target:
+                      entity_id: input_select.koel_strategie
+                    data:
+                      option: Pv koelen
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'Pv koelen' ?
+                          'rgba(3,169,244,0.2)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: >-
+                          [[[ return entity.state === 'Pv koelen' ? '#03a9f4' :
+                          '#555' ]]]
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: >-
+                          [[[ return entity.state === 'Pv koelen' ? '#03a9f4' :
+                          '#777' ]]]
+                      - margin-top: 8px
+                - type: custom:button-card
+                  entity: input_select.koel_strategie
+                  name: Automatisch
+                  icon: mdi:thermostat-auto
+                  show_state: false
+                  tap_action:
+                    action: call-service
+                    service: input_select.select_option
+                    target:
+                      entity_id: input_select.koel_strategie
+                    data:
+                      option: Automatisch koelen
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'Automatisch koelen' ?
+                          'rgba(3,169,244,0.2)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: >-
+                          [[[ return entity.state === 'Automatisch koelen' ?
+                          '#03a9f4' : '#555' ]]]
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: >-
+                          [[[ return entity.state === 'Automatisch koelen' ?
+                          '#03a9f4' : '#777' ]]]
+                      - margin-top: 8px
+                - type: custom:button-card
+                  entity: input_select.koel_strategie
+                  name: Handmatig
+                  icon: mdi:hand-back-right
+                  show_state: false
+                  tap_action:
+                    action: call-service
+                    service: input_select.select_option
+                    target:
+                      entity_id: input_select.koel_strategie
+                    data:
+                      option: Handmatig koelen
+                  styles:
+                    card:
+                      - background: >-
+                          [[[ return entity.state === 'Handmatig koelen' ?
+                          'rgba(3,169,244,0.2)' : 'rgba(20,25,30,0.3)' ]]]
+                      - backdrop-filter: blur(16px)
+                      - border-radius: 20px
+                      - border: 1px solid rgba(255,255,255,0.08)
+                      - padding: 14px 0
+                    icon:
+                      - color: >-
+                          [[[ return entity.state === 'Handmatig koelen' ?
+                          '#03a9f4' : '#555' ]]]
+                    name:
+                      - font-size: 12px
+                      - font-weight: '600'
+                      - color: >-
+                          [[[ return entity.state === 'Handmatig koelen' ?
+                          '#03a9f4' : '#777' ]]]
+                      - margin-top: 8px
+      - type: custom:decluttering-card
+        template: tablet_navbar
+  - type: grid
+    columns: 1
+    cards:
+      - type: grid
+        columns: 2
+        square: false
+        cards:
+          - type: thermostat
+            entity: climate.beneden
+            name: Woonkamer
+            show_current_as_primary: false
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(15, 20, 25, 0.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                  border-radius: 28px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :host([hvac-action="heating"]) ha-card {
+                  border-color: rgba(255, 152, 0, 0.6); background: rgba(255, 152, 0, 0.08);
+                  box-shadow: 0 0 40px rgba(255, 152, 0, 0.15), inset 0 0 20px rgba(255, 152, 0, 0.05);
+                }
+                ha-icon-button { opacity: 0.7; }
+          - type: thermostat
+            entity: climate.thermostaat_badkamer
+            name: Badkamer
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(15, 20, 25, 0.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                  border-radius: 28px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :host([hvac-action="heating"]) ha-card {
+                  border-color: rgba(255, 152, 0, 0.6); background: rgba(255, 152, 0, 0.08);
+                  box-shadow: 0 0 40px rgba(255, 152, 0, 0.15), inset 0 0 20px rgba(255, 152, 0, 0.05);
+                }
+                ha-icon-button { opacity: 0.7; }
+          - type: thermostat
+            entity: climate.air_conditioning_woonkamer
+            name: A/C Woonkamer
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(15, 20, 25, 0.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                  border-radius: 28px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :host([hvac-action="heating"]) ha-card {
+                  border-color: rgba(255, 152, 0, 0.6); background: rgba(255, 152, 0, 0.08);
+                  box-shadow: 0 0 40px rgba(255, 152, 0, 0.15), inset 0 0 20px rgba(255, 152, 0, 0.05);
+                }
+                :host([hvac-action="cooling"]) ha-card {
+                  border-color: rgba(3, 169, 244, 0.6); background: rgba(3, 169, 244, 0.08);
+                  box-shadow: 0 0 40px rgba(3, 169, 244, 0.15), inset 0 0 20px rgba(3, 169, 244, 0.05);
+                }
+                ha-icon-button { opacity: 0.7; }
+          - type: thermostat
+            entity: climate.air_conditioning_zolder
+            name: A/C Zolder
+            show_current_as_primary: false
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(15, 20, 25, 0.55); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+                  border-radius: 28px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                :host([hvac-action="heating"]) ha-card {
+                  border-color: rgba(255, 152, 0, 0.6); background: rgba(255, 152, 0, 0.08);
+                  box-shadow: 0 0 40px rgba(255, 152, 0, 0.15), inset 0 0 20px rgba(255, 152, 0, 0.05);
+                }
+                :host([hvac-action="cooling"]) ha-card {
+                  border-color: rgba(3, 169, 244, 0.6); background: rgba(3, 169, 244, 0.08);
+                  box-shadow: 0 0 40px rgba(3, 169, 244, 0.15), inset 0 0 20px rgba(3, 169, 244, 0.05);
+                }
+                ha-icon-button { opacity: 0.7; }
+      - type: custom:swipe-card
+        parameters:
+          spaceBetween: 8
+          scrollbar:
+            hide: true
+        cards:
+          - type: vertical-stack
+            cards:
+              - type: custom:button-card
+                entity: sensor.gratis_stroom_airco_energie_kwh
+                name: Totale Zon-Besparing
+                icon: mdi:leaf
+                show_state: true
+                styles:
+                  card:
+                    - background: rgba(39, 174, 96, 0.15)
+                    - backdrop-filter: blur(12px)
+                    - border-radius: 24px
+                    - border: 1px solid rgba(39, 174, 96, 0.3)
+                    - padding: 16px
+                  icon:
+                    - color: '#27ae60'
+                    - width: 32px
+                  name:
+                    - color: '#fff'
+                    - font-size: 14px
+                    - font-weight: '500'
+                    - opacity: '0.8'
+                    - justify-self: start
+                  state:
+                    - color: '#27ae60'
+                    - font-size: 24px
+                    - font-weight: '700'
+                    - justify-self: start
+                  grid:
+                    - grid-template-areas: '"i n" "i s"'
+                    - grid-template-columns: 50px 1fr
+              - type: custom:button-card
+                color_type: blank-card
+                styles:
+                  card:
+                    - height: 110px
+          - type: vertical-stack
+            cards:
+              - type: custom:button-card
+                entity: sensor.gratis_airco_kwh_dag
+                name: Vandaag
+                icon: mdi:calendar-today
+                show_state: true
+                styles:
+                  card:
+                    - background: rgba(39, 174, 96, 0.1)
+                    - backdrop-filter: blur(12px)
+                    - border-radius: 12px
+                    - border: 1px solid rgba(39, 174, 96, 0.2)
+                    - padding: 8px 12px
+                    - margin-bottom: 4px
+                  icon:
+                    - color: '#27ae60'
+                    - width: 20px
+                  name:
+                    - color: '#fff'
+                    - font-size: 13px
+                    - justify-self: start
+                  state:
+                    - color: '#27ae60'
+                    - font-size: 14px
+                    - font-weight: '600'
+                    - justify-self: end
+                  grid:
+                    - grid-template-areas: '"i n s"'
+                    - grid-template-columns: 30px 1fr auto
+              - type: custom:button-card
+                entity: sensor.gratis_airco_kwh_maand
+                name: Deze maand
+                icon: mdi:calendar-month
+                show_state: true
+                styles:
+                  card:
+                    - background: rgba(39, 174, 96, 0.1)
+                    - backdrop-filter: blur(12px)
+                    - border-radius: 12px
+                    - border: 1px solid rgba(39, 174, 96, 0.2)
+                    - padding: 8px 12px
+                    - margin-bottom: 4px
+                  icon:
+                    - color: '#27ae60'
+                    - width: 20px
+                  name:
+                    - color: '#fff'
+                    - font-size: 13px
+                    - justify-self: start
+                  state:
+                    - color: '#27ae60'
+                    - font-size: 14px
+                    - font-weight: '600'
+                    - justify-self: end
+                  grid:
+                    - grid-template-areas: '"i n s"'
+                    - grid-template-columns: 30px 1fr auto
+              - type: custom:button-card
+                entity: sensor.gratis_airco_kwh_jaar
+                name: Dit jaar
+                icon: mdi:calendar-star
+                show_state: true
+                styles:
+                  card:
+                    - background: rgba(39, 174, 96, 0.1)
+                    - backdrop-filter: blur(12px)
+                    - border-radius: 12px
+                    - border: 1px solid rgba(39, 174, 96, 0.2)
+                    - padding: 8px 12px
+                    - margin-bottom: 4px
+                  icon:
+                    - color: '#27ae60'
+                    - width: 20px
+                  name:
+                    - color: '#fff'
+                    - font-size: 13px
+                    - justify-self: start
+                  state:
+                    - color: '#27ae60'
+                    - font-size: 14px
+                    - font-weight: '600'
+                    - justify-self: end
+                  grid:
+                    - grid-template-areas: '"i n s"'
+                    - grid-template-columns: 30px 1fr auto
+  - type: grid
+    columns: 1
+    cards:
+      - type: custom:swipe-card
+        parameters:
+          spaceBetween: 8
+          scrollbar:
+            hide: false
+            draggable: true
+          pagination:
+            type: bullets
+        cards:
+          - type: vertical-stack
+            cards:
+              - type: custom:button-card
+                name: Woonkamer
+                label: >
+                  [[[ return states['sensor.beneden_temperatuur'].state + '°C •
+                  ' + states['sensor.beneden_luchtvochtigheid'].state + '%' ]]]
+                show_label: true
+                icon: mdi:sofa
+                styles:
+                  card:
+                    - background: |
+                        [[[
+                          let cur = parseFloat(states['sensor.beneden_temperatuur']?.state)||0;
+                          let n = states['climate.beneden'], a = states['climate.air_conditioning_woonkamer'];
+                          let nS = n?.state||'off', nA = n?.attributes?.hvac_action||'idle', nT = parseFloat(n?.attributes?.temperature)||0;
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_woonkamer_koelen']?.state)||22;
+                          let sT_h = parseFloat(states['input_number.temp_airco_woonkamer']?.state)||20;
+                          
+                          let st = 'off';
+                          if (nS !== 'off' || aS !== 'off') {
+                            let isH = nA === 'heating' || (aS === 'heat' && cT > 18.0);
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (nS !== 'off' && cur < nT - 0.2) nr = true;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+                          
+                          let tgt = cur;
+                          if (aS === 'cool') tgt = sT_c;
+                          else if (aS === 'heat') tgt = sT_h;
+                          else if (nS !== 'off') tgt = nT;
+                          
+                          let isNight = states['sun.sun']?.state === 'below_horizon';
+                          let diff = Math.max(0, Math.abs(tgt - cur));
+                          let int = isNight ? 0.12 : Math.min(0.35, 0.15 + (diff * 0.05));
+
+                          if (st === 'red') return `rgba(255, 61, 0, ${int})`;
+                          if (st === 'blue') return `rgba(41, 121, 255, ${int})`;
+                          if (st === 'green') return 'rgba(39, 174, 96, 0.08)';
+                          if (st === 'orange') return 'rgba(255, 152, 0, 0.08)';
+                          return 'rgba(255, 255, 255, 0.05)';
+                        ]]]
+                    - border: |
+                        [[[
+                          let cur = parseFloat(states['sensor.beneden_temperatuur']?.state)||0;
+                          let n = states['climate.beneden'], a = states['climate.air_conditioning_woonkamer'];
+                          let nS = n?.state||'off', nA = n?.attributes?.hvac_action||'idle', nT = parseFloat(n?.attributes?.temperature)||0;
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_woonkamer_koelen']?.state)||22;
+                          let sT_h = parseFloat(states['input_number.temp_airco_woonkamer']?.state)||20;
+                          
+                          let st = 'off';
+                          if (nS !== 'off' || aS !== 'off') {
+                            let isH = nA === 'heating' || (aS === 'heat' && cT > 18.0);
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (nS !== 'off' && cur < nT - 0.2) nr = true;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+
+                          if (st === 'red') return '1px solid rgba(255, 61, 0, 0.6)';
+                          if (st === 'blue') return '1px solid rgba(41, 121, 255, 0.6)';
+                          if (st === 'green') return '1px solid rgba(39, 174, 96, 0.3)';
+                          if (st === 'orange') return '1px solid rgba(255, 152, 0, 0.4)';
+                          return '1px solid rgba(255, 255, 255, 0.08)';
+                        ]]]
+                    - box-shadow: |
+                        [[[
+                          let cur = parseFloat(states['sensor.beneden_temperatuur']?.state)||0;
+                          let n = states['climate.beneden'], a = states['climate.air_conditioning_woonkamer'];
+                          let nS = n?.state||'off', nA = n?.attributes?.hvac_action||'idle', nT = parseFloat(n?.attributes?.temperature)||0;
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (nS !== 'off' || aS !== 'off') {
+                            let isH = nA === 'heating' || (aS === 'heat' && cT > 18.0);
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                          }
+
+                          if (st === 'red') return '0px 0px 20px rgba(255, 61, 0, 0.3)';
+                          if (st === 'blue') return '0px 0px 20px rgba(41, 121, 255, 0.3)';
+                          return 'none';
+                        ]]]
+                    - backdrop-filter: blur(16px)
+                    - border-radius: 24px
+                    - padding: 16px
+                  grid:
+                    - grid-template-areas: '"i n" "i l"'
+                    - grid-template-columns: 50px 1fr
+                    - justify-items: start
+                  icon:
+                    - color: |
+                        [[[
+                          let cur = parseFloat(states['sensor.beneden_temperatuur']?.state)||0;
+                          let n = states['climate.beneden'], a = states['climate.air_conditioning_woonkamer'];
+                          let nS = n?.state||'off', nA = n?.attributes?.hvac_action||'idle', nT = parseFloat(n?.attributes?.temperature)||0;
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_woonkamer_koelen']?.state)||22;
+                          let sT_h = parseFloat(states['input_number.temp_airco_woonkamer']?.state)||20;
+                          
+                          let st = 'off';
+                          if (nS !== 'off' || aS !== 'off') {
+                            let isH = nA === 'heating' || (aS === 'heat' && cT > 18.0);
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (nS !== 'off' && cur < nT - 0.2) nr = true;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+
+                          if (st === 'red') return '#ff3d00';
+                          if (st === 'blue') return '#2979ff';
+                          if (st === 'green') return '#27ae60';
+                          if (st === 'orange') return '#ff9800';
+                          return '#ffffff';
+                        ]]]
+                    - width: 28px
+                    - animation: |
+                        [[[
+                          let cur = parseFloat(states['sensor.beneden_temperatuur']?.state)||0;
+                          let n = states['climate.beneden'], a = states['climate.air_conditioning_woonkamer'];
+                          let nS = n?.state||'off', nA = n?.attributes?.hvac_action||'idle', nT = parseFloat(n?.attributes?.temperature)||0;
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (nS !== 'off' || aS !== 'off') {
+                            let isH = nA === 'heating' || (aS === 'heat' && cT > 18.0);
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                          }
+
+                          if (st === 'red') return 'pulse 2s infinite ease-in-out';
+                          if (st === 'blue') return 'pulse 3s infinite ease-in-out';
+                          return 'none';
+                        ]]]
+                extra_styles: |
+                  @keyframes pulse {
+                    0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                    50% { transform: scale(1.15); filter: drop-shadow(0 0 10px currentColor); }
+                    100% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                  }
+              - type: custom:button-card
+                name: Zolder
+                label: >
+                  [[[ return
+                  states['sensor.hue_motion_sensor_zolder_temperatuur'].state +
+                  '°C' ]]]
+                show_label: true
+                icon: hue:room-attic
+                styles:
+                  card:
+                    - background: |
+                        [[[
+                          let cur = parseFloat(states['sensor.hue_motion_sensor_zolder_temperatuur']?.state)||0;
+                          let a = states['climate.air_conditioning_zolder'];
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_zolder_koelen']?.state)||22.5;
+                          let sT_h = parseFloat(states['input_number.temp_airco_zolder']?.state)||20;
+                          
+                          let st = 'off';
+                          if (aS !== 'off') {
+                            let isH = aS === 'heat' && cT > 18.0;
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+                          
+                          let tgt = cur;
+                          if (aS === 'cool') tgt = sT_c;
+                          else if (aS === 'heat') tgt = sT_h;
+
+                          let isNight = states['sun.sun']?.state === 'below_horizon';
+                          let diff = Math.max(0, Math.abs(tgt - cur));
+                          let int = isNight ? 0.12 : Math.min(0.35, 0.15 + (diff * 0.05));
+
+                          if (st === 'red') return `rgba(255, 61, 0, ${int})`;
+                          if (st === 'blue') return `rgba(41, 121, 255, ${int})`;
+                          if (st === 'green') return 'rgba(39, 174, 96, 0.08)';
+                          if (st === 'orange') return 'rgba(255, 152, 0, 0.08)';
+                          return 'rgba(255, 255, 255, 0.05)';
+                        ]]]
+                    - border: |
+                        [[[
+                          let cur = parseFloat(states['sensor.hue_motion_sensor_zolder_temperatuur']?.state)||0;
+                          let a = states['climate.air_conditioning_zolder'];
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_zolder_koelen']?.state)||22.5;
+                          let sT_h = parseFloat(states['input_number.temp_airco_zolder']?.state)||20;
+                          
+                          let st = 'off';
+                          if (aS !== 'off') {
+                            let isH = aS === 'heat' && cT > 18.0;
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+
+                          if (st === 'red') return '1px solid rgba(255, 61, 0, 0.6)';
+                          if (st === 'blue') return '1px solid rgba(41, 121, 255, 0.6)';
+                          if (st === 'green') return '1px solid rgba(39, 174, 96, 0.3)';
+                          if (st === 'orange') return '1px solid rgba(255, 152, 0, 0.4)';
+                          return '1px solid rgba(255, 255, 255, 0.08)';
+                        ]]]
+                    - box-shadow: |
+                        [[[
+                          let cur = parseFloat(states['sensor.hue_motion_sensor_zolder_temperatuur']?.state)||0;
+                          let a = states['climate.air_conditioning_zolder'];
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (aS !== 'off') {
+                            let isH = aS === 'heat' && cT > 18.0;
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                          }
+
+                          if (st === 'red') return '0px 0px 20px rgba(255, 61, 0, 0.3)';
+                          if (st === 'blue') return '0px 0px 20px rgba(41, 121, 255, 0.3)';
+                          return 'none';
+                        ]]]
+                    - backdrop-filter: blur(16px)
+                    - border-radius: 24px
+                    - padding: 16px
+                  grid:
+                    - grid-template-areas: '"i n" "i l"'
+                    - grid-template-columns: 50px 1fr
+                    - justify-items: start
+                  icon:
+                    - color: |
+                        [[[
+                          let cur = parseFloat(states['sensor.hue_motion_sensor_zolder_temperatuur']?.state)||0;
+                          let a = states['climate.air_conditioning_zolder'];
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          let sT_c = parseFloat(states['input_number.temp_airco_zolder_koelen']?.state)||22.5;
+                          let sT_h = parseFloat(states['input_number.temp_airco_zolder']?.state)||20;
+                          
+                          let st = 'off';
+                          if (aS !== 'off') {
+                            let isH = aS === 'heat' && cT > 18.0;
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                            else {
+                              let nr = false;
+                              if (aS === 'heat' && cT <= 18.0 && cur < sT_h - 0.2) nr = true;
+                              if (aS === 'cool' && cT >= 25.0 && cur > sT_c + 0.2) nr = true;
+                              st = nr ? 'orange' : 'green';
+                            }
+                          }
+
+                          if (st === 'red') return '#ff3d00';
+                          if (st === 'blue') return '#2979ff';
+                          if (st === 'green') return '#27ae60';
+                          if (st === 'orange') return '#ff9800';
+                          return '#ffffff';
+                        ]]]
+                    - width: 28px
+                    - animation: |
+                        [[[
+                          let cur = parseFloat(states['sensor.hue_motion_sensor_zolder_temperatuur']?.state)||0;
+                          let a = states['climate.air_conditioning_zolder'];
+                          let aS = a?.state||'off', cT = parseFloat(a?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (aS !== 'off') {
+                            let isH = aS === 'heat' && cT > 18.0;
+                            let isC = aS === 'cool' && cT < 25.0;
+                            if (isH) st = 'red';
+                            else if (isC) st = 'blue';
+                          }
+
+                          if (st === 'red') return 'pulse 2s infinite ease-in-out';
+                          if (st === 'blue') return 'pulse 3s infinite ease-in-out';
+                          return 'none';
+                        ]]]
+                extra_styles: |
+                  @keyframes pulse {
+                    0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                    50% { transform: scale(1.15); filter: drop-shadow(0 0 10px currentColor); }
+                    100% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                  }
+              - type: custom:button-card
+                name: Badkamer
+                label: >
+                  [[[ return states['sensor.badkamer_huidige_temperatuur'].state
+                  + '°C' ]]]
+                show_label: true
+                icon: mdi:shower
+                styles:
+                  card:
+                    - background: |
+                        [[[
+                          let cur = parseFloat(states['sensor.badkamer_huidige_temperatuur']?.state)||0;
+                          let b = states['climate.thermostaat_badkamer'];
+                          let bS = b?.state||'off', bA = b?.attributes?.hvac_action||'idle', bT = parseFloat(b?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (bS !== 'off') {
+                            let heat = bA === 'heating' || (bS === 'heat' && cur < bT);
+                            let cool = bS === 'cool' && cur > bT;
+                            let reach = cur >= bT - 0.2;
+                            st = heat ? 'red' : (cool ? 'blue' : (reach ? 'green' : 'orange'));
+                          }
+                          
+                          let isNight = states['sun.sun']?.state === 'below_horizon';
+                          let diff = Math.max(0, Math.abs(bT - cur));
+                          let int = isNight ? 0.12 : Math.min(0.35, 0.15 + (diff * 0.05));
+
+                          if (st === 'red') return `rgba(255, 61, 0, ${int})`;
+                          if (st === 'blue') return `rgba(41, 121, 255, ${int})`;
+                          if (st === 'green') return 'rgba(39, 174, 96, 0.08)';
+                          if (st === 'orange') return 'rgba(255, 152, 0, 0.08)';
+                          return 'rgba(255, 255, 255, 0.05)';
+                        ]]]
+                    - border: |
+                        [[[
+                          let cur = parseFloat(states['sensor.badkamer_huidige_temperatuur']?.state)||0;
+                          let b = states['climate.thermostaat_badkamer'];
+                          let bS = b?.state||'off', bA = b?.attributes?.hvac_action||'idle', bT = parseFloat(b?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (bS !== 'off') {
+                            let heat = bA === 'heating' || (bS === 'heat' && cur < bT);
+                            let cool = bS === 'cool' && cur > bT;
+                            let reach = cur >= bT - 0.2;
+                            st = heat ? 'red' : (cool ? 'blue' : (reach ? 'green' : 'orange'));
+                          }
+
+                          if (st === 'red') return '1px solid rgba(255, 61, 0, 0.6)';
+                          if (st === 'blue') return '1px solid rgba(41, 121, 255, 0.6)';
+                          if (st === 'green') return '1px solid rgba(39, 174, 96, 0.3)';
+                          if (st === 'orange') return '1px solid rgba(255, 152, 0, 0.4)';
+                          return '1px solid rgba(255, 255, 255, 0.08)';
+                        ]]]
+                    - box-shadow: |
+                        [[[
+                          let cur = parseFloat(states['sensor.badkamer_huidige_temperatuur']?.state)||0;
+                          let b = states['climate.thermostaat_badkamer'];
+                          let bS = b?.state||'off', bA = b?.attributes?.hvac_action||'idle', bT = parseFloat(b?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (bS !== 'off') {
+                            let heat = bA === 'heating' || (bS === 'heat' && cur < bT);
+                            let cool = bS === 'cool' && cur > bT;
+                            st = heat ? 'red' : (cool ? 'blue' : 'other');
+                          }
+
+                          if (st === 'red') return '0px 0px 20px rgba(255, 61, 0, 0.3)';
+                          if (st === 'blue') return '0px 0px 20px rgba(41, 121, 255, 0.3)';
+                          return 'none';
+                        ]]]
+                    - backdrop-filter: blur(16px)
+                    - border-radius: 24px
+                    - padding: 16px
+                  grid:
+                    - grid-template-areas: '"i n" "i l"'
+                    - grid-template-columns: 50px 1fr
+                    - justify-items: start
+                  icon:
+                    - color: |
+                        [[[
+                          let cur = parseFloat(states['sensor.badkamer_huidige_temperatuur']?.state)||0;
+                          let b = states['climate.thermostaat_badkamer'];
+                          let bS = b?.state||'off', bA = b?.attributes?.hvac_action||'idle', bT = parseFloat(b?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (bS !== 'off') {
+                            let heat = bA === 'heating' || (bS === 'heat' && cur < bT);
+                            let cool = bS === 'cool' && cur > bT;
+                            let reach = cur >= bT - 0.2;
+                            st = heat ? 'red' : (cool ? 'blue' : (reach ? 'green' : 'orange'));
+                          }
+
+                          if (st === 'red') return '#ff3d00';
+                          if (st === 'blue') return '#2979ff';
+                          if (st === 'green') return '#27ae60';
+                          if (st === 'orange') return '#ff9800';
+                          return '#ffffff';
+                        ]]]
+                    - width: 28px
+                    - animation: |
+                        [[[
+                          let cur = parseFloat(states['sensor.badkamer_huidige_temperatuur']?.state)||0;
+                          let b = states['climate.thermostaat_badkamer'];
+                          let bS = b?.state||'off', bA = b?.attributes?.hvac_action||'idle', bT = parseFloat(b?.attributes?.temperature)||0;
+                          
+                          let st = 'off';
+                          if (bS !== 'off') {
+                            let heat = bA === 'heating' || (bS === 'heat' && cur < bT);
+                            let cool = bS === 'cool' && cur > bT;
+                            st = heat ? 'red' : (cool ? 'blue' : 'other');
+                          }
+
+                          if (st === 'red') return 'pulse 2s infinite ease-in-out';
+                          if (st === 'blue') return 'pulse 3s infinite ease-in-out';
+                          return 'none';
+                        ]]]
+                extra_styles: |
+                  @keyframes pulse {
+                    0% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                    50% { transform: scale(1.15); filter: drop-shadow(0 0 10px currentColor); }
+                    100% { transform: scale(1); filter: drop-shadow(0 0 2px currentColor); }
+                  }
+          - type: custom:mini-graph-card
+            name: Temperatuurverloop
+            decimals: 1
+            hours_to_show: 24
+            points_per_hour: 2
+            line_width: 3
+            show:
+              icon: true
+              labels: true
+              extrema: false
+              fill: true
+              legend: true
+            entities:
+              - entity: sensor.beneden_temperatuur
+                name: Woonkamer
+                show_state: true
+              - entity: sensor.entree_temperatuur
+                name: Hal
+                show_state: true
+              - entity: sensor.hue_motion_sensor_zolder_temperatuur
+                name: Zolder
+                show_state: true
+              - entity: sensor.badkamer_huidige_temperatuur
+                name: Badkamer
+                show_state: true
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(20, 25, 30, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+                  border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: none;
+                  height: 100%;
+                }
+          - type: custom:config-template-card
+            entities:
+              - sensor.beneden_luchtvochtigheid
+            card:
+              type: custom:mini-graph-card
+              name: |-
+                ${(() => {
+                  const lv = parseFloat(states['sensor.beneden_luchtvochtigheid'].state) || 0;
+                  let txt = 'Onbekend';
+                  if (lv < 45) txt = 'Te droog';
+                  else if (lv < 55) txt = 'Ideaal binnenklimaat';
+                  else if (lv < 65) txt = 'Wat vochtig';
+                  else txt = 'Te vochtig';
+                  return `Luchtvochtigheid — ${txt}`;
+                })()}
+              icon: mdi:water-percent
+              hours_to_show: 24
+              points_per_hour: 2
+              hour24: true
+              line_width: 3
+              animate: true
+              show:
+                icon: true
+                name: true
+                state: true
+                labels: true
+                extrema: true
+                fill: true
+              color_thresholds:
+                - value: 0
+                  color: '#f2994a'
+                - value: 40
+                  color: '#2f80ed'
+                - value: 60
+                  color: '#27ae60'
+                - value: 70
+                  color: '#9b51e0'
+              entities:
+                - entity: sensor.beneden_luchtvochtigheid
+                  name: LV beneden
+              card_mod:
+                style: |
+                  ha-card {
+                    background: rgba(20, 25, 30, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+                    border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: none;
+                    height: 100%;
+                  }
+      - type: custom:swipe-card
+        parameters:
+          spaceBetween: 8
+          scrollbar:
+            hide: false
+            draggable: true
+          pagination:
+            type: bullets
+          noSwiping: true
+          noSwipingSelector: mushroom-number-card
+        cards:
+          - type: conditional
+            conditions:
+              - condition: state
+                entity: input_select.verwarming_modus
+                state_not: vakantie
+            card:
+              type: entities
+              title: Temperatuur Doelen
+              show_header_toggle: false
+              state_color: true
+              entities:
+                - type: custom:button-card
+                  entity: binary_sensor.setpoints_afwijkend_van_standaard
+                  name: Herstel handmatige wijzigingen (reset automatisch om 03:00)
+                  icon: mdi:refresh
+                  show_state: false
+                  show_name: true
+                  tap_action:
+                    action: call-service
+                    service: automation.trigger
+                    target:
+                      entity_id: automation.airco_setpoints_reset_naar_standaard
+                  hold_action:
+                    action: none
+                  styles:
+                    card:
+                      - display: |
+                          [[[ return entity.state === 'on' ? 'flex' : 'none' ]]]
+                      - background: none
+                      - border: none
+                      - box-shadow: none
+                      - padding: 0px 8px 12px 8px
+                      - margin: 0
+                    name:
+                      - font-size: 13px
+                      - font-weight: 400
+                      - font-style: italic
+                      - color: rgba(255, 255, 255, 0.5)
+                      - justify-self: start
+                    icon:
+                      - color: rgba(255, 255, 255, 0.5)
+                      - width: 18px
+                      - justify-self: end
+                    grid:
+                      - grid-template-columns: 1fr 24px
+                      - align-items: center
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_nest_dag
+                    name: Comfort (Dag)
+                    icon: mdi:sofa
+                    icon_color: deep-orange
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_nest_eco
+                    name: Eco (Afwezig)
+                    icon: mdi:leaf
+                    icon_color: green
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_nest_voorwarm
+                    name: Voorverwarmen
+                    icon: mdi:clock-start
+                    icon_color: orange
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.badkamer_heat_off_temp_dag
+                    name: Badkamer
+                    icon: mdi:shower
+                    icon_color: deep-orange
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_airco_woonkamer
+                    name: A/C Woonkamer
+                    icon: mdi:heat-pump
+                    icon_color: deep-orange
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: state
+                      entity: input_boolean.zomer_modus_actief
+                      state: 'off'
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_airco_zolder
+                    name: A/C Zolder
+                    icon: mdi:bed
+                    icon_color: deep-orange
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: or
+                      conditions:
+                        - condition: state
+                          entity: input_boolean.zomer_modus_actief
+                          state: 'on'
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Handmatig koelen
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Automatisch koelen
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Pv koelen
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_airco_woonkamer_koelen
+                    name: A/C Woonkamer
+                    icon: mdi:snowflake
+                    icon_color: blue
+                    display_mode: slider
+                    layout: horizontal
+                - type: conditional
+                  conditions:
+                    - condition: or
+                      conditions:
+                        - condition: state
+                          entity: input_boolean.zomer_modus_actief
+                          state: 'on'
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Handmatig koelen
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Automatisch koelen
+                        - condition: state
+                          entity: input_select.koel_strategie
+                          state: Pv koelen
+                  row:
+                    type: custom:mushroom-number-card
+                    entity: input_number.temp_airco_zolder_koelen
+                    name: A/C Zolder
+                    icon: mdi:snowflake
+                    icon_color: blue
+                    display_mode: slider
+                    layout: horizontal
+              card_mod:
+                style: |
+                  ha-card { 
+                    background: rgba(20, 25, 30, 0.45); 
+                    backdrop-filter: blur(16px); 
+                    -webkit-backdrop-filter: blur(16px);
+                    border-radius: 20px; 
+                    border: 1px solid rgba(255, 255, 255, 0.08); 
+                    box-shadow: none;
+                    
+                    --control-height: 10px;     
+                    --mush-icon-size: 26px;     
+                    --mush-spacing: 4px;         
+                  }
+                  .card-header { 
+                    font-size: 12px; 
+                    font-weight: 500; 
+                    padding-bottom: 0;
+                    opacity: 0.9; 
+                  }
+                  mushroom-number-card {
+                    margin-top: -6px !important;
+                    margin-bottom: -6px !important;
+                  } 
+                  ha-card {
+                    --ha-card-background: transparent;
+                    --ha-card-box-shadow: none;
+                    --ha-card-border-width: 0;
+                  }
+          - type: entities
+            title: Standaard temperatuur instellingen
+            show_header_toggle: false
+            state_color: true
+            entities:
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_nest_dag_standaard
+                  name: Comfort (Dag)
+                  icon: mdi:sofa
+                  icon_color: deep-orange
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_nest_eco_standaard
+                  name: Eco (Afwezig)
+                  icon: mdi:leaf
+                  icon_color: green
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_nest_voorwarm_standaard
+                  name: Voorverwarmen
+                  icon: mdi:clock-start
+                  icon_color: orange
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.badkamer_heat_off_temp_dag_standaard
+                  name: Badkamer
+                  icon: mdi:shower
+                  icon_color: deep-orange
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_airco_woonkamer_standaard
+                  name: A/C Woonkamer
+                  icon: mdi:heat-pump
+                  icon_color: deep-orange
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: state
+                    entity: input_boolean.zomer_modus_actief
+                    state: 'off'
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_airco_zolder_standaard
+                  name: A/C Zolder
+                  icon: mdi:bed
+                  icon_color: deep-orange
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: or
+                    conditions:
+                      - condition: state
+                        entity: input_boolean.zomer_modus_actief
+                        state: 'on'
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Handmatig koelen
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Automatisch koelen
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Pv koelen
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_airco_woonkamer_koelen_standaard
+                  name: A/C Woonkamer
+                  icon: mdi:snowflake
+                  icon_color: blue
+                  display_mode: slider
+                  layout: horizontal
+              - type: conditional
+                conditions:
+                  - condition: or
+                    conditions:
+                      - condition: state
+                        entity: input_boolean.zomer_modus_actief
+                        state: 'on'
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Handmatig koelen
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Automatisch koelen
+                      - condition: state
+                        entity: input_select.koel_strategie
+                        state: Pv koelen
+                row:
+                  type: custom:mushroom-number-card
+                  entity: input_number.temp_airco_zolder_koelen_standaard
+                  name: A/C Zolder
+                  icon: mdi:snowflake
+                  icon_color: blue
+                  display_mode: slider
+                  layout: horizontal
+            card_mod:
+              style: |
+                ha-card { 
+                  background: rgba(20, 25, 30, 0.45); 
+                  backdrop-filter: blur(16px); 
+                  -webkit-backdrop-filter: blur(16px);
+                  border-radius: 20px; 
+                  border: 1px solid rgba(255, 255, 255, 0.08); 
+                  box-shadow: none;
+                  
+                  --control-height: 10px;     
+                  --mush-icon-size: 26px;     
+                  --mush-spacing: 4px;         
+                }
+                .card-header { 
+                  font-size: 12px; 
+                  font-weight: 500; 
+                  padding-bottom: 0;
+                  opacity: 0.9; 
+                }
+                mushroom-number-card {
+                  margin-top: -6px !important;
+                  margin-bottom: -6px !important;
+                } 
+                ha-card {
+                  --ha-card-background: transparent;
+                  --ha-card-box-shadow: none;
+                  --ha-card-border-width: 0;
+                }
+cards: []

@@ -1,0 +1,37 @@
+alias Sliders direct naar Airco (Manuele Override)
+triggers
+  - entity_id input_number.temp_airco_woonkamer_koelen
+    trigger state
+  - entity_id input_number.temp_airco_zolder_koelen
+    trigger state
+actions
+  - choose
+      - conditions
+          - condition template
+            value_template -
+              {{ trigger.entity_id == 'input_number.temp_airco_woonkamer_koelen'
+              }}
+          - condition template
+            value_template '{{ states(''climate.air_conditioning_woonkamer'') != ''off'' }}'
+        sequence
+          - action climate.set_temperature
+            target
+              entity_id climate.air_conditioning_woonkamer
+            data
+              temperature -
+                {{ states('input_number.temp_airco_woonkamer_koelen') 
+                float(21) }}
+      - conditions
+          - condition template
+            value_template '{{ trigger.entity_id == ''input_number.temp_airco_zolder_koelen'' }}'
+          - condition template
+            value_template '{{ states(''climate.air_conditioning_zolder'') != ''off'' }}'
+        sequence
+          - action climate.set_temperature
+            target
+              entity_id climate.air_conditioning_zolder
+            data
+              temperature -
+                {{ states('input_number.temp_airco_zolder_koelen')  float(21)
+                }}
+mode restart

@@ -1,0 +1,408 @@
+/**
+ * Schaduwmodus.
+ *
+ * De arbiter beslist continu mee op de echte toestand van het huis, maar zijn
+ * commando's gaan naar het log in plaats van naar Home Assistant. Zo verzamel
+ * je een winter aan beslissingen naast het draaiende YAML-systeem, en zie je
+ * waar de twee uiteenlopen voordat er iets overgezet wordt.
+ *
+ * De veiligheid zit niet in deze klasse maar een laag dieper: `HaClient` werpt
+ * bij elke `callService` zolang `allowWrites` uit staat. Deze runner roept die
+ * methode sowieso niet aan — de commando's belanden alleen in het logboek.
+ */
+
+import { appendFile, mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+
+import type { Command, Decision } from '../../core/decision.js';
+import { decide } from '../../core/decide.js';
+import type { SiteConfig } from '../../core/model.js';
+import type { StrategyRegistry } from '../../core/strategy.js';
+import type { HaClient, HaEntityState } from './client.js';
+import {
+  buildSystemState,
+  configFrom,
+  observedEntities,
+  relevantEntities,
+} from './mapping.js';
+import { EntityStore } from './store.js';
+
+export interface ShadowOptions {
+  readonly config: SiteConfig;
+  readonly strategies: StrategyRegistry;
+  readonly client: HaClient;
+  /** Vaste hartslag, ook als er niets verandert. */
+  readonly tickSeconds?: number;
+  /** Rust na een reeks wijzigingen voordat er opnieuw gerekend wordt. */
+  readonly debounceMs?: number;
+  /**
+   * Ondergrens tussen twee evaluaties.
+   *
+   * De slimme meter meldt zich elke vijf seconden, en is daarmee bijna negentig
+   * procent van alle wijzigingen die ons aangaan. Daarop telkens opnieuw
+   * beslissen heeft geen zin: de regeling werkt met stabilisatietimers van vijf
+   * minuten en minimale draaitijden van een kwartier. Het oude YAML-systeem
+   * draaide eens per drie minuten. Vijftien seconden is dus al ruim.
+   *
+   * Nul zet de begrenzer uit; dat is wat de tests doen.
+   */
+  readonly minIntervalSeconds?: number;
+  /**
+   * Na hoeveel minuten zonder geslaagde evaluatie het proces zichzelf beëindigt.
+   *
+   * Een dienst die maanden moet doorlopen faalt zelden met een knal; hij blijft
+   * hangen. Een websocket die dood is zonder dat 'close' afging, een
+   * herverbindingslus die vastloopt — het proces leeft, de opname stopt, en dat
+   * merk je pas als je de dataset gaat gebruiken. Afsluiten met een foutcode
+   * laat Docker hem herstarten; dat is beter dan stil blijven staan.
+   *
+   * Nul zet de bewaking uit.
+   */
+  readonly watchdogMinutes?: number;
+  /** Hoe het proces beëindigd wordt. Injecteerbaar voor de test. */
+  readonly onStall?: (idleMinutes: number) => void;
+  /**
+   * Hoe vaak de bewaking kijkt. Standaard een derde van de bewakingstijd, met
+   * dertig seconden als ondergrens: vaker kijken heeft geen zin voor een
+   * controle die vrijwel altijd niets vindt. De tests zetten hem lager zodat ze
+   * niet een halve minuut hoeven te wachten.
+   */
+  readonly watchdogCheckMs?: number;
+  /** Map waarin het beslislogboek als NDJSON belandt. Leeg laten = niet loggen. */
+  readonly logDir?: string;
+  /** Waar de regels naartoe gaan. Standaard de console. */
+  readonly write?: (line: string) => void;
+  /**
+   * De klok. Standaard `Date.now`, maar injecteerbaar — de kern behandelt tijd
+   * al als invoer, en dan hoort de laag eromheen dat ook te doen. Zonder dit
+   * hangt de uitkomst van een test af van het uur waarop hij toevallig draait.
+   */
+  readonly now?: () => number;
+}
+
+function commandKey(commands: readonly Command[]): string {
+  return commands
+    .map((c) =>
+      c.kind === 'setAction'
+        ? `${c.actuatorId}:${c.action}`
+        : c.kind === 'setSetpoint'
+          ? `${c.actuatorId}:${c.setpointC.toFixed(1)}`
+          : `${c.kind}:${'timerId' in c ? c.timerId : ''}`,
+    )
+    .sort()
+    .join('|');
+}
+
+function describe(command: Command): string {
+  switch (command.kind) {
+    case 'setAction':
+      return `${command.actuatorId} → ${command.action}`;
+    case 'setSetpoint':
+      return `${command.actuatorId} → ${command.setpointC.toFixed(1)} °C`;
+    case 'startTimer':
+      return `timer ${command.timerId} start (${command.durationS} s)`;
+    case 'cancelTimer':
+      return `timer ${command.timerId} stop`;
+  }
+}
+
+export class ShadowRunner {
+  readonly #options: Required<Omit<ShadowOptions, 'logDir'>> & {
+    logDir: string | null;
+  };
+  readonly #store: EntityStore;
+  #timer: NodeJS.Timeout | null = null;
+  #debounce: NodeJS.Timeout | null = null;
+  #ready = false;
+  #lastKey: string | null = null;
+  #lastLegacy: string | null = null;
+  #ticks = 0;
+  #ignored = 0;
+  #throttled = 0;
+  #lastEvalMs = Number.NEGATIVE_INFINITY;
+  #throttle: NodeJS.Timeout | null = null;
+  #watchdog: NodeJS.Timeout | null = null;
+
+  constructor(options: ShadowOptions) {
+    // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
+    // opnieuw te beslissen.
+    const triggers = relevantEntities(options.config);
+    const observed = observedEntities(options.config);
+    this.#store = new EntityStore(new Set([...triggers, ...observed]), triggers);
+    this.#options = {
+      config: options.config,
+      strategies: options.strategies,
+      client: options.client,
+      tickSeconds: options.tickSeconds ?? 30,
+      debounceMs: options.debounceMs ?? 2_000,
+      minIntervalSeconds: options.minIntervalSeconds ?? 15,
+      watchdogMinutes: options.watchdogMinutes ?? 10,
+      watchdogCheckMs:
+        options.watchdogCheckMs ??
+        Math.max(30_000, ((options.watchdogMinutes ?? 10) * 60_000) / 3),
+      onStall:
+        options.onStall ??
+        ((idle) => {
+          console.error(
+            `Geen besluit meer genomen in ${idle.toFixed(1)} minuten. ` +
+              'De verbinding met Home Assistant lijkt vast te zitten; ' +
+              'afsluiten zodat de omgeving opnieuw kan starten.',
+          );
+          process.exit(1);
+        }),
+      logDir: options.logDir ?? null,
+      write: options.write ?? ((line: string) => console.log(line)),
+      now: options.now ?? (() => Date.now()),
+    };
+  }
+
+  start(): void {
+    const { client } = this.#options;
+
+    client.on('ready', (states: HaEntityState[]) => {
+      this.#store.replaceAll(states);
+      this.#ready = true;
+      this.#log(
+        `verbonden — ${states.length} entiteiten in Home Assistant, ` +
+          `${this.#store.size} daarvan volgen we, ` +
+          `${this.#missingEntities().length} ontbreken`,
+      );
+      for (const missing of this.#missingEntities()) {
+        this.#log(`  ontbreekt: ${missing}`);
+      }
+      this.#lastEvalMs = Number.NEGATIVE_INFINITY;
+      void this.#evaluate('verbonden');
+    });
+
+    client.on('stateChanged', (state: HaEntityState) => {
+      // Alles buiten de klimaatconfiguratie negeren we volledig: geen opslag,
+      // geen herberekening, geen logregel.
+      if (!this.#store.apply(state)) {
+        this.#ignored += 1;
+        return;
+      }
+      // Wel vastgelegd, maar geen reden om te herrekenen.
+      if (!this.#store.isTrigger(state.entity_id)) return;
+      if (!this.#ready) return;
+      if (this.#debounce) clearTimeout(this.#debounce);
+      this.#debounce = setTimeout(() => {
+        this.#request('wijziging');
+      }, this.#options.debounceMs);
+      this.#debounce.unref?.();
+    });
+
+    client.on('disconnected', (reason: string) => {
+      this.#ready = false;
+      this.#log(`verbinding weg (${reason}) — opnieuw verbinden`);
+    });
+
+    client.on('error', (error: Error) => {
+      this.#log(`fout: ${error.message}`);
+    });
+
+    this.#timer = setInterval(() => {
+      if (this.#ready) void this.#evaluate('hartslag');
+    }, this.#options.tickSeconds * 1_000);
+
+
+    const watchdogMs = this.#options.watchdogMinutes * 60_000;
+    if (watchdogMs > 0) {
+      // Op een derde van de bewakingstijd kijken, zodat de melding niet tot een
+      // vol venster op zich laat wachten.
+      this.#watchdog = setInterval(() => {
+        if (this.#lastEvalMs === Number.NEGATIVE_INFINITY) return;
+        const idle = this.#options.now() - this.#lastEvalMs;
+        if (idle > watchdogMs) {
+          this.#options.onStall(idle / 60_000);
+        }
+      }, this.#options.watchdogCheckMs);
+      this.#watchdog.unref?.();
+    }
+
+    client.connect();
+  }
+
+  stop(): void {
+    if (this.#timer) clearInterval(this.#timer);
+    if (this.#debounce) clearTimeout(this.#debounce);
+    if (this.#throttle) clearTimeout(this.#throttle);
+    if (this.#watchdog) clearInterval(this.#watchdog);
+    this.#options.client.close();
+  }
+
+  /**
+   * Vraagt een evaluatie aan, met inachtneming van de ondergrens. Te vroeg?
+   * Dan wordt hij verschoven, niet weggegooid — een wijziging mag nooit
+   * verdwijnen, hij mag alleen even wachten.
+   */
+  #request(trigger: string): void {
+    const minMs = this.#options.minIntervalSeconds * 1_000;
+    const waited = this.#options.now() - this.#lastEvalMs;
+    if (waited >= minMs) {
+      void this.#evaluate(trigger);
+      return;
+    }
+    this.#throttled += 1;
+    if (this.#throttle) return; // er staat er al een klaar
+    this.#throttle = setTimeout(() => {
+      this.#throttle = null;
+      void this.#evaluate(trigger);
+    }, minMs - waited);
+    this.#throttle.unref?.();
+  }
+
+  /** Meetpunten uit de configuratie die HA niet blijkt te kennen. */
+  #missingEntities(): string[] {
+    const needed = new Set<string>();
+    for (const ref of this.#options.config.criticalInputs) needed.add(ref.id);
+    for (const zone of this.#options.config.zones) needed.add(zone.temperature.id);
+    for (const actuator of this.#options.config.actuators) {
+      needed.add(actuator.ref.id);
+      if (actuator.power.sensor) needed.add(actuator.power.sensor.id);
+    }
+    return [...needed].filter((id) => !this.#store.has(id)).sort();
+  }
+
+  async #evaluate(trigger: string): Promise<void> {
+    const nowMs = this.#options.now();
+    this.#lastEvalMs = nowMs;
+    const config = configFrom(this.#options.config, this.#store);
+    const state = buildSystemState(config, this.#store, nowMs);
+    const decision = decide({
+      config,
+      state,
+      strategies: this.#options.strategies,
+    });
+
+    this.#ticks += 1;
+    await this.#record(decision, trigger);
+  }
+
+  /**
+   * Wat de apparaten op dit moment werkelijk doen, kort genoteerd.
+   *
+   * Dit is de grondwaarheid waartegen de divergentietool het besluit afzet. Door
+   * het hier vast te leggen — op precies het moment dat de arbiter besluit —
+   * heeft die tool later geen verbinding met Home Assistant nodig, geen token,
+   * en geen last van de bewaartermijn van de recorder.
+   */
+  #observation(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const actuator of this.#options.config.actuators) {
+      const s = this.#store.state(actuator.ref.id);
+      if (s == null) {
+        out[actuator.id] = 'onbekend';
+        continue;
+      }
+      const setpoint = this.#store.attrNumber(actuator.ref.id, 'temperature');
+      out[actuator.id] = setpoint == null ? s : `${s}@${setpoint}`;
+    }
+    return out;
+  }
+
+  async #record(decision: Decision, trigger: string): Promise<void> {
+    const key = commandKey(decision.commands);
+    const changed = key !== this.#lastKey;
+    this.#lastKey = key;
+
+    const e = decision.explanation;
+    const time = new Date(decision.atMs).toLocaleTimeString('nl-NL');
+
+    // Alleen loggen wanneer het besluit verandert. Anders staat er elke dertig
+    // seconden hetzelfde, en verdwijnt het interessante in de ruis.
+    if (changed) {
+      const budget =
+        `budget ${Math.round(e.budget.allocatedW)}/${Math.round(e.budget.availableW)} W` +
+        ` (overschot ${Math.round(e.budget.surplusW)})`;
+      this.#log(
+        `${time}  ${e.mode.padEnd(14)} ${budget}` +
+          (e.failsafe.active ? `  FAILSAFE: ${e.failsafe.unreliable.join(', ')}` : ''),
+      );
+
+      if (decision.commands.length === 0) {
+        this.#log('          zou niets wijzigen');
+      } else {
+        for (const command of decision.commands) {
+          this.#log(`          zou sturen: ${describe(command)}`);
+        }
+      }
+
+      const blocked = decision.rejected.filter(
+        (r) => r.blockedBy !== 'no_change_needed',
+      );
+      for (const r of blocked.slice(0, 4)) {
+        this.#log(
+          `          geblokkeerd: ${r.intent.actuatorId} ${r.intent.action}` +
+            ` — ${r.blockedBy}${r.detail ? ` (${r.detail})` : ''}`,
+        );
+      }
+    }
+
+    if (this.#options.logDir == null) return;
+
+    // Volledig record alleen wanneer het besluit verandert; anders een korte
+    // regel met de meetwaarden. `zones` en `accepted` zijn samen tweederde van
+    // een record en staan juist stil zolang er niets gebeurt — die elke dertig
+    // seconden herhalen levert een logboek op waar de gebeurtenissen in
+    // verdrinken.
+    const observed = this.#observation();
+    const legacyRef = this.#options.config.migration?.legacyExplanation;
+    const legacy = legacyRef ? this.#store.state(legacyRef.id) : null;
+    // De uitleg van het oude systeem alleen schrijven als hij wijzigt; hij is
+    // lang en verandert een paar keer per uur. De lezer draagt hem voort.
+    const legacyChanged = legacy !== this.#lastLegacy;
+    this.#lastLegacy = legacy;
+
+    const record = changed
+      ? {
+          t: decision.atMs,
+          trigger,
+          changed: true as const,
+          mode: e.mode,
+          modeSource: e.modeSource,
+          occupied: e.occupied,
+          budget: e.budget,
+          failsafe: e.failsafe,
+          zones: e.perZone,
+          commands: decision.commands,
+          accepted: decision.accepted,
+          rejected: decision.rejected,
+          obs: observed,
+          ...(legacy != null ? { legacy } : {}),
+        }
+      : {
+          t: decision.atMs,
+          changed: false as const,
+          mode: e.mode,
+          budget: e.budget,
+          // Genoeg om de temperatuurgang te volgen zonder doelen en redenen te
+          // herhalen: die staan in het laatste volledige record ervoor.
+          zonesT: e.perZone.map((z) => [z.zoneId, z.temperatureC, z.demand]),
+          obs: observed,
+          ...(legacyChanged && legacy != null ? { legacy } : {}),
+          ...(e.failsafe.active ? { failsafe: e.failsafe } : {}),
+        };
+
+    const day = new Date(decision.atMs).toISOString().slice(0, 10);
+    const file = join(this.#options.logDir, `decisions-${day}.ndjson`);
+    await mkdir(dirname(file), { recursive: true });
+    await appendFile(file, `${JSON.stringify(record)}\n`, 'utf-8');
+  }
+
+  /** Cijfers over wat de filter tegenhoudt, voor de opstartregel en tests. */
+  get stats(): {
+    evaluations: number;
+    ignoredEvents: number;
+    throttledRequests: number;
+  } {
+    return {
+      evaluations: this.#ticks,
+      ignoredEvents: this.#ignored,
+      throttledRequests: this.#throttled,
+    };
+  }
+
+  #log(line: string): void {
+    this.#options.write(line);
+  }
+}

@@ -1,0 +1,63 @@
+# Schaduwmodus op de Synology NAS.
+#
+# Uitrollen:
+#   1. Kopieer de projectmap naar /volume1/docker/hems-climate/src
+#   2. Leg .env, config/ en logs/ ernaast (zie README-NAS.md)
+#   3. Container Manager → Project → Aanmaken → deze map
+#
+# De NAS bouwt het image zelf. Dat is met opzet: dan hoef je je niet druk te
+# maken over de processorarchitectuur van je NAS tegenover die van je pc.
+
+services:
+  hems-shadow:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    image: hems-climate/shadow:latest
+    container_name: hems-shadow
+
+    # Herstart na een crash, na een herstart van de NAS, en na de zelfbeëindiging
+    # van de bewaking wanneer de verbinding vastloopt. Niet `always`: dan zou hij
+    # ook opstarten nadat jij hem bewust hebt stopgezet.
+    restart: unless-stopped
+
+    # HA_URL en HA_TOKEN. Blijft buiten het image en buiten versiebeheer.
+    env_file:
+      - .env
+
+    environment:
+      # Van belang: zonder dit draait de container in UTC. De applicatie leest
+      # de tijdzone uit de configuratie en is daar niet van afhankelijk, maar
+      # tijdstempels in de logregels worden er wel leesbaarder van.
+      TZ: Europe/Amsterdam
+      SHADOW_TICK_SECONDS: "30"
+      SHADOW_MIN_INTERVAL_SECONDS: "15"
+      # Sluit zichzelf af bij vastlopen; restart:unless-stopped pakt het op.
+      SHADOW_WATCHDOG_MINUTES: "10"
+      SHADOW_LOG_DIR: /logs
+
+    volumes:
+      # Alleen-lezen: de dienst hoort zijn eigen configuratie nooit te wijzigen.
+      #
+      # Let op de vorm: hier wordt `config` op `config` gemount, met `sites`
+      # eronder — precies zoals de map in de repo eruitziet. Een eerdere versie
+      # hernoemde de map onderweg (`./config:/app/config/sites`), en dan komt
+      # een gekopieerde `config/sites` een niveau te diep terecht. Wat je
+      # neerzet moet eruitzien zoals het in het project staat.
+      - ./config:/app/config:ro
+      # Hier komt de winterdataset te staan.
+      - ./logs:/logs
+
+    # Deze dienst luistert nergens op en verbindt alleen uitgaand met Home
+    # Assistant. Daarom geen ports en geen extra netwerkrechten.
+
+    logging:
+      driver: json-file
+      options:
+        # Zonder grenzen groeit het containerlogboek een winter lang door.
+        max-size: "10m"
+        max-file: "5"
+
+    # Ruim boven wat hij nodig heeft (~70 MB), maar laag genoeg om te merken
+    # dat er iets lekt in plaats van dat de NAS het merkt.
+    mem_limit: 256m

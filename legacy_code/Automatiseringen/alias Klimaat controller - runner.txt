@@ -1,0 +1,113 @@
+alias Klimaat controller - runner
+description -
+  Roept de centrale klimaat controller aan bij relevante wijzigingen  (Aangepast
+  voor koel_strategie en slimme afwezigheid).
+triggers
+  - trigger homeassistant
+    event start
+  - trigger time
+    at
+      - '060000'
+      - '080000'
+      - '220000'
+  - trigger time_pattern
+    minutes 3
+  - trigger numeric_state
+    entity_id sensor.pv_overschot_w
+    above input_number.pv_klimaat_start_overschot_w
+    for
+      minutes 3
+  - trigger numeric_state
+    entity_id sensor.p1_meter_power
+    above input_number.pv_klimaat_stop_import_w
+    for
+      minutes 3
+  - trigger state
+    entity_id
+      - person.ricardo_cornelissen
+      - person.shira
+      - binary_sensor.saskia_thuis_gestabiliseerd
+      - binary_sensor.rob_thuis_gestabiliseerd
+      - binary_sensor.dini_thuis_gestabiliseerd
+      - input_select.verwarming_modus
+      - input_boolean.voorverwarmen_aan
+      - input_number.temp_nest_dag
+      - input_number.temp_nest_voorwarm
+      - input_number.temp_nest_eco
+      - input_number.badkamer_heat_off_temp_dag
+      - input_select.koel_strategie
+      - input_boolean.pv_verwarmen_actief
+      - input_boolean.airco_toestaan
+      - input_boolean.status_airco_assist_actief
+      - input_boolean.airco_assist_start_pending
+      - input_number.airco_assist_start_na_min
+      - input_number.airco_assist_min_on_min
+      - input_number.airco_assist_delta_min
+      - input_number.temp_airco_woonkamer
+      - input_number.temp_airco_zolder
+      - input_number.temp_airco_woonkamer_koelen
+      - input_number.temp_airco_zolder_koelen
+      - timer.airco_assist_start_delay
+      - timer.airco_assist_min_on
+      - timer.pv_stabilisatie
+      - light.sfeerverlichting
+      - light.woonkamer_plafonniere
+  - trigger state
+    entity_id climate.beneden
+    attribute hvac_action
+  - trigger state
+    entity_id climate.thermostaat_badkamer
+  - trigger state
+    entity_id climate.thermostaat_badkamer
+    attribute current_temperature
+  - trigger state
+    entity_id input_select.verwarming_modus
+    to afwezig
+    id check_huis_verlaten
+  - trigger state
+    entity_id input_select.koel_strategie
+    to
+      - Handmatig koelen
+      - Automatisch koelen
+    id check_strategie_gewijzigd
+actions
+  - choose
+      - conditions
+          - condition trigger
+            id check_huis_verlaten
+          - condition state
+            entity_id input_select.koel_strategie
+            state
+              - Handmatig koelen
+              - Automatisch koelen
+        sequence
+          - action input_select.select_option
+            target
+              entity_id input_select.koel_strategie
+            data
+              option Pv koelen
+      - conditions
+          - condition trigger
+            id check_strategie_gewijzigd
+          - condition state
+            entity_id input_select.verwarming_modus
+            state afwezig
+        sequence
+          - action input_select.select_option
+            target
+              entity_id input_select.verwarming_modus
+            data
+              option handmatig
+  - delay '000001'
+  - if
+      - condition state
+        entity_id input_select.koel_strategie
+        state Automatisch koelen
+    then
+      - action script.turn_on
+        target
+          entity_id script.koelen_apply_per_ruimte
+  - action script.turn_on
+    target
+      entity_id script.klimaat_controller_apply
+mode restart

@@ -1,0 +1,95 @@
+{%- set p1_import = states('sensor.p1_meter_power') | float(0) -%}
+{%- set pv_stop_w = states('input_number.pv_klimaat_stop_import_w') | float(50) -%}
+
+{# Statussen en temperaturen ophalen #}
+{%- set wk_cooling = is_state('climate.air_conditioning_woonkamer', 'cool') -%}
+{%- set zd_cooling = is_state('climate.air_conditioning_zolder', 'cool') -%}
+{%- set wk_heating = is_state('climate.air_conditioning_woonkamer', 'heat') -%}
+{%- set zd_heating = is_state('climate.air_conditioning_zolder', 'heat') -%}
+
+{%- set wk_temp = state_attr('climate.air_conditioning_woonkamer', 'temperature') | float(0) -%}
+{%- set zd_temp = state_attr('climate.air_conditioning_zolder', 'temperature') | float(0) -%}
+
+{%- set wk_cur = state_attr('climate.air_conditioning_woonkamer', 'current_temperature') | float(0) -%}
+{%- set zd_cur = state_attr('climate.air_conditioning_zolder', 'current_temperature') | float(0) -%}
+
+{%- set wk_koel_doel = states('input_number.temp_airco_woonkamer_koelen') | float(22) -%}
+{%- set zd_koel_doel = states('input_number.temp_airco_zolder_koelen') | float(22.5) -%}
+
+{%- set wk_op_temperatuur = wk_cur <= wk_koel_doel -%}
+{%- set zd_op_temperatuur = zd_cur <= zd_koel_doel -%}
+{%- set alles_op_temperatuur = wk_op_temperatuur and zd_op_temperatuur -%}
+
+{# Standby check #}
+{%- set wk_standby = (wk_heating and wk_temp <= 18.0) or (wk_cooling and wk_temp >= 25.0) -%}
+{%- set zd_standby = (zd_heating and zd_temp <= 18.0) or (zd_cooling and zd_temp >= 25.0) -%}
+
+{# Compacte spatie om 255-karakter limiet te voorkomen #}
+{%- set indent = "&emsp;" -%}
+
+{%- set st_w = "Standby" if wk_standby else ("Koelen" if wk_cooling else ("Verwarmen" if wk_heating else "Uit")) -%}
+{%- set st_z = "Standby" if zd_standby else ("Koelen" if zd_cooling else ("Verwarmen" if zd_heating else "Uit")) -%}
+
+{%- set icon_w = "💤" if wk_standby else ("❄️" if wk_cooling else ("☀️" if wk_heating else "")) -%}
+{%- set icon_z = "💤" if zd_standby else ("❄️" if zd_cooling else ("☀️" if zd_heating else "")) -%}
+
+{%- set airco_regels = "" -%}
+{%- if (wk_cooling or wk_heating) and (zd_cooling or zd_heating) and (st_w == st_z) -%}
+  {%- set airco_regels = "<br>" ~ indent ~ icon_w ~ " Woonkamer & Zolder (" ~ st_w ~ ")" -%}
+{%- else -%}
+  {%- set wk_line = ("<br>" ~ indent ~ icon_w ~ " Woonkamer (" ~ st_w ~ ")") if (wk_cooling or wk_heating) else "" -%}
+  {%- set zd_line = ("<br>" ~ indent ~ icon_z ~ " Zolder (" ~ st_z ~ ")") if (zd_cooling or zd_heating) else "" -%}
+  {%- set airco_regels = wk_line ~ zd_line -%}
+{%- endif -%}
+
+{%- set modus = states('input_select.verwarming_modus') -%}
+{%- set koel_strategie = states('input_select.koel_strategie') -%}
+{%- set pv_verwarmen_aan = is_state('input_boolean.pv_verwarmen_actief', 'on') -%}
+{%- set min_on_active = is_state('timer.airco_assist_min_on', 'active') -%}
+{%- set stab_active = is_state('timer.pv_stabilisatie', 'active') -%}
+{%- set assist_busy = is_state('input_boolean.status_airco_assist_actief', 'on') or is_state('input_boolean.airco_assist_start_pending', 'on') -%}
+
+{%- set pv_hard_stop = (p1_import > pv_stop_w) and not min_on_active -%}
+
+{%- set reden_tekst -%}
+{%- if koel_strategie == 'Handmatig koelen' -%}
+  Handmatig koelen actief:{{ "<br>" ~ indent ~ "⏳ Wacht op temperatuur" if airco_regels == "" else airco_regels }}
+{%- elif koel_strategie == 'Automatisch koelen' -%}
+  Automatisch koelen actief:{{ "<br>" ~ indent ~ "⏳ Wacht op temperatuur" if airco_regels == "" else airco_regels }}
+{%- elif assist_busy -%}
+  Heat-assist actief:{{ "<br>" ~ indent ~ "⏳ Bezig met starten..." if airco_regels == "" else airco_regels }}
+{%- elif koel_strategie == 'Pv koelen' and (wk_cooling or zd_cooling) -%}
+  PV-koelen actief:{{ airco_regels }}
+{%- elif pv_verwarmen_aan and (wk_heating or zd_heating) -%}
+  PV-verwarmen actief{{ ' (Eco)' if modus == 'afwezig' else '' }}:{{ airco_regels }}
+{%- elif koel_strategie == 'Pv koelen' -%}
+  {%- if modus == 'vakantie' -%} Vakantiemodus actief
+  {%- elif not is_state('sun.sun', 'above_horizon') -%} PV-koelen: Zon is onder
+  {%- elif pv_hard_stop -%} PV-koelen: Gepauzeerd (Import)
+  {%- elif alles_op_temperatuur -%} PV-koelen: Op temperatuur
+  {%- else -%} PV-koelen: Wacht op overschot
+  {%- endif -%}
+{%- elif pv_verwarmen_aan -%}
+  {%- if modus == 'vakantie' -%} Vakantie: Nest op 12°C
+  {%- elif not is_state('sun.sun', 'above_horizon') -%} PV-verwarmen: Zon is onder
+  {%- elif pv_hard_stop -%} PV-verwarmen: Gepauzeerd (Import)
+  {%- else -%} PV-verwarmen: Wacht op overschot
+  {%- endif -%}
+{%- else -%}
+  {%- if modus == 'afwezig' -%} Afwezig: Nest op Eco
+  {%- elif modus == 'vakantie' -%} Vakantie: Nest op 12°C
+  {%- else -%} Airco's staan momenteel uit
+  {%- endif -%}
+{%- endif -%}
+{%- endset -%}
+
+{%- set min_on_tijd = state_attr('timer.airco_assist_min_on', 'finishes_at') -%}
+{%- set stab_tijd = state_attr('timer.pv_stabilisatie', 'finishes_at') -%}
+
+{{- reden_tekst -}}
+{%- if min_on_active and min_on_tijd != None -%}
+  <br><i>{{ indent }}⏱️ Min. aan tot {{ min_on_tijd | as_timestamp | timestamp_custom('%H:%M') }}</i>
+{%- endif -%}
+{%- if stab_active and stab_tijd != None -%}
+  <br><i>{{ indent }}⏳ Stabiliseert tot {{ stab_tijd | as_timestamp | timestamp_custom('%H:%M') }}</i>
+{%- endif -%}

@@ -1,0 +1,29 @@
+# ---- geheimen ----------------------------------------------------------
+# Bevat het Home Assistant-token. Hoort nooit in versiebeheer, ook niet in
+# een privérepository: wie ooit toegang krijgt, krijgt je hele huis erbij.
+.env
+*.env
+!.env.example
+
+# ---- te groot ----------------------------------------------------------
+# De HA-backup is bijna een gigabyte en bevat je volledige installatie
+# inclusief geheimen. GitHub weigert bestanden boven 100 MB sowieso.
+*.tar
+*.tar.gz
+!backend/data/replay/*.ndjson.gz
+
+# ---- afgeleide bestanden ----------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+
+# ---- gegevens ----------------------------------------------------------
+# Logboeken en datasets horen niet in de code-repository; die halen we van
+# de NAS met sync-logs.bat.
+backend/data/
+deploy.log
+
+# ---- lokale rommel -----------------------------------------------------
+.DS_Store
+Thumbs.db
+*.err.log
