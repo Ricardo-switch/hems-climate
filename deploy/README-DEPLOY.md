@@ -81,6 +81,25 @@ dat er niets te doen valt. De mislukte uitrol wordt dan nooit meer geprobeerd.
 overlappende runs tegen; een slot dat ouder is dan een uur wordt als restant
 van een afgebroken run opgeruimd.
 
+## De Taakplanner is een andere wereld
+
+Een geplande taak draait niet in jouw shell. Drie dingen zijn daar anders, en
+alle drie hebben ze dit script een keer laten struikelen:
+
+- **Geen PATH** naar docker en git. Het script zoekt ze daarom expliciet op.
+- **Geen `HOME=/root`**, waardoor ssh de sleutel niet vond. Die wordt nu
+  expliciet meegegeven.
+- **Geen bash.** DSM start scripts met `/bin/sh`, en dat is busybox ash. Die
+  kent geen arrays en geen procesvervanging. Het script start zichzelf daarom
+  opnieuw onder bash zodra het merkt dat het niet onder bash draait.
+
+Daardoor werkt het nu ongeacht hoe de taak is ingesteld — of je nu het pad
+opgeeft, `bash /pad/deploy.sh`, of `sh /pad/deploy.sh`.
+
+**Toets een wijziging in dit script altijd via de Taakplanner zelf**, met
+*Uitvoeren*, en niet alleen vanaf de commandoregel. Alleen zo draai je in
+dezelfde omgeving als straks om drie uur 's nachts.
+
 ## De sleutel en de Taakplanner
 
 Een geplande taak draait niet in een loginshell. `HOME` kan daardoor ergens
