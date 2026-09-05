@@ -16,6 +16,21 @@
 # seconden in plaats van de hele bouwtijd. Mislukt het bouwen, dan blijft de
 # draaiende container ongemoeid.
 
+# Dit script leunt op bash: arrays, herestrings, procesvervanging. De Synology
+# Taakplanner start scripts met /bin/sh, en dat is op DSM busybox ash — die
+# struikelt daar meteen over. Opnieuw starten onder bash lost dat op, ongeacht
+# hoe de taak is ingesteld. Alles bóven deze regel moet daarom in gewone sh
+# leesbaar blijven.
+if [ -z "${BASH_VERSION:-}" ]; then
+  for candidate in /bin/bash /usr/bin/bash /usr/local/bin/bash /opt/bin/bash; do
+    if [ -x "$candidate" ]; then
+      exec "$candidate" "$0" "$@"
+    fi
+  done
+  echo "FOUT: dit script heeft bash nodig, en die is niet gevonden." >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 ROOT="/volume1/docker/hems-climate"
