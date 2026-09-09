@@ -435,8 +435,16 @@ geen afspraak. Net als bij `HaClient` zonder `allowWrites`:
 
 *Kosten:* er is geen authenticatie. Op een thuisnetwerk is dat verdedigbaar —
 Home Assistant zelf staat daar ook — maar het staat als waarschuwing in de
-compose: hier hoort nooit een portforward op. Fase 6 heeft er een antwoord voor
-nodig zodra dit bij iemand anders komt te draaien.
+compose: hier hoort nooit een reverse proxy naar buiten op. Het verschil met
+Home Assistant is dat díe een inlog heeft; deze pagina niet. Fase 6 heeft er een
+antwoord voor nodig zodra dit bij iemand anders komt te draaien.
+
+*Nagekomen:* de poort stond eerst hard op 8080, en dat bleek op de eigen NAS al
+bezet door SABnzbd. Welke poorten vrij zijn is een eigenschap van de
+installatie en niet van de code, dus hij komt nu uit `.env` — met 8099 als
+standaard. Anders zou het verzetten van een poort een wijziging in een
+git-bestand vragen, en daarmee een melding van de compose-controle uit besluit
+25 over een verschil dat helemaal geen drift is.
 
 *Gevolg:* de weergave krijgt élk besluit, ook wanneer er niets wijzigde. Dat is
 het omgekeerde van wat het logboek doet, en met opzet: een logboek dat de winter
