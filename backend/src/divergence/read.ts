@@ -51,6 +51,45 @@ export interface Moment {
   readonly failsafe: boolean;
   /** Of dit een volledig record was; korte records dragen veel voort. */
   readonly full: boolean;
+  /**
+   * Of de bewoner op dat moment de knoppen had overgenomen.
+   *
+   * In een hands-off stand stelt de arbiter niets voor en stuurt hij niets, dus
+   * er valt niets te vergelijken: wat er draait is wat de bewoner wilde. Een
+   * episode maken van "het oude systeem koelde en ik zou stoppen" is dan geen
+   * meningsverschil tussen twee regelaars maar een meningsverschil met de
+   * bewoner, en dat hoort niet in dit rapport.
+   */
+  readonly handsOff: boolean;
+}
+
+/** Modi waarin de regeling zich terugtrekt. Spiegelt `HANDS_OFF_MODES`. */
+const HANDS_OFF_MODES: ReadonlySet<string> = new Set(['handmatig']);
+
+/**
+ * Herkent de handmatige stand in logboeken van vóór de vertaalfout-fix.
+ *
+ * Tot september 2026 las `mapping.ts` alleen `input_select.verwarming_modus`,
+ * en niet `input_select.koel_strategie`. Die logboeken schreven dus `dag` waar
+ * de bewoner op het dashboard 'Handmatig koelen' had staan.
+ *
+ * De uitleg van het oude systeem staat er wél in, en die is eenduidig: in
+ * `sensor.airco_assist_reden` is dit de éérste tak van de sjabloon —
+ *
+ *   {%- if koel_strategie == 'Handmatig koelen' -%}
+ *     Handmatig koelen actief:…
+ *
+ * — dus deze tekst verschijnt precies dan, en alleen dan, als die stand aan
+ * stond. Daarmee is de stand uit het logboek zelf terug te lezen, zonder
+ * verbinding met Home Assistant (besluit 11).
+ *
+ * Weghalen zodra er geen logboeken van vóór die fix meer worden meegenomen.
+ */
+const LEGACY_MANUAL_PREFIX = 'Handmatig koelen actief';
+
+function handsOffAt(mode: string, legacy: string | null): boolean {
+  if (HANDS_OFF_MODES.has(mode)) return true;
+  return legacy != null && legacy.startsWith(LEGACY_MANUAL_PREFIX);
 }
 
 interface RawRecord {
@@ -145,9 +184,11 @@ export async function* readMoments(
             demand,
           }));
 
+      const mode = raw.mode ?? 'onbekend';
+
       yield {
         tMs: raw.t,
-        mode: raw.mode ?? 'onbekend',
+        mode,
         budget: raw.budget
           ? { ...EMPTY_BUDGET, ...raw.budget }
           : EMPTY_BUDGET,
@@ -164,6 +205,7 @@ export async function* readMoments(
         arbiterAction,
         failsafe: raw.failsafe?.active === true,
         full: raw.changed === true,
+        handsOff: handsOffAt(mode, lastLegacy),
       };
     }
   }
@@ -195,6 +237,12 @@ export function observedRunning(observed: string | undefined): boolean {
  * maken dan hij is.
  */
 export function arbiterRunning(moment: Moment, actuatorId: string): boolean {
+  // Handen af betekent: geen voorstel, geen commando, en dus ook geen mening
+  // over wat er draait. De wens van de arbiter ís hier de waarneming. Zonder
+  // dit zou een eerder besluit blijven doorwerken en een handmatig aangezette
+  // airco als afwijking gaan tellen.
+  if (moment.handsOff) return observedRunning(moment.observed[actuatorId]);
+
   const wanted = moment.arbiterAction[actuatorId];
   if (wanted != null) return wanted === 'heat' || wanted === 'cool';
   // Geen aanvaard voorstel: er gaat niets uit, dus het apparaat houdt aan wat
