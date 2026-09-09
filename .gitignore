@@ -12,6 +12,13 @@
 *.tar.gz
 !backend/data/replay/*.ndjson.gz
 
+# Dezelfde backup, maar uitgepakt. Dat is waar we de feiten uit nakijken, en
+# het is 1,1 GB: de recorder-database alleen al is 800 MB. Er zit bovendien
+# meer in dan alleen configuratie — secrets.yaml, .storage/auth met de
+# refresh-tokens, en apparaatsleutels. De .tar hierboven wordt genegeerd; de
+# uitgepakte versie ernaast hoort dat net zo goed te worden.
+automatic_backup_*/
+
 # ---- afgeleide bestanden ----------------------------------------------
 node_modules/
 dist/
@@ -19,7 +26,7 @@ dist/
 
 # ---- gegevens ----------------------------------------------------------
 # Logboeken en datasets horen niet in de code-repository; die halen we van
-# de NAS met sync-logs.bat.
+# de NAS met sync-start-divergence.ps1.
 backend/data/
 deploy.log
 

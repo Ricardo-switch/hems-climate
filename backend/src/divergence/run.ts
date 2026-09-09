@@ -196,7 +196,7 @@ function render(analysis: Analysis, opts: Options): string {
     lines.push('  van de arbiter, en daar valt niets mee te vergelijken.');
     lines.push('');
     lines.push('  Draai de schaduwmodus op de bijgewerkte versie en haal over een dag');
-    lines.push('  opnieuw op met sync-logs.bat.');
+    lines.push('  opnieuw op met sync-start-divergence.ps1.');
     lines.push('═'.repeat(78));
     return lines.join('\n');
   }
@@ -260,14 +260,14 @@ async function main(): Promise<void> {
 
   if (!existsSync(dir)) {
     console.error(`De map ${dir} bestaat niet.`);
-    console.error('  Haal de logboeken eerst op met sync-logs.bat.');
+    console.error('  Haal de logboeken eerst op met sync-start-divergence.ps1.');
     process.exit(1);
   }
 
   let files = await findLogFiles(dir);
   if (files.length === 0) {
     console.error(`Geen decisions-*.ndjson gevonden in ${dir}.`);
-    console.error('  Haal de logboeken eerst op met sync-logs.bat.');
+    console.error('  Haal de logboeken eerst op met sync-start-divergence.ps1.');
     process.exit(1);
   }
   if (opts.days != null && Number.isFinite(opts.days)) {
