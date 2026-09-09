@@ -17,9 +17,12 @@ Via File Station of SSH, onder de gedeelde map `docker`:
 └── src/                  ← de projectmap (backend/ en config/)
 ```
 
-De NAS bouwt het image zelf uit `src/backend`. Dat is met opzet: zo hoef je je
-niets aan te trekken van het verschil tussen de processor van je pc en die van
-je NAS.
+De NAS bouwt het image zelf uit `src/`. Dat is met opzet: zo hoef je je niets
+aan te trekken van het verschil tussen de processor van je pc en die van je NAS.
+
+De build-context is sinds fase 5 de projectwortel en niet `src/backend`, want de
+webweergave in `frontend/` wordt in hetzelfde image gebouwd. Daar hoort de
+`.dockerignore` in de wortel bij; die in `backend/` doet niets meer.
 
 ## Bestanden neerzetten
 
@@ -29,7 +32,13 @@ je NAS.
 2. **`config/sites/huis-cornelissen.json`** — kopieer de map `config/sites` uit
    het project over, met dezelfde indeling. De container mount `config` op
    `config`, dus wat je hier neerzet ziet er precies zo uit als in de repo.
-3. **`docker-compose.yml`** — kopieer uit `deploy/`.
+3. **`docker-compose.yml`** — kopieer uit `deploy/`. **Ook bij een update**:
+   dit bestand wordt niet automatisch overgezet, net zomin als `deploy.sh`
+   (besluit 20). Het bepaalt onder meer de build-context, dus een verouderde
+   kopie laat een nieuwe Dockerfile tegen een oude context bouwen. Sinds
+   9 september 2026 stopt `deploy.sh` daarop met een melding en het commando
+   dat je nodig hebt, in plaats van een bouwfout die niet naar de oorzaak
+   wijst.
 4. **`.env`** — nieuw aanmaken, met dezelfde twee regels als op je pc:
 
 ```
@@ -58,6 +67,31 @@ verbonden — 1672 entiteiten in Home Assistant, 31 daarvan volgen we, 0 ontbrek
 
 Zie je dat niet, kijk dan in het containerlogboek: fouten in de configuratie of
 in het token worden bij het opstarten met naam en toenaam gemeld.
+
+## Bijwerken
+
+`deploy.sh` in de Taakplanner haalt de code op en bouwt opnieuw. Twee bestanden
+horen daar niet bij en neem je zelf over wanneer ze in git wijzigen:
+
+```sh
+cp /volume1/docker/hems-climate/src/deploy/docker-compose.yml    /volume1/docker/hems-climate/docker-compose.yml
+```
+
+en `deploy.sh` zelf. Het script meldt in beide gevallen dat er iets te doen is.
+
+## De webweergave
+
+Sinds fase 5 luistert de dienst op poort 8080: `http://<nas>:8080/`. Read-only —
+er is geen route die iets wijzigt. Er is ook **geen authenticatie**, en dit
+proces houdt het HA-token vast, dus zet hier nooit een portforward of een
+reverse proxy naar buiten op.
+
+Is 8080 op je NAS al bezet, dan mislukt het omwisselen met "port is already
+allocated". Kies dan links een andere poort in `docker-compose.yml`
+(`"8081:8080"`); de rechterkant hoort bij `HEMS_WEB_PORT` en blijft 8080.
+
+Helemaal uitzetten kan door `HEMS_WEB_PORT` en het `ports`-blok weg te laten.
+Dan luistert de dienst nergens op, zoals vóór fase 5.
 
 ## Wat er is ingebouwd voor het onbewaakt draaien
 
