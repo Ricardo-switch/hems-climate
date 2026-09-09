@@ -51,6 +51,17 @@ met controle op samenhang: verwijst een zone naar een apparaat dat niet bestaat,
 eisen twee zones hetzelfde apparaat op, is een doeltemperatuur onbereikbaar. De
 parser stopt niet bij de eerste fout maar levert de hele lijst met pad.
 
+**Twee applicaties, niet één.** Wat hier staat is de *machinekamer*: de kern, de
+schaduwmodus, de harnassen en een technische monitor. Het dashboard waar een
+bewoner naar kijkt wordt een aparte applicatie (fase 8), met een eigen
+ontwerptaal en een eigen tempo. Ze delen één ding: het `Explanation`-contract.
+Zie besluit 29.
+
+**De schaduwmodus blijft, ook na de overstap.** Hij is geen steiger die je
+afbreekt zodra het gebouw staat, maar het instrument waarmee elke volgende
+woning begint: eerst een tijd meekijken en een gedragsbasislijn opbouwen, dan
+pas sturen. Zie besluit 28.
+
 **Weergave (`frontend/`).** Read-only. Eén HTML-pagina, vanilla JS, Tailwind die
 lokaal wordt gebouwd tot ~10 kB CSS — geen framework, geen CDN. Ze leest
 `Explanation` en herberekent niets: elk getal en elke reden komt uit het besluit
@@ -98,11 +109,28 @@ geleerd:
 | 3 | Configuratie als data | **klaar** |
 | 4 | Divergentietool | **klaar**, wacht op winterdata |
 | 5 | Read-only webweergave | **klaar** |
-| 6 | Onboarding voor andermans huis | later |
+| 6 | Bindingen uit de configuratie, en onboarding | **bezig** |
 | 7 | Vooruitkijken: PV-prognose, weer, dynamische tarieven | later |
+| 8 | Het bewonersdashboard, als eigen applicatie | later |
 
 De eerdere nummering is hier samengevoegd: configuratie als data en de
 divergentietool bleken beide voorwaarden voor de frontend, niet erna.
+
+### Fase 6, uitgesplitst
+
+Fase 6 heette "onboarding voor andermans huis", maar dat bleek de laatste stap
+en niet de eerste. Ervoor liggen twee dingen die dit huis vandaag al raken:
+
+| | Wat | Waarom nu |
+| --- | --- | --- |
+| 6a | `mapping.ts` leest de bindingen uit `SiteConfig` | De configuratie en de code bevatten nu dezelfde vijf tabellen, met de hand gelijkgehouden. Niets bewaakt dat. |
+| 6b | Timers, standby-afspraak, modusbron en legacy-helpers naar de configuratie | Wat in code staat kan niet per woning verschillen — en de modusbron was de oorzaak van de 151 minuten uit besluit 8b. |
+| 6c | De onboarding-wizard zelf | Pas zinvol als 6a en 6b staan; anders is elke tweede woning een codewijziging. |
+
+**Buitentemperatuur is naar voren gehaald.** `sensor.temperatuur` stond in fase 7
+en wordt nu meteen vastgelegd. Reden: elke winterdag die zonder hem wordt
+opgenomen is een winterdag die je voor fase 7 opnieuw moet doen. De regeling
+gebruikt hem nog niet; hij gaat alleen mee het logboek in. Zie besluit 30.
 
 ## 5. Waar we nu staan
 
@@ -174,9 +202,13 @@ nodig hebt, want de code vertelt het wat en niet het waarom.
 
 ## 8. Volgende stap
 
-Fase 6: onboarding voor andermans huis. Twee dingen die daar als eerste hard
-worden — de weergave kent geen authenticatie (besluit 23), en de bindingen in
-`mapping.ts` zijn nog met de hand geschreven voor dit ene huis.
+Fase 6a en 6b, plus de buitentemperatuur uit fase 7. Alle drie om dezelfde
+reden: ze raken de kwaliteit van de winterdataset die nu wordt opgebouwd, en die
+kun je niet met terugwerkende kracht repareren.
 
-Ondertussen loopt de winterdataset door. Die is sinds 9 september 2026 gebaseerd
-op een vertaling die de handmatige stand kent (besluit 8b); alles daarvóór niet.
+Daarna 6c (de wizard) of fase 7 (vooruitkijken). Die volgorde is nog niet
+bepaald; fase 8 — het bewonersdashboard — komt daar hoe dan ook na.
+
+De winterdataset is sinds 9 september 2026 gebaseerd op een vertaling die de
+handmatige stand kent (besluit 8b); alles daarvóór niet. Vanaf de uitrol van
+fase 6a/6b staat ook de buitentemperatuur erin.
