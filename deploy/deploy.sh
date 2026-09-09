@@ -317,6 +317,36 @@ fi
 
 cd "$ROOT"
 
+# Het compose-bestand is een handmatige kopie uit `deploy/`, net als dit script
+# (besluit 20). Anders dan de configuratie is het geen voorkeur maar een
+# bouwinstructie: het bepaalt de build-context. Loopt het uit de pas met de
+# Dockerfile in git, dan bouw je een nieuwe Dockerfile tegen een oude context,
+# en dat mislukt met acht regels "not found" die niets over de oorzaak zeggen.
+#
+# Dat is precies één keer gebeurd, op 9 september 2026, bij de overstap naar
+# een context in de projectwortel. Vandaar: stoppen, niet waarschuwen. Een
+# mismatch hier maakt de rest van deze run betekenisloos.
+if [ -f "$SRC/deploy/docker-compose.yml" ] &&
+   ! cmp -s "$SRC/deploy/docker-compose.yml" "$ROOT/docker-compose.yml"; then
+  log "GESTOPT: $ROOT/docker-compose.yml wijkt af van de versie in git."
+  log ""
+  log "  Het compose-bestand bepaalt onder meer de build-context, dus bouwen"
+  log "  met een verouderde kopie levert een mislukking op die niet naar de"
+  log "  oorzaak wijst. De draaiende container is niet aangeraakt."
+  log ""
+  log "  Neem de nieuwe versie over en draai deze taak opnieuw:"
+  log "    cp $SRC/deploy/docker-compose.yml $ROOT/docker-compose.yml"
+  log ""
+  log "  Verschillen (links: wat er draait, rechts: git):"
+  # `diff` geeft 1 terug zodra er een verschil is, en met `set -o pipefail`
+  # zou dat de pijplijn laten mislukken voordat we bij `exit 1` zijn. Vandaar
+  # eerst opvangen; dan bepalen wij wanneer we stoppen en met welke code.
+  COMPOSE_DIFF="$(diff "$ROOT/docker-compose.yml" "$SRC/deploy/docker-compose.yml" 2>&1 || true)"
+  printf '%s
+' "$COMPOSE_DIFF" | head -40 | sed 's/^/    /'
+  exit 1
+fi
+
 # De configuratie is niet van de code maar van deze installatie, en wordt
 # daarom niet automatisch overgezet. Wel melden wanneer git iets anders bevat
 # dan wat er draait — dan weet je dat er iets te doen is.

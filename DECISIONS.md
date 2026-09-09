@@ -468,6 +468,38 @@ gaat de hele repository de daemon in, HA-backup van een gigabyte incluis.
 `frontend/` — anders is een gewijzigde pagina een pagina die niet verandert, en
 dat is weer precies het soort stilte waar dit project vanaf moest.
 
+## 25. Het compose-bestand is een bouwinstructie, geen voorkeur
+
+`docker-compose.yml` staat op de NAS naast `src/` en wordt met de hand
+overgenomen, net als `deploy.sh` (besluit 20) en de configuratie (besluit 21).
+Voor die twee is dat goed: het zijn keuzes van deze installatie.
+
+Voor compose bleek het iets anders. Fase 5 verplaatste de build-context van
+`backend/` naar de projectwortel, want `frontend/` moet mee. De Dockerfile ging
+met git mee naar de NAS; het compose-bestand niet. Resultaat: een nieuwe
+Dockerfile die tegen de oude context bouwde, en acht regels
+`"/backend/package.json": not found` die niets over de oorzaak zeggen. De
+Taakplanner mailde dat elke vijf minuten.
+
+`deploy.sh` had de wijziging netjes gezien — `deploy/docker-compose.yml` stond
+in de lijst met gewijzigde bestanden — en bouwde vrolijk verder met de oude
+kopie. Het script controleerde alleen of `$ROOT/docker-compose.yml` *bestaat*.
+
+*Besluit:* het script vergelijkt de draaiende kopie met die in git en **stopt**
+wanneer ze verschillen, met de diff en het `cp`-commando erbij. Stoppen en niet
+waarschuwen, want anders dan bij de configuratie maakt een mismatch hier de rest
+van de run betekenisloos: het compose-bestand bepaalt waar de build naar kijkt.
+
+*Waarom niet automatisch kopiëren:* dan zou een `git pull` de poortbinding en de
+mounts van een draaiende installatie kunnen wijzigen zonder dat iemand ernaar
+keek. Dat is precies waarom besluit 20 en 21 bestaan. De juiste vorm is niet
+"doe het voor me" maar "weiger tot het klopt".
+
+*Les, en die is breder:* dit script kende de wijziging al. Het gebruikte hem
+alleen om te besluiten *dat* er werk was, niet om te controleren *of* het werk
+kon slagen. Een detectie die geen controle wordt, is een gemiste kans die je pas
+ziet als hij misgaat.
+
 ---
 
 ## Wat nog een besluit wacht
