@@ -65,6 +65,12 @@ Die terugblik draait dezelfde `analyse()` als `npm run divergence` in de
 terminal — één analyse, twee vensters — elk kwartier, met de uitkomst in het
 geheugen. Zie besluit 26.
 
+De pagina heeft twee tabbladen, **Nu** en **Terugblik**, met daarboven een
+datasetmeter die altijd zichtbaar blijft: dagen per seizoen tegen een doel, en
+welke modi, strategieën en richtingen ooit zijn afgegaan. Die checklist komt uit
+de gesloten unions van de kern, dus een nieuwe modus verschijnt er vanzelf in.
+Zie besluit 27.
+
 ## 3. Ontwerpprincipes
 
 De oorspronkelijke drie staan overeind. Wat we er in de praktijk bij hebben

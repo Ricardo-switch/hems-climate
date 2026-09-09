@@ -24,8 +24,13 @@ export interface Moment {
     /** Netvermogen; negatief bij teruglevering. */
     readonly gridPowerW: number;
   };
-  /** Temperatuur en vraag per zone. */
-  readonly zones: readonly { id: string; temperatureC: number | null; demand: string }[];
+  /** Temperatuur en vraag per zone. `reason` alleen op volledige records. */
+  readonly zones: readonly {
+    id: string;
+    temperatureC: number | null;
+    demand: string;
+    reason?: string;
+  }[];
   /** Wat de apparaten op dat moment werkelijk deden, op actuator-id. */
   readonly observed: Readonly<Record<string, string>>;
   /** De uitleg van het oude systeem, voortgedragen tot hij wijzigt. */
@@ -35,7 +40,12 @@ export interface Moment {
   /** Waarom een voorstel het niet haalde. Idem. */
   readonly rejected: readonly { actuatorId: string; action: string; blockedBy: string }[];
   /** Aanvaarde voorstellen, voor het bepalen van wat er zou draaien. */
-  readonly accepted: readonly { actuatorId: string; action: string }[];
+  readonly accepted: readonly {
+    actuatorId: string;
+    action: string;
+    /** Welke strategie het voorstelde. Alleen op volledige records. */
+    strategyId?: string;
+  }[];
   /**
    * Wat de arbiter voor elk apparaat wil, voortgedragen over korte records.
    *
@@ -97,13 +107,18 @@ interface RawRecord {
   changed?: boolean;
   mode?: string;
   budget?: Moment['budget'];
-  zones?: { zoneId: string; temperatureC: number | null; demand: string }[];
+  zones?: {
+    zoneId: string;
+    temperatureC: number | null;
+    demand: string;
+    reason?: string;
+  }[];
   zonesT?: [string, number | null, string][];
   obs?: Record<string, string>;
   legacy?: string;
   commands?: { kind: string; actuatorId?: string; action?: string }[];
   rejected?: { intent: { actuatorId: string; action: string }; blockedBy: string }[];
-  accepted?: { actuatorId: string; action: string }[];
+  accepted?: { actuatorId: string; action: string; strategyId?: string }[];
   failsafe?: { active: boolean };
 }
 
@@ -177,6 +192,7 @@ export async function* readMoments(
             id: z.zoneId,
             temperatureC: z.temperatureC,
             demand: z.demand,
+            ...(z.reason != null ? { reason: z.reason } : {}),
           }))
         : (raw.zonesT ?? []).map(([id, temperatureC, demand]) => ({
             id,

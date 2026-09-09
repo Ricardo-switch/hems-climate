@@ -562,6 +562,47 @@ dE >= 9 bij deuteranopie, L binnen 0,48-0,67, contrast >= 3:1 op de achtergrond.
 Daarbovenop draagt niets identiteit via kleur alleen — er is altijd een legenda,
 en de balken tonen de aantallen erbij.
 
+## 27. De datasetmeter meet dekking, niet duur
+
+"Hoever zijn we" is een verleidelijk simpele vraag. Het antwoord "vijf dagen"
+klopt en zegt niets: vijf dagen september bevatten geen enkel
+verwarmingscommando, geen vakantiestand en geen failsafe. Een teller die alleen
+dagen telt zou op weg naar een winter geruststellend oplopen terwijl de helft
+van de regeling nog nooit is afgegaan.
+
+*Besluit:* de meter telt twee dingen, even zwaar. **Tijd** — dagen per seizoen,
+tegen een doel. En **dekking** — is elke modus, elke strategie en elke richting
+ooit langsgekomen. Beide halen honderd procent, of het is niet compleet.
+
+*De lijst komt uit de kern.* `MODES`, `ACTIONS`, `REASON_CODES` en `BLOCK_CODES`
+zijn gesloten unions, en die zijn hier de checklist. Voegt iemand later een
+modus toe, dan verschijnt die vanzelf als openstaand punt in plaats van dat de
+meter stilletjes achterblijft — dezelfde reden dat die unions gesloten zijn.
+
+*Wat de meter meteen liet zien,* op de eigen opname van vijf dagen: 44%. Geen
+`heat`-commando, geen `heat-assist`, geen `vakantie`. Dat wisten we uit
+DECISIONS.md, maar niet als getal, en niet zonder ernaar te zoeken.
+
+*En één ding dat langer wachten niet oplost:* `sensor.temperatuur` wordt niet in
+het beslislogboek meegeschreven. De winterdataset die nu wordt opgebouwd is
+straks compleet op alles behalve de buitentemperatuur die fase 7 nodig heeft.
+Dat staat als aparte waarschuwing in de meter, want het is een andere klasse
+probleem dan "nog niet voorgekomen".
+
+*De dagdoelen zijn een oordeel.* Dertig winterdagen, veertien per ander
+seizoen. Dat is ervaring en geen meting, net als `bufferBandC` (besluit 14), en
+het staat zo in de broncode zodat je erover kunt twisten in plaats van dat het
+voor gemeten doorgaat.
+
+*Terzijde — en niet de minste vondst:* de weergave laadde na een uitrol de
+nieuwe HTML met de oude JavaScript. `app.js` en `app.css` dragen geen hash in
+hun naam en werden met `max-age=3600` geserveerd, dus een browser hield ze een
+uur vast. Dat mislukt op de lastigst vindbare manier: een pagina die half werkt,
+zonder één foutmelding. Nu `no-cache` met `last-modified` (navragen mag,
+opnieuw versturen hoeft niet) én een hash van de inhoud in de URL, zodat een
+browser die de oude versie al vasthield hem niet meer kan gebruiken. Drie tests
+bewaken het.
+
 ---
 
 ## Wat nog een besluit wacht

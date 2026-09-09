@@ -503,14 +503,16 @@ function tekenTerugblik(r) {
   $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat het oude systeem besteedde`;
 
   tekenTijdlijn(r.dagen);
+  tekenPatronen(r.patronen ?? []);
   tekenBalken(r.tallies);
   tekenEpisodes(r);
+  tekenDataset(r.dataset);
 
   const oud = Math.round((Date.now() - r.berekendOpMs) / 60000);
   $('terugblik-vers').textContent =
     `berekend ${oud <= 1 ? 'zojuist' : `${oud} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden`;
 
-  $('terugblik-sectie').hidden = false;
+  $('terugblik-inhoud').hidden = false;
 }
 
 async function haalTerugblik() {
@@ -523,17 +525,298 @@ async function haalTerugblik() {
     // 503 betekent "staat uit" of "nog niet gerekend". Bij het eerste hoort de
     // sectie te verdwijnen, bij het tweede hoort er iets te staan.
     const { wachten } = await res.json();
-    if (wachten === 'nog niet doorgerekend') {
-      $('terugblik-sectie').hidden = false;
-      $('terugblik-vers').textContent = 'de logboeken worden nog doorgerekend…';
-    }
+    $('terugblik-vers').textContent =
+      wachten === 'nog niet doorgerekend'
+        ? 'de logboeken worden nog doorgerekend…'
+        : 'de logboekanalyse staat uit op deze installatie.';
+  } catch (fout) {
+    // Geen terugblik is geen reden om de live stand te verbergen — maar
+    // stilzwijgend niets tonen is erger dan een lege sectie. Een fout hoort
+    // ergens te landen waar je hem kunt vinden (besluit 7).
+    console.error('[terugblik] tekenen mislukt', fout);
+    $('terugblik-vers').textContent = 'de terugblik kon niet worden getoond.';
+  }
+}
+
+/* ------------------------------------------------------------- tabs ---- */
+
+/*
+ * Twee panelen, één zichtbaar.
+ *
+ * De keuze wordt onthouden. Wie het dashboard openhoudt om de terugblik te
+ * volgen, wil na een herlaadbeurt niet elke keer terug naar "Nu" — en wie
+ * alleen de huidige stand wil zien, wil geen tabel van vijf dagen.
+ */
+const TABS = [
+  ['tab-live', 'paneel-live'],
+  ['tab-terugblik', 'paneel-terugblik'],
+];
+
+function kiesTab(actiefId) {
+  for (const [tabId, paneelId] of TABS) {
+    const actief = tabId === actiefId;
+    $(tabId).setAttribute('aria-selected', String(actief));
+    $(paneelId).hidden = !actief;
+  }
+  try {
+    localStorage.setItem('hems-tab', actiefId);
   } catch {
-    // Geen terugblik is geen reden om de live stand te verbergen.
+    // Een browser die opslag weigert is geen reden om de tab niet te wisselen.
+  }
+}
+
+function tabsAanzetten() {
+  for (const [tabId] of TABS) {
+    $(tabId).addEventListener('click', () => kiesTab(tabId));
+  }
+  // Pijltjes horen bij een tablist; anders kom je er met het toetsenbord niet uit.
+  for (const [i, [tabId]] of TABS.entries()) {
+    $(tabId).addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const volgende = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
+      kiesTab(volgende);
+      $(volgende).focus();
+    });
+  }
+  let onthouden = null;
+  try {
+    onthouden = localStorage.getItem('hems-tab');
+  } catch {
+    onthouden = null;
+  }
+  kiesTab(TABS.some(([id]) => id === onthouden) ? onthouden : 'tab-live');
+}
+
+/* ---------------------------------------------------------- dataset ---- */
+
+const SEIZOEN_NAAM = {
+  winter: 'Winter',
+  lente: 'Lente',
+  zomer: 'Zomer',
+  herfst: 'Herfst',
+};
+
+/** Wat een ontbrekend onderdeel betekent, in gewone taal. */
+const WAAROM = {
+  vakantie: 'de vakantiestand is nog nooit aangezet',
+  'heat-assist': 'heat-assist is nog nooit afgegaan — de Nest meldde nooit dat hij brandt',
+  heat: 'er is nog nooit een verwarmingscommando uitgegaan',
+  zone_below_setpoint: 'een zone is nog nooit ónder zijn doel geweest',
+  buffering_free_energy: 'er is nog nooit gebufferd op gratis stroom',
+  nobody_home: 'de regeling heeft nog nooit op een leeg huis gereageerd',
+  failsafe_unreliable_input: 'de failsafe is nog nooit afgegaan',
+  outside_active_hours: 'de vensterbegrenzing is nog nooit geraakt',
+  mode_excludes_action: 'een modus heeft nog nooit iets uitgesloten',
+  importing_from_grid: 'er is nog nooit afgeschaald op inkoop',
+  surplus_insufficient: 'te weinig overschot is nog nooit als reden opgegeven',
+  surplus_available: 'overschot is nog nooit als reden opgegeven',
+  zone_above_setpoint: 'een zone is nog nooit boven zijn doel geweest',
+  zone_satisfied: 'een zone is nog nooit op temperatuur geweest',
+};
+
+const NAAM = {
+  modi: 'Modi',
+  strategieen: 'Strategieën',
+  richtingen: 'Richtingen',
+  zoneRedenen: 'Redenen per zone',
+  blokkades: 'Blokkades',
+};
+
+function seizoenKaart(s) {
+  const kaart = el('div');
+  const kop = el('div', 'flex items-baseline justify-between gap-2');
+  kop.append(el('span', 'text-xs font-medium', SEIZOEN_NAAM[s.seizoen] ?? s.seizoen));
+  kop.append(el('span', 'text-zacht meting text-xs', `${s.dagen}/${s.doel}`));
+  kaart.append(kop);
+
+  const spoor = el('div', 'bg-grond mt-1 h-1.5 overflow-hidden rounded-full');
+  const vulling = el('div', 'h-full rounded-full transition-all duration-500');
+  const deel = Math.min(1, s.doel === 0 ? 1 : s.dagen / s.doel);
+  vulling.style.width = `${deel * 100}%`;
+  // Vol is groen, onderweg is blauw, leeg blijft leeg. Kleur alleen als
+  // versterking: het getal ernaast zegt hetzelfde.
+  vulling.style.background = deel >= 1 ? 'var(--color-eens)' : 'var(--color-ruimer)';
+  spoor.append(vulling);
+  kaart.append(spoor);
+  return kaart;
+}
+
+/** Chips voor wat nog nooit is langsgekomen. */
+function tekenGaten(d) {
+  const doel = $('dataset-gaten');
+  doel.replaceChildren();
+
+  // Alleen de functionele dekking: modi, strategieën en richtingen. Precies
+  // waar het percentage hierboven mee rekent, en precies wat je zelf kunt
+  // uitlokken door de knop om te zetten of te wachten op het seizoen.
+  //
+  // De reden- en blokkadecodes horen niet in deze rij: sommige daarvan hóren
+  // zeldzaam te zijn (`setpoint_out_of_range` is een fout), en twaalf chips
+  // waarvan de helft ruis is, leest niemand. Die staan in de uitklap.
+  const ontbreekt = [d.modi, d.strategieen, d.richtingen].flatMap((lijst) =>
+    lijst.filter((x) => x.gezien === 0),
+  );
+
+  if (ontbreekt.length === 0 && d.ontbrekendeInvoer.length === 0) {
+    doel.append(
+      el('p', 'text-eens text-xs', 'Elk onderdeel van de regeling is minstens één keer afgegaan.'),
+    );
+    return;
+  }
+
+  doel.append(
+    el(
+      'h3',
+      'text-zacht mb-2 text-xs font-medium tracking-wide uppercase',
+      'Nog niet afgegaan',
+    ),
+  );
+
+  const rij = el('div', 'flex flex-wrap gap-2');
+  for (const x of ontbreekt) {
+    const chip = el(
+      'span',
+      'border-rand bg-grond text-zacht rounded-full border px-2.5 py-1 text-xs',
+    );
+    chip.append(el('span', 'text-strenger', '○ '));
+    chip.append(document.createTextNode(x.id));
+    const waarom = WAAROM[x.id];
+    if (waarom) chip.title = waarom;
+    rij.append(chip);
+    // De uitleg erbij, want "heat" zegt op zichzelf niets. Bij drie chips past
+    // dat; bij twaalf zou het een muur worden — vandaar de inperking hierboven.
+    if (waarom && ontbreekt.length <= 4) {
+      rij.append(el('span', 'text-zacht w-full text-xs sm:w-auto sm:pt-1.5', waarom));
+    }
+  }
+  doel.append(rij);
+
+  // Ontbrekende invoer is een andere klasse: die komt niet vanzelf goed door
+  // langer te wachten. Daarom apart en met de reden erbij.
+  for (const inv of d.ontbrekendeInvoer) {
+    doel.append(
+      el(
+        'p',
+        'text-strenger mt-2 text-xs',
+        `Wordt niet vastgelegd: ${inv.id} — ${inv.waarvoor}`,
+      ),
+    );
+  }
+}
+
+function dekkingsTabel(titel, lijst) {
+  const blok = el('div');
+  blok.append(
+    el('h4', 'text-zacht mb-1 text-xs font-medium tracking-wide uppercase', titel),
+  );
+  const ul = el('ul', 'space-y-0.5');
+  for (const x of lijst) {
+    const li = el('li', 'flex items-baseline justify-between gap-2 text-xs');
+    const naam = el('span', x.gezien > 0 ? '' : 'text-zacht');
+    naam.append(el('span', x.gezien > 0 ? 'text-eens' : 'text-strenger', x.gezien > 0 ? '● ' : '○ '));
+    naam.append(document.createTextNode(x.id));
+    li.append(naam);
+    li.append(
+      el('span', 'text-zacht meting', x.gezien > 0 ? x.gezien.toLocaleString('nl-NL') : '—'),
+    );
+    ul.append(li);
+  }
+  blok.append(ul);
+  return blok;
+}
+
+function tekenDataset(d) {
+  if (d == null) return;
+
+  $('dataset-pct').textContent = `${d.gereedheid}%`;
+  $('dataset-balk').style.width = `${d.gereedheid}%`;
+
+  const van = new Date(d.vanMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  const tot = new Date(d.totMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  $('dataset-spanne').textContent = `${van} – ${tot}`;
+
+  const gaten =
+    d.gatendagen.length === 0
+      ? 'geen gaten'
+      : `${d.gatendagen.length} ${d.gatendagen.length === 1 ? 'dag' : 'dagen'} zonder opname`;
+  $('dataset-samenvatting').textContent =
+    `${d.dagenOpgenomen} ${d.dagenOpgenomen === 1 ? 'dag' : 'dagen'} opgenomen · ${gaten} · ` +
+    `${d.momenten.toLocaleString('nl-NL')} momenten`;
+
+  const seizoenen = $('dataset-seizoenen');
+  seizoenen.replaceChildren();
+  for (const s of d.seizoenen) seizoenen.append(seizoenKaart(s));
+
+  tekenGaten(d);
+
+  const tabellen = $('dataset-tabellen');
+  tabellen.replaceChildren();
+  for (const sleutel of ['modi', 'strategieen', 'richtingen', 'zoneRedenen', 'blokkades']) {
+    tabellen.append(dekkingsTabel(NAAM[sleutel] ?? sleutel, d[sleutel]));
+  }
+
+  $('dataset').hidden = false;
+}
+
+/* --------------------------------------------------------- patronen ---- */
+
+/**
+ * Terugkerende afwijkingen.
+ *
+ * Losse episodes vertellen wat er die middag gebeurde; deze tabel vertelt waar
+ * het stelselmatig misgaat. Gesorteerd op totale tijd en niet op aantal: twintig
+ * hikjes van twee minuten wegen minder dan drie middagen van een uur.
+ */
+function tekenPatronen(patronen) {
+  const doel = $('patronen');
+  doel.replaceChildren();
+  $('patronen-blok').hidden = patronen.length === 0;
+
+  for (const p of patronen) {
+    const tr = el('tr');
+
+    const wat = el('td', 'px-4 py-2 align-top');
+    const strenger = p.direction === 'strenger';
+    const titel = el('div', 'flex items-baseline gap-2');
+    const stip = el('span', 'inline-block h-2 w-2 shrink-0 rounded-full');
+    stip.style.background = strenger ? 'var(--color-strenger)' : 'var(--color-ruimer)';
+    titel.append(stip);
+    titel.append(
+      el(
+        'span',
+        'font-medium',
+        `${naamVanActuator(p.actuatorId)} — ${strenger ? 'ik zou stoppen' : 'ik zou draaien'}`,
+      ),
+    );
+    wat.append(titel);
+    const detail = [
+      p.mode && p.mode !== 'onbekend' ? `modus ${p.mode}` : null,
+      p.blockedBy ? GEBLOKKEERD[p.blockedBy] ?? p.blockedBy : null,
+    ].filter(Boolean);
+    if (detail.length > 0) {
+      wat.append(el('div', 'text-zacht mt-0.5 pl-4 text-xs', detail.join(' · ')));
+    }
+    tr.append(wat);
+
+    tr.append(el('td', 'meting px-2 py-2 text-right align-top', String(p.keren)));
+    tr.append(el('td', 'meting px-2 py-2 text-right align-top', `${p.minuten} min`));
+    tr.append(
+      el('td', 'meting text-zacht px-2 py-2 text-right align-top', `${p.langsteMinuten} min`),
+    );
+    tr.append(
+      el(
+        'td',
+        'meting px-4 py-2 text-right align-top',
+        p.wh > 1 ? kwh(p.wh) : '—',
+      ),
+    );
+    doel.append(tr);
   }
 }
 
 /* --------------------------------------------------------------- starten */
 
+tabsAanzetten();
 await haalSite();
 
 // Eerst de huidige stand, zodat de pagina niet leeg blijft als er net geen

@@ -12,8 +12,8 @@
     />
   </head>
   <body class="bg-grond text-tekst min-h-screen antialiased">
-    <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-      <header class="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+    <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <header class="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <div class="min-w-0">
           <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Smart Climate OS</h1>
           <p class="text-zacht mt-0.5 text-sm">
@@ -26,169 +26,237 @@
         </div>
       </header>
 
-      <!-- Alleen zichtbaar wanneer er iets aan de hand is. -->
-      <section
-        id="failsafe"
-        hidden
-        class="border-alarm/50 bg-alarm/10 mb-6 rounded-lg border px-4 py-3"
-      >
-        <h2 class="text-alarm font-semibold">Failsafe actief</h2>
-        <p class="text-zacht mt-1 text-sm">
-          Een kritiek meetpunt is onbetrouwbaar. De assist-apparaten gaan uit; de
-          hoofdverwarming blijft draaien.
-        </p>
-        <ul id="failsafe-lijst" class="meting mt-2 space-y-0.5 text-sm"></ul>
-      </section>
-
       <!--
-        Alles hieronder heeft een besluit nodig. Tot dat er is, is één duidelijke
-        regel beter dan een raamwerk van lege kopjes: dat tweede ziet eruit als
-        een pagina die stuk is, en dit is precies wat je na een uitrol als
-        eerste ziet.
+        De datasetmeter staat boven de tabs en blijft altijd staan.
+
+        Dit project draait om één belofte — aantonen of de arbiter het beter
+        doet — en die staat of valt met wat er in de opname zit. Dan hoort de
+        stand daarvan niet ergens onderin te staan.
       -->
-      <section id="wachten" class="border-rand bg-paneel rounded-lg border px-4 py-8 text-center">
-        <p class="text-zacht">Wachten op het eerste besluit van de arbiter.</p>
-        <p class="text-zacht mt-1 text-xs">
-          Dat duurt hoogstens één hartslag na het verbinden met Home Assistant.
-        </p>
-      </section>
-
-      <div id="inhoud" hidden>
-      <!-- Modus en budget -->
-      <section class="mb-6 grid gap-4 sm:grid-cols-3">
-        <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-1">
-          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">Modus</h2>
-          <p id="modus" class="mt-1 text-2xl font-semibold">—</p>
-          <p id="modus-bron" class="text-zacht mt-0.5 text-sm"></p>
-          <p id="bezet" class="text-zacht mt-2 text-sm"></p>
+      <section id="dataset" hidden class="border-rand bg-paneel mb-5 rounded-lg border p-4">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">Dataset</h2>
+          <p id="dataset-spanne" class="text-zacht meting text-xs"></p>
         </div>
 
-        <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-2">
-          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
-            Vermogensbudget
-          </h2>
-          <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-            <div>
-              <div class="text-zacht text-xs">toegewezen</div>
-              <div id="budget-toegewezen" class="meting text-lg font-medium">—</div>
+        <div class="mt-2 flex items-end gap-3">
+          <div id="dataset-pct" class="meting text-3xl leading-none font-semibold">—</div>
+          <div class="min-w-0 flex-1 pb-1">
+            <div class="bg-grond h-2 overflow-hidden rounded-full">
+              <div
+                id="dataset-balk"
+                class="bg-eens h-full w-0 rounded-full transition-all duration-500"
+              ></div>
             </div>
-            <div>
-              <div class="text-zacht text-xs">beschikbaar</div>
-              <div id="budget-beschikbaar" class="meting text-lg font-medium">—</div>
-            </div>
-            <div>
-              <div class="text-zacht text-xs">overschot</div>
-              <div id="budget-overschot" class="meting text-zon text-lg font-medium">—</div>
-            </div>
-            <div>
-              <div class="text-zacht text-xs">net</div>
-              <div id="budget-net" class="meting text-lg font-medium">—</div>
-            </div>
+            <p id="dataset-samenvatting" class="text-zacht mt-1 text-xs"></p>
           </div>
-          <div class="bg-grond mt-3 h-2 overflow-hidden rounded-full">
-            <div id="budget-balk" class="bg-zon h-full w-0 rounded-full transition-all"></div>
-          </div>
-          <p id="budget-uitleg" class="text-zacht mt-2 text-xs"></p>
         </div>
+
+        <!-- Seizoenen: de tijdas van de volledigheid. -->
+        <div id="dataset-seizoenen" class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4"></div>
+
+        <!-- Wat er nog nooit is langsgekomen. Dat is het bruikbare deel. -->
+        <div id="dataset-gaten" class="mt-4"></div>
+
+        <details class="mt-3">
+          <summary class="text-zacht hover:text-tekst cursor-pointer text-xs">
+            Alle functiedekking
+          </summary>
+          <div id="dataset-tabellen" class="mt-3 grid gap-4 sm:grid-cols-2"></div>
+        </details>
       </section>
 
-      <!-- Vraag per zone -->
-      <section class="mb-6">
-        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-          Vraag per zone
-        </h2>
-        <div id="zones" class="grid gap-3 sm:grid-cols-3"></div>
-      </section>
+      <!-- Tabs -->
+      <nav class="border-rand mb-5 flex gap-1 border-b" role="tablist">
+        <button id="tab-live" role="tab" aria-selected="true" aria-controls="paneel-live" class="tab">
+          Nu
+        </button>
+        <button
+          id="tab-terugblik"
+          role="tab"
+          aria-selected="false"
+          aria-controls="paneel-terugblik"
+          class="tab"
+        >
+          Terugblik
+        </button>
+      </nav>
 
-      <!-- Wat de arbiter zou doen -->
-      <section class="mb-6">
-        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-          Wat de arbiter zou doen
-        </h2>
-        <div id="apparaten" class="border-rand bg-paneel divide-rand divide-y rounded-lg border"></div>
-        <p id="geen-commando" class="text-zacht mt-2 text-sm"></p>
-      </section>
+      <!-- ============================== NU ============================== -->
+      <div id="paneel-live" role="tabpanel" aria-labelledby="tab-live">
+        <section
+          id="failsafe"
+          hidden
+          class="border-alarm/50 bg-alarm/10 mb-5 rounded-lg border px-4 py-3"
+        >
+          <h2 class="text-alarm font-semibold">Failsafe actief</h2>
+          <p class="text-zacht mt-1 text-sm">
+            Een kritiek meetpunt is onbetrouwbaar. De assist-apparaten gaan uit; de
+            hoofdverwarming blijft draaien.
+          </p>
+          <ul id="failsafe-lijst" class="meting mt-2 space-y-0.5 text-sm"></ul>
+        </section>
 
-      <!-- Waarom een voorstel het niet haalde -->
-      <section id="geblokkeerd-sectie" hidden class="mb-6">
-        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-          Voorstellen die het niet haalden
-        </h2>
-        <ul id="geblokkeerd" class="border-rand bg-paneel divide-rand divide-y rounded-lg border"></ul>
-      </section>
+        <section
+          id="wachten"
+          class="border-rand bg-paneel rounded-lg border px-4 py-8 text-center"
+        >
+          <p class="text-zacht">Wachten op het eerste besluit van de arbiter.</p>
+          <p class="text-zacht mt-1 text-xs">
+            Dat duurt hoogstens één hartslag na het verbinden met Home Assistant.
+          </p>
+        </section>
 
-      <!-- Zolang de migratie loopt -->
-      <section id="oud-sectie" hidden class="mb-6">
-        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-          Wat het oude systeem er op dit moment over zegt
-        </h2>
-        <div id="oud" class="border-rand bg-paneel rounded-lg border p-4 text-sm"></div>
-      </section>
+        <div id="inhoud" hidden>
+          <section class="mb-5 grid gap-4 sm:grid-cols-3">
+            <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-1">
+              <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">Modus</h2>
+              <p id="modus" class="mt-1 text-2xl font-semibold">—</p>
+              <p id="modus-bron" class="text-zacht mt-0.5 text-sm"></p>
+              <p id="bezet" class="text-zacht mt-2 text-sm"></p>
+            </div>
+
+            <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-2">
+              <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
+                Vermogensbudget
+              </h2>
+              <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+                <div>
+                  <div class="text-zacht text-xs">toegewezen</div>
+                  <div id="budget-toegewezen" class="meting text-lg font-medium">—</div>
+                </div>
+                <div>
+                  <div class="text-zacht text-xs">beschikbaar</div>
+                  <div id="budget-beschikbaar" class="meting text-lg font-medium">—</div>
+                </div>
+                <div>
+                  <div class="text-zacht text-xs">overschot</div>
+                  <div id="budget-overschot" class="meting text-zon text-lg font-medium">—</div>
+                </div>
+                <div>
+                  <div class="text-zacht text-xs">net</div>
+                  <div id="budget-net" class="meting text-lg font-medium">—</div>
+                </div>
+              </div>
+              <div class="bg-grond mt-3 h-2 overflow-hidden rounded-full">
+                <div id="budget-balk" class="bg-zon h-full w-0 rounded-full transition-all"></div>
+              </div>
+              <p id="budget-uitleg" class="text-zacht mt-2 text-xs"></p>
+            </div>
+          </section>
+
+          <section class="mb-5">
+            <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+              Vraag per zone
+            </h2>
+            <div id="zones" class="grid gap-3 sm:grid-cols-3"></div>
+          </section>
+
+          <section class="mb-5">
+            <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+              Wat de arbiter zou doen
+            </h2>
+            <div
+              id="apparaten"
+              class="border-rand bg-paneel divide-rand divide-y rounded-lg border"
+            ></div>
+            <p id="geen-commando" class="text-zacht mt-2 text-sm"></p>
+          </section>
+
+          <section id="geblokkeerd-sectie" hidden class="mb-5">
+            <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+              Voorstellen die het niet haalden
+            </h2>
+            <ul
+              id="geblokkeerd"
+              class="border-rand bg-paneel divide-rand divide-y rounded-lg border"
+            ></ul>
+          </section>
+
+          <section id="oud-sectie" hidden class="mb-5">
+            <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+              Wat het oude systeem er op dit moment over zegt
+            </h2>
+            <div id="oud" class="border-rand bg-paneel rounded-lg border p-4 text-sm"></div>
+          </section>
+        </div>
       </div>
 
-      <!--
-        De terugblik. Andere gegevensbron dan alles hierboven: dit komt uit de
-        logboeken, niet uit het besluit van dit moment. Vandaar ook los
-        zichtbaar, met een eigen "berekend op".
-      -->
-      <section id="terugblik-sectie" hidden class="mt-8 border-t border-rand pt-6">
-        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
-            Sinds het begin van de opname
-          </h2>
-          <p id="terugblik-vers" class="text-zacht meting text-xs"></p>
-        </div>
+      <!-- =========================== TERUGBLIK =========================== -->
+      <div id="paneel-terugblik" role="tabpanel" aria-labelledby="tab-terugblik" hidden>
+        <p id="terugblik-vers" class="text-zacht meting mb-3 text-xs"></p>
 
-        <!-- De cijfers waar het om gaat. Geen grafiek: het zijn drie getallen. -->
-        <div class="mb-4 grid gap-3 sm:grid-cols-3">
-          <div class="border-rand bg-paneel rounded-lg border p-4">
-            <div class="text-zacht text-xs">arbiter en oud systeem het eens</div>
-            <div id="stat-eens" class="meting mt-1 text-3xl font-semibold">—</div>
-            <div id="stat-eens-sub" class="text-zacht mt-0.5 text-xs"></div>
-          </div>
-          <div class="border-rand bg-paneel rounded-lg border p-4">
-            <div class="text-zacht text-xs">netstroom naar de airco's</div>
-            <div id="stat-stroom" class="meting mt-1 text-3xl font-semibold">—</div>
-            <div id="stat-stroom-sub" class="text-zacht mt-0.5 text-xs">
-              door het oude systeem besteed
+        <div id="terugblik-inhoud" hidden>
+          <div class="mb-5 grid gap-3 sm:grid-cols-3">
+            <div class="border-rand bg-paneel rounded-lg border p-4">
+              <div class="text-zacht text-xs">arbiter en oud systeem het eens</div>
+              <div id="stat-eens" class="meting mt-1 text-3xl font-semibold">—</div>
+              <div id="stat-eens-sub" class="text-zacht mt-0.5 text-xs"></div>
+            </div>
+            <div class="border-rand bg-paneel rounded-lg border p-4">
+              <div class="text-zacht text-xs">netstroom naar de airco's</div>
+              <div id="stat-stroom" class="meting mt-1 text-3xl font-semibold">—</div>
+              <div class="text-zacht mt-0.5 text-xs">door het oude systeem besteed</div>
+            </div>
+            <div class="border-rand bg-paneel rounded-lg border p-4">
+              <div class="text-zacht text-xs">daarvan zou ik hebben vermeden</div>
+              <div id="stat-vermeden" class="meting text-zon mt-1 text-3xl font-semibold">—</div>
+              <div id="stat-vermeden-sub" class="text-zacht mt-0.5 text-xs"></div>
             </div>
           </div>
-          <div class="border-rand bg-paneel rounded-lg border p-4">
-            <div class="text-zacht text-xs">daarvan zou ik hebben vermeden</div>
-            <div id="stat-vermeden" class="meting text-zon mt-1 text-3xl font-semibold">—</div>
-            <div id="stat-vermeden-sub" class="text-zacht mt-0.5 text-xs"></div>
+
+          <div class="border-rand bg-paneel mb-5 rounded-lg border p-4">
+            <h3 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+              Tijdlijn — één blokje per kwartier
+            </h3>
+            <div class="overflow-x-auto">
+              <div id="tijdlijn" class="min-w-[560px]"></div>
+            </div>
+            <div id="tijdlijn-legenda" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"></div>
+            <p id="tijdlijn-tip" class="text-zacht meting mt-2 h-4 text-xs"></p>
+          </div>
+
+          <!-- Terugkerende afwijkingen: waar loopt dit stelselmatig uit de pas -->
+          <div id="patronen-blok" class="border-rand bg-paneel mb-5 rounded-lg border">
+            <h3
+              class="text-zacht border-rand border-b px-4 py-3 text-xs font-medium tracking-wide uppercase"
+            >
+              Meest voorkomende afwijkingen
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-zacht border-rand border-b text-left text-xs">
+                    <th class="px-4 py-2 font-medium">Patroon</th>
+                    <th class="px-2 py-2 text-right font-medium">Keren</th>
+                    <th class="px-2 py-2 text-right font-medium">Totaal</th>
+                    <th class="px-2 py-2 text-right font-medium">Langste</th>
+                    <th class="px-4 py-2 text-right font-medium">Stroom</th>
+                  </tr>
+                </thead>
+                <tbody id="patronen" class="divide-rand divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="border-rand bg-paneel mb-5 rounded-lg border p-4">
+            <h3 class="text-zacht mb-3 text-xs font-medium tracking-wide uppercase">
+              Overeenstemming per apparaat
+            </h3>
+            <div id="balken" class="space-y-3"></div>
+          </div>
+
+          <div id="episodes-blok" class="border-rand bg-paneel rounded-lg border">
+            <h3
+              class="text-zacht border-rand border-b px-4 py-3 text-xs font-medium tracking-wide uppercase"
+            >
+              Langste afwijkingen, los
+            </h3>
+            <ul id="episodes" class="divide-rand divide-y"></ul>
+            <p id="episodes-rest" class="text-zacht px-4 py-2 text-xs"></p>
           </div>
         </div>
-
-        <!-- Tijdlijn -->
-        <div class="border-rand bg-paneel mb-4 rounded-lg border p-4">
-          <h3 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-            Tijdlijn — één blokje per kwartier
-          </h3>
-          <div class="overflow-x-auto">
-            <div id="tijdlijn" class="min-w-[560px]"></div>
-          </div>
-          <div id="tijdlijn-legenda" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"></div>
-          <p id="tijdlijn-tip" class="text-zacht meting mt-2 h-4 text-xs"></p>
-        </div>
-
-        <!-- Overeenstemming per apparaat -->
-        <div class="border-rand bg-paneel mb-4 rounded-lg border p-4">
-          <h3 class="text-zacht mb-3 text-xs font-medium tracking-wide uppercase">
-            Overeenstemming per apparaat
-          </h3>
-          <div id="balken" class="space-y-3"></div>
-        </div>
-
-        <!-- Episodes -->
-        <div id="episodes-blok" class="border-rand bg-paneel rounded-lg border">
-          <h3 class="text-zacht border-rand border-b px-4 py-3 text-xs font-medium tracking-wide uppercase">
-            Langste afwijkingen
-          </h3>
-          <ul id="episodes" class="divide-rand divide-y"></ul>
-          <p id="episodes-rest" class="text-zacht px-4 py-2 text-xs"></p>
-        </div>
-      </section>
+      </div>
 
       <footer class="text-zacht border-rand mt-8 border-t pt-4 text-xs">
         <p>
