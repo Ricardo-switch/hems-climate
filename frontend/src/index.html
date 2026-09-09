@@ -126,6 +126,70 @@
       </section>
       </div>
 
+      <!--
+        De terugblik. Andere gegevensbron dan alles hierboven: dit komt uit de
+        logboeken, niet uit het besluit van dit moment. Vandaar ook los
+        zichtbaar, met een eigen "berekend op".
+      -->
+      <section id="terugblik-sectie" hidden class="mt-8 border-t border-rand pt-6">
+        <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
+            Sinds het begin van de opname
+          </h2>
+          <p id="terugblik-vers" class="text-zacht meting text-xs"></p>
+        </div>
+
+        <!-- De cijfers waar het om gaat. Geen grafiek: het zijn drie getallen. -->
+        <div class="mb-4 grid gap-3 sm:grid-cols-3">
+          <div class="border-rand bg-paneel rounded-lg border p-4">
+            <div class="text-zacht text-xs">arbiter en oud systeem het eens</div>
+            <div id="stat-eens" class="meting mt-1 text-3xl font-semibold">—</div>
+            <div id="stat-eens-sub" class="text-zacht mt-0.5 text-xs"></div>
+          </div>
+          <div class="border-rand bg-paneel rounded-lg border p-4">
+            <div class="text-zacht text-xs">netstroom naar de airco's</div>
+            <div id="stat-stroom" class="meting mt-1 text-3xl font-semibold">—</div>
+            <div id="stat-stroom-sub" class="text-zacht mt-0.5 text-xs">
+              door het oude systeem besteed
+            </div>
+          </div>
+          <div class="border-rand bg-paneel rounded-lg border p-4">
+            <div class="text-zacht text-xs">daarvan zou ik hebben vermeden</div>
+            <div id="stat-vermeden" class="meting text-zon mt-1 text-3xl font-semibold">—</div>
+            <div id="stat-vermeden-sub" class="text-zacht mt-0.5 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Tijdlijn -->
+        <div class="border-rand bg-paneel mb-4 rounded-lg border p-4">
+          <h3 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+            Tijdlijn — één blokje per kwartier
+          </h3>
+          <div class="overflow-x-auto">
+            <div id="tijdlijn" class="min-w-[560px]"></div>
+          </div>
+          <div id="tijdlijn-legenda" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"></div>
+          <p id="tijdlijn-tip" class="text-zacht meting mt-2 h-4 text-xs"></p>
+        </div>
+
+        <!-- Overeenstemming per apparaat -->
+        <div class="border-rand bg-paneel mb-4 rounded-lg border p-4">
+          <h3 class="text-zacht mb-3 text-xs font-medium tracking-wide uppercase">
+            Overeenstemming per apparaat
+          </h3>
+          <div id="balken" class="space-y-3"></div>
+        </div>
+
+        <!-- Episodes -->
+        <div id="episodes-blok" class="border-rand bg-paneel rounded-lg border">
+          <h3 class="text-zacht border-rand border-b px-4 py-3 text-xs font-medium tracking-wide uppercase">
+            Langste afwijkingen
+          </h3>
+          <ul id="episodes" class="divide-rand divide-y"></ul>
+          <p id="episodes-rest" class="text-zacht px-4 py-2 text-xs"></p>
+        </div>
+      </section>
+
       <footer class="text-zacht border-rand mt-8 border-t pt-4 text-xs">
         <p>
           Deze weergave leest alleen. Ze toont het besluit van de kern onbewerkt en

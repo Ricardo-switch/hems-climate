@@ -25,6 +25,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
+import type { DivergenceReport } from './divergence.js';
 
 export interface WebOptions {
   /** Poort om op te luisteren. */
@@ -40,6 +41,14 @@ export interface WebOptions {
   readonly config: SiteConfig;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
+  /**
+   * Levert de divergentieanalyse over de logboeken, of null.
+   *
+   * Los van `latest`, want het is een andere waarheid: `latest` is het besluit
+   * van dit moment, dit is wat er sinds het begin van de opname is gebeurd.
+   * Weglaten mag — dan is er geen analyse en zegt het eindpunt dat ook.
+   */
+  readonly divergence?: () => DivergenceReport | null;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -198,11 +207,29 @@ export class WebServer {
       return;
     }
 
+    if (path === '/api/divergence') {
+      const report = this.#options.divergence?.() ?? null;
+      if (report == null) {
+        // Onderscheid tussen "staat uit" en "nog niet gerekend" is voor de
+        // pagina het verschil tussen iets verbergen en iets uitleggen.
+        sendJson(res, 503, {
+          wachten:
+            this.#options.divergence == null
+              ? 'geen logboekanalyse ingeschakeld'
+              : 'nog niet doorgerekend',
+        });
+        return;
+      }
+      sendJson(res, 200, report);
+      return;
+    }
+
     if (path === '/api/health') {
       const snapshot = this.#options.latest();
       sendJson(res, 200, {
         ok: true,
         laatsteBesluitMs: snapshot?.atMs ?? null,
+        analyseBerekendOpMs: this.#options.divergence?.()?.berekendOpMs ?? null,
         kijkers: this.#listeners.size,
       });
       return;

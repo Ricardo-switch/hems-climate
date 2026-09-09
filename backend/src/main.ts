@@ -20,6 +20,7 @@ import { HaClient } from './adapters/homeassistant/client.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir } from './web/server.js';
+import { DivergenceCache } from './web/divergence.js';
 
 /**
  * Laadt een .env-bestand, maar laat variabelen die al gezet zijn met rust.
@@ -218,6 +219,10 @@ const runner = new ShadowRunner({
     : { onDecision: (snapshot: LiveSnapshot) => web?.publish(snapshot) }),
 });
 
+// De analyse over de logboeken. Alleen zinvol wanneer er ook gelogd wordt —
+// zonder logboek valt er niets terug te kijken.
+const analyse = webPort == null || logDir === '' ? null : new DivergenceCache({ logDir });
+
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
@@ -225,6 +230,7 @@ if (webPort != null) {
     webDir,
     config: site.config,
     latest: () => runner.latest,
+    ...(analyse ? { divergence: () => analyse.latest } : {}),
   });
 }
 
@@ -257,6 +263,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     console.log('\nafsluiten…');
     runner.stop();
+    analyse?.stop();
     void web?.stop().finally(() => process.exit(0));
     if (web == null) process.exit(0);
   });
@@ -267,6 +274,11 @@ if (web) {
     const port = await web.start();
     console.log(`  weergave luistert op http://localhost:${port}/`);
     console.log(`  frontend uit     ${webDir}`);
+    if (analyse) {
+      // Meteen beginnen, zodat de tijdlijn er staat voordat iemand kijkt.
+      analyse.start();
+      console.log(`  logboekanalyse   elk kwartier over ${logDir}`);
+    }
     console.log('─'.repeat(64));
   } catch (error) {
     // Een bezette poort is een opstartfout, geen reden om zonder venster door
