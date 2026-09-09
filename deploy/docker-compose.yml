@@ -57,14 +57,23 @@ services:
     # route die iets wijzigt, en niet-GET krijgt 405 vóór de routering. Zie
     # DECISIONS.md, besluit 23.
     #
+    # De poort aan de buitenkant is een keuze van deze installatie en niet van
+    # de code: welke poorten vrij zijn verschilt per NAS. Vandaar uit `.env`,
+    # net als HA_URL en HA_TOKEN (besluit 21). Zo hoeft niemand een bestand uit
+    # git aan te passen om hem te verzetten, en klaagt de compose-controle in
+    # deploy.sh er niet over.
+    #
+    # Links de poort op de NAS, rechts die in de container — die blijft 8080 en
+    # hoort bij HEMS_WEB_PORT hierboven.
+    #
     # Dit bindt op alle adressen van de NAS, dus alles op je thuisnetwerk kan de
     # pagina openen. Dat is de bedoeling. Wat niet de bedoeling is: hier een
-    # portforward of reverse proxy naar buiten op zetten. Er is geen
-    # authenticatie, en dit proces houdt het HA-token vast.
+    # reverse proxy naar buiten op zetten. Er is geen authenticatie, en dit
+    # proces houdt het HA-token vast.
     #
-    # Alleen vanaf de NAS zelf bereikbaar maken kan met "127.0.0.1:8080:8080".
+    # Alleen vanaf de NAS zelf bereikbaar maken: zet HEMS_WEB_BIND=127.0.0.1
     ports:
-      - "8080:8080"
+      - "${HEMS_WEB_BIND:-0.0.0.0}:${HEMS_WEB_PORT_NAS:-8099}:8080"
 
     logging:
       driver: json-file

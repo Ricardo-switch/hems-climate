@@ -86,12 +86,33 @@ er is geen route die iets wijzigt. Er is ook **geen authenticatie**, en dit
 proces houdt het HA-token vast, dus zet hier nooit een portforward of een
 reverse proxy naar buiten op.
 
-Is 8080 op je NAS al bezet, dan mislukt het omwisselen met "port is already
-allocated". Kies dan links een andere poort in `docker-compose.yml`
-(`"8081:8080"`); de rechterkant hoort bij `HEMS_WEB_PORT` en blijft 8080.
+De poort staat standaard op **8099**. Welke poorten vrij zijn verschilt per NAS,
+dus dat is een keuze van deze installatie en geen codekeuze — hij komt daarom
+uit `.env`, net als het token:
+
+```
+# Alleen nodig als 8099 al bezet is.
+HEMS_WEB_PORT_NAS=8099
+# Alleen vanaf de NAS zelf bereikbaar in plaats van vanaf je hele netwerk.
+HEMS_WEB_BIND=127.0.0.1
+```
+
+Zo hoef je geen bestand uit git aan te passen om de poort te verzetten, en
+klaagt de compose-controle in `deploy.sh` er niet over.
+
+Welke poorten al bezet zijn zie je in DSM onder *Aanmeldingsportaal → Reverse
+Proxy*, en met `netstat -tlnp` over SSH. Botst het toch, dan mislukt het
+omwisselen met "port is already allocated" en blijft de oude container draaien.
 
 Helemaal uitzetten kan door `HEMS_WEB_PORT` en het `ports`-blok weg te laten.
 Dan luistert de dienst nergens op, zoals vóór fase 5.
+
+### Niet achter de reverse proxy
+
+DSM's reverse proxy publiceert op `*.synology.me`, dus buiten je huis. Deze
+pagina hoort daar niet bij: er is geen inlog, geen sessie en geen rate limit, en
+het proces erachter houdt een token met volledige toegang tot je Home Assistant.
+Home Assistant zelf staat daar terecht wel achter — dat heeft een inlog.
 
 ## Wat er is ingebouwd voor het onbewaakt draaien
 
