@@ -326,8 +326,19 @@ cd "$ROOT"
 # Dat is precies één keer gebeurd, op 9 september 2026, bij de overstap naar
 # een context in de projectwortel. Vandaar: stoppen, niet waarschuwen. Een
 # mismatch hier maakt de rest van deze run betekenisloos.
+# Vergelijken op inhoud en niet op bytes: een kopie die via Windows is gegaan
+# draagt CRLF mee, en daar kan Docker prima mee overweg. Zou dit script daarop
+# stoppen, dan blokkeert het een uitrol om een verschil dat niet bestaat — en
+# een diff die identieke regels toont is het ergste soort foutmelding.
+compose_gelijk() {
+  # \015 is de octale schrijfwijze van CR. Een echte CR in dit script zetten
+  # zou werken en onleesbaar zijn, en precies zo'n onzichtbaar teken is hier
+  # al eens misgegaan (besluit 22, punt 4).
+  [ -f "$1" ] && [ -f "$2" ] && cmp -s <(tr -d '\015' < "$1") <(tr -d '\015' < "$2")
+}
+
 if [ -f "$SRC/deploy/docker-compose.yml" ] &&
-   ! cmp -s "$SRC/deploy/docker-compose.yml" "$ROOT/docker-compose.yml"; then
+   ! compose_gelijk "$SRC/deploy/docker-compose.yml" "$ROOT/docker-compose.yml"; then
   log "GESTOPT: $ROOT/docker-compose.yml wijkt af van de versie in git."
   log ""
   log "  Het compose-bestand bepaalt onder meer de build-context, dus bouwen"
@@ -341,7 +352,9 @@ if [ -f "$SRC/deploy/docker-compose.yml" ] &&
   # `diff` geeft 1 terug zodra er een verschil is, en met `set -o pipefail`
   # zou dat de pijplijn laten mislukken voordat we bij `exit 1` zijn. Vandaar
   # eerst opvangen; dan bepalen wij wanneer we stoppen en met welke code.
-  COMPOSE_DIFF="$(diff "$ROOT/docker-compose.yml" "$SRC/deploy/docker-compose.yml" 2>&1 || true)"
+  # Ook de diff op genormaliseerde tekst, anders toont hij 78 identieke regels
+  # als 78 verschillen en wijst hij nergens naar.
+  COMPOSE_DIFF="$(diff <(tr -d '\015' < "$ROOT/docker-compose.yml") <(tr -d '\015' < "$SRC/deploy/docker-compose.yml") 2>&1 || true)"
   printf '%s
 ' "$COMPOSE_DIFF" | head -40 | sed 's/^/    /'
   exit 1
