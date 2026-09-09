@@ -25,6 +25,7 @@ import {
   type LiveSnapshot,
 } from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
+import type { SiteConfig } from '../src/core/model.js';
 import { defaultStrategies } from '../src/index.js';
 
 const TOKEN = 'geheim-token';
@@ -330,27 +331,64 @@ describe('ShadowRunner', () => {
 });
 
 describe('eventfilter', () => {
-  it('kent precies de entiteiten die de vertaling uitleest', () => {
-    // Drift-bewaking: leest de broncode van mapping.ts, haalt er elke
-    // entity-ID uit, en eist dat de filter ze allemaal kent. Zonder deze test
-    // valt een nieuw uitgelezen meetpunt stilzwijgend buiten de filter, en
-    // reageert de regeling er nooit meer op.
+  /** Elke entity-ID die letterlijk in de broncode van de vertaling staat. */
+  function literalsInMapping(): string[] {
     const source = readFileSync(
       new URL('../src/adapters/homeassistant/mapping.ts', import.meta.url),
       'utf-8',
     );
-    const literals = new Set(
-      [
-        ...source.matchAll(
-          /'((?:climate|sensor|binary_sensor|input_number|input_select|input_boolean|timer|person|light|sun)\.[a-z0-9_.]+)'/g,
-        ),
-      ].map((m) => m[1]!),
-    );
-    expect(literals.size).toBeGreaterThan(20);
+    return [
+      ...new Set(
+        [
+          ...source.matchAll(
+            /'((?:climate|sensor|binary_sensor|input_number|input_select|input_boolean|timer|person|light|sun)\.[a-z0-9_.]+)'/g,
+          ),
+        ].map((m) => m[1]!),
+      ),
+    ].sort();
+  }
 
+  it('kent elke entiteit die nog letterlijk in de vertaling staat', () => {
+    // Drift-bewaking, oorspronkelijke vorm: wat hier hard in de code staat moet
+    // de filter kennen, anders valt een uitgelezen meetpunt er stilzwijgend
+    // buiten en reageert de regeling er nooit meer op.
     const known = relevantEntities(exampleSite);
-    const forgotten = [...literals].filter((id) => !known.has(id)).sort();
+    const forgotten = literalsInMapping().filter((id) => !known.has(id));
     expect(forgotten).toEqual([]);
+  });
+
+  it('volgt de configuratie in plaats van een eigen tabel', () => {
+    // De sterkere garantie, sinds fase 6a. Wat de configuratie noemt hoort de
+    // filter te kennen — óók wanneer die configuratie van een ander huis komt.
+    // Dit is wat de vijf handgeschreven tabellen vervangt: die stonden identiek
+    // aan de configuratie en niets bewaakte dat.
+    const anders: SiteConfig = {
+      ...exampleSite,
+      power: {
+        ...exampleSite.power,
+        gridPower: { adapter: 'homeassistant', id: 'sensor.andere_meter' },
+      },
+      zones: exampleSite.zones.map((z) => ({
+        ...z,
+        temperature: { adapter: 'homeassistant', id: `sensor.${z.id}_anders` },
+      })),
+      occupancy: [{ id: 'gast', ref: { adapter: 'homeassistant', id: 'person.gast' } }],
+      // Ook deze, anders blijft de oude slimme meter langs deze weg in de
+      // filter staan en zegt de negatieve controle hieronder niets.
+      criticalInputs: [{ adapter: 'homeassistant', id: 'sensor.andere_meter' }],
+    };
+
+    const known = relevantEntities(anders);
+    expect(known.has('sensor.andere_meter')).toBe(true);
+    expect(known.has('person.gast')).toBe(true);
+    for (const z of anders.zones) expect(known.has(`sensor.${z.id}_anders`)).toBe(true);
+
+    // En de entiteiten van dít huis komen er niet meer in voor. Dat is de kern
+    // van 6a: zonder de handgeschreven tabellen sleept de vertaling geen
+    // meetpunten van de één naar de ander mee.
+    expect(known.has(exampleSite.power.gridPower.id)).toBe(false);
+    expect(known.has(exampleSite.occupancy[0]!.ref.id)).toBe(false);
+    for (const z of exampleSite.zones) expect(known.has(z.temperature.id)).toBe(false);
   });
 
   it('negeert entiteiten die niets met klimaat te maken hebben', () => {

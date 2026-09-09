@@ -15,45 +15,34 @@ import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
 import type { EntitySource } from './source.js';
 
-/** Koppelt een actuator uit de configuratie aan zijn bronnen in de historie. */
+/**
+ * Koppelt een actuator aan zijn bronnen.
+ *
+ * Afgeleid uit de configuratie, niet uit een tabel hier. Tot september 2026
+ * stonden deze bindingen én de zonetemperaturen én de bewoners én de slimme meter
+ * met de hand in dit bestand, terwijl `SiteConfig` ze ook al bevatte. Ze stonden
+ * identiek in en niets bewaakte dat: wie de zoldersensor in de configuratie
+ * wijzigde, kreeg een arbiter die stilzwijgend de oude bleef uitlezen.
+ *
+ * Nu is er één bron. Dit bestand kent geen entity-ID's meer van dit ene huis —
+ * dat is de voorwaarde waaronder een tweede woning geen codewijziging is.
+ */
 interface ActuatorBinding {
   readonly actuatorId: string;
   readonly climateEntity: string;
-  readonly powerEntity?: string;
+  readonly powerEntity: string | null;
   /** Setpointdrempels waarboven of -onder het apparaat feitelijk standby staat. */
-  readonly standby?: { heat: number; cool: number };
+  readonly standby: { heat: number; cool: number } | null;
 }
 
-const BINDINGS: readonly ActuatorBinding[] = [
-  { actuatorId: 'nest', climateEntity: 'climate.beneden' },
-  { actuatorId: 'badkamer', climateEntity: 'climate.thermostaat_badkamer' },
-  {
-    actuatorId: 'ac-woonkamer',
-    climateEntity: 'climate.air_conditioning_woonkamer',
-    powerEntity: 'sensor.air_conditioning_woonkamer_energy_current',
-    standby: { heat: 18, cool: 25 },
-  },
-  {
-    actuatorId: 'ac-zolder',
-    climateEntity: 'climate.air_conditioning_zolder',
-    powerEntity: 'sensor.air_conditioning_zolder_energy_current',
-    standby: { heat: 18, cool: 25 },
-  },
-];
-
-const ZONE_TEMPERATURE: Readonly<Record<string, string>> = {
-  woonkamer: 'sensor.beneden_temperatuur',
-  badkamer: 'sensor.badkamer_huidige_temperatuur',
-  zolder: 'sensor.hue_motion_sensor_zolder_temperatuur',
-};
-
-const OCCUPANCY: Readonly<Record<string, string>> = {
-  ricardo: 'person.ricardo_cornelissen',
-  shira: 'person.shira',
-  saskia: 'binary_sensor.saskia_thuis_gestabiliseerd',
-  rob: 'binary_sensor.rob_thuis_gestabiliseerd',
-  dini: 'binary_sensor.dini_thuis_gestabiliseerd',
-};
+function bindingsVan(config: SiteConfig): ActuatorBinding[] {
+  return config.actuators.map((a) => ({
+    actuatorId: a.id,
+    climateEntity: a.ref.id,
+    powerEntity: a.power.sensor?.id ?? null,
+    standby: a.capabilities.standby ?? null,
+  }));
+}
 
 /**
  * Vertaalt de HA-toestand van een klimaatapparaat naar onze `Action`.
@@ -143,7 +132,7 @@ export function buildSystemState(
   nowMs: number,
 ): SystemState {
   const actuators: Record<string, ActuatorState> = {};
-  for (const b of BINDINGS) {
+  for (const b of bindingsVan(config)) {
     const haState = source.state(b.climateEntity) ?? 'unavailable';
     const setpointC = source.attrNumber(b.climateEntity, 'temperature');
     const powerW = b.powerEntity == null ? null : source.number(b.powerEntity);
@@ -168,19 +157,19 @@ export function buildSystemState(
   }
 
   const zones: SystemState['zones'] = Object.fromEntries(
-    Object.entries(ZONE_TEMPERATURE).map(([zoneId, entityId]) => {
-      const t = source.number(entityId);
+    config.zones.map((zone) => {
+      const t = source.number(zone.temperature.id);
       return [
-        zoneId,
+        zone.id,
         { temperatureC: t == null ? unavailable<number>() : value(t, nowMs) },
       ];
     }),
   );
 
   const occupancy: SystemState['occupancy'] = Object.fromEntries(
-    Object.entries(OCCUPANCY).map(([id, entityId]) => {
-      const b = source.bool(entityId);
-      return [id, b == null ? unavailable<boolean>() : value(b, nowMs)];
+    config.occupancy.map((bewoner) => {
+      const b = source.bool(bewoner.ref.id);
+      return [bewoner.id, b == null ? unavailable<boolean>() : value(b, nowMs)];
     }),
   );
 
@@ -196,7 +185,7 @@ export function buildSystemState(
     inputHealth[ref.id] = source.state(ref.id) != null;
   }
 
-  const grid = source.number('sensor.p1_meter_power');
+  const grid = source.number(config.power.gridPower.id);
   const sun = source.bool('sun.sun');
   const chosen = source.state('input_select.verwarming_modus');
   const strategy = source.state(STRATEGY_ENTITY);
@@ -303,9 +292,16 @@ const SETPOINT_INPUTS: readonly string[] = [
   'input_number.pv_klimaat_stop_import_w',
 ];
 
-/** Losse meetpunten die `buildSystemState` uitleest. */
+/**
+ * Losse meetpunten die `buildSystemState` uitleest en die de configuratie nog
+ * niet kent.
+ *
+ * Wat hier staat is werk-in-uitvoering: het netvermogen, de zonetemperaturen,
+ * de actuatoren en de bewoners zijn hier weg omdat ze uit `SiteConfig` komen
+ * (fase 6a). Deze vijf volgen in 6b. Zolang ze hier staan, is een tweede woning
+ * een codewijziging.
+ */
 const SINGLETON_INPUTS: readonly string[] = [
-  'sensor.p1_meter_power',
   'sun.sun',
   'input_select.verwarming_modus',
   'input_select.koel_strategie',
@@ -340,14 +336,9 @@ export function observedEntities(config: SiteConfig): ReadonlySet<string> {
 export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   const ids = new Set<string>([...SETPOINT_INPUTS, ...SINGLETON_INPUTS]);
 
-  for (const b of BINDINGS) {
-    ids.add(b.climateEntity);
-    if (b.powerEntity) ids.add(b.powerEntity);
-  }
-  for (const id of Object.values(ZONE_TEMPERATURE)) ids.add(id);
-  for (const id of Object.values(OCCUPANCY)) ids.add(id);
+  // Wat de configuratie aandraagt.
+  ids.add(config.power.gridPower.id);
 
-  // Wat de configuratie zelf aandraagt.
   for (const ref of config.criticalInputs) ids.add(ref.id);
   for (const zone of config.zones) {
     ids.add(zone.temperature.id);

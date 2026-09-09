@@ -642,6 +642,115 @@ opnieuw versturen hoeft niet) én een hash van de inhoud in de URL, zodat een
 browser die de oude versie al vasthield hem niet meer kan gebruiken. Drie tests
 bewaken het.
 
+## 28. De schaduwmodus is geen steiger
+
+De schaduwmodus is gebouwd om de overstap te kunnen verantwoorden: laat de
+arbiter meedenken naast het YAML-systeem, en kijk waar ze uiteenlopen. De
+vanzelfsprekende aanname was dat hij daarna weg kan.
+
+*Besluit:* nee. De schaduwmodus en de divergentietool blijven als permanent,
+losstaand mechanisme, ook nadat dit huis is overgezet.
+
+*Reden:* wat hij hier deed — een gedragsbasislijn opbouwen voordat er iets
+verandert — is precies wat elke vólgende woning nodig heeft. Een nieuw huis
+begint met meekijken: wat doet de bestaande regeling, hoeveel koopt het huis in,
+wat zou de arbiter anders doen. Pas als dat er staat mag hij sturen.
+
+*Gevolg voor het ontwerp:* de schaduwmodus mag niet groeien naar iets dat alleen
+naast een YAML-systeem werkt. Het `migration`-blok is daarom optioneel (besluit
+11), en voor een huis zonder voorganger vergelijkt hij de arbiter met wat de
+thermostaten uit zichzelf deden. Dat is een andere vraag met dezelfde machinerie
+— maar de woorden in de weergave gaan nu nog uit van "het oude systeem", en dat
+klopt daar niet. Staat op de lijst.
+
+*Gevolg voor de naam:* "schaduwmodus" beschrijft straks niet meer wat het is.
+Het is de onboarding- en verantwoordingsmotor. De naam blijft voorlopig; een
+hernoeming raakt tientallen bestanden en lost niets op.
+
+## 29. Twee applicaties, en dat is geen tussenoplossing
+
+De weergave uit fase 5 is een technische monitor: dicht op de kern, alles wat de
+arbiter denkt, in de taal van de arbiter. Bruikbaar voor wie het systeem bouwt.
+
+*Besluit:* het bewonersdashboard wordt daar geen uitbouw van, maar een eigen
+applicatie (fase 8) met een eigen ontwerptaal — een premium, rustige interface,
+in de geest van de Luminar-energiekaart en de interface uit Iron Man. Die
+ambitie staat hier zwart op wit zodat hij niet ongemerkt verwatert tot "de
+monitor met een ander kleurtje".
+
+*Waarom niet één applicatie die meegroeit:* de twee hebben tegengestelde eisen.
+De monitor moet álles tonen en mag lelijk zijn; het dashboard moet weinig tonen
+en moet mooi zijn. Eén codebase die beide doet wordt geen van beide, en de
+verleiding om "even" een technisch veld toe te voegen is dan onweerstaanbaar.
+
+*Wat ze delen is precies één ding:* het `Explanation`-contract. Beide lezen wat
+de kern al heeft besloten en rekenen niets zelf uit. Dat is dezelfde regel die
+het oude dashboard overtrad met vijfhonderd regels JavaScript, en de reden dat
+er twee applicaties mógen zijn zonder dat ze uit elkaar lopen.
+
+*Kosten:* de monitor blijft bestaan en moet onderhouden worden. Dat is bewust —
+zie besluit 28: hij is straks het onboarding-instrument, niet een overblijfsel.
+
+## 30. Buitentemperatuur naar voren gehaald
+
+`sensor.temperatuur` stond als openstaand punt: de huidige strategieën gebruiken
+hem niet, dus hij ging het beslislogboek niet in. Voor fase 7 — vooruitkijken op
+weer en prognose — is hij onmisbaar.
+
+*Besluit:* meteen vastleggen, ver vóór fase 7, en zonder dat de regeling er iets
+mee doet.
+
+*Reden:* een ontbrekend meetpunt in een logboek is niet met terugwerkende kracht
+te repareren. Elke winterdag die nu zonder buitentemperatuur wordt opgenomen, is
+een winterdag die fase 7 opnieuw moet afwachten — en op een winter per jaar is
+dat geen detail maar een jaar vertraging.
+
+*Wat het niet is:* een strategie die hem gebruikt. Hij gaat als waarneming mee in
+`Explanation` en dus in het logboek. De arbiter neemt er geen besluit op, en de
+datasetmeter telt hem als invoer en niet als functie.
+
+*Prijs:* het logboek wordt iets groter, en `Explanation` krijgt een veld dat
+voorlopig alleen gelezen wordt door de dataset. Dat is de goedkoopste helft van
+een jaar wachten.
+
+## 31. De vertaling had een tweede configuratie in zich
+
+`mapping.ts` heette "de enige plek waar entity-ID's voorkomen". Dat klopte, en
+was tegelijk het probleem: er stonden er víjf tabellen vol — zonetemperaturen,
+actuatorbindingen, vermogenssensoren, de slimme meter en de bewoners — terwijl
+`SiteConfig` diezelfde vijf dingen ook al bevatte.
+
+Ze stonden identiek in. Met de hand gelijkgehouden, en niets bewaakte dat. Wie
+de zoldersensor in `huis-cornelissen.json` wijzigde, kreeg een arbiter die
+stilzwijgend de oude bleef uitlezen — en `relevantEntities()` voegde beide toe,
+dus zelfs de eventfilter merkte er niets van.
+
+*Dat is niet alleen fase-6-werk.* Het was een openstaande fout in de draaiende
+installatie, van precies de klasse waar dit project voor bestaat: twee plekken
+die moeten kloppen, zonder dat iets het controleert.
+
+*Besluit:* de vertaling leest de bindingen uit `SiteConfig`. De tabellen zijn
+weg.
+
+*Bewezen in plaats van aangenomen.* Acht tests wijzigen elk een stuk van de
+configuratie en eisen dat de vertaling meebeweegt — een andere zoldersensor, een
+extra zone, een andere slimme meter, andere bewoners. Ze faalden allemaal tegen
+de oude code, met het bewijs erbij: de vertaling las 99 waar de configuratie 21,5
+zei. En de replay-harness gaf na de verbouwing over 14.476 ticks bit-identieke
+uitkomsten, dus er is geen besluit veranderd.
+
+*De drift-test is van vorm veranderd.* Die las de broncode van `mapping.ts`, haalde
+er elke entity-ID uit en eiste dat de filter ze kende. Met de tabellen weg is dat
+een bewaking op steeds minder; de sterkere garantie is nu dat de filter een
+*andere* configuratie volgt. Beide staan er: de oude voor wat er nog letterlijk
+in de code staat, de nieuwe voor wat de configuratie aandraagt.
+
+*Bijvangst:* de standby-afspraak (verwarmen ≤ 18, koelen ≥ 25) stond als vaste
+waarde in de code voor precies de twee assist-airco's. Model én schema
+ondersteunden `capabilities.standby` allang — alleen de configuratie zette hem
+niet. Nu wel, en daarmee is het een eigenschap van het apparaat in plaats van een
+conventie in de vertaling.
+
 ---
 
 ## Wat nog een besluit wacht
@@ -664,7 +773,13 @@ bewaken het.
 - **`handmatig` is grofkorrelig.** Zie besluit 8b: de stand geldt bij ons voor de
   hele woning, in het oude systeem alleen voor de koelregeling.
 - **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
-  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6.
+  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6c.
+- **De terugblik spreekt over "het oude systeem".** Voor een woning zonder
+  YAML-voorganger vergelijkt de schaduwmodus de arbiter met wat de thermostaten
+  uit zichzelf deden (besluit 28). Dezelfde machinerie, andere vraag, verkeerde
+  woorden. Uit te zoeken bij 6c.
+- **De dagdoelen van de datasetmeter zijn op dit huis geijkt** — dertig
+  winterdagen, en de seizoenen van Nederland. Zie besluit 27.
 - **De terugblik rekent alles opnieuw door.** Elk kwartier de hele opname, ook
   het deel dat niet meer verandert. Dat is nu 120 ms en over een winter een
   seconde of vier; pas als dat gaat knellen is een tussenstand per dag de
