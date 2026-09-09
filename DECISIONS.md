@@ -500,6 +500,17 @@ alleen om te besluiten *dat* er werk was, niet om te controleren *of* het werk
 kon slagen. Een detectie die geen controle wordt, is een gemiste kans die je pas
 ziet als hij misgaat.
 
+*Nawee, dezelfde dag:* de eerste versie van deze controle vergeleek bytes, en
+blokkeerde daarop meteen een uitrol waar niets mis mee was. De kopie op de NAS
+had CRLF, de versie in git LF — `.gitattributes` legt LF vast voor alles wat op
+Linux draait (besluit 22, punt 4). `diff` toonde toen 78 identieke regels als 78
+verschillen, en dat is het ergste soort foutmelding: hij wijst nergens naar.
+
+De controle vergelijkt nu genormaliseerde tekst. Docker leest CRLF in YAML
+prima, dus een uitrol tegenhouden op een verschil dat voor de bouw niet bestaat
+is strenger dan streng — het is fout. Een bewaking die vals alarm slaat, leert
+mensen hem te negeren, en dan bewaakt hij niets meer.
+
 ---
 
 ## Wat nog een besluit wacht
