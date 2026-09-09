@@ -1,0 +1,811 @@
+klimaat_controller_apply:
+  alias: Klimaat controller - apply
+  description: Centrale controller met nieuwe input_select koel_strategie. Failsafe
+    voor Handmatig ingebouwd.
+  mode: queued
+  sequence:
+  # --- FIX: begin met een schone lei --------------------------------------
+  # Deze twee vlaggen zorgen ervoor dat er per run hoogstens één airco
+  # bijschakelt. Ze werden alleen aan het EIND van dit script opgeruimd.
+  # Breekt een run daarvoor af (een climate-aanroep die faalt, of een
+  # herstart van HA), dan blijft de vlag "on" staan en blokkeert hij bij de
+  # volgende run stilzwijgend de woonkamer. Opruimen hoort daarom aan het
+  # begin, waar het niet overgeslagen kan worden.
+  - action: input_boolean.turn_off
+    target:
+      entity_id:
+      - input_boolean.woonkamer_started_now
+      - input_boolean.zolder_started_now
+  # --- einde fix -----------------------------------------------------------
+  - delay: 00:00:01
+  - variables:
+      std_nest_dag: '{{ states(''input_number.temp_nest_dag_standaard'') | float(20)
+        }}'
+      std_nest_eco: '{{ states(''input_number.temp_nest_eco_standaard'') | float(16)
+        }}'
+      std_nest_voor: '{{ states(''input_number.temp_nest_voorwarm_standaard'') | float(19)
+        }}'
+      std_badkamer: '{{ states(''input_number.badkamer_heat_off_temp_dag_standaard'')
+        | float(18) }}'
+      std_wk_koel: '{{ states(''input_number.temp_airco_woonkamer_koelen_standaard'')
+        | float(22) }}'
+      std_zd_koel: '{{ states(''input_number.temp_airco_zolder_koelen_standaard'')
+        | float(22.5) }}'
+      pv_overschot: '{{ states(''sensor.pv_overschot_w'') | float(0) }}'
+      p1_import: '{{ states(''sensor.p1_meter_power'') | float(0) }}'
+      pv_start_w: '{{ states(''input_number.pv_klimaat_start_overschot_w'') | float(1000)
+        }}'
+      pv_hervat_w: 600
+      pv_stop_w: '{{ states(''input_number.pv_klimaat_stop_import_w'') | float(50)
+        }}'
+      uur: '{{ now().hour }}'
+      ricardo_home: '{{ is_state(''person.ricardo_cornelissen'',''home'') }}'
+      shira_home: '{{ is_state(''person.shira'',''home'') }}'
+      saskia_home: '{{ is_state(''binary_sensor.saskia_thuis_gestabiliseerd'',''on'')
+        }}'
+      rob_home: '{{ is_state(''binary_sensor.rob_thuis_gestabiliseerd'',''on'') }}'
+      dini_home: '{{ is_state(''binary_sensor.dini_thuis_gestabiliseerd'',''on'')
+        }}'
+      iemand_thuis: '{{ ricardo_home or shira_home or saskia_home or rob_home or dini_home
+        }}'
+      niemand_thuis: '{{ not iemand_thuis }}'
+      voorverwarmen_toegestaan: '{{ is_state(''input_boolean.voorverwarmen_aan'',''on'')
+        }}'
+      keuze_modus: '{{ states(''input_select.verwarming_modus'') }}'
+      lichten_aan: '{{ is_state(''light.sfeerverlichting'', ''on'') or is_state(''light.woonkamer_plafonniere'',
+        ''on'') }}'
+      avond_verlenging: '{{ (uur >= 22 or uur < 3) and lichten_aan and iemand_thuis
+        }}'
+      auto_modus: '{%- if niemand_thuis -%} afwezig {%- elif avond_verlenging -%}
+        dag  {%- elif uur >= 22 or uur < 6 -%} nacht  {%- elif (uur >= 6 and uur <
+        8) and voorverwarmen_toegestaan -%} voorverwarmen  {%- elif (uur >= 8 and
+        uur < 22) -%} dag  {%- else -%} nacht  {%- endif -%}'
+      effectieve_modus: '{{ auto_modus if keuze_modus == ''automatisch'' else keuze_modus
+        }}'
+      min_on_active: '{{ is_state(''timer.airco_assist_min_on'', ''active'') }}'
+      pv_stabilisatie_active: '{{ is_state(''timer.pv_stabilisatie'', ''active'')
+        }}'
+      manuele_override_actief: "{{ (states('input_number.temp_airco_woonkamer')|float(0)
+        != states('input_number.temp_airco_woonkamer_standaard')|float(0)) or\n   (states('input_number.temp_airco_zolder')|float(0)
+        != states('input_number.temp_airco_zolder_standaard')|float(0)) or\n   (states('input_number.temp_airco_woonkamer_koelen')|float(0)
+        != states('input_number.temp_airco_woonkamer_koelen_standaard')|float(0))
+        or\n   (states('input_number.temp_airco_zolder_koelen')|float(0) != states('input_number.temp_airco_zolder_koelen_standaard')|float(0))
+        }}"
+      pv_hard_stop: '{{ (p1_import > pv_stop_w) and not manuele_override_actief }}'
+      wk_is_cooling: '{{ is_state(''climate.air_conditioning_woonkamer'', ''cool'')
+        }}'
+      zd_is_cooling: '{{ is_state(''climate.air_conditioning_zolder'', ''cool'') }}'
+      wk_is_heating: '{{ is_state(''climate.air_conditioning_woonkamer'', ''heat'')
+        }}'
+      zd_is_heating: '{{ is_state(''climate.air_conditioning_zolder'', ''heat'') }}'
+      heat_assist_is_busy: '{{ is_state(''input_boolean.status_airco_assist_actief'',
+        ''on'') or is_state(''input_boolean.airco_assist_start_pending'', ''on'')
+        }}'
+      wk_is_actively_cooling: '{{ wk_is_cooling and state_attr(''climate.air_conditioning_woonkamer'',
+        ''temperature'') | float(100) < 25.0 }}'
+      zd_is_actively_cooling: '{{ zd_is_cooling and state_attr(''climate.air_conditioning_zolder'',
+        ''temperature'') | float(100) < 25.0 }}'
+      wk_is_actively_heating: '{{ wk_is_heating and state_attr(''climate.air_conditioning_woonkamer'',
+        ''temperature'') | float(0) > 18.0 }}'
+      zd_is_actively_heating: '{{ zd_is_heating and state_attr(''climate.air_conditioning_zolder'',
+        ''temperature'') | float(0) > 18.0 }}'
+      pv_koelen_heeft_regie: '{{ is_state(''input_select.koel_strategie'', ''Pv koelen'')
+        and effectieve_modus != ''nacht'' and keuze_modus != ''vakantie'' and (pv_overschot
+        >= pv_start_w or wk_is_cooling or zd_is_cooling) }}'
+      pv_verwarmen_heeft_regie: '{{ is_state(''input_boolean.pv_verwarmen_actief'',
+        ''on'') and (pv_overschot >= pv_start_w or wk_is_heating or zd_is_heating)
+        }}'
+      handmatig_koelen_actief: '{{ is_state(''input_select.koel_strategie'', ''Handmatig
+        koelen'') }}'
+      koelen_nu: '{{ states(''input_select.koel_strategie'') in [''Pv koelen'', ''Automatisch
+        koelen'', ''Handmatig koelen''] }}'
+      gewenste_hvac: '{{ ''off'' if effectieve_modus in [''nacht'', ''vakantie'',
+        ''koelen''] or koelen_nu else ''heat'' }}'
+      gewenste_preset: '{{ ''eco'' if effectieve_modus == ''afwezig'' else ''none''
+        }}'
+      gewenste_temp: '{%- if effectieve_modus == ''afwezig'' -%} {{ states(''input_number.temp_nest_eco'')|float(std_nest_eco)
+        }} {%- elif effectieve_modus == ''voorverwarmen'' -%} {{ states(''input_number.temp_nest_voorwarm'')|float(std_nest_voor)
+        }} {%- elif effectieve_modus == ''dag'' -%} {{ states(''input_number.temp_nest_dag'')|float(std_nest_dag)
+        }} {%- else -%} {{ state_attr(''climate.beneden'',''temperature'')|float(0)
+        }} {%- endif -%}'
+      nest_temp_tolerantie: 0.3
+      handmatig: '{{ keuze_modus not in [''automatisch'', ''vakantie''] }}'
+      handmatig_timer_state: '{{ states(''timer.verwarming_handmatig'') }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ handmatig and handmatig_timer_state == ''idle'' }}'
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.verwarming_handmatig
+    - conditions:
+      - condition: template
+        value_template: '{{ (not handmatig) and handmatig_timer_state != ''idle''
+          }}'
+      sequence:
+      - action: timer.cancel
+        target:
+          entity_id: timer.verwarming_handmatig
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ states(''input_select.verwarming_modus_actief'') != effectieve_modus
+          }}'
+      sequence:
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.verwarming_modus_actief
+        data:
+          option: '{{ effectieve_modus }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ effectieve_modus == ''dag'' }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.status_nest_regeling_actief
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.status_voorverwarmen_actief
+    - conditions:
+      - condition: template
+        value_template: '{{ effectieve_modus == ''voorverwarmen'' }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.status_nest_regeling_actief
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.status_voorverwarmen_actief
+    default:
+    - action: input_boolean.turn_off
+      target:
+        entity_id:
+        - input_boolean.status_nest_regeling_actief
+        - input_boolean.status_voorverwarmen_actief
+  - variables:
+      huidige_hvac: '{{ states(''climate.beneden'') }}'
+      huidige_setpoint: '{{ state_attr(''climate.beneden'',''temperature'')|float(0)
+        }}'
+      huidige_preset: '{{ state_attr(''climate.beneden'',''preset_mode'')|default(''none'',
+        true) }}'
+      moet_preset: '{{ huidige_preset != gewenste_preset }}'
+      moet_hvac: '{{ huidige_hvac != gewenste_hvac }}'
+      moet_temp: "{{ (effectieve_modus not in ['nacht', 'vakantie', 'koelen']) and
+        \n   (not koelen_nu) and \n   (gewenste_preset != 'eco') and \n   ((huidige_setpoint
+        - (gewenste_temp|float(0)))|abs > nest_temp_tolerantie) }}"
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ moet_hvac }}'
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.beneden
+        data:
+          hvac_mode: '{{ gewenste_hvac }}'
+      - delay: 00:00:02
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ moet_preset }}'
+      sequence:
+      - action: climate.set_preset_mode
+        target:
+          entity_id: climate.beneden
+        data:
+          preset_mode: '{{ gewenste_preset }}'
+      - delay: 00:00:02
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ moet_temp and gewenste_hvac != ''off'' and gewenste_preset
+          != ''eco'' and huidige_preset != ''eco'' }}'
+      sequence:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.beneden
+        data:
+          temperature: '{{ gewenste_temp }}'
+  - variables:
+      bathroom_target: "{%- if effectieve_modus in ['afwezig', 'vakantie', 'koelen']
+        or koelen_nu -%} 0    {%- elif effectieve_modus == 'nacht' -%} \n  {%- if
+        state_attr('climate.thermostaat_badkamer', 'current_temperature') | float(0)
+        < 16.0 -%} 16 \n  {%- else -%} 0 {%- endif -%} \n{%- else -%} \n  {{ states('input_number.badkamer_heat_off_temp_dag')
+        | float(std_badkamer) }} \n{%- endif -%}"
+      bathroom_gewenste_hvac: '{{ ''off'' if bathroom_target == 0 else ''heat_cool''
+        }}'
+      moet_bathroom_hvac: '{{ states(''climate.thermostaat_badkamer'') != bathroom_gewenste_hvac
+        }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ moet_bathroom_hvac }}'
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.thermostaat_badkamer
+        data:
+          hvac_mode: '{{ bathroom_gewenste_hvac }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ bathroom_target > 0 and (state_attr(''climate.thermostaat_badkamer'',
+          ''temperature'') | float(0) - bathroom_target) | abs > 0.2 }}'
+      sequence:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.thermostaat_badkamer
+        data:
+          temperature: '{{ bathroom_target }}'
+  - variables:
+      wk_cur: '{{ state_attr(''climate.beneden'', ''current_temperature'') | float(0)
+        }}'
+      zd_cur: '{{ states(''sensor.hue_motion_sensor_zolder_temperatuur'') | float(0)
+        }}'
+      ac_wk_power: '{{ states(''sensor.air_conditioning_woonkamer_energy_current'')
+        | float(0) }}'
+      ac_zd_power: '{{ states(''sensor.air_conditioning_zolder_energy_current'') |
+        float(0) }}'
+      wk_koel_doel: '{{ states(''input_number.temp_airco_woonkamer_koelen'') | float(std_wk_koel)
+        }}'
+      wk_koel_start: '{{ std_wk_koel + 1.0 }}'
+      wk_koel_klaar: '{{ wk_cur <= (wk_koel_doel - 0.3) }}'
+      zd_koel_doel: '{{ states(''input_number.temp_airco_zolder_koelen'') | float(std_zd_koel)
+        }}'
+      zd_koel_start: '{{ std_zd_koel + 1.0 }}'
+      zd_koel_klaar: '{{ zd_cur <= (zd_koel_doel - 0.3) }}'
+      zd_vraagt_koel: '{{ zd_cur >= zd_koel_start }}'
+      wk_vraagt_koel: '{{ wk_cur >= wk_koel_start }}'
+      wk_heat_doel: '{% if pv_verwarmen_heeft_regie %} 22.0 {% else %}  {{ states(''input_number.temp_airco_woonkamer'')
+        | float(states(''input_number.temp_airco_woonkamer_standaard'')|float(21.0))
+        }} {% endif %}'
+      zd_heat_doel: '{% if pv_verwarmen_heeft_regie %} 22.0 {% else %} {{ states(''input_number.temp_airco_zolder'')
+        | float(states(''input_number.temp_airco_zolder_standaard'')|float(21.0))
+        }} {% endif %}'
+      wk_buffer_vol: '{{ wk_cur >= 22.0 and not manuele_override_actief }}'
+      zd_buffer_vol: '{{ zd_cur >= 22.0 and not manuele_override_actief }}'
+      wk_vraagt_warm: '{% if pv_verwarmen_heeft_regie %} {{ wk_cur <= 21.5 or manuele_override_actief
+        }} {% else %} {{ wk_cur < wk_heat_doel }} {% endif %}'
+      zd_vraagt_warm: '{% if pv_verwarmen_heeft_regie %} {{ zd_cur <= 21.5 or manuele_override_actief
+        }} {% else %} {{ zd_cur < zd_heat_doel }} {% endif %}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ pv_koelen_heeft_regie and not handmatig_koelen_actief
+          }}'
+      sequence:
+      - if:
+        - condition: template
+          value_template: '{% set drempel = ac_wk_power if wk_is_actively_cooling
+            else (pv_hervat_w if (zd_is_cooling and not zd_is_actively_cooling) else
+            pv_start_w) %} {{ zd_vraagt_koel and (not zd_is_actively_cooling) and
+            not pv_stabilisatie_active and pv_overschot >= drempel }}'
+        then:
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: climate.air_conditioning_zolder
+          data:
+            hvac_mode: cool
+        - action: climate.set_temperature
+          target:
+            entity_id: climate.air_conditioning_zolder
+          data:
+            temperature: '{{ zd_koel_doel }}'
+        - if:
+          - condition: template
+            value_template: '{{ not zd_is_cooling }}'
+          then:
+          - action: timer.start
+            target:
+              entity_id: timer.airco_assist_min_on
+            data:
+              duration: '{{ states(''input_number.airco_assist_min_on_min'') | int(15)
+                * 60 }}'
+        - action: timer.start
+          target:
+            entity_id: timer.pv_stabilisatie
+          data:
+            duration: 00:05:00
+        - action: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.zolder_started_now
+      - if:
+        - condition: template
+          value_template: '{% set drempel = ac_zd_power if zd_is_actively_cooling
+            else (pv_hervat_w if (wk_is_cooling and not wk_is_actively_cooling) else
+            pv_start_w) %} {{ wk_vraagt_koel and (not wk_is_actively_cooling) and
+            is_state(''input_boolean.zolder_started_now'', ''off'') and not pv_stabilisatie_active
+            and pv_overschot >= drempel }}'
+        then:
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: climate.air_conditioning_woonkamer
+          data:
+            hvac_mode: cool
+        - action: climate.set_temperature
+          target:
+            entity_id: climate.air_conditioning_woonkamer
+          data:
+            temperature: '{{ wk_koel_doel }}'
+        - if:
+          - condition: template
+            value_template: '{{ not wk_is_cooling }}'
+          then:
+          - action: timer.start
+            target:
+              entity_id: timer.airco_assist_min_on
+            data:
+              duration: '{{ states(''input_number.airco_assist_min_on_min'') | int(15)
+                * 60 }}'
+        - action: timer.start
+          target:
+            entity_id: timer.pv_stabilisatie
+          data:
+            duration: 00:05:00
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ pv_verwarmen_heeft_regie and not koelen_nu }}'
+      sequence:
+      - if:
+        - condition: template
+          value_template: '{% set drempel = ac_zd_power if zd_is_actively_heating
+            else (pv_hervat_w if (wk_is_heating and not wk_is_actively_heating) else
+            pv_start_w) %} {{ wk_vraagt_warm and not wk_buffer_vol and not wk_is_actively_heating
+            and not pv_stabilisatie_active and pv_overschot >= drempel }}'
+        then:
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: climate.air_conditioning_woonkamer
+          data:
+            hvac_mode: heat
+        - action: climate.set_temperature
+          target:
+            entity_id: climate.air_conditioning_woonkamer
+          data:
+            temperature: '{{ wk_heat_doel }}'
+        - if:
+          - condition: template
+            value_template: '{{ not wk_is_heating }}'
+          then:
+          - action: timer.start
+            target:
+              entity_id: timer.airco_assist_min_on
+            data:
+              duration: '{{ states(''input_number.airco_assist_min_on_min'') | int(15)
+                * 60 }}'
+        - action: timer.start
+          target:
+            entity_id: timer.pv_stabilisatie
+          data:
+            duration: 00:05:00
+        - action: input_boolean.turn_on
+          target:
+            entity_id: input_boolean.woonkamer_started_now
+      - if:
+        - condition: template
+          value_template: '{% set drempel = ac_wk_power if wk_is_actively_heating
+            else (pv_hervat_w if (zd_is_heating and not zd_is_actively_heating) else
+            pv_start_w) %} {{ zd_vraagt_warm and not zd_buffer_vol and not zd_is_actively_heating
+            and is_state(''input_boolean.woonkamer_started_now'', ''off'') and not
+            pv_stabilisatie_active and pv_overschot >= drempel }}'
+        then:
+        - action: climate.set_hvac_mode
+          target:
+            entity_id: climate.air_conditioning_zolder
+          data:
+            hvac_mode: heat
+        - action: climate.set_temperature
+          target:
+            entity_id: climate.air_conditioning_zolder
+          data:
+            temperature: '{{ zd_heat_doel }}'
+        - if:
+          - condition: template
+            value_template: '{{ not zd_is_heating }}'
+          then:
+          - action: timer.start
+            target:
+              entity_id: timer.airco_assist_min_on
+            data:
+              duration: '{{ states(''input_number.airco_assist_min_on_min'') | int(15)
+                * 60 }}'
+        - action: timer.start
+          target:
+            entity_id: timer.pv_stabilisatie
+          data:
+            duration: 00:05:00
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ (is_state(''input_select.koel_strategie'',''Pv koelen'')
+          or is_state(''input_boolean.pv_verwarmen_actief'',''on'')) and not handmatig_koelen_actief
+          and not heat_assist_is_busy }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''input_boolean.pv_verwarmen_actief'', ''on'')
+              }}'
+          sequence:
+          - if:
+            - condition: template
+              value_template: '{{ wk_is_heating and wk_buffer_vol and state_attr(''climate.air_conditioning_woonkamer'',
+                ''temperature'') | float(21) > 18.0 }}'
+            then:
+            - action: climate.set_temperature
+              target:
+                entity_id: climate.air_conditioning_woonkamer
+              data:
+                temperature: 18
+          - if:
+            - condition: template
+              value_template: '{{ zd_is_heating and zd_buffer_vol and state_attr(''climate.air_conditioning_zolder'',
+                ''temperature'') | float(21) > 18.0 }}'
+            then:
+            - action: climate.set_temperature
+              target:
+                entity_id: climate.air_conditioning_zolder
+              data:
+                temperature: 18
+          - if:
+            - condition: template
+              value_template: '{{ pv_hard_stop }}'
+            then:
+            - choose:
+              - conditions:
+                - condition: template
+                  value_template: '{{ wk_is_heating and state_attr(''climate.air_conditioning_woonkamer'',
+                    ''temperature'') | float(21) > 18.0 }}'
+                sequence:
+                - action: climate.set_temperature
+                  target:
+                    entity_id: climate.air_conditioning_woonkamer
+                  data:
+                    temperature: 18
+                - action: timer.start
+                  target:
+                    entity_id: timer.pv_stabilisatie
+                  data:
+                    duration: 00:05:00
+              - conditions:
+                - condition: template
+                  value_template: '{{ wk_is_heating and state_attr(''climate.air_conditioning_woonkamer'',
+                    ''temperature'') | float(21) <= 18.0 and not is_state(''timer.pv_stabilisatie'',
+                    ''active'') and not is_state(''timer.airco_assist_min_on'', ''active'')
+                    }}'
+                sequence:
+                - action: climate.turn_off
+                  target:
+                    entity_id: climate.air_conditioning_woonkamer
+            - choose:
+              - conditions:
+                - condition: template
+                  value_template: '{{ zd_is_heating and state_attr(''climate.air_conditioning_zolder'',
+                    ''temperature'') | float(21) > 18.0 }}'
+                sequence:
+                - action: climate.set_temperature
+                  target:
+                    entity_id: climate.air_conditioning_zolder
+                  data:
+                    temperature: 18
+                - action: timer.start
+                  target:
+                    entity_id: timer.pv_stabilisatie
+                  data:
+                    duration: 00:05:00
+              - conditions:
+                - condition: template
+                  value_template: '{{ zd_is_heating and state_attr(''climate.air_conditioning_zolder'',
+                    ''temperature'') | float(21) <= 18.0 and not is_state(''timer.pv_stabilisatie'',
+                    ''active'') and not is_state(''timer.airco_assist_min_on'', ''active'')
+                    }}'
+                sequence:
+                - action: climate.turn_off
+                  target:
+                    entity_id: climate.air_conditioning_zolder
+        - conditions:
+          - condition: template
+            value_template: '{{ is_state(''input_select.koel_strategie'', ''Pv koelen'')
+              }}'
+          sequence:
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: '{{ pv_hard_stop or (effectieve_modus == ''nacht''
+                  or keuze_modus == ''vakantie'') or wk_koel_klaar }}'
+              sequence:
+              - choose:
+                - conditions:
+                  - condition: template
+                    value_template: '{{ wk_is_cooling and state_attr(''climate.air_conditioning_woonkamer'',
+                      ''temperature'') | float(22) < 25.0 }}'
+                  sequence:
+                  - action: climate.set_temperature
+                    target:
+                      entity_id: climate.air_conditioning_woonkamer
+                    data:
+                      temperature: 25
+                  - action: timer.start
+                    target:
+                      entity_id: timer.pv_stabilisatie
+                    data:
+                      duration: 00:05:00
+                - conditions:
+                  - condition: template
+                    value_template: '{{ wk_is_cooling and state_attr(''climate.air_conditioning_woonkamer'',
+                      ''temperature'') | float(22) >= 25.0 and not is_state(''timer.pv_stabilisatie'',
+                      ''active'') and not is_state(''timer.airco_assist_min_on'',
+                      ''active'') }}'
+                  sequence:
+                  - action: climate.turn_off
+                    target:
+                      entity_id: climate.air_conditioning_woonkamer
+          - choose:
+            - conditions:
+              - condition: template
+                value_template: '{{ pv_hard_stop or (effectieve_modus == ''nacht''
+                  or keuze_modus == ''vakantie'') or zd_koel_klaar }}'
+              sequence:
+              - choose:
+                - conditions:
+                  - condition: template
+                    value_template: '{{ zd_is_cooling and state_attr(''climate.air_conditioning_zolder'',
+                      ''temperature'') | float(22) < 25.0 }}'
+                  sequence:
+                  - action: climate.set_temperature
+                    target:
+                      entity_id: climate.air_conditioning_zolder
+                    data:
+                      temperature: 25
+                  - action: timer.start
+                    target:
+                      entity_id: timer.pv_stabilisatie
+                    data:
+                      duration: 00:05:00
+                - conditions:
+                  - condition: template
+                    value_template: '{{ zd_is_cooling and state_attr(''climate.air_conditioning_zolder'',
+                      ''temperature'') | float(22) >= 25.0 and not is_state(''timer.pv_stabilisatie'',
+                      ''active'') and not is_state(''timer.airco_assist_min_on'',
+                      ''active'') }}'
+                  sequence:
+                  - action: climate.turn_off
+                    target:
+                      entity_id: climate.air_conditioning_zolder
+  - variables:
+      reguliere_assist_actief: '{{ not koelen_nu and not pv_verwarmen_heeft_regie
+        }}'
+      airco_toegestaan: '{{ is_state(''input_boolean.airco_toestaan'',''on'') }}'
+      assist_actief: '{{ is_state(''input_boolean.status_airco_assist_actief'',''on'')
+        }}'
+      start_pending: '{{ is_state(''input_boolean.airco_assist_start_pending'',''on'')
+        }}'
+      nest_heating: '{{ is_state_attr(''climate.beneden'',''hvac_action'',''heating'')
+        }}'
+      sp: '{{ state_attr(''climate.beneden'',''temperature'') | float(0) }}'
+      cur: '{{ state_attr(''climate.beneden'',''current_temperature'') | float(0)
+        }}'
+      dmin: '{{ states(''input_number.airco_assist_delta_min'') | float(0) }}'
+      delta_ok: '{{ (sp - cur) >= dmin }}'
+      start_delay_min: '{{ states(''input_number.airco_assist_start_na_min'') | int(5)
+        }}'
+      min_on_min: '{{ states(''input_number.airco_assist_min_on_min'') | int(10) }}'
+      start_delay_active: '{{ is_state(''timer.airco_assist_start_delay'',''active'')
+        }}'
+      hard_stop: '{{ (not airco_toegestaan) or (effectieve_modus != ''dag'') }}'
+      normal_stop: '{{ assist_actief and (not nest_heating) and (not min_on_active)
+        }}'
+      wk_pv_standby: "{{ (is_state('climate.air_conditioning_woonkamer', 'cool') and
+        state_attr('climate.air_conditioning_woonkamer', 'temperature') | float(0)
+        >= 25.0) or\n   (is_state('climate.air_conditioning_woonkamer', 'heat') and
+        state_attr('climate.air_conditioning_woonkamer', 'temperature') | float(100)
+        <= 18.0) }}"
+      zd_pv_standby: "{{ (is_state('climate.air_conditioning_zolder', 'cool') and
+        state_attr('climate.air_conditioning_zolder', 'temperature') | float(0) >=
+        25.0) or\n   (is_state('climate.air_conditioning_zolder', 'heat') and state_attr('climate.air_conditioning_zolder',
+        'temperature') | float(100) <= 18.0) }}"
+      idle_stop: "{{ (not assist_actief) and (not start_pending) and (not start_delay_active)
+        and \n   (not min_on_active) and (not nest_heating) and not pv_hard_stop and\n
+        \  ((states('climate.air_conditioning_woonkamer') not in ['off', 'unavailable']
+        and not wk_pv_standby) or \n    (states('climate.air_conditioning_zolder')
+        not in ['off', 'unavailable'] and not zd_pv_standby)) }}"
+      temp_woonkamer: '{{ states(''input_number.temp_airco_woonkamer'') | float(states(''input_number.temp_airco_woonkamer_standaard'')|float(21.0))
+        }}'
+      temp_zolder: '{{ states(''input_number.temp_airco_zolder'') | float(states(''input_number.temp_airco_zolder_standaard'')|float(21.0))
+        }}'
+      tol_airco: 0.3
+      ac_living: climate.air_conditioning_woonkamer
+      ac_attic: climate.air_conditioning_zolder
+      attic_is_on: '{{ states(ac_attic) != ''off'' }}'
+      zolder_on_thr: 18
+      zolder_off_thr: 18.5
+      zolder_mag_meedoen: '{%- if attic_is_on -%} {{ zd_cur < zolder_off_thr }} {%-
+        else -%} {{ zd_cur < zolder_on_thr }} {%- endif -%}'
+      living_need_heat: '{{ states(ac_living) != ''heat'' }}'
+      living_need_temp: '{{ (state_attr(ac_living,''temperature'') is none) or ((state_attr(ac_living,''temperature'')
+        - temp_woonkamer) | abs > tol_airco) }}'
+      attic_should_on: '{{ zolder_mag_meedoen }}'
+      attic_need_off: '{{ (not attic_should_on) and attic_is_on }}'
+      attic_need_heat: '{{ attic_should_on and (states(ac_attic) != ''heat'') }}'
+      attic_need_temp: '{{ attic_should_on and ((state_attr(ac_attic,''temperature'')
+        is none) or ((state_attr(ac_attic,''temperature'') - temp_zolder) | abs >
+        tol_airco)) }}'
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ not reguliere_assist_actief }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+          - input_boolean.status_airco_assist_actief
+          - input_boolean.airco_assist_start_pending
+      - action: timer.cancel
+        target:
+          entity_id: timer.airco_assist_start_delay
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and hard_stop }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+          - input_boolean.status_airco_assist_actief
+          - input_boolean.airco_assist_start_pending
+      - action: timer.cancel
+        target:
+          entity_id: timer.airco_assist_start_delay
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ not koelen_nu }}'
+          sequence:
+          - action: climate.turn_off
+            target:
+              entity_id:
+              - climate.air_conditioning_woonkamer
+              - climate.air_conditioning_zolder
+            continue_on_error: true
+      - stop: Airco assist - hard stop uitgevoerd
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and (not assist_actief) and (not
+          start_delay_active)  and (not start_pending) and nest_heating and delta_ok
+          }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.airco_assist_start_pending
+      - action: timer.start
+        target:
+          entity_id: timer.airco_assist_start_delay
+        data:
+          duration: '{{ (start_delay_min * 60) | int }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and (not assist_actief) and start_delay_active  and
+          (not (nest_heating and delta_ok)) }}'
+      sequence:
+      - action: timer.cancel
+        target:
+          entity_id: timer.airco_assist_start_delay
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.airco_assist_start_pending
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and (not assist_actief) and start_pending
+          and (not start_delay_active) and nest_heating and delta_ok }}'
+      sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.status_airco_assist_actief
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.airco_assist_start_pending
+      - action: timer.start
+        target:
+          entity_id: timer.airco_assist_min_on
+        data:
+          duration: '{{ (min_on_min * 60) | int }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and (not assist_actief) and start_pending
+          and (not start_delay_active) and (not (nest_heating and delta_ok)) }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.airco_assist_start_pending
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and (normal_stop or idle_stop)
+          }}'
+      sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.status_airco_assist_actief
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ not koelen_nu }}'
+          sequence:
+          - action: climate.turn_off
+            target:
+              entity_id:
+              - climate.air_conditioning_woonkamer
+              - climate.air_conditioning_zolder
+            continue_on_error: true
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ reguliere_assist_actief and assist_actief and airco_toegestaan
+          and (effectieve_modus == ''dag'') }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ living_need_heat }}'
+          sequence:
+          - action: climate.set_hvac_mode
+            target:
+              entity_id: '{{ ac_living }}'
+            data:
+              hvac_mode: heat
+            continue_on_error: true
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ living_need_temp }}'
+          sequence:
+          - action: climate.set_temperature
+            target:
+              entity_id: '{{ ac_living }}'
+            data:
+              temperature: '{{ temp_woonkamer }}'
+            continue_on_error: true
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ attic_need_off }}'
+          sequence:
+          - action: climate.turn_off
+            target:
+              entity_id: '{{ ac_attic }}'
+            continue_on_error: true
+        - conditions:
+          - condition: template
+            value_template: '{{ attic_should_on }}'
+          sequence:
+          - if:
+            - condition: template
+              value_template: '{{ attic_need_heat }}'
+            then:
+            - action: climate.set_hvac_mode
+              target:
+                entity_id: '{{ ac_attic }}'
+              data:
+                hvac_mode: heat
+              continue_on_error: true
+          - if:
+            - condition: template
+              value_template: '{{ attic_need_temp }}'
+            then:
+            - action: climate.set_temperature
+              target:
+                entity_id: '{{ ac_attic }}'
+              data:
+                temperature: '{{ temp_zolder }}'
+              continue_on_error: true
+  - action: input_boolean.turn_off
+    target:
+      entity_id:
+      - input_boolean.woonkamer_started_now
+      - input_boolean.zolder_started_now
