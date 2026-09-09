@@ -14,7 +14,13 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-import type { Command, Decision } from '../../core/decision.js';
+import type {
+  Command,
+  Decision,
+  Explanation,
+  Intent,
+  RejectedIntent,
+} from '../../core/decision.js';
 import { decide } from '../../core/decide.js';
 import type { SiteConfig } from '../../core/model.js';
 import type { StrategyRegistry } from '../../core/strategy.js';
@@ -26,6 +32,32 @@ import {
   relevantEntities,
 } from './mapping.js';
 import { EntityStore } from './store.js';
+
+/**
+ * Het laatste besluit, klaar om te tonen.
+ *
+ * Dit is precies wat er ook in het logboek belandt, alleen niet ingedikt: de
+ * webweergave leest hetzelfde besluit als het log en de historie, en rekent
+ * niets zelf uit. Zodra de weergave iets zou afleiden wat hier niet in staat,
+ * ontstaat de divergentie tussen dashboard en regeling waar dit project juist
+ * vandaan komt — het oude dashboard had ~500 regels JS die de state machine
+ * dupliceerden.
+ */
+export interface LiveSnapshot {
+  readonly atMs: number;
+  /** Wat deze evaluatie uitlokte: 'wijziging', 'hartslag', 'start'. */
+  readonly trigger: string;
+  /** Of het besluit wijzigde ten opzichte van het vorige. */
+  readonly changed: boolean;
+  readonly explanation: Explanation;
+  readonly commands: readonly Command[];
+  readonly accepted: readonly Intent[];
+  readonly rejected: readonly RejectedIntent[];
+  /** Wat de apparaten op dat moment werkelijk deden, op actuator-id. */
+  readonly observed: Readonly<Record<string, string>>;
+  /** De uitleg van het oude systeem, zolang de migratie loopt. */
+  readonly legacy: string | null;
+}
 
 export interface ShadowOptions {
   readonly config: SiteConfig;
@@ -73,6 +105,14 @@ export interface ShadowOptions {
   /** Waar de regels naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
   /**
+   * Wordt na elk besluit aangeroepen, ook wanneer er niets wijzigde.
+   *
+   * Hier hangt de webweergave zich aan. Bewust een callback en geen server in
+   * deze klasse: de runner hoort niet te weten dat er iemand meekijkt, en de
+   * tests draaien hem zonder.
+   */
+  readonly onDecision?: (snapshot: LiveSnapshot) => void;
+  /**
    * De klok. Standaard `Date.now`, maar injecteerbaar — de kern behandelt tijd
    * al als invoer, en dan hoort de laag eromheen dat ook te doen. Zonder dit
    * hangt de uitkomst van een test af van het uur waarop hij toevallig draait.
@@ -114,6 +154,7 @@ export class ShadowRunner {
   #timer: NodeJS.Timeout | null = null;
   #debounce: NodeJS.Timeout | null = null;
   #ready = false;
+  #latest: LiveSnapshot | null = null;
   #lastKey: string | null = null;
   #lastLegacy: string | null = null;
   #ticks = 0;
@@ -137,6 +178,7 @@ export class ShadowRunner {
       debounceMs: options.debounceMs ?? 2_000,
       minIntervalSeconds: options.minIntervalSeconds ?? 15,
       watchdogMinutes: options.watchdogMinutes ?? 10,
+      onDecision: options.onDecision ?? ((): void => {}),
       watchdogCheckMs:
         options.watchdogCheckMs ??
         Math.max(30_000, ((options.watchdogMinutes ?? 10) * 60_000) / 3),
@@ -338,6 +380,33 @@ export class ShadowRunner {
       }
     }
 
+    const observed = this.#observation();
+    const legacyRef = this.#options.config.migration?.legacyExplanation;
+    const legacy = legacyRef ? this.#store.state(legacyRef.id) : null;
+
+    // De weergave krijgt élk besluit, ook wanneer er niets wijzigde: de
+    // temperaturen en het budget lopen door, en een dashboard dat pas
+    // bijwerkt als de arbiter van gedachten verandert lijkt vastgelopen.
+    // Het logboek doet het omgekeerde, en met reden — zie hieronder.
+    this.#latest = {
+      atMs: decision.atMs,
+      trigger,
+      changed,
+      explanation: e,
+      commands: decision.commands,
+      accepted: decision.accepted,
+      rejected: decision.rejected,
+      observed,
+      legacy,
+    };
+    // Een kapotte luisteraar mag de opname niet meeslepen. De schaduwmodus
+    // draait maanden onbewaakt; het logboek is het product, de weergave niet.
+    try {
+      this.#options.onDecision(this.#latest);
+    } catch (error) {
+      this.#log(`  weergave gaf een fout door: ${String(error)}`);
+    }
+
     if (this.#options.logDir == null) return;
 
     // Volledig record alleen wanneer het besluit verandert; anders een korte
@@ -345,9 +414,6 @@ export class ShadowRunner {
     // een record en staan juist stil zolang er niets gebeurt — die elke dertig
     // seconden herhalen levert een logboek op waar de gebeurtenissen in
     // verdrinken.
-    const observed = this.#observation();
-    const legacyRef = this.#options.config.migration?.legacyExplanation;
-    const legacy = legacyRef ? this.#store.state(legacyRef.id) : null;
     // De uitleg van het oude systeem alleen schrijven als hij wijzigt; hij is
     // lang en verandert een paar keer per uur. De lezer draagt hem voort.
     const legacyChanged = legacy !== this.#lastLegacy;
@@ -387,6 +453,11 @@ export class ShadowRunner {
     const file = join(this.#options.logDir, `decisions-${day}.ndjson`);
     await mkdir(dirname(file), { recursive: true });
     await appendFile(file, `${JSON.stringify(record)}\n`, 'utf-8');
+  }
+
+  /** Het laatste besluit, of null zolang er nog niet is gerekend. */
+  get latest(): LiveSnapshot | null {
+    return this.#latest;
   }
 
   /** Cijfers over wat de filter tegenhoudt, voor de opstartregel en tests. */

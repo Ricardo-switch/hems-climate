@@ -404,6 +404,70 @@ niets met de oorzaak te maken had:
 *Les:* toets een wijziging in het uitrolscript altijd via *Uitvoeren* in de
 Taakplanner. Vanaf de commandoregel bewijst het niets.
 
+## 23. De schaduwdienst gaat luisteren, maar alleen om te lezen
+
+Tot fase 5 stond er in `docker-compose.yml`: *deze dienst luistert nergens op en
+verbindt alleen uitgaand met Home Assistant.* Dat was een eigenschap, geen
+toevalligheid — het proces houdt het HA-token vast en draait maanden onbewaakt.
+
+*Afgewezen — een tweede dienst die het logboek volgt.* Houdt de schaduwdienst
+volledig dicht, en dat is echt iets waard. Maar het levert een tweede container,
+een tweede uitrol, en een weergave die de laatste *geschreven* regel toont in
+plaats van het laatste *besluit*. En juist het verschil daartussen is
+interessant: het logboek slaat een ongewijzigd besluit over (besluit 11), dus
+een pagina die daaruit leest staat stil zolang de arbiter het eens blijft met
+zichzelf. Dat ziet er precies zo uit als kapot.
+
+*Afgewezen — een statisch rapport uit de divergentietool.* Geen nieuwe
+netwerkoppervlakte, maar dan kijk je naar de stand van de laatste keer dat je
+het script draaide. Voor een dashboard is dat geen dashboard.
+
+*Gekozen:* de weergave zit in de schaduwdienst, en read-only is er een grens en
+geen afspraak. Net als bij `HaClient` zonder `allowWrites`:
+
+- alles wat geen GET of HEAD is krijgt 405, **vóór** de routering — een nieuwe
+  route kan die controle dus niet per ongeluk omzeilen
+- er is geen route die iets wijzigt, ook niet als je hem zou willen
+- het pad naar een bestand wordt genormaliseerd en tegen de wortel gecontroleerd,
+  want `.env` ligt precies één map boven de gebouwde frontend
+- `HEMS_WEB_PORT` weglaten zet het geheel uit, en dat is de standaard: luisteren
+  is een keuze die je in de compose maakt en ziet staan
+
+*Kosten:* er is geen authenticatie. Op een thuisnetwerk is dat verdedigbaar —
+Home Assistant zelf staat daar ook — maar het staat als waarschuwing in de
+compose: hier hoort nooit een portforward op. Fase 6 heeft er een antwoord voor
+nodig zodra dit bij iemand anders komt te draaien.
+
+*Gevolg:* de weergave krijgt élk besluit, ook wanneer er niets wijzigde. Dat is
+het omgekeerde van wat het logboek doet, en met opzet: een logboek dat de winter
+haalt en een dashboard dat leeft, stellen tegengestelde eisen aan hetzelfde
+besluit.
+
+## 24. Tailwind met een bouwstap, niet via een CDN
+
+*Afgewezen — de play-CDN.* Geen bouwstap, maar dan heeft een pagina die je juist
+lokaal wilt kunnen openen internet nodig om er goed uit te zien. Een dashboard in
+de meterkast dat bij een haperende verbinding als kale HTML verschijnt, is precies
+op het verkeerde moment onleesbaar.
+
+*Afgewezen — handgeschreven CSS.* Zou kunnen, en zou minder bewegende delen
+geven. Maar dit wordt een product met meer schermen dan dit ene, en dan is een
+schaal die al bestaat meer waard dan de honderd regels die we nu uitsparen.
+
+*Gekozen:* Tailwind, lokaal gebouwd. De uitvoer is één CSS-bestand van ~10 kB,
+en Tailwind zelf komt nergens in de buurt van de draaifase: het gebeurt in een
+eigen bouwfase in de Dockerfile en wat eruit komt zijn drie bestanden.
+
+*Kosten, en dit is de echte:* de bouwcontext moest van `backend/` naar de
+projectwortel, want `frontend/` moet mee. Daarmee verhuisde ook de
+`.dockerignore` — Docker leest die naast de *context*, niet naast de Dockerfile,
+dus `backend/.dockerignore` doet daar niets meer. Zonder een nieuwe in de wortel
+gaat de hele repository de daemon in, HA-backup van een gigabyte incluis.
+
+*En:* `deploy.sh` bouwde alleen bij een wijziging in `backend/`. Nu ook bij
+`frontend/` — anders is een gewijzigde pagina een pagina die niet verandert, en
+dat is weer precies het soort stilte waar dit project vanaf moest.
+
 ---
 
 ## Wat nog een besluit wacht
@@ -425,6 +489,11 @@ Taakplanner. Vanaf de commandoregel bewijst het niets.
   arbiter die regeling moet nabootsen of vervangen.
 - **`handmatig` is grofkorrelig.** Zie besluit 8b: de stand geldt bij ons voor de
   hele woning, in het oude systeem alleen voor de koelregeling.
+- **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
+  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6.
+- **De weergave toont alleen het heden.** Geen grafiek, geen verloop. Het
+  logboek heeft die gegevens wel, en de divergentietool leest ze al; die twee
+  koppelen is fase 7-werk en geen gat in fase 5.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**
   `script.klimaat_controller_apply` zet `input_boolean.zolder_started_now` en
   `..._woonkamer_started_now` aan tijdens de run en pas als laatste stap weer

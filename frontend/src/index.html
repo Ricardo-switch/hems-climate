@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Smart Climate OS — schaduwmodus</title>
+    <link rel="stylesheet" href="app.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🌡️</text></svg>"
+    />
+  </head>
+  <body class="bg-grond text-tekst min-h-screen antialiased">
+    <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+      <header class="mb-6 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <div class="min-w-0">
+          <h1 class="text-xl font-semibold tracking-tight sm:text-2xl">Smart Climate OS</h1>
+          <p class="text-zacht mt-0.5 text-sm">
+            Schaduwmodus — de arbiter denkt mee, maar schakelt niets
+          </p>
+        </div>
+        <div class="w-full sm:w-auto sm:text-right">
+          <div id="verbinding" class="text-zacht text-sm">verbinden…</div>
+          <div id="besluit-tijd" class="text-zacht meting text-xs"></div>
+        </div>
+      </header>
+
+      <!-- Alleen zichtbaar wanneer er iets aan de hand is. -->
+      <section
+        id="failsafe"
+        hidden
+        class="border-alarm/50 bg-alarm/10 mb-6 rounded-lg border px-4 py-3"
+      >
+        <h2 class="text-alarm font-semibold">Failsafe actief</h2>
+        <p class="text-zacht mt-1 text-sm">
+          Een kritiek meetpunt is onbetrouwbaar. De assist-apparaten gaan uit; de
+          hoofdverwarming blijft draaien.
+        </p>
+        <ul id="failsafe-lijst" class="meting mt-2 space-y-0.5 text-sm"></ul>
+      </section>
+
+      <!--
+        Alles hieronder heeft een besluit nodig. Tot dat er is, is één duidelijke
+        regel beter dan een raamwerk van lege kopjes: dat tweede ziet eruit als
+        een pagina die stuk is, en dit is precies wat je na een uitrol als
+        eerste ziet.
+      -->
+      <section id="wachten" class="border-rand bg-paneel rounded-lg border px-4 py-8 text-center">
+        <p class="text-zacht">Wachten op het eerste besluit van de arbiter.</p>
+        <p class="text-zacht mt-1 text-xs">
+          Dat duurt hoogstens één hartslag na het verbinden met Home Assistant.
+        </p>
+      </section>
+
+      <div id="inhoud" hidden>
+      <!-- Modus en budget -->
+      <section class="mb-6 grid gap-4 sm:grid-cols-3">
+        <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-1">
+          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">Modus</h2>
+          <p id="modus" class="mt-1 text-2xl font-semibold">—</p>
+          <p id="modus-bron" class="text-zacht mt-0.5 text-sm"></p>
+          <p id="bezet" class="text-zacht mt-2 text-sm"></p>
+        </div>
+
+        <div class="border-rand bg-paneel rounded-lg border p-4 sm:col-span-2">
+          <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
+            Vermogensbudget
+          </h2>
+          <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+            <div>
+              <div class="text-zacht text-xs">toegewezen</div>
+              <div id="budget-toegewezen" class="meting text-lg font-medium">—</div>
+            </div>
+            <div>
+              <div class="text-zacht text-xs">beschikbaar</div>
+              <div id="budget-beschikbaar" class="meting text-lg font-medium">—</div>
+            </div>
+            <div>
+              <div class="text-zacht text-xs">overschot</div>
+              <div id="budget-overschot" class="meting text-zon text-lg font-medium">—</div>
+            </div>
+            <div>
+              <div class="text-zacht text-xs">net</div>
+              <div id="budget-net" class="meting text-lg font-medium">—</div>
+            </div>
+          </div>
+          <div class="bg-grond mt-3 h-2 overflow-hidden rounded-full">
+            <div id="budget-balk" class="bg-zon h-full w-0 rounded-full transition-all"></div>
+          </div>
+          <p id="budget-uitleg" class="text-zacht mt-2 text-xs"></p>
+        </div>
+      </section>
+
+      <!-- Vraag per zone -->
+      <section class="mb-6">
+        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+          Vraag per zone
+        </h2>
+        <div id="zones" class="grid gap-3 sm:grid-cols-3"></div>
+      </section>
+
+      <!-- Wat de arbiter zou doen -->
+      <section class="mb-6">
+        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+          Wat de arbiter zou doen
+        </h2>
+        <div id="apparaten" class="border-rand bg-paneel divide-rand divide-y rounded-lg border"></div>
+        <p id="geen-commando" class="text-zacht mt-2 text-sm"></p>
+      </section>
+
+      <!-- Waarom een voorstel het niet haalde -->
+      <section id="geblokkeerd-sectie" hidden class="mb-6">
+        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+          Voorstellen die het niet haalden
+        </h2>
+        <ul id="geblokkeerd" class="border-rand bg-paneel divide-rand divide-y rounded-lg border"></ul>
+      </section>
+
+      <!-- Zolang de migratie loopt -->
+      <section id="oud-sectie" hidden class="mb-6">
+        <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
+          Wat het oude systeem er op dit moment over zegt
+        </h2>
+        <div id="oud" class="border-rand bg-paneel rounded-lg border p-4 text-sm"></div>
+      </section>
+      </div>
+
+      <footer class="text-zacht border-rand mt-8 border-t pt-4 text-xs">
+        <p>
+          Deze weergave leest alleen. Ze toont het besluit van de kern onbewerkt en
+          rekent zelf niets uit.
+        </p>
+        <p id="installatie" class="mt-1"></p>
+      </footer>
+    </div>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

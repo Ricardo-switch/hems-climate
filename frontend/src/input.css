@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind v4 leest de klassen uit de bronbestanden. Die staan hiernaast, en
+ * niet in een map die hij vanzelf vindt, dus wijzen we ze aan.
+ */
+@source './index.html';
+@source './app.js';
+
+/*
+ * Eén schaal voor de hele weergave.
+ *
+ * De kleuren dragen betekenis en zijn daarom benoemd naar wat ze zeggen, niet
+ * naar hoe ze eruitzien: `warm` blijft `warm` als de tint ooit verandert. Het
+ * dashboard hangt in de meterkast en wordt 's avonds bekeken, vandaar donker
+ * als uitgangspunt in plaats van als optie.
+ */
+@theme {
+  --color-grond: oklch(0.19 0.012 250);
+  --color-paneel: oklch(0.24 0.014 250);
+  --color-rand: oklch(0.32 0.016 250);
+  --color-tekst: oklch(0.93 0.005 250);
+  --color-zacht: oklch(0.68 0.012 250);
+
+  --color-warm: oklch(0.72 0.16 45);
+  --color-koel: oklch(0.74 0.13 230);
+  --color-rust: oklch(0.6 0.01 250);
+  --color-zon: oklch(0.82 0.15 95);
+  --color-alarm: oklch(0.66 0.19 25);
+  --color-goed: oklch(0.75 0.15 155);
+}
+
+/*
+ * Tabulaire cijfers voor alles wat meebeweegt. Zonder dit springt de hele
+ * regel bij elke meting, en dan lijkt een rustig huis onrustig.
+ */
+.meting {
+  font-variant-numeric: tabular-nums;
+}

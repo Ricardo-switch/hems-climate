@@ -8,6 +8,30 @@
 # honderden megabytes en, belangrijker, alles wat daarin ooit een kwetsbaarheid
 # kan krijgen.
 
+# De bouwcontext is de projectwortel en niet `backend/`, want de weergave wordt
+# hier ook gebouwd en die staat in `frontend/`. Vandaar het pad in elke COPY.
+#
+#   docker build -f backend/Dockerfile .
+
+# ---------- de weergave bouwen ----------
+#
+# Aparte fase, en met opzet als eerste: Tailwind en zijn afhankelijkheden komen
+# zo nooit in de buurt van de draaifase. Wat er uit komt is drie bestanden.
+FROM node:22-alpine AS web
+
+WORKDIR /web
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/build.js ./
+COPY frontend/src ./src
+
+# Naar een vaste map, los van de mappenstructuur van het project: de backend
+# hoeft niet te weten waar de bron stond.
+ENV HEMS_WEB_OUT=/web/dist
+RUN npm run build
+
 # ---------- bouwen ----------
 FROM node:22-alpine AS build
 
@@ -15,12 +39,12 @@ WORKDIR /build
 
 # Eerst alleen de manifesten, zodat het installeren opnieuw gebruikt kan worden
 # zolang de afhankelijkheden niet wijzigen.
-COPY package.json package-lock.json ./
+COPY backend/package.json backend/package-lock.json ./
 RUN npm ci
 
-COPY tsconfig.json tsconfig.build.json ./
-COPY src ./src
-COPY test ./test
+COPY backend/tsconfig.json backend/tsconfig.build.json ./
+COPY backend/src ./src
+COPY backend/test ./test
 
 # Typecontrole en compilatie. Beide hebben alleen de TypeScript-compiler nodig
 # en geen platformspecifieke binaries.
@@ -47,7 +71,11 @@ RUN apk add --no-cache tzdata
 WORKDIR /app
 
 COPY --from=build /build/dist ./dist
-COPY package.json ./
+COPY backend/package.json ./
+
+# De gebouwde weergave. `defaultWebDir` zoekt hem naast `dist`, dus dit pad
+# hoort bij die functie — verplaats je er één, verplaats dan allebei.
+COPY --from=web /web/dist ./web
 
 # Waar de gemonteerde mappen terechtkomen. `config/sites` zit onder /app zodat
 # het opzoeken vanaf de werkmap hem vindt zonder extra instelling.
@@ -56,8 +84,10 @@ RUN mkdir -p /app/config/sites /logs
 ENV NODE_ENV=production \
     SHADOW_LOG_DIR=/logs
 
-# Geen poorten: deze dienst luistert nergens op. Hij verbindt alleen uitgaand
-# met Home Assistant.
+# De read-only weergave. Staat standaard uit: zonder HEMS_WEB_PORT luistert deze
+# dienst nergens op en verbindt hij alleen uitgaand met Home Assistant. De
+# compose zet de poort; dat is een keuze die je daar maakt en ziet staan.
+EXPOSE 8080
 
 # De bewaking in de applicatie sluit zichzelf af wanneer er te lang geen besluit
 # meer genomen is; het herstartbeleid van compose start hem dan opnieuw. Deze

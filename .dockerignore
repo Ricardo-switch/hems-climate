@@ -1,0 +1,38 @@
+# De bouwcontext is sinds de webweergave de projectwortel en niet `backend/`,
+# want `frontend/` moet mee. Deze lijst hoort daarbij: zonder hem gaat de hele
+# repository de daemon in, inclusief de HA-backup van een gigabyte.
+#
+# Let op: Docker leest de .dockerignore naast de *context*, niet naast de
+# Dockerfile. `backend/.dockerignore` doet hier dus niets meer.
+
+# Geheimen en gegevens
+.env
+*.env
+!**/.env.example
+backend/data
+deploy.log
+*.log
+
+# Afgeleide bestanden
+**/node_modules
+backend/dist
+backend/web
+frontend/dist
+*.tsbuildinfo
+
+# Niets van dit alles hoort in een image
+.git
+.github
+automatic_backup_*
+*.tar
+*.tar.gz
+legacy_code
+ha-fixes
+HA export
+config
+deploy
+*.md
+*.ps1
+*.bat
+backend/scripts
+backend/tools
