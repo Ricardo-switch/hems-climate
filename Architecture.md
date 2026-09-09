@@ -36,7 +36,10 @@ in configuratie.
 voorstel draagt een `budgetW`; het overschot is een pot die leegloopt. Een
 draaiend apparaat rekent zijn gemeten opname, een stilstaand apparaat zijn
 schatting — zo kost bijschakelen alleen het verschil. Dit verving de vlag
-`zolder_started_now` uit de YAML-versie, die door een scopingfout nooit werkte.
+`zolder_started_now` uit de YAML-versie, die daar door een scopingfout niet
+werkte. Die vlag is in de draaiende installatie inmiddels met een losse helper
+gerepareerd; het budget vervangt hem alsnog, omdat het de vórm wegneemt die de
+fout mogelijk maakte (DECISIONS.md, besluit 1 en 3).
 
 **Adapterlaag (`backend/src/adapters/homeassistant`).** WebSocket-client,
 schaduwmodus, en één gedeelde vertaling van HA naar het domeinmodel die zowel de

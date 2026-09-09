@@ -156,6 +156,7 @@ describe('wat de arbiter zou doen', () => {
     arbiterAction: {},
     failsafe: false,
     full: true,
+    handsOff: false,
     ...over,
   });
 
@@ -299,5 +300,80 @@ describe('toerekening van netstroom', () => {
     // Eén uur lang hoogstens 300 W toerekenen, niet de volle 5 kW.
     expect(a.legacyGridWh).toBeGreaterThan(280);
     expect(a.legacyGridWh).toBeLessThan(310);
+  });
+});
+
+describe('de bewoner neemt over', () => {
+  const HANDMATIG = 'Handmatig koelen actief:<br>&emsp;❄️ Zolder (Koelen)';
+
+  /**
+   * Het geval van 6 september 2026, ingedikt.
+   *
+   * De arbiter had eerder besloten dat de zolder uit mocht. Daarna zet de
+   * bewoner hem met de hand aan. Zonder de hands-off regel blijft dat oude
+   * besluit doorwerken en groeit er een episode van "oud draaide, ik zou
+   * stoppen" — terwijl de arbiter in die stand juist niets vindt.
+   */
+  const specs = [
+    {
+      min: 0,
+      obs: { 'ac-zolder': 'off' },
+      gridW: 200,
+      changed: true,
+      legacy: 'PV-koelen: Zon is onder',
+      commands: [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' }],
+    },
+    ...Array.from({ length: 20 }, (_, i) => ({
+      min: 1 + i,
+      obs: { 'ac-zolder': 'cool@21' },
+      gridW: 700,
+      reclaimableW: 700,
+      ...(i === 0 ? { legacy: HANDMATIG } : {}),
+    })),
+  ];
+
+  it('telt een handmatig aangezet apparaat niet als afwijking', async () => {
+    const analysis = await run(specs);
+    const zolder = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
+
+    expect(zolder?.stricter).toBe(0);
+    expect(analysis.episodes).toEqual([]);
+  });
+
+  it('rekent de handmatige stroom niet als vermijdbaar', async () => {
+    const analysis = await run(specs);
+
+    // Het oude systeem gaf die stroom wel uit — dat blijft staan.
+    expect(analysis.legacyGridWh).toBeGreaterThan(0);
+    // Maar de arbiter zou er niets aan gedaan hebben, dus valt er niets te
+    // vermijden. Anders zou het rapport een besparing claimen op een keuze van
+    // de bewoner.
+    expect(analysis.avoidableGridWh).toBe(0);
+  });
+
+  it('pakt de draad weer op zodra de bewoner de stand loslaat', async () => {
+    const analysis = await run([
+      ...specs,
+      {
+        min: 21,
+        obs: { 'ac-zolder': 'cool@21' },
+        gridW: 700,
+        reclaimableW: 700,
+        changed: true,
+        legacy: 'PV-koelen: Gepauzeerd (Import)',
+        commands: [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' }],
+      },
+      ...Array.from({ length: 10 }, (_, i) => ({
+        min: 22 + i,
+        obs: { 'ac-zolder': 'cool@21' },
+        gridW: 700,
+        reclaimableW: 700,
+      })),
+    ]);
+
+    const zolder = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
+    expect(zolder?.stricter).toBeGreaterThan(0);
+    expect(analysis.episodes).toHaveLength(1);
+    expect(analysis.episodes[0]?.direction).toBe('strenger');
   });
 });

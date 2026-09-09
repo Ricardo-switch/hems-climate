@@ -16,7 +16,10 @@ import { WebSocketServer, type WebSocket as WsSocket } from 'ws';
 
 import { HaClient, websocketUrl, type HaEntityState } from '../src/adapters/homeassistant/client.js';
 import { EntityStore } from '../src/adapters/homeassistant/store.js';
-import { relevantEntities } from '../src/adapters/homeassistant/mapping.js';
+import {
+  buildSystemState,
+  relevantEntities,
+} from '../src/adapters/homeassistant/mapping.js';
 import { ShadowRunner } from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
 import { defaultStrategies } from '../src/index.js';
@@ -522,5 +525,77 @@ describe('bewaking tegen vastlopen', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(stalls.length).toBeGreaterThan(0);
     expect(stalls[0]).toBeGreaterThan(1);
+  });
+});
+
+describe('de modus uit twee knoppen', () => {
+  /**
+   * Een bron die alleen states kent. `buildSystemState` mag daar geen moeite
+   * mee hebben: alles wat ontbreekt hoort `unavailable` te worden, niet te
+   * knallen. Wat we hier toetsen is uitsluitend de modus-keuze.
+   */
+  const sourceOf = (states: Record<string, string>) => ({
+    state: (id: string) => states[id] ?? null,
+    number: () => null,
+    bool: () => null,
+    attr: () => null,
+    attrNumber: () => null,
+    changedAt: () => null,
+    hvacAction: () => null,
+    hvacActionSince: () => null,
+  });
+
+  const modeFor = (states: Record<string, string>) =>
+    buildSystemState(exampleSite, sourceOf(states), SHADOW_NOW).modeOverride;
+
+  it('laat de regeling met rust in automatisch zonder handmatige koelstand', () => {
+    expect(
+      modeFor({
+        'input_select.verwarming_modus': 'automatisch',
+        'input_select.koel_strategie': 'Pv koelen',
+      }),
+    ).toBeNull();
+  });
+
+  it('leest de handmatige koelstand van het dashboard als handmatig', () => {
+    // Dit is het geval van 6 september 2026: de modus stond op automatisch en
+    // de bewoner zette de zolderairco met de hand aan via de koelstrategie.
+    expect(
+      modeFor({
+        'input_select.verwarming_modus': 'automatisch',
+        'input_select.koel_strategie': 'Handmatig koelen',
+      }),
+    ).toBe('handmatig');
+  });
+
+  it('laat de handmatige koelstand voorgaan op de modus-keuze', () => {
+    // Het oude systeem schermde óók zijn afbouwblok af met
+    // `not handmatig_koelen_actief`, tot en met vakantie.
+    expect(
+      modeFor({
+        'input_select.verwarming_modus': 'vakantie',
+        'input_select.koel_strategie': 'Handmatig koelen',
+      }),
+    ).toBe('handmatig');
+  });
+
+  it('houdt de automatische koelstand buiten de handmatige stand', () => {
+    // 'Automatisch koelen' is een andere regeling, geen overname door de
+    // bewoner. Zie het openstaande punt in DECISIONS.md.
+    expect(
+      modeFor({
+        'input_select.verwarming_modus': 'automatisch',
+        'input_select.koel_strategie': 'Automatisch koelen',
+      }),
+    ).toBeNull();
+  });
+
+  it('vertaalt de handmatige stand van de modus-keuze onveranderd', () => {
+    expect(
+      modeFor({
+        'input_select.verwarming_modus': 'handmatig',
+        'input_select.koel_strategie': 'Pv koelen',
+      }),
+    ).toBe('handmatig');
   });
 });

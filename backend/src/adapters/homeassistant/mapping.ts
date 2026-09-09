@@ -109,6 +109,34 @@ const MODE_ALIASES: Readonly<Record<string, Mode>> = {
   handmatig: 'handmatig',
 };
 
+/**
+ * De tweede knop waarmee de bewoner de regeling overneemt.
+ *
+ * `input_select.verwarming_modus` is niet de enige plek waar "handen af" wordt
+ * gezegd. Het dashboard heeft daarnaast een koelstrategie, en die stand zet in
+ * het oude systeem de hele PV-koelregeling stil:
+ *
+ *   pv_koelen_heeft_regie: koel_strategie == 'Pv koelen' and …
+ *   choose → conditions: pv_koelen_heeft_regie and not handmatig_koelen_actief
+ *
+ * en het afbouwblok is met datzelfde `not handmatig_koelen_actief` afgeschermd.
+ * Onder 'Handmatig koelen' start het oude systeem dus niets en schakelt het ook
+ * niets af — precies wat `handmatig` bij ons betekent (besluit 8).
+ *
+ * Zonder deze regel las de vertaling alleen `verwarming_modus`. Die stond op
+ * `automatisch`, dus draaide de arbiter gewoon in `dag` door terwijl de bewoner
+ * de zolderairco met de hand had aangezet om het PV-budget te negeren. Dat gaf
+ * op 6 september 2026 een afwijking van 151 minuten die geen afwijking was.
+ *
+ * Let op de grofheid: bij ons is `handmatig` een stand van de héle woning, in
+ * het oude systeem trok alleen de koelregeling zich terug en bleef de Nest zijn
+ * modus volgen. De arbiter laat de Nest daarmee met rust waar het oude systeem
+ * hem nog stuurde. Dat is de veilige kant — hij zet niets uit — maar het is een
+ * benadering, niet een gelijkstelling. Zie besluit 8.
+ */
+const STRATEGY_ENTITY = 'input_select.koel_strategie';
+const MANUAL_COOLING = 'Handmatig koelen';
+
 export function buildSystemState(
   config: SiteConfig,
   source: EntitySource,
@@ -171,10 +199,15 @@ export function buildSystemState(
   const grid = source.number('sensor.p1_meter_power');
   const sun = source.bool('sun.sun');
   const chosen = source.state('input_select.verwarming_modus');
+  const strategy = source.state(STRATEGY_ENTITY);
+  // De handmatige koelstand wint van de modus-keuze: het oude systeem liet die
+  // stand ook boven alles gaan, tot en met vakantie.
   const modeOverride =
-    chosen == null || chosen === 'automatisch'
-      ? null
-      : (MODE_ALIASES[chosen] ?? null);
+    strategy === MANUAL_COOLING
+      ? 'handmatig'
+      : chosen == null || chosen === 'automatisch'
+        ? null
+        : (MODE_ALIASES[chosen] ?? null);
 
   return {
     nowMs,
@@ -275,6 +308,7 @@ const SINGLETON_INPUTS: readonly string[] = [
   'sensor.p1_meter_power',
   'sun.sun',
   'input_select.verwarming_modus',
+  'input_select.koel_strategie',
   'timer.pv_stabilisatie',
   'timer.verwarming_handmatig',
 ];

@@ -26,6 +26,34 @@ doorlezen vonden, waren er vier jarenlang onzichtbaar geweest:
 Geen van deze fouten gaf ooit een melding. Dat is de eigenlijke reden voor de
 overstap: niet betere logica, maar **aantoonbare** logica.
 
+*Nagekeken in de HA-export van 1 september 2026.* Twee van de vier zijn in de
+draaiende installatie inmiddels gerepareerd, en het lijstje hierboven beschreef
+ze te stellig als open:
+
+- **`zolder_started_now` is opgelost, en niet zoals hier stond.** De scopingfout
+  was echt — in `legacy_code/Scripts/alias Klimaat controller - apply.txt` staat
+  `zolder_started_now: false` als scriptvariabele, en de `- variables:
+  zolder_started_now: true` binnen de geneste `then:` valt buiten het bereik van
+  de zustertak die hem uitleest, dus die zag altijd `false`. Maar dat is de
+  *oude* kopie. In de export staat er een echte helper,
+  `input_boolean.zolder_started_now` ("zolder nu gestart"), plus
+  `input_boolean.woonkamer_started_now`. `scripts.yaml` zet hem aan na het
+  starten van de zolder, leest hem uit in de voorwaarde van de woonkamer, en
+  zet beide aan het einde van het script weer uit. De vlag werkt dus. Zie wel het
+  openstaande punt over het opruimen van die vlaggen, onderaan.
+- **`handmatig` bestaat wél als optie.** `input_select.verwarming_modus` heeft
+  in de export de standen `automatisch, dag, nacht, voorverwarmen, afwezig,
+  koelen, vakantie, handmatig`.
+
+`legacy_code/` in deze repository is een momentopname van vóór die reparaties.
+Bij twijfel is `automatic_backup_*/homeassistant/data/` de waarheid, niet
+`legacy_code/`.
+
+Dat verandert niets aan de conclusie. Beide fouten hebben jaren stil bestaan en
+zijn met de hand gevonden, niet door het systeem gemeld. Besluit 3 blijft ook
+staan: het budget vervangt de vlag, in plaats van erop te vertrouwen dat hij
+blijft werken.
+
 ## 2. Een pure kern
 
 `decide(state, config, now) -> Decision` doet geen I/O, leest geen klok en kent
@@ -111,6 +139,83 @@ start hij niets en schakelt hij ook niets af. Dat laatste is het verschil met
 `nacht`, waar "niets te doen" juist betekent dat de boel uit mag.
 
 *Uitzondering:* de failsafe wint hiervan. Een storing is geen voorkeur.
+
+### 8b. De knop staat op twee plekken, de vertaling keek er maar naar één
+
+De kern deed het goede in `handmatig` — de arbiter stelde niets voor, stuurde
+niets en schakelde niets af, en `test/arbiter.test.ts` bewaakte dat. Alleen
+bereikte de stand hem nooit. `mapping.ts` las uitsluitend
+`input_select.verwarming_modus`, en dat is niet de knop waar de bewoner op
+drukt om de zolderairco met de hand aan te zetten.
+
+Dat is `input_select.koel_strategie`, met de standen
+`Pv koelen, Automatisch koelen, Handmatig koelen, uit`. In het oude systeem is
+dat geen dashboardversiering maar de schakelaar die de PV-koelregeling stilzet:
+
+```
+handmatig_koelen_actief: {{ is_state('input_select.koel_strategie', 'Handmatig koelen') }}
+choose → conditions: {{ pv_koelen_heeft_regie and not handmatig_koelen_actief }}
+```
+
+en het afbouwblok is met datzelfde `not handmatig_koelen_actief` afgeschermd.
+Onder 'Handmatig koelen' start het oude systeem dus niets en schakelt het ook
+niets af. Dat is woord voor woord wat `handmatig` hierboven betekent.
+
+*Gevonden door:* de divergentietool, niet door een test. Op 6 september 2026
+stond er één episode van **151 minuten** bovenaan, `ac-zolder`, "oud draaide, ik
+zou stoppen, modus dag" — met eronder de uitleg van het oude systeem:
+`Handmatig koelen actief: · ❄️ Zolder (Koelen)`. De arbiter dacht `dag` omdat
+`verwarming_modus` op `automatisch` stond; de bewoner had de knop ernaast
+omgezet.
+
+*Besluit:* `mapping.ts` leest beide knoppen, en 'Handmatig koelen' wint van de
+modus-keuze — het oude systeem liet die stand ook boven alles gaan, tot en met
+vakantie.
+
+*Kosten:* onze `handmatig` geldt voor de héle woning, terwijl in het oude
+systeem alleen de koelregeling zich terugtrok en de Nest zijn modus bleef
+volgen. De arbiter laat de Nest daarmee met rust waar het oude systeem hem nog
+stuurde. Dat is de veilige kant — hij zet niets uit, en de failsafe blijft
+winnen — maar het is een benadering. Een `handmatig` per apparaatgroep is het
+echte antwoord; die staat op de lijst hieronder.
+
+*Wat het rapport erover zei was fout, en flink:* met de 151 minuten meegeteld
+claimde de divergentietool dat de arbiter **88,7%** van de netstroom naar de
+airco's zou hebben vermeden. Zonder die episode is het **8,1%**. De hele
+"besparing" was op één na een keuze van de bewoner. Een rapport dat de bewoner
+overrulet en dat als winst opschrijft, is erger dan geen rapport.
+
+*En het zat niet alleen in de divergentietool.* De replay-harness deelt dezelfde
+`mapping.ts` — dat is het hele punt van die gedeelde vertaling — dus dezelfde
+fout stond in het replay-rapport over 25 augustus tot 4 september. In dat venster
+stond de koelstrategie 950 minuten op 'Handmatig koelen', verdeeld over vier
+periodes. Opnieuw gedraaid met de fix:
+
+| | vóór | na |
+| --- | --- | --- |
+| netstroom die het oude systeem besteedde | 3,73 kWh | 3,73 kWh |
+| daarvan zou de arbiter hebben vermeden | 3,57 kWh (95,7%) | 0,98 kWh (26,1%) |
+| ac-zolder, "ik zou stoppen" | 629 ticks | 90 ticks |
+
+De 3,73 kWh klopte — dat is wat het oude systeem uitgaf, en dat staat los van
+wie er gelijk had. Wat niet klopte was de claim eromheen. Twee onafhankelijke
+harnessen wezen dezelfde kant op, en dat leek bevestiging; het was twee keer
+dezelfde vertaalfout.
+
+*Les:* twee harnessen die dezelfde vertaallaag delen, geven geen twee metingen.
+Ze geven één meting, twee keer opgeschreven. Dat is precies wat we wilden
+(besluit: één vertaling, nooit twee) — maar het betekent dat een fout in die laag
+nergens tegenspraak oplevert. Alleen de uitleg van het oude systeem zelf, die we
+als referentie meeschrijven, viel er uit de toon: `Handmatig koelen actief`.
+
+*Gevolg voor de tool:* een moment in een hands-off stand is geen vergelijking.
+`divergence/read.ts` geeft daar de waarneming terug als "wat de arbiter wil",
+zodat er geen episode ontstaat en er niets vermijdbaar heet. Logboeken van vóór
+deze fix schreven `dag`, dus daar wordt de stand teruggelezen uit de uitleg van
+het oude systeem: `Handmatig koelen actief` is de eerste tak van de sjabloon van
+`sensor.airco_assist_reden` en verschijnt precies dan, en alleen dan. Die
+terugleesregel mag weg zodra er geen logboeken van vóór september 2026 meer
+meegaan.
 
 ## 9. Configuratie als JSON, niet YAML, niet meteen een database
 
@@ -309,3 +414,24 @@ Taakplanner. Vanaf de commandoregel bewijst het niets.
 - **`bufferBandC`** staat op 1,0 zonder onderbouwing. Zie besluit 14.
 - **Heat-assist** mist de startvertraging niet meer, maar is nooit in de praktijk
   afgegaan: de Nest rapporteerde in het augustusvenster nooit `heating`.
+- **`Automatisch koelen` is nog niet vertaald.** Onder die stand valt
+  `pv_koelen_heeft_regie` ook weg — die eist `Pv koelen` — en draait het oude
+  systeem `script.koelen_apply_per_ruimte`: koelen op setpoint met hysterese,
+  zonder naar het PV-budget te kijken. Dat is géén overname door de bewoner maar
+  een tweede automaat, dus `handmatig` is er het verkeerde antwoord voor en het
+  is bewust niet toegevoegd. In de schaduwlogboeken van 5 tot 7 september komt
+  de stand niet voor, dus er is nog niets om aan te meten. Zodra hij wel valt:
+  verwacht divergentie in de richting "ik zou stoppen", en dan is de vraag of de
+  arbiter die regeling moet nabootsen of vervangen.
+- **`handmatig` is grofkorrelig.** Zie besluit 8b: de stand geldt bij ons voor de
+  hele woning, in het oude systeem alleen voor de koelregeling.
+- **De start-vlaggen worden alleen aan het einde opgeruimd.**
+  `script.klimaat_controller_apply` zet `input_boolean.zolder_started_now` en
+  `..._woonkamer_started_now` aan tijdens de run en pas als laatste stap weer
+  uit. Het script staat op `mode: queued`, dus een normale run maakt dat altijd
+  af — het gat is kleiner dan het lijkt. Maar breekt een run af (een
+  `climate.`-aanroep die faalt zonder `continue_on_error`, of een herstart van
+  HA op het verkeerde moment), dan blijft de vlag `on` en blokkeert hij bij de
+  vólgende run de woonkamer, stilzwijgend. Een `turn_off` van beide aan het
+  *begin* van het script sluit dat af. Dit raakt alleen het oude systeem; de
+  arbiter heeft de vlag niet nodig (besluit 3).
