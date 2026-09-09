@@ -206,6 +206,43 @@ export interface DayScheduleConfig {
   readonly eveningExtensionLights: readonly DeviceRef[];
 }
 
+/**
+ * Waar de modus vandaan komt, en wanneer de bewoner het overneemt.
+ *
+ * Stond tot fase 6b hard in `mapping.ts`: één `input_select`, één vertaaltabel
+ * en één knop voor "handen af". Dat is per woning anders — en het waren
+ * uitgerekend deze twee entiteiten die de 151 minuten uit besluit 8b
+ * veroorzaakten, doordat de code er maar één van kende.
+ */
+export interface ModeSource {
+  /** De keuzelijst met de modus. */
+  readonly select: DeviceRef;
+  /** De waarde die "laat de regeling zelf kiezen" betekent. */
+  readonly automatic: string;
+  /**
+   * Van de standen van die lijst naar onze modi.
+   *
+   * Een stand die hier niet in staat levert geen modus op, en dan valt de
+   * regeling terug op het dagritme. Dat is met opzet geen fout: een bewoner die
+   * een stand toevoegt hoort geen kapotte regeling te krijgen.
+   */
+  readonly aliases: Readonly<Record<string, Mode>>;
+  /**
+   * Extra knoppen die "handen af" betekenen, ongeacht de modus hierboven.
+   *
+   * Elke ingang is een entiteit met de stand waarbij de regeling zich
+   * terugtrekt. Ze winnen van de modus-keuze, want zo werkte het oude systeem
+   * ook: de handmatige koelstand schermde daar zelfs de vakantiestand af.
+   */
+  readonly handsOffWhen: readonly { readonly ref: DeviceRef; readonly state: string }[];
+}
+
+/** De timers die de kern als invoer krijgt. */
+export interface TimerSources {
+  readonly stabilisation: DeviceRef;
+  readonly manualOverride: DeviceRef;
+}
+
 export interface SiteConfig {
   readonly id: string;
   readonly timezone: string;
@@ -221,6 +258,19 @@ export interface SiteConfig {
    * failsafe alle assist-apparaten terug.
    */
   readonly criticalInputs: readonly DeviceRef[];
+  /** Waar de modus vandaan komt. */
+  readonly mode: ModeSource;
+  readonly timers: TimerSources;
+  /** Staat de zon boven de horizon. In HA `sun.sun`. */
+  readonly sun: DeviceRef;
+  /**
+   * Buitentemperatuur.
+   *
+   * De regeling gebruikt hem niet; hij gaat mee het beslislogboek in zodat de
+   * dataset compleet is voor fase 7 (besluit 30). Optioneel, want een woning
+   * zonder buitensensor moet gewoon kunnen draaien.
+   */
+  readonly outdoorTemperature?: DeviceRef;
   readonly migration?: MigrationConfig;
 }
 
@@ -239,6 +289,25 @@ export interface MigrationConfig {
    * verbinding met het oude systeem meer nodig heeft.
    */
   readonly legacyExplanation?: DeviceRef;
+  /**
+   * De helpers waarin de bewoner zijn setpoints zet in het oude systeem.
+   *
+   * Zonder deze zou de arbiter tegen andere doelen regelen dan het systeem
+   * waarmee hij wordt vergeleken, en zegt de vergelijking niets. Per zone en
+   * per modus, en alleen wat er werkelijk is: wat hier ontbreekt houdt de
+   * waarde uit de configuratie zelf.
+   *
+   * Hoort bij `migration` en niet bij de kern: zodra de overstap gemaakt is,
+   * bestaan deze helpers niet meer.
+   */
+  readonly setpoints?: Readonly<
+    Record<string, Partial<Record<Mode, { readonly heat?: DeviceRef; readonly cool?: DeviceRef }>>>
+  >;
+  /** Idem voor de vermogensdrempels. */
+  readonly power?: {
+    readonly startSurplusW?: DeviceRef;
+    readonly stopImportW?: DeviceRef;
+  };
 }
 
 /** Zoekt een actuator op id. Werpt wanneer de configuratie inconsistent is. */

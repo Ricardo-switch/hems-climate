@@ -114,6 +114,15 @@ function tekenBudget(b) {
       : `Het huis koopt ${watt(b.gridPowerW)}.`;
 }
 
+function tekenBuiten(e) {
+  // Waarneming en geen invoer: hij wordt vastgelegd voor fase 7, de arbiter
+  // gebruikt hem niet. Daarom klein en terzijde.
+  $('buiten').textContent =
+    e.outdoorTemperatureC == null
+      ? ''
+      : `buiten ${graden(e.outdoorTemperatureC)} · wordt vastgelegd, nog niet gebruikt`;
+}
+
 function tekenZones(perZone) {
   const doel = $('zones');
   doel.replaceChildren();
@@ -230,6 +239,7 @@ function tekenOud(legacy) {
 function teken(snapshot) {
   tekenModus(snapshot.explanation);
   tekenBudget(snapshot.explanation.budget);
+  tekenBuiten(snapshot.explanation);
   tekenZones(snapshot.explanation.perZone);
   tekenApparaten(snapshot);
   tekenGeblokkeerd(snapshot.rejected);

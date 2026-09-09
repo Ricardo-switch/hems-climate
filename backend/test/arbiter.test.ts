@@ -63,6 +63,8 @@ function buildState(o: Overrides = {}): SystemState {
   return {
     nowMs: NOW,
     modeOverride: null,
+    // De regeling doet er niets mee (besluit 30), maar het veld hoort te bestaan.
+    outdoorTemperatureC: unavailable<number>('missing'),
     occupancy: { ricardo: value(true, NOW) },
     zones: {
       woonkamer: { temperatureC: value(o.woonkamerC ?? 21.0, NOW) },

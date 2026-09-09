@@ -123,8 +123,8 @@ en niet de eerste. Ervoor liggen twee dingen die dit huis vandaag al raken:
 
 | | Wat | Waarom nu |
 | --- | --- | --- |
-| 6a | `mapping.ts` leest de bindingen uit `SiteConfig` | De configuratie en de code bevatten nu dezelfde vijf tabellen, met de hand gelijkgehouden. Niets bewaakt dat. |
-| 6b | Timers, standby-afspraak, modusbron en legacy-helpers naar de configuratie | Wat in code staat kan niet per woning verschillen — en de modusbron was de oorzaak van de 151 minuten uit besluit 8b. |
+| 6a | `mapping.ts` leest de bindingen uit `SiteConfig` — **klaar** | De configuratie en de code bevatten nu dezelfde vijf tabellen, met de hand gelijkgehouden. Niets bewaakt dat. |
+| 6b | Timers, standby-afspraak, modusbron en legacy-helpers naar de configuratie — **klaar** | Wat in code staat kan niet per woning verschillen — en de modusbron was de oorzaak van de 151 minuten uit besluit 8b. |
 | 6c | De onboarding-wizard zelf | Pas zinvol als 6a en 6b staan; anders is elke tweede woning een codewijziging. |
 
 **Buitentemperatuur is naar voren gehaald.** `sensor.temperatuur` stond in fase 7

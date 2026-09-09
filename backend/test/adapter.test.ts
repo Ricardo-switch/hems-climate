@@ -6,7 +6,7 @@
  * tegen een versimpelde versie van de werkelijkheid wordt getoetst.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -25,6 +25,7 @@ import {
   type LiveSnapshot,
 } from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
+import { decide } from '../src/core/decide.js';
 import type { SiteConfig } from '../src/core/model.js';
 import { defaultStrategies } from '../src/index.js';
 
@@ -348,13 +349,14 @@ describe('eventfilter', () => {
     ].sort();
   }
 
-  it('kent elke entiteit die nog letterlijk in de vertaling staat', () => {
-    // Drift-bewaking, oorspronkelijke vorm: wat hier hard in de code staat moet
-    // de filter kennen, anders valt een uitgelezen meetpunt er stilzwijgend
-    // buiten en reageert de regeling er nooit meer op.
-    const known = relevantEntities(exampleSite);
-    const forgotten = literalsInMapping().filter((id) => !known.has(id));
-    expect(forgotten).toEqual([]);
+  it('bevat geen enkele entity-ID meer', () => {
+    // Sinds fase 6b is dit de bewaking, en hij is scherper dan de oude.
+    //
+    // Die eiste dat een hardgecodeerd ID in de filter zat; deze eist dat er
+    // geen hardgecodeerd ID meer ís. Zolang dat waar is kan de vertaling niet
+    // afwijken van de configuratie, want er is niets om van af te wijken — en
+    // is een tweede woning geen codewijziging maar een tweede JSON-bestand.
+    expect(literalsInMapping()).toEqual([]);
   });
 
   it('volgt de configuratie in plaats van een eigen tabel', () => {
@@ -702,5 +704,49 @@ describe('de weergave krijgt het besluit', () => {
     // De schaduwopname is het product; het venster erop is dat niet.
     expect(runner.stats.evaluations).toBeGreaterThan(0);
     expect(runner.latest).not.toBeNull();
+  });
+});
+
+describe('de buitentemperatuur is waarneming, geen invoer', () => {
+  it('wordt nergens in de kern gelezen', () => {
+    // Besluit 30: hij gaat mee het logboek in zodat fase 7 straks een complete
+    // winter heeft, maar de arbiter neemt er geen besluit op. Zodra iemand dat
+    // wél wil, hoort daar een besluit bij — en dan faalt deze test als
+    // herinnering in plaats van dat het ongemerkt gebeurt.
+    //
+    // `decide.ts` mag hem aanraken: die zet hem in de uitleg en dus in het log.
+    const kern = new URL('../src/core/', import.meta.url);
+    const bestanden = readdirSync(kern).filter((n) => n.endsWith('.ts'));
+    expect(bestanden.length).toBeGreaterThan(4);
+
+    const lezers = bestanden.filter((naam) => {
+      if (naam === 'state.ts' || naam === 'decision.ts' || naam === 'decide.ts') return false;
+      return readFileSync(new URL(naam, kern), 'utf-8').includes('outdoorTemperatureC');
+    });
+    expect(lezers).toEqual([]);
+  });
+
+  it('komt onbewerkt in de uitleg terecht', () => {
+    const state = buildSystemState(
+      exampleSite,
+      {
+        state: (id) => (id === exampleSite.outdoorTemperature!.id ? '7.3' : null),
+        number: (id) => (id === exampleSite.outdoorTemperature!.id ? 7.3 : null),
+        bool: () => null,
+        attr: () => null,
+        attrNumber: () => null,
+        changedAt: () => null,
+        hvacAction: () => null,
+        hvacActionSince: () => null,
+      },
+      SHADOW_NOW,
+    );
+
+    const decision = decide({
+      config: exampleSite,
+      state,
+      strategies: defaultStrategies(),
+    });
+    expect(decision.explanation.outdoorTemperatureC).toBe(7.3);
   });
 });

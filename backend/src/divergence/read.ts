@@ -59,6 +59,8 @@ export interface Moment {
    */
   readonly arbiterAction: Readonly<Record<string, string>>;
   readonly failsafe: boolean;
+  /** Buitentemperatuur, of null. Waarneming; de regeling gebruikt hem niet. */
+  readonly outdoorC: number | null;
   /** Of dit een volledig record was; korte records dragen veel voort. */
   readonly full: boolean;
   /**
@@ -120,6 +122,7 @@ interface RawRecord {
   rejected?: { intent: { actuatorId: string; action: string }; blockedBy: string }[];
   accepted?: { actuatorId: string; action: string; strategyId?: string }[];
   failsafe?: { active: boolean };
+  buitenC?: number | null;
 }
 
 const EMPTY_BUDGET = {
@@ -220,6 +223,7 @@ export async function* readMoments(
         accepted: raw.accepted ?? [],
         arbiterAction,
         failsafe: raw.failsafe?.active === true,
+        outdoorC: raw.buitenC ?? null,
         full: raw.changed === true,
         handsOff: handsOffAt(mode, lastLegacy),
       };

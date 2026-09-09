@@ -428,6 +428,7 @@ export class ShadowRunner {
           modeSource: e.modeSource,
           occupied: e.occupied,
           budget: e.budget,
+          buitenC: e.outdoorTemperatureC,
           failsafe: e.failsafe,
           zones: e.perZone,
           commands: decision.commands,
@@ -441,6 +442,11 @@ export class ShadowRunner {
           changed: false as const,
           mode: e.mode,
           budget: e.budget,
+          // Ook op korte records: de buitentemperatuur beweegt de hele dag door
+          // en juist dat verloop is wat fase 7 nodig heeft. Hem alleen bij een
+          // besluitwijziging opschrijven zou een dataset opleveren met gaten van
+          // uren — precies waar de arbiter het rustigst is.
+          buitenC: e.outdoorTemperatureC,
           // Genoeg om de temperatuurgang te volgen zonder doelen en redenen te
           // herhalen: die staan in het laatste volledige record ervoor.
           zonesT: e.perZone.map((z) => [z.zoneId, z.temperatureC, z.demand]),

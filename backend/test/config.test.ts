@@ -43,6 +43,17 @@ function baseConfig(): Record<string, unknown> {
       eveningExtensionLights: [],
     },
     occupancy: [{ id: 'iemand', ref: 'person.iemand' }],
+    mode: {
+      select: 'input_select.modus',
+      automatic: 'automatisch',
+      aliases: { dag: 'dag', nacht: 'nacht', handmatig: 'handmatig' },
+    },
+    timers: {
+      stabilisation: 'timer.stabilisatie',
+      manualOverride: 'timer.handmatig',
+    },
+    sun: 'sun.sun',
+    outdoorTemperature: 'sensor.buiten',
     actuators: [
       {
         id: 'ketel',

@@ -147,9 +147,17 @@
           </section>
 
           <section class="mb-5">
-            <h2 class="text-zacht mb-2 text-xs font-medium tracking-wide uppercase">
-              Vraag per zone
-            </h2>
+            <div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-4">
+              <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
+                Vraag per zone
+              </h2>
+              <!--
+                Buiten staat hier als context en niet als kaart: de regeling
+                doet er niets mee (besluit 30). Hem als vierde zone tonen zou
+                suggereren dat hij meetelt.
+              -->
+              <p id="buiten" class="text-zacht meting text-xs"></p>
+            </div>
             <div id="zones" class="grid gap-3 sm:grid-cols-3"></div>
           </section>
 

@@ -27,6 +27,7 @@ function moment(over: Partial<Moment> & { tMs: number }): Moment {
     accepted: [],
     arbiterAction: {},
     failsafe: false,
+    outdoorC: null,
     full: true,
     handsOff: false,
     ...over,
@@ -200,5 +201,19 @@ describe('de gereedheid', () => {
     expect(s.gereedheid.tijd).toBe(100);
     expect(s.gereedheid.dekking).toBe(100);
     expect(s.gereedheid.totaal).toBe(100);
+  });
+});
+
+describe('verwachte invoer', () => {
+  it('meldt de buitentemperatuur zolang er geen enkele waarde is', async () => {
+    const s = (await datasetStatus(stroom(volleDag('2026-11-20'))))!;
+    expect(s.ontbrekendeInvoer.map((i) => i.id)).toContain('buitentemperatuur');
+  });
+
+  it('meldt hem niet meer zodra hij wordt vastgelegd', async () => {
+    // Sinds fase 6b gaat hij mee het logboek in (besluit 30). Een vaste regel
+    // die "ontbreekt" bleef zeggen zou de meter een onwaarheid laten tonen.
+    const s = (await datasetStatus(stroom(volleDag('2026-11-20', { outdoorC: 4.5 }))))!;
+    expect(s.ontbrekendeInvoer).toEqual([]);
   });
 });

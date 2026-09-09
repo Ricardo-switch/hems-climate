@@ -116,6 +116,14 @@ export interface Explanation {
     readonly unreliable: readonly string[];
   };
   readonly perZone: readonly ZoneExplanation[];
+  /**
+   * Buitentemperatuur op het moment van het besluit, of null.
+   *
+   * Waarneming en geen invoer voor de regeling: de arbiter doet er niets mee.
+   * Hij staat in de uitleg omdat de uitleg is wat het logboek bewaart, en
+   * fase 7 hem straks nodig heeft over een hele winter (besluit 30).
+   */
+  readonly outdoorTemperatureC: number | null;
 }
 
 export interface ZoneExplanation {

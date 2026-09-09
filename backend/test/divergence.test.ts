@@ -155,6 +155,7 @@ describe('wat de arbiter zou doen', () => {
     accepted: [],
     arbiterAction: {},
     failsafe: false,
+    outdoorC: null,
     full: true,
     handsOff: false,
     ...over,

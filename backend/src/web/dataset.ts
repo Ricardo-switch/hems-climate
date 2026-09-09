@@ -130,17 +130,23 @@ export interface DatasetStatus {
 }
 
 /**
- * Bekend, maar bewust niet vastgelegd.
+ * Meetpunten die de dataset nodig heeft en die de meter zelf nakijkt.
  *
- * `sensor.temperatuur` staat als openstaand punt in DECISIONS.md: de huidige
- * strategieën gebruiken hem niet, dus hij wordt niet in het beslislogboek
- * meegeschreven. Voor fase 7 (vooruitkijken op weer en prognose) is hij
- * onmisbaar, en dan is de winterdataset die nu wordt opgebouwd er zonder.
+ * Eerst stond hier een vaste regel dat de buitentemperatuur ontbrak. Dat klopte
+ * toen, en dat is precies het probleem met een vaste regel: sinds fase 6b wordt
+ * hij wél vastgelegd (besluit 30) en zou de meter een onwaarheid zijn blijven
+ * tonen. Nu telt hij hoeveel momenten er een waarde voor hebben en meldt het
+ * alleen wanneer dat er geen zijn.
  */
-const ONTBREKENDE_INVOER: readonly { id: string; waarvoor: string }[] = [
+const VERWACHTE_INVOER: readonly {
+  id: string;
+  waarvoor: string;
+  aanwezig: (m: Moment) => boolean;
+}[] = [
   {
-    id: 'sensor.temperatuur',
-    waarvoor: 'buitentemperatuur, nodig voor fase 7 (vooruitkijken)',
+    id: 'buitentemperatuur',
+    waarvoor: 'nodig voor fase 7 (vooruitkijken)',
+    aanwezig: (m) => m.outdoorC != null,
   },
 ];
 
@@ -222,6 +228,7 @@ export async function datasetStatus(
   let totMs = Number.NEGATIVE_INFINITY;
   let momentenTotaal = 0;
   let failsafeMomenten = 0;
+  const invoerGezien = new Map<string, number>();
 
   for await (const m of momenten) {
     momentenTotaal += 1;
@@ -239,6 +246,10 @@ export async function datasetStatus(
 
     if (m.mode !== 'onbekend') tel(modi, m.mode, dag);
     if (m.failsafe) failsafeMomenten += 1;
+
+    for (const inv of VERWACHTE_INVOER) {
+      if (inv.aanwezig(m)) invoerGezien.set(inv.id, (invoerGezien.get(inv.id) ?? 0) + 1);
+    }
 
     for (const a of m.accepted) {
       if (a.strategyId) tel(strategieen, a.strategyId, dag);
@@ -313,7 +324,9 @@ export async function datasetStatus(
     zoneRedenen: redenDekking,
     blokkades: blokkadeDekking,
     failsafeMomenten,
-    ontbrekendeInvoer: ONTBREKENDE_INVOER,
+    ontbrekendeInvoer: VERWACHTE_INVOER.filter((inv) => (invoerGezien.get(inv.id) ?? 0) === 0).map(
+      ({ id, waarvoor }) => ({ id, waarvoor }),
+    ),
     gereedheid: gereedheidVan(seizoenen, [
       modiDekking,
       strategieDekking,
