@@ -99,6 +99,19 @@ export interface SystemState {
   /** Lampen uit `eveningExtensionLights`, op DeviceRef.id. */
   readonly lights: Readonly<Record<string, Reading<boolean>>>;
   readonly sunAboveHorizon: Reading<boolean>;
+  /**
+   * Buitentemperatuur, in °C.
+   *
+   * **De regeling gebruikt hem niet.** Hij staat hier zodat hij mee het
+   * beslislogboek in gaat en de dataset compleet is voor fase 7 (besluit 30).
+   * Een ontbrekend meetpunt in een logboek valt niet met terugwerkende kracht
+   * te repareren, en op één winter per jaar kost dat een jaar.
+   *
+   * Wie hier een strategie op wil bouwen: doe dat, maar leg het besluit vast.
+   * Zolang dat niet gebeurd is, hoort niets in `core/` deze waarde te lezen —
+   * en een test bewaakt dat.
+   */
+  readonly outdoorTemperatureC: Reading<number>;
 }
 
 /** Loopt de timer nog op dit moment? */

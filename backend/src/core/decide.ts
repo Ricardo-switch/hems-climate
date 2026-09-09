@@ -56,6 +56,7 @@ function failsafeIntents(ctx: DecisionContext): Intent[] {
 function explain(
   ctx: DecisionContext,
   budget: Explanation['budget'],
+  state: SystemState,
 ): Explanation {
   const perZone: ZoneExplanation[] = ctx.zones.map((d) => ({
     zoneId: d.zone.id,
@@ -79,6 +80,12 @@ function explain(
     budget,
     failsafe: { active: ctx.failsafeActive, unreliable: ctx.unreliableInputs },
     perZone,
+    // Rechtstreeks uit de toestand en niet uit de context: de context is wat de
+    // regeling gebruikt, en dit is uitdrukkelijk geen invoer voor de regeling
+    // (besluit 30). Het gaat alleen mee het logboek in.
+    outdoorTemperatureC: state.outdoorTemperatureC.ok
+      ? state.outdoorTemperatureC.value
+      : null,
   };
 }
 
@@ -105,7 +112,7 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
         surplusW: ctx.surplusW,
         reclaimableW: ctx.reclaimableW,
         gridPowerW: ctx.gridPowerW,
-      }),
+      }, state),
     };
   }
 
@@ -123,6 +130,6 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
     proposed,
     accepted,
     rejected,
-    explanation: explain(ctx, budget),
+    explanation: explain(ctx, budget, state),
   };
 }

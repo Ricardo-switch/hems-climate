@@ -49,6 +49,7 @@ function snapshot(over: Partial<LiveSnapshot> = {}): LiveSnapshot {
           reason: 'zone_above_setpoint',
         },
       ],
+      outdoorTemperatureC: 18.2,
     },
     commands: [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }],
     accepted: [],

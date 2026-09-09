@@ -9,7 +9,7 @@
  * In fase 4 levert de onboarding ze aan; de vorm blijft dezelfde.
  */
 
-import type { Mode, SiteConfig, Zone } from '../../core/model.js';
+import type { DeviceRef, Mode, SiteConfig, Zone } from '../../core/model.js';
 import type { ActuatorState, SystemState, TimerState } from '../../core/state.js';
 import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
@@ -84,48 +84,6 @@ function timerAt(source: EntitySource, entityId: string): TimerState {
   return { endsAtMs: Number.isFinite(ms) ? ms : null };
 }
 
-const MODE_ALIASES: Readonly<Record<string, Mode>> = {
-  dag: 'dag',
-  nacht: 'nacht',
-  voorverwarmen: 'voorverwarmen',
-  afwezig: 'afwezig',
-  vakantie: 'vakantie',
-  // Het oude systeem kende een aparte koelmodus. In het nieuwe model is koelen
-  // geen modus maar een richting, dus die valt samen met de dagmodus.
-  koelen: 'dag',
-  // Toegevoegd aan input_select.verwarming_modus toen de 'handmatig'-bug werd
-  // verholpen. Betekent hier hetzelfde als daar: de regeling laat los.
-  handmatig: 'handmatig',
-};
-
-/**
- * De tweede knop waarmee de bewoner de regeling overneemt.
- *
- * `input_select.verwarming_modus` is niet de enige plek waar "handen af" wordt
- * gezegd. Het dashboard heeft daarnaast een koelstrategie, en die stand zet in
- * het oude systeem de hele PV-koelregeling stil:
- *
- *   pv_koelen_heeft_regie: koel_strategie == 'Pv koelen' and …
- *   choose → conditions: pv_koelen_heeft_regie and not handmatig_koelen_actief
- *
- * en het afbouwblok is met datzelfde `not handmatig_koelen_actief` afgeschermd.
- * Onder 'Handmatig koelen' start het oude systeem dus niets en schakelt het ook
- * niets af — precies wat `handmatig` bij ons betekent (besluit 8).
- *
- * Zonder deze regel las de vertaling alleen `verwarming_modus`. Die stond op
- * `automatisch`, dus draaide de arbiter gewoon in `dag` door terwijl de bewoner
- * de zolderairco met de hand had aangezet om het PV-budget te negeren. Dat gaf
- * op 6 september 2026 een afwijking van 151 minuten die geen afwijking was.
- *
- * Let op de grofheid: bij ons is `handmatig` een stand van de héle woning, in
- * het oude systeem trok alleen de koelregeling zich terug en bleef de Nest zijn
- * modus volgen. De arbiter laat de Nest daarmee met rust waar het oude systeem
- * hem nog stuurde. Dat is de veilige kant — hij zet niets uit — maar het is een
- * benadering, niet een gelijkstelling. Zie besluit 8.
- */
-const STRATEGY_ENTITY = 'input_select.koel_strategie';
-const MANUAL_COOLING = 'Handmatig koelen';
-
 export function buildSystemState(
   config: SiteConfig,
   source: EntitySource,
@@ -186,17 +144,27 @@ export function buildSystemState(
   }
 
   const grid = source.number(config.power.gridPower.id);
-  const sun = source.bool('sun.sun');
-  const chosen = source.state('input_select.verwarming_modus');
-  const strategy = source.state(STRATEGY_ENTITY);
-  // De handmatige koelstand wint van de modus-keuze: het oude systeem liet die
-  // stand ook boven alles gaan, tot en met vakantie.
-  const modeOverride =
-    strategy === MANUAL_COOLING
-      ? 'handmatig'
-      : chosen == null || chosen === 'automatisch'
-        ? null
-        : (MODE_ALIASES[chosen] ?? null);
+  const sun = source.bool(config.sun.id);
+  const buiten =
+    config.outdoorTemperature == null ? null : source.number(config.outdoorTemperature.id);
+
+  /*
+   * De modus komt uit twee soorten knoppen, en de volgorde is niet vrijblijvend.
+   *
+   * Eerst de "handen af"-knoppen: die winnen van de modus-keuze, want zo werkte
+   * het oude systeem ook — de handmatige koelstand schermde daar zelfs de
+   * vakantiestand af. Dat de code er maar één van kende, gaf de 151 minuten uit
+   * besluit 8b. Nu staan ze in de configuratie en kunnen het er meer zijn.
+   */
+  const handsOff = config.mode.handsOffWhen.some(
+    (knop) => source.state(knop.ref.id) === knop.state,
+  );
+  const chosen = source.state(config.mode.select.id);
+  const modeOverride = handsOff
+    ? 'handmatig'
+    : chosen == null || chosen === config.mode.automatic
+      ? null
+      : (config.mode.aliases[chosen] ?? null);
 
   return {
     nowMs,
@@ -208,11 +176,15 @@ export function buildSystemState(
       gridPowerW: grid == null ? unavailable<number>() : value(grid, nowMs),
     },
     timers: {
-      stabilisation: timerAt(source, 'timer.pv_stabilisatie'),
-      manualOverride: timerAt(source, 'timer.verwarming_handmatig'),
+      stabilisation: timerAt(source, config.timers.stabilisation.id),
+      manualOverride: timerAt(source, config.timers.manualOverride.id),
     },
     lights,
     sunAboveHorizon: sun == null ? unavailable<boolean>() : value(sun, nowMs),
+    // Waarneming, geen invoer voor de regeling (besluit 30). Ontbreekt de
+    // sensor in de configuratie, dan blijft dit `unavailable` en gaat er null
+    // het logboek in — een lege kolom is eerlijker dan een verzonnen waarde.
+    outdoorTemperatureC: buiten == null ? unavailable<number>('missing') : value(buiten, nowMs),
     inputHealth,
   };
 }
@@ -223,91 +195,53 @@ export function buildSystemState(
  * regelen dan het oude systeem, en zegt de vergelijking niets.
  */
 export function configFrom(base: SiteConfig, source: EntitySource): SiteConfig {
-  const num = (id: string, fallback: number): number =>
-    source.number(id) ?? fallback;
+  const bron = base.migration;
+  if (!bron?.setpoints && !bron?.power) return base;
 
-  const patch: Readonly<Record<string, Partial<Record<Mode, { heat?: number; cool?: number }>>>> = {
-    woonkamer: {
-      dag: {
-        heat: num('input_number.temp_nest_dag', 20),
-        cool: num('input_number.temp_airco_woonkamer_koelen', 22),
-      },
-      voorverwarmen: { heat: num('input_number.temp_nest_voorwarm', 19) },
-      afwezig: { heat: num('input_number.temp_nest_eco', 16) },
-    },
-    badkamer: {
-      dag: { heat: num('input_number.badkamer_heat_off_temp_dag', 18) },
-      voorverwarmen: { heat: num('input_number.badkamer_heat_off_temp_dag', 18) },
-    },
-    zolder: {
-      dag: {
-        heat: num('input_number.temp_airco_zolder', 18),
-        cool: num('input_number.temp_airco_zolder_koelen', 22.5),
-      },
-      voorverwarmen: { heat: num('input_number.temp_airco_zolder', 18) },
-    },
-  };
-
+  /*
+   * De terugval is de configuratie zelf, niet een vast getal.
+   *
+   * Hier stonden negen `input_number`-ID's met elk een hardgecodeerde
+   * terugvalwaarde — 20, 22, 19, 16, 18, 22,5 — die de setpoints uit de
+   * configuratie herhaalden. Weer twee plekken die moesten kloppen zonder dat
+   * iets het controleerde. Valt een helper weg, dan is "wat de configuratie
+   * zegt" het juiste antwoord; een los getal in de vertaling was dat nooit.
+   */
   const zones: Zone[] = base.zones.map((zone) => {
-    const perMode = patch[zone.id];
-    if (!perMode) return zone;
+    const perModus = bron.setpoints?.[zone.id];
+    if (!perModus) return zone;
+
     const setpoints = { ...zone.setpoints };
-    for (const [mode, pair] of Object.entries(perMode)) {
-      setpoints[mode as Mode] = { ...setpoints[mode as Mode], ...pair };
+    for (const [modus, richtingen] of Object.entries(perModus)) {
+      const m = modus as Mode;
+      const huidig = setpoints[m] ?? {};
+      const heat =
+        richtingen.heat == null ? huidig.heat : (source.number(richtingen.heat.id) ?? huidig.heat);
+      const cool =
+        richtingen.cool == null ? huidig.cool : (source.number(richtingen.cool.id) ?? huidig.cool);
+      setpoints[m] = {
+        ...huidig,
+        ...(heat != null ? { heat } : {}),
+        ...(cool != null ? { cool } : {}),
+      };
     }
     return { ...zone, setpoints };
   });
+
+  const drempel = (ref: DeviceRef | undefined, terugval: number): number =>
+    ref == null ? terugval : (source.number(ref.id) ?? terugval);
 
   return {
     ...base,
     zones,
     power: {
       ...base.power,
-      startSurplusW: num(
-        'input_number.pv_klimaat_start_overschot_w',
-        base.power.startSurplusW,
-      ),
-      stopImportW: num(
-        'input_number.pv_klimaat_stop_import_w',
-        base.power.stopImportW,
-      ),
+      startSurplusW: drempel(bron.power?.startSurplusW, base.power.startSurplusW),
+      stopImportW: drempel(bron.power?.stopImportW, base.power.stopImportW),
     },
   };
 }
 
-/**
- * Setpoints en drempels die `configFrom` uitleest.
- * Los vastgelegd omdat de filter ze moet kennen; de drift-test in
- * `test/adapter.test.ts` bewaakt dat deze lijst compleet blijft.
- */
-const SETPOINT_INPUTS: readonly string[] = [
-  'input_number.temp_nest_dag',
-  'input_number.temp_nest_eco',
-  'input_number.temp_nest_voorwarm',
-  'input_number.badkamer_heat_off_temp_dag',
-  'input_number.temp_airco_zolder',
-  'input_number.temp_airco_woonkamer_koelen',
-  'input_number.temp_airco_zolder_koelen',
-  'input_number.pv_klimaat_start_overschot_w',
-  'input_number.pv_klimaat_stop_import_w',
-];
-
-/**
- * Losse meetpunten die `buildSystemState` uitleest en die de configuratie nog
- * niet kent.
- *
- * Wat hier staat is werk-in-uitvoering: het netvermogen, de zonetemperaturen,
- * de actuatoren en de bewoners zijn hier weg omdat ze uit `SiteConfig` komen
- * (fase 6a). Deze vijf volgen in 6b. Zolang ze hier staan, is een tweede woning
- * een codewijziging.
- */
-const SINGLETON_INPUTS: readonly string[] = [
-  'sun.sun',
-  'input_select.verwarming_modus',
-  'input_select.koel_strategie',
-  'timer.pv_stabilisatie',
-  'timer.verwarming_handmatig',
-];
 
 /**
  * Elke entiteit waar de vertaling naar kijkt.
@@ -316,28 +250,21 @@ const SINGLETON_INPUTS: readonly string[] = [
  * bij een gemiddelde installatie duizenden entiteiten. Zonder deze lijst zou de
  * regeling op elke lamp en elke telefoonbatterij opnieuw gaan rekenen. In de
  * praktijk scheelde dat een factor zeven in het aantal evaluaties.
- */
-/**
- * Meetpunten die we alleen vastleggen om achteraf mee te vergelijken.
  *
- * Ze mogen géén herberekening uitlokken: het oude systeem dat zijn eigen
- * uitleg bijwerkt is geen reden voor ons om opnieuw te beslissen. Ze worden
- * wel bijgehouden, zodat elk besluit in het logboek naast de waarneming van
- * datzelfde moment komt te staan — en de vergelijking later geen verbinding
- * met Home Assistant meer nodig heeft.
+ * De lijst komt sinds fase 6b volledig uit de configuratie. Er staat geen
+ * entity-ID meer in dit bestand: wat de vertaling uitleest en wat de filter
+ * doorlaat komen daarmee uit één bron, en kunnen dus niet uiteenlopen.
  */
-export function observedEntities(config: SiteConfig): ReadonlySet<string> {
-  const ids = new Set<string>();
-  const legacy = config.migration?.legacyExplanation;
-  if (legacy) ids.add(legacy.id);
-  return ids;
-}
-
 export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
-  const ids = new Set<string>([...SETPOINT_INPUTS, ...SINGLETON_INPUTS]);
+  const ids = new Set<string>();
 
-  // Wat de configuratie aandraagt.
   ids.add(config.power.gridPower.id);
+  ids.add(config.sun.id);
+  ids.add(config.mode.select.id);
+  for (const knop of config.mode.handsOffWhen) ids.add(knop.ref.id);
+  ids.add(config.timers.stabilisation.id);
+  ids.add(config.timers.manualOverride.id);
+  if (config.outdoorTemperature) ids.add(config.outdoorTemperature.id);
 
   for (const ref of config.criticalInputs) ids.add(ref.id);
   for (const zone of config.zones) {
@@ -351,5 +278,26 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   for (const ref of config.schedule.eveningExtensionLights) ids.add(ref.id);
   for (const source of config.occupancy) ids.add(source.ref.id);
 
+  // De helpers van het oude systeem, zolang de migratie loopt. `configFrom`
+  // leest ze uit; zonder ze in de filter zou een gewijzigd setpoint pas bij de
+  // volgende hartslag doorkomen.
+  for (const perModus of Object.values(config.migration?.setpoints ?? {})) {
+    for (const richtingen of Object.values(perModus)) {
+      if (richtingen.heat) ids.add(richtingen.heat.id);
+      if (richtingen.cool) ids.add(richtingen.cool.id);
+    }
+  }
+  const mPower = config.migration?.power;
+  if (mPower?.startSurplusW) ids.add(mPower.startSurplusW.id);
+  if (mPower?.stopImportW) ids.add(mPower.stopImportW.id);
+
   return ids;
 }
+
+export function observedEntities(config: SiteConfig): ReadonlySet<string> {
+  const ids = new Set<string>();
+  const legacy = config.migration?.legacyExplanation;
+  if (legacy) ids.add(legacy.id);
+  return ids;
+}
+

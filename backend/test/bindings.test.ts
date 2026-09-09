@@ -14,7 +14,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildSystemState, relevantEntities } from '../src/adapters/homeassistant/mapping.js';
+import {
+  buildSystemState,
+  configFrom,
+  relevantEntities,
+} from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 import type { DeviceRef, SiteConfig } from '../src/core/model.js';
 import { exampleSite } from './site.js';
@@ -29,7 +33,11 @@ function bronVan(
   return {
     state: (id) => states[id] ?? null,
     number: (id) => (states[id] == null ? null : Number(states[id])),
-    bool: (id) => (states[id] == null ? null : states[id] === 'on' || states[id] === 'home'),
+    // Dezelfde afspraak als de echte bron: on, home en above_horizon zijn waar.
+    bool: (id) =>
+      states[id] == null
+        ? null
+        : ['on', 'home', 'above_horizon'].includes(states[id]!),
     attr: (id, k) => attrs[id]?.[k] ?? null,
     attrNumber: (id, k) => attrs[id]?.[k] ?? null,
     changedAt: () => null,
@@ -185,5 +193,159 @@ describe('de filter volgt de configuratie', () => {
     // En de oude niet meer: die staat nergens meer in de configuratie, dus een
     // wijziging erop hoort geen herberekening meer uit te lokken.
     expect(ids.has(exampleSite.zones[0]!.temperature.id)).toBe(false);
+  });
+});
+
+describe('de modusbron', () => {
+  const metModus = (config: SiteConfig, over: Partial<SiteConfig['mode']>): SiteConfig => ({
+    ...config,
+    mode: { ...config.mode, ...over },
+  });
+
+  it('leest de keuzelijst die de configuratie noemt', () => {
+    const config = metModus(exampleSite, { select: ref('input_select.andere_lijst') });
+    const state = buildSystemState(
+      config,
+      bronVan({ [exampleSite.mode.select.id]: 'nacht', 'input_select.andere_lijst': 'vakantie' }),
+      NU,
+    );
+    expect(state.modeOverride).toBe('vakantie');
+  });
+
+  it('vertaalt standen volgens de tabel uit de configuratie', () => {
+    // Het oude systeem kende een aparte koelmodus; bij ons is koelen een
+    // richting en geen modus, dus die valt samen met de dagmodus.
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [exampleSite.mode.select.id]: 'koelen' }),
+      NU,
+    );
+    expect(state.modeOverride).toBe('dag');
+  });
+
+  it('laat de regeling zelf kiezen bij de automatische stand', () => {
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [exampleSite.mode.select.id]: exampleSite.mode.automatic }),
+      NU,
+    );
+    expect(state.modeOverride).toBeNull();
+  });
+
+  it('kent een onbekende stand geen modus toe in plaats van te knallen', () => {
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [exampleSite.mode.select.id]: 'iets-nieuws' }),
+      NU,
+    );
+    expect(state.modeOverride).toBeNull();
+  });
+
+  it('laat elke handen-af knop van de configuratie winnen', () => {
+    // Dit is de fout uit besluit 8b: de code kende maar één knop. Nu staan ze
+    // in de configuratie en kunnen het er meer zijn.
+    const knop = exampleSite.mode.handsOffWhen[0]!;
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({
+        [exampleSite.mode.select.id]: 'vakantie',
+        [knop.ref.id]: knop.state,
+      }),
+      NU,
+    );
+    expect(state.modeOverride).toBe('handmatig');
+  });
+
+  it('werkt met een tweede handen-af knop erbij', () => {
+    const config = metModus(exampleSite, {
+      handsOffWhen: [
+        ...exampleSite.mode.handsOffWhen,
+        { ref: ref('input_boolean.gasten'), state: 'on' },
+      ],
+    });
+    const state = buildSystemState(
+      config,
+      bronVan({ [exampleSite.mode.select.id]: 'dag', 'input_boolean.gasten': 'on' }),
+      NU,
+    );
+    expect(state.modeOverride).toBe('handmatig');
+  });
+});
+
+describe('timers en zon', () => {
+  it('leest de timers die de configuratie noemt', () => {
+    const config: SiteConfig = {
+      ...exampleSite,
+      timers: { stabilisation: ref('timer.anders'), manualOverride: ref('timer.nog_anders') },
+    };
+    const eind = '2026-09-10T12:05:00+00:00';
+    const state = buildSystemState(
+      config,
+      {
+        ...bronVan({ 'timer.anders': 'active' }),
+        attr: (id, k) => (id === 'timer.anders' && k === 'finishes_at' ? eind : null),
+      },
+      NU,
+    );
+    expect(state.timers.stabilisation.endsAtMs).toBe(Date.parse(eind));
+  });
+
+  it('leest de zon uit de configuratie', () => {
+    const config: SiteConfig = { ...exampleSite, sun: ref('sun.andere_zon') };
+    const state = buildSystemState(config, bronVan({ 'sun.andere_zon': 'above_horizon' }), NU);
+    expect(state.sunAboveHorizon).toEqual({ ok: true, value: true, atMs: NU });
+  });
+});
+
+describe('de buitentemperatuur', () => {
+  it('gaat mee in de toestand wanneer de configuratie hem noemt', () => {
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [exampleSite.outdoorTemperature!.id]: '11.4' }),
+      NU,
+    );
+    expect(state.outdoorTemperatureC).toEqual({ ok: true, value: 11.4, atMs: NU });
+  });
+
+  it('blijft onbekend zonder sensor, in plaats van iets te verzinnen', () => {
+    const config: SiteConfig = { ...exampleSite };
+    delete (config as { outdoorTemperature?: unknown }).outdoorTemperature;
+    const state = buildSystemState(config, bronVan({}), NU);
+    expect(state.outdoorTemperatureC.ok).toBe(false);
+  });
+
+  it('staat in de filter, zodat een wijziging wordt opgemerkt', () => {
+    expect(relevantEntities(exampleSite).has(exampleSite.outdoorTemperature!.id)).toBe(true);
+  });
+});
+
+describe('de legacy-setpoints', () => {
+  it('leest de helpers die het migratieblok noemt', () => {
+    const woonkamer = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
+    const helper = exampleSite.migration!.setpoints!['woonkamer']!.dag!.heat!;
+
+    const aangepast = configFrom(exampleSite, bronVan({ [helper.id]: '20.5' }));
+    const zone = aangepast.zones.find((z) => z.id === 'woonkamer')!;
+
+    expect(zone.setpoints.dag?.heat).toBe(20.5);
+    // En de configuratie zelf blijft ongemoeid.
+    expect(woonkamer.setpoints.dag?.heat).not.toBe(20.5);
+  });
+
+  it('valt terug op de configuratie en niet op een getal in de code', () => {
+    // Hier stonden negen hardgecodeerde terugvalwaarden die de setpoints uit de
+    // configuratie herhaalden. Valt een helper weg, dan is "wat de configuratie
+    // zegt" het juiste antwoord.
+    const woonkamer = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
+    const aangepast = configFrom(exampleSite, bronVan({}));
+    const zone = aangepast.zones.find((z) => z.id === 'woonkamer')!;
+
+    expect(zone.setpoints.dag?.heat).toBe(woonkamer.setpoints.dag?.heat);
+  });
+
+  it('laat de configuratie met rust zonder migratieblok', () => {
+    const config: SiteConfig = { ...exampleSite };
+    delete (config as { migration?: unknown }).migration;
+    expect(configFrom(config, bronVan({}))).toBe(config);
   });
 });

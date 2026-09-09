@@ -751,13 +751,57 @@ ondersteunden `capabilities.standby` allang — alleen de configuratie zette hem
 niet. Nu wel, en daarmee is het een eigenschap van het apparaat in plaats van een
 conventie in de vertaling.
 
+## 32. Wat in code stond kon niet per woning verschillen
+
+Na besluit 31 stonden er nog vier groepen entity-ID's in `mapping.ts`: negen
+legacy setpoint-helpers, de zon, twee timers, en de twee keuzelijsten waaruit de
+modus komt.
+
+Die laatste zijn het pijnlijkst. Het waren uitgerekend
+`input_select.verwarming_modus` en `input_select.koel_strategie` die de 151
+minuten uit besluit 8b veroorzaakten — doordat de code er maar één van kende.
+Een tweede knop toevoegen was toen een codewijziging. Nu is het een regel in de
+configuratie, en kunnen het er drie zijn.
+
+*Besluit:* alles naar `SiteConfig`.
+
+- `mode` — de keuzelijst, welke waarde "automatisch" betekent, de vertaaltabel
+  van standen naar modi, en een lijst `handsOffWhen` van knoppen die "handen af"
+  betekenen ongeacht de modus.
+- `timers` en `sun` — gewoon verwijzingen.
+- `migration.setpoints` — de helpers van het oude systeem, per zone en per
+  modus. Ze horen bij `migration` en niet bij de kern, want zodra de overstap
+  gemaakt is bestaan ze niet meer.
+
+*Bijvangst die groter is dan hij lijkt.* Die negen helpers hadden elk een
+hardgecodeerde terugvalwaarde — 20, 22, 19, 16, 18, 22,5 — die de setpoints uit
+de configuratie herhaalden. Wéér twee plekken die moesten kloppen zonder dat
+iets het controleerde. De terugval is nu de configuratie zelf: valt een helper
+weg, dan is "wat de configuratie zegt" het juiste antwoord, en een los getal in
+de vertaling was dat nooit.
+
+*Een waarschuwing erbij.* Het schema klaagt wanneer geen enkele stand naar
+`handmatig` vertaalt én er geen `handsOffWhen` is: dan kan de bewoner de
+regeling nergens loslaten. Waarschuwing en geen fout — een woning zonder die
+knop mag bestaan.
+
+*Bewijs.* De drift-test is omgedraaid. Hij eiste dat elk hardgecodeerd ID in de
+filter zat; nu eist hij dat er **geen enkel** entity-ID meer in `mapping.ts`
+staat. Dat is de sterkere garantie: wat er niet is kan niet afwijken. En de
+replay-harness gaf ook na deze verbouwing over 14.476 ticks bit-identieke
+uitkomsten.
+
+*Wat dit waard is:* een tweede woning is vanaf hier een tweede JSON-bestand, en
+geen codewijziging. Dat was de hele belofte van fase 6.
+
 ---
 
 ## Wat nog een besluit wacht
 
-- **Buitentemperatuur.** `sensor.temperatuur` wordt nergens gebruikt en niet
-  vastgelegd in het beslislogboek. Voor de huidige strategieën is dat terecht,
-  maar fase 7 heeft hem nodig — en de winterdataset legt hem nu niet vast.
+- **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
+  10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
+  logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
+  zodra een strategie dat wel wil, hoort daar een besluit bij.
 - **`bufferBandC`** staat op 1,0 zonder onderbouwing. Zie besluit 14.
 - **Heat-assist** mist de startvertraging niet meer, maar is nooit in de praktijk
   afgegaan: de Nest rapporteerde in het augustusvenster nooit `heating`.

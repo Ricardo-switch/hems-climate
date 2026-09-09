@@ -259,6 +259,66 @@
     "sensor.p1_meter_power"
   ],
   "migration": {
-    "legacyExplanation": "sensor.airco_assist_reden"
-  }
+    "legacyExplanation": "sensor.airco_assist_reden",
+    "setpoints": {
+      "woonkamer": {
+        "dag": {
+          "heat": "input_number.temp_nest_dag",
+          "cool": "input_number.temp_airco_woonkamer_koelen"
+        },
+        "voorverwarmen": {
+          "heat": "input_number.temp_nest_voorwarm"
+        },
+        "afwezig": {
+          "heat": "input_number.temp_nest_eco"
+        }
+      },
+      "badkamer": {
+        "dag": {
+          "heat": "input_number.badkamer_heat_off_temp_dag"
+        },
+        "voorverwarmen": {
+          "heat": "input_number.badkamer_heat_off_temp_dag"
+        }
+      },
+      "zolder": {
+        "dag": {
+          "heat": "input_number.temp_airco_zolder",
+          "cool": "input_number.temp_airco_zolder_koelen"
+        },
+        "voorverwarmen": {
+          "heat": "input_number.temp_airco_zolder"
+        }
+      }
+    },
+    "power": {
+      "startSurplusW": "input_number.pv_klimaat_start_overschot_w",
+      "stopImportW": "input_number.pv_klimaat_stop_import_w"
+    }
+  },
+  "mode": {
+    "select": "input_select.verwarming_modus",
+    "automatic": "automatisch",
+    "aliases": {
+      "dag": "dag",
+      "nacht": "nacht",
+      "voorverwarmen": "voorverwarmen",
+      "afwezig": "afwezig",
+      "vakantie": "vakantie",
+      "koelen": "dag",
+      "handmatig": "handmatig"
+    },
+    "handsOffWhen": [
+      {
+        "ref": "input_select.koel_strategie",
+        "state": "Handmatig koelen"
+      }
+    ]
+  },
+  "timers": {
+    "stabilisation": "timer.pv_stabilisatie",
+    "manualOverride": "timer.verwarming_handmatig"
+  },
+  "sun": "sun.sun",
+  "outdoorTemperature": "sensor.temperatuur"
 }

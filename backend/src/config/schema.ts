@@ -775,6 +775,100 @@ export function parseSiteConfig(
   const criticalRaw = arr(p, input, '', 'criticalInputs');
   const criticalInputs = refList(p, criticalRaw ?? [], 'criticalInputs', defaultAdapter);
 
+  // ---- modusbron ------------------------------------------------------------
+  let mode: SiteConfig['mode'] | null = null;
+  const modeRaw = input['mode'];
+  if (!isRecord(modeRaw)) {
+    p.error('mode', 'ontbreekt of is geen object');
+  } else {
+    const select = ref(p, modeRaw['select'], 'mode.select', defaultAdapter);
+    const automatic = str(p, modeRaw, 'mode', 'automatic');
+
+    const aliases: Record<string, Mode> = {};
+    const aliasRaw = modeRaw['aliases'];
+    if (!isRecord(aliasRaw)) {
+      p.error('mode.aliases', 'ontbreekt of is geen object');
+    } else {
+      for (const [stand, doel] of Object.entries(aliasRaw)) {
+        if (typeof doel !== 'string' || !(MODES as readonly string[]).includes(doel)) {
+          p.error(
+            join('mode.aliases', stand),
+            `"${String(doel)}" is geen bekende modus; kies uit ${MODES.join(', ')}`,
+          );
+          continue;
+        }
+        aliases[stand] = doel as Mode;
+      }
+    }
+
+    const handsOffWhen: { ref: DeviceRef; state: string }[] = [];
+    const handsRaw = modeRaw['handsOffWhen'];
+    if (handsRaw !== undefined) {
+      if (!Array.isArray(handsRaw)) {
+        p.error('mode.handsOffWhen', 'moet een lijst zijn');
+      } else {
+        handsRaw.forEach((v, i) => {
+          const path = `mode.handsOffWhen[${i}]`;
+          if (!isRecord(v)) {
+            p.error(path, 'moet een object zijn met ref en state');
+            return;
+          }
+          const r = ref(p, v['ref'], join(path, 'ref'), defaultAdapter);
+          const st = str(p, v, path, 'state');
+          if (r && st) handsOffWhen.push({ ref: r, state: st });
+        });
+      }
+    }
+
+    if (select && automatic) {
+      // Een modus-keuze die nergens naar "handmatig" kan wijzen is verdacht:
+      // dan kan de bewoner de regeling nooit loslaten. Waarschuwing en geen
+      // fout, want een woning zonder die knop mag bestaan.
+      const kentHandmatig =
+        Object.values(aliases).includes('handmatig') || handsOffWhen.length > 0;
+      if (!kentHandmatig) {
+        p.warn(
+          'mode',
+          'geen enkele stand vertaalt naar "handmatig" en er is geen handsOffWhen; ' +
+            'de bewoner kan de regeling dan nergens loslaten',
+        );
+      }
+      mode = { select, automatic, aliases, handsOffWhen };
+    }
+  }
+
+  // ---- timers en zon --------------------------------------------------------
+  let timers: SiteConfig['timers'] | null = null;
+  const timersRaw = input['timers'];
+  if (!isRecord(timersRaw)) {
+    p.error('timers', 'ontbreekt of is geen object');
+  } else {
+    const stabilisation = ref(p, timersRaw['stabilisation'], 'timers.stabilisation', defaultAdapter);
+    const manualOverride = ref(
+      p,
+      timersRaw['manualOverride'],
+      'timers.manualOverride',
+      defaultAdapter,
+    );
+    if (stabilisation && manualOverride) timers = { stabilisation, manualOverride };
+  }
+
+  const sun = ref(p, input['sun'], 'sun', defaultAdapter);
+
+  const outdoorRaw = input['outdoorTemperature'];
+  const outdoorTemperature =
+    outdoorRaw === undefined ? null : ref(p, outdoorRaw, 'outdoorTemperature', defaultAdapter);
+  if (outdoorRaw === undefined) {
+    // Geen fout: een woning zonder buitensensor moet kunnen draaien. Wel
+    // melden, want zonder hem is de dataset niet compleet voor fase 7
+    // (besluit 30) en dat merk je pas een winter later.
+    p.warn(
+      'outdoorTemperature',
+      'ontbreekt; de buitentemperatuur wordt dan niet in het beslislogboek ' +
+        'vastgelegd en de dataset is niet compleet voor fase 7',
+    );
+  }
+
   let migration: SiteConfig['migration'];
   const migrationRaw = input['migration'];
   if (migrationRaw !== undefined) {
@@ -786,7 +880,86 @@ export function parseSiteConfig(
         legacyRaw === undefined
           ? null
           : ref(p, legacyRaw, 'migration.legacyExplanation', defaultAdapter);
-      migration = legacyExplanation ? { legacyExplanation } : {};
+
+      // De helpers waarin de bewoner zijn setpoints zet in het oude systeem.
+      // Per zone, per modus, verwarmen en/of koelen. Wat ontbreekt houdt de
+      // waarde uit de configuratie zelf — dat is de betere terugval dan een
+      // vast getal in de code, want die kon van de configuratie afwijken.
+      let setpoints: NonNullable<SiteConfig['migration']>['setpoints'];
+      const setpointsRaw = migrationRaw['setpoints'];
+      if (setpointsRaw !== undefined) {
+        if (!isRecord(setpointsRaw)) {
+          p.error('migration.setpoints', 'moet een object zijn met een ingang per zone');
+        } else {
+          const uit: Record<string, Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>>> =
+            {};
+          for (const [zoneId, perModus] of Object.entries(setpointsRaw)) {
+            const zPath = join('migration.setpoints', zoneId);
+            if (!zones.some((z) => z.id === zoneId)) {
+              p.error(zPath, `verwijst naar zone "${zoneId}" die niet bestaat`);
+              continue;
+            }
+            if (!isRecord(perModus)) {
+              p.error(zPath, 'moet een object zijn met een ingang per modus');
+              continue;
+            }
+            const modi: Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>> = {};
+            for (const [modus, richtingen] of Object.entries(perModus)) {
+              const mPath = join(zPath, modus);
+              if (!(MODES as readonly string[]).includes(modus)) {
+                p.error(mPath, `"${modus}" is geen bekende modus`);
+                continue;
+              }
+              if (!isRecord(richtingen)) {
+                p.error(mPath, 'moet een object zijn met heat en/of cool');
+                continue;
+              }
+              const heat =
+                richtingen['heat'] === undefined
+                  ? null
+                  : ref(p, richtingen['heat'], join(mPath, 'heat'), defaultAdapter);
+              const cool =
+                richtingen['cool'] === undefined
+                  ? null
+                  : ref(p, richtingen['cool'], join(mPath, 'cool'), defaultAdapter);
+              if (heat || cool) {
+                modi[modus as Mode] = { ...(heat ? { heat } : {}), ...(cool ? { cool } : {}) };
+              }
+            }
+            if (Object.keys(modi).length > 0) uit[zoneId] = modi;
+          }
+          if (Object.keys(uit).length > 0) setpoints = uit;
+        }
+      }
+
+      let migrationPower: NonNullable<SiteConfig['migration']>['power'];
+      const mPowerRaw = migrationRaw['power'];
+      if (mPowerRaw !== undefined) {
+        if (!isRecord(mPowerRaw)) {
+          p.error('migration.power', 'moet een object zijn');
+        } else {
+          const start =
+            mPowerRaw['startSurplusW'] === undefined
+              ? null
+              : ref(p, mPowerRaw['startSurplusW'], 'migration.power.startSurplusW', defaultAdapter);
+          const stop =
+            mPowerRaw['stopImportW'] === undefined
+              ? null
+              : ref(p, mPowerRaw['stopImportW'], 'migration.power.stopImportW', defaultAdapter);
+          if (start || stop) {
+            migrationPower = {
+              ...(start ? { startSurplusW: start } : {}),
+              ...(stop ? { stopImportW: stop } : {}),
+            };
+          }
+        }
+      }
+
+      migration = {
+        ...(legacyExplanation ? { legacyExplanation } : {}),
+        ...(setpoints ? { setpoints } : {}),
+        ...(migrationPower ? { power: migrationPower } : {}),
+      };
     }
   }
 
@@ -794,7 +967,15 @@ export function parseSiteConfig(
 
   const errors = p.errors;
   const incomplete =
-    !id || !timezone || !power || !schedule || zones.length === 0 || actuators.length === 0;
+    !id ||
+    !timezone ||
+    !power ||
+    !schedule ||
+    !mode ||
+    !timers ||
+    !sun ||
+    zones.length === 0 ||
+    actuators.length === 0;
 
   if (errors.length > 0 || incomplete) {
     const problems: ConfigProblem[] =
@@ -816,6 +997,10 @@ export function parseSiteConfig(
       schedule: schedule as Schedule,
       enabledStrategies,
       criticalInputs,
+      mode: mode as SiteConfig['mode'],
+      timers: timers as SiteConfig['timers'],
+      sun: sun as DeviceRef,
+      ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(migration ? { migration } : {}),
     },
     warnings: p.warnings,
