@@ -519,6 +519,49 @@ prima, dus een uitrol tegenhouden op een verschil dat voor de bouw niet bestaat
 is strenger dan streng — het is fout. Een bewaking die vals alarm slaat, leert
 mensen hem te negeren, en dan bewaakt hij niets meer.
 
+## 26. De terugblik hoort bij de weergave, maar is een andere waarheid
+
+De pagina toonde het besluit van dit moment. Wat ontbrak was wat de
+divergentietool in de terminal al gaf: de tijdlijn, de verhoudingen en de
+stroom.
+
+*Besluit:* dezelfde `analyse()` draait in de dienst en levert `/api/divergence`.
+Eén analyse, twee vensters — de terminal en de pagina kunnen niet uiteenlopen,
+en dat is gecontroleerd door de cijfers naast elkaar te leggen. Ook de opbouw
+van de tijdlijn is gedeeld: `bucketsPerDay()` en één tabel met tekencodes, in
+plaats van twee keer dezelfde logica.
+
+*Gescheiden gehouden van de live stand,* want het tempo verschilt met een factor
+dertig: de arbiter beslist elke dertig seconden, deze analyse draait elk
+kwartier — de grootte van één tijdvak. Daarom een eigen sectie met een eigen
+"berekend op". Een cijfer zonder houdbaarheidsdatum naast een live stand zetten
+suggereert dat ze even vers zijn.
+
+*Waarom een cache en niet per verzoek.* Gemeten op eigen logboeken: 280.000
+momenten per seconde, dus 120 ms voor vijf dagen en zo'n vier seconden voor een
+winter. Dat is te veel om bij elke paginaweergave te doen voor een uitkomst die
+per kwartier hoogstens één tijdvak opschuift.
+
+*Waarom geen worker thread.* Dat was de aanname; de meting sprak hem tegen. De
+analyse leest via een async generator over een bestandsstroom, dus hij geeft de
+event loop voortdurend terug — gemeten op **0 ms** grootste vertraging tijdens
+een volledige run. Machinerie die een probleem oplost dat er niet is, is
+machinerie die je later moet onderhouden.
+
+*De tijdlijn is samengevoegd, niet uitgeschreven.* Een winter is 180 dagen van
+96 tijdvakken: zeventienduizend elementen om iets te tonen dat vrijwel altijd
+uit lange gelijke stukken bestaat. Aaneengesloten gelijke tijdvakken worden één
+rechthoek — op de eigen logboeken 72 in plaats van 480, en dat wordt gunstiger
+naarmate er meer stille nachten bij komen.
+
+*De kleuren zijn doorgerekend, niet gekozen.* De tekstkleuren van de pagina
+zitten op OKLCH L 0,72-0,82, want ze moeten leesbaar zijn op donker. Voor
+gevulde vlakken naast elkaar geldt een andere eis, en die viel buiten de band.
+De vier vlakkleuren zijn opnieuw gestapt tot ze alle controles haalden: OKLab
+dE >= 9 bij deuteranopie, L binnen 0,48-0,67, contrast >= 3:1 op de achtergrond.
+Daarbovenop draagt niets identiteit via kleur alleen — er is altijd een legenda,
+en de balken tonen de aantallen erbij.
+
 ---
 
 ## Wat nog een besluit wacht
@@ -542,9 +585,11 @@ mensen hem te negeren, en dan bewaakt hij niets meer.
   hele woning, in het oude systeem alleen voor de koelregeling.
 - **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
   thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6.
-- **De weergave toont alleen het heden.** Geen grafiek, geen verloop. Het
-  logboek heeft die gegevens wel, en de divergentietool leest ze al; die twee
-  koppelen is fase 7-werk en geen gat in fase 5.
+- **De terugblik rekent alles opnieuw door.** Elk kwartier de hele opname, ook
+  het deel dat niet meer verandert. Dat is nu 120 ms en over een winter een
+  seconde of vier; pas als dat gaat knellen is een tussenstand per dag de
+  moeite. Nu zou het een cache zijn die kan verlopen zonder dat iemand het
+  merkt — en dat is precies wat besluit 11 wilde vermijden.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**
   `script.klimaat_controller_apply` zet `input_boolean.zolder_started_now` en
   `..._woonkamer_started_now` aan tijdens de run en pas als laatste stap weer

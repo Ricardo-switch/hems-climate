@@ -27,21 +27,13 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { analyse, type Analysis, type BucketState } from './analyse.js';
+import {
+  analyse,
+  bucketsPerDay,
+  BUCKET_CODE as GLYPH,
+  type Analysis,
+} from './analyse.js';
 import { findLogFiles, readMoments } from './read.js';
-
-const BUCKET_MS = 15 * 60_000;
-const BUCKETS_PER_DAY = 96;
-
-/** Eén teken per kwartier. Bewust ook zonder kleur te lezen. */
-const GLYPH: Record<BucketState, string> = {
-  geen: ' ',
-  'beide-uit': '·',
-  eens: '=',
-  ruimer: '+',
-  strenger: '!',
-  failsafe: 'X',
-};
 
 interface Options {
   dir: string;
@@ -106,24 +98,13 @@ function shortLegacy(raw: string | null): string {
 }
 
 function renderTimeline(analysis: Analysis, lines: string[]): void {
-  const byDay = new Map<string, BucketState[]>();
-  for (const [bucketMs, state] of analysis.buckets) {
-    const key = dayKey(bucketMs);
-    let row = byDay.get(key);
-    if (!row) {
-      row = new Array<BucketState>(BUCKETS_PER_DAY).fill('geen');
-      byDay.set(key, row);
-    }
-    const midnight = new Date(bucketMs);
-    midnight.setHours(0, 0, 0, 0);
-    const index = Math.floor((bucketMs - midnight.getTime()) / BUCKET_MS);
-    if (index >= 0 && index < BUCKETS_PER_DAY) row[index] = state;
-  }
+  // Dezelfde opbouw die de webweergave gebruikt; één tijdlijn, twee vensters.
+  const byDay = bucketsPerDay(analysis.buckets);
 
   lines.push('  Tijdlijn — één teken per kwartier');
   lines.push(`  ${' '.repeat(11)}0h      3h      6h      9h      12h     15h     18h     21h`);
-  for (const [day, row] of [...byDay.entries()].sort()) {
-    lines.push(`  ${day}  ${row.map((s) => GLYPH[s]).join('')}`);
+  for (const { day, states } of byDay) {
+    lines.push(`  ${day}  ${states.map((s) => GLYPH[s]).join('')}`);
   }
   lines.push('');
   lines.push(

@@ -56,9 +56,14 @@ lokaal wordt gebouwd tot ~10 kB CSS — geen framework, geen CDN. Ze leest
 `Explanation` en herberekent niets: elk getal en elke reden komt uit het besluit
 van de kern, en het enige wat hier gebeurt is vertalen naar Nederlands.
 
-De schaduwdienst serveert haar zelf, over `/api/state` (de stand nu) en
-`/api/events` (een SSE-stroom van elk volgend besluit). Read-only is een grens:
-alles wat geen GET of HEAD is krijgt 405 vóór de routering. Zie besluit 23.
+De schaduwdienst serveert haar zelf, over `/api/state` (de stand nu),
+`/api/events` (een SSE-stroom van elk volgend besluit) en `/api/divergence` (de
+terugblik over de logboeken). Read-only is een grens: alles wat geen GET of HEAD
+is krijgt 405 vóór de routering. Zie besluit 23.
+
+Die terugblik draait dezelfde `analyse()` als `npm run divergence` in de
+terminal — één analyse, twee vensters — elk kwartier, met de uitkomst in het
+geheugen. Zie besluit 26.
 
 ## 3. Ontwerpprincipes
 

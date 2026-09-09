@@ -14,6 +14,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { WebServer } from '../src/web/server.js';
+import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
 
@@ -62,6 +63,7 @@ function snapshot(over: Partial<LiveSnapshot> = {}): LiveSnapshot {
 async function start(options: {
   latest?: () => LiveSnapshot | null;
   webDir?: string;
+  divergence?: () => DivergenceReport | null;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -72,6 +74,7 @@ async function start(options: {
     webDir,
     config: exampleSite,
     latest: options.latest ?? (() => null),
+    ...(options.divergence ? { divergence: options.divergence } : {}),
     write: () => {},
   });
   const port = await server.start();
@@ -236,5 +239,122 @@ describe('de besluitenstroom', () => {
       await new Promise((r) => setTimeout(r, 10));
     }
     expect(server.viewers).toBe(0);
+  });
+});
+
+describe('de terugblik op de logboeken', () => {
+  const DAG = '2026-11-20';
+  const T0 = Date.parse(`${DAG}T09:00:00Z`);
+
+  /** Een logboek met een korte periode waarin de arbiter strenger zou zijn. */
+  async function logboek(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-div-web-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+
+    const regels: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      const vol = i === 0;
+      regels.push(
+        JSON.stringify({
+          t: T0 + i * 60_000,
+          changed: vol,
+          mode: 'dag',
+          budget: {
+            availableW: 0,
+            allocatedW: 0,
+            surplusW: 0,
+            reclaimableW: 700,
+            gridPowerW: 700,
+          },
+          obs: { 'ac-zolder': 'cool@21' },
+          ...(vol
+            ? {
+                zones: [{ zoneId: 'zolder', temperatureC: 24, demand: 'cool' }],
+                commands: [
+                  { kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' },
+                ],
+                accepted: [],
+                rejected: [],
+                legacy: 'PV-koelen: Gepauzeerd (Import)',
+              }
+            : { zonesT: [['zolder', 24, 'cool']] }),
+        }),
+      );
+    }
+    await writeFile(join(dir, `decisions-${DAG}.ndjson`), regels.join('\n') + '\n', 'utf-8');
+    return dir;
+  }
+
+  it('zegt dat er nog niets is berekend in plaats van niets te tonen', async () => {
+    const { base } = await start({ divergence: () => null });
+    const res = await fetch(`${base}/api/divergence`);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ wachten: 'nog niet doorgerekend' });
+  });
+
+  it('onderscheidt "staat uit" van "nog niet gerekend"', async () => {
+    const { base } = await start({});
+    const res = await fetch(`${base}/api/divergence`);
+    expect(res.status).toBe(503);
+    // De pagina moet iets kunnen verbergen dat uitstaat, en iets kunnen
+    // uitleggen dat nog moet komen. Dat zijn twee verschillende dingen.
+    expect(await res.json()).toEqual({ wachten: 'geen logboekanalyse ingeschakeld' });
+  });
+
+  it('levert tijdlijn, verhoudingen en stroom uit een echt logboek', async () => {
+    const cache = new DivergenceCache({ logDir: await logboek(), write: () => {} });
+    await cache.refresh();
+
+    const { base } = await start({ divergence: () => cache.latest });
+    const res = await fetch(`${base}/api/divergence`);
+    const r = (await res.json()) as DivergenceReport;
+
+    expect(res.status).toBe(200);
+    expect(r.momenten).toBe(30);
+    expect(r.bestanden).toBe(1);
+
+    // De tijdlijn is één regel per dag van 96 tekens — compact genoeg om een
+    // winter te versturen zonder er tienduizend objecten van te maken.
+    expect(r.dagen).toHaveLength(1);
+    expect(r.dagen[0]?.states).toHaveLength(96);
+    expect(r.dagen[0]?.day).toBe(DAG);
+
+    // Het oude systeem koelde, de arbiter zou hebben afgeschakeld.
+    const zolder = r.tallies.find((t) => t.actuatorId === 'ac-zolder');
+    expect(zolder?.stricter).toBeGreaterThan(0);
+    expect(r.episodes.length).toBeGreaterThan(0);
+    expect(r.episodesTotaal).toBeGreaterThanOrEqual(r.episodes.length);
+
+    // Import boven de tolerantie, dus er valt stroom toe te rekenen.
+    expect(r.legacyGridWh).toBeGreaterThan(0);
+    expect(r.avoidableGridWh).toBeGreaterThan(0);
+  });
+
+  it('houdt het aantal episodes begrensd maar telt ze wel allemaal', async () => {
+    const cache = new DivergenceCache({
+      logDir: await logboek(),
+      maxEpisodes: 0,
+      write: () => {},
+    });
+    await cache.refresh();
+
+    expect(cache.latest?.episodes).toHaveLength(0);
+    expect(cache.latest?.episodesTotaal).toBeGreaterThan(0);
+  });
+
+  it('houdt de vorige uitkomst vast wanneer het opnieuw rekenen mislukt', async () => {
+    const dir = await logboek();
+    const cache = new DivergenceCache({ logDir: dir, write: () => {} });
+    await cache.refresh();
+    const eerste = cache.latest;
+    expect(eerste).not.toBeNull();
+
+    // Map weg: de analyse kan niets meer lezen.
+    await rm(dir, { recursive: true, force: true });
+    await cache.refresh();
+
+    // Geen lege pagina en geen crash; de weergave ziet aan berekendOpMs dat
+    // het cijfer veroudert.
+    expect(cache.latest).toBe(eerste);
   });
 });

@@ -64,7 +64,60 @@ export interface Analysis {
 /** Wat er in een kwartier overheerste. */
 export type BucketState = 'geen' | 'beide-uit' | 'eens' | 'strenger' | 'ruimer' | 'failsafe';
 
-const BUCKET_MS = 15 * 60_000;
+export const BUCKET_MS = 15 * 60_000;
+export const BUCKETS_PER_DAY = 96;
+
+/**
+ * Eén teken per tijdvak.
+ *
+ * Gedeeld door de terminal en de webweergave. Twee losse tabellen zouden vroeg
+ * of laat iets anders betekenen, en dan zegt "de tijdlijn" op twee plekken iets
+ * anders — precies de bugklasse waar dit project vandaan komt.
+ */
+export const BUCKET_CODE: Readonly<Record<BucketState, string>> = {
+  geen: ' ',
+  'beide-uit': '·',
+  eens: '=',
+  ruimer: '+',
+  strenger: '!',
+  failsafe: 'X',
+};
+
+export interface DayRow {
+  /** JJJJ-MM-DD in lokale tijd. */
+  readonly day: string;
+  /** 96 tijdvakken van een kwartier, middernacht tot middernacht. */
+  readonly states: readonly BucketState[];
+}
+
+/**
+ * Zet de tijdvakken om naar één rij per dag.
+ *
+ * Lokale tijd en niet UTC: een tijdlijn waarop "de middag" niet in het midden
+ * ligt is onleesbaar. Dagen zonder waarneming krijgen `geen`, zodat een gat in
+ * de opname zichtbaar blijft in plaats van weg te vallen.
+ */
+export function bucketsPerDay(
+  buckets: ReadonlyMap<number, BucketState>,
+): DayRow[] {
+  const byDay = new Map<string, BucketState[]>();
+  for (const [bucketMs, state] of buckets) {
+    const d = new Date(bucketMs);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let row = byDay.get(day);
+    if (!row) {
+      row = new Array<BucketState>(BUCKETS_PER_DAY).fill('geen');
+      byDay.set(day, row);
+    }
+    const midnight = new Date(bucketMs);
+    midnight.setHours(0, 0, 0, 0);
+    const index = Math.floor((bucketMs - midnight.getTime()) / BUCKET_MS);
+    if (index >= 0 && index < BUCKETS_PER_DAY) row[index] = state;
+  }
+  return [...byDay.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, states]) => ({ day, states }));
+}
 
 /** Tolerantie voor import waar we niemand op afrekenen, in W. */
 const IMPORT_TOLERANCE_W = 50;

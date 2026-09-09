@@ -276,6 +276,264 @@ function volg() {
   bron.onerror = () => toonVerbinding('verbinding kwijt — opnieuw proberen…', 'text-alarm');
 }
 
+/* ------------------------------------------------------- terugblik ------ */
+
+/*
+ * De terugblik komt uit de logboeken en niet uit het besluit van dit moment.
+ * Dat is een andere waarheid met een ander tempo: de arbiter beslist elke
+ * dertig seconden, deze analyse draait elk kwartier. Vandaar een eigen sectie
+ * met een eigen "berekend op" — een cijfer zonder houdbaarheidsdatum naast een
+ * live stand zetten is misleidend.
+ */
+
+/** Tekencode uit het rapport naar naam en kleur. Eén plek. */
+const VAK = {
+  ' ': { naam: 'geen opname', kleur: 'transparent' },
+  '·': { naam: 'beide uit', kleur: 'var(--color-beide-uit)' },
+  '=': { naam: 'eens, draait', kleur: 'var(--color-eens)' },
+  '+': { naam: 'ik zou draaien', kleur: 'var(--color-ruimer)' },
+  '!': { naam: 'ik zou stoppen', kleur: 'var(--color-strenger)' },
+  X: { naam: 'failsafe', kleur: 'var(--color-storing)' },
+};
+
+const kwh = (wh) =>
+  `${(wh / 1000).toLocaleString('nl-NL', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} kWh`;
+
+const pct = (deel, geheel) =>
+  geheel === 0 ? '—' : `${((deel / geheel) * 100).toFixed(1)}%`;
+
+const tijdvak = (i) =>
+  `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`;
+
+/**
+ * Eén dagrij als SVG.
+ *
+ * Aaneengesloten gelijke tijdvakken worden één rechthoek. Een winter is 180
+ * dagen van 96 vakjes; als losse elementen zijn dat er zeventienduizend, en dan
+ * wordt de pagina traag om iets te tonen dat vrijwel altijd uit lange gelijke
+ * stukken bestaat. Samengevoegd blijven het er een paar honderd.
+ */
+function dagRij(states) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 96 10');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('height', '14');
+  svg.style.display = 'block';
+  svg.style.width = '100%';
+
+  let i = 0;
+  while (i < 96) {
+    const code = states[i];
+    let eind = i;
+    while (eind + 1 < 96 && states[eind + 1] === code) eind++;
+    const vak = VAK[code] ?? VAK[' '];
+
+    if (vak.kleur !== 'transparent') {
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', String(i));
+      r.setAttribute('y', '0');
+      // 0,12 lucht houdt de blokken los zonder een gat te suggereren.
+      r.setAttribute('width', String(eind - i + 1 - 0.12));
+      r.setAttribute('height', '10');
+      r.setAttribute('fill', vak.kleur);
+      r.setAttribute('rx', '1');
+      r.dataset.uitleg = `${tijdvak(i)}–${tijdvak(Math.min(eind + 1, 96))} · ${vak.naam}`;
+      svg.append(r);
+    }
+    i = eind + 1;
+  }
+  return svg;
+}
+
+function tekenTijdlijn(dagen) {
+  const doel = $('tijdlijn');
+  doel.replaceChildren();
+
+  // Uurmarkering boven de rijen, anders weet je niet waar de middag ligt.
+  const kop = el('div', 'text-zacht mb-1 flex text-[10px]');
+  kop.append(el('div', 'w-20 shrink-0'));
+  const schaal = el('div', 'relative h-3 flex-1');
+  for (let u = 0; u < 24; u += 3) {
+    const m = el('span', 'meting absolute', `${String(u).padStart(2, '0')}u`);
+    m.style.left = `${(u / 24) * 100}%`;
+    schaal.append(m);
+  }
+  kop.append(schaal);
+  doel.append(kop);
+
+  const rijen = el('div', 'space-y-[3px]');
+  for (const { day, states } of dagen) {
+    const rij = el('div', 'flex items-center gap-2');
+    rij.append(el('div', 'text-zacht meting w-20 shrink-0 text-[11px]', day));
+    const houder = el('div', 'min-w-0 flex-1');
+    houder.append(dagRij(states));
+    rij.append(houder);
+    rijen.append(rij);
+  }
+  doel.append(rijen);
+
+  // Legenda: identiteit mag nooit alleen aan kleur hangen.
+  const legenda = $('tijdlijn-legenda');
+  legenda.replaceChildren();
+  for (const code of ['·', '=', '+', '!', 'X']) {
+    const vak = VAK[code];
+    const item = el('span', 'flex items-center gap-1.5');
+    const blok = el('span', 'inline-block h-3 w-3 rounded-sm');
+    blok.style.background = vak.kleur;
+    item.append(blok, el('span', 'text-zacht', vak.naam));
+    legenda.append(item);
+  }
+
+  // Aanwijzen geeft het tijdvak. Zonder dit is een blokje van drie pixels
+  // mooi maar onleesbaar.
+  const tip = $('tijdlijn-tip');
+  doel.addEventListener('pointermove', (e) => {
+    tip.textContent = e.target?.dataset?.uitleg ?? '';
+  });
+  doel.addEventListener('pointerleave', () => {
+    tip.textContent = '';
+  });
+}
+
+function tekenBalken(tallies) {
+  const doel = $('balken');
+  doel.replaceChildren();
+
+  const SEGMENTEN = [
+    ['agree', '=', 'eens'],
+    ['stricter', '!', 'ik zou stoppen'],
+    ['looser', '+', 'ik zou draaien'],
+  ];
+
+  for (const t of tallies) {
+    const totaal = t.agree + t.stricter + t.looser;
+    if (totaal === 0) continue;
+    const rij = el('div');
+
+    const kop = el('div', 'mb-1 flex items-baseline justify-between gap-2 text-sm');
+    kop.append(el('span', 'font-medium', naamVanActuator(t.actuatorId)));
+    kop.append(el('span', 'text-zacht meting text-xs', `${pct(t.agree, totaal)} eens`));
+    rij.append(kop);
+
+    // Gestapeld, met 2px lucht ertussen zodat de segmenten niet in elkaar
+    // overlopen.
+    const balk = el('div', 'flex h-3 gap-[2px] overflow-hidden rounded-full');
+    for (const [sleutel, code, naam] of SEGMENTEN) {
+      const n = t[sleutel];
+      if (n === 0) continue;
+      const deel = el('div', 'h-full first:rounded-l-full last:rounded-r-full');
+      deel.style.width = `${(n / totaal) * 100}%`;
+      deel.style.background = VAK[code].kleur;
+      deel.title = `${naam}: ${n.toLocaleString('nl-NL')} momenten`;
+      balk.append(deel);
+    }
+    rij.append(balk);
+
+    // De cijfers erbij, want een balk alleen laat je schatten.
+    const onder = el('div', 'text-zacht meting mt-1 flex flex-wrap gap-x-4 text-xs');
+    for (const [sleutel, , naam] of SEGMENTEN) {
+      onder.append(el('span', '', `${t[sleutel].toLocaleString('nl-NL')} ${naam}`));
+    }
+    rij.append(onder);
+
+    doel.append(rij);
+  }
+}
+
+function tekenEpisodes(r) {
+  const doel = $('episodes');
+  doel.replaceChildren();
+
+  for (const e of r.episodes) {
+    const li = el('li', 'px-4 py-3');
+    const kop = el('div', 'flex flex-wrap items-baseline justify-between gap-x-4 text-sm');
+    const dag = new Date(e.fromMs).toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+    });
+    kop.append(
+      el('span', 'font-medium', `${dag} ${klok(e.fromMs).slice(0, 5)}–${klok(e.toMs).slice(0, 5)}`),
+    );
+    kop.append(
+      el('span', 'text-zacht meting', `${e.minutes} min · ${naamVanActuator(e.actuatorId)}`),
+    );
+    li.append(kop);
+
+    const strenger = e.direction === 'strenger';
+    li.append(
+      el(
+        'div',
+        `mt-0.5 text-xs ${strenger ? 'text-strenger' : 'text-ruimer'}`,
+        (strenger ? 'oud draaide, ik zou stoppen' : 'oud stond uit, ik zou draaien') +
+          (e.mode && e.mode !== 'onbekend' ? ` · modus ${e.mode}` : ''),
+      ),
+    );
+    if (e.blockedBy) {
+      li.append(
+        el(
+          'div',
+          'text-zacht mt-0.5 text-xs',
+          `mijn reden: ${GEBLOKKEERD[e.blockedBy] ?? e.blockedBy}`,
+        ),
+      );
+    }
+    doel.append(li);
+  }
+
+  const rest = r.episodesTotaal - r.episodes.length;
+  $('episodes-rest').textContent =
+    rest > 0 ? `… en nog ${rest} kortere.` : `${r.episodesTotaal} afwijkingen in totaal.`;
+  $('episodes-blok').hidden = r.episodesTotaal === 0;
+}
+
+function tekenTerugblik(r) {
+  const eens = r.tallies.reduce((n, t) => n + t.agree, 0);
+  const totaal = r.tallies.reduce((n, t) => n + t.agree + t.stricter + t.looser, 0);
+  const dagen = (r.totMs - r.vanMs) / 86400000;
+
+  $('stat-eens').textContent = pct(eens, totaal);
+  $('stat-eens-sub').textContent = `over ${dagen.toFixed(1)} dagen · ${r.momenten.toLocaleString('nl-NL')} momenten`;
+
+  $('stat-stroom').textContent = kwh(r.legacyGridWh);
+  $('stat-vermeden').textContent = kwh(r.avoidableGridWh);
+  $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat het oude systeem besteedde`;
+
+  tekenTijdlijn(r.dagen);
+  tekenBalken(r.tallies);
+  tekenEpisodes(r);
+
+  const oud = Math.round((Date.now() - r.berekendOpMs) / 60000);
+  $('terugblik-vers').textContent =
+    `berekend ${oud <= 1 ? 'zojuist' : `${oud} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden`;
+
+  $('terugblik-sectie').hidden = false;
+}
+
+async function haalTerugblik() {
+  try {
+    const res = await fetch('api/divergence');
+    if (res.ok) {
+      tekenTerugblik(await res.json());
+      return;
+    }
+    // 503 betekent "staat uit" of "nog niet gerekend". Bij het eerste hoort de
+    // sectie te verdwijnen, bij het tweede hoort er iets te staan.
+    const { wachten } = await res.json();
+    if (wachten === 'nog niet doorgerekend') {
+      $('terugblik-sectie').hidden = false;
+      $('terugblik-vers').textContent = 'de logboeken worden nog doorgerekend…';
+    }
+  } catch {
+    // Geen terugblik is geen reden om de live stand te verbergen.
+  }
+}
+
+/* --------------------------------------------------------------- starten */
+
 await haalSite();
 
 // Eerst de huidige stand, zodat de pagina niet leeg blijft als er net geen
@@ -290,3 +548,8 @@ try {
 }
 
 volg();
+
+// De analyse draait op de dienst elk kwartier; vaker ophalen heeft geen zin.
+// Wel meteen bij het openen, want daar komt iemand voor.
+await haalTerugblik();
+setInterval(haalTerugblik, 15 * 60_000);

@@ -28,6 +28,22 @@
   --color-zon: oklch(0.82 0.15 95);
   --color-alarm: oklch(0.66 0.19 25);
   --color-goed: oklch(0.75 0.15 155);
+
+  /*
+   * Vlakken in de tijdlijn en de balken zijn iets anders dan tekst.
+   *
+   * De tekstkleuren hierboven zitten op L 0.72-0.82, want die moeten leesbaar
+   * zijn op donker. Voor gevulde vlakken naast elkaar geldt een andere eis: ze
+   * moeten van elkaar te onderscheiden zijn, ook voor wie kleuren anders ziet.
+   * Deze vier zijn daarop doorgerekend (OKLab dE >= 9 bij deuteranopie, alle
+   * binnen de band L 0.48-0.67, contrast >= 3:1 op --color-grond) in plaats van
+   * op gevoel gekozen.
+   */
+  --color-eens: oklch(0.64 0.14 155);
+  --color-ruimer: oklch(0.62 0.13 240);
+  --color-strenger: oklch(0.66 0.14 70);
+  --color-storing: oklch(0.58 0.18 25);
+  --color-beide-uit: oklch(0.34 0.014 250);
 }
 
 /*
