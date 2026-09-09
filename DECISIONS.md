@@ -594,6 +594,45 @@ seizoen. Dat is ervaring en geen meting, net als `bufferBandC` (besluit 14), en
 het staat zo in de broncode zodat je erover kunt twisten in plaats van dat het
 voor gemeten doorgaat.
 
+### 27b. Het eerste getal was te vriendelijk
+
+De meter gaf 44% op vijf zomerdagen zonder één verwarmingscommando. Dat voelde
+te snel, en dat was het ook — om vier redenen tegelijk, die elk op zichzelf klein
+lijken en samen het getal verdubbelden.
+
+**1. Rekenkundig middelen behandelt noodzakelijke voorwaarden als
+uitwisselbaar.** 8,9% tijd en 78,6% dekking werd 44%, alsof veel functiedekking
+een tekort aan seizoenen kan goedmaken. Dat kan niet: zonder winter valt er over
+verwarmen niets aan te tonen, hoeveel zomerdagen je er ook tegenaan gooit. Nu het
+meetkundig gemiddelde — nul zodra één as nul is, nooit ver boven de zwakste as,
+en het blijft op beide assen bewegen (anders dan het minimum, waarbij
+vooruitgang in dekking onzichtbaar zou blijven).
+
+**2. Een vinkje kostte één waarneming.** `handmatig` stond op groen op grond van
+één moment van de 33.144. Nu telt iets pas mee als het op **twee verschillende
+dagen** voorkwam; één dag geeft een half punt. Eén dag kan toeval zijn of een
+handmatige test, op twee losse dagen heeft de regeling het uit zichzelf gedaan.
+
+**3. `arbiter:wind-down` telde als strategie.** Dat is er geen — het is de
+arbiter die afbouwt (besluit 5). De opvangregel voor onbekende id's gaf hem een
+gratis punt in teller én noemer: 3/4 in plaats van 2/3. Alles met het voorvoegsel
+`arbiter:` blijft nu buiten die lijst.
+
+**4. Halve dagen telden als hele.** De opname begon 5 september om 17:11 en
+eindigde midden op de 9e: vijf aangeraakte kalenderdagen, 3,9 dagen opname.
+Geteld wordt nu het aandeel uren per dag waarin een besluit staat — bestand tegen
+een gat, en tegen twee losse records rond middernacht.
+
+*Uitkomst:* dezelfde opname staat nu op **22%**, met tijd 7% en dekking 73%
+zichtbaar naast het getal. Dat laatste is het echte antwoord: één getal kan deze
+vraag niet dragen, en dan hoort de weergave de twee assen te tonen in plaats van
+te doen alsof.
+
+*Les:* een voortgangsmeter die te snel oploopt is erger dan geen meter. Hij
+beantwoordt de vraag waarvoor hij bestaat — "kunnen we al iets zeggen?" — met
+ja terwijl het antwoord nee is. Acht tests leggen de rekensom nu vast, inclusief
+een die eist dat volle functiedekking ontbrekende seizoenen niet goedmaakt.
+
 *Terzijde — en niet de minste vondst:* de weergave laadde na een uitrol de
 nieuwe HTML met de oude JavaScript. `app.js` en `app.css` dragen geen hash in
 hun naam en werden met `max-age=3600` geserveerd, dus een browser hield ze een

@@ -626,7 +626,10 @@ function seizoenKaart(s) {
   const kaart = el('div');
   const kop = el('div', 'flex items-baseline justify-between gap-2');
   kop.append(el('span', 'text-xs font-medium', SEIZOEN_NAAM[s.seizoen] ?? s.seizoen));
-  kop.append(el('span', 'text-zacht meting text-xs', `${s.dagen}/${s.doel}`));
+  const dagen = s.dagen >= 10 ? Math.round(s.dagen) : Math.round(s.dagen * 10) / 10;
+  kop.append(
+    el('span', 'text-zacht meting text-xs', `${dagen.toLocaleString('nl-NL')}/${s.doel}`),
+  );
   kaart.append(kop);
 
   const spoor = el('div', 'bg-grond mt-1 h-1.5 overflow-hidden rounded-full');
@@ -654,7 +657,7 @@ function tekenGaten(d) {
   // zeldzaam te zijn (`setpoint_out_of_range` is een fout), en twaalf chips
   // waarvan de helft ruis is, leest niemand. Die staan in de uitklap.
   const ontbreekt = [d.modi, d.strategieen, d.richtingen].flatMap((lijst) =>
-    lijst.filter((x) => x.gezien === 0),
+    lijst.filter((x) => x.deel < 1),
   );
 
   if (ontbreekt.length === 0 && d.ontbrekendeInvoer.length === 0) {
@@ -678,9 +681,14 @@ function tekenGaten(d) {
       'span',
       'border-rand bg-grond text-zacht rounded-full border px-2.5 py-1 text-xs',
     );
-    chip.append(el('span', 'text-strenger', '○ '));
+    // Half betekent: één dag gezien. Dat is waargenomen en niet aangetoond,
+    // dus een eigen teken — anders lijkt het óf af óf nooit gebeurd.
+    const half = x.deel === 0.5;
+    chip.append(el('span', half ? 'text-zon' : 'text-strenger', half ? '◑ ' : '○ '));
     chip.append(document.createTextNode(x.id));
-    const waarom = WAAROM[x.id];
+    const waarom = half
+      ? `één dag gezien; twee losse dagen nodig om mee te tellen`
+      : WAAROM[x.id];
     if (waarom) chip.title = waarom;
     rij.append(chip);
     // De uitleg erbij, want "heat" zegt op zichzelf niets. Bij drie chips past
@@ -712,12 +720,22 @@ function dekkingsTabel(titel, lijst) {
   const ul = el('ul', 'space-y-0.5');
   for (const x of lijst) {
     const li = el('li', 'flex items-baseline justify-between gap-2 text-xs');
-    const naam = el('span', x.gezien > 0 ? '' : 'text-zacht');
-    naam.append(el('span', x.gezien > 0 ? 'text-eens' : 'text-strenger', x.gezien > 0 ? '● ' : '○ '));
+    const teken = x.deel === 1 ? '● ' : x.deel === 0.5 ? '◑ ' : '○ ';
+    const kleur = x.deel === 1 ? 'text-eens' : x.deel === 0.5 ? 'text-zon' : 'text-strenger';
+    const naam = el('span', x.deel > 0 ? '' : 'text-zacht');
+    naam.append(el('span', kleur, teken));
     naam.append(document.createTextNode(x.id));
     li.append(naam);
+    // De dagen zijn wat telt; het aantal momenten staat erachter als maat voor
+    // hoe vaak het speelde.
     li.append(
-      el('span', 'text-zacht meting', x.gezien > 0 ? x.gezien.toLocaleString('nl-NL') : '—'),
+      el(
+        'span',
+        'text-zacht meting',
+        x.dagen === 0
+          ? '—'
+          : `${x.dagen} ${x.dagen === 1 ? 'dag' : 'dagen'} · ${x.gezien.toLocaleString('nl-NL')}×`,
+      ),
     );
     ul.append(li);
   }
@@ -728,8 +746,13 @@ function dekkingsTabel(titel, lijst) {
 function tekenDataset(d) {
   if (d == null) return;
 
-  $('dataset-pct').textContent = `${d.gereedheid}%`;
-  $('dataset-balk').style.width = `${d.gereedheid}%`;
+  // Eén getal is te weinig: het komt uit twee assen die allebei noodzakelijk
+  // zijn, en zonder die twee erbij leest 22% als "bijna een kwart klaar"
+  // terwijl er geen enkele winterdag in zit.
+  $('dataset-pct').textContent = `${d.gereedheid.totaal}%`;
+  $('dataset-balk').style.width = `${d.gereedheid.totaal}%`;
+  $('dataset-assen').textContent =
+    `tijd ${d.gereedheid.tijd}% · functiedekking ${d.gereedheid.dekking}%`;
 
   const van = new Date(d.vanMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
   const tot = new Date(d.totMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
@@ -739,8 +762,14 @@ function tekenDataset(d) {
     d.gatendagen.length === 0
       ? 'geen gaten'
       : `${d.gatendagen.length} ${d.gatendagen.length === 1 ? 'dag' : 'dagen'} zonder opname`;
+  // Echte dagen, niet aangeraakte kalenderdagen: een opname die om vijf uur
+  // 's middags begint levert die dag geen dag op.
+  const aangeraakt =
+    d.kalenderdagenAangeraakt > Math.ceil(d.dagenOpgenomen)
+      ? ` (over ${d.kalenderdagenAangeraakt} kalenderdagen)`
+      : '';
   $('dataset-samenvatting').textContent =
-    `${d.dagenOpgenomen} ${d.dagenOpgenomen === 1 ? 'dag' : 'dagen'} opgenomen · ${gaten} · ` +
+    `${d.dagenOpgenomen.toLocaleString('nl-NL')} dagen opgenomen${aangeraakt} · ${gaten} · ` +
     `${d.momenten.toLocaleString('nl-NL')} momenten`;
 
   const seizoenen = $('dataset-seizoenen');
