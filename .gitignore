@@ -23,6 +23,8 @@ automatic_backup_*/
 node_modules/
 dist/
 *.tsbuildinfo
+# De gebouwde weergave. Komt uit `frontend/`, hoort daar niet dubbel te staan.
+backend/web/
 
 # ---- gegevens ----------------------------------------------------------
 # Logboeken en datasets horen niet in de code-repository; die halen we van

@@ -51,8 +51,14 @@ met controle op samenhang: verwijst een zone naar een apparaat dat niet bestaat,
 eisen twee zones hetzelfde apparaat op, is een doeltemperatuur onbereikbaar. De
 parser stopt niet bij de eerste fout maar levert de hele lijst met pad.
 
-**Frontend.** Nog niet gebouwd. Blijft: ultralichte PWA, HTML met Tailwind en
-vanilla JS, zonder zwaar framework. Leest `Explanation` en herberekent niets.
+**Weergave (`frontend/`).** Read-only. Eén HTML-pagina, vanilla JS, Tailwind die
+lokaal wordt gebouwd tot ~10 kB CSS — geen framework, geen CDN. Ze leest
+`Explanation` en herberekent niets: elk getal en elke reden komt uit het besluit
+van de kern, en het enige wat hier gebeurt is vertalen naar Nederlands.
+
+De schaduwdienst serveert haar zelf, over `/api/state` (de stand nu) en
+`/api/events` (een SSE-stroom van elk volgend besluit). Read-only is een grens:
+alles wat geen GET of HEAD is krijgt 405 vóór de routering. Zie besluit 23.
 
 ## 3. Ontwerpprincipes
 
@@ -80,7 +86,7 @@ geleerd:
 | 2 | HA-adapter in schaduwmodus | **klaar**, draait op de NAS |
 | 3 | Configuratie als data | **klaar** |
 | 4 | Divergentietool | **klaar**, wacht op winterdata |
-| 5 | Read-only webweergave | volgende |
+| 5 | Read-only webweergave | **klaar** |
 | 6 | Onboarding voor andermans huis | later |
 | 7 | Vooruitkijken: PV-prognose, weer, dynamische tarieven | later |
 
@@ -111,12 +117,19 @@ winterdata nodig, en dat is precies wat er nu wordt opgebouwd.
 Monorepo op `github.com/Ricardo-switch/hems-climate` (privé).
 
 ```
-backend/        Node.js: kern, adapters, replay, divergentie
+backend/        Node.js: kern, adapters, replay, divergentie, webserver
+frontend/       De read-only weergave; bouwt naar backend/web
 config/sites/   Configuratie per installatie
 deploy/         Dockerfile-omgeving, compose, uitrolscript
+ha-fixes/       Reparaties aan het YAML-systeem, klaar om over te nemen
 legacy_code/    Het YAML-systeem dat vervangen wordt
 HA export/      Referentie: helpers, entity-register, dashboards
 ```
+
+**Bouwen.** De Dockerfile heeft sinds fase 5 drie fasen: de weergave, de
+backend, en de draaifase die alleen `dist` en `web` overhoudt. De bouwcontext is
+daarom de projectwortel en niet `backend/` — met de `.dockerignore` die daarbij
+hoort in de wortel, want Docker leest die naast de context.
 
 **Uitrol.** De NAS haalt de code uit git via `deploy/deploy.sh`, ingepland in de
 Synology Taakplanner. Het script bouwt alleen wanneer er iets in `backend/`
@@ -150,6 +163,9 @@ nodig hebt, want de code vertelt het wat en niet het waarom.
 
 ## 8. Volgende stap
 
-De read-only webweergave: modus, budget, vraag per zone, en wat de arbiter zou
-doen. Die leest alleen het bestaande `Explanation`-contract, dus dat werk gaat
-niet verloren wanneer de rest van de frontend erbij komt.
+Fase 6: onboarding voor andermans huis. Twee dingen die daar als eerste hard
+worden — de weergave kent geen authenticatie (besluit 23), en de bindingen in
+`mapping.ts` zijn nog met de hand geschreven voor dit ene huis.
+
+Ondertussen loopt de winterdataset door. Die is sinds 9 september 2026 gebaseerd
+op een vertaling die de handmatige stand kent (besluit 8b); alles daarvóór niet.

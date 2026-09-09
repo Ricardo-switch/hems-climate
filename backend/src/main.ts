@@ -17,8 +17,9 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { HaClient } from './adapters/homeassistant/client.js';
-import { ShadowRunner } from './adapters/homeassistant/shadow.js';
+import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
+import { WebServer, defaultWebDir } from './web/server.js';
 
 /**
  * Laadt een .env-bestand, maar laat variabelen die al gezet zijn met rust.
@@ -76,6 +77,11 @@ function fail(problems: readonly string[]): never {
   console.error('  HEMS_SITE             naam in config/sites (zonder .json)');
   console.error('  SHADOW_LOG_DIR        map voor het beslislogboek');
   console.error('                        (standaard data/shadow)');
+  console.error('  HEMS_WEB_PORT         poort voor de read-only webweergave;');
+  console.error('                        weglaten betekent: geen weergave, en dan');
+  console.error('                        luistert deze dienst nergens op');
+  console.error('  HEMS_WEB_HOST         adres om aan te binden (standaard 0.0.0.0)');
+  console.error('  HEMS_WEB_DIR          map met de gebouwde frontend');
   process.exit(1);
 }
 
@@ -151,6 +157,22 @@ const minInterval = Number(process.env['SHADOW_MIN_INTERVAL_SECONDS'] ?? 15);
 const watchdog = Number(process.env['SHADOW_WATCHDOG_MINUTES'] ?? 10);
 const logDir = process.env['SHADOW_LOG_DIR'] ?? 'data/shadow';
 
+/**
+ * De webweergave staat standaard uit.
+ *
+ * Deze dienst houdt het HA-token vast en draait maanden onbewaakt. Luisteren
+ * is dus een keuze die je maakt, niet iets wat je overkomt door hem te
+ * starten. De compose op de NAS zet de poort; een losse `npm run shadow`
+ * blijft dicht.
+ */
+const webPortRaw = process.env['HEMS_WEB_PORT'];
+const webPort = webPortRaw == null || webPortRaw.trim() === '' ? null : Number(webPortRaw);
+if (webPort != null && (!Number.isInteger(webPort) || webPort < 1 || webPort > 65535)) {
+  console.error(`HEMS_WEB_PORT is geen geldige poort: "${webPortRaw}".`);
+  process.exit(1);
+}
+const webDir = process.env['HEMS_WEB_DIR'] ?? defaultWebDir(packageRoot);
+
 const strategies = defaultStrategies();
 
 // De configuratie wordt hier gelezen én gecontroleerd. Een fout erin is een
@@ -178,6 +200,11 @@ const client = new HaClient({
   allowWrites: false,
 });
 
+// De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
+// weergave haalt de laatste stand bij de runner op. Vandaar eerst een lege doos
+// en pas daarna vullen — een van beide moet als eerste bestaan.
+let web: WebServer | null = null;
+
 const runner = new ShadowRunner({
   config: site.config,
   strategies,
@@ -186,7 +213,20 @@ const runner = new ShadowRunner({
   minIntervalSeconds: Number.isFinite(minInterval) ? minInterval : 15,
   watchdogMinutes: Number.isFinite(watchdog) ? watchdog : 10,
   logDir,
+  ...(webPort == null
+    ? {}
+    : { onDecision: (snapshot: LiveSnapshot) => web?.publish(snapshot) }),
 });
+
+if (webPort != null) {
+  web = new WebServer({
+    port: webPort,
+    host: process.env['HEMS_WEB_HOST'] ?? '0.0.0.0',
+    webDir,
+    config: site.config,
+    latest: () => runner.latest,
+  });
+}
 
 console.log('─'.repeat(64));
 console.log('  SCHADUWMODUS — de arbiter denkt mee, maar schakelt niets');
@@ -202,6 +242,9 @@ console.log(
 );
 console.log(`  logboek          ${logDir}/decisions-JJJJ-MM-DD.ndjson`);
 console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : 'uit'}`);
+console.log(
+  `  webweergave      ${webPort == null ? 'uit — deze dienst luistert nergens op' : `poort ${webPort}, alleen lezen`}`,
+);
 console.log('─'.repeat(64));
 
 if (site.warnings.length > 0) {
@@ -214,8 +257,24 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     console.log('\nafsluiten…');
     runner.stop();
-    process.exit(0);
+    void web?.stop().finally(() => process.exit(0));
+    if (web == null) process.exit(0);
   });
+}
+
+if (web) {
+  try {
+    const port = await web.start();
+    console.log(`  weergave luistert op http://localhost:${port}/`);
+    console.log(`  frontend uit     ${webDir}`);
+    console.log('─'.repeat(64));
+  } catch (error) {
+    // Een bezette poort is een opstartfout, geen reden om zonder venster door
+    // te draaien: dan denk je dat het dashboard kapot is terwijl de dienst
+    // gewoon nooit is gaan luisteren (besluit 7).
+    console.error(`Kan niet luisteren op poort ${webPort}: ${String(error)}`);
+    process.exit(1);
+  }
 }
 
 runner.start();

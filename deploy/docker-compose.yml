@@ -10,9 +10,11 @@
 
 services:
   hems-shadow:
+    # De context is de projectwortel en niet `backend/`: de weergave wordt in
+    # hetzelfde image gebouwd en die staat in `frontend/`.
     build:
-      context: ./src/backend
-      dockerfile: Dockerfile
+      context: ./src
+      dockerfile: backend/Dockerfile
     image: hems-climate/shadow:latest
     container_name: hems-shadow
 
@@ -35,6 +37,9 @@ services:
       # Sluit zichzelf af bij vastlopen; restart:unless-stopped pakt het op.
       SHADOW_WATCHDOG_MINUTES: "10"
       SHADOW_LOG_DIR: /logs
+      # De read-only webweergave. Weglaten betekent: de dienst luistert nergens
+      # op, zoals hij dat tot fase 5 deed.
+      HEMS_WEB_PORT: "8080"
 
     volumes:
       # Alleen-lezen: de dienst hoort zijn eigen configuratie nooit te wijzigen.
@@ -48,8 +53,18 @@ services:
       # Hier komt de winterdataset te staan.
       - ./logs:/logs
 
-    # Deze dienst luistert nergens op en verbindt alleen uitgaand met Home
-    # Assistant. Daarom geen ports en geen extra netwerkrechten.
+    # Sinds fase 5 luistert deze dienst wél, maar alleen om te lezen: er is geen
+    # route die iets wijzigt, en niet-GET krijgt 405 vóór de routering. Zie
+    # DECISIONS.md, besluit 23.
+    #
+    # Dit bindt op alle adressen van de NAS, dus alles op je thuisnetwerk kan de
+    # pagina openen. Dat is de bedoeling. Wat niet de bedoeling is: hier een
+    # portforward of reverse proxy naar buiten op zetten. Er is geen
+    # authenticatie, en dit proces houdt het HA-token vast.
+    #
+    # Alleen vanaf de NAS zelf bereikbaar maken kan met "127.0.0.1:8080:8080".
+    ports:
+      - "8080:8080"
 
     logging:
       driver: json-file

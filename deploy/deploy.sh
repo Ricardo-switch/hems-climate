@@ -295,8 +295,12 @@ else
   log "Gewijzigd sinds de draaiende versie:"
   echo "$CHANGED" | sed 's/^/    /'
   # Bewust `if` en geen `a && b`: met set -e stapt een mislukte AND-lijst uit
-  # het script, en "geen backend-wijziging" is geen fout maar een uitkomst.
-  if grep -q '^backend/' <<< "$CHANGED"; then
+  # het script, en "geen wijziging" is geen fout maar een uitkomst.
+  #
+  # `frontend/` telt sinds fase 5 mee: die wordt in hetzelfde image gebouwd, dus
+  # een gewijzigde pagina zonder herbouw is een pagina die niet verandert. Dat
+  # is precies het soort stilte waar dit script vanaf moest.
+  if grep -qE '^(backend|frontend)/' <<< "$CHANGED"; then
     NEEDS_BUILD=1
   fi
   if grep -q '^deploy/docker-compose\.yml$' <<< "$CHANGED"; then

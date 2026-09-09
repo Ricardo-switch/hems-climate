@@ -20,7 +20,10 @@ import {
   buildSystemState,
   relevantEntities,
 } from '../src/adapters/homeassistant/mapping.js';
-import { ShadowRunner } from '../src/adapters/homeassistant/shadow.js';
+import {
+  ShadowRunner,
+  type LiveSnapshot,
+} from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
 import { defaultStrategies } from '../src/index.js';
 
@@ -597,5 +600,69 @@ describe('de modus uit twee knoppen', () => {
         'input_select.koel_strategie': 'Pv koelen',
       }),
     ).toBe('handmatig');
+  });
+});
+
+describe('de weergave krijgt het besluit', () => {
+  it('geeft elk besluit door en houdt het laatste vast', async () => {
+    const ha = await startFakeHa({ states: shadowStates() });
+    cleanups.push(() => ha.close());
+
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const gezien: LiveSnapshot[] = [];
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      // Zonder logDir: de weergave mag niet afhangen van of er gelogd wordt.
+      write: () => {},
+      now: () => SHADOW_NOW,
+      onDecision: (snapshot) => gezien.push(snapshot),
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(gezien.length).toBeGreaterThan(0);
+    const laatste = gezien[gezien.length - 1]!;
+
+    // Wat de weergave krijgt is hetzelfde besluit dat de runner vasthoudt.
+    expect(runner.latest).toEqual(laatste);
+    // En het is compleet genoeg om de pagina mee te vullen.
+    expect(laatste.explanation.perZone.length).toBe(exampleSite.zones.length);
+    expect(Object.keys(laatste.observed).length).toBe(exampleSite.actuators.length);
+    expect(typeof laatste.atMs).toBe('number');
+  });
+
+  it('laat een kapotte weergave de opname niet meeslepen', async () => {
+    const ha = await startFakeHa({ states: shadowStates() });
+    cleanups.push(() => ha.close());
+
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      write: () => {},
+      now: () => SHADOW_NOW,
+      onDecision: () => {
+        throw new Error('de weergave is stuk');
+      },
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // De schaduwopname is het product; het venster erop is dat niet.
+    expect(runner.stats.evaluations).toBeGreaterThan(0);
+    expect(runner.latest).not.toBeNull();
   });
 });
