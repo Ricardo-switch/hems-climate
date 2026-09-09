@@ -113,6 +113,7 @@ async function sendFile(
   webDir: string,
   pathname: string,
   headOnly: boolean,
+  sinds: string | undefined,
 ): Promise<boolean> {
   const relative = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
   const full = resolve(webDir, relative);
@@ -127,14 +128,31 @@ async function sendFile(
   }
   if (info.isDirectory()) return false;
 
+  /*
+   * `no-cache` en niet `max-age`.
+   *
+   * De bestandsnamen dragen geen hash: het blijven `app.js` en `app.css`. Met
+   * een `max-age` van een uur krijgt een bezoeker na een uitrol dus de nieuwe
+   * HTML met de oude JS, en dat mislukt op precies de manier die het lastigst
+   * te vinden is — een pagina die half werkt zonder één foutmelding. Dat is
+   * hier één keer gebeurd tijdens het bouwen van de tabs.
+   *
+   * `no-cache` betekent niet "niet bewaren" maar "altijd navragen". Samen met
+   * `last-modified` kost een ongewijzigd bestand een leeg 304-antwoord in
+   * plaats van tien kilobyte, en klopt de pagina altijd.
+   */
+  const gewijzigd = info.mtime.toUTCString();
+  if (sinds != null && sinds === gewijzigd) {
+    res.writeHead(304, { 'cache-control': 'no-cache', 'last-modified': gewijzigd });
+    res.end();
+    return true;
+  }
+
   res.writeHead(200, {
     'content-type': MIME[extname(full).toLowerCase()] ?? 'application/octet-stream',
     'content-length': info.size,
-    // De pagina zelf mag nooit uit de cache komen; na een uitrol wil je de
-    // nieuwe zien. De rest draagt een hash in zijn naam.
-    'cache-control': relative === '' || relative.endsWith('.html')
-      ? 'no-store'
-      : 'public, max-age=3600',
+    'cache-control': 'no-cache',
+    'last-modified': gewijzigd,
   });
   if (headOnly) {
     res.end();
@@ -237,7 +255,18 @@ export class WebServer {
 
     const headOnly = method === 'HEAD';
     const target = path === '/' ? 'index.html' : path;
-    if (await sendFile(res, this.#options.webDir, target, headOnly)) return;
+    const sinds = req.headers['if-modified-since'];
+    if (
+      await sendFile(
+        res,
+        this.#options.webDir,
+        target,
+        headOnly,
+        typeof sinds === 'string' ? sinds : undefined,
+      )
+    ) {
+      return;
+    }
 
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end(headOnly ? undefined : 'Niet gevonden.\n');

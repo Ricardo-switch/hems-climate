@@ -11,8 +11,9 @@
  */
 
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { copyFile, mkdir, readdir, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,11 +67,40 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
   cwd: here,
 });
 
+/**
+ * Zet een versiestempel achter de verwijzingen naar app.js en app.css.
+ *
+ * De bestandsnamen blijven gelijk, dus een browser die er ooit een met een
+ * `max-age` heeft opgehaald houdt die vast tot die vervalt — ook als de server
+ * inmiddels iets anders zegt. Dat is precies één keer misgegaan: nieuwe HTML,
+ * oude JS, een pagina die half werkt zonder één foutmelding.
+ *
+ * Een korte hash van de inhoud in de URL maakt dat onmogelijk: wijzigt het
+ * bestand, dan wijzigt de URL, en dan is er niets om uit de cache te halen.
+ * Wijzigt het niet, dan blijft de URL gelijk en werkt de cache gewoon.
+ */
+async function stempel() {
+  const html = join(out, 'index.html');
+  let inhoud = await readFile(html, 'utf-8');
+
+  for (const naam of ['app.css', 'app.js']) {
+    const hash = createHash('sha256')
+      .update(await readFile(join(out, naam)))
+      .digest('hex')
+      .slice(0, 8);
+    inhoud = inhoud.replaceAll(`"${naam}"`, `"${naam}?v=${hash}"`);
+  }
+  await writeFile(html, inhoud, 'utf-8');
+}
+
 tailwind.on('exit', (code) => {
   if (code !== 0) {
     console.error(`Tailwind stopte met code ${code}.`);
     process.exit(code ?? 1);
   }
-  console.log(`Weergave gebouwd naar ${out}`);
-  console.log(`  ${[...copied, 'app.css'].sort().join(', ')}`);
+  // Pas stempelen als Tailwind klaar is; anders hasht hij de vorige CSS.
+  void stempel().then(() => {
+    console.log(`Weergave gebouwd naar ${out}`);
+    console.log(`  ${[...copied, 'app.css'].sort().join(', ')}`);
+  });
 });

@@ -53,3 +53,35 @@
 .meting {
   font-variant-numeric: tabular-nums;
 }
+
+/*
+ * Tabs.
+ *
+ * Als component en niet als losse klassenrij in de HTML: er zijn er twee, ze
+ * moeten precies gelijk zijn, en de geselecteerde staat hangt aan
+ * `aria-selected` zodat schermlezers en de opmaak dezelfde bron gebruiken.
+ */
+.tab {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-zacht);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: color 120ms;
+}
+
+.tab:hover {
+  color: var(--color-tekst);
+}
+
+.tab[aria-selected='true'] {
+  color: var(--color-tekst);
+  border-bottom-color: var(--color-eens);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--color-ruimer);
+  outline-offset: 2px;
+}

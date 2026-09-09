@@ -358,3 +358,59 @@ describe('de terugblik op de logboeken', () => {
     expect(cache.latest).toBe(eerste);
   });
 });
+
+describe('de pagina veroudert niet stilletjes', () => {
+  /** Een webmap met een pagina en een script erin. */
+  async function webmap(inhoud: string): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-cache-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    await writeFile(join(dir, 'index.html'), '<h1>hallo</h1>', 'utf-8');
+    await writeFile(join(dir, 'app.js'), inhoud, 'utf-8');
+    return dir;
+  }
+
+  it('laat een browser nooit een oud script vasthouden', async () => {
+    const { base } = await start({ webDir: await webmap('const versie = 1;') });
+
+    for (const pad of ['/', '/app.js']) {
+      const res = await fetch(`${base}${pad}`);
+      // `max-age` zou hier fataal zijn: de bestandsnamen dragen geen hash, dus
+      // na een uitrol krijgt de bezoeker nieuwe HTML met oude JS. Dat mislukt
+      // op de lastigst vindbare manier — een pagina die half werkt.
+      expect(res.headers.get('cache-control'), pad).toBe('no-cache');
+    }
+  });
+
+  it('geeft 304 zolang het bestand niet wijzigde', async () => {
+    const { base } = await start({ webDir: await webmap('const versie = 1;') });
+
+    const eerste = await fetch(`${base}/app.js`);
+    const gewijzigd = eerste.headers.get('last-modified');
+    expect(gewijzigd).not.toBeNull();
+
+    const tweede = await fetch(`${base}/app.js`, {
+      headers: { 'if-modified-since': gewijzigd! },
+    });
+    // Navragen mag; opnieuw versturen hoeft niet.
+    expect(tweede.status).toBe(304);
+    expect(await tweede.text()).toBe('');
+  });
+
+  it('stuurt de nieuwe versie zodra het bestand wel wijzigde', async () => {
+    const dir = await webmap('const versie = 1;');
+    const { base } = await start({ webDir: dir });
+
+    const eerste = await fetch(`${base}/app.js`);
+    const gewijzigd = eerste.headers.get('last-modified')!;
+
+    // Een uitrol, een seconde later: `last-modified` heeft secondeprecisie.
+    await new Promise((r) => setTimeout(r, 1100));
+    await writeFile(join(dir, 'app.js'), 'const versie = 2;', 'utf-8');
+
+    const tweede = await fetch(`${base}/app.js`, {
+      headers: { 'if-modified-since': gewijzigd },
+    });
+    expect(tweede.status).toBe(200);
+    expect(await tweede.text()).toContain('versie = 2');
+  });
+});
