@@ -222,42 +222,91 @@ processor   6.828 ms       event loop    1 ms vertraging
 bezetting   0,76% van één kern, elk kwartier
 ```
 
-### 3. Dezelfde set naar de Pi, en dezelfde meting
+### Uitkomst, gemeten op 10 september 2026
 
-Kopieer `data/bench` naar de Pi — niet opnieuw genereren, want dan meet je twee
-verschillende invoeren tegen elkaar.
+Op een Raspberry Pi 5 met HAOS 18.2, met dezelfde 180 dagen:
 
-```sh
-sudo docker run --rm -v /pad/naar/bench:/bench:ro hems-climate/shadow:latest   node dist/main.js --benchmark /bench
+```
+wandtijd    21.529 ms      piekgeheugen  110,4 MB rss
+processor   24.037 ms      event loop    9 ms vertraging
+bezetting   2,67% van één kern, elk kwartier
+
+HA in rust    mediaan 0,002 s   hoogste 0,002 s
+HA belast     mediaan 0,002 s   hoogste 0,003 s
 ```
 
-De meting geeft zelf aan of hij de grenzen haalt: wandtijd onder 60 s (vier keer
-speling op een kwartiercyclus), piekgeheugen onder 256 MB (de `mem_limit`), en
-vertraging van de event loop onder 1 s.
+Alle grenzen gehaald, en geen meetbaar effect op Home Assistant. Besluit 17 is
+daarmee omgedraaid; zie besluit 17b. De stappen hieronder blijven staan om de
+meting te kunnen herhalen na een zware wijziging.
 
-**Let op het geheugen.** Op het werkstation zit de piek op 181,6 MB tegen een
-limiet van 256 MB. Dat is minder speling dan de andere twee grenzen, en het is
-het enige getal dat niet langzaam maar hard faalt: er overheen betekent dat de
-kernel het proces afschiet.
+Het piekgeheugen is op de Pi láger dan op het werkstation (110 tegen 182 MB): V8
+reserveert op Windows royaler. Dat was uitgerekend het getal om in de gaten te
+houden, want het is het enige dat hard faalt in plaats van langzaam — eroverheen
+schiet de kernel het proces af.
 
-### 4. Wat de benchmark níét meet: of HA er last van heeft
+### 3. Meten op de Pi
 
-Dit is de eigenlijke vraag van besluit 17, en die kun je alleen op de doelmachine
-beantwoorden. Meet de reactietijd van HA vóór en tíjdens de analyse:
+Op HAOS gaat dit anders dan op de NAS. Vier dingen die misgingen voordat het
+liep, zodat je ze niet opnieuw hoeft te ontdekken:
+
+- **Je hebt `docker` nodig.** Installeer de add-on *Advanced SSH & Web Terminal*
+  en zet **Protection mode uit**. Controleer met `docker ps`.
+- **Het image van de NAS draait niet op de Pi.** Dat is x86, de Pi is ARM.
+  Bouw opnieuw: `docker build -f backend/Dockerfile -t hems-bench:arm .`
+- **`scp` naar DSM faalt** met `subsystem request failed on channel 0`, omdat
+  SFTP daar uitstaat. Gebruik tar over ssh:
+  `ssh gebruiker@nas "tar -C /pad -cf - ." | tar -C /doel -xf -`
+- **`-v /addon_configs/...` werkt niet.** Dat pad bestaat binnen de add-on, niet
+  op de host waar de docker-daemon draait; je krijgt
+  `mkdir /addon_configs: read-only file system`. Gebruik `--volumes-from` met de
+  SSH-add-on, dan kloppen de paden vanzelf.
 
 ```sh
-# In een tweede sessie, terwijl de benchmark loopt:
-while true; do
-  curl -s -o /dev/null -w '%{time_total}
-'     -H "Authorization: Bearer $HA_TOKEN"     http://localhost:8123/api/
+SSHC=$(docker ps --format '{{.Names}}' | grep -i ssh | head -1)
+docker run --rm --volumes-from "$SSHC" hems-bench:arm node dist/main.js --make-winter 180 /addon_configs/hems/logs /addon_configs/hems/bench
+docker run --rm --volumes-from "$SSHC" hems-bench:arm node dist/main.js --benchmark /addon_configs/hems/bench
+```
+
+### 4. Wat de benchmark níet meet: of HA er last van heeft
+
+Dat is de eigenlijke vraag van besluit 17, en die kun je alleen op de doelmachine
+beantwoorden.
+
+Vanuit een add-on is HA bereikbaar op `http://homeassistant:8123`; het LAN-IP van
+de host loopt in een time-out. `manifest.json` heeft geen token nodig.
+
+```sh
+cat > /tmp/meet.sh <<'EOF'
+#!/bin/sh
+HA=http://homeassistant:8123/manifest.json
+n=${1:-20}
+i=0
+while [ $i -lt $n ]; do
+  curl -s -o /dev/null -w '%{time_total}\n' -m 5 "$HA"
   sleep 1
+  i=$((i+1))
 done
+EOF
+chmod +x /tmp/meet.sh
+
+/tmp/meet.sh 20 > /tmp/ha-rust.txt
+
+docker run --rm --volumes-from "$SSHC" hems-bench:arm node dist/main.js --benchmark /addon_configs/hems/bench > /dev/null &
+/tmp/meet.sh 40 > /tmp/ha-belast.txt
 ```
 
-Draai dat eerst een minuut zonder de benchmark voor een basislijn, en dan
-opnieuw terwijl hij loopt. Loopt de reactietijd van HA meer dan een factor twee
-op, dan belast de analyse de machine die niet mag omvallen — precies waar
-besluit 17 bang voor was.
+De `-m 5` is geen franje: zonder tijdslimiet blijft `curl` bij een onbereikbaar
+adres minutenlang hangen en líjkt de meting vastgelopen.
+
+Vergelijken:
+
+```sh
+sort -n /tmp/ha-rust.txt | awk '{a[NR]=$1} END {printf "rust   %.3fs mediaan, %.3fs hoogste\n", a[int(NR/2)+1], a[NR]}'
+sort -n /tmp/ha-belast.txt | awk '{a[NR]=$1} END {printf "belast %.3fs mediaan, %.3fs hoogste\n", a[int(NR/2)+1], a[NR]}'
+```
+
+Loopt de mediaan meer dan een factor twee op, dan belast de analyse de machine
+die niet mag omvallen. Bij de meting van 10 september bewoog hij niet.
 
 ### Als de Pi het niet trekt
 
