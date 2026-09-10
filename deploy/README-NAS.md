@@ -21,7 +21,13 @@ De NAS bouwt het image zelf uit `src/`. Dat is met opzet: zo hoef je je niets
 aan te trekken van het verschil tussen de processor van je pc en die van je NAS.
 
 De build-context is sinds fase 5 de projectwortel en niet `src/backend`, want de
-webweergave in `frontend/` wordt in hetzelfde image gebouwd. Daar hoort de
+webweergave in `frontend/` wordt in hetzelfde image gebouwd.
+
+In `src/` staat trouwens niet de hele repository: `deploy.sh` beperkt de werkmap
+met sparse-checkout tot `backend`, `frontend`, `config` en `deploy`, plus de
+bestanden in de wortel. `HA export/`, `legacy_code/` en `ha-fixes/` zijn naslag
+voor het ontwikkelen en horen niet op een server (besluit 35). Een bestaande
+volle kloon ruimt zichzelf op bij de eerstvolgende uitrol. Daar hoort de
 `.dockerignore` in de wortel bij; die in `backend/` doet niets meer.
 
 ## Bestanden neerzetten

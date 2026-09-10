@@ -209,6 +209,30 @@ fi
 
 cd "$SRC"
 
+# ---------------------------------------------------------- alleen dit ------
+
+# Wat een server draait, en niets meer.
+#
+# De repository bevat ook `HA export/` (3,1 MB entity-registers en dashboards),
+# `legacy_code/` en `ha-fixes/`. Dat is naslag voor het ontwikkelen; op een
+# machine die alleen de dienst draait heeft het niets te zoeken. Het kost geen
+# noemenswaardige schijfruimte, maar het is wel huishouding van een klant op een
+# server — en zodra dit bij iemand anders draait is dat geen smaakkwestie meer.
+#
+# Cone-modus houdt de bestanden in de wortel altijd, en dat is hier geen detail:
+# `.dockerignore` moet naast de bouwcontext staan, anders gaat alsnog de hele
+# map de docker-daemon in.
+#
+# Idempotent: staat het al goed, dan doet dit niets.
+SPARSE_MAPPEN="backend frontend config deploy"
+if [ "$("$GIT" config --get core.sparseCheckout || echo false)" != "true" ]; then
+  log "Werkmap beperken tot wat de dienst nodig heeft..."
+  "$GIT" sparse-checkout init --cone
+  # shellcheck disable=SC2086
+  "$GIT" sparse-checkout set $SPARSE_MAPPEN
+  log "  behouden: $SPARSE_MAPPEN (plus de bestanden in de wortel)"
+fi
+
 # Lokale wijzigingen niet stilzwijgend weggooien. Wie op de NAS iets heeft
 # aangepast hoort dat te horen, niet kwijt te raken.
 if [ -n "$("$GIT" status --porcelain)" ]; then
