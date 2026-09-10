@@ -97,6 +97,28 @@ $mb = [math]::Round(((Get-ChildItem $Doel -Recurse -File | Measure-Object Length
 Write-Host "Klaargezet in $Doel — $aantal bestanden, $mb MB"
 
 if ($Share) {
+  # Eerst kijken of de share zelf bestaat, en niet of de doelmap bestaat. Doet
+  # hij dat niet, dan komt er anders een `New-Item`-fout over een "ongeldige
+  # indeling" die nergens naar wijst; de werkelijke oorzaak is dat de
+  # Samba-add-on niet draait.
+  if ($Share.StartsWith('\\')) {
+    $delen = $Share.TrimStart('\') -split '\\'
+    if ($delen.Count -lt 2) { throw "Geen geldig netwerkpad: $Share" }
+    $wortelShare = '\\' + $delen[0] + '\' + $delen[1]
+    if (-not (Test-Path $wortelShare)) {
+      Write-Host ""
+      Write-Host "$wortelShare is niet bereikbaar."
+      Write-Host ""
+      Write-Host "Meestal betekent dat de Samba-add-on in Home Assistant niet draait,"
+      Write-Host "of dat deze share niet in enabled_shares staat. Nakijken met:"
+      Write-Host ""
+      Write-Host "  net view $('\\' + $delen[0])"
+      Write-Host ""
+      Write-Host "Zonder share kun je het resultaat met de hand kopieren; het staat"
+      Write-Host "klaar in $Doel"
+      exit 1
+    }
+  }
   if (-not (Test-Path $Share)) { New-Item -ItemType Directory -Path $Share -Force | Out-Null }
   # Eerst leegmaken: een oud bestand dat blijft liggen wordt meegebouwd.
   Get-ChildItem $Share -Force | Remove-Item -Recurse -Force
