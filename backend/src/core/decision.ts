@@ -129,6 +129,14 @@ export interface Explanation {
 export interface ZoneExplanation {
   readonly zoneId: string;
   readonly temperatureC: number | null;
+  /**
+   * Luchtvochtigheid, of null wanneer de zone er geen sensor voor heeft.
+   *
+   * Waarneming en geen invoer voor de regeling, net als de buitentemperatuur
+   * (besluit 30). Hij stond al in de eventfilter en lokte herberekeningen uit,
+   * terwijl de vertaling hem nooit uitlas en hij nergens werd vastgelegd.
+   */
+  readonly humidityPct: number | null;
   readonly targetC: number | null;
   readonly demand: 'heat' | 'cool' | 'none';
   readonly reason: ReasonCode;

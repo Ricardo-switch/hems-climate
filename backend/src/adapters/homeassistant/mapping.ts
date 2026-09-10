@@ -117,9 +117,18 @@ export function buildSystemState(
   const zones: SystemState['zones'] = Object.fromEntries(
     config.zones.map((zone) => {
       const t = source.number(zone.temperature.id);
+      // Luchtvochtigheid is waarneming en geen invoer, net als de
+      // buitentemperatuur (besluit 30). Hij stond al in de filter — en lokte
+      // dus herberekeningen uit — terwijl niemand hem uitlas.
+      const h = zone.humidity == null ? null : source.number(zone.humidity.id);
       return [
         zone.id,
-        { temperatureC: t == null ? unavailable<number>() : value(t, nowMs) },
+        {
+          temperatureC: t == null ? unavailable<number>() : value(t, nowMs),
+          ...(zone.humidity == null
+            ? {}
+            : { humidityPct: h == null ? unavailable<number>('missing') : value(h, nowMs) }),
+        },
       ];
     }),
   );
