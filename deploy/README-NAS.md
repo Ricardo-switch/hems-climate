@@ -179,3 +179,84 @@ voor de architectuur van de NAS.
 De testsuite draait bewust niet mee in de build, juist om dit soort
 architectuurgedoe buiten de deur te houden. Wil je het toch:
 `--build-arg RUN_TESTS=true`.
+
+## Prestatiemeting voor de Raspberry Pi
+
+Voordat de dienst als HA-add-on naast Home Assistant gaat draaien (besluit 34)
+moet vaststaan dat de Pi de analyse aankan. Die draait elk kwartier over de hele
+opname, en een winter is een andere som dan de vijf dagen waarop hij nu wordt
+gemeten.
+
+**Waarom niet wachten tot maart:** dan is de add-on al gebouwd. Daarom een
+nagebouwd logboek van winterformaat.
+
+### 1. Testset maken (op je werkstation, één keer)
+
+```sh
+cd backend && npx tsx tools/make-winter.ts 180 data/bench
+```
+
+Dit herhaalt de bestaande dagen met verschoven tijdstempels tot 180 dagen. De
+uitkomsten van de analyse zijn daarmee onzin — het meet doorvoer, geen gedrag.
+Realistisch zijn het aantal momenten, de verhouding volledige/korte records en
+de recordgrootte, en dat is wat het rekenwerk bepaalt.
+
+### 2. Nulmeting op je werkstation
+
+```sh
+node dist/main.js --benchmark data/bench
+```
+
+Gemeten op een x64-werkstation, NVMe, Node 24:
+
+```
+invoer      180 dagbestanden, 375 MB, 1.119.000 momenten
+wandtijd    6.480 ms       piekgeheugen  181,6 MB rss
+processor   6.828 ms       event loop    1 ms vertraging
+bezetting   0,76% van één kern, elk kwartier
+```
+
+### 3. Dezelfde set naar de Pi, en dezelfde meting
+
+Kopieer `data/bench` naar de Pi — niet opnieuw genereren, want dan meet je twee
+verschillende invoeren tegen elkaar.
+
+```sh
+sudo docker run --rm -v /pad/naar/bench:/bench:ro hems-climate/shadow:latest   node dist/main.js --benchmark /bench
+```
+
+De meting geeft zelf aan of hij de grenzen haalt: wandtijd onder 60 s (vier keer
+speling op een kwartiercyclus), piekgeheugen onder 256 MB (de `mem_limit`), en
+vertraging van de event loop onder 1 s.
+
+**Let op het geheugen.** Op het werkstation zit de piek op 181,6 MB tegen een
+limiet van 256 MB. Dat is minder speling dan de andere twee grenzen, en het is
+het enige getal dat niet langzaam maar hard faalt: er overheen betekent dat de
+kernel het proces afschiet.
+
+### 4. Wat de benchmark níét meet: of HA er last van heeft
+
+Dit is de eigenlijke vraag van besluit 17, en die kun je alleen op de doelmachine
+beantwoorden. Meet de reactietijd van HA vóór en tíjdens de analyse:
+
+```sh
+# In een tweede sessie, terwijl de benchmark loopt:
+while true; do
+  curl -s -o /dev/null -w '%{time_total}
+'     -H "Authorization: Bearer $HA_TOKEN"     http://localhost:8123/api/
+  sleep 1
+done
+```
+
+Draai dat eerst een minuut zonder de benchmark voor een basislijn, en dan
+opnieuw terwijl hij loopt. Loopt de reactietijd van HA meer dan een factor twee
+op, dan belast de analyse de machine die niet mag omvallen — precies waar
+besluit 17 bang voor was.
+
+### Als de Pi het niet trekt
+
+De uitweg staat al als openstaand punt in `DECISIONS.md`: een tussenstand per
+dag bewaren in plaats van elke keer de hele opname doorrekenen. Dat is bewust
+uitgesteld omdat het een tweede waarheid introduceert die kan verlopen. Faalt
+deze meting op de doelmachine, dan is dat het moment waarop die prijs de moeite
+waard wordt.

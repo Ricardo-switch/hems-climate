@@ -862,6 +862,74 @@ nog draaien als het misgaat.
 de configuratie geldig is maar naar entiteiten wijst die niet meer bestaan. Daar
 is de failsafe voor, en die meldt het — maar pas als de dienst al draait.
 
+## 34. Hybride SaaS — verborgen HA met een dunne agent
+
+> **Langetermijnvisie.** Dit besluit stuurt wat we nú bouwen, maar er wordt
+> voorlopig niets van geïmplementeerd. Het staat hier zodat de add-on van fase 6c
+> de goede vorm krijgt, en niet omdat er aan een cloud wordt begonnen.
+
+Het eindproduct is niet lokaal en niet cloud, maar allebei: een klein kastje bij
+de klant met daarop Home Assistant als ónzichtbare driverlaag, onze agent
+erbovenop, en een tabletapp aan de muur.
+
+*Waarom niet puur cloud.* Doorgerekend op de eigen installatie: zeven van de
+negen apparaten zijn in principe vanuit een server bereikbaar — Nest, LG ThinQ,
+Tuya, SolarEdge, Buienradar. Twee niet, en juist de belangrijkste van die twee
+is de P1-meter.
+
+Het hele vermogensbudget hangt aan het netvermogen (besluit 13: het netvermogen
+bévat het airco-verbruik al), hij staat in `criticalInputs`, en hij meldt zich
+elke vijf seconden — in zijn eentje 88% van al het verkeer dat we doorlaten
+(besluit 16). Datzelfde getal via een cloud op minuutbasis ophalen betekent
+regelen op een gemiddelde in plaats van op wat er nú gebeurt. Dat is een ander
+product.
+
+*Waarom niet puur lokaal-zonder-HA.* Elke fabrikant heeft zijn eigen OAuth, rate
+limits en voorwaarden. Voor één huis zijn dat er al vier. Die koppelingen zelf
+onderhouden is een permanente kostenpost; de HA-gemeenschap doet het gratis en
+voor duizenden apparaten. Dát is de waarde van HA in deze stack — niet het gemak,
+maar dat "alle apparaten koppelen" zonder zo'n gemeenschap onbetaalbaar is.
+
+*Waarom een tablet niet volstaat.* Een tablet is de bediening, niet de motor. Het
+brein moet draaien als het scherm in slaapstand staat, in een la ligt of is
+meegenomen.
+
+*Gevolg voor wat we nu bouwen — en dit is de reden dat dit besluit nu al
+opgeschreven wordt:* de add-on uit fase 6c **is** versie 1.0 van die agent. Zijn
+drie taken zijn dezelfde in beide werelden:
+
+1. **Filteren.** Gemeten: 213.808 gebeurtenissen per dag per huis, waarvan er
+   34.920 overblijven. Op duizend huizen scheelt dat 2,1 tegen 13 GB per dag.
+   Filteren hoort lokaal, altijd.
+2. **Verbinden.** Lokaal met HA, straks eventueel uitgaand met een server.
+3. **Veilig terugvallen.** Nu triviaal omdat de schaduwmodus toch niets stuurt.
+   Zodra hij wél stuurt, moet er een lokale dodemansknop zijn voor een huis dat
+   zijn brein kwijt is: een thermostaat houdt zijn setpoint, maar een airco die
+   op `cool` stond blijft koelen.
+
+Bouwen we de add-on zo, dan is de cloudstap later een verplaatsing van
+`decide()` — mogelijk gemaakt door besluit 2, de pure kern — en geen
+herschrijving. Dan kan het brein per klant links of rechts van de verbinding
+draaien.
+
+*Dit draait besluit 17 om.* Daar kozen we bewust de NAS boven een HA-add-on,
+omdat een add-on de machine belast die niet mag omvallen. Die afweging blijft
+gelden, maar de uitkomst niet: in een product staat er geen NAS. Voordat we
+overgaan hoort er een meting te liggen van wat de analyse op een Pi kost náást
+HA — nu 120 ms per kwartier op vijf dagen, maar een winter is een andere som.
+
+*Wat de AVG hiervan vindt.* `occupancy` legt vast wie wanneer thuis is. Zolang
+dat op het kastje van de klant blijft is dat zijn eigen data. Zodra er een server
+bij komt is het verwerking van persoonsgegevens, met alles wat daarbij hoort.
+Een reden te meer om het brein zo lang mogelijk lokaal te houden.
+
+*Harde eis voor de weergave, vastgelegd op verzoek:* achter Ingress moet de
+pagina net zo snel aanvoelen als nu. Bij het opschrijven hiervan is dat geen
+belofte maar een eigenschap: de frontend gebruikt uitsluitend relatieve paden
+(`fetch('api/state')`, niet `/api/state`), wat precies is wat Ingress nodig
+heeft, en de hele pagina weegt 59 kB. Het enige echte risico is de SSE-stroom
+door de proxy; daarvoor staat `x-accel-buffering: no` al in de kop.
+
 ---
 
 ## Wat nog een besluit wacht
