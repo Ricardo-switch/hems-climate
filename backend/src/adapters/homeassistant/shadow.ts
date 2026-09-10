@@ -22,7 +22,8 @@ import type {
   RejectedIntent,
 } from '../../core/decision.js';
 import { decide } from '../../core/decide.js';
-import type { SiteConfig } from '../../core/model.js';
+import type { Mode, SiteConfig } from '../../core/model.js';
+import { OwnState } from '../own-state.js';
 import type { StrategyRegistry } from '../../core/strategy.js';
 import type { HaClient, HaEntityState } from './client.js';
 import {
@@ -163,6 +164,14 @@ export class ShadowRunner {
   #lastEvalMs = Number.NEGATIVE_INFINITY;
   #throttle: NodeJS.Timeout | null = null;
   #watchdog: NodeJS.Timeout | null = null;
+  /**
+   * De modus en de timers die deze dienst zelf bijhoudt.
+   *
+   * Bestaat altijd, ook wanneer de configuratie Home Assistant-bronnen noemt.
+   * De vertaling kijkt er dan niet naar — dat scheelt een tak die alleen in de
+   * ene opstelling wordt gelopen en in de andere niet.
+   */
+  readonly #eigen = new OwnState();
 
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
@@ -273,6 +282,19 @@ export class ShadowRunner {
   }
 
   /**
+   * Zet de modus die deze dienst zelf bijhoudt.
+   *
+   * Alleen zinvol wanneer de configuratie geen `mode` noemt; noemt hij die
+   * wel, dan wint Home Assistant en verandert dit niets. Er zit bewust nog
+   * geen HTTP-eindpunt op: de weergave is read-only (besluit 23), en daar iets
+   * aan veranderen is een eigen besluit waard.
+   */
+  setMode(mode: Mode | null): void {
+    this.#eigen.setMode(mode);
+    this.#request('modus');
+  }
+
+  /**
    * Vraagt een evaluatie aan, met inachtneming van de ondergrens. Te vroeg?
    * Dan wordt hij verschoven, niet weggegooid — een wijziging mag nooit
    * verdwijnen, hij mag alleen even wachten.
@@ -309,12 +331,26 @@ export class ShadowRunner {
     const nowMs = this.#options.now();
     this.#lastEvalMs = nowMs;
     const config = configFrom(this.#options.config, this.#store);
-    const state = buildSystemState(config, this.#store, nowMs);
+    const state = buildSystemState(config, this.#store, nowMs, this.#eigen);
     const decision = decide({
       config,
       state,
       strategies: this.#options.strategies,
     });
+
+    /*
+     * De timercommando's uitvoeren.
+     *
+     * Dit is geen schakelen: er gaat niets naar Home Assistant (besluit 15).
+     * De kern vraagt met een commando om een timer, en tot nu toe beantwoordde
+     * het oude systeem die vraag door zijn eigen `timer.pv_stabilisatie` te
+     * starten. Zonder dat systeem blijft de vraag onbeantwoord en zou de
+     * stabilisatie nooit aanslaan — dus beantwoorden we hem zelf.
+     *
+     * Ná het besluit en niet ervoor: de timer die de arbiter zojuist aanvroeg
+     * hoort pas bij de vólgende evaluatie te gelden.
+     */
+    this.#eigen.apply(decision.commands, nowMs);
 
     this.#ticks += 1;
     await this.#record(decision, trigger);

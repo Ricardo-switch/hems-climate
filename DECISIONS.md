@@ -1114,6 +1114,52 @@ Home Assistant zelf aanmaakt.
 
 ---
 
+## 39. De modus en de timers horen bij de dienst, niet bij Home Assistant
+
+Om de add-on te laten starten moest een woning een `input_select` met zeven
+standen hebben en twee `timer.`-entiteiten. Bij dit huis bestonden die, omdat de
+oude YAML ze had aangemaakt. Bij iemand anders bestaan ze niet — en ze zelf
+aanmaken zou schrijven naar Home Assistant zijn, wat besluit 15 verbiedt. De
+dienst weigerde dus te starten bij precies de installatie waarvoor hij bedoeld
+is.
+
+*Besluit:* `mode` en `timers` in de configuratie worden optioneel. Ontbreken ze,
+dan houdt de dienst ze zelf bij (`adapters/own-state.ts`). Staan ze er wel, dan
+wint Home Assistant — per timer afzonderlijk, zodat een woning die alleen de
+stabilisatietimer daar heeft staan niet ineens ook de andere daar moet hebben.
+
+*Dit raakt de kern niet, en dat is geen toeval.* `state.ts` zei het al: timers
+zijn invoer, geen bijwerking. De kern vraagt met een commando om een timer en
+leest alleen `endsAtMs`. Tot nu toe beantwoordde het oude systeem die vraag door
+zijn eigen `timer.pv_stabilisatie` te starten; nu kan de dienst het zelf. Aan
+`decide()` is geen regel veranderd, en de replay over de volledige opname is
+bit-identiek — byte voor byte hetzelfde rapport.
+
+*Waarom niet de helpers aanmaken via de API.* Dat kan technisch: de add-on heeft
+`homeassistant_api`. Maar dan is "de schaduwmodus schrijft niets" niet langer
+een eigenschap maar een gewoonte met een uitzondering, en uitzonderingen op die
+regel zijn precies wat je niet wilt in een dienst die straks wél gaat schakelen.
+De interne stand kost minder en houdt de belofte heel.
+
+*Wat er nog niet is: opslag.* Een herstart wist de stand. Voor de
+stabilisatietimer is dat onbelangrijk — die loopt minuten. Voor de modus telt
+het pas wanneer de dienst werkelijk schakelt; in de schaduwmodus is "terug naar
+automatisch" ongevaarlijk. Zodra er geschakeld wordt hoort hier een bestandje
+bij.
+
+*`timers.manualOverride` is nu ook optioneel.* Bij het nakijken bleek dat niets
+in de kern hem uitleest — hij wordt alleen meegedragen. Hem eisen was een eis
+zonder doel. Het veld blijft bestaan omdat de detectie van "de bewoner heeft
+zelf iets gedaan" er straks op landt; die informatie komt nu nog van het oude
+systeem, dat de timer zelf startte.
+
+*Er zit nog geen knop op.* `ShadowRunner.setMode()` bestaat, maar er is geen
+HTTP-eindpunt. De weergave is read-only (besluit 23) en dat veranderen is een
+eigen besluit — het komt aan de orde bij de onboarding, die de eerste keer is
+dat de pagina iets terugschrijft.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

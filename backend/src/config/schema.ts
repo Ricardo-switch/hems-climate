@@ -778,8 +778,17 @@ export function parseSiteConfig(
   // ---- modusbron ------------------------------------------------------------
   let mode: SiteConfig['mode'] | null = null;
   const modeRaw = input['mode'];
-  if (!isRecord(modeRaw)) {
-    p.error('mode', 'ontbreekt of is geen object');
+  if (modeRaw === undefined) {
+    // Geen fout sinds fase 6e: bij een verse installatie bestaan die knoppen
+    // in Home Assistant niet, en ze aanmaken zou schrijven zijn (besluit 15).
+    // De dienst houdt de modus dan zelf bij.
+    p.warn(
+      'mode',
+      'ontbreekt; de modus wordt dan intern bijgehouden en er is geen knop ' +
+        'in Home Assistant die hem verzet',
+    );
+  } else if (!isRecord(modeRaw)) {
+    p.error('mode', 'moet een object zijn');
   } else {
     const select = ref(p, modeRaw['select'], 'mode.select', defaultAdapter);
     const automatic = str(p, modeRaw, 'mode', 'automatic');
@@ -840,17 +849,28 @@ export function parseSiteConfig(
   // ---- timers en zon --------------------------------------------------------
   let timers: SiteConfig['timers'] | null = null;
   const timersRaw = input['timers'];
-  if (!isRecord(timersRaw)) {
-    p.error('timers', 'ontbreekt of is geen object');
+  if (timersRaw === undefined) {
+    // Ook geen fout meer. De kern vraagt met een commando om een timer; die
+    // vraag kan de dienst zelf beantwoorden. Zie adapters/own-state.ts.
+    p.warn(
+      'timers',
+      'ontbreekt; de stabilisatietimer wordt dan intern bijgehouden en gaat ' +
+        'bij een herstart verloren',
+    );
+  } else if (!isRecord(timersRaw)) {
+    p.error('timers', 'moet een object zijn');
   } else {
     const stabilisation = ref(p, timersRaw['stabilisation'], 'timers.stabilisation', defaultAdapter);
-    const manualOverride = ref(
-      p,
-      timersRaw['manualOverride'],
-      'timers.manualOverride',
-      defaultAdapter,
-    );
-    if (stabilisation && manualOverride) timers = { stabilisation, manualOverride };
+    // `manualOverride` is optioneel: op dit moment leest niets in de kern hem
+    // uit. Wie hem weglaat verandert geen enkel besluit.
+    const manualOverrideRaw = timersRaw['manualOverride'];
+    const manualOverride =
+      manualOverrideRaw === undefined
+        ? null
+        : ref(p, manualOverrideRaw, 'timers.manualOverride', defaultAdapter);
+    if (stabilisation) {
+      timers = { stabilisation, ...(manualOverride ? { manualOverride } : {}) };
+    }
   }
 
   const sun = ref(p, input['sun'], 'sun', defaultAdapter);
@@ -971,8 +991,6 @@ export function parseSiteConfig(
     !timezone ||
     !power ||
     !schedule ||
-    !mode ||
-    !timers ||
     !sun ||
     zones.length === 0 ||
     actuators.length === 0;
@@ -997,8 +1015,8 @@ export function parseSiteConfig(
       schedule: schedule as Schedule,
       enabledStrategies,
       criticalInputs,
-      mode: mode as SiteConfig['mode'],
-      timers: timers as SiteConfig['timers'],
+      ...(mode ? { mode } : {}),
+      ...(timers ? { timers } : {}),
       sun: sun as DeviceRef,
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(migration ? { migration } : {}),

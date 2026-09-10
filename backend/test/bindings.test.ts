@@ -21,7 +21,8 @@ import {
   relevantEntities,
 } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
-import type { DeviceRef, SiteConfig } from '../src/core/model.js';
+import { OwnState } from '../src/adapters/own-state.js';
+import type { DeviceRef, ModeSource, SiteConfig } from '../src/core/model.js';
 import { exampleSite } from './site.js';
 
 const NU = Date.parse('2026-09-10T12:00:00Z');
@@ -198,16 +199,20 @@ describe('de filter volgt de configuratie', () => {
 });
 
 describe('de modusbron', () => {
-  const metModus = (config: SiteConfig, over: Partial<SiteConfig['mode']>): SiteConfig => ({
+  // Deze woning noemt wél een keuzelijst in Home Assistant; sinds fase 6e mag
+  // dat ontbreken, dus het type is optioneel geworden. Eén keer vastpakken.
+  const modusBron = exampleSite.mode!;
+
+  const metModus = (config: SiteConfig, over: Partial<ModeSource>): SiteConfig => ({
     ...config,
-    mode: { ...config.mode, ...over },
+    mode: { ...(config.mode ?? modusBron), ...over },
   });
 
   it('leest de keuzelijst die de configuratie noemt', () => {
     const config = metModus(exampleSite, { select: ref('input_select.andere_lijst') });
     const state = buildSystemState(
       config,
-      bronVan({ [exampleSite.mode.select.id]: 'nacht', 'input_select.andere_lijst': 'vakantie' }),
+      bronVan({ [modusBron.select.id]: 'nacht', 'input_select.andere_lijst': 'vakantie' }),
       NU,
     );
     expect(state.modeOverride).toBe('vakantie');
@@ -218,7 +223,7 @@ describe('de modusbron', () => {
     // richting en geen modus, dus die valt samen met de dagmodus.
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [exampleSite.mode.select.id]: 'koelen' }),
+      bronVan({ [modusBron.select.id]: 'koelen' }),
       NU,
     );
     expect(state.modeOverride).toBe('dag');
@@ -227,7 +232,7 @@ describe('de modusbron', () => {
   it('laat de regeling zelf kiezen bij de automatische stand', () => {
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [exampleSite.mode.select.id]: exampleSite.mode.automatic }),
+      bronVan({ [modusBron.select.id]: modusBron.automatic }),
       NU,
     );
     expect(state.modeOverride).toBeNull();
@@ -236,7 +241,7 @@ describe('de modusbron', () => {
   it('kent een onbekende stand geen modus toe in plaats van te knallen', () => {
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [exampleSite.mode.select.id]: 'iets-nieuws' }),
+      bronVan({ [modusBron.select.id]: 'iets-nieuws' }),
       NU,
     );
     expect(state.modeOverride).toBeNull();
@@ -245,11 +250,11 @@ describe('de modusbron', () => {
   it('laat elke handen-af knop van de configuratie winnen', () => {
     // Dit is de fout uit besluit 8b: de code kende maar één knop. Nu staan ze
     // in de configuratie en kunnen het er meer zijn.
-    const knop = exampleSite.mode.handsOffWhen[0]!;
+    const knop = modusBron.handsOffWhen[0]!;
     const state = buildSystemState(
       exampleSite,
       bronVan({
-        [exampleSite.mode.select.id]: 'vakantie',
+        [modusBron.select.id]: 'vakantie',
         [knop.ref.id]: knop.state,
       }),
       NU,
@@ -260,13 +265,13 @@ describe('de modusbron', () => {
   it('werkt met een tweede handen-af knop erbij', () => {
     const config = metModus(exampleSite, {
       handsOffWhen: [
-        ...exampleSite.mode.handsOffWhen,
+        ...modusBron.handsOffWhen,
         { ref: ref('input_boolean.gasten'), state: 'on' },
       ],
     });
     const state = buildSystemState(
       config,
-      bronVan({ [exampleSite.mode.select.id]: 'dag', 'input_boolean.gasten': 'on' }),
+      bronVan({ [modusBron.select.id]: 'dag', 'input_boolean.gasten': 'on' }),
       NU,
     );
     expect(state.modeOverride).toBe('handmatig');
@@ -401,5 +406,87 @@ describe('niets wordt voor niets gevolgd', () => {
     const zonder = exampleSite.zones.find((z) => z.humidity == null)!;
     const state = buildSystemState(exampleSite, bronVan({}), NU);
     expect(state.zones[zonder.id]?.humidityPct).toBeUndefined();
+  });
+});
+
+describe('zonder bronnen in Home Assistant', () => {
+  /*
+   * Deze woning heeft een `input_select` en twee `timer.`-entiteiten, omdat de
+   * oude YAML ze had aangemaakt. Een verse installatie heeft ze niet, en ze
+   * aanmaken zou schrijven zijn (besluit 15). Dan houdt de dienst ze zelf bij.
+   *
+   * Wat hier bewaakt wordt is de volgorde: staat er een bron in de
+   * configuratie, dan wint Home Assistant. Zonder die regel zou een interne
+   * stand stilletjes over de knop van de bewoner heen gaan liggen.
+   */
+  const keuzelijst = exampleSite.mode!;
+
+  const zonder = (config: SiteConfig, ...sleutels: string[]): SiteConfig => {
+    const kopie: Record<string, unknown> = { ...config };
+    for (const k of sleutels) delete kopie[k];
+    return kopie as unknown as SiteConfig;
+  };
+
+  it('leest de modus uit de eigen stand wanneer de configuratie er geen noemt', () => {
+    const eigen = new OwnState();
+    eigen.setMode('vakantie');
+    const state = buildSystemState(zonder(exampleSite, 'mode'), bronVan({}), NU, eigen);
+    expect(state.modeOverride).toBe('vakantie');
+  });
+
+  it('staat zonder gekozen modus op volautomatisch', () => {
+    const state = buildSystemState(
+      zonder(exampleSite, 'mode'),
+      bronVan({}),
+      NU,
+      new OwnState(),
+    );
+    expect(state.modeOverride).toBeNull();
+  });
+
+  it('laat Home Assistant winnen wanneer de configuratie een keuzelijst noemt', () => {
+    const eigen = new OwnState();
+    eigen.setMode('vakantie');
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [keuzelijst.select.id]: 'nacht' }),
+      NU,
+      eigen,
+    );
+    expect(state.modeOverride).toBe('nacht');
+  });
+
+  it('houdt de stabilisatietimer zelf bij op verzoek van de kern', () => {
+    const eigen = new OwnState();
+    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
+    const state = buildSystemState(zonder(exampleSite, 'timers'), bronVan({}), NU, eigen);
+    expect(state.timers.stabilisation.endsAtMs).toBe(NU + 300_000);
+  });
+
+  it('laat de timer uit Home Assistant winnen wanneer die is opgegeven', () => {
+    // De eigen boekhouding loopt door, maar de vertaling kijkt er niet naar.
+    // Dit is de regressie die de draaiende opname beschermt: die vergelijkt
+    // met het oude systeem, en moet dus diens timer blijven volgen.
+    const eigen = new OwnState();
+    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
+    const state = buildSystemState(exampleSite, bronVan({}), NU, eigen);
+    expect(state.timers.stabilisation.endsAtMs).toBeNull();
+  });
+
+  it('vergeet een timer weer na een cancelTimer', () => {
+    const eigen = new OwnState();
+    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
+    eigen.apply([{ kind: 'cancelTimer', timerId: 'stabilisation' }], NU);
+    const state = buildSystemState(zonder(exampleSite, 'timers'), bronVan({}), NU, eigen);
+    expect(state.timers.stabilisation.endsAtMs).toBeNull();
+  });
+
+  it('wacht niet op entiteiten die er niet zijn', () => {
+    const kaal = zonder(exampleSite, 'mode', 'timers');
+    const ids = relevantEntities(kaal);
+    expect(ids.has(keuzelijst.select.id)).toBe(false);
+    expect(ids.has(exampleSite.timers!.stabilisation.id)).toBe(false);
+    // En de rest staat er nog wel in.
+    expect(ids.has(exampleSite.power.gridPower.id)).toBe(true);
   });
 });

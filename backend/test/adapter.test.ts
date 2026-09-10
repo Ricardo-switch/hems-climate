@@ -331,6 +331,76 @@ describe('ShadowRunner', () => {
   });
 });
 
+describe('zonder helpers in Home Assistant', () => {
+  /*
+   * De kern vraagt met een commando om een stabilisatietimer. Tot nu toe
+   * beantwoordde het oude systeem die vraag: dat startte zijn eigen
+   * `timer.pv_stabilisatie`, en de vertaling las die weer uit. Bij een verse
+   * installatie bestaat die timer niet en bleef de vraag onbeantwoord — de
+   * stabilisatie sloeg dan nooit aan, stil en zonder foutmelding.
+   *
+   * Deze twee tests zetten dezelfde woning twee keer neer, met en zonder
+   * `timers` in de configuratie, en eisen dat het verschil precies dáár zit.
+   */
+  function zonderHelpers(config: SiteConfig): SiteConfig {
+    const kopie: Record<string, unknown> = { ...config };
+    delete kopie['mode'];
+    delete kopie['timers'];
+    return kopie as unknown as SiteConfig;
+  }
+
+  async function draai(config: SiteConfig): Promise<string[]> {
+    const ha = await startFakeHa({ states: shadowStates() });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const lines: string[] = [];
+    const runner = new ShadowRunner({
+      config,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      write: (line) => lines.push(line),
+      now: () => SHADOW_NOW,
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // Een tweede evaluatie uitlokken. De klok staat stil, dus een timer die
+    // bij het eerste besluit is gestart loopt nu gegarandeerd nog.
+    ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.1'));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return lines;
+  }
+
+  it('houdt de stabilisatietimer zelf bij en blokkeert daarna zelf', async () => {
+    const lines = await draai(zonderHelpers(exampleSite));
+
+    // Ruim overschot en een warme zolder: het eerste besluit wil koelen, en
+    // vraagt daarbij om een stabilisatietimer.
+    expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
+    // En bij de volgende evaluatie is die van kracht — zonder dat er ooit een
+    // `timer.`-entiteit aan te pas kwam.
+    expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(true);
+  });
+
+  it('laat de opname die met het oude systeem vergelijkt ongemoeid', async () => {
+    // Dezelfde woning, maar mét `timers` in de configuratie. De nep-HA kent
+    // `timer.pv_stabilisatie` niet, dus die staat niet actief — en de eigen
+    // boekhouding mag daar niet overheen gaan liggen. Deed hij dat wel, dan
+    // zou de draaiende schaduwopname ineens andere besluiten nemen dan het
+    // systeem waarmee hij wordt vergeleken.
+    const lines = await draai(exampleSite);
+
+    expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
+    expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(false);
+  });
+});
+
 describe('eventfilter', () => {
   /** Elke entity-ID die letterlijk in de broncode van de vertaling staat. */
   function literalsInMapping(): string[] {
