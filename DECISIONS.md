@@ -345,6 +345,52 @@ bedienen.
 *Gekozen:* de Synology. Staat los van de kritieke machine, is 24/7 aan, en de
 werkwijze was al bekend.
 
+### 17b. Gemeten, en de vrees blijkt ongegrond
+
+De aanname onder "het belast de machine die niet mag omvallen" was nooit
+nagerekend. Voor besluit 34 moest dat alsnog, want daar staat de add-on wél op
+de Pi. Gemeten op 10 september 2026, op een Raspberry Pi 5 met HAOS 18.2 en HA
+Core 2026.9.1, met een nagebouwd logboek van winterformaat:
+
+| | Pi 5 (arm64) | werkstation (x64) |
+| --- | --- | --- |
+| invoer | 180 dagen, 385 MB, 1.141.710 momenten | idem |
+| wandtijd | 21.529 ms | 6.480 ms |
+| processortijd | 24.037 ms | 6.828 ms |
+| piekgeheugen | **110,4 MB** | 181,6 MB |
+| vertraging event loop | 9 ms | 1 ms |
+| bezetting | 2,67% van één kern per kwartier | 0,76% |
+
+En de vraag waar het werkelijk om ging — de reactietijd van Home Assistant, in
+rust en tijdens de analyse:
+
+```
+rust     mediaan 0,002 s   hoogste 0,002 s   (20 metingen)
+belast   mediaan 0,002 s   hoogste 0,003 s   (40 metingen)
+```
+
+Geen verschil. Van de 900 seconden in een kwartier gebruikt de analyse er 24 op
+één van de vier kernen.
+
+*Verrassing in de meting:* het piekgeheugen is op de Pi **lager** dan op het
+werkstation, 110 tegen 182 MB. V8 reserveert op Windows royaler. Uitgerekend dat
+getal was de zorg, want het is het enige dat hard faalt in plaats van langzaam —
+eroverheen schiet de kernel het proces af. Tegen de `mem_limit` van 256 MB is dit
+comfortabel.
+
+*Gevolg:* besluit 17 gaat om. De add-on op de Pi is geen risico voor de machine
+die niet mag omvallen, en fase 6c kan die kant op.
+
+*Wat de meting niet zegt.* De probe is `manifest.json` — die toetst of HA's
+HTTP-laag reageert, niet of een zware sjabloon trager rendert. Op zichzelf zou
+dat te mager zijn; samen met 2,67% bezetting op één van vier kernen draagt de
+conclusie wel.
+
+*En wat er nog wél voor pleit om te wachten:* het tweede bezwaar uit besluit 17
+staat nog overeind — elke wijziging op de Pi is trager te testen dan op de NAS.
+Dat is een reden om de add-on pas te bouwen als de rest af is, niet om hem niet
+te bouwen.
+
 ## 18. Een bewaking tegen vastlopen
 
 Een dienst die maanden draait faalt zelden met een knal; hij blijft hangen. Een
@@ -912,11 +958,9 @@ Bouwen we de add-on zo, dan is de cloudstap later een verplaatsing van
 herschrijving. Dan kan het brein per klant links of rechts van de verbinding
 draaien.
 
-*Dit draait besluit 17 om.* Daar kozen we bewust de NAS boven een HA-add-on,
-omdat een add-on de machine belast die niet mag omvallen. Die afweging blijft
-gelden, maar de uitkomst niet: in een product staat er geen NAS. Voordat we
-overgaan hoort er een meting te liggen van wat de analyse op een Pi kost náást
-HA — nu 120 ms per kwartier op vijf dagen, maar een winter is een andere som.
+*Dit draait besluit 17 om,* en die meting ligt er inmiddels: op een Pi 5 kost de
+winteranalyse 21,5 s per kwartier op één van vier kernen, met 110 MB piek en geen
+meetbaar effect op de reactietijd van Home Assistant. Zie besluit 17b.
 
 *Wat de AVG hiervan vindt.* `occupancy` legt vast wie wanneer thuis is. Zolang
 dat op het kastje van de klant blijft is dat zijn eigen data. Zodra er een server
