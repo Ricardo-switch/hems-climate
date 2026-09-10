@@ -36,7 +36,8 @@ bouwcontext: hij koppelt alleen die map aan en draait daar `docker buildx build
 wordt de boom eerst platgeslagen:
 
 ```powershell
-pwsh addon/stage.ps1 -Share \\homeassistant\addons\hems-climate
+powershell -ExecutionPolicy Bypass -File addon\stage.ps1 \
+  -Share \\homeassistant\addons\hems-climate
 ```
 
 Dat zet een map van een halve megabyte klaar met `config.yaml`, `Dockerfile`,

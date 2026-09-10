@@ -14,7 +14,7 @@
 # bestanden van de add-on bovenin en `backend/` en `frontend/` ernaast. De COPY's
 # hieronder gaan uit van die vorm.
 #
-#   pwsh addon/stage.ps1        -> dist-addon/
+#   powershell -File addon/stage.ps1   -> dist-addon/
 #   docker build dist-addon
 
 ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
