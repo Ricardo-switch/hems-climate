@@ -86,6 +86,9 @@ function fail(problems: readonly string[]): never {
   console.error('');
   console.error('Alleen de configuratie nakijken, zonder Home Assistant:');
   console.error('  node dist/main.js --check-config');
+  console.error('');
+  console.error('Meten of deze machine de analyse aankan:');
+  console.error('  node dist/main.js --benchmark <map met decisions-*.ndjson>');
   process.exit(1);
 }
 
@@ -103,6 +106,20 @@ function fail(problems: readonly string[]): never {
  *
  * Vóór de tokencontrole, want hiervoor is geen Home Assistant nodig.
  */
+/*
+ * Prestatiemeting, zonder Home Assistant.
+ *
+ * Draait binnen het uitgerolde image, zodat je op de Pi precies meet wat daar
+ * straks draait — en niet wat er op je werkstation onder een andere Node en een
+ * andere schijf gebeurt. Zie besluit 34.
+ */
+if (process.argv.includes('--benchmark')) {
+  const i = process.argv.indexOf('--benchmark');
+  const dir = process.argv[i + 1] ?? process.env['SHADOW_LOG_DIR'] ?? 'data/shadow';
+  const { benchmark } = await import('./web/benchmark.js');
+  process.exit(await benchmark(resolve(dir)));
+}
+
 if (process.argv.includes('--check-config')) {
   try {
     const site = await loadSiteConfig({
