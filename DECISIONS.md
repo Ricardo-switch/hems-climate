@@ -930,6 +930,36 @@ belofte maar een eigenschap: de frontend gebruikt uitsluitend relatieve paden
 heeft, en de hele pagina weegt 59 kB. Het enige echte risico is de SSE-stroom
 door de proxy; daarvoor staat `x-accel-buffering: no` al in de kop.
 
+## 35. Een server draagt alleen wat hij draait
+
+De NAS kloonde de hele repository. Daar zit `HA export/` bij — 3,1 MB
+entity-registers en dashboards, driekwart van alles — plus `legacy_code/` en
+`ha-fixes/`. Naslag voor het ontwikkelen, op een machine die alleen de dienst
+draait.
+
+*Het is geen schijfprobleem.* 3,3 MB. De reden om het toch te doen is een
+andere: het is de huishouding van een woning op een server die er niets mee doet.
+Nu is dat de eigen NAS en een smaakkwestie. Zodra dit als kastje bij iemand
+anders staat (besluit 34) is het dat niet meer, en dan is het goedkoper om de
+gewoonte nu te hebben dan hem later in te voeren.
+
+*Besluit:* `deploy.sh` zet sparse-checkout op `backend frontend config deploy`.
+Werkmap van 4,2 MB naar 833 kB.
+
+*Waarom cone-modus.* Die houdt de bestanden in de wortel altijd, en dat is hier
+geen bijvangst maar een eis: `.dockerignore` moét naast de bouwcontext staan,
+anders gaat alsnog de hele map de docker-daemon in — precies de fout uit
+besluit 24, maar dan andersom.
+
+*Idempotent en zelfmigrerend.* Staat het al goed, dan doet het script niets. Een
+bestaande volle kloon ruimt zichzelf op bij de eerstvolgende uitrol; dat is
+getest, net als dat een `fetch` + `merge --ff-only` erna gewoon doorloopt.
+
+*Wat dit niet doet:* de geschiedenis blijft in `.git` staan (1,2 MB). Sparse
+checkout haalt bestanden uit de wérkmap, niet uit de objectopslag. Een
+`--filter=blob:none`-kloon zou dat wel doen, maar vereist een verse kloon en
+maakt het uitchecken netwerkafhankelijk. Voor 1,2 MB is dat de verkeerde ruil.
+
 ---
 
 ## Wat nog een besluit wacht
