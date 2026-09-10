@@ -10,9 +10,11 @@
  */
 
 import type { DeviceRef, Mode, SiteConfig, Zone } from '../../core/model.js';
-import type { ActuatorState, SystemState, TimerState } from '../../core/state.js';
+import type { ActuatorState, SystemState, TimerId, TimerState } from '../../core/state.js';
 import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
+import type { OwnStateReader } from '../own-state.js';
+import { NEUTRAL_OWN_STATE } from '../own-state.js';
 import type { EntitySource } from './source.js';
 
 /**
@@ -84,10 +86,47 @@ function timerAt(source: EntitySource, entityId: string): TimerState {
   return { endsAtMs: Number.isFinite(ms) ? ms : null };
 }
 
+/**
+ * Home Assistant wanneer de configuratie een entiteit noemt, anders onszelf.
+ *
+ * Per timer en niet per blok, zodat een installatie die alleen de
+ * stabilisatietimer in Home Assistant heeft staan niet ineens ook de andere
+ * daar moet hebben.
+ */
+function timerVan(
+  config: SiteConfig,
+  source: EntitySource,
+  eigen: OwnStateReader,
+  id: TimerId,
+): TimerState {
+  const ref = config.timers?.[id];
+  return ref ? timerAt(source, ref.id) : eigen.timer(id);
+}
+
+function modusVan(config: SiteConfig, source: EntitySource, eigen: OwnStateReader): Mode | null {
+  if (!config.mode) return eigen.modeOverride();
+
+  const handsOff = config.mode.handsOffWhen.some(
+    (knop) => source.state(knop.ref.id) === knop.state,
+  );
+  if (handsOff) return 'handmatig';
+
+  const chosen = source.state(config.mode.select.id);
+  return chosen == null || chosen === config.mode.automatic
+    ? null
+    : (config.mode.aliases[chosen] ?? null);
+}
+
 export function buildSystemState(
   config: SiteConfig,
   source: EntitySource,
   nowMs: number,
+  /**
+   * Waar modus en timers vandaan komen wanneer de configuratie er geen
+   * Home Assistant-bron voor noemt. Weggelaten betekent: automatisch, geen
+   * timer loopt — wat de replay-harness van een oude opname wil.
+   */
+  eigen: OwnStateReader = NEUTRAL_OWN_STATE,
 ): SystemState {
   const actuators: Record<string, ActuatorState> = {};
   for (const b of bindingsVan(config)) {
@@ -164,16 +203,12 @@ export function buildSystemState(
    * het oude systeem ook — de handmatige koelstand schermde daar zelfs de
    * vakantiestand af. Dat de code er maar één van kende, gaf de 151 minuten uit
    * besluit 8b. Nu staan ze in de configuratie en kunnen het er meer zijn.
+   *
+   * Noemt de configuratie geen knoppen, dan houdt de dienst de modus zelf bij.
+   * Dat is de stand bij een verse installatie: daar bestaat geen
+   * `input_select`, en er een aanmaken zou schrijven zijn (besluit 15).
    */
-  const handsOff = config.mode.handsOffWhen.some(
-    (knop) => source.state(knop.ref.id) === knop.state,
-  );
-  const chosen = source.state(config.mode.select.id);
-  const modeOverride = handsOff
-    ? 'handmatig'
-    : chosen == null || chosen === config.mode.automatic
-      ? null
-      : (config.mode.aliases[chosen] ?? null);
+  const modeOverride = modusVan(config, source, eigen);
 
   return {
     nowMs,
@@ -185,8 +220,8 @@ export function buildSystemState(
       gridPowerW: grid == null ? unavailable<number>() : value(grid, nowMs),
     },
     timers: {
-      stabilisation: timerAt(source, config.timers.stabilisation.id),
-      manualOverride: timerAt(source, config.timers.manualOverride.id),
+      stabilisation: timerVan(config, source, eigen, 'stabilisation'),
+      manualOverride: timerVan(config, source, eigen, 'manualOverride'),
     },
     lights,
     sunAboveHorizon: sun == null ? unavailable<boolean>() : value(sun, nowMs),
@@ -269,10 +304,14 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
 
   ids.add(config.power.gridPower.id);
   ids.add(config.sun.id);
-  ids.add(config.mode.select.id);
-  for (const knop of config.mode.handsOffWhen) ids.add(knop.ref.id);
-  ids.add(config.timers.stabilisation.id);
-  ids.add(config.timers.manualOverride.id);
+  // Modus en timers hoeven niet uit Home Assistant te komen. Wat de dienst
+  // zelf bijhoudt heeft geen entiteit om op te wachten.
+  if (config.mode) {
+    ids.add(config.mode.select.id);
+    for (const knop of config.mode.handsOffWhen) ids.add(knop.ref.id);
+  }
+  if (config.timers?.stabilisation) ids.add(config.timers.stabilisation.id);
+  if (config.timers?.manualOverride) ids.add(config.timers.manualOverride.id);
   if (config.outdoorTemperature) ids.add(config.outdoorTemperature.id);
 
   for (const ref of config.criticalInputs) ids.add(ref.id);

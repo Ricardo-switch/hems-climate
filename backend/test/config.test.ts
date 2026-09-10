@@ -166,6 +166,60 @@ describe('vorm', () => {
   });
 });
 
+describe('een installatie zonder helpers in Home Assistant', () => {
+  /*
+   * De reden dat deze tests bestaan.
+   *
+   * Tot fase 6e eiste het schema een `input_select` voor de modus en twee
+   * `timer.`-entiteiten. Die bestaan alleen omdat de oude YAML van dit huis ze
+   * had aangemaakt. Bij iemand anders staan ze er niet, en ze aanmaken zou
+   * schrijven naar Home Assistant zijn (besluit 15) — dus weigerde de dienst
+   * te starten bij precies de installatie waarvoor hij bedoeld is.
+   */
+  const zonder = (...sleutels: string[]): Record<string, unknown> => {
+    const c = baseConfig();
+    for (const k of sleutels) delete c[k];
+    return c;
+  };
+
+  it('neemt een configuratie zonder mode en timers aan', () => {
+    const result = parse(zonder('mode', 'timers'));
+    expect(result.ok).toBe(true);
+  });
+
+  it('zegt erbij wat er dan intern gebeurt', () => {
+    const result = parse(zonder('mode', 'timers'));
+    if (!result.ok) throw new Error(messages(result));
+    const meldingen = result.warnings.map((w) => `${w.path}: ${w.message}`);
+    expect(meldingen.join('\n')).toContain('intern bijgehouden');
+    // En niet alleen voor één van de twee.
+    expect(meldingen.filter((m) => m.includes('intern bijgehouden'))).toHaveLength(2);
+  });
+
+  it('laat de velden dan ook echt weg in plaats van iets te verzinnen', () => {
+    const result = parse(zonder('mode', 'timers'));
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.mode).toBeUndefined();
+    expect(result.config.timers).toBeUndefined();
+  });
+
+  it('vindt een timerblok zonder manualOverride goed', () => {
+    // Niets in de kern leest die timer uit; hem eisen was een eis zonder doel.
+    const c = baseConfig();
+    c['timers'] = { stabilisation: 'timer.stabilisatie' };
+    const result = parse(c);
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.timers?.stabilisation.id).toBe('timer.stabilisatie');
+    expect(result.config.timers?.manualOverride).toBeUndefined();
+  });
+
+  it('blijft klagen wanneer mode er wél staat maar onzin is', () => {
+    const c = baseConfig();
+    c['mode'] = 'input_select.modus';
+    expect(messages(parse(c))).toContain('mode: moet een object zijn');
+  });
+});
+
 describe('samenhang', () => {
   it('vindt een zone die naar een onbekende actuator wijst, en denkt mee', () => {
     const c = baseConfig();

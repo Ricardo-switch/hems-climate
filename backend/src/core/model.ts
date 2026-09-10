@@ -240,7 +240,16 @@ export interface ModeSource {
 /** De timers die de kern als invoer krijgt. */
 export interface TimerSources {
   readonly stabilisation: DeviceRef;
-  readonly manualOverride: DeviceRef;
+  /**
+   * Loopt er een handmatige ingreep van de bewoner.
+   *
+   * Optioneel, en op dit moment leest niets in de kern hem uit — hij wordt
+   * alleen meegedragen. Wie hem weglaat verandert dus geen enkel besluit. Het
+   * veld blijft staan omdat de detectie van "de bewoner heeft zelf iets
+   * gedaan" er straks op landt; nu komt die informatie nog van het oude
+   * systeem, dat de timer zelf startte.
+   */
+  readonly manualOverride?: DeviceRef;
 }
 
 export interface SiteConfig {
@@ -258,9 +267,23 @@ export interface SiteConfig {
    * failsafe alle assist-apparaten terug.
    */
   readonly criticalInputs: readonly DeviceRef[];
-  /** Waar de modus vandaan komt. */
-  readonly mode: ModeSource;
-  readonly timers: TimerSources;
+  /**
+   * Waar de modus vandaan komt, wanneer dat Home Assistant is.
+   *
+   * Optioneel sinds fase 6e. Staat hij er niet, dan houdt de dienst de modus
+   * zelf bij en is er geen `input_select` in Home Assistant nodig. Dat is de
+   * enige manier waarop een verse installatie kan draaien: die knoppen bestaan
+   * daar niet, en ze aanmaken zou schrijven zijn (besluit 15).
+   */
+  readonly mode?: ModeSource;
+  /**
+   * Waar de timers vandaan komen, wanneer dat Home Assistant is.
+   *
+   * Ook optioneel. Ontbreekt hij, dan houdt de dienst ze zelf bij: de kern
+   * vraagt er met een commando om, en die vraag komt bij ons eigen boekhoudingetje
+   * terecht in plaats van bij een `timer.`-entiteit.
+   */
+  readonly timers?: TimerSources;
   /** Staat de zon boven de horizon. In HA `sun.sun`. */
   readonly sun: DeviceRef;
   /**
