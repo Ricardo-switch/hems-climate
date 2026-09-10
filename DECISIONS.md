@@ -1050,6 +1050,70 @@ te draaien, en dus te testen.
 
 ---
 
+## 37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt
+
+De add-on stond in `addon/`, met `COPY backend/...` en `COPY frontend/...` naar
+een niveau hoger. Dat werkt bij een handmatige `docker build` vanuit de
+projectwortel, en het werkt niet bij de Supervisor.
+
+*Wat de Supervisor doet* (nagekeken in `supervisor/apps/build.py`, niet
+aangenomen): hij koppelt uitsluitend de map van de add-on aan, read-only op
+`/addon`, zet zijn werkmap daar en draait `docker buildx build .`. Alles
+daarbuiten bestaat tijdens het bouwen niet. Er is geen instelling om dat te
+verruimen; `build.yaml` kent alleen basisafbeelding, argumenten en labels.
+
+*Besluit:* `addon/stage.ps1` slaat de boom plat tot de vorm die de Supervisor
+wél kan bouwen — de bestanden van de add-on bovenin, `backend/` en `frontend/`
+ernaast, 58 bestanden en een halve megabyte. De Dockerfile gaat uit van die
+vorm en van geen andere. Eén Dockerfile, en het is degene die werkelijk
+gebruikt wordt.
+
+*Waarom geen tweede Dockerfile voor de handmatige bouw.* Dat is precies de
+constructie uit besluit 36 die we daar afwezen: twee paden die uit de pas gaan
+lopen, waarbij het pad dat je zelden gebruikt degene is die het eerst breekt.
+
+*De winkelroute is dicht zolang de repository privé is.* Add-on-bronnen worden
+met een gewone `git clone` opgehaald; er is geen plek voor inloggegevens.
+Openbaar maken lost het bouwprobleem bovendien niet op — de context blijft de
+add-on-map. Wat het wél zou vragen is een eigen, kleine, openbare repository
+waarvan de wortel de platte add-on ís. Dat is waar `stage.ps1` naartoe werkt.
+Tot dan: lokale add-on onder `/addons/`.
+
+---
+
+## 38. De ruwe HA-export hoort niet in versiebeheer
+
+`HA export/core.config_entries` stond in de repository. Dat bestand is de bron
+van waarheid over welke integraties er zijn — waarvoor het hier ook stond — maar
+het bevat de gegevens waarmee die integraties inloggen: 63 werkende geheimen,
+waaronder refresh-tokens van Google, een GitHub-token van HACS, en sleutels van
+Home Connect, Hue, HomeWizard, SolarEdge, Tuya, Synology en Reolink.
+
+Een refresh-token verloopt niet vanzelf. Wie het bestand heeft, houdt toegang.
+
+*Besluit:* de ruwe export gaat niet in versiebeheer, ook niet in een privé
+repository. Wat het onderzoek nodig had — welke integraties er zijn en hoe hun
+gegevens zijn opgebouwd — staat in `core.config_entries.gemaskeerd.json`: per
+domein het aantal koppelingen en de namen van de velden, met alle waarden
+vervangen. Ook namen van installaties en apparaten zijn weg, want een titel als
+`gateway-2326-9560-4553.local` is zelf een identificatie.
+
+*Uit de geschiedenis, niet alleen uit de laatste commit.* Een bestand
+verwijderen laat het staan in elke oudere commit. De geschiedenis is herschreven
+en er is met een steekproef van vijf geheimen gecontroleerd dat ze in geen enkel
+object meer voorkomen.
+
+*Wat dit niet oplost.* GitHub ruimt onbereikbare objecten niet meteen op; een
+oude commit kan nog even op zijn eigen hash opvraagbaar zijn. De repository is
+nooit openbaar geweest, dus dit is opruimen en geen incident — maar het is de
+reden dat de tokens hoe dan ook vervangen horen te worden.
+
+*De rest is nagekeken.* Alle andere gevolgde bestanden zijn doorzocht op
+token-patronen. Geen treffers. `secrets.yaml` is het lege voorbeeldbestand dat
+Home Assistant zelf aanmaakt.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
