@@ -375,6 +375,32 @@ if [ -d "$SRC/config/sites" ]; then
   done
 fi
 
+# De draaiende configuratie toetsen tegen het nieuwe image.
+#
+# Anders dan het compose-bestand mág de configuratie afwijken van git: hij hoort
+# bij deze installatie (besluit 21). Maar een schemawijziging kan hem ongeldig
+# maken, en dan start de dienst niet meer op — met `restart: unless-stopped`
+# levert dat een herstartlus op in plaats van een foutmelding.
+#
+# Dat is op 10 september 2026 gebeurd toen `mode`, `timers` en `sun` verplicht
+# werden. Vandaar: eerst vragen of het nieuwe image met de oude configuratie
+# overweg kan, en pas omwisselen als het antwoord ja is. Zie besluit 33.
+controleer_configuratie() {
+  [ "$NEEDS_BUILD" -eq 1 ] || return 0
+  log "Configuratie nakijken tegen het nieuwe image..."
+  if "$DOCKER" run --rm     -v "$ROOT/config:/app/config:ro"     "$IMAGE:latest" node dist/main.js --check-config; then
+    return 0
+  fi
+  log ""
+  log "GESTOPT: het nieuwe image kan de draaiende configuratie niet lezen."
+  log "  De draaiende container is niet aangeraakt en blijft op de oude versie."
+  log ""
+  log "  De configuratie hoort bij deze installatie en gaat niet met git mee."
+  log "  Is de versie in git de goede, neem hem dan over en draai opnieuw:"
+  log "    cp $SRC/config/sites/*.json $ROOT/config/sites/"
+  exit 1
+}
+
 if [ "$NEEDS_BUILD" -eq 1 ]; then
   # De huidige versie eerst wegzetten, zodat terugvallen mogelijk blijft.
   if "$DOCKER" image inspect "$IMAGE:latest" >/dev/null 2>&1; then
@@ -390,6 +416,9 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
     exit 1
   fi
   log "Bouwen gelukt."
+  # Ná het bouwen en vóór het omwisselen: het image moet bestaan om ermee te
+  # kunnen toetsen, en de oude container moet nog draaien als het misgaat.
+  controleer_configuratie
 fi
 
 log "Container omwisselen…"

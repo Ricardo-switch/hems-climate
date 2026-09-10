@@ -83,7 +83,43 @@ function fail(problems: readonly string[]): never {
   console.error('                        luistert deze dienst nergens op');
   console.error('  HEMS_WEB_HOST         adres om aan te binden (standaard 0.0.0.0)');
   console.error('  HEMS_WEB_DIR          map met de gebouwde frontend');
+  console.error('');
+  console.error('Alleen de configuratie nakijken, zonder Home Assistant:');
+  console.error('  node dist/main.js --check-config');
   process.exit(1);
+}
+
+/*
+ * Alleen de configuratie nakijken en stoppen.
+ *
+ * Bestaat zodat de uitrol de drááiende configuratie kan toetsen tegen het
+ * nínuwe image, vóórdat de container wordt omgewisseld. Die configuratie hoort
+ * bij de installatie en wordt niet met git meegestuurd (besluit 21), dus een
+ * schemawijziging kan hem ongeldig maken zonder dat iemand het merkt.
+ *
+ * Dat is precies wat er op 10 september 2026 gebeurde: `mode`, `timers` en `sun`
+ * werden verplicht, de NAS had de oude configuratie, en de container kwam in een
+ * herstartlus terecht. Zie besluit 33.
+ *
+ * Vóór de tokencontrole, want hiervoor is geen Home Assistant nodig.
+ */
+if (process.argv.includes('--check-config')) {
+  try {
+    const site = await loadSiteConfig({
+      explicitPath: process.env['HEMS_CONFIG'],
+      siteId: process.env['HEMS_SITE'],
+      knownStrategies: defaultStrategies().ids,
+    });
+    console.log(`Configuratie in orde: ${site.source}`);
+    for (const warning of site.warnings) console.log(warning);
+    process.exit(0);
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      console.error(error.format());
+      process.exit(1);
+    }
+    throw error;
+  }
 }
 
 const url = read('HA_URL');
