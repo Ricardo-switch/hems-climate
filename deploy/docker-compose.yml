@@ -3,7 +3,10 @@
 # Uitrollen:
 #   1. Kopieer de projectmap naar /volume1/docker/hems-climate/src
 #   2. Leg .env, config/ en logs/ ernaast (zie README-NAS.md)
-#   3. Container Manager → Project → Aanmaken → deze map
+#   3. /volume1/docker/hems-climate/deploy.sh --force
+#
+# Bewust géén project in Container Manager: die houdt zijn eigen administratie
+# bij en loopt achter zodra deploy.sh de container vervangt. Zie README-NAS.md.
 #
 # De NAS bouwt het image zelf. Dat is met opzet: dan hoef je je niet druk te
 # maken over de processorarchitectuur van je NAS tegenover die van je pc.

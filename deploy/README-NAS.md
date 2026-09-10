@@ -58,14 +58,13 @@ laptop ermee ophoudt, en zie je in HA welke van de twee actief is.
 
 ## Starten
 
-**Container Manager** → *Project* → *Aanmaken*
+Via SSH, als root:
 
-- Projectnaam: `hems-climate`
-- Pad: `/volume1/docker/hems-climate`
-- Bron: het bestaande `docker-compose.yml`
+```sh
+/volume1/docker/hems-climate/deploy.sh --force
+```
 
-Bouwen duurt de eerste keer een paar minuten. Daarna verschijnt de container en
-staat er in het logboek:
+Bouwen duurt de eerste keer een paar minuten. Daarna staat er in het logboek:
 
 ```
 verbonden — 1672 entiteiten in Home Assistant, 31 daarvan volgen we, 0 ontbreken
@@ -73,6 +72,22 @@ verbonden — 1672 entiteiten in Home Assistant, 31 daarvan volgen we, 0 ontbrek
 
 Zie je dat niet, kijk dan in het containerlogboek: fouten in de configuratie of
 in het token worden bij het opstarten met naam en toenaam gemeld.
+
+### Geen project in Container Manager
+
+Het is verleidelijk om de stack als *Project* in Container Manager aan te
+maken: dat geeft een knopje en een overzicht. Doe het niet.
+
+Container Manager houdt van een project zijn eigen administratie bij van welke
+containers erbij horen. `deploy.sh` vervangt de container buiten die
+administratie om, en dan wijst de UI naar een container-ID dat Docker niet meer
+kent: een groene stip zonder statistieken, en knoppen die niets doen. Een
+herstart van het pakket lost dat niet op, want de administratie zelf klopt niet
+meer.
+
+Twee eigenaren van één container is er één te veel. De container blijft
+gewoon zichtbaar onder **Container** in Container Manager — die lijst komt
+rechtstreeks uit Docker en klopt dus altijd.
 
 ## Bijwerken
 
