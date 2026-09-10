@@ -36,3 +36,6 @@ deploy.log
 .DS_Store
 Thumbs.db
 *.err.log
+
+# Wat addon/stage.ps1 klaarzet om naar Home Assistant te kopiëren.
+dist-addon/
