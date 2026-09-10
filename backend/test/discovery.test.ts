@@ -143,7 +143,9 @@ describe('de ontdekking', () => {
     const voorstel = ontdek(r);
     expect(voorstel.config['zones']).toHaveLength(0);
     expect(
-      voorstel.bevindingen.some((b) => b.soort === 'overgeslagen' && b.tekst.includes('geen losse temperatuursensor')),
+      voorstel.bevindingen.some(
+        (b) => b.soort === 'overgeslagen' && b.tekst.includes('niets dat de temperatuur meet'),
+      ),
     ).toBe(true);
   });
 
@@ -429,5 +431,90 @@ describe('de antwoorden van de bewoner', () => {
     const voor = JSON.stringify(v.config);
     pasKeuzesToe(v, { 'dubbel:airco': 'climate.airco_2' });
     expect(JSON.stringify(v.config)).toBe(voor);
+  });
+});
+
+describe('een kamer waar het apparaat de enige thermometer is', () => {
+  /*
+   * Besluit 41 noemde dit als bekende beperking: bij de gemeten woning had de
+   * badkamer een thermostaat met een ingebouwde meting maar geen losse
+   * sensor, en werd daardoor geen zone. Een thermostaat meldt die meting als
+   * `current_temperature` — een attribuut, geen entiteit.
+   */
+  function badkamer(): Bewerkbaar {
+    return {
+      config: { time_zone: 'Europe/Amsterdam' },
+      areas: [{ area_id: 'badkamer', name: 'Badkamer' }],
+      devices: [{ id: 'dev-thermostaat', area_id: 'badkamer' }],
+      entities: [ent('climate.thermostaat_badkamer', { device_id: 'dev-thermostaat' })],
+      states: [
+        state('climate.thermostaat_badkamer', 'heat', {
+          hvac_modes: ['off', 'heat'],
+          min_temp: 5,
+          max_temp: 30,
+          current_temperature: 21.5,
+          current_humidity: 62,
+        }),
+      ],
+    };
+  }
+
+  it('maakt er nu wel een zone van', () => {
+    const voorstel = ontdek(badkamer());
+    const zones = voorstel.config['zones'] as Record<string, unknown>[];
+    expect(zones).toHaveLength(1);
+    expect(zones[0]!['temperature']).toEqual({
+      id: 'climate.thermostaat_badkamer',
+      attribute: 'current_temperature',
+    });
+  });
+
+  it('zegt erbij dat die thermometer in het apparaat zit', () => {
+    const b = ontdek(badkamer()).bevindingen.find((x) => x.pad === 'zones.badkamer.temperature');
+    expect(b?.soort).toBe('geraden');
+    expect(b?.tekst).toContain('leest');
+  });
+
+  it('neemt de luchtvochtigheid langs dezelfde weg mee', () => {
+    const zones = ontdek(badkamer()).config['zones'] as Record<string, unknown>[];
+    expect(zones[0]!['humidity']).toEqual({
+      id: 'climate.thermostaat_badkamer',
+      attribute: 'current_humidity',
+    });
+  });
+
+  it('laat een losse sensor altijd voorgaan', () => {
+    // Een thermometer aan de muur leest de kamer; die in het apparaat leest
+    // de uitblaas. Bij twijfel wint de muur.
+    const r = badkamer();
+    r.devices.push({ id: 'dev-sensor', area_id: 'badkamer' });
+    r.entities.push(
+      ent('sensor.badkamer_temp', { device_id: 'dev-sensor', original_device_class: 'temperature' }),
+    );
+    r.states.push(state('sensor.badkamer_temp', '21.0', { device_class: 'temperature' }));
+
+    const zones = ontdek(r).config['zones'] as Record<string, unknown>[];
+    expect(zones[0]!['temperature']).toBe('sensor.badkamer_temp');
+  });
+
+  it('levert een configuratie op die het schema aanneemt en te lezen is', () => {
+    const voorstel = ontdek(badkamer());
+    const result = parse(voorstel.config);
+    if (!result.ok) {
+      throw new Error(result.problems.map((x) => `${x.path}: ${x.message}`).join('\n'));
+    }
+    const zone = result.config.zones[0]!;
+    expect(zone.temperature.id).toBe('climate.thermostaat_badkamer');
+    expect(zone.temperature.attribute).toBe('current_temperature');
+  });
+
+  it('slaat de kamer nog steeds over wanneer niemand iets meet', () => {
+    const r = badkamer();
+    r.states = [state('climate.thermostaat_badkamer', 'heat', { hvac_modes: ['off', 'heat'] })];
+    const voorstel = ontdek(r);
+    expect(voorstel.config['zones']).toHaveLength(0);
+    expect(
+      voorstel.bevindingen.some((b) => b.tekst.includes('niets dat de temperatuur meet')),
+    ).toBe(true);
   });
 });

@@ -1317,6 +1317,44 @@ komt het bestand door `--check-config` heen.
 
 ---
 
+## 43. Een meetwaarde mag in een attribuut zitten
+
+Besluit 41 noemde het als bekende beperking: een kamer met een thermostaat of
+airco die zijn eigen temperatuur meet, maar zonder losse `sensor.`-entiteit,
+kon geen zone worden. Bij de gemeten woning kostte dat de badkamer. En het is
+geen randgeval — een apparaat met een ingebouwde thermometer maakt daar lang
+niet altijd een aparte entiteit voor aan.
+
+*Besluit:* `Zone.temperature` en `Zone.humidity` zijn een `Meetpunt` geworden:
+een verwijzing die optioneel een attribuut noemt.
+
+```json
+"temperature": "sensor.woonkamer_temperatuur"
+"temperature": { "id": "climate.thermostaat_badkamer",
+                 "attribute": "current_temperature" }
+```
+
+*Dit kostte bijna niets, en dat is geen toeval.* Beide adapters — de live-
+adapter en de replay-harness — konden attributen al lezen; `EntitySource` had
+`attrNumber` van het begin af aan, omdat het setpoint van een klimaatapparaat
+ook een attribuut is. Wat ontbrak was een manier om het op te schrijven. De
+kern merkt er niets van: die krijgt een getal.
+
+*Een losse sensor gaat altijd voor.* De thermometer in het apparaat zit bij de
+uitblaas of tegen het plafond en leest daardoor anders dan de kamer. Bruikbaar,
+maar tweede keus — en de ontdekking zegt dat er ook bij, in plaats van het
+verschil te verzwijgen.
+
+*Luchtvochtigheid langs dezelfde weg.* Die is waarneming en geen invoer
+(besluit 30), dus een minder nauwkeurige bron verandert daar geen regelgedrag.
+
+*Gemeten aan de echte woning.* Het voorstel gaat van drie naar vier zones, en
+in de schaduwmodus leest de badkamer 22,5 °C via `current_temperature`. De
+korte vorm blijft een gewone tekst, zodat een bestand er niet ingewikkelder
+uitziet dan het is.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

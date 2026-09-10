@@ -382,19 +382,54 @@ export function ontdek(r: Registers): Voorstel {
       });
       continue;
     }
-    if (thermometers.length === 0) {
+    /*
+     * Geen losse thermometer? Vraag het apparaat zelf.
+     *
+     * Een thermostaat of airco met een ingebouwde meting geeft die door als
+     * `current_temperature`, zonder er een `sensor.`-entiteit voor aan te
+     * maken. Bij de gemeten woning kostte dat de badkamer een zone.
+     *
+     * Wel met een kanttekening, en die staat in de bevinding: die thermometer
+     * zit ín het apparaat. Vlak bij de uitblaas of tegen het plafond leest hij
+     * anders dan de kamer. Bruikbaar, maar iets om te weten.
+     */
+    const zelfmeters = apparaten.filter(
+      (a) => getal(statePer.get(a.entity_id), 'current_temperature') != null,
+    );
+
+    if (thermometers.length === 0 && zelfmeters.length === 0) {
       bevindingen.push({
         soort: 'overgeslagen',
         pad: `zones.${gebied}`,
         tekst:
-          `${naam} heeft wel een klimaatapparaat maar geen losse temperatuursensor. ` +
-          'De ingebouwde meting van het apparaat is nog niet als bron te gebruiken.',
+          `${naam} heeft wel een klimaatapparaat maar niets dat de temperatuur meet — ` +
+          'ook het apparaat zelf meldt er geen',
       });
       continue;
     }
 
-    const thermometer = thermometers[0]!;
+    /** Waar de temperatuur van deze zone vandaan komt. */
+    let bron: { id: string; attribute?: string };
+    if (thermometers.length === 0) {
+      const zelfmeter = zelfmeters[0]!;
+      bron = { id: zelfmeter.entity_id, attribute: 'current_temperature' };
+      bevindingen.push({
+        soort: 'geraden',
+        pad: `zones.${gebied}.temperature`,
+        tekst:
+          `${naam} heeft geen losse thermometer; de eigen meting van ` +
+          `${zelfmeter.entity_id} wordt gebruikt. Die zit in het apparaat en leest ` +
+          'daardoor anders dan de kamer — een losse sensor is nauwkeuriger.',
+        ...(zelfmeters.length > 1
+          ? { alternatieven: zelfmeters.slice(1).map((e) => e.entity_id) }
+          : {}),
+      });
+    } else {
+      bron = { id: thermometers[0]!.entity_id };
+    }
+
     if (thermometers.length > 1) {
+      const thermometer = thermometers[0]!;
       bevindingen.push({
         soort: 'geraden',
         pad: `zones.${gebied}.temperature`,
@@ -508,12 +543,30 @@ export function ontdek(r: Registers): Voorstel {
 
     if (actuatorIds.length === 0) continue;
 
+    /*
+     * Luchtvochtigheid langs dezelfde weg: liever een losse sensor, anders de
+     * eigen meting van het apparaat waar de temperatuur ook vandaan komt. Dit
+     * is waarneming en geen invoer (besluit 30), dus een minder nauwkeurige
+     * bron kost hier geen regelgedrag.
+     */
     const vocht = inGebied(vochtSensoren)[0] ?? null;
+    const eigenVocht =
+      vocht == null && bron.attribute != null &&
+      getal(statePer.get(bron.id), 'current_humidity') != null
+        ? { id: bron.id, attribute: 'current_humidity' }
+        : null;
+
+    // Een verwijzing zonder attribuut blijft een gewone tekst, zodat het
+    // bestand er niet ingewikkelder uitziet dan het is.
+    const alsRef = (m: { id: string; attribute?: string }): unknown =>
+      m.attribute == null ? m.id : { id: m.id, attribute: m.attribute };
+
     zones.push({
       id: slug(gebied),
       name: naam,
-      temperature: thermometer.entity_id,
+      temperature: alsRef(bron),
       ...(vocht ? { humidity: vocht.entity_id } : {}),
+      ...(eigenVocht ? { humidity: alsRef(eigenVocht) } : {}),
       actuatorIds,
     });
 
@@ -521,7 +574,7 @@ export function ontdek(r: Registers): Voorstel {
       soort: 'gevonden',
       pad: `zones.${slug(gebied)}`,
       tekst:
-        `${naam}: ${thermometer.entity_id} met ` +
+        `${naam}: ${bron.id}${bron.attribute ? ` (${bron.attribute})` : ''} met ` +
         `${actuatorIds.length} ${actuatorIds.length === 1 ? 'apparaat' : 'apparaten'} ` +
         `(${actuatorIds.join(', ')})`,
     });

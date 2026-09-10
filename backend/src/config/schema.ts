@@ -23,6 +23,7 @@ import {
   type Actuator,
   type ActuatorRole,
   type DeviceRef,
+  type Meetpunt,
   type Mode,
   type SetpointPair,
   type SiteConfig,
@@ -287,6 +288,32 @@ function ref(
   }
   p.error(path, 'moet een tekst zijn of een object met adapter en id');
   return null;
+}
+
+/**
+ * Een meetpunt: net als `ref`, maar de waarde mag ook in een attribuut staan.
+ *
+ *   "sensor.woonkamer_temperatuur"
+ *   { "id": "climate.thermostaat_badkamer", "attribute": "current_temperature" }
+ *
+ * De korte vorm blijft precies wat hij was. In de lange vorm is `adapter`
+ * optioneel geworden — wie een attribuut opgeeft wil zelden ook nog een andere
+ * adapter noemen, en de standaard klopt bijna altijd.
+ */
+function meetpunt(
+  p: Problems,
+  value: unknown,
+  path: string,
+  defaultAdapter: string,
+): Meetpunt | null {
+  if (!isRecord(value) || value['attribute'] === undefined) {
+    return ref(p, value, path, defaultAdapter);
+  }
+  const id = str(p, value, path, 'id');
+  const attribute = str(p, value, path, 'attribute');
+  const adapter = value['adapter'] === undefined ? defaultAdapter : str(p, value, path, 'adapter');
+  if (!id || !attribute || !adapter) return null;
+  return { adapter, id, attribute };
 }
 
 function refList(
@@ -617,12 +644,12 @@ function zone(
   }
   const id = str(p, value, path, 'id');
   const name = strOr(p, value, path, 'name', id ?? '');
-  const temperature = ref(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
+  const temperature = meetpunt(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
   const humidityRaw = value['humidity'];
   const humidity =
     humidityRaw === undefined
       ? null
-      : ref(p, humidityRaw, join(path, 'humidity'), defaultAdapter);
+      : meetpunt(p, humidityRaw, join(path, 'humidity'), defaultAdapter);
 
   const idsRaw = arr(p, value, path, 'actuatorIds', { minLength: 1 });
   const actuatorIds: string[] = [];
