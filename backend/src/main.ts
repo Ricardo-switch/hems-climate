@@ -87,6 +87,9 @@ function fail(problems: readonly string[]): never {
   console.error('Alleen de configuratie nakijken, zonder Home Assistant:');
   console.error('  node dist/main.js --check-config');
   console.error('');
+  console.error('Kijken wat er in huis staat en een configuratie voorstellen:');
+  console.error('  node dist/main.js --discover [pad naar het nieuwe bestand]');
+  console.error('');
   console.error('Meten of deze machine de analyse aankan:');
   console.error('  node dist/main.js --make-winter 180 <bronmap> <doelmap>');
   console.error('  node dist/main.js --benchmark <doelmap>');
@@ -235,6 +238,21 @@ if (complaint) {
   console.error('');
   console.error('Doorgaan heeft geen zin; Home Assistant zou dit weigeren.');
   process.exit(1);
+}
+
+/*
+ * Ontdekken gaat vóór het inlezen van de configuratie.
+ *
+ * Dat is de hele reden dat deze vlag bestaat: wie hem gebruikt heeft nog geen
+ * configuratie. Zou hij ná `loadSiteConfig` staan, dan zou de opdracht die je
+ * helpt aan een configuratie te komen alleen werken als je er al een had.
+ */
+if (process.argv.includes('--discover')) {
+  const i = process.argv.indexOf('--discover');
+  const arg = process.argv[i + 1];
+  const doel = arg != null && !arg.startsWith('--') ? resolve(arg) : null;
+  const { discoverCli } = await import('./adapters/homeassistant/discoverCli.js');
+  process.exit(await discoverCli({ url: url!, token: token!, doel }));
 }
 
 const tickSeconds = Number(process.env['SHADOW_TICK_SECONDS'] ?? 30);

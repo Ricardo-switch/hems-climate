@@ -321,11 +321,17 @@ const STANDAARD_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
   handmatig: {},
 };
 
+interface SetpointUitkomst {
+  readonly points: Record<Mode, SetpointPair>;
+  /** Welke modi uit de standaardwaarden komen in plaats van uit het bestand. */
+  readonly ingevuld: ReadonlySet<Mode>;
+}
+
 function setpoints(
   p: Problems,
   value: unknown,
   path: string,
-): Record<Mode, SetpointPair> | null {
+): SetpointUitkomst | null {
   if (value === undefined) {
     p.warn(
       path,
@@ -333,12 +339,13 @@ function setpoints(
         `dag ${STANDAARD_SETPOINTS.dag.heat} / nacht ${STANDAARD_SETPOINTS.nacht.heat} / ` +
         `afwezig ${STANDAARD_SETPOINTS.afwezig.heat} / vakantie ${STANDAARD_SETPOINTS.vakantie.heat} °C`,
     );
-    return { ...STANDAARD_SETPOINTS };
+    return { points: { ...STANDAARD_SETPOINTS }, ingevuld: new Set(MODES) };
   }
   if (!isRecord(value)) {
     p.error(path, 'moet een object zijn');
     return null;
   }
+  const ingevuld = new Set<Mode>();
   for (const key of Object.keys(value)) {
     if (!(MODES as readonly string[]).includes(key)) {
       p.error(join(path, key), `"${key}" is geen bekende modus; kies uit ${MODES.join(', ')}`);
@@ -351,6 +358,7 @@ function setpoints(
       // Een deels ingevulde tabel aanvullen in plaats van afkeuren. Wie drie
       // modi heeft bedacht is niet van plan de andere drie te verbieden.
       out[mode] = { ...STANDAARD_SETPOINTS[mode] };
+      ingevuld.add(mode);
       continue;
     }
     if (!isRecord(raw)) {
@@ -371,7 +379,7 @@ function setpoints(
     }
     out[mode] = pair;
   }
-  return out;
+  return { points: out, ingevuld };
 }
 
 function actuator(
@@ -517,6 +525,82 @@ function actuator(
   return { id, name, ref: refValue, role, capabilities, power, timing };
 }
 
+/*
+ * Ingevulde setpoints binnen bereik van de apparaten brengen.
+ *
+ * De standaardwaarden zijn vaste getallen — vakantie op 12 °C — maar of die
+ * haalbaar zijn hangt af van wat er in de kamer hangt. Een airco die pas bij
+ * 16 begint, haalt 12 nooit, en de samenhangscontrole wees zo'n configuratie
+ * terecht af. Die controle is goed; het waren de standaardwaarden die niet
+ * wisten waar ze terechtkwamen.
+ *
+ * Twee dingen gebeuren hier, en allebei alleen voor wat wij zelf hebben
+ * ingevuld. Wat de bewoner opschrijft blijft staan en mag gerust een fout
+ * opleveren: dan is er iets anders aan de hand dan een gok van ons.
+ *
+ *  - een verwarmingsdoel dat buiten het bereik valt wordt erin geschoven;
+ *  - een verwarmingsdoel in een zone die niet kan verwarmen verdwijnt. Er
+ *    blijft dan niets over, en de zone doet niets — wat eerlijker is dan
+ *    een koeldoel verzinnen dat wij hebben bedacht.
+ */
+function passendGemaakt(
+  p: Problems,
+  gelezen: SetpointUitkomst,
+  path: string,
+  actuatorIds: readonly string[],
+  apparaten: ReadonlyMap<string, Actuator>,
+): Record<Mode, SetpointPair> {
+  const inZone = actuatorIds.map((id) => apparaten.get(id)).filter((a): a is Actuator => a != null);
+  if (inZone.length === 0 || gelezen.ingevuld.size === 0) return gelezen.points;
+
+  const kanVerwarmen = inZone.filter((a) => a.capabilities.canHeat);
+  const out = { ...gelezen.points };
+
+  if (kanVerwarmen.length === 0) {
+    let weggehaald = 0;
+    for (const mode of gelezen.ingevuld) {
+      if (out[mode].heat != null) {
+        out[mode] = { ...out[mode] };
+        delete (out[mode] as { heat?: number }).heat;
+        weggehaald += 1;
+      }
+    }
+    if (weggehaald > 0) {
+      p.warn(
+        join(path, 'setpoints'),
+        'geen enkel apparaat in deze zone kan verwarmen, dus de ingevulde ' +
+          'verwarmingsdoelen zijn weggelaten. Zet zelf een koeldoel als je wilt ' +
+          'dat hier iets gebeurt — koelen verzinnen wij niet.',
+      );
+    }
+    return out;
+  }
+
+  const laagste = Math.min(...kanVerwarmen.map((a) => a.capabilities.setpointRange[0]));
+  const hoogste = Math.max(...kanVerwarmen.map((a) => a.capabilities.setpointRange[1]));
+  let verschoven = 0;
+  for (const mode of gelezen.ingevuld) {
+    const heat = out[mode].heat;
+    if (heat == null) continue;
+    const binnen = Math.min(hoogste, Math.max(laagste, heat));
+    if (binnen !== heat) {
+      out[mode] = { ...out[mode], heat: binnen };
+      verschoven += 1;
+    }
+  }
+  if (verschoven > 0) {
+    p.warn(
+      join(path, 'setpoints'),
+      verschoven === 1
+        ? `één ingevuld verwarmingsdoel viel buiten het bereik ${laagste}-${hoogste} °C ` +
+          'van de apparaten en is erin geschoven'
+        : `${verschoven} ingevulde verwarmingsdoelen vielen buiten het bereik ` +
+          `${laagste}-${hoogste} °C van de apparaten en zijn erin geschoven`,
+    );
+  }
+  return out;
+}
+
 function zone(
   p: Problems,
   value: unknown,
@@ -524,6 +608,8 @@ function zone(
   defaultAdapter: string,
   /** Positie in de lijst, als terugval voor `priority`. */
   volgorde: number,
+  /** De al gelezen apparaten, om ingevulde setpoints haalbaar te houden. */
+  apparaten: ReadonlyMap<string, Actuator>,
 ): Zone | null {
   if (!isRecord(value)) {
     p.error(path, 'moet een object zijn');
@@ -597,7 +683,8 @@ function zone(
     }
   }
 
-  const points = setpoints(p, value['setpoints'], join(path, 'setpoints'));
+  const gelezen = setpoints(p, value['setpoints'], join(path, 'setpoints'));
+  const points = gelezen == null ? null : passendGemaakt(p, gelezen, path, actuatorIds, apparaten);
 
   if (
     !id ||
@@ -821,7 +908,9 @@ export function parseSiteConfig(
 
   const zonesRaw = arr(p, input, '', 'zones', { minLength: 1 });
   const zones = (zonesRaw ?? [])
-    .map((v, i) => zone(p, v, `zones[${i}]`, defaultAdapter, i + 1))
+    .map((v, i) =>
+      zone(p, v, `zones[${i}]`, defaultAdapter, i + 1, new Map(actuators.map((a) => [a.id, a]))),
+    )
     .filter((z): z is Zone => z != null);
 
   /*

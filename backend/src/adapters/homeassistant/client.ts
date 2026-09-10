@@ -11,6 +11,20 @@
 
 import { EventEmitter } from 'node:events';
 
+/**
+ * Wat `query()` mag opvragen. Alles hierbuiten werpt.
+ *
+ * Allemaal leesopdrachten uit de registers van Home Assistant. `get_config`
+ * staat erbij omdat daar de tijdzone in zit — het enige veld dat de
+ * configuratie echt nodig heeft en dat nergens anders te halen is.
+ */
+const LEESOPDRACHTEN: ReadonlySet<string> = new Set([
+  'get_config',
+  'config/area_registry/list',
+  'config/device_registry/list',
+  'config/entity_registry/list',
+]);
+
 export interface HaEntityState {
   readonly entity_id: string;
   readonly state: string;
@@ -252,6 +266,28 @@ export class HaClient extends EventEmitter {
       pending.reject(new Error(reason));
     }
     this.#pending.clear();
+  }
+
+  /**
+   * Stelt Home Assistant een leesvraag.
+   *
+   * Bedoeld voor de registers waarmee de onboarding een installatie ontdekt:
+   * gebieden, apparaten, entiteiten, en de basisinstellingen waarin de
+   * tijdzone staat.
+   *
+   * De lijst hieronder is een witte lijst en geen gemak. `callService` werpt
+   * zolang `allowWrites` uit staat (besluit 15), en dat zou weinig waard zijn
+   * als er daarnaast een gat bestaat waar elk willekeurig commando doorheen
+   * kan. Wie hier iets wil toevoegen, voegt het bewust toe.
+   */
+  async query<T>(type: string): Promise<T> {
+    if (!LEESOPDRACHTEN.has(type)) {
+      throw new Error(
+        `"${type}" staat niet op de lijst van leesopdrachten. ` +
+          `Toegestaan zijn: ${[...LEESOPDRACHTEN].join(', ')}.`,
+      );
+    }
+    return (await this.#command({ type })) as T;
   }
 
   /**
