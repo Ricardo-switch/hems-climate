@@ -53,6 +53,8 @@ export interface HaRegistryEntity {
   readonly entity_category?: string | null;
   readonly device_class?: string | null;
   readonly original_device_class?: string | null;
+  /** De integratie die deze entiteit levert, bijvoorbeeld "buienradar". */
+  readonly platform?: string | null;
 }
 
 export interface HaCoreConfig {
@@ -133,10 +135,26 @@ const METERWOORDEN = new RegExp(
   `${GRENS_VOOR}(?:p1|grid|net|netto)${GRENS_NA}|smart[ _-]?meter|slimme[ _-]?meter`,
   'i',
 );
+/**
+ * Wat een weerintegratie naast de huidige temperatuur nog meer levert.
+ *
+ * Buienradar geeft dertien temperatuursensoren: de huidige, de gevoels- en
+ * grondtemperatuur, en per dag een verwachting met een minimum. Voor het
+ * beslislogboek willen we er precies één — wat het buiten nú is.
+ */
+const AFGELEIDE_TEMPERATUUR =
+  /(_\d+d$)|forecast|verwacht|gevoels|apparent|feels|grond|ground|soil|dauw|dew|minimale|maximale|minimum|maximum/i;
+
 const BUITENWOORDEN = new RegExp(
   `${GRENS_VOOR}(?:buiten|outdoor|outside|extern|external)${GRENS_NA}`,
   'i',
 );
+
+/** Heet deze sensor gewoon "temperatuur", zonder verdere bijstelling? */
+function kaleNaam(e: HaRegistryEntity): boolean {
+  const object = e.entity_id.split('.')[1] ?? '';
+  return object === 'temperatuur' || object === 'temperature';
+}
 
 // ------------------------------------------------------------ ontdekken ----
 
@@ -213,36 +231,64 @@ export function ontdek(r: Registers): Voorstel {
   // Thermometers die aan geen enkel gebied hangen: kandidaten, geen keuze.
   const zwervend = temperatuurSensoren.filter((e) => gebiedVan(e) == null);
   /*
-   * Geen naam die naar buiten wijst? Dan niet kiezen.
+   * Geen naam die naar buiten wijst? Dan de weerintegratie vragen.
    *
-   * De eerste versie viel terug op "een thermometer die aan geen enkel gebied
-   * hangt". Dat leek redelijk — een weersintegratie zit nergens in huis — maar
-   * op de gemeten woning leverde het zeventien kandidaten op, waarvan de
-   * eerste een Formule 1-sensor was.
+   * Wie een weerdienst gekoppeld heeft, heeft daarmee een buitentemperatuur —
+   * dat is waar zo'n integratie voor is. Welke integraties dat zijn hoeven we
+   * niet te weten: een integratie die een `weather.`-entiteit levert, is er
+   * een. Zo hoeft er geen lijst met namen bijgehouden te worden die
+   * veroudert.
    *
-   * Dit veld is optioneel: zonder hem regelt alles gewoon door en mist alleen
-   * de dataset een kolom (besluit 30). Een verkeerde keuze kost meer dan geen
-   * keuze, dus tonen we de kandidaten en laten we het aan de bewoner.
+   * De eerste versie viel hier terug op "een thermometer die aan geen enkel
+   * gebied hangt". Op de gemeten woning gaf dat achttien kandidaten met een
+   * Formule 1-sensor bovenaan. Dit filter houdt er daar één van over.
    */
-  const buiten = buitenKandidaten[0] ?? null;
+  const weerPlatforms = new Set(
+    bruikbaar
+      .filter((e) => e.entity_id.startsWith('weather.'))
+      .map((e) => e.platform)
+      .filter((x): x is string => x != null),
+  );
+  const uitWeerbericht = temperatuurSensoren
+    .filter(
+      (e) =>
+        e.platform != null &&
+        weerPlatforms.has(e.platform) &&
+        !AFGELEIDE_TEMPERATUUR.test(e.entity_id),
+    )
+    /*
+     * Blijven er meer over, dan bovenaan degene die gewoon "temperatuur" heet.
+     *
+     * Een weerintegratie voor je eigen postcode noemt zijn sensor zelden
+     * anders. Wie er daarnaast een heeft voor een circuit — dat komt voor —
+     * herkent die aan de naam. Wij kiezen dan niet; we leggen alleen de meest
+     * waarschijnlijke bovenop.
+     */
+    .sort((a, b) => Number(!kaleNaam(a)) - Number(!kaleNaam(b)));
+
+  const buiten = buitenKandidaten[0] ?? (uitWeerbericht.length === 1 ? uitWeerbericht[0]! : null);
   if (buiten) {
+    const opNaam = buitenKandidaten.length > 0;
+    const anderen = opNaam ? buitenKandidaten.slice(1).map((e) => e.entity_id) : [];
     bevindingen.push({
-      soort: buitenKandidaten.length > 1 ? 'geraden' : 'gevonden',
+      soort: opNaam && anderen.length === 0 ? 'gevonden' : 'geraden',
       pad: 'outdoorTemperature',
-      tekst: `${buiten.entity_id} — ${naamVan(buiten, statePer.get(buiten.entity_id))}`,
-      ...(buitenKandidaten.length > 1
-        ? { alternatieven: buitenKandidaten.slice(1).map((e) => e.entity_id) }
-        : {}),
+      tekst: opNaam
+        ? `${buiten.entity_id} — ${naamVan(buiten, statePer.get(buiten.entity_id))}`
+        : `${buiten.entity_id}, de enige actuele buitentemperatuur van je weerintegratie`,
+      ...(anderen.length > 0 ? { alternatieven: anderen } : {}),
     });
-  } else if (zwervend.length > 0) {
+  } else if (uitWeerbericht.length > 1 || zwervend.length > 0) {
+    const kandidaten = uitWeerbericht.length > 1 ? uitWeerbericht : zwervend;
     bevindingen.push({
       soort: 'ontbreekt',
       pad: 'outdoorTemperature',
       tekst:
-        `geen sensor heet naar buiten. Deze ${zwervend.length} hangen aan geen enkel ` +
-        'gebied en zijn dus kandidaat; kies er zelf een. Zonder buitentemperatuur ' +
-        'regelt alles gewoon door, maar mist de dataset een kolom (besluit 30).',
-      alternatieven: zwervend.map((e) => e.entity_id),
+        `geen sensor heet naar buiten, en er is er niet één aan te wijzen. Deze ` +
+        `${kandidaten.length} komen in aanmerking; kies er zelf een. Zonder ` +
+        'buitentemperatuur regelt alles gewoon door, maar mist de dataset een ' +
+        'kolom (besluit 30).',
+      alternatieven: kandidaten.map((e) => e.entity_id),
     });
   } else {
     bevindingen.push({

@@ -180,6 +180,54 @@ describe('de ontdekking', () => {
     expect(zone['temperature']).toBe('sensor.woonkamer_temp');
   });
 
+  it('vindt de buitentemperatuur bij de weerintegratie', () => {
+    // Een integratie die een `weather.`-entiteit levert, is een weerintegratie.
+    // Zo hoeft er geen lijst met namen bijgehouden te worden die veroudert.
+    const r = basis();
+    r.entities.push(
+      ent('weather.buienradar', { platform: 'buienradar' }),
+      ent('sensor.temperatuur', { platform: 'buienradar', original_device_class: 'temperature' }),
+      // De rest van wat zo'n integratie meelevert, en wat we niet willen.
+      ent('sensor.gevoelstemperatuur', {
+        platform: 'buienradar',
+        original_device_class: 'temperature',
+      }),
+      ent('sensor.grondtemperatuur', {
+        platform: 'buienradar',
+        original_device_class: 'temperature',
+      }),
+      ent('sensor.temperatuur_1d', {
+        platform: 'buienradar',
+        original_device_class: 'temperature',
+      }),
+      ent('sensor.minimale_temperatuur_3d', {
+        platform: 'buienradar',
+        original_device_class: 'temperature',
+      }),
+    );
+    const voorstel = ontdek(r);
+    expect(voorstel.config['outdoorTemperature']).toBe('sensor.temperatuur');
+    expect(voorstel.bevindingen.find((b) => b.pad === 'outdoorTemperature')!.soort).toBe('geraden');
+  });
+
+  it('kiest niet wanneer er twee weerintegraties zijn, maar sorteert wel', () => {
+    // Uit de echte installatie: naast het weer thuis ook het weer op een
+    // circuit. Dan is kiezen aan de bewoner — wij leggen alleen de meest
+    // waarschijnlijke bovenop.
+    const r = basis();
+    r.entities.push(
+      ent('weather.buienradar', { platform: 'buienradar' }),
+      ent('weather.circuit', { platform: 'f1_sensor' }),
+      ent('sensor.f1_weather', { platform: 'f1_sensor', original_device_class: 'temperature' }),
+      ent('sensor.temperatuur', { platform: 'buienradar', original_device_class: 'temperature' }),
+    );
+    const voorstel = ontdek(r);
+    expect(voorstel.config['outdoorTemperature']).toBeUndefined();
+    const b = voorstel.bevindingen.find((x) => x.pad === 'outdoorTemperature')!;
+    expect(b.soort).toBe('ontbreekt');
+    expect(b.alternatieven?.[0]).toBe('sensor.temperatuur');
+  });
+
   it('raadt de slimme meter en zegt erbij dat het een gok is', () => {
     const r = basis();
     r.devices.push({ id: 'dev-p1', area_id: null });
