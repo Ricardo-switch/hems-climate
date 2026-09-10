@@ -63,6 +63,8 @@ export interface Moment {
   readonly failsafe: boolean;
   /** Buitentemperatuur, of null. Waarneming; de regeling gebruikt hem niet. */
   readonly outdoorC: number | null;
+  /** Opbrengst van de panelen in W, als maat voor instraling (besluit 47). */
+  readonly solarW: number | null;
   /** Of dit een volledig record was; korte records dragen veel voort. */
   readonly full: boolean;
   /**
@@ -126,6 +128,7 @@ interface RawRecord {
   accepted?: { actuatorId: string; action: string; strategyId?: string }[];
   failsafe?: { active: boolean };
   buitenC?: number | null;
+  zonW?: number | null;
 }
 
 const EMPTY_BUDGET = {
@@ -229,6 +232,7 @@ export async function* readMoments(
         arbiterAction,
         failsafe: raw.failsafe?.active === true,
         outdoorC: raw.buitenC ?? null,
+        solarW: raw.zonW ?? null,
         full: raw.changed === true,
         handsOff: handsOffAt(mode, lastLegacy),
       };

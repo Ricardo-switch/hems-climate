@@ -320,5 +320,6 @@
     "manualOverride": "timer.verwarming_handmatig"
   },
   "sun": "sun.sun",
-  "outdoorTemperature": "sensor.temperatuur"
+  "outdoorTemperature": "sensor.temperatuur",
+  "solarProduction": "sensor.solaredge_huidig_vermogen"
 }

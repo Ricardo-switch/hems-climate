@@ -171,6 +171,10 @@ const METERWOORDEN = new RegExp(
 const AFGELEIDE_TEMPERATUUR =
   /(_\d+d$)|forecast|verwacht|gevoels|apparent|feels|grond|ground|soil|dauw|dew|minimale|maximale|minimum|maximum/i;
 
+/** Woorden die op de opbrengst van zonnepanelen wijzen. */
+const OPBRENGSTWOORDEN =
+  /solar|zonne|zonnepane|pv[_ ]|photovolta|omvormer|inverter|huidig[_ ]vermogen/i;
+
 const BUITENWOORDEN = new RegExp(
   `${GRENS_VOOR}(?:buiten|outdoor|outside|extern|external)${GRENS_NA}`,
   'i',
@@ -629,6 +633,58 @@ export function ontdek(r: Registers): Voorstel {
     });
   }
 
+  // ---- opbrengst van de panelen -------------------------------------------
+  //
+  // De beste instralingsmeter die een woning met panelen al in huis heeft
+  // (besluit 47). Herkenbaar aan de naam plus de eis dat hij in watt meet:
+  // een omvormer die in kW rapporteert kan ook, maar dan klopt de eenheid in
+  // het logboek niet meer met de rest.
+  const opbrengstKandidaten = vermogenSensoren.filter((e) => {
+    const st = statePer.get(e.entity_id);
+    const eenheid = (st?.attributes as Record<string, unknown> | undefined)?.[
+      'unit_of_measurement'
+    ];
+    return (
+      OPBRENGSTWOORDEN.test(e.entity_id) &&
+      !METERWOORDEN.test(e.entity_id) &&
+      eenheid === 'W'
+    );
+  });
+  const opbrengst = opbrengstKandidaten[0] ?? null;
+  if (opbrengst) {
+    bevindingen.push({
+      soort: 'geraden',
+      pad: 'solarProduction',
+      tekst: `${opbrengst.entity_id} lijkt te meten wat de panelen leveren`,
+      ...(opbrengstKandidaten.length > 1
+        ? { alternatieven: opbrengstKandidaten.slice(1).map((e) => e.entity_id) }
+        : {}),
+    });
+    if (opbrengstKandidaten.length > 1) {
+      keuzes.push({
+        id: 'solarProduction',
+        soort: 'veld',
+        pad: 'solarProduction',
+        vraag: 'Welke sensor meet wat je panelen leveren?',
+        toelichting:
+          'De regeling gebruikt hem niet. Hij gaat mee het logboek in als maat ' +
+          'voor instraling, zodat later te berekenen valt hoeveel de zon een ' +
+          'kamer opwarmt. Overslaan mag.',
+        huidig: opbrengst.entity_id,
+        opties: opbrengstKandidaten.map((e) => e.entity_id),
+        magLeeg: true,
+      });
+    }
+  } else {
+    bevindingen.push({
+      soort: 'ontbreekt',
+      pad: 'solarProduction',
+      tekst:
+        'geen sensor herkend die de opbrengst van zonnepanelen meet. Zonder die ' +
+        'maat kan later niet worden uitgerekend hoeveel de zon een kamer opwarmt.',
+    });
+  }
+
   // ---- bewoners en zon ----------------------------------------------------
 
   const personen = van('person');
@@ -669,6 +725,7 @@ export function ontdek(r: Registers): Voorstel {
     zones,
     ...(zon ? { sun: 'sun.sun' } : {}),
     ...(buiten ? { outdoorTemperature: buiten.entity_id } : {}),
+    ...(opbrengst ? { solarProduction: opbrengst.entity_id } : {}),
   };
 
   return { config, bevindingen, keuzes };

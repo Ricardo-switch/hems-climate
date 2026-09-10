@@ -92,6 +92,7 @@ function explain(
     outdoorTemperatureC: state.outdoorTemperatureC.ok
       ? state.outdoorTemperatureC.value
       : null,
+    solarProductionW: state.solarProductionW.ok ? state.solarProductionW.value : null,
   };
 }
 

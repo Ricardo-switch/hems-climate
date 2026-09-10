@@ -210,6 +210,7 @@ export function buildSystemState(
   const sun = config.sun == null ? null : source.bool(config.sun.id);
   const buiten =
     config.outdoorTemperature == null ? null : source.number(config.outdoorTemperature.id);
+  const zonW = config.solarProduction == null ? null : lees(source, config.solarProduction);
 
   /*
    * De modus komt uit twee soorten knoppen, en de volgorde is niet vrijblijvend.
@@ -244,6 +245,9 @@ export function buildSystemState(
     // sensor in de configuratie, dan blijft dit `unavailable` en gaat er null
     // het logboek in — een lege kolom is eerlijker dan een verzonnen waarde.
     outdoorTemperatureC: buiten == null ? unavailable<number>('missing') : value(buiten, nowMs),
+    // Ook waarneming (besluit 47). Zonder panelen of zonder sensor blijft dit
+    // leeg, en gaat er null het logboek in.
+    solarProductionW: zonW == null ? unavailable<number>('missing') : value(zonW, nowMs),
     inputHealth,
   };
 }
@@ -328,6 +332,7 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   if (config.timers?.stabilisation) ids.add(config.timers.stabilisation.id);
   if (config.timers?.manualOverride) ids.add(config.timers.manualOverride.id);
   if (config.outdoorTemperature) ids.add(config.outdoorTemperature.id);
+  if (config.solarProduction) ids.add(config.solarProduction.id);
 
   for (const ref of config.criticalInputs) ids.add(ref.id);
   for (const zone of config.zones) {

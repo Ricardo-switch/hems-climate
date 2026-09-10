@@ -1469,6 +1469,37 @@ koud is.
 
 ---
 
+## 47. De opbrengst van de panelen is de instralingsmeter
+
+Het thermische model van fase 7 heeft drie termen: warmteverlies naar buiten,
+wat een apparaat levert, en hoeveel de zon een kamer opwarmt. Voor die derde
+stond er alleen `sun.sun` in het logboek — boven of onder de horizon. Dat is te
+grof: een heldere februarimiddag en een grijze zijn allebei "boven".
+
+*Besluit:* `solarProduction` komt in de configuratie en de gemeten waarde gaat
+mee het beslislogboek in, als `zonW`. Een woning met panelen heeft daarmee de
+beste instralingsmeter die er is al in huis staan — betere data dan een
+weerdienst, want hij meet wat er op dít dak valt.
+
+*Zelfde behandeling als de buitentemperatuur (besluit 30).* Waarneming, geen
+invoer. De regeling leest hem niet, en de test die dat bewaakt is uitgebreid
+zodat hij nu beide velden dekt in plaats van alleen de temperatuur.
+
+*Waarom nu en niet in maart.* Precies de les van vorige week: een kolom die je
+niet opneemt is een winter die je niet terugkrijgt. Toen ontbrak de
+buitentemperatuur, nu deze. Het kost een halve dag en het scheelt een jaar
+wachten.
+
+*De ontdekking stelt hem voor,* met de eis dat de sensor in watt meet — een
+omvormer die in kW rapporteert kan ook, maar dan klopt de eenheid in het
+logboek niet meer met de rest. Bij deze woning wordt dat
+`sensor.solaredge_huidig_vermogen`.
+
+*De datasetmeter telt hem mee.* Zolang de kolom leeg blijft, staat hij bij de
+ontbrekende invoer. Anders zou de meter volledigheid melden die er niet is.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

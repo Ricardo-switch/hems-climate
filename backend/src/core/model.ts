@@ -325,6 +325,19 @@ export interface SiteConfig {
    * zonder buitensensor moet gewoon kunnen draaien.
    */
   readonly outdoorTemperature?: DeviceRef;
+  /**
+   * Wat de zonnepanelen op dit moment leveren, in W.
+   *
+   * Net als de buitentemperatuur: waarneming, geen invoer voor de regeling
+   * (besluit 30). Hij gaat mee het logboek in omdat het thermische model van
+   * fase 7 hem nodig heeft.
+   *
+   * Waarvoor precies: de term "hoeveel warmt de zon deze kamer op". Zon boven
+   * of onder de horizon is daarvoor te grof — een heldere februarimiddag en
+   * een grijze zijn allebei "boven". De eigen opbrengst is de beste
+   * instralingsmeter die een woning met panelen al in huis heeft.
+   */
+  readonly solarProduction?: Meetpunt;
   readonly migration?: MigrationConfig;
 }
 
