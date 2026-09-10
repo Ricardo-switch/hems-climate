@@ -124,6 +124,8 @@ export interface Explanation {
    * fase 7 hem straks nodig heeft over een hele winter (besluit 30).
    */
   readonly outdoorTemperatureC: number | null;
+  /** Opbrengst van de zonnepanelen in W. Zelfde reden, zie besluit 47. */
+  readonly solarProductionW: number | null;
 }
 
 export interface ZoneExplanation {

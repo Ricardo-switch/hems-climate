@@ -112,6 +112,13 @@ export interface SystemState {
    * en een test bewaakt dat.
    */
   readonly outdoorTemperatureC: Reading<number>;
+  /**
+   * Opbrengst van de zonnepanelen in W.
+   *
+   * Zelfde regel als hierboven: waarneming voor het logboek, en niets in
+   * `core/` hoort dit te lezen. Dezelfde test bewaakt het.
+   */
+  readonly solarProductionW: Reading<number>;
 }
 
 /** Loopt de timer nog op dit moment? */

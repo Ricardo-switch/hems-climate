@@ -148,6 +148,11 @@ const VERWACHTE_INVOER: readonly {
     waarvoor: 'nodig voor fase 7 (vooruitkijken)',
     aanwezig: (m) => m.outdoorC != null,
   },
+  {
+    id: 'opbrengst zonnepanelen',
+    waarvoor: 'maat voor instraling; zonder deze kolom is niet te berekenen hoeveel de zon een kamer opwarmt',
+    aanwezig: (m) => m.solarW != null,
+  },
 ];
 
 const dagSleutel = (ms: number): string => {

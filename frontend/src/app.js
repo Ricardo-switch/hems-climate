@@ -115,12 +115,13 @@ function tekenBudget(b) {
 }
 
 function tekenBuiten(e) {
-  // Waarneming en geen invoer: hij wordt vastgelegd voor fase 7, de arbiter
-  // gebruikt hem niet. Daarom klein en terzijde.
+  // Waarnemingen en geen invoer: ze worden vastgelegd voor fase 7, de arbiter
+  // gebruikt ze niet. Daarom klein en terzijde.
+  const delen = [];
+  if (e.outdoorTemperatureC != null) delen.push(`buiten ${graden(e.outdoorTemperatureC)}`);
+  if (e.solarProductionW != null) delen.push(`panelen ${Math.round(e.solarProductionW)} W`);
   $('buiten').textContent =
-    e.outdoorTemperatureC == null
-      ? ''
-      : `buiten ${graden(e.outdoorTemperatureC)} · wordt vastgelegd, nog niet gebruikt`;
+    delen.length === 0 ? '' : `${delen.join(' · ')} · wordt vastgelegd, nog niet gebruikt`;
 }
 
 function tekenZones(perZone) {

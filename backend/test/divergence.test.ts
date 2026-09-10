@@ -156,6 +156,7 @@ describe('wat de arbiter zou doen', () => {
     arbiterAction: {},
     failsafe: false,
     outdoorC: null,
+    solarW: null,
     full: true,
     handsOff: false,
     ...over,

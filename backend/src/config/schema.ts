@@ -1196,6 +1196,19 @@ export function parseSiteConfig(
     );
   }
 
+  // Dezelfde behandeling voor de opbrengst van de zonnepanelen (besluit 47).
+  const zonRaw = input['solarProduction'];
+  const solarProduction =
+    zonRaw === undefined ? null : meetpunt(p, zonRaw, 'solarProduction', defaultAdapter);
+  if (zonRaw === undefined) {
+    p.warn(
+      'solarProduction',
+      'ontbreekt; zonder de eigen opbrengst is er geen maat voor instraling, ' +
+        'en kan het thermische model van fase 7 niet uitrekenen hoeveel de zon ' +
+        'een kamer opwarmt',
+    );
+  }
+
   let migration: SiteConfig['migration'];
   const migrationRaw = input['migration'];
   if (migrationRaw !== undefined) {
@@ -1360,6 +1373,7 @@ export function parseSiteConfig(
       ...(timers ? { timers } : {}),
       ...(sun ? { sun } : {}),
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
+      ...(solarProduction ? { solarProduction } : {}),
       ...(migration ? { migration } : {}),
     },
     warnings: p.warnings,

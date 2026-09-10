@@ -777,8 +777,8 @@ describe('de weergave krijgt het besluit', () => {
   });
 });
 
-describe('de buitentemperatuur is waarneming, geen invoer', () => {
-  it('wordt nergens in de kern gelezen', () => {
+describe('waarnemingen zijn geen invoer voor de regeling', () => {
+  it('worden nergens in de kern gelezen', () => {
     // Besluit 30: hij gaat mee het logboek in zodat fase 7 straks een complete
     // winter heeft, maar de arbiter neemt er geen besluit op. Zodra iemand dat
     // wél wil, hoort daar een besluit bij — en dan faalt deze test als
@@ -789,11 +789,15 @@ describe('de buitentemperatuur is waarneming, geen invoer', () => {
     const bestanden = readdirSync(kern).filter((n) => n.endsWith('.ts'));
     expect(bestanden.length).toBeGreaterThan(4);
 
-    const lezers = bestanden.filter((naam) => {
-      if (naam === 'state.ts' || naam === 'decision.ts' || naam === 'decide.ts') return false;
-      return readFileSync(new URL(naam, kern), 'utf-8').includes('outdoorTemperatureC');
-    });
-    expect(lezers).toEqual([]);
+    // Twee waarnemingen inmiddels: de buitentemperatuur (besluit 30) en de
+    // opbrengst van de panelen (besluit 47). Voor allebei geldt hetzelfde.
+    for (const veld of ['outdoorTemperatureC', 'solarProductionW']) {
+      const lezers = bestanden.filter((naam) => {
+        if (naam === 'state.ts' || naam === 'decision.ts' || naam === 'decide.ts') return false;
+        return readFileSync(new URL(naam, kern), 'utf-8').includes(veld);
+      });
+      expect(lezers, veld).toEqual([]);
+    }
   });
 
   it('komt onbewerkt in de uitleg terecht', () => {
@@ -801,7 +805,12 @@ describe('de buitentemperatuur is waarneming, geen invoer', () => {
       exampleSite,
       {
         state: (id) => (id === exampleSite.outdoorTemperature!.id ? '7.3' : null),
-        number: (id) => (id === exampleSite.outdoorTemperature!.id ? 7.3 : null),
+        number: (id) =>
+          id === exampleSite.outdoorTemperature!.id
+            ? 7.3
+            : id === exampleSite.solarProduction!.id
+              ? 1840
+              : null,
         bool: () => null,
         attr: () => null,
         attrNumber: () => null,
@@ -818,6 +827,7 @@ describe('de buitentemperatuur is waarneming, geen invoer', () => {
       strategies: defaultStrategies(),
     });
     expect(decision.explanation.outdoorTemperatureC).toBe(7.3);
+    expect(decision.explanation.solarProductionW).toBe(1840);
   });
 });
 

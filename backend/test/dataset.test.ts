@@ -28,6 +28,7 @@ function moment(over: Partial<Moment> & { tMs: number }): Moment {
     arbiterAction: {},
     failsafe: false,
     outdoorC: null,
+    solarW: null,
     full: true,
     handsOff: false,
     ...over,
@@ -210,10 +211,19 @@ describe('verwachte invoer', () => {
     expect(s.ontbrekendeInvoer.map((i) => i.id)).toContain('buitentemperatuur');
   });
 
-  it('meldt hem niet meer zodra hij wordt vastgelegd', async () => {
-    // Sinds fase 6b gaat hij mee het logboek in (besluit 30). Een vaste regel
-    // die "ontbreekt" bleef zeggen zou de meter een onwaarheid laten tonen.
+  it('meldt de opbrengst van de panelen zolang die ontbreekt', async () => {
+    // De maat voor instraling (besluit 47). Zonder die kolom is de derde term
+    // van het thermische model niet te passen, en dat merk je pas in maart.
     const s = (await datasetStatus(stroom(volleDag('2026-11-20', { outdoorC: 4.5 }))))!;
+    expect(s.ontbrekendeInvoer.map((i) => i.id)).toEqual(['opbrengst zonnepanelen']);
+  });
+
+  it('meldt ze niet meer zodra ze allebei worden vastgelegd', async () => {
+    // Een vaste regel die "ontbreekt" bleef zeggen zou de meter een onwaarheid
+    // laten tonen.
+    const s = (await datasetStatus(
+      stroom(volleDag('2026-11-20', { outdoorC: 4.5, solarW: 1800 })),
+    ))!;
     expect(s.ontbrekendeInvoer).toEqual([]);
   });
 });

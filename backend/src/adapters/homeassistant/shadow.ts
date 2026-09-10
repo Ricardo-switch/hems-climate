@@ -465,6 +465,7 @@ export class ShadowRunner {
           occupied: e.occupied,
           budget: e.budget,
           buitenC: e.outdoorTemperatureC,
+          zonW: e.solarProductionW,
           failsafe: e.failsafe,
           zones: e.perZone,
           commands: decision.commands,
@@ -483,6 +484,7 @@ export class ShadowRunner {
           // besluitwijziging opschrijven zou een dataset opleveren met gaten van
           // uren — precies waar de arbiter het rustigst is.
           buitenC: e.outdoorTemperatureC,
+          zonW: e.solarProductionW,
           // Genoeg om de temperatuurgang te volgen zonder doelen en redenen te
           // herhalen: die staan in het laatste volledige record ervoor.
           // Ook hier de luchtvochtigheid: net als bij de buitentemperatuur is
