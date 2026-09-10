@@ -281,10 +281,29 @@ fi
 
 if [ "$BEFORE" != "$REMOTE" ]; then
   log "Ophalen: $(echo "$BEFORE" | cut -c1-8) naar $(echo "$REMOTE" | cut -c1-8)"
-  "$GIT" log --oneline "$BEFORE..$REMOTE" | sed 's/^/    /'
-  # Alleen fast-forward: samenvoegen zou een merge-commit op de NAS maken, en
-  # daar hoort geen geschiedenis te ontstaan.
-  "$GIT" merge --ff-only --quiet "origin/$BRANCH"
+  if "$GIT" merge-base --is-ancestor "$BEFORE" "$REMOTE"; then
+    "$GIT" log --oneline "$BEFORE..$REMOTE" | sed 's/^/    /'
+    # Alleen fast-forward: samenvoegen zou een merge-commit op de NAS maken, en
+    # daar hoort geen geschiedenis te ontstaan.
+    "$GIT" merge --ff-only --quiet "origin/$BRANCH"
+  else
+    # De geschiedenis is herschreven; wat hier staat is geen voorouder meer van
+    # wat er op origin staat. `merge --ff-only` faalt dan met "refusing to merge
+    # unrelated histories", en de uitrol staat stil tot iemand het met de hand
+    # rechtzet.
+    #
+    # Terugzetten is hier het goede antwoord en geen noodgreep: deze werkmap is
+    # een spiegel van origin en geen plek waar werk ontstaat. Eigen wijzigingen
+    # zijn een paar regels hierboven al geweigerd, dus er valt niets te
+    # verliezen. En een reset maakt geen commit, dus het uitgangspunt blijft
+    # staan dat er op de NAS geen geschiedenis bijkomt.
+    log "  De geschiedenis is herschreven — $(echo "$BEFORE" | cut -c1-8) is geen"
+    log "  voorouder van $(echo "$REMOTE" | cut -c1-8). Terugzetten in plaats van"
+    log "  samenvoegen. Terug naar de oude stand kan met:"
+    log "    cd $SRC && $GIT reset --hard $BEFORE"
+    "$GIT" log --oneline -n 5 "$REMOTE" | sed 's/^/    /'
+    "$GIT" reset --hard --quiet "origin/$BRANCH"
+  fi
 fi
 
 AFTER="$("$GIT" rev-parse HEAD)"

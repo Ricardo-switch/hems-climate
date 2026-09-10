@@ -28,6 +28,9 @@ chmod +x /volume1/docker/hems-climate/deploy.sh
 Het script staat bewust in de wortel en niet in `src/`, zodat een `git pull`
 nooit het script kan raken dat op dat moment draait.
 
+Die scheiding heeft een keerzijde: een verbetering in `deploy.sh` komt pas mee
+nadat je stap 2 opnieuw doet. Het script werkt zichzelf niet bij, met opzet.
+
 **3. Eerst proefdraaien**, voordat je iets inplant:
 
 ```bash
@@ -132,3 +135,26 @@ Het logboek staat in `/volume1/docker/hems-climate/deploy.log` en wordt op
 ./deploy.sh              # normaal
 ./deploy.sh --force      # herbouwen ook zonder wijzigingen
 ```
+
+## Als de geschiedenis is herschreven
+
+Wordt er op GitHub geforceerd gepusht — bijvoorbeeld omdat er iets uit de
+geschiedenis moest dat er niet in hoorde — dan is de commit op de NAS geen
+voorouder meer van wat er op origin staat. `deploy.sh` merkt dat sinds
+10 september zelf op en zet de werkmap terug in plaats van te proberen samen te
+voegen; hij logt daarbij de oude commit, zodat je terug kunt.
+
+Draait er nog een oudere versie van het script, dan strandt de uitrol op
+`refusing to merge unrelated histories` en stopt hij met code 128 zonder iets
+te wijzigen. Eenmalig rechtzetten:
+
+```bash
+cd /volume1/docker/hems-climate/src
+git fetch origin
+git reset --hard origin/main
+cp deploy/deploy.sh /volume1/docker/hems-climate/deploy.sh
+chmod +x /volume1/docker/hems-climate/deploy.sh
+```
+
+De eerstvolgende uitrol bouwt daarna volledig opnieuw: de commit die in
+`.deployed` staat bestaat niet meer, dus er valt niets te vergelijken.
