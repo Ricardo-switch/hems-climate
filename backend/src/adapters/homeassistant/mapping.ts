@@ -9,7 +9,7 @@
  * In fase 4 levert de onboarding ze aan; de vorm blijft dezelfde.
  */
 
-import type { DeviceRef, Mode, SiteConfig, Zone } from '../../core/model.js';
+import type { DeviceRef, Meetpunt, Mode, SiteConfig, Zone } from '../../core/model.js';
 import type { ActuatorState, SystemState, TimerId, TimerState } from '../../core/state.js';
 import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
@@ -76,6 +76,20 @@ export function mapAction(
     default:
       return unavailable();
   }
+}
+
+/**
+ * Een meetwaarde ophalen, uit de entiteit zelf of uit een van zijn attributen.
+ *
+ * Die tweede vorm bestaat voor kamers waar een thermostaat of airco de enige
+ * thermometer is: die melden hun kamertemperatuur als `current_temperature` en
+ * niet als losse `sensor.`-entiteit. Zonder dit kon zo'n kamer geen zone
+ * worden (besluit 41).
+ */
+function lees(source: EntitySource, punt: Meetpunt): number | null {
+  return punt.attribute == null
+    ? source.number(punt.id)
+    : source.attrNumber(punt.id, punt.attribute);
 }
 
 function timerAt(source: EntitySource, entityId: string): TimerState {
@@ -155,11 +169,11 @@ export function buildSystemState(
 
   const zones: SystemState['zones'] = Object.fromEntries(
     config.zones.map((zone) => {
-      const t = source.number(zone.temperature.id);
+      const t = lees(source, zone.temperature);
       // Luchtvochtigheid is waarneming en geen invoer, net als de
       // buitentemperatuur (besluit 30). Hij stond al in de filter — en lokte
       // dus herberekeningen uit — terwijl niemand hem uitlas.
-      const h = zone.humidity == null ? null : source.number(zone.humidity.id);
+      const h = zone.humidity == null ? null : lees(source, zone.humidity);
       return [
         zone.id,
         {

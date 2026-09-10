@@ -13,6 +13,26 @@ export interface DeviceRef {
 }
 
 /**
+ * Een meetwaarde, eventueel uit een attribuut van een entiteit.
+ *
+ * Zonder `attribute` is het de waarde van de entiteit zelf — een
+ * `sensor.woonkamer_temperatuur` en klaar. Mét `attribute` staat de waarde
+ * ergens ín die entiteit: `climate.thermostaat_badkamer` meldt zijn
+ * kamertemperatuur als `current_temperature` en niet als eigen sensor.
+ *
+ * Dat komt vaker voor dan je zou denken. Een airco of thermostaat met een
+ * ingebouwde thermometer levert lang niet altijd een losse `sensor.`-entiteit,
+ * en zonder deze vorm kon zo'n kamer helemaal geen zone worden — precies wat
+ * er bij de badkamer van de gemeten woning gebeurde (besluit 41).
+ *
+ * De kern merkt hier niets van: die krijgt een getal. Het uitlezen is werk van
+ * de adapter, en beide adapters — live en replay — konden attributen al lezen.
+ */
+export interface Meetpunt extends DeviceRef {
+  readonly attribute?: string;
+}
+
+/**
  * De bedrijfsmodi van de woning. Dit is een gesloten union: een modus die hier
  * niet in staat compileert niet. Precies de klasse fouten die in de YAML-versie
  * pas op de draaiende installatie zichtbaar werd (`handmatig` bestond niet als
@@ -141,8 +161,8 @@ export type ThermalMass = 'low' | 'medium' | 'high';
 export interface Zone {
   readonly id: string;
   readonly name: string;
-  readonly temperature: DeviceRef;
-  readonly humidity?: DeviceRef;
+  readonly temperature: Meetpunt;
+  readonly humidity?: Meetpunt;
   /** Verwijst naar Actuator.id. Volgorde is niet betekenisvol. */
   readonly actuatorIds: readonly string[];
   /** Lager wint bij schaarste. 1 is de belangrijkste zone. */
