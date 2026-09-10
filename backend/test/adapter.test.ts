@@ -750,3 +750,26 @@ describe('de buitentemperatuur is waarneming, geen invoer', () => {
     expect(decision.explanation.outdoorTemperatureC).toBe(7.3);
   });
 });
+
+describe('het websocket-eindpunt', () => {
+  it('vult /api/websocket aan bij een basis-URL', () => {
+    expect(websocketUrl('http://homeassistant.local:8123')).toBe(
+      'ws://homeassistant.local:8123/api/websocket',
+    );
+  });
+
+  it('laat een volledig eindpunt met rust', () => {
+    expect(websocketUrl('ws://192.168.1.20:8123/api/websocket')).toBe(
+      'ws://192.168.1.20:8123/api/websocket',
+    );
+  });
+
+  it('laat het Supervisor-eindpunt met rust', () => {
+    // De Supervisor proxyt HA op /core/websocket. Dat is een websocket-eindpunt
+    // maar niet /api/websocket; er nog eens /api/websocket achter plakken gaf
+    // een add-on die nergens verbinding mee maakte.
+    expect(websocketUrl('http://supervisor/core/websocket')).toBe(
+      'ws://supervisor/core/websocket',
+    );
+  });
+});

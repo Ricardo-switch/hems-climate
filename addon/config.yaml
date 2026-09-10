@@ -1,0 +1,68 @@
+# Het manifest van de Home Assistant-add-on.
+#
+# Dit bestand is de hele reden dat de add-on bestaat naast de compose-uitrol op
+# de NAS: het beschrijft aan de Supervisor wat de dienst nodig heeft, en de
+# Supervisor regelt de rest. Zie besluit 34.
+#
+# Drie dingen die hij ons gratis geeft, en die we anders zelf hadden moeten
+# bouwen:
+#
+#  1. Een token. `SUPERVISOR_TOKEN` staat in de omgeving en Home Assistant is
+#     bereikbaar op `ws://supervisor/core/websocket`. Geen long-lived token meer
+#     dat je moet plakken, dat verloopt, of dat in een .env belandt.
+#  2. Authenticatie voor de weergave. Met `ingress` zit de pagina achter de
+#     inlog van Home Assistant zelf. Dat schrapt het openstaande punt uit
+#     besluit 23 — de weergave had geen enkele beveiliging.
+#  3. Meerdere architecturen, herstartbeleid en logboekbeheer.
+
+name: Smart Climate OS — schaduwmodus
+version: 0.1.0
+slug: hems_climate
+description: >-
+  Laat de arbiter meedenken naast je bestaande regeling en legt elk besluit vast,
+  zonder iets te schakelen. De basis voor een latere overstap.
+url: https://github.com/Ricardo-switch/hems-climate
+
+# De Pi is arm64/aarch64. De rest staat erbij omdat de kern nergens van
+# afhangt dat platformspecifiek is; alleen aarch64 is werkelijk getest.
+arch:
+  - aarch64
+  - amd64
+  - armv7
+
+# De weergave gaat via Ingress en dus door de inlog van Home Assistant. Geen
+# `ports:`, want daarmee zou hij daarbuiten óók bereikbaar zijn — precies wat
+# besluit 23 als openstaand punt had.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:home-thermometer
+panel_title: Smart Climate
+
+# Alleen lezen bij Home Assistant. De schaduwmodus schrijft niets (besluit 15),
+# maar dat is een eigenschap van onze code; dit maakt het ook een eigenschap van
+# de omgeving.
+homeassistant_api: true
+
+# Herstart na een crash en na de zelfbeëindiging van de bewaking (besluit 18).
+startup: application
+boot: auto
+init: false
+
+map:
+  # Het beslislogboek. In `share` en niet in `data`, zodat je er met de
+  # Samba-add-on bij kunt om het naar je werkstation te halen — precies wat
+  # sync-start-divergence.ps1 doet.
+  - share:rw
+  # De configuratie van de installatie. Hoort bij de installatie en niet bij de
+  # code (besluit 21); hier kun je hem met de bestandseditor bewerken.
+  - addon_config:rw
+
+options:
+  hartslag_seconden: 30
+  min_interval_seconden: 15
+  bewaking_minuten: 10
+
+schema:
+  hartslag_seconden: int(5,3600)
+  min_interval_seconden: int(0,600)
+  bewaking_minuten: int(0,1440)

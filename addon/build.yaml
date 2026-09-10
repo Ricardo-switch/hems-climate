@@ -1,0 +1,9 @@
+# Welke basisafbeelding per architectuur.
+#
+# De Supervisor vult hiermee `BUILD_FROM` in de Dockerfile. Alleen aarch64 is
+# werkelijk getest (Raspberry Pi 5, besluit 17b); de rest staat erbij omdat er
+# niets platformspecifieks in de kern zit.
+build_from:
+  aarch64: ghcr.io/home-assistant/aarch64-base:latest
+  amd64: ghcr.io/home-assistant/amd64-base:latest
+  armv7: ghcr.io/home-assistant/armv7-base:latest

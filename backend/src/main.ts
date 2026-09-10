@@ -155,8 +155,23 @@ if (process.argv.includes('--check-config')) {
   }
 }
 
-const url = read('HA_URL');
-const token = read('HA_TOKEN');
+/*
+ * Draaien we als Home Assistant-add-on?
+ *
+ * De Supervisor zet `SUPERVISOR_TOKEN` in de omgeving en proxyt Home Assistant
+ * op `ws://supervisor/core/websocket`. Daarmee vervalt het long-lived token —
+ * en daarmee de hele klasse problemen eromheen: geen token in `.env`, geen
+ * token dat verloopt of per ongeluk wordt ingetrokken, en niets om te plakken.
+ *
+ * De omgeving wint nog steeds: wie `HA_URL` en `HA_TOKEN` zélf zet, krijgt die.
+ * Dat houdt de NAS-uitrol werkend zolang die nog draait, en maakt het mogelijk
+ * om de add-on tegen een andere HA te richten.
+ */
+const supervisorToken = read('SUPERVISOR_TOKEN');
+const alsAddon = supervisorToken != null && read('HA_URL') == null && read('HA_TOKEN') == null;
+
+const url = alsAddon ? 'http://supervisor/core/websocket' : read('HA_URL');
+const token = alsAddon ? supervisorToken : read('HA_TOKEN');
 
 // Onderscheid tussen "staat er niet" en "staat er wel maar is leeg" — dat
 // tweede is de fout die je maakt als je het bestand hebt aangemaakt maar het
@@ -204,7 +219,7 @@ function tokenComplaint(token: string): string | null {
   return null;
 }
 
-const complaint = tokenComplaint(token!);
+const complaint = alsAddon ? null : tokenComplaint(token!);
 if (complaint) {
   console.error('Het token in HA_TOKEN klopt niet:');
   console.error(`  ${complaint}.`);
@@ -306,7 +321,9 @@ if (webPort != null) {
 console.log('─'.repeat(64));
 console.log('  SCHADUWMODUS — de arbiter denkt mee, maar schakelt niets');
 console.log('─'.repeat(64));
-console.log(`  Home Assistant   ${url}`);
+console.log(
+  `  Home Assistant   ${url}${alsAddon ? '  (via de Supervisor, geen eigen token)' : ''}`,
+);
 console.log(`  configuratie     ${site.source}`);
 console.log(`  installatie      ${site.config.id} — ${site.config.zones.length} zones, ${site.config.actuators.length} apparaten`);
 console.log(`  instellingen     ${loadedFrom ?? 'uit de omgeving'}`);
