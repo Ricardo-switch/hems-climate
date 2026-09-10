@@ -1,0 +1,1188 @@
+{
+  "_toelichting": "Gemaskeerde samenvatting van core.config_entries uit de HA-export. Het origineel bevatte 63 werkende tokens, sleutels en wachtwoorden en is uit deze repository en uit de geschiedenis verwijderd. Wat hier overblijft is waar het bij het onderzoek om ging: welke integraties er zijn en hoe hun gegevens zijn opgebouwd. Alle waarden zijn vervangen, en ook namen van installaties en apparaten zijn weggelaten.",
+  "integraties": [
+    {
+      "domein": "adguard",
+      "aantal": 1,
+      "bronnen": [
+        "hassio"
+      ],
+      "velden_data": {
+        "host": "<weggelaten>",
+        "password": "<weggelaten>",
+        "port": "<weggelaten>",
+        "ssl": "<weggelaten>",
+        "username": "<weggelaten>",
+        "verify_ssl": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "afvalbeheer",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "alwaysshowday": "<weggelaten>",
+        "builtinicons": "<weggelaten>",
+        "builtiniconsnew": "<weggelaten>",
+        "custommapping": {},
+        "dateformat": "<weggelaten>",
+        "dateobject": "<weggelaten>",
+        "dateonly": "<weggelaten>",
+        "dayofweek": "<weggelaten>",
+        "dayofweekonly": "<weggelaten>",
+        "disableicons": "<weggelaten>",
+        "dutch": "<weggelaten>",
+        "id": "<weggelaten>",
+        "name": "<weggelaten>",
+        "postcode": "<weggelaten>",
+        "resources": [
+          "<weggelaten>"
+        ],
+        "streetnumber": "<weggelaten>",
+        "suffix": "<weggelaten>",
+        "upcomingsensor": "<weggelaten>",
+        "updateinterval": "<weggelaten>",
+        "wastecollector": "<weggelaten>",
+        "wastecollectornameprefix": "<weggelaten>"
+      },
+      "velden_options": {
+        "alwaysshowday": "<weggelaten>",
+        "builtinicons": "<weggelaten>",
+        "builtiniconsnew": "<weggelaten>",
+        "custommapping": {},
+        "dateformat": "<weggelaten>",
+        "dateobject": "<weggelaten>",
+        "dateonly": "<weggelaten>",
+        "dayofweek": "<weggelaten>",
+        "dayofweekonly": "<weggelaten>",
+        "disableicons": "<weggelaten>",
+        "dutch": "<weggelaten>",
+        "postcode": "<weggelaten>",
+        "resources": [
+          "<weggelaten>"
+        ],
+        "streetnumber": "<weggelaten>",
+        "suffix": "<weggelaten>",
+        "upcomingsensor": "<weggelaten>",
+        "updateinterval": "<weggelaten>",
+        "wastecollector": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "analytics",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "androidtv",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "device_class": "<weggelaten>",
+        "host": "<weggelaten>",
+        "port": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "androidtv_remote",
+      "aantal": 3,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "host": "<weggelaten>",
+        "mac": "<weggelaten>",
+        "name": "<weggelaten>"
+      },
+      "velden_options": {
+        "enable_ime": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "backup",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "bluetooth",
+      "aantal": 1,
+      "bronnen": [
+        "integration_discovery"
+      ],
+      "velden_data": {},
+      "velden_options": {
+        "passive": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "buienradar",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "latitude": "<weggelaten>",
+        "longitude": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "cast",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "ignore_cec": [],
+        "known_hosts": [],
+        "user_id": "<weggelaten>",
+        "uuid": []
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "cloud",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "dlna_dmr",
+      "aantal": 2,
+      "bronnen": [
+        "ssdp"
+      ],
+      "velden_data": {
+        "device_id": "<weggelaten>",
+        "mac": "<weggelaten>",
+        "type": "<weggelaten>",
+        "url": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "dlna_dms",
+      "aantal": 2,
+      "bronnen": [
+        "ssdp"
+      ],
+      "velden_data": {
+        "device_id": "<weggelaten>",
+        "source_id": "<weggelaten>",
+        "url": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "f1_sensor",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "disabled_sensors": [],
+        "enable_race_control": "<weggelaten>",
+        "enabled_sensors": [
+          "<weggelaten>"
+        ],
+        "favorite_tlas": "<weggelaten>",
+        "live_delay_seconds": "<weggelaten>",
+        "operation_mode": "<weggelaten>",
+        "race_week_start_day": "<weggelaten>",
+        "replay_file": "<weggelaten>",
+        "sensor_name": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "forecast_solar",
+      "aantal": 2,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "latitude": "<weggelaten>",
+        "longitude": "<weggelaten>"
+      },
+      "velden_options": {
+        "api_key": "<weggelaten>",
+        "damping_evening": "<weggelaten>",
+        "damping_morning": "<weggelaten>",
+        "inverter_size": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "go2rtc",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "google",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "credential_type": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {
+        "calendar_access": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "google_assistant_sdk",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {
+        "language_code": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "google_assistant_sdk_custom",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {
+        "language_code": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "google_drive",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "google_generative_ai_conversation",
+      "aantal": 2,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "api_key": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "google_translate",
+      "aantal": 2,
+      "bronnen": [
+        "onboarding",
+        "user"
+      ],
+      "velden_data": {
+        "language": "<weggelaten>",
+        "tld": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "govee_light_local",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "group",
+      "aantal": 8,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {
+        "all": "<weggelaten>",
+        "entities": [
+          "<weggelaten>"
+        ],
+        "group_type": "<weggelaten>",
+        "hide_members": "<weggelaten>",
+        "name": "<weggelaten>",
+        "ignore_non_numeric": "<weggelaten>",
+        "type": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "hacs",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "token": "<weggelaten>"
+      },
+      "velden_options": {
+        "experimental": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "hassio",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {
+        "user": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "home_connect",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "id_token": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "home_connect_alt",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "id_token": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {
+        "appliance_settings": {},
+        "delayed_ops": "<weggelaten>",
+        "entity_settings": {},
+        "language": "<weggelaten>",
+        "log_mode": "<weggelaten>",
+        "name_template": "<weggelaten>",
+        "sse_timeout": "<weggelaten>",
+        "translation_mode": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "homekit_controller",
+      "aantal": 1,
+      "bronnen": [
+        "ignore"
+      ],
+      "velden_data": {
+        "AccessoryIP": "<weggelaten>",
+        "AccessoryIPs": [
+          "<weggelaten>"
+        ],
+        "AccessoryPort": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "homewizard",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "ip_address": "<weggelaten>",
+        "token": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "hue",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "api_key": "<weggelaten>",
+        "api_version": "<weggelaten>",
+        "host": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "hue_ble",
+      "aantal": 1,
+      "bronnen": [
+        "ignore"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "ibeacon",
+      "aantal": 1,
+      "bronnen": [
+        "bluetooth"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "ipp",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "base_path": "<weggelaten>",
+        "host": "<weggelaten>",
+        "name": "<weggelaten>",
+        "port": "<weggelaten>",
+        "ssl": "<weggelaten>",
+        "uuid": "<weggelaten>",
+        "verify_ssl": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "lg_thinq",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "access_token": "<weggelaten>",
+        "connect_client_id": "<weggelaten>",
+        "country": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "local_calendar",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "calendar_name": "<weggelaten>",
+        "import": "<weggelaten>",
+        "storage_key": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "local_todo",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "storage_key": "<weggelaten>",
+        "todo_list_name": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "matter",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "integration_created_addon": "<weggelaten>",
+        "url": "<weggelaten>",
+        "use_addon": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "met",
+      "aantal": 1,
+      "bronnen": [
+        "onboarding"
+      ],
+      "velden_data": {
+        "track_home": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "mobile_app",
+      "aantal": 5,
+      "bronnen": [
+        "registration"
+      ],
+      "velden_data": {
+        "app_data": {
+          "push_token": "<weggelaten>",
+          "push_url": "<weggelaten>",
+          "push_websocket_channel": "<weggelaten>"
+        },
+        "app_id": "<weggelaten>",
+        "app_name": "<weggelaten>",
+        "app_version": "<weggelaten>",
+        "device_id": "<weggelaten>",
+        "device_name": "<weggelaten>",
+        "manufacturer": "<weggelaten>",
+        "model": "<weggelaten>",
+        "os_name": "<weggelaten>",
+        "os_version": "<weggelaten>",
+        "supports_encryption": "<weggelaten>",
+        "user_id": "<weggelaten>",
+        "webhook_id": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "mqtt",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "broker": "<weggelaten>",
+        "password": "<weggelaten>",
+        "port": "<weggelaten>",
+        "protocol": "<weggelaten>",
+        "username": "<weggelaten>"
+      },
+      "velden_options": {
+        "birth_message": {
+          "payload": "<weggelaten>",
+          "qos": "<weggelaten>",
+          "retain": "<weggelaten>",
+          "topic": "<weggelaten>"
+        },
+        "discovery": "<weggelaten>",
+        "discovery_prefix": "<weggelaten>",
+        "discovery_qos": "<weggelaten>",
+        "will_message": {}
+      }
+    },
+    {
+      "domein": "music_assistant",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "token": "<weggelaten>",
+        "url": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "neerslag",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "NeerslagSensorUseHAforLocation": "<weggelaten>",
+        "buienalarm": "<weggelaten>",
+        "buienalarmLatitude": "<weggelaten>",
+        "buienalarmLongitude": "<weggelaten>",
+        "buienradar": "<weggelaten>",
+        "buienradarLatitude": "<weggelaten>",
+        "buienradarLongitude": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "nest",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "cloud_project_id": "<weggelaten>",
+        "project_id": "<weggelaten>",
+        "sdm": {},
+        "subscriber_id_imported": "<weggelaten>",
+        "subscription_name": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        },
+        "topic_name": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "nest_protect",
+      "aantal": 1,
+      "bronnen": [
+        "dhcp"
+      ],
+      "velden_data": {
+        "account_type": "<weggelaten>",
+        "cookies": "<weggelaten>",
+        "issue_token": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "openai_conversation",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "api_key": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "openweathermap",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "api_key": "<weggelaten>",
+        "latitude": "<weggelaten>",
+        "longitude": "<weggelaten>"
+      },
+      "velden_options": {
+        "language": "<weggelaten>",
+        "mode": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "overkiz",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {
+        "api_type": "<weggelaten>",
+        "host": "<weggelaten>",
+        "hub": "<weggelaten>",
+        "token": "<weggelaten>",
+        "verify_ssl": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "plex",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "server": "<weggelaten>",
+        "server_config": {
+          "client_id": "<weggelaten>",
+          "token": "<weggelaten>",
+          "url": "<weggelaten>",
+          "verify_ssl": "<weggelaten>"
+        },
+        "server_id": "<weggelaten>"
+      },
+      "velden_options": {
+        "media_player": {}
+      }
+    },
+    {
+      "domein": "proximity",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "ignored_zones": [],
+        "tolerance": "<weggelaten>",
+        "tracked_entities": [
+          "<weggelaten>"
+        ],
+        "zone": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "radio_browser",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "raspberry_pi",
+      "aantal": 1,
+      "bronnen": [
+        "system"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "rdw",
+      "aantal": 2,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "license_plate": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "reolink",
+      "aantal": 2,
+      "bronnen": [
+        "dhcp"
+      ],
+      "velden_data": {
+        "baichuan_connection": "<weggelaten>",
+        "baichuan_only": "<weggelaten>",
+        "baichuan_port": "<weggelaten>",
+        "firmware_check_time": "<weggelaten>",
+        "host": "<weggelaten>",
+        "password": "<weggelaten>",
+        "port": "<weggelaten>",
+        "privacy_mode_supported": "<weggelaten>",
+        "uid": "<weggelaten>",
+        "use_https": "<weggelaten>",
+        "username": "<weggelaten>"
+      },
+      "velden_options": {
+        "protocol": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "rpi_power",
+      "aantal": 1,
+      "bronnen": [
+        "onboarding"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "samsungtv",
+      "aantal": 2,
+      "bronnen": [
+        "ignore",
+        "zeroconf"
+      ],
+      "velden_data": {
+        "host": "<weggelaten>",
+        "mac": "<weggelaten>",
+        "model": "<weggelaten>",
+        "ssdp_rendering_control_location": "<weggelaten>",
+        "manufacturer": "<weggelaten>",
+        "method": "<weggelaten>",
+        "port": "<weggelaten>",
+        "ssdp_main_tv_agent_location": "<weggelaten>",
+        "token": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "seventeentrack",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "password": "<weggelaten>",
+        "username": "<weggelaten>"
+      },
+      "velden_options": {
+        "show_archived": "<weggelaten>",
+        "show_delivered": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "shopping_list",
+      "aantal": 1,
+      "bronnen": [
+        "onboarding"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "smartthings",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "location_id": "<weggelaten>",
+        "subscription_id": "<weggelaten>",
+        "token": {
+          "access_tier": "<weggelaten>",
+          "access_token": "<weggelaten>",
+          "app_id": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "installed_app_id": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "service": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "smartthinq_sensors",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "client_id": "<weggelaten>",
+        "language": "<weggelaten>",
+        "oauth2_url": "<weggelaten>",
+        "region": "<weggelaten>",
+        "token": "<weggelaten>",
+        "use_api_v2": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "solaredge",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "api_key": "<weggelaten>",
+        "site_id": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "spook",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "spotify",
+      "aantal": 2,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "auth_implementation": "<weggelaten>",
+        "name": "<weggelaten>",
+        "token": {
+          "access_token": "<weggelaten>",
+          "expires_at": "<weggelaten>",
+          "expires_in": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "scope": "<weggelaten>",
+          "token_type": "<weggelaten>"
+        }
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "sun",
+      "aantal": 1,
+      "bronnen": [
+        "import"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "synology_dsm",
+      "aantal": 1,
+      "bronnen": [
+        "ssdp"
+      ],
+      "velden_data": {
+        "device_token": "<weggelaten>",
+        "host": "<weggelaten>",
+        "mac": [
+          "<weggelaten>"
+        ],
+        "password": "<weggelaten>",
+        "port": "<weggelaten>",
+        "ssl": "<weggelaten>",
+        "username": "<weggelaten>",
+        "verify_ssl": "<weggelaten>"
+      },
+      "velden_options": {
+        "backup_path": "<weggelaten>",
+        "backup_share": "<weggelaten>",
+        "snap_profile_type": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "teamtracker",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "league_id": "<weggelaten>",
+        "league_path": "<weggelaten>",
+        "name": "<weggelaten>",
+        "sport_path": "<weggelaten>",
+        "team_id": "<weggelaten>"
+      },
+      "velden_options": {
+        "api_language": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "template",
+      "aantal": 14,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {
+        "name": "<weggelaten>",
+        "state": "<weggelaten>",
+        "template_type": "<weggelaten>",
+        "unit_of_measurement": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "thread",
+      "aantal": 1,
+      "bronnen": [
+        "zeroconf"
+      ],
+      "velden_data": {},
+      "velden_options": {}
+    },
+    {
+      "domein": "time_date",
+      "aantal": 2,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {
+        "display_options": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "tplink_deco",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "client_postfix": "<weggelaten>",
+        "client_prefix": "<weggelaten>",
+        "consider_home": "<weggelaten>",
+        "deco_postfix": "<weggelaten>",
+        "deco_prefix": "<weggelaten>",
+        "host": "<weggelaten>",
+        "interval_seconds": "<weggelaten>",
+        "password": "<weggelaten>",
+        "timeout_error_retries": "<weggelaten>",
+        "timeout_seconds": "<weggelaten>",
+        "username": "<weggelaten>",
+        "verify_ssl": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "tuya",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "endpoint": "<weggelaten>",
+        "terminal_id": "<weggelaten>",
+        "token_info": {
+          "access_token": "<weggelaten>",
+          "expire_time": "<weggelaten>",
+          "refresh_token": "<weggelaten>",
+          "t": "<weggelaten>",
+          "uid": "<weggelaten>"
+        },
+        "user_code": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "upnp",
+      "aantal": 1,
+      "bronnen": [
+        "ssdp"
+      ],
+      "velden_data": {
+        "host": "<weggelaten>",
+        "location": "<weggelaten>",
+        "mac_address": "<weggelaten>",
+        "original_udn": "<weggelaten>",
+        "st": "<weggelaten>",
+        "udn": "<weggelaten>"
+      },
+      "velden_options": {
+        "force_poll": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "wake_on_lan",
+      "aantal": 1,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {},
+      "velden_options": {
+        "mac": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "waze_travel_time",
+      "aantal": 3,
+      "bronnen": [
+        "user"
+      ],
+      "velden_data": {
+        "destination": "<weggelaten>",
+        "name": "<weggelaten>",
+        "origin": "<weggelaten>",
+        "region": "<weggelaten>"
+      },
+      "velden_options": {
+        "avoid_ferries": "<weggelaten>",
+        "avoid_subscription_roads": "<weggelaten>",
+        "avoid_toll_roads": "<weggelaten>",
+        "base_coordinates": {
+          "latitude": "<weggelaten>",
+          "longitude": "<weggelaten>"
+        },
+        "excl_filter": [
+          "<weggelaten>"
+        ],
+        "incl_filter": [
+          "<weggelaten>"
+        ],
+        "realtime": "<weggelaten>",
+        "time_delta": {
+          "minutes": "<weggelaten>"
+        },
+        "units": "<weggelaten>",
+        "vehicle_type": "<weggelaten>"
+      }
+    },
+    {
+      "domein": "wyoming",
+      "aantal": 4,
+      "bronnen": [
+        "hassio"
+      ],
+      "velden_data": {
+        "host": "<weggelaten>",
+        "port": "<weggelaten>"
+      },
+      "velden_options": {}
+    },
+    {
+      "domein": "zha",
+      "aantal": 1,
+      "bronnen": [
+        "usb"
+      ],
+      "velden_data": {
+        "device": {
+          "baudrate": "<weggelaten>",
+          "flow_control": "<weggelaten>",
+          "path": "<weggelaten>"
+        },
+        "radio_type": "<weggelaten>"
+      },
+      "velden_options": {}
+    }
+  ]
+}
