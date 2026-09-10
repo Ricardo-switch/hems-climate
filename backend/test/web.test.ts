@@ -7,7 +7,7 @@
  * van bestanden zit het venijn in dat tweede.
  */
 
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -15,6 +15,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { WebServer } from '../src/web/server.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
+import { Onboarding } from '../src/web/onboarding.js';
+import type { Registers } from '../src/adapters/homeassistant/discovery.js';
+import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { exampleSite } from './site.js';
 
@@ -66,6 +69,8 @@ async function start(options: {
   latest?: () => LiveSnapshot | null;
   webDir?: string;
   divergence?: () => DivergenceReport | null;
+  onboarding?: Onboarding;
+  zonderConfig?: boolean;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -74,9 +79,10 @@ async function start(options: {
     port: 0,
     host: '127.0.0.1',
     webDir,
-    config: exampleSite,
+    config: options.zonderConfig ? null : exampleSite,
     latest: options.latest ?? (() => null),
     ...(options.divergence ? { divergence: options.divergence } : {}),
+    ...(options.onboarding ? { onboarding: options.onboarding } : {}),
     write: () => {},
   });
   const port = await server.start();
@@ -415,5 +421,146 @@ describe('de pagina veroudert niet stilletjes', () => {
     });
     expect(tweede.status).toBe(200);
     expect(await tweede.text()).toContain('versie = 2');
+  });
+});
+
+describe('de onboarding', () => {
+  /*
+   * De deur in de muur uit besluit 42. Wat hier getoetst wordt is niet dat hij
+   * werkt, maar dat hij er niet is zolang hij er niet hoort te zijn.
+   */
+  const registers: Registers = {
+    config: { time_zone: 'Europe/Amsterdam' },
+    areas: [{ area_id: 'woonkamer', name: 'Woonkamer' }],
+    devices: [{ id: 'dev', area_id: 'woonkamer' }],
+    entities: [
+      { entity_id: 'climate.ketel', device_id: 'dev' },
+      { entity_id: 'sensor.woonkamer_temp', device_id: 'dev', original_device_class: 'temperature' },
+    ],
+    states: [
+      {
+        entity_id: 'climate.ketel',
+        state: 'off',
+        attributes: { hvac_modes: ['off', 'heat'], min_temp: 10, max_temp: 30 },
+        last_changed: '2026-09-10T12:00:00+00:00',
+        last_updated: '2026-09-10T12:00:00+00:00',
+      },
+      {
+        entity_id: 'sensor.woonkamer_temp',
+        state: '19.0',
+        attributes: { device_class: 'temperature' },
+        last_changed: '2026-09-10T12:00:00+00:00',
+        last_updated: '2026-09-10T12:00:00+00:00',
+      },
+    ],
+  };
+
+  async function maakOnboarding(): Promise<{ onboarding: Onboarding; dir: string }> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-sites-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    return {
+      onboarding: new Onboarding({
+        registers: () => Promise.resolve(registers),
+        sitesDir: dir,
+        knownStrategies: defaultStrategies().ids,
+      }),
+      dir,
+    };
+  }
+
+  it('bestaat niet wanneer hij niet is meegegeven', async () => {
+    const { base } = await start({});
+    const res = await fetch(`${base}/api/onboarding`, {
+      method: 'POST',
+      body: JSON.stringify({ antwoorden: {} }),
+    });
+    // Niet 503 en niet 404: de muur staat er nog, en die antwoordt met 405.
+    expect(res.status).toBe(405);
+    expect(res.headers.get('allow')).toBe('GET, HEAD');
+  });
+
+  it('houdt de muur overeind voor elke andere route, ook mét onboarding', async () => {
+    const { onboarding } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    for (const path of ['/api/state', '/api/site', '/api/events', '/']) {
+      const res = await fetch(`${base}${path}`, { method: 'POST' });
+      expect(res.status, path).toBe(405);
+    }
+    // En elke andere methode blijft ook op het onboarding-pad geweigerd.
+    for (const method of ['PUT', 'PATCH', 'DELETE']) {
+      const res = await fetch(`${base}/api/onboarding`, { method });
+      expect(res.status, method).toBe(405);
+      expect(res.headers.get('allow')).toBe('GET, HEAD, POST');
+    }
+  });
+
+  it('geeft een voorstel met de gevonden zones en de open keuzes', async () => {
+    const { onboarding } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    const res = await fetch(`${base}/api/onboarding`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { config: Record<string, unknown>; bevindingen: unknown[] };
+    expect(body.config['zones']).toHaveLength(1);
+    expect(body.bevindingen.length).toBeGreaterThan(0);
+  });
+
+  it('schrijft pas na het ophalen van een voorstel', async () => {
+    const { onboarding } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    const res = await fetch(`${base}/api/onboarding`, {
+      method: 'POST',
+      body: JSON.stringify({ antwoorden: {} }),
+    });
+    expect(res.status).toBe(422);
+    expect(await res.text()).toContain('nog geen voorstel');
+  });
+
+  it('schrijft het bestand weg en laat het door de eigen controle komen', async () => {
+    const { onboarding, dir } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    await fetch(`${base}/api/onboarding`);
+    const res = await fetch(`${base}/api/onboarding`, {
+      method: 'POST',
+      body: JSON.stringify({ antwoorden: {} }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; pad: string };
+    expect(body.ok).toBe(true);
+    expect(body.pad).toContain(dir);
+
+    // En wat er staat is te lezen door de gewone lader.
+    const geschreven = JSON.parse(await readFile(body.pad, 'utf-8')) as Record<string, unknown>;
+    expect(geschreven['timezone']).toBe('Europe/Amsterdam');
+  });
+
+  it('schrijft nooit over een bestaande configuratie heen', async () => {
+    const { onboarding, dir } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    await writeFile(join(dir, 'mijn-huis.json'), '{"eigen":"werk"}', 'utf-8');
+
+    await fetch(`${base}/api/onboarding`);
+    const res = await fetch(`${base}/api/onboarding`, {
+      method: 'POST',
+      body: JSON.stringify({ antwoorden: {} }),
+    });
+    expect(res.status).toBe(422);
+    // Het bestaande bestand is niet aangeraakt.
+    expect(await readFile(join(dir, 'mijn-huis.json'), 'utf-8')).toBe('{"eigen":"werk"}');
+  });
+
+  it('weigert een verzoek dat geen antwoorden bevat', async () => {
+    const { onboarding } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    for (const body of ['geen json', '{"iets":1}', '[]']) {
+      const res = await fetch(`${base}/api/onboarding`, { method: 'POST', body });
+      expect(res.status, body).toBe(400);
+    }
+  });
+
+  it('zegt dat er nog niets is ingesteld in plaats van te doen alsof', async () => {
+    const { base } = await start({ zonderConfig: true });
+    const res = await fetch(`${base}/api/site`);
+    expect(res.status).toBe(503);
+    expect(await res.text()).toContain('nog geen installatie');
   });
 });

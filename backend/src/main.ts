@@ -16,11 +16,13 @@ import { dirname, join, resolve } from 'node:path';
 
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
-import { HaClient } from './adapters/homeassistant/client.js';
+import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
+import { haalRegisters } from './adapters/homeassistant/discovery.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir } from './web/server.js';
 import { DivergenceCache } from './web/divergence.js';
+import { Onboarding } from './web/onboarding.js';
 
 /**
  * Laadt een .env-bestand, maar laat variabelen die al gezet zijn met rust.
@@ -289,11 +291,34 @@ try {
     knownStrategies: strategies.ids,
   });
 } catch (error) {
-  if (error instanceof ConfigError) {
+  /*
+   * Ontbreken is iets anders dan kapot zijn.
+   *
+   * Een configuratie die er staat maar niet deugt blijft een opstartfout: die
+   * moet je repareren, en stilzwijgend doorstarten zou de fout verbergen tot
+   * hij 's nachts opduikt (besluit 33). Maar er helemaal géén hebben is de
+   * normale toestand van een verse installatie, en daar hoort de onboarding
+   * bij en geen foutmelding.
+   *
+   * Alleen achter Ingress: daar heeft Home Assistant vastgesteld wie er kijkt.
+   * Zonder die zekerheid is een pagina die configuratie wegschrijft iets wat
+   * je niet aan je netwerk hangt (besluit 42).
+   */
+  const magOnboarden = webPort != null && (alsAddon || read('HEMS_ONBOARDING') === '1');
+  if (error instanceof ConfigError && error.soort === 'ontbreekt' && magOnboarden) {
+    console.log('─'.repeat(64));
+    console.log('  NOG GEEN INSTALLATIE INGESTELD');
+    console.log('─'.repeat(64));
+    console.log('  Er is geen configuratie gevonden, dus er wordt nog niets geregeld.');
+    console.log('  Open het paneel Smart Climate in Home Assistant; daar staat wat');
+    console.log('  er in huis is gevonden en kun je het bevestigen.');
+    console.log('─'.repeat(64));
+  } else if (error instanceof ConfigError) {
     console.error(error.format());
     process.exit(1);
+  } else {
+    throw error;
   }
-  throw error;
 }
 
 const client = new HaClient({
@@ -308,31 +333,84 @@ const client = new HaClient({
 // en pas daarna vullen — een van beide moet als eerste bestaan.
 let web: WebServer | null = null;
 
-const runner = new ShadowRunner({
-  config: site.config,
-  strategies,
-  client,
-  tickSeconds: Number.isFinite(tickSeconds) ? tickSeconds : 30,
-  minIntervalSeconds: Number.isFinite(minInterval) ? minInterval : 15,
-  watchdogMinutes: Number.isFinite(watchdog) ? watchdog : 10,
-  logDir,
-  ...(webPort == null
-    ? {}
-    : { onDecision: (snapshot: LiveSnapshot) => web?.publish(snapshot) }),
+/*
+ * De laatst ontvangen toestand van Home Assistant.
+ *
+ * Zonder configuratie is er geen runner die een winkeltje bijhoudt, en de
+ * onboarding heeft die toestanden nodig om te weten wat een apparaat kan.
+ * Eén extra luisteraar op hetzelfde `ready`-signaal kost niets en werkt in
+ * beide standen hetzelfde.
+ */
+let laatsteStates: readonly HaEntityState[] = [];
+client.on('ready', (states: HaEntityState[]) => {
+  laatsteStates = states;
 });
+
+const runner =
+  site == null
+    ? null
+    : new ShadowRunner({
+        config: site.config,
+        strategies,
+        client,
+        tickSeconds: Number.isFinite(tickSeconds) ? tickSeconds : 30,
+        minIntervalSeconds: Number.isFinite(minInterval) ? minInterval : 15,
+        watchdogMinutes: Number.isFinite(watchdog) ? watchdog : 10,
+        logDir,
+        ...(webPort == null
+          ? {}
+          : { onDecision: (snapshot: LiveSnapshot) => web?.publish(snapshot) }),
+      });
 
 // De analyse over de logboeken. Alleen zinvol wanneer er ook gelogd wordt —
 // zonder logboek valt er niets terug te kijken.
 const analyse = webPort == null || logDir === '' ? null : new DivergenceCache({ logDir });
+
+/*
+ * De onboarding bestaat alleen achter Ingress.
+ *
+ * Dit is de schakelaar uit besluit 42, en hij staat hier en niet in de server:
+ * de server weet niet waar hij draait, `main.ts` wel. Zonder Supervisor is er
+ * geen inlog voor de pagina, en dan hoort er geen route te bestaan die
+ * bestanden wegschrijft — ook niet een die niemand aanroept.
+ */
+/*
+ * Buiten de add-on kan het ook, maar dan moet je het zeggen.
+ *
+ * Dezelfde vorm als `HEMS_WEB_PORT`: luisteren is een keuze die je maakt, niet
+ * iets wat je overkomt. Zonder deze schakelaar zou de onboarding alleen achter
+ * Ingress bestaan en dus nergens uit te proberen zijn — en een deur die je niet
+ * kunt testen, test je op de draaiende dienst.
+ *
+ * Wie hem aanzet zonder inlog ervoor, zet een pagina op zijn netwerk die
+ * bestanden wegschrijft. Vandaar de waarschuwing bij het starten.
+ */
+const onboardingGevraagd = read('HEMS_ONBOARDING') === '1';
+const onboardingAan = webPort != null && (alsAddon || onboardingGevraagd);
+if (onboardingGevraagd && !alsAddon) {
+  console.warn('LET OP: de onboarding staat aan zonder Ingress ervoor.');
+  console.warn('  Deze weergave heeft geen inlog. Doe dit alleen op een machine');
+  console.warn('  waar je zelf bij bent, en zet HEMS_ONBOARDING daarna weer uit.');
+}
+
+const onboarding =
+  onboardingAan
+    ? new Onboarding({
+        registers: () => haalRegisters(client, laatsteStates),
+        sitesDir: process.env['HEMS_SITES_DIR'] ?? join(process.cwd(), 'config', 'sites'),
+        knownStrategies: strategies.ids,
+      })
+    : null;
 
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
     host: process.env['HEMS_WEB_HOST'] ?? '0.0.0.0',
     webDir,
-    config: site.config,
-    latest: () => runner.latest,
+    config: site?.config ?? null,
+    latest: () => runner?.latest ?? null,
     ...(analyse ? { divergence: () => analyse.latest } : {}),
+    ...(onboarding ? { onboarding } : {}),
   });
 }
 
@@ -342,8 +420,12 @@ console.log('─'.repeat(64));
 console.log(
   `  Home Assistant   ${url}${alsAddon ? '  (via de Supervisor, geen eigen token)' : ''}`,
 );
-console.log(`  configuratie     ${site.source}`);
-console.log(`  installatie      ${site.config.id} — ${site.config.zones.length} zones, ${site.config.actuators.length} apparaten`);
+console.log(`  configuratie     ${site?.source ?? 'nog geen — wachtend op de onboarding'}`);
+if (site) {
+  console.log(
+    `  installatie      ${site.config.id} — ${site.config.zones.length} zones, ${site.config.actuators.length} apparaten`,
+  );
+}
 console.log(`  instellingen     ${loadedFrom ?? 'uit de omgeving'}`);
 console.log(`  hartslag         ${tickSeconds} s`);
 console.log(`  min. interval    ${minInterval} s tussen twee evaluaties`);
@@ -353,11 +435,15 @@ console.log(
 console.log(`  logboek          ${logDir}/decisions-JJJJ-MM-DD.ndjson`);
 console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : 'uit'}`);
 console.log(
-  `  webweergave      ${webPort == null ? 'uit — deze dienst luistert nergens op' : `poort ${webPort}, alleen lezen`}`,
+  `  webweergave      ${
+    webPort == null
+      ? 'uit — deze dienst luistert nergens op'
+      : `poort ${webPort}, ${onboarding ? 'lezen plus de onboarding' : 'alleen lezen'}`
+  }`,
 );
 console.log('─'.repeat(64));
 
-if (site.warnings.length > 0) {
+if (site && site.warnings.length > 0) {
   console.log('  Let op in de configuratie:');
   for (const warning of site.warnings) console.log(warning);
   console.log('─'.repeat(64));
@@ -366,7 +452,7 @@ if (site.warnings.length > 0) {
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     console.log('\nafsluiten…');
-    runner.stop();
+    runner?.stop();
     analyse?.stop();
     void web?.stop().finally(() => process.exit(0));
     if (web == null) process.exit(0);
@@ -393,4 +479,10 @@ if (web) {
   }
 }
 
-runner.start();
+if (runner) {
+  runner.start();
+} else {
+  // Geen configuratie, dus niets om te beslissen. Wel verbinden: de onboarding
+  // heeft de registers nodig, en die komen over deze socket.
+  client.connect();
+}

@@ -20,6 +20,7 @@ import { describe, expect, it } from 'vitest';
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import {
   ontdek,
+  pasKeuzesToe,
   type HaArea,
   type HaCoreConfig,
   type HaDevice,
@@ -327,5 +328,106 @@ describe('tegen het echte register van deze woning', () => {
     const b = voorstel.bevindingen.find((x) => x.pad === 'occupancy')!;
     expect(b.soort).toBe('gevonden');
     expect(b.tekst).toContain('person.');
+  });
+});
+
+describe('de antwoorden van de bewoner', () => {
+  /** Een woning met alle drie de twijfelgevallen erin. */
+  function twijfelachtig() {
+    const r = basis();
+    r.devices.push({ id: 'dev-p1', area_id: null }, { id: 'dev-airco2', area_id: 'woonkamer' });
+    r.entities.push(
+      // twee thermometers in dezelfde kamer
+      ent('sensor.woonkamer_temp_2', {
+        device_id: 'dev-sensor',
+        original_device_class: 'temperature',
+      }),
+      // dezelfde airco via een tweede integratie
+      ent('climate.airco_2', { device_id: 'dev-airco2' }),
+      // twee kandidaten voor de netmeting
+      ent('sensor.p1_meter_power', { device_id: 'dev-p1', original_device_class: 'power' }),
+      ent('sensor.grid_power', { device_id: 'dev-p1', original_device_class: 'power' }),
+    );
+    r.states.push(
+      state('sensor.woonkamer_temp_2', '21.9', { device_class: 'temperature' }),
+      state('climate.airco_2', 'off', { hvac_modes: ['off', 'cool', 'heat'] }),
+      state('sensor.p1_meter_power', '-1200', { device_class: 'power' }),
+      state('sensor.grid_power', '-1200', { device_class: 'power' }),
+    );
+    return ontdek(r);
+  }
+
+  it('vraagt precies waar het onzeker over is, en niet meer', () => {
+    const v = twijfelachtig();
+    expect(v.keuzes.map((k) => k.id).sort()).toEqual([
+      'dubbel:airco',
+      'gridPower',
+      'zone:woonkamer:temperature',
+    ]);
+  });
+
+  it('neemt een andere thermometer over', () => {
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, { 'zone:woonkamer:temperature': 'sensor.woonkamer_temp_2' });
+    expect((c['zones'] as Record<string, unknown>[])[0]!['temperature']).toBe(
+      'sensor.woonkamer_temp_2',
+    );
+  });
+
+  it('haalt bij een dubbel apparaat de ander eruit, inclusief de verwijzing', () => {
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, { 'dubbel:airco': 'climate.airco_2' });
+    const actuators = c['actuators'] as Record<string, unknown>[];
+    expect(actuators.map((a) => a['ref'])).toEqual(['climate.airco_2']);
+    // En de zone wijst niet meer naar iets dat niet bestaat.
+    const zone = (c['zones'] as Record<string, unknown>[])[0]!;
+    expect(zone['actuatorIds']).toEqual(['airco-2']);
+  });
+
+  it('laat een veld weg wanneer het antwoord leeg mag zijn', () => {
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, { gridPower: null });
+    expect(c['power']).toBeUndefined();
+  });
+
+  it('negeert een antwoord dat niet in de keuzelijst stond', () => {
+    // De pagina levert een keuzelijst aan. Alles daarbuiten is een fout, of
+    // iets ergers, en in geen van beide gevallen iets om over te nemen.
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, { gridPower: 'sensor.iets_heel_anders' });
+    expect((c['power'] as Record<string, unknown>)['gridPower']).toBe('sensor.p1_meter_power');
+  });
+
+  it('weigert leeg te laten wat niet leeg mag', () => {
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, { 'zone:woonkamer:temperature': null });
+    expect((c['zones'] as Record<string, unknown>[])[0]!['temperature']).toBe(
+      'sensor.woonkamer_temp',
+    );
+  });
+
+  it('levert na het beantwoorden nog steeds iets op dat het schema aanneemt', () => {
+    const v = twijfelachtig();
+    const c = pasKeuzesToe(v, {
+      'zone:woonkamer:temperature': 'sensor.woonkamer_temp_2',
+      'dubbel:airco': 'climate.airco',
+      gridPower: 'sensor.grid_power',
+    });
+    const result = parse(c);
+    if (!result.ok) {
+      throw new Error(result.problems.map((x) => `${x.path}: ${x.message}`).join('\n'));
+    }
+    expect(result.config.zones[0]!.temperature.id).toBe('sensor.woonkamer_temp_2');
+    expect(result.config.actuators).toHaveLength(1);
+    expect(result.config.power.gridPower!.id).toBe('sensor.grid_power');
+  });
+
+  it('raakt het oorspronkelijke voorstel niet aan', () => {
+    // De weergave mag hetzelfde voorstel meerdere keren met andere antwoorden
+    // doorrekenen zonder dat het onderweg verandert.
+    const v = twijfelachtig();
+    const voor = JSON.stringify(v.config);
+    pasKeuzesToe(v, { 'dubbel:airco': 'climate.airco_2' });
+    expect(JSON.stringify(v.config)).toBe(voor);
   });
 });

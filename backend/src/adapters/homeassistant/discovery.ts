@@ -81,10 +81,36 @@ export interface Bevinding {
   readonly alternatieven?: readonly string[];
 }
 
+/**
+ * Een punt waarop de ontdekking het niet zeker weet.
+ *
+ * Het verschil met een bevinding: een bevinding vertelt, een keuze vraagt. Ze
+ * bestaan naast elkaar omdat de meeste bevindingen niets van de bewoner nodig
+ * hebben — "6 bewoners gevonden" is prettig om te lezen en verder klaar.
+ */
+export interface Keuze {
+  /** Stabiel, zodat een antwoord bij de juiste vraag terechtkomt. */
+  readonly id: string;
+  readonly soort: 'veld' | 'zoneTemperatuur' | 'dubbelApparaat';
+  readonly vraag: string;
+  readonly toelichting?: string;
+  /** Wat de ontdekking zelf zou kiezen, of null als hij niets kiest. */
+  readonly huidig: string | null;
+  readonly opties: readonly string[];
+  /** Mag "geen van deze" het antwoord zijn? */
+  readonly magLeeg: boolean;
+  /** Bij `veld`: waar in de configuratie. */
+  readonly pad?: string;
+  /** Bij `zoneTemperatuur`: welke zone. */
+  readonly zoneId?: string;
+}
+
 export interface Voorstel {
   /** De JSON zoals hij in `sites/<naam>.json` zou staan. */
   readonly config: Record<string, unknown>;
   readonly bevindingen: readonly Bevinding[];
+  /** Wat er nog beslist moet worden voordat dit klopt. */
+  readonly keuzes: readonly Keuze[];
 }
 
 // -------------------------------------------------------------- hulpjes ----
@@ -160,6 +186,7 @@ function kaleNaam(e: HaRegistryEntity): boolean {
 
 export function ontdek(r: Registers): Voorstel {
   const bevindingen: Bevinding[] = [];
+  const keuzes: Keuze[] = [];
   const statePer = new Map(r.states.map((s) => [s.entity_id, s]));
   const areaVanDevice = new Map(r.devices.map((d) => [d.id, d.area_id]));
   const areaNaam = new Map(r.areas.map((a) => [a.area_id, a.name]));
@@ -278,8 +305,31 @@ export function ontdek(r: Registers): Voorstel {
         : `${buiten.entity_id}, de enige actuele buitentemperatuur van je weerintegratie`,
       ...(anderen.length > 0 ? { alternatieven: anderen } : {}),
     });
+    if (anderen.length > 0) {
+      keuzes.push({
+        id: 'outdoorTemperature',
+        soort: 'veld',
+        pad: 'outdoorTemperature',
+        vraag: 'Welke sensor meet de buitentemperatuur?',
+        huidig: buiten.entity_id,
+        opties: [buiten.entity_id, ...anderen],
+        magLeeg: true,
+      });
+    }
   } else if (uitWeerbericht.length > 1 || zwervend.length > 0) {
     const kandidaten = uitWeerbericht.length > 1 ? uitWeerbericht : zwervend;
+    keuzes.push({
+      id: 'outdoorTemperature',
+      soort: 'veld',
+      pad: 'outdoorTemperature',
+      vraag: 'Welke sensor meet de buitentemperatuur?',
+      toelichting:
+        'De regeling gebruikt hem niet; hij gaat mee het logboek in zodat de ' +
+        'dataset compleet is. Overslaan mag.',
+      huidig: null,
+      opties: kandidaten.map((e) => e.entity_id),
+      magLeeg: true,
+    });
     bevindingen.push({
       soort: 'ontbreekt',
       pad: 'outdoorTemperature',
@@ -351,6 +401,16 @@ export function ontdek(r: Registers): Voorstel {
         tekst: `${naam} heeft ${thermometers.length} thermometers; ${thermometer.entity_id} gekozen`,
         alternatieven: thermometers.slice(1).map((e) => e.entity_id),
       });
+      keuzes.push({
+        id: `zone:${slug(gebied)}:temperature`,
+        soort: 'zoneTemperatuur',
+        zoneId: slug(gebied),
+        vraag: `Welke thermometer geldt voor ${naam}?`,
+        toelichting: 'Hierop wordt geregeld, dus dit moet de kamer zijn en niet een apparaat.',
+        huidig: thermometer.entity_id,
+        opties: thermometers.map((e) => e.entity_id),
+        magLeeg: false,
+      });
     }
 
     const actuatorIds: string[] = [];
@@ -397,6 +457,17 @@ export function ontdek(r: Registers): Voorstel {
             `${apparaat.entity_id} en ${tweeling.entity_id} lijken hetzelfde apparaat ` +
             'via twee integraties. Houd er één over.',
           alternatieven: [tweeling.entity_id],
+        });
+        keuzes.push({
+          id: `dubbel:${id}`,
+          soort: 'dubbelApparaat',
+          vraag: 'Welke van deze twee stuurt dit apparaat aan?',
+          toelichting:
+            'Ze lijken hetzelfde apparaat via twee integraties. Allebei aanhouden ' +
+            'betekent hetzelfde apparaat twee keer commanderen; de ander wordt weggelaten.',
+          huidig: apparaat.entity_id,
+          opties: [apparaat.entity_id, tweeling.entity_id],
+          magLeeg: false,
         });
       }
 
@@ -483,6 +554,18 @@ export function ontdek(r: Registers): Voorstel {
         ? { alternatieven: meterKandidaten.slice(1).map((e) => e.entity_id) }
         : {}),
     });
+    keuzes.push({
+      id: 'gridPower',
+      soort: 'veld',
+      pad: 'power.gridPower',
+      vraag: 'Welke sensor meet wat er van het net komt?',
+      toelichting:
+        'Hij hoort negatief te worden bij teruglevering. Klopt dat niet, dan klopt ' +
+        'het hele overschot niet. Zonder meter doet pv-surplus niet mee.',
+      huidig: meter.entity_id,
+      opties: meterKandidaten.map((e) => e.entity_id),
+      magLeeg: true,
+    });
   } else {
     bevindingen.push({
       soort: 'ontbreekt',
@@ -535,7 +618,81 @@ export function ontdek(r: Registers): Voorstel {
     ...(buiten ? { outdoorTemperature: buiten.entity_id } : {}),
   };
 
-  return { config, bevindingen };
+  return { config, bevindingen, keuzes };
+}
+
+// -------------------------------------------------------- keuzes maken -----
+
+/**
+ * De antwoorden van de bewoner op het voorstel toepassen.
+ *
+ * Bewust hier en niet in de weergave. De pagina kiest wát er gebeurt; wat dat
+ * betekent voor de configuratie is domeinkennis, en die hoort op één plek te
+ * staan waar hij te toetsen is. De pagina stuurt dus antwoorden en geen JSON.
+ *
+ * Onbekende antwoorden worden genegeerd: de weergave kan achterlopen op wat de
+ * ontdekking net vond, en dan is stilzwijgend overslaan beter dan weigeren.
+ */
+export function pasKeuzesToe(
+  voorstel: Voorstel,
+  antwoorden: Readonly<Record<string, string | null>>,
+): Record<string, unknown> {
+  const config: Record<string, unknown> = structuredClone(voorstel.config);
+
+  for (const keuze of voorstel.keuzes) {
+    if (!(keuze.id in antwoorden)) continue;
+    const antwoord = antwoorden[keuze.id] ?? null;
+
+    // Een antwoord dat niet in de lijst stond komt er niet in. De weergave
+    // levert een keuzelijst aan; alles daarbuiten is een fout of iets ergers.
+    if (antwoord != null && !keuze.opties.includes(antwoord)) continue;
+    if (antwoord == null && !keuze.magLeeg) continue;
+
+    if (keuze.soort === 'veld' && keuze.pad === 'outdoorTemperature') {
+      if (antwoord == null) delete config['outdoorTemperature'];
+      else config['outdoorTemperature'] = antwoord;
+    } else if (keuze.soort === 'veld' && keuze.pad === 'power.gridPower') {
+      if (antwoord == null) delete config['power'];
+      else config['power'] = { ...(config['power'] as object | undefined), gridPower: antwoord };
+    } else if (keuze.soort === 'zoneTemperatuur') {
+      const zones = (config['zones'] as Record<string, unknown>[] | undefined) ?? [];
+      for (const zone of zones) {
+        if (zone['id'] === keuze.zoneId) zone['temperature'] = antwoord;
+      }
+    } else if (keuze.soort === 'dubbelApparaat' && antwoord != null) {
+      const teVerwijderen = keuze.opties.filter((o) => o !== antwoord);
+      verwijderApparaten(config, teVerwijderen);
+    }
+  }
+
+  return config;
+}
+
+/**
+ * Een apparaat uit het voorstel halen, inclusief de verwijzingen ernaar.
+ *
+ * Alleen uit de lijst schrappen is niet genoeg: een zone die naar een apparaat
+ * wijst dat niet bestaat, wordt door de samenhangscontrole afgekeurd. En een
+ * zone die daardoor helemaal geen apparaat meer heeft, kan niet blijven staan.
+ */
+function verwijderApparaten(config: Record<string, unknown>, refs: readonly string[]): void {
+  const actuators = (config['actuators'] as Record<string, unknown>[] | undefined) ?? [];
+  const weg = new Set(
+    actuators.filter((a) => refs.includes(String(a['ref']))).map((a) => String(a['id'])),
+  );
+  if (weg.size === 0) return;
+
+  config['actuators'] = actuators.filter((a) => !weg.has(String(a['id'])));
+
+  const zones = (config['zones'] as Record<string, unknown>[] | undefined) ?? [];
+  config['zones'] = zones
+    .map((zone) => ({
+      ...zone,
+      actuatorIds: ((zone['actuatorIds'] as string[] | undefined) ?? []).filter(
+        (id) => !weg.has(id),
+      ),
+    }))
+    .filter((zone) => (zone['actuatorIds'] as string[]).length > 0);
 }
 
 // ------------------------------------------------------------- ophalen -----

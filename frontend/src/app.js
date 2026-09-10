@@ -560,7 +560,11 @@ async function haalTerugblik() {
 const TABS = [
   ['tab-live', 'paneel-live'],
   ['tab-terugblik', 'paneel-terugblik'],
+  ['tab-installatie', 'paneel-installatie'],
 ];
+
+/** Welke tabs er werkelijk zijn. De installatie bestaat lang niet altijd. */
+const zichtbareTabs = () => TABS.filter(([tabId]) => !$(tabId).hidden);
 
 function kiesTab(actiefId) {
   for (const [tabId, paneelId] of TABS) {
@@ -578,12 +582,15 @@ function kiesTab(actiefId) {
 function tabsAanzetten() {
   for (const [tabId] of TABS) {
     $(tabId).addEventListener('click', () => kiesTab(tabId));
-  }
-  // Pijltjes horen bij een tablist; anders kom je er met het toetsenbord niet uit.
-  for (const [i, [tabId]] of TABS.entries()) {
+    // Pijltjes horen bij een tablist; anders kom je er met het toetsenbord
+    // niet uit. Over de zichtbare tabs, want een verborgen tab overslaan is
+    // wat je verwacht.
     $(tabId).addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      const volgende = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length][0];
+      const lijst = zichtbareTabs();
+      const i = lijst.findIndex(([id]) => id === tabId);
+      if (i < 0) return;
+      const volgende = lijst[(i + (e.key === 'ArrowRight' ? 1 : lijst.length - 1)) % lijst.length][0];
       kiesTab(volgende);
       $(volgende).focus();
     });
@@ -594,7 +601,7 @@ function tabsAanzetten() {
   } catch {
     onthouden = null;
   }
-  kiesTab(TABS.some(([id]) => id === onthouden) ? onthouden : 'tab-live');
+  kiesTab(zichtbareTabs().some(([id]) => id === onthouden) ? onthouden : 'tab-live');
 }
 
 /* ---------------------------------------------------------- dataset ---- */
@@ -875,3 +882,170 @@ volg();
 // Wel meteen bij het openen, want daar komt iemand voor.
 await haalTerugblik();
 setInterval(haalTerugblik, 15 * 60_000);
+
+/* ------------------------------------------------------ installatie ---- */
+
+/*
+ * De onboarding.
+ *
+ * Bestaat alleen wanneer de dienst hem aanbiedt, en dat doet hij alleen
+ * achter Ingress (besluit 42). Op de NAS geeft `api/onboarding` een 503 en
+ * blijft de tab weg — dat is geen fout maar de normale toestand daar.
+ *
+ * De pagina stelt de configuratie niet samen. Ze toont vragen die de dienst
+ * heeft gesteld en stuurt de antwoorden terug; wat die betekenen staat in
+ * `discovery.ts`. Anders zou de vorm van de configuratie op twee plekken
+ * moeten kloppen.
+ */
+
+const MERKEN = {
+  gevonden: ['gevonden', 'text-goed'],
+  geraden: ['geraden', 'text-strenger'],
+  overgeslagen: ['overgeslagen', 'text-zacht'],
+  ontbreekt: ['ontbreekt', 'text-zacht'],
+};
+
+let voorstelKeuzes = [];
+
+function tekenKeuzes(keuzes) {
+  const doel = $('onboarding-keuzes');
+  doel.replaceChildren();
+  if (keuzes.length === 0) {
+    doel.append(
+      el('p', 'text-zacht text-sm', 'Er is niets waar de ontdekking over twijfelt.'),
+    );
+    return;
+  }
+
+  for (const keuze of keuzes) {
+    const kaart = el('div', 'border-rand rounded-md border p-3');
+    kaart.append(el('p', 'text-sm font-medium', keuze.vraag));
+    if (keuze.toelichting) {
+      kaart.append(el('p', 'text-zacht mt-1 text-xs', keuze.toelichting));
+    }
+
+    const select = el('select', 'meting mt-2 w-full rounded-md border border-rand bg-grond p-2 text-sm');
+    select.id = `keuze-${keuze.id}`;
+    if (keuze.magLeeg) {
+      const leeg = el('option', null, 'geen van deze');
+      leeg.value = '';
+      select.append(leeg);
+    }
+    for (const optie of keuze.opties) {
+      const o = el('option', null, optie);
+      o.value = optie;
+      if (optie === keuze.huidig) o.selected = true;
+      select.append(o);
+    }
+    kaart.append(select);
+    doel.append(kaart);
+  }
+}
+
+/** Eerst wat aandacht vraagt, dan wat klaar is. Zelfde volgorde als in de terminal. */
+const VOLGORDE = ['ontbreekt', 'geraden', 'gevonden', 'overgeslagen'];
+
+function tekenBevindingen(bevindingen) {
+  const doel = $('onboarding-bevindingen');
+  doel.replaceChildren();
+  const lijst = el('ul', 'grid gap-2 text-sm');
+  const gesorteerd = [...bevindingen].sort(
+    (a, b) => VOLGORDE.indexOf(a.soort) - VOLGORDE.indexOf(b.soort),
+  );
+  for (const b of gesorteerd) {
+    const [label, kleur] = MERKEN[b.soort] ?? ['?', 'text-zacht'];
+    const regel = el('li', 'flex gap-3');
+    regel.append(el('span', `${kleur} meting w-28 shrink-0 text-xs uppercase`, label));
+    const rechts = el('div', 'min-w-0');
+    rechts.append(el('p', null, b.tekst));
+    if (b.alternatieven?.length) {
+      rechts.append(
+        el(
+          'p',
+          'text-zacht meting mt-0.5 text-xs break-all',
+          `ook mogelijk: ${b.alternatieven.slice(0, 6).join(', ')}` +
+            (b.alternatieven.length > 6 ? ` … en nog ${b.alternatieven.length - 6}` : ''),
+        ),
+      );
+    }
+    rechts.append(el('p', 'text-zacht meting text-xs', b.pad));
+    regel.append(rechts);
+    lijst.append(regel);
+  }
+  doel.append(lijst);
+}
+
+function toonUitkomst(tekst, kleur) {
+  const doel = $('onboarding-uitkomst');
+  doel.replaceChildren(el('p', kleur, tekst));
+  doel.hidden = false;
+}
+
+async function bewaarInstallatie() {
+  const knop = $('onboarding-bewaar');
+  knop.disabled = true;
+  const antwoorden = {};
+  for (const keuze of voorstelKeuzes) {
+    const waarde = $(`keuze-${keuze.id}`).value;
+    antwoorden[keuze.id] = waarde === '' ? null : waarde;
+  }
+
+  try {
+    const res = await fetch('api/onboarding', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ antwoorden }),
+    });
+    const body = await res.json();
+    if (body.ok) {
+      toonUitkomst(
+        `Geschreven naar ${body.pad}. Herstart de add-on om hem in gebruik te nemen.`,
+        'text-goed',
+      );
+      knop.hidden = true;
+      return;
+    }
+    const doel = $('onboarding-uitkomst');
+    doel.replaceChildren(el('p', 'text-alarm', body.reden ?? 'Opslaan mislukt.'));
+    for (const p of body.problemen ?? []) {
+      doel.append(el('p', 'text-zacht meting mt-1 text-xs', p));
+    }
+    doel.hidden = false;
+  } catch (error) {
+    toonUitkomst(`Opslaan mislukt: ${error}`, 'text-alarm');
+  } finally {
+    knop.disabled = false;
+  }
+}
+
+async function haalOnboarding() {
+  let res;
+  try {
+    res = await fetch('api/onboarding');
+  } catch {
+    return; // geen dienst; de tab blijft weg
+  }
+  // 503 betekent: deze opstelling kent geen onboarding. Dat is de NAS, en daar
+  // hoort geen tab te verschijnen die niets kan.
+  if (!res.ok) return;
+
+  $('tab-installatie').hidden = false;
+  let voorstel;
+  try {
+    voorstel = await res.json();
+  } catch (error) {
+    $('onboarding-laden').hidden = true;
+    $('onboarding-fout').textContent = `Het voorstel is niet te lezen: ${error}`;
+    $('onboarding-fout').hidden = false;
+    return;
+  }
+
+  voorstelKeuzes = voorstel.keuzes ?? [];
+  tekenKeuzes(voorstelKeuzes);
+  tekenBevindingen(voorstel.bevindingen ?? []);
+  $('onboarding-laden').hidden = true;
+  $('onboarding-inhoud').hidden = false;
+  $('onboarding-bewaar').addEventListener('click', () => void bewaarInstallatie());
+}
+
+await haalOnboarding();

@@ -59,19 +59,31 @@ repository toevoegen. `repository.yaml` in de wortel staat daar al klaar voor.
 Dan vervalt `stage.ps1` niet — de Supervisor heeft dezelfde platte vorm nodig,
 dus de add-on krijgt dan een eigen repository waarin die vorm de vorm *is*.
 
-### Vóór de eerste start
+### De eerste start
 
-De add-on heeft een eigen map onder `/addon_configs/`, bereikbaar met de
-bestandseditor of de Samba-add-on. Maak daarin een map `sites` en zet er je
-installatiebestand in:
+Gewoon starten. Er hoeft nog niets klaar te staan.
+
+De add-on leest Home Assistant uit — gebieden, apparaten, sensoren — en toont
+in het paneel **Smart Climate** onder het tabblad *Installatie* wat hij heeft
+gevonden. Wat hij zeker weet staat er als bevinding; waar hij twijfelt staat
+een vraag met een keuzelijst. Eén klik op *Zo instellen* schrijft de
+configuratie weg, en na een herstart begint de opname.
+
+Tot dat moment regelt hij niets en schrijft hij geen logboek. Dat is geen fout
+maar de normale toestand van een verse installatie (besluit 42).
+
+Wil je het bestand liever zelf schrijven, dan kan dat ook: de add-on heeft een
+eigen map onder `/addon_configs/`, bereikbaar met de bestandseditor of de
+Samba-add-on. Maak daarin een map `sites` en zet er je installatiebestand in:
 
 ```
 sites/mijn-huis.json
 ```
 
-Zonder dat bestand stopt de add-on met een melding in plaats van in een
-herstartlus te belanden — dat laatste is één keer gebeurd en dat is niet
-grappig (besluit 33).
+Een bestand dat er wél staat maar niet deugt, is nog steeds een reden om te
+stoppen — dat moet je repareren, en stilzwijgend doorstarten zou de fout
+verbergen tot hij 's nachts opduikt (besluit 33). Er wordt ook nooit over een
+bestaande configuratie heen geschreven.
 
 ## Waar dingen staan
 

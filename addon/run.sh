@@ -19,16 +19,21 @@ LOG_DIR=/share/hems/shadow
 
 bashio::log.info "Smart Climate OS — schaduwmodus"
 
-# De configuratie hoort bij de installatie, niet bij de code (besluit 21). Bij
-# een verse add-on staat er nog niets; dan is een duidelijke melding beter dan
-# een herstartlus (besluit 33 leerde dat op de harde manier).
+# De configuratie hoort bij de installatie, niet bij de code (besluit 21).
+#
+# Staat er nog niets, dan is dat sinds fase 6e stap 4 geen fout meer maar de
+# normale toestand van een verse installatie: de dienst start, regelt niets, en
+# toont in het paneel wat er in huis is gevonden (besluit 42).
+#
+# Wat wél een fout blijft, is een configuratie die er staat maar niet deugt.
+# Daar hoort de controle verderop bij; zonder die controle levert een
+# schemawijziging een herstartlus op waarin de melding wegscrolt (besluit 33).
+HEEFT_CONFIG=1
 if ! compgen -G "${CONFIG_DIR}/sites/*.json" > /dev/null; then
-  bashio::log.fatal "Geen configuratie gevonden in ${CONFIG_DIR}/sites/"
-  bashio::log.fatal ""
-  bashio::log.fatal "Zet je installatiebestand neer in de map 'sites' van deze"
-  bashio::log.fatal "add-on, te vinden onder /addon_configs/ met de bestandseditor"
-  bashio::log.fatal "of de Samba-add-on. Bijvoorbeeld: sites/mijn-huis.json"
-  bashio::exit.nok
+  HEEFT_CONFIG=0
+  bashio::log.info "Nog geen configuratie in ${CONFIG_DIR}/sites/"
+  bashio::log.info "Open het paneel Smart Climate; daar staat wat er in huis is"
+  bashio::log.info "gevonden en kun je het bevestigen."
 fi
 
 mkdir -p "${LOG_DIR}"
@@ -81,7 +86,7 @@ bashio::log.info "Logboek naar    ${SHADOW_LOG_DIR}"
 # NAS-uitrol doet `deploy.sh` dat vóór het omwisselen (besluit 33); hier kan dat
 # niet, want de Supervisor start ons gewoon. Dan maar zelf, één keer, met een
 # leesbare fout in plaats van een herstartlus.
-if ! node /app/dist/main.js --check-config; then
+if [ "${HEEFT_CONFIG}" -eq 1 ] && ! node /app/dist/main.js --check-config; then
   bashio::log.fatal "De configuratie is niet bruikbaar; zie de fouten hierboven."
   bashio::exit.nok
 fi
