@@ -458,7 +458,7 @@ describe('eventfilter', () => {
     // En de entiteiten van dít huis komen er niet meer in voor. Dat is de kern
     // van 6a: zonder de handgeschreven tabellen sleept de vertaling geen
     // meetpunten van de één naar de ander mee.
-    expect(known.has(exampleSite.power.gridPower.id)).toBe(false);
+    expect(known.has(exampleSite.power.gridPower!.id)).toBe(false);
     expect(known.has(exampleSite.occupancy[0]!.ref.id)).toBe(false);
     for (const z of exampleSite.zones) expect(known.has(z.temperature.id)).toBe(false);
   });

@@ -163,6 +163,86 @@ function oneOf<T extends string>(
   return v as T;
 }
 
+/*
+ * Hieronder de tegenhangers van `str`, `num`, `bool` en `oneOf` die niet
+ * klagen maar terugvallen.
+ *
+ * Ze bestaan sinds fase 6e stap 2. Daarvoor was bijna elk veld verplicht, wat
+ * verdedigbaar leek — hoe explicieter de configuratie, hoe minder verrassingen.
+ * Maar het maakte de drempel onneembaar: een nieuwe gebruiker moest 158
+ * waarden aanleveren voordat er iets startte, en de meeste daarvan zijn keuzes
+ * waar hij nog geen mening over heeft.
+ *
+ * De regel die we aanhouden: een standaardwaarde mag, zolang fout zijn
+ * ongevaarlijk of behoudend is. Een verkeerd geraden schakelband kost comfort;
+ * een verkeerd geraden `canHeat` laat de regeling verwarmen met een apparaat
+ * dat dat niet kan. Die tweede soort blijft verplicht.
+ *
+ * Een fout blijft een fout: staat het veld er wél maar deugt het niet, dan is
+ * dat geen reden om stilletjes iets anders te doen.
+ */
+
+/** Een tekstveld dat mag ontbreken en dan terugvalt. */
+function strOr(
+  p: Problems,
+  obj: Record<string, unknown>,
+  path: string,
+  key: string,
+  fallback: string,
+): string {
+  if (obj[key] === undefined) return fallback;
+  return str(p, obj, path, key) ?? fallback;
+}
+
+function numOr(
+  p: Problems,
+  obj: Record<string, unknown>,
+  path: string,
+  key: string,
+  fallback: number,
+  opts: NumOptions = {},
+): number {
+  if (obj[key] === undefined) return fallback;
+  return num(p, obj, path, key, opts) ?? fallback;
+}
+
+function boolOr(
+  p: Problems,
+  obj: Record<string, unknown>,
+  path: string,
+  key: string,
+  fallback: boolean,
+): boolean {
+  if (obj[key] === undefined) return fallback;
+  return bool(p, obj, path, key) ?? fallback;
+}
+
+function oneOfOr<T extends string>(
+  p: Problems,
+  obj: Record<string, unknown>,
+  path: string,
+  key: string,
+  allowed: readonly T[],
+  fallback: T,
+): T {
+  if (obj[key] === undefined) return fallback;
+  return oneOf(p, obj, path, key, allowed) ?? fallback;
+}
+
+/** Een blok dat mag ontbreken. Geeft een leeg object terug in plaats van null. */
+function blokOf(
+  p: Problems,
+  value: unknown,
+  path: string,
+): Record<string, unknown> | null {
+  if (value === undefined) return {};
+  if (!isRecord(value)) {
+    p.error(path, 'moet een object zijn');
+    return null;
+  }
+  return value;
+}
+
 function arr(
   p: Problems,
   obj: Record<string, unknown>,
@@ -223,13 +303,40 @@ function refList(
   return out;
 }
 
+/*
+ * Waar een zone naartoe regelt wanneer het bestand niets zegt.
+ *
+ * Alleen verwarmen. Een koeldrempel raden is de gevaarlijke richting: dan zou
+ * een airco kunnen gaan draaien omdat wij een getal hebben verzonnen. Wie wil
+ * koelen zegt dat zelf.
+ *
+ * `handmatig` blijft met opzet leeg — daar heeft de bewoner het stuur.
+ */
+const STANDAARD_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
+  dag: { heat: 20 },
+  nacht: { heat: 17 },
+  voorverwarmen: { heat: 20 },
+  afwezig: { heat: 16 },
+  vakantie: { heat: 12 },
+  handmatig: {},
+};
+
 function setpoints(
   p: Problems,
   value: unknown,
   path: string,
 ): Record<Mode, SetpointPair> | null {
+  if (value === undefined) {
+    p.warn(
+      path,
+      'ontbreekt; er wordt alleen verwarmd, volgens ' +
+        `dag ${STANDAARD_SETPOINTS.dag.heat} / nacht ${STANDAARD_SETPOINTS.nacht.heat} / ` +
+        `afwezig ${STANDAARD_SETPOINTS.afwezig.heat} / vakantie ${STANDAARD_SETPOINTS.vakantie.heat} °C`,
+    );
+    return { ...STANDAARD_SETPOINTS };
+  }
   if (!isRecord(value)) {
-    p.error(path, value === undefined ? 'ontbreekt' : 'moet een object zijn');
+    p.error(path, 'moet een object zijn');
     return null;
   }
   for (const key of Object.keys(value)) {
@@ -241,7 +348,9 @@ function setpoints(
   for (const mode of MODES) {
     const raw = value[mode];
     if (raw === undefined) {
-      p.error(join(path, mode), 'ontbreekt — geef een leeg object als deze modus niets regelt');
+      // Een deels ingevulde tabel aanvullen in plaats van afkeuren. Wie drie
+      // modi heeft bedacht is niet van plan de andere drie te verbieden.
+      out[mode] = { ...STANDAARD_SETPOINTS[mode] };
       continue;
     }
     if (!isRecord(raw)) {
@@ -276,9 +385,13 @@ function actuator(
     return null;
   }
   const id = str(p, value, path, 'id');
-  const name = str(p, value, path, 'name');
+  // Zonder naam is de id de naam. Een label is geen reden om niet te starten.
+  const name = strOr(p, value, path, 'name', id ?? '');
   const refValue = ref(p, value['ref'], join(path, 'ref'), defaultAdapter);
-  const role = oneOf(p, value, path, 'role', ROLES);
+  // `primary` is de behoudende aanname: het apparaat regelt zijn zone gewoon.
+  // `assist` is de bijzondere rol — opportunistisch meedraaien op overschot —
+  // en die kies je bewust.
+  const role = oneOfOr(p, value, path, 'role', ROLES, 'primary');
 
   const capsRaw = value['capabilities'];
   let capabilities: Actuator['capabilities'] | null = null;
@@ -288,9 +401,20 @@ function actuator(
     const cPath = join(path, 'capabilities');
     const canHeat = bool(p, capsRaw, cPath, 'canHeat');
     const canCool = bool(p, capsRaw, cPath, 'canCool');
-    const range = arr(p, capsRaw, cPath, 'setpointRange');
-    let min: number | null = null;
-    let max: number | null = null;
+    // Het bereik begrenst wat we naar het apparaat zouden sturen. Ontbreekt
+    // het, dan nemen we de ruimste band die dit schema überhaupt toestaat: het
+    // apparaat kapt zelf af, en te ruim raden kost hooguit een genegeerde
+    // opdracht. Te krap raden zou juist regelruimte weggooien.
+    const rangeRaw = capsRaw['setpointRange'];
+    let min: number | null = rangeRaw === undefined ? 5 : null;
+    let max: number | null = rangeRaw === undefined ? 35 : null;
+    if (rangeRaw === undefined) {
+      p.warn(
+        join(cPath, 'setpointRange'),
+        'ontbreekt; er wordt gerekend met 5-35 °C, wat ruimer is dan de meeste apparaten aankunnen',
+      );
+    }
+    const range = rangeRaw === undefined ? null : arr(p, capsRaw, cPath, 'setpointRange');
     if (range) {
       if (range.length !== 2) {
         p.error(join(cPath, 'setpointRange'), 'moet precies twee getallen bevatten: [min, max]');
@@ -347,33 +471,46 @@ function actuator(
     }
   }
 
-  const powerRaw = value['power'];
+  /*
+   * Het vermogen mag ontbreken — behalve bij een assist-apparaat.
+   *
+   * Voor een `primary` doet het niet mee: comfort vraagt `budgetW: 0` en wordt
+   * nooit door het budget tegengehouden. Voor een `assist` is het de hele
+   * grondslag: `pv-surplus` verdeelt overschot en een apparaat dat 0 W claimt
+   * past altijd, hoe weinig er ook over is. Dat is de gevaarlijke richting, en
+   * daarom blijft het daar verplicht.
+   */
+  const pPath = join(path, 'power');
+  const powerRaw = blokOf(p, value['power'], pPath);
   let power: Actuator['power'] | null = null;
-  if (!isRecord(powerRaw)) {
-    p.error(join(path, 'power'), 'ontbreekt of is geen object');
-  } else {
-    const pPath = join(path, 'power');
-    const estimatedW = num(p, powerRaw, pPath, 'estimatedW', { min: 0, max: 50_000 });
-    const sensorRaw = powerRaw['sensor'];
-    const sensor =
-      sensorRaw === undefined ? null : ref(p, sensorRaw, join(pPath, 'sensor'), defaultAdapter);
-    if (estimatedW != null) {
+  if (powerRaw) {
+    const opgegeven = powerRaw['estimatedW'] !== undefined;
+    if (!opgegeven && role === 'assist') {
+      p.error(
+        join(pPath, 'estimatedW'),
+        'ontbreekt; een assist-apparaat verdeelt overschot en een apparaat ' +
+          'zonder vermogen past altijd, hoe weinig er ook over is',
+      );
+    } else {
+      const estimatedW = numOr(p, powerRaw, pPath, 'estimatedW', 0, { min: 0, max: 50_000 });
+      const sensorRaw = powerRaw['sensor'];
+      const sensor =
+        sensorRaw === undefined ? null : ref(p, sensorRaw, join(pPath, 'sensor'), defaultAdapter);
       power = { estimatedW, ...(sensor ? { sensor } : {}) };
     }
   }
 
-  const timingRaw = value['timing'];
+  // Draaitijden beschermen het apparaat tegen klapperen. Ontbreken ze, dan
+  // zijn deze waarden gebruikelijk en aan de veilige kant.
+  const tPath = join(path, 'timing');
+  const timingRaw = blokOf(p, value['timing'], tPath);
   let timing: Actuator['timing'] | null = null;
-  if (!isRecord(timingRaw)) {
-    p.error(join(path, 'timing'), 'ontbreekt of is geen object');
-  } else {
-    const tPath = join(path, 'timing');
-    const minRunMinutes = num(p, timingRaw, tPath, 'minRunMinutes', { min: 0, max: 240 });
-    const minRestMinutes = num(p, timingRaw, tPath, 'minRestMinutes', { min: 0, max: 240 });
-    const settleMinutes = num(p, timingRaw, tPath, 'settleMinutes', { min: 0, max: 60 });
-    if (minRunMinutes != null && minRestMinutes != null && settleMinutes != null) {
-      timing = { minRunMinutes, minRestMinutes, settleMinutes };
-    }
+  if (timingRaw) {
+    timing = {
+      minRunMinutes: numOr(p, timingRaw, tPath, 'minRunMinutes', 10, { min: 0, max: 240 }),
+      minRestMinutes: numOr(p, timingRaw, tPath, 'minRestMinutes', 5, { min: 0, max: 240 }),
+      settleMinutes: numOr(p, timingRaw, tPath, 'settleMinutes', 2, { min: 0, max: 60 }),
+    };
   }
 
   if (!id || !name || !refValue || !role || !capabilities || !power || !timing) return null;
@@ -385,13 +522,15 @@ function zone(
   value: unknown,
   path: string,
   defaultAdapter: string,
+  /** Positie in de lijst, als terugval voor `priority`. */
+  volgorde: number,
 ): Zone | null {
   if (!isRecord(value)) {
     p.error(path, 'moet een object zijn');
     return null;
   }
   const id = str(p, value, path, 'id');
-  const name = str(p, value, path, 'name');
+  const name = strOr(p, value, path, 'name', id ?? '');
   const temperature = ref(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
   const humidityRaw = value['humidity'];
   const humidity =
@@ -409,18 +548,26 @@ function zone(
     }
   });
 
-  const priority = num(p, value, path, 'priority', { min: 1, max: 999, integer: true });
-  const thermalMass = oneOf(p, value, path, 'thermalMass', THERMAL_MASS);
+  // Zonder opgegeven volgorde telt de volgorde in het bestand. Dat is wat een
+  // lezer ook zou aannemen.
+  const priority = numOr(p, value, path, 'priority', volgorde, {
+    min: 1,
+    max: 999,
+    integer: true,
+  });
+  // `medium` raakt niemand hard: het bepaalt hoe ver vooruit er geladen mag
+  // worden, en dat staat standaard toch uit.
+  const thermalMass = oneOfOr(p, value, path, 'thermalMass', THERMAL_MASS, 'medium');
 
-  const hystRaw = value['hysteresis'];
+  // Een gebruikelijke schakelband. Verkeerd geraden kost comfort, geen
+  // veiligheid — precies het soort keuze dat een standaardwaarde verdient.
+  const hPath = join(path, 'hysteresis');
+  const hystRaw = blokOf(p, value['hysteresis'], hPath);
   let hysteresis: Zone['hysteresis'] | null = null;
-  if (!isRecord(hystRaw)) {
-    p.error(join(path, 'hysteresis'), 'ontbreekt of is geen object');
-  } else {
-    const hPath = join(path, 'hysteresis');
-    const onDelta = num(p, hystRaw, hPath, 'onDelta', { min: 0, max: 5 });
-    const offDelta = num(p, hystRaw, hPath, 'offDelta', { min: 0, max: 5 });
-    if (onDelta != null && offDelta != null) {
+  if (hystRaw) {
+    const onDelta = numOr(p, hystRaw, hPath, 'onDelta', 0.3, { min: 0, max: 5 });
+    const offDelta = numOr(p, hystRaw, hPath, 'offDelta', 0.2, { min: 0, max: 5 });
+    {
       if (onDelta + offDelta === 0) {
         p.error(
           hPath,
@@ -435,15 +582,14 @@ function zone(
     }
   }
 
-  const bufRaw = value['buffering'];
+  // Voorladen staat standaard uit. Aanzetten is een keuze, geen aanname.
+  const bPath = join(path, 'buffering');
+  const bufRaw = blokOf(p, value['buffering'], bPath);
   let buffering: Zone['buffering'] | null = null;
-  if (!isRecord(bufRaw)) {
-    p.error(join(path, 'buffering'), 'ontbreekt of is geen object');
-  } else {
-    const bPath = join(path, 'buffering');
-    const enabled = bool(p, bufRaw, bPath, 'enabled');
-    const bandC = num(p, bufRaw, bPath, 'bandC', { min: 0, max: 5 });
-    if (enabled != null && bandC != null) {
+  if (bufRaw) {
+    const enabled = boolOr(p, bufRaw, bPath, 'enabled', false);
+    const bandC = numOr(p, bufRaw, bPath, 'bandC', 0, { min: 0, max: 5 });
+    {
       buffering = { enabled, bandC };
       if (enabled && bandC === 0) {
         p.warn(bPath, 'buffering staat aan maar de band is nul, dus er wordt niets voorgeladen');
@@ -635,7 +781,10 @@ export function parseSiteConfig(
 
   const version = input['schemaVersion'];
   if (version === undefined) {
-    p.error('schemaVersion', `ontbreekt; deze versie verwacht ${SCHEMA_VERSION}`);
+    // Ontbreken is iets anders dan afwijken. Zonder nummer nemen we aan dat
+    // het bestand bij deze versie hoort; staat er een ánder nummer, dan weten
+    // we juist zeker dat het niet klopt.
+    p.warn('schemaVersion', `ontbreekt; er wordt gelezen alsof het ${SCHEMA_VERSION} is`);
   } else if (version !== SCHEMA_VERSION) {
     p.error(
       'schemaVersion',
@@ -644,7 +793,9 @@ export function parseSiteConfig(
     );
   }
 
-  const id = str(p, input, '', 'id');
+  // De naam van de installatie is een label: hij staat in het logboek en boven
+  // de weergave. Geen reden om te weigeren.
+  const id = strOr(p, input, '', 'id', 'installatie');
   const timezone = str(p, input, '', 'timezone');
   if (timezone != null) {
     // Een tikfout in de tijdzone zou de dagindeling uren verschuiven zonder één
@@ -670,30 +821,32 @@ export function parseSiteConfig(
 
   const zonesRaw = arr(p, input, '', 'zones', { minLength: 1 });
   const zones = (zonesRaw ?? [])
-    .map((v, i) => zone(p, v, `zones[${i}]`, defaultAdapter))
+    .map((v, i) => zone(p, v, `zones[${i}]`, defaultAdapter, i + 1))
     .filter((z): z is Zone => z != null);
 
+  /*
+   * Het hele vermogensblok mag weg.
+   *
+   * Zonder slimme meter valt `pv-surplus` weg — verderop wordt die dan ook
+   * werkelijk uitgezet in plaats van hem stil niets te laten doen. De drempels
+   * blijven bestaan met gebruikelijke waarden, want `stopImportW` en
+   * `stabilisationMinutes` worden ook buiten die strategie gelezen.
+   */
   type Power = SiteConfig['power'];
   let power: Power | null = null;
-  const powerRaw = input['power'];
-  if (!isRecord(powerRaw)) {
-    p.error('power', 'ontbreekt of is geen object');
-  } else {
-    const gridPower = ref(p, powerRaw['gridPower'], 'power.gridPower', defaultAdapter);
-    const startSurplusW = num(p, powerRaw, 'power', 'startSurplusW', { min: 0, max: 50_000 });
-    const stopImportW = num(p, powerRaw, 'power', 'stopImportW', { min: 0, max: 50_000 });
-    const resumeSurplusW = num(p, powerRaw, 'power', 'resumeSurplusW', { min: 0, max: 50_000 });
-    const stabilisationMinutes = num(p, powerRaw, 'power', 'stabilisationMinutes', {
+  const powerRaw = blokOf(p, input['power'], 'power');
+  if (powerRaw) {
+    const gridRaw = powerRaw['gridPower'];
+    const gridPower =
+      gridRaw === undefined ? null : ref(p, gridRaw, 'power.gridPower', defaultAdapter);
+    const startSurplusW = numOr(p, powerRaw, 'power', 'startSurplusW', 1000, { min: 0, max: 50_000 });
+    const stopImportW = numOr(p, powerRaw, 'power', 'stopImportW', 50, { min: 0, max: 50_000 });
+    const resumeSurplusW = numOr(p, powerRaw, 'power', 'resumeSurplusW', 600, { min: 0, max: 50_000 });
+    const stabilisationMinutes = numOr(p, powerRaw, 'power', 'stabilisationMinutes', 5, {
       min: 0,
       max: 120,
     });
-    if (
-      gridPower &&
-      startSurplusW != null &&
-      stopImportW != null &&
-      resumeSurplusW != null &&
-      stabilisationMinutes != null
-    ) {
+    {
       if (resumeSurplusW > startSurplusW) {
         p.error(
           'power.resumeSurplusW',
@@ -701,12 +854,21 @@ export function parseSiteConfig(
             'is tegenstrijdig; hervatten hoort de lagere drempel te zijn',
         );
       } else {
-        power = { gridPower, startSurplusW, stopImportW, resumeSurplusW, stabilisationMinutes };
+        power = {
+          ...(gridPower ? { gridPower } : {}),
+          startSurplusW,
+          stopImportW,
+          resumeSurplusW,
+          stabilisationMinutes,
+        };
       }
     }
   }
 
-  const occupancyRaw = arr(p, input, '', 'occupancy');
+  // Geen aanwezigheidsbronnen is een geldige installatie: dan geldt het huis
+  // als bewoond (zie context.ts). Dat is de comfortabele kant om te raden.
+  const occupancyRaw =
+    input['occupancy'] === undefined ? null : arr(p, input, '', 'occupancy');
   const occupancy: { id: string; ref: DeviceRef }[] = [];
   const seenOccupancy = new Set<string>();
   occupancyRaw?.forEach((v, i) => {
@@ -725,30 +887,33 @@ export function parseSiteConfig(
     p.warn('occupancy', 'zonder aanwezigheidsbronnen staat het huis altijd op afwezig');
   }
 
+  // Een dagritme dat voor de meeste huishoudens klopt. Wie er anders in staat
+  // zet het zelf, maar niemand hoeft erover na te denken om te kunnen starten.
   type Schedule = SiteConfig['schedule'];
   let schedule: Schedule | null = null;
-  const scheduleRaw = input['schedule'];
-  if (!isRecord(scheduleRaw)) {
-    p.error('schedule', 'ontbreekt of is geen object');
-  } else {
-    const preheatFromHour = num(p, scheduleRaw, 'schedule', 'preheatFromHour', {
+  const scheduleRaw = blokOf(p, input['schedule'], 'schedule');
+  if (scheduleRaw) {
+    const preheatFromHour = numOr(p, scheduleRaw, 'schedule', 'preheatFromHour', 6, {
       min: 0,
       max: 23,
       integer: true,
     });
-    const dayFromHour = num(p, scheduleRaw, 'schedule', 'dayFromHour', {
+    const dayFromHour = numOr(p, scheduleRaw, 'schedule', 'dayFromHour', 8, {
       min: 0,
       max: 23,
       integer: true,
     });
-    const nightFromHour = num(p, scheduleRaw, 'schedule', 'nightFromHour', {
+    const nightFromHour = numOr(p, scheduleRaw, 'schedule', 'nightFromHour', 22, {
       min: 0,
       max: 23,
       integer: true,
     });
-    const lightsRaw = arr(p, scheduleRaw, 'schedule', 'eveningExtensionLights');
-    const lights = refList(p, lightsRaw ?? [], 'schedule.eveningExtensionLights', defaultAdapter);
-    if (preheatFromHour != null && dayFromHour != null && nightFromHour != null) {
+    const lightsRaw =
+      scheduleRaw['eveningExtensionLights'] === undefined
+        ? []
+        : (arr(p, scheduleRaw, 'schedule', 'eveningExtensionLights') ?? []);
+    const lights = refList(p, lightsRaw, 'schedule.eveningExtensionLights', defaultAdapter);
+    {
       if (!(preheatFromHour < dayFromHour && dayFromHour < nightFromHour)) {
         p.error(
           'schedule',
@@ -765,14 +930,37 @@ export function parseSiteConfig(
     }
   }
 
-  const strategiesRaw = arr(p, input, '', 'enabledStrategies', { minLength: 1 });
+  /*
+   * Welke strategieën meedoen.
+   *
+   * Ontbreekt de lijst, dan doen ze allemaal mee. Dat is de aanname die past
+   * bij "ik heb dit nog niet ingesteld": je wilt dat het werkt, niet dat het
+   * niets doet.
+   *
+   * Verderop gaat `pv-surplus` er weer uit wanneer er geen slimme meter is.
+   * Dat is het verschil tussen degraderen en stilvallen: zonder die stap zou
+   * de strategie blijven staan en elke ronde een budget van vijftig watt
+   * verdelen, wat nergens genoeg voor is — zonder dat iemand het merkt.
+   */
+  const strategiesRaw =
+    input['enabledStrategies'] === undefined
+      ? null
+      : arr(p, input, '', 'enabledStrategies', { minLength: 1 });
   const enabledStrategies: string[] = [];
-  strategiesRaw?.forEach((v, i) => {
-    if (typeof v !== 'string') p.error(`enabledStrategies[${i}]`, 'moet een tekst zijn');
-    else enabledStrategies.push(v);
-  });
+  if (input['enabledStrategies'] === undefined) {
+    enabledStrategies.push(...knownStrategies);
+  } else {
+    strategiesRaw?.forEach((v, i) => {
+      if (typeof v !== 'string') p.error(`enabledStrategies[${i}]`, 'moet een tekst zijn');
+      else enabledStrategies.push(v);
+    });
+  }
 
-  const criticalRaw = arr(p, input, '', 'criticalInputs');
+  // Zonder opgegeven meetpunten valt de failsafe nooit aan. Dat is geen
+  // verzwakking: de failsafe schakelt assist-apparaten terug wanneer een
+  // meetpunt wegvalt, en zonder opgave weten we niet welke dat zouden zijn.
+  const criticalRaw =
+    input['criticalInputs'] === undefined ? null : arr(p, input, '', 'criticalInputs');
   const criticalInputs = refList(p, criticalRaw ?? [], 'criticalInputs', defaultAdapter);
 
   // ---- modusbron ------------------------------------------------------------
@@ -873,7 +1061,10 @@ export function parseSiteConfig(
     }
   }
 
-  const sun = ref(p, input['sun'], 'sun', defaultAdapter);
+  // Alleen `pv-surplus` leest de zon, om 's nachts niet op een spookoverschot
+  // te reageren. Zonder die strategie doet hij niets, dus hij mag ontbreken.
+  const sunRaw = input['sun'];
+  const sun = sunRaw === undefined ? null : ref(p, sunRaw, 'sun', defaultAdapter);
 
   const outdoorRaw = input['outdoorTemperature'];
   const outdoorTemperature =
@@ -983,17 +1174,51 @@ export function parseSiteConfig(
     }
   }
 
+  /*
+   * Degraderen in plaats van stilvallen.
+   *
+   * `pv-surplus` is de enige strategie die vermogen claimt, en de enige die
+   * een netmeting nodig heeft. Zonder meter zou hij blijven draaien op een
+   * gridPowerW van nul: een budget van `stopImportW`, vijftig watt, waar niets
+   * op start. Dat is geen werkende regeling maar een stille.
+   *
+   * Hetzelfde voor de zon: die staat in dienst van dezelfde strategie.
+   */
+  const heeftMeter = power?.gridPower != null;
+  if (!heeftMeter && enabledStrategies.includes('pv-surplus')) {
+    const i = enabledStrategies.indexOf('pv-surplus');
+    enabledStrategies.splice(i, 1);
+    p.warn(
+      'power.gridPower',
+      'ontbreekt; zonder netmeting valt pv-surplus weg. Comfort en heat-assist ' +
+        'werken gewoon door — die vragen geen vermogen.',
+    );
+  }
+  if (heeftMeter && sun == null && enabledStrategies.includes('pv-surplus')) {
+    p.warn(
+      'sun',
+      'ontbreekt; pv-surplus kan dan bij nacht niet zien dat een gemeten ' +
+        'overschot niet van de zon komt',
+    );
+  }
+
   checkCoherence(p, { zones, actuators, enabledStrategies }, knownStrategies);
 
+  /*
+   * Wat er echt niet zonder kan.
+   *
+   * Drie dingen. Een tijdzone, want zonder die verschuift de hele dagindeling
+   * zonder dat iemand het merkt. Minstens één zone, want anders is er niets om
+   * te regelen. En minstens één apparaat, want anders is er niets om mee te
+   * regelen. Al het andere heeft hierboven een terugval gekregen.
+   *
+   * `power` en `schedule` staan er nog wel bij, maar die zijn nu altijd
+   * gevuld — ze kunnen alleen nog null zijn wanneer er een échte fout in
+   * stond, en dan staat die fout al in `errors`.
+   */
   const errors = p.errors;
   const incomplete =
-    !id ||
-    !timezone ||
-    !power ||
-    !schedule ||
-    !sun ||
-    zones.length === 0 ||
-    actuators.length === 0;
+    !timezone || zones.length === 0 || actuators.length === 0 || !power || !schedule;
 
   if (errors.length > 0 || incomplete) {
     const problems: ConfigProblem[] =
@@ -1017,7 +1242,7 @@ export function parseSiteConfig(
       criticalInputs,
       ...(mode ? { mode } : {}),
       ...(timers ? { timers } : {}),
-      sun: sun as DeviceRef,
+      ...(sun ? { sun } : {}),
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(migration ? { migration } : {}),
     },

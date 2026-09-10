@@ -191,8 +191,9 @@ export function buildSystemState(
     inputHealth[ref.id] = source.state(ref.id) != null;
   }
 
-  const grid = source.number(config.power.gridPower.id);
-  const sun = source.bool(config.sun.id);
+  const grid =
+    config.power.gridPower == null ? null : source.number(config.power.gridPower.id);
+  const sun = config.sun == null ? null : source.bool(config.sun.id);
   const buiten =
     config.outdoorTemperature == null ? null : source.number(config.outdoorTemperature.id);
 
@@ -302,8 +303,8 @@ export function configFrom(base: SiteConfig, source: EntitySource): SiteConfig {
 export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   const ids = new Set<string>();
 
-  ids.add(config.power.gridPower.id);
-  ids.add(config.sun.id);
+  if (config.power.gridPower) ids.add(config.power.gridPower.id);
+  if (config.sun) ids.add(config.sun.id);
   // Modus en timers hoeven niet uit Home Assistant te komen. Wat de dienst
   // zelf bijhoudt heeft geen entiteit om op te wachten.
   if (config.mode) {

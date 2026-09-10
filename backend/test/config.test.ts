@@ -127,16 +127,19 @@ describe('vorm', () => {
 
   it('meldt alle problemen tegelijk, niet alleen het eerste', () => {
     const c = baseConfig();
-    delete c['id'];
+    // Drie fouten van verschillende soort: een ontbrekend levensader-veld, een
+    // veld met de verkeerde soort waarde, en een verwijzing die nergens heen
+    // gaat. Ze horen alle drie in één keer op tafel te komen.
     delete c['timezone'];
     (c['power'] as Record<string, unknown>)['startSurplusW'] = 'veel';
+    (c['zones'] as Record<string, unknown>[])[0]!['temperature'] = 42;
     const result = parse(c);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     const paths = result.problems.map((p) => p.path);
-    expect(paths).toContain('id');
     expect(paths).toContain('timezone');
     expect(paths).toContain('power.startSurplusW');
+    expect(paths).toContain('zones[0].temperature');
   });
 
   it('wijst een onbekende modus in setpoints af en noemt de geldige', () => {
@@ -217,6 +220,167 @@ describe('een installatie zonder helpers in Home Assistant', () => {
     const c = baseConfig();
     c['mode'] = 'input_select.modus';
     expect(messages(parse(c))).toContain('mode: moet een object zijn');
+  });
+});
+
+describe('het kleinst mogelijke bestand', () => {
+  /*
+   * De maat voor stap 2 van fase 6e.
+   *
+   * Daarvoor moest een nieuwe gebruiker 158 waarden aanleveren met 34
+   * entity-ID's, waarvan de meeste keuzes waren waar hij nog geen mening over
+   * had — schakelbanden, thermische massa, draaitijden, een setpoint per modus
+   * per zone. Dat is geen configuratie maar een examen.
+   *
+   * Wat er overblijft: een tijdzone, één zone, één apparaat. De rest heeft een
+   * terugval, en waar raden gevaarlijk zou zijn blijft het verplicht.
+   */
+  const minimaal = (): Record<string, unknown> => ({
+    timezone: 'Europe/Amsterdam',
+    actuators: [
+      {
+        id: 'ketel',
+        ref: 'climate.ketel',
+        // Wat een apparaat kán is het enige dat niet te raden valt: aannemen
+        // dat iets kan verwarmen terwijl het alleen koelt, is de verkeerde
+        // kant van fout.
+        capabilities: { canHeat: true, canCool: false },
+      },
+    ],
+    zones: [{ id: 'woonkamer', temperature: 'sensor.woonkamer', actuatorIds: ['ketel'] }],
+  });
+
+  it('wordt aangenomen', () => {
+    const result = parse(minimaal());
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.ok).toBe(true);
+  });
+
+  it('vult in wat niet gevraagd is', () => {
+    const result = parse(minimaal());
+    if (!result.ok) throw new Error(messages(result));
+    const c = result.config;
+
+    expect(c.id).toBe('installatie');
+    expect(c.schedule).toEqual({
+      preheatFromHour: 6,
+      dayFromHour: 8,
+      nightFromHour: 22,
+      eveningExtensionLights: [],
+    });
+
+    const a = c.actuators[0]!;
+    expect(a.name).toBe('ketel');
+    expect(a.role).toBe('primary');
+    expect(a.power.estimatedW).toBe(0);
+    expect(a.timing).toEqual({ minRunMinutes: 10, minRestMinutes: 5, settleMinutes: 2 });
+    expect(a.capabilities.setpointRange).toEqual([5, 35]);
+
+    const z = c.zones[0]!;
+    expect(z.name).toBe('woonkamer');
+    expect(z.priority).toBe(1);
+    expect(z.thermalMass).toBe('medium');
+    expect(z.hysteresis).toEqual({ onDelta: 0.3, offDelta: 0.2 });
+    expect(z.buffering).toEqual({ enabled: false, bandC: 0 });
+  });
+
+  it('regelt alleen verwarmen wanneer niemand om koelen heeft gevraagd', () => {
+    // Een koeldrempel verzinnen zou een airco kunnen laten draaien op een getal
+    // dat wij hebben bedacht.
+    const result = parse(minimaal());
+    if (!result.ok) throw new Error(messages(result));
+    const sp = result.config.zones[0]!.setpoints;
+    expect(sp.dag).toEqual({ heat: 20 });
+    expect(sp.nacht).toEqual({ heat: 17 });
+    expect(sp.vakantie).toEqual({ heat: 12 });
+    expect(sp.handmatig).toEqual({});
+    for (const modus of Object.values(sp)) {
+      expect(modus.cool).toBeUndefined();
+    }
+  });
+
+  it('vult een half ingevulde setpointtabel aan in plaats van hem af te keuren', () => {
+    const c = minimaal();
+    (c['zones'] as Record<string, unknown>[])[0]!['setpoints'] = { dag: { heat: 21 } };
+    const result = parse(c);
+    if (!result.ok) throw new Error(messages(result));
+    const sp = result.config.zones[0]!.setpoints;
+    expect(sp.dag).toEqual({ heat: 21 });
+    expect(sp.nacht).toEqual({ heat: 17 });
+  });
+
+  it('zet pv-surplus uit in plaats van hem stil niets te laten doen', () => {
+    const result = parse(minimaal());
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.enabledStrategies).not.toContain('pv-surplus');
+    expect(result.config.enabledStrategies).toContain('comfort');
+    expect(result.warnings.map((w) => w.message).join('\n')).toContain('valt pv-surplus weg');
+  });
+
+  it('houdt pv-surplus wél aan zodra er een netmeting is', () => {
+    const c = minimaal();
+    c['power'] = { gridPower: 'sensor.p1' };
+    const result = parse(c);
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.enabledStrategies).toContain('pv-surplus');
+    // En de drempels zijn ingevuld, zonder dat erom gevraagd is.
+    expect(result.config.power.startSurplusW).toBe(1000);
+    expect(result.config.power.stopImportW).toBe(50);
+  });
+});
+
+describe('wat verplicht blijft', () => {
+  const minimaal = (): Record<string, unknown> => ({
+    timezone: 'Europe/Amsterdam',
+    actuators: [
+      { id: 'ketel', ref: 'climate.ketel', capabilities: { canHeat: true, canCool: false } },
+    ],
+    zones: [{ id: 'woonkamer', temperature: 'sensor.woonkamer', actuatorIds: ['ketel'] }],
+  });
+
+  it('een tijdzone, want anders schuift de hele dagindeling ongemerkt', () => {
+    const c = minimaal();
+    delete c['timezone'];
+    expect(messages(parse(c))).toContain('timezone');
+  });
+
+  it('minstens één zone, want anders valt er niets te regelen', () => {
+    const c = minimaal();
+    c['zones'] = [];
+    expect(parse(c).ok).toBe(false);
+  });
+
+  it('minstens één apparaat, want anders valt er niets mee te regelen', () => {
+    const c = minimaal();
+    c['actuators'] = [];
+    expect(parse(c).ok).toBe(false);
+  });
+
+  it('wat een apparaat kan, want dat raden is de gevaarlijke kant', () => {
+    const c = minimaal();
+    delete (c['actuators'] as Record<string, unknown>[])[0]!['capabilities'];
+    expect(messages(parse(c))).toContain('capabilities');
+  });
+
+  it('een thermometer per zone', () => {
+    const c = minimaal();
+    delete (c['zones'] as Record<string, unknown>[])[0]!['temperature'];
+    expect(messages(parse(c))).toContain('zones[0].temperature');
+  });
+
+  it('het vermogen van een assist-apparaat', () => {
+    // Comfort vraagt budgetW 0 en merkt er niets van. Maar pv-surplus verdeelt
+    // overschot, en een apparaat dat nul watt claimt past altijd — hoe weinig
+    // er ook over is. Daar is raden niet ongevaarlijk maar juist het probleem.
+    const c = minimaal();
+    (c['actuators'] as Record<string, unknown>[])[0]!['role'] = 'assist';
+    expect(messages(parse(c))).toContain('estimatedW');
+  });
+
+  it('en klaagt nog steeds over een veld dat er wél staat maar niet deugt', () => {
+    const c = minimaal();
+    (c['zones'] as Record<string, unknown>[])[0]!['thermalMass'] = 'zwaar';
+    expect(messages(parse(c))).toContain('thermalMass');
   });
 });
 

@@ -169,8 +169,14 @@ export interface Buffering {
 }
 
 export interface PowerSources {
-  /** Netvermogen. Negatief bij teruglevering. */
-  readonly gridPower: DeviceRef;
+  /**
+   * Netvermogen. Negatief bij teruglevering.
+   *
+   * Optioneel: niet elke woning heeft een slimme meter die dit uitleest. Zonder
+   * hem valt `pv-surplus` weg — die strategie is de enige die vermogen claimt.
+   * Comfort en heat-assist vragen `budgetW: 0` en merken er niets van.
+   */
+  readonly gridPower?: DeviceRef;
   /** Overschot waarboven een apparaat mag starten, in W. */
   readonly startSurplusW: number;
   /**
@@ -284,8 +290,13 @@ export interface SiteConfig {
    * terecht in plaats van bij een `timer.`-entiteit.
    */
   readonly timers?: TimerSources;
-  /** Staat de zon boven de horizon. In HA `sun.sun`. */
-  readonly sun: DeviceRef;
+  /**
+   * Staat de zon boven de horizon. In HA `sun.sun`.
+   *
+   * Optioneel. Alleen `pv-surplus` leest hem, om 's nachts niet op een
+   * spookoverschot te reageren. Zonder zonnepanelen is die strategie toch uit.
+   */
+  readonly sun?: DeviceRef;
   /**
    * Buitentemperatuur.
    *
