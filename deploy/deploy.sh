@@ -41,7 +41,11 @@ fi
 
 set -euo pipefail
 
-ROOT="/volume1/docker/hems-climate"
+# De wortel van de installatie. Overschrijfbaar zodat dit script na te spelen
+# is in een wegwerpmap; op de NAS blijft het gewoon dit pad. Een uitrolscript
+# dat je niet kunt uitproberen, probeer je uit op de draaiende dienst — en dat
+# heeft hier al een keer een herstartlus opgeleverd.
+ROOT="${HEMS_DEPLOY_ROOT:-/volume1/docker/hems-climate}"
 SRC="$ROOT/src"
 LOGFILE="$ROOT/deploy.log"
 LOCKDIR="$ROOT/.deploy.lock"
@@ -308,7 +312,35 @@ fi
 
 AFTER="$("$GIT" rev-parse HEAD)"
 
-if [ "$AFTER" = "$DEPLOYED" ] && [ "$FORCE" -eq 0 ]; then
+# Bestaat de container eigenlijk nog?
+#
+# Zonder deze vraag betekent "de commit is niet veranderd" ook "er valt niets
+# te doen" — óók wanneer de container is verdwenen. Dan blijft hij weg tot
+# iemand toevallig kijkt en `--force` draait. Dat kan gebeuren wanneer
+# Container Manager hem opruimt, of wanneer een `docker system prune` te ruim
+# was.
+#
+# Let op het verschil tussen wég en gestópt. Een container die er niet meer is
+# hoort terug te komen; een container die iemand bewust heeft stopgezet niet.
+# Daarom staat er in het compose-bestand `unless-stopped` en niet `always`, en
+# daarom kijken we hier alleen naar afwezigheid. Een crash hoeft dit script
+# sowieso niet op te lossen: dat doet `unless-stopped` al.
+#
+# `docker inspect` en niet `docker ps`: die laatste geeft niets terug voor een
+# gestopte container, en dan zou "gestopt" niet van "weg" te onderscheiden zijn.
+CONTAINER_STATE="$("$DOCKER" inspect -f '{{.State.Status}}' "$CONTAINER" 2>/dev/null || echo 'weg')"
+if [ "$CONTAINER_STATE" = 'weg' ]; then
+  log "$CONTAINER bestaat niet meer; opnieuw aanmaken."
+  NEEDS_RECREATE_FORCED=1
+else
+  NEEDS_RECREATE_FORCED=0
+  if [ "$CONTAINER_STATE" != 'running' ]; then
+    log "$CONTAINER staat op '$CONTAINER_STATE' en wordt met rust gelaten."
+    log "  Bewust stopgezet blijft stopgezet. Weer aan: ${COMPOSE[*]} up -d"
+  fi
+fi
+
+if [ "$AFTER" = "$DEPLOYED" ] && [ "$FORCE" -eq 0 ] && [ "$NEEDS_RECREATE_FORCED" -eq 0 ]; then
   log "Draait al op $(echo "$AFTER" | cut -c1-8). Niets te doen."
   exit 0
 fi
@@ -349,6 +381,10 @@ else
   if grep -q '^deploy/docker-compose\.yml$' <<< "$CHANGED"; then
     NEEDS_RECREATE=1
   fi
+fi
+
+if [ "$NEEDS_RECREATE_FORCED" -eq 1 ]; then
+  NEEDS_RECREATE=1
 fi
 
 if [ "$NEEDS_BUILD" -eq 0 ] && [ "$NEEDS_RECREATE" -eq 0 ]; then
