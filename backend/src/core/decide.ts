@@ -61,6 +61,12 @@ function explain(
   const perZone: ZoneExplanation[] = ctx.zones.map((d) => ({
     zoneId: d.zone.id,
     temperatureC: d.temperatureC,
+    // Rechtstreeks uit de toestand: de context is wat de regeling gebruikt, en
+    // dit is uitdrukkelijk geen invoer voor de regeling.
+    humidityPct: (() => {
+      const h = state.zones[d.zone.id]?.humidityPct;
+      return h?.ok ? h.value : null;
+    })(),
     targetC: d.demand === 'cool' ? d.coolTargetC : d.heatTargetC,
     demand: d.demand,
     reason:

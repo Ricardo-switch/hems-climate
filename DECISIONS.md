@@ -713,6 +713,36 @@ datasetmeter telt hem als invoer en niet als functie.
 voorlopig alleen gelezen wordt door de dataset. Dat is de goedkoopste helft van
 een jaar wachten.
 
+### 30b. En toen zochten we naar het volgende gat
+
+De buitentemperatuur was gevonden doordat hij als openstaand punt in dit document
+stond. De vraag daarna was of er méér zulke gaten waren — want elk gat dat je
+pas in maart ontdekt, kost een winter.
+
+*Aanpak:* niet nadenken maar meten. Een audit die `buildSystemState` draait met
+een bron die bijhoudt welke entiteiten worden aangeraakt, en dat afzet tegen wat
+de eventfilter volgt. Alles in de filter dat niemand uitleest is per definitie
+een gat: het kost herberekeningen en levert niets.
+
+*Uitkomst:* één treffer, en een pijnlijke. `sensor.beneden_luchtvochtigheid`
+stond in de configuratie, `zone.humidity` bestond in het model, `SystemState`
+had er een veld voor, en de filter volgde hem — dus elke verandering lokte een
+volledige herberekening uit. Alleen las `buildSystemState` hem nooit uit, en
+kwam hij nergens in het logboek terecht. Erger dan de buitentemperatuur: die
+kostte tenminste niets.
+
+*Besluit:* dezelfde behandeling. Waarneming, geen invoer, wél in het logboek —
+ook op korte records, want het verloop is de hele waarde.
+
+*En de bewaking erbij,* want dit hoort niet nog een keer te kunnen: een test
+draait die audit en eist dat elke gevolgde entiteit ook werkelijk wordt
+uitgelezen. Wat alleen voor het logboek wordt bijgehouden is uitgezonderd; dat
+is een bewuste categorie.
+
+*Les:* "staat in de configuratie" betekende niet "wordt gebruikt", en "zit in de
+filter" betekende niet "wordt gelezen". Tussen die twee zat een gat waar je
+alleen in valt door het na te meten.
+
 ## 31. De vertaling had een tweede configuratie in zich
 
 `mapping.ts` heette "de enige plek waar entity-ID's voorkomen". Dat klopte, en

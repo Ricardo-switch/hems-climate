@@ -449,7 +449,9 @@ export class ShadowRunner {
           buitenC: e.outdoorTemperatureC,
           // Genoeg om de temperatuurgang te volgen zonder doelen en redenen te
           // herhalen: die staan in het laatste volledige record ervoor.
-          zonesT: e.perZone.map((z) => [z.zoneId, z.temperatureC, z.demand]),
+          // Ook hier de luchtvochtigheid: net als bij de buitentemperatuur is
+          // juist het verloop over de dag wat een dataset bruikbaar maakt.
+          zonesT: e.perZone.map((z) => [z.zoneId, z.temperatureC, z.demand, z.humidityPct]),
           obs: observed,
           ...(legacyChanged && legacy != null ? { legacy } : {}),
           ...(e.failsafe.active ? { failsafe: e.failsafe } : {}),

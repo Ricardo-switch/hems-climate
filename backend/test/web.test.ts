@@ -44,6 +44,7 @@ function snapshot(over: Partial<LiveSnapshot> = {}): LiveSnapshot {
         {
           zoneId: 'zolder',
           temperatureC: 24.5,
+          humidityPct: null,
           targetC: 22.5,
           demand: 'cool',
           reason: 'zone_above_setpoint',
@@ -216,6 +217,7 @@ describe('de besluitenstroom', () => {
             {
               zoneId: 'zolder',
               temperatureC: 25.1,
+              humidityPct: null,
               targetC: 22.5,
               demand: 'cool',
               reason: 'zone_above_setpoint',

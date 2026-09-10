@@ -30,6 +30,8 @@ export interface Moment {
     temperatureC: number | null;
     demand: string;
     reason?: string;
+    /** Luchtvochtigheid, wanneer de zone er een sensor voor heeft. */
+    humidityPct?: number;
   }[];
   /** Wat de apparaten op dat moment werkelijk deden, op actuator-id. */
   readonly observed: Readonly<Record<string, string>>;
@@ -114,8 +116,9 @@ interface RawRecord {
     temperatureC: number | null;
     demand: string;
     reason?: string;
+    humidityPct?: number | null;
   }[];
-  zonesT?: [string, number | null, string][];
+  zonesT?: [string, number | null, string, (number | null)?][];
   obs?: Record<string, string>;
   legacy?: string;
   commands?: { kind: string; actuatorId?: string; action?: string }[];
@@ -196,11 +199,13 @@ export async function* readMoments(
             temperatureC: z.temperatureC,
             demand: z.demand,
             ...(z.reason != null ? { reason: z.reason } : {}),
+            ...(z.humidityPct != null ? { humidityPct: z.humidityPct } : {}),
           }))
-        : (raw.zonesT ?? []).map(([id, temperatureC, demand]) => ({
+        : (raw.zonesT ?? []).map(([id, temperatureC, demand, humidityPct]) => ({
             id,
             temperatureC,
             demand,
+            ...(humidityPct == null ? {} : { humidityPct }),
           }));
 
       const mode = raw.mode ?? 'onbekend';

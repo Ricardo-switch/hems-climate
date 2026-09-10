@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSystemState,
   configFrom,
+  observedEntities,
   relevantEntities,
 } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
@@ -347,5 +348,58 @@ describe('de legacy-setpoints', () => {
     const config: SiteConfig = { ...exampleSite };
     delete (config as { migration?: unknown }).migration;
     expect(configFrom(config, bronVan({}))).toBe(config);
+  });
+});
+
+describe('niets wordt voor niets gevolgd', () => {
+  it('leest elke entiteit uit die de filter volgt', () => {
+    /*
+     * De eventfilter bepaalt waarop de regeling opnieuw rekent. Staat er iets
+     * in dat niemand uitleest, dan kost dat evaluaties en levert het niets —
+     * en, erger, dan is er een meetpunt dat je dacht te hebben en dat nergens
+     * wordt vastgelegd.
+     *
+     * Dat was precies het geval met `sensor.beneden_luchtvochtigheid`: hij
+     * stond in de configuratie, hij zat in de filter, en `buildSystemState`
+     * las hem nooit. Zonder deze test zou dat pas een winter later opvallen.
+     */
+    const aangeraakt = new Set<string>();
+    const spion: EntitySource = {
+      state: (id) => (aangeraakt.add(id), null),
+      number: (id) => (aangeraakt.add(id), null),
+      bool: (id) => (aangeraakt.add(id), null),
+      attr: (id) => (aangeraakt.add(id), null),
+      attrNumber: (id) => (aangeraakt.add(id), null),
+      changedAt: (id) => (aangeraakt.add(id), null),
+      hvacAction: (id) => (aangeraakt.add(id), null),
+      hvacActionSince: (id) => (aangeraakt.add(id), null),
+    };
+
+    buildSystemState(configFrom(exampleSite, spion), spion, NU);
+
+    // Wat alleen voor het logboek wordt bijgehouden telt niet mee: dat is met
+    // opzet niet iets waar de vertaling naar kijkt.
+    const alleenLog = observedEntities(exampleSite);
+    const ongebruikt = [...relevantEntities(exampleSite)]
+      .filter((id) => !aangeraakt.has(id) && !alleenLog.has(id))
+      .sort();
+
+    expect(ongebruikt).toEqual([]);
+  });
+
+  it('legt de luchtvochtigheid vast waar de zone er een sensor voor heeft', () => {
+    const zone = exampleSite.zones.find((z) => z.humidity != null)!;
+    const state = buildSystemState(
+      exampleSite,
+      bronVan({ [zone.humidity!.id]: '54' }),
+      NU,
+    );
+    expect(state.zones[zone.id]?.humidityPct).toEqual({ ok: true, value: 54, atMs: NU });
+  });
+
+  it('laat een zone zonder vochtsensor met rust', () => {
+    const zonder = exampleSite.zones.find((z) => z.humidity == null)!;
+    const state = buildSystemState(exampleSite, bronVan({}), NU);
+    expect(state.zones[zonder.id]?.humidityPct).toBeUndefined();
   });
 });
