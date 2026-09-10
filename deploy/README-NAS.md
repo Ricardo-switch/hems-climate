@@ -70,14 +70,32 @@ in het token worden bij het opstarten met naam en toenaam gemeld.
 
 ## Bijwerken
 
-`deploy.sh` in de Taakplanner haalt de code op en bouwt opnieuw. Twee bestanden
+`deploy.sh` in de Taakplanner haalt de code op en bouwt opnieuw. Drie bestanden
 horen daar niet bij en neem je zelf over wanneer ze in git wijzigen:
 
 ```sh
-cp /volume1/docker/hems-climate/src/deploy/docker-compose.yml    /volume1/docker/hems-climate/docker-compose.yml
+cp /volume1/docker/hems-climate/src/deploy/docker-compose.yml /volume1/docker/hems-climate/docker-compose.yml
 ```
 
 en `deploy.sh` zelf. Het script meldt in beide gevallen dat er iets te doen is.
+
+**Het derde is de configuratie.** `config/sites/*.json` hoort bij de installatie
+en gaat ook niet met git mee. Wijzigt het schema, dan kan de oude versie
+ongeldig worden — de dienst start dan niet meer op en komt met
+`restart: unless-stopped` in een herstartlus terecht. Sinds 10 september 2026
+toetst `deploy.sh` de draaiende configuratie tegen het nieuwe image vóórdat hij
+omwisselt, en stopt hij met de melding welk bestand je moet overnemen
+(besluit 33):
+
+```sh
+sudo cp /volume1/docker/hems-climate/src/config/sites/*.json /volume1/docker/hems-climate/config/sites/
+```
+
+Zelf nakijken kan ook, zonder iets te wijzigen:
+
+```sh
+sudo docker run --rm -v /volume1/docker/hems-climate/config:/app/config:ro hems-climate/shadow:latest node dist/main.js --check-config
+```
 
 ## De webweergave
 

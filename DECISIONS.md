@@ -794,6 +794,44 @@ uitkomsten.
 *Wat dit waard is:* een tweede woning is vanaf hier een tweede JSON-bestand, en
 geen codewijziging. Dat was de hele belofte van fase 6.
 
+## 33. De uitrol vraagt het nieuwe image of het de oude configuratie snapt
+
+Fase 6b maakte `mode`, `timers` en `sun` verplicht in het schema. De
+configuratie op de NAS gaat niet met git mee — die hoort bij de installatie
+(besluit 21) — dus die had die velden niet. De dienst stopte bij het opstarten
+met exitcode 1, `restart: unless-stopped` startte hem opnieuw, en zo verder.
+
+Wat je zag was "de container blijft onverwachts stoppen". Wat er stond was een
+keurige foutmelding met drie regels die precies zeiden wat er ontbrak — maar die
+scrolde weg in een herstartlus.
+
+*Dit is de tweede keer.* Besluit 25 ging over hetzelfde patroon bij
+`docker-compose.yml`, met de les: "een detectie die geen controle wordt, is een
+gemiste kans die je pas ziet als hij misgaat." `deploy.sh` wáárschuwde al dat de
+configuratie afweek van git. Het gebruikte die kennis alleen niet.
+
+*Waarom het hier niet mag zoals bij compose.* Daar is elk verschil fout, dus
+stopt het script erop. Hier mág de configuratie afwijken: dat is de bedoeling.
+Weigeren op "anders dan git" zou een correcte installatie blokkeren.
+
+*Besluit:* de uitrol vraagt het nínuwe image of het de drááiende configuratie
+kan lezen, en wisselt pas om als het antwoord ja is. `main.js --check-config`
+laadt en valideert de configuratie en stopt — zonder Home Assistant, zonder
+netwerk, in een wegwerpcontainer op hetzelfde image dat straks gaat draaien.
+
+Dat toetst precies de goede vraag. Niet "is dit hetzelfde bestand als in git",
+maar "kan de versie die zó gaat draaien hiermee overweg". Mislukt het, dan
+blijft de oude container staan en zegt het script welk bestand je moet
+overnemen.
+
+*Volgorde is niet vrijblijvend:* ná het bouwen — het image moet bestaan om
+ermee te kunnen toetsen — en vóór het omwisselen, want de oude container moet
+nog draaien als het misgaat.
+
+*Wat er nóg open ligt:* dit vangt een ongeldige configuratie. Het vangt niet dat
+de configuratie geldig is maar naar entiteiten wijst die niet meer bestaan. Daar
+is de failsafe voor, en die meldt het — maar pas als de dienst al draait.
+
 ---
 
 ## Wat nog een besluit wacht
