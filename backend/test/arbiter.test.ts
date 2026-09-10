@@ -451,6 +451,34 @@ describe('afbouwen', () => {
   });
 });
 
+describe('een huis zonder aanwezigheidsbronnen', () => {
+  /*
+   * `some()` op een lege lijst geeft false, en dat betekende: altijd afwezig,
+   * dus altijd de zuinige setpoints. Een installatie waarin niemand
+   * `person.`-entiteiten heeft ingesteld zou zichzelf stilzwijgend koud
+   * houden. Wanneer we het niet weten, raden we de comfortabele kant.
+   */
+  const zonderBewoners = { ...exampleSite, occupancy: [] };
+
+  it('geldt als bewoond in plaats van als leeg', () => {
+    const state = { ...buildState({ woonkamerC: 19.0 }), occupancy: {}, modeOverride: null };
+    const decision = decide({
+      config: zonderBewoners,
+      state,
+      strategies: defaultStrategies(),
+    });
+    expect(decision.explanation.occupied).toBe(true);
+    expect(decision.explanation.mode).not.toBe('afwezig');
+  });
+
+  it('laat een huis mét bronnen gewoon afwezig zijn', () => {
+    // De tegenhanger: de lege lijst is de uitzondering, niet de regel.
+    const state = { ...buildState({ woonkamerC: 19.0 }), occupancy: {}, modeOverride: null };
+    const decision = decide({ config: exampleSite, state, strategies: defaultStrategies() });
+    expect(decision.explanation.occupied).toBe(false);
+  });
+});
+
 describe('koelen tijdens afwezigheid', () => {
   /** Warm huis, niemand thuis, zon op het dak. */
   const awayAndWarm = () => ({

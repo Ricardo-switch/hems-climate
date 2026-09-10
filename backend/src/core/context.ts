@@ -134,9 +134,19 @@ export function buildContext(
   config: SiteConfig,
   state: SystemState,
 ): DecisionContext {
-  const occupied = config.occupancy.some((o) =>
-    readOr(state.occupancy[o.id], false),
-  );
+  /*
+   * Zonder aanwezigheidsbronnen is het huis bewoond.
+   *
+   * `some()` op een lege lijst geeft false, en dat betekende: altijd afwezig,
+   * dus altijd de zuinige setpoints. Een installatie waarin niemand
+   * `person.`-entiteiten heeft ingesteld zou het huis stilzwijgend koud
+   * houden — en dat is de verkeerde kant om te raden. Comfort boven besparing
+   * wanneer we het niet weten.
+   */
+  const occupied =
+    config.occupancy.length === 0
+      ? true
+      : config.occupancy.some((o) => readOr(state.occupancy[o.id], false));
   const mode = state.modeOverride ?? scheduledMode(config, state, occupied);
   const modeSource: 'override' | 'schedule' =
     state.modeOverride == null ? 'schedule' : 'override';

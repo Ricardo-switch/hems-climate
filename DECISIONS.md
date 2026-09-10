@@ -1160,6 +1160,59 @@ dat de pagina iets terugschrijft.
 
 ---
 
+## 40. Het schema weigert alleen nog op wat er echt niet zonder kan
+
+Om te starten moest een woning 158 waarden aanleveren met 34 entity-ID's.
+Bijna alles was verplicht, en dat leek verdedigbaar: hoe explicieter de
+configuratie, hoe minder verrassingen. Maar de meeste van die waarden zijn
+keuzes waar een nieuwe gebruiker nog geen mening over heeft — een schakelband,
+een thermische massa, drie draaitijden, een setpoint per modus per zone. Dat is
+geen configuratie meer maar een examen, en je slaagt er pas voor nadat je het
+systeem al kent.
+
+*Besluit:* er blijven drie levensaders over. Een **tijdzone**, want zonder die
+verschuift de hele dagindeling zonder dat iemand het merkt. Minstens één
+**zone**, want anders is er niets om te regelen. Minstens één **apparaat**,
+want anders is er niets om mee te regelen. Het kleinste geldige bestand is
+daarmee twaalf regels.
+
+*De regel waarmee de rest is afgewogen:* een standaardwaarde mag, zolang fout
+zijn ongevaarlijk of behoudend is. Een verkeerd geraden schakelband kost
+comfort. Een verkeerd geraden `canHeat` laat de regeling verwarmen met een
+apparaat dat dat niet kan. Die tweede soort blijft verplicht — net als de
+thermometer van een zone, en het vermogen van een assist-apparaat.
+
+*Dat laatste is niet willekeurig.* Comfort en heat-assist vragen `budgetW: 0`
+en worden nooit door het vermogensbudget tegengehouden. `pv-surplus` verdeelt
+juist wél, en een apparaat dat nul watt claimt past altijd — hoe weinig er ook
+over is. Daar is raden niet ongevaarlijk maar precies het probleem. Vandaar:
+`estimatedW` mag ontbreken bij een `primary`, niet bij een `assist`.
+
+*Koelen wordt nooit verzonnen.* De standaard-setpoints regelen alleen
+verwarmen. Een koeldrempel raden zou een airco kunnen laten draaien op een
+getal dat wij hebben bedacht.
+
+*Degraderen in plaats van stilvallen.* Zonder netmeting wordt `pv-surplus`
+werkelijk uit de lijst gehaald, met een melding. Hem laten staan zou hem laten
+rekenen met een gridPowerW van nul: elke ronde een budget van vijftig watt,
+waar niets op start. Dat is geen werkende regeling maar een stille — en stil
+mislukken is wat dit project overal probeert te vermijden.
+
+*Een leeg huis is een bewoond huis.* `some()` op een lege lijst geeft false, en
+dat betekende: geen `person.`-entiteiten ingesteld, dus altijd afwezig, dus
+altijd de zuinige setpoints. Een installatie die zichzelf stilzwijgend koud
+houdt. Wanneer we het niet weten raden we nu de comfortabele kant.
+
+*Wat het niet is: soepeler worden over fouten.* Een veld dat er wél staat maar
+niet deugt, is nog steeds een fout. Ontbreken en verkeerd zijn is niet
+hetzelfde.
+
+*De draaiende opname merkt er niets van.* `huis-cornelissen.json` vult alles
+zelf in, dus geen enkele terugval treedt in werking. De replay over de volledige
+geschiedenis levert opnieuw byte voor byte hetzelfde rapport.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

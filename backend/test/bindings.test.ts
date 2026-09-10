@@ -22,6 +22,9 @@ import {
 } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 import { OwnState } from '../src/adapters/own-state.js';
+import { parseSiteConfig } from '../src/config/schema.js';
+import { decide } from '../src/core/decide.js';
+import { defaultStrategies } from '../src/index.js';
 import type { DeviceRef, ModeSource, SiteConfig } from '../src/core/model.js';
 import { exampleSite } from './site.js';
 
@@ -166,7 +169,7 @@ describe('losse meetpunten', () => {
 
     const state = buildSystemState(
       config,
-      bronVan({ [exampleSite.power.gridPower.id]: '9999', 'sensor.andere_meter': '-1200' }),
+      bronVan({ [exampleSite.power.gridPower!.id]: '9999', 'sensor.andere_meter': '-1200' }),
       NU,
     );
 
@@ -487,6 +490,56 @@ describe('zonder bronnen in Home Assistant', () => {
     expect(ids.has(keuzelijst.select.id)).toBe(false);
     expect(ids.has(exampleSite.timers!.stabilisation.id)).toBe(false);
     // En de rest staat er nog wel in.
-    expect(ids.has(exampleSite.power.gridPower.id)).toBe(true);
+    expect(ids.has(exampleSite.power.gridPower!.id)).toBe(true);
+  });
+});
+
+describe('een verse installatie beslist ook echt', () => {
+  /*
+   * Het schema aannemen is niet hetzelfde als kunnen draaien. Een
+   * configuratie die parseert maar waarop `decide()` struikelt, is een
+   * drempel die je pas voelt nadat je hem genomen hebt.
+   *
+   * Dit is de kleinste installatie die het schema toelaat — een tijdzone, een
+   * zone, een apparaat — helemaal tot een besluit.
+   */
+  const minimaal = parseSiteConfig(
+    {
+      timezone: 'Europe/Amsterdam',
+      actuators: [
+        { id: 'ketel', ref: 'climate.ketel', capabilities: { canHeat: true, canCool: false } },
+      ],
+      zones: [{ id: 'woonkamer', temperature: 'sensor.woonkamer', actuatorIds: ['ketel'] }],
+    },
+    { knownStrategies: defaultStrategies().ids },
+  );
+
+  it('komt tot een besluit zonder meter, zon, modusknop of timers', () => {
+    if (!minimaal.ok) throw new Error(minimaal.problems.map((x) => x.message).join('\n'));
+
+    const state = buildSystemState(
+      minimaal.config,
+      bronVan({ 'sensor.woonkamer': '17.5', 'climate.ketel': 'off' }),
+      NU,
+      new OwnState(),
+    );
+    const besluit = decide({
+      config: minimaal.config,
+      state,
+      strategies: defaultStrategies(),
+    });
+
+    // Het huis is koud en er is niemand opgegeven, dus het geldt als bewoond
+    // en er wordt naar het dagsetpoint van 20 geregeld.
+    expect(besluit.explanation.occupied).toBe(true);
+    expect(besluit.commands.some((c) => c.kind === 'setAction' && c.action === 'heat')).toBe(true);
+  });
+
+  it('wacht niet op entiteiten die deze installatie niet heeft', () => {
+    if (!minimaal.ok) throw new Error('configuratie ongeldig');
+    const ids = [...relevantEntities(minimaal.config)].sort();
+    // Precies twee: de thermometer en het apparaat. Geen meter, geen zon,
+    // geen keuzelijst, geen timers.
+    expect(ids).toEqual(['climate.ketel', 'sensor.woonkamer']);
   });
 });
