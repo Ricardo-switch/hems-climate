@@ -1365,6 +1365,110 @@ uitziet dan het is.
 
 ---
 
+## 44. De assistent is een vierde voorsteller, geen baas
+
+Het doel is een assistent waaraan je kunt vragen waarom het koud is, en die je
+kunt zeggen dat de airco wel wat warmer mag — desnoods met spraak. De
+verleiding is om zo'n model rechtstreeks aan de apparaten te knopen. Dat is
+precies wat hier niet gebeurt.
+
+*Besluit:* het systeem kent al `Intent` — strategieën stellen voor, de arbiter
+beslist. Een assistent wordt daar een voorsteller bij. Hij leest het
+`Explanation`-object en zet een verzoek om in een intentie. **Hij roept nooit
+zelf een dienst aan.** Dezelfde muur als besluit 15 en 42: geen afspraak maar
+een grens in de code.
+
+*Wat dat gratis oplevert.* Het vermogensbudget, de draaitijden, de failsafe en
+de handen-af-knop blijven onverkort gelden voor een verzoek van de bewoner.
+En een afwijzing is al in woorden beschikbaar: `blockedBy:
+surplus_insufficient` is "kan nu niet, er komt te weinig van het dak". Een
+assistent die alleen "oké" of "dat lukt niet" kan zeggen is een speeltje; deze
+kan zeggen waarom, omdat de arbiter dat toch al opschrijft.
+
+*Er is minder taalmodel nodig dan het lijkt.* Drie verschillende taken:
+zinsherkenning ("zet de woonkamer een graadje warmer") kan Home Assistant
+Assist lokaal en deterministisch; uitleg in woorden is een sjabloon over het
+`Explanation`-object en is daarmee altijd waar; alleen open vragen ("was het
+gisteren duurder?") vragen werkelijk een model. De eerste twee geven het
+grootste deel van het gevoel, exact en gratis.
+
+*De getallen komen uit de data, alleen de zinnen uit het model.* Een assistent
+die zegt dat de zolder 24 graden is terwijl het er 19 is, sloopt het
+vertrouwen sneller dan een saaie tabel het opbouwt.
+
+*Hardware, nuchter.* Whisper en Piper draaien prima op een Pi 5; een taalmodel
+niet comfortabel. Spraak lokaal, het model elders — en de regeling moet blijven
+werken wanneer dat model wegvalt. Dat laatste is geen detail maar een eis.
+
+*Waarom dit uniek is, en waarom niet.* Een taalmodel aan een thermostaat knopen
+kan iedereen. Het verschil is dat dit model iets echts te vertellen heeft;
+bijna elk ander systeem moet een reden verzinnen omdat er geen besluit ligt dat
+zichzelf uitlegt.
+
+---
+
+## 45. Een bewoner ziet nooit een entity-ID
+
+De weergave die er nu staat is een instrumentenpaneel voor één gebruiker die
+weet wat een arbiter is. Dat blijkt overal: `budget 1106/1972 W`,
+`geblokkeerd: ac-zolder cool — stabilisation_active`, en een onboarding die
+`climate.air_conditioning_woonkamer_2` in een keuzelijst zet.
+
+Die laatste is het scherpste voorbeeld, want het is zelfgemaakt: de naam *Airco
+woonkamer* en het gebied *Woonkamer* staan gewoon in het register. De
+ontdekking leest ze en gooit ze in de weergave weg.
+
+*Besluit:* in een bewonersweergave komen geen entity-ID's, geen blokkadecodes
+en geen domeintermen voor. Namen komen uit Home Assistant — `friendly_name` en
+de gebiedsnaam — en codes worden vertaald. Die vertaling bestaat al voor de
+blokkaderedenen in `app.js`; die lijn trekken we door.
+
+*Twee publieken, dezelfde gegevens.* Het instrumentenpaneel blijft bestaan, met
+watts en codes en entity-ID's, want dat is wat je nodig hebt om te zien wat de
+arbiter denkt. Daarnaast komt een bewonersweergave op precies dezelfde
+`Explanation`. Geen tweede waarheid, wel een tweede taal.
+
+*Waarom nu vastgelegd en niet straks gebouwd.* Het bewonersdashboard heeft pas
+zin wanneer de dienst werkelijk schakelt — een mooie interface waarin je niets
+kunt veranderen is een screensaver. Maar zonder deze regel groeit alles wat we
+tussentijds bouwen verder de verkeerde kant op, en "dat maken we later mooi"
+is hoe het nooit gebeurt.
+
+---
+
+## 46. Het huis leert wat het ís, niet wat het moet doen
+
+Er zit leren in dit systeem, en er zit bewust geen leren in. Het onderscheid
+loopt precies langs de grens tussen wereldbeeld en beleid.
+
+*Wordt uit data geleerd:* hoe snel elke kamer afkoelt per graad verschil met
+buiten, wat een apparaat werkelijk levert in graden per uur, hoe lang
+voorverwarmen duurt bij dit weer, hoeveel zon er vanmiddag komt. Dat is het
+wereldbeeld — wat het huis ís.
+
+*Blijft vaste logica:* wanneer een zone om warmte vraagt, hoe overschot bij
+schaarste wordt verdeeld, dat handmatig altijd wint, dat een assist-apparaat
+wijkt voor comfort. Dat is beleid — wat het huis moet doen.
+
+*Waarom die grens er is.* `decide(toestand, configuratie, tijd)` is zuiver:
+dezelfde invoer geeft over een jaar hetzelfde antwoord. Dat is wat het mogelijk
+maakte om na drie ingrijpende verbouwingen te zeggen dat de replay over 14.476
+ticks byte voor byte identiek was. Een beleid dat zichzelf bijstelt maakt die
+zin onmogelijk — en belangrijker: dan is "waarom staat de airco aan?" niet meer
+te beantwoorden met een reden, alleen met "omdat het model dat vond".
+
+*Voorspellingen mogen wél uit een model komen.* Zon, prijzen, aanwezigheid. Die
+gaan als invoer de arbiter in en staan als getal in het logboek. Is de
+voorspelling fout, dan is het besluit nog steeds navolgbaar: er stond gewoon
+iets verkeerds in.
+
+*En er is een praktische kant.* Eén huis, een handvol apparaten, een paar
+seizoenen. Dat is te weinig data om gedrag uit te leren, en veel te weinig om
+op te mogen experimenteren. Een regeling die verkent is een huis dat op dinsdag
+koud is.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
