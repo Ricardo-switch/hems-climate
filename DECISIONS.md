@@ -1262,6 +1262,61 @@ blijkt dat het knelt.
 
 ---
 
+## 42. De weergave mag schrijven waar Home Assistant de deur bewaakt
+
+Besluit 23 legde vast dat de weergave alleen leest, en besluit 29 maakte daar
+een muur van: alles wat geen GET of HEAD is krijgt 405, vóór de routering, zodat
+een nieuwe route die grens niet per ongeluk kan omzeilen. Dat was geen
+overdrijving. Deze dienst houdt een token met volledige toegang tot Home
+Assistant vast, en de pagina had geen enkele inlog.
+
+Maar een onboarding die niets kan wegschrijven is een folder.
+
+*Besluit:* er komt precies één deur in die muur, op één pad, en hij bestaat
+alleen wanneer de dienst weet dat er een inlog vóór zit. Achter Ingress is dat
+zo: Home Assistant heeft de bezoeker dan al vastgesteld, en het manifest
+publiceert bewust geen `ports:` — er is geen route van het netwerk naar die
+poort omheen.
+
+*De schakelaar staat in `main.ts` en niet in de server.* De server weet niet
+waar hij draait; `main.ts` wel. Zonder Supervisor wordt de onboarding niet
+aangemaakt, en dan bestaat de route niet — ook niet ongebruikt.
+
+*Er is één uitzondering, en die is expliciet.* `HEMS_ONBOARDING=1` zet hem ook
+buiten de add-on aan, met een waarschuwing bij het starten. Dat is dezelfde
+vorm als `HEMS_WEB_PORT`: luisteren is een keuze die je maakt. Zonder die
+schakelaar zou de deur alleen achter Ingress bestaan en dus nergens uit te
+proberen zijn — en een deur die je niet kunt testen, test je op de draaiende
+dienst.
+
+*Ontbreken is geen fout meer.* Een verse installatie heeft geen configuratie,
+en dat is de normale toestand van iemand die net begint. De add-on start nu, en
+regelt niets tot er iets is ingesteld. Wat er staat maar niet deugt blijft wél
+een opstartfout: dat moet gerepareerd worden, niet overschreven (besluit 33).
+`ConfigError` heeft daarvoor een `soort` gekregen, zodat dat onderscheid in de
+code staat en niet in een tekstvergelijking.
+
+*De pagina stuurt geen configuratie.* Ze stuurt antwoorden op vragen die de
+dienst heeft gesteld. Wat een antwoord betekent — een veld zetten, een zone een
+andere thermometer geven, een dubbel apparaat eruit halen inclusief de
+verwijzingen ernaar — staat in `discovery.ts`, op één plek, met tests. Zou de
+pagina de JSON zelf samenstellen, dan moest de vorm ervan op twee plekken
+kloppen, en dat is precies wat besluit 29 uit `mapping.ts` heeft gesloopt.
+
+*Drie sloten op het schrijven zelf.* Een antwoord dat niet in de aangeboden
+keuzelijst stond wordt genegeerd. Het resultaat gaat door het gewone schema
+voordat er iets op schijf komt. En een bestaand bestand wordt nooit
+overschreven — wie er al een heeft, heeft daar keuzes in gemaakt die wij niet
+kunnen terughalen.
+
+*Gemeten aan de echte woning.* Het voorstel komt uit op drie zones en vijf
+apparaten, met vijf open vragen: de buitentemperatuur, de netmeting, welke
+thermometer voor de zolder geldt, en twee keer welke van twee integraties
+hetzelfde apparaat aanstuurt. Na beantwoorden blijven er drie apparaten over en
+komt het bestand door `--check-config` heen.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

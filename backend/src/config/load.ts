@@ -22,10 +22,21 @@ import {
 /** Waar configuraties standaard staan, gerekend vanaf de projectwortel. */
 export const SITES_DIR = 'config/sites';
 
+/**
+ * Waarom er geen bruikbare configuratie is.
+ *
+ * `ontbreekt` is sinds fase 6e stap 4 iets anders dan een fout: een verse
+ * installatie hoort de onboarding te krijgen, geen foutmelding. De andere
+ * soorten blijven wél een fout — een configuratie die er staat maar niet
+ * deugt, moet gerepareerd worden en niet overschreven (besluit 33).
+ */
+export type ConfigFoutSoort = 'ontbreekt' | 'ongeldig' | 'meerdere' | 'onleesbaar';
+
 export class ConfigError extends Error {
   constructor(
     message: string,
     readonly details: readonly string[] = [],
+    readonly soort: ConfigFoutSoort = 'ongeldig',
   ) {
     super(message);
     this.name = 'ConfigError';
@@ -206,9 +217,11 @@ export async function resolveConfigPath(options: ResolveOptions = {}): Promise<s
 
   const dir = findSitesDir(root);
   if (dir == null) {
-    throw new ConfigError(`Geen map ${SITES_DIR} gevonden vanaf ${resolve(root)}.`, [
-      '  Zet er een configuratiebestand neer, of wijs met HEMS_CONFIG een pad aan.',
-    ]);
+    throw new ConfigError(
+      `Geen map ${SITES_DIR} gevonden vanaf ${resolve(root)}.`,
+      ['  Zet er een configuratiebestand neer, of wijs met HEMS_CONFIG een pad aan.'],
+      'ontbreekt',
+    );
   }
   if (options.siteId) return join(dir, `${options.siteId}.json`);
 
@@ -221,16 +234,20 @@ export async function resolveConfigPath(options: ResolveOptions = {}): Promise<s
 
   if (entries.length === 1) return join(dir, entries[0]!);
   if (entries.length === 0) {
-    throw new ConfigError(`Geen configuratiebestanden gevonden in ${dir}.`, [
-      ...describeDir(dir),
-      '',
-      '  Zet er een .json neer, of wijs met HEMS_CONFIG een pad aan.',
-    ]);
+    throw new ConfigError(
+      `Geen configuratiebestanden gevonden in ${dir}.`,
+      [...describeDir(dir), '', '  Zet er een .json neer, of wijs met HEMS_CONFIG een pad aan.'],
+      'ontbreekt',
+    );
   }
-  throw new ConfigError(`Er staan ${entries.length} configuraties in ${dir}.`, [
-    '  Kies er een met HEMS_SITE=<naam zonder .json> of HEMS_CONFIG=<pad>:',
-    ...entries.map((e) => `    ${e.replace(/\.json$/, '')}`),
-  ]);
+  throw new ConfigError(
+    `Er staan ${entries.length} configuraties in ${dir}.`,
+    [
+      '  Kies er een met HEMS_SITE=<naam zonder .json> of HEMS_CONFIG=<pad>:',
+      ...entries.map((e) => `    ${e.replace(/\.json$/, '')}`),
+    ],
+    'meerdere',
+  );
 }
 
 /** Synchrone variant, voor de offline gereedschappen. */
@@ -243,22 +260,30 @@ export function resolveConfigPathSync(options: ResolveOptions = {}): string {
   }
   const dir = findSitesDir(root);
   if (dir == null) {
-    throw new ConfigError(`Geen map ${SITES_DIR} gevonden vanaf ${resolve(root)}.`, [
-      '  Zet er een configuratiebestand neer, of wijs met HEMS_CONFIG een pad aan.',
-    ]);
+    throw new ConfigError(
+      `Geen map ${SITES_DIR} gevonden vanaf ${resolve(root)}.`,
+      ['  Zet er een configuratiebestand neer, of wijs met HEMS_CONFIG een pad aan.'],
+      'ontbreekt',
+    );
   }
   if (options.siteId) return join(dir, `${options.siteId}.json`);
   const entries = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
   if (entries.length === 1) return join(dir, entries[0]!);
   if (entries.length === 0) {
-    throw new ConfigError(`Geen configuratiebestanden gevonden in ${dir}.`, [
-      ...describeDir(dir),
-    ]);
+    throw new ConfigError(
+      `Geen configuratiebestanden gevonden in ${dir}.`,
+      [...describeDir(dir)],
+      'ontbreekt',
+    );
   }
-  throw new ConfigError(`Er staan ${entries.length} configuraties in ${dir}.`, [
-    '  Kies er een met HEMS_SITE=<naam zonder .json> of HEMS_CONFIG=<pad>:',
-    ...entries.map((e) => `    ${e.replace(/\.json$/, '')}`),
-  ]);
+  throw new ConfigError(
+    `Er staan ${entries.length} configuraties in ${dir}.`,
+    [
+      '  Kies er een met HEMS_SITE=<naam zonder .json> of HEMS_CONFIG=<pad>:',
+      ...entries.map((e) => `    ${e.replace(/\.json$/, '')}`),
+    ],
+    'meerdere',
+  );
 }
 
 /** Het gewone startpad: kiezen, lezen, valideren. */

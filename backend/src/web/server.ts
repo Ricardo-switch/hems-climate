@@ -26,6 +26,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
+import type { Onboarding } from './onboarding.js';
 
 export interface WebOptions {
   /** Poort om op te luisteren. */
@@ -37,8 +38,13 @@ export interface WebOptions {
   readonly host?: string;
   /** Map met de gebouwde frontend. Ontbreekt hij, dan draait de API gewoon. */
   readonly webDir: string;
-  /** De configuratie, voor de namen en de eenheden in de weergave. */
-  readonly config: SiteConfig;
+  /**
+   * De configuratie, voor de namen en de eenheden in de weergave.
+   *
+   * Mag null zijn: bij een verse installatie is er nog niets, en dan is de
+   * onboarding het enige wat deze server te bieden heeft.
+   */
+  readonly config: SiteConfig | null;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -49,6 +55,14 @@ export interface WebOptions {
    * Weglaten mag — dan is er geen analyse en zegt het eindpunt dat ook.
    */
   readonly divergence?: () => DivergenceReport | null;
+  /**
+   * De onboarding, of weg wanneer die niet mag.
+   *
+   * Aanwezigheid is de schakelaar. Deze server accepteert alleen een POST
+   * wanneer dit is meegegeven, en `main.ts` geeft het alleen mee wanneer we
+   * achter Ingress draaien. Zie besluit 42.
+   */
+  readonly onboarding?: Onboarding;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -87,6 +101,32 @@ function siteInfo(config: SiteConfig): unknown {
     /** Zolang dit er staat, draait de vergelijking met het oude systeem nog. */
     migrating: config.migration?.legacyExplanation != null,
   };
+}
+
+/** Zoveel mag een verzoek zijn. Antwoorden op keuzes zijn kilobytes, geen megabytes. */
+const MAX_BODY = 64 * 1024;
+
+/**
+ * Leest een JSON-verzoek, met een dak erop.
+ *
+ * Zonder grens houdt een verzoek dat blijft doorsturen deze dienst bezig tot
+ * het geheugen op is. Dat is hier extra onprettig: het is dezelfde dienst die
+ * de opname doet, en die hoort niet om te vallen door een pagina.
+ */
+async function leesJson(req: IncomingMessage): Promise<unknown> {
+  const stukken: Buffer[] = [];
+  let bytes = 0;
+  for await (const stuk of req) {
+    bytes += (stuk as Buffer).length;
+    if (bytes > MAX_BODY) throw new Error('verzoek te groot');
+    stukken.push(stuk as Buffer);
+  }
+  const text = Buffer.concat(stukken).toString('utf-8');
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('geen geldige JSON');
+  }
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -192,19 +232,44 @@ export class WebServer {
   async #handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const method = req.method ?? 'GET';
 
-    // Read-only als grens, niet als afspraak. Vóór de routering, zodat een
-    // nieuwe route hem niet per ongeluk kan omzeilen.
-    if (method !== 'GET' && method !== 'HEAD') {
-      res.writeHead(405, { allow: 'GET, HEAD', 'content-type': 'text/plain; charset=utf-8' });
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const path = url.pathname;
+
+    /*
+     * Read-only als grens, niet als afspraak — met sinds fase 6e stap 4 één
+     * deur erin.
+     *
+     * Die deur is smal en dubbel op slot. Hij zit op één pad, hij bestaat
+     * alleen wanneer `onboarding` is meegegeven, en `main.ts` geeft dat alleen
+     * mee wanneer we achter Ingress draaien, waar Home Assistant heeft
+     * vastgesteld wie er kijkt (besluit 42). Zonder die twee is dit weer een
+     * muur: elke andere methode krijgt 405 vóór de routering, zodat een nieuwe
+     * route hem niet per ongeluk kan omzeilen.
+     */
+    const magSchrijven = this.#options.onboarding != null && path === '/api/onboarding';
+    if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && magSchrijven)) {
+      res.writeHead(405, {
+        allow: magSchrijven ? 'GET, HEAD, POST' : 'GET, HEAD',
+        'content-type': 'text/plain; charset=utf-8',
+      });
       res.end('Deze weergave leest alleen.\n');
       return;
     }
 
-    const url = new URL(req.url ?? '/', 'http://localhost');
-    const path = url.pathname;
-
     if (path === '/api/site') {
-      sendJson(res, 200, siteInfo(this.#options.config));
+      const config = this.#options.config;
+      if (config == null) {
+        // 503 en niet 404: de installatie bestaat, hij is alleen nog niet
+        // ingesteld. De pagina kan daar iets nuttigs mee doen.
+        sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
+        return;
+      }
+      sendJson(res, 200, siteInfo(config));
+      return;
+    }
+
+    if (path === '/api/onboarding') {
+      await this.#onboarding(req, res, method);
       return;
     }
 
@@ -270,6 +335,66 @@ export class WebServer {
 
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end(headOnly ? undefined : 'Niet gevonden.\n');
+  }
+
+  /**
+   * De onboarding: een voorstel ophalen, of het beantwoorde voorstel bewaren.
+   *
+   * Twee methoden op één pad, omdat het over hetzelfde ding gaat. De GET is
+   * altijd beschikbaar zolang de onboarding bestaat; de POST kwam hierboven
+   * al langs de 405-muur en zit dus achter dezelfde voorwaarde.
+   */
+  async #onboarding(
+    req: IncomingMessage,
+    res: ServerResponse,
+    method: string,
+  ): Promise<void> {
+    const onboarding = this.#options.onboarding;
+    if (onboarding == null) {
+      sendJson(res, 503, { wachten: 'de onboarding staat niet aan' });
+      return;
+    }
+
+    if (method === 'GET' || method === 'HEAD') {
+      try {
+        const voorstel = await onboarding.voorstel();
+        sendJson(res, 200, voorstel);
+      } catch (error) {
+        // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
+        // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen
+        // zeggen wat er niet lukte.
+        sendJson(res, 502, { fout: (error as Error).message });
+      }
+      return;
+    }
+
+    let body: unknown;
+    try {
+      body = await leesJson(req);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return;
+    }
+
+    const antwoorden =
+      typeof body === 'object' && body != null && 'antwoorden' in body
+        ? (body as { antwoorden: unknown }).antwoorden
+        : null;
+    if (typeof antwoorden !== 'object' || antwoorden == null || Array.isArray(antwoorden)) {
+      sendJson(res, 400, { fout: 'verwacht een object met veld "antwoorden"' });
+      return;
+    }
+
+    const schoon: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(antwoorden as Record<string, unknown>)) {
+      if (v == null) schoon[k] = null;
+      else if (typeof v === 'string') schoon[k] = v;
+      // Al het andere valt weg. `pasKeuzesToe` weigert wat niet in de
+      // keuzelijst stond, dus dit is de tweede zeef en niet de enige.
+    }
+
+    const resultaat = await onboarding.opslaan(schoon);
+    sendJson(res, resultaat.ok ? 200 : 422, resultaat);
   }
 
   /**
