@@ -5,9 +5,17 @@
 # op de HA-basis in plaats van op kaal Alpine, omdat de Supervisor daar `bashio`
 # en het opstartmechanisme in verwacht.
 #
-# De bouwcontext is de projectwortel, net als bij backend/Dockerfile:
+# De bouwcontext is de map van de add-on zelf, en niets daarbuiten. Dat is geen
+# keuze: de Supervisor koppelt alleen die map aan (read-only op /addon) en draait
+# daar `docker buildx build .`. Wat er niet in staat, bestaat tijdens het bouwen
+# niet.
 #
-#   docker build -f addon/Dockerfile .
+# Daarom wordt de boom eerst platgeslagen door addon/stage.ps1: dat zet de
+# bestanden van de add-on bovenin en `backend/` en `frontend/` ernaast. De COPY's
+# hieronder gaan uit van die vorm.
+#
+#   pwsh addon/stage.ps1        -> dist-addon/
+#   docker build dist-addon
 
 ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:latest
 
@@ -45,7 +53,7 @@ COPY --from=build /build/dist ./dist
 COPY --from=web /web/dist ./web
 COPY backend/package.json ./
 
-COPY addon/run.sh /run.sh
+COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
 ENV NODE_ENV=production

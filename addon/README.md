@@ -21,23 +21,56 @@ Drie dingen die we anders zelf hadden moeten bouwen:
 
 ## Installeren
 
-1. **Instellingen → Add-ons → Add-on store**, rechtsboven de drie puntjes →
-   **Repositories**, en voeg toe:
-   `https://github.com/Ricardo-switch/hems-climate`
-2. Installeer *Smart Climate OS — schaduwmodus*. De eerste keer bouwen duurt op
-   een Raspberry Pi een paar minuten.
-3. **Zet je configuratie neer** vóór de eerste start. De add-on heeft een eigen
-   map onder `/addon_configs/`, bereikbaar met de bestandseditor of de
-   Samba-add-on. Maak daarin een map `sites` en zet er je installatiebestand in:
+Twee routes. Welke je kunt nemen hangt af van één ding: of deze repository
+openbaar is.
 
-   ```
-   sites/mijn-huis.json
-   ```
+### Nu: als lokale add-on
 
-   Zonder dat bestand stopt de add-on met een melding in plaats van in een
-   herstartlus te belanden — dat laatste is één keer gebeurd en dat is niet
-   grappig (besluit 33).
-4. Starten. In het logboek staat wat hij leest en waar hij schrijft.
+Zolang de repository privé is, kan Home Assistant hem niet als add-on-bron
+toevoegen — de Supervisor haalt add-on-bronnen met een gewone `git clone` op en
+heeft nergens een plek voor inloggegevens.
+
+De Supervisor bouwt een add-on bovendien met de map van de add-on zélf als
+bouwcontext: hij koppelt alleen die map aan en draait daar `docker buildx build
+.`. Onze code staat een niveau hoger, in `backend/` en `frontend/`. Daarom
+wordt de boom eerst platgeslagen:
+
+```powershell
+pwsh addon/stage.ps1 -Share \\homeassistant\addons\hems-climate
+```
+
+Dat zet een map van een halve megabyte klaar met `config.yaml`, `Dockerfile`,
+`run.sh` en de bronbestanden ernaast, en kopieert hem naar de add-on-share.
+Zonder `-Share` blijft het resultaat in `dist-addon/` staan en kopieer je het
+zelf.
+
+Daarna in Home Assistant: **Instellingen → Add-ons → Add-on store**, rechtsboven
+de drie puntjes → **Vernieuwen**. Hij verschijnt onder *Local add-ons*.
+
+Bijwerken is hetzelfde commando nog een keer, gevolgd door **Herbouwen** op de
+add-on-pagina.
+
+### Later: als add-on-bron
+
+Zodra de repository openbaar is (of in een eigen, openbare add-on-repository
+staat), gaat het zoals gebruikelijk: **Repositories** → de URL van deze
+repository toevoegen. `repository.yaml` in de wortel staat daar al klaar voor.
+Dan vervalt `stage.ps1` niet — de Supervisor heeft dezelfde platte vorm nodig,
+dus de add-on krijgt dan een eigen repository waarin die vorm de vorm *is*.
+
+### Vóór de eerste start
+
+De add-on heeft een eigen map onder `/addon_configs/`, bereikbaar met de
+bestandseditor of de Samba-add-on. Maak daarin een map `sites` en zet er je
+installatiebestand in:
+
+```
+sites/mijn-huis.json
+```
+
+Zonder dat bestand stopt de add-on met een melding in plaats van in een
+herstartlus te belanden — dat laatste is één keer gebeurd en dat is niet
+grappig (besluit 33).
 
 ## Waar dingen staan
 
