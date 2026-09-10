@@ -88,7 +88,8 @@ function fail(problems: readonly string[]): never {
   console.error('  node dist/main.js --check-config');
   console.error('');
   console.error('Meten of deze machine de analyse aankan:');
-  console.error('  node dist/main.js --benchmark <map met decisions-*.ndjson>');
+  console.error('  node dist/main.js --make-winter 180 <bronmap> <doelmap>');
+  console.error('  node dist/main.js --benchmark <doelmap>');
   process.exit(1);
 }
 
@@ -113,6 +114,21 @@ function fail(problems: readonly string[]): never {
  * straks draait — en niet wat er op je werkstation onder een andere Node en een
  * andere schijf gebeurt. Zie besluit 34.
  */
+/*
+ * Een logboek van winterformaat nabouwen uit de dagen die er al zijn.
+ *
+ * Ook als vlag, en om dezelfde reden als `--benchmark`: op een Pi met HAOS staat
+ * geen npm en geen tsx. Wat in het image zit kun je daar draaien.
+ */
+if (process.argv.includes('--make-winter')) {
+  const i = process.argv.indexOf('--make-winter');
+  const dagen = Number(process.argv[i + 1] ?? 180);
+  const bron = resolve(process.argv[i + 2] ?? process.env['SHADOW_LOG_DIR'] ?? 'data/shadow');
+  const doel = resolve(process.argv[i + 3] ?? 'data/bench');
+  const { makeWinter } = await import('./web/makeWinter.js');
+  process.exit(await makeWinter(dagen, bron, doel));
+}
+
 if (process.argv.includes('--benchmark')) {
   const i = process.argv.indexOf('--benchmark');
   const dir = process.argv[i + 1] ?? process.env['SHADOW_LOG_DIR'] ?? 'data/shadow';
