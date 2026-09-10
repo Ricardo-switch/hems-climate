@@ -1,0 +1,283 @@
+/**
+ * De ontdekking stelt voor, en stelt het juiste voor.
+ *
+ * Twee soorten tests. De meeste met verzonnen registers, omdat je alleen zo
+ * één regel tegelijk kunt toetsen. En één met het échte entiteitenregister uit
+ * de HA-export van deze woning — 2.507 entiteiten, met alle rommel die daarbij
+ * hoort — want de twee fouten die dit bestand vormgeven zijn allebei gevonden
+ * door naar die data te kijken en niet naar de documentatie:
+ *
+ *  1. gebieden hangen aan apparaten, niet aan entiteiten;
+ *  2. zonder filter op `entity_category` wordt de schijftemperatuur van een NAS
+ *     een woonkamerthermostaat.
+ */
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
+import {
+  ontdek,
+  type HaArea,
+  type HaCoreConfig,
+  type HaDevice,
+  type HaRegistryEntity,
+  type Registers,
+} from '../src/adapters/homeassistant/discovery.js';
+import { parseSiteConfig } from '../src/config/schema.js';
+import { defaultStrategies } from '../src/index.js';
+
+function state(entity_id: string, s: string, attributes: Record<string, unknown> = {}): HaEntityState {
+  return {
+    entity_id,
+    state: s,
+    attributes,
+    last_changed: '2026-09-10T12:00:00+00:00',
+    last_updated: '2026-09-10T12:00:00+00:00',
+  };
+}
+
+function ent(entity_id: string, extra: Partial<HaRegistryEntity> = {}): HaRegistryEntity {
+  return { entity_id, device_id: null, area_id: null, ...extra };
+}
+
+/** `Registers` is read-only; de tests bouwen erop voort, dus hier los. */
+interface Bewerkbaar {
+  config: HaCoreConfig;
+  areas: HaArea[];
+  devices: HaDevice[];
+  entities: HaRegistryEntity[];
+  states: HaEntityState[];
+}
+
+/** Een woonkamer met een airco en een thermometer, allebei via hun apparaat. */
+function basis(): Bewerkbaar {
+  return {
+    config: { time_zone: 'Europe/Amsterdam' },
+    areas: [{ area_id: 'woonkamer', name: 'Woonkamer' }],
+    devices: [
+      { id: 'dev-airco', area_id: 'woonkamer' },
+      { id: 'dev-sensor', area_id: 'woonkamer' },
+    ],
+    entities: [
+      ent('climate.airco', { device_id: 'dev-airco' }),
+      ent('sensor.woonkamer_temp', { device_id: 'dev-sensor', original_device_class: 'temperature' }),
+    ],
+    states: [
+      state('climate.airco', 'off', { hvac_modes: ['off', 'cool', 'heat'], min_temp: 16, max_temp: 30 }),
+      state('sensor.woonkamer_temp', '21.4', { device_class: 'temperature' }),
+    ],
+  };
+}
+
+const parse = (c: unknown) => parseSiteConfig(c, { knownStrategies: defaultStrategies().ids });
+
+describe('de ontdekking', () => {
+  it('levert een configuratie op die het schema aanneemt', () => {
+    // De belangrijkste test van dit bestand. Een voorstel dat er goed uitziet
+    // maar door de eigen controle wordt afgewezen, is geen voorstel.
+    const voorstel = ontdek(basis());
+    const result = parse(voorstel.config);
+    if (!result.ok) {
+      throw new Error(result.problems.map((p) => `${p.path}: ${p.message}`).join('\n'));
+    }
+    expect(result.config.zones).toHaveLength(1);
+    expect(result.config.actuators).toHaveLength(1);
+    expect(result.config.timezone).toBe('Europe/Amsterdam');
+  });
+
+  it('vindt het gebied via het apparaat en niet via de entiteit', () => {
+    // In de gemeten woning hadden 3 van de 2.507 entiteiten een eigen area_id.
+    // Wie alleen daarnaar kijkt, vindt niets.
+    const r = basis();
+    expect(r.entities.every((e) => e.area_id == null)).toBe(true);
+    const voorstel = ontdek(r);
+    expect(voorstel.config['zones']).toHaveLength(1);
+  });
+
+  it('neemt wat een apparaat kan over uit hvac_modes', () => {
+    const alleenKoelen = basis();
+    alleenKoelen.states = [
+      state('climate.airco', 'off', { hvac_modes: ['off', 'cool'], min_temp: 16, max_temp: 30 }),
+      state('sensor.woonkamer_temp', '21.4', { device_class: 'temperature' }),
+    ];
+    const result = parse(ontdek(alleenKoelen).config);
+    if (!result.ok) throw new Error('afgewezen');
+    expect(result.config.actuators[0]!.capabilities).toMatchObject({
+      canHeat: false,
+      canCool: true,
+      setpointRange: [16, 30],
+    });
+  });
+
+  it('slaat een apparaat over dat niet kan verwarmen en niet kan koelen', () => {
+    const r = basis();
+    r.states = [
+      state('climate.airco', 'off', { hvac_modes: ['off', 'fan_only', 'dry'] }),
+      state('sensor.woonkamer_temp', '21.4', { device_class: 'temperature' }),
+    ];
+    const voorstel = ontdek(r);
+    expect(voorstel.config['actuators']).toHaveLength(0);
+    expect(voorstel.bevindingen.some((b) => b.tekst.includes('fan_only'))).toBe(true);
+  });
+
+  it('gebruikt een diagnostische sensor nooit als thermometer', () => {
+    // Uit de echte export: de schijftemperatuur van een NAS, de accu van een
+    // telefoon. Allemaal device_class temperature, geen van alle een kamer.
+    const r = basis();
+    r.entities = [
+      ent('climate.airco', { device_id: 'dev-airco' }),
+      ent('sensor.nas_schijf_temperatuur', {
+        device_id: 'dev-sensor',
+        original_device_class: 'temperature',
+        entity_category: 'diagnostic',
+      }),
+    ];
+    r.states = [
+      state('climate.airco', 'off', { hvac_modes: ['off', 'cool', 'heat'] }),
+      state('sensor.nas_schijf_temperatuur', '38', { device_class: 'temperature' }),
+    ];
+    const voorstel = ontdek(r);
+    expect(voorstel.config['zones']).toHaveLength(0);
+    expect(
+      voorstel.bevindingen.some((b) => b.soort === 'overgeslagen' && b.tekst.includes('geen losse temperatuursensor')),
+    ).toBe(true);
+  });
+
+  it('laat een uitgeschakelde of verborgen entiteit buiten beeld', () => {
+    const r = basis();
+    r.entities = [
+      ...r.entities,
+      ent('climate.oude_airco', { device_id: 'dev-airco', disabled_by: 'user' }),
+      ent('climate.verborgen', { device_id: 'dev-airco', hidden_by: 'user' }),
+    ];
+    r.states = [
+      ...r.states,
+      state('climate.oude_airco', 'off', { hvac_modes: ['off', 'heat'] }),
+      state('climate.verborgen', 'off', { hvac_modes: ['off', 'heat'] }),
+    ];
+    expect(ontdek(r).config['actuators']).toHaveLength(1);
+  });
+
+  it('houdt de buitentemperatuur buiten de zones', () => {
+    // Anders zou de regeling de woonkamer op de buitentemperatuur sturen —
+    // en dat gaat een hele winter goed mis zonder één foutmelding.
+    const r = basis();
+    r.devices.push({ id: 'dev-buiten', area_id: 'woonkamer' });
+    r.entities.push(
+      ent('sensor.buiten_temperatuur', {
+        device_id: 'dev-buiten',
+        original_device_class: 'temperature',
+      }),
+    );
+    r.states.push(state('sensor.buiten_temperatuur', '11.2', { device_class: 'temperature' }));
+
+    const voorstel = ontdek(r);
+    expect(voorstel.config['outdoorTemperature']).toBe('sensor.buiten_temperatuur');
+    const zone = (voorstel.config['zones'] as Record<string, unknown>[])[0]!;
+    expect(zone['temperature']).toBe('sensor.woonkamer_temp');
+  });
+
+  it('raadt de slimme meter en zegt erbij dat het een gok is', () => {
+    const r = basis();
+    r.devices.push({ id: 'dev-p1', area_id: null });
+    r.entities.push(ent('sensor.p1_meter_power', { device_id: 'dev-p1', original_device_class: 'power' }));
+    r.states.push(state('sensor.p1_meter_power', '-1200', { device_class: 'power' }));
+
+    const voorstel = ontdek(r);
+    expect((voorstel.config['power'] as Record<string, unknown>)['gridPower']).toBe(
+      'sensor.p1_meter_power',
+    );
+    const b = voorstel.bevindingen.find((x) => x.pad === 'power.gridPower')!;
+    expect(b.soort).toBe('geraden');
+    expect(b.tekst).toContain('negatief');
+  });
+
+  it('trapt niet in een sensor die alleen toevallig "net" in zijn naam heeft', () => {
+    const r = basis();
+    r.entities.push(ent('sensor.internet_verbruik', { original_device_class: 'power' }));
+    r.states.push(state('sensor.internet_verbruik', '12', { device_class: 'power' }));
+    expect(ontdek(r).config['power']).toBeUndefined();
+  });
+
+  it('koppelt een vermogenssensor aan het apparaat waar hij op zit', () => {
+    const r = basis();
+    r.entities.push(
+      ent('sensor.airco_verbruik', { device_id: 'dev-airco', original_device_class: 'power' }),
+    );
+    r.states.push(state('sensor.airco_verbruik', '410', { device_class: 'power' }));
+
+    const actuator = (ontdek(r).config['actuators'] as Record<string, unknown>[])[0]!;
+    expect(actuator['power']).toEqual({ estimatedW: 0, sensor: 'sensor.airco_verbruik' });
+  });
+
+  it('meldt het wanneer er niets te vinden valt in plaats van iets te verzinnen', () => {
+    const leeg: Registers = {
+      config: { time_zone: 'Europe/Amsterdam' },
+      areas: [],
+      devices: [],
+      entities: [],
+      states: [],
+    };
+    const voorstel = ontdek(leeg);
+    expect(voorstel.config['zones']).toHaveLength(0);
+    expect(
+      voorstel.bevindingen.some((b) => b.pad === 'zones' && b.soort === 'ontbreekt'),
+    ).toBe(true);
+  });
+});
+
+describe('tegen het echte register van deze woning', () => {
+  /*
+   * 2.507 entiteiten uit de HA-export. De export bevat geen apparaat- of
+   * gebiedsregister, dus er kan hier geen zone uitkomen — dat is precies wat
+   * er getoetst wordt: op rommelige echte data hoort de ontdekking niets te
+   * verzinnen en netjes te zeggen wat er ontbreekt.
+   */
+  const pad = resolve(process.cwd(), '..', 'HA export', 'core.entity_registry');
+  const ruw = JSON.parse(readFileSync(pad, 'utf-8')) as {
+    data: { entities: HaRegistryEntity[] };
+  };
+  const entities = ruw.data.entities;
+
+  it('leest een register van deze omvang zonder te struikelen', () => {
+    expect(entities.length).toBeGreaterThan(2000);
+    const voorstel = ontdek({
+      config: { time_zone: 'Europe/Amsterdam' },
+      areas: [],
+      devices: [],
+      entities,
+      states: [],
+    });
+    expect(voorstel.config['zones']).toHaveLength(0);
+    expect(voorstel.config['actuators']).toHaveLength(0);
+  });
+
+  it('zegt hoeveel er buiten beeld blijft, en dat is niet niks', () => {
+    const voorstel = ontdek({
+      config: {},
+      areas: [],
+      devices: [],
+      entities,
+      states: [],
+    });
+    const b = voorstel.bevindingen.find((x) => x.pad === '(register)');
+    expect(b).toBeDefined();
+    expect(b!.soort).toBe('overgeslagen');
+  });
+
+  it('vindt de bewoners wel, want die hangen nergens aan', () => {
+    const voorstel = ontdek({
+      config: {},
+      areas: [],
+      devices: [],
+      entities,
+      states: [],
+    });
+    const b = voorstel.bevindingen.find((x) => x.pad === 'occupancy')!;
+    expect(b.soort).toBe('gevonden');
+    expect(b.tekst).toContain('person.');
+  });
+});

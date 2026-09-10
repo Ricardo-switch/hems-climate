@@ -1213,6 +1213,55 @@ geschiedenis levert opnieuw byte voor byte hetzelfde rapport.
 
 ---
 
+## 41. De ontdekking stelt voor en besluit niet
+
+Na besluit 40 is het kleinste geldige bestand twaalf regels. Maar in die twaalf
+regels staan entity-ID's, en die vind je alleen door in de
+ontwikkelaarshulpmiddelen van Home Assistant te graven. De drempel was verlaagd,
+niet weggehaald.
+
+*Besluit:* `--discover` leest de registers en stelt een configuratie voor. Elke
+keuze komt terug met de reden en de alternatieven, en wat geraden is heet
+geraden. Het schrijft nooit over een bestaand bestand heen.
+
+*Alleen lezen, en dat is afgedwongen.* `HaClient.query` kent een witte lijst met
+vier opdrachten: de drie registers en `get_config`. Alles daarbuiten werpt, net
+als `callService` zonder schrijfrechten (besluit 15). Een uitzondering op die
+regel zou weinig waard maken dat de regel bestaat.
+
+*Twee dingen die dit ontwerp bepaalden komen uit echte data, niet uit de
+documentatie.* In de gemeten woning hadden 3 van de 2.507 entiteiten een eigen
+`area_id`; de rest erft het gebied van zijn apparaat. En zonder filter op
+`entity_category` wordt de schijftemperatuur van een NAS een
+woonkamerthermostaat — van de 36 temperatuursensoren daar was de meerderheid
+diagnostisch.
+
+*Niet kiezen is soms het antwoord.* De eerste versie viel voor de
+buitentemperatuur terug op "een thermometer die aan geen enkel gebied hangt".
+Op de echte installatie leverde dat achttien kandidaten op, en de eerste was
+een Formule 1-sensor. Het veld is optioneel; een verkeerde keuze kost meer dan
+geen keuze. Nu worden de kandidaten getoond en kiest de bewoner.
+
+*Het voorstel wordt door het eigen schema getoetst.* Dat is een test, en die
+test vond meteen een fout in besluit 40: de standaard-setpoints waren vaste
+getallen, terwijl haalbaarheid van het apparaat afhangt. Vakantie op 12 °C is
+onmogelijk voor een airco die bij 16 begint, en de samenhangscontrole wees het
+voorstel terecht af. Nu worden alleen de *ingevulde* setpoints binnen bereik
+geschoven; wat de bewoner zelf opschrijft blijft staan en mag gerust een fout
+opleveren.
+
+*Kan een zone niet verwarmen, dan verdwijnen de ingevulde verwarmingsdoelen* —
+en er komt geen koeldoel voor in de plaats. De zone doet dan niets, en dat is
+eerlijker dan een getal verzinnen waarop een airco gaat draaien.
+
+*Wat het nog niet kan.* Een klimaatapparaat met een ingebouwde thermometer maar
+zonder losse sensor levert geen zone op. Op de gemeten woning kostte dat de
+badkamer. Dat vraagt een verwijzing naar een attribuut in plaats van naar een
+entiteit, en dat is een modelwijziging — een eigen besluit waard, wanneer
+blijkt dat het knelt.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
