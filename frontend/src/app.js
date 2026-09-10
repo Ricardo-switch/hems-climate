@@ -1045,6 +1045,29 @@ async function haalOnboarding() {
   tekenBevindingen(voorstel.bevindingen ?? []);
   $('onboarding-laden').hidden = true;
   $('onboarding-inhoud').hidden = false;
+
+  /*
+   * Staat er al een configuratie, dan is er niets in te stellen.
+   *
+   * Het voorstel blijft staan — je mag zien wat de ontdekking van je huis
+   * maakt — maar de knop verdwijnt. Hij zou toch weigeren, en een knop die
+   * altijd weigert is erger dan geen knop.
+   *
+   * De aanleiding: de eerste versie schreef vrolijk een tweede bestand naast
+   * het bestaande, waarna de dienst niet meer wist welke gold en niet meer
+   * startte.
+   */
+  const bestaande = voorstel.bestaande ?? [];
+  if (bestaande.length > 0) {
+    $('onboarding-bewaar').hidden = true;
+    toonUitkomst(
+      `Er staat al een configuratie (${bestaande.join(', ')}), dus hier valt niets ` +
+        'in te stellen. Wil je opnieuw beginnen, verplaats dat bestand dan eerst.',
+      'text-zacht',
+    );
+    return;
+  }
+
   $('onboarding-bewaar').addEventListener('click', () => void bewaarInstallatie());
 }
 
