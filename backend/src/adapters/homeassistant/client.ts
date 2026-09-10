@@ -57,12 +57,17 @@ const WS_PATH = '/api/websocket';
  * de basis-URL die in de browser staat, of het eindpunt zelf. Beide horen te
  * werken; een dubbel aangeplakt pad is geen configuratiefout die je een
  * gebruiker moet laten uitzoeken.
+ *
+ * Sinds de add-on is er een derde vorm: de Supervisor proxyt Home Assistant op
+ * `ws://supervisor/core/websocket` — wél een websocket-eindpunt, maar niet op
+ * `/api/websocket`. Vandaar dat elk pad dat op `/websocket` eindigt met rust
+ * wordt gelaten, in plaats van alleen dat ene.
  */
 export function websocketUrl(base: string): string {
   const u = new URL(base);
   u.protocol = u.protocol === 'https:' || u.protocol === 'wss:' ? 'wss:' : 'ws:';
   const path = u.pathname.replace(/\/+$/, '');
-  u.pathname = path.endsWith(WS_PATH) ? path : path + WS_PATH;
+  u.pathname = path.endsWith('/websocket') ? path : path + WS_PATH;
   u.search = '';
   u.hash = '';
   return u.toString();

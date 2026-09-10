@@ -1,0 +1,7 @@
+# Zodat deze repository als add-on-bron in Home Assistant kan.
+#
+# Instellingen -> Add-ons -> Add-on store -> rechtsboven -> Repositories,
+# en dan de URL van deze repository toevoegen.
+name: Smart Climate OS
+url: https://github.com/Ricardo-switch/hems-climate
+maintainer: Ricardo Cornelissen

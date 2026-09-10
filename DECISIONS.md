@@ -1004,6 +1004,50 @@ checkout haalt bestanden uit de wérkmap, niet uit de objectopslag. Een
 `--filter=blob:none`-kloon zou dat wel doen, maar vereist een verse kloon en
 maakt het uitchecken netwerkafhankelijk. Voor 1,2 MB is dat de verkeerde ruil.
 
+## 36. De add-on is dezelfde dienst, niet een tweede
+
+De add-on had een eigen opstartpad kunnen krijgen: eigen configuratielezer,
+eigen verbindingslogica, eigen manier om instellingen te vinden. Dat is de
+gewone manier waarop een tweede uitrolvorm ontstaat, en het is ook de manier
+waarop hij langzaam uit de pas gaat lopen met de eerste.
+
+*Besluit:* `addon/run.sh` vertaalt en niets meer. Het leest de add-on-opties met
+`bashio` en zet ze om naar precies de omgevingsvariabelen die de dienst al kende
+van de NAS — `SHADOW_TICK_SECONDS`, `SHADOW_LOG_DIR`, `HEMS_WEB_PORT`. Daarna
+`exec node dist/main.js`. Er draait één binary, met één opstartpad.
+
+*Zelfs het zoeken van de configuratie is niet nagebouwd.* De lader zoekt vanaf
+de werkmap omhoog naar `config/sites`; door in het script naar `/` te gaan vindt
+hij `/config/sites` vanzelf. Daarmee blijft al zijn gedrag intact: één bestand is
+vanzelfsprekend, meerdere geeft een fout die ze opsomt. Dat nabouwen zou een
+tweede plek zijn die kan afwijken.
+
+*Wat de Supervisor wegneemt.* `SUPERVISOR_TOKEN` staat in de omgeving en Home
+Assistant zit op `ws://supervisor/core/websocket`. Geen long-lived token meer —
+en daarmee ook niet de klasse problemen eromheen. `main.ts` herkent dat vanzelf;
+wie `HA_URL` en `HA_TOKEN` zélf zet krijgt die nog steeds, zodat de NAS-uitrol
+blijft werken zolang die draait.
+
+*Ingress schrapt besluit 23's openstaande punt.* De weergave had geen inlog.
+Achter Ingress zit hij achter die van Home Assistant. Er is bewust géén `ports:`
+in het manifest: met een poort erbij zou hij daarbuiten óók bereikbaar zijn, en
+dan is er niets gewonnen. Dat dit werkt zonder de frontend aan te passen is geen
+toeval maar wel geluk: de pagina gebruikte al uitsluitend relatieve paden, en dat
+is precies wat Ingress vereist.
+
+*Eén ding is wél gedupliceerd, met reden.* Het script draait
+`main.js --check-config` vóór de echte start. Op de NAS doet `deploy.sh` dat
+vlak voor het omwisselen (besluit 33); hier kan dat niet, want de Supervisor
+start ons gewoon. Zonder die controle levert een onleesbare configuratie een
+herstartlus op waarin de foutmelding wegscrolt — precies wat er op 10 september
+gebeurde.
+
+*Terugval bij een hikkende Supervisor.* `bashio::config` haalt de instellingen
+over de API. Is die even weg, dan start de add-on met de standaardwaarden en een
+waarschuwing, in plaats van niet te starten. Drie instelbare getallen zijn geen
+reden om de opname stil te leggen — en het maakt de add-on buiten Home Assistant
+te draaien, en dus te testen.
+
 ---
 
 ## Wat nog een besluit wacht
