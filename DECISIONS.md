@@ -1303,11 +1303,21 @@ verwijzingen ernaar — staat in `discovery.ts`, op één plek, met tests. Zou d
 pagina de JSON zelf samenstellen, dan moest de vorm ervan op twee plekken
 kloppen, en dat is precies wat besluit 29 uit `mapping.ts` heeft gesloopt.
 
-*Drie sloten op het schrijven zelf.* Een antwoord dat niet in de aangeboden
+*Vier sloten op het schrijven zelf.* Een antwoord dat niet in de aangeboden
 keuzelijst stond wordt genegeerd. Het resultaat gaat door het gewone schema
-voordat er iets op schijf komt. En een bestaand bestand wordt nooit
-overschreven — wie er al een heeft, heeft daar keuzes in gemaakt die wij niet
-kunnen terughalen.
+voordat er iets op schijf komt. Een bestaand bestand wordt nooit overschreven.
+En er wordt niets geschreven zolang er überhaupt een configuratie staat.
+
+*Dat vierde slot ontbrak, en dat kostte diezelfde avond de add-on.* Het derde
+keek alleen of het bestand dat wíj zouden schrijven al bestond. Naast
+`huis-cornelissen.json` verscheen daardoor `mijn-huis.json`, de lader weigerde
+te kiezen tussen twee configuraties — terecht — en de dienst startte niet meer
+op. Het bestaande bestand was keurig beschermd; de installatie niet.
+
+De onboarding is er voor een lege installatie. Wie er al een heeft en opnieuw
+wil beginnen, zet het oude bestand zelf opzij: één handeling, en zichtbaar. De
+weergave zegt dit nu vóórdat er iets te klikken valt en verbergt de knop, want
+een knop die altijd weigert is erger dan geen knop.
 
 *Gemeten aan de echte woning.* Het voorstel komt uit op drie zones en vijf
 apparaten, met vijf open vragen: de buitentemperatuur, de netmeting, welke

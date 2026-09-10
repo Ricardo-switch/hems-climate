@@ -19,7 +19,7 @@
  * moeten kloppen — precies wat besluit 29 uit `mapping.ts` heeft gesloopt.
  */
 
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
@@ -65,6 +65,23 @@ export class Onboarding {
     return this.#laatste;
   }
 
+  /**
+   * Welke configuraties er al staan.
+   *
+   * De weergave laat dit zien vóórdat er iets te klikken valt, en `opslaan`
+   * weigert eropaf. Zie de uitleg daar: dit is het lek dat op 11 september
+   * 2026 de add-on stillegde.
+   */
+  async bestaande(): Promise<string[]> {
+    try {
+      return (await readdir(this.#opties.sitesDir))
+        .filter((f) => f.endsWith('.json'))
+        .sort();
+    } catch {
+      return [];
+    }
+  }
+
   async opslaan(antwoorden: Readonly<Record<string, string | null>>): Promise<OpslaanResultaat> {
     const voorstel = this.#laatste;
     if (voorstel == null) {
@@ -72,6 +89,33 @@ export class Onboarding {
         ok: false,
         reden: 'Er is nog geen voorstel opgehaald om te bewaren.',
         problemen: [],
+      };
+    }
+
+    /*
+     * Staat er al een configuratie, dan is deze installatie niet vers.
+     *
+     * De eerste versie keek alleen of het bestand dat wij zouden schrijven al
+     * bestond. Dat beschermde dat ene bestand, maar niet de installatie: naast
+     * `huis-cornelissen.json` verscheen `mijn-huis.json`, en de lader weigert
+     * dan te kiezen — met een add-on die niet meer startte als gevolg.
+     *
+     * De onboarding is er voor een lege installatie. Wie er al een heeft en
+     * opnieuw wil beginnen, zet het oude bestand zelf opzij. Dat is één
+     * handeling, en het maakt zichtbaar wat er gebeurt.
+     */
+    const alAanwezig = await this.bestaande();
+    if (alAanwezig.length > 0) {
+      return {
+        ok: false,
+        reden: 'Er staat al een configuratie; er is niets geschreven.',
+        problemen: [
+          ...alAanwezig.map((f) => `${f} staat in ${this.#opties.sitesDir}`),
+          '',
+          'Wil je opnieuw beginnen, verplaats of hernoem dat bestand dan eerst.',
+          'Twee configuraties naast elkaar maakt niet duidelijk welke geldt, en',
+          'dan start de dienst niet meer.',
+        ],
       };
     }
 
@@ -96,8 +140,10 @@ export class Onboarding {
     const naam = String(config['id'] ?? 'installatie');
     const pad = join(this.#opties.sitesDir, `${naam}.json`);
 
-    // Nooit over een bestaande configuratie heen. Wie er al een heeft, heeft
-    // daar keuzes in gemaakt die wij niet kunnen terughalen.
+    // Het slot hierboven dekt dit al af — geen enkele .json in de map betekent
+    // ook dit bestand niet. Toch nog een keer kijken, want tussen de controle
+    // en het schrijven zit tijd, en een bestaande configuratie overschrijven
+    // is het ergste wat deze code kan doen.
     const bestaat = await access(pad).then(
       () => true,
       () => false,

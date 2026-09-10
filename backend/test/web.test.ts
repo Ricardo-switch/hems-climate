@@ -7,7 +7,7 @@
  * van bestanden zit het venijn in dat tweede.
  */
 
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -546,6 +546,40 @@ describe('de onboarding', () => {
     expect(res.status).toBe(422);
     // Het bestaande bestand is niet aangeraakt.
     expect(await readFile(join(dir, 'mijn-huis.json'), 'utf-8')).toBe('{"eigen":"werk"}');
+  });
+
+  it('legt er ook geen tweede naast, hoe anders hij ook heet', async () => {
+    /*
+     * Dit ging op 11 september 2026 mis op de echte add-on. Het slot keek
+     * alleen of het bestand dat wíj zouden schrijven al bestond; naast
+     * `huis-cornelissen.json` verscheen `mijn-huis.json`, de lader wist niet
+     * meer welke gold, en de dienst startte niet meer op.
+     */
+    const { onboarding, dir } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    await writeFile(join(dir, 'huis-van-iemand-anders.json'), '{"eigen":"werk"}', 'utf-8');
+
+    await fetch(`${base}/api/onboarding`);
+    const res = await fetch(`${base}/api/onboarding`, {
+      method: 'POST',
+      body: JSON.stringify({ antwoorden: {} }),
+    });
+    expect(res.status).toBe(422);
+    expect(await res.text()).toContain('staat al een configuratie');
+
+    // En er is niets bijgekomen.
+    expect((await readdir(dir)).sort()).toEqual(['huis-van-iemand-anders.json']);
+  });
+
+  it('zegt in het voorstel al welke configuraties er staan', async () => {
+    const { onboarding, dir } = await maakOnboarding();
+    const { base } = await start({ onboarding });
+    await writeFile(join(dir, 'al-ingesteld.json'), '{}', 'utf-8');
+
+    const body = (await (await fetch(`${base}/api/onboarding`)).json()) as {
+      bestaande: string[];
+    };
+    expect(body.bestaande).toEqual(['al-ingesteld.json']);
   });
 
   it('weigert een verzoek dat geen antwoorden bevat', async () => {

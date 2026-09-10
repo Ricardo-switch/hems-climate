@@ -357,8 +357,13 @@ export class WebServer {
 
     if (method === 'GET' || method === 'HEAD') {
       try {
-        const voorstel = await onboarding.voorstel();
-        sendJson(res, 200, voorstel);
+        const [voorstel, bestaande] = await Promise.all([
+          onboarding.voorstel(),
+          onboarding.bestaande(),
+        ]);
+        // `bestaande` erbij, zodat de pagina kan zeggen dat er al iets staat
+        // vóórdat iemand op een knop drukt die toch zou weigeren.
+        sendJson(res, 200, { ...voorstel, bestaande });
       } catch (error) {
         // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
         // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen
