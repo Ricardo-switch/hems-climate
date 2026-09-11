@@ -135,22 +135,34 @@
               <h2 class="text-zacht text-xs font-medium tracking-wide uppercase">
                 Vermogensbudget
               </h2>
-              <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-                <div>
-                  <div class="text-zacht text-xs">toegewezen</div>
-                  <div id="budget-toegewezen" class="meting text-lg font-medium">—</div>
+              <!--
+                Eerst de stroom zoals hij loopt — panelen, verbruik, net — en dan
+                pas wat de arbiter daarvan mag uitgeven. "Overschot" is hier
+                bewust geen eigen tegel: dat is per definitie de teruglevering,
+                en twee tegels met hetzelfde getal zeggen minder dan één.
+              -->
+              <div class="mt-2 grid grid-cols-3 gap-x-4 gap-y-2">
+                <div id="tegel-panelen" hidden>
+                  <div class="text-zacht text-xs">panelen</div>
+                  <div id="budget-panelen" class="meting text-zon text-lg font-medium">—</div>
                 </div>
-                <div>
-                  <div class="text-zacht text-xs">beschikbaar</div>
-                  <div id="budget-beschikbaar" class="meting text-lg font-medium">—</div>
-                </div>
-                <div>
-                  <div class="text-zacht text-xs">overschot</div>
-                  <div id="budget-overschot" class="meting text-zon text-lg font-medium">—</div>
+                <div id="tegel-verbruik" hidden>
+                  <div class="text-zacht text-xs">huis verbruikt</div>
+                  <div id="budget-verbruik" class="meting text-lg font-medium">—</div>
                 </div>
                 <div>
                   <div class="text-zacht text-xs">net</div>
                   <div id="budget-net" class="meting text-lg font-medium">—</div>
+                </div>
+              </div>
+              <div class="border-rand mt-3 grid grid-cols-2 gap-x-4 border-t pt-3">
+                <div>
+                  <div class="text-zacht text-xs">voor de arbiter beschikbaar</div>
+                  <div id="budget-beschikbaar" class="meting text-lg font-medium">—</div>
+                </div>
+                <div>
+                  <div class="text-zacht text-xs">daarvan toegewezen</div>
+                  <div id="budget-toegewezen" class="meting text-lg font-medium">—</div>
                 </div>
               </div>
               <div class="bg-grond mt-3 h-2 overflow-hidden rounded-full">

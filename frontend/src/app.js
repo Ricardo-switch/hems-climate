@@ -95,10 +95,22 @@ function tekenModus(e) {
   $('bezet').textContent = extra ?? (e.occupied ? 'Er is iemand thuis.' : 'Niemand thuis.');
 }
 
-function tekenBudget(b) {
-  $('budget-toegewezen').textContent = watt(b.allocatedW);
-  $('budget-beschikbaar').textContent = watt(b.availableW);
-  $('budget-overschot').textContent = watt(b.surplusW);
+function tekenBudget(b, panelenW) {
+  /*
+   * De stroom zoals hij loopt: panelen → huis → net.
+   *
+   * Het verbruik van het huis staat nergens als sensor; het volgt uit de twee
+   * die er wél zijn. Levert het dak 1.200 W en gaat er 368 W het net op, dan
+   * verbruikt het huis 832 W. Koopt het huis 430 W bij nul opbrengst, dan
+   * verbruikt het 430 W. Beide gevallen zijn dezelfde optelsom.
+   */
+  const kentPanelen = panelenW != null;
+  $('tegel-panelen').hidden = !kentPanelen;
+  $('tegel-verbruik').hidden = !kentPanelen;
+  if (kentPanelen) {
+    $('budget-panelen').textContent = watt(panelenW);
+    $('budget-verbruik').textContent = watt(Math.max(0, panelenW + b.gridPowerW));
+  }
 
   const net = $('budget-net');
   net.textContent = watt(Math.abs(b.gridPowerW));
@@ -106,22 +118,27 @@ function tekenBudget(b) {
   // zichtbaar te zijn zonder het getal te hoeven lezen.
   net.className = `meting text-lg font-medium ${b.gridPowerW < 0 ? 'text-goed' : 'text-warm'}`;
 
+  // Wat de arbiter daarvan mag uitgeven: de teruglevering, plus wat zijn eigen
+  // apparaten nu al trekken (die kopen zichzelf elke ronde opnieuw), plus de
+  // kleine import die we goedkoper vinden dan een herstart.
+  $('budget-beschikbaar').textContent = watt(b.availableW);
+  $('budget-toegewezen').textContent = watt(b.allocatedW);
+
   const deel = b.availableW > 0 ? Math.min(100, (b.allocatedW / b.availableW) * 100) : 0;
   $('budget-balk').style.width = `${deel}%`;
   $('budget-uitleg').textContent =
     b.gridPowerW < 0
-      ? `Het huis levert ${watt(-b.gridPowerW)} terug.`
-      : `Het huis koopt ${watt(b.gridPowerW)}.`;
+      ? `Het huis levert ${watt(-b.gridPowerW)} terug; dat is het overschot waar de arbiter mee rekent.`
+      : `Het huis koopt ${watt(b.gridPowerW)}; er is geen overschot.`;
 }
 
 function tekenBuiten(e) {
   // Waarnemingen en geen invoer: ze worden vastgelegd voor fase 7, de arbiter
   // gebruikt ze niet. Daarom klein en terzijde.
-  const delen = [];
-  if (e.outdoorTemperatureC != null) delen.push(`buiten ${graden(e.outdoorTemperatureC)}`);
-  if (e.solarProductionW != null) delen.push(`panelen ${Math.round(e.solarProductionW)} W`);
   $('buiten').textContent =
-    delen.length === 0 ? '' : `${delen.join(' · ')} · wordt vastgelegd, nog niet gebruikt`;
+    e.outdoorTemperatureC == null
+      ? ''
+      : `buiten ${graden(e.outdoorTemperatureC)} · wordt vastgelegd, nog niet gebruikt`;
 }
 
 function tekenZones(perZone) {
@@ -239,7 +256,7 @@ function tekenOud(legacy) {
 
 function teken(snapshot) {
   tekenModus(snapshot.explanation);
-  tekenBudget(snapshot.explanation.budget);
+  tekenBudget(snapshot.explanation.budget, snapshot.explanation.solarProductionW);
   tekenBuiten(snapshot.explanation);
   tekenZones(snapshot.explanation.perZone);
   tekenApparaten(snapshot);
