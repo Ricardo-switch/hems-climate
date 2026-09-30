@@ -20,7 +20,7 @@ import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js
 import { haalRegisters } from './adapters/homeassistant/discovery.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
-import { WebServer, defaultWebDir } from './web/server.js';
+import { WebServer, defaultWebDir, versieUitOmgeving } from './web/server.js';
 import { DivergenceCache } from './web/divergence.js';
 import { Onboarding } from './web/onboarding.js';
 
@@ -413,6 +413,7 @@ if (webPort != null) {
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
+    versie: versieUitOmgeving(process.env),
   });
 }
 

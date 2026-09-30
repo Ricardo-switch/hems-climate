@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { WebServer } from '../src/web/server.js';
+import { WebServer, versieUitOmgeving, type Versie } from '../src/web/server.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
@@ -72,6 +72,7 @@ async function start(options: {
   divergence?: () => DivergenceReport | null;
   onboarding?: Onboarding;
   zonderConfig?: boolean;
+  versie?: Versie;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -84,12 +85,44 @@ async function start(options: {
     latest: options.latest ?? (() => null),
     ...(options.divergence ? { divergence: options.divergence } : {}),
     ...(options.onboarding ? { onboarding: options.onboarding } : {}),
+    ...(options.versie ? { versie: options.versie } : {}),
     write: () => {},
   });
   const port = await server.start();
   cleanups.push(() => server.stop());
   return { base: `http://127.0.0.1:${port}`, server };
 }
+
+describe('welke versie er draait (besluit 54)', () => {
+  it('staat in /api/health', async () => {
+    const { base } = await start({
+      versie: { commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' },
+    });
+    const health = (await (await fetch(`${base}/api/health`)).json()) as {
+      versie: Versie;
+    };
+    expect(health.versie).toEqual({ commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' });
+  });
+
+  it('zegt eerlijk dat hij het niet weet', async () => {
+    // Een image zonder bouwargumenten: dan liever `onbekend` dan een lege
+    // regel die op een versie lijkt.
+    const { base } = await start({});
+    const health = (await (await fetch(`${base}/api/health`)).json()) as {
+      versie: Versie;
+    };
+    expect(health.versie).toEqual({ commit: 'onbekend', gebouwd: null });
+  });
+
+  it('leest de omgeving en behandelt leeg als ontbrekend', () => {
+    expect(versieUitOmgeving({ HEMS_COMMIT: 'abc1234', HEMS_GEBOUWD: '2026-10-01T08:00:00Z' }))
+      .toEqual({ commit: 'abc1234', gebouwd: '2026-10-01T08:00:00Z' });
+    // Zo komt hij uit de Dockerfile wanneer niemand iets meegaf.
+    expect(versieUitOmgeving({ HEMS_COMMIT: 'onbekend', HEMS_GEBOUWD: '' }))
+      .toEqual({ commit: 'onbekend', gebouwd: null });
+    expect(versieUitOmgeving({})).toEqual({ commit: 'onbekend', gebouwd: null });
+  });
+});
 
 describe('de weergave leest alleen', () => {
   it('weigert elke methode die zou kunnen schrijven', async () => {
