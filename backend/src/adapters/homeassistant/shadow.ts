@@ -33,6 +33,7 @@ import {
   observedEntities,
   relevantEntities,
 } from './mapping.js';
+import { comprimeerOudeDagen } from '../archief.js';
 import { Historieschrijver } from './history.js';
 import { EntityStore } from './store.js';
 
@@ -191,6 +192,9 @@ export class ShadowRunner {
    * beslislogboek. Alleen wanneer er een logmap is.
    */
   #historie: Historieschrijver | null = null;
+
+  /** De dag waarop voor het laatst oude dagen gecomprimeerd zijn (besluit 58). */
+  #gecomprimeerdOp: string | null = null;
 
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
@@ -549,6 +553,19 @@ export class ShadowRunner {
     const file = join(this.#options.logDir, `decisions-${day}.ndjson`);
     await mkdir(dirname(file), { recursive: true });
     await appendFile(file, `${JSON.stringify(record)}\n`, 'utf-8');
+
+    // Eén keer per dag de oude dagen comprimeren, en dus ook meteen na het
+    // opstarten (besluit 58). Niet afwachten: een trage schijf hoort het
+    // volgende besluit niet op te houden, en een fout hoort in het logboek,
+    // niet in de regeling.
+    if (this.#gecomprimeerdOp !== day) {
+      this.#gecomprimeerdOp = day;
+      void comprimeerOudeDagen(this.#options.logDir, decision.atMs)
+        .then((gedaan) => {
+          if (gedaan.length > 0) this.#log(`  ${gedaan.length} oude dagbestand(en) gecomprimeerd`);
+        })
+        .catch((error: unknown) => this.#log(`  comprimeren mislukt: ${String(error)}`));
+    }
   }
 
   /** Het laatste besluit, of null zolang er nog niet is gerekend. */
