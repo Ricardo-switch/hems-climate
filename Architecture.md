@@ -1,6 +1,16 @@
 # Project: Smart Climate OS (met HEMS-roadmap)
 
-*Bijgewerkt 5 september 2026.*
+*Bijgewerkt 30 september 2026.*
+
+Dit document is de kaart van hoe het nu is: welke onderdelen er zijn, hoe een
+besluit tot stand komt, en waar wat draait. Het waarom — welke alternatieven
+afvielen en wat een keuze kostte — staat in [DECISIONS.md](DECISIONS.md), en
+daar verwijst deze kaart naar.
+
+**Afspraak:** elke commit die de structuur of de werking verandert, werkt deze
+kaart in dezelfde commit bij. Een machine kan proza niet op juistheid
+controleren; daarom is dit een afspraak en geen test. Het besluitenlog heeft wel
+een test (besluit 54 en de index).
 
 ## 1. De visie
 
@@ -9,187 +19,188 @@ dat later doorgroeit naar een volwaardig Home Energy Management System. Home
 Assistant is uitsluitend de hardwarelaag; de logica, de voorspelling en de
 interface draaien in een losse Node.js-stack.
 
-Die visie staat nog steeds. Wat er sinds de eerste versie van dit document bij
-is gekomen, is het inzicht dat **de moeilijkheid niet in de regellogica zit maar
-in het aantoonbaar maken ervan**. Het YAML-systeem dat we vervangen werkte
-grotendeels; wat ontbrak was de mogelijkheid om te zien of het klopte. Vier van
-de zes fouten die we vonden waren jarenlang onzichtbaar geweest.
+Wat er sinds de eerste versie bij is gekomen, is het inzicht dat **de
+moeilijkheid niet in de regellogica zit maar in het aantoonbaar maken ervan**.
+Het YAML-systeem dat we vervangen werkte grotendeels; wat ontbrak was de
+mogelijkheid om te zien of het klopte. En dezelfde soort fout — iets wat er
+staat en niets doet — kwam in dit project zelf ook terug, tot een machine er
+systematisch naar ging kijken (besluit 54).
 
-## 2. De architectuur
+## 2. Hoe een besluit tot stand komt
 
-**Kern (`backend/src/core`).** Eén pure functie:
-
-```ts
-decide(state, config, now) -> Decision
+```
+Home Assistant ──websocket──▶ EntityStore ──▶ buildSystemState ──▶ decide()
+   (alleen lezen)             (filter, 16)     (vertaling, één)      (pure kern)
+                                                     ▲                    │
+                          OwnState (modus, timers) ──┤                    ▼
+                SchaduwApparaten (eigen stand, 49) ──┘              Decision
+                                                                         │
+                ┌─────────────────────┬──────────────────────┬──────────┘
+                ▼                     ▼                      ▼
+         beslislogboek          weergave (SSE)        SchaduwApparaten.volg
+      decisions-*.ndjson                              OwnState.apply
 ```
 
-Geen I/O, geen klok, geen netwerk. Gelijke invoer geeft gelijke uitvoer. Timers
-zijn invoer en komen als commando terug. Dat is wat de replay-harness en de
-divergentietool mogelijk maakt.
+**De kern (`backend/src/core`).** Eén pure functie,
+`decide({ config, state, strategies })`. Geen I/O, geen klok — de tijd zit in
+de toestand — en geen netwerk. Gelijke invoer geeft gelijke uitvoer; een test
+met duizenden gegenereerde toestanden bewaakt dat en een handvol andere regels
+(besluit 56). De kern kent geen entity-ID's en geen kamernamen: wat
+huisspecifiek is, staat in configuratie.
 
-De kern kent geen entity-ID's, geen kamernamen en geen bewonersnamen. Een zone
-heeft een temperatuurbron, actuatoren, setpoints per modus en een prioriteit;
-een actuator heeft capaciteiten, vermogen en timing. Wat huisspecifiek is, staat
-in configuratie.
+Drie strategieën stellen voor, één arbiter beslist (besluit 4):
 
-**Het vermogensbudget.** Strategieën stellen voor, een arbiter beslist. Elk
-voorstel draagt een `budgetW`; het overschot is een pot die leegloopt. Een
-draaiend apparaat rekent zijn gemeten opname, een stilstaand apparaat zijn
-schatting — zo kost bijschakelen alleen het verschil. Dit verving de vlag
-`zolder_started_now` uit de YAML-versie, die daar door een scopingfout niet
-werkte. Die vlag is in de draaiende installatie inmiddels met een losse helper
-gerepareerd; het budget vervangt hem alsnog, omdat het de vórm wegneemt die de
-fout mogelijk maakte (DECISIONS.md, besluit 1 en 3).
+- **comfort** houdt elke zone op het doel van de geldende modus, met het
+  hoofdapparaat. Vraagt geen vermogensbudget: comfort sneuvelt niet omdat de zon
+  niet schijnt. Waar geen hoofdapparaat kan koelen, verdedigt comfort een
+  plafond — voor dit huis 26 °C — desnoods op netstroom (besluit 50).
+- **pv-overschot** laadt het gebouw op met stroom die anders het net op gaat,
+  binnen een bufferband voorbij het doel. Betaalt uit het budget.
+- **heat-assist** laat de warmtepomp bijspringen als de ketel al een tijd stookt
+  en de zone achterblijft.
 
-**Adapterlaag (`backend/src/adapters/homeassistant`).** WebSocket-client,
-schaduwmodus, en één gedeelde vertaling van HA naar het domeinmodel die zowel de
-live-adapter als de replay-harness gebruiken. Twee losse vertalingen zouden
-uiteenlopen, en dat is precies de bugklasse waar dit project vandaan komt.
+De **arbiter** verdeelt een budget: overschot plus wat de bestuurde apparaten nu
+werkelijk opnemen plus een kleine tolerantie (besluit 3, 49b). Hij toetst per
+apparaat de minimale draai- en rusttijd, de stabilisatie na een start, het
+settelen na een wissel, en of er genoeg marge is om te *starten* in plaats van
+alleen door te draaien (besluit 51). Wat niemand meer wil, bouwt hij af: eerst
+naar standby, na de stabilisatie uit (besluit 5).
 
-**Configuratie als data (`config/sites/*.json`).** Gevalideerd bij het opstarten,
-met controle op samenhang: verwijst een zone naar een apparaat dat niet bestaat,
-eisen twee zones hetzelfde apparaat op, is een doeltemperatuur onbereikbaar. De
-parser stopt niet bij de eerste fout maar levert de hele lijst met pad.
+Elk besluit draagt een **`Explanation`**: modus, budget, per zone temperatuur,
+doel en vraag, plus buitentemperatuur en zonne-opbrengst als waarneming. Dat
+contract delen het logboek, de weergave, de analyse en straks het
+bewonersdashboard (besluit 29).
 
-**Twee applicaties, niet één.** Wat hier staat is de *machinekamer*: de kern, de
-schaduwmodus, de harnassen en een technische monitor. Het dashboard waar een
-bewoner naar kijkt wordt een aparte applicatie (fase 8), met een eigen
-ontwerptaal en een eigen tempo. Ze delen één ding: het `Explanation`-contract.
-Zie besluit 29.
+**De schaduwdienst (`backend/src/adapters/homeassistant`).** `HaClient`
+verbindt met Home Assistant en weigert elke `callService` zolang schrijven uit
+staat; `query()` kent alleen een lijst leesopdrachten (besluit 15). De
+`EntityStore` volgt alleen de entiteiten uit de configuratie. Eén vertaling
+(`mapping.ts`) maakt er een toestand van, voor de live dienst én de replay.
+`ShadowRunner` beslist bij elke relevante wijziging en elke hartslag, met een
+ondergrens tussen evaluaties en een bewaking die afsluit als hij vastloopt
+(besluit 18).
 
-**De schaduwmodus blijft, ook na de overstap.** Hij is geen steiger die je
-afbreekt zodra het gebouw staat, maar het instrument waarmee elke volgende
-woning begint: eerst een tijd meekijken en een gedragsbasislijn opbouwen, dan
-pas sturen. Zie besluit 28.
+Omdat de schaduw niet schakelt, houdt hij zelf bij wat hij gedaan zou hebben:
 
-**Weergave (`frontend/`).** Read-only. Eén HTML-pagina, vanilla JS, Tailwind die
-lokaal wordt gebouwd tot ~10 kB CSS — geen framework, geen CDN. Ze leest
-`Explanation` en herberekent niets: elk getal en elke reden komt uit het besluit
-van de kern, en het enige wat hier gebeurt is vertalen naar Nederlands.
+- **`OwnState`** — modus en timers, die de dienst bezit (besluit 39).
+- **`SchaduwApparaten`** — de stand die de arbiter de apparaten zou geven, zodat
+  draaitijden en hysterese zijn eigen geschiedenis meten (besluit 49). Het
+  budget rekent met wat de meter werkelijk zag, en zolang de bewoner stuurt laat
+  de boekhouding los (besluit 49b).
 
-De schaduwdienst serveert haar zelf, over `/api/state` (de stand nu),
-`/api/events` (een SSE-stroom van elk volgend besluit) en `/api/divergence` (de
-terugblik over de logboeken). Read-only is een grens: alles wat geen GET of HEAD
-is krijgt 405 vóór de routering. Zie besluit 23.
+**De opstart (`backend/src/opstart.ts`).** Eén zuivere functie leidt uit de
+omgeving af hoe de dienst draait: add-on of niet, de weergave, de schrijfdeur,
+de tijden (besluit 55). `main.ts` voert het alleen uit.
 
-Die terugblik draait dezelfde `analyse()` als `npm run divergence` in de
-terminal — één analyse, twee vensters — elk kwartier, met de uitkomst in het
-geheugen. Zie besluit 26.
+**Configuratie als data (`config/sites/*.json`).** Gevalideerd bij het
+opstarten, met samenhangscontroles; alleen wat echt niet kan ontbreken is een
+fout, de rest valt veilig terug (besluit 40). De ontdekking stelt uit de
+registers van Home Assistant een configuratie voor en besluit niet (besluit 41).
+Een stiltetest eist dat elk veld ergens gelezen wordt of met een reden op een
+lijst staat (besluit 54).
 
-De pagina heeft twee tabbladen, **Nu** en **Terugblik**, met daarboven een
-datasetmeter die altijd zichtbaar blijft: dagen per seizoen tegen een doel, en
-welke modi, strategieën en richtingen ooit zijn afgegaan. Die checklist komt uit
-de gesloten unions van de kern, dus een nieuwe modus verschijnt er vanzelf in.
-Zie besluit 27.
+**De weergave (`frontend/`).** Eén pagina, vanilla JS, Tailwind lokaal gebouwd.
+Ze leest `Explanation` en herberekent niets. De schaduwdienst serveert haar zelf:
+
+| Route | Wat |
+| --- | --- |
+| `/api/state`, `/api/events` | het laatste besluit, en een stroom van elk volgend |
+| `/api/divergence` | de terugblik over de logboeken, elk kwartier herrekend (besluit 26) |
+| `/api/site` | namen en apparaten per zone, voor de weergave |
+| `/api/health` | leeft hij, wanneer besliste hij, en welke versie (besluit 54) |
+| `/api/export`, `/api/export/info` | de hele dataset als tar.gz (besluit 48) |
+| `POST /api/onboarding` | de enige deur die schrijft, alleen achter Ingress (besluit 42) |
+
+Alles wat geen GET of HEAD is, krijgt 405 vóór de routering — behalve die ene
+deur, en die bestaat alleen als `opstart.ts` hem opent.
+
+**De data.** Naast elkaar in de logmap:
+
+- `decisions-JJJJ-MM-DD.ndjson` — elk besluit; volledig als het verandert, kort
+  als het gelijk blijft (besluit 11).
+- `history-JJJJ-MM-DD.ndjson` — elke wijziging van de gevolgde entiteiten, de
+  ruwe historie waarmee je later opnieuw kunt beslissen (besluit 52).
+- Dagen ouder dan een week worden `.ndjson.gz` (besluit 58). Alle lezers gaan
+  via `divergence/read.ts`, die beide vormen kent.
+
+**De harnassen (`backend/src/replay`, `backend/src/divergence`).** De replay
+speelt opgenomen historie minuut voor minuut af en vraagt wat de arbiter zou
+doen; het is een schaduwvergelijking, geen gesloten simulatie, dus
+temperatuurgevolgen zijn niet te zien. Eén dag staat als vaste test in git
+(besluit 54). De divergentietool zet het logboek af tegen wat het oude systeem
+deed.
+
+**Twee applicaties, niet één.** Wat hier staat is de *machinekamer*. Het
+dashboard voor een bewoner wordt een aparte applicatie (fase 8), met alleen het
+`Explanation`-contract gemeen (besluit 29). **De schaduwmodus blijft** ook na de
+overstap: hij is het instrument waarmee elke volgende woning begint (besluit 28).
 
 ## 3. Ontwerpprincipes
 
-De oorspronkelijke drie staan overeind. Wat we er in de praktijk bij hebben
-geleerd:
-
-- **Geen logica in de frontend.** Het oude dashboard bevatte ~500 regels JS die
-  de state machine dupliceerden. Die zijn de bron van divergentie.
+- **Geen logica in de frontend.** Het oude dashboard dupliceerde de state
+  machine in ~500 regels JS; dat was een bron van divergentie.
 - **Afwezigheid van vraag is niet de taak van een strategie.** Strategieën
-  drukken vraag uit; de arbiter regelt het afbouwen, omdat alleen die weet wat
-  een apparaat nú doet.
-- **Tijd is invoer.** Zowel in de kern als in de laag eromheen. Een test die
-  afhangt van het uur waarop hij draait, toetst niets.
+  drukken vraag uit; de arbiter bouwt af, want alleen die weet wat een apparaat
+  nú doet.
+- **Tijd is invoer.** In de kern en in de laag eromheen. Een test die afhangt van
+  het uur waarop hij draait, toetst niets; tests wachten op een voorwaarde, niet
+  op de klok.
 - **Een fout hoort luid te falen, niet stil terug te vallen.** Een setpoint
-  buiten bereik wordt afgewezen, niet begrensd.
-- **Wat je niet kunt meten, weet je niet.** Elke bewering over besparing in dit
-  project komt uit een harness, met de beperkingen erbij vermeld.
+  buiten bereik wordt afgewezen, een hartslag van "30s" laat de dienst weigeren
+  te starten.
+- **Wat je niet kunt meten, weet je niet.** Elke bewering over besparing komt uit
+  een harness, met de beperkingen erbij — en een kopgetal wordt eerst naar
+  oorzaak uitgesplitst voordat het in het besluitenlog komt (besluit 49b).
+- **Een machine kijkt mee.** Wat mis kan gaan, hoort een test te vinden, niet
+  iemand die toevallig gaat kijken (besluit 54).
 
 ## 4. Roadmap
 
-### Het fundament
+Fase 0 tot en met 6 zijn af: kern en replay, de schaduwmodus op de NAS,
+configuratie als data, de divergentietool, de weergave met export, en de add-on
+met onboarding. De nummering daarna volgt letters, omdat er stappen bij kwamen
+die er niet in stonden; "fase 7" en "fase 8" houden hun naam, want zo staan ze
+in het besluitenlog en in de code.
 
-| Fase | Wat | Status |
-| --- | --- | --- |
-| 0 | Brondata herstellen en de state machine vastleggen | **klaar** |
-| 1 | Pure kern + replay-harness op eigen historie | **klaar** |
-| 2 | HA-adapter in schaduwmodus | **klaar**, draait op de NAS |
-| 3 | Configuratie als data | **klaar** |
-| 4 | Divergentietool | **klaar**, wacht op winterdata |
-| 5 | Read-only webweergave | **klaar**, met exportknop (besluit 48) |
-| 6 | Bindingen uit de configuratie, add-on en onboarding | **klaar** |
-
-De eerdere nummering is hier samengevoegd: configuratie als data en de
-divergentietool bleken beide voorwaarden voor de frontend, niet erna.
-
-### De weg vooruit
-
-Na fase 6 bleek de oude nummering niet meer te kloppen met het werk. Er kwamen
-stappen bij die er niet in stonden — echt schakelen, de assistent — en fase 7
-bleek twee dingen die op elkaar wachten. De stappen hieronder hebben daarom
-letters. "Fase 7" en "fase 8" blijven bestaan onder hun oude naam, want zo
-staan ze in `DECISIONS.md` en in de code.
-
-| | Wat | Waarom | Kan beginnen |
+| | Wat | Waarom | Stand |
 | --- | --- | --- | --- |
-| **A** | **De schaduw eerlijk.** Eigen apparaatstand (besluit 49 en 49b, **klaar**), comfortplafond (besluit 50, **klaar**), startdrempel (besluit 51, **klaar**), de ruwe historie zelf vastleggen in plaats van op de recorder te vertrouwen (besluit 52, **klaar**) | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | **klaar** |
-| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug naar het oude systeem, en de schaduwvergelijking die doorloopt | Het moment waarop het oude systeem uit kan | na A |
-| **C** | **Universeel.** Een bewuste tabel met standaardwaarden, een inlog op de weergave (besluit 23), een terugblik die niet uitgaat van "het oude systeem" (besluit 28), een datasetmeter die niet op dit huis geijkt is (besluit 27) | Voorwaarde voor een tweede woning | los van B |
-| **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet. Voorverwarmen wordt uitgerekend in plaats van een vast uur, en de replay rekent eindelijk ook de temperatuur door | Het lerende deel (besluit 46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
-| **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven: plannen over uren in plaats van per moment | Van reageren naar optimaliseren | na D |
-| **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (besluit 45) | Wat een bewoner ziet | na B, beter na D |
-| **G** | **De assistent** (besluit 44). Vragen in taal of met spraak, lokaal. Een vierde voorsteller, geen baas | Het gesprek met het huis | na F |
-| **H** | **Product** (besluit 34). Meerdere woningen, updates op afstand, ondersteuning | Van dit huis naar andere huizen | na C en F |
+| **A** | **De schaduw eerlijk.** Eigen apparaatstand (49, 49b), comfortplafond (50), startdrempel (51), de ruwe historie zelf vastleggen (52) | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | **klaar** |
+| — | **Het vangnet.** CI vóór de NAS, vaste replay, stiltetest, versie in health (54), opstart (55), invarianten (56), linter (57), compressie (58), index op het besluitenlog | Het kwaliteitsrapport van 30 september | **klaar** |
+| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: de stabilisatie op de eigen timer in plaats van die van het oude systeem, een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug, en de add-on weer aan als plek om te regelen (53) | Het moment waarop het oude systeem uit kan | volgende |
+| **C** | **Universeel.** Een bewuste tabel met standaardwaarden, een inlog op de weergave (23), een terugblik die niet uitgaat van "het oude systeem" (28), een datasetmeter die niet op dit huis geijkt is (27) | Voorwaarde voor een tweede woning | los van B |
+| **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
+| **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na D |
+| **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (45) | Wat een bewoner ziet | na B, beter na D |
+| **G** | **De assistent** (44). Vragen in taal of met spraak, lokaal. Een vierde voorsteller, geen baas | Het gesprek met het huis | na F |
+| **H** | **Product** (34). Meerdere woningen, updates op afstand, ondersteuning | Van dit huis naar andere huizen | na C en F |
 
 Twee dingen bepalen het tempo. **D is aan het seizoen gebonden**: een winter
-laat zich niet versnellen, en elke winterdag die nu wordt opgenomen is er één
-die later niet opnieuw hoeft. **B is het moment van overdracht**: alles vóór B
-mag mislukken zonder dat iemand het koud krijgt, alles erna niet.
-
-### Fase 6, uitgesplitst
-
-Fase 6 heette "onboarding voor andermans huis", maar dat bleek de laatste stap
-en niet de eerste. Ervoor liggen twee dingen die dit huis vandaag al raken:
-
-| | Wat | Waarom nu |
-| --- | --- | --- |
-| 6a | `mapping.ts` leest de bindingen uit `SiteConfig` — **klaar** | De configuratie en de code bevatten nu dezelfde vijf tabellen, met de hand gelijkgehouden. Niets bewaakt dat. |
-| 6b | Timers, standby-afspraak, modusbron en legacy-helpers naar de configuratie — **klaar** | Wat in code staat kan niet per woning verschillen — en de modusbron was de oorzaak van de 151 minuten uit besluit 8b. |
-| 6c | De add-on: dezelfde dienst in de vorm die HA verwacht | **klaar** — Supervisor-token, Ingress, opties. Zie besluit 36. |
-| 6d | De onboarding: ontdekking uit de HA-registers en een wizard in de weergave | **klaar** — stelt voor en besluit niet (besluit 41), schrijft alleen achter Ingress (besluit 42). |
-
-**Buitentemperatuur is naar voren gehaald.** `sensor.temperatuur` stond in fase 7
-en wordt nu meteen vastgelegd. Reden: elke winterdag die zonder hem wordt
-opgenomen is een winterdag die je voor fase 7 opnieuw moet doen. De regeling
-gebruikt hem nog niet; hij gaat alleen mee het logboek in. Zie besluit 30.
+laat zich niet versnellen. **B is het moment van overdracht**: alles vóór B mag
+mislukken zonder dat iemand het koud krijgt, alles erna niet.
 
 ## 5. Waar we nu staan
 
-De schaduwmodus draait onbewaakt op de Synology, verbonden met Home Assistant,
-en schrijft elk besluit weg. Hij schakelt niets: `HaClient` werpt bij elke
-`callService` zolang schrijven uit staat, en een test bewijst dat er in een
-volledige sessie geen enkele dienst wordt aangeroepen.
+De schaduwmodus draait onbewaakt op de Synology, verbonden met Home Assistant op
+de Pi, en schrijft elk besluit en elke wijziging weg. Hij schakelt niets.
 
-Wat gemeten is op tien dagen eigen historie:
-
-- 91,7% van alle HA-events gaat ons niet aan en wordt genegeerd; de slimme meter
-  is 88% van wat overblijft, vandaar een ondergrens van 15 seconden tussen
-  evaluaties
-- 15 uur waarin het oude systeem een airco liet draaien terwijl het huis
-  netstroom kocht, goed voor 3,73 kWh
-- het beslislogboek is ~1 MB per dag
-
-Wat de eerste maand schaduw liet zien (26 dagen, 209.995 momenten, tot 30
+Wat de eerste maand liet zien (26 dagen, ruim 210.000 momenten, tot 30
 september 2026):
 
 - de arbiter is het 95,4% (woonkamer) en 93,2% (zolder) van de tijd eens met het
   oude systeem, zonder gaten in de opname
-- de draaitijden bleken in de schaduwmodus zonder werk: ze lazen de
-  geschiedenis van het echte apparaat, en dat bewoog niet. Sinds besluit 49 meet
-  de schaduw zijn eigen schakelingen, en valt geen enkele rit meer onder de
-  ingestelde ondergrens — tegen 21–57% daarvoor
+- de draaitijden bewaakten in de schaduwmodus niets, omdat ze de geschiedenis
+  van het echte apparaat lazen; sinds besluit 49 meten ze de eigen schakelingen
 - er bestond geen comfortpad voor koelen; de woonkamer zat 96,6% van de tijd
   boven zijn doel. Sinds besluit 50 geldt een plafond van 26 °C
-- de netstroom die de draaitijd kost, is na de correcties van besluit 49b
-  ongeveer 2 kWh per tien dagen. Een eerste meting gaf 22 kWh, maar dat bleek
-  een fout in de schaduw zelf: het budget rekende met een ander huis dan de
-  meter, en in handmatig bleef een veronderstelde airco "koelen"
+- de netstroom die de minimale draaitijd kost, is ongeveer 2 kWh per tien dagen
+  (besluit 49b; een eerste meting van 22 kWh bleek een fout in de schaduw zelf)
 - de ingestelde startdrempel van 1000 W werd door niets afgedwongen; sinds
   besluit 51 wel
+
+De kwaliteitsbewaking: 282 tests in 17 bestanden, typecheck op de strengste
+stand, een linter, en een CI die bij elke push draait en pas dan de NAS laat
+uitrollen. De vaste replay en de invarianten bewaken het gedrag van de kern,
+de stiltetest de configuratie, de indextest het besluitenlog.
 
 Nog niet aangetoond: of de arbiter het in de praktijk beter doet, en hoeveel
 koeler of warmer het huis ervan wordt. Het eerste vraagt winterdata, het tweede
@@ -200,83 +211,79 @@ het thermisch model — en die winterdata wordt nu opgebouwd.
 Monorepo op `github.com/Ricardo-switch/hems-climate` (privé).
 
 ```
+.github/        De CI: typecheck, lint, tests en builds, en de tak stable
 backend/        Node.js: kern, adapters, replay, divergentie, webserver
-frontend/       De read-only weergave; bouwt naar backend/web
-addon/          De Home Assistant-add-on: manifest, Dockerfile, opstartscript
+  src/            de dienst
+  test/           de tests, met fixtures/ voor de vaste replay
+  tools/          gereedschap: recorder-export, historie samenvoegen, index
+frontend/       De weergave; bouwt naar backend/web
+addon/          De Home Assistant-add-on (staat stil sinds besluit 53)
 config/sites/   Configuratie per installatie
-deploy/         Dockerfile-omgeving, compose, uitrolscript
+deploy/         Compose, uitrolscript, handleiding voor de NAS
 ha-fixes/       Reparaties aan het YAML-systeem, klaar om over te nemen
 legacy_code/    Het YAML-systeem dat vervangen wordt
 HA export/      Referentie: helpers, entity-register, dashboards
 ```
 
-**Bouwen.** De Dockerfile heeft sinds fase 5 drie fasen: de weergave, de
-backend, en de draaifase die alleen `dist` en `web` overhoudt. De bouwcontext is
-daarom de projectwortel en niet `backend/` — met de `.dockerignore` die daarbij
-hoort in de wortel, want Docker leest die naast de context.
+**Bouwen.** De Dockerfile heeft drie fasen: de weergave, de backend, en de
+draaifase die alleen `dist` en `web` overhoudt. De bouwcontext is de
+projectwortel, met de `.dockerignore` daar. De commit en de bouwtijd gaan als
+bouwargumenten het image in (besluit 54). In het image komen nul
+runtime-afhankelijkheden; de linter en de testgereedschappen blijven in de
+bouwfase.
 
-**Uitrol.** De NAS haalt elke vijf minuten de code uit git via
-`deploy/deploy.sh`, ingepland in de Synology Taakplanner. Het script volgt de tak
-die op de NAS is uitgecheckt: `stable`. Die tak schuift pas mee wanneer de CI
-(`.github/workflows/ci.yml`) typecheck, tests en builds groen heeft; een push
-naar `main` die faalt, komt dus nooit op de NAS (besluit 54). Het script bouwt
-alleen wanneer er iets in `backend/` wijzigde, bouwt éérst en wisselt pas daarna
-om, en houdt in `.deployed` bij welke commit er werkelijk draait — anders wordt
-een mislukte uitrol nooit opnieuw geprobeerd. Welke commit er draait, zegt de
-dienst zelf in `/api/health`.
+**Uitrol.** De NAS draait elke vijf minuten `deploy.sh` vanuit de Synology
+Taakplanner. Het script volgt de tak die op de NAS is uitgecheckt: `stable`. Die
+schuift pas mee wanneer de CI groen is; een push naar `main` die faalt, komt dus
+nooit op de NAS (besluit 54). Het script bouwt alleen wanneer er iets in
+`backend/` wijzigde, bouwt éérst en wisselt pas daarna om, toetst de draaiende
+configuratie tegen het nieuwe image (besluit 33), en houdt in `.deployed` bij
+welke commit er werkelijk draait. Welke commit dat is, zegt de dienst zelf in
+`/api/health`.
 
 **Eén draaiende schaduw.** Alleen de NAS (besluit 53). De add-on op de Pi staat
-stil sinds 30 september 2026 en komt terug bij stap B, als de plek waar
-geregeld wordt.
+stil en komt terug bij stap B, als de plek waar geregeld wordt.
 
-**De Taakplanner is een andere omgeving dan een shell.** Dat heeft dit project
-vier keer laten struikelen, en het is de moeite waard om te onthouden:
+**De Taakplanner is een andere omgeving dan een shell** (besluit 22):
 
 1. Geen `PATH` naar docker en git — die worden expliciet gezocht.
 2. Geen `HOME=/root` — de SSH-sleutel wordt expliciet meegegeven.
-3. Aangeroepen als `sh script`, waardoor bash in POSIX-modus draait en een deel
-   van de syntaxis wegvalt — het script start zichzelf opnieuw met een echte
-   bash.
+3. Aangeroepen als `sh script`, waardoor bash in POSIX-modus draait — het
+   script start zichzelf opnieuw met een echte bash.
 4. Regeleindes — `.gitattributes` legt LF vast voor alles wat op Linux draait.
+5. Overschrijven tijdens een run — bash leest een script tijdens het uitvoeren
+   van schijf. Sinds 30 september staat het script in git tussen accolades met
+   een `exit` erin, zodat een lopende run zijn eigen versie afmaakt. Op de NAS
+   geldt dat vanaf de eerste kopie van die versie; kopieer die ene keer nog vlak
+   na een regel "Niets te doen" in het journaal.
 
-Toets een wijziging in het uitrolscript altijd via *Uitvoeren* in de Taakplanner,
-niet vanaf de commandoregel. Alleen zo draai je in dezelfde omgeving.
+Toets een wijziging in het uitrolscript via *Uitvoeren* in de Taakplanner, niet
+vanaf de commandoregel. Git-opdrachten op de NAS gaan met `sudo -H`: de werkmap
+en de SSH-sleutel zijn van root.
 
-**Wat buiten git blijft:** het HA-token (`.env`), de logboeken, en
-`config/sites/*.json` op de NAS. Dat laatste hoort bij de installatie, niet bij
-de code — en het is meteen de vorm die nodig is zodra er een tweede huis bij komt.
-Het uitrolscript zet de configuratie dus níet over; het meldt alleen dat hij van
-git verschilt. Een configuratiewijziging (zoals het comfortplafond) is pas
-actief nadat je hem zelf naar `$ROOT/config/sites/` kopieert.
+**Wat buiten git blijft, en dus met de hand naar de NAS gaat:** het HA-token
+(`.env`), `docker-compose.yml`, `deploy.sh` zelf (besluit 20) en
+`config/sites/*.json` (besluit 21). Het uitrolscript meldt wanneer een ervan van
+git verschilt, maar zet ze niet over. Een configuratiewijziging is pas actief
+nadat je hem zelf kopieert en de container herstart.
 
-**De replay-data legt de dienst zelf vast** (besluit 52): elke gevolgde
-wijziging in `history-JJJJ-MM-DD.ndjson` naast het beslislogboek, ongeveer 2 MB
-per dag. `backend/tools/stitch-history.ts` maakt er een replay-dataset van; de
-exportknop neemt hem mee. Daarvóór kwam de replay-data uit de recorder van Home
-Assistant, en die ruimt op: op de standaard van tien dagen was half september
-al weg voordat hij werd geëxporteerd. De recorder bewaart sinds 30 september
-2026 zestig dagen en blijft het vangnet voor gaten, via
-`backend/tools/export-history.ts`.
+**De data blijft ook buiten git.** De logboeken en de historie staan op de NAS;
+`/api/export` haalt ze op. De recorder van Home Assistant bewaart sinds
+30 september 2026 zestig dagen en is het vangnet voor gaten in de eigen
+historie, via `backend/tools/export-history.ts`.
 
 ## 7. Waarom het zo is
 
-Dit document beschrijft de huidige stand. Waaróm er zo gekozen is — welke
-alternatieven zijn afgevallen en wat een besluit heeft gekost — staat in
-[DECISIONS.md](DECISIONS.md). Dat is het document dat je over een half jaar
-nodig hebt, want de code vertelt het wat en niet het waarom.
+Dit document beschrijft de huidige stand. Waaróm er zo gekozen is, staat in
+[DECISIONS.md](DECISIONS.md), met een index per onderwerp bovenaan. Dat is het
+document dat je over een half jaar nodig hebt, want de code vertelt het wat en
+niet het waarom.
 
 ## 8. Volgende stap
 
-Stap A is klaar. Eerst pushen — de NAS haalt `main` elke vijf minuten zelf op —
-zodat de winterdataset vanaf nu
-met de eerlijke schaduw én met de ruwe historie wordt opgebouwd. Daarna B —
-echt schakelen — met één apparaat.
+Stap A en het vangnet zijn klaar. Wat nog op een keuze wacht: een afspraak over
+de taal van de namen in de code (ronde 3 van de verbeterpunten).
 
-C kan ernaast, maar is pas nodig bij een tweede woning. D wacht op de winter.
-
-De winterdataset is sinds 9 september 2026 gebaseerd op een vertaling die de
-handmatige stand kent (besluit 8b); alles daarvóór niet. De buitentemperatuur
-staat erin sinds de uitrol van fase 6a/6b, de opbrengst van de panelen sinds
-besluit 47. Beslissingen van de schaduw volgen besluit 49 tot en met 52 pas
-vanaf het moment dat die op de NAS zijn uitgerold — en voor besluit 50 ook de
-configuratie gekopieerd.
+Daarna stap B, met als voorwerk de open punten die het besluitenlog noemt: de
+stabilisatie op de eigen timer, en opslag voor `OwnState`. C kan ernaast, maar
+is pas nodig bij een tweede woning. D wacht op de winter.
