@@ -38,9 +38,15 @@ ingress_port: 8099
 panel_icon: mdi:home-thermometer
 panel_title: Smart Climate
 
-# Alleen lezen bij Home Assistant. De schaduwmodus schrijft niets (besluit 15),
-# maar dat is een eigenschap van onze code; dit maakt het ook een eigenschap van
-# de omgeving.
+# Toegang tot de API van Home Assistant, via de proxy van de Supervisor.
+#
+# Let op: dit is volledige toegang, geen alleen-lezen. Home Assistant kent voor
+# add-ons geen variant die alleen leest. Dat de schaduwmodus niets schrijft, is
+# een eigenschap van onze code — `HaClient` weigert elke `callService` zolang
+# schrijven uit staat, en een test bewijst dat (besluit 15) — niet van deze
+# omgeving. Een eerdere versie van dit commentaar beweerde het tegendeel. Bij
+# echt schakelen (stap B) hoort niemand te rekenen op een tweede laag die er
+# niet is.
 homeassistant_api: true
 
 # Herstart na een crash en na de zelfbeëindiging van de bewaking (besluit 18).
