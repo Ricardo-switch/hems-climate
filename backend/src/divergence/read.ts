@@ -147,6 +147,14 @@ export async function findLogFiles(dir: string): Promise<string[]> {
   return names.map((n) => join(dir, n));
 }
 
+/** De dagbestanden met ruwe historie naast het logboek (besluit 52). */
+export async function findHistoryFiles(dir: string): Promise<string[]> {
+  const names = (await readdir(dir))
+    .filter((n) => /^history-\d{4}-\d{2}-\d{2}\.ndjson$/.test(n))
+    .sort();
+  return names.map((n) => join(dir, n));
+}
+
 /**
  * Leest de logboeken en levert momenten op, in tijdsvolgorde.
  *

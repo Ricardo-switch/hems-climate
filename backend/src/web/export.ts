@@ -29,7 +29,7 @@ import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 
-import { findLogFiles } from '../divergence/read.js';
+import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 
 const BLOK = 512;
 
@@ -78,15 +78,29 @@ export interface ExportInfo {
   readonly laatste: string | null;
 }
 
+/**
+ * Wat er in de export gaat: het beslislogboek en de ruwe historie (besluit 52).
+ * Allebei per dag, allebei nodig — het eerste zegt wat de arbiter besloot, het
+ * tweede is waarmee je dat besluit opnieuw kunt nemen met een andere instelling.
+ */
+async function exportBestanden(logDir: string): Promise<{ logboek: string[]; alles: string[] }> {
+  const logboek = await findLogFiles(logDir);
+  const historie = await findHistoryFiles(logDir);
+  return { logboek, alles: [...logboek, ...historie] };
+}
+
 export async function exportInfo(logDir: string): Promise<ExportInfo> {
   let paden: string[];
+  let alles: string[];
   try {
-    paden = await findLogFiles(logDir);
+    ({ logboek: paden, alles } = await exportBestanden(logDir));
   } catch {
     return { bestanden: 0, bytes: 0, eerste: null, laatste: null };
   }
+  // `bestanden` is het aantal dagen — zo staat het op de knop — en telt dus
+  // alleen het logboek. De omvang telt alles, want dat is wat je downloadt.
   let bytes = 0;
-  for (const p of paden) bytes += (await stat(p)).size;
+  for (const p of alles) bytes += (await stat(p)).size;
   return {
     bestanden: paden.length,
     bytes,
@@ -107,7 +121,7 @@ export async function schrijfExport(
   res: ServerResponse,
   nu: Date = new Date(),
 ): Promise<void> {
-  const paden = await findLogFiles(logDir);
+  const { alles: paden } = await exportBestanden(logDir);
   const stempel = nu.toISOString().slice(0, 10);
   const map = `hems-logboek-${stempel}`;
 

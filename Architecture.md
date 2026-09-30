@@ -126,9 +126,9 @@ staan ze in `DECISIONS.md` en in de code.
 
 | | Wat | Waarom | Kan beginnen |
 | --- | --- | --- | --- |
-| **A** | **De schaduw eerlijk.** Eigen apparaatstand (besluit 49, **klaar**), comfortplafond (besluit 50, **klaar**), een grens op hoe lang een draaiend apparaat netstroom mag gebruiken, de recorder elke nacht exporteren | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | nu |
+| **A** | **De schaduw eerlijk.** Eigen apparaatstand (besluit 49 en 49b, **klaar**), comfortplafond (besluit 50, **klaar**), startdrempel (besluit 51, **klaar**), de ruwe historie zelf vastleggen in plaats van op de recorder te vertrouwen (besluit 52, **klaar**) | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | **klaar** |
 | **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug naar het oude systeem, en de schaduwvergelijking die doorloopt | Het moment waarop het oude systeem uit kan | na A |
-| **C** | **Universeel.** Een bewuste tabel met standaardwaarden (besluit 51), een inlog op de weergave (besluit 23), een terugblik die niet uitgaat van "het oude systeem" (besluit 28), een datasetmeter die niet op dit huis geijkt is (besluit 27) | Voorwaarde voor een tweede woning | los van B |
+| **C** | **Universeel.** Een bewuste tabel met standaardwaarden, een inlog op de weergave (besluit 23), een terugblik die niet uitgaat van "het oude systeem" (besluit 28), een datasetmeter die niet op dit huis geijkt is (besluit 27) | Voorwaarde voor een tweede woning | los van B |
 | **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet. Voorverwarmen wordt uitgerekend in plaats van een vast uur, en de replay rekent eindelijk ook de temperatuur door | Het lerende deel (besluit 46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
 | **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven: plannen over uren in plaats van per moment | Van reageren naar optimaliseren | na D |
 | **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (besluit 45) | Wat een bewoner ziet | na B, beter na D |
@@ -184,8 +184,12 @@ september 2026):
   ingestelde ondergrens — tegen 21–57% daarvoor
 - er bestond geen comfortpad voor koelen; de woonkamer zat 96,6% van de tijd
   boven zijn doel. Sinds besluit 50 geldt een plafond van 26 °C
-- met werkende draaitijden zou een draaiend apparaat in tien septemberdagen
-  ruwweg 22 kWh netstroom gebruiken — nog geen besluit, zie `DECISIONS.md`
+- de netstroom die de draaitijd kost, is na de correcties van besluit 49b
+  ongeveer 2 kWh per tien dagen. Een eerste meting gaf 22 kWh, maar dat bleek
+  een fout in de schaduw zelf: het budget rekende met een ander huis dan de
+  meter, en in handmatig bleef een veronderstelde airco "koelen"
+- de ingestelde startdrempel van 1000 W werd door niets afgedwongen; sinds
+  besluit 51 wel
 
 Nog niet aangetoond: of de arbiter het in de praktijk beter doet, en hoeveel
 koeler of warmer het huis ervan wordt. Het eerste vraagt winterdata, het tweede
@@ -237,11 +241,14 @@ Het uitrolscript zet de configuratie dus níet over; het meldt alleen dat hij va
 git verschilt. Een configuratiewijziging (zoals het comfortplafond) is pas
 actief nadat je hem zelf naar `$ROOT/config/sites/` kopieert.
 
-**De replay-data komt uit de recorder van Home Assistant,** en die ruimt op. Op
-de standaard van tien dagen was half september al weg voordat hij werd
-geëxporteerd; de recorder bewaart sinds 30 september 2026 zestig dagen.
-`backend/tools/export-history.ts` maakt er een replay-dataset van. Die draait
-nog met de hand — nachtelijk maken hoort bij stap A.
+**De replay-data legt de dienst zelf vast** (besluit 52): elke gevolgde
+wijziging in `history-JJJJ-MM-DD.ndjson` naast het beslislogboek, ongeveer 2 MB
+per dag. `backend/tools/stitch-history.ts` maakt er een replay-dataset van; de
+exportknop neemt hem mee. Daarvóór kwam de replay-data uit de recorder van Home
+Assistant, en die ruimt op: op de standaard van tien dagen was half september
+al weg voordat hij werd geëxporteerd. De recorder bewaart sinds 30 september
+2026 zestig dagen en blijft het vangnet voor gaten, via
+`backend/tools/export-history.ts`.
 
 ## 7. Waarom het zo is
 
@@ -252,16 +259,16 @@ nodig hebt, want de code vertelt het wat en niet het waarom.
 
 ## 8. Volgende stap
 
-Stap A afmaken: besluiten hoe lang een draaiend apparaat netstroom mag
-gebruiken, en de recorder-export nachtelijk laten draaien. Beide raken de
-kwaliteit van de winterdataset, en die kun je niet met terugwerkende kracht
-repareren. Daarna B — echt schakelen — met één apparaat.
+Stap A is klaar. Eerst pushen — de NAS haalt `main` elke vijf minuten zelf op —
+zodat de winterdataset vanaf nu
+met de eerlijke schaduw én met de ruwe historie wordt opgebouwd. Daarna B —
+echt schakelen — met één apparaat.
 
 C kan ernaast, maar is pas nodig bij een tweede woning. D wacht op de winter.
 
 De winterdataset is sinds 9 september 2026 gebaseerd op een vertaling die de
 handmatige stand kent (besluit 8b); alles daarvóór niet. De buitentemperatuur
 staat erin sinds de uitrol van fase 6a/6b, de opbrengst van de panelen sinds
-besluit 47. Beslissingen van de schaduw volgen besluit 49 en 50 pas vanaf het
-moment dat die op de NAS zijn uitgerold — en voor besluit 50 ook de
+besluit 47. Beslissingen van de schaduw volgen besluit 49 tot en met 52 pas
+vanaf het moment dat die op de NAS zijn uitgerold — en voor besluit 50 ook de
 configuratie gekopieerd.

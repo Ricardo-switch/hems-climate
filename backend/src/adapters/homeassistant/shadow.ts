@@ -33,6 +33,7 @@ import {
   observedEntities,
   relevantEntities,
 } from './mapping.js';
+import { Historieschrijver } from './history.js';
 import { EntityStore } from './store.js';
 
 /**
@@ -185,6 +186,12 @@ export class ShadowRunner {
    */
   readonly #schaduwApparaten = new SchaduwApparaten();
 
+  /**
+   * De ruwe historie van de gevolgde entiteiten (besluit 52), naast het
+   * beslislogboek. Alleen wanneer er een logmap is.
+   */
+  #historie: Historieschrijver | null = null;
+
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
     // opnieuw te beslissen.
@@ -217,6 +224,13 @@ export class ShadowRunner {
       write: options.write ?? ((line: string) => console.log(line)),
       now: options.now ?? (() => Date.now()),
     };
+    if (this.#options.logDir != null) {
+      this.#historie = new Historieschrijver(
+        this.#options.logDir,
+        this.#options.now,
+        (error) => this.#log(`historie niet weggeschreven: ${String(error)}`),
+      );
+    }
   }
 
   start(): void {
@@ -224,6 +238,11 @@ export class ShadowRunner {
 
     client.on('ready', (states: HaEntityState[]) => {
       this.#store.replaceAll(states);
+      // De volledige stand bij elk (her)verbinden: daar begint de replay, en na
+      // een onderbreking is dit de enige manier om te weten waar hij verdergaat.
+      this.#historie?.vastleggen(
+        states.filter((s) => this.#store.isRelevant(s.entity_id)),
+      );
       this.#ready = true;
       this.#log(
         `verbonden — ${states.length} entiteiten in Home Assistant, ` +
@@ -244,6 +263,9 @@ export class ShadowRunner {
         this.#ignored += 1;
         return;
       }
+      // Alles wat we volgen, ook wat geen herberekening waard is: de replay
+      // leest dezelfde entiteiten als de vertaling.
+      this.#historie?.vastleggen([state]);
       // Wel vastgelegd, maar geen reden om te herrekenen.
       if (!this.#store.isTrigger(state.entity_id)) return;
       if (!this.#ready) return;
@@ -283,6 +305,11 @@ export class ShadowRunner {
     }
 
     client.connect();
+  }
+
+  /** Belooft dat de historie tot nu toe op schijf staat. */
+  historieGereed(): Promise<void> {
+    return this.#historie?.gereed() ?? Promise.resolve();
   }
 
   stop(): void {
