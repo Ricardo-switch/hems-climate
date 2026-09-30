@@ -109,6 +109,27 @@ describe('de dataset exporteren', () => {
     expect(await readFile(join(map, 'decisions-2026-09-06.ndjson'), 'utf-8')).toBe(groot);
   });
 
+  it('neemt de ruwe historie mee, en telt op de knop alleen dagen (besluit 52)', async () => {
+    const dir = await logboekMet({ '2026-09-05': 'a\n' });
+    await writeFile(join(dir, 'history-2026-09-05.ndjson'), '{"t":1,"e":"x","s":"1"}\n', 'utf-8');
+
+    const info = await exportInfo(dir);
+    // Eén dag, al zijn er twee bestanden: zo staat het op de knop.
+    expect(info.bestanden).toBe(1);
+    // Maar de omvang is wat je downloadt, dus alles.
+    expect(info.bytes).toBe(2 + 24);
+
+    const tgz = join(dir, 'uit.tar.gz');
+    await schrijfExport(dir, nepAntwoord(tgz).res, new Date('2026-09-30T12:00:00Z'));
+    const uit = join(dir, 'uitgepakt');
+    await mkdir(uit);
+    await uitvoeren('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    expect((await readdir(join(uit, 'hems-logboek-2026-09-30'))).sort()).toEqual([
+      'decisions-2026-09-05.ndjson',
+      'history-2026-09-05.ndjson',
+    ]);
+  });
+
   it('laat wat geen dagbestand is buiten het archief', async () => {
     const dir = await logboekMet({ '2026-09-05': 'a\n' });
     const tgz = join(dir, 'uit.tar.gz');

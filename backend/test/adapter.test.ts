@@ -548,6 +548,54 @@ describe('eventfilter', () => {
   });
 });
 
+describe('de ruwe historie (besluit 52)', () => {
+  it('legt de stand bij verbinden en elke gevolgde wijziging vast, en niets anders', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+
+    const ha = await startFakeHa({ states: shadowStates() });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      logDir: dir,
+      write: () => {},
+      now: () => SHADOW_NOW,
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await wachtTot(runner, 1);
+    // Eerst iets wat we niet volgen, dan iets wat we wel volgen. Eén
+    // verbinding, dus als de tweede verwerkt is, is de eerste dat ook.
+    ha.push(shadowEntity('sensor.koelkast_temperatuur', '4.1'));
+    ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.3'));
+    await wachtTot(runner, 2);
+    await runner.historieGereed();
+
+    const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
+    const rijen = (await readFile(join(dir, `history-${day}.ndjson`), 'utf-8'))
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { e: string; s: string });
+
+    // De momentopname: de netmeting en de airco's zitten erin.
+    expect(rijen.some((r) => r.e === 'sensor.p1_meter_power')).toBe(true);
+    expect(rijen.some((r) => r.e === 'climate.air_conditioning_zolder')).toBe(true);
+    // De wijziging daarna.
+    expect(
+      rijen.some((r) => r.e === 'sensor.hue_motion_sensor_zolder_temperatuur' && r.s === '25.3'),
+    ).toBe(true);
+    // En niets wat de regeling niet leest.
+    expect(rijen.some((r) => r.e === 'sensor.koelkast_temperatuur')).toBe(false);
+  });
+});
+
 describe('loghygiene', () => {
   it('schrijft een kort record zolang het besluit niet verandert', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));

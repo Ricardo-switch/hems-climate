@@ -1764,6 +1764,57 @@ die geeft geen eigen stand mee.
 
 ---
 
+## 52. De dienst legt de ruwe historie zelf vast
+
+De replay leest een dataset met elke toestandswijziging van de entiteiten die de
+regeling leest. Die kwam uit de recorder van Home Assistant, met de hand
+geëxporteerd via `tools/export-history.ts`. De recorder ruimt op: op de
+standaard van tien dagen was 5 tot 19 september al weg toen we op 30 september
+exporteerden. Het beslislogboek over die dagen is er nog, maar daarmee kun je
+niet opnieuw beslissen met een andere instelling — daar ontbreken de
+apparaatstanden, de timers en de zon in.
+
+Het plan was de export 's nachts te laten draaien. Maar de database staat op de
+Pi en het logboek op de NAS: dat vraagt een geplande taak, een Samba-koppeling
+en een wachtwoord op de NAS, voor een kopie van iets wat de schaduwdienst al
+live binnenkrijgt — gefilterd op precies de entiteiten uit de configuratie.
+
+*Besluit:* de schaduwdienst schrijft elke gevolgde wijziging weg in
+`history-JJJJ-MM-DD.ndjson`, naast het beslislogboek, in het datasetformaat
+(`adapters/homeassistant/history.ts`). Bij elk (her)verbinden legt hij de
+volledige stand vast, zodat de replay weet waar hij begint.
+`tools/stitch-history.ts` maakt er een replay-bestand van in hetzelfde formaat
+als de recorder-export, dus elk meetscript leest het zonder aanpassing. De
+exportknop neemt de historie mee.
+
+*Waarom dit en niet een nachtelijke export.* Geen bewaartermijn om voor te
+blijven, geen tweede systeem dat kan uitvallen, geen wachtwoord op een tweede
+machine. En de lijst entiteiten klopt per definitie: de store volgt dezelfde
+lijst als de vertaling leest, dus wat in de configuratie komt, komt in de
+historie. De recorder-export blijft bestaan voor wat hiervoor lag.
+
+*Het bestand volgt de dag van ontvangst, niet van de meting.* Een sensor die
+drie dagen niet veranderde, heeft bij het verbinden een tijdstempel van drie
+dagen terug. Die rij in het bestand van die dag zetten zou een afgesloten dag
+openbreken. `loadHistory` sorteert per entiteit, dus de volgorde in het bestand
+doet er niet toe.
+
+*Het venster begint waar de dataset compleet is,* niet bij de vroegste tijd. De
+momentopname bij het verbinden draagt de tijden van Home Assistant; een persoon
+die een week thuis is heeft een rij van een week terug. Vanaf die tijd afspelen
+zou een week failsafe geven, want de netmeter is dan nog onbekend.
+
+*Wat het kost.* Gemeten op het septembervenster: 34.444 rijen en 2,1 MB per
+dag, 0,77 GB per jaar ongecomprimeerd. 91% daarvan zijn drie vermogenssensoren
+die om de paar seconden melden. In de export gaat het door gzip.
+
+*Wat er niet in zit: de gaten.* Ligt de dienst eruit, dan mist de historie wat
+er in die tijd gebeurde; bij het herverbinden komt alleen de stand op dat moment
+binnen. Daarvoor blijft de recorder het vangnet, sinds 30 september 2026 met een
+bewaartermijn van zestig dagen.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
