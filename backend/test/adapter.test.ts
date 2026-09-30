@@ -61,10 +61,27 @@ function shadowEntity(
  * viel een test om zonder dat er iets mis was.
  */
 async function wachtTot(runner: { stats: { evaluations: number } }, n: number): Promise<void> {
+  await wachtOp(
+    () => runner.stats.evaluations >= n,
+    () => `${n} evaluaties (bleef op ${runner.stats.evaluations} staan)`,
+  );
+}
+
+/**
+ * Wacht tot een voorwaarde waar is, met een ruime bovengrens.
+ *
+ * Voor alles wat een test "na een tijdje" verwacht. Een vaste wachttijd is op
+ * een snelle pc ruim en op een drukke CI-machine te krap; deze wacht precies zo
+ * lang als nodig en faalt met een zin in plaats van een verkeerde telling.
+ */
+async function wachtOp(
+  voorwaarde: () => boolean | Promise<boolean>,
+  wat: string | (() => string),
+): Promise<void> {
   const uiterlijk = Date.now() + 5_000;
-  while (runner.stats.evaluations < n) {
+  while (!(await voorwaarde())) {
     if (Date.now() > uiterlijk) {
-      throw new Error(`bleef op ${runner.stats.evaluations} evaluaties staan`);
+      throw new Error(`gewacht op ${typeof wat === 'function' ? wat() : wat}, kwam niet`);
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -329,7 +346,10 @@ describe('ShadowRunner', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await wachtOp(
+      () => lines.some((l) => l.includes('zou sturen') || l.includes('zou niets')),
+      'een besluitregel',
+    );
 
     // Er is beslist, en het besluit is opgeschreven.
     expect(lines.some((l) => l.includes('verbonden'))).toBe(true);
@@ -405,13 +425,13 @@ describe('zonder helpers in Home Assistant', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await wachtTot(runner, 1);
 
     // Een tweede evaluatie uitlokken, nu met een woonkamer die wél wil koelen.
     // De klok staat stil, dus de timer die bij het eerste besluit is gestart
     // loopt nu gegarandeerd nog.
     ha.push(shadowEntity('sensor.beneden_temperatuur', '24.5'));
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await wachtTot(runner, 2);
 
     return lines;
   }
@@ -530,20 +550,22 @@ describe('eventfilter', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await wachtTot(runner, 1);
     const baseline = runner.stats.evaluations;
 
-    // Twintig irrelevante events: geen enkele herberekening.
+    // Twintig irrelevante events: geen enkele herberekening. Eerst wachten tot
+    // ze aantoonbaar alle twintig verwerkt zijn; pas dan zegt "niet gerekend"
+    // iets.
     for (let i = 0; i < 20; i++) {
       ha.push(entity(`sensor.ruis_${i}`, String(i)));
     }
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await wachtOp(() => runner.stats.ignoredEvents === 20, 'twintig genegeerde events');
     expect(runner.stats.evaluations).toBe(baseline);
     expect(runner.stats.ignoredEvents).toBe(20);
 
     // Een echte klimaatwijziging wel.
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '26.5'));
-    await new Promise((resolve) => setTimeout(resolve, 120));
+    await wachtTot(runner, baseline + 1);
     expect(runner.stats.evaluations).toBe(baseline + 1);
   });
 });
@@ -635,10 +657,17 @@ describe('loghygiene', () => {
     await wachtTot(runner, 2);
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.2'));
     await wachtTot(runner, 3);
-    // Het derde record moet ook geschreven zijn, en dat gaat na de evaluatie.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
     const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
+    // Het derde record moet ook geschreven zijn, en dat gaat na de evaluatie.
+    await wachtOp(async () => {
+      try {
+        const tekst = await readFile(join(dir, `decisions-${day}.ndjson`), 'utf-8');
+        return tekst.trim().split('\n').length >= 3;
+      } catch {
+        return false;
+      }
+    }, 'drie records op schijf');
+
     const lines = (await readFile(join(dir, `decisions-${day}.ndjson`), 'utf-8'))
       .trim()
       .split('\n')
@@ -679,14 +708,18 @@ describe('snelheidsbegrenzer', () => {
       client,
       tickSeconds: 3600,
       debounceMs: 5,
-      minIntervalSeconds: 0.4,
+      // Ruim, zodat tien pulsen er ook op een drukke CI-machine binnen vallen.
+      minIntervalSeconds: 2,
       write: () => {},
       now: () => SHADOW_NOW + (Date.now() - t0),
     });
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Pas meten na de eerste evaluatie. Een vaste wachttijd haalde onder
+    // belasting het verbinden niet, en dan viel die eerste evaluatie ná het
+    // nulpunt en telde de test er twee.
+    await wachtTot(runner, 1);
     const baseline = runner.stats.evaluations;
 
     // Tien meterpulsen kort achter elkaar, zoals de P1 ze levert.
@@ -701,7 +734,8 @@ describe('snelheidsbegrenzer', () => {
     expect(runner.stats.throttledRequests).toBeGreaterThan(0);
 
     // Maar de laatste stand komt er alsnog doorheen zodra het venster opent.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Wachten tot het gebeurt, niet een vaste tijd: de bewering is "uiteindelijk".
+    await wachtTot(runner, baseline + 1);
     expect(runner.stats.evaluations).toBeGreaterThan(baseline);
   });
 });
@@ -732,13 +766,12 @@ describe('bewaking tegen vastlopen', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    expect(runner.stats.evaluations).toBeGreaterThan(0);
+    await wachtTot(runner, 1);
     expect(stalls).toEqual([]);
 
     // De klok springt twee minuten vooruit zonder dat er iets gebeurt.
     clock = SHADOW_NOW + 2 * 60_000;
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await wachtOp(() => stalls.length > 0, 'een alarm van de bewaking');
     expect(stalls.length).toBeGreaterThan(0);
     expect(stalls[0]).toBeGreaterThan(1);
   });
@@ -838,7 +871,7 @@ describe('de weergave krijgt het besluit', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await wachtOp(() => gezien.length > 0, 'een besluit voor de weergave');
 
     expect(gezien.length).toBeGreaterThan(0);
     const laatste = gezien[gezien.length - 1]!;
