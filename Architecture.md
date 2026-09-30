@@ -101,6 +101,8 @@ geleerd:
 
 ## 4. Roadmap
 
+### Het fundament
+
 | Fase | Wat | Status |
 | --- | --- | --- |
 | 0 | Brondata herstellen en de state machine vastleggen | **klaar** |
@@ -108,13 +110,35 @@ geleerd:
 | 2 | HA-adapter in schaduwmodus | **klaar**, draait op de NAS |
 | 3 | Configuratie als data | **klaar** |
 | 4 | Divergentietool | **klaar**, wacht op winterdata |
-| 5 | Read-only webweergave | **klaar** |
-| 6 | Bindingen uit de configuratie, en onboarding | **bezig** |
-| 7 | Vooruitkijken: PV-prognose, weer, dynamische tarieven | later |
-| 8 | Het bewonersdashboard, als eigen applicatie | later |
+| 5 | Read-only webweergave | **klaar**, met exportknop (besluit 48) |
+| 6 | Bindingen uit de configuratie, add-on en onboarding | **klaar** |
 
 De eerdere nummering is hier samengevoegd: configuratie als data en de
 divergentietool bleken beide voorwaarden voor de frontend, niet erna.
+
+### De weg vooruit
+
+Na fase 6 bleek de oude nummering niet meer te kloppen met het werk. Er kwamen
+stappen bij die er niet in stonden — echt schakelen, de assistent — en fase 7
+bleek twee dingen die op elkaar wachten. De stappen hieronder hebben daarom
+letters. "Fase 7" en "fase 8" blijven bestaan onder hun oude naam, want zo
+staan ze in `DECISIONS.md` en in de code.
+
+| | Wat | Waarom | Kan beginnen |
+| --- | --- | --- | --- |
+| **A** | **De schaduw eerlijk.** Eigen apparaatstand (besluit 49, **klaar**), comfortplafond (besluit 50, **klaar**), een grens op hoe lang een draaiend apparaat netstroom mag gebruiken, de recorder elke nacht exporteren | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | nu |
+| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug naar het oude systeem, en de schaduwvergelijking die doorloopt | Het moment waarop het oude systeem uit kan | na A |
+| **C** | **Universeel.** Een bewuste tabel met standaardwaarden (besluit 51), een inlog op de weergave (besluit 23), een terugblik die niet uitgaat van "het oude systeem" (besluit 28), een datasetmeter die niet op dit huis geijkt is (besluit 27) | Voorwaarde voor een tweede woning | los van B |
+| **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet. Voorverwarmen wordt uitgerekend in plaats van een vast uur, en de replay rekent eindelijk ook de temperatuur door | Het lerende deel (besluit 46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
+| **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven: plannen over uren in plaats van per moment | Van reageren naar optimaliseren | na D |
+| **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (besluit 45) | Wat een bewoner ziet | na B, beter na D |
+| **G** | **De assistent** (besluit 44). Vragen in taal of met spraak, lokaal. Een vierde voorsteller, geen baas | Het gesprek met het huis | na F |
+| **H** | **Product** (besluit 34). Meerdere woningen, updates op afstand, ondersteuning | Van dit huis naar andere huizen | na C en F |
+
+Twee dingen bepalen het tempo. **D is aan het seizoen gebonden**: een winter
+laat zich niet versnellen, en elke winterdag die nu wordt opgenomen is er één
+die later niet opnieuw hoeft. **B is het moment van overdracht**: alles vóór B
+mag mislukken zonder dat iemand het koud krijgt, alles erna niet.
 
 ### Fase 6, uitgesplitst
 
@@ -126,7 +150,7 @@ en niet de eerste. Ervoor liggen twee dingen die dit huis vandaag al raken:
 | 6a | `mapping.ts` leest de bindingen uit `SiteConfig` — **klaar** | De configuratie en de code bevatten nu dezelfde vijf tabellen, met de hand gelijkgehouden. Niets bewaakt dat. |
 | 6b | Timers, standby-afspraak, modusbron en legacy-helpers naar de configuratie — **klaar** | Wat in code staat kan niet per woning verschillen — en de modusbron was de oorzaak van de 151 minuten uit besluit 8b. |
 | 6c | De add-on: dezelfde dienst in de vorm die HA verwacht | **klaar** — Supervisor-token, Ingress, opties. Zie besluit 36. |
-| 6d | De onboarding-wizard zelf | Pas zinvol als 6a t/m 6c staan; anders is elke tweede woning een codewijziging. |
+| 6d | De onboarding: ontdekking uit de HA-registers en een wizard in de weergave | **klaar** — stelt voor en besluit niet (besluit 41), schrijft alleen achter Ingress (besluit 42). |
 
 **Buitentemperatuur is naar voren gehaald.** `sensor.temperatuur` stond in fase 7
 en wordt nu meteen vastgelegd. Reden: elke winterdag die zonder hem wordt
@@ -149,8 +173,23 @@ Wat gemeten is op tien dagen eigen historie:
   netstroom kocht, goed voor 3,73 kWh
 - het beslislogboek is ~1 MB per dag
 
-Nog niet aangetoond: of de arbiter het in de praktijk beter doet. Daarvoor is
-winterdata nodig, en dat is precies wat er nu wordt opgebouwd.
+Wat de eerste maand schaduw liet zien (26 dagen, 209.995 momenten, tot 30
+september 2026):
+
+- de arbiter is het 95,4% (woonkamer) en 93,2% (zolder) van de tijd eens met het
+  oude systeem, zonder gaten in de opname
+- de draaitijden bleken in de schaduwmodus zonder werk: ze lazen de
+  geschiedenis van het echte apparaat, en dat bewoog niet. Sinds besluit 49 meet
+  de schaduw zijn eigen schakelingen, en valt geen enkele rit meer onder de
+  ingestelde ondergrens — tegen 21–57% daarvoor
+- er bestond geen comfortpad voor koelen; de woonkamer zat 96,6% van de tijd
+  boven zijn doel. Sinds besluit 50 geldt een plafond van 26 °C
+- met werkende draaitijden zou een draaiend apparaat in tien septemberdagen
+  ruwweg 22 kWh netstroom gebruiken — nog geen besluit, zie `DECISIONS.md`
+
+Nog niet aangetoond: of de arbiter het in de praktijk beter doet, en hoeveel
+koeler of warmer het huis ervan wordt. Het eerste vraagt winterdata, het tweede
+het thermisch model — en die winterdata wordt nu opgebouwd.
 
 ## 6. Repository en infrastructuur
 
@@ -194,6 +233,15 @@ niet vanaf de commandoregel. Alleen zo draai je in dezelfde omgeving.
 **Wat buiten git blijft:** het HA-token (`.env`), de logboeken, en
 `config/sites/*.json` op de NAS. Dat laatste hoort bij de installatie, niet bij
 de code — en het is meteen de vorm die nodig is zodra er een tweede huis bij komt.
+Het uitrolscript zet de configuratie dus níet over; het meldt alleen dat hij van
+git verschilt. Een configuratiewijziging (zoals het comfortplafond) is pas
+actief nadat je hem zelf naar `$ROOT/config/sites/` kopieert.
+
+**De replay-data komt uit de recorder van Home Assistant,** en die ruimt op. Op
+de standaard van tien dagen was half september al weg voordat hij werd
+geëxporteerd; de recorder bewaart sinds 30 september 2026 zestig dagen.
+`backend/tools/export-history.ts` maakt er een replay-dataset van. Die draait
+nog met de hand — nachtelijk maken hoort bij stap A.
 
 ## 7. Waarom het zo is
 
@@ -204,13 +252,16 @@ nodig hebt, want de code vertelt het wat en niet het waarom.
 
 ## 8. Volgende stap
 
-Fase 6a en 6b, plus de buitentemperatuur uit fase 7. Alle drie om dezelfde
-reden: ze raken de kwaliteit van de winterdataset die nu wordt opgebouwd, en die
-kun je niet met terugwerkende kracht repareren.
+Stap A afmaken: besluiten hoe lang een draaiend apparaat netstroom mag
+gebruiken, en de recorder-export nachtelijk laten draaien. Beide raken de
+kwaliteit van de winterdataset, en die kun je niet met terugwerkende kracht
+repareren. Daarna B — echt schakelen — met één apparaat.
 
-Daarna 6c (de wizard) of fase 7 (vooruitkijken). Die volgorde is nog niet
-bepaald; fase 8 — het bewonersdashboard — komt daar hoe dan ook na.
+C kan ernaast, maar is pas nodig bij een tweede woning. D wacht op de winter.
 
 De winterdataset is sinds 9 september 2026 gebaseerd op een vertaling die de
-handmatige stand kent (besluit 8b); alles daarvóór niet. Vanaf de uitrol van
-fase 6a/6b staat ook de buitentemperatuur erin.
+handmatige stand kent (besluit 8b); alles daarvóór niet. De buitentemperatuur
+staat erin sinds de uitrol van fase 6a/6b, de opbrengst van de panelen sinds
+besluit 47. Beslissingen van de schaduw volgen besluit 49 en 50 pas vanaf het
+moment dat die op de NAS zijn uitgerold — en voor besluit 50 ook de
+configuratie gekopieerd.
