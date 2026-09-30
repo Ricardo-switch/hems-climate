@@ -349,8 +349,29 @@ describe('zonder helpers in Home Assistant', () => {
     return kopie as unknown as SiteConfig;
   }
 
+  /**
+   * Dezelfde woning, maar met een koele woonkamer.
+   *
+   * Sinds besluit 49 houdt de schaduw bij wat hij zelf geschakeld zou hebben.
+   * Een apparaat dat hij in de eerste ronde aanzette geldt daarna als draaiend,
+   * en de stabilisatie blokkeert alleen het *starten* van iets dat stilstaat.
+   * Zou de woonkamer meteen willen koelen, dan startte hij in dezelfde ronde
+   * als de zolder en bleef er niets over om tegen te houden.
+   *
+   * Dus: eerst alleen de zolder warm. De woonkamer komt in de tweede ronde, en
+   * dát is het geval waar de stabilisatie voor bestaat — niet een tweede unit
+   * opstarten zolang het vermogen van de eerste nog geen betrouwbare basis is.
+   */
+  function koeleWoonkamer(): HaEntityState[] {
+    return shadowStates().map((s) =>
+      s.entity_id === 'sensor.beneden_temperatuur'
+        ? shadowEntity('sensor.beneden_temperatuur', '21.0')
+        : s,
+    );
+  }
+
   async function draai(config: SiteConfig): Promise<string[]> {
-    const ha = await startFakeHa({ states: shadowStates() });
+    const ha = await startFakeHa({ states: koeleWoonkamer() });
     cleanups.push(() => ha.close());
     const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
     const lines: string[] = [];
@@ -369,9 +390,10 @@ describe('zonder helpers in Home Assistant', () => {
     runner.start();
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // Een tweede evaluatie uitlokken. De klok staat stil, dus een timer die
-    // bij het eerste besluit is gestart loopt nu gegarandeerd nog.
-    ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.1'));
+    // Een tweede evaluatie uitlokken, nu met een woonkamer die wél wil koelen.
+    // De klok staat stil, dus de timer die bij het eerste besluit is gestart
+    // loopt nu gegarandeerd nog.
+    ha.push(shadowEntity('sensor.beneden_temperatuur', '24.5'));
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     return lines;
@@ -380,10 +402,11 @@ describe('zonder helpers in Home Assistant', () => {
   it('houdt de stabilisatietimer zelf bij en blokkeert daarna zelf', async () => {
     const lines = await draai(zonderHelpers(exampleSite));
 
-    // Ruim overschot en een warme zolder: het eerste besluit wil koelen, en
-    // vraagt daarbij om een stabilisatietimer.
+    // Ruim overschot en een warme zolder: het eerste besluit zet de zolder aan,
+    // en vraagt daarbij om een stabilisatietimer.
     expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
-    // En bij de volgende evaluatie is die van kracht — zonder dat er ooit een
+    // Bij de volgende evaluatie wil de woonkamer ook koelen, en die staat nog
+    // stil — dus houdt de eigen timer hem tegen, zonder dat er ooit een
     // `timer.`-entiteit aan te pas kwam.
     expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(true);
   });
@@ -529,11 +552,44 @@ describe('loghygiene', () => {
     });
     cleanups.push(() => runner.stop());
 
+    /**
+     * Wacht tot er zoveel evaluaties geweest zijn.
+     *
+     * Niet op een vaste tijd: deze test doet drie rondes, en onder een
+     * volgelopen suite haalt de debounce van 10 ms plus het schrijven naar
+     * schijf een vast venster van 150 ms niet altijd. Dan viel hij om zonder
+     * dat er iets mis was.
+     */
+    async function tot(n: number): Promise<void> {
+      const uiterlijk = Date.now() + 5_000;
+      while (runner.stats.evaluations < n) {
+        if (Date.now() > uiterlijk) {
+          throw new Error(`bleef op ${runner.stats.evaluations} evaluaties staan`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    }
+
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    // Zelfde toestand nog eens: het besluit verandert niet.
+    await tot(1);
+    /*
+     * Drie evaluaties, want sinds besluit 49 komt de rust pas bij de derde.
+     *
+     * De eerste zet de airco's aan. De tweede geeft geen commando's meer: de
+     * schaduw weet nu dat hij ze gestuurd heeft, dus staan ze goed. Dat is een
+     * ánder besluit dan het eerste en levert dus een volledig record. Pas de
+     * derde is gelijk aan de tweede, en dat is het korte record.
+     *
+     * Voorheen was de tweede al kort — maar om de verkeerde reden: het echte
+     * apparaat bewoog nooit, dus gaf de arbiter elke ronde hetzelfde commando
+     * opnieuw. Stilstand die op rust leek.
+     */
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.1'));
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await tot(2);
+    ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.2'));
+    await tot(3);
+    // Het derde record moet ook geschreven zijn, en dat gaat na de evaluatie.
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
     const lines = (await readFile(join(dir, `decisions-${day}.ndjson`), 'utf-8'))

@@ -15,6 +15,8 @@ import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
 import type { OwnStateReader } from '../own-state.js';
 import { NEUTRAL_OWN_STATE } from '../own-state.js';
+import type { SchaduwApparatenReader } from '../shadow-actuators.js';
+import { GEEN_SCHADUW } from '../shadow-actuators.js';
 import type { EntitySource } from './source.js';
 
 /**
@@ -141,6 +143,12 @@ export function buildSystemState(
    * timer loopt — wat de replay-harness van een oude opname wil.
    */
   eigen: OwnStateReader = NEUTRAL_OWN_STATE,
+  /**
+   * Wat de armatuur zou doen als de arbiter het stuur had. Weggelaten betekent:
+   * neem het echte apparaat, wat juist is zodra er werkelijk geschakeld wordt.
+   * Zie `shadow-actuators.ts` (besluit 49).
+   */
+  schaduw: SchaduwApparatenReader = GEEN_SCHADUW,
 ): SystemState {
   const actuators: Record<string, ActuatorState> = {};
   for (const b of bindingsVan(config)) {
@@ -156,11 +164,37 @@ export function buildSystemState(
         ? unavailable<boolean>('missing')
         : value(hvac === 'heating' || hvac === 'cooling', nowMs);
 
+    const echteActie = mapAction(haState, setpointC, b.standby);
+    const eigenStand = schaduw.apparaat(b.actuatorId);
+
+    /*
+     * Meet de vermogenssensor nog wel ons apparaat?
+     *
+     * Zodra de veronderstelde stand van de echte afwijkt, hoort de meting bij
+     * een apparaat dat iets anders doet. Hem dan toch gebruiken zou het budget
+     * vergiftigen: `reclaimableW` telt de gemeten 0 W van een echt apparaat dat
+     * uit staat, terwijl ons veronderstelde apparaat draait en dus wél terug te
+     * winnen is. Onbruikbaar melden is eerlijker dan verkeerd melden, en beide
+     * lezers — `reclaimableW` en `claimW` — vallen dan terug op `estimatedW`,
+     * precies waar die schatting voor bedoeld is.
+     */
+    const meetOnsApparaat =
+      eigenStand?.action == null ||
+      (echteActie.ok && echteActie.value === eigenStand.action);
+
     actuators[b.actuatorId] = {
-      action: mapAction(haState, setpointC, b.standby),
-      setpointC: setpointC == null ? unavailable<number>() : value(setpointC, nowMs),
-      powerW: powerW == null ? unavailable<number>() : value(powerW, nowMs),
-      lastChangeMs: source.changedAt(b.climateEntity),
+      action: eigenStand?.action != null ? value(eigenStand.action, nowMs) : echteActie,
+      setpointC:
+        eigenStand?.setpointC != null
+          ? value(eigenStand.setpointC, nowMs)
+          : setpointC == null
+            ? unavailable<number>()
+            : value(setpointC, nowMs),
+      powerW:
+        powerW == null || !meetOnsApparaat
+          ? unavailable<number>('missing')
+          : value(powerW, nowMs),
+      lastChangeMs: eigenStand?.lastChangeMs ?? source.changedAt(b.climateEntity),
       producing,
       producingSinceMs:
         producing.ok && producing.value ? source.hvacActionSince(b.climateEntity) : null,
