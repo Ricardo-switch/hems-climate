@@ -1815,8 +1815,104 @@ bewaartermijn van zestig dagen.
 
 ---
 
+## 53. De NAS is de primaire omgeving; de add-on wacht tot stap B
+
+Er draaiden twee schaduwdiensten. De NAS volgt `main` en schrijft het
+logboek waar alle analyses op rusten. De add-on op de Pi was een proef: kan de
+dienst in de vorm die Home Assistant verwacht (besluit 36). Dat kon, maar hij
+draaide sinds 10 september een verouderde versie, met een eigen logboek waar
+niemand naar keek. Geen kwaad, wel verwarring: welke schaduw beslist er nu?
+
+*Besluit:* de NAS is de enige draaiende schaduw. De add-on is op 30 september
+2026 stilgezet, met "starten bij opstarten" uit. Hij blijft in de repository.
+
+*Waarom niet weggooien.* De Pi zelf blijft sowieso nodig: daar draait Home
+Assistant. En bij echt schakelen (stap B) is de add-on de betere plek om te
+regelen. Een regelaar naast Home Assistant hangt van één machine af; vanaf de
+NAS hangt het klimaat ook af van de NAS en het netwerk ertussen, en stopt de
+regeling bij elke herstart voor een update. De add-on heeft daarbij het
+Supervisor-token en de inlog van Home Assistant. En bij een tweede woning is de
+add-on de vorm waarin het er komt; niet iedereen heeft een NAS.
+
+*De verdeling op termijn:* de Pi regelt, de NAS onthoudt — logboek, historie,
+analyse en export, want daar staat de opslag. Tot stap B doet de NAS allebei.
+
+*Wat daarmee wacht:* de herkomstcontrole op de schrijfdeur en het vastzetten
+van Node in de add-on (punt 6 en 7 uit het kwaliteitsrapport). Die horen bij het
+moment dat de add-on weer aangaat.
+
+---
+
+## 54. Een machine kijkt mee
+
+Het kwaliteitsrapport van 30 september 2026 gaf "testen en bewaking" een 6. Het
+patroon: wat misging werd gevonden door iemand die ging kijken, niet door iets
+dat altijd kijkt. De startdrempel deed weken niets (51), de draaitijden
+bewaakten in de schaduw niets (49), en de belangrijkste regressiebewaking —
+de bit-identieke replay — draaide met de hand op één pc tegen een dataset
+buiten git. Intussen rolt de NAS elke push naar `main` binnen vijf minuten uit.
+
+*Besluit:* vijf dingen, samen het vangnet.
+
+*1. Een CI-poort vóór de NAS.* GitHub Actions draait bij elke push typecheck,
+tests en beide builds, in UTC zoals de container. Pas als alles groen is,
+schuift de tak `stable` mee; de NAS volgt `stable`. `deploy.sh` hoefde daarvoor
+niet te veranderen: het volgt al de tak die op de NAS is uitgecheckt. `stable`
+schuift alleen vooruit; een herschreven geschiedenis laat de CI falen en is dan
+een beslissing voor een mens.
+
+*2. De replay als vaste test.* Eén dag — 26 augustus, met zowel overschot als
+invoer — staat in git (`test/fixtures`), 135 kB. Hij wordt minuut voor minuut
+afgespeeld zoals de NAS beslist, met de schaduwboekhouding van 49b. Het
+verwachte resultaat is geen hash maar een leesbare samenvatting: elk commando
+met zijn tijd, de blokkades en de aanvaarde voorstellen. Verandert het gedrag
+bewust, dan maakt `npm run replay:vastleggen` hem opnieuw en is de diff in de
+commit het verslag van wat er anders beslist wordt. Aanwezigheid staat in de
+uitsnede de hele dag op thuis: wanneer er iemand thuis was, hoort niet in git.
+
+De eerste run vond meteen iets: om 10:03 werd de zolder geparkeerd en om 10:04
+stond hij uit, terwijl parkeren de stabilisatietijd hoort te duren. Zie het
+open punt over de stabilisatietimer.
+
+*3. Een stiltetest.* Elk veld van de configuratie wordt ergens gelezen, of
+staat met een reden op een lijst — en die lijst wordt zelf ook bewaakt. Doorgeven
+telt niet als lezen: `configFrom` en de abonnementslijsten noemen velden zonder
+er iets mee te doen, en zonder die uitzondering had de test besluit 51 alleen
+via het broertje `resumeSurplusW` gevonden. Nagegaan tegen de arbiter van vóór
+51: hij vindt nu beide velden. Op de lijst staan `thermalMass` (fase 7),
+`adapter` (de naad voor andere platformen) en `manualOverride` (een timer die
+wordt bijgehouden maar door niets gelezen).
+
+*4. Een versie in `/api/health`.* De commit en de bouwtijd gaan als
+bouwargumenten het image in. Op de commandoregel van `deploy.sh` en niet in het
+compose-bestand: dat laatste moet op de NAS met de hand worden bijgewerkt, en
+tot dan stopt `deploy.sh` met uitrollen. Een image zonder argumenten zegt
+`onbekend`, en dat is ook een antwoord.
+
+*5. Tests die niet op de klok wachten.* Drie tests leunden op vaste wachttijden
+en vielen onder belasting om; één daarvan (de snelheidsbegrenzer) faalde in
+ongeveer een op de drie runs. Alle wachttijden zijn vervangen door wachten op
+een voorwaarde: tot er beslist is, tot de events verwerkt zijn, tot het record op
+schijf staat.
+
+*Wat het niet vangt.* Een ontwerpfout zoals die in besluit 49 slaagde voor al zijn
+tests. De vaste replay legt gedrag vast; hij oordeelt er niet over. Daarvoor
+blijft de meetdiscipline nodig: een kopgetal uitsplitsen naar oorzaak voordat
+het in dit logboek komt.
+
+---
+
 ## Wat nog een besluit wacht
 
+- **De stabilisatie volgt de timer van het oude systeem.** De configuratie van
+  dit huis noemt `timer.pv_stabilisatie` als bron, dus leest de schaduw de timer
+  van het YAML-systeem en negeert hij zijn eigen verzoek om vijf minuten (zie
+  besluit 39, dat dit bewust zo liet voor de vergelijking). Gevonden door de
+  vaste replay: parkeren duurde één minuut. Bij echt schakelen draait die oude
+  timer niet meer, en dan is de parkeerstand zinloos. Vóór stap B hoort
+  `timers.stabilisation` uit de configuratie, zodat de eigen timer geldt — en
+  eigenlijk al eerder, want dezelfde redenering als besluit 49 geldt hier:
+  de schaduw hoort zijn eigen geschiedenis te meten.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
