@@ -2259,10 +2259,15 @@ regels meer uitvoert. Zie de commit van 30 september.
 - **De dagdoelen van de datasetmeter zijn op dit huis geijkt** — dertig
   winterdagen, en de seizoenen van Nederland. Zie besluit 27.
 - **De terugblik rekent alles opnieuw door.** Elk kwartier de hele opname, ook
-  het deel dat niet meer verandert. Dat is nu 120 ms en over een winter een
-  seconde of vier; pas als dat gaat knellen is een tussenstand per dag de
-  moeite. Nu zou het een cache zijn die kan verlopen zonder dat iemand het
-  merkt — en dat is precies wat besluit 11 wilde vermijden.
+  het deel dat niet meer verandert. De schatting hier was 120 ms en over een
+  winter een seconde of vier. Gemeten op de NAS op 30 september 2026, na 26
+  dagen: **35 seconden** per keer (`duurMs` in `/api/divergence`), en sinds
+  besluit 58 komt daar het uitpakken van de oude dagen bij. Het draait
+  asynchroon en houdt de regeling niet op, maar het groeit met elke dag mee: na
+  een winter wordt het minuten van elk kwartier. Een tussenstand per afgesloten
+  dag wordt daarmee de moeite waard — met een test die bewaakt dat de
+  tussenstand gelijk blijft aan opnieuw rekenen, want een cache die stil
+  verloopt is precies wat besluit 11 wilde vermijden.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**
   `script.klimaat_controller_apply` zet `input_boolean.zolder_started_now` en
   `..._woonkamer_started_now` aan tijdens de run en pas als laatste stap weer
