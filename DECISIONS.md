@@ -2122,6 +2122,16 @@ tests. De vaste replay legt gedrag vast; hij oordeelt er niet over. Daarvoor
 blijft de meetdiscipline nodig: een kopgetal uitsplitsen naar oorzaak voordat
 het in dit logboek komt.
 
+*Aanvulling, dezelfde avond: de CI bouwt ook het image.* Om 23:46 kwam er een
+commit op `stable` die in de repository klopte maar op de NAS niet te bouwen
+was: een test importeerde uit `tools/`, en de Dockerfile kopieerde die map niet.
+De poort deed wat hij moest — de NAS draaide door op de vorige versie, want
+`deploy.sh` bouwt eerst en wisselt pas daarna om — maar de CI had het moeten
+vangen. Nu bouwt een tweede taak het image met dezelfde Dockerfile en context
+als de NAS, en schuift `stable` pas mee als ook dat lukt. De add-on-image zit
+er nog niet bij: die wordt uit een platgeslagen map gebouwd (besluit 37), en
+staat stil tot stap B.
+
 ---
 
 ## 55. De opstart is één zuivere functie

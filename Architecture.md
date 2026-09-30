@@ -211,7 +211,7 @@ het thermisch model — en die winterdata wordt nu opgebouwd.
 Monorepo op `github.com/Ricardo-switch/hems-climate` (privé).
 
 ```
-.github/        De CI: typecheck, lint, tests en builds, en de tak stable
+.github/        De CI: typecheck, lint, tests, builds en het image, en de tak stable
 backend/        Node.js: kern, adapters, replay, divergentie, webserver
   src/            de dienst
   test/           de tests, met fixtures/ voor de vaste replay
@@ -234,8 +234,9 @@ bouwfase.
 
 **Uitrol.** De NAS draait elke vijf minuten `deploy.sh` vanuit de Synology
 Taakplanner. Het script volgt de tak die op de NAS is uitgecheckt: `stable`. Die
-schuift pas mee wanneer de CI groen is; een push naar `main` die faalt, komt dus
-nooit op de NAS (besluit 54). Het script bouwt alleen wanneer er iets in
+schuift pas mee wanneer de CI groen is — inclusief het bouwen van het image met
+dezelfde Dockerfile en context als de NAS; een push naar `main` die faalt, komt
+dus nooit op de NAS (besluit 54). Het script bouwt alleen wanneer er iets in
 `backend/` wijzigde, bouwt éérst en wisselt pas daarna om, toetst de draaiende
 configuratie tegen het nieuwe image (besluit 33), en houdt in `.deployed` bij
 welke commit er werkelijk draait. Welke commit dat is, zegt de dienst zelf in

@@ -45,6 +45,8 @@ RUN npm ci
 COPY backend/tsconfig.json backend/tsconfig.build.json ./
 COPY backend/src ./src
 COPY backend/test ./test
+# De tests importeren gereedschap uit tools/, en de typecheck neemt het mee.
+COPY backend/tools ./tools
 
 # Typecontrole en compilatie. Beide hebben alleen de TypeScript-compiler nodig
 # en geen platformspecifieke binaries.

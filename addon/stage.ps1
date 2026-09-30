@@ -64,6 +64,7 @@ $bestanden = @(
 $mappen = @(
   @{ Van = 'backend/src';   Naar = 'backend/src' }
   @{ Van = 'backend/test';  Naar = 'backend/test' }
+  @{ Van = 'backend/tools'; Naar = 'backend/tools' }
   @{ Van = 'frontend/src';  Naar = 'frontend/src' }
 )
 
