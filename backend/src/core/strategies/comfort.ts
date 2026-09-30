@@ -21,6 +21,46 @@ export const comfort: Strategy = {
     for (const derived of ctx.zones) {
       const { zone, demand, temperatureC } = derived;
 
+      /*
+       * Het comfortplafond, en waarom het hier staat (besluit 50).
+       *
+       * De lus hieronder kijkt alleen naar `primary`, en dat is juist: comfort
+       * regelt met het hoofdapparaat. Maar in een zone waar geen primary kan
+       * koelen bestond er daardoor géén comfortpad voor koelen — de airco is
+       * `assist`, en assist draait alleen op overschot. Dan koelt er op een
+       * bewolkte dag van 28 graden niets.
+       *
+       * Alleen wanneer geen primary het kan. Kan er wel één koelen, dan
+       * verdedigt `coolTargetC` al een strengere grens en zou dit niets
+       * toevoegen.
+       *
+       * `budgetW: 0`, dus onblokkeerbaar: dit is comfort, en comfort sneuvelt
+       * niet omdat de zon niet schijnt. Het setpoint is het plafond zelf en
+       * niet het koeldoel — hij zorgt dat het niet warmer wordt, hij koelt niet
+       * door naar het doel. Dat is het verschil dat de rekening bepaalt.
+       */
+      const primaryKanKoelen = zone.actuatorIds.some((id) => {
+        const a = actuatorById(ctx.config, id);
+        return a.role === 'primary' && a.capabilities.canCool;
+      });
+      if (derived.bovenComfortplafond && !primaryKanKoelen && derived.comfortMaxC != null) {
+        const koeler = zone.actuatorIds.find(
+          (id) => actuatorById(ctx.config, id).capabilities.canCool,
+        );
+        if (koeler != null) {
+          intents.push({
+            strategyId: comfort.id,
+            zoneId: zone.id,
+            actuatorId: koeler,
+            action: 'cool',
+            setpointC: derived.comfortMaxC,
+            priority: comfort.priority,
+            budgetW: 0,
+            reason: 'zone_above_setpoint',
+          });
+        }
+      }
+
       for (const actuatorId of zone.actuatorIds) {
         const actuator = actuatorById(ctx.config, actuatorId);
         if (actuator.role !== 'primary') continue;

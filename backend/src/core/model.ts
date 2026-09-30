@@ -171,6 +171,24 @@ export interface Zone {
   readonly hysteresis: Hysteresis;
   readonly setpoints: Readonly<Record<Mode, SetpointPair>>;
   readonly buffering: Buffering;
+  /**
+   * De temperatuur die comfort niet laat overschrijden, in °C — desnoods op
+   * netstroom (besluit 50).
+   *
+   * Zonder dit veld bestaat er geen comfortpad voor koelen in een zone waar
+   * geen enkele primary kan koelen. De airco's zijn `assist`, en assist draait
+   * alleen op overschot. Op een bewolkte dag van 28 graden koelt er dan niets,
+   * hoe warm het ook wordt. In het septemberlogboek zat de woonkamer 96,6% van
+   * de tijd meer dan een halve graad boven zijn doel.
+   *
+   * Dit is een plafond en geen doel: hij koelt tót deze waarde, niet tot het
+   * koeldoel. Dat is het verschil tussen "het mag niet warmer worden dan dit"
+   * en "het moet hier naartoe", en het scheelt het grootste deel van de
+   * netstroom.
+   *
+   * Weglaten betekent: geen plafond, en dan is het gedrag zoals het was.
+   */
+  readonly comfortMaxC?: number;
 }
 
 /**

@@ -482,6 +482,42 @@ describe('grenswaarden met een reden', () => {
     if (!result.ok) return;
     expect(result.warnings.map((w) => w.message).join()).toContain('niets voorgeladen');
   });
+
+  it('neemt een comfortplafond over, en laat het weg als het ontbreekt', () => {
+    // Geen standaardwaarde: koelen op netstroom is een keuze (besluit 50).
+    const zonder = parse(baseConfig());
+    expect(zonder.ok && zonder.config.zones[0]!.comfortMaxC).toBe(undefined);
+
+    const c = baseConfig();
+    (c['zones'] as Record<string, unknown>[])[0]!['comfortMaxC'] = 26;
+    const met = parse(c);
+    expect(met.ok && met.config.zones[0]!.comfortMaxC).toBe(26);
+  });
+
+  it('waarschuwt bij een comfortplafond onder het koeldoel', () => {
+    // Dan is de dure regel strenger dan de zuinige, en koelt hij altijd op
+    // netstroom. Werkt wel, kost alleen geld — dus waarschuwing, geen fout.
+    const c = baseConfig();
+    // Een koeldoel vraagt een apparaat dat kan koelen; de ketel alleen kan dat
+    // niet, en dan keurt de samenhangscontrole het terecht af.
+    (c['actuators'] as Record<string, unknown>[]).push({
+      id: 'airco',
+      name: 'Airco',
+      ref: 'climate.airco',
+      role: 'assist',
+      capabilities: { canHeat: true, canCool: true, setpointRange: [16, 30] },
+      power: { estimatedW: 900 },
+      timing: { minRunMinutes: 15, minRestMinutes: 5, settleMinutes: 3 },
+    });
+    const zone = (c['zones'] as Record<string, unknown>[])[0]!;
+    zone['actuatorIds'] = ['ketel', 'airco'];
+    (zone['setpoints'] as Record<string, unknown>)['dag'] = { heat: 20, cool: 24 };
+    zone['comfortMaxC'] = 23;
+    const result = parse(c);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings.map((w) => w.message).join()).toContain('niet boven het koeldoel');
+  });
 });
 
 describe('tijdzone', () => {

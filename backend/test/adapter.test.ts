@@ -53,6 +53,23 @@ function shadowEntity(
   return entity(entity_id, state, attributes, SHADOW_NOW - 3_600_000);
 }
 
+/**
+ * Wacht tot de schaduw zoveel evaluaties heeft gedaan.
+ *
+ * Niet op een vaste tijd. Onder een volle suite — web.test draait ernaast —
+ * haalt de debounce plus het schrijven een vast venster niet altijd, en dan
+ * viel een test om zonder dat er iets mis was.
+ */
+async function wachtTot(runner: { stats: { evaluations: number } }, n: number): Promise<void> {
+  const uiterlijk = Date.now() + 5_000;
+  while (runner.stats.evaluations < n) {
+    if (Date.now() > uiterlijk) {
+      throw new Error(`bleef op ${runner.stats.evaluations} evaluaties staan`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
 interface FakeHa {
   readonly port: number;
   readonly close: () => Promise<void>;
@@ -552,26 +569,8 @@ describe('loghygiene', () => {
     });
     cleanups.push(() => runner.stop());
 
-    /**
-     * Wacht tot er zoveel evaluaties geweest zijn.
-     *
-     * Niet op een vaste tijd: deze test doet drie rondes, en onder een
-     * volgelopen suite haalt de debounce van 10 ms plus het schrijven naar
-     * schijf een vast venster van 150 ms niet altijd. Dan viel hij om zonder
-     * dat er iets mis was.
-     */
-    async function tot(n: number): Promise<void> {
-      const uiterlijk = Date.now() + 5_000;
-      while (runner.stats.evaluations < n) {
-        if (Date.now() > uiterlijk) {
-          throw new Error(`bleef op ${runner.stats.evaluations} evaluaties staan`);
-        }
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-    }
-
     runner.start();
-    await tot(1);
+    await wachtTot(runner, 1);
     /*
      * Drie evaluaties, want sinds besluit 49 komt de rust pas bij de derde.
      *
@@ -585,9 +584,9 @@ describe('loghygiene', () => {
      * opnieuw. Stilstand die op rust leek.
      */
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.1'));
-    await tot(2);
+    await wachtTot(runner, 2);
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.2'));
-    await tot(3);
+    await wachtTot(runner, 3);
     // Het derde record moet ook geschreven zijn, en dat gaat na de evaluatie.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -825,7 +824,7 @@ describe('de weergave krijgt het besluit', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await wachtTot(runner, 1);
 
     // De schaduwopname is het product; het venster erop is dat niet.
     expect(runner.stats.evaluations).toBeGreaterThan(0);

@@ -1608,6 +1608,72 @@ beide vensters.
 
 ---
 
+## 50. Comfort mag koelen boven een plafond, ook op netstroom
+
+Comfort stelt alleen voor voor `primary`-apparaten, en in dit huis kan geen
+enkele primary koelen: de Nest en de badkamerthermostaat verwarmen alleen. De
+airco's zijn `assist`, en assist draait uitsluitend op overschot. Er bestond dus
+geen comfortpad voor koelen. De zolder heeft zelfs helemaal geen primary. Op
+een bewolkte dag van 28 graden koelt er niets, hoe warm het ook wordt. In het
+septemberlogboek zat de woonkamer 96,6% van de tijd meer dan een halve graad
+boven zijn doel — geen storing, een ontbrekend pad.
+
+*Besluit:* een zone kan een `comfortMaxC` krijgen. Boven dat plafond, met de
+gewone hysterese van de zone, stelt comfort koelen voor op het eerste apparaat
+in de zone dat kan koelen — met `budgetW: 0`, dus onblokkeerbaar.
+
+*Een plafond en geen doel.* Hij koelt tót het plafond, niet door naar het
+koeldoel. "Het mag niet warmer worden dan dit" is iets anders dan "het moet hier
+naartoe", en dat verschil is het grootste deel van de rekening. Naar het
+koeldoel laden blijft het werk van pv-overschot, op eigen stroom.
+
+*Alleen waar geen primary kan koelen.* Kan die het wel, dan verdedigt het
+koeldoel al een strengere grens en voegt een plafond niets toe behalve een
+tweede voorstel dat afgewezen wordt.
+
+*Geen standaardwaarde.* Koelen op netstroom is een keuze met een prijs, en die
+maakt de bewoner, niet het schema. Weglaten geeft het gedrag van vóór dit
+besluit. Een plafond onder het koeldoel levert een waarschuwing: dan is de dure
+regel strenger dan de zuinige en koelt hij altijd op netstroom.
+
+*Wat de hoogte kost, over beide vensters* (`src/replay/besluit50.ts`, met
+besluit 49 aan). De betrouwbare kolom is hoe lang de zone boven het plafond zat,
+want die hangt niet af van wat koelen met de temperatuur doet:
+
+| plafond | woonkamer aug | woonkamer sep | zolder aug | zolder sep |
+| --- | --- | --- | --- | --- |
+| 26 °C | 5% | 1% | 5% | 2% |
+| 25 °C | 34% | 7% | 14% | 11% |
+| 24 °C | 90% | 51% | 45% | 37% |
+| 23 °C | 99% | 97% | 83% | 83% |
+
+De netstroom die het script erbij geeft is alleen bij 26 °C bruikbaar als orde
+van grootte — bovengrens 17 kWh in tien augustusdagen, 7 in september. Lager
+wordt het getal onzin: de reconstructie speelt de gemeten temperatuur af, dus de
+airco koelt de kamer nooit en draait door zolang de ongekoelde meting boven het
+plafond staat. Een plafond van 24 lijkt dan 200 kWh te kosten; in werkelijkheid
+zou de kamer binnen een kwartier onder de grens zijn. De echte prijs is pas te
+berekenen met het thermisch model.
+
+*Voor dit huis: 26 °C, op de woonkamer en de zolder.* Een vangnet en geen
+regeling: het wordt nooit 28 terwijl er niets gebeurt, en het raakt maar 1–5%
+van de tijd. Daaronder blijft koelen het werk van de zon. De badkamer krijgt er
+geen; daar staat geen apparaat dat kan koelen.
+
+*Wat het aan de replay verandert.* De replay-harness leest dezelfde
+configuratie, dus zijn referentie verschuift: 939 bytes, sha256 `6fdeb5e2…`.
+Met het plafond uit het bestand gehaald geeft dezelfde code nog steeds
+`81a74044…` — het verschil komt alleen uit de waarde, niet uit de code. Over het
+augustusvenster zou de arbiter 294 minuten extra koelen in de woonkamer en 694
+op de zolder waar het oude systeem stil bleef (`arbiterLooser` van 153 naar 447
+en van 731 naar 1.425). Dat is precies het gat dat dit besluit dicht: op
+netstroom, boven 26 graden, wanneer de zon het niet deed.
+
+`besluit49.ts` meet zonder plafond, zodat de getallen van besluit 49 uit dat
+script te blijven halen zijn.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Een draaiend apparaat mag netstroom invoeren, en dat is nooit besloten.**
