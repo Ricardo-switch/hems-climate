@@ -91,7 +91,17 @@ rechtstreeks uit Docker en klopt dus altijd.
 
 ## Bijwerken
 
-`deploy.sh` in de Taakplanner haalt de code op en bouwt opnieuw. Drie bestanden
+`deploy.sh` in de Taakplanner haalt de code op en bouwt opnieuw. Het volgt de
+tak die in `src/` is uitgecheckt, en dat hoort `stable` te zijn: die schuift pas
+mee wanneer de CI op GitHub alles groen heeft (besluit 54). Eenmalig overzetten:
+
+```sh
+git -C /volume1/docker/hems-climate/src fetch origin stable
+git -C /volume1/docker/hems-climate/src checkout stable
+```
+
+Staat hij nog op `main`, dan komt elke push ongetoetst binnen vijf minuten live.
+Welke commit er draait, zie je op `/api/health` onder `versie`. Drie bestanden
 horen daar niet bij en neem je zelf over wanneer ze in git wijzigen:
 
 ```sh

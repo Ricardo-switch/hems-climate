@@ -215,11 +215,19 @@ backend, en de draaifase die alleen `dist` en `web` overhoudt. De bouwcontext is
 daarom de projectwortel en niet `backend/` — met de `.dockerignore` die daarbij
 hoort in de wortel, want Docker leest die naast de context.
 
-**Uitrol.** De NAS haalt de code uit git via `deploy/deploy.sh`, ingepland in de
-Synology Taakplanner. Het script bouwt alleen wanneer er iets in `backend/`
-wijzigde, bouwt éérst en wisselt pas daarna om, en houdt in `.deployed` bij welke
-commit er werkelijk draait — anders wordt een mislukte uitrol nooit opnieuw
-geprobeerd.
+**Uitrol.** De NAS haalt elke vijf minuten de code uit git via
+`deploy/deploy.sh`, ingepland in de Synology Taakplanner. Het script volgt de tak
+die op de NAS is uitgecheckt: `stable`. Die tak schuift pas mee wanneer de CI
+(`.github/workflows/ci.yml`) typecheck, tests en builds groen heeft; een push
+naar `main` die faalt, komt dus nooit op de NAS (besluit 54). Het script bouwt
+alleen wanneer er iets in `backend/` wijzigde, bouwt éérst en wisselt pas daarna
+om, en houdt in `.deployed` bij welke commit er werkelijk draait — anders wordt
+een mislukte uitrol nooit opnieuw geprobeerd. Welke commit er draait, zegt de
+dienst zelf in `/api/health`.
+
+**Eén draaiende schaduw.** Alleen de NAS (besluit 53). De add-on op de Pi staat
+stil sinds 30 september 2026 en komt terug bij stap B, als de plek waar
+geregeld wordt.
 
 **De Taakplanner is een andere omgeving dan een shell.** Dat heeft dit project
 vier keer laten struikelen, en het is de moeite waard om te onthouden:

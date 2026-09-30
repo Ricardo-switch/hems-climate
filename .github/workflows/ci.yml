@@ -1,0 +1,86 @@
+# De poort vóór de NAS (besluit 54).
+#
+# De NAS haalt elke vijf minuten de tak op die daar is uitgecheckt en rolt die
+# uit. Stond dat op `main`, dan stond elke push binnen vijf minuten in de
+# schaduwdienst die de winterdataset opbouwt, zonder één automatische controle.
+#
+# Nu: elke push naar main draait typecheck, tests en build. Pas als alles groen
+# is, schuift de tak `stable` mee naar die commit. De NAS volgt `stable`.
+#
+# `stable` schuift alleen vooruit. Een push die hem terug zou zetten of een
+# herschreven geschiedenis zou volgen, wordt door git geweigerd en laat deze run
+# falen — dat is dan een beslissing voor een mens, niet voor de CI.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: typecheck, tests en build
+    runs-on: ubuntu-latest
+    # Dezelfde zone als de container op de NAS: Node draait daar in UTC.
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # De dienst gebruikt de WebSocket die in Node zelf zit; die is er
+          # vanaf 22. Dezelfde versie als de images.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: backend — afhankelijkheden
+        working-directory: backend
+        run: npm ci
+
+      - name: backend — typecheck
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: backend — tests
+        working-directory: backend
+        run: npm test
+
+      - name: backend — build
+        working-directory: backend
+        run: npm run build
+
+      - name: weergave — build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+  stable:
+    name: stable bijwerken
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Twee snelle pushes na elkaar: niet tegelijk aan `stable` schrijven. De
+    # latere wacht op de eerdere; een oudere commit die later klaar is, wordt
+    # door de alleen-vooruit-regel geweigerd.
+    concurrency:
+      group: stable
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: stable naar deze commit, alleen vooruit
+        run: git push origin "${GITHUB_SHA}:refs/heads/stable"
