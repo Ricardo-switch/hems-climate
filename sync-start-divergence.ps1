@@ -78,7 +78,9 @@ else {
     if (-not (Test-Path $LokaalPad)) { New-Item -ItemType Directory -Path $LokaalPad | Out-Null }
 
     # /xo = alleen nieuwer dan wat er al staat. De rest onderdrukt de banner.
-    robocopy $NasPad $LokaalPad 'decisions-*.ndjson' /xo /njh /njs /ndl /nc /ns | Out-Null
+    # Ook de .gz: dagen ouder dan een week staan op de NAS gecomprimeerd
+    # (besluit 58). Staat een dag hier daarna als beide, dan telt de lezer er een.
+    robocopy $NasPad $LokaalPad 'decisions-*.ndjson' 'decisions-*.ndjson.gz' /xo /njh /njs /ndl /nc /ns | Out-Null
     $rc = $LASTEXITCODE
 
     # Robocopy telt anders dan de rest van de wereld: 0-7 is goed (0 = niets
@@ -96,14 +98,14 @@ else {
     }
 }
 
-if (-not (Test-Path $LokaalPad) -or -not (Get-ChildItem $LokaalPad -Filter 'decisions-*.ndjson')) {
+if (-not (Test-Path $LokaalPad) -or -not (Get-ChildItem $LokaalPad -Filter 'decisions-*')) {
     Write-Error "Geen decisions-*.ndjson in $LokaalPad, en ophalen leverde niets op."
     exit 1
 }
 
 # Zeggen hoe vers de invoer is. Een rapport over logboeken van vier dagen oud
 # ziet er precies hetzelfde uit als een rapport over die van vanochtend.
-$nieuwste = Get-ChildItem $LokaalPad -Filter 'decisions-*.ndjson' |
+$nieuwste = Get-ChildItem $LokaalPad -Filter 'decisions-*' |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
 $ouderdom = [int]((Get-Date) - $nieuwste.LastWriteTime).TotalHours
 Say "  Nieuwste logboek: $($nieuwste.Name), $ouderdom uur oud." `

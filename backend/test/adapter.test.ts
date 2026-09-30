@@ -7,7 +7,7 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -615,6 +615,40 @@ describe('de ruwe historie (besluit 52)', () => {
     ).toBe(true);
     // En niets wat de regeling niet leest.
     expect(rijen.some((r) => r.e === 'sensor.koelkast_temperatuur')).toBe(false);
+  });
+});
+
+describe('oude dagen comprimeren (besluit 58)', () => {
+  it('doet de dienst zelf, meteen na het eerste besluit', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    // Twee weken voor de vaste klok van de schaduwtest.
+    await writeFile(join(dir, 'decisions-2026-07-01.ndjson'), '{"t":1}\n', 'utf-8');
+
+    const meldingen: string[] = [];
+    const ha = await startFakeHa({ states: shadowStates() });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      logDir: dir,
+      // Bewaren, zodat een mislukte compressie in de foutmelding staat.
+      write: (regel) => meldingen.push(regel),
+      now: () => SHADOW_NOW,
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await wachtOp(
+      async () => (await readdir(dir)).includes('decisions-2026-07-01.ndjson.gz'),
+      () => `de gecomprimeerde oude dag; de dienst meldde:\n${meldingen.join('\n')}`,
+    );
+    expect(await readdir(dir)).not.toContain('decisions-2026-07-01.ndjson');
   });
 });
 

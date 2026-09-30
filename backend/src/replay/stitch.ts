@@ -20,13 +20,13 @@
  */
 
 import { createWriteStream } from 'node:fs';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 
-import { findHistoryFiles } from '../divergence/read.js';
+import { findHistoryFiles, regelsVan } from '../divergence/read.js';
 import type { DatasetMeta, DatasetRow } from './dataset.js';
 
 export interface Dataset {
@@ -43,7 +43,7 @@ function isRij(x: unknown): x is DatasetRow {
 export async function stikHistorie(map: string, nuMs: number = Date.now()): Promise<Dataset> {
   const alle: DatasetRow[] = [];
   for (const pad of await findHistoryFiles(map)) {
-    for (const regel of (await readFile(pad, 'utf-8')).split('\n')) {
+    for await (const regel of regelsVan(pad)) {
       if (regel.trim() === '') continue;
       // Een regel die halverwege is afgekapt — de container werd gestopt — mag
       // de rest niet meeslepen.

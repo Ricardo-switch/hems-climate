@@ -26,10 +26,11 @@
  * niet.
  */
 
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
-import { createInterface } from 'node:readline';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
+
+import { findLogFiles, regelsVan } from '../divergence/read.js';
 
 const DAG_MS = 86_400_000;
 
@@ -43,9 +44,9 @@ export async function makeWinter(
     return 1;
   }
 
-  const bestanden = (await readdir(bron))
-  .filter((n) => /^decisions-\d{4}-\d{2}-\d{2}\.ndjson$/.test(n))
-  .sort();
+  // Via dezelfde lezer als de analyse, zodat gecomprimeerde dagen ook als
+  // sjabloon dienen (besluit 58).
+  const bestanden = (await findLogFiles(bron)).map((p) => basename(p));
 
   if (bestanden.length === 0) {
   console.error(`Geen decisions-*.ndjson in ${bron} om mee te vullen.`);
@@ -80,12 +81,7 @@ export async function makeWinter(
   const verschil = doelDagMs - bronDag;
 
   const uit = createWriteStream(join(doel, `decisions-${dagSleutel(doelDagMs)}.ndjson`));
-  const rl = createInterface({
-    input: createReadStream(join(bron, sjabloon), 'utf-8'),
-    crlfDelay: Infinity,
-  });
-
-  for await (const regel of rl) {
+  for await (const regel of regelsVan(join(bron, sjabloon))) {
     if (regel.trim() === '') continue;
     let r: { t?: number };
     try {

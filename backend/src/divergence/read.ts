@@ -9,8 +9,9 @@
 
 import { createReadStream } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { createInterface } from 'node:readline';
+import { createInterface, type Interface } from 'node:readline';
 import { join } from 'node:path';
+import { createGunzip } from 'node:zlib';
 
 /** Eén moment uit het logboek, met alles ingevuld wat de korte regel weglaat. */
 export interface Moment {
@@ -139,20 +140,47 @@ const EMPTY_BUDGET = {
   gridPowerW: 0,
 } as const;
 
-/** Alle dagbestanden in een map, op datum gesorteerd. */
-export async function findLogFiles(dir: string): Promise<string[]> {
-  const names = (await readdir(dir))
-    .filter((n) => /^decisions-\d{4}-\d{2}-\d{2}\.ndjson$/.test(n))
-    .sort();
-  return names.map((n) => join(dir, n));
+const LOGBOEK = /^decisions-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
+const HISTORIE = /^history-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
+
+/**
+ * Per dag één bestand, gewoon of gecomprimeerd, op datum gesorteerd.
+ *
+ * Dagen ouder dan een week worden gecomprimeerd (besluit 58). Elke lezer gaat
+ * via deze functie, zodat geen analyse ongemerkt de oude dagen mist.
+ *
+ * Staan beide er — een compressie die halverwege werd onderbroken — dan telt
+ * de `.gz`: die ontstaat pas met een rename als hij compleet is, en de gewone
+ * wordt daarna weggehaald. Beide tellen zou die dag dubbel meenemen.
+ */
+async function dagbestanden(dir: string, patroon: RegExp): Promise<string[]> {
+  const perDag = new Map<string, string>();
+  for (const naam of await readdir(dir)) {
+    const m = patroon.exec(naam);
+    if (!m) continue;
+    const dag = m[1]!;
+    if (!perDag.has(dag) || m[2] != null) perDag.set(dag, naam);
+  }
+  return [...perDag.keys()].sort().map((dag) => join(dir, perDag.get(dag)!));
+}
+
+/** Alle dagbestanden van het beslislogboek. */
+export function findLogFiles(dir: string): Promise<string[]> {
+  return dagbestanden(dir, LOGBOEK);
 }
 
 /** De dagbestanden met ruwe historie naast het logboek (besluit 52). */
-export async function findHistoryFiles(dir: string): Promise<string[]> {
-  const names = (await readdir(dir))
-    .filter((n) => /^history-\d{4}-\d{2}-\d{2}\.ndjson$/.test(n))
-    .sort();
-  return names.map((n) => join(dir, n));
+export function findHistoryFiles(dir: string): Promise<string[]> {
+  return dagbestanden(dir, HISTORIE);
+}
+
+/** Leest een dagbestand regel voor regel, gecomprimeerd of niet. */
+export function regelsVan(pad: string): Interface {
+  const bron = createReadStream(pad);
+  return createInterface({
+    input: pad.endsWith('.gz') ? bron.pipe(createGunzip()) : bron,
+    crlfDelay: Infinity,
+  });
 }
 
 /**
@@ -171,12 +199,7 @@ export async function* readMoments(
   let arbiterAction: Record<string, string> = {};
 
   for (const file of files) {
-    const rl = createInterface({
-      input: createReadStream(file, 'utf-8'),
-      crlfDelay: Infinity,
-    });
-
-    for await (const line of rl) {
+    for await (const line of regelsVan(file)) {
       if (line.trim() === '') continue;
       let raw: RawRecord;
       try {
