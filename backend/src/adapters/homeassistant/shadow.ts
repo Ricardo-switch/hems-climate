@@ -24,6 +24,7 @@ import type {
 import { decide } from '../../core/decide.js';
 import type { Mode, SiteConfig } from '../../core/model.js';
 import { OwnState } from '../own-state.js';
+import { SchaduwApparaten } from '../shadow-actuators.js';
 import type { StrategyRegistry } from '../../core/strategy.js';
 import type { HaClient, HaEntityState } from './client.js';
 import {
@@ -172,6 +173,17 @@ export class ShadowRunner {
    * ene opstelling wordt gelopen en in de andere niet.
    */
   readonly #eigen = new OwnState();
+
+  /**
+   * De veronderstelde stand van de apparaten (besluit 49).
+   *
+   * Zolang er niet geschakeld wordt, is de laatste wijziging van het échte
+   * apparaat de geschiedenis van het oude systeem, en meten de draaitijden
+   * iemand anders. Hier staat wat de arbiter zelf gedaan zou hebben. Zodra de
+   * actuator-laag werkelijk schakelt hoort dit weg te vallen: dan ís het echte
+   * apparaat het antwoord.
+   */
+  readonly #schaduwApparaten = new SchaduwApparaten();
 
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
@@ -331,7 +343,13 @@ export class ShadowRunner {
     const nowMs = this.#options.now();
     this.#lastEvalMs = nowMs;
     const config = configFrom(this.#options.config, this.#store);
-    const state = buildSystemState(config, this.#store, nowMs, this.#eigen);
+    const state = buildSystemState(
+      config,
+      this.#store,
+      nowMs,
+      this.#eigen,
+      this.#schaduwApparaten,
+    );
     const decision = decide({
       config,
       state,
@@ -351,6 +369,10 @@ export class ShadowRunner {
      * hoort pas bij de vólgende evaluatie te gelden.
      */
     this.#eigen.apply(decision.commands, nowMs);
+    // En de apparaatcommando's op de veronderstelde stand (besluit 49). Ook ná
+    // het besluit, en om dezelfde reden: wat de arbiter zojuist gestuurd zou
+    // hebben, geldt pas bij de vólgende evaluatie.
+    this.#schaduwApparaten.apply(decision.commands, nowMs);
 
     this.#ticks += 1;
     await this.#record(decision, trigger);

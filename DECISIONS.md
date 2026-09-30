@@ -1538,8 +1538,85 @@ terwijl je op je telefoon zit.
 
 ---
 
+## 49. De schaduw meet zijn eigen geschiedenis
+
+`minutesSinceChange` leest `ActuatorState.lastChangeMs`, en de vertaling vulde
+dat met `source.changedAt(climateEntity)` — de laatste schakeling van het échte
+apparaat. In de schaduwmodus stuurt de arbiter niets (besluit 15), dus staat dat
+apparaat waar het oude systeem het zette, meestal al uren. Daardoor was de
+verstreken tijd vrijwel altijd groot en bleven `minRunMinutes` en
+`minRestMinutes` zonder werk. Hetzelfde gold voor `currentZoneAction` in
+`context.ts`, dat dezelfde stand leest om te bepalen of een zone al aan het
+koelen was: ook de hysterese keek naar het oude systeem.
+
+Over het augustusvenster was 57% van de ritten van `ac-zolder` korter dan de
+ingestelde ondergrens van 15 minuten, over het septembervenster 50%. Niet omdat
+de grens verkeerd stond, maar omdat hij de verkeerde geschiedenis las.
+
+*Besluit:* de schaduw houdt een eigen boekhouding van wat de apparaten zouden
+doen, gevuld met precies de commando's die de arbiter gaf
+(`adapters/shadow-actuators.ts`). De vertaling legt die over de stand uit Home
+Assistant. Weglaten geeft het oude gedrag, en dát is het juiste zodra de
+actuator-laag werkelijk schakelt: dan ís het echte apparaat het antwoord.
+
+*Niet hetzelfde als `OwnState`.* Die houdt bij wat de dienst bezit omdat Home
+Assistant het niet heeft — modus en timers (besluit 39). Dit houdt bij wat er
+niet is. Eigendom tegenover veronderstelling, dus aparte modules.
+
+*Wat er meetbaar aan verandert.* Over beide vensters is nu 0% van de ritten
+korter dan de ondergrens, tegen 21–57% ervoor. De mediane rit van `ac-zolder`
+gaat van 10,0 naar 23,0 minuten (augustus) en van 12,5 naar 23,5 (september).
+`min_run_not_elapsed` gaat van 31 naar 266 keer in september, `min_rest_not_-
+elapsed` van 203 naar 697. De grenzen dóen nu iets, en dat is aantoonbaar in
+plaats van aannemelijk.
+
+*Het aantal wisselingen is tussen de twee opstellingen niet vergelijkbaar,* en
+dat is geen detail. Zonder eigen stand staat het apparaat altijd `off`, en
+`windDownIntent` laat een uitgeschakeld apparaat met rust — de afbouwketen
+(koelen → standby → uit) was daardoor onbereikbaar en werd nooit geteld. De
+oude cijfers zijn dus geen ondergrens voor het geklapper, ze zijn een
+halfgelopen toestandsmachine. Het aantal ritten is de maat die wel vergelijkt.
+
+*De gemeten vermogens blijven gemeten, met één regel erbij.* Wijkt de
+veronderstelde stand af van de echte, dan meet die sensor een ander apparaat en
+is de waarde onbruikbaar in plaats van verkeerd. Beide lezers —
+`reclaimableW` en `claimW` — vallen dan terug op `estimatedW`, precies waar die
+schatting voor is. Zonder die regel telt `reclaimableW` de gemeten 0 W van een
+echt apparaat dat uit staat, terwijl het veronderstelde apparaat draait en dus
+wél terug te winnen is.
+
+*Wat dit blootlegt en nog geen besluit heeft.* Met werkende grenzen draait de
+arbiter zijn airco's in het septembervenster 1.610 minuten terwijl het huis
+netstroom invoert en het echte apparaat stilstond — ruwweg 22 kWh in 10,6 dagen,
+als bovengrens. Slechts 266 van die momenten zijn `min_run_not_elapsed`; het
+merendeel komt doordat het budget een draaiend apparaat aanvaardt, want zijn
+eigen opname staat in `reclaimableW` en er is 50 W tolerantie. Dat is
+`reclaimableW` die doet wat hij moet — niet uitschakelen voor een korte dip —
+maar het betekent wel dat "wij koelen alleen op eigen stroom" niet houdbaar is
+zoals het nu staat. Hoort bij besluit 50 over de comfortvloer voor koelen.
+
+*Wat er niet in zit.* `producing` blijft het echte apparaat: of een apparaat
+werkelijk warmte levert is natuurkunde, en die rekenen we niet door zolang er
+geen thermisch model is. Dit raakt alleen heat-assist. De temperatuur blijft
+ook de gemeten temperatuur — dit is een schaduwvergelijking en geen gesloten
+simulatie. Daardoor is het bovenstaande een bovengrens: onder echte regeling was
+de zone eerder koud en de vraag eerder weg.
+
+*De replay blijft bit-identiek* (938 bytes, sha256 `81a74044…`), want die geeft
+geen eigen stand mee. `src/replay/besluit49.ts` rekent het verschil door over
+beide vensters.
+
+---
+
 ## Wat nog een besluit wacht
 
+- **Een draaiend apparaat mag netstroom invoeren, en dat is nooit besloten.**
+  Sinds besluit 49 is het meetbaar: in het septembervenster 1.610 minuten,
+  ruwweg 22 kWh in 10,6 dagen als bovengrens. Het budget aanvaardt een apparaat
+  dat al draait, want zijn eigen opname zit in `reclaimableW` en er is 50 W
+  tolerantie — precies zoals bedoeld, om niet uit te schakelen voor een korte
+  dip in de zon. Maar niemand heeft besloten hoe lang die dip mag duren. Een
+  bovengrens op de invoer, of een tijd, hoort hierbij. Raakt besluit 50.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
