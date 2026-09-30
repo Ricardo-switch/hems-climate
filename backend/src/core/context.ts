@@ -20,6 +20,16 @@ export interface ZoneDerived {
   readonly coolTargetC: number | null;
   /** Vraag na toepassing van de hysterese van deze zone. */
   readonly demand: 'heat' | 'cool' | 'none';
+  /** Het comfortplafond van deze zone, of null wanneer ze er geen heeft. */
+  readonly comfortMaxC: number | null;
+  /**
+   * Staat de zone boven haar comfortplafond, hysterese meegerekend?
+   *
+   * Dit is een ándere vraag dan `demand === 'cool'`. Die gaat over het koeldoel,
+   * dat op eigen stroom gehaald wordt. Deze gaat over de grens die comfort
+   * desnoods op netstroom verdedigt (besluit 50).
+   */
+  readonly bovenComfortplafond: boolean;
 }
 
 export interface DecisionContext {
@@ -117,6 +127,22 @@ function demandOf(
   return 'none';
 }
 
+/**
+ * Staat de zone boven haar comfortplafond? Zelfde hysterese als de gewone
+ * vraag, zodat er niet twee definities van "te warm" naast elkaar bestaan.
+ */
+function bovenPlafond(
+  zone: Zone,
+  temperatureC: number | null,
+  previous: 'heat' | 'cool' | 'none',
+): boolean {
+  if (temperatureC == null || zone.comfortMaxC == null) return false;
+  const { onDelta, offDelta } = zone.hysteresis;
+  return previous === 'cool'
+    ? temperatureC > zone.comfortMaxC - offDelta
+    : temperatureC >= zone.comfortMaxC + onDelta;
+}
+
 /** Wat de zone nu al doet, afgeleid uit de stand van haar actuatoren. */
 function currentZoneAction(
   config: SiteConfig,
@@ -183,6 +209,8 @@ export function buildContext(
       heatTargetC,
       coolTargetC,
       demand: demandOf(zone, temperatureC, heatTargetC, coolTargetC, previous),
+      comfortMaxC: zone.comfortMaxC ?? null,
+      bovenComfortplafond: bovenPlafond(zone, temperatureC, previous),
     };
   });
 

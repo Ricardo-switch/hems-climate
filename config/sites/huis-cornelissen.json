@@ -157,6 +157,7 @@
         "onDelta": 0.3,
         "offDelta": 0.2
       },
+      "comfortMaxC": 26,
       "buffering": {
         "enabled": true,
         "bandC": 1
@@ -225,6 +226,7 @@
         "onDelta": 0,
         "offDelta": 0.5
       },
+      "comfortMaxC": 26,
       "buffering": {
         "enabled": true,
         "bandC": 1

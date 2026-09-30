@@ -30,10 +30,24 @@ import { exampleSite } from './site.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
 import { SchaduwApparaten } from '../adapters/shadow-actuators.js';
 import { decide } from '../core/decide.js';
-import type { Action } from '../core/model.js';
+import type { Action, SiteConfig, Zone } from '../core/model.js';
 import { defaultStrategies } from '../index.js';
 
 const TICK_MS = 60_000;
+
+/**
+ * De woning zonder comfortplafond.
+ *
+ * Dit script meet besluit 49 en niets anders. Sinds besluit 50 staat er een
+ * plafond in de configuratie, en met dat plafond aan zouden hier twee
+ * veranderingen door elkaar lopen — en zouden de getallen in DECISIONS.md niet
+ * meer uit dit script te halen zijn.
+ */
+const zonderPlafond = (z: Zone): Zone => {
+  const { comfortMaxC: _weg, ...rest } = z;
+  return rest;
+};
+const SITE: SiteConfig = { ...exampleSite, zones: exampleSite.zones.map(zonderPlafond) };
 const APPARATEN = ['ac-woonkamer', 'ac-zolder'] as const;
 type ApparaatId = (typeof APPARATEN)[number];
 
@@ -105,7 +119,7 @@ async function meet(pad: string, metSchaduw: boolean): Promise<Uitkomst> {
   const start = Math.ceil(history.meta.fromMs / TICK_MS) * TICK_MS;
   for (let t = start; t <= history.meta.toMs; t += TICK_MS) {
     cursor.advanceTo(t);
-    const config = configAt(exampleSite, cursor);
+    const config = configAt(SITE, cursor);
     const state = snapshot(config, cursor, t, undefined, schaduw);
     const decision = decide({ config, state, strategies });
     schaduw?.apply(decision.commands, t);

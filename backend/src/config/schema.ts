@@ -695,6 +695,17 @@ function zone(
     }
   }
 
+  /*
+   * Het comfortplafond (besluit 50). Geen standaardwaarde: koelen op netstroom
+   * is een keuze en niet iets om voor iemand aan te nemen. Weglaten houdt het
+   * gedrag zoals het was.
+   */
+  const comfortMaxC = num(p, value, path, 'comfortMaxC', {
+    min: 5,
+    max: 35,
+    optional: true,
+  });
+
   // Voorladen staat standaard uit. Aanzetten is een keuze, geen aanname.
   const bPath = join(path, 'buffering');
   const bufRaw = blokOf(p, value['buffering'], bPath);
@@ -712,6 +723,27 @@ function zone(
 
   const gelezen = setpoints(p, value['setpoints'], join(path, 'setpoints'));
   const points = gelezen == null ? null : passendGemaakt(p, gelezen, path, actuatorIds, apparaten);
+
+  /*
+   * Een plafond onder het koeldoel is tegenstrijdig.
+   *
+   * Het plafond is de grens die comfort desnoods op netstroom verdedigt; het
+   * koeldoel is waar op eigen stroom naartoe geladen wordt. Ligt het plafond
+   * eronder, dan zou de zuinige regel strenger zijn dan de dure — en dan koelt
+   * hij altijd op netstroom, wat precies niet de bedoeling is. Een waarschuwing
+   * en geen fout: de installatie werkt, hij kost alleen geld.
+   */
+  if (comfortMaxC != null && points != null) {
+    for (const [mode, pair] of Object.entries(points)) {
+      if (pair.cool != null && comfortMaxC <= pair.cool) {
+        p.warn(
+          join(path, 'comfortMaxC'),
+          `${comfortMaxC} ligt niet boven het koeldoel van ${pair.cool} in modus ${mode}; ` +
+            'het plafond hoort losser te staan dan het doel, anders koelt hij altijd op netstroom',
+        );
+      }
+    }
+  }
 
   if (
     !id ||
@@ -737,6 +769,7 @@ function zone(
     hysteresis,
     buffering,
     setpoints: points,
+    ...(comfortMaxC == null ? {} : { comfortMaxC }),
   };
 }
 

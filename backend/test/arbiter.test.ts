@@ -18,7 +18,7 @@ import {
   pvSurplus,
   StrategyRegistry,
 } from '../src/index.js';
-import type { Action } from '../src/core/model.js';
+import type { Action, SiteConfig } from '../src/core/model.js';
 import type { ActuatorState, SystemState } from '../src/core/state.js';
 import { unavailable, value } from '../src/core/state.js';
 
@@ -517,5 +517,112 @@ describe('koelen tijdens afwezigheid', () => {
     expect(
       decision.rejected.some((r) => r.blockedBy === 'capability_missing'),
     ).toBe(false);
+  });
+});
+
+describe('het comfortplafond (besluit 50)', () => {
+  /** Dezelfde woning, met een plafond op de woonkamer. */
+  function metPlafond(plafond: number | undefined): SiteConfig {
+    return {
+      ...exampleSite,
+      zones: exampleSite.zones.map((z) => {
+        if (z.id !== 'woonkamer') return z;
+        const { comfortMaxC: _weg, ...rest } = z;
+        return plafond == null ? rest : { ...rest, comfortMaxC: plafond };
+      }),
+    };
+  }
+
+  const draai = (config: SiteConfig, state: SystemState) =>
+    decide({ config, state, strategies: defaultStrategies() });
+
+  /** Warm, en de zon betaalt niets: het huis voert 500 W in. */
+  const heetEnBewolkt = (o: Overrides = {}) =>
+    buildState({ gridPowerW: 500, woonkamerC: 27.0, ...o });
+
+  it('koelt zonder plafond niet op netstroom, hoe warm het ook is', () => {
+    // Het gat zoals het was: de airco is assist, en assist draait op overschot.
+    const decision = draai(metPlafond(undefined), heetEnBewolkt());
+
+    const koelt = decision.commands.some(
+      (c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && c.action === 'cool',
+    );
+    expect(koelt).toBe(false);
+  });
+
+  it('koelt met een plafond wel, en laat zich daarbij niet door het budget tegenhouden', () => {
+    const decision = draai(metPlafond(26), heetEnBewolkt());
+
+    const aanvaard = decision.accepted.find(
+      (i) => i.actuatorId === 'ac-woonkamer' && i.action === 'cool',
+    );
+    expect(aanvaard?.strategyId).toBe('comfort');
+    expect(aanvaard?.budgetW).toBe(0);
+    expect(
+      decision.rejected.some(
+        (r) =>
+          r.intent.actuatorId === 'ac-woonkamer' &&
+          r.intent.strategyId === 'comfort' &&
+          r.blockedBy === 'insufficient_power_budget',
+      ),
+    ).toBe(false);
+  });
+
+  it('koelt tot het plafond en niet door naar het koeldoel', () => {
+    // Het verschil tussen "het mag niet warmer worden" en "het moet hier
+    // naartoe". Het koeldoel van de woonkamer is 22; op netstroom daarheen
+    // koelen zou het grootste deel van de rekening zijn.
+    const decision = draai(metPlafond(26), heetEnBewolkt());
+
+    const aanvaard = decision.accepted.find(
+      (i) => i.actuatorId === 'ac-woonkamer' && i.strategyId === 'comfort',
+    );
+    expect(aanvaard?.setpointC).toBe(26);
+  });
+
+  it('slaat pas aan boven het plafond plus de schakelband', () => {
+    // onDelta is 0,3 voor de woonkamer. Op 26,2 nog niet, op 26,3 wel.
+    const net = draai(metPlafond(26), heetEnBewolkt({ woonkamerC: 26.2 }));
+    const wel = draai(metPlafond(26), heetEnBewolkt({ woonkamerC: 26.3 }));
+
+    const comfortKoelt = (d: ReturnType<typeof draai>) =>
+      d.accepted.some((i) => i.actuatorId === 'ac-woonkamer' && i.strategyId === 'comfort');
+    expect(comfortKoelt(net)).toBe(false);
+    expect(comfortKoelt(wel)).toBe(true);
+  });
+
+  it('houdt vast tot onder het plafond min de uitschakelband', () => {
+    // Al aan het koelen, op 25,9: offDelta 0,2 betekent doorgaan tot onder 25,8.
+    // Zonder deze band zou hij op het plafond zelf klapperen.
+    const decision = draai(
+      metPlafond(26),
+      heetEnBewolkt({
+        woonkamerC: 25.9,
+        actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 26, powerW: 850 }) },
+      }),
+    );
+
+    expect(
+      decision.accepted.some(
+        (i) => i.actuatorId === 'ac-woonkamer' && i.strategyId === 'comfort',
+      ),
+    ).toBe(true);
+  });
+
+  it('geeft een zone met een koelende primary geen tweede voorstel', () => {
+    // Kan de primary zelf koelen, dan verdedigt het koeldoel al een strengere
+    // grens. Een tweede voorstel zou alleen maar afgewezen worden.
+    const config: SiteConfig = {
+      ...metPlafond(26),
+      actuators: exampleSite.actuators.map((a) =>
+        a.id === 'nest' ? { ...a, capabilities: { ...a.capabilities, canCool: true } } : a,
+      ),
+    };
+    const decision = draai(config, heetEnBewolkt());
+
+    const doorComfort = decision.proposed.filter(
+      (i) => i.zoneId === 'woonkamer' && i.strategyId === 'comfort' && i.action === 'cool',
+    );
+    expect(doorComfort.map((i) => i.actuatorId)).toEqual(['nest']);
   });
 });
