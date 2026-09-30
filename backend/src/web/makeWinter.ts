@@ -29,7 +29,7 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 const DAG_MS = 86_400_000;
 

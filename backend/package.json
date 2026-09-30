@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
     "export:history": "tsx tools/export-history.ts",
@@ -28,8 +29,10 @@
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@types/ws": "^8.18.1",
+    "eslint": "^9.39.5",
     "tsx": "^4.23.13",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.71.0",
     "vitest": "^2.1.8",
     "ws": "^8.21.3"
   }
