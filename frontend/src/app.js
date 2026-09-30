@@ -50,6 +50,7 @@ const GEBLOKKEERD = {
   stabilisation_active: 'stabiliseert nog',
   settling_after_switch: 'komt tot rust na een wissel',
   insufficient_power_budget: 'te weinig budget',
+  start_threshold_not_met: 'wacht op genoeg zon om te starten',
   capability_missing: 'apparaat kan dit niet',
   setpoint_out_of_range: 'setpoint buiten bereik',
   superseded_by_higher_priority: 'een hogere prioriteit ging voor',
