@@ -96,9 +96,14 @@ tak die in `src/` is uitgecheckt, en dat hoort `stable` te zijn: die schuift pas
 mee wanneer de CI op GitHub alles groen heeft (besluit 54). Eenmalig overzetten:
 
 ```sh
-git -C /volume1/docker/hems-climate/src fetch origin stable
-git -C /volume1/docker/hems-climate/src checkout stable
+sudo -H git -C /volume1/docker/hems-climate/src fetch origin stable
+sudo -H git -C /volume1/docker/hems-climate/src checkout stable
 ```
+
+Met `sudo -H`, want de werkmap is van root en git haalt op met de SSH-sleutel
+van root. Zonder `-H` houdt sudo je eigen thuismap aan, en dan vindt git
+root's `safe.directory` en sleutel niet: "dubious ownership" of een geweigerde
+sleutel.
 
 Staat hij nog op `main`, dan komt elke push ongetoetst binnen vijf minuten live.
 Welke commit er draait, zie je op `/api/health` onder `versie`. Drie bestanden
