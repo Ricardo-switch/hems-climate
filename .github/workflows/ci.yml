@@ -68,9 +68,28 @@ jobs:
           npm ci
           npm run build
 
+  image:
+    name: image bouwen zoals de NAS
+    runs-on: ubuntu-latest
+    # Op 30 september 2026 kwam er een commit op stable die in de repo klopte,
+    # maar op de NAS niet te bouwen was: een test importeerde uit tools/, en de
+    # Dockerfile kopieerde die map niet. De NAS draaide gewoon door op de
+    # vorige versie, maar elke vijf minuten mislukte het bouwen opnieuw. Dus
+    # bouwt de CI nu ook het image, met dezelfde Dockerfile en context.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build, zoals deploy.sh op de NAS
+        run: >
+          docker build
+          -f backend/Dockerfile
+          --build-arg HEMS_COMMIT="${GITHUB_SHA::7}"
+          -t hems-climate/shadow:ci
+          .
+
   stable:
     name: stable bijwerken
-    needs: test
+    needs: [test, image]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
