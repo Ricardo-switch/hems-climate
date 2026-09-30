@@ -112,17 +112,51 @@ async function meet(pad: string, metSchaduw: boolean): Promise<Uitkomst> {
   const schaduw = metSchaduw ? new SchaduwApparaten() : undefined;
   const uit = leeg();
 
-  // De doorgeschoven stand: wat er staat zolang er geen nieuw commando komt.
+  /*
+   * De stand die de arbiter het apparaat zou geven.
+   *
+   * Met eigen boekhouding is dat wat de arbiter zelf ziet: de stand in de
+   * toestand waarmee hij de minuut ingaat — zijn veronderstelling, of het echte
+   * apparaat wanneer hij heeft losgelaten (handmatig, besluit 49b). Zonder
+   * boekhouding hield niemand die stand bij, en is het laatst gegeven commando
+   * het beste wat er is.
+   *
+   * Dat verschil is geen detail. Na handmatig laat de boekhouding los en hoeft
+   * de arbiter niets te sturen, want het echte apparaat staat al uit. Wie dan het
+   * laatste commando blijft onthouden, telt een airco die "koelt" terwijl hij uit
+   * staat — precies de fout die 49b uit de schaduw haalde.
+   */
   const stand: Record<string, Action | null> = {};
   const sinds: Record<string, number | null> = {};
+
+  const wissel = (id: ApparaatId, actie: Action | null, t: number): void => {
+    const vorige = stand[id] ?? null;
+    if (actie === vorige) return;
+    // Een afgeronde rit: hij draaide, en nu niet meer.
+    if (draait(vorige) && !draait(actie) && sinds[id] != null) {
+      uit.apparaat[id].ritten.push((t - sinds[id]!) / 60_000);
+    }
+    if (!draait(vorige) && draait(actie)) sinds[id] = t;
+    // Het eerste gegeven is geen wisseling, alleen een beginstand.
+    if (id in stand) uit.apparaat[id].wisselingen += 1;
+    stand[id] = actie;
+  };
 
   const start = Math.ceil(history.meta.fromMs / TICK_MS) * TICK_MS;
   for (let t = start; t <= history.meta.toMs; t += TICK_MS) {
     cursor.advanceTo(t);
     const config = configAt(SITE, cursor);
     const state = snapshot(config, cursor, t, undefined, schaduw);
+
+    if (schaduw) {
+      for (const id of APPARATEN) {
+        const a = state.actuators[id]?.action;
+        wissel(id, a?.ok ? a.value : null, t);
+      }
+    }
+
     const decision = decide({ config, state, strategies });
-    schaduw?.apply(decision.commands, t);
+    schaduw?.volg(decision);
     uit.ticks += 1;
 
     for (const r of decision.rejected) {
@@ -133,9 +167,7 @@ async function meet(pad: string, metSchaduw: boolean): Promise<Uitkomst> {
      * Eerst de rekening van deze minuut, dan de nieuwe stand.
      *
      * De stand zoals hij de minuut ínging bepaalt wat er in die minuut draaide;
-     * een commando dat nu valt geldt pas hierna. De toerekening is ruw: een
-     * apparaat kan nooit meer invoer veroorzaken dan het zelf trekt, en nooit
-     * meer dan er werkelijk ingevoerd werd.
+     * een commando dat nu valt geldt pas hierna.
      */
     const netW = cursor.number('sensor.p1_meter_power') ?? 0;
     if (netW > 0) {
@@ -158,22 +190,13 @@ async function meet(pad: string, metSchaduw: boolean): Promise<Uitkomst> {
       }
     }
 
-    for (const id of APPARATEN) {
-      const cmd = decision.commands.find(
-        (c) => c.kind === 'setAction' && c.actuatorId === id,
-      );
-      if (!cmd || cmd.kind !== 'setAction') continue;
-      const vorige = stand[id] ?? null;
-      if (cmd.action === vorige) continue;
-
-      // Een afgeronde rit: hij draaide, en nu niet meer.
-      if (draait(vorige) && !draait(cmd.action) && sinds[id] != null) {
-        uit.apparaat[id].ritten.push((t - sinds[id]!) / 60_000);
+    if (!schaduw) {
+      for (const id of APPARATEN) {
+        const cmd = decision.commands.find(
+          (c) => c.kind === 'setAction' && c.actuatorId === id,
+        );
+        if (cmd && cmd.kind === 'setAction') wissel(id, cmd.action, t);
       }
-      if (!draait(vorige) && draait(cmd.action)) sinds[id] = t;
-
-      stand[id] = cmd.action;
-      uit.apparaat[id].wisselingen += 1;
     }
   }
 

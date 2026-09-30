@@ -1595,6 +1595,9 @@ eigen opname staat in `reclaimableW` en er is 50 W tolerantie. Dat is
 maar het betekent wel dat "wij koelen alleen op eigen stroom" niet houdbaar is
 zoals het nu staat. Hoort bij besluit 50 over de comfortvloer voor koelen.
 
+*Achteraf: dit getal was grotendeels een fout in de schaduw zelf.* Zie 49b
+hieronder. Na de correctie blijft er ruwweg 2 kWh per tien dagen over.
+
 *Wat er niet in zit.* `producing` blijft het echte apparaat: of een apparaat
 werkelijk warmte levert is natuurkunde, en die rekenen we niet door zolang er
 geen thermisch model is. Dit raakt alleen heat-assist. De temperatuur blijft
@@ -1605,6 +1608,61 @@ de zone eerder koud en de vraag eerder weg.
 *De replay blijft bit-identiek* (938 bytes, sha256 `81a74044…`), want die geeft
 geen eigen stand mee. `src/replay/besluit49.ts` rekent het verschil door over
 beide vensters.
+
+### 49b. De veronderstelling blijft bij de meter en bij de bewoner
+
+De 22 kWh hierboven klopte niet, en de fout zat in de boekhouding van 49
+zelf. Op twee plekken liet de veronderstelde stand zich los van wat er werkelijk
+gebeurde.
+
+*Het budget rekende met een ander huis dan de meter.* Beschikbaar is
+`−net + terugwinbaar + tolerantie`. Het netvermogen is gemeten aan het échte
+huis, maar terugwinbaar volgde de veronderstelde apparaten. Draaide onze airco
+en de echte niet, dan telde hij voor 750 W als terugwinbaar terwijl de meter
+hem nooit zag. Bij 30 W invoer zag de arbiter 770 W ruimte waar er 20 was, en
+bleef hij draaien waar hij onder echte regeling zou afbouwen.
+
+*Besluit:* de adapter geeft wat de échte apparaten opnemen apart mee
+(`PowerState.observedDrawW`), en de kern rekent terugwinbaar daarmee. Dan valt
+de veronderstelling precies weg uit de ruimte: `−net + echt verbruik +
+tolerantie` is de basislast van het huis, ongeacht welk apparaat er in welke
+versie draait. Het logboek blijft daarmee de werkelijkheid — gemeten net,
+werkelijk verbruik — en dat moest ook: de weergave toont `gridPowerW` als de
+P1-meter, en de divergentie-analyse rekent netstroom aan het oude systeem toe
+met `reclaimableW` als "wat er echt draaide". Met de boekhouding van 49 op de
+NAS zou die analyse de veronderstelde apparaten zijn gaan tellen. Zonder
+schaduw geeft de adapter het veld niet mee en rekent de kern zoals altijd.
+
+*In handmatig bleef de veronderstelling hangen.* Dan geeft de arbiter bewust
+geen commando's (besluit 8), dus hield de boekhouding zijn laatste opdracht
+vast — terwijl de bewoner het echte apparaat allang anders had gezet. In het
+septembervenster: 589 minuten een veronderstelde woonkamer-airco die "koelde"
+terwijl hij uit stond.
+
+*Besluit:* zolang de bewoner stuurt, laat de boekhouding los en geldt het echte
+apparaat (`SchaduwApparaten.volg`). Onder echte regeling pakt de arbiter het na
+handmatig ook op vanaf de stand waarin de bewoner het achterliet. Behalve bij de
+failsafe: die stuurt ook in handmatig de assist-apparaten uit, en die commando's
+gelden.
+
+*En het meetscript maakte dezelfde fout.* `besluit49.ts` onthield het laatst
+gegeven commando als stand. Na handmatig hoeft de arbiter niets te sturen — het
+echte apparaat staat al uit — en dan telde het script een airco die koelde. Het
+meet nu de stand waarmee de arbiter de minuut ingaat.
+
+*Wat er overblijft* aan draaien tijdens invoer, met het echte apparaat stil, als
+bovengrens:
+
+| | augustus | september |
+| --- | --- | --- |
+| besluit 49 zoals vastgelegd | 5,3 kWh | 22,1 kWh |
+| met 49b | 2,0 kWh | 2,0 kWh |
+| met 49b en 51 | 1,8 kWh | 1,9 kWh |
+
+Dat is ongeveer 0,2 kWh per dag: de prijs van `minRunMinutes`. Een apparaat dat
+start en een kwartier moet blijven draaien, draait soms door een wolk heen. Dat
+is waar de draaitijd voor bestaat, dus hier hoort geen apart besluit over een
+"dip-grens" bij — de vraag uit besluit 49 is beantwoord.
 
 ---
 
@@ -1676,13 +1734,6 @@ script te blijven halen zijn.
 
 ## Wat nog een besluit wacht
 
-- **Een draaiend apparaat mag netstroom invoeren, en dat is nooit besloten.**
-  Sinds besluit 49 is het meetbaar: in het septembervenster 1.610 minuten,
-  ruwweg 22 kWh in 10,6 dagen als bovengrens. Het budget aanvaardt een apparaat
-  dat al draait, want zijn eigen opname zit in `reclaimableW` en er is 50 W
-  tolerantie — precies zoals bedoeld, om niet uit te schakelen voor een korte
-  dip in de zon. Maar niemand heeft besloten hoe lang die dip mag duren. Een
-  bovengrens op de invoer, of een tijd, hoort hierbij. Raakt besluit 50.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;

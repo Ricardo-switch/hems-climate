@@ -66,6 +66,21 @@ export interface ZoneState {
 export interface PowerState {
   /** Netvermogen in W. Negatief bij teruglevering. */
   readonly gridPowerW: Reading<number>;
+  /**
+   * Wat de bestuurde apparaten werkelijk opnemen, in W, wanneer dat iets
+   * anders is dan hun stand in `actuators` doet vermoeden (besluit 49b).
+   *
+   * In de schaduwmodus staat in `actuators` wat de arbiter zelf gestuurd zou
+   * hebben, maar het netvermogen is gemeten aan het échte huis. Het budget moet
+   * met hetzelfde huis rekenen als de meter: anders telt een veronderstelde
+   * airco van 750 W als terugwinbaar terwijl de meter hem nooit zag, en ziet
+   * de arbiter 770 W ruimte waar er 20 is.
+   *
+   * Weglaten betekent: de stand in `actuators` ís de werkelijkheid, en het
+   * verbruik volgt daaruit. Zo is het zonder schaduw en straks bij echt
+   * schakelen.
+   */
+  readonly observedDrawW?: number;
 }
 
 /**

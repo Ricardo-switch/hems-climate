@@ -180,13 +180,27 @@ export function buildContext(
   const gridPowerW = readOr(state.power.gridPowerW, 0);
   const surplusW = gridPowerW < 0 ? -gridPowerW : 0;
 
+  /*
+   * Terugwinbaar: wat de bestuurde apparaten nu opnemen.
+   *
+   * Het hoort bij hetzelfde huis als `gridPowerW`, want het budget is het
+   * verschil tussen die twee: netvermogen zonder de bestuurde apparaten, oftewel
+   * de basislast. Meestal volgt het uit `actuators`. In de schaduwmodus staat
+   * daar wat de arbiter gestuurd zou hebben, en dan geeft de adapter het
+   * werkelijke verbruik apart mee (besluit 49b) — anders telde een
+   * veronderstelde airco als terugwinbaar terwijl de meter hem nooit zag.
+   */
   let reclaimableW = 0;
-  for (const actuator of config.actuators) {
-    const s = state.actuators[actuator.id];
-    if (!s) continue;
-    const running = s.action.ok && (s.action.value === 'heat' || s.action.value === 'cool');
-    if (running) {
-      reclaimableW += s.powerW.ok ? s.powerW.value : actuator.power.estimatedW;
+  if (state.power.observedDrawW != null) {
+    reclaimableW = state.power.observedDrawW;
+  } else {
+    for (const actuator of config.actuators) {
+      const s = state.actuators[actuator.id];
+      if (!s) continue;
+      const running = s.action.ok && (s.action.value === 'heat' || s.action.value === 'cool');
+      if (running) {
+        reclaimableW += s.powerW.ok ? s.powerW.value : actuator.power.estimatedW;
+      }
     }
   }
 

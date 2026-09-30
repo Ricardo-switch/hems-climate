@@ -78,7 +78,7 @@ function loop(
     store.replaceAll(toestand(zolderC));
     const state = buildSystemState(exampleSite, store, nowMs, undefined, schaduw);
     const decision = decide({ config: exampleSite, state, strategies });
-    schaduw?.apply(decision.commands, nowMs);
+    schaduw?.volg(decision);
     uit.push([...decision.commands]);
   });
 
@@ -145,6 +145,44 @@ describe('de veronderstelde stand van de apparaten', () => {
     });
   });
 
+  it('laat los zolang de bewoner stuurt, en neemt de failsafe wel mee (besluit 49b)', () => {
+    // Een echt besluit als basis, zodat de vorm klopt; alleen modus, failsafe
+    // en commando's verschillen per geval.
+    const store = new EntityStore();
+    store.replaceAll(toestand('25.0'));
+    const basis = decide({
+      config: exampleSite,
+      state: buildSystemState(exampleSite, store, NOW),
+      strategies: defaultStrategies(),
+    });
+    const uit: Command[] = [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' }];
+
+    const s = new SchaduwApparaten();
+    s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
+
+    // Handmatig: de arbiter stuurt niets, de bewoner wel. De veronderstelde
+    // "koelen" mag dan niet blijven hangen — het echte apparaat is de waarheid.
+    s.volg({
+      ...basis,
+      commands: [],
+      explanation: { ...basis.explanation, mode: 'handmatig' },
+    });
+    expect(s.apparaat('ac-zolder')).toBeNull();
+
+    // Handmatig mét failsafe: die stuurt de assist-apparaten uit, ook nu.
+    s.volg({
+      ...basis,
+      atMs: NOW + MINUUT,
+      commands: uit,
+      explanation: {
+        ...basis.explanation,
+        mode: 'handmatig',
+        failsafe: { active: true, unreliable: ['sensor.p1_meter_power'] },
+      },
+    });
+    expect(s.apparaat('ac-zolder')?.action).toBe('off');
+  });
+
   it('laat de timercommandos aan OwnState', () => {
     const s = new SchaduwApparaten();
     s.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
@@ -189,6 +227,39 @@ describe('de vertaling met een veronderstelde stand', () => {
       .actuators['ac-zolder']!;
 
     expect(a.powerW).toEqual({ ok: true, value: 810, atMs: NOW + MINUUT });
+  });
+
+  it('rekent het budget met wat de meter werkelijk zag (besluit 49b)', () => {
+    /*
+     * De veronderstelde zolder-airco draait al een halfuur; de echte staat uit,
+     * en het huis voert 30 W in. Onder echte regeling zou die airco in de meter
+     * zitten en het huis 780 W invoeren — dus hoort hij af te bouwen.
+     *
+     * Voor 49b telde het budget de 750 W van de veronderstelde airco als
+     * terugwinbaar, terwijl de meter hem nooit zag: 770 W ruimte waar er 20 was.
+     * Hij bleef draaien, en de schaduw schreef dat op als netstroom die de
+     * arbiter zou kopen.
+     */
+    const store = new EntityStore();
+    store.replaceAll(
+      toestand('25.0').map((e) =>
+        e.entity_id === 'sensor.p1_meter_power' ? entity('sensor.p1_meter_power', '30') : e,
+      ),
+    );
+    const s = new SchaduwApparaten();
+    s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW - 30 * MINUUT);
+
+    const state = buildSystemState(exampleSite, store, NOW, undefined, s);
+    const decision = decide({ config: exampleSite, state, strategies: defaultStrategies() });
+    const budget = decision.explanation.budget;
+
+    // Het logboek blijft de werkelijkheid: gemeten net, en wat er echt draaide.
+    expect(budget.gridPowerW).toBe(30);
+    expect(budget.reclaimableW).toBe(0);
+    // Ruimte: 30 W invoer eraf, 50 W tolerantie erbij.
+    expect(budget.availableW).toBe(20);
+    // En dus bouwt hij af, naar standby.
+    expect(acties(decision.commands, 'ac-zolder')).toEqual(['standby']);
   });
 
   it('valt terug op het echte apparaat zolang er niets gestuurd is', () => {
