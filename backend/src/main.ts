@@ -410,6 +410,8 @@ if (webPort != null) {
     config: site?.config ?? null,
     latest: () => runner?.latest ?? null,
     ...(analyse ? { divergence: () => analyse.latest } : {}),
+    // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
+    ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
   });
 }

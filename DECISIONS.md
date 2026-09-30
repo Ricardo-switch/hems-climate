@@ -1500,6 +1500,44 @@ ontbrekende invoer. Anders zou de meter volledigheid melden die er niet is.
 
 ---
 
+## 48. De dataset komt er met een knop uit, als tar.gz
+
+De opname van de NAS halen ging via de Samba-share, met een PowerShell-script
+dat het pad hardgecodeerd had. Dat werkt zolang je thuis bent met de juiste
+schijf gekoppeld. De weergave staat er al; een knop erbij is minder werk dan
+dat script onderhouden.
+
+*Besluit:* `/api/export` levert alle dagbestanden als één gzipte tar.
+
+*Waarom tar en niet één samengevoegd NDJSON.* Dat plakt prima aan elkaar, maar
+dan is de dagindeling weg — en `findLogFiles` zoekt juist naar
+`decisions-JJJJ-MM-DD.ndjson`. Een export die je niet in de divergentietool kunt
+terugzetten is een archief en geen dataset. Uitgepakt krijg je een map die je
+rechtstreeks aan `--benchmark` of de analyse kunt voeren.
+
+*Met de hand geschreven, geen pakket.* Een ustar-kop is 512 bytes met velden op
+vaste posities; minder code dan de afhankelijkheid waard is voor een dienst die
+maanden onbewaakt draait. `zlib` zit al in Node. De test pakt het archief uit
+met de `tar` van het systeem en legt de inhoud naast het origineel — een
+verkeerde checksum of een vergeten vulblok levert een bestand op dat er prima
+uitziet en dat niets opent.
+
+*Streamend, niet in het geheugen.* De opname is 50 MB en wordt een winter lang
+groter. Alles eerst inlezen zou de dienst die de opname máákt kunnen omleggen.
+
+*Wat dit wél verandert aan besluit 23.* De weergave heeft geen inlog, en dit
+maakt de volledige opname downloadbaar voor wie op het netwerk zit. Dat is meer
+dan de pagina al toonde: per minuut, maanden terug, inclusief wanneer er niemand
+thuis was. Geen wachtwoorden en geen tokens, maar wel het gedrag van een
+huishouden. Achter Ingress is dat geen punt; op de NAS is het een reden te meer
+om er geen portforward op te zetten.
+
+*De knop verschijnt alleen wanneer er iets te halen valt,* met het aantal dagen
+en de omvang erbij. Het verschil tussen 3 MB en 300 MB bepaalt of je erop klikt
+terwijl je op je telefoon zit.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds

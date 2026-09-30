@@ -27,6 +27,7 @@ import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
+import { exportInfo, schrijfExport } from './export.js';
 
 export interface WebOptions {
   /** Poort om op te luisteren. */
@@ -55,6 +56,13 @@ export interface WebOptions {
    * Weglaten mag — dan is er geen analyse en zegt het eindpunt dat ook.
    */
   readonly divergence?: () => DivergenceReport | null;
+  /**
+   * Waar de dagbestanden staan, voor de export.
+   *
+   * Weglaten betekent: geen exportknop. Dat is de stand wanneer er niet
+   * gelogd wordt — dan valt er ook niets te downloaden.
+   */
+  readonly logDir?: string;
   /**
    * De onboarding, of weg wanneer die niet mag.
    *
@@ -304,6 +312,43 @@ export class WebServer {
         return;
       }
       sendJson(res, 200, report);
+      return;
+    }
+
+    /*
+     * De dataset ophalen.
+     *
+     * Twee paden: `/api/export/info` zegt hoe groot het is, zodat de knop een
+     * getal kan tonen in plaats van een belofte, en `/api/export` levert het
+     * spul. Allebei lezen; de 405-muur hierboven blijft dus ongemoeid.
+     */
+    const logDir = this.#options.logDir;
+    if (path === '/api/export/info') {
+      if (logDir == null) {
+        sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er valt niets te exporteren' });
+        return;
+      }
+      sendJson(res, 200, await exportInfo(logDir));
+      return;
+    }
+
+    if (path === '/api/export') {
+      if (logDir == null) {
+        sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er valt niets te exporteren' });
+        return;
+      }
+      const info = await exportInfo(logDir);
+      if (info.bestanden === 0) {
+        sendJson(res, 503, { wachten: 'nog geen dagbestanden' });
+        return;
+      }
+      if (method === 'HEAD') {
+        // Geen inhoud, wel het antwoord dat er iets te halen valt.
+        res.writeHead(200, { 'content-type': 'application/gzip' });
+        res.end();
+        return;
+      }
+      await schrijfExport(logDir, res);
       return;
     }
 

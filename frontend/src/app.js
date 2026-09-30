@@ -1090,3 +1090,49 @@ async function haalOnboarding() {
 }
 
 await haalOnboarding();
+
+/* ---------------------------------------------------------- exporteren ---- */
+
+/*
+ * De exportknop.
+ *
+ * Verschijnt alleen wanneer er werkelijk iets te halen valt: geen logboek
+ * betekent een 503 van de dienst, en dan hoort er geen knop te staan die een
+ * leeg bestand oplevert.
+ *
+ * De omvang staat erbij omdat het verschil tussen 3 MB en 300 MB bepaalt of je
+ * hierop klikt terwijl je op je telefoon aan de andere kant van het land zit.
+ */
+function megabytes(bytes) {
+  return bytes >= 1e9
+    ? `${(bytes / 1e9).toFixed(1)} GB`
+    : `${Math.round(bytes / 1e6)} MB`;
+}
+
+async function haalExport() {
+  let res;
+  try {
+    res = await fetch('api/export/info');
+  } catch {
+    return;
+  }
+  if (!res.ok) return;
+
+  let info;
+  try {
+    info = await res.json();
+  } catch {
+    return;
+  }
+  if (!info.bestanden) return;
+
+  const knop = $('dataset-export');
+  knop.textContent = `Exporteren · ${info.bestanden} dagen, ${megabytes(info.bytes)}`;
+  knop.title = `${info.eerste} tot en met ${info.laatste}, als tar.gz`;
+  knop.hidden = false;
+}
+
+await haalExport();
+// Elk kwartier bijwerken, in hetzelfde ritme als de analyse: de opname groeit
+// door en een knop die een oude omvang toont is een knop die liegt.
+setInterval(haalExport, 15 * 60_000);
