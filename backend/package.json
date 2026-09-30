@@ -17,6 +17,7 @@
     "replay": "tsx src/replay/run.ts",
     "sweep": "tsx src/replay/sweep.ts",
     "replay:vastleggen": "tsx tools/replay-vastleggen.ts",
+    "besluiten:index": "tsx tools/besluiten-index.ts",
     "shadow": "tsx src/main.ts",
     "config:check": "tsx tools/check-config.ts",
     "shadow:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 start",

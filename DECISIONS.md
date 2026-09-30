@@ -5,11 +5,117 @@ vertelt het *waarom*, inclusief de alternatieven die zijn afgevallen en wat een
 besluit heeft gekost.
 
 Nieuwste onderaan. Voeg een besluit toe zodra je merkt dat je een keuze
-verdedigt die niet uit de code blijkt.
+verdedigt die niet uit de code blijkt. Zet onder de kop een regel met onderwerp
+en status, zoals bij de andere, en draai `npm run besluiten:index` in
+`backend/`. Wordt een besluit later gecorrigeerd of vervangen, pas dan zijn
+status aan: wie via een zoekopdracht op een oud besluit belandt, hoort meteen te
+zien dat het niet meer zo werkt. Een test in de CI bewaakt beide.
+
+
+<!-- index:begin -->
+
+## Index
+
+Per onderwerp. Een besluit dat later is gecorrigeerd of vervangen, staat er
+toch in: het waarom blijft gelden voor wie het oude gedrag tegenkomt.
+Gemaakt met `npm run besluiten:index`; een test bewaakt dat hij klopt.
+
+**Visie en principes**
+
+- [1. Weg van YAML, niet omdat het niet werkte](#1-weg-van-yaml-niet-omdat-het-niet-werkte)
+- [7. Een fout hoort luid te falen](#7-een-fout-hoort-luid-te-falen)
+- [28. De schaduwmodus is geen steiger](#28-de-schaduwmodus-is-geen-steiger)
+- [29. Twee applicaties, en dat is geen tussenoplossing](#29-twee-applicaties-en-dat-is-geen-tussenoplossing)
+- [34. Hybride SaaS — verborgen HA met een dunne agent](#34-hybride-saas--verborgen-ha-met-een-dunne-agent)
+- [44. De assistent is een vierde voorsteller, geen baas](#44-de-assistent-is-een-vierde-voorsteller-geen-baas)
+- [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
+
+**Kern en regeling**
+
+- [2. Een pure kern](#2-een-pure-kern)
+- [3. Een vermogensbudget in plaats van een vlag](#3-een-vermogensbudget-in-plaats-van-een-vlag)
+- [4. Strategieën stellen voor, één arbiter beslist](#4-strategieën-stellen-voor-één-arbiter-beslist)
+- [5. Afwezigheid van vraag is niet de taak van een strategie](#5-afwezigheid-van-vraag-is-niet-de-taak-van-een-strategie)
+- [6. Tijd is invoer, ook buiten de kern](#6-tijd-is-invoer-ook-buiten-de-kern)
+- [8. `handmatig` is een modus waarin de regeling zich terugtrekt](#8-handmatig-is-een-modus-waarin-de-regeling-zich-terugtrekt) — *aangevuld door 8b*
+- [8b. De knop staat op twee plekken, de vertaling keek er maar naar één](#8b-de-knop-staat-op-twee-plekken-de-vertaling-keek-er-maar-naar-één)
+- [16. Filteren op wat ons aangaat](#16-filteren-op-wat-ons-aangaat)
+- [39. De modus en de timers horen bij de dienst, niet bij Home Assistant](#39-de-modus-en-de-timers-horen-bij-de-dienst-niet-bij-home-assistant)
+- [49. De schaduw meet zijn eigen geschiedenis](#49-de-schaduw-meet-zijn-eigen-geschiedenis) — *gecorrigeerd door 49b*
+- [49b. De veronderstelling blijft bij de meter en bij de bewoner](#49b-de-veronderstelling-blijft-bij-de-meter-en-bij-de-bewoner)
+- [50. Comfort mag koelen boven een plafond, ook op netstroom](#50-comfort-mag-koelen-boven-een-plafond-ook-op-netstroom)
+- [51. Starten vraagt meer dan draaien](#51-starten-vraagt-meer-dan-draaien)
+
+**Configuratie en onboarding**
+
+- [9. Configuratie als JSON, niet YAML, niet meteen een database](#9-configuratie-als-json-niet-yaml-niet-meteen-een-database)
+- [10. Validatie met de hand, zonder bibliotheek](#10-validatie-met-de-hand-zonder-bibliotheek)
+- [31. De vertaling had een tweede configuratie in zich](#31-de-vertaling-had-een-tweede-configuratie-in-zich)
+- [32. Wat in code stond kon niet per woning verschillen](#32-wat-in-code-stond-kon-niet-per-woning-verschillen)
+- [40. Het schema weigert alleen nog op wat er echt niet zonder kan](#40-het-schema-weigert-alleen-nog-op-wat-er-echt-niet-zonder-kan)
+- [41. De ontdekking stelt voor en besluit niet](#41-de-ontdekking-stelt-voor-en-besluit-niet)
+- [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
+
+**Meten, data en analyse**
+
+- [11. Het logboek is zelfvoorzienend](#11-het-logboek-is-zelfvoorzienend)
+- [12. Episodes, geen percentages](#12-episodes-geen-percentages)
+- [13. Meten, en de beperkingen erbij vermelden](#13-meten-en-de-beperkingen-erbij-vermelden)
+- [14. Geen RC-model per huis](#14-geen-rc-model-per-huis) — *deels vervangen door 46*
+- [27. De datasetmeter meet dekking, niet duur](#27-de-datasetmeter-meet-dekking-niet-duur) — *gecorrigeerd door 27b*
+- [27b. Het eerste getal was te vriendelijk](#27b-het-eerste-getal-was-te-vriendelijk)
+- [30. Buitentemperatuur naar voren gehaald](#30-buitentemperatuur-naar-voren-gehaald) — *aangevuld door 30b*
+- [30b. En toen zochten we naar het volgende gat](#30b-en-toen-zochten-we-naar-het-volgende-gat)
+- [47. De opbrengst van de panelen is de instralingsmeter](#47-de-opbrengst-van-de-panelen-is-de-instralingsmeter)
+- [48. De dataset komt er met een knop uit, als tar.gz](#48-de-dataset-komt-er-met-een-knop-uit-als-targz)
+- [52. De dienst legt de ruwe historie zelf vast](#52-de-dienst-legt-de-ruwe-historie-zelf-vast)
+- [58. Dagen ouder dan een week worden gecomprimeerd](#58-dagen-ouder-dan-een-week-worden-gecomprimeerd)
+
+**Weergave**
+
+- [24. Tailwind met een bouwstap, niet via een CDN](#24-tailwind-met-een-bouwstap-niet-via-een-cdn)
+- [26. De terugblik hoort bij de weergave, maar is een andere waarheid](#26-de-terugblik-hoort-bij-de-weergave-maar-is-een-andere-waarheid)
+- [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
+
+**Veiligheid**
+
+- [15. Schaduwmodus schrijft niet, structureel](#15-schaduwmodus-schrijft-niet-structureel)
+- [23. De schaduwdienst gaat luisteren, maar alleen om te lezen](#23-de-schaduwdienst-gaat-luisteren-maar-alleen-om-te-lezen) — *deels vervangen door 42*
+- [38. De ruwe HA-export hoort niet in versiebeheer](#38-de-ruwe-ha-export-hoort-niet-in-versiebeheer)
+- [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt)
+
+**Uitrol en beheer**
+
+- [17. Op de NAS, niet op de Pi](#17-op-de-nas-niet-op-de-pi) — *gecorrigeerd door 17b*
+- [17b. Gemeten, en de vrees blijkt ongegrond](#17b-gemeten-en-de-vrees-blijkt-ongegrond)
+- [18. Een bewaking tegen vastlopen](#18-een-bewaking-tegen-vastlopen)
+- [19. Het uitrolscript weet wat er draait](#19-het-uitrolscript-weet-wat-er-draait)
+- [20. Het uitrolscript staat buiten `src/`](#20-het-uitrolscript-staat-buiten-src)
+- [21. De configuratie blijft buiten git op de NAS](#21-de-configuratie-blijft-buiten-git-op-de-nas)
+- [22. De Taakplanner is een andere omgeving dan een shell](#22-de-taakplanner-is-een-andere-omgeving-dan-een-shell)
+- [25. Het compose-bestand is een bouwinstructie, geen voorkeur](#25-het-compose-bestand-is-een-bouwinstructie-geen-voorkeur)
+- [33. De uitrol vraagt het nieuwe image of het de oude configuratie snapt](#33-de-uitrol-vraagt-het-nieuwe-image-of-het-de-oude-configuratie-snapt)
+- [35. Een server draagt alleen wat hij draait](#35-een-server-draagt-alleen-wat-hij-draait)
+- [36. De add-on is dezelfde dienst, niet een tweede](#36-de-add-on-is-dezelfde-dienst-niet-een-tweede)
+- [37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt](#37-de-add-on-wordt-platgeslagen-voordat-de-supervisor-hem-bouwt)
+- [53. De NAS is de primaire omgeving; de add-on wacht tot stap B](#53-de-nas-is-de-primaire-omgeving-de-add-on-wacht-tot-stap-b)
+
+**Kwaliteitsbewaking**
+
+- [54. Een machine kijkt mee](#54-een-machine-kijkt-mee)
+- [55. De opstart is één zuivere functie](#55-de-opstart-is-één-zuivere-functie)
+- [56. Regels die voor elke toestand gelden](#56-regels-die-voor-elke-toestand-gelden)
+- [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
+
+Wat nog open staat: [Wat nog een besluit wacht](#wat-nog-een-besluit-wacht).
+
+<!-- index:einde -->
 
 ---
 
 ## 1. Weg van YAML, niet omdat het niet werkte
+
+*Onderwerp: visie en principes · Status: geldig*
 
 Het YAML-systeem regelde het huis grotendeels naar behoren. Wat ontbrak was de
 mogelijkheid om vast te stellen óf het klopte. Van de zeven fouten die we bij het
@@ -56,6 +162,8 @@ blijft werken.
 
 ## 2. Een pure kern
 
+*Onderwerp: kern en regeling · Status: geldig*
+
 `decide(state, config, now) -> Decision` doet geen I/O, leest geen klok en kent
 geen netwerk. Timers zijn invoer; een timerstart komt als commando terug.
 
@@ -67,6 +175,8 @@ in één seizoen per jaar.
 de regellogica wordt in seconden getoetst in plaats van in seizoenen.
 
 ## 3. Een vermogensbudget in plaats van een vlag
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 Het overschot is een pot die leegloopt. Elk voorstel draagt een `budgetW`: een
 draaiend apparaat rekent zijn gemeten opname, een stilstaand apparaat zijn
@@ -81,6 +191,8 @@ maar een middel dat op raakt.
 
 ## 4. Strategieën stellen voor, één arbiter beslist
 
+*Onderwerp: kern en regeling · Status: geldig*
+
 In de YAML-versie zat de voorrang tussen strategieën impliciet in de volgorde van
 `choose`-blokken. Nu levert elke strategie `Intent[]` met een prioriteit, en één
 arbiter lost conflicten op.
@@ -90,6 +202,8 @@ arbiter lost conflicten op.
 regels moet afleiden.
 
 ## 5. Afwezigheid van vraag is niet de taak van een strategie
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 `pvSurplus` stelde aanvankelijk `standby` voor zodra er niets te bufferen viel.
 Live bleek dat twee uitgeschakelde airco's aanzette om vervolgens niets te doen —
@@ -104,6 +218,8 @@ bleef in `nacht` en `vakantie` eeuwig in standby staan.
 
 ## 6. Tijd is invoer, ook buiten de kern
 
+*Onderwerp: kern en regeling · Status: geldig*
+
 De schaduwrunner las eerst `Date.now()`. Een test faalde daardoor omdat het
 toevallig 22:45 was en het huis in nachtmodus stond.
 
@@ -116,6 +232,8 @@ container draait Node in UTC, en dan begint voorverwarmen twee uur te laat
 zonder één foutmelding.
 
 ## 7. Een fout hoort luid te falen
+
+*Onderwerp: visie en principes · Status: geldig*
 
 Een setpoint buiten het bereik van een apparaat wordt afgewezen, niet
 stilzwijgend begrensd. Een onbekende tijdzone wordt geweigerd bij het inlezen.
@@ -130,6 +248,8 @@ omdat een zoldersensor wegvalt is gevaarlijker dan hem te laten lopen.
 
 ## 8. `handmatig` is een modus waarin de regeling zich terugtrekt
 
+*Onderwerp: kern en regeling · Status: aangevuld door 8b*
+
 Toen `handmatig` als stand aan de helper werd toegevoegd, lag het voor de hand
 hem op `dag` te laten lijken. Dat zou fout zijn: het is geen
 temperatuurregime maar een instructie — *laat staan wat er staat*.
@@ -141,6 +261,8 @@ start hij niets en schakelt hij ook niets af. Dat laatste is het verschil met
 *Uitzondering:* de failsafe wint hiervan. Een storing is geen voorkeur.
 
 ### 8b. De knop staat op twee plekken, de vertaling keek er maar naar één
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 De kern deed het goede in `handmatig` — de arbiter stelde niets voor, stuurde
 niets en schakelde niets af, en `test/arbiter.test.ts` bewaakte dat. Alleen
@@ -219,6 +341,8 @@ meegaan.
 
 ## 9. Configuratie als JSON, niet YAML, niet meteen een database
 
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
 De configuratie komt straks uit een onboarding-wizard en gaat over een API; dan
 is JSON het natuurlijke formaat.
 
@@ -232,6 +356,8 @@ dit moment geen enkele vraag. Wel is de vorm er klaar voor: een document met een
 herschrijving.
 
 ## 10. Validatie met de hand, zonder bibliotheek
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
 
 *Afgewezen:* zod of vergelijkbaar.
 
@@ -249,6 +375,8 @@ streng: een zone mág apparaten met verschillende bereiken hebben. De regel is n
 
 ## 11. Het logboek is zelfvoorzienend
 
+*Onderwerp: meten, data en analyse · Status: geldig*
+
 Het lag voor de hand de historische standen van het oude systeem via de
 HA-API op te halen wanneer we gaan vergelijken.
 
@@ -265,6 +393,8 @@ is, en dan verdwijnt de vergelijking vanzelf.
 
 ## 12. Episodes, geen percentages
 
+*Onderwerp: meten, data en analyse · Status: geldig*
+
 Vierhonderd afwijkende minuten zeggen niet of dat vierhonderd losse hikjes waren
 of drie lange middagen.
 
@@ -274,6 +404,8 @@ zei. Daarboven een tijdlijn van één teken per kwartier, want patronen zie je i
 een plaatje en niet in een tabel.
 
 ## 13. Meten, en de beperkingen erbij vermelden
+
+*Onderwerp: meten, data en analyse · Status: geldig*
 
 Elke bewering over besparing komt uit een harness. De replay is een
 **schaduwvergelijking, geen gesloten simulatie**: de arbiter krijgt op elk
@@ -295,6 +427,8 @@ kern zou dichten.
 
 ## 14. Geen RC-model per huis
 
+*Onderwerp: meten, data en analyse · Status: deels vervangen door 46*
+
 Om de bufferband van de zolder te onderbouwen zou een thermisch model helpen.
 
 *Afgewezen:* dat is over-fitten op één woning, en dit moet een product worden.
@@ -306,6 +440,8 @@ definitie onzichtbaar — en dat is een uitkomst, geen mislukking.
 
 ## 15. Schaduwmodus schrijft niet, structureel
 
+*Onderwerp: veiligheid · Status: geldig*
+
 `HaClient` wordt zonder `allowWrites` aangemaakt, en `callService` werpt dán al
 voordat er iets de socket op gaat.
 
@@ -315,6 +451,8 @@ nagebootste Home Assistant en controleert dat er geen enkele `call_service`
 aankomt.
 
 ## 16. Filteren op wat ons aangaat
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 Gemeten op tien dagen eigen historie: 2.149.449 wijzigingen over 1666
 entiteiten, waarvan er 31 over klimaat gaan. De rest wordt volledig genegeerd —
@@ -333,6 +471,8 @@ stilzwijgend buiten de filter.
 
 ## 17. Op de NAS, niet op de Pi
 
+*Onderwerp: uitrol en beheer · Status: gecorrigeerd door 17b*
+
 Home Assistant draait als HAOS: een afgesloten appliance waarvan de
 Docker-daemon van de Supervisor is. Eigen containers ernaast worden genegeerd of
 bij een opruimronde verwijderd.
@@ -346,6 +486,8 @@ bedienen.
 werkwijze was al bekend.
 
 ### 17b. Gemeten, en de vrees blijkt ongegrond
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 De aanname onder "het belast de machine die niet mag omvallen" was nooit
 nagerekend. Voor besluit 34 moest dat alsnog, want daar staat de add-on wél op
@@ -393,6 +535,8 @@ te bouwen.
 
 ## 18. Een bewaking tegen vastlopen
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 Een dienst die maanden draait faalt zelden met een knal; hij blijft hangen. Een
 websocket die dood is zonder dat de sluiting doorkwam, en het proces leeft
 verder terwijl de opname stilstaat — dat merk je pas als je de dataset opent.
@@ -401,6 +545,8 @@ verder terwijl de opname stilstaat — dat merk je pas als je de dataset opent.
 foutcode, waarna `restart: unless-stopped` het oppakt.
 
 ## 19. Het uitrolscript weet wat er draait
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 Mislukt het bouwen, dan staat de werkmap al op de nieuwe commit. Zonder
 onderscheid zou de volgende run concluderen dat HEAD gelijk is aan origin en dat
@@ -416,12 +562,16 @@ lokale wijzigingen in `src/` staan in plaats van ze te overschrijven.
 
 ## 20. Het uitrolscript staat buiten `src/`
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 *Reden:* anders kan een `git pull` het script wijzigen terwijl het draait.
 
 *Kosten:* een nieuwe versie moet je zelf overnemen. Het script meldt wanneer dat
 aan de orde is.
 
 ## 21. De configuratie blijft buiten git op de NAS
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 `config/sites/*.json` staat wél in de repository, maar wordt op de NAS niet
 automatisch overgezet.
@@ -433,6 +583,8 @@ meteen de vorm die nodig is zodra er een tweede huis bij komt.
 git afwijkt van wat er draait.
 
 ## 22. De Taakplanner is een andere omgeving dan een shell
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 Dit heeft vier keer een uitrol laten mislukken, elke keer met een foutmelding die
 niets met de oorzaak te maken had:
@@ -451,6 +603,8 @@ niets met de oorzaak te maken had:
 Taakplanner. Vanaf de commandoregel bewijst het niets.
 
 ## 23. De schaduwdienst gaat luisteren, maar alleen om te lezen
+
+*Onderwerp: veiligheid · Status: deels vervangen door 42*
 
 Tot fase 5 stond er in `docker-compose.yml`: *deze dienst luistert nergens op en
 verbindt alleen uitgaand met Home Assistant.* Dat was een eigenschap, geen
@@ -499,6 +653,8 @@ besluit.
 
 ## 24. Tailwind met een bouwstap, niet via een CDN
 
+*Onderwerp: weergave · Status: geldig*
+
 *Afgewezen — de play-CDN.* Geen bouwstap, maar dan heeft een pagina die je juist
 lokaal wilt kunnen openen internet nodig om er goed uit te zien. Een dashboard in
 de meterkast dat bij een haperende verbinding als kale HTML verschijnt, is precies
@@ -523,6 +679,8 @@ gaat de hele repository de daemon in, HA-backup van een gigabyte incluis.
 dat is weer precies het soort stilte waar dit project vanaf moest.
 
 ## 25. Het compose-bestand is een bouwinstructie, geen voorkeur
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 `docker-compose.yml` staat op de NAS naast `src/` en wordt met de hand
 overgenomen, net als `deploy.sh` (besluit 20) en de configuratie (besluit 21).
@@ -567,6 +725,8 @@ mensen hem te negeren, en dan bewaakt hij niets meer.
 
 ## 26. De terugblik hoort bij de weergave, maar is een andere waarheid
 
+*Onderwerp: weergave · Status: geldig*
+
 De pagina toonde het besluit van dit moment. Wat ontbrak was wat de
 divergentietool in de terminal al gaf: de tijdlijn, de verhoudingen en de
 stroom.
@@ -610,6 +770,8 @@ en de balken tonen de aantallen erbij.
 
 ## 27. De datasetmeter meet dekking, niet duur
 
+*Onderwerp: meten, data en analyse · Status: gecorrigeerd door 27b*
+
 "Hoever zijn we" is een verleidelijk simpele vraag. Het antwoord "vijf dagen"
 klopt en zegt niets: vijf dagen september bevatten geen enkel
 verwarmingscommando, geen vakantiestand en geen failsafe. Een teller die alleen
@@ -641,6 +803,8 @@ het staat zo in de broncode zodat je erover kunt twisten in plaats van dat het
 voor gemeten doorgaat.
 
 ### 27b. Het eerste getal was te vriendelijk
+
+*Onderwerp: meten, data en analyse · Status: geldig*
 
 De meter gaf 44% op vijf zomerdagen zonder één verwarmingscommando. Dat voelde
 te snel, en dat was het ook — om vier redenen tegelijk, die elk op zichzelf klein
@@ -690,6 +854,8 @@ bewaken het.
 
 ## 28. De schaduwmodus is geen steiger
 
+*Onderwerp: visie en principes · Status: geldig*
+
 De schaduwmodus is gebouwd om de overstap te kunnen verantwoorden: laat de
 arbiter meedenken naast het YAML-systeem, en kijk waar ze uiteenlopen. De
 vanzelfsprekende aanname was dat hij daarna weg kan.
@@ -715,6 +881,8 @@ hernoeming raakt tientallen bestanden en lost niets op.
 
 ## 29. Twee applicaties, en dat is geen tussenoplossing
 
+*Onderwerp: visie en principes · Status: geldig*
+
 De weergave uit fase 5 is een technische monitor: dicht op de kern, alles wat de
 arbiter denkt, in de taal van de arbiter. Bruikbaar voor wie het systeem bouwt.
 
@@ -739,6 +907,8 @@ zie besluit 28: hij is straks het onboarding-instrument, niet een overblijfsel.
 
 ## 30. Buitentemperatuur naar voren gehaald
 
+*Onderwerp: meten, data en analyse · Status: aangevuld door 30b*
+
 `sensor.temperatuur` stond als openstaand punt: de huidige strategieën gebruiken
 hem niet, dus hij ging het beslislogboek niet in. Voor fase 7 — vooruitkijken op
 weer en prognose — is hij onmisbaar.
@@ -760,6 +930,8 @@ voorlopig alleen gelezen wordt door de dataset. Dat is de goedkoopste helft van
 een jaar wachten.
 
 ### 30b. En toen zochten we naar het volgende gat
+
+*Onderwerp: meten, data en analyse · Status: geldig*
 
 De buitentemperatuur was gevonden doordat hij als openstaand punt in dit document
 stond. De vraag daarna was of er méér zulke gaten waren — want elk gat dat je
@@ -790,6 +962,8 @@ filter" betekende niet "wordt gelezen". Tussen die twee zat een gat waar je
 alleen in valt door het na te meten.
 
 ## 31. De vertaling had een tweede configuratie in zich
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
 
 `mapping.ts` heette "de enige plek waar entity-ID's voorkomen". Dat klopte, en
 was tegelijk het probleem: er stonden er víjf tabellen vol — zonetemperaturen,
@@ -828,6 +1002,8 @@ niet. Nu wel, en daarmee is het een eigenschap van het apparaat in plaats van ee
 conventie in de vertaling.
 
 ## 32. Wat in code stond kon niet per woning verschillen
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
 
 Na besluit 31 stonden er nog vier groepen entity-ID's in `mapping.ts`: negen
 legacy setpoint-helpers, de zon, twee timers, en de twee keuzelijsten waaruit de
@@ -872,6 +1048,8 @@ geen codewijziging. Dat was de hele belofte van fase 6.
 
 ## 33. De uitrol vraagt het nieuwe image of het de oude configuratie snapt
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 Fase 6b maakte `mode`, `timers` en `sun` verplicht in het schema. De
 configuratie op de NAS gaat niet met git mee — die hoort bij de installatie
 (besluit 21) — dus die had die velden niet. De dienst stopte bij het opstarten
@@ -909,6 +1087,8 @@ de configuratie geldig is maar naar entiteiten wijst die niet meer bestaan. Daar
 is de failsafe voor, en die meldt het — maar pas als de dienst al draait.
 
 ## 34. Hybride SaaS — verborgen HA met een dunne agent
+
+*Onderwerp: visie en principes · Status: geldig*
 
 > **Langetermijnvisie.** Dit besluit stuurt wat we nú bouwen, maar er wordt
 > voorlopig niets van geïmplementeerd. Het staat hier zodat de add-on van fase 6c
@@ -976,6 +1156,8 @@ door de proxy; daarvoor staat `x-accel-buffering: no` al in de kop.
 
 ## 35. Een server draagt alleen wat hij draait
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 De NAS kloonde de hele repository. Daar zit `HA export/` bij — 3,1 MB
 entity-registers en dashboards, driekwart van alles — plus `legacy_code/` en
 `ha-fixes/`. Naslag voor het ontwikkelen, op een machine die alleen de dienst
@@ -1005,6 +1187,8 @@ checkout haalt bestanden uit de wérkmap, niet uit de objectopslag. Een
 maakt het uitchecken netwerkafhankelijk. Voor 1,2 MB is dat de verkeerde ruil.
 
 ## 36. De add-on is dezelfde dienst, niet een tweede
+
+*Onderwerp: uitrol en beheer · Status: geldig*
 
 De add-on had een eigen opstartpad kunnen krijgen: eigen configuratielezer,
 eigen verbindingslogica, eigen manier om instellingen te vinden. Dat is de
@@ -1052,6 +1236,8 @@ te draaien, en dus te testen.
 
 ## 37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 De add-on stond in `addon/`, met `COPY backend/...` en `COPY frontend/...` naar
 een niveau hoger. Dat werkt bij een handmatige `docker build` vanuit de
 projectwortel, en het werkt niet bij de Supervisor.
@@ -1082,6 +1268,8 @@ Tot dan: lokale add-on onder `/addons/`.
 ---
 
 ## 38. De ruwe HA-export hoort niet in versiebeheer
+
+*Onderwerp: veiligheid · Status: geldig*
 
 `HA export/core.config_entries` stond in de repository. Dat bestand is de bron
 van waarheid over welke integraties er zijn — waarvoor het hier ook stond — maar
@@ -1115,6 +1303,8 @@ Home Assistant zelf aanmaakt.
 ---
 
 ## 39. De modus en de timers horen bij de dienst, niet bij Home Assistant
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 Om de add-on te laten starten moest een woning een `input_select` met zeven
 standen hebben en twee `timer.`-entiteiten. Bij dit huis bestonden die, omdat de
@@ -1161,6 +1351,8 @@ dat de pagina iets terugschrijft.
 ---
 
 ## 40. Het schema weigert alleen nog op wat er echt niet zonder kan
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
 
 Om te starten moest een woning 158 waarden aanleveren met 34 entity-ID's.
 Bijna alles was verplicht, en dat leek verdedigbaar: hoe explicieter de
@@ -1215,6 +1407,8 @@ geschiedenis levert opnieuw byte voor byte hetzelfde rapport.
 
 ## 41. De ontdekking stelt voor en besluit niet
 
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
 Na besluit 40 is het kleinste geldige bestand twaalf regels. Maar in die twaalf
 regels staan entity-ID's, en die vind je alleen door in de
 ontwikkelaarshulpmiddelen van Home Assistant te graven. De drempel was verlaagd,
@@ -1263,6 +1457,8 @@ blijkt dat het knelt.
 ---
 
 ## 42. De weergave mag schrijven waar Home Assistant de deur bewaakt
+
+*Onderwerp: veiligheid · Status: geldig*
 
 Besluit 23 legde vast dat de weergave alleen leest, en besluit 29 maakte daar
 een muur van: alles wat geen GET of HEAD is krijgt 405, vóór de routering, zodat
@@ -1329,6 +1525,8 @@ komt het bestand door `--check-config` heen.
 
 ## 43. Een meetwaarde mag in een attribuut zitten
 
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
 Besluit 41 noemde het als bekende beperking: een kamer met een thermostaat of
 airco die zijn eigen temperatuur meet, maar zonder losse `sensor.`-entiteit,
 kon geen zone worden. Bij de gemeten woning kostte dat de badkamer. En het is
@@ -1366,6 +1564,8 @@ uitziet dan het is.
 ---
 
 ## 44. De assistent is een vierde voorsteller, geen baas
+
+*Onderwerp: visie en principes · Status: geldig*
 
 Het doel is een assistent waaraan je kunt vragen waarom het koud is, en die je
 kunt zeggen dat de airco wel wat warmer mag — desnoods met spraak. De
@@ -1409,6 +1609,8 @@ zichzelf uitlegt.
 
 ## 45. Een bewoner ziet nooit een entity-ID
 
+*Onderwerp: weergave · Status: geldig*
+
 De weergave die er nu staat is een instrumentenpaneel voor één gebruiker die
 weet wat een arbiter is. Dat blijkt overal: `budget 1106/1972 W`,
 `geblokkeerd: ac-zolder cool — stabilisation_active`, en een onboarding die
@@ -1437,6 +1639,8 @@ is hoe het nooit gebeurt.
 ---
 
 ## 46. Het huis leert wat het ís, niet wat het moet doen
+
+*Onderwerp: visie en principes · Status: geldig*
 
 Er zit leren in dit systeem, en er zit bewust geen leren in. Het onderscheid
 loopt precies langs de grens tussen wereldbeeld en beleid.
@@ -1471,6 +1675,8 @@ koud is.
 
 ## 47. De opbrengst van de panelen is de instralingsmeter
 
+*Onderwerp: meten, data en analyse · Status: geldig*
+
 Het thermische model van fase 7 heeft drie termen: warmteverlies naar buiten,
 wat een apparaat levert, en hoeveel de zon een kamer opwarmt. Voor die derde
 stond er alleen `sun.sun` in het logboek — boven of onder de horizon. Dat is te
@@ -1501,6 +1707,8 @@ ontbrekende invoer. Anders zou de meter volledigheid melden die er niet is.
 ---
 
 ## 48. De dataset komt er met een knop uit, als tar.gz
+
+*Onderwerp: meten, data en analyse · Status: geldig*
 
 De opname van de NAS halen ging via de Samba-share, met een PowerShell-script
 dat het pad hardgecodeerd had. Dat werkt zolang je thuis bent met de juiste
@@ -1539,6 +1747,8 @@ terwijl je op je telefoon zit.
 ---
 
 ## 49. De schaduw meet zijn eigen geschiedenis
+
+*Onderwerp: kern en regeling · Status: gecorrigeerd door 49b*
 
 `minutesSinceChange` leest `ActuatorState.lastChangeMs`, en de vertaling vulde
 dat met `source.changedAt(climateEntity)` — de laatste schakeling van het échte
@@ -1611,6 +1821,8 @@ beide vensters.
 
 ### 49b. De veronderstelling blijft bij de meter en bij de bewoner
 
+*Onderwerp: kern en regeling · Status: geldig*
+
 De 22 kWh hierboven klopte niet, en de fout zat in de boekhouding van 49
 zelf. Op twee plekken liet de veronderstelde stand zich los van wat er werkelijk
 gebeurde.
@@ -1667,6 +1879,8 @@ is waar de draaitijd voor bestaat, dus hier hoort geen apart besluit over een
 ---
 
 ## 50. Comfort mag koelen boven een plafond, ook op netstroom
+
+*Onderwerp: kern en regeling · Status: geldig*
 
 Comfort stelt alleen voor voor `primary`-apparaten, en in dit huis kan geen
 enkele primary koelen: de Nest en de badkamerthermostaat verwarmen alleen. De
@@ -1734,6 +1948,8 @@ script te blijven halen zijn.
 
 ## 51. Starten vraagt meer dan draaien
 
+*Onderwerp: kern en regeling · Status: geldig*
+
 `power.startSurplusW` (1000 W) en `power.resumeSurplusW` (600 W) stonden in de
 configuratie, werden ingelezen en gecontroleerd, en stonden in het model
 beschreven als "overschot waarboven een apparaat mag starten". Geen strategie
@@ -1765,6 +1981,8 @@ die geeft geen eigen stand mee.
 ---
 
 ## 52. De dienst legt de ruwe historie zelf vast
+
+*Onderwerp: meten, data en analyse · Status: geldig*
 
 De replay leest een dataset met elke toestandswijziging van de entiteiten die de
 regeling leest. Die kwam uit de recorder van Home Assistant, met de hand
@@ -1817,6 +2035,8 @@ bewaartermijn van zestig dagen.
 
 ## 53. De NAS is de primaire omgeving; de add-on wacht tot stap B
 
+*Onderwerp: uitrol en beheer · Status: geldig*
+
 Er draaiden twee schaduwdiensten. De NAS volgt `main` en schrijft het
 logboek waar alle analyses op rusten. De add-on op de Pi was een proef: kan de
 dienst in de vorm die Home Assistant verwacht (besluit 36). Dat kon, maar hij
@@ -1844,6 +2064,8 @@ moment dat de add-on weer aangaat.
 ---
 
 ## 54. Een machine kijkt mee
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
 
 Het kwaliteitsrapport van 30 september 2026 gaf "testen en bewaking" een 6. Het
 patroon: wat misging werd gevonden door iemand die ging kijken, niet door iets
@@ -1899,6 +2121,103 @@ schijf staat.
 tests. De vaste replay legt gedrag vast; hij oordeelt er niet over. Daarvoor
 blijft de meetdiscipline nodig: een kopgetal uitsplitsen naar oorzaak voordat
 het in dit logboek komt.
+
+---
+
+## 55. De opstart is één zuivere functie
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+`main.ts` las de omgeving verspreid uit, tussen `process.exit`-aanroepen door,
+en was daardoor niet te testen. Juist daar zitten de schakelaars die ertoe
+doen: add-on of niet, luistert de weergave, mag de pagina configuratie
+wegschrijven. De voorwaarde voor die schrijfdeur (besluit 42) stond er twee
+keer in, en niets bewaakte dat ze gelijk bleven.
+
+*Besluit:* `src/opstart.ts` leidt alles af uit de omgeving in één zuivere
+functie; `main.ts` voert het alleen nog uit. De schrijfdeur staat er één keer
+in, met tests: open in de add-on, dicht op de NAS, dicht zodra iemand de add-on
+naar een eigen Home Assistant wijst, open buiten Ingress alleen op
+`HEMS_ONBOARDING=1` en dan met waarschuwing, en nooit zonder weergave.
+
+*En instellingen die niet kloppen vallen nu op.* Een hartslag van "30s" werd
+stil 30, en nul ging door — een hartslag zonder pauze. Nu weigert de dienst te
+starten met een zin die zegt wat er mis is. Nul blijft toegestaan waar het iets
+betekent: geen minimale pauze, of de bewaking uit.
+
+---
+
+## 56. Regels die voor elke toestand gelden
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+De tests beschreven gevallen die iemand bedacht. `test/invarianten.test.ts`
+genereert er 3.000 — temperaturen, netstanden, apparaatstanden, draaitijden,
+modi, timers, haperende sensoren — en eist dat een paar regels altijd houden:
+nooit meer toegewezen dan beschikbaar, per apparaat hooguit één
+schakelcommando, nooit een stand die het apparaat niet kan, geen stop binnen de
+draaitijd, geen start binnen de rusttijd of onder de startdrempel, setpoints
+binnen bereik, niets in handmatig, geen airco aan bij de failsafe, en zelfde
+toestand, zelfde besluit.
+
+*Een eigen generator en geen bibliotheek:* met een vast startgetal is elke run
+exact herhaalbaar, en een overtreding noemt het geval en het startgetal.
+
+*Een generator die alleen saaie gevallen maakt, bewijst niets.* Een aparte test
+telt of er genoeg starts, stops, budget- en draaitijdblokkades en failsafes
+langskomen. Die vond meteen een fout in de generator zelf: de laatste schakeling
+lag bijna altijd uren terug, dus de draaitijd werd nauwelijks op de proef
+gesteld. Nagegaan door de draaitijd en de startdrempel tijdelijk uit de arbiter
+te halen: gevangen bij geval 2 en geval 249.
+
+---
+
+## 57. Een linter met een handvol regels
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+ESLint met typescript-eslint, als dev-afhankelijkheid; het image houdt nul
+runtime-afhankelijkheden. Geen stijlgids — de compiler staat al op zijn
+strengst — maar de regels voor beloften (`no-floating-promises`,
+`no-misused-promises`, `await-thenable`) en ongebruikte variabelen. Deze dienst
+vuurt veel af zonder te wachten, en een vergeten `await` is een stille fout. De
+CI draait hem na de typecheck.
+
+De eerste run vond één ding, een ongebruikte import. Wie de code schreef, ging
+dus al zorgvuldig met beloften om; de linter houdt dat zo. En `tsconfig.json`
+neemt nu ook `tools/` mee: de gereedschappen werden nooit op typefouten
+gecontroleerd. Ze bleken schoon.
+
+---
+
+## 58. Dagen ouder dan een week worden gecomprimeerd
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Logboek en historie schrijven samen ongeveer 5 MB per dag, rond 1,8 GB per
+jaar. NDJSON comprimeert ruwweg dertig keer. De schaduwdienst comprimeert
+daarom één keer per dag, en meteen na het opstarten, elk dagbestand van meer dan
+een week oud. De recente week blijft gewoon leesbaar. Weggooien doet hij niets:
+de dataset is het product van dit project.
+
+*Eerst de lezers.* Elke plek die logboeken leest — divergentie, terugblik,
+benchmark, `stitch-history`, `makeWinter` — gaat via `findLogFiles`,
+`findHistoryFiles` en `regelsVan` in `divergence/read.ts`, die beide vormen
+kennen. Ook `sync-start-divergence.ps1` haalt de `.gz` op. Anders waren de oude
+dagen ongemerkt uit elke analyse verdwenen. Een test legt vast dat elke lezer
+vóór en na het comprimeren precies hetzelfde ziet.
+
+*Onderbreken mag.* Eerst een tijdelijk bestand, dan een atomaire rename, dan
+pas de gewone weg. Staan beide er, dan telt de `.gz` en ruimt de volgende
+ronde de gewone op. Een dag raakt nooit weg en telt nooit dubbel.
+
+*Eén keer gezien, niet gevonden:* de integratietest faalde één keer in ruim
+twintig volledige runs op Windows. Hij toont nu de meldingen van de dienst in
+zijn foutmelding, zodat een volgende keer zegt wat er misging.
+
+*Erbij, geen besluit maar een reparatie:* `deploy.sh` staat voortaan tussen
+accolades met een `exit` erin, zodat overschrijven tijdens een run geen halve
+regels meer uitvoert. Zie de commit van 30 september.
 
 ---
 
