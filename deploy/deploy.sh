@@ -39,6 +39,18 @@ if [ -z "${DEPLOY_UNDER_BASH:-}" ]; then
   exit 1
 fi
 
+# De rest van dit script staat tussen accolades, met een exit erin.
+#
+# Bash leest een script tijdens het uitvoeren stukje voor stukje van schijf.
+# Wie het overschrijft terwijl er een run loopt — op 30 september 2026 om 23:05
+# gebeurde precies dat — laat die run verder lezen in de nieuwe versie, vanaf
+# de oude positie: halve regels en variabelen die nooit gezet zijn. Een blok
+# tussen accolades leest bash helemaal in voordat hij begint, en door de exit
+# erin komt hij daarna niet meer terug in het bestand. Kopiëren mag dus altijd.
+#
+# De inhoud is bewust niet ingesprongen: dat zou elke regel van dit script
+# veranderen voor een wijziging van twee regels.
+{
 set -euo pipefail
 
 # De wortel van de installatie. Overschrijfbaar zodat dit script na te spelen
@@ -552,3 +564,7 @@ log "Klaar op $(echo "$AFTER" | cut -c1-8) — container $STATE, gezondheid $HEA
 # Kort tonen wat de dienst zelf bij het opstarten zei; daar staat of hij
 # verbonden is en of de configuratie klopt.
 "$DOCKER" logs --tail 6 "$CONTAINER" 2>&1 | sed 's/^/    /' || true
+
+# Einde van het blok: hierna leest bash dit bestand niet meer.
+exit
+}
