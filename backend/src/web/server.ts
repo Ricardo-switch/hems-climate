@@ -29,6 +29,30 @@ import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
 import { exportInfo, schrijfExport } from './export.js';
 
+/** De versie die het image meekreeg bij het bouwen. */
+export interface Versie {
+  /** Korte commit-hash, of `onbekend`. */
+  readonly commit: string;
+  /** Bouwtijd in ISO 8601, of null. */
+  readonly gebouwd: string | null;
+}
+
+export const ONBEKENDE_VERSIE: Versie = { commit: 'onbekend', gebouwd: null };
+
+/**
+ * Leest de versie uit de omgeving. Het image zet `HEMS_COMMIT` en `HEMS_GEBOUWD`
+ * uit bouwargumenten die `deploy.sh` meegeeft; een lege of ontbrekende waarde
+ * betekent dat niemand ze meegaf.
+ */
+export function versieUitOmgeving(env: NodeJS.ProcessEnv): Versie {
+  const commit = env['HEMS_COMMIT']?.trim();
+  const gebouwd = env['HEMS_GEBOUWD']?.trim();
+  return {
+    commit: commit && commit !== '' ? commit : ONBEKENDE_VERSIE.commit,
+    gebouwd: gebouwd && gebouwd !== '' ? gebouwd : null,
+  };
+}
+
 export interface WebOptions {
   /** Poort om op te luisteren. */
   readonly port: number;
@@ -71,6 +95,14 @@ export interface WebOptions {
    * achter Ingress draaien. Zie besluit 42.
    */
   readonly onboarding?: Onboarding;
+  /**
+   * Welke code er draait (besluit 54). Komt uit het image; zie `versieUitOmgeving`.
+   *
+   * Zonder dit moest "draait de nieuwe versie al?" worden afgeleid uit
+   * herstarts in het logboek. Weglaten geeft `onbekend`, en dat is ook een
+   * antwoord: dan is het image gebouwd zonder dat iemand het zei.
+   */
+  readonly versie?: Versie;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -356,6 +388,7 @@ export class WebServer {
       const snapshot = this.#options.latest();
       sendJson(res, 200, {
         ok: true,
+        versie: this.#options.versie ?? ONBEKENDE_VERSIE,
         laatsteBesluitMs: snapshot?.atMs ?? null,
         analyseBerekendOpMs: this.#options.divergence?.()?.berekendOpMs ?? null,
         kijkers: this.#listeners.size,

@@ -96,4 +96,11 @@ EXPOSE 8080
 HEALTHCHECK --interval=2m --timeout=10s --start-period=90s --retries=2 \
   CMD node -e "const fs=require('fs');const d='/logs';const f=fs.readdirSync(d).filter(n=>n.startsWith('decisions-'));if(!f.length)process.exit(1);const newest=Math.max(...f.map(n=>fs.statSync(d+'/'+n).mtimeMs));process.exit(Date.now()-newest<5*60*1000?0:1)"
 
+# Welke code dit is, voor /api/health (besluit 54). Helemaal achteraan: deze
+# waarden verschillen per uitrol, en alles erboven blijft zo uit de cache komen.
+# Zonder bouwargumenten staat er `onbekend`, en dat zegt de dienst dan ook.
+ARG HEMS_COMMIT=onbekend
+ARG HEMS_GEBOUWD=
+ENV HEMS_COMMIT=$HEMS_COMMIT     HEMS_GEBOUWD=$HEMS_GEBOUWD
+
 CMD ["node", "dist/main.js"]

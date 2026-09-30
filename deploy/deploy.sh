@@ -490,7 +490,13 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
   log "Bouwen…"
   # Eerst bouwen, dan pas omwisselen. Mislukt dit, dan draait de oude container
   # gewoon door en is er niets gebeurd.
-  if ! "${COMPOSE[@]}" build; then
+  # De commit en de bouwtijd gaan het image in, zodat /api/health kan zeggen
+  # wat er draait (besluit 54). Op de commandoregel en niet in het
+  # compose-bestand: dat laatste moet je op de NAS met de hand bijwerken, en
+  # tot dan zou deploy.sh stoppen met uitrollen.
+  VERSIE_COMMIT="$("$GIT" -C "$SRC" rev-parse --short HEAD)"
+  VERSIE_GEBOUWD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if ! "${COMPOSE[@]}" build       --build-arg HEMS_COMMIT="$VERSIE_COMMIT"       --build-arg HEMS_GEBOUWD="$VERSIE_GEBOUWD"; then
     log "FOUT: bouwen mislukt. De draaiende container is niet aangeraakt."
     exit 1
   fi
