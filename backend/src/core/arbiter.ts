@@ -250,6 +250,38 @@ export function arbitrate(
         );
         return;
       }
+
+      /*
+       * Starten vraagt meer dan draaien (besluit 51).
+       *
+       * Een draaiend apparaat mag door zolang zijn opname in het budget past,
+       * met `stopImportW` tolerantie. Starten op precies zoveel overschot als
+       * het apparaat trekt is een gok: zakt de zon een minuut later weg, dan
+       * houdt `minRunMinutes` het een kwartier aan terwijl het huis netstroom
+       * koopt. `startSurplusW` is de marge die dat voorkomt — hij stond in de
+       * configuratie en in het model, maar niets dwong hem af.
+       *
+       * Geteld zonder de tolerantie: die is er voor een apparaat dat al draait,
+       * niet om een start mee te halen. Een geparkeerd apparaat (standby) valt
+       * onder de lagere `resumeSurplusW`; dat is kortstondig uitvallen, geen
+       * koude start.
+       */
+      const nu = current?.action.ok ? current.action.value : undefined;
+      if (!isRunning(nu)) {
+        const drempel =
+          nu === 'standby'
+            ? ctx.config.power.resumeSurplusW
+            : ctx.config.power.startSurplusW;
+        const vrij = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
+        if (vrij < drempel) {
+          reject(
+            intent,
+            'start_threshold_not_met',
+            `${Math.max(0, vrij)} W vrij, ${drempel} W nodig om te starten`,
+          );
+          return;
+        }
+      }
       allocatedW += intent.budgetW;
     }
 

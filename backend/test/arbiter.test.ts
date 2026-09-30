@@ -626,3 +626,54 @@ describe('het comfortplafond (besluit 50)', () => {
     expect(doorComfort.map((i) => i.actuatorId)).toEqual(['nest']);
   });
 });
+
+describe('starten vraagt meer dan draaien (besluit 51)', () => {
+  // Alleen de zolder wil koelen: de woonkamer staat op 21,0 en valt daarmee net
+  // buiten zijn bufferband. `startSurplusW` is 1000, `resumeSurplusW` 600.
+  const zolderRejectie = (d: ReturnType<typeof run>) =>
+    d.rejected.find((r) => r.intent.actuatorId === 'ac-zolder')?.blockedBy;
+  const zolderStart = (d: ReturnType<typeof run>) =>
+    d.commands.some(
+      (c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder' && c.action === 'cool',
+    );
+
+  it('start niet op een overschot dat het apparaat net dekt', () => {
+    // 900 W overschot is genoeg voor de 750 W van de zolder-airco, maar geen
+    // marge: een wolk later draait hij een kwartier op netstroom.
+    const d = run(buildState({ gridPowerW: -900 }));
+    expect(zolderStart(d)).toBe(false);
+    expect(zolderRejectie(d)).toBe('start_threshold_not_met');
+  });
+
+  it('start wel zodra de marge er is', () => {
+    const d = run(buildState({ gridPowerW: -1000 }));
+    expect(zolderStart(d)).toBe(true);
+  });
+
+  it('laat een draaiend apparaat door op de tolerantie, zonder startdrempel', () => {
+    // 30 W invoer, 750 W eigen opname: 770 W budget voor een claim van 750.
+    // Uitschakelen voor een dip van 30 W zou duurder zijn dan doordraaien.
+    const d = run(
+      buildState({
+        gridPowerW: 30,
+        actuators: { 'ac-zolder': actuator('cool', { setpointC: 21.5, powerW: 750 }) },
+      }),
+    );
+    expect(d.accepted.some((i) => i.actuatorId === 'ac-zolder' && i.action === 'cool')).toBe(true);
+    expect(zolderRejectie(d)).toBeUndefined();
+  });
+
+  it('laat een geparkeerd apparaat hervatten op de lagere drempel', () => {
+    // 800 W vrij: onder de startdrempel, boven de hervatdrempel. Een koude
+    // start wacht, een apparaat dat net geparkeerd werd pakt het weer op.
+    const koud = run(buildState({ gridPowerW: -800 }));
+    const geparkeerd = run(
+      buildState({
+        gridPowerW: -800,
+        actuators: { 'ac-zolder': actuator('standby', { setpointC: 25, minutesAgo: 10 }) },
+      }),
+    );
+    expect(zolderRejectie(koud)).toBe('start_threshold_not_met');
+    expect(zolderStart(geparkeerd)).toBe(true);
+  });
+});

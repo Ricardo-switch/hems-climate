@@ -32,6 +32,9 @@ export const BLOCK_CODES = [
   'stabilisation_active',
   'settling_after_switch',
   'insufficient_power_budget',
+  // Er is genoeg om te draaien, maar niet genoeg marge om te starten
+  // (besluit 51). Anders dan een tekort: een apparaat dat al draaide mocht door.
+  'start_threshold_not_met',
   'capability_missing',
   'setpoint_out_of_range',
   'superseded_by_higher_priority',

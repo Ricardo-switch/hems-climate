@@ -1732,6 +1732,38 @@ script te blijven halen zijn.
 
 ---
 
+## 51. Starten vraagt meer dan draaien
+
+`power.startSurplusW` (1000 W) en `power.resumeSurplusW` (600 W) stonden in de
+configuratie, werden ingelezen en gecontroleerd, en stonden in het model
+beschreven als "overschot waarboven een apparaat mag starten". Geen strategie
+en de arbiter zelf lazen ze. De arbiter startte een airco zodra zijn schatting in
+het budget paste — de woonkamer bij ongeveer 850 W, de zolder bij 700. Precies
+het soort stilte waar dit project om begonnen is: een instelling die er staat en
+niets doet.
+
+*Besluit:* een apparaat dat niet draait start pas wanneer er minstens
+`startSurplusW` vrij is, geteld zonder de tolerantie van `stopImportW` — die is
+er voor een apparaat dat al draait, niet om een start mee te halen. Een
+geparkeerd apparaat (standby) valt onder `resumeSurplusW`: dat is kortstondig
+uitvallen, geen koude start. Een draaiend apparaat merkt er niets van. De
+afwijzing heeft een eigen code, `start_threshold_not_met`, zodat de weergave
+"wacht op genoeg zon om te starten" kan zeggen in plaats van "te weinig budget".
+
+*Wat het doet, eerlijk gezegd: weinig aan de netstroom.* Het haalt ongeveer
+0,1 kWh per tien dagen weg (zie de tabel bij 49b); dat verschil maakte 49b. Wat
+het wel doet is minder starts op de rand — in september 642 keer tegengehouden
+— en de arbiter dichter bij het oude systeem, dat dezelfde drempel had. Over
+het augustusvenster stijgt de overeenstemming van 13.803 naar 13.867 minuten
+(woonkamer) en van 12.962 naar 13.211 (zolder), en zakken de momenten waarop de
+arbiter ruimer is dan het oude systeem.
+
+*De replay* krijgt een nieuwe referentie: 939 bytes, sha256 `e2c178fd…`. Het
+verschil met `6fdeb5e2…` komt uit de drempel; 49b raakt de replay niet, want
+die geeft geen eigen stand mee.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
