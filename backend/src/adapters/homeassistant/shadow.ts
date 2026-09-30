@@ -369,10 +369,11 @@ export class ShadowRunner {
      * hoort pas bij de vólgende evaluatie te gelden.
      */
     this.#eigen.apply(decision.commands, nowMs);
-    // En de apparaatcommando's op de veronderstelde stand (besluit 49). Ook ná
+    // En de veronderstelde stand van de apparaten (besluit 49, 49b): de
+    // commando's erop toepassen, of loslaten zolang de bewoner stuurt. Ook ná
     // het besluit, en om dezelfde reden: wat de arbiter zojuist gestuurd zou
     // hebben, geldt pas bij de vólgende evaluatie.
-    this.#schaduwApparaten.apply(decision.commands, nowMs);
+    this.#schaduwApparaten.volg(decision);
 
     this.#ticks += 1;
     await this.#record(decision, trigger);

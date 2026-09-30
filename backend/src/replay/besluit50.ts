@@ -103,7 +103,7 @@ async function meet(
     const config = configAt(basis, cursor);
     const state = snapshot(config, cursor, t, undefined, schaduw);
     const decision = decide({ config, state, strategies });
-    schaduw.apply(decision.commands, t);
+    schaduw.volg(decision);
     ticks += 1;
 
     const netW = cursor.number('sensor.p1_meter_power') ?? 0;

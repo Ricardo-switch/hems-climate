@@ -144,13 +144,17 @@ export function buildSystemState(
    */
   eigen: OwnStateReader = NEUTRAL_OWN_STATE,
   /**
-   * Wat de armatuur zou doen als de arbiter het stuur had. Weggelaten betekent:
-   * neem het echte apparaat, wat juist is zodra er werkelijk geschakeld wordt.
-   * Zie `shadow-actuators.ts` (besluit 49).
+   * Wat de apparaten zouden doen als de arbiter het stuur had. Weggelaten
+   * betekent: neem het echte apparaat, wat juist is zodra er werkelijk
+   * geschakeld wordt. Zie `shadow-actuators.ts` (besluit 49).
    */
   schaduw: SchaduwApparatenReader = GEEN_SCHADUW,
 ): SystemState {
   const actuators: Record<string, ActuatorState> = {};
+  // Wat de échte apparaten opnemen, en of de schaduw ergens van de
+  // werkelijkheid afwijkt. Zie `PowerState.observedDrawW` (besluit 49b).
+  let echtVerbruikW = 0;
+  let veronderstelling = false;
   for (const b of bindingsVan(config)) {
     const haState = source.state(b.climateEntity) ?? 'unavailable';
     const setpointC = source.attrNumber(b.climateEntity, 'temperature');
@@ -166,17 +170,26 @@ export function buildSystemState(
 
     const echteActie = mapAction(haState, setpointC, b.standby);
     const eigenStand = schaduw.apparaat(b.actuatorId);
+    if (eigenStand != null) veronderstelling = true;
+
+    // Dezelfde regel als `reclaimableW` in de kern: een draaiend apparaat telt
+    // met zijn meting, en zonder meting met zijn schatting.
+    const echtDraait =
+      echteActie.ok && (echteActie.value === 'heat' || echteActie.value === 'cool');
+    if (echtDraait) {
+      echtVerbruikW +=
+        powerW ?? config.actuators.find((a) => a.id === b.actuatorId)!.power.estimatedW;
+    }
 
     /*
      * Meet de vermogenssensor nog wel ons apparaat?
      *
      * Zodra de veronderstelde stand van de echte afwijkt, hoort de meting bij
-     * een apparaat dat iets anders doet. Hem dan toch gebruiken zou het budget
-     * vergiftigen: `reclaimableW` telt de gemeten 0 W van een echt apparaat dat
-     * uit staat, terwijl ons veronderstelde apparaat draait en dus wél terug te
-     * winnen is. Onbruikbaar melden is eerlijker dan verkeerd melden, en beide
-     * lezers — `reclaimableW` en `claimW` — vallen dan terug op `estimatedW`,
-     * precies waar die schatting voor bedoeld is.
+     * een apparaat dat iets anders doet. Zou `claimW` in pv-overschot hem toch
+     * gebruiken, dan vroeg een veronderstelde airco de gemeten 0 W van een echt
+     * apparaat dat uit staat — gratis draaien. Onbruikbaar melden is eerlijker
+     * dan verkeerd melden, en dan valt `claimW` terug op `estimatedW`, precies
+     * waar die schatting voor bedoeld is.
      */
     const meetOnsApparaat =
       eigenStand?.action == null ||
@@ -268,6 +281,10 @@ export function buildSystemState(
     actuators,
     power: {
       gridPowerW: grid == null ? unavailable<number>() : value(grid, nowMs),
+      // Alleen wanneer de schaduw iets veronderstelt. Zonder schaduw volgt het
+      // verbruik uit de apparaten zelf, en rekent de kern het precies zo uit als
+      // altijd — dat houdt de replay bit-identiek.
+      ...(veronderstelling ? { observedDrawW: echtVerbruikW } : {}),
     },
     timers: {
       stabilisation: timerVan(config, source, eigen, 'stabilisation'),

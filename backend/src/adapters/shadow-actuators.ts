@@ -45,8 +45,9 @@
  * open waar het huis begint. Dat tweede is uit te leggen.
  */
 
-import type { Command } from '../core/decision.js';
+import type { Command, Decision } from '../core/decision.js';
 import type { Action } from '../core/model.js';
+import { isHandsOff } from '../core/model.js';
 
 /**
  * De veronderstelde stand van één apparaat.
@@ -79,6 +80,31 @@ export class SchaduwApparaten implements SchaduwApparatenReader {
 
   apparaat(actuatorId: string): SchaduwApparaat | null {
     return this.#stand.get(actuatorId) ?? null;
+  }
+
+  /**
+   * Werkt de boekhouding bij na een besluit. Dit is wat de dienst en de
+   * meetscripts aanroepen; `apply` is het onderdeel ervan.
+   *
+   * **Zolang de bewoner stuurt, volgt de boekhouding de werkelijkheid**
+   * (besluit 49b). In `handmatig` geeft de arbiter bewust geen commando's, dus
+   * bleef de veronderstelde stand hangen op zijn laatste opdracht — terwijl de
+   * bewoner het echte apparaat allang anders had gezet. In het septembervenster
+   * gaf dat 589 minuten een veronderstelde airco die "koelde" terwijl hij uit
+   * stond, en dus netstroom die niemand kocht. Onder echte regeling pakt de
+   * arbiter het na handmatig op vanaf de stand waarin de bewoner het apparaat
+   * achterliet; vergeten is precies dat.
+   *
+   * Behalve bij de failsafe: die stuurt ook in handmatig de assist-apparaten
+   * uit, en die commando's gelden.
+   */
+  volg(decision: Decision): void {
+    const { mode, failsafe } = decision.explanation;
+    if (isHandsOff(mode) && !failsafe.active) {
+      this.#stand.clear();
+      return;
+    }
+    this.apply(decision.commands, decision.atMs);
   }
 
   /**
