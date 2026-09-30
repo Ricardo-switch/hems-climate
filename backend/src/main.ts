@@ -21,6 +21,7 @@ import { haalRegisters } from './adapters/homeassistant/discovery.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versieUitOmgeving } from './web/server.js';
+import { leesOpstart } from './opstart.js';
 import { DivergenceCache } from './web/divergence.js';
 import { Onboarding } from './web/onboarding.js';
 
@@ -45,11 +46,6 @@ function loadDotEnv(file: string): boolean {
 const packageRoot = resolve(dirname(new URL(import.meta.url).pathname), '..');
 const candidates = [resolve(process.cwd(), '.env'), join(packageRoot, '.env')];
 const loadedFrom = candidates.find((file) => loadDotEnv(file));
-
-function read(name: string): string | null {
-  const v = process.env[name];
-  return v && v.trim() !== '' ? v.trim() : null;
-}
 
 function fail(problems: readonly string[]): never {
   console.error('Kan de schaduwmodus niet starten.');
@@ -161,42 +157,20 @@ if (process.argv.includes('--check-config')) {
 }
 
 /*
- * Draaien we als Home Assistant-add-on?
- *
- * De Supervisor zet `SUPERVISOR_TOKEN` in de omgeving en proxyt Home Assistant
- * op `ws://supervisor/core/websocket`. Daarmee vervalt het long-lived token —
- * en daarmee de hele klasse problemen eromheen: geen token in `.env`, geen
- * token dat verloopt of per ongeluk wordt ingetrokken, en niets om te plakken.
- *
- * De omgeving wint nog steeds: wie `HA_URL` en `HA_TOKEN` zélf zet, krijgt die.
- * Dat houdt de NAS-uitrol werkend zolang die nog draait, en maakt het mogelijk
- * om de add-on tegen een andere HA te richten.
+ * Alles wat de omgeving zegt over hoe deze dienst draait, op één plek en getest
+ * (besluit 55): add-on of niet, de verbinding, de weergave, de schrijfdeur en
+ * de tijden. Hier wordt alleen nog uitgevoerd.
  */
-const supervisorToken = read('SUPERVISOR_TOKEN');
-const alsAddon = supervisorToken != null && read('HA_URL') == null && read('HA_TOKEN') == null;
-
-const url = alsAddon ? 'http://supervisor/core/websocket' : read('HA_URL');
-const token = alsAddon ? supervisorToken : read('HA_TOKEN');
-
-// Onderscheid tussen "staat er niet" en "staat er wel maar is leeg" — dat
-// tweede is de fout die je maakt als je het bestand hebt aangemaakt maar het
-// token nog moet plakken, en dan wil je dat ook horen.
-const problems: string[] = [];
-if (url == null) {
-  problems.push(
-    'HA_URL' in process.env
-      ? 'HA_URL staat er wel, maar is leeg.'
-      : 'HA_URL ontbreekt.',
-  );
+const opstart = leesOpstart(process.env);
+const { alsAddon } = opstart;
+const { url, token } = opstart.ha;
+if (opstart.haProblemen.length > 0) fail(opstart.haProblemen);
+if (opstart.fouten.length > 0) {
+  console.error('Kan de schaduwmodus niet starten:');
+  console.error('');
+  for (const fout of opstart.fouten) console.error(`  ${fout}`);
+  process.exit(1);
 }
-if (token == null) {
-  problems.push(
-    'HA_TOKEN' in process.env
-      ? 'HA_TOKEN staat er wel, maar is leeg — het token is nog niet geplakt.'
-      : 'HA_TOKEN ontbreekt.',
-  );
-}
-if (problems.length > 0) fail(problems);
 
 /**
  * Kijkt of het token er überhaupt uitziet als een JWT, voordat we Home
@@ -257,12 +231,9 @@ if (process.argv.includes('--discover')) {
   process.exit(await discoverCli({ url: url!, token: token!, doel }));
 }
 
-const tickSeconds = Number(process.env['SHADOW_TICK_SECONDS'] ?? 30);
-const minInterval = Number(process.env['SHADOW_MIN_INTERVAL_SECONDS'] ?? 15);
-const watchdog = Number(process.env['SHADOW_WATCHDOG_MINUTES'] ?? 10);
-const logDir = process.env['SHADOW_LOG_DIR'] ?? 'data/shadow';
+const { tickSeconds, logDir } = opstart;
 
-/**
+/*
  * De webweergave staat standaard uit.
  *
  * Deze dienst houdt het HA-token vast en draait maanden onbewaakt. Luisteren
@@ -270,13 +241,8 @@ const logDir = process.env['SHADOW_LOG_DIR'] ?? 'data/shadow';
  * starten. De compose op de NAS zet de poort; een losse `npm run shadow`
  * blijft dicht.
  */
-const webPortRaw = process.env['HEMS_WEB_PORT'];
-const webPort = webPortRaw == null || webPortRaw.trim() === '' ? null : Number(webPortRaw);
-if (webPort != null && (!Number.isInteger(webPort) || webPort < 1 || webPort > 65535)) {
-  console.error(`HEMS_WEB_PORT is geen geldige poort: "${webPortRaw}".`);
-  process.exit(1);
-}
-const webDir = process.env['HEMS_WEB_DIR'] ?? defaultWebDir(packageRoot);
+const webPort = opstart.web.poort;
+const webDir = opstart.web.dir ?? defaultWebDir(packageRoot);
 
 const strategies = defaultStrategies();
 
@@ -286,8 +252,8 @@ const strategies = defaultStrategies();
 let site;
 try {
   site = await loadSiteConfig({
-    explicitPath: process.env['HEMS_CONFIG'],
-    siteId: process.env['HEMS_SITE'],
+    explicitPath: opstart.configPad ?? undefined,
+    siteId: opstart.siteId ?? undefined,
     knownStrategies: strategies.ids,
   });
 } catch (error) {
@@ -304,8 +270,7 @@ try {
    * Zonder die zekerheid is een pagina die configuratie wegschrijft iets wat
    * je niet aan je netwerk hangt (besluit 42).
    */
-  const magOnboarden = webPort != null && (alsAddon || read('HEMS_ONBOARDING') === '1');
-  if (error instanceof ConfigError && error.soort === 'ontbreekt' && magOnboarden) {
+  if (error instanceof ConfigError && error.soort === 'ontbreekt' && opstart.onboarding.aan) {
     console.log('─'.repeat(64));
     console.log('  NOG GEEN INSTALLATIE INGESTELD');
     console.log('─'.repeat(64));
@@ -353,9 +318,9 @@ const runner =
         config: site.config,
         strategies,
         client,
-        tickSeconds: Number.isFinite(tickSeconds) ? tickSeconds : 30,
-        minIntervalSeconds: Number.isFinite(minInterval) ? minInterval : 15,
-        watchdogMinutes: Number.isFinite(watchdog) ? watchdog : 10,
+        tickSeconds,
+        minIntervalSeconds: opstart.minIntervalSeconds,
+        watchdogMinutes: opstart.watchdogMinutes,
         logDir,
         ...(webPort == null
           ? {}
@@ -385,19 +350,17 @@ const analyse = webPort == null || logDir === '' ? null : new DivergenceCache({ 
  * Wie hem aanzet zonder inlog ervoor, zet een pagina op zijn netwerk die
  * bestanden wegschrijft. Vandaar de waarschuwing bij het starten.
  */
-const onboardingGevraagd = read('HEMS_ONBOARDING') === '1';
-const onboardingAan = webPort != null && (alsAddon || onboardingGevraagd);
-if (onboardingGevraagd && !alsAddon) {
+if (opstart.onboarding.zonderIngress) {
   console.warn('LET OP: de onboarding staat aan zonder Ingress ervoor.');
   console.warn('  Deze weergave heeft geen inlog. Doe dit alleen op een machine');
   console.warn('  waar je zelf bij bent, en zet HEMS_ONBOARDING daarna weer uit.');
 }
 
 const onboarding =
-  onboardingAan
+  opstart.onboarding.aan
     ? new Onboarding({
         registers: () => haalRegisters(client, laatsteStates),
-        sitesDir: process.env['HEMS_SITES_DIR'] ?? join(process.cwd(), 'config', 'sites'),
+        sitesDir: opstart.sitesDir ?? join(process.cwd(), 'config', 'sites'),
         knownStrategies: strategies.ids,
       })
     : null;
@@ -405,7 +368,7 @@ const onboarding =
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
-    host: process.env['HEMS_WEB_HOST'] ?? '0.0.0.0',
+    host: opstart.web.host,
     webDir,
     config: site?.config ?? null,
     latest: () => runner?.latest ?? null,
@@ -431,9 +394,9 @@ if (site) {
 }
 console.log(`  instellingen     ${loadedFrom ?? 'uit de omgeving'}`);
 console.log(`  hartslag         ${tickSeconds} s`);
-console.log(`  min. interval    ${minInterval} s tussen twee evaluaties`);
+console.log(`  min. interval    ${opstart.minIntervalSeconds} s tussen twee evaluaties`);
 console.log(
-  `  bewaking         ${watchdog > 0 ? `afsluiten na ${watchdog} min zonder besluit` : 'uit'}`,
+  `  bewaking         ${opstart.watchdogMinutes > 0 ? `afsluiten na ${opstart.watchdogMinutes} min zonder besluit` : 'uit'}`,
 );
 console.log(`  logboek          ${logDir}/decisions-JJJJ-MM-DD.ndjson`);
 console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : 'uit'}`);
