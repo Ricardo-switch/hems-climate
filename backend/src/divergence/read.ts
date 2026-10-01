@@ -184,20 +184,36 @@ export function linesOf(path: string): Interface {
 }
 
 /**
+ * Wat een kort record weglaat en de lezer dus voortdraagt, van regel naar regel
+ * en van dagbestand naar dagbestand.
+ *
+ * Een eigen object, zodat wie halverwege wil stoppen en later verdergaan (de
+ * tussenstand van de terugblik, besluit 63) het kan bewaren en teruggeven.
+ */
+export interface ReaderCarry {
+  lastLegacy: string | null;
+  lastObserved: Record<string, string>;
+  arbiterAction: Record<string, string>;
+}
+
+export function newReaderCarry(): ReaderCarry {
+  return { lastLegacy: null, lastObserved: {}, arbiterAction: {} };
+}
+
+/**
  * Leest de logboeken en levert momenten op, in tijdsvolgorde.
  *
  * Kapotte regels worden overgeslagen in plaats van fataal: een logboek dat
  * halverwege een regel is afgekapt doordat de container werd gestopt mag de
  * hele analyse niet blokkeren.
+ *
+ * `carry` begint leeg, of bij wat een eerdere lezing achterliet; na afloop
+ * staat erin waar deze lezing eindigde.
  */
 export async function* readMoments(
   files: readonly string[],
+  carry: ReaderCarry = newReaderCarry(),
 ): AsyncGenerator<Moment> {
-  // Wat een kort record weglaat, dragen we voort.
-  let lastLegacy: string | null = null;
-  let lastObserved: Record<string, string> = {};
-  let arbiterAction: Record<string, string> = {};
-
   for (const file of files) {
     for await (const line of linesOf(file)) {
       if (line.trim() === '') continue;
@@ -209,8 +225,8 @@ export async function* readMoments(
       }
       if (typeof raw.t !== 'number') continue;
 
-      if (raw.legacy != null) lastLegacy = raw.legacy;
-      if (raw.obs) lastObserved = raw.obs;
+      if (raw.legacy != null) carry.lastLegacy = raw.legacy;
+      if (raw.obs) carry.lastObserved = raw.obs;
 
       // Alleen een volledig record herziet de wens van de arbiter.
       if (raw.changed === true) {
@@ -224,7 +240,7 @@ export async function* readMoments(
             next[c.actuatorId] = c.action;
           }
         }
-        arbiterAction = next;
+        carry.arbiterAction = next;
       }
 
       const zones = raw.zones
@@ -251,8 +267,8 @@ export async function* readMoments(
           ? { ...EMPTY_BUDGET, ...raw.budget }
           : EMPTY_BUDGET,
         zones,
-        observed: lastObserved,
-        legacy: lastLegacy,
+        observed: carry.lastObserved,
+        legacy: carry.lastLegacy,
         commands: raw.commands ?? [],
         rejected: (raw.rejected ?? []).map((r) => ({
           actuatorId: r.intent.actuatorId,
@@ -260,12 +276,12 @@ export async function* readMoments(
           blockedBy: r.blockedBy,
         })),
         accepted: raw.accepted ?? [],
-        arbiterAction,
+        arbiterAction: carry.arbiterAction,
         failsafe: raw.failsafe?.active === true,
         outdoorC: raw.buitenC ?? null,
         solarW: raw.zonW ?? null,
         full: raw.changed === true,
-        handsOff: handsOffAt(mode, lastLegacy),
+        handsOff: handsOffAt(mode, carry.lastLegacy),
       };
     }
   }

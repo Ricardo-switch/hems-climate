@@ -17,11 +17,30 @@
  * kan verlopen zonder dat iemand het merkt. Nu staat er bij elk antwoord wanneer
  * hij is berekend en hoe lang dat duurde, en kan de pagina daar eerlijk over
  * zijn.
+ *
+ * **Wat er sinds besluit 63 wel bewaard wordt: een tussenstand, geen uitkomst.**
+ * Die schatting van vier seconden bleek op de NAS 35 te zijn, na 26 dagen. Dus
+ * bewaren we de doorlopende stand van de analyse na de laatste afgesloten dag,
+ * en leest een ronde alleen wat daarna kwam (`review-checkpoint.ts`). De
+ * uitkomst wordt nog steeds elke ronde berekend. Een tussenstand die niet meer
+ * klopt met de bestanden wordt weggegooid, en een test bewaakt dat voortzetten
+ * precies hetzelfde oplevert als opnieuw rekenen.
  */
 
-import { analyse, bucketsPerDay, BUCKET_CODE, type Episode } from '../divergence/analyse.js';
-import { findLogFiles, readMoments } from '../divergence/read.js';
-import { statusFromFiles, type DatasetStatus } from './dataset.js';
+import { stat } from 'node:fs/promises';
+import { basename } from 'node:path';
+
+import { Analyser, bucketsPerDay, BUCKET_CODE, type Episode } from '../divergence/analyse.js';
+import { findLogFiles, newReaderCarry, readMoments } from '../divergence/read.js';
+import { DatasetCounter, type DatasetStatus } from './dataset.js';
+import {
+  CHECKPOINT_VERSION,
+  coveredPrefix,
+  loadCheckpoint,
+  saveCheckpoint,
+  type Checkpoint,
+  type DayFile,
+} from './review-checkpoint.js';
 
 /**
  * Een terugkerende afwijking, samengevat.
@@ -101,6 +120,8 @@ export interface DivergenceReport {
   readonly berekendOpMs: number;
   readonly duurMs: number;
   readonly bestanden: number;
+  /** Hoeveel daarvan deze ronde gelezen zijn; de rest zat in de tussenstand. */
+  readonly opnieuwGelezen: number;
   readonly vanMs: number;
   readonly totMs: number;
   readonly momenten: number;
@@ -137,6 +158,9 @@ export class DivergenceCache {
   #latest: DivergenceReport | null = null;
   #timer: NodeJS.Timeout | null = null;
   #busy = false;
+  /** De stand na de laatste afgesloten dag (besluit 63). */
+  #checkpoint: Checkpoint | null = null;
+  #checkpointLoaded = false;
 
   constructor(options: DivergenceOptions) {
     this.#options = {
@@ -162,30 +186,86 @@ export class DivergenceCache {
     this.#busy = true;
     const t0 = this.#options.now();
     try {
-      const files = await findLogFiles(this.#options.logDir);
+      const { logDir, minEpisodeMinutes } = this.#options;
+      const files = await findLogFiles(logDir);
       if (files.length === 0) {
         this.#latest = null;
         return null;
       }
 
-      const a = await analyse(readMoments(files), {
-        minEpisodeMinutes: this.#options.minEpisodeMinutes,
-      });
+      /*
+       * Afgesloten is een dag waar niets meer bij kan komen. De dagbestanden
+       * heten naar de UTC-datum van het besluit; tien minuten na middernacht
+       * UTC is de vorige dag dus dicht.
+       */
+      const closedBefore = new Date(this.#options.now() - 10 * 60_000).toISOString().slice(0, 10);
+      const infos: (DayFile & { path: string })[] = await Promise.all(
+        files.map(async (path) => {
+          const name = basename(path);
+          return { path, name, day: name.slice(10, 20), size: (await stat(path)).size };
+        }),
+      );
+      const closed = infos.filter((f) => f.day < closedBefore);
+      const recent = infos.slice(closed.length);
+
+      if (!this.#checkpointLoaded) {
+        this.#checkpointLoaded = true;
+        this.#checkpoint = await loadCheckpoint(logDir);
+      }
+      const saved = this.#checkpoint;
+      const covered = saved == null ? null : coveredPrefix(saved, closed, minEpisodeMinutes);
+
+      // Verder vanaf een kopie: de tussenstand zelf blijft onaangeroerd.
+      const carry = saved && covered != null ? structuredClone(saved.carry) : newReaderCarry();
+      const analyser = new Analyser(
+        { minEpisodeMinutes },
+        saved && covered != null ? structuredClone(saved.analyser) : undefined,
+      );
+      const counter = new DatasetCounter(
+        saved && covered != null ? structuredClone(saved.counter) : undefined,
+      );
+
+      const feed = async (paths: readonly string[]): Promise<void> => {
+        for await (const m of readMoments(paths, carry)) {
+          analyser.add(m);
+          counter.add(m);
+        }
+      };
+
+      const newlyClosed = closed.slice(covered ?? 0);
+      await feed(newlyClosed.map((f) => f.path));
+      if (newlyClosed.length > 0 || covered == null) {
+        this.#checkpoint = {
+          version: CHECKPOINT_VERSION,
+          minEpisodeMinutes,
+          files: closed.map(({ day, name, size }) => ({ day, name, size })),
+          carry: structuredClone(carry),
+          analyser: analyser.snapshot(),
+          counter: counter.snapshot(),
+        };
+        // Lukt het niet, dan rekent de volgende herstart alles opnieuw. Dat is
+        // traag, niet fout.
+        await saveCheckpoint(logDir, this.#checkpoint).catch((error: unknown) => {
+          this.#options.write(`  tussenstand van de terugblik niet bewaard: ${String(error)}`);
+        });
+      }
+      await feed(recent.map((f) => f.path));
+
+      const a = analyser.result();
       if (a.moments === 0) {
         this.#latest = null;
         return null;
       }
-
-      // Tweede keer langs dezelfde bestanden. Bewust, want het is een andere
-      // vraag: de analyse hierboven vergelijkt twee regelaars, deze telt wat de
-      // opname heeft gezien. Ze in één doorloop persen zou beide functies
-      // troebel maken voor 120 ms winst per kwartier.
-      const dataset = await statusFromFiles(files);
+      // In dezelfde doorloop als de analyse, met een eigen optelling: het zijn
+      // twee vragen (twee regelaars vergelijken, en tellen wat de opname zag),
+      // maar wel over dezelfde momenten.
+      const dataset = counter.result();
 
       this.#latest = {
         berekendOpMs: this.#options.now(),
         duurMs: this.#options.now() - t0,
         bestanden: files.length,
+        opnieuwGelezen: newlyClosed.length + recent.length,
         vanMs: a.fromMs,
         totMs: a.toMs,
         momenten: a.moments,

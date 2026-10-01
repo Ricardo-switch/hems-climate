@@ -79,6 +79,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [24. Tailwind met een bouwstap, niet via een CDN](#24-tailwind-met-een-bouwstap-niet-via-een-cdn)
 - [26. De terugblik hoort bij de weergave, maar is een andere waarheid](#26-de-terugblik-hoort-bij-de-weergave-maar-is-een-andere-waarheid)
 - [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
+- [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
 
 **Veiligheid**
 
@@ -2406,6 +2407,46 @@ zijn voorganger. Zonder het terugnemen faalt die test.
 
 ---
 
+## 63. De terugblik gaat verder waar hij was
+
+*Onderwerp: weergave · Status: geldig*
+
+De terugblik las elk kwartier de hele opname opnieuw. Besluit 26 schatte dat
+op vier seconden na een winter. Op de NAS was het na 26 dagen al 35 seconden,
+na het comprimeren 16,6 (besluit 58). Na een winter zouden dat minuten van elk
+kwartier worden. Maar een afgesloten dag verandert niet meer.
+
+*Besluit:* na de laatste afgesloten dag bewaart de dienst de doorlopende stand
+van de terugblik, en leest elke ronde alleen wat daarna kwam. Afgesloten is een
+dag tien minuten na middernacht UTC, want zo heten de dagbestanden. De
+tussenstand staat in het geheugen én in `review-checkpoint.bin` in de logmap,
+zodat ook de eerste ronde na een uitrol snel is.
+
+*Een tussenstand, geen uitkomst.* Besluit 26 wilde geen vooraf berekende
+uitkomst bewaren, omdat die stil kan verouderen. Dat blijft zo: de uitkomst
+wordt elke ronde berekend. Wat bewaard wordt, is de volledige doorlopende stand
+van de lezer, de analyse en de datasetmeter. Die dragen dingen over dagen heen
+mee: een afwijking die over middernacht doorloopt, of wat een kort record
+weglaat. Daarom is voortzetten precies hetzelfde als opnieuw rekenen. De
+analyse en de datasetmeter zijn daarvoor optellingen geworden (`Analyser`,
+`DatasetCounter`); hun rekenregels zijn niet veranderd.
+
+*Wanneer hij vervalt:* als een afgesloten dag anders is dan toen. Comprimeren
+telt niet: dat verandert naam en grootte, niet de inhoud. Ook een andere versie
+van de tussenstand of andere instellingen laten hem vervallen. Dan rekent de
+terugblik één keer alles opnieuw: dat kost tijd, maar is nooit fout.
+
+*Getoetst* met een generator over zes dagen, met afwijkingen over middernacht:
+stap voor stap, na een herstart en na comprimeren gelijk aan in één keer. En op
+de echte logboeken van 27 dagen (217.581 momenten): alles opnieuw 751 ms, verder
+na een herstart 18 ms, dezelfde uitkomst. Gemeten op een pc; de NAS is ruim
+twintig keer trager. Zonder de meegedragen stand van de lezer falen drie van de
+zes tests.
+
+De pagina toont erbij hoeveel dagbestanden er die ronde echt gelezen zijn.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **Twee starts in dezelfde minuut.** Dekt het overschot beide airco's, dan
@@ -2439,17 +2480,6 @@ zijn voorganger. Zonder het terugnemen faalt die test.
   woorden. Uit te zoeken bij 6c.
 - **De dagdoelen van de datasetmeter zijn op dit huis geijkt** — dertig
   winterdagen, en de seizoenen van Nederland. Zie besluit 27.
-- **De terugblik rekent alles opnieuw door.** Elk kwartier de hele opname, ook
-  het deel dat niet meer verandert. De schatting hier was 120 ms en over een
-  winter een seconde of vier. Gemeten op de NAS op 30 september 2026, na 26
-  dagen: **35 seconden** per keer (`duurMs` in `/api/divergence`). Na het
-  comprimeren van besluit 58 werd dat 16,6 seconden — minder bytes van de schijf
-  weegt zwaarder dan het uitpakken — al kostte de eerste run na een herstart
-  99 seconden. Het draait asynchroon en houdt de regeling niet op, maar het
-  groeit met elke dag mee: na een winter wordt het minuten van elk kwartier. Een tussenstand per afgesloten
-  dag wordt daarmee de moeite waard — met een test die bewaakt dat de
-  tussenstand gelijk blijft aan opnieuw rekenen, want een cache die stil
-  verloopt is precies wat besluit 11 wilde vermijden.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**
   `script.klimaat_controller_apply` zet `input_boolean.zolder_started_now` en
   `..._woonkamer_started_now` aan tijdens de run en pas als laatste stap weer
