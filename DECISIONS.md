@@ -2560,8 +2560,10 @@ Valt de opname stil, dan merkte niemand het tot iemand de pagina opende. Dat
 gebeurt bijvoorbeeld als de NAS de verbinding met Home Assistant kwijtraakt, of
 als de dienst in een herstartlus zit. De healthcheck van Docker kleurde de
 container rood, maar alleen in Container Manager, en daar kijkt niemand
-dagelijks. Een week winter die ontbreekt, komt niet terug: de recorder van Home
-Assistant bewaart maar tien dagen, en de winter laat zich niet overdoen.
+dagelijks. Van een week winter die ontbreekt, is de ruwe invoer alleen terug te
+halen zolang de recorder van Home Assistant hem nog heeft. Dat is bij de
+standaardinstelling tien dagen. De besluiten van die week zijn er nooit
+geweest, en de winter laat zich niet overdoen.
 
 *Besluit:* `deploy.sh` draait toch elke vijf minuten, en kijkt daarbij hoe oud
 het nieuwste beslislogboek is. Is dat ouder dan een half uur, dan eindigt de
