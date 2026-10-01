@@ -26,7 +26,7 @@ import { parseSiteConfig } from '../src/config/schema.js';
 import { decide } from '../src/core/decide.js';
 import { defaultStrategies } from '../src/index.js';
 import type { DeviceRef, ModeSource, SiteConfig } from '../src/core/model.js';
-import { exampleSite } from './site.js';
+import { exampleSite, withHaStabilisation } from './site.js';
 
 const NOW = Date.parse('2026-09-10T12:00:00Z');
 
@@ -467,13 +467,23 @@ describe('zonder bronnen in Home Assistant', () => {
   });
 
   it('laat de timer uit Home Assistant winnen wanneer die is opgegeven', () => {
-    // De eigen boekhouding loopt door, maar de vertaling kijkt er niet naar.
-    // Dit is de regressie die de draaiende opname beschermt: die vergelijkt
-    // met het oude systeem, en moet dus diens timer blijven volgen.
+    // De eigen boekhouding loopt door, maar de vertaling kijkt er niet naar
+    // (besluit 39). Deze woning noemt hem sinds besluit 60 niet meer; een
+    // woning die hem wel noemt, krijgt hem.
     const own = new OwnState();
     own.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
-    const state = buildSystemState(exampleSite, sourceOfFile({}), NOW, own);
+    const state = buildSystemState(withHaStabilisation, sourceOfFile({}), NOW, own);
     expect(state.timers.stabilisation.endsAtMs).toBeNull();
+  });
+
+  it('leest per timer: alleen manualOverride in Home Assistant, stabilisatie zelf', () => {
+    // Zo staat deze woning sinds besluit 60.
+    const own = new OwnState();
+    own.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
+    expect(exampleSite.timers?.manualOverride).toBeDefined();
+    const state = buildSystemState(exampleSite, sourceOfFile({}), NOW, own);
+    expect(state.timers.stabilisation.endsAtMs).toBe(NOW + 300_000);
+    expect(relevantEntities(exampleSite).has('timer.pv_stabilisatie')).toBe(false);
   });
 
   it('vergeet een timer weer na een cancelTimer', () => {
@@ -488,7 +498,7 @@ describe('zonder bronnen in Home Assistant', () => {
     const bare = without(exampleSite, 'mode', 'timers');
     const ids = relevantEntities(bare);
     expect(ids.has(choiceList.select.id)).toBe(false);
-    expect(ids.has(exampleSite.timers!.stabilisation.id)).toBe(false);
+    expect(ids.has('timer.pv_stabilisatie')).toBe(false);
     // En de rest staat er nog wel in.
     expect(ids.has(exampleSite.power.gridPower!.id)).toBe(true);
   });

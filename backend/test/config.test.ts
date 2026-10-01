@@ -212,8 +212,18 @@ describe('een installatie zonder helpers in Home Assistant', () => {
     c['timers'] = { stabilisation: 'timer.stabilisatie' };
     const result = parse(c);
     if (!result.ok) throw new Error(messages(result));
-    expect(result.config.timers?.stabilisation.id).toBe('timer.stabilisatie');
+    expect(result.config.timers?.stabilisation?.id).toBe('timer.stabilisatie');
     expect(result.config.timers?.manualOverride).toBeUndefined();
+  });
+
+  it('vindt een timerblok zonder stabilisatietimer goed', () => {
+    // Per timer optioneel (besluit 60): wat ontbreekt, houdt de dienst zelf bij.
+    const c = baseConfig();
+    c['timers'] = { manualOverride: 'timer.handmatig' };
+    const result = parse(c);
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.timers?.stabilisation).toBeUndefined();
+    expect(result.config.timers?.manualOverride?.id).toBe('timer.handmatig');
   });
 
   it('blijft klagen wanneer mode er wél staat maar onzin is', () => {

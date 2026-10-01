@@ -16,6 +16,7 @@
 
 import type { SiteConfig } from '../core/model.js';
 import { decide } from '../core/decide.js';
+import { OwnState } from '../adapters/own-state.js';
 import { ShadowActuators } from '../adapters/shadow-actuators.js';
 import { defaultStrategies } from '../index.js';
 import { Cursor, configAt, snapshot, type History } from './reconstruct.js';
@@ -51,6 +52,8 @@ export function playBack(history: History, site: SiteConfig): Summary {
   });
   const strategies = defaultStrategies();
   const cursor = new Cursor(history);
+  // Zoals de NAS: eigen timers en modus (besluit 39, 60) en eigen apparaatstand (49).
+  const own = new OwnState();
   const shadow = new ShadowActuators();
 
   const commands: string[] = [];
@@ -62,8 +65,9 @@ export function playBack(history: History, site: SiteConfig): Summary {
   for (let t = start; t <= history.meta.toMs; t += MINUTE) {
     cursor.advanceTo(t);
     const config = configAt(site, cursor);
-    const state = snapshot(config, cursor, t, undefined, shadow);
+    const state = snapshot(config, cursor, t, own, shadow);
     const decision = decide({ config, state, strategies });
+    own.apply(decision.commands, t);
     shadow.follow(decision);
     minutes += 1;
 

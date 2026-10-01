@@ -30,6 +30,7 @@ import {
   type TickComparison,
 } from './compare.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
+import { OwnState } from '../adapters/own-state.js';
 
 const TICK_MINUTES = 1;
 const TICK_MS = TICK_MINUTES * 60_000;
@@ -62,6 +63,8 @@ async function main(): Promise<void> {
   const history = await loadHistory(path);
   const strategies = defaultStrategies();
   const cursor = new Cursor(history);
+  // De stabilisatietimer houdt de dienst zelf bij (besluit 60).
+  const own = new OwnState();
   const totals = emptyTotals(TICK_MINUTES);
   const samples: TickComparison[] = [];
   let heatAssistProposals = 0;
@@ -73,8 +76,9 @@ async function main(): Promise<void> {
     cursor.advanceTo(t);
 
     const config = configAt(exampleSite, cursor);
-    const state = snapshot(config, cursor, t);
+    const state = snapshot(config, cursor, t, own);
     const decision = decide({ config, state, strategies });
+    own.apply(decision.commands, t);
 
     // Wat het oude systeem op dit moment feitelijk deed.
     const legacyRunning = {} as Record<AssistId, boolean>;
