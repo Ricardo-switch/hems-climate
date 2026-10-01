@@ -47,7 +47,7 @@ const NOT_YET_READ: Readonly<Record<string, string>> = {
     'Er is er nog maar één, dus niets hoeft erop te kiezen.',
   manualOverride:
     'De HA-timer van het oude systeem. Wordt opgehaald en in de toestand gezet, ' +
-    'maar niets leest die timer; zie TIMERS_NOG_NIET_GELEZEN hieronder.',
+    'maar niets leest die timer; zie TIMERS_NOT_YET_READ hieronder.',
 };
 
 /** Timers die bijgehouden worden maar die de kern (nog) niet leest. */
@@ -73,7 +73,7 @@ const PASS_THROUGH_FUNCTIONS: Readonly<Record<string, readonly string[]>> = {
 /** Haalt de body van een functie weg, op accolades geteld. */
 function withoutFunction(text: string, name: string): string {
   const begin = text.search(new RegExp(`function ${name}\\s*\\(`));
-  if (begin < 0) throw new Error(`functie ${name} niet gevonden; klopt DOORGEEFFUNCTIES nog?`);
+  if (begin < 0) throw new Error(`functie ${name} niet gevonden; klopt PASS_THROUGH_FUNCTIONS nog?`);
   // De eerste accolade na de parameterlijst opent de body.
   const closingBrace = text.indexOf(')', begin);
   const open = text.indexOf('{', closingBrace);
@@ -132,7 +132,7 @@ describe('geen instelling zonder werking', () => {
       (v) => !(v in NOT_YET_READ) && !isRead(v, sources),
     );
     // Faalt dit, dan staat er een instelling die niets doet. Laat hem iets doen,
-    // haal hem weg, of zet hem met een reden op NOG_NIET_GELEZEN.
+    // haal hem weg, of zet hem met een reden op NOT_YET_READ.
     expect(silent).toEqual([]);
   });
 
