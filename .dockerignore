@@ -28,6 +28,7 @@ automatic_backup_*
 *.tar.gz
 legacy_code
 ha-fixes
+design
 HA export
 config
 deploy
