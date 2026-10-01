@@ -378,7 +378,27 @@ function dayRow(states) {
   return svg;
 }
 
-function renderTimeline(days) {
+/**
+ * Per dag de starts waarop de versie of de configuratie veranderde (besluit 66).
+ * Een herstart met dezelfde versie en configuratie is geen markering waard.
+ */
+function versionChangesPerDay(versions) {
+  const out = new Map();
+  let previous = null;
+  for (const v of versions ?? []) {
+    const changed = previous == null || v.commit !== previous.commit || v.config !== previous.config;
+    previous = v;
+    if (!changed) continue;
+    const d = new Date(v.tMs);
+    const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (!out.has(day)) out.set(day, []);
+    out.get(day).push(v);
+  }
+  return out;
+}
+
+function renderTimeline(days, versions) {
+  const changes = versionChangesPerDay(versions);
   const target = $('tijdlijn');
   target.replaceChildren();
 
@@ -401,6 +421,20 @@ function renderTimeline(days) {
     const holder = el('div', 'min-w-0 flex-1');
     holder.append(dayRow(states));
     row.append(holder);
+    // Vanaf hier besliste een andere versie of configuratie.
+    const started = changes.get(day) ?? [];
+    const mark = el('div', 'text-zacht meting w-16 shrink-0 truncate text-[10px]');
+    if (started.length > 0) {
+      const last = started[started.length - 1];
+      mark.textContent = `▲ ${last.commit}`;
+      mark.title = started
+        .map((v) => {
+          const time = new Date(v.tMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+          return `${time} versie ${v.commit}, configuratie ${v.config}${v.bron ? ` (uit ${v.bron})` : ''}`;
+        })
+        .join('\n');
+    }
+    row.append(mark);
     rows.append(row);
   }
   target.append(rows);
@@ -531,7 +565,7 @@ function renderReview(r) {
   $('stat-vermeden').textContent = kwh(r.avoidableGridWh);
   $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat het oude systeem besteedde`;
 
-  renderTimeline(r.dagen);
+  renderTimeline(r.dagen, r.versies);
   renderPatterns(r.patronen ?? []);
   renderBars(r.tallies);
   renderEpisodes(r);

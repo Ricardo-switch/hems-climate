@@ -23,6 +23,7 @@ import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
 import { readStartup } from './startup.js';
 import { DivergenceCache } from './web/divergence.js';
+import { configFingerprint, recordRun } from './adapters/runs.js';
 import { Onboarding } from './web/onboarding.js';
 
 /**
@@ -306,6 +307,9 @@ let web: WebServer | null = null;
  * Eén extra luisteraar op hetzelfde `ready`-signaal kost niets en werkt in
  * beide standen hetzelfde.
  */
+/** Welke code er draait (besluit 54); gaat naar /api/health en runs.ndjson. */
+const version = versionFromEnv(process.env);
+
 let lastStates: readonly HaEntityState[] = [];
 client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
@@ -376,7 +380,7 @@ if (webPort != null) {
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
-    version: versionFromEnv(process.env),
+    version,
   });
 }
 
@@ -446,6 +450,25 @@ if (web) {
 }
 
 if (runner) {
+  /*
+   * Welke versie en welke configuratie vanaf nu beslissen (besluit 66). Vóór
+   * het eerste besluit, zodat elk besluit onder een regel in dit bestand valt.
+   * Lukt het niet, dan beslist de dienst toch: zonder herkomst is de dataset
+   * minder waard, zonder dienst is hij er helemaal niet.
+   */
+  if (logDir !== '' && site) {
+    try {
+      await recordRun(logDir, {
+        t: Date.now(),
+        commit: version.commit,
+        built: version.gebouwd,
+        config: configFingerprint(site.config),
+        site: site.config.id,
+      });
+    } catch (error) {
+      console.error(`Kon de start niet vastleggen in runs.ndjson: ${String(error)}`);
+    }
+  }
   runner.start();
 } else {
   // Geen configuratie, dus niets om te beslissen. Wel verbinden: de onboarding

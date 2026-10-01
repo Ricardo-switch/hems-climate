@@ -33,6 +33,7 @@ import { basename } from 'node:path';
 import { Analyser, bucketsPerDay, BUCKET_CODE, type Episode } from '../divergence/analyse.js';
 import { findLogFiles, newReaderCarry, readMoments } from '../divergence/read.js';
 import { DatasetCounter, type DatasetStatus } from './dataset.js';
+import { readRuns } from '../adapters/runs.js';
 import {
   CHECKPOINT_VERSION,
   coveredPrefix,
@@ -151,6 +152,11 @@ export interface DivergenceReport {
   readonly avoidableGridWh: number;
   /** Hoe compleet de opname is. Null wanneer er niets te lezen viel. */
   readonly dataset: DatasetStatus | null;
+  /**
+   * Elke start van de dienst: welke code en welke configuratie vanaf dan
+   * besliste (besluit 66). De weergave markeert er de tijdlijn mee.
+   */
+  readonly versies: readonly { tMs: number; commit: string; config: string; bron?: string }[];
 }
 
 export class DivergenceCache {
@@ -260,6 +266,8 @@ export class DivergenceCache {
       // twee vragen (twee regelaars vergelijken, en tellen wat de opname zag),
       // maar wel over dezelfde momenten.
       const dataset = counter.result();
+      // Zonder herkomst is de terugblik nog steeds waar, alleen minder te duiden.
+      const runs = await readRuns(logDir).catch(() => []);
 
       this.#latest = {
         berekendOpMs: this.#options.now(),
@@ -285,6 +293,12 @@ export class DivergenceCache {
         legacyGridWh: a.legacyGridWh,
         avoidableGridWh: a.avoidableGridWh,
         dataset,
+        versies: runs.map((r) => ({
+          tMs: r.t,
+          commit: r.commit,
+          config: r.config,
+          ...(r.source ? { bron: r.source } : {}),
+        })),
       };
       return this.#latest;
     } catch (error) {
