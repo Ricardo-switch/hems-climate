@@ -2477,8 +2477,9 @@ die wel mee, en staat op dat moment dus nog onder de 100%. Dat is bewust. Koelen
 is het best bekende deel van de regeling, en een volle seizoenscyclus afwachten
 zou de overdracht tot de zomer van 2027 uitstellen.
 
-*Tot die tijd:* de voorbereiding van stap B (een weg terug, de add-on weer aan)
-mag gewoon doorgaan, want die raakt het huis niet.
+*Tot die tijd:* de schaduw meet. De weg terug en de add-on horen bij het
+schakelen zelf en komen een paar weken ervoor. Dan heeft de dodemansknop al
+meegedraaid voordat iemand erop vertrouwt.
 
 ---
 
