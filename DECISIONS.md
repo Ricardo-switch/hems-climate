@@ -45,6 +45,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [49b. De veronderstelling blijft bij de meter en bij de bewoner](#49b-de-veronderstelling-blijft-bij-de-meter-en-bij-de-bewoner)
 - [50. Comfort mag koelen boven een plafond, ook op netstroom](#50-comfort-mag-koelen-boven-een-plafond-ook-op-netstroom)
 - [51. Starten vraagt meer dan draaien](#51-starten-vraagt-meer-dan-draaien)
+- [60. De schaduw gebruikt zijn eigen stabilisatietimer](#60-de-schaduw-gebruikt-zijn-eigen-stabilisatietimer)
+- [61. Parkeren start de stabilisatie](#61-parkeren-start-de-stabilisatie)
 
 **Configuratie en onboarding**
 
@@ -2094,8 +2096,8 @@ commit het verslag van wat er anders beslist wordt. Aanwezigheid staat in de
 uitsnede de hele dag op thuis: wanneer er iemand thuis was, hoort niet in git.
 
 De eerste run vond meteen iets: om 10:03 werd de zolder geparkeerd en om 10:04
-stond hij uit, terwijl parkeren de stabilisatietijd hoort te duren. Zie het
-open punt over de stabilisatietimer.
+stond hij uit, terwijl parkeren de stabilisatietijd hoort te duren. Zie
+besluit 61.
 
 *3. Een stiltetest.* Elk veld van de configuratie wordt ergens gelezen, of
 staat met een reden op een lijst — en die lijst wordt zelf ook bewaakt. Doorgeven
@@ -2286,17 +2288,91 @@ belangrijkste vertalingen:
 
 ---
 
+## 60. De schaduw gebruikt zijn eigen stabilisatietimer
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+De configuratie van dit huis noemde `timer.pv_stabilisatie` als bron van de
+stabilisatietimer. Dat is de timer van het YAML-systeem, en die loopt alleen
+wanneer dát systeem iets start of parkeert. Startte de arbiter iets, dan liep er
+niets; startte het oude systeem iets, dan werd de arbiter tegengehouden zonder
+dat hij zelf iets had gedaan. Besluit 39 liet dit bewust zo, om de schaduw met
+het oude systeem te laten vergelijken. Besluit 49 trok voor de draaitijden de
+tegenovergestelde conclusie, en die geldt hier net zo: de schaduw hoort zijn
+eigen geschiedenis te meten, niet een stukje van zijn voorganger.
+
+*Besluit:* `timers.stabilisation` gaat uit de configuratie van dit huis. De
+dienst houdt de timer zelf bij, zoals besluit 39 al mogelijk maakte.
+`timers.manualOverride` blijft uit Home Assistant komen. Daarvoor moest het
+schema per timer optioneel worden: het eiste de stabilisatietimer zodra er een
+`timers`-blok stond, terwijl besluit 39 "per timer afzonderlijk" beloofde.
+
+*Gemeten* (`src/replay/decision-60.ts`, beide vensters, met alles zoals het op
+de NAS draait):
+
+| | augustus | september |
+| --- | --- | --- |
+| tegengehouden door de stabilisatietimer | 1.548 → 257 | 765 → 180 |
+| starts, woonkamer + zolder | 123 → 160 | 95 → 102 |
+| oude systeem zelf, ter vergelijking | 177 | 76 |
+| tweede start 1–4 minuten na een eerste | 7 → 0 | 5 → 0 |
+
+De timer van het oude systeem hield de arbiter dus vooral tegen op momenten dat
+hij zelf niets had gestart. Zonder die koppeling start hij vaker, en is hij het
+vaker oneens met het oude systeem. Dat is geen verslechtering: het is wat de
+arbiter werkelijk zou doen, en dat zag de schaduw tot nu toe niet. Wat
+overblijft onder "binnen vijf minuten" zijn twee airco's die in dezelfde minuut
+starten, omdat het overschot ze allebei dekt (besluit 3).
+
+*De vaste replay* (besluit 54) gaat van 113 naar 159 commando's op 26 augustus.
+De replay-gereedschappen houden de eigen timer nu bij, zoals de NAS. Alleen de
+meetscripts van besluit 49 en 50 lezen bewust nog de oude timer, zodat hun
+getallen in dit logboek reproduceerbaar blijven.
+
+*Wat dit níét oploste:* parkeren duurde ook met de eigen timer één minuut. Zie
+besluit 61.
+
+---
+
+## 61. Parkeren start de stabilisatie
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Besluit 5 zegt: geparkeerd gaat na de stabilisatieperiode uit. De arbiter
+startte die periode alleen wanneer hij iets aanzette. Een airco die werd
+geparkeerd zonder dat er net iets was gestart, ging dus de minuut erna al uit,
+en dan is de parkeerstand zinloos. Met de timer van het oude systeem viel dat
+soms weg, omdat dat systeem op hetzelfde moment parkeerde. Met de eigen timer
+(besluit 60) werd het zichtbaar: mediaan één minuut.
+
+Het oude systeem doet het anders, en terecht. Bij parkeren zet het het setpoint
+op 25 °C (of 18 °C bij verwarmen) én start het `timer.pv_stabilisatie`. Pas als
+die is afgelopen, gaat de airco uit.
+
+*Besluit:* de arbiter start de stabilisatietimer ook wanneer hij een draaiend
+apparaat parkeert. Dezelfde reden als bij een start: parkeren verandert de
+opname, en pas na de stabilisatie is de meting weer een basis voor de volgende
+beslissing. Is de periode voorbij, dan hervat het apparaat op `resumeSurplusW`
+als er weer zon is, of gaat het uit. Uitzetten na het parkeren start geen nieuwe
+timer.
+
+*Gemeten,* bovenop besluit 60: parkeren duurt nu mediaan vijf minuten, in beide
+vensters en voor beide airco's. De vaste replay gaat van 159 naar 161 commando's.
+
+*Gevonden doordat de test het niet toetste.* De bestaande test "zet een
+geparkeerd apparaat pas uit als de rustperiode voorbij is" gaf de timer van
+buitenaf mee. Of parkeren hem zelf startte, vroeg niemand. Nu wel, en die test
+faalt zonder deze wijziging.
+
+---
+
 ## Wat nog een besluit wacht
 
-- **De stabilisatie volgt de timer van het oude systeem.** De configuratie van
-  dit huis noemt `timer.pv_stabilisatie` als bron, dus leest de schaduw de timer
-  van het YAML-systeem en negeert hij zijn eigen verzoek om vijf minuten (zie
-  besluit 39, dat dit bewust zo liet voor de vergelijking). Gevonden door de
-  vaste replay: parkeren duurde één minuut. Bij echt schakelen draait die oude
-  timer niet meer, en dan is de parkeerstand zinloos. Vóór stap B hoort
-  `timers.stabilisation` uit de configuratie, zodat de eigen timer geldt — en
-  eigenlijk al eerder, want dezelfde redenering als besluit 49 geldt hier:
-  de schaduw hoort zijn eigen geschiedenis te meten.
+- **Twee starts in dezelfde minuut.** Dekt het overschot beide airco's, dan
+  start de arbiter ze samen (besluit 3); in het augustusvenster acht keer, in
+  september niet. Het oude systeem verbiedt dat met `zolder_started_now`, zodat
+  de tweede pas start als de opname van de eerste in de meting zit. Of de
+  arbiter dat ook hoort te doen, is nog niet gemeten.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;

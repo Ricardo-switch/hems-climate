@@ -199,6 +199,7 @@ export function arbitrate(
   const claimed = new Set<string>();
   let allocatedW = 0;
   let startedSomething = false;
+  let parkedSomething = false;
 
   const reject = (intent: Intent, blockedBy: BlockCode, detail?: string): void => {
     rejected.push(detail == null ? { intent, blockedBy } : { intent, blockedBy, detail });
@@ -298,6 +299,7 @@ export function arbitrate(
     const wasRunning = isRunning(current?.action.ok ? current.action.value : undefined);
     const willRun = intent.action === 'heat' || intent.action === 'cool';
     if (!wasRunning && willRun) startedSomething = true;
+    if (wasRunning && intent.action === 'standby') parkedSomething = true;
 
     commands.push(...cmds);
   };
@@ -325,7 +327,17 @@ export function arbitrate(
     }
   }
 
-  if (startedSomething && ctx.config.power.stabilisationMinutes > 0) {
+  /*
+   * Ook na parkeren (besluit 61).
+   *
+   * Besluit 5 zegt: geparkeerd gaat na de stabilisatieperiode uit. Die periode
+   * begon alleen bij een start, dus een airco die werd geparkeerd zonder dat er
+   * net iets gestart was, ging de minuut erna al uit — en dan is de parkeerstand
+   * zinloos. Het oude systeem start de timer bij beide, en om dezelfde reden:
+   * parkeren verandert de opname net zo goed als starten, en pas na de
+   * stabilisatie is de meting weer een basis voor de volgende beslissing.
+   */
+  if ((startedSomething || parkedSomething) && ctx.config.power.stabilisationMinutes > 0) {
     commands.push({
       kind: 'startTimer',
       timerId: 'stabilisation',

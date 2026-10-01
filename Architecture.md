@@ -65,7 +65,8 @@ Drie strategieën stellen voor, één arbiter beslist (besluit 4):
 
 De **arbiter** verdeelt een budget: overschot plus wat de bestuurde apparaten nu
 werkelijk opnemen plus een kleine tolerantie (besluit 3, 49b). Hij toetst per
-apparaat de minimale draai- en rusttijd, de stabilisatie na een start, het
+apparaat de minimale draai- en rusttijd, de stabilisatie na een start of een
+parkeerbeurt (besluit 61), het
 settelen na een wissel, en of er genoeg marge is om te *starten* in plaats van
 alleen door te draaien (besluit 51). Wat niemand meer wil, bouwt hij af: eerst
 naar standby, na de stabilisatie uit (besluit 5).
@@ -86,7 +87,9 @@ ondergrens tussen evaluaties en een bewaking die afsluit als hij vastloopt
 
 Omdat de schaduw niet schakelt, houdt hij zelf bij wat hij gedaan zou hebben:
 
-- **`OwnState`** — modus en timers, die de dienst bezit (besluit 39).
+- **`OwnState`** — modus en timers, die de dienst bezit (besluit 39). Voor dit
+  huis komt de stabilisatietimer hier vandaan en niet van het oude systeem
+  (besluit 60).
 - **`ShadowActuators`** — de stand die de arbiter de apparaten zou geven, zodat
   draaitijden en hysterese zijn eigen geschiedenis meten (besluit 49). Het
   budget rekent met wat de meter werkelijk zag, en zolang de bewoner stuurt laat
@@ -170,7 +173,7 @@ in het besluitenlog en in de code.
 | --- | --- | --- | --- |
 | **A** | **De schaduw eerlijk.** Eigen apparaatstand (49, 49b), comfortplafond (50), startdrempel (51), de ruwe historie zelf vastleggen (52) | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | **klaar** |
 | — | **Het vangnet.** CI vóór de NAS, vaste replay, stiltetest, versie in health (54), opstart (55), invarianten (56), linter (57), compressie (58), index op het besluitenlog | Het kwaliteitsrapport van 30 september | **klaar** |
-| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: de stabilisatie op de eigen timer in plaats van die van het oude systeem, een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug, en de add-on weer aan als plek om te regelen (53) | Het moment waarop het oude systeem uit kan | volgende |
+| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: een eigen stand die een herstart overleeft (`OwnState` heeft nog geen opslag), een weg terug, en de add-on weer aan als plek om te regelen (53) | Het moment waarop het oude systeem uit kan | volgende |
 | **C** | **Universeel.** Een bewuste tabel met standaardwaarden, een inlog op de weergave (23), een terugblik die niet uitgaat van "het oude systeem" (28), een datasetmeter die niet op dit huis geijkt is (27) | Voorwaarde voor een tweede woning | los van B |
 | **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
 | **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na D |
@@ -289,6 +292,8 @@ niet het waarom.
 Stap A, het vangnet en de afspraak over de taal van de namen (besluit 59) zijn
 klaar.
 
-Nu stap B, met als voorwerk de open punten die het besluitenlog noemt: de
-stabilisatie op de eigen timer, en opslag voor `OwnState`. C kan ernaast, maar
-is pas nodig bij een tweede woning. D wacht op de winter.
+Nu het voorwerk van stap B: opslag voor `OwnState`, een weg terug, en de
+add-on weer aan. De stabilisatie loopt sinds besluit 60 en 61 al op de eigen
+timer. Wanneer er daarna werkelijk geschakeld wordt, is nog een eigen besluit:
+nu, of pas nadat de schaduw een winter heeft gezien. C kan ernaast, maar is pas
+nodig bij een tweede woning. D wacht op de winter.
