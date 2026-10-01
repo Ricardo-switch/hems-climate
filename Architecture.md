@@ -286,9 +286,9 @@ niet het waarom.
 
 ## 8. Volgende stap
 
-Stap A en het vangnet zijn klaar. Wat nog op een keuze wacht: een afspraak over
-de taal van de namen in de code (ronde 3 van de verbeterpunten).
+Stap A, het vangnet en de afspraak over de taal van de namen (besluit 59) zijn
+klaar.
 
-Daarna stap B, met als voorwerk de open punten die het besluitenlog noemt: de
+Nu stap B, met als voorwerk de open punten die het besluitenlog noemt: de
 stabilisatie op de eigen timer, en opslag voor `OwnState`. C kan ernaast, maar
 is pas nodig bij een tweede woning. D wacht op de winter.
