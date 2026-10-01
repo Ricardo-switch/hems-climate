@@ -395,6 +395,14 @@ describe('niets wordt voor niets gevolgd', () => {
     expect(unused).toEqual([]);
   });
 
+  it('volgt wat alleen vastgelegd wordt, zonder er opnieuw op te beslissen (besluit 65)', () => {
+    expect(exampleSite.recordOnly?.map((r) => r.id)).toContain('sensor.gas_meter_gas');
+    for (const ref of exampleSite.recordOnly ?? []) {
+      expect(observedEntities(exampleSite).has(ref.id)).toBe(true);
+      expect(relevantEntities(exampleSite).has(ref.id)).toBe(false);
+    }
+  });
+
   it('legt de luchtvochtigheid vast waar de zone er een sensor voor heeft', () => {
     const zone = exampleSite.zones.find((z) => z.humidity != null)!;
     const state = buildSystemState(

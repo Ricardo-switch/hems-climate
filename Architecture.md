@@ -126,7 +126,9 @@ deur, en die bestaat alleen als `startup.ts` hem opent.
 - `decisions-JJJJ-MM-DD.ndjson` — elk besluit; volledig als het verandert, kort
   als het gelijk blijft (besluit 11).
 - `history-JJJJ-MM-DD.ndjson` — elke wijziging van de gevolgde entiteiten, de
-  ruwe historie waarmee je later opnieuw kunt beslissen (besluit 52).
+  ruwe historie waarmee je later opnieuw kunt beslissen (besluit 52). Daarin ook
+  wat alleen voor later wordt vastgelegd, zoals gas en ventilatie
+  (`recordOnly`, besluit 65).
 - Dagen ouder dan een week worden `.ndjson.gz` (besluit 58). Alle lezers gaan
   via `divergence/read.ts`, die beide vormen kent.
 - `own-state.json` — de eigen stand van de dienst (modus, timers, de

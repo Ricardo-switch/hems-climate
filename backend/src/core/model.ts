@@ -365,6 +365,19 @@ export interface SiteConfig {
    * instralingsmeter die een woning met panelen al in huis heeft.
    */
   readonly solarProduction?: MeasurementPoint;
+  /**
+   * Alleen vastleggen (besluit 65).
+   *
+   * Entiteiten die de regeling niet leest, maar die in de ruwe historie horen
+   * omdat een later model ze nodig heeft. Het gasverbruik is in de winter de
+   * warmte die er in huis gaat; de ventilatie is een deel van wat eruit gaat.
+   * Ze komen in `history-*.ndjson` en niet in het beslislogboek, en een
+   * wijziging is geen reden om opnieuw te beslissen.
+   *
+   * Wat hier niet staat en niet elders in de configuratie, wordt niet
+   * vastgelegd, en dat is achteraf niet meer te herstellen.
+   */
+  readonly recordOnly?: readonly DeviceRef[];
   readonly migration?: MigrationConfig;
 }
 

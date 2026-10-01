@@ -216,6 +216,18 @@ describe('een installatie zonder helpers in Home Assistant', () => {
     expect(result.config.timers?.manualOverride).toBeUndefined();
   });
 
+  it('leest recordOnly als lijst met entiteiten (besluit 65)', () => {
+    const c = baseConfig();
+    c['recordOnly'] = ['sensor.gas', { adapter: 'homeassistant', id: 'sensor.ventilatie' }];
+    const result = parse(c);
+    if (!result.ok) throw new Error(messages(result));
+    expect(result.config.recordOnly?.map((r) => r.id)).toEqual(['sensor.gas', 'sensor.ventilatie']);
+
+    const wrong = baseConfig();
+    wrong['recordOnly'] = 'sensor.gas';
+    expect(parse(wrong).ok).toBe(false);
+  });
+
   it('vindt een timerblok zonder stabilisatietimer goed', () => {
     // Per timer optioneel (besluit 60): wat ontbreekt, houdt de dienst zelf bij.
     const c = baseConfig();

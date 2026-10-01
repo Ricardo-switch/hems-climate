@@ -45,6 +45,9 @@ const NOT_YET_READ: Readonly<Record<string, string>> = {
   adapter:
     'De naad voor andere platformen dan Home Assistant (zie de kop van model.ts). ' +
     'Er is er nog maar één, dus niets hoeft erop te kiezen.',
+  recordOnly:
+    'Bewust: wordt alleen gevolgd en in de ruwe historie vastgelegd (besluit 65). ' +
+    'Niets in de regeling leest het, en dat is de bedoeling.',
   manualOverride:
     'De HA-timer van het oude systeem. Wordt opgehaald en in de toestand gezet, ' +
     'maar niets leest die timer; zie TIMERS_NOT_YET_READ hieronder.',

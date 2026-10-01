@@ -73,6 +73,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [48. De dataset komt er met een knop uit, als tar.gz](#48-de-dataset-komt-er-met-een-knop-uit-als-targz)
 - [52. De dienst legt de ruwe historie zelf vast](#52-de-dienst-legt-de-ruwe-historie-zelf-vast)
 - [58. Dagen ouder dan een week worden gecomprimeerd](#58-dagen-ouder-dan-een-week-worden-gecomprimeerd)
+- [65. Wat het thermisch model nodig heeft, wordt nu al vastgelegd](#65-wat-het-thermisch-model-nodig-heeft-wordt-nu-al-vastgelegd)
 
 **Weergave**
 
@@ -2480,6 +2481,41 @@ zou de overdracht tot de zomer van 2027 uitstellen.
 *Tot die tijd:* de schaduw meet. De weg terug en de add-on horen bij het
 schakelen zelf en komen een paar weken ervoor. Dan heeft de dodemansknop al
 meegedraaid voordat iemand erop vertrouwt.
+
+---
+
+## 65. Wat het thermisch model nodig heeft, wordt nu al vastgelegd
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+De replay kan elk besluit later opnieuw nemen, want de ruwe invoer wordt
+vastgelegd (besluit 52). Wat hij niet kan terughalen, is invoer die nooit is
+vastgelegd. Het gasverbruik ontbrak, terwijl de gasmeter in Home Assistant
+staat (`sensor.gas_meter_gas`, via de HomeWizard P1). In de winter is gas de
+grootste warmtebron in huis. Het thermisch model (stap D, besluit 46) moet weten
+hoeveel warmte er in een kamer ging. Zonder gas ziet het alleen dát de Nest
+stookt (`hvac_action`), niet hoeveel.
+
+*Besluit:* een configuratieveld `recordOnly` voor entiteiten die de dienst
+volgt en in de ruwe historie vastlegt, zonder dat de regeling ze leest. Een
+wijziging is ook geen aanleiding om opnieuw te beslissen. Voor dit huis: de
+gasmeter, en de binnen- en buitentemperatuur en luchtvochtigheid van de
+ventilatie-unit (`sensor.cve_silent_*`), omdat ventilatie in de winter ook
+warmte kost.
+
+*Waarom nu:* het stookseizoen is nog niet begonnen. Elke stookdag zonder
+gasmeting is een dag waarop het model de warmte-invoer moet raden. Home
+Assistant bewaart voor een meter als deze meestal ook uurtotalen op lange
+termijn, maar fijner dan per uur, en in onze eigen dataset, krijg je het alleen
+door het zelf vast te leggen.
+
+*Waarom niet in het beslislogboek,* zoals de buitentemperatuur (besluit 30): die
+staat daar omdat de terugblik hem bij een besluit toont. Gas en ventilatie zijn
+invoer voor een model dat nog niet bestaat. De ruwe historie is daar de plek
+voor, en het beslislogboek blijft over beslissen gaan.
+
+De stiltetest kent `recordOnly` als bewuste uitzondering: niets in de regeling
+leest het, en dat is de bedoeling.
 
 ---
 

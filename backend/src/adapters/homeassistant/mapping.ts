@@ -417,6 +417,9 @@ export function observedEntities(config: SiteConfig): ReadonlySet<string> {
   const ids = new Set<string>();
   const legacy = config.migration?.legacyExplanation;
   if (legacy) ids.add(legacy.id);
+  // Alleen voor de ruwe historie (besluit 65): gevolgd, vastgelegd, en geen
+  // aanleiding om opnieuw te beslissen.
+  for (const ref of config.recordOnly ?? []) ids.add(ref.id);
   return ids;
 }
 

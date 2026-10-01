@@ -322,5 +322,12 @@
   },
   "sun": "sun.sun",
   "outdoorTemperature": "sensor.temperatuur",
-  "solarProduction": "sensor.solaredge_huidig_vermogen"
+  "solarProduction": "sensor.solaredge_huidig_vermogen",
+  "recordOnly": [
+    "sensor.gas_meter_gas",
+    "sensor.cve_silent_indoortemp",
+    "sensor.cve_silent_indoorhumidity",
+    "sensor.cve_silent_outdoortemp",
+    "sensor.cve_silent_outdoorhumidity"
+  ]
 }
