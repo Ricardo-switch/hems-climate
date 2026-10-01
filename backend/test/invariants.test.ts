@@ -200,6 +200,14 @@ function validate(config: SiteConfig): string | null {
       }
     }
 
+    // Hooguit één start op het budget per beslissing (besluit 68).
+    const budgetStarts = d.accepted.filter(
+      (i) => i.budgetW > 0 && isRunning(i.action) && !isRunning(action(state.actuators[i.actuatorId])),
+    );
+    if (budgetStarts.length > 1) {
+      return error(`${budgetStarts.length} starts op het budget in één beslissing`);
+    }
+
     // Geen start op overschot onder de startdrempel (besluit 51). Alleen voor
     // voorstellen die vermogen claimen en een apparaat dat echt uit stond.
     for (const i of d.accepted) {

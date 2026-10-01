@@ -269,6 +269,19 @@ export function arbitrate(
        */
       const now = current?.action.ok ? current.action.value : undefined;
       if (!isRunning(now)) {
+        /*
+         * Hooguit één start op het budget per beslissing (besluit 68).
+         *
+         * Dekte het overschot twee airco's, dan startten ze samen, op twee
+         * schattingen. De stabilisatie bestaat juist om eerst te meten wat de
+         * eerste werkelijk trekt (besluit 61); een tweede start in dezelfde
+         * beslissing slaat die meting over. Het oude systeem verbiedt het ook,
+         * met `zolder_started_now`.
+         */
+        if (startedSomething) {
+          reject(intent, 'stabilisation_active', 'er is deze ronde al iets gestart');
+          return;
+        }
         const threshold =
           now === 'standby'
             ? ctx.config.power.resumeSurplusW
