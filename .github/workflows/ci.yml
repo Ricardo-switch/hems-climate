@@ -87,9 +87,24 @@ jobs:
           -t hems-climate/shadow:ci
           .
 
+  deploy:
+    name: deploy.sh nakijken
+    runs-on: ubuntu-latest
+    # deploy.sh draait op de NAS en wordt met de hand gekopieerd. Een fout erin
+    # merk je pas als de uitrol of de melding bij stilvallen het niet meer doet
+    # (besluit 69). ShellCheck staat op de runner; vanaf "warning" faalt hij.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: shellcheck -S warning deploy/deploy.sh deploy/test-deploy.sh addon/run.sh
+
+      - name: syntaxis en de melding bij stilvallen
+        run: bash deploy/test-deploy.sh
+
   stable:
     name: stable bijwerken
-    needs: [test, image]
+    needs: [test, image, deploy]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

@@ -47,9 +47,12 @@ export SHADOW_LOG_DIR="${LOG_DIR}"
 # instelbare getallen zijn geen reden om hem stil te leggen. Bovendien maakt dit
 # de add-on buiten Home Assistant te draaien, en dus te testen.
 if bashio::supervisor.ping 2> /dev/null; then
-  export SHADOW_TICK_SECONDS="$(bashio::config 'hartslag_seconden')"
-  export SHADOW_MIN_INTERVAL_SECONDS="$(bashio::config 'min_interval_seconden')"
-  export SHADOW_WATCHDOG_MINUTES="$(bashio::config 'bewaking_minuten')"
+  # Toewijzen en exporteren apart: `export X="$(...)"` slikt de foutcode van
+  # het commando tussen de haakjes in (ShellCheck SC2155).
+  SHADOW_TICK_SECONDS="$(bashio::config 'hartslag_seconden')"
+  SHADOW_MIN_INTERVAL_SECONDS="$(bashio::config 'min_interval_seconden')"
+  SHADOW_WATCHDOG_MINUTES="$(bashio::config 'bewaking_minuten')"
+  export SHADOW_TICK_SECONDS SHADOW_MIN_INTERVAL_SECONDS SHADOW_WATCHDOG_MINUTES
 else
   bashio::log.warning "Supervisor niet bereikbaar; standaardinstellingen gebruikt."
   export SHADOW_TICK_SECONDS=30
