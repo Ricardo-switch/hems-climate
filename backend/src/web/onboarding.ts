@@ -23,14 +23,14 @@ import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import {
-  ontdek,
-  pasKeuzesToe,
+  discover,
+  applyChoices,
   type Registers,
-  type Voorstel,
+  type Proposal,
 } from '../adapters/homeassistant/discovery.js';
 import { parseSiteConfig } from '../config/schema.js';
 
-export interface OnboardingOpties {
+export interface OnboardingOptions {
   /** Waar de registers vandaan komen. Async, want dit gaat over de socket. */
   readonly registers: () => Promise<Registers>;
   /** De map waar `<id>.json` terechtkomt. */
@@ -39,12 +39,12 @@ export interface OnboardingOpties {
   readonly knownStrategies: readonly string[];
 }
 
-export type OpslaanResultaat =
+export type SaveResult =
   | { readonly ok: true; readonly pad: string }
   | { readonly ok: false; readonly reden: string; readonly problemen: readonly string[] };
 
 export class Onboarding {
-  readonly #opties: OnboardingOpties;
+  readonly #options: OnboardingOptions;
   /**
    * Het laatst uitgedeelde voorstel.
    *
@@ -53,16 +53,16 @@ export class Onboarding {
    * betekenen dat er inmiddels andere vragen zijn — en dan landt een antwoord
    * op de verkeerde vraag.
    */
-  #laatste: Voorstel | null = null;
+  #latest: Proposal | null = null;
 
-  constructor(opties: OnboardingOpties) {
-    this.#opties = opties;
+  constructor(options: OnboardingOptions) {
+    this.#options = options;
   }
 
-  async voorstel(): Promise<Voorstel> {
-    const registers = await this.#opties.registers();
-    this.#laatste = ontdek(registers);
-    return this.#laatste;
+  async proposal(): Promise<Proposal> {
+    const registers = await this.#options.registers();
+    this.#latest = discover(registers);
+    return this.#latest;
   }
 
   /**
@@ -72,9 +72,9 @@ export class Onboarding {
    * weigert eropaf. Zie de uitleg daar: dit is het lek dat op 11 september
    * 2026 de add-on stillegde.
    */
-  async bestaande(): Promise<string[]> {
+  async existing(): Promise<string[]> {
     try {
-      return (await readdir(this.#opties.sitesDir))
+      return (await readdir(this.#options.sitesDir))
         .filter((f) => f.endsWith('.json'))
         .sort();
     } catch {
@@ -82,9 +82,9 @@ export class Onboarding {
     }
   }
 
-  async opslaan(antwoorden: Readonly<Record<string, string | null>>): Promise<OpslaanResultaat> {
-    const voorstel = this.#laatste;
-    if (voorstel == null) {
+  async save(answers: Readonly<Record<string, string | null>>): Promise<SaveResult> {
+    const proposal = this.#latest;
+    if (proposal == null) {
       return {
         ok: false,
         reden: 'Er is nog geen voorstel opgehaald om te bewaren.',
@@ -104,13 +104,13 @@ export class Onboarding {
      * opnieuw wil beginnen, zet het oude bestand zelf opzij. Dat is één
      * handeling, en het maakt zichtbaar wat er gebeurt.
      */
-    const alAanwezig = await this.bestaande();
-    if (alAanwezig.length > 0) {
+    const alreadyPresent = await this.existing();
+    if (alreadyPresent.length > 0) {
       return {
         ok: false,
         reden: 'Er staat al een configuratie; er is niets geschreven.',
         problemen: [
-          ...alAanwezig.map((f) => `${f} staat in ${this.#opties.sitesDir}`),
+          ...alreadyPresent.map((f) => `${f} staat in ${this.#options.sitesDir}`),
           '',
           'Wil je opnieuw beginnen, verplaats of hernoem dat bestand dan eerst.',
           'Twee configuraties naast elkaar maakt niet duidelijk welke geldt, en',
@@ -119,45 +119,45 @@ export class Onboarding {
       };
     }
 
-    const config = pasKeuzesToe(voorstel, antwoorden);
+    const config = applyChoices(proposal, answers);
 
     // Toetsen vóór schrijven. Een bestand dat de dienst niet kan lezen is
     // erger dan geen bestand: dan start hij niet meer, en de melding komt in
     // een logboek terecht dat niemand openslaat (besluit 33).
-    const gecontroleerd = parseSiteConfig(config, {
-      knownStrategies: this.#opties.knownStrategies,
+    const checked = parseSiteConfig(config, {
+      knownStrategies: this.#options.knownStrategies,
     });
-    if (!gecontroleerd.ok) {
+    if (!checked.ok) {
       return {
         ok: false,
         reden: 'De configuratie is zo niet bruikbaar.',
-        problemen: gecontroleerd.problems.map((p) =>
+        problemen: checked.problems.map((p) =>
           p.path === '' ? p.message : `${p.path}: ${p.message}`,
         ),
       };
     }
 
-    const naam = String(config['id'] ?? 'installatie');
-    const pad = join(this.#opties.sitesDir, `${naam}.json`);
+    const name = String(config['id'] ?? 'installatie');
+    const path = join(this.#options.sitesDir, `${name}.json`);
 
     // Het slot hierboven dekt dit al af — geen enkele .json in de map betekent
     // ook dit bestand niet. Toch nog een keer kijken, want tussen de controle
     // en het schrijven zit tijd, en een bestaande configuratie overschrijven
     // is het ergste wat deze code kan doen.
-    const bestaat = await access(pad).then(
+    const exists = await access(path).then(
       () => true,
       () => false,
     );
-    if (bestaat) {
+    if (exists) {
       return {
         ok: false,
-        reden: `${pad} bestaat al; er is niets geschreven.`,
+        reden: `${path} bestaat al; er is niets geschreven.`,
         problemen: ['Verplaats of hernoem dat bestand eerst.'],
       };
     }
 
-    await mkdir(this.#opties.sitesDir, { recursive: true });
-    await writeFile(pad, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
-    return { ok: true, pad };
+    await mkdir(this.#options.sitesDir, { recursive: true });
+    await writeFile(path, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
+    return { ok: true, pad: path };
   }
 }

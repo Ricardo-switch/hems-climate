@@ -179,28 +179,28 @@ describe('een installatie zonder helpers in Home Assistant', () => {
    * schrijven naar Home Assistant zijn (besluit 15) — dus weigerde de dienst
    * te starten bij precies de installatie waarvoor hij bedoeld is.
    */
-  const zonder = (...sleutels: string[]): Record<string, unknown> => {
+  const without = (...keys: string[]): Record<string, unknown> => {
     const c = baseConfig();
-    for (const k of sleutels) delete c[k];
+    for (const k of keys) delete c[k];
     return c;
   };
 
   it('neemt een configuratie zonder mode en timers aan', () => {
-    const result = parse(zonder('mode', 'timers'));
+    const result = parse(without('mode', 'timers'));
     expect(result.ok).toBe(true);
   });
 
   it('zegt erbij wat er dan intern gebeurt', () => {
-    const result = parse(zonder('mode', 'timers'));
+    const result = parse(without('mode', 'timers'));
     if (!result.ok) throw new Error(messages(result));
-    const meldingen = result.warnings.map((w) => `${w.path}: ${w.message}`);
-    expect(meldingen.join('\n')).toContain('intern bijgehouden');
+    const reported = result.warnings.map((w) => `${w.path}: ${w.message}`);
+    expect(reported.join('\n')).toContain('intern bijgehouden');
     // En niet alleen voor één van de twee.
-    expect(meldingen.filter((m) => m.includes('intern bijgehouden'))).toHaveLength(2);
+    expect(reported.filter((m) => m.includes('intern bijgehouden'))).toHaveLength(2);
   });
 
   it('laat de velden dan ook echt weg in plaats van iets te verzinnen', () => {
-    const result = parse(zonder('mode', 'timers'));
+    const result = parse(without('mode', 'timers'));
     if (!result.ok) throw new Error(messages(result));
     expect(result.config.mode).toBeUndefined();
     expect(result.config.timers).toBeUndefined();
@@ -235,7 +235,7 @@ describe('het kleinst mogelijke bestand', () => {
    * Wat er overblijft: een tijdzone, één zone, één apparaat. De rest heeft een
    * terugval, en waar raden gevaarlijk zou zijn blijft het verplicht.
    */
-  const minimaal = (): Record<string, unknown> => ({
+  const minimal = (): Record<string, unknown> => ({
     timezone: 'Europe/Amsterdam',
     actuators: [
       {
@@ -251,13 +251,13 @@ describe('het kleinst mogelijke bestand', () => {
   });
 
   it('wordt aangenomen', () => {
-    const result = parse(minimaal());
+    const result = parse(minimal());
     if (!result.ok) throw new Error(messages(result));
     expect(result.ok).toBe(true);
   });
 
   it('vult in wat niet gevraagd is', () => {
-    const result = parse(minimaal());
+    const result = parse(minimal());
     if (!result.ok) throw new Error(messages(result));
     const c = result.config;
 
@@ -287,20 +287,20 @@ describe('het kleinst mogelijke bestand', () => {
   it('regelt alleen verwarmen wanneer niemand om koelen heeft gevraagd', () => {
     // Een koeldrempel verzinnen zou een airco kunnen laten draaien op een getal
     // dat wij hebben bedacht.
-    const result = parse(minimaal());
+    const result = parse(minimal());
     if (!result.ok) throw new Error(messages(result));
     const sp = result.config.zones[0]!.setpoints;
     expect(sp.dag).toEqual({ heat: 20 });
     expect(sp.nacht).toEqual({ heat: 17 });
     expect(sp.vakantie).toEqual({ heat: 12 });
     expect(sp.handmatig).toEqual({});
-    for (const modus of Object.values(sp)) {
-      expect(modus.cool).toBeUndefined();
+    for (const mode of Object.values(sp)) {
+      expect(mode.cool).toBeUndefined();
     }
   });
 
   it('vult een half ingevulde setpointtabel aan in plaats van hem af te keuren', () => {
-    const c = minimaal();
+    const c = minimal();
     (c['zones'] as Record<string, unknown>[])[0]!['setpoints'] = { dag: { heat: 21 } };
     const result = parse(c);
     if (!result.ok) throw new Error(messages(result));
@@ -310,7 +310,7 @@ describe('het kleinst mogelijke bestand', () => {
   });
 
   it('zet pv-surplus uit in plaats van hem stil niets te laten doen', () => {
-    const result = parse(minimaal());
+    const result = parse(minimal());
     if (!result.ok) throw new Error(messages(result));
     expect(result.config.enabledStrategies).not.toContain('pv-surplus');
     expect(result.config.enabledStrategies).toContain('comfort');
@@ -318,7 +318,7 @@ describe('het kleinst mogelijke bestand', () => {
   });
 
   it('houdt pv-surplus wél aan zodra er een netmeting is', () => {
-    const c = minimaal();
+    const c = minimal();
     c['power'] = { gridPower: 'sensor.p1' };
     const result = parse(c);
     if (!result.ok) throw new Error(messages(result));
@@ -330,7 +330,7 @@ describe('het kleinst mogelijke bestand', () => {
 });
 
 describe('wat verplicht blijft', () => {
-  const minimaal = (): Record<string, unknown> => ({
+  const minimal = (): Record<string, unknown> => ({
     timezone: 'Europe/Amsterdam',
     actuators: [
       { id: 'ketel', ref: 'climate.ketel', capabilities: { canHeat: true, canCool: false } },
@@ -339,31 +339,31 @@ describe('wat verplicht blijft', () => {
   });
 
   it('een tijdzone, want anders schuift de hele dagindeling ongemerkt', () => {
-    const c = minimaal();
+    const c = minimal();
     delete c['timezone'];
     expect(messages(parse(c))).toContain('timezone');
   });
 
   it('minstens één zone, want anders valt er niets te regelen', () => {
-    const c = minimaal();
+    const c = minimal();
     c['zones'] = [];
     expect(parse(c).ok).toBe(false);
   });
 
   it('minstens één apparaat, want anders valt er niets mee te regelen', () => {
-    const c = minimaal();
+    const c = minimal();
     c['actuators'] = [];
     expect(parse(c).ok).toBe(false);
   });
 
   it('wat een apparaat kan, want dat raden is de gevaarlijke kant', () => {
-    const c = minimaal();
+    const c = minimal();
     delete (c['actuators'] as Record<string, unknown>[])[0]!['capabilities'];
     expect(messages(parse(c))).toContain('capabilities');
   });
 
   it('een thermometer per zone', () => {
-    const c = minimaal();
+    const c = minimal();
     delete (c['zones'] as Record<string, unknown>[])[0]!['temperature'];
     expect(messages(parse(c))).toContain('zones[0].temperature');
   });
@@ -372,13 +372,13 @@ describe('wat verplicht blijft', () => {
     // Comfort vraagt budgetW 0 en merkt er niets van. Maar pv-surplus verdeelt
     // overschot, en een apparaat dat nul watt claimt past altijd — hoe weinig
     // er ook over is. Daar is raden niet ongevaarlijk maar juist het probleem.
-    const c = minimaal();
+    const c = minimal();
     (c['actuators'] as Record<string, unknown>[])[0]!['role'] = 'assist';
     expect(messages(parse(c))).toContain('estimatedW');
   });
 
   it('en klaagt nog steeds over een veld dat er wél staat maar niet deugt', () => {
-    const c = minimaal();
+    const c = minimal();
     (c['zones'] as Record<string, unknown>[])[0]!['thermalMass'] = 'zwaar';
     expect(messages(parse(c))).toContain('thermalMass');
   });
@@ -485,13 +485,13 @@ describe('grenswaarden met een reden', () => {
 
   it('neemt een comfortplafond over, en laat het weg als het ontbreekt', () => {
     // Geen standaardwaarde: koelen op netstroom is een keuze (besluit 50).
-    const zonder = parse(baseConfig());
-    expect(zonder.ok && zonder.config.zones[0]!.comfortMaxC).toBe(undefined);
+    const without = parse(baseConfig());
+    expect(without.ok && without.config.zones[0]!.comfortMaxC).toBe(undefined);
 
     const c = baseConfig();
     (c['zones'] as Record<string, unknown>[])[0]!['comfortMaxC'] = 26;
-    const met = parse(c);
-    expect(met.ok && met.config.zones[0]!.comfortMaxC).toBe(26);
+    const withCeiling = parse(c);
+    expect(withCeiling.ok && withCeiling.config.zones[0]!.comfortMaxC).toBe(26);
   });
 
   it('waarschuwt bij een comfortplafond onder het koeldoel', () => {

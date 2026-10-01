@@ -35,10 +35,10 @@ import { describe, expect, it } from 'vitest';
 
 import { TIMER_IDS } from '../src/core/state.js';
 
-const srcPad = fileURLToPath(new URL('../src/', import.meta.url));
+const srcPath = fileURLToPath(new URL('../src/', import.meta.url));
 
 /** Velden die bewust nog door niets gelezen worden, met de reden. */
-const NOG_NIET_GELEZEN: Readonly<Record<string, string>> = {
+const NOT_YET_READ: Readonly<Record<string, string>> = {
   thermalMass:
     'Gereserveerd voor het thermisch model (fase 7, besluit 46). Wordt ingelezen ' +
     'en gecontroleerd, maar stuurt nog niets.',
@@ -51,104 +51,104 @@ const NOG_NIET_GELEZEN: Readonly<Record<string, string>> = {
 };
 
 /** Timers die bijgehouden worden maar die de kern (nog) niet leest. */
-const TIMERS_NOG_NIET_GELEZEN: Readonly<Record<string, string>> = {
+const TIMERS_NOT_YET_READ: Readonly<Record<string, string>> = {
   manualOverride:
     'Komt uit het oude systeem en wordt gevuld, maar de handmatige stand loopt ' +
     'via de modus `handmatig` (besluit 8). Geen strategie leest deze timer.',
 };
 
-function bronbestanden(dir: string): string[] {
-  return readdirSync(dir).flatMap((naam) => {
-    const pad = join(dir, naam);
-    if (statSync(pad).isDirectory()) return bronbestanden(pad);
-    return naam.endsWith('.ts') ? [pad] : [];
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return sourceFiles(path);
+    return name.endsWith('.ts') ? [path] : [];
   });
 }
 
 /** Functies die configuratie alleen doorgeven: kopiëren of op abonneren. */
-const DOORGEEFFUNCTIES: Readonly<Record<string, readonly string[]>> = {
+const PASS_THROUGH_FUNCTIONS: Readonly<Record<string, readonly string[]>> = {
   'adapters/homeassistant/mapping.ts': ['configFrom', 'relevantEntities', 'observedEntities'],
 };
 
 /** Haalt de body van een functie weg, op accolades geteld. */
-function zonderFunctie(tekst: string, naam: string): string {
-  const begin = tekst.search(new RegExp(`function ${naam}\\s*\\(`));
-  if (begin < 0) throw new Error(`functie ${naam} niet gevonden; klopt DOORGEEFFUNCTIES nog?`);
+function withoutFunction(text: string, name: string): string {
+  const begin = text.search(new RegExp(`function ${name}\\s*\\(`));
+  if (begin < 0) throw new Error(`functie ${name} niet gevonden; klopt DOORGEEFFUNCTIES nog?`);
   // De eerste accolade na de parameterlijst opent de body.
-  const sluitHaakje = tekst.indexOf(')', begin);
-  const open = tekst.indexOf('{', sluitHaakje);
-  let diepte = 0;
-  for (let i = open; i < tekst.length; i += 1) {
-    if (tekst[i] === '{') diepte += 1;
-    else if (tekst[i] === '}') {
-      diepte -= 1;
-      if (diepte === 0) return tekst.slice(0, begin) + tekst.slice(i + 1);
+  const closingBrace = text.indexOf(')', begin);
+  const open = text.indexOf('{', closingBrace);
+  let depth = 0;
+  for (let i = open; i < text.length; i += 1) {
+    if (text[i] === '{') depth += 1;
+    else if (text[i] === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(0, begin) + text.slice(i + 1);
     }
   }
-  throw new Error(`einde van ${naam} niet gevonden`);
+  throw new Error(`einde van ${name} niet gevonden`);
 }
 
 /** Alle bronbestanden behalve de parser en het model zelf. */
-function lezers(): Map<string, string> {
-  const uit = new Map<string, string>();
-  for (const pad of bronbestanden(srcPad)) {
-    const rel = relative(srcPad, pad).split(sep).join('/');
+function readers(): Map<string, string> {
+  const result = new Map<string, string>();
+  for (const path of sourceFiles(srcPath)) {
+    const rel = relative(srcPath, path).split(sep).join('/');
     if (rel.startsWith('config/') || rel === 'core/model.ts') continue;
-    let tekst = readFileSync(pad, 'utf-8');
-    for (const naam of DOORGEEFFUNCTIES[rel] ?? []) tekst = zonderFunctie(tekst, naam);
-    uit.set(rel, tekst);
+    let text = readFileSync(path, 'utf-8');
+    for (const name of PASS_THROUGH_FUNCTIONS[rel] ?? []) text = withoutFunction(text, name);
+    result.set(rel, text);
   }
-  return uit;
+  return result;
 }
 
-function velden(): string[] {
-  const model = readFileSync(join(srcPad, 'core', 'model.ts'), 'utf-8');
+function fields(): string[] {
+  const model = readFileSync(join(srcPath, 'core', 'model.ts'), 'utf-8');
   return [...new Set([...model.matchAll(/^\s+readonly\s+([A-Za-z]+)\??:/gm)].map((m) => m[1]!))]
     .sort();
 }
 
-function wordtGelezen(veld: string, bronnen: Map<string, string>): boolean {
-  const toegang = new RegExp(`[.?]${veld}\\b`);
-  const uitpakken = new RegExp(`\\{[^}]*\\b${veld}\\b[^}]*\\}\\s*=`);
-  for (const tekst of bronnen.values()) {
-    if (toegang.test(tekst) || uitpakken.test(tekst)) return true;
+function isRead(field: string, sources: Map<string, string>): boolean {
+  const access = new RegExp(`[.?]${field}\\b`);
+  const unpack = new RegExp(`\\{[^}]*\\b${field}\\b[^}]*\\}\\s*=`);
+  for (const text of sources.values()) {
+    if (access.test(text) || unpack.test(text)) return true;
   }
   return false;
 }
 
 describe('geen instelling zonder werking', () => {
-  const bronnen = lezers();
-  const alle = velden();
+  const sources = readers();
+  const all = fields();
 
   it('vindt de velden van het model', () => {
     // Als de uitlezing stuk gaat, slaagt de test hieronder vanzelf. Deze niet.
-    expect(alle.length).toBeGreaterThan(40);
-    expect(alle).toContain('startSurplusW');
-    expect(alle).toContain('comfortMaxC');
+    expect(all.length).toBeGreaterThan(40);
+    expect(all).toContain('startSurplusW');
+    expect(all).toContain('comfortMaxC');
   });
 
   it('leest elk configuratieveld ergens buiten de parser', () => {
-    const stil = alle.filter(
-      (v) => !(v in NOG_NIET_GELEZEN) && !wordtGelezen(v, bronnen),
+    const silent = all.filter(
+      (v) => !(v in NOT_YET_READ) && !isRead(v, sources),
     );
     // Faalt dit, dan staat er een instelling die niets doet. Laat hem iets doen,
     // haal hem weg, of zet hem met een reden op NOG_NIET_GELEZEN.
-    expect(stil).toEqual([]);
+    expect(silent).toEqual([]);
   });
 
   it('houdt de lijst met uitzonderingen actueel', () => {
-    const achterhaald = Object.keys(NOG_NIET_GELEZEN).filter(
-      (v) => !alle.includes(v) || wordtGelezen(v, bronnen),
+    const stale = Object.keys(NOT_YET_READ).filter(
+      (v) => !all.includes(v) || isRead(v, sources),
     );
     // Wordt een veld inmiddels gelezen, of bestaat het niet meer: van de lijst af.
-    expect(achterhaald).toEqual([]);
+    expect(stale).toEqual([]);
   });
 
   it('leest elke timer in de kern', () => {
-    const kern = new Map([...bronnen].filter(([rel]) => rel.startsWith('core/')));
-    const ongelezen = TIMER_IDS.filter(
-      (id) => ![...kern.values()].some((t) => new RegExp(`timers\\.${id}\\b`).test(t)),
+    const core = new Map([...sources].filter(([rel]) => rel.startsWith('core/')));
+    const unread = TIMER_IDS.filter(
+      (id) => ![...core.values()].some((t) => new RegExp(`timers\\.${id}\\b`).test(t)),
     );
-    expect(ongelezen.sort()).toEqual(Object.keys(TIMERS_NOG_NIET_GELEZEN).sort());
+    expect(unread.sort()).toEqual(Object.keys(TIMERS_NOT_YET_READ).sort());
   });
 });

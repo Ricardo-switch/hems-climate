@@ -31,11 +31,11 @@ import { createGzip } from 'node:zlib';
 
 import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 
-const BLOK = 512;
+const BLOCK = 512;
 
 /** Octaal met voorloopnullen, zoals tar het wil, met een afsluitende NUL. */
-function octaal(n: number, breedte: number): string {
-  return n.toString(8).padStart(breedte - 1, '0') + '\0';
+function octal(n: number, width: number): string {
+  return n.toString(8).padStart(width - 1, '0') + '\0';
 }
 
 /**
@@ -45,30 +45,30 @@ function octaal(n: number, breedte: number): string {
  * checksumveld gevuld met spaties — een eigenaardigheid van het formaat die je
  * één keer opzoekt en daarna nooit meer.
  */
-function kop(naam: string, grootte: number, gewijzigdMs: number): Buffer {
-  const b = Buffer.alloc(BLOK);
-  b.write(naam.slice(0, 99), 0, 'utf-8'); // naam
-  b.write(octaal(0o644, 8), 100); // rechten
-  b.write(octaal(0, 8), 108); // uid
-  b.write(octaal(0, 8), 116); // gid
-  b.write(octaal(grootte, 12), 124);
-  b.write(octaal(Math.floor(gewijzigdMs / 1000), 12), 136);
+function heading(name: string, size: number, changedMs: number): Buffer {
+  const b = Buffer.alloc(BLOCK);
+  b.write(name.slice(0, 99), 0, 'utf-8'); // naam
+  b.write(octal(0o644, 8), 100); // rechten
+  b.write(octal(0, 8), 108); // uid
+  b.write(octal(0, 8), 116); // gid
+  b.write(octal(size, 12), 124);
+  b.write(octal(Math.floor(changedMs / 1000), 12), 136);
   b.write('        ', 148); // checksumveld, tijdelijk spaties
   b.write('0', 156); // typeflag: gewoon bestand
   b.write('ustar\0', 257);
   b.write('00', 263);
 
-  let som = 0;
-  for (const byte of b) som += byte;
-  b.write(octaal(som, 7), 148);
+  let sum = 0;
+  for (const byte of b) sum += byte;
+  b.write(octal(sum, 7), 148);
   b.write(' ', 155);
   return b;
 }
 
 /** Vult aan tot een veelvoud van 512; tar werkt in blokken. */
-function vulling(grootte: number): Buffer {
-  const rest = grootte % BLOK;
-  return rest === 0 ? Buffer.alloc(0) : Buffer.alloc(BLOK - rest);
+function padding(size: number): Buffer {
+  const rest = size % BLOCK;
+  return rest === 0 ? Buffer.alloc(0) : Buffer.alloc(BLOCK - rest);
 }
 
 export interface ExportInfo {
@@ -83,29 +83,29 @@ export interface ExportInfo {
  * Allebei per dag, allebei nodig — het eerste zegt wat de arbiter besloot, het
  * tweede is waarmee je dat besluit opnieuw kunt nemen met een andere instelling.
  */
-async function exportBestanden(logDir: string): Promise<{ logboek: string[]; alles: string[] }> {
-  const logboek = await findLogFiles(logDir);
-  const historie = await findHistoryFiles(logDir);
-  return { logboek, alles: [...logboek, ...historie] };
+async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; everything: string[] }> {
+  const decisionLog = await findLogFiles(logDir);
+  const history = await findHistoryFiles(logDir);
+  return { decisionLog, everything: [...decisionLog, ...history] };
 }
 
 export async function exportInfo(logDir: string): Promise<ExportInfo> {
-  let paden: string[];
-  let alles: string[];
+  let paths: string[];
+  let everything: string[];
   try {
-    ({ logboek: paden, alles } = await exportBestanden(logDir));
+    ({ decisionLog: paths, everything } = await exportFiles(logDir));
   } catch {
     return { bestanden: 0, bytes: 0, eerste: null, laatste: null };
   }
   // `bestanden` is het aantal dagen — zo staat het op de knop — en telt dus
   // alleen het logboek. De omvang telt alles, want dat is wat je downloadt.
   let bytes = 0;
-  for (const p of alles) bytes += (await stat(p)).size;
+  for (const p of everything) bytes += (await stat(p)).size;
   return {
-    bestanden: paden.length,
+    bestanden: paths.length,
     bytes,
-    eerste: paden.length > 0 ? basename(paden[0]!) : null,
-    laatste: paden.length > 0 ? basename(paden[paden.length - 1]!) : null,
+    eerste: paths.length > 0 ? basename(paths[0]!) : null,
+    laatste: paths.length > 0 ? basename(paths[paths.length - 1]!) : null,
   };
 }
 
@@ -116,14 +116,14 @@ export async function exportInfo(logDir: string): Promise<ExportInfo> {
  * uitgepakt krijg je `hems-logboek-JJJJ-MM-DD/decisions-*.ndjson`, en dat is
  * precies wat je aan `--divergence` of `--benchmark` kunt voeren.
  */
-export async function schrijfExport(
+export async function writeExport(
   logDir: string,
   res: ServerResponse,
-  nu: Date = new Date(),
+  now: Date = new Date(),
 ): Promise<void> {
-  const { alles: paden } = await exportBestanden(logDir);
-  const stempel = nu.toISOString().slice(0, 10);
-  const map = `hems-logboek-${stempel}`;
+  const { everything: paths } = await exportFiles(logDir);
+  const stamp = now.toISOString().slice(0, 10);
+  const map = `hems-logboek-${stamp}`;
 
   res.writeHead(200, {
     'content-type': 'application/gzip',
@@ -134,7 +134,7 @@ export async function schrijfExport(
   });
 
   const gzip = createGzip();
-  const naarAntwoord = pipeline(gzip, res);
+  const toResponse = pipeline(gzip, res);
 
   /*
    * De tar-stroom.
@@ -143,16 +143,16 @@ export async function schrijfExport(
    * — dat is hoe tar het einde markeert. De inhoud gaat er als stroom doorheen
    * en niet als buffer, zodat een dagbestand van 3 MB ook 3 MB blijft.
    */
-  async function* stroom(): AsyncGenerator<Buffer> {
-    for (const pad of paden) {
-      const info = await stat(pad);
-      yield kop(`${map}/${basename(pad)}`, info.size, info.mtimeMs);
-      for await (const stuk of createReadStream(pad)) yield stuk as Buffer;
-      yield vulling(info.size);
+  async function* chunks(): AsyncGenerator<Buffer> {
+    for (const path of paths) {
+      const info = await stat(path);
+      yield heading(`${map}/${basename(path)}`, info.size, info.mtimeMs);
+      for await (const piece of createReadStream(path)) yield piece as Buffer;
+      yield padding(info.size);
     }
-    yield Buffer.alloc(BLOK * 2);
+    yield Buffer.alloc(BLOCK * 2);
   }
 
-  await pipeline(Readable.from(stroom()), gzip);
-  await naarAntwoord;
+  await pipeline(Readable.from(chunks()), gzip);
+  await toResponse;
 }

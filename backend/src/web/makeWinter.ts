@@ -30,87 +30,87 @@ import { createWriteStream } from 'node:fs';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
-import { findLogFiles, regelsVan } from '../divergence/read.js';
+import { findLogFiles, linesOf } from '../divergence/read.js';
 
-const DAG_MS = 86_400_000;
+const DAY_MS = 86_400_000;
 
 export async function makeWinter(
-  dagen: number,
-  bron: string,
-  doel: string,
+  days: number,
+  source: string,
+  target: string,
 ): Promise<number> {
-  if (!Number.isInteger(dagen) || dagen < 1 || dagen > 1000) {
-    console.error(`Aantal dagen moet tussen 1 en 1000 liggen, niet "${dagen}".`);
+  if (!Number.isInteger(days) || days < 1 || days > 1000) {
+    console.error(`Aantal dagen moet tussen 1 en 1000 liggen, niet "${days}".`);
     return 1;
   }
 
   // Via dezelfde lezer als de analyse, zodat gecomprimeerde dagen ook als
   // sjabloon dienen (besluit 58).
-  const bestanden = (await findLogFiles(bron)).map((p) => basename(p));
+  const files = (await findLogFiles(source)).map((p) => basename(p));
 
-  if (bestanden.length === 0) {
-  console.error(`Geen decisions-*.ndjson in ${bron} om mee te vullen.`);
+  if (files.length === 0) {
+  console.error(`Geen decisions-*.ndjson in ${source} om mee te vullen.`);
   process.exit(1);
   }
 
   /** JJJJ-MM-DD van een tijdstip, in lokale tijd — net als de schaduwrunner. */
-  const dagSleutel = (ms: number): string => {
+  const dayKey = (ms: number): string => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
-  await rm(doel, { recursive: true, force: true });
-  await mkdir(doel, { recursive: true });
+  await rm(target, { recursive: true, force: true });
+  await mkdir(target, { recursive: true });
 
   // Terugtellen vanaf gisteren, zodat de reeks aansluit op "nu" en de
   // seizoensverdeling van de datasetmeter er realistisch uitziet.
-  const eind = new Date();
-  eind.setHours(0, 0, 0, 0);
-  const startMs = eind.getTime() - dagen * DAG_MS;
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const startMs = end.getTime() - days * DAY_MS;
 
-  let regels = 0;
+  let lines = 0;
   let bytes = 0;
 
-  for (let i = 0; i < dagen; i++) {
-  const doelDagMs = startMs + i * DAG_MS;
-  const sjabloon = bestanden[i % bestanden.length]!;
+  for (let i = 0; i < days; i++) {
+  const targetDayMs = startMs + i * DAY_MS;
+  const template = files[i % files.length]!;
 
   // Het verschil tussen de brondag en de doeldag, zodat elke tijdstempel
   // meeschuift en de volgorde binnen de dag intact blijft.
-  const bronDag = Date.parse(`${sjabloon.slice(10, 20)}T00:00:00`);
-  const verschil = doelDagMs - bronDag;
+  const sourceDay = Date.parse(`${template.slice(10, 20)}T00:00:00`);
+  const difference = targetDayMs - sourceDay;
 
-  const uit = createWriteStream(join(doel, `decisions-${dagSleutel(doelDagMs)}.ndjson`));
-  for await (const regel of regelsVan(join(bron, sjabloon))) {
-    if (regel.trim() === '') continue;
+  const outStream = createWriteStream(join(target, `decisions-${dayKey(targetDayMs)}.ndjson`));
+  for await (const line of linesOf(join(source, template))) {
+    if (line.trim() === '') continue;
     let r: { t?: number };
     try {
-      r = JSON.parse(regel) as { t?: number };
+      r = JSON.parse(line) as { t?: number };
     } catch {
       continue;
     }
     if (typeof r.t !== 'number') continue;
-    r.t += verschil;
-    const nieuw = `${JSON.stringify(r)}\n`;
-    bytes += Buffer.byteLength(nieuw);
-    regels += 1;
-    if (!uit.write(nieuw)) await new Promise<void>((ok) => uit.once('drain', () => ok()));
+    r.t += difference;
+    const serialized = `${JSON.stringify(r)}\n`;
+    bytes += Buffer.byteLength(serialized);
+    lines += 1;
+    if (!outStream.write(serialized)) await new Promise<void>((ok) => outStream.once('drain', () => ok()));
   }
 
-  uit.end();
-  await new Promise<void>((ok) => uit.once('close', () => ok()));
+  outStream.end();
+  await new Promise<void>((ok) => outStream.once('close', () => ok()));
   }
 
-  const opSchijf = (
+  const onDisk = (
   await Promise.all(
-    (await readdir(doel)).map(async (n) => (await stat(join(doel, n))).size),
+    (await readdir(target)).map(async (n) => (await stat(join(target, n))).size),
   )
   ).reduce((a, b) => a + b, 0);
 
-  console.log(`${dagen} dagbestanden geschreven naar ${doel}`);
-  console.log(`  ${regels.toLocaleString('nl-NL')} regels`);
-  console.log(`  ${(opSchijf / 1e6).toFixed(1)} MB op schijf`);
-  console.log(`  ${(bytes / dagen / 1e6).toFixed(2)} MB per dag`);
+  console.log(`${days} dagbestanden geschreven naar ${target}`);
+  console.log(`  ${lines.toLocaleString('nl-NL')} regels`);
+  console.log(`  ${(onDisk / 1e6).toFixed(1)} MB op schijf`);
+  console.log(`  ${(bytes / days / 1e6).toFixed(2)} MB per dag`);
   console.log('');
   console.log('Kopieer deze map naar de Pi en draai daar dezelfde meting:');
   console.log('  node dist/main.js --benchmark <map>');

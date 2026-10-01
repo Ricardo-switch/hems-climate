@@ -124,7 +124,7 @@ function renderEpisodes(analysis: Analysis, opts: Options, lines: string[]): voi
   lines.push(`  Afwijkingen, langste eerst (${analysis.episodes.length} in totaal)`);
   lines.push('  ' + '─'.repeat(74));
   for (const e of shown) {
-    const richting =
+    const direction =
       e.direction === 'strenger'
         ? 'oud draaide, ik zou stoppen'
         : 'oud stond uit, ik zou draaien';
@@ -132,7 +132,7 @@ function renderEpisodes(analysis: Analysis, opts: Options, lines: string[]): voi
       `  ${dayKey(e.fromMs)} ${clock(e.fromMs)}–${clock(e.toMs)}  ` +
         `${String(e.minutes).padStart(4)} min  ${e.actuatorId}`,
     );
-    lines.push(`      ${richting}${e.mode === 'onbekend' ? '' : `, modus ${e.mode}`}`);
+    lines.push(`      ${direction}${e.mode === 'onbekend' ? '' : `, modus ${e.mode}`}`);
     if (e.blockedBy) {
       lines.push(`      mijn reden : ${e.blockedBy}`);
     }

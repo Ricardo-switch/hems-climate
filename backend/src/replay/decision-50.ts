@@ -1,7 +1,7 @@
 /**
  * Wat een comfortplafond kost, per hoogte, over de opgenomen historie.
  *
- *   npx tsx src/replay/besluit50.ts [venster.ndjson.gz ...]
+ *   npx tsx src/replay/decision-50.ts [venster.ndjson.gz ...]
  *
  * Besluit 50 is de vraag of comfort mag koelen wanneer de zon het niet betaalt.
  * Dit script rekent de hoogtes door: geen plafond (zoals het nu is), 26, 25, 24
@@ -26,45 +26,45 @@ import { basename, resolve } from 'node:path';
 
 import { exampleSite } from './site.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
-import { SchaduwApparaten } from '../adapters/shadow-actuators.js';
+import { ShadowActuators } from '../adapters/shadow-actuators.js';
 import { decide } from '../core/decide.js';
 import type { SiteConfig, Zone } from '../core/model.js';
 import { defaultStrategies } from '../index.js';
 
 const TICK_MS = 60_000;
-const PLAFONDS = [null, 26, 25, 24, 23] as const;
+const CEILINGS = [null, 26, 25, 24, 23] as const;
 
 /** De zones zonder koelende primary — precies de zones met het gat. */
 const ZONES = ['woonkamer', 'zolder'] as const;
 type ZoneId = (typeof ZONES)[number];
 
-const KLIMAAT: Readonly<Record<ZoneId, string>> = {
+const CLIMATE: Readonly<Record<ZoneId, string>> = {
   woonkamer: 'climate.air_conditioning_woonkamer',
   zolder: 'climate.air_conditioning_zolder',
 };
-const APPARAAT: Readonly<Record<ZoneId, string>> = {
+const ACTUATOR: Readonly<Record<ZoneId, string>> = {
   woonkamer: 'ac-woonkamer',
   zolder: 'ac-zolder',
 };
 
 /** De zone met dit plafond, of zonder: dan hoort het veld er niet te zijn. */
-function zonePlafond(z: Zone, plafond: number | null): Zone {
-  const { comfortMaxC: _weg, ...rest } = z;
-  return plafond == null ? rest : { ...rest, comfortMaxC: plafond };
+function zoneCeiling(z: Zone, ceiling: number | null): Zone {
+  const { comfortMaxC: _omitted, ...rest } = z;
+  return ceiling == null ? rest : { ...rest, comfortMaxC: ceiling };
 }
 
-function metPlafond(base: SiteConfig, plafond: number | null): SiteConfig {
+function withCeiling(base: SiteConfig, ceiling: number | null): SiteConfig {
   return {
     ...base,
     zones: base.zones.map((z) =>
-      (ZONES as readonly string[]).includes(z.id) ? zonePlafond(z, plafond) : z,
+      (ZONES as readonly string[]).includes(z.id) ? zoneCeiling(z, ceiling) : z,
     ),
   };
 }
 
-function echtDraait(cursor: Cursor, zone: ZoneId): boolean {
-  const state = cursor.state(KLIMAAT[zone]);
-  const setpoint = cursor.attrNumber(KLIMAAT[zone], 'temperature');
+function actuallyRunning(cursor: Cursor, zone: ZoneId): boolean {
+  const state = cursor.state(CLIMATE[zone]);
+  const setpoint = cursor.attrNumber(CLIMATE[zone], 'temperature');
   const standby =
     (state === 'heat' && setpoint != null && setpoint <= 18) ||
     (state === 'cool' && setpoint != null && setpoint >= 25);
@@ -73,59 +73,59 @@ function echtDraait(cursor: Cursor, zone: ZoneId): boolean {
 
 interface PerZone {
   /** Minuten waarin de meting boven het plafond stond. De omvang van het gat. */
-  bovenPlafond: number;
+  aboveCeiling: number;
   /** Minuten waarin comfort de airco liet koelen (niet pv-overschot). */
-  comfortKoelen: number;
+  comfortCooling: number;
   /** Daarvan: tijdens invoer, terwijl het echte apparaat stilstond. */
-  invoerminuten: number;
-  invoerWh: number;
+  importMinutes: number;
+  importWh: number;
 }
 
-async function meet(
-  pad: string,
-  plafond: number | null,
+async function measure(
+  path: string,
+  ceiling: number | null,
 ): Promise<{ ticks: number; zone: Record<ZoneId, PerZone> }> {
-  const history = await loadHistory(pad);
+  const history = await loadHistory(path);
   const strategies = defaultStrategies();
   const cursor = new Cursor(history);
-  const schaduw = new SchaduwApparaten();
-  const basis = metPlafond(exampleSite, plafond);
+  const shadow = new ShadowActuators();
+  const base = withCeiling(exampleSite, ceiling);
 
   const zone: Record<ZoneId, PerZone> = {
-    woonkamer: { bovenPlafond: 0, comfortKoelen: 0, invoerminuten: 0, invoerWh: 0 },
-    zolder: { bovenPlafond: 0, comfortKoelen: 0, invoerminuten: 0, invoerWh: 0 },
+    woonkamer: { aboveCeiling: 0, comfortCooling: 0, importMinutes: 0, importWh: 0 },
+    zolder: { aboveCeiling: 0, comfortCooling: 0, importMinutes: 0, importWh: 0 },
   };
   let ticks = 0;
 
   const start = Math.ceil(history.meta.fromMs / TICK_MS) * TICK_MS;
   for (let t = start; t <= history.meta.toMs; t += TICK_MS) {
     cursor.advanceTo(t);
-    const config = configAt(basis, cursor);
-    const state = snapshot(config, cursor, t, undefined, schaduw);
+    const config = configAt(base, cursor);
+    const state = snapshot(config, cursor, t, undefined, shadow);
     const decision = decide({ config, state, strategies });
-    schaduw.volg(decision);
+    shadow.follow(decision);
     ticks += 1;
 
     const netW = cursor.number('sensor.p1_meter_power') ?? 0;
 
     for (const z of ZONES) {
-      const gemeten = state.zones[z]?.temperatureC;
-      if (plafond != null && gemeten?.ok && gemeten.value >= plafond) {
-        zone[z].bovenPlafond += 1;
+      const measured = state.zones[z]?.temperatureC;
+      if (ceiling != null && measured?.ok && measured.value >= ceiling) {
+        zone[z].aboveCeiling += 1;
       }
 
       // Draait de airco op verzoek van comfort, en niet van pv-overschot?
-      const aanvaard = decision.accepted.find(
-        (i) => i.actuatorId === APPARAAT[z] && i.action === 'cool',
+      const accepted = decision.accepted.find(
+        (i) => i.actuatorId === ACTUATOR[z] && i.action === 'cool',
       );
-      if (aanvaard?.strategyId !== 'comfort') continue;
-      zone[z].comfortKoelen += 1;
+      if (accepted?.strategyId !== 'comfort') continue;
+      zone[z].comfortCooling += 1;
 
-      if (netW > 0 && !echtDraait(cursor, z)) {
-        const schatting = exampleSite.actuators.find((a) => a.id === APPARAAT[z])!
+      if (netW > 0 && !actuallyRunning(cursor, z)) {
+        const estimate = exampleSite.actuators.find((a) => a.id === ACTUATOR[z])!
           .power.estimatedW;
-        zone[z].invoerminuten += 1;
-        zone[z].invoerWh += schatting / 60;
+        zone[z].importMinutes += 1;
+        zone[z].importWh += estimate / 60;
       }
     }
   }
@@ -133,12 +133,12 @@ async function meet(
   return { ticks, zone };
 }
 
-function uren(minuten: number): string {
-  return (minuten / 60).toFixed(0);
+function hours(minutes: number): string {
+  return (minutes / 60).toFixed(0);
 }
 
 async function main(): Promise<void> {
-  const paden =
+  const paths =
     process.argv.length > 2
       ? process.argv.slice(2)
       : ['data/replay/history.ndjson.gz', 'data/replay/history-2026-09-30.ndjson.gz'];
@@ -147,29 +147,29 @@ async function main(): Promise<void> {
   console.log('  Besluit 50 — wat een comfortplafond kost');
   console.log('  ' + '═'.repeat(74));
 
-  for (const p of paden) {
-    const pad = resolve(p);
+  for (const p of paths) {
+    const path = resolve(p);
     console.log('');
 
-    for (const plafond of PLAFONDS) {
-      const { ticks, zone } = await meet(pad, plafond);
-      if (plafond === null) {
+    for (const ceiling of CEILINGS) {
+      const { ticks, zone } = await measure(path, ceiling);
+      if (ceiling === null) {
         console.log(
-          `  ${basename(pad)}  (${ticks.toLocaleString('nl-NL')} minuten, ${(ticks / 1440).toFixed(1)} dagen)`,
+          `  ${basename(path)}  (${ticks.toLocaleString('nl-NL')} minuten, ${(ticks / 1440).toFixed(1)} dagen)`,
         );
         console.log('');
         console.log(
           '  plafond   zone         boven plafond   comfort koelt   waarvan uit net',
         );
       }
-      const label = plafond == null ? 'geen  ' : `${plafond} °C `;
+      const label = ceiling == null ? 'geen  ' : `${ceiling} °C `;
       for (const z of ZONES) {
         const d = zone[z];
         console.log(
           `  ${label.padEnd(9)} ${z.padEnd(12)} ` +
-            `${(plafond == null ? '—' : `${uren(d.bovenPlafond)} uur`).padStart(13)}   ` +
-            `${`${uren(d.comfortKoelen)} uur`.padStart(13)}   ` +
-            `${`${uren(d.invoerminuten)} uur ≈ ${(d.invoerWh / 1000).toFixed(1)} kWh`.padStart(18)}`,
+            `${(ceiling == null ? '—' : `${hours(d.aboveCeiling)} uur`).padStart(13)}   ` +
+            `${`${hours(d.comfortCooling)} uur`.padStart(13)}   ` +
+            `${`${hours(d.importMinutes)} uur ≈ ${(d.importWh / 1000).toFixed(1)} kWh`.padStart(18)}`,
         );
       }
     }

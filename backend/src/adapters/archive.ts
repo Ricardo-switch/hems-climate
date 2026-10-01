@@ -7,14 +7,14 @@
  * De recente week blijft gewoon, zodat je die zonder gereedschap kunt openen.
  *
  * **Niets mag ervan merken.** Elke lezer gaat via `findLogFiles`,
- * `findHistoryFiles` en `regelsVan` in `divergence/read.ts`, die beide vormen
+ * `findHistoryFiles` en `linesOf` in `divergence/read.ts`, die beide vormen
  * kennen. Een test legt vast dat een analyse vóór en na het comprimeren
  * precies hetzelfde ziet.
  *
  * **Onderbreken mag.** Eerst naar een tijdelijk bestand, dan een rename — die
  * is atomair — en pas daarna de gewone weg. Valt de stroom halverwege, dan is
  * er óf alleen de gewone, óf allebei; bij allebei telt de `.gz` (zie
- * `dagbestanden`), en de volgende ronde ruimt de gewone op. Een dag raakt dus
+ * `dayFiles`), en de volgende ronde ruimt de gewone op. Een dag raakt dus
  * nooit weg en telt nooit dubbel.
  *
  * **Weggooien doet het niet.** De dataset is het product van dit project; wat
@@ -27,12 +27,12 @@ import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 
-const DAGBESTAND = /^(?:decisions|history)-(\d{4}-\d{2}-\d{2})\.ndjson$/;
-const DAG_MS = 86_400_000;
+const DAY_FILE = /^(?:decisions|history)-(\d{4}-\d{2}-\d{2})\.ndjson$/;
+const DAY_MS = 86_400_000;
 
-async function bestaat(pad: string): Promise<boolean> {
+async function exists(path: string): Promise<boolean> {
   try {
-    await access(pad);
+    await access(path);
     return true;
   } catch {
     return false;
@@ -40,39 +40,39 @@ async function bestaat(pad: string): Promise<boolean> {
 }
 
 /**
- * Comprimeert elk dagbestand van vóór `bewaarDagen` dagen terug. Geeft terug
+ * Comprimeert elk dagbestand van vóór `keepDays` dagen terug. Geeft terug
  * welke bestanden er gecomprimeerd of opgeruimd zijn.
  *
  * De grens is de UTC-dag, net als de bestandsnamen. Vandaag wordt nooit
  * aangeraakt, en de afgelopen week ook niet.
  */
-export async function comprimeerOudeDagen(
+export async function compressOldDays(
   map: string,
-  nuMs: number,
-  bewaarDagen = 7,
+  nowMs: number,
+  keepDays = 7,
 ): Promise<string[]> {
-  const grens = new Date(nuMs - bewaarDagen * DAG_MS).toISOString().slice(0, 10);
-  const gedaan: string[] = [];
+  const limit = new Date(nowMs - keepDays * DAY_MS).toISOString().slice(0, 10);
+  const done: string[] = [];
 
-  for (const naam of (await readdir(map)).sort()) {
-    const m = DAGBESTAND.exec(naam);
-    if (!m || m[1]! >= grens) continue;
+  for (const name of (await readdir(map)).sort()) {
+    const m = DAY_FILE.exec(name);
+    if (!m || m[1]! >= limit) continue;
 
-    const gewoon = join(map, naam);
-    const gz = `${gewoon}.gz`;
+    const plain = join(map, name);
+    const gz = `${plain}.gz`;
 
     // Een eerdere ronde kwam tot de rename maar niet tot het weghalen.
-    if (await bestaat(gz)) {
-      await unlink(gewoon);
-      gedaan.push(naam);
+    if (await exists(gz)) {
+      await unlink(plain);
+      done.push(name);
       continue;
     }
 
-    const tijdelijk = `${gz}.tmp`;
-    await pipeline(createReadStream(gewoon), createGzip(), createWriteStream(tijdelijk));
-    await rename(tijdelijk, gz);
-    await unlink(gewoon);
-    gedaan.push(naam);
+    const temporary = `${gz}.tmp`;
+    await pipeline(createReadStream(plain), createGzip(), createWriteStream(temporary));
+    await rename(temporary, gz);
+    await unlink(plain);
+    done.push(name);
   }
-  return gedaan;
+  return done;
 }

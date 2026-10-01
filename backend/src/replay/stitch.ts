@@ -26,7 +26,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 
-import { findHistoryFiles, regelsVan } from '../divergence/read.js';
+import { findHistoryFiles, linesOf } from '../divergence/read.js';
 import type { DatasetMeta, DatasetRow } from './dataset.js';
 
 export interface Dataset {
@@ -34,22 +34,22 @@ export interface Dataset {
   readonly rows: readonly DatasetRow[];
 }
 
-function isRij(x: unknown): x is DatasetRow {
+function isRow(x: unknown): x is DatasetRow {
   if (x == null || typeof x !== 'object') return false;
   const r = x as Record<string, unknown>;
   return typeof r['t'] === 'number' && typeof r['e'] === 'string' && typeof r['s'] === 'string';
 }
 
-export async function stikHistorie(map: string, nuMs: number = Date.now()): Promise<Dataset> {
-  const alle: DatasetRow[] = [];
-  for (const pad of await findHistoryFiles(map)) {
-    for await (const regel of regelsVan(pad)) {
-      if (regel.trim() === '') continue;
+export async function stitchHistory(map: string, nowMs: number = Date.now()): Promise<Dataset> {
+  const all: DatasetRow[] = [];
+  for (const path of await findHistoryFiles(map)) {
+    for await (const line of linesOf(path)) {
+      if (line.trim() === '') continue;
       // Een regel die halverwege is afgekapt — de container werd gestopt — mag
       // de rest niet meeslepen.
       try {
-        const x: unknown = JSON.parse(regel);
-        if (isRij(x)) alle.push(x);
+        const x: unknown = JSON.parse(line);
+        if (isRow(x)) all.push(x);
       } catch {
         /* overslaan */
       }
@@ -57,16 +57,16 @@ export async function stikHistorie(map: string, nuMs: number = Date.now()): Prom
   }
 
   // Stabiel: bij gelijke tijd blijft de volgorde van binnenkomst.
-  alle.sort((a, b) => a.t - b.t);
+  all.sort((a, b) => a.t - b.t);
 
-  const laatste = new Map<string, string>();
-  const eerste = new Map<string, number>();
+  const last = new Map<string, string>();
+  const first = new Map<string, number>();
   const rows: DatasetRow[] = [];
-  for (const r of alle) {
-    const sleutel = `${r.t}|${r.s}|${JSON.stringify(r.a ?? null)}`;
-    if (laatste.get(r.e) === sleutel) continue;
-    laatste.set(r.e, sleutel);
-    if (!eerste.has(r.e)) eerste.set(r.e, r.t);
+  for (const r of all) {
+    const key = `${r.t}|${r.s}|${JSON.stringify(r.a ?? null)}`;
+    if (last.get(r.e) === key) continue;
+    last.set(r.e, key);
+    if (!first.has(r.e)) first.set(r.e, r.t);
     rows.push(r);
   }
 
@@ -78,21 +78,21 @@ export async function stikHistorie(map: string, nuMs: number = Date.now()): Prom
     kind: 'meta',
     version: 1,
     source: `live:${resolve(map)}`,
-    exportedAtMs: nuMs,
-    fromMs: Math.max(...eerste.values()),
+    exportedAtMs: nowMs,
+    fromMs: Math.max(...first.values()),
     toMs: rows[rows.length - 1]!.t,
-    entities: [...eerste.keys()].sort(),
+    entities: [...first.keys()].sort(),
     rows: rows.length,
   };
   return { meta, rows };
 }
 
 /** Schrijft een dataset als gzip-NDJSON, meta-regel voorop. */
-export async function schrijfDataset(pad: string, d: Dataset): Promise<void> {
-  await mkdir(dirname(pad), { recursive: true });
-  async function* regels(): AsyncGenerator<string> {
+export async function writeDataset(path: string, d: Dataset): Promise<void> {
+  await mkdir(dirname(path), { recursive: true });
+  async function* lines(): AsyncGenerator<string> {
     yield `${JSON.stringify(d.meta)}\n`;
     for (const r of d.rows) yield `${JSON.stringify(r)}\n`;
   }
-  await pipeline(Readable.from(regels()), createGzip(), createWriteStream(pad));
+  await pipeline(Readable.from(lines()), createGzip(), createWriteStream(path));
 }

@@ -30,13 +30,13 @@ export const SITES_DIR = 'config/sites';
  * soorten blijven wél een fout — een configuratie die er staat maar niet
  * deugt, moet gerepareerd worden en niet overschreven (besluit 33).
  */
-export type ConfigFoutSoort = 'ontbreekt' | 'ongeldig' | 'meerdere' | 'onleesbaar';
+export type ConfigErrorKind = 'ontbreekt' | 'ongeldig' | 'meerdere' | 'onleesbaar';
 
 export class ConfigError extends Error {
   constructor(
     message: string,
     readonly details: readonly string[] = [],
-    readonly soort: ConfigFoutSoort = 'ongeldig',
+    readonly kind: ConfigErrorKind = 'ongeldig',
   ) {
     super(message);
     this.name = 'ConfigError';

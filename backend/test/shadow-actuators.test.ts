@@ -14,13 +14,13 @@ import { exampleSite } from './site.js';
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import { buildSystemState } from '../src/adapters/homeassistant/mapping.js';
 import { EntityStore } from '../src/adapters/homeassistant/store.js';
-import { SchaduwApparaten } from '../src/adapters/shadow-actuators.js';
+import { ShadowActuators } from '../src/adapters/shadow-actuators.js';
 import { decide } from '../src/core/decide.js';
 import type { Command } from '../src/core/decision.js';
 import { defaultStrategies } from '../src/index.js';
 
 const NOW = Date.UTC(2026, 7, 28, 12, 0, 0); // woensdagmiddag, dagmodus
-const MINUUT = 60_000;
+const MINUTE = 60_000;
 
 function entity(
   entity_id: string,
@@ -29,7 +29,7 @@ function entity(
 ): HaEntityState {
   // Ruim in het verleden gestempeld: dat is de schaduwmodus in één detail. Het
   // echte apparaat staat al een uur stil, dus elke draaitijdgrens is "allang om".
-  const stamp = new Date(NOW - 60 * MINUUT).toISOString();
+  const stamp = new Date(NOW - 60 * MINUTE).toISOString();
   return { entity_id, state, attributes, last_changed: stamp, last_updated: stamp };
 }
 
@@ -39,12 +39,12 @@ function entity(
  * Dat laatste is het punt: in de schaduwmodus stuurt niemand, dus blijft
  * `climate.air_conditioning_zolder` op `off` staan wat de arbiter ook besluit.
  */
-function toestand(zolderC: string): HaEntityState[] {
+function entityState(atticC: string): HaEntityState[] {
   return [
     entity('sensor.p1_meter_power', '-2500'),
     entity('sensor.beneden_temperatuur', '21.0'),
     entity('sensor.badkamer_huidige_temperatuur', '20.0'),
-    entity('sensor.hue_motion_sensor_zolder_temperatuur', zolderC),
+    entity('sensor.hue_motion_sensor_zolder_temperatuur', atticC),
     entity('climate.beneden', 'off', { current_temperature: 21.0, hvac_action: 'off' }),
     entity('climate.thermostaat_badkamer', 'off', { temperature: 18 }),
     entity('climate.air_conditioning_woonkamer', 'off', {}),
@@ -66,26 +66,26 @@ function toestand(zolderC: string): HaEntityState[] {
  * van de apparaten uit Home Assistant, zoals het was.
  */
 function loop(
-  minuten: readonly string[],
-  schaduw: SchaduwApparaten | undefined,
+  minutes: readonly string[],
+  shadow: ShadowActuators | undefined,
 ): Command[][] {
   const store = new EntityStore();
   const strategies = defaultStrategies();
-  const uit: Command[][] = [];
+  const result: Command[][] = [];
 
-  minuten.forEach((zolderC, i) => {
-    const nowMs = NOW + i * MINUUT;
-    store.replaceAll(toestand(zolderC));
-    const state = buildSystemState(exampleSite, store, nowMs, undefined, schaduw);
+  minutes.forEach((atticC, i) => {
+    const nowMs = NOW + i * MINUTE;
+    store.replaceAll(entityState(atticC));
+    const state = buildSystemState(exampleSite, store, nowMs, undefined, shadow);
     const decision = decide({ config: exampleSite, state, strategies });
-    schaduw?.volg(decision);
-    uit.push([...decision.commands]);
+    shadow?.follow(decision);
+    result.push([...decision.commands]);
   });
 
-  return uit;
+  return result;
 }
 
-function acties(commands: readonly Command[], actuatorId: string): string[] {
+function actions(commands: readonly Command[], actuatorId: string): string[] {
   return commands
     .filter((c) => c.kind === 'setAction' && c.actuatorId === actuatorId)
     .map((c) => (c.kind === 'setAction' ? c.action : ''));
@@ -93,10 +93,10 @@ function acties(commands: readonly Command[], actuatorId: string): string[] {
 
 describe('de veronderstelde stand van de apparaten', () => {
   it('onthoudt een schakeling en wanneer die viel', () => {
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
 
-    expect(s.apparaat('ac-zolder')).toEqual({
+    expect(s.actuator('ac-zolder')).toEqual({
       action: 'cool',
       setpointC: null,
       lastChangeMs: NOW,
@@ -104,41 +104,41 @@ describe('de veronderstelde stand van de apparaten', () => {
   });
 
   it('schuift de laatste schakeling niet op bij hetzelfde commando nog eens', () => {
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
     s.apply(
       [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }],
-      NOW + 5 * MINUUT,
+      NOW + 5 * MINUTE,
     );
 
-    expect(s.apparaat('ac-zolder')?.lastChangeMs).toBe(NOW);
+    expect(s.actuator('ac-zolder')?.lastChangeMs).toBe(NOW);
   });
 
   it('rekent een nieuw setpoint niet als schakeling', () => {
     // Een compressor die doorloopt op een andere doeltemperatuur is niet
     // opnieuw gestart. Home Assistant doet het net zo: `last_changed` zit op de
     // state en niet op de attributen.
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
     s.apply(
       [{ kind: 'setSetpoint', actuatorId: 'ac-zolder', setpointC: 20 }],
-      NOW + 3 * MINUUT,
+      NOW + 3 * MINUTE,
     );
 
-    const stand = s.apparaat('ac-zolder');
-    expect(stand?.lastChangeMs).toBe(NOW);
-    expect(stand?.setpointC).toBe(20);
-    expect(stand?.action).toBe('cool');
+    const state = s.actuator('ac-zolder');
+    expect(state?.lastChangeMs).toBe(NOW);
+    expect(state?.setpointC).toBe(20);
+    expect(state?.action).toBe('cool');
   });
 
   it('verzint geen actie bij een los setpoint', () => {
     // Stond het apparaat al goed, dan komt er alleen een setpoint langs. Daar
     // valt niet uit te leiden wat het apparaat doet, dus blijft dat aan het
     // echte apparaat.
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setSetpoint', actuatorId: 'ac-zolder', setpointC: 21 }], NOW);
 
-    expect(s.apparaat('ac-zolder')).toEqual({
+    expect(s.actuator('ac-zolder')).toEqual({
       action: null,
       setpointC: 21,
       lastChangeMs: null,
@@ -149,59 +149,59 @@ describe('de veronderstelde stand van de apparaten', () => {
     // Een echt besluit als basis, zodat de vorm klopt; alleen modus, failsafe
     // en commando's verschillen per geval.
     const store = new EntityStore();
-    store.replaceAll(toestand('25.0'));
-    const basis = decide({
+    store.replaceAll(entityState('25.0'));
+    const base = decide({
       config: exampleSite,
       state: buildSystemState(exampleSite, store, NOW),
       strategies: defaultStrategies(),
     });
-    const uit: Command[] = [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' }];
+    const result: Command[] = [{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'off' }];
 
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
 
     // Handmatig: de arbiter stuurt niets, de bewoner wel. De veronderstelde
     // "koelen" mag dan niet blijven hangen — het echte apparaat is de waarheid.
-    s.volg({
-      ...basis,
+    s.follow({
+      ...base,
       commands: [],
-      explanation: { ...basis.explanation, mode: 'handmatig' },
+      explanation: { ...base.explanation, mode: 'handmatig' },
     });
-    expect(s.apparaat('ac-zolder')).toBeNull();
+    expect(s.actuator('ac-zolder')).toBeNull();
 
     // Handmatig mét failsafe: die stuurt de assist-apparaten uit, ook nu.
-    s.volg({
-      ...basis,
-      atMs: NOW + MINUUT,
-      commands: uit,
+    s.follow({
+      ...base,
+      atMs: NOW + MINUTE,
+      commands: result,
       explanation: {
-        ...basis.explanation,
+        ...base.explanation,
         mode: 'handmatig',
         failsafe: { active: true, unreliable: ['sensor.p1_meter_power'] },
       },
     });
-    expect(s.apparaat('ac-zolder')?.action).toBe('off');
+    expect(s.actuator('ac-zolder')?.action).toBe('off');
   });
 
   it('laat de timercommandos aan OwnState', () => {
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
 
-    expect(s.apparaat('ac-zolder')).toBeNull();
+    expect(s.actuator('ac-zolder')).toBeNull();
   });
 });
 
 describe('de vertaling met een veronderstelde stand', () => {
   it('legt de eigen stand over die van Home Assistant', () => {
     const store = new EntityStore();
-    store.replaceAll(toestand('25.0'));
-    const s = new SchaduwApparaten();
+    store.replaceAll(entityState('25.0'));
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
 
-    const state = buildSystemState(exampleSite, store, NOW + MINUUT, undefined, s);
+    const state = buildSystemState(exampleSite, store, NOW + MINUTE, undefined, s);
     const a = state.actuators['ac-zolder']!;
 
-    expect(a.action).toEqual({ ok: true, value: 'cool', atMs: NOW + MINUUT });
+    expect(a.action).toEqual({ ok: true, value: 'cool', atMs: NOW + MINUTE });
     expect(a.lastChangeMs).toBe(NOW);
     // Het echte apparaat staat uit, dus de vermogenssensor van 0 W meet niet
     // óns apparaat. Onbruikbaar melden laat het budget terugvallen op de
@@ -212,7 +212,7 @@ describe('de vertaling met een veronderstelde stand', () => {
   it('houdt de gemeten waarden zodra de standen weer overeenkomen', () => {
     const store = new EntityStore();
     store.replaceAll([
-      ...toestand('25.0').filter(
+      ...entityState('25.0').filter(
         (e) =>
           e.entity_id !== 'climate.air_conditioning_zolder' &&
           e.entity_id !== 'sensor.air_conditioning_zolder_energy_current',
@@ -220,13 +220,13 @@ describe('de vertaling met een veronderstelde stand', () => {
       entity('climate.air_conditioning_zolder', 'cool', { temperature: 21 }),
       entity('sensor.air_conditioning_zolder_energy_current', '810'),
     ]);
-    const s = new SchaduwApparaten();
+    const s = new ShadowActuators();
     s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW);
 
-    const a = buildSystemState(exampleSite, store, NOW + MINUUT, undefined, s)
+    const a = buildSystemState(exampleSite, store, NOW + MINUTE, undefined, s)
       .actuators['ac-zolder']!;
 
-    expect(a.powerW).toEqual({ ok: true, value: 810, atMs: NOW + MINUUT });
+    expect(a.powerW).toEqual({ ok: true, value: 810, atMs: NOW + MINUTE });
   });
 
   it('rekent het budget met wat de meter werkelijk zag (besluit 49b)', () => {
@@ -242,12 +242,12 @@ describe('de vertaling met een veronderstelde stand', () => {
      */
     const store = new EntityStore();
     store.replaceAll(
-      toestand('25.0').map((e) =>
+      entityState('25.0').map((e) =>
         e.entity_id === 'sensor.p1_meter_power' ? entity('sensor.p1_meter_power', '30') : e,
       ),
     );
-    const s = new SchaduwApparaten();
-    s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW - 30 * MINUUT);
+    const s = new ShadowActuators();
+    s.apply([{ kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' }], NOW - 30 * MINUTE);
 
     const state = buildSystemState(exampleSite, store, NOW, undefined, s);
     const decision = decide({ config: exampleSite, state, strategies: defaultStrategies() });
@@ -259,23 +259,23 @@ describe('de vertaling met een veronderstelde stand', () => {
     // Ruimte: 30 W invoer eraf, 50 W tolerantie erbij.
     expect(budget.availableW).toBe(20);
     // En dus bouwt hij af, naar standby.
-    expect(acties(decision.commands, 'ac-zolder')).toEqual(['standby']);
+    expect(actions(decision.commands, 'ac-zolder')).toEqual(['standby']);
   });
 
   it('valt terug op het echte apparaat zolang er niets gestuurd is', () => {
     const store = new EntityStore();
-    store.replaceAll(toestand('25.0'));
+    store.replaceAll(entityState('25.0'));
 
-    const zonder = buildSystemState(exampleSite, store, NOW).actuators['ac-zolder']!;
-    const met = buildSystemState(
+    const plain = buildSystemState(exampleSite, store, NOW).actuators['ac-zolder']!;
+    const shadowed = buildSystemState(
       exampleSite,
       store,
       NOW,
       undefined,
-      new SchaduwApparaten(),
+      new ShadowActuators(),
     ).actuators['ac-zolder']!;
 
-    expect(met).toEqual(zonder);
+    expect(shadowed).toEqual(plain);
   });
 });
 
@@ -288,28 +288,28 @@ describe('de draaitijd bijt pas met een eigen geschiedenis', () => {
    * dus geblokkeerd te worden — maar alleen wanneer de arbiter weet dat hij
    * zelf vier minuten eerder gestart is.
    */
-  const MINUTEN = ['25.0', '25.0', '25.0', '25.0', '21.0', '21.0', '21.0', '21.0'];
+  const MINUTES = ['25.0', '25.0', '25.0', '25.0', '21.0', '21.0', '21.0', '21.0'];
 
   it('geeft zonder eigen stand elke ronde hetzelfde startcommando', () => {
-    const rondes = loop(MINUTEN, undefined);
+    const rounds = loop(MINUTES, undefined);
 
     // Vier keer "ga koelen" voor hetzelfde apparaat, want het beweegt nooit.
-    const starts = rondes.filter((r) => acties(r, 'ac-zolder').includes('cool'));
+    const starts = rounds.filter((r) => actions(r, 'ac-zolder').includes('cool'));
     expect(starts.length).toBe(4);
   });
 
   it('start één keer en laat daarna de minimale draaitijd gelden', () => {
-    const schaduw = new SchaduwApparaten();
-    const rondes = loop(MINUTEN, schaduw);
+    const shadow = new ShadowActuators();
+    const rounds = loop(MINUTES, shadow);
 
     // Eén startcommando, niet vier.
-    const starts = rondes.filter((r) => acties(r, 'ac-zolder').includes('cool'));
+    const starts = rounds.filter((r) => actions(r, 'ac-zolder').includes('cool'));
     expect(starts.length).toBe(1);
 
     // En als de vraag wegvalt, gaat hij niet meteen uit: de draaitijd van
     // 15 minuten houdt hem aan. Na acht minuten is er dus nog geen afbouw.
-    const stops = rondes.filter((r) => {
-      const a = acties(r, 'ac-zolder');
+    const stops = rounds.filter((r) => {
+      const a = actions(r, 'ac-zolder');
       return a.includes('off') || a.includes('standby');
     });
     expect(stops.length).toBe(0);
@@ -318,12 +318,12 @@ describe('de draaitijd bijt pas met een eigen geschiedenis', () => {
   it('laat hem wél gaan zodra de draaitijd verstreken is', () => {
     // Zestien minuten koelen, daarna zakt de vraag weg. Nu is de ondergrens
     // voorbij en hoort de afbouw door te gaan.
-    const lang = [...Array.from({ length: 16 }, () => '25.0'), '21.0', '21.0'];
-    const rondes = loop(lang, new SchaduwApparaten());
+    const long = [...Array.from({ length: 16 }, () => '25.0'), '21.0', '21.0'];
+    const rounds = loop(long, new ShadowActuators());
 
     // De vraag valt weg op minuut 16; daar hoort de afbouw te staan. Naar
     // standby en niet uit: het apparaat blijft beschikbaar voor een korte dip
     // in de zon, en gaat pas echt uit als de stabilisatie voorbij is.
-    expect(acties(rondes[16]!, 'ac-zolder')).toEqual(['standby']);
+    expect(actions(rounds[16]!, 'ac-zolder')).toEqual(['standby']);
   });
 });

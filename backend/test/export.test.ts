@@ -16,19 +16,19 @@ import { promisify } from 'node:util';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { exportInfo, schrijfExport } from '../src/web/export.js';
+import { exportInfo, writeExport } from '../src/web/export.js';
 
-const uitvoeren = promisify(execFile);
-const opruimen: string[] = [];
+const execute = promisify(execFile);
+const cleanup: string[] = [];
 afterEach(async () => {
-  for (const d of opruimen.splice(0)) await rm(d, { recursive: true, force: true });
+  for (const d of cleanup.splice(0)) await rm(d, { recursive: true, force: true });
 });
 
-async function logboekMet(dagen: Record<string, string>): Promise<string> {
+async function decisionLogWith(days: Record<string, string>): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'hems-export-'));
-  opruimen.push(dir);
-  for (const [dag, inhoud] of Object.entries(dagen)) {
-    await writeFile(join(dir, `decisions-${dag}.ndjson`), inhoud, 'utf-8');
+  cleanup.push(dir);
+  for (const [day, content] of Object.entries(days)) {
+    await writeFile(join(dir, `decisions-${day}.ndjson`), content, 'utf-8');
   }
   // Rommel die er niet in hoort: findLogFiles filtert op de naamvorm.
   await writeFile(join(dir, 'aantekening.txt'), 'geen logboek', 'utf-8');
@@ -36,30 +36,30 @@ async function logboekMet(dagen: Record<string, string>): Promise<string> {
 }
 
 /** Een antwoord dat naar een bestand schrijft in plaats van naar een socket. */
-function nepAntwoord(pad: string) {
-  const stream = createWriteStream(pad);
-  const koppen: Record<string, string> = {};
+function fakeResponse(path: string) {
+  const stream = createWriteStream(path);
+  const headings: Record<string, string> = {};
   let status = 0;
   return {
     res: Object.assign(stream, {
       writeHead(code: number, h: Record<string, string>) {
         status = code;
-        Object.assign(koppen, h);
+        Object.assign(headings, h);
         return this;
       },
     }) as never,
     get status() {
       return status;
     },
-    get koppen() {
-      return koppen;
+    get headings() {
+      return headings;
     },
   };
 }
 
 describe('de dataset exporteren', () => {
   it('telt alleen de dagbestanden en hun omvang', async () => {
-    const dir = await logboekMet({
+    const dir = await decisionLogWith({
       '2026-09-05': 'a\nb\n',
       '2026-09-06': 'c\n',
     });
@@ -79,26 +79,26 @@ describe('de dataset exporteren', () => {
   it('levert een archief dat het systeem kan uitpakken, met de inhoud intact', async () => {
     // Groot genoeg om over meerdere tar-blokken te lopen: een bestand van
     // precies 512 bytes zou een vulfout kunnen verbergen.
-    const groot = 'x'.repeat(1500) + '\n';
-    const dir = await logboekMet({
+    const large = 'x'.repeat(1500) + '\n';
+    const dir = await decisionLogWith({
       '2026-09-05': '{"t":1}\n{"t":2}\n',
-      '2026-09-06': groot,
+      '2026-09-06': large,
     });
 
     const tgz = join(dir, 'uit.tar.gz');
-    const doel = nepAntwoord(tgz);
-    await schrijfExport(dir, doel.res, new Date('2026-09-30T12:00:00Z'));
+    const target = fakeResponse(tgz);
+    await writeExport(dir, target.res, new Date('2026-09-30T12:00:00Z'));
 
-    expect(doel.status).toBe(200);
-    expect(doel.koppen['content-disposition']).toContain('hems-logboek-2026-09-30.tar.gz');
+    expect(target.status).toBe(200);
+    expect(target.headings['content-disposition']).toContain('hems-logboek-2026-09-30.tar.gz');
 
-    const uit = join(dir, 'uitgepakt');
-    await mkdir(uit);
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
     // Relatieve paden, met de map als werkmap: GNU tar leest een pad dat met
     // "C:" begint als `host:pad` en probeert verbinding te maken.
-    await uitvoeren('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
 
-    const map = join(uit, 'hems-logboek-2026-09-30');
+    const map = join(unpackDir, 'hems-logboek-2026-09-30');
     expect((await readdir(map)).sort()).toEqual([
       'decisions-2026-09-05.ndjson',
       'decisions-2026-09-06.ndjson',
@@ -106,11 +106,11 @@ describe('de dataset exporteren', () => {
     expect(await readFile(join(map, 'decisions-2026-09-05.ndjson'), 'utf-8')).toBe(
       '{"t":1}\n{"t":2}\n',
     );
-    expect(await readFile(join(map, 'decisions-2026-09-06.ndjson'), 'utf-8')).toBe(groot);
+    expect(await readFile(join(map, 'decisions-2026-09-06.ndjson'), 'utf-8')).toBe(large);
   });
 
   it('neemt de ruwe historie mee, en telt op de knop alleen dagen (besluit 52)', async () => {
-    const dir = await logboekMet({ '2026-09-05': 'a\n' });
+    const dir = await decisionLogWith({ '2026-09-05': 'a\n' });
     await writeFile(join(dir, 'history-2026-09-05.ndjson'), '{"t":1,"e":"x","s":"1"}\n', 'utf-8');
 
     const info = await exportInfo(dir);
@@ -120,25 +120,25 @@ describe('de dataset exporteren', () => {
     expect(info.bytes).toBe(2 + 24);
 
     const tgz = join(dir, 'uit.tar.gz');
-    await schrijfExport(dir, nepAntwoord(tgz).res, new Date('2026-09-30T12:00:00Z'));
-    const uit = join(dir, 'uitgepakt');
-    await mkdir(uit);
-    await uitvoeren('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
-    expect((await readdir(join(uit, 'hems-logboek-2026-09-30'))).sort()).toEqual([
+    await writeExport(dir, fakeResponse(tgz).res, new Date('2026-09-30T12:00:00Z'));
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    expect((await readdir(join(unpackDir, 'hems-logboek-2026-09-30'))).sort()).toEqual([
       'decisions-2026-09-05.ndjson',
       'history-2026-09-05.ndjson',
     ]);
   });
 
   it('laat wat geen dagbestand is buiten het archief', async () => {
-    const dir = await logboekMet({ '2026-09-05': 'a\n' });
+    const dir = await decisionLogWith({ '2026-09-05': 'a\n' });
     const tgz = join(dir, 'uit.tar.gz');
-    await schrijfExport(dir, nepAntwoord(tgz).res, new Date('2026-09-30T12:00:00Z'));
+    await writeExport(dir, fakeResponse(tgz).res, new Date('2026-09-30T12:00:00Z'));
 
-    const uit = join(dir, 'uitgepakt');
-    await mkdir(uit);
-    await uitvoeren('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
-    const map = join(uit, 'hems-logboek-2026-09-30');
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    const map = join(unpackDir, 'hems-logboek-2026-09-30');
     expect(await readdir(map)).toEqual(['decisions-2026-09-05.ndjson']);
   });
 });

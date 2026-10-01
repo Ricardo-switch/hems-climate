@@ -57,7 +57,7 @@ import { isHandsOff } from '../core/model.js';
  * volledige toestand — een `setSetpoint` zonder `setAction` (het apparaat stond
  * al goed) zou anders een actie moeten verzinnen.
  */
-export interface SchaduwApparaat {
+export interface ShadowActuator {
   readonly action: Action | null;
   readonly setpointC: number | null;
   /** Wanneer de veronderstelde actie voor het laatst wisselde. */
@@ -68,18 +68,18 @@ export interface SchaduwApparaat {
  * Een leesinterface en niet de klas zelf, zodat de replay-harness dezelfde
  * boekhouding kan voeren en `buildSystemState` niets over de herkomst weet.
  */
-export interface SchaduwApparatenReader {
-  apparaat(actuatorId: string): SchaduwApparaat | null;
+export interface ShadowActuatorReader {
+  actuator(actuatorId: string): ShadowActuator | null;
 }
 
 /** Geen veronderstelling: alles komt van het echte apparaat. */
-export const GEEN_SCHADUW: SchaduwApparatenReader = { apparaat: () => null };
+export const NO_SHADOW: ShadowActuatorReader = { actuator: () => null };
 
-export class SchaduwApparaten implements SchaduwApparatenReader {
-  readonly #stand = new Map<string, SchaduwApparaat>();
+export class ShadowActuators implements ShadowActuatorReader {
+  readonly #state = new Map<string, ShadowActuator>();
 
-  apparaat(actuatorId: string): SchaduwApparaat | null {
-    return this.#stand.get(actuatorId) ?? null;
+  actuator(actuatorId: string): ShadowActuator | null {
+    return this.#state.get(actuatorId) ?? null;
   }
 
   /**
@@ -98,10 +98,10 @@ export class SchaduwApparaten implements SchaduwApparatenReader {
    * Behalve bij de failsafe: die stuurt ook in handmatig de assist-apparaten
    * uit, en die commando's gelden.
    */
-  volg(decision: Decision): void {
+  follow(decision: Decision): void {
     const { mode, failsafe } = decision.explanation;
     if (isHandsOff(mode) && !failsafe.active) {
-      this.#stand.clear();
+      this.#state.clear();
       return;
     }
     this.apply(decision.commands, decision.atMs);
@@ -122,19 +122,19 @@ export class SchaduwApparaten implements SchaduwApparatenReader {
   apply(commands: readonly Command[], nowMs: number): void {
     for (const c of commands) {
       if (c.kind === 'setAction') {
-        const vorig = this.#stand.get(c.actuatorId);
-        if (vorig?.action === c.action) continue;
-        this.#stand.set(c.actuatorId, {
+        const previous = this.#state.get(c.actuatorId);
+        if (previous?.action === c.action) continue;
+        this.#state.set(c.actuatorId, {
           action: c.action,
-          setpointC: vorig?.setpointC ?? null,
+          setpointC: previous?.setpointC ?? null,
           lastChangeMs: nowMs,
         });
       } else if (c.kind === 'setSetpoint') {
-        const vorig = this.#stand.get(c.actuatorId);
-        this.#stand.set(c.actuatorId, {
-          action: vorig?.action ?? null,
+        const previous = this.#state.get(c.actuatorId);
+        this.#state.set(c.actuatorId, {
+          action: previous?.action ?? null,
           setpointC: c.setpointC,
-          lastChangeMs: vorig?.lastChangeMs ?? null,
+          lastChangeMs: previous?.lastChangeMs ?? null,
         });
       }
     }

@@ -11,7 +11,7 @@
 
 import { resolve } from 'node:path';
 
-import { schrijfDataset, stikHistorie } from '../src/replay/stitch.js';
+import { writeDataset, stitchHistory } from '../src/replay/stitch.js';
 
 async function main(): Promise<void> {
   const map = process.argv[2];
@@ -20,18 +20,18 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
-  const uit = resolve(process.argv[3] ?? 'data/replay/history-live.ndjson.gz');
+  const outPath = resolve(process.argv[3] ?? 'data/replay/history-live.ndjson.gz');
 
-  const d = await stikHistorie(map);
-  await schrijfDataset(uit, d);
+  const d = await stitchHistory(map);
+  await writeDataset(outPath, d);
 
-  const dagen = (d.meta.toMs - d.meta.fromMs) / 86_400_000;
-  console.log(`Geschreven: ${uit}`);
+  const days = (d.meta.toMs - d.meta.fromMs) / 86_400_000;
+  console.log(`Geschreven: ${outPath}`);
   console.log(`  rijen        ${d.meta.rows.toLocaleString('nl-NL')}`);
   console.log(`  entiteiten   ${d.meta.entities.length}`);
   console.log(
     `  venster      ${new Date(d.meta.fromMs).toISOString().slice(0, 16)} tot ` +
-      `${new Date(d.meta.toMs).toISOString().slice(0, 16)}  (${dagen.toFixed(1)} dagen)`,
+      `${new Date(d.meta.toMs).toISOString().slice(0, 16)}  (${days.toFixed(1)} dagen)`,
   );
 }
 

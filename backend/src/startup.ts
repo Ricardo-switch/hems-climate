@@ -15,15 +15,15 @@
  * processor.
  */
 
-export interface Opstart {
+export interface Startup {
   /** Draaien we als Home Assistant-add-on, met het token van de Supervisor? */
-  readonly alsAddon: boolean;
+  readonly asAddon: boolean;
   readonly ha: { readonly url: string | null; readonly token: string | null };
   /** Wat er aan de verbinding met Home Assistant ontbreekt. Niet leeg: niet starten. */
-  readonly haProblemen: readonly string[];
+  readonly haProblems: readonly string[];
   readonly web: {
     /** Null: de weergave staat uit. Luisteren is een keuze, geen standaard. */
-    readonly poort: number | null;
+    readonly port: number | null;
     readonly host: string;
     readonly dir: string | null;
   };
@@ -33,46 +33,46 @@ export interface Opstart {
    * Alleen met een weergave, en alleen achter Ingress — of wanneer iemand dat
    * uitdrukkelijk vraagt, en dan met een waarschuwing.
    */
-  readonly onboarding: { readonly aan: boolean; readonly zonderIngress: boolean };
+  readonly onboarding: { readonly enabled: boolean; readonly withoutIngress: boolean };
   readonly logDir: string;
   readonly tickSeconds: number;
   readonly minIntervalSeconds: number;
   /** Nul zet de bewaking uit. */
   readonly watchdogMinutes: number;
-  readonly configPad: string | null;
+  readonly configPath: string | null;
   readonly siteId: string | null;
   readonly sitesDir: string | null;
   /** Instellingen die niet kloppen. Niet leeg: niet starten. */
-  readonly fouten: readonly string[];
+  readonly errors: readonly string[];
 }
 
-type Omgeving = Readonly<Record<string, string | undefined>>;
+type Environment = Readonly<Record<string, string | undefined>>;
 
-function lees(env: Omgeving, naam: string): string | null {
-  const v = env[naam];
+function readPoint(env: Environment, name: string): string | null {
+  const v = env[name];
   return v != null && v.trim() !== '' ? v.trim() : null;
 }
 
 /** Een getal met een ondergrens, of een foutmelding. Ontbreken geeft de standaard. */
-function getal(
-  env: Omgeving,
-  naam: string,
-  standaard: number,
+function numberAttr(
+  env: Environment,
+  name: string,
+  defaults: number,
   minimum: number,
-  fouten: string[],
+  errors: string[],
 ): number {
-  const ruw = lees(env, naam);
-  if (ruw == null) return standaard;
-  const n = Number(ruw);
+  const raw = readPoint(env, name);
+  if (raw == null) return defaults;
+  const n = Number(raw);
   if (!Number.isFinite(n) || n < minimum) {
-    fouten.push(`${naam} moet een getal van minstens ${minimum} zijn, niet "${ruw}".`);
-    return standaard;
+    errors.push(`${name} moet een getal van minstens ${minimum} zijn, niet "${raw}".`);
+    return defaults;
   }
   return n;
 }
 
-export function leesOpstart(env: Omgeving): Opstart {
-  const fouten: string[] = [];
+export function readStartup(env: Environment): Startup {
+  const errors: string[] = [];
 
   /*
    * Add-on of niet.
@@ -81,56 +81,56 @@ export function leesOpstart(env: Omgeving): Opstart {
    * wint nog steeds: wie `HA_URL` en `HA_TOKEN` zelf zet, krijgt die — en is
    * dan dus ook geen add-on meer in de zin van "achter Ingress".
    */
-  const supervisorToken = lees(env, 'SUPERVISOR_TOKEN');
-  const alsAddon =
-    supervisorToken != null && lees(env, 'HA_URL') == null && lees(env, 'HA_TOKEN') == null;
-  const url = alsAddon ? 'http://supervisor/core/websocket' : lees(env, 'HA_URL');
-  const token = alsAddon ? supervisorToken : lees(env, 'HA_TOKEN');
+  const supervisorToken = readPoint(env, 'SUPERVISOR_TOKEN');
+  const asAddon =
+    supervisorToken != null && readPoint(env, 'HA_URL') == null && readPoint(env, 'HA_TOKEN') == null;
+  const url = asAddon ? 'http://supervisor/core/websocket' : readPoint(env, 'HA_URL');
+  const token = asAddon ? supervisorToken : readPoint(env, 'HA_TOKEN');
 
   // "Staat er niet" is iets anders dan "staat er wel maar is leeg": dat tweede
   // is het bestand dat je aanmaakte voordat je het token plakte.
-  const haProblemen: string[] = [];
+  const haProblems: string[] = [];
   if (url == null) {
-    haProblemen.push('HA_URL' in env ? 'HA_URL staat er wel, maar is leeg.' : 'HA_URL ontbreekt.');
+    haProblems.push('HA_URL' in env ? 'HA_URL staat er wel, maar is leeg.' : 'HA_URL ontbreekt.');
   }
   if (token == null) {
-    haProblemen.push(
+    haProblems.push(
       'HA_TOKEN' in env
         ? 'HA_TOKEN staat er wel, maar is leeg — het token is nog niet geplakt.'
         : 'HA_TOKEN ontbreekt.',
     );
   }
 
-  const poortRuw = lees(env, 'HEMS_WEB_PORT');
-  let poort: number | null = null;
-  if (poortRuw != null) {
-    const n = Number(poortRuw);
-    if (Number.isInteger(n) && n >= 1 && n <= 65535) poort = n;
-    else fouten.push(`HEMS_WEB_PORT is geen geldige poort: "${poortRuw}".`);
+  const portRaw = readPoint(env, 'HEMS_WEB_PORT');
+  let port: number | null = null;
+  if (portRaw != null) {
+    const n = Number(portRaw);
+    if (Number.isInteger(n) && n >= 1 && n <= 65535) port = n;
+    else errors.push(`HEMS_WEB_PORT is geen geldige poort: "${portRaw}".`);
   }
 
   // Eén definitie van de schrijfdeur. Stond in twee versies in main.ts.
-  const onboardingGevraagd = lees(env, 'HEMS_ONBOARDING') === '1';
-  const onboardingAan = poort != null && (alsAddon || onboardingGevraagd);
+  const onboardingRequested = readPoint(env, 'HEMS_ONBOARDING') === '1';
+  const onboardingOn = port != null && (asAddon || onboardingRequested);
 
   return {
-    alsAddon,
+    asAddon,
     ha: { url, token },
-    haProblemen,
+    haProblems,
     web: {
-      poort,
-      host: lees(env, 'HEMS_WEB_HOST') ?? '0.0.0.0',
-      dir: lees(env, 'HEMS_WEB_DIR'),
+      port,
+      host: readPoint(env, 'HEMS_WEB_HOST') ?? '0.0.0.0',
+      dir: readPoint(env, 'HEMS_WEB_DIR'),
     },
-    onboarding: { aan: onboardingAan, zonderIngress: onboardingAan && !alsAddon },
+    onboarding: { enabled: onboardingOn, withoutIngress: onboardingOn && !asAddon },
     // Een lege SHADOW_LOG_DIR betekent bewust: niet loggen. Dus niet `lees`.
     logDir: env['SHADOW_LOG_DIR'] ?? 'data/shadow',
-    tickSeconds: getal(env, 'SHADOW_TICK_SECONDS', 30, 1, fouten),
-    minIntervalSeconds: getal(env, 'SHADOW_MIN_INTERVAL_SECONDS', 15, 0, fouten),
-    watchdogMinutes: getal(env, 'SHADOW_WATCHDOG_MINUTES', 10, 0, fouten),
-    configPad: lees(env, 'HEMS_CONFIG'),
-    siteId: lees(env, 'HEMS_SITE'),
-    sitesDir: lees(env, 'HEMS_SITES_DIR'),
-    fouten,
+    tickSeconds: numberAttr(env, 'SHADOW_TICK_SECONDS', 30, 1, errors),
+    minIntervalSeconds: numberAttr(env, 'SHADOW_MIN_INTERVAL_SECONDS', 15, 0, errors),
+    watchdogMinutes: numberAttr(env, 'SHADOW_WATCHDOG_MINUTES', 10, 0, errors),
+    configPath: readPoint(env, 'HEMS_CONFIG'),
+    siteId: readPoint(env, 'HEMS_SITE'),
+    sitesDir: readPoint(env, 'HEMS_SITES_DIR'),
+    errors,
   };
 }

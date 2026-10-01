@@ -23,7 +23,7 @@ import {
   type Actuator,
   type ActuatorRole,
   type DeviceRef,
-  type Meetpunt,
+  type MeasurementPoint,
   type Mode,
   type SetpointPair,
   type SiteConfig,
@@ -231,7 +231,7 @@ function oneOfOr<T extends string>(
 }
 
 /** Een blok dat mag ontbreken. Geeft een leeg object terug in plaats van null. */
-function blokOf(
+function blockOf(
   p: Problems,
   value: unknown,
   path: string,
@@ -300,12 +300,12 @@ function ref(
  * optioneel geworden — wie een attribuut opgeeft wil zelden ook nog een andere
  * adapter noemen, en de standaard klopt bijna altijd.
  */
-function meetpunt(
+function measurementPoint(
   p: Problems,
   value: unknown,
   path: string,
   defaultAdapter: string,
-): Meetpunt | null {
+): MeasurementPoint | null {
   if (!isRecord(value) || value['attribute'] === undefined) {
     return ref(p, value, path, defaultAdapter);
   }
@@ -339,7 +339,7 @@ function refList(
  *
  * `handmatig` blijft met opzet leeg — daar heeft de bewoner het stuur.
  */
-const STANDAARD_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
+const DEFAULT_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
   dag: { heat: 20 },
   nacht: { heat: 17 },
   voorverwarmen: { heat: 20 },
@@ -348,31 +348,31 @@ const STANDAARD_SETPOINTS: Readonly<Record<Mode, SetpointPair>> = {
   handmatig: {},
 };
 
-interface SetpointUitkomst {
+interface SetpointOutcome {
   readonly points: Record<Mode, SetpointPair>;
   /** Welke modi uit de standaardwaarden komen in plaats van uit het bestand. */
-  readonly ingevuld: ReadonlySet<Mode>;
+  readonly filled: ReadonlySet<Mode>;
 }
 
 function setpoints(
   p: Problems,
   value: unknown,
   path: string,
-): SetpointUitkomst | null {
+): SetpointOutcome | null {
   if (value === undefined) {
     p.warn(
       path,
       'ontbreekt; er wordt alleen verwarmd, volgens ' +
-        `dag ${STANDAARD_SETPOINTS.dag.heat} / nacht ${STANDAARD_SETPOINTS.nacht.heat} / ` +
-        `afwezig ${STANDAARD_SETPOINTS.afwezig.heat} / vakantie ${STANDAARD_SETPOINTS.vakantie.heat} °C`,
+        `dag ${DEFAULT_SETPOINTS.dag.heat} / nacht ${DEFAULT_SETPOINTS.nacht.heat} / ` +
+        `afwezig ${DEFAULT_SETPOINTS.afwezig.heat} / vakantie ${DEFAULT_SETPOINTS.vakantie.heat} °C`,
     );
-    return { points: { ...STANDAARD_SETPOINTS }, ingevuld: new Set(MODES) };
+    return { points: { ...DEFAULT_SETPOINTS }, filled: new Set(MODES) };
   }
   if (!isRecord(value)) {
     p.error(path, 'moet een object zijn');
     return null;
   }
-  const ingevuld = new Set<Mode>();
+  const filled = new Set<Mode>();
   for (const key of Object.keys(value)) {
     if (!(MODES as readonly string[]).includes(key)) {
       p.error(join(path, key), `"${key}" is geen bekende modus; kies uit ${MODES.join(', ')}`);
@@ -384,8 +384,8 @@ function setpoints(
     if (raw === undefined) {
       // Een deels ingevulde tabel aanvullen in plaats van afkeuren. Wie drie
       // modi heeft bedacht is niet van plan de andere drie te verbieden.
-      out[mode] = { ...STANDAARD_SETPOINTS[mode] };
-      ingevuld.add(mode);
+      out[mode] = { ...DEFAULT_SETPOINTS[mode] };
+      filled.add(mode);
       continue;
     }
     if (!isRecord(raw)) {
@@ -406,7 +406,7 @@ function setpoints(
     }
     out[mode] = pair;
   }
-  return { points: out, ingevuld };
+  return { points: out, filled };
 }
 
 function actuator(
@@ -516,11 +516,11 @@ function actuator(
    * daarom blijft het daar verplicht.
    */
   const pPath = join(path, 'power');
-  const powerRaw = blokOf(p, value['power'], pPath);
+  const powerRaw = blockOf(p, value['power'], pPath);
   let power: Actuator['power'] | null = null;
   if (powerRaw) {
-    const opgegeven = powerRaw['estimatedW'] !== undefined;
-    if (!opgegeven && role === 'assist') {
+    const given = powerRaw['estimatedW'] !== undefined;
+    if (!given && role === 'assist') {
       p.error(
         join(pPath, 'estimatedW'),
         'ontbreekt; een assist-apparaat verdeelt overschot en een apparaat ' +
@@ -538,7 +538,7 @@ function actuator(
   // Draaitijden beschermen het apparaat tegen klapperen. Ontbreken ze, dan
   // zijn deze waarden gebruikelijk en aan de veilige kant.
   const tPath = join(path, 'timing');
-  const timingRaw = blokOf(p, value['timing'], tPath);
+  const timingRaw = blockOf(p, value['timing'], tPath);
   let timing: Actuator['timing'] | null = null;
   if (timingRaw) {
     timing = {
@@ -570,29 +570,29 @@ function actuator(
  *    blijft dan niets over, en de zone doet niets — wat eerlijker is dan
  *    een koeldoel verzinnen dat wij hebben bedacht.
  */
-function passendGemaakt(
+function fitted(
   p: Problems,
-  gelezen: SetpointUitkomst,
+  parsed: SetpointOutcome,
   path: string,
   actuatorIds: readonly string[],
-  apparaten: ReadonlyMap<string, Actuator>,
+  actuators: ReadonlyMap<string, Actuator>,
 ): Record<Mode, SetpointPair> {
-  const inZone = actuatorIds.map((id) => apparaten.get(id)).filter((a): a is Actuator => a != null);
-  if (inZone.length === 0 || gelezen.ingevuld.size === 0) return gelezen.points;
+  const inZone = actuatorIds.map((id) => actuators.get(id)).filter((a): a is Actuator => a != null);
+  if (inZone.length === 0 || parsed.filled.size === 0) return parsed.points;
 
-  const kanVerwarmen = inZone.filter((a) => a.capabilities.canHeat);
-  const out = { ...gelezen.points };
+  const canHeat = inZone.filter((a) => a.capabilities.canHeat);
+  const out = { ...parsed.points };
 
-  if (kanVerwarmen.length === 0) {
-    let weggehaald = 0;
-    for (const mode of gelezen.ingevuld) {
+  if (canHeat.length === 0) {
+    let removed = 0;
+    for (const mode of parsed.filled) {
       if (out[mode].heat != null) {
         out[mode] = { ...out[mode] };
         delete (out[mode] as { heat?: number }).heat;
-        weggehaald += 1;
+        removed += 1;
       }
     }
-    if (weggehaald > 0) {
+    if (removed > 0) {
       p.warn(
         join(path, 'setpoints'),
         'geen enkel apparaat in deze zone kan verwarmen, dus de ingevulde ' +
@@ -603,26 +603,26 @@ function passendGemaakt(
     return out;
   }
 
-  const laagste = Math.min(...kanVerwarmen.map((a) => a.capabilities.setpointRange[0]));
-  const hoogste = Math.max(...kanVerwarmen.map((a) => a.capabilities.setpointRange[1]));
-  let verschoven = 0;
-  for (const mode of gelezen.ingevuld) {
+  const lowest = Math.min(...canHeat.map((a) => a.capabilities.setpointRange[0]));
+  const highest = Math.max(...canHeat.map((a) => a.capabilities.setpointRange[1]));
+  let shifted = 0;
+  for (const mode of parsed.filled) {
     const heat = out[mode].heat;
     if (heat == null) continue;
-    const binnen = Math.min(hoogste, Math.max(laagste, heat));
-    if (binnen !== heat) {
-      out[mode] = { ...out[mode], heat: binnen };
-      verschoven += 1;
+    const inside = Math.min(highest, Math.max(lowest, heat));
+    if (inside !== heat) {
+      out[mode] = { ...out[mode], heat: inside };
+      shifted += 1;
     }
   }
-  if (verschoven > 0) {
+  if (shifted > 0) {
     p.warn(
       join(path, 'setpoints'),
-      verschoven === 1
-        ? `één ingevuld verwarmingsdoel viel buiten het bereik ${laagste}-${hoogste} °C ` +
+      shifted === 1
+        ? `één ingevuld verwarmingsdoel viel buiten het bereik ${lowest}-${highest} °C ` +
           'van de apparaten en is erin geschoven'
-        : `${verschoven} ingevulde verwarmingsdoelen vielen buiten het bereik ` +
-          `${laagste}-${hoogste} °C van de apparaten en zijn erin geschoven`,
+        : `${shifted} ingevulde verwarmingsdoelen vielen buiten het bereik ` +
+          `${lowest}-${highest} °C van de apparaten en zijn erin geschoven`,
     );
   }
   return out;
@@ -634,9 +634,9 @@ function zone(
   path: string,
   defaultAdapter: string,
   /** Positie in de lijst, als terugval voor `priority`. */
-  volgorde: number,
+  order: number,
   /** De al gelezen apparaten, om ingevulde setpoints haalbaar te houden. */
-  apparaten: ReadonlyMap<string, Actuator>,
+  actuators: ReadonlyMap<string, Actuator>,
 ): Zone | null {
   if (!isRecord(value)) {
     p.error(path, 'moet een object zijn');
@@ -644,12 +644,12 @@ function zone(
   }
   const id = str(p, value, path, 'id');
   const name = strOr(p, value, path, 'name', id ?? '');
-  const temperature = meetpunt(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
+  const temperature = measurementPoint(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
   const humidityRaw = value['humidity'];
   const humidity =
     humidityRaw === undefined
       ? null
-      : meetpunt(p, humidityRaw, join(path, 'humidity'), defaultAdapter);
+      : measurementPoint(p, humidityRaw, join(path, 'humidity'), defaultAdapter);
 
   const idsRaw = arr(p, value, path, 'actuatorIds', { minLength: 1 });
   const actuatorIds: string[] = [];
@@ -663,7 +663,7 @@ function zone(
 
   // Zonder opgegeven volgorde telt de volgorde in het bestand. Dat is wat een
   // lezer ook zou aannemen.
-  const priority = numOr(p, value, path, 'priority', volgorde, {
+  const priority = numOr(p, value, path, 'priority', order, {
     min: 1,
     max: 999,
     integer: true,
@@ -675,7 +675,7 @@ function zone(
   // Een gebruikelijke schakelband. Verkeerd geraden kost comfort, geen
   // veiligheid — precies het soort keuze dat een standaardwaarde verdient.
   const hPath = join(path, 'hysteresis');
-  const hystRaw = blokOf(p, value['hysteresis'], hPath);
+  const hystRaw = blockOf(p, value['hysteresis'], hPath);
   let hysteresis: Zone['hysteresis'] | null = null;
   if (hystRaw) {
     const onDelta = numOr(p, hystRaw, hPath, 'onDelta', 0.3, { min: 0, max: 5 });
@@ -708,7 +708,7 @@ function zone(
 
   // Voorladen staat standaard uit. Aanzetten is een keuze, geen aanname.
   const bPath = join(path, 'buffering');
-  const bufRaw = blokOf(p, value['buffering'], bPath);
+  const bufRaw = blockOf(p, value['buffering'], bPath);
   let buffering: Zone['buffering'] | null = null;
   if (bufRaw) {
     const enabled = boolOr(p, bufRaw, bPath, 'enabled', false);
@@ -721,8 +721,8 @@ function zone(
     }
   }
 
-  const gelezen = setpoints(p, value['setpoints'], join(path, 'setpoints'));
-  const points = gelezen == null ? null : passendGemaakt(p, gelezen, path, actuatorIds, apparaten);
+  const parsed = setpoints(p, value['setpoints'], join(path, 'setpoints'));
+  const points = parsed == null ? null : fitted(p, parsed, path, actuatorIds, actuators);
 
   /*
    * Een plafond onder het koeldoel is tegenstrijdig.
@@ -983,7 +983,7 @@ export function parseSiteConfig(
    */
   type Power = SiteConfig['power'];
   let power: Power | null = null;
-  const powerRaw = blokOf(p, input['power'], 'power');
+  const powerRaw = blockOf(p, input['power'], 'power');
   if (powerRaw) {
     const gridRaw = powerRaw['gridPower'];
     const gridPower =
@@ -1040,7 +1040,7 @@ export function parseSiteConfig(
   // zet het zelf, maar niemand hoeft erover na te denken om te kunnen starten.
   type Schedule = SiteConfig['schedule'];
   let schedule: Schedule | null = null;
-  const scheduleRaw = blokOf(p, input['schedule'], 'schedule');
+  const scheduleRaw = blockOf(p, input['schedule'], 'schedule');
   if (scheduleRaw) {
     const preheatFromHour = numOr(p, scheduleRaw, 'schedule', 'preheatFromHour', 6, {
       min: 0,
@@ -1135,15 +1135,15 @@ export function parseSiteConfig(
     if (!isRecord(aliasRaw)) {
       p.error('mode.aliases', 'ontbreekt of is geen object');
     } else {
-      for (const [stand, doel] of Object.entries(aliasRaw)) {
-        if (typeof doel !== 'string' || !(MODES as readonly string[]).includes(doel)) {
+      for (const [state, target] of Object.entries(aliasRaw)) {
+        if (typeof target !== 'string' || !(MODES as readonly string[]).includes(target)) {
           p.error(
-            join('mode.aliases', stand),
-            `"${String(doel)}" is geen bekende modus; kies uit ${MODES.join(', ')}`,
+            join('mode.aliases', state),
+            `"${String(target)}" is geen bekende modus; kies uit ${MODES.join(', ')}`,
           );
           continue;
         }
-        aliases[stand] = doel as Mode;
+        aliases[state] = target as Mode;
       }
     }
 
@@ -1170,9 +1170,9 @@ export function parseSiteConfig(
       // Een modus-keuze die nergens naar "handmatig" kan wijzen is verdacht:
       // dan kan de bewoner de regeling nooit loslaten. Waarschuwing en geen
       // fout, want een woning zonder die knop mag bestaan.
-      const kentHandmatig =
+      const knowsManual =
         Object.values(aliases).includes('handmatig') || handsOffWhen.length > 0;
-      if (!kentHandmatig) {
+      if (!knowsManual) {
         p.warn(
           'mode',
           'geen enkele stand vertaalt naar "handmatig" en er is geen handsOffWhen; ' +
@@ -1230,10 +1230,10 @@ export function parseSiteConfig(
   }
 
   // Dezelfde behandeling voor de opbrengst van de zonnepanelen (besluit 47).
-  const zonRaw = input['solarProduction'];
+  const solarRaw = input['solarProduction'];
   const solarProduction =
-    zonRaw === undefined ? null : meetpunt(p, zonRaw, 'solarProduction', defaultAdapter);
-  if (zonRaw === undefined) {
+    solarRaw === undefined ? null : measurementPoint(p, solarRaw, 'solarProduction', defaultAdapter);
+  if (solarRaw === undefined) {
     p.warn(
       'solarProduction',
       'ontbreekt; zonder de eigen opbrengst is er geen maat voor instraling, ' +
@@ -1264,44 +1264,44 @@ export function parseSiteConfig(
         if (!isRecord(setpointsRaw)) {
           p.error('migration.setpoints', 'moet een object zijn met een ingang per zone');
         } else {
-          const uit: Record<string, Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>>> =
+          const result: Record<string, Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>>> =
             {};
-          for (const [zoneId, perModus] of Object.entries(setpointsRaw)) {
+          for (const [zoneId, perMode] of Object.entries(setpointsRaw)) {
             const zPath = join('migration.setpoints', zoneId);
             if (!zones.some((z) => z.id === zoneId)) {
               p.error(zPath, `verwijst naar zone "${zoneId}" die niet bestaat`);
               continue;
             }
-            if (!isRecord(perModus)) {
+            if (!isRecord(perMode)) {
               p.error(zPath, 'moet een object zijn met een ingang per modus');
               continue;
             }
-            const modi: Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>> = {};
-            for (const [modus, richtingen] of Object.entries(perModus)) {
-              const mPath = join(zPath, modus);
-              if (!(MODES as readonly string[]).includes(modus)) {
-                p.error(mPath, `"${modus}" is geen bekende modus`);
+            const modes: Partial<Record<Mode, { heat?: DeviceRef; cool?: DeviceRef }>> = {};
+            for (const [mode, directions] of Object.entries(perMode)) {
+              const mPath = join(zPath, mode);
+              if (!(MODES as readonly string[]).includes(mode)) {
+                p.error(mPath, `"${mode}" is geen bekende modus`);
                 continue;
               }
-              if (!isRecord(richtingen)) {
+              if (!isRecord(directions)) {
                 p.error(mPath, 'moet een object zijn met heat en/of cool');
                 continue;
               }
               const heat =
-                richtingen['heat'] === undefined
+                directions['heat'] === undefined
                   ? null
-                  : ref(p, richtingen['heat'], join(mPath, 'heat'), defaultAdapter);
+                  : ref(p, directions['heat'], join(mPath, 'heat'), defaultAdapter);
               const cool =
-                richtingen['cool'] === undefined
+                directions['cool'] === undefined
                   ? null
-                  : ref(p, richtingen['cool'], join(mPath, 'cool'), defaultAdapter);
+                  : ref(p, directions['cool'], join(mPath, 'cool'), defaultAdapter);
               if (heat || cool) {
-                modi[modus as Mode] = { ...(heat ? { heat } : {}), ...(cool ? { cool } : {}) };
+                modes[mode as Mode] = { ...(heat ? { heat } : {}), ...(cool ? { cool } : {}) };
               }
             }
-            if (Object.keys(modi).length > 0) uit[zoneId] = modi;
+            if (Object.keys(modes).length > 0) result[zoneId] = modes;
           }
-          if (Object.keys(uit).length > 0) setpoints = uit;
+          if (Object.keys(result).length > 0) setpoints = result;
         }
       }
 
@@ -1346,8 +1346,8 @@ export function parseSiteConfig(
    *
    * Hetzelfde voor de zon: die staat in dienst van dezelfde strategie.
    */
-  const heeftMeter = power?.gridPower != null;
-  if (!heeftMeter && enabledStrategies.includes('pv-surplus')) {
+  const hasMeter = power?.gridPower != null;
+  if (!hasMeter && enabledStrategies.includes('pv-surplus')) {
     const i = enabledStrategies.indexOf('pv-surplus');
     enabledStrategies.splice(i, 1);
     p.warn(
@@ -1356,7 +1356,7 @@ export function parseSiteConfig(
         'werken gewoon door — die vragen geen vermogen.',
     );
   }
-  if (heeftMeter && sun == null && enabledStrategies.includes('pv-surplus')) {
+  if (hasMeter && sun == null && enabledStrategies.includes('pv-surplus')) {
     p.warn(
       'sun',
       'ontbreekt; pv-surplus kan dan bij nacht niet zien dat een gemeten ' +

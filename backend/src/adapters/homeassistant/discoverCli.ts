@@ -18,9 +18,9 @@ import { dirname } from 'node:path';
 import { mkdir, access } from 'node:fs/promises';
 
 import { HaClient, type HaEntityState } from './client.js';
-import { haalRegisters, ontdek, type Bevinding, type Voorstel } from './discovery.js';
+import { fetchRegistries, discover, type Finding, type Proposal } from './discovery.js';
 
-const MERK: Record<Bevinding['soort'], string> = {
+const BRAND: Record<Finding['soort'], string> = {
   gevonden: 'GEVONDEN   ',
   geraden: 'GERADEN    ',
   overgeslagen: 'OVERGESLAGEN',
@@ -28,55 +28,55 @@ const MERK: Record<Bevinding['soort'], string> = {
 };
 
 /** Volgorde waarin een mens dit wil lezen: eerst wat aandacht vraagt. */
-const VOLGORDE: Bevinding['soort'][] = ['ontbreekt', 'geraden', 'gevonden', 'overgeslagen'];
+const ORDER: Finding['soort'][] = ['ontbreekt', 'geraden', 'gevonden', 'overgeslagen'];
 
-export function rapport(voorstel: Voorstel): string {
-  const regels: string[] = [];
-  regels.push('─'.repeat(72));
-  regels.push('  WAT ER IN HUIS STAAT');
-  regels.push('─'.repeat(72));
+export function formatReport(proposal: Proposal): string {
+  const lines: string[] = [];
+  lines.push('─'.repeat(72));
+  lines.push('  WAT ER IN HUIS STAAT');
+  lines.push('─'.repeat(72));
 
-  for (const soort of VOLGORDE) {
-    const groep = voorstel.bevindingen.filter((b) => b.soort === soort);
-    if (groep.length === 0) continue;
-    regels.push('');
-    for (const b of groep) {
-      regels.push(`  ${MERK[b.soort]}  ${b.pad}`);
-      regels.push(`                ${b.tekst}`);
+  for (const kind of ORDER) {
+    const group = proposal.bevindingen.filter((b) => b.soort === kind);
+    if (group.length === 0) continue;
+    lines.push('');
+    for (const b of group) {
+      lines.push(`  ${BRAND[b.soort]}  ${b.pad}`);
+      lines.push(`                ${b.tekst}`);
       if (b.alternatieven?.length) {
         // Een lijst van zeventien leest niemand. Zes en een telling wel.
-        const eerste = b.alternatieven.slice(0, 6);
-        const rest = b.alternatieven.length - eerste.length;
-        regels.push(
-          `                ook mogelijk: ${eerste.join(', ')}` +
+        const first = b.alternatieven.slice(0, 6);
+        const rest = b.alternatieven.length - first.length;
+        lines.push(
+          `                ook mogelijk: ${first.join(', ')}` +
             (rest > 0 ? ` … en nog ${rest}` : ''),
         );
       }
     }
   }
 
-  const zones = (voorstel.config['zones'] as unknown[] | undefined)?.length ?? 0;
-  const apparaten = (voorstel.config['actuators'] as unknown[] | undefined)?.length ?? 0;
-  regels.push('');
-  regels.push('─'.repeat(72));
-  regels.push(`  Voorstel: ${zones} zone${zones === 1 ? '' : 's'}, ${apparaten} ${apparaten === 1 ? 'apparaat' : 'apparaten'}`);
-  regels.push('─'.repeat(72));
-  return regels.join('\n');
+  const zones = (proposal.config['zones'] as unknown[] | undefined)?.length ?? 0;
+  const actuators = (proposal.config['actuators'] as unknown[] | undefined)?.length ?? 0;
+  lines.push('');
+  lines.push('─'.repeat(72));
+  lines.push(`  Voorstel: ${zones} zone${zones === 1 ? '' : 's'}, ${actuators} ${actuators === 1 ? 'apparaat' : 'apparaten'}`);
+  lines.push('─'.repeat(72));
+  return lines.join('\n');
 }
 
-export interface DiscoverOpties {
+export interface DiscoverOptions {
   readonly url: string;
   readonly token: string;
   /** Waar het voorstel heen moet, of null om het te tonen. */
-  readonly doel: string | null;
+  readonly target: string | null;
   /** Hoe lang we op Home Assistant wachten voordat we opgeven. */
-  readonly wachtMs?: number;
+  readonly waitMs?: number;
 }
 
-export async function discoverCli(opties: DiscoverOpties): Promise<number> {
+export async function discoverCli(options: DiscoverOptions): Promise<number> {
   const client = new HaClient({
-    url: opties.url,
-    token: opties.token,
+    url: options.url,
+    token: options.token,
     // Ook hier expliciet. Ontdekken is lezen (besluit 15).
     allowWrites: false,
   });
@@ -84,7 +84,7 @@ export async function discoverCli(opties: DiscoverOpties): Promise<number> {
   const states = await new Promise<HaEntityState[] | Error>((resolve) => {
     const timer = setTimeout(
       () => resolve(new Error('Home Assistant antwoordde niet binnen de wachttijd.')),
-      opties.wachtMs ?? 30_000,
+      options.waitMs ?? 30_000,
     );
     timer.unref?.();
     client.once('ready', (s: HaEntityState[]) => {
@@ -105,13 +105,13 @@ export async function discoverCli(opties: DiscoverOpties): Promise<number> {
   }
 
   try {
-    const registers = await haalRegisters(client, states);
-    const voorstel = ontdek(registers);
-    const json = `${JSON.stringify(voorstel.config, null, 2)}\n`;
+    const registers = await fetchRegistries(client, states);
+    const proposal = discover(registers);
+    const json = `${JSON.stringify(proposal.config, null, 2)}\n`;
 
-    console.log(rapport(voorstel));
+    console.log(formatReport(proposal));
 
-    if (opties.doel == null) {
+    if (options.target == null) {
       console.log('');
       console.log(json);
       console.log('Wegschrijven kan met:  node dist/main.js --discover <pad>');
@@ -120,21 +120,21 @@ export async function discoverCli(opties: DiscoverOpties): Promise<number> {
 
     // Niet over een bestaande configuratie heen. Een tweede keer draaien is
     // makkelijk; de keuzes die in dat bestand staan zijn dat niet.
-    const bestaatAl = await access(opties.doel).then(
+    const alreadyExists = await access(options.target).then(
       () => true,
       () => false,
     );
-    if (bestaatAl) {
+    if (alreadyExists) {
       console.error('');
-      console.error(`${opties.doel} bestaat al; er is niets geschreven.`);
+      console.error(`${options.target} bestaat al; er is niets geschreven.`);
       console.error('Verplaats of hernoem dat bestand eerst.');
       return 1;
     }
 
-    await mkdir(dirname(opties.doel), { recursive: true });
-    await writeFile(opties.doel, json, 'utf-8');
+    await mkdir(dirname(options.target), { recursive: true });
+    await writeFile(options.target, json, 'utf-8');
     console.log('');
-    console.log(`Geschreven naar ${opties.doel}`);
+    console.log(`Geschreven naar ${options.target}`);
     console.log('Kijk het na en draai daarna:  node dist/main.js --check-config');
     return 0;
   } catch (error) {

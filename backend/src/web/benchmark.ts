@@ -28,10 +28,10 @@ import { join } from 'node:path';
 
 import { analyse } from '../divergence/analyse.js';
 import { findLogFiles, readMoments } from '../divergence/read.js';
-import { statusVanBestanden } from './dataset.js';
+import { statusFromFiles } from './dataset.js';
 
 /** Grenzen waarboven we de Pi niet geschikt noemen. Oordeel, geen meting. */
-const GRENS = {
+const BOUNDARY = {
   /** Vier keer speling op een cyclus van een kwartier. */
   wandtijdMs: 60_000,
   /** De `mem_limit` uit docker-compose.yml. */
@@ -44,19 +44,19 @@ const GRENS = {
 };
 
 /** Houdt bij hoe lang de event loop wegblijft terwijl er gerekend wordt. */
-function meetVertraging(intervalMs = 20): { stop: () => number } {
-  let ergste = 0;
-  let vorige = performance.now();
+function measureLatency(intervalMs = 20): { stop: () => number } {
+  let worst = 0;
+  let previous = performance.now();
   const timer = setInterval(() => {
-    const nu = performance.now();
-    ergste = Math.max(ergste, nu - vorige - intervalMs);
-    vorige = nu;
+    const now = performance.now();
+    worst = Math.max(worst, now - previous - intervalMs);
+    previous = now;
   }, intervalMs);
   timer.unref?.();
   return {
     stop: () => {
       clearInterval(timer);
-      return ergste;
+      return worst;
     },
   };
 }
@@ -72,14 +72,14 @@ export async function benchmark(dir: string): Promise<number> {
     return 1;
   }
 
-  const opSchijf = (
+  const onDisk = (
     await Promise.all((await readdir(dir)).map(async (n) => (await stat(join(dir, n))).size))
   ).reduce((a, b) => a + b, 0);
 
   console.log('─'.repeat(64));
   console.log('  PRESTATIEMETING — kan deze machine de winteranalyse aan?');
   console.log('─'.repeat(64));
-  console.log(`  invoer          ${files.length} dagbestanden, ${mb(opSchijf)} MB`);
+  console.log(`  invoer          ${files.length} dagbestanden, ${mb(onDisk)} MB`);
   console.log(`  node            ${process.version} op ${process.platform}/${process.arch}`);
   console.log('─'.repeat(64));
 
@@ -87,59 +87,59 @@ export async function benchmark(dir: string): Promise<number> {
   // meting zelf is en niet van wat ervoor gebeurde.
   global.gc?.();
 
-  const vertraging = meetVertraging();
+  const latency = measureLatency();
   const cpu0 = process.cpuUsage();
   const t0 = performance.now();
 
   const a = await analyse(readMoments(files), { minEpisodeMinutes: 2 });
-  const tNaAnalyse = performance.now();
+  const tAfterAnalysis = performance.now();
 
-  const d = await statusVanBestanden(files);
+  const d = await statusFromFiles(files);
   const t1 = performance.now();
 
   const cpu = process.cpuUsage(cpu0);
-  const ergsteVertraging = vertraging.stop();
-  const piek = process.memoryUsage();
+  const worstLatency = latency.stop();
+  const peak = process.memoryUsage();
 
-  const wand = t1 - t0;
-  const cpuTotaalMs = (cpu.user + cpu.system) / 1000;
+  const wall = t1 - t0;
+  const cpuTotalMs = (cpu.user + cpu.system) / 1000;
 
   console.log(`  momenten        ${a.moments.toLocaleString('nl-NL')}`);
   console.log(`  episodes        ${a.episodes.length.toLocaleString('nl-NL')}`);
   console.log(`  dagen in beeld  ${d?.dagenOpgenomen.toFixed(1) ?? '?'}`);
   console.log('');
-  console.log(`  divergentie     ${ms(tNaAnalyse - t0)}`);
-  console.log(`  datasetmeter    ${ms(t1 - tNaAnalyse)}`);
-  console.log(`  samen           ${ms(wand)}   (${Math.round(a.moments / (wand / 1000)).toLocaleString('nl-NL')} momenten/s)`);
+  console.log(`  divergentie     ${ms(tAfterAnalysis - t0)}`);
+  console.log(`  datasetmeter    ${ms(t1 - tAfterAnalysis)}`);
+  console.log(`  samen           ${ms(wall)}   (${Math.round(a.moments / (wall / 1000)).toLocaleString('nl-NL')} momenten/s)`);
   console.log('');
-  console.log(`  processortijd   ${ms(cpuTotaalMs)}  (${((cpuTotaalMs / wand) * 100).toFixed(0)}% van de wandtijd)`);
-  console.log(`  piekgeheugen    ${mb(piek.rss)} MB rss, ${mb(piek.heapUsed)} MB heap`);
-  console.log(`  ergste vertraging van de event loop  ${ms(ergsteVertraging)}`);
+  console.log(`  processortijd   ${ms(cpuTotalMs)}  (${((cpuTotalMs / wall) * 100).toFixed(0)}% van de wandtijd)`);
+  console.log(`  piekgeheugen    ${mb(peak.rss)} MB rss, ${mb(peak.heapUsed)} MB heap`);
+  console.log(`  ergste vertraging van de event loop  ${ms(worstLatency)}`);
   console.log('');
 
   // Elke cyclus is een kwartier. Wat we hier gebruiken pakken we van HA af.
-  const bezetting = (cpuTotaalMs / (15 * 60_000)) * 100;
-  console.log(`  bezetting       ${bezetting.toFixed(2)}% van één kern, elk kwartier`);
+  const occupancy = (cpuTotalMs / (15 * 60_000)) * 100;
+  console.log(`  bezetting       ${occupancy.toFixed(2)}% van één kern, elk kwartier`);
   console.log('─'.repeat(64));
 
-  const oordeel: [string, boolean, string][] = [
-    ['wandtijd', wand < GRENS.wandtijdMs, `${ms(wand)} < ${ms(GRENS.wandtijdMs)}`],
-    ['piekgeheugen', piek.rss / 1e6 < GRENS.piekMb, `${mb(piek.rss)} MB < ${GRENS.piekMb} MB`],
+  const verdict: [string, boolean, string][] = [
+    ['wandtijd', wall < BOUNDARY.wandtijdMs, `${ms(wall)} < ${ms(BOUNDARY.wandtijdMs)}`],
+    ['piekgeheugen', peak.rss / 1e6 < BOUNDARY.piekMb, `${mb(peak.rss)} MB < ${BOUNDARY.piekMb} MB`],
     [
       'event loop',
-      ergsteVertraging < GRENS.vertragingMs,
-      `${ms(ergsteVertraging)} < ${ms(GRENS.vertragingMs)}`,
+      worstLatency < BOUNDARY.vertragingMs,
+      `${ms(worstLatency)} < ${ms(BOUNDARY.vertragingMs)}`,
     ],
   ];
 
-  let geslaagd = true;
-  for (const [naam, ok, uitleg] of oordeel) {
-    if (!ok) geslaagd = false;
-    console.log(`  ${ok ? 'HAALT' : 'FAALT'}  ${naam.padEnd(14)} ${uitleg}`);
+  let succeeded = true;
+  for (const [name, ok, explanation] of verdict) {
+    if (!ok) succeeded = false;
+    console.log(`  ${ok ? 'HAALT' : 'FAALT'}  ${name.padEnd(14)} ${explanation}`);
   }
   console.log('─'.repeat(64));
 
-  if (geslaagd) {
+  if (succeeded) {
     console.log('  Deze machine kan de analyse aan binnen de gestelde grenzen.');
     console.log('');
     console.log('  Let op: dit meet ons eigen werk. Of Home Assistant er last van');
@@ -154,5 +154,5 @@ export async function benchmark(dir: string): Promise<number> {
     console.log('  op de doelmachine faalt, knelt het.');
   }
 
-  return geslaagd ? 0 : 1;
+  return succeeded ? 0 : 1;
 }

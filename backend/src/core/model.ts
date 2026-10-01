@@ -28,7 +28,7 @@ export interface DeviceRef {
  * De kern merkt hier niets van: die krijgt een getal. Het uitlezen is werk van
  * de adapter, en beide adapters — live en replay — konden attributen al lezen.
  */
-export interface Meetpunt extends DeviceRef {
+export interface MeasurementPoint extends DeviceRef {
   readonly attribute?: string;
 }
 
@@ -161,8 +161,8 @@ export type ThermalMass = 'low' | 'medium' | 'high';
 export interface Zone {
   readonly id: string;
   readonly name: string;
-  readonly temperature: Meetpunt;
-  readonly humidity?: Meetpunt;
+  readonly temperature: MeasurementPoint;
+  readonly humidity?: MeasurementPoint;
   /** Verwijst naar Actuator.id. Volgorde is niet betekenisvol. */
   readonly actuatorIds: readonly string[];
   /** Lager wint bij schaarste. 1 is de belangrijkste zone. */
@@ -355,7 +355,7 @@ export interface SiteConfig {
    * een grijze zijn allebei "boven". De eigen opbrengst is de beste
    * instralingsmeter die een woning met panelen al in huis heeft.
    */
-  readonly solarProduction?: Meetpunt;
+  readonly solarProduction?: MeasurementPoint;
   readonly migration?: MigrationConfig;
 }
 

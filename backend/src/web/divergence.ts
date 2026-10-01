@@ -21,7 +21,7 @@
 
 import { analyse, bucketsPerDay, BUCKET_CODE, type Episode } from '../divergence/analyse.js';
 import { findLogFiles, readMoments } from '../divergence/read.js';
-import { statusVanBestanden, type DatasetStatus } from './dataset.js';
+import { statusFromFiles, type DatasetStatus } from './dataset.js';
 
 /**
  * Een terugkerende afwijking, samengevat.
@@ -33,7 +33,7 @@ import { statusVanBestanden, type DatasetStatus } from './dataset.js';
  * "waar loopt dit systematisch uit de pas". Dat tweede is waar je iets aan
  * verandert.
  */
-export interface Patroon {
+export interface Pattern {
   readonly actuatorId: string;
   readonly direction: 'strenger' | 'ruimer';
   readonly blockedBy: string | null;
@@ -48,22 +48,22 @@ export interface Patroon {
 }
 
 /** Groepeert alle episodes en levert de zwaarste bovenaan. */
-function patronen(episodes: readonly Episode[], maximaal: number): Patroon[] {
-  const per = new Map<string, Patroon & { keren: number }>();
+function patterns(episodes: readonly Episode[], maximum: number): Pattern[] {
+  const per = new Map<string, Pattern & { keren: number }>();
   for (const e of episodes) {
-    const sleutel = `${e.actuatorId}|${e.direction}|${e.blockedBy ?? ''}|${e.mode}`;
-    const bestaand = per.get(sleutel);
-    if (bestaand) {
-      per.set(sleutel, {
-        ...bestaand,
-        keren: bestaand.keren + 1,
-        minuten: bestaand.minuten + e.minutes,
-        langsteMinuten: Math.max(bestaand.langsteMinuten, e.minutes),
-        wh: bestaand.wh + e.attributableWh,
-        laatsteMs: Math.max(bestaand.laatsteMs, e.toMs),
+    const key = `${e.actuatorId}|${e.direction}|${e.blockedBy ?? ''}|${e.mode}`;
+    const existing = per.get(key);
+    if (existing) {
+      per.set(key, {
+        ...existing,
+        keren: existing.keren + 1,
+        minuten: existing.minuten + e.minutes,
+        langsteMinuten: Math.max(existing.langsteMinuten, e.minutes),
+        wh: existing.wh + e.attributableWh,
+        laatsteMs: Math.max(existing.laatsteMs, e.toMs),
       });
     } else {
-      per.set(sleutel, {
+      per.set(key, {
         actuatorId: e.actuatorId,
         direction: e.direction,
         blockedBy: e.blockedBy,
@@ -78,7 +78,7 @@ function patronen(episodes: readonly Episode[], maximaal: number): Patroon[] {
   }
   // Op totale tijd en niet op aantal: twintig hikjes van twee minuten zijn
   // minder waard dan drie middagen van een uur.
-  return [...per.values()].sort((a, b) => b.minuten - a.minuten).slice(0, maximaal);
+  return [...per.values()].sort((a, b) => b.minuten - a.minuten).slice(0, maximum);
 }
 
 export interface DivergenceOptions {
@@ -91,7 +91,7 @@ export interface DivergenceOptions {
   /** Hoeveel episodes er meegaan. De rest wordt geteld, niet opgesomd. */
   readonly maxEpisodes?: number;
   /** Hoeveel samengevatte patronen er meegaan. */
-  readonly maxPatronen?: number;
+  readonly maxPatterns?: number;
   readonly write?: (line: string) => void;
   readonly now?: () => number;
 }
@@ -125,7 +125,7 @@ export interface DivergenceReport {
   readonly episodes: readonly Episode[];
   readonly episodesTotaal: number;
   /** Terugkerende afwijkingen, zwaarste eerst. */
-  readonly patronen: readonly Patroon[];
+  readonly patronen: readonly Pattern[];
   readonly legacyGridWh: number;
   readonly avoidableGridWh: number;
   /** Hoe compleet de opname is. Null wanneer er niets te lezen viel. */
@@ -136,7 +136,7 @@ export class DivergenceCache {
   readonly #options: Required<DivergenceOptions>;
   #latest: DivergenceReport | null = null;
   #timer: NodeJS.Timeout | null = null;
-  #bezig = false;
+  #busy = false;
 
   constructor(options: DivergenceOptions) {
     this.#options = {
@@ -144,7 +144,7 @@ export class DivergenceCache {
       refreshMs: options.refreshMs ?? 15 * 60_000,
       minEpisodeMinutes: options.minEpisodeMinutes ?? 2,
       maxEpisodes: options.maxEpisodes ?? 25,
-      maxPatronen: options.maxPatronen ?? 10,
+      maxPatterns: options.maxPatterns ?? 10,
       write: options.write ?? ((line) => console.log(line)),
       now: options.now ?? Date.now,
     };
@@ -158,8 +158,8 @@ export class DivergenceCache {
   async refresh(): Promise<DivergenceReport | null> {
     // Overlappende runs hebben geen zin en zouden bij een groeiend logboek op
     // elkaar gaan stapelen.
-    if (this.#bezig) return this.#latest;
-    this.#bezig = true;
+    if (this.#busy) return this.#latest;
+    this.#busy = true;
     const t0 = this.#options.now();
     try {
       const files = await findLogFiles(this.#options.logDir);
@@ -180,7 +180,7 @@ export class DivergenceCache {
       // vraag: de analyse hierboven vergelijkt twee regelaars, deze telt wat de
       // opname heeft gezien. Ze in één doorloop persen zou beide functies
       // troebel maken voor 120 ms winst per kwartier.
-      const dataset = await statusVanBestanden(files);
+      const dataset = await statusFromFiles(files);
 
       this.#latest = {
         berekendOpMs: this.#options.now(),
@@ -201,7 +201,7 @@ export class DivergenceCache {
         episodesTotaal: a.episodes.length,
         // Over álle episodes, niet over de getoonde: een patroon van veertig
         // korte hikjes zou anders onzichtbaar blijven.
-        patronen: patronen(a.episodes, this.#options.maxPatronen),
+        patronen: patterns(a.episodes, this.#options.maxPatterns),
         legacyGridWh: a.legacyGridWh,
         avoidableGridWh: a.avoidableGridWh,
         dataset,
@@ -213,7 +213,7 @@ export class DivergenceCache {
       this.#options.write(`  divergentieanalyse mislukt: ${String(error)}`);
       return this.#latest;
     } finally {
-      this.#bezig = false;
+      this.#busy = false;
     }
   }
 

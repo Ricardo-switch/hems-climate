@@ -306,7 +306,7 @@ describe('toerekening van netstroom', () => {
 });
 
 describe('de bewoner neemt over', () => {
-  const HANDMATIG = 'Handmatig koelen actief:<br>&emsp;❄️ Zolder (Koelen)';
+  const MANUAL = 'Handmatig koelen actief:<br>&emsp;❄️ Zolder (Koelen)';
 
   /**
    * Het geval van 6 september 2026, ingedikt.
@@ -330,15 +330,15 @@ describe('de bewoner neemt over', () => {
       obs: { 'ac-zolder': 'cool@21' },
       gridW: 700,
       reclaimableW: 700,
-      ...(i === 0 ? { legacy: HANDMATIG } : {}),
+      ...(i === 0 ? { legacy: MANUAL } : {}),
     })),
   ];
 
   it('telt een handmatig aangezet apparaat niet als afwijking', async () => {
     const analysis = await run(specs);
-    const zolder = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
+    const attic = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
 
-    expect(zolder?.stricter).toBe(0);
+    expect(attic?.stricter).toBe(0);
     expect(analysis.episodes).toEqual([]);
   });
 
@@ -373,8 +373,8 @@ describe('de bewoner neemt over', () => {
       })),
     ]);
 
-    const zolder = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
-    expect(zolder?.stricter).toBeGreaterThan(0);
+    const attic = analysis.tallies.find((t) => t.actuatorId === 'ac-zolder');
+    expect(attic?.stricter).toBeGreaterThan(0);
     expect(analysis.episodes).toHaveLength(1);
     expect(analysis.episodes[0]?.direction).toBe('strenger');
   });

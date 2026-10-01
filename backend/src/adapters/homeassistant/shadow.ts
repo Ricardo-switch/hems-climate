@@ -24,7 +24,7 @@ import type {
 import { decide } from '../../core/decide.js';
 import type { Mode, SiteConfig } from '../../core/model.js';
 import { OwnState } from '../own-state.js';
-import { SchaduwApparaten } from '../shadow-actuators.js';
+import { ShadowActuators } from '../shadow-actuators.js';
 import type { StrategyRegistry } from '../../core/strategy.js';
 import type { HaClient, HaEntityState } from './client.js';
 import {
@@ -33,8 +33,8 @@ import {
   observedEntities,
   relevantEntities,
 } from './mapping.js';
-import { comprimeerOudeDagen } from '../archief.js';
-import { Historieschrijver } from './history.js';
+import { compressOldDays } from '../archive.js';
+import { HistoryWriter } from './history.js';
 import { EntityStore } from './store.js';
 
 /**
@@ -174,7 +174,7 @@ export class ShadowRunner {
    * De vertaling kijkt er dan niet naar — dat scheelt een tak die alleen in de
    * ene opstelling wordt gelopen en in de andere niet.
    */
-  readonly #eigen = new OwnState();
+  readonly #own = new OwnState();
 
   /**
    * De veronderstelde stand van de apparaten (besluit 49).
@@ -185,16 +185,16 @@ export class ShadowRunner {
    * actuator-laag werkelijk schakelt hoort dit weg te vallen: dan ís het echte
    * apparaat het antwoord.
    */
-  readonly #schaduwApparaten = new SchaduwApparaten();
+  readonly #shadowActuators = new ShadowActuators();
 
   /**
    * De ruwe historie van de gevolgde entiteiten (besluit 52), naast het
    * beslislogboek. Alleen wanneer er een logmap is.
    */
-  #historie: Historieschrijver | null = null;
+  #history: HistoryWriter | null = null;
 
   /** De dag waarop voor het laatst oude dagen gecomprimeerd zijn (besluit 58). */
-  #gecomprimeerdOp: string | null = null;
+  #compressedOn: string | null = null;
 
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
@@ -229,7 +229,7 @@ export class ShadowRunner {
       now: options.now ?? (() => Date.now()),
     };
     if (this.#options.logDir != null) {
-      this.#historie = new Historieschrijver(
+      this.#history = new HistoryWriter(
         this.#options.logDir,
         this.#options.now,
         (error) => this.#log(`historie niet weggeschreven: ${String(error)}`),
@@ -244,7 +244,7 @@ export class ShadowRunner {
       this.#store.replaceAll(states);
       // De volledige stand bij elk (her)verbinden: daar begint de replay, en na
       // een onderbreking is dit de enige manier om te weten waar hij verdergaat.
-      this.#historie?.vastleggen(
+      this.#history?.record(
         states.filter((s) => this.#store.isRelevant(s.entity_id)),
       );
       this.#ready = true;
@@ -269,7 +269,7 @@ export class ShadowRunner {
       }
       // Alles wat we volgen, ook wat geen herberekening waard is: de replay
       // leest dezelfde entiteiten als de vertaling.
-      this.#historie?.vastleggen([state]);
+      this.#history?.record([state]);
       // Wel vastgelegd, maar geen reden om te herrekenen.
       if (!this.#store.isTrigger(state.entity_id)) return;
       if (!this.#ready) return;
@@ -312,8 +312,8 @@ export class ShadowRunner {
   }
 
   /** Belooft dat de historie tot nu toe op schijf staat. */
-  historieGereed(): Promise<void> {
-    return this.#historie?.gereed() ?? Promise.resolve();
+  historySettled(): Promise<void> {
+    return this.#history?.settled() ?? Promise.resolve();
   }
 
   stop(): void {
@@ -333,7 +333,7 @@ export class ShadowRunner {
    * aan veranderen is een eigen besluit waard.
    */
   setMode(mode: Mode | null): void {
-    this.#eigen.setMode(mode);
+    this.#own.setMode(mode);
     this.#request('modus');
   }
 
@@ -378,8 +378,8 @@ export class ShadowRunner {
       config,
       this.#store,
       nowMs,
-      this.#eigen,
-      this.#schaduwApparaten,
+      this.#own,
+      this.#shadowActuators,
     );
     const decision = decide({
       config,
@@ -399,12 +399,12 @@ export class ShadowRunner {
      * Ná het besluit en niet ervoor: de timer die de arbiter zojuist aanvroeg
      * hoort pas bij de vólgende evaluatie te gelden.
      */
-    this.#eigen.apply(decision.commands, nowMs);
+    this.#own.apply(decision.commands, nowMs);
     // En de veronderstelde stand van de apparaten (besluit 49, 49b): de
     // commando's erop toepassen, of loslaten zolang de bewoner stuurt. Ook ná
     // het besluit, en om dezelfde reden: wat de arbiter zojuist gestuurd zou
     // hebben, geldt pas bij de vólgende evaluatie.
-    this.#schaduwApparaten.volg(decision);
+    this.#shadowActuators.follow(decision);
 
     this.#ticks += 1;
     await this.#record(decision, trigger);
@@ -558,11 +558,11 @@ export class ShadowRunner {
     // opstarten (besluit 58). Niet afwachten: een trage schijf hoort het
     // volgende besluit niet op te houden, en een fout hoort in het logboek,
     // niet in de regeling.
-    if (this.#gecomprimeerdOp !== day) {
-      this.#gecomprimeerdOp = day;
-      void comprimeerOudeDagen(this.#options.logDir, decision.atMs)
-        .then((gedaan) => {
-          if (gedaan.length > 0) this.#log(`  ${gedaan.length} oude dagbestand(en) gecomprimeerd`);
+    if (this.#compressedOn !== day) {
+      this.#compressedOn = day;
+      void compressOldDays(this.#options.logDir, decision.atMs)
+        .then((done) => {
+          if (done.length > 0) this.#log(`  ${done.length} oude dagbestand(en) gecomprimeerd`);
         })
         .catch((error: unknown) => this.#log(`  comprimeren mislukt: ${String(error)}`));
     }
