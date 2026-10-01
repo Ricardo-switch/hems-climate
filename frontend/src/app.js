@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------------------------------------------------------------- vertalen */
 
-const MODUS = {
+const MODE_LABEL = {
   dag: 'Dag',
   nacht: 'Nacht',
   voorverwarmen: 'Voorverwarmen',
@@ -24,13 +24,13 @@ const MODUS = {
   handmatig: 'Handmatig',
 };
 
-const MODUS_TOELICHTING = {
+const MODE_NOTE = {
   handmatig: 'De bewoner heeft overgenomen. De arbiter blijft overal vanaf.',
   nacht: 'Niets te doen betekent hier: de assist-apparaten mogen uit.',
   vakantie: 'Alleen vorstbescherming; de assist-apparaten blijven uit.',
 };
 
-const REDEN = {
+const REASON_LABEL = {
   zone_below_setpoint: 'onder het setpoint',
   zone_above_setpoint: 'boven het setpoint',
   zone_satisfied: 'op temperatuur',
@@ -44,7 +44,7 @@ const REDEN = {
   failsafe_unreliable_input: 'meetpunt onbetrouwbaar',
 };
 
-const GEBLOKKEERD = {
+const BLOCK_LABEL = {
   min_run_not_elapsed: 'minimale draaitijd nog niet om',
   min_rest_not_elapsed: 'minimale rusttijd nog niet om',
   stabilisation_active: 'stabiliseert nog',
@@ -57,9 +57,9 @@ const GEBLOKKEERD = {
   no_change_needed: 'geen wijziging nodig',
 };
 
-const ACTIE = { heat: 'verwarmen', cool: 'koelen', standby: 'standby', off: 'uit' };
+const ACTION_LABEL = { heat: 'verwarmen', cool: 'koelen', standby: 'standby', off: 'uit' };
 
-const VRAAG_STIJL = {
+const QUESTION_STYLE = {
   heat: { rand: 'border-warm/40', tekst: 'text-warm', label: 'verwarmen' },
   cool: { rand: 'border-koel/40', tekst: 'text-koel', label: 'koelen' },
   none: { rand: 'border-rand', tekst: 'text-rust', label: 'geen vraag' },
@@ -68,9 +68,9 @@ const VRAAG_STIJL = {
 /* -------------------------------------------------------------- opmaken */
 
 const watt = (w) => `${Math.round(w).toLocaleString('nl-NL')} W`;
-const graden = (c) => (c == null ? '—' : `${c.toFixed(1)} °C`);
+const degrees = (c) => (c == null ? '—' : `${c.toFixed(1)} °C`);
 
-const klok = (ms) =>
+const clock = (ms) =>
   new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 /** Losse elementen bouwen is korter dan innerHTML, en kan niets injecteren. */
@@ -85,18 +85,18 @@ function el(tag, className, text) {
 
 let site = null;
 
-const naamVanZone = (id) => site?.zones.find((z) => z.id === id)?.name ?? id;
-const naamVanActuator = (id) => site?.actuators.find((a) => a.id === id)?.name ?? id;
+const zoneName = (id) => site?.zones.find((z) => z.id === id)?.name ?? id;
+const actuatorName = (id) => site?.actuators.find((a) => a.id === id)?.name ?? id;
 
-function tekenModus(e) {
-  $('modus').textContent = MODUS[e.mode] ?? e.mode;
+function renderMode(e) {
+  $('modus').textContent = MODE_LABEL[e.mode] ?? e.mode;
   $('modus-bron').textContent =
     e.modeSource === 'override' ? 'handmatig gekozen' : 'volgens het dagritme';
-  const extra = MODUS_TOELICHTING[e.mode];
+  const extra = MODE_NOTE[e.mode];
   $('bezet').textContent = extra ?? (e.occupied ? 'Er is iemand thuis.' : 'Niemand thuis.');
 }
 
-function tekenBudget(b, panelenW) {
+function renderBudget(b, panelsW) {
   /*
    * De stroom zoals hij loopt: panelen → huis → net.
    *
@@ -105,12 +105,12 @@ function tekenBudget(b, panelenW) {
    * verbruikt het huis 832 W. Koopt het huis 430 W bij nul opbrengst, dan
    * verbruikt het 430 W. Beide gevallen zijn dezelfde optelsom.
    */
-  const kentPanelen = panelenW != null;
-  $('tegel-panelen').hidden = !kentPanelen;
-  $('tegel-verbruik').hidden = !kentPanelen;
-  if (kentPanelen) {
-    $('budget-panelen').textContent = watt(panelenW);
-    $('budget-verbruik').textContent = watt(Math.max(0, panelenW + b.gridPowerW));
+  const knowsPanels = panelsW != null;
+  $('tegel-panelen').hidden = !knowsPanels;
+  $('tegel-verbruik').hidden = !knowsPanels;
+  if (knowsPanels) {
+    $('budget-panelen').textContent = watt(panelsW);
+    $('budget-verbruik').textContent = watt(Math.max(0, panelsW + b.gridPowerW));
   }
 
   const net = $('budget-net');
@@ -125,43 +125,43 @@ function tekenBudget(b, panelenW) {
   $('budget-beschikbaar').textContent = watt(b.availableW);
   $('budget-toegewezen').textContent = watt(b.allocatedW);
 
-  const deel = b.availableW > 0 ? Math.min(100, (b.allocatedW / b.availableW) * 100) : 0;
-  $('budget-balk').style.width = `${deel}%`;
+  const share = b.availableW > 0 ? Math.min(100, (b.allocatedW / b.availableW) * 100) : 0;
+  $('budget-balk').style.width = `${share}%`;
   $('budget-uitleg').textContent =
     b.gridPowerW < 0
       ? `Het huis levert ${watt(-b.gridPowerW)} terug; dat is het overschot waar de arbiter mee rekent.`
       : `Het huis koopt ${watt(b.gridPowerW)}; er is geen overschot.`;
 }
 
-function tekenBuiten(e) {
+function renderOutdoor(e) {
   // Waarnemingen en geen invoer: ze worden vastgelegd voor fase 7, de arbiter
   // gebruikt ze niet. Daarom klein en terzijde.
   $('buiten').textContent =
     e.outdoorTemperatureC == null
       ? ''
-      : `buiten ${graden(e.outdoorTemperatureC)} · wordt vastgelegd, nog niet gebruikt`;
+      : `buiten ${degrees(e.outdoorTemperatureC)} · wordt vastgelegd, nog niet gebruikt`;
 }
 
-function tekenZones(perZone) {
-  const doel = $('zones');
-  doel.replaceChildren();
+function renderZones(perZone) {
+  const target = $('zones');
+  target.replaceChildren();
 
   for (const z of perZone) {
-    const stijl = VRAAG_STIJL[z.demand] ?? VRAAG_STIJL.none;
-    const kaart = el('div', `bg-paneel rounded-lg border p-4 ${stijl.rand}`);
+    const style = QUESTION_STYLE[z.demand] ?? QUESTION_STYLE.none;
+    const card = el('div', `bg-paneel rounded-lg border p-4 ${style.rand}`);
 
-    kaart.append(el('div', 'text-zacht text-xs uppercase tracking-wide', naamVanZone(z.zoneId)));
+    card.append(el('div', 'text-zacht text-xs uppercase tracking-wide', zoneName(z.zoneId)));
 
-    const rij = el('div', 'mt-1 flex items-baseline gap-2');
-    rij.append(el('span', 'meting text-2xl font-semibold', graden(z.temperatureC)));
+    const row = el('div', 'mt-1 flex items-baseline gap-2');
+    row.append(el('span', 'meting text-2xl font-semibold', degrees(z.temperatureC)));
     if (z.targetC != null) {
-      rij.append(el('span', 'text-zacht meting text-sm', `doel ${graden(z.targetC)}`));
+      row.append(el('span', 'text-zacht meting text-sm', `doel ${degrees(z.targetC)}`));
     }
-    kaart.append(rij);
+    card.append(row);
 
-    kaart.append(el('div', `mt-2 text-sm font-medium ${stijl.tekst}`, stijl.label));
-    kaart.append(el('div', 'text-zacht mt-0.5 text-xs', REDEN[z.reason] ?? z.reason));
-    doel.append(kaart);
+    card.append(el('div', `mt-2 text-sm font-medium ${style.tekst}`, style.label));
+    card.append(el('div', 'text-zacht mt-0.5 text-xs', REASON_LABEL[z.reason] ?? z.reason));
+    target.append(card);
   }
 }
 
@@ -172,36 +172,36 @@ function tekenZones(perZone) {
  * arbiter zou sturen. Dat tweede is leeg wanneer hij niets zou wijzigen, en
  * dat is een uitkomst en geen gat.
  */
-function tekenApparaten(snapshot) {
-  const doel = $('apparaten');
-  doel.replaceChildren();
+function renderActuators(snapshot) {
+  const target = $('apparaten');
+  target.replaceChildren();
 
-  const gewenst = new Map();
+  const wanted = new Map();
   for (const c of snapshot.commands) {
-    if (c.kind === 'setAction') gewenst.set(c.actuatorId, ACTIE[c.action] ?? c.action);
+    if (c.kind === 'setAction') wanted.set(c.actuatorId, ACTION_LABEL[c.action] ?? c.action);
     if (c.kind === 'setSetpoint') {
-      const eerder = gewenst.get(c.actuatorId);
+      const earlier = wanted.get(c.actuatorId);
       const setpoint = `${c.setpointC.toFixed(1)} °C`;
-      gewenst.set(c.actuatorId, eerder ? `${eerder} op ${setpoint}` : `setpoint ${setpoint}`);
+      wanted.set(c.actuatorId, earlier ? `${earlier} op ${setpoint}` : `setpoint ${setpoint}`);
     }
   }
 
   const ids = site ? site.actuators.map((a) => a.id) : Object.keys(snapshot.observed);
   for (const id of ids) {
-    const rij = el('div', 'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3');
-    rij.append(el('span', 'font-medium', naamVanActuator(id)));
+    const row = el('div', 'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3');
+    row.append(el('span', 'font-medium', actuatorName(id)));
 
-    const rechts = el('div', 'flex items-baseline gap-3 text-sm');
-    rechts.append(el('span', 'text-zacht meting', `nu: ${snapshot.observed[id] ?? 'onbekend'}`));
+    const right = el('div', 'flex items-baseline gap-3 text-sm');
+    right.append(el('span', 'text-zacht meting', `nu: ${snapshot.observed[id] ?? 'onbekend'}`));
 
-    const wens = gewenst.get(id);
-    rechts.append(
-      wens
-        ? el('span', 'text-zon font-medium', `zou sturen: ${wens}`)
+    const wish = wanted.get(id);
+    right.append(
+      wish
+        ? el('span', 'text-zon font-medium', `zou sturen: ${wish}`)
         : el('span', 'text-rust', 'zou niets wijzigen'),
     );
-    rij.append(rechts);
-    doel.append(rij);
+    row.append(right);
+    target.append(row);
   }
 
   $('geen-commando').textContent =
@@ -210,62 +210,62 @@ function tekenApparaten(snapshot) {
       : `${snapshot.commands.length} commando${snapshot.commands.length === 1 ? '' : "'s"} — die gaan naar het logboek, niet naar Home Assistant.`;
 }
 
-function tekenGeblokkeerd(rejected) {
+function renderBlocked(rejected) {
   // `no_change_needed` is geen blokkade maar de normale gang van zaken; die
   // elke keer tonen maakt de lijst betekenisloos.
-  const echt = rejected.filter((r) => r.blockedBy !== 'no_change_needed');
-  $('geblokkeerd-sectie').hidden = echt.length === 0;
+  const real = rejected.filter((r) => r.blockedBy !== 'no_change_needed');
+  $('geblokkeerd-sectie').hidden = real.length === 0;
 
-  const doel = $('geblokkeerd');
-  doel.replaceChildren();
-  for (const r of echt) {
-    const rij = el('li', 'flex flex-wrap items-baseline justify-between gap-x-4 px-4 py-2 text-sm');
-    rij.append(
+  const target = $('geblokkeerd');
+  target.replaceChildren();
+  for (const r of real) {
+    const row = el('li', 'flex flex-wrap items-baseline justify-between gap-x-4 px-4 py-2 text-sm');
+    row.append(
       el(
         'span',
         '',
-        `${naamVanActuator(r.intent.actuatorId)} — ${ACTIE[r.intent.action] ?? r.intent.action}`,
+        `${actuatorName(r.intent.actuatorId)} — ${ACTION_LABEL[r.intent.action] ?? r.intent.action}`,
       ),
     );
-    rij.append(el('span', 'text-zacht', GEBLOKKEERD[r.blockedBy] ?? r.blockedBy));
-    doel.append(rij);
+    row.append(el('span', 'text-zacht', BLOCK_LABEL[r.blockedBy] ?? r.blockedBy));
+    target.append(row);
   }
 }
 
-function tekenFailsafe(failsafe) {
+function renderFailsafe(failsafe) {
   $('failsafe').hidden = !failsafe.active;
-  const lijst = $('failsafe-lijst');
-  lijst.replaceChildren();
-  for (const id of failsafe.unreliable) lijst.append(el('li', 'text-zacht', id));
+  const list = $('failsafe-lijst');
+  list.replaceChildren();
+  for (const id of failsafe.unreliable) list.append(el('li', 'text-zacht', id));
 }
 
-function tekenOud(legacy) {
-  const sectie = $('oud-sectie');
-  sectie.hidden = legacy == null;
+function renderLegacy(legacy) {
+  const section = $('oud-sectie');
+  section.hidden = legacy == null;
   if (legacy == null) return;
   // De uitleg van het oude systeem is HTML met <br> en &emsp;. Als tekst tonen
   // en zelf de regels breken: nooit vreemde opmaak in onze pagina inbrengen.
-  const plat = legacy
+  const flat = legacy
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&emsp;/g, '  ')
     .replace(/&nbsp;/g, ' ');
   const node = $('oud');
   node.replaceChildren();
-  node.append(el('pre', 'whitespace-pre-wrap font-sans', plat.trim()));
+  node.append(el('pre', 'whitespace-pre-wrap font-sans', flat.trim()));
 }
 
-function teken(snapshot) {
-  tekenModus(snapshot.explanation);
-  tekenBudget(snapshot.explanation.budget, snapshot.explanation.solarProductionW);
-  tekenBuiten(snapshot.explanation);
-  tekenZones(snapshot.explanation.perZone);
-  tekenApparaten(snapshot);
-  tekenGeblokkeerd(snapshot.rejected);
-  tekenFailsafe(snapshot.explanation.failsafe);
-  tekenOud(snapshot.legacy);
+function render(snapshot) {
+  renderMode(snapshot.explanation);
+  renderBudget(snapshot.explanation.budget, snapshot.explanation.solarProductionW);
+  renderOutdoor(snapshot.explanation);
+  renderZones(snapshot.explanation.perZone);
+  renderActuators(snapshot);
+  renderBlocked(snapshot.rejected);
+  renderFailsafe(snapshot.explanation.failsafe);
+  renderLegacy(snapshot.legacy);
 
-  $('besluit-tijd').textContent = `besluit van ${klok(snapshot.atMs)} · ${snapshot.trigger}`;
+  $('besluit-tijd').textContent = `besluit van ${clock(snapshot.atMs)} · ${snapshot.trigger}`;
 
   // Vanaf hier is er iets te zien. De wachtregel mag weg en blijft weg: een
   // volgend besluit maakt het niet leger.
@@ -275,13 +275,13 @@ function teken(snapshot) {
 
 /* -------------------------------------------------------------- verbinden */
 
-function toonVerbinding(tekst, klasse) {
+function showConnection(text, cssClass) {
   const node = $('verbinding');
-  node.textContent = tekst;
-  node.className = `text-sm ${klasse}`;
+  node.textContent = text;
+  node.className = `text-sm ${cssClass}`;
 }
 
-async function haalSite() {
+async function loadSite() {
   try {
     site = await (await fetch('api/site')).json();
     $('installatie').textContent =
@@ -292,17 +292,17 @@ async function haalSite() {
   }
 }
 
-function volg() {
-  const bron = new EventSource('api/events');
+function follow() {
+  const source = new EventSource('api/events');
 
-  bron.onopen = () => toonVerbinding('verbonden', 'text-goed');
-  bron.onmessage = (event) => {
-    toonVerbinding('verbonden', 'text-goed');
-    teken(JSON.parse(event.data));
+  source.onopen = () => showConnection('verbonden', 'text-goed');
+  source.onmessage = (event) => {
+    showConnection('verbonden', 'text-goed');
+    render(JSON.parse(event.data));
   };
   // EventSource herverbindt zelf. Dat hoeven we niet na te bouwen; we moeten
   // het alleen eerlijk tonen, anders staat er een stand die niet meer leeft.
-  bron.onerror = () => toonVerbinding('verbinding kwijt — opnieuw proberen…', 'text-alarm');
+  source.onerror = () => showConnection('verbinding kwijt — opnieuw proberen…', 'text-alarm');
 }
 
 /* ------------------------------------------------------- terugblik ------ */
@@ -316,7 +316,7 @@ function volg() {
  */
 
 /** Tekencode uit het rapport naar naam en kleur. Eén plek. */
-const VAK = {
+const CELL = {
   ' ': { naam: 'geen opname', kleur: 'transparent' },
   '·': { naam: 'beide uit', kleur: 'var(--color-beide-uit)' },
   '=': { naam: 'eens, draait', kleur: 'var(--color-eens)' },
@@ -331,10 +331,10 @@ const kwh = (wh) =>
     maximumFractionDigits: 2,
   })} kWh`;
 
-const pct = (deel, geheel) =>
-  geheel === 0 ? '—' : `${((deel / geheel) * 100).toFixed(1)}%`;
+const pct = (share, whole) =>
+  whole === 0 ? '—' : `${((share / whole) * 100).toFixed(1)}%`;
 
-const tijdvak = (i) =>
+const timeSlot = (i) =>
   `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`;
 
 /**
@@ -345,7 +345,7 @@ const tijdvak = (i) =>
  * wordt de pagina traag om iets te tonen dat vrijwel altijd uit lange gelijke
  * stukken bestaat. Samengevoegd blijven het er een paar honderd.
  */
-function dagRij(states) {
+function dayRow(states) {
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', '0 0 96 10');
@@ -357,147 +357,147 @@ function dagRij(states) {
   let i = 0;
   while (i < 96) {
     const code = states[i];
-    let eind = i;
-    while (eind + 1 < 96 && states[eind + 1] === code) eind++;
-    const vak = VAK[code] ?? VAK[' '];
+    let end = i;
+    while (end + 1 < 96 && states[end + 1] === code) end++;
+    const cell = CELL[code] ?? CELL[' '];
 
-    if (vak.kleur !== 'transparent') {
+    if (cell.kleur !== 'transparent') {
       const r = document.createElementNS(NS, 'rect');
       r.setAttribute('x', String(i));
       r.setAttribute('y', '0');
       // 0,12 lucht houdt de blokken los zonder een gat te suggereren.
-      r.setAttribute('width', String(eind - i + 1 - 0.12));
+      r.setAttribute('width', String(end - i + 1 - 0.12));
       r.setAttribute('height', '10');
-      r.setAttribute('fill', vak.kleur);
+      r.setAttribute('fill', cell.kleur);
       r.setAttribute('rx', '1');
-      r.dataset.uitleg = `${tijdvak(i)}–${tijdvak(Math.min(eind + 1, 96))} · ${vak.naam}`;
+      r.dataset.uitleg = `${timeSlot(i)}–${timeSlot(Math.min(end + 1, 96))} · ${cell.naam}`;
       svg.append(r);
     }
-    i = eind + 1;
+    i = end + 1;
   }
   return svg;
 }
 
-function tekenTijdlijn(dagen) {
-  const doel = $('tijdlijn');
-  doel.replaceChildren();
+function renderTimeline(days) {
+  const target = $('tijdlijn');
+  target.replaceChildren();
 
   // Uurmarkering boven de rijen, anders weet je niet waar de middag ligt.
-  const kop = el('div', 'text-zacht mb-1 flex text-[10px]');
-  kop.append(el('div', 'w-20 shrink-0'));
-  const schaal = el('div', 'relative h-3 flex-1');
+  const heading = el('div', 'text-zacht mb-1 flex text-[10px]');
+  heading.append(el('div', 'w-20 shrink-0'));
+  const scale = el('div', 'relative h-3 flex-1');
   for (let u = 0; u < 24; u += 3) {
     const m = el('span', 'meting absolute', `${String(u).padStart(2, '0')}u`);
     m.style.left = `${(u / 24) * 100}%`;
-    schaal.append(m);
+    scale.append(m);
   }
-  kop.append(schaal);
-  doel.append(kop);
+  heading.append(scale);
+  target.append(heading);
 
-  const rijen = el('div', 'space-y-[3px]');
-  for (const { day, states } of dagen) {
-    const rij = el('div', 'flex items-center gap-2');
-    rij.append(el('div', 'text-zacht meting w-20 shrink-0 text-[11px]', day));
-    const houder = el('div', 'min-w-0 flex-1');
-    houder.append(dagRij(states));
-    rij.append(houder);
-    rijen.append(rij);
+  const rows = el('div', 'space-y-[3px]');
+  for (const { day, states } of days) {
+    const row = el('div', 'flex items-center gap-2');
+    row.append(el('div', 'text-zacht meting w-20 shrink-0 text-[11px]', day));
+    const holder = el('div', 'min-w-0 flex-1');
+    holder.append(dayRow(states));
+    row.append(holder);
+    rows.append(row);
   }
-  doel.append(rijen);
+  target.append(rows);
 
   // Legenda: identiteit mag nooit alleen aan kleur hangen.
-  const legenda = $('tijdlijn-legenda');
-  legenda.replaceChildren();
+  const legend = $('tijdlijn-legenda');
+  legend.replaceChildren();
   for (const code of ['·', '=', '+', '!', 'X']) {
-    const vak = VAK[code];
+    const cell = CELL[code];
     const item = el('span', 'flex items-center gap-1.5');
-    const blok = el('span', 'inline-block h-3 w-3 rounded-sm');
-    blok.style.background = vak.kleur;
-    item.append(blok, el('span', 'text-zacht', vak.naam));
-    legenda.append(item);
+    const block = el('span', 'inline-block h-3 w-3 rounded-sm');
+    block.style.background = cell.kleur;
+    item.append(block, el('span', 'text-zacht', cell.naam));
+    legend.append(item);
   }
 
   // Aanwijzen geeft het tijdvak. Zonder dit is een blokje van drie pixels
   // mooi maar onleesbaar.
   const tip = $('tijdlijn-tip');
-  doel.addEventListener('pointermove', (e) => {
+  target.addEventListener('pointermove', (e) => {
     tip.textContent = e.target?.dataset?.uitleg ?? '';
   });
-  doel.addEventListener('pointerleave', () => {
+  target.addEventListener('pointerleave', () => {
     tip.textContent = '';
   });
 }
 
-function tekenBalken(tallies) {
-  const doel = $('balken');
-  doel.replaceChildren();
+function renderBars(tallies) {
+  const target = $('balken');
+  target.replaceChildren();
 
-  const SEGMENTEN = [
+  const SEGMENTS = [
     ['agree', '=', 'eens'],
     ['stricter', '!', 'ik zou stoppen'],
     ['looser', '+', 'ik zou draaien'],
   ];
 
   for (const t of tallies) {
-    const totaal = t.agree + t.stricter + t.looser;
-    if (totaal === 0) continue;
-    const rij = el('div');
+    const total = t.agree + t.stricter + t.looser;
+    if (total === 0) continue;
+    const row = el('div');
 
-    const kop = el('div', 'mb-1 flex items-baseline justify-between gap-2 text-sm');
-    kop.append(el('span', 'font-medium', naamVanActuator(t.actuatorId)));
-    kop.append(el('span', 'text-zacht meting text-xs', `${pct(t.agree, totaal)} eens`));
-    rij.append(kop);
+    const heading = el('div', 'mb-1 flex items-baseline justify-between gap-2 text-sm');
+    heading.append(el('span', 'font-medium', actuatorName(t.actuatorId)));
+    heading.append(el('span', 'text-zacht meting text-xs', `${pct(t.agree, total)} eens`));
+    row.append(heading);
 
     // Gestapeld, met 2px lucht ertussen zodat de segmenten niet in elkaar
     // overlopen.
-    const balk = el('div', 'flex h-3 gap-[2px] overflow-hidden rounded-full');
-    for (const [sleutel, code, naam] of SEGMENTEN) {
-      const n = t[sleutel];
+    const bar = el('div', 'flex h-3 gap-[2px] overflow-hidden rounded-full');
+    for (const [key, code, name] of SEGMENTS) {
+      const n = t[key];
       if (n === 0) continue;
-      const deel = el('div', 'h-full first:rounded-l-full last:rounded-r-full');
-      deel.style.width = `${(n / totaal) * 100}%`;
-      deel.style.background = VAK[code].kleur;
-      deel.title = `${naam}: ${n.toLocaleString('nl-NL')} momenten`;
-      balk.append(deel);
+      const share = el('div', 'h-full first:rounded-l-full last:rounded-r-full');
+      share.style.width = `${(n / total) * 100}%`;
+      share.style.background = CELL[code].kleur;
+      share.title = `${name}: ${n.toLocaleString('nl-NL')} momenten`;
+      bar.append(share);
     }
-    rij.append(balk);
+    row.append(bar);
 
     // De cijfers erbij, want een balk alleen laat je schatten.
-    const onder = el('div', 'text-zacht meting mt-1 flex flex-wrap gap-x-4 text-xs');
-    for (const [sleutel, , naam] of SEGMENTEN) {
-      onder.append(el('span', '', `${t[sleutel].toLocaleString('nl-NL')} ${naam}`));
+    const below = el('div', 'text-zacht meting mt-1 flex flex-wrap gap-x-4 text-xs');
+    for (const [key, , name] of SEGMENTS) {
+      below.append(el('span', '', `${t[key].toLocaleString('nl-NL')} ${name}`));
     }
-    rij.append(onder);
+    row.append(below);
 
-    doel.append(rij);
+    target.append(row);
   }
 }
 
-function tekenEpisodes(r) {
-  const doel = $('episodes');
-  doel.replaceChildren();
+function renderEpisodes(r) {
+  const target = $('episodes');
+  target.replaceChildren();
 
   for (const e of r.episodes) {
     const li = el('li', 'px-4 py-3');
-    const kop = el('div', 'flex flex-wrap items-baseline justify-between gap-x-4 text-sm');
-    const dag = new Date(e.fromMs).toLocaleDateString('nl-NL', {
+    const heading = el('div', 'flex flex-wrap items-baseline justify-between gap-x-4 text-sm');
+    const day = new Date(e.fromMs).toLocaleDateString('nl-NL', {
       day: 'numeric',
       month: 'short',
     });
-    kop.append(
-      el('span', 'font-medium', `${dag} ${klok(e.fromMs).slice(0, 5)}–${klok(e.toMs).slice(0, 5)}`),
+    heading.append(
+      el('span', 'font-medium', `${day} ${clock(e.fromMs).slice(0, 5)}–${clock(e.toMs).slice(0, 5)}`),
     );
-    kop.append(
-      el('span', 'text-zacht meting', `${e.minutes} min · ${naamVanActuator(e.actuatorId)}`),
+    heading.append(
+      el('span', 'text-zacht meting', `${e.minutes} min · ${actuatorName(e.actuatorId)}`),
     );
-    li.append(kop);
+    li.append(heading);
 
-    const strenger = e.direction === 'strenger';
+    const stricter = e.direction === 'strenger';
     li.append(
       el(
         'div',
-        `mt-0.5 text-xs ${strenger ? 'text-strenger' : 'text-ruimer'}`,
-        (strenger ? 'oud draaide, ik zou stoppen' : 'oud stond uit, ik zou draaien') +
+        `mt-0.5 text-xs ${stricter ? 'text-strenger' : 'text-ruimer'}`,
+        (stricter ? 'oud draaide, ik zou stoppen' : 'oud stond uit, ik zou draaien') +
           (e.mode && e.mode !== 'onbekend' ? ` · modus ${e.mode}` : ''),
       ),
     );
@@ -506,11 +506,11 @@ function tekenEpisodes(r) {
         el(
           'div',
           'text-zacht mt-0.5 text-xs',
-          `mijn reden: ${GEBLOKKEERD[e.blockedBy] ?? e.blockedBy}`,
+          `mijn reden: ${BLOCK_LABEL[e.blockedBy] ?? e.blockedBy}`,
         ),
       );
     }
-    doel.append(li);
+    target.append(li);
   }
 
   const rest = r.episodesTotaal - r.episodes.length;
@@ -519,50 +519,50 @@ function tekenEpisodes(r) {
   $('episodes-blok').hidden = r.episodesTotaal === 0;
 }
 
-function tekenTerugblik(r) {
-  const eens = r.tallies.reduce((n, t) => n + t.agree, 0);
-  const totaal = r.tallies.reduce((n, t) => n + t.agree + t.stricter + t.looser, 0);
-  const dagen = (r.totMs - r.vanMs) / 86400000;
+function renderReview(r) {
+  const agreed = r.tallies.reduce((n, t) => n + t.agree, 0);
+  const total = r.tallies.reduce((n, t) => n + t.agree + t.stricter + t.looser, 0);
+  const days = (r.totMs - r.vanMs) / 86400000;
 
-  $('stat-eens').textContent = pct(eens, totaal);
-  $('stat-eens-sub').textContent = `over ${dagen.toFixed(1)} dagen · ${r.momenten.toLocaleString('nl-NL')} momenten`;
+  $('stat-eens').textContent = pct(agreed, total);
+  $('stat-eens-sub').textContent = `over ${days.toFixed(1)} dagen · ${r.momenten.toLocaleString('nl-NL')} momenten`;
 
   $('stat-stroom').textContent = kwh(r.legacyGridWh);
   $('stat-vermeden').textContent = kwh(r.avoidableGridWh);
   $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat het oude systeem besteedde`;
 
-  tekenTijdlijn(r.dagen);
-  tekenPatronen(r.patronen ?? []);
-  tekenBalken(r.tallies);
-  tekenEpisodes(r);
-  tekenDataset(r.dataset);
+  renderTimeline(r.dagen);
+  renderPatterns(r.patronen ?? []);
+  renderBars(r.tallies);
+  renderEpisodes(r);
+  renderDataset(r.dataset);
 
-  const oud = Math.round((Date.now() - r.berekendOpMs) / 60000);
+  const ageMinutes = Math.round((Date.now() - r.berekendOpMs) / 60000);
   $('terugblik-vers').textContent =
-    `berekend ${oud <= 1 ? 'zojuist' : `${oud} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden`;
+    `berekend ${ageMinutes <= 1 ? 'zojuist' : `${ageMinutes} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden`;
 
   $('terugblik-inhoud').hidden = false;
 }
 
-async function haalTerugblik() {
+async function loadReview() {
   try {
     const res = await fetch('api/divergence');
     if (res.ok) {
-      tekenTerugblik(await res.json());
+      renderReview(await res.json());
       return;
     }
     // 503 betekent "staat uit" of "nog niet gerekend". Bij het eerste hoort de
     // sectie te verdwijnen, bij het tweede hoort er iets te staan.
-    const { wachten } = await res.json();
+    const { wachten: waiting } = await res.json();
     $('terugblik-vers').textContent =
-      wachten === 'nog niet doorgerekend'
+      waiting === 'nog niet doorgerekend'
         ? 'de logboeken worden nog doorgerekend…'
         : 'de logboekanalyse staat uit op deze installatie.';
-  } catch (fout) {
+  } catch (error) {
     // Geen terugblik is geen reden om de live stand te verbergen — maar
     // stilzwijgend niets tonen is erger dan een lege sectie. Een fout hoort
     // ergens te landen waar je hem kunt vinden (besluit 7).
-    console.error('[terugblik] tekenen mislukt', fout);
+    console.error('[terugblik] tekenen mislukt', error);
     $('terugblik-vers').textContent = 'de terugblik kon niet worden getoond.';
   }
 }
@@ -583,49 +583,49 @@ const TABS = [
 ];
 
 /** Welke tabs er werkelijk zijn. De installatie bestaat lang niet altijd. */
-const zichtbareTabs = () => TABS.filter(([tabId]) => !$(tabId).hidden);
+const visibleTabs = () => TABS.filter(([tabId]) => !$(tabId).hidden);
 
-function kiesTab(actiefId) {
-  for (const [tabId, paneelId] of TABS) {
-    const actief = tabId === actiefId;
-    $(tabId).setAttribute('aria-selected', String(actief));
-    $(paneelId).hidden = !actief;
+function selectTab(activeId) {
+  for (const [tabId, panelId] of TABS) {
+    const active = tabId === activeId;
+    $(tabId).setAttribute('aria-selected', String(active));
+    $(panelId).hidden = !active;
   }
   try {
-    localStorage.setItem('hems-tab', actiefId);
+    localStorage.setItem('hems-tab', activeId);
   } catch {
     // Een browser die opslag weigert is geen reden om de tab niet te wisselen.
   }
 }
 
-function tabsAanzetten() {
+function enableTabs() {
   for (const [tabId] of TABS) {
-    $(tabId).addEventListener('click', () => kiesTab(tabId));
+    $(tabId).addEventListener('click', () => selectTab(tabId));
     // Pijltjes horen bij een tablist; anders kom je er met het toetsenbord
     // niet uit. Over de zichtbare tabs, want een verborgen tab overslaan is
     // wat je verwacht.
     $(tabId).addEventListener('keydown', (e) => {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      const lijst = zichtbareTabs();
-      const i = lijst.findIndex(([id]) => id === tabId);
+      const list = visibleTabs();
+      const i = list.findIndex(([id]) => id === tabId);
       if (i < 0) return;
-      const volgende = lijst[(i + (e.key === 'ArrowRight' ? 1 : lijst.length - 1)) % lijst.length][0];
-      kiesTab(volgende);
-      $(volgende).focus();
+      const next = list[(i + (e.key === 'ArrowRight' ? 1 : list.length - 1)) % list.length][0];
+      selectTab(next);
+      $(next).focus();
     });
   }
-  let onthouden = null;
+  let remembered = null;
   try {
-    onthouden = localStorage.getItem('hems-tab');
+    remembered = localStorage.getItem('hems-tab');
   } catch {
-    onthouden = null;
+    remembered = null;
   }
-  kiesTab(zichtbareTabs().some(([id]) => id === onthouden) ? onthouden : 'tab-live');
+  selectTab(visibleTabs().some(([id]) => id === remembered) ? remembered : 'tab-live');
 }
 
 /* ---------------------------------------------------------- dataset ---- */
 
-const SEIZOEN_NAAM = {
+const SEASON_NAME = {
   winter: 'Winter',
   lente: 'Lente',
   zomer: 'Zomer',
@@ -633,7 +633,7 @@ const SEIZOEN_NAAM = {
 };
 
 /** Wat een ontbrekend onderdeel betekent, in gewone taal. */
-const WAAROM = {
+const WHY = {
   vakantie: 'de vakantiestand is nog nooit aangezet',
   'heat-assist': 'heat-assist is nog nooit afgegaan — de Nest meldde nooit dat hij brandt',
   heat: 'er is nog nooit een verwarmingscommando uitgegaan',
@@ -650,7 +650,7 @@ const WAAROM = {
   zone_satisfied: 'een zone is nog nooit op temperatuur geweest',
 };
 
-const NAAM = {
+const COVERAGE_TITLE = {
   modi: 'Modi',
   strategieen: 'Strategieën',
   richtingen: 'Richtingen',
@@ -658,32 +658,32 @@ const NAAM = {
   blokkades: 'Blokkades',
 };
 
-function seizoenKaart(s) {
-  const kaart = el('div');
-  const kop = el('div', 'flex items-baseline justify-between gap-2');
-  kop.append(el('span', 'text-xs font-medium', SEIZOEN_NAAM[s.seizoen] ?? s.seizoen));
-  const dagen = s.dagen >= 10 ? Math.round(s.dagen) : Math.round(s.dagen * 10) / 10;
-  kop.append(
-    el('span', 'text-zacht meting text-xs', `${dagen.toLocaleString('nl-NL')}/${s.doel}`),
+function seasonCard(s) {
+  const card = el('div');
+  const heading = el('div', 'flex items-baseline justify-between gap-2');
+  heading.append(el('span', 'text-xs font-medium', SEASON_NAME[s.seizoen] ?? s.seizoen));
+  const days = s.dagen >= 10 ? Math.round(s.dagen) : Math.round(s.dagen * 10) / 10;
+  heading.append(
+    el('span', 'text-zacht meting text-xs', `${days.toLocaleString('nl-NL')}/${s.doel}`),
   );
-  kaart.append(kop);
+  card.append(heading);
 
-  const spoor = el('div', 'bg-grond mt-1 h-1.5 overflow-hidden rounded-full');
-  const vulling = el('div', 'h-full rounded-full transition-all duration-500');
-  const deel = Math.min(1, s.doel === 0 ? 1 : s.dagen / s.doel);
-  vulling.style.width = `${deel * 100}%`;
+  const track = el('div', 'bg-grond mt-1 h-1.5 overflow-hidden rounded-full');
+  const fill = el('div', 'h-full rounded-full transition-all duration-500');
+  const share = Math.min(1, s.doel === 0 ? 1 : s.dagen / s.doel);
+  fill.style.width = `${share * 100}%`;
   // Vol is groen, onderweg is blauw, leeg blijft leeg. Kleur alleen als
   // versterking: het getal ernaast zegt hetzelfde.
-  vulling.style.background = deel >= 1 ? 'var(--color-eens)' : 'var(--color-ruimer)';
-  spoor.append(vulling);
-  kaart.append(spoor);
-  return kaart;
+  fill.style.background = share >= 1 ? 'var(--color-eens)' : 'var(--color-ruimer)';
+  track.append(fill);
+  card.append(track);
+  return card;
 }
 
 /** Chips voor wat nog nooit is langsgekomen. */
-function tekenGaten(d) {
-  const doel = $('dataset-gaten');
-  doel.replaceChildren();
+function renderGaps(d) {
+  const target = $('dataset-gaten');
+  target.replaceChildren();
 
   // Alleen de functionele dekking: modi, strategieën en richtingen. Precies
   // waar het percentage hierboven mee rekent, en precies wat je zelf kunt
@@ -692,18 +692,18 @@ function tekenGaten(d) {
   // De reden- en blokkadecodes horen niet in deze rij: sommige daarvan hóren
   // zeldzaam te zijn (`setpoint_out_of_range` is een fout), en twaalf chips
   // waarvan de helft ruis is, leest niemand. Die staan in de uitklap.
-  const ontbreekt = [d.modi, d.strategieen, d.richtingen].flatMap((lijst) =>
-    lijst.filter((x) => x.deel < 1),
+  const missing = [d.modi, d.strategieen, d.richtingen].flatMap((list) =>
+    list.filter((x) => x.deel < 1),
   );
 
-  if (ontbreekt.length === 0 && d.ontbrekendeInvoer.length === 0) {
-    doel.append(
+  if (missing.length === 0 && d.ontbrekendeInvoer.length === 0) {
+    target.append(
       el('p', 'text-eens text-xs', 'Elk onderdeel van de regeling is minstens één keer afgegaan.'),
     );
     return;
   }
 
-  doel.append(
+  target.append(
     el(
       'h3',
       'text-zacht mb-2 text-xs font-medium tracking-wide uppercase',
@@ -711,34 +711,34 @@ function tekenGaten(d) {
     ),
   );
 
-  const rij = el('div', 'flex flex-wrap gap-2');
-  for (const x of ontbreekt) {
+  const row = el('div', 'flex flex-wrap gap-2');
+  for (const x of missing) {
     const chip = el(
       'span',
       'border-rand bg-grond text-zacht rounded-full border px-2.5 py-1 text-xs',
     );
     // Half betekent: één dag gezien. Dat is waargenomen en niet aangetoond,
     // dus een eigen teken — anders lijkt het óf af óf nooit gebeurd.
-    const half = x.deel === 0.5;
-    chip.append(el('span', half ? 'text-zon' : 'text-strenger', half ? '◑ ' : '○ '));
+    const halfShare = x.deel === 0.5;
+    chip.append(el('span', halfShare ? 'text-zon' : 'text-strenger', halfShare ? '◑ ' : '○ '));
     chip.append(document.createTextNode(x.id));
-    const waarom = half
+    const why = halfShare
       ? `één dag gezien; twee losse dagen nodig om mee te tellen`
-      : WAAROM[x.id];
-    if (waarom) chip.title = waarom;
-    rij.append(chip);
+      : WHY[x.id];
+    if (why) chip.title = why;
+    row.append(chip);
     // De uitleg erbij, want "heat" zegt op zichzelf niets. Bij drie chips past
     // dat; bij twaalf zou het een muur worden — vandaar de inperking hierboven.
-    if (waarom && ontbreekt.length <= 4) {
-      rij.append(el('span', 'text-zacht w-full text-xs sm:w-auto sm:pt-1.5', waarom));
+    if (why && missing.length <= 4) {
+      row.append(el('span', 'text-zacht w-full text-xs sm:w-auto sm:pt-1.5', why));
     }
   }
-  doel.append(rij);
+  target.append(row);
 
   // Ontbrekende invoer is een andere klasse: die komt niet vanzelf goed door
   // langer te wachten. Daarom apart en met de reden erbij.
   for (const inv of d.ontbrekendeInvoer) {
-    doel.append(
+    target.append(
       el(
         'p',
         'text-strenger mt-2 text-xs',
@@ -748,20 +748,20 @@ function tekenGaten(d) {
   }
 }
 
-function dekkingsTabel(titel, lijst) {
-  const blok = el('div');
-  blok.append(
-    el('h4', 'text-zacht mb-1 text-xs font-medium tracking-wide uppercase', titel),
+function coverageTable(title, list) {
+  const block = el('div');
+  block.append(
+    el('h4', 'text-zacht mb-1 text-xs font-medium tracking-wide uppercase', title),
   );
   const ul = el('ul', 'space-y-0.5');
-  for (const x of lijst) {
+  for (const x of list) {
     const li = el('li', 'flex items-baseline justify-between gap-2 text-xs');
-    const teken = x.deel === 1 ? '● ' : x.deel === 0.5 ? '◑ ' : '○ ';
-    const kleur = x.deel === 1 ? 'text-eens' : x.deel === 0.5 ? 'text-zon' : 'text-strenger';
-    const naam = el('span', x.deel > 0 ? '' : 'text-zacht');
-    naam.append(el('span', kleur, teken));
-    naam.append(document.createTextNode(x.id));
-    li.append(naam);
+    const render = x.deel === 1 ? '● ' : x.deel === 0.5 ? '◑ ' : '○ ';
+    const color = x.deel === 1 ? 'text-eens' : x.deel === 0.5 ? 'text-zon' : 'text-strenger';
+    const name = el('span', x.deel > 0 ? '' : 'text-zacht');
+    name.append(el('span', color, render));
+    name.append(document.createTextNode(x.id));
+    li.append(name);
     // De dagen zijn wat telt; het aantal momenten staat erachter als maat voor
     // hoe vaak het speelde.
     li.append(
@@ -775,11 +775,11 @@ function dekkingsTabel(titel, lijst) {
     );
     ul.append(li);
   }
-  blok.append(ul);
-  return blok;
+  block.append(ul);
+  return block;
 }
 
-function tekenDataset(d) {
+function renderDataset(d) {
   if (d == null) return;
 
   // Eén getal is te weinig: het komt uit twee assen die allebei noodzakelijk
@@ -790,34 +790,34 @@ function tekenDataset(d) {
   $('dataset-assen').textContent =
     `tijd ${d.gereedheid.tijd}% · functiedekking ${d.gereedheid.dekking}%`;
 
-  const van = new Date(d.vanMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
-  const tot = new Date(d.totMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
-  $('dataset-spanne').textContent = `${van} – ${tot}`;
+  const from = new Date(d.vanMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  const until = new Date(d.totMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+  $('dataset-spanne').textContent = `${from} – ${until}`;
 
-  const gaten =
+  const gaps =
     d.gatendagen.length === 0
       ? 'geen gaten'
       : `${d.gatendagen.length} ${d.gatendagen.length === 1 ? 'dag' : 'dagen'} zonder opname`;
   // Echte dagen, niet aangeraakte kalenderdagen: een opname die om vijf uur
   // 's middags begint levert die dag geen dag op.
-  const aangeraakt =
+  const touched =
     d.kalenderdagenAangeraakt > Math.ceil(d.dagenOpgenomen)
       ? ` (over ${d.kalenderdagenAangeraakt} kalenderdagen)`
       : '';
   $('dataset-samenvatting').textContent =
-    `${d.dagenOpgenomen.toLocaleString('nl-NL')} dagen opgenomen${aangeraakt} · ${gaten} · ` +
+    `${d.dagenOpgenomen.toLocaleString('nl-NL')} dagen opgenomen${touched} · ${gaps} · ` +
     `${d.momenten.toLocaleString('nl-NL')} momenten`;
 
-  const seizoenen = $('dataset-seizoenen');
-  seizoenen.replaceChildren();
-  for (const s of d.seizoenen) seizoenen.append(seizoenKaart(s));
+  const seasons = $('dataset-seizoenen');
+  seasons.replaceChildren();
+  for (const s of d.seizoenen) seasons.append(seasonCard(s));
 
-  tekenGaten(d);
+  renderGaps(d);
 
-  const tabellen = $('dataset-tabellen');
-  tabellen.replaceChildren();
-  for (const sleutel of ['modi', 'strategieen', 'richtingen', 'zoneRedenen', 'blokkades']) {
-    tabellen.append(dekkingsTabel(NAAM[sleutel] ?? sleutel, d[sleutel]));
+  const tables = $('dataset-tabellen');
+  tables.replaceChildren();
+  for (const key of ['modi', 'strategieen', 'richtingen', 'zoneRedenen', 'blokkades']) {
+    tables.append(coverageTable(COVERAGE_TITLE[key] ?? key, d[key]));
   }
 
   $('dataset').hidden = false;
@@ -832,36 +832,36 @@ function tekenDataset(d) {
  * het stelselmatig misgaat. Gesorteerd op totale tijd en niet op aantal: twintig
  * hikjes van twee minuten wegen minder dan drie middagen van een uur.
  */
-function tekenPatronen(patronen) {
-  const doel = $('patronen');
-  doel.replaceChildren();
-  $('patronen-blok').hidden = patronen.length === 0;
+function renderPatterns(patterns) {
+  const target = $('patronen');
+  target.replaceChildren();
+  $('patronen-blok').hidden = patterns.length === 0;
 
-  for (const p of patronen) {
+  for (const p of patterns) {
     const tr = el('tr');
 
-    const wat = el('td', 'px-4 py-2 align-top');
-    const strenger = p.direction === 'strenger';
-    const titel = el('div', 'flex items-baseline gap-2');
-    const stip = el('span', 'inline-block h-2 w-2 shrink-0 rounded-full');
-    stip.style.background = strenger ? 'var(--color-strenger)' : 'var(--color-ruimer)';
-    titel.append(stip);
-    titel.append(
+    const what = el('td', 'px-4 py-2 align-top');
+    const stricter = p.direction === 'strenger';
+    const title = el('div', 'flex items-baseline gap-2');
+    const dot = el('span', 'inline-block h-2 w-2 shrink-0 rounded-full');
+    dot.style.background = stricter ? 'var(--color-strenger)' : 'var(--color-ruimer)';
+    title.append(dot);
+    title.append(
       el(
         'span',
         'font-medium',
-        `${naamVanActuator(p.actuatorId)} — ${strenger ? 'ik zou stoppen' : 'ik zou draaien'}`,
+        `${actuatorName(p.actuatorId)} — ${stricter ? 'ik zou stoppen' : 'ik zou draaien'}`,
       ),
     );
-    wat.append(titel);
+    what.append(title);
     const detail = [
       p.mode && p.mode !== 'onbekend' ? `modus ${p.mode}` : null,
-      p.blockedBy ? GEBLOKKEERD[p.blockedBy] ?? p.blockedBy : null,
+      p.blockedBy ? BLOCK_LABEL[p.blockedBy] ?? p.blockedBy : null,
     ].filter(Boolean);
     if (detail.length > 0) {
-      wat.append(el('div', 'text-zacht mt-0.5 pl-4 text-xs', detail.join(' · ')));
+      what.append(el('div', 'text-zacht mt-0.5 pl-4 text-xs', detail.join(' · ')));
     }
-    tr.append(wat);
+    tr.append(what);
 
     tr.append(el('td', 'meting px-2 py-2 text-right align-top', String(p.keren)));
     tr.append(el('td', 'meting px-2 py-2 text-right align-top', `${p.minuten} min`));
@@ -875,32 +875,32 @@ function tekenPatronen(patronen) {
         p.wh > 1 ? kwh(p.wh) : '—',
       ),
     );
-    doel.append(tr);
+    target.append(tr);
   }
 }
 
 /* --------------------------------------------------------------- starten */
 
-tabsAanzetten();
-await haalSite();
+enableTabs();
+await loadSite();
 
 // Eerst de huidige stand, zodat de pagina niet leeg blijft als er net geen
 // besluit langskomt. Bij dertig seconden hartslag is dat lang genoeg om voor
 // kapot door te gaan.
 try {
   const res = await fetch('api/state');
-  if (res.ok) teken(await res.json());
-  else toonVerbinding('wacht op het eerste besluit…', 'text-zacht');
+  if (res.ok) render(await res.json());
+  else showConnection('wacht op het eerste besluit…', 'text-zacht');
 } catch {
-  toonVerbinding('geen verbinding met de dienst', 'text-alarm');
+  showConnection('geen verbinding met de dienst', 'text-alarm');
 }
 
-volg();
+follow();
 
 // De analyse draait op de dienst elk kwartier; vaker ophalen heeft geen zin.
 // Wel meteen bij het openen, want daar komt iemand voor.
-await haalTerugblik();
-setInterval(haalTerugblik, 15 * 60_000);
+await loadReview();
+setInterval(loadReview, 15 * 60_000);
 
 /* ------------------------------------------------------ installatie ---- */
 
@@ -917,68 +917,68 @@ setInterval(haalTerugblik, 15 * 60_000);
  * moeten kloppen.
  */
 
-const MERKEN = {
+const BRANDS = {
   gevonden: ['gevonden', 'text-goed'],
   geraden: ['geraden', 'text-strenger'],
   overgeslagen: ['overgeslagen', 'text-zacht'],
   ontbreekt: ['ontbreekt', 'text-zacht'],
 };
 
-let voorstelKeuzes = [];
+let proposalChoices = [];
 
-function tekenKeuzes(keuzes) {
-  const doel = $('onboarding-keuzes');
-  doel.replaceChildren();
-  if (keuzes.length === 0) {
-    doel.append(
+function renderChoices(choices) {
+  const target = $('onboarding-keuzes');
+  target.replaceChildren();
+  if (choices.length === 0) {
+    target.append(
       el('p', 'text-zacht text-sm', 'Er is niets waar de ontdekking over twijfelt.'),
     );
     return;
   }
 
-  for (const keuze of keuzes) {
-    const kaart = el('div', 'border-rand rounded-md border p-3');
-    kaart.append(el('p', 'text-sm font-medium', keuze.vraag));
-    if (keuze.toelichting) {
-      kaart.append(el('p', 'text-zacht mt-1 text-xs', keuze.toelichting));
+  for (const choice of choices) {
+    const card = el('div', 'border-rand rounded-md border p-3');
+    card.append(el('p', 'text-sm font-medium', choice.vraag));
+    if (choice.toelichting) {
+      card.append(el('p', 'text-zacht mt-1 text-xs', choice.toelichting));
     }
 
     const select = el('select', 'meting mt-2 w-full rounded-md border border-rand bg-grond p-2 text-sm');
-    select.id = `keuze-${keuze.id}`;
-    if (keuze.magLeeg) {
-      const leeg = el('option', null, 'geen van deze');
-      leeg.value = '';
-      select.append(leeg);
+    select.id = `keuze-${choice.id}`;
+    if (choice.magLeeg) {
+      const empty = el('option', null, 'geen van deze');
+      empty.value = '';
+      select.append(empty);
     }
-    for (const optie of keuze.opties) {
-      const o = el('option', null, optie);
-      o.value = optie;
-      if (optie === keuze.huidig) o.selected = true;
+    for (const option of choice.opties) {
+      const o = el('option', null, option);
+      o.value = option;
+      if (option === choice.huidig) o.selected = true;
       select.append(o);
     }
-    kaart.append(select);
-    doel.append(kaart);
+    card.append(select);
+    target.append(card);
   }
 }
 
 /** Eerst wat aandacht vraagt, dan wat klaar is. Zelfde volgorde als in de terminal. */
-const VOLGORDE = ['ontbreekt', 'geraden', 'gevonden', 'overgeslagen'];
+const ORDER = ['ontbreekt', 'geraden', 'gevonden', 'overgeslagen'];
 
-function tekenBevindingen(bevindingen) {
-  const doel = $('onboarding-bevindingen');
-  doel.replaceChildren();
-  const lijst = el('ul', 'grid gap-2 text-sm');
-  const gesorteerd = [...bevindingen].sort(
-    (a, b) => VOLGORDE.indexOf(a.soort) - VOLGORDE.indexOf(b.soort),
+function renderFindings(findings) {
+  const target = $('onboarding-bevindingen');
+  target.replaceChildren();
+  const list = el('ul', 'grid gap-2 text-sm');
+  const sorted = [...findings].sort(
+    (a, b) => ORDER.indexOf(a.soort) - ORDER.indexOf(b.soort),
   );
-  for (const b of gesorteerd) {
-    const [label, kleur] = MERKEN[b.soort] ?? ['?', 'text-zacht'];
-    const regel = el('li', 'flex gap-3');
-    regel.append(el('span', `${kleur} meting w-28 shrink-0 text-xs uppercase`, label));
-    const rechts = el('div', 'min-w-0');
-    rechts.append(el('p', null, b.tekst));
+  for (const b of sorted) {
+    const [label, color] = BRANDS[b.soort] ?? ['?', 'text-zacht'];
+    const line = el('li', 'flex gap-3');
+    line.append(el('span', `${color} meting w-28 shrink-0 text-xs uppercase`, label));
+    const right = el('div', 'min-w-0');
+    right.append(el('p', null, b.tekst));
     if (b.alternatieven?.length) {
-      rechts.append(
+      right.append(
         el(
           'p',
           'text-zacht meting mt-0.5 text-xs break-all',
@@ -987,57 +987,57 @@ function tekenBevindingen(bevindingen) {
         ),
       );
     }
-    rechts.append(el('p', 'text-zacht meting text-xs', b.pad));
-    regel.append(rechts);
-    lijst.append(regel);
+    right.append(el('p', 'text-zacht meting text-xs', b.pad));
+    line.append(right);
+    list.append(line);
   }
-  doel.append(lijst);
+  target.append(list);
 }
 
-function toonUitkomst(tekst, kleur) {
-  const doel = $('onboarding-uitkomst');
-  doel.replaceChildren(el('p', kleur, tekst));
-  doel.hidden = false;
+function showOutcome(text, color) {
+  const target = $('onboarding-uitkomst');
+  target.replaceChildren(el('p', color, text));
+  target.hidden = false;
 }
 
-async function bewaarInstallatie() {
-  const knop = $('onboarding-bewaar');
-  knop.disabled = true;
-  const antwoorden = {};
-  for (const keuze of voorstelKeuzes) {
-    const waarde = $(`keuze-${keuze.id}`).value;
-    antwoorden[keuze.id] = waarde === '' ? null : waarde;
+async function saveInstallation() {
+  const button = $('onboarding-bewaar');
+  button.disabled = true;
+  const answers = {};
+  for (const choice of proposalChoices) {
+    const value = $(`keuze-${choice.id}`).value;
+    answers[choice.id] = value === '' ? null : value;
   }
 
   try {
     const res = await fetch('api/onboarding', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ antwoorden }),
+      body: JSON.stringify({ antwoorden: answers }),
     });
     const body = await res.json();
     if (body.ok) {
-      toonUitkomst(
+      showOutcome(
         `Geschreven naar ${body.pad}. Herstart de add-on om hem in gebruik te nemen.`,
         'text-goed',
       );
-      knop.hidden = true;
+      button.hidden = true;
       return;
     }
-    const doel = $('onboarding-uitkomst');
-    doel.replaceChildren(el('p', 'text-alarm', body.reden ?? 'Opslaan mislukt.'));
+    const target = $('onboarding-uitkomst');
+    target.replaceChildren(el('p', 'text-alarm', body.reden ?? 'Opslaan mislukt.'));
     for (const p of body.problemen ?? []) {
-      doel.append(el('p', 'text-zacht meting mt-1 text-xs', p));
+      target.append(el('p', 'text-zacht meting mt-1 text-xs', p));
     }
-    doel.hidden = false;
+    target.hidden = false;
   } catch (error) {
-    toonUitkomst(`Opslaan mislukt: ${error}`, 'text-alarm');
+    showOutcome(`Opslaan mislukt: ${error}`, 'text-alarm');
   } finally {
-    knop.disabled = false;
+    button.disabled = false;
   }
 }
 
-async function haalOnboarding() {
+async function loadOnboarding() {
   let res;
   try {
     res = await fetch('api/onboarding');
@@ -1049,9 +1049,9 @@ async function haalOnboarding() {
   if (!res.ok) return;
 
   $('tab-installatie').hidden = false;
-  let voorstel;
+  let proposal;
   try {
-    voorstel = await res.json();
+    proposal = await res.json();
   } catch (error) {
     $('onboarding-laden').hidden = true;
     $('onboarding-fout').textContent = `Het voorstel is niet te lezen: ${error}`;
@@ -1059,9 +1059,9 @@ async function haalOnboarding() {
     return;
   }
 
-  voorstelKeuzes = voorstel.keuzes ?? [];
-  tekenKeuzes(voorstelKeuzes);
-  tekenBevindingen(voorstel.bevindingen ?? []);
+  proposalChoices = proposal.keuzes ?? [];
+  renderChoices(proposalChoices);
+  renderFindings(proposal.bevindingen ?? []);
   $('onboarding-laden').hidden = true;
   $('onboarding-inhoud').hidden = false;
 
@@ -1076,21 +1076,21 @@ async function haalOnboarding() {
    * het bestaande, waarna de dienst niet meer wist welke gold en niet meer
    * startte.
    */
-  const bestaande = voorstel.bestaande ?? [];
-  if (bestaande.length > 0) {
+  const existing = proposal.bestaande ?? [];
+  if (existing.length > 0) {
     $('onboarding-bewaar').hidden = true;
-    toonUitkomst(
-      `Er staat al een configuratie (${bestaande.join(', ')}), dus hier valt niets ` +
+    showOutcome(
+      `Er staat al een configuratie (${existing.join(', ')}), dus hier valt niets ` +
         'in te stellen. Wil je opnieuw beginnen, verplaats dat bestand dan eerst.',
       'text-zacht',
     );
     return;
   }
 
-  $('onboarding-bewaar').addEventListener('click', () => void bewaarInstallatie());
+  $('onboarding-bewaar').addEventListener('click', () => void saveInstallation());
 }
 
-await haalOnboarding();
+await loadOnboarding();
 
 /* ---------------------------------------------------------- exporteren ---- */
 
@@ -1110,7 +1110,7 @@ function megabytes(bytes) {
     : `${Math.round(bytes / 1e6)} MB`;
 }
 
-async function haalExport() {
+async function loadExport() {
   let res;
   try {
     res = await fetch('api/export/info');
@@ -1127,13 +1127,13 @@ async function haalExport() {
   }
   if (!info.bestanden) return;
 
-  const knop = $('dataset-export');
-  knop.textContent = `Exporteren · ${info.bestanden} dagen, ${megabytes(info.bytes)}`;
-  knop.title = `${info.eerste} tot en met ${info.laatste}, als tar.gz`;
-  knop.hidden = false;
+  const button = $('dataset-export');
+  button.textContent = `Exporteren · ${info.bestanden} dagen, ${megabytes(info.bytes)}`;
+  button.title = `${info.eerste} tot en met ${info.laatste}, als tar.gz`;
+  button.hidden = false;
 }
 
-await haalExport();
+await loadExport();
 // Elk kwartier bijwerken, in hetzelfde ritme als de analyse: de opname groeit
 // door en een knop die een oude omvang toont is een knop die liegt.
-setInterval(haalExport, 15 * 60_000);
+setInterval(loadExport, 15 * 60_000);
