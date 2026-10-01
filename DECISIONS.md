@@ -2228,9 +2228,11 @@ vóór en na het comprimeren precies hetzelfde ziet.
 pas de gewone weg. Staan beide er, dan telt de `.gz` en ruimt de volgende
 ronde de gewone op. Een dag raakt nooit weg en telt nooit dubbel.
 
-*Eén keer gezien, niet gevonden:* de integratietest faalde één keer in ruim
-twintig volledige runs op Windows. Hij toont nu de meldingen van de dienst in
-zijn foutmelding, zodat een volgende keer zegt wat er misging.
+*Eén keer gezien, en later gevonden:* de integratietest faalde af en toe onder
+de last van de volledige suite. Op 1 oktober zat de oorzaak in de test zelf. Hij
+wachtte tot de `.gz` er stond en controleerde dan meteen dat het gewone bestand
+weg was. Maar de dienst hernoemt eerst en haalt pas daarna weg, en daartussen
+staan beide er even. De test wacht nu op allebei. De dienst deed het goed.
 
 *Erbij, geen besluit maar een reparatie:* `deploy.sh` staat voortaan tussen
 accolades met een `exit` erin, zodat overschrijven tijdens een run geen halve
