@@ -184,12 +184,27 @@ foutcode, en start Docker hem opnieuw. In te stellen met
 naar het besluitenlogboek is geschreven. Container Manager kleurt de container
 dan groen of rood — handig om in één oogopslag te zien of het loopt.
 
-**Begrensde logboeken.** Het containerlogboek gaat naar maximaal 5 × 10 MB. Het
-besluitenlogboek in `logs/` is per dag en ongeveer 1 MB — over een winter dus
-ruim onder de 200 MB.
+**Een mail als de opname stilvalt** (besluit 67). `deploy.sh` kijkt bij elke
+run hoe oud het nieuwste beslislogboek is. Staat er al een half uur geen besluit
+in, dan eindigt de run met een foutcode. Per storing komt er hooguit één melding
+per drie uur. Een container die je zelf hebt stopgezet, geeft geen melding. De
+mail zelf komt van DSM, en die zet je één keer aan:
 
-**Geen poorten.** De dienst luistert nergens op en verbindt alleen uitgaand met
-Home Assistant. Er is niets bereikbaar van buiten.
+1. **Configuratiescherm → Melding → E-mail**: zorg dat DSM mail kan versturen,
+   en verstuur een testbericht.
+2. **Configuratiescherm → Taakplanner** → de taak van `deploy.sh` → **Bewerken →
+   Taakinstellingen**: vink **Verzend uitvoeringsgegevens per e-mail** aan, en
+   daaronder **Alleen verzenden wanneer het script abnormaal wordt beëindigd**.
+
+Zonder dat tweede vinkje krijg je elke vijf minuten een mail.
+
+**Begrensde logboeken.** Het containerlogboek gaat naar maximaal 5 × 10 MB. Het
+beslislogboek en de ruwe historie in `logs/` schrijven samen ongeveer 5 MB per
+dag. Dagen ouder dan een week worden gecomprimeerd (besluit 58), dus een winter
+blijft ruim onder de 200 MB.
+
+**Alleen de weergave luistert.** Op poort 8099, zonder inlog en alleen lezen;
+zie hieronder. Verder verbindt de dienst alleen uitgaand met Home Assistant.
 
 ## De dataset ophalen
 

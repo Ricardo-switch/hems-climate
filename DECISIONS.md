@@ -106,6 +106,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt](#37-de-add-on-wordt-platgeslagen-voordat-de-supervisor-hem-bouwt)
 - [53. De NAS is de primaire omgeving; de add-on wacht tot stap B](#53-de-nas-is-de-primaire-omgeving-de-add-on-wacht-tot-stap-b)
 - [64. Echt schakelen pas met een complete winter en alle functies](#64-echt-schakelen-pas-met-een-complete-winter-en-alle-functies)
+- [67. Een mail als de opname stilvalt](#67-een-mail-als-de-opname-stilvalt)
 
 **Kwaliteitsbewaking**
 
@@ -2548,6 +2549,38 @@ dit logboek met datum, niet in het bestand.
 
 *Mislukt het schrijven,* dan beslist de dienst toch. Zonder herkomst is de
 dataset minder waard, zonder dienst is er geen dataset.
+
+---
+
+## 67. Een mail als de opname stilvalt
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Valt de opname stil, dan merkte niemand het tot iemand de pagina opende. Dat
+gebeurt bijvoorbeeld als de NAS de verbinding met Home Assistant kwijtraakt, of
+als de dienst in een herstartlus zit. De healthcheck van Docker kleurde de
+container rood, maar alleen in Container Manager, en daar kijkt niemand
+dagelijks. Een week winter die ontbreekt, komt niet terug: de recorder van Home
+Assistant bewaart maar tien dagen, en de winter laat zich niet overdoen.
+
+*Besluit:* `deploy.sh` draait toch elke vijf minuten, en kijkt daarbij hoe oud
+het nieuwste beslislogboek is. Is dat ouder dan een half uur, dan eindigt de
+run met een foutcode. De Taakplanner van DSM stuurt dan een mail, als dat in de
+taak aanstaat (zie `README-NAS.md`). De melding komt hooguit één keer per drie
+uur per storing, en niet voor een container die bewust is stopgezet. Komt de
+opname terug, dan zegt het journaal dat ook.
+
+*Waarom niet in de dienst zelf:* de dienst is juist wat er stilvalt. De controle
+moet van buiten komen, en het script dat de NAS al elke vijf minuten draait, is
+het eenvoudigste buiten dat er is.
+
+*Waarom een half uur:* de dienst beslist elke dertig seconden, en een uitrol
+legt hem een paar minuten stil. Een half uur is ruim boven elke uitrol, en
+ruim onder wat een winternacht kost.
+
+Uitgeprobeerd in een wegwerpmap met een logboek van verschillende ouderdom:
+vers, een half uur stil, al gemeld, na drie uur opnieuw, hersteld, en bewust
+gestopt.
 
 ---
 
