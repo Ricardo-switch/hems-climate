@@ -9,10 +9,18 @@
 
 import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import { createWriteStream } from 'node:fs';
+import {
+  appendFileSync,
+  createWriteStream,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -35,9 +43,25 @@ async function decisionLogWith(days: Record<string, string>): Promise<string> {
   return dir;
 }
 
-/** Een antwoord dat naar een bestand schrijft in plaats van naar een socket. */
-function fakeResponse(path: string) {
+/**
+ * Een antwoord dat naar een bestand schrijft in plaats van naar een socket.
+ *
+ * `duringDownload` draait bij het eerste stuk dat binnenkomt: dan is de export
+ * halverwege, en kan een test nabootsen wat de dienst op de NAS ondertussen doet.
+ */
+function fakeResponse(path: string, duringDownload?: () => void) {
   const stream = createWriteStream(path);
+  if (duringDownload != null) {
+    const write = stream.write.bind(stream) as (...args: unknown[]) => boolean;
+    let fired = false;
+    stream.write = ((...args: unknown[]) => {
+      if (!fired) {
+        fired = true;
+        duringDownload();
+      }
+      return write(...args);
+    }) as typeof stream.write;
+  }
   const headings: Record<string, string> = {};
   let status = 0;
   return {
@@ -146,6 +170,64 @@ describe('de dataset exporteren', () => {
       'decisions-2026-09-05.ndjson',
       'runs.ndjson',
     ]);
+  });
+
+  /*
+   * De export loopt terwijl de dienst doorschrijft. Op 1 oktober brak het
+   * archief daarop: de kop beloofde de omvang van het moment van opvragen, de
+   * inhoud las door tot het nieuwe einde, en `tar` verloor daarna de draad —
+   * alles achter het bestand van vandaag, `runs.ndjson` voorop, was weg.
+   */
+  it('blijft heel wanneer het bestand van vandaag groeit tijdens het downloaden', async () => {
+    // Vooraan, groot en slecht comprimeerbaar: het eerste stuk uitvoer komt dan
+    // pas nadat dit bestand geopend is, en ruim voordat het uit is.
+    const today = randomBytes(3_000_000).toString('base64') + '\n';
+    const dir = await decisionLogWith({ '2026-10-01': today });
+    await writeFile(join(dir, 'runs.ndjson'), '{"t":1,"commit":"abc1234","config":"x"}\n', 'utf-8');
+
+    const tgz = join(dir, 'uit.tar.gz');
+    const growing = join(dir, 'decisions-2026-10-01.ndjson');
+    await writeExport(
+      dir,
+      fakeResponse(tgz, () => appendFileSync(growing, '{"t":2}\n'.repeat(1000))).res,
+      new Date('2026-10-01T21:00:00Z'),
+    );
+
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    const map = join(unpackDir, 'hems-logboek-2026-10-01');
+    expect((await readdir(map)).sort()).toEqual(['decisions-2026-10-01.ndjson', 'runs.ndjson']);
+    // Wat er was toen het bestand aan de beurt kwam; de rest komt de volgende keer mee.
+    expect(await readFile(join(map, 'decisions-2026-10-01.ndjson'), 'utf-8')).toBe(today);
+    expect(await readFile(join(map, 'runs.ndjson'), 'utf-8')).toContain('abc1234');
+  });
+
+  it('pakt de .gz wanneer een dag tijdens het downloaden wordt gecomprimeerd (besluit 58)', async () => {
+    const busy = randomBytes(3_000_000).toString('base64') + '\n';
+    const dir = await decisionLogWith({ '2026-09-05': busy, '2026-09-06': '{"t":1}\n' });
+
+    // Wat de archivering doet: .gz ernaast zetten, het origineel weghalen.
+    const plain = join(dir, 'decisions-2026-09-06.ndjson');
+    const compress = () => {
+      writeFileSync(`${plain}.gz`, gzipSync(readFileSync(plain)));
+      unlinkSync(plain);
+    };
+
+    const tgz = join(dir, 'uit.tar.gz');
+    await writeExport(dir, fakeResponse(tgz, compress).res, new Date('2026-09-30T12:00:00Z'));
+
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    const map = join(unpackDir, 'hems-logboek-2026-09-30');
+    expect((await readdir(map)).sort()).toEqual([
+      'decisions-2026-09-05.ndjson',
+      'decisions-2026-09-06.ndjson.gz',
+    ]);
+    expect(gunzipSync(await readFile(join(map, 'decisions-2026-09-06.ndjson.gz'))).toString()).toBe(
+      '{"t":1}\n',
+    );
   });
 
   it('laat wat geen dagbestand is buiten het archief', async () => {
