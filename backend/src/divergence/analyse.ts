@@ -122,7 +122,7 @@ export function bucketsPerDay(
 /** Tolerantie voor import waar we niemand op afrekenen, in W. */
 const IMPORT_TOLERANCE_W = 50;
 
-interface OpenEpisode {
+export interface OpenEpisode {
   actuatorId: string;
   direction: Direction;
   fromMs: number;
@@ -166,51 +166,102 @@ export interface AnalyseOptions {
   readonly minEpisodeMinutes?: number;
 }
 
-export async function analyse(
-  moments: AsyncIterable<Moment>,
-  options: AnalyseOptions = {},
-): Promise<Analysis> {
-  const minMinutes = options.minEpisodeMinutes ?? 2;
+/**
+ * De doorlopende stand van de analyse (besluit 63).
+ *
+ * Alles wat van moment naar moment meegaat, in één object, zodat het na een
+ * afgesloten dag bevroren kan worden en later voortgezet. `structuredClone`
+ * kan hem kopiëren en `node:v8` kan hem bewaren: alleen getallen, tekst,
+ * arrays, Maps en gewone objecten.
+ */
+export interface AnalyserState {
+  tallies: Map<string, ActuatorTally>;
+  open: Map<string, OpenEpisode>;
+  episodes: Episode[];
+  buckets: Map<number, BucketState>;
+  fromMs: number;
+  toMs: number;
+  count: number;
+  failsafeMoments: number;
+  withObservation: number;
+  legacyGridWh: number;
+  avoidableGridWh: number;
+  previousMs: number | null;
+}
 
-  const tallies = new Map<string, ActuatorTally>();
-  const open = new Map<string, OpenEpisode>();
-  const episodes: Episode[] = [];
-  const buckets = new Map<number, BucketState>();
+function emptyAnalyserState(): AnalyserState {
+  return {
+    tallies: new Map(),
+    open: new Map(),
+    episodes: [],
+    buckets: new Map(),
+    fromMs: Number.POSITIVE_INFINITY,
+    toMs: Number.NEGATIVE_INFINITY,
+    count: 0,
+    failsafeMoments: 0,
+    withObservation: 0,
+    legacyGridWh: 0,
+    avoidableGridWh: 0,
+    previousMs: null,
+  };
+}
 
-  let fromMs = Number.POSITIVE_INFINITY;
-  let toMs = Number.NEGATIVE_INFINITY;
-  let count = 0;
-  let failsafeMoments = 0;
-  let withObservation = 0;
-  let legacyGridWh = 0;
-  let avoidableGridWh = 0;
-  let previousMs: number | null = null;
+/** Afwijking overheerst in de weergave; zie `add`. */
+const BUCKET_RANK: Record<BucketState, number> = {
+  geen: 0,
+  'beide-uit': 1,
+  eens: 2,
+  ruimer: 3,
+  strenger: 4,
+  failsafe: 5,
+};
 
-  const tallyFor = (id: string): ActuatorTally => {
-    let t = tallies.get(id);
+/**
+ * De analyse als optelling: moment voor moment erbij, en op elk punt een
+ * uitkomst. Wie alles in één keer wil, gebruikt `analyse`.
+ */
+export class Analyser {
+  readonly #options: AnalyseOptions;
+  readonly #minMinutes: number;
+  readonly #s: AnalyserState;
+
+  constructor(options: AnalyseOptions = {}, state: AnalyserState = emptyAnalyserState()) {
+    this.#options = options;
+    this.#minMinutes = options.minEpisodeMinutes ?? 2;
+    this.#s = state;
+  }
+
+  /** Een kopie van de stand, om te bewaren of later voort te zetten. */
+  snapshot(): AnalyserState {
+    return structuredClone(this.#s);
+  }
+
+  #tallyFor(id: string): ActuatorTally {
+    let t = this.#s.tallies.get(id);
     if (!t) {
       t = { actuatorId: id, agree: 0, stricter: 0, looser: 0 };
-      tallies.set(id, t);
+      this.#s.tallies.set(id, t);
     }
     return t;
-  };
+  }
 
-  for await (const moment of moments) {
-    count += 1;
-    fromMs = Math.min(fromMs, moment.tMs);
-    toMs = Math.max(toMs, moment.tMs);
-    if (moment.failsafe) failsafeMoments += 1;
-    if (Object.keys(moment.observed).length > 0) withObservation += 1;
+  add(moment: Moment): void {
+    const s = this.#s;
+    s.count += 1;
+    s.fromMs = Math.min(s.fromMs, moment.tMs);
+    s.toMs = Math.max(s.toMs, moment.tMs);
+    if (moment.failsafe) s.failsafeMoments += 1;
+    if (Object.keys(moment.observed).length > 0) s.withObservation += 1;
 
     // Hoe lang dit moment "geldig" was: tot het volgende. Een vaste stap
     // aannemen zou fout zijn, want de snelheidsbegrenzer maakt de afstand
     // ongelijk en een herstart laat een gat achter.
     const gapMinutes =
-      previousMs == null ? 0 : Math.min(5, (moment.tMs - previousMs) / 60_000);
-    previousMs = moment.tMs;
+      s.previousMs == null ? 0 : Math.min(5, (moment.tMs - s.previousMs) / 60_000);
+    s.previousMs = moment.tMs;
 
     const ids =
-      options.actuatorIds ??
+      this.#options.actuatorIds ??
       Object.keys(moment.observed).filter((id) => id.startsWith('ac-'));
 
     // Netstroom die aan de draaiende apparaten valt toe te rekenen. Het
@@ -233,16 +284,16 @@ export async function analyse(
       if (legacyOn) anyLegacyRunning = true;
       if (legacyOn && !mineOn) anyArbiterWouldStop = true;
 
-      const tally = tallyFor(id);
+      const tally = this.#tallyFor(id);
       const key = id;
 
       if (legacyOn === mineOn) {
         tally.agree += 1;
-        const closing = open.get(key);
+        const closing = s.open.get(key);
         if (closing) {
           const done = closeEpisode(closing);
-          if (done.minutes >= minMinutes) episodes.push(done);
-          open.delete(key);
+          if (done.minutes >= this.#minMinutes) s.episodes.push(done);
+          s.open.delete(key);
         }
         if (legacyOn && bucketState !== 'strenger' && bucketState !== 'ruimer') {
           bucketState = 'eens';
@@ -257,7 +308,7 @@ export async function analyse(
         bucketState = direction === 'strenger' ? 'strenger' : 'ruimer';
       }
 
-      const existing = open.get(key);
+      const existing = s.open.get(key);
       if (existing && existing.direction === direction) {
         existing.toMs = moment.tMs;
         existing.samples += 1;
@@ -270,13 +321,13 @@ export async function analyse(
       } else {
         if (existing) {
           const done = closeEpisode(existing);
-          if (done.minutes >= minMinutes) episodes.push(done);
+          if (done.minutes >= this.#minMinutes) s.episodes.push(done);
         }
         const blocks = new Map<string, number>();
         for (const r of moment.rejected) {
           if (r.actuatorId === id) blocks.set(r.blockedBy, 1);
         }
-        open.set(key, {
+        s.open.set(key, {
           actuatorId: id,
           direction,
           fromMs: moment.tMs,
@@ -292,47 +343,56 @@ export async function analyse(
     }
 
     if (anyLegacyRunning) {
-      legacyGridWh += attributableWh;
-      if (anyArbiterWouldStop) avoidableGridWh += attributableWh;
+      s.legacyGridWh += attributableWh;
+      if (anyArbiterWouldStop) s.avoidableGridWh += attributableWh;
     }
 
     if (moment.failsafe) bucketState = 'failsafe';
     const bucket = Math.floor(moment.tMs / BUCKET_MS) * BUCKET_MS;
-    const current = buckets.get(bucket);
+    const current = s.buckets.get(bucket);
     // Afwijking overheerst in de weergave: een kwartier waarin het één minuut
     // misging is interessanter dan een kwartier waarin alles klopte.
-    const rank: Record<BucketState, number> = {
-      geen: 0,
-      'beide-uit': 1,
-      eens: 2,
-      ruimer: 3,
-      strenger: 4,
-      failsafe: 5,
-    };
-    if (current == null || rank[bucketState] > rank[current]) {
-      buckets.set(bucket, bucketState);
+    if (current == null || BUCKET_RANK[bucketState] > BUCKET_RANK[current]) {
+      s.buckets.set(bucket, bucketState);
     }
   }
 
-  for (const still of open.values()) {
-    const done = closeEpisode(still);
-    if (done.minutes >= minMinutes) episodes.push(done);
+  /**
+   * De uitkomst tot nu toe. Raakt de stand niet: episodes die nog open staan
+   * worden in een kopie gesloten, zodat er daarna gewoon verder geteld kan
+   * worden.
+   */
+  result(): Analysis {
+    const s = this.#s;
+    const episodes = [...s.episodes];
+    for (const still of s.open.values()) {
+      const done = closeEpisode(still);
+      if (done.minutes >= this.#minMinutes) episodes.push(done);
+    }
+    episodes.sort((a, b) => b.minutes - a.minutes);
+
+    return {
+      fromMs: Number.isFinite(s.fromMs) ? s.fromMs : 0,
+      toMs: Number.isFinite(s.toMs) ? s.toMs : 0,
+      moments: s.count,
+      momentsWithObservation: s.withObservation,
+      failsafeMoments: s.failsafeMoments,
+      tallies: [...s.tallies.values()]
+        .map((t) => ({ ...t }))
+        .sort((a, b) => a.actuatorId.localeCompare(b.actuatorId)),
+      episodes,
+      legacyGridWh: s.legacyGridWh,
+      avoidableGridWh: s.avoidableGridWh,
+      buckets: new Map(s.buckets),
+    };
   }
+}
 
-  episodes.sort((a, b) => b.minutes - a.minutes);
-
-  return {
-    fromMs: Number.isFinite(fromMs) ? fromMs : 0,
-    toMs: Number.isFinite(toMs) ? toMs : 0,
-    moments: count,
-    momentsWithObservation: withObservation,
-    failsafeMoments,
-    tallies: [...tallies.values()].sort((a, b) =>
-      a.actuatorId.localeCompare(b.actuatorId),
-    ),
-    episodes,
-    legacyGridWh,
-    avoidableGridWh,
-    buckets,
-  };
+export async function analyse(
+  moments: AsyncIterable<Moment>,
+  options: AnalyseOptions = {},
+): Promise<Analysis> {
+  const analyser = new Analyser(options);
+  for await (const moment of moments) analyser.add(moment);
+  return analyser.result();
 }

@@ -220,57 +220,117 @@ function complete(
 export async function datasetStatus(
   moments: AsyncIterable<Moment>,
 ): Promise<DatasetStatus | null> {
-  const days = new Set<string>();
+  const counter = new DatasetCounter();
+  for await (const m of moments) counter.add(m);
+  return counter.result();
+}
+
+/**
+ * De doorlopende telling van de datasetmeter (besluit 63). Net als
+ * `AnalyserState`: te kopiëren met `structuredClone` en te bewaren met `node:v8`.
+ */
+export interface DatasetCounterState {
+  days: Set<string>;
   /** Per dag de uren waarin iets is opgenomen; zo tellen halve dagen half. */
-  const hoursPerDay = new Map<string, Set<number>>();
-  const modes: Counter = new Map();
-  const strategies: Counter = new Map();
-  const directions: Counter = new Map();
-  const zoneReasons: Counter = new Map();
-  const blocks: Counter = new Map();
+  hoursPerDay: Map<string, Set<number>>;
+  modes: Counter;
+  strategies: Counter;
+  directions: Counter;
+  zoneReasons: Counter;
+  blocks: Counter;
+  fromMs: number;
+  toMs: number;
+  momentsTotal: number;
+  failsafeMoments: number;
+  inputSeen: Map<string, number>;
+}
 
-  let fromMs = Number.POSITIVE_INFINITY;
-  let toMs = Number.NEGATIVE_INFINITY;
-  let momentsTotal = 0;
-  let failsafeMoments = 0;
-  const inputSeen = new Map<string, number>();
+function emptyCounterState(): DatasetCounterState {
+  return {
+    days: new Set(),
+    hoursPerDay: new Map(),
+    modes: new Map(),
+    strategies: new Map(),
+    directions: new Map(),
+    zoneReasons: new Map(),
+    blocks: new Map(),
+    fromMs: Number.POSITIVE_INFINITY,
+    toMs: Number.NEGATIVE_INFINITY,
+    momentsTotal: 0,
+    failsafeMoments: 0,
+    inputSeen: new Map(),
+  };
+}
 
-  for await (const m of moments) {
-    momentsTotal += 1;
-    fromMs = Math.min(fromMs, m.tMs);
-    toMs = Math.max(toMs, m.tMs);
+/** De datasetmeter als optelling: moment voor moment erbij, op elk punt een stand. */
+export class DatasetCounter {
+  readonly #s: DatasetCounterState;
+
+  constructor(state: DatasetCounterState = emptyCounterState()) {
+    this.#s = state;
+  }
+
+  snapshot(): DatasetCounterState {
+    return structuredClone(this.#s);
+  }
+
+  add(m: Moment): void {
+    const s = this.#s;
+    s.momentsTotal += 1;
+    s.fromMs = Math.min(s.fromMs, m.tMs);
+    s.toMs = Math.max(s.toMs, m.tMs);
     const day = dayKey(m.tMs);
-    days.add(day);
+    s.days.add(day);
 
-    let hours = hoursPerDay.get(day);
+    let hours = s.hoursPerDay.get(day);
     if (!hours) {
       hours = new Set();
-      hoursPerDay.set(day, hours);
+      s.hoursPerDay.set(day, hours);
     }
     hours.add(new Date(m.tMs).getHours());
 
-    if (m.mode !== 'onbekend') count(modes, m.mode, day);
-    if (m.failsafe) failsafeMoments += 1;
+    if (m.mode !== 'onbekend') count(s.modes, m.mode, day);
+    if (m.failsafe) s.failsafeMoments += 1;
 
     for (const inv of EXPECTED_INPUTS) {
-      if (inv.present(m)) inputSeen.set(inv.id, (inputSeen.get(inv.id) ?? 0) + 1);
+      if (inv.present(m)) s.inputSeen.set(inv.id, (s.inputSeen.get(inv.id) ?? 0) + 1);
     }
 
     for (const a of m.accepted) {
-      if (a.strategyId) count(strategies, a.strategyId, day);
+      if (a.strategyId) count(s.strategies, a.strategyId, day);
     }
     // De richting is wat er werkelijk zou zijn gestuurd. `heat` is het
     // interessantste vakje van deze hele tabel: zolang dat leeg is, is de
     // verwarmingskant van de regeling nooit in het echt afgegaan.
     for (const c of m.commands) {
-      if (c.kind === 'setAction' && c.action) count(directions, c.action, day);
+      if (c.kind === 'setAction' && c.action) count(s.directions, c.action, day);
     }
     for (const z of m.zones) {
-      if (z.reason) count(zoneReasons, z.reason, day);
+      if (z.reason) count(s.zoneReasons, z.reason, day);
     }
-    for (const r of m.rejected) count(blocks, r.blockedBy, day);
+    for (const r of m.rejected) count(s.blocks, r.blockedBy, day);
   }
 
+  /** De stand tot nu toe. Leest alleen; er kan daarna verder geteld worden. */
+  result(): DatasetStatus | null {
+    return statusOf(this.#s);
+  }
+}
+
+function statusOf({
+  days,
+  hoursPerDay,
+  modes,
+  strategies,
+  directions,
+  zoneReasons,
+  blocks,
+  fromMs,
+  toMs,
+  momentsTotal,
+  failsafeMoments,
+  inputSeen,
+}: DatasetCounterState): DatasetStatus | null {
   if (momentsTotal === 0) return null;
 
   // Seizoenen tellen per opgenomen dag, niet per moment: een dag met twintig

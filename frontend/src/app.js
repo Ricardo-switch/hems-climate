@@ -539,7 +539,12 @@ function renderReview(r) {
 
   const ageMinutes = Math.round((Date.now() - r.berekendOpMs) / 60000);
   $('terugblik-vers').textContent =
-    `berekend ${ageMinutes <= 1 ? 'zojuist' : `${ageMinutes} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden`;
+    `berekend ${ageMinutes <= 1 ? 'zojuist' : `${ageMinutes} min geleden`} · ${r.duurMs} ms over ${r.bestanden} dagbestanden` +
+    // Sinds besluit 63 zit de rest in de tussenstand; ontbreekt het veld, dan
+    // komt het antwoord van een oudere dienst.
+    (r.opnieuwGelezen != null && r.opnieuwGelezen < r.bestanden
+      ? `, waarvan ${r.opnieuwGelezen} gelezen`
+      : '');
 
   $('terugblik-inhoud').hidden = false;
 }

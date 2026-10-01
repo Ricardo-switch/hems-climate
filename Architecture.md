@@ -112,7 +112,7 @@ Ze leest `Explanation` en herberekent niets. De schaduwdienst serveert haar zelf
 | Route | Wat |
 | --- | --- |
 | `/api/state`, `/api/events` | het laatste besluit, en een stroom van elk volgend |
-| `/api/divergence` | de terugblik over de logboeken, elk kwartier herrekend (besluit 26) |
+| `/api/divergence` | de terugblik over de logboeken, elk kwartier bijgewerkt vanaf de tussenstand (besluit 26, 63) |
 | `/api/site` | namen en apparaten per zone, voor de weergave |
 | `/api/health` | leeft hij, wanneer besliste hij, en welke versie (besluit 54) |
 | `/api/export`, `/api/export/info` | de hele dataset als tar.gz (besluit 48) |
@@ -129,6 +129,11 @@ deur, en die bestaat alleen als `startup.ts` hem opent.
   ruwe historie waarmee je later opnieuw kunt beslissen (besluit 52).
 - Dagen ouder dan een week worden `.ndjson.gz` (besluit 58). Alle lezers gaan
   via `divergence/read.ts`, die beide vormen kent.
+- `own-state.json` — de eigen stand van de dienst (modus, timers, de
+  veronderstelde apparaatstand), zodat een herstart hem niet wist (besluit 62).
+- `review-checkpoint.bin` — de tussenstand van de terugblik na de laatste
+  afgesloten dag (besluit 63). Weggooien mag: dan rekent hij één keer alles
+  opnieuw.
 
 **De harnassen (`backend/src/replay`, `backend/src/divergence`).** De replay
 speelt opgenomen historie minuut voor minuut af en vraagt wat de arbiter zou
