@@ -66,9 +66,9 @@ Drie strategieën stellen voor, één arbiter beslist (besluit 4):
 De **arbiter** verdeelt een budget: overschot plus wat de bestuurde apparaten nu
 werkelijk opnemen plus een kleine tolerantie (besluit 3, 49b). Hij toetst per
 apparaat de minimale draai- en rusttijd, de stabilisatie na een start of een
-parkeerbeurt (besluit 61), het
-settelen na een wissel, en of er genoeg marge is om te *starten* in plaats van
-alleen door te draaien (besluit 51). Wat niemand meer wil, bouwt hij af: eerst
+parkeerbeurt (besluit 61), het settelen na een wissel, en of er genoeg marge is
+om te *starten* in plaats van alleen door te draaien (besluit 51). Per
+beslissing start hij hooguit één apparaat op het budget (besluit 68). Wat niemand meer wil, bouwt hij af: eerst
 naar standby, na de stabilisatie uit (besluit 5).
 
 Elk besluit draagt een **`Explanation`**: modus, budget, per zone temperatuur,

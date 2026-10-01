@@ -452,6 +452,25 @@ describe('afbouwen', () => {
   });
 });
 
+describe('hooguit één start per beslissing (besluit 68)', () => {
+  it('start bij ruim overschot één airco, en houdt de tweede op de stabilisatie', () => {
+    // Genoeg zon voor allebei, en allebei te warm.
+    const decision = run(buildState({ gridPowerW: -6000, livingRoomC: 24.5, atticC: 25.5 }));
+    const starts = decision.commands.filter(
+      (c) =>
+        c.kind === 'setAction' &&
+        (c.actuatorId === 'ac-woonkamer' || c.actuatorId === 'ac-zolder') &&
+        c.action === 'cool',
+    );
+    expect(starts).toHaveLength(1);
+
+    const held = decision.rejected.find(
+      (r) => r.intent.actuatorId !== (starts[0] as { actuatorId: string }).actuatorId && r.blockedBy === 'stabilisation_active',
+    );
+    expect(held?.detail).toBe('er is deze ronde al iets gestart');
+  });
+});
+
 describe('parkeren start de stabilisatie (besluit 61)', () => {
   const quiet = (actuators: Partial<Record<string, ActuatorState>>) => ({
     ...buildState({ gridPowerW: 200, livingRoomC: 24.2, bathroomC: 22.5, atticC: 23.2, actuators }),

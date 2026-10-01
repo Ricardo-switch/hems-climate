@@ -48,6 +48,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [60. De schaduw gebruikt zijn eigen stabilisatietimer](#60-de-schaduw-gebruikt-zijn-eigen-stabilisatietimer)
 - [61. Parkeren start de stabilisatie](#61-parkeren-start-de-stabilisatie)
 - [62. De eigen stand overleeft een herstart](#62-de-eigen-stand-overleeft-een-herstart)
+- [68. Hooguit één start per beslissing](#68-hooguit-één-start-per-beslissing)
 
 **Configuratie en onboarding**
 
@@ -2590,6 +2591,45 @@ gestopt.
 
 ---
 
+## 68. Hooguit één start per beslissing
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Dekte het overschot beide airco's, dan startte de arbiter ze in dezelfde
+beslissing. Besluit 3 staat dat toe: het budget telt de schatting van allebei
+mee, en de startdrempel van besluit 51 geldt voor elk. Maar dan wordt er op twee
+schattingen gestart. De stabilisatie bestaat juist om eerst te meten wat de
+eerste airco werkelijk trekt, en pas daarna over de volgende te beslissen
+(besluit 61). Het oude systeem verbiedt een tweede start in dezelfde ronde, met
+`zolder_started_now`.
+
+*Besluit:* hooguit één start op het budget per beslissing. Een tweede voorstel
+dat zou starten, krijgt `stabilisation_active` met als toelichting "er is deze
+ronde al iets gestart", en komt na de stabilisatie opnieuw aan de beurt. Wat
+niet op het budget start, valt erbuiten: comfort met een primair apparaat, en
+hervatten blijft gewoon onder de stabilisatie zelf vallen.
+
+*Gemeten* (`src/replay/decision-60.ts`, met en zonder deze regel). Alleen de
+zolder in het augustusvenster verandert; in september kwam het niet voor.
+
+| Zolder, augustus | Was | Nu |
+| --- | --- | --- |
+| twee starts in dezelfde minuut | 8 | 0 |
+| starts | 73 | 69 |
+| "ik zou draaien", minuten | 1.785 | 1.738 |
+| netstroom tijdens draaien (bovengrens) | 11,06 kWh | 10,89 kWh |
+
+Een klein effect, maar het maakt de regeling consequent: wie na een start vijf
+minuten wacht, hoort niet in dezelfde minuut nog iets te starten. De vaste
+replay van 26 augustus gaat van 161 naar 151 commando's. De zolder start daar om
+13:38 in plaats van tegelijk met de woonkamer om 13:32.
+
+*Bewaakt* door een test, en door een nieuwe regel bij de invarianten (besluit
+56): nooit meer dan één start op het budget per beslissing. Zonder deze
+wijziging falen ze alle drie.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -2605,11 +2645,6 @@ gestopt.
   volgt hoeveel lucht er naar buiten gaat. Later komen er misschien
   CO₂-sensoren bij, voor de luchtkwaliteit; die horen dan ook in `recordOnly`.
 
-- **Twee starts in dezelfde minuut.** Dekt het overschot beide airco's, dan
-  start de arbiter ze samen (besluit 3); in het augustusvenster acht keer, in
-  september niet. Het oude systeem verbiedt dat met `zolder_started_now`, zodat
-  de tweede pas start als de opname van de eerste in de meting zit. Of de
-  arbiter dat ook hoort te doen, is nog niet gemeten.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
