@@ -2521,6 +2521,10 @@ voor, en het beslislogboek blijft over beslissen gaan.
 De stiltetest kent `recordOnly` als bewuste uitzondering: niets in de regeling
 leest het, en dat is de bedoeling.
 
+*Op 1 oktober gecontroleerd:* de gasmeter wordt vastgelegd. De ventilatie-unit
+is in Home Assistant gekoppeld, maar nog niet in huis geïnstalleerd. Zijn
+entiteiten bestaan dus nog niet; zie het open punt over de ventilatie.
+
 ---
 
 ## 66. Bij elk besluit is na te gaan welke versie het nam
@@ -2587,6 +2591,19 @@ gestopt.
 ---
 
 ## Wat nog een besluit wacht
+
+- **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
+  Een centrale kast met afzuiging in wc, badkamer, zolder en woonkamer, één
+  vochtsensor in de kast, geen kleppen per ruimte en geen warmteterugwinning.
+  Afzuigen zonder terugwinning voert de hele winter verwarmde lucht af, dus het
+  huis verliest daarna anders warmte dan ervoor. Voor het thermisch model (stap
+  D) is de installatiedag een breukpunt. Op die dag: de datum hier vastleggen, en
+  nagaan of de entiteiten in `recordOnly` (besluit 65) zo heten als in Home
+  Assistant. Ze zijn al gekoppeld, maar bestonden op 1 oktober 2026 nog niet; de
+  dienst legt ze vanzelf vast zodra ze er zijn. De stand of het debiet van de
+  ventilator is daarbij belangrijker dan de temperaturen in de kast: daaruit
+  volgt hoeveel lucht er naar buiten gaat. Later komen er misschien
+  CO₂-sensoren bij, voor de luchtkwaliteit; die horen dan ook in `recordOnly`.
 
 - **Twee starts in dezelfde minuut.** Dekt het overschot beide airco's, dan
   start de arbiter ze samen (besluit 3); in het augustusvenster acht keer, in
