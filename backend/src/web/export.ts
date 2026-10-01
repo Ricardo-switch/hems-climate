@@ -21,8 +21,7 @@
  * omleggen — en dat is precies de verkeerde volgorde.
  */
 
-import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { open, stat, type FileHandle } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
 import { basename, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
@@ -142,7 +141,6 @@ export async function writeExport(
   });
 
   const gzip = createGzip();
-  const toResponse = pipeline(gzip, res);
 
   /*
    * De tar-stroom.
@@ -153,14 +151,64 @@ export async function writeExport(
    */
   async function* chunks(): AsyncGenerator<Buffer> {
     for (const path of paths) {
-      const info = await stat(path);
-      yield heading(`${map}/${basename(path)}`, info.size, info.mtimeMs);
-      for await (const piece of createReadStream(path)) yield piece as Buffer;
-      yield padding(info.size);
+      const opened = await openSettled(path);
+      if (opened == null) continue;
+      const { handle, name } = opened;
+      try {
+        yield* entry(`${map}/${name}`, handle);
+      } finally {
+        await handle.close();
+      }
     }
     yield Buffer.alloc(BLOCK * 2);
   }
 
-  await pipeline(Readable.from(chunks()), gzip);
-  await toResponse;
+  // Samen afwachten: gaat de eerste helft mis, dan mag de tweede niet als
+  // onafgehandelde fout blijven hangen — die legt in Node de hele dienst stil.
+  await Promise.all([pipeline(Readable.from(chunks()), gzip), pipeline(gzip, res)]);
+}
+
+/**
+ * Opent een dagbestand, of de `.gz` die er intussen van gemaakt is.
+ *
+ * De lijst wordt aan het begin gemaakt; een download van een paar seconden kan
+ * over de nachtelijke compressie heen lopen (besluit 58). Die zet de `.gz`
+ * ernaast en haalt het origineel pas daarna weg, dus wie het origineel mist,
+ * vindt de `.gz`. Is ook die er niet, dan is er niets te halen en slaan we over.
+ */
+async function openSettled(path: string): Promise<{ handle: FileHandle; name: string } | null> {
+  for (const candidate of path.endsWith('.gz') ? [path] : [path, `${path}.gz`]) {
+    try {
+      return { handle: await open(candidate, 'r'), name: basename(candidate) };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+  }
+  return null;
+}
+
+/**
+ * Eén bestand in het archief: kop, precies zoveel bytes als de kop belooft, vulling.
+ *
+ * Het bestand van vandaag groeit terwijl we lezen. De kop noemt de omvang van
+ * het moment van openen, en daarom lezen we tot daar en niet tot het einde dat
+ * er tegen die tijd is — anders loopt elk volgend bestand in het archief scheef
+ * (1 oktober: `runs.ndjson` kwam onleesbaar mee). Wat erbij kwam, komt de
+ * volgende export mee. Een open bestand blijft leesbaar als het ondertussen
+ * wordt weggehaald, dus ook de compressie kan er niet meer tussen komen.
+ */
+async function* entry(name: string, handle: FileHandle): AsyncGenerator<Buffer> {
+  const info = await handle.stat();
+  yield heading(name, info.size, info.mtimeMs);
+  let sent = 0;
+  if (info.size > 0) {
+    for await (const piece of handle.createReadStream({ start: 0, end: info.size - 1, autoClose: false })) {
+      sent += (piece as Buffer).length;
+      yield piece as Buffer;
+    }
+  }
+  // Korter dan beloofd kan een logboek niet worden, maar mocht het: aanvullen
+  // houdt de rest van het archief leesbaar.
+  if (sent < info.size) yield Buffer.alloc(info.size - sent);
+  yield padding(info.size);
 }
