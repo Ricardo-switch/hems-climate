@@ -186,7 +186,7 @@ in het besluitenlog en in de code.
 | **C** | **Universeel.** Elke opstelling werkt, ook met één airco, alleen koelen of een warmtepomp via SG-Ready (70); een bewuste tabel met standaardwaarden, een inlog op de weergave (23), een terugblik die niet uitgaat van "het oude systeem" (28), een datasetmeter die alleen telt wat het huis kan (27, 70) | Voorwaarde voor een tweede woning | los van B |
 | **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
 | **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na D |
-| **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (45) | Wat een bewoner ziet | na B, beter na D |
+| **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (45), op de telefoon en op een tablet aan de muur. De schetsen in `design/app/` zijn de maatstaf (71) | Wat een bewoner ziet | na B, beter na D |
 | **G** | **De assistent** (44). Vragen in taal of met spraak, lokaal. Een vierde voorsteller, geen baas | Het gesprek met het huis | na F |
 | **H** | **Product** (34). Meerdere woningen, updates op afstand, ondersteuning | Van dit huis naar andere huizen | na C en F |
 
@@ -233,6 +233,7 @@ backend/        Node.js: kern, adapters, replay, divergentie, webserver
   test/           de tests, met fixtures/ voor de vaste replay
   tools/          gereedschap: recorder-export, historie samenvoegen, index
 frontend/       De weergave; bouwt naar backend/web
+design/app/     De schetsen van de bewonersapp, de maatstaf voor F en G (71)
 addon/          De Home Assistant-add-on (staat stil sinds besluit 53)
 config/sites/   Configuratie per installatie
 deploy/         Compose, uitrolscript, handleiding voor de NAS

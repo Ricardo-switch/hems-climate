@@ -30,6 +30,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [44. De assistent is een vierde voorsteller, geen baas](#44-de-assistent-is-een-vierde-voorsteller-geen-baas)
 - [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
 - [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
+- [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
 
 **Kern en regeling**
 
@@ -2705,6 +2706,44 @@ niets aan dit huis, dus ze mogen ook eerder, zonder de winterdata te raken.
 
 ---
 
+## 71. De schetsen van de app zijn de maatstaf
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Op 1 oktober 2026 zijn de schermen van de bewonersapp geschetst: vijf voor de
+telefoon, vijf voor een tablet aan de muur. Ze staan in `design/app/`, met
+screenshots. Een van de wandschermen is gevuld met het echte logboek van die
+avond, om te zien of het ontwerp ook overeind blijft zonder zon en met rommelige
+data. Dat doet het, al is het 's avonds een stuk rustiger.
+
+*Besluit:* deze schetsen zijn de maatstaf voor stap F en G. Wat gebouwd wordt,
+wordt ernaast gelegd; wijkt het af, dan is dat een keuze en geen toeval. De
+regels die erachter zitten, gelden ook voor schermen die nog niet getekend zijn:
+
+- **Elk getal is te herleiden.** Een getal op het scherm komt uit het logboek.
+  Is het berekend of voorspeld, dan staat dat erbij, en ook hoe zeker het is.
+- **Bij elk besluit een reden, in gewone taal.** Zonder entity-ID's (45). Weet
+  het systeem iets niet, zoals waarom een kamer opliep, dan zegt het dat.
+- **De assistent stelt voor; de regeling beslist (44).** Een voorstel kan eerst
+  een week meekijken voordat het geldt.
+- **Het scherm weet in welke fase het huis zit.** Leren, meekijken of regelen.
+  "Je huidige regeling" staat er alleen zolang er een vorige regeling is; in een
+  huis zonder is het "zoals jullie het zelf deden" (28, 70).
+- **Eerst de lelijke momenten.** Nacht, geen zon, een sensor die wegvalt, één
+  airco. Ziet een scherm er dan nog goed uit, dan valt het eindproduct niet
+  tegen.
+- **Donker op de muur, licht op de telefoon.** Een tablet die altijd aanstaat,
+  moet 's avonds niet de kamer verlichten.
+
+*Wat het niet is:* een belofte over getallen. De besparingen, de zekerheid van
+de voorspelling en het plan voor de middag zijn voorbeelden; ze worden pas echt
+met het thermisch model (D) en de vooruitblik (E).
+
+*Hoe het bewaakt wordt:* zodra F gebouwd wordt, krijgt de page-test (69)
+screenshots die naast deze worden gelegd, met het echte logboek als invoer.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -2720,6 +2759,15 @@ niets aan dit huis, dus ze mogen ook eerder, zonder de winterdata te raken.
   volgt hoeveel lucht er naar buiten gaat. Later komen er misschien
   CO₂-sensoren bij, voor de luchtkwaliteit; die horen dan ook in `recordOnly`.
 
+- **Koelen op netstroom boven het comfortplafond.** Op 1 oktober 2026 liep de
+  woonkamer tussen 17:50 en 18:25 op van 24,8 naar 26,8 °C. De schaduw had dan
+  op het plafond van 26 °C (besluit 50) gekoeld: de woonkamer van 18:05 tot
+  19:43, de zolder van 18:21 tot 20:41, met weinig of geen zon, dus vooral op
+  netstroom. Het oude systeem koelt alleen op zon en deed niets. Wat de
+  woonkamer deed oplopen, staat niet in de data; in dezelfde minuten liep er
+  wel 0,29 m³ gas door de meter. De vraag aan de bewoner: wil hij boven 26 °C
+  ook op netstroom koelen, of alleen op zon? Het antwoord kan per huis
+  verschillen, en hoort dus een instelling te worden.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
