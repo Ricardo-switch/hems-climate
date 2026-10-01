@@ -352,8 +352,55 @@ else
   fi
 fi
 
+# --------------------------------------------- loopt de opname nog? -------
+#
+# Besluit 67. Valt de opname stil — de NAS kwijt aan Home Assistant, een dienst
+# die hangt of in een herstartlus zit — dan merkte niemand dat tot iemand de
+# pagina opende. Een week winter die ontbreekt, komt niet terug. Dit script
+# draait toch elke vijf minuten, dus kijkt het hier: hoe oud is het nieuwste
+# beslislogboek?
+#
+# Is dat ouder dan een half uur, dan eindigt deze run met een foutcode. De
+# Taakplanner van DSM stuurt dan een mail, als "Verzend uitvoeringsgegevens per
+# e-mail" op "alleen bij abnormale beëindiging" staat. Eén keer per storing per
+# drie uur, anders komt er elke vijf minuten een. Een container die bewust is
+# stopgezet, geeft geen melding: dan weet je het al.
+RECORDING_STALE=0
+ALERTFILE="$ROOT/.recording-alert"
+check_recording() {
+  [ "$CONTAINER_STATE" = 'running' ] || return 0
+  local newest age_min since_alert
+  newest="$(ls -t "$ROOT"/logs/decisions-*.ndjson 2>/dev/null | head -n 1 || true)"
+  [ -n "$newest" ] || return 0
+  age_min=$(( ( $(date +%s) - $(stat -c %Y "$newest") ) / 60 ))
+  if [ "$age_min" -lt 30 ]; then
+    if [ -f "$ALERTFILE" ]; then
+      log "De opname loopt weer: laatste besluit $age_min min geleden."
+      rm -f "$ALERTFILE"
+    fi
+    return 0
+  fi
+  log "LET OP: al $age_min minuten geen besluit in het logboek ($(basename "$newest"))."
+  log "  Kijk op /api/health en in: docker logs --tail 40 $CONTAINER"
+  if [ -f "$ALERTFILE" ]; then
+    since_alert=$(( ( $(date +%s) - $(stat -c %Y "$ALERTFILE") ) / 60 ))
+    if [ "$since_alert" -lt 180 ]; then
+      log "  Al gemeld $since_alert min geleden; de volgende melding hooguit over drie uur."
+      return 0
+    fi
+  fi
+  RECORDING_STALE=1
+}
+check_recording
+
 if [ "$AFTER" = "$DEPLOYED" ] && [ "$FORCE" -eq 0 ] && [ "$NEEDS_RECREATE_FORCED" -eq 0 ]; then
   log "Draait al op $(echo "$AFTER" | cut -c1-8). Niets te doen."
+  # Een foutcode hier is de melding: zie check_recording. Pas nu als gemeld
+  # markeren; een run die gaat uitrollen, eindigt gewoon en meldt dus niets.
+  if [ "$RECORDING_STALE" -eq 1 ]; then
+    touch "$ALERTFILE"
+    exit 1
+  fi
   exit 0
 fi
 
