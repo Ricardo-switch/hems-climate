@@ -779,11 +779,20 @@ describe('oude dagen comprimeren (besluit 58)', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
+    // Wachten op allebei. De dienst hernoemt eerst naar `.gz` en haalt pas
+    // daarna het gewone bestand weg (besluit 58). Wie na het eerste meteen het
+    // tweede controleert, valt soms precies tussen die twee stappen; onder de
+    // last van de volledige suite gebeurde dat ongeveer één keer op twintig.
     await waitFor(
-      async () => (await readdir(dir)).includes('decisions-2026-07-01.ndjson.gz'),
-      () => `de gecomprimeerde oude dag; de dienst meldde:\n${messages.join('\n')}`,
+      async () => {
+        const names = await readdir(dir);
+        return (
+          names.includes('decisions-2026-07-01.ndjson.gz') &&
+          !names.includes('decisions-2026-07-01.ndjson')
+        );
+      },
+      () => `de gecomprimeerde oude dag, zonder het origineel; de dienst meldde:\n${messages.join('\n')}`,
     );
-    expect(await readdir(dir)).not.toContain('decisions-2026-07-01.ndjson');
   });
 });
 
