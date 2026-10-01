@@ -13,12 +13,9 @@
  * oude systeem hem, door zijn eigen timer te starten; nu kan de dienst het
  * zelf. Aan `decide()` verandert niets.
  *
- * **Wat er niet in zit: opslag.** Een herstart wist de stand. Voor de
- * stabilisatietimer maakt dat niets uit — die loopt minuten. Voor de modus is
- * het een keuze die pas telt wanneer de dienst werkelijk gaat schakelen; in de
- * schaduwmodus is "terug naar automatisch na een herstart" ongevaarlijk. Zodra
- * er geschakeld wordt hoort hier een bestandje bij, en dat is dan een eigen
- * besluit waard.
+ * **Opslag zit hier niet in, maar ernaast** (`state-file.ts`, besluit 62). Deze
+ * klas levert een momentopname en neemt er een terug; de dienst bewaart hem.
+ * Zo blijft dit zonder I/O, en kunnen replay en tests hem gewoon gebruiken.
  */
 
 import type { Command } from '../core/decision.js';
@@ -60,6 +57,20 @@ export class OwnState implements OwnStateReader {
 
   timer(id: TimerId): TimerState {
     return this.#timers[id];
+  }
+
+  /** De stand om te bewaren (besluit 62). */
+  snapshot(): { readonly mode: Mode | null; readonly timers: Readonly<Record<TimerId, TimerState>> } {
+    return { mode: this.#mode, timers: { ...this.#timers } };
+  }
+
+  /**
+   * Neemt een bewaarde stand terug. Timers met een eindtijd in het verleden
+   * mogen mee: een verlopen timer is gewoon niet actief.
+   */
+  restore(saved: { readonly mode: Mode | null; readonly timers: Readonly<Record<TimerId, TimerState>> }): void {
+    this.#mode = saved.mode;
+    this.#timers = { ...saved.timers };
   }
 
   /**

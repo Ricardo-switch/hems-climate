@@ -82,6 +82,17 @@ export class ShadowActuators implements ShadowActuatorReader {
     return this.#state.get(actuatorId) ?? null;
   }
 
+  /** De stand om te bewaren (besluit 62). */
+  snapshot(): Record<string, ShadowActuator> {
+    return Object.fromEntries(this.#state);
+  }
+
+  /** Neemt een bewaarde stand terug, in plaats van wat er nu staat. */
+  restore(saved: Readonly<Record<string, ShadowActuator>>): void {
+    this.#state.clear();
+    for (const [id, a] of Object.entries(saved)) this.#state.set(id, a);
+  }
+
   /**
    * Werkt de boekhouding bij na een besluit. Dit is wat de dienst en de
    * meetscripts aanroepen; `apply` is het onderdeel ervan.
