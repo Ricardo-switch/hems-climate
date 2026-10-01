@@ -24,12 +24,13 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
-import { basename } from 'node:path';
+import { basename, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { createGzip } from 'node:zlib';
 
 import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
+import { RUNS_FILE } from '../adapters/runs.js';
 
 const BLOCK = 512;
 
@@ -82,11 +83,18 @@ export interface ExportInfo {
  * Wat er in de export gaat: het beslislogboek en de ruwe historie (besluit 52).
  * Allebei per dag, allebei nodig — het eerste zegt wat de arbiter besloot, het
  * tweede is waarmee je dat besluit opnieuw kunt nemen met een andere instelling.
+ * En welke versie wanneer besliste (besluit 66): zonder dat is een dataset die
+ * meerdere versies overspant niet uit elkaar te halen.
  */
 async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; everything: string[] }> {
   const decisionLog = await findLogFiles(logDir);
   const history = await findHistoryFiles(logDir);
-  return { decisionLog, everything: [...decisionLog, ...history] };
+  const runs = join(logDir, RUNS_FILE);
+  const hasRuns = await stat(runs).then(
+    () => true,
+    () => false,
+  );
+  return { decisionLog, everything: [...decisionLog, ...history, ...(hasRuns ? [runs] : [])] };
 }
 
 export async function exportInfo(logDir: string): Promise<ExportInfo> {

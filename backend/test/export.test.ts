@@ -130,6 +130,24 @@ describe('de dataset exporteren', () => {
     ]);
   });
 
+  it('neemt mee welke versie wanneer besliste, en laat de eigen stand thuis (besluit 66)', async () => {
+    const dir = await decisionLogWith({ '2026-09-05': 'a\n' });
+    await writeFile(join(dir, 'runs.ndjson'), '{"t":1,"commit":"abc1234","config":"x"}\n', 'utf-8');
+    // Werkbestanden van de dienst zelf, geen dataset.
+    await writeFile(join(dir, 'own-state.json'), '{}', 'utf-8');
+    await writeFile(join(dir, 'review-checkpoint.bin'), 'x', 'utf-8');
+
+    const tgz = join(dir, 'uit.tar.gz');
+    await writeExport(dir, fakeResponse(tgz).res, new Date('2026-09-30T12:00:00Z'));
+    const unpackDir = join(dir, 'uitgepakt');
+    await mkdir(unpackDir);
+    await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
+    expect((await readdir(join(unpackDir, 'hems-logboek-2026-09-30'))).sort()).toEqual([
+      'decisions-2026-09-05.ndjson',
+      'runs.ndjson',
+    ]);
+  });
+
   it('laat wat geen dagbestand is buiten het archief', async () => {
     const dir = await decisionLogWith({ '2026-09-05': 'a\n' });
     const tgz = join(dir, 'uit.tar.gz');

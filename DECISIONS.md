@@ -74,6 +74,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [52. De dienst legt de ruwe historie zelf vast](#52-de-dienst-legt-de-ruwe-historie-zelf-vast)
 - [58. Dagen ouder dan een week worden gecomprimeerd](#58-dagen-ouder-dan-een-week-worden-gecomprimeerd)
 - [65. Wat het thermisch model nodig heeft, wordt nu al vastgelegd](#65-wat-het-thermisch-model-nodig-heeft-wordt-nu-al-vastgelegd)
+- [66. Bij elk besluit is na te gaan welke versie het nam](#66-bij-elk-besluit-is-na-te-gaan-welke-versie-het-nam)
 
 **Weergave**
 
@@ -2518,6 +2519,35 @@ voor, en het beslislogboek blijft over beslissen gaan.
 
 De stiltetest kent `recordOnly` als bewuste uitzondering: niets in de regeling
 leest het, en dat is de bedoeling.
+
+---
+
+## 66. Bij elk besluit is na te gaan welke versie het nam
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Het beslislogboek zei wat er besloten werd, niet door welke code en met welke
+instellingen. Op 30 september en 1 oktober veranderden arbiter en configuratie
+samen acht keer (besluit 49 tot 63). Verandert er deze winter iets, dan bestaat
+de winterdataset uit stukken van verschillende versies. Die waren alleen uit het
+uitroljournaal van de NAS te reconstrueren, en een gekopieerde configuratie
+helemaal niet.
+
+*Besluit:* bij elke start schrijft de dienst één regel in `runs.ndjson` in de
+logmap, vóór het eerste besluit: het tijdstip, de commit, de bouwtijd, en een
+vingerafdruk van de configuratie (twaalf tekens SHA-256 over de gelezen
+configuratie). Een start is het enige moment waarop code en configuratie kunnen
+veranderen, want ze worden alleen dan gelezen. Het bestand gaat mee in de
+export. De terugblik markeert op de tijdlijn de dagen waarop de versie of de
+configuratie veranderde. Een herstart met dezelfde versie telt niet.
+
+*Achteraf aangevuld:* de zes uitrollen die het uitroljournaal nog kende (vanaf
+1 oktober 00:26), met `source: "deploy.log"` en de configuratie op
+"onbekend" (`tools/runs-from-deploy-log.ts`). Wat daarvoor gebeurde, staat in
+dit logboek met datum, niet in het bestand.
+
+*Mislukt het schrijven,* dan beslist de dienst toch. Zonder herkomst is de
+dataset minder waard, zonder dienst is er geen dataset.
 
 ---
 

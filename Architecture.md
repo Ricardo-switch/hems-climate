@@ -131,6 +131,8 @@ deur, en die bestaat alleen als `startup.ts` hem opent.
   (`recordOnly`, besluit 65).
 - Dagen ouder dan een week worden `.ndjson.gz` (besluit 58). Alle lezers gaan
   via `divergence/read.ts`, die beide vormen kent.
+- `runs.ndjson` — één regel per start: welke commit en welke configuratie
+  vanaf dan beslisten (besluit 66). Gaat mee in de export.
 - `own-state.json` — de eigen stand van de dienst (modus, timers, de
   veronderstelde apparaatstand), zodat een herstart hem niet wist (besluit 62).
 - `review-checkpoint.bin` — de tussenstand van de terugblik na de laatste
