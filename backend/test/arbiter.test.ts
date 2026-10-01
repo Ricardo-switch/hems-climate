@@ -48,9 +48,9 @@ function actuator(
 
 interface Overrides {
   gridPowerW?: number;
-  woonkamerC?: number;
-  zolderC?: number;
-  badkamerC?: number;
+  livingRoomC?: number;
+  atticC?: number;
+  bathroomC?: number;
   actuators?: Partial<Record<string, ActuatorState>>;
   inputHealth?: Record<string, boolean>;
   stabilisationEndsAtMs?: number | null;
@@ -68,9 +68,9 @@ function buildState(o: Overrides = {}): SystemState {
     solarProductionW: unavailable<number>('missing'),
     occupancy: { ricardo: value(true, NOW) },
     zones: {
-      woonkamer: { temperatureC: value(o.woonkamerC ?? 21.0, NOW) },
-      badkamer: { temperatureC: value(o.badkamerC ?? 20.0, NOW) },
-      zolder: { temperatureC: value(o.zolderC ?? 24.0, NOW) },
+      woonkamer: { temperatureC: value(o.livingRoomC ?? 21.0, NOW) },
+      badkamer: { temperatureC: value(o.bathroomC ?? 20.0, NOW) },
+      zolder: { temperatureC: value(o.atticC ?? 24.0, NOW) },
     },
     actuators: {
       nest: actuator('off'),
@@ -98,7 +98,7 @@ describe('vermogensbudget', () => {
     // Beide zones warm genoeg om te willen koelen; 900 + 750 W gevraagd,
     // maar slechts 1000 W overschot plus 50 W importtolerantie beschikbaar.
     const decision = run(
-      buildState({ gridPowerW: -1000, woonkamerC: 24.0, zolderC: 24.5 }),
+      buildState({ gridPowerW: -1000, livingRoomC: 24.0, atticC: 24.5 }),
     );
 
     const starts = decision.commands.filter(
@@ -118,8 +118,8 @@ describe('vermogensbudget', () => {
     const decision = run(
       buildState({
         gridPowerW: -200,
-        woonkamerC: 24.0,
-        zolderC: 24.5,
+        livingRoomC: 24.0,
+        atticC: 24.5,
         actuators: {
           'ac-woonkamer': actuator('cool', { setpointC: 21, powerW: 400 }),
         },
@@ -135,7 +135,7 @@ describe('vermogensbudget', () => {
 
   it('laat comfort doorgaan zonder overschot', () => {
     const decision = run(
-      buildState({ gridPowerW: 3000, woonkamerC: 18.0, badkamerC: 15.0 }),
+      buildState({ gridPowerW: 3000, livingRoomC: 18.0, bathroomC: 15.0 }),
     );
     const heating = decision.accepted.filter((i) => i.action === 'heat');
     expect(heating.map((i) => i.actuatorId).sort()).toEqual(['badkamer', 'nest']);
@@ -147,7 +147,7 @@ describe('timing', () => {
     const decision = run(
       buildState({
         gridPowerW: 3000, // geen overschot, dus pv-surplus wil terugschakelen
-        zolderC: 24.0,
+        atticC: 24.0,
         actuators: {
           'ac-zolder': actuator('cool', { setpointC: 21.5, minutesAgo: 3 }),
         },
@@ -172,7 +172,7 @@ describe('timing', () => {
     const decision = run(
       buildState({
         gridPowerW: -3000,
-        zolderC: 24.5,
+        atticC: 24.5,
         stabilisationEndsAtMs: NOW + 120_000,
       }),
     );
@@ -186,7 +186,7 @@ describe('failsafe', () => {
   it('schakelt assist uit en laat de primary met rust', () => {
     const decision = run(
       buildState({
-        woonkamerC: 18.0,
+        livingRoomC: 18.0,
         inputHealth: { 'sensor.p1_meter_power': false },
         actuators: {
           'ac-woonkamer': actuator('heat', { setpointC: 21, minutesAgo: 60 }),
@@ -214,7 +214,7 @@ describe('failsafe', () => {
 
 describe('determinisme', () => {
   it('geeft bij gelijke invoer exact hetzelfde besluit', () => {
-    const state = buildState({ gridPowerW: -1200, woonkamerC: 23.8, zolderC: 24.2 });
+    const state = buildState({ gridPowerW: -1200, livingRoomC: 23.8, atticC: 24.2 });
     expect(JSON.stringify(run(state))).toBe(JSON.stringify(run(state)));
   });
 });
@@ -226,8 +226,8 @@ describe('budget bij import', () => {
     const decision = run(
       buildState({
         gridPowerW: 200,
-        woonkamerC: 24.0,
-        zolderC: 24.5,
+        livingRoomC: 24.0,
+        atticC: 24.5,
         actuators: {
           'ac-woonkamer': actuator('cool', { setpointC: 21, powerW: 300 }),
           'ac-zolder': actuator('cool', { setpointC: 21.5, powerW: 200 }),
@@ -253,9 +253,9 @@ describe('heat-assist startvertraging', () => {
   const winterish = (nestOpts: Parameters<typeof actuator>[1]) =>
     buildState({
       gridPowerW: 1500,
-      woonkamerC: 18.5,
-      badkamerC: 20.0,
-      zolderC: 20.0,
+      livingRoomC: 18.5,
+      bathroomC: 20.0,
+      atticC: 20.0,
       actuators: { nest: actuator('heat', { setpointC: 20, ...nestOpts }) },
     });
 
@@ -280,7 +280,7 @@ describe('heat-assist startvertraging', () => {
   it('springt niet bij bij een verwaarloosbaar temperatuurtekort', () => {
     const state = buildState({
       gridPowerW: 1500,
-      woonkamerC: 19.8, // 0,2 onder doel: onder minShortfallC
+      livingRoomC: 19.8, // 0,2 onder doel: onder minShortfallC
       actuators: { nest: actuator('heat', { setpointC: 20, producingFor: 30 }) },
     });
     expect(assistProposed(state)).toBe(false);
@@ -306,7 +306,7 @@ describe('heat-assist startvertraging', () => {
 describe('handmatige stand', () => {
   /** Warme zolder én ruim overschot: normaal zou de arbiter gaan koelen. */
   const hot = (extra: Partial<Parameters<typeof buildState>[0]> = {}) =>
-    buildState({ gridPowerW: -3000, woonkamerC: 24.5, zolderC: 25.0, ...extra });
+    buildState({ gridPowerW: -3000, livingRoomC: 24.5, atticC: 25.0, ...extra });
 
   it('laat alles met rust zodra de bewoner overneemt', () => {
     const auto = run(hot());
@@ -373,9 +373,9 @@ describe('afbouwen', () => {
   const nothingToDo = (actuators: Partial<Record<string, ActuatorState>> = {}) => ({
     ...buildState({
       gridPowerW: 200,
-      woonkamerC: 24.2,
-      badkamerC: 22.5,
-      zolderC: 23.2,
+      livingRoomC: 24.2,
+      bathroomC: 22.5,
+      atticC: 23.2,
       actuators,
     }),
     modeOverride: 'voorverwarmen' as const,
@@ -459,12 +459,12 @@ describe('een huis zonder aanwezigheidsbronnen', () => {
    * `person.`-entiteiten heeft ingesteld zou zichzelf stilzwijgend koud
    * houden. Wanneer we het niet weten, raden we de comfortabele kant.
    */
-  const zonderBewoners = { ...exampleSite, occupancy: [] };
+  const withoutResidents = { ...exampleSite, occupancy: [] };
 
   it('geldt als bewoond in plaats van als leeg', () => {
-    const state = { ...buildState({ woonkamerC: 19.0 }), occupancy: {}, modeOverride: null };
+    const state = { ...buildState({ livingRoomC: 19.0 }), occupancy: {}, modeOverride: null };
     const decision = decide({
-      config: zonderBewoners,
+      config: withoutResidents,
       state,
       strategies: defaultStrategies(),
     });
@@ -474,7 +474,7 @@ describe('een huis zonder aanwezigheidsbronnen', () => {
 
   it('laat een huis mét bronnen gewoon afwezig zijn', () => {
     // De tegenhanger: de lege lijst is de uitzondering, niet de regel.
-    const state = { ...buildState({ woonkamerC: 19.0 }), occupancy: {}, modeOverride: null };
+    const state = { ...buildState({ livingRoomC: 19.0 }), occupancy: {}, modeOverride: null };
     const decision = decide({ config: exampleSite, state, strategies: defaultStrategies() });
     expect(decision.explanation.occupied).toBe(false);
   });
@@ -483,7 +483,7 @@ describe('een huis zonder aanwezigheidsbronnen', () => {
 describe('koelen tijdens afwezigheid', () => {
   /** Warm huis, niemand thuis, zon op het dak. */
   const awayAndWarm = () => ({
-    ...buildState({ gridPowerW: -2500, woonkamerC: 24.0, zolderC: 24.5 }),
+    ...buildState({ gridPowerW: -2500, livingRoomC: 24.0, atticC: 24.5 }),
     occupancy: {},
     modeOverride: null,
   });
@@ -522,42 +522,42 @@ describe('koelen tijdens afwezigheid', () => {
 
 describe('het comfortplafond (besluit 50)', () => {
   /** Dezelfde woning, met een plafond op de woonkamer. */
-  function metPlafond(plafond: number | undefined): SiteConfig {
+  function withCeiling(ceiling: number | undefined): SiteConfig {
     return {
       ...exampleSite,
       zones: exampleSite.zones.map((z) => {
         if (z.id !== 'woonkamer') return z;
-        const { comfortMaxC: _weg, ...rest } = z;
-        return plafond == null ? rest : { ...rest, comfortMaxC: plafond };
+        const { comfortMaxC: _omitted, ...rest } = z;
+        return ceiling == null ? rest : { ...rest, comfortMaxC: ceiling };
       }),
     };
   }
 
-  const draai = (config: SiteConfig, state: SystemState) =>
+  const decideWith = (config: SiteConfig, state: SystemState) =>
     decide({ config, state, strategies: defaultStrategies() });
 
   /** Warm, en de zon betaalt niets: het huis voert 500 W in. */
-  const heetEnBewolkt = (o: Overrides = {}) =>
-    buildState({ gridPowerW: 500, woonkamerC: 27.0, ...o });
+  const hotAndCloudy = (o: Overrides = {}) =>
+    buildState({ gridPowerW: 500, livingRoomC: 27.0, ...o });
 
   it('koelt zonder plafond niet op netstroom, hoe warm het ook is', () => {
     // Het gat zoals het was: de airco is assist, en assist draait op overschot.
-    const decision = draai(metPlafond(undefined), heetEnBewolkt());
+    const decision = decideWith(withCeiling(undefined), hotAndCloudy());
 
-    const koelt = decision.commands.some(
+    const cools = decision.commands.some(
       (c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && c.action === 'cool',
     );
-    expect(koelt).toBe(false);
+    expect(cools).toBe(false);
   });
 
   it('koelt met een plafond wel, en laat zich daarbij niet door het budget tegenhouden', () => {
-    const decision = draai(metPlafond(26), heetEnBewolkt());
+    const decision = decideWith(withCeiling(26), hotAndCloudy());
 
-    const aanvaard = decision.accepted.find(
+    const accepted = decision.accepted.find(
       (i) => i.actuatorId === 'ac-woonkamer' && i.action === 'cool',
     );
-    expect(aanvaard?.strategyId).toBe('comfort');
-    expect(aanvaard?.budgetW).toBe(0);
+    expect(accepted?.strategyId).toBe('comfort');
+    expect(accepted?.budgetW).toBe(0);
     expect(
       decision.rejected.some(
         (r) =>
@@ -572,32 +572,32 @@ describe('het comfortplafond (besluit 50)', () => {
     // Het verschil tussen "het mag niet warmer worden" en "het moet hier
     // naartoe". Het koeldoel van de woonkamer is 22; op netstroom daarheen
     // koelen zou het grootste deel van de rekening zijn.
-    const decision = draai(metPlafond(26), heetEnBewolkt());
+    const decision = decideWith(withCeiling(26), hotAndCloudy());
 
-    const aanvaard = decision.accepted.find(
+    const accepted = decision.accepted.find(
       (i) => i.actuatorId === 'ac-woonkamer' && i.strategyId === 'comfort',
     );
-    expect(aanvaard?.setpointC).toBe(26);
+    expect(accepted?.setpointC).toBe(26);
   });
 
   it('slaat pas aan boven het plafond plus de schakelband', () => {
     // onDelta is 0,3 voor de woonkamer. Op 26,2 nog niet, op 26,3 wel.
-    const net = draai(metPlafond(26), heetEnBewolkt({ woonkamerC: 26.2 }));
-    const wel = draai(metPlafond(26), heetEnBewolkt({ woonkamerC: 26.3 }));
+    const justBelow = decideWith(withCeiling(26), hotAndCloudy({ livingRoomC: 26.2 }));
+    const justAbove = decideWith(withCeiling(26), hotAndCloudy({ livingRoomC: 26.3 }));
 
-    const comfortKoelt = (d: ReturnType<typeof draai>) =>
+    const comfortCools = (d: ReturnType<typeof decideWith>) =>
       d.accepted.some((i) => i.actuatorId === 'ac-woonkamer' && i.strategyId === 'comfort');
-    expect(comfortKoelt(net)).toBe(false);
-    expect(comfortKoelt(wel)).toBe(true);
+    expect(comfortCools(justBelow)).toBe(false);
+    expect(comfortCools(justAbove)).toBe(true);
   });
 
   it('houdt vast tot onder het plafond min de uitschakelband', () => {
     // Al aan het koelen, op 25,9: offDelta 0,2 betekent doorgaan tot onder 25,8.
     // Zonder deze band zou hij op het plafond zelf klapperen.
-    const decision = draai(
-      metPlafond(26),
-      heetEnBewolkt({
-        woonkamerC: 25.9,
+    const decision = decideWith(
+      withCeiling(26),
+      hotAndCloudy({
+        livingRoomC: 25.9,
         actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 26, powerW: 850 }) },
       }),
     );
@@ -613,26 +613,26 @@ describe('het comfortplafond (besluit 50)', () => {
     // Kan de primary zelf koelen, dan verdedigt het koeldoel al een strengere
     // grens. Een tweede voorstel zou alleen maar afgewezen worden.
     const config: SiteConfig = {
-      ...metPlafond(26),
+      ...withCeiling(26),
       actuators: exampleSite.actuators.map((a) =>
         a.id === 'nest' ? { ...a, capabilities: { ...a.capabilities, canCool: true } } : a,
       ),
     };
-    const decision = draai(config, heetEnBewolkt());
+    const decision = decideWith(config, hotAndCloudy());
 
-    const doorComfort = decision.proposed.filter(
+    const byComfort = decision.proposed.filter(
       (i) => i.zoneId === 'woonkamer' && i.strategyId === 'comfort' && i.action === 'cool',
     );
-    expect(doorComfort.map((i) => i.actuatorId)).toEqual(['nest']);
+    expect(byComfort.map((i) => i.actuatorId)).toEqual(['nest']);
   });
 });
 
 describe('starten vraagt meer dan draaien (besluit 51)', () => {
   // Alleen de zolder wil koelen: de woonkamer staat op 21,0 en valt daarmee net
   // buiten zijn bufferband. `startSurplusW` is 1000, `resumeSurplusW` 600.
-  const zolderRejectie = (d: ReturnType<typeof run>) =>
+  const atticRejection = (d: ReturnType<typeof run>) =>
     d.rejected.find((r) => r.intent.actuatorId === 'ac-zolder')?.blockedBy;
-  const zolderStart = (d: ReturnType<typeof run>) =>
+  const atticStart = (d: ReturnType<typeof run>) =>
     d.commands.some(
       (c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder' && c.action === 'cool',
     );
@@ -641,13 +641,13 @@ describe('starten vraagt meer dan draaien (besluit 51)', () => {
     // 900 W overschot is genoeg voor de 750 W van de zolder-airco, maar geen
     // marge: een wolk later draait hij een kwartier op netstroom.
     const d = run(buildState({ gridPowerW: -900 }));
-    expect(zolderStart(d)).toBe(false);
-    expect(zolderRejectie(d)).toBe('start_threshold_not_met');
+    expect(atticStart(d)).toBe(false);
+    expect(atticRejection(d)).toBe('start_threshold_not_met');
   });
 
   it('start wel zodra de marge er is', () => {
     const d = run(buildState({ gridPowerW: -1000 }));
-    expect(zolderStart(d)).toBe(true);
+    expect(atticStart(d)).toBe(true);
   });
 
   it('laat een draaiend apparaat door op de tolerantie, zonder startdrempel', () => {
@@ -660,20 +660,20 @@ describe('starten vraagt meer dan draaien (besluit 51)', () => {
       }),
     );
     expect(d.accepted.some((i) => i.actuatorId === 'ac-zolder' && i.action === 'cool')).toBe(true);
-    expect(zolderRejectie(d)).toBeUndefined();
+    expect(atticRejection(d)).toBeUndefined();
   });
 
   it('laat een geparkeerd apparaat hervatten op de lagere drempel', () => {
     // 800 W vrij: onder de startdrempel, boven de hervatdrempel. Een koude
     // start wacht, een apparaat dat net geparkeerd werd pakt het weer op.
-    const koud = run(buildState({ gridPowerW: -800 }));
-    const geparkeerd = run(
+    const cold = run(buildState({ gridPowerW: -800 }));
+    const parked = run(
       buildState({
         gridPowerW: -800,
         actuators: { 'ac-zolder': actuator('standby', { setpointC: 25, minutesAgo: 10 }) },
       }),
     );
-    expect(zolderRejectie(koud)).toBe('start_threshold_not_met');
-    expect(zolderStart(geparkeerd)).toBe(true);
+    expect(atticRejection(cold)).toBe('start_threshold_not_met');
+    expect(atticStart(parked)).toBe(true);
   });
 });

@@ -28,10 +28,10 @@ import { defaultStrategies } from '../src/index.js';
 import type { DeviceRef, ModeSource, SiteConfig } from '../src/core/model.js';
 import { exampleSite } from './site.js';
 
-const NU = Date.parse('2026-09-10T12:00:00Z');
+const NOW = Date.parse('2026-09-10T12:00:00Z');
 
 /** Een bron die alleen states en attributen kent, uit een tabel. */
-function bronVan(
+function sourceOfFile(
   states: Record<string, string>,
   attrs: Record<string, Record<string, number>> = {},
 ): EntitySource {
@@ -54,7 +54,7 @@ function bronVan(
 const ref = (id: string): DeviceRef => ({ adapter: 'homeassistant', id });
 
 /** Vervangt de temperatuurbron van één zone. */
-function metZoneSensor(config: SiteConfig, zoneId: string, id: string): SiteConfig {
+function withZoneSensor(config: SiteConfig, zoneId: string, id: string): SiteConfig {
   return {
     ...config,
     zones: config.zones.map((z) => (z.id === zoneId ? { ...z, temperature: ref(id) } : z)),
@@ -62,7 +62,7 @@ function metZoneSensor(config: SiteConfig, zoneId: string, id: string): SiteConf
 }
 
 /** Vervangt de entiteit van één actuator. */
-function metActuatorRef(config: SiteConfig, actuatorId: string, id: string): SiteConfig {
+function withActuatorRef(config: SiteConfig, actuatorId: string, id: string): SiteConfig {
   return {
     ...config,
     actuators: config.actuators.map((a) => (a.id === actuatorId ? { ...a, ref: ref(id) } : a)),
@@ -72,17 +72,17 @@ function metActuatorRef(config: SiteConfig, actuatorId: string, id: string): Sit
 describe('zonetemperaturen', () => {
   it('leest de sensor die de configuratie noemt', () => {
     const zone = exampleSite.zones[0]!;
-    const config = metZoneSensor(exampleSite, zone.id, 'sensor.andere_bron');
+    const config = withZoneSensor(exampleSite, zone.id, 'sensor.andere_bron');
 
     const state = buildSystemState(
       config,
       // De oude sensor staat er nog en heeft een andere waarde. Wie die
       // uitleest, krijgt 99 en valt door de mand.
-      bronVan({ [zone.temperature.id]: '99', 'sensor.andere_bron': '21.5' }),
-      NU,
+      sourceOfFile({ [zone.temperature.id]: '99', 'sensor.andere_bron': '21.5' }),
+      NOW,
     );
 
-    expect(state.zones[zone.id]?.temperatureC).toEqual({ ok: true, value: 21.5, atMs: NU });
+    expect(state.zones[zone.id]?.temperatureC).toEqual({ ok: true, value: 21.5, atMs: NOW });
   });
 
   it('kent elke zone uit de configuratie, ook een nieuwe', () => {
@@ -99,23 +99,23 @@ describe('zonetemperaturen', () => {
       ],
     };
 
-    const state = buildSystemState(config, bronVan({ 'sensor.washok_temperatuur': '18.0' }), NU);
-    expect(state.zones['washok']?.temperatureC).toEqual({ ok: true, value: 18, atMs: NU });
+    const state = buildSystemState(config, sourceOfFile({ 'sensor.washok_temperatuur': '18.0' }), NOW);
+    expect(state.zones['washok']?.temperatureC).toEqual({ ok: true, value: 18, atMs: NOW });
   });
 });
 
 describe('actuatoren', () => {
   it('leest de climate-entiteit die de configuratie noemt', () => {
     const actuator = exampleSite.actuators.find((a) => a.capabilities.canCool)!;
-    const config = metActuatorRef(exampleSite, actuator.id, 'climate.andere_airco');
+    const config = withActuatorRef(exampleSite, actuator.id, 'climate.andere_airco');
 
     const state = buildSystemState(
       config,
-      bronVan(
+      sourceOfFile(
         { [actuator.ref.id]: 'off', 'climate.andere_airco': 'cool' },
         { 'climate.andere_airco': { temperature: 21 } },
       ),
-      NU,
+      NOW,
     );
 
     // De oude entiteit staat op `off`. Wie die leest, ziet `off`.
@@ -135,15 +135,15 @@ describe('actuatoren', () => {
 
     const state = buildSystemState(
       config,
-      bronVan({
+      sourceOfFile({
         [actuator.power.sensor!.id]: '999',
         'sensor.ander_vermogen': '412',
         [actuator.ref.id]: 'cool',
       }),
-      NU,
+      NOW,
     );
 
-    expect(state.actuators[actuator.id]?.powerW).toEqual({ ok: true, value: 412, atMs: NU });
+    expect(state.actuators[actuator.id]?.powerW).toEqual({ ok: true, value: 412, atMs: NOW });
   });
 
   it('kent elke actuator uit de configuratie, ook een nieuwe', () => {
@@ -155,7 +155,7 @@ describe('actuatoren', () => {
       ],
     };
 
-    const state = buildSystemState(config, bronVan({ 'climate.kachel': 'heat' }), NU);
+    const state = buildSystemState(config, sourceOfFile({ 'climate.kachel': 'heat' }), NOW);
     expect(state.actuators['kachel']).toBeDefined();
   });
 });
@@ -169,11 +169,11 @@ describe('losse meetpunten', () => {
 
     const state = buildSystemState(
       config,
-      bronVan({ [exampleSite.power.gridPower!.id]: '9999', 'sensor.andere_meter': '-1200' }),
-      NU,
+      sourceOfFile({ [exampleSite.power.gridPower!.id]: '9999', 'sensor.andere_meter': '-1200' }),
+      NOW,
     );
 
-    expect(state.power.gridPowerW).toEqual({ ok: true, value: -1200, atMs: NU });
+    expect(state.power.gridPowerW).toEqual({ ok: true, value: -1200, atMs: NOW });
   });
 
   it('leest de bewoners uit de configuratie', () => {
@@ -182,16 +182,16 @@ describe('losse meetpunten', () => {
       occupancy: [{ id: 'gast', ref: ref('person.gast') }],
     };
 
-    const state = buildSystemState(config, bronVan({ 'person.gast': 'home' }), NU);
+    const state = buildSystemState(config, sourceOfFile({ 'person.gast': 'home' }), NOW);
 
     expect(Object.keys(state.occupancy)).toEqual(['gast']);
-    expect(state.occupancy['gast']).toEqual({ ok: true, value: true, atMs: NU });
+    expect(state.occupancy['gast']).toEqual({ ok: true, value: true, atMs: NOW });
   });
 });
 
 describe('de filter volgt de configuratie', () => {
   it('kent de entiteiten van een gewijzigde configuratie', () => {
-    const config = metZoneSensor(exampleSite, exampleSite.zones[0]!.id, 'sensor.andere_bron');
+    const config = withZoneSensor(exampleSite, exampleSite.zones[0]!.id, 'sensor.andere_bron');
     const ids = relevantEntities(config);
 
     expect(ids.has('sensor.andere_bron')).toBe(true);
@@ -204,19 +204,19 @@ describe('de filter volgt de configuratie', () => {
 describe('de modusbron', () => {
   // Deze woning noemt wél een keuzelijst in Home Assistant; sinds fase 6e mag
   // dat ontbreken, dus het type is optioneel geworden. Eén keer vastpakken.
-  const modusBron = exampleSite.mode!;
+  const modeSource = exampleSite.mode!;
 
-  const metModus = (config: SiteConfig, over: Partial<ModeSource>): SiteConfig => ({
+  const withMode = (config: SiteConfig, over: Partial<ModeSource>): SiteConfig => ({
     ...config,
-    mode: { ...(config.mode ?? modusBron), ...over },
+    mode: { ...(config.mode ?? modeSource), ...over },
   });
 
   it('leest de keuzelijst die de configuratie noemt', () => {
-    const config = metModus(exampleSite, { select: ref('input_select.andere_lijst') });
+    const config = withMode(exampleSite, { select: ref('input_select.andere_lijst') });
     const state = buildSystemState(
       config,
-      bronVan({ [modusBron.select.id]: 'nacht', 'input_select.andere_lijst': 'vakantie' }),
-      NU,
+      sourceOfFile({ [modeSource.select.id]: 'nacht', 'input_select.andere_lijst': 'vakantie' }),
+      NOW,
     );
     expect(state.modeOverride).toBe('vakantie');
   });
@@ -226,8 +226,8 @@ describe('de modusbron', () => {
     // richting en geen modus, dus die valt samen met de dagmodus.
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [modusBron.select.id]: 'koelen' }),
-      NU,
+      sourceOfFile({ [modeSource.select.id]: 'koelen' }),
+      NOW,
     );
     expect(state.modeOverride).toBe('dag');
   });
@@ -235,8 +235,8 @@ describe('de modusbron', () => {
   it('laat de regeling zelf kiezen bij de automatische stand', () => {
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [modusBron.select.id]: modusBron.automatic }),
-      NU,
+      sourceOfFile({ [modeSource.select.id]: modeSource.automatic }),
+      NOW,
     );
     expect(state.modeOverride).toBeNull();
   });
@@ -244,8 +244,8 @@ describe('de modusbron', () => {
   it('kent een onbekende stand geen modus toe in plaats van te knallen', () => {
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [modusBron.select.id]: 'iets-nieuws' }),
-      NU,
+      sourceOfFile({ [modeSource.select.id]: 'iets-nieuws' }),
+      NOW,
     );
     expect(state.modeOverride).toBeNull();
   });
@@ -253,29 +253,29 @@ describe('de modusbron', () => {
   it('laat elke handen-af knop van de configuratie winnen', () => {
     // Dit is de fout uit besluit 8b: de code kende maar één knop. Nu staan ze
     // in de configuratie en kunnen het er meer zijn.
-    const knop = modusBron.handsOffWhen[0]!;
+    const button = modeSource.handsOffWhen[0]!;
     const state = buildSystemState(
       exampleSite,
-      bronVan({
-        [modusBron.select.id]: 'vakantie',
-        [knop.ref.id]: knop.state,
+      sourceOfFile({
+        [modeSource.select.id]: 'vakantie',
+        [button.ref.id]: button.state,
       }),
-      NU,
+      NOW,
     );
     expect(state.modeOverride).toBe('handmatig');
   });
 
   it('werkt met een tweede handen-af knop erbij', () => {
-    const config = metModus(exampleSite, {
+    const config = withMode(exampleSite, {
       handsOffWhen: [
-        ...modusBron.handsOffWhen,
+        ...modeSource.handsOffWhen,
         { ref: ref('input_boolean.gasten'), state: 'on' },
       ],
     });
     const state = buildSystemState(
       config,
-      bronVan({ [modusBron.select.id]: 'dag', 'input_boolean.gasten': 'on' }),
-      NU,
+      sourceOfFile({ [modeSource.select.id]: 'dag', 'input_boolean.gasten': 'on' }),
+      NOW,
     );
     expect(state.modeOverride).toBe('handmatig');
   });
@@ -287,22 +287,22 @@ describe('timers en zon', () => {
       ...exampleSite,
       timers: { stabilisation: ref('timer.anders'), manualOverride: ref('timer.nog_anders') },
     };
-    const eind = '2026-09-10T12:05:00+00:00';
+    const end = '2026-09-10T12:05:00+00:00';
     const state = buildSystemState(
       config,
       {
-        ...bronVan({ 'timer.anders': 'active' }),
-        attr: (id, k) => (id === 'timer.anders' && k === 'finishes_at' ? eind : null),
+        ...sourceOfFile({ 'timer.anders': 'active' }),
+        attr: (id, k) => (id === 'timer.anders' && k === 'finishes_at' ? end : null),
       },
-      NU,
+      NOW,
     );
-    expect(state.timers.stabilisation.endsAtMs).toBe(Date.parse(eind));
+    expect(state.timers.stabilisation.endsAtMs).toBe(Date.parse(end));
   });
 
   it('leest de zon uit de configuratie', () => {
     const config: SiteConfig = { ...exampleSite, sun: ref('sun.andere_zon') };
-    const state = buildSystemState(config, bronVan({ 'sun.andere_zon': 'above_horizon' }), NU);
-    expect(state.sunAboveHorizon).toEqual({ ok: true, value: true, atMs: NU });
+    const state = buildSystemState(config, sourceOfFile({ 'sun.andere_zon': 'above_horizon' }), NOW);
+    expect(state.sunAboveHorizon).toEqual({ ok: true, value: true, atMs: NOW });
   });
 });
 
@@ -310,16 +310,16 @@ describe('de buitentemperatuur', () => {
   it('gaat mee in de toestand wanneer de configuratie hem noemt', () => {
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [exampleSite.outdoorTemperature!.id]: '11.4' }),
-      NU,
+      sourceOfFile({ [exampleSite.outdoorTemperature!.id]: '11.4' }),
+      NOW,
     );
-    expect(state.outdoorTemperatureC).toEqual({ ok: true, value: 11.4, atMs: NU });
+    expect(state.outdoorTemperatureC).toEqual({ ok: true, value: 11.4, atMs: NOW });
   });
 
   it('blijft onbekend zonder sensor, in plaats van iets te verzinnen', () => {
     const config: SiteConfig = { ...exampleSite };
     delete (config as { outdoorTemperature?: unknown }).outdoorTemperature;
-    const state = buildSystemState(config, bronVan({}), NU);
+    const state = buildSystemState(config, sourceOfFile({}), NOW);
     expect(state.outdoorTemperatureC.ok).toBe(false);
   });
 
@@ -330,32 +330,32 @@ describe('de buitentemperatuur', () => {
 
 describe('de legacy-setpoints', () => {
   it('leest de helpers die het migratieblok noemt', () => {
-    const woonkamer = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
+    const livingRoom = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
     const helper = exampleSite.migration!.setpoints!['woonkamer']!.dag!.heat!;
 
-    const aangepast = configFrom(exampleSite, bronVan({ [helper.id]: '20.5' }));
-    const zone = aangepast.zones.find((z) => z.id === 'woonkamer')!;
+    const adjusted = configFrom(exampleSite, sourceOfFile({ [helper.id]: '20.5' }));
+    const zone = adjusted.zones.find((z) => z.id === 'woonkamer')!;
 
     expect(zone.setpoints.dag?.heat).toBe(20.5);
     // En de configuratie zelf blijft ongemoeid.
-    expect(woonkamer.setpoints.dag?.heat).not.toBe(20.5);
+    expect(livingRoom.setpoints.dag?.heat).not.toBe(20.5);
   });
 
   it('valt terug op de configuratie en niet op een getal in de code', () => {
     // Hier stonden negen hardgecodeerde terugvalwaarden die de setpoints uit de
     // configuratie herhaalden. Valt een helper weg, dan is "wat de configuratie
     // zegt" het juiste antwoord.
-    const woonkamer = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
-    const aangepast = configFrom(exampleSite, bronVan({}));
-    const zone = aangepast.zones.find((z) => z.id === 'woonkamer')!;
+    const livingRoom = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
+    const adjusted = configFrom(exampleSite, sourceOfFile({}));
+    const zone = adjusted.zones.find((z) => z.id === 'woonkamer')!;
 
-    expect(zone.setpoints.dag?.heat).toBe(woonkamer.setpoints.dag?.heat);
+    expect(zone.setpoints.dag?.heat).toBe(livingRoom.setpoints.dag?.heat);
   });
 
   it('laat de configuratie met rust zonder migratieblok', () => {
     const config: SiteConfig = { ...exampleSite };
     delete (config as { migration?: unknown }).migration;
-    expect(configFrom(config, bronVan({}))).toBe(config);
+    expect(configFrom(config, sourceOfFile({}))).toBe(config);
   });
 });
 
@@ -371,44 +371,44 @@ describe('niets wordt voor niets gevolgd', () => {
      * stond in de configuratie, hij zat in de filter, en `buildSystemState`
      * las hem nooit. Zonder deze test zou dat pas een winter later opvallen.
      */
-    const aangeraakt = new Set<string>();
-    const spion: EntitySource = {
-      state: (id) => (aangeraakt.add(id), null),
-      number: (id) => (aangeraakt.add(id), null),
-      bool: (id) => (aangeraakt.add(id), null),
-      attr: (id) => (aangeraakt.add(id), null),
-      attrNumber: (id) => (aangeraakt.add(id), null),
-      changedAt: (id) => (aangeraakt.add(id), null),
-      hvacAction: (id) => (aangeraakt.add(id), null),
-      hvacActionSince: (id) => (aangeraakt.add(id), null),
+    const touched = new Set<string>();
+    const spy: EntitySource = {
+      state: (id) => (touched.add(id), null),
+      number: (id) => (touched.add(id), null),
+      bool: (id) => (touched.add(id), null),
+      attr: (id) => (touched.add(id), null),
+      attrNumber: (id) => (touched.add(id), null),
+      changedAt: (id) => (touched.add(id), null),
+      hvacAction: (id) => (touched.add(id), null),
+      hvacActionSince: (id) => (touched.add(id), null),
     };
 
-    buildSystemState(configFrom(exampleSite, spion), spion, NU);
+    buildSystemState(configFrom(exampleSite, spy), spy, NOW);
 
     // Wat alleen voor het logboek wordt bijgehouden telt niet mee: dat is met
     // opzet niet iets waar de vertaling naar kijkt.
-    const alleenLog = observedEntities(exampleSite);
-    const ongebruikt = [...relevantEntities(exampleSite)]
-      .filter((id) => !aangeraakt.has(id) && !alleenLog.has(id))
+    const logOnly = observedEntities(exampleSite);
+    const unused = [...relevantEntities(exampleSite)]
+      .filter((id) => !touched.has(id) && !logOnly.has(id))
       .sort();
 
-    expect(ongebruikt).toEqual([]);
+    expect(unused).toEqual([]);
   });
 
   it('legt de luchtvochtigheid vast waar de zone er een sensor voor heeft', () => {
     const zone = exampleSite.zones.find((z) => z.humidity != null)!;
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [zone.humidity!.id]: '54' }),
-      NU,
+      sourceOfFile({ [zone.humidity!.id]: '54' }),
+      NOW,
     );
-    expect(state.zones[zone.id]?.humidityPct).toEqual({ ok: true, value: 54, atMs: NU });
+    expect(state.zones[zone.id]?.humidityPct).toEqual({ ok: true, value: 54, atMs: NOW });
   });
 
   it('laat een zone zonder vochtsensor met rust', () => {
-    const zonder = exampleSite.zones.find((z) => z.humidity == null)!;
-    const state = buildSystemState(exampleSite, bronVan({}), NU);
-    expect(state.zones[zonder.id]?.humidityPct).toBeUndefined();
+    const without = exampleSite.zones.find((z) => z.humidity == null)!;
+    const state = buildSystemState(exampleSite, sourceOfFile({}), NOW);
+    expect(state.zones[without.id]?.humidityPct).toBeUndefined();
   });
 });
 
@@ -422,72 +422,72 @@ describe('zonder bronnen in Home Assistant', () => {
    * configuratie, dan wint Home Assistant. Zonder die regel zou een interne
    * stand stilletjes over de knop van de bewoner heen gaan liggen.
    */
-  const keuzelijst = exampleSite.mode!;
+  const choiceList = exampleSite.mode!;
 
-  const zonder = (config: SiteConfig, ...sleutels: string[]): SiteConfig => {
-    const kopie: Record<string, unknown> = { ...config };
-    for (const k of sleutels) delete kopie[k];
-    return kopie as unknown as SiteConfig;
+  const without = (config: SiteConfig, ...keys: string[]): SiteConfig => {
+    const copy: Record<string, unknown> = { ...config };
+    for (const k of keys) delete copy[k];
+    return copy as unknown as SiteConfig;
   };
 
   it('leest de modus uit de eigen stand wanneer de configuratie er geen noemt', () => {
-    const eigen = new OwnState();
-    eigen.setMode('vakantie');
-    const state = buildSystemState(zonder(exampleSite, 'mode'), bronVan({}), NU, eigen);
+    const own = new OwnState();
+    own.setMode('vakantie');
+    const state = buildSystemState(without(exampleSite, 'mode'), sourceOfFile({}), NOW, own);
     expect(state.modeOverride).toBe('vakantie');
   });
 
   it('staat zonder gekozen modus op volautomatisch', () => {
     const state = buildSystemState(
-      zonder(exampleSite, 'mode'),
-      bronVan({}),
-      NU,
+      without(exampleSite, 'mode'),
+      sourceOfFile({}),
+      NOW,
       new OwnState(),
     );
     expect(state.modeOverride).toBeNull();
   });
 
   it('laat Home Assistant winnen wanneer de configuratie een keuzelijst noemt', () => {
-    const eigen = new OwnState();
-    eigen.setMode('vakantie');
+    const own = new OwnState();
+    own.setMode('vakantie');
     const state = buildSystemState(
       exampleSite,
-      bronVan({ [keuzelijst.select.id]: 'nacht' }),
-      NU,
-      eigen,
+      sourceOfFile({ [choiceList.select.id]: 'nacht' }),
+      NOW,
+      own,
     );
     expect(state.modeOverride).toBe('nacht');
   });
 
   it('houdt de stabilisatietimer zelf bij op verzoek van de kern', () => {
-    const eigen = new OwnState();
-    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
-    const state = buildSystemState(zonder(exampleSite, 'timers'), bronVan({}), NU, eigen);
-    expect(state.timers.stabilisation.endsAtMs).toBe(NU + 300_000);
+    const own = new OwnState();
+    own.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
+    const state = buildSystemState(without(exampleSite, 'timers'), sourceOfFile({}), NOW, own);
+    expect(state.timers.stabilisation.endsAtMs).toBe(NOW + 300_000);
   });
 
   it('laat de timer uit Home Assistant winnen wanneer die is opgegeven', () => {
     // De eigen boekhouding loopt door, maar de vertaling kijkt er niet naar.
     // Dit is de regressie die de draaiende opname beschermt: die vergelijkt
     // met het oude systeem, en moet dus diens timer blijven volgen.
-    const eigen = new OwnState();
-    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
-    const state = buildSystemState(exampleSite, bronVan({}), NU, eigen);
+    const own = new OwnState();
+    own.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
+    const state = buildSystemState(exampleSite, sourceOfFile({}), NOW, own);
     expect(state.timers.stabilisation.endsAtMs).toBeNull();
   });
 
   it('vergeet een timer weer na een cancelTimer', () => {
-    const eigen = new OwnState();
-    eigen.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NU);
-    eigen.apply([{ kind: 'cancelTimer', timerId: 'stabilisation' }], NU);
-    const state = buildSystemState(zonder(exampleSite, 'timers'), bronVan({}), NU, eigen);
+    const own = new OwnState();
+    own.apply([{ kind: 'startTimer', timerId: 'stabilisation', durationS: 300 }], NOW);
+    own.apply([{ kind: 'cancelTimer', timerId: 'stabilisation' }], NOW);
+    const state = buildSystemState(without(exampleSite, 'timers'), sourceOfFile({}), NOW, own);
     expect(state.timers.stabilisation.endsAtMs).toBeNull();
   });
 
   it('wacht niet op entiteiten die er niet zijn', () => {
-    const kaal = zonder(exampleSite, 'mode', 'timers');
-    const ids = relevantEntities(kaal);
-    expect(ids.has(keuzelijst.select.id)).toBe(false);
+    const bare = without(exampleSite, 'mode', 'timers');
+    const ids = relevantEntities(bare);
+    expect(ids.has(choiceList.select.id)).toBe(false);
     expect(ids.has(exampleSite.timers!.stabilisation.id)).toBe(false);
     // En de rest staat er nog wel in.
     expect(ids.has(exampleSite.power.gridPower!.id)).toBe(true);
@@ -503,7 +503,7 @@ describe('een verse installatie beslist ook echt', () => {
    * Dit is de kleinste installatie die het schema toelaat — een tijdzone, een
    * zone, een apparaat — helemaal tot een besluit.
    */
-  const minimaal = parseSiteConfig(
+  const minimal = parseSiteConfig(
     {
       timezone: 'Europe/Amsterdam',
       actuators: [
@@ -515,29 +515,29 @@ describe('een verse installatie beslist ook echt', () => {
   );
 
   it('komt tot een besluit zonder meter, zon, modusknop of timers', () => {
-    if (!minimaal.ok) throw new Error(minimaal.problems.map((x) => x.message).join('\n'));
+    if (!minimal.ok) throw new Error(minimal.problems.map((x) => x.message).join('\n'));
 
     const state = buildSystemState(
-      minimaal.config,
-      bronVan({ 'sensor.woonkamer': '17.5', 'climate.ketel': 'off' }),
-      NU,
+      minimal.config,
+      sourceOfFile({ 'sensor.woonkamer': '17.5', 'climate.ketel': 'off' }),
+      NOW,
       new OwnState(),
     );
-    const besluit = decide({
-      config: minimaal.config,
+    const record = decide({
+      config: minimal.config,
       state,
       strategies: defaultStrategies(),
     });
 
     // Het huis is koud en er is niemand opgegeven, dus het geldt als bewoond
     // en er wordt naar het dagsetpoint van 20 geregeld.
-    expect(besluit.explanation.occupied).toBe(true);
-    expect(besluit.commands.some((c) => c.kind === 'setAction' && c.action === 'heat')).toBe(true);
+    expect(record.explanation.occupied).toBe(true);
+    expect(record.commands.some((c) => c.kind === 'setAction' && c.action === 'heat')).toBe(true);
   });
 
   it('wacht niet op entiteiten die deze installatie niet heeft', () => {
-    if (!minimaal.ok) throw new Error('configuratie ongeldig');
-    const ids = [...relevantEntities(minimaal.config)].sort();
+    if (!minimal.ok) throw new Error('configuratie ongeldig');
+    const ids = [...relevantEntities(minimal.config)].sort();
     // Precies twee: de thermometer en het apparaat. Geen meter, geen zon,
     // geen keuzelijst, geen timers.
     expect(ids).toEqual(['climate.ketel', 'sensor.woonkamer']);

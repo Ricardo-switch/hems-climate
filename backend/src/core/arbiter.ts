@@ -266,18 +266,18 @@ export function arbitrate(
        * onder de lagere `resumeSurplusW`; dat is kortstondig uitvallen, geen
        * koude start.
        */
-      const nu = current?.action.ok ? current.action.value : undefined;
-      if (!isRunning(nu)) {
-        const drempel =
-          nu === 'standby'
+      const now = current?.action.ok ? current.action.value : undefined;
+      if (!isRunning(now)) {
+        const threshold =
+          now === 'standby'
             ? ctx.config.power.resumeSurplusW
             : ctx.config.power.startSurplusW;
-        const vrij = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
-        if (vrij < drempel) {
+        const free = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
+        if (free < threshold) {
           reject(
             intent,
             'start_threshold_not_met',
-            `${Math.max(0, vrij)} W vrij, ${drempel} W nodig om te starten`,
+            `${Math.max(0, free)} W vrij, ${threshold} W nodig om te starten`,
           );
           return;
         }

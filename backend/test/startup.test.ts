@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { leesOpstart } from '../src/opstart.js';
+import { readStartup } from '../src/startup.js';
 
 const NAS = {
   HA_URL: 'http://192.168.67.52:8123',
@@ -30,29 +30,29 @@ const ADDON = {
 
 describe('de opstart', () => {
   it('leest de NAS zoals hij draait', () => {
-    const o = leesOpstart(NAS);
-    expect(o.alsAddon).toBe(false);
+    const o = readStartup(NAS);
+    expect(o.asAddon).toBe(false);
     expect(o.ha).toEqual({ url: NAS.HA_URL, token: NAS.HA_TOKEN });
-    expect(o.web.poort).toBe(8080);
+    expect(o.web.port).toBe(8080);
     expect(o.tickSeconds).toBe(30);
     expect(o.minIntervalSeconds).toBe(15);
     expect(o.watchdogMinutes).toBe(10);
     expect(o.logDir).toBe('/logs');
-    expect(o.haProblemen).toEqual([]);
-    expect(o.fouten).toEqual([]);
+    expect(o.haProblems).toEqual([]);
+    expect(o.errors).toEqual([]);
   });
 
   it('herkent de add-on aan het token van de Supervisor', () => {
-    const o = leesOpstart(ADDON);
-    expect(o.alsAddon).toBe(true);
+    const o = readStartup(ADDON);
+    expect(o.asAddon).toBe(true);
     expect(o.ha).toEqual({ url: 'http://supervisor/core/websocket', token: 'supervisor-token' });
-    expect(o.haProblemen).toEqual([]);
+    expect(o.haProblems).toEqual([]);
   });
 
   it('meldt een ontbrekend en een leeg token verschillend', () => {
     // Leeg is het bestand dat je aanmaakte voordat je het token plakte.
-    expect(leesOpstart({ HA_URL: 'http://ha:8123' }).haProblemen).toEqual(['HA_TOKEN ontbreekt.']);
-    expect(leesOpstart({ HA_URL: 'http://ha:8123', HA_TOKEN: '  ' }).haProblemen).toEqual([
+    expect(readStartup({ HA_URL: 'http://ha:8123' }).haProblems).toEqual(['HA_TOKEN ontbreekt.']);
+    expect(readStartup({ HA_URL: 'http://ha:8123', HA_TOKEN: '  ' }).haProblems).toEqual([
       'HA_TOKEN staat er wel, maar is leeg — het token is nog niet geplakt.',
     ]);
   });
@@ -60,55 +60,55 @@ describe('de opstart', () => {
 
 describe('de schrijfdeur (besluit 42)', () => {
   it('staat open in de add-on, achter Ingress', () => {
-    const o = leesOpstart(ADDON);
-    expect(o.onboarding).toEqual({ aan: true, zonderIngress: false });
+    const o = readStartup(ADDON);
+    expect(o.onboarding).toEqual({ enabled: true, withoutIngress: false });
   });
 
   it('staat dicht op de NAS', () => {
-    expect(leesOpstart(NAS).onboarding).toEqual({ aan: false, zonderIngress: false });
+    expect(readStartup(NAS).onboarding).toEqual({ enabled: false, withoutIngress: false });
   });
 
   it('staat dicht zodra iemand de add-on naar een eigen Home Assistant wijst', () => {
     // De omgeving wint van de Supervisor, en dan is er geen garantie meer dat
     // de pagina achter de inlog van Home Assistant zit.
-    const o = leesOpstart({ ...ADDON, HA_URL: 'http://elders:8123', HA_TOKEN: 'eyJ.a.b' });
-    expect(o.alsAddon).toBe(false);
-    expect(o.onboarding.aan).toBe(false);
+    const o = readStartup({ ...ADDON, HA_URL: 'http://elders:8123', HA_TOKEN: 'eyJ.a.b' });
+    expect(o.asAddon).toBe(false);
+    expect(o.onboarding.enabled).toBe(false);
   });
 
   it('gaat buiten de add-on alleen open op uitdrukkelijk verzoek, en zegt dat erbij', () => {
-    const o = leesOpstart({ ...NAS, HEMS_ONBOARDING: '1' });
-    expect(o.onboarding).toEqual({ aan: true, zonderIngress: true });
+    const o = readStartup({ ...NAS, HEMS_ONBOARDING: '1' });
+    expect(o.onboarding).toEqual({ enabled: true, withoutIngress: true });
   });
 
   it('bestaat niet zonder weergave, ook niet op verzoek', () => {
     // Geen pagina, dus ook geen deur — ook niet een die niemand aanroept.
-    expect(leesOpstart({ ...ADDON, HEMS_WEB_PORT: undefined }).onboarding.aan).toBe(false);
-    const { HEMS_WEB_PORT: _weg, ...zonderPoort } = NAS;
-    expect(leesOpstart({ ...zonderPoort, HEMS_ONBOARDING: '1' }).onboarding.aan).toBe(false);
+    expect(readStartup({ ...ADDON, HEMS_WEB_PORT: undefined }).onboarding.enabled).toBe(false);
+    const { HEMS_WEB_PORT: _omitted, ...withoutPort } = NAS;
+    expect(readStartup({ ...withoutPort, HEMS_ONBOARDING: '1' }).onboarding.enabled).toBe(false);
   });
 
   it('opent alleen op precies "1"', () => {
-    for (const waarde of ['true', 'ja', '0', '']) {
-      expect(leesOpstart({ ...NAS, HEMS_ONBOARDING: waarde }).onboarding.aan).toBe(false);
+    for (const value of ['true', 'ja', '0', '']) {
+      expect(readStartup({ ...NAS, HEMS_ONBOARDING: value }).onboarding.enabled).toBe(false);
     }
   });
 });
 
 describe('instellingen die niet kloppen, vallen op', () => {
   it('weigert een poort die er geen is', () => {
-    for (const poort of ['0', '70000', '80a', '8.5']) {
-      const o = leesOpstart({ ...NAS, HEMS_WEB_PORT: poort });
-      expect(o.web.poort).toBeNull();
-      expect(o.fouten).toEqual([`HEMS_WEB_PORT is geen geldige poort: "${poort}".`]);
+    for (const port of ['0', '70000', '80a', '8.5']) {
+      const o = readStartup({ ...NAS, HEMS_WEB_PORT: port });
+      expect(o.web.port).toBeNull();
+      expect(o.errors).toEqual([`HEMS_WEB_PORT is geen geldige poort: "${port}".`]);
     }
   });
 
   it('weigert een hartslag van nul of een getal met een eenheid erachter', () => {
     // Voorheen werd "30s" stil 30 en ging nul door: een hartslag zonder pauze.
     for (const tick of ['0', '30s', '-5']) {
-      const o = leesOpstart({ ...NAS, SHADOW_TICK_SECONDS: tick });
-      expect(o.fouten).toEqual([
+      const o = readStartup({ ...NAS, SHADOW_TICK_SECONDS: tick });
+      expect(o.errors).toEqual([
         `SHADOW_TICK_SECONDS moet een getal van minstens 1 zijn, niet "${tick}".`,
       ]);
     }
@@ -116,15 +116,15 @@ describe('instellingen die niet kloppen, vallen op', () => {
 
   it('laat nul toe waar nul iets betekent', () => {
     // Geen minimale pauze tussen evaluaties, en de bewaking uit.
-    const o = leesOpstart({ ...NAS, SHADOW_MIN_INTERVAL_SECONDS: '0', SHADOW_WATCHDOG_MINUTES: '0' });
-    expect(o.fouten).toEqual([]);
+    const o = readStartup({ ...NAS, SHADOW_MIN_INTERVAL_SECONDS: '0', SHADOW_WATCHDOG_MINUTES: '0' });
+    expect(o.errors).toEqual([]);
     expect(o.minIntervalSeconds).toBe(0);
     expect(o.watchdogMinutes).toBe(0);
   });
 
   it('houdt een lege logmap leeg: dan wordt er niet gelogd', () => {
-    expect(leesOpstart({ ...NAS, SHADOW_LOG_DIR: '' }).logDir).toBe('');
-    const { SHADOW_LOG_DIR: _weg, ...zonder } = NAS;
-    expect(leesOpstart(zonder).logDir).toBe('data/shadow');
+    expect(readStartup({ ...NAS, SHADOW_LOG_DIR: '' }).logDir).toBe('');
+    const { SHADOW_LOG_DIR: _omitted, ...without } = NAS;
+    expect(readStartup(without).logDir).toBe('data/shadow');
   });
 });

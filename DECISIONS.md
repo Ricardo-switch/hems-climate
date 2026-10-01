@@ -6,7 +6,7 @@ besluit heeft gekost.
 
 Nieuwste onderaan. Voeg een besluit toe zodra je merkt dat je een keuze
 verdedigt die niet uit de code blijkt. Zet onder de kop een regel met onderwerp
-en status, zoals bij de andere, en draai `npm run besluiten:index` in
+en status, zoals bij de andere, en draai `npm run decisions:index` in
 `backend/`. Wordt een besluit later gecorrigeerd of vervangen, pas dan zijn
 status aan: wie via een zoekopdracht op een oud besluit belandt, hoort meteen te
 zien dat het niet meer zo werkt. Een test in de CI bewaakt beide.
@@ -18,7 +18,7 @@ zien dat het niet meer zo werkt. Een test in de CI bewaakt beide.
 
 Per onderwerp. Een besluit dat later is gecorrigeerd of vervangen, staat er
 toch in: het waarom blijft gelden voor wie het oude gedrag tegenkomt.
-Gemaakt met `npm run besluiten:index`; een test bewaakt dat hij klopt.
+Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 
 **Visie en principes**
 
@@ -106,6 +106,7 @@ Gemaakt met `npm run besluiten:index`; een test bewaakt dat hij klopt.
 - [55. De opstart is één zuivere functie](#55-de-opstart-is-één-zuivere-functie)
 - [56. Regels die voor elke toestand gelden](#56-regels-die-voor-elke-toestand-gelden)
 - [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
+- [59. Namen in het Engels, de rest in het Nederlands](#59-namen-in-het-engels-de-rest-in-het-nederlands)
 
 Wat nog open staat: [Wat nog een besluit wacht](#wat-nog-een-besluit-wacht).
 
@@ -1816,7 +1817,7 @@ simulatie. Daardoor is het bovenstaande een bovengrens: onder echte regeling was
 de zone eerder koud en de vraag eerder weg.
 
 *De replay blijft bit-identiek* (938 bytes, sha256 `81a74044…`), want die geeft
-geen eigen stand mee. `src/replay/besluit49.ts` rekent het verschil door over
+geen eigen stand mee. `src/replay/decision-49.ts` rekent het verschil door over
 beide vensters.
 
 ### 49b. De veronderstelling blijft bij de meter en bij de bewoner
@@ -1857,7 +1858,7 @@ handmatig ook op vanaf de stand waarin de bewoner het achterliet. Behalve bij de
 failsafe: die stuurt ook in handmatig de assist-apparaten uit, en die commando's
 gelden.
 
-*En het meetscript maakte dezelfde fout.* `besluit49.ts` onthield het laatst
+*En het meetscript maakte dezelfde fout.* `decision-49.ts` onthield het laatst
 gegeven commando als stand. Na handmatig hoeft de arbiter niets te sturen — het
 echte apparaat staat al uit — en dan telde het script een airco die koelde. Het
 meet nu de stand waarmee de arbiter de minuut ingaat.
@@ -1908,7 +1909,7 @@ maakt de bewoner, niet het schema. Weglaten geeft het gedrag van vóór dit
 besluit. Een plafond onder het koeldoel levert een waarschuwing: dan is de dure
 regel strenger dan de zuinige en koelt hij altijd op netstroom.
 
-*Wat de hoogte kost, over beide vensters* (`src/replay/besluit50.ts`, met
+*Wat de hoogte kost, over beide vensters* (`src/replay/decision-50.ts`, met
 besluit 49 aan). De betrouwbare kolom is hoe lang de zone boven het plafond zat,
 want die hangt niet af van wat koelen met de temperatuur doet:
 
@@ -1941,7 +1942,7 @@ op de zolder waar het oude systeem stil bleef (`arbiterLooser` van 153 naar 447
 en van 731 naar 1.425). Dat is precies het gat dat dit besluit dicht: op
 netstroom, boven 26 graden, wanneer de zon het niet deed.
 
-`besluit49.ts` meet zonder plafond, zodat de getallen van besluit 49 uit dat
+`decision-49.ts` meet zonder plafond, zodat de getallen van besluit 49 uit dat
 script te blijven halen zijn.
 
 ---
@@ -2088,7 +2089,7 @@ invoer — staat in git (`test/fixtures`), 135 kB. Hij wordt minuut voor minuut
 afgespeeld zoals de NAS beslist, met de schaduwboekhouding van 49b. Het
 verwachte resultaat is geen hash maar een leesbare samenvatting: elk commando
 met zijn tijd, de blokkades en de aanvaarde voorstellen. Verandert het gedrag
-bewust, dan maakt `npm run replay:vastleggen` hem opnieuw en is de diff in de
+bewust, dan maakt `npm run replay:record` hem opnieuw en is de diff in de
 commit het verslag van wat er anders beslist wordt. Aanwezigheid staat in de
 uitsnede de hele dag op thuis: wanneer er iemand thuis was, hoort niet in git.
 
@@ -2144,7 +2145,7 @@ doen: add-on of niet, luistert de weergave, mag de pagina configuratie
 wegschrijven. De voorwaarde voor die schrijfdeur (besluit 42) stond er twee
 keer in, en niets bewaakte dat ze gelijk bleven.
 
-*Besluit:* `src/opstart.ts` leidt alles af uit de omgeving in één zuivere
+*Besluit:* `src/startup.ts` leidt alles af uit de omgeving in één zuivere
 functie; `main.ts` voert het alleen nog uit. De schrijfdeur staat er één keer
 in, met tests: open in de add-on, dicht op de NAS, dicht zodra iemand de add-on
 naar een eigen Home Assistant wijst, open buiten Ingress alleen op
@@ -2161,7 +2162,7 @@ betekent: geen minimale pauze, of de bewaking uit.
 
 *Onderwerp: kwaliteitsbewaking · Status: geldig*
 
-De tests beschreven gevallen die iemand bedacht. `test/invarianten.test.ts`
+De tests beschreven gevallen die iemand bedacht. `test/invariants.test.ts`
 genereert er 3.000 — temperaturen, netstanden, apparaatstanden, draaitijden,
 modi, timers, haperende sensoren — en eist dat een paar regels altijd houden:
 nooit meer toegewezen dan beschikbaar, per apparaat hooguit één
@@ -2228,6 +2229,60 @@ zijn foutmelding, zodat een volgende keer zegt wat er misging.
 *Erbij, geen besluit maar een reparatie:* `deploy.sh` staat voortaan tussen
 accolades met een `exit` erin, zodat overschrijven tijdens een run geen halve
 regels meer uitvoert. Zie de commit van 30 september.
+
+---
+
+## 59. Namen in het Engels, de rest in het Nederlands
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+De code sprak twee talen door elkaar. De kern heette `decide`, `arbitrate` en
+`SiteConfig`; wat er later bij kwam heette `SchaduwApparaten`, `leesOpstart` en
+`comprimeerOudeDagen`. Wie een naam zocht, moest eerst raden in welke taal.
+
+*Besluit:* namen in de code zijn Engels: typen, functies, velden, variabelen en
+bestandsnamen. Commentaar, meldingen, de weergave, de documentatie en dit
+logboek blijven Nederlands.
+
+*Wat Nederlands blijft, omdat het gegevens zijn en geen namen:* de sleutels in
+bestanden op schijf en in de API naar de weergave (`buitenC` en `zonW` in het
+beslislogboek; `dekking`, `seizoen`, `patronen`, `bestanden` en `versie` in de
+antwoorden), en waarden die uit Home Assistant of de configuratie komen
+(`handmatig`, `strenger`, `ontbreekt`). Die hernoemen zou oude logboeken
+onleesbaar maken of de pagina breken, en dat alleen voor een naam. De typen die
+ze beschrijven, hebben wel een Engelse naam.
+
+*Hoe:* ruim duizend declaraties in de backend en de weergave. Niet met
+zoeken-en-vervangen, maar via de taaldienst van TypeScript, die elke verwijzing
+kent. Daarna een controle die voor elke naam in de code nagaat of hij na het
+hernoemen naar dezelfde declaratie wijst als ervoor. Zo kan een nieuwe naam
+nooit stil een andere overschaduwen. Die controle ving vijftien botsingen
+voordat er iets geschreven was. De golden replay (besluit 53) gaf daarna byte
+voor byte hetzelfde.
+
+*Wat het testpakket ving:* acht tests lazen een API-antwoord met een eigen
+typebeschrijving, en daarin waren de sleutels mee hernoemd. De dienst stuurde
+nog `versie`, de test zocht `version`. Hersteld in de tests; de dienst zelf was
+goed.
+
+*Oudere besluiten noemen de oude namen.* Die zijn niet herschreven. Alleen
+bestandspaden en commando's zijn bijgewerkt, want die zijn om te volgen. De
+belangrijkste vertalingen:
+
+| Was | Is |
+| --- | --- |
+| `SchaduwApparaten`, `.volg()` | `ShadowActuators`, `.follow()` |
+| `leesOpstart`, `src/opstart.ts` | `readStartup`, `src/startup.ts` |
+| `comprimeerOudeDagen`, `adapters/archief.ts` | `compressOldDays`, `adapters/archive.ts` |
+| `Historieschrijver`, `naarRij`, `historieGereed()` | `HistoryWriter`, `toRow`, `historySettled()` |
+| `regelsVan`, `dagbestanden` | `linesOf`, `dayFiles` |
+| `stikHistorie`, `schrijfDataset` | `stitchHistory`, `writeDataset` |
+| `speelAf`, `Samenvatting` | `playBack`, `Summary` |
+| `bovenComfortplafond`, `bovenPlafond` | `aboveComfortCeiling`, `aboveCeiling` |
+| `versieUitOmgeving`, `Versie` | `versionFromEnv`, `Version` |
+| `ontdek`, `pasKeuzesToe`, `Voorstel`, `Keuze` | `discover`, `applyChoices`, `Proposal`, `Choice` |
+| `src/replay/besluit49.ts`, `besluit50.ts` | `src/replay/decision-49.ts`, `decision-50.ts` |
+| `npm run besluiten:index`, `npm run replay:vastleggen` | `npm run decisions:index`, `npm run replay:record` |
 
 ---
 

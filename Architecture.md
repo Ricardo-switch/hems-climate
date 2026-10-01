@@ -1,6 +1,6 @@
 # Project: Smart Climate OS (met HEMS-roadmap)
 
-*Bijgewerkt 30 september 2026.*
+*Bijgewerkt 1 oktober 2026.*
 
 Dit document is de kaart van hoe het nu is: welke onderdelen er zijn, hoe een
 besluit tot stand komt, en waar wat draait. Het waarom — welke alternatieven
@@ -11,6 +11,10 @@ daar verwijst deze kaart naar.
 kaart in dezelfde commit bij. Een machine kan proza niet op juistheid
 controleren; daarom is dit een afspraak en geen test. Het besluitenlog heeft wel
 een test (besluit 54 en de index).
+
+**Taal:** namen in de code zijn Engels, al het andere is Nederlands, ook dit
+document. Sleutels in bestanden en in de API blijven zoals ze zijn, omdat oude
+logboeken leesbaar moeten blijven (besluit 59).
 
 ## 1. De visie
 
@@ -33,11 +37,11 @@ Home Assistant ──websocket──▶ EntityStore ──▶ buildSystemState �
    (alleen lezen)             (filter, 16)     (vertaling, één)      (pure kern)
                                                      ▲                    │
                           OwnState (modus, timers) ──┤                    ▼
-                SchaduwApparaten (eigen stand, 49) ──┘              Decision
+                 ShadowActuators (eigen stand, 49) ──┘              Decision
                                                                          │
                 ┌─────────────────────┬──────────────────────┬──────────┘
                 ▼                     ▼                      ▼
-         beslislogboek          weergave (SSE)        SchaduwApparaten.volg
+         beslislogboek          weergave (SSE)        ShadowActuators.follow
       decisions-*.ndjson                              OwnState.apply
 ```
 
@@ -83,12 +87,12 @@ ondergrens tussen evaluaties en een bewaking die afsluit als hij vastloopt
 Omdat de schaduw niet schakelt, houdt hij zelf bij wat hij gedaan zou hebben:
 
 - **`OwnState`** — modus en timers, die de dienst bezit (besluit 39).
-- **`SchaduwApparaten`** — de stand die de arbiter de apparaten zou geven, zodat
+- **`ShadowActuators`** — de stand die de arbiter de apparaten zou geven, zodat
   draaitijden en hysterese zijn eigen geschiedenis meten (besluit 49). Het
   budget rekent met wat de meter werkelijk zag, en zolang de bewoner stuurt laat
   de boekhouding los (besluit 49b).
 
-**De opstart (`backend/src/opstart.ts`).** Eén zuivere functie leidt uit de
+**De opstart (`backend/src/startup.ts`).** Eén zuivere functie leidt uit de
 omgeving af hoe de dienst draait: add-on of niet, de weergave, de schrijfdeur,
 de tijden (besluit 55). `main.ts` voert het alleen uit.
 
@@ -112,7 +116,7 @@ Ze leest `Explanation` en herberekent niets. De schaduwdienst serveert haar zelf
 | `POST /api/onboarding` | de enige deur die schrijft, alleen achter Ingress (besluit 42) |
 
 Alles wat geen GET of HEAD is, krijgt 405 vóór de routering — behalve die ene
-deur, en die bestaat alleen als `opstart.ts` hem opent.
+deur, en die bestaat alleen als `startup.ts` hem opent.
 
 **De data.** Naast elkaar in de logmap:
 

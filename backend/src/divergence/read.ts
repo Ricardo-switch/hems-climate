@@ -140,8 +140,8 @@ const EMPTY_BUDGET = {
   gridPowerW: 0,
 } as const;
 
-const LOGBOEK = /^decisions-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
-const HISTORIE = /^history-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
+const DECISION_LOG = /^decisions-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
+const HISTORY = /^history-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
 
 /**
  * Per dag één bestand, gewoon of gecomprimeerd, op datum gesorteerd.
@@ -153,32 +153,32 @@ const HISTORIE = /^history-(\d{4}-\d{2}-\d{2})\.ndjson(\.gz)?$/;
  * de `.gz`: die ontstaat pas met een rename als hij compleet is, en de gewone
  * wordt daarna weggehaald. Beide tellen zou die dag dubbel meenemen.
  */
-async function dagbestanden(dir: string, patroon: RegExp): Promise<string[]> {
-  const perDag = new Map<string, string>();
-  for (const naam of await readdir(dir)) {
-    const m = patroon.exec(naam);
+async function dayFiles(dir: string, pattern: RegExp): Promise<string[]> {
+  const perDay = new Map<string, string>();
+  for (const name of await readdir(dir)) {
+    const m = pattern.exec(name);
     if (!m) continue;
-    const dag = m[1]!;
-    if (!perDag.has(dag) || m[2] != null) perDag.set(dag, naam);
+    const day = m[1]!;
+    if (!perDay.has(day) || m[2] != null) perDay.set(day, name);
   }
-  return [...perDag.keys()].sort().map((dag) => join(dir, perDag.get(dag)!));
+  return [...perDay.keys()].sort().map((day) => join(dir, perDay.get(day)!));
 }
 
 /** Alle dagbestanden van het beslislogboek. */
 export function findLogFiles(dir: string): Promise<string[]> {
-  return dagbestanden(dir, LOGBOEK);
+  return dayFiles(dir, DECISION_LOG);
 }
 
 /** De dagbestanden met ruwe historie naast het logboek (besluit 52). */
 export function findHistoryFiles(dir: string): Promise<string[]> {
-  return dagbestanden(dir, HISTORIE);
+  return dayFiles(dir, HISTORY);
 }
 
 /** Leest een dagbestand regel voor regel, gecomprimeerd of niet. */
-export function regelsVan(pad: string): Interface {
-  const bron = createReadStream(pad);
+export function linesOf(path: string): Interface {
+  const source = createReadStream(path);
   return createInterface({
-    input: pad.endsWith('.gz') ? bron.pipe(createGunzip()) : bron,
+    input: path.endsWith('.gz') ? source.pipe(createGunzip()) : source,
     crlfDelay: Infinity,
   });
 }
@@ -199,7 +199,7 @@ export async function* readMoments(
   let arbiterAction: Record<string, string> = {};
 
   for (const file of files) {
-    for await (const line of regelsVan(file)) {
+    for await (const line of linesOf(file)) {
       if (line.trim() === '') continue;
       let raw: RawRecord;
       try {

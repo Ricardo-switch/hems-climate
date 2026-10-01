@@ -60,8 +60,8 @@ function shadowEntity(
  * haalt de debounce plus het schrijven een vast venster niet altijd, en dan
  * viel een test om zonder dat er iets mis was.
  */
-async function wachtTot(runner: { stats: { evaluations: number } }, n: number): Promise<void> {
-  await wachtOp(
+async function waitUntil(runner: { stats: { evaluations: number } }, n: number): Promise<void> {
+  await waitFor(
     () => runner.stats.evaluations >= n,
     () => `${n} evaluaties (bleef op ${runner.stats.evaluations} staan)`,
   );
@@ -74,14 +74,14 @@ async function wachtTot(runner: { stats: { evaluations: number } }, n: number): 
  * een snelle pc ruim en op een drukke CI-machine te krap; deze wacht precies zo
  * lang als nodig en faalt met een zin in plaats van een verkeerde telling.
  */
-async function wachtOp(
-  voorwaarde: () => boolean | Promise<boolean>,
-  wat: string | (() => string),
+async function waitFor(
+  condition: () => boolean | Promise<boolean>,
+  what: string | (() => string),
 ): Promise<void> {
-  const uiterlijk = Date.now() + 5_000;
-  while (!(await voorwaarde())) {
-    if (Date.now() > uiterlijk) {
-      throw new Error(`gewacht op ${typeof wat === 'function' ? wat() : wat}, kwam niet`);
+  const deadline = Date.now() + 5_000;
+  while (!(await condition())) {
+    if (Date.now() > deadline) {
+      throw new Error(`gewacht op ${typeof what === 'function' ? what() : what}, kwam niet`);
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
@@ -346,7 +346,7 @@ describe('ShadowRunner', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtOp(
+    await waitFor(
       () => lines.some((l) => l.includes('zou sturen') || l.includes('zou niets')),
       'een besluitregel',
     );
@@ -379,11 +379,11 @@ describe('zonder helpers in Home Assistant', () => {
    * Deze twee tests zetten dezelfde woning twee keer neer, met en zonder
    * `timers` in de configuratie, en eisen dat het verschil precies dáár zit.
    */
-  function zonderHelpers(config: SiteConfig): SiteConfig {
-    const kopie: Record<string, unknown> = { ...config };
-    delete kopie['mode'];
-    delete kopie['timers'];
-    return kopie as unknown as SiteConfig;
+  function withoutHelpers(config: SiteConfig): SiteConfig {
+    const copy: Record<string, unknown> = { ...config };
+    delete copy['mode'];
+    delete copy['timers'];
+    return copy as unknown as SiteConfig;
   }
 
   /**
@@ -399,7 +399,7 @@ describe('zonder helpers in Home Assistant', () => {
    * dát is het geval waar de stabilisatie voor bestaat — niet een tweede unit
    * opstarten zolang het vermogen van de eerste nog geen betrouwbare basis is.
    */
-  function koeleWoonkamer(): HaEntityState[] {
+  function coolLivingRoom(): HaEntityState[] {
     return shadowStates().map((s) =>
       s.entity_id === 'sensor.beneden_temperatuur'
         ? shadowEntity('sensor.beneden_temperatuur', '21.0')
@@ -407,8 +407,8 @@ describe('zonder helpers in Home Assistant', () => {
     );
   }
 
-  async function draai(config: SiteConfig): Promise<string[]> {
-    const ha = await startFakeHa({ states: koeleWoonkamer() });
+  async function runShadow(config: SiteConfig): Promise<string[]> {
+    const ha = await startFakeHa({ states: coolLivingRoom() });
     cleanups.push(() => ha.close());
     const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
     const lines: string[] = [];
@@ -425,19 +425,19 @@ describe('zonder helpers in Home Assistant', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
 
     // Een tweede evaluatie uitlokken, nu met een woonkamer die wél wil koelen.
     // De klok staat stil, dus de timer die bij het eerste besluit is gestart
     // loopt nu gegarandeerd nog.
     ha.push(shadowEntity('sensor.beneden_temperatuur', '24.5'));
-    await wachtTot(runner, 2);
+    await waitUntil(runner, 2);
 
     return lines;
   }
 
   it('houdt de stabilisatietimer zelf bij en blokkeert daarna zelf', async () => {
-    const lines = await draai(zonderHelpers(exampleSite));
+    const lines = await runShadow(withoutHelpers(exampleSite));
 
     // Ruim overschot en een warme zolder: het eerste besluit zet de zolder aan,
     // en vraagt daarbij om een stabilisatietimer.
@@ -454,7 +454,7 @@ describe('zonder helpers in Home Assistant', () => {
     // boekhouding mag daar niet overheen gaan liggen. Deed hij dat wel, dan
     // zou de draaiende schaduwopname ineens andere besluiten nemen dan het
     // systeem waarmee hij wordt vergeleken.
-    const lines = await draai(exampleSite);
+    const lines = await runShadow(exampleSite);
 
     expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
     expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(false);
@@ -494,7 +494,7 @@ describe('eventfilter', () => {
     // filter te kennen — óók wanneer die configuratie van een ander huis komt.
     // Dit is wat de vijf handgeschreven tabellen vervangt: die stonden identiek
     // aan de configuratie en niets bewaakte dat.
-    const anders: SiteConfig = {
+    const other: SiteConfig = {
       ...exampleSite,
       power: {
         ...exampleSite.power,
@@ -510,10 +510,10 @@ describe('eventfilter', () => {
       criticalInputs: [{ adapter: 'homeassistant', id: 'sensor.andere_meter' }],
     };
 
-    const known = relevantEntities(anders);
+    const known = relevantEntities(other);
     expect(known.has('sensor.andere_meter')).toBe(true);
     expect(known.has('person.gast')).toBe(true);
-    for (const z of anders.zones) expect(known.has(`sensor.${z.id}_anders`)).toBe(true);
+    for (const z of other.zones) expect(known.has(`sensor.${z.id}_anders`)).toBe(true);
 
     // En de entiteiten van dít huis komen er niet meer in voor. Dat is de kern
     // van 6a: zonder de handgeschreven tabellen sleept de vertaling geen
@@ -550,7 +550,7 @@ describe('eventfilter', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
     const baseline = runner.stats.evaluations;
 
     // Twintig irrelevante events: geen enkele herberekening. Eerst wachten tot
@@ -559,13 +559,13 @@ describe('eventfilter', () => {
     for (let i = 0; i < 20; i++) {
       ha.push(entity(`sensor.ruis_${i}`, String(i)));
     }
-    await wachtOp(() => runner.stats.ignoredEvents === 20, 'twintig genegeerde events');
+    await waitFor(() => runner.stats.ignoredEvents === 20, 'twintig genegeerde events');
     expect(runner.stats.evaluations).toBe(baseline);
     expect(runner.stats.ignoredEvents).toBe(20);
 
     // Een echte klimaatwijziging wel.
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '26.5'));
-    await wachtTot(runner, baseline + 1);
+    await waitUntil(runner, baseline + 1);
     expect(runner.stats.evaluations).toBe(baseline + 1);
   });
 });
@@ -592,29 +592,29 @@ describe('de ruwe historie (besluit 52)', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
     // Eerst iets wat we niet volgen, dan iets wat we wel volgen. Eén
     // verbinding, dus als de tweede verwerkt is, is de eerste dat ook.
     ha.push(shadowEntity('sensor.koelkast_temperatuur', '4.1'));
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.3'));
-    await wachtTot(runner, 2);
-    await runner.historieGereed();
+    await waitUntil(runner, 2);
+    await runner.historySettled();
 
     const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
-    const rijen = (await readFile(join(dir, `history-${day}.ndjson`), 'utf-8'))
+    const rows = (await readFile(join(dir, `history-${day}.ndjson`), 'utf-8'))
       .trim()
       .split('\n')
       .map((l) => JSON.parse(l) as { e: string; s: string });
 
     // De momentopname: de netmeting en de airco's zitten erin.
-    expect(rijen.some((r) => r.e === 'sensor.p1_meter_power')).toBe(true);
-    expect(rijen.some((r) => r.e === 'climate.air_conditioning_zolder')).toBe(true);
+    expect(rows.some((r) => r.e === 'sensor.p1_meter_power')).toBe(true);
+    expect(rows.some((r) => r.e === 'climate.air_conditioning_zolder')).toBe(true);
     // De wijziging daarna.
     expect(
-      rijen.some((r) => r.e === 'sensor.hue_motion_sensor_zolder_temperatuur' && r.s === '25.3'),
+      rows.some((r) => r.e === 'sensor.hue_motion_sensor_zolder_temperatuur' && r.s === '25.3'),
     ).toBe(true);
     // En niets wat de regeling niet leest.
-    expect(rijen.some((r) => r.e === 'sensor.koelkast_temperatuur')).toBe(false);
+    expect(rows.some((r) => r.e === 'sensor.koelkast_temperatuur')).toBe(false);
   });
 });
 
@@ -625,7 +625,7 @@ describe('oude dagen comprimeren (besluit 58)', () => {
     // Twee weken voor de vaste klok van de schaduwtest.
     await writeFile(join(dir, 'decisions-2026-07-01.ndjson'), '{"t":1}\n', 'utf-8');
 
-    const meldingen: string[] = [];
+    const messages: string[] = [];
     const ha = await startFakeHa({ states: shadowStates() });
     cleanups.push(() => ha.close());
     const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
@@ -638,15 +638,15 @@ describe('oude dagen comprimeren (besluit 58)', () => {
       minIntervalSeconds: 0,
       logDir: dir,
       // Bewaren, zodat een mislukte compressie in de foutmelding staat.
-      write: (regel) => meldingen.push(regel),
+      write: (line) => messages.push(line),
       now: () => SHADOW_NOW,
     });
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtOp(
+    await waitFor(
       async () => (await readdir(dir)).includes('decisions-2026-07-01.ndjson.gz'),
-      () => `de gecomprimeerde oude dag; de dienst meldde:\n${meldingen.join('\n')}`,
+      () => `de gecomprimeerde oude dag; de dienst meldde:\n${messages.join('\n')}`,
     );
     expect(await readdir(dir)).not.toContain('decisions-2026-07-01.ndjson');
   });
@@ -674,7 +674,7 @@ describe('loghygiene', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
     /*
      * Drie evaluaties, want sinds besluit 49 komt de rust pas bij de derde.
      *
@@ -688,15 +688,15 @@ describe('loghygiene', () => {
      * opnieuw. Stilstand die op rust leek.
      */
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.1'));
-    await wachtTot(runner, 2);
+    await waitUntil(runner, 2);
     ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.2'));
-    await wachtTot(runner, 3);
+    await waitUntil(runner, 3);
     const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
     // Het derde record moet ook geschreven zijn, en dat gaat na de evaluatie.
-    await wachtOp(async () => {
+    await waitFor(async () => {
       try {
-        const tekst = await readFile(join(dir, `decisions-${day}.ndjson`), 'utf-8');
-        return tekst.trim().split('\n').length >= 3;
+        const text = await readFile(join(dir, `decisions-${day}.ndjson`), 'utf-8');
+        return text.trim().split('\n').length >= 3;
       } catch {
         return false;
       }
@@ -753,7 +753,7 @@ describe('snelheidsbegrenzer', () => {
     // Pas meten na de eerste evaluatie. Een vaste wachttijd haalde onder
     // belasting het verbinden niet, en dan viel die eerste evaluatie ná het
     // nulpunt en telde de test er twee.
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
     const baseline = runner.stats.evaluations;
 
     // Tien meterpulsen kort achter elkaar, zoals de P1 ze levert.
@@ -769,7 +769,7 @@ describe('snelheidsbegrenzer', () => {
 
     // Maar de laatste stand komt er alsnog doorheen zodra het venster opent.
     // Wachten tot het gebeurt, niet een vaste tijd: de bewering is "uiteindelijk".
-    await wachtTot(runner, baseline + 1);
+    await waitUntil(runner, baseline + 1);
     expect(runner.stats.evaluations).toBeGreaterThan(baseline);
   });
 });
@@ -800,12 +800,12 @@ describe('bewaking tegen vastlopen', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
     expect(stalls).toEqual([]);
 
     // De klok springt twee minuten vooruit zonder dat er iets gebeurt.
     clock = SHADOW_NOW + 2 * 60_000;
-    await wachtOp(() => stalls.length > 0, 'een alarm van de bewaking');
+    await waitFor(() => stalls.length > 0, 'een alarm van de bewaking');
     expect(stalls.length).toBeGreaterThan(0);
     expect(stalls[0]).toBeGreaterThan(1);
   });
@@ -889,7 +889,7 @@ describe('de weergave krijgt het besluit', () => {
     cleanups.push(() => ha.close());
 
     const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
-    const gezien: LiveSnapshot[] = [];
+    const seen: LiveSnapshot[] = [];
     const runner = new ShadowRunner({
       config: exampleSite,
       strategies: defaultStrategies(),
@@ -900,22 +900,22 @@ describe('de weergave krijgt het besluit', () => {
       // Zonder logDir: de weergave mag niet afhangen van of er gelogd wordt.
       write: () => {},
       now: () => SHADOW_NOW,
-      onDecision: (snapshot) => gezien.push(snapshot),
+      onDecision: (snapshot) => seen.push(snapshot),
     });
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtOp(() => gezien.length > 0, 'een besluit voor de weergave');
+    await waitFor(() => seen.length > 0, 'een besluit voor de weergave');
 
-    expect(gezien.length).toBeGreaterThan(0);
-    const laatste = gezien[gezien.length - 1]!;
+    expect(seen.length).toBeGreaterThan(0);
+    const last = seen[seen.length - 1]!;
 
     // Wat de weergave krijgt is hetzelfde besluit dat de runner vasthoudt.
-    expect(runner.latest).toEqual(laatste);
+    expect(runner.latest).toEqual(last);
     // En het is compleet genoeg om de pagina mee te vullen.
-    expect(laatste.explanation.perZone.length).toBe(exampleSite.zones.length);
-    expect(Object.keys(laatste.observed).length).toBe(exampleSite.actuators.length);
-    expect(typeof laatste.atMs).toBe('number');
+    expect(last.explanation.perZone.length).toBe(exampleSite.zones.length);
+    expect(Object.keys(last.observed).length).toBe(exampleSite.actuators.length);
+    expect(typeof last.atMs).toBe('number');
   });
 
   it('laat een kapotte weergave de opname niet meeslepen', async () => {
@@ -939,7 +939,7 @@ describe('de weergave krijgt het besluit', () => {
     cleanups.push(() => runner.stop());
 
     runner.start();
-    await wachtTot(runner, 1);
+    await waitUntil(runner, 1);
 
     // De schaduwopname is het product; het venster erop is dat niet.
     expect(runner.stats.evaluations).toBeGreaterThan(0);
@@ -955,18 +955,18 @@ describe('waarnemingen zijn geen invoer voor de regeling', () => {
     // herinnering in plaats van dat het ongemerkt gebeurt.
     //
     // `decide.ts` mag hem aanraken: die zet hem in de uitleg en dus in het log.
-    const kern = new URL('../src/core/', import.meta.url);
-    const bestanden = readdirSync(kern).filter((n) => n.endsWith('.ts'));
-    expect(bestanden.length).toBeGreaterThan(4);
+    const core = new URL('../src/core/', import.meta.url);
+    const files = readdirSync(core).filter((n) => n.endsWith('.ts'));
+    expect(files.length).toBeGreaterThan(4);
 
     // Twee waarnemingen inmiddels: de buitentemperatuur (besluit 30) en de
     // opbrengst van de panelen (besluit 47). Voor allebei geldt hetzelfde.
-    for (const veld of ['outdoorTemperatureC', 'solarProductionW']) {
-      const lezers = bestanden.filter((naam) => {
-        if (naam === 'state.ts' || naam === 'decision.ts' || naam === 'decide.ts') return false;
-        return readFileSync(new URL(naam, kern), 'utf-8').includes(veld);
+    for (const field of ['outdoorTemperatureC', 'solarProductionW']) {
+      const readers = files.filter((name) => {
+        if (name === 'state.ts' || name === 'decision.ts' || name === 'decide.ts') return false;
+        return readFileSync(new URL(name, core), 'utf-8').includes(field);
       });
-      expect(lezers, veld).toEqual([]);
+      expect(readers, field).toEqual([]);
     }
   });
 

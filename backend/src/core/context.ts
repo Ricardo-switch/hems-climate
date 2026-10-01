@@ -29,7 +29,7 @@ export interface ZoneDerived {
    * dat op eigen stroom gehaald wordt. Deze gaat over de grens die comfort
    * desnoods op netstroom verdedigt (besluit 50).
    */
-  readonly bovenComfortplafond: boolean;
+  readonly aboveComfortCeiling: boolean;
 }
 
 export interface DecisionContext {
@@ -131,7 +131,7 @@ function demandOf(
  * Staat de zone boven haar comfortplafond? Zelfde hysterese als de gewone
  * vraag, zodat er niet twee definities van "te warm" naast elkaar bestaan.
  */
-function bovenPlafond(
+function aboveCeiling(
   zone: Zone,
   temperatureC: number | null,
   previous: 'heat' | 'cool' | 'none',
@@ -224,7 +224,7 @@ export function buildContext(
       coolTargetC,
       demand: demandOf(zone, temperatureC, heatTargetC, coolTargetC, previous),
       comfortMaxC: zone.comfortMaxC ?? null,
-      bovenComfortplafond: bovenPlafond(zone, temperatureC, previous),
+      aboveComfortCeiling: aboveCeiling(zone, temperatureC, previous),
     };
   });
 

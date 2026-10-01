@@ -27,29 +27,29 @@ import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
-import { exportInfo, schrijfExport } from './export.js';
+import { exportInfo, writeExport } from './export.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
-export interface Versie {
+export interface Version {
   /** Korte commit-hash, of `onbekend`. */
   readonly commit: string;
   /** Bouwtijd in ISO 8601, of null. */
   readonly gebouwd: string | null;
 }
 
-export const ONBEKENDE_VERSIE: Versie = { commit: 'onbekend', gebouwd: null };
+export const UNKNOWN_VERSION: Version = { commit: 'onbekend', gebouwd: null };
 
 /**
  * Leest de versie uit de omgeving. Het image zet `HEMS_COMMIT` en `HEMS_GEBOUWD`
  * uit bouwargumenten die `deploy.sh` meegeeft; een lege of ontbrekende waarde
  * betekent dat niemand ze meegaf.
  */
-export function versieUitOmgeving(env: NodeJS.ProcessEnv): Versie {
+export function versionFromEnv(env: NodeJS.ProcessEnv): Version {
   const commit = env['HEMS_COMMIT']?.trim();
-  const gebouwd = env['HEMS_GEBOUWD']?.trim();
+  const built = env['HEMS_GEBOUWD']?.trim();
   return {
-    commit: commit && commit !== '' ? commit : ONBEKENDE_VERSIE.commit,
-    gebouwd: gebouwd && gebouwd !== '' ? gebouwd : null,
+    commit: commit && commit !== '' ? commit : UNKNOWN_VERSION.commit,
+    gebouwd: built && built !== '' ? built : null,
   };
 }
 
@@ -96,13 +96,13 @@ export interface WebOptions {
    */
   readonly onboarding?: Onboarding;
   /**
-   * Welke code er draait (besluit 54). Komt uit het image; zie `versieUitOmgeving`.
+   * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
    * Zonder dit moest "draait de nieuwe versie al?" worden afgeleid uit
    * herstarts in het logboek. Weglaten geeft `onbekend`, en dat is ook een
    * antwoord: dan is het image gebouwd zonder dat iemand het zei.
    */
-  readonly versie?: Versie;
+  readonly version?: Version;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -153,15 +153,15 @@ const MAX_BODY = 64 * 1024;
  * het geheugen op is. Dat is hier extra onprettig: het is dezelfde dienst die
  * de opname doet, en die hoort niet om te vallen door een pagina.
  */
-async function leesJson(req: IncomingMessage): Promise<unknown> {
-  const stukken: Buffer[] = [];
+async function readJson(req: IncomingMessage): Promise<unknown> {
+  const pieces: Buffer[] = [];
   let bytes = 0;
-  for await (const stuk of req) {
-    bytes += (stuk as Buffer).length;
+  for await (const piece of req) {
+    bytes += (piece as Buffer).length;
     if (bytes > MAX_BODY) throw new Error('verzoek te groot');
-    stukken.push(stuk as Buffer);
+    pieces.push(piece as Buffer);
   }
-  const text = Buffer.concat(stukken).toString('utf-8');
+  const text = Buffer.concat(pieces).toString('utf-8');
   try {
     return JSON.parse(text);
   } catch {
@@ -193,7 +193,7 @@ async function sendFile(
   webDir: string,
   pathname: string,
   headOnly: boolean,
-  sinds: string | undefined,
+  since: string | undefined,
 ): Promise<boolean> {
   const relative = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
   const full = resolve(webDir, relative);
@@ -221,9 +221,9 @@ async function sendFile(
    * `last-modified` kost een ongewijzigd bestand een leeg 304-antwoord in
    * plaats van tien kilobyte, en klopt de pagina altijd.
    */
-  const gewijzigd = info.mtime.toUTCString();
-  if (sinds != null && sinds === gewijzigd) {
-    res.writeHead(304, { 'cache-control': 'no-cache', 'last-modified': gewijzigd });
+  const changed = info.mtime.toUTCString();
+  if (since != null && since === changed) {
+    res.writeHead(304, { 'cache-control': 'no-cache', 'last-modified': changed });
     res.end();
     return true;
   }
@@ -232,7 +232,7 @@ async function sendFile(
     'content-type': MIME[extname(full).toLowerCase()] ?? 'application/octet-stream',
     'content-length': info.size,
     'cache-control': 'no-cache',
-    'last-modified': gewijzigd,
+    'last-modified': changed,
   });
   if (headOnly) {
     res.end();
@@ -286,10 +286,10 @@ export class WebServer {
      * muur: elke andere methode krijgt 405 vóór de routering, zodat een nieuwe
      * route hem niet per ongeluk kan omzeilen.
      */
-    const magSchrijven = this.#options.onboarding != null && path === '/api/onboarding';
-    if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && magSchrijven)) {
+    const mayWrite = this.#options.onboarding != null && path === '/api/onboarding';
+    if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
       res.writeHead(405, {
-        allow: magSchrijven ? 'GET, HEAD, POST' : 'GET, HEAD',
+        allow: mayWrite ? 'GET, HEAD, POST' : 'GET, HEAD',
         'content-type': 'text/plain; charset=utf-8',
       });
       res.end('Deze weergave leest alleen.\n');
@@ -380,7 +380,7 @@ export class WebServer {
         res.end();
         return;
       }
-      await schrijfExport(logDir, res);
+      await writeExport(logDir, res);
       return;
     }
 
@@ -388,7 +388,7 @@ export class WebServer {
       const snapshot = this.#options.latest();
       sendJson(res, 200, {
         ok: true,
-        versie: this.#options.versie ?? ONBEKENDE_VERSIE,
+        versie: this.#options.version ?? UNKNOWN_VERSION,
         laatsteBesluitMs: snapshot?.atMs ?? null,
         analyseBerekendOpMs: this.#options.divergence?.()?.berekendOpMs ?? null,
         kijkers: this.#listeners.size,
@@ -398,14 +398,14 @@ export class WebServer {
 
     const headOnly = method === 'HEAD';
     const target = path === '/' ? 'index.html' : path;
-    const sinds = req.headers['if-modified-since'];
+    const since = req.headers['if-modified-since'];
     if (
       await sendFile(
         res,
         this.#options.webDir,
         target,
         headOnly,
-        typeof sinds === 'string' ? sinds : undefined,
+        typeof since === 'string' ? since : undefined,
       )
     ) {
       return;
@@ -435,13 +435,13 @@ export class WebServer {
 
     if (method === 'GET' || method === 'HEAD') {
       try {
-        const [voorstel, bestaande] = await Promise.all([
-          onboarding.voorstel(),
-          onboarding.bestaande(),
+        const [proposal, existing] = await Promise.all([
+          onboarding.proposal(),
+          onboarding.existing(),
         ]);
         // `bestaande` erbij, zodat de pagina kan zeggen dat er al iets staat
         // vóórdat iemand op een knop drukt die toch zou weigeren.
-        sendJson(res, 200, { ...voorstel, bestaande });
+        sendJson(res, 200, { ...proposal, bestaande: existing });
       } catch (error) {
         // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
         // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen
@@ -453,31 +453,31 @@ export class WebServer {
 
     let body: unknown;
     try {
-      body = await leesJson(req);
+      body = await readJson(req);
     } catch (error) {
       sendJson(res, 400, { fout: (error as Error).message });
       return;
     }
 
-    const antwoorden =
+    const answers =
       typeof body === 'object' && body != null && 'antwoorden' in body
         ? (body as { antwoorden: unknown }).antwoorden
         : null;
-    if (typeof antwoorden !== 'object' || antwoorden == null || Array.isArray(antwoorden)) {
+    if (typeof answers !== 'object' || answers == null || Array.isArray(answers)) {
       sendJson(res, 400, { fout: 'verwacht een object met veld "antwoorden"' });
       return;
     }
 
-    const schoon: Record<string, string | null> = {};
-    for (const [k, v] of Object.entries(antwoorden as Record<string, unknown>)) {
-      if (v == null) schoon[k] = null;
-      else if (typeof v === 'string') schoon[k] = v;
-      // Al het andere valt weg. `pasKeuzesToe` weigert wat niet in de
+    const clean: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(answers as Record<string, unknown>)) {
+      if (v == null) clean[k] = null;
+      else if (typeof v === 'string') clean[k] = v;
+      // Al het andere valt weg. `applyChoices` weigert wat niet in de
       // keuzelijst stond, dus dit is de tweede zeef en niet de enige.
     }
 
-    const resultaat = await onboarding.opslaan(schoon);
-    sendJson(res, resultaat.ok ? 200 : 422, resultaat);
+    const result = await onboarding.save(clean);
+    sendJson(res, result.ok ? 200 : 422, result);
   }
 
   /**

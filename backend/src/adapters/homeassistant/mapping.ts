@@ -9,14 +9,14 @@
  * In fase 4 levert de onboarding ze aan; de vorm blijft dezelfde.
  */
 
-import type { DeviceRef, Meetpunt, Mode, SiteConfig, Zone } from '../../core/model.js';
+import type { DeviceRef, MeasurementPoint, Mode, SiteConfig, Zone } from '../../core/model.js';
 import type { ActuatorState, SystemState, TimerId, TimerState } from '../../core/state.js';
 import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
 import type { OwnStateReader } from '../own-state.js';
 import { NEUTRAL_OWN_STATE } from '../own-state.js';
-import type { SchaduwApparatenReader } from '../shadow-actuators.js';
-import { GEEN_SCHADUW } from '../shadow-actuators.js';
+import type { ShadowActuatorReader } from '../shadow-actuators.js';
+import { NO_SHADOW } from '../shadow-actuators.js';
 import type { EntitySource } from './source.js';
 
 /**
@@ -39,7 +39,7 @@ interface ActuatorBinding {
   readonly standby: { heat: number; cool: number } | null;
 }
 
-function bindingsVan(config: SiteConfig): ActuatorBinding[] {
+function bindingsOf(config: SiteConfig): ActuatorBinding[] {
   return config.actuators.map((a) => ({
     actuatorId: a.id,
     climateEntity: a.ref.id,
@@ -88,10 +88,10 @@ export function mapAction(
  * niet als losse `sensor.`-entiteit. Zonder dit kon zo'n kamer geen zone
  * worden (besluit 41).
  */
-function lees(source: EntitySource, punt: Meetpunt): number | null {
-  return punt.attribute == null
-    ? source.number(punt.id)
-    : source.attrNumber(punt.id, punt.attribute);
+function readPoint(source: EntitySource, point: MeasurementPoint): number | null {
+  return point.attribute == null
+    ? source.number(point.id)
+    : source.attrNumber(point.id, point.attribute);
 }
 
 function timerAt(source: EntitySource, entityId: string): TimerState {
@@ -109,21 +109,21 @@ function timerAt(source: EntitySource, entityId: string): TimerState {
  * stabilisatietimer in Home Assistant heeft staan niet ineens ook de andere
  * daar moet hebben.
  */
-function timerVan(
+function timerOf(
   config: SiteConfig,
   source: EntitySource,
-  eigen: OwnStateReader,
+  own: OwnStateReader,
   id: TimerId,
 ): TimerState {
   const ref = config.timers?.[id];
-  return ref ? timerAt(source, ref.id) : eigen.timer(id);
+  return ref ? timerAt(source, ref.id) : own.timer(id);
 }
 
-function modusVan(config: SiteConfig, source: EntitySource, eigen: OwnStateReader): Mode | null {
-  if (!config.mode) return eigen.modeOverride();
+function modeOf(config: SiteConfig, source: EntitySource, own: OwnStateReader): Mode | null {
+  if (!config.mode) return own.modeOverride();
 
   const handsOff = config.mode.handsOffWhen.some(
-    (knop) => source.state(knop.ref.id) === knop.state,
+    (button) => source.state(button.ref.id) === button.state,
   );
   if (handsOff) return 'handmatig';
 
@@ -142,20 +142,20 @@ export function buildSystemState(
    * Home Assistant-bron voor noemt. Weggelaten betekent: automatisch, geen
    * timer loopt — wat de replay-harness van een oude opname wil.
    */
-  eigen: OwnStateReader = NEUTRAL_OWN_STATE,
+  own: OwnStateReader = NEUTRAL_OWN_STATE,
   /**
    * Wat de apparaten zouden doen als de arbiter het stuur had. Weggelaten
    * betekent: neem het echte apparaat, wat juist is zodra er werkelijk
    * geschakeld wordt. Zie `shadow-actuators.ts` (besluit 49).
    */
-  schaduw: SchaduwApparatenReader = GEEN_SCHADUW,
+  shadow: ShadowActuatorReader = NO_SHADOW,
 ): SystemState {
   const actuators: Record<string, ActuatorState> = {};
   // Wat de échte apparaten opnemen, en of de schaduw ergens van de
   // werkelijkheid afwijkt. Zie `PowerState.observedDrawW` (besluit 49b).
-  let echtVerbruikW = 0;
-  let veronderstelling = false;
-  for (const b of bindingsVan(config)) {
+  let actualDrawW = 0;
+  let assumption = false;
+  for (const b of bindingsOf(config)) {
     const haState = source.state(b.climateEntity) ?? 'unavailable';
     const setpointC = source.attrNumber(b.climateEntity, 'temperature');
     const powerW = b.powerEntity == null ? null : source.number(b.powerEntity);
@@ -168,16 +168,16 @@ export function buildSystemState(
         ? unavailable<boolean>('missing')
         : value(hvac === 'heating' || hvac === 'cooling', nowMs);
 
-    const echteActie = mapAction(haState, setpointC, b.standby);
-    const eigenStand = schaduw.apparaat(b.actuatorId);
-    if (eigenStand != null) veronderstelling = true;
+    const actualAction = mapAction(haState, setpointC, b.standby);
+    const ownState = shadow.actuator(b.actuatorId);
+    if (ownState != null) assumption = true;
 
     // Dezelfde regel als `reclaimableW` in de kern: een draaiend apparaat telt
     // met zijn meting, en zonder meting met zijn schatting.
-    const echtDraait =
-      echteActie.ok && (echteActie.value === 'heat' || echteActie.value === 'cool');
-    if (echtDraait) {
-      echtVerbruikW +=
+    const actuallyRunning =
+      actualAction.ok && (actualAction.value === 'heat' || actualAction.value === 'cool');
+    if (actuallyRunning) {
+      actualDrawW +=
         powerW ?? config.actuators.find((a) => a.id === b.actuatorId)!.power.estimatedW;
     }
 
@@ -191,23 +191,23 @@ export function buildSystemState(
      * dan verkeerd melden, en dan valt `claimW` terug op `estimatedW`, precies
      * waar die schatting voor bedoeld is.
      */
-    const meetOnsApparaat =
-      eigenStand?.action == null ||
-      (echteActie.ok && echteActie.value === eigenStand.action);
+    const measureOurActuator =
+      ownState?.action == null ||
+      (actualAction.ok && actualAction.value === ownState.action);
 
     actuators[b.actuatorId] = {
-      action: eigenStand?.action != null ? value(eigenStand.action, nowMs) : echteActie,
+      action: ownState?.action != null ? value(ownState.action, nowMs) : actualAction,
       setpointC:
-        eigenStand?.setpointC != null
-          ? value(eigenStand.setpointC, nowMs)
+        ownState?.setpointC != null
+          ? value(ownState.setpointC, nowMs)
           : setpointC == null
             ? unavailable<number>()
             : value(setpointC, nowMs),
       powerW:
-        powerW == null || !meetOnsApparaat
+        powerW == null || !measureOurActuator
           ? unavailable<number>('missing')
           : value(powerW, nowMs),
-      lastChangeMs: eigenStand?.lastChangeMs ?? source.changedAt(b.climateEntity),
+      lastChangeMs: ownState?.lastChangeMs ?? source.changedAt(b.climateEntity),
       producing,
       producingSinceMs:
         producing.ok && producing.value ? source.hvacActionSince(b.climateEntity) : null,
@@ -216,11 +216,11 @@ export function buildSystemState(
 
   const zones: SystemState['zones'] = Object.fromEntries(
     config.zones.map((zone) => {
-      const t = lees(source, zone.temperature);
+      const t = readPoint(source, zone.temperature);
       // Luchtvochtigheid is waarneming en geen invoer, net als de
       // buitentemperatuur (besluit 30). Hij stond al in de filter — en lokte
       // dus herberekeningen uit — terwijl niemand hem uitlas.
-      const h = zone.humidity == null ? null : lees(source, zone.humidity);
+      const h = zone.humidity == null ? null : readPoint(source, zone.humidity);
       return [
         zone.id,
         {
@@ -234,9 +234,9 @@ export function buildSystemState(
   );
 
   const occupancy: SystemState['occupancy'] = Object.fromEntries(
-    config.occupancy.map((bewoner) => {
-      const b = source.bool(bewoner.ref.id);
-      return [bewoner.id, b == null ? unavailable<boolean>() : value(b, nowMs)];
+    config.occupancy.map((resident) => {
+      const b = source.bool(resident.ref.id);
+      return [resident.id, b == null ? unavailable<boolean>() : value(b, nowMs)];
     }),
   );
 
@@ -255,9 +255,9 @@ export function buildSystemState(
   const grid =
     config.power.gridPower == null ? null : source.number(config.power.gridPower.id);
   const sun = config.sun == null ? null : source.bool(config.sun.id);
-  const buiten =
+  const outdoor =
     config.outdoorTemperature == null ? null : source.number(config.outdoorTemperature.id);
-  const zonW = config.solarProduction == null ? null : lees(source, config.solarProduction);
+  const solarW = config.solarProduction == null ? null : readPoint(source, config.solarProduction);
 
   /*
    * De modus komt uit twee soorten knoppen, en de volgorde is niet vrijblijvend.
@@ -271,7 +271,7 @@ export function buildSystemState(
    * Dat is de stand bij een verse installatie: daar bestaat geen
    * `input_select`, en er een aanmaken zou schrijven zijn (besluit 15).
    */
-  const modeOverride = modusVan(config, source, eigen);
+  const modeOverride = modeOf(config, source, own);
 
   return {
     nowMs,
@@ -284,21 +284,21 @@ export function buildSystemState(
       // Alleen wanneer de schaduw iets veronderstelt. Zonder schaduw volgt het
       // verbruik uit de apparaten zelf, en rekent de kern het precies zo uit als
       // altijd — dat houdt de replay bit-identiek.
-      ...(veronderstelling ? { observedDrawW: echtVerbruikW } : {}),
+      ...(assumption ? { observedDrawW: actualDrawW } : {}),
     },
     timers: {
-      stabilisation: timerVan(config, source, eigen, 'stabilisation'),
-      manualOverride: timerVan(config, source, eigen, 'manualOverride'),
+      stabilisation: timerOf(config, source, own, 'stabilisation'),
+      manualOverride: timerOf(config, source, own, 'manualOverride'),
     },
     lights,
     sunAboveHorizon: sun == null ? unavailable<boolean>() : value(sun, nowMs),
     // Waarneming, geen invoer voor de regeling (besluit 30). Ontbreekt de
     // sensor in de configuratie, dan blijft dit `unavailable` en gaat er null
     // het logboek in — een lege kolom is eerlijker dan een verzonnen waarde.
-    outdoorTemperatureC: buiten == null ? unavailable<number>('missing') : value(buiten, nowMs),
+    outdoorTemperatureC: outdoor == null ? unavailable<number>('missing') : value(outdoor, nowMs),
     // Ook waarneming (besluit 47). Zonder panelen of zonder sensor blijft dit
     // leeg, en gaat er null het logboek in.
-    solarProductionW: zonW == null ? unavailable<number>('missing') : value(zonW, nowMs),
+    solarProductionW: solarW == null ? unavailable<number>('missing') : value(solarW, nowMs),
     inputHealth,
   };
 }
@@ -309,8 +309,8 @@ export function buildSystemState(
  * regelen dan het oude systeem, en zegt de vergelijking niets.
  */
 export function configFrom(base: SiteConfig, source: EntitySource): SiteConfig {
-  const bron = base.migration;
-  if (!bron?.setpoints && !bron?.power) return base;
+  const migration = base.migration;
+  if (!migration?.setpoints && !migration?.power) return base;
 
   /*
    * De terugval is de configuratie zelf, niet een vast getal.
@@ -322,19 +322,19 @@ export function configFrom(base: SiteConfig, source: EntitySource): SiteConfig {
    * zegt" het juiste antwoord; een los getal in de vertaling was dat nooit.
    */
   const zones: Zone[] = base.zones.map((zone) => {
-    const perModus = bron.setpoints?.[zone.id];
-    if (!perModus) return zone;
+    const perMode = migration.setpoints?.[zone.id];
+    if (!perMode) return zone;
 
     const setpoints = { ...zone.setpoints };
-    for (const [modus, richtingen] of Object.entries(perModus)) {
-      const m = modus as Mode;
-      const huidig = setpoints[m] ?? {};
+    for (const [mode, directions] of Object.entries(perMode)) {
+      const m = mode as Mode;
+      const current = setpoints[m] ?? {};
       const heat =
-        richtingen.heat == null ? huidig.heat : (source.number(richtingen.heat.id) ?? huidig.heat);
+        directions.heat == null ? current.heat : (source.number(directions.heat.id) ?? current.heat);
       const cool =
-        richtingen.cool == null ? huidig.cool : (source.number(richtingen.cool.id) ?? huidig.cool);
+        directions.cool == null ? current.cool : (source.number(directions.cool.id) ?? current.cool);
       setpoints[m] = {
-        ...huidig,
+        ...current,
         ...(heat != null ? { heat } : {}),
         ...(cool != null ? { cool } : {}),
       };
@@ -342,16 +342,16 @@ export function configFrom(base: SiteConfig, source: EntitySource): SiteConfig {
     return { ...zone, setpoints };
   });
 
-  const drempel = (ref: DeviceRef | undefined, terugval: number): number =>
-    ref == null ? terugval : (source.number(ref.id) ?? terugval);
+  const threshold = (ref: DeviceRef | undefined, fallback: number): number =>
+    ref == null ? fallback : (source.number(ref.id) ?? fallback);
 
   return {
     ...base,
     zones,
     power: {
       ...base.power,
-      startSurplusW: drempel(bron.power?.startSurplusW, base.power.startSurplusW),
-      stopImportW: drempel(bron.power?.stopImportW, base.power.stopImportW),
+      startSurplusW: threshold(migration.power?.startSurplusW, base.power.startSurplusW),
+      stopImportW: threshold(migration.power?.stopImportW, base.power.stopImportW),
     },
   };
 }
@@ -378,7 +378,7 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   // zelf bijhoudt heeft geen entiteit om op te wachten.
   if (config.mode) {
     ids.add(config.mode.select.id);
-    for (const knop of config.mode.handsOffWhen) ids.add(knop.ref.id);
+    for (const button of config.mode.handsOffWhen) ids.add(button.ref.id);
   }
   if (config.timers?.stabilisation) ids.add(config.timers.stabilisation.id);
   if (config.timers?.manualOverride) ids.add(config.timers.manualOverride.id);
@@ -400,10 +400,10 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   // De helpers van het oude systeem, zolang de migratie loopt. `configFrom`
   // leest ze uit; zonder ze in de filter zou een gewijzigd setpoint pas bij de
   // volgende hartslag doorkomen.
-  for (const perModus of Object.values(config.migration?.setpoints ?? {})) {
-    for (const richtingen of Object.values(perModus)) {
-      if (richtingen.heat) ids.add(richtingen.heat.id);
-      if (richtingen.cool) ids.add(richtingen.cool.id);
+  for (const perMode of Object.values(config.migration?.setpoints ?? {})) {
+    for (const directions of Object.values(perMode)) {
+      if (directions.heat) ids.add(directions.heat.id);
+      if (directions.cool) ids.add(directions.cool.id);
     }
   }
   const mPower = config.migration?.power;

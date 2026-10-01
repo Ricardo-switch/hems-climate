@@ -39,19 +39,19 @@ export const comfort: Strategy = {
        * niet het koeldoel — hij zorgt dat het niet warmer wordt, hij koelt niet
        * door naar het doel. Dat is het verschil dat de rekening bepaalt.
        */
-      const primaryKanKoelen = zone.actuatorIds.some((id) => {
+      const primaryCanCool = zone.actuatorIds.some((id) => {
         const a = actuatorById(ctx.config, id);
         return a.role === 'primary' && a.capabilities.canCool;
       });
-      if (derived.bovenComfortplafond && !primaryKanKoelen && derived.comfortMaxC != null) {
-        const koeler = zone.actuatorIds.find(
+      if (derived.aboveComfortCeiling && !primaryCanCool && derived.comfortMaxC != null) {
+        const cooler = zone.actuatorIds.find(
           (id) => actuatorById(ctx.config, id).capabilities.canCool,
         );
-        if (koeler != null) {
+        if (cooler != null) {
           intents.push({
             strategyId: comfort.id,
             zoneId: zone.id,
-            actuatorId: koeler,
+            actuatorId: cooler,
             action: 'cool',
             setpointC: derived.comfortMaxC,
             priority: comfort.priority,

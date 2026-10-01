@@ -17,11 +17,11 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
-import { haalRegisters } from './adapters/homeassistant/discovery.js';
+import { fetchRegistries } from './adapters/homeassistant/discovery.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
-import { WebServer, defaultWebDir, versieUitOmgeving } from './web/server.js';
-import { leesOpstart } from './opstart.js';
+import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
+import { readStartup } from './startup.js';
 import { DivergenceCache } from './web/divergence.js';
 import { Onboarding } from './web/onboarding.js';
 
@@ -123,11 +123,11 @@ function fail(problems: readonly string[]): never {
  */
 if (process.argv.includes('--make-winter')) {
   const i = process.argv.indexOf('--make-winter');
-  const dagen = Number(process.argv[i + 1] ?? 180);
-  const bron = resolve(process.argv[i + 2] ?? process.env['SHADOW_LOG_DIR'] ?? 'data/shadow');
-  const doel = resolve(process.argv[i + 3] ?? 'data/bench');
+  const days = Number(process.argv[i + 1] ?? 180);
+  const source = resolve(process.argv[i + 2] ?? process.env['SHADOW_LOG_DIR'] ?? 'data/shadow');
+  const target = resolve(process.argv[i + 3] ?? 'data/bench');
   const { makeWinter } = await import('./web/makeWinter.js');
-  process.exit(await makeWinter(dagen, bron, doel));
+  process.exit(await makeWinter(days, source, target));
 }
 
 if (process.argv.includes('--benchmark')) {
@@ -161,14 +161,14 @@ if (process.argv.includes('--check-config')) {
  * (besluit 55): add-on of niet, de verbinding, de weergave, de schrijfdeur en
  * de tijden. Hier wordt alleen nog uitgevoerd.
  */
-const opstart = leesOpstart(process.env);
-const { alsAddon } = opstart;
-const { url, token } = opstart.ha;
-if (opstart.haProblemen.length > 0) fail(opstart.haProblemen);
-if (opstart.fouten.length > 0) {
+const startup = readStartup(process.env);
+const { asAddon } = startup;
+const { url, token } = startup.ha;
+if (startup.haProblems.length > 0) fail(startup.haProblems);
+if (startup.errors.length > 0) {
   console.error('Kan de schaduwmodus niet starten:');
   console.error('');
-  for (const fout of opstart.fouten) console.error(`  ${fout}`);
+  for (const error of startup.errors) console.error(`  ${error}`);
   process.exit(1);
 }
 
@@ -198,7 +198,7 @@ function tokenComplaint(token: string): string | null {
   return null;
 }
 
-const complaint = alsAddon ? null : tokenComplaint(token!);
+const complaint = asAddon ? null : tokenComplaint(token!);
 if (complaint) {
   console.error('Het token in HA_TOKEN klopt niet:');
   console.error(`  ${complaint}.`);
@@ -226,12 +226,12 @@ if (complaint) {
 if (process.argv.includes('--discover')) {
   const i = process.argv.indexOf('--discover');
   const arg = process.argv[i + 1];
-  const doel = arg != null && !arg.startsWith('--') ? resolve(arg) : null;
+  const target = arg != null && !arg.startsWith('--') ? resolve(arg) : null;
   const { discoverCli } = await import('./adapters/homeassistant/discoverCli.js');
-  process.exit(await discoverCli({ url: url!, token: token!, doel }));
+  process.exit(await discoverCli({ url: url!, token: token!, target }));
 }
 
-const { tickSeconds, logDir } = opstart;
+const { tickSeconds, logDir } = startup;
 
 /*
  * De webweergave staat standaard uit.
@@ -241,8 +241,8 @@ const { tickSeconds, logDir } = opstart;
  * starten. De compose op de NAS zet de poort; een losse `npm run shadow`
  * blijft dicht.
  */
-const webPort = opstart.web.poort;
-const webDir = opstart.web.dir ?? defaultWebDir(packageRoot);
+const webPort = startup.web.port;
+const webDir = startup.web.dir ?? defaultWebDir(packageRoot);
 
 const strategies = defaultStrategies();
 
@@ -252,8 +252,8 @@ const strategies = defaultStrategies();
 let site;
 try {
   site = await loadSiteConfig({
-    explicitPath: opstart.configPad ?? undefined,
-    siteId: opstart.siteId ?? undefined,
+    explicitPath: startup.configPath ?? undefined,
+    siteId: startup.siteId ?? undefined,
     knownStrategies: strategies.ids,
   });
 } catch (error) {
@@ -270,7 +270,7 @@ try {
    * Zonder die zekerheid is een pagina die configuratie wegschrijft iets wat
    * je niet aan je netwerk hangt (besluit 42).
    */
-  if (error instanceof ConfigError && error.soort === 'ontbreekt' && opstart.onboarding.aan) {
+  if (error instanceof ConfigError && error.kind === 'ontbreekt' && startup.onboarding.enabled) {
     console.log('─'.repeat(64));
     console.log('  NOG GEEN INSTALLATIE INGESTELD');
     console.log('─'.repeat(64));
@@ -306,9 +306,9 @@ let web: WebServer | null = null;
  * Eén extra luisteraar op hetzelfde `ready`-signaal kost niets en werkt in
  * beide standen hetzelfde.
  */
-let laatsteStates: readonly HaEntityState[] = [];
+let lastStates: readonly HaEntityState[] = [];
 client.on('ready', (states: HaEntityState[]) => {
-  laatsteStates = states;
+  lastStates = states;
 });
 
 const runner =
@@ -319,8 +319,8 @@ const runner =
         strategies,
         client,
         tickSeconds,
-        minIntervalSeconds: opstart.minIntervalSeconds,
-        watchdogMinutes: opstart.watchdogMinutes,
+        minIntervalSeconds: startup.minIntervalSeconds,
+        watchdogMinutes: startup.watchdogMinutes,
         logDir,
         ...(webPort == null
           ? {}
@@ -350,17 +350,17 @@ const analyse = webPort == null || logDir === '' ? null : new DivergenceCache({ 
  * Wie hem aanzet zonder inlog ervoor, zet een pagina op zijn netwerk die
  * bestanden wegschrijft. Vandaar de waarschuwing bij het starten.
  */
-if (opstart.onboarding.zonderIngress) {
+if (startup.onboarding.withoutIngress) {
   console.warn('LET OP: de onboarding staat aan zonder Ingress ervoor.');
   console.warn('  Deze weergave heeft geen inlog. Doe dit alleen op een machine');
   console.warn('  waar je zelf bij bent, en zet HEMS_ONBOARDING daarna weer uit.');
 }
 
 const onboarding =
-  opstart.onboarding.aan
+  startup.onboarding.enabled
     ? new Onboarding({
-        registers: () => haalRegisters(client, laatsteStates),
-        sitesDir: opstart.sitesDir ?? join(process.cwd(), 'config', 'sites'),
+        registers: () => fetchRegistries(client, lastStates),
+        sitesDir: startup.sitesDir ?? join(process.cwd(), 'config', 'sites'),
         knownStrategies: strategies.ids,
       })
     : null;
@@ -368,7 +368,7 @@ const onboarding =
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
-    host: opstart.web.host,
+    host: startup.web.host,
     webDir,
     config: site?.config ?? null,
     latest: () => runner?.latest ?? null,
@@ -376,7 +376,7 @@ if (webPort != null) {
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
-    versie: versieUitOmgeving(process.env),
+    version: versionFromEnv(process.env),
   });
 }
 
@@ -384,7 +384,7 @@ console.log('─'.repeat(64));
 console.log('  SCHADUWMODUS — de arbiter denkt mee, maar schakelt niets');
 console.log('─'.repeat(64));
 console.log(
-  `  Home Assistant   ${url}${alsAddon ? '  (via de Supervisor, geen eigen token)' : ''}`,
+  `  Home Assistant   ${url}${asAddon ? '  (via de Supervisor, geen eigen token)' : ''}`,
 );
 console.log(`  configuratie     ${site?.source ?? 'nog geen — wachtend op de onboarding'}`);
 if (site) {
@@ -394,9 +394,9 @@ if (site) {
 }
 console.log(`  instellingen     ${loadedFrom ?? 'uit de omgeving'}`);
 console.log(`  hartslag         ${tickSeconds} s`);
-console.log(`  min. interval    ${opstart.minIntervalSeconds} s tussen twee evaluaties`);
+console.log(`  min. interval    ${startup.minIntervalSeconds} s tussen twee evaluaties`);
 console.log(
-  `  bewaking         ${opstart.watchdogMinutes > 0 ? `afsluiten na ${opstart.watchdogMinutes} min zonder besluit` : 'uit'}`,
+  `  bewaking         ${startup.watchdogMinutes > 0 ? `afsluiten na ${startup.watchdogMinutes} min zonder besluit` : 'uit'}`,
 );
 console.log(`  logboek          ${logDir}/decisions-JJJJ-MM-DD.ndjson`);
 console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : 'uit'}`);

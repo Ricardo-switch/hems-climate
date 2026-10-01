@@ -18,7 +18,7 @@ import { EventEmitter } from 'node:events';
  * staat erbij omdat daar de tijdzone in zit — het enige veld dat de
  * configuratie echt nodig heeft en dat nergens anders te halen is.
  */
-const LEESOPDRACHTEN: ReadonlySet<string> = new Set([
+const READ_COMMANDS: ReadonlySet<string> = new Set([
   'get_config',
   'config/area_registry/list',
   'config/device_registry/list',
@@ -281,10 +281,10 @@ export class HaClient extends EventEmitter {
    * kan. Wie hier iets wil toevoegen, voegt het bewust toe.
    */
   async query<T>(type: string): Promise<T> {
-    if (!LEESOPDRACHTEN.has(type)) {
+    if (!READ_COMMANDS.has(type)) {
       throw new Error(
         `"${type}" staat niet op de lijst van leesopdrachten. ` +
-          `Toegestaan zijn: ${[...LEESOPDRACHTEN].join(', ')}.`,
+          `Toegestaan zijn: ${[...READ_COMMANDS].join(', ')}.`,
       );
     }
     return (await this.#command({ type })) as T;

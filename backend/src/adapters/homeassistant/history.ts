@@ -41,37 +41,37 @@ import {
 import type { HaEntityState } from './client.js';
 
 /** Eén toestand uit Home Assistant als datasetregel, of null als hij onleesbaar is. */
-export function naarRij(s: HaEntityState): DatasetRow | null {
+export function toRow(s: HaEntityState): DatasetRow | null {
   const t = Date.parse(s.last_updated);
   if (!Number.isFinite(t)) return null;
 
   const a: Partial<Record<KeptAttribute, string | number | null>> = {};
-  let bewaard = false;
+  let kept = false;
   for (const k of KEPT_ATTRIBUTES) {
     if (!(k in s.attributes)) continue;
     const v = s.attributes[k];
     if (typeof v === 'string' || typeof v === 'number' || v === null) {
       a[k] = v;
-      bewaard = true;
+      kept = true;
     }
   }
-  return { t, e: s.entity_id, s: s.state, ...(bewaard ? { a } : {}) };
+  return { t, e: s.entity_id, s: s.state, ...(kept ? { a } : {}) };
 }
 
-export class Historieschrijver {
+export class HistoryWriter {
   readonly #map: string;
-  readonly #nu: () => number;
-  readonly #fout: (error: unknown) => void;
+  readonly #now: () => number;
+  readonly #onError: (error: unknown) => void;
   /**
    * Alles achter elkaar. `appendFile` garandeert geen volgorde tussen
    * gelijktijdige aanroepen, en een event-handler wacht niet.
    */
-  #rij: Promise<void> = Promise.resolve();
+  #queue: Promise<void> = Promise.resolve();
 
-  constructor(map: string, nu: () => number, fout: (error: unknown) => void) {
+  constructor(map: string, now: () => number, error: (error: unknown) => void) {
     this.#map = map;
-    this.#nu = nu;
-    this.#fout = fout;
+    this.#now = now;
+    this.#onError = error;
   }
 
   /**
@@ -79,26 +79,26 @@ export class Historieschrijver {
    * wordt vanuit een event-handler aangeroepen, en een trage schijf hoort de
    * regeling niet op te houden. Een fout gaat naar `fout` en breekt de rij niet.
    */
-  vastleggen(states: readonly HaEntityState[]): void {
-    const regels = states
-      .map(naarRij)
+  record(states: readonly HaEntityState[]): void {
+    const lines = states
+      .map(toRow)
       .filter((r): r is DatasetRow => r != null)
       .map((r) => `${JSON.stringify(r)}\n`)
       .join('');
-    if (regels === '') return;
+    if (lines === '') return;
 
-    const dag = new Date(this.#nu()).toISOString().slice(0, 10);
-    const bestand = join(this.#map, `history-${dag}.ndjson`);
-    this.#rij = this.#rij
+    const day = new Date(this.#now()).toISOString().slice(0, 10);
+    const file = join(this.#map, `history-${day}.ndjson`);
+    this.#queue = this.#queue
       .then(async () => {
         await mkdir(this.#map, { recursive: true });
-        await appendFile(bestand, regels, 'utf-8');
+        await appendFile(file, lines, 'utf-8');
       })
-      .catch((error: unknown) => this.#fout(error));
+      .catch((error: unknown) => this.#onError(error));
   }
 
   /** Belooft dat alles tot nu toe op schijf staat. Voor afsluiten en tests. */
-  gereed(): Promise<void> {
-    return this.#rij;
+  settled(): Promise<void> {
+    return this.#queue;
   }
 }

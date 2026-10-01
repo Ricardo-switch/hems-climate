@@ -6,7 +6,7 @@
  * de schaduwboekhouding of de configuratie die het gedrag raakt, maakt deze test
  * rood — ook als alle andere tests groen blijven.
  *
- * Rood en het was de bedoeling? `npm run replay:vastleggen`, en de diff van het
+ * Rood en het was de bedoeling? `npm run replay:record`, en de diff van het
  * verwachte bestand gaat mee in de commit. Rood en het was níet de bedoeling?
  * Dan is dit precies waarvoor de test er staat.
  */
@@ -18,29 +18,29 @@ import { describe, expect, it } from 'vitest';
 
 import { exampleSite } from './site.js';
 import { loadHistory } from '../src/replay/reconstruct.js';
-import { speelAf, type Samenvatting } from '../src/replay/golden.js';
+import { playBack, type Summary } from '../src/replay/golden.js';
 
-const DAG = fileURLToPath(new URL('./fixtures/replay-2026-08-26.ndjson.gz', import.meta.url));
-const VERWACHT = new URL('./fixtures/replay-2026-08-26.verwacht.json', import.meta.url);
+const DAY = fileURLToPath(new URL('./fixtures/replay-2026-08-26.ndjson.gz', import.meta.url));
+const EXPECTED = new URL('./fixtures/replay-2026-08-26.expected.json', import.meta.url);
 
 describe('de vaste replay', () => {
   it('beslist over 26 augustus precies zoals vastgelegd', async () => {
-    const werkelijk = speelAf(await loadHistory(DAG), exampleSite);
-    const verwacht = JSON.parse(readFileSync(VERWACHT, 'utf-8')) as Samenvatting;
+    const actual = playBack(await loadHistory(DAY), exampleSite);
+    const expected = JSON.parse(readFileSync(EXPECTED, 'utf-8')) as Summary;
 
     // Eerst de tellingen: die geven bij een afwijking het snelste beeld.
-    expect(werkelijk.minuten).toBe(1440);
-    expect(werkelijk.blokkades).toEqual(verwacht.blokkades);
-    expect(werkelijk.aanvaard).toEqual(verwacht.aanvaard);
+    expect(actual.minuten).toBe(1440);
+    expect(actual.blokkades).toEqual(expected.blokkades);
+    expect(actual.aanvaard).toEqual(expected.aanvaard);
     // Dan elk commando, met zijn tijd.
-    expect(werkelijk.commandos).toEqual(verwacht.commandos);
+    expect(actual.commandos).toEqual(expected.commandos);
   });
 
   it('heeft een dag die iets te beslissen gaf', () => {
     // Een vaste test op een dag waarop niets gebeurt, bewaakt niets.
-    const verwacht = JSON.parse(readFileSync(VERWACHT, 'utf-8')) as Samenvatting;
-    const starts = verwacht.commandos.filter((c) => / (cool|heat)$/.test(c));
+    const expected = JSON.parse(readFileSync(EXPECTED, 'utf-8')) as Summary;
+    const starts = expected.commandos.filter((c) => / (cool|heat)$/.test(c));
     expect(starts.length).toBeGreaterThan(0);
-    expect(Object.keys(verwacht.blokkades).length).toBeGreaterThan(2);
+    expect(Object.keys(expected.blokkades).length).toBeGreaterThan(2);
   });
 });

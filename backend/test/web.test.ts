@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { WebServer, versieUitOmgeving, type Versie } from '../src/web/server.js';
+import { WebServer, versionFromEnv, type Version } from '../src/web/server.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
@@ -71,8 +71,8 @@ async function start(options: {
   webDir?: string;
   divergence?: () => DivergenceReport | null;
   onboarding?: Onboarding;
-  zonderConfig?: boolean;
-  versie?: Versie;
+  withoutConfig?: boolean;
+  version?: Version;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -81,11 +81,11 @@ async function start(options: {
     port: 0,
     host: '127.0.0.1',
     webDir,
-    config: options.zonderConfig ? null : exampleSite,
+    config: options.withoutConfig ? null : exampleSite,
     latest: options.latest ?? (() => null),
     ...(options.divergence ? { divergence: options.divergence } : {}),
     ...(options.onboarding ? { onboarding: options.onboarding } : {}),
-    ...(options.versie ? { versie: options.versie } : {}),
+    ...(options.version ? { version: options.version } : {}),
     write: () => {},
   });
   const port = await server.start();
@@ -96,10 +96,10 @@ async function start(options: {
 describe('welke versie er draait (besluit 54)', () => {
   it('staat in /api/health', async () => {
     const { base } = await start({
-      versie: { commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' },
+      version: { commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' },
     });
     const health = (await (await fetch(`${base}/api/health`)).json()) as {
-      versie: Versie;
+      versie: Version;
     };
     expect(health.versie).toEqual({ commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' });
   });
@@ -109,18 +109,18 @@ describe('welke versie er draait (besluit 54)', () => {
     // regel die op een versie lijkt.
     const { base } = await start({});
     const health = (await (await fetch(`${base}/api/health`)).json()) as {
-      versie: Versie;
+      versie: Version;
     };
     expect(health.versie).toEqual({ commit: 'onbekend', gebouwd: null });
   });
 
   it('leest de omgeving en behandelt leeg als ontbrekend', () => {
-    expect(versieUitOmgeving({ HEMS_COMMIT: 'abc1234', HEMS_GEBOUWD: '2026-10-01T08:00:00Z' }))
+    expect(versionFromEnv({ HEMS_COMMIT: 'abc1234', HEMS_GEBOUWD: '2026-10-01T08:00:00Z' }))
       .toEqual({ commit: 'abc1234', gebouwd: '2026-10-01T08:00:00Z' });
     // Zo komt hij uit de Dockerfile wanneer niemand iets meegaf.
-    expect(versieUitOmgeving({ HEMS_COMMIT: 'onbekend', HEMS_GEBOUWD: '' }))
+    expect(versionFromEnv({ HEMS_COMMIT: 'onbekend', HEMS_GEBOUWD: '' }))
       .toEqual({ commit: 'onbekend', gebouwd: null });
-    expect(versieUitOmgeving({})).toEqual({ commit: 'onbekend', gebouwd: null });
+    expect(versionFromEnv({})).toEqual({ commit: 'onbekend', gebouwd: null });
   });
 });
 
@@ -286,21 +286,21 @@ describe('de besluitenstroom', () => {
 });
 
 describe('de terugblik op de logboeken', () => {
-  const DAG = '2026-11-20';
-  const T0 = Date.parse(`${DAG}T09:00:00Z`);
+  const DAY = '2026-11-20';
+  const T0 = Date.parse(`${DAY}T09:00:00Z`);
 
   /** Een logboek met een korte periode waarin de arbiter strenger zou zijn. */
-  async function logboek(): Promise<string> {
+  async function decisionLog(): Promise<string> {
     const dir = await mkdtemp(join(tmpdir(), 'hems-div-web-'));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
 
-    const regels: string[] = [];
+    const lines: string[] = [];
     for (let i = 0; i < 30; i++) {
-      const vol = i === 0;
-      regels.push(
+      const full = i === 0;
+      lines.push(
         JSON.stringify({
           t: T0 + i * 60_000,
-          changed: vol,
+          changed: full,
           mode: 'dag',
           budget: {
             availableW: 0,
@@ -310,7 +310,7 @@ describe('de terugblik op de logboeken', () => {
             gridPowerW: 700,
           },
           obs: { 'ac-zolder': 'cool@21' },
-          ...(vol
+          ...(full
             ? {
                 zones: [{ zoneId: 'zolder', temperatureC: 24, demand: 'cool' }],
                 commands: [
@@ -324,7 +324,7 @@ describe('de terugblik op de logboeken', () => {
         }),
       );
     }
-    await writeFile(join(dir, `decisions-${DAG}.ndjson`), regels.join('\n') + '\n', 'utf-8');
+    await writeFile(join(dir, `decisions-${DAY}.ndjson`), lines.join('\n') + '\n', 'utf-8');
     return dir;
   }
 
@@ -345,7 +345,7 @@ describe('de terugblik op de logboeken', () => {
   });
 
   it('levert tijdlijn, verhoudingen en stroom uit een echt logboek', async () => {
-    const cache = new DivergenceCache({ logDir: await logboek(), write: () => {} });
+    const cache = new DivergenceCache({ logDir: await decisionLog(), write: () => {} });
     await cache.refresh();
 
     const { base } = await start({ divergence: () => cache.latest });
@@ -360,11 +360,11 @@ describe('de terugblik op de logboeken', () => {
     // winter te versturen zonder er tienduizend objecten van te maken.
     expect(r.dagen).toHaveLength(1);
     expect(r.dagen[0]?.states).toHaveLength(96);
-    expect(r.dagen[0]?.day).toBe(DAG);
+    expect(r.dagen[0]?.day).toBe(DAY);
 
     // Het oude systeem koelde, de arbiter zou hebben afgeschakeld.
-    const zolder = r.tallies.find((t) => t.actuatorId === 'ac-zolder');
-    expect(zolder?.stricter).toBeGreaterThan(0);
+    const attic = r.tallies.find((t) => t.actuatorId === 'ac-zolder');
+    expect(attic?.stricter).toBeGreaterThan(0);
     expect(r.episodes.length).toBeGreaterThan(0);
     expect(r.episodesTotaal).toBeGreaterThanOrEqual(r.episodes.length);
 
@@ -375,7 +375,7 @@ describe('de terugblik op de logboeken', () => {
 
   it('houdt het aantal episodes begrensd maar telt ze wel allemaal', async () => {
     const cache = new DivergenceCache({
-      logDir: await logboek(),
+      logDir: await decisionLog(),
       maxEpisodes: 0,
       write: () => {},
     });
@@ -386,11 +386,11 @@ describe('de terugblik op de logboeken', () => {
   });
 
   it('houdt de vorige uitkomst vast wanneer het opnieuw rekenen mislukt', async () => {
-    const dir = await logboek();
+    const dir = await decisionLog();
     const cache = new DivergenceCache({ logDir: dir, write: () => {} });
     await cache.refresh();
-    const eerste = cache.latest;
-    expect(eerste).not.toBeNull();
+    const first = cache.latest;
+    expect(first).not.toBeNull();
 
     // Map weg: de analyse kan niets meer lezen.
     await rm(dir, { recursive: true, force: true });
@@ -398,63 +398,63 @@ describe('de terugblik op de logboeken', () => {
 
     // Geen lege pagina en geen crash; de weergave ziet aan berekendOpMs dat
     // het cijfer veroudert.
-    expect(cache.latest).toBe(eerste);
+    expect(cache.latest).toBe(first);
   });
 });
 
 describe('de pagina veroudert niet stilletjes', () => {
   /** Een webmap met een pagina en een script erin. */
-  async function webmap(inhoud: string): Promise<string> {
+  async function webDirFixture(content: string): Promise<string> {
     const dir = await mkdtemp(join(tmpdir(), 'hems-cache-'));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     await writeFile(join(dir, 'index.html'), '<h1>hallo</h1>', 'utf-8');
-    await writeFile(join(dir, 'app.js'), inhoud, 'utf-8');
+    await writeFile(join(dir, 'app.js'), content, 'utf-8');
     return dir;
   }
 
   it('laat een browser nooit een oud script vasthouden', async () => {
-    const { base } = await start({ webDir: await webmap('const versie = 1;') });
+    const { base } = await start({ webDir: await webDirFixture('const versie = 1;') });
 
-    for (const pad of ['/', '/app.js']) {
-      const res = await fetch(`${base}${pad}`);
+    for (const path of ['/', '/app.js']) {
+      const res = await fetch(`${base}${path}`);
       // `max-age` zou hier fataal zijn: de bestandsnamen dragen geen hash, dus
       // na een uitrol krijgt de bezoeker nieuwe HTML met oude JS. Dat mislukt
       // op de lastigst vindbare manier — een pagina die half werkt.
-      expect(res.headers.get('cache-control'), pad).toBe('no-cache');
+      expect(res.headers.get('cache-control'), path).toBe('no-cache');
     }
   });
 
   it('geeft 304 zolang het bestand niet wijzigde', async () => {
-    const { base } = await start({ webDir: await webmap('const versie = 1;') });
+    const { base } = await start({ webDir: await webDirFixture('const versie = 1;') });
 
-    const eerste = await fetch(`${base}/app.js`);
-    const gewijzigd = eerste.headers.get('last-modified');
-    expect(gewijzigd).not.toBeNull();
+    const first = await fetch(`${base}/app.js`);
+    const changed = first.headers.get('last-modified');
+    expect(changed).not.toBeNull();
 
-    const tweede = await fetch(`${base}/app.js`, {
-      headers: { 'if-modified-since': gewijzigd! },
+    const second = await fetch(`${base}/app.js`, {
+      headers: { 'if-modified-since': changed! },
     });
     // Navragen mag; opnieuw versturen hoeft niet.
-    expect(tweede.status).toBe(304);
-    expect(await tweede.text()).toBe('');
+    expect(second.status).toBe(304);
+    expect(await second.text()).toBe('');
   });
 
   it('stuurt de nieuwe versie zodra het bestand wel wijzigde', async () => {
-    const dir = await webmap('const versie = 1;');
+    const dir = await webDirFixture('const versie = 1;');
     const { base } = await start({ webDir: dir });
 
-    const eerste = await fetch(`${base}/app.js`);
-    const gewijzigd = eerste.headers.get('last-modified')!;
+    const first = await fetch(`${base}/app.js`);
+    const changed = first.headers.get('last-modified')!;
 
     // Een uitrol, een seconde later: `last-modified` heeft secondeprecisie.
     await new Promise((r) => setTimeout(r, 1100));
     await writeFile(join(dir, 'app.js'), 'const versie = 2;', 'utf-8');
 
-    const tweede = await fetch(`${base}/app.js`, {
-      headers: { 'if-modified-since': gewijzigd },
+    const second = await fetch(`${base}/app.js`, {
+      headers: { 'if-modified-since': changed },
     });
-    expect(tweede.status).toBe(200);
-    expect(await tweede.text()).toContain('versie = 2');
+    expect(second.status).toBe(200);
+    expect(await second.text()).toContain('versie = 2');
   });
 });
 
@@ -489,7 +489,7 @@ describe('de onboarding', () => {
     ],
   };
 
-  async function maakOnboarding(): Promise<{ onboarding: Onboarding; dir: string }> {
+  async function createOnboarding(): Promise<{ onboarding: Onboarding; dir: string }> {
     const dir = await mkdtemp(join(tmpdir(), 'hems-sites-'));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     return {
@@ -514,7 +514,7 @@ describe('de onboarding', () => {
   });
 
   it('houdt de muur overeind voor elke andere route, ook mét onboarding', async () => {
-    const { onboarding } = await maakOnboarding();
+    const { onboarding } = await createOnboarding();
     const { base } = await start({ onboarding });
     for (const path of ['/api/state', '/api/site', '/api/events', '/']) {
       const res = await fetch(`${base}${path}`, { method: 'POST' });
@@ -529,7 +529,7 @@ describe('de onboarding', () => {
   });
 
   it('geeft een voorstel met de gevonden zones en de open keuzes', async () => {
-    const { onboarding } = await maakOnboarding();
+    const { onboarding } = await createOnboarding();
     const { base } = await start({ onboarding });
     const res = await fetch(`${base}/api/onboarding`);
     expect(res.status).toBe(200);
@@ -539,7 +539,7 @@ describe('de onboarding', () => {
   });
 
   it('schrijft pas na het ophalen van een voorstel', async () => {
-    const { onboarding } = await maakOnboarding();
+    const { onboarding } = await createOnboarding();
     const { base } = await start({ onboarding });
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
@@ -550,7 +550,7 @@ describe('de onboarding', () => {
   });
 
   it('schrijft het bestand weg en laat het door de eigen controle komen', async () => {
-    const { onboarding, dir } = await maakOnboarding();
+    const { onboarding, dir } = await createOnboarding();
     const { base } = await start({ onboarding });
     await fetch(`${base}/api/onboarding`);
     const res = await fetch(`${base}/api/onboarding`, {
@@ -563,12 +563,12 @@ describe('de onboarding', () => {
     expect(body.pad).toContain(dir);
 
     // En wat er staat is te lezen door de gewone lader.
-    const geschreven = JSON.parse(await readFile(body.pad, 'utf-8')) as Record<string, unknown>;
-    expect(geschreven['timezone']).toBe('Europe/Amsterdam');
+    const written = JSON.parse(await readFile(body.pad, 'utf-8')) as Record<string, unknown>;
+    expect(written['timezone']).toBe('Europe/Amsterdam');
   });
 
   it('schrijft nooit over een bestaande configuratie heen', async () => {
-    const { onboarding, dir } = await maakOnboarding();
+    const { onboarding, dir } = await createOnboarding();
     const { base } = await start({ onboarding });
     await writeFile(join(dir, 'mijn-huis.json'), '{"eigen":"werk"}', 'utf-8');
 
@@ -589,7 +589,7 @@ describe('de onboarding', () => {
      * `huis-cornelissen.json` verscheen `mijn-huis.json`, de lader wist niet
      * meer welke gold, en de dienst startte niet meer op.
      */
-    const { onboarding, dir } = await maakOnboarding();
+    const { onboarding, dir } = await createOnboarding();
     const { base } = await start({ onboarding });
     await writeFile(join(dir, 'huis-van-iemand-anders.json'), '{"eigen":"werk"}', 'utf-8');
 
@@ -606,7 +606,7 @@ describe('de onboarding', () => {
   });
 
   it('zegt in het voorstel al welke configuraties er staan', async () => {
-    const { onboarding, dir } = await maakOnboarding();
+    const { onboarding, dir } = await createOnboarding();
     const { base } = await start({ onboarding });
     await writeFile(join(dir, 'al-ingesteld.json'), '{}', 'utf-8');
 
@@ -617,7 +617,7 @@ describe('de onboarding', () => {
   });
 
   it('weigert een verzoek dat geen antwoorden bevat', async () => {
-    const { onboarding } = await maakOnboarding();
+    const { onboarding } = await createOnboarding();
     const { base } = await start({ onboarding });
     for (const body of ['geen json', '{"iets":1}', '[]']) {
       const res = await fetch(`${base}/api/onboarding`, { method: 'POST', body });
@@ -626,7 +626,7 @@ describe('de onboarding', () => {
   });
 
   it('zegt dat er nog niets is ingesteld in plaats van te doen alsof', async () => {
-    const { base } = await start({ zonderConfig: true });
+    const { base } = await start({ withoutConfig: true });
     const res = await fetch(`${base}/api/site`);
     expect(res.status).toBe(503);
     expect(await res.text()).toContain('nog geen installatie');

@@ -24,9 +24,9 @@ import { REASON_CODES, BLOCK_CODES } from '../core/decision.js';
 import { readMoments, type Moment } from '../divergence/read.js';
 
 /** De meteorologische seizoenen, op maandnummer. */
-export type Seizoen = 'winter' | 'lente' | 'zomer' | 'herfst';
+export type Season = 'winter' | 'lente' | 'zomer' | 'herfst';
 
-const SEIZOEN_VAN_MAAND: readonly Seizoen[] = [
+const SEASON_OF_MONTH: readonly Season[] = [
   'winter', 'winter', 'lente', 'lente', 'lente', 'zomer',
   'zomer', 'zomer', 'herfst', 'herfst', 'herfst', 'winter',
 ];
@@ -41,7 +41,7 @@ const SEIZOEN_VAN_MAAND: readonly Seizoen[] = [
  *
  * Dit is een oordeel. Zie de kop van dit bestand.
  */
-export const DAGDOEL: Readonly<Record<Seizoen, number>> = {
+export const DAILY_TARGET: Readonly<Record<Season, number>> = {
   winter: 30,
   lente: 14,
   zomer: 14,
@@ -56,7 +56,7 @@ export const DAGDOEL: Readonly<Record<Seizoen, number>> = {
  * waargenomen, niet aangetoond. `handmatig` stond op groen op grond van één
  * enkel moment van de drieëndertigduizend.
  */
-export interface Dekking {
+export interface Coverage {
   readonly id: string;
   readonly gezien: number;
   readonly dagen: number;
@@ -77,12 +77,12 @@ export interface Dekking {
  * heeft de regeling het uit zichzelf gedaan. Dit is een oordeel, net als de
  * dagdoelen hierboven.
  */
-export const DAGEN_VOOR_DEKKING = 2;
+export const DAYS_FOR_COVERAGE = 2;
 
 
 
-export interface SeizoenStand {
-  readonly seizoen: Seizoen;
+export interface SeasonProgress {
+  readonly seizoen: Season;
   /**
    * Opgenomen dagen, in echte dagen en niet in aangeraakte kalenderdagen.
    *
@@ -112,12 +112,12 @@ export interface DatasetStatus {
   /** Dagen zonder één regel, tussen de eerste en de laatste. */
   readonly gatendagen: readonly string[];
   readonly momenten: number;
-  readonly seizoenen: readonly SeizoenStand[];
-  readonly modi: readonly Dekking[];
-  readonly strategieen: readonly Dekking[];
-  readonly richtingen: readonly Dekking[];
-  readonly zoneRedenen: readonly Dekking[];
-  readonly blokkades: readonly Dekking[];
+  readonly seizoenen: readonly SeasonProgress[];
+  readonly modi: readonly Coverage[];
+  readonly strategieen: readonly Coverage[];
+  readonly richtingen: readonly Coverage[];
+  readonly zoneRedenen: readonly Coverage[];
+  readonly blokkades: readonly Coverage[];
   readonly failsafeMomenten: number;
   /**
    * Meetpunten die de regeling straks nodig heeft maar nu niet worden
@@ -126,7 +126,7 @@ export interface DatasetStatus {
    */
   readonly ontbrekendeInvoer: readonly { id: string; waarvoor: string }[];
   /** Eén getal plus de twee assen waar het uit komt. */
-  readonly gereedheid: Gereedheid;
+  readonly gereedheid: Readiness;
 }
 
 /**
@@ -138,42 +138,42 @@ export interface DatasetStatus {
  * tonen. Nu telt hij hoeveel momenten er een waarde voor hebben en meldt het
  * alleen wanneer dat er geen zijn.
  */
-const VERWACHTE_INVOER: readonly {
+const EXPECTED_INPUTS: readonly {
   id: string;
-  waarvoor: string;
-  aanwezig: (m: Moment) => boolean;
+  purpose: string;
+  present: (m: Moment) => boolean;
 }[] = [
   {
     id: 'buitentemperatuur',
-    waarvoor: 'nodig voor fase 7 (vooruitkijken)',
-    aanwezig: (m) => m.outdoorC != null,
+    purpose: 'nodig voor fase 7 (vooruitkijken)',
+    present: (m) => m.outdoorC != null,
   },
   {
     id: 'opbrengst zonnepanelen',
-    waarvoor: 'maat voor instraling; zonder deze kolom is niet te berekenen hoeveel de zon een kamer opwarmt',
-    aanwezig: (m) => m.solarW != null,
+    purpose: 'maat voor instraling; zonder deze kolom is niet te berekenen hoeveel de zon een kamer opwarmt',
+    present: (m) => m.solarW != null,
   },
 ];
 
-const dagSleutel = (ms: number): string => {
+const dayKey = (ms: number): string => {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const seizoenVan = (ms: number): Seizoen =>
-  SEIZOEN_VAN_MAAND[new Date(ms).getMonth()] ?? 'winter';
+const seasonOf = (ms: number): Season =>
+  SEASON_OF_MONTH[new Date(ms).getMonth()] ?? 'winter';
 
 /** Wat er van één soort is gezien: momenten en de dagen waarop. */
-type Teller = Map<string, { n: number; dagen: Set<string> }>;
+type Counter = Map<string, { n: number; days: Set<string> }>;
 
-function tel(m: Teller, sleutel: string, dag: string): void {
-  let x = m.get(sleutel);
+function count(m: Counter, key: string, day: string): void {
+  let x = m.get(key);
   if (!x) {
-    x = { n: 0, dagen: new Set() };
-    m.set(sleutel, x);
+    x = { n: 0, days: new Set() };
+    m.set(key, x);
   }
   x.n += 1;
-  x.dagen.add(dag);
+  x.days.add(day);
 }
 
 /**
@@ -184,28 +184,28 @@ function tel(m: Teller, sleutel: string, dag: string): void {
  * 5). Die kwam via de opvangregel voor onbekende id's in de lijst terecht en
  * gaf een gratis punt in zowel de teller als de noemer — 3/4 in plaats van 2/3.
  */
-function volledig(
-  gezien: Teller,
-  alles: readonly string[],
-  negeer: (id: string) => boolean = () => false,
-): Dekking[] {
-  const maak = (id: string): Dekking => {
-    const x = gezien.get(id);
-    const dagen = x?.dagen.size ?? 0;
+function complete(
+  seen: Counter,
+  everything: readonly string[],
+  ignore: (id: string) => boolean = () => false,
+): Coverage[] {
+  const make = (id: string): Coverage => {
+    const x = seen.get(id);
+    const days = x?.days.size ?? 0;
     return {
       id,
       gezien: x?.n ?? 0,
-      dagen,
-      deel: dagen >= DAGEN_VOOR_DEKKING ? 1 : dagen === 1 ? 0.5 : 0,
+      dagen: days,
+      deel: days >= DAYS_FOR_COVERAGE ? 1 : days === 1 ? 0.5 : 0,
     };
   };
-  const uit = alles.map(maak);
+  const result = everything.map(make);
   // Wat de kern niet kent maar wel in het logboek staat, hoort er ook bij:
   // anders verdwijnt een strategie die later is toegevoegd uit beeld.
-  for (const id of gezien.keys()) {
-    if (!alles.includes(id) && !negeer(id)) uit.push(maak(id));
+  for (const id of seen.keys()) {
+    if (!everything.includes(id) && !ignore(id)) result.push(make(id));
   }
-  return uit;
+  return result;
 }
 
 /**
@@ -218,130 +218,130 @@ function volledig(
  * is dit ooit voorgekomen, en hoe vaak ongeveer.
  */
 export async function datasetStatus(
-  momenten: AsyncIterable<Moment>,
+  moments: AsyncIterable<Moment>,
 ): Promise<DatasetStatus | null> {
-  const dagen = new Set<string>();
+  const days = new Set<string>();
   /** Per dag de uren waarin iets is opgenomen; zo tellen halve dagen half. */
-  const urenPerDag = new Map<string, Set<number>>();
-  const modi: Teller = new Map();
-  const strategieen: Teller = new Map();
-  const richtingen: Teller = new Map();
-  const zoneRedenen: Teller = new Map();
-  const blokkades: Teller = new Map();
+  const hoursPerDay = new Map<string, Set<number>>();
+  const modes: Counter = new Map();
+  const strategies: Counter = new Map();
+  const directions: Counter = new Map();
+  const zoneReasons: Counter = new Map();
+  const blocks: Counter = new Map();
 
-  let vanMs = Number.POSITIVE_INFINITY;
-  let totMs = Number.NEGATIVE_INFINITY;
-  let momentenTotaal = 0;
-  let failsafeMomenten = 0;
-  const invoerGezien = new Map<string, number>();
+  let fromMs = Number.POSITIVE_INFINITY;
+  let toMs = Number.NEGATIVE_INFINITY;
+  let momentsTotal = 0;
+  let failsafeMoments = 0;
+  const inputSeen = new Map<string, number>();
 
-  for await (const m of momenten) {
-    momentenTotaal += 1;
-    vanMs = Math.min(vanMs, m.tMs);
-    totMs = Math.max(totMs, m.tMs);
-    const dag = dagSleutel(m.tMs);
-    dagen.add(dag);
+  for await (const m of moments) {
+    momentsTotal += 1;
+    fromMs = Math.min(fromMs, m.tMs);
+    toMs = Math.max(toMs, m.tMs);
+    const day = dayKey(m.tMs);
+    days.add(day);
 
-    let uren = urenPerDag.get(dag);
-    if (!uren) {
-      uren = new Set();
-      urenPerDag.set(dag, uren);
+    let hours = hoursPerDay.get(day);
+    if (!hours) {
+      hours = new Set();
+      hoursPerDay.set(day, hours);
     }
-    uren.add(new Date(m.tMs).getHours());
+    hours.add(new Date(m.tMs).getHours());
 
-    if (m.mode !== 'onbekend') tel(modi, m.mode, dag);
-    if (m.failsafe) failsafeMomenten += 1;
+    if (m.mode !== 'onbekend') count(modes, m.mode, day);
+    if (m.failsafe) failsafeMoments += 1;
 
-    for (const inv of VERWACHTE_INVOER) {
-      if (inv.aanwezig(m)) invoerGezien.set(inv.id, (invoerGezien.get(inv.id) ?? 0) + 1);
+    for (const inv of EXPECTED_INPUTS) {
+      if (inv.present(m)) inputSeen.set(inv.id, (inputSeen.get(inv.id) ?? 0) + 1);
     }
 
     for (const a of m.accepted) {
-      if (a.strategyId) tel(strategieen, a.strategyId, dag);
+      if (a.strategyId) count(strategies, a.strategyId, day);
     }
     // De richting is wat er werkelijk zou zijn gestuurd. `heat` is het
     // interessantste vakje van deze hele tabel: zolang dat leeg is, is de
     // verwarmingskant van de regeling nooit in het echt afgegaan.
     for (const c of m.commands) {
-      if (c.kind === 'setAction' && c.action) tel(richtingen, c.action, dag);
+      if (c.kind === 'setAction' && c.action) count(directions, c.action, day);
     }
     for (const z of m.zones) {
-      if (z.reason) tel(zoneRedenen, z.reason, dag);
+      if (z.reason) count(zoneReasons, z.reason, day);
     }
-    for (const r of m.rejected) tel(blokkades, r.blockedBy, dag);
+    for (const r of m.rejected) count(blocks, r.blockedBy, day);
   }
 
-  if (momentenTotaal === 0) return null;
+  if (momentsTotal === 0) return null;
 
   // Seizoenen tellen per opgenomen dag, niet per moment: een dag met twintig
   // evaluaties is één dag, net als een dag met tienduizend.
-  const perSeizoen = new Map<Seizoen, number>();
-  for (const dag of dagen) {
-    const s = seizoenVan(Date.parse(`${dag}T12:00:00`));
+  const perSeason = new Map<Season, number>();
+  for (const day of days) {
+    const s = seasonOf(Date.parse(`${day}T12:00:00`));
     // Het aandeel uren van die dag waarin iets is opgenomen. Een opname die om
     // 17:11 begint levert die dag geen dag op maar zeven vierentwintigste.
-    const deel = (urenPerDag.get(dag)?.size ?? 0) / 24;
-    perSeizoen.set(s, (perSeizoen.get(s) ?? 0) + deel);
+    const share = (hoursPerDay.get(day)?.size ?? 0) / 24;
+    perSeason.set(s, (perSeason.get(s) ?? 0) + share);
   }
-  const seizoenen: SeizoenStand[] = (
+  const seasons: SeasonProgress[] = (
     ['winter', 'lente', 'zomer', 'herfst'] as const
-  ).map((seizoen) => ({
-    seizoen,
-    dagen: perSeizoen.get(seizoen) ?? 0,
-    doel: DAGDOEL[seizoen],
+  ).map((season) => ({
+    seizoen: season,
+    dagen: perSeason.get(season) ?? 0,
+    doel: DAILY_TARGET[season],
   }));
 
   // Gaten: kalenderdagen tussen begin en eind waarop niets is opgenomen. Een
   // dienst die drie dagen stil lag hoort dat te laten zien.
-  const gatendagen: string[] = [];
-  for (let t = vanMs; t <= totMs; t += 86_400_000) {
-    const dag = dagSleutel(t);
-    if (!dagen.has(dag)) gatendagen.push(dag);
+  const gapDays: string[] = [];
+  for (let t = fromMs; t <= toMs; t += 86_400_000) {
+    const day = dayKey(t);
+    if (!days.has(day)) gapDays.push(day);
   }
 
-  const modiDekking = volledig(modi, [...MODES] as string[]);
-  const richtingDekking = volledig(richtingen, [...ACTIONS] as string[]);
-  const redenDekking = volledig(zoneRedenen, [...REASON_CODES] as string[]);
-  const blokkadeDekking = volledig(blokkades, [...BLOCK_CODES] as string[]);
-  const strategieDekking = volledig(
-    strategieen,
+  const modeCoverage = complete(modes, [...MODES] as string[]);
+  const directionCoverage = complete(directions, [...ACTIONS] as string[]);
+  const reasonCoverage = complete(zoneReasons, [...REASON_CODES] as string[]);
+  const blockCoverage = complete(blocks, [...BLOCK_CODES] as string[]);
+  const strategyCoverage = complete(
+    strategies,
     ['comfort', 'pv-surplus', 'heat-assist'],
     // Alles met het voorvoegsel `arbiter:` komt van de arbiter zelf en is geen
-    // strategie. Zie `volledig`.
+    // strategie. Zie `complete`.
     (id) => id.startsWith('arbiter:'),
   );
 
   return {
-    vanMs,
-    totMs,
+    vanMs: fromMs,
+    totMs: toMs,
     dagenOpgenomen:
       Math.round(
-        [...urenPerDag.values()].reduce((n, u) => n + u.size / 24, 0) * 10,
+        [...hoursPerDay.values()].reduce((n, u) => n + u.size / 24, 0) * 10,
       ) / 10,
-    kalenderdagenAangeraakt: dagen.size,
-    kalenderdagen: Math.max(1, Math.round((totMs - vanMs) / 86_400_000) + 1),
-    gatendagen,
-    momenten: momentenTotaal,
-    seizoenen,
-    modi: modiDekking,
-    strategieen: strategieDekking,
-    richtingen: richtingDekking,
-    zoneRedenen: redenDekking,
-    blokkades: blokkadeDekking,
-    failsafeMomenten,
-    ontbrekendeInvoer: VERWACHTE_INVOER.filter((inv) => (invoerGezien.get(inv.id) ?? 0) === 0).map(
-      ({ id, waarvoor }) => ({ id, waarvoor }),
+    kalenderdagenAangeraakt: days.size,
+    kalenderdagen: Math.max(1, Math.round((toMs - fromMs) / 86_400_000) + 1),
+    gatendagen: gapDays,
+    momenten: momentsTotal,
+    seizoenen: seasons,
+    modi: modeCoverage,
+    strategieen: strategyCoverage,
+    richtingen: directionCoverage,
+    zoneRedenen: reasonCoverage,
+    blokkades: blockCoverage,
+    failsafeMomenten: failsafeMoments,
+    ontbrekendeInvoer: EXPECTED_INPUTS.filter((inv) => (inputSeen.get(inv.id) ?? 0) === 0).map(
+      ({ id, purpose }) => ({ id, waarvoor: purpose }),
     ),
-    gereedheid: gereedheidVan(seizoenen, [
-      modiDekking,
-      strategieDekking,
-      richtingDekking,
+    gereedheid: readinessOf(seasons, [
+      modeCoverage,
+      strategyCoverage,
+      directionCoverage,
     ]),
   };
 }
 
 /** De twee assen apart, zodat de weergave ze naast het getal kan tonen. */
-export interface Gereedheid {
+export interface Readiness {
   /** Heb je de seizoenen gezien. */
   readonly tijd: number;
   /** Is elk onderdeel van de regeling afgegaan, op genoeg losse dagen. */
@@ -368,27 +368,27 @@ export interface Gereedheid {
  * zeldzaam te zijn (`setpoint_out_of_range` is een fout), en dan zou een
  * gezonde installatie nooit op honderd procent uitkomen.
  */
-function gereedheidVan(
-  seizoenen: readonly SeizoenStand[],
-  groepen: readonly (readonly Dekking[])[],
-): Gereedheid {
-  const tijd =
-    seizoenen.reduce((n, s) => n + Math.min(1, s.dagen / s.doel), 0) /
-    seizoenen.length;
+function readinessOf(
+  seasons: readonly SeasonProgress[],
+  groups: readonly (readonly Coverage[])[],
+): Readiness {
+  const time =
+    seasons.reduce((n, s) => n + Math.min(1, s.dagen / s.doel), 0) /
+    seasons.length;
 
-  const punten = groepen.flat();
+  const points = groups.flat();
   // Halve punten voor wat maar op één dag voorkwam: waargenomen, niet aangetoond.
-  const dekking = punten.reduce((n, p) => n + p.deel, 0) / Math.max(1, punten.length);
+  const coverage = points.reduce((n, p) => n + p.deel, 0) / Math.max(1, points.length);
 
   return {
-    tijd: Math.round(tijd * 100),
-    dekking: Math.round(dekking * 100),
-    totaal: Math.round(Math.sqrt(tijd * dekking) * 100),
+    tijd: Math.round(time * 100),
+    dekking: Math.round(coverage * 100),
+    totaal: Math.round(Math.sqrt(time * coverage) * 100),
   };
 }
 
 /** Leest de logboeken en levert de stand. */
-export async function statusVanBestanden(
+export async function statusFromFiles(
   files: readonly string[],
 ): Promise<DatasetStatus | null> {
   return datasetStatus(readMoments(files));

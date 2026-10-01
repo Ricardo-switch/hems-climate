@@ -70,10 +70,10 @@ export interface Registers {
   readonly states: readonly HaEntityState[];
 }
 
-export type Soort = 'gevonden' | 'geraden' | 'overgeslagen' | 'ontbreekt';
+export type FindingKind = 'gevonden' | 'geraden' | 'overgeslagen' | 'ontbreekt';
 
-export interface Bevinding {
-  readonly soort: Soort;
+export interface Finding {
+  readonly soort: FindingKind;
   /** Waar in de configuratie dit over gaat, of een losse aanduiding. */
   readonly pad: string;
   readonly tekst: string;
@@ -88,7 +88,7 @@ export interface Bevinding {
  * bestaan naast elkaar omdat de meeste bevindingen niets van de bewoner nodig
  * hebben — "6 bewoners gevonden" is prettig om te lezen en verder klaar.
  */
-export interface Keuze {
+export interface Choice {
   /** Stabiel, zodat een antwoord bij de juiste vraag terechtkomt. */
   readonly id: string;
   readonly soort: 'veld' | 'zoneTemperatuur' | 'dubbelApparaat';
@@ -105,43 +105,43 @@ export interface Keuze {
   readonly zoneId?: string;
 }
 
-export interface Voorstel {
+export interface Proposal {
   /** De JSON zoals hij in `sites/<naam>.json` zou staan. */
   readonly config: Record<string, unknown>;
-  readonly bevindingen: readonly Bevinding[];
+  readonly bevindingen: readonly Finding[];
   /** Wat er nog beslist moet worden voordat dit klopt. */
-  readonly keuzes: readonly Keuze[];
+  readonly keuzes: readonly Choice[];
 }
 
 // -------------------------------------------------------------- hulpjes ----
 
-function slug(tekst: string): string {
-  return tekst
+function slug(text: string): string {
+  return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
 
 /** De naam die een mens zou herkennen, met terugval op de entity-ID. */
-function naamVan(e: HaRegistryEntity, state: HaEntityState | undefined): string {
+function nameOf(e: HaRegistryEntity, state: HaEntityState | undefined): string {
   const attr = state?.attributes as Record<string, unknown> | undefined;
-  const vriendelijk = typeof attr?.['friendly_name'] === 'string' ? attr['friendly_name'] : null;
-  return e.name ?? vriendelijk ?? e.original_name ?? e.entity_id;
+  const friendly = typeof attr?.['friendly_name'] === 'string' ? attr['friendly_name'] : null;
+  return e.name ?? friendly ?? e.original_name ?? e.entity_id;
 }
 
 function deviceClass(e: HaRegistryEntity, state: HaEntityState | undefined): string | null {
   const attr = state?.attributes as Record<string, unknown> | undefined;
-  const uitState = typeof attr?.['device_class'] === 'string' ? attr['device_class'] : null;
-  return e.device_class ?? e.original_device_class ?? uitState;
+  const offState = typeof attr?.['device_class'] === 'string' ? attr['device_class'] : null;
+  return e.device_class ?? e.original_device_class ?? offState;
 }
 
-function getal(state: HaEntityState | undefined, sleutel: string): number | null {
-  const v = (state?.attributes as Record<string, unknown> | undefined)?.[sleutel];
+function numberAttr(state: HaEntityState | undefined, key: string): number | null {
+  const v = (state?.attributes as Record<string, unknown> | undefined)?.[key];
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
-function lijst(state: HaEntityState | undefined, sleutel: string): string[] {
-  const v = (state?.attributes as Record<string, unknown> | undefined)?.[sleutel];
+function listAttr(state: HaEntityState | undefined, key: string): string[] {
+  const v = (state?.attributes as Record<string, unknown> | undefined)?.[key];
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 }
 
@@ -155,10 +155,10 @@ function lijst(state: HaEntityState | undefined, sleutel: string): string[] {
  * De grens zelf is er ook niet voor niets: "net" zit in tientallen
  * Nederlandse woorden, en `sensor.internet_verbruik` is geen slimme meter.
  */
-const GRENS_VOOR = '(?:^|[^a-z0-9])';
-const GRENS_NA = '(?:[^a-z0-9]|$)';
-const METERWOORDEN = new RegExp(
-  `${GRENS_VOOR}(?:p1|grid|net|netto)${GRENS_NA}|smart[ _-]?meter|slimme[ _-]?meter`,
+const BEFORE_BOUNDARY = '(?:^|[^a-z0-9])';
+const AFTER_BOUNDARY = '(?:[^a-z0-9]|$)';
+const METER_WORDS = new RegExp(
+  `${BEFORE_BOUNDARY}(?:p1|grid|net|netto)${AFTER_BOUNDARY}|smart[ _-]?meter|slimme[ _-]?meter`,
   'i',
 );
 /**
@@ -168,32 +168,32 @@ const METERWOORDEN = new RegExp(
  * grondtemperatuur, en per dag een verwachting met een minimum. Voor het
  * beslislogboek willen we er precies één — wat het buiten nú is.
  */
-const AFGELEIDE_TEMPERATUUR =
+const DERIVED_TEMPERATURE =
   /(_\d+d$)|forecast|verwacht|gevoels|apparent|feels|grond|ground|soil|dauw|dew|minimale|maximale|minimum|maximum/i;
 
 /** Woorden die op de opbrengst van zonnepanelen wijzen. */
-const OPBRENGSTWOORDEN =
+const PRODUCTION_WORDS =
   /solar|zonne|zonnepane|pv[_ ]|photovolta|omvormer|inverter|huidig[_ ]vermogen/i;
 
-const BUITENWOORDEN = new RegExp(
-  `${GRENS_VOOR}(?:buiten|outdoor|outside|extern|external)${GRENS_NA}`,
+const OUTDOOR_WORDS = new RegExp(
+  `${BEFORE_BOUNDARY}(?:buiten|outdoor|outside|extern|external)${AFTER_BOUNDARY}`,
   'i',
 );
 
 /** Heet deze sensor gewoon "temperatuur", zonder verdere bijstelling? */
-function kaleNaam(e: HaRegistryEntity): boolean {
+function bareName(e: HaRegistryEntity): boolean {
   const object = e.entity_id.split('.')[1] ?? '';
   return object === 'temperatuur' || object === 'temperature';
 }
 
 // ------------------------------------------------------------ ontdekken ----
 
-export function ontdek(r: Registers): Voorstel {
-  const bevindingen: Bevinding[] = [];
-  const keuzes: Keuze[] = [];
+export function discover(r: Registers): Proposal {
+  const findings: Finding[] = [];
+  const choices: Choice[] = [];
   const statePer = new Map(r.states.map((s) => [s.entity_id, s]));
-  const areaVanDevice = new Map(r.devices.map((d) => [d.id, d.area_id]));
-  const areaNaam = new Map(r.areas.map((a) => [a.area_id, a.name]));
+  const areaOfDevice = new Map(r.devices.map((d) => [d.id, d.area_id]));
+  const areaName = new Map(r.areas.map((a) => [a.area_id, a.name]));
 
   /**
    * Het gebied van een entiteit.
@@ -202,8 +202,8 @@ export function ontdek(r: Registers): Voorstel {
    * praktijk komt vrijwel alles uit die tweede regel: in Home Assistant wijs je
    * een apparaat aan een gebied toe, niet elke entiteit apart.
    */
-  const gebiedVan = (e: HaRegistryEntity): string | null =>
-    e.area_id ?? (e.device_id ? (areaVanDevice.get(e.device_id) ?? null) : null);
+  const areaOf = (e: HaRegistryEntity): string | null =>
+    e.area_id ?? (e.device_id ? (areaOfDevice.get(e.device_id) ?? null) : null);
 
   /*
    * Wat we sowieso niet willen zien.
@@ -213,38 +213,38 @@ export function ontdek(r: Registers): Voorstel {
    * het huis — de temperatuur van een harde schijf, het signaal van een
    * batterij, de bijwerkknop van een integratie.
    */
-  const bruikbaar = r.entities.filter(
+  const usable = r.entities.filter(
     (e) => e.disabled_by == null && e.hidden_by == null && e.entity_category == null,
   );
 
-  const overgeslagen = r.entities.length - bruikbaar.length;
-  if (overgeslagen > 0) {
-    bevindingen.push({
+  const skipped = r.entities.length - usable.length;
+  if (skipped > 0) {
+    findings.push({
       soort: 'overgeslagen',
       pad: '(register)',
       tekst:
-        `${overgeslagen} van de ${r.entities.length} entiteiten blijven buiten beeld: ` +
+        `${skipped} van de ${r.entities.length} entiteiten blijven buiten beeld: ` +
         'uitgeschakeld, verborgen, of horend bij een apparaat in plaats van bij het huis',
     });
   }
 
-  const van = (domein: string): HaRegistryEntity[] =>
-    bruikbaar.filter((e) => e.entity_id.startsWith(`${domein}.`));
+  const from = (domain: string): HaRegistryEntity[] =>
+    usable.filter((e) => e.entity_id.startsWith(`${domain}.`));
 
-  const sensorenVan = (klasse: string): HaRegistryEntity[] =>
-    van('sensor').filter((e) => deviceClass(e, statePer.get(e.entity_id)) === klasse);
+  const sensorsOf = (wantedClass: string): HaRegistryEntity[] =>
+    from('sensor').filter((e) => deviceClass(e, statePer.get(e.entity_id)) === wantedClass);
 
   // ---- tijdzone -----------------------------------------------------------
 
   const timezone = r.config.time_zone;
   if (timezone) {
-    bevindingen.push({
+    findings.push({
       soort: 'gevonden',
       pad: 'timezone',
       tekst: `${timezone}, overgenomen van Home Assistant`,
     });
   } else {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'timezone',
       tekst: 'Home Assistant gaf geen tijdzone terug; vul hem zelf in',
@@ -255,12 +255,12 @@ export function ontdek(r: Registers): Voorstel {
   //
   // Eerst, want een buitensensor mag geen zonethermometer worden.
 
-  const temperatuurSensoren = sensorenVan('temperature');
-  const buitenKandidaten = temperatuurSensoren.filter(
-    (e) => BUITENWOORDEN.test(e.entity_id) || BUITENWOORDEN.test(naamVan(e, statePer.get(e.entity_id))),
+  const temperatureSensors = sensorsOf('temperature');
+  const outdoorCandidates = temperatureSensors.filter(
+    (e) => OUTDOOR_WORDS.test(e.entity_id) || OUTDOOR_WORDS.test(nameOf(e, statePer.get(e.entity_id))),
   );
   // Thermometers die aan geen enkel gebied hangen: kandidaten, geen keuze.
-  const zwervend = temperatuurSensoren.filter((e) => gebiedVan(e) == null);
+  const stray = temperatureSensors.filter((e) => areaOf(e) == null);
   /*
    * Geen naam die naar buiten wijst? Dan de weerintegratie vragen.
    *
@@ -274,18 +274,18 @@ export function ontdek(r: Registers): Voorstel {
    * gebied hangt". Op de gemeten woning gaf dat achttien kandidaten met een
    * Formule 1-sensor bovenaan. Dit filter houdt er daar één van over.
    */
-  const weerPlatforms = new Set(
-    bruikbaar
+  const weatherPlatforms = new Set(
+    usable
       .filter((e) => e.entity_id.startsWith('weather.'))
       .map((e) => e.platform)
       .filter((x): x is string => x != null),
   );
-  const uitWeerbericht = temperatuurSensoren
+  const fromForecast = temperatureSensors
     .filter(
       (e) =>
         e.platform != null &&
-        weerPlatforms.has(e.platform) &&
-        !AFGELEIDE_TEMPERATUUR.test(e.entity_id),
+        weatherPlatforms.has(e.platform) &&
+        !DERIVED_TEMPERATURE.test(e.entity_id),
     )
     /*
      * Blijven er meer over, dan bovenaan degene die gewoon "temperatuur" heet.
@@ -295,34 +295,34 @@ export function ontdek(r: Registers): Voorstel {
      * herkent die aan de naam. Wij kiezen dan niet; we leggen alleen de meest
      * waarschijnlijke bovenop.
      */
-    .sort((a, b) => Number(!kaleNaam(a)) - Number(!kaleNaam(b)));
+    .sort((a, b) => Number(!bareName(a)) - Number(!bareName(b)));
 
-  const buiten = buitenKandidaten[0] ?? (uitWeerbericht.length === 1 ? uitWeerbericht[0]! : null);
-  if (buiten) {
-    const opNaam = buitenKandidaten.length > 0;
-    const anderen = opNaam ? buitenKandidaten.slice(1).map((e) => e.entity_id) : [];
-    bevindingen.push({
-      soort: opNaam && anderen.length === 0 ? 'gevonden' : 'geraden',
+  const outdoor = outdoorCandidates[0] ?? (fromForecast.length === 1 ? fromForecast[0]! : null);
+  if (outdoor) {
+    const byName = outdoorCandidates.length > 0;
+    const others = byName ? outdoorCandidates.slice(1).map((e) => e.entity_id) : [];
+    findings.push({
+      soort: byName && others.length === 0 ? 'gevonden' : 'geraden',
       pad: 'outdoorTemperature',
-      tekst: opNaam
-        ? `${buiten.entity_id} — ${naamVan(buiten, statePer.get(buiten.entity_id))}`
-        : `${buiten.entity_id}, de enige actuele buitentemperatuur van je weerintegratie`,
-      ...(anderen.length > 0 ? { alternatieven: anderen } : {}),
+      tekst: byName
+        ? `${outdoor.entity_id} — ${nameOf(outdoor, statePer.get(outdoor.entity_id))}`
+        : `${outdoor.entity_id}, de enige actuele buitentemperatuur van je weerintegratie`,
+      ...(others.length > 0 ? { alternatieven: others } : {}),
     });
-    if (anderen.length > 0) {
-      keuzes.push({
+    if (others.length > 0) {
+      choices.push({
         id: 'outdoorTemperature',
         soort: 'veld',
         pad: 'outdoorTemperature',
         vraag: 'Welke sensor meet de buitentemperatuur?',
-        huidig: buiten.entity_id,
-        opties: [buiten.entity_id, ...anderen],
+        huidig: outdoor.entity_id,
+        opties: [outdoor.entity_id, ...others],
         magLeeg: true,
       });
     }
-  } else if (uitWeerbericht.length > 1 || zwervend.length > 0) {
-    const kandidaten = uitWeerbericht.length > 1 ? uitWeerbericht : zwervend;
-    keuzes.push({
+  } else if (fromForecast.length > 1 || stray.length > 0) {
+    const candidates = fromForecast.length > 1 ? fromForecast : stray;
+    choices.push({
       id: 'outdoorTemperature',
       soort: 'veld',
       pad: 'outdoorTemperature',
@@ -331,21 +331,21 @@ export function ontdek(r: Registers): Voorstel {
         'De regeling gebruikt hem niet; hij gaat mee het logboek in zodat de ' +
         'dataset compleet is. Overslaan mag.',
       huidig: null,
-      opties: kandidaten.map((e) => e.entity_id),
+      opties: candidates.map((e) => e.entity_id),
       magLeeg: true,
     });
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'outdoorTemperature',
       tekst:
         `geen sensor heet naar buiten, en er is er niet één aan te wijzen. Deze ` +
-        `${kandidaten.length} komen in aanmerking; kies er zelf een. Zonder ` +
+        `${candidates.length} komen in aanmerking; kies er zelf een. Zonder ` +
         'buitentemperatuur regelt alles gewoon door, maar mist de dataset een ' +
         'kolom (besluit 30).',
-      alternatieven: kandidaten.map((e) => e.entity_id),
+      alternatieven: candidates.map((e) => e.entity_id),
     });
   } else {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'outdoorTemperature',
       tekst:
@@ -356,33 +356,33 @@ export function ontdek(r: Registers): Voorstel {
 
   // ---- zones en apparaten -------------------------------------------------
 
-  const klimaat = van('climate');
-  const vochtSensoren = sensorenVan('humidity');
-  const vermogenSensoren = sensorenVan('power');
+  const climate = from('climate');
+  const humiditySensors = sensorsOf('humidity');
+  const powerSensors = sensorsOf('power');
 
   const zones: Record<string, unknown>[] = [];
   const actuators: Record<string, unknown>[] = [];
-  const gebruikteActuatorIds = new Set<string>();
+  const usedActuatorIds = new Set<string>();
 
-  const gebieden = new Set<string>();
-  for (const e of [...klimaat, ...temperatuurSensoren]) {
-    const g = gebiedVan(e);
-    if (g) gebieden.add(g);
+  const areaList = new Set<string>();
+  for (const e of [...climate, ...temperatureSensors]) {
+    const g = areaOf(e);
+    if (g) areaList.add(g);
   }
 
-  for (const gebied of [...gebieden].sort()) {
-    const naam = areaNaam.get(gebied) ?? gebied;
-    const inGebied = <T extends HaRegistryEntity>(lijstje: readonly T[]): T[] =>
-      lijstje.filter((e) => gebiedVan(e) === gebied);
+  for (const area of [...areaList].sort()) {
+    const name = areaName.get(area) ?? area;
+    const inArea = <T extends HaRegistryEntity>(shortList: readonly T[]): T[] =>
+      shortList.filter((e) => areaOf(e) === area);
 
-    const apparaten = inGebied(klimaat);
-    const thermometers = inGebied(temperatuurSensoren).filter((e) => e !== buiten);
+    const climateDevices = inArea(climate);
+    const thermometers = inArea(temperatureSensors).filter((e) => e !== outdoor);
 
-    if (apparaten.length === 0) {
-      bevindingen.push({
+    if (climateDevices.length === 0) {
+      findings.push({
         soort: 'overgeslagen',
-        pad: `zones.${gebied}`,
-        tekst: `${naam} heeft wel een thermometer maar geen klimaatapparaat`,
+        pad: `zones.${area}`,
+        tekst: `${name} heeft wel een thermometer maar geen klimaatapparaat`,
       });
       continue;
     }
@@ -397,54 +397,54 @@ export function ontdek(r: Registers): Voorstel {
      * zit ín het apparaat. Vlak bij de uitblaas of tegen het plafond leest hij
      * anders dan de kamer. Bruikbaar, maar iets om te weten.
      */
-    const zelfmeters = apparaten.filter(
-      (a) => getal(statePer.get(a.entity_id), 'current_temperature') != null,
+    const selfMeters = climateDevices.filter(
+      (a) => numberAttr(statePer.get(a.entity_id), 'current_temperature') != null,
     );
 
-    if (thermometers.length === 0 && zelfmeters.length === 0) {
-      bevindingen.push({
+    if (thermometers.length === 0 && selfMeters.length === 0) {
+      findings.push({
         soort: 'overgeslagen',
-        pad: `zones.${gebied}`,
+        pad: `zones.${area}`,
         tekst:
-          `${naam} heeft wel een klimaatapparaat maar niets dat de temperatuur meet — ` +
+          `${name} heeft wel een klimaatapparaat maar niets dat de temperatuur meet — ` +
           'ook het apparaat zelf meldt er geen',
       });
       continue;
     }
 
     /** Waar de temperatuur van deze zone vandaan komt. */
-    let bron: { id: string; attribute?: string };
+    let source: { id: string; attribute?: string };
     if (thermometers.length === 0) {
-      const zelfmeter = zelfmeters[0]!;
-      bron = { id: zelfmeter.entity_id, attribute: 'current_temperature' };
-      bevindingen.push({
+      const selfMeter = selfMeters[0]!;
+      source = { id: selfMeter.entity_id, attribute: 'current_temperature' };
+      findings.push({
         soort: 'geraden',
-        pad: `zones.${gebied}.temperature`,
+        pad: `zones.${area}.temperature`,
         tekst:
-          `${naam} heeft geen losse thermometer; de eigen meting van ` +
-          `${zelfmeter.entity_id} wordt gebruikt. Die zit in het apparaat en leest ` +
+          `${name} heeft geen losse thermometer; de eigen meting van ` +
+          `${selfMeter.entity_id} wordt gebruikt. Die zit in het apparaat en leest ` +
           'daardoor anders dan de kamer — een losse sensor is nauwkeuriger.',
-        ...(zelfmeters.length > 1
-          ? { alternatieven: zelfmeters.slice(1).map((e) => e.entity_id) }
+        ...(selfMeters.length > 1
+          ? { alternatieven: selfMeters.slice(1).map((e) => e.entity_id) }
           : {}),
       });
     } else {
-      bron = { id: thermometers[0]!.entity_id };
+      source = { id: thermometers[0]!.entity_id };
     }
 
     if (thermometers.length > 1) {
       const thermometer = thermometers[0]!;
-      bevindingen.push({
+      findings.push({
         soort: 'geraden',
-        pad: `zones.${gebied}.temperature`,
-        tekst: `${naam} heeft ${thermometers.length} thermometers; ${thermometer.entity_id} gekozen`,
+        pad: `zones.${area}.temperature`,
+        tekst: `${name} heeft ${thermometers.length} thermometers; ${thermometer.entity_id} gekozen`,
         alternatieven: thermometers.slice(1).map((e) => e.entity_id),
       });
-      keuzes.push({
-        id: `zone:${slug(gebied)}:temperature`,
+      choices.push({
+        id: `zone:${slug(area)}:temperature`,
         soort: 'zoneTemperatuur',
-        zoneId: slug(gebied),
-        vraag: `Welke thermometer geldt voor ${naam}?`,
+        zoneId: slug(area),
+        vraag: `Welke thermometer geldt voor ${name}?`,
         toelichting: 'Hierop wordt geregeld, dus dit moet de kamer zijn en niet een apparaat.',
         huidig: thermometer.entity_id,
         opties: thermometers.map((e) => e.entity_id),
@@ -453,27 +453,27 @@ export function ontdek(r: Registers): Voorstel {
     }
 
     const actuatorIds: string[] = [];
-    for (const apparaat of apparaten) {
-      const st = statePer.get(apparaat.entity_id);
-      const modi = lijst(st, 'hvac_modes');
-      const canHeat = modi.includes('heat') || modi.includes('heat_cool');
-      const canCool = modi.includes('cool') || modi.includes('heat_cool');
+    for (const device of climateDevices) {
+      const st = statePer.get(device.entity_id);
+      const modes = listAttr(st, 'hvac_modes');
+      const canHeat = modes.includes('heat') || modes.includes('heat_cool');
+      const canCool = modes.includes('cool') || modes.includes('heat_cool');
 
       if (!canHeat && !canCool) {
-        bevindingen.push({
+        findings.push({
           soort: 'overgeslagen',
-          pad: `actuators.${apparaat.entity_id}`,
+          pad: `actuators.${device.entity_id}`,
           tekst:
-            modi.length === 0
-              ? `${apparaat.entity_id} meldde geen hvac_modes; stond hij aan tijdens het uitlezen?`
-              : `${apparaat.entity_id} kan alleen ${modi.join(', ')} en dus niet verwarmen of koelen`,
+            modes.length === 0
+              ? `${device.entity_id} meldde geen hvac_modes; stond hij aan tijdens het uitlezen?`
+              : `${device.entity_id} kan alleen ${modes.join(', ')} en dus niet verwarmen of koelen`,
         });
         continue;
       }
 
-      let id = slug(apparaat.entity_id.split('.')[1] ?? apparaat.entity_id);
-      while (gebruikteActuatorIds.has(id)) id = `${id}-2`;
-      gebruikteActuatorIds.add(id);
+      let id = slug(device.entity_id.split('.')[1] ?? device.entity_id);
+      while (usedActuatorIds.has(id)) id = `${id}-2`;
+      usedActuatorIds.add(id);
 
       /*
        * Twee integraties die dezelfde airco aanbieden.
@@ -484,45 +484,45 @@ export function ontdek(r: Registers): Voorstel {
        * zeggen dat er iets te kiezen valt, want ze allebei aansturen betekent
        * hetzelfde apparaat twee keer commanderen.
        */
-      const kaal = apparaat.entity_id.replace(/_\d+$/, '');
-      const tweeling = apparaten.find(
-        (x) => x !== apparaat && x.entity_id.replace(/_\d+$/, '') === kaal,
+      const bare = device.entity_id.replace(/_\d+$/, '');
+      const twin = climateDevices.find(
+        (x) => x !== device && x.entity_id.replace(/_\d+$/, '') === bare,
       );
-      if (tweeling && apparaat.entity_id.length <= tweeling.entity_id.length) {
-        bevindingen.push({
+      if (twin && device.entity_id.length <= twin.entity_id.length) {
+        findings.push({
           soort: 'geraden',
           pad: `actuators.${id}`,
           tekst:
-            `${apparaat.entity_id} en ${tweeling.entity_id} lijken hetzelfde apparaat ` +
+            `${device.entity_id} en ${twin.entity_id} lijken hetzelfde apparaat ` +
             'via twee integraties. Houd er één over.',
-          alternatieven: [tweeling.entity_id],
+          alternatieven: [twin.entity_id],
         });
-        keuzes.push({
+        choices.push({
           id: `dubbel:${id}`,
           soort: 'dubbelApparaat',
           vraag: 'Welke van deze twee stuurt dit apparaat aan?',
           toelichting:
             'Ze lijken hetzelfde apparaat via twee integraties. Allebei aanhouden ' +
             'betekent hetzelfde apparaat twee keer commanderen; de ander wordt weggelaten.',
-          huidig: apparaat.entity_id,
-          opties: [apparaat.entity_id, tweeling.entity_id],
+          huidig: device.entity_id,
+          opties: [device.entity_id, twin.entity_id],
           magLeeg: false,
         });
       }
 
       // Een vermogenssensor op hetzelfde apparaat is bijna altijd de zijne.
-      const eigenMeter =
-        apparaat.device_id == null
+      const ownMeter =
+        device.device_id == null
           ? null
-          : (vermogenSensoren.find((s) => s.device_id === apparaat.device_id) ?? null);
+          : (powerSensors.find((s) => s.device_id === device.device_id) ?? null);
 
-      const min = getal(st, 'min_temp');
-      const max = getal(st, 'max_temp');
+      const min = numberAttr(st, 'min_temp');
+      const max = numberAttr(st, 'max_temp');
 
       actuators.push({
         id,
-        name: naamVan(apparaat, st),
-        ref: apparaat.entity_id,
+        name: nameOf(device, st),
+        ref: device.entity_id,
         // Altijd `primary`. Assist is de bijzondere rol — opportunistisch
         // meedraaien op overschot — en dat is een keuze van de bewoner, geen
         // eigenschap die in een register staat.
@@ -532,15 +532,15 @@ export function ontdek(r: Registers): Voorstel {
           canCool,
           ...(min != null && max != null && min < max ? { setpointRange: [min, max] } : {}),
         },
-        ...(eigenMeter ? { power: { estimatedW: 0, sensor: eigenMeter.entity_id } } : {}),
+        ...(ownMeter ? { power: { estimatedW: 0, sensor: ownMeter.entity_id } } : {}),
       });
       actuatorIds.push(id);
 
       if (min == null || max == null) {
-        bevindingen.push({
+        findings.push({
           soort: 'geraden',
           pad: `actuators.${id}.capabilities.setpointRange`,
-          tekst: `${apparaat.entity_id} gaf geen min_temp/max_temp; er wordt 5-35 °C aangehouden`,
+          tekst: `${device.entity_id} gaf geen min_temp/max_temp; er wordt 5-35 °C aangehouden`,
         });
       }
     }
@@ -553,39 +553,39 @@ export function ontdek(r: Registers): Voorstel {
      * is waarneming en geen invoer (besluit 30), dus een minder nauwkeurige
      * bron kost hier geen regelgedrag.
      */
-    const vocht = inGebied(vochtSensoren)[0] ?? null;
-    const eigenVocht =
-      vocht == null && bron.attribute != null &&
-      getal(statePer.get(bron.id), 'current_humidity') != null
-        ? { id: bron.id, attribute: 'current_humidity' }
+    const humidity = inArea(humiditySensors)[0] ?? null;
+    const ownHumidity =
+      humidity == null && source.attribute != null &&
+      numberAttr(statePer.get(source.id), 'current_humidity') != null
+        ? { id: source.id, attribute: 'current_humidity' }
         : null;
 
     // Een verwijzing zonder attribuut blijft een gewone tekst, zodat het
     // bestand er niet ingewikkelder uitziet dan het is.
-    const alsRef = (m: { id: string; attribute?: string }): unknown =>
+    const asRef = (m: { id: string; attribute?: string }): unknown =>
       m.attribute == null ? m.id : { id: m.id, attribute: m.attribute };
 
     zones.push({
-      id: slug(gebied),
-      name: naam,
-      temperature: alsRef(bron),
-      ...(vocht ? { humidity: vocht.entity_id } : {}),
-      ...(eigenVocht ? { humidity: alsRef(eigenVocht) } : {}),
+      id: slug(area),
+      name,
+      temperature: asRef(source),
+      ...(humidity ? { humidity: humidity.entity_id } : {}),
+      ...(ownHumidity ? { humidity: asRef(ownHumidity) } : {}),
       actuatorIds,
     });
 
-    bevindingen.push({
+    findings.push({
       soort: 'gevonden',
-      pad: `zones.${slug(gebied)}`,
+      pad: `zones.${slug(area)}`,
       tekst:
-        `${naam}: ${bron.id}${bron.attribute ? ` (${bron.attribute})` : ''} met ` +
+        `${name}: ${source.id}${source.attribute ? ` (${source.attribute})` : ''} met ` +
         `${actuatorIds.length} ${actuatorIds.length === 1 ? 'apparaat' : 'apparaten'} ` +
         `(${actuatorIds.join(', ')})`,
     });
   }
 
   if (zones.length === 0) {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'zones',
       tekst:
@@ -596,22 +596,22 @@ export function ontdek(r: Registers): Voorstel {
 
   // ---- netmeting ----------------------------------------------------------
 
-  const meterKandidaten = vermogenSensoren.filter(
-    (e) => METERWOORDEN.test(e.entity_id) || METERWOORDEN.test(naamVan(e, statePer.get(e.entity_id))),
+  const meterCandidates = powerSensors.filter(
+    (e) => METER_WORDS.test(e.entity_id) || METER_WORDS.test(nameOf(e, statePer.get(e.entity_id))),
   );
-  const meter = meterKandidaten[0] ?? null;
+  const meter = meterCandidates[0] ?? null;
   if (meter) {
-    bevindingen.push({
+    findings.push({
       soort: 'geraden',
       pad: 'power.gridPower',
       tekst:
         `${meter.entity_id} lijkt de netmeting. Controleer dat hij negatief wordt ` +
         'bij teruglevering — anders klopt het hele overschot niet.',
-      ...(meterKandidaten.length > 1
-        ? { alternatieven: meterKandidaten.slice(1).map((e) => e.entity_id) }
+      ...(meterCandidates.length > 1
+        ? { alternatieven: meterCandidates.slice(1).map((e) => e.entity_id) }
         : {}),
     });
-    keuzes.push({
+    choices.push({
       id: 'gridPower',
       soort: 'veld',
       pad: 'power.gridPower',
@@ -620,11 +620,11 @@ export function ontdek(r: Registers): Voorstel {
         'Hij hoort negatief te worden bij teruglevering. Klopt dat niet, dan klopt ' +
         'het hele overschot niet. Zonder meter doet pv-surplus niet mee.',
       huidig: meter.entity_id,
-      opties: meterKandidaten.map((e) => e.entity_id),
+      opties: meterCandidates.map((e) => e.entity_id),
       magLeeg: true,
     });
   } else {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'power.gridPower',
       tekst:
@@ -639,29 +639,29 @@ export function ontdek(r: Registers): Voorstel {
   // (besluit 47). Herkenbaar aan de naam plus de eis dat hij in watt meet:
   // een omvormer die in kW rapporteert kan ook, maar dan klopt de eenheid in
   // het logboek niet meer met de rest.
-  const opbrengstKandidaten = vermogenSensoren.filter((e) => {
+  const productionCandidates = powerSensors.filter((e) => {
     const st = statePer.get(e.entity_id);
-    const eenheid = (st?.attributes as Record<string, unknown> | undefined)?.[
+    const unit = (st?.attributes as Record<string, unknown> | undefined)?.[
       'unit_of_measurement'
     ];
     return (
-      OPBRENGSTWOORDEN.test(e.entity_id) &&
-      !METERWOORDEN.test(e.entity_id) &&
-      eenheid === 'W'
+      PRODUCTION_WORDS.test(e.entity_id) &&
+      !METER_WORDS.test(e.entity_id) &&
+      unit === 'W'
     );
   });
-  const opbrengst = opbrengstKandidaten[0] ?? null;
-  if (opbrengst) {
-    bevindingen.push({
+  const production = productionCandidates[0] ?? null;
+  if (production) {
+    findings.push({
       soort: 'geraden',
       pad: 'solarProduction',
-      tekst: `${opbrengst.entity_id} lijkt te meten wat de panelen leveren`,
-      ...(opbrengstKandidaten.length > 1
-        ? { alternatieven: opbrengstKandidaten.slice(1).map((e) => e.entity_id) }
+      tekst: `${production.entity_id} lijkt te meten wat de panelen leveren`,
+      ...(productionCandidates.length > 1
+        ? { alternatieven: productionCandidates.slice(1).map((e) => e.entity_id) }
         : {}),
     });
-    if (opbrengstKandidaten.length > 1) {
-      keuzes.push({
+    if (productionCandidates.length > 1) {
+      choices.push({
         id: 'solarProduction',
         soort: 'veld',
         pad: 'solarProduction',
@@ -670,13 +670,13 @@ export function ontdek(r: Registers): Voorstel {
           'De regeling gebruikt hem niet. Hij gaat mee het logboek in als maat ' +
           'voor instraling, zodat later te berekenen valt hoeveel de zon een ' +
           'kamer opwarmt. Overslaan mag.',
-        huidig: opbrengst.entity_id,
-        opties: opbrengstKandidaten.map((e) => e.entity_id),
+        huidig: production.entity_id,
+        opties: productionCandidates.map((e) => e.entity_id),
         magLeeg: true,
       });
     }
   } else {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'solarProduction',
       tekst:
@@ -687,24 +687,24 @@ export function ontdek(r: Registers): Voorstel {
 
   // ---- bewoners en zon ----------------------------------------------------
 
-  const personen = van('person');
-  if (personen.length > 0) {
-    bevindingen.push({
+  const persons = from('person');
+  if (persons.length > 0) {
+    findings.push({
       soort: 'gevonden',
       pad: 'occupancy',
-      tekst: `${personen.length} bewoner${personen.length === 1 ? '' : 's'}: ${personen
+      tekst: `${persons.length} bewoner${persons.length === 1 ? '' : 's'}: ${persons
         .map((e) => e.entity_id)
         .join(', ')}`,
     });
   } else {
-    bevindingen.push({
+    findings.push({
       soort: 'ontbreekt',
       pad: 'occupancy',
       tekst: 'geen person-entiteiten; het huis geldt dan altijd als bewoond (besluit 40)',
     });
   }
 
-  const zon = r.states.some((s) => s.entity_id === 'sun.sun');
+  const sun = r.states.some((s) => s.entity_id === 'sun.sun');
 
   // ---- het voorstel -------------------------------------------------------
 
@@ -713,9 +713,9 @@ export function ontdek(r: Registers): Voorstel {
     id: 'mijn-huis',
     ...(timezone ? { timezone } : {}),
     ...(meter ? { power: { gridPower: meter.entity_id } } : {}),
-    ...(personen.length > 0
+    ...(persons.length > 0
       ? {
-          occupancy: personen.map((e) => ({
+          occupancy: persons.map((e) => ({
             id: slug(e.entity_id.split('.')[1] ?? e.entity_id),
             ref: e.entity_id,
           })),
@@ -723,12 +723,12 @@ export function ontdek(r: Registers): Voorstel {
       : {}),
     actuators,
     zones,
-    ...(zon ? { sun: 'sun.sun' } : {}),
-    ...(buiten ? { outdoorTemperature: buiten.entity_id } : {}),
-    ...(opbrengst ? { solarProduction: opbrengst.entity_id } : {}),
+    ...(sun ? { sun: 'sun.sun' } : {}),
+    ...(outdoor ? { outdoorTemperature: outdoor.entity_id } : {}),
+    ...(production ? { solarProduction: production.entity_id } : {}),
   };
 
-  return { config, bevindingen, keuzes };
+  return { config, bevindingen: findings, keuzes: choices };
 }
 
 // -------------------------------------------------------- keuzes maken -----
@@ -743,35 +743,35 @@ export function ontdek(r: Registers): Voorstel {
  * Onbekende antwoorden worden genegeerd: de weergave kan achterlopen op wat de
  * ontdekking net vond, en dan is stilzwijgend overslaan beter dan weigeren.
  */
-export function pasKeuzesToe(
-  voorstel: Voorstel,
-  antwoorden: Readonly<Record<string, string | null>>,
+export function applyChoices(
+  proposal: Proposal,
+  answers: Readonly<Record<string, string | null>>,
 ): Record<string, unknown> {
-  const config: Record<string, unknown> = structuredClone(voorstel.config);
+  const config: Record<string, unknown> = structuredClone(proposal.config);
 
-  for (const keuze of voorstel.keuzes) {
-    if (!(keuze.id in antwoorden)) continue;
-    const antwoord = antwoorden[keuze.id] ?? null;
+  for (const choice of proposal.keuzes) {
+    if (!(choice.id in answers)) continue;
+    const response = answers[choice.id] ?? null;
 
     // Een antwoord dat niet in de lijst stond komt er niet in. De weergave
     // levert een keuzelijst aan; alles daarbuiten is een fout of iets ergers.
-    if (antwoord != null && !keuze.opties.includes(antwoord)) continue;
-    if (antwoord == null && !keuze.magLeeg) continue;
+    if (response != null && !choice.opties.includes(response)) continue;
+    if (response == null && !choice.magLeeg) continue;
 
-    if (keuze.soort === 'veld' && keuze.pad === 'outdoorTemperature') {
-      if (antwoord == null) delete config['outdoorTemperature'];
-      else config['outdoorTemperature'] = antwoord;
-    } else if (keuze.soort === 'veld' && keuze.pad === 'power.gridPower') {
-      if (antwoord == null) delete config['power'];
-      else config['power'] = { ...(config['power'] as object | undefined), gridPower: antwoord };
-    } else if (keuze.soort === 'zoneTemperatuur') {
+    if (choice.soort === 'veld' && choice.pad === 'outdoorTemperature') {
+      if (response == null) delete config['outdoorTemperature'];
+      else config['outdoorTemperature'] = response;
+    } else if (choice.soort === 'veld' && choice.pad === 'power.gridPower') {
+      if (response == null) delete config['power'];
+      else config['power'] = { ...(config['power'] as object | undefined), gridPower: response };
+    } else if (choice.soort === 'zoneTemperatuur') {
       const zones = (config['zones'] as Record<string, unknown>[] | undefined) ?? [];
       for (const zone of zones) {
-        if (zone['id'] === keuze.zoneId) zone['temperature'] = antwoord;
+        if (zone['id'] === choice.zoneId) zone['temperature'] = response;
       }
-    } else if (keuze.soort === 'dubbelApparaat' && antwoord != null) {
-      const teVerwijderen = keuze.opties.filter((o) => o !== antwoord);
-      verwijderApparaten(config, teVerwijderen);
+    } else if (choice.soort === 'dubbelApparaat' && response != null) {
+      const toRemove = choice.opties.filter((o) => o !== response);
+      removeActuators(config, toRemove);
     }
   }
 
@@ -785,21 +785,21 @@ export function pasKeuzesToe(
  * wijst dat niet bestaat, wordt door de samenhangscontrole afgekeurd. En een
  * zone die daardoor helemaal geen apparaat meer heeft, kan niet blijven staan.
  */
-function verwijderApparaten(config: Record<string, unknown>, refs: readonly string[]): void {
+function removeActuators(config: Record<string, unknown>, refs: readonly string[]): void {
   const actuators = (config['actuators'] as Record<string, unknown>[] | undefined) ?? [];
-  const weg = new Set(
+  const gone = new Set(
     actuators.filter((a) => refs.includes(String(a['ref']))).map((a) => String(a['id'])),
   );
-  if (weg.size === 0) return;
+  if (gone.size === 0) return;
 
-  config['actuators'] = actuators.filter((a) => !weg.has(String(a['id'])));
+  config['actuators'] = actuators.filter((a) => !gone.has(String(a['id'])));
 
   const zones = (config['zones'] as Record<string, unknown>[] | undefined) ?? [];
   config['zones'] = zones
     .map((zone) => ({
       ...zone,
       actuatorIds: ((zone['actuatorIds'] as string[] | undefined) ?? []).filter(
-        (id) => !weg.has(id),
+        (id) => !gone.has(id),
       ),
     }))
     .filter((zone) => (zone['actuatorIds'] as string[]).length > 0);
@@ -808,7 +808,7 @@ function verwijderApparaten(config: Record<string, unknown>, refs: readonly stri
 // ------------------------------------------------------------- ophalen -----
 
 /** Wat `ontdek` nodig heeft, opgehaald bij een verbonden client. */
-export async function haalRegisters(
+export async function fetchRegistries(
   client: {
     query<T>(type: string): Promise<T>;
   },
