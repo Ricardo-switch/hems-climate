@@ -116,6 +116,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [56. Regels die voor elke toestand gelden](#56-regels-die-voor-elke-toestand-gelden)
 - [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
 - [59. Namen in het Engels, de rest in het Nederlands](#59-namen-in-het-engels-de-rest-in-het-nederlands)
+- [69. Ook de pagina en deploy.sh worden getest](#69-ook-de-pagina-en-deploysh-worden-getest)
 
 Wat nog open staat: [Wat nog een besluit wacht](#wat-nog-een-besluit-wacht).
 
@@ -2627,6 +2628,42 @@ replay van 26 augustus gaat van 161 naar 151 commando's. De zolder start daar om
 *Bewaakt* door een test, en door een nieuwe regel bij de invarianten (besluit
 56): nooit meer dan één start op het budget per beslissing. Zonder deze
 wijziging falen ze alle drie.
+
+---
+
+## 69. Ook de pagina en deploy.sh worden getest
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+Twee onderdelen vielen buiten de tests. De weergave is 1.144 regels JavaScript,
+die de sleutels van de API letterlijk leest. Bij het hernoemen van besluit 59
+bleek hoe dun de grens is: acht tests zochten al `version` waar de dienst
+`versie` stuurde. En `deploy.sh` draait op de NAS en wordt met de hand
+gekopieerd. Een fout erin merk je pas als de uitrol of de melding van besluit 67
+het niet meer doet.
+
+*Besluit:* twee taken in de CI, allebei vóór `stable`.
+
+- **De pagina in een browser.** De echte pagina tegen de echte webserver, in
+  headless Chromium via Playwright (`test/page.test.ts`). Met een echt besluit
+  van de arbiter over 26 augustus, en een terugblik over drie dagen logboek met
+  twee versies. De test eist: geen fout in de pagina, geen andere mislukte
+  aanvraag dan de onboarding die buiten de add-on uitstaat, en modus, zones,
+  budget, tijdlijn, versiemarkeringen en exportknop gevuld. Zonder
+  `HEMS_PAGE_TEST=1` slaat hij zichzelf over, zodat de rest van de suite geen
+  browser nodig heeft. Lokaal kan hij draaien met de Edge die er al staat.
+- **`deploy.sh` nakijken.** ShellCheck vanaf "warning" op alle shellscripts, en
+  `deploy/test-deploy.sh`, dat de syntaxis controleert en de melding van besluit
+  67 in acht situaties naspeelt.
+
+Playwright is een ontwikkelafhankelijkheid. Het image op de NAS blijft zonder
+afhankelijkheden, en de browser komt alleen op de CI-runner.
+
+*Getoetst door ze stuk te maken:* laat de pagina `versions` lezen in plaats van
+`versies`, en de test faalt. Zet de drempel van de melding op 3.000 minuten, en
+het testscript faalt. ShellCheck vond drie keer dezelfde stille fout in het
+opstartscript van de add-on (`export X="$(…)"` slikt de foutcode in); die is
+gesplitst.
 
 ---
 

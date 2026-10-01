@@ -102,9 +102,44 @@ jobs:
       - name: syntaxis en de melding bij stilvallen
         run: bash deploy/test-deploy.sh
 
+  page:
+    name: de pagina in een browser
+    runs-on: ubuntu-latest
+    # De echte pagina tegen de echte server, headless (besluit 69). Bewaakt
+    # vooral dat de weergave en de API dezelfde sleutels blijven gebruiken.
+    env:
+      TZ: UTC
+      HEMS_PAGE_TEST: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: weergave bouwen
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: backend — afhankelijkheden en browser
+        working-directory: backend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: de pagina
+        working-directory: backend
+        run: npx vitest run test/page.test.ts
+
   stable:
     name: stable bijwerken
-    needs: [test, image, deploy]
+    needs: [test, image, deploy, page]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
