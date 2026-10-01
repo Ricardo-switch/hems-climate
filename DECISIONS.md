@@ -47,6 +47,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [51. Starten vraagt meer dan draaien](#51-starten-vraagt-meer-dan-draaien)
 - [60. De schaduw gebruikt zijn eigen stabilisatietimer](#60-de-schaduw-gebruikt-zijn-eigen-stabilisatietimer)
 - [61. Parkeren start de stabilisatie](#61-parkeren-start-de-stabilisatie)
+- [62. De eigen stand overleeft een herstart](#62-de-eigen-stand-overleeft-een-herstart)
 
 **Configuratie en onboarding**
 
@@ -2363,6 +2364,45 @@ vensters en voor beide airco's. De vaste replay gaat van 159 naar 161 commando's
 geparkeerd apparaat pas uit als de rustperiode voorbij is" gaf de timer van
 buitenaf mee. Of parkeren hem zelf startte, vroeg niemand. Nu wel, en die test
 faalt zonder deze wijziging.
+
+---
+
+## 62. De eigen stand overleeft een herstart
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Wat de dienst zelf bijhoudt, zat alleen in het geheugen: de modus en de timers
+(besluit 39) en de veronderstelde stand van de apparaten (besluit 49). Besluit
+39 noemde dat voor de schaduw onschuldig. Dat was het niet meer sinds de NAS
+zelf uitrolt (besluit 54): elke push herstart de dienst. Op 1 oktober waren dat
+voor de middag drie uitrollen en één handmatige herstart. Na elke herstart begon de schaduw opnieuw vanaf het échte
+apparaat, en mat hij een paar minuten de geschiedenis van het oude systeem. Een
+lopende stabilisatie was weg, net als het moment waarop een veronderstelde rit
+begon. Onder echte regeling wordt dat een fout die je voelt: een herstart
+midden in een rit laat de minimale draaitijd vervallen.
+
+*Besluit:* de dienst bewaart die stand in `own-state.json` in de logmap, zodat
+hij in de back-up meegaat. Hij schrijft bij elke wijziging, en minstens elke vijf
+minuten, zodat het tijdstip in het bestand zegt hoe vers het is. Eerst een
+tijdelijk bestand, dan een atomaire rename. Bij het starten, vóór het eerste
+besluit, neemt hij de stand terug:
+
+- **modus en timers altijd.** Een verlopen timer is gewoon niet actief, en een
+  gekozen modus is een keuze van de bewoner.
+- **de veronderstelde apparaatstand alleen als hij hooguit een half uur oud
+  is.** Een uitrol duurt minuten. Lag de dienst langer stil, dan heeft de
+  arbiter in die tijd niets bestuurd, en is het echte apparaat het eerlijker
+  beginpunt.
+
+Een onleesbaar bestand is nooit een reden om niet te starten: dan begint de
+dienst zoals vroeger, en zegt hij waarom.
+
+*Waarom niet in Home Assistant:* dat zou schrijven zijn (besluit 15), en het
+bestand hoort bij de dienst, niet bij de woning.
+
+*Getoetst* met een dienst die stopt en een nieuwe die een minuut later start:
+die start de zolder niet opnieuw en houdt de woonkamer tegen op de timer van
+zijn voorganger. Zonder het terugnemen faalt die test.
 
 ---
 

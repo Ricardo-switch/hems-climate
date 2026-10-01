@@ -25,6 +25,7 @@ import { decide } from '../../core/decide.js';
 import type { Mode, SiteConfig } from '../../core/model.js';
 import { OwnState } from '../own-state.js';
 import { ShadowActuators } from '../shadow-actuators.js';
+import { StateFile } from '../state-file.js';
 import type { StrategyRegistry } from '../../core/strategy.js';
 import type { HaClient, HaEntityState } from './client.js';
 import {
@@ -150,6 +151,15 @@ function describe(command: Command): string {
   }
 }
 
+/**
+ * Hoe oud een bewaarde apparaatstand mag zijn om hem terug te nemen.
+ *
+ * Een uitrol duurt een paar minuten; de langste grens die de stand bewaakt is
+ * een draaitijd van een kwartier. Een half uur dekt het eerste ruim en laat het
+ * tweede niet langer gelden dan het betekent.
+ */
+const ACTUATOR_STATE_MAX_AGE_MS = 30 * 60_000;
+
 export class ShadowRunner {
   readonly #options: Required<Omit<ShadowOptions, 'logDir'>> & {
     logDir: string | null;
@@ -196,6 +206,12 @@ export class ShadowRunner {
   /** De dag waarop voor het laatst oude dagen gecomprimeerd zijn (besluit 58). */
   #compressedOn: string | null = null;
 
+  /**
+   * De eigen stand op schijf, zodat een herstart hem niet wist (besluit 62).
+   * Alleen wanneer er een logmap is; daar staat hij naast de logboeken.
+   */
+  #stateFile: StateFile | null = null;
+
   constructor(options: ShadowOptions) {
     // Bijhouden doen we allebei; alleen de eerste groep is aanleiding om
     // opnieuw te beslissen.
@@ -234,11 +250,15 @@ export class ShadowRunner {
         this.#options.now,
         (error) => this.#log(`historie niet weggeschreven: ${String(error)}`),
       );
+      this.#stateFile = new StateFile(this.#options.logDir, (error) =>
+        this.#log(`eigen stand niet weggeschreven: ${String(error)}`),
+      );
     }
   }
 
   start(): void {
     const { client } = this.#options;
+    this.#restore();
 
     client.on('ready', (states: HaEntityState[]) => {
       this.#store.replaceAll(states);
@@ -309,6 +329,43 @@ export class ShadowRunner {
     }
 
     client.connect();
+  }
+
+  /**
+   * Neemt de bewaarde eigen stand terug, vóór de eerste evaluatie.
+   *
+   * Modus en timers altijd: een verlopen timer is gewoon niet actief, en een
+   * gekozen modus is een keuze van de bewoner. De veronderstelde apparaatstand
+   * alleen als hij vers is. Lag de dienst langer stil dan dat, dan heeft de
+   * arbiter in die tijd niets bestuurd, en is het echte apparaat een eerlijker
+   * beginpunt dan een stand van uren terug.
+   */
+  #restore(): void {
+    const loaded = this.#stateFile?.load() ?? null;
+    if (loaded == null) return;
+    if ('problem' in loaded) {
+      this.#log(`bewaarde stand genegeerd (${loaded.problem}); begint leeg`);
+      return;
+    }
+    const ageMs = this.#options.now() - loaded.savedAtMs;
+    const minutes = Math.max(0, Math.round(ageMs / 60_000));
+    this.#own.restore(loaded);
+    const fresh = ageMs <= ACTUATOR_STATE_MAX_AGE_MS;
+    if (fresh) this.#shadowActuators.restore(loaded.actuators);
+    const count = Object.keys(loaded.actuators).length;
+    this.#log(
+      `eigen stand hersteld van ${minutes} min geleden` +
+        (count === 0
+          ? ''
+          : fresh
+            ? ` — ${count} veronderstelde apparaatstand(en) mee`
+            : ` — apparaatstand te oud, begint bij het echte apparaat`),
+    );
+  }
+
+  /** Belooft dat de eigen stand tot nu toe op schijf staat. */
+  stateSettled(): Promise<void> {
+    return this.#stateFile?.settled() ?? Promise.resolve();
   }
 
   /** Belooft dat de historie tot nu toe op schijf staat. */
@@ -405,6 +462,12 @@ export class ShadowRunner {
     // het besluit, en om dezelfde reden: wat de arbiter zojuist gestuurd zou
     // hebben, geldt pas bij de vólgende evaluatie.
     this.#shadowActuators.follow(decision);
+    this.#stateFile?.save({
+      version: 1,
+      savedAtMs: nowMs,
+      ...this.#own.snapshot(),
+      actuators: this.#shadowActuators.snapshot(),
+    });
 
     this.#ticks += 1;
     await this.#record(decision, trigger);

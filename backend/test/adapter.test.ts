@@ -625,6 +625,90 @@ describe('de ruwe historie (besluit 52)', () => {
   });
 });
 
+describe('de eigen stand over een herstart heen (besluit 62)', () => {
+  /** Zolder warm, woonkamer wel of niet: zie `coolLivingRoom` hierboven. */
+  function states(livingRoomC: string): HaEntityState[] {
+    return shadowStates().map((s) =>
+      s.entity_id === 'sensor.beneden_temperatuur'
+        ? shadowEntity('sensor.beneden_temperatuur', livingRoomC)
+        : s,
+    );
+  }
+
+  /** Eén dienst: verbinden, één besluit, en dan weer weg. */
+  async function once(dir: string, livingRoomC: string, nowMs: number): Promise<string[]> {
+    const ha = await startFakeHa({ states: states(livingRoomC) });
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const lines: string[] = [];
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      watchdogMinutes: 0,
+      logDir: dir,
+      write: (line) => lines.push(line),
+      now: () => nowMs,
+    });
+    runner.start();
+    await waitUntil(runner, 1);
+    await runner.stateSettled();
+    await runner.historySettled();
+    runner.stop();
+    await ha.close();
+    return lines;
+  }
+
+  async function freshDir(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    return dir;
+  }
+
+  it('gaat na een herstart verder met de timer en de veronderstelde stand', async () => {
+    const dir = await freshDir();
+
+    // Eerste dienst: de zolder start, en daarmee de stabilisatietimer.
+    const first = await once(dir, '21.0', SHADOW_NOW);
+    expect(first.some((l) => l.includes('ac-zolder → cool'))).toBe(true);
+    const saved = JSON.parse(await readFile(join(dir, 'own-state.json'), 'utf-8')) as {
+      timers: { stabilisation: { endsAtMs: number } };
+      actuators: Record<string, { action: string }>;
+    };
+    expect(saved.timers.stabilisation.endsAtMs).toBe(SHADOW_NOW + 5 * 60_000);
+    expect(saved.actuators['ac-zolder']?.action).toBe('cool');
+
+    // Een minuut later een nieuwe dienst, nu wil de woonkamer ook koelen.
+    const second = await once(dir, '24.5', SHADOW_NOW + 60_000);
+    expect(second.some((l) => l.includes('eigen stand hersteld van 1 min geleden'))).toBe(true);
+    // De zolder draait in zijn veronderstelling al: niet opnieuw starten.
+    expect(second.some((l) => l.includes('ac-zolder → cool'))).toBe(false);
+    // En de timer van de vorige dienst houdt de woonkamer tegen.
+    expect(second.some((l) => l.includes('stabilisation_active'))).toBe(true);
+  });
+
+  it('begint bij het echte apparaat als de bewaarde stand te oud is', async () => {
+    const dir = await freshDir();
+    await once(dir, '21.0', SHADOW_NOW);
+
+    const later = await once(dir, '21.0', SHADOW_NOW + 2 * 3_600_000);
+    expect(later.some((l) => l.includes('apparaatstand te oud'))).toBe(true);
+    // Het echte apparaat staat uit, dus begint de arbiter opnieuw.
+    expect(later.some((l) => l.includes('ac-zolder → cool'))).toBe(true);
+  });
+
+  it('start gewoon als het bestand onleesbaar is, en zegt waarom', async () => {
+    const dir = await freshDir();
+    await writeFile(join(dir, 'own-state.json'), '{ half', 'utf-8');
+
+    const lines = await once(dir, '21.0', SHADOW_NOW);
+    expect(lines.some((l) => l.includes('bewaarde stand genegeerd (geen geldige JSON)'))).toBe(true);
+    expect(lines.some((l) => l.includes('ac-zolder → cool'))).toBe(true);
+  });
+});
+
 describe('oude dagen comprimeren (besluit 58)', () => {
   it('doet de dienst zelf, meteen na het eerste besluit', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));
