@@ -178,7 +178,7 @@ in het besluitenlog en in de code.
 | --- | --- | --- | --- |
 | **A** | **De schaduw eerlijk.** Eigen apparaatstand (49, 49b), comfortplafond (50), startdrempel (51), de ruwe historie zelf vastleggen (52) | Zonder dit meet de schaduw de verkeerde dingen, of gaat data verloren | **klaar** |
 | — | **Het vangnet.** CI vóór de NAS, vaste replay, stiltetest, versie in health (54), opstart (55), invarianten (56), linter (57), compressie (58), index op het besluitenlog | Het kwaliteitsrapport van 30 september | **klaar** |
-| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: een weg terug, en de add-on weer aan als plek om te regelen (53) | Het moment waarop het oude systeem uit kan | voorwerk nu; schakelen na een winter en alle functies (64) |
+| **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: een weg terug, en de add-on weer aan als plek om te regelen (53) | Het moment waarop het oude systeem uit kan | na een winter en alle functies (64); de weg terug een paar weken ervoor |
 | **C** | **Universeel.** Een bewuste tabel met standaardwaarden, een inlog op de weergave (23), een terugblik die niet uitgaat van "het oude systeem" (28), een datasetmeter die niet op dit huis geijkt is (27) | Voorwaarde voor een tweede woning | los van B |
 | **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
 | **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na D |
@@ -297,9 +297,11 @@ niet het waarom.
 Stap A, het vangnet en de afspraak over de taal van de namen (besluit 59) zijn
 klaar.
 
-Nu het voorwerk van stap B: een weg terug, en de add-on weer aan. De
-stabilisatie loopt sinds besluit 60 en 61 op de eigen timer, en de eigen stand
-overleeft sinds besluit 62 een herstart. Werkelijk geschakeld wordt pas als de
-datasetmeter dertig winterdagen en honderd procent functiedekking toont
-(besluit 64), op zijn vroegst eind december 2026. C kan ernaast, maar is pas
+Nu: de schaduw laten meten. De stabilisatie loopt sinds besluit 60 en 61 op de
+eigen timer, en de eigen stand overleeft sinds besluit 62 een herstart.
+Werkelijk geschakeld wordt pas als de datasetmeter dertig winterdagen en honderd
+procent functiedekking toont (besluit 64), op zijn vroegst eind december 2026.
+De weg terug (één schakelaar die bepaalt wie stuurt, en een dodemansknop in Home
+Assistant) en de add-on horen bij die stap. Ze komen een paar weken ervoor, zodat
+het teken van leven al heeft meegedraaid voordat iemand erop vertrouwt. C kan ernaast, maar is pas
 nodig bij een tweede woning. D wacht op de winter.
