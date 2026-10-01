@@ -103,6 +103,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [36. De add-on is dezelfde dienst, niet een tweede](#36-de-add-on-is-dezelfde-dienst-niet-een-tweede)
 - [37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt](#37-de-add-on-wordt-platgeslagen-voordat-de-supervisor-hem-bouwt)
 - [53. De NAS is de primaire omgeving; de add-on wacht tot stap B](#53-de-nas-is-de-primaire-omgeving-de-add-on-wacht-tot-stap-b)
+- [64. Echt schakelen pas met een complete winter en alle functies](#64-echt-schakelen-pas-met-een-complete-winter-en-alle-functies)
 
 **Kwaliteitsbewaking**
 
@@ -2444,6 +2445,40 @@ twintig keer trager. Zonder de meegedragen stand van de lezer falen drie van de
 zes tests.
 
 De pagina toont erbij hoeveel dagbestanden er die ronde echt gelezen zijn.
+
+---
+
+## 64. Echt schakelen pas met een complete winter en alle functies
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Stap B, de overdracht, had geen moment. De voorbereiding kon al, maar wanneer
+de arbiter werkelijk iets mag aanzetten, was nooit besloten.
+
+*Besluit:* er wordt pas geschakeld als de datasetmeter twee dingen laat zien.
+
+- **Een winter:** 30 winterdagen. De meter telt december tot en met februari als
+  winter.
+- **Alle functies:** functiedekking 100%. Elke modus, elke strategie en elke
+  richting moet op minstens twee losse dagen zijn voorgekomen.
+
+Op 1 oktober 2026 stond de winter op 0 van 30. De dekking was 85%: alles was
+langsgekomen behalve verwarmen (`heat`) en `heat-assist`. Het vroegste moment
+is daarmee rond eind december 2026.
+
+*Waarom niet eerder:* verwarmen is in de schaduw nog nooit afgegaan. Gaat het nu
+live, dan draait een pad dat we nooit hebben zien werken, in het seizoen waarin
+een fout het meest voelbaar is. En zolang het oude systeem regelt, levert elke
+winterdag een vergelijking op. Die eindigt voor een apparaat zodra de arbiter
+het overneemt.
+
+*Wat niet in de eis zit:* lente en zomer. Het totaalcijfer van de meter rekent
+die wel mee, en staat op dat moment dus nog onder de 100%. Dat is bewust. Koelen
+is het best bekende deel van de regeling, en een volle seizoenscyclus afwachten
+zou de overdracht tot de zomer van 2027 uitstellen.
+
+*Tot die tijd:* de voorbereiding van stap B (een weg terug, de add-on weer aan)
+mag gewoon doorgaan, want die raakt het huis niet.
 
 ---
 
