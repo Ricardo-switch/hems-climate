@@ -26,7 +26,7 @@
 
 import { basename, resolve } from 'node:path';
 
-import { exampleSite } from './site.js';
+import { exampleSite, withLegacyStabilisation } from './site.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
 import { ShadowActuators } from '../adapters/shadow-actuators.js';
 import { decide } from '../core/decide.js';
@@ -47,7 +47,10 @@ const withoutCeiling = (z: Zone): Zone => {
   const { comfortMaxC: _omitted, ...rest } = z;
   return rest;
 };
-const SITE: SiteConfig = { ...exampleSite, zones: exampleSite.zones.map(withoutCeiling) };
+const SITE: SiteConfig = withLegacyStabilisation({
+  ...exampleSite,
+  zones: exampleSite.zones.map(withoutCeiling),
+});
 const ACTUATORS = ['ac-woonkamer', 'ac-zolder'] as const;
 type ActuatorId = (typeof ACTUATORS)[number];
 

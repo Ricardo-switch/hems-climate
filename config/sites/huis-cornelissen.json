@@ -318,7 +318,6 @@
     ]
   },
   "timers": {
-    "stabilisation": "timer.pv_stabilisatie",
     "manualOverride": "timer.verwarming_handmatig"
   },
   "sun": "sun.sun",

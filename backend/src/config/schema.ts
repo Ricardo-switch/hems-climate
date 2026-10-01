@@ -1197,16 +1197,19 @@ export function parseSiteConfig(
   } else if (!isRecord(timersRaw)) {
     p.error('timers', 'moet een object zijn');
   } else {
-    const stabilisation = ref(p, timersRaw['stabilisation'], 'timers.stabilisation', defaultAdapter);
-    // `manualOverride` is optioneel: op dit moment leest niets in de kern hem
-    // uit. Wie hem weglaat verandert geen enkel besluit.
-    const manualOverrideRaw = timersRaw['manualOverride'];
-    const manualOverride =
-      manualOverrideRaw === undefined
+    // Per timer optioneel (besluit 39 en 60). Wat ontbreekt, houdt de dienst
+    // zelf bij; `manualOverride` leest de kern op dit moment niet eens uit.
+    const optionalRef = (key: 'stabilisation' | 'manualOverride'): DeviceRef | null =>
+      timersRaw[key] === undefined
         ? null
-        : ref(p, manualOverrideRaw, 'timers.manualOverride', defaultAdapter);
-    if (stabilisation) {
-      timers = { stabilisation, ...(manualOverride ? { manualOverride } : {}) };
+        : ref(p, timersRaw[key], `timers.${key}`, defaultAdapter);
+    const stabilisation = optionalRef('stabilisation');
+    const manualOverride = optionalRef('manualOverride');
+    if (stabilisation || manualOverride) {
+      timers = {
+        ...(stabilisation ? { stabilisation } : {}),
+        ...(manualOverride ? { manualOverride } : {}),
+      };
     }
   }
 

@@ -29,6 +29,7 @@ import { decide } from '../core/decide.js';
 import type { SiteConfig } from '../core/model.js';
 import { defaultStrategies } from '../index.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
+import { OwnState } from '../adapters/own-state.js';
 
 const TICK_MINUTES = 1;
 const TICK_MS = TICK_MINUTES * 60_000;
@@ -69,6 +70,8 @@ async function main(): Promise<void> {
   for (const bandC of BANDS) {
     const base = withBand(exampleSite, bandC);
     const cursor = new Cursor(history);
+    // De stabilisatietimer houdt de dienst zelf bij (besluit 60).
+    const own = new OwnState();
     const out: Outcome = {
       bandC,
       runningTicks: 0,
@@ -82,8 +85,9 @@ async function main(): Promise<void> {
     for (let t = start; t <= history.meta.toMs; t += TICK_MS) {
       cursor.advanceTo(t);
       const config = configAt(base, cursor);
-      const state = snapshot(config, cursor, t);
+      const state = snapshot(config, cursor, t, own);
       const decision = decide({ config, state, strategies });
+      own.apply(decision.commands, t);
 
       const intent = decision.accepted.find((i) => i.actuatorId === ACTUATOR_ID);
       const running = intent?.action === 'cool' || intent?.action === 'heat';

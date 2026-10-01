@@ -281,9 +281,18 @@ export interface ModeSource {
   readonly handsOffWhen: readonly { readonly ref: DeviceRef; readonly state: string }[];
 }
 
-/** De timers die de kern als invoer krijgt. */
+/**
+ * De timers die de kern als invoer krijgt, wanneer ze uit Home Assistant komen.
+ *
+ * Per timer: wat hier niet staat, houdt de dienst zelf bij (besluit 39).
+ */
 export interface TimerSources {
-  readonly stabilisation: DeviceRef;
+  /**
+   * Optioneel, en voor een woning met een oud systeem ernaast hoort hij weg.
+   * Een `timer.`-entiteit van dat systeem loopt alleen wanneer dát systeem iets
+   * startte, niet wanneer de arbiter dat deed (besluit 60).
+   */
+  readonly stabilisation?: DeviceRef;
   /**
    * Loopt er een handmatige ingreep van de bewoner.
    *

@@ -24,7 +24,7 @@ import {
   ShadowRunner,
   type LiveSnapshot,
 } from '../src/adapters/homeassistant/shadow.js';
-import { exampleSite } from './site.js';
+import { exampleSite, withHaStabilisation } from './site.js';
 import { decide } from '../src/core/decide.js';
 import type { SiteConfig } from '../src/core/model.js';
 import { defaultStrategies } from '../src/index.js';
@@ -448,13 +448,20 @@ describe('zonder helpers in Home Assistant', () => {
     expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(true);
   });
 
-  it('laat de opname die met het oude systeem vergelijkt ongemoeid', async () => {
-    // Dezelfde woning, maar mét `timers` in de configuratie. De nep-HA kent
-    // `timer.pv_stabilisatie` niet, dus die staat niet actief — en de eigen
-    // boekhouding mag daar niet overheen gaan liggen. Deed hij dat wel, dan
-    // zou de draaiende schaduwopname ineens andere besluiten nemen dan het
-    // systeem waarmee hij wordt vergeleken.
+  it('gebruikt in deze woning de eigen timer, niet die van het oude systeem', async () => {
+    // Besluit 60. De timer van het oude systeem liep alleen wanneer dát systeem
+    // iets startte; de schaduw mat daardoor een stukje van zijn voorganger.
     const lines = await runShadow(exampleSite);
+
+    expect(exampleSite.timers?.stabilisation).toBeUndefined();
+    expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
+    expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(true);
+  });
+
+  it('laat een timer uit Home Assistant winnen wanneer de configuratie hem noemt', async () => {
+    // De nep-HA kent `timer.pv_stabilisatie` niet, dus die staat niet actief —
+    // en de eigen boekhouding mag daar niet overheen gaan liggen (besluit 39).
+    const lines = await runShadow(withHaStabilisation);
 
     expect(lines.some((l) => l.includes('timer stabilisation start'))).toBe(true);
     expect(lines.some((l) => l.includes('stabilisation_active'))).toBe(false);

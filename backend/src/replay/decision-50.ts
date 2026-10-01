@@ -24,7 +24,7 @@
 
 import { basename, resolve } from 'node:path';
 
-import { exampleSite } from './site.js';
+import { exampleSite, withLegacyStabilisation } from './site.js';
 import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
 import { ShadowActuators } from '../adapters/shadow-actuators.js';
 import { decide } from '../core/decide.js';
@@ -89,7 +89,8 @@ async function measure(
   const strategies = defaultStrategies();
   const cursor = new Cursor(history);
   const shadow = new ShadowActuators();
-  const base = withCeiling(exampleSite, ceiling);
+  // Gemeten met de timer van het oude systeem, zoals toen (zie besluit 60).
+  const base = withCeiling(withLegacyStabilisation(exampleSite), ceiling);
 
   const zone: Record<ZoneId, PerZone> = {
     woonkamer: { aboveCeiling: 0, comfortCooling: 0, importMinutes: 0, importWh: 0 },
