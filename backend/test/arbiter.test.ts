@@ -452,6 +452,36 @@ describe('afbouwen', () => {
   });
 });
 
+describe('parkeren start de stabilisatie (besluit 61)', () => {
+  const quiet = (actuators: Partial<Record<string, ActuatorState>>) => ({
+    ...buildState({ gridPowerW: 200, livingRoomC: 24.2, bathroomC: 22.5, atticC: 23.2, actuators }),
+    modeOverride: 'voorverwarmen' as const,
+  });
+  const timerStart = (d: ReturnType<typeof run>) =>
+    d.commands.find((c) => c.kind === 'startTimer' && c.timerId === 'stabilisation');
+
+  it('start de timer wanneer een draaiende airco wordt geparkeerd', () => {
+    const decision = run(quiet({ 'ac-zolder': actuator('cool', { setpointC: 21.5, minutesAgo: 90 }) }));
+    expect(
+      decision.commands.find((c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder'),
+    ).toMatchObject({ action: 'standby' });
+    expect(timerStart(decision)).toMatchObject({ durationS: 5 * 60 });
+  });
+
+  it('start geen timer wanneer een geparkeerde airco uitgaat', () => {
+    // Uitzetten na het parkeren is het einde van de stabilisatie, geen nieuwe.
+    const decision = run(quiet({ 'ac-zolder': actuator('standby', { setpointC: 25, minutesAgo: 90 }) }));
+    expect(
+      decision.commands.find((c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder'),
+    ).toMatchObject({ action: 'off' });
+    expect(timerStart(decision)).toBeUndefined();
+  });
+
+  it('start geen timer wanneer er niets verandert', () => {
+    expect(timerStart(run(quiet({})))).toBeUndefined();
+  });
+});
+
 describe('een huis zonder aanwezigheidsbronnen', () => {
   /*
    * `some()` op een lege lijst geeft false, en dat betekende: altijd afwezig,
