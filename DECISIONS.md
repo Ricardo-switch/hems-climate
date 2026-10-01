@@ -2629,7 +2629,9 @@ gestopt.
 - **`handmatig` is grofkorrelig.** Zie besluit 8b: de stand geldt bij ons voor de
   hele woning, in het oude systeem alleen voor de koelregeling.
 - **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
-  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6c.
+  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6c. Voor dit
+  huis bewust zo gelaten (1 oktober 2026): de NAS is alleen bereikbaar op het
+  thuisnetwerk en via Tailscale, en daarmee ook onderweg te openen.
 - **De terugblik spreekt over "het oude systeem".** Voor een woning zonder
   YAML-voorganger vergelijkt de schaduwmodus de arbiter met wat de thermostaten
   uit zichzelf deden (besluit 28). Dezelfde machinerie, andere vraag, verkeerde
