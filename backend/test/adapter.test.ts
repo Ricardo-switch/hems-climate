@@ -625,6 +625,50 @@ describe('de ruwe historie (besluit 52)', () => {
   });
 });
 
+describe('alleen vastleggen (besluit 65)', () => {
+  it('legt het gasverbruik vast, maar beslist er niet opnieuw op', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-shadow-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+
+    const ha = await startFakeHa({
+      states: [...shadowStates(), shadowEntity('sensor.gas_meter_gas', '4123.456')],
+    });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      logDir: dir,
+      write: () => {},
+      now: () => SHADOW_NOW,
+    });
+    cleanups.push(() => runner.stop());
+
+    runner.start();
+    await waitUntil(runner, 1);
+    // Eerst het gas, dan iets wat wél een besluit uitlokt. Eén verbinding, dus
+    // als het tweede verwerkt is, is het eerste dat ook.
+    ha.push(shadowEntity('sensor.gas_meter_gas', '4123.789'));
+    ha.push(shadowEntity('sensor.hue_motion_sensor_zolder_temperatuur', '25.3'));
+    await waitUntil(runner, 2);
+    await runner.historySettled();
+
+    // Alleen de temperatuur gaf een besluit, het gas niet.
+    expect(runner.stats.evaluations).toBe(2);
+    const day = new Date(SHADOW_NOW).toISOString().slice(0, 10);
+    const rows = (await readFile(join(dir, `history-${day}.ndjson`), 'utf-8'))
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as { e: string; s: string });
+    const gas = rows.filter((r) => r.e === 'sensor.gas_meter_gas').map((r) => r.s);
+    expect(gas).toEqual(['4123.456', '4123.789']);
+  });
+});
+
 describe('de eigen stand over een herstart heen (besluit 62)', () => {
   /** Zolder warm, woonkamer wel of niet: zie `coolLivingRoom` hierboven. */
   function states(livingRoomC: string): HaEntityState[] {

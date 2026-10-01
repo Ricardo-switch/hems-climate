@@ -1232,6 +1232,17 @@ export function parseSiteConfig(
     );
   }
 
+  // Alleen vastleggen, niets beslist erop (besluit 65).
+  const recordOnlyRaw = input['recordOnly'];
+  let recordOnly: DeviceRef[] | null = null;
+  if (recordOnlyRaw !== undefined) {
+    if (!Array.isArray(recordOnlyRaw)) {
+      p.error('recordOnly', 'moet een lijst met entiteiten zijn');
+    } else {
+      recordOnly = refList(p, recordOnlyRaw, 'recordOnly', defaultAdapter);
+    }
+  }
+
   // Dezelfde behandeling voor de opbrengst van de zonnepanelen (besluit 47).
   const solarRaw = input['solarProduction'];
   const solarProduction =
@@ -1410,6 +1421,7 @@ export function parseSiteConfig(
       ...(sun ? { sun } : {}),
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(solarProduction ? { solarProduction } : {}),
+      ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),
     },
     warnings: p.warnings,
