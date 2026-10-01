@@ -2605,9 +2605,9 @@ eerste airco werkelijk trekt, en pas daarna over de volgende te beslissen
 
 *Besluit:* hooguit één start op het budget per beslissing. Een tweede voorstel
 dat zou starten, krijgt `stabilisation_active` met als toelichting "er is deze
-ronde al iets gestart", en komt na de stabilisatie opnieuw aan de beurt. Wat
-niet op het budget start, valt erbuiten: comfort met een primair apparaat, en
-hervatten blijft gewoon onder de stabilisatie zelf vallen.
+ronde al iets gestart", en komt na de stabilisatie opnieuw aan de beurt.
+Hervatten uit standby telt ook als start. Wat niet op het budget start, valt
+erbuiten, zoals comfort met een primair apparaat.
 
 *Gemeten* (`src/replay/decision-60.ts`, met en zonder deze regel). Alleen de
 zolder in het augustusvenster verandert; in september kwam het niet voor.
