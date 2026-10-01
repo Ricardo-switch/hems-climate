@@ -29,6 +29,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [34. Hybride SaaS — verborgen HA met een dunne agent](#34-hybride-saas--verborgen-ha-met-een-dunne-agent)
 - [44. De assistent is een vierde voorsteller, geen baas](#44-de-assistent-is-een-vierde-voorsteller-geen-baas)
 - [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
+- [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
 
 **Kern en regeling**
 
@@ -2664,6 +2665,43 @@ afhankelijkheden, en de browser komt alleen op de CI-runner.
 het testscript faalt. ShellCheck vond drie keer dezelfde stille fout in het
 opstartscript van de add-on (`export X="$(…)"` slikt de foutcode in); die is
 gesplitst.
+
+---
+
+## 70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Een tweede huis heeft andere apparaten dan dit huis: misschien één airco, geen
+ventilatie, geen zonnepanelen, of een warmtepomp in plaats van een Nest. Het
+systeem mag zo'n huis niet weigeren, en de bewoner moet ook niet eerst iets
+hoeven aanschaffen.
+
+*Besluit:* elke combinatie van apparaten en sensoren wordt geaccepteerd. Het
+systeem leidt uit de configuratie af wat het kan. Ontbreekt er iets, dan regelt
+het minder slim of anders, maar het regelt. En het zegt erbij wat het daardoor
+niet kan, en waarom. Dat principe zat al in de code voor een ontbrekende
+netmeter; vanaf nu geldt het voor alles.
+
+| Ontbreekt of anders | Wat de regeling dan doet | Stand op 1 oktober 2026 |
+| --- | --- | --- |
+| Slimme meter (netvermogen) | Geen zonnestrategie; comfort en heat-assist werken door | werkt, met een waarschuwing |
+| Zon boven de horizon | Zonnestrategie zonder nachtbeveiliging | werkt, met een waarschuwing |
+| Buitentemperatuur, zonne-opbrengst | Regelt gewoon; de dataset is minder compleet voor het model | werkt, met een waarschuwing |
+| Modusknop of timers in Home Assistant | De dienst houdt ze zelf bij (besluit 39) | werkt |
+| Ventilatie, gasmeter | Wordt niet vastgelegd; het model mist die invoer | werkt |
+| Geen oud systeem ernaast | De terugblik vergelijkt met wat de thermostaten zelf deden (besluit 28) | werkt, maar de pagina spreekt nog over "het oude systeem" |
+| Eén airco als enige apparaat | Moet zowel comfort houden als zonnestroom gebruiken | ontbreekt: elk apparaat heeft nu één rol, hoofd- of hulpapparaat |
+| Alleen koelen, of alleen verwarmen | De datasetmeter en besluit 64 tellen alleen functies die het huis heeft | ontbreekt: de meter eist nu ook verwarmen en heat-assist |
+| Warmtepomp via een SG-Ready-schakelaar | Stuurt via een schakelaar in plaats van een thermostaat | ontbreekt: een apparaat moet nu een `climate`-entiteit zijn |
+
+*Hoe het bewaakt wordt:* met voorbeeldhuizen in de tests. Een set
+configuraties (één airco; alleen koelen; geen zonnepanelen; geen meter; een
+warmtepomp) gaat door de beslissing en door de invarianten van besluit 56. Een
+opstelling die vastloopt of stil niets doet, laat de test falen.
+
+*Wanneer:* de drie gaten horen bij stap C, vóór het tweede huis. Ze veranderen
+niets aan dit huis, dus ze mogen ook eerder, zonder de winterdata te raken.
 
 ---
 
