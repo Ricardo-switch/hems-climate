@@ -174,7 +174,7 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 | Comfort per kamer: nooit kouder dan, nooit warmer dan | vast | 50 |
 | Wie stuurt, per apparaat | vast | 53, 73 |
 | Zelf ingrijpen per apparaat, en hoe lang | vast | 74 |
-| Koelen op netstroom boven het plafond, of alleen op zon | open | wacht op een besluit; gevonden in de data van 1 oktober |
+| Koelen op netstroom boven het plafond, of alleen op zon | vast, standaard aan | 50, bevestigd op 2 oktober |
 | Stille uren per kamer | voorstel | 72 |
 | Welke kamer voorgaat bij weinig zon | vast | prioriteit per zone |
 | Gekoppeld: laadpaal, batterij, tarief | voorstel | koppelen via evcc en Predbat, niet zelf bouwen |
@@ -269,5 +269,3 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   een besluit wacht" in het besluitenlog.
 - **Uiterlijk en naam.** Telefoon en wand zijn allebei donker. Mag de bewoner
   zelf een lichte versie kiezen, of een accentkleur? En het logo en de naam van de app; nu een plaatshouder.
-- **Het plafond op netstroom** (§6): per huis een instelling, maar met welke
-  standaard?

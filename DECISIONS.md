@@ -1964,6 +1964,13 @@ netstroom, boven 26 graden, wanneer de zon het niet deed.
 `decision-49.ts` meet zonder plafond, zodat de getallen van besluit 49 uit dat
 script te blijven halen zijn.
 
+
+*Bevestigd, 2 oktober 2026.* Op 1 oktober zou de schaduw 's avonds anderhalf
+uur op netstroom hebben gekoeld, toen de woonkamer naar 26,8 °C liep; het oude
+systeem deed niets. De bewoner koos ervoor dat zo te houden: comfort weegt mee,
+niet alleen zonnestroom, en dat maakt de regeling begrijpelijker. Een bewoner
+denkt in "het is hier te warm", niet in watt. In de app wordt het een
+instelling per huis onder "Wat mag het", standaard aan.
 ---
 
 ## 51. Starten vraagt meer dan draaien
@@ -3084,15 +3091,6 @@ komt na stap E.
   volgt hoeveel lucht er naar buiten gaat. Later komen er misschien
   CO₂-sensoren bij, voor de luchtkwaliteit; die horen dan ook in `recordOnly`.
 
-- **Koelen op netstroom boven het comfortplafond.** Op 1 oktober 2026 liep de
-  woonkamer tussen 17:50 en 18:25 op van 24,8 naar 26,8 °C. De schaduw had dan
-  op het plafond van 26 °C (besluit 50) gekoeld: de woonkamer van 18:05 tot
-  19:43, de zolder van 18:21 tot 20:41, met weinig of geen zon, dus vooral op
-  netstroom. Het oude systeem koelt alleen op zon en deed niets. Wat de
-  woonkamer deed oplopen, staat niet in de data; in dezelfde minuten liep er
-  wel 0,29 m³ gas door de meter. De vraag aan de bewoner: wil hij boven 26 °C
-  ook op netstroom koelen, of alleen op zon? Het antwoord kan per huis
-  verschillen, en hoort dus een instelling te worden.
 - **De zonne-opbrengst komt eens per kwartier.** `sensor.solaredge_huidig_vermogen`
   komt uit de cloudkoppeling van SolarEdge (api-sleutel en site-id) en werkt
   precies elke 15 minuten bij; de API van SolarEdge staat niet veel vaker toe.
