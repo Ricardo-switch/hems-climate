@@ -139,6 +139,20 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
    begint het leren.
 
+### Wat er verandert in Home Assistant
+
+**Vast** (72). De dienst ziet zelf dat er een apparaat bijkomt, verdwijnt of
+verhuist, en doet per soort een voorstel: een thermometer gaat meten, een betere
+thermometer vervangt de oude, een raamsensor wordt de functie "airco pauzeren
+als het raam openstaat", een airco wordt toegevoegd en begint met leren of
+meekijken. Wat er niet toe doet, staat bij "niet gebruikt". Een verdwenen
+apparaat waar de regeling op leunde, is een melding.
+
+Meldingen in twee niveaus. Nieuw is een voorstel in de app, zonder pushmelding.
+Wat de regeling raakt (een verdwenen sensor, een airco die niet reageert, de
+failsafe) krijgt een pushmelding. Dat beantwoordt een deel van de open vraag
+over meldingen hieronder.
+
 ### Een apparaat toevoegen
 
 **Vast** (72). Twee stappen. Koppelen aan Home Assistant blijft in Home
@@ -289,8 +303,9 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   verwarmen op zon, voorverwarmen met het thermisch model. Die zijn pas echt in
   te vullen met de winterdata, maar de opbouw kan eerder.
 
-- **Meldingen.** Wanneer stuurt de app iets naar de telefoon, en wanneer juist
-  niet? Een voorstel, een sensor die wegvalt, het vangnet dat ingrijpt.
+- **Meldingen.** Voor apparaten staat het vast (§4: nieuw is geen pushmelding,
+  wat de regeling raakt wel). Open voor de rest: voorstellen van de assistent,
+  opgevallen sluipverbruik, een ingreep die afloopt.
 - **Meerdere bewoners.** Mag iedereen het comfort aanpassen? Wie beslist over
   de fase? Tellen alle gevoelstikken even zwaar?
 - **Een zone met twee sensoren.** Telt de warmste, het gemiddelde, of die waar
