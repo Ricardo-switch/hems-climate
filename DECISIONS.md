@@ -56,6 +56,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [68. Hooguit één start per beslissing](#68-hooguit-één-start-per-beslissing)
 - [74. Wie zelf ingrijpt, wordt herkend en met rust gelaten](#74-wie-zelf-ingrijpt-wordt-herkend-en-met-rust-gelaten)
 - [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste)
+- [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
 
 **Configuratie en onboarding**
 
@@ -95,6 +96,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract)
 - [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
 - [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
+- [86. De app is vanaf het begin toegankelijk en tweetalig](#86-de-app-is-vanaf-het-begin-toegankelijk-en-tweetalig)
+- [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur)
 
 **Veiligheid**
 
@@ -104,6 +107,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt)
 - [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
 - [80. Iedereen in huis bedient; één beheert](#80-iedereen-in-huis-bedient-één-beheert)
+- [84. Gevoel en toelichting mogen deze winter via de testpagina, naar een eigen bestand](#84-gevoel-en-toelichting-mogen-deze-winter-via-de-testpagina-naar-een-eigen-bestand)
 
 **Uitrol en beheer**
 
@@ -2905,9 +2909,8 @@ er geen voorganger, en dan moet de app iets anders zeggen en vragen.
 *Hoe het bewaakt wordt:* een test die de pagina in elke fase rendert en faalt
 op woorden die bij een andere fase horen.
 
-*Wanneer:* de schermen bij F, het gebruik van gevoel en context bij D. Of dit
-huis ze deze winter al vastlegt, is een eigen vraag: het vraagt schrijven
-vanaf de pagina op de NAS, en dat is met besluit 42 bewust afgesloten.
+*Wanneer:* de schermen bij F, het gebruik van gevoel en context bij D. Dit huis
+legt ze deze winter al vast, via de testpagina (besluit 84).
 
 ---
 
@@ -3245,6 +3248,98 @@ altijd.
 *Wanneer:* het eerste moment waarop iets ouder dan twee jaar is, is september
 2028; het samenvatten hoort uiterlijk dan te bestaan. Tot dan blijft alles
 staan, ook in de back-up.
+
+---
+
+## 84. Gevoel en toelichting mogen deze winter via de testpagina, naar een eigen bestand
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Besluit 73 maakt gevoel ("te koud, goed, te warm") en toelichting ("we kookten")
+tot data voor het thermisch model. Zonder ze deze winter vast te leggen, leert
+het model een winter lang zonder. De weergave op de NAS leest alleen (42), en
+een inlog is er nog niet (23). Op 2 oktober 2026 koos de bewoner bewust voor
+een uitzondering: de testpagina mag ze afgeven.
+
+*Besluit:* een tweede, smalle deur: `POST /api/gevoel`.
+
+- **Naar een eigen bestand, nooit naar Home Assistant.** `gevoel.ndjson` in de
+  logmap, regel per regel. Besluit 15 blijft staan: `HaClient` schrijft niets.
+- **Alleen vaste woorden voor een bestaande zone.** Gevoel: `te_koud`, `goed`,
+  `te_warm`. Toelichting: `koken`, `raam_open`, `gasten`, `douche`,
+  `zon_door_raam`, `weet_niet`. Geen vrije tekst, en wat er verder in een
+  verzoek staat, komt niet in het bestand.
+- **Een grens op het tempo:** dertig per tien minuten voor het hele huis, en de
+  grens op de grootte die de server al had.
+- **Dezelfde schakelaar als de onboarding:** de route bestaat alleen als `main.ts`
+  het logboek meegeeft, en dat doet hij alleen als er gelogd wordt. Elke andere
+  route en methode blijft achter de muur; tests bewijzen beide.
+- **Het hoort bij de dataset:** de export neemt het bestand mee (48), en het
+  thermisch model leest het (D).
+
+*Het risico, bewust genomen:* iedereen op het thuisnetwerk of in het tailnet kan
+een tik afgeven. Het ergste dat dat oplevert, is ruis in de dataset, en die is
+eruit te filteren. Het huis is alleen daar bereikbaar (besluit 23, aantekening
+van 1 oktober). Bij een product buiten dit huis gaat deze deur achter de inlog
+(77, 80).
+
+---
+
+## 85. Bij zon over: eerst comfort, dan de batterij, dan de auto
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Zodra er een laadpaal en een thuisbatterij bij komen (via evcc en Predbat),
+vragen drie verbruikers om dezelfde zonnestroom. Gekozen op 2 oktober 2026.
+
+*Besluit:* de volgorde is comfort (de airco's, de verwarming op zon), dan de
+batterij (voor de avond), dan de auto. Met één uitzondering die de bewoner zet:
+"auto vol om 7:00" geeft de auto voorrang tot hij genoeg heeft voor dat
+tijdstip. Smart Climate stuurt laadpaal en batterij niet zelf, maar ziet ze in
+het budget en geeft evcc en Predbat door hoeveel er over is.
+
+*Wanneer:* met de koppeling van laadpaal en batterij; niet voor dit huis
+nodig zolang die er niet zijn.
+
+---
+
+## 86. De app is vanaf het begin toegankelijk en tweetalig
+
+*Onderwerp: weergave · Status: geldig*
+
+Achteraf toegankelijk maken is duurder dan het meteen doen. Gekozen op 2
+oktober 2026.
+
+*Besluit:*
+
+- **Grote tekst en contrast.** De app volgt de tekstgrootte van de telefoon, en
+  alle tekst haalt het contrast van WCAG AA, ook op de donkere wand.
+- **Bedienbaar zonder kijken.** Alles werkt met een schermlezer (VoiceOver,
+  TalkBack): echte knoppen met namen, en elke tekening heeft een beschrijving
+  die zegt wat er gebeurt, niet alleen wat er staat.
+- **Engels naast Nederlands.** Alle teksten komen uit één plek en zijn
+  vertaalbaar; Engels is de tweede taal. Dat geldt ook voor de uitleg uit het
+  bewonerscontract (76) en voor de assistent.
+
+*Hoe het bewaakt wordt:* een toegankelijkheidscontrole in de page-test (69)
+zodra stap F gebouwd wordt.
+
+---
+
+## 87. Donker, met later een lichte versie en een eigen accentkleur
+
+*Onderwerp: weergave · Status: geldig*
+
+Gekozen op 2 oktober 2026, als aanvulling op besluit 71.
+
+*Besluit:* alles begint in de donkere ontwerptaal. Op de telefoon komt een
+lichte versie als keuze zodra de app staat; de wand blijft donker. En de
+bewoner kan een accentkleur kiezen voor de app: het menu, de knoppen, het logo.
+
+*Wat de accentkleur niet raakt:* de kleuren die iets betekenen. Blauw is
+koelen, oranje verwarmen, amber wachten, groen goed. Die blijven overal gelijk,
+anders zegt een kleur op de ene telefoon iets anders dan op de andere. En de
+kiezer biedt alleen kleuren die het contrast van besluit 86 halen.
 
 ---
 

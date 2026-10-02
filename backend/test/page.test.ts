@@ -31,6 +31,7 @@ import { decide } from '../src/core/decide.js';
 import { defaultStrategies } from '../src/index.js';
 import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstruct.js';
 import { DivergenceCache } from '../src/web/divergence.js';
+import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
@@ -147,6 +148,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           latest: () => live,
           divergence: () => review.latest,
           logDir: dir,
+          feedback: new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           write: () => {},
         });
@@ -238,6 +240,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#h-vandaag').waitFor({ state: 'visible' });
       expect(await p.locator('#v-grafiek svg').count()).toBe(1);
       expect(await p.locator(stand === 'portret' ? '.rail' : '.bottomnav').isVisible()).toBe(false);
+
+      // Gevoel vastleggen (besluit 84): de enige knop die iets bewaart.
+      await p.locator('#h-gevoel').waitFor({ state: 'visible' });
+      await p.locator('#g-voel button', { hasText: 'Te warm' }).click();
+      await p.locator('#g-status').filter({ hasText: 'te warm' }).waitFor();
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);

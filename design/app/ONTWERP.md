@@ -310,10 +310,10 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   te vullen met de winterdata, maar de opbouw kan eerder.
 
 Besloten op 2 oktober 2026: meerdere bewoners (80), een zone met meer
-sensoren (81), de tablet zonder verbinding (82) en de bewaartermijn (83).
+sensoren (81), de tablet zonder verbinding (82), de bewaartermijn (83), gevoel
+en toelichting deze winter via de testpagina (84), voorrang bij zon over (85),
+toegankelijk en tweetalig (86), en donker met een eigen accentkleur (87).
 
-- **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
-  later andere talen dan Nederlands.
 - **De hoofdzekering.** Nodig voor de beveiliging tegen overbelasting (78).
   **Voorstel:** de onboarding biedt de gangbare Nederlandse aansluitingen aan:
   1 × 35 A, 1 × 40 A of 3 × 25 A, en "anders", met uitleg waar het op de meter
@@ -325,5 +325,4 @@ sensoren (81), de tablet zonder verbinding (82) en de bewaartermijn (83).
   lokale sensor (Modbus van de omvormer of een kWh-meter op de groep) maakt de
   stromen op het scherm en de instraling in de dataset echt live. Zie "Wat nog
   een besluit wacht" in het besluitenlog.
-- **Uiterlijk en naam.** Telefoon en wand zijn allebei donker. Mag de bewoner
-  zelf een lichte versie kiezen, of een accentkleur? En het logo en de naam van de app; nu een plaatshouder.
+- **De naam en het logo van de app.** Nu een plaatshouder.

@@ -29,6 +29,7 @@ import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
 import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
+import type { FeedbackLog } from './feedback.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -96,6 +97,12 @@ export interface WebOptions {
    * achter Ingress draaien. Zie besluit 42.
    */
   readonly onboarding?: Onboarding;
+  /**
+   * Gevoel en toelichting van de bewoner (besluit 84), of weg wanneer die niet
+   * mogen. Zelfde schakelaar als de onboarding: zonder dit object bestaat de
+   * route niet, en staat de muur er ook voor `/api/gevoel`.
+   */
+  readonly feedback?: FeedbackLog;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -288,7 +295,11 @@ export class WebServer {
      * muur: elke andere methode krijgt 405 vóór de routering, zodat een nieuwe
      * route hem niet per ongeluk kan omzeilen.
      */
-    const mayWrite = this.#options.onboarding != null && path === '/api/onboarding';
+    // De tweede deur (besluit 84): gevoel en toelichting, naar een eigen
+    // bestand in de logmap en nooit naar Home Assistant.
+    const mayWrite =
+      (this.#options.onboarding != null && path === '/api/onboarding') ||
+      (this.#options.feedback != null && path === '/api/gevoel');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
       res.writeHead(405, {
         allow: mayWrite ? 'GET, HEAD, POST' : 'GET, HEAD',
@@ -312,6 +323,30 @@ export class WebServer {
 
     if (path === '/api/onboarding') {
       await this.#onboarding(req, res, method);
+      return;
+    }
+
+    if (path === '/api/gevoel') {
+      const feedback = this.#options.feedback;
+      if (feedback == null) {
+        sendJson(res, 503, { wachten: 'gevoel en toelichting staan niet aan' });
+        return;
+      }
+      if (method === 'POST') {
+        let body: unknown;
+        try {
+          body = await readJson(req);
+        } catch (error) {
+          sendJson(res, 400, { fout: (error as Error).message });
+          return;
+        }
+        const result = await feedback.add(body);
+        if (result.ok) sendJson(res, 200, result.record);
+        else sendJson(res, result.status, { fout: result.reden });
+        return;
+      }
+      // Wat er de afgelopen 24 uur is vastgelegd, voor de bevestiging op de pagina.
+      sendJson(res, 200, await feedback.since(Date.now() - 86_400_000));
       return;
     }
 

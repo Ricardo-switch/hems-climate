@@ -25,6 +25,7 @@ import { readStartup } from './startup.js';
 import { DivergenceCache } from './web/divergence.js';
 import { configFingerprint, recordRun } from './adapters/runs.js';
 import { Onboarding } from './web/onboarding.js';
+import { FeedbackLog } from './web/feedback.js';
 
 /**
  * Laadt een .env-bestand, maar laat variabelen die al gezet zijn met rust.
@@ -380,6 +381,11 @@ if (webPort != null) {
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
+    // Gevoel en toelichting (besluit 84): alleen als er gelogd wordt, want ze
+    // horen bij de dataset, en alleen naar een eigen bestand in de logmap.
+    ...(logDir !== '' && site
+      ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
+      : {}),
     version,
   });
 }

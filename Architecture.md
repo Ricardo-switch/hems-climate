@@ -119,10 +119,11 @@ niets. De schaduwdienst serveert ze zelf:
 | `/api/vandaag` | de dag tot nu toe: zon per kwartier, wanneer elk apparaat draaide volgens Smart Climate en volgens de huidige regeling, en de besluiten; een minuut vastgehouden |
 | `/api/health` | leeft hij, wanneer besliste hij, en welke versie (besluit 54) |
 | `/api/export`, `/api/export/info` | de hele dataset als tar.gz (besluit 48) |
-| `POST /api/onboarding` | de enige deur die schrijft, alleen achter Ingress (besluit 42) |
+| `POST /api/onboarding` | schrijft de configuratie, alleen achter Ingress (besluit 42) |
+| `GET`/`POST /api/gevoel` | gevoel en toelichting van de bewoner, vaste woorden, naar `gevoel.ndjson` in de logmap en nooit naar Home Assistant (besluit 84) |
 
-Alles wat geen GET of HEAD is, krijgt 405 vóór de routering — behalve die ene
-deur, en die bestaat alleen als `startup.ts` hem opent.
+Alles wat geen GET of HEAD is, krijgt 405 vóór de routering — behalve die twee
+deuren, en die bestaan alleen als `main.ts` ze meegeeft.
 
 **De data.** Naast elkaar in de logmap:
 

@@ -536,6 +536,45 @@
       #h-rooms {
         order: 3;
       }
+      #h-gevoel {
+        order: 3;
+      }
+      .fb {
+        flex: 1;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: transparent;
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .fb.cool {
+        background: rgba(92, 200, 255, 0.16);
+        color: var(--cool-t);
+        border-color: transparent;
+      }
+      .fb.ok {
+        background: rgba(111, 220, 166, 0.16);
+        color: var(--good);
+        border-color: transparent;
+      }
+      .fb.heat {
+        background: rgba(255, 138, 76, 0.16);
+        color: var(--heat-t);
+        border-color: transparent;
+      }
+      .fb.note {
+        flex: 0 0 auto;
+        min-height: 34px;
+        border-radius: 999px;
+        font-size: 13px;
+      }
+      .seg.pick button {
+        cursor: pointer;
+      }
       #h-vandaag {
         order: 4;
       }
@@ -664,6 +703,14 @@
                 <p class="lead" id="h-zin"></p>
               </div>
               <div class="stack" id="h-rooms"></div>
+              <div class="card" id="h-gevoel" hidden>
+                <div class="head"><h2>Hoe voelt het?</h2><small id="g-status"></small></div>
+                <div class="seg pick" id="g-zones" role="group" aria-label="Over welke kamer"></div>
+                <div style="display: flex; gap: 8px" id="g-voel"></div>
+                <div class="small muted">Of vertel wat er speelt:</div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap" id="g-notes"></div>
+                <p class="tiny">Wordt vastgelegd naast het logboek; je huis leert ervan.</p>
+              </div>
               <div class="card kpi" id="h-kpi" hidden></div>
             </div>
             <div class="col">

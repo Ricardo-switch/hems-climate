@@ -30,6 +30,7 @@ import { createGzip } from 'node:zlib';
 
 import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 import { RUNS_FILE } from '../adapters/runs.js';
+import { FEEDBACK_FILE } from './feedback.js';
 
 const BLOCK = 512;
 
@@ -93,7 +94,16 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
     () => true,
     () => false,
   );
-  return { decisionLog, everything: [...decisionLog, ...history, ...(hasRuns ? [runs] : [])] };
+  // Gevoel en toelichting horen bij de dataset (besluit 84).
+  const feedback = join(logDir, FEEDBACK_FILE);
+  const hasFeedback = await stat(feedback).then(
+    () => true,
+    () => false,
+  );
+  return {
+    decisionLog,
+    everything: [...decisionLog, ...history, ...(hasRuns ? [runs] : []), ...(hasFeedback ? [feedback] : [])],
+  };
 }
 
 export async function exportInfo(logDir: string): Promise<ExportInfo> {
