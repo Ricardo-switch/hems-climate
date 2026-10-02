@@ -18,6 +18,7 @@ import type {
 import type { DecisionContext } from './context.js';
 import { actuatorById } from './model.js';
 import type { Action, Actuator } from './model.js';
+import { isOverridden } from './override.js';
 import { minutesSinceChange } from './state.js';
 import type { ActuatorState } from './state.js';
 
@@ -211,6 +212,13 @@ export function arbitrate(
       return;
     }
 
+    // Overgenomen door de bewoner: met rust laten tot de ingreep afloopt
+    // (besluit 74). De failsafe wint, net als bij handen af (besluit 8).
+    if (intent.strategyId !== 'failsafe' && isOverridden(ctx.state, intent.actuatorId)) {
+      reject(intent, 'resident_override');
+      return;
+    }
+
     const actuator = actuatorById(ctx.config, intent.actuatorId);
     const caps = actuator.capabilities;
 
@@ -327,6 +335,9 @@ export function arbitrate(
   for (const zone of ctx.config.zones) {
     for (const actuatorId of zone.actuatorIds) {
       if (claimed.has(actuatorId)) continue;
+      // Ook afbouwen is ingrijpen. Een overgenomen apparaat blijft staan zoals
+      // de bewoner het zette.
+      if (isOverridden(ctx.state, actuatorId)) continue;
       const current = ctx.state.actuators[actuatorId];
       const action = current?.action.ok ? current.action.value : undefined;
 

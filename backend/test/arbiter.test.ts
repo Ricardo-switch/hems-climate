@@ -726,3 +726,105 @@ describe('starten vraagt meer dan draaien (besluit 51)', () => {
     expect(atticStart(parked)).toBe(true);
   });
 });
+
+describe('wie zelf ingrijpt, wordt met rust gelaten (besluit 74)', () => {
+  /** Warm, ruim overschot: zonder ingreep koelen beide airco's mee. */
+  const sunny = (extra: Partial<Parameters<typeof buildState>[0]> = {}) =>
+    buildState({ gridPowerW: -3000, livingRoomC: 24.5, atticC: 25.0, ...extra });
+  const takenOver = (untilMs: number | null) => ({
+    'ac-woonkamer': { sinceMs: NOW - 10 * 60_000, untilMs },
+  });
+  const touches = (d: ReturnType<typeof run>, id: string) =>
+    d.commands.some((c) => 'actuatorId' in c && c.actuatorId === id);
+
+  it('stuurt een overgenomen apparaat niets, en regelt de rest gewoon door', () => {
+    const decision = run({
+      ...sunny({ actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 20, minutesAgo: 10 }) } }),
+      residentOverrides: takenOver(NOW + 3_600_000),
+    });
+    expect(touches(decision, 'ac-woonkamer')).toBe(false);
+    expect(
+      decision.rejected.some(
+        (r) => r.intent.actuatorId === 'ac-woonkamer' && r.blockedBy === 'resident_override',
+      ),
+    ).toBe(true);
+    // De zolder koelt gewoon op de zon.
+    expect(
+      decision.commands.some(
+        (c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder' && c.action === 'cool',
+      ),
+    ).toBe(true);
+  });
+
+  it('bouwt een overgenomen apparaat ook niet af, ook niet zonder zon', () => {
+    const decision = run({
+      ...buildState({
+        gridPowerW: 2000,
+        livingRoomC: 23.0,
+        actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 21, minutesAgo: 90 }) },
+      }),
+      residentOverrides: takenOver(null),
+    });
+    expect(touches(decision, 'ac-woonkamer')).toBe(false);
+  });
+
+  it('pakt het apparaat weer op zodra de ingreep is afgelopen', () => {
+    const state = buildState({
+      gridPowerW: 2000,
+      livingRoomC: 23.0,
+      actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 21, minutesAgo: 90 }) },
+    });
+    const decision = run({ ...state, residentOverrides: takenOver(NOW - 60_000) });
+    // Zonder zon en zonder vraag: parkeren, zoals zonder ingreep.
+    expect(
+      decision.commands.some(
+        (c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && c.action === 'standby',
+      ),
+    ).toBe(true);
+    expect(decision.explanation.overrides).toBeUndefined();
+  });
+
+  it('laat de failsafe wel ingrijpen', () => {
+    const decision = run({
+      ...sunny({
+        actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 20, minutesAgo: 90 }) },
+        inputHealth: { 'sensor.p1_meter_power': false },
+      }),
+      residentOverrides: takenOver(null),
+    });
+    expect(decision.explanation.failsafe.active).toBe(true);
+    expect(
+      decision.commands.some(
+        (c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && c.action === 'off',
+      ),
+    ).toBe(true);
+  });
+
+  it('telt het verbruik van een overgenomen apparaat niet als ruimte voor een ander', () => {
+    const decision = run({
+      ...sunny({
+        gridPowerW: -200,
+        actuators: {
+          'ac-woonkamer': actuator('cool', { setpointC: 20, powerW: 800, minutesAgo: 30 }),
+        },
+      }),
+      residentOverrides: takenOver(NOW + 3_600_000),
+    });
+    // 200 W teruglevering en 50 W tolerantie; de 800 W van de woonkamer is van de bewoner.
+    expect(decision.explanation.budget.reclaimableW).toBe(0);
+    expect(decision.explanation.budget.availableW).toBe(250);
+    expect(
+      decision.commands.some(
+        (c) => c.kind === 'setAction' && c.actuatorId === 'ac-zolder' && c.action === 'cool',
+      ),
+    ).toBe(false);
+  });
+
+  it('zet de ingreep in de uitleg, en laat de uitleg zonder ingreep ongemoeid', () => {
+    const taken = run({ ...sunny(), residentOverrides: takenOver(NOW + 3_600_000) });
+    expect(taken.explanation.overrides).toEqual([
+      { actuatorId: 'ac-woonkamer', sinceMs: NOW - 10 * 60_000, untilMs: NOW + 3_600_000 },
+    ]);
+    expect('overrides' in run(sunny()).explanation).toBe(false);
+  });
+});

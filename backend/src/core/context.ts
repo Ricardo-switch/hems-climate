@@ -9,6 +9,7 @@
 
 import type { Mode, SiteConfig, Zone } from './model.js';
 import { actuatorById } from './model.js';
+import { isOverridden } from './override.js';
 import type { SystemState } from './state.js';
 import { readOr, timerActive } from './state.js';
 
@@ -197,6 +198,10 @@ export function buildContext(
     for (const actuator of config.actuators) {
       const s = state.actuators[actuator.id];
       if (!s) continue;
+      // Een apparaat dat de bewoner heeft overgenomen, schakelt de regeling niet
+      // terug; zijn verbruik is dus geen ruimte voor een ander (besluit 74). Het
+      // zit wel in het netvermogen, en drukt zo vanzelf het budget.
+      if (isOverridden(state, actuator.id)) continue;
       const running = s.action.ok && (s.action.value === 'heat' || s.action.value === 'cool');
       if (running) {
         reclaimableW += s.powerW.ok ? s.powerW.value : actuator.power.estimatedW;

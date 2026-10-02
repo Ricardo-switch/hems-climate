@@ -18,6 +18,7 @@ import type {
   ZoneExplanation,
 } from './decision.js';
 import { isHandsOff } from './model.js';
+import { activeOverrides } from './override.js';
 import type { SiteConfig } from './model.js';
 import type { StrategyRegistry } from './strategy.js';
 import type { SystemState } from './state.js';
@@ -93,6 +94,10 @@ function explain(
       ? state.outdoorTemperatureC.value
       : null,
     solarProductionW: state.solarProductionW.ok ? state.solarProductionW.value : null,
+    ...(() => {
+      const overrides = activeOverrides(state);
+      return overrides.length > 0 ? { overrides } : {};
+    })(),
   };
 }
 
