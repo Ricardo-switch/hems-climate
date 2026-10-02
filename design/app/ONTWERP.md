@@ -304,10 +304,10 @@ toelichting als invoer (D).
 
 Dit moet beantwoord zijn vóór F gebouwd wordt:
 
-- **De winter in de schetsen.** Thuis, Plan en Kamer bestaan alleen als
-  koeldag. Er horen wintervarianten bij: de cv en de airco als warmtepomp,
-  verwarmen op zon, voorverwarmen met het thermisch model. Die zijn pas echt in
-  te vullen met de winterdata, maar de opbouw kan eerder.
+- **De winter in de schetsen.** De opbouw staat sinds 2 oktober 2026
+  (`Wand-Thuis-winter`, `Wand-Plan-winter`, `Wand-Kamer-winter`), met
+  voorbeeldgetallen die het scherm zelf zo noemt. Zodra er een paar koude weken
+  in de data zitten, krijgen ze echte getallen, zoals `Wand-Thuis-echt`.
 
 Besloten op 2 oktober 2026: meerdere bewoners (80), een zone met meer
 sensoren (81), de tablet zonder verbinding (82), de bewaartermijn (83), gevoel
