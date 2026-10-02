@@ -148,10 +148,16 @@ als het raam openstaat", een airco wordt toegevoegd en begint met leren of
 meekijken. Wat er niet toe doet, staat bij "niet gebruikt". Een verdwenen
 apparaat waar de regeling op leunde, is een melding.
 
-Meldingen in twee niveaus. Nieuw is een voorstel in de app, zonder pushmelding.
-Wat de regeling raakt (een verdwenen sensor, een airco die niet reageert, de
-failsafe) krijgt een pushmelding. Dat beantwoordt een deel van de open vraag
-over meldingen hieronder.
+Meldingen volgen besluit 79: nieuw is een voorstel in de app, zonder
+pushmelding; wat de regeling raakt, krijgt een pushmelding.
+
+### Meldingen
+
+**Vast** (79). Pushmelding: wat de regeling raakt; opgevallen sluipverbruik,
+één keer de ochtend erna; een ingreep die afloopt, een kwartier vooraf met "Nog
+een uur" en "Laat maar". Alleen in de app: iets nieuws in Home Assistant, en
+voorstellen van de assistent. Tussen 23:00 en 07:00 alleen wat dringend is.
+Later per bewoner instelbaar.
 
 ### Een apparaat toevoegen
 
@@ -303,9 +309,6 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   verwarmen op zon, voorverwarmen met het thermisch model. Die zijn pas echt in
   te vullen met de winterdata, maar de opbouw kan eerder.
 
-- **Meldingen.** Voor apparaten staat het vast (§4: nieuw is geen pushmelding,
-  wat de regeling raakt wel). Open voor de rest: voorstellen van de assistent,
-  opgevallen sluipverbruik, een ingreep die afloopt.
 - **Meerdere bewoners.** Mag iedereen het comfort aanpassen? Wie beslist over
   de fase? Tellen alle gevoelstikken even zwaar?
 - **Een zone met twee sensoren.** Telt de warmste, het gemiddelde, of die waar

@@ -91,6 +91,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
 - [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
 - [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract)
+- [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
 
 **Veiligheid**
 
@@ -3132,6 +3133,34 @@ gevolgen voor gedaan.
 start en stopt. De stroom per fase kan nu al mee de dataset in (65), net als de
 spanning: wat je niet vastlegt, krijg je niet terug. Begrenzen van de omvormer
 komt na stap E.
+
+---
+
+## 79. Wat een pushmelding krijgt, en wat in de app blijft
+
+*Onderwerp: weergave · Status: geldig*
+
+Een app die te vaak meldt, wordt uitgezet; een app die het belangrijke niet
+meldt, wordt niet vertrouwd. Op 2 oktober 2026 koos de bewoner per soort.
+
+*Besluit:*
+
+| Wat | Hoe |
+| --- | --- |
+| Iets nieuws in Home Assistant (72) | alleen in de app, als voorstel bovenaan Kamers en op Thuis |
+| Iets wat de regeling raakt: een verdwenen sensor, een airco die niet reageert, de failsafe (72) | pushmelding |
+| Een voorstel van de assistent (44, 74) | alleen in de app, bij "Opgevallen"; een voorstel heeft geen haast |
+| Opgevallen sluipverbruik | één pushmelding de ochtend erna, alleen als de nacht duidelijk boven de laagste nachten van het huis ligt |
+| Een ingreep die afloopt (74) | een pushmelding een kwartier vooraf, met "Nog een uur" en "Laat maar"; alleen bij een ingreep met een eindtijd |
+
+*Nachtrust:* tussen 23:00 en 07:00 alleen wat dringend is, dus wat de regeling
+raakt. De rest wacht tot 07:00.
+
+*Wat ervoor nodig is:* een manier om de telefoon te bereiken. In de add-on is
+dat de app van Home Assistant (een melding via de notify-dienst), en dat is
+schrijven naar Home Assistant: het hoort bij de inlog en het besluit over
+schrijven (23, 77). De niveaus en de nachtrust worden later per bewoner
+instelbaar; dit zijn de standaarden.
 
 ---
 
