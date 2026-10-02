@@ -18,13 +18,13 @@ Bijgewerkt op 2 oktober 2026, na de brainstorms van 1 en 2 oktober (besluiten 71
 ## 1. Voor wie, en op welk scherm
 
 De app is voor wie in het huis woont, niet voor wie het installeert. Geen
-entity-ID's, geen jargon (45). Twee vormen, met dezelfde inhoud en een andere
-taak (**vast**, 71):
+entity-ID's, geen jargon (45). Twee vormen, met dezelfde inhoud, dezelfde ontwerptaal en een andere taak
+(**vast**, 71):
 
 | | Telefoon | Tablet aan de muur |
 | --- | --- | --- |
 | Taak | Bijsturen en nalezen, ook van buiten | Laten zien wat er nu gebeurt, en vragen stellen |
-| Uiterlijk | Licht | Donker: hij staat altijd aan en mag 's avonds de kamer niet verlichten |
+| Uiterlijk | Donker, dezelfde ontwerptaal als de wand | Donker: hij staat altijd aan en mag 's avonds de kamer niet verlichten |
 | Indeling | Vijf tabs onderin | Smalle balk links, één groot scherm |
 | Assistent | Typen, of de microfoonknop | Spreken ("Hé huis") of tikken |
 | Zelf bedienen | Bediening, per kamer | Een kamer aantikken op Thuis; de modus van het huis altijd onderin |
@@ -231,7 +231,7 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   bewaard?
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
-- **Uiterlijk en naam.** Mag de bewoner donker en licht zelf kiezen, of een
-  accentkleur? En het logo en de naam van de app; nu een plaatshouder.
+- **Uiterlijk en naam.** Telefoon en wand zijn allebei donker. Mag de bewoner
+  zelf een lichte versie kiezen, of een accentkleur? En het logo en de naam van de app; nu een plaatshouder.
 - **Het plafond op netstroom** (§6): per huis een instelling, maar met welke
   standaard?
