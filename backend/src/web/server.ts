@@ -28,6 +28,7 @@ import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
 import { exportInfo, writeExport } from './export.js';
+import { TodayCache } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -252,6 +253,7 @@ export class WebServer {
   readonly #options: WebOptions & { host: string; write: (line: string) => void };
   readonly #server: Server;
   readonly #listeners = new Set<Listener>();
+  #today: TodayCache | null = null;
 
   constructor(options: WebOptions) {
     this.#options = {
@@ -355,6 +357,27 @@ export class WebServer {
      * spul. Allebei lezen; de 405-muur hierboven blijft dus ongemoeid.
      */
     const logDir = this.#options.logDir;
+
+    /*
+     * Vandaag, voor de bewonersweergave (besluit 71): de zon per kwartier,
+     * wanneer elk apparaat draaide en de besluiten van vandaag. Leest het
+     * logboek, dus alleen waar er gelogd wordt.
+     */
+    if (path === '/api/vandaag') {
+      const config = this.#options.config;
+      if (logDir == null || config == null) {
+        sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er is geen dag om te tonen' });
+        return;
+      }
+      this.#today ??= new TodayCache(logDir, config);
+      try {
+        sendJson(res, 200, await this.#today.get());
+      } catch (error) {
+        sendJson(res, 500, { fout: (error as Error).message });
+      }
+      return;
+    }
+
     if (path === '/api/export/info') {
       if (logDir == null) {
         sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er valt niets te exporteren' });

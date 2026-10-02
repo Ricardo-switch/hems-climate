@@ -166,6 +166,7 @@ function showView() {
     else a.removeAttribute('aria-current');
   }
   if (id === 'opbrengst') void loadReview();
+  if (id === 'waarom' || id === 'thuis') void loadToday();
 }
 
 /* ------------------------------------------------------- klok */
@@ -328,17 +329,33 @@ function drawHouse(snap) {
     svg.append(g);
   }
 
+  // Zon naar de airco die Smart Climate zou laten draaien, of anders naar het huis.
+  const climateW = e.budget.allocatedW ?? 0;
+  const useW = Math.max(0, (solar ?? 0) + grid);
+  if (!flowTarget && sunny && n >= 2) {
+    flowTarget = { path: 'M372,150 C452,196 462,330 432,396', toHouse: true };
+  }
   if (flowTarget) {
     svg.append(s('path', { d: flowTarget.path, fill: 'none', stroke: 'url(#nFlow)', 'stroke-width': 8, 'stroke-opacity': 0.18, 'stroke-linecap': 'round' }));
-    svg.append(s('path', { d: flowTarget.path, fill: 'none', stroke: 'url(#nFlow)', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
+    svg.append(s('path', { class: 'flow', d: flowTarget.path, fill: 'none', stroke: flowTarget.toHouse ? '#F5B342' : 'url(#nFlow)', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
+    const toHouseW = Math.min(solar ?? 0, useW);
+    const big = flowTarget.toHouse ? kw(toHouseW) : climateW > 0 ? `≈ ${kw(climateW)}` : null;
+    if (big) {
+      // Een donkere rand om de letters houdt ze leesbaar boven de stippellijn.
+      const halo = { stroke: '#0A141C', 'stroke-width': 5, 'paint-order': 'stroke', 'stroke-linejoin': 'round' };
+      svg.append(s('text', { x: 516, y: 262, 'text-anchor': 'end', 'font-size': 20, 'font-weight': 700, fill: flowTarget.toHouse ? '#F5C66E' : '#8FD9FF', ...halo }, big));
+      svg.append(s('text', { x: 516, y: 282, 'text-anchor': 'end', 'font-size': 14, fill: '#A9BAC2', ...halo }, flowTarget.toHouse ? 'naar het huis' : 'naar airco'));
+    }
   }
 
   // Het net: een mast, en een stroom erheen of ervandaan.
   svg.append(s('path', { d: 'M478,470 L490,404 L502,470 M482,446 L498,446 M486,424 L494,424 M472,408 L508,408', fill: 'none', stroke: 'rgba(255,255,255,0.45)', 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
-  if (Math.abs(grid) >= 50) {
+  if (Math.abs(grid) >= 20) {
     const exporting = grid < 0;
-    svg.append(s('path', { d: exporting ? 'M430,446 C452,446 466,436 484,418' : 'M484,418 C466,436 452,446 430,446', fill: 'none', stroke: exporting ? '#6FDCA6' : '#A9BAC2', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round' }));
-    svg.append(s('text', { x: 516, y: 496, 'text-anchor': 'end', 'font-size': 18, 'font-weight': 700, fill: exporting ? '#6FDCA6' : '#C9D6DC' }, exporting ? `${kw(grid)} terug` : `${kw(grid)} van het net`));
+    svg.append(s('path', { class: 'flow', d: exporting ? 'M430,446 C452,446 466,436 484,418' : 'M484,418 C466,436 452,446 430,446', fill: 'none', stroke: exporting ? '#6FDCA6' : '#A9BAC2', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
+    if (Math.abs(grid) >= 50) {
+      svg.append(s('text', { x: 516, y: 496, 'text-anchor': 'end', 'font-size': 18, 'font-weight': 700, fill: exporting ? '#6FDCA6' : '#C9D6DC' }, exporting ? `${kw(grid)} terug` : `${kw(grid)} van het net`));
+    }
   }
 
   const names = zones.map((z) => z.name).join(', ');
@@ -411,8 +428,10 @@ function renderHome(snap) {
     }),
   );
 
-  // Wat Smart Climate per apparaat zou doen, met de reden.
+  // Wat Smart Climate per apparaat zou doen, met de reden. Wat niets te doen
+  // heeft, komt samen op één regel; anders wint de lijst het van het huis.
   const lines = [];
+  const quiet = [];
   for (const a of site?.actuators ?? []) {
     const acc = snap.accepted.find((i) => i.actuatorId === a.id);
     const rej = snap.rejected.find((r) => r.intent.actuatorId === a.id);
@@ -424,12 +443,14 @@ function renderHome(snap) {
     } else if (rej) {
       kind = 'wait';
       text = `zou ${ACTION[rej.intent.action] ?? rej.intent.action}, maar ${BLOCK[rej.blockedBy] ?? rej.blockedBy}`;
-    } else if (acc) {
-      text = `${ACTION[acc.action] ?? acc.action} · ${REASON[acc.reason] ?? acc.reason}`;
     } else {
-      text = 'niets te doen';
+      quiet.push(a.name);
+      continue;
     }
     lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: `dot k-${kind}`, style: 'margin-top: 5px' }), el('div', {}, el('b', { text: a.name }), el('div', { class: 'muted', text }))));
+  }
+  if (quiet.length) {
+    lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: 'dot k-idle', style: 'margin-top: 5px' }), el('div', { class: 'muted', text: `${quiet.join(', ')}: niets te doen` })));
   }
   $('nu-lijst').replaceChildren(...lines);
   $('besluit-tijd').textContent = `besluit ${hhmm(snap.atMs)}`;
@@ -440,6 +461,117 @@ function renderHome(snap) {
 
   $('buiten').textContent = e.outdoorTemperatureC == null ? '' : `${nl(e.outdoorTemperatureC)}° buiten`;
   drawHouse(snap);
+}
+
+/* ------------------------------------------------------- Vandaag */
+
+let today = null;
+let todayAt = 0;
+
+async function loadToday(force = false) {
+  if (!force && Date.now() - todayAt < 60_000) return;
+  todayAt = Date.now();
+  try {
+    const res = await fetch('api/vandaag');
+    if (!res.ok) return;
+    today = await res.json();
+    renderToday();
+    renderLog();
+  } catch {
+    // Zonder dagoverzicht blijven de live kaarten gewoon werken.
+  }
+}
+
+/** De zon van vandaag, met per apparaat wanneer het draaide. */
+function renderToday() {
+  const t = today;
+  if (!t) return;
+  const DAY = 86_400_000;
+  const X = (ms) => 10 + ((ms - t.vanMs) / DAY) * 280;
+  const peak = Math.max(1500, ...t.kwartieren.map((k) => k.zonW ?? 0));
+  const Y = (w) => 104 - (w / peak) * 90;
+  const lanes = t.apparaten.filter((a) => a.smartClimate.length || a.huidig.length || canCool(a.actuatorId));
+  const height = 118 + lanes.length * 18 + 18;
+  const svg = s('svg', { viewBox: `0 0 300 ${height}`, role: 'img', 'aria-label': 'Zon van vandaag en wanneer de apparaten draaiden' });
+  const defs = s('defs');
+  defs.innerHTML = '<linearGradient id="vSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5B342" stop-opacity="0.55"/><stop offset="1" stop-color="#F5B342" stop-opacity="0.04"/></linearGradient>';
+  svg.append(defs);
+
+  const pts = t.kwartieren.filter((k) => k.zonW != null).map((k) => [X(k.tMs + 450_000), Y(k.zonW)]);
+  if (pts.length > 1) {
+    const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    svg.append(s('path', { d: `${line} L${pts.at(-1)[0].toFixed(1)},104 L${pts[0][0].toFixed(1)},104 Z`, fill: 'url(#vSun)' }));
+    svg.append(s('path', { d: line, fill: 'none', stroke: '#F5B342', 'stroke-width': 1.2, 'stroke-linejoin': 'round' }));
+  }
+  svg.append(s('line', { x1: 10, y1: 104, x2: 290, y2: 104, stroke: 'rgba(255,255,255,0.12)' }));
+  const nowX = X(Date.now());
+  svg.append(s('line', { x1: nowX, y1: 12, x2: nowX, y2: height - 18, stroke: '#fff', 'stroke-opacity': 0.6 }));
+  svg.append(s('text', { x: nowX, y: 9, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff' }, 'nu'));
+
+  lanes.forEach((a, i) => {
+    const y = 118 + i * 18;
+    svg.append(s('text', { x: 10, y: y + 7, 'font-size': 10, fill: '#8FA3AD' }, actuatorName(a.actuatorId)));
+    for (const sp of a.smartClimate) {
+      svg.append(s('rect', { x: X(sp.vanMs), y: y - 1, width: Math.max(2, X(sp.totMs) - X(sp.vanMs)), height: 8, rx: 3, fill: sp.actie === 'heat' ? '#FF8A4C' : '#5CC8FF' }));
+    }
+    for (const sp of a.huidig) {
+      svg.append(s('rect', { x: X(sp.vanMs), y: y + 9, width: Math.max(2, X(sp.totMs) - X(sp.vanMs)), height: 3, rx: 1.5, fill: '#A9BAC2' }));
+    }
+  });
+  for (const [h, anchor] of [[0, 'start'], [6, 'middle'], [12, 'middle'], [18, 'middle'], [24, 'end']]) {
+    svg.append(s('text', { x: X(t.vanMs + h * 3_600_000), y: height - 4, 'text-anchor': anchor, 'font-size': 10, fill: '#6E828C' }, String(h).padStart(2, '0')));
+  }
+  $('v-grafiek').replaceChildren(svg);
+  const top = t.kwartieren.reduce((m, k) => ((k.zonW ?? 0) > (m?.zonW ?? -1) ? k : m), null);
+  $('v-piek').textContent = top && top.zonW > 0 ? `piek ${kw(top.zonW)} om ${hhmm(top.tMs + 450_000)}` : 'nog geen zon';
+  $('h-vandaag').hidden = false;
+
+  // Wat de zon vandaag opleverde.
+  const zon = t.zonWh / 1000;
+  const self = t.zonWh > 0 ? Math.max(0, Math.min(1, (t.zonWh - t.netTerugWh) / t.zonWh)) : 0;
+  $('h-kpi').replaceChildren(
+    el('div', { class: 'small', style: 'color: var(--soft)', text: 'Vandaag tot nu toe' }),
+    el('div', { style: 'display: flex; align-items: baseline; gap: 10px' }, el('b', { text: nl(zon) }), el('span', { class: 'small', style: 'color: var(--soft)', text: t.zonWh > 0 ? `kWh zon, daarvan ${Math.round(self * 100)}% zelf gebruikt` : 'kWh zon' })),
+    el('div', { class: 'bar' }, el('div', { style: `width: ${Math.round(self * 100)}%` })),
+    el('div', { class: 'tiny', text: `${nl(t.netAfWh / 1000)} kWh van het net · ${nl(t.netTerugWh / 1000)} kWh terug` }),
+  );
+  $('h-kpi').hidden = false;
+}
+
+/* ------------------------------------------------------- Opgevallen */
+
+const BECAUSE = {
+  insufficient_power_budget: 'er te weinig zon over was',
+  start_threshold_not_met: 'er net te weinig zon was om te starten',
+  stabilisation_active: 'het verbruik nog niet stabiel was',
+  min_rest_not_elapsed: 'hij eerst moest rusten',
+  min_run_not_elapsed: 'hij zijn minimale draaitijd nog niet had',
+};
+
+function duration(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h > 0 ? `${h} uur ${m} min` : `${m} min`;
+}
+
+/** Het patroon met de meeste netstroom, anders het zwaarste. */
+function renderNoticed() {
+  const list = review?.patronen ?? [];
+  if (!list.length || !site?.migrating) return;
+  const p = [...list].sort((a, b) => b.wh - a.wh)[0];
+  const name = actuatorName(p.actuatorId);
+  const mode = (MODE[p.mode] ?? p.mode).toLowerCase();
+  if (p.direction === 'strenger') {
+    $('og-titel').textContent = `${name}: ik zou vaker stoppen`;
+    $('og-tekst').textContent =
+      `${p.keren} keer liet je huidige regeling de ${name.toLowerCase()} draaien terwijl ik zou stoppen` +
+      `${p.blockedBy && BECAUSE[p.blockedBy] ? `, omdat ${BECAUSE[p.blockedBy]}` : ''} (modus ${mode}). ` +
+      `Samen ${duration(p.minuten)}${p.wh > 0 ? ` en ${nl(p.wh / 1000)} kWh van het net` : ''}.`;
+  } else {
+    $('og-titel').textContent = `${name}: ik zou vaker draaien`;
+    $('og-tekst').textContent = `${p.keren} keer zou ik de ${name.toLowerCase()} laten draaien waar je huidige regeling niets deed (modus ${mode}), samen ${duration(p.minuten)}.`;
+  }
+  $('h-opgevallen').hidden = false;
 }
 
 /* ------------------------------------------------------- Waarom */
@@ -470,6 +602,23 @@ function remember(snap) {
 
 function renderLog() {
   const box = $('tijdlijn');
+  if (today) {
+    const fromDay = today.besluiten.map((b) => ({
+      t: b.tMs,
+      what: b.opdrachten.map(describeCommand),
+      why: b.redenen.map((r) => `${actuatorName(r.actuatorId)}: ${REASON[r.reden] ?? r.reden ?? ACTION[r.actie] ?? r.actie}`),
+    }));
+    const newer = log.filter((x) => x.t > (today.besluiten[0]?.tMs ?? today.totMs));
+    const all = [...newer, ...fromDay];
+    $('w-lead').textContent = 'Wat Smart Climate vandaag besloot, met de reden. Nieuwste bovenaan.';
+    const item = (x) => el('div', { class: 'event' }, el('time', { text: hhmm(x.t) }), el('div', {}, el('b', { text: x.what.join(' · ') }), x.why.length ? el('p', { text: x.why.join(' · ') }) : null));
+    if (all.length) {
+      box.replaceChildren(...all.map(item));
+      return;
+    }
+    box.replaceChildren(el('div', { class: 'event' }, el('time', { text: '—' }), el('div', {}, el('b', { text: 'Vandaag nog niets veranderd' }), el('p', { text: 'Zodra Smart Climate iets anders zou doen, verschijnt het hier met de reden.' }))));
+    return;
+  }
   if (log.length === 0) {
     box.replaceChildren(el('div', { class: 'event' }, el('time', { text: '—' }), el('div', {}, el('b', { text: 'Nog niets veranderd' }), el('p', { text: 'Zodra Smart Climate iets anders zou doen, verschijnt het hier met de reden.' }))));
     return;
@@ -488,6 +637,7 @@ async function loadReview() {
     }
     review = await res.json();
     renderReview();
+    renderNoticed();
   } catch {
     $('o-periode').textContent = 'De terugblik is nu niet bereikbaar.';
   }
@@ -578,6 +728,7 @@ function connection(ok, text) {
 function render(snap) {
   latest = snap;
   remember(snap);
+  if (snap.commands?.length) void loadToday(true);
   renderHome(snap);
   renderLog();
   renderControls(snap);
@@ -605,6 +756,9 @@ async function start() {
   } catch {
     // De stroom hieronder vult het zo aan.
   }
+  void loadToday(true);
+  void loadReview();
+  setInterval(() => void loadToday(), 5 * 60_000);
   const source = new EventSource('api/events');
   source.onopen = () => connection(true, 'Verbonden');
   source.onmessage = (event) => {

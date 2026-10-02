@@ -536,17 +536,40 @@
       #h-rooms {
         order: 3;
       }
-      #h-today {
+      #h-vandaag {
         order: 4;
       }
-      #h-ai {
+      #h-today {
         order: 5;
       }
-      #h-kpi {
+      #h-opgevallen {
         order: 6;
       }
-      #h-ask {
+      #h-ai {
         order: 7;
+      }
+      #h-kpi {
+        order: 8;
+      }
+      #h-ask {
+        order: 9;
+      }
+      @keyframes flow {
+        to {
+          stroke-dashoffset: -48;
+        }
+      }
+      .flow {
+        animation: flow 1.6s linear infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .flow {
+          animation: none;
+        }
+      }
+      .vandaag svg {
+        width: 100%;
+        height: auto;
       }
 
       /* ---------------------------------------------- opbouw: landschap */
@@ -648,8 +671,6 @@
                 <div id="huis"></div>
                 <div class="legend" id="legenda"></div>
               </div>
-            </div>
-            <div class="col">
               <div class="card" id="h-today">
                 <div class="head"><h2>Wat ik nu zou doen</h2><small id="besluit-tijd"></small></div>
                 <div id="nu-lijst" class="stack small"></div>
@@ -660,6 +681,25 @@
                   <span class="small" style="color: var(--soft)">Je huidige regeling zegt</span>
                 </div>
                 <p id="oud" class="small" style="color: var(--soft)"></p>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card vandaag" id="h-vandaag" hidden>
+                <div class="head"><h2>Vandaag</h2><small id="v-piek"></small></div>
+                <div id="v-grafiek"></div>
+                <div class="legend" style="justify-content: flex-start">
+                  <span><i style="background: var(--cool); width: 12px; height: 6px; border-radius: 3px"></i>Smart Climate</span>
+                  <span><i style="background: var(--muted); width: 12px; height: 3px; border-radius: 2px"></i>Je huidige regeling</span>
+                </div>
+              </div>
+              <div class="card ai" id="h-opgevallen" hidden>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span class="orb" style="width: 24px; height: 24px; box-shadow: none"></span>
+                  <span class="small" style="color: var(--soft)">Opgevallen in de terugblik</span>
+                </div>
+                <div id="og-titel" style="font-family: var(--display); font-size: 21px; line-height: 1.15; font-weight: 600"></div>
+                <p id="og-tekst" class="small" style="color: var(--soft)"></p>
+                <a href="#opbrengst" class="small" style="font-weight: 600; text-decoration: none">Naar de terugblik</a>
               </div>
               <a class="ask" id="h-ask" href="#assistent"
                 ><span class="orb" style="width: 40px; height: 40px"></span>Vraag iets over je huis…</a
@@ -672,13 +712,9 @@
         <section class="view narrow" data-view="waarom" hidden>
           <div class="stack">
             <h1 class="title">Waarom</h1>
-            <p class="lead">Wat Smart Climate besloot sinds je deze pagina opende, met de reden.</p>
+            <p class="lead" id="w-lead">Wat Smart Climate besloot sinds je deze pagina opende, met de reden.</p>
           </div>
           <div class="card rows" id="tijdlijn"></div>
-          <p class="tiny">
-            Een overzicht van de hele dag vraagt een eigen ingang in de dienst; die is er nog niet. Deze lijst bewaart
-            wat binnenkwam terwijl de pagina openstond.
-          </p>
         </section>
 
         <!-- Opbrengst -->

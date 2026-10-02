@@ -106,14 +106,17 @@ registers van Home Assistant een configuratie voor en besluit niet (besluit 41).
 Een stiltetest eist dat elk veld ergens gelezen wordt of met een reden op een
 lijst staat (besluit 54).
 
-**De weergave (`frontend/`).** Eén pagina, vanilla JS, Tailwind lokaal gebouwd.
-Ze leest `Explanation` en herberekent niets. De schaduwdienst serveert haar zelf:
+**De weergave (`frontend/`).** Twee pagina's, vanilla JS: `index.html` voor de schaduw
+(Tailwind lokaal gebouwd) en `nieuw.html`, de testversie van de bewonersapp in de
+ontwerptaal van `design/app/` (besluit 71). Ze lezen `Explanation` en herberekenen
+niets. De schaduwdienst serveert ze zelf:
 
 | Route | Wat |
 | --- | --- |
 | `/api/state`, `/api/events` | het laatste besluit, en een stroom van elk volgend |
 | `/api/divergence` | de terugblik over de logboeken, elk kwartier bijgewerkt vanaf de tussenstand (besluit 26, 63) |
 | `/api/site` | namen en apparaten per zone, voor de weergave |
+| `/api/vandaag` | de dag tot nu toe: zon per kwartier, wanneer elk apparaat draaide volgens Smart Climate en volgens de huidige regeling, en de besluiten; een minuut vastgehouden |
 | `/api/health` | leeft hij, wanneer besliste hij, en welke versie (besluit 54) |
 | `/api/export`, `/api/export/info` | de hele dataset als tar.gz (besluit 48) |
 | `POST /api/onboarding` | de enige deur die schrijft, alleen achter Ingress (besluit 42) |
