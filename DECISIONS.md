@@ -2422,6 +2422,17 @@ bestand hoort bij de dienst, niet bij de woning.
 die start de zolder niet opnieuw en houdt de woonkamer tegen op de timer van
 zijn voorganger. Zonder het terugnemen faalt die test.
 
+*Eén keer gezien, en later gevonden:* op 2 oktober liep een van deze tests
+onder de volledige suite tegen zijn tijdslimiet. De oorzaak zat niet in de
+eigen stand en niet in een klok. De nagebootste Home Assistant kreeg van
+Windows een willekeurige vrije poort, en die reeks begint hier bij 1024. Daar
+zitten poorten tussen die de Fetch-standaard blokkeert, zoals 5060 en 6666.
+Node's ingebouwde WebSocket weigert die zonder te verbinden, en de client
+probeerde het na 1, 2 en 4 seconden opnieuw, op dezelfde poort. De testservers
+openen nu een nieuwe als ze zo'n poort krijgen (`test/ports.ts`), ook die van
+de weergavetests, die om dezelfde reden af en toe faalden. De dienst deed het
+goed.
+
 ---
 
 ## 63. De terugblik gaat verder waar hij was

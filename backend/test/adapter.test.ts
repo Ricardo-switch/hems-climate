@@ -8,6 +8,7 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -24,6 +25,7 @@ import {
   ShadowRunner,
   type LiveSnapshot,
 } from '../src/adapters/homeassistant/shadow.js';
+import { onUsablePort } from './ports.js';
 import { exampleSite, withHaStabilisation } from './site.js';
 import { decide } from '../src/core/decide.js';
 import type { SiteConfig } from '../src/core/model.js';
@@ -104,8 +106,16 @@ async function startFakeHa(options: {
   const sockets = new Set<WsSocket>();
   const subscriptions = new Map<WsSocket, number>();
 
-  const wss = new WebSocketServer({ port: 0 });
-  await new Promise<void>((resolve) => wss.once('listening', resolve));
+  // Niet zomaar poort 0: zie ports.ts.
+  const wss = await onUsablePort(
+    async () => {
+      const server = new WebSocketServer({ port: 0 });
+      await new Promise<void>((resolve) => server.once('listening', resolve));
+      return server;
+    },
+    (server) => (server.address() as AddressInfo).port,
+    (server) => new Promise<void>((resolve) => server.close(() => resolve())),
+  );
 
   wss.on('connection', (socket) => {
     sockets.add(socket);

@@ -32,6 +32,7 @@ import { defaultStrategies } from '../src/index.js';
 import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstruct.js';
 import { DivergenceCache } from '../src/web/divergence.js';
 import { WebServer } from '../src/web/server.js';
+import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
 const ENABLED = process.env['HEMS_PAGE_TEST'] === '1';
@@ -134,18 +135,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await review.refresh();
     live = await liveSnapshot();
 
-    server = new WebServer({
-      port: 0,
-      host: '127.0.0.1',
-      webDir: WEB_DIR,
-      config: exampleSite,
-      latest: () => live,
-      divergence: () => review.latest,
-      logDir: dir,
-      version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
-      write: () => {},
-    });
-    const port = await server.start();
+    // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
+    let port: number;
+    ({ server, port } = await onUsablePort(
+      async () => {
+        const server = new WebServer({
+          port: 0,
+          host: '127.0.0.1',
+          webDir: WEB_DIR,
+          config: exampleSite,
+          latest: () => live,
+          divergence: () => review.latest,
+          logDir: dir,
+          version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          write: () => {},
+        });
+        return { server, port: await server.start() };
+      },
+      (s) => s.port,
+      (s) => s.server.stop(),
+    ));
     baseUrl = `http://127.0.0.1:${port}`;
 
     const channel = process.env['HEMS_PAGE_BROWSER'];
