@@ -3059,6 +3059,9 @@ gevolgen voor gedaan.
   apparaat zit, leert de regeling uit de sprong in de stroom wanneer het
   aangaat; de bewoner hoeft het niet op te zoeken.
 
+*Voor dit huis:* één fase, hoofdzekering 1 × 35 A (volgens Liander, 2 oktober
+2026). Komt in de configuratie zodra het schema er een veld voor heeft.
+
 *Wanneer:* het budget voor overbelasting kan na stap B, als de regeling echt
 start en stopt. De stroom per fase kan nu al mee de dataset in (65), net als de
 spanning: wat je niet vastlegt, krijg je niet terug. Begrenzen van de omvormer
