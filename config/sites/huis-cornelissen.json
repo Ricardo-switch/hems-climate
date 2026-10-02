@@ -324,6 +324,8 @@
   "outdoorTemperature": "sensor.temperatuur",
   "solarProduction": "sensor.solaredge_huidig_vermogen",
   "recordOnly": [
+    "sensor.solaredge_i1_ac_power",
+    "sensor.solaredge_i1_dc_power",
     "sensor.gas_meter_gas",
     "sensor.cve_silent_indoortemp",
     "sensor.cve_silent_indoorhumidity",
