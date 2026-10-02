@@ -2736,8 +2736,13 @@ regels die erachter zitten, gelden ook voor schermen die nog niet getekend zijn:
 - **Eerst de lelijke momenten.** Nacht, geen zon, een sensor die wegvalt, één
   airco. Ziet een scherm er dan nog goed uit, dan valt het eindproduct niet
   tegen.
-- **Donker op de muur, licht op de telefoon.** Een tablet die altijd aanstaat,
-  moet 's avonds niet de kamer verlichten.
+- **Eén ontwerptaal voor telefoon en wand.** Donker, met glazen kaarten, dezelfde
+  letters, kleuren en de bol van de assistent; de telefoon houdt zijn eigen
+  indeling in portret. Een tablet die altijd aanstaat, mag 's avonds de kamer niet
+  verlichten, en de telefoon volgt dezelfde taal zodat het één product is.
+  (Eerst stond hier "licht op de telefoon"; op 2 oktober 2026 rechtgetrokken naar
+  de wand. Of de bewoner zelf licht kan kiezen, staat in `design/app/ONTWERP.md`
+  bij de open vragen.)
 
 *Wat het niet is:* een belofte over getallen. De besparingen, de zekerheid van
 de voorspelling en het plan voor de middag zijn voorbeelden; ze worden pas echt

@@ -9,92 +9,53 @@
 <x-dc>
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap">
 <style>
-body{margin:0}
-a{color:#1F6FA8}a:hover{color:#16557F}
+body{margin:0;background:#0A141C}
+a{color:#8FD9FF}
 </style>
 </helmet>
-<div style="width: 390px; height: 1180px; box-sizing: border-box; position: relative; overflow: hidden; background: #EEF2F1; color: #10232D; font-family: 'Figtree', 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums">
-<div style="display: flex; flex-direction: column; gap: 18px; padding: 24px 20px 96px 20px">
-<div style="display: flex; flex-direction: column; gap: 6px">
-<h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 30px; line-height: 1.1; font-weight: 700">Bediening</h1>
-<p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4E626C">Hoe het huis geregeld wordt, en door wie.</p>
+<div style="width: 390px; height: 1300px; box-sizing: border-box; position: relative; overflow: hidden; color: #EAF2F5; font-family: 'Figtree', 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums; background: radial-gradient(420px 380px at 70% 6%, rgba(245,179,66,0.12), transparent 70%), radial-gradient(420px 420px at 10% 60%, rgba(92,200,255,0.10), transparent 70%), radial-gradient(360px 320px at 100% 100%, rgba(122,108,255,0.14), transparent 70%), #0A141C">
+<div style="display: flex; flex-direction: column; gap: 14px; padding: 22px 20px 100px 20px">
+<div style="display: flex; flex-direction: column; gap: 6px"><h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 30px; line-height: 1.08; font-weight: 600; letter-spacing: -0.015em">Bediening</h1><p style="margin: 0; font-size: 15px; line-height: 1.45; color: #A9BAC2">Hoe het huis geregeld wordt, en door wie.</p></div>
+<h2 style="margin: 4px 0 0 0; font-size: 17px; font-weight: 700">Modus</h2>
+<div role="group" aria-label="Modus" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06)"><button type="button" aria-pressed="true" style="min-height: 38px; border: 0; border-radius: 10px; background: #EAF2F5; color: #0A141C; font-weight: 700; font: inherit; font-size: 13px">Automatisch</button><button type="button" aria-pressed="false" style="min-height: 38px; border: 0; border-radius: 10px; background: transparent; color: #C9D6DC; font-weight: 600; font: inherit; font-size: 13px">Afwezig</button><button type="button" aria-pressed="false" style="min-height: 38px; border: 0; border-radius: 10px; background: transparent; color: #C9D6DC; font-weight: 600; font: inherit; font-size: 13px">Vakantie</button><button type="button" aria-pressed="false" style="min-height: 38px; border: 0; border-radius: 10px; background: transparent; color: #C9D6DC; font-weight: 600; font: inherit; font-size: 13px">Handmatig</button></div>
+<div style="font-size: 13px; color: #A9BAC2">Automatisch volgt het dagritme en of er iemand thuis is. Handmatig: alles zelf, ik kijk alleen mee.</div>
+<h2 style="margin: 4px 0 0 0; font-size: 17px; font-weight: 700">Comfort per kamer</h2>
+<div style="padding: 2px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0px; ">
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07);"><div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Woonkamer</span><span style="font-size: 14px; font-weight: 600">20,5 – 26 °C</span></div><div style="position: relative; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08)"><div style="position: absolute; left: 30%; width: 46%; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #FF8A4C, #5CC8FF)"></div></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: #8FA3AD"><span>nooit kouder</span><span>nooit warmer, ook zonder zon</span></div></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07);"><div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Zolder</span><span style="font-size: 14px; font-weight: 600">19 – 26 °C</span></div><div style="position: relative; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08)"><div style="position: absolute; left: 20%; width: 56%; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #FF8A4C, #5CC8FF)"></div></div></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0; "><div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Badkamer</span><span style="font-size: 14px; font-weight: 600">18 – 24 °C</span></div><div style="position: relative; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08)"><div style="position: absolute; left: 10%; width: 46%; height: 8px; border-radius: 999px; background: linear-gradient(90deg, #FF8A4C, #5CC8FF)"></div></div></div>
 </div>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<h2 style="margin: 0; font-size: 17px; font-weight: 700">Modus</h2>
-<div role="group" aria-label="Modus" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; background: #DCE4E5; border-radius: 12px">
-<button type="button" aria-pressed="true" style="min-height: 40px; border: 0; border-radius: 9px; background: #FFFFFF; color: #10232D; font: inherit; font-size: 13px; font-weight: 700">Automatisch</button>
-<button type="button" aria-pressed="false" style="min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #3B4D55; font: inherit; font-size: 13px; font-weight: 600">Afwezig</button>
-<button type="button" aria-pressed="false" style="min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #3B4D55; font: inherit; font-size: 13px; font-weight: 600">Vakantie</button>
-<button type="button" aria-pressed="false" style="min-height: 40px; border: 0; border-radius: 9px; background: transparent; color: #3B4D55; font: inherit; font-size: 13px; font-weight: 600">Handmatig</button>
+<h2 style="margin: 4px 0 0 0; font-size: 17px; font-weight: 700">Wie stuurt</h2>
+<div style="padding: 2px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0px; ">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07);"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Airco woonkamer</span><span style="font-size: 13px; color: #8FD9FF; font-weight: 600">Smart Climate stuurt</span></div><button type="button" role="switch" aria-checked="true" aria-label="Smart Climate stuurt de airco woonkamer" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: #5CC8FF; padding: 3px; display: flex; justify-content: flex-end"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF"></span></button></div>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07);"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Airco zolder</span><span style="font-size: 13px; color: #A9BAC2; font-weight: 600">Jij hebt hem tot 22:00</span></div><button type="button" role="switch" aria-checked="false" aria-label="Smart Climate stuurt de airco zolder" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: rgba(255,255,255,0.16); padding: 3px; display: flex; justify-content: flex-start"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF"></span></button></div>
+<div style="display: flex; gap: 10px; align-items: flex-start; padding: 14px 0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6FDCA6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg><div style="font-size: 13px; line-height: 1.4; color: #C9D6DC">Laatste teken van leven 12 seconden geleden. Valt Smart Climate vijf minuten stil, dan neemt je huidige regeling het vanzelf over.</div></div>
 </div>
-<div style="font-size: 13px; color: #4E626C">Automatisch volgt het dagritme en of er iemand thuis is.</div>
+<h2 style="margin: 4px 0 0 0; font-size: 17px; font-weight: 700">Huis</h2>
+<div style="padding: 2px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0px; ">
+<a href="Kamers.dc.html" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07); color: #EAF2F5; text-decoration: none"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Kamers</span><span style="font-size: 13px; color: #A9BAC2">5 kamers op 3 etages, 3 zones</span></div><span style="font-size: 14px; font-weight: 600">›</span></a>
+<a href="#" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0;  color: #EAF2F5; text-decoration: none"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Wat mag het</span><span style="font-size: 13px; color: #A9BAC2">Koelen boven 26 °C: alleen op zon</span></div><span style="font-size: 14px; font-weight: 600">›</span></a>
 </div>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<h2 style="margin: 0; font-size: 17px; font-weight: 700">Comfort per kamer</h2>
-<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 4px 16px; display: flex; flex-direction: column">
-<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Woonkamer</span><span style="font-size: 14px; font-weight: 600">20,5 – 26 °C</span></div>
-<div style="position: relative; height: 8px; border-radius: 999px; background: #E6ECED"><div style="position: absolute; left: 30%; width: 46%; height: 8px; border-radius: 999px; background: #1F6FA8"></div></div>
-<div style="display: flex; justify-content: space-between; font-size: 12px; color: #4E626C"><span>nooit kouder</span><span>nooit warmer, ook zonder zon</span></div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Zolder</span><span style="font-size: 14px; font-weight: 600">19 – 26 °C</span></div>
-<div style="position: relative; height: 8px; border-radius: 999px; background: #E6ECED"><div style="position: absolute; left: 20%; width: 56%; height: 8px; border-radius: 999px; background: #1F6FA8"></div></div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 0">
-<div style="display: flex; justify-content: space-between; align-items: baseline"><span style="font-size: 15px; font-weight: 700">Badkamer</span><span style="font-size: 14px; font-weight: 600">18 – 24 °C</span></div>
-<div style="position: relative; height: 8px; border-radius: 999px; background: #E6ECED"><div style="position: absolute; left: 10%; width: 46%; height: 8px; border-radius: 999px; background: #1F6FA8"></div></div>
+<h2 style="margin: 4px 0 0 0; font-size: 17px; font-weight: 700">Gekoppeld</h2>
+<div style="padding: 2px 16px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 0px; ">
+<a href="#" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07); color: #EAF2F5; text-decoration: none"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Laadpaal</span><span style="font-size: 13px; color: #A9BAC2">Gestuurd door evcc · laadt op zon</span></div><span style="font-size: 14px; font-weight: 600">2,1 kW</span></a>
+<a href="#" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.07); color: #EAF2F5; text-decoration: none"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Thuisbatterij</span><span style="font-size: 13px; color: #A9BAC2">Gestuurd door Predbat</span></div><span style="font-size: 14px; font-weight: 600">62%</span></a>
+<a href="#" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0;  color: #EAF2F5; text-decoration: none"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Stroomtarief</span><span style="font-size: 13px; color: #A9BAC2">[JOUW CONTRACT] · dynamisch vanaf 2027</span></div><span style="font-size: 14px; font-weight: 600">Wijzigen</span></a>
 </div>
 </div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<h2 style="margin: 0; font-size: 17px; font-weight: 700">Wie stuurt</h2>
-<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 4px 16px; display: flex; flex-direction: column">
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Airco woonkamer</span><span style="font-size: 13px; color: #16557F; font-weight: 600">Smart Climate stuurt</span></div>
-<button type="button" role="switch" aria-checked="true" aria-label="Smart Climate stuurt de airco woonkamer" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: #1F6FA8; padding: 3px; display: flex; justify-content: flex-end"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF"></span></button>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Airco zolder</span><span style="font-size: 13px; color: #4E626C">Je huidige regeling stuurt</span></div>
-<button type="button" role="switch" aria-checked="false" aria-label="Smart Climate stuurt de airco zolder" style="width: 52px; height: 32px; border: 0; border-radius: 999px; background: #C9D3D5; padding: 3px; display: flex; justify-content: flex-start"><span style="width: 26px; height: 26px; border-radius: 999px; background: #FFFFFF"></span></button>
-</div>
-<div style="display: flex; gap: 10px; align-items: flex-start; padding: 14px 0">
-<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2E6B47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
-<div style="font-size: 13px; line-height: 1.4; color: #3B4D55">Laatste teken van leven 12 seconden geleden. Valt Smart Climate vijf minuten stil, dan neemt je huidige regeling het vanzelf over.</div>
-</div>
-</div>
-</div>
-<div style="display: flex; flex-direction: column; gap: 8px">
-<h2 style="margin: 0; font-size: 17px; font-weight: 700">Gekoppeld</h2>
-<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 4px 16px; display: flex; flex-direction: column">
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Laadpaal</span><span style="font-size: 13px; color: #4E626C">Gestuurd door evcc · laadt op zon</span></div>
-<span style="font-size: 14px; font-weight: 600">2,1 kW</span>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #E6ECED">
-<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Thuisbatterij</span><span style="font-size: 13px; color: #4E626C">Gestuurd door Predbat</span></div>
-<span style="font-size: 14px; font-weight: 600">62%</span>
-</div>
-<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0">
-<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 15px; font-weight: 700">Stroomtarief</span><span style="font-size: 13px; color: #4E626C">[JOUW CONTRACT] · dynamisch vanaf 2027</span></div>
-<a href="Assistent.dc.html" style="font-size: 14px; font-weight: 600; text-decoration: none">Wijzigen</a>
-</div>
-</div>
-<div style="font-size: 13px; line-height: 1.4; color: #4E626C">Smart Climate ziet hun verbruik in het budget, maar stuurt ze niet zelf.</div>
-</div>
-</div>
-<nav aria-label="Hoofdmenu" style="position: absolute; left: 0; right: 0; bottom: 0; height: 76px; background: #FFFFFF; border-top: 1px solid #D5DEDF; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr))">
-<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #4E626C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg>Thuis</a>
-<a href="Waarom.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #4E626C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg>Waarom</a>
-<a href="Opbrengst.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #4E626C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6M3 20h18"></path></svg>Opbrengst</a>
-<a href="Assistent.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #4E626C"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"></path></svg>Assistent</a>
-<a href="Bediening.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 700; color: #1F6FA8"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>Bediening</a>
+<nav aria-label="Hoofdmenu" style="position: absolute; left: 12px; right: 12px; bottom: 12px; height: 68px; border-radius: 24px; background: rgba(20,32,42,0.92); border: 1px solid rgba(255,255,255,0.10); display: grid; grid-template-columns: repeat(5, minmax(0, 1fr))">
+<a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #8FA3AD"><span style="width: 44px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; "><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg></span>Thuis</a>
+<a href="Waarom.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #8FA3AD"><span style="width: 44px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; "><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg></span>Waarom</a>
+<a href="Opbrengst.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #8FA3AD"><span style="width: 44px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; "><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6M3 20h18"></path></svg></span>Opbrengst</a>
+<a href="Assistent.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 600; color: #8FA3AD"><span style="width: 44px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; "><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"></path></svg></span>Assistent</a>
+<a href="Bediening.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-decoration: none; font-size: 11px; font-weight: 700; color: #8FD9FF"><span style="width: 44px; height: 28px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: rgba(92,200,255,0.16);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg></span>Bediening</a>
 </nav>
+
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1180}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1300}}'>
 class Component extends DCLogic {
 renderVals() {
 return {};
