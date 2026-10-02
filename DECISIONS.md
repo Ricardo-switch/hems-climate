@@ -31,6 +31,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
 - [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
 - [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
+- [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten)
+- [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 
 **Kern en regeling**
 
@@ -2744,6 +2746,92 @@ screenshots die naast deze worden gelegd, met het echte logboek als invoer.
 
 ---
 
+## 72. Kamers en zones horen bij de app; Home Assistant levert de apparaten
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+De ontdekking leest de gebieden van Home Assistant en stelt per gebied een zone
+voor (besluit 41); de onboarding laat dat bevestigen en schrijft het naar
+`config/sites/` (besluit 42). De vraag was of kamers en zones in de app thuishoren
+of in Home Assistant.
+
+*Besluit:* elk zijn eigen waarheid, en nooit twee keer dezelfde.
+
+- **Home Assistant is de bron voor de apparaten:** welke er zijn, wat ze meten
+  en wat ze kunnen.
+- **De app is de bron voor de kamers en zones:** hoe ze heten, welke apparaten
+  en sensoren erbij horen, wat comfortabel is, welke voorgaat bij weinig zon,
+  en wanneer het stil moet zijn. Dat staat in de eigen configuratie, niet in
+  Home Assistant. Een gebied in Home Assistant ordent zijn menu; een zone is iets
+  wat geregeld wordt, en daar heeft Home Assistant geen plek voor.
+- **Een kamer is iets anders dan een zone.** Een kamer is wat de bewoner ziet:
+  een naam, misschien een sensor. Een zone is wat de regeling stuurt: één of
+  meer kamers die hetzelfde apparaat bedient. Keuken en woonkamer met één airco
+  zijn twee kamers en één zone. Een slaapkamer met alleen een sensor is een
+  kamer zonder zone: gemeten, niet geregeld (70).
+- **Importeren, en daarna nooit stil overnemen.** Bij de installatie stelt de
+  ontdekking kamers en zones voor uit de gebieden; de bewoner bevestigt of past
+  aan. Daarna vergelijkt de dienst bij elke start. Een nieuw apparaat wordt een
+  voorstel ("nieuwe airco in de slaapkamer, toevoegen?"). Een verdwenen
+  entiteit wordt een melding, en de regeling werkt door met wat er nog is (70).
+  Een gebied dat in Home Assistant een andere naam krijgt, verandert niets: de
+  app houdt zijn eigen naam.
+- **Aanpassen kan altijd,** in een scherm Kamers, niet alleen bij de installatie.
+
+*Wat het vraagt:* een modelwijziging. Naast `zones` komen `rooms` in het schema;
+de kern blijft alleen zones kennen, en kamers dienen de uitleg en de weergave.
+En schrijven vanuit de app vraagt de inlog op de weergave (23, stap C). Tot dan
+kan het alleen achter Ingress (42).
+
+*Wanneer:* het model bij stap C, het scherm bij F. Niets hiervan raakt de
+winterdata van dit huis.
+
+---
+
+## 73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee
+
+*Onderwerp: visie en principes · Status: geldig*
+
+In dit huis kijkt Smart Climate mee naast een YAML-systeem. In een nieuw huis is
+er geen voorganger, en dan moet de app iets anders zeggen en vragen.
+
+*Besluit:*
+
+- **Drie fasen: leren, meekijken, regelen.** Leren: het systeem meet en stuurt
+  niets. Meekijken: het legt zijn besluiten naast wat er werkelijk gebeurde,
+  door een vorige regeling of door de bewoners zelf (28). Regelen: het stuurt.
+  De fase kan per apparaat verschillen, en de bewoner beslist wanneer het een
+  stap verder gaat. Terug kan altijd. De fase bepaalt de woorden op het scherm
+  (71): "je huidige regeling" alleen waar er een is, anders "zoals jullie het
+  zelf deden".
+- **Leren is geen wachttijd.** De regeling van nu werkt met vaste regels en
+  heeft geen geleerd model nodig. Wie meteen wil, kan beginnen met de
+  basisregels; het leren maakt het daarna slimmer (D). Meekijken is er voor het
+  vertrouwen en het bewijs, niet omdat het anders niet werkt.
+- **Wat de bewoner tijdens het leren doet, is data.** Gewoon gebruik is de
+  basis voor het meekijken. Daarnaast kan de bewoner:
+  - zeggen hoe het voelt: te koud, goed of te warm, met één tik op de wand;
+  - een moment toelichten dat sensoren niet zien, zoals koken, een open raam,
+    gasten of vakantie. Het systeem vraagt het zelf bij een sprong die het niet
+    kan verklaren, zoals de 2 °C in de woonkamer op de avond van 1 oktober;
+  - meehelpen met een proef: de bewoner zet een apparaat aan, het systeem meet.
+    Ook dan stuurt het systeem zelf niets;
+  - vooraf kiezen wat het straks mag: koelen op netstroom boven het plafond,
+    stille uren. Dat zijn dezelfde instellingen als later.
+- **Gevoel en context horen bij de dataset.** Ze worden per dag naast het
+  logboek bewaard, met tijd en kamer, gaan mee in de export, en zijn invoer voor
+  het thermisch model. Ze zijn zo gevoelig als de aanwezigheid. Het precieze
+  formaat volgt bij het bouwen.
+
+*Hoe het bewaakt wordt:* een test die de pagina in elke fase rendert en faalt
+op woorden die bij een andere fase horen.
+
+*Wanneer:* de schermen bij F, het gebruik van gevoel en context bij D. Of dit
+huis ze deze winter al vastlegt, is een eigen vraag: het vraagt schrijven
+vanaf de pagina op de NAS, en dat is met besluit 42 bewust afgesloten.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -2793,7 +2881,8 @@ screenshots die naast deze worden gelegd, met het echte logboek als invoer.
 - **De terugblik spreekt over "het oude systeem".** Voor een woning zonder
   YAML-voorganger vergelijkt de schaduwmodus de arbiter met wat de thermostaten
   uit zichzelf deden (besluit 28). Dezelfde machinerie, andere vraag, verkeerde
-  woorden. Uit te zoeken bij 6c.
+  woorden. Uit te zoeken bij 6c. De richting staat sinds besluit 73: de fase
+  bepaalt de woorden.
 - **De dagdoelen van de datasetmeter zijn op dit huis geijkt** — dertig
   winterdagen, en de seizoenen van Nederland. Zie besluit 27.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**

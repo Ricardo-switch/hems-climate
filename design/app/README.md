@@ -1,12 +1,14 @@
 # De bewonersapp: de maatstaf
 
-Schetsen van hoe Smart Climate eruitziet voor wie erin woont: vijf
+Schetsen van hoe Smart Climate eruitziet voor wie erin woont: zeven
 telefoonschermen en vijf schermen voor een tablet aan de muur. Besluit 71 maakt
 ze de maatstaf voor stap F (het bewonersdashboard) en G (de assistent): wat
 gebouwd wordt, wordt hiernaast gelegd.
 
 Ook te bekijken als canvas op claude.ai (privé, alleen voor de eigenaar):
 <https://claude.ai/artifact/Wc7WrUvPW885wq7ZMWtjkw>
+
+Hoe het samenhangt, wat vastligt en wat nog open is: [ONTWERP.md](ONTWERP.md).
 
 ## Wat er staat
 
@@ -21,7 +23,9 @@ Ook te bekijken als canvas op claude.ai (privé, alleen voor de eigenaar):
 | Wand · Assistent | `Wand-Assistent.dc.html` | Een gesproken vraag, beantwoord met een grafiek |
 | Wand · Plan | `Wand-Plan.dc.html` | Vooruitkijken; kan pas na het thermisch model (D) |
 | Wand · Thuis met echte data | `Wand-Thuis-echt.dc.html` | Hetzelfde scherm, gevuld met het logboek van 1 oktober 2026, 23:01 |
-| Wand · Leren | `Wand-Leren.dc.html` | De eerste week in een nieuw huis, zonder oud systeem |
+| Wand · Leren | `Wand-Leren.dc.html` | De eerste week in een nieuw huis, zonder oud systeem, met wat de bewoner kan doen |
+| Telefoon · Onboarding | `Onboarding.dc.html` | Stap 2 van 4: klopt wat uit Home Assistant kwam? |
+| Telefoon · Kamers | `Kamers.dc.html` | Kamers en zones na de installatie, met een voorstel uit Home Assistant |
 
 `screens/` heeft van elk scherm een screenshot, en `Wand-aan-de-muur.png`
 laat het Thuis-scherm zien op een tablet aan de muur.

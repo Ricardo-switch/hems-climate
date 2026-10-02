@@ -1,0 +1,190 @@
+# Het ontwerp van de bewonersapp
+
+Eén plek waar de app is doorgedacht vóórdat hij gebouwd wordt: wat de bewoner
+ziet, wat hij kan doen, en waar het op rust. De besluiten zelf staan in
+`DECISIONS.md`; dit document verbindt ze en vult de gaten ertussen. De schetsen
+staan ernaast in deze map (besluit 71).
+
+Bij elk onderdeel staat hoe vast het is:
+
+- **Vast** — er is een besluit; afwijken vraagt een nieuw besluit.
+- **Voorstel** — doordacht, maar het detail volgt bij het bouwen.
+- **Open** — nog niet doordacht; staat onderaan bij de vragen.
+
+Bijgewerkt op 2 oktober 2026, na de brainstorms van 1 en 2 oktober.
+
+---
+
+## 1. Voor wie, en op welk scherm
+
+De app is voor wie in het huis woont, niet voor wie het installeert. Geen
+entity-ID's, geen jargon (45). Twee vormen, met dezelfde inhoud en een andere
+taak (**vast**, 71):
+
+| | Telefoon | Tablet aan de muur |
+| --- | --- | --- |
+| Taak | Bijsturen en nalezen, ook van buiten | Laten zien wat er nu gebeurt, en vragen stellen |
+| Uiterlijk | Licht | Donker: hij staat altijd aan en mag 's avonds de kamer niet verlichten |
+| Indeling | Vijf tabs onderin | Smalle balk links, één groot scherm |
+| Assistent | Typen, of de microfoonknop | Spreken ("Hé huis") of tikken |
+
+## 2. De regels achter elk scherm
+
+**Vast** (71). Ook voor schermen die nog niet getekend zijn:
+
+1. Elk getal is te herleiden tot het logboek. Berekend of voorspeld staat erbij,
+   met hoe zeker het is.
+2. Bij elk besluit een reden, in gewone taal. Weet het systeem iets niet, dan
+   zegt het dat.
+3. De assistent stelt voor; de regeling beslist (44).
+4. Het scherm weet in welke fase het huis zit (73).
+5. Eerst de lelijke momenten ontwerpen: nacht, geen zon, een sensor die
+   wegvalt, één airco.
+
+## 3. De drie fasen
+
+**Vast** (73). Per apparaat kan de fase verschillen; de bewoner beslist wanneer
+het een stap verder gaat, en terug kan altijd.
+
+| | Leren | Meekijken | Regelen |
+| --- | --- | --- | --- |
+| Wat het systeem doet | Meet, stuurt niets | Beslist in de schaduw en legt dat naast wat er gebeurde | Stuurt |
+| Waarmee vergeleken | Niets | Een vorige regeling, of "zoals jullie het zelf deden" (28) | Een berekening van "zonder Smart Climate", gelabeld als berekend (D) |
+| Thuisscherm | `Wand-Leren` | `Wand-Thuis`, met de grijze lijn | `Wand-Thuis`, zonder grijze lijn |
+| Door naar de volgende | Als de bewoner wil; het scherm toont wat er nog nodig is | Bij voldoende bewijs; in dit huis besluit 64 | — |
+
+**Leren is geen wachttijd.** De vaste regels werken zonder geleerd model. Op het
+Leren-scherm staat daarom "Nu al beginnen, met de basisregels" (**vast**, 73).
+
+### Wat de bewoner kan doen tijdens het leren
+
+**Vast** in opzet (73), **voorstel** in vorm:
+
+| Wat | Hoe op het scherm | Waarom |
+| --- | --- | --- |
+| Gewoon leven | Niets te doen | De basis voor het meekijken |
+| Nakijken wat er gevonden is | Lijst "Wat ik vond", met aanpassen en toevoegen | Kamers en apparaten kloppen (72) |
+| Zeggen hoe het voelt | Op de wand altijd zichtbaar: te koud · goed · te warm | Sensoren meten temperatuur, niet gevoel |
+| Een moment toelichten | Het systeem vraagt bij een sprong die het niet verklaart: "De woonkamer liep 2 °C op. Weet je waarom?" | Zonder dit leert het model koken als opwarming |
+| Meehelpen met een proef | Een kaart: "Zet morgen om 14:00 de airco een uur aan, dan meet ik hoe snel het afkoelt" | Eén middag in plaats van een week; het systeem stuurt zelf niets |
+| Vooraf kiezen | Dezelfde instellingen als later (§6) | Geen verrassing bij de overstap |
+
+## 4. Kamers, zones en apparaten
+
+**Vast** (72).
+
+- Home Assistant levert de **apparaten**. De app bewaart de **kamers en zones**,
+  in de eigen configuratie.
+- Een **kamer** is wat de bewoner ziet. Een **zone** is wat de regeling stuurt:
+  de kamers die één apparaat bedient. Een kamer zonder apparaat wordt gemeten,
+  niet geregeld.
+- Na de installatie neemt de app nooit stil iets over uit Home Assistant. Nieuw
+  apparaat: een voorstel. Verdwenen apparaat: een melding, en doorwerken met
+  minder (70).
+
+### De onboarding
+
+**Voorstel**, bovenop wat er al is (41, 42). Vier stappen, telefoon of laptop:
+
+1. **Verbinden.** Home Assistant herkennen; achter Ingress gaat dat vanzelf.
+2. **Klopt dit?** De gebieden uit Home Assistant als kamers, met per kamer de
+   gevonden apparaten en sensoren. Twijfelgevallen als vraag, met de reden
+   (`Onboarding.dc.html`).
+3. **Zones.** Welke kamers één apparaat delen. Meestal is dat al goed:
+   één airco per kamer is één zone.
+4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
+   begint het leren.
+
+### Het scherm Kamers
+
+**Voorstel** (`Kamers.dc.html`). Na de installatie:
+
+- per kamer de naam, de sensor, het apparaat en de zone;
+- een kamer of apparaat toevoegen, hernoemen of verplaatsen;
+- bovenaan de voorstellen uit de vergelijking met Home Assistant.
+
+Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
+
+## 5. De schermen
+
+| Scherm | Vorm | Fase | Wat het toont | Hangt af van | Schets |
+| --- | --- | --- | --- | --- | --- |
+| Thuis | telefoon, wand | meekijken, regelen | Nu: kamers, stroom, wat er draait en waarom | — | `Main`, `Wand-Thuis` |
+| Leren | wand (en telefoon) | leren | Wat gevonden is, wat geleerd is, hoe zeker, wat nog nodig is | — | `Wand-Leren` |
+| Waarom | telefoon | alle | Elk besluit van vandaag met de reden | — | `Waarom` |
+| Opbrengst | telefoon | meekijken, regelen | Netstroom, kosten, ritten; comfort pas met D | D voor comfort | `Opbrengst` |
+| Plan | wand | regelen | Wat het vanmiddag en vanavond van plan is | D en E | `Wand-Plan` |
+| Assistent | telefoon, wand | alle | Uitleg en voorstellen | G | `Assistent`, `Wand-Assistent` |
+| Bediening | telefoon | alle | Modus, comfort, wie stuurt, keuzes, gekoppeld | inlog voor schrijven | `Bediening` |
+| Kamers | telefoon | alle | Kamers, zones, apparaten, voorstellen | 72, inlog | `Kamers` |
+| Onboarding | telefoon | vóór leren | De vier stappen van §4 | 41, 42 | `Onboarding` |
+
+## 6. Wat de bewoner kan instellen
+
+| Instelling | Stand | Bron |
+| --- | --- | --- |
+| Modus: automatisch, afwezig, vakantie, handmatig | vast | bestaat; 39 |
+| Comfort per kamer: nooit kouder dan, nooit warmer dan | vast | 50 |
+| Wie stuurt, per apparaat | vast | 53, 73 |
+| Koelen op netstroom boven het plafond, of alleen op zon | open | wacht op een besluit; gevonden in de data van 1 oktober |
+| Stille uren per kamer | voorstel | 72 |
+| Welke kamer voorgaat bij weinig zon | vast | prioriteit per zone |
+| Gekoppeld: laadpaal, batterij, tarief | voorstel | koppelen via evcc en Predbat, niet zelf bouwen |
+
+## 7. De assistent
+
+**Vast** in rol (44), **voorstel** in vorm:
+
+- Hij legt uit en stelt voor. Een voorstel kan eerst een week meekijken.
+- Zijn bronnen zijn het besluitenlog, de configuratie en wat de bewoner heeft
+  toegelicht. Wat daar niet in staat, weet hij niet, en dat zegt hij.
+- Hij vraagt zelf om toelichting bij wat hij niet kan verklaren (§3).
+- Spreken op de wand: waarschijnlijk via Assist van Home Assistant. **Open**:
+  of het wekwoord betrouwbaar genoeg werkt op een tablet.
+
+## 8. Data die de app toevoegt
+
+**Vast** (73), formaat **voorstel**:
+
+| Wat | Waar | Gevoeligheid |
+| --- | --- | --- |
+| Gevoel (te koud, goed, te warm) | Per dag naast het logboek, met tijd en kamer | Als aanwezigheid |
+| Toelichting bij een moment | Idem | Als aanwezigheid |
+| Keuzes en kamers | In de configuratie (72) | Laag |
+| Antwoorden op voorstellen van de assistent | In het logboek, als besluit van de bewoner | Laag |
+
+Alles gaat mee in de export. Het thermisch model gebruikt gevoel en
+toelichting als invoer (D).
+
+## 9. Volgorde
+
+1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. De app-schermen
+   wachten. Open vraag: gevoel en toelichting deze winter al vastleggen.
+2. **Stap B:** echt schakelen in dit huis. De Bediening krijgt "wie stuurt".
+3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
+   daarna Kamers en de onboarding als schermen.
+4. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
+   op het Leren-scherm, en Plan.
+5. **Stap E:** weer en tarieven; Plan wordt compleet.
+6. **Stap F:** de schermen, naast de schetsen gelegd.
+7. **Stap G:** de assistent.
+
+## 10. Nog niet doordacht
+
+Dit moet beantwoord zijn vóór F gebouwd wordt:
+
+- **Meldingen.** Wanneer stuurt de app iets naar de telefoon, en wanneer juist
+  niet? Een voorstel, een sensor die wegvalt, het vangnet dat ingrijpt.
+- **Meerdere bewoners.** Mag iedereen het comfort aanpassen? Wie beslist over
+  de fase? Tellen alle gevoelstikken even zwaar?
+- **Een zone met twee sensoren.** Telt de warmste, het gemiddelde, of die waar
+  het apparaat hangt? De schets `Kamers` laat de warmste zien; dat is een
+  voorbeeld, geen keuze.
+- **De tablet zonder verbinding.** Wat toont hij als de NAS of Home Assistant
+  even weg is?
+- **Bewaartermijn.** Hoe lang blijven gevoel, toelichting en aanwezigheid
+  bewaard?
+- **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
+  later andere talen dan Nederlands.
+- **Het plafond op netstroom** (§6): per huis een instelling, maar met welke
+  standaard?
