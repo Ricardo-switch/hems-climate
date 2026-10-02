@@ -32,6 +32,20 @@ entity-ID's, geen jargon (45). Twee vormen, met dezelfde inhoud, dezelfde ontwer
 Het gekleurde blokje linksboven op de wand is een plaatshouder voor het logo;
 het doet niets.
 
+### Waar de app opent
+
+**Vast** (77). In de add-on via Home Assistant: een menu-item, achter de inlog
+van Home Assistant, in elke browser en in de app van Home Assistant. Een eigen
+link zonder Home Assistant eromheen komt pas met een eigen inlog (stap C); dan
+ook als kioskstand voor de wand. Tot die tijd: een eigen gebruiker voor de
+tablet en een kioskbrowser die rechtstreeks naar de add-on-pagina gaat.
+
+### Waar de app zijn gegevens vandaan haalt
+
+**Vast** (76). Uit een bewonerscontract van de dienst: status per kamer in
+woorden, de kop, de stromen, het dagoverzicht, wat opviel. Uitgerekend en
+getest in de dienst; de app toont alleen. `/api/vandaag` is het eerste stuk.
+
 ## 2. De regels achter elk scherm
 
 **Vast** (71). Ook voor schermen die nog niet getekend zijn:
@@ -198,9 +212,9 @@ toelichting als invoer (D).
 ## 9. Volgorde
 
 1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. Naast de
-   schaduwpagina staat een testversie in deze ontwerptaal, op live data en alleen
+   schaduwpagina staat een prototype in deze ontwerptaal, op live data en alleen
    lezen: `nieuw.html` (Thuis, Waarom, Opbrengst, Bediening; portret en
-   landschap). Open vraag: gevoel en toelichting deze winter al vastleggen.
+   landschap). Het is niet de basis van F (76). Open vraag: gevoel en toelichting deze winter al vastleggen.
 2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner
    zelf ingrijpt (74). De Bediening krijgt "wie stuurt", de wand het scherm Kamer.
 3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
@@ -233,6 +247,10 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   bewaard?
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
+- **De zonnesensor.** Nu eens per kwartier, uit de cloud van SolarEdge. Een
+  lokale sensor (Modbus van de omvormer of een kWh-meter op de groep) maakt de
+  stromen op het scherm en de instraling in de dataset echt live. Zie "Wat nog
+  een besluit wacht" in het besluitenlog.
 - **Uiterlijk en naam.** Telefoon en wand zijn allebei donker. Mag de bewoner
   zelf een lichte versie kiezen, of een accentkleur? En het logo en de naam van de app; nu een plaatshouder.
 - **Het plafond op netstroom** (§6): per huis een instelling, maar met welke
