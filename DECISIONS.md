@@ -3138,22 +3138,32 @@ komt na stap E.
   naar `recordOnly`, en in dezelfde wijziging komen
   `sensor.p1_meter_current_phase_1` en `sensor.p1_meter_voltage_phase_1` erbij
   (besluit 78), zodat het één keer kopiëren en herstarten is.
-- **De badkamer verwarmt elektrisch, en de configuratie rekent met 0 W.**
-  Volgens de bewoner (2 oktober 2026) heeft het hele huis radiatoren op de cv,
-  geregeld door de Nest beneden, behalve de badkamer. Daar schakelt
-  `climate.thermostaat_badkamer` elektrische vloerverwarming en een
-  infraroodpaneel in het plafond tegelijk. Dat verbruik zit in het netvermogen,
-  maar de configuratie geeft de badkamer `estimatedW: 0`. De regeling weet dus
-  niet dat de badkamer stroom trekt: hij telt niet mee als terug te winnen, niet
-  in de beveiliging tegen overbelasting (78), en verwarmen op zon kan niet. In
-  de opname tot 2 oktober verwarmde de badkamer nooit (steeds uit op 18 °C bij
-  20,5–24 °C), dus het vermogen is uit de data nog niet te halen. Te doen: het
-  vermogen van beide van het typeplaatje, of meten aan de sprong in de P1-meter
-  zodra de badkamer dit najaar aanslaat; dan `estimatedW` invullen, met een
-  replayvergelijking, want het verandert hoe het budget in de winter rekent. En
-  voor het thermisch model (D): een infraroodpaneel verwarmt vooral mensen en
-  oppervlakken, niet de lucht, dus de thermostaat ziet die warmte later en
-  minder dan de bewoner hem voelt.
+- **De badkamer verwarmt elektrisch; voor het budget is 0 W toch juist.**
+  Volgens de bewoner (2 oktober 2026): het hele huis heeft radiatoren op de cv,
+  met water van 60 °C, geregeld door de Nest beneden. De badkamer niet: daar
+  schakelt `climate.thermostaat_badkamer` elektrische vloerverwarming (450 W)
+  en een infraroodpaneel in het plafond (700 W) tegelijk, samen 1.150 W.
+
+  De configuratie geeft de badkamer `estimatedW: 0`, en dat blijft zo. Twee
+  redenen. Comfort vraagt geen budget (`budgetW: 0`), maar `reclaimableW` telt
+  het verbruik van elk draaiend apparaat als terug te winnen: met 1.150 W zou de
+  regeling denken dat die ruimte vrij is voor een airco, terwijl de badkamer
+  voor comfort nooit uitgaat. En de thermostaat meldt niet of hij werkelijk
+  stookt (geen `hvac_action`): op "verwarmen" bij een warme badkamer trekt hij
+  niets, maar zou er wel 1.150 W gerekend worden. Voor het budget hoort het
+  verbruik van de badkamer bij de basislast, en daar staat het nu ook.
+
+  Waar de 1.150 W wel voor nodig is: de beveiliging tegen overbelasting (78)
+  en het thermisch model (D). Daarvoor komt er een eigen veld voor het
+  vermogen van het typeplaatje, los van `estimatedW` als claim op het budget.
+  En `reclaimableW` hoort alleen apparaten te tellen die de regeling werkelijk
+  terugschakelt; bij dit huis zijn dat alleen de airco's, dus die wijziging
+  verandert hier niets. Wanneer de badkamer echt stookt, leert het model uit de
+  sprongen van ongeveer 1,15 kW in de P1-meter. Verder voor het model: een
+  infraroodpaneel verwarmt vooral mensen en oppervlakken, niet de lucht, dus
+  de thermostaat ziet die warmte later en minder dan de bewoner hem voelt. En
+  radiatoren op 60 °C zijn hogetemperatuurverwarming: snel, maar een
+  warmtepomp zou er later minder zuinig mee zijn.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
