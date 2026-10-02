@@ -11,7 +11,7 @@ Bij elk onderdeel staat hoe vast het is:
 - **Voorstel** — doordacht, maar het detail volgt bij het bouwen.
 - **Open** — nog niet doordacht; staat onderaan bij de vragen.
 
-Bijgewerkt op 2 oktober 2026, na de brainstorms van 1 en 2 oktober.
+Bijgewerkt op 2 oktober 2026, na de brainstorms van 1 en 2 oktober (besluiten 71 tot en met 74).
 
 ---
 
@@ -27,6 +27,10 @@ taak (**vast**, 71):
 | Uiterlijk | Licht | Donker: hij staat altijd aan en mag 's avonds de kamer niet verlichten |
 | Indeling | Vijf tabs onderin | Smalle balk links, één groot scherm |
 | Assistent | Typen, of de microfoonknop | Spreken ("Hé huis") of tikken |
+| Zelf bedienen | Bediening, per kamer | Een kamer aantikken op Thuis; de modus van het huis altijd onderin |
+
+Het gekleurde blokje linksboven op de wand is een plaatshouder voor het logo;
+het doet niets.
 
 ## 2. De regels achter elk scherm
 
@@ -69,6 +73,22 @@ Leren-scherm staat daarom "Nu al beginnen, met de basisregels" (**vast**, 73).
 | Meehelpen met een proef | Een kaart: "Zet morgen om 14:00 de airco een uur aan, dan meet ik hoe snel het afkoelt" | Eén middag in plaats van een week; het systeem stuurt zelf niets |
 | Vooraf kiezen | Dezelfde instellingen als later (§6) | Geen verrassing bij de overstap |
 
+### Als de bewoner zelf ingrijpt
+
+**Vast** (74), en een voorwaarde voor stap B. Het oude systeem zet een apparaat
+dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
+
+- De regeling herkent per apparaat dat de bewoner ingreep: het staat anders dan
+  zij het zette, zonder eigen opdracht onderweg. Ook een ingreep via de app.
+- Alleen dat apparaat valt buiten de regeling; de rest regelt door, met het
+  verbruik ervan in het budget.
+- Het duurt tot een natuurlijk eindpunt: een uur, tot vanavond, of tot de
+  bewoner het teruggeeft. Zonder keuze tot het volgende dagdeel.
+- Het scherm zegt wie het overnam, wanneer en tot wanneer, met "Geef terug"
+  (`Wand-Kamer`). Daar staat ook wat de regeling zelf zou doen.
+- Steeds weer hetzelfde ingrijpen wordt een voorstel van de assistent.
+- De failsafe wint. De modus Handmatig blijft bestaan voor het hele huis.
+
 ## 4. Kamers, zones en apparaten
 
 **Vast** (72).
@@ -110,6 +130,7 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 | Scherm | Vorm | Fase | Wat het toont | Hangt af van | Schets |
 | --- | --- | --- | --- | --- | --- |
 | Thuis | telefoon, wand | meekijken, regelen | Nu: kamers, stroom, wat er draait en waarom | — | `Main`, `Wand-Thuis` |
+| Kamer | wand (en telefoon) | alle | Eén kamer bedienen: doel, koelen of verwarmen, hoe lang; wie het overnam | 74, inlog voor schrijven | `Wand-Kamer` |
 | Leren | wand (en telefoon) | leren | Wat gevonden is, wat geleerd is, hoe zeker, wat nog nodig is | — | `Wand-Leren` |
 | Waarom | telefoon | alle | Elk besluit van vandaag met de reden | — | `Waarom` |
 | Opbrengst | telefoon | meekijken, regelen | Netstroom, kosten, ritten; comfort pas met D | D voor comfort | `Opbrengst` |
@@ -126,6 +147,7 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 | Modus: automatisch, afwezig, vakantie, handmatig | vast | bestaat; 39 |
 | Comfort per kamer: nooit kouder dan, nooit warmer dan | vast | 50 |
 | Wie stuurt, per apparaat | vast | 53, 73 |
+| Zelf ingrijpen per apparaat, en hoe lang | vast | 74 |
 | Koelen op netstroom boven het plafond, of alleen op zon | open | wacht op een besluit; gevonden in de data van 1 oktober |
 | Stille uren per kamer | voorstel | 72 |
 | Welke kamer voorgaat bij weinig zon | vast | prioriteit per zone |
@@ -160,7 +182,8 @@ toelichting als invoer (D).
 
 1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. De app-schermen
    wachten. Open vraag: gevoel en toelichting deze winter al vastleggen.
-2. **Stap B:** echt schakelen in dit huis. De Bediening krijgt "wie stuurt".
+2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner
+   zelf ingrijpt (74). De Bediening krijgt "wie stuurt", de wand het scherm Kamer.
 3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
    daarna Kamers en de onboarding als schermen.
 4. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
@@ -186,5 +209,7 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   bewaard?
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
+- **Uiterlijk en naam.** Mag de bewoner donker en licht zelf kiezen, of een
+  accentkleur? En het logo en de naam van de app; nu een plaatshouder.
 - **Het plafond op netstroom** (§6): per huis een instelling, maar met welke
   standaard?

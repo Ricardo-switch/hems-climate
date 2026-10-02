@@ -52,6 +52,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [61. Parkeren start de stabilisatie](#61-parkeren-start-de-stabilisatie)
 - [62. De eigen stand overleeft een herstart](#62-de-eigen-stand-overleeft-een-herstart)
 - [68. Hooguit één start per beslissing](#68-hooguit-één-start-per-beslissing)
+- [74. Wie zelf ingrijpt, wordt herkend en met rust gelaten](#74-wie-zelf-ingrijpt-wordt-herkend-en-met-rust-gelaten)
 
 **Configuratie en onboarding**
 
@@ -2832,6 +2833,58 @@ vanaf de pagina op de NAS, en dat is met besluit 42 bewust afgesloten.
 
 ---
 
+## 74. Wie zelf ingrijpt, wordt herkend en met rust gelaten
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Het oude systeem zet een apparaat dat de bewoner zelf bedient na een paar
+minuten terug in zijn eigen stand. De nieuwe regeling kent alleen "handen af"
+voor het hele huis (8, 8b), en gaat daarna verder vanaf de stand waarin de
+bewoner het apparaat achterliet (49b). Zelf merken dat iemand de
+afstandsbediening of de thermostaat gebruikt, kan hij niet: `manualOverride` in
+het model is een lege plek die de kern niet uitleest. Onder echte regeling zou
+hij dus precies doen wat het oude systeem nu doet.
+
+*Besluit:*
+
+- **Herkennen, per apparaat.** Staat een apparaat anders dan de regeling het
+  zette (aan of uit, stand, setpoint), en is er geen eigen opdracht onderweg,
+  dan heeft de bewoner ingegrepen. Een ingreep via de app telt net zo.
+- **Alleen dat apparaat valt buiten de regeling.** De rest regelt door. Het
+  verbruik van het overgenomen apparaat telt mee in het budget, zoals het
+  werkelijke verbruik dat nu al doet (49b).
+- **Geen vaste minuten, maar een natuurlijk eindpunt.** De bewoner kiest hoe
+  lang: een uur, tot vanavond, of tot hij het teruggeeft. Kiest hij niets, dan
+  duurt het tot het volgende dagdeel van het dagritme. Zet hij het apparaat zelf
+  uit of geeft hij het terug, dan is het meteen voorbij. Daarna gaat de regeling
+  verder vanaf zijn stand (49b).
+- **Het scherm zegt het.** Wie het overnam, wanneer en tot wanneer, met een
+  knop "Geef terug".
+- **Herhaald ingrijpen is een signaal.** Zet de bewoner hetzelfde apparaat een
+  week lang steeds op dezelfde manier, dan stelt de assistent voor de instelling
+  aan te passen (44, 73). Hij past zelf niets aan.
+- **De failsafe wint,** net als bij handen af (8).
+- **Handen af voor het hele huis blijft bestaan,** als de modus Handmatig.
+
+*Wat het vraagt.* De adapter moet weten welke opdracht hij zelf het laatst gaf
+en wanneer, om een eigen wijziging te scheiden van die van de bewoner. Een
+apparaat dat een opdracht traag of afgerond uitvoert, mag geen ingreep lijken;
+daarvoor komt er een marge in tijd en waarde. En een apparaat dat een opdracht
+niet uitvoert, is geen ingreep maar een storing: de bewoner verandert iets, een
+storing laat het staan. Bij twijfel tussen ingreep en geen ingreep wint de
+ingreep. Een apparaat ten onrechte met rust laten is zichtbaar en onschuldig;
+de bewoner overrulen is precies wat hier wordt opgelost.
+
+*Hoe het bewaakt wordt:* tests in de kern en de adapter. Na een ingreep gaan er
+geen commando's naar dat apparaat tot het eindpunt; de andere apparaten regelen
+door; de failsafe stuurt wel; een eigen opdracht telt niet als ingreep, ook niet
+als het apparaat er een minuut over doet.
+
+*Wanneer:* het is een voorwaarde voor stap B. Zonder dit gaat het echte
+schakelen niet aan.
+
+---
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -2874,6 +2927,8 @@ vanaf de pagina op de NAS, en dat is met besluit 42 bewust afgesloten.
   arbiter die regeling moet nabootsen of vervangen.
 - **`handmatig` is grofkorrelig.** Zie besluit 8b: de stand geldt bij ons voor de
   hele woning, in het oude systeem alleen voor de koelregeling.
+  Besluit 74 maakt ingrijpen per apparaat mogelijk; de stand voor het hele huis
+  blijft daarnaast bestaan.
 - **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
   thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6c. Voor dit
   huis bewust zo gelaten (1 oktober 2026): de NAS is alleen bereikbaar op het
