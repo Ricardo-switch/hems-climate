@@ -20,6 +20,7 @@ import { exampleSite } from './site.js';
 import { decide } from '../src/core/decide.js';
 import type { Command, Decision } from '../src/core/decision.js';
 import { ACTIONS, MODES, actuatorById, isHandsOff } from '../src/core/model.js';
+import { isOverridden } from '../src/core/override.js';
 import type { Action, Mode, SiteConfig } from '../src/core/model.js';
 import type { ActuatorState, SystemState } from '../src/core/state.js';
 import { minutesSinceChange, unavailable, value } from '../src/core/state.js';
@@ -110,6 +111,19 @@ function entityState(k: Dice, config: SiteConfig): SystemState {
     // Meestal gezond; soms hapert er een meetpunt en moet de failsafe het
     // overnemen.
     inputHealth: Object.fromEntries(config.criticalInputs.map((r) => [r.id, !k.chance(0.02)])),
+    // Soms heeft de bewoner een apparaat overgenomen (besluit 74): lopend, tot
+    // hij het teruggeeft, of al afgelopen.
+    residentOverrides: Object.fromEntries(
+      config.actuators
+        .filter(() => k.chance(0.15))
+        .map((a) => [
+          a.id,
+          {
+            sinceMs: now - k.int(0, 120) * 60_000,
+            untilMs: k.chance(0.3) ? null : now + k.int(-30, 120) * 60_000,
+          },
+        ]),
+    ),
   };
 }
 
@@ -157,6 +171,11 @@ function validate(config: SiteConfig): string | null {
     }
 
     for (const [id, cmds] of perActuator) {
+      // Een overgenomen apparaat krijgt niets, behalve van de failsafe (besluit 74).
+      if (isOverridden(state, id) && !d.explanation.failsafe.active) {
+        return error(`${id} krijgt een commando terwijl de bewoner het heeft overgenomen`);
+      }
+
       const actuatorCfg = actuatorById(config, id);
       const caps = actuatorCfg.capabilities;
       const now = state.actuators[id];
@@ -248,6 +267,7 @@ describe('regels die altijd gelden', () => {
     let budgetBlock = 0;
     let runtimeBlock = 0;
     let failsafe = 0;
+    let overridden = 0;
     for (let caseIndex = 0; caseIndex < CASES; caseIndex += 1) {
       const d = decide({ config: exampleSite, state: entityState(k, exampleSite), strategies });
       for (const c of d.commands) {
@@ -258,12 +278,14 @@ describe('regels die altijd gelden', () => {
       if (d.rejected.some((r) => r.blockedBy === 'insufficient_power_budget')) budgetBlock += 1;
       if (d.rejected.some((r) => r.blockedBy === 'min_run_not_elapsed')) runtimeBlock += 1;
       if (d.explanation.failsafe.active) failsafe += 1;
+      if (d.rejected.some((r) => r.blockedBy === 'resident_override')) overridden += 1;
     }
     expect(starts).toBeGreaterThan(50);
     expect(stops).toBeGreaterThan(50);
     expect(budgetBlock).toBeGreaterThan(50);
     expect(runtimeBlock).toBeGreaterThan(20);
     expect(failsafe).toBeGreaterThan(10);
+    expect(overridden).toBeGreaterThan(20);
     // Voor wie het wil zien: npx vitest run test/invariants.test.ts
     expect(ACTIONS.length).toBe(4);
   });

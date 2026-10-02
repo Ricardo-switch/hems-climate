@@ -39,6 +39,8 @@ export const BLOCK_CODES = [
   'setpoint_out_of_range',
   'superseded_by_higher_priority',
   'no_change_needed',
+  // De bewoner heeft het apparaat zelf overgenomen (besluit 74).
+  'resident_override',
 ] as const;
 export type BlockCode = (typeof BLOCK_CODES)[number];
 
@@ -129,6 +131,16 @@ export interface Explanation {
   readonly outdoorTemperatureC: number | null;
   /** Opbrengst van de zonnepanelen in W. Zelfde reden, zie besluit 47. */
   readonly solarProductionW: number | null;
+  /**
+   * Apparaten die de bewoner nu zelf bedient, met sinds en tot wanneer
+   * (besluit 74). Alleen aanwezig als er iets overgenomen is, zodat het logboek
+   * zonder ingrepen niet verandert.
+   */
+  readonly overrides?: readonly {
+    readonly actuatorId: string;
+    readonly sinceMs: number;
+    readonly untilMs: number | null;
+  }[];
 }
 
 export interface ZoneExplanation {

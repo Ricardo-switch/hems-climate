@@ -92,6 +92,14 @@ export interface TimerState {
   readonly endsAtMs: number | null;
 }
 
+/** Een ingreep van de bewoner op één apparaat (besluit 74). */
+export interface ResidentOverride {
+  /** Wanneer de ingreep begon. */
+  readonly sinceMs: number;
+  /** Wanneer hij eindigt, of null: tot de bewoner het apparaat teruggeeft. */
+  readonly untilMs: number | null;
+}
+
 export const TIMER_IDS = ['stabilisation', 'manualOverride'] as const;
 export type TimerId = (typeof TIMER_IDS)[number];
 
@@ -105,6 +113,15 @@ export interface SystemState {
   readonly actuators: Readonly<Record<string, ActuatorState>>;
   readonly power: PowerState;
   readonly timers: Readonly<Record<TimerId, TimerState>>;
+  /**
+   * Apparaten die de bewoner zelf heeft overgenomen, op actuator-id (besluit 74).
+   *
+   * Zo'n apparaat krijgt geen opdrachten tot de ingreep afloopt, behalve van de
+   * failsafe. Een ingreep met een eindtijd in het verleden geldt niet meer.
+   * Weglaten betekent: niemand heeft iets overgenomen. Zo is het in de
+   * schaduwmodus, waar niets herkend kan worden.
+   */
+  readonly residentOverrides?: Readonly<Record<string, ResidentOverride>>;
   /**
    * Elk meetpunt uit `SiteConfig.criticalInputs`, op DeviceRef.id, met alleen
    * de vraag of het nu een geldige waarde geeft. De adapter vult dit; de kern

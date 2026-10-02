@@ -2921,6 +2921,30 @@ als het apparaat er een minuut over doet.
 *Wanneer:* het is een voorwaarde voor stap B. Zonder dit gaat het echte
 schakelen niet aan.
 
+*Stand op 2 oktober 2026: de regels zijn gebouwd, het aansluiten niet.*
+- In de kern: `SystemState.residentOverrides`. Een overgenomen apparaat krijgt
+  geen opdrachten en wordt niet afgebouwd (blokkade `resident_override`); de
+  failsafe gaat voor. Zijn verbruik telt niet als terugwinbare ruimte. De
+  uitleg krijgt `overrides`, maar alleen als er iets overgenomen is, zodat het
+  logboek en de vaste replay zonder ingrepen niets veranderen.
+- In `core/override.ts`: tot wanneer een ingreep duurt (een uur, vanavond, tot
+  hij wordt teruggegeven, of het volgende dagdeel; in de tijdzone van het huis)
+  en hoe een afwijking wordt beoordeeld (gelijk, onderweg, storing, ingreep).
+- In `adapters/override-detector.ts`: de herkenner die de laatste opdracht per
+  apparaat onthoudt, ingrepen begint en beëindigt (eindtijd, zelf uitgezet,
+  teruggegeven) en zijn stand kan bewaren.
+- Bewaakt door tests in de kern en voor de herkenner, en door een invariant
+  over 3.000 gegenereerde toestanden: een overgenomen apparaat krijgt nooit een
+  opdracht, behalve van de failsafe. Die invariant faalt aantoonbaar als de
+  controle uit de arbiter wordt gehaald.
+
+Nog te doen bij stap B: de herkenner aansluiten op de actuator-laag (opdrachten
+vastleggen als ze uitgaan, waarnemingen erlangs halen), zijn stand meenemen in
+`own-state.json` (62), en een deur in de app om over te nemen en terug te geven
+(75), die pas met een inlog kan (23, 77). In de schaduwmodus geeft de adapter
+`observedDrawW` mee; bij echt schakelen hoort het verbruik van overgenomen
+apparaten daar niet in.
+
 ---
 
 ## 75. Een opdracht aan de assistent wordt een ingreep met een eindtijd

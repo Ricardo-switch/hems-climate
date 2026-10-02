@@ -33,6 +33,7 @@ const BLOCK = {
   setpoint_out_of_range: 'doel buiten bereik van het apparaat',
   superseded_by_higher_priority: 'een andere kamer ging voor',
   no_change_needed: 'niets te veranderen',
+  resident_override: 'jij hebt het overgenomen',
 };
 
 const REASON = {
@@ -188,6 +189,11 @@ function zoneStatus(snap, zoneId) {
   const pz = e.perZone.find((z) => z.zoneId === zoneId);
   if (e.failsafe?.active) return { kind: 'bad', text: 'Storing: veilig gezet' };
   const ids = actuatorsOf(zoneId);
+  // Overgenomen door de bewoner (besluit 74): dat gaat voor alles behalve een storing.
+  const taken = (e.overrides ?? []).find((o) => ids.includes(o.actuatorId));
+  if (taken) {
+    return { kind: 'wait', text: taken.untilMs == null ? 'Jij hebt het overgenomen' : `Jij hebt het tot ${hhmm(taken.untilMs)}` };
+  }
   const accepted = snap.accepted.filter((i) => ids.includes(i.actuatorId));
   const running = accepted.find((i) => i.action === 'cool' || i.action === 'heat');
   if (running) {

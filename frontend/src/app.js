@@ -55,6 +55,7 @@ const BLOCK_LABEL = {
   setpoint_out_of_range: 'setpoint buiten bereik',
   superseded_by_higher_priority: 'een hogere prioriteit ging voor',
   no_change_needed: 'geen wijziging nodig',
+  resident_override: 'de bewoner heeft het overgenomen',
 };
 
 const ACTION_LABEL = { heat: 'verwarmen', cool: 'koelen', standby: 'standby', off: 'uit' };
