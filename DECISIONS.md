@@ -55,6 +55,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [62. De eigen stand overleeft een herstart](#62-de-eigen-stand-overleeft-een-herstart)
 - [68. Hooguit één start per beslissing](#68-hooguit-één-start-per-beslissing)
 - [74. Wie zelf ingrijpt, wordt herkend en met rust gelaten](#74-wie-zelf-ingrijpt-wordt-herkend-en-met-rust-gelaten)
+- [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste)
 
 **Configuratie en onboarding**
 
@@ -83,6 +84,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [58. Dagen ouder dan een week worden gecomprimeerd](#58-dagen-ouder-dan-een-week-worden-gecomprimeerd)
 - [65. Wat het thermisch model nodig heeft, wordt nu al vastgelegd](#65-wat-het-thermisch-model-nodig-heeft-wordt-nu-al-vastgelegd)
 - [66. Bij elk besluit is na te gaan welke versie het nam](#66-bij-elk-besluit-is-na-te-gaan-welke-versie-het-nam)
+- [83. Ruwe data twee jaar, daarna samengevat](#83-ruwe-data-twee-jaar-daarna-samengevat)
 
 **Weergave**
 
@@ -92,6 +94,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
 - [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract)
 - [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
+- [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
 
 **Veiligheid**
 
@@ -100,6 +103,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [38. De ruwe HA-export hoort niet in versiebeheer](#38-de-ruwe-ha-export-hoort-niet-in-versiebeheer)
 - [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt)
 - [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
+- [80. Iedereen in huis bedient; één beheert](#80-iedereen-in-huis-bedient-één-beheert)
 
 **Uitrol en beheer**
 
@@ -3161,6 +3165,86 @@ dat de app van Home Assistant (een melding via de notify-dienst), en dat is
 schrijven naar Home Assistant: het hoort bij de inlog en het besluit over
 schrijven (23, 77). De niveaus en de nachtrust worden later per bewoner
 instelbaar; dit zijn de standaarden.
+
+---
+
+## 80. Iedereen in huis bedient; één beheert
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Een huis heeft meer dan één bewoner, en niet iedereen hoeft alles te kunnen.
+Gekozen op 2 oktober 2026.
+
+*Besluit:* twee rollen.
+
+- **Bewoner:** een kamer bijsturen, een apparaat overnemen en teruggeven (74,
+  75), de modus kiezen, zeggen hoe het voelt en een moment toelichten (73).
+- **Beheerder:** daarnaast de comfortgrenzen, de kamers en zones (72), wat de
+  regeling mag (zoals koelen op netstroom, 50), ingrijpende functies (78) en
+  de fase: leren, meekijken of regelen (73).
+
+In de add-on volgt de rol uit Home Assistant: een beheerder daar is beheerder
+hier, de rest is bewoner. Alle gevoelstikken tellen even zwaar; het model
+middelt over wie er thuis is.
+
+*Wanneer:* met de inlog (23, 77).
+
+---
+
+## 81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Met kamers en zones uit elkaar (72) kan één zone meer kamers met elk een
+thermometer hebben, zoals keuken en woonkamer op één airco. Gekozen op 2
+oktober 2026.
+
+*Besluit:* bij koelen telt de warmste kamer, bij verwarmen de koudste. Niemand
+in de zone krijgt het te warm of te koud; dat kost iets meer dan regelen op een
+gemiddelde, en dat is de afspraak. De hysterese (de schakelbanden) geldt op die
+kamer. De app laat zien op welke kamer de zone op dat moment regelt.
+
+*Wanneer:* met het model voor kamers (72, stap C). Tot dan heeft elke zone één
+thermometer en verandert er niets.
+
+---
+
+## 82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd
+
+*Onderwerp: weergave · Status: geldig*
+
+Een tablet aan de muur verliest weleens de verbinding: de wifi, een herstart
+van de NAS, een update van Home Assistant. Gekozen op 2 oktober 2026.
+
+*Besluit:* het scherm blijft staan met de laatste waarden, grijs gemaakt, met
+"Geen verbinding sinds 14:02". De regeling draait niet op de tablet maar in de
+dienst, en dat staat erbij: "De regeling loopt gewoon door." Bedienen kan niet
+tot de verbinding terug is; de knoppen zijn dan uitgeschakeld en zeggen
+waarom. De tablet herstelt de verbinding zelf.
+
+Is niet de verbinding weg maar de dienst zelf, dan zegt het scherm dat ook, met
+wat het vangnet doet: "Smart Climate reageert niet; je huidige regeling heeft
+het overgenomen" (het teken van leven uit stap B).
+
+---
+
+## 83. Ruwe data twee jaar, daarna samengevat
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Gevoel, toelichting en aanwezigheid zijn persoonlijke gegevens; het logboek en
+de ruwe historie bewaren ze nu onbeperkt. Het thermisch model heeft wel een
+paar winters nodig. Gekozen op 2 oktober 2026.
+
+*Besluit:* ruwe gegevens, per minuut en met wie er thuis was, blijven twee jaar
+bewaard. Daarna worden ze samengevat per uur en zonder aanwezigheid; de
+samenvatting blijft. Het thermisch model leert in die twee jaar en houdt zijn
+geleerde getallen. Exporteren (48) en alles verwijderen kan de beheerder
+altijd.
+
+*Wanneer:* het eerste moment waarop iets ouder dan twee jaar is, is september
+2028; het samenvatten hoort uiterlijk dan te bestaan. Tot dan blijft alles
+staan, ook in de back-up.
 
 ---
 
