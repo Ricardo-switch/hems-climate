@@ -1,1 +1,212 @@
-{"v": 3, "createdOnFiles": {"v": 1, "at": "2026-10-01T15:30:00Z"}, "title": "Smart Climate app", "launch": {"view": "canvas"}, "pages": [], "boards": {"Main.dc.html": {"x": 0, "y": 0, "w": 390, "h": 1300, "title": "Thuis", "is_interactive": true, "radius": 28}, "Waarom.dc.html": {"x": 470, "y": 0, "w": 390, "h": 844, "title": "Waarom", "is_interactive": true, "radius": 28}, "Opbrengst.dc.html": {"x": 940, "y": 0, "w": 390, "h": 844, "title": "Opbrengst", "is_interactive": true, "radius": 28}, "Assistent.dc.html": {"x": 1410, "y": 0, "w": 390, "h": 1060, "title": "Assistent", "is_interactive": true, "radius": 28}, "Bediening.dc.html": {"x": 1880, "y": 0, "w": 390, "h": 1300, "title": "Bediening", "is_interactive": true, "radius": 28}, "Wand-Thuis.dc.html": {"x": 0, "y": 1500, "w": 1280, "h": 800, "title": "Wand · Thuis", "is_interactive": true, "radius": 24}, "Wand-Assistent.dc.html": {"x": 1360, "y": 1500, "w": 1280, "h": 800, "title": "Wand · Assistent", "is_interactive": true, "radius": 24}, "Wand-Plan.dc.html": {"x": 2720, "y": 1500, "w": 1280, "h": 800, "title": "Wand · Plan", "is_interactive": true, "radius": 24}, "Wand-Thuis-echt.dc.html": {"x": 0, "y": 2440, "w": 1280, "h": 800, "title": "Wand · Thuis met echte data (1 okt, 23:01)", "is_interactive": true, "radius": 24}, "Wand-Leren.dc.html": {"x": 1360, "y": 2440, "w": 1280, "h": 800, "title": "Wand · Leren (nieuw huis, eerste week)", "is_interactive": true, "radius": 24}, "Onboarding.dc.html": {"x": 2350, "y": 0, "w": 390, "h": 1200, "title": "Onboarding · Klopt dit?", "is_interactive": true, "radius": 28}, "Kamers.dc.html": {"x": 2820, "y": 0, "w": 390, "h": 1320, "title": "Kamers · per etage", "is_interactive": true, "radius": 28}, "Wand-Kamer.dc.html": {"x": 2720, "y": 2440, "w": 1280, "h": 800, "title": "Wand · Kamer (de bewoner neemt het over)", "is_interactive": true, "radius": 24}}, "order": ["Main.dc.html", "Waarom.dc.html", "Opbrengst.dc.html", "Assistent.dc.html", "Bediening.dc.html", "Wand-Thuis.dc.html", "Wand-Assistent.dc.html", "Wand-Plan.dc.html", "Wand-Thuis-echt.dc.html", "Wand-Leren.dc.html", "Onboarding.dc.html", "Kamers.dc.html", "Wand-Kamer.dc.html"], "notes": {"titel": {"x": 0, "y": -260, "text": "Smart Climate app · schets van de bewonersapp", "kind": "title1", "maxW": 3210}, "wand": {"x": 0, "y": 1340, "text": "Tablet aan de muur · altijd aan, donker", "kind": "title1", "maxW": 4000}, "echt": {"x": 0, "y": 2380, "text": "Zelfde scherm, gevuld met het logboek van 1 oktober", "kind": "title2", "maxW": 1280}}, "designSystems": []}
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Assistent.dc.html": {
+      "h": 1060,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Assistent",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "Bediening.dc.html": {
+      "h": 1300,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Bediening",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "Kamers.dc.html": {
+      "h": 1320,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Kamers · per etage",
+      "w": 390,
+      "x": 2820,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "h": 1300,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Thuis",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Onboarding.dc.html": {
+      "h": 1200,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Onboarding · Klopt dit?",
+      "w": 390,
+      "x": 2350,
+      "y": 0
+    },
+    "Opbrengst.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Opbrengst",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "Waarom.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Waarom",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "Wand-Assistent.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Assistent",
+      "w": 1280,
+      "x": 1360,
+      "y": 1500
+    },
+    "Wand-Kamer.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Kamer (de bewoner neemt het over)",
+      "w": 1280,
+      "x": 2720,
+      "y": 2440
+    },
+    "Wand-Leren.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Leren (nieuw huis, eerste week)",
+      "w": 1280,
+      "x": 1360,
+      "y": 2440
+    },
+    "Wand-Plan.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Plan",
+      "w": 1280,
+      "x": 2720,
+      "y": 1500
+    },
+    "Wand-Thuis-echt.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Thuis met echte data (1 okt, 23:01)",
+      "w": 1280,
+      "x": 0,
+      "y": 2440
+    },
+    "Wand-Thuis.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Thuis",
+      "w": 1280,
+      "x": 0,
+      "y": 1500
+    },
+    "Wand-Thuis-winter.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Thuis (winter, voorbeeld)",
+      "w": 1280,
+      "x": 0,
+      "y": 3380
+    },
+    "Wand-Plan-winter.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Plan (winter, voorbeeld)",
+      "w": 1280,
+      "x": 1360,
+      "y": 3380
+    },
+    "Wand-Kamer-winter.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Kamer (winter, voorbeeld)",
+      "w": 1280,
+      "x": 2720,
+      "y": 3380
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-01T15:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "echt": {
+      "kind": "title1",
+      "maxW": 1280,
+      "text": "Zelfde scherm, gevuld met het logboek van 1 oktober",
+      "w": 240,
+      "x": 0,
+      "y": 2380
+    },
+    "titel": {
+      "kind": "title1",
+      "maxW": 3210,
+      "text": "Smart Climate app · schets van de bewonersapp",
+      "w": 240,
+      "x": 0,
+      "y": -260
+    },
+    "wand": {
+      "kind": "title1",
+      "maxW": 4000,
+      "text": "Tablet aan de muur · altijd aan, donker",
+      "w": 240,
+      "x": 0,
+      "y": 1340
+    },
+    "winter": {
+      "kind": "title1",
+      "maxW": 4000,
+      "text": "Een winterdag · de opbouw, met voorbeeldgetallen",
+      "w": 240,
+      "x": 0,
+      "y": 3320
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Waarom.dc.html",
+    "Opbrengst.dc.html",
+    "Assistent.dc.html",
+    "Bediening.dc.html",
+    "Wand-Thuis.dc.html",
+    "Wand-Assistent.dc.html",
+    "Wand-Plan.dc.html",
+    "Wand-Thuis-echt.dc.html",
+    "Wand-Leren.dc.html",
+    "Onboarding.dc.html",
+    "Kamers.dc.html",
+    "Wand-Kamer.dc.html",
+    "Wand-Thuis-winter.dc.html",
+    "Wand-Plan-winter.dc.html",
+    "Wand-Kamer-winter.dc.html"
+  ],
+  "pages": [],
+  "title": "Smart Climate app"
+}
