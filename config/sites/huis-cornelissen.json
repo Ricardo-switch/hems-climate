@@ -326,6 +326,7 @@
   "recordOnly": [
     "sensor.solaredge_i1_ac_power",
     "sensor.solaredge_i1_dc_power",
+    "sensor.schakelaar_screen_groot_schakelaar_screen_groot_temperature",
     "sensor.gas_meter_gas",
     "sensor.cve_silent_indoortemp",
     "sensor.cve_silent_indoorhumidity",
