@@ -164,6 +164,7 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 | Assistent | telefoon, wand | alle | Uitleg en voorstellen | G | `Assistent`, `Wand-Assistent` |
 | Bediening | telefoon | alle | Modus, comfort, wie stuurt, keuzes, gekoppeld | inlog voor schrijven | `Bediening` |
 | Kamers | telefoon | alle | Kamers, zones, apparaten, voorstellen | 72, inlog | `Kamers` |
+| Sluipverbruik (kaart) | telefoon, wand | alle | Het verbruik van elke nacht, het verloop, en wat opviel | P1-meter; overdag ook de zonnesensor | nog geen schets |
 | Onboarding | telefoon | vóór leren | De vier stappen van §4 | 41, 42 | `Onboarding` |
 
 ## 6. Wat de bewoner kan instellen
@@ -203,6 +204,34 @@ als de verbinding wegvalt.
 - Hij vraagt zelf om toelichting bij wat hij niet kan verklaren (§3).
 - Spreken op de wand: waarschijnlijk via Assist van Home Assistant. **Open**:
   of het wekwoord betrouwbaar genoeg werkt op een tablet.
+
+### Sluipverbruik
+
+**Voorstel**, na de analyse van 2 oktober 2026. Geen klimaat, wel energie-inzicht
+zonder nieuwe sensoren: de P1-meter is genoeg.
+
+- **Meten.** Elke nacht tussen 01:00 en 05:00, zonder zon, en alleen de momenten
+  waarop geen bestuurd apparaat draait (airco, verwarming, later een
+  warmtepomp). Dan is wat de P1-meter meet precies wat het huis verbruikt. Het
+  sluipverbruik van die nacht is het laagste tiende deel van die metingen: de
+  vloer, zonder de korte pieken van een koelkast die aanslaat.
+- **Vergelijken met het eigen huis,** niet met een landelijk gemiddelde. De
+  laagste nachten zijn de vloer van dít huis; een nacht die daar duidelijk
+  boven ligt, valt op.
+- **Wat de app laat zien.** Een kaart met het sluipverbruik van afgelopen nacht
+  en het verloop, met het vermogen in W en wat het per jaar kost, als
+  bandbreedte zolang niet bekend is of het overdag doorloopt. En bij
+  "Opgevallen": "Vannacht 140 W meer dan je laagste nachten. Staat er iets
+  aan?"
+- **Overdag.** Met een lokale zonnesensor is het verbruik ook overdag te
+  berekenen als net plus zon, elke minuut. Dan wordt de bandbreedte een meting.
+- **Uit de dataset van dit huis (6 september tot 2 oktober 2026, 26 nachten):**
+  twee niveaus. Zes nachten rond 165–185 W, de rest meestal 300–320 W. Het
+  verschil van ongeveer 140 W lag niet aan het klimaat; waarschijnlijk stond de
+  pc aan. Op een jaar is dat 410 tot 1.230 kWh, afhankelijk van of hij alleen
+  's nachts of altijd aanstaat.
+- **Waar het in de dienst hoort:** in het bewonerscontract (76), bijvoorbeeld als
+  "afgelopen nacht" in `/api/vandaag`.
 
 ## 8. Data die de app toevoegt
 
