@@ -3210,6 +3210,23 @@ kamer. De app laat zien op welke kamer de zone op dat moment regelt.
 *Wanneer:* met het model voor kamers (72, stap C). Tot dan heeft elke zone één
 thermometer en verandert er niets.
 
+*Aanvulling, dezelfde dag: twee meters in één ruimte.* De regel hierboven is
+voor aparte kamers. Hangen er twee meters in dezelfde ruimte, zoals in dit huis
+de Nest aan de keukenkant en de screenschakelaar in de zithoek, dan zou "de
+warmste telt" bij koelen op de keukenkant regelen, ook als er gekookt wordt.
+Daarom wijst de bewoner per ruimte aan welke meter telt: de plek waar je zit.
+De andere meet mee, voor de dataset en het thermisch model (D), maar stuurt
+niet. Wijst niemand iets aan, dan telt de meter die de ruimte als eerste kreeg.
+De app laat beide zien, met het verschil.
+
+Een thermostaat die zelf de ketel regelt, zoals de Nest, blijft op zijn eigen
+meting stoken. Telt een andere meter, dan zet Smart Climate de Nest zoveel hoger
+of lager als het verschil dat het thermisch model tussen de twee meters kent.
+Daarvoor moet dat verschil eerst gemeten zijn. In dit huis schrijft de
+schakelaar sinds 2 oktober mee (`recordOnly`). De woonkamer blijft op de Nest
+regelen tot de vergelijking er ligt, en tot het moment van echt schakelen (64),
+want het oude systeem regelt ook op de Nest.
+
 ---
 
 ## 82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd
