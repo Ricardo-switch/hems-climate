@@ -32,6 +32,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
 - [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
+- [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 
 **Kern en regeling**
 
@@ -2778,11 +2779,22 @@ of in Home Assistant.
   Een gebied dat in Home Assistant een andere naam krijgt, verandert niets: de
   app houdt zijn eigen naam.
 - **Aanpassen kan altijd,** in een scherm Kamers, niet alleen bij de installatie.
+  Een kamer toevoegen, hernoemen, verplaatsen naar een andere etage of zone, of
+  weghalen. Een apparaat toevoegen, naar een andere kamer verplaatsen, aanpassen
+  (naam, rol, vermogen, bereik, stille uren) of uit de regeling halen. Uit de
+  regeling halen is iets anders dan verdwijnen: het apparaat blijft in Home
+  Assistant en wordt nog gemeten, maar Smart Climate stuurt het niet meer.
+- **Kamers horen bij een etage.** Home Assistant kent sinds 2024 etages, met
+  gebieden erin. De ontdekking neemt ze over; de bewoner kan ze aanpassen of zelf
+  aanmaken als Home Assistant ze niet heeft. De app toont kamers per etage, en de
+  doorsnede op de wand wordt eruit opgebouwd: etages boven elkaar, kamers
+  ernaast. Zo hoeft niemand per huis een tekening te maken.
 
-*Wat het vraagt:* een modelwijziging. Naast `zones` komen `rooms` in het schema;
-de kern blijft alleen zones kennen, en kamers dienen de uitleg en de weergave.
-En schrijven vanuit de app vraagt de inlog op de weergave (23, stap C). Tot dan
-kan het alleen achter Ingress (42).
+*Wat het vraagt:* een modelwijziging. Naast `zones` komen `rooms` en `floors`
+in het schema; de kern blijft alleen zones kennen, en kamers en etages dienen de
+uitleg en de weergave. De witte lijst van `HaClient.query` (41) krijgt het
+etageregister erbij, nog steeds alleen lezen. En schrijven vanuit de app vraagt
+de inlog op de weergave (23, stap C). Tot dan kan het alleen achter Ingress (42).
 
 *Wanneer:* het model bij stap C, het scherm bij F. Niets hiervan raakt de
 winterdata van dit huis.
@@ -2882,6 +2894,41 @@ als het apparaat er een minuut over doet.
 
 *Wanneer:* het is een voorwaarde voor stap B. Zonder dit gaat het echte
 schakelen niet aan.
+
+---
+
+## 75. Een opdracht aan de assistent wordt een ingreep met een eindtijd
+
+*Onderwerp: visie en principes · Status: geldig*
+
+"Zet de zolder op 21" is geen vraag maar een opdracht van de bewoner. Besluit 44
+zegt dat de assistent nooit zelf een dienst aanroept, maar een verzoek omzet in
+een intentie voor de arbiter. Besluit 74 zegt dat een ingreep van de bewoner met
+rust wordt gelaten tot een eindpunt. Dit besluit legt vast hoe die twee op
+elkaar passen.
+
+*Besluit:*
+
+- **Een opdracht via de assistent of de app is een ingreep van de bewoner**
+  (74), met de assistent als vertaler. Ze gaat als intentie naar de arbiter
+  (44). Over dat apparaat beslist de bewoner; de arbiter bewaakt alleen wat de
+  bewoner niet ziet: de failsafe, en de rusttijd die de compressor beschermt.
+  Kan iets niet meteen, dan zegt de assistent waarom ("over drie minuten, de
+  airco moet eerst rusten").
+- **Daarna altijd de vraag tot hoe laat.** Een uur, tot vanavond, of tot ik
+  het teruggeef. Met spraak kort: "Tot vanavond, goed?" Zonder antwoord geldt
+  het volgende dagdeel (74).
+- **Een voorstel voor later, als dat beter is.** Kost het nu netstroom en komt
+  er binnen afzienbare tijd zon over, dan zegt de assistent dat erbij, met de
+  keuze: "Nu kost het 0,3 kW van het net. Om 15:00 is er zon over. Nu, of om
+  15:00?" Eén voorstel, zonder aandringen; de bewoner kiest. Zonder prognose
+  (E) baseert hij het op het verloop van vandaag, en als hij niets beters weet,
+  zegt hij niets.
+- **Hij bevestigt wat er werkelijk gebeurde,** uit het besluit van de arbiter
+  en niet uit wat hij dacht te doen (44).
+
+*Wanneer:* met de assistent (G). De knoppen in de app (F) volgen dezelfde
+stappen: opdracht, tot hoe laat, en het voorstel voor later als dat er is.
 
 ---
 

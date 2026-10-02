@@ -44,6 +44,9 @@ het doet niets.
 4. Het scherm weet in welke fase het huis zit (73).
 5. Eerst de lelijke momenten ontwerpen: nacht, geen zon, een sensor die
    wegvalt, één airco.
+6. Elk scherm in beide seizoenen. De schetsen leunen nu op koelen, omdat de
+   echte data van september en oktober over koelen gaat; de winter is waar het
+   gas, de warmtepomp en het voorverwarmen zitten (§10).
 
 ## 3. De drie fasen
 
@@ -119,9 +122,18 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 
 **Voorstel** (`Kamers.dc.html`). Na de installatie:
 
-- per kamer de naam, de sensor, het apparaat en de zone;
-- een kamer of apparaat toevoegen, hernoemen of verplaatsen;
+- kamers per etage, met per kamer de sensor, de apparaten en de zone; om te
+  schakelen naar een weergave per zone;
+- een kamer toevoegen, hernoemen, naar een andere etage of zone verplaatsen, of
+  weghalen; een etage toevoegen als Home Assistant er geen heeft;
+- een apparaat aantikken: aanpassen (naam, rol, vermogen, bereik, stille uren),
+  naar een andere kamer verplaatsen, of uit de regeling halen. Uit de regeling
+  is niet weg: het blijft in Home Assistant en wordt nog gemeten (72);
 - bovenaan de voorstellen uit de vergelijking met Home Assistant.
+
+De etages komen uit Home Assistant (sinds 2024) of van de bewoner. De doorsnede
+op het Thuis-scherm van de wand wordt eruit opgebouwd: etages boven elkaar,
+kamers ernaast. Zo hoeft niemand per huis een tekening te maken (72).
 
 Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 
@@ -158,6 +170,11 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 **Vast** in rol (44), **voorstel** in vorm:
 
 - Hij legt uit en stelt voor. Een voorstel kan eerst een week meekijken.
+- Een opdracht ("zet de zolder op 21", "doe de airco aan") voert hij uit als
+  ingreep van de bewoner (75). Daarna vraagt hij altijd tot hoe laat, en als het
+  later duidelijk beter kan, zegt hij dat erbij: "Nu kost het 0,3 kW van het
+  net. Om 15:00 is er zon over. Nu, of om 15:00?" Eén voorstel, de bewoner
+  kiest. Wat niet meteen kan, zegt hij met de reden.
 - Zijn bronnen zijn het besluitenlog, de configuratie en wat de bewoner heeft
   toegelicht. Wat daar niet in staat, weet hij niet, en dat zegt hij.
 - Hij vraagt zelf om toelichting bij wat hij niet kan verklaren (§3).
@@ -195,6 +212,11 @@ toelichting als invoer (D).
 ## 10. Nog niet doordacht
 
 Dit moet beantwoord zijn vóór F gebouwd wordt:
+
+- **De winter in de schetsen.** Thuis, Plan en Kamer bestaan alleen als
+  koeldag. Er horen wintervarianten bij: de cv en de airco als warmtepomp,
+  verwarmen op zon, voorverwarmen met het thermisch model. Die zijn pas echt in
+  te vullen met de winterdata, maar de opbouw kan eerder.
 
 - **Meldingen.** Wanneer stuurt de app iets naar de telefoon, en wanneer juist
   niet? Een voorstel, een sensor die wegvalt, het vangnet dat ingrijpt.
