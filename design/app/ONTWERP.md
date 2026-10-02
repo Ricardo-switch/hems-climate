@@ -197,8 +197,10 @@ toelichting als invoer (D).
 
 ## 9. Volgorde
 
-1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. De app-schermen
-   wachten. Open vraag: gevoel en toelichting deze winter al vastleggen.
+1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. Naast de
+   schaduwpagina staat een testversie in deze ontwerptaal, op live data en alleen
+   lezen: `nieuw.html` (Thuis, Waarom, Opbrengst, Bediening; portret en
+   landschap). Open vraag: gevoel en toelichting deze winter al vastleggen.
 2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner
    zelf ingrijpt (74). De Bediening krijgt "wie stuurt", de wand het scherm Kamer.
 3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
