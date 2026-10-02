@@ -3138,6 +3138,22 @@ komt na stap E.
   naar `recordOnly`, en in dezelfde wijziging komen
   `sensor.p1_meter_current_phase_1` en `sensor.p1_meter_voltage_phase_1` erbij
   (besluit 78), zodat het één keer kopiëren en herstarten is.
+- **De badkamer verwarmt elektrisch, en de configuratie rekent met 0 W.**
+  Volgens de bewoner (2 oktober 2026) heeft het hele huis radiatoren op de cv,
+  geregeld door de Nest beneden, behalve de badkamer. Daar schakelt
+  `climate.thermostaat_badkamer` elektrische vloerverwarming en een
+  infraroodpaneel in het plafond tegelijk. Dat verbruik zit in het netvermogen,
+  maar de configuratie geeft de badkamer `estimatedW: 0`. De regeling weet dus
+  niet dat de badkamer stroom trekt: hij telt niet mee als terug te winnen, niet
+  in de beveiliging tegen overbelasting (78), en verwarmen op zon kan niet. In
+  de opname tot 2 oktober verwarmde de badkamer nooit (steeds uit op 18 °C bij
+  20,5–24 °C), dus het vermogen is uit de data nog niet te halen. Te doen: het
+  vermogen van beide van het typeplaatje, of meten aan de sprong in de P1-meter
+  zodra de badkamer dit najaar aanslaat; dan `estimatedW` invullen, met een
+  replayvergelijking, want het verandert hoe het budget in de winter rekent. En
+  voor het thermisch model (D): een infraroodpaneel verwarmt vooral mensen en
+  oppervlakken, niet de lucht, dus de thermostaat ziet die warmte later en
+  minder dan de bewoner hem voelt.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;

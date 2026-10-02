@@ -127,8 +127,15 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 2. **Klopt dit?** De gebieden uit Home Assistant als kamers, met per kamer de
    gevonden apparaten en sensoren. Twijfelgevallen als vraag, met de reden
    (`Onboarding.dc.html`).
-3. **Zones.** Welke kamers één apparaat delen. Meestal is dat al goed:
-   één airco per kamer is één zone.
+3. **Zones en verwarming.** Welke kamers één apparaat delen; meestal is dat al
+   goed, één airco per kamer is één zone. En per kamer: "Hoe wordt deze kamer
+   verwarmd?" Radiator (de standaard), vloerverwarming, convector, elektrisch
+   of geen; en wat er op een radiator zit: niets, een gewone of een slimme
+   thermostaatkraan. Het type bepaalt hoe snel een kamer reageert, dus hoe ver
+   vooruit er voorverwarmd wordt (D). Elektrisch verwarmen telt mee in het
+   stroombudget en in de beveiliging tegen overbelasting (78), en kan op zon.
+   Kamers met radiatoren op één cv-thermostaat worden samen warm; het model
+   moet weten welke, anders schrijft het de warmte van de cv aan de zon toe.
 4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
    begint het leren.
 
