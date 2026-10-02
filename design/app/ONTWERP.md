@@ -139,6 +139,16 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
    begint het leren.
 
+### Een apparaat toevoegen
+
+**Vast** (72). Twee stappen. Koppelen aan Home Assistant blijft in Home
+Assistant; opnemen in Smart Climate (kamer, zone, rol, grenzen) gebeurt in de app.
+"+ Apparaat" vraagt eerst wat voor apparaat en welk merk, en opent dan met een
+vaste link van Home Assistant meteen het juiste koppelscherm. Zodra het apparaat
+er is, verschijnt het voorstel om het aan een kamer toe te voegen. Voor de
+bewoner voelt dat als één stroom. Koppelen vanuit de app zelf komt pas voor een
+product met een verborgen Home Assistant, met een eigen besluit.
+
 ### Het scherm Kamers
 
 **Voorstel** (`Kamers.dc.html`). Na de installatie:

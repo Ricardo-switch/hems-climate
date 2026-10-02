@@ -2810,6 +2810,20 @@ of in Home Assistant.
   (naam, rol, vermogen, bereik, stille uren) of uit de regeling halen. Uit de
   regeling halen is iets anders dan verdwijnen: het apparaat blijft in Home
   Assistant en wordt nog gemeten, maar Smart Climate stuurt het niet meer.
+- **Een apparaat toevoegen zijn twee stappen** (aangevuld 2 oktober 2026).
+  Het apparaat in Home Assistant krijgen (een integratie van het merk, een
+  Zigbee-sensor aanmelden, inloggen bij de cloud van de fabrikant) blijft werk
+  van Home Assistant: dat kent honderden merken, en de inloggegevens horen daar.
+  Het apparaat in Smart Climate opnemen (kamer, zone, rol, grenzen) gebeurt in
+  de app. De app maakt de eerste stap kort met de vaste links van Home Assistant
+  ("my links"), die meteen het koppelscherm van het gekozen merk of het
+  Zigbee-scherm openen; daarna ziet de dienst het nieuwe apparaat en volgt het
+  voorstel om het aan een kamer toe te voegen. Later, voor een product waarin
+  Home Assistant onzichtbaar is (34), kan de app de koppelschermen van Home
+  Assistant ook zelf starten en invullen. Dat is schrijven naar Home Assistant
+  en vraagt een eigen besluit: alleen een korte, geteste lijst integraties
+  (klimaat, P1-meter, omvormers), inloggegevens rechtstreeks naar Home
+  Assistant zonder dat de app ze bewaart, en pas met een eigen inlog (23, 77).
 - **Kamers horen bij een etage.** Home Assistant kent sinds 2024 etages, met
   gebieden erin. De ontdekking neemt ze over; de bewoner kan ze aanpassen of zelf
   aanmaken als Home Assistant ze niet heeft. De app toont kamers per etage, en de
