@@ -10,9 +10,10 @@ Ook te bekijken als canvas op claude.ai (privé, alleen voor de eigenaar):
 
 Hoe het samenhangt, wat vastligt en wat nog open is: [ONTWERP.md](ONTWERP.md).
 
-Een eerste levende versie staat naast de schaduwpagina: `nieuw.html` op de NAS
+Een levend prototype staat naast de schaduwpagina: `nieuw.html` op de NAS
 (bron in `frontend/src/nieuw.html` en `nieuw.js`). Zelfde live gegevens, alleen
-lezen, en de indeling volgt de stand van het scherm.
+lezen, en de indeling volgt de stand van het scherm. Het is een prototype en niet de
+basis van de echte app (besluit 76).
 
 ## Wat er staat
 

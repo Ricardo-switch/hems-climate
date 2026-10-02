@@ -89,6 +89,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [26. De terugblik hoort bij de weergave, maar is een andere waarheid](#26-de-terugblik-hoort-bij-de-weergave-maar-is-een-andere-waarheid)
 - [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
 - [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
+- [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract)
 
 **Veiligheid**
 
@@ -96,6 +97,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [23. De schaduwdienst gaat luisteren, maar alleen om te lezen](#23-de-schaduwdienst-gaat-luisteren-maar-alleen-om-te-lezen) — *deels vervangen door 42*
 - [38. De ruwe HA-export hoort niet in versiebeheer](#38-de-ruwe-ha-export-hoort-niet-in-versiebeheer)
 - [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt)
+- [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
 
 **Uitrol en beheer**
 
@@ -2937,6 +2939,65 @@ stappen: opdracht, tot hoe laat, en het voorstel voor later als dat er is.
 
 ---
 
+## 76. De testpagina is een prototype; de echte app krijgt een bewonerscontract
+
+*Onderwerp: weergave · Status: geldig*
+
+Sinds 2 oktober 2026 staat `nieuw.html` naast de schaduwpagina: de ontwerptaal van
+besluit 71 op live gegevens. Om snel te kunnen kijken leest hij interne vormen
+letterlijk (het `Explanation`-object, redencodes, waarnemingen als `cool@22`) en
+rekent hij zelf uit wat een kamer doet, welke kop erboven staat en welke stroom
+er loopt. Dat gaat in tegen de regel dat er geen logica in de frontend hoort. Voor
+een prototype is dat te verdedigen, voor het product niet. Verandert het besluit
+met stap B, D of E, dan breekt de pagina. En de wand, de telefoon en straks de
+assistent zouden elk hun eigen uitleg hebben.
+
+*Besluit:*
+
+- **`nieuw.html` blijft een prototype.** Hij is er om rond te kijken en ideeën te
+  toetsen, leest alleen, en is niet de basis van stap F. Hij wordt niet verder
+  uitgebouwd dan nodig is om iets te toetsen.
+- **De echte app krijgt een bewonerscontract van de dienst:** per kamer de status
+  in woorden en de soort, de kop van het moment, de stromen in kW, het
+  dagoverzicht, wat er opviel. Uitgerekend en getest in de dienst; de app toont
+  alleen. Interne vormen veranderen dan achter dat contract, niet in de app.
+- **Dezelfde teksten voeden de assistent** (44): één uitleg, op elk scherm gelijk.
+- **`/api/vandaag` is het eerste stuk ervan,** en blijft.
+
+*Hoe het bewaakt wordt:* contracttests in de dienst, zoals de sleutels die de
+page-test sinds besluit 69 bewaakt.
+
+*Wanneer:* bij stap F. Tot dan alleen kleine aanpassingen aan het prototype.
+
+---
+
+## 77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog
+
+*Onderwerp: veiligheid · Status: geldig*
+
+De vraag was of de add-on straks een eigen link geeft die elke browser opent,
+zonder Home Assistant eromheen.
+
+*Besluit:*
+
+- **De add-on draait naast Home Assistant, op hetzelfde apparaat.** Bij dit huis
+  is dat de Pi. Op telefoon, tablet of pc is alleen een browser nodig.
+- **Hij opent via Ingress,** achter de inlog van Home Assistant: een menu-item
+  "Smart Climate", in elke browser waarin Home Assistant opent en in de app van
+  Home Assistant. Geen `ports:` in `addon/config.yaml`, zoals nu (23).
+- **Een eigen link** (bijvoorbeeld `http://homeassistant.local:8099`) komt pas
+  als de weergave een eigen inlog heeft (stap C). Dan als optie, voor een tablet
+  aan de muur in kioskstand.
+- **Tot dan, voor de wand:** een eigen gebruiker in Home Assistant voor de
+  tablet, één keer inloggen, en een kioskbrowser die rechtstreeks naar de pagina
+  van de add-on gaat. De inlog van Home Assistant blijft de deur.
+- **Wie Home Assistant zonder add-ons draait** (Container of Core), gebruikt het
+  Docker-image, zoals de NAS.
+
+*Wanneer:* de add-on gaat weer aan bij stap B (53).
+
+---
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -2961,6 +3022,21 @@ stappen: opdracht, tot hoe laat, en het voorstel voor later als dat er is.
   wel 0,29 m³ gas door de meter. De vraag aan de bewoner: wil hij boven 26 °C
   ook op netstroom koelen, of alleen op zon? Het antwoord kan per huis
   verschillen, en hoort dus een instelling te worden.
+- **De zonne-opbrengst komt eens per kwartier.** `sensor.solaredge_huidig_vermogen`
+  komt uit de cloudkoppeling van SolarEdge (api-sleutel en site-id) en werkt
+  precies elke 15 minuten bij; de API van SolarEdge staat niet veel vaker toe.
+  De regeling leest hem niet (47), dus de besluiten merken het niet. De
+  weergave wel: een zon die een kwartier stilstaat naast een net dat elke paar
+  seconden beweegt, en een "huis" (zon plus net) dat daardoor niet klopt. En de
+  dataset voor het thermisch model krijgt de instraling per kwartier in plaats
+  van per minuut. Twee lokale alternatieven, allebei met updates per seconden:
+  Modbus TCP van de omvormer (moet op de omvormer worden aangezet, bij nieuwere
+  omvormers soms door de installateur; via een HACS-integratie; vaak maar één
+  verbinding tegelijk), of een HomeWizard kWh-meter op de groep van de panelen,
+  naast de P1-meter die er al is. Bij de overstap: de nieuwe sensor eerst in
+  `recordOnly` (65) naast de oude, een paar dagen vergelijken, dan
+  `solarProduction` omzetten, en de datum vastleggen, want het is een
+  breukpunt in de kolom `zonW`.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
