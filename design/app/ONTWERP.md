@@ -256,8 +256,13 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   bewaard?
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
-- **De hoofdzekering.** Nodig voor de beveiliging tegen overbelasting (78). In
-  de onboarding vragen, met uitleg waar het op de meter staat.
+- **De hoofdzekering.** Nodig voor de beveiliging tegen overbelasting (78).
+  **Voorstel:** de onboarding biedt de gangbare Nederlandse aansluitingen aan:
+  1 × 35 A, 1 × 40 A of 3 × 25 A, en "anders", met uitleg waar het op de meter
+  of in de meterkast staat. Het aantal fasen leidt hij af uit de P1-meter. Weet
+  de bewoner het niet, dan rekent de regeling met de laagste gangbare waarde
+  voor dat aantal fasen (1 × 35 A of 3 × 25 A) en zegt hij dat erbij: liever
+  een airco die iets later start dan een zekering die eruit vliegt.
 - **De zonnesensor.** Nu eens per kwartier, uit de cloud van SolarEdge. Een
   lokale sensor (Modbus van de omvormer of een kWh-meter op de groep) maakt de
   stromen op het scherm en de instraling in de dataset echt live. Zie "Wat nog
