@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { WebServer, versionFromEnv, type Version } from '../src/web/server.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
+import { FeedbackLog } from '../src/web/feedback.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
 import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
@@ -72,6 +73,7 @@ async function start(options: {
   webDir?: string;
   divergence?: () => DivergenceReport | null;
   onboarding?: Onboarding;
+  feedback?: FeedbackLog;
   withoutConfig?: boolean;
   version?: Version;
 }): Promise<{ base: string; server: WebServer }> {
@@ -89,6 +91,7 @@ async function start(options: {
         latest: options.latest ?? (() => null),
         ...(options.divergence ? { divergence: options.divergence } : {}),
         ...(options.onboarding ? { onboarding: options.onboarding } : {}),
+        ...(options.feedback ? { feedback: options.feedback } : {}),
         ...(options.version ? { version: options.version } : {}),
         write: () => {},
       });
@@ -638,5 +641,71 @@ describe('de onboarding', () => {
     const res = await fetch(`${base}/api/site`);
     expect(res.status).toBe(503);
     expect(await res.text()).toContain('nog geen installatie');
+  });
+});
+
+describe('gevoel en toelichting, de tweede deur (besluit 84)', () => {
+  async function feedbackDir(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-gevoel-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    return dir;
+  }
+
+  it('bestaat niet wanneer hij niet is meegegeven', async () => {
+    const { base } = await start({});
+    const res = await fetch(`${base}/api/gevoel`, {
+      method: 'POST',
+      body: JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' }),
+    });
+    expect(res.status).toBe(405);
+    expect(res.headers.get('allow')).toBe('GET, HEAD');
+  });
+
+  it('legt een gevoel vast en geeft het terug', async () => {
+    const dir = await feedbackDir();
+    const feedback = new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) });
+    const { base } = await start({ feedback });
+
+    const res = await fetch(`${base}/api/gevoel`, {
+      method: 'POST',
+      body: JSON.stringify({ zoneId: 'woonkamer', gevoel: 'te_warm' }),
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ zoneId: 'woonkamer', gevoel: 'te_warm' });
+
+    const list = (await (await fetch(`${base}/api/gevoel`)).json()) as { gevoel?: string }[];
+    expect(list.map((r) => r.gevoel)).toEqual(['te_warm']);
+    expect(await readFile(join(dir, 'gevoel.ndjson'), 'utf-8')).toContain('"te_warm"');
+  });
+
+  it('weigert wat niet in de lijst staat, met een reden', async () => {
+    const dir = await feedbackDir();
+    const feedback = new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] });
+    const { base } = await start({ feedback });
+    for (const body of [
+      { zoneId: 'kelder', gevoel: 'goed' },
+      { zoneId: 'woonkamer', gevoel: 'heerlijk' },
+      { zoneId: 'woonkamer', toelichting: '<script>' },
+      { zoneId: 'woonkamer', gevoel: 'goed', toelichting: 'koken' },
+      { zoneId: 'woonkamer' },
+    ]) {
+      const res = await fetch(`${base}/api/gevoel`, { method: 'POST', body: JSON.stringify(body) });
+      expect(res.status, JSON.stringify(body)).toBe(400);
+    }
+  });
+
+  it('houdt de muur overeind voor elke andere route en methode', async () => {
+    const dir = await feedbackDir();
+    const feedback = new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] });
+    const { base } = await start({ feedback });
+    for (const path of ['/api/state', '/api/site', '/api/onboarding', '/']) {
+      const res = await fetch(`${base}${path}`, { method: 'POST' });
+      expect(res.status, path).toBe(405);
+    }
+    for (const method of ['PUT', 'PATCH', 'DELETE']) {
+      const res = await fetch(`${base}/api/gevoel`, { method });
+      expect(res.status, method).toBe(405);
+      expect(res.headers.get('allow')).toBe('GET, HEAD, POST');
+    }
   });
 });

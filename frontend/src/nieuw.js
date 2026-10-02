@@ -733,6 +733,93 @@ function renderControls(snap) {
   );
 }
 
+/* ------------------------------------------------------- gevoel */
+
+/*
+ * Gevoel en toelichting (besluit 84). De enige knoppen op deze pagina die iets
+ * vastleggen, en alleen in een eigen bestand naast het logboek. Is de deur er
+ * niet, dan blijft de kaart weg.
+ */
+const FEELINGS = [
+  ['te_koud', 'Te koud', 'cool'],
+  ['goed', 'Goed', 'ok'],
+  ['te_warm', 'Te warm', 'heat'],
+];
+const NOTES = [
+  ['koken', 'We koken'],
+  ['raam_open', 'Raam open'],
+  ['gasten', 'Gasten'],
+  ['douche', 'Douche'],
+  ['zon_door_raam', 'Zon door het raam'],
+  ['weet_niet', 'Weet ik niet'],
+];
+const feedbackLabel = (r) =>
+  r.gevoel ? FEELINGS.find(([k]) => k === r.gevoel)?.[1] : NOTES.find(([k]) => k === r.toelichting)?.[1];
+let feedbackZone = null;
+
+function feedbackStatus(r) {
+  $('g-status').textContent = r ? `laatst ${hhmm(r.t)}: ${zoneName(r.zoneId)}, ${feedbackLabel(r)?.toLowerCase()}` : '';
+}
+
+async function sendFeedback(body) {
+  try {
+    const res = await fetch('api/gevoel', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const answer = await res.json();
+    if (res.ok) feedbackStatus(answer);
+    else $('g-status').textContent = answer.fout ?? 'niet gelukt';
+  } catch {
+    $('g-status').textContent = 'niet gelukt; geen verbinding';
+  }
+}
+
+async function setupFeedback() {
+  let list;
+  try {
+    const res = await fetch('api/gevoel');
+    if (!res.ok) return;
+    list = await res.json();
+  } catch {
+    return;
+  }
+  const zones = site?.zones ?? [];
+  if (!zones.length) return;
+  feedbackZone = zones[0].id;
+  const seg = $('g-zones');
+  seg.style.gridTemplateColumns = `repeat(${zones.length}, minmax(0, 1fr))`;
+  const pick = (id) => {
+    feedbackZone = id;
+    for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.zone === id));
+  };
+  seg.replaceChildren(
+    ...zones.map((z) => {
+      const b = el('button', { type: 'button', 'data-zone': z.id, 'aria-pressed': 'false', text: z.name });
+      b.addEventListener('click', () => pick(z.id));
+      return b;
+    }),
+  );
+  pick(feedbackZone);
+  $('g-voel').replaceChildren(
+    ...FEELINGS.map(([key, label, kind]) => {
+      const b = el('button', { type: 'button', class: `fb ${kind}`, text: label });
+      b.addEventListener('click', () => void sendFeedback({ zoneId: feedbackZone, gevoel: key }));
+      return b;
+    }),
+  );
+  $('g-notes').replaceChildren(
+    ...NOTES.map(([key, label]) => {
+      const b = el('button', { type: 'button', class: 'fb note', text: label });
+      b.addEventListener('click', () => void sendFeedback({ zoneId: feedbackZone, toelichting: key }));
+      return b;
+    }),
+  );
+  feedbackStatus(list[0]);
+  $('h-gevoel').hidden = false;
+}
+
 /* ------------------------------------------------------- verbinding */
 
 function connection(ok, text) {
@@ -774,6 +861,7 @@ async function start() {
   }
   void loadToday(true);
   void loadReview();
+  void setupFeedback();
   setInterval(() => void loadToday(), 5 * 60_000);
   const source = new EventSource('api/events');
   source.onopen = () => connection(true, 'Verbonden');
