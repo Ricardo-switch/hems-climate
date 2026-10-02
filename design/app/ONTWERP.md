@@ -309,15 +309,9 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   verwarmen op zon, voorverwarmen met het thermisch model. Die zijn pas echt in
   te vullen met de winterdata, maar de opbouw kan eerder.
 
-- **Meerdere bewoners.** Mag iedereen het comfort aanpassen? Wie beslist over
-  de fase? Tellen alle gevoelstikken even zwaar?
-- **Een zone met twee sensoren.** Telt de warmste, het gemiddelde, of die waar
-  het apparaat hangt? De schets `Kamers` laat de warmste zien; dat is een
-  voorbeeld, geen keuze.
-- **De tablet zonder verbinding.** Wat toont hij als de NAS of Home Assistant
-  even weg is?
-- **Bewaartermijn.** Hoe lang blijven gevoel, toelichting en aanwezigheid
-  bewaard?
+Besloten op 2 oktober 2026: meerdere bewoners (80), een zone met meer
+sensoren (81), de tablet zonder verbinding (82) en de bewaartermijn (83).
+
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
 - **De hoofdzekering.** Nodig voor de beveiliging tegen overbelasting (78).
