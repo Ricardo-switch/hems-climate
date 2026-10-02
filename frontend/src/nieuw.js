@@ -289,7 +289,8 @@ function drawHouse(snap) {
   const floorH = (470 - boxTop) / (n >= 2 ? floors : 1);
   const status = new Map(zones.map((z) => [z.id, zoneStatus(snap, z.id)]));
   const temp = (id) => e.perZone.find((p) => p.zoneId === id)?.temperatureC ?? null;
-  let flowTarget = null;
+  // Elke airco die Smart Climate op zon laat draaien, krijgt zijn eigen stroom.
+  const flows = [];
 
   zones.forEach((z, i) => {
     const st = status.get(z.id);
@@ -298,12 +299,16 @@ function drawHouse(snap) {
     const running = st.kind === 'cool' || st.kind === 'heat';
     if (inRoof) {
       svg.append(s('polygon', { points: '124,206 270,84 416,206', fill: `url(#nF-${st.kind})` }));
-      svg.append(s('text', { x: 270, y: 134, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
-      svg.append(s('text', { x: 270, y: 166, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
-      svg.append(s('text', { x: 270, y: 187, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
+      svg.append(s('text', { x: 270, y: 124, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
+      svg.append(s('text', { x: 270, y: 154, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
+      svg.append(s('text', { x: 270, y: 174, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
       if (unitCool) {
-        svg.append(s('rect', { x: 244, y: 194, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
-        if (running && sunny) flowTarget = { path: 'M372,150 C392,170 330,192 296,198' };
+        // Dezelfde airco als beneden, alleen kleiner: met luchtstroom als hij draait.
+        svg.append(s('rect', { x: 244, y: 180, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
+        if (running) {
+          svg.append(s('path', { d: 'M254,193 q5,6 0,12 M270,193 q5,6 0,12 M286,193 q5,6 0,12', fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
+          if (sunny) flows.push({ path: 'M372,150 C392,166 330,180 296,184' });
+        }
       }
     } else {
       const top = 470 - (i + 1) * floorH;
@@ -318,7 +323,7 @@ function drawHouse(snap) {
         svg.append(s('rect', { x: 340, y: uy, width: 64, height: 12, rx: 4, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.35)', filter: running ? 'url(#nGlow)' : '' }));
         if (running) {
           svg.append(s('path', { d: `M350,${uy + 20} q6,8 0,16 M372,${uy + 20} q6,8 0,16 M394,${uy + 20} q6,8 0,16`, fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
-          if (sunny && !flowTarget) flowTarget = { path: `M372,150 C452,196 456,${uy - 26} 404,${uy}` };
+          if (sunny) flows.push({ path: `M372,150 C452,196 456,${uy - 26} 404,${uy}` });
         }
       }
     }
@@ -338,19 +343,23 @@ function drawHouse(snap) {
   // Zon naar de airco die Smart Climate zou laten draaien, of anders naar het huis.
   const climateW = e.budget.allocatedW ?? 0;
   const useW = Math.max(0, (solar ?? 0) + grid);
-  if (!flowTarget && sunny && n >= 2) {
-    flowTarget = { path: 'M372,150 C452,196 462,330 432,396', toHouse: true };
+  const toHouse = flows.length === 0 && sunny && n >= 2;
+  if (toHouse) flows.push({ path: 'M372,150 C452,196 462,330 432,396' });
+  for (const f of flows) {
+    svg.append(s('path', { d: f.path, fill: 'none', stroke: 'url(#nFlow)', 'stroke-width': 8, 'stroke-opacity': 0.18, 'stroke-linecap': 'round' }));
+    svg.append(s('path', { class: 'flow', d: f.path, fill: 'none', stroke: toHouse ? '#F5B342' : 'url(#nFlow)', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
   }
-  if (flowTarget) {
-    svg.append(s('path', { d: flowTarget.path, fill: 'none', stroke: 'url(#nFlow)', 'stroke-width': 8, 'stroke-opacity': 0.18, 'stroke-linecap': 'round' }));
-    svg.append(s('path', { class: 'flow', d: flowTarget.path, fill: 'none', stroke: flowTarget.toHouse ? '#F5B342' : 'url(#nFlow)', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
+  if (flows.length > 0) {
     const toHouseW = Math.min(solar ?? 0, useW);
-    const big = flowTarget.toHouse ? kw(toHouseW) : climateW > 0 ? `≈ ${kw(climateW)}` : null;
+    // In de schaduw is wat naar de airco's gaat een plan van Smart Climate, geen meting.
+    const units = flows.length > 1 ? "airco's" : 'airco';
+    const big = toHouse ? kw(toHouseW) : climateW > 0 ? `≈ ${kw(climateW)}` : null;
+    const small = toHouse ? 'naar het huis' : site?.migrating ? `gepland voor ${units}` : `naar ${units}`;
     if (big) {
       // Een donkere rand om de letters houdt ze leesbaar boven de stippellijn.
       const halo = { stroke: '#0A141C', 'stroke-width': 5, 'paint-order': 'stroke', 'stroke-linejoin': 'round' };
-      svg.append(s('text', { x: 516, y: 262, 'text-anchor': 'end', 'font-size': 20, 'font-weight': 700, fill: flowTarget.toHouse ? '#F5C66E' : '#8FD9FF', ...halo }, big));
-      svg.append(s('text', { x: 516, y: 282, 'text-anchor': 'end', 'font-size': 14, fill: '#A9BAC2', ...halo }, flowTarget.toHouse ? 'naar het huis' : 'naar airco'));
+      svg.append(s('text', { x: 516, y: 262, 'text-anchor': 'end', 'font-size': 20, 'font-weight': 700, fill: toHouse ? '#F5C66E' : '#8FD9FF', ...halo }, big));
+      svg.append(s('text', { x: 516, y: 282, 'text-anchor': 'end', 'font-size': 14, fill: '#A9BAC2', ...halo }, small));
     }
   }
 
@@ -373,7 +382,8 @@ function drawHouse(snap) {
   $('legenda').replaceChildren(
     ...[
       ['#F5B342', `Zon ${solar == null ? '—' : kw(solar)}`],
-      ['#5CC8FF', `Airco ${kw(climate)}`],
+      // Gemeten: wat de airco's echt opnemen, ook als je huidige regeling ze stuurt.
+      ['#5CC8FF', `${site?.migrating ? 'Airco gemeten' : 'Airco'} ${kw(climate)}`],
       ['#8FA3AD', `Huis ${kw(house)}`],
     ].map(([c, t]) => el('span', {}, el('i', { style: `background: ${c}` }), t)),
   );

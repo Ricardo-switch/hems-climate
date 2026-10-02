@@ -2810,6 +2810,27 @@ of in Home Assistant.
   (naam, rol, vermogen, bereik, stille uren) of uit de regeling halen. Uit de
   regeling halen is iets anders dan verdwijnen: het apparaat blijft in Home
   Assistant en wordt nog gemeten, maar Smart Climate stuurt het niet meer.
+- **Wat er verandert in Home Assistant, ziet de dienst zelf** (aangevuld
+  2 oktober 2026). Hij luistert naar de meldingen van Home Assistant als er een
+  apparaat bijkomt, verdwijnt of naar een ander gebied gaat, net zoals hij nu
+  naar metingen luistert en ook alleen lezend, en vergelijkt bij elke start.
+  Per soort volgt een voorstel, nooit een stille wijziging:
+
+  | Nieuw in Home Assistant | Voorstel |
+  | --- | --- |
+  | Thermometer in een kamer zonder meting | meten in die kamer |
+  | Betere thermometer in een kamer met meting | deze gebruiken in plaats van de oude |
+  | Raam- of deursensor | een functie (78): de airco in die kamer pauzeren als het raam openstaat; en mee in de dataset |
+  | Airco of warmtepomp | toevoegen aan een kamer, met wat hij kan; daarna eerst leren of meekijken (73) |
+  | Iets wat er niet toe doet (41) | overslaan, zichtbaar bij "niet gebruikt" |
+  | Een apparaat dat de regeling gebruikte, verdwijnt | geen voorstel maar een melding, en doorregelen met wat er is (70) |
+
+  Twee niveaus voor meldingen. Iets nieuws is niet dringend: een voorstel in de
+  app, bovenaan Kamers en op Thuis, zonder pushmelding. Iets wat de regeling
+  raakt (een verdwenen sensor, een airco die niet meer reageert, de failsafe)
+  krijgt wel een pushmelding: de bewoner moet weten dat de regeling iets anders
+  doet dan hij verwacht. Een bevestigd voorstel verandert de configuratie, en
+  dat legt `runs.ndjson` vanzelf vast (66).
 - **Een apparaat toevoegen zijn twee stappen** (aangevuld 2 oktober 2026).
   Het apparaat in Home Assistant krijgen (een integratie van het merk, een
   Zigbee-sensor aanmelden, inloggen bij de cloud van de fabrikant) blijft werk
