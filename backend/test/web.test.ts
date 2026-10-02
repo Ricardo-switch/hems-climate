@@ -19,6 +19,7 @@ import { Onboarding } from '../src/web/onboarding.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
 import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
+import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -77,18 +78,25 @@ async function start(options: {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
 
-  const server = new WebServer({
-    port: 0,
-    host: '127.0.0.1',
-    webDir,
-    config: options.withoutConfig ? null : exampleSite,
-    latest: options.latest ?? (() => null),
-    ...(options.divergence ? { divergence: options.divergence } : {}),
-    ...(options.onboarding ? { onboarding: options.onboarding } : {}),
-    ...(options.version ? { version: options.version } : {}),
-    write: () => {},
-  });
-  const port = await server.start();
+  // Niet zomaar poort 0: zie ports.ts.
+  const { server, port } = await onUsablePort(
+    async () => {
+      const server = new WebServer({
+        port: 0,
+        host: '127.0.0.1',
+        webDir,
+        config: options.withoutConfig ? null : exampleSite,
+        latest: options.latest ?? (() => null),
+        ...(options.divergence ? { divergence: options.divergence } : {}),
+        ...(options.onboarding ? { onboarding: options.onboarding } : {}),
+        ...(options.version ? { version: options.version } : {}),
+        write: () => {},
+      });
+      return { server, port: await server.start() };
+    },
+    (s) => s.port,
+    (s) => s.server.stop(),
+  );
   cleanups.push(() => server.stop());
   return { base: `http://127.0.0.1:${port}`, server };
 }
