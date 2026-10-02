@@ -3105,6 +3105,14 @@ komt na stap E.
   `recordOnly` (65) naast de oude, een paar dagen vergelijken, dan
   `solarProduction` omzetten, en de datum vastleggen, want het is een
   breukpunt in de kolom `zonW`.
+  Stand op 2 oktober 2026: SolarEdge Modbus Multi staat aan (elke 60 seconden),
+  en sinds 10:11 schrijven `sensor.solaredge_i1_ac_power` en
+  `sensor.solaredge_i1_dc_power` mee in `recordOnly`. Het plan voor de
+  omzetting, over een paar dagen na een heldere en een bewolkte dag:
+  `solarProduction` wordt `sensor.solaredge_i1_ac_power`, de cloudsensor gaat
+  naar `recordOnly`, en in dezelfde wijziging komen
+  `sensor.p1_meter_current_phase_1` en `sensor.p1_meter_voltage_phase_1` erbij
+  (besluit 78), zodat het één keer kopiëren en herstarten is.
 - **Buitentemperatuur wordt vastgelegd, maar nog niet gebruikt.** Sinds
   10 september 2026 gaat `sensor.temperatuur` mee in `Explanation` en dus het
   logboek in (besluit 30). Een test bewaakt dat niets in `core/` hem leest;
