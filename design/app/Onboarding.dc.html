@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Onboarding · Klopt dit?</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#1F6FA8}a:hover{color:#16557F}
+</style>
+</helmet>
+<div style="width: 390px; height: 1160px; box-sizing: border-box; position: relative; overflow: hidden; background: #EEF2F1; color: #10232D; font-family: 'Figtree', 'Segoe UI', sans-serif; font-variant-numeric: tabular-nums">
+<div style="display: flex; flex-direction: column; gap: 14px; padding: 24px 20px 130px 20px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center"><a href="#" style="font-size: 14px; font-weight: 600; text-decoration: none">‹ Terug</a><span style="font-size: 13px; color: #4E626C">Stap 2 van 4</span></div>
+<div aria-hidden="true" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px"><span style="height: 4px; border-radius: 2px; background: #1F6FA8"></span><span style="height: 4px; border-radius: 2px; background: #1F6FA8"></span><span style="height: 4px; border-radius: 2px; background: #D5DEDF"></span><span style="height: 4px; border-radius: 2px; background: #D5DEDF"></span></div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Bricolage Grotesque', 'Figtree', sans-serif; font-size: 30px; line-height: 1.1; font-weight: 700">Klopt dit?</h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.45; color: #4E626C">Dit vond ik in Home Assistant. De kamers bewaar ik zelf; wat je hier aanpast, verandert niets in Home Assistant.</p>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 17px; font-weight: 700">Woonkamer</span><span style="font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: #E2F1E7; color: #24603E">Klopt</span></div>
+<div style="font-size: 13px; line-height: 1.5; color: #4E626C">Airco woonkamer · koelen en verwarmen<br>Thermostaat beneden · verwarmen<br>Temperatuur: sensor beneden</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 17px; font-weight: 700">Keuken</span><span style="font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: #FBEBD7; color: #6B3A08">Vraag</span></div>
+<div style="font-size: 14px; line-height: 1.45">De keuken heeft een sensor maar geen eigen apparaat. Wordt hij door de airco van de woonkamer gekoeld?</div>
+<div style="display: flex; gap: 8px">
+<button type="button" style="flex-grow: 1; min-height: 40px; border: 0; border-radius: 12px; background: #1F6FA8; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 700">Ja, samen één zone</button>
+<button type="button" style="min-height: 40px; padding: 0 12px; border: 1px solid #C9D3D5; border-radius: 12px; background: #FFFFFF; color: #10232D; font: inherit; font-size: 14px; font-weight: 600">Alleen meten</button>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 17px; font-weight: 700">Zolder</span><span style="font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: #FBEBD7; color: #6B3A08">Geraden</span></div>
+<div style="font-size: 13px; line-height: 1.5; color: #4E626C">Airco zolder · koelen en verwarmen</div>
+<div style="font-size: 14px; line-height: 1.45">Ik heb geen thermometer gevonden, wel de bewegingsmelder op de zolder. Die meet ook temperatuur. Zal ik die gebruiken?</div>
+<div style="display: flex; gap: 8px">
+<button type="button" style="flex-grow: 1; min-height: 40px; border: 0; border-radius: 12px; background: #1F6FA8; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 700">Ja, gebruik die</button>
+<button type="button" style="min-height: 40px; padding: 0 12px; border: 1px solid #C9D3D5; border-radius: 12px; background: #FFFFFF; color: #10232D; font: inherit; font-size: 14px; font-weight: 600">Kies een andere</button>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 17px; font-weight: 700">Badkamer</span><span style="font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: #E2F1E7; color: #24603E">Klopt</span></div>
+<div style="font-size: 13px; line-height: 1.5; color: #4E626C">Thermostaat badkamer · verwarmen<br>Temperatuur: meet de thermostaat zelf</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #D5DEDF; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; justify-content: space-between; align-items: center"><span style="font-size: 17px; font-weight: 700">Slaapkamer</span><span style="font-size: 12px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: #E7ECEC; color: #3B4D55">Alleen meten</span></div>
+<div style="font-size: 13px; line-height: 1.5; color: #4E626C">Alleen een sensor. Ik laat zien hoe warm het er is, maar regel er niets.</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 4px 4px 0 4px">
+<a href="#" style="font-size: 15px; font-weight: 600; text-decoration: none">+ Kamer toevoegen</a>
+<div style="font-size: 13px; line-height: 1.45; color: #4E626C">Niet gebruikt: temperatuursensoren die bij een apparaat zelf horen, zoals die van de NAS.</div>
+</div>
+</div>
+<div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 24px 20px; background: #FFFFFF; border-top: 1px solid #D5DEDF; display: flex; flex-direction: column; gap: 6px">
+<button type="button" style="min-height: 50px; border: 0; border-radius: 14px; background: #1F6FA8; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 700">Klopt, verder naar de zones</button>
+<div style="text-align: center; font-size: 12px; color: #4E626C">Later aan te passen bij Bediening › Kamers</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1160}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>
