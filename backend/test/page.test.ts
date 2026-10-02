@@ -225,6 +225,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.locator('#h-rooms').textContent()).toContain('Woonkamer');
       expect(await p.locator('#huis svg').getAttribute('aria-label')).toContain('Woonkamer');
       expect(await p.locator(menu).isVisible()).toBe(true);
+      // Het dagoverzicht komt uit /api/vandaag; ook een dag zonder zon toont de kaart.
+      await p.locator('#h-vandaag').waitFor({ state: 'visible' });
+      expect(await p.locator('#v-grafiek svg').count()).toBe(1);
       expect(await p.locator(stand === 'portret' ? '.rail' : '.bottomnav').isVisible()).toBe(false);
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
