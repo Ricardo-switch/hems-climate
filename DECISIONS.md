@@ -31,7 +31,6 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
 - [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
 - [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
-- [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten)
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 
 **Kern en regeling**
@@ -63,6 +62,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [40. Het schema weigert alleen nog op wat er echt niet zonder kan](#40-het-schema-weigert-alleen-nog-op-wat-er-echt-niet-zonder-kan)
 - [41. De ontdekking stelt voor en besluit niet](#41-de-ontdekking-stelt-voor-en-besluit-niet)
 - [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
+- [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten)
 
 **Meten, data en analyse**
 
