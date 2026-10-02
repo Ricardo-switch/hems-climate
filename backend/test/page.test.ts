@@ -120,6 +120,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let browser: Browser;
   let page: Page;
   let live: LiveSnapshot;
+  let baseUrl: string;
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
   const failedResponses: string[] = [];
@@ -145,6 +146,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       write: () => {},
     });
     const port = await server.start();
+    baseUrl = `http://127.0.0.1:${port}`;
 
     const channel = process.env['HEMS_PAGE_BROWSER'];
     browser = await chromium.launch(channel ? { channel } : {});
@@ -199,4 +201,37 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await page.locator('#dataset-export').textContent()).toContain('Exporteren · 3 dagen');
     expect(await page.locator('#dataset-pct').textContent()).toMatch(/\d+%/);
   });
+
+  /*
+   * De testversie van de bewonersapp (besluit 71): dezelfde gegevens, en de
+   * indeling volgt de stand van het scherm. Portret krijgt het menu onderin,
+   * landschap de balk links en drie kolommen.
+   */
+  for (const [stand, viewport, menu] of [
+    ['portret', { width: 390, height: 844 }, '.bottomnav'],
+    ['landschap', { width: 1280, height: 800 }, '.rail'],
+  ] as const) {
+    it(`toont de nieuwe weergave in ${stand}`, async () => {
+      const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      const p = await context.newPage();
+      const errors: string[] = [];
+      p.on('pageerror', (e) => errors.push(String(e)));
+      // De lettertypen komen van buiten; zonder internet in de test is dat geen fout van de pagina.
+      await p.route('https://fonts.googleapis.com/**', (r) => r.abort());
+      await p.goto(`${baseUrl}/nieuw.html`);
+      await p.locator('#h-titel').filter({ hasNotText: 'Even laden' }).waitFor();
+
+      expect(errors).toEqual([]);
+      expect(await p.locator('#h-rooms').textContent()).toContain('Woonkamer');
+      expect(await p.locator('#huis svg').getAttribute('aria-label')).toContain('Woonkamer');
+      expect(await p.locator(menu).isVisible()).toBe(true);
+      expect(await p.locator(stand === 'portret' ? '.rail' : '.bottomnav').isVisible()).toBe(false);
+
+      // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
+      await p.goto(`${baseUrl}/nieuw.html#opbrengst`);
+      await p.locator('#o-hero .big').waitFor();
+      expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
+      await context.close();
+    });
+  }
 });

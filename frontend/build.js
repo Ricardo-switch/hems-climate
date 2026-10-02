@@ -80,17 +80,21 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
  * Wijzigt het niet, dan blijft de URL gelijk en werkt de cache gewoon.
  */
 async function stempel() {
-  const html = join(out, 'index.html');
-  let inhoud = await readFile(html, 'utf-8');
-
-  for (const naam of ['app.css', 'app.js']) {
-    const hash = createHash('sha256')
-      .update(await readFile(join(out, naam)))
-      .digest('hex')
-      .slice(0, 8);
-    inhoud = inhoud.replaceAll(`"${naam}"`, `"${naam}?v=${hash}"`);
+  // Per pagina de bestanden die ze laadt. nieuw.html is de testversie van de
+  // bewonersapp (besluit 71); hij heeft zijn opmaak in de pagina zelf.
+  const paginas = { 'index.html': ['app.css', 'app.js'], 'nieuw.html': ['nieuw.js'] };
+  for (const [pagina, namen] of Object.entries(paginas)) {
+    const html = join(out, pagina);
+    let inhoud = await readFile(html, 'utf-8');
+    for (const naam of namen) {
+      const hash = createHash('sha256')
+        .update(await readFile(join(out, naam)))
+        .digest('hex')
+        .slice(0, 8);
+      inhoud = inhoud.replaceAll(`"${naam}"`, `"${naam}?v=${hash}"`);
+    }
+    await writeFile(html, inhoud, 'utf-8');
   }
-  await writeFile(html, inhoud, 'utf-8');
 }
 
 tailwind.on('exit', (code) => {

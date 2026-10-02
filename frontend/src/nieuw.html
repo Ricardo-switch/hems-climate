@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>Smart Climate — nieuwe weergave (test)</title>
+    <!--
+      De testversie van de bewonersapp (besluit 71). Zelfde live gegevens als
+      index.html, in de ontwerptaal van design/app/. Alleen lezen: elke knop die
+      iets zou veranderen, zegt dat dat in deze versie nog niet kan.
+
+      De lettertypen komen voorlopig van Google; zonder internet valt de pagina
+      terug op de systeemletter. Voor het echte product horen ze lokaal.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%235CC8FF'/></svg>"
+    />
+    <style>
+      :root {
+        --ground: #0a141c;
+        --ink: #eaf2f5;
+        --muted: #a9bac2;
+        --dim: #8fa3ad;
+        --faint: #6e828c;
+        --soft: #c9d6dc;
+        --cool: #5cc8ff;
+        --cool-t: #8fd9ff;
+        --warm: #f5b342;
+        --warm-t: #f5c66e;
+        --good: #6fdca6;
+        --heat: #ff8a4c;
+        --heat-t: #ffb088;
+        --violet: #c4bcff;
+        --card: rgba(255, 255, 255, 0.05);
+        --line: rgba(255, 255, 255, 0.08);
+        --display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--ground);
+        color: var(--ink);
+        font-family: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+        font-variant-numeric: tabular-nums;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background:
+          radial-gradient(60vmax 40vmax at 60% 5%, rgba(245, 179, 66, 0.11), transparent 70%),
+          radial-gradient(60vmax 50vmax at 15% 100%, rgba(92, 200, 255, 0.1), transparent 70%),
+          radial-gradient(50vmax 40vmax at 100% 100%, rgba(122, 108, 255, 0.12), transparent 70%),
+          var(--ground);
+      }
+      a {
+        color: var(--cool-t);
+      }
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+      button {
+        font: inherit;
+      }
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid var(--cool-t);
+        outline-offset: 2px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      .view {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      /* ---------------------------------------------- opbouw: portret */
+      .app {
+        min-height: 100vh;
+      }
+      .rail {
+        display: none;
+      }
+      main {
+        max-width: 560px;
+        margin: 0 auto;
+        padding: 18px 16px 104px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .bottomnav {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        max-width: 536px;
+        margin: 0 auto;
+        height: 68px;
+        border-radius: 24px;
+        background: rgba(20, 32, 42, 0.92);
+        backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        z-index: 10;
+      }
+      .navitem {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--dim);
+      }
+      .navitem .pill {
+        width: 44px;
+        height: 28px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .navitem[aria-current='page'] {
+        color: var(--cool-t);
+        font-weight: 700;
+      }
+      .navitem[aria-current='page'] .pill {
+        background: rgba(92, 200, 255, 0.16);
+      }
+      .navitem svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .clock {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .clock b {
+        font-family: var(--display);
+        font-size: 34px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .clock span {
+        font-size: 14px;
+        color: var(--dim);
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 30px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .chip.good {
+        background: rgba(111, 220, 166, 0.12);
+        color: var(--good);
+      }
+      .chip.bad {
+        background: rgba(255, 138, 76, 0.14);
+        color: var(--heat-t);
+      }
+      .chip.phase {
+        background: rgba(167, 156, 255, 0.14);
+        color: var(--violet);
+      }
+      .chip.plain {
+        color: var(--soft);
+        padding: 0 4px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        flex-shrink: 0;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .dot.glow {
+        box-shadow: 0 0 10px currentColor;
+      }
+
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--dim);
+        text-transform: uppercase;
+      }
+      .title {
+        font-family: var(--display);
+        font-size: 30px;
+        line-height: 1.08;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+      }
+      .lead {
+        font-size: 15px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .card {
+        padding: 16px;
+        border-radius: 20px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card h2 {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .card .head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .card .head small {
+        font-size: 13px;
+        color: var(--dim);
+      }
+      .ai {
+        background: linear-gradient(160deg, rgba(122, 108, 255, 0.22), rgba(92, 200, 255, 0.08) 60%, rgba(255, 255, 255, 0.04));
+        border-color: rgba(160, 150, 255, 0.28);
+      }
+      .orb {
+        flex-shrink: 0;
+        border-radius: 999px;
+        background: radial-gradient(circle at 35% 30%, #fff 0, #9ee6ff 18%, #5cc8ff 42%, #7a6cff 78%, #2b2266 100%);
+        box-shadow: 0 0 22px rgba(92, 200, 255, 0.45), 0 0 50px rgba(122, 108, 255, 0.28);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .small {
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .tiny {
+        font-size: 12px;
+        color: var(--dim);
+        line-height: 1.4;
+      }
+
+      /* kamers */
+      .room {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 16px;
+        border-radius: 18px;
+        background: var(--card);
+        border: 1px solid var(--line);
+      }
+      .room .name {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .room .status {
+        font-size: 13px;
+      }
+      .room .real {
+        font-size: 12px;
+        color: var(--dim);
+      }
+      .room .temp {
+        margin-left: auto;
+        font-size: 28px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .k-cool {
+        color: var(--cool-t);
+      }
+      .k-heat {
+        color: var(--heat-t);
+      }
+      .k-wait {
+        color: var(--warm-t);
+      }
+      .k-ok {
+        color: var(--good);
+      }
+      .k-idle {
+        color: var(--muted);
+      }
+      .k-bad {
+        color: var(--heat-t);
+      }
+
+      .house {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 10px 14px;
+      }
+      .house svg {
+        width: 100%;
+        max-width: 460px;
+        height: auto;
+      }
+      .legend {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .legend i {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        display: inline-block;
+      }
+
+      .kpi b {
+        font-family: var(--display);
+        font-size: 40px;
+        line-height: 1;
+        font-weight: 600;
+      }
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      .bar > div {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--warm), var(--cool));
+      }
+
+      .seg {
+        display: grid;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .seg button {
+        min-height: 38px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--soft);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: not-allowed;
+      }
+      .seg button[aria-pressed='true'] {
+        background: var(--ink);
+        color: #0a141c;
+        font-weight: 700;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .row:last-child {
+        border-bottom: 0;
+      }
+      .row .l {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+      .row .l b {
+        font-size: 15px;
+      }
+      .row .l span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .rows {
+        padding: 2px 16px;
+        gap: 0;
+      }
+      .switch {
+        width: 52px;
+        height: 32px;
+        border: 0;
+        border-radius: 999px;
+        padding: 3px;
+        display: flex;
+        background: rgba(255, 255, 255, 0.16);
+        cursor: not-allowed;
+        flex-shrink: 0;
+      }
+      .switch span {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: #fff;
+      }
+      .switch[aria-checked='true'] {
+        background: var(--cool);
+        justify-content: flex-end;
+      }
+      .note {
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px dashed rgba(255, 255, 255, 0.18);
+        font-size: 13px;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+
+      .event {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 4px 10px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .event:last-child {
+        border-bottom: 0;
+      }
+      .event time {
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .event b {
+        font-size: 15px;
+      }
+      .event p {
+        font-size: 13px;
+        line-height: 1.4;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .big {
+        font-family: var(--display);
+        font-size: 48px;
+        line-height: 1;
+        font-weight: 600;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .warmnote {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(245, 179, 66, 0.12);
+        border: 1px solid rgba(245, 179, 66, 0.3);
+      }
+      .ask {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 56px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 15px;
+      }
+
+      /* Thuis in portret: de kolommen vallen weg, de volgorde blijft logisch. */
+      .home {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .home > .col {
+        display: contents;
+      }
+      #h-head {
+        order: 1;
+      }
+      #h-house {
+        order: 2;
+      }
+      #h-rooms {
+        order: 3;
+      }
+      #h-today {
+        order: 4;
+      }
+      #h-ai {
+        order: 5;
+      }
+      #h-kpi {
+        order: 6;
+      }
+      #h-ask {
+        order: 7;
+      }
+
+      /* ---------------------------------------------- opbouw: landschap */
+      @media (orientation: landscape) and (min-width: 900px) {
+        .app {
+          display: flex;
+          gap: 24px;
+          padding: 24px 28px;
+          height: 100vh;
+        }
+        .rail {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+          width: 72px;
+          flex-shrink: 0;
+          padding: 16px 0;
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid var(--line);
+        }
+        .rail .logo {
+          width: 34px;
+          height: 34px;
+          border-radius: 11px;
+          margin-bottom: 14px;
+          background: conic-gradient(from 200deg, #5cc8ff, #7a6cff, #f5b342, #5cc8ff);
+        }
+        .rail .navitem {
+          width: 60px;
+          padding: 6px 0;
+          font-size: 10px;
+        }
+        .bottomnav {
+          display: none;
+        }
+        main {
+          flex: 1;
+          max-width: none;
+          margin: 0;
+          padding: 0 4px 0 0;
+          overflow-y: auto;
+        }
+        .clock b {
+          font-size: 44px;
+        }
+        .title {
+          font-size: 36px;
+        }
+        .home {
+          display: grid;
+          grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(280px, 340px);
+          gap: 22px;
+          align-items: start;
+        }
+        .home > .col {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .view.narrow {
+          max-width: 760px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <nav class="rail" aria-label="Hoofdmenu">
+        <div class="logo" aria-hidden="true"></div>
+        <div data-nav></div>
+      </nav>
+
+      <main>
+        <div class="topbar">
+          <div class="clock"><b id="tijd">--:--</b><span id="datum"></span></div>
+          <div class="chips">
+            <span class="chip plain" id="buiten"></span>
+            <span class="chip phase" id="fase" hidden></span>
+            <span class="chip good" id="verbinding"><span class="dot glow"></span><span>verbinden…</span></span>
+          </div>
+        </div>
+
+        <!-- Thuis -->
+        <section class="view" data-view="thuis">
+          <div class="home">
+            <div class="col">
+              <div class="stack" id="h-head">
+                <div class="eyebrow" id="h-eyebrow">Nu</div>
+                <h1 class="title" id="h-titel">Even laden…</h1>
+                <p class="lead" id="h-zin"></p>
+              </div>
+              <div class="stack" id="h-rooms"></div>
+              <div class="card kpi" id="h-kpi" hidden></div>
+            </div>
+            <div class="col">
+              <div class="card house" id="h-house">
+                <div id="huis"></div>
+                <div class="legend" id="legenda"></div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="card" id="h-today">
+                <div class="head"><h2>Wat ik nu zou doen</h2><small id="besluit-tijd"></small></div>
+                <div id="nu-lijst" class="stack small"></div>
+              </div>
+              <div class="card" id="h-ai">
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span class="dot" style="color: var(--dim)"></span>
+                  <span class="small" style="color: var(--soft)">Je huidige regeling zegt</span>
+                </div>
+                <p id="oud" class="small" style="color: var(--soft)"></p>
+              </div>
+              <a class="ask" id="h-ask" href="#assistent"
+                ><span class="orb" style="width: 40px; height: 40px"></span>Vraag iets over je huis…</a
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- Waarom -->
+        <section class="view narrow" data-view="waarom" hidden>
+          <div class="stack">
+            <h1 class="title">Waarom</h1>
+            <p class="lead">Wat Smart Climate besloot sinds je deze pagina opende, met de reden.</p>
+          </div>
+          <div class="card rows" id="tijdlijn"></div>
+          <p class="tiny">
+            Een overzicht van de hele dag vraagt een eigen ingang in de dienst; die is er nog niet. Deze lijst bewaart
+            wat binnenkwam terwijl de pagina openstond.
+          </p>
+        </section>
+
+        <!-- Opbrengst -->
+        <section class="view narrow" data-view="opbrengst" hidden>
+          <div class="stack">
+            <h1 class="title">Wat het oplevert</h1>
+            <p class="lead" id="o-periode">Even laden…</p>
+          </div>
+          <div class="card" id="o-hero"></div>
+          <div class="grid2" id="o-tegels"></div>
+          <div class="card" id="o-dataset"></div>
+          <div class="warmnote">
+            <div class="small" style="font-weight: 700; color: var(--warm-t)">Comfort volgt in het voorjaar</div>
+            <div class="small" style="color: #e9d9bf">
+              Eerst leert het systeem hoe snel je kamers opwarmen en afkoelen (stap D). Pas dan is eerlijk te zeggen
+              hoeveel koeler of warmer het werd.
+            </div>
+          </div>
+          <p class="tiny" id="o-voet"></p>
+        </section>
+
+        <!-- Assistent -->
+        <section class="view narrow" data-view="assistent" hidden>
+          <div style="display: flex; align-items: center; gap: 14px">
+            <span class="orb" style="width: 48px; height: 48px"></span>
+            <div class="stack" style="gap: 2px">
+              <h1 class="title" style="font-size: 28px">Assistent</h1>
+              <span class="small muted">Nog niet gebouwd; dit is stap G.</span>
+            </div>
+          </div>
+          <div class="card ai">
+            <p class="small" style="color: var(--soft)">
+              Straks vraag je hier waarom iets gebeurt, of zeg je "zet de zolder op 21". Hij legt uit uit het
+              besluitenlog, voert een opdracht uit als jouw ingreep, vraagt tot hoe laat, en zegt erbij als het later
+              beter kan (besluiten 44, 74 en 75). Tot die tijd staat het waarom op het tabblad Waarom.
+            </p>
+            <a href="#waarom" class="small" style="font-weight: 600; text-decoration: none">Naar Waarom</a>
+          </div>
+        </section>
+
+        <!-- Bediening -->
+        <section class="view narrow" data-view="bediening" hidden>
+          <div class="stack">
+            <h1 class="title">Bediening</h1>
+            <p class="lead">Hoe het huis geregeld wordt, en door wie.</p>
+          </div>
+          <div class="note">
+            Deze testversie leest alleen. Bedienen kan pas als Smart Climate echt schakelt (stap B), en schrijven vanaf
+            deze pagina vraagt eerst een inlog (besluiten 42 en 74).
+          </div>
+          <div class="stack">
+            <div class="eyebrow">Modus</div>
+            <div class="seg" id="b-modus" role="group" aria-label="Modus"></div>
+            <p class="small muted" id="b-modus-noot"></p>
+          </div>
+          <div class="stack">
+            <div class="eyebrow">Doel per kamer, nu</div>
+            <div class="card rows" id="b-doelen"></div>
+          </div>
+          <div class="stack">
+            <div class="eyebrow">Wie stuurt</div>
+            <div class="card rows" id="b-wie"></div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottomnav" aria-label="Hoofdmenu"><div data-nav style="display: contents"></div></nav>
+    </div>
+    <script src="nieuw.js"></script>
+  </body>
+</html>
