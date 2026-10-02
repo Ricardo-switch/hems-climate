@@ -179,6 +179,15 @@ Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 | Welke kamer voorgaat bij weinig zon | vast | prioriteit per zone |
 | Gekoppeld: laadpaal, batterij, tarief | voorstel | koppelen via evcc en Predbat, niet zelf bouwen |
 
+### Wat je huis kan
+
+**Vast** (78). Een scherm (of een deel van Leren en Bediening) met per functie:
+beschikbaar of niet, wat het oplevert, en wat ervoor nodig is, met de moeite
+erbij: "zelf te doen", "geavanceerd" of "installateur nodig". Ingrijpende
+functies (de omvormer begrenzen, nul-op-de-meter, draaiende apparaten
+afschakelen) staan nooit vanzelf aan, kijken eerst mee, en vallen veilig terug
+als de verbinding wegvalt.
+
 ## 7. De assistent
 
 **Vast** in rol (44), **voorstel** in vorm:
@@ -247,6 +256,8 @@ Dit moet beantwoord zijn vóór F gebouwd wordt:
   bewaard?
 - **Toegankelijkheid en taal.** Contrast op de donkere wand, grote tekst,
   later andere talen dan Nederlands.
+- **De hoofdzekering.** Nodig voor de beveiliging tegen overbelasting (78). In
+  de onboarding vragen, met uitleg waar het op de meter staat.
 - **De zonnesensor.** Nu eens per kwartier, uit de cloud van SolarEdge. Een
   lokale sensor (Modbus van de omvormer of een kWh-meter op de groep) maakt de
   stromen op het scherm en de instraling in de dataset echt live. Zie "Wat nog

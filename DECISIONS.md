@@ -33,6 +33,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
+- [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
 
 **Kern en regeling**
 
@@ -2995,6 +2996,62 @@ zonder Home Assistant eromheen.
   Docker-image, zoals de NAS.
 
 *Wanneer:* de add-on gaat weer aan bij stap B (53).
+
+---
+
+## 78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Op 2 oktober 2026 kwam de omvormer van dit huis lokaal binnen via Modbus. Dat
+maakt functies mogelijk die verder gaan dan klimaat: nul-op-de-meter, niet
+terugleveren bij een negatieve prijs, en beveiliging tegen overbelasting. Niet
+iedereen heeft zo'n koppeling, en wie hem heeft, heeft er een handeling met
+gevolgen voor gedaan.
+
+*Besluit:*
+
+- **Wat een huis kan, volgt uit wat het heeft (70),** niet uit een schakelaar
+  voor gevorderden:
+
+  | Functie | Wat ervoor nodig is |
+  | --- | --- |
+  | Koelen en verwarmen op zon | P1-meter |
+  | Beveiliging tegen overbelasting | P1-meter met stroom per fase, en de waarde van de hoofdzekering |
+  | Negatieve prijs opvangen door zelf te verbruiken | Dynamisch tarief (stap E) |
+  | Negatieve prijs opvangen door de omvormer te begrenzen | Dynamisch tarief en besturing van de omvormer |
+  | Nul-op-de-meter | Besturing van de omvormer |
+
+- **Overbelasting is een tweede budget naast vermogen.** De arbiter start geen
+  apparaat dat de stroom op een fase boven de hoofdzekering zou brengen. Een
+  P1-meter met stroom per fase is genoeg; Modbus is er niet voor nodig. De
+  waarde van de hoofdzekering vraagt de onboarding.
+- **Eerst verbruiken, dan pas begrenzen.** Een negatieve prijs vangt de
+  regeling eerst op met wat hij al doet: koelte of warmte opslaan, een boiler,
+  een laadpaal (via evcc). Begrenzen van de omvormer is de laag erbovenop, voor
+  wie die besturing heeft.
+- **Ingrijpende functies vragen drie dingen.** Ingrijpend is alles wat de
+  omvormer of het net begrenst, of draaiende apparaten afschakelt.
+  1. De bewoner zet ze bewust aan; niets daarvan staat vanzelf aan.
+  2. Eerst meekijken, per functie, zoals nu met de airco's.
+  3. Een veilige terugval: valt de verbinding weg, dan gaat de omvormer terug
+     naar 100%. Een omvormer die op een begrenzing blijft hangen, kost stil
+     opbrengst.
+
+  Schrijven naar de omvormer is een nieuwe soort apparaat. De witte lijst van
+  `HaClient` (15) krijgt die pas met een eigen besluit.
+- **De app laat zien wat het huis kan.** Per functie: beschikbaar of niet, wat
+  hij oplevert, en wat ervoor nodig is, met hoeveel moeite: "zelf te doen",
+  "geavanceerd" of "installateur nodig". Een gewone gebruiker ziet wat kan; wie
+  meer wil, ziet de volgende stap.
+- **Bij drie fasen** krijgt elke fase een eigen budget. Op welke fase een
+  apparaat zit, leert de regeling uit de sprong in de stroom wanneer het
+  aangaat; de bewoner hoeft het niet op te zoeken.
+
+*Wanneer:* het budget voor overbelasting kan na stap B, als de regeling echt
+start en stopt. De stroom per fase kan nu al mee de dataset in (65), net als de
+spanning: wat je niet vastlegt, krijg je niet terug. Begrenzen van de omvormer
+komt na stap E.
 
 ---
 
