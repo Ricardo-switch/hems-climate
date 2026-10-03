@@ -98,6 +98,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
 - [86. De app is vanaf het begin toegankelijk en tweetalig](#86-de-app-is-vanaf-het-begin-toegankelijk-en-tweetalig)
 - [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur)
+- [88. De app noemt alleen een oorzaak die gemeten is](#88-de-app-noemt-alleen-een-oorzaak-die-gemeten-is)
 
 **Veiligheid**
 
@@ -3357,6 +3358,40 @@ bewoner kan een accentkleur kiezen voor de app: het menu, de knoppen, het logo.
 koelen, oranje verwarmen, amber wachten, groen goed. Die blijven overal gelijk,
 anders zegt een kleur op de ene telefoon iets anders dan op de andere. En de
 kiezer biedt alleen kleuren die het contrast van besluit 86 halen.
+
+---
+
+## 88. De app noemt alleen een oorzaak die gemeten is
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 3 oktober 2026 bevestigde een proef dat ongeveer 140 W 's nachts bij de pc
+hoorde: de pc ging uit en de nacht kwam op 165 W. Maar de P1-meter ziet het hele
+huis, niet de pc. Een kaart die "je pc stond aan" zegt, gokt. Bij de volgende
+keer kan het net zo goed een kachel, een lader of een vergeten lamp zijn. Gekozen
+door de bewoner op 3 oktober 2026.
+
+*Besluit:* wat de app zegt, is gemeten. Een oorzaak noemt hij alleen als een
+meter hem aantoont.
+
+- **Zonder eigen meter: het wat, het wanneer en het hoeveel.** "Vannacht 140 W
+  meer dan je laagste nachten, van 23:10 tot 07:30. Staat er iets aan?" Geen
+  apparaat, ook niet met "waarschijnlijk" ervoor.
+- **Met een eigen meter: het apparaat bij naam.** Een slimme stekker of een
+  energiesensor die in de app aan een apparaat gekoppeld is (72), en die het
+  verschil ook echt meet. Dan mag het: "Je pc verbruikte vannacht 140 W."
+- **Wat de bewoner zelf zegt, blijft van de bewoner.** Antwoordt hij op de vraag
+  "dat was de pc", dan onthoudt de app dat als zijn toelichting (73, 84), en
+  toont hij het zo: "Jij zei: de pc." Komt hetzelfde patroon terug, dan mag de app
+  vragen "Weer de pc?", maar hij stelt het niet vast.
+- **Dit geldt voor alles wat opvalt,** niet alleen voor het sluipverbruik: een
+  kamer die sneller afkoelt (een raam?), een airco die meer vraagt dan anders. De
+  app beschrijft het patroon en vraagt; de redenen die de regeling zelf geeft
+  (het `Explanation`-object) zijn wel gemeten en blijven zoals ze zijn.
+
+*Hoe het bewaakt wordt:* in het bewonerscontract (76) heeft een melding over iets
+dat opviel alleen een veld voor een apparaat als er een meter van dat apparaat
+achter staat; een contracttest bewijst dat het zonder meter leeg blijft.
 
 ---
 
