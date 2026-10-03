@@ -267,6 +267,10 @@ zonder nieuwe sensoren: de P1-meter is genoeg.
   verschil van ongeveer 140 W lag niet aan het klimaat; waarschijnlijk stond de
   pc aan. Op een jaar is dat 410 tot 1.230 kWh, afhankelijk van of hij alleen
   's nachts of altijd aanstaat.
+- **De proef van 2 op 3 oktober bevestigt het:** de bewoner zette de pc uit, en
+  die nacht kwam uit op 165 W (mediaan 184 W). Dat is precies de vloer van de
+  laagste nachten. De "Opgevallen"-kaart had die ochtend dus gezwegen, en elke
+  nacht met de pc aan had hem laten zien.
 - **Waar het in de dienst hoort:** in het bewonerscontract (76), bijvoorbeeld als
   "afgelopen nacht" in `/api/vandaag`.
 
