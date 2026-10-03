@@ -259,7 +259,8 @@ zonder nieuwe sensoren: de P1-meter is genoeg.
   en het verloop, met het vermogen in W en wat het per jaar kost, als
   bandbreedte zolang niet bekend is of het overdag doorloopt. En bij
   "Opgevallen": "Vannacht 140 W meer dan je laagste nachten. Staat er iets
-  aan?"
+  aan?" Nooit welk apparaat het was, tenzij een eigen meter het aantoont
+  (besluit 88).
 - **Overdag.** Met een lokale zonnesensor is het verbruik ook overdag te
   berekenen als net plus zon, elke minuut. Dan wordt de bandbreedte een meting.
 - **Uit de dataset van dit huis (6 september tot 2 oktober 2026, 26 nachten):**
@@ -269,7 +270,8 @@ zonder nieuwe sensoren: de P1-meter is genoeg.
   's nachts of altijd aanstaat.
 - **De proef van 2 op 3 oktober bevestigt het:** de bewoner zette de pc uit, en
   die nacht kwam uit op 165 W (mediaan 184 W). Dat is precies de vloer van de
-  laagste nachten. De "Opgevallen"-kaart had die ochtend dus gezwegen, en elke
+  laagste nachten. Dat bewijst het voor die proef; de app weet het
+  daarna nog steeds niet, want de P1-meter ziet alleen het hele huis. De "Opgevallen"-kaart had die ochtend dus gezwegen, en elke
   nacht met de pc aan had hem laten zien.
 - **Waar het in de dienst hoort:** in het bewonerscontract (76), bijvoorbeeld als
   "afgelopen nacht" in `/api/vandaag`.
