@@ -57,6 +57,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [74. Wie zelf ingrijpt, wordt herkend en met rust gelaten](#74-wie-zelf-ingrijpt-wordt-herkend-en-met-rust-gelaten)
 - [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste)
 - [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
+- [89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg](#89-elke-omvormer-werkt-de-app-meet-hoe-snel-de-zonnesensor-is-en-wijst-de-lokale-weg)
 
 **Configuratie en onboarding**
 
@@ -3392,6 +3393,59 @@ meter hem aantoont.
 *Hoe het bewaakt wordt:* in het bewonerscontract (76) heeft een melding over iets
 dat opviel alleen een veld voor een apparaat als er een meter van dat apparaat
 achter staat; een contracttest bewijst dat het zonder meter leeg blijft.
+
+---
+
+## 89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Op 3 oktober 2026 lag de vergelijking er: de Modbus-sensor van de SolarEdge
+geeft elke 61 seconden een waarde, de cloud elke 15 minuten, als momentopname.
+De waarden komen overeen (mediaan −10 W), maar bij wisselend weer zit de cloud
+honderden watts naast wat er op dat moment binnenkomt. Andere merken hebben
+hetzelfde verschil, met een andere weg naar lokaal. Een Growatt bijvoorbeeld
+heeft Modbus op een RS485-aansluiting, niet via het netwerk, en de standaard
+WiFi-stick praat alleen met de cloud. Gekozen op 4 oktober 2026.
+
+*Besluit:*
+
+- **De regeling is niet aan een merk gebonden.** `solarProduction` is een gewone
+  sensor in W. Elk merk werkt, via de cloud of lokaal.
+- **De app meet zelf hoe vaak de zonnesensor een nieuwe waarde geeft,** overdag,
+  bij de onboarding en daarna doorlopend. Dat is een meting, geen aanname over
+  het merk (88).
+- **Is dat trager dan eens per twee minuten, dan zegt hij het,** met wat het
+  kost: "Je zonnesensor geeft eens per 15 minuten een waarde. Met een lokale
+  koppeling zie ik een wolk binnen een minuut, in plaats van na een kwartier."
+  Eén keer bij de onboarding en bij "Wat je huis kan" (78), geen pushmelding
+  (79).
+- **Met de lokale weg voor dat merk,** en de moeite die erbij hoort, op de
+  schaal van besluit 78:
+
+  | Merk | Lokale weg | Moeite |
+  | --- | --- | --- |
+  | SolarEdge | Modbus TCP aanzetten in SetApp, met de integratie SolarEdge Modbus Multi | geavanceerd, soms de installateur |
+  | Growatt | RS485 naar het netwerk (bijvoorbeeld een Elfin EW11) of een USB-stick aan Home Assistant; of de WiFi-stick met andere firmware | geavanceerd |
+  | Elk merk | Een kWh-meter op de groep van de panelen, naast de P1-meter | zelf te doen of installateur |
+
+  De tabel groeit met de huizen die erbij komen. Wat er voor een merk staat,
+  is nagegaan, niet aangenomen; wat nog niet is nagegaan, krijgt alleen de
+  kWh-meter als weg.
+- **Het merk leidt de app af uit Home Assistant** (de integratie van de sensor).
+  Weet hij het niet, dan vraagt hij het, en zonder antwoord noemt hij de
+  kWh-meter.
+- **Een andere zonnesensor is een breukpunt in de dataset.** De app zet de
+  nieuwe eerst naast de oude (65), vergelijkt een paar dagen, en legt de datum
+  van de overstap vast, zoals in dit huis.
+
+*Wat dit niet regelt:* het begrenzen van de omvormer. Dat blijft bij besluit
+78, met een eigen besluit voor het schrijven. Per merk moet dan nagegaan worden
+of een vermogensgrens via Modbus in geheugen terechtkomt dat slijt bij vaak
+schrijven; dan mag de regeling hem niet elke minuut bijstellen.
+
+*Wanneer:* de meting en de melding bij de onboarding (stap F). De meting kan
+eerder in de dienst, als deel van het bewonerscontract (76).
 
 ---
 
