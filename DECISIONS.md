@@ -3447,6 +3447,20 @@ schrijven; dan mag de regeling hem niet elke minuut bijstellen.
 *Wanneer:* de meting en de melding bij de onboarding (stap F). De meting kan
 eerder in de dienst, als deel van het bewonerscontract (76).
 
+*Voor dit huis: omgezet op 4 oktober 2026.* Tot dan kwam `solarProduction` uit de
+cloudkoppeling van SolarEdge (`sensor.solaredge_huidig_vermogen`), die precies
+elke 15 minuten bijwerkt. Sinds 2 oktober 10:11 liep de Modbus-sensor mee in
+`recordOnly`. Na drie dagen (een wisselende op 2 oktober, twee rustiger en
+zonniger) was de uitkomst: elke 61 seconden een waarde, nooit onbeschikbaar,
+'s avonds netjes 0, en per dag 2 tot 3% onder de cloud, wat past bij een
+momentopname per kwartier. Sindsdien is `solarProduction`
+`sensor.solaredge_i1_ac_power`; de cloudsensor schrijft mee in `recordOnly`, net
+als de stroom en spanning op fase 1 van de P1-meter (78). Het breukpunt in de
+kolom `zonW` is de herstart van de dienst op 4 oktober, na deze wijziging. De
+besluiten merken het niet: de regeling rekent het budget op de P1-meter (47),
+en het oude systeem gebruikt de cloudsensor alleen voor de weergave
+(`sensor.zonnepanelen_vermogen_w` in `pv_overschot.yaml`).
+
 ---
 
 ## Wat nog een besluit wacht
@@ -3464,29 +3478,6 @@ eerder in de dienst, als deel van het bewonerscontract (76).
   volgt hoeveel lucht er naar buiten gaat. Later komen er misschien
   CO₂-sensoren bij, voor de luchtkwaliteit; die horen dan ook in `recordOnly`.
 
-- **De zonne-opbrengst komt eens per kwartier.** `sensor.solaredge_huidig_vermogen`
-  komt uit de cloudkoppeling van SolarEdge (api-sleutel en site-id) en werkt
-  precies elke 15 minuten bij; de API van SolarEdge staat niet veel vaker toe.
-  De regeling leest hem niet (47), dus de besluiten merken het niet. De
-  weergave wel: een zon die een kwartier stilstaat naast een net dat elke paar
-  seconden beweegt, en een "huis" (zon plus net) dat daardoor niet klopt. En de
-  dataset voor het thermisch model krijgt de instraling per kwartier in plaats
-  van per minuut. Twee lokale alternatieven, allebei met updates per seconden:
-  Modbus TCP van de omvormer (moet op de omvormer worden aangezet, bij nieuwere
-  omvormers soms door de installateur; via een HACS-integratie; vaak maar één
-  verbinding tegelijk), of een HomeWizard kWh-meter op de groep van de panelen,
-  naast de P1-meter die er al is. Bij de overstap: de nieuwe sensor eerst in
-  `recordOnly` (65) naast de oude, een paar dagen vergelijken, dan
-  `solarProduction` omzetten, en de datum vastleggen, want het is een
-  breukpunt in de kolom `zonW`.
-  Stand op 2 oktober 2026: SolarEdge Modbus Multi staat aan (elke 60 seconden),
-  en sinds 10:11 schrijven `sensor.solaredge_i1_ac_power` en
-  `sensor.solaredge_i1_dc_power` mee in `recordOnly`. Het plan voor de
-  omzetting, over een paar dagen na een heldere en een bewolkte dag:
-  `solarProduction` wordt `sensor.solaredge_i1_ac_power`, de cloudsensor gaat
-  naar `recordOnly`, en in dezelfde wijziging komen
-  `sensor.p1_meter_current_phase_1` en `sensor.p1_meter_voltage_phase_1` erbij
-  (besluit 78), zodat het één keer kopiëren en herstarten is.
 - **De badkamer verwarmt elektrisch; voor het budget is 0 W toch juist.**
   Volgens de bewoner (2 oktober 2026): het hele huis heeft radiatoren op de cv,
   met water van 60 °C, geregeld door de Nest beneden. De badkamer niet: daar
