@@ -139,6 +139,10 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
    begint het leren.
 
+**Vast** (89). Tijdens het leren meet de app hoe vaak de zonnesensor een nieuwe
+waarde geeft. Is dat trager dan eens per twee minuten, dan zegt hij dat één
+keer, met wat het kost en de lokale weg voor dat merk.
+
 ### Wat er verandert in Home Assistant
 
 **Vast** (72). De dienst ziet zelf dat er een apparaat bijkomt, verdwijnt of
@@ -327,8 +331,4 @@ toegankelijk en tweetalig (86), en donker met een eigen accentkleur (87).
   de bewoner het niet, dan rekent de regeling met de laagste gangbare waarde
   voor dat aantal fasen (1 × 35 A of 3 × 25 A) en zegt hij dat erbij: liever
   een airco die iets later start dan een zekering die eruit vliegt.
-- **De zonnesensor.** Nu eens per kwartier, uit de cloud van SolarEdge. Een
-  lokale sensor (Modbus van de omvormer of een kWh-meter op de groep) maakt de
-  stromen op het scherm en de instraling in de dataset echt live. Zie "Wat nog
-  een besluit wacht" in het besluitenlog.
 - **De naam en het logo van de app.** Nu een plaatshouder.
