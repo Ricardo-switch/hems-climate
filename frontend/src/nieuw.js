@@ -1309,6 +1309,69 @@ function homelessNote() {
   ];
 }
 
+/*
+ * De basisplattegrond van een etage (`Wand-Etage`), uit de indeling alleen: elke
+ * kamer een vlak, groter naarmate hij meer zones en apparaten heeft; een kamer
+ * zonder apparaten, zoals een hal, een smalle strook. Zones liggen gestippeld
+ * gescheiden in hun kamer, de apparaten staan erin. Waar een kamer werkelijk
+ * ligt en waar in de kamer een lamp hangt, weet de app nog niet; dat volgt.
+ */
+function planWeight(r) {
+  if (!r.apparaten.length) return 0.7;
+  return 1 + Math.max(0, r.zones.length - 1) * 0.8 + Math.min(r.apparaten.length, 8) * 0.08;
+}
+
+function planDevice(room, d) {
+  return el(
+    'a',
+    {
+      class: `plan-apparaat${d.aan ? ` aan-${d.soort}` : ''}`,
+      href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}`,
+      'aria-label': `${d.naam}: ${d.stand}`,
+    },
+    icon(d),
+    el('span', { text: d.naam }),
+    el('span', { text: d.stand }),
+  );
+}
+
+function plattegrond(floor) {
+  const rooms = floor.ruimtes.map((r) => {
+    const w = planWeight(r);
+    const sections = [];
+    if (r.zones.length) {
+      for (const z of r.zones) sections.push({ naam: z.naam, list: r.apparaten.filter((d) => d.zone === z.id) });
+      const loose = r.apparaten.filter((d) => !r.zones.some((z) => z.id === d.zone));
+      if (loose.length) sections.push({ naam: 'Verder', list: loose });
+    } else {
+      sections.push({ naam: null, list: r.apparaten });
+    }
+    const soort = r.status?.soort;
+    return el(
+      'div',
+      {
+        class: `plan-kamer${soort ? ` s-${soort}` : ''}${r.apparaten.length ? '' : ' leeg'}`,
+        style: `flex: ${w} 1 ${Math.round(150 * w)}px`,
+      },
+      el(
+        'a',
+        { class: 'plan-kop', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
+        el('b', { text: r.naam }),
+        el('span', { class: `t${soort ? ` k-${soort}` : ''}`, text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+      ),
+      ...sections.map((sec) =>
+        el(
+          'div',
+          { class: 'plan-zone' },
+          sec.naam ? el('div', { class: 'zonelabel', text: sec.naam }) : null,
+          el('div', { class: 'plan-apparaten' }, ...byKind(sec.list).map((d) => planDevice(r, d))),
+        ),
+      ),
+    );
+  });
+  return el('nav', { class: 'plattegrond', 'aria-label': `Plattegrond van ${floor.naam}` }, ...rooms);
+}
+
 /** De etage (`Etage`, `Wand-Etage`): per kamer een kaart met wat erin staat. */
 function renderFloor(floor, many) {
   tipDone();
@@ -1320,10 +1383,17 @@ function renderFloor(floor, many) {
     $('hu-lijst').replaceChildren(...editBar(), ...editFloorLevel(floor.id));
     return;
   }
+  // Buiten is geen gebouw: daar alleen de kaarten.
+  const plan = floor.id !== 'buiten' && floor.ruimtes.length > 0;
   $('hu-lijst').replaceChildren(
     ...editBar(),
     ...allOff({ doel: 'etage', id: floor.id }, floor.lampenAan),
-    el('div', { class: 'kamers' }, ...floor.ruimtes.map(roomCard)),
+    el(
+      'div',
+      { class: `etage-raster${plan ? ' met-plan' : ''}` },
+      plan ? plattegrond(floor) : null,
+      el('div', { class: 'kamers' }, ...floor.ruimtes.map(roomCard)),
+    ),
   );
 }
 

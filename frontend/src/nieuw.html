@@ -669,6 +669,9 @@
         border-radius: 0;
         border-bottom: 1px solid rgba(255, 255, 255, 0.07);
       }
+      .kamerkaart a.room.kop:last-child {
+        border-bottom: 0;
+      }
       .kamerkaart a.room.kop .temp {
         font-size: 30px;
       }
@@ -735,6 +738,121 @@
         height: 28px;
         accent-color: #ffe08a;
         cursor: pointer;
+      }
+      /*
+       * De basisplattegrond van een etage (Wand-Etage): kamers als vlakken naast
+       * elkaar, zones gestippeld gescheiden, de apparaten erin. De muren zijn de
+       * achtergrond die tussen de vlakken door schijnt.
+       */
+      .etage-raster {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .plattegrond {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.3);
+      }
+      .plan-kamer {
+        --tint: transparent;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 150px;
+        background: linear-gradient(var(--tint), var(--tint)), #0f1b24;
+      }
+      .plan-kamer.s-ok {
+        --tint: rgba(111, 220, 166, 0.07);
+      }
+      .plan-kamer.s-cool {
+        --tint: rgba(92, 200, 255, 0.1);
+      }
+      .plan-kamer.s-heat,
+      .plan-kamer.s-bad {
+        --tint: rgba(255, 138, 76, 0.09);
+      }
+      .plan-kamer.s-wait {
+        --tint: rgba(245, 179, 66, 0.08);
+      }
+      .plan-kamer.leeg {
+        background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(255, 255, 255, 0.05) 22px 23px), #0f1b24;
+      }
+      a.plan-kop {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        padding: 10px 12px 2px;
+        color: inherit;
+        text-decoration: none;
+      }
+      a.plan-kop b {
+        min-width: 0;
+        font-size: 14px;
+        overflow-wrap: anywhere;
+      }
+      a.plan-kop .t {
+        font-size: 22px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      a.plan-kop:hover b,
+      a.plan-kop:focus-visible b {
+        text-decoration: underline;
+      }
+      .plan-zone {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px 12px 10px;
+      }
+      .plan-zone + .plan-zone {
+        border-top: 1.5px dashed rgba(255, 255, 255, 0.28);
+      }
+      .plan-zone .zonelabel {
+        padding-top: 0;
+      }
+      .plan-apparaten {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: center;
+        justify-content: space-around;
+        gap: 10px 14px;
+      }
+      a.plan-apparaat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        max-width: 92px;
+        color: var(--dim);
+        font-size: 11px;
+        line-height: 1.25;
+        text-align: center;
+        text-decoration: none;
+      }
+      a.plan-apparaat .icoon {
+        width: 30px;
+        height: 30px;
+      }
+      a.plan-apparaat.aan-licht {
+        color: #ffe08a;
+      }
+      a.plan-apparaat.aan-screen {
+        color: var(--warm-t);
+      }
+      a.plan-apparaat.aan-klimaat {
+        color: var(--cool-t);
+      }
+      a.plan-apparaat:hover,
+      a.plan-apparaat:focus-visible {
+        color: var(--ink);
       }
       .knoppen.drie {
         display: grid;
@@ -1095,6 +1213,18 @@
         }
         .doorsnede .huisje {
           width: min(100%, 520px);
+        }
+        /* Op de wand: de plattegrond links, de kamers rechts (Wand-Etage). */
+        .etage-raster.met-plan {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+          align-items: start;
+        }
+        .etage-raster.met-plan .kamers {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .plan-kamer {
+          min-height: 190px;
         }
       }
     </style>
