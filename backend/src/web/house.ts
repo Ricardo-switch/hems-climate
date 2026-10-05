@@ -15,14 +15,24 @@
  *
  * Wat erin komt: lampen, zonwering, en de klimaatapparaten uit de configuratie.
  * Groepen van lampen niet, want die zouden lampen dubbel tellen; uitgezette en
- * verborgen entiteiten ook niet.
+ * verborgen entiteiten ook niet. Behalve een groep waarvan de lampen uitgezet of
+ * verborgen zijn: die is zelf de lamp (een armatuur, zie `collect`).
  */
 
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
 import { roomStatus, type DecisionView, type RoomKind } from './assistant.js';
-import { FLOORS, FLOOR_NAMES, type FloorId, type Layout, type LayoutKnown, type LayoutRoom } from './layout.js';
+import {
+  FLOORS,
+  FLOOR_NAMES,
+  carryOver,
+  type FloorId,
+  type Layout,
+  type LayoutDevice,
+  type LayoutKnown,
+  type LayoutRoom,
+} from './layout.js';
 
 export interface HouseRegisters {
   readonly floors: readonly HaFloor[];
@@ -203,14 +213,27 @@ interface Context {
   readonly found: readonly Found[];
   readonly areaOf: (entityId: string) => string | null;
   readonly groups: readonly LightGroup[];
+  /** Per lamp die niet los in het huis staat, de groep die hem als één lamp toont. */
+  readonly successors: ReadonlyMap<string, string>;
 }
 
 /**
  * De lampgroepen: een groep van Home Assistant somt zijn lampen op als
  * `entity_id`, een Hue-kamer of -zone doet dat soms alleen met namen (`lights`).
+ * Een uitgezette lamp heeft geen toestand; zijn naam staat dan alleen nog in de
+ * registers, bij de entiteit of bij het apparaat (Hue noemt de lamp zoals het
+ * apparaat heet).
  */
-function lightGroups(states: ReadonlyMap<string, HaEntityState>): LightGroup[] {
+function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>): LightGroup[] {
   const byName = new Map<string, string>();
+  const devices = new Map(registers.devices.map((d) => [d.id, d]));
+  for (const e of registers.entities) {
+    if (!e.entity_id.startsWith('light.')) continue;
+    const dev = e.device_id ? devices.get(e.device_id) : undefined;
+    for (const n of [dev?.name, dev?.name_by_user, e.original_name, e.name]) {
+      if (typeof n === 'string' && n.trim() !== '') byName.set(n.trim().toLowerCase(), e.entity_id);
+    }
+  }
   for (const [id, st] of states) {
     if (!id.startsWith('light.')) continue;
     const n = st.attributes['friendly_name'];
@@ -250,7 +273,7 @@ function collect(
     return e.area_id ?? (e.device_id ? (deviceArea.get(e.device_id) ?? null) : null);
   };
   const found: Found[] = [];
-  const groups = lightGroups(states);
+  const groups = lightGroups(registers, states);
   const groupIds = new Set(groups.map((g) => g.id));
   const memberOf = new Map<string, string[]>();
   for (const g of groups) {
@@ -278,25 +301,36 @@ function collect(
   }
 
   /*
-   * Armaturen: een groep waarvan de lampen verborgen zijn, is één lamp.
+   * Armaturen: een groep waarvan de lampen verborgen of uitgezet zijn, is één lamp.
    *
-   * Wie de losse peren van een plafonnière verbergt in Home Assistant, ziet die
-   * plafonnière als één ding; zo staat hij ook in het huis. Per verborgen peer
+   * Wie de losse peren van een plafonnière verbergt of uitzet in Home Assistant,
+   * ziet die plafonnière als één ding; zo staat hij ook in het huis. Per peer
    * telt de kleinste groep waar hij in zit: de Hue-zone "Woonkamer plafonnière"
    * (4 peren), niet de Hue-kamer "Woonkamer" (6). Grotere groepen blijven
-   * context, en tellen nooit als lamp, anders telt een lamp dubbel.
+   * context, en tellen nooit als lamp, anders telt een lamp dubbel. Een
+   * uitgezette groep van Home Assistant is geen peer: die somt alleen lampen op.
    */
-  const hidden = new Set(
+  const offstage = new Set(
     registers.entities
-      .filter((e) => e.entity_id.startsWith('light.') && e.hidden_by && !e.disabled_by && !groupIds.has(e.entity_id))
+      .filter(
+        (e) =>
+          e.entity_id.startsWith('light.') &&
+          (e.hidden_by || e.disabled_by) &&
+          e.platform !== 'group' &&
+          !groupIds.has(e.entity_id),
+      )
       .map((e) => e.entity_id),
   );
   const fixtures = new Set<string>();
-  for (const peer of hidden) {
+  const successors = new Map<string, string>();
+  for (const peer of offstage) {
     const smallest = groups
       .filter((g) => g.leden.includes(peer))
       .sort((a, b) => a.leden.length - b.leden.length || Number(b.hue) - Number(a.hue))[0];
-    if (smallest) fixtures.add(smallest.id);
+    if (smallest) {
+      fixtures.add(smallest.id);
+      successors.set(peer, smallest.id);
+    }
   }
   const majorityArea = (ids: readonly string[]): string | null => {
     const votes = new Map<string, number>();
@@ -326,7 +360,7 @@ function collect(
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '');
     found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id), groepen: memberOf.get(e.entity_id) ?? [] });
   }
-  return { found, areaOf, groups };
+  return { found, areaOf, groups, successors };
 }
 
 const GROUP_WORDS = /\b(alles|alle|groep|lampen|lamp|licht|verlichting|all|hue)\b/g;
@@ -360,8 +394,12 @@ export function knownForLayout(
   registers: HouseRegisters,
   states: ReadonlyMap<string, HaEntityState>,
 ): LayoutKnown {
-  const { found } = collect(config, registers, states, null);
-  return { deviceIds: new Set(found.map((f) => f.device.id)), zoneIds: new Set(config.zones.map((z) => z.id)) };
+  const { found, successors } = collect(config, registers, states, null);
+  return {
+    deviceIds: new Set(found.map((f) => f.device.id)),
+    zoneIds: new Set(config.zones.map((z) => z.id)),
+    opvolgers: successors,
+  };
 }
 
 /** Een id dat de indeling accepteert, uit een gebied van Home Assistant. */
@@ -444,8 +482,14 @@ export function buildHouse(
   snapshot: DecisionView | null,
   saved: Layout | null = null,
 ): HouseReport {
-  const layout = saved ?? proposeLayout(config, registers, states);
-  const { found, groups } = collect(config, registers, states, snapshot);
+  const { found, groups, successors } = collect(config, registers, states, snapshot);
+  const base = saved ?? proposeLayout(config, registers, states);
+  // Een lamp die sinds het indelen is uitgezet, geeft zijn plek door aan zijn groep.
+  const deviceIds = new Set(found.map((f) => f.device.id));
+  const layout: Layout = {
+    ...base,
+    apparaten: carryOver(base.apparaten, { deviceIds, opvolgers: successors }) as Record<string, LayoutDevice>,
+  };
   const areaName = new Map(registers.areas.map((a) => [a.area_id, a.name]));
   const roomByArea = new Map(layout.kamers.filter((k) => k.haGebied).map((k) => [k.haGebied as string, k]));
 

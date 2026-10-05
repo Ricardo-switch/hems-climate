@@ -59,7 +59,6 @@ describe('de indeling toetsen', () => {
       ['lege naam', { ...good, kamers: [{ ...good.kamers[0], naam: '   ' }] }],
       ['onbekend regelgebied', { ...good, kamers: [{ ...good.kamers[0], regelzone: 'kelder' }] }],
       ['regelgebied twee keer', { ...good, kamers: [good.kamers[0], { ...good.kamers[1], regelzone: 'woonkamer' }] }],
-      ['onbekend apparaat', { ...good, apparaten: { 'light.bestaat_niet': { kamer: 'hal', zone: null } } }],
       ['apparaat in een onbekende kamer', { ...good, apparaten: { nest: { kamer: 'kelder', zone: null } } }],
       ['zone die de kamer niet heeft', { ...good, apparaten: { nest: { kamer: 'hal', zone: 'keuken' } } }],
       ['te lange naam', { ...good, apparaten: { nest: { naam: 'x'.repeat(61), kamer: 'hal', zone: null } } }],
@@ -69,6 +68,42 @@ describe('de indeling toetsen', () => {
       expect(r.ok, label).toBe(false);
       if (!r.ok) expect(r.reden, label).not.toBe('');
     }
+  });
+
+  it('laat een apparaat dat Home Assistant niet meer kent vallen, in plaats van te weigeren', () => {
+    const r = validateLayout({ ...good, apparaten: { ...good.apparaten, 'light.uitgezet': { kamer: 'hal', zone: null } } }, known);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(Object.keys(r.layout.apparaten)).toEqual(['nest', 'light.sfeerverlichting']);
+  });
+
+  it('geeft de plek van een uitgezette lamp door aan de groep die hem nu toont, tenzij die er zelf een heeft', () => {
+    const withGroup: LayoutKnown = {
+      ...known,
+      deviceIds: new Set([...known.deviceIds, 'light.hue_hal']),
+      opvolgers: new Map([
+        ['light.hal_1', 'light.hue_hal'],
+        ['light.hal_2', 'light.hue_hal'],
+        ['light.sfeer_1', 'light.sfeerverlichting'],
+      ]),
+    };
+    const r = validateLayout(
+      {
+        ...good,
+        apparaten: {
+          ...good.apparaten,
+          'light.hal_1': { naam: 'Spot 1', kamer: 'hal', zone: null },
+          'light.hal_2': { kamer: 'woonkamer', zone: null },
+          'light.sfeer_1': { kamer: 'hal', zone: null },
+        },
+      },
+      withGroup,
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.layout.apparaten['light.hue_hal']).toEqual({ kamer: 'hal', zone: null });
+    expect(r.layout.apparaten['light.sfeerverlichting']!.kamer).toBe('woonkamer');
+    expect('light.hal_1' in r.layout.apparaten).toBe(false);
   });
 });
 

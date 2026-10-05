@@ -54,6 +54,8 @@ export const registers: HouseRegisters = {
     { id: 'd-tuin', area_id: 'tuin' },
     { id: 'd-oprit', area_id: 'oprit' },
     { id: 'd-keuken', area_id: 'woonkamer' },
+    { id: 'd-badspot-1', area_id: 'badkamer', name: 'Badkamer spot 1' },
+    { id: 'd-badspot-2', area_id: 'badkamer', name: 'Hue spot', name_by_user: 'Badkamer spot 2' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -77,6 +79,12 @@ export const registers: HouseRegisters = {
     entity('light.keukentafel_2', 'd-keuken', { hidden_by: 'user' }),
     entity('light.keukentafel_3', 'd-keuken', { hidden_by: 'user' }),
     entity('light.hue_sfeer', null),
+    // De badkamerspots: uitgezet, dus zonder toestand; de Hue-kamer noemt ze bij naam.
+    entity('light.badkamer_spot_1', 'd-badspot-1', { disabled_by: 'user' }),
+    entity('light.badkamer_spot_2', 'd-badspot-2', { disabled_by: 'user' }),
+    entity('light.hue_badkamer', null),
+    // Een uitgezette groep van Home Assistant, nog genoemd in "Tuin alles".
+    entity('light.oude_groep', null, { disabled_by: 'user', platform: 'group' }),
   ],
 };
 
@@ -88,13 +96,15 @@ export const states = new Map<string, HaEntityState>([
   ['cover.screen_low_speed', state('cover.screen_low_speed', 'open', { friendly_name: 'Screen low speed', current_position: 40 })],
   ['light.achtertuin', state('light.achtertuin', 'off', { friendly_name: 'Achtertuin' })],
   // Een groep die een lamp zonder gebied bevat, en een Hue-kamer die zijn lampen alleen bij naam noemt.
-  ['light.tuin_alles', state('light.tuin_alles', 'off', { friendly_name: 'Tuin alles', entity_id: ['light.zwerver'] })],
+  ['light.tuin_alles', state('light.tuin_alles', 'off', { friendly_name: 'Tuin alles', entity_id: ['light.zwerver', 'light.oude_groep'] })],
   ['light.hue_keuken', state('light.hue_keuken', 'on', { friendly_name: 'Keuken', is_hue_group: true, lights: ['Keukentafel 1', 'Keukentafel 2', 'Keukentafel 3'], brightness: 128 })],
   ['light.keukentafel_1', state('light.keukentafel_1', 'on', { friendly_name: 'Keukentafel 1' })],
   ['light.keukentafel_2', state('light.keukentafel_2', 'on', { friendly_name: 'Keukentafel 2' })],
   ['light.keukentafel_3', state('light.keukentafel_3', 'on', { friendly_name: 'Keukentafel 3' })],
   // Een Hue-zone met een zichtbare lamp: alleen context, geen armatuur.
   ['light.hue_sfeer', state('light.hue_sfeer', 'on', { friendly_name: 'Sfeer', is_hue_group: true, lights: ['Sfeerverlichting'] })],
+  // Een Hue-kamer met alleen uitgezette lampen: die is zelf de lamp.
+  ['light.hue_badkamer', state('light.hue_badkamer', 'off', { friendly_name: 'Badkamer', is_hue_group: true, lights: ['Badkamer spot 1', 'Badkamer spot 2'] })],
 ]);
 
 export const snapshot: DecisionView = {
