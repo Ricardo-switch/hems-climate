@@ -95,6 +95,29 @@ describe('de schrijfdeur (besluit 42)', () => {
   });
 });
 
+describe('licht bedienen (besluit 97)', () => {
+  it('staat aan in de add-on, achter Ingress, tenzij de bewoner het uitzet', () => {
+    expect(readStartup(ADDON).lights).toEqual({ enabled: true, withoutIngress: false });
+    expect(readStartup({ ...ADDON, HEMS_LIGHTS: '0' }).lights.enabled).toBe(false);
+  });
+
+  it('staat buiten de add-on alleen aan op uitdrukkelijk verzoek, en zegt dat erbij', () => {
+    expect(readStartup(NAS).lights.enabled).toBe(false);
+    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1' }).lights).toEqual({ enabled: true, withoutIngress: true });
+  });
+
+  it('bestaat niet zonder weergave', () => {
+    const { HEMS_WEB_PORT: _omitted, ...withoutPort } = NAS;
+    expect(readStartup({ ...withoutPort, HEMS_LIGHTS: '1' }).lights.enabled).toBe(false);
+  });
+
+  it('weigert iets anders dan 1 of 0', () => {
+    const o = readStartup({ ...NAS, HEMS_LIGHTS: 'ja' });
+    expect(o.lights.enabled).toBe(false);
+    expect(o.errors.join(' ')).toContain('HEMS_LIGHTS');
+  });
+});
+
 describe('instellingen die niet kloppen, vallen op', () => {
   it('weigert een poort die er geen is', () => {
     for (const port of ['0', '70000', '80a', '8.5']) {

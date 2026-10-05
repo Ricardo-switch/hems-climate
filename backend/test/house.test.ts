@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
+import { buildHouse, knownForLayout, lampsFor, proposeLayout } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -72,13 +72,40 @@ describe('het voorstel uit Home Assistant', () => {
     expect(all.some((d) => d.id === 'light.hue_sfeer' || d.id === 'light.tuin_alles')).toBe(false);
     expect(all.find((d) => d.id === 'light.sfeerverlichting')!.groepen).toEqual(['Sfeer']);
     expect(all.find((d) => d.id === 'light.woonkamer_plafonniere')!.groepen).toEqual(['Woonkamer alles']);
-    expect(house.lampgroepen.map((g) => [g.naam, g.hue])).toEqual([
-      ['Woonkamer alles', false],
-      ['Tuin alles', false],
-      ['Keuken', true],
-      ['Sfeer', true],
-      ['Badkamer', true],
+    expect(house.lampgroepen.map((g) => [g.naam, g.hue, g.overzicht])).toEqual([
+      ['Woonkamer alles', false, true],
+      ['Tuin alles', false, true],
+      ['Keuken', true, false],
+      ['Sfeer', true, false],
+      ['Etage 2 alles', false, true],
+      ['Badkamer', true, false],
     ]);
+  });
+
+  it('toont een "alles"-groep nooit als lamp, en noemt een lamp die alleen daarin zit', () => {
+    const all = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
+    expect(all.some((d) => d.id === 'light.etage2_alles')).toBe(false);
+    expect(house.onvindbaar).toEqual([{ id: 'light.zolder_spot', naam: 'Zolderspot', groepen: ['Etage 2 alles'] }]);
+    expect(knownForLayout(config, registers, states).opvolgers?.has('light.zolder_spot')).toBe(false);
+  });
+
+  it('noemt een groep die zelf groepen bevat een overzicht, ook zonder "alles" in de naam', () => {
+    const st = new Map(states);
+    st.set('light.beneden', { ...st.get('light.tuin_alles')!, entity_id: 'light.beneden', attributes: { friendly_name: 'Beneden', entity_id: ['light.hue_keuken', 'light.sfeerverlichting'] } });
+    const h = buildHouse(config, registers, st, snapshot);
+    expect(h.lampgroepen.find((g) => g.id === 'light.beneden')!.overzicht).toBe(true);
+  });
+
+  it('geeft per doel de lampen die het huis toont', () => {
+    const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    const inWk = wk.apparaten.filter((d) => d.soort === 'licht').map((d) => d.id);
+    expect(lampsFor(house, { soort: 'kamer', id: wk.id })).toEqual(inWk);
+    expect(lampsFor(house, { soort: 'etage', id: 'bg' })).toEqual(inWk);
+    expect(lampsFor(house, { soort: 'huis', id: null })).toContain('light.hue_badkamer');
+    expect(lampsFor(house, { soort: 'lamp', id: 'light.sfeerverlichting' })).toEqual(['light.sfeerverlichting']);
+    expect(lampsFor(house, { soort: 'lamp', id: 'cover.screen' })).toBeNull();
+    expect(lampsFor(house, { soort: 'lamp', id: 'light.zwerver' })).toBeNull();
+    expect(lampsFor(house, { soort: 'etage', id: 'kelder' })).toBeNull();
   });
 
   it('toont een groep met uitgezette lampen als één lamp, ook als Hue ze alleen bij naam noemt', () => {
@@ -175,6 +202,18 @@ describe('een vastgelegde indeling', () => {
     expect(known.opvolgers?.get('light.badkamer_spot_1')).toBe('light.hue_badkamer');
     expect(known.opvolgers?.get('light.keukentafel_2')).toBe('light.hue_keuken');
     expect(known.opvolgers?.has('light.oude_groep')).toBe(false);
+  });
+
+  it('laat een verborgen apparaat weg uit zijn kamer en uit de telling, en noemt het om terug te zetten', () => {
+    const h = buildHouse(config, registers, states, snapshot, { ...layout, verborgen: ['light.sfeerverlichting', 'light.zwerver'] });
+    const all = h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
+    expect(all.some((d) => d.id === 'light.sfeerverlichting' || d.id === 'light.zwerver')).toBe(false);
+    expect(h.lampenAan).toBe(house.lampenAan - 1);
+    expect(h.verborgen).toEqual([
+      { id: 'light.sfeerverlichting', naam: 'Sfeer', soort: 'licht' },
+      { id: 'light.zwerver', naam: 'Tuinlamp', soort: 'licht' },
+    ]);
+    expect(lampsFor(h, { soort: 'huis', id: null })).not.toContain('light.sfeerverlichting');
   });
 
   it('geeft de plek van een lamp die sindsdien is uitgezet door aan zijn groep, zonder zijn naam', () => {

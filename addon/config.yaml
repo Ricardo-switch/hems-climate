@@ -20,7 +20,8 @@ version: 0.1.0
 slug: hems_climate
 description: >-
   Laat de arbiter meedenken naast je bestaande regeling en legt elk besluit vast,
-  zonder iets te schakelen. De basis voor een latere overstap.
+  zonder klimaat of screens te schakelen. Lampen kun je vanuit de app aan- en
+  uitzetten. De basis voor een latere overstap.
 url: https://github.com/Ricardo-switch/hems-climate
 
 # De Pi is arm64/aarch64. De rest staat erbij omdat de kern nergens van
@@ -67,8 +68,12 @@ options:
   hartslag_seconden: 30
   min_interval_seconden: 15
   bewaking_minuten: 10
+  # Lampen aan- en uitzetten vanuit de app (besluit 97). Alleen licht, en alleen
+  # de lampen die het huis toont; klimaat en screens blijven alleen-lezen.
+  licht_bedienen: true
 
 schema:
   hartslag_seconden: int(5,3600)
   min_interval_seconden: int(0,600)
   bewaking_minuten: int(0,1440)
+  licht_bedienen: bool

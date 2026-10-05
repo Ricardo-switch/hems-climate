@@ -922,6 +922,44 @@ async function loadHouse(force = false) {
 const floorKey = (f) => f.id ?? 'geen';
 const lampen = (n) => `${n} ${n === 1 ? 'lamp' : 'lampen'} aan`;
 
+/*
+ * Licht bedienen (besluit 97): rechtstreeks via Home Assistant, en alleen de
+ * lampen die het huis toont. Welke dat zijn, beslist de dienst; deze pagina zegt
+ * alleen het doel. Daarna even wachten tot Home Assistant de nieuwe stand
+ * doorgeeft, en het huis opnieuw tekenen.
+ */
+async function switchLights(body) {
+  try {
+    const res = await fetch('api/licht', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json();
+    if (!res.ok) return out.fout ?? out.wachten ?? 'Niet gelukt.';
+    // Niet tijdens het indelen: dan ververst het huis nooit vanzelf, anders raakt
+    // een veld waarin je typt zijn inhoud kwijt.
+    setTimeout(() => {
+      if (!editing) void loadHouse(true);
+    }, 800);
+    return null;
+  } catch {
+    return 'Geen verbinding met Smart Climate.';
+  }
+}
+
+/** "Alle lampen uit" voor een kamer, een etage of het huis; alleen als er iets brandt. */
+function allOff(body, on) {
+  if (!house?.lichtBedienen || !on || editing) return [];
+  const status = el('span', { class: 'small muted', 'aria-live': 'polite' });
+  const b = button('Alle lampen uit', async () => {
+    status.textContent = 'Even…';
+    const fout = await switchLights({ ...body, aan: false });
+    status.textContent = fout ?? 'Gaat uit.';
+  });
+  return [el('div', { class: 'knoppen' }, b, status)];
+}
+
 function houseRoute() {
   const [, level = null, key = null] = (location.hash || '').slice(1).split('/');
   return { level, key: key == null ? null : decodeURIComponent(key) };
@@ -992,6 +1030,7 @@ function renderHouse() {
   }
   $('hu-lijst').replaceChildren(
     ...editBar(),
+    ...allOff({ doel: 'huis' }, house.lampenAan),
     ...floors.map((f) =>
       el(
         'a',
@@ -1007,7 +1046,23 @@ function renderHouse() {
       ),
     ),
     ...homelessNote(),
+    ...unreachableNote(),
   );
+}
+
+/** Lampen die uitgezet zijn in Home Assistant en alleen nog in een "alles"-groep zitten. */
+function unreachableNote() {
+  const list = house?.onvindbaar ?? [];
+  if (!list.length) return [];
+  const names = list.slice(0, 6).map((d) => d.naam).join(', ') + (list.length > 6 ? ', …' : '');
+  const n = list.length;
+  return [
+    el(
+      'div',
+      { class: 'note' },
+      `${n} ${n === 1 ? 'lamp staat' : 'lampen staan'} in Home Assistant uitgeschakeld en ${n === 1 ? 'zit' : 'zitten'} alleen in een groep als "${list[0].groepen[0]}", dus het huis kan ${n === 1 ? 'hem' : 'ze'} niet tonen: ${names}. Zet ${n === 1 ? 'hem' : 'ze'} in Home Assistant weer aan, of in een eigen Hue-zone.`,
+    ),
+  ];
 }
 
 /** Wat in Home Assistant in geen ruimte staat, kan het huis niet tonen; zeg dat. */
@@ -1044,6 +1099,7 @@ function renderFloor(floor, many) {
   }
   $('hu-lijst').replaceChildren(
     ...editBar(),
+    ...allOff({ doel: 'etage', id: floor.id }, floor.lampenAan),
     ...floor.ruimtes.map((r) => {
       const screens = [...new Set(r.apparaten.filter((d) => d.soort === 'screen').map((d) => d.stand))];
       const bits = [r.lampenAan ? lampen(r.lampenAan) : null, screens.length ? `screens ${screens.join(', ')}` : null].filter(Boolean);
@@ -1077,7 +1133,7 @@ function renderRoom(floor, room) {
   crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
   $('hu-titel').textContent = room.temperatuurC == null ? room.naam : `${room.naam} · ${deg(room.temperatuurC)}`;
   $('hu-zin').textContent = room.status?.zin ?? '';
-  const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : [])];
+  const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan))];
   const zoneName = (id) => room.zones.find((z) => z.id === id)?.naam;
   for (const [kind, label] of GROUPS) {
     const list = room.apparaten.filter((d) => d.soort === kind);
@@ -1111,8 +1167,9 @@ function renderRoom(floor, room) {
 
 /*
  * Bedienen in de proefomgeving (besluit 94): de knoppen werken, en zeggen wat
- * er zou gebeuren. Klimaat vraagt het de assistent; screens en licht hebben een
- * vaste zin, want daar beslist Smart Climate (nog) niets.
+ * er zou gebeuren. Klimaat vraagt het de assistent; screens hebben een vaste
+ * zin, want daar beslist Smart Climate (nog) niets. Licht schakelt echt, als de
+ * dienst dat mag (besluit 97); Smart Climate regelt het niet, het is een knop.
  */
 function openDevice(room, d) {
   $('hu-blad').hidden = false;
@@ -1151,9 +1208,25 @@ function openDevice(room, d) {
     ]) {
       buttons.push([label, () => say(`Dan zou ik de ${d.naam.toLowerCase()} ${what}. Maar ik kijk nog alleen mee en mag nog niet schakelen.`)]);
     }
+  } else if (d.soort === 'licht' && house?.lichtBedienen) {
+    for (const [label, body] of [
+      ['Aan', { aan: true }],
+      ['Uit', { aan: false }],
+      ['Gedimd', { aan: true, helderheidPct: 30 }],
+      ['Fel', { aan: true, helderheidPct: 100 }],
+    ]) {
+      buttons.push([
+        label,
+        async () => {
+          say('Even…');
+          const fout = await switchLights({ doel: 'lamp', id: d.id, ...body });
+          say(fout ?? `${d.naam} gaat ${body.aan ? 'aan' : 'uit'}.`);
+        },
+      ]);
+    }
   } else if (d.soort === 'licht') {
     for (const label of ['Aan', 'Uit']) {
-      buttons.push([label, () => say('Licht bedien je straks hier, rechtstreeks via Home Assistant. In deze proef nog niet.')]);
+      buttons.push([label, () => say('Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.')]);
     }
   }
   $('hu-blad-knoppen').replaceChildren(
@@ -1353,11 +1426,40 @@ function editHouseLevel() {
             next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone: null };
             await saveLayout(next, `${dev.naam}`);
           }),
+          button('Niet tonen', () => hideDevice(dev)),
         ),
       );
     }
   }
+  // Wat de bewoner verborg, met een knop om het terug te halen.
+  const hidden = house?.verborgen ?? [];
+  if (hidden.length) {
+    parts.push(el('div', { class: 'groep', text: `NIET GETOOND (${hidden.length})` }));
+    for (const dev of hidden) {
+      parts.push(
+        el(
+          'div',
+          { class: 'rij' },
+          el('b', { style: 'flex: 1 1 200px; min-width: 0', text: dev.naam }),
+          button('Weer tonen', async () => {
+            const next = draft();
+            next.verborgen = (next.verborgen ?? []).filter((id) => id !== dev.id);
+            await saveLayout(next, `${dev.naam} terug;`);
+          }),
+        ),
+      );
+    }
+  }
+  parts.push(...unreachableNote());
   return parts;
+}
+
+/** Een apparaat uit de app halen: het staat dan in geen kamer en telt nergens mee. */
+async function hideDevice(dev) {
+  const next = draft();
+  next.verborgen = [...new Set([...(next.verborgen ?? []), dev.id])];
+  delete next.apparaten[dev.id];
+  await saveLayout(next, `${dev.naam} verborgen;`);
 }
 
 /** Etageniveau in de bewerkstand: kamers hernoemen, verhuizen, weghalen en toevoegen. */
@@ -1509,6 +1611,10 @@ function editDevice(room, dev) {
         zone: zoneSel.value || null,
       };
       await saveLayout(next, dev.naam);
+    }),
+    button('Niet tonen', async () => {
+      $('hu-blad').hidden = true;
+      await hideDevice(dev);
     }),
   );
 }

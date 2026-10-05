@@ -34,6 +34,14 @@ export interface Startup {
    * uitdrukkelijk vraagt, en dan met een waarschuwing.
    */
   readonly onboarding: { readonly enabled: boolean; readonly withoutIngress: boolean };
+  /**
+   * Mag de pagina lampen aan- en uitzetten (besluit 97)?
+   *
+   * Alleen met een weergave. Achter Ingress standaard aan, want daar staat de
+   * inlog van Home Assistant voor; elders alleen met `HEMS_LIGHTS=1`, en dan met
+   * een waarschuwing. `HEMS_LIGHTS=0` zet het overal uit.
+   */
+  readonly lights: { readonly enabled: boolean; readonly withoutIngress: boolean };
   readonly logDir: string;
   readonly tickSeconds: number;
   readonly minIntervalSeconds: number;
@@ -113,6 +121,12 @@ export function readStartup(env: Environment): Startup {
   const onboardingRequested = readPoint(env, 'HEMS_ONBOARDING') === '1';
   const onboardingOn = port != null && (asAddon || onboardingRequested);
 
+  const lightsRaw = readPoint(env, 'HEMS_LIGHTS');
+  if (lightsRaw != null && lightsRaw !== '0' && lightsRaw !== '1') {
+    errors.push(`HEMS_LIGHTS is 1 (licht bedienen) of 0 (niet), niet "${lightsRaw}".`);
+  }
+  const lightsOn = port != null && (lightsRaw === '1' || (asAddon && lightsRaw !== '0'));
+
   return {
     asAddon,
     ha: { url, token },
@@ -123,6 +137,7 @@ export function readStartup(env: Environment): Startup {
       dir: readPoint(env, 'HEMS_WEB_DIR'),
     },
     onboarding: { enabled: onboardingOn, withoutIngress: onboardingOn && !asAddon },
+    lights: { enabled: lightsOn, withoutIngress: lightsOn && !asAddon },
     // Een lege SHADOW_LOG_DIR betekent bewust: niet loggen. Dus niet `lees`.
     logDir: env['SHADOW_LOG_DIR'] ?? 'data/shadow',
     tickSeconds: numberAttr(env, 'SHADOW_TICK_SECONDS', 30, 1, errors),

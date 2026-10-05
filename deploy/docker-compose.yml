@@ -43,6 +43,11 @@ services:
       # De read-only webweergave. Weglaten betekent: de dienst luistert nergens
       # op, zoals hij dat tot fase 5 deed.
       HEMS_WEB_PORT: "8080"
+      # Lampen aan- en uitzetten vanuit de app (besluit 97). Alleen licht; klimaat
+      # en screens blijven alleen-lezen. Let op: deze weergave heeft geen inlog,
+      # dus iedereen op je thuisnetwerk kan dan je lampen schakelen. Uitzetten:
+      # "0", of de regel weghalen.
+      HEMS_LIGHTS: "1"
 
     volumes:
       # Alleen-lezen: de dienst hoort zijn eigen configuratie nooit te wijzigen.
@@ -56,9 +61,9 @@ services:
       # Hier komt de winterdataset te staan.
       - ./logs:/logs
 
-    # Sinds fase 5 luistert deze dienst wél, maar alleen om te lezen: er is geen
-    # route die iets wijzigt, en niet-GET krijgt 405 vóór de routering. Zie
-    # DECISIONS.md, besluit 23.
+    # Sinds fase 5 luistert deze dienst wél, en vooral om te lezen: niet-GET
+    # krijgt 405 vóór de routering (besluit 23), behalve een paar smalle deuren
+    # zoals de indeling (96) en licht aan/uit (97, HEMS_LIGHTS hierboven).
     #
     # De poort aan de buitenkant is een keuze van deze installatie en niet van
     # de code: welke poorten vrij zijn verschilt per NAS. Vandaar uit `.env`,

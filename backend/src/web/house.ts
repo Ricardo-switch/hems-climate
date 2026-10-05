@@ -109,7 +109,22 @@ export interface HouseReport {
    * niet als apparaat in het huis (dan telt een lamp dubbel), maar zeggen wel welke
    * lampen bij elkaar horen.
    */
-  readonly lampgroepen: readonly { readonly id: string; readonly naam: string; readonly leden: readonly string[]; readonly hue: boolean }[];
+  readonly lampgroepen: readonly {
+    readonly id: string;
+    readonly naam: string;
+    readonly leden: readonly string[];
+    readonly hue: boolean;
+    /** Een groep die een heel gebied schakelt ("Etage 2 alles"), geen lamp. */
+    readonly overzicht: boolean;
+  }[];
+  /** Wat de bewoner in de app niet wil zien (96), om terug te kunnen zetten. */
+  readonly verborgen: readonly { readonly id: string; readonly naam: string; readonly soort: DeviceKind }[];
+  /**
+   * Lampen die in Home Assistant uitgezet of verborgen zijn en alleen nog in een
+   * groep als "Etage 2 alles" zitten. Het huis kan ze nergens tonen; ze weer
+   * aanzetten in Home Assistant, of in een eigen Hue-zone, maakt ze zichtbaar.
+   */
+  readonly onvindbaar: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
 }
 
 const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2 };
@@ -207,6 +222,7 @@ interface LightGroup {
   readonly naam: string;
   readonly leden: readonly string[];
   readonly hue: boolean;
+  readonly overzicht: boolean;
 }
 
 interface Context {
@@ -215,7 +231,20 @@ interface Context {
   readonly groups: readonly LightGroup[];
   /** Per lamp die niet los in het huis staat, de groep die hem als één lamp toont. */
   readonly successors: ReadonlyMap<string, string>;
+  /** Uitgezette of verborgen lampen die alleen in een overzichtsgroep zitten. */
+  readonly unreachable: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
 }
+
+/** De namen die een lamp in de registers heeft, van algemeen naar eigen; de laatste wint. */
+function registryNames(e: HaRegistryEntity, devices: ReadonlyMap<string, HaDevice>): string[] {
+  const dev = e.device_id ? devices.get(e.device_id) : undefined;
+  return [dev?.name, dev?.name_by_user, e.original_name, e.name].filter(
+    (n): n is string => typeof n === 'string' && n.trim() !== '',
+  ).map((n) => n.trim());
+}
+
+/** "Etage 2 alles", "Alles", `light.bg_alles`: een groep die een heel gebied schakelt. */
+const OVERVIEW = /\b(alles|alle|all)\b/i;
 
 /**
  * De lampgroepen: een groep van Home Assistant somt zijn lampen op als
@@ -223,23 +252,24 @@ interface Context {
  * Een uitgezette lamp heeft geen toestand; zijn naam staat dan alleen nog in de
  * registers, bij de entiteit of bij het apparaat (Hue noemt de lamp zoals het
  * apparaat heet).
+ *
+ * Een overzichtsgroep is een groep die een heel gebied schakelt: zijn naam zegt
+ * "alles", of hij bevat zelf groepen. Die is nooit een lamp; alles uit op een
+ * etage of in het hele huis doet de app zelf, met de lampen uit de indeling.
  */
 function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>): LightGroup[] {
   const byName = new Map<string, string>();
   const devices = new Map(registers.devices.map((d) => [d.id, d]));
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('light.')) continue;
-    const dev = e.device_id ? devices.get(e.device_id) : undefined;
-    for (const n of [dev?.name, dev?.name_by_user, e.original_name, e.name]) {
-      if (typeof n === 'string' && n.trim() !== '') byName.set(n.trim().toLowerCase(), e.entity_id);
-    }
+    for (const n of registryNames(e, devices)) byName.set(n.toLowerCase(), e.entity_id);
   }
   for (const [id, st] of states) {
     if (!id.startsWith('light.')) continue;
     const n = st.attributes['friendly_name'];
     if (typeof n === 'string') byName.set(n.trim().toLowerCase(), id);
   }
-  const out: LightGroup[] = [];
+  const out: Omit<LightGroup, 'overzicht'>[] = [];
   for (const [id, st] of states) {
     if (!id.startsWith('light.')) continue;
     const members = st.attributes['entity_id'];
@@ -255,7 +285,11 @@ function lightGroups(registers: HouseRegisters, states: ReadonlyMap<string, HaEn
     if (!hue && !Array.isArray(members)) continue;
     out.push({ id, naam: friendly(st, id), leden, hue });
   }
-  return out;
+  const ids = new Set(out.map((g) => g.id));
+  return out.map((g) => ({
+    ...g,
+    overzicht: OVERVIEW.test(g.naam) || OVERVIEW.test(g.id.replace(/[._]/g, ' ')) || g.leden.some((m) => ids.has(m)),
+  }));
 }
 
 /** Alle apparaten die het huis toont, met hun gebied in Home Assistant. */
@@ -309,6 +343,8 @@ function collect(
    * (4 peren), niet de Hue-kamer "Woonkamer" (6). Grotere groepen blijven
    * context, en tellen nooit als lamp, anders telt een lamp dubbel. Een
    * uitgezette groep van Home Assistant is geen peer: die somt alleen lampen op.
+   * Een overzichtsgroep ("Etage 2 alles") is nooit een armatuur; een peer die
+   * alleen daarin zit, kan het huis niet tonen, en dat zegt het (`onvindbaar`).
    */
   const offstage = new Set(
     registers.entities
@@ -323,13 +359,19 @@ function collect(
   );
   const fixtures = new Set<string>();
   const successors = new Map<string, string>();
+  const unreachable: { id: string; naam: string; groepen: string[] }[] = [];
+  const devices = new Map(registers.devices.map((d) => [d.id, d]));
   for (const peer of offstage) {
-    const smallest = groups
-      .filter((g) => g.leden.includes(peer))
+    const containing = groups.filter((g) => g.leden.includes(peer));
+    const smallest = containing
+      .filter((g) => !g.overzicht)
       .sort((a, b) => a.leden.length - b.leden.length || Number(b.hue) - Number(a.hue))[0];
     if (smallest) {
       fixtures.add(smallest.id);
       successors.set(peer, smallest.id);
+    } else if (containing.length > 0) {
+      const e = registry.get(peer)!;
+      unreachable.push({ id: peer, naam: friendly(states.get(peer), registryNames(e, devices).at(-1) ?? peer), groepen: containing.map((g) => g.naam) });
     }
   }
   const majorityArea = (ids: readonly string[]): string | null => {
@@ -360,7 +402,8 @@ function collect(
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '');
     found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id), groepen: memberOf.get(e.entity_id) ?? [] });
   }
-  return { found, areaOf, groups, successors };
+  unreachable.sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  return { found, areaOf, groups, successors, unreachable };
 }
 
 const GROUP_WORDS = /\b(alles|alle|groep|lampen|lamp|licht|verlichting|all|hue)\b/g;
@@ -482,7 +525,7 @@ export function buildHouse(
   snapshot: DecisionView | null,
   saved: Layout | null = null,
 ): HouseReport {
-  const { found, groups, successors } = collect(config, registers, states, snapshot);
+  const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot);
   const base = saved ?? proposeLayout(config, registers, states);
   // Een lamp die sinds het indelen is uitgezet, geeft zijn plek door aan zijn groep.
   const deviceIds = new Set(found.map((f) => f.device.id));
@@ -502,11 +545,17 @@ export function buildHouse(
     groepen: readonly string[];
     voorstelKamer: string | null;
   }[] = [];
+  const hiddenIds = new Set(layout.verborgen ?? []);
+  const hidden: { id: string; naam: string; soort: DeviceKind }[] = [];
   for (const f of found) {
     const own = layout.apparaten[f.device.id];
     const room = own ? layout.kamers.find((k) => k.id === own.kamer) : f.haArea ? roomByArea.get(f.haArea) : undefined;
     const fromHa = shortName(f.haNaam, f.haArea ? (areaName.get(f.haArea) ?? null) : null);
     const naam = own?.naam ?? (room && room.naam !== areaName.get(f.haArea ?? '') ? shortName(fromHa, room.naam) : fromHa);
+    if (hiddenIds.has(f.device.id)) {
+      hidden.push({ id: f.device.id, naam, soort: f.device.soort });
+      continue;
+    }
     if (!room) {
       homeless.push({
         id: f.device.id,
@@ -550,11 +599,41 @@ export function buildHouse(
   }
 
   homeless.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
+  hidden.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
   return {
     indeling: saved ? 'eigen' : 'voorstel',
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     zonderRuimte: homeless,
-    lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue })),
+    lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue, overzicht: g.overzicht })),
+    verborgen: hidden,
+    onvindbaar: unreachable,
   };
+}
+
+/**
+ * De lampen die "alles uit" of een knop raakt (besluit 97): alleen wat het huis
+ * nu als lamp toont, dus nooit iets wat de bewoner verborg of wat in geen kamer
+ * staat. Null als het doel niet bestaat.
+ */
+export function lampsFor(
+  house: HouseReport,
+  doel: { readonly soort: 'lamp' | 'kamer' | 'etage' | 'huis'; readonly id: string | null },
+): string[] | null {
+  const lampsIn = (rooms: readonly HouseRoom[]) => rooms.flatMap((r) => r.apparaten.filter((d) => d.soort === 'licht').map((d) => d.id));
+  const rooms = house.etages.flatMap((f) => f.ruimtes);
+  switch (doel.soort) {
+    case 'huis':
+      return lampsIn(rooms);
+    case 'etage': {
+      const floor = house.etages.find((f) => f.id === doel.id);
+      return floor ? lampsIn(floor.ruimtes) : null;
+    }
+    case 'kamer': {
+      const room = rooms.find((r) => r.id === doel.id);
+      return room ? lampsIn([room]) : null;
+    }
+    case 'lamp':
+      return lampsIn(rooms).includes(doel.id ?? '') ? [doel.id as string] : null;
+  }
 }

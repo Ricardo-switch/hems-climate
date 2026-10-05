@@ -35,6 +35,7 @@ import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
+import { LightSwitch } from '../src/web/lights.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
@@ -128,6 +129,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let baseUrl: string;
   let layoutStore: LayoutStore;
   const pageErrors: string[] = [];
+  const lightCalls: string[] = [];
   const consoleErrors: string[] = [];
   const failedResponses: string[] = [];
 
@@ -157,6 +159,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
           layout: { store: layoutStore, proposal: () => proposeLayout(exampleSite, houseRegisters, houseStates) },
+          // Licht bedienen (besluit 97), met een Home Assistant die alleen onthoudt wat er kwam.
+          lights: new LightSwitch({
+            house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
+            call: async (service, ids) => {
+              lightCalls.push(`${service} ${ids.join(',')}`);
+            },
+          }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           write: () => {},
         });
@@ -233,6 +242,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
       const p = await context.newPage();
+      // Een stap die niet lukt, faalt met zijn eigen melding, ruim voor de 30 s van de test.
+      p.setDefaultTimeout(10_000);
       const errors: string[] = [];
       p.on('pageerror', (e) => errors.push(String(e)));
       // De lettertypen komen van buiten; zonder internet in de test is dat geen fout van de pagina.
@@ -259,18 +270,27 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#a-vragen button', { hasText: 'Wat doe je nu?' }).click();
       await p.locator('#a-gesprek .bel.hij').filter({ hasText: 'Ik kijk nog alleen mee' }).waitFor();
 
-      // Het huis als navigatie (ONTWERP §4): inzoomen tot een apparaat, en bedienen zegt wat er zou gebeuren.
+      // Het huis als navigatie (ONTWERP §4): inzoomen tot een apparaat. Licht schakelt
+      // (besluit 97); klimaat zegt wat er zou gebeuren.
       await p.goto(`${baseUrl}/nieuw.html#huis`);
       // Wat nergens hangt, staat erbij, tot het indelen hieronder het een kamer gaf.
       if (stand === 'portret') await p.locator('#hu-lijst .note').filter({ hasText: 'in geen ruimte' }).waitFor();
       // Op de plek, niet op de naam: het indelen hieronder hernoemt de etage.
       await p.locator('#hu-lijst a.room[href="#huis/etage/bg"]').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Het huis' }).waitFor();
+      // Alles uit op de etage: alleen de lampen die het huis daar toont.
+      lightCalls.length = 0;
+      await p.locator('#hu-lijst button', { hasText: 'Alle lampen uit' }).click();
+      await p.locator('#hu-lijst .knoppen span').filter({ hasText: 'Gaat uit' }).waitFor();
+      expect(lightCalls).toHaveLength(1);
+      expect(lightCalls[0]).toMatch(/^turn_off light\./);
+      expect(lightCalls[0]).not.toContain('etage2_alles');
       await p.locator('#hu-lijst a.room', { hasText: 'Woonkamer' }).click();
       await p.locator('#hu-titel').filter({ hasText: 'Woonkamer' }).waitFor();
       await p.locator('#hu-lijst .tegel', { hasText: 'Plafonnière' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Aan' }).click();
-      await p.locator('#hu-blad-zin').filter({ hasText: 'via Home Assistant' }).waitFor();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'gaat aan' }).waitFor();
+      expect(lightCalls.at(-1)).toBe('turn_on light.woonkamer_plafonniere');
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
@@ -288,7 +308,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await etage.fill('Beneden');
         await etage.press('Tab');
         await p.locator('#hu-bewerk-status').filter({ hasText: 'bewaard' }).waitFor();
-        // Wat nergens hing, krijgt een kamer.
+        // Wat nergens hing, kan uit de app, en weer terug.
+        await p.locator('#hu-lijst .rij', { hasText: 'light.zwerver' }).locator('button', { hasText: 'Niet tonen' }).click();
+        await p.locator('#hu-lijst .groep').filter({ hasText: 'NIET GETOOND (1)' }).waitFor();
+        await p.locator('#hu-lijst button', { hasText: 'Weer tonen' }).click();
+        await p.locator('#hu-lijst').filter({ hasNotText: 'NIET GETOOND' }).waitFor();
+        // En krijgt een kamer.
         await p.getByLabel('Kamer voor light.zwerver').selectOption({ label: 'Tuin (Buiten)' });
         await p.locator('#hu-lijst').filter({ hasNotText: 'NOG IN TE DELEN' }).waitFor();
         // Een kamer toevoegen op de begane grond, via de link: herladen zou de bewerkstand sluiten.
