@@ -276,7 +276,48 @@ function collect(
     found.push({ device, haNaam: friendly(states.get(id), id), haArea: areaOf(id), groepen: [] });
   }
 
-  // Lampen, zonder groepen: een groep somt lampen op die er al in staan.
+  /*
+   * Armaturen: een groep waarvan de lampen verborgen zijn, is één lamp.
+   *
+   * Wie de losse peren van een plafonnière verbergt in Home Assistant, ziet die
+   * plafonnière als één ding; zo staat hij ook in het huis. Per verborgen peer
+   * telt de kleinste groep waar hij in zit: de Hue-zone "Woonkamer plafonnière"
+   * (4 peren), niet de Hue-kamer "Woonkamer" (6). Grotere groepen blijven
+   * context, en tellen nooit als lamp, anders telt een lamp dubbel.
+   */
+  const hidden = new Set(
+    registers.entities
+      .filter((e) => e.entity_id.startsWith('light.') && e.hidden_by && !e.disabled_by && !groupIds.has(e.entity_id))
+      .map((e) => e.entity_id),
+  );
+  const fixtures = new Set<string>();
+  for (const peer of hidden) {
+    const smallest = groups
+      .filter((g) => g.leden.includes(peer))
+      .sort((a, b) => a.leden.length - b.leden.length || Number(b.hue) - Number(a.hue))[0];
+    if (smallest) fixtures.add(smallest.id);
+  }
+  const majorityArea = (ids: readonly string[]): string | null => {
+    const votes = new Map<string, number>();
+    for (const id of ids) {
+      const a = areaOf(id);
+      if (a) votes.set(a, (votes.get(a) ?? 0) + 1);
+    }
+    return [...votes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  };
+  for (const g of groups) {
+    if (!fixtures.has(g.id)) continue;
+    const s = states.get(g.id);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(g.id, s, '');
+    found.push({
+      device,
+      haNaam: g.naam,
+      haArea: areaOf(g.id) ?? majorityArea(g.leden),
+      groepen: (memberOf.get(g.id) ?? []).filter((n) => n !== g.naam),
+    });
+  }
+
+  // Losse lampen: niet verborgen, en zelf geen groep (een groep somt lampen op die er al in staan).
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('light.') || e.disabled_by || e.hidden_by) continue;
     if (groupIds.has(e.entity_id)) continue;

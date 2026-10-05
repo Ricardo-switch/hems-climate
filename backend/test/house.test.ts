@@ -52,11 +52,12 @@ describe('het voorstel uit Home Assistant', () => {
       ['klimaat', 'Airco woonkamer', 'koelen naar 22°'],
       ['klimaat', 'Nest (beneden)', 'uit'],
       ['screen', 'Screen', '60% dicht'],
+      ['licht', 'Keuken', 'aan · 50%'],
       ['licht', 'Plafonnière', 'aan · 70%'],
       ['licht', 'Sfeerverlichting', 'aan'],
     ]);
-    expect(wk.lampenAan).toBe(2);
-    expect(house.lampenAan).toBe(2);
+    expect(wk.lampenAan).toBe(3);
+    expect(house.lampenAan).toBe(3);
   });
 
   it('zet wat in geen gebied hangt bij "nog in te delen", met de kamer van zijn groep als voorstel', () => {
@@ -68,14 +69,22 @@ describe('het voorstel uit Home Assistant', () => {
 
   it('toont lampgroepen niet als lamp, maar zegt wel in welke groep een lamp zit, ook bij een Hue-kamer', () => {
     const all = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
-    expect(all.some((d) => d.id === 'light.hue_keuken' || d.id === 'light.tuin_alles')).toBe(false);
-    expect(all.find((d) => d.id === 'light.sfeerverlichting')!.groepen).toEqual(['Keuken']);
+    expect(all.some((d) => d.id === 'light.hue_sfeer' || d.id === 'light.tuin_alles')).toBe(false);
+    expect(all.find((d) => d.id === 'light.sfeerverlichting')!.groepen).toEqual(['Sfeer']);
     expect(all.find((d) => d.id === 'light.woonkamer_plafonniere')!.groepen).toEqual(['Woonkamer alles']);
     expect(house.lampgroepen.map((g) => [g.naam, g.hue])).toEqual([
       ['Woonkamer alles', false],
       ['Tuin alles', false],
       ['Keuken', true],
+      ['Sfeer', true],
     ]);
+  });
+
+  it('toont een groep met verborgen peren als één lamp, in de kamer van die peren', () => {
+    const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    const lamps = wk.apparaten.filter((d) => d.soort === 'licht').map((d) => [d.naam, d.stand]);
+    expect(lamps).toContainEqual(['Keuken', 'aan · 50%']);
+    expect(lamps.some(([n]) => String(n).startsWith('Keukentafel'))).toBe(false);
   });
 
   it('zet alles op de begane grond als Home Assistant geen etages kent, en buiten wat naar buiten klinkt', () => {

@@ -53,6 +53,7 @@ export const registers: HouseRegisters = {
     { id: 'd-screen', area_id: 'woonkamer' },
     { id: 'd-tuin', area_id: 'tuin' },
     { id: 'd-oprit', area_id: 'oprit' },
+    { id: 'd-keuken', area_id: 'woonkamer' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -71,6 +72,11 @@ export const registers: HouseRegisters = {
     entity('light.zwerver', 'd-nergens'),
     entity('light.tuin_alles', null),
     entity('light.hue_keuken', null),
+    // De keukenlamp: drie peren, verborgen achter de Hue-kamer "Keuken".
+    entity('light.keukentafel_1', 'd-keuken', { hidden_by: 'user' }),
+    entity('light.keukentafel_2', 'd-keuken', { hidden_by: 'user' }),
+    entity('light.keukentafel_3', 'd-keuken', { hidden_by: 'user' }),
+    entity('light.hue_sfeer', null),
   ],
 };
 
@@ -83,7 +89,12 @@ export const states = new Map<string, HaEntityState>([
   ['light.achtertuin', state('light.achtertuin', 'off', { friendly_name: 'Achtertuin' })],
   // Een groep die een lamp zonder gebied bevat, en een Hue-kamer die zijn lampen alleen bij naam noemt.
   ['light.tuin_alles', state('light.tuin_alles', 'off', { friendly_name: 'Tuin alles', entity_id: ['light.zwerver'] })],
-  ['light.hue_keuken', state('light.hue_keuken', 'on', { friendly_name: 'Keuken', is_hue_group: true, lights: ['Sfeerverlichting'] })],
+  ['light.hue_keuken', state('light.hue_keuken', 'on', { friendly_name: 'Keuken', is_hue_group: true, lights: ['Keukentafel 1', 'Keukentafel 2', 'Keukentafel 3'], brightness: 128 })],
+  ['light.keukentafel_1', state('light.keukentafel_1', 'on', { friendly_name: 'Keukentafel 1' })],
+  ['light.keukentafel_2', state('light.keukentafel_2', 'on', { friendly_name: 'Keukentafel 2' })],
+  ['light.keukentafel_3', state('light.keukentafel_3', 'on', { friendly_name: 'Keukentafel 3' })],
+  // Een Hue-zone met een zichtbare lamp: alleen context, geen armatuur.
+  ['light.hue_sfeer', state('light.hue_sfeer', 'on', { friendly_name: 'Sfeer', is_hue_group: true, lights: ['Sfeerverlichting'] })],
 ]);
 
 export const snapshot: DecisionView = {
