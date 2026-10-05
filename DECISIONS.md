@@ -90,6 +90,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [65. Wat het thermisch model nodig heeft, wordt nu al vastgelegd](#65-wat-het-thermisch-model-nodig-heeft-wordt-nu-al-vastgelegd)
 - [66. Bij elk besluit is na te gaan welke versie het nam](#66-bij-elk-besluit-is-na-te-gaan-welke-versie-het-nam)
 - [83. Ruwe data twee jaar, daarna samengevat](#83-ruwe-data-twee-jaar-daarna-samengevat)
+- [93. Hoe het huis en de panelen liggen, meet de app zelf; de bewoner bevestigt](#93-hoe-het-huis-en-de-panelen-liggen-meet-de-app-zelf-de-bewoner-bevestigt)
 
 **Weergave**
 
@@ -3636,6 +3637,78 @@ Adaptive Lighting), en Assist begrijpt "doe het licht aan" zelf. Daarom:
 *Wanneer:* zonwering na D, als het thermisch model laat zien wat een screen
 scheelt. Licht tonen en bedienen kan met de schermen (F). Vastleggen doet de
 dienst nu al.
+
+---
+
+## 93. Hoe het huis en de panelen liggen, meet de app zelf; de bewoner bevestigt
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Een plattegrond met een kompas, een zonneprognose, het maximum per zonnestand
+(90) en het thermisch model hebben allemaal nodig hoe het huis en de panelen
+liggen. Een bewoner weet dat zelden precies, en hoort het niet op te zoeken:
+geen kompasrichting, geen helling, geen wattpiek, geen omvormertype. Gekozen
+op 5 oktober 2026, op voorstel van de bewoner.
+
+*Besluit:*
+
+- **Twee vragen in de onboarding, met een tekening van het huis.** "Waar
+  liggen je panelen?" (dak aan de voorkant, aan de achterkant, beide kanten,
+  plat dak, weet ik niet) en "Hoeveel ongeveer?" (mag leeg). De ligging van het
+  huis komt uit Home Assistant, op één decimaal (90).
+- **De richting en helling van de panelen meet de app,** door de opbrengst per
+  minuut te vergelijken met de stand van de zon. Het moment van de piek zegt de
+  richting, de vorm van de dagcurve en later het verschil tussen de seizoenen
+  de helling. Alleen de heldere momenten tellen (de bovenkant van de metingen).
+  Een brede, platte curve wijst op twee vlakken, zoals oost en west, en dan
+  zoekt hij er twee.
+- **Het vermogen ook:** de wattpiek, en of de omvormer de piek afkapt. Een
+  afgekapte piek telt niet mee voor de richting.
+- **De richting van de gevels** volgt uit een zonnesensor op die gevel, zoals
+  die van de screen (92). Een gevel staat rechtop, dus de piek zegt de richting
+  meteen. Met de antwoorden van de bewoner (de panelen liggen aan de
+  achterkant) geeft dat het kompas van het hele huis, en de twee metingen
+  controleren elkaar.
+- **De bewoner bevestigt,** in gewone woorden: "Je panelen liggen ongeveer op
+  het zuiden, helling rond 35°, samen zo'n 2,4 kWp. Klopt dat?" Met een knop om
+  het te verbeteren. Wat hij verbetert, wint van de meting; wat de meting later
+  anders ziet, wordt een vraag en geen stille wijziging.
+- **Zekerheid hoort erbij.** Na een paar heldere dagen is de richting
+  betrouwbaar, de helling en het vermogen na een paar weken. Tot dan zegt de
+  app "ongeveer" en hoeveel heldere dagen hij nog nodig heeft.
+
+*De eerste poging in dit huis (5 oktober, drie dagen per minuut):* de richting
+is ongeveer het zuiden; op de rustigste dagen lag de piek rond 13:35 tot 13:55,
+met de zon op het zuiden. De helling is nog niet te zeggen: te veel wolken en
+te kort. Om 09:25 al 1.084 W wijst misschien op een oostelijke kant. Opnieuw na
+een paar heldere dagen, samen met de gevel uit de zonnesensor van de screen.
+
+*Waar het naartoe gaat: de voorspelling (E met D).* Met de ligging wordt het
+weerbericht een voorspelling voor dit huis:
+
+- **Zonnestroom:** de voorspelde instraling (bewolking, of direct de instraling
+  op een schuin vlak) op het vlak van de panelen, maal het gemeten vermogen, en
+  bijgesteld met wat het huis zelf leerde: het maximum per zonnestand, en hoe
+  vaak de voorspelling er voor dit dak naast zat.
+- **Warmte door de ramen:** dezelfde instraling op elke gevel, met de stand van
+  de screens. Dat is invoer voor het thermisch model.
+- **Samen:** het thermisch model rekent met de voorspelde buitentemperatuur, de
+  zon op de gevels en wat de regeling van plan is, hoe warm elke kamer wordt.
+  Daar komt het plan van `Wand-Plan` uit: "om 10:30 de screens dicht", "tussen
+  12:00 en 14:00 voorkoelen op zon".
+- **Eerst bewezen in de replay:** de voorspelling naast wat er werkelijk
+  gebeurde, over een winter. De app laat zien hoe vaak hij ernaast zat ("Hoe
+  zeker ben ik?").
+
+*Welk weerbericht* is een besluit voor E. Home Assistant heeft er al twee
+(`weather.home` van Met.no en `weather.buienradar`), met bewolking en
+temperatuur per uur, maar geen instraling. Een dienst als Open-Meteo levert de
+instraling op een schuin vlak voor een opgegeven helling en richting, en bewaart
+oude voorspellingen, zodat de replay ook achteraf kan toetsen. Dat vraagt een
+verbinding naar buiten, met alleen de afgeronde ligging.
+
+*Wanneer:* de vragen bij de onboarding (F), de meting zodra er een paar heldere
+weken zijn, de voorspelling met E en D.
 
 ---
 
