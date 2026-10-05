@@ -56,6 +56,7 @@ export const registers: HouseRegisters = {
     { id: 'd-keuken', area_id: 'woonkamer' },
     { id: 'd-badspot-1', area_id: 'badkamer', name: 'Badkamer spot 1' },
     { id: 'd-badspot-2', area_id: 'badkamer', name: 'Hue spot', name_by_user: 'Badkamer spot 2' },
+    { id: 'd-zolderspot', area_id: 'zolder', name: 'Zolderspot' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -85,6 +86,9 @@ export const registers: HouseRegisters = {
     entity('light.hue_badkamer', null),
     // Een uitgezette groep van Home Assistant, nog genoemd in "Tuin alles".
     entity('light.oude_groep', null, { disabled_by: 'user', platform: 'group' }),
+    // Een uitgezette spot die alleen nog in "Etage 2 alles" zit: die groep is geen lamp.
+    entity('light.zolder_spot', 'd-zolderspot', { disabled_by: 'user' }),
+    entity('light.etage2_alles', null, { platform: 'group' }),
   ],
 };
 
@@ -104,6 +108,7 @@ export const states = new Map<string, HaEntityState>([
   // Een Hue-zone met een zichtbare lamp: alleen context, geen armatuur.
   ['light.hue_sfeer', state('light.hue_sfeer', 'on', { friendly_name: 'Sfeer', is_hue_group: true, lights: ['Sfeerverlichting'] })],
   // Een Hue-kamer met alleen uitgezette lampen: die is zelf de lamp.
+  ['light.etage2_alles', state('light.etage2_alles', 'on', { friendly_name: 'Etage 2 alles', entity_id: ['light.zolder_spot'] })],
   ['light.hue_badkamer', state('light.hue_badkamer', 'off', { friendly_name: 'Badkamer', is_hue_group: true, lights: ['Badkamer spot 1', 'Badkamer spot 2'] })],
 ]);
 

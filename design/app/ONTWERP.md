@@ -241,7 +241,8 @@ plattegrond. De plattegrond wacht op de indeling (zie hieronder).
 **Wat ervoor nodig is.** De etages en kamers uit Home Assistant (72). Bedienen
 schrijft, dus pas in B voor klimaat en screens, en met de integratie van
 besluit 91 voor alles, onder de inlog van Home Assistant. Tot dan toont de
-app alleen.
+app alleen. Behalve licht: lampen aan en uit, en alle lampen uit per kamer,
+etage of huis, kan sinds 5 oktober 2026 al in de proef (besluit 97).
 
 **Uitleggen hoe het werkt.** `Wand-Inzoomen` is uitleg, geen scherm. In de app
 laat het huis het zelf zien: de eerste keer één korte tip op het echte huis

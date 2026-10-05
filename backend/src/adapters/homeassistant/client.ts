@@ -54,6 +54,13 @@ export interface HaClientOptions {
    * Zonder deze vlag werpt `callService` en komt er niets bij HA terecht.
    */
   readonly allowWrites?: boolean;
+  /**
+   * Of deze client lampen mag aan- en uitzetten, ook als `allowWrites` uit staat
+   * (besluit 97). Precies `light.turn_on` en `light.turn_off`, en alleen op
+   * `light.`-entiteiten; elke andere dienst blijft werpen. Klimaat en screens
+   * kunnen hier dus niet doorheen.
+   */
+  readonly allowLights?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   readonly reconnectMaxMs?: number;
@@ -65,6 +72,19 @@ type Pending = {
 };
 
 const WS_PATH = '/api/websocket';
+
+/**
+ * Een aanroep die alleen lampen raakt: `light.turn_on` of `light.turn_off`, met
+ * als doel uitsluitend een of meer `light.`-entiteiten. Geen gebied, apparaat of
+ * label als doel, want daar kan van alles onder hangen.
+ */
+function isLightCall(domain: string, service: string, target: Record<string, unknown>): boolean {
+  if (domain !== 'light' || (service !== 'turn_on' && service !== 'turn_off')) return false;
+  if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const ids = target['entity_id'];
+  const list = Array.isArray(ids) ? ids : [ids];
+  return list.length > 0 && list.every((id) => typeof id === 'string' && /^light\.[a-z0-9_]+$/.test(id));
+}
 
 /**
  * Zet een http(s)- of ws(s)-URL om naar het websocket-eindpunt van HA.
@@ -97,8 +117,9 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights'>> & {
     allowWrites: boolean;
+    allowLights: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -113,6 +134,7 @@ export class HaClient extends EventEmitter {
       url: options.url,
       token: options.token,
       allowWrites: options.allowWrites ?? false,
+      allowLights: options.allowLights ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
@@ -120,6 +142,10 @@ export class HaClient extends EventEmitter {
 
   get writesAllowed(): boolean {
     return this.#options.allowWrites;
+  }
+
+  get lightsAllowed(): boolean {
+    return this.#options.allowLights;
   }
 
   connect(): void {
@@ -294,7 +320,8 @@ export class HaClient extends EventEmitter {
 
   /**
    * Roept een dienst aan in Home Assistant. Werpt zolang `allowWrites` uit
-   * staat — in schaduwmodus is dat de bedoeling.
+   * staat — in schaduwmodus is dat de bedoeling. De enige uitzondering is licht
+   * (`allowLights`), zie `isLightCall`.
    */
   async callService(
     domain: string,
@@ -302,7 +329,7 @@ export class HaClient extends EventEmitter {
     data: Record<string, unknown>,
     target: Record<string, unknown>,
   ): Promise<void> {
-    if (!this.#options.allowWrites) {
+    if (!this.#options.allowWrites && !(this.#options.allowLights && isLightCall(domain, service, target))) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +
           'Zet allowWrites expliciet aan om deze adapter te laten schakelen.',

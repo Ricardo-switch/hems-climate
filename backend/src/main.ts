@@ -27,6 +27,7 @@ import {
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
+import { LightSwitch } from './web/lights.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -302,6 +303,9 @@ const client = new HaClient({
   token: token!,
   // Schaduwmodus: expliciet geen schrijfrechten.
   allowWrites: false,
+  // Behalve lampen aan en uit vanuit de app, als dat mag (besluit 97). De client
+  // laat dan precies light.turn_on en light.turn_off op lampen door, niets anders.
+  allowLights: startup.lights.enabled,
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -448,6 +452,27 @@ const layoutStore =
     : null;
 void layoutStore?.load();
 
+const houseReport = () =>
+  siteConfig && houseRegisters
+    ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null, layoutStore?.current ?? null)
+    : null;
+
+/*
+ * Licht bedienen (besluit 97): alleen de lampen die het huis toont, en alleen
+ * aan en uit. Smart Climate regelt het licht niet (92); dit is een knop.
+ */
+if (startup.lights.withoutIngress) {
+  console.warn('LET OP: licht bedienen staat aan zonder Ingress ervoor.');
+  console.warn('  Iedereen die deze weergave kan openen, kan je lampen schakelen.');
+  console.warn('  Zet HEMS_LIGHTS=0 als je dat niet wilt.');
+}
+const lightSwitch = startup.lights.enabled
+  ? new LightSwitch({
+      house: houseReport,
+      call: (service, entityIds, data) => client.callService('light', service, data, { entity_id: [...entityIds] }),
+    })
+  : null;
+
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
@@ -460,10 +485,8 @@ if (webPort != null) {
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
     location: () => location,
-    house: () =>
-      siteConfig && houseRegisters
-        ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null, layoutStore?.current ?? null)
-        : null,
+    house: houseReport,
+    ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(layoutStore && siteConfig
       ? {
           layout: {
@@ -500,7 +523,7 @@ console.log(
   `  bewaking         ${startup.watchdogMinutes > 0 ? `afsluiten na ${startup.watchdogMinutes} min zonder besluit` : 'uit'}`,
 );
 console.log(`  logboek          ${logDir}/decisions-JJJJ-MM-DD.ndjson`);
-console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : 'uit'}`);
+console.log(`  schrijfrechten   ${client.writesAllowed ? 'AAN' : client.lightsAllowed ? 'alleen licht aan/uit (besluit 97)' : 'uit'}`);
 console.log(
   `  webweergave      ${
     webPort == null

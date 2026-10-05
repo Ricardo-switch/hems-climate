@@ -274,6 +274,42 @@ describe('schrijfbeveiliging', () => {
       client.callService('climate', 'turn_off', {}, { entity_id: 'climate.beneden' }),
     ).rejects.toThrow(/Schrijven staat uit/);
   });
+
+  it('laat met allowLights alleen light.turn_on en light.turn_off op lampen door', async () => {
+    const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowLights: true });
+    expect(client.writesAllowed).toBe(false);
+    expect(client.lightsAllowed).toBe(true);
+    const refused: [string, string, Record<string, unknown>][] = [
+      ['climate', 'turn_off', { entity_id: 'climate.beneden' }],
+      ['cover', 'close_cover', { entity_id: 'cover.screen' }],
+      ['light', 'toggle', { entity_id: 'light.hal' }],
+      ['light', 'turn_off', { entity_id: 'climate.beneden' }],
+      ['light', 'turn_off', { entity_id: ['light.hal', 'switch.pomp'] }],
+      ['light', 'turn_off', { area_id: 'woonkamer' }],
+      ['light', 'turn_off', { entity_id: 'light.hal', area_id: 'woonkamer' }],
+      ['light', 'turn_off', { entity_id: [] }],
+      ['homeassistant', 'turn_off', { entity_id: 'light.hal' }],
+    ];
+    for (const [domain, service, target] of refused) {
+      await expect(client.callService(domain, service, {}, target), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
+    }
+  });
+
+  it('stuurt een toegestane lichtopdracht echt naar Home Assistant', async () => {
+    const ha = await startFakeHa({});
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN, allowLights: true });
+    cleanups.push(() => client.close());
+    const ready = new Promise((resolve) => client.on('ready', resolve));
+    client.connect();
+    await ready;
+    await client.callService('light', 'turn_off', {}, { entity_id: ['light.hal', 'light.trap'] });
+    expect(ha.received.find((m) => m['type'] === 'call_service')).toMatchObject({
+      domain: 'light',
+      service: 'turn_off',
+      target: { entity_id: ['light.hal', 'light.trap'] },
+    });
+  });
 });
 
 describe('EntityStore', () => {

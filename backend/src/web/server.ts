@@ -34,6 +34,7 @@ import { ask, parseQuestion } from './assistant.js';
 import { sunReport, type Location } from './sun.js';
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
+import type { LightSwitch } from './lights.js';
 import { startOfLocalDay } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -136,6 +137,12 @@ export interface WebOptions {
     /** Het voorstel uit Home Assistant, of null zolang de registers niet gelezen zijn. */
     readonly proposal: () => Layout | null;
   };
+  /**
+   * Licht bedienen (besluit 97), of weg wanneer dat niet mag. Zelfde schakelaar
+   * als de indeling: zonder dit object bestaat de route niet, en staat de muur er
+   * ook voor `/api/licht`.
+   */
+  readonly lights?: LightSwitch;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -323,10 +330,12 @@ export class WebServer {
     // De tweede deur (besluit 84): gevoel en toelichting, naar een eigen
     // bestand in de logmap en nooit naar Home Assistant.
     // De derde (besluit 96): de indeling, naar een eigen bestand in de logmap.
+    // De vierde (besluit 97): lampen aan en uit, en alleen lampen.
     const mayWrite =
       (this.#options.onboarding != null && path === '/api/onboarding') ||
       (this.#options.feedback != null && path === '/api/gevoel') ||
-      (this.#options.layout != null && path === '/api/indeling');
+      (this.#options.layout != null && path === '/api/indeling') ||
+      (this.#options.lights != null && path === '/api/licht');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
       res.writeHead(405, {
         allow: mayWrite ? 'GET, HEAD, POST' : 'GET, HEAD',
@@ -547,7 +556,31 @@ export class WebServer {
         sendJson(res, 503, { wachten: 'de etages en ruimtes komen van Home Assistant zodra die verbonden is' });
         return;
       }
-      sendJson(res, 200, house);
+      // Of de knoppen voor licht echt schakelen, of zeggen dat het nog niet mag.
+      sendJson(res, 200, { ...house, lichtBedienen: this.#options.lights != null });
+      return;
+    }
+
+    if (path === '/api/licht') {
+      const lights = this.#options.lights;
+      if (lights == null) {
+        sendJson(res, 503, { wachten: 'licht bedienen staat niet aan' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 405, { fout: 'licht bedien je met een POST' });
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await lights.switch(body);
+      if (result.ok) sendJson(res, 200, { lampen: result.lampen });
+      else sendJson(res, result.status, { fout: result.reden });
       return;
     }
 
