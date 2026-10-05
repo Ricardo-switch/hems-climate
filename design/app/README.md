@@ -1,7 +1,7 @@
 # De bewonersapp: de maatstaf
 
 Schetsen van hoe Smart Climate eruitziet voor wie erin woont: zeven
-telefoonschermen en negen schermen voor een tablet aan de muur, waarvan drie voor de winter. Besluit 71 maakt
+telefoonschermen en twaalf schermen voor een tablet aan de muur, waarvan drie voor de winter en drie voor het inzoomen. Besluit 71 maakt
 ze de maatstaf voor stap F (het bewonersdashboard) en G (de assistent): wat
 gebouwd wordt, wordt hiernaast gelegd.
 
@@ -33,6 +33,7 @@ basis van de echte app (besluit 76).
 | Telefoon · Kamers | `Kamers.dc.html` | Kamers per etage, apparaten aanpassen, verplaatsen of uit de regeling halen, en een voorstel uit Home Assistant |
 | Wand · Kamer | `Wand-Kamer.dc.html` | Eén kamer zelf bedienen, en wat er gebeurt als de bewoner het overneemt (besluit 74) |
 | Wand · Thuis, Plan en Kamer in de winter | `Wand-Thuis-winter.dc.html`, `Wand-Plan-winter.dc.html`, `Wand-Kamer-winter.dc.html` | Een koude dag: cv en radiatoren, de airco als warmtepomp op zon, voorverwarmen; voorbeeldgetallen, gemarkeerd op het scherm |
+| Het huis als navigatie | `Wand-Inzoomen.dc.html`, `Wand-Etage.dc.html`, `Wand-Ruimte.dc.html`, `Etage.dc.html`, `Ruimte.dc.html` | Inzoomen van huis naar etage naar ruimte, met lampen en screens erin; een apparaat aantikken om het te bedienen (ONTWERP §4) |
 
 `screens/` heeft van elk scherm een screenshot, en `Wand-aan-de-muur.png`
 laat het Thuis-scherm zien op een tablet aan de muur.
