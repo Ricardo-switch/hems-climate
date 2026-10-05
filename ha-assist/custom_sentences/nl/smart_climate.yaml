@@ -1,65 +1,103 @@
 # Smart Climate: de zinnen voor de assistent die uitlegt.
 # Hoort in de map custom_sentences/nl/ van Home Assistant.
+#
+# [woord] mag je weglaten, (a|b) is het een of het ander. Hoofdletters en
+# leestekens maken niet uit. Na een wijziging: Ontwikkelhulpmiddelen → Acties →
+# "Conversation: Reload" (conversation.reload), of herstart.
+#
+# Bewust niet: zinnen die Home Assistant zelf ook kent en dan uitvoert, zoals
+# "zet de zolder uit" of "zet de airco zolder op 21". Dan schakelt Assist echt,
+# buiten de arbiter om (ONTWERP §7, valkuil).
 language: "nl"
+
+expansion_rules:
+  kamer: "[de|het] {kamer}"
+  in_kamer: "[in|op|van] [de|het] {kamer}"
+  sc: "(je|jij|smart climate|het systeem|de regeling|het klimaat)"
+  nu: "[nu|op dit moment|momenteel|eigenlijk]"
+  panelen: "[de] (zonnepanelen|panelen)"
+
 intents:
   SmartClimateNu:
     data:
       - sentences:
-          - "wat doe je nu"
-          - "wat doe jij nu"
-          - "wat doet smart climate [nu]"
-          - "hoe staat [het met] het klimaat"
+          - "wat (doe|doet) <sc> <nu>"
+          - "wat (ben je|is smart climate) <nu> aan het doen"
+          - "hoe staat [het] [er] [met] (het klimaat|het huis|de regeling|de airco's|de verwarming) [ervoor] <nu>"
+          - "(geef|vertel) [me] [een] [kort] (overzicht|status|update) [van] [het klimaat|het huis]"
+          - "klimaat status"
+          - "status [van het] klimaat"
+          - "wat (draait|staat aan|is er aan de hand) [er] <nu>"
+          - "wat gebeurt er <nu> [in huis]"
 
   SmartClimateWaarom:
     data:
       - sentences:
-          - "waarom (draait|koelt|verwarmt) [de] {kamer} [niet]"
-          - "waarom staat [de] {kamer} [niet] aan"
-          - "waarom staat [de] airco [op] [de] {kamer} [niet] aan"
-          - "wat doet [de] {kamer}"
-          - "hoe staat [het met] [de] {kamer}"
+          - "waarom (draait|koelt|verwarmt|staat) <kamer> [niet] [aan|uit] <nu>"
+          - "waarom (draait|koelt|verwarmt|staat) de (airco|verwarming|thermostaat) <in_kamer> [niet] [aan|uit] <nu>"
+          - "waarom (is|wordt) het [zo] (warm|koud|heet|fris) <in_kamer>"
+          - "waarom gebeurt er [niets|niks|iets] <in_kamer>"
+          - "waarom (doe|doet) <sc> [niets|niks] <in_kamer>"
+          - "wat (doet|is er met) [de airco] <in_kamer>"
+          - "hoe staat [het] [er] [met] <kamer> [ervoor]"
+          - "(leg|vertel) [me] [eens] uit (wat|waarom) [er] <in_kamer> [gebeurt|draait]"
+          - "waarom <kamer>"
+          - "uitleg <kamer>"
 
   SmartClimateStraks:
     data:
       - sentences:
-          - "wat ga je straks doen"
-          - "wat ga je [hierna|vanavond] doen"
-          - "wat is het plan"
+          - "wat (ga je|gaat smart climate|gaat de regeling) [straks|vanavond|vannacht|hierna|vandaag|zo] doen"
+          - "wat (is|zijn) [het|je] plan[nen] [voor] [straks|vanavond|vannacht|vandaag]"
+          - "wat komt er [straks|hierna]"
+          - "wanneer (ga je|gaat het|gaat de regeling) naar [de] (nacht|nachtstand|dag|dagstand)"
+          - "wat (staat er|is er) gepland"
 
   SmartClimateZon:
     data:
       - sentences:
-          - "hoeveel zon [hebben we] vandaag"
-          - "hoeveel hebben de [zonne]panelen vandaag [op]geleverd"
-          - "wat leveren de [zonne]panelen"
+          - "hoeveel (zon|zonnestroom|stroom|energie) [hebben we|heb ik|is er] vandaag [opgewekt|geleverd|gehad|gemaakt]"
+          - "hoeveel (hebben|leveren|leverden) <panelen> [vandaag] [al] [op]geleverd"
+          - "wat (leveren|doen|deden) <panelen> <nu>"
+          - "[wat is de] opbrengst [van] <panelen> [vandaag]"
+          - "hoeveel (lever ik|leveren we|leverden we) [vandaag] terug"
+          - "hoe (gaat het met|staat het met) <panelen>"
+          - "zonnestroom [vandaag]"
 
+  # Een opdracht. Tijdens de schaduw zegt de dienst wat hij zou doen, en dat
+  # hij nog niet mag schakelen. Er gaat niets naar de airco.
   SmartClimateDoe:
     data:
       - sentences:
-          - "koel [de] {kamer} [naar {temperatuur} [graden]]"
-          - "zet [de] {kamer} op koelen [naar {temperatuur} [graden]]"
+          - "koel <kamer> [af] [naar|op|tot] [{temperatuur} [graden]]"
+          - "maak <kamer> (koeler|kouder|koel|frisser)"
+          - "(kan|wil) <sc> <kamer> [even] (koelen|afkoelen) [naar|tot] [{temperatuur} [graden]]"
+          - "laat <kamer> [even] (koelen|afkoelen) [naar|tot] [{temperatuur} [graden]]"
         slots:
           wens: koelen
       - sentences:
-          - "verwarm [de] {kamer} [naar {temperatuur} [graden]]"
-          - "zet [de] {kamer} op verwarmen [naar {temperatuur} [graden]]"
+          - "verwarm <kamer> [naar|op|tot] [{temperatuur} [graden]]"
+          - "maak <kamer> (warmer|warm)"
+          - "(kan|wil) <sc> <kamer> [even] (verwarmen|opwarmen) [naar|tot] [{temperatuur} [graden]]"
+          - "laat <kamer> [even] (verwarmen|opwarmen) [naar|tot] [{temperatuur} [graden]]"
         slots:
           wens: verwarmen
-      # Bewust geen "zet de zolder uit": die zin kent Home Assistant zelf ook,
-      # en dan zet Assist de apparaten in dat gebied echt uit, buiten de
-      # arbiter om (ONTWERP §7, valkuil).
       - sentences:
-          - "mag [de] {kamer} uit"
-          - "smart climate zet [de] {kamer} uit"
+          - "mag <kamer> uit"
+          - "smart climate zet <kamer> uit"
+          - "(kan|mag) de airco <in_kamer> uit"
         slots:
           wens: uit
 
 lists:
   kamer:
     values:
-      - woonkamer
-      - badkamer
-      - zolder
+      - in: "(woonkamer|huiskamer|beneden|keuken)"
+        out: woonkamer
+      - in: "(badkamer|douche)"
+        out: badkamer
+      - in: "(zolder|boven|zolderkamer)"
+        out: zolder
   temperatuur:
     range:
       from: 10
