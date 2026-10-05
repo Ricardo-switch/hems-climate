@@ -246,6 +246,63 @@ als de verbinding wegvalt.
 - Spreken op de wand: waarschijnlijk via Assist van Home Assistant. **Open**:
   of het wekwoord betrouwbaar genoeg werkt op een tablet.
 
+### Van uitleggen naar schakelen
+
+**Voorstel**, 5 oktober 2026. Een assistent zonder taalmodel kan het grootste
+deel: vaste zinnen herkennen, en antwoorden die een sjabloon zijn over het
+besluit, en dus altijd waar. Het model is alleen nodig voor open vragen (44).
+Daarom in twee fasen, elk op zichzelf bruikbaar.
+
+**Fase 1: uitleggen, tijdens de schaduw (nu tot B).** Alles leest alleen; er
+komt geen deur bij die schrijft, en Home Assistant krijgt geen opdracht.
+
+1. **Uitleg in woorden.** Per kamer en apparaat een zin uit het
+   `Explanation`-object ("De zolder koelt op zon: 1,2 kW over, 24,3°"), in de
+   dienst, als deel van het bewonerscontract (76), in Nederlands en Engels (86).
+   Klaar als een test bewijst dat elk getal in elke zin uit het besluit komt
+   (88).
+2. **Vaste vragen.** "Waarom draait de zolder (niet)?", "Wat doe je nu?", "Wat
+   ga je straks doen?", "Hoeveel zon vandaag?" Eén leesroute in de dienst, met
+   een vaste set vragen; elke vraag heeft een antwoord, ook "dat weet ik niet".
+3. **Assist stelt de vraag.** Een eigen zin in Home Assistant gaat naar die
+   leesroute, en Assist spreekt het antwoord uit. Assist schakelt hierbij niets.
+4. **Wat ik zou doen.** "Zet de zolder op 21" krijgt een eerlijk antwoord: "Dat
+   zou ik nu doen, maar ik mag nog niet schakelen." Assist geeft de opdracht
+   door en voert hem niet zelf uit.
+
+**Fase 2: schakelen, in B via de arbiter.**
+
+1. **Ingrepen aansluiten.** De `OverrideDetector` (74) komt in de draaiende
+   dienst.
+2. **De opdrachtroute.** Eén route die schrijft: kamer of apparaat, wens,
+   eindtijd. De opdracht wordt een ingreep van de bewoner; de arbiter bewaakt de
+   failsafe en de rusttijd, de dienst stuurt het apparaat (75). Achter Ingress,
+   of achter een sleutel die alleen Home Assistant heeft (77, 80); tests
+   bewijzen dat de muur verder staat.
+3. **Assist geeft de opdracht door,** nu echt, naar die route.
+4. **Tot hoe laat.** Zonder antwoord het volgende dagdeel (74), en de
+   assistent zegt het erbij: "Tot vanavond. Zeg 'tot ik het teruggeef' als het
+   langer mag." Of Assist zonder model een echte vervolgvraag kan stellen, moet
+   nog worden nagegaan.
+5. **Bevestigen wat er gebeurde,** uit het volgende besluit van de arbiter
+   (75): meteen, of "over drie minuten, de airco moet eerst rusten".
+6. **De knoppen in de app** gebruiken dezelfde route; die wordt één keer
+   gebouwd.
+
+**Daarna.** E maakt het voorstel voor later beter ("nu, of om 15:00 met zon?"),
+D laat hem zeggen hoe lang iets duurt ("over 40 minuten 21°"), en G voegt het
+taalmodel toe voor open vragen.
+
+Waarom deze volgorde: als B begint, is het uitleggende deel al een winter lang
+getoetst op echte besluiten, en komt er in B alleen de route bij die de app toch
+al nodig heeft.
+
+**Valkuil.** Assist van Home Assistant schakelt uit zichzelf, buiten de
+arbiter om. Dan valt de vraag "tot hoe laat" weg, en de bescherming van de
+rusttijd ook; de detector van 74 ziet het pas achteraf als ingreep. Voor de
+assistent herkent Assist daarom alleen de zin, en geeft hij hem door aan de
+dienst (een eigen intentie, `intent_script` naar de API).
+
 ### Sluipverbruik
 
 **Voorstel**, na de analyse van 2 oktober 2026. Geen klimaat, wel energie-inzicht
@@ -299,16 +356,20 @@ toelichting als invoer (D).
 1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. Naast de
    schaduwpagina staat een prototype in deze ontwerptaal, op live data en alleen
    lezen: `nieuw.html` (Thuis, Waarom, Opbrengst, Bediening; portret en
-   landschap). Het is niet de basis van F (76). Open vraag: gevoel en toelichting deze winter al vastleggen.
+   landschap). Het is niet de basis van F (76). Gevoel en toelichting legt het
+   deze winter al vast (84). De assistent die alleen uitlegt (§7, fase 1) kan in
+   deze periode.
 2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner
    zelf ingrijpt (74). De Bediening krijgt "wie stuurt", de wand het scherm Kamer.
+   De opdrachtroute voor knoppen en assistent (§7, fase 2).
 3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
    daarna Kamers en de onboarding als schermen.
 4. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
    op het Leren-scherm, en Plan.
 5. **Stap E:** weer en tarieven; Plan wordt compleet.
 6. **Stap F:** de schermen, naast de schetsen gelegd.
-7. **Stap G:** de assistent.
+7. **Stap G:** het taalmodel voor open vragen; de rest van de assistent is er
+   dan al (§7).
 
 ## 10. Nog niet doordacht
 
@@ -332,3 +393,10 @@ toegankelijk en tweetalig (86), en donker met een eigen accentkleur (87).
   voor dat aantal fasen (1 × 35 A of 3 × 25 A) en zegt hij dat erbij: liever
   een airco die iets later start dan een zekering die eruit vliegt.
 - **De naam en het logo van de app.** Nu een plaatshouder.
+- **Opdrachten aan de assistent deze winter vastleggen?** In fase 1 (§7) zegt
+  hij alleen wat hij zou doen. Die opdrachten bewaren zou laten zien wat
+  bewoners willen, maar vraagt een tweede deur die schrijft, zoals bij het
+  gevoel (84). Vraagt een eigen besluit.
+- **Waar het taalmodel draait** (G): de bewoner koppelt zelf een model in Home
+  Assistant, een lokaal model op een NAS of pc, of een dienst van ons. Geen
+  besluit nodig vóór G.
