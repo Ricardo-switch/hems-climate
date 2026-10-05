@@ -274,7 +274,8 @@ komt geen deur bij die schrijft, en Home Assistant krijgt geen opdracht.
 komen uit `backend/src/web/assistant.ts`, de vragen gaan via `GET /api/vraag`,
 en een test eist voor duizend gegenereerde toestanden dat er geen getal zonder
 bron in een antwoord staat. De zinnen en de koppeling voor Assist staan in
-`ha-assist/`, en moeten nog op de echte Home Assistant worden getest. De wand
+`ha-assist/`, en moeten nog op de echte Home Assistant worden getest. In het
+product doet een eigen integratie dat, zonder YAML voor de bewoner (91). De wand
 en de testpagina gebruiken de uitleg per kamer nog niet; dat is werk voor F.
 
 **Fase 2: schakelen, in B via de arbiter.**
