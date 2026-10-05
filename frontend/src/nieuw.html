@@ -269,6 +269,45 @@
         background: linear-gradient(160deg, rgba(122, 108, 255, 0.22), rgba(92, 200, 255, 0.08) 60%, rgba(255, 255, 255, 0.04));
         border-color: rgba(160, 150, 255, 0.28);
       }
+      .gesprek {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .bel {
+        max-width: 92%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 15px;
+        line-height: 1.45;
+      }
+      .bel.ik {
+        align-self: flex-end;
+        background: rgba(92, 200, 255, 0.16);
+        color: var(--ink);
+      }
+      .bel.hij {
+        align-self: flex-start;
+        border: 1px solid rgba(160, 150, 255, 0.28);
+        background: linear-gradient(160deg, rgba(122, 108, 255, 0.22), rgba(92, 200, 255, 0.08) 60%, rgba(255, 255, 255, 0.04));
+        color: var(--soft);
+      }
+      .vragen {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .vragen button {
+        min-height: 40px;
+        padding: 0 16px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
       .orb {
         flex-shrink: 0;
         border-radius: 999px;
@@ -789,17 +828,18 @@
             <span class="orb" style="width: 48px; height: 48px"></span>
             <div class="stack" style="gap: 2px">
               <h1 class="title" style="font-size: 28px">Assistent</h1>
-              <span class="small muted">Nog niet gebouwd; dit is stap G.</span>
+              <span class="small muted">Legt uit wat Smart Climate doet. Hij kijkt nog mee en schakelt niets.</span>
             </div>
           </div>
-          <div class="card ai">
-            <p class="small" style="color: var(--soft)">
-              Straks vraag je hier waarom iets gebeurt, of zeg je "zet de zolder op 21". Hij legt uit uit het
-              besluitenlog, voert een opdracht uit als jouw ingreep, vraagt tot hoe laat, en zegt erbij als het later
-              beter kan (besluiten 44, 74 en 75). Tot die tijd staat het waarom op het tabblad Waarom.
-            </p>
-            <a href="#waarom" class="small" style="font-weight: 600; text-decoration: none">Naar Waarom</a>
+          <div class="gesprek" id="a-gesprek" aria-live="polite"></div>
+          <div class="card">
+            <div class="small muted">Vraag:</div>
+            <div class="vragen" id="a-vragen"></div>
           </div>
+          <p class="tiny">
+            Dezelfde vragen kun je hardop stellen via Assist van Home Assistant. Opdrachten zoals "koel de zolder naar
+            21" kan hij pas uitvoeren als Smart Climate echt schakelt (stap B).
+          </p>
         </section>
 
         <!-- Bediening -->

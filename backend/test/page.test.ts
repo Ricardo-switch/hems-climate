@@ -246,6 +246,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#g-voel button', { hasText: 'Te warm' }).click();
       await p.locator('#g-status').filter({ hasText: 'te warm' }).waitFor();
 
+      // De assistent die uitlegt (ONTWERP §7, fase 1): een vaste vraag, het antwoord uit de dienst.
+      await p.goto(`${baseUrl}/nieuw.html#assistent`);
+      await p.locator('#a-vragen button', { hasText: 'Wat doe je nu?' }).click();
+      await p.locator('#a-gesprek .bel.hij').filter({ hasText: 'Ik kijk nog alleen mee' }).waitFor();
+
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);
       await p.locator('#o-hero .big').waitFor();
