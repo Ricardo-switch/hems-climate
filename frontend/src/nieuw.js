@@ -952,15 +952,23 @@ async function switchLights(body) {
   }
 }
 
-/** "Alle lampen uit" voor een kamer, een etage of het huis; alleen als er iets brandt. */
-function allOff(body, on) {
-  if (!house?.lichtBedienen || !on || editing) return [];
-  const status = el('span', { class: 'small muted', 'aria-live': 'polite' });
+/** Hoeveel lampen er in deze kamers staan. */
+const lampTotal = (rooms) => rooms.reduce((n, r) => n + r.apparaten.filter((d) => d.soort === 'licht').length, 0);
+
+/**
+ * "Alle lampen uit" voor een kamer, een etage of het huis. De app doet dat zelf,
+ * met de lampen uit de indeling; een groep in Home Assistant is niet nodig. De
+ * knop staat er altijd als er lampen zijn, en zegt het als er niets brandt.
+ */
+function allOff(body, on, total) {
+  if (!house?.lichtBedienen || !total || editing) return [];
+  const status = el('span', { class: 'small muted', 'aria-live': 'polite', text: on ? '' : 'Er brandt niets.' });
   const b = button('Alle lampen uit', async () => {
     status.textContent = 'Even…';
     const fout = await switchLights({ ...body, aan: false });
     status.textContent = fout ?? 'Gaat uit.';
   });
+  if (!on) b.disabled = true;
   return [el('div', { class: 'knoppen' }, b, status)];
 }
 
@@ -1188,6 +1196,11 @@ function renderHouse() {
   const { level, key } = houseRoute();
   const floors = house.etages;
   let floor = level === 'etage' ? floors.find((f) => floorKey(f) === key) : null;
+  // Een etage zonder kamers bestaat wel: daar voeg je de eerste kamer toe.
+  if (level === 'etage' && !floor && layoutInfo?.etages.some((e) => e.id === key)) {
+    const d = draft();
+    floor = { id: key, naam: d ? floorName(d, key) : key, lampenAan: 0, samenvatting: null, ruimtes: [] };
+  }
   // Vanaf de doorsnede op Thuis: de etage waar dat regelgebied ligt, met terug naar Thuis.
   const fromHome = level === 'etagevan';
   if (fromHome) floor = floors.find((f) => f.ruimtes.some((r) => r.zoneId === key)) ?? null;
@@ -1223,9 +1236,8 @@ function renderHouse() {
   $('hu-lijst').replaceChildren(
     ...editBar(),
     doorsnede(floors),
-    ...allOff({ doel: 'huis' }, house.lampenAan),
+    ...allOff({ doel: 'huis' }, house.lampenAan, lampTotal(floors.flatMap((f) => f.ruimtes))),
     ...homelessNote(),
-    ...unreachableNote(),
   );
 }
 
@@ -1257,18 +1269,39 @@ function tipDone() {
  */
 function doorsnede(floors) {
   const byId = new Map(floors.map((f) => [f.id, f]));
-  const line = (f) => f.ruimtes.map((r) => (r.temperatuurC == null ? r.naam : `${r.naam} ${deg(r.temperatuurC)}`)).join(' · ');
-  const parts = (f) => [
-    el('span', { class: 'naam', text: f.naam }),
+  const line = (f) =>
+    f.ruimtes.length
+      ? f.ruimtes.map((r) => (r.temperatuurC == null ? r.naam : `${r.naam} ${deg(r.temperatuurC)}`)).join(' · ')
+      : 'nog geen kamers';
+  const link = (f) =>
     el(
-      'span',
-      { class: 'lampen' },
-      f.lampenAan ? icon({ soort: 'licht', aan: true }, true) : null,
-      f.lampenAan ? lampen(f.lampenAan) : 'geen licht aan',
-    ),
-    el('span', { class: 'mini', text: line(f) }),
-  ];
-  const href = (f) => `#huis/etage/${encodeURIComponent(floorKey(f))}`;
+      'a',
+      { class: 'room verdieping-link', href: `#huis/etage/${encodeURIComponent(floorKey(f))}` },
+      el('span', { class: 'naam', text: f.naam }),
+      el(
+        'span',
+        { class: 'lampen' },
+        f.lampenAan ? icon({ soort: 'licht', aan: true }, true) : null,
+        f.lampenAan ? lampen(f.lampenAan) : 'geen licht aan',
+      ),
+      el('span', { class: 'mini', text: line(f) }),
+    );
+  // Alles uit op deze etage: de app doet het zelf, met de lampen uit de indeling.
+  const off = (f) => {
+    if (!house?.lichtBedienen || !f.lampenAan) return null;
+    const b = button('Alles uit', async () => {
+      b.disabled = true;
+      b.textContent = 'Gaat uit…';
+      const fout = await switchLights({ doel: 'etage', id: f.id, aan: false });
+      if (fout) {
+        b.disabled = false;
+        b.textContent = 'Alles uit';
+        b.title = fout;
+      }
+    });
+    b.setAttribute('aria-label', `Alle lampen uit op ${f.naam}`);
+    return b;
+  };
   const roofSvg = (lit) => {
     const svg = s('svg', { viewBox: '0 0 100 50', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
     svg.append(
@@ -1282,10 +1315,13 @@ function doorsnede(floors) {
     );
     return svg;
   };
+  const floorBox = (f, cls) => el('div', { class: `verdieping ${cls}${f.lampenAan ? ' licht' : ''}` }, link(f), off(f));
   const box = el('div', { class: 'huisje' });
   const top = byId.get('e2');
   if (top) {
-    box.append(el('a', { class: `room verdieping dak${top.lampenAan ? ' licht' : ''}`, href: href(top) }, roofSvg(top.lampenAan > 0), ...parts(top)));
+    const roof = floorBox(top, 'dak');
+    roof.prepend(roofSvg(top.lampenAan > 0));
+    box.append(roof);
   } else {
     box.append(el('div', { class: 'dak', 'aria-hidden': 'true' }, roofSvg(false)));
   }
@@ -1293,47 +1329,30 @@ function doorsnede(floors) {
   for (const id of ['e1', 'bg']) {
     const f = byId.get(id);
     if (!f) continue;
-    box.append(el('a', { class: `room verdieping${first ? ' eerste' : ''}${f.lampenAan ? ' licht' : ''}`, href: href(f) }, ...parts(f)));
+    box.append(floorBox(f, first ? 'eerste' : ''));
     first = false;
   }
   const out = byId.get('buiten');
-  if (out) box.append(el('a', { class: `room verdieping buiten${out.lampenAan ? ' licht' : ''}`, href: href(out) }, ...parts(out)));
+  if (out) box.append(floorBox(out, 'buiten'));
   return el('nav', { class: 'doorsnede', 'aria-label': 'De etages van het huis' }, box);
 }
 
-/** Lampen die uitgezet zijn in Home Assistant en alleen nog in een "alles"-groep zitten. */
-function unreachableNote() {
-  const list = house?.onvindbaar ?? [];
+/** Wat nog in geen kamer staat: zeg het kort, met een knop om het meteen in te delen. */
+function homelessNote() {
+  const list = house?.zonderRuimte ?? [];
   if (!list.length) return [];
   const names = list.slice(0, 6).map((d) => d.naam).join(', ') + (list.length > 6 ? ', …' : '');
   const n = list.length;
   return [
     el(
       'div',
-      { class: 'note' },
-      `${n} ${n === 1 ? 'lamp staat' : 'lampen staan'} in Home Assistant uitgeschakeld en ${n === 1 ? 'zit' : 'zitten'} alleen in een groep als "${list[0].groepen[0]}", dus het huis kan ${n === 1 ? 'hem' : 'ze'} niet tonen: ${names}. Zet ${n === 1 ? 'hem' : 'ze'} in Home Assistant weer aan, of in een eigen Hue-zone.`,
-    ),
-  ];
-}
-
-/** Wat in Home Assistant in geen ruimte staat, kan het huis niet tonen; zeg dat. */
-function homelessNote() {
-  const list = house?.zonderRuimte ?? [];
-  if (!list.length) return [];
-  const lamps = list.filter((d) => d.soort === 'licht').length;
-  const screens = list.filter((d) => d.soort === 'screen').length;
-  const climate = list.filter((d) => d.soort === 'klimaat').length;
-  const what = [
-    lamps ? `${lamps} ${lamps === 1 ? 'lamp' : 'lampen'}` : null,
-    screens ? `${screens} ${screens === 1 ? 'screen' : 'screens'}` : null,
-    climate ? `${climate} klimaatapparaat${climate === 1 ? '' : 'en'}` : null,
-  ].filter(Boolean);
-  const names = list.slice(0, 6).map((d) => d.naam).join(', ') + (list.length > 6 ? ', …' : '');
-  return [
-    el(
-      'div',
-      { class: 'note' },
-      `${what.join(' en ')} ${list.length === 1 ? 'staat' : 'staan'} in Home Assistant in geen ruimte, dus het huis kan ze niet tonen: ${names}. Zet ze in Home Assistant in een ruimte; dan verschijnen ze hier vanzelf.`,
+      { class: 'note', style: 'display: flex; flex-wrap: wrap; align-items: center; gap: 10px' },
+      el('span', { style: 'flex: 1 1 220px', text: `${n} ${n === 1 ? 'apparaat staat' : 'apparaten staan'} nog in geen kamer: ${names}.` }),
+      button('Nu indelen', () => {
+        editing = true;
+        editStatus('');
+        renderHouse();
+      }),
     ),
   ];
 }
@@ -1412,11 +1431,18 @@ function renderFloor(floor, many, fromHome = false) {
     $('hu-lijst').replaceChildren(...editBar(), ...editFloorLevel(floor.id));
     return;
   }
+  if (!floor.ruimtes.length) {
+    $('hu-lijst').replaceChildren(
+      ...editBar(),
+      el('div', { class: 'note' }, 'Op deze etage staan nog geen kamers. Kies "Indeling bewerken" en voeg er een toe; daarna zet je er lampen en andere apparaten in.'),
+    );
+    return;
+  }
   // Buiten is geen gebouw: daar alleen de kaarten.
   const plan = floor.id !== 'buiten' && floor.ruimtes.length > 0;
   $('hu-lijst').replaceChildren(
     ...editBar(),
-    ...allOff({ doel: 'etage', id: floor.id }, floor.lampenAan),
+    ...allOff({ doel: 'etage', id: floor.id }, floor.lampenAan, lampTotal(floor.ruimtes)),
     el(
       'div',
       { class: `etage-raster${plan ? ' met-plan' : ''}` },
@@ -1443,7 +1469,7 @@ function renderRoom(floor, room) {
       ].filter(Boolean),
     );
   }
-  const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan))];
+  const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan, lampTotal([room])))];
   const tiles = (list) => [
     el(
       'div',
@@ -1819,7 +1845,6 @@ function editHouseLevel() {
       );
     }
   }
-  parts.push(...unreachableNote());
   return parts;
 }
 

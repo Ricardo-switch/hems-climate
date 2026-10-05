@@ -793,7 +793,9 @@ export function buildHouse(
   const floors: HouseFloor[] = [];
   for (const id of FLOORS) {
     const ruimtes = rooms.filter((r) => layout.kamers.find((k) => k.id === r.id)?.etage === id);
-    if (ruimtes.length === 0) continue;
+    // Een etage zonder kamers alleen als de bewoner hem een naam gaf: dan wil hij
+    // er iets mee, en daar voegt hij de eerste kamer toe.
+    if (ruimtes.length === 0 && !(saved && saved.etages[id])) continue;
     floors.push({
       id,
       naam: layout.etages[id] ?? FLOOR_NAMES[id],
