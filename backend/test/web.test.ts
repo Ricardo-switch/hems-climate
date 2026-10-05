@@ -141,7 +141,7 @@ describe('de weergave leest alleen', () => {
 
     // Niet één route uitgezonderd: de controle staat vóór de routering.
     for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
-      for (const path of ['/api/state', '/api/site', '/api/events', '/']) {
+      for (const path of ['/api/state', '/api/site', '/api/events', '/api/vraag', '/']) {
         const res = await fetch(`${base}${path}`, { method });
         expect(res.status, `${method} ${path}`).toBe(405);
         expect(res.headers.get('allow')).toBe('GET, HEAD');
@@ -707,5 +707,42 @@ describe('gevoel en toelichting, de tweede deur (besluit 84)', () => {
       expect(res.status, method).toBe(405);
       expect(res.headers.get('allow')).toBe('GET, HEAD, POST');
     }
+  });
+});
+
+describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
+  it('beantwoordt een vaste vraag uit het laatste besluit', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    const res = await fetch(`${base}/api/vraag?v=waarom&kamer=zolder`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { vraag: string; kamer: string; antwoord: string };
+    expect(body.vraag).toBe('waarom');
+    expect(body.kamer).toBe('zolder');
+    expect(body.antwoord).toContain('24,5°');
+    expect(body.antwoord).toContain('Ik kijk nog alleen mee');
+  });
+
+  it('spreekt Engels als dat gevraagd wordt', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    const body = (await (await fetch(`${base}/api/vraag?v=nu&taal=en`)).json()) as { antwoord: string };
+    expect(body.antwoord).toContain('I am only watching');
+  });
+
+  it('weigert een vraag die hij niet kent, met een reden', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    for (const q of ['', 'v=hoi', 'v=waarom', 'v=doe&kamer=zolder', 'v=nu&taal=fr']) {
+      const res = await fetch(`${base}/api/vraag?${q}`);
+      expect(res.status, q).toBe(400);
+      expect(((await res.json()) as { fout: string }).fout, q).not.toBe('');
+    }
+  });
+
+  it('schakelt niets, ook niet bij een opdracht', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    const res = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen&temperatuur=21`);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { antwoord: string }).antwoord).toContain('mag nog niet schakelen');
+    const post = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen`, { method: 'POST' });
+    expect(post.status).toBe(405);
   });
 });

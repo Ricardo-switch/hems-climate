@@ -117,6 +117,7 @@ niets. De schaduwdienst serveert ze zelf:
 | `/api/divergence` | de terugblik over de logboeken, elk kwartier bijgewerkt vanaf de tussenstand (besluit 26, 63) |
 | `/api/site` | namen en apparaten per zone, voor de weergave |
 | `/api/vandaag` | de dag tot nu toe: zon per kwartier, wanneer elk apparaat draaide volgens Smart Climate en volgens de huidige regeling, en de besluiten; een minuut vastgehouden |
+| `/api/vraag` | de assistent die uitlegt: een vaste vraag (`v=nu`, `waarom`, `straks`, `zon`, `doe`) met een antwoord in woorden uit het laatste besluit, in het Nederlands of Engels; elk getal staat met zijn bron in `feiten` (besluit 88); leest alleen, ook bij een opdracht (ONTWERP §7, fase 1) |
 | `/api/health` | leeft hij, wanneer besliste hij, en welke versie (besluit 54) |
 | `/api/export`, `/api/export/info` | de hele dataset als tar.gz (besluit 48) |
 | `POST /api/onboarding` | schrijft de configuratie, alleen achter Ingress (besluit 42) |
