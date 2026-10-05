@@ -1289,14 +1289,42 @@ function editHouseLevel() {
   }
   const homeless = house?.zonderRuimte ?? [];
   if (homeless.length) {
-    parts.push(el('div', { class: 'groep', text: 'NOG IN TE DELEN' }));
-    const rooms = [['', 'Kies een kamer…'], ...d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`])];
-    for (const dev of homeless) {
+    parts.push(el('div', { class: 'groep', text: `NOG IN TE DELEN (${homeless.length})` }));
+    // De groepen in Home Assistant zeggen vaak waar een lamp hoort; de dienst stelt de kamer voor.
+    const proposed = homeless.filter((dev) => dev.voorstelKamer);
+    if (proposed.length) {
       parts.push(
         el(
           'div',
           { class: 'rij' },
-          el('span', { style: 'flex: 1; min-width: 0' }, el('b', { text: dev.naam }), dev.voorstel ? el('span', { class: 'small muted', text: ` · in Home Assistant: ${dev.voorstel}` }) : null),
+          button(`Alle voorstellen overnemen (${proposed.length})`, async () => {
+            const next = draft();
+            for (const dev of proposed) next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer: dev.voorstelKamer, zone: null };
+            await saveLayout(next, `${proposed.length} apparaten`);
+          }),
+        ),
+      );
+    }
+    const roomName = (id) => d.kamers.find((k) => k.id === id)?.naam;
+    for (const dev of homeless) {
+      const rooms = [
+        ['', dev.voorstelKamer ? `Voorstel: ${roomName(dev.voorstelKamer)}…` : 'Kies een kamer…'],
+        ...d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`]),
+      ];
+      const where = [
+        dev.groepen?.length ? `in ${dev.groepen.join(', ')}` : null,
+        dev.voorstel ? `in Home Assistant: ${dev.voorstel}` : null,
+      ].filter(Boolean);
+      parts.push(
+        el(
+          'div',
+          { class: 'rij' },
+          el(
+            'span',
+            { style: 'flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column' },
+            el('b', { text: dev.naam }),
+            el('span', { class: 'small muted', text: where.length ? where.join(' · ') : 'geen groep of gebied in Home Assistant' }),
+          ),
           select(rooms, '', `Kamer voor ${dev.naam}`, async (kamer) => {
             if (!kamer) return;
             const next = draft();

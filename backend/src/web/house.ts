@@ -51,6 +51,8 @@ export interface HouseDevice {
   readonly actuatorId: string | null;
   /** De zone in de kamer waar het staat, of null. */
   readonly zone: string | null;
+  /** De lampgroepen in Home Assistant waar het in zit: context bij een naam die vaker voorkomt. */
+  readonly groepen: readonly string[];
 }
 
 export interface HouseRoom {
@@ -87,7 +89,17 @@ export interface HouseReport {
     readonly naam: string;
     readonly soort: DeviceKind;
     readonly voorstel: string | null;
+    /** De lampgroepen waar het in zit, zoals "Hal alles" of de Hue-kamer "Keuken". */
+    readonly groepen: readonly string[];
+    /** De kamer die bij een van die groepen lijkt te horen, of null. */
+    readonly voorstelKamer: string | null;
   }[];
+  /**
+   * De lampgroepen uit Home Assistant: groepen en Hue-kamers en -zones. Ze staan
+   * niet als apparaat in het huis (dan telt een lamp dubbel), maar zeggen wel welke
+   * lampen bij elkaar horen.
+   */
+  readonly lampgroepen: readonly { readonly id: string; readonly naam: string; readonly leden: readonly string[]; readonly hue: boolean }[];
 }
 
 const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2 };
@@ -135,7 +147,7 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
           ? 'aan'
           : `aan · ${pct}%`
         : 'uit';
-  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null };
+  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [] };
 }
 
 function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
@@ -151,7 +163,7 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   else stand = `${100 - pos}% dicht`;
   // "Aan" is voor een screen: hij hangt (deels) voor het raam.
   const down = pos != null ? pos < 100 : state?.state === 'closed';
-  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null };
+  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [] };
 }
 
 function climateOf(
@@ -170,18 +182,57 @@ function climateOf(
         : Number.isFinite(setpoint)
           ? `${word} naar ${nl1(setpoint)}°`
           : word;
-  return { id: actuatorId, naam: name, haNaam: name, soort: 'klimaat', stand, aan: word != null, helderheidPct: null, positiePct: null, actuatorId, zone: null };
+  return { id: actuatorId, naam: name, haNaam: name, soort: 'klimaat', stand, aan: word != null, helderheidPct: null, positiePct: null, actuatorId, zone: null, groepen: [] };
 }
 
 interface Found {
-  readonly device: Omit<HouseDevice, 'naam' | 'haNaam' | 'zone'>;
+  readonly device: Omit<HouseDevice, 'naam' | 'haNaam' | 'zone' | 'groepen'>;
   readonly haNaam: string;
   readonly haArea: string | null;
+  readonly groepen: readonly string[];
+}
+
+interface LightGroup {
+  readonly id: string;
+  readonly naam: string;
+  readonly leden: readonly string[];
+  readonly hue: boolean;
 }
 
 interface Context {
   readonly found: readonly Found[];
   readonly areaOf: (entityId: string) => string | null;
+  readonly groups: readonly LightGroup[];
+}
+
+/**
+ * De lampgroepen: een groep van Home Assistant somt zijn lampen op als
+ * `entity_id`, een Hue-kamer of -zone doet dat soms alleen met namen (`lights`).
+ */
+function lightGroups(states: ReadonlyMap<string, HaEntityState>): LightGroup[] {
+  const byName = new Map<string, string>();
+  for (const [id, st] of states) {
+    if (!id.startsWith('light.')) continue;
+    const n = st.attributes['friendly_name'];
+    if (typeof n === 'string') byName.set(n.trim().toLowerCase(), id);
+  }
+  const out: LightGroup[] = [];
+  for (const [id, st] of states) {
+    if (!id.startsWith('light.')) continue;
+    const members = st.attributes['entity_id'];
+    const names = st.attributes['lights'];
+    const hue = st.attributes['is_hue_group'] === true;
+    let leden: string[] = [];
+    if (Array.isArray(members)) leden = members.filter((m): m is string => typeof m === 'string');
+    else if (Array.isArray(names)) {
+      leden = names
+        .map((n) => (typeof n === 'string' ? byName.get(n.trim().toLowerCase()) : undefined))
+        .filter((m): m is string => m != null);
+    }
+    if (!hue && !Array.isArray(members)) continue;
+    out.push({ id, naam: friendly(st, id), leden, hue });
+  }
+  return out;
 }
 
 /** Alle apparaten die het huis toont, met hun gebied in Home Assistant. */
@@ -199,11 +250,17 @@ function collect(
     return e.area_id ?? (e.device_id ? (deviceArea.get(e.device_id) ?? null) : null);
   };
   const found: Found[] = [];
+  const groups = lightGroups(states);
+  const groupIds = new Set(groups.map((g) => g.id));
+  const memberOf = new Map<string, string[]>();
+  for (const g of groups) {
+    for (const m of g.leden) memberOf.set(m, [...(memberOf.get(m) ?? []), g.naam]);
+  }
 
   // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen.
   for (const a of config.actuators) {
-    const { naam: _n, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id]);
-    found.push({ device, haNaam: a.name, haArea: areaOf(a.ref.id) });
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id]);
+    found.push({ device, haNaam: a.name, haArea: areaOf(a.ref.id), groepen: [] });
   }
 
   // Zonwering: één per apparaat (Somfy levert er per screen twee, ook een langzame).
@@ -215,19 +272,40 @@ function collect(
     if (prev == null || e.entity_id.length < prev.length) coverPerDevice.set(key, e.entity_id);
   }
   for (const id of coverPerDevice.values()) {
-    const { naam: _n, ...device } = coverOf(id, states.get(id), '');
-    found.push({ device, haNaam: friendly(states.get(id), id), haArea: areaOf(id) });
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = coverOf(id, states.get(id), '');
+    found.push({ device, haNaam: friendly(states.get(id), id), haArea: areaOf(id), groepen: [] });
   }
 
   // Lampen, zonder groepen: een groep somt lampen op die er al in staan.
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('light.') || e.disabled_by || e.hidden_by) continue;
+    if (groupIds.has(e.entity_id)) continue;
     const s = states.get(e.entity_id);
-    if (Array.isArray(s?.attributes['entity_id'])) continue;
-    const { naam: _n, ...device } = lightOf(e.entity_id, s, '');
-    found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id) });
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '');
+    found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id), groepen: memberOf.get(e.entity_id) ?? [] });
   }
-  return { found, areaOf };
+  return { found, areaOf, groups };
+}
+
+const GROUP_WORDS = /\b(alles|alle|groep|lampen|lamp|licht|verlichting|all|hue)\b/g;
+
+/** "Hal alles" → "hal"; leeg als er niets kamerachtigs overblijft. */
+function groupCore(name: string): string {
+  return name.toLowerCase().replace(GROUP_WORDS, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/** De kamer die bij een van de groepen lijkt te horen: de naam van de een zit in die van de ander. */
+function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[]): string | null {
+  for (const g of groepen) {
+    const core = groupCore(g);
+    if (core.length < 3) continue;
+    const room = rooms.find((r) => {
+      const n = r.naam.toLowerCase();
+      return n.includes(core) || core.includes(n);
+    });
+    if (room) return room.id;
+  }
+  return null;
 }
 
 /** Wat het huis nu kent: de sleutels die een indeling mag gebruiken. */
@@ -321,24 +399,38 @@ export function buildHouse(
   saved: Layout | null = null,
 ): HouseReport {
   const layout = saved ?? proposeLayout(config, registers, states);
-  const { found } = collect(config, registers, states, snapshot);
+  const { found, groups } = collect(config, registers, states, snapshot);
   const areaName = new Map(registers.areas.map((a) => [a.area_id, a.name]));
   const roomByArea = new Map(layout.kamers.filter((k) => k.haGebied).map((k) => [k.haGebied as string, k]));
 
   const perRoom = new Map<string, HouseDevice[]>();
-  const homeless: { id: string; naam: string; soort: DeviceKind; voorstel: string | null }[] = [];
+  const homeless: {
+    id: string;
+    naam: string;
+    soort: DeviceKind;
+    voorstel: string | null;
+    groepen: readonly string[];
+    voorstelKamer: string | null;
+  }[] = [];
   for (const f of found) {
     const own = layout.apparaten[f.device.id];
     const room = own ? layout.kamers.find((k) => k.id === own.kamer) : f.haArea ? roomByArea.get(f.haArea) : undefined;
     const fromHa = shortName(f.haNaam, f.haArea ? (areaName.get(f.haArea) ?? null) : null);
     const naam = own?.naam ?? (room && room.naam !== areaName.get(f.haArea ?? '') ? shortName(fromHa, room.naam) : fromHa);
     if (!room) {
-      homeless.push({ id: f.device.id, naam, soort: f.device.soort, voorstel: f.haArea ? (areaName.get(f.haArea) ?? null) : null });
+      homeless.push({
+        id: f.device.id,
+        naam,
+        soort: f.device.soort,
+        voorstel: f.haArea ? (areaName.get(f.haArea) ?? null) : null,
+        groepen: f.groepen,
+        voorstelKamer: roomForGroups(f.groepen, layout.kamers),
+      });
       continue;
     }
     const zone = own?.zone && room.zones.some((z) => z.id === own.zone) ? own.zone : null;
     const list = perRoom.get(room.id) ?? [];
-    list.push({ ...f.device, naam, haNaam: f.haNaam, zone });
+    list.push({ ...f.device, naam, haNaam: f.haNaam, zone, groepen: f.groepen });
     perRoom.set(room.id, list);
   }
 
@@ -373,5 +465,6 @@ export function buildHouse(
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     zonderRuimte: homeless,
+    lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue })),
   };
 }
