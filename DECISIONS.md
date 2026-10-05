@@ -3917,6 +3917,29 @@ regelgebied kiezen, en apparaten hernoemen en verplaatsen. Tijdens het bewerken
 ververst het huis niet, zodat een veld niet leeg raakt. De paginatest loopt het
 door: een etage hernoemen, een lamp indelen, een kamer toevoegen.
 
+*Aangevuld 5 oktober 2026: lampen in groepen, en wat Home Assistant niet meer
+kent.* De bewoner zette in Home Assistant de losse lampen uit die al in een groep
+zaten (een Hue-zone of -kamer, of een groep van Home Assistant). Daarna gaf elk
+bewaren "onbekend apparaat": de vastgelegde indeling noemde die lampen nog, en de
+deur weigerde de hele indeling. Ook verdwenen de groepen uit het huis, want alleen
+een groep met *verborgen* peren telde als één lamp. Nu:
+
+- **Een groep waarvan de lampen verborgen of uitgezet zijn, is zelf de lamp** (een
+  armatuur). Per peer telt de kleinste groep waar hij in zit, zodat een Hue-zone
+  voor de Hue-kamer gaat en "BG alles" of "Alles" nooit als lamp telt. Een
+  uitgezette groep van Home Assistant is geen peer. Een uitgezette lamp heeft geen
+  toestand; noemt een Hue-groep zijn lampen alleen bij naam, dan komt die naam uit
+  de registers (entiteit of apparaat).
+- **"Alleen apparaten die Home Assistant kent" betekent: wat hij niet meer kent,
+  valt weg,** in plaats van het bewaren te blokkeren. Een oude indeling mag een
+  nieuwe nooit tegenhouden. De kamer en zone van een uitgezette lamp gaan naar de
+  groep die hem nu toont, als die nog geen eigen plek had; de eigen naam van de
+  lamp niet, want die hoorde bij de losse lamp. Het huis doet hetzelfde bij het
+  tekenen, zodat de groep meteen staat waar zijn lampen stonden.
+- **Bewust geaccepteerd:** zit een uitgezette lamp alleen in een Hue-kamer waarin
+  ook zichtbare lampen staan, dan staat die Hue-kamer als lamp naast die lampen.
+  De bewoner lost dat op met een eigen Hue-zone voor de uitgezette lampen.
+
 ---
 
 ## Wat nog een besluit wacht
