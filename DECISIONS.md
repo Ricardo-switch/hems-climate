@@ -71,7 +71,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [40. Het schema weigert alleen nog op wat er echt niet zonder kan](#40-het-schema-weigert-alleen-nog-op-wat-er-echt-niet-zonder-kan)
 - [41. De ontdekking stelt voor en besluit niet](#41-de-ontdekking-stelt-voor-en-besluit-niet)
 - [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
-- [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten)
+- [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten) — *aangevuld door 95*
+- [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant)
 
 **Meten, data en analyse**
 
@@ -2792,7 +2793,7 @@ screenshots die naast deze worden gelegd, met het echte logboek als invoer.
 
 ## 72. Kamers en zones horen bij de app; Home Assistant levert de apparaten
 
-*Onderwerp: configuratie en onboarding · Status: geldig*
+*Onderwerp: configuratie en onboarding · Status: aangevuld door 95*
 
 De ontdekking leest de gebieden van Home Assistant en stelt per gebied een zone
 voor (besluit 41); de onboarding laat dat bevestigen en schrijft het naar
@@ -3795,6 +3796,65 @@ blijft een lijst van leesopdrachten. Kent Home Assistant geen etages, dan is het
 (`#huis`), de kamers op Thuis zijn aan te tikken, en elk apparaat opent een blad
 met knoppen die zeggen wat er zou gebeuren: klimaat via de assistent, screens en
 licht met een vaste zin. De paginatest loopt die weg door.
+
+---
+
+## 95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 5 oktober 2026 las de dienst voor het eerst het huis uit Home Assistant
+(`/api/huis`). Het klopte maar half. De Nest hing in een gebied "Beneden" zonder
+etage, de airco in "Woonkamer" op de begane grond, dus één kamer stond er twee
+keer. Het merendeel van de lampen en beide screens hingen in geen enkel gebied.
+Gebieden komen in Home Assistant uit allerlei koppelingen, zoals Hue, en zijn
+daardoor vaak versnipperd. De bewoner trok de conclusie: een vaste opbouw in de
+app, die Home Assistant als voorstel gebruikt maar er niet van afhangt.
+
+*Besluit:*
+
+- **Een vaste set etages:** begane grond en eerste verdieping, en als het huis
+  ze heeft een tweede verdieping en "Buiten" (tuin, oprit, een zonnescherm aan
+  de achterkant). Elke etage is te hernoemen, bijvoorbeeld "Beneden" of
+  "Zolder". Meer soorten zijn niet nodig, en een vaste set maakt de tekening van
+  het huis eenvoudig (de doorsnede: etages boven elkaar).
+- **De opbouw is etage, kamer, zone,** met deze betekenis:
+  - een **kamer** is wat de bewoner ziet en wat Smart Climate regelt: een naam,
+    een temperatuur, apparaten;
+  - een **zone** is een deel van een kamer, als die er een heeft: de keuken en
+    de zithoek in één woonkamer, elk met hun eigen sensoren en apparaten op hun
+    plek. Hangen er twee meters in één kamer, dan kiest de bewoner welke zone
+    telt (aanvulling op 81);
+  - twee ruimtes die één apparaat delen, zoals een keuken en een woonkamer met
+    één airco, worden één kamer met twee zones.
+
+  Dit vervangt de betekenis van "zone" in besluit 72, waar een zone één of meer
+  kamers was. In de code heet wat de regeling stuurt nog `zone` (het
+  regelgebied); dat blijft intern, en de bewoner ziet het woord alleen in de
+  betekenis hierboven.
+- **Herkennen, voorstellen, en dan van de app.** Bij de installatie stelt de app
+  de opbouw voor uit Home Assistant: etages en gebieden waar ze er zijn, en
+  anders uit namen (een gebied "Zolder", een lampgroep `bg_alles`). De bewoner
+  bevestigt of past aan. Daarna is de opbouw van de app en verandert er niets
+  stil (72).
+- **Wat nergens hoort, is een taak, geen gat.** Apparaten zonder gebied in Home
+  Assistant komen bij "nog in te delen", met een voorstel waar het waarschijnlijk
+  hoort ("Woonkamer 2" in de woonkamer). De bewoner deelt ze in met een tik.
+- **Apparaten zijn te verplaatsen en te hernoemen,** net als kamers, zones en
+  etages, in het scherm Kamers en vanuit het huis (ONTWERP §4).
+- **De naam in de app is de naam overal:** in de app, op de wand, in de
+  assistent, en straks in de zinnen van Assist, die de integratie uit die namen
+  opbouwt (91). De naam uit Home Assistant is alleen het voorstel bij de
+  installatie.
+
+*Wat het vraagt:* in het schema `floors`, `rooms` en per apparaat een eigen naam
+en plek; de kern blijft alleen regelgebieden kennen. En schrijven vanuit de
+app: in het product onder de inlog (77, 80), voor de proef in dit huis met een
+smalle deur zoals bij het gevoel (84), die een eigen besluit vraagt.
+
+*Wanneer:* de opbouw en het bewerken met stap C (het model met kamers, 72). Tot
+dan toont de proefomgeving het huis zoals Home Assistant het kent, en noemt hij
+wat in geen gebied staat.
 
 ---
 

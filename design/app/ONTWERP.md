@@ -178,6 +178,15 @@ er is, verschijnt het voorstel om het aan een kamer toe te voegen. Voor de
 bewoner voelt dat als één stroom. Koppelen vanuit de app zelf komt pas voor een
 product met een verborgen Home Assistant, met een eigen besluit.
 
+### Etage, kamer, zone
+
+**Vast** (95). Een vaste set etages (begane grond, eerste, en als het huis ze
+heeft een tweede en "Buiten"), elk te hernoemen. Daarin kamers, en in een kamer
+eventueel zones: de keuken en de zithoek in één woonkamer. Een kamer is wat
+geregeld wordt; een zone is een plek in een kamer. Herkend uit Home Assistant,
+daarna van de app. Wat nergens hoort, staat bij "nog in te delen". De naam in de
+app is de naam overal, ook voor de assistent.
+
 ### Het scherm Kamers
 
 **Voorstel** (`Kamers.dc.html`). Na de installatie:
