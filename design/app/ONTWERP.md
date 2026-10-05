@@ -139,6 +139,11 @@ dat de bewoner bedient na een paar minuten terug; dat gebeurt hier niet.
 4. **Wat mag het straks?** De keuzes uit §6, met verstandige standaarden. Dan
    begint het leren.
 
+**Vast** (93). In stap 3 ook twee vragen over de zon: "Waar liggen je
+panelen?" (voorkant, achterkant, beide, plat dak, weet ik niet) en "Hoeveel
+ongeveer?". Richting, helling en vermogen meet de app daarna zelf, en vraagt dan
+om bevestiging.
+
 **Vast** (89). Tijdens het leren meet de app hoe vaak de zonnesensor een nieuwe
 waarde geeft. Is dat trager dan eens per twee minuten, dan zegt hij dat één
 keer, met wat het kost en de lokale weg voor dat merk.
@@ -224,7 +229,17 @@ schrijft, dus pas in B voor klimaat en screens, en met de integratie van
 besluit 91 voor alles, onder de inlog van Home Assistant. Tot dan toont de
 app alleen.
 
-**Schetsen** (5 oktober 2026): `Wand-Inzoomen` (de drie stappen naast elkaar),
+**Uitleggen hoe het werkt.** `Wand-Inzoomen` is uitleg, geen scherm. In de app
+laat het huis het zelf zien: de eerste keer één korte tip op het echte huis
+("Tik op een etage om in te zoomen"), die weggaat zodra je het doet. Daarna
+zit de uitleg achter een infoknop. Tikbare dingen zijn ook zonder tip te zien
+(een rand of een pijltje), zodat niemand de uitleg nodig heeft om het te
+vinden.
+
+**Kompas en zon.** De plattegrond krijgt een kompas zodra de app weet hoe het
+huis ligt. Dat meet hij zelf (besluit 93).
+
+**Schetsen** (5 oktober 2026): `Wand-Inzoomen` (uitleg: de drie stappen naast elkaar),
 `Wand-Etage` (de begane grond van boven, met de screens op de voorgevel en de
 ochtendzon), `Wand-Ruimte` (de woonzone, met een screen gekozen om te
 bedienen), en op de telefoon `Etage` en `Ruimte` (licht bedienen in een blad
