@@ -254,7 +254,8 @@ function collect(
   const groupIds = new Set(groups.map((g) => g.id));
   const memberOf = new Map<string, string[]>();
   for (const g of groups) {
-    for (const m of g.leden) memberOf.set(m, [...(memberOf.get(m) ?? []), g.naam]);
+    // Twee groepen met dezelfde naam zeggen niets extra's; één keer noemen.
+    for (const m of g.leden) memberOf.set(m, [...new Set([...(memberOf.get(m) ?? []), g.naam])]);
   }
 
   // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen.
@@ -335,16 +336,20 @@ function groupCore(name: string): string {
   return name.toLowerCase().replace(GROUP_WORDS, ' ').replace(/\s+/g, ' ').trim();
 }
 
-/** De kamer die bij een van de groepen lijkt te horen: de naam van de een zit in die van de ander. */
+/**
+ * De kamer die bij een van de groepen hoort: dezelfde naam, of de groepsnaam in
+ * de kamernaam ("Hal" bij "Hal en trap"). Niet andersom: "Slaapkamer Mylan" is
+ * een andere kamer dan "Slaapkamer".
+ */
 function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[]): string | null {
   for (const g of groepen) {
     const core = groupCore(g);
     if (core.length < 3) continue;
-    const room = rooms.find((r) => {
-      const n = r.naam.toLowerCase();
-      return n.includes(core) || core.includes(n);
-    });
-    if (room) return room.id;
+    const exact = rooms.find((r) => r.naam.toLowerCase() === core);
+    if (exact) return exact.id;
+    // Hele woorden: "hal" in "hal en trap", maar niet in "halfopen".
+    const within = rooms.find((r) => ` ${r.naam.toLowerCase()} `.includes(` ${core} `));
+    if (within) return within.id;
   }
   return null;
 }
