@@ -549,7 +549,12 @@
         display: flex;
         flex-direction: column;
       }
-      .doorsnede a.verdieping {
+      /*
+       * Een verdieping is een vlak met een link over het hele vlak (naar de
+       * etage) en een eigen knop erboven (alle lampen uit). Geen knop in een
+       * link: dat mag niet, en een schermlezer raakt ervan in de war.
+       */
+      .doorsnede .verdieping {
         position: relative;
         display: flex;
         flex-direction: column;
@@ -560,25 +565,47 @@
         padding: 12px;
         border: 1.5px solid rgba(255, 255, 255, 0.24);
         border-top-width: 0;
-        border-radius: 0;
         background: rgba(255, 255, 255, 0.03);
         text-align: center;
       }
-      .doorsnede a.verdieping.eerste {
+      .doorsnede .verdieping.eerste {
         border-top-width: 1.5px;
       }
-      .doorsnede a.verdieping.licht {
+      .doorsnede .verdieping.licht {
         background: radial-gradient(70% 90% at 50% 60%, rgba(255, 224, 138, 0.16), rgba(255, 255, 255, 0.03));
       }
-      .doorsnede a.verdieping:hover,
-      .doorsnede a.verdieping:focus-visible {
+      .doorsnede .verdieping:has(a:hover),
+      .doorsnede .verdieping:has(a:focus-visible) {
         border-color: var(--cool-t);
+      }
+      .doorsnede a.verdieping-link {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: none;
+        color: inherit;
+        text-decoration: none;
         outline: none;
       }
-      .doorsnede .dak,
-      .doorsnede a.verdieping.dak {
+      .doorsnede a.verdieping-link::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+      }
+      .doorsnede .verdieping .knop {
         position: relative;
-        border: 0;
+        z-index: 1;
+        min-height: 34px;
+        margin-top: 6px;
+        padding: 0 14px;
+        font-size: 13px;
+      }
+      .doorsnede .dak {
+        position: relative;
         min-height: 128px;
         display: flex;
         flex-direction: column;
@@ -586,8 +613,9 @@
         justify-content: flex-end;
         gap: 4px;
         padding: 0 0 14px;
-        color: inherit;
-        text-decoration: none;
+      }
+      .doorsnede .verdieping.dak {
+        border: 0;
         background: none;
       }
       .doorsnede .dak svg {
@@ -596,17 +624,11 @@
         width: 100%;
         height: 100%;
       }
-      .doorsnede .dak > span {
-        position: relative;
-      }
-      .doorsnede a.dak:hover polygon,
-      .doorsnede a.dak:focus-visible polygon {
+      .doorsnede .dak:has(a:hover) polygon,
+      .doorsnede .dak:has(a:focus-visible) polygon {
         stroke: var(--cool-t);
       }
-      .doorsnede a.dak:focus-visible {
-        outline: none;
-      }
-      .doorsnede a.verdieping.buiten {
+      .doorsnede .verdieping.buiten {
         margin-top: 12px;
         min-height: 64px;
         border-top-width: 1.5px;
@@ -624,8 +646,7 @@
         font-size: 14px;
         color: var(--dim);
       }
-      .doorsnede .licht .lampen,
-      .doorsnede .dak.licht .lampen {
+      .doorsnede .licht .lampen {
         color: #ffe08a;
       }
       .doorsnede .mini {

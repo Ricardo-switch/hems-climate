@@ -241,6 +241,14 @@ describe('een vastgelegde indeling', () => {
     expect(known.opvolgers?.has('light.oude_groep')).toBe(false);
   });
 
+  it('toont een etage zonder kamers als de bewoner hem een naam gaf, en anders niet', () => {
+    const empty = { ...layout, etages: { ...layout.etages, e1: '1e verdieping' }, kamers: layout.kamers.filter((k) => k.etage !== 'e1') };
+    const named = buildHouse(config, registers, states, snapshot, empty);
+    expect(named.etages.find((e) => e.id === 'e1')).toMatchObject({ naam: '1e verdieping', ruimtes: [], lampenAan: 0 });
+    const { e1: _e1, ...without } = empty.etages;
+    expect(buildHouse(config, registers, states, snapshot, { ...empty, etages: without }).etages.some((e) => e.id === 'e1')).toBe(false);
+  });
+
   it('laat een verborgen apparaat weg uit zijn kamer en uit de telling, en noemt het om terug te zetten', () => {
     const h = buildHouse(config, registers, states, snapshot, { ...layout, verborgen: ['light.sfeerverlichting', 'light.zwerver'] });
     const all = h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);

@@ -280,7 +280,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // (besluit 97); klimaat zegt wat er zou gebeuren.
       await p.goto(`${baseUrl}/nieuw.html#huis`);
       // Wat nergens hangt, staat erbij, tot het indelen hieronder het een kamer gaf.
-      if (stand === 'portret') await p.locator('#hu-lijst .note').filter({ hasText: 'in geen ruimte' }).waitFor();
+      if (stand === 'portret') await p.locator('#hu-lijst .note').filter({ hasText: 'in geen kamer' }).waitFor();
       // Op de plek, niet op de naam: het indelen hieronder hernoemt de etage.
       await p.locator('#hu-lijst a.room[href="#huis/etage/bg"]').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Het huis' }).waitFor();

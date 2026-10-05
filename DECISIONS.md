@@ -3988,8 +3988,11 @@ licht.
   uit op een etage of in het huis doet de app zelf, met de lampen uit de
   indeling; zo volgt het de indeling ook als de groepen in Home Assistant
   achterlopen. Een uitgezette lamp die alleen in zo'n groep zit, kan het huis
-  niet tonen; het zegt dat erbij, met de raad hem in Home Assistant weer aan te
-  zetten of in een eigen Hue-zone te zetten.
+  niet tonen. *Aangevuld 5 oktober 2026:* de pagina zei dat eerst in een
+  melding, maar de bewoner had zijn lampen al zoals hij ze wilde en kon er niets
+  mee; de melding is weg (de dienst noemt ze nog in `onvindbaar`). "Alles uit"
+  staat nu ook per etage op het huis, en op elke kamer, etage en het huis
+  altijd, ook als er niets brandt.
 - **Verbergen.** In de bewerkstand kan elk apparaat verborgen worden: het
   staat dan in geen kamer, telt nergens mee en wordt nooit geschakeld. Het staat
   in de indeling (`verborgen`) en is in de bewerkstand terug te halen.
