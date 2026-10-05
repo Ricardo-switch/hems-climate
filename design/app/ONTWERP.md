@@ -235,14 +235,21 @@ overzicht van alles, zodat de bewoner niet uit de app hoeft:
   samengevat ("3 lampen aan"); alle lampen pas in de kamer.
 
 **Stand op 5 oktober 2026.** Gebouwd als proef (besluit 94): `/api/huis` en
-het inzoomen op `nieuw.html#huis`, naar de schetsen hieronder, behalve de
-plattegrond:
+het inzoomen op `nieuw.html#huis`, naar de schetsen hieronder, met een
+basisplattegrond:
 
 - *Huis:* de doorsnede uit `Wand-Inzoomen` stap 1, opgebouwd uit de vaste etages
   (95): de tweede verdieping onder het dak, buiten eronder. Per etage wat er
   brandt en de temperatuur per kamer; elke etage is een link. Daarboven de
   chips ("3 lampen aan", "Screens 60% dicht", wat er draait) en één keer de tip
   "Tik op een etage om in te zoomen", tot je het doet.
+- *Plattegrond* (`Wand-Etage` links), voor de begane grond en de verdiepingen,
+  niet voor buiten: een basisplattegrond die zichzelf opbouwt uit de indeling.
+  Elke kamer is een vlak, groter naarmate hij meer zones en apparaten heeft; een
+  kamer zonder apparaten, zoals een hal, is een smalle strook. Zones liggen
+  gestippeld gescheiden in hun kamer, met de apparaten erin; een lamp die
+  brandt licht op, en de kamer kleurt naar wat Smart Climate er doet. Een kamer
+  of apparaat aantikken opent het. Op de telefoon staat hij boven de kaarten.
 - *Etage* (`Etage`, `Wand-Etage` rechts): dezelfde chips, en per kamer een kaart
   met de lampen en een schakelaar, de screens in één rij en het klimaat per
   apparaat. Bij meer dan vier lampen alleen wat aan is, en de rest in één rij
@@ -254,9 +261,10 @@ plattegrond:
 - Bedienen: licht echt (97), klimaat via de assistent en screens als "dit zou
   ik doen", tot stap B.
 
-Nog niet: de plattegrond van boven, met de kamers en apparaten op hun plek en
-de screens op de gevel. Daarvoor moet de app weten waar elke kamer ligt en welke
-kant de voorkant is; Home Assistant weet dat niet (zie hieronder). Ook "Tot hoe
+Nog niet: de echte ligging. Welke kamer naast welke ligt, welke kant de
+voorkant is (met de screens op de gevel en de zon), en waar in de kamer een
+apparaat hangt; Home Assistant weet dat niet (zie hieronder). Dat wordt later
+een stap in het indelen: kamers schuiven en apparaten neerzetten. Ook "Tot hoe
 laat?" bij een screen of airco wacht op stap B, en welke meter een kamer meet
 ("gemeten bij de screenschakelaar") komt met de indeling in de configuratie.
 

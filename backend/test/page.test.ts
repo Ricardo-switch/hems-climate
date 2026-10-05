@@ -285,8 +285,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(lightCalls).toHaveLength(1);
       expect(lightCalls[0]).toMatch(/^turn_off light\./);
       expect(lightCalls[0]).not.toContain('etage2_alles');
-      // Op de etage (ONTWERP §4): chips met wat er aan staat, en per kamer de lampen met een schakelaar.
+      // Op de etage (ONTWERP §4): chips met wat er aan staat, de plattegrond met de apparaten
+      // in hun kamer, en per kamer de lampen met een schakelaar.
       expect(await p.locator('#hu-chips').textContent()).toContain('lampen aan');
+      expect(await p.locator('#hu-lijst .plattegrond .plan-kamer', { hasText: 'Woonkamer' }).locator('.plan-apparaat').count()).toBeGreaterThan(3);
       await p.locator('#hu-lijst .apparaatrij', { hasText: 'Sfeerverlichting' }).locator('[role="switch"]').click();
       await p.locator('#hu-lijst .apparaatrij', { hasText: 'Sfeerverlichting' }).filter({ hasText: 'gaat uit' }).waitFor();
       expect(lightCalls.at(-1)).toBe('turn_off light.sfeerverlichting');
