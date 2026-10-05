@@ -64,6 +64,7 @@ const registers: HouseRegisters = {
     entity('cover.screen_low_speed', 'd-screen'),
     entity('light.achtertuin', 'd-tuin'),
     entity('light.uitgezet', 'd-plaf', { disabled_by: 'user' }),
+    entity('light.zwerver', 'd-nergens'),
   ],
 };
 
@@ -129,6 +130,10 @@ describe('het huis als navigatie', () => {
     ]);
     expect(wk.lampenAan).toBe(2);
     expect(house.lampenAan).toBe(2);
+  });
+
+  it('noemt lampen en screens die in geen ruimte staan, in plaats van ze stil weg te laten', () => {
+    expect(house.zonderRuimte).toEqual([{ naam: 'light.zwerver', soort: 'licht' }]);
   });
 
   it('valt terug op één etage als Home Assistant er geen kent', () => {

@@ -978,7 +978,30 @@ function renderHouse() {
         el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
       ),
     ),
+    ...homelessNote(),
   );
+}
+
+/** Wat in Home Assistant in geen ruimte staat, kan het huis niet tonen; zeg dat. */
+function homelessNote() {
+  const list = house?.zonderRuimte ?? [];
+  if (!list.length) return [];
+  const lamps = list.filter((d) => d.soort === 'licht').length;
+  const screens = list.filter((d) => d.soort === 'screen').length;
+  const climate = list.filter((d) => d.soort === 'klimaat').length;
+  const what = [
+    lamps ? `${lamps} ${lamps === 1 ? 'lamp' : 'lampen'}` : null,
+    screens ? `${screens} ${screens === 1 ? 'screen' : 'screens'}` : null,
+    climate ? `${climate} klimaatapparaat${climate === 1 ? '' : 'en'}` : null,
+  ].filter(Boolean);
+  const names = list.slice(0, 6).map((d) => d.naam).join(', ') + (list.length > 6 ? ', …' : '');
+  return [
+    el(
+      'div',
+      { class: 'note' },
+      `${what.join(' en ')} ${list.length === 1 ? 'staat' : 'staan'} in Home Assistant in geen ruimte, dus het huis kan ze niet tonen: ${names}. Zet ze in Home Assistant in een ruimte; dan verschijnen ze hier vanzelf.`,
+    ),
+  ];
 }
 
 function renderFloor(floor, many) {

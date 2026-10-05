@@ -120,6 +120,7 @@ async function writeLogs(dir: string): Promise<void> {
 /** Een klein huis voor het inzoomen: twee etages, een woonkamer met een lamp en een airco. */
 const HOUSE: HouseReport = {
   lampenAan: 1,
+  zonderRuimte: [{ naam: 'Screen klein', soort: 'screen' }],
   etages: [
     {
       id: 'zolder',
@@ -290,6 +291,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
       // Het huis als navigatie (ONTWERP §4): inzoomen tot een apparaat, en bedienen zegt wat er zou gebeuren.
       await p.goto(`${baseUrl}/nieuw.html#huis`);
+      await p.locator('#hu-lijst .note').filter({ hasText: 'in geen ruimte' }).waitFor();
       await p.locator('#hu-lijst a.room', { hasText: 'Begane grond' }).click();
       await p.locator('#hu-titel').filter({ hasText: 'Begane grond' }).waitFor();
       await p.locator('#hu-lijst a.room', { hasText: 'Woonkamer' }).click();
