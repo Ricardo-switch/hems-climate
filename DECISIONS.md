@@ -3990,9 +3990,14 @@ licht.
   achterlopen. Een uitgezette lamp die alleen in zo'n groep zit, kan het huis
   niet tonen; het zegt dat erbij, met de raad hem in Home Assistant weer aan te
   zetten of in een eigen Hue-zone te zetten.
-- **Verbergen.** In de bewerkstand kan elk apparaat "Niet tonen" krijgen: het
+- **Verbergen.** In de bewerkstand kan elk apparaat verborgen worden: het
   staat dan in geen kamer, telt nergens mee en wordt nooit geschakeld. Het staat
   in de indeling (`verborgen`) en is in de bewerkstand terug te halen.
+  *Aangevuld 5 oktober 2026:* "Niet tonen" bleek verwarrend: het haalde een lamp
+  ongemerkt uit zijn kamer. Een apparaat in een kamer vraagt nu eerst
+  bevestiging, met wat verbergen doet en hoe het terugkomt. Terughalen kan op
+  een plek naar keuze, ook vanuit de kamer zelf ("Toevoegen aan deze kamer").
+  Bij het indelen is een plek nu een kamer of meteen een zone erin.
 
 ---
 

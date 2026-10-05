@@ -265,6 +265,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#g-voel button', { hasText: 'Te warm' }).click();
       await p.locator('#g-status').filter({ hasText: 'te warm' }).waitFor();
 
+      // Op de doorsnede een verdieping aantikken gaat meteen naar die etage, met terug naar Thuis.
+      await p.locator('#huis svg a.verdieping-link[href="#huis/etagevan/woonkamer"]').click();
+      await p.locator('#hu-lijst .plattegrond').waitFor();
+      expect(await p.locator('#hu-terug').textContent()).toBe('‹ Thuis');
+      expect(await p.locator('#hu-terug').getAttribute('href')).toBe('#thuis');
+
       // De assistent die uitlegt (ONTWERP §7, fase 1): een vaste vraag, het antwoord uit de dienst.
       await p.goto(`${baseUrl}/nieuw.html#assistent`);
       await p.locator('#a-vragen button', { hasText: 'Wat doe je nu?' }).click();
@@ -305,6 +311,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
+      // De Nest kan alleen verwarmen: geen knop om te koelen, wel wat hij meet en kan.
+      await p.locator('#hu-lijst .tegel', { hasText: 'Nest (beneden)' }).click();
+      await p.locator('#hu-blad-knoppen button', { hasText: 'Verwarmen' }).waitFor();
+      expect(await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).count()).toBe(0);
+      expect(await p.locator('#hu-blad-extra').textContent()).toContain('Kan verwarmen.');
       // Terug is uitzoomen.
       await p.locator('#hu-terug').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Woonkamer' }).waitFor();
@@ -319,11 +330,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await etage.fill('Beneden');
         await etage.press('Tab');
         await p.locator('#hu-bewerk-status').filter({ hasText: 'bewaard' }).waitFor();
-        // Wat nergens hing, kan uit de app, en weer terug.
-        await p.locator('#hu-lijst .rij', { hasText: 'light.zwerver' }).locator('button', { hasText: 'Niet tonen' }).click();
-        await p.locator('#hu-lijst .groep').filter({ hasText: 'NIET GETOOND (1)' }).waitFor();
+        // Wat nergens hing, kan uit de app, en weer terug: op een plek naar keuze of zoals het was.
+        await p.locator('#hu-lijst .rij', { hasText: 'light.zwerver' }).locator('button', { hasText: 'Verbergen' }).click();
+        await p.locator('#hu-lijst .groep').filter({ hasText: 'VERBORGEN (1)' }).waitFor();
+        await p.getByLabel('Plek voor light.zwerver').waitFor();
         await p.locator('#hu-lijst button', { hasText: 'Weer tonen' }).click();
-        await p.locator('#hu-lijst').filter({ hasNotText: 'NIET GETOOND' }).waitFor();
+        await p.locator('#hu-lijst .groep').filter({ hasText: 'VERBORGEN' }).waitFor({ state: 'detached' });
         // En krijgt een kamer.
         await p.getByLabel('Kamer voor light.zwerver').selectOption({ label: 'Tuin (Buiten)' });
         await p.locator('#hu-lijst').filter({ hasNotText: 'NOG IN TE DELEN' }).waitFor();

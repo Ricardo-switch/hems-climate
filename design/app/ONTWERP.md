@@ -258,8 +258,15 @@ basisplattegrond:
   van de assistent eronder, elk apparaat een tegel met een icoon, per zone. Een
   tegel opent het blad: voor een lamp een schakelaar, een dimmer en warm,
   neutraal of koel (als de lamp dat kan); op de wand staat het blad rechts.
+- *Meten:* temperatuur- en vochtsensoren in een kamer staan er als meter, net
+  als een lamp in te delen of te verbergen; een kamer zonder regeling, zoals de
+  hal of de zolder, krijgt zo zijn temperatuur en luchtvochtigheid ("gemeten
+  door de bewegingssensor"). Weer, telefoons, schijven en diagnose doen niet
+  mee, en wat een klimaatapparaat zelf meet (de Nest, een airco), staat bij dat
+  apparaat: wat het meet, het doel, wat het nu doet en wat het kan.
 - Bedienen: licht echt (97), klimaat via de assistent en screens als "dit zou
-  ik doen", tot stap B.
+  ik doen", tot stap B. De knoppen volgen wat een apparaat kan: de Nest en de
+  badkamerthermostaat verwarmen alleen, dus daar staat geen "Koelen".
 
 Nog niet: de echte ligging. Welke kamer naast welke ligt, welke kant de
 voorkant is (met de screens op de gevel en de zon), en waar in de kamer een

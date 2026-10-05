@@ -249,7 +249,8 @@ function drawHouse(snap) {
   const e = snap.explanation;
   const zones = site?.zones ?? e.perZone.map((z) => ({ id: z.zoneId, name: z.zoneId, actuatorIds: [] }));
   const n = zones.length;
-  const svg = s('svg', { viewBox: '0 0 520 500', role: 'img' });
+  // Een groep en geen plaatje: de verdiepingen erin zijn links.
+  const svg = s('svg', { viewBox: '0 0 520 500', role: 'group' });
   const defs = s('defs');
   defs.innerHTML =
     '<radialGradient id="nSun"><stop offset="0" stop-color="#F5B342" stop-opacity="0.75"/><stop offset="1" stop-color="#F5B342" stop-opacity="0"/></radialGradient>' +
@@ -319,35 +320,38 @@ function drawHouse(snap) {
 
   zones.forEach((z, i) => {
     const st = status.get(z.id);
+    // Elke verdieping is een link naar zijn etage in het huis, met terug naar Thuis.
+    const link = s('a', { href: `#huis/etagevan/${encodeURIComponent(z.id)}`, class: 'verdieping-link', 'aria-label': `${z.name}: naar de etage` });
+    svg.append(link);
     const inRoof = n >= 2 && i === n - 1;
     const unitCool = (z.actuatorIds ?? []).some(canCool);
     const running = st.kind === 'cool' || st.kind === 'heat';
     if (inRoof) {
-      svg.append(s('polygon', { points: '124,206 270,84 416,206', fill: `url(#nF-${st.kind})` }));
-      svg.append(s('text', { x: 270, y: 124, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
-      svg.append(s('text', { x: 270, y: 154, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
-      svg.append(s('text', { x: 270, y: 174, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
+      link.append(s('polygon', { points: '124,206 270,84 416,206', fill: `url(#nF-${st.kind})` }));
+      link.append(s('text', { x: 270, y: 124, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
+      link.append(s('text', { x: 270, y: 154, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
+      link.append(s('text', { x: 270, y: 174, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
       if (unitCool) {
         // Dezelfde airco als beneden, alleen kleiner: met luchtstroom als hij draait.
-        svg.append(s('rect', { x: 244, y: 180, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
+        link.append(s('rect', { x: 244, y: 180, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
         if (running) {
-          svg.append(s('path', { d: 'M254,193 q5,6 0,12 M270,193 q5,6 0,12 M286,193 q5,6 0,12', fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
+          link.append(s('path', { d: 'M254,193 q5,6 0,12 M270,193 q5,6 0,12 M286,193 q5,6 0,12', fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
           if (sunny) flows.push({ path: 'M372,150 C392,166 330,180 296,184' });
         }
       }
     } else {
       const top = 470 - (i + 1) * floorH;
-      svg.append(s('rect', { x: 114, y: top + 4, width: 312, height: floorH - 8, fill: `url(#nF-${st.kind})` }));
-      if (i > 0 || n >= 2) svg.append(s('line', { x1: 110, y1: top, x2: 430, y2: top, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1.5 }));
+      link.append(s('rect', { x: 114, y: top + 4, width: 312, height: floorH - 8, fill: `url(#nF-${st.kind})` }));
+      if (i > 0 || n >= 2) link.append(s('line', { x1: 110, y1: top, x2: 430, y2: top, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1.5 }));
       const big = floorH >= 110;
-      svg.append(s('text', { x: 132, y: top + (big ? 36 : 28), 'font-size': big ? 20 : 17, fill: '#C9D6DC' }, z.name));
-      svg.append(s('text', { x: 132, y: top + (big ? 84 : 62), 'font-size': big ? 46 : 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
-      svg.append(s('text', { x: 132, y: top + (big ? 112 : 84), 'font-size': big ? 17 : 15, fill: TEXT[st.kind] }, short(st.text)));
+      link.append(s('text', { x: 132, y: top + (big ? 36 : 28), 'font-size': big ? 20 : 17, fill: '#C9D6DC' }, z.name));
+      link.append(s('text', { x: 132, y: top + (big ? 84 : 62), 'font-size': big ? 46 : 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
+      link.append(s('text', { x: 132, y: top + (big ? 112 : 84), 'font-size': big ? 17 : 15, fill: TEXT[st.kind] }, short(st.text)));
       if (unitCool) {
         const uy = top + 12;
-        svg.append(s('rect', { x: 340, y: uy, width: 64, height: 12, rx: 4, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.35)', filter: running ? 'url(#nGlow)' : '' }));
+        link.append(s('rect', { x: 340, y: uy, width: 64, height: 12, rx: 4, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.35)', filter: running ? 'url(#nGlow)' : '' }));
         if (running) {
-          svg.append(s('path', { d: `M350,${uy + 20} q6,8 0,16 M372,${uy + 20} q6,8 0,16 M394,${uy + 20} q6,8 0,16`, fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
+          link.append(s('path', { d: `M350,${uy + 20} q6,8 0,16 M372,${uy + 20} q6,8 0,16 M394,${uy + 20} q6,8 0,16`, fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
           if (sunny) flows.push({ path: `M372,150 C452,196 456,${uy - 26} 404,${uy}` });
         }
       }
@@ -998,10 +1002,25 @@ const ICON = {
   screen: '<rect x="3" y="3.5" width="18" height="3.5" rx="1"/><path d="M5 7v10h14V7M5 10.5h14M5 14h14"/>',
   airco: '<rect x="2.5" y="5" width="19" height="8" rx="2"/><path d="M6 10h12M8 16.5c-.5 1-.5 2 0 3M12 16v3.5M16 16.5c.5 1 .5 2 0 3"/>',
   thermostaat: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/>',
+  meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
 };
 
+/** "21,4° · 55%": wat een meter of klimaatapparaat meet. */
+function readingText(m) {
+  if (!m) return '';
+  const parts = [m.temperatuurC == null ? null : deg(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}%`];
+  return parts.filter(Boolean).join(' · ');
+}
+
+/** De stand van een apparaat, met voor klimaat erbij wat het meet. */
+function standText(d) {
+  const meet = d.soort === 'klimaat' ? readingText(d.meting) : '';
+  return meet ? `${d.stand} · ${meet}` : d.stand;
+}
+
 function icon(d, klein = false) {
-  const kind = d.soort === 'klimaat' ? (d.actuatorId && canCool(d.actuatorId) ? 'airco' : 'thermostaat') : d.soort;
+  // Een airco kan koelen; wat alleen verwarmt, is een thermostaat (de Nest, de badkamer).
+  const kind = d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco' : 'thermostaat') : d.soort;
   const svg = s('svg', {
     viewBox: '0 0 24 24',
     fill: 'none',
@@ -1048,11 +1067,11 @@ function lampSwitch(d, say) {
   return sw;
 }
 
-const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2 };
+const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2, meter: 3 };
 const byKind = (list) => [...list].sort((a, b) => KIND_ORDER[a.soort] - KIND_ORDER[b.soort]);
 
 /** Een apparaat dat in de kamer verder gaat: een rij met een pijltje. */
-function deviceLink(room, d, naam = d.naam, stand = d.stand) {
+function deviceLink(room, d, naam = d.naam, stand = standText(d)) {
   return el(
     'a',
     { class: 'apparaatrij', href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}` },
@@ -1105,6 +1124,8 @@ function deviceRows(room, list) {
     rows.push(deviceLink(room, any, 'Screens', stands.length === 1 ? stands[0] : stands.join(', ')));
   }
   for (const d of list.filter((x) => x.soort === 'klimaat')) rows.push(deviceLink(room, d));
+  // Meters zijn informatie: temperatuur en luchtvochtigheid.
+  for (const d of list.filter((x) => x.soort === 'meter')) rows.push(deviceLink(room, d));
   return rows;
 }
 
@@ -1134,7 +1155,12 @@ function roomCard(r) {
       'a',
       { class: 'room kop', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
       el('div', { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1' }, el('span', { class: 'name', text: r.naam }), sub),
-      el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+      el(
+        'span',
+        { style: 'display: flex; flex-direction: column; align-items: flex-end; margin-left: auto' },
+        el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+        r.vochtPct == null ? null : el('span', { class: 'small muted', text: `${Math.round(r.vochtPct)}% vocht` }),
+      ),
       el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
     ),
     ...byZone(r, (list) => deviceRows(r, byKind(list))),
@@ -1162,6 +1188,9 @@ function renderHouse() {
   const { level, key } = houseRoute();
   const floors = house.etages;
   let floor = level === 'etage' ? floors.find((f) => floorKey(f) === key) : null;
+  // Vanaf de doorsnede op Thuis: de etage waar dat regelgebied ligt, met terug naar Thuis.
+  const fromHome = level === 'etagevan';
+  if (fromHome) floor = floors.find((f) => f.ruimtes.some((r) => r.zoneId === key)) ?? null;
   let room = null;
   if (level === 'ruimte' || level === 'zone') {
     for (const f of floors) {
@@ -1180,7 +1209,7 @@ function renderHouse() {
     return;
   }
   if (floor) {
-    renderFloor(floor, floors.length > 1);
+    renderFloor(floor, floors.length > 1, fromHome);
     return;
   }
 
@@ -1327,11 +1356,11 @@ function planDevice(room, d) {
     {
       class: `plan-apparaat${d.aan ? ` aan-${d.soort}` : ''}`,
       href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}`,
-      'aria-label': `${d.naam}: ${d.stand}`,
+      'aria-label': `${d.naam}: ${standText(d)}`,
     },
     icon(d),
     el('span', { text: d.naam }),
-    el('span', { text: d.stand }),
+    el('span', { text: standText(d) }),
   );
 }
 
@@ -1373,9 +1402,9 @@ function plattegrond(floor) {
 }
 
 /** De etage (`Etage`, `Wand-Etage`): per kamer een kaart met wat erin staat. */
-function renderFloor(floor, many) {
+function renderFloor(floor, many, fromHome = false) {
   tipDone();
-  if (many) back('#huis', 'Huis');
+  if (many && !fromHome) back('#huis', 'Huis');
   else back('#thuis', 'Thuis');
   crumb(many ? [['Huis', '#huis'], [floor.naam]] : [[floor.naam]]);
   heading(floor.naam, { samenvatting: floor.samenvatting });
@@ -1405,6 +1434,15 @@ function renderRoom(floor, room) {
   back(up, floor.naam);
   crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
   heading(room.naam, { temp: room.temperatuurC, zin: room.status?.zin ?? '', soort: room.status?.soort ?? null });
+  // Luchtvochtigheid als informatie, en waar de temperatuur vandaan komt als dat geen regeling is.
+  if (!editing) {
+    $('hu-chips').replaceChildren(
+      ...[
+        room.vochtPct == null ? null : el('span', { class: 'chip klimaat', text: `Luchtvochtigheid ${Math.round(room.vochtPct)}%` }),
+        room.gemetenDoor ? el('span', { class: 'chip plain', text: `gemeten door ${room.gemetenDoor}` }) : null,
+      ].filter(Boolean),
+    );
+  }
   const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan))];
   const tiles = (list) => [
     el(
@@ -1417,6 +1455,7 @@ function renderRoom(floor, room) {
           icon(d),
           el('b', { text: d.naam }),
           el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
+          d.soort === 'klimaat' && d.meting ? el('span', { class: 'small muted', text: readingText(d.meting) }) : null,
         );
         b.addEventListener('click', () => {
           for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
@@ -1434,6 +1473,25 @@ function renderRoom(floor, room) {
   // Het gekozen apparaat houdt zijn blad, met de stand van nu.
   const chosen = room.apparaten.find((d) => d.id === selectedDevice);
   if (chosen && !editing) openDevice(room, chosen);
+}
+
+/** "Meet 19,5° en 61% luchtvochtigheid." */
+function meterLine(d) {
+  const m = d.meting ?? {};
+  const parts = [m.temperatuurC == null ? null : deg(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}% luchtvochtigheid`];
+  return parts.some(Boolean) ? `Meet ${parts.filter(Boolean).join(' en ')}.` : 'Geeft nu geen meting.';
+}
+
+/** "Meet 22,4° en 55% · doel 22° · koelt nu." */
+function climateLine(d) {
+  const bits = [];
+  const meet = readingText(d.meting);
+  if (meet) bits.push(`Meet ${meet}`);
+  if (d.klimaat?.doelC != null) bits.push(`doel ${deg(d.klimaat.doelC)}`);
+  if (d.klimaat?.actie) bits.push(`${d.klimaat.actie} nu`);
+  const can = d.klimaat ? [d.klimaat.kanVerwarmen ? 'verwarmen' : null, d.klimaat.kanKoelen ? 'koelen' : null].filter(Boolean) : [];
+  const kan = can.length ? ` Kan ${can.join(' en ')}.` : '';
+  return bits.length ? `${bits.join(' · ')}.${kan}` : kan.trim();
 }
 
 /** Het blad leeg maken, voor bedienen of voor indelen. */
@@ -1501,12 +1559,25 @@ function openDevice(room, d) {
       }
     }
     say(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
-  } else if (d.soort === 'klimaat' && room.zoneId) {
-    for (const [label, wens] of [
-      ['Koelen', 'koelen'],
-      ['Verwarmen', 'verwarmen'],
+  } else if (d.soort === 'meter') {
+    $('hu-blad-extra').append(el('p', { class: 'small', text: meterLine(d) }));
+    say(
+      d.meetKamer
+        ? 'Deze meter levert de temperatuur waar Smart Climate deze kamer op regelt.'
+        : 'Alleen informatie; aan een meter valt niets te bedienen.',
+    );
+  } else if (d.soort === 'klimaat') {
+    $('hu-blad-extra').append(el('p', { class: 'small', text: climateLine(d) }));
+    // Alleen wat het apparaat kan: de Nest verwarmt, maar koelt niet.
+    const can = d.klimaat ?? { kanKoelen: true, kanVerwarmen: true };
+    const wishes = [
+      can.kanKoelen ? ['Koelen', 'koelen'] : null,
+      can.kanVerwarmen ? ['Verwarmen', 'verwarmen'] : null,
       ['Uit', 'uit'],
-    ]) {
+    ].filter(Boolean);
+    $('hu-blad-knoppen').className = wishes.length === 3 ? 'knoppen drie' : 'knoppen';
+    if (!room.zoneId) say('Deze kamer heeft geen regeling; Smart Climate stuurt dit apparaat hier niet.');
+    for (const [label, wens] of room.zoneId ? wishes : []) {
       buttons.push([
         label,
         async () => {
@@ -1706,10 +1777,7 @@ function editHouseLevel() {
     }
     const roomName = (id) => d.kamers.find((k) => k.id === id)?.naam;
     for (const dev of homeless) {
-      const rooms = [
-        ['', dev.voorstelKamer ? `Voorstel: ${roomName(dev.voorstelKamer)}…` : 'Kies een kamer…'],
-        ...d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`]),
-      ];
+      const rooms = [['', dev.voorstelKamer ? `Voorstel: ${roomName(dev.voorstelKamer)}…` : 'Kies een kamer of zone…'], ...placeOptions(d)];
       const where = [
         dev.groepen?.length ? `in ${dev.groepen.join(', ')}` : null,
         dev.voorstel ? `in Home Assistant: ${dev.voorstel}` : null,
@@ -1724,27 +1792,24 @@ function editHouseLevel() {
             el('b', { text: dev.naam }),
             el('span', { class: 'small muted', text: where.length ? where.join(' · ') : 'geen groep of gebied in Home Assistant' }),
           ),
-          select(rooms, '', `Kamer voor ${dev.naam}`, async (kamer) => {
-            if (!kamer) return;
-            const next = draft();
-            next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone: null };
-            await saveLayout(next, `${dev.naam}`);
-          }),
-          button('Niet tonen', () => hideDevice(dev)),
+          select(rooms, '', `Kamer voor ${dev.naam}`, (v) => placeDevice(dev, v)),
+          button('Verbergen', () => hideDevice(dev)),
         ),
       );
     }
   }
-  // Wat de bewoner verborg, met een knop om het terug te halen.
+  // Wat de bewoner verborg: terug op een plek naar keuze, of zoals Home Assistant het indeelt.
   const hidden = house?.verborgen ?? [];
   if (hidden.length) {
-    parts.push(el('div', { class: 'groep', text: `NIET GETOOND (${hidden.length})` }));
+    parts.push(el('div', { class: 'groep', text: `VERBORGEN (${hidden.length})` }));
+    parts.push(el('p', { class: 'tiny', text: 'Verborgen staat in geen kamer, telt nergens mee en gaat niet mee met "Alle lampen uit".' }));
     for (const dev of hidden) {
       parts.push(
         el(
           'div',
           { class: 'rij' },
           el('b', { style: 'flex: 1 1 200px; min-width: 0', text: dev.naam }),
+          select([['', 'Terugzetten in…'], ...placeOptions(d)], '', `Plek voor ${dev.naam}`, (v) => placeDevice(dev, v)),
           button('Weer tonen', async () => {
             const next = draft();
             next.verborgen = (next.verborgen ?? []).filter((id) => id !== dev.id);
@@ -1764,6 +1829,24 @@ async function hideDevice(dev) {
   next.verborgen = [...new Set([...(next.verborgen ?? []), dev.id])];
   delete next.apparaten[dev.id];
   await saveLayout(next, `${dev.naam} verborgen;`);
+}
+
+/** Elke kamer, en elke zone erin, als één keuze: "Woonkamer › Keuken (Begane grond)". */
+function placeOptions(d) {
+  return d.kamers.flatMap((k) => {
+    const floor = floorName(d, k.etage);
+    return [[k.id, `${k.naam} (${floor})`], ...k.zones.map((z) => [`${k.id}|${z.id}`, `${k.naam} › ${z.naam} (${floor})`])];
+  });
+}
+
+/** Een apparaat op een plek uit `placeOptions` zetten; was het verborgen, dan is het dat niet meer. */
+async function placeDevice(dev, value) {
+  if (!value) return;
+  const [kamer, zone = null] = value.split('|');
+  const next = draft();
+  next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone };
+  next.verborgen = (next.verborgen ?? []).filter((id) => id !== dev.id);
+  await saveLayout(next, dev.naam);
 }
 
 /** Etageniveau in de bewerkstand: kamers hernoemen, verhuizen, weghalen en toevoegen. */
@@ -1880,6 +1963,34 @@ function editRoomLevel(roomId) {
     ),
   );
   if (!k.zones.length) parts.push(el('p', { class: 'tiny', text: 'Geen zones: de kamer is één geheel. Voeg ze alleen toe als de kamer open delen heeft.' }));
+
+  // Wat nog nergens staat, of verborgen is, kan hier meteen in de kamer of een zone.
+  const candidates = [
+    ...(house?.zonderRuimte ?? []).map((x) => ({ ...x, label: `${x.naam} (nog in te delen)` })),
+    ...(house?.verborgen ?? []).map((x) => ({ ...x, label: `${x.naam} (verborgen)` })),
+  ];
+  if (candidates.length) {
+    parts.push(el('div', { class: 'groep', text: 'TOEVOEGEN AAN DEZE KAMER' }));
+    const which = select([['', 'Kies een apparaat…'], ...candidates.map((x) => [x.id, x.label])], '', 'Apparaat om toe te voegen', () => {});
+    const where = select(
+      [[roomId, k.zones.length ? 'Geen zone' : k.naam], ...k.zones.map((z) => [`${roomId}|${z.id}`, z.naam])],
+      roomId,
+      'Zone voor het apparaat',
+      () => {},
+    );
+    parts.push(
+      el(
+        'div',
+        { class: 'rij' },
+        which,
+        k.zones.length ? where : null,
+        button('Toevoegen', async () => {
+          const dev = candidates.find((x) => x.id === which.value);
+          if (dev) await placeDevice(dev, where.value);
+        }),
+      ),
+    );
+  }
   return parts;
 }
 
@@ -1916,10 +2027,22 @@ function editDevice(room, dev) {
       };
       await saveLayout(next, dev.naam);
     }),
-    button('Niet tonen', async () => {
+    button('Verbergen…', () => confirmHide(room, dev)),
+  );
+}
+
+/** Eerst zeggen wat verbergen doet; pas dan verbergen. */
+function confirmHide(room, dev) {
+  $('hu-blad-zin').textContent =
+    `Verbergen haalt ${dev.naam} uit de app: hij staat dan in geen kamer, telt nergens mee en gaat niet mee met "Alle lampen uit". ` +
+    'Terughalen kan hier via "Toevoegen aan deze kamer", of op het huis onder "Verborgen". Wil je hem alleen naar een andere kamer of zone, kies dan Annuleren en verplaats hem.';
+  $('hu-blad-knoppen').replaceChildren(
+    button('Ja, verbergen', async () => {
       $('hu-blad').hidden = true;
+      selectedDevice = null;
       await hideDevice(dev);
     }),
+    button('Annuleren', () => editDevice(room, dev)),
   );
 }
 

@@ -13,7 +13,8 @@
  * Assistant kwam; heeft het geen gebied, of hoort dat gebied bij geen kamer, dan
  * staat het bij "nog in te delen".
  *
- * Wat erin komt: lampen, zonwering, en de klimaatapparaten uit de configuratie.
+ * Wat erin komt: lampen, zonwering, de klimaatapparaten uit de configuratie, en
+ * meters: sensoren die in een kamer temperatuur en luchtvochtigheid meten.
  * Groepen van lampen niet, want die zouden lampen dubbel tellen; uitgezette en
  * verborgen entiteiten ook niet. Behalve een groep waarvan de lampen uitgezet of
  * verborgen zijn: die is zelf de lamp (een armatuur, zie `collect`).
@@ -41,7 +42,23 @@ export interface HouseRegisters {
   readonly entities: readonly HaRegistryEntity[];
 }
 
-export type DeviceKind = 'klimaat' | 'screen' | 'licht';
+export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter';
+
+/** Wat een klimaatapparaat of meter meet, uit Home Assistant. */
+export interface HouseReading {
+  readonly temperatuurC: number | null;
+  readonly vochtPct: number | null;
+}
+
+/** Wat een klimaatapparaat kan en doet: de knoppen volgen wat het kan. */
+export interface HouseClimate {
+  readonly kanKoelen: boolean;
+  readonly kanVerwarmen: boolean;
+  /** Het doel dat Home Assistant nu heeft, of null. */
+  readonly doelC: number | null;
+  /** Wat het apparaat nu werkelijk doet: "verwarmt", "koelt", "staat stil", of null. */
+  readonly actie: string | null;
+}
 
 export interface HouseDevice {
   /** Voor de pagina, als sleutel; de bewoner ziet hem nooit (45). */
@@ -67,6 +84,12 @@ export interface HouseDevice {
   readonly dimbaar: boolean;
   /** Een lamp die warm, neutraal of koel kan (kleurtemperatuur, of kleur). */
   readonly kleurtemp: boolean;
+  /** Temperatuur en luchtvochtigheid, voor een meter of een klimaatapparaat. */
+  readonly meting: HouseReading | null;
+  /** Alleen bij klimaat. */
+  readonly klimaat: HouseClimate | null;
+  /** Een meter die de temperatuur van een regelgebied levert. */
+  readonly meetKamer: boolean;
 }
 
 /**
@@ -89,7 +112,11 @@ export interface HouseRoom {
   readonly zoneId: string | null;
   /** De delen van de kamer (95), leeg als hij er geen heeft. */
   readonly zones: readonly { readonly id: string; readonly naam: string }[];
+  /** Van het regelgebied, of anders van een meter in de kamer. */
   readonly temperatuurC: number | null;
+  readonly vochtPct: number | null;
+  /** De meter waar de temperatuur vandaan komt, als het niet het regelgebied is. */
+  readonly gemetenDoor: string | null;
   readonly status: { readonly soort: RoomKind; readonly zin: string } | null;
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -147,7 +174,31 @@ export interface HouseReport {
   readonly onvindbaar: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
 }
 
-const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2 };
+const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, meter: 3 };
+
+/** Wat geen kamer meet: het weer, telefoons, schijven, de buitenkant van een apparaat. */
+const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoelstemperatuur|battery|batterij|body|basal|cpu|processor|schijf|schijftemperatuur|disk|drive|nas|track)\b/i;
+
+const HVAC_ACTION: Readonly<Record<string, string>> = {
+  heating: 'verwarmt',
+  preheating: 'warmt voor',
+  cooling: 'koelt',
+  drying: 'droogt',
+  fan: 'ventileert',
+  idle: 'staat stil',
+  off: 'uit',
+};
+
+/** Een getal uit een toestand, of null als het er niet is of onbereikbaar. */
+function num(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function readingText(r: HouseReading): string {
+  const parts = [r.temperatuurC == null ? null : `${nl1(r.temperatuurC)}°`, r.vochtPct == null ? null : `${Math.round(r.vochtPct)}%`];
+  return parts.filter(Boolean).join(' · ') || 'geen meting';
+}
 
 const CLIMATE_WORD: Readonly<Record<string, string>> = {
   cool: 'koelen',
@@ -200,7 +251,7 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
   const list = Array.isArray(modes) ? modes.filter((m): m is string => typeof m === 'string') : [];
   const dimbaar = list.some((m) => m !== 'onoff') || typeof b === 'number';
   const kleurtemp = list.some((m) => COLOR_MODES.has(m));
-  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp };
+  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, meting: null, klimaat: null, meetKamer: false };
 }
 
 function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
@@ -216,13 +267,14 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   else stand = `${100 - pos}% dicht`;
   // "Aan" is voor een screen: hij hangt (deels) voor het raam.
   const down = pos != null ? pos < 100 : state?.state === 'closed';
-  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false };
+  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false };
 }
 
 function climateOf(
   actuatorId: string,
   name: string,
   observed: string | undefined,
+  info: { meting: HouseReading | null; klimaat: HouseClimate | null } = { meting: null, klimaat: null },
 ): HouseDevice {
   const [mode = '', sp] = (observed ?? '').split('@');
   const word = CLIMATE_WORD[mode];
@@ -235,7 +287,46 @@ function climateOf(
         : Number.isFinite(setpoint)
           ? `${word} naar ${nl1(setpoint)}°`
           : word;
-  return { id: actuatorId, naam: name, haNaam: name, soort: 'klimaat', stand, aan: word != null, helderheidPct: null, positiePct: null, actuatorId, zone: null, groepen: [], dimbaar: false, kleurtemp: false };
+  return {
+    id: actuatorId,
+    naam: name,
+    haNaam: name,
+    soort: 'klimaat',
+    stand,
+    aan: word != null,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting: info.meting,
+    klimaat: info.klimaat,
+    meetKamer: false,
+  };
+}
+
+/** Een meter: een sensor in een kamer die temperatuur en luchtvochtigheid geeft. */
+function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean): HouseDevice {
+  return {
+    id,
+    naam: name,
+    haNaam: name,
+    soort: 'meter',
+    stand: readingText(meting),
+    aan: false,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting,
+    klimaat: null,
+    meetKamer,
+  };
 }
 
 interface Found {
@@ -343,10 +434,71 @@ function collect(
     for (const m of g.leden) memberOf.set(m, [...new Set([...(memberOf.get(m) ?? []), g.naam])]);
   }
 
-  // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen.
+  /*
+   * Metingen per apparaat in Home Assistant: een temperatuur- en een vochtsensor.
+   * Alleen wat een kamer meet: met een apparaat, geen diagnose, niet uitgezet of
+   * verborgen, geen telefoon, en niets wat naar weer, buiten of een schijf klinkt.
+   */
+  const devices = new Map(registers.devices.map((d) => [d.id, d]));
+  const sensorsOf = new Map<string, { temp?: string; hum?: string }>();
+  for (const e of registers.entities) {
+    if (!e.entity_id.startsWith('sensor.') || !e.device_id || e.entity_category || e.disabled_by || e.hidden_by) continue;
+    if (e.platform === 'mobile_app') continue;
+    const dc = e.device_class ?? e.original_device_class ?? states.get(e.entity_id)?.attributes['device_class'];
+    if (dc !== 'temperature' && dc !== 'humidity') continue;
+    const label = `${e.entity_id} ${e.original_name ?? ''} ${e.name ?? ''}`.replace(/[._]/g, ' ');
+    if (NOT_A_ROOM.test(label)) continue;
+    const r = sensorsOf.get(e.device_id) ?? {};
+    if (dc === 'temperature') r.temp ??= e.entity_id;
+    else r.hum ??= e.entity_id;
+    sensorsOf.set(e.device_id, r);
+  }
+  const readingOf = (r: { temp?: string; hum?: string } | undefined): HouseReading => ({
+    temperatuurC: r?.temp ? num(states.get(r.temp)?.state) : null,
+    vochtPct: r?.hum ? num(states.get(r.hum)?.state) : null,
+  });
+
+  // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen en meten.
   for (const a of config.actuators) {
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id]);
+    const st = states.get(a.ref.id);
+    const own = sensorsOf.get(registry.get(a.ref.id)?.device_id ?? '');
+    const fromSensors = readingOf(own);
+    const meting: HouseReading = {
+      temperatuurC: num(st?.attributes['current_temperature']) ?? fromSensors.temperatuurC,
+      vochtPct: num(st?.attributes['current_humidity']) ?? fromSensors.vochtPct,
+    };
+    const action = st?.attributes['hvac_action'];
+    const klimaat: HouseClimate = {
+      kanKoelen: a.capabilities.canCool,
+      kanVerwarmen: a.capabilities.canHeat,
+      doelC: num(st?.attributes['temperature']),
+      actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+    };
+    const hasReading = meting.temperatuurC != null || meting.vochtPct != null;
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id], {
+      meting: hasReading ? meting : null,
+      klimaat,
+    });
     found.push({ device, haNaam: a.name, haArea: areaOf(a.ref.id), groepen: [] });
+  }
+
+  /*
+   * Meters: per apparaat één, met temperatuur en luchtvochtigheid samen. Een
+   * apparaat dat zelf een klimaatapparaat is (de Nest, een airco), is geen meter:
+   * wat het meet, staat bij dat apparaat.
+   */
+  const climateDevices = new Set(
+    registers.entities.filter((e) => e.entity_id.startsWith('climate.') && e.device_id).map((e) => e.device_id as string),
+  );
+  const zoneSensors = new Set(config.zones.map((z) => z.temperature.id));
+  for (const [deviceId, r] of sensorsOf) {
+    if (climateDevices.has(deviceId)) continue;
+    const id = r.temp ?? r.hum;
+    if (!id) continue;
+    const dev = devices.get(deviceId);
+    const haNaam = dev?.name_by_user?.trim() || dev?.name?.trim() || friendly(states.get(id), id);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = meterOf(id, haNaam, readingOf(r), zoneSensors.has(r.temp ?? ''));
+    found.push({ device, haNaam, haArea: areaOf(id), groepen: [] });
   }
 
   // Zonwering: één per apparaat (Somfy levert er per screen twee, ook een langzame).
@@ -388,7 +540,6 @@ function collect(
   const fixtures = new Set<string>();
   const successors = new Map<string, string>();
   const unreachable: { id: string; naam: string; groepen: string[] }[] = [];
-  const devices = new Map(registers.devices.map((d) => [d.id, d]));
   for (const peer of offstage) {
     const containing = groups.filter((g) => g.leden.includes(peer));
     const smallest = containing
@@ -621,13 +772,17 @@ export function buildHouse(
     devices.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || Number(b.aan) - Number(a.aan) || a.naam.localeCompare(b.naam, 'nl'));
     const zone = k.regelzone ? config.zones.find((z) => z.id === k.regelzone) : undefined;
     const pz = zone ? snapshot?.explanation.perZone.find((z) => z.zoneId === zone.id) : undefined;
+    // Zonder regelgebied meet een meter in de kamer, zoals in de hal of op zolder.
+    const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null);
     const status = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
     return {
       id: k.id,
       naam: k.naam,
       zoneId: zone?.id ?? null,
       zones: k.zones.map((z) => ({ id: z.id, naam: z.naam })),
-      temperatuurC: pz?.temperatureC ?? null,
+      temperatuurC: pz?.temperatureC ?? meterTemp?.meting?.temperatuurC ?? null,
+      vochtPct: pz?.humidityPct ?? devices.find((d) => d.meting?.vochtPct != null)?.meting?.vochtPct ?? null,
+      gemetenDoor: pz?.temperatureC == null && meterTemp ? meterTemp.naam : null,
       status: status ? { soort: status.kind, zin: status.zin } : null,
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
       samenvatting: summarize(devices),
