@@ -80,6 +80,24 @@ describe('het voorstel uit Home Assistant', () => {
     ]);
   });
 
+  it('stelt een kamer alleen voor bij dezelfde naam, of de groepsnaam als woord in de kamernaam', () => {
+    const base = proposeLayout(config, registers, states);
+    const rooms = [
+      { ...base.kamers[0]!, id: 'slaapkamer', naam: 'Slaapkamer' },
+      { ...base.kamers[0]!, id: 'hal', naam: 'Hal en trap', regelzone: null },
+    ];
+    const layout = { ...base, kamers: rooms, apparaten: {} };
+    const at = (group: string) => {
+      const st = new Map(states);
+      st.set('light.tuin_alles', { ...st.get('light.tuin_alles')!, attributes: { friendly_name: group, entity_id: ['light.zwerver'] } });
+      return buildHouse(config, registers, st, null, layout).zonderRuimte.find((d) => d.id === 'light.zwerver')!.voorstelKamer;
+    };
+    expect(at('Hal alles')).toBe('hal');
+    expect(at('Slaapkamer')).toBe('slaapkamer');
+    expect(at('Slaapkamer Mylan')).toBeNull();
+    expect(at('Halfopen')).toBeNull();
+  });
+
   it('toont een groep met verborgen peren als één lamp, in de kamer van die peren', () => {
     const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
     const lamps = wk.apparaten.filter((d) => d.soort === 'licht').map((d) => [d.naam, d.stand]);
