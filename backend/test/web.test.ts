@@ -824,6 +824,9 @@ describe('licht bedienen (besluit 97)', () => {
     groepen: [],
     dimbaar: true,
     kleurtemp: false,
+    meting: null,
+    klimaat: null,
+    meetKamer: false,
   });
   const room = (id: string, apparaten: ReturnType<typeof lamp>[]) => ({
     id,
@@ -831,6 +834,8 @@ describe('licht bedienen (besluit 97)', () => {
     zoneId: null,
     zones: [],
     temperatuurC: null,
+    vochtPct: null,
+    gemetenDoor: null,
     status: null,
     lampenAan: apparaten.filter((d) => d.aan).length,
     samenvatting: summarize(apparaten),

@@ -42,6 +42,7 @@ export const registers: HouseRegisters = {
     { area_id: 'tuin', name: 'Tuin', floor_id: null },
     { area_id: 'berging', name: 'Berging', floor_id: 'bg' },
     { area_id: 'oprit', name: 'Oprit', floor_id: 'bg' },
+    { area_id: 'hal', name: 'Hal', floor_id: 'bg' },
   ],
   devices: [
     { id: 'd-ac-wk', area_id: 'woonkamer' },
@@ -57,11 +58,15 @@ export const registers: HouseRegisters = {
     { id: 'd-badspot-1', area_id: 'badkamer', name: 'Badkamer spot 1' },
     { id: 'd-badspot-2', area_id: 'badkamer', name: 'Hue spot', name_by_user: 'Badkamer spot 2' },
     { id: 'd-zolderspot', area_id: 'zolder', name: 'Zolderspot' },
+    { id: 'd-halsensor', area_id: 'hal', name: 'Bewegingssensor hal' },
+    { id: 'd-nas', area_id: 'hal', name: 'NAS' },
+    { id: 'd-f1', area_id: null, name: 'F1' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
     entity(ref('nest'), 'd-nest'),
-    entity(zoneTemp('woonkamer'), 'd-nest'),
+    entity(zoneTemp('woonkamer'), 'd-nest', { device_class: 'temperature' }),
+    entity('sensor.beneden_luchtvochtigheid', 'd-nest', { device_class: 'humidity' }),
     entity(ref('ac-zolder'), 'd-ac-z'),
     entity(ref('badkamer'), 'd-bad'),
     entity('light.woonkamer_plafonniere', 'd-plaf'),
@@ -89,6 +94,13 @@ export const registers: HouseRegisters = {
     // Een uitgezette spot die alleen nog in "Etage 2 alles" zit: die groep is geen lamp.
     entity('light.zolder_spot', 'd-zolderspot', { disabled_by: 'user' }),
     entity('light.etage2_alles', null, { platform: 'group' }),
+    // Meters: een bewegingssensor in de hal meet temperatuur en luchtvochtigheid.
+    entity('sensor.bewegingssensor_hal_temperatuur', 'd-halsensor', { original_device_class: 'temperature', original_name: 'Temperatuur' }),
+    entity('sensor.bewegingssensor_hal_luchtvochtigheid', 'd-halsensor', { original_device_class: 'humidity', original_name: 'Luchtvochtigheid' }),
+    // Geen meters: een schijf van de NAS, het weer, en het weer van een raceweekend.
+    entity('sensor.nas_temperatuur', 'd-nas', { device_class: 'temperature', entity_category: 'diagnostic' }),
+    entity('sensor.temperatuur', null, { device_class: 'temperature', platform: 'buienradar' }),
+    entity('sensor.f1_track_weather', 'd-f1', { device_class: 'temperature', platform: 'f1_sensor' }),
   ],
 };
 
@@ -107,6 +119,14 @@ export const states = new Map<string, HaEntityState>([
   ['light.keukentafel_3', state('light.keukentafel_3', 'on', { friendly_name: 'Keukentafel 3' })],
   // Een Hue-zone met een zichtbare lamp: alleen context, geen armatuur.
   ['light.hue_sfeer', state('light.hue_sfeer', 'on', { friendly_name: 'Sfeer', is_hue_group: true, lights: ['Sfeerverlichting'] })],
+  [zoneTemp('woonkamer'), state(zoneTemp('woonkamer'), '21.9', { device_class: 'temperature' })],
+  ['sensor.beneden_luchtvochtigheid', state('sensor.beneden_luchtvochtigheid', '55', { device_class: 'humidity' })],
+  [ref('ac-woonkamer'), state(ref('ac-woonkamer'), 'cool', { current_temperature: 22.4, temperature: 22, hvac_action: 'cooling' })],
+  ['sensor.bewegingssensor_hal_temperatuur', state('sensor.bewegingssensor_hal_temperatuur', '19.5')],
+  ['sensor.bewegingssensor_hal_luchtvochtigheid', state('sensor.bewegingssensor_hal_luchtvochtigheid', '61.4')],
+  ['sensor.nas_temperatuur', state('sensor.nas_temperatuur', '41')],
+  ['sensor.temperatuur', state('sensor.temperatuur', '13')],
+  ['sensor.f1_track_weather', state('sensor.f1_track_weather', '30')],
   // Een Hue-kamer met alleen uitgezette lampen: die is zelf de lamp.
   ['light.etage2_alles', state('light.etage2_alles', 'on', { friendly_name: 'Etage 2 alles', entity_id: ['light.zolder_spot'] })],
   ['light.hue_badkamer', state('light.hue_badkamer', 'off', { friendly_name: 'Badkamer', is_hue_group: true, lights: ['Badkamer spot 1', 'Badkamer spot 2'] })],
