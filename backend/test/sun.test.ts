@@ -91,6 +91,24 @@ describe('de zoninval van dit huis', () => {
     expect(afternoon.gevels.find((g) => g.id === 'achtergevel')!.inDeZon).toBe(true);
   });
 
+  it('zegt waar de zon op de boog van de dag staat, en dat hij aan de voorkant opkomt', () => {
+    const morning = sunReport(geometry, location, Date.parse('2026-10-05T07:30:00Z'), day);
+    const noonish = sunReport(geometry, location, Date.parse('2026-10-05T11:40:00Z'), day);
+    const night = sunReport(geometry, location, Date.parse('2026-10-05T21:00:00Z'), day);
+    expect(morning.dag.opVoorkant).toBe(true);
+    expect(morning.dag.fractie!).toBeGreaterThan(0);
+    expect(morning.dag.fractie!).toBeLessThan(0.3);
+    expect(noonish.dag.fractie!).toBeGreaterThan(0.4);
+    expect(noonish.dag.fractie!).toBeLessThan(0.6);
+    expect(noonish.dag.hoogteDeel).toBeGreaterThan(0.95);
+    expect(morning.dag.hoogteDeel).toBeLessThan(noonish.dag.hoogteDeel);
+    expect(night.dag.fractie).toBeNull();
+    expect(night.dag.hoogteDeel).toBe(0);
+    // Op 5 oktober in het midden van Nederland: op rond 07:50, onder rond 19:05 (zomertijd).
+    expect(new Date(morning.dag.opMs!).toISOString()).toMatch(/T05:[45]\d/);
+    expect(new Date(morning.dag.onderMs!).toISOString()).toMatch(/T1[67]:\d\d/);
+  });
+
   it('rekent elk kwartier van de dag, en nooit boven de omvormer', () => {
     const r = sunReport(geometry, location, Date.parse('2026-10-05T10:00:00Z'), day);
     expect(r.kwartieren).toHaveLength(96);
