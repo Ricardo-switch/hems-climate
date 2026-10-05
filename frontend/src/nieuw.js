@@ -837,6 +837,48 @@ function render(snap) {
   renderControls(snap);
 }
 
+/* ------------------------------------------------------- assistent */
+
+/*
+ * De assistent die uitlegt (ONTWERP §7, fase 1). Vaste vragen; de antwoorden
+ * komen kant-en-klaar uit de dienst (`/api/vraag`), deze pagina rekent niets uit.
+ */
+function assistantQuestions() {
+  const zones = site?.zones ?? [];
+  return [
+    ['Wat doe je nu?', 'v=nu'],
+    ...zones.map((z) => [`Waarom de ${z.name.toLowerCase()}?`, `v=waarom&kamer=${encodeURIComponent(z.id)}`]),
+    ['Wat ga je straks doen?', 'v=straks'],
+    ['Hoeveel zon vandaag?', 'v=zon'],
+  ];
+}
+
+async function askAssistant(label, query) {
+  const log = $('a-gesprek');
+  const reply = el('div', { class: 'bel hij', text: 'Even kijken…' });
+  log.append(el('div', { class: 'bel ik', text: label }), reply);
+  // Hooguit de laatste zes vragen met hun antwoord.
+  while (log.children.length > 12) log.firstElementChild.remove();
+  try {
+    const res = await fetch(`api/vraag?${query}`);
+    const body = await res.json();
+    reply.textContent = res.ok ? body.antwoord : (body.fout ?? body.wachten ?? 'Geen antwoord.');
+  } catch {
+    reply.textContent = 'Geen verbinding met Smart Climate.';
+  }
+  reply.scrollIntoView({ block: 'nearest' });
+}
+
+function setupAssistant() {
+  $('a-vragen').replaceChildren(
+    ...assistantQuestions().map(([label, query]) => {
+      const b = el('button', { type: 'button', text: label });
+      b.addEventListener('click', () => void askAssistant(label, query));
+      return b;
+    }),
+  );
+}
+
 async function start() {
   buildNav();
   showView();
@@ -862,6 +904,7 @@ async function start() {
   void loadToday(true);
   void loadReview();
   void setupFeedback();
+  setupAssistant();
   setInterval(() => void loadToday(), 5 * 60_000);
   const source = new EventSource('api/events');
   source.onopen = () => connection(true, 'Verbonden');

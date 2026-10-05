@@ -246,11 +246,12 @@ const WORDS = {
       nobody_home: 'er niemand thuis is',
       failsafe_unreliable_input: 'een meting niet betrouwbaar is',
     } satisfies Record<ReasonCode, string>,
+    // Bijzinnen: ze staan na "omdat", dus het werkwoord achteraan.
     block: {
-      min_run_not_elapsed: 'het apparaat moet eerst zijn minimale draaitijd halen',
-      min_rest_not_elapsed: 'het apparaat moet eerst even rusten',
+      min_run_not_elapsed: 'het apparaat eerst zijn minimale draaitijd moet halen',
+      min_rest_not_elapsed: 'het apparaat eerst even moet rusten',
       stabilisation_active: 'ik wacht tot het verbruik stabiel is',
-      settling_after_switch: 'het apparaat komt nog tot rust na een wissel',
+      settling_after_switch: 'het apparaat na een wissel nog tot rust komt',
       insufficient_power_budget: 'er te weinig zon over is',
       start_threshold_not_met: 'er net te weinig zon over is om te starten',
       capability_missing: 'het apparaat dat niet kan',
