@@ -510,6 +510,237 @@
         color: var(--heat-t);
       }
 
+      /* het huis als navigatie (ONTWERP §4) */
+      .titelrij {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .titelrij .big {
+        font-size: 40px;
+        white-space: nowrap;
+      }
+      .chip.licht {
+        background: rgba(255, 224, 138, 0.13);
+        color: #ffe08a;
+      }
+      .chip.screen {
+        background: rgba(245, 179, 66, 0.13);
+        color: var(--warm-t);
+      }
+      .chip.klimaat {
+        background: rgba(92, 200, 255, 0.13);
+        color: var(--cool-t);
+      }
+      .huis-raster {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .doorsnede {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 0 4px;
+      }
+      .doorsnede .huisje {
+        width: min(100%, 440px);
+        display: flex;
+        flex-direction: column;
+      }
+      .doorsnede a.verdieping {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 96px;
+        padding: 12px;
+        border: 1.5px solid rgba(255, 255, 255, 0.24);
+        border-top-width: 0;
+        border-radius: 0;
+        background: rgba(255, 255, 255, 0.03);
+        text-align: center;
+      }
+      .doorsnede a.verdieping.eerste {
+        border-top-width: 1.5px;
+      }
+      .doorsnede a.verdieping.licht {
+        background: radial-gradient(70% 90% at 50% 60%, rgba(255, 224, 138, 0.16), rgba(255, 255, 255, 0.03));
+      }
+      .doorsnede a.verdieping:hover,
+      .doorsnede a.verdieping:focus-visible {
+        border-color: var(--cool-t);
+        outline: none;
+      }
+      .doorsnede .dak,
+      .doorsnede a.verdieping.dak {
+        position: relative;
+        border: 0;
+        min-height: 128px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        padding: 0 0 14px;
+        color: inherit;
+        text-decoration: none;
+        background: none;
+      }
+      .doorsnede .dak svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .doorsnede .dak > span {
+        position: relative;
+      }
+      .doorsnede a.dak:hover polygon,
+      .doorsnede a.dak:focus-visible polygon {
+        stroke: var(--cool-t);
+      }
+      .doorsnede a.dak:focus-visible {
+        outline: none;
+      }
+      .doorsnede a.verdieping.buiten {
+        margin-top: 12px;
+        min-height: 64px;
+        border-top-width: 1.5px;
+        border-style: dashed;
+        border-radius: 16px;
+      }
+      .doorsnede .naam {
+        font-size: 17px;
+        font-weight: 700;
+      }
+      .doorsnede .lampen {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: var(--dim);
+      }
+      .doorsnede .licht .lampen,
+      .doorsnede .dak.licht .lampen {
+        color: #ffe08a;
+      }
+      .doorsnede .mini {
+        font-size: 12px;
+        color: var(--dim);
+      }
+      .icoon {
+        width: 26px;
+        height: 26px;
+        flex-shrink: 0;
+        color: var(--dim);
+      }
+      .icoon.klein {
+        width: 18px;
+        height: 18px;
+      }
+      .icoon.aan-licht {
+        color: #ffe08a;
+        filter: drop-shadow(0 0 6px rgba(255, 224, 138, 0.55));
+      }
+      .icoon.aan-screen {
+        color: var(--warm-t);
+      }
+      .icoon.aan-klimaat {
+        color: var(--cool-t);
+      }
+      .kamers {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+        align-items: start;
+      }
+      .kamerkaart {
+        padding: 4px 16px 6px;
+        gap: 0;
+      }
+      .kamerkaart a.room.kop {
+        padding: 12px 0;
+        background: none;
+        border: 0;
+        border-radius: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .kamerkaart a.room.kop .temp {
+        font-size: 30px;
+      }
+      .apparaatrij {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        color: inherit;
+        text-decoration: none;
+      }
+      .apparaatrij:last-child {
+        border-bottom: 0;
+      }
+      .apparaatrij .l {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+      .apparaatrij .l b {
+        font-size: 15px;
+      }
+      .apparaatrij .l span {
+        font-size: 13px;
+      }
+      .l .aan-licht,
+      #hu-blad-stand.aan-licht {
+        color: #ffe08a;
+      }
+      .l .aan-screen,
+      #hu-blad-stand.aan-screen {
+        color: var(--warm-t);
+      }
+      .l .aan-klimaat,
+      #hu-blad-stand.aan-klimaat {
+        color: var(--cool-t);
+      }
+      .l .uit {
+        color: var(--dim);
+      }
+      .zonelabel {
+        padding-top: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: var(--dim);
+        text-transform: uppercase;
+      }
+      .switch.live {
+        cursor: pointer;
+      }
+      .switch.live[aria-checked='true'] {
+        background: #e2c97a;
+      }
+      .switch.live:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      .dimmer {
+        width: 100%;
+        height: 28px;
+        accent-color: #ffe08a;
+        cursor: pointer;
+      }
+      .knoppen.drie {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
       .house {
         display: flex;
         flex-direction: column;
@@ -849,6 +1080,22 @@
         .view.narrow {
           max-width: 760px;
         }
+        /* Op de wand: de kamer links, het blad van het gekozen apparaat rechts. */
+        .huisview {
+          max-width: 1240px;
+        }
+        .huis-raster:has(#hu-blad:not([hidden])) {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+          align-items: start;
+        }
+        .huis-raster #hu-blad {
+          position: sticky;
+          top: 0;
+        }
+        .doorsnede .huisje {
+          width: min(100%, 520px);
+        }
       }
     </style>
   </head>
@@ -934,18 +1181,31 @@
         </section>
 
         <!-- Huis: inzoomen van huis naar etage naar ruimte (ONTWERP §4, besluit 94) -->
-        <section class="view narrow" data-view="huis" hidden>
+        <section class="view huisview" data-view="huis" hidden>
           <div class="stack">
             <a class="terug" id="hu-terug" href="#thuis">‹ Thuis</a>
             <nav class="pad" id="hu-pad" aria-label="Waar je bent"></nav>
-            <h1 class="title" id="hu-titel">Het huis</h1>
+            <div class="titelrij">
+              <h1 class="title" id="hu-titel">Het huis</h1>
+              <span class="big" id="hu-temp"></span>
+            </div>
             <p class="lead" id="hu-zin"></p>
+            <div class="chips" id="hu-chips"></div>
           </div>
-          <div class="stack" id="hu-lijst"></div>
-          <div class="card ai blad" id="hu-blad" hidden aria-live="polite">
-            <div class="head"><h2 id="hu-blad-naam"></h2><small id="hu-blad-stand"></small></div>
-            <div class="knoppen" id="hu-blad-knoppen"></div>
-            <p class="small" id="hu-blad-zin" style="color: var(--soft)"></p>
+          <div class="huis-raster">
+            <div class="stack" id="hu-lijst"></div>
+            <div class="card blad" id="hu-blad" hidden aria-live="polite">
+              <div class="head">
+                <div class="stack" style="gap: 2px; min-width: 0">
+                  <h2 id="hu-blad-naam"></h2>
+                  <small id="hu-blad-stand"></small>
+                </div>
+                <span id="hu-blad-schakel"></span>
+              </div>
+              <div class="stack" id="hu-blad-extra"></div>
+              <div class="knoppen" id="hu-blad-knoppen"></div>
+              <p class="small" id="hu-blad-zin" style="color: var(--soft)"></p>
+            </div>
           </div>
         </section>
 

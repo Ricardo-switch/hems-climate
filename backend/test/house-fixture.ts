@@ -93,7 +93,7 @@ export const registers: HouseRegisters = {
 };
 
 export const states = new Map<string, HaEntityState>([
-  ['light.woonkamer_plafonniere', state('light.woonkamer_plafonniere', 'on', { friendly_name: 'Woonkamer plafonnière', brightness: 178 })],
+  ['light.woonkamer_plafonniere', state('light.woonkamer_plafonniere', 'on', { friendly_name: 'Woonkamer plafonnière', brightness: 178, supported_color_modes: ['color_temp'] })],
   ['light.sfeerverlichting', state('light.sfeerverlichting', 'on', { friendly_name: 'Sfeerverlichting' })],
   ['light.woonkamer_alles', state('light.woonkamer_alles', 'on', { friendly_name: 'Woonkamer alles', entity_id: ['light.woonkamer_plafonniere'] })],
   ['cover.screen', state('cover.screen', 'open', { friendly_name: 'Screen', current_position: 40 })],

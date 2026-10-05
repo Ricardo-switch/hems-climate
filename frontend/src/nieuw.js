@@ -961,8 +961,12 @@ function allOff(body, on) {
 }
 
 function houseRoute() {
-  const [, level = null, key = null] = (location.hash || '').slice(1).split('/');
-  return { level, key: key == null ? null : decodeURIComponent(key) };
+  const [, level = null, key = null, sel = null] = (location.hash || '').slice(1).split('/');
+  return {
+    level,
+    key: key == null ? null : decodeURIComponent(key),
+    sel: sel == null ? null : decodeURIComponent(sel),
+  };
 }
 
 function crumb(parts) {
@@ -979,19 +983,179 @@ function back(href, label) {
   $('hu-terug').textContent = `‹ ${label}`;
 }
 
+/** Kop van een niveau: titel, temperatuur rechts, een zin en de chips. */
+function heading(title, { temp = null, zin = '', soort = null, samenvatting = null } = {}) {
+  $('hu-titel').textContent = title;
+  $('hu-temp').textContent = temp == null ? '' : deg(temp);
+  $('hu-zin').textContent = zin;
+  $('hu-zin').className = soort ? `lead k-${soort}` : 'lead';
+  $('hu-chips').replaceChildren(...(editing ? [] : chips(samenvatting)));
+}
+
+/* Vaste, eigen iconen per soort; geen gegevens van buiten. */
+const ICON = {
+  licht: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+  screen: '<rect x="3" y="3.5" width="18" height="3.5" rx="1"/><path d="M5 7v10h14V7M5 10.5h14M5 14h14"/>',
+  airco: '<rect x="2.5" y="5" width="19" height="8" rx="2"/><path d="M6 10h12M8 16.5c-.5 1-.5 2 0 3M12 16v3.5M16 16.5c.5 1 .5 2 0 3"/>',
+  thermostaat: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/>',
+};
+
+function icon(d, klein = false) {
+  const kind = d.soort === 'klimaat' ? (d.actuatorId && canCool(d.actuatorId) ? 'airco' : 'thermostaat') : d.soort;
+  const svg = s('svg', {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': 1.8,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+    class: `icoon${klein ? ' klein' : ''}${d.aan ? ` aan-${d.soort}` : ''}`,
+  });
+  svg.innerHTML = ICON[kind] ?? ICON.thermostaat;
+  return svg;
+}
+
+/** "2 lampen aan", "Screens 60% dicht", "Er draait niets": uit de dienst. */
+function chips(sum) {
+  if (!sum) return [];
+  const out = [el('span', { class: `chip ${sum.lampenAan ? 'licht' : 'plain'}`, text: sum.lampenAan ? lampen(sum.lampenAan) : 'Geen licht aan' })];
+  if (sum.screens) out.push(el('span', { class: 'chip screen', text: `Screens ${sum.screens}` }));
+  out.push(el('span', { class: `chip ${sum.draait ? 'klimaat' : 'good'}`, text: sum.klimaat }));
+  return out;
+}
+
+/**
+ * Een schakelaar voor een lamp (besluit 97). Hij springt meteen om; lukt het
+ * niet, dan terug, met de reden. Zonder licht bedienen staat hij uit.
+ */
+function lampSwitch(d, say) {
+  const sw = el(
+    'button',
+    { type: 'button', class: 'switch live', role: 'switch', 'aria-checked': String(d.aan), 'aria-label': `${d.naam} aan of uit` },
+    el('span'),
+  );
+  if (!house?.lichtBedienen) sw.disabled = true;
+  sw.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const aan = sw.getAttribute('aria-checked') !== 'true';
+    sw.setAttribute('aria-checked', String(aan));
+    const fout = await switchLights({ doel: 'lamp', id: d.id, aan });
+    if (fout) sw.setAttribute('aria-checked', String(!aan));
+    say(fout ?? `${d.naam} gaat ${aan ? 'aan' : 'uit'}.`);
+  });
+  return sw;
+}
+
+const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2 };
+const byKind = (list) => [...list].sort((a, b) => KIND_ORDER[a.soort] - KIND_ORDER[b.soort]);
+
+/** Een apparaat dat in de kamer verder gaat: een rij met een pijltje. */
+function deviceLink(room, d, naam = d.naam, stand = d.stand) {
+  return el(
+    'a',
+    { class: 'apparaatrij', href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}` },
+    icon(d),
+    el('div', { class: 'l' }, el('b', { text: naam }), el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: stand })),
+    el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+  );
+}
+
+/**
+ * De rijen van een kamer op de etage (ONTWERP §4). Lampen met een schakelaar;
+ * zijn het er veel, dan alleen wat aan is, en de rest in één rij naar de kamer.
+ * Screens samen in één rij, klimaat per apparaat.
+ */
+function deviceRows(room, list) {
+  const rows = [];
+  const lamps = list.filter((d) => d.soort === 'licht');
+  const shown = lamps.length <= 4 ? lamps : lamps.filter((d) => d.aan);
+  for (const d of shown) {
+    const stand = el('span', { class: d.aan ? 'aan-licht' : 'uit', text: d.stand });
+    rows.push(
+      el(
+        'div',
+        { class: 'apparaatrij' },
+        icon(d),
+        el('div', { class: 'l' }, el('b', { text: d.naam }), stand),
+        lampSwitch(d, (text) => {
+          stand.textContent = text;
+        }),
+      ),
+    );
+  }
+  const rest = lamps.length - shown.length;
+  if (rest > 0) {
+    rows.push(
+      el(
+        'a',
+        { class: 'apparaatrij', href: `#huis/ruimte/${encodeURIComponent(room.id)}` },
+        icon({ soort: 'licht', aan: false }),
+        el('div', { class: 'l' }, el('b', { text: `${rest} ${rest === 1 ? 'lamp' : 'lampen'} uit` }), el('span', { class: 'uit', text: 'in de kamer' })),
+        el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+      ),
+    );
+  }
+  const screens = list.filter((d) => d.soort === 'screen');
+  if (screens.length === 1) rows.push(deviceLink(room, screens[0]));
+  else if (screens.length > 1) {
+    const stands = [...new Set(screens.map((d) => d.stand))];
+    const any = screens.find((d) => d.aan) ?? screens[0];
+    rows.push(deviceLink(room, any, 'Screens', stands.length === 1 ? stands[0] : stands.join(', ')));
+  }
+  for (const d of list.filter((x) => x.soort === 'klimaat')) rows.push(deviceLink(room, d));
+  return rows;
+}
+
+/** Per zone een kopje, als de kamer zones heeft; anders alles onder elkaar. */
+function byZone(room, render) {
+  if (!room.zones.length) return render(room.apparaten);
+  const out = [];
+  for (const z of room.zones) {
+    const list = room.apparaten.filter((d) => d.zone === z.id);
+    if (!list.length) continue;
+    out.push(el('div', { class: 'zonelabel', text: z.naam }), ...render(list));
+  }
+  const loose = room.apparaten.filter((d) => !d.zone || !room.zones.some((z) => z.id === d.zone));
+  if (loose.length) out.push(el('div', { class: 'zonelabel', text: out.length ? 'Verder in de kamer' : room.naam }), ...render(loose));
+  return out;
+}
+
+function roomCard(r) {
+  const lampsOn = r.samenvatting?.lampenAan ?? r.lampenAan;
+  const sub = r.status
+    ? el('span', { class: `status k-${r.status.soort}`, text: r.status.zin })
+    : el('span', { class: 'status muted', text: r.apparaten.length ? (lampsOn ? lampen(lampsOn) : 'geen licht aan') : 'hier staat niets' });
+  return el(
+    'div',
+    { class: 'card kamerkaart' },
+    el(
+      'a',
+      { class: 'room kop', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
+      el('div', { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1' }, el('span', { class: 'name', text: r.naam }), sub),
+      el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+      el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+    ),
+    ...byZone(r, (list) => deviceRows(r, byKind(list))),
+  );
+}
+
 let houseRouteShown = '';
+// Het apparaat waarvan het blad open is; blijft gekozen als het huis opnieuw tekent.
+let selectedDevice = null;
 
 function renderHouse() {
   // Een ander niveau sluit het blad; dezelfde plek opnieuw tekenen niet.
   if (location.hash !== houseRouteShown) {
     $('hu-blad').hidden = true;
     houseRouteShown = location.hash;
+    selectedDevice = houseRoute().sel;
   }
   if (!house) {
     back('#thuis', 'Thuis');
     crumb([['Huis']]);
-    $('hu-titel').textContent = 'Het huis';
-    $('hu-zin').textContent = 'De etages en ruimtes komen van Home Assistant zodra die verbonden is.';
+    heading('Het huis', { zin: 'De etages en ruimtes komen van Home Assistant zodra die verbonden is.' });
     $('hu-lijst').replaceChildren();
     return;
   }
@@ -1022,32 +1186,90 @@ function renderHouse() {
 
   back('#thuis', 'Thuis');
   crumb([['Huis']]);
-  $('hu-titel').textContent = 'Het huis';
-  $('hu-zin').textContent = house.lampenAan ? `${lampen(house.lampenAan)}.` : 'Er brandt geen licht.';
+  heading('Het huis', { zin: houseTip(), samenvatting: house.samenvatting });
   if (editing) {
     $('hu-lijst').replaceChildren(...editBar(), ...editHouseLevel());
     return;
   }
   $('hu-lijst').replaceChildren(
     ...editBar(),
+    doorsnede(floors),
     ...allOff({ doel: 'huis' }, house.lampenAan),
-    ...floors.map((f) =>
-      el(
-        'a',
-        { class: 'room', href: `#huis/etage/${encodeURIComponent(floorKey(f))}` },
-        el(
-          'div',
-          { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0' },
-          el('span', { class: 'name', text: f.naam }),
-          el('span', { class: 'status', text: f.ruimtes.map((r) => (r.temperatuurC == null ? r.naam : `${r.naam} ${deg(r.temperatuurC)}`)).join(' · ') }),
-          el('span', { class: 'real', text: f.lampenAan ? lampen(f.lampenAan) : 'geen licht aan' }),
-        ),
-        el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
-      ),
-    ),
     ...homelessNote(),
     ...unreachableNote(),
   );
+}
+
+/*
+ * De tip uit ONTWERP §4: één keer, op het echte huis, tot je het doet. Onthouden
+ * in deze browser; lukt dat niet, dan staat hij er gewoon elke keer.
+ */
+const TIP_KEY = 'nieuw.huis.ingezoomd';
+function houseTip() {
+  try {
+    if (localStorage.getItem(TIP_KEY)) return '';
+  } catch {
+    // Geen opslag: dan de tip.
+  }
+  return 'Tik op een etage om in te zoomen, en op een apparaat om het te bedienen.';
+}
+function tipDone() {
+  try {
+    localStorage.setItem(TIP_KEY, '1');
+  } catch {
+    // Geen opslag; de tip komt terug, en dat is niet erg.
+  }
+}
+
+/**
+ * De doorsnede (ONTWERP §4, `Wand-Inzoomen` stap 1): de etages boven elkaar,
+ * de bovenste onder het dak, buiten eronder. Elke etage is een link, met wat er
+ * brandt; een schermlezer krijgt dezelfde volgorde als lijst.
+ */
+function doorsnede(floors) {
+  const byId = new Map(floors.map((f) => [f.id, f]));
+  const line = (f) => f.ruimtes.map((r) => (r.temperatuurC == null ? r.naam : `${r.naam} ${deg(r.temperatuurC)}`)).join(' · ');
+  const parts = (f) => [
+    el('span', { class: 'naam', text: f.naam }),
+    el(
+      'span',
+      { class: 'lampen' },
+      f.lampenAan ? icon({ soort: 'licht', aan: true }, true) : null,
+      f.lampenAan ? lampen(f.lampenAan) : 'geen licht aan',
+    ),
+    el('span', { class: 'mini', text: line(f) }),
+  ];
+  const href = (f) => `#huis/etage/${encodeURIComponent(floorKey(f))}`;
+  const roofSvg = (lit) => {
+    const svg = s('svg', { viewBox: '0 0 100 50', preserveAspectRatio: 'none', 'aria-hidden': 'true' });
+    svg.append(
+      s('polygon', {
+        points: '1,49.5 50,1 99,49.5',
+        fill: lit ? 'rgba(255,224,138,0.10)' : 'rgba(255,255,255,0.03)',
+        stroke: 'rgba(255,255,255,0.3)',
+        'stroke-width': 1.5,
+        'vector-effect': 'non-scaling-stroke',
+      }),
+    );
+    return svg;
+  };
+  const box = el('div', { class: 'huisje' });
+  const top = byId.get('e2');
+  if (top) {
+    box.append(el('a', { class: `room verdieping dak${top.lampenAan ? ' licht' : ''}`, href: href(top) }, roofSvg(top.lampenAan > 0), ...parts(top)));
+  } else {
+    box.append(el('div', { class: 'dak', 'aria-hidden': 'true' }, roofSvg(false)));
+  }
+  let first = true;
+  for (const id of ['e1', 'bg']) {
+    const f = byId.get(id);
+    if (!f) continue;
+    box.append(el('a', { class: `room verdieping${first ? ' eerste' : ''}${f.lampenAan ? ' licht' : ''}`, href: href(f) }, ...parts(f)));
+    first = false;
+  }
+  const out = byId.get('buiten');
+  if (out) box.append(el('a', { class: `room verdieping buiten${out.lampenAan ? ' licht' : ''}`, href: href(out) }, ...parts(out)));
+  return el('nav', { class: 'doorsnede', 'aria-label': 'De etages van het huis' }, box);
 }
 
 /** Lampen die uitgezet zijn in Home Assistant en alleen nog in een "alles"-groep zitten. */
@@ -1087,12 +1309,13 @@ function homelessNote() {
   ];
 }
 
+/** De etage (`Etage`, `Wand-Etage`): per kamer een kaart met wat erin staat. */
 function renderFloor(floor, many) {
+  tipDone();
   if (many) back('#huis', 'Huis');
   else back('#thuis', 'Thuis');
   crumb(many ? [['Huis', '#huis'], [floor.naam]] : [[floor.naam]]);
-  $('hu-titel').textContent = floor.naam;
-  $('hu-zin').textContent = floor.lampenAan ? `${lampen(floor.lampenAan)}.` : 'Er brandt hier geen licht.';
+  heading(floor.naam, { samenvatting: floor.samenvatting });
   if (editing) {
     $('hu-lijst').replaceChildren(...editBar(), ...editFloorLevel(floor.id));
     return;
@@ -1100,87 +1323,115 @@ function renderFloor(floor, many) {
   $('hu-lijst').replaceChildren(
     ...editBar(),
     ...allOff({ doel: 'etage', id: floor.id }, floor.lampenAan),
-    ...floor.ruimtes.map((r) => {
-      const screens = [...new Set(r.apparaten.filter((d) => d.soort === 'screen').map((d) => d.stand))];
-      const bits = [r.lampenAan ? lampen(r.lampenAan) : null, screens.length ? `screens ${screens.join(', ')}` : null].filter(Boolean);
-      return el(
-        'a',
-        { class: 'room', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
-        el('span', { class: `dot glow k-${r.status?.soort ?? 'idle'}` }),
-        el(
-          'div',
-          { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0' },
-          el('span', { class: 'name', text: r.naam }),
-          r.status ? el('span', { class: `status k-${r.status.soort}`, text: r.status.zin }) : null,
-          bits.length ? el('span', { class: 'real', text: bits.join(' · ') }) : null,
-        ),
-        el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
-      );
-    }),
+    el('div', { class: 'kamers' }, ...floor.ruimtes.map(roomCard)),
   );
 }
 
-const GROUPS = [
-  ['klimaat', 'KLIMAAT'],
-  ['screen', 'ZONWERING'],
-  ['licht', 'VERLICHTING'],
-];
-
+/** De kamer (`Ruimte`, `Wand-Ruimte`): elk apparaat een tegel, het blad ernaast of eronder. */
 function renderRoom(floor, room) {
+  tipDone();
   const many = house.etages.length > 1;
   const up = `#huis/etage/${encodeURIComponent(floorKey(floor))}`;
   back(up, floor.naam);
   crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
-  $('hu-titel').textContent = room.temperatuurC == null ? room.naam : `${room.naam} · ${deg(room.temperatuurC)}`;
-  $('hu-zin').textContent = room.status?.zin ?? '';
+  heading(room.naam, { temp: room.temperatuurC, zin: room.status?.zin ?? '', soort: room.status?.soort ?? null });
   const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan))];
-  const zoneName = (id) => room.zones.find((z) => z.id === id)?.naam;
-  for (const [kind, label] of GROUPS) {
-    const list = room.apparaten.filter((d) => d.soort === kind);
-    if (!list.length) continue;
-    parts.push(el('div', { class: 'groep', text: label }));
-    parts.push(
-      el(
-        'div',
-        { class: 'tegels' },
-        ...list.map((d) => {
-          const b = el(
-            'button',
-            { type: 'button', class: 'tegel', 'aria-pressed': 'false' },
-            el('b', { text: d.naam }),
-            el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
-            d.zone && zoneName(d.zone) ? el('span', { class: 'small muted', text: zoneName(d.zone) }) : null,
-          );
-          b.addEventListener('click', () => {
-            for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
-            if (editing) editDevice(room, d);
-            else openDevice(room, d);
-          });
-          return b;
-        }),
-      ),
-    );
-  }
+  const tiles = (list) => [
+    el(
+      'div',
+      { class: 'tegels' },
+      ...byKind(list).map((d) => {
+        const b = el(
+          'button',
+          { type: 'button', class: 'tegel', 'aria-pressed': String(d.id === selectedDevice) },
+          icon(d),
+          el('b', { text: d.naam }),
+          el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
+        );
+        b.addEventListener('click', () => {
+          for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
+          selectedDevice = d.id;
+          if (editing) editDevice(room, d);
+          else openDevice(room, d);
+        });
+        return b;
+      }),
+    ),
+  ];
+  parts.push(...byZone(room, tiles));
   if (!room.apparaten.length) parts.push(el('p', { class: 'small muted', text: 'Hier staat niets dat Smart Climate kent.' }));
   $('hu-lijst').replaceChildren(...parts);
+  // Het gekozen apparaat houdt zijn blad, met de stand van nu.
+  const chosen = room.apparaten.find((d) => d.id === selectedDevice);
+  if (chosen && !editing) openDevice(room, chosen);
 }
 
-/*
- * Bedienen in de proefomgeving (besluit 94): de knoppen werken, en zeggen wat
- * er zou gebeuren. Klimaat vraagt het de assistent; screens hebben een vaste
- * zin, want daar beslist Smart Climate (nog) niets. Licht schakelt echt, als de
- * dienst dat mag (besluit 97); Smart Climate regelt het niet, het is een knop.
- */
-function openDevice(room, d) {
+/** Het blad leeg maken, voor bedienen of voor indelen. */
+function resetBlad(d) {
   $('hu-blad').hidden = false;
   $('hu-blad-naam').textContent = d.naam;
   $('hu-blad-stand').textContent = d.stand;
+  $('hu-blad-stand').className = d.aan ? `aan-${d.soort}` : '';
   $('hu-blad-zin').textContent = '';
+  $('hu-blad-schakel').replaceChildren();
+  $('hu-blad-extra').replaceChildren();
+  $('hu-blad-knoppen').className = 'knoppen';
+}
+
+/*
+ * Bedienen (ONTWERP §4). Licht schakelt echt, als de dienst dat mag (besluit
+ * 97): aan en uit, dimmen, warm of koel; Smart Climate regelt het niet, het is
+ * een knop. Klimaat vraagt het de assistent, en screens zeggen wat er zou
+ * gebeuren: dat schrijft pas in stap B.
+ */
+function openDevice(room, d) {
+  const wasHidden = $('hu-blad').hidden;
+  resetBlad(d);
   const say = (text) => {
     $('hu-blad-zin').textContent = text;
   };
   const buttons = [];
-  if (d.soort === 'klimaat' && room.zoneId) {
+  if (d.soort === 'licht') {
+    const live = Boolean(house?.lichtBedienen);
+    $('hu-blad-schakel').replaceChildren(lampSwitch(d, say));
+    if (d.dimbaar) {
+      const dim = el('input', {
+        type: 'range',
+        class: 'dimmer',
+        min: '1',
+        max: '100',
+        step: '1',
+        value: String(d.helderheidPct ?? 100),
+        'aria-label': `Helderheid van ${d.naam}`,
+      });
+      dim.disabled = !live;
+      dim.addEventListener('change', async () => {
+        say('Even…');
+        const fout = await switchLights({ doel: 'lamp', id: d.id, aan: true, helderheidPct: Number(dim.value) });
+        say(fout ?? `${d.naam} op ${dim.value}%.`);
+      });
+      $('hu-blad-extra').append(dim);
+    }
+    if (d.kleurtemp) {
+      $('hu-blad-knoppen').className = 'knoppen drie';
+      for (const [label, kleur] of [
+        ['Warm', 'warm'],
+        ['Neutraal', 'neutraal'],
+        ['Koel', 'koel'],
+      ]) {
+        buttons.push([
+          label,
+          async () => {
+            say('Even…');
+            const fout = await switchLights({ doel: 'lamp', id: d.id, aan: true, kleur });
+            say(fout ?? `${d.naam} ${label.toLowerCase()} wit.`);
+          },
+          !live,
+        ]);
+      }
+    }
+    say(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
+  } else if (d.soort === 'klimaat' && room.zoneId) {
     for (const [label, wens] of [
       ['Koelen', 'koelen'],
       ['Verwarmen', 'verwarmen'],
@@ -1208,35 +1459,18 @@ function openDevice(room, d) {
     ]) {
       buttons.push([label, () => say(`Dan zou ik de ${d.naam.toLowerCase()} ${what}. Maar ik kijk nog alleen mee en mag nog niet schakelen.`)]);
     }
-  } else if (d.soort === 'licht' && house?.lichtBedienen) {
-    for (const [label, body] of [
-      ['Aan', { aan: true }],
-      ['Uit', { aan: false }],
-      ['Gedimd', { aan: true, helderheidPct: 30 }],
-      ['Fel', { aan: true, helderheidPct: 100 }],
-    ]) {
-      buttons.push([
-        label,
-        async () => {
-          say('Even…');
-          const fout = await switchLights({ doel: 'lamp', id: d.id, ...body });
-          say(fout ?? `${d.naam} gaat ${body.aan ? 'aan' : 'uit'}.`);
-        },
-      ]);
-    }
-  } else if (d.soort === 'licht') {
-    for (const label of ['Aan', 'Uit']) {
-      buttons.push([label, () => say('Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.')]);
-    }
+    $('hu-blad-knoppen').className = 'knoppen drie';
   }
   $('hu-blad-knoppen').replaceChildren(
-    ...buttons.map(([label, fn]) => {
+    ...buttons.map(([label, fn, off]) => {
       const b = el('button', { type: 'button', text: label });
+      if (off) b.disabled = true;
       b.addEventListener('click', () => void fn());
       return b;
     }),
   );
-  $('hu-blad').scrollIntoView({ block: 'nearest' });
+  // Alleen bij openen naar het blad schuiven, niet bij elke verversing.
+  if (wasHidden) $('hu-blad').scrollIntoView({ block: 'nearest' });
 }
 
 /* ------------------------------------------------------- indeling */
@@ -1583,8 +1817,8 @@ function editRoomLevel(roomId) {
 function editDevice(room, dev) {
   const d = draft();
   if (!d) return;
-  $('hu-blad').hidden = false;
-  $('hu-blad-naam').textContent = dev.naam;
+  resetBlad(dev);
+  $('hu-blad-stand').className = '';
   $('hu-blad-stand').textContent = dev.naam === dev.haNaam ? '' : `in Home Assistant: ${dev.haNaam}`;
   $('hu-blad-zin').textContent = 'De naam hier is de naam overal: in de app, op de wand en voor de assistent.';
   const current = d.apparaten[dev.id] ?? { kamer: room.id, zone: dev.zone ?? null };

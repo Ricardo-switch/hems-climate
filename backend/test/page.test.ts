@@ -285,11 +285,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(lightCalls).toHaveLength(1);
       expect(lightCalls[0]).toMatch(/^turn_off light\./);
       expect(lightCalls[0]).not.toContain('etage2_alles');
+      // Op de etage (ONTWERP §4): chips met wat er aan staat, en per kamer de lampen met een schakelaar.
+      expect(await p.locator('#hu-chips').textContent()).toContain('lampen aan');
+      await p.locator('#hu-lijst .apparaatrij', { hasText: 'Sfeerverlichting' }).locator('[role="switch"]').click();
+      await p.locator('#hu-lijst .apparaatrij', { hasText: 'Sfeerverlichting' }).filter({ hasText: 'gaat uit' }).waitFor();
+      expect(lightCalls.at(-1)).toBe('turn_off light.sfeerverlichting');
       await p.locator('#hu-lijst a.room', { hasText: 'Woonkamer' }).click();
       await p.locator('#hu-titel').filter({ hasText: 'Woonkamer' }).waitFor();
+      // In de kamer: het blad van de plafonnière. Hij brandt, dus de schakelaar zet hem uit; warm wit weer aan.
       await p.locator('#hu-lijst .tegel', { hasText: 'Plafonnière' }).click();
-      await p.locator('#hu-blad-knoppen button', { hasText: 'Aan' }).click();
-      await p.locator('#hu-blad-zin').filter({ hasText: 'gaat aan' }).waitFor();
+      await p.locator('#hu-blad [role="switch"]').click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'gaat uit' }).waitFor();
+      expect(lightCalls.at(-1)).toBe('turn_off light.woonkamer_plafonniere');
+      await p.locator('#hu-blad-knoppen button', { hasText: 'Warm' }).click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'warm wit' }).waitFor();
       expect(lightCalls.at(-1)).toBe('turn_on light.woonkamer_plafonniere');
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
