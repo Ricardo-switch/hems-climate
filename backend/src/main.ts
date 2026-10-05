@@ -17,7 +17,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
-import { fetchRegistries } from './adapters/homeassistant/discovery.js';
+import { fetchRegistries, type HaCoreConfig } from './adapters/homeassistant/discovery.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -312,8 +312,31 @@ let web: WebServer | null = null;
 const version = versionFromEnv(process.env);
 
 let lastStates: readonly HaEntityState[] = [];
+
+/*
+ * De ligging van het huis, voor de stand van de zon (besluit 93).
+ *
+ * Eén decimaal, ongeveer tien kilometer: genoeg voor de zon, niet genoeg om het
+ * huis te vinden (besluit 90). Alleen in het geheugen; hij gaat niet naar het
+ * logboek, de export of de console.
+ */
+let location: { latDeg: number; lonDeg: number } | null = null;
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
 client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
+  if (location == null) {
+    client
+      .query<HaCoreConfig>('get_config')
+      .then((c) => {
+        if (typeof c.latitude === 'number' && typeof c.longitude === 'number') {
+          location = { latDeg: round1(c.latitude), lonDeg: round1(c.longitude) };
+        }
+      })
+      .catch(() => {
+        // Zonder ligging valt alleen de zoninval weg; volgende verbinding opnieuw.
+      });
+  }
 });
 
 const runner =
@@ -381,6 +404,7 @@ if (webPort != null) {
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
+    location: () => location,
     // Gevoel en toelichting (besluit 84): alleen als er gelogd wordt, want ze
     // horen bij de dataset, en alleen naar een eigen bestand in de logmap.
     ...(logDir !== '' && site

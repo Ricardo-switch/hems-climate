@@ -31,6 +31,8 @@ import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
 import type { FeedbackLog } from './feedback.js';
 import { ask, parseQuestion } from './assistant.js';
+import { sunReport, type Location } from './sun.js';
+import { startOfLocalDay } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -112,6 +114,11 @@ export interface WebOptions {
    * antwoord: dan is het image gebouwd zonder dat iemand het zei.
    */
   readonly version?: Version;
+  /**
+   * De ligging van het huis op één decimaal, of null zolang Home Assistant hem
+   * niet gaf. Alleen voor de stand van de zon (besluit 93).
+   */
+  readonly location?: () => Location | null;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -439,10 +446,19 @@ export class WebServer {
           // Zonder dagoverzicht zegt het antwoord dat het het niet weet.
         }
       }
+      // Op welke gevel de zon staat, als de ligging bekend is (besluit 93).
+      const location = this.#options.location?.() ?? null;
+      let zoninval = null;
+      if (parsed.question.kind === 'zon' && config.geometry != null && location != null) {
+        const now = Date.now();
+        const r = sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone));
+        zoninval = { boven: r.zon.boven, gevels: r.gevels.filter((g) => g.inDeZon).map((g) => g.naam) };
+      }
       sendJson(
         res,
         200,
         ask(parsed.question, {
+          zoninval,
           config,
           snapshot: this.#options.latest(),
           today,
@@ -452,6 +468,27 @@ export class WebServer {
           lang: parsed.lang,
         }),
       );
+      return;
+    }
+
+    /*
+     * De zoninval (besluit 93): waar de zon staat, op welke gevel hij valt, en
+     * wat de panelen bij een heldere lucht zouden leveren.
+     */
+    if (path === '/api/zon') {
+      const config = this.#options.config;
+      const location = this.#options.location?.() ?? null;
+      if (config?.geometry == null || location == null) {
+        sendJson(res, 503, {
+          wachten:
+            config?.geometry == null
+              ? 'de ligging van het huis en de panelen is nog niet bekend'
+              : 'de ligging van het huis komt van Home Assistant zodra die verbonden is',
+        });
+        return;
+      }
+      const now = Date.now();
+      sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone)));
       return;
     }
 

@@ -76,6 +76,7 @@ async function start(options: {
   feedback?: FeedbackLog;
   withoutConfig?: boolean;
   version?: Version;
+  location?: { latDeg: number; lonDeg: number } | null;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -93,6 +94,7 @@ async function start(options: {
         ...(options.onboarding ? { onboarding: options.onboarding } : {}),
         ...(options.feedback ? { feedback: options.feedback } : {}),
         ...(options.version ? { version: options.version } : {}),
+        ...(options.location !== undefined ? { location: () => options.location ?? null } : {}),
         write: () => {},
       });
       return { server, port: await server.start() };
@@ -744,5 +746,31 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     expect(((await res.json()) as { antwoord: string }).antwoord).toContain('mag nog niet schakelen');
     const post = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen`, { method: 'POST' });
     expect(post.status).toBe(405);
+  });
+});
+
+describe('de zoninval (besluit 93)', () => {
+  it('wacht op de ligging van het huis in plaats van te gokken', async () => {
+    const { base } = await start({ latest: () => snapshot(), location: null });
+    const res = await fetch(`${base}/api/zon`);
+    expect(res.status).toBe(503);
+    expect(((await res.json()) as { wachten: string }).wachten).toContain('Home Assistant');
+  });
+
+  it('zegt waar de zon staat, op welke gevel hij valt en wat de panelen bij een heldere lucht leveren', async () => {
+    const { base } = await start({ latest: () => snapshot(), location: { latDeg: 52.1, lonDeg: 5.1 } });
+    const res = await fetch(`${base}/api/zon`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      zon: { boven: boolean };
+      gevels: { id: string; inDeZon: boolean }[];
+      panelen: unknown[];
+      kwartieren: unknown[];
+    };
+    expect(body.gevels.map((g) => g.id)).toEqual(['voorgevel', 'achtergevel']);
+    expect(body.panelen).toHaveLength(2);
+    expect(body.kwartieren.length).toBeGreaterThanOrEqual(92);
+    // Nooit allebei in de zon: ze kijken tegenovergesteld.
+    expect(body.gevels.filter((g) => g.inDeZon).length).toBeLessThanOrEqual(1);
   });
 });

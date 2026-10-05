@@ -19,8 +19,12 @@
  */
 
 import {
+  GEOMETRY_SOURCES,
   MODES,
   type Actuator,
+  type Facade,
+  type Geometry,
+  type SolarPlane,
   type ActuatorRole,
   type DeviceRef,
   type MeasurementPoint,
@@ -1243,6 +1247,62 @@ export function parseSiteConfig(
     }
   }
 
+  // Hoe het huis en de panelen liggen (besluit 93). Optioneel, en zonder valt
+  // alleen de zoninval weg; de regeling leest het niet.
+  let geometry: Geometry | null = null;
+  const geoRaw = input['geometry'];
+  if (geoRaw !== undefined) {
+    if (!isRecord(geoRaw)) {
+      p.error('geometry', 'moet een object zijn');
+    } else {
+      const zoneIds = new Set(zones.map((z) => z.id));
+      const facades: Facade[] = [];
+      const facadesRaw = geoRaw['facades'] === undefined ? [] : arr(p, geoRaw, 'geometry', 'facades');
+      (facadesRaw ?? []).forEach((f, i) => {
+        const path = join('geometry.facades', i);
+        if (!isRecord(f)) {
+          p.error(path, 'moet een object zijn');
+          return;
+        }
+        const id = str(p, f, path, 'id');
+        const name = str(p, f, path, 'name');
+        const azimuthDeg = num(p, f, path, 'azimuthDeg', { min: 0, max: 360 });
+        const source = oneOfOr(p, f, path, 'source', GEOMETRY_SOURCES, 'schatting');
+        const zs = f['zoneIds'] === undefined ? [] : arr(p, f, path, 'zoneIds');
+        const ids: string[] = [];
+        (zs ?? []).forEach((z, j) => {
+          if (typeof z !== 'string' || !zoneIds.has(z)) {
+            p.error(join(join(path, 'zoneIds'), j), `"${String(z)}" is geen zone`);
+          } else ids.push(z);
+        });
+        if (id && name && azimuthDeg != null) facades.push({ id, name, azimuthDeg, zoneIds: ids, source });
+      });
+      const planes: SolarPlane[] = [];
+      const planesRaw = geoRaw['solarPlanes'] === undefined ? [] : arr(p, geoRaw, 'geometry', 'solarPlanes');
+      (planesRaw ?? []).forEach((f, i) => {
+        const path = join('geometry.solarPlanes', i);
+        if (!isRecord(f)) {
+          p.error(path, 'moet een object zijn');
+          return;
+        }
+        const id = str(p, f, path, 'id');
+        const azimuthDeg = num(p, f, path, 'azimuthDeg', { min: 0, max: 360 });
+        const tiltDeg = num(p, f, path, 'tiltDeg', { min: 0, max: 90 });
+        const peakW = num(p, f, path, 'peakW', { min: 1 });
+        const source = oneOfOr(p, f, path, 'source', GEOMETRY_SOURCES, 'schatting');
+        if (id && azimuthDeg != null && tiltDeg != null && peakW != null) {
+          planes.push({ id, azimuthDeg, tiltDeg, peakW, source });
+        }
+      });
+      const inverterMaxW = num(p, geoRaw, 'geometry', 'inverterMaxW', { min: 1, optional: true });
+      geometry = {
+        facades,
+        solarPlanes: planes,
+        ...(inverterMaxW != null ? { inverterMaxW } : {}),
+      };
+    }
+  }
+
   // Dezelfde behandeling voor de opbrengst van de zonnepanelen (besluit 47).
   const solarRaw = input['solarProduction'];
   const solarProduction =
@@ -1421,6 +1481,7 @@ export function parseSiteConfig(
       ...(sun ? { sun } : {}),
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(solarProduction ? { solarProduction } : {}),
+      ...(geometry ? { geometry } : {}),
       ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),
     },
