@@ -53,6 +53,10 @@ drie dingen:
 
 ## Wat er later verandert
 
+Deze twee bestanden zijn er voor de test in dit huis. In het product doet een
+eigen integratie van Smart Climate dit, zonder YAML in je configuratie
+(besluit 91).
+
 In stap B (ONTWERP §7, fase 2) gaat de opdrachtzin naar een route die echt
 schakelt, via de arbiter, met de vraag tot hoe laat. De zinnen blijven
 hetzelfde.

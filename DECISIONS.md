@@ -34,6 +34,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
+- [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
 
 **Kern en regeling**
 
@@ -3538,6 +3539,48 @@ Dit is kandidaat 2 en moet dus ook eerst in de replay winnen.
 *Wanneer:* deel 1 bij stap B. De kandidaten daarna, elk na een replay. Het
 plafond per zonnestand kan nu al worden uitgerekend uit de dataset; daarvoor
 is sinds 4 oktober de zonnestroom per minuut er (89).
+
+---
+
+## 91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Fase 1 van de assistent (ONTWERP §7) werkt in dit huis met twee bestanden die
+de bewoner zelf in Home Assistant zet: zinnen in `custom_sentences/nl/` en een
+`rest_command` met `intent_script` in `configuration.yaml` (`ha-assist/`).
+Voor een test is dat goed. Voor een product niet: een bewoner hoort geen YAML
+te plakken, net zoals hij nooit een entity-ID ziet (45). Gekozen op 5 oktober
+2026.
+
+*Besluit:* naast de add-on komt een eigen integratie van Smart Climate.
+
+- **Installeren is: add-on, integratie, één klik.** De add-on meldt zich aan
+  bij Home Assistant. Die toont "Nieuw apparaat gevonden: Smart Climate", en
+  met één klik staat de integratie erin. Zolang de integratie niet in Home
+  Assistant zelf zit, installeert de bewoner hem eerst via HACS.
+- **De integratie registreert de vragen voor Assist in code.** Geen
+  `intent_script` en geen `rest_command` in de configuratie van de bewoner.
+  Kan de integratie de zinnen niet zonder bestand aanbieden, dan schrijft hij
+  één eigen bestand in `custom_sentences/`. Dat bestand is van de integratie:
+  hij maakt het, werkt het bij en haalt het weg bij verwijderen.
+- **Niet: de add-on schrijft in de configuratie van de bewoner.** Dat kan
+  technisch, maar het botst met wat er al staat, vraagt een herstart en is
+  slecht terug te draaien.
+- **Niet: een eigen gespreksagent.** Dan gaat ook "doe het licht aan" eerst
+  langs Smart Climate. Dat is te breed voor een klimaatregeling.
+- **De integratie is ook de weg voor stap B.** Een opdracht die echt schakelt,
+  loopt door Home Assistant met diens inlog, in plaats van een losse sleutel
+  (77, 80). En de stand per kamer kan als sensor beschikbaar komen, voor wie
+  hem in een eigen dashboard of automatisering wil.
+
+*Nog uit te zoeken:* of een integratie zinnen voor Assist kan aanbieden zonder
+bestand, via hetzelfde mechanisme als de zin-triggers van automatiseringen.
+
+*Voor dit huis:* tot die integratie er is, blijven de bestanden in
+`ha-assist/` de manier om de assistent te testen.
+
+*Wanneer:* bij het product (H), samen met de add-on (53, 77).
 
 ---
 
