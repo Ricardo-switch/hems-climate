@@ -249,7 +249,8 @@ function drawHouse(snap) {
   const e = snap.explanation;
   const zones = site?.zones ?? e.perZone.map((z) => ({ id: z.zoneId, name: z.zoneId, actuatorIds: [] }));
   const n = zones.length;
-  const svg = s('svg', { viewBox: '0 0 520 500', role: 'img' });
+  // Een groep en geen plaatje: de verdiepingen erin zijn links.
+  const svg = s('svg', { viewBox: '0 0 520 500', role: 'group' });
   const defs = s('defs');
   defs.innerHTML =
     '<radialGradient id="nSun"><stop offset="0" stop-color="#F5B342" stop-opacity="0.75"/><stop offset="1" stop-color="#F5B342" stop-opacity="0"/></radialGradient>' +
@@ -319,35 +320,38 @@ function drawHouse(snap) {
 
   zones.forEach((z, i) => {
     const st = status.get(z.id);
+    // Elke verdieping is een link naar zijn etage in het huis, met terug naar Thuis.
+    const link = s('a', { href: `#huis/etagevan/${encodeURIComponent(z.id)}`, class: 'verdieping-link', 'aria-label': `${z.name}: naar de etage` });
+    svg.append(link);
     const inRoof = n >= 2 && i === n - 1;
     const unitCool = (z.actuatorIds ?? []).some(canCool);
     const running = st.kind === 'cool' || st.kind === 'heat';
     if (inRoof) {
-      svg.append(s('polygon', { points: '124,206 270,84 416,206', fill: `url(#nF-${st.kind})` }));
-      svg.append(s('text', { x: 270, y: 124, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
-      svg.append(s('text', { x: 270, y: 154, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
-      svg.append(s('text', { x: 270, y: 174, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
+      link.append(s('polygon', { points: '124,206 270,84 416,206', fill: `url(#nF-${st.kind})` }));
+      link.append(s('text', { x: 270, y: 124, 'text-anchor': 'middle', 'font-size': 18, fill: '#C9D6DC' }, z.name));
+      link.append(s('text', { x: 270, y: 154, 'text-anchor': 'middle', 'font-size': 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
+      link.append(s('text', { x: 270, y: 174, 'text-anchor': 'middle', 'font-size': 15, fill: TEXT[st.kind] }, short(st.text)));
       if (unitCool) {
         // Dezelfde airco als beneden, alleen kleiner: met luchtstroom als hij draait.
-        svg.append(s('rect', { x: 244, y: 180, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
+        link.append(s('rect', { x: 244, y: 180, width: 52, height: 9, rx: 3, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.4)', filter: running ? 'url(#nGlow)' : '' }));
         if (running) {
-          svg.append(s('path', { d: 'M254,193 q5,6 0,12 M270,193 q5,6 0,12 M286,193 q5,6 0,12', fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
+          link.append(s('path', { d: 'M254,193 q5,6 0,12 M270,193 q5,6 0,12 M286,193 q5,6 0,12', fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
           if (sunny) flows.push({ path: 'M372,150 C392,166 330,180 296,184' });
         }
       }
     } else {
       const top = 470 - (i + 1) * floorH;
-      svg.append(s('rect', { x: 114, y: top + 4, width: 312, height: floorH - 8, fill: `url(#nF-${st.kind})` }));
-      if (i > 0 || n >= 2) svg.append(s('line', { x1: 110, y1: top, x2: 430, y2: top, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1.5 }));
+      link.append(s('rect', { x: 114, y: top + 4, width: 312, height: floorH - 8, fill: `url(#nF-${st.kind})` }));
+      if (i > 0 || n >= 2) link.append(s('line', { x1: 110, y1: top, x2: 430, y2: top, stroke: 'rgba(255,255,255,0.2)', 'stroke-width': 1.5 }));
       const big = floorH >= 110;
-      svg.append(s('text', { x: 132, y: top + (big ? 36 : 28), 'font-size': big ? 20 : 17, fill: '#C9D6DC' }, z.name));
-      svg.append(s('text', { x: 132, y: top + (big ? 84 : 62), 'font-size': big ? 46 : 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
-      svg.append(s('text', { x: 132, y: top + (big ? 112 : 84), 'font-size': big ? 17 : 15, fill: TEXT[st.kind] }, short(st.text)));
+      link.append(s('text', { x: 132, y: top + (big ? 36 : 28), 'font-size': big ? 20 : 17, fill: '#C9D6DC' }, z.name));
+      link.append(s('text', { x: 132, y: top + (big ? 84 : 62), 'font-size': big ? 46 : 32, 'font-weight': 600, fill: '#fff' }, deg(temp(z.id))));
+      link.append(s('text', { x: 132, y: top + (big ? 112 : 84), 'font-size': big ? 17 : 15, fill: TEXT[st.kind] }, short(st.text)));
       if (unitCool) {
         const uy = top + 12;
-        svg.append(s('rect', { x: 340, y: uy, width: 64, height: 12, rx: 4, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.35)', filter: running ? 'url(#nGlow)' : '' }));
+        link.append(s('rect', { x: 340, y: uy, width: 64, height: 12, rx: 4, fill: running ? '#DDF3FF' : 'rgba(255,255,255,0.35)', filter: running ? 'url(#nGlow)' : '' }));
         if (running) {
-          svg.append(s('path', { d: `M350,${uy + 20} q6,8 0,16 M372,${uy + 20} q6,8 0,16 M394,${uy + 20} q6,8 0,16`, fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
+          link.append(s('path', { d: `M350,${uy + 20} q6,8 0,16 M372,${uy + 20} q6,8 0,16 M394,${uy + 20} q6,8 0,16`, fill: 'none', stroke: st.kind === 'cool' ? '#8FD9FF' : '#FFB088', 'stroke-width': 2, 'stroke-linecap': 'round' }));
           if (sunny) flows.push({ path: `M372,150 C452,196 456,${uy - 26} 404,${uy}` });
         }
       }
@@ -1162,6 +1166,9 @@ function renderHouse() {
   const { level, key } = houseRoute();
   const floors = house.etages;
   let floor = level === 'etage' ? floors.find((f) => floorKey(f) === key) : null;
+  // Vanaf de doorsnede op Thuis: de etage waar dat regelgebied ligt, met terug naar Thuis.
+  const fromHome = level === 'etagevan';
+  if (fromHome) floor = floors.find((f) => f.ruimtes.some((r) => r.zoneId === key)) ?? null;
   let room = null;
   if (level === 'ruimte' || level === 'zone') {
     for (const f of floors) {
@@ -1180,7 +1187,7 @@ function renderHouse() {
     return;
   }
   if (floor) {
-    renderFloor(floor, floors.length > 1);
+    renderFloor(floor, floors.length > 1, fromHome);
     return;
   }
 
@@ -1373,9 +1380,9 @@ function plattegrond(floor) {
 }
 
 /** De etage (`Etage`, `Wand-Etage`): per kamer een kaart met wat erin staat. */
-function renderFloor(floor, many) {
+function renderFloor(floor, many, fromHome = false) {
   tipDone();
-  if (many) back('#huis', 'Huis');
+  if (many && !fromHome) back('#huis', 'Huis');
   else back('#thuis', 'Thuis');
   crumb(many ? [['Huis', '#huis'], [floor.naam]] : [[floor.naam]]);
   heading(floor.naam, { samenvatting: floor.samenvatting });

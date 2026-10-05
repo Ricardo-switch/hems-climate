@@ -265,6 +265,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#g-voel button', { hasText: 'Te warm' }).click();
       await p.locator('#g-status').filter({ hasText: 'te warm' }).waitFor();
 
+      // Op de doorsnede een verdieping aantikken gaat meteen naar die etage, met terug naar Thuis.
+      await p.locator('#huis svg a.verdieping-link[href="#huis/etagevan/woonkamer"]').click();
+      await p.locator('#hu-lijst .plattegrond').waitFor();
+      expect(await p.locator('#hu-terug').textContent()).toBe('‹ Thuis');
+      expect(await p.locator('#hu-terug').getAttribute('href')).toBe('#thuis');
+
       // De assistent die uitlegt (ONTWERP §7, fase 1): een vaste vraag, het antwoord uit de dienst.
       await p.goto(`${baseUrl}/nieuw.html#assistent`);
       await p.locator('#a-vragen button', { hasText: 'Wat doe je nu?' }).click();
