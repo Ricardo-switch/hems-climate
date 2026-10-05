@@ -419,8 +419,9 @@ toelichting als invoer (D).
 
 1. **Nu tot het voorjaar:** de schaduw verzamelt de winter. Naast de
    schaduwpagina staat een prototype in deze ontwerptaal, op live data en alleen
-   lezen: `nieuw.html` (Thuis, Waarom, Opbrengst, Bediening; portret en
-   landschap). Het is niet de basis van F (76). Gevoel en toelichting legt het
+   lezen: `nieuw.html` (Thuis, Waarom, Opbrengst, Assistent, Bediening; portret
+   en landschap). Het is de proefomgeving die de app wordt (94): dun, alles uit
+   de dienst, en bedienen alvast als "dit zou ik doen". Gevoel en toelichting legt het
    deze winter al vast (84). De assistent die alleen uitlegt (§7, fase 1) kan in
    deze periode.
 2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner

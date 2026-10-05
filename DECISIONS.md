@@ -98,12 +98,13 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [26. De terugblik hoort bij de weergave, maar is een andere waarheid](#26-de-terugblik-hoort-bij-de-weergave-maar-is-een-andere-waarheid)
 - [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
 - [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
-- [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract)
+- [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract) — *aangevuld door 94*
 - [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
 - [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
 - [86. De app is vanaf het begin toegankelijk en tweetalig](#86-de-app-is-vanaf-het-begin-toegankelijk-en-tweetalig)
 - [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur)
 - [88. De app noemt alleen een oorzaak die gemeten is](#88-de-app-noemt-alleen-een-oorzaak-die-gemeten-is)
+- [94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app](#94-de-schaduwweergave-is-voor-de-cijfers-de-proefomgeving-voor-de-app)
 
 **Veiligheid**
 
@@ -3033,7 +3034,7 @@ stappen: opdracht, tot hoe laat, en het voorstel voor later als dat er is.
 
 ## 76. De testpagina is een prototype; de echte app krijgt een bewonerscontract
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 94*
 
 Sinds 2 oktober 2026 staat `nieuw.html` naast de schaduwpagina: de ontwerptaal van
 besluit 71 op live gegevens. Om snel te kunnen kijken leest hij interne vormen
@@ -3739,6 +3740,50 @@ staan de gevels en dakvlakken als `schatting`: de voorgevel op 97°, de
 achtergevel op 277°, de dakvlakken op 97° en 277° met een helling van 47° en
 elk 2.340 Wp, en een omvormer van 3.000 W. De toets volgt met de zonnesensor op
 de screen: als de voorgevel op het oosten kijkt, valt de zon er rond 13:40 af.
+
+---
+
+## 94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app
+
+*Onderwerp: weergave · Status: geldig*
+
+Besluit 76 noemde `nieuw.html` een prototype dat niet de basis van stap F is,
+omdat hij zelf logica bevatte. In de praktijk werd hij iets anders. Op 5 oktober
+2026 bracht hij, samen met de assistent in Assist, in een paar uur zes dingen
+boven die geen test vond: zinsbouw, een doel van 20° bij een kamer van 22,3°,
+een getal dat drie keer terugkwam. De bewoner zei het zo: de schaduwweergave is
+voor de dataset en de cijfers; de proefomgeving is om de app nu al op kwaliteit
+en gebruiksgemak te testen, zodat niet alles pas na de winter boven komt.
+Gekozen op 5 oktober 2026.
+
+*Besluit:*
+
+- **Twee weergaven, twee taken.** `index.html` is de schaduwweergave: cijfers,
+  de vergelijking met het oude systeem, de dataset. `nieuw.html` is de
+  proefomgeving: de app in de ontwerptaal van besluit 71, op echte data, voor
+  kwaliteit en gebruiksgemak.
+- **De proefomgeving wordt de app, en blijft daarom dun.** Alles wat hij laat
+  zien, komt kant-en-klaar uit de dienst: zinnen, getallen, de stand per kamer,
+  de zoninval. Zoals `/api/vraag` en `/api/zon` al doen. Wat de pagina nu nog
+  zelf uitrekent (de stand per kamer, de stromen, de kop) verhuist stap voor
+  stap naar het bewonerscontract (76). Dan is wat getest wordt ook wat er
+  straks staat, en hoeft stap F niet opnieuw te bouwen.
+- **Bedienen wordt ook nu al getest.** Knoppen werken in de proefomgeving en
+  zeggen wat Smart Climate zou doen, net als de assistent in fase 1 (ONTWERP
+  §7): kamer, wens, tot hoe laat, en het voorstel voor later. Er gaat niets naar
+  Home Assistant. Zo wordt het gebruiksgemak van bedienen getest, en ziet de
+  schaduw welke opdrachten de deur uit zouden gaan.
+- **In stap B gaat dan één knop om:** van "zou ik doen" naar "doe ik". Wat
+  daaronder zit (de opdrachtroute, de detector van 74, opnieuw lezen en
+  controleren, het piepbudget van 90) wordt in B gebouwd, maar zoveel mogelijk
+  eerst in de schaduw beproefd.
+- **Ook in de proefomgeving geldt besluit 88:** wat er staat, is gemeten of
+  komt uit een besluit. Voorbeeldgetallen horen alleen in schetsen.
+
+*Wat dit verandert aan 76:* de testpagina is niet langer alleen een prototype
+dat niet verder groeit; hij is de proefomgeving die de app wordt, onder de
+regel dat hij niets zelf uitrekent. Het bewonerscontract en de contracttests
+blijven zoals 76 ze vastlegde.
 
 ---
 
