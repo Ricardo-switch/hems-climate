@@ -194,7 +194,8 @@ class Facts {
   }
 
   energy(bron: string, wh: number): string {
-    return this.#add(bron, `${this.#num(Math.abs(wh) / 1000)} kWh`);
+    const a = Math.abs(wh);
+    return this.#add(bron, a < 1000 ? `${Math.round(a / 10) * 10} Wh` : `${this.#num(a / 1000)} kWh`);
   }
 
   time(bron: string, ms: number): string {
@@ -401,6 +402,8 @@ function statusOf(
   lang: Lang,
   shadow: boolean,
   f: Facts,
+  // "Wat doe je nu?" noemt het net één keer voor het hele huis.
+  withGrid = true,
 ): { kind: RoomKind; zin: string } {
   const w = WORDS[lang];
   const e = snap.explanation;
@@ -490,11 +493,12 @@ function statusOf(
     const why = blocked ? w.block[blocked.blockedBy] : w.reason[pz.reason];
     const sunBlock =
       blocked?.blockedBy === 'insufficient_power_budget' || blocked?.blockedBy === 'start_threshold_not_met';
-    const grid = sunBlock ? gridSentence(f, e, lang) : null;
+    const grid = sunBlock && withGrid ? gridSentence(f, e, lang) : null;
+    // De redenen zijn bijzinnen ("er te weinig zon over is"); na "omdat" staan ze goed.
     const head =
       lang === 'nl'
-        ? `${cap(zn)} wil ${w.infinitive[a]} (${temps}), maar ${why}.`
-        : `${cap(zn)} wants to ${w.infinitive[a]} (${temps}), but ${why}.`;
+        ? `${cap(zn)} wil ${w.infinitive[a]} (${temps}), maar dat kan nu niet, omdat ${why}.`
+        : `${cap(zn)} wants to ${w.infinitive[a]} (${temps}), but that has to wait, because ${why}.`;
     return { kind: 'wait', zin: grid ? `${head} ${grid}` : head };
   }
 
@@ -530,8 +534,12 @@ function realSentence(f: Facts, config: SiteConfig, snap: DecisionView, zone: Zo
     const setpoint = state !== 'off' && Number.isFinite(n) ? f.temp(`apparaat.${a.id}.setpoint`, n) : null;
     known.push(
       lang === 'nl'
-        ? `staat ${dn} op ${word}${setpoint ? ` naar ${setpoint}` : ''}`
-        : `${dn} is set to ${word}${setpoint ? ` at ${setpoint}` : ''}`,
+        ? state === 'off'
+          ? `staat ${dn} uit`
+          : `staat ${dn} op ${word}${setpoint ? ` naar ${setpoint}` : ''}`
+        : state === 'off'
+          ? `${dn} is off`
+          : `${dn} is set to ${word}${setpoint ? ` at ${setpoint}` : ''}`,
     );
   }
   const out: string[] = [];
@@ -614,7 +622,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
         // Elke kamer met eigen feiten: alleen wat in het antwoord komt, telt mee.
         const statuses = config.zones.map((z) => {
           const own = new Facts(lang, config.timezone);
-          return { ...statusOf(config, snapshot, z, lang, shadow, own), own };
+          return { ...statusOf(config, snapshot, z, lang, shadow, own, false), own };
         });
         const said = e.failsafe.active
           ? // Bij een storing zegt elke kamer hetzelfde; één keer is genoeg.
@@ -709,8 +717,12 @@ export function ask(question: Question, ctx: AskContext): Answer {
         );
       }
       const out: string[] = [];
-      const zon = f.energy('vandaag.zonWh', t.zonWh);
-      out.push(lang === 'nl' ? `Vandaag leverden de panelen tot nu toe ${zon}.` : `So far today the panels produced ${zon}.`);
+      if (t.zonWh < 5) {
+        out.push(lang === 'nl' ? 'Vandaag leverden de panelen nog vrijwel niets.' : 'So far today the panels have produced almost nothing.');
+      } else {
+        const zon = f.energy('vandaag.zonWh', t.zonWh);
+        out.push(lang === 'nl' ? `Vandaag leverden de panelen tot nu toe ${zon}.` : `So far today the panels produced ${zon}.`);
+      }
       const best = t.kwartieren
         .filter((k): k is typeof k & { zonW: number } => k.zonW != null)
         .reduce<{ tMs: number; zonW: number } | null>((m, k) => (m == null || k.zonW > m.zonW ? k : m), null);
@@ -719,13 +731,21 @@ export function ask(question: Question, ctx: AskContext): Answer {
         const at = f.time('vandaag.piekTijd', best.tMs);
         out.push(lang === 'nl' ? `Het meeste was ${p}, in het kwartier van ${at}.` : `The most was ${p}, in the quarter from ${at}.`);
       }
-      const back = f.energy('vandaag.netTerugWh', t.netTerugWh);
       const off = f.energy('vandaag.netAfWh', t.netAfWh);
-      out.push(
-        lang === 'nl'
-          ? `Je huis leverde ${back} terug en haalde ${off} van het net.`
-          : `Your house returned ${back} to the grid and drew ${off} from it.`,
-      );
+      if (t.netTerugWh < 5) {
+        out.push(
+          lang === 'nl'
+            ? `Je huis leverde nog niets terug en haalde ${off} van het net.`
+            : `Your house has not returned anything yet and drew ${off} from the grid.`,
+        );
+      } else {
+        const back = f.energy('vandaag.netTerugWh', t.netTerugWh);
+        out.push(
+          lang === 'nl'
+            ? `Je huis leverde ${back} terug en haalde ${off} van het net.`
+            : `Your house returned ${back} to the grid and drew ${off} from it.`,
+        );
+      }
       const now = snapshot?.explanation.solarProductionW;
       if (now != null) {
         out.push(

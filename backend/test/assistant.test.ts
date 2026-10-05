@@ -117,6 +117,11 @@ describe('waarom', () => {
     expect(a.antwoord).toContain('Ik kijk nog alleen mee');
   });
 
+  it('zegt "staat uit" voor een apparaat dat uit staat', () => {
+    const a = askNl({ kind: 'waarom', kamer: 'woonkamer' });
+    expect(a.antwoord).toContain('In werkelijkheid staat de nest (beneden) op verwarmen naar 20°, en staat de airco woonkamer uit.');
+  });
+
   it('zegt "koelt" in plaats van "zou" zodra hij echt schakelt', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ accepted: [coolOnSun] }), { shadow: false });
     expect(a.antwoord).toContain('De zolder koelt op zon');
@@ -131,7 +136,9 @@ describe('waarom', () => {
         rejected: [{ intent: coolOnSun, blockedBy: 'start_threshold_not_met' }],
       }),
     );
-    expect(a.antwoord).toContain('De zolder wil koelen (het is er 24,3°, het doel is 23°), maar er net te weinig zon over is om te starten.');
+    expect(a.antwoord).toContain(
+      'De zolder wil koelen (het is er 24,3°, het doel is 23°), maar dat kan nu niet, omdat er net te weinig zon over is om te starten.',
+    );
     expect(a.antwoord).toContain('Er gaat nu 300 W terug naar het net.');
   });
 
@@ -163,6 +170,30 @@ describe('waarom', () => {
 });
 
 describe('nu', () => {
+  it('noemt het net één keer, ook als meer kamers op zon wachten', () => {
+    const wait = { ...coolOnSun, zoneId: 'woonkamer', actuatorId: 'ac-woonkamer' };
+    const e = explanation({
+      budget: { availableW: 100, allocatedW: 0, surplusW: 0, reclaimableW: 0, gridPowerW: 2300 },
+      perZone: [
+        { zoneId: 'woonkamer', temperatureC: 22.8, humidityPct: 55, targetC: 22, demand: 'cool', reason: 'zone_above_setpoint' },
+        { zoneId: 'badkamer', temperatureC: 21.5, humidityPct: null, targetC: null, demand: 'none', reason: 'zone_satisfied' },
+        { zoneId: 'zolder', temperatureC: 22.8, humidityPct: null, targetC: 22.5, demand: 'cool', reason: 'zone_above_setpoint' },
+      ],
+    });
+    const a = askNl(
+      { kind: 'nu' },
+      view({
+        explanation: e,
+        rejected: [
+          { intent: wait, blockedBy: 'insufficient_power_budget' },
+          { intent: coolOnSun, blockedBy: 'insufficient_power_budget' },
+        ],
+      }),
+    );
+    expect(a.antwoord.split('van het net').length - 1).toBe(1);
+  });
+
+
   it('noemt alleen de kamers waar iets speelt, en de stroom', () => {
     const a = askNl({ kind: 'nu' }, view({ accepted: [coolOnSun] }));
     expect(a.antwoord).toBe(
@@ -218,6 +249,12 @@ describe('zon', () => {
       'Vandaag leverden de panelen tot nu toe 5,3 kWh. Het meeste was 1,9 kW, in het kwartier van 12:15. ' +
         'Je huis leverde 2,9 kWh terug en haalde 1,2 kWh van het net. Nu leveren ze 1,8 kW.',
     );
+  });
+
+  it('zegt "nog vrijwel niets" in plaats van 0 kWh', () => {
+    const a = askNl({ kind: 'zon' }, view(), { today: { ...today, zonWh: 3, netTerugWh: 0, netAfWh: 640, kwartieren: [] } });
+    expect(a.antwoord).toContain('Vandaag leverden de panelen nog vrijwel niets.');
+    expect(a.antwoord).toContain('Je huis leverde nog niets terug en haalde 640 Wh van het net.');
   });
 
   it('zegt het als er geen dag wordt bijgehouden', () => {
