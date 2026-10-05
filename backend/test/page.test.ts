@@ -319,11 +319,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await etage.fill('Beneden');
         await etage.press('Tab');
         await p.locator('#hu-bewerk-status').filter({ hasText: 'bewaard' }).waitFor();
-        // Wat nergens hing, kan uit de app, en weer terug.
-        await p.locator('#hu-lijst .rij', { hasText: 'light.zwerver' }).locator('button', { hasText: 'Niet tonen' }).click();
-        await p.locator('#hu-lijst .groep').filter({ hasText: 'NIET GETOOND (1)' }).waitFor();
+        // Wat nergens hing, kan uit de app, en weer terug: op een plek naar keuze of zoals het was.
+        await p.locator('#hu-lijst .rij', { hasText: 'light.zwerver' }).locator('button', { hasText: 'Verbergen' }).click();
+        await p.locator('#hu-lijst .groep').filter({ hasText: 'VERBORGEN (1)' }).waitFor();
+        await p.getByLabel('Plek voor light.zwerver').waitFor();
         await p.locator('#hu-lijst button', { hasText: 'Weer tonen' }).click();
-        await p.locator('#hu-lijst').filter({ hasNotText: 'NIET GETOOND' }).waitFor();
+        await p.locator('#hu-lijst .groep').filter({ hasText: 'VERBORGEN' }).waitFor({ state: 'detached' });
         // En krijgt een kamer.
         await p.getByLabel('Kamer voor light.zwerver').selectOption({ label: 'Tuin (Buiten)' });
         await p.locator('#hu-lijst').filter({ hasNotText: 'NOG IN TE DELEN' }).waitFor();

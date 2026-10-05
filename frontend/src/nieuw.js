@@ -1706,10 +1706,7 @@ function editHouseLevel() {
     }
     const roomName = (id) => d.kamers.find((k) => k.id === id)?.naam;
     for (const dev of homeless) {
-      const rooms = [
-        ['', dev.voorstelKamer ? `Voorstel: ${roomName(dev.voorstelKamer)}…` : 'Kies een kamer…'],
-        ...d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`]),
-      ];
+      const rooms = [['', dev.voorstelKamer ? `Voorstel: ${roomName(dev.voorstelKamer)}…` : 'Kies een kamer of zone…'], ...placeOptions(d)];
       const where = [
         dev.groepen?.length ? `in ${dev.groepen.join(', ')}` : null,
         dev.voorstel ? `in Home Assistant: ${dev.voorstel}` : null,
@@ -1724,27 +1721,24 @@ function editHouseLevel() {
             el('b', { text: dev.naam }),
             el('span', { class: 'small muted', text: where.length ? where.join(' · ') : 'geen groep of gebied in Home Assistant' }),
           ),
-          select(rooms, '', `Kamer voor ${dev.naam}`, async (kamer) => {
-            if (!kamer) return;
-            const next = draft();
-            next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone: null };
-            await saveLayout(next, `${dev.naam}`);
-          }),
-          button('Niet tonen', () => hideDevice(dev)),
+          select(rooms, '', `Kamer voor ${dev.naam}`, (v) => placeDevice(dev, v)),
+          button('Verbergen', () => hideDevice(dev)),
         ),
       );
     }
   }
-  // Wat de bewoner verborg, met een knop om het terug te halen.
+  // Wat de bewoner verborg: terug op een plek naar keuze, of zoals Home Assistant het indeelt.
   const hidden = house?.verborgen ?? [];
   if (hidden.length) {
-    parts.push(el('div', { class: 'groep', text: `NIET GETOOND (${hidden.length})` }));
+    parts.push(el('div', { class: 'groep', text: `VERBORGEN (${hidden.length})` }));
+    parts.push(el('p', { class: 'tiny', text: 'Verborgen staat in geen kamer, telt nergens mee en gaat niet mee met "Alle lampen uit".' }));
     for (const dev of hidden) {
       parts.push(
         el(
           'div',
           { class: 'rij' },
           el('b', { style: 'flex: 1 1 200px; min-width: 0', text: dev.naam }),
+          select([['', 'Terugzetten in…'], ...placeOptions(d)], '', `Plek voor ${dev.naam}`, (v) => placeDevice(dev, v)),
           button('Weer tonen', async () => {
             const next = draft();
             next.verborgen = (next.verborgen ?? []).filter((id) => id !== dev.id);
@@ -1764,6 +1758,24 @@ async function hideDevice(dev) {
   next.verborgen = [...new Set([...(next.verborgen ?? []), dev.id])];
   delete next.apparaten[dev.id];
   await saveLayout(next, `${dev.naam} verborgen;`);
+}
+
+/** Elke kamer, en elke zone erin, als één keuze: "Woonkamer › Keuken (Begane grond)". */
+function placeOptions(d) {
+  return d.kamers.flatMap((k) => {
+    const floor = floorName(d, k.etage);
+    return [[k.id, `${k.naam} (${floor})`], ...k.zones.map((z) => [`${k.id}|${z.id}`, `${k.naam} › ${z.naam} (${floor})`])];
+  });
+}
+
+/** Een apparaat op een plek uit `placeOptions` zetten; was het verborgen, dan is het dat niet meer. */
+async function placeDevice(dev, value) {
+  if (!value) return;
+  const [kamer, zone = null] = value.split('|');
+  const next = draft();
+  next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone };
+  next.verborgen = (next.verborgen ?? []).filter((id) => id !== dev.id);
+  await saveLayout(next, dev.naam);
 }
 
 /** Etageniveau in de bewerkstand: kamers hernoemen, verhuizen, weghalen en toevoegen. */
@@ -1880,6 +1892,34 @@ function editRoomLevel(roomId) {
     ),
   );
   if (!k.zones.length) parts.push(el('p', { class: 'tiny', text: 'Geen zones: de kamer is één geheel. Voeg ze alleen toe als de kamer open delen heeft.' }));
+
+  // Wat nog nergens staat, of verborgen is, kan hier meteen in de kamer of een zone.
+  const candidates = [
+    ...(house?.zonderRuimte ?? []).map((x) => ({ ...x, label: `${x.naam} (nog in te delen)` })),
+    ...(house?.verborgen ?? []).map((x) => ({ ...x, label: `${x.naam} (verborgen)` })),
+  ];
+  if (candidates.length) {
+    parts.push(el('div', { class: 'groep', text: 'TOEVOEGEN AAN DEZE KAMER' }));
+    const which = select([['', 'Kies een apparaat…'], ...candidates.map((x) => [x.id, x.label])], '', 'Apparaat om toe te voegen', () => {});
+    const where = select(
+      [[roomId, k.zones.length ? 'Geen zone' : k.naam], ...k.zones.map((z) => [`${roomId}|${z.id}`, z.naam])],
+      roomId,
+      'Zone voor het apparaat',
+      () => {},
+    );
+    parts.push(
+      el(
+        'div',
+        { class: 'rij' },
+        which,
+        k.zones.length ? where : null,
+        button('Toevoegen', async () => {
+          const dev = candidates.find((x) => x.id === which.value);
+          if (dev) await placeDevice(dev, where.value);
+        }),
+      ),
+    );
+  }
   return parts;
 }
 
@@ -1916,10 +1956,22 @@ function editDevice(room, dev) {
       };
       await saveLayout(next, dev.naam);
     }),
-    button('Niet tonen', async () => {
+    button('Verbergen…', () => confirmHide(room, dev)),
+  );
+}
+
+/** Eerst zeggen wat verbergen doet; pas dan verbergen. */
+function confirmHide(room, dev) {
+  $('hu-blad-zin').textContent =
+    `Verbergen haalt ${dev.naam} uit de app: hij staat dan in geen kamer, telt nergens mee en gaat niet mee met "Alle lampen uit". ` +
+    'Terughalen kan hier via "Toevoegen aan deze kamer", of op het huis onder "Verborgen". Wil je hem alleen naar een andere kamer of zone, kies dan Annuleren en verplaats hem.';
+  $('hu-blad-knoppen').replaceChildren(
+    button('Ja, verbergen', async () => {
       $('hu-blad').hidden = true;
+      selectedDevice = null;
       await hideDevice(dev);
     }),
+    button('Annuleren', () => editDevice(room, dev)),
   );
 }
 
