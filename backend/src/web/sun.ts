@@ -43,6 +43,20 @@ export interface SunReport {
   readonly heldereLuchtW: number;
   /** Per kwartier van vandaag, van middernacht tot middernacht. */
   readonly kwartieren: readonly { readonly tMs: number; readonly heldereLuchtW: number }[];
+  /**
+   * De dag van de zon, voor de tekening van het huis: waar hij op de boog staat.
+   * Uitgerekend in de dienst, zodat de pagina hem alleen hoeft neer te zetten (94).
+   */
+  readonly dag: {
+    readonly opMs: number | null;
+    readonly onderMs: number | null;
+    /** 0 bij zonsopkomst, 1 bij zonsondergang; null als de zon onder is. */
+    readonly fractie: number | null;
+    /** De hoogte nu als deel van de hoogste stand van vandaag, 0 tot 1. */
+    readonly hoogteDeel: number;
+    /** Komt de zon op aan de kant van de voorgevel; null zonder voorgevel. */
+    readonly opVoorkant: boolean | null;
+  };
 }
 
 /**
@@ -95,8 +109,36 @@ export function sunReport(
     // Het midden van het kwartier, zoals het dagoverzicht het gemiddelde neemt.
     quarters.push({ tMs: t, heldereLuchtW: clearSkyW(geometry, location, t + 7.5 * 60_000) });
   }
+  // Op- en ondergang en het hoogste punt van vandaag, minuut voor minuut.
+  let opMs: number | null = null;
+  let onderMs: number | null = null;
+  let highest = 0;
+  for (let t = dayStartMs; t < dayStartMs + 24 * 3_600_000; t += 60_000) {
+    const p = sunPosition(t, location.latDeg, location.lonDeg);
+    if (p.elevationDeg > 0) {
+      opMs ??= t;
+      onderMs = t;
+      highest = Math.max(highest, p.elevationDeg);
+    }
+  }
+  const up = sun.elevationDeg > 0 && opMs != null && onderMs != null && onderMs > opMs;
+  const front = geometry.facades.find((f) => f.id === 'voorgevel') ?? geometry.facades[0];
+  let opVoorkant: boolean | null = null;
+  if (front && opMs != null) {
+    const rise = sunPosition(opMs, location.latDeg, location.lonDeg).azimuthDeg;
+    const diff = Math.abs((((rise - front.azimuthDeg) % 360) + 540) % 360 - 180);
+    opVoorkant = diff < 90;
+  }
+
   return {
     tMs: nowMs,
+    dag: {
+      opMs,
+      onderMs,
+      fractie: up ? Math.round(((nowMs - opMs!) / (onderMs! - opMs!)) * 1000) / 1000 : null,
+      hoogteDeel: up && highest > 0 ? Math.round((sun.elevationDeg / highest) * 1000) / 1000 : 0,
+      opVoorkant,
+    },
     zon: {
       hoogteGraden: round1(sun.elevationDeg),
       richtingGraden: Math.round(sun.azimuthDeg),

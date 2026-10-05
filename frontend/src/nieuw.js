@@ -269,10 +269,32 @@ function drawHouse(snap) {
   const sunny = solar != null && solar > 30;
   // Een zwakke zon tekenen we ook zwak: 100 W is geen stralende middag.
   const strength = sunny ? Math.min(1, 0.35 + solar / 1500) : 0;
+  /*
+   * Waar de zon op de boog van de dag staat (besluit 93 en 94): de dienst rekent
+   * het uit, de pagina zet hem neer. De voorkant is rechts, waar het oostdak
+   * getekend wordt: komt de zon aan de voorkant op, dan loopt hij van rechts
+   * laag, over het huis, naar links laag. Zonder ligging blijft hij rechtsboven.
+   */
+  const arc = sunInfo?.dag;
+  let sx = 452;
+  let sy = 66;
+  if (arc?.fractie != null) {
+    const f = arc.opVoorkant === false ? 1 - arc.fractie : arc.fractie;
+    sx = 490 - f * 460;
+    sy = 196 - arc.hoogteDeel * 172;
+  }
+  // Het getal naast de zon als hij hoog staat (anders botst het met het dak), erboven als hij laag staat.
+  const label = sy < 110
+    ? { x: sx < 270 ? sx + 30 : sx - 30, y: sy + 8, 'text-anchor': sx < 270 ? 'start' : 'end' }
+    : { x: Math.min(470, Math.max(50, sx)), y: sy - 34, 'text-anchor': 'middle' };
   if (sunny) {
-    svg.append(s('circle', { cx: 452, cy: 66, r: 30 + 30 * strength, fill: 'url(#nSun)', opacity: strength }));
-    svg.append(s('circle', { cx: 452, cy: 66, r: 20, fill: '#F5B342', filter: 'url(#nGlow)', opacity: 0.45 + 0.55 * strength }));
-    svg.append(s('text', { x: 452, y: 122, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 700, fill: '#F5C66E' }, kw(solar)));
+    svg.append(s('circle', { cx: sx, cy: sy, r: 30 + 30 * strength, fill: 'url(#nSun)', opacity: strength }));
+    svg.append(s('circle', { cx: sx, cy: sy, r: 20, fill: '#F5B342', filter: 'url(#nGlow)', opacity: 0.45 + 0.55 * strength }));
+    svg.append(s('text', { ...label, 'font-size': 24, 'font-weight': 700, fill: '#F5C66E' }, kw(solar)));
+  } else if (arc?.fractie != null) {
+    // Overdag maar weinig zon: een bleke zon op zijn plek.
+    svg.append(s('circle', { cx: sx, cy: sy, r: 16, fill: 'rgba(255,255,255,0.25)' }));
+    svg.append(s('text', { ...label, 'font-size': 18, fill: '#A9BAC2' }, solar == null ? 'geen zonmeting' : 'bewolkt'));
   } else if (hour >= 19 || hour < 7) {
     const mask = s('mask', { id: 'nMoon' });
     mask.append(s('rect', { x: 400, y: 20, width: 110, height: 110, fill: '#fff' }));
