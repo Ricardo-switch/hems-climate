@@ -77,6 +77,14 @@ describe('de indeling toetsen', () => {
     expect(Object.keys(r.layout.apparaten)).toEqual(['nest', 'light.sfeerverlichting']);
   });
 
+  it('bewaart welke apparaten verborgen zijn, zonder dubbele en zonder onbekende', () => {
+    const r = validateLayout({ ...good, verborgen: ['cover.screen', 'cover.screen', 'light.weg', 7] }, known);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.layout.verborgen).toEqual(['cover.screen']);
+    expect(validateLayout({ ...good, verborgen: 'cover.screen' }, known).ok).toBe(false);
+  });
+
   it('geeft de plek van een uitgezette lamp door aan de groep die hem nu toont, tenzij die er zelf een heeft', () => {
     const withGroup: LayoutKnown = {
       ...known,

@@ -22,6 +22,7 @@ import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import type { HouseReport } from '../src/web/house.js';
 import { LayoutStore, type Layout } from '../src/web/layout.js';
+import { LightSwitch } from '../src/web/lights.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -81,6 +82,7 @@ async function start(options: {
   location?: { latDeg: number; lonDeg: number } | null;
   house?: () => HouseReport | null;
   layout?: { store: LayoutStore; proposal: () => Layout | null };
+  lights?: LightSwitch;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -101,6 +103,7 @@ async function start(options: {
         ...(options.location !== undefined ? { location: () => options.location ?? null } : {}),
         ...(options.house ? { house: options.house } : {}),
         ...(options.layout ? { layout: options.layout } : {}),
+        ...(options.lights ? { lights: options.lights } : {}),
         write: () => {},
       });
       return { server, port: await server.start() };
@@ -788,12 +791,109 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
   });
 
   it('geeft het huis door zoals de dienst het opbouwde, en leest alleen', async () => {
-    const house: HouseReport = { indeling: 'voorstel', etages: [{ id: 'bg', naam: 'Begane grond', lampenAan: 0, ruimtes: [] }], lampenAan: 0, zonderRuimte: [], lampgroepen: [] };
+    const house: HouseReport = {
+      indeling: 'voorstel',
+      etages: [{ id: 'bg', naam: 'Begane grond', lampenAan: 0, ruimtes: [] }],
+      lampenAan: 0,
+      zonderRuimte: [],
+      lampgroepen: [],
+      verborgen: [],
+      onvindbaar: [],
+    };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(house);
+    expect(await res.json()).toEqual({ ...house, lichtBedienen: false });
     expect((await fetch(`${base}/api/huis`, { method: 'POST' })).status).toBe(405);
+  });
+});
+
+describe('licht bedienen (besluit 97)', () => {
+  const lamp = (id: string, aan: boolean) => ({
+    id,
+    naam: id,
+    haNaam: id,
+    soort: 'licht' as const,
+    stand: aan ? 'aan' : 'uit',
+    aan,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+  });
+  const room = (id: string, apparaten: ReturnType<typeof lamp>[]) => ({
+    id,
+    naam: id,
+    zoneId: null,
+    zones: [],
+    temperatuurC: null,
+    status: null,
+    lampenAan: apparaten.filter((d) => d.aan).length,
+    apparaten,
+  });
+  const house: HouseReport = {
+    indeling: 'eigen',
+    etages: [
+      { id: 'e2', naam: 'Zolder', lampenAan: 1, ruimtes: [room('zolder', [lamp('light.zolder', true)])] },
+      { id: 'bg', naam: 'Beneden', lampenAan: 1, ruimtes: [room('hal', [lamp('light.hal', true), lamp('light.trap', false)])] },
+    ],
+    lampenAan: 2,
+    zonderRuimte: [],
+    lampgroepen: [],
+    verborgen: [],
+    onvindbaar: [],
+  };
+
+  async function withLights() {
+    const calls: { service: string; ids: readonly string[]; data: Record<string, unknown> }[] = [];
+    const lights = new LightSwitch({
+      house: () => house,
+      call: async (service, ids, data) => {
+        calls.push({ service, ids, data });
+      },
+    });
+    const started = await start({ latest: () => snapshot(), house: () => house, lights });
+    const post = (body: unknown) => fetch(`${started.base}/api/licht`, { method: 'POST', body: JSON.stringify(body) });
+    return { ...started, calls, post };
+  }
+
+  it('bestaat niet wanneer het niet is meegegeven', async () => {
+    const { base } = await start({ latest: () => snapshot(), house: () => house });
+    expect((await fetch(`${base}/api/licht`, { method: 'POST', body: '{}' })).status).toBe(405);
+  });
+
+  it('zet een etage, een kamer of het huis uit, met alleen de lampen die het huis toont', async () => {
+    const { post, calls, base } = await withLights();
+    expect((await (await fetch(`${base}/api/huis`)).json()) as { lichtBedienen: boolean }).toMatchObject({ lichtBedienen: true });
+    expect(await (await post({ doel: 'etage', id: 'bg', aan: false })).json()).toEqual({ lampen: 2 });
+    expect((await post({ doel: 'huis', aan: false })).status).toBe(200);
+    expect((await post({ doel: 'lamp', id: 'light.zolder', aan: true, helderheidPct: 40 })).status).toBe(200);
+    expect(calls).toEqual([
+      { service: 'turn_off', ids: ['light.hal', 'light.trap'], data: {} },
+      { service: 'turn_off', ids: ['light.zolder', 'light.hal', 'light.trap'], data: {} },
+      { service: 'turn_on', ids: ['light.zolder'], data: { brightness_pct: 40 } },
+    ]);
+  });
+
+  it('weigert wat niet klopt, en zet nooit een hele etage of het huis aan', async () => {
+    const { post, calls } = await withLights();
+    expect((await post({ doel: 'huis', aan: true })).status).toBe(400);
+    expect((await post({ doel: 'etage', id: 'bg', aan: true })).status).toBe(400);
+    expect((await post({ doel: 'lamp', id: 'climate.beneden', aan: false })).status).toBe(404);
+    expect((await post({ doel: 'kamer', id: 'kelder', aan: false })).status).toBe(404);
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: false, helderheidPct: 50 })).status).toBe(400);
+    expect(calls).toEqual([]);
+  });
+
+  it('houdt de muur overeind voor elke andere route en methode', async () => {
+    const { base } = await withLights();
+    for (const path of ['/api/state', '/api/huis', '/api/indeling', '/']) {
+      expect((await fetch(`${base}${path}`, { method: 'POST' })).status, path).toBe(405);
+    }
+    for (const method of ['PUT', 'DELETE']) {
+      expect((await fetch(`${base}/api/licht`, { method })).status, method).toBe(405);
+    }
   });
 });
 

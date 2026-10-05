@@ -53,6 +53,13 @@ if bashio::supervisor.ping 2> /dev/null; then
   SHADOW_MIN_INTERVAL_SECONDS="$(bashio::config 'min_interval_seconden')"
   SHADOW_WATCHDOG_MINUTES="$(bashio::config 'bewaking_minuten')"
   export SHADOW_TICK_SECONDS SHADOW_MIN_INTERVAL_SECONDS SHADOW_WATCHDOG_MINUTES
+  # Licht bedienen (besluit 97). Achter Ingress staat het in de dienst standaard
+  # aan; uitzetten in de instellingen maakt er HEMS_LIGHTS=0 van.
+  if bashio::config.true 'licht_bedienen'; then
+    export HEMS_LIGHTS=1
+  else
+    export HEMS_LIGHTS=0
+  fi
 else
   bashio::log.warning "Supervisor niet bereikbaar; standaardinstellingen gebruikt."
   export SHADOW_TICK_SECONDS=30

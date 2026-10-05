@@ -117,6 +117,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
 - [80. Iedereen in huis bedient; één beheert](#80-iedereen-in-huis-bedient-één-beheert)
 - [84. Gevoel en toelichting mogen deze winter via de testpagina, naar een eigen bestand](#84-gevoel-en-toelichting-mogen-deze-winter-via-de-testpagina-naar-een-eigen-bestand)
+- [97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp](#97-lampen-aan-en-uit-vanuit-de-app-alles-groepen-zijn-geen-lamp)
 
 **Uitrol en beheer**
 
@@ -481,7 +482,8 @@ definitie onzichtbaar — en dat is een uitkomst, geen mislukking.
 *Onderwerp: veiligheid · Status: geldig*
 
 `HaClient` wordt zonder `allowWrites` aangemaakt, en `callService` werpt dán al
-voordat er iets de socket op gaat.
+voordat er iets de socket op gaat. (Sinds 97 met één smalle uitzondering voor
+lampen aan en uit, `allowLights`; klimaat en screens blijven hierachter.)
 
 *Reden:* dit is geen afspraak maar een grens. De code kijkt mee bij de
 verwarming van een bewoond huis. Een test draait een volledige sessie tegen een
@@ -3639,7 +3641,8 @@ Adaptive Lighting), en Assist begrijpt "doe het licht aan" zelf. Daarom:
 
 *Wanneer:* zonwering na D, als het thermisch model laat zien wat een screen
 scheelt. Licht tonen en bedienen kan met de schermen (F). Vastleggen doet de
-dienst nu al.
+dienst nu al. *Aangevuld 5 oktober 2026:* licht bedienen kan al in de proef, met
+een eigen smalle deur (97).
 
 ---
 
@@ -3939,6 +3942,57 @@ een groep met *verborgen* peren telde als één lamp. Nu:
 - **Bewust geaccepteerd:** zit een uitgezette lamp alleen in een Hue-kamer waarin
   ook zichtbare lampen staan, dan staat die Hue-kamer als lamp naast die lampen.
   De bewoner lost dat op met een eigen Hue-zone voor de uitgezette lampen.
+
+## 97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Op 5 oktober 2026 werkte de indeling weer (96), maar twee dingen bleven. De
+groepen "Etage 2 alles" en "Achtertuin alles" stonden als lamp in het huis: een
+uitgezette lamp zat alleen nog in zo'n groep, en de kleinste groep werd dan de
+armatuur. En de knoppen bij een lamp zeiden alleen "in deze proef nog niet",
+terwijl de bewoner per etage en voor het hele huis alles in één keer uit wil
+kunnen zetten. Besluit 92 stond licht bedienen al toe; alleen het moment lag
+bij de schermen (F). De bewoner koos ervoor om het nu te doen, alleen voor
+licht.
+
+*Besluit:*
+
+- **De app zet lampen aan en uit,** rechtstreeks via Home Assistant. Smart
+  Climate regelt het licht nog steeds niet (92): dit is een knop van de bewoner,
+  geen besluit van de arbiter. Per lamp aan, uit, gedimd en fel; per kamer, per
+  etage en voor het hele huis "alle lampen uit". Een hele etage of het huis gaat
+  nooit in één keer *aan*: dat is zelden de bedoeling, en 's nachts een
+  vervelende vergissing.
+- **De schrijfgrens van 15 blijft structureel, met één smalle uitzondering.**
+  `HaClient` krijgt naast `allowWrites` een eigen `allowLights`. Daarmee gaat
+  precies `light.turn_on` en `light.turn_off` door, en alleen met
+  `light.`-entiteiten als doel: geen gebied, apparaat of label, want daar kan van
+  alles onder hangen. Klimaat, screens en elke andere dienst blijven werpen;
+  `allowWrites` blijft uit. Een test bewijst beide.
+- **Alleen wat het huis toont.** De dienst bepaalt welke lampen een doel raakt
+  (`lampsFor`): de lampen in die kamer, op die etage of in het huis, volgens de
+  indeling. Wat de bewoner verborg of wat in geen kamer staat, raakt hij nooit.
+  De pagina zegt alleen het doel, en rekent niets uit (76).
+- **De vierde smalle deur in de muur** (na 42, 84 en 96): `POST /api/licht`,
+  alleen als `main.ts` hem meegeeft, met een grens op het tempo. Achter Ingress
+  staat hij standaard aan (de add-on-optie `licht_bedienen`), want daar staat de
+  inlog van Home Assistant voor. Elders alleen met `HEMS_LIGHTS=1`, met een
+  waarschuwing bij het starten.
+- **Het risico, bewust genomen:** op de NAS heeft de weergave geen inlog, dus
+  iedereen op het thuisnetwerk of in het tailnet kan dan de lampen schakelen. Het
+  ergste is een lamp die aan of uit gaat; geen klimaat, geen screens. In het
+  product gaat deze deur achter de inlog (77, 80).
+- **Een "alles"-groep is een overzicht, geen lamp.** Een groep waarvan de naam
+  "alles" zegt, of die zelf groepen bevat, wordt nooit een armatuur (96). Alles
+  uit op een etage of in het huis doet de app zelf, met de lampen uit de
+  indeling; zo volgt het de indeling ook als de groepen in Home Assistant
+  achterlopen. Een uitgezette lamp die alleen in zo'n groep zit, kan het huis
+  niet tonen; het zegt dat erbij, met de raad hem in Home Assistant weer aan te
+  zetten of in een eigen Hue-zone te zetten.
+- **Verbergen.** In de bewerkstand kan elk apparaat "Niet tonen" krijgen: het
+  staat dan in geen kamer, telt nergens mee en wordt nooit geschakeld. Het staat
+  in de indeling (`verborgen`) en is in de bewerkstand terug te halen.
 
 ---
 

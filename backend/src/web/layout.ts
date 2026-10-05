@@ -64,6 +64,8 @@ export interface Layout {
   readonly kamers: readonly LayoutRoom[];
   /** Per apparaat, op de sleutel die het huis gebruikt (actuator-id of entity-ID). */
   readonly apparaten: Readonly<Record<string, LayoutDevice>>;
+  /** Apparaten die de bewoner in de app niet wil zien, zoals een lamp die nergens hoort. */
+  readonly verborgen?: readonly string[];
 }
 
 export interface LayoutKnown {
@@ -195,7 +197,12 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     apparaten[id] = { ...(naam ? { naam } : {}), kamer: room.id, zone: zone as string | null };
   }
 
-  return { ok: true, layout: { versie: 1, etages, kamers, apparaten } };
+  // Verbergen kan alleen wat het huis kent; wat het niet meer kent, valt weg, net als hierboven.
+  const verborgenIn = b['verborgen'] ?? [];
+  if (!Array.isArray(verborgenIn) || verborgenIn.length > MAX_DEVICES) return { ok: false, reden: `verborgen is een lijst van hooguit ${MAX_DEVICES} apparaten` };
+  const verborgen = [...new Set(verborgenIn.filter((id): id is string => typeof id === 'string' && known.deviceIds.has(id)))];
+
+  return { ok: true, layout: { versie: 1, etages, kamers, apparaten, verborgen } };
 }
 
 export interface LayoutStoreOptions {
