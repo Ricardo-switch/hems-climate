@@ -3827,6 +3827,17 @@ app, die Home Assistant als voorstel gebruikt maar er niet van afhangt.
     telt (aanvulling op 81);
   - twee ruimtes die één apparaat delen, zoals een keuken en een woonkamer met
     één airco, worden één kamer met twee zones.
+  - **de regel voor de bewoner: een deur ertussen maakt een eigen kamer, open
+    maakt een zone** (aangevuld 5 oktober 2026). Achter een deur mengt de lucht
+    niet vanzelf: een airco in de woonkamer koelt de hal nauwelijks. Open, zoals
+    keuken en zithoek, is dezelfde lucht op een andere plek. In dit huis is de
+    hal met de trap daarom een eigen kamer op de begane grond, zonder regeling
+    (70), en de woonkamer één kamer met de zones keuken en woonzone. Dit is ook
+    de uitleg in de onboarding, zodat niemand hoeft te weten wat een zone is;
+  - **regelen gebeurt per kamer.** Heeft een open ruimte twee eigen apparaten,
+    elk met een eigen meter in hun eigen zone, dan kan de bewoner later kiezen
+    voor "regel per zone". In dit huis is dat niet nodig: de woonkamer regelt
+    als één kamer, met de meter die de bewoner kiest (81).
 
   Dit vervangt de betekenis van "zone" in besluit 72, waar een zone één of meer
   kamers was. In de code heet wat de regeling stuurt nog `zone` (het

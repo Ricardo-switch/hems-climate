@@ -183,7 +183,8 @@ product met een verborgen Home Assistant, met een eigen besluit.
 **Vast** (95). Een vaste set etages (begane grond, eerste, en als het huis ze
 heeft een tweede en "Buiten"), elk te hernoemen. Daarin kamers, en in een kamer
 eventueel zones: de keuken en de zithoek in één woonkamer. Een kamer is wat
-geregeld wordt; een zone is een plek in een kamer. Herkend uit Home Assistant,
+geregeld wordt; een zone is een plek in een kamer. De regel voor de bewoner: een
+deur ertussen maakt een eigen kamer, open maakt een zone. Herkend uit Home Assistant,
 daarna van de app. Wat nergens hoort, staat bij "nog in te delen". De naam in de
 app is de naam overal, ook voor de assistent.
 
