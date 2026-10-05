@@ -33,6 +33,7 @@ export const registers: HouseRegisters = {
     { floor_id: 'bg', name: 'Begane grond', level: 0 },
     { floor_id: 'zolder', name: 'Zolder', level: 2 },
     { floor_id: 'e1', name: 'Eerste verdieping', level: 1 },
+    { floor_id: 'dak', name: 'Dak', level: 3 },
   ],
   areas: [
     { area_id: 'woonkamer', name: 'Woonkamer', floor_id: 'bg' },
@@ -40,6 +41,7 @@ export const registers: HouseRegisters = {
     { area_id: 'zolder', name: 'Zolder', floor_id: 'zolder' },
     { area_id: 'tuin', name: 'Tuin', floor_id: null },
     { area_id: 'berging', name: 'Berging', floor_id: 'bg' },
+    { area_id: 'oprit', name: 'Oprit', floor_id: 'bg' },
   ],
   devices: [
     { id: 'd-ac-wk', area_id: 'woonkamer' },
@@ -50,6 +52,7 @@ export const registers: HouseRegisters = {
     { id: 'd-sfeer', area_id: 'woonkamer' },
     { id: 'd-screen', area_id: 'woonkamer' },
     { id: 'd-tuin', area_id: 'tuin' },
+    { id: 'd-oprit', area_id: 'oprit' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -63,6 +66,7 @@ export const registers: HouseRegisters = {
     entity('cover.screen', 'd-screen'),
     entity('cover.screen_low_speed', 'd-screen'),
     entity('light.achtertuin', 'd-tuin'),
+    entity('light.oprit', 'd-oprit'),
     entity('light.uitgezet', 'd-plaf', { disabled_by: 'user' }),
     entity('light.zwerver', 'd-nergens'),
   ],

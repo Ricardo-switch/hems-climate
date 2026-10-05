@@ -271,16 +271,19 @@ export function proposeLayout(
   const { found, areaOf } = collect(config, registers, states, null);
   const floorById = new Map(registers.floors.map((f) => [f.floor_id, f]));
   const floorOf = (area: HaArea): FloorId => {
+    // Een tuin of oprit is buiten, ook als Home Assistant hem op de begane grond zet.
+    if (OUTSIDE.test(area.name)) return 'buiten';
     const f = area.floor_id ? floorById.get(area.floor_id) : undefined;
     if (f && f.level != null) return f.level <= 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
-    return OUTSIDE.test(area.name) ? 'buiten' : 'bg';
+    return 'bg';
   };
 
+  // De naam van een etage komt van de etage op precies dat niveau; een "Dak" op
+  // niveau 3 geeft de tweede verdieping geen naam.
   const etages: Partial<Record<FloorId, string>> = {};
-  for (const f of registers.floors) {
-    if (f.level == null) continue;
-    const id: FloorId = f.level <= 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
-    if (etages[id] == null && f.name.trim() !== '') etages[id] = f.name.trim();
+  for (const [id, level] of [['bg', 0], ['e1', 1], ['e2', 2]] as const) {
+    const f = registers.floors.find((x) => x.level === level && x.name.trim() !== '');
+    if (f) etages[id] = f.name.trim();
   }
 
   const zoneArea = new Map<string, string>();

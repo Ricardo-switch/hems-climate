@@ -23,7 +23,15 @@ describe('het voorstel uit Home Assistant', () => {
       ['bg', 'Begane grond'],
       ['buiten', 'Buiten'],
     ]);
-    expect(house.etages.at(-1)!.ruimtes.map((r) => r.naam)).toEqual(['Tuin']);
+    expect(house.etages.at(-1)!.ruimtes.map((r) => r.naam)).toEqual(['Tuin', 'Oprit']);
+  });
+
+  it('zet een tuin of oprit buiten, ook als Home Assistant hem op de begane grond zet', () => {
+    expect(house.etages.find((e) => e.id === 'bg')!.ruimtes.map((r) => r.naam)).not.toContain('Oprit');
+  });
+
+  it('noemt een etage naar het precieze niveau, niet naar een "Dak" erboven', () => {
+    expect(proposeLayout(config, registers, states).etages.e2).toBe('Zolder');
   });
 
   it('laat gebieden zonder iets erin weg', () => {
