@@ -33,6 +33,20 @@ voor Engels.
    controleren) en herstart Home Assistant.
 4. Probeer het eerst getypt: open Assist en typ "wat doe je nu".
 
+## Snapt hij een zin niet?
+
+Assist herkent alleen zinnen die op een patroon in `smart_climate.yaml`
+passen. Twee hulpmiddelen:
+
+- **Ontwikkelhulpmiddelen → Assist:** typ een zin en zie welke intentie hij
+  herkent, en met welke kamer. Zo zie je zonder iets te vragen of een zin
+  werkt.
+- **Na een wijziging in de zinnen** hoef je niet te herstarten: voer
+  `conversation.reload` uit (Ontwikkelhulpmiddelen → Acties).
+
+Een zin die hij niet snapt, kan er gewoon bij. Geef hem door, dan zet ik hem
+in het bestand.
+
 ## Eerst controleren
 
 Dit is nog niet op jouw Home Assistant getest. Let bij de eerste keer op deze
