@@ -937,7 +937,11 @@ async function switchLights(body) {
     });
     const out = await res.json();
     if (!res.ok) return out.fout ?? out.wachten ?? 'Niet gelukt.';
-    setTimeout(() => void loadHouse(true), 800);
+    // Niet tijdens het indelen: dan ververst het huis nooit vanzelf, anders raakt
+    // een veld waarin je typt zijn inhoud kwijt.
+    setTimeout(() => {
+      if (!editing) void loadHouse(true);
+    }, 800);
     return null;
   } catch {
     return 'Geen verbinding met Smart Climate.';

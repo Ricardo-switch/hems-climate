@@ -242,6 +242,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
       const p = await context.newPage();
+      // Een stap die niet lukt, faalt met zijn eigen melding, ruim voor de 30 s van de test.
+      p.setDefaultTimeout(10_000);
       const errors: string[] = [];
       p.on('pageerror', (e) => errors.push(String(e)));
       // De lettertypen komen van buiten; zonder internet in de test is dat geen fout van de pagina.
