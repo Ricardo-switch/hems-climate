@@ -487,8 +487,8 @@ function statusOf(
     };
   }
 
-  const temps = tempClause(f, zone, e, lang);
   if (pz.demand !== 'none') {
+    const temps = tempClause(f, zone, e, lang);
     const a = pz.demand;
     const blocked = snap.rejected.find((r) => r.intent.zoneId === zone.id && r.intent.action === a);
     const why = blocked ? w.block[blocked.blockedBy] : w.reason[pz.reason];
@@ -503,18 +503,39 @@ function statusOf(
     return { kind: 'wait', zin: grid ? `${head} ${grid}` : head };
   }
 
-  if (pz.targetC == null) {
+  // Geen vraag: de kamer zit tussen het doel voor verwarmen en dat voor koelen.
+  const t = f.temp(`zone.${zone.id}.temperatuur`, pz.temperatureC);
+  const heatC = pz.heatTargetC ?? (pz.coolTargetC === undefined ? pz.targetC : null);
+  const coolC = pz.coolTargetC ?? null;
+  if (heatC == null && coolC == null) {
     return {
       kind: 'idle',
       zin:
         lang === 'nl'
-          ? `Voor ${zn} is er nu geen doel; ${temps}.`
-          : `There is no target for ${zn} right now; ${temps}.`,
+          ? `Voor ${zn} is er nu geen doel; het is er ${t}.`
+          : `There is no target for ${zn} right now; it is ${t}.`,
     };
   }
+  const h = heatC == null ? null : f.temp(`zone.${zone.id}.doelVerwarmen`, heatC);
+  const c = coolC == null ? null : f.temp(`zone.${zone.id}.doelKoelen`, coolC);
+  const band =
+    lang === 'nl'
+      ? h && c
+        ? `tussen het doel voor verwarmen (${h}) en dat voor koelen (${c})`
+        : h
+          ? `en het doel voor verwarmen is ${h}`
+          : `en het doel voor koelen is ${c}`
+      : h && c
+        ? `between the heating target (${h}) and the cooling target (${c})`
+        : h
+          ? `and the heating target is ${h}`
+          : `and the cooling target is ${c}`;
   return {
     kind: 'ok',
-    zin: lang === 'nl' ? `${cap(zn)} is op temperatuur: ${temps}.` : `${cap(zn)} is at temperature: ${temps}.`,
+    zin:
+      lang === 'nl'
+        ? `${cap(zn)} heeft niets nodig: het is er ${t}, ${band}.`
+        : `${cap(zn)} needs nothing: it is ${t}, ${band}.`,
   };
 }
 

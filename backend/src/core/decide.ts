@@ -69,6 +69,8 @@ function explain(
       return h?.ok ? h.value : null;
     })(),
     targetC: d.demand === 'cool' ? d.coolTargetC : d.heatTargetC,
+    heatTargetC: d.heatTargetC,
+    coolTargetC: d.coolTargetC,
     demand: d.demand,
     reason:
       d.temperatureC == null
