@@ -323,6 +323,17 @@
   "sun": "sun.sun",
   "outdoorTemperature": "sensor.temperatuur",
   "solarProduction": "sensor.solaredge_i1_ac_power",
+  "geometry": {
+    "facades": [
+      { "id": "voorgevel", "name": "Voorgevel", "azimuthDeg": 97, "zoneIds": ["woonkamer"], "source": "schatting" },
+      { "id": "achtergevel", "name": "Achtergevel", "azimuthDeg": 277, "zoneIds": ["woonkamer"], "source": "schatting" }
+    ],
+    "solarPlanes": [
+      { "id": "dak-oost", "azimuthDeg": 97, "tiltDeg": 47, "peakW": 2340, "source": "schatting" },
+      { "id": "dak-west", "azimuthDeg": 277, "tiltDeg": 47, "peakW": 2340, "source": "schatting" }
+    ],
+    "inverterMaxW": 3000
+  },
   "recordOnly": [
     "sensor.solaredge_huidig_vermogen",
     "sensor.solaredge_i1_dc_power",

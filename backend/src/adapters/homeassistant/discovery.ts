@@ -59,6 +59,9 @@ export interface HaRegistryEntity {
 
 export interface HaCoreConfig {
   readonly time_zone?: string;
+  /** De ligging van het huis. De dienst rondt af op één decimaal (besluit 90). */
+  readonly latitude?: number;
+  readonly longitude?: number;
 }
 
 /** Alles wat de ontdekking nodig heeft, zodat de functie zelf niets ophaalt. */

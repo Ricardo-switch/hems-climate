@@ -3726,6 +3726,20 @@ verbinding naar buiten, met alleen de afgeronde ligging.
 *Wanneer:* de vragen bij de onboarding (F), de meting zodra er een paar heldere
 weken zijn, de voorspelling met E en D.
 
+*Gebouwd op 5 oktober 2026: de zoninval.* De stand van de zon en de hoek op een
+vlak in `core/sun.ts` (zuiver, getoetst aan het middaguur en de equinox), de
+gevels en dakvlakken als optioneel blok `geometry` in de configuratie, met per
+richting waar hij vandaan komt (`bewoner`, `gemeten`, `schatting`), en
+`/api/zon` met de gevel in de zon en de panelen bij een heldere lucht. De
+ligging van het huis vraagt de dienst bij het verbinden aan Home Assistant
+(`get_config`), rondt af op één decimaal en houdt hem alleen in het geheugen.
+De assistent zegt bij "hoeveel zon vandaag?" op welke gevel de zon staat, en de
+testpagina tekent de heldere lucht als stippellijn in Vandaag. Voor dit huis
+staan de gevels en dakvlakken als `schatting`: de voorgevel op 97°, de
+achtergevel op 277°, de dakvlakken op 97° en 277° met een helling van 47° en
+elk 2.340 Wp, en een omvormer van 3.000 W. De toets volgt met de zonnesensor op
+de screen: als de voorgevel op het oosten kijkt, valt de zon er rond 13:40 af.
+
 ---
 
 ## Wat nog een besluit wacht

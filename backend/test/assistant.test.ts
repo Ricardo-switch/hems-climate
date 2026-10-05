@@ -280,6 +280,15 @@ describe('zon', () => {
     expect(a.antwoord).toContain('Je huis leverde nog niets terug en haalde 640 Wh van het net.');
   });
 
+  it('zegt op welke gevel de zon staat, als de ligging bekend is', () => {
+    const at = (zoninval: { boven: boolean; gevels: string[] } | null) =>
+      ask({ kind: 'zon' }, { config, snapshot: view(), today, nowMs: AT, shadow: true, lang: 'nl', zoninval }).antwoord;
+    expect(at({ boven: true, gevels: ['Voorgevel'] })).toContain('De zon staat nu op de voorgevel.');
+    expect(at({ boven: true, gevels: [] })).toContain('De zon staat nu op geen van de gevels.');
+    expect(at({ boven: false, gevels: [] })).not.toContain('gevel');
+    expect(at(null)).not.toContain('gevel');
+  });
+
   it('zegt het als er geen dag wordt bijgehouden', () => {
     expect(askNl({ kind: 'zon' }).antwoord).toContain('houd ik geen dag bij');
   });

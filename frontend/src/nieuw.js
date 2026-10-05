@@ -385,6 +385,7 @@ function drawHouse(snap) {
       // Gemeten: wat de airco's echt opnemen, ook als je huidige regeling ze stuurt.
       ['#5CC8FF', `${site?.migrating ? 'Airco gemeten' : 'Airco'} ${kw(climate)}`],
       ['#8FA3AD', `Huis ${kw(house)}`],
+      ...(facadeLine() ? [['#F5C66E', facadeLine()]] : []),
     ].map(([c, t]) => el('span', {}, el('i', { style: `background: ${c}` }), t)),
   );
 }
@@ -487,6 +488,13 @@ let todayAt = 0;
 async function loadToday(force = false) {
   if (!force && Date.now() - todayAt < 60_000) return;
   todayAt = Date.now();
+  // De zoninval (besluit 93): kant-en-klaar uit de dienst; zonder ligging blijft hij weg.
+  try {
+    const res = await fetch('api/zon');
+    sunInfo = res.ok ? await res.json() : null;
+  } catch {
+    sunInfo = null;
+  }
   try {
     const res = await fetch('api/vandaag');
     if (!res.ok) return;
@@ -498,13 +506,23 @@ async function loadToday(force = false) {
   }
 }
 
+let sunInfo = null;
+
+/** "Zon op de voorgevel", of niets als de ligging onbekend is of de zon onder is. */
+function facadeLine() {
+  if (!sunInfo?.zon?.boven) return null;
+  const lit = sunInfo.gevels.filter((g) => g.inDeZon).map((g) => g.naam.toLowerCase());
+  return lit.length ? `Zon op de ${lit.join(' en de ')}` : 'Zon op geen gevel';
+}
+
 /** De zon van vandaag, met per apparaat wanneer het draaide. */
 function renderToday() {
   const t = today;
   if (!t) return;
   const DAY = 86_400_000;
   const X = (ms) => 10 + ((ms - t.vanMs) / DAY) * 280;
-  const peak = Math.max(1500, ...t.kwartieren.map((k) => k.zonW ?? 0));
+  const clear = sunInfo?.kwartieren ?? [];
+  const peak = Math.max(1500, ...t.kwartieren.map((k) => k.zonW ?? 0), ...clear.map((k) => k.heldereLuchtW));
   const Y = (w) => 104 - (w / peak) * 90;
   const lanes = t.apparaten.filter((a) => a.smartClimate.length || a.huidig.length || canCool(a.actuatorId));
   const height = 118 + lanes.length * 18 + 18;
@@ -518,6 +536,11 @@ function renderToday() {
     const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
     svg.append(s('path', { d: `${line} L${pts.at(-1)[0].toFixed(1)},104 L${pts[0][0].toFixed(1)},104 Z`, fill: 'url(#vSun)' }));
     svg.append(s('path', { d: line, fill: 'none', stroke: '#F5B342', 'stroke-width': 1.2, 'stroke-linejoin': 'round' }));
+  }
+  // Wat de panelen bij een heldere lucht zouden leveren: de bovenkant van de dag.
+  const cpts = clear.filter((k) => k.heldereLuchtW > 0).map((k) => [X(k.tMs + 450_000), Y(k.heldereLuchtW)]);
+  if (cpts.length > 1) {
+    svg.append(s('path', { d: cpts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' '), fill: 'none', stroke: '#F5C66E', 'stroke-width': 1, 'stroke-dasharray': '3 3', 'stroke-opacity': 0.8 }));
   }
   svg.append(s('line', { x1: 10, y1: 104, x2: 290, y2: 104, stroke: 'rgba(255,255,255,0.12)' }));
   const nowX = X(Date.now());
@@ -540,6 +563,7 @@ function renderToday() {
   $('v-grafiek').replaceChildren(svg);
   const top = t.kwartieren.reduce((m, k) => ((k.zonW ?? 0) > (m?.zonW ?? -1) ? k : m), null);
   $('v-piek').textContent = top && top.zonW > 0 ? `piek ${kw(top.zonW)} om ${hhmm(top.tMs + 450_000)}` : 'nog geen zon';
+  $('v-helder').hidden = cpts.length < 2;
   $('h-vandaag').hidden = false;
 
   // Wat de zon vandaag opleverde.

@@ -77,6 +77,23 @@ export interface AskContext {
   /** Tijdens de schaduw zegt de assistent "ik zou", niet "ik doe". */
   readonly shadow: boolean;
   readonly lang: Lang;
+  /**
+   * Of de zon op is en op welke gevels hij staat, op naam (besluit 93). Weg of
+   * null als de ligging van het huis niet bekend is; dan zegt de assistent er
+   * niets over.
+   */
+  readonly zoninval?: { readonly boven: boolean; readonly gevels: readonly string[] } | null;
+}
+
+/** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
+function facadeSentence(zoninval: AskContext['zoninval'], lang: Lang): string | null {
+  if (zoninval == null || !zoninval.boven) return null;
+  const list = zoninval.gevels.map((n) => (lang === 'nl' ? `de ${n.toLowerCase()}` : `the ${n.toLowerCase()}`));
+  if (list.length === 0) {
+    return lang === 'nl' ? 'De zon staat nu op geen van de gevels.' : 'The sun is not on any of the facades right now.';
+  }
+  const joined = list.join(lang === 'nl' ? ' en ' : ' and ');
+  return lang === 'nl' ? `De zon staat nu op ${joined}.` : `The sun is on ${joined} right now.`;
 }
 
 /* ---------------------------------------------------------------- vragen */
@@ -731,11 +748,15 @@ export function ask(question: Question, ctx: AskContext): Answer {
 
     case 'zon': {
       const t = ctx.today;
+      const facade = facadeSentence(ctx.zoninval, lang);
       if (t == null) {
         return done(
-          lang === 'nl'
-            ? 'In deze installatie houd ik geen dag bij, dus dat weet ik niet.'
-            : 'This installation does not keep a daily record, so I do not know.',
+          [
+            lang === 'nl'
+              ? 'In deze installatie houd ik geen dag bij, dus dat weet ik niet.'
+              : 'This installation does not keep a daily record, so I do not know.',
+            facade ?? '',
+          ].join(' '),
         );
       }
       const out: string[] = [];
@@ -780,6 +801,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
               : 'Right now they are producing nothing.',
         );
       }
+      if (facade) out.push(facade);
       return done(out.join(' '));
     }
 

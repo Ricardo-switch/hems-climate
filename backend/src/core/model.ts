@@ -231,6 +231,43 @@ export interface PowerSources {
   readonly stabilisationMinutes: number;
 }
 
+/**
+ * Waar een richting vandaan komt. Wat de bewoner zegt, wint van een meting; een
+ * schatting is een begin tot er gemeten is (besluit 93).
+ */
+export const GEOMETRY_SOURCES = ['bewoner', 'gemeten', 'schatting'] as const;
+export type GeometrySource = (typeof GEOMETRY_SOURCES)[number];
+
+/** Een gevel, met de kant waar hij naartoe kijkt. */
+export interface Facade {
+  readonly id: string;
+  readonly name: string;
+  /** Kompasrichting waar de gevel naartoe kijkt: 90 is oost. */
+  readonly azimuthDeg: number;
+  /** De zones achter deze gevel; daar komt de zon binnen. */
+  readonly zoneIds: readonly string[];
+  readonly source: GeometrySource;
+}
+
+/** Een dakvlak met panelen. */
+export interface SolarPlane {
+  readonly id: string;
+  readonly azimuthDeg: number;
+  /** 0 is plat, 90 staat rechtop. */
+  readonly tiltDeg: number;
+  /** Wattpiek van de panelen op dit vlak. */
+  readonly peakW: number;
+  /** Waar de richting en de helling vandaan komen. */
+  readonly source: GeometrySource;
+}
+
+export interface Geometry {
+  readonly facades: readonly Facade[];
+  readonly solarPlanes: readonly SolarPlane[];
+  /** Wat de omvormer hooguit levert; daarboven kapt hij af. */
+  readonly inverterMaxW?: number;
+}
+
 export interface OccupancySource {
   readonly id: string;
   readonly ref: DeviceRef;
@@ -365,6 +402,15 @@ export interface SiteConfig {
    * instralingsmeter die een woning met panelen al in huis heeft.
    */
   readonly solarProduction?: MeasurementPoint;
+  /**
+   * Hoe het huis en de panelen liggen (besluit 93).
+   *
+   * Waarneming over het huis, geen invoer voor de regeling: de weergave en de
+   * assistent zeggen ermee op welke gevel de zon staat, en wat de panelen bij
+   * een heldere lucht zouden leveren. Later rekenen de prognose (E) en het
+   * thermisch model (D) ermee. Optioneel: zonder valt alleen dat weg.
+   */
+  readonly geometry?: Geometry;
   /**
    * Alleen vastleggen (besluit 65).
    *
