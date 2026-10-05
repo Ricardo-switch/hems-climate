@@ -3677,11 +3677,21 @@ op 5 oktober 2026, op voorstel van de bewoner.
   betrouwbaar, de helling en het vermogen na een paar weken. Tot dan zegt de
   app "ongeveer" en hoeveel heldere dagen hij nog nodig heeft.
 
-*De eerste poging in dit huis (5 oktober, drie dagen per minuut):* de richting
-is ongeveer het zuiden; op de rustigste dagen lag de piek rond 13:35 tot 13:55,
-met de zon op het zuiden. De helling is nog niet te zeggen: te veel wolken en
-te kort. Om 09:25 al 1.084 W wijst misschien op een oostelijke kant. Opnieuw na
-een paar heldere dagen, samen met de gevel uit de zonnesensor van de screen.
+*De eerste poging in dit huis (5 oktober, drie dagen per minuut):* met één vlak
+kwam er "ongeveer het zuiden" uit, met de piek rond het middaguur. Dat was
+fout. De bewoner zei daarna: zes panelen ongeveer op het oosten, zes ongeveer op
+het westen. Een dak op oost en west geeft samen precies zo'n brede curve met de
+piek rond het middaguur, en 1.084 W om 09:25 was de oostkant. Met twee vlakken
+tegenover elkaar past het acht keer beter: het oostvlak rond 95 tot 100° (oost,
+iets naar het zuiden), het westvlak rond 275 tot 280°, helling rond 45 tot 50°.
+Het vermogen komt grof uit op zo'n 5 kWp, ongeveer 410 Wp per paneel; dat is nog
+onzeker, want het hangt af van het model voor een heldere hemel. De voorgevel
+krijgt de ochtendzon, dus het oostvlak ligt waarschijnlijk aan de voorkant.
+
+Wat dit leert voor de app: één vraag ("waar liggen je panelen?") voorkomt een
+verkeerde fit, en de meting moet twee vlakken altijd proberen en de bewoner
+laten kiezen als ze allebei passen. Opnieuw na een paar heldere dagen, samen
+met de gevel uit de zonnesensor van de screen.
 
 *Waar het naartoe gaat: de voorspelling (E met D).* Met de ligging wordt het
 weerbericht een voorspelling voor dit huis:
