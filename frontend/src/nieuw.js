@@ -1154,6 +1154,9 @@ function openDevice(room, d) {
  */
 let layoutInfo = null;
 let editing = false;
+// De laatste melding van het bewaren; het huis tekent daarna opnieuw, en de
+// melding hoort dat te overleven.
+let editMessage = '';
 
 async function loadLayoutInfo() {
   try {
@@ -1193,6 +1196,7 @@ async function saveLayout(next, what) {
 }
 
 function editStatus(text) {
+  editMessage = text;
   const el2 = $('hu-bewerk-status');
   if (el2) el2.textContent = text;
 }
@@ -1253,7 +1257,7 @@ function editBar() {
         editStatus('');
         renderHouse();
       }),
-      el('span', { class: 'small muted', id: 'hu-bewerk-status', 'aria-live': 'polite' }),
+      el('span', { class: 'small muted', id: 'hu-bewerk-status', 'aria-live': 'polite', text: editMessage }),
     ),
   );
   return out;
