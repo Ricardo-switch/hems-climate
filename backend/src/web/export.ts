@@ -31,6 +31,7 @@ import { createGzip } from 'node:zlib';
 import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 import { RUNS_FILE } from '../adapters/runs.js';
 import { FEEDBACK_FILE } from './feedback.js';
+import { LAYOUT_FILE } from './layout.js';
 
 const BLOCK = 512;
 
@@ -100,9 +101,21 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
     () => true,
     () => false,
   );
+  // De indeling ook (besluit 96): zonder weet de dataset niet welke lamp waar staat.
+  const layout = join(logDir, LAYOUT_FILE);
+  const hasLayout = await stat(layout).then(
+    () => true,
+    () => false,
+  );
   return {
     decisionLog,
-    everything: [...decisionLog, ...history, ...(hasRuns ? [runs] : []), ...(hasFeedback ? [feedback] : [])],
+    everything: [
+      ...decisionLog,
+      ...history,
+      ...(hasRuns ? [runs] : []),
+      ...(hasFeedback ? [feedback] : []),
+      ...(hasLayout ? [layout] : []),
+    ],
   };
 }
 

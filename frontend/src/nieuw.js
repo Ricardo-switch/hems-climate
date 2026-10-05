@@ -887,6 +887,7 @@ let houseAt = 0;
 async function loadHouse(force = false) {
   if (!force && Date.now() - houseAt < 20_000) return;
   houseAt = Date.now();
+  await loadLayoutInfo();
   try {
     const res = await fetch('api/huis');
     house = res.ok ? await res.json() : null;
@@ -948,7 +949,7 @@ function renderHouse() {
     }
   }
   // Is er maar één etage, dan sla je het huisniveau over.
-  if (!floor && !room && floors.length === 1) floor = floors[0];
+  if (!floor && !room && floors.length === 1 && !editing) floor = floors[0];
 
   if (room) {
     renderRoom(floor, room);
@@ -963,7 +964,12 @@ function renderHouse() {
   crumb([['Huis']]);
   $('hu-titel').textContent = 'Het huis';
   $('hu-zin').textContent = house.lampenAan ? `${lampen(house.lampenAan)}.` : 'Er brandt geen licht.';
+  if (editing) {
+    $('hu-lijst').replaceChildren(...editBar(), ...editHouseLevel());
+    return;
+  }
   $('hu-lijst').replaceChildren(
+    ...editBar(),
     ...floors.map((f) =>
       el(
         'a',
@@ -1010,7 +1016,12 @@ function renderFloor(floor, many) {
   crumb(many ? [['Huis', '#huis'], [floor.naam]] : [[floor.naam]]);
   $('hu-titel').textContent = floor.naam;
   $('hu-zin').textContent = floor.lampenAan ? `${lampen(floor.lampenAan)}.` : 'Er brandt hier geen licht.';
+  if (editing) {
+    $('hu-lijst').replaceChildren(...editBar(), ...editFloorLevel(floor.id));
+    return;
+  }
   $('hu-lijst').replaceChildren(
+    ...editBar(),
     ...floor.ruimtes.map((r) => {
       const screens = [...new Set(r.apparaten.filter((d) => d.soort === 'screen').map((d) => d.stand))];
       const bits = [r.lampenAan ? lampen(r.lampenAan) : null, screens.length ? `screens ${screens.join(', ')}` : null].filter(Boolean);
@@ -1044,7 +1055,8 @@ function renderRoom(floor, room) {
   crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
   $('hu-titel').textContent = room.temperatuurC == null ? room.naam : `${room.naam} · ${deg(room.temperatuurC)}`;
   $('hu-zin').textContent = room.status?.zin ?? '';
-  const parts = [];
+  const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : [])];
+  const zoneName = (id) => room.zones.find((z) => z.id === id)?.naam;
   for (const [kind, label] of GROUPS) {
     const list = room.apparaten.filter((d) => d.soort === kind);
     if (!list.length) continue;
@@ -1059,17 +1071,19 @@ function renderRoom(floor, room) {
             { type: 'button', class: 'tegel', 'aria-pressed': 'false' },
             el('b', { text: d.naam }),
             el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
+            d.zone && zoneName(d.zone) ? el('span', { class: 'small muted', text: zoneName(d.zone) }) : null,
           );
           b.addEventListener('click', () => {
             for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
-            openDevice(room, d);
+            if (editing) editDevice(room, d);
+            else openDevice(room, d);
           });
           return b;
         }),
       ),
     );
   }
-  if (!parts.length) parts.push(el('p', { class: 'small muted', text: 'Hier staat niets dat Smart Climate kent.' }));
+  if (!room.apparaten.length) parts.push(el('p', { class: 'small muted', text: 'Hier staat niets dat Smart Climate kent.' }));
   $('hu-lijst').replaceChildren(...parts);
 }
 
@@ -1128,6 +1142,321 @@ function openDevice(room, d) {
     }),
   );
   $('hu-blad').scrollIntoView({ block: 'nearest' });
+}
+
+/* ------------------------------------------------------- indeling */
+
+/*
+ * Indelen in de proefomgeving (besluiten 95 en 96): etages en kamers hernoemen,
+ * kamers en zones aanmaken, apparaten hernoemen en verplaatsen. Elke wijziging
+ * gaat meteen naar de dienst, die hem toetst en bewaart; het huis tekent daarna
+ * opnieuw uit wat de dienst teruggeeft. Deze pagina rekent het huis niet zelf.
+ */
+let layoutInfo = null;
+let editing = false;
+
+async function loadLayoutInfo() {
+  try {
+    const res = await fetch('api/indeling');
+    layoutInfo = res.ok ? await res.json() : null;
+  } catch {
+    layoutInfo = null;
+  }
+}
+
+/** De indeling om te bewerken: de eigen, of anders het voorstel uit Home Assistant. */
+function draft() {
+  const base = layoutInfo?.indeling ?? layoutInfo?.voorstel;
+  return base ? JSON.parse(JSON.stringify(base)) : null;
+}
+
+async function saveLayout(next, what) {
+  try {
+    const res = await fetch('api/indeling', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(next),
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      editStatus(body.fout ?? 'niet bewaard');
+      return false;
+    }
+    layoutInfo = { ...layoutInfo, indeling: body };
+    editStatus(`${what} bewaard`);
+    await loadHouse(true);
+    return true;
+  } catch {
+    editStatus('niet bewaard; geen verbinding');
+    return false;
+  }
+}
+
+function editStatus(text) {
+  const el2 = $('hu-bewerk-status');
+  if (el2) el2.textContent = text;
+}
+
+/** Een id uit een naam, zoals de dienst ze accepteert. */
+function slugId(text, taken) {
+  const base =
+    text
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 36) || 'kamer';
+  let id = base;
+  for (let i = 2; taken.has(id); i++) id = `${base}-${i}`;
+  return id;
+}
+
+function input(value, placeholder, label, onSave) {
+  const i = el('input', { class: 'veld', type: 'text', value: value ?? '', placeholder: placeholder ?? '', 'aria-label': label, maxlength: '60' });
+  i.addEventListener('change', () => void onSave(i.value.trim()));
+  return i;
+}
+
+function select(options, value, label, onSave) {
+  const s2 = el('select', { class: 'veld', 'aria-label': label });
+  for (const [v, t] of options) {
+    const o = el('option', { value: v, text: t });
+    if (v === value) o.selected = true;
+    s2.append(o);
+  }
+  s2.addEventListener('change', () => void onSave(s2.value));
+  return s2;
+}
+
+function button(text, onClick, cls = '') {
+  const b = el('button', { type: 'button', class: `knop ${cls}`.trim(), text });
+  b.addEventListener('click', () => void onClick());
+  return b;
+}
+
+/** De knop boven het huis, en de uitleg als het nog een voorstel is. */
+function editBar() {
+  if (!layoutInfo) return [];
+  const out = [];
+  if (house?.indeling === 'voorstel') {
+    out.push(
+      el('div', { class: 'note' }, 'Dit is wat Home Assistant van je huis weet. Pas het aan; je eerste wijziging legt de indeling vast, en daarna verandert er niets meer vanzelf.'),
+    );
+  }
+  out.push(
+    el(
+      'div',
+      { class: 'knoppen' },
+      button(editing ? 'Klaar met indelen' : 'Indeling bewerken', () => {
+        editing = !editing;
+        editStatus('');
+        renderHouse();
+      }),
+      el('span', { class: 'small muted', id: 'hu-bewerk-status', 'aria-live': 'polite' }),
+    ),
+  );
+  return out;
+}
+
+function floorName(d, id) {
+  return d.etages[id] ?? layoutInfo.etages.find((e) => e.id === id)?.standaardNaam ?? id;
+}
+
+/** Huisniveau in de bewerkstand: de etages hernoemen, en indelen wat nergens hoort. */
+function editHouseLevel() {
+  const d = draft();
+  if (!d) return [];
+  const parts = [el('div', { class: 'groep', text: 'ETAGES' })];
+  for (const { id, standaardNaam } of layoutInfo.etages) {
+    parts.push(
+      el(
+        'div',
+        { class: 'rij' },
+        input(d.etages[id] ?? '', standaardNaam, `Naam van ${standaardNaam}`, async (v) => {
+          const next = draft();
+          if (v === '' || v === standaardNaam) delete next.etages[id];
+          else next.etages[id] = v;
+          await saveLayout(next, 'Etage');
+        }),
+        el('a', { class: 'small', href: `#huis/etage/${id}`, text: 'kamers ›' }),
+      ),
+    );
+  }
+  const homeless = house?.zonderRuimte ?? [];
+  if (homeless.length) {
+    parts.push(el('div', { class: 'groep', text: 'NOG IN TE DELEN' }));
+    const rooms = [['', 'Kies een kamer…'], ...d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`])];
+    for (const dev of homeless) {
+      parts.push(
+        el(
+          'div',
+          { class: 'rij' },
+          el('span', { style: 'flex: 1; min-width: 0' }, el('b', { text: dev.naam }), dev.voorstel ? el('span', { class: 'small muted', text: ` · in Home Assistant: ${dev.voorstel}` }) : null),
+          select(rooms, '', `Kamer voor ${dev.naam}`, async (kamer) => {
+            if (!kamer) return;
+            const next = draft();
+            next.apparaten[dev.id] = { ...(next.apparaten[dev.id] ?? {}), kamer, zone: null };
+            await saveLayout(next, `${dev.naam}`);
+          }),
+        ),
+      );
+    }
+  }
+  return parts;
+}
+
+/** Etageniveau in de bewerkstand: kamers hernoemen, verhuizen, weghalen en toevoegen. */
+function editFloorLevel(floorId) {
+  const d = draft();
+  if (!d) return [];
+  const parts = [];
+  const etages = layoutInfo.etages.map((e) => [e.id, floorName(d, e.id)]);
+  for (const k of d.kamers.filter((x) => x.etage === floorId)) {
+    parts.push(
+      el(
+        'div',
+        { class: 'rij' },
+        input(k.naam, 'Naam', `Naam van ${k.naam}`, async (v) => {
+          if (!v) return;
+          const next = draft();
+          next.kamers.find((x) => x.id === k.id).naam = v;
+          await saveLayout(next, 'Kamer');
+        }),
+        select(etages, k.etage, `Etage van ${k.naam}`, async (v) => {
+          const next = draft();
+          next.kamers.find((x) => x.id === k.id).etage = v;
+          await saveLayout(next, 'Kamer');
+        }),
+        button('Weg', async () => {
+          const next = draft();
+          next.kamers = next.kamers.filter((x) => x.id !== k.id);
+          // Wat in deze kamer stond, gaat naar "nog in te delen".
+          for (const [id, a] of Object.entries(next.apparaten)) if (a.kamer === k.id) delete next.apparaten[id];
+          await saveLayout(next, 'Kamer weggehaald;');
+        }),
+      ),
+    );
+  }
+  const name = el('input', { class: 'veld', type: 'text', placeholder: 'Nieuwe kamer, bijvoorbeeld Hal en trap', 'aria-label': 'Naam van een nieuwe kamer', maxlength: '40' });
+  parts.push(
+    el(
+      'div',
+      { class: 'rij' },
+      name,
+      button('Kamer toevoegen', async () => {
+        const v = name.value.trim();
+        if (!v) return;
+        const next = draft();
+        next.kamers.push({ id: slugId(v, new Set(next.kamers.map((x) => x.id))), naam: v, etage: floorId, zones: [], regelzone: null, haGebied: null });
+        await saveLayout(next, 'Kamer');
+      }),
+    ),
+  );
+  parts.push(el('p', { class: 'tiny', text: 'Een deur ertussen maakt een eigen kamer; open, zoals keuken en zithoek, maakt een zone in dezelfde kamer.' }));
+  return parts;
+}
+
+/** Kamerniveau in de bewerkstand: naam, regeling en zones. */
+function editRoomLevel(roomId) {
+  const d = draft();
+  const k = d?.kamers.find((x) => x.id === roomId);
+  if (!k) return [];
+  const regel = [['', 'Niet geregeld'], ...layoutInfo.regelzones.map((z) => [z.id, `Geregeld als ${z.naam}`])];
+  const parts = [
+    el(
+      'div',
+      { class: 'rij' },
+      input(k.naam, 'Naam', 'Naam van de kamer', async (v) => {
+        if (!v) return;
+        const next = draft();
+        next.kamers.find((x) => x.id === roomId).naam = v;
+        await saveLayout(next, 'Kamer');
+      }),
+      select(regel, k.regelzone ?? '', 'Regeling van de kamer', async (v) => {
+        const next = draft();
+        for (const x of next.kamers) if (v && x.regelzone === v) x.regelzone = null;
+        next.kamers.find((x) => x.id === roomId).regelzone = v || null;
+        await saveLayout(next, 'Regeling');
+      }),
+    ),
+    el('div', { class: 'groep', text: 'ZONES IN DEZE KAMER' }),
+  ];
+  for (const z of k.zones) {
+    parts.push(
+      el(
+        'div',
+        { class: 'rij' },
+        input(z.naam, 'Naam', `Naam van zone ${z.naam}`, async (v) => {
+          if (!v) return;
+          const next = draft();
+          next.kamers.find((x) => x.id === roomId).zones.find((y) => y.id === z.id).naam = v;
+          await saveLayout(next, 'Zone');
+        }),
+        button('Weg', async () => {
+          const next = draft();
+          const room = next.kamers.find((x) => x.id === roomId);
+          room.zones = room.zones.filter((y) => y.id !== z.id);
+          for (const a of Object.values(next.apparaten)) if (a.kamer === roomId && a.zone === z.id) a.zone = null;
+          await saveLayout(next, 'Zone weggehaald;');
+        }),
+      ),
+    );
+  }
+  const name = el('input', { class: 'veld', type: 'text', placeholder: 'Nieuwe zone, bijvoorbeeld Keuken', 'aria-label': 'Naam van een nieuwe zone', maxlength: '40' });
+  parts.push(
+    el(
+      'div',
+      { class: 'rij' },
+      name,
+      button('Zone toevoegen', async () => {
+        const v = name.value.trim();
+        if (!v) return;
+        const next = draft();
+        const room = next.kamers.find((x) => x.id === roomId);
+        room.zones.push({ id: slugId(v, new Set(room.zones.map((y) => y.id))), naam: v });
+        await saveLayout(next, 'Zone');
+      }),
+    ),
+  );
+  if (!k.zones.length) parts.push(el('p', { class: 'tiny', text: 'Geen zones: de kamer is één geheel. Voeg ze alleen toe als de kamer open delen heeft.' }));
+  return parts;
+}
+
+/** Een apparaat hernoemen en verplaatsen, in het blad onder de tegels. */
+function editDevice(room, dev) {
+  const d = draft();
+  if (!d) return;
+  $('hu-blad').hidden = false;
+  $('hu-blad-naam').textContent = dev.naam;
+  $('hu-blad-stand').textContent = dev.naam === dev.haNaam ? '' : `in Home Assistant: ${dev.haNaam}`;
+  $('hu-blad-zin').textContent = 'De naam hier is de naam overal: in de app, op de wand en voor de assistent.';
+  const current = d.apparaten[dev.id] ?? { kamer: room.id, zone: dev.zone ?? null };
+  const name = el('input', { class: 'veld', type: 'text', value: dev.naam, placeholder: dev.haNaam, 'aria-label': `Naam van ${dev.naam}`, maxlength: '60' });
+  const rooms = d.kamers.map((k) => [k.id, `${k.naam} (${floorName(d, k.etage)})`]);
+  const roomSel = select(rooms, current.kamer, `Kamer van ${dev.naam}`, () => fillZones());
+  const zoneSel = el('select', { class: 'veld', 'aria-label': `Zone van ${dev.naam}` });
+  const fillZones = () => {
+    const k = d.kamers.find((x) => x.id === roomSel.value);
+    zoneSel.replaceChildren(el('option', { value: '', text: 'Geen zone' }), ...(k?.zones ?? []).map((z) => el('option', { value: z.id, text: z.naam })));
+    zoneSel.value = k?.zones.some((z) => z.id === current.zone) ? current.zone : '';
+  };
+  fillZones();
+  $('hu-blad-knoppen').replaceChildren(
+    name,
+    roomSel,
+    zoneSel,
+    button('Bewaren', async () => {
+      const next = draft();
+      const v = name.value.trim();
+      next.apparaten[dev.id] = {
+        ...(v && v !== dev.haNaam ? { naam: v } : {}),
+        kamer: roomSel.value,
+        zone: zoneSel.value || null,
+      };
+      await saveLayout(next, dev.naam);
+    }),
+  );
 }
 
 /* ------------------------------------------------------- assistent */
@@ -1201,7 +1530,8 @@ async function start() {
   setInterval(() => void loadToday(), 5 * 60_000);
   // Lampen en screens veranderen vaker; ververs het huis zolang je ernaar kijkt.
   setInterval(() => {
-    if (!document.querySelector('[data-view="huis"]').hidden) void loadHouse(true);
+    // Niet tijdens het indelen: verversen zou een veld wissen waarin je typt.
+    if (!editing && !document.querySelector('[data-view="huis"]').hidden) void loadHouse(true);
   }, 30_000);
   const source = new EventSource('api/events');
   source.onopen = () => connection(true, 'Verbonden');

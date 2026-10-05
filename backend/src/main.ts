@@ -25,7 +25,8 @@ import {
   type HaFloor,
   type HaRegistryEntity,
 } from './adapters/homeassistant/discovery.js';
-import { buildHouse, type HouseRegisters } from './web/house.js';
+import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
+import { LayoutStore } from './web/layout.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -434,6 +435,19 @@ const onboarding =
 // Vast na het laden; de functies hieronder lezen hem later.
 const siteConfig = site?.config ?? null;
 
+/*
+ * De indeling van het huis (besluit 96): alleen als er gelogd wordt, want hij
+ * staat naast de dataset, en alleen met een configuratie.
+ */
+const layoutStore =
+  logDir !== '' && siteConfig
+    ? new LayoutStore({
+        logDir,
+        known: () => (houseRegisters ? knownForLayout(siteConfig, houseRegisters, houseStates) : null),
+      })
+    : null;
+void layoutStore?.load();
+
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
@@ -448,8 +462,16 @@ if (webPort != null) {
     location: () => location,
     house: () =>
       siteConfig && houseRegisters
-        ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null)
+        ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null, layoutStore?.current ?? null)
         : null,
+    ...(layoutStore && siteConfig
+      ? {
+          layout: {
+            store: layoutStore,
+            proposal: () => (houseRegisters ? proposeLayout(siteConfig, houseRegisters, houseStates) : null),
+          },
+        }
+      : {}),
     // Gevoel en toelichting (besluit 84): alleen als er gelogd wordt, want ze
     // horen bij de dataset, en alleen naar een eigen bestand in de logmap.
     ...(logDir !== '' && site

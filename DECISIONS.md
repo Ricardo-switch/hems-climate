@@ -3905,6 +3905,18 @@ Home Assistant ontbreekt. Gekozen door de bewoner op 5 oktober 2026.
   van de configuratie zodat de regeling er ook mee werkt), volgt in deze stap,
   in deze volgorde: eerst de indeling in de proef, dan de inlog, dan het schema.
 
+*Gebouwd op 5 oktober 2026: de indeling in de proef.* `GET`/`POST
+/api/indeling` met `indeling.json` in de logmap (en in de export). Het huis gaat
+altijd uit van een indeling: de eigen, of anders een voorstel uit Home Assistant
+(`proposeLayout`), zodat er één weg door de code is en het voorstel precies is
+wat de eerste wijziging vastlegt. Een apparaat zonder eigen plek staat in de
+kamer die uit zijn gebied kwam; zonder gebied, of als die kamer weg is, bij "nog
+in te delen". In de proefomgeving: "Indeling bewerken" op elk niveau, etages en
+kamers hernoemen, kamers toevoegen, verhuizen en weghalen, zones aanmaken, het
+regelgebied kiezen, en apparaten hernoemen en verplaatsen. Tijdens het bewerken
+ververst het huis niet, zodat een veld niet leeg raakt. De paginatest loopt het
+door: een etage hernoemen, een lamp indelen, een kamer toevoegen.
+
 ---
 
 ## Wat nog een besluit wacht
