@@ -159,13 +159,16 @@ function buildNav() {
 }
 
 function showView() {
-  const want = (location.hash || '#thuis').slice(1);
-  const id = NAV.some(([n]) => n === want) ? want : 'thuis';
+  const want = (location.hash || '#thuis').slice(1).split('/')[0];
+  // Het huis staat niet in het menu: je komt er door op het huis te tikken.
+  const id = NAV.some(([n]) => n === want) || want === 'huis' ? want : 'thuis';
   for (const v of document.querySelectorAll('.view')) v.hidden = v.dataset.view !== id;
+  const menu = id === 'huis' ? 'thuis' : id;
   for (const a of document.querySelectorAll('.navitem')) {
-    if (a.dataset.target === id) a.setAttribute('aria-current', 'page');
+    if (a.dataset.target === menu) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
+  if (id === 'huis') void loadHouse(true);
   if (id === 'opbrengst') void loadReview();
   if (id === 'waarom' || id === 'thuis') void loadToday();
 }
@@ -443,9 +446,10 @@ function renderHome(snap) {
       const pz = e.perZone.find((p) => p.zoneId === z.id);
       const extra = pz?.humidityPct != null ? ` · ${pz.humidityPct}% vocht` : '';
       const real = site?.migrating ? `Je huidige regeling: ${zoneReal(snap, z.id)}` : null;
+      // Aantikken zoomt in op de ruimte van deze zone (ONTWERP §4).
       return el(
-        'div',
-        { class: 'room' },
+        'a',
+        { class: 'room', href: `#huis/zone/${encodeURIComponent(z.id)}` },
         el('span', { class: `dot glow k-${st.kind}` }),
         el('div', { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0' }, el('span', { class: 'name', text: z.name }), el('span', { class: `status k-${st.kind}`, text: st.text + extra }), real ? el('span', { class: 'real', text: real }) : null),
         el('span', { class: 'temp', text: deg(pz?.temperatureC ?? null) }),
@@ -870,6 +874,239 @@ function render(snap) {
   renderControls(snap);
 }
 
+/* ------------------------------------------------------- huis */
+
+/*
+ * Het huis als navigatie (ONTWERP §4, besluit 94): huis, etage, ruimte. Namen,
+ * standen en zinnen komen kant-en-klaar uit /api/huis; deze pagina kiest alleen
+ * welk niveau ze toont. Bedienen zegt wat Smart Climate zou doen.
+ */
+let house = null;
+let houseAt = 0;
+
+async function loadHouse(force = false) {
+  if (!force && Date.now() - houseAt < 20_000) return;
+  houseAt = Date.now();
+  try {
+    const res = await fetch('api/huis');
+    house = res.ok ? await res.json() : null;
+  } catch {
+    house = null;
+  }
+  renderHouse();
+}
+
+const floorKey = (f) => f.id ?? 'geen';
+const lampen = (n) => `${n} ${n === 1 ? 'lamp' : 'lampen'} aan`;
+
+function houseRoute() {
+  const [, level = null, key = null] = (location.hash || '').slice(1).split('/');
+  return { level, key: key == null ? null : decodeURIComponent(key) };
+}
+
+function crumb(parts) {
+  const out = [];
+  parts.forEach(([label, href], i) => {
+    if (i) out.push(el('span', { 'aria-hidden': 'true', text: '›' }));
+    out.push(href ? el('a', { href, text: label, style: 'color: inherit; text-decoration: none' }) : el('b', { text: label }));
+  });
+  $('hu-pad').replaceChildren(...out);
+}
+
+function back(href, label) {
+  $('hu-terug').href = href;
+  $('hu-terug').textContent = `‹ ${label}`;
+}
+
+let houseRouteShown = '';
+
+function renderHouse() {
+  // Een ander niveau sluit het blad; dezelfde plek opnieuw tekenen niet.
+  if (location.hash !== houseRouteShown) {
+    $('hu-blad').hidden = true;
+    houseRouteShown = location.hash;
+  }
+  if (!house) {
+    back('#thuis', 'Thuis');
+    crumb([['Huis']]);
+    $('hu-titel').textContent = 'Het huis';
+    $('hu-zin').textContent = 'De etages en ruimtes komen van Home Assistant zodra die verbonden is.';
+    $('hu-lijst').replaceChildren();
+    return;
+  }
+  const { level, key } = houseRoute();
+  const floors = house.etages;
+  let floor = level === 'etage' ? floors.find((f) => floorKey(f) === key) : null;
+  let room = null;
+  if (level === 'ruimte' || level === 'zone') {
+    for (const f of floors) {
+      const r = f.ruimtes.find((x) => (level === 'zone' ? x.zoneId === key : x.id === key));
+      if (r) {
+        floor = f;
+        room = r;
+      }
+    }
+  }
+  // Is er maar één etage, dan sla je het huisniveau over.
+  if (!floor && !room && floors.length === 1) floor = floors[0];
+
+  if (room) {
+    renderRoom(floor, room);
+    return;
+  }
+  if (floor) {
+    renderFloor(floor, floors.length > 1);
+    return;
+  }
+
+  back('#thuis', 'Thuis');
+  crumb([['Huis']]);
+  $('hu-titel').textContent = 'Het huis';
+  $('hu-zin').textContent = house.lampenAan ? `${lampen(house.lampenAan)}.` : 'Er brandt geen licht.';
+  $('hu-lijst').replaceChildren(
+    ...floors.map((f) =>
+      el(
+        'a',
+        { class: 'room', href: `#huis/etage/${encodeURIComponent(floorKey(f))}` },
+        el(
+          'div',
+          { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0' },
+          el('span', { class: 'name', text: f.naam }),
+          el('span', { class: 'status', text: f.ruimtes.map((r) => (r.temperatuurC == null ? r.naam : `${r.naam} ${deg(r.temperatuurC)}`)).join(' · ') }),
+          el('span', { class: 'real', text: f.lampenAan ? lampen(f.lampenAan) : 'geen licht aan' }),
+        ),
+        el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
+      ),
+    ),
+  );
+}
+
+function renderFloor(floor, many) {
+  if (many) back('#huis', 'Huis');
+  else back('#thuis', 'Thuis');
+  crumb(many ? [['Huis', '#huis'], [floor.naam]] : [[floor.naam]]);
+  $('hu-titel').textContent = floor.naam;
+  $('hu-zin').textContent = floor.lampenAan ? `${lampen(floor.lampenAan)}.` : 'Er brandt hier geen licht.';
+  $('hu-lijst').replaceChildren(
+    ...floor.ruimtes.map((r) => {
+      const screens = [...new Set(r.apparaten.filter((d) => d.soort === 'screen').map((d) => d.stand))];
+      const bits = [r.lampenAan ? lampen(r.lampenAan) : null, screens.length ? `screens ${screens.join(', ')}` : null].filter(Boolean);
+      return el(
+        'a',
+        { class: 'room', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
+        el('span', { class: `dot glow k-${r.status?.soort ?? 'idle'}` }),
+        el(
+          'div',
+          { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0' },
+          el('span', { class: 'name', text: r.naam }),
+          r.status ? el('span', { class: `status k-${r.status.soort}`, text: r.status.zin }) : null,
+          bits.length ? el('span', { class: 'real', text: bits.join(' · ') }) : null,
+        ),
+        el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+      );
+    }),
+  );
+}
+
+const GROUPS = [
+  ['klimaat', 'KLIMAAT'],
+  ['screen', 'ZONWERING'],
+  ['licht', 'VERLICHTING'],
+];
+
+function renderRoom(floor, room) {
+  const many = house.etages.length > 1;
+  const up = `#huis/etage/${encodeURIComponent(floorKey(floor))}`;
+  back(up, floor.naam);
+  crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
+  $('hu-titel').textContent = room.temperatuurC == null ? room.naam : `${room.naam} · ${deg(room.temperatuurC)}`;
+  $('hu-zin').textContent = room.status?.zin ?? '';
+  const parts = [];
+  for (const [kind, label] of GROUPS) {
+    const list = room.apparaten.filter((d) => d.soort === kind);
+    if (!list.length) continue;
+    parts.push(el('div', { class: 'groep', text: label }));
+    parts.push(
+      el(
+        'div',
+        { class: 'tegels' },
+        ...list.map((d) => {
+          const b = el(
+            'button',
+            { type: 'button', class: 'tegel', 'aria-pressed': 'false' },
+            el('b', { text: d.naam }),
+            el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
+          );
+          b.addEventListener('click', () => {
+            for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
+            openDevice(room, d);
+          });
+          return b;
+        }),
+      ),
+    );
+  }
+  if (!parts.length) parts.push(el('p', { class: 'small muted', text: 'Hier staat niets dat Smart Climate kent.' }));
+  $('hu-lijst').replaceChildren(...parts);
+}
+
+/*
+ * Bedienen in de proefomgeving (besluit 94): de knoppen werken, en zeggen wat
+ * er zou gebeuren. Klimaat vraagt het de assistent; screens en licht hebben een
+ * vaste zin, want daar beslist Smart Climate (nog) niets.
+ */
+function openDevice(room, d) {
+  $('hu-blad').hidden = false;
+  $('hu-blad-naam').textContent = d.naam;
+  $('hu-blad-stand').textContent = d.stand;
+  $('hu-blad-zin').textContent = '';
+  const say = (text) => {
+    $('hu-blad-zin').textContent = text;
+  };
+  const buttons = [];
+  if (d.soort === 'klimaat' && room.zoneId) {
+    for (const [label, wens] of [
+      ['Koelen', 'koelen'],
+      ['Verwarmen', 'verwarmen'],
+      ['Uit', 'uit'],
+    ]) {
+      buttons.push([
+        label,
+        async () => {
+          say('Even kijken…');
+          try {
+            const res = await fetch(`api/vraag?v=doe&kamer=${encodeURIComponent(room.zoneId)}&wens=${wens}`);
+            const body = await res.json();
+            say(res.ok ? body.antwoord : (body.fout ?? 'Geen antwoord.'));
+          } catch {
+            say('Geen verbinding met Smart Climate.');
+          }
+        },
+      ]);
+    }
+  } else if (d.soort === 'screen') {
+    for (const [label, what] of [
+      ['Open', 'openen'],
+      ['Stop', 'stoppen'],
+      ['Dicht', 'sluiten'],
+    ]) {
+      buttons.push([label, () => say(`Dan zou ik de ${d.naam.toLowerCase()} ${what}. Maar ik kijk nog alleen mee en mag nog niet schakelen.`)]);
+    }
+  } else if (d.soort === 'licht') {
+    for (const label of ['Aan', 'Uit']) {
+      buttons.push([label, () => say('Licht bedien je straks hier, rechtstreeks via Home Assistant. In deze proef nog niet.')]);
+    }
+  }
+  $('hu-blad-knoppen').replaceChildren(
+    ...buttons.map(([label, fn]) => {
+      const b = el('button', { type: 'button', text: label });
+      b.addEventListener('click', () => void fn());
+      return b;
+    }),
+  );
+  $('hu-blad').scrollIntoView({ block: 'nearest' });
+}
+
 /* ------------------------------------------------------- assistent */
 
 /*
@@ -939,6 +1176,10 @@ async function start() {
   void setupFeedback();
   setupAssistant();
   setInterval(() => void loadToday(), 5 * 60_000);
+  // Lampen en screens veranderen vaker; ververs het huis zolang je ernaar kijkt.
+  setInterval(() => {
+    if (!document.querySelector('[data-view="huis"]').hidden) void loadHouse(true);
+  }, 30_000);
   const source = new EventSource('api/events');
   source.onopen = () => connection(true, 'Verbonden');
   source.onmessage = (event) => {

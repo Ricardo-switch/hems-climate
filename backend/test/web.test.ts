@@ -20,6 +20,7 @@ import { FeedbackLog } from '../src/web/feedback.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
 import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
+import type { HouseReport } from '../src/web/house.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -77,6 +78,7 @@ async function start(options: {
   withoutConfig?: boolean;
   version?: Version;
   location?: { latDeg: number; lonDeg: number } | null;
+  house?: () => HouseReport | null;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -95,6 +97,7 @@ async function start(options: {
         ...(options.feedback ? { feedback: options.feedback } : {}),
         ...(options.version ? { version: options.version } : {}),
         ...(options.location !== undefined ? { location: () => options.location ?? null } : {}),
+        ...(options.house ? { house: options.house } : {}),
         write: () => {},
       });
       return { server, port: await server.start() };
@@ -772,5 +775,21 @@ describe('de zoninval (besluit 93)', () => {
     expect(body.kwartieren.length).toBeGreaterThanOrEqual(92);
     // Nooit allebei in de zon: ze kijken tegenovergesteld.
     expect(body.gevels.filter((g) => g.inDeZon).length).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('het huis als navigatie (ONTWERP §4)', () => {
+  it('wacht op de registers van Home Assistant in plaats van een leeg huis te tonen', async () => {
+    const { base } = await start({ latest: () => snapshot(), house: () => null });
+    expect((await fetch(`${base}/api/huis`)).status).toBe(503);
+  });
+
+  it('geeft het huis door zoals de dienst het opbouwde, en leest alleen', async () => {
+    const house: HouseReport = { etages: [{ id: null, naam: 'Huis', niveau: null, lampenAan: 0, ruimtes: [] }], lampenAan: 0 };
+    const { base } = await start({ latest: () => snapshot(), house: () => house });
+    const res = await fetch(`${base}/api/huis`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(house);
+    expect((await fetch(`${base}/api/huis`, { method: 'POST' })).status).toBe(405);
   });
 });

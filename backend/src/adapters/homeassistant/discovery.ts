@@ -33,6 +33,15 @@ import type { HaEntityState } from './client.js';
 export interface HaArea {
   readonly area_id: string;
   readonly name: string;
+  /** De etage, sinds Home Assistant 2024.4; leeg als de bewoner er geen gaf. */
+  readonly floor_id?: string | null;
+}
+
+export interface HaFloor {
+  readonly floor_id: string;
+  readonly name: string;
+  /** 0 is de begane grond, hoger is hoger; leeg als niemand het zei. */
+  readonly level?: number | null;
 }
 
 export interface HaDevice {

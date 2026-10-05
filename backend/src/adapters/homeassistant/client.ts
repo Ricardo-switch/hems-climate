@@ -16,11 +16,13 @@ import { EventEmitter } from 'node:events';
  *
  * Allemaal leesopdrachten uit de registers van Home Assistant. `get_config`
  * staat erbij omdat daar de tijdzone in zit — het enige veld dat de
- * configuratie echt nodig heeft en dat nergens anders te halen is.
+ * configuratie echt nodig heeft en dat nergens anders te halen is. De etages
+ * kwamen erbij voor het huis als navigatie (ONTWERP §4); ook dat is lezen.
  */
 const READ_COMMANDS: ReadonlySet<string> = new Set([
   'get_config',
   'config/area_registry/list',
+  'config/floor_registry/list',
   'config/device_registry/list',
   'config/entity_registry/list',
 ]);

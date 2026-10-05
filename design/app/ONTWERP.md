@@ -224,6 +224,10 @@ overzicht van alles, zodat de bewoner niet uit de app hoeft:
 - **Bij veel lampen:** op het overzicht alleen wat aan is, per kamer
   samengevat ("3 lampen aan"); alle lampen pas in de kamer.
 
+**Stand op 5 oktober 2026.** Gebouwd als proef (besluit 94): `/api/huis` en
+het inzoomen op `nieuw.html#huis`, nog als lijsten en tegels, zonder
+plattegrond. De plattegrond wacht op de indeling (zie hieronder).
+
 **Wat ervoor nodig is.** De etages en kamers uit Home Assistant (72). Bedienen
 schrijft, dus pas in B voor klimaat en screens, en met de integratie van
 besluit 91 voor alles, onder de inlog van Home Assistant. Tot dan toont de

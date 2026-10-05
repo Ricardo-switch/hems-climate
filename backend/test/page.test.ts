@@ -33,6 +33,7 @@ import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstru
 import { DivergenceCache } from '../src/web/divergence.js';
 import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
+import type { HouseReport } from '../src/web/house.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -116,6 +117,41 @@ async function writeLogs(dir: string): Promise<void> {
   await recordRun(dir, { t: Date.parse('2026-09-30T12:00:00Z'), commit: 'bbbbbbb', built: null, config: 'c1', site: 'huis-cornelissen' });
 }
 
+/** Een klein huis voor het inzoomen: twee etages, een woonkamer met een lamp en een airco. */
+const HOUSE: HouseReport = {
+  lampenAan: 1,
+  etages: [
+    {
+      id: 'zolder',
+      naam: 'Zolder',
+      niveau: 2,
+      lampenAan: 0,
+      ruimtes: [{ id: 'zolder', naam: 'Zolder', zoneId: 'zolder', temperatuurC: 23.2, status: { soort: 'ok', zin: 'De zolder heeft niets nodig.' }, lampenAan: 0, apparaten: [] }],
+    },
+    {
+      id: 'bg',
+      naam: 'Begane grond',
+      niveau: 0,
+      lampenAan: 1,
+      ruimtes: [
+        {
+          id: 'woonkamer',
+          naam: 'Woonkamer',
+          zoneId: 'woonkamer',
+          temperatuurC: 21.9,
+          status: { soort: 'ok', zin: 'De woonkamer heeft niets nodig.' },
+          lampenAan: 1,
+          apparaten: [
+            { id: 'ac-woonkamer', naam: 'Airco woonkamer', soort: 'klimaat', stand: 'uit', aan: false, helderheidPct: null, positiePct: null, actuatorId: 'ac-woonkamer' },
+            { id: 'cover.screen', naam: 'Screen', soort: 'screen', stand: '60% dicht', aan: true, helderheidPct: null, positiePct: 40, actuatorId: null },
+            { id: 'light.woonkamer_plafonniere', naam: 'Plafonnière', soort: 'licht', stand: 'aan · 70%', aan: true, helderheidPct: 70, positiePct: null, actuatorId: null },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let dir: string;
   let server: WebServer;
@@ -149,6 +185,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           divergence: () => review.latest,
           logDir: dir,
           feedback: new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) }),
+          house: () => HOUSE,
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           write: () => {},
         });
@@ -250,6 +287,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.goto(`${baseUrl}/nieuw.html#assistent`);
       await p.locator('#a-vragen button', { hasText: 'Wat doe je nu?' }).click();
       await p.locator('#a-gesprek .bel.hij').filter({ hasText: 'Ik kijk nog alleen mee' }).waitFor();
+
+      // Het huis als navigatie (ONTWERP §4): inzoomen tot een apparaat, en bedienen zegt wat er zou gebeuren.
+      await p.goto(`${baseUrl}/nieuw.html#huis`);
+      await p.locator('#hu-lijst a.room', { hasText: 'Begane grond' }).click();
+      await p.locator('#hu-titel').filter({ hasText: 'Begane grond' }).waitFor();
+      await p.locator('#hu-lijst a.room', { hasText: 'Woonkamer' }).click();
+      await p.locator('#hu-titel').filter({ hasText: 'Woonkamer' }).waitFor();
+      await p.locator('#hu-lijst .tegel', { hasText: 'Plafonnière' }).click();
+      await p.locator('#hu-blad-knoppen button', { hasText: 'Aan' }).click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'via Home Assistant' }).waitFor();
+      await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
+      await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
+      // Terug is uitzoomen.
+      await p.locator('#hu-terug').click();
+      await p.locator('#hu-titel').filter({ hasText: 'Begane grond' }).waitFor();
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);

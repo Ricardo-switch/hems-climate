@@ -3785,6 +3785,17 @@ dat niet verder groeit; hij is de proefomgeving die de app wordt, onder de
 regel dat hij niets zelf uitrekent. Het bewonerscontract en de contracttests
 blijven zoals 76 ze vastlegde.
 
+*Gebouwd op 5 oktober 2026: het huis als navigatie.* `/api/huis` bouwt uit de
+registers van Home Assistant de etages, de ruimtes met hun zone en de apparaten
+erin: klimaat uit de configuratie, zonwering (één per apparaat), lampen zonder
+groepen, elk met de stand in woorden. Daarvoor mag de client ook het
+etageregister lezen (`config/floor_registry/list`); de leeslijst van besluit 15
+blijft een lijst van leesopdrachten. Kent Home Assistant geen etages, dan is het
+één etage "Huis". De proefomgeving zoomt in van huis naar etage naar ruimte
+(`#huis`), de kamers op Thuis zijn aan te tikken, en elk apparaat opent een blad
+met knoppen die zeggen wat er zou gebeuren: klimaat via de assistent, screens en
+licht met een vaste zin. De paginatest loopt die weg door.
+
 ---
 
 ## Wat nog een besluit wacht
