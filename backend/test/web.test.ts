@@ -785,7 +785,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
   });
 
   it('geeft het huis door zoals de dienst het opbouwde, en leest alleen', async () => {
-    const house: HouseReport = { etages: [{ id: null, naam: 'Huis', niveau: null, lampenAan: 0, ruimtes: [] }], lampenAan: 0 };
+    const house: HouseReport = { etages: [{ id: null, naam: 'Huis', niveau: null, lampenAan: 0, ruimtes: [] }], lampenAan: 0, zonderRuimte: [] };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
     expect(res.status).toBe(200);

@@ -62,6 +62,11 @@ export interface HouseFloor {
 export interface HouseReport {
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
+  /**
+   * Lampen en screens die in Home Assistant in geen ruimte staan. Die kan het
+   * huis nergens tonen; de bewoner hoort te weten dat ze ontbreken.
+   */
+  readonly zonderRuimte: readonly { readonly naam: string; readonly soort: DeviceKind }[];
 }
 
 const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2 };
@@ -94,7 +99,7 @@ function shortName(full: string, areaName: string | null): string {
 
 function friendly(state: HaEntityState | undefined, fallback: string): string {
   const name = state?.attributes['friendly_name'];
-  return typeof name === 'string' && name.trim() !== '' ? name : fallback;
+  return typeof name === 'string' && name.trim() !== '' ? name.trim() : fallback;
 }
 
 function lightOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
@@ -181,8 +186,12 @@ export function buildHouse(
   }
 
   const perArea = new Map<string, HouseDevice[]>();
+  const homeless: { naam: string; soort: DeviceKind }[] = [];
   const add = (area: string | null, d: HouseDevice) => {
-    if (!area) return;
+    if (!area) {
+      homeless.push({ naam: d.naam, soort: d.soort });
+      return;
+    }
     const list = perArea.get(area) ?? [];
     list.push(d);
     perArea.set(area, list);
@@ -256,5 +265,6 @@ export function buildHouse(
   // Ruimtes zonder etage: zonder etages in Home Assistant is dat het hele huis.
   pushFloor(null, known.length === 0 ? 'Huis' : 'Zonder etage', null);
 
-  return { etages: floors, lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0) };
+  homeless.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
+  return { etages: floors, lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0), zonderRuimte: homeless };
 }
