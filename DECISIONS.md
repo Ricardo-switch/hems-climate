@@ -3608,7 +3608,8 @@ verwarmen. Het past op wat er al ligt:
   vergrendelde (de bewoner, wind, een andere bediening). Dan kan de app zeggen
   dat de wind hem ophaalde, in plaats van te raden.
 
-*Voor dit huis:* de screen aan de voorkant krijgt de ochtendzon. De screens
+*Voor dit huis:* de screens hangen aan de voorkant, in de woonzone op de
+begane grond, en krijgen de ochtendzon (volgens de bewoner, 5 oktober 2026). Ze
 zitten via Somfy (Overkiz) in Home Assistant: `cover.screen`,
 `cover.zonnescherm` en `cover.io_2243641_1`, met een eigen zonnesensor op de
 screen (`sensor.screen_screen_luminance` in lux en
@@ -3617,7 +3618,7 @@ de ligging van de panelen. Sinds 5 oktober schrijven ze mee in `recordOnly`
 (65), met de stand van de screen (`current_position`) in de historie. Wie hem
 vergrendelde (`sensor.screen_priority_lock_originator`) en het doel van de
 beweging (`sensor.screen_target_closure`) staan in Home Assistant standaard
-uit; ze worden vastgelegd zodra de bewoner ze aanzet.
+uit; de bewoner zette ze op 5 oktober aan.
 
 *Besluit, deel 2: verlichting regelt Smart Climate niet.* Bij licht valt weinig
 energie te winnen; LED vraagt weinig, dus het budget, de zon en de tarieven
@@ -3627,8 +3628,9 @@ Adaptive Lighting), en Assist begrijpt "doe het licht aan" zelf. Daarom:
 - **Licht blijft invoer.** De avondstand loopt door zolang er licht brandt
   (`eveningExtensionLights`).
 - **De app mag licht tonen en bedienen,** via Home Assistant: welke lampen aan
-  zijn, met een knop. Dat maakt de app compleet, zonder dat Smart Climate het
-  licht regelt.
+  zijn, met een knop, in het huis waarop je inzoomt (ONTWERP §4, "Het huis is
+  de navigatie"). Dan hoeft de bewoner niet uit de app, zonder dat Smart
+  Climate het licht regelt.
 - **Spraak over licht** blijft bij Assist van Home Assistant (91).
 
 *Wanneer:* zonwering na D, als het thermisch model laat zien wat een screen

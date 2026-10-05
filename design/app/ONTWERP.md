@@ -192,6 +192,41 @@ kamers ernaast. Zo hoeft niemand per huis een tekening te maken (72).
 
 Schrijven vraagt de inlog (23, stap C). Tot dan werkt dit alleen achter Ingress.
 
+### Het huis is de navigatie
+
+**Voorstel**, 5 oktober 2026, van de bewoner. De doorsnede op Thuis wordt het
+overzicht van alles, zodat de bewoner niet uit de app hoeft:
+
+- **Huis.** Wat er nu aan staat en de stromen (zon, net, per apparaat), zoals
+  nu, maar uitgebreider: ook de lampen die aan zijn en de stand van de screens.
+- **Inzoomen.** Een etage aantikken zoomt in op die etage, met de kamers en
+  zones erop; een kamer aantikken opent de kamer (zoals `Wand-Kamer`). Terug
+  zoomt weer uit. Huis, etage, kamer of zone, en apparaat: dezelfde volgorde
+  als het model van besluit 72.
+- **De apparaten staan erin, en zijn aan te tikken om te bedienen.** Per soort:
+  - *airco, thermostaat, verwarming:* bedienen is een ingreep van de bewoner,
+    met de vraag tot hoe laat (74, 75), via de arbiter;
+  - *screens:* open, dicht of een stand, ook als ingreep (92);
+  - *lampen:* aan, uit en dimmen, rechtstreeks via Home Assistant. Smart
+    Climate regelt het licht niet (92), dus hier komt de arbiter er niet aan te
+    pas.
+- **Op elk niveau dezelfde stromen,** kleiner naarmate je inzoomt: op de etage
+  per kamer, in de kamer per apparaat.
+- **Op de wand en de telefoon hetzelfde,** in landschap en portret.
+- **Zonder kijken te bedienen (86):** een schermlezer krijgt dezelfde
+  volgorde als lijst (etage, kamer, apparaat), en elke tekening zegt in
+  woorden wat er gebeurt.
+- **Bij veel lampen:** op het overzicht alleen wat aan is, per kamer
+  samengevat ("3 lampen aan"); alle lampen pas in de kamer.
+
+**Wat ervoor nodig is.** De etages en kamers uit Home Assistant (72). Bedienen
+schrijft, dus pas in B voor klimaat en screens, en met de integratie van
+besluit 91 voor alles, onder de inlog van Home Assistant. Tot dan toont de
+app alleen.
+
+**Open:** schetsen van het inzoomen (huis naar etage naar kamer), voor de wand
+en de telefoon.
+
 ## 5. De schermen
 
 | Scherm | Vorm | Fase | Wat het toont | Hangt af van | Schets |
