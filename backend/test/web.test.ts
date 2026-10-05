@@ -21,6 +21,7 @@ import type { Registers } from '../src/adapters/homeassistant/discovery.js';
 import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import type { HouseReport } from '../src/web/house.js';
+import { LayoutStore, type Layout } from '../src/web/layout.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -79,6 +80,7 @@ async function start(options: {
   version?: Version;
   location?: { latDeg: number; lonDeg: number } | null;
   house?: () => HouseReport | null;
+  layout?: { store: LayoutStore; proposal: () => Layout | null };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -98,6 +100,7 @@ async function start(options: {
         ...(options.version ? { version: options.version } : {}),
         ...(options.location !== undefined ? { location: () => options.location ?? null } : {}),
         ...(options.house ? { house: options.house } : {}),
+        ...(options.layout ? { layout: options.layout } : {}),
         write: () => {},
       });
       return { server, port: await server.start() };
@@ -785,11 +788,70 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
   });
 
   it('geeft het huis door zoals de dienst het opbouwde, en leest alleen', async () => {
-    const house: HouseReport = { etages: [{ id: null, naam: 'Huis', niveau: null, lampenAan: 0, ruimtes: [] }], lampenAan: 0, zonderRuimte: [] };
+    const house: HouseReport = { indeling: 'voorstel', etages: [{ id: 'bg', naam: 'Begane grond', lampenAan: 0, ruimtes: [] }], lampenAan: 0, zonderRuimte: [] };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(house);
     expect((await fetch(`${base}/api/huis`, { method: 'POST' })).status).toBe(405);
+  });
+});
+
+describe('de indeling (besluit 96)', () => {
+  const known = { deviceIds: new Set(['nest']), zoneIds: new Set(exampleSite.zones.map((z) => z.id)) };
+  const layout: Layout = {
+    versie: 1,
+    etages: { bg: 'Beneden' },
+    kamers: [{ id: 'woonkamer', naam: 'Woonkamer', etage: 'bg', zones: [], regelzone: 'woonkamer', haGebied: null }],
+    apparaten: { nest: { naam: 'Thermostaat', kamer: 'woonkamer', zone: null } },
+  };
+
+  async function withLayout() {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-indeling-web-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    const store = new LayoutStore({ logDir: dir, known: () => known });
+    return start({ latest: () => snapshot(), layout: { store, proposal: () => layout } });
+  }
+
+  it('bestaat niet wanneer hij niet is meegegeven', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    const res = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify(layout) });
+    expect(res.status).toBe(405);
+  });
+
+  it('geeft het voorstel, de vaste etages en de regelgebieden, en bewaart een indeling', async () => {
+    const { base } = await withLayout();
+    const before = (await (await fetch(`${base}/api/indeling`)).json()) as {
+      indeling: unknown;
+      voorstel: Layout;
+      etages: { id: string }[];
+      regelzones: { id: string }[];
+    };
+    expect(before.indeling).toBeNull();
+    expect(before.voorstel.kamers).toHaveLength(1);
+    expect(before.etages.map((e) => e.id)).toEqual(['e2', 'e1', 'bg', 'buiten']);
+    expect(before.regelzones.map((z) => z.id)).toEqual(exampleSite.zones.map((z) => z.id));
+
+    const saved = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify(layout) });
+    expect(saved.status).toBe(200);
+    const after = (await (await fetch(`${base}/api/indeling`)).json()) as { indeling: Layout };
+    expect(after.indeling.apparaten['nest']!.naam).toBe('Thermostaat');
+  });
+
+  it('weigert een indeling die niet deugt, met een reden', async () => {
+    const { base } = await withLayout();
+    const res = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify({ ...layout, etages: { kelder: 'x' } }) });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { fout: string }).fout).toContain('kelder');
+  });
+
+  it('houdt de muur overeind voor elke andere route en methode', async () => {
+    const { base } = await withLayout();
+    for (const path of ['/api/state', '/api/huis', '/api/gevoel', '/']) {
+      expect((await fetch(`${base}${path}`, { method: 'POST' })).status, path).toBe(405);
+    }
+    for (const method of ['PUT', 'PATCH', 'DELETE']) {
+      expect((await fetch(`${base}/api/indeling`, { method })).status, method).toBe(405);
+    }
   });
 });

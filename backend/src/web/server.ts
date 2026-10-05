@@ -33,6 +33,7 @@ import type { FeedbackLog } from './feedback.js';
 import { ask, parseQuestion } from './assistant.js';
 import { sunReport, type Location } from './sun.js';
 import type { HouseReport } from './house.js';
+import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
 import { startOfLocalDay } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -125,6 +126,16 @@ export interface WebOptions {
    * of null zolang de registers van Home Assistant nog niet gelezen zijn.
    */
   readonly house?: () => HouseReport | null;
+  /**
+   * De indeling van het huis (besluit 96), of weg wanneer die niet mag. Zelfde
+   * schakelaar als het gevoel: zonder dit object bestaat de route niet, en staat
+   * de muur er ook voor `/api/indeling`.
+   */
+  readonly layout?: {
+    readonly store: LayoutStore;
+    /** Het voorstel uit Home Assistant, of null zolang de registers niet gelezen zijn. */
+    readonly proposal: () => Layout | null;
+  };
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -311,9 +322,11 @@ export class WebServer {
      */
     // De tweede deur (besluit 84): gevoel en toelichting, naar een eigen
     // bestand in de logmap en nooit naar Home Assistant.
+    // De derde (besluit 96): de indeling, naar een eigen bestand in de logmap.
     const mayWrite =
       (this.#options.onboarding != null && path === '/api/onboarding') ||
-      (this.#options.feedback != null && path === '/api/gevoel');
+      (this.#options.feedback != null && path === '/api/gevoel') ||
+      (this.#options.layout != null && path === '/api/indeling');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
       res.writeHead(405, {
         allow: mayWrite ? 'GET, HEAD, POST' : 'GET, HEAD',
@@ -495,6 +508,36 @@ export class WebServer {
       }
       const now = Date.now();
       sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone)));
+      return;
+    }
+
+    if (path === '/api/indeling') {
+      const door = this.#options.layout;
+      const config = this.#options.config;
+      if (door == null || config == null) {
+        sendJson(res, 503, { wachten: 'indelen staat niet aan' });
+        return;
+      }
+      if (method === 'POST') {
+        let body: unknown;
+        try {
+          body = await readJson(req);
+        } catch (error) {
+          sendJson(res, 400, { fout: (error as Error).message });
+          return;
+        }
+        const result = await door.store.save(body);
+        if (result.ok) sendJson(res, 200, result.layout);
+        else sendJson(res, result.status, { fout: result.reden });
+        return;
+      }
+      // Alles wat de bewerkstand nodig heeft om te kiezen, zonder zelf te rekenen.
+      sendJson(res, 200, {
+        indeling: door.store.current,
+        voorstel: door.proposal(),
+        etages: FLOORS.map((id) => ({ id, standaardNaam: FLOOR_NAMES[id] })),
+        regelzones: config.zones.map((z) => ({ id: z.id, naam: z.name })),
+      });
       return;
     }
 
