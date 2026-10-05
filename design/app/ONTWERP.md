@@ -441,8 +441,9 @@ toelichting als invoer (D).
 2. **Stap B:** echt schakelen in dit huis. Vooraf: herkennen dat de bewoner
    zelf ingrijpt (74). De Bediening krijgt "wie stuurt", de wand het scherm Kamer.
    De opdrachtroute voor knoppen en assistent (§7, fase 2).
-3. **Stap C:** het model met kamers (72), de inlog, voorbeeldhuizen (70). Pas
-   daarna Kamers en de onboarding als schermen.
+3. **Stap C, naast 1 en 2** (96): de opbouw met etages, kamers en zones (72,
+   95), eerst als indeling in de proefomgeving, dan de inlog, dan het schema en
+   voorbeeldhuizen (70). Kamers en de onboarding als schermen groeien mee.
 4. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
    op het Leren-scherm, en Plan.
 5. **Stap E:** weer en tarieven; Plan wordt compleet.

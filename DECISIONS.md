@@ -36,6 +36,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
 - [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
 - [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet)
+- [96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving](#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving)
 
 **Kern en regeling**
 
@@ -3866,6 +3867,43 @@ smalle deur zoals bij het gevoel (84), die een eigen besluit vraagt.
 *Wanneer:* de opbouw en het bewerken met stap C (het model met kamers, 72). Tot
 dan toont de proefomgeving het huis zoals Home Assistant het kent, en noemt hij
 wat in geen gebied staat.
+
+---
+
+## 96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Stap C (het model met etages, kamers en zones, 72 en 95) stond na B, en B wacht
+op een complete winter (64). Maar de opbouw van het huis hangt niet af van echt
+schakelen, en de proefomgeving (94) laat juist nu zien wat er aan de opbouw uit
+Home Assistant ontbreekt. Gekozen door de bewoner op 5 oktober 2026.
+
+*Besluit:*
+
+- **C loopt parallel** aan de schaduw (nu) en aan B (echt schakelen). Wat C
+  oplevert, wordt in de proefomgeving getest zodra het er is, net als de
+  assistent en het huis.
+- **Indelen kan al in de proefomgeving,** via een derde smalle deur, met
+  dezelfde voorzorgen als het gevoel (84):
+  - naar een eigen bestand naast de dataset (`indeling.json`), nooit naar Home
+    Assistant en nooit over de configuratie van het huis heen;
+  - alleen wat bij de indeling hoort: de namen van de etages, de kamers met hun
+    etage en zones, en per apparaat een eigen naam en een plek (kamer, zone);
+  - streng gecontroleerd: alleen de vaste etages (95), alleen apparaten die
+    Home Assistant kent, en een grens op het tempo en de grootte;
+  - de route bestaat alleen als `main.ts` hem meegeeft, en dat doet hij alleen
+    als er gelogd wordt. Elke andere route en methode blijft achter de muur;
+    tests bewijzen beide.
+- **Het huis gebruikt de indeling waar die er is,** en vult de rest aan uit Home
+  Assistant als voorstel. Zo wordt de indeling stap voor stap van de app (95).
+- **Het risico, bewust genomen:** iedereen op het thuisnetwerk of in het tailnet
+  kan de indeling veranderen. Het ergste dat dat oplevert, is een verkeerde naam
+  of plek; de regeling leest de indeling niet, en het bestand staat in de
+  dagelijkse back-up. In het product gaat deze deur achter de inlog (77, 80).
+- **Wat C verder vraagt** (de inlog, voorbeeldhuizen, en de indeling als deel
+  van de configuratie zodat de regeling er ook mee werkt), volgt in deze stap,
+  in deze volgorde: eerst de indeling in de proef, dan de inlog, dan het schema.
 
 ---
 
