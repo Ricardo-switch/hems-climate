@@ -333,11 +333,19 @@ function drawHouse(snap) {
   svg.append(s('rect', { x: 110, y: boxTop, width: 320, height: 470 - boxTop, fill: 'none', stroke: 'rgba(255,255,255,0.24)', 'stroke-width': 1.5 }));
 
   if (solar != null && n >= 2) {
-    const g = s('g', { transform: 'translate(270,70) rotate(40.3)', filter: sunny ? 'url(#nGlow)' : '' });
-    for (const x of [30, 66, 102, 138, 174]) {
-      g.append(s('rect', { x, y: -15, width: 32, height: 10, rx: 2, fill: sunny ? '#24496A' : '#1A2733', stroke: sunny ? '#F5B342' : 'rgba(255,255,255,0.25)', 'stroke-opacity': 0.8 }));
+    // Twee dakvlakken (oost en west, besluit 93): op elke kant panelen, en elk
+    // licht op naar wat het bij een heldere lucht nu zou vangen. Uit de dienst.
+    const planes = sunInfo?.panelen ?? [];
+    const lit = (i) => sunny && (planes.length < 2 || (planes[i]?.heldereLuchtW ?? 0) > 50);
+    const slopes = planes.length >= 2 ? [['rotate(40.3)', -15, 0], ['rotate(139.7)', 5, 1]] : [['rotate(40.3)', -15, 0]];
+    for (const [rot, y, i] of slopes) {
+      const on = lit(i);
+      const g = s('g', { transform: `translate(270,70) ${rot}`, filter: on ? 'url(#nGlow)' : '' });
+      for (const x of [30, 66, 102, 138, 174]) {
+        g.append(s('rect', { x, y, width: 32, height: 10, rx: 2, fill: on ? '#24496A' : '#1A2733', stroke: on ? '#F5B342' : 'rgba(255,255,255,0.25)', 'stroke-opacity': 0.8 }));
+      }
+      svg.append(g);
     }
-    svg.append(g);
   }
 
   // Zon naar de airco die Smart Climate zou laten draaien, of anders naar het huis.
@@ -525,7 +533,8 @@ function renderToday() {
   const peak = Math.max(1500, ...t.kwartieren.map((k) => k.zonW ?? 0), ...clear.map((k) => k.heldereLuchtW));
   const Y = (w) => 104 - (w / peak) * 90;
   const lanes = t.apparaten.filter((a) => a.smartClimate.length || a.huidig.length || canCool(a.actuatorId));
-  const height = 118 + lanes.length * 18 + 18;
+  // Elke baan een eigen regel voor de naam, zodat een balk hem niet bedekt.
+  const height = 118 + lanes.length * 26 + 18;
   const svg = s('svg', { viewBox: `0 0 300 ${height}`, role: 'img', 'aria-label': 'Zon van vandaag en wanneer de apparaten draaiden' });
   const defs = s('defs');
   defs.innerHTML = '<linearGradient id="vSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F5B342" stop-opacity="0.55"/><stop offset="1" stop-color="#F5B342" stop-opacity="0.04"/></linearGradient>';
@@ -548,8 +557,8 @@ function renderToday() {
   svg.append(s('text', { x: nowX, y: 9, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 700, fill: '#fff' }, 'nu'));
 
   lanes.forEach((a, i) => {
-    const y = 118 + i * 18;
-    svg.append(s('text', { x: 10, y: y + 7, 'font-size': 10, fill: '#8FA3AD' }, actuatorName(a.actuatorId)));
+    const y = 128 + i * 26;
+    svg.append(s('text', { x: 10, y: y - 3, 'font-size': 10, fill: '#8FA3AD' }, actuatorName(a.actuatorId)));
     for (const sp of a.smartClimate) {
       svg.append(s('rect', { x: X(sp.vanMs), y: y - 1, width: Math.max(2, X(sp.totMs) - X(sp.vanMs)), height: 8, rx: 3, fill: sp.actie === 'heat' ? '#FF8A4C' : '#5CC8FF' }));
     }
