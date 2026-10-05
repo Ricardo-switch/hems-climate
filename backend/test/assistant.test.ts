@@ -142,6 +142,24 @@ describe('waarom', () => {
     expect(a.antwoord).toContain('Er gaat nu 300 W terug naar het net.');
   });
 
+  it('zegt bij een kamer zonder vraag tussen welke doelen hij zit', () => {
+    const e = explanation();
+    const perZone = e.perZone.map((z) =>
+      z.zoneId === 'zolder'
+        ? { ...z, temperatureC: 22.3, targetC: 20, heatTargetC: 20, coolTargetC: 22.5, demand: 'none' as const, reason: 'zone_satisfied' as const }
+        : z,
+    );
+    const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ explanation: { ...e, perZone } }));
+    expect(a.antwoord).toContain(
+      'De zolder heeft niets nodig: het is er 22,3°, tussen het doel voor verwarmen (20°) en dat voor koelen (22,5°).',
+    );
+  });
+
+  it('valt bij een ouder besluit zonder beide doelen terug op het ene doel', () => {
+    const a = askNl({ kind: 'waarom', kamer: 'woonkamer' });
+    expect(a.antwoord).toContain('De woonkamer heeft niets nodig: het is er 21,4°, en het doel voor verwarmen is 21°.');
+  });
+
   it('zet het werkwoord achteraan na "omdat"', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ rejected: [{ intent: coolOnSun, blockedBy: 'min_rest_not_elapsed' }] }));
     expect(a.antwoord).toContain('maar dat kan nu niet, omdat het apparaat eerst even moet rusten.');

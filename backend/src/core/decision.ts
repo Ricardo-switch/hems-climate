@@ -154,7 +154,16 @@ export interface ZoneExplanation {
    * terwijl de vertaling hem nooit uitlas en hij nergens werd vastgelegd.
    */
   readonly humidityPct: number | null;
+  /** Het doel dat bij de vraag hoort: koelen bij `cool`, anders verwarmen. */
   readonly targetC: number | null;
+  /**
+   * Beide doelen van dit moment. Een kamer zonder vraag zit ertussen, en dan
+   * zegt `targetC` alleen het doel voor verwarmen: "op temperatuur, doel 20°"
+   * terwijl het er 22,3° is. De uitleg aan de bewoner heeft beide nodig.
+   * Optioneel, want oudere logboeken hebben ze niet.
+   */
+  readonly heatTargetC?: number | null;
+  readonly coolTargetC?: number | null;
   readonly demand: 'heat' | 'cool' | 'none';
   readonly reason: ReasonCode;
 }
