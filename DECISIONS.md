@@ -3687,6 +3687,12 @@ iets naar het zuiden), het westvlak rond 275 tot 280°, helling rond 45 tot 50°
 Het vermogen komt grof uit op zo'n 5 kWp, ongeveer 410 Wp per paneel; dat is nog
 onzeker, want het hangt af van het model voor een heldere hemel. De voorgevel
 krijgt de ochtendzon, dus het oostvlak ligt waarschijnlijk aan de voorkant.
+Volgens de bewoner is het werkelijk 4.680 Wp (390 Wp per paneel), met een
+omvormer van 3.000 W: de schatting zat 7% te hoog, na drie bewolkte dagen. Met
+een omvormer van 3.000 W op 4.680 Wp kapt hij op heldere zomerdagen rond het
+middaguur af. Bij oost-west gebeurt dat minder, want de twee vlakken pieken op
+verschillende tijden. De meting moet die afgekapte uren dus herkennen en niet
+gebruiken voor richting en helling.
 
 Wat dit leert voor de app: één vraag ("waar liggen je panelen?") voorkomt een
 verkeerde fit, en de meting moet twee vlakken altijd proberen en de bewoner
