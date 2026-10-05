@@ -60,6 +60,16 @@ describe('het voorstel uit Home Assistant', () => {
     expect(house.lampenAan).toBe(3);
   });
 
+  it('vat elk niveau samen in woorden, en zegt wat een lamp kan', () => {
+    const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    expect(wk.samenvatting).toEqual({ lampenAan: 3, screens: '60% dicht', draait: 1, klimaat: 'Airco woonkamer: koelen naar 22°' });
+    expect(house.etages.find((e) => e.id === 'buiten')!.samenvatting).toEqual({ lampenAan: 0, screens: null, draait: 0, klimaat: 'Er draait niets' });
+    expect(house.samenvatting.lampenAan).toBe(house.lampenAan);
+    const lamp = (id: string) => wk.apparaten.find((d) => d.id === id)!;
+    expect([lamp('light.woonkamer_plafonniere').dimbaar, lamp('light.woonkamer_plafonniere').kleurtemp]).toEqual([true, true]);
+    expect([lamp('light.sfeerverlichting').dimbaar, lamp('light.sfeerverlichting').kleurtemp]).toEqual([false, false]);
+  });
+
   it('zet wat in geen gebied hangt bij "nog in te delen", met de kamer van zijn groep als voorstel', () => {
     const tuin = proposeLayout(config, registers, states).kamers.find((k) => k.naam === 'Tuin')!;
     expect(house.zonderRuimte).toEqual([

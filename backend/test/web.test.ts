@@ -20,7 +20,7 @@ import { FeedbackLog } from '../src/web/feedback.js';
 import type { Registers } from '../src/adapters/homeassistant/discovery.js';
 import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
-import type { HouseReport } from '../src/web/house.js';
+import { summarize, type HouseReport } from '../src/web/house.js';
 import { LayoutStore, type Layout } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { onUsablePort } from './ports.js';
@@ -793,8 +793,9 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
   it('geeft het huis door zoals de dienst het opbouwde, en leest alleen', async () => {
     const house: HouseReport = {
       indeling: 'voorstel',
-      etages: [{ id: 'bg', naam: 'Begane grond', lampenAan: 0, ruimtes: [] }],
+      etages: [{ id: 'bg', naam: 'Begane grond', lampenAan: 0, samenvatting: summarize([]), ruimtes: [] }],
       lampenAan: 0,
+      samenvatting: summarize([]),
       zonderRuimte: [],
       lampgroepen: [],
       verborgen: [],
@@ -821,6 +822,8 @@ describe('licht bedienen (besluit 97)', () => {
     actuatorId: null,
     zone: null,
     groepen: [],
+    dimbaar: true,
+    kleurtemp: false,
   });
   const room = (id: string, apparaten: ReturnType<typeof lamp>[]) => ({
     id,
@@ -830,15 +833,17 @@ describe('licht bedienen (besluit 97)', () => {
     temperatuurC: null,
     status: null,
     lampenAan: apparaten.filter((d) => d.aan).length,
+    samenvatting: summarize(apparaten),
     apparaten,
   });
   const house: HouseReport = {
     indeling: 'eigen',
     etages: [
-      { id: 'e2', naam: 'Zolder', lampenAan: 1, ruimtes: [room('zolder', [lamp('light.zolder', true)])] },
-      { id: 'bg', naam: 'Beneden', lampenAan: 1, ruimtes: [room('hal', [lamp('light.hal', true), lamp('light.trap', false)])] },
+      { id: 'e2', naam: 'Zolder', lampenAan: 1, samenvatting: summarize([]), ruimtes: [room('zolder', [lamp('light.zolder', true)])] },
+      { id: 'bg', naam: 'Beneden', lampenAan: 1, samenvatting: summarize([]), ruimtes: [room('hal', [lamp('light.hal', true), lamp('light.trap', false)])] },
     ],
     lampenAan: 2,
+    samenvatting: summarize([]),
     zonderRuimte: [],
     lampgroepen: [],
     verborgen: [],
@@ -869,10 +874,12 @@ describe('licht bedienen (besluit 97)', () => {
     expect(await (await post({ doel: 'etage', id: 'bg', aan: false })).json()).toEqual({ lampen: 2 });
     expect((await post({ doel: 'huis', aan: false })).status).toBe(200);
     expect((await post({ doel: 'lamp', id: 'light.zolder', aan: true, helderheidPct: 40 })).status).toBe(200);
+    expect((await post({ doel: 'lamp', id: 'light.zolder', aan: true, kleur: 'warm' })).status).toBe(200);
     expect(calls).toEqual([
       { service: 'turn_off', ids: ['light.hal', 'light.trap'], data: {} },
       { service: 'turn_off', ids: ['light.zolder', 'light.hal', 'light.trap'], data: {} },
       { service: 'turn_on', ids: ['light.zolder'], data: { brightness_pct: 40 } },
+      { service: 'turn_on', ids: ['light.zolder'], data: { color_temp_kelvin: 2700 } },
     ]);
   });
 
@@ -883,6 +890,8 @@ describe('licht bedienen (besluit 97)', () => {
     expect((await post({ doel: 'lamp', id: 'climate.beneden', aan: false })).status).toBe(404);
     expect((await post({ doel: 'kamer', id: 'kelder', aan: false })).status).toBe(404);
     expect((await post({ doel: 'lamp', id: 'light.hal', aan: false, helderheidPct: 50 })).status).toBe(400);
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: false, kleur: 'warm' })).status).toBe(400);
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: true, kleur: 'paars' })).status).toBe(400);
     expect(calls).toEqual([]);
   });
 

@@ -1,6 +1,6 @@
 /**
- * Licht bedienen vanuit de app (besluit 97): een lamp aan of uit, of alles uit
- * in een kamer, op een etage of in het hele huis.
+ * Licht bedienen vanuit de app (besluit 97): een lamp aan of uit, dimmen, warm
+ * of koel wit, of alles uit in een kamer, op een etage of in het hele huis.
  *
  * Smart Climate regelt het licht niet (92); dit is een knop voor de bewoner,
  * rechtstreeks naar Home Assistant. Het is de vierde smalle deur in de muur, en
@@ -25,7 +25,14 @@ export interface LightRequest {
   readonly aan: boolean;
   /** 1 tot en met 100, alleen bij aan. */
   readonly helderheidPct: number | null;
+  /** Warm, neutraal of koel wit, alleen bij aan. */
+  readonly kleur: LightColor | null;
 }
+
+export type LightColor = 'warm' | 'neutraal' | 'koel';
+
+/** De kleurtemperatuur per keuze, in kelvin: gloeilamp, kantoor, daglicht. */
+const KELVIN: Readonly<Record<LightColor, number>> = { warm: 2700, neutraal: 4000, koel: 6000 };
 
 export type LightResult =
   | { readonly ok: true; readonly lampen: number }
@@ -52,7 +59,14 @@ export function parseLightRequest(body: unknown): { ok: true; request: LightRequ
   if (h !== null && (!aan || typeof h !== 'number' || !Number.isInteger(h) || h < 1 || h > 100)) {
     return { ok: false, reden: 'helderheidPct is een geheel getal van 1 tot en met 100, en alleen bij aan' };
   }
-  return { ok: true, request: { doel: doel as LightTarget, id: id as string | null, aan, helderheidPct: h as number | null } };
+  const kleur = b['kleur'] ?? null;
+  if (kleur !== null && (!aan || typeof kleur !== 'string' || !(kleur in KELVIN))) {
+    return { ok: false, reden: `kleur is ${Object.keys(KELVIN).join(', ')}, en alleen bij aan` };
+  }
+  return {
+    ok: true,
+    request: { doel: doel as LightTarget, id: id as string | null, aan, helderheidPct: h as number | null, kleur: kleur as LightColor | null },
+  };
 }
 
 export interface LightSwitchOptions {
@@ -82,7 +96,7 @@ export class LightSwitch {
   async switch(body: unknown): Promise<LightResult> {
     const parsed = parseLightRequest(body);
     if (!parsed.ok) return { ok: false, status: 400, reden: parsed.reden };
-    const { doel, id, aan, helderheidPct } = parsed.request;
+    const { doel, id, aan, helderheidPct, kleur } = parsed.request;
 
     const house = this.#options.house();
     if (house == null) return { ok: false, status: 503, reden: 'het huis is nog niet gelezen uit Home Assistant' };
@@ -96,7 +110,11 @@ export class LightSwitch {
     this.#recent.push(t);
 
     try {
-      await this.#options.call(aan ? 'turn_on' : 'turn_off', lamps, helderheidPct == null ? {} : { brightness_pct: helderheidPct });
+      const data = {
+        ...(helderheidPct == null ? {} : { brightness_pct: helderheidPct }),
+        ...(kleur == null ? {} : { color_temp_kelvin: KELVIN[kleur] }),
+      };
+      await this.#options.call(aan ? 'turn_on' : 'turn_off', lamps, data);
     } catch (error) {
       return { ok: false, status: 502, reden: `Home Assistant weigerde: ${(error as Error).message}` };
     }

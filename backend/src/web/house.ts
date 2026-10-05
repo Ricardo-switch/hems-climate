@@ -63,6 +63,23 @@ export interface HouseDevice {
   readonly zone: string | null;
   /** De lampgroepen in Home Assistant waar het in zit: context bij een naam die vaker voorkomt. */
   readonly groepen: readonly string[];
+  /** Een lamp die meer kan dan aan en uit. */
+  readonly dimbaar: boolean;
+  /** Een lamp die warm, neutraal of koel kan (kleurtemperatuur, of kleur). */
+  readonly kleurtemp: boolean;
+}
+
+/**
+ * Wat er op een niveau aan staat, in woorden (ONTWERP §4: "2 lampen aan",
+ * "Screens 60% dicht", "Er draait niets"). De dienst zegt het, de pagina toont het.
+ */
+export interface HouseSummary {
+  readonly lampenAan: number;
+  /** De stand van de screens, of null als er geen zijn. */
+  readonly screens: string | null;
+  /** Hoeveel klimaatapparaten draaien, en dat in woorden. */
+  readonly draait: number;
+  readonly klimaat: string;
 }
 
 export interface HouseRoom {
@@ -75,6 +92,7 @@ export interface HouseRoom {
   readonly temperatuurC: number | null;
   readonly status: { readonly soort: RoomKind; readonly zin: string } | null;
   readonly lampenAan: number;
+  readonly samenvatting: HouseSummary;
   readonly apparaten: readonly HouseDevice[];
 }
 
@@ -82,6 +100,7 @@ export interface HouseFloor {
   readonly id: FloorId;
   readonly naam: string;
   readonly lampenAan: number;
+  readonly samenvatting: HouseSummary;
   readonly ruimtes: readonly HouseRoom[];
 }
 
@@ -90,6 +109,7 @@ export interface HouseReport {
   readonly indeling: 'eigen' | 'voorstel';
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
+  readonly samenvatting: HouseSummary;
   /**
    * Wat in geen kamer staat. Het huis kan het nergens tonen; de bewoner deelt
    * het in (95), met als voorstel het gebied uit Home Assistant als dat er is.
@@ -160,6 +180,9 @@ function friendly(state: HaEntityState | undefined, fallback: string): string {
   return typeof name === 'string' && name.trim() !== '' ? name.trim() : fallback;
 }
 
+/** Kleurstanden waarmee Home Assistant ook een kleurtemperatuur kan zetten. */
+const COLOR_MODES: ReadonlySet<string> = new Set(['color_temp', 'hs', 'xy', 'rgb', 'rgbw', 'rgbww']);
+
 function lightOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
   const on = state?.state === 'on';
   const b = state?.attributes['brightness'];
@@ -172,7 +195,12 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
           ? 'aan'
           : `aan · ${pct}%`
         : 'uit';
-  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [] };
+  // Wat de lamp kan, uit Home Assistant; een uitgezette lamp zonder toestand kan alleen aan en uit.
+  const modes = state?.attributes['supported_color_modes'];
+  const list = Array.isArray(modes) ? modes.filter((m): m is string => typeof m === 'string') : [];
+  const dimbaar = list.some((m) => m !== 'onoff') || typeof b === 'number';
+  const kleurtemp = list.some((m) => COLOR_MODES.has(m));
+  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp };
 }
 
 function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
@@ -188,7 +216,7 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   else stand = `${100 - pos}% dicht`;
   // "Aan" is voor een screen: hij hangt (deels) voor het raam.
   const down = pos != null ? pos < 100 : state?.state === 'closed';
-  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [] };
+  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false };
 }
 
 function climateOf(
@@ -207,7 +235,7 @@ function climateOf(
         : Number.isFinite(setpoint)
           ? `${word} naar ${nl1(setpoint)}°`
           : word;
-  return { id: actuatorId, naam: name, haNaam: name, soort: 'klimaat', stand, aan: word != null, helderheidPct: null, positiePct: null, actuatorId, zone: null, groepen: [] };
+  return { id: actuatorId, naam: name, haNaam: name, soort: 'klimaat', stand, aan: word != null, helderheidPct: null, positiePct: null, actuatorId, zone: null, groepen: [], dimbaar: false, kleurtemp: false };
 }
 
 interface Found {
@@ -518,6 +546,21 @@ export function proposeLayout(
   return { versie: 1, etages, kamers, apparaten: {} };
 }
 
+/** "2 lampen aan", "Screens 60% dicht", "Er draait niets": over een lijst apparaten. */
+export function summarize(devices: readonly HouseDevice[]): HouseSummary {
+  const lampenAan = devices.filter((d) => d.soort === 'licht' && d.aan).length;
+  const covers = devices.filter((d) => d.soort === 'screen');
+  let screens: string | null = null;
+  if (covers.length > 0) {
+    const stands = new Set(covers.map((c) => c.stand));
+    screens = stands.size === 1 ? covers[0]!.stand : covers.some((c) => c.aan) ? 'deels dicht' : 'open';
+  }
+  const running = devices.filter((d) => d.soort === 'klimaat' && d.aan);
+  const klimaat =
+    running.length === 0 ? 'Er draait niets' : running.length === 1 ? `${running[0]!.naam}: ${running[0]!.stand}` : `${running.length} apparaten draaien`;
+  return { lampenAan, screens, draait: running.length, klimaat };
+}
+
 export function buildHouse(
   config: SiteConfig,
   registers: HouseRegisters,
@@ -587,6 +630,7 @@ export function buildHouse(
       temperatuurC: pz?.temperatureC ?? null,
       status: status ? { soort: status.kind, zin: status.zin } : null,
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
+      samenvatting: summarize(devices),
       apparaten: devices,
     };
   });
@@ -595,7 +639,13 @@ export function buildHouse(
   for (const id of FLOORS) {
     const ruimtes = rooms.filter((r) => layout.kamers.find((k) => k.id === r.id)?.etage === id);
     if (ruimtes.length === 0) continue;
-    floors.push({ id, naam: layout.etages[id] ?? FLOOR_NAMES[id], lampenAan: ruimtes.reduce((n, r) => n + r.lampenAan, 0), ruimtes });
+    floors.push({
+      id,
+      naam: layout.etages[id] ?? FLOOR_NAMES[id],
+      lampenAan: ruimtes.reduce((n, r) => n + r.lampenAan, 0),
+      samenvatting: summarize(ruimtes.flatMap((r) => r.apparaten)),
+      ruimtes,
+    });
   }
 
   homeless.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
@@ -604,6 +654,7 @@ export function buildHouse(
     indeling: saved ? 'eigen' : 'voorstel',
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
+    samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten))),
     zonderRuimte: homeless,
     lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue, overzicht: g.overzicht })),
     verborgen: hidden,
