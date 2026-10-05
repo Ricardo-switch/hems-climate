@@ -35,6 +35,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
 - [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
+- [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet)
 
 **Kern en regeling**
 
@@ -3581,6 +3582,58 @@ bestand, via hetzelfde mechanisme als de zin-triggers van automatiseringen.
 `ha-assist/` de manier om de assistent te testen.
 
 *Wanneer:* bij het product (H), samen met de add-on (53, 77).
+
+---
+
+## 92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Na de laatste fase kwam de vraag of slimme verlichting in de app hoort.
+Gekozen op 5 oktober 2026.
+
+*Besluit, deel 1: zonwering wordt een klimaatapparaat.* Een screen die op tijd
+dichtgaat, houdt warmte buiten die een airco anders weer moet wegkoelen, vaak
+goedkoper dan koelen, ook op zon. In de winter andersom: open laten is gratis
+verwarmen. Het past op wat er al ligt:
+
+- **De stand van de zon** wordt al uitgerekend (90), en de toelichting "zon door
+  het raam" wordt al vastgelegd (84).
+- **Het thermisch model (D)** leert hoeveel zon er door elk raam binnenkomt, en
+  dus wat een screen scheelt.
+- **In de arbiter** is een screen een apparaat dat geen vermogen vraagt, met
+  dezelfde regels voor de bewoner die zelf ingrijpt (74). Wie de screen zelf
+  bedient, wordt met rust gelaten.
+- **Een eigen meting gaat voor een aanname (88).** Somfy-screens melden wie ze
+  vergrendelde (de bewoner, wind, een andere bediening). Dan kan de app zeggen
+  dat de wind hem ophaalde, in plaats van te raden.
+
+*Voor dit huis:* de screen aan de voorkant krijgt de ochtendzon. De screens
+zitten via Somfy (Overkiz) in Home Assistant: `cover.screen`,
+`cover.zonnescherm` en `cover.io_2243641_1`, met een eigen zonnesensor op de
+screen (`sensor.screen_screen_luminance` in lux en
+`sensor.screen_screen_sun_energy` in W). Die meet de zon op de gevel, los van
+de ligging van de panelen. Sinds 5 oktober schrijven ze mee in `recordOnly`
+(65), met de stand van de screen (`current_position`) in de historie. Wie hem
+vergrendelde (`sensor.screen_priority_lock_originator`) en het doel van de
+beweging (`sensor.screen_target_closure`) staan in Home Assistant standaard
+uit; ze worden vastgelegd zodra de bewoner ze aanzet.
+
+*Besluit, deel 2: verlichting regelt Smart Climate niet.* Bij licht valt weinig
+energie te winnen; LED vraagt weinig, dus het budget, de zon en de tarieven
+doen er nauwelijks toe. Home Assistant doet het al goed (automatiseringen,
+Adaptive Lighting), en Assist begrijpt "doe het licht aan" zelf. Daarom:
+
+- **Licht blijft invoer.** De avondstand loopt door zolang er licht brandt
+  (`eveningExtensionLights`).
+- **De app mag licht tonen en bedienen,** via Home Assistant: welke lampen aan
+  zijn, met een knop. Dat maakt de app compleet, zonder dat Smart Climate het
+  licht regelt.
+- **Spraak over licht** blijft bij Assist van Home Assistant (91).
+
+*Wanneer:* zonwering na D, als het thermisch model laat zien wat een screen
+scheelt. Licht tonen en bedienen kan met de schermen (F). Vastleggen doet de
+dienst nu al.
 
 ---
 

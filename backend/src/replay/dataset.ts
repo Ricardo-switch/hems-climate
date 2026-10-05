@@ -14,6 +14,9 @@ export const KEPT_ATTRIBUTES = [
   'hvac_action',
   'preset_mode',
   'finishes_at',
+  // De stand van een screen of zonnescherm, 0 (dicht) tot 100 (open). Voor het
+  // thermisch model: hoeveel zon er door een raam binnenkomt (besluit 92).
+  'current_position',
 ] as const;
 export type KeptAttribute = (typeof KEPT_ATTRIBUTES)[number];
 
