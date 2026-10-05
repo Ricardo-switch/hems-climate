@@ -59,8 +59,23 @@ describe('het voorstel uit Home Assistant', () => {
     expect(house.lampenAan).toBe(2);
   });
 
-  it('zet wat in geen gebied hangt bij "nog in te delen"', () => {
-    expect(house.zonderRuimte).toEqual([{ id: 'light.zwerver', naam: 'light.zwerver', soort: 'licht', voorstel: null }]);
+  it('zet wat in geen gebied hangt bij "nog in te delen", met de kamer van zijn groep als voorstel', () => {
+    const tuin = proposeLayout(config, registers, states).kamers.find((k) => k.naam === 'Tuin')!;
+    expect(house.zonderRuimte).toEqual([
+      { id: 'light.zwerver', naam: 'light.zwerver', soort: 'licht', voorstel: null, groepen: ['Tuin alles'], voorstelKamer: tuin.id },
+    ]);
+  });
+
+  it('toont lampgroepen niet als lamp, maar zegt wel in welke groep een lamp zit, ook bij een Hue-kamer', () => {
+    const all = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
+    expect(all.some((d) => d.id === 'light.hue_keuken' || d.id === 'light.tuin_alles')).toBe(false);
+    expect(all.find((d) => d.id === 'light.sfeerverlichting')!.groepen).toEqual(['Keuken']);
+    expect(all.find((d) => d.id === 'light.woonkamer_plafonniere')!.groepen).toEqual(['Woonkamer alles']);
+    expect(house.lampgroepen.map((g) => [g.naam, g.hue])).toEqual([
+      ['Woonkamer alles', false],
+      ['Tuin alles', false],
+      ['Keuken', true],
+    ]);
   });
 
   it('zet alles op de begane grond als Home Assistant geen etages kent, en buiten wat naar buiten klinkt', () => {

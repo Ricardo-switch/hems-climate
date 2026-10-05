@@ -69,6 +69,8 @@ export const registers: HouseRegisters = {
     entity('light.oprit', 'd-oprit'),
     entity('light.uitgezet', 'd-plaf', { disabled_by: 'user' }),
     entity('light.zwerver', 'd-nergens'),
+    entity('light.tuin_alles', null),
+    entity('light.hue_keuken', null),
   ],
 };
 
@@ -79,6 +81,9 @@ export const states = new Map<string, HaEntityState>([
   ['cover.screen', state('cover.screen', 'open', { friendly_name: 'Screen', current_position: 40 })],
   ['cover.screen_low_speed', state('cover.screen_low_speed', 'open', { friendly_name: 'Screen low speed', current_position: 40 })],
   ['light.achtertuin', state('light.achtertuin', 'off', { friendly_name: 'Achtertuin' })],
+  // Een groep die een lamp zonder gebied bevat, en een Hue-kamer die zijn lampen alleen bij naam noemt.
+  ['light.tuin_alles', state('light.tuin_alles', 'off', { friendly_name: 'Tuin alles', entity_id: ['light.zwerver'] })],
+  ['light.hue_keuken', state('light.hue_keuken', 'on', { friendly_name: 'Keuken', is_hue_group: true, lights: ['Sfeerverlichting'] })],
 ]);
 
 export const snapshot: DecisionView = {
