@@ -17,7 +17,15 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
-import { fetchRegistries, type HaCoreConfig } from './adapters/homeassistant/discovery.js';
+import {
+  fetchRegistries,
+  type HaArea,
+  type HaCoreConfig,
+  type HaDevice,
+  type HaFloor,
+  type HaRegistryEntity,
+} from './adapters/homeassistant/discovery.js';
+import { buildHouse, type HouseRegisters } from './web/house.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -323,8 +331,38 @@ let lastStates: readonly HaEntityState[] = [];
 let location: { latDeg: number; lonDeg: number } | null = null;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+/*
+ * Het huis als navigatie (ONTWERP §4): lampen en zonwering per ruimte.
+ *
+ * De regeling volgt alleen de entiteiten uit de configuratie; voor het huis
+ * houdt dit kaartje de stand van alle lampen en screens bij, uit dezelfde
+ * stroom. De registers (etages, ruimtes, apparaten) worden bij elke verbinding
+ * en daarna elk kwartier opnieuw gelezen: zo komt een verhuisde lamp vanzelf
+ * mee. Alleen lezen.
+ */
+const houseStates = new Map<string, HaEntityState>();
+const inHouse = (id: string) => id.startsWith('light.') || id.startsWith('cover.');
+let houseRegisters: HouseRegisters | null = null;
+async function readHouseRegisters(): Promise<void> {
+  const [floors, areas, devices, entities] = await Promise.all([
+    client.query<HaFloor[]>('config/floor_registry/list').catch(() => [] as HaFloor[]),
+    client.query<HaArea[]>('config/area_registry/list'),
+    client.query<HaDevice[]>('config/device_registry/list'),
+    client.query<HaRegistryEntity[]>('config/entity_registry/list'),
+  ]);
+  houseRegisters = { floors, areas, devices, entities };
+}
+client.on('stateChanged', (state: HaEntityState) => {
+  if (inHouse(state.entity_id)) houseStates.set(state.entity_id, state);
+});
+setInterval(() => void readHouseRegisters().catch(() => {}), 15 * 60_000).unref();
+
 client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
+  for (const s of states) if (inHouse(s.entity_id)) houseStates.set(s.entity_id, s);
+  void readHouseRegisters().catch(() => {
+    // Zonder registers is er geen huis te tonen; de volgende verbinding opnieuw.
+  });
   if (location == null) {
     client
       .query<HaCoreConfig>('get_config')
@@ -393,6 +431,9 @@ const onboarding =
       })
     : null;
 
+// Vast na het laden; de functies hieronder lezen hem later.
+const siteConfig = site?.config ?? null;
+
 if (webPort != null) {
   web = new WebServer({
     port: webPort,
@@ -405,6 +446,10 @@ if (webPort != null) {
     ...(logDir === '' ? {} : { logDir }),
     ...(onboarding ? { onboarding } : {}),
     location: () => location,
+    house: () =>
+      siteConfig && houseRegisters
+        ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null)
+        : null,
     // Gevoel en toelichting (besluit 84): alleen als er gelogd wordt, want ze
     // horen bij de dataset, en alleen naar een eigen bestand in de logmap.
     ...(logDir !== '' && site

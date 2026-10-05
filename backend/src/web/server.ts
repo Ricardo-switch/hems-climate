@@ -32,6 +32,7 @@ import { TodayCache } from './today.js';
 import type { FeedbackLog } from './feedback.js';
 import { ask, parseQuestion } from './assistant.js';
 import { sunReport, type Location } from './sun.js';
+import type { HouseReport } from './house.js';
 import { startOfLocalDay } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -119,6 +120,11 @@ export interface WebOptions {
    * niet gaf. Alleen voor de stand van de zon (besluit 93).
    */
   readonly location?: () => Location | null;
+  /**
+   * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
+   * of null zolang de registers van Home Assistant nog niet gelezen zijn.
+   */
+  readonly house?: () => HouseReport | null;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -489,6 +495,16 @@ export class WebServer {
       }
       const now = Date.now();
       sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone)));
+      return;
+    }
+
+    if (path === '/api/huis') {
+      const house = this.#options.house?.() ?? null;
+      if (house == null) {
+        sendJson(res, 503, { wachten: 'de etages en ruimtes komen van Home Assistant zodra die verbonden is' });
+        return;
+      }
+      sendJson(res, 200, house);
       return;
     }
 
