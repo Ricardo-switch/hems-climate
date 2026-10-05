@@ -58,6 +58,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste)
 - [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
 - [89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg](#89-elke-omvormer-werkt-de-app-meet-hoe-snel-de-zonnesensor-is-en-wijst-de-lokale-weg)
+- [90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen](#90-alleen-sturen-wat-afwijkt-slimmere-timing-moet-eerst-in-de-replay-winnen)
 
 **Configuratie en onboarding**
 
@@ -3460,6 +3461,83 @@ kolom `zonW` is de herstart van de dienst op 4 oktober, na deze wijziging. De
 besluiten merken het niet: de regeling rekent het budget op de P1-meter (47),
 en het oude systeem gebruikt de cloudsensor alleen voor de weergave
 (`sensor.zonnepanelen_vermogen_w` in `pv_overschot.yaml`).
+
+---
+
+## 90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Het oude systeem laat de airco's vaak piepen. Als het ingrijpt, stuurt het
+altijd `set_hvac_mode: cool` én `set_temperature`, ook als alleen de temperatuur
+anders is. En de PV-logica stuurt opnieuw zolang een airco "niet actief koelt",
+ook als hij gewoon zijn temperatuur heeft gehaald en de compressor terugschakelt.
+De kern doet dat al anders: `commandsFor` in de arbiter stuurt een stand alleen
+als die afwijkt, een setpoint alleen buiten de tolerantie, en niets als alles al
+goed staat. Gekozen op 5 oktober 2026.
+
+*Besluit, deel 1: sturen in stap B.* De dienst die echt stuurt:
+
+- **Leest de stand opnieuw vlak voor hij stuurt,** niet de momentopname van de
+  beslissing. Wat dan al goed staat, gaat niet de deur uit.
+- **Stuurt stand en temperatuur samen** als het apparaat uit staat en de
+  koppeling dat in één opdracht kan. Per koppeling na te gaan; voor de
+  LG-airco's van dit huis eerst testen hoeveel piepjes dat geeft.
+- **Controleert na het sturen of het aankwam,** met de wachttijd van de
+  detector (74). Kwam het niet aan, dan is dat een storing en geen reden om te
+  blijven herhalen.
+- **Heeft een piepbudget:** per apparaat hooguit een paar opdrachten per uur,
+  en een setpoint alleen in hele stappen bijgesteld. Goed voor de oren en voor
+  het apparaat.
+
+*Besluit, deel 2: de timing blijft tot B gelijk aan het oude systeem.*
+Stabilisatie (5 minuten, ook na parkeren, 61), minimale draaitijd, rusttijd,
+standby op 25/18 en één start per beslissing (68). In de schaduw moeten de regels
+gelijk zijn, anders vergelijk je twee regelingen. Slimmer kan wel, en dit zijn de
+kandidaten:
+
+1. **Stabiliseren op meting:** klaar zodra het vermogen van het apparaat een
+   minuut stabiel is, met de 5 minuten als maximum.
+2. **Parkeren of uit, op wat er nog komt.** Zie hieronder.
+3. **De compressor beschermen met starts per uur,** met de minimale draaitijd
+   als ondergrens.
+4. **Het piepbudget van deel 1** ook als regel in de arbiter, zodat de replay
+   het kan tellen.
+
+Een kandidaat gaat pas in de regeling als hij in de replay op de eigen dataset
+wint: minder starts en minder opdrachten, bij hetzelfde comfort en niet meer
+netstroom. Pas na de start van B, zodat de vergelijking deze winter zuiver
+blijft.
+
+*Parkeren of uit: op de stand van de zon, niet op de klok of de zonsondergang.*
+De kern kent nu alleen "zon boven de horizon" (`sun.sun`): de strategie voor
+zonnestroom stopt als de zon onder is. De dagdelen (nacht, voorverwarmen, dag)
+volgen de klok, en dat blijft zo, want die gaan over het ritme van de bewoners.
+Maar voor zonnestroom is de zonsondergang te laat: op 2 oktober leverden de
+panelen om 18:00 nog 260 W, en de zon ging om 19:05 onder. Wanneer er niet
+genoeg meer komt, hangt af van de ligging van de panelen, van schaduw en van
+het seizoen. Daarom:
+
+- **De stand van de zon wordt uitgerekend** uit de tijd en de ligging van het
+  huis (hoogte en richting van de zon). Dat is zuiver, dus in de kern, en
+  hoeft niet uit Home Assistant te komen. De ligging hoeft maar op één
+  decimaal (ongeveer 10 km): genoeg voor de zon, niet genoeg om het huis te
+  vinden.
+- **Het huis leert wat zijn panelen bij elke zonnestand hooguit leveren,** uit
+  de eigen dataset: het hoogste van de afgelopen weken bij die stand. Dat is de
+  opbrengst bij een heldere hemel, voor dit dak.
+- **Bij een dip vergelijkt de regeling met dat plafond.** Kan er bij deze
+  zonnestand nog genoeg komen voor het apparaat, dan is het een wolk: parkeren.
+  Kan dat niet meer, dan is de zonnige dag voorbij: meteen uit, geen standby
+  die eindigt in een tweede schakeling.
+- **Met E (prognose) en D (hoe snel de kamer opwarmt)** wordt het beter: of de
+  wolk lang duurt, en of de kamer de dip kan opvangen.
+
+Dit is kandidaat 2 en moet dus ook eerst in de replay winnen.
+
+*Wanneer:* deel 1 bij stap B. De kandidaten daarna, elk na een replay. Het
+plafond per zonnestand kan nu al worden uitgerekend uit de dataset; daarvoor
+is sinds 4 oktober de zonnestroom per minuut er (89).
 
 ---
 
