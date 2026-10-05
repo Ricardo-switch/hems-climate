@@ -346,7 +346,13 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  * mee. Alleen lezen.
  */
 const houseStates = new Map<string, HaEntityState>();
-const inHouse = (id: string) => id.startsWith('light.') || id.startsWith('cover.');
+// Lampen en screens, klimaat, en sensoren die temperatuur of luchtvochtigheid meten.
+const inHouse = (st: HaEntityState) =>
+  st.entity_id.startsWith('light.') ||
+  st.entity_id.startsWith('cover.') ||
+  st.entity_id.startsWith('climate.') ||
+  (st.entity_id.startsWith('sensor.') &&
+    (st.attributes['device_class'] === 'temperature' || st.attributes['device_class'] === 'humidity'));
 let houseRegisters: HouseRegisters | null = null;
 async function readHouseRegisters(): Promise<void> {
   const [floors, areas, devices, entities] = await Promise.all([
@@ -358,13 +364,13 @@ async function readHouseRegisters(): Promise<void> {
   houseRegisters = { floors, areas, devices, entities };
 }
 client.on('stateChanged', (state: HaEntityState) => {
-  if (inHouse(state.entity_id)) houseStates.set(state.entity_id, state);
+  if (inHouse(state)) houseStates.set(state.entity_id, state);
 });
 setInterval(() => void readHouseRegisters().catch(() => {}), 15 * 60_000).unref();
 
 client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
-  for (const s of states) if (inHouse(s.entity_id)) houseStates.set(s.entity_id, s);
+  for (const s of states) if (inHouse(s)) houseStates.set(s.entity_id, s);
   void readHouseRegisters().catch(() => {
     // Zonder registers is er geen huis te tonen; de volgende verbinding opnieuw.
   });

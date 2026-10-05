@@ -60,6 +60,33 @@ describe('het voorstel uit Home Assistant', () => {
     expect(house.lampenAan).toBe(3);
   });
 
+  it('toont een meter in een kamer zonder regeling, met temperatuur en luchtvochtigheid', () => {
+    const hal = house.etages.find((e) => e.id === 'bg')!.ruimtes.find((r) => r.naam === 'Hal')!;
+    expect(hal.apparaten.map((d) => [d.soort, d.naam, d.stand])).toEqual([['meter', 'Bewegingssensor hal', '19,5° · 61%']]);
+    expect([hal.temperatuurC, hal.vochtPct, hal.gemetenDoor]).toEqual([19.5, 61.4, 'Bewegingssensor hal']);
+    expect(hal.samenvatting).toEqual({ lampenAan: 0, screens: null, draait: 0, klimaat: 'Er draait niets' });
+  });
+
+  it('laat weer, schijven, telefoons en diagnose weg, en een sensor van een klimaatapparaat is geen meter', () => {
+    const all = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).map((d) => d.id);
+    for (const id of ['sensor.nas_temperatuur', 'sensor.temperatuur', 'sensor.f1_track_weather', 'sensor.beneden_luchtvochtigheid']) {
+      expect(all, id).not.toContain(id);
+      expect(house.zonderRuimte.map((d) => d.id), id).not.toContain(id);
+    }
+  });
+
+  it('zegt bij klimaat wat het meet, doet en kan: de Nest kan niet koelen', () => {
+    const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    const nest = wk.apparaten.find((d) => d.id === 'nest')!;
+    expect(nest.meting).toEqual({ temperatuurC: 21.9, vochtPct: 55 });
+    expect(nest.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true });
+    const ac = wk.apparaten.find((d) => d.id === 'ac-woonkamer')!;
+    expect(ac.meting).toEqual({ temperatuurC: 22.4, vochtPct: null });
+    expect(ac.klimaat).toEqual({ kanKoelen: true, kanVerwarmen: true, doelC: 22, actie: 'koelt' });
+    // Met een regelgebied komt de temperatuur van de kamer daarvandaan, niet van een meter.
+    expect([wk.temperatuurC, wk.vochtPct, wk.gemetenDoor]).toEqual([21.9, 55, null]);
+  });
+
   it('vat elk niveau samen in woorden, en zegt wat een lamp kan', () => {
     const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
     expect(wk.samenvatting).toEqual({ lampenAan: 3, screens: '60% dicht', draait: 1, klimaat: 'Airco woonkamer: koelen naar 22°' });

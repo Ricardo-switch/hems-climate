@@ -311,6 +311,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
+      // De Nest kan alleen verwarmen: geen knop om te koelen, wel wat hij meet en kan.
+      await p.locator('#hu-lijst .tegel', { hasText: 'Nest (beneden)' }).click();
+      await p.locator('#hu-blad-knoppen button', { hasText: 'Verwarmen' }).waitFor();
+      expect(await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).count()).toBe(0);
+      expect(await p.locator('#hu-blad-extra').textContent()).toContain('Kan verwarmen.');
       // Terug is uitzoomen.
       await p.locator('#hu-terug').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Woonkamer' }).waitFor();

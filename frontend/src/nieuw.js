@@ -1002,10 +1002,25 @@ const ICON = {
   screen: '<rect x="3" y="3.5" width="18" height="3.5" rx="1"/><path d="M5 7v10h14V7M5 10.5h14M5 14h14"/>',
   airco: '<rect x="2.5" y="5" width="19" height="8" rx="2"/><path d="M6 10h12M8 16.5c-.5 1-.5 2 0 3M12 16v3.5M16 16.5c.5 1 .5 2 0 3"/>',
   thermostaat: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/>',
+  meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
 };
 
+/** "21,4° · 55%": wat een meter of klimaatapparaat meet. */
+function readingText(m) {
+  if (!m) return '';
+  const parts = [m.temperatuurC == null ? null : deg(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}%`];
+  return parts.filter(Boolean).join(' · ');
+}
+
+/** De stand van een apparaat, met voor klimaat erbij wat het meet. */
+function standText(d) {
+  const meet = d.soort === 'klimaat' ? readingText(d.meting) : '';
+  return meet ? `${d.stand} · ${meet}` : d.stand;
+}
+
 function icon(d, klein = false) {
-  const kind = d.soort === 'klimaat' ? (d.actuatorId && canCool(d.actuatorId) ? 'airco' : 'thermostaat') : d.soort;
+  // Een airco kan koelen; wat alleen verwarmt, is een thermostaat (de Nest, de badkamer).
+  const kind = d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco' : 'thermostaat') : d.soort;
   const svg = s('svg', {
     viewBox: '0 0 24 24',
     fill: 'none',
@@ -1052,11 +1067,11 @@ function lampSwitch(d, say) {
   return sw;
 }
 
-const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2 };
+const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2, meter: 3 };
 const byKind = (list) => [...list].sort((a, b) => KIND_ORDER[a.soort] - KIND_ORDER[b.soort]);
 
 /** Een apparaat dat in de kamer verder gaat: een rij met een pijltje. */
-function deviceLink(room, d, naam = d.naam, stand = d.stand) {
+function deviceLink(room, d, naam = d.naam, stand = standText(d)) {
   return el(
     'a',
     { class: 'apparaatrij', href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}` },
@@ -1109,6 +1124,8 @@ function deviceRows(room, list) {
     rows.push(deviceLink(room, any, 'Screens', stands.length === 1 ? stands[0] : stands.join(', ')));
   }
   for (const d of list.filter((x) => x.soort === 'klimaat')) rows.push(deviceLink(room, d));
+  // Meters zijn informatie: temperatuur en luchtvochtigheid.
+  for (const d of list.filter((x) => x.soort === 'meter')) rows.push(deviceLink(room, d));
   return rows;
 }
 
@@ -1138,7 +1155,12 @@ function roomCard(r) {
       'a',
       { class: 'room kop', href: `#huis/ruimte/${encodeURIComponent(r.id)}` },
       el('div', { style: 'display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1' }, el('span', { class: 'name', text: r.naam }), sub),
-      el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+      el(
+        'span',
+        { style: 'display: flex; flex-direction: column; align-items: flex-end; margin-left: auto' },
+        el('span', { class: 'temp', text: r.temperatuurC == null ? '' : deg(r.temperatuurC) }),
+        r.vochtPct == null ? null : el('span', { class: 'small muted', text: `${Math.round(r.vochtPct)}% vocht` }),
+      ),
       el('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }),
     ),
     ...byZone(r, (list) => deviceRows(r, byKind(list))),
@@ -1334,11 +1356,11 @@ function planDevice(room, d) {
     {
       class: `plan-apparaat${d.aan ? ` aan-${d.soort}` : ''}`,
       href: `#huis/ruimte/${encodeURIComponent(room.id)}/${encodeURIComponent(d.id)}`,
-      'aria-label': `${d.naam}: ${d.stand}`,
+      'aria-label': `${d.naam}: ${standText(d)}`,
     },
     icon(d),
     el('span', { text: d.naam }),
-    el('span', { text: d.stand }),
+    el('span', { text: standText(d) }),
   );
 }
 
@@ -1412,6 +1434,15 @@ function renderRoom(floor, room) {
   back(up, floor.naam);
   crumb([...(many ? [['Huis', '#huis']] : []), [floor.naam, up], [room.naam]]);
   heading(room.naam, { temp: room.temperatuurC, zin: room.status?.zin ?? '', soort: room.status?.soort ?? null });
+  // Luchtvochtigheid als informatie, en waar de temperatuur vandaan komt als dat geen regeling is.
+  if (!editing) {
+    $('hu-chips').replaceChildren(
+      ...[
+        room.vochtPct == null ? null : el('span', { class: 'chip klimaat', text: `Luchtvochtigheid ${Math.round(room.vochtPct)}%` }),
+        room.gemetenDoor ? el('span', { class: 'chip plain', text: `gemeten door ${room.gemetenDoor}` }) : null,
+      ].filter(Boolean),
+    );
+  }
   const parts = [...editBar(), ...(editing ? editRoomLevel(room.id) : allOff({ doel: 'kamer', id: room.id }, room.lampenAan))];
   const tiles = (list) => [
     el(
@@ -1424,6 +1455,7 @@ function renderRoom(floor, room) {
           icon(d),
           el('b', { text: d.naam }),
           el('span', { class: d.aan ? `aan-${d.soort}` : 'uit', text: d.stand }),
+          d.soort === 'klimaat' && d.meting ? el('span', { class: 'small muted', text: readingText(d.meting) }) : null,
         );
         b.addEventListener('click', () => {
           for (const t of document.querySelectorAll('#hu-lijst .tegel')) t.setAttribute('aria-pressed', String(t === b));
@@ -1441,6 +1473,25 @@ function renderRoom(floor, room) {
   // Het gekozen apparaat houdt zijn blad, met de stand van nu.
   const chosen = room.apparaten.find((d) => d.id === selectedDevice);
   if (chosen && !editing) openDevice(room, chosen);
+}
+
+/** "Meet 19,5° en 61% luchtvochtigheid." */
+function meterLine(d) {
+  const m = d.meting ?? {};
+  const parts = [m.temperatuurC == null ? null : deg(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}% luchtvochtigheid`];
+  return parts.some(Boolean) ? `Meet ${parts.filter(Boolean).join(' en ')}.` : 'Geeft nu geen meting.';
+}
+
+/** "Meet 22,4° en 55% · doel 22° · koelt nu." */
+function climateLine(d) {
+  const bits = [];
+  const meet = readingText(d.meting);
+  if (meet) bits.push(`Meet ${meet}`);
+  if (d.klimaat?.doelC != null) bits.push(`doel ${deg(d.klimaat.doelC)}`);
+  if (d.klimaat?.actie) bits.push(`${d.klimaat.actie} nu`);
+  const can = d.klimaat ? [d.klimaat.kanVerwarmen ? 'verwarmen' : null, d.klimaat.kanKoelen ? 'koelen' : null].filter(Boolean) : [];
+  const kan = can.length ? ` Kan ${can.join(' en ')}.` : '';
+  return bits.length ? `${bits.join(' · ')}.${kan}` : kan.trim();
 }
 
 /** Het blad leeg maken, voor bedienen of voor indelen. */
@@ -1508,12 +1559,25 @@ function openDevice(room, d) {
       }
     }
     say(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
-  } else if (d.soort === 'klimaat' && room.zoneId) {
-    for (const [label, wens] of [
-      ['Koelen', 'koelen'],
-      ['Verwarmen', 'verwarmen'],
+  } else if (d.soort === 'meter') {
+    $('hu-blad-extra').append(el('p', { class: 'small', text: meterLine(d) }));
+    say(
+      d.meetKamer
+        ? 'Deze meter levert de temperatuur waar Smart Climate deze kamer op regelt.'
+        : 'Alleen informatie; aan een meter valt niets te bedienen.',
+    );
+  } else if (d.soort === 'klimaat') {
+    $('hu-blad-extra').append(el('p', { class: 'small', text: climateLine(d) }));
+    // Alleen wat het apparaat kan: de Nest verwarmt, maar koelt niet.
+    const can = d.klimaat ?? { kanKoelen: true, kanVerwarmen: true };
+    const wishes = [
+      can.kanKoelen ? ['Koelen', 'koelen'] : null,
+      can.kanVerwarmen ? ['Verwarmen', 'verwarmen'] : null,
       ['Uit', 'uit'],
-    ]) {
+    ].filter(Boolean);
+    $('hu-blad-knoppen').className = wishes.length === 3 ? 'knoppen drie' : 'knoppen';
+    if (!room.zoneId) say('Deze kamer heeft geen regeling; Smart Climate stuurt dit apparaat hier niet.');
+    for (const [label, wens] of room.zoneId ? wishes : []) {
       buttons.push([
         label,
         async () => {
