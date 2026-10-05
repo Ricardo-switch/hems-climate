@@ -30,6 +30,7 @@ import type { Onboarding } from './onboarding.js';
 import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
 import type { FeedbackLog } from './feedback.js';
+import { ask, parseQuestion } from './assistant.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -410,6 +411,47 @@ export class WebServer {
       } catch (error) {
         sendJson(res, 500, { fout: (error as Error).message });
       }
+      return;
+    }
+
+    /*
+     * De assistent die uitlegt (ONTWERP §7, fase 1): een vaste vraag, een
+     * antwoord in woorden uit het laatste besluit. Leest alleen, ook voor
+     * "zet de zolder op 21"; de muur hierboven blijft staan.
+     */
+    if (path === '/api/vraag') {
+      const config = this.#options.config;
+      if (config == null) {
+        sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
+        return;
+      }
+      const parsed = parseQuestion(url.searchParams);
+      if (!parsed.ok) {
+        sendJson(res, 400, { fout: parsed.reden });
+        return;
+      }
+      let today = null;
+      if (parsed.question.kind === 'zon' && logDir != null) {
+        this.#today ??= new TodayCache(logDir, config);
+        try {
+          today = await this.#today.get();
+        } catch {
+          // Zonder dagoverzicht zegt het antwoord dat het het niet weet.
+        }
+      }
+      sendJson(
+        res,
+        200,
+        ask(parsed.question, {
+          config,
+          snapshot: this.#options.latest(),
+          today,
+          nowMs: Date.now(),
+          // Tot stap B schrijft de dienst niets (besluit 15): hij is altijd schaduw.
+          shadow: true,
+          lang: parsed.lang,
+        }),
+      );
       return;
     }
 

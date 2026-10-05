@@ -1,0 +1,66 @@
+# Smart Climate: de zinnen voor de assistent die uitlegt.
+# Hoort in de map custom_sentences/nl/ van Home Assistant.
+language: "nl"
+intents:
+  SmartClimateNu:
+    data:
+      - sentences:
+          - "wat doe je nu"
+          - "wat doe jij nu"
+          - "wat doet smart climate [nu]"
+          - "hoe staat [het met] het klimaat"
+
+  SmartClimateWaarom:
+    data:
+      - sentences:
+          - "waarom (draait|koelt|verwarmt) [de] {kamer} [niet]"
+          - "waarom staat [de] {kamer} [niet] aan"
+          - "waarom staat [de] airco [op] [de] {kamer} [niet] aan"
+          - "wat doet [de] {kamer}"
+          - "hoe staat [het met] [de] {kamer}"
+
+  SmartClimateStraks:
+    data:
+      - sentences:
+          - "wat ga je straks doen"
+          - "wat ga je [hierna|vanavond] doen"
+          - "wat is het plan"
+
+  SmartClimateZon:
+    data:
+      - sentences:
+          - "hoeveel zon [hebben we] vandaag"
+          - "hoeveel hebben de [zonne]panelen vandaag [op]geleverd"
+          - "wat leveren de [zonne]panelen"
+
+  SmartClimateDoe:
+    data:
+      - sentences:
+          - "koel [de] {kamer} [naar {temperatuur} [graden]]"
+          - "zet [de] {kamer} op koelen [naar {temperatuur} [graden]]"
+        slots:
+          wens: koelen
+      - sentences:
+          - "verwarm [de] {kamer} [naar {temperatuur} [graden]]"
+          - "zet [de] {kamer} op verwarmen [naar {temperatuur} [graden]]"
+        slots:
+          wens: verwarmen
+      # Bewust geen "zet de zolder uit": die zin kent Home Assistant zelf ook,
+      # en dan zet Assist de apparaten in dat gebied echt uit, buiten de
+      # arbiter om (ONTWERP §7, valkuil).
+      - sentences:
+          - "mag [de] {kamer} uit"
+          - "smart climate zet [de] {kamer} uit"
+        slots:
+          wens: uit
+
+lists:
+  kamer:
+    values:
+      - woonkamer
+      - badkamer
+      - zolder
+  temperatuur:
+    range:
+      from: 10
+      to: 35

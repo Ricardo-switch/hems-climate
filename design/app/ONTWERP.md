@@ -270,6 +270,13 @@ komt geen deur bij die schrijft, en Home Assistant krijgt geen opdracht.
    zou ik nu doen, maar ik mag nog niet schakelen." Assist geeft de opdracht
    door en voert hem niet zelf uit.
 
+*Stand op 5 oktober 2026:* stap 1 tot en met 4 staan in de dienst. De zinnen
+komen uit `backend/src/web/assistant.ts`, de vragen gaan via `GET /api/vraag`,
+en een test eist voor duizend gegenereerde toestanden dat er geen getal zonder
+bron in een antwoord staat. De zinnen en de koppeling voor Assist staan in
+`ha-assist/`, en moeten nog op de echte Home Assistant worden getest. De wand
+en de testpagina gebruiken de uitleg per kamer nog niet; dat is werk voor F.
+
 **Fase 2: schakelen, in B via de arbiter.**
 
 1. **Ingrepen aansluiten.** De `OverrideDetector` (74) komt in de draaiende
