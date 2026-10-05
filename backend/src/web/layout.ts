@@ -10,7 +10,8 @@
  * - één eigen bestand in de logmap, nooit naar Home Assistant, nooit over de
  *   configuratie van het huis heen;
  * - alleen de vaste etages, apparaten die Home Assistant kent, en zones van de
- *   regeling die bestaan; wat er verder in een verzoek staat, wordt niet bewaard;
+ *   regeling die bestaan; wat er verder in een verzoek staat, wordt niet bewaard
+ *   (een apparaat dat Home Assistant niet meer kent ook niet, zie `carryOver`);
  * - een grens op het tempo, en de grens op de grootte die de server al had.
  *
  * De regeling leest de indeling niet. Hij dient de weergave en de assistent.
@@ -70,6 +71,36 @@ export interface LayoutKnown {
   readonly deviceIds: ReadonlySet<string>;
   /** De regelgebieden uit de configuratie. */
   readonly zoneIds: ReadonlySet<string>;
+  /**
+   * Per lamp die niet meer los in het huis staat (uitgezet of verborgen in Home
+   * Assistant), de groep die hem nu als één lamp toont.
+   */
+  readonly opvolgers?: ReadonlyMap<string, string>;
+}
+
+/**
+ * De apparaten die het huis nog kent. Een lamp die de bewoner in Home Assistant
+ * uitzette, staat niet meer in het huis; zijn plek gaat naar de groep die hem nu
+ * toont, als die zelf nog geen plek heeft. Zijn eigen naam niet, want die hoorde
+ * bij de losse lamp. Wat het huis helemaal niet meer kent, valt weg: een oude
+ * indeling mag het bewaren van een nieuwe nooit blokkeren.
+ */
+export function carryOver(apparaten: Readonly<Record<string, unknown>>, known: Pick<LayoutKnown, 'deviceIds' | 'opvolgers'>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  const moved: Record<string, unknown> = {};
+  for (const [id, v] of Object.entries(apparaten)) {
+    if (known.deviceIds.has(id)) {
+      kept[id] = v;
+      continue;
+    }
+    const to = known.opvolgers?.get(id);
+    if (to == null || !known.deviceIds.has(to) || to in apparaten || to in moved) continue;
+    if (typeof v === 'object' && v != null && !Array.isArray(v)) {
+      const { naam: _naam, ...rest } = v as Record<string, unknown>;
+      moved[to] = rest;
+    }
+  }
+  return { ...moved, ...kept };
 }
 
 export type LayoutResult =
@@ -147,11 +178,10 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
 
   const appIn = b['apparaten'] ?? {};
   if (typeof appIn !== 'object' || appIn == null || Array.isArray(appIn)) return { ok: false, reden: 'apparaten is een object' };
-  const entries = Object.entries(appIn as Record<string, unknown>);
-  if (entries.length > MAX_DEVICES) return { ok: false, reden: `hooguit ${MAX_DEVICES} apparaten` };
+  if (Object.keys(appIn).length > MAX_DEVICES) return { ok: false, reden: `hooguit ${MAX_DEVICES} apparaten` };
+  const entries = Object.entries(carryOver(appIn as Record<string, unknown>, known));
   const apparaten: Record<string, LayoutDevice> = {};
   for (const [id, v] of entries) {
-    if (!known.deviceIds.has(id)) return { ok: false, reden: `onbekend apparaat "${id}"` };
     const d = (typeof v === 'object' && v != null && !Array.isArray(v) ? v : null) as Record<string, unknown> | null;
     if (d == null) return { ok: false, reden: `apparaat ${id} is geen object` };
     const kamer = d['kamer'];

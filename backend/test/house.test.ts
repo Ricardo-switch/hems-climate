@@ -77,7 +77,14 @@ describe('het voorstel uit Home Assistant', () => {
       ['Tuin alles', false],
       ['Keuken', true],
       ['Sfeer', true],
+      ['Badkamer', true],
     ]);
+  });
+
+  it('toont een groep met uitgezette lampen als één lamp, ook als Hue ze alleen bij naam noemt', () => {
+    const bad = house.etages.find((e) => e.id === 'e1')!.ruimtes.find((r) => r.naam === 'Badkamer')!;
+    expect(bad.apparaten.filter((d) => d.soort === 'licht').map((d) => [d.id, d.naam, d.stand])).toEqual([['light.hue_badkamer', 'Badkamer', 'uit']]);
+    expect(house.lampgroepen.find((g) => g.id === 'light.hue_badkamer')!.leden).toEqual(['light.badkamer_spot_1', 'light.badkamer_spot_2']);
   });
 
   it('stelt een kamer alleen voor bij dezelfde naam, of de groepsnaam als woord in de kamernaam', () => {
@@ -163,6 +170,19 @@ describe('een vastgelegde indeling', () => {
     expect(known.deviceIds.has('light.sfeerverlichting')).toBe(true);
     expect(known.deviceIds.has('light.woonkamer_alles')).toBe(false);
     expect(known.deviceIds.has('cover.screen_low_speed')).toBe(false);
+    expect(known.deviceIds.has('light.badkamer_spot_1')).toBe(false);
     expect([...known.zoneIds]).toEqual(config.zones.map((z) => z.id));
+    expect(known.opvolgers?.get('light.badkamer_spot_1')).toBe('light.hue_badkamer');
+    expect(known.opvolgers?.get('light.keukentafel_2')).toBe('light.hue_keuken');
+    expect(known.opvolgers?.has('light.oude_groep')).toBe(false);
+  });
+
+  it('geeft de plek van een lamp die sindsdien is uitgezet door aan zijn groep, zonder zijn naam', () => {
+    const later = buildHouse(config, registers, states, snapshot, {
+      ...layout,
+      apparaten: { ...layout.apparaten, 'light.badkamer_spot_1': { naam: 'Spot', kamer: tuin.id, zone: null } },
+    });
+    const tuinRoom = later.etages.find((e) => e.id === 'buiten')!.ruimtes.find((r) => r.id === tuin.id)!;
+    expect(tuinRoom.apparaten.find((d) => d.id === 'light.hue_badkamer')?.naam).toBe('Badkamer');
   });
 });
