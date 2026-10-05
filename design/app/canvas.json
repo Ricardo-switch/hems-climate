@@ -145,6 +145,51 @@
       "w": 1280,
       "x": 2720,
       "y": 3380
+    },
+    "Wand-Inzoomen.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Inzoomen (huis, etage, ruimte)",
+      "w": 1280,
+      "x": 0,
+      "y": 4360
+    },
+    "Wand-Etage.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Etage (begane grond)",
+      "w": 1280,
+      "x": 1360,
+      "y": 4360
+    },
+    "Wand-Ruimte.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Ruimte (woonzone, bedienen)",
+      "w": 1280,
+      "x": 2720,
+      "y": 4360
+    },
+    "Etage.dc.html": {
+      "h": 930,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Etage",
+      "w": 390,
+      "x": 4080,
+      "y": 4360
+    },
+    "Ruimte.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Ruimte · licht bedienen",
+      "w": 390,
+      "x": 4550,
+      "y": 4360
     }
   },
   "createdOnFiles": {
@@ -187,6 +232,14 @@
       "w": 240,
       "x": 0,
       "y": 3320
+    },
+    "navigatie": {
+      "kind": "title1",
+      "maxW": 5000,
+      "text": "Het huis is de navigatie · inzoomen en bedienen (schets)",
+      "w": 240,
+      "x": 0,
+      "y": 4300
     }
   },
   "order": [
@@ -205,7 +258,12 @@
     "Wand-Kamer.dc.html",
     "Wand-Thuis-winter.dc.html",
     "Wand-Plan-winter.dc.html",
-    "Wand-Kamer-winter.dc.html"
+    "Wand-Kamer-winter.dc.html",
+    "Wand-Inzoomen.dc.html",
+    "Wand-Etage.dc.html",
+    "Wand-Ruimte.dc.html",
+    "Etage.dc.html",
+    "Ruimte.dc.html"
   ],
   "pages": [],
   "title": "Smart Climate app"

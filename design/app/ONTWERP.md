@@ -224,8 +224,14 @@ schrijft, dus pas in B voor klimaat en screens, en met de integratie van
 besluit 91 voor alles, onder de inlog van Home Assistant. Tot dan toont de
 app alleen.
 
-**Open:** schetsen van het inzoomen (huis naar etage naar kamer), voor de wand
-en de telefoon.
+**Schetsen** (5 oktober 2026): `Wand-Inzoomen` (de drie stappen naast elkaar),
+`Wand-Etage` (de begane grond van boven, met de screens op de voorgevel en de
+ochtendzon), `Wand-Ruimte` (de woonzone, met een screen gekozen om te
+bedienen), en op de telefoon `Etage` en `Ruimte` (licht bedienen in een blad
+onderin). Voorbeeldgetallen; de echte plattegrond volgt uit de etages en kamers
+van Home Assistant. Een plattegrond van boven vraagt meer dan de doorsnede:
+waar elke kamer ligt en welke kant de voorkant is. Dat is een vraag voor de
+onboarding (§4), of een eenvoudige indeling als Home Assistant het niet weet.
 
 ## 5. De schermen
 
