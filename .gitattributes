@@ -26,3 +26,8 @@ Dockerfile  text eol=lf
 *.gz        binary
 *.tar       binary
 *.ndjson    binary
+
+# De Impeccable-skill start via een shellscript zonder extensie (LF) en op
+# Windows via een .cmd (CRLF).
+.claude/skills/impeccable/scripts/impeccable  text eol=lf
+*.cmd       text eol=crlf

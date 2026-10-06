@@ -9,7 +9,8 @@
     "watch": "node build.js --watch"
   },
   "devDependencies": {
-    "tailwindcss": "^4.1.14",
-    "@tailwindcss/cli": "^4.1.14"
+    "@playwright/cli": "^0.1.22",
+    "@tailwindcss/cli": "^4.1.14",
+    "tailwindcss": "^4.1.14"
   }
 }
