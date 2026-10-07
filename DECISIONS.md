@@ -3593,6 +3593,38 @@ Dit is kandidaat 2 en moet dus ook eerst in de replay winnen.
 plafond per zonnestand kan nu al worden uitgerekend uit de dataset; daarvoor
 is sinds 4 oktober de zonnestroom per minuut er (89).
 
+*Aangevuld 7 oktober 2026: kandidaat 2 gemeten.* Het plafond per zonnestand
+wordt nu geleerd (aanvulling bij 93), en `src/replay/decision-90.ts` speelt
+dezelfde minuten af met en zonder de kandidaat. Het plafond komt telkens uit
+de andere dagen, nooit uit de dag die wordt afgespeeld. Venster 20 tot 30
+september (15.262 minuten; de zon uit het beslislogboek, want dat venster kent
+geen zonnesensor):
+
+| | starts | hervat | parkeren | opdrachten | standby (min) | draaien (min) |
+| --- | --- | --- | --- | --- | --- | --- |
+| woonkamer, zoals nu | 43 | 13 | 54 | 268 | 292 | 2.165 |
+| woonkamer, verbruik van nu | 52 | 1 | 9 | 147 | 48 | 2.138 |
+| woonkamer, laagste van het uur | 43 | 13 | 51 | 262 | 277 | 2.165 |
+| zolder, zoals nu | 36 | 12 | 48 | 227 | 269 | 1.570 |
+| zolder, verbruik van nu | 37 | 8 | 18 | 140 | 110 | 1.489 |
+| zolder, laagste van het uur | 36 | 12 | 45 | 220 | 254 | 1.570 |
+
+- **Met het verbruik van dit moment verliest hij.** Veel minder opdrachten,
+  maar meer koude starts, en van de 69 keer meteen uit hervatte de huidige
+  regeling er 34 binnen een kwartier. Koken of een wasmachine laat de dag
+  voorbij lijken terwijl de zon er nog is.
+- **Met het laagste verbruik van het afgelopen uur wint hij, nipt:** minder
+  opdrachten en minder standby, evenveel starts, draaiminuten en netstroom. Van
+  de 6 keer meteen uit hervatte de huidige regeling er één. De winst is klein
+  omdat de meeste parkeerbeurten echte wolken zijn, en dan is parkeren goed.
+
+Dus: kandidaat 2 gaat met het laagste verbruik van het uur in de regeling,
+volgens deel 2 pas na de start van B, en na een tweede meting op een venster
+met meer einde-van-de-dag-momenten (het voorjaar). Kandidaat 1 (stabiliseren
+op meting) vraagt het vermogen van een airco die de arbiter zelf bestuurt; dat
+bestaat pas bij B. Kandidaten 3 en 4 zijn grenzen op starts en opdrachten per
+uur; die kan de replay nu al tellen, en dat is de volgende meting.
+
 ---
 
 ## 91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML

@@ -80,7 +80,8 @@ const PERFORMANCE = 0.85;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-function clearSkyW(geometry: Geometry, location: Location, ms: number, learned: SolarLearned | null): number {
+/** Wat alle vlakken samen bij een heldere lucht leveren, afgekapt op de omvormer. */
+export function clearSkyW(geometry: Geometry, location: Location, ms: number, learned: SolarLearned | null): number {
   const sun = sunPosition(ms, location.latDeg, location.lonDeg);
   const { factor } = factorFor(learned, sun, PERFORMANCE);
   const total = geometry.solarPlanes.reduce((sum, p) => sum + (clearSkyOnPlaneWm2(sun, p) / 1000) * p.peakW * factor, 0);

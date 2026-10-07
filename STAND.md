@@ -79,7 +79,8 @@ verwijzing bestaat.
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
   ([89]).
 - **Sturen:** alleen wat afwijkt. Slimmere timing moet eerst in de replay winnen
-  ([90]).
+  ([90]); de eerste kandidaat, meteen uit als de zon de dag niet meer draagt,
+  won nipt en gaat na de start van B in de regeling.
 - **Uitstelbare apparaten:** de droger wordt een eigen soort apparaat in de
   arbiter, eerst in de schaduw; echt starten hoort bij B ([98]).
 
