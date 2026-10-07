@@ -1495,6 +1495,9 @@ function climateLine(d) {
   return bits.length ? `${bits.join(' · ')}.${kan}` : kan.trim();
 }
 
+/** Voor welk apparaat het blad nu open staat, en of om te bedienen of in te delen. */
+let bladFor = null;
+
 /** Het blad leeg maken, voor bedienen of voor indelen. */
 function resetBlad(d) {
   $('hu-blad').hidden = false;
@@ -1515,10 +1518,15 @@ function resetBlad(d) {
  */
 function openDevice(room, d) {
   const wasHidden = $('hu-blad').hidden;
+  // Ververst het huis terwijl dit blad open staat, dan blijft het antwoord op de
+  // laatste knop staan: anders wist het verversen na een lamp het meteen weer.
+  const kept = !wasHidden && bladFor === `bedien:${d.id}` ? $('hu-blad-zin').textContent : '';
   resetBlad(d);
+  bladFor = `bedien:${d.id}`;
   const say = (text) => {
     $('hu-blad-zin').textContent = text;
   };
+  if (kept) say(kept);
   const buttons = [];
   if (d.soort === 'licht') {
     const live = Boolean(house?.lichtBedienen);
@@ -1999,6 +2007,7 @@ function editDevice(room, dev) {
   const d = draft();
   if (!d) return;
   resetBlad(dev);
+  bladFor = `indeel:${dev.id}`;
   $('hu-blad-stand').className = '';
   $('hu-blad-stand').textContent = dev.naam === dev.haNaam ? '' : `in Home Assistant: ${dev.haNaam}`;
   $('hu-blad-zin').textContent = 'De naam hier is de naam overal: in de app, op de wand en voor de assistent.';

@@ -25,6 +25,8 @@ dist/
 *.tsbuildinfo
 # De gebouwde weergave. Komt uit `frontend/`, hoort daar niet dubbel te staan.
 backend/web/
+# Playwright-traces van een mislukte paginatest.
+backend/test-results/
 
 # ---- gegevens ----------------------------------------------------------
 # Logboeken en datasets horen niet in de code-repository; die halen we van

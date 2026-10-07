@@ -14,6 +14,11 @@
  * Alleen met `HEMS_PAGE_TEST=1`: de rest van de suite heeft geen browser nodig.
  * De CI zet hem aan in een eigen taak. Lokaal kan het met de Edge die er al
  * staat: `HEMS_PAGE_TEST=1 HEMS_PAGE_BROWSER=msedge npx vitest run test/page.test.ts`.
+ *
+ * Faalt een weergavetest, dan bewaart hij een Playwright-trace in
+ * `test-results/`: elke stap met een schermafdruk, de netwerkverzoeken en de
+ * console. De CI bewaart die map dan als artefact; openen kan op
+ * trace.playwright.dev, of met `npx playwright show-trace`.
  */
 
 import { existsSync } from 'node:fs';
@@ -22,7 +27,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest';
 import { chromium, type Browser, type Page } from 'playwright';
 
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
@@ -43,6 +48,7 @@ import { exampleSite } from './site.js';
 const ENABLED = process.env['HEMS_PAGE_TEST'] === '1';
 const WEB_DIR = fileURLToPath(new URL('../web', import.meta.url));
 const FIXTURE = fileURLToPath(new URL('./fixtures/replay-2026-08-26.ndjson.gz', import.meta.url));
+const TRACES = fileURLToPath(new URL('../test-results', import.meta.url));
 
 /** Een echt besluit: 26 augustus om 13:00, uit de vaste replay. */
 async function liveSnapshot(): Promise<LiveSnapshot> {
@@ -241,6 +247,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   ] as const) {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      // Alleen bij een fout bewaard: zo is te zien wat de pagina deed, ook in de CI.
+      await context.tracing.start({ screenshots: true, snapshots: true });
+      onTestFailed(async () => {
+        await context.tracing.stop({ path: join(TRACES, `weergave-${stand}.zip`) });
+      });
       const p = await context.newPage();
       // Een stap die niet lukt, faalt met zijn eigen melding, ruim voor de 30 s van de test.
       p.setDefaultTimeout(10_000);
@@ -305,12 +316,18 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-blad [role="switch"]').click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'gaat uit' }).waitFor();
       expect(lightCalls.at(-1)).toBe('turn_off light.woonkamer_plafonniere');
+      // Na een lamp ververst het huis zich even later; dat mag het antwoord op de
+      // volgende knop niet wissen (de CI ving dat, 7 oktober).
+      const refreshed = p.waitForResponse((r) => new URL(r.url()).pathname === '/api/huis');
       await p.locator('#hu-blad-knoppen button', { hasText: 'Warm' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'warm wit' }).waitFor();
       expect(lightCalls.at(-1)).toBe('turn_on light.woonkamer_plafonniere');
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
+      await refreshed;
+      await p.waitForTimeout(100);
+      expect(await p.locator('#hu-blad-zin').textContent()).toContain('mag nog niet schakelen');
       // De Nest kan alleen verwarmen: geen knop om te koelen, wel wat hij meet en kan.
       await p.locator('#hu-lijst .tegel', { hasText: 'Nest (beneden)' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Verwarmen' }).waitFor();

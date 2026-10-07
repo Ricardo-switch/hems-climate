@@ -137,6 +137,17 @@ jobs:
         working-directory: backend
         run: npx vitest run test/page.test.ts
 
+      # Bij een fout: de trace van de pagina, met elke stap en een schermafdruk.
+      # Openen op trace.playwright.dev.
+      - name: trace bewaren
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagina-trace
+          path: backend/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
   stable:
     name: stable bijwerken
     needs: [test, image, deploy, page]
