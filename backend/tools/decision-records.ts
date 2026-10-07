@@ -143,3 +143,70 @@ export function withIndex(text: string): string {
   }
   return result.replace(/\n/g, nl);
 }
+
+/*
+ * `STAND.md`: de doorsnede naast de geschiedenis. Per onderwerp hoe het nu
+ * werkt, met verwijzingen als `[95]`. De links onderaan maakt deze module; een
+ * test eist dat elk besluit dat nog geldt erin staat, zodat de pagina niet
+ * ongemerkt achterloopt zoals `Architecture.md` ooit deed.
+ */
+
+export const LINKS_BEGIN = '<!-- links:begin -->';
+export const LINKS_END = '<!-- links:einde -->';
+
+/** Een verwijzing `[95]`, maar geen linkdefinitie `[95]:` en geen inline link `[95](…)`. */
+const REF = /\[(\d+[a-z]?)\](?![(:])/g;
+
+/** Wat nog geldt, ook als het is aangevuld of deels vervangen, moet in de stand staan. */
+function stillApplies(status: string | null): boolean {
+  return status != null && !/^(gecorrigeerd|vervangen) door /.test(status);
+}
+
+function withoutLinks(text: string): string {
+  const begin = text.indexOf(LINKS_BEGIN);
+  const end = text.indexOf(LINKS_END);
+  return begin >= 0 && end > begin ? text.slice(0, begin) + text.slice(end + LINKS_END.length) : text;
+}
+
+/** De besluiten waar de stand naar verwijst, in volgorde van nummer. */
+export function standReferences(stand: string): string[] {
+  const ids = new Set([...withoutLinks(stand.replace(/\r\n/g, '\n')).matchAll(REF)].map((m) => m[1]!));
+  return [...ids].sort((a, b) => parseInt(a, 10) - parseInt(b, 10) || a.localeCompare(b));
+}
+
+/** Wat er aan de stand niet klopt. Leeg is goed. */
+export function validateStand(stand: string, records: readonly DecisionRecord[]): string[] {
+  const errors: string[] = [];
+  const known = new Set(records.map((b) => b.id));
+  const refs = standReferences(stand);
+  for (const id of refs) {
+    if (!known.has(id)) errors.push(`de stand verwijst naar besluit ${id}, en dat bestaat niet`);
+  }
+  // `[15][42]` is in Markdown één link met tekst 15, niet twee verwijzingen.
+  if (/\]\[/.test(withoutLinks(stand))) errors.push('twee verwijzingen staan direct naast elkaar; zet er een komma tussen');
+  const mentioned = new Set(refs);
+  for (const b of records) {
+    if (stillApplies(b.status) && !mentioned.has(b.id)) {
+      errors.push(`besluit ${b.id} (${b.status}) staat niet in de stand`);
+    }
+  }
+  return errors;
+}
+
+/** De stand met de links onderaan bijgewerkt: één definitie per besluit waarnaar verwezen wordt. */
+export function withLinks(stand: string, records: readonly DecisionRecord[]): string {
+  const nl = stand.includes('\r\n') ? '\r\n' : '\n';
+  const clean = stand.replace(/\r\n/g, '\n');
+  const byId = new Map(records.map((b) => [b.id, b]));
+  const lines = standReferences(clean)
+    .filter((id) => byId.has(id))
+    .map((id) => `[${id}]: DECISIONS.md#${anchor(byId.get(id)!.heading)}`);
+  const block = [LINKS_BEGIN, ...lines, LINKS_END].join('\n');
+  const begin = clean.indexOf(LINKS_BEGIN);
+  const end = clean.indexOf(LINKS_END);
+  const result =
+    begin >= 0 && end > begin
+      ? clean.slice(0, begin) + block + clean.slice(end + LINKS_END.length)
+      : `${clean.trimEnd()}\n\n${block}\n`;
+  return result.replace(/\n/g, nl);
+}

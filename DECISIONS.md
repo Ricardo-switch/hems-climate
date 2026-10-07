@@ -11,6 +11,9 @@ en status, zoals bij de andere, en draai `npm run decisions:index` in
 status aan: wie via een zoekopdracht op een oud besluit belandt, hoort meteen te
 zien dat het niet meer zo werkt. Een test in de CI bewaakt beide.
 
+Hoe het nu staat, per onderwerp en zonder de geschiedenis: [STAND.md](STAND.md).
+Verandert een besluit daar iets aan, werk die pagina dan mee bij.
+
 
 <!-- index:begin -->
 
@@ -35,7 +38,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
 - [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
-- [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet)
+- [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet) — *aangevuld door 97*
 - [96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving](#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving)
 
 **Kern en regeling**
@@ -58,7 +61,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [62. De eigen stand overleeft een herstart](#62-de-eigen-stand-overleeft-een-herstart)
 - [68. Hooguit één start per beslissing](#68-hooguit-één-start-per-beslissing)
 - [74. Wie zelf ingrijpt, wordt herkend en met rust gelaten](#74-wie-zelf-ingrijpt-wordt-herkend-en-met-rust-gelaten)
-- [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste)
+- [81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste](#81-een-zone-met-meer-sensoren-koelt-op-de-warmste-en-verwarmt-op-de-koudste) — *aangevuld door 95*
 - [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
 - [89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg](#89-elke-omvormer-werkt-de-app-meet-hoe-snel-de-zonnesensor-is-en-wijst-de-lokale-weg)
 - [90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen](#90-alleen-sturen-wat-afwijkt-slimmere-timing-moet-eerst-in-de-replay-winnen)
@@ -111,10 +114,10 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 
 **Veiligheid**
 
-- [15. Schaduwmodus schrijft niet, structureel](#15-schaduwmodus-schrijft-niet-structureel)
+- [15. Schaduwmodus schrijft niet, structureel](#15-schaduwmodus-schrijft-niet-structureel) — *aangevuld door 97*
 - [23. De schaduwdienst gaat luisteren, maar alleen om te lezen](#23-de-schaduwdienst-gaat-luisteren-maar-alleen-om-te-lezen) — *deels vervangen door 42*
 - [38. De ruwe HA-export hoort niet in versiebeheer](#38-de-ruwe-ha-export-hoort-niet-in-versiebeheer)
-- [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt)
+- [42. De weergave mag schrijven waar Home Assistant de deur bewaakt](#42-de-weergave-mag-schrijven-waar-home-assistant-de-deur-bewaakt) — *aangevuld door 97*
 - [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
 - [80. Iedereen in huis bedient; één beheert](#80-iedereen-in-huis-bedient-één-beheert)
 - [84. Gevoel en toelichting mogen deze winter via de testpagina, naar een eigen bestand](#84-gevoel-en-toelichting-mogen-deze-winter-via-de-testpagina-naar-een-eigen-bestand)
@@ -480,7 +483,7 @@ definitie onzichtbaar — en dat is een uitkomst, geen mislukking.
 
 ## 15. Schaduwmodus schrijft niet, structureel
 
-*Onderwerp: veiligheid · Status: geldig*
+*Onderwerp: veiligheid · Status: aangevuld door 97*
 
 `HaClient` wordt zonder `allowWrites` aangemaakt, en `callService` werpt dán al
 voordat er iets de socket op gaat. (Sinds 97 met één smalle uitzondering voor
@@ -1499,7 +1502,7 @@ blijkt dat het knelt.
 
 ## 42. De weergave mag schrijven waar Home Assistant de deur bewaakt
 
-*Onderwerp: veiligheid · Status: geldig*
+*Onderwerp: veiligheid · Status: aangevuld door 97*
 
 Besluit 23 legde vast dat de weergave alleen leest, en besluit 29 maakte daar
 een muur van: alles wat geen GET of HEAD is krijgt 405, vóór de routering, zodat
@@ -3250,7 +3253,7 @@ middelt over wie er thuis is.
 
 ## 81. Een zone met meer sensoren koelt op de warmste en verwarmt op de koudste
 
-*Onderwerp: kern en regeling · Status: geldig*
+*Onderwerp: kern en regeling · Status: aangevuld door 95*
 
 Met kamers en zones uit elkaar (72) kan één zone meer kamers met elk een
 thermometer hebben, zoals keuken en woonkamer op één airco. Gekozen op 2
@@ -3636,7 +3639,7 @@ bestand, via hetzelfde mechanisme als de zin-triggers van automatiseringen.
 
 ## 92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet
 
-*Onderwerp: visie en principes · Status: geldig*
+*Onderwerp: visie en principes · Status: aangevuld door 97*
 
 Na de laatste fase kwam de vraag of slimme verlichting in de app hoort.
 Gekozen op 5 oktober 2026.

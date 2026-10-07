@@ -13,10 +13,20 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { anchor, validate, parseDecisionRecords, withIndex } from '../tools/decision-records.js';
+import {
+  anchor,
+  validate,
+  validateStand,
+  parseDecisionRecords,
+  standReferences,
+  withIndex,
+  withLinks,
+} from '../tools/decision-records.js';
 
 const PATH = fileURLToPath(new URL('../../DECISIONS.md', import.meta.url));
 const text = readFileSync(PATH, 'utf-8');
+const STAND = fileURLToPath(new URL('../../STAND.md', import.meta.url));
+const stand = readFileSync(STAND, 'utf-8');
 
 describe('het besluitenlog', () => {
   it('geeft elk besluit een onderwerp en een geldige status', () => {
@@ -61,5 +71,52 @@ describe('ankers zoals GitHub ze maakt', () => {
     expect(errors.join('\n')).toContain('besluit 99, en dat bestaat niet');
     expect(errors.join('\n')).toContain('onbekend onderwerp "iets anders"');
     expect(errors.join('\n')).toContain('besluit 3');
+  });
+});
+
+/*
+ * De stand (STAND.md) is de doorsnede naast de geschiedenis. Hij veroudert net
+ * zo stil als een index met de hand, dus ook hier een test.
+ */
+describe('de stand per onderwerp', () => {
+  it('noemt elk besluit dat nog geldt, en verwijst alleen naar wat bestaat', () => {
+    // Faalt dit na een nieuw besluit: zet het in STAND.md bij zijn onderwerp,
+    // met [nummer], en draai npm run decisions:index.
+    expect(validateStand(stand, parseDecisionRecords(text))).toEqual([]);
+  });
+
+  it('heeft links die kloppen', () => {
+    // Faalt dit: npm run decisions:index, en de wijziging mee committen.
+    expect(withLinks(stand, parseDecisionRecords(text))).toBe(stand);
+  });
+
+  it('vangt een ontbrekend besluit, een onbekende verwijzing en twee aan elkaar', () => {
+    const records = parseDecisionRecords(
+      [
+        '## 1. Een',
+        '',
+        '*Onderwerp: weergave · Status: geldig*',
+        '',
+        '## 2. Twee',
+        '',
+        '*Onderwerp: weergave · Status: vervangen door 3*',
+        '',
+        '## 3. Drie',
+        '',
+        '*Onderwerp: weergave · Status: aangevuld door 1*',
+      ].join('\n'),
+    );
+    const errors = validateStand('Zo staat het: [3][7].', records).join(' | ');
+    expect(errors).toContain('besluit 7, en dat bestaat niet');
+    expect(errors).toContain('direct naast elkaar');
+    // Geldig ontbreekt; vervangen hoeft er niet in, aangevuld wel (en staat erin).
+    expect(errors).toContain('besluit 1 (geldig) staat niet in de stand');
+    expect(errors).not.toContain('besluit 2');
+    expect(errors).not.toContain('besluit 3 (');
+  });
+
+  it('leest geen linkdefinitie of inline link als verwijzing', () => {
+    const sample = ['Zie [12] en [8b], [13](x.md).', '<!-- links:begin -->', '[14]: x', '<!-- links:einde -->'].join('\n');
+    expect(standReferences(sample)).toEqual(['8b', '12']);
   });
 });
