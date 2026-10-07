@@ -3,7 +3,7 @@
  * (besluit 102). Alleen leesopdrachten, via de witte lijst van de client.
  */
 
-import type { EnergySource, MeterOption } from '../../web/energy.js';
+import { meterRole, type EnergySource, type MeterOption } from '../../web/energy.js';
 import type { HaClient, HaEntityState } from './client.js';
 
 interface StatisticId {
@@ -24,7 +24,12 @@ const toMs = (v: number | string) => (typeof v === 'number' ? v : Date.parse(v))
  * `state` zoekt de stand van nu van een entiteit: voor de naam van een meter
  * (de statistiek geeft er meestal geen) en een prijs uit een entiteit.
  */
-export function haEnergySource(client: HaClient, state: (entityId: string) => HaEntityState | undefined = () => undefined): EnergySource {
+export function haEnergySource(
+  client: HaClient,
+  state: (entityId: string) => HaEntityState | undefined = () => undefined,
+  /** De integratie van een entiteit, uit het register: voor de rol van een meter. */
+  platform: (entityId: string) => string | null = () => null,
+): EnergySource {
   const friendly = (id: string) => {
     const n = state(id)?.attributes['friendly_name'];
     return typeof n === 'string' && n.trim() ? n.trim() : null;
@@ -46,7 +51,11 @@ export function haEnergySource(client: HaClient, state: (entityId: string) => Ha
       const list = await client.query<StatisticId[]>('recorder/list_statistic_ids', { statistic_type: 'sum' });
       return list
         .filter((s) => s.has_sum !== false && (s.unit_class === 'energy' || s.unit_class === 'volume'))
-        .map((s) => ({ id: s.statistic_id, naam: s.name?.trim() || friendly(s.statistic_id) || s.statistic_id, soort: s.unit_class === 'volume' ? 'volume' : 'energy' }) as const)
+        .map((s): MeterOption => {
+          const naam = s.name?.trim() || friendly(s.statistic_id) || s.statistic_id;
+          const soort = s.unit_class === 'volume' ? 'volume' : 'energy';
+          return { id: s.statistic_id, naam, soort, rol: meterRole(s.statistic_id, naam, soort, platform(s.statistic_id)) };
+        })
         .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
     },
     async changes(ids, startMs, endMs, period) {

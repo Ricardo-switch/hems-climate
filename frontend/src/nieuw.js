@@ -1128,7 +1128,28 @@ function renderEnergy() {
   parts.push(ha);
 
   // Zelf kiezen: per soort de gekozen meters, met erbij zetten en weghalen.
-  const pick = (title, ids, soort, onChange, single = false) => {
+  // Wat al een rol heeft, staat niet nog eens in een andere lijst.
+  const used = new Set([...d.net.afname, ...d.net.teruglevering, ...d.zon, ...(d.gas ? [d.gas] : []), ...d.apparaten.map((a) => a.id)]);
+  /**
+   * Een keuzelijst met eerst de meters die bij deze rol passen (de dienst raadt
+   * de rol), en daaronder de andere van dezelfde soort, voor als het raden misgaat.
+   */
+  const meterSelect = (label, placeholder, rol, soort, onPick) => {
+    const free = meters.filter((m) => m.soort === soort && !used.has(m.id));
+    const fit = free.filter((m) => m.rol === rol);
+    const other = free.filter((m) => m.rol !== rol);
+    if (!free.length) return null;
+    const opt = (m) => el('option', { value: m.id, text: m.naam });
+    const sel = el(
+      'select',
+      { class: 'veld', 'aria-label': label },
+      el('option', { value: '', text: placeholder }),
+      ...(fit.length && other.length ? [el('optgroup', { label: 'Past hierbij' }, ...fit.map(opt)), el('optgroup', { label: 'Andere meters' }, ...other.map(opt))] : free.map(opt)),
+    );
+    sel.addEventListener('change', () => sel.value && onPick(sel.value));
+    return sel;
+  };
+  const pick = (title, ids, rol, soort, onChange, single = false) => {
     const box = el('div', { class: 'stack', style: 'gap: 6px' }, el('b', { class: 'small', text: title }));
     const chips = el('div', { class: 'o-chips' });
     for (const id of ids) {
@@ -1138,12 +1159,8 @@ function renderEnergy() {
     }
     if (!ids.length) chips.append(el('span', { class: 'tiny', text: 'geen' }));
     box.append(chips);
-    const rest = meters.filter((m) => m.soort === soort && !ids.includes(m.id));
-    if ((!single || !ids.length) && rest.length) {
-      const sel = el('select', { class: 'veld', 'aria-label': `${title}: meter erbij` }, el('option', { value: '', text: 'meter erbij…' }), ...rest.map((m) => el('option', { value: m.id, text: m.naam })));
-      sel.addEventListener('change', () => sel.value && onChange([...ids, sel.value]));
-      box.append(sel);
-    }
+    const sel = !single || !ids.length ? meterSelect(`${title}: meter erbij`, 'meter erbij…', rol, soort, (id) => onChange([...ids, id])) : null;
+    if (sel) box.append(sel);
     return box;
   };
   const redraw = () => renderEnergy();
@@ -1152,10 +1169,10 @@ function renderEnergy() {
       'div',
       { class: 'card' },
       el('h2', { text: 'Meters' }),
-      pick('Stroom van het net', d.net.afname, 'energy', (ids) => ((d.net.afname = ids), redraw())),
-      pick('Teruglevering', d.net.teruglevering, 'energy', (ids) => ((d.net.teruglevering = ids), redraw())),
-      pick('Zonnepanelen', d.zon, 'energy', (ids) => ((d.zon = ids), redraw())),
-      pick('Gas', d.gas ? [d.gas] : [], 'volume', (ids) => ((d.gas = ids[0] ?? null), redraw()), true),
+      pick('Stroom van het net', d.net.afname, 'afname', 'energy', (ids) => ((d.net.afname = ids), redraw())),
+      pick('Teruglevering', d.net.teruglevering, 'teruglevering', 'energy', (ids) => ((d.net.teruglevering = ids), redraw())),
+      pick('Zonnepanelen', d.zon, 'zon', 'energy', (ids) => ((d.zon = ids), redraw())),
+      pick('Gas', d.gas ? [d.gas] : [], 'gas', 'volume', (ids) => ((d.gas = ids[0] ?? null), redraw()), true),
     ),
   );
 
@@ -1171,15 +1188,12 @@ function renderEnergy() {
     });
     devs.append(el('div', { class: 'rij' }, name, del), el('span', { class: 'tiny', text: nameOf(a.id) }));
   });
-  const free = meters.filter((m) => m.soort === 'energy' && !d.apparaten.some((a) => a.id === m.id));
-  if (free.length) {
-    const sel = el('select', { class: 'veld', 'aria-label': 'Apparaat erbij' }, el('option', { value: '', text: 'apparaat erbij…' }), ...free.map((m) => el('option', { value: m.id, text: m.naam })));
-    sel.addEventListener('change', () => {
-      if (!sel.value) return;
-      d.apparaten.push({ id: sel.value, naam: nameOf(sel.value).slice(0, 40) });
-      redraw();
-    });
-    devs.append(sel);
+  const addDevice = meterSelect('Apparaat erbij', 'apparaat erbij…', 'apparaat', 'energy', (id) => {
+    d.apparaten.push({ id, naam: nameOf(id).slice(0, 40) });
+    redraw();
+  });
+  if (addDevice) {
+    devs.append(addDevice);
   }
   parts.push(devs);
 

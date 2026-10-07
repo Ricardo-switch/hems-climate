@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { HaClient } from '../src/adapters/homeassistant/client.js';
-import { EnergyStore, importFromPrefs, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
+import { EnergyStore, importFromPrefs, meterRole, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
 import { partsIn, zonedMidnight } from '../src/web/today.js';
 import { periodRange, yieldReport } from '../src/web/yield.js';
 
@@ -178,6 +178,26 @@ describe('meters en prijzen in de app', () => {
     });
     expect(importFromPrefs(null)).toBeNull();
     expect(importFromPrefs({ energy_sources: 'x' })).toBeNull();
+  });
+
+  it('raadt de rol van een meter, zodat elke lijst eerst toont wat past', () => {
+    // De meters van dit huis, zoals Home Assistant ze op 7 oktober gaf.
+    const cases: [string, string, string | null, string][] = [
+      ['sensor.p1_meter_energy_import_tariff_1', 'P1 Meter Energie import tarief 1', 'homewizard', 'afname'],
+      ['sensor.p1_meter_energy_export_tariff_2', 'P1 Meter Energie export tarief 2', 'homewizard', 'teruglevering'],
+      ['sensor.solaredge_produced_energy', 'SolarEdge Produced energy', 'solaredge', 'zon'],
+      ['sensor.solaredge_lifetime_energy', 'SolarEdge Lifetime energy', 'solaredge', 'zon'],
+      ['sensor.solaredge_self_consumed_energy', 'SolarEdge Self consumed energy', 'solaredge', 'periode'],
+      ['sensor.solaredge_imported_energy', 'SolarEdge Imported energy', 'solaredge', 'periode'],
+      ['sensor.airconditioning_woonkamer_energie_kwh', 'Airco woonkamer totaal (kWh)', 'integration', 'apparaat'],
+      ['sensor.samsung_oled_power_energy', 'Samsung_OLED Power energy', 'smartthings', 'apparaat'],
+      ['sensor.samsung_oled_energie_bespaard', 'Samsung_OLED Energie bespaard', 'smartthings', 'periode'],
+      ['sensor.gratis_airco_kwh_maand', 'Gratis airco stroom deze maand (kWh)', 'utility_meter', 'periode'],
+      ['sensor.airconditioning_totaal_energie', "Airco's gecombineerd totaal (kWh)", 'template', 'periode'],
+      ['sensor.energy_production_today', 'Energy production today', 'forecast_solar', 'periode'],
+    ];
+    for (const [id, naam, platform, rol] of cases) expect(meterRole(id, naam, 'energy', platform), naam).toBe(rol);
+    expect(meterRole('sensor.gas_meter_gas', 'Gas meter Gas', 'volume', 'homewizard')).toBe('gas');
   });
 
   it('zegt per meter waar het dashboard zijn prijs vandaan haalt', () => {

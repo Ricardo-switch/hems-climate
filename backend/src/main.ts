@@ -572,7 +572,16 @@ if (webPort != null) {
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
-    ...(energyStore ? { energy: { store: energyStore, source: haEnergySource(client, (id) => allStates.get(id)) } } : {}),
+    ...(energyStore ? {
+          energy: {
+            store: energyStore,
+            source: haEnergySource(
+              client,
+              (id) => allStates.get(id),
+              (id) => houseRegisters?.entities.find((e) => e.entity_id === id)?.platform ?? null,
+            ),
+          },
+        } : {}),
     version,
   });
 }

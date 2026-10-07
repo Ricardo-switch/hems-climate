@@ -50,6 +50,44 @@ export interface MeterOption {
   readonly naam: string;
   /** `energy` (kWh) of `volume` (m³). */
   readonly soort: 'energy' | 'volume';
+  /**
+   * Waar hij waarschijnlijk voor is, zodat elke lijst eerst toont wat past: een
+   * P1-meter is geen apparaat, een tv geen zonnepaneel. `periode` is een teller
+   * die elke dag, maand of jaar opnieuw begint, of een berekende waarde; die
+   * hoort nergens als bron.
+   */
+  readonly rol?: MeterRole;
+}
+
+export type MeterRole = 'afname' | 'teruglevering' | 'zon' | 'gas' | 'apparaat' | 'periode';
+
+/** Integraties van een slimme meter (het net). */
+const GRID_PLATFORMS = new Set(['dsmr', 'dsmr_reader', 'p1_monitor', 'slimmelezer', 'energyzero']);
+/** Integraties van omvormers en zonnepanelen. */
+const SOLAR_PLATFORMS = new Set(['solaredge', 'solaredge_modbus', 'fronius', 'enphase_envoy', 'sma', 'growatt_server', 'huawei_solar', 'solax', 'goodwe', 'apsystems', 'solarman', 'omnik_inverter', 'forecast_solar', 'sunsynk']);
+
+/**
+ * De rol van een meter, uit zijn integratie en zijn naam. Een schatting: in de
+ * app staat wat niet past onder "andere meters", zodat er altijd een uitweg is.
+ */
+export function meterRole(id: string, naam: string, soort: 'energy' | 'volume', platform: string | null = null): MeterRole {
+  if (soort === 'volume') return 'gas';
+  const text = `${id} ${naam}`.toLowerCase();
+  const has = (re: RegExp) => re.test(text);
+  // Tellers die opnieuw beginnen, en berekende of geschatte waarden.
+  if (platform === 'utility_meter' || platform === 'forecast_solar' || has(/vandaag|deze maand|dit jaar|today|this[ _]month|this[ _]year|_dag\b|_maand\b|_jaar\b|daily|monthly|yearly|bespaard|saved|verschil|gratis|free|gecombineerd|combined|forecast|prognose|remaining/)) {
+    return 'periode';
+  }
+  const export_ = has(/export|teruglever|returned|production_tarif|levering_aan|to_grid/);
+  const gridMeter = (platform != null && GRID_PLATFORMS.has(platform)) || has(/\bp1\b|p1_meter|p1 meter|dsmr|slimme meter|smart meter|electricity_meter/);
+  if (gridMeter) return export_ ? 'teruglevering' : 'afname';
+  const solar = (platform != null && SOLAR_PLATFORMS.has(platform)) || has(/solar|zonnepane|omvormer|inverter|\bpv\b|opgewekt|opbrengst/);
+  if (solar) {
+    // Een omvormer meet ook wat het huis gebruikte of uitwisselde: dat is geen opbrengst.
+    if (has(/import|export|consum|verbruik|self|zelf/)) return 'periode';
+    return 'zon';
+  }
+  return 'apparaat';
 }
 
 /** Wat de dienst uit Home Assistant leest; in de tests een nep. */

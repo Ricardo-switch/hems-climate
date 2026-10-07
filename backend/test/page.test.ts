@@ -58,11 +58,13 @@ const ENERGY_SOURCE: EnergySource = {
     device_consumption: [{ stat_consumption: 'sensor.airco', name: 'Airco woonkamer' }],
   }),
   meters: async () => [
-    { id: 'sensor.afname', naam: 'P1 afname', soort: 'energy' },
-    { id: 'sensor.terug', naam: 'P1 teruglevering', soort: 'energy' },
-    { id: 'sensor.zon', naam: 'SolarEdge opgewekt', soort: 'energy' },
-    { id: 'sensor.airco', naam: 'Airco woonkamer energie', soort: 'energy' },
-    { id: 'sensor.gas', naam: 'Gasmeter', soort: 'volume' },
+    { id: 'sensor.afname', naam: 'P1 afname', soort: 'energy', rol: 'afname' },
+    { id: 'sensor.terug', naam: 'P1 teruglevering', soort: 'energy', rol: 'teruglevering' },
+    { id: 'sensor.zon', naam: 'SolarEdge opgewekt', soort: 'energy', rol: 'zon' },
+    { id: 'sensor.airco', naam: 'Airco woonkamer energie', soort: 'energy', rol: 'apparaat' },
+    { id: 'sensor.tv', naam: 'Tv energie', soort: 'energy', rol: 'apparaat' },
+    { id: 'sensor.p1_totaal', naam: 'P1 import totaal', soort: 'energy', rol: 'afname' },
+    { id: 'sensor.gas', naam: 'Gasmeter', soort: 'volume', rol: 'gas' },
   ],
   changes: async (ids, startMs, endMs, period) => {
     const hourly: Record<string, (h: number) => number> = {
@@ -593,6 +595,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         expect(await layoutProblems(p), `Meters en prijzen in ${stand}`).toEqual([]);
         await p.locator('#e-inhoud button', { hasText: 'Overnemen' }).click();
         await p.locator('#e-inhoud .chip', { hasText: 'SolarEdge opgewekt' }).waitFor();
+        // Apparaat erbij: eerst wat een apparaat is (de tv), de P1-meter pas onder "Andere meters".
+        const groups = await p.locator('#e-inhoud select[aria-label="Apparaat erbij"] optgroup').evaluateAll((gs) => gs.map((g) => [g.getAttribute('label'), [...g.querySelectorAll('option')].map((o) => o.textContent)]));
+        expect(groups).toEqual([
+          ['Past hierbij', ['Tv energie']],
+          ['Andere meters', ['P1 import totaal']],
+        ]);
         await p.locator('#e-inhoud button', { hasText: 'Bewaren' }).click();
         await p.locator('#e-zin').filter({ hasText: 'Bewaard' }).waitFor();
         expect(energyStore.current?.zon).toEqual(['sensor.zon']);
