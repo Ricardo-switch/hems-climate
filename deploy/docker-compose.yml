@@ -43,10 +43,10 @@ services:
       # De read-only webweergave. Weglaten betekent: de dienst luistert nergens
       # op, zoals hij dat tot fase 5 deed.
       HEMS_WEB_PORT: "8080"
-      # Lampen aan- en uitzetten vanuit de app (besluit 97). Alleen licht; klimaat
-      # en screens blijven alleen-lezen. Let op: deze weergave heeft geen inlog,
-      # dus iedereen op je thuisnetwerk kan dan je lampen schakelen. Uitzetten:
-      # "0", of de regel weghalen.
+      # Lampen en Hue-scènes vanuit de app (besluiten 97 en 100). Alleen licht;
+      # klimaat en screens blijven alleen-lezen. Bedienen vraagt een inlog met je
+      # Home Assistant-account (besluit 99); kijken blijft open op je thuisnetwerk
+      # en in je tailnet. Uitzetten: "0", of de regel weghalen.
       HEMS_LIGHTS: "1"
 
     volumes:
