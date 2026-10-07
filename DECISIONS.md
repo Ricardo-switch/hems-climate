@@ -4006,6 +4006,13 @@ een groep met *verborgen* peren telde als één lamp. Nu:
   ook zichtbare lampen staan, dan staat die Hue-kamer als lamp naast die lampen.
   De bewoner lost dat op met een eigen Hue-zone voor de uitgezette lampen.
 
+*Aangevuld 7 oktober 2026: ook de app (F) loopt al mee.* De proefomgeving wordt
+de app (94), en wat C oplevert, groeit daar al in: het huis als navigatie, het
+indelen, de lampen, de assistent die uitlegt. F begint dus niet pas na D, maar
+loopt nu mee en wordt na B afgemaakt. De reden van de bewoner: B wordt na de
+winter bewezen, dus werk aan de app is nu geen verloren tijd, en wat de winter
+aan gebruik oplevert, maakt de app beter.
+
 ## 97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp
 
 *Onderwerp: veiligheid · Status: geldig*

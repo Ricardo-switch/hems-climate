@@ -16,10 +16,13 @@ verwijzing bestaat.
 - **Nu: meekijken.** Smart Climate draait op de NAS naast de oude YAML-regeling,
   beslist elke ronde en legt vast wat hij zou doen. Klimaat en screens schakelt
   hij niet ([15], [28], [73]).
+- **Ernaast, nu al:** C, kamers en zones, en de app (F) groeien in de
+  proefomgeving ([96], [94]). B wordt na de winter bewezen, dus dat werk gaat niet
+  verloren.
 - **Daarna, in deze volgorde:** B echt schakelen, pas bij 30 winterdagen en
   100% functiedekking ([64]), met een bewijsrapport; E tarieven en prognoses;
-  D het thermisch model ([46]); F de app ([71]); G de assistent ([44]); H een
-  product voor meer huizen ([34]). C, kamers en zones, loopt ernaast ([96]).
+  D het thermisch model ([46]); de app af ([71]); G de assistent ([44]); H een
+  product voor meer huizen ([34]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
