@@ -4368,6 +4368,14 @@ blauw, daglicht en een scène, en kijkt wat er naar Home Assistant zou gaan.
 Scènes staan aan met dezelfde schakelaar als het licht (`HEMS_LIGHTS=1` of
 Ingress).
 
+*Aangevuld 7 oktober 2026, na de eerste dag op de NAS:* er stond nog geen
+enkele scène, omdat de dienst de stand van `scene.`-entiteiten niet bijhield.
+Nu wel, en een scène die niet via zijn Hue-kamer bij een ruimte past, hangt
+aan het gebied van het Hue-apparaat waar hij bij hoort (192 scènes in dit
+huis). Kleur kiest de bewoner nu op een kleurenwiel: de hoek is de tint, de
+afstand tot het midden de verzadiging; bij loslaten gaat de kleur naar de lamp.
+De vaste kleuren blijven eronder als snelkeuze.
+
 ---
 
 ## 101. "Klaar voor" bij de droger is per keer te kiezen

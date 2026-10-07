@@ -623,9 +623,10 @@ function renderReview() {
   const r = review;
   const days = Math.max(1, Math.round((r.totMs - r.vanMs) / 86_400_000));
   $('o-scheelde').hidden = false;
-  $('o-periode').textContent = `In ${days} dagen meekijken naast je huidige regeling.`;
   const legacyKwh = r.legacyGridWh / 1000;
   const avoid = r.avoidableGridWh / 1000;
+  // Eén zin, zoals op de wand (Wand-Opbrengst); de balken eronder alleen op de telefoon.
+  $('o-periode').textContent = `${nl(avoid)} kWh minder van het net voor de airco's, in ${days} dagen meekijken naast je huidige regeling.`;
   const ours = Math.max(0, legacyKwh - avoid);
   const pct = legacyKwh > 0 ? Math.round((avoid / legacyKwh) * 100) : 0;
   $('o-hero').replaceChildren(
@@ -750,14 +751,48 @@ function renderYield() {
   if (r.kosten.totaal != null) tiles.push(kpiTile('Kosten', euro(r.kosten.totaal), '', r.kosten.vorige != null ? `${prevName}: ${euro(r.kosten.vorige)}` : '', 'var(--ink)'));
   if (tiles.length) parts.push(el('div', { class: 'o-kpis', style: `grid-template-columns: repeat(${tiles.length}, minmax(0, 1fr))` }, ...tiles));
 
-  if (r.zon) parts.push(sunCard(r));
-  parts.push(sankeyCard(r));
-  parts.push(devicesCard(r));
-  parts.push(bucketsCard(r));
-  parts.push(compareCard(r));
-  parts.push(costCard(r));
-  $('o-terug').replaceChildren(...parts);
+  const sun = r.zon ? sunCard(r) : null;
+  const sankey = sankeyCard(r);
+  const devices = devicesCard(r);
+  const buckets = bucketsCard(r);
+  const compare = compareCard(r);
+  const cost = costCard(r);
+  const view = document.querySelector('[data-view="opbrengst"]');
+  if (WIDE.matches) {
+    // Op de wand (Wand-Opbrengst): links de periode en de getallen, in het
+    // midden waar het heen ging en vergelijken, rechts per apparaat en per dag.
+    // Wat Smart Climate scheelde schuift mee naar links.
+    view.classList.add('breed');
+    $('o-terug').replaceChildren(
+      el(
+        'div',
+        { class: 'o-breed' },
+        el('div', { class: 'o-kolom' }, ...parts, ...[sun, $('o-scheelde'), $('o-comfort')].filter(Boolean), el('a', { class: 'knop', href: '#energie', text: 'Meters en prijzen' })),
+        el('div', { class: 'o-kolom' }, sankey, compare),
+        el('div', { class: 'o-kolom' }, devices, buckets, cost),
+      ),
+    );
+  } else {
+    view.classList.remove('breed');
+    // Terug op hun eigen plek onder de terugblik.
+    $('o-terug').after($('o-scheelde'), $('o-comfort'));
+    $('o-terug').replaceChildren(...parts, ...[sun, sankey, devices, buckets, compare, cost].filter(Boolean));
+  }
+  // De sankey op de breedte die hij echt krijgt: dan zijn de letters overal even groot.
+  drawSankey(sankey, r);
 }
+
+/** Liggend en breed genoeg: de wand. Wisselt het, dan opnieuw opbouwen. */
+const WIDE = matchMedia('(orientation: landscape) and (min-width: 900px)');
+WIDE.addEventListener('change', () => yieldData && renderYield());
+let sankeyResize = null;
+window.addEventListener('resize', () => {
+  clearTimeout(sankeyResize);
+  sankeyResize = setTimeout(() => {
+    const card = document.querySelector('#o-terug .o-sankey-kaart');
+    if (yieldData && card) drawSankey(card, yieldData);
+  }, 200);
+});
 
 function kpiTile(label, value, unit, sub, color) {
   return el(
@@ -797,10 +832,10 @@ function sunCard(r) {
   );
 }
 
-/** De sankey op schaal: links de bronnen, rechts waar het heen ging. */
+/** De kaart van de sankey; de tekening zelf volgt als hij zijn breedte heeft. */
 function sankeyCard(r) {
   const withGas = yieldView.sankey === 'alles' && r.gas;
-  const card = el('div', { class: 'card' }, el('h2', { text: withGas ? 'Waar je energie heen ging' : 'Waar je stroom heen ging' }));
+  const card = el('div', { class: 'card o-sankey-kaart' }, el('h2', { text: withGas ? 'Waar je energie heen ging' : 'Waar je stroom heen ging' }));
   if (r.gas) {
     card.append(
       seg(
@@ -817,6 +852,18 @@ function sankeyCard(r) {
       ),
     );
   }
+  card.append(el('div', { class: 'o-sankey' }), el('span', { class: 'tiny', text: withGas ? 'Alles in kWh: 1 m³ gas is ongeveer 9,8 kWh warmte.' : 'De breedte is de hoeveelheid.' }));
+  return card;
+}
+
+/**
+ * De sankey op schaal: links de bronnen, rechts waar het heen ging. Getekend
+ * in pixels van de kaart zelf, zodat de tekst niet meegroeit met een brede kolom.
+ */
+function drawSankey(card, r) {
+  const holder = card.querySelector('.o-sankey');
+  if (!holder) return;
+  const withGas = yieldView.sankey === 'alles' && r.gas;
   const flows = r.stromen.filter((f) => withGas || f.van !== 'gas');
   const value = (pred) => flows.filter(pred).reduce((a, f) => a + f.kwh, 0);
   const sources = [
@@ -835,17 +882,19 @@ function sankeyCard(r) {
     .filter((t) => t.v > 0);
   const total = sources.reduce((a, s) => a + s.v, 0);
   if (total <= 0) {
-    card.append(el('p', { class: 'small muted', text: 'In deze periode is er nog niets gemeten.' }));
-    return card;
+    holder.replaceChildren(el('p', { class: 'small muted', text: 'In deze periode is er nog niets gemeten.' }));
+    return;
   }
-  const W = 350;
-  const H = Math.max(240, 40 + targets.length * 34);
+  const W = Math.max(280, Math.round(holder.clientWidth || 320));
+  const H = Math.max(240, Math.min(420, 40 + targets.length * 40));
   const gap = 8;
-  const k = (H - 10 - gap * (targets.length - 1)) / total;
-  const sx = 70;
-  const tx = 178;
+  // Elk doel minstens een regel hoog, zodat kleine stromen hun naam houden.
+  const minH = 14;
+  const k = (H - 10 - gap * (targets.length - 1) - minH * targets.length) / total;
+  const sx = 64;
+  const tx = W - 182;
   const nw = 9;
-  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${withGas ? 'Energie' : 'Stroom'}: ${sources.map((x) => `${x.naam} ${num(x.v)} kWh`).join(', ')}, naar ${targets.map((t) => `${t.naam} ${num(t.v)}`).join(', ')}` });
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': `${withGas ? 'Energie' : 'Stroom'}: ${sources.map((x) => `${x.naam} ${num(x.v)} kWh`).join(', ')}, naar ${targets.map((t) => `${t.naam} ${num(t.v)}`).join(', ')}` });
   const sgap = sources.length > 1 ? (H - 10 - total * k) / (sources.length - 1) : 0;
   const sy = {};
   let y = 5;
@@ -857,7 +906,7 @@ function sankeyCard(r) {
   y = 5;
   for (const t of targets) {
     ty[t.id] = { top: y, run: y };
-    y += t.v * k + gap;
+    y += Math.max(minH, t.v * k) + gap;
   }
   for (const t of targets) {
     for (const src of ['zon', 'net', 'gas']) {
@@ -888,8 +937,7 @@ function sankeyCard(r) {
     label.append(s('tspan', { 'font-weight': 700 }, naam), s('tspan', { fill: '#A9BAC2' }, ` ${num(t.v)}`));
     svg.append(label);
   }
-  card.append(svg, el('span', { class: 'tiny', text: withGas ? 'Alles in kWh: 1 m³ gas is ongeveer 9,8 kWh warmte.' : 'De breedte is de hoeveelheid.' }));
-  return card;
+  holder.replaceChildren(svg);
 }
 
 function devicesCard(r) {
@@ -1656,14 +1704,69 @@ function hsCss(h, sat) {
   return `rgb(${f(5)}, ${f(3)}, ${f(1)})`;
 }
 
-/** "#ff8800" naar tint en verzadiging. */
-function hexHs(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-  const max = Math.max(r, g, b);
-  const d = max - Math.min(r, g, b);
-  let h = 0;
-  if (d > 0) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-  return [Math.round((h * 60 + 360) % 360), max === 0 ? 0 : Math.round((d / max) * 100)];
+/**
+ * Het kleurenwiel: schuif over het wiel, en bij loslaten gaat de kleur naar de
+ * lamp. De hoek is de tint (rood rechts, met de klok mee), de afstand tot het
+ * midden de verzadiging: in het midden bijna wit, aan de rand vol. Met de
+ * pijltjes kan het ook: links en rechts de tint, op en neer de verzadiging,
+ * Enter zet hem.
+ */
+function colourWheel(d, kan, live, onPick) {
+  let cur = kan.tint ? [kan.tint[0], kan.tint[1]] : [30, 80];
+  const dot = el('span', { class: 'wieldot', 'aria-hidden': 'true' });
+  const wheel = el('div', { class: 'kleurwiel', tabindex: live ? '0' : '-1', role: 'slider', 'aria-label': `Kleur van ${d.naam}`, 'aria-valuemin': '0', 'aria-valuemax': '360' }, dot);
+  if (!live) wheel.setAttribute('aria-disabled', 'true');
+  const place = () => {
+    const a = (cur[0] * Math.PI) / 180;
+    const r = (cur[1] / 100) * 50;
+    dot.style.left = `${50 + Math.cos(a) * r}%`;
+    dot.style.top = `${50 + Math.sin(a) * r}%`;
+    dot.style.background = hsCss(cur[0], cur[1]);
+    wheel.setAttribute('aria-valuenow', String(cur[0]));
+    wheel.setAttribute('aria-valuetext', `tint ${cur[0]} graden, verzadiging ${cur[1]} procent`);
+  };
+  const fromPoint = (ev) => {
+    const b = wheel.getBoundingClientRect();
+    const dx = ev.clientX - (b.left + b.width / 2);
+    const dy = ev.clientY - (b.top + b.height / 2);
+    // Afgerond kan 359,7 graden 360 worden: dat is weer 0.
+    const h = Math.round((((Math.atan2(dy, dx) * 180) / Math.PI) + 360) % 360) % 360;
+    cur = [h, Math.round(Math.min(1, Math.hypot(dx, dy) / (b.width / 2)) * 100)];
+    place();
+  };
+  let dragging = false;
+  wheel.addEventListener('pointerdown', (ev) => {
+    if (!live) return;
+    dragging = true;
+    wheel.setPointerCapture?.(ev.pointerId);
+    fromPoint(ev);
+    ev.preventDefault();
+  });
+  wheel.addEventListener('pointermove', (ev) => {
+    if (dragging) fromPoint(ev);
+  });
+  wheel.addEventListener('pointerup', () => {
+    if (!dragging) return;
+    dragging = false;
+    void onPick([cur[0], cur[1]]);
+  });
+  wheel.addEventListener('pointercancel', () => {
+    dragging = false;
+  });
+  wheel.addEventListener('keydown', (ev) => {
+    if (!live) return;
+    const step = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, 5], ArrowDown: [0, -5] }[ev.key];
+    if (step) {
+      cur = [(cur[0] + step[0] + 360) % 360, Math.max(0, Math.min(100, cur[1] + step[1]))];
+      place();
+      ev.preventDefault();
+    } else if (ev.key === 'Enter' || ev.key === ' ') {
+      void onPick([cur[0], cur[1]]);
+      ev.preventDefault();
+    }
+  });
+  place();
+  return el('div', { class: 'wielvak' }, wheel);
 }
 
 /** De naam van een vaste kleur dicht bij deze tint, of null. */
@@ -1713,10 +1816,7 @@ function lampColour(d, say, live) {
         return b;
       }),
     );
-    const pick = el('input', { type: 'color', value: '#ff9a3c', 'aria-label': `Een andere kleur voor ${d.naam}` });
-    pick.disabled = !live;
-    pick.addEventListener('change', () => void send({ tint: hexHs(pick.value) }, `${d.naam} in de gekozen kleur.`));
-    return [el('div', { class: 'kleuren' }, el('label', { class: 'kleurrad', title: 'Elke andere kleur' }, pick), swatches)];
+    return [colourWheel(d, kan, live, (tint) => send({ tint }, `${d.naam} in de gekozen kleur.`)), swatches];
   };
 
   const draw = () => {

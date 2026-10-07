@@ -497,6 +497,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-blad-extra .seg button[aria-pressed="true"]', { hasText: 'Kleur' }).waitFor();
       expect(await p.locator('#hu-blad-extra .stalen button[aria-pressed="true"]').getAttribute('aria-label')).toBe('oranje');
       expect(await layoutProblems(p), `een kleurenlamp in ${stand}`).toEqual([]);
+      // Het kleurenwiel: rechts aan de rand is rood en vol; indrukken en loslaten zet hem.
+      const wheel = p.locator('#hu-blad-extra .kleurwiel');
+      const size = await wheel.evaluate((e) => e.clientWidth);
+      await wheel.click({ position: { x: size * 0.95, y: size / 2 } });
+      await p.locator('#hu-blad-zin').filter({ hasText: 'in de gekozen kleur' }).waitFor();
+      expect(lightData.at(-1)).toEqual({ hs_color: [0, 90] });
       await p.locator('#hu-blad-extra .stalen button[aria-label="blauw"]').click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'Sfeerverlichting blauw' }).waitFor();
       expect(lightData.at(-1)).toEqual({ hs_color: [220, 75] });
@@ -574,8 +580,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);
-      await p.locator('#o-hero .big').waitFor();
-      expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
+      // Wat Smart Climate scheelde: op de wand één zin, op de telefoon ook het percentage.
+      await p.locator('#o-periode').filter({ hasText: 'kWh minder van het net' }).waitFor();
+      if (stand === 'portret') {
+        await p.locator('#o-hero .big').waitFor();
+        expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
+      }
       // Terugkijken (besluit 102): de eerste keer de meters overnemen uit Home Assistant.
       if (stand === 'portret') {
         await p.locator('#o-terug a', { hasText: 'Meters en prijzen instellen' }).click();

@@ -62,6 +62,8 @@ export const registers: HouseRegisters = {
     { id: 'd-halsensor', area_id: 'hal', name: 'Bewegingssensor hal' },
     { id: 'd-nas', area_id: 'hal', name: 'NAS' },
     { id: 'd-f1', area_id: null, name: 'F1' },
+    // De Hue-kamer van de zolder, met zijn scènes (besluit 100).
+    { id: 'd-hue-zolder', area_id: 'zolder', name: 'Zolderkamer' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -71,6 +73,7 @@ export const registers: HouseRegisters = {
     entity(ref('ac-zolder'), 'd-ac-z'),
     entity(ref('badkamer'), 'd-bad'),
     entity('light.woonkamer_plafonniere', 'd-plaf'),
+    entity('scene.zolderkamer_helder', 'd-hue-zolder'),
     entity('light.sfeerverlichting', 'd-sfeer'),
     entity('light.woonkamer_alles', null, { area_id: 'woonkamer' }),
     entity('cover.screen', 'd-screen'),
@@ -114,6 +117,8 @@ export const states = new Map<string, HaEntityState>([
   // met zijn lampen, en een van een ruimte die er niet is.
   ['scene.keuken_lezen', state('scene.keuken_lezen', '2026-10-05T07:00:00+00:00', { friendly_name: 'Keuken Lezen', group_name: 'Keuken', name: 'Lezen' })],
   ['scene.ontspannen', state('scene.ontspannen', '2026-10-05T07:30:00+00:00', { friendly_name: 'Ontspannen', entity_id: ['light.woonkamer_plafonniere', 'light.sfeerverlichting'] })],
+  // Een Hue-kamer met een naam die geen lamp of ruimte kent: via het gebied van zijn apparaat.
+  ['scene.zolderkamer_helder', state('scene.zolderkamer_helder', '2026-10-05T06:00:00+00:00', { friendly_name: 'Zolderkamer Helder', group_name: 'Zolderkamer', name: 'Helder' })],
   ['scene.garage_feest', state('scene.garage_feest', '2026-10-05T08:00:00+00:00', { friendly_name: 'Garage Feest', group_name: 'Garage', name: 'Feest' })],
   ['light.woonkamer_alles', state('light.woonkamer_alles', 'on', { friendly_name: 'Woonkamer alles', entity_id: ['light.woonkamer_plafonniere'] })],
   ['cover.screen', state('cover.screen', 'open', { friendly_name: 'Screen', current_position: 40 })],

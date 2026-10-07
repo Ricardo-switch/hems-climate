@@ -297,6 +297,8 @@ describe('wit, kleur en scènes (besluit 100)', () => {
       { id: 'scene.ontspannen', naam: 'Ontspannen', actief: true },
     ]);
     expect(rooms.flatMap((r) => r.scenes).map((s) => s.id)).not.toContain('scene.garage_feest');
+    // Via het gebied van de Hue-kamer, als de naam niets oplevert.
+    expect(rooms.find((r) => r.naam === 'Zolder')?.scenes).toEqual([{ id: 'scene.zolderkamer_helder', naam: 'Helder', actief: true }]);
   });
 });
 

@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
+    <!-- "only": een browser met een eigen donkere stand laat de kleuren van de pagina staan. -->
+    <meta name="color-scheme" content="only dark" />
     <title>Smart Climate — nieuwe weergave (test)</title>
     <!-- Een eigen icoon, ingebakken: anders vraagt elke browser /favicon.ico op en staat er een 404 in de console. -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23F5B342'/%3E%3C/svg%3E" />
@@ -572,6 +573,12 @@
         font-weight: 500;
         color: var(--muted);
       }
+      :root {
+        color-scheme: only dark;
+      }
+      .o-sankey svg {
+        display: block;
+      }
       .o-split {
         display: flex;
         border-radius: 999px;
@@ -958,39 +965,47 @@
       .scenes button[aria-pressed='true'] {
         border: 2px solid var(--ink);
       }
-      .kleuren {
-        display: grid;
-        grid-template-columns: minmax(72px, 112px) minmax(0, 1fr);
-        gap: 16px;
-        align-items: center;
+      /* Het kleurenwiel: tint rond, verzadiging naar buiten (rood rechts, met de klok mee). */
+      .wielvak {
+        display: flex;
+        justify-content: center;
+        padding: 6px 0;
       }
-      .kleurrad {
+      .kleurwiel {
         position: relative;
+        width: min(240px, 72vw);
         aspect-ratio: 1;
         border-radius: 50%;
         background:
-          radial-gradient(circle, #fff 0, rgba(255, 255, 255, 0) 62%),
-          conic-gradient(#ff4d4d, #ffd54d, #5ce07a, #4de0e0, #4d7bff, #c04dff, #ff4da6, #ff4d4d);
-        cursor: pointer;
+          radial-gradient(circle closest-side, #fff 0, rgba(255, 255, 255, 0) 100%),
+          conic-gradient(from 90deg, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%));
+        cursor: crosshair;
+        /* Slepen kleurt, het scrolt niet. */
+        touch-action: none;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
       }
-      .kleurrad input {
+      .kleurwiel[aria-disabled='true'] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .wieldot {
         position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        border: 0;
-        opacity: 0;
-        cursor: pointer;
+        width: 28px;
+        height: 28px;
+        margin: -14px 0 0 -14px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
       }
       .stalen {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 6px;
       }
       .stalen button {
         width: 100%;
-        max-width: 52px;
+        max-width: 36px;
         aspect-ratio: 1;
         justify-self: center;
         padding: 0;
@@ -1048,8 +1063,7 @@
         background: linear-gradient(135deg, var(--warm), var(--violet));
       }
       .lampkleur button:disabled,
-      .scenes button:disabled,
-      .kleurrad:has(input:disabled) {
+      .scenes button:disabled {
         cursor: not-allowed;
         opacity: 0.5;
       }
@@ -1540,6 +1554,37 @@
         .view.narrow {
           max-width: 760px;
         }
+        /* Opbrengst op de wand (Wand-Opbrengst): drie kolommen, over de hele breedte. */
+        .view.narrow.breed {
+          max-width: none;
+        }
+        /* Op de wand zegt het menu al waar je bent: de titel mag weg, zodat alles op één scherm past. */
+        .view.breed > .tussen {
+          display: none;
+        }
+        .o-breed {
+          display: grid;
+          grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(260px, 340px);
+          gap: 18px;
+          align-items: start;
+        }
+        .o-breed .o-kolom {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          min-width: 0;
+        }
+        .o-breed .o-kpis {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+        .o-breed .o-kpi {
+          padding: 10px 14px;
+        }
+        /* Op de wand past wat Smart Climate scheelde in één zin. */
+        .o-breed #o-hero,
+        .o-breed #o-comfort {
+          display: none;
+        }
         /* Op de wand: de kamer links, het blad van het gekozen apparaat rechts. */
         .huisview {
           max-width: 1240px;
@@ -1726,7 +1771,7 @@
             </div>
             <div id="o-hero" class="stack"></div>
           </div>
-          <div class="warmnote">
+          <div class="warmnote" id="o-comfort">
             <div class="small" style="font-weight: 700; color: var(--warm-t)">Comfort volgt in het voorjaar</div>
             <div class="small" style="color: #e9d9bf">
               Eerst leert Smart Climate deze winter hoe snel je kamers opwarmen en afkoelen. Pas dan is eerlijk te

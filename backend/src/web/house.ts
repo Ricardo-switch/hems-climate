@@ -280,6 +280,8 @@ function lightAbilities(state: HaEntityState | undefined, modes: readonly string
 function scenesPerRoom(
   states: ReadonlyMap<string, HaEntityState>,
   rooms: readonly { readonly id: string; readonly naam: string; readonly devices: readonly HouseDevice[] }[],
+  /** De ruimte van een scène via zijn gebied in Home Assistant, als laatste uitweg. */
+  roomOfArea: (sceneId: string) => string | null = () => null,
 ): Map<string, HouseScene[]> {
   const out = new Map<string, (HouseScene & { t: number })[]>();
   const lower = (s: string) => s.trim().toLowerCase();
@@ -307,6 +309,9 @@ function scenesPerRoom(
         rooms.find((r) => lower(r.naam) === group)?.id ??
         null;
     }
+    // Een Hue-scène hangt aan het apparaat van zijn Hue-kamer; staat dat in een
+    // gebied, dan is dat de ruimte (zo kwamen er op 7 oktober 192 scènes binnen).
+    roomId ??= roomOfArea(id);
     if (roomId == null) continue;
     const friendlyName = typeof a['friendly_name'] === 'string' ? a['friendly_name'].trim() : id;
     const own = typeof a['name'] === 'string' && a['name'].trim() !== '' ? a['name'].trim() : null;
@@ -862,9 +867,16 @@ export function buildHouse(
     perRoom.set(room.id, list);
   }
 
+  const deviceArea = new Map(registers.devices.map((d) => [d.id, d.area_id]));
+  const registry = new Map(registers.entities.map((e) => [e.entity_id, e]));
   const scenes = scenesPerRoom(
     states,
     layout.kamers.map((k) => ({ id: k.id, naam: k.naam, devices: perRoom.get(k.id) ?? [] })),
+    (sceneId) => {
+      const e = registry.get(sceneId);
+      const area = e?.area_id ?? (e?.device_id ? (deviceArea.get(e.device_id) ?? null) : null);
+      return area ? (roomByArea.get(area)?.id ?? null) : null;
+    },
   );
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];
