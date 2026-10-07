@@ -161,6 +161,18 @@ export interface SystemState {
    * `core/` hoort dit te lezen. Dezelfde test bewaakt het.
    */
   readonly solarProductionW: Reading<number>;
+  /**
+   * De uitstelbare apparaten, op `Deferrable.id` (besluit 98). Alleen als de
+   * configuratie er een kent.
+   */
+  readonly deferrables?: Readonly<Record<string, DeferrableState>>;
+}
+
+export interface DeferrableState {
+  /** Mag het nu op afstand starten? */
+  readonly remoteStartAllowed: Reading<boolean>;
+  /** De bedrijfsstatus zoals het apparaat hem meldt. */
+  readonly operation: Reading<string>;
 }
 
 /** Loopt de timer nog op dit moment? */

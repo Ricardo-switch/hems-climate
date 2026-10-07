@@ -1224,6 +1224,8 @@ describe('het stroombudget in de schaduw (besluit 78)', () => {
       return s;
     });
     states.push(shadowEntity('sensor.p1_meter_current_phase_1', '32'), shadowEntity('sensor.p1_meter_voltage_phase_1', '230'));
+    // De droger staat klaar om op afstand te starten (besluit 98); ook die houdt de zekering tegen.
+    states.push(shadowEntity(exampleSite.deferrables![0]!.remoteStart.id, 'on'));
     const ha = await startFakeHa({ states });
     cleanups.push(() => ha.close());
     const dir = await mkdtemp(join(tmpdir(), 'hems-fase-'));
@@ -1256,9 +1258,10 @@ describe('het stroombudget in de schaduw (besluit 78)', () => {
     const records = text
       .split('\n')
       .filter((l) => l.trim() !== '')
-      .map((l) => JSON.parse(l) as { fasen?: unknown; stroomGeweigerd?: string[]; rejected?: { blockedBy: string; detail?: string }[] });
+      .map((l) => JSON.parse(l) as { fasen?: unknown; stroomGeweigerd?: string[]; uitstel?: unknown; rejected?: { blockedBy: string; detail?: string }[] });
     const first = records[0]!;
     expect(first.fasen).toEqual([['L1', 32, 'gemeten']]);
+    expect(first.uitstel).toEqual([['droger', 'waiting', 'insufficient_current_budget']]);
     expect(first.stroomGeweigerd).toContain('ac-woonkamer');
     expect(first.rejected?.find((r) => r.blockedBy === 'insufficient_current_budget')?.detail).toBe(
       'fase L1: 3.9 A gevraagd, 1.0 A over (gemeten)',

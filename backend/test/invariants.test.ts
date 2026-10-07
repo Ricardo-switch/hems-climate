@@ -87,6 +87,17 @@ function validate(config: SiteConfig): string | null {
       }
     }
 
+    // De droger zou nooit beginnen zonder "start op afstand", in de failsafe of in
+    // handmatig, en zonder overschot alleen na zijn uiterlijke starttijd (besluit 98).
+    for (const dx of d.explanation.deferrables ?? []) {
+      if (dx.state !== 'would_start') continue;
+      const s = state.deferrables?.[dx.id];
+      if (!(s?.remoteStartAllowed.ok && s.remoteStartAllowed.value)) return error(`${dx.id} zou starten zonder "start op afstand"`);
+      if (d.explanation.failsafe.active) return error(`${dx.id} zou starten in de failsafe`);
+      if (isHandsOff(d.explanation.mode)) return error(`${dx.id} zou starten in handmatig`);
+      if (d.commands.some((c) => 'actuatorId' in c && c.actuatorId === dx.id)) return error(`${dx.id} kreeg een opdracht in de schaduw`);
+    }
+
     // In handmatig trekt de regeling zich terug, behalve bij de failsafe.
     if (isHandsOff(d.explanation.mode) && !d.explanation.failsafe.active && d.commands.length > 0) {
       return error('commando in handmatig zonder failsafe');

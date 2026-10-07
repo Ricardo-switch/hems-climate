@@ -66,6 +66,30 @@ export interface Intent {
   readonly reason: ReasonCode;
 }
 
+export const DEFERRABLE_STATES = ['not_ready', 'waiting', 'would_start', 'running', 'unknown'] as const;
+export type DeferrableStateCode = (typeof DEFERRABLE_STATES)[number];
+
+export const DEFERRABLE_REASONS = [
+  'remote_start_not_allowed',
+  'program_running',
+  'program_finished',
+  'reading_unavailable',
+  'failsafe_unreliable_input',
+  'mode_excludes_action',
+  'insufficient_current_budget',
+  'latest_start_reached',
+  'stabilisation_active',
+  'surplus_available',
+  'surplus_insufficient',
+] as const;
+export type DeferrableReason = (typeof DEFERRABLE_REASONS)[number];
+
+export interface DeferrableExplanation {
+  readonly id: string;
+  readonly state: DeferrableStateCode;
+  readonly reason: DeferrableReason;
+}
+
 export type Command =
   | {
       readonly kind: 'setAction';
@@ -144,6 +168,11 @@ export interface Explanation {
     readonly limitA: number;
     readonly bron: 'gemeten' | 'geschat' | 'onbekend';
   }[];
+  /**
+   * Wat de uitstelbare apparaten nu zouden doen, en waarom (besluit 98). Alleen
+   * als de configuratie er een kent, zodat het logboek anders niet verandert.
+   */
+  readonly deferrables?: readonly DeferrableExplanation[];
   /**
    * Apparaten die de bewoner nu zelf bedient, met sinds en tot wanneer
    * (besluit 74). Alleen aanwezig als er iets overgenomen is, zodat het logboek

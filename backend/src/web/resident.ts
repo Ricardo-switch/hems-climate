@@ -48,7 +48,8 @@ export interface ResidentFlows {
 export interface ResidentDevice {
   readonly actuatorId: string;
   readonly naam: string;
-  readonly soort: 'cool' | 'heat' | 'wait';
+  /** `ok` voor een uitstelbaar apparaat dat zou starten of draait (besluit 98). */
+  readonly soort: 'cool' | 'heat' | 'wait' | 'ok';
   readonly tekst: string;
 }
 
@@ -96,6 +97,16 @@ const HEAD = {
     goal: (c: string) => `doel ${c}°`,
     stabilise: (min: number) => `Stabiliseren, ${min} minuten`,
     timer: (id: string) => `Timer ${id}`,
+    deferrable: {
+      surplus_available: () => 'zou nu starten: er is genoeg zon over',
+      latest_start_reached: (t: string) => `zou nu starten: het is na ${t}`,
+      surplus_insufficient: (t: string) => `wacht op zon, uiterlijk tot ${t}`,
+      stabilisation_active: () => 'wacht een ronde: er is net iets gestart',
+      insufficient_current_budget: () => 'wacht: de hoofdzekering zou te zwaar belast worden',
+      failsafe_unreliable_input: () => 'wacht: een meting is onbetrouwbaar',
+      mode_excludes_action: () => 'wacht: je regelt het huis nu zelf',
+      program_running: () => 'draait een programma',
+    } as Record<string, (t: string) => string>,
   },
   en: {
     now: 'Now',
@@ -117,6 +128,16 @@ const HEAD = {
     goal: (c: string) => `target ${c}°`,
     stabilise: (min: number) => `Settling, ${min} minutes`,
     timer: (id: string) => `Timer ${id}`,
+    deferrable: {
+      surplus_available: () => 'would start now: there is enough solar to spare',
+      latest_start_reached: (t: string) => `would start now: it is past ${t}`,
+      surplus_insufficient: (t: string) => `waiting for sun, until ${t} at the latest`,
+      stabilisation_active: () => 'waiting a round: something just started',
+      insufficient_current_budget: () => 'waiting: the main fuse would be overloaded',
+      failsafe_unreliable_input: () => 'waiting: a measurement is unreliable',
+      mode_excludes_action: () => 'waiting: you are running the house yourself',
+      program_running: () => 'is running a programme',
+    } as Record<string, (t: string) => string>,
   },
 } as const;
 
@@ -182,6 +203,18 @@ export function residentDevices(config: SiteConfig, snap: DecisionView, lang: La
     } else {
       quiet.push(a.name);
     }
+  }
+  // De uitstelbare apparaten (besluit 98): wat de droger nu zou doen.
+  for (const dx of snap.explanation.deferrables ?? []) {
+    const d = config.deferrables?.find((x) => x.id === dx.id);
+    if (!d) continue;
+    const say = w.deferrable[dx.reason];
+    if (dx.state === 'not_ready' || dx.state === 'unknown' || say == null) {
+      quiet.push(d.name);
+      continue;
+    }
+    const soort = dx.state === 'would_start' || dx.state === 'running' ? 'ok' : 'wait';
+    apparaten.push({ actuatorId: d.id, naam: d.name, soort, tekst: say(d.latestStart) });
   }
   return { apparaten, rust: quiet.length ? w.quiet(quiet.join(', ')) : null };
 }

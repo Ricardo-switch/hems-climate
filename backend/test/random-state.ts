@@ -108,6 +108,23 @@ export function entityState(k: Dice, config: SiteConfig): SystemState {
     // Meestal gezond; soms hapert er een meetpunt en moet de failsafe het
     // overnemen.
     inputHealth: Object.fromEntries(config.criticalInputs.map((r) => [r.id, !k.chance(0.02)])),
+    // De uitstelbare apparaten (besluit 98): start op afstand aan, uit of onbekend,
+    // en een bedrijfsstatus in de vormen die Home Connect kan geven.
+    ...(config.deferrables && config.deferrables.length > 0
+      ? {
+          deferrables: Object.fromEntries(
+            config.deferrables.map((d) => [
+              d.id,
+              {
+                remoteStartAllowed: k.chance(0.1) ? unavailable<boolean>() : value(k.chance(0.6), NOW),
+                operation: k.chance(0.3)
+                  ? unavailable<string>('missing')
+                  : value(k.pick(['BSH.Common.EnumType.OperationState.Ready', 'BSH.Common.EnumType.OperationState.Run', 'Finished', 'Inactive', 'Pause']), NOW),
+              },
+            ]),
+          ),
+        }
+      : {}),
     // Soms heeft de bewoner een apparaat overgenomen (besluit 74): lopend, tot
     // hij het teruggeeft, of al afgelopen.
     residentOverrides: Object.fromEntries(

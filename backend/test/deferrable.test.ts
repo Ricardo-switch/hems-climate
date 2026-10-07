@@ -1,0 +1,138 @@
+/**
+ * De droger op zon, in de schaduw (besluit 98).
+ *
+ * Wat de kern over een uitstelbaar apparaat zegt: wanneer het zou beginnen en
+ * waarom niet. Er komt geen opdracht; die hoort bij stap B.
+ */
+
+import { describe, expect, it } from 'vitest';
+
+import { decide } from '../src/core/decide.js';
+import type { DeferrableExplanation } from '../src/core/decision.js';
+import type { SiteConfig } from '../src/core/model.js';
+import type { SystemState } from '../src/core/state.js';
+import { unavailable, value } from '../src/core/state.js';
+import { defaultStrategies } from '../src/index.js';
+import { exampleSite } from './site.js';
+
+// 12:00 UTC is 14:00 in Amsterdam: vóór de uiterlijke start van 15:00.
+const NOW = Date.UTC(2026, 7, 28, 12, 0, 0);
+
+const droger = exampleSite.deferrables?.find((d) => d.id === 'droger');
+
+const actuator = (action: 'off' | 'cool') => ({
+  action: value(action, NOW),
+  setpointC: unavailable<number>(),
+  powerW: value(0, NOW),
+  lastChangeMs: NOW - 3_600_000,
+  producing: unavailable<boolean>('missing'),
+  producingSinceMs: null,
+});
+
+function state(o: {
+  gridPowerW?: number;
+  remote?: boolean | null;
+  operation?: string | null;
+  nowMs?: number;
+  atticC?: number;
+  stabilising?: boolean;
+  modeOverride?: SystemState['modeOverride'];
+  healthy?: boolean;
+  currentA?: number;
+} = {}): SystemState {
+  const now = o.nowMs ?? NOW;
+  return {
+    nowMs: now,
+    modeOverride: o.modeOverride ?? null,
+    outdoorTemperatureC: unavailable<number>('missing'),
+    solarProductionW: unavailable<number>('missing'),
+    occupancy: { ricardo: value(true, now) },
+    // Niemand wil koelen, tenzij de test de zolder warm maakt.
+    zones: {
+      woonkamer: { temperatureC: value(21, now) },
+      badkamer: { temperatureC: value(20, now) },
+      zolder: { temperatureC: value(o.atticC ?? 21, now) },
+    },
+    actuators: { nest: actuator('off'), badkamer: actuator('off'), 'ac-woonkamer': actuator('off'), 'ac-zolder': actuator('off') },
+    power: {
+      gridPowerW: value(o.gridPowerW ?? -1500, now),
+      ...(o.currentA != null ? { phases: { L1: { currentA: value(o.currentA, now), voltageV: value(230, now) } } } : {}),
+    },
+    timers: { stabilisation: { endsAtMs: o.stabilising ? now + 120_000 : null }, manualOverride: { endsAtMs: null } },
+    lights: {},
+    sunAboveHorizon: value(true, now),
+    inputHealth: Object.fromEntries(exampleSite.criticalInputs.map((r) => [r.id, o.healthy ?? true])),
+    deferrables: {
+      droger: {
+        remoteStartAllowed: o.remote === null ? unavailable<boolean>() : value(o.remote ?? true, now),
+        operation: o.operation == null ? unavailable<string>('missing') : value(o.operation, now),
+      },
+    },
+  };
+}
+
+function dryer(s: SystemState, config: SiteConfig = exampleSite): DeferrableExplanation | undefined {
+  return decide({ config, state: s, strategies: defaultStrategies() }).explanation.deferrables?.find((d) => d.id === 'droger');
+}
+
+describe('de droger op zon (besluit 98)', () => {
+  it('staat in de configuratie van dit huis, met "start op afstand" als invoer', () => {
+    expect(droger).toMatchObject({ estimatedW: 600, latestStart: '15:00' });
+    expect((exampleSite.recordOnly ?? []).map((r) => r.id)).not.toContain(droger!.remoteStart.id);
+  });
+
+  it('zou starten als het overschot hem draagt', () => {
+    expect(dryer(state({ gridPowerW: -900 }))).toEqual({ id: 'droger', state: 'would_start', reason: 'surplus_available' });
+  });
+
+  it('wacht op zon als er te weinig over is', () => {
+    expect(dryer(state({ gridPowerW: -300 }))).toMatchObject({ state: 'waiting', reason: 'surplus_insufficient' });
+  });
+
+  it('start uiterlijk om 15:00, ook zonder zon', () => {
+    const late = Date.UTC(2026, 7, 28, 13, 5, 0); // 15:05 in Amsterdam
+    expect(dryer(state({ gridPowerW: 400, nowMs: late }))).toMatchObject({ state: 'would_start', reason: 'latest_start_reached' });
+  });
+
+  it('nooit zonder "start op afstand", en zegt het als dat onbekend is', () => {
+    expect(dryer(state({ remote: false }))).toMatchObject({ state: 'not_ready', reason: 'remote_start_not_allowed' });
+    expect(dryer(state({ remote: null }))).toMatchObject({ state: 'unknown', reason: 'reading_unavailable' });
+  });
+
+  it('weet dat hij al draait of klaar is, ook als Home Connect het in een eigen vorm zegt', () => {
+    expect(dryer(state({ operation: 'BSH.Common.EnumType.OperationState.Run' }))).toMatchObject({ state: 'running' });
+    expect(dryer(state({ operation: 'Finished' }))).toMatchObject({ state: 'not_ready', reason: 'program_finished' });
+    expect(dryer(state({ operation: 'BSH.Common.EnumType.OperationState.Ready' }))).toMatchObject({ state: 'would_start' });
+  });
+
+  it('laat een airco voorgaan, en start niet in dezelfde ronde (besluiten 68 en 85)', () => {
+    // De zolder wil koelen en krijgt het overschot; de droger wacht een ronde.
+    const s = state({ gridPowerW: -2500, atticC: 26 });
+    const d = decide({ config: exampleSite, state: s, strategies: defaultStrategies() });
+    expect(d.commands.some((c) => c.kind === 'setAction' && c.action === 'cool')).toBe(true);
+    expect(d.explanation.deferrables?.[0]).toMatchObject({ state: 'waiting', reason: 'stabilisation_active' });
+    expect(dryer(state({ gridPowerW: -2500, stabilising: true }))).toMatchObject({ reason: 'stabilisation_active' });
+  });
+
+  it('niet in de failsafe en niet als de bewoner de regeling terugtrok', () => {
+    expect(dryer(state({ healthy: false }))).toMatchObject({ state: 'waiting', reason: 'failsafe_unreliable_input' });
+    expect(dryer(state({ modeOverride: 'handmatig' }))).toMatchObject({ state: 'waiting', reason: 'mode_excludes_action' });
+  });
+
+  it('niet als de hoofdzekering het niet draagt, ook niet om 15:00 (besluit 78)', () => {
+    const late = Date.UTC(2026, 7, 28, 13, 5, 0);
+    // 31 A op een grens van 33 A: 600 W is 2,6 A, en dat past niet.
+    expect(dryer(state({ gridPowerW: 7100, currentA: 31, nowMs: late }))).toMatchObject({ state: 'waiting', reason: 'insufficient_current_budget' });
+  });
+
+  it('geeft nooit een opdracht: dat komt pas met stap B', () => {
+    const d = decide({ config: exampleSite, state: state({ gridPowerW: -900 }), strategies: defaultStrategies() });
+    expect(d.commands.filter((c) => 'actuatorId' in c && c.actuatorId === 'droger')).toEqual([]);
+  });
+
+  it('verandert niets zonder uitstelbare apparaten in de configuratie', () => {
+    const { deferrables: _gone, ...without } = exampleSite;
+    const d = decide({ config: without, state: state(), strategies: defaultStrategies() });
+    expect(d.explanation.deferrables).toBeUndefined();
+  });
+});

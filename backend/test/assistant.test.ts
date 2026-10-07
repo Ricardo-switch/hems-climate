@@ -531,3 +531,21 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     expect(JSON.stringify(b)).not.toMatch(/undefined|[a-z]+_[a-z_]+"/);
   });
 });
+
+describe('de droger in de lijst van Thuis (besluit 98)', () => {
+  const withDryer = (state: 'would_start' | 'waiting' | 'not_ready', reason: string) =>
+    view({ explanation: explanation({ deferrables: [{ id: 'droger', state, reason } as never] }) });
+
+  it('zegt dat hij nu zou starten, of waarop hij wacht', () => {
+    const start = residentView(config, withDryer('would_start', 'surplus_available')).apparaten.find((d) => d.actuatorId === 'droger');
+    expect(start).toEqual({ actuatorId: 'droger', naam: 'Droger', soort: 'ok', tekst: 'zou nu starten: er is genoeg zon over' });
+    const wait = residentView(config, withDryer('waiting', 'surplus_insufficient')).apparaten.find((d) => d.actuatorId === 'droger');
+    expect(wait?.tekst).toBe('wacht op zon, uiterlijk tot 15:00');
+  });
+
+  it('staat bij "niets te doen" als hij niet klaargezet is', () => {
+    const b = residentView(config, withDryer('not_ready', 'remote_start_not_allowed'));
+    expect(b.apparaten.some((d) => d.actuatorId === 'droger')).toBe(false);
+    expect(b.rust).toContain('Droger');
+  });
+});

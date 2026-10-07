@@ -578,9 +578,12 @@ export class ShadowRunner {
     const stroomGeweigerd = decision.rejected
       .filter((r) => r.blockedBy === 'insufficient_current_budget')
       .map((r) => r.intent.actuatorId);
+    // De uitstelbare apparaten (besluit 98): per apparaat de stand en de reden.
+    const uitstel = e.deferrables?.map((d) => [d.id, d.state, d.reason] as const);
     const phaseFields = {
       ...(fasen ? { fasen } : {}),
       ...(stroomGeweigerd.length > 0 ? { stroomGeweigerd } : {}),
+      ...(uitstel ? { uitstel } : {}),
     };
 
     const record = changed

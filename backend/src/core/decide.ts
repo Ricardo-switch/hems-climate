@@ -9,6 +9,7 @@
  */
 
 import { arbitrate } from './arbiter.js';
+import { deferrableDecisions } from './deferrable.js';
 import { buildContext } from './context.js';
 import type { DecisionContext } from './context.js';
 import type {
@@ -132,13 +133,16 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
       proposed: [],
       accepted: [],
       rejected: [],
-      explanation: explain(ctx, {
-        availableW: ctx.availableW,
-        allocatedW: 0,
-        surplusW: ctx.surplusW,
-        reclaimableW: ctx.reclaimableW,
-        gridPowerW: ctx.gridPowerW,
-      }, state),
+      explanation: withDeferrables(
+        explain(ctx, {
+          availableW: ctx.availableW,
+          allocatedW: 0,
+          surplusW: ctx.surplusW,
+          reclaimableW: ctx.reclaimableW,
+          gridPowerW: ctx.gridPowerW,
+        }, state),
+        deferrableDecisions(ctx, 0, []),
+      ),
     };
   }
 
@@ -156,6 +160,12 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
     proposed,
     accepted,
     rejected,
-    explanation: explain(ctx, budget, state),
+    // De droger krijgt wat de airco's overlaten (besluiten 85 en 98).
+    explanation: withDeferrables(explain(ctx, budget, state), deferrableDecisions(ctx, budget.allocatedW, commands)),
   };
+}
+
+/** Alleen als er uitstelbare apparaten zijn, zodat het logboek anders niet verandert. */
+function withDeferrables(e: Explanation, list: Explanation['deferrables']): Explanation {
+  return list && list.length > 0 ? { ...e, deferrables: list } : e;
 }

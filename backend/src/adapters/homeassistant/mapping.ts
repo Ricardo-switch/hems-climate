@@ -319,6 +319,24 @@ export function buildSystemState(
     // leeg, en gaat er null het logboek in.
     solarProductionW: solarW == null ? unavailable<number>('missing') : value(solarW, nowMs),
     inputHealth,
+    // De uitstelbare apparaten (besluit 98), alleen als de configuratie er een kent.
+    ...(config.deferrables && config.deferrables.length > 0
+      ? {
+          deferrables: Object.fromEntries(
+            config.deferrables.map((d) => {
+              const remote = source.bool(d.remoteStart.id);
+              const op = d.operationState ? source.state(d.operationState.id) : null;
+              return [
+                d.id,
+                {
+                  remoteStartAllowed: remote == null ? unavailable<boolean>() : value(remote, nowMs),
+                  operation: op == null ? unavailable<string>('missing') : value(op, nowMs),
+                },
+              ];
+            }),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -406,6 +424,10 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   for (const phase of config.grid?.phases ?? []) {
     ids.add(phase.current.id);
     if (phase.voltage) ids.add(phase.voltage.id);
+  }
+  for (const d of config.deferrables ?? []) {
+    ids.add(d.remoteStart.id);
+    if (d.operationState) ids.add(d.operationState.id);
   }
 
   for (const ref of config.criticalInputs) ids.add(ref.id);

@@ -294,6 +294,23 @@ export interface GridLimits {
   readonly marginA: number;
 }
 
+/**
+ * Een apparaat dat één programma draait en dan stopt, en dat Smart Climate op
+ * zon laat beginnen (besluit 98).
+ */
+export interface Deferrable {
+  readonly id: string;
+  readonly name: string;
+  /** "Start op afstand toegestaan": een programma staat klaar en de bewoner laat het toe. */
+  readonly remoteStart: DeviceRef;
+  /** De bedrijfsstatus, om te zien of het programma al draait of klaar is. */
+  readonly operationState?: DeviceRef;
+  /** Wat het apparaat ongeveer trekt als het draait, in W. */
+  readonly estimatedW: number;
+  /** Uiterlijk om deze tijd beginnen, ook zonder zon, als "HH:MM". */
+  readonly latestStart: string;
+}
+
 export interface OccupancySource {
   readonly id: string;
   readonly ref: DeviceRef;
@@ -433,6 +450,11 @@ export interface SiteConfig {
    * Optioneel; zonder blijft het alleen een vermogensbudget, zoals het was.
    */
   readonly grid?: GridLimits;
+  /**
+   * Uitstelbare apparaten, zoals de droger (besluit 98). Optioneel; zonder blijft
+   * alles zoals het was.
+   */
+  readonly deferrables?: readonly Deferrable[];
   /**
    * Hoe het huis en de panelen liggen (besluit 93).
    *

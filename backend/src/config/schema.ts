@@ -26,6 +26,7 @@ import {
   type Geometry,
   type GridLimits,
   type GridPhase,
+  type Deferrable,
   type SolarPlane,
   type ActuatorRole,
   type DeviceRef,
@@ -1249,6 +1250,36 @@ export function parseSiteConfig(
     }
   }
 
+  // Uitstelbare apparaten, zoals de droger (besluit 98). Optioneel.
+  const deferrables: Deferrable[] = [];
+  const deferrablesRaw = input['deferrables'];
+  if (deferrablesRaw !== undefined) {
+    if (!Array.isArray(deferrablesRaw)) {
+      p.error('deferrables', 'moet een lijst zijn');
+    } else {
+      const seenDeferrable = new Set<string>();
+      deferrablesRaw.forEach((d, i) => {
+        const path = join('deferrables', i);
+        if (!isRecord(d)) {
+          p.error(path, 'moet een object zijn');
+          return;
+        }
+        const id = str(p, d, path, 'id');
+        if (id && seenDeferrable.has(id)) p.error(join(path, 'id'), `apparaat "${id}" staat er twee keer`);
+        if (id) seenDeferrable.add(id);
+        const name = str(p, d, path, 'name');
+        const remoteStart = d['remoteStart'] === undefined ? (p.error(join(path, 'remoteStart'), 'ontbreekt'), null) : ref(p, d['remoteStart'], join(path, 'remoteStart'), defaultAdapter);
+        const operationState = d['operationState'] === undefined ? null : ref(p, d['operationState'], join(path, 'operationState'), defaultAdapter);
+        const estimatedW = num(p, d, path, 'estimatedW', { min: 50, max: 10_000 });
+        const latestStart = strOr(p, d, path, 'latestStart', '15:00');
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(latestStart)) p.error(join(path, 'latestStart'), 'moet een tijd zijn als "15:00"');
+        if (id && name && remoteStart && estimatedW != null) {
+          deferrables.push({ id, name, remoteStart, estimatedW, latestStart, ...(operationState ? { operationState } : {}) });
+        }
+      });
+    }
+  }
+
   // De aansluiting: stroom per fase tegen de hoofdzekering (besluit 78).
   // Optioneel; zonder blijft het alleen een vermogensbudget.
   let grid: GridLimits | null = null;
@@ -1517,6 +1548,7 @@ export function parseSiteConfig(
       ...(solarProduction ? { solarProduction } : {}),
       ...(geometry ? { geometry } : {}),
       ...(grid ? { grid } : {}),
+      ...(deferrables.length > 0 ? { deferrables } : {}),
       ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),
     },

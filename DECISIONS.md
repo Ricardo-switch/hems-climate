@@ -4252,6 +4252,30 @@ hem startte. De oude automatisering blijft draaien tot stap B.
 *Wanneer:* de schaduwversie kan nu, naast het werk aan de kern. Echt starten
 hoort bij B, met de schrijfdeur.
 
+*Aangevuld 7 oktober 2026: gebouwd in de schaduw.* De configuratie kent
+`deferrables`: per apparaat "start op afstand", de bedrijfsstatus, een geschat
+vermogen (600 W, de drempel van de oude automatisering) en de uiterlijke
+starttijd (15:00). Die twee sensoren gingen daarmee van `recordOnly` naar echte
+invoer. Elke beslissing zegt per apparaat wat het nu zou doen (`deferrables` in
+de uitleg, `uitstel` in het logboek):
+
+- **zou starten** als het overschot na de airco's het draagt, gerekend zoals de
+  arbiter een start rekent, of na de uiterlijke starttijd ook zonder zon;
+- **wacht** als er te weinig zon is, als er deze ronde al een airco startte of
+  de stabilisatie loopt (68), als de hoofdzekering het niet draagt (78, ook na
+  15:00), in de failsafe, of in handmatig;
+- **niet klaar** zonder "start op afstand", of als het programma klaar is;
+  **draait** als het programma loopt.
+
+De kern geeft geen opdracht voor de droger; een test en de invarianten bewaken
+dat, net als dat hij nooit zou starten zonder "start op afstand". Thuis toont
+het bij "Wat ik nu zou doen": "zou nu starten: er is genoeg zon over", of "wacht
+op zon, uiterlijk tot 15:00". Nog na te gaan: welke waarden Home Connect Alt
+voor de bedrijfsstatus geeft. De herkenning is ruim ("Run", "Finished", ook in
+de lange vorm), en de dataset legt de echte waarden vast zodra de droger draait.
+Nog niet: de prognose voor het komende uur (E), en een eindtijd die de bewoner
+per keer kiest.
+
 ---
 
 ## Wat nog een besluit wacht
