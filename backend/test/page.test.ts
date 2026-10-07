@@ -323,9 +323,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
       await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
-      // Zonder de lettertypes van Google, zoals in de CI: het lettertype ernaast is
-      // breder, en de pagina moet ook daarmee passen (de CI ving dat, 7 oktober).
-      await context.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
+      // De pagina haalt niets van buiten, ook de lettertypen niet: die staan in de
+      // dienst zelf. Wat toch naar buiten wil, wordt tegengehouden en onthouden.
+      const outside: string[] = [];
+      await context.route(
+        (url) => !url.href.startsWith(baseUrl),
+        (route) => {
+          outside.push(route.request().url());
+          return route.abort();
+        },
+      );
       // Alleen bij een fout bewaard: zo is te zien wat de pagina deed, ook in de CI.
       await context.tracing.start({ screenshots: true, snapshots: true });
       onTestFailed(async () => {
@@ -336,8 +343,6 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       p.setDefaultTimeout(10_000);
       const errors: string[] = [];
       p.on('pageerror', (e) => errors.push(String(e)));
-      // De lettertypen komen van buiten; zonder internet in de test is dat geen fout van de pagina.
-      await p.route('https://fonts.googleapis.com/**', (r) => r.abort());
       await p.goto(`${baseUrl}/nieuw.html`);
       await p.locator('#h-titel').filter({ hasNotText: 'Even laden' }).waitFor();
 
@@ -516,6 +521,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#o-hero .big').waitFor();
       expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
       expect(await layoutProblems(p), `Opbrengst in ${stand}`).toEqual([]);
+      // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
+      const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
+      expect(fonts).toEqual(expect.arrayContaining(['Figtree', 'Bricolage Grotesque']));
+      expect(outside).toEqual([]);
       await context.close();
     }, 30_000);
   }

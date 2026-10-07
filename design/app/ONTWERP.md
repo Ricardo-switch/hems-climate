@@ -339,7 +339,7 @@ onboarding (§4), of een eenvoudige indeling als Home Assistant het niet weet.
 | Kamer | wand (en telefoon) | alle | Eén kamer bedienen: doel, koelen of verwarmen, hoe lang; wie het overnam | 74, inlog voor schrijven | `Wand-Kamer` |
 | Leren | wand (en telefoon) | leren | Wat gevonden is, wat geleerd is, hoe zeker, wat nog nodig is | — | `Wand-Leren` |
 | Waarom | telefoon | alle | Elk besluit van vandaag met de reden | — | `Waarom` |
-| Opbrengst | telefoon | meekijken, regelen | Netstroom, kosten, ritten; comfort pas met D | D voor comfort | `Opbrengst` |
+| Opbrengst | telefoon, wand | alle | Terugkijken per dag, week, maand of jaar: stroom, gas, zon, kosten, per apparaat, vergelijken; onderaan wat Smart Climate scheelde | P1-meter, tarief; D voor comfort | `Opbrengst-terug`, `Wand-Opbrengst` |
 | Plan | wand | regelen | Wat het vanmiddag en vanavond van plan is | D en E | `Wand-Plan` |
 | Assistent | telefoon, wand | alle | Uitleg en voorstellen | G | `Assistent`, `Wand-Assistent` |
 | Bediening | telefoon | alle | Modus, comfort, wie stuurt, keuzes, gekoppeld | inlog voor schrijven | `Bediening` |

@@ -12,19 +12,26 @@
       index.html, in de ontwerptaal van design/app/. Alleen lezen: elke knop die
       iets zou veranderen, zegt dat dat in deze versie nog niet kan.
 
-      De lettertypen komen voorlopig van Google; zonder internet valt de pagina
-      terug op de systeemletter. Voor het echte product horen ze lokaal.
+      De lettertypen staan in de dienst zelf (build.js), niet bij Google: de
+      pagina haalt niets van buiten.
     -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap"
-    />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%235CC8FF'/></svg>"
-    />
+    <link rel="preload" href="figtree.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="bricolage-grotesque.woff2" as="font" type="font/woff2" crossorigin />
     <style>
+      @font-face {
+        font-family: 'Figtree';
+        font-style: normal;
+        font-weight: 300 900;
+        font-display: swap;
+        src: url('figtree.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Bricolage Grotesque';
+        font-style: normal;
+        font-weight: 200 800;
+        font-display: swap;
+        src: url('bricolage-grotesque.woff2') format('woff2');
+      }
       :root {
         --ground: #0a141c;
         --ink: #eaf2f5;

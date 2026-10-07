@@ -47,15 +47,6 @@
       "x": 2350,
       "y": 0
     },
-    "Opbrengst.dc.html": {
-      "h": 844,
-      "is_interactive": true,
-      "radius": 28,
-      "title": "Opbrengst",
-      "w": 390,
-      "x": 940,
-      "y": 0
-    },
     "Waarom.dc.html": {
       "h": 1080,
       "is_interactive": true,
@@ -299,7 +290,6 @@
   "order": [
     "Main.dc.html",
     "Waarom.dc.html",
-    "Opbrengst.dc.html",
     "Assistent.dc.html",
     "Bediening.dc.html",
     "Wand-Thuis.dc.html",

@@ -24,7 +24,6 @@ wordt de app en blijft dun: alles wat hij toont, komt uit de dienst (besluit
 | --- | --- | --- |
 | Telefoon · Thuis | `Main.dc.html` | Hoe het huis er nu voor staat |
 | Telefoon · Waarom | `Waarom.dc.html` | Elk besluit van vandaag, met de reden |
-| Telefoon · Opbrengst | `Opbrengst.dc.html` | Wat het oplevert, gemeten in schaduwmodus |
 | Telefoon · Assistent | `Assistent.dc.html` | Uitleg, en een opdracht met een voorstel voor later en de vraag tot hoe laat (besluit 75) |
 | Telefoon · Bediening | `Bediening.dc.html` | Modus, comfort per kamer, wie stuurt, gekoppeld |
 | Wand · Thuis | `Wand-Thuis.dc.html` | Het huis als doorsnede, met de stroom van zon naar airco |

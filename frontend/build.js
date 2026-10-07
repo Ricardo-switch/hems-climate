@@ -33,6 +33,20 @@ async function copyStatic() {
 
 const copied = await copyStatic();
 
+/*
+ * De lettertypen staan in de dienst zelf, niet bij Google: de app werkt zo ook
+ * zonder internet, en een bezoek lekt niets naar buiten. Uit de npm-pakketten
+ * van Fontsource (OFL), alleen de Latijnse set: die heeft ook €, ³, ° en −.
+ */
+const FONTS = {
+  'figtree.woff2': '@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2',
+  'bricolage-grotesque.woff2': '@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2',
+};
+for (const [name, from] of Object.entries(FONTS)) {
+  await copyFile(join(here, 'node_modules', from), join(out, name));
+  copied.push(name);
+}
+
 const args = [
   '--input',
   join(src, 'input.css'),
