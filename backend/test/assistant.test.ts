@@ -16,6 +16,7 @@ import type { Explanation } from '../src/core/decision.js';
 import { value } from '../src/core/state.js';
 import { defaultStrategies } from '../src/index.js';
 import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus } from '../src/web/assistant.js';
+import { inSentence } from '../src/web/assistant.js';
 import type { Answer, DecisionView, Question } from '../src/web/assistant.js';
 import type { TodayReport } from '../src/web/today.js';
 
@@ -119,7 +120,7 @@ describe('waarom', () => {
 
   it('zegt "staat uit" voor een apparaat dat uit staat', () => {
     const a = askNl({ kind: 'waarom', kamer: 'woonkamer' });
-    expect(a.antwoord).toContain('In werkelijkheid staat de nest (beneden) op verwarmen naar 20°, en staat de airco woonkamer uit.');
+    expect(a.antwoord).toContain('In werkelijkheid staat de Nest (beneden) op verwarmen naar 20°, en staat de airco woonkamer uit.');
   });
 
   it('zegt "koelt" in plaats van "zou" zodra hij echt schakelt', () => {
@@ -305,7 +306,7 @@ describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
 
   it('verwarmt eerst met wat de basiswarmte levert', () => {
     const a = askNl({ kind: 'doe', kamer: 'woonkamer', wens: 'verwarmen', temperatuurC: 21 });
-    expect(a.antwoord).toContain('de nest (beneden) op verwarmen naar 21°');
+    expect(a.antwoord).toContain('de Nest (beneden) op verwarmen naar 21°');
   });
 
   it('weet wat een apparaat niet kan', () => {
@@ -435,5 +436,14 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
         }
       }
     }
+  });
+});
+
+describe('namen midden in een zin', () => {
+  it('maakt alleen een gewoon woord klein, en houdt een merk of een naam', () => {
+    expect(inSentence('Airco woonkamer')).toBe('airco woonkamer');
+    expect(inSentence('Slaapkamer Mylan')).toBe('slaapkamer Mylan');
+    expect(inSentence('Nest (beneden)')).toBe('Nest (beneden)');
+    expect(inSentence('Voorgevel')).toBe('voorgevel');
   });
 });

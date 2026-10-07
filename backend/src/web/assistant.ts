@@ -88,7 +88,7 @@ export interface AskContext {
 /** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
 function facadeSentence(zoninval: AskContext['zoninval'], lang: Lang): string | null {
   if (zoninval == null || !zoninval.boven) return null;
-  const list = zoninval.gevels.map((n) => (lang === 'nl' ? `de ${n.toLowerCase()}` : `the ${n.toLowerCase()}`));
+  const list = zoninval.gevels.map((n) => (lang === 'nl' ? `de ${inSentence(n)}` : `the ${inSentence(n)}`));
   if (list.length === 0) {
     return lang === 'nl' ? 'De zon staat nu op geen van de gevels.' : 'The sun is not on any of the facades right now.';
   }
@@ -330,13 +330,25 @@ const WORDS = {
   },
 } as const;
 
+/**
+ * Een naam midden in een zin. Alleen de eerste letter gaat klein, en alleen als
+ * het eerste woord een gewoon woord is: "Slaapkamer Mylan" wordt "slaapkamer
+ * Mylan" en "Nest (beneden)" blijft "Nest (beneden)". Een merk of een naam
+ * houdt zijn hoofdletter.
+ */
+const COMMON = /^(airco|thermostaat|zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|zone|lamp|screen|zonnescherm|droger|wasmachine|vaatwasser|verwarming|vloerverwarming|radiator|ventilatie|warmtepomp|boiler|voorgevel|achtergevel|zijgevel|gevel)\b/i;
+
+export function inSentence(name: string): string {
+  return COMMON.test(name) ? name.charAt(0).toLowerCase() + name.slice(1) : name;
+}
+
 /** "Zolder" → "de zolder"; in het Engels de naam zoals hij is. */
 function zoneName(zone: Zone, lang: Lang): string {
-  return lang === 'nl' ? `de ${zone.name.toLowerCase()}` : `the ${zone.name}`;
+  return lang === 'nl' ? `de ${inSentence(zone.name)}` : `the ${zone.name}`;
 }
 
 function deviceName(actuator: Actuator, lang: Lang): string {
-  return lang === 'nl' ? `de ${actuator.name.toLowerCase()}` : `the ${actuator.name}`;
+  return lang === 'nl' ? `de ${inSentence(actuator.name)}` : `the ${actuator.name}`;
 }
 
 function cap(s: string): string {
@@ -606,7 +618,7 @@ function realSentence(f: Facts, config: SiteConfig, snap: DecisionView, zone: Zo
 /* --------------------------------------------------------------- antwoorden */
 
 function unknownRoom(config: SiteConfig, said: string, lang: Lang): string {
-  const names = config.zones.map((z) => z.name.toLowerCase()).join(', ');
+  const names = config.zones.map((z) => inSentence(z.name)).join(', ');
   return lang === 'nl'
     ? `De kamer "${said}" ken ik niet. Ik ken: ${names}.`
     : `I do not know the room "${said}". I know: ${names}.`;

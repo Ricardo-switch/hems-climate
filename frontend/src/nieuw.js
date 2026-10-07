@@ -169,7 +169,11 @@ function showView() {
     if (a.dataset.target === menu) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
-  if (id === 'huis') void loadHouse(true);
+  if (id === 'huis') {
+    // Meteen tekenen wat er al is (of "even laden"), dan verversen.
+    renderHouse();
+    void loadHouse(true);
+  }
   if (id === 'opbrengst') void loadReview();
   if (id === 'waarom' || id === 'thuis') void loadToday();
 }
@@ -712,24 +716,12 @@ function renderReview() {
     barRow('Huidige regeling', legacyKwh, 100, 'rgba(169,186,194,0.45)'),
     barRow('Smart Climate', ours, legacyKwh > 0 ? (ours / legacyKwh) * 100 : 0, null),
   );
-  const winter = r.dataset?.seizoenen?.find((x) => x.seizoen === 'winter');
+  // De dataset (seizoenen, winterdagen) is een cijfer over de opname, en staat
+  // in de schaduwweergave; hier alleen wat de bewoner er iets aan heeft.
   $('o-tegels').replaceChildren(
     el('div', { class: 'card', style: 'gap: 4px' }, el('div', { style: 'font-size: 24px; font-weight: 600', text: `${r.episodesTotaal}` }), el('div', { class: 'small muted', text: 'keer dat Smart Climate het anders zou doen' })),
-    el('div', { class: 'card', style: 'gap: 4px' }, el('div', { style: 'font-size: 24px; font-weight: 600', text: winter ? `${nl(winter.dagen, 0)} / ${winter.doel}` : '—' }), el('div', { class: 'small muted', text: 'winterdagen in de dataset' })),
   );
-  const seasons = r.dataset?.seizoenen ?? [];
-  $('o-dataset').replaceChildren(
-    el('div', { class: 'head' }, el('h2', { text: 'De dataset' }), el('small', { text: `${nl(r.dataset?.dagenOpgenomen ?? 0)} dagen opgenomen` })),
-    ...seasons.map((x) =>
-      el(
-        'div',
-        { class: 'stack', style: 'gap: 4px' },
-        el('div', { class: 'small', style: 'display: flex; justify-content: space-between' }, el('span', { text: x.seizoen }), el('span', { class: 'muted', text: `${nl(x.dagen, 0)} van ${x.doel}` })),
-        el('div', { class: 'bar' }, el('div', { style: `width: ${Math.min(100, (x.dagen / x.doel) * 100)}%` })),
-      ),
-    ),
-  );
-  $('o-voet').textContent = `Gemeten in schaduwmodus: wat Smart Climate zou hebben gedaan. Berekend om ${hhmm(r.berekendOpMs)}, uit ${r.bestanden} dagbestanden.`;
+  $('o-voet').textContent = `Gemeten terwijl Smart Climate meekeek: wat hij zou hebben gedaan. Bijgewerkt om ${hhmm(r.berekendOpMs)}.`;
 }
 
 function barRow(label, kwh, pct, color) {
@@ -884,17 +876,23 @@ function render(snap) {
  */
 let house = null;
 let houseAt = 0;
+let houseTried = false;
 
 async function loadHouse(force = false) {
   if (!force && Date.now() - houseAt < 20_000) return;
   houseAt = Date.now();
   await loadLayoutInfo();
+  let fresh = null;
   try {
     const res = await fetch('api/huis');
-    house = res.ok ? await res.json() : null;
+    fresh = res.ok ? await res.json() : null;
   } catch {
-    house = null;
+    // Geen verbinding: hieronder blijft de laatste stand staan.
   }
+  // Een verversing die mislukt, bijvoorbeeld terwijl de dienst net opnieuw
+  // start, wist het huis niet: de laatste stand blijft staan (besluit 82).
+  if (fresh || !house) house = fresh;
+  houseTried = true;
   renderHouse();
 }
 
@@ -1164,7 +1162,7 @@ function renderHouse() {
   if (!house) {
     back('#thuis', 'Thuis');
     crumb([['Huis']]);
-    heading('Het huis', { zin: 'De etages en ruimtes komen van Home Assistant zodra die verbonden is.' });
+    heading('Het huis', { zin: houseTried ? 'De etages en ruimtes komen van Home Assistant zodra die verbonden is.' : 'Even laden…' });
     $('hu-lijst').replaceChildren();
     return;
   }
@@ -1638,12 +1636,14 @@ let editing = false;
 let editMessage = '';
 
 async function loadLayoutInfo() {
+  let fresh = null;
   try {
     const res = await fetch('api/indeling');
-    layoutInfo = res.ok ? await res.json() : null;
+    fresh = res.ok ? await res.json() : null;
   } catch {
-    layoutInfo = null;
+    // Zoals bij het huis: de laatste stand blijft.
   }
+  if (fresh || !layoutInfo) layoutInfo = fresh;
 }
 
 /** De indeling om te bewerken: de eigen, of anders het voorstel uit Home Assistant. */
