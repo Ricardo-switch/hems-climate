@@ -3746,6 +3746,16 @@ achtergevel op 277°, de dakvlakken op 97° en 277° met een helling van 47° en
 elk 2.340 Wp, en een omvormer van 3.000 W. De toets volgt met de zonnesensor op
 de screen: als de voorgevel op het oosten kijkt, valt de zon er rond 13:40 af.
 
+*De toets, 5 tot 7 oktober 2026:* de zonnesensor op de screen verloor de directe
+zon al rond 10:15, bij een zonnehoogte van zo'n 20°, terwijl de panelen helder
+doorleverden. Volgens de bewoner hangt de sensor onder de dakgoot: zodra de zon
+hoger staat, valt hij in de schaduw. De sensor zegt dus iets over zon op het
+raam onder de goot, niet over de richting van de gevel. De voorgevel blijft op
+97° (oost), afgeleid van het oostdak en de ochtendzon, als `schatting`. Voor de
+app volgt eruit: een gevel meten uit een zonnesensor kan alleen als die vrij op
+de gevel hangt, en dat vraagt de app eerst ("hangt hij onder een goot of
+overstek?") voordat hij de richting eruit afleidt.
+
 ---
 
 ## 94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app
