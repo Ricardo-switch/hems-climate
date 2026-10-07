@@ -3190,6 +3190,11 @@ Nog niet: leren op welke fase een apparaat zit (deel 2 van dit besluit), de
 hoofdzekering vragen in de onboarding, en draaiende apparaten afschakelen bij
 overbelasting; dat laatste is ingrijpend en vraagt een bewuste keuze.
 
+*Voor dit huis, vooruit:* er loopt een aanvraag voor drie fasen, 3 × 25 A,
+die eind 2026 gerealiseerd wordt (volgens de bewoner, 7 oktober 2026). Dan
+krijgt `grid` drie fasen met de P1-sensoren per fase, en wordt het budget per
+fase hier ook in de praktijk getest; tot dan alleen met tests.
+
 ---
 
 ## 79. Wat een pushmelding krijgt, en wat in de app blijft
@@ -4096,9 +4101,20 @@ arbiter, eerst in de schaduw.
   nu doen" (94). Zo is te zien of Smart Climate een beter moment kiest voordat
   hij iets indrukt.
 
-*Voor dit huis:* de droger komt via twee koppelingen binnen (Home Connect en
-Home Connect Alt). Eén ervan wordt de bron; de andere blijft buiten de
-configuratie. De oude automatisering blijft draaien tot stap B.
+*Voor dit huis:* de droger komt via twee koppelingen binnen. De bron wordt
+Home Connect Alt (via HACS): die heeft een echte startknop (`start_pause`), die
+de oude automatisering al gebruikt, en levert de geschatte totale duur, de
+resterende tijd en de bedrijfsstatus apart. De officiële koppeling heeft
+mooiere namen, maar start alleen door een programma te kiezen
+(`select.droger_actieve_programma`), en dat is meer dan op de knop drukken. De
+lange namen doen er niet toe: de app gebruikt zijn eigen naam (95). Valt Alt
+ooit weg, dan is de officiële koppeling de terugval; het uitstelbare apparaat
+kent daarom twee manieren van starten, een knop of een programma kiezen. Sinds
+7 oktober schrijven de status, "start op afstand", de deur, het programma, de
+duur, de resterende tijd, de voortgang en het startteken van de oude
+automatisering (`input_boolean.droger_auto_gestart`) mee in `recordOnly`. Zo
+laat de dataset zien wanneer de droger klaarstond en wanneer het oude systeem
+hem startte. De oude automatisering blijft draaien tot stap B.
 
 *Wanneer:* de schaduwversie kan nu, naast het werk aan de kern. Echt starten
 hoort bij B, met de schrijfdeur.
