@@ -95,7 +95,10 @@ describe('het voorstel uit Home Assistant', () => {
     expect(house.samenvatting.lampenAan).toBe(house.lampenAan);
     const lamp = (id: string) => wk.apparaten.find((d) => d.id === id)!;
     expect([lamp('light.woonkamer_plafonniere').dimbaar, lamp('light.woonkamer_plafonniere').kleurtemp]).toEqual([true, true]);
-    expect([lamp('light.sfeerverlichting').dimbaar, lamp('light.sfeerverlichting').kleurtemp]).toEqual([false, false]);
+    expect([lamp('light.sfeerverlichting').dimbaar, lamp('light.sfeerverlichting').kleurtemp]).toEqual([true, true]);
+    const tuin = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'light.achtertuin')!;
+    expect([tuin.dimbaar, tuin.kleurtemp]).toEqual([false, false]);
+    expect(tuin.licht).toEqual({ wit: null, kleur: false, kelvin: null, tint: null });
   });
 
   it('zet wat in geen gebied hangt bij "nog in te delen", met de kamer van zijn groep als voorstel', () => {
@@ -269,5 +272,27 @@ describe('een vastgelegde indeling', () => {
     });
     const tuinRoom = later.etages.find((e) => e.id === 'buiten')!.ruimtes.find((r) => r.id === tuin.id)!;
     expect(tuinRoom.apparaten.find((d) => d.id === 'light.hue_badkamer')?.naam).toBe('Badkamer');
+  });
+});
+
+describe('wit, kleur en scènes (besluit 100)', () => {
+  const house = buildHouse(exampleSite, registers, states, snapshot);
+  const rooms = house.etages.flatMap((f) => f.ruimtes);
+  const wk = rooms.find((r) => r.naam === 'Woonkamer')!;
+
+  it('zegt per lamp wat hij in wit en kleur kan, en hoe hij nu staat', () => {
+    const sfeer = wk.apparaten.find((d) => d.id === 'light.sfeerverlichting')!;
+    expect(sfeer.licht).toEqual({ wit: { minK: 2000, maxK: 6500 }, kleur: true, kelvin: null, tint: [30, 80] });
+    const plaf = wk.apparaten.find((d) => d.id === 'light.woonkamer_plafonniere')!;
+    expect(plaf.licht?.kleur).toBe(false);
+    expect(plaf.licht?.wit).not.toBeNull();
+  });
+
+  it('zet de scènes bij hun ruimte, met de laatst gekozen als actief, en laat een scène zonder ruimte weg', () => {
+    expect(wk.scenes).toEqual([
+      { id: 'scene.keuken_lezen', naam: 'Lezen', actief: false },
+      { id: 'scene.ontspannen', naam: 'Ontspannen', actief: true },
+    ]);
+    expect(rooms.flatMap((r) => r.scenes).map((s) => s.id)).not.toContain('scene.garage_feest');
   });
 });

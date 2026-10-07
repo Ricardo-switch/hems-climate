@@ -382,6 +382,8 @@ export class WebServer {
       (this.#options.feedback != null && path === '/api/gevoel') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       (this.#options.lights != null && path === '/api/licht') ||
+      // Scènes (besluit 100): een eigen smalle deur naast het licht.
+      (this.#options.lights?.scenesEnabled === true && path === '/api/scene') ||
       // Uitloggen (besluit 99): alleen de eigen sessie weg, verder niets.
       (access.kind === 'sessions' && path === '/auth/logout');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
@@ -659,6 +661,29 @@ export class WebServer {
       }
       // Of de knoppen voor licht echt schakelen, of zeggen dat het nog niet mag.
       sendJson(res, 200, { ...house, lichtBedienen: this.#options.lights != null });
+      return;
+    }
+
+    if (path === '/api/scene') {
+      const lights = this.#options.lights;
+      if (lights == null || !lights.scenesEnabled) {
+        sendJson(res, 503, { wachten: 'scènes staan niet aan' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 405, { fout: 'een scène zet je aan met een POST' });
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await lights.scene(body);
+      if (result.ok) sendJson(res, 200, { aan: true });
+      else sendJson(res, result.status, { fout: result.reden });
       return;
     }
 

@@ -13,6 +13,11 @@
  * - "aan" voor één lamp of één kamer, nooit voor een hele etage of het huis: dat
  *   is zelden de bedoeling en 's nachts een vervelende vergissing;
  * - een grens op het tempo.
+ *
+ * Besluit 100 voegt toe: wit in kelvin en kleur als tint en verzadiging, alleen
+ * voor één lamp en alleen als die lamp dat kan; en de scènes van een ruimte,
+ * via een eigen smalle deur (`scene.turn_on`, alleen scènes die het huis bij een
+ * ruimte toont).
  */
 
 import { lampsFor, type HouseReport } from './house.js';
@@ -27,6 +32,10 @@ export interface LightRequest {
   readonly helderheidPct: number | null;
   /** Warm, neutraal of koel wit, alleen bij aan. */
   readonly kleur: LightColor | null;
+  /** Wit in kelvin (besluit 100), alleen bij aan en alleen voor één lamp. */
+  readonly kelvin: number | null;
+  /** Kleur als tint 0–360 en verzadiging 0–100 (besluit 100), alleen voor één lamp. */
+  readonly tint: readonly [number, number] | null;
 }
 
 export type LightColor = 'warm' | 'neutraal' | 'koel';
@@ -63,9 +72,37 @@ export function parseLightRequest(body: unknown): { ok: true; request: LightRequ
   if (kleur !== null && (!aan || typeof kleur !== 'string' || !(kleur in KELVIN))) {
     return { ok: false, reden: `kleur is ${Object.keys(KELVIN).join(', ')}, en alleen bij aan` };
   }
+  const kelvin = b['kelvin'] ?? null;
+  if (kelvin !== null && (!aan || doel !== 'lamp' || typeof kelvin !== 'number' || !Number.isInteger(kelvin) || kelvin < 1500 || kelvin > 9000)) {
+    return { ok: false, reden: 'kelvin is een geheel getal van 1500 tot en met 9000, alleen bij aan en voor één lamp' };
+  }
+  const tintRaw = b['tint'] ?? null;
+  const tintOk =
+    Array.isArray(tintRaw) &&
+    tintRaw.length === 2 &&
+    typeof tintRaw[0] === 'number' &&
+    typeof tintRaw[1] === 'number' &&
+    tintRaw[0] >= 0 &&
+    tintRaw[0] <= 360 &&
+    tintRaw[1] >= 0 &&
+    tintRaw[1] <= 100;
+  if (tintRaw !== null && (!aan || doel !== 'lamp' || !tintOk)) {
+    return { ok: false, reden: 'tint is [0–360, 0–100], alleen bij aan en voor één lamp' };
+  }
+  if ([kleur, kelvin, tintRaw].filter((x) => x !== null).length > 1) {
+    return { ok: false, reden: 'kies één van kleur, kelvin of tint' };
+  }
   return {
     ok: true,
-    request: { doel: doel as LightTarget, id: id as string | null, aan, helderheidPct: h as number | null, kleur: kleur as LightColor | null },
+    request: {
+      doel: doel as LightTarget,
+      id: id as string | null,
+      aan,
+      helderheidPct: h as number | null,
+      kleur: kleur as LightColor | null,
+      kelvin: kelvin as number | null,
+      tint: tintRaw === null ? null : [tintRaw[0] as number, tintRaw[1] as number],
+    },
   };
 }
 
@@ -74,6 +111,8 @@ export interface LightSwitchOptions {
   readonly house: () => HouseReport | null;
   /** Roept de dienst aan in Home Assistant; de client staat alleen licht toe. */
   readonly call: (service: 'turn_on' | 'turn_off', entityIds: readonly string[], data: Record<string, unknown>) => Promise<void>;
+  /** Zet een scène aan (besluit 100); weg als scènes niet mogen. */
+  readonly callScene?: (sceneId: string) => Promise<void>;
   readonly now?: () => number;
   /** Zoveel opdrachten per minuut. */
   readonly perMinute?: number;
@@ -96,7 +135,7 @@ export class LightSwitch {
   async switch(body: unknown): Promise<LightResult> {
     const parsed = parseLightRequest(body);
     if (!parsed.ok) return { ok: false, status: 400, reden: parsed.reden };
-    const { doel, id, aan, helderheidPct, kleur } = parsed.request;
+    const { doel, id, aan, helderheidPct, kleur, kelvin, tint } = parsed.request;
 
     const house = this.#options.house();
     if (house == null) return { ok: false, status: 503, reden: 'het huis is nog niet gelezen uit Home Assistant' };
@@ -104,20 +143,67 @@ export class LightSwitch {
     if (lamps == null) return { ok: false, status: 404, reden: `die ${doel} kent het huis niet` };
     if (lamps.length === 0) return { ok: true, lampen: 0 };
 
-    const t = this.#now();
-    this.#recent = this.#recent.filter((x) => t - x < WINDOW_MS);
-    if (this.#recent.length >= this.#limit) return { ok: false, status: 429, reden: 'even te veel achter elkaar; probeer het zo weer' };
-    this.#recent.push(t);
+    // Wit en kleur alleen als de lamp het kan, en wit binnen zijn bereik.
+    let kelvinOut = kleur == null ? kelvin : KELVIN[kleur];
+    if (kelvin != null || tint != null) {
+      const lamp = house.etages.flatMap((f) => f.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === id);
+      const kan = lamp?.licht;
+      if (kelvin != null) {
+        if (!kan?.wit) return { ok: false, status: 400, reden: 'deze lamp kan geen tint wit' };
+        kelvinOut = Math.min(kan.wit.maxK, Math.max(kan.wit.minK, kelvin));
+      }
+      if (tint != null && !kan?.kleur) return { ok: false, status: 400, reden: 'deze lamp kan geen kleur' };
+    }
+
+    if (!this.#take()) return { ok: false, status: 429, reden: 'even te veel achter elkaar; probeer het zo weer' };
 
     try {
       const data = {
         ...(helderheidPct == null ? {} : { brightness_pct: helderheidPct }),
-        ...(kleur == null ? {} : { color_temp_kelvin: KELVIN[kleur] }),
+        ...(kelvinOut == null ? {} : { color_temp_kelvin: kelvinOut }),
+        ...(tint == null ? {} : { hs_color: [tint[0], tint[1]] }),
       };
       await this.#options.call(aan ? 'turn_on' : 'turn_off', lamps, data);
     } catch (error) {
       return { ok: false, status: 502, reden: `Home Assistant weigerde: ${(error as Error).message}` };
     }
     return { ok: true, lampen: lamps.length };
+  }
+
+  /** Mogen scènes (besluit 100)? Dan bestaat de route. */
+  get scenesEnabled(): boolean {
+    return this.#options.callScene != null;
+  }
+
+  /**
+   * Zet een scène aan (besluit 100): alleen een scène die het huis bij een
+   * ruimte toont. Een andere `scene.`, of iets wat geen scène is, komt niet
+   * verder dan hier; de client weigert daarna ook alles behalve `scene.turn_on`.
+   */
+  async scene(body: unknown): Promise<LightResult> {
+    const callScene = this.#options.callScene;
+    if (callScene == null) return { ok: false, status: 503, reden: 'scènes staan niet aan' };
+    const id = typeof body === 'object' && body != null && !Array.isArray(body) ? (body as Record<string, unknown>)['id'] : undefined;
+    if (typeof id !== 'string' || !/^scene\.[a-z0-9_]+$/.test(id)) return { ok: false, status: 400, reden: 'id is een scène' };
+    const house = this.#options.house();
+    if (house == null) return { ok: false, status: 503, reden: 'het huis is nog niet gelezen uit Home Assistant' };
+    const known = house.etages.flatMap((f) => f.ruimtes).some((r) => r.scenes.some((s) => s.id === id));
+    if (!known) return { ok: false, status: 404, reden: 'die scène hoort bij geen ruimte in je indeling' };
+    if (!this.#take()) return { ok: false, status: 429, reden: 'even te veel achter elkaar; probeer het zo weer' };
+    try {
+      await callScene(id);
+    } catch (error) {
+      return { ok: false, status: 502, reden: `Home Assistant weigerde: ${(error as Error).message}` };
+    }
+    return { ok: true, lampen: 0 };
+  }
+
+  /** De grens op het tempo, gedeeld door lampen en scènes. */
+  #take(): boolean {
+    const t = this.#now();
+    this.#recent = this.#recent.filter((x) => t - x < WINDOW_MS);
+    if (this.#recent.length >= this.#limit) return false;
+    this.#recent.push(t);
+    return true;
   }
 }

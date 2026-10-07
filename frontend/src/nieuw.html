@@ -763,6 +763,126 @@
         accent-color: #ffe08a;
         cursor: pointer;
       }
+      /* Wit en kleur van een lamp (besluit 100, `Lamp`, `Lamp-wit`). */
+      /* De schuif zelf is de band van warm naar daglicht. */
+      .wit-schuif {
+        appearance: none;
+        height: 14px;
+        margin: 7px 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ffb35c, #fff1d6 55%, #d6e9ff);
+      }
+      .wit-schuif::-webkit-slider-thumb {
+        appearance: none;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 3px solid #0a141c;
+        background: var(--ink);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+      }
+      .wit-schuif::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid #0a141c;
+        background: var(--ink);
+      }
+      .lampkleur .knoppen button[aria-pressed='true'],
+      .scenes button[aria-pressed='true'] {
+        border: 2px solid var(--ink);
+      }
+      .kleuren {
+        display: grid;
+        grid-template-columns: minmax(72px, 112px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: center;
+      }
+      .kleurrad {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle, #fff 0, rgba(255, 255, 255, 0) 62%),
+          conic-gradient(#ff4d4d, #ffd54d, #5ce07a, #4de0e0, #4d7bff, #c04dff, #ff4da6, #ff4d4d);
+        cursor: pointer;
+      }
+      .kleurrad input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+      .stalen {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .stalen button {
+        width: 100%;
+        max-width: 52px;
+        aspect-ratio: 1;
+        justify-self: center;
+        padding: 0;
+        border-radius: 50%;
+        border: 3px solid rgba(0, 0, 0, 0.3);
+        background: var(--staal);
+        cursor: pointer;
+      }
+      .stalen button[aria-pressed='true'] {
+        border-color: var(--ink);
+      }
+      .tussen {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      }
+      .scenebox {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+      .scenes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .scenes button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 8px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        font-weight: 600;
+        text-align: left;
+        cursor: pointer;
+      }
+      .scenes button::before {
+        content: '';
+        flex: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--warm), var(--violet));
+      }
+      .lampkleur button:disabled,
+      .scenes button:disabled,
+      .kleurrad:has(input:disabled) {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
       /*
        * De basisplattegrond van een etage (Wand-Etage): kamers als vlakken naast
        * elkaar, zones gestippeld gescheiden, de apparaten erin. De muren zijn de

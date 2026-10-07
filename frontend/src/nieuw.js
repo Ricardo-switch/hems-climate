@@ -868,9 +868,9 @@ const lampen = (n) => `${n} ${n === 1 ? 'lamp' : 'lampen'} aan`;
  * alleen het doel. Daarna even wachten tot Home Assistant de nieuwe stand
  * doorgeeft, en het huis opnieuw tekenen.
  */
-async function switchLights(body) {
+async function switchLights(body, door = 'api/licht') {
   try {
-    const res = await postDoor('api/licht', body);
+    const res = await postDoor(door, body);
     const out = await res.json();
     if (!res.ok) return out.fout ?? out.wachten ?? 'Niet gelukt.';
     // Niet tijdens het indelen: dan ververst het huis nooit vanzelf, anders raakt
@@ -1005,6 +1005,152 @@ function lampSwitch(d, say) {
     say(fout ?? `${d.naam} gaat ${aan ? 'aan' : 'uit'}.`);
   });
   return sw;
+}
+
+/*
+ * Wit en kleur (besluit 100, `Lamp`, `Lamp-wit`): twee tabs, alleen wat de lamp
+ * kan. Wit is een schuif van warm tot daglicht met drie vaste standen; kleur zijn
+ * acht vaste kleuren en het rad voor elke andere. De dienst houdt kelvin binnen
+ * het bereik van de lamp.
+ */
+const WHITES = [
+  ['Warm', 2700, 'warm wit'],
+  ['Neutraal', 4000, 'neutraal wit'],
+  ['Daglicht', 6500, 'daglicht'],
+];
+const COLOURS = [
+  ['rood', 0, 85],
+  ['oranje', 30, 90],
+  ['geel', 52, 85],
+  ['groen', 140, 65],
+  ['turkoois', 180, 70],
+  ['blauw', 220, 75],
+  ['paars', 270, 65],
+  ['roze', 320, 65],
+];
+/** Welke tab per lamp open stond, zodat een verversing hem niet terugzet. */
+const lampTab = new Map();
+
+const whiteWord = (k) => (k < 3300 ? 'warm wit' : k < 5000 ? 'neutraal wit' : 'daglicht');
+
+/** Tint en verzadiging (zoals Home Assistant ze geeft) als CSS-kleur, op volle helderheid. */
+function hsCss(h, sat) {
+  const sv = sat / 100;
+  const f = (n) => {
+    const k = (n + h / 60) % 6;
+    return Math.round(255 * (1 - sv * Math.max(0, Math.min(k, 4 - k, 1))));
+  };
+  return `rgb(${f(5)}, ${f(3)}, ${f(1)})`;
+}
+
+/** "#ff8800" naar tint en verzadiging. */
+function hexHs(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d > 0) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [Math.round((h * 60 + 360) % 360), max === 0 ? 0 : Math.round((d / max) * 100)];
+}
+
+/** De naam van een vaste kleur dicht bij deze tint, of null. */
+function colourName(tint) {
+  if (!tint) return null;
+  const near = COLOURS.find(([, h, s]) => Math.min(Math.abs(h - tint[0]), 360 - Math.abs(h - tint[0])) <= 12 && Math.abs(s - tint[1]) <= 20);
+  return near?.[0] ?? null;
+}
+
+function lampColour(d, say, live) {
+  const kan = d.licht;
+  const tabs = [kan.wit ? 'wit' : null, kan.kleur ? 'kleur' : null].filter(Boolean);
+  let tab = lampTab.get(d.id) ?? (kan.tint && kan.kleur ? 'kleur' : tabs[0]);
+  if (!tabs.includes(tab)) tab = tabs[0];
+  const box = el('div', { class: 'stack lampkleur' });
+  const send = async (body, done) => {
+    say('Even…');
+    const fout = await switchLights({ doel: 'lamp', id: d.id, aan: true, ...body });
+    say(fout ?? done);
+  };
+
+  const wit = () => {
+    const { minK, maxK } = kan.wit;
+    const now = kan.kelvin ?? Math.min(maxK, Math.max(minK, 2700));
+    const slider = el('input', { type: 'range', class: 'dimmer wit-schuif', min: String(minK), max: String(maxK), step: '50', value: String(now), 'aria-label': `Wit van ${d.naam}, van warm tot daglicht` });
+    slider.disabled = !live;
+    slider.addEventListener('change', () => void send({ kelvin: Number(slider.value) }, `${d.naam} op ${whiteWord(Number(slider.value))}.`));
+    const presets = el('div', { class: 'knoppen drie' });
+    for (const [label, k, word] of WHITES) {
+      const b = el('button', { type: 'button', text: label, 'aria-pressed': String(kan.kelvin != null && whiteWord(kan.kelvin) === word) });
+      b.disabled = !live;
+      b.addEventListener('click', () => void send({ kelvin: Math.min(maxK, Math.max(minK, k)) }, `${d.naam} ${word}.`));
+      presets.append(b);
+    }
+    return [slider, el('div', { class: 'tussen small muted' }, el('span', { text: 'Warm, geel' }), el('span', { text: 'Daglicht, koel' })), presets];
+  };
+
+  const kleur = () => {
+    const name = colourName(kan.tint);
+    const swatches = el(
+      'div',
+      { class: 'stalen' },
+      ...COLOURS.map(([naam, h, sat]) => {
+        const b = el('button', { type: 'button', style: `--staal: ${hsCss(h, sat)}`, 'aria-label': naam, title: naam, 'aria-pressed': String(name === naam) });
+        b.disabled = !live;
+        b.addEventListener('click', () => void send({ tint: [h, sat] }, `${d.naam} ${naam}.`));
+        return b;
+      }),
+    );
+    const pick = el('input', { type: 'color', value: '#ff9a3c', 'aria-label': `Een andere kleur voor ${d.naam}` });
+    pick.disabled = !live;
+    pick.addEventListener('change', () => void send({ tint: hexHs(pick.value) }, `${d.naam} in de gekozen kleur.`));
+    return [el('div', { class: 'kleuren' }, el('label', { class: 'kleurrad', title: 'Elke andere kleur' }, pick), swatches)];
+  };
+
+  const draw = () => {
+    const parts = [];
+    if (tabs.length > 1) {
+      const seg = el('div', { class: 'seg pick', role: 'group', 'aria-label': 'Wit of kleur', style: 'grid-template-columns: 1fr 1fr' });
+      for (const t of tabs) {
+        const b = el('button', { type: 'button', text: t === 'wit' ? 'Wit' : 'Kleur', 'aria-pressed': String(t === tab) });
+        b.addEventListener('click', () => {
+          tab = t;
+          lampTab.set(d.id, t);
+          draw();
+        });
+        seg.append(b);
+      }
+      parts.push(seg);
+    }
+    parts.push(...(tab === 'kleur' ? kleur() : wit()));
+    box.replaceChildren(...parts);
+  };
+  draw();
+  return box;
+}
+
+/** De scènes van de ruimte, uit Hue (besluit 100): één tik zet alle lampen ervan. */
+function roomScenes(room, say, live) {
+  const grid = el(
+    'div',
+    { class: 'scenes' },
+    ...room.scenes.map((sc) => {
+      const b = el('button', { type: 'button', text: sc.naam, 'aria-pressed': String(sc.actief) });
+      b.disabled = !live;
+      b.addEventListener('click', async () => {
+        say('Even…');
+        const fout = await switchLights({ id: sc.id }, 'api/scene');
+        say(fout ?? `Scène ${sc.naam} in de ${room.naam.toLowerCase()}.`);
+      });
+      return b;
+    }),
+  );
+  return el(
+    'section',
+    { class: 'scenebox stack' },
+    el('div', { class: 'tussen' }, el('b', { text: `Scènes in de ${room.naam.toLowerCase()}` }), el('span', { class: 'small muted', text: 'uit Hue' })),
+    grid,
+    el('p', { class: 'small muted', text: `Een scène zet alle lampen van de ${room.naam.toLowerCase()} in één keer. Je maakt en verandert ze in de Hue-app; hier kies je ze.` }),
+  );
 }
 
 const KIND_ORDER = { licht: 0, screen: 1, klimaat: 2, meter: 3 };
@@ -1484,6 +1630,10 @@ function openDevice(room, d) {
     $('hu-blad-zin').textContent = text;
   };
   if (kept) say(kept);
+  // De vaste uitleg alleen als er geen antwoord op een knop staat.
+  const hint = (text) => {
+    if (!kept) say(text);
+  };
   const buttons = [];
   if (d.soort === 'licht') {
     const live = Boolean(house?.lichtBedienen);
@@ -1499,14 +1649,20 @@ function openDevice(room, d) {
         'aria-label': `Helderheid van ${d.naam}`,
       });
       dim.disabled = !live;
+      const pct = el('span', { class: 'muted', text: `${dim.value}%` });
+      dim.addEventListener('input', () => {
+        pct.textContent = `${dim.value}%`;
+      });
       dim.addEventListener('change', async () => {
         say('Even…');
         const fout = await switchLights({ doel: 'lamp', id: d.id, aan: true, helderheidPct: Number(dim.value) });
         say(fout ?? `${d.naam} op ${dim.value}%.`);
       });
-      $('hu-blad-extra').append(dim);
+      $('hu-blad-extra').append(el('div', { class: 'tussen' }, el('b', { text: 'Helderheid' }), pct), dim);
     }
-    if (d.kleurtemp) {
+    if (d.licht?.wit || d.licht?.kleur) {
+      $('hu-blad-extra').append(lampColour(d, say, live));
+    } else if (d.kleurtemp) {
       $('hu-blad-knoppen').className = 'knoppen drie';
       for (const [label, kleur] of [
         ['Warm', 'warm'],
@@ -1524,10 +1680,11 @@ function openDevice(room, d) {
         ]);
       }
     }
-    say(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
+    if (room.scenes?.length) $('hu-blad-extra').append(roomScenes(room, say, live));
+    hint(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
   } else if (d.soort === 'meter') {
     $('hu-blad-extra').append(el('p', { class: 'small', text: meterLine(d) }));
-    say(
+    hint(
       d.meetKamer
         ? 'Deze meter levert de temperatuur waar Smart Climate deze kamer op regelt.'
         : 'Alleen informatie; aan een meter valt niets te bedienen.',
@@ -1542,7 +1699,7 @@ function openDevice(room, d) {
       ['Uit', 'uit'],
     ].filter(Boolean);
     $('hu-blad-knoppen').className = wishes.length === 3 ? 'knoppen drie' : 'knoppen';
-    if (!room.zoneId) say('Deze kamer heeft geen regeling; Smart Climate stuurt dit apparaat hier niet.');
+    if (!room.zoneId) hint('Deze kamer heeft geen regeling; Smart Climate stuurt dit apparaat hier niet.');
     for (const [label, wens] of room.zoneId ? wishes : []) {
       buttons.push([
         label,

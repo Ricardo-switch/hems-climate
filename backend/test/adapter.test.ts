@@ -289,9 +289,32 @@ describe('schrijfbeveiliging', () => {
       ['light', 'turn_off', { entity_id: 'light.hal', area_id: 'woonkamer' }],
       ['light', 'turn_off', { entity_id: [] }],
       ['homeassistant', 'turn_off', { entity_id: 'light.hal' }],
+      // Zonder allowScenes ook geen scène.
+      ['scene', 'turn_on', { entity_id: 'scene.woonkamer_ontspannen' }],
     ];
     for (const [domain, service, target] of refused) {
       await expect(client.callService(domain, service, {}, target), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
+    }
+    // Alleen de velden van de app: geen effect of knipperen (besluit 100).
+    await expect(client.callService('light', 'turn_on', { flash: 'long' }, { entity_id: 'light.hal' })).rejects.toThrow(/Schrijven staat uit/);
+    await expect(client.callService('light', 'turn_on', { effect: 'colorloop' }, { entity_id: 'light.hal' })).rejects.toThrow(/Schrijven staat uit/);
+    await expect(client.callService('light', 'turn_off', { brightness_pct: 10 }, { entity_id: 'light.hal' })).rejects.toThrow(/Schrijven staat uit/);
+  });
+
+  it('laat met allowScenes alleen scene.turn_on op één scène door (besluit 100)', async () => {
+    const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowScenes: true });
+    const refused: [string, string, Record<string, unknown>, Record<string, unknown>][] = [
+      ['scene', 'apply', {}, { entity_id: 'scene.x' }],
+      ['scene', 'create', {}, { entity_id: 'scene.x' }],
+      ['scene', 'turn_on', {}, { area_id: 'woonkamer' }],
+      ['scene', 'turn_on', {}, { entity_id: ['scene.a', 'scene.b'] }],
+      ['scene', 'turn_on', { transition: 30 }, { entity_id: 'scene.a' }],
+      ['scene', 'turn_on', {}, { entity_id: 'light.hal' }],
+      ['hue', 'activate_scene', {}, { entity_id: 'scene.a' }],
+      ['light', 'turn_on', {}, { entity_id: 'light.hal' }],
+    ];
+    for (const [domain, service, data, target] of refused) {
+      await expect(client.callService(domain, service, data, target), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
     }
   });
 

@@ -196,6 +196,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let sessionId = '';
   const pageErrors: string[] = [];
   const lightCalls: string[] = [];
+  const lightData: Record<string, unknown>[] = [];
+  const sceneCalls: string[] = [];
   const consoleErrors: string[] = [];
   const failedResponses: string[] = [];
 
@@ -228,9 +230,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Licht bedienen (besluit 97), met een Home Assistant die alleen onthoudt wat er kwam.
           lights: new LightSwitch({
             house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
-            call: async (service, ids) => {
+            call: async (service, ids, data) => {
               lightCalls.push(`${service} ${ids.join(',')}`);
+              lightData.push(data);
             },
+            // Scènes (besluit 100): alleen onthouden welke.
+            callScene: async (id) => void sceneCalls.push(id),
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
@@ -407,9 +412,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Na een lamp ververst het huis zich even later; dat mag het antwoord op de
       // volgende knop niet wissen (de CI ving dat, 7 oktober).
       const refreshed = p.waitForResponse((r) => new URL(r.url()).pathname === '/api/huis');
-      await p.locator('#hu-blad-knoppen button', { hasText: 'Warm' }).click();
+      // De plafonnière kan alleen wit: geen tab Kleur (besluit 100).
+      expect(await p.locator('#hu-blad-extra .seg').count()).toBe(0);
+      await p.locator('#hu-blad-extra').getByRole('button', { name: 'Warm', exact: true }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'warm wit' }).waitFor();
       expect(lightCalls.at(-1)).toBe('turn_on light.woonkamer_plafonniere');
+      expect(lightData.at(-1)).toEqual({ color_temp_kelvin: 2700 });
       await p.locator('#hu-lijst .tegel', { hasText: 'Airco woonkamer' }).click();
       await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'mag nog niet schakelen' }).waitFor();
@@ -421,6 +429,29 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-blad-knoppen button', { hasText: 'Verwarmen' }).waitFor();
       expect(await p.locator('#hu-blad-knoppen button', { hasText: 'Koelen' }).count()).toBe(0);
       expect(await p.locator('#hu-blad-extra').textContent()).toContain('Kan verwarmen.');
+      // Wit, kleur en scènes (besluit 100): de sfeerverlichting staat in oranje,
+      // dus de tab Kleur staat open met oranje gekozen.
+      await p.locator('#hu-lijst .tegel', { hasText: 'Sfeerverlichting' }).click();
+      await p.locator('#hu-blad-extra .seg button[aria-pressed="true"]', { hasText: 'Kleur' }).waitFor();
+      expect(await p.locator('#hu-blad-extra .stalen button[aria-pressed="true"]').getAttribute('aria-label')).toBe('oranje');
+      expect(await layoutProblems(p), `een kleurenlamp in ${stand}`).toEqual([]);
+      await p.locator('#hu-blad-extra .stalen button[aria-label="blauw"]').click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'Sfeerverlichting blauw' }).waitFor();
+      expect(lightData.at(-1)).toEqual({ hs_color: [220, 75] });
+      // Het huis ververst even later; het antwoord en de open tab blijven staan.
+      await p.waitForResponse((r) => new URL(r.url()).pathname === '/api/huis');
+      await p.waitForTimeout(100);
+      expect(await p.locator('#hu-blad-zin').textContent()).toContain('Sfeerverlichting blauw');
+      await p.locator('#hu-blad-extra .seg button[aria-pressed="true"]', { hasText: 'Kleur' }).waitFor();
+      await p.locator('#hu-blad-extra .seg button', { hasText: 'Wit' }).click();
+      await p.locator('#hu-blad-extra').getByRole('button', { name: 'Daglicht', exact: true }).click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'daglicht' }).waitFor();
+      expect(lightData.at(-1)).toEqual({ color_temp_kelvin: 6500 });
+      // De scènes van de woonkamer; de laatst gekozen staat aan.
+      expect(await p.locator('#hu-blad .scenes button[aria-pressed="true"]').textContent()).toBe('Ontspannen');
+      await p.locator('#hu-blad .scenes button', { hasText: 'Lezen' }).click();
+      await p.locator('#hu-blad-zin').filter({ hasText: 'Scène Lezen' }).waitFor();
+      expect(sceneCalls.at(-1)).toBe('scene.keuken_lezen');
       // Terug is uitzoomen.
       await p.locator('#hu-terug').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Woonkamer' }).waitFor();

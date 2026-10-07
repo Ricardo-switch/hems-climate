@@ -308,7 +308,7 @@ pagina zet hem neer. Onder de tekening staat op welke gevel de zon nu valt
 ("Zon op de voorgevel"). Het dakvlak licht op naar wat het bij een heldere
 lucht nu zou vangen.
 
-**Licht: wit, kleur en scènes.** **Voorstel**, 7 oktober 2026, van de bewoner
+**Licht: wit, kleur en scènes.** **Gebouwd** (besluit 100), 7 oktober 2026, van de bewoner
 (`Lamp`, `Lamp-wit`). Een lamp aantikken geeft een eigen scherm (op de wand het
 blad): aan en uit, helderheid, en twee tabs. *Wit* is een schuif van warm,
 bijna geel, tot koel daglicht, met drie vaste standen; *Kleur* is een
@@ -319,9 +319,8 @@ uit Hue: "Ontspannen", "Lezen", "Zonsondergang". Een scène zet alle lampen van
 de ruimte in één keer; maken en veranderen gebeurt in de Hue-app. En "alle
 lampen in de woonzone uit". Wat ervoor nodig is: kleur en wit gaan via
 `light.turn_on`, de deur die er al is (97), met de velden voor kleur en
-kleurtemperatuur erbij. Een scène is een andere dienst (`scene.turn_on`) en
-valt nu buiten de deur van besluit 97: die vraagt eerst een aanvulling op 97,
-met een test dat alleen scènes van de eigen ruimtes doorgaan.
+kleurtemperatuur erbij. Een scène is een andere dienst (`scene.turn_on`) met
+een eigen smalle deur (besluit 100): alleen scènes van de eigen ruimtes.
 
 **Schetsen** (5 oktober 2026): `Wand-Inzoomen` (uitleg: de drie stappen naast elkaar),
 `Wand-Etage` (de begane grond van boven, met de screens op de voorgevel en de

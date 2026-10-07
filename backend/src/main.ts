@@ -307,6 +307,8 @@ const client = new HaClient({
   // Behalve lampen aan en uit vanuit de app, als dat mag (besluit 97). De client
   // laat dan precies light.turn_on en light.turn_off op lampen door, niets anders.
   allowLights: startup.lights.enabled,
+  // Scènes horen bij het licht (besluit 100): dezelfde schakelaar, een eigen deur.
+  allowScenes: startup.lights.enabled,
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -477,6 +479,7 @@ const lightSwitch = startup.lights.enabled
   ? new LightSwitch({
       house: houseReport,
       call: (service, entityIds, data) => client.callService('light', service, data, { entity_id: [...entityIds] }),
+      callScene: (sceneId) => client.callService('scene', 'turn_on', {}, { entity_id: sceneId }),
     })
   : null;
 

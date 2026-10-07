@@ -61,6 +61,12 @@ export interface HaClientOptions {
    * kunnen hier dus niet doorheen.
    */
   readonly allowLights?: boolean;
+  /**
+   * Of deze client een scène mag aanzetten (besluit 100): precies
+   * `scene.turn_on`, op één `scene.`-entiteit, zonder verdere velden. Elke
+   * andere dienst blijft werpen, ook `hue.activate_scene`.
+   */
+  readonly allowScenes?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   readonly reconnectMaxMs?: number;
@@ -78,12 +84,26 @@ const WS_PATH = '/api/websocket';
  * als doel uitsluitend een of meer `light.`-entiteiten. Geen gebied, apparaat of
  * label als doel, want daar kan van alles onder hangen.
  */
-function isLightCall(domain: string, service: string, target: Record<string, unknown>): boolean {
+function isLightCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'light' || (service !== 'turn_on' && service !== 'turn_off')) return false;
   if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  // Alleen de velden die de app gebruikt (besluiten 97 en 100): helderheid,
+  // kleurtemperatuur en kleur. Niets als knipperen of een effect.
+  if (Object.keys(data).some((k) => !LIGHT_FIELDS.has(k))) return false;
+  if (service === 'turn_off' && Object.keys(data).length > 0) return false;
   const ids = target['entity_id'];
   const list = Array.isArray(ids) ? ids : [ids];
   return list.length > 0 && list.every((id) => typeof id === 'string' && /^light\.[a-z0-9_]+$/.test(id));
+}
+
+const LIGHT_FIELDS: ReadonlySet<string> = new Set(['brightness_pct', 'color_temp_kelvin', 'hs_color']);
+
+/** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
+function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
+  if (domain !== 'scene' || service !== 'turn_on') return false;
+  if (Object.keys(data).length > 0 || Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const id = target['entity_id'];
+  return typeof id === 'string' && /^scene\.[a-z0-9_]+$/.test(id);
 }
 
 /**
@@ -117,9 +137,10 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes'>> & {
     allowWrites: boolean;
     allowLights: boolean;
+    allowScenes: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -135,6 +156,7 @@ export class HaClient extends EventEmitter {
       token: options.token,
       allowWrites: options.allowWrites ?? false,
       allowLights: options.allowLights ?? false,
+      allowScenes: options.allowScenes ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
@@ -329,7 +351,11 @@ export class HaClient extends EventEmitter {
     data: Record<string, unknown>,
     target: Record<string, unknown>,
   ): Promise<void> {
-    if (!this.#options.allowWrites && !(this.#options.allowLights && isLightCall(domain, service, target))) {
+    const allowed =
+      this.#options.allowWrites ||
+      (this.#options.allowLights && isLightCall(domain, service, data, target)) ||
+      (this.#options.allowScenes && isSceneCall(domain, service, data, target));
+    if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +
           'Zet allowWrites expliciet aan om deze adapter te laten schakelen.',

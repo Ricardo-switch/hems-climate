@@ -84,6 +84,17 @@ export interface HouseDevice {
   readonly dimbaar: boolean;
   /** Een lamp die warm, neutraal of koel kan (kleurtemperatuur, of kleur). */
   readonly kleurtemp: boolean;
+  /**
+   * Wat een lamp in wit en kleur kan (besluit 100): het bereik in kelvin, of null,
+   * en of hij kleur kan. Met de stand van nu, voor wat er gekozen staat.
+   */
+  readonly licht?: {
+    readonly wit: { readonly minK: number; readonly maxK: number } | null;
+    readonly kleur: boolean;
+    readonly kelvin: number | null;
+    /** Tint 0–360 en verzadiging 0–100, als hij nu in kleur staat. */
+    readonly tint: readonly [number, number] | null;
+  };
   /** Temperatuur en luchtvochtigheid, voor een meter of een klimaatapparaat. */
   readonly meting: HouseReading | null;
   /** Alleen bij klimaat. */
@@ -121,6 +132,15 @@ export interface HouseRoom {
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
   readonly apparaten: readonly HouseDevice[];
+  /** De scènes van deze ruimte, uit Hue (besluit 100); de laatst gekozen is actief. */
+  readonly scenes: readonly HouseScene[];
+}
+
+export interface HouseScene {
+  readonly id: string;
+  readonly naam: string;
+  /** De laatst aangezette in deze ruimte: Hue zegt zelf niet welke er "aan" staat. */
+  readonly actief: boolean;
 }
 
 export interface HouseFloor {
@@ -231,6 +251,81 @@ function friendly(state: HaEntityState | undefined, fallback: string): string {
   return typeof name === 'string' && name.trim() !== '' ? name.trim() : fallback;
 }
 
+/** Kleurstanden voor een echte kleur, niet alleen wit (besluit 100). */
+const HUE_MODES: ReadonlySet<string> = new Set(['hs', 'xy', 'rgb', 'rgbw', 'rgbww']);
+
+/** Wat een lamp in wit en kleur kan, uit Home Assistant. */
+function lightAbilities(state: HaEntityState | undefined, modes: readonly string[]): NonNullable<HouseDevice['licht']> {
+  const a = state?.attributes ?? {};
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  const anyColor = modes.some((m) => COLOR_MODES.has(m));
+  const minK = num(a['min_color_temp_kelvin']) ?? (anyColor ? 2200 : null);
+  const maxK = num(a['max_color_temp_kelvin']) ?? (anyColor ? 6500 : null);
+  const hs = Array.isArray(a['hs_color']) && a['color_mode'] !== 'color_temp' ? (a['hs_color'] as unknown[]).map(num) : null;
+  return {
+    wit: minK != null && maxK != null ? { minK: Math.round(minK), maxK: Math.round(maxK) } : null,
+    kleur: modes.some((m) => HUE_MODES.has(m)),
+    kelvin: a['color_mode'] === 'color_temp' ? num(a['color_temp_kelvin']) : null,
+    tint: hs && hs[0] != null && hs[1] != null ? [Math.round(hs[0]), Math.round(hs[1])] : null,
+  };
+}
+
+/**
+ * De scènes per ruimte (besluit 100). Hue zet elke scène in Home Assistant als
+ * `scene.`-entiteit, met de naam van de Hue-kamer of -zone (`group_name`). Die
+ * hoort bij de ruimte waarvan de lampen in die groep zitten, of die zo heet. Een
+ * scène uit Home Assistant zelf noemt zijn lampen (`entity_id`): de ruimte met
+ * de meeste daarvan. Een scène die bij geen ruimte hoort, laat de app weg.
+ */
+function scenesPerRoom(
+  states: ReadonlyMap<string, HaEntityState>,
+  rooms: readonly { readonly id: string; readonly naam: string; readonly devices: readonly HouseDevice[] }[],
+): Map<string, HouseScene[]> {
+  const out = new Map<string, (HouseScene & { t: number })[]>();
+  const lower = (s: string) => s.trim().toLowerCase();
+  for (const [id, st] of states) {
+    if (!id.startsWith('scene.') || st.state === 'unavailable') continue;
+    const a = st.attributes;
+    let roomId: string | null = null;
+    const members = Array.isArray(a['entity_id']) ? (a['entity_id'] as unknown[]).filter((m): m is string => typeof m === 'string') : [];
+    if (members.length > 0) {
+      let best = 0;
+      for (const r of rooms) {
+        const n = r.devices.filter((d) => members.includes(d.id)).length;
+        if (n > best) {
+          best = n;
+          roomId = r.id;
+        }
+      }
+    }
+    const group = typeof a['group_name'] === 'string' ? lower(a['group_name']) : null;
+    if (roomId == null && group != null) {
+      roomId =
+        rooms.find((r) => r.devices.some((d) => d.groepen.some((g) => lower(g) === group)))?.id ??
+        // Een Hue-groep van verborgen peren staat zelf als armatuur in de ruimte.
+        rooms.find((r) => r.devices.some((d) => lower(d.haNaam) === group))?.id ??
+        rooms.find((r) => lower(r.naam) === group)?.id ??
+        null;
+    }
+    if (roomId == null) continue;
+    const friendlyName = typeof a['friendly_name'] === 'string' ? a['friendly_name'].trim() : id;
+    const own = typeof a['name'] === 'string' && a['name'].trim() !== '' ? a['name'].trim() : null;
+    const groupName = typeof a['group_name'] === 'string' ? a['group_name'].trim() : '';
+    const naam = own ?? (groupName && friendlyName.toLowerCase().startsWith(groupName.toLowerCase()) ? friendlyName.slice(groupName.length).trim() || friendlyName : friendlyName);
+    const t = Date.parse(st.state);
+    const list = out.get(roomId) ?? [];
+    list.push({ id, naam, actief: false, t: Number.isFinite(t) ? t : 0 });
+    out.set(roomId, list);
+  }
+  const result = new Map<string, HouseScene[]>();
+  for (const [roomId, list] of out) {
+    const newest = Math.max(...list.map((s) => s.t));
+    list.sort((x, y) => x.naam.localeCompare(y.naam, 'nl'));
+    result.set(roomId, list.map((s) => ({ id: s.id, naam: s.naam, actief: newest > 0 && s.t === newest })));
+  }
+  return result;
+}
+
 /** Kleurstanden waarmee Home Assistant ook een kleurtemperatuur kan zetten. */
 const COLOR_MODES: ReadonlySet<string> = new Set(['color_temp', 'hs', 'xy', 'rgb', 'rgbw', 'rgbww']);
 
@@ -251,7 +346,7 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
   const list = Array.isArray(modes) ? modes.filter((m): m is string => typeof m === 'string') : [];
   const dimbaar = list.some((m) => m !== 'onoff') || typeof b === 'number';
   const kleurtemp = list.some((m) => COLOR_MODES.has(m));
-  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, meting: null, klimaat: null, meetKamer: false };
+  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
 }
 
 function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
@@ -767,6 +862,10 @@ export function buildHouse(
     perRoom.set(room.id, list);
   }
 
+  const scenes = scenesPerRoom(
+    states,
+    layout.kamers.map((k) => ({ id: k.id, naam: k.naam, devices: perRoom.get(k.id) ?? [] })),
+  );
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];
     devices.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || Number(b.aan) - Number(a.aan) || a.naam.localeCompare(b.naam, 'nl'));
@@ -787,6 +886,7 @@ export function buildHouse(
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
       samenvatting: summarize(devices),
       apparaten: devices,
+      scenes: scenes.get(k.id) ?? [],
     };
   });
 

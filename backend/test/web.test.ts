@@ -863,6 +863,7 @@ describe('licht bedienen (besluit 97)', () => {
     lampenAan: apparaten.filter((d) => d.aan).length,
     samenvatting: summarize(apparaten),
     apparaten,
+    scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false }] : [],
   });
   const house: HouseReport = {
     indeling: 'eigen',
@@ -894,6 +895,46 @@ describe('licht bedienen (besluit 97)', () => {
   it('bestaat niet wanneer het niet is meegegeven', async () => {
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     expect((await fetch(`${base}/api/licht`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
+  });
+
+  it('zet een scène van een eigen ruimte aan, en weigert een andere (besluit 100)', async () => {
+    const scenes: string[] = [];
+    const lights = new LightSwitch({ house: () => house, call: async () => {}, callScene: async (id) => void scenes.push(id) });
+    const started = await start({ house: () => house, lights });
+    const post = (body: unknown) => fetch(`${started.base}/api/scene`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    expect((await post({ id: 'scene.hal_avond' })).status).toBe(200);
+    expect(scenes).toEqual(['scene.hal_avond']);
+    expect((await post({ id: 'scene.garage_feest' })).status).toBe(404);
+    expect((await post({ id: 'light.hal' })).status).toBe(400);
+    expect(scenes).toEqual(['scene.hal_avond']);
+  });
+
+  it('heeft geen scènedeur zonder scènes', async () => {
+    const lights = new LightSwitch({ house: () => house, call: async () => {} });
+    const started = await start({ house: () => house, lights });
+    expect((await fetch(`${started.base}/api/scene`, { method: 'POST', headers: JSON_HEADERS, body: '{"id":"scene.hal_avond"}' })).status).toBe(405);
+  });
+
+  it('zet wit in kelvin binnen het bereik van de lamp, en kleur alleen op een lamp die het kan (besluit 100)', async () => {
+    const calls: { ids: readonly string[]; data: Record<string, unknown> }[] = [];
+    const colourHouse: HouseReport = {
+      ...house,
+      etages: house.etages.map((f) => ({
+        ...f,
+        ruimtes: f.ruimtes.map((r) => ({
+          ...r,
+          apparaten: r.apparaten.map((d) => (d.id === 'light.hal' ? { ...d, licht: { wit: { minK: 2200, maxK: 4000 }, kleur: false, kelvin: null, tint: null } } : d)),
+        })),
+      })),
+    };
+    const lights = new LightSwitch({ house: () => colourHouse, call: async (_s, ids, data) => void calls.push({ ids, data }) });
+    const started = await start({ house: () => colourHouse, lights });
+    const post = (body: unknown) => fetch(`${started.base}/api/licht`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: true, kelvin: 6500 })).status).toBe(200);
+    expect(calls.at(-1)!.data).toEqual({ color_temp_kelvin: 4000 });
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: true, tint: [200, 80] })).status).toBe(400);
+    expect((await post({ doel: 'kamer', id: 'hal', aan: true, tint: [200, 80] })).status).toBe(400);
+    expect((await post({ doel: 'lamp', id: 'light.hal', aan: true, kelvin: 3000, kleur: 'warm' })).status).toBe(400);
   });
 
   it('zet een etage, een kamer of het huis uit, met alleen de lampen die het huis toont', async () => {

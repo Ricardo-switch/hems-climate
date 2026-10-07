@@ -4353,6 +4353,20 @@ uit Hue kiezen (schetsen `Lamp` en `Lamp-wit`). Gekozen op 7 oktober 2026.
 - Zoals bij 97: dit is een knop van de bewoner, geen besluit van Smart Climate,
   en hij vraagt een inlog (99).
 
+*Gebouwd op 7 oktober 2026.* De client laat met `allowScenes` alleen
+`scene.turn_on` op één `scene.`-entiteit zonder velden door, en bij het licht
+alleen de velden helderheid, kelvin en kleur (ook geen `flash` of `effect`).
+Het huis zegt per lamp wat hij kan (`licht`: het bereik in kelvin, of hij kleur
+kan, en de stand van nu) en per ruimte de scènes: een Hue-scène via de naam van
+zijn Hue-kamer (de groep van een lamp, een Hue-groep die zelf als armatuur in de
+ruimte staat, of de naam van de ruimte), een scène uit Home Assistant via de
+meeste van zijn lampen. `POST /api/scene` zet alleen een scène die zo bij een
+ruimte staat; de rest krijgt 404. In de app staan wit en kleur als tabs in het
+blad van de lamp, met de scènes van de ruimte eronder; de paginatest kiest
+blauw, daglicht en een scène, en kijkt wat er naar Home Assistant zou gaan.
+Scènes staan aan met dezelfde schakelaar als het licht (`HEMS_LIGHTS=1` of
+Ingress).
+
 ---
 
 ## 101. "Klaar voor" bij de droger is per keer te kiezen
