@@ -852,6 +852,7 @@ export class WebServer {
     // Wat er staat, wat Home Assistant voorstelt, en de meters om uit te kiezen.
     let voorstel = null;
     let dashboardPrijzen: ReturnType<typeof pricesInPrefs> = [];
+    let dashboard: unknown = null;
     let meters: readonly MeterOption[] = [];
     let fout: string | null = null;
     try {
@@ -859,10 +860,13 @@ export class WebServer {
       const prefs = await energy.source.prefs();
       voorstel = importFromPrefs(prefs, meters, (id) => energy.source.entityNumber?.(id) ?? null);
       dashboardPrijzen = pricesInPrefs(prefs);
+      // Het dashboard zoals Home Assistant het geeft: entiteiten en prijzen, om
+      // na te gaan wat het overnemen ervan maakte.
+      dashboard = prefs;
     } catch (error) {
       fout = `Home Assistant gaf de meters niet: ${(error as Error).message}`;
     }
-    sendJson(res, 200, { instellingen: energy.store.current, voorstel, dashboardPrijzen, meters, ...(fout ? { fout } : {}) });
+    sendJson(res, 200, { instellingen: energy.store.current, voorstel, dashboardPrijzen, dashboard, meters, ...(fout ? { fout } : {}) });
   }
 
   async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {
