@@ -885,6 +885,8 @@ async function postDoor(url, body) {
 }
 
 function renderSession() {
+  // Bovenin, naast de verbinding: wie niet is ingelogd, ziet waar het kan.
+  $('inlog-chip').hidden = !(session?.toegang === 'sessions' && !session.ingelogd);
   const box = $('b-account');
   if (!box) return;
   if (!session || session.toegang !== 'sessions') {
@@ -2302,6 +2304,10 @@ async function start() {
   void loadSession();
   showView();
   window.addEventListener('hashchange', showView);
+  $('inlog-chip').addEventListener('click', (ev) => {
+    ev.preventDefault();
+    location.href = loginHref();
+  });
   tick();
   setInterval(tick, 10_000);
   renderLog();

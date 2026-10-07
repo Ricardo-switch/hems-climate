@@ -520,6 +520,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#b-modus button').first().waitFor();
       // Wie er is ingelogd (besluit 99): de browser heeft een sessie als beheerder.
       await p.locator('#b-account').filter({ hasText: 'Ingelogd als Test' }).waitFor();
+      // Ingelogd: geen knop "Inloggen" bovenin.
+      expect(await p.locator('#inlog-chip').isVisible()).toBe(false);
       expect(await layoutProblems(p), `Bediening in ${stand}`).toEqual([]);
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
@@ -548,4 +550,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await context.close();
     }, 30_000);
   }
+
+  it('wijst wie niet is ingelogd bovenin de weg naar de inlog van Home Assistant (besluit 99)', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    await p.goto(`${baseUrl}/nieuw.html#bediening`);
+    await p.locator('#inlog-chip').waitFor();
+    // Zonder te volgen: de dienst stuurt door naar het inlogscherm van Home Assistant.
+    const go = p.waitForRequest((r) => new URL(r.url()).pathname === '/auth/login');
+    await p.locator('#inlog-chip').click();
+    expect(new URL((await go).url()).searchParams.get('terug')).toBe('/nieuw.html#bediening');
+    await context.close();
+  });
 });

@@ -110,6 +110,17 @@ describe('inloggen via Home Assistant', () => {
     expect(url.searchParams.get('state')).toBe('st');
   });
 
+  it('maakt van het websocket-adres van de dienst een adres dat een browser opent', async () => {
+    const ws = new URL(homeAssistantLogin('ws://192.168.67.52:8123/api/websocket').authorizeUrl('http://nas:8099', 'st'));
+    expect(ws.origin + ws.pathname).toBe('http://192.168.67.52:8123/auth/authorize');
+    const wss = new URL(homeAssistantLogin('wss://ha.example.ts.net/api/websocket').authorizeUrl('http://nas:8099', 'st'));
+    expect(wss.origin + wss.pathname).toBe('https://ha.example.ts.net/auth/authorize');
+    // En de hele inlog werkt via zo'n adres.
+    const ha = await fakeHa({ id: 'abc', name: 'Ricardo', is_admin: false });
+    const user = await homeAssistantLogin(`${ha.base.replace('http', 'ws')}/api/websocket`).identify('goede-code', 'http://nas:8099');
+    expect(user).toEqual({ userId: 'abc', naam: 'Ricardo', isAdmin: false });
+  });
+
   it('wisselt de code in, vraagt wie het is, en gooit het token van Home Assistant weg', async () => {
     const ha = await fakeHa({ id: 'abc', name: 'Ricardo', is_admin: true });
     const user = await homeAssistantLogin(ha.base).identify('goede-code', 'http://192.168.67.65:8099');

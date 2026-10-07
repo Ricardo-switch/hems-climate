@@ -190,7 +190,13 @@ export interface HaLogin {
  * dus Home Assistant vraagt verder niets na.
  */
 export function homeAssistantLogin(haUrl: string, fetchFn: typeof fetch = fetch): HaLogin {
-  const base = haUrl.replace(/\/+$/, '').replace(/\/api\/websocket$/, '');
+  // Het adres van de dienst is vaak het websocket-adres ("ws://…/api/websocket");
+  // een browser opent alleen http(s). Op de NAS stuurde de inlog zo naar ws://
+  // en gebeurde er niets (7 oktober).
+  const base = haUrl
+    .replace(/\/+$/, '')
+    .replace(/\/api\/websocket$/, '')
+    .replace(/^ws(s?):\/\//i, 'http$1://');
   return {
     authorizeUrl(appOrigin, state) {
       const q = new URLSearchParams({

@@ -200,6 +200,12 @@
         font-weight: 600;
         white-space: nowrap;
       }
+      /* Inloggen om te bedienen (besluit 99): altijd te vinden, niet alleen bij Bediening. */
+      .chip.login {
+        background: rgba(92, 200, 255, 0.12);
+        color: var(--cool-t);
+        text-decoration: none;
+      }
       .chip.good {
         background: rgba(111, 220, 166, 0.12);
         color: var(--good);
@@ -1466,6 +1472,7 @@
             <span class="chip plain" id="buiten"></span>
             <span class="chip phase" id="fase" hidden></span>
             <span class="chip good" id="verbinding"><span class="dot glow"></span><span>verbinden…</span></span>
+            <a class="chip login" id="inlog-chip" href="auth/login" hidden>Inloggen</a>
           </div>
         </div>
 
