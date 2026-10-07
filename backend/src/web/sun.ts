@@ -44,13 +44,14 @@ export interface SunReport {
   readonly heldereLuchtW: number;
   /**
    * Waar de lijn voor een heldere lucht vandaan komt: geleerd uit de eigen
-   * opbrengst, of nog een schatting (besluiten 88 en 93). `zin` is het
-   * onderschrift voor de grafiek.
+   * opbrengst, of nog een schatting (besluit 93). Voor de schaduwweergave, die
+   * de cijfers toont; de app tekent alleen de lijn.
    */
   readonly heldereLucht: {
     readonly bron: 'geleerd' | 'geschat';
     readonly dagen: number;
-    readonly zin: string;
+    /** Het midden van de geleerde factoren op het model, of de schatting. */
+    readonly factor: number;
   };
   /** Per kwartier van vandaag, van middernacht tot middernacht. */
   readonly kwartieren: readonly { readonly tMs: number; readonly heldereLuchtW: number }[];
@@ -88,12 +89,11 @@ export function clearSkyW(geometry: Geometry, location: Location, ms: number, le
   return Math.round(Math.min(total, geometry.inverterMaxW ?? Infinity));
 }
 
-function clearSkyCaption(learned: SolarLearned | null): SunReport['heldereLucht'] {
+function clearSkySource(learned: SolarLearned | null): SunReport['heldereLucht'] {
   if (learned != null && learned.overall != null) {
-    const dagen = learned.days;
-    return { bron: 'geleerd', dagen, zin: `Zon bij heldere lucht, geleerd uit ${dagen} ${dagen === 1 ? 'dag' : 'dagen'}` };
+    return { bron: 'geleerd', dagen: learned.days, factor: Math.round(learned.overall * 100) / 100 };
   }
-  return { bron: 'geschat', dagen: learned?.days ?? 0, zin: 'Zon bij heldere lucht, nog geschat' };
+  return { bron: 'geschat', dagen: learned?.days ?? 0, factor: PERFORMANCE };
 }
 
 export function sunReport(
@@ -168,7 +168,7 @@ export function sunReport(
     gevels: facades,
     panelen: planes,
     heldereLuchtW: clearSkyW(geometry, location, nowMs, learned),
-    heldereLucht: clearSkyCaption(learned),
+    heldereLucht: clearSkySource(learned),
     kwartieren: quarters,
   };
 }

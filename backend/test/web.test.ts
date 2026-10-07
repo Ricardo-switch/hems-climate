@@ -780,12 +780,12 @@ describe('de zoninval (besluit 93)', () => {
       gevels: { id: string; inDeZon: boolean }[];
       panelen: unknown[];
       kwartieren: unknown[];
-      heldereLucht: { bron: string; zin: string };
+      heldereLucht: { bron: string; dagen: number; factor: number };
     };
     expect(body.gevels.map((g) => g.id)).toEqual(['voorgevel', 'achtergevel']);
-    // Geleerd of geschat, en dat staat erbij (besluiten 88, 93).
+    // Geleerd of geschat, en dat staat erbij (besluit 93).
     expect(['geleerd', 'geschat']).toContain(body.heldereLucht.bron);
-    expect(body.heldereLucht.zin).toContain('heldere lucht');
+    expect(body.heldereLucht.factor).toBeGreaterThan(0);
     expect(body.panelen).toHaveLength(2);
     expect(body.kwartieren.length).toBeGreaterThanOrEqual(92);
     // Nooit allebei in de zon: ze kijken tegenovergesteld.

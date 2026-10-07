@@ -173,6 +173,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             },
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          // De ligging, zoals Home Assistant hem geeft: op één decimaal (besluit 93).
+          location: () => ({ latDeg: 52.1, lonDeg: 5.1 }),
           write: () => {},
         });
         return { server, port: await server.start() };
@@ -234,6 +236,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   it('toont de dataset en de exportknop', async () => {
     expect(await page.locator('#dataset-export').textContent()).toContain('Exporteren · 3 dagen');
     expect(await page.locator('#dataset-pct').textContent()).toMatch(/\d+%/);
+    // Het zonplafond is een cijfer over de dataset: hier, niet in de app.
+    await page.locator('#dataset-zon').waitFor({ state: 'visible' });
+    expect(await page.locator('#dataset-zon').textContent()).toMatch(/zonplafond (geleerd uit \d+ dagen|nog geschat) · factor \d,\d\d/);
   });
 
   /*

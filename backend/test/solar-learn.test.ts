@@ -122,14 +122,16 @@ describe('de lijn voor een heldere lucht', () => {
 
   it('is een schatting zolang er niets geleerd is, en zegt dat', () => {
     const r = sunReport(geometry, location, start + 11.5 * 3_600_000, start);
-    expect(r.heldereLucht).toEqual({ bron: 'geschat', dagen: 0, zin: 'Zon bij heldere lucht, nog geschat' });
+    expect(r.heldereLucht).toEqual({ bron: 'geschat', dagen: 0, factor: 0.85 });
   });
 
   it('volgt wat het huis leerde, en zegt uit hoeveel dagen', () => {
     const learned = learnSolar(days(8, () => 1.2), geometry, location);
     const before = sunReport(geometry, location, start + 11.5 * 3_600_000, start);
     const after = sunReport(geometry, location, start + 11.5 * 3_600_000, start, learned);
-    expect(after.heldereLucht).toEqual({ bron: 'geleerd', dagen: 8, zin: 'Zon bij heldere lucht, geleerd uit 8 dagen' });
+    expect(after.heldereLucht.bron).toBe('geleerd');
+    expect(after.heldereLucht.dagen).toBe(8);
+    expect(after.heldereLucht.factor).toBeCloseTo(1.2, 1);
     // 1,2 in plaats van 0,85, behalve waar de omvormer afkapt.
     const ratio = after.panelen.reduce((s, p) => s + p.heldereLuchtW, 0) / before.panelen.reduce((s, p) => s + p.heldereLuchtW, 0);
     expect(ratio).toBeCloseTo(1.2 / 0.85, 1);

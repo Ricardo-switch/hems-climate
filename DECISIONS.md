@@ -3852,8 +3852,10 @@ lage zon te zuinig. De lijn heet nu geleerd:
   terug, een reeks bewolkte dagen niet. In één najaar schuift de zon sneller
   door de vakken, dus schaduw herkennen gaat langzaam. Dat is de voorzichtige
   kant: tot dan blijft de lijn op het midden.
-- **De grafiek zegt het erbij:** "geleerd uit 26 dagen", of "nog geschat"
-  zolang er niets geleerd is (88). Een nieuw huis begint bij de schatting.
+- **Waar de lijn vandaan komt, staat in de schaduwweergave,** bij de dataset:
+  "zonplafond geleerd uit 26 dagen · factor 0,99 op het model", of "nog
+  geschat". De app tekent alleen de lijn: voor een bewoner voegt de herkomst
+  niets toe (de bewoner, 7 oktober). Een nieuw huis begint bij de schatting.
 
 Uitkomst voor dit huis: het midden is 0,99 in plaats van 0,85, met per vak
 0,89 tot 1,47. Onder 5° hoogte blijft het model het zwakst; dat vak leert pas

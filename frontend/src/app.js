@@ -1177,3 +1177,30 @@ await loadExport();
 // Elk kwartier bijwerken, in hetzelfde ritme als de analyse: de opname groeit
 // door en een knop die een oude omvang toont is een knop die liegt.
 setInterval(loadExport, 15 * 60_000);
+
+/*
+ * Het zonplafond (besluit 93): wat de panelen bij een heldere lucht halen,
+ * geleerd uit de eigen opbrengst. Een cijfer over de dataset, dus hier en niet
+ * in de app, die alleen de lijn tekent.
+ */
+async function loadSunCeiling() {
+  let info;
+  try {
+    const res = await fetch('api/zon');
+    if (!res.ok) return;
+    info = (await res.json()).heldereLucht;
+  } catch {
+    return;
+  }
+  if (!info) return;
+  const factor = info.factor.toLocaleString('nl-NL', { minimumFractionDigits: 2 });
+  const line = $('dataset-zon');
+  line.textContent =
+    info.bron === 'geleerd'
+      ? `zonplafond geleerd uit ${info.dagen} ${info.dagen === 1 ? 'dag' : 'dagen'} · factor ${factor} op het model`
+      : `zonplafond nog geschat · factor ${factor} op het model`;
+  line.hidden = false;
+}
+
+await loadSunCeiling();
+setInterval(loadSunCeiling, 60 * 60_000);
