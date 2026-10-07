@@ -29,8 +29,9 @@ describe('de kleuren van een scène', () => {
   });
 
   it('kent de standaardscènes van Hue bij hun naam, en verzint niets voor een andere', () => {
-    expect(defaultSceneColors('Nachtlampje')).toEqual(['#a2531b', '#5c2d0e']);
-    expect(defaultSceneColors('Relax')).toEqual(['#ffc27a', '#ffa757']);
+    expect(defaultSceneColors('Nachtlampje')).toEqual(['#814346', '#a8605f']);
+    expect(defaultSceneColors('Relax')).toEqual(['#ffc059', '#ffe0a8']);
+    expect(defaultSceneColors('Tropische schemering')).toEqual(['#a03aa3', '#d37ad6']);
     expect(defaultSceneColors('Tyrell')).toEqual([]);
   });
 

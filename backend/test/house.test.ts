@@ -294,8 +294,8 @@ describe('wit, kleur en scènes (besluit 100)', () => {
   it('zet de scènes bij hun ruimte, met de laatst gekozen als actief, en laat een scène zonder ruimte weg', () => {
     // De recentste eerst; actief per Hue-groep; de vaste kleuren bij hun naam.
     expect(wk.scenes).toEqual([
-      { id: 'scene.ontspannen', naam: 'Ontspannen', actief: true, groep: null, gebruiktMs: Date.parse('2026-10-05T07:30:00+00:00'), kleuren: ['#ffc27a', '#ffa757'] },
-      { id: 'scene.keuken_lezen', naam: 'Lezen', actief: true, groep: 'Keuken', gebruiktMs: Date.parse('2026-10-05T07:00:00+00:00'), kleuren: ['#ffefd2', '#ffd9a0'] },
+      { id: 'scene.ontspannen', naam: 'Ontspannen', actief: true, groep: null, gebruiktMs: Date.parse('2026-10-05T07:30:00+00:00'), kleuren: ['#ffc059', '#ffe0a8'] },
+      { id: 'scene.keuken_lezen', naam: 'Lezen', actief: true, groep: 'Keuken', gebruiktMs: Date.parse('2026-10-05T07:00:00+00:00'), kleuren: ['#fdfb9f', '#fffde0'] },
     ]);
     expect(rooms.flatMap((r) => r.scenes).map((s) => s.id)).not.toContain('scene.garage_feest');
     // Via het gebied van de Hue-kamer, als de naam niets oplevert.

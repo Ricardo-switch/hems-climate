@@ -60,17 +60,26 @@ export function colorsFromLamps(lamps: readonly HouseDevice[]): string[] {
   return out;
 }
 
-/** De standaardscènes van Hue, in het Nederlands en het Engels, met hun licht. */
+/**
+ * De standaardscènes van Hue, in het Nederlands en het Engels, met de kleur die
+ * de Hue-app erbij toont. De kleuren komen uit een draad op het forum van Home
+ * Assistant ("Hue scenes mimicked in HA"); een tweede, lichtere tint geeft het
+ * bolletje diepte.
+ */
 const DEFAULTS: readonly [RegExp, readonly string[]][] = [
-  [/^(helder|bright)$/, ['#fff6ea', '#ffe9c8']],
-  [/^(concentreren|concentrate)$/, ['#f2f7ff', '#dce9ff']],
-  [/^(lezen|read)$/, ['#ffefd2', '#ffd9a0']],
-  [/^(energie|energize|energise)$/, ['#e6f1ff', '#ffffff']],
-  [/^(ontspannen|relax)$/, ['#ffc27a', '#ffa757']],
-  [/^(gedimd|dimmed)$/, ['#c98a4a', '#8a5a2b']],
-  [/^(nachtlampje|nightlight)$/, ['#a2531b', '#5c2d0e']],
+  [/^(helder|bright)$/, ['#fcdb97', '#fff3d6']],
+  [/^(concentreren|concentrate)$/, ['#a2eaf2', '#e6fbfd']],
+  [/^(lezen|read)$/, ['#fdfb9f', '#fffde0']],
+  [/^(energie|energize|energise)$/, ['#a8dfed', '#e8f7fb']],
+  [/^(ontspannen|relax)$/, ['#ffc059', '#ffe0a8']],
+  [/^(gedimd|dimmed)$/, ['#8c642b', '#b88c4e']],
+  [/^(nachtlampje|nightlight)$/, ['#814346', '#a8605f']],
   [/^(rusten|rest)$/, ['#ffb46b', '#e08a3c']],
-  [/^(natuurlijk licht|natural light)$/, ['#ffd1a3', '#e6f1ff']],
+  [/^(natuurlijk licht|natural light)$/, ['#fcdb97', '#a8dfed']],
+  [/^(arctische dageraad|arctic aurora)$/, ['#00d0a0', '#5be3c2']],
+  [/^(savanne zonsondergang|savanna sunset)$/, ['#ff7935', '#ffb07a']],
+  [/^(tropische schemering|tropical twilight)$/, ['#a03aa3', '#d37ad6']],
+  [/^(lentebloesem|spring blossom)$/, ['#ba496c', '#e08aa4']],
 ];
 
 export function defaultSceneColors(naam: string): readonly string[] {
