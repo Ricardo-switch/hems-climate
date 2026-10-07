@@ -37,6 +37,7 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/gevoel': 'bewoner',
   '/api/uitstel': 'bewoner',
   '/api/indeling': 'beheerder',
+  '/api/energie': 'beheerder',
   '/api/onboarding': 'beheerder',
 };
 

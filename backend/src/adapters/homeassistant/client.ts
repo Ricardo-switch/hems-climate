@@ -25,7 +25,15 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'config/floor_registry/list',
   'config/device_registry/list',
   'config/entity_registry/list',
+  // Opbrengst (besluit 102): het Energie-dashboard en de statistiek van de
+  // meters. Ook dat is lezen.
+  'energy/get_prefs',
+  'recorder/list_statistic_ids',
+  'recorder/statistics_during_period',
 ]);
+
+/** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period']);
 
 export interface HaEntityState {
   readonly entity_id: string;
@@ -330,14 +338,18 @@ export class HaClient extends EventEmitter {
    * als er daarnaast een gat bestaat waar elk willekeurig commando doorheen
    * kan. Wie hier iets wil toevoegen, voegt het bewust toe.
    */
-  async query<T>(type: string): Promise<T> {
+  async query<T>(type: string, fields: Record<string, unknown> = {}): Promise<T> {
     if (!READ_COMMANDS.has(type)) {
       throw new Error(
         `"${type}" staat niet op de lijst van leesopdrachten. ` +
           `Toegestaan zijn: ${[...READ_COMMANDS].join(', ')}.`,
       );
     }
-    return (await this.#command({ type })) as T;
+    if (Object.keys(fields).length > 0 && !READ_WITH_FIELDS.has(type)) {
+      throw new Error(`"${type}" krijgt geen velden mee.`);
+    }
+    // De velden komen eerst, zodat ze `type` en `id` nooit kunnen overschrijven.
+    return (await this.#command({ ...fields, type })) as T;
   }
 
   /**

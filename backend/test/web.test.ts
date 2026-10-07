@@ -25,6 +25,7 @@ import { summarize, type HouseReport } from '../src/web/house.js';
 import { LayoutStore, type Layout } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
+import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -90,6 +91,7 @@ async function start(options: {
   lights?: LightSwitch;
   access?: Access;
   uitstel?: UitstelStore;
+  energy?: { store: EnergyStore; source: EnergySource };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -112,6 +114,7 @@ async function start(options: {
         ...(options.layout ? { layout: options.layout } : {}),
         ...(options.lights ? { lights: options.lights } : {}),
         ...(options.uitstel ? { uitstel: options.uitstel } : {}),
+        ...(options.energy ? { energy: options.energy } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -148,6 +151,43 @@ describe('"klaar voor" bij de droger (besluit 101)', () => {
     const { base } = await start({});
     expect((await fetch(`${base}/api/uitstel`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
     expect(DOOR_ROLES['/api/uitstel']).toBe('bewoner');
+  });
+});
+
+describe('Opbrengst: meters, prijzen en terugkijken (besluit 102)', () => {
+  const source: EnergySource = {
+    prefs: async () => ({ energy_sources: [{ type: 'grid', flow_from: [{ stat_energy_from: 'sensor.afname', number_energy_price: 0.25 }], flow_to: [] }] }),
+    meters: async () => [{ id: 'sensor.afname', naam: 'P1 afname', soort: 'energy' }],
+    changes: async (ids, startMs) => Object.fromEntries(ids.map((id) => [id, [{ startMs, change: 2 }]])),
+  };
+
+  it('stelt eerst de meters in, met het voorstel uit Home Assistant, en kijkt daarna terug', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-energie-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const store = new EnergyStore(logDir);
+    const { base } = await start({ energy: { store, source } });
+    const first = await fetch(`${base}/api/opbrengst?soort=dag&datum=2026-09-15`);
+    expect(first.status).toBe(409);
+    expect(await first.json()).toMatchObject({ instellen: true });
+
+    const info = (await (await fetch(`${base}/api/energie`)).json()) as { instellingen: unknown; voorstel: { net: { afname: string[] } }; meters: unknown[] };
+    expect(info.instellingen).toBeNull();
+    expect(info.voorstel.net.afname).toEqual(['sensor.afname']);
+    expect(info.meters).toHaveLength(1);
+
+    const saved = await fetch(`${base}/api/energie`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(info.voorstel) });
+    expect(saved.status).toBe(200);
+    const report = await fetch(`${base}/api/opbrengst?soort=dag&datum=2026-09-15`);
+    expect(report.status).toBe(200);
+    expect(await report.json()).toMatchObject({ periode: { label: 'Dinsdag 15 september' }, stroom: { vanNetKwh: 2 } });
+    expect((await fetch(`${base}/api/opbrengst?soort=eeuw`)).status).toBe(400);
+    expect((await fetch(`${base}/api/opbrengst?soort=dag&datum=gisteren`)).status).toBe(400);
+    const bad = await fetch(`${base}/api/energie`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ zon: ['geen meter'] }) });
+    expect(bad.status).toBe(400);
+  });
+
+  it('bewaren vraagt een beheerder', () => {
+    expect(DOOR_ROLES['/api/energie']).toBe('beheerder');
   });
 });
 

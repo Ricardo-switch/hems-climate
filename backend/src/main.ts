@@ -28,6 +28,8 @@ import {
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
 import { UitstelStore } from './web/uitstel.js';
+import { EnergyStore } from './web/energy.js';
+import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { LightSwitch } from './web/lights.js';
 import { SessionStore, homeAssistantLogin, type Access } from './web/auth.js';
@@ -409,6 +411,10 @@ const uitstelStore: UitstelStore | null =
     : null;
 await uitstelStore?.load();
 
+/* Meters en prijzen voor Opbrengst (besluit 102): naast de dataset, dus alleen met een logmap. */
+const energyStore = logDir !== '' ? new EnergyStore(logDir) : null;
+await energyStore?.load();
+
 const runner: ShadowRunner | null =
   site == null
     ? null
@@ -557,6 +563,8 @@ if (webPort != null) {
       ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
+    // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
+    ...(energyStore ? { energy: { store: energyStore, source: haEnergySource(client) } } : {}),
     version,
   });
 }

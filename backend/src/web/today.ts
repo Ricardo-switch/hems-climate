@@ -65,7 +65,7 @@ export interface TodayReport {
 }
 
 /** De delen van een tijdstip in een tijdzone. */
-function partsIn(ms: number, timeZone: string): { y: number; m: number; d: number; h: number; mi: number; s: number } {
+export function partsIn(ms: number, timeZone: string): { y: number; m: number; d: number; h: number; mi: number; s: number } {
   const fmt = new Intl.DateTimeFormat('en-GB', {
     timeZone,
     year: 'numeric',
@@ -84,6 +84,15 @@ function partsIn(ms: number, timeZone: string): { y: number; m: number; d: numbe
 function offsetAt(ms: number, timeZone: string): number {
   const p = partsIn(ms, timeZone);
   return Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s) - Math.floor(ms / 1000) * 1000;
+}
+
+/**
+ * Middernacht van een kalenderdag in de tijdzone van de installatie. Maand en
+ * dag mogen overlopen (maand 13, dag 0): `Date.UTC` rekent dat door.
+ */
+export function zonedMidnight(y: number, m: number, d: number, timeZone: string): number {
+  const guess = Date.UTC(y, m - 1, d);
+  return guess - offsetAt(guess - offsetAt(guess, timeZone), timeZone);
 }
 
 /** "18:00" in de tijdzone van de installatie. */

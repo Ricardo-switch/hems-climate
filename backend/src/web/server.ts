@@ -32,6 +32,9 @@ import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
+import { importFromPrefs, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
+import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
+import { partsIn } from './today.js';
 import { ask, parseQuestion } from './assistant.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
@@ -115,6 +118,11 @@ export interface WebOptions {
   readonly feedback?: FeedbackLog;
   /** "Klaar voor" bij de droger (besluit 101); zonder dit bestaat de route niet. */
   readonly uitstel?: UitstelStore;
+  /**
+   * Opbrengst (besluit 102): de meters en prijzen van de app, en de statistiek
+   * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.
+   */
+  readonly energy?: { readonly store: EnergyStore; readonly source: EnergySource };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -384,6 +392,7 @@ export class WebServer {
       (this.#options.onboarding != null && path === '/api/onboarding') ||
       (this.#options.feedback != null && path === '/api/gevoel') ||
       (this.#options.uitstel != null && path === '/api/uitstel') ||
+      (this.#options.energy != null && path === '/api/energie') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
@@ -454,6 +463,16 @@ export class WebServer {
 
     if (path === '/api/onboarding') {
       await this.#onboarding(req, res, method);
+      return;
+    }
+
+    if (path === '/api/energie') {
+      await this.#energy(req, res, method);
+      return;
+    }
+
+    if (path === '/api/opbrengst') {
+      await this.#yield(res, url.searchParams);
       return;
     }
 
@@ -807,6 +826,82 @@ export class WebServer {
    * `/auth/callback` met een code. De dienst wisselt die in voor wie het is,
    * maakt een eigen sessie en gooit het token van Home Assistant weg.
    */
+  /** De terugblik per periode, even bewaard: de statistiek verandert per uur. */
+  readonly #yieldCache = new Map<string, { atMs: number; report: YieldReport }>();
+
+  async #energy(req: IncomingMessage, res: ServerResponse, method: string): Promise<void> {
+    const energy = this.#options.energy;
+    if (energy == null) {
+      sendJson(res, 503, { wachten: 'Opbrengst staat niet aan' });
+      return;
+    }
+    if (method === 'POST') {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await energy.store.save(body);
+      this.#yieldCache.clear();
+      if (result.ok) sendJson(res, 200, result.settings);
+      else sendJson(res, result.status, { fout: result.reden });
+      return;
+    }
+    // Wat er staat, wat Home Assistant voorstelt, en de meters om uit te kiezen.
+    let voorstel = null;
+    let meters: readonly MeterOption[] = [];
+    let fout: string | null = null;
+    try {
+      meters = await energy.source.meters();
+      voorstel = importFromPrefs(await energy.source.prefs(), meters);
+    } catch (error) {
+      fout = `Home Assistant gaf de meters niet: ${(error as Error).message}`;
+    }
+    sendJson(res, 200, { instellingen: energy.store.current, voorstel, meters, ...(fout ? { fout } : {}) });
+  }
+
+  async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {
+    const energy = this.#options.energy;
+    const config = this.#options.config;
+    if (energy == null || config == null) {
+      sendJson(res, 503, { wachten: 'Opbrengst staat niet aan' });
+      return;
+    }
+    const settings = energy.store.current;
+    if (settings == null) {
+      sendJson(res, 409, { fout: 'er zijn nog geen meters ingesteld', instellen: true });
+      return;
+    }
+    const soort = (params.get('soort') ?? 'maand') as PeriodKind;
+    if (!PERIODS.includes(soort)) {
+      sendJson(res, 400, { fout: `soort is ${PERIODS.join(', ')}` });
+      return;
+    }
+    const now = Date.now();
+    const today = partsIn(now, config.timezone);
+    const datum = params.get('datum') ?? `${today.y}-${String(today.m).padStart(2, '0')}-${String(today.d).padStart(2, '0')}`;
+    const key = `${soort}:${datum}`;
+    const hit = this.#yieldCache.get(key);
+    if (hit && now - hit.atMs < 120_000) {
+      sendJson(res, 200, hit.report);
+      return;
+    }
+    try {
+      const report = await yieldReport(energy.source, settings, soort, datum, config.timezone, now);
+      if (report == null) {
+        sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
+        return;
+      }
+      if (this.#yieldCache.size > 50) this.#yieldCache.clear();
+      this.#yieldCache.set(key, { atMs: now, report });
+      sendJson(res, 200, report);
+    } catch (error) {
+      sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
+    }
+  }
+
   async #auth(req: IncomingMessage, res: ServerResponse, method: string, path: string, url: URL): Promise<void> {
     const access = this.#options.access;
     if (path === '/api/sessie') {

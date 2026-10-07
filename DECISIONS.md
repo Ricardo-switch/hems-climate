@@ -112,6 +112,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur)
 - [88. De app noemt alleen een oorzaak die gemeten is](#88-de-app-noemt-alleen-een-oorzaak-die-gemeten-is)
 - [94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app](#94-de-schaduwweergave-is-voor-de-cijfers-de-proefomgeving-voor-de-app)
+- [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
 
 **Veiligheid**
 
@@ -4417,6 +4418,44 @@ liet twee dingen zien die de kern van 98 nog niet wist:
   haperende koppeling valt zo aan de veilige kant (niet starten). Met dezelfde
   data van die dag zegt de kern nu: 15:20 zou starten (na 15:00, zoals de oude
   automatisering), 15:51 draait, 15:55 klaar, en daarna niets meer.
+
+---
+
+## 102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant
+
+*Onderwerp: weergave · Status: geldig*
+
+De bewoner wil terugkijken: per dag, week, maand of jaar wat het huis gebruikte,
+waar het vandaan kwam, wat het kostte, per apparaat, en vergelijken met eerder
+(schetsen `Opbrengst-terug` en `Wand-Opbrengst`). Gekozen op 7 oktober 2026.
+
+*Besluit:*
+
+- **De app bewaart de meters en de prijzen** (`energie.json` naast de dataset),
+  te beheren via Instellingen bij Opbrengst. Wie Home Assistant al heeft
+  ingericht, neemt het Energie-dashboard in één keer over; wie nieuw is, kiest
+  de meters uit een lijst en vult de prijzen in. Daarna is de app de bron, ook
+  als het dashboard later verandert. Bewaren vraagt een beheerder (99).
+- **De cijfers komen uit de statistiek van Home Assistant**
+  (`recorder/statistics_during_period`), in kWh en m³, dus ook van vóór Smart
+  Climate. Alleen lezen: de client kent drie nieuwe leesopdrachten
+  (`energy/get_prefs`, `recorder/list_statistic_ids`,
+  `recorder/statistics_during_period`), en alleen de laatste twee krijgen
+  velden mee.
+- **Zelf gebruikt** is opgewekt min teruggeleverd, per uur; verbruik is van het
+  net plus zelf gebruikt. **Per apparaat** telt het aandeel eigen zon van elk
+  uur: een schatting, maar dezelfde regel voor elk apparaat. Wat de apparaten
+  met een eigen meter niet verklaren, is "rest van het huis".
+- **Kosten** met de prijzen uit de app; teruglevering tegen de stroomprijs
+  zolang er gesaldeerd wordt, tenzij er een eigen vergoeding staat. Vanaf 2027
+  vraagt dat een vergoeding, en met E de prijs per uur.
+- **Vergelijken:** twaalf periodes tot en met deze, met dezelfde een jaar
+  eerder ernaast; bij een jaar de jaren zelf.
+
+*Gebouwd op 7 oktober 2026, eerst de dienst:* `GET /api/energie` (wat er staat,
+het voorstel uit Home Assistant en de meters om uit te kiezen),
+`POST /api/energie` en `GET /api/opbrengst?soort=maand&datum=2026-09-01`. De
+pagina volgt.
 
 ---
 

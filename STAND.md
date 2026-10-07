@@ -84,6 +84,9 @@ verwijzing bestaat.
 - **Uitstelbare apparaten:** de droger staat in de schaduw. Elke beslissing zegt
   of hij nu op zon zou starten, met de airco's voor; echt starten hoort bij B
   ([98]). Voor hoe laat hij klaar moet zijn, kies je per keer ([101]).
+- **Terugkijken:** Opbrengst rekent per dag, week, maand of jaar met de meters
+  en prijzen die de app bewaart, overgenomen uit het Energie-dashboard of zelf
+  ingesteld; de cijfers komen uit de statistiek van Home Assistant ([102]).
 
 ## Configuratie en onboarding
 
@@ -273,4 +276,5 @@ verwijzing bestaat.
 [99]: DECISIONS.md#99-bedienen-vraagt-een-inlog-met-je-home-assistant-account-kijken-blijft-open
 [100]: DECISIONS.md#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97
 [101]: DECISIONS.md#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen
+[102]: DECISIONS.md#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant
 <!-- links:einde -->
