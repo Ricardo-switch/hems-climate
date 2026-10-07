@@ -471,8 +471,13 @@ const analyse = webPort == null || logDir === '' ? null : new DivergenceCache({ 
  */
 if (startup.onboarding.withoutIngress) {
   console.warn('LET OP: de onboarding staat aan zonder Ingress ervoor.');
-  console.warn('  Deze weergave heeft geen inlog. Doe dit alleen op een machine');
-  console.warn('  waar je zelf bij bent, en zet HEMS_ONBOARDING daarna weer uit.');
+  // Met de inlog van besluit 99 vraagt hij een beheerder; open is hij voor iedereen.
+  console.warn(
+    startup.access.kind === 'open'
+      ? '  Deze weergave staat open (HEMS_OPEN). Doe dit alleen op een machine'
+      : '  Alleen een beheerder in Home Assistant kan hem gebruiken. Doe dit toch alleen',
+  );
+  console.warn(startup.access.kind === 'open' ? '  waar je zelf bij bent, en zet HEMS_ONBOARDING daarna weer uit.' : '  als je hem nodig hebt, en zet HEMS_ONBOARDING daarna weer uit.');
 }
 
 const onboarding =

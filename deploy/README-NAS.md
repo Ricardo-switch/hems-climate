@@ -192,8 +192,9 @@ het logboek. Niet doen buiten een test.
 ### Niet achter de reverse proxy
 
 DSM's reverse proxy publiceert op `*.synology.me`, dus buiten je huis. Deze
-pagina hoort daar niet bij: er is geen inlog, geen sessie en geen rate limit, en
-het proces erachter houdt een token met volledige toegang tot je Home Assistant.
+pagina hoort daar niet bij: bedienen vraagt een inlog (besluit 99), maar kijken
+is open, zonder grens op het tempo, en het proces erachter houdt een token met
+volledige toegang tot je Home Assistant.
 Home Assistant zelf staat daar terecht wel achter — dat heeft een inlog.
 
 ## Wat er is ingebouwd voor het onbewaakt draaien
