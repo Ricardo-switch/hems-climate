@@ -630,6 +630,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#ap-lijst .apparaat').filter({ hasText: 'Geen tijd meer' }).waitFor();
       expect(uitstel.readyBy).toEqual({});
 
+      // Zonder verbinding (besluit 82): de laatste stand, grijs, met sinds wanneer.
+      await p.evaluate('showOffline(Date.now())');
+      await p.locator('#offline').filter({ hasText: 'De regeling loopt gewoon door' }).waitFor();
+      expect(await p.evaluate("getComputedStyle(document.querySelector('main button')).pointerEvents")).toBe('none');
+      expect(await layoutProblems(p), `zonder verbinding in ${stand}`).toEqual([]);
+      await p.evaluate('markOnline()');
+      expect(await p.locator('#offline').isVisible()).toBe(false);
+
       // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
       const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
       expect(fonts).toEqual(expect.arrayContaining(['Figtree', 'Bricolage Grotesque']));

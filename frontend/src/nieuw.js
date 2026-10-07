@@ -1356,6 +1356,37 @@ function connection(ok, text) {
   const chip = $('verbinding');
   chip.className = `chip ${ok ? 'good' : 'bad'}`;
   chip.lastElementChild.textContent = text;
+  if (ok) markOnline();
+  else markLost();
+}
+
+/*
+ * Zonder verbinding (besluit 82): het scherm blijft staan met de laatste stand,
+ * grijs, met sinds wanneer en dat de regeling gewoon doorloopt; bedienen kan pas
+ * weer als de verbinding terug is. Een korte onderbreking, zoals bij een uitrol,
+ * telt nog niet: pas na vijftien seconden.
+ */
+const OFFLINE_AFTER_MS = 15_000;
+let lostAt = null;
+let offlineTimer = null;
+
+function markLost() {
+  if (lostAt != null) return;
+  lostAt = Date.now();
+  offlineTimer = setTimeout(() => showOffline(lostAt), OFFLINE_AFTER_MS);
+}
+
+function showOffline(sinceMs) {
+  document.body.classList.add('offline');
+  $('offline-tijd').textContent = hhmm(sinceMs);
+  $('offline').hidden = false;
+}
+
+function markOnline() {
+  clearTimeout(offlineTimer);
+  lostAt = null;
+  document.body.classList.remove('offline');
+  $('offline').hidden = true;
 }
 
 function render(snap) {

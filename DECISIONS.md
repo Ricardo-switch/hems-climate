@@ -3307,6 +3307,13 @@ Is niet de verbinding weg maar de dienst zelf, dan zegt het scherm dat ook, met
 wat het vangnet doet: "Smart Climate reageert niet; je huidige regeling heeft
 het overgenomen" (het teken van leven uit stap B).
 
+*Gebouwd op 7 oktober 2026, het eerste deel.* Valt de stroom van besluiten
+langer dan vijftien seconden weg, dan wordt de app grijs met de laatste stand,
+met bovenaan "Geen verbinding sinds 14:02" en dat de regeling op de NAS gewoon
+doorloopt; knoppen en velden doen dan niets. Een korte onderbreking, zoals bij
+een uitrol, telt niet. De browser maakt de verbinding zelf opnieuw. Het tweede
+deel, de dienst zelf die niet reageert met het vangnet erbij, volgt met stap B.
+
 ---
 
 ## 83. Ruwe data twee jaar, daarna samengevat

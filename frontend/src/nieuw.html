@@ -576,6 +576,36 @@
       :root {
         color-scheme: only dark;
       }
+      /* Zonder verbinding (besluit 82): alles grijs en niet te bedienen, behalve de balk. */
+      .offline-balk {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        border-radius: 16px;
+        background: #3a2a14;
+        border: 1px solid rgba(245, 198, 110, 0.5);
+        color: var(--warm-t);
+        font-size: 14px;
+      }
+      .offline-balk span {
+        color: #e9d9bf;
+      }
+      body.offline main > :not(.offline-balk),
+      body.offline .bottomnav {
+        filter: grayscale(1);
+        opacity: 0.55;
+      }
+      body.offline main button,
+      body.offline main input,
+      body.offline main select,
+      body.offline main [role='switch'] {
+        pointer-events: none;
+      }
       .o-sankey svg {
         display: block;
       }
@@ -1624,6 +1654,11 @@
       </nav>
 
       <main>
+        <!-- Zonder verbinding (besluit 82): de laatste stand blijft staan, grijs. -->
+        <div class="offline-balk" id="offline" role="status" hidden>
+          <b>Geen verbinding sinds <span id="offline-tijd"></span></b>
+          <span>De regeling loopt gewoon door, op de NAS. Je ziet de laatste stand; bedienen kan weer zodra de verbinding terug is.</span>
+        </div>
         <div class="topbar">
           <div class="clock"><b id="tijd">--:--</b><span id="datum"></span></div>
           <div class="chips">
