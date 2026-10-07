@@ -161,6 +161,34 @@ omwisselen met "port is already allocated" en blijft de oude container draaien.
 Helemaal uitzetten kan door `HEMS_WEB_PORT` en het `ports`-blok weg te laten.
 Dan luistert de dienst nergens op, zoals vóór fase 5.
 
+### Inloggen (besluit 99)
+
+Kijken kan zonder inlog. Bedienen (lampen, gevoel, de indeling) vraagt een
+inlog met je **Home Assistant-account**: de app stuurt je naar het inlogscherm
+van je eigen Home Assistant en neemt je daarna terug. Een beheerder in Home
+Assistant is beheerder in de app. De tablet aan de muur logt één keer in en
+blijft dat; uitloggen kan bij Bediening.
+
+Standaard gaat de browser naar het adres in `HA_URL`. Bereik je Home Assistant
+onderweg onder een andere naam (bijvoorbeeld de naam in je tailnet), zet die
+dan in `.env`:
+
+```
+# Waar de browser Home Assistant bereikt om in te loggen.
+HEMS_HA_LOGIN_URL=http://homeassistant.tail1234.ts.net:8123
+```
+
+De dienst antwoordt alleen op een IP-adres, `localhost`, een naam zonder punt,
+of een naam op `.local`, `.lan`, `.home.arpa` of `.ts.net`. Open je de app
+onder een andere naam, voeg die dan toe, met komma's ertussen:
+
+```
+HEMS_HOSTS=klimaat.thuis.nl
+```
+
+`HEMS_OPEN=1` zet alles open zoals vóór dit besluit, met een waarschuwing in
+het logboek. Niet doen buiten een test.
+
 ### Niet achter de reverse proxy
 
 DSM's reverse proxy publiceert op `*.synology.me`, dus buiten je huis. Deze

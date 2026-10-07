@@ -83,7 +83,7 @@ verwijzing bestaat.
   won nipt en gaat na de start van B in de regeling.
 - **Uitstelbare apparaten:** de droger staat in de schaduw. Elke beslissing zegt
   of hij nu op zon zou starten, met de airco's voor; echt starten hoort bij B
-  ([98]).
+  ([98]). Voor hoe laat hij klaar moet zijn, kies je per keer ([101]).
 
 ## Configuratie en onboarding
 
@@ -132,8 +132,12 @@ verwijzing bestaat.
   code ([15]). Er zijn vier smalle deuren, elk getest: de onboarding achter
   Ingress ([42]), gevoel ([84]) en indeling ([96]) naar eigen bestanden, en
   lampen aan en uit ([97]). Klimaat en screens blijven dicht tot B.
-- **De weergave luistert,** maar alleen om te lezen ([23]). Op de NAS bewust
-  zonder inlog: alleen het thuisnetwerk en Tailscale.
+- **De weergave luistert,** maar alleen om te lezen ([23]). Kijken blijft open
+  op het thuisnetwerk en in het tailnet; bedienen vraagt een inlog met je
+  Home Assistant-account, en de dienst antwoordt alleen op bekende hostnamen
+  ([99]).
+- **Licht in kleur en wit gaat door de deur van de lampen; Hue-scènes van de
+  eigen ruimtes krijgen een eigen smalle deur** ([100]).
 - **De ruwe export van Home Assistant** hoort niet in git ([38]).
 - **In de add-on** opent de app via Ingress; een eigen link pas met een eigen
   inlog ([77]). Iedereen in huis bedient, één beheert ([80]).
@@ -265,4 +269,7 @@ verwijzing bestaat.
 [96]: DECISIONS.md#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving
 [97]: DECISIONS.md#97-lampen-aan-en-uit-vanuit-de-app-alles-groepen-zijn-geen-lamp
 [98]: DECISIONS.md#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter
+[99]: DECISIONS.md#99-bedienen-vraagt-een-inlog-met-je-home-assistant-account-kijken-blijft-open
+[100]: DECISIONS.md#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97
+[101]: DECISIONS.md#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen
 <!-- links:einde -->

@@ -41,6 +41,7 @@ import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
+import { SessionStore } from '../src/web/auth.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
@@ -191,6 +192,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let live: LiveSnapshot;
   let baseUrl: string;
   let layoutStore: LayoutStore;
+  const sessions = new SessionStore();
+  let sessionId = '';
   const pageErrors: string[] = [];
   const lightCalls: string[] = [];
   const consoleErrors: string[] = [];
@@ -230,6 +233,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             },
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
+          // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
+          access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
           // De ligging, zoals Home Assistant hem geeft: op één decimaal (besluit 93).
           location: () => ({ latDeg: 52.1, lonDeg: 5.1 }),
           write: () => {},
@@ -240,12 +246,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       (s) => s.server.stop(),
     ));
     baseUrl = `http://127.0.0.1:${port}`;
+    sessionId = await sessions.create({ userId: 'u', naam: 'Test', rol: 'beheerder' });
 
     const channel = process.env['HEMS_PAGE_BROWSER'];
     browser = await chromium.launch(channel ? { channel } : {});
     // UTC, net als de rest van de suite in de CI: de tijdlijn en de
     // versiemarkering rekenen dan in dezelfde dagen.
     const context = await browser.newContext({ timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     page = await context.newPage();
     page.on('pageerror', (e) => pageErrors.push(String(e)));
     page.on('console', (m) => {
@@ -309,6 +317,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   ] as const) {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
       // Alleen bij een fout bewaard: zo is te zien wat de pagina deed, ook in de CI.
       await context.tracing.start({ screenshots: true, snapshots: true });
       onTestFailed(async () => {
@@ -448,6 +457,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Bediening: de modusbalk met vijf woorden naast elkaar.
       await p.goto(`${baseUrl}/nieuw.html#bediening`);
       await p.locator('#b-modus button').first().waitFor();
+      // Wie er is ingelogd (besluit 99): de browser heeft een sessie als beheerder.
+      await p.locator('#b-account').filter({ hasText: 'Ingelogd als Test' }).waitFor();
       expect(await layoutProblems(p), `Bediening in ${stand}`).toEqual([]);
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.

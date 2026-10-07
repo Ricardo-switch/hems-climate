@@ -37,6 +37,7 @@ import { sunReport, type Location } from './sun.js';
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
 import type { LightSwitch } from './lights.js';
+import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -145,6 +146,12 @@ export interface WebOptions {
    * ook voor `/api/licht`.
    */
   readonly lights?: LightSwitch;
+  /**
+   * Wie mag bedienen (besluit 99): een eigen inlog via Home Assistant, Ingress
+   * van de add-on, of open (alleen voor tests). Verplicht, zodat een nieuwe
+   * opstelling er niet per ongeluk zonder komt te staan.
+   */
+  readonly access: Access;
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -341,6 +348,19 @@ export class WebServer {
 
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = url.pathname;
+    const access = this.#options.access;
+
+    /*
+     * Alleen bekende hostnamen (besluit 99). Een vreemde website die zijn eigen
+     * naam naar het adres van de NAS laat wijzen (DNS-rebinding), is voor de
+     * browser "dezelfde" herkomst; hier strandt hij. Achter Ingress niet: daar
+     * staat Home Assistant voor, onder welke naam dan ook.
+     */
+    if (access.kind !== 'ingress' && !hostAllowed(req.headers.host, access.kind === 'sessions' ? access.hosts : [])) {
+      res.writeHead(421, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Onbekende hostnaam.\n');
+      return;
+    }
 
     /*
      * Read-only als grens, niet als afspraak — met sinds fase 6e stap 4 één
@@ -361,7 +381,9 @@ export class WebServer {
       (this.#options.onboarding != null && path === '/api/onboarding') ||
       (this.#options.feedback != null && path === '/api/gevoel') ||
       (this.#options.layout != null && path === '/api/indeling') ||
-      (this.#options.lights != null && path === '/api/licht');
+      (this.#options.lights != null && path === '/api/licht') ||
+      // Uitloggen (besluit 99): alleen de eigen sessie weg, verder niets.
+      (access.kind === 'sessions' && path === '/auth/logout');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
       res.writeHead(405, {
         allow: mayWrite ? 'GET, HEAD, POST' : 'GET, HEAD',
@@ -392,6 +414,24 @@ export class WebServer {
         sendJson(res, 403, { fout: 'alleen vanaf de eigen pagina' });
         return;
       }
+      // Wie is het, en mag dat (besluit 99)?
+      const role = DOOR_ROLES[path];
+      if (role != null && access.kind === 'sessions') {
+        const visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+        if (visitor == null) {
+          sendJson(res, 401, { fout: 'log eerst in', inlog: '/auth/login' });
+          return;
+        }
+        if (role === 'beheerder' && visitor.rol !== 'beheerder') {
+          sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
+          return;
+        }
+      }
+    }
+
+    if (path === '/api/sessie' || path.startsWith('/auth/')) {
+      await this.#auth(req, res, method, path, url);
+      return;
     }
 
     if (path === '/api/site') {
@@ -703,6 +743,77 @@ export class WebServer {
 
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
     res.end(headOnly ? undefined : 'Niet gevonden.\n');
+  }
+
+  /** Inlogpogingen die onderweg zijn: de waarde voor Home Assistant, met de terugweg. */
+  readonly #pending = new Map<string, { terug: string; untilMs: number }>();
+
+  /**
+   * Inloggen, uitloggen en "wie ben ik" (besluit 99).
+   *
+   * Inloggen stuurt de browser naar Home Assistant; die komt terug op
+   * `/auth/callback` met een code. De dienst wisselt die in voor wie het is,
+   * maakt een eigen sessie en gooit het token van Home Assistant weg.
+   */
+  async #auth(req: IncomingMessage, res: ServerResponse, method: string, path: string, url: URL): Promise<void> {
+    const access = this.#options.access;
+    if (path === '/api/sessie') {
+      let visitor: Visitor | null = null;
+      if (access.kind === 'sessions') visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+      else if (access.kind === 'ingress') visitor = { naam: String(req.headers['x-remote-user-display-name'] ?? req.headers['x-remote-user-name'] ?? 'bewoner'), rol: 'beheerder' };
+      else visitor = { naam: 'iedereen', rol: 'beheerder' };
+      sendJson(res, 200, {
+        toegang: access.kind,
+        ingelogd: visitor != null,
+        ...(visitor ? { naam: visitor.naam, rol: visitor.rol } : {}),
+        ...(access.kind === 'sessions' ? { inlog: '/auth/login', uitlog: '/auth/logout' } : {}),
+      });
+      return;
+    }
+    if (access.kind !== 'sessions') {
+      sendJson(res, 404, { fout: 'inloggen gaat hier via Home Assistant zelf' });
+      return;
+    }
+    const origin = `${String(req.headers['x-forwarded-proto'] ?? 'http').split(',')[0]!.trim()}://${req.headers.host}`;
+    const secure = origin.startsWith('https:');
+
+    if (path === '/auth/login') {
+      const now = Date.now();
+      for (const [k, v] of this.#pending) if (v.untilMs < now) this.#pending.delete(k);
+      const state = newState();
+      this.#pending.set(state, { terug: safeReturn(url.searchParams.get('terug')), untilMs: now + 10 * 60_000 });
+      res.writeHead(302, { location: access.login.authorizeUrl(origin, state), 'cache-control': 'no-store' });
+      res.end();
+      return;
+    }
+    if (path === '/auth/callback') {
+      const state = url.searchParams.get('state') ?? '';
+      const code = url.searchParams.get('code');
+      const pending = this.#pending.get(state);
+      this.#pending.delete(state);
+      if (pending == null || pending.untilMs < Date.now() || code == null) {
+        res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('Deze inlog is verlopen of komt niet van hier. Probeer het opnieuw.\n');
+        return;
+      }
+      try {
+        const user = await access.login.identify(code, origin);
+        const id = await access.store.create({ userId: user.userId, naam: user.naam, rol: user.isAdmin ? 'beheerder' : 'bewoner' });
+        res.writeHead(302, { location: pending.terug, 'set-cookie': sessionCookie(id, secure), 'cache-control': 'no-store' });
+        res.end();
+      } catch (error) {
+        res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end(`Inloggen lukte niet: ${(error as Error).message}\n`);
+      }
+      return;
+    }
+    if (path === '/auth/logout' && method === 'POST') {
+      await access.store.remove(cookieValue(req, SESSION_COOKIE));
+      res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'set-cookie': sessionCookie(null, secure) });
+      res.end('{"uitgelogd":true}');
+      return;
+    }
+    sendJson(res, 404, { fout: 'onbekend' });
   }
 
   /**

@@ -28,6 +28,7 @@ import {
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
 import { LightSwitch } from './web/lights.js';
+import { SessionStore, homeAssistantLogin, type Access } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -479,8 +480,29 @@ const lightSwitch = startup.lights.enabled
     })
   : null;
 
+/*
+ * Wie mag bedienen (besluit 99). Op de NAS een eigen inlog via Home Assistant;
+ * de sessies staan naast de dataset, alleen als vingerafdruk.
+ */
+let access: Access;
+if (startup.access.kind === 'sessions') {
+  const loginUrl = startup.access.haLoginUrl ?? url ?? '';
+  access = {
+    kind: 'sessions',
+    store: new SessionStore({ logDir: logDir === '' ? null : logDir }),
+    login: homeAssistantLogin(loginUrl),
+    hosts: startup.access.hosts,
+  };
+} else {
+  access = startup.access.kind === 'ingress' ? { kind: 'ingress' } : { kind: 'open' };
+  if (startup.access.kind === 'open') {
+    console.warn('LET OP: HEMS_OPEN=1. Iedereen die deze weergave kan openen, kan bedienen.');
+  }
+}
+
 if (webPort != null) {
   web = new WebServer({
+    access,
     port: webPort,
     host: startup.web.host,
     webDir,

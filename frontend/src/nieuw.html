@@ -1019,6 +1019,19 @@
         background: var(--cool);
         justify-content: flex-end;
       }
+      /* Wie er is ingelogd (besluit 99): tekst links, de knop rechts, en onder elkaar als het smal is. */
+      .note.account {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      a.knop {
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+      }
       .note {
         padding: 12px 14px;
         border-radius: 16px;
@@ -1431,6 +1444,7 @@
             <h1 class="title">Bediening</h1>
             <p class="lead">Hoe het huis geregeld wordt, en door wie.</p>
           </div>
+          <div class="note account" id="b-account" hidden></div>
           <div class="note">
             Het klimaat bedien je hier zodra Smart Climate echt schakelt; tot dan kijkt hij mee. Lampen bedien je al,
             in het huis.

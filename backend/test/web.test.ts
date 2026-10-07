@@ -7,6 +7,7 @@
  * van bestanden zit het venijn in dat tweede.
  */
 
+import { SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
 import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -86,6 +87,7 @@ async function start(options: {
   house?: () => HouseReport | null;
   layout?: { store: LayoutStore; proposal: () => Layout | null };
   lights?: LightSwitch;
+  access?: Access;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -107,6 +109,8 @@ async function start(options: {
         ...(options.house ? { house: options.house } : {}),
         ...(options.layout ? { layout: options.layout } : {}),
         ...(options.lights ? { lights: options.lights } : {}),
+        // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
+        access: options.access ?? { kind: 'open' },
         write: () => {},
       });
       return { server, port: await server.start() };
@@ -1022,5 +1026,112 @@ describe('alleen de eigen pagina door de deuren (CSRF)', () => {
     expect(own.status).toBe(200);
     const script = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body });
     expect(script.status).toBe(200);
+  });
+});
+
+describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
+  /** Een nep-Home Assistant: elke code hoort bij één gebruiker. */
+  function fakeLogin(user: { userId: string; naam: string; isAdmin: boolean }): HaLogin & { codes: string[] } {
+    const codes: string[] = [];
+    return {
+      codes,
+      authorizeUrl: (origin, state) => `http://ha.local:8123/auth/authorize?client_id=${encodeURIComponent(`${origin}/`)}&state=${state}`,
+      identify: async (code) => {
+        codes.push(code);
+        return user;
+      },
+    };
+  }
+
+  async function withLogin(isAdmin: boolean) {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-inlog-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin });
+    const access: Access = { kind: 'sessions', store: new SessionStore({ logDir: dir }), login };
+    const feedback = new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] });
+    const started = await start({ feedback, access });
+    return { ...started, login, dir };
+  }
+
+  /** Loopt de inlog door zoals een browser: naar Home Assistant en terug. */
+  async function logIn(base: string): Promise<string> {
+    const go = await fetch(`${base}/auth/login?terug=/nieuw.html%23huis`, { redirect: 'manual' });
+    expect(go.status).toBe(302);
+    const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
+    const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
+    expect(back.status).toBe(302);
+    expect(back.headers.get('location')).toBe('/nieuw.html#huis');
+    const cookie = back.headers.get('set-cookie')!;
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Strict/);
+    return cookie.split(';')[0]!;
+  }
+
+  const gevoel = JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' });
+
+  it('weigert een deur zonder inlog, en wijst de weg naar binnen', async () => {
+    const { base } = await withLogin(false);
+    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: gevoel });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ inlog: '/auth/login' });
+    // Kijken blijft open.
+    expect((await fetch(`${base}/api/gevoel`)).status).toBe(200);
+  });
+
+  it('laat een bewoner na het inloggen door, en zegt wie hij is', async () => {
+    const { base, login, dir } = await withLogin(false);
+    const cookie = await logIn(base);
+    expect(login.codes).toEqual(['abc']);
+    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: gevoel });
+    expect(res.status).toBe(200);
+    const me = (await (await fetch(`${base}/api/sessie`, { headers: { cookie } })).json()) as { ingelogd: boolean; naam: string; rol: string };
+    expect(me).toMatchObject({ ingelogd: true, naam: 'Ricardo', rol: 'bewoner' });
+    // In het bestand staat de sessie zelf niet, alleen een vingerafdruk.
+    const saved = await readFile(join(dir, 'sessies.json'), 'utf-8');
+    expect(saved).not.toContain(cookie.split('=')[1]!);
+  });
+
+  it('houdt de indeling voor de beheerder', async () => {
+    const { base } = await withLogin(false);
+    const cookie = await logIn(base);
+    // Zonder indeling-deur in deze opstelling is het de muur; met de deur zou een bewoner 403 krijgen.
+    const { DOOR_ROLES } = await import('../src/web/auth.js');
+    expect(DOOR_ROLES['/api/indeling']).toBe('beheerder');
+    expect(DOOR_ROLES['/api/licht']).toBe('bewoner');
+    expect((await fetch(`${base}/api/indeling`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: '{}' })).status).toBe(405);
+  });
+
+  it('weigert een terugkeer die niet van hier komt, en een terugweg naar een andere site', async () => {
+    const { base } = await withLogin(false);
+    const bad = await fetch(`${base}/auth/callback?code=abc&state=verzonnen`, { redirect: 'manual' });
+    expect(bad.status).toBe(400);
+    const go = await fetch(`${base}/auth/login?terug=//vreemd.example/x`, { redirect: 'manual' });
+    const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
+    const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
+    expect(back.headers.get('location')).toBe('/nieuw.html');
+  });
+
+  it('logt uit: daarna is de sessie weg', async () => {
+    const { base } = await withLogin(false);
+    const cookie = await logIn(base);
+    const out = await fetch(`${base}/auth/logout`, { method: 'POST', headers: { ...JSON_HEADERS, cookie, origin: base }, body: '{}' });
+    expect(out.status).toBe(200);
+    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: gevoel });
+    expect(res.status).toBe(401);
+  });
+
+  it('antwoordt niet op een onbekende hostnaam (DNS-rebinding)', async () => {
+    const { base } = await withLogin(false);
+    const { request } = await import('node:http');
+    const status = await new Promise<number>((resolveStatus, reject) => {
+      const u = new URL(`${base}/api/state`);
+      const r = request({ host: u.hostname, port: u.port, path: u.pathname, headers: { host: 'nas.vreemd.example' } }, (res) => {
+        res.resume();
+        resolveStatus(res.statusCode ?? 0);
+      });
+      r.on('error', reject);
+      r.end();
+    });
+    expect(status).toBe(421);
   });
 });

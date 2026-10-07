@@ -65,7 +65,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
 - [89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg](#89-elke-omvormer-werkt-de-app-meet-hoe-snel-de-zonnesensor-is-en-wijst-de-lokale-weg)
 - [90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen](#90-alleen-sturen-wat-afwijkt-slimmere-timing-moet-eerst-in-de-replay-winnen)
-- [98. Uitstelbare apparaten: de droger draait op zon, via de arbiter](#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter)
+- [98. Uitstelbare apparaten: de droger draait op zon, via de arbiter](#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter) — *aangevuld door 101*
+- [101. "Klaar voor" bij de droger is per keer te kiezen](#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen)
 
 **Configuratie en onboarding**
 
@@ -121,7 +122,9 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [77. De add-on opent via Home Assistant; een eigen link pas met een eigen inlog](#77-de-add-on-opent-via-home-assistant-een-eigen-link-pas-met-een-eigen-inlog)
 - [80. Iedereen in huis bedient; één beheert](#80-iedereen-in-huis-bedient-één-beheert)
 - [84. Gevoel en toelichting mogen deze winter via de testpagina, naar een eigen bestand](#84-gevoel-en-toelichting-mogen-deze-winter-via-de-testpagina-naar-een-eigen-bestand)
-- [97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp](#97-lampen-aan-en-uit-vanuit-de-app-alles-groepen-zijn-geen-lamp)
+- [97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp](#97-lampen-aan-en-uit-vanuit-de-app-alles-groepen-zijn-geen-lamp) — *aangevuld door 100*
+- [99. Bedienen vraagt een inlog, met je Home Assistant-account; kijken blijft open](#99-bedienen-vraagt-een-inlog-met-je-home-assistant-account-kijken-blijft-open)
+- [100. Licht in kleur en wit, en de scènes van Hue (aanvulling op 97)](#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97)
 
 **Uitrol en beheer**
 
@@ -4112,7 +4115,7 @@ aan gebruik oplevert, maakt de app beter.
 
 ## 97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp
 
-*Onderwerp: veiligheid · Status: geldig*
+*Onderwerp: veiligheid · Status: aangevuld door 100*
 
 Op 5 oktober 2026 werkte de indeling weer (96), maar twee dingen bleven. De
 groepen "Etage 2 alles" en "Achtertuin alles" stonden als lamp in het huis: een
@@ -4192,7 +4195,7 @@ toegestane hostnamen; die hoort bij de inlog van stap C.
 
 ## 98. Uitstelbare apparaten: de droger draait op zon, via de arbiter
 
-*Onderwerp: kern en regeling · Status: geldig*
+*Onderwerp: kern en regeling · Status: aangevuld door 101*
 
 De bewoner wil dat slimme grootverbruikers (wasmachine, droger, vaatwasser) op
 zon draaien zodra ze klaarstaan om op afstand gestart te worden. In dit huis is
@@ -4275,6 +4278,101 @@ voor de bedrijfsstatus geeft. De herkenning is ruim ("Run", "Finished", ook in
 de lange vorm), en de dataset legt de echte waarden vast zodra de droger draait.
 Nog niet: de prognose voor het komende uur (E), en een eindtijd die de bewoner
 per keer kiest.
+
+---
+
+## 99. Bedienen vraagt een inlog, met je Home Assistant-account; kijken blijft open
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Stap C begint met de inlog. Er waren vier schrijfdeuren (42, 84, 96, 97) en er
+komen er meer (100, 101). Op de NAS kon tot nu toe iedereen op het thuisnetwerk
+of in het tailnet ze gebruiken, en voor een tweede woning kan dat niet. Gekozen
+door de bewoner op 7 oktober 2026, uit drie opties: een koppelcode per
+apparaat, één wachtwoord voor het huis, of het account van Home Assistant.
+
+*Besluit:*
+
+- **Inloggen gaat via Home Assistant.** De app stuurt je naar het inlogscherm
+  van je eigen Home Assistant; die stuurt je terug met een code, en de dienst
+  vraagt Home Assistant wie je bent. Het token van Home Assistant gooit hij
+  daarna weg: de dienst bewaart geen wachtwoord en geen token van de bewoner,
+  alleen een eigen sessie.
+- **De rol volgt uit Home Assistant** (80): een beheerder daar is beheerder
+  hier; ieder ander is bewoner.
+- **Alleen bedienen vraagt een inlog.** Kijken blijft open op het thuisnetwerk
+  en in het tailnet, zoals nu. Lampen, scènes, gevoel en "klaar voor" vragen een
+  bewoner; de indeling en de onboarding een beheerder.
+- **Een sessie blijft lang geldig,** zodat de tablet aan de muur één keer
+  inlogt. Een cookie dat alleen de eigen pagina meekrijgt (`HttpOnly`,
+  `SameSite=Strict`); in het bestand staat alleen een vingerafdruk, niet de
+  sessie zelf. Uitloggen kan altijd.
+- **Alleen bekende hostnamen.** De dienst antwoordt alleen op een IP-adres,
+  `localhost`, een naam zonder punt, en namen op `.local`, `.lan`,
+  `.home.arpa` of `.ts.net`, plus wat de beheerder erbij zet. Dat sluit
+  DNS-rebinding uit, het punt dat na 97 open bleef.
+- **Achter Ingress** (de add-on) heeft Home Assistant de bezoeker al
+  vastgesteld; daar is geen tweede inlog.
+
+*Wanneer:* nu, als eerste stap van C.
+
+*Gebouwd op 7 oktober 2026.* `web/auth.ts` en de routes `/auth/login`,
+`/auth/callback`, `/auth/logout` en `/api/sessie`. De toegang is verplicht bij
+het starten van de webserver (`sessions`, `ingress` of `open`), zodat een
+nieuwe opstelling er niet per ongeluk zonder komt. De paginatest draait met de
+echte inlog en een sessie in de browser; webtests lopen de hele inlog door
+(naar Home Assistant en terug, een terugweg naar een andere site, uitloggen,
+een onbekende hostnaam), en een nep-Home Assistant bewijst dat het token na het
+inloggen wordt weggegooid. Op de NAS: `HEMS_HA_LOGIN_URL` als Home Assistant
+onderweg onder een andere naam bereikbaar is, `HEMS_HOSTS` voor een eigen
+hostnaam (`deploy/README-NAS.md`).
+
+---
+
+## 100. Licht in kleur en wit, en de scènes van Hue (aanvulling op 97)
+
+*Onderwerp: veiligheid · Status: geldig*
+
+De bewoner wil een lamp ook in kleur of in een tint wit zetten, en de scènes
+uit Hue kiezen (schetsen `Lamp` en `Lamp-wit`). Gekozen op 7 oktober 2026.
+
+*Besluit:*
+
+- **Kleur en wit gaan door de deur van 97,** `light.turn_on`, met twee vaste
+  velden erbij: `color_temp_kelvin` (binnen wat de lamp kan) en `hs_color`
+  (tint 0–360, verzadiging 0–100). Geen andere velden.
+- **Scènes krijgen een eigen, even smalle deur:** alleen `scene.turn_on`, alleen
+  voor een `scene.`-entiteit die bij een ruimte in de indeling hoort (via de
+  Hue-kamer of -zone waar hij bij hoort). Een scène van een ruimte die er niet
+  is, `hue.activate_scene` en elke andere dienst blijven werpen; een test
+  bewijst het.
+- **Wat een lamp kan, zegt Home Assistant** (`supported_color_modes`, het bereik
+  in kelvin). Een lamp zonder kleur krijgt geen tab Kleur.
+- **Welke scène actief is,** zegt Hue niet. "Gekozen" is de laatst aangezette
+  in die ruimte.
+- Zoals bij 97: dit is een knop van de bewoner, geen besluit van Smart Climate,
+  en hij vraagt een inlog (99).
+
+---
+
+## 101. "Klaar voor" bij de droger is per keer te kiezen
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Besluit 98 wilde een eindtijd van de bewoner in plaats van vast 15:00. Gekozen
+op 7 oktober 2026: per keer, in de app (schets `Apparaten`), niet als vaste
+instelling.
+
+*Besluit:*
+
+- **Een vijfde smalle deur** bewaart alleen de eindtijd: per uitstelbaar
+  apparaat een tijd van vandaag of morgen, in een eigen bestand naast de dataset
+  (`uitstel.json`). Nooit naar Home Assistant.
+- **De kern rekent ermee:** de uiterlijke start is de eindtijd min de duur van
+  het programma (die Home Connect meldt); zonder eindtijd geldt `latestStart`
+  uit de configuratie. Is het programma klaar of gaat de deur open, dan vervalt
+  de eindtijd.
+- Vraagt een inlog als bewoner (99).
 
 ---
 

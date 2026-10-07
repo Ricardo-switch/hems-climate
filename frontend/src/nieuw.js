@@ -709,11 +709,7 @@ function feedbackStatus(r) {
 
 async function sendFeedback(body) {
   try {
-    const res = await fetch('api/gevoel', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await postDoor('api/gevoel', body);
     const answer = await res.json();
     if (res.ok) feedbackStatus(answer);
     else $('g-status').textContent = answer.fout ?? 'niet gelukt';
@@ -783,6 +779,57 @@ function render(snap) {
   renderControls(snap);
 }
 
+/* ------------------------------------------------------- inloggen */
+
+/*
+ * Bedienen vraagt een inlog met je Home Assistant-account (besluit 99); kijken
+ * niet. Wie zonder inlog op een knop tikt, gaat naar het inlogscherm van Home
+ * Assistant en komt daarna terug op dezelfde plek.
+ */
+let session = null;
+
+async function loadSession() {
+  try {
+    session = await (await fetch('api/sessie')).json();
+  } catch {
+    session = null;
+  }
+  renderSession();
+}
+
+function loginHref() {
+  return `auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}`;
+}
+
+/** Een POST naar een deur. Zonder inlog: naar het inlogscherm, en geen antwoord. */
+async function postDoor(url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  if (res.status === 401) {
+    location.href = loginHref();
+    return new Promise(() => {});
+  }
+  return res;
+}
+
+function renderSession() {
+  const box = $('b-account');
+  if (!box) return;
+  if (!session || session.toegang !== 'sessions') {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  if (session.ingelogd) {
+    const out = button('Uitloggen', async () => {
+      await fetch(session.uitlog, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+      await loadSession();
+    });
+    box.replaceChildren(el('span', { text: `Ingelogd als ${session.naam} · ${session.rol}` }), out);
+  } else {
+    box.replaceChildren(el('span', { text: 'Je kijkt mee. Log in met je Home Assistant-account om te bedienen.' }), el('a', { class: 'knop', href: loginHref(), text: 'Inloggen' }));
+  }
+}
+
 /* ------------------------------------------------------- huis */
 
 /*
@@ -823,11 +870,7 @@ const lampen = (n) => `${n} ${n === 1 ? 'lamp' : 'lampen'} aan`;
  */
 async function switchLights(body) {
   try {
-    const res = await fetch('api/licht', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const res = await postDoor('api/licht', body);
     const out = await res.json();
     if (!res.ok) return out.fout ?? out.wachten ?? 'Niet gelukt.';
     // Niet tijdens het indelen: dan ververst het huis nooit vanzelf, anders raakt
@@ -1570,11 +1613,7 @@ function draft() {
 
 async function saveLayout(next, what) {
   try {
-    const res = await fetch('api/indeling', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(next),
-    });
+    const res = await postDoor('api/indeling', next);
     const body = await res.json();
     if (!res.ok) {
       editStatus(body.fout ?? 'niet bewaard');
@@ -2015,6 +2054,7 @@ function setupAssistant() {
 
 async function start() {
   buildNav();
+  void loadSession();
   showView();
   window.addEventListener('hashchange', showView);
   tick();

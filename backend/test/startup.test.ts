@@ -101,9 +101,11 @@ describe('licht bedienen (besluit 97)', () => {
     expect(readStartup({ ...ADDON, HEMS_LIGHTS: '0' }).lights.enabled).toBe(false);
   });
 
-  it('staat buiten de add-on alleen aan op uitdrukkelijk verzoek, en zegt dat erbij', () => {
+  it('staat buiten de add-on alleen aan op uitdrukkelijk verzoek, en waarschuwt alleen zonder inlog', () => {
     expect(readStartup(NAS).lights.enabled).toBe(false);
-    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1' }).lights).toEqual({ enabled: true, withoutIngress: true });
+    // Met de inlog van besluit 99 kan niet iedereen schakelen.
+    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1' }).lights).toEqual({ enabled: true, withoutIngress: false });
+    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1', HEMS_OPEN: '1' }).lights).toEqual({ enabled: true, withoutIngress: true });
   });
 
   it('bestaat niet zonder weergave', () => {
@@ -149,5 +151,27 @@ describe('instellingen die niet kloppen, vallen op', () => {
     expect(readStartup({ ...NAS, SHADOW_LOG_DIR: '' }).logDir).toBe('');
     const { SHADOW_LOG_DIR: _omitted, ...without } = NAS;
     expect(readStartup(without).logDir).toBe('data/shadow');
+  });
+});
+
+describe('wie mag bedienen (besluit 99)', () => {
+  it('vraagt op de NAS een inlog via Home Assistant, op het adres van HA_URL', () => {
+    const a = readStartup(NAS).access;
+    expect(a.kind).toBe('sessions');
+    if (a.kind === 'sessions') expect(a.haLoginUrl).toBe(NAS['HA_URL']);
+  });
+
+  it('neemt een eigen inlogadres en extra hostnamen', () => {
+    const a = readStartup({ ...NAS, HEMS_HA_LOGIN_URL: 'http://ha.tailnet.ts.net:8123', HEMS_HOSTS: 'nas.thuis.nl, klimaat.thuis.nl' }).access;
+    expect(a).toEqual({ kind: 'sessions', haLoginUrl: 'http://ha.tailnet.ts.net:8123', hosts: ['nas.thuis.nl', 'klimaat.thuis.nl'] });
+  });
+
+  it('laat Ingress de bezoeker vaststellen in de add-on', () => {
+    expect(readStartup({ SUPERVISOR_TOKEN: 'x', HEMS_WEB_PORT: '8099' }).access).toEqual({ kind: 'ingress' });
+  });
+
+  it('staat alleen open op uitdrukkelijk verzoek, en weigert iets anders dan 1 of 0', () => {
+    expect(readStartup({ ...NAS, HEMS_OPEN: '1' }).access).toEqual({ kind: 'open' });
+    expect(readStartup({ ...NAS, HEMS_OPEN: 'ja' }).errors.join(' ')).toContain('HEMS_OPEN');
   });
 });

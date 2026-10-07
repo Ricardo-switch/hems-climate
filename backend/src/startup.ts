@@ -42,6 +42,16 @@ export interface Startup {
    * een waarschuwing. `HEMS_LIGHTS=0` zet het overal uit.
    */
   readonly lights: { readonly enabled: boolean; readonly withoutIngress: boolean };
+  /**
+   * Wie mag bedienen (besluit 99). In de add-on staat Ingress ervoor; elders een
+   * eigen inlog via Home Assistant, met het adres waaronder de browser Home
+   * Assistant bereikt. `HEMS_OPEN=1` zet alles open, zoals vóór 99, met een
+   * waarschuwing.
+   */
+  readonly access:
+    | { readonly kind: 'ingress' }
+    | { readonly kind: 'open' }
+    | { readonly kind: 'sessions'; readonly haLoginUrl: string | null; readonly hosts: readonly string[] };
   readonly logDir: string;
   readonly tickSeconds: number;
   readonly minIntervalSeconds: number;
@@ -127,6 +137,20 @@ export function readStartup(env: Environment): Startup {
   }
   const lightsOn = port != null && (lightsRaw === '1' || (asAddon && lightsRaw !== '0'));
 
+  const openRaw = readPoint(env, 'HEMS_OPEN');
+  if (openRaw != null && openRaw !== '0' && openRaw !== '1') {
+    errors.push(`HEMS_OPEN is 1 (iedereen mag bedienen) of 0, niet "${openRaw}".`);
+  }
+  const hosts = (readPoint(env, 'HEMS_HOSTS') ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter((h) => h !== '');
+  const access: Startup['access'] = asAddon
+    ? { kind: 'ingress' }
+    : openRaw === '1'
+      ? { kind: 'open' }
+      : { kind: 'sessions', haLoginUrl: readPoint(env, 'HEMS_HA_LOGIN_URL') ?? url, hosts };
+
   return {
     asAddon,
     ha: { url, token },
@@ -137,7 +161,9 @@ export function readStartup(env: Environment): Startup {
       dir: readPoint(env, 'HEMS_WEB_DIR'),
     },
     onboarding: { enabled: onboardingOn, withoutIngress: onboardingOn && !asAddon },
-    lights: { enabled: lightsOn, withoutIngress: lightsOn && !asAddon },
+    // Zonder Ingress en zonder inlog kan iedereen die de weergave opent schakelen.
+    lights: { enabled: lightsOn, withoutIngress: lightsOn && access.kind === 'open' },
+    access,
     // Een lege SHADOW_LOG_DIR betekent bewust: niet loggen. Dus niet `lees`.
     logDir: env['SHADOW_LOG_DIR'] ?? 'data/shadow',
     tickSeconds: numberAttr(env, 'SHADOW_TICK_SECONDS', 30, 1, errors),
