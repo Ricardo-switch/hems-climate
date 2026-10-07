@@ -144,6 +144,14 @@ panelen?" (voorkant, achterkant, beide, plat dak, weet ik niet) en "Hoeveel
 ongeveer?". Richting, helling en vermogen meet de app daarna zelf, en vraagt dan
 om bevestiging.
 
+**Voorstel**, 7 oktober 2026 (`Onboarding-Zon`): het tweede deel van stap 3,
+"De zon en je aansluiting". Naast de panelen: hoe snel de zonnesensor is (89,
+alleen als melding), de **hoofdzekering** (1 × 25, 1 × 35, 3 × 25 A of "weet ik
+niet"; besluit 78 noemde dit als nog te doen) en de **apparaten op zon**: vond de
+ontdekking een droger, wasmachine of vaatwasser die op afstand kan starten, dan
+vraagt hij of die op zon mag beginnen, en voor hoe laat hij klaar moet zijn
+(98).
+
 **Vast** (89). Tijdens het leren meet de app hoe vaak de zonnesensor een nieuwe
 waarde geeft. Is dat trager dan eens per twee minuten, dan zegt hij dat één
 keer, met wat het kost en de lokale weg voor dat merk.
@@ -291,6 +299,30 @@ vinden.
 **Kompas en zon.** De plattegrond krijgt een kompas zodra de app weet hoe het
 huis ligt. Dat meet hij zelf (besluit 93).
 
+**De zon over het huis.** Gebouwd op 6 oktober 2026, in de schetsen sinds 7
+oktober (`Main`, `Wand-Thuis`). De zon staat op Thuis op zijn boog: links of
+rechts laag bij op- en ondergang, hoog boven het dak rond de middag, en hij komt
+op aan de kant van de voorgevel als het huis zo ligt. De dienst rekent de plek
+uit (`/api/zon`: `dag.fractie`, `dag.hoogteDeel`, `dag.opVoorkant`); de
+pagina zet hem neer. Onder de tekening staat op welke gevel de zon nu valt
+("Zon op de voorgevel"). Het dakvlak licht op naar wat het bij een heldere
+lucht nu zou vangen.
+
+**Licht: wit, kleur en scènes.** **Voorstel**, 7 oktober 2026, van de bewoner
+(`Lamp`, `Lamp-wit`). Een lamp aantikken geeft een eigen scherm (op de wand het
+blad): aan en uit, helderheid, en twee tabs. *Wit* is een schuif van warm,
+bijna geel, tot koel daglicht, met drie vaste standen; *Kleur* is een
+kleurenrad met acht vaste kleuren. Een lamp die alleen wit kan, krijgt geen tab
+Kleur; een lamp die niet dimt, geen schuif. Wat een lamp kan, staat in Home
+Assistant (`supported_color_modes`). Onder de lamp de **scènes van de ruimte**,
+uit Hue: "Ontspannen", "Lezen", "Zonsondergang". Een scène zet alle lampen van
+de ruimte in één keer; maken en veranderen gebeurt in de Hue-app. En "alle
+lampen in de woonzone uit". Wat ervoor nodig is: kleur en wit gaan via
+`light.turn_on`, de deur die er al is (97), met de velden voor kleur en
+kleurtemperatuur erbij. Een scène is een andere dienst (`scene.turn_on`) en
+valt nu buiten de deur van besluit 97: die vraagt eerst een aanvulling op 97,
+met een test dat alleen scènes van de eigen ruimtes doorgaan.
+
 **Schetsen** (5 oktober 2026): `Wand-Inzoomen` (uitleg: de drie stappen naast elkaar),
 `Wand-Etage` (de begane grond van boven, met de screens op de voorgevel en de
 ochtendzon), `Wand-Ruimte` (de woonzone, met een screen gekozen om te
@@ -315,6 +347,29 @@ onboarding (§4), of een eenvoudige indeling als Home Assistant het niet weet.
 | Kamers | telefoon | alle | Kamers, zones, apparaten, voorstellen | 72, inlog | `Kamers` |
 | Sluipverbruik (kaart) | telefoon, wand | alle | Het verbruik van elke nacht, het verloop, en wat opviel | P1-meter; overdag ook de zonnesensor | nog geen schets |
 | Onboarding | telefoon | vóór leren | De vier stappen van §4 | 41, 42 | `Onboarding` |
+
+### Apparaten op zon
+
+**Vast** (98), **voorstel** in vorm (`Apparaten`, en een regel op `Main` en
+`Wand-Thuis`). Wasmachine, droger en vaatwasser die op afstand kunnen starten.
+Op Thuis staat per apparaat één regel: "Droger · wacht op zon · klaar voor
+18:00", "Wasmachine · draait op zon · nog 42 min". Het scherm Apparaten laat per
+apparaat zien:
+
+- *Klaargezet:* het programma, wat het vraagt tegen wat er nu over is, en
+  wanneer het zou beginnen. Een dagkaart met de zon, de airco's en de geplande
+  tijd, en een streep voor de uiterlijke start.
+- *Klaar voor:* 15:00, 18:00, vanavond of morgen, per keer te kiezen. Komt er
+  te weinig zon, dan begint het op tijd om dat te halen. En "Nu starten", een
+  ingreep zoals bij een airco (74).
+- *Draait:* hoe lang nog, en wanneer het op welke zon begon.
+- *Niet klaargezet:* wat de bewoner op de machine moet doen ("op afstand
+  starten" aanzetten). Zonder dat start Smart Climate nooit.
+
+De airco's gaan voor, en nooit zoveel tegelijk dat de hoofdzekering het niet
+houdt (78, 85). **Stand op 7 oktober 2026:** de droger staat in de schaduw;
+elke beslissing zegt of hij zou starten, en Thuis toont het bij "Wat ik nu zou
+doen". De eindtijd per keer, de prognose en echt starten (B) volgen.
 
 ## 6. Wat de bewoner kan instellen
 

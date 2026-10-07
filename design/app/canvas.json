@@ -12,7 +12,7 @@
       "y": 0
     },
     "Bediening.dc.html": {
-      "h": 1300,
+      "h": 1500,
       "is_interactive": true,
       "radius": 28,
       "title": "Bediening",
@@ -30,7 +30,7 @@
       "y": 0
     },
     "Main.dc.html": {
-      "h": 1300,
+      "h": 1790,
       "is_interactive": true,
       "radius": 28,
       "title": "Thuis",
@@ -57,7 +57,7 @@
       "y": 0
     },
     "Waarom.dc.html": {
-      "h": 844,
+      "h": 1080,
       "is_interactive": true,
       "radius": 28,
       "title": "Waarom",
@@ -72,7 +72,7 @@
       "title": "Wand · Assistent",
       "w": 1280,
       "x": 1360,
-      "y": 1500
+      "y": 2060
     },
     "Wand-Kamer.dc.html": {
       "h": 800,
@@ -81,7 +81,7 @@
       "title": "Wand · Kamer (de bewoner neemt het over)",
       "w": 1280,
       "x": 2720,
-      "y": 2440
+      "y": 3000
     },
     "Wand-Leren.dc.html": {
       "h": 800,
@@ -90,7 +90,7 @@
       "title": "Wand · Leren (nieuw huis, eerste week)",
       "w": 1280,
       "x": 1360,
-      "y": 2440
+      "y": 3000
     },
     "Wand-Plan.dc.html": {
       "h": 800,
@@ -99,7 +99,7 @@
       "title": "Wand · Plan",
       "w": 1280,
       "x": 2720,
-      "y": 1500
+      "y": 2060
     },
     "Wand-Thuis-echt.dc.html": {
       "h": 800,
@@ -108,7 +108,7 @@
       "title": "Wand · Thuis met echte data (1 okt, 23:01)",
       "w": 1280,
       "x": 0,
-      "y": 2440
+      "y": 3000
     },
     "Wand-Thuis.dc.html": {
       "h": 800,
@@ -117,7 +117,7 @@
       "title": "Wand · Thuis",
       "w": 1280,
       "x": 0,
-      "y": 1500
+      "y": 2060
     },
     "Wand-Thuis-winter.dc.html": {
       "h": 800,
@@ -126,7 +126,7 @@
       "title": "Wand · Thuis (winter, voorbeeld)",
       "w": 1280,
       "x": 0,
-      "y": 3380
+      "y": 3940
     },
     "Wand-Plan-winter.dc.html": {
       "h": 800,
@@ -135,7 +135,7 @@
       "title": "Wand · Plan (winter, voorbeeld)",
       "w": 1280,
       "x": 1360,
-      "y": 3380
+      "y": 3940
     },
     "Wand-Kamer-winter.dc.html": {
       "h": 800,
@@ -144,7 +144,7 @@
       "title": "Wand · Kamer (winter, voorbeeld)",
       "w": 1280,
       "x": 2720,
-      "y": 3380
+      "y": 3940
     },
     "Wand-Inzoomen.dc.html": {
       "h": 800,
@@ -153,7 +153,7 @@
       "title": "Uitleg · Inzoomen (geen scherm; de eerste keer een tip)",
       "w": 1280,
       "x": 0,
-      "y": 4360
+      "y": 4920
     },
     "Wand-Etage.dc.html": {
       "h": 800,
@@ -162,7 +162,7 @@
       "title": "Wand · Etage (begane grond)",
       "w": 1280,
       "x": 1360,
-      "y": 4360
+      "y": 4920
     },
     "Wand-Ruimte.dc.html": {
       "h": 800,
@@ -171,7 +171,7 @@
       "title": "Wand · Ruimte (woonzone, bedienen)",
       "w": 1280,
       "x": 2720,
-      "y": 4360
+      "y": 4920
     },
     "Etage.dc.html": {
       "h": 930,
@@ -180,7 +180,7 @@
       "title": "Etage",
       "w": 390,
       "x": 4080,
-      "y": 4360
+      "y": 4920
     },
     "Ruimte.dc.html": {
       "h": 844,
@@ -189,7 +189,43 @@
       "title": "Ruimte · licht bedienen",
       "w": 390,
       "x": 4550,
-      "y": 4360
+      "y": 4920
+    },
+    "Onboarding-Zon.dc.html": {
+      "is_interactive": true,
+      "radius": 28,
+      "w": 390,
+      "title": "Onboarding · De zon en je aansluiting",
+      "x": 3290,
+      "y": 0,
+      "h": 1460
+    },
+    "Apparaten.dc.html": {
+      "is_interactive": true,
+      "radius": 28,
+      "w": 390,
+      "title": "Apparaten op zon",
+      "x": 3760,
+      "y": 0,
+      "h": 1240
+    },
+    "Lamp.dc.html": {
+      "is_interactive": true,
+      "radius": 28,
+      "w": 390,
+      "title": "Lamp · kleur en scènes",
+      "x": 5020,
+      "y": 4920,
+      "h": 1090
+    },
+    "Lamp-wit.dc.html": {
+      "is_interactive": true,
+      "radius": 28,
+      "w": 390,
+      "title": "Lamp · wit, van warm tot koel",
+      "x": 5490,
+      "y": 4920,
+      "h": 1090
     }
   },
   "createdOnFiles": {
@@ -207,11 +243,11 @@
       "text": "Zelfde scherm, gevuld met het logboek van 1 oktober",
       "w": 240,
       "x": 0,
-      "y": 2380
+      "y": 2940
     },
     "titel": {
       "kind": "title1",
-      "maxW": 3210,
+      "maxW": 4150,
       "text": "Smart Climate app · schets van de bewonersapp",
       "w": 240,
       "x": 0,
@@ -223,7 +259,7 @@
       "text": "Tablet aan de muur · altijd aan, donker",
       "w": 240,
       "x": 0,
-      "y": 1340
+      "y": 1900
     },
     "winter": {
       "kind": "title1",
@@ -231,15 +267,15 @@
       "text": "Een winterdag · de opbouw, met voorbeeldgetallen",
       "w": 240,
       "x": 0,
-      "y": 3320
+      "y": 3880
     },
     "navigatie": {
       "kind": "title1",
-      "maxW": 5000,
+      "maxW": 5880,
       "text": "Het huis is de navigatie · inzoomen en bedienen (schets)",
       "w": 240,
       "x": 0,
-      "y": 4300
+      "y": 4860
     }
   },
   "order": [
@@ -263,7 +299,11 @@
     "Wand-Etage.dc.html",
     "Wand-Ruimte.dc.html",
     "Etage.dc.html",
-    "Ruimte.dc.html"
+    "Ruimte.dc.html",
+    "Onboarding-Zon.dc.html",
+    "Apparaten.dc.html",
+    "Lamp.dc.html",
+    "Lamp-wit.dc.html"
   ],
   "pages": [],
   "title": "Smart Climate app"
