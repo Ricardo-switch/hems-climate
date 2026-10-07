@@ -4388,6 +4388,36 @@ instelling.
   de eindtijd.
 - Vraagt een inlog als bewoner (99).
 
+*Gebouwd op 7 oktober 2026.* `POST /api/uitstel` met `{ id, klaarVoor: "18:00" }`
+(of `null`) bewaart de eindtijd in `uitstel.json`, alleen als het apparaat
+klaarstaat; de tijd is de eerstvolgende keer dat het zo laat is, vandaag of
+morgen, in de tijdzone van het huis. De dienst beslist daarna meteen opnieuw.
+De duur komt uit `programDuration` in de configuratie (Home Connect meldt
+"2:48"); is die onbekend, dan rekent de kern met drie uur. De hoofdzekering
+gaat ook dan voor (78). De app heeft een scherm Apparaten (vanaf Thuis, "Wat ik
+nu zou doen"): wat de droger doet, hoe lang het programma duurt, en "klaar
+voor" met de tijden die nog te halen zijn, of een eigen tijd. "Nu starten" uit
+de schets komt pas met B.
+
+*De droger draaide op 7 oktober voor het eerst met de dataset erbij*, en dat
+liet twee dingen zien die de kern van 98 nog niet wist:
+
+- **Hij zegt het in het Nederlands:** "Klaar" bij aanzetten, "Loopt" tijdens
+  het programma, een tel "Afgerond" en dan weer "Klaar". "Loopt" kende de kern
+  niet, dus bleef hij "zou starten" zeggen terwijl de droger draaide. "Klaar"
+  betekent gereed, niet afgelopen.
+- **"Start op afstand" blijft na het programma aanstaan.** Daardoor bleef de
+  kern de hele middag "zou starten" zeggen: onder B had hij de lege droger
+  opnieuw aangezet. De oude automatisering voorkomt dat met
+  `input_boolean.droger_auto_gestart`. Nu: wisselde de status ná het
+  klaarzetten (met een minuut speling) weer naar "Klaar", dan heeft er sindsdien
+  een programma gedraaid, en is het apparaat "klaar, het programma is
+  afgelopen" tot de bewoner opnieuw klaarzet. Dat leest de kern uit wanneer
+  beide meetpunten in Home Assistant wisselden, zonder eigen geheugen; een
+  haperende koppeling valt zo aan de veilige kant (niet starten). Met dezelfde
+  data van die dag zegt de kern nu: 15:20 zou starten (na 15:00, zoals de oude
+  automatisering), 15:51 draait, 15:55 klaar, en daarna niets meer.
+
 ---
 
 ## Wat nog een besluit wacht

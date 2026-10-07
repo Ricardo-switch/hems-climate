@@ -39,6 +39,10 @@ function state(o: {
   modeOverride?: SystemState['modeOverride'];
   healthy?: boolean;
   currentA?: number;
+  remoteSinceMs?: number;
+  operationSinceMs?: number;
+  durationMin?: number;
+  readyByMs?: number;
 } = {}): SystemState {
   const now = o.nowMs ?? NOW;
   return {
@@ -66,6 +70,10 @@ function state(o: {
       droger: {
         remoteStartAllowed: o.remote === null ? unavailable<boolean>() : value(o.remote ?? true, now),
         operation: o.operation == null ? unavailable<string>('missing') : value(o.operation, now),
+        ...(o.remoteSinceMs != null ? { remoteStartSinceMs: o.remoteSinceMs } : {}),
+        ...(o.operationSinceMs != null ? { operationSinceMs: o.operationSinceMs } : {}),
+        ...(o.durationMin != null ? { durationMin: value(o.durationMin, now) } : {}),
+        ...(o.readyByMs != null ? { readyByMs: o.readyByMs } : {}),
       },
     },
   };
@@ -134,5 +142,62 @@ describe('de droger op zon (besluit 98)', () => {
     const { deferrables: _gone, ...without } = exampleSite;
     const d = decide({ config: without, state: state(), strategies: defaultStrategies() });
     expect(d.explanation.deferrables).toBeUndefined();
+  });
+});
+
+describe('de droger zoals hij op 7 oktober echt draaide (besluit 101)', () => {
+  const MIN = 60_000;
+
+  it('kent "Loopt" als draaien, en "Klaar" als klaar om te beginnen', () => {
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0 }))).toMatchObject({ state: 'running', reason: 'program_running' });
+    expect(dryer(state({ operation: 'Vertraagde start' }))).toMatchObject({ state: 'running' });
+    // Eerst aangezet ("Klaar"), daarna klaargezet: dat is gereed.
+    expect(dryer(state({ operation: 'Klaar', operationSinceMs: NOW - 10 * MIN, remoteSinceMs: NOW - 5 * MIN }))).toMatchObject({
+      state: 'would_start',
+      reason: 'surplus_available',
+    });
+  });
+
+  it('start een droger die al gedraaid heeft nooit nog eens, ook al blijft "start op afstand" aan', () => {
+    // 15:20 klaargezet, 15:55 weer "Klaar": er draaide sindsdien een programma.
+    const s = state({ operation: 'Klaar', remoteSinceMs: NOW - 40 * MIN, operationSinceMs: NOW - 5 * MIN, nowMs: NOW });
+    expect(dryer(s)).toEqual({ id: 'droger', state: 'not_ready', reason: 'program_finished' });
+    // Ook na de uiterlijke start van 15:00.
+    const late = NOW + 2 * 60 * MIN;
+    expect(dryer(state({ operation: 'Klaar', remoteSinceMs: late - 40 * MIN, operationSinceMs: late - 5 * MIN, nowMs: late }))).toMatchObject({
+      state: 'not_ready',
+    });
+    // Aanzetten en klaarzetten in dezelfde minuut is geen programma.
+    expect(dryer(state({ operation: 'Klaar', remoteSinceMs: NOW - 5 * MIN, operationSinceMs: NOW - 5 * MIN + 30_000 }))).toMatchObject({
+      state: 'would_start',
+    });
+  });
+
+  it('rekent van "klaar voor" terug naar de uiterlijke start, met de duur van het programma', () => {
+    const readyBy = NOW + 4 * 60 * MIN; // 18:00
+    const waiting = dryer(state({ gridPowerW: 0, durationMin: 168, readyByMs: readyBy }));
+    expect(waiting).toEqual({
+      id: 'droger',
+      state: 'waiting',
+      reason: 'surplus_insufficient',
+      durationMin: 168,
+      readyByMs: readyBy,
+      latestStartMs: readyBy - 168 * MIN,
+    });
+    // Om 15:05 wacht hij nog: de eindtijd telt, niet de vaste tijd van 15:00.
+    const at1505 = NOW + 65 * MIN;
+    expect(dryer(state({ gridPowerW: 0, durationMin: 168, readyByMs: readyBy, nowMs: at1505 }))).toMatchObject({ state: 'waiting' });
+    // Om 15:12 is het tijd, ook zonder zon.
+    expect(dryer(state({ gridPowerW: 0, durationMin: 168, readyByMs: readyBy, nowMs: readyBy - 168 * MIN }))).toMatchObject({
+      state: 'would_start',
+      reason: 'ready_by_reached',
+    });
+  });
+
+  it('rekent met drie uur als de duur onbekend is, en de hoofdzekering gaat nog steeds voor', () => {
+    const readyBy = NOW + 3 * 60 * MIN;
+    expect(dryer(state({ gridPowerW: 0, readyByMs: readyBy }))).toMatchObject({ state: 'would_start', reason: 'ready_by_reached', latestStartMs: NOW });
+    // 31 A op een grens van 33 A, zoals hierboven: ook als de tijd dringt.
+    expect(dryer(state({ gridPowerW: 7100, currentA: 31, readyByMs: readyBy }))).toMatchObject({ state: 'waiting', reason: 'insufficient_current_budget' });
   });
 });

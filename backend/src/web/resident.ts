@@ -15,9 +15,11 @@
  * tests, in het Nederlands en het Engels.
  */
 
-import type { Command } from '../core/decision.js';
-import type { SiteConfig } from '../core/model.js';
+import type { Command, DeferrableExplanation, DeferrableStateCode } from '../core/decision.js';
+import { FALLBACK_PROGRAM_MIN } from '../core/deferrable.js';
+import type { Deferrable, SiteConfig } from '../core/model.js';
 import { SHORT, inSentence, residentRooms, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
+import { clockIn, nextLocalTime } from './today.js';
 
 export interface ResidentHeadline {
   /** "Nu · Dag", met "(gekozen)" als de bewoner de modus koos. */
@@ -53,6 +55,29 @@ export interface ResidentDevice {
   readonly tekst: string;
 }
 
+/**
+ * Een uitstelbaar apparaat voor het scherm Apparaten (besluit 101): wat het
+ * doet, in een kop en een zin, en "klaar voor" als de bewoner dat koos.
+ */
+export interface ResidentDeferrable {
+  readonly id: string;
+  readonly naam: string;
+  readonly stand: DeferrableStateCode;
+  /** "Klaargezet · wacht op zon". */
+  readonly kop: string;
+  readonly zin: string;
+  /** "18:00", of null als de bewoner geen tijd koos. */
+  readonly klaarVoor: string | null;
+  /** De start die uiterlijk nodig is: "15:12", of de vaste tijd uit de configuratie. */
+  readonly uiterlijk: string | null;
+  /** Hoe lang het gekozen programma duurt, als het apparaat dat meldt. */
+  readonly duurMin: number | null;
+  /** Kan de bewoner nu "klaar voor" kiezen? Alleen als hij klaarstaat. */
+  readonly kanKiezen: boolean;
+  /** Tijden om uit te kiezen die nog te halen zijn: "18:00", "morgen 07:00". */
+  readonly keuzes: readonly { readonly tekst: string; readonly waarde: string }[];
+}
+
 export interface ResidentDecisionWords {
   /** Wat er verandert, per opdracht: "Airco woonkamer: koelen". */
   readonly wat: readonly string[];
@@ -69,6 +94,8 @@ export interface ResidentView {
   readonly rust: string | null;
   /** De woorden bij dit besluit als het iets veranderde; anders null. */
   readonly besluit: ResidentDecisionWords | null;
+  /** De uitstelbare apparaten, voor het scherm Apparaten (besluit 101). */
+  readonly uitstelbaar: readonly ResidentDeferrable[];
 }
 
 const MODE = {
@@ -100,6 +127,7 @@ const HEAD = {
     deferrable: {
       surplus_available: () => 'zou nu starten: er is genoeg zon over',
       latest_start_reached: (t: string) => `zou nu starten: het is na ${t}`,
+      ready_by_reached: () => 'zou nu starten: anders is hij niet op tijd klaar',
       surplus_insufficient: (t: string) => `wacht op zon, uiterlijk tot ${t}`,
       stabilisation_active: () => 'wacht een ronde: er is net iets gestart',
       insufficient_current_budget: () => 'wacht: de hoofdzekering zou te zwaar belast worden',
@@ -131,6 +159,7 @@ const HEAD = {
     deferrable: {
       surplus_available: () => 'would start now: there is enough solar to spare',
       latest_start_reached: (t: string) => `would start now: it is past ${t}`,
+      ready_by_reached: () => 'would start now: otherwise it will not be done in time',
       surplus_insufficient: (t: string) => `waiting for sun, until ${t} at the latest`,
       stabilisation_active: () => 'waiting a round: something just started',
       insufficient_current_budget: () => 'waiting: the main fuse would be overloaded',
@@ -214,7 +243,7 @@ export function residentDevices(config: SiteConfig, snap: DecisionView, lang: La
       continue;
     }
     const soort = dx.state === 'would_start' || dx.state === 'running' ? 'ok' : 'wait';
-    apparaten.push({ actuatorId: d.id, naam: d.name, soort, tekst: say(d.latestStart) });
+    apparaten.push({ actuatorId: d.id, naam: d.name, soort, tekst: say(latestText(config, d, dx)) });
   }
   return { apparaten, rust: quiet.length ? w.quiet(quiet.join(', ')) : null };
 }
@@ -264,5 +293,112 @@ export function residentView(config: SiteConfig, snap: DecisionView, lang: Lang 
     apparaten,
     rust,
     besluit: snap.commands.length > 0 ? decisionWords(config, snap.commands, redenen, lang) : null,
+    uitstelbaar: residentDeferrables(config, snap.explanation.deferrables ?? [], snap.atMs, lang),
   };
+}
+
+/** De uiterlijke start in woorden: met "klaar voor" berekend, anders de vaste tijd. */
+function latestText(config: SiteConfig, d: Deferrable, dx: DeferrableExplanation): string {
+  return dx.latestStartMs != null ? clockIn(dx.latestStartMs, config.timezone) : d.latestStart;
+}
+
+const DEFERRABLE_WORDS = {
+  nl: {
+    kop: {
+      not_ready: 'Niet klaargezet',
+      finished: 'Klaar · het programma is afgelopen',
+      unknown: 'Niet te lezen',
+      running: 'Draait',
+      waiting: 'Klaargezet · wacht op zon',
+      waitingOther: 'Klaargezet · wacht',
+      would_start: 'Klaargezet · zou nu starten',
+    },
+    notReady: (n: string) => `Kies een programma, sluit de deur en zet "op afstand starten" aan op de ${n}. Dan kies ik het moment.`,
+    finished: 'Het programma is afgelopen. Zet een nieuw programma klaar om hem weer op zon te laten draaien.',
+    unknown: 'Home Connect geeft nu geen stand door.',
+    running: (by: string | null) => (by ? `Het programma loopt; hij is op tijd voor ${by}.` : 'Het programma loopt.'),
+    waitSun: (latest: string, by: string | null) =>
+      by
+        ? `Ik begin zodra er zon over is. Komt er niet genoeg, dan begin ik om ${latest}, op tijd voor ${by}.`
+        : `Ik begin zodra er zon over is, en uiterlijk om ${latest}.`,
+    waitOther: (why: string) => `${why[0]!.toUpperCase()}${why.slice(1)}.`,
+    sun: 'Er is genoeg zon over: ik zou hem nu starten.',
+    late: (latest: string) => `Het is na ${latest}: ik zou hem nu starten, ook zonder zon.`,
+    readyBy: (by: string) => `Ik zou hem nu starten, anders is hij niet op tijd klaar voor ${by}.`,
+  },
+  en: {
+    kop: {
+      not_ready: 'Not set up',
+      finished: 'Done · the programme has finished',
+      unknown: 'Cannot be read',
+      running: 'Running',
+      waiting: 'Set up · waiting for sun',
+      waitingOther: 'Set up · waiting',
+      would_start: 'Set up · would start now',
+    },
+    notReady: (n: string) => `Choose a programme, close the door and turn on "remote start" on the ${n}. Then I choose the moment.`,
+    finished: 'The programme has finished. Set up a new one to run it on solar again.',
+    unknown: 'Home Connect is not reporting a state right now.',
+    running: (by: string | null) => (by ? `The programme is running; it will be done by ${by}.` : 'The programme is running.'),
+    waitSun: (latest: string, by: string | null) =>
+      by
+        ? `I start as soon as there is solar to spare. If there is not enough, I start at ${latest}, in time for ${by}.`
+        : `I start as soon as there is solar to spare, and at ${latest} at the latest.`,
+    waitOther: (why: string) => `${why[0]!.toUpperCase()}${why.slice(1)}.`,
+    sun: 'There is enough solar to spare: I would start it now.',
+    late: (latest: string) => `It is past ${latest}: I would start it now, even without sun.`,
+    readyBy: (by: string) => `I would start it now, otherwise it will not be done by ${by}.`,
+  },
+} as const;
+
+/** De uitstelbare apparaten voor het scherm Apparaten (besluit 101). */
+export function residentDeferrables(config: SiteConfig, list: readonly DeferrableExplanation[], nowMs: number, lang: Lang = 'nl'): ResidentDeferrable[] {
+  const w = DEFERRABLE_WORDS[lang];
+  const say = HEAD[lang].deferrable;
+  return (config.deferrables ?? []).flatMap((d): ResidentDeferrable[] => {
+    const dx = list.find((x) => x.id === d.id);
+    if (!dx) return [];
+    const by = dx.readyByMs != null ? clockIn(dx.readyByMs, config.timezone) : null;
+    const latest = latestText(config, d, dx);
+    let kop: string;
+    let zin: string;
+    if (dx.state === 'not_ready' && dx.reason === 'program_finished') [kop, zin] = [w.kop.finished, w.finished];
+    else if (dx.state === 'not_ready') [kop, zin] = [w.kop.not_ready, w.notReady(d.name.toLowerCase())];
+    else if (dx.state === 'unknown') [kop, zin] = [w.kop.unknown, w.unknown];
+    else if (dx.state === 'running') [kop, zin] = [by ? `${w.kop.running} · ${by}` : w.kop.running, w.running(by)];
+    else if (dx.state === 'would_start') {
+      kop = w.kop.would_start;
+      zin = dx.reason === 'surplus_available' ? w.sun : dx.reason === 'ready_by_reached' && by ? w.readyBy(by) : w.late(latest);
+    } else if (dx.reason === 'surplus_insufficient') [kop, zin] = [w.kop.waiting, w.waitSun(latest, by)];
+    else [kop, zin] = [w.kop.waitingOther, w.waitOther(say[dx.reason]?.(latest) ?? dx.reason)];
+    return [
+      {
+        id: d.id,
+        naam: d.name,
+        stand: dx.state,
+        kop,
+        zin,
+        klaarVoor: by,
+        uiterlijk: dx.state === 'waiting' || dx.state === 'would_start' ? latest : null,
+        duurMin: dx.durationMin ?? null,
+        kanKiezen: dx.state === 'waiting' || dx.state === 'would_start',
+        keuzes: dx.state === 'waiting' || dx.state === 'would_start' ? readyChoices(config, nowMs, dx.durationMin ?? FALLBACK_PROGRAM_MIN, lang) : [],
+      },
+    ];
+  });
+}
+
+/**
+ * Drie tijden voor "klaar voor" die nog te halen zijn: niet vóór nu plus de
+ * duur van het programma. Vandaag als "18:00", anders "morgen 07:00".
+ */
+function readyChoices(config: SiteConfig, nowMs: number, durationMin: number, lang: Lang): { tekst: string; waarde: string }[] {
+  const earliest = nowMs + durationMin * 60_000;
+  const dayOf = (ms: number) => new Intl.DateTimeFormat('en-CA', { timeZone: config.timezone }).format(ms);
+  return ['07:00', '12:00', '15:00', '18:00', '21:00']
+    .map((waarde) => ({ waarde, ms: nextLocalTime(nowMs, waarde, config.timezone) }))
+    .filter((c) => c.ms >= earliest)
+    .sort((a, b) => a.ms - b.ms)
+    .slice(0, 3)
+    .map((c) => ({ waarde: c.waarde, tekst: dayOf(c.ms) === dayOf(nowMs) ? c.waarde : `${lang === 'nl' ? 'morgen' : 'tomorrow'} ${c.waarde}` }));
 }

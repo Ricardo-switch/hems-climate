@@ -515,6 +515,46 @@
       .k-idle {
         color: var(--muted);
       }
+      /* Apparaten op zon (besluit 101). */
+      .apparaat.klaar {
+        border-color: rgba(245, 198, 110, 0.35);
+      }
+      .apparaat.leeg {
+        border-style: dashed;
+      }
+      .apparaat .kop {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .apparaat .kop svg {
+        flex: none;
+        width: 40px;
+        height: 40px;
+      }
+      .apparaat .kop .wie {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+      }
+      .apparaat .kop b {
+        font-size: 18px;
+      }
+      .apparaat .tijdkeuze {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .apparaat .tijdkeuze .veld {
+        flex: 0 1 140px;
+      }
+      .naar-apparaten {
+        font-weight: 600;
+        text-decoration: none;
+      }
       .k-bad {
         color: var(--heat-t);
       }
@@ -1491,6 +1531,23 @@
               >
             </div>
           </div>
+        </section>
+
+        <!-- Apparaten op zon (schets Apparaten, besluiten 98 en 101) -->
+        <section class="view narrow" data-view="apparaten" hidden>
+          <div class="stack">
+            <a class="terug" href="#thuis">‹ Thuis</a>
+            <h1 class="title">Apparaten op zon</h1>
+            <p class="lead">Zet een programma klaar en zet op de machine "op afstand starten" aan. Ik begin als er zon over is, en zorg dat hij op tijd klaar is.</p>
+          </div>
+          <div class="stack" id="ap-lijst"></div>
+          <div class="card ai">
+            <div style="display: flex; gap: 12px; align-items: flex-start">
+              <span class="orb" style="width: 24px; height: 24px; box-shadow: none; flex: none"></span>
+              <span class="small" style="color: var(--soft)">De airco's gaan voor: ze krijgen eerst de zon, de droger wat overblijft. En nooit samen zoveel dat de hoofdzekering het niet houdt.</span>
+            </div>
+          </div>
+          <p class="small muted">Tijdens het meekijken start je huidige automatisering de droger. Hier zie je wanneer ik het zou doen.</p>
         </section>
 
         <!-- Huis: inzoomen van huis naar etage naar ruimte (ONTWERP §4, besluit 94) -->

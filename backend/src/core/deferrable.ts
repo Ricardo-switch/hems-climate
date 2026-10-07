@@ -8,7 +8,8 @@
  *
  * - **op zon**, als het overschot na de airco's het apparaat draagt;
  * - **uiterlijk om `latestStart`**, ook zonder zon, zoals de oude automatisering
- *   om 15:00 deed;
+ *   om 15:00 deed; of, als de bewoner "klaar voor" koos, op tijd om dan klaar te
+ *   zijn: die tijd min de duur van het programma (besluit 101);
  * - **nooit** zonder "start op afstand", in de failsafe, in een stand waarin de
  *   bewoner de regeling terugtrok, of als de hoofdzekering het niet draagt.
  *
@@ -27,11 +28,22 @@ import { isHandsOff } from './model.js';
 
 /**
  * De bedrijfsstatus in woorden. Home Connect geeft "...OperationState.Run" of een
- * vertaling; welke dit huis geeft, is pas te zien als de droger draait. Daarom
- * ruim herkend, op het laatste deel.
+ * vertaling, op het laatste deel herkend. De droger in dit huis zei op 7 oktober:
+ * "Klaar" bij aanzetten, "Loopt" tijdens het programma, een tel "Afgerond" en
+ * dan weer "Klaar". "Klaar" is dus gereed om te beginnen, niet afgelopen.
  */
-const RUNNING = new Set(['run', 'running', 'delayedstart', 'draait', 'bezig']);
-const FINISHED = new Set(['finished', 'voltooid', 'afgerond']);
+const RUNNING = new Set(['run', 'running', 'delayedstart', 'pause', 'loopt', 'vertraagdestart', 'pauze', 'draait', 'bezig']);
+const FINISHED = new Set(['finished', 'afgerond', 'voltooid']);
+const READY = new Set(['ready', 'klaar']);
+
+/**
+ * Hoe lang na het klaarzetten de status nog mag wisselen zonder dat het een
+ * gedraaid programma is: aanzetten en klaarzetten gebeuren soms in dezelfde tel.
+ */
+const SETTLE_MS = 60_000;
+
+/** Duurt het programma onbekend lang, dan rekent "klaar voor" met zoveel. */
+export const FALLBACK_PROGRAM_MIN = 180;
 
 function lastWord(state: string): string {
   return (state.split('.').pop() ?? state).trim().toLowerCase().replace(/\s+/g, '');
@@ -64,27 +76,44 @@ export function deferrableDecisions(ctx: DecisionContext, allocatedW: number, co
   return list.map((d): DeferrableExplanation => {
     const s = ctx.state.deferrables?.[d.id];
     const op = s?.operation.ok ? lastWord(s.operation.value) : null;
-    if (op != null && RUNNING.has(op)) return { id: d.id, state: 'running', reason: 'program_running' };
+    // "Klaar voor" en de start die daarvoor nodig is (besluit 101).
+    const readyBy = s?.readyByMs ?? null;
+    const durationMin = s?.durationMin?.ok && s.durationMin.value > 0 ? s.durationMin.value : FALLBACK_PROGRAM_MIN;
+    const known = s?.durationMin?.ok && s.durationMin.value > 0 ? { durationMin: s.durationMin.value } : {};
+    const deadline = { ...known, ...(readyBy == null ? {} : { readyByMs: readyBy, latestStartMs: readyBy - durationMin * 60_000 }) };
+    if (op != null && RUNNING.has(op)) return { id: d.id, state: 'running', reason: 'program_running', ...deadline };
     if (op != null && FINISHED.has(op)) return { id: d.id, state: 'not_ready', reason: 'program_finished' };
     if (!s?.remoteStartAllowed.ok) return { id: d.id, state: 'unknown', reason: 'reading_unavailable' };
     if (!s.remoteStartAllowed.value) return { id: d.id, state: 'not_ready', reason: 'remote_start_not_allowed' };
+    // Werd de status ná het klaarzetten weer "klaar", dan draaide er sindsdien
+    // een programma en is de machine leeg; "start op afstand" blijft daarna
+    // soms gewoon aan. Nooit nog eens starten (besluit 101). Een haperende
+    // koppeling valt zo ook aan de veilige kant: dan wacht hij op opnieuw klaarzetten.
+    const since = s.remoteStartSinceMs ?? null;
+    const opSince = s.operationSinceMs ?? null;
+    if (op != null && READY.has(op) && since != null && opSince != null && opSince > since + SETTLE_MS) {
+      return { id: d.id, state: 'not_ready', reason: 'program_finished' };
+    }
     if (ctx.failsafeActive) return { id: d.id, state: 'waiting', reason: 'failsafe_unreliable_input' };
     if (isHandsOff(ctx.mode)) return { id: d.id, state: 'waiting', reason: 'mode_excludes_action' };
 
     // De hoofdzekering gaat voor alles, ook voor de eindtijd (besluit 78).
     for (const phase of ctx.phases) {
-      if (phase.signedA == null) return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget' };
+      if (phase.signedA == null) return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline };
       if (Math.abs(phase.signedA + d.estimatedW / phase.voltageV) > phase.limitA) {
-        return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget' };
+        return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline };
       }
     }
-    if (localMinutes(ctx.config.timezone, ctx.nowMs) >= minutesOf(d.latestStart)) {
+    // Met "klaar voor" telt die tijd, anders de vaste uiterlijke start.
+    if (deadline.latestStartMs != null) {
+      if (ctx.nowMs >= deadline.latestStartMs) return { id: d.id, state: 'would_start', reason: 'ready_by_reached', ...deadline };
+    } else if (localMinutes(ctx.config.timezone, ctx.nowMs) >= minutesOf(d.latestStart)) {
       return { id: d.id, state: 'would_start', reason: 'latest_start_reached' };
     }
-    if (started || ctx.stabilisationActive) return { id: d.id, state: 'waiting', reason: 'stabilisation_active' };
+    if (started || ctx.stabilisationActive) return { id: d.id, state: 'waiting', reason: 'stabilisation_active', ...deadline };
     // Wat de airco's overlaten, gerekend zoals de arbiter een start rekent (besluit 51).
     const free = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
-    if (free >= d.estimatedW) return { id: d.id, state: 'would_start', reason: 'surplus_available' };
-    return { id: d.id, state: 'waiting', reason: 'surplus_insufficient' };
+    if (free >= d.estimatedW) return { id: d.id, state: 'would_start', reason: 'surplus_available', ...deadline };
+    return { id: d.id, state: 'waiting', reason: 'surplus_insufficient', ...deadline };
   });
 }

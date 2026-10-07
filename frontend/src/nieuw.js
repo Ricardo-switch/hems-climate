@@ -133,9 +133,9 @@ function buildNav() {
 function showView() {
   const want = (location.hash || '#thuis').slice(1).split('/')[0];
   // Het huis staat niet in het menu: je komt er door op het huis te tikken.
-  const id = NAV.some(([n]) => n === want) || want === 'huis' ? want : 'thuis';
+  const id = NAV.some(([n]) => n === want) || want === 'huis' || want === 'apparaten' ? want : 'thuis';
   for (const v of document.querySelectorAll('.view')) v.hidden = v.dataset.view !== id;
-  const menu = id === 'huis' ? 'thuis' : id;
+  const menu = id === 'huis' || id === 'apparaten' ? 'thuis' : id;
   for (const a of document.querySelectorAll('.navitem')) {
     if (a.dataset.target === menu) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -414,6 +414,8 @@ function renderHome(snap) {
   if (b.rust) {
     lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: 'dot k-idle', style: 'margin-top: 5px' }), el('div', { class: 'muted', text: b.rust })));
   }
+  // De droger en zijn soortgenoten hebben een eigen scherm (besluit 101).
+  if (b.uitstelbaar?.length) lines.push(el('a', { class: 'small naar-apparaten', href: '#apparaten', text: 'Apparaten op zon ›' }));
   $('nu-lijst').replaceChildren(...lines);
   $('besluit-tijd').textContent = `besluit ${hhmm(snap.atMs)}`;
 
@@ -777,6 +779,77 @@ function render(snap) {
   renderHome(snap);
   renderLog();
   renderControls(snap);
+  renderDeferrables(snap);
+}
+
+/* ------------------------------------------------------- apparaten op zon */
+
+/*
+ * Apparaten op zon (schets Apparaten, besluiten 98 en 101). Per apparaat wat
+ * het nu doet, in de woorden van de dienst, en "klaar voor": de bewoner kiest
+ * per keer hoe laat hij klaar moet zijn. Die tijd gaat naar de dienst
+ * (`api/uitstel`), nooit naar Home Assistant; de keuzes en de zinnen komen
+ * kant-en-klaar mee (besluit 94).
+ */
+const DRUM =
+  '<rect x="6" y="5" width="28" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="22" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 10h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>';
+/** Het antwoord op de laatste keuze per apparaat, tot het volgende besluit het overneemt. */
+const deferrableSaid = new Map();
+
+function renderDeferrables(snap) {
+  const list = snap.bewoner?.uitstelbaar ?? [];
+  if (!list.length) {
+    $('ap-lijst').replaceChildren(el('p', { class: 'small muted', text: 'Er staat geen apparaat als uitstelbaar in de configuratie.' }));
+    return;
+  }
+  $('ap-lijst').replaceChildren(...list.map(deferrableCard));
+}
+
+function deferrableCard(d) {
+  const kind = d.stand === 'running' || d.stand === 'would_start' ? 'ok' : d.stand === 'waiting' ? 'wait' : 'idle';
+  const icon = s('svg', { viewBox: '0 0 40 40', 'aria-hidden': 'true', class: `k-${kind}` });
+  icon.innerHTML = DRUM;
+  const duur = d.duurMin ? `${Math.floor(d.duurMin / 60)} u ${String(d.duurMin % 60).padStart(2, '0')} min` : '';
+  const card = el(
+    'div',
+    { class: `card apparaat${d.kanKiezen ? ' klaar' : ''}${d.stand === 'not_ready' ? ' leeg' : ''}` },
+    el('div', { class: 'kop' }, icon, el('div', { class: 'wie' }, el('b', { text: d.naam }), el('span', { class: `small k-${kind}`, text: d.kop })), duur ? el('span', { class: 'small muted', text: duur }) : null),
+    el('p', { class: 'small', style: 'color: var(--soft)', text: d.zin }),
+  );
+  if (d.kanKiezen) {
+    const said = el('p', { class: 'small muted', 'aria-live': 'polite', text: deferrableSaid.get(d.id) ?? '' });
+    const choose = async (klaarVoor, label) => {
+      said.textContent = 'Even…';
+      try {
+        const res = await postDoor('api/uitstel', { id: d.id, klaarVoor });
+        const out = await res.json();
+        const text = res.ok ? (klaarVoor ? `Genoteerd: klaar voor ${label}. Ik reken het zo door.` : 'Geen tijd meer: ik begin op zon, en uiterlijk op de vaste tijd.') : (out.fout ?? 'Niet gelukt.');
+        deferrableSaid.set(d.id, text);
+        said.textContent = text;
+      } catch {
+        said.textContent = 'Geen verbinding met Smart Climate.';
+      }
+    };
+    const options = [{ tekst: 'Geen haast', waarde: null }, ...d.keuzes];
+    const seg = el('div', { class: 'seg pick', role: 'group', 'aria-label': `Klaar voor, ${d.naam}`, style: `grid-template-columns: repeat(${options.length}, minmax(max-content, 1fr))` });
+    for (const o of options) {
+      const pressed = o.waarde == null ? d.klaarVoor == null : d.klaarVoor === o.waarde;
+      const b = el('button', { type: 'button', text: o.tekst, 'aria-pressed': String(pressed) });
+      b.addEventListener('click', () => void choose(o.waarde, o.tekst));
+      seg.append(b);
+    }
+    const own = el('input', { class: 'veld', type: 'time', step: '300', 'aria-label': `Een eigen tijd voor ${d.naam}`, value: d.klaarVoor && !d.keuzes.some((k) => k.waarde === d.klaarVoor) ? d.klaarVoor : '' });
+    own.addEventListener('change', () => {
+      if (/^\d\d:\d\d$/.test(own.value)) void choose(own.value, own.value);
+    });
+    card.append(
+      el('div', { class: 'small', style: 'font-weight: 600', text: 'Klaar voor' }),
+      seg,
+      el('div', { class: 'tijdkeuze' }, el('span', { class: 'small muted', text: 'of om' }), own),
+      said,
+    );
+  }
+  return card;
 }
 
 /* ------------------------------------------------------- inloggen */

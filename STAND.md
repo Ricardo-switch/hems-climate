@@ -129,10 +129,10 @@ verwijzing bestaat.
 ## Veiligheid
 
 - **De schaduw schrijft niet naar Home Assistant,** en dat is een grens in de
-  code ([15]). Er zijn vijf smalle deuren, elk getest: de onboarding achter
-  Ingress ([42]), gevoel ([84]) en indeling ([96]) naar eigen bestanden,
-  lampen aan en uit ([97]) en de scènes van de eigen ruimtes ([100]). Klimaat
-  en screens blijven dicht tot B.
+  code ([15]). Er zijn zes smalle deuren, elk getest: de onboarding achter
+  Ingress ([42]), gevoel ([84]), indeling ([96]) en "klaar voor" bij de droger
+  ([101]) naar eigen bestanden, lampen aan en uit ([97]) en de scènes van de
+  eigen ruimtes ([100]). Klimaat en screens blijven dicht tot B.
 - **De weergave luistert,** maar alleen om te lezen ([23]). Kijken blijft open
   op het thuisnetwerk en in het tailnet; bedienen vraagt een inlog met je
   Home Assistant-account, en de dienst antwoordt alleen op bekende hostnamen

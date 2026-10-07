@@ -78,6 +78,7 @@ export const DEFERRABLE_REASONS = [
   'mode_excludes_action',
   'insufficient_current_budget',
   'latest_start_reached',
+  'ready_by_reached',
   'stabilisation_active',
   'surplus_available',
   'surplus_insufficient',
@@ -88,6 +89,11 @@ export interface DeferrableExplanation {
   readonly id: string;
   readonly state: DeferrableStateCode;
   readonly reason: DeferrableReason;
+  /** "Klaar voor" van de bewoner, en de start die daarvoor uiterlijk nodig is (besluit 101). */
+  readonly readyByMs?: number;
+  readonly latestStartMs?: number;
+  /** Hoe lang het gekozen programma duurt, als het apparaat dat meldt. */
+  readonly durationMin?: number;
 }
 
 export type Command =

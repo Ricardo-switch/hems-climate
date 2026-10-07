@@ -173,6 +173,18 @@ export interface DeferrableState {
   readonly remoteStartAllowed: Reading<boolean>;
   /** De bedrijfsstatus zoals het apparaat hem meldt. */
   readonly operation: Reading<string>;
+  /**
+   * Sinds wanneer "start op afstand" en de bedrijfsstatus hun huidige waarde
+   * hebben, in epoch-ms. Wisselde de status ná het klaarzetten weer naar
+   * "klaar", dan draaide er sindsdien een programma: dan is de machine leeg,
+   * ook al staat "start op afstand" nog aan (besluit 101).
+   */
+  readonly remoteStartSinceMs?: number | null;
+  readonly operationSinceMs?: number | null;
+  /** Hoe lang het gekozen programma duurt, in minuten (besluit 101). */
+  readonly durationMin?: Reading<number>;
+  /** "Klaar voor" van de bewoner, in epoch-ms; null of weg als er geen is (besluit 101). */
+  readonly readyByMs?: number | null;
 }
 
 /** Loopt de timer nog op dit moment? */

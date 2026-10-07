@@ -41,6 +41,7 @@ import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
+import { UitstelStore } from '../src/web/uitstel.js';
 import { SessionStore } from '../src/web/auth.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { onUsablePort } from './ports.js';
@@ -192,6 +193,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let live: LiveSnapshot;
   let baseUrl: string;
   let layoutStore: LayoutStore;
+  let uitstel: UitstelStore;
   const sessions = new SessionStore();
   let sessionId = '';
   const pageErrors: string[] = [];
@@ -209,7 +211,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const review = new DivergenceCache({ logDir: dir, write: () => {}, now: () => Date.parse('2026-10-01T00:30:00Z') });
     await review.refresh();
     live = await liveSnapshot();
+    // De droger staat klaar, met een programma van 2 u 48 (besluit 101).
+    live = { ...live, explanation: { ...live.explanation, deferrables: [{ id: 'droger', state: 'waiting', reason: 'surplus_insufficient', durationMin: 168 }] } };
     layoutStore = new LayoutStore({ logDir: dir, known: () => knownForLayout(exampleSite, houseRegisters, houseStates) });
+    uitstel = new UitstelStore({ logDir: dir, config: exampleSite, status: () => 'waiting' });
 
     // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
     let port: number;
@@ -238,6 +243,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             callScene: async (id) => void sceneCalls.push(id),
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          uitstel,
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
           // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
           access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
@@ -521,6 +527,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#o-hero .big').waitFor();
       expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
       expect(await layoutProblems(p), `Opbrengst in ${stand}`).toEqual([]);
+      // Apparaten op zon (besluit 101): vanaf Thuis, en "klaar voor" kiezen.
+      await p.goto(`${baseUrl}/nieuw.html#thuis`);
+      await p.locator('#nu-lijst a', { hasText: 'Apparaten op zon' }).click();
+      await p.locator('#ap-lijst .apparaat', { hasText: 'Droger' }).waitFor();
+      expect(await p.locator('#ap-lijst .apparaat').textContent()).toContain('2 u 48 min');
+      expect(await p.locator('#ap-lijst .apparaat').textContent()).toContain('uiterlijk om 15:00');
+      expect(await layoutProblems(p), `Apparaten in ${stand}`).toEqual([]);
+      await p.locator('#ap-lijst .seg button', { hasText: '18:00' }).click();
+      await p.locator('#ap-lijst .apparaat').filter({ hasText: 'Genoteerd: klaar voor 18:00' }).waitFor();
+      expect(Object.keys(uitstel.readyBy)).toEqual(['droger']);
+      await p.locator('#ap-lijst .seg button', { hasText: 'Geen haast' }).click();
+      await p.locator('#ap-lijst .apparaat').filter({ hasText: 'Geen tijd meer' }).waitFor();
+      expect(uitstel.readyBy).toEqual({});
+
       // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
       const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
       expect(fonts).toEqual(expect.arrayContaining(['Figtree', 'Bricolage Grotesque']));

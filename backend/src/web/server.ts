@@ -31,6 +31,7 @@ import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
+import type { UitstelStore } from './uitstel.js';
 import { ask, parseQuestion } from './assistant.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
@@ -112,6 +113,8 @@ export interface WebOptions {
    * route niet, en staat de muur er ook voor `/api/gevoel`.
    */
   readonly feedback?: FeedbackLog;
+  /** "Klaar voor" bij de droger (besluit 101); zonder dit bestaat de route niet. */
+  readonly uitstel?: UitstelStore;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -380,6 +383,7 @@ export class WebServer {
     const mayWrite =
       (this.#options.onboarding != null && path === '/api/onboarding') ||
       (this.#options.feedback != null && path === '/api/gevoel') ||
+      (this.#options.uitstel != null && path === '/api/uitstel') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
@@ -450,6 +454,29 @@ export class WebServer {
 
     if (path === '/api/onboarding') {
       await this.#onboarding(req, res, method);
+      return;
+    }
+
+    if (path === '/api/uitstel') {
+      const uitstel = this.#options.uitstel;
+      if (uitstel == null) {
+        sendJson(res, 503, { wachten: '"klaar voor" staat niet aan' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 405, { fout: '"klaar voor" zet je met een POST' });
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await uitstel.set(body);
+      if (result.ok) sendJson(res, 200, { id: result.id, klaarVoorMs: result.klaarVoorMs });
+      else sendJson(res, result.status, { fout: result.reden });
       return;
     }
 

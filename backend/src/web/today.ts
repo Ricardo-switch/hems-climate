@@ -86,6 +86,27 @@ function offsetAt(ms: number, timeZone: string): number {
   return Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s) - Math.floor(ms / 1000) * 1000;
 }
 
+/** "18:00" in de tijdzone van de installatie. */
+export function clockIn(ms: number, timeZone: string): string {
+  const p = partsIn(ms, timeZone);
+  return `${String(p.h).padStart(2, '0')}:${String(p.mi).padStart(2, '0')}`;
+}
+
+/**
+ * De eerstvolgende keer dat het "18:00" is in de tijdzone van de installatie:
+ * vandaag, of morgen als die tijd al voorbij is (besluit 101).
+ */
+export function nextLocalTime(nowMs: number, hhmm: string, timeZone: string): number {
+  const [h = 0, mi = 0] = hhmm.split(':').map(Number);
+  const at = (dayStart: number) => {
+    const p = partsIn(dayStart, timeZone);
+    const guess = Date.UTC(p.y, p.m - 1, p.d, h, mi);
+    return guess - offsetAt(guess - offsetAt(guess, timeZone), timeZone);
+  };
+  const today = at(startOfLocalDay(nowMs, timeZone));
+  return today > nowMs ? today : at(startOfLocalDay(nowMs + 26 * 3_600_000, timeZone));
+}
+
 /** Middernacht van de dag waarin `nowMs` valt, in de tijdzone van de installatie. */
 export function startOfLocalDay(nowMs: number, timeZone: string): number {
   const p = partsIn(nowMs, timeZone);

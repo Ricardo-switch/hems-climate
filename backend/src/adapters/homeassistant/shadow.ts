@@ -23,6 +23,7 @@ import type {
 } from '../../core/decision.js';
 import { decide } from '../../core/decide.js';
 import type { Mode, SiteConfig } from '../../core/model.js';
+import type { SystemState } from '../../core/state.js';
 import { OwnState } from '../own-state.js';
 import { ShadowActuators } from '../shadow-actuators.js';
 import { StateFile } from '../state-file.js';
@@ -84,6 +85,8 @@ export interface ShadowOptions {
    * Nul zet de begrenzer uit; dat is wat de tests doen.
    */
   readonly minIntervalSeconds?: number;
+  /** "Klaar voor" per uitstelbaar apparaat, in epoch-ms (besluit 101). */
+  readonly readyBy?: () => Readonly<Record<string, number>>;
   /**
    * Na hoeveel minuten zonder geslaagde evaluatie het proces zichzelf beëindigt.
    *
@@ -161,8 +164,9 @@ function describe(command: Command): string {
 const ACTUATOR_STATE_MAX_AGE_MS = 30 * 60_000;
 
 export class ShadowRunner {
-  readonly #options: Required<Omit<ShadowOptions, 'logDir'>> & {
+  readonly #options: Required<Omit<ShadowOptions, 'logDir' | 'readyBy'>> & {
     logDir: string | null;
+    readyBy: () => Readonly<Record<string, number>>;
   };
   readonly #store: EntityStore;
   #timer: NodeJS.Timeout | null = null;
@@ -241,6 +245,7 @@ export class ShadowRunner {
           process.exit(1);
         }),
       logDir: options.logDir ?? null,
+      readyBy: options.readyBy ?? (() => ({})),
       write: options.write ?? ((line: string) => console.log(line)),
       now: options.now ?? (() => Date.now()),
     };
@@ -394,6 +399,11 @@ export class ShadowRunner {
     this.#request('modus');
   }
 
+  /** Opnieuw beslissen omdat de bewoner iets koos, zoals "klaar voor" (besluit 101). */
+  nudge(trigger: string): void {
+    if (this.#ready) this.#request(trigger);
+  }
+
   /**
    * Vraagt een evaluatie aan, met inachtneming van de ondergrens. Te vroeg?
    * Dan wordt hij verschoven, niet weggegooid — een wijziging mag nooit
@@ -431,12 +441,9 @@ export class ShadowRunner {
     const nowMs = this.#options.now();
     this.#lastEvalMs = nowMs;
     const config = configFrom(this.#options.config, this.#store);
-    const state = buildSystemState(
-      config,
-      this.#store,
-      nowMs,
-      this.#own,
-      this.#shadowActuators,
+    const state = withReadyBy(
+      buildSystemState(config, this.#store, nowMs, this.#own, this.#shadowActuators),
+      this.#options.readyBy(),
     );
     const decision = decide({
       config,
@@ -579,7 +586,8 @@ export class ShadowRunner {
       .filter((r) => r.blockedBy === 'insufficient_current_budget')
       .map((r) => r.intent.actuatorId);
     // De uitstelbare apparaten (besluit 98): per apparaat de stand en de reden.
-    const uitstel = e.deferrables?.map((d) => [d.id, d.state, d.reason] as const);
+    // Met "klaar voor" de eindtijd erachter (besluit 101).
+    const uitstel = e.deferrables?.map((d) => (d.readyByMs == null ? [d.id, d.state, d.reason] : [d.id, d.state, d.reason, d.readyByMs]));
     const phaseFields = {
       ...(fasen ? { fasen } : {}),
       ...(stroomGeweigerd.length > 0 ? { stroomGeweigerd } : {}),
@@ -668,4 +676,14 @@ export class ShadowRunner {
   #log(line: string): void {
     this.#options.write(line);
   }
+}
+
+/** Zet "klaar voor" van de bewoner bij de uitstelbare apparaten (besluit 101). */
+function withReadyBy(state: SystemState, readyBy: Readonly<Record<string, number>>): SystemState {
+  const list = state.deferrables;
+  if (list == null || Object.keys(readyBy).length === 0) return state;
+  return {
+    ...state,
+    deferrables: Object.fromEntries(Object.entries(list).map(([id, d]) => [id, { ...d, readyByMs: readyBy[id] ?? null }])),
+  };
 }

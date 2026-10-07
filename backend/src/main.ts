@@ -27,6 +27,8 @@ import {
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
+import { UitstelStore } from './web/uitstel.js';
+import type { DeferrableStateCode } from './core/decision.js';
 import { LightSwitch } from './web/lights.js';
 import { SessionStore, homeAssistantLogin, type Access } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
@@ -391,7 +393,23 @@ client.on('ready', (states: HaEntityState[]) => {
   }
 });
 
-const runner =
+/*
+ * "Klaar voor" bij de droger (besluit 101): alleen met een logmap, want het
+ * bestand staat naast de dataset, en alleen als er een uitstelbaar apparaat is.
+ * Vóór de dienst, zodat die het bij elk besluit kan lezen.
+ */
+const uitstelStore: UitstelStore | null =
+  logDir !== '' && site && (site.config.deferrables ?? []).length > 0
+    ? new UitstelStore({
+        logDir,
+        config: site.config,
+        status: (id): DeferrableStateCode | null => runner?.latest?.explanation.deferrables?.find((d) => d.id === id)?.state ?? null,
+        onChange: () => runner?.nudge('uitstel'),
+      })
+    : null;
+await uitstelStore?.load();
+
+const runner: ShadowRunner | null =
   site == null
     ? null
     : new ShadowRunner({
@@ -402,9 +420,16 @@ const runner =
         minIntervalSeconds: startup.minIntervalSeconds,
         watchdogMinutes: startup.watchdogMinutes,
         logDir,
+        ...(uitstelStore ? { readyBy: () => uitstelStore.readyBy } : {}),
         ...(webPort == null
           ? {}
-          : { onDecision: (snapshot: LiveSnapshot) => web?.publish(snapshot) }),
+          : {
+              onDecision: (snapshot: LiveSnapshot) => {
+                // Een eindtijd vervalt als het programma klaar is of de deur openging.
+                void uitstelStore?.prune(snapshot.explanation.deferrables);
+                web?.publish(snapshot);
+              },
+            }),
       });
 
 // De analyse over de logboeken. Alleen zinvol wanneer er ook gelogd wordt —
@@ -531,6 +556,7 @@ if (webPort != null) {
     ...(logDir !== '' && site
       ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
       : {}),
+    ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     version,
   });
 }

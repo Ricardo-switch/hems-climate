@@ -309,6 +309,12 @@ export interface Deferrable {
   readonly estimatedW: number;
   /** Uiterlijk om deze tijd beginnen, ook zonder zon, als "HH:MM". */
   readonly latestStart: string;
+  /**
+   * Hoe lang het gekozen programma duurt, zoals het apparaat het meldt (Home
+   * Connect: "2:48"). Daarmee rekent de kern terug van "klaar voor" naar de
+   * uiterlijke start (besluit 101).
+   */
+  readonly programDuration?: DeviceRef;
 }
 
 export interface OccupancySource {

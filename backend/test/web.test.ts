@@ -7,7 +7,7 @@
  * van bestanden zit het venijn in dat tweede.
  */
 
-import { SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
+import { DOOR_ROLES, SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
 import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -24,6 +24,7 @@ import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { summarize, type HouseReport } from '../src/web/house.js';
 import { LayoutStore, type Layout } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
+import { UitstelStore } from '../src/web/uitstel.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -88,6 +89,7 @@ async function start(options: {
   layout?: { store: LayoutStore; proposal: () => Layout | null };
   lights?: LightSwitch;
   access?: Access;
+  uitstel?: UitstelStore;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -109,6 +111,7 @@ async function start(options: {
         ...(options.house ? { house: options.house } : {}),
         ...(options.layout ? { layout: options.layout } : {}),
         ...(options.lights ? { lights: options.lights } : {}),
+        ...(options.uitstel ? { uitstel: options.uitstel } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -121,6 +124,32 @@ async function start(options: {
   cleanups.push(() => server.stop());
   return { base: `http://127.0.0.1:${port}`, server };
 }
+
+describe('"klaar voor" bij de droger (besluit 101)', () => {
+  it('zet en wist een eindtijd met een POST, en zegt waarom niet als hij niet klaarstaat', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-uitstel-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    let status: 'waiting' | 'not_ready' = 'waiting';
+    const uitstel = new UitstelStore({ logDir, config: exampleSite, status: () => status });
+    const { base } = await start({ uitstel });
+    const post = (body: unknown) => fetch(`${base}/api/uitstel`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    const ok = await post({ id: 'droger', klaarVoor: '18:00' });
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ id: 'droger', klaarVoorMs: expect.any(Number) });
+    expect((await post({ id: 'droger', klaarVoor: null })).status).toBe(200);
+    status = 'not_ready';
+    const no = await post({ id: 'droger', klaarVoor: '18:00' });
+    expect(no.status).toBe(409);
+    expect(((await no.json()) as { fout: string }).fout).toMatch(/op afstand starten/);
+    expect((await fetch(`${base}/api/uitstel`)).status).toBe(405);
+  });
+
+  it('bestaat niet zonder de deur, en vraagt een inlog als bewoner', async () => {
+    const { base } = await start({});
+    expect((await fetch(`${base}/api/uitstel`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
+    expect(DOOR_ROLES['/api/uitstel']).toBe('bewoner');
+  });
+});
 
 describe('welke versie er draait (besluit 54)', () => {
   it('staat in /api/health', async () => {

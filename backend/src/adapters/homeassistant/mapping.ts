@@ -326,11 +326,15 @@ export function buildSystemState(
             config.deferrables.map((d) => {
               const remote = source.bool(d.remoteStart.id);
               const op = d.operationState ? source.state(d.operationState.id) : null;
+              const minutes = d.programDuration ? programMinutes(source, d.programDuration.id) : null;
               return [
                 d.id,
                 {
                   remoteStartAllowed: remote == null ? unavailable<boolean>() : value(remote, nowMs),
                   operation: op == null ? unavailable<string>('missing') : value(op, nowMs),
+                  remoteStartSinceMs: remote == null ? null : source.changedAt(d.remoteStart.id),
+                  operationSinceMs: op == null || !d.operationState ? null : source.changedAt(d.operationState.id),
+                  durationMin: minutes == null ? unavailable<number>('missing') : value(minutes, nowMs),
                 },
               ];
             }),
@@ -340,6 +344,27 @@ export function buildSystemState(
   };
 }
 
+
+/**
+ * Hoe lang een programma duurt, in minuten (besluit 101). Home Connect meldt
+ * "2:48" (uren en minuten); een gewone duursensor een getal met een eenheid.
+ * Null bij niets, of bij 0:00: dat meldt de droger zolang er geen programma
+ * gekozen is.
+ */
+export function programMinutes(source: EntitySource, entityId: string): number | null {
+  const raw = source.state(entityId);
+  if (raw == null) return null;
+  const hm = /^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/.exec(raw.trim());
+  let minutes: number | null = null;
+  if (hm) minutes = Number(hm[1]) * 60 + Number(hm[2]);
+  else {
+    const n = source.number(entityId);
+    if (n == null) return null;
+    const unit = String(source.attr(entityId, 'unit_of_measurement') ?? 'min').toLowerCase();
+    minutes = unit === 's' ? n / 60 : unit === 'h' ? n * 60 : n;
+  }
+  return minutes > 0 ? Math.round(minutes) : null;
+}
 /**
  * Legt de setpoints van de configuratie gelijk aan wat de bewoner op dat moment
  * werkelijk had ingesteld. Zonder deze stap zou de arbiter tegen andere doelen
@@ -428,6 +453,7 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   for (const d of config.deferrables ?? []) {
     ids.add(d.remoteStart.id);
     if (d.operationState) ids.add(d.operationState.id);
+    if (d.programDuration) ids.add(d.programDuration.id);
   }
 
   for (const ref of config.criticalInputs) ids.add(ref.id);

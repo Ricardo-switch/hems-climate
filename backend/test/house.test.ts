@@ -5,6 +5,9 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
+import type { EntitySource } from '../src/adapters/homeassistant/source.js';
+
 import { buildHouse, knownForLayout, lampsFor, proposeLayout } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
@@ -294,5 +297,22 @@ describe('wit, kleur en scènes (besluit 100)', () => {
       { id: 'scene.ontspannen', naam: 'Ontspannen', actief: true },
     ]);
     expect(rooms.flatMap((r) => r.scenes).map((s) => s.id)).not.toContain('scene.garage_feest');
+  });
+});
+
+describe('de duur van een programma (besluit 101)', () => {
+  const source = (state: string, unit?: string) =>
+    ({
+      state: () => state,
+      number: () => (Number.isFinite(Number(state)) ? Number(state) : null),
+      attr: (_id: string, key: string) => (key === 'unit_of_measurement' ? (unit ?? null) : null),
+    }) as unknown as EntitySource;
+
+  it('leest "2:48" van Home Connect, en een getal met een eenheid', () => {
+    expect(programMinutes(source('2:48'), 'x')).toBe(168);
+    expect(programMinutes(source('0:00'), 'x')).toBeNull();
+    expect(programMinutes(source('5400', 's'), 'x')).toBe(90);
+    expect(programMinutes(source('95', 'min'), 'x')).toBe(95);
+    expect(programMinutes(source('1.5', 'h'), 'x')).toBe(90);
   });
 });
