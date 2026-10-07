@@ -184,6 +184,29 @@ function siteInfo(config: SiteConfig): unknown {
   };
 }
 
+/**
+ * Komt het verzoek van deze dienst zelf? Zonder Origin (curl, een script op de
+ * NAS) is het geen browser van een ander, en mag het. Met een Origin moet de
+ * host gelijk zijn aan die van dit verzoek, of aan die waarvoor een proxy het
+ * doorgaf (Ingress van Home Assistant zet `x-forwarded-host`).
+ */
+function sameOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin;
+  if (origin == null || origin === '') return true;
+  let host: string;
+  try {
+    host = new URL(origin).host.toLowerCase();
+  } catch {
+    return false;
+  }
+  const own = [req.headers.host, req.headers['x-forwarded-host']]
+    .flat()
+    .filter((h): h is string => typeof h === 'string')
+    .flatMap((h) => h.split(','))
+    .map((h) => h.trim().toLowerCase());
+  return own.includes(host);
+}
+
 /** Zoveel mag een verzoek zijn. Antwoorden op keuzes zijn kilobytes, geen megabytes. */
 const MAX_BODY = 64 * 1024;
 
@@ -345,6 +368,29 @@ export class WebServer {
       });
       res.end('Deze weergave leest alleen.\n');
       return;
+    }
+
+    /*
+     * Alleen de eigen pagina mag door een deur (CSRF). Op de NAS staat geen
+     * inlog voor de weergave: wie op het thuisnetwerk of in het tailnet zit,
+     * mag kijken en de deuren gebruiken. Maar zonder deze controle kon ook een
+     * willekeurige website, geopend op zo'n apparaat, een verzoek sturen als
+     * gewone tekst (de browser vraagt dan niets vooraf) en zo lampen schakelen,
+     * de indeling overschrijven of gevoel in de dataset zetten. Daarom: alleen
+     * JSON, wat een vreemde site niet zonder voorafgaande vraag kan sturen, en
+     * die vraag beantwoordt deze dienst niet. En een Origin, als de browser er
+     * een meegeeft, moet deze dienst zelf zijn.
+     */
+    if (method === 'POST') {
+      const type = String(req.headers['content-type'] ?? '').toLowerCase();
+      if (!type.startsWith('application/json')) {
+        sendJson(res, 415, { fout: 'alleen JSON' });
+        return;
+      }
+      if (!sameOrigin(req)) {
+        sendJson(res, 403, { fout: 'alleen vanaf de eigen pagina' });
+        return;
+      }
     }
 
     if (path === '/api/site') {

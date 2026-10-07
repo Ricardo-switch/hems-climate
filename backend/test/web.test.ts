@@ -71,6 +71,9 @@ function snapshot(over: Partial<LiveSnapshot> = {}): LiveSnapshot {
 }
 
 /** Start een server op een vrije poort en levert de basis-URL. */
+/** Zoals de eigen pagina een deur gebruikt: als JSON. */
+const JSON_HEADERS = { 'content-type': 'application/json' };
+
 async function start(options: {
   latest?: () => LiveSnapshot | null;
   webDir?: string;
@@ -533,6 +536,7 @@ describe('de onboarding', () => {
     const { base } = await start({});
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ antwoorden: {} }),
     });
     // Niet 503 en niet 404: de muur staat er nog, en die antwoordt met 405.
@@ -570,6 +574,7 @@ describe('de onboarding', () => {
     const { base } = await start({ onboarding });
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ antwoorden: {} }),
     });
     expect(res.status).toBe(422);
@@ -582,6 +587,7 @@ describe('de onboarding', () => {
     await fetch(`${base}/api/onboarding`);
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ antwoorden: {} }),
     });
     expect(res.status).toBe(200);
@@ -602,6 +608,7 @@ describe('de onboarding', () => {
     await fetch(`${base}/api/onboarding`);
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ antwoorden: {} }),
     });
     expect(res.status).toBe(422);
@@ -623,6 +630,7 @@ describe('de onboarding', () => {
     await fetch(`${base}/api/onboarding`);
     const res = await fetch(`${base}/api/onboarding`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ antwoorden: {} }),
     });
     expect(res.status).toBe(422);
@@ -647,7 +655,7 @@ describe('de onboarding', () => {
     const { onboarding } = await createOnboarding();
     const { base } = await start({ onboarding });
     for (const body of ['geen json', '{"iets":1}', '[]']) {
-      const res = await fetch(`${base}/api/onboarding`, { method: 'POST', body });
+      const res = await fetch(`${base}/api/onboarding`, { method: 'POST', headers: JSON_HEADERS, body });
       expect(res.status, body).toBe(400);
     }
   });
@@ -671,6 +679,7 @@ describe('gevoel en toelichting, de tweede deur (besluit 84)', () => {
     const { base } = await start({});
     const res = await fetch(`${base}/api/gevoel`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' }),
     });
     expect(res.status).toBe(405);
@@ -684,6 +693,7 @@ describe('gevoel en toelichting, de tweede deur (besluit 84)', () => {
 
     const res = await fetch(`${base}/api/gevoel`, {
       method: 'POST',
+      headers: JSON_HEADERS,
       body: JSON.stringify({ zoneId: 'woonkamer', gevoel: 'te_warm' }),
     });
     expect(res.status).toBe(200);
@@ -705,7 +715,7 @@ describe('gevoel en toelichting, de tweede deur (besluit 84)', () => {
       { zoneId: 'woonkamer', gevoel: 'goed', toelichting: 'koken' },
       { zoneId: 'woonkamer' },
     ]) {
-      const res = await fetch(`${base}/api/gevoel`, { method: 'POST', body: JSON.stringify(body) });
+      const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
       expect(res.status, JSON.stringify(body)).toBe(400);
     }
   });
@@ -873,13 +883,13 @@ describe('licht bedienen (besluit 97)', () => {
       },
     });
     const started = await start({ latest: () => snapshot(), house: () => house, lights });
-    const post = (body: unknown) => fetch(`${started.base}/api/licht`, { method: 'POST', body: JSON.stringify(body) });
+    const post = (body: unknown) => fetch(`${started.base}/api/licht`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
     return { ...started, calls, post };
   }
 
   it('bestaat niet wanneer het niet is meegegeven', async () => {
     const { base } = await start({ latest: () => snapshot(), house: () => house });
-    expect((await fetch(`${base}/api/licht`, { method: 'POST', body: '{}' })).status).toBe(405);
+    expect((await fetch(`${base}/api/licht`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
   });
 
   it('zet een etage, een kamer of het huis uit, met alleen de lampen die het huis toont', async () => {
@@ -938,7 +948,7 @@ describe('de indeling (besluit 96)', () => {
 
   it('bestaat niet wanneer hij niet is meegegeven', async () => {
     const { base } = await start({ latest: () => snapshot() });
-    const res = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify(layout) });
+    const res = await fetch(`${base}/api/indeling`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(layout) });
     expect(res.status).toBe(405);
   });
 
@@ -955,7 +965,7 @@ describe('de indeling (besluit 96)', () => {
     expect(before.etages.map((e) => e.id)).toEqual(['e2', 'e1', 'bg', 'buiten']);
     expect(before.regelzones.map((z) => z.id)).toEqual(exampleSite.zones.map((z) => z.id));
 
-    const saved = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify(layout) });
+    const saved = await fetch(`${base}/api/indeling`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(layout) });
     expect(saved.status).toBe(200);
     const after = (await (await fetch(`${base}/api/indeling`)).json()) as { indeling: Layout };
     expect(after.indeling.apparaten['nest']!.naam).toBe('Thermostaat');
@@ -963,7 +973,7 @@ describe('de indeling (besluit 96)', () => {
 
   it('weigert een indeling die niet deugt, met een reden', async () => {
     const { base } = await withLayout();
-    const res = await fetch(`${base}/api/indeling`, { method: 'POST', body: JSON.stringify({ ...layout, etages: { kelder: 'x' } }) });
+    const res = await fetch(`${base}/api/indeling`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...layout, etages: { kelder: 'x' } }) });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { fout: string }).fout).toContain('kelder');
   });
@@ -976,5 +986,41 @@ describe('de indeling (besluit 96)', () => {
     for (const method of ['PUT', 'PATCH', 'DELETE']) {
       expect((await fetch(`${base}/api/indeling`, { method })).status, method).toBe(405);
     }
+  });
+});
+
+describe('alleen de eigen pagina door de deuren (CSRF)', () => {
+  async function withFeedback(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-csrf-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    const { base } = await start({ feedback: new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] }) });
+    return base;
+  }
+  const body = JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' });
+
+  it('weigert gewone tekst: zo stuurt een vreemde website zonder iets te vragen', async () => {
+    const base = await withFeedback();
+    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body });
+    expect(res.status).toBe(415);
+    // Zonder type stuurt fetch het ook als tekst.
+    expect((await fetch(`${base}/api/gevoel`, { method: 'POST', body })).status).toBe(415);
+  });
+
+  it('weigert een verzoek van een andere herkomst, ook als JSON', async () => {
+    const base = await withFeedback();
+    const res = await fetch(`${base}/api/gevoel`, {
+      method: 'POST',
+      headers: { ...JSON_HEADERS, origin: 'https://vreemd.example' },
+      body,
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it('laat de eigen pagina door, en een verzoek zonder browser', async () => {
+    const base = await withFeedback();
+    const own = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: { ...JSON_HEADERS, origin: base }, body });
+    expect(own.status).toBe(200);
+    const script = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body });
+    expect(script.status).toBe(200);
   });
 });

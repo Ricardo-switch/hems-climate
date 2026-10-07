@@ -4131,6 +4131,25 @@ licht.
   een plek naar keuze, ook vanuit de kamer zelf ("Toevoegen aan deze kamer").
   Bij het indelen is een plek nu een kamer of meteen een zone erin.
 
+*Aangevuld 7 oktober 2026: alleen de eigen pagina door de deuren.* De
+QA-ronde vond dat alle vier de deuren een verzoek aannamen van elke website.
+Een site die iemand in huis opent, kon een POST als gewone tekst sturen (dan
+vraagt de browser niets vooraf) en zo de lampen schakelen, de indeling
+overschrijven of gevoel in de dataset zetten. Dat de NAS geen inlog heeft, is
+bewust voor wie er zelf bij kan, maar zo kon ook een vreemde site erbij, via de
+browser van iemand in huis. Nu, voor elke deur op één plek achter de 405-muur:
+
+- **Alleen JSON.** Een vreemde site kan dat niet sturen zonder eerst toestemming
+  te vragen, en die vraag beantwoordt de dienst niet. Anders 415.
+- **Een Origin moet de dienst zelf zijn**, of de host waarvoor Ingress het
+  doorgaf (`x-forwarded-host`). Anders 403. Zonder Origin (een script, curl) mag
+  het: dat is geen browser van een ander.
+
+Tests bewijzen beide, en falen als de controle uit staat. Wat open blijft is
+DNS-rebinding: een site die zijn eigen naam naar het adres van de NAS laat
+wijzen, is voor de browser "dezelfde" herkomst. Daartegen helpt een lijst met
+toegestane hostnamen; die hoort bij de inlog van stap C.
+
 ---
 
 ## 98. Uitstelbare apparaten: de droger draait op zon, via de arbiter
