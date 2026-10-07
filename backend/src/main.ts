@@ -353,6 +353,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  * mee. Alleen lezen.
  */
 const houseStates = new Map<string, HaEntityState>();
+// Alle standen, voor de namen van meters en een prijs uit een entiteit (besluit 102).
+const allStates = new Map<string, HaEntityState>();
 // Lampen en screens, klimaat, en sensoren die temperatuur of luchtvochtigheid meten.
 const inHouse = (st: HaEntityState) =>
   st.entity_id.startsWith('light.') ||
@@ -372,12 +374,16 @@ async function readHouseRegisters(): Promise<void> {
 }
 client.on('stateChanged', (state: HaEntityState) => {
   if (inHouse(state)) houseStates.set(state.entity_id, state);
+  allStates.set(state.entity_id, state);
 });
 setInterval(() => void readHouseRegisters().catch(() => {}), 15 * 60_000).unref();
 
 client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
-  for (const s of states) if (inHouse(s)) houseStates.set(s.entity_id, s);
+  for (const s of states) {
+    if (inHouse(s)) houseStates.set(s.entity_id, s);
+    allStates.set(s.entity_id, s);
+  }
   void readHouseRegisters().catch(() => {
     // Zonder registers is er geen huis te tonen; de volgende verbinding opnieuw.
   });
@@ -564,7 +570,7 @@ if (webPort != null) {
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
-    ...(energyStore ? { energy: { store: energyStore, source: haEnergySource(client) } } : {}),
+    ...(energyStore ? { energy: { store: energyStore, source: haEnergySource(client, (id) => allStates.get(id)) } } : {}),
     version,
   });
 }

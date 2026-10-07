@@ -58,6 +58,8 @@ export interface EnergySource {
   prefs(): Promise<unknown>;
   /** De meters met een optelbare statistiek. */
   meters(): Promise<readonly MeterOption[]>;
+  /** De stand van een entiteit als getal: voor een prijs die uit een entiteit komt. */
+  entityNumber?(entityId: string): number | null;
   /** Per meter het verbruik per periode, in kWh en m³. */
   changes(
     ids: readonly string[],
@@ -76,11 +78,19 @@ const price = (v: unknown): number | null => (typeof v === 'number' && Number.is
  * Leest het Energie-dashboard van Home Assistant. Het net heeft afname en
  * teruglevering (vaak per tarief), de zon een of meer omvormers, gas één meter
  * met een prijs; de apparaten staan los. Een prijs die uit een entiteit komt
- * (een dynamisch tarief) is hier nog geen getal: die vult de bewoner aan.
+ * (een `input_number`, of een dynamisch tarief) neemt de stand van nu over; die
+ * kan de bewoner daarna aanpassen.
  */
-export function importFromPrefs(prefs: unknown, meters: readonly MeterOption[] = []): EnergySettings | null {
+export function importFromPrefs(
+  prefs: unknown,
+  meters: readonly MeterOption[] = [],
+  entityNumber: (entityId: string) => number | null = () => null,
+): EnergySettings | null {
   if (!isRecord(prefs) || !Array.isArray(prefs['energy_sources'])) return null;
   const nameOf = (id: string) => meters.find((m) => m.id === id)?.naam ?? id;
+  // Een vast getal, of de stand van de entiteit die de prijs geeft.
+  const priceIn = (x: Record<string, unknown>) =>
+    price(x['number_energy_price']) ?? (typeof x['entity_energy_price'] === 'string' ? price(entityNumber(x['entity_energy_price'])) : null);
   const afname: string[] = [];
   const terug: string[] = [];
   const zon: string[] = [];
@@ -96,19 +106,19 @@ export function importFromPrefs(prefs: unknown, meters: readonly MeterOption[] =
       for (const f of from) {
         const id = isRecord(f) ? str(f['stat_energy_from']) : null;
         if (id && !afname.includes(id)) afname.push(id);
-        if (isRecord(f)) stroomPrijs ??= price(f['number_energy_price']);
+        if (isRecord(f)) stroomPrijs ??= priceIn(f);
       }
       for (const t of to) {
         const id = isRecord(t) ? str(t['stat_energy_to']) : null;
         if (id && !terug.includes(id)) terug.push(id);
-        if (isRecord(t)) terugPrijs ??= price(t['number_energy_price']);
+        if (isRecord(t)) terugPrijs ??= priceIn(t);
       }
     } else if (src['type'] === 'solar') {
       const id = str(src['stat_energy_from']);
       if (id && !zon.includes(id)) zon.push(id);
     } else if (src['type'] === 'gas') {
       gas ??= str(src['stat_energy_from']);
-      gasPrijs ??= price(src['number_energy_price']);
+      gasPrijs ??= priceIn(src);
     }
   }
   const apparaten: EnergyDevice[] = [];

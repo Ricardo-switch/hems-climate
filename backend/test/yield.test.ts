@@ -180,6 +180,12 @@ describe('meters en prijzen in de app', () => {
     expect(importFromPrefs({ energy_sources: 'x' })).toBeNull();
   });
 
+  it('neemt een prijs uit een entiteit over met de stand van nu', () => {
+    const only = { energy_sources: [{ type: 'grid', flow_from: [{ stat_energy_from: 'sensor.afname', entity_energy_price: 'input_number.stroomprijs' }] }, { type: 'gas', stat_energy_from: 'sensor.gas', entity_energy_price: 'input_number.gasprijs' }] };
+    const prices: Record<string, number> = { 'input_number.stroomprijs': 0.2899, 'input_number.gasprijs': 1.31 };
+    expect(importFromPrefs(only, [], (id) => prices[id] ?? null)?.prijzen).toEqual({ stroom: 0.2899, teruglevering: null, gas: 1.31, vastPerMaand: null });
+  });
+
   it('bewaart alleen meters en redelijke bedragen, en houdt ze over een herstart', async () => {
     expect(validateEnergy({ ...SETTINGS, zon: ['geen meter'] })).toMatchObject({ ok: false });
     expect(validateEnergy({ ...SETTINGS, prijzen: { stroom: 25 } })).toMatchObject({ ok: false });

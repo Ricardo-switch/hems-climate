@@ -855,7 +855,7 @@ export class WebServer {
     let fout: string | null = null;
     try {
       meters = await energy.source.meters();
-      voorstel = importFromPrefs(await energy.source.prefs(), meters);
+      voorstel = importFromPrefs(await energy.source.prefs(), meters, (id) => energy.source.entityNumber?.(id) ?? null);
     } catch (error) {
       fout = `Home Assistant gaf de meters niet: ${(error as Error).message}`;
     }
