@@ -4452,10 +4452,16 @@ waar het vandaan kwam, wat het kostte, per apparaat, en vergelijken met eerder
 - **Vergelijken:** twaalf periodes tot en met deze, met dezelfde een jaar
   eerder ernaast; bij een jaar de jaren zelf.
 
-*Gebouwd op 7 oktober 2026, eerst de dienst:* `GET /api/energie` (wat er staat,
-het voorstel uit Home Assistant en de meters om uit te kiezen),
-`POST /api/energie` en `GET /api/opbrengst?soort=maand&datum=2026-09-01`. De
-pagina volgt.
+*Gebouwd op 7 oktober 2026.* De dienst: `GET /api/energie` (wat er staat, het
+voorstel uit Home Assistant en de meters om uit te kiezen), `POST /api/energie`
+en `GET /api/opbrengst?soort=maand&datum=2026-09-01`, met de verschillen tegen
+de periode ervoor en een jaar eerder erbij. De app: Opbrengst met de drie
+getallen, de zonnepanelen, de sankey (stroom, of stroom en gas in kWh), per
+apparaat, per uur, dag of maand, vergelijken en kosten, met "Wat Smart Climate
+had gescheeld" onderaan; en een scherm Meters en prijzen achter Instellingen,
+met "Overnemen" uit Home Assistant en zelf kiezen. Zonder meters zegt
+Opbrengst eerst waar je ze instelt. De oude cijfers van het meekijken (−% voor
+de airco's) staan nu in die onderste kaart.
 
 ---
 

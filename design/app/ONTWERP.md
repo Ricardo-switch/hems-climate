@@ -349,7 +349,7 @@ onboarding (§4), of een eenvoudige indeling als Home Assistant het niet weet.
 
 ### Terugkijken: alles wat het huis gebruikte
 
-**Voorstel**, 7 oktober 2026, van de bewoner (`Opbrengst-terug`,
+**Gebouwd** (besluit 102), 7 oktober 2026, van de bewoner (`Opbrengst-terug`,
 `Wand-Opbrengst`). Opbrengst wordt het scherm om terug te kijken, per dag,
 week, maand of jaar, met pijltjes naar de vorige periode:
 

@@ -61,6 +61,12 @@ export interface YieldCompare {
   readonly kosten: readonly YieldComparePoint[];
 }
 
+/** "+11%" tegen de periode ervoor en tegen een jaar eerder; null zonder cijfer. */
+export interface YieldDelta {
+  readonly vorige: { readonly dan: number; readonly pct: number } | null;
+  readonly jaar: { readonly dan: number; readonly pct: number } | null;
+}
+
 export interface YieldReport {
   readonly periode: {
     readonly soort: PeriodKind;
@@ -99,6 +105,7 @@ export interface YieldReport {
   readonly stromen: readonly { readonly van: 'zon' | 'net' | 'gas'; readonly naar: string; readonly kwh: number }[];
   readonly perBucket: readonly YieldBucket[];
   readonly vergelijk: YieldCompare;
+  readonly verschil: Readonly<Record<keyof YieldCompare, YieldDelta>>;
   readonly kosten: {
     readonly regels: readonly { readonly naam: string; readonly uitleg: string; readonly euro: number | null }[];
     readonly totaal: number | null;
@@ -341,13 +348,15 @@ export async function yieldReport(
   const regels: { naam: string; uitleg: string; euro: number | null }[] = [];
   const p = s.prijzen;
   const eur = (n: number) => `€ ${n.toFixed(2).replace('.', ',')}`;
-  if (s.net.afname.length) regels.push({ naam: 'Stroom van het net', uitleg: p.stroom == null ? `${r1(afnameKwh)} kWh, prijs nog niet ingesteld` : `${r1(afnameKwh)} kWh × ${eur(p.stroom)}`, euro: p.stroom == null ? null : r2(afnameKwh * p.stroom) });
+  // In de zin met een komma, zoals de rest van de app.
+  const nlNum = (n: number) => String(n).replace('.', ',');
+  if (s.net.afname.length) regels.push({ naam: 'Stroom van het net', uitleg: p.stroom == null ? `${nlNum(r1(afnameKwh))} kWh, prijs nog niet ingesteld` : `${nlNum(r1(afnameKwh))} kWh × ${eur(p.stroom)}`, euro: p.stroom == null ? null : r2(afnameKwh * p.stroom) });
   if (s.net.teruglevering.length) {
     const tp = p.teruglevering ?? p.stroom;
-    const uitleg = p.teruglevering == null ? `${r1(terugKwh)} kWh, gesaldeerd tot 2027` : `${r1(terugKwh)} kWh × ${eur(p.teruglevering)}`;
+    const uitleg = p.teruglevering == null ? `${nlNum(r1(terugKwh))} kWh, gesaldeerd tot 2027` : `${nlNum(r1(terugKwh))} kWh × ${eur(p.teruglevering)}`;
     regels.push({ naam: 'Teruggeleverd', uitleg, euro: tp == null ? null : -r2(terugKwh * tp) });
   }
-  if (s.gas) regels.push({ naam: 'Gas', uitleg: p.gas == null ? `${r2(gasM3)} m³, prijs nog niet ingesteld` : `${r2(gasM3)} m³ × ${eur(p.gas)}`, euro: p.gas == null ? null : r2(gasM3 * p.gas) });
+  if (s.gas) regels.push({ naam: 'Gas', uitleg: p.gas == null ? `${nlNum(r2(gasM3))} m³, prijs nog niet ingesteld` : `${nlNum(r2(gasM3))} m³ × ${eur(p.gas)}`, euro: p.gas == null ? null : r2(gasM3 * p.gas) });
   const months = (range.endMs - range.startMs) / (30.44 * 86_400_000);
   regels.push({ naam: 'Vaste kosten', uitleg: p.vastPerMaand == null ? 'nog niet ingesteld' : `${eur(p.vastPerMaand)} per maand`, euro: p.vastPerMaand == null ? null : r2(p.vastPerMaand * months) });
   const variable = costOf(s, afnameKwh, terugKwh, gasM3);
@@ -387,8 +396,20 @@ export async function yieldReport(
     stromen,
     perBucket,
     vergelijk,
+    verschil: {
+      stroom: deltaOf(vergelijk.stroom),
+      zon: deltaOf(vergelijk.zon),
+      gas: deltaOf(vergelijk.gas),
+      kosten: deltaOf(vergelijk.kosten),
+    },
     kosten: { regels, totaal: variable, vorige: prev(vergelijk.kosten) },
   };
+}
+
+function deltaOf(series: readonly YieldComparePoint[]): YieldDelta {
+  const now = series.at(-1)?.nu ?? null;
+  const pct = (then: number | null) => (now == null || then == null || then === 0 ? null : { dan: then, pct: Math.round(((now - then) / Math.abs(then)) * 100) });
+  return { vorige: pct(series.at(-2)?.nu ?? null), jaar: pct(series.at(-1)?.jaarEerder ?? null) };
 }
 
 /** De vakken van de grafiek, in volgorde. */

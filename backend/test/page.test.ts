@@ -42,6 +42,51 @@ import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
+import { EnergyStore, type EnergySource } from '../src/web/energy.js';
+
+/**
+ * Een Home Assistant met een Energie-dashboard (besluit 102): net, zon, gas en
+ * een airco, elke dag hetzelfde, een jaar eerder 80%.
+ */
+const ENERGY_SOURCE: EnergySource = {
+  prefs: async () => ({
+    energy_sources: [
+      { type: 'grid', flow_from: [{ stat_energy_from: 'sensor.afname', number_energy_price: 0.25 }], flow_to: [{ stat_energy_to: 'sensor.terug' }] },
+      { type: 'solar', stat_energy_from: 'sensor.zon' },
+      { type: 'gas', stat_energy_from: 'sensor.gas', number_energy_price: 1.3 },
+    ],
+    device_consumption: [{ stat_consumption: 'sensor.airco', name: 'Airco woonkamer' }],
+  }),
+  meters: async () => [
+    { id: 'sensor.afname', naam: 'P1 afname', soort: 'energy' },
+    { id: 'sensor.terug', naam: 'P1 teruglevering', soort: 'energy' },
+    { id: 'sensor.zon', naam: 'SolarEdge opgewekt', soort: 'energy' },
+    { id: 'sensor.airco', naam: 'Airco woonkamer energie', soort: 'energy' },
+    { id: 'sensor.gas', naam: 'Gasmeter', soort: 'volume' },
+  ],
+  changes: async (ids, startMs, endMs, period) => {
+    const hourly: Record<string, (h: number) => number> = {
+      'sensor.afname': (h) => (h >= 10 && h < 17 ? 0 : 0.4),
+      'sensor.terug': (h) => (h >= 10 && h < 17 ? 1 : 0),
+      'sensor.zon': (h) => (h >= 10 && h < 17 ? 2 : 0),
+      'sensor.airco': (h) => (h === 12 || h === 13 ? 0.5 : 0),
+      'sensor.gas': (h) => (h === 7 ? 0.2 : 0),
+    };
+    const scale = (t: number) => (new Date(t).getUTCFullYear() < 2026 ? 0.8 : 1);
+    const step = period === 'hour' ? 3_600_000 : 86_400_000;
+    return Object.fromEntries(
+      ids.map((id) => {
+        const rows = [];
+        for (let t = startMs; t < endMs; t += step) {
+          const h = (new Date(t).getUTCHours() + 2) % 24;
+          const v = period === 'hour' ? hourly[id]!(h) : Array.from({ length: 24 }, (_, x) => hourly[id]!(x)).reduce((a, b) => a + b, 0);
+          rows.push({ startMs: t, change: v * scale(t) });
+        }
+        return [id, rows];
+      }),
+    );
+  },
+};
 import { SessionStore } from '../src/web/auth.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { onUsablePort } from './ports.js';
@@ -194,6 +239,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let baseUrl: string;
   let layoutStore: LayoutStore;
   let uitstel: UitstelStore;
+  let energyStore: EnergyStore;
   const sessions = new SessionStore();
   let sessionId = '';
   const pageErrors: string[] = [];
@@ -215,6 +261,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     live = { ...live, explanation: { ...live.explanation, deferrables: [{ id: 'droger', state: 'waiting', reason: 'surplus_insufficient', durationMin: 168 }] } };
     layoutStore = new LayoutStore({ logDir: dir, known: () => knownForLayout(exampleSite, houseRegisters, houseStates) });
     uitstel = new UitstelStore({ logDir: dir, config: exampleSite, status: () => 'waiting' });
+    energyStore = new EnergyStore(dir);
 
     // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
     let port: number;
@@ -244,6 +291,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           uitstel,
+          energy: { store: energyStore, source: ENERGY_SOURCE },
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
           // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
           access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
@@ -528,7 +576,28 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);
       await p.locator('#o-hero .big').waitFor();
       expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
+      // Terugkijken (besluit 102): de eerste keer de meters overnemen uit Home Assistant.
+      if (stand === 'portret') {
+        await p.locator('#o-terug a', { hasText: 'Meters en prijzen instellen' }).click();
+        await p.locator('#e-inhoud').filter({ hasText: 'Je Energie-dashboard heeft' }).waitFor();
+        expect(await layoutProblems(p), `Meters en prijzen in ${stand}`).toEqual([]);
+        await p.locator('#e-inhoud button', { hasText: 'Overnemen' }).click();
+        await p.locator('#e-inhoud .chip', { hasText: 'SolarEdge opgewekt' }).waitFor();
+        await p.locator('#e-inhoud button', { hasText: 'Bewaren' }).click();
+        await p.locator('#e-zin').filter({ hasText: 'Bewaard' }).waitFor();
+        expect(energyStore.current?.zon).toEqual(['sensor.zon']);
+        await p.locator('#e-inhoud a', { hasText: 'Naar Opbrengst' }).click();
+      }
+      await p.locator('#o-terug .o-kpi', { hasText: 'STROOM' }).waitFor();
+      expect(await p.locator('#o-terug').textContent()).toContain('Je zonnepanelen');
+      expect(await p.locator('#o-terug').textContent()).toContain('Airco woonkamer');
+      expect(await p.locator('#o-terug svg').count()).toBeGreaterThanOrEqual(3);
       expect(await layoutProblems(p), `Opbrengst in ${stand}`).toEqual([]);
+      await p.locator('#o-terug .seg button', { hasText: 'Jaar' }).click();
+      await p.locator('#o-terug .o-nav b', { hasText: /^\d{4}$/ }).waitFor();
+      await p.locator('#o-terug .seg button', { hasText: 'Stroom en gas' }).click();
+      await p.locator('#o-terug h2', { hasText: 'Waar je energie heen ging' }).waitFor();
+      expect(await layoutProblems(p), `Opbrengst per jaar in ${stand}`).toEqual([]);
       // Apparaten op zon (besluit 101): vanaf Thuis, en "klaar voor" kiezen.
       await p.goto(`${baseUrl}/nieuw.html#thuis`);
       await p.locator('#nu-lijst a', { hasText: 'Apparaten op zon' }).click();

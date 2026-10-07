@@ -133,9 +133,9 @@ function buildNav() {
 function showView() {
   const want = (location.hash || '#thuis').slice(1).split('/')[0];
   // Het huis staat niet in het menu: je komt er door op het huis te tikken.
-  const id = NAV.some(([n]) => n === want) || want === 'huis' || want === 'apparaten' ? want : 'thuis';
+  const id = NAV.some(([n]) => n === want) || ['huis', 'apparaten', 'energie'].includes(want) ? want : 'thuis';
   for (const v of document.querySelectorAll('.view')) v.hidden = v.dataset.view !== id;
-  const menu = id === 'huis' || id === 'apparaten' ? 'thuis' : id;
+  const menu = id === 'huis' || id === 'apparaten' ? 'thuis' : id === 'energie' ? 'opbrengst' : id;
   for (const a of document.querySelectorAll('.navitem')) {
     if (a.dataset.target === menu) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -145,7 +145,11 @@ function showView() {
     renderHouse();
     void loadHouse(true);
   }
-  if (id === 'opbrengst') void loadReview();
+  if (id === 'opbrengst') {
+    void loadYield();
+    void loadReview();
+  }
+  if (id === 'energie') void loadEnergy();
   if (id === 'waarom' || id === 'thuis') void loadToday();
 }
 
@@ -606,22 +610,20 @@ function renderLog() {
 async function loadReview() {
   try {
     const res = await fetch('api/divergence');
-    if (!res.ok) {
-      $('o-periode').textContent = 'De terugblik is nog niet doorgerekend.';
-      return;
-    }
+    if (!res.ok) return;
     review = await res.json();
     renderReview();
     renderNoticed();
   } catch {
-    $('o-periode').textContent = 'De terugblik is nu niet bereikbaar.';
+    // Zonder meekijkcijfers blijft die kaart weg.
   }
 }
 
 function renderReview() {
   const r = review;
   const days = Math.max(1, Math.round((r.totMs - r.vanMs) / 86_400_000));
-  $('o-periode').textContent = `${days} dagen meekijken naast je huidige regeling.`;
+  $('o-scheelde').hidden = false;
+  $('o-periode').textContent = `In ${days} dagen meekijken naast je huidige regeling.`;
   const legacyKwh = r.legacyGridWh / 1000;
   const avoid = r.avoidableGridWh / 1000;
   const ours = Math.max(0, legacyKwh - avoid);
@@ -633,11 +635,6 @@ function renderReview() {
     barRow('Huidige regeling', legacyKwh, 100, 'rgba(169,186,194,0.45)'),
     barRow('Smart Climate', ours, legacyKwh > 0 ? (ours / legacyKwh) * 100 : 0, null),
   );
-  // De dataset (seizoenen, winterdagen) is een cijfer over de opname, en staat
-  // in de schaduwweergave; hier alleen wat de bewoner er iets aan heeft.
-  $('o-tegels').replaceChildren(
-    el('div', { class: 'card', style: 'gap: 4px' }, el('div', { style: 'font-size: 24px; font-weight: 600', text: `${r.episodesTotaal}` }), el('div', { class: 'small muted', text: 'keer dat Smart Climate het anders zou doen' })),
-  );
   $('o-voet').textContent = `Gemeten terwijl Smart Climate meekeek: wat hij zou hebben gedaan. Bijgewerkt om ${hhmm(r.berekendOpMs)}.`;
 }
 
@@ -648,6 +645,521 @@ function barRow(label, kwh, pct, color) {
     el('div', { class: 'small', style: 'display: flex; justify-content: space-between' }, el('b', { text: label }), el('span', { text: `${nl(kwh)} kWh` })),
     el('div', { class: 'bar', style: 'height: 12px' }, el('div', { style: `width: ${Math.max(0, Math.min(100, pct))}%${color ? `; background: ${color}` : ''}` })),
   );
+}
+
+/* ------------------------------------------------------- terugkijken */
+
+/*
+ * Opbrengst om terug te kijken (besluit 102, schetsen `Opbrengst-terug` en
+ * `Wand-Opbrengst`). De dienst rekent alles uit (`api/opbrengst`); deze pagina
+ * tekent het: de getallen, de zon, de sankey op schaal, per apparaat, per dag,
+ * vergelijken en kosten. De meters en prijzen staan bij Instellingen.
+ */
+const yieldView = { soort: 'maand', datum: null, sankey: 'stroom', metric: 'stroom' };
+let yieldData = null;
+
+const ZON_C = '#F5B342';
+const NET_C = '#A9BAC2';
+const GAS_C = '#FF8A4C';
+const TERUG_C = '#6FDCA6';
+const DEVICE_C = ['#5CC8FF', '#8FD9FF', '#FFB088', '#F5C66E', '#C4BCFF', '#9EE6FF', '#FFD08A'];
+/** 414 of 13,8: hele getallen vanaf honderd, anders één decimaal. */
+const num = (n) => nl(n, Math.abs(n) >= 100 ? 0 : 1);
+const euro = (n) => `€ ${nl(n, 2)}`;
+const kwh = (n) => `${num(n)} kWh`;
+
+async function loadYield() {
+  const q = new URLSearchParams({ soort: yieldView.soort, ...(yieldView.datum ? { datum: yieldView.datum } : {}) });
+  $('o-terug').setAttribute('aria-busy', 'true');
+  try {
+    const res = await fetch(`api/opbrengst?${q}`);
+    const body = await res.json();
+    if (res.status === 409) {
+      yieldData = null;
+      $('o-terug').replaceChildren(
+        el(
+          'div',
+          { class: 'card' },
+          el('b', { text: 'Eerst je meters' }),
+          el('p', { class: 'small', style: 'color: var(--soft)', text: 'Om terug te kijken moet Smart Climate weten welke meters je huis heeft en wat stroom en gas kosten. Neem het over uit Home Assistant, of stel het zelf in.' }),
+          el('a', { class: 'knop', href: '#energie', text: 'Meters en prijzen instellen' }),
+        ),
+      );
+      return;
+    }
+    if (!res.ok) {
+      $('o-terug').replaceChildren(el('p', { class: 'small muted', text: body.fout ?? body.wachten ?? 'De terugblik is nu niet beschikbaar.' }));
+      return;
+    }
+    yieldData = body;
+    renderYield();
+  } catch {
+    $('o-terug').replaceChildren(el('p', { class: 'small muted', text: 'Geen verbinding met Smart Climate.' }));
+  } finally {
+    $('o-terug').removeAttribute('aria-busy');
+  }
+}
+
+function seg(options, current, onPick, label) {
+  const g = el('div', { class: 'seg pick', role: 'group', 'aria-label': label, style: `grid-template-columns: repeat(${options.length}, minmax(max-content, 1fr))` });
+  for (const [value, text] of options) {
+    const b = el('button', { type: 'button', text, 'aria-pressed': String(value === current) });
+    b.addEventListener('click', () => onPick(value));
+    g.append(b);
+  }
+  return g;
+}
+
+function renderYield() {
+  const r = yieldData;
+  const parts = [];
+  parts.push(
+    seg(
+      [
+        ['dag', 'Dag'],
+        ['week', 'Week'],
+        ['maand', 'Maand'],
+        ['jaar', 'Jaar'],
+      ],
+      r.periode.soort,
+      (v) => {
+        yieldView.soort = v;
+        yieldView.datum = null;
+        void loadYield();
+      },
+      'Periode',
+    ),
+  );
+  const step = (datum, label) => {
+    const b = el('button', { type: 'button', class: 'rond', 'aria-label': label, text: label.startsWith('Vorige') ? '‹' : '›' });
+    if (!datum) b.disabled = true;
+    else
+      b.addEventListener('click', () => {
+        yieldView.datum = datum;
+        void loadYield();
+      });
+    return b;
+  };
+  parts.push(el('div', { class: 'o-nav' }, step(r.periode.vorige, 'Vorige periode'), el('b', { text: r.periode.label }), step(r.periode.volgende, 'Volgende periode')));
+
+  // Drie getallen, met de periode ervoor eronder.
+  const prevName = r.periode.vorigeNaam;
+  const tiles = [];
+  if (r.heeft.net) tiles.push(kpiTile('Stroom', num(r.stroom.verbruikKwh), 'kWh', r.stroom.eigenZonPct != null ? `${r.stroom.eigenZonPct}% eigen zon` : r.stroom.vorigeKwh != null ? `${prevName}: ${num(r.stroom.vorigeKwh)}` : '', 'var(--warm)'));
+  if (r.gas) tiles.push(kpiTile('Gas', num(r.gas.m3), 'm³', r.gas.vorigeM3 != null ? `${prevName}: ${num(r.gas.vorigeM3)}` : '', 'var(--heat)'));
+  if (r.kosten.totaal != null) tiles.push(kpiTile('Kosten', euro(r.kosten.totaal), '', r.kosten.vorige != null ? `${prevName}: ${euro(r.kosten.vorige)}` : '', 'var(--ink)'));
+  if (tiles.length) parts.push(el('div', { class: 'o-kpis', style: `grid-template-columns: repeat(${tiles.length}, minmax(0, 1fr))` }, ...tiles));
+
+  if (r.zon) parts.push(sunCard(r));
+  parts.push(sankeyCard(r));
+  parts.push(devicesCard(r));
+  parts.push(bucketsCard(r));
+  parts.push(compareCard(r));
+  parts.push(costCard(r));
+  $('o-terug').replaceChildren(...parts);
+}
+
+function kpiTile(label, value, unit, sub, color) {
+  return el(
+    'div',
+    { class: 'card o-kpi' },
+    el('span', { class: 'o-label', style: `color: ${color}`, text: label.toUpperCase() }),
+    el('span', { class: 'o-big' }, value, unit ? el('small', { text: ` ${unit}` }) : null),
+    sub ? el('span', { class: 'tiny', text: sub }) : null,
+  );
+}
+
+function splitBar(parts, height = 10) {
+  const sum = parts.reduce((a, [v]) => a + v, 0) || 1;
+  return el('div', { class: 'o-split', style: `height: ${height}px`, 'aria-hidden': 'true' }, ...parts.map(([v, c]) => el('span', { style: `width: ${(v / sum) * 100}%; background: ${c}` })));
+}
+
+function sunCard(r) {
+  const z = r.zon;
+  const line = (c, text, pct) => el('div', { class: 'tussen small' }, el('span', { class: 'o-key' }, el('i', { style: `background: ${c}` }), text), el('span', { class: 'muted', text: pct == null ? '' : `${pct}%` }));
+  return el(
+    'div',
+    { class: 'card' },
+    el('div', { class: 'tussen' }, el('h2', { text: 'Je zonnepanelen' }), z.vorigeKwh != null ? el('small', { class: 'muted', text: `${r.periode.vorigeNaam}: ${kwh(z.vorigeKwh)}` }) : null),
+    el('div', { class: 'o-big' }, num(z.opgewektKwh), el('small', { text: ' kWh opgewekt' })),
+    splitBar([
+      [z.zelfKwh, ZON_C],
+      [z.terugKwh, TERUG_C],
+    ]),
+    line(ZON_C, `${kwh(z.zelfKwh)} zelf gebruikt`, z.zelfPct),
+    line(TERUG_C, `${kwh(z.terugKwh)} naar het net`, z.zelfPct == null ? null : 100 - z.zelfPct),
+    el(
+      'div',
+      { class: 'o-duo' },
+      r.stroom.eigenZonPct != null ? el('div', {}, el('span', { class: 'tiny', text: 'Zelfvoorzienend' }), el('b', { text: `${r.stroom.eigenZonPct}%` }), el('span', { class: 'tiny', text: 'van je stroom kwam van je dak' })) : null,
+      z.besteDag ? el('div', {}, el('span', { class: 'tiny', text: 'Beste dag' }), el('b', { text: kwh(z.besteDag.kwh) }), el('span', { class: 'tiny', text: z.besteDag.label })) : null,
+    ),
+  );
+}
+
+/** De sankey op schaal: links de bronnen, rechts waar het heen ging. */
+function sankeyCard(r) {
+  const withGas = yieldView.sankey === 'alles' && r.gas;
+  const card = el('div', { class: 'card' }, el('h2', { text: withGas ? 'Waar je energie heen ging' : 'Waar je stroom heen ging' }));
+  if (r.gas) {
+    card.append(
+      seg(
+        [
+          ['stroom', 'Stroom'],
+          ['alles', 'Stroom en gas'],
+        ],
+        yieldView.sankey,
+        (v) => {
+          yieldView.sankey = v;
+          renderYield();
+        },
+        'Wat de tekening toont',
+      ),
+    );
+  }
+  const flows = r.stromen.filter((f) => withGas || f.van !== 'gas');
+  const value = (pred) => flows.filter(pred).reduce((a, f) => a + f.kwh, 0);
+  const sources = [
+    ['zon', 'Zon', ZON_C],
+    ['net', 'Net', NET_C],
+    ['gas', 'Gas', GAS_C],
+  ]
+    .map(([id, naam, c]) => ({ id, naam, c, v: value((f) => f.van === id) }))
+    .filter((s) => s.v > 0);
+  const targets = [
+    ...r.apparaten.map((a, i) => ({ id: a.id, naam: a.naam, c: a.rest ? '#8FA3AD' : DEVICE_C[i % DEVICE_C.length] })),
+    { id: 'terug', naam: 'Teruggeleverd', c: TERUG_C },
+    { id: 'cv', naam: 'Cv en warm water', c: GAS_C },
+  ]
+    .map((t) => ({ ...t, v: value((f) => f.naar === t.id) }))
+    .filter((t) => t.v > 0);
+  const total = sources.reduce((a, s) => a + s.v, 0);
+  if (total <= 0) {
+    card.append(el('p', { class: 'small muted', text: 'In deze periode is er nog niets gemeten.' }));
+    return card;
+  }
+  const W = 350;
+  const H = Math.max(240, 40 + targets.length * 34);
+  const gap = 8;
+  const k = (H - 10 - gap * (targets.length - 1)) / total;
+  const sx = 70;
+  const tx = 178;
+  const nw = 9;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${withGas ? 'Energie' : 'Stroom'}: ${sources.map((x) => `${x.naam} ${num(x.v)} kWh`).join(', ')}, naar ${targets.map((t) => `${t.naam} ${num(t.v)}`).join(', ')}` });
+  const sgap = sources.length > 1 ? (H - 10 - total * k) / (sources.length - 1) : 0;
+  const sy = {};
+  let y = 5;
+  for (const x of sources) {
+    sy[x.id] = { top: y, run: y };
+    y += x.v * k + sgap;
+  }
+  const ty = {};
+  y = 5;
+  for (const t of targets) {
+    ty[t.id] = { top: y, run: y };
+    y += t.v * k + gap;
+  }
+  for (const t of targets) {
+    for (const src of ['zon', 'net', 'gas']) {
+      const f = flows.find((x) => x.van === src && x.naar === t.id);
+      if (!f || !sy[src]) continue;
+      const h = f.kwh * k;
+      const a0 = sy[src].run;
+      const b0 = ty[t.id].run;
+      const m = (sx + nw + tx) / 2;
+      svg.append(s('path', { d: `M${sx + nw},${a0} C${m},${a0} ${m},${b0} ${tx},${b0} L${tx},${b0 + h} C${m},${b0 + h} ${m},${a0 + h} ${sx + nw},${a0 + h} Z`, fill: sources.find((x) => x.id === src).c, 'fill-opacity': 0.42 }));
+      sy[src].run += h;
+      ty[t.id].run += h;
+    }
+  }
+  for (const x of sources) {
+    const h = x.v * k;
+    svg.append(s('rect', { x: sx, y: sy[x.id].top, width: nw, height: h, rx: 2, fill: x.c }));
+    svg.append(s('text', { x: sx - 6, y: sy[x.id].top + h / 2 - 2, 'text-anchor': 'end', 'font-size': 13, 'font-weight': 700, fill: '#EAF2F5' }, x.naam));
+    svg.append(s('text', { x: sx - 6, y: sy[x.id].top + h / 2 + 13, 'text-anchor': 'end', 'font-size': 12, fill: '#A9BAC2' }, x.id === 'gas' ? `${num(r.gas.m3)} m³` : kwh(x.v)));
+  }
+  for (const t of targets) {
+    const h = t.v * k;
+    const cy = ty[t.id].top + h / 2;
+    svg.append(s('rect', { x: tx, y: ty[t.id].top, width: nw, height: Math.max(1, h), rx: 2, fill: t.c }));
+    const label = s('text', { x: tx + nw + 7, y: cy + 4, 'font-size': 12, fill: '#EAF2F5' });
+    // Een lange naam uit Home Assistant past niet naast de tekening: dan ingekort.
+    const naam = t.naam.length > 18 ? `${t.naam.slice(0, 17)}…` : t.naam;
+    label.append(s('tspan', { 'font-weight': 700 }, naam), s('tspan', { fill: '#A9BAC2' }, ` ${num(t.v)}`));
+    svg.append(label);
+  }
+  card.append(svg, el('span', { class: 'tiny', text: withGas ? 'Alles in kWh: 1 m³ gas is ongeveer 9,8 kWh warmte.' : 'De breedte is de hoeveelheid.' }));
+  return card;
+}
+
+function devicesCard(r) {
+  const peak = Math.max(...r.apparaten.map((a) => a.kwh), 0.1);
+  return el(
+    'div',
+    { class: 'card rows' },
+    el('div', { class: 'tussen' }, el('h2', { text: 'Per apparaat' }), el('small', { class: 'muted', text: r.heeft.prijzen ? 'kosten van het net' : '' })),
+    ...r.apparaten.map((a) =>
+      el(
+        'div',
+        { class: 'o-dev' },
+        el('div', { class: 'tussen small' }, el('b', {}, a.naam, a.rest ? el('span', { class: 'muted', style: 'font-weight: 400', text: ' · geen eigen meter' }) : null), el('span', {}, el('b', { text: num(a.kwh) }), ` kWh${a.kosten != null ? ` · ${euro(a.kosten)}` : ''}`)),
+        el('div', { class: 'o-split', style: 'height: 8px', 'aria-hidden': 'true' }, el('span', { style: `width: ${(a.zonKwh / peak) * 100}%; background: ${ZON_C}` }), el('span', { style: `width: ${(a.netKwh / peak) * 100}%; background: ${NET_C}` })),
+        el('span', { class: 'tiny', text: r.heeft.zon ? `${kwh(a.zonKwh)} eigen zon · ${kwh(a.netKwh)} van het net` : `${kwh(a.netKwh)} van het net` }),
+      ),
+    ),
+  );
+}
+
+function bucketsCard(r) {
+  const title = { dag: 'Per uur', week: 'Per dag', maand: 'Per dag', jaar: 'Per maand' }[r.periode.soort];
+  const list = r.perBucket;
+  const W = 320;
+  const H = 120;
+  const base = H - 16;
+  const peak = Math.max(...list.map((b) => b.zonKwh + b.netKwh), 0.1);
+  const gasPeak = Math.max(...list.map((b) => b.gasM3), 0.001);
+  const bw = W / list.length;
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${title}: eigen zon en van het net${r.gas ? ', en gas als lijn' : ''}` });
+  svg.append(s('line', { x1: 0, y1: base, x2: W, y2: base, stroke: 'rgba(255,255,255,0.14)' }));
+  list.forEach((b, i) => {
+    const hz = (b.zonKwh / peak) * (base - 6);
+    const hn = (b.netKwh / peak) * (base - 6);
+    const x = i * bw + 1;
+    svg.append(s('rect', { x, y: base - hz, width: Math.max(1, bw - 2), height: hz, rx: 1.5, fill: ZON_C, 'fill-opacity': 0.85 }));
+    svg.append(s('rect', { x, y: base - hz - hn, width: Math.max(1, bw - 2), height: hn, rx: 1.5, fill: NET_C, 'fill-opacity': 0.7 }));
+  });
+  if (r.gas && list.some((b) => b.gasM3 > 0)) {
+    svg.append(s('polyline', { points: list.map((b, i) => `${i * bw + bw / 2},${base - (b.gasM3 / gasPeak) * (base - 10)}`).join(' '), fill: 'none', stroke: GAS_C, 'stroke-width': 1.6, 'stroke-linejoin': 'round' }));
+  }
+  const every = Math.max(1, Math.ceil(list.length / 6));
+  list.forEach((b, i) => {
+    if (i % every === 0) svg.append(s('text', { x: i * bw + bw / 2, y: H - 3, 'text-anchor': 'middle', 'font-size': 10, fill: '#6E828C' }, b.label));
+  });
+  return el(
+    'div',
+    { class: 'card' },
+    el('h2', { text: title }),
+    svg,
+    el('div', { class: 'legend', style: 'justify-content: flex-start' }, ...[[ZON_C, 'eigen zon'], [NET_C, 'van het net'], ...(r.gas ? [[GAS_C, 'gas']] : [])].map(([c, t]) => el('span', {}, el('i', { style: `background: ${c}` }), t))),
+  );
+}
+
+function compareCard(r) {
+  const metrics = [
+    ['stroom', 'Stroom'],
+    ...(r.heeft.zon ? [['zon', 'Zon']] : []),
+    ...(r.gas ? [['gas', 'Gas']] : []),
+    ...(r.heeft.prijzen ? [['kosten', 'Kosten']] : []),
+  ];
+  if (!metrics.some(([m]) => m === yieldView.metric)) yieldView.metric = 'stroom';
+  const m = yieldView.metric;
+  const series = r.vergelijk[m];
+  const unit = m === 'gas' ? 'm³' : m === 'kosten' ? '' : 'kWh';
+  const show = (v) => (m === 'kosten' ? euro(v) : `${num(v)} ${unit}`);
+  const W = 320;
+  const H = 140;
+  const base = H - 16;
+  const peak = Math.max(...series.flatMap((p) => [p.nu ?? 0, p.jaarEerder ?? 0]), 0.1);
+  const slot = W / series.length;
+  const bw = Math.min(11, slot / 2 - 2);
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img', 'aria-label': `${metrics.find(([x]) => x === m)[1]} per periode${r.periode.soort === 'jaar' ? '' : ', met dezelfde periode een jaar eerder ernaast'}` });
+  svg.append(s('line', { x1: 0, y1: base, x2: W, y2: base, stroke: 'rgba(255,255,255,0.14)' }));
+  series.forEach((p, i) => {
+    const cx = i * slot + slot / 2;
+    const last = i === series.length - 1;
+    if (p.jaarEerder != null) {
+      const h = (Math.max(0, p.jaarEerder) / peak) * (base - 18);
+      svg.append(s('rect', { x: cx - bw - 1, y: base - h, width: bw, height: h, rx: 2, fill: 'none', stroke: 'rgba(201,214,220,0.45)', 'stroke-dasharray': '3 2' }));
+    }
+    if (p.nu != null) {
+      const h = (Math.max(0, p.nu) / peak) * (base - 18);
+      svg.append(s('rect', { x: cx + 1, y: base - h, width: bw, height: h, rx: 2, fill: '#8FD9FF', 'fill-opacity': last ? 1 : 0.45 }));
+    }
+    svg.append(s('text', { x: cx, y: H - 3, 'text-anchor': 'middle', 'font-size': 10, fill: last ? '#EAF2F5' : '#6E828C', 'font-weight': last ? 700 : 400 }, p.label));
+  });
+  const d = r.verschil[m];
+  const good = (pct) => (m === 'zon' ? pct >= 0 : pct <= 0);
+  const box = (label, x) =>
+    x
+      ? el('div', {}, el('span', { class: 'tiny', text: label }), el('b', { style: `color: ${good(x.pct) ? 'var(--good)' : 'var(--heat-t)'}`, text: `${x.pct > 0 ? '+' : x.pct < 0 ? '−' : ''}${Math.abs(x.pct)}%` }), el('span', { class: 'tiny', text: `${show(series.at(-1).nu)} tegen ${show(x.dan)}` }))
+      : null;
+  return el(
+    'div',
+    { class: 'card' },
+    el('div', { class: 'tussen' }, el('h2', { text: 'Vergelijken' }), el('small', { class: 'muted', text: r.periode.soort === 'jaar' ? 'per jaar' : 'stippel is een jaar eerder' })),
+    seg(
+      metrics,
+      m,
+      (v) => {
+        yieldView.metric = v;
+        renderYield();
+      },
+      'Wat te vergelijken',
+    ),
+    svg,
+    el('div', { class: 'o-duo' }, box(`Tegen ${r.periode.vorigeNaam}`, d.vorige), box('Tegen een jaar eerder', d.jaar)),
+  );
+}
+
+function costCard(r) {
+  if (!r.heeft.prijzen) {
+    return el('div', { class: 'card' }, el('h2', { text: 'Kosten' }), el('p', { class: 'small muted', text: 'Vul bij Instellingen je prijzen in, dan staat hier wat het kostte.' }), el('a', { class: 'knop', href: '#energie', text: 'Prijzen invullen' }));
+  }
+  return el(
+    'div',
+    { class: 'card rows' },
+    el('h2', { text: 'Kosten' }),
+    ...r.kosten.regels.map((x) => el('div', { class: 'row' }, el('div', { class: 'l' }, el('b', { text: x.naam }), el('span', { text: x.uitleg })), el('b', { text: x.euro == null ? '—' : x.euro < 0 ? `− ${euro(-x.euro)}` : euro(x.euro) }))),
+    el('div', { class: 'tussen', style: 'padding: 12px 0 6px' }, el('b', { text: 'Totaal zonder vaste kosten' }), el('span', { class: 'o-big', text: r.kosten.totaal == null ? '—' : euro(r.kosten.totaal) })),
+  );
+}
+
+/* ------------------------------------------------------- instellingen: meters en prijzen */
+
+/*
+ * Meters en prijzen (besluit 102). Overnemen uit het Energie-dashboard van Home
+ * Assistant, of zelf kiezen uit de meters die Home Assistant bijhoudt. Bewaren
+ * vraagt een beheerder; wie dat niet is, kijkt mee.
+ */
+let energyInfo = null;
+let energyDraft = null;
+
+async function loadEnergy() {
+  $('e-inhoud').replaceChildren(el('p', { class: 'small muted', text: 'Even laden…' }));
+  try {
+    const res = await fetch('api/energie');
+    energyInfo = await res.json();
+    if (!res.ok) {
+      $('e-inhoud').replaceChildren(el('p', { class: 'small muted', text: energyInfo.fout ?? energyInfo.wachten ?? 'Niet beschikbaar.' }));
+      return;
+    }
+    energyDraft = JSON.parse(JSON.stringify(energyInfo.instellingen ?? energyInfo.voorstel ?? emptyEnergy()));
+    renderEnergy();
+  } catch {
+    $('e-inhoud').replaceChildren(el('p', { class: 'small muted', text: 'Geen verbinding met Smart Climate.' }));
+  }
+}
+
+const emptyEnergy = () => ({ versie: 1, bron: 'zelf', net: { afname: [], teruglevering: [] }, zon: [], gas: null, apparaten: [], prijzen: { stroom: null, teruglevering: null, gas: null, vastPerMaand: null } });
+
+function renderEnergy() {
+  const info = energyInfo;
+  const d = energyDraft;
+  const meters = info.meters ?? [];
+  const nameOf = (id) => meters.find((m) => m.id === id)?.naam ?? id;
+  const parts = [];
+
+  // Overnemen uit Home Assistant.
+  const v = info.voorstel;
+  const ha = el('div', { class: 'card' }, el('h2', { text: 'Uit Home Assistant' }));
+  if (v) {
+    const count = [v.net.afname.length ? `${v.net.afname.length} meter${v.net.afname.length > 1 ? 's' : ''} van het net` : null, v.net.teruglevering.length ? 'teruglevering' : null, v.zon.length ? 'zonnepanelen' : null, v.gas ? 'gas' : null, v.apparaten.length ? `${v.apparaten.length} apparaten` : null].filter(Boolean);
+    ha.append(
+      el('p', { class: 'small', style: 'color: var(--soft)', text: `Je Energie-dashboard heeft ${count.join(', ')}${v.prijzen.stroom != null || v.prijzen.gas != null ? ', met prijzen' : ''}.` }),
+      button('Overnemen', () => {
+        energyDraft = JSON.parse(JSON.stringify(v));
+        renderEnergy();
+        energySay('Overgenomen. Kijk het na en bewaar.');
+      }),
+    );
+  } else {
+    ha.append(el('p', { class: 'small muted', text: info.fout ?? 'Het Energie-dashboard van Home Assistant is niet ingericht. Kies hieronder zelf je meters.' }));
+  }
+  parts.push(ha);
+
+  // Zelf kiezen: per soort de gekozen meters, met erbij zetten en weghalen.
+  const pick = (title, ids, soort, onChange, single = false) => {
+    const box = el('div', { class: 'stack', style: 'gap: 6px' }, el('b', { class: 'small', text: title }));
+    const chips = el('div', { class: 'o-chips' });
+    for (const id of ids) {
+      const x = el('button', { type: 'button', class: 'chip plain', 'aria-label': `${nameOf(id)} weghalen`, text: `${nameOf(id)} ×` });
+      x.addEventListener('click', () => onChange(ids.filter((i) => i !== id)));
+      chips.append(x);
+    }
+    if (!ids.length) chips.append(el('span', { class: 'tiny', text: 'geen' }));
+    box.append(chips);
+    const rest = meters.filter((m) => m.soort === soort && !ids.includes(m.id));
+    if ((!single || !ids.length) && rest.length) {
+      const sel = el('select', { class: 'veld', 'aria-label': `${title}: meter erbij` }, el('option', { value: '', text: 'meter erbij…' }), ...rest.map((m) => el('option', { value: m.id, text: m.naam })));
+      sel.addEventListener('change', () => sel.value && onChange([...ids, sel.value]));
+      box.append(sel);
+    }
+    return box;
+  };
+  const redraw = () => renderEnergy();
+  parts.push(
+    el(
+      'div',
+      { class: 'card' },
+      el('h2', { text: 'Meters' }),
+      pick('Stroom van het net', d.net.afname, 'energy', (ids) => ((d.net.afname = ids), redraw())),
+      pick('Teruglevering', d.net.teruglevering, 'energy', (ids) => ((d.net.teruglevering = ids), redraw())),
+      pick('Zonnepanelen', d.zon, 'energy', (ids) => ((d.zon = ids), redraw())),
+      pick('Gas', d.gas ? [d.gas] : [], 'volume', (ids) => ((d.gas = ids[0] ?? null), redraw()), true),
+    ),
+  );
+
+  // Apparaten met een eigen meter, met een eigen naam.
+  const devs = el('div', { class: 'card' }, el('h2', { text: 'Apparaten met een eigen meter' }));
+  d.apparaten.forEach((a, i) => {
+    const name = el('input', { class: 'veld', type: 'text', value: a.naam, maxlength: '40', 'aria-label': `Naam van ${nameOf(a.id)}` });
+    name.addEventListener('change', () => (a.naam = name.value.trim() || a.naam));
+    const del = el('button', { type: 'button', class: 'knop', text: 'Weg', 'aria-label': `${a.naam} weghalen` });
+    del.addEventListener('click', () => {
+      d.apparaten.splice(i, 1);
+      redraw();
+    });
+    devs.append(el('div', { class: 'rij' }, name, del), el('span', { class: 'tiny', text: nameOf(a.id) }));
+  });
+  const free = meters.filter((m) => m.soort === 'energy' && !d.apparaten.some((a) => a.id === m.id));
+  if (free.length) {
+    const sel = el('select', { class: 'veld', 'aria-label': 'Apparaat erbij' }, el('option', { value: '', text: 'apparaat erbij…' }), ...free.map((m) => el('option', { value: m.id, text: m.naam })));
+    sel.addEventListener('change', () => {
+      if (!sel.value) return;
+      d.apparaten.push({ id: sel.value, naam: nameOf(sel.value).slice(0, 40) });
+      redraw();
+    });
+    devs.append(sel);
+  }
+  parts.push(devs);
+
+  // Prijzen.
+  const price = (label, key, hint) => {
+    const i = el('input', { class: 'veld', type: 'number', inputmode: 'decimal', step: '0.001', min: '0', value: d.prijzen[key] ?? '', placeholder: hint, 'aria-label': label });
+    i.addEventListener('change', () => (d.prijzen[key] = i.value === '' ? null : Number(i.value)));
+    return el('label', { class: 'stack', style: 'gap: 4px' }, el('span', { class: 'small', text: label }), i);
+  };
+  parts.push(
+    el(
+      'div',
+      { class: 'card' },
+      el('h2', { text: 'Prijzen' }),
+      el('div', { class: 'o-prijzen' }, price('Stroom, € per kWh', 'stroom', '0,25'), price('Teruglevering, € per kWh', 'teruglevering', 'leeg: gesaldeerd'), price('Gas, € per m³', 'gas', '1,30'), price('Vaste kosten, € per maand', 'vastPerMaand', '')),
+      el('p', { class: 'tiny', text: 'Zonder vergoeding voor teruglevering rekent Opbrengst met de stroomprijs: tot 2027 wordt er gesaldeerd.' }),
+    ),
+  );
+
+  const save = button('Bewaren', async () => {
+    energySay('Even…');
+    try {
+      const res = await postDoor('api/energie', { ...d, bron: d.bron ?? 'zelf' });
+      const out = await res.json();
+      if (res.status === 403) return energySay('Alleen een beheerder in Home Assistant kan dit bewaren.');
+      if (!res.ok) return energySay(out.fout ?? 'Niet bewaard.');
+      energyInfo = { ...energyInfo, instellingen: out };
+      energySay('Bewaard. Opbrengst rekent er nu mee.');
+      yieldData = null;
+    } catch {
+      energySay('Geen verbinding met Smart Climate.');
+    }
+  });
+  parts.push(el('div', { class: 'knoppen' }, save, el('a', { class: 'knop', href: '#opbrengst', text: 'Naar Opbrengst' })), el('p', { class: 'small', id: 'e-zin', 'aria-live': 'polite', text: '' }));
+  $('e-inhoud').replaceChildren(...parts);
+}
+
+function energySay(text) {
+  const p = $('e-zin');
+  if (p) p.textContent = text;
 }
 
 /* ------------------------------------------------------- Bediening */

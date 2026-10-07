@@ -106,6 +106,7 @@ describe('een dag terugkijken', () => {
       ['Vaste kosten', null],
     ]);
     expect(r.kosten.totaal).toBe(0.21);
+    expect(r.kosten.regels.map((x) => x.uitleg)).toEqual(['6,8 kWh × € 0,25', '7 kWh, gesaldeerd tot 2027', '0,2 m³ × € 1,30', 'nog niet ingesteld']);
   });
 
   it('zonder zonnepanelen geen zon, en alles van het net', async () => {
@@ -129,6 +130,8 @@ describe('een maand, en vergelijken', () => {
     expect(stroom.at(-1)).toEqual({ label: 'sep', nu: 414, jaarEerder: 331.2 });
     expect(r.stroom.vorigeKwh).toBe(stroom.at(-2)!.nu);
     expect(r.vergelijk.gas.at(-1)).toEqual({ label: 'sep', nu: 6, jaarEerder: 4.8 });
+    // Augustus had 31 dagen, september 30; een jaar eerder 80%.
+    expect(r.verschil.stroom).toEqual({ vorige: { dan: 427.8, pct: -3 }, jaar: { dan: 331.2, pct: 25 } });
     expect(source.calls).toEqual(['hour', 'month']);
   });
 
