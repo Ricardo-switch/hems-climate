@@ -482,9 +482,10 @@ toelichting als invoer (D).
 3. **Stap C, naast 1 en 2** (96): de opbouw met etages, kamers en zones (72,
    95), eerst als indeling in de proefomgeving, dan de inlog, dan het schema en
    voorbeeldhuizen (70). Kamers en de onboarding als schermen groeien mee.
-4. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
-   op het Leren-scherm, en Plan.
-5. **Stap E:** weer en tarieven; Plan wordt compleet.
+4. **Stap E:** weer en tarieven; Plan krijgt de verwachting. E komt vóór D,
+   want het hoeft niet op een winter aan data te wachten.
+5. **Stap D:** het thermisch model; daarmee Opbrengst-comfort, de zekerheid
+   op het Leren-scherm, en Plan wordt compleet.
 6. **Stap F:** de schermen, naast de schetsen gelegd.
 7. **Stap G:** het taalmodel voor open vragen; de rest van de assistent is er
    dan al (§7).

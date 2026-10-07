@@ -204,14 +204,15 @@ in het besluitenlog en in de code.
 | — | **Het vangnet.** CI vóór de NAS, vaste replay, stiltetest, versie in health (54), opstart (55), invarianten (56), linter (57), compressie (58), index op het besluitenlog | Het kwaliteitsrapport van 30 september | **klaar** |
 | **B** | **Echt schakelen.** De actuator-laag aan, eerst voor één apparaat. Vooraf: een weg terug, de add-on weer aan als plek om te regelen (53), en herkennen dat de bewoner zelf ingrijpt (74) | Het moment waarop het oude systeem uit kan | na een winter en alle functies (64); de weg terug een paar weken ervoor |
 | **C** | **Universeel.** Elke opstelling werkt, ook met één airco, alleen koelen of een warmtepomp via SG-Ready (70); een bewuste tabel met standaardwaarden, een inlog op de weergave (23), een terugblik die niet uitgaat van "het oude systeem" (28), een datasetmeter die alleen telt wat het huis kan (27, 70) | Voorwaarde voor een tweede woning | los van B |
-| **D** | **Het thermisch model** — de eerste helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
-| **E** | **Vooruitkijken** — de tweede helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na D |
+| **E** | **Vooruitkijken** — een helft van fase 7. PV-prognose, weer, dynamische tarieven | Van reageren naar optimaliseren | na B, vóór D: dit hoeft niet op een winter aan data te wachten |
+| **D** | **Het thermisch model** — de andere helft van fase 7. Leert per zone hoe snel ze opwarmt en afkoelt en wat de zon doet; voorverwarmen wordt uitgerekend, en de replay rekent ook de temperatuur door | Het lerende deel (46), en de enige manier om comfortwinst te meten | na een winter: voorjaar 2027 |
 | **F** | **Het bewonersdashboard** — fase 8. Live stroom en klimaat in mensentaal, zonder entity-ID's (45), op de telefoon en op een tablet aan de muur. De schetsen in `design/app/` zijn de maatstaf (71); hoe het samenhangt staat in `design/app/ONTWERP.md`, met kamers en zones (72) en de drie fasen (73) | Wat een bewoner ziet | na B, beter na D |
 | **G** | **De assistent** (44). Vragen in taal of met spraak, lokaal. Een vierde voorsteller, geen baas | Het gesprek met het huis | na F |
 | **H** | **Product** (34). Meerdere woningen, updates op afstand, ondersteuning | Van dit huis naar andere huizen | na C en F |
 
 Twee dingen bepalen het tempo. **D is aan het seizoen gebonden**: een winter
-laat zich niet versnellen. **B is het moment van overdracht**: alles vóór B mag
+laat zich niet versnellen. Daarom komt E vóór D: prognoses en tarieven werken
+meteen na B, het model pas als de winter erin zit. **B is het moment van overdracht**: alles vóór B mag
 mislukken zonder dat iemand het koud krijgt, alles erna niet.
 
 ## 5. Waar we nu staan
