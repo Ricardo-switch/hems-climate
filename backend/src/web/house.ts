@@ -153,6 +153,8 @@ export interface HouseScene {
   readonly gebruiktMs: number | null;
   /** Zijn kleuren, zoals de lampen ze lieten zien, of die bij zijn naam; leeg als onbekend. */
   readonly kleuren: readonly string[];
+  /** Een plaatje uit `scene-plaatjes/` als de bewoner dat heeft (scene-pictures.ts), anders null. */
+  readonly plaatje: string | null;
 }
 
 export interface HouseFloor {
@@ -296,6 +298,8 @@ function scenesPerRoom(
   roomOfArea: (sceneId: string) => string | null = () => null,
   /** De kleuren van een scène (scene-colors.ts). */
   colorsOf: (sceneId: string, naam: string) => readonly string[] = () => [],
+  /** Het plaatje van een scène (scene-pictures.ts). */
+  pictureOf: (naam: string) => string | null = () => null,
 ): Map<string, HouseScene[]> {
   const out = new Map<string, (HouseScene & { t: number })[]>();
   const lower = (s: string) => s.trim().toLowerCase();
@@ -333,7 +337,7 @@ function scenesPerRoom(
     const naam = own ?? (groupName && friendlyName.toLowerCase().startsWith(groupName.toLowerCase()) ? friendlyName.slice(groupName.length).trim() || friendlyName : friendlyName);
     const t = Date.parse(st.state);
     const list = out.get(roomId) ?? [];
-    list.push({ id, naam, actief: false, groep: groupName || null, gebruiktMs: Number.isFinite(t) ? t : null, kleuren: colorsOf(id, naam), t: Number.isFinite(t) ? t : 0 });
+    list.push({ id, naam, actief: false, groep: groupName || null, gebruiktMs: Number.isFinite(t) ? t : null, kleuren: colorsOf(id, naam), plaatje: pictureOf(naam), t: Number.isFinite(t) ? t : 0 });
     out.set(roomId, list);
   }
   const result = new Map<string, HouseScene[]>();
@@ -345,7 +349,7 @@ function scenesPerRoom(
     list.sort((x, y) => y.t - x.t || x.naam.localeCompare(y.naam, 'nl'));
     result.set(
       roomId,
-      list.map((s) => ({ id: s.id, naam: s.naam, actief: s.t > 0 && s.t === newest.get(s.groep ?? ''), groep: s.groep, gebruiktMs: s.gebruiktMs, kleuren: s.kleuren })),
+      list.map((s) => ({ id: s.id, naam: s.naam, actief: s.t > 0 && s.t === newest.get(s.groep ?? ''), groep: s.groep, gebruiktMs: s.gebruiktMs, kleuren: s.kleuren, plaatje: s.plaatje })),
     );
   }
   return result;
@@ -840,6 +844,8 @@ export function buildHouse(
   saved: Layout | null = null,
   /** De kleuren van de Hue-scènes, zoals de app ze zag (scene-colors.ts). */
   sceneColors: (sceneId: string, naam: string) => readonly string[] = (_id, naam) => defaultSceneColors(naam),
+  /** De plaatjes van de Hue-scènes, als de bewoner die heeft (scene-pictures.ts). */
+  scenePicture: (naam: string) => string | null = () => null,
 ): HouseReport {
   const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot);
   const base = saved ?? proposeLayout(config, registers, states);
@@ -900,6 +906,7 @@ export function buildHouse(
       return area ? (roomByArea.get(area)?.id ?? null) : null;
     },
     sceneColors,
+    scenePicture,
   );
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];

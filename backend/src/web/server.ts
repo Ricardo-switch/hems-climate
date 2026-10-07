@@ -35,6 +35,7 @@ import type { UitstelStore } from './uitstel.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
+import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, parseQuestion } from './assistant.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
@@ -123,6 +124,8 @@ export interface WebOptions {
    * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.
    */
   readonly energy?: { readonly store: EnergyStore; readonly source: EnergySource };
+  /** De map met scèneplaatjes van de bewoner (scene-pictures.ts); zonder dit geen route. */
+  readonly scenePicturesDir?: string;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -176,6 +179,9 @@ const MIME: Readonly<Record<string, string>> = {
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
 };
 
 /**
@@ -794,6 +800,17 @@ export class WebServer {
         analyseBerekendOpMs: this.#options.divergence?.()?.berekendOpMs ?? null,
         kijkers: this.#listeners.size,
       });
+      return;
+    }
+
+    // Scèneplaatjes uit de map van de bewoner: alleen een plat bestand met een
+    // nette naam, en alleen uit die map (besluit 100).
+    if (path.startsWith('/scene-plaatjes/') && this.#options.scenePicturesDir && (method === 'GET' || method === 'HEAD')) {
+      const file = path.slice('/scene-plaatjes/'.length);
+      const since0 = req.headers['if-modified-since'];
+      if (!PICTURE_FILE.test(file) || !(await sendFile(res, this.#options.scenePicturesDir, file, method === 'HEAD', typeof since0 === 'string' ? since0 : undefined))) {
+        sendJson(res, 404, { fout: 'geen plaatje met die naam' });
+      }
       return;
     }
 

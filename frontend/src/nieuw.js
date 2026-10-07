@@ -1893,6 +1893,7 @@ const SCENES_SHOWN = 6;
 
 /** Het bolletje van een scène: zijn kleuren, of een zacht verloop als die nog onbekend zijn. */
 function sceneDot(sc) {
+  if (sc.plaatje) return el('img', { class: 'scene-dot scene-pic', src: sc.plaatje, alt: '', loading: 'lazy' });
   const c = sc.kleuren ?? [];
   const bg = c.length === 0 ? 'linear-gradient(135deg, var(--warm), var(--violet))' : c.length === 1 ? c[0] : `conic-gradient(from 210deg, ${[...c, c[0]].join(', ')})`;
   return el('i', { class: 'scene-dot', 'aria-hidden': 'true', style: `background: ${bg}` });

@@ -189,6 +189,22 @@ HEMS_HOSTS=klimaat.thuis.nl
 `HEMS_OPEN=1` zet alles open zoals vóór dit besluit, met een waarschuwing in
 het logboek. Niet doen buiten een test.
 
+### Plaatjes bij de Hue-scènes (besluit 100)
+
+De app toont bij een scène het plaatje uit `logs/scene-plaatjes/` met zijn naam;
+zonder plaatje een bolletje in de kleuren van de scène. Smart Climate levert de
+plaatjes niet mee: ze zijn van Philips Hue. Wie ze voor eigen gebruik wil, haalt
+bijvoorbeeld de verzameling van github.com/mattmon/hue-scene-icons op de NAS:
+
+```
+cd /tmp && git clone --depth 1 https://github.com/mattmon/hue-scene-icons   && mkdir -p /volume1/docker/hems-climate/logs/scene-plaatjes   && cp hue-scene-icons/icons/*.png /volume1/docker/hems-climate/logs/scene-plaatjes/   && rm -rf hue-scene-icons
+```
+
+Die heten Engels (`bright.png`); de app vertaalt de Nederlandse namen uit de
+Hue-app ("Helder"). Een eigen plaatje met de Nederlandse naam in kleine letters
+(`helder.png`, `arctische_dageraad.png`) gaat voor. De map wordt elke tien
+minuten opnieuw gelezen.
+
 ### Niet achter de reverse proxy
 
 DSM's reverse proxy publiceert op `*.synology.me`, dus buiten je huis. Deze

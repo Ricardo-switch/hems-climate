@@ -92,6 +92,7 @@ async function start(options: {
   access?: Access;
   uitstel?: UitstelStore;
   energy?: { store: EnergyStore; source: EnergySource };
+  scenePicturesDir?: string;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -115,6 +116,7 @@ async function start(options: {
         ...(options.lights ? { lights: options.lights } : {}),
         ...(options.uitstel ? { uitstel: options.uitstel } : {}),
         ...(options.energy ? { energy: options.energy } : {}),
+        ...(options.scenePicturesDir ? { scenePicturesDir: options.scenePicturesDir } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -127,6 +129,21 @@ async function start(options: {
   cleanups.push(() => server.stop());
   return { base: `http://127.0.0.1:${port}`, server };
 }
+
+describe('scèneplaatjes uit de map van de bewoner (besluit 100)', () => {
+  it('geeft een plaatje uit die map, en niets daarbuiten of met een rare naam', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-plaatjes-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    await writeFile(join(dir, 'bright.png'), 'png');
+    const { base } = await start({ scenePicturesDir: dir });
+    const ok = await fetch(`${base}/scene-plaatjes/bright.png`);
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get('content-type')).toBe('image/png');
+    expect((await fetch(`${base}/scene-plaatjes/relax.png`)).status).toBe(404);
+    expect((await fetch(`${base}/scene-plaatjes/..%2F..%2Fsessies.json`)).status).toBe(404);
+    expect((await fetch(`${base}/scene-plaatjes/Bright.PNG`)).status).toBe(404);
+  });
+});
 
 describe('"klaar voor" bij de droger (besluit 101)', () => {
   it('zet en wist een eindtijd met een POST, en zegt waarom niet als hij niet klaarstaat', async () => {
@@ -932,7 +949,7 @@ describe('licht bedienen (besluit 97)', () => {
     lampenAan: apparaten.filter((d) => d.aan).length,
     samenvatting: summarize(apparaten),
     apparaten,
-    scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false, groep: 'Hal', gebruiktMs: null, kleuren: [] }] : [],
+    scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false, groep: 'Hal', gebruiktMs: null, kleuren: [], plaatje: null }] : [],
   });
   const house: HouseReport = {
     indeling: 'eigen',

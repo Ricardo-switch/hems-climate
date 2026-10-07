@@ -4391,7 +4391,11 @@ scènes van zijn eigen Hue-groep, de laatst gebruikte eerst, zes per groep met
 Home Assistant niet door. In plaats daarvan krijgt een scène een bolletje in
 zijn eigen kleuren: zes tellen na het aanzetten kijkt de dienst naar de lampen
 van zijn groep en onthoudt hun kleur (`scene-kleuren.json`, alleen lezen). Tot
-dan hebben de standaardscènes van Hue vaste kleuren bij hun naam.
+dan hebben de standaardscènes van Hue vaste kleuren bij hun naam. Wie de plaatjes
+van de Hue-app zelf heeft, zet ze in `logs/scene-plaatjes/`; de app toont ze op
+de naam van de scène, met een tabel van de Nederlandse naar de Engelse namen
+van de bekende verzameling. Smart Climate levert ze niet mee: ze zijn van
+Philips Hue (`deploy/README-NAS.md`).
 
 ---
 

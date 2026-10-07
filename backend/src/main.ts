@@ -29,6 +29,7 @@ import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from '
 import { LayoutStore } from './web/layout.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
+import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -509,6 +510,10 @@ void layoutStore?.load();
 /* De kleuren van de Hue-scènes, zoals de lampen ze lieten zien (besluit 100). */
 const sceneColors = logDir !== '' ? new SceneColorStore(logDir) : null;
 await sceneColors?.load();
+// Plaatjes die de bewoner zelf in logs/scene-plaatjes/ zette; elke tien minuten opnieuw gelezen.
+const scenePictures = logDir !== '' ? new ScenePictures(logDir) : null;
+await scenePictures?.refresh();
+if (scenePictures) setInterval(() => void scenePictures.refresh(), 10 * 60_000).unref();
 
 const houseReport = () =>
   siteConfig && houseRegisters
@@ -519,6 +524,7 @@ const houseReport = () =>
         runner?.latest ?? null,
         layoutStore?.current ?? null,
         sceneColors ? (id, naam) => sceneColors.colors(id, naam) : undefined,
+        scenePictures ? (naam) => scenePictures.pictureFor(naam) : undefined,
       )
     : null;
 
@@ -607,6 +613,7 @@ if (webPort != null) {
       ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
+    ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {
