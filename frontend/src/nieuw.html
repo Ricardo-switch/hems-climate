@@ -958,6 +958,13 @@
         font-weight: 600;
         cursor: not-allowed;
       }
+      /* Op een smalle telefoon passen vijf woorden alleen kleiner. */
+      @media (max-width: 360px) {
+        .seg button {
+          padding-inline: 3px;
+          font-size: 12px;
+        }
+      }
       .seg button[aria-pressed='true'] {
         background: var(--ink);
         color: #0a141c;

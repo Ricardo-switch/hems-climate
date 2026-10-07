@@ -739,7 +739,8 @@ function renderControls(snap) {
   const e = snap.explanation;
   const modes = ['dag', 'nacht', 'afwezig', 'vakantie', 'handmatig'];
   const seg = $('b-modus');
-  seg.style.gridTemplateColumns = `repeat(${modes.length}, minmax(0, 1fr))`;
+  // Minstens zo breed als het woord: "Handmatig" paste niet in een vijfde.
+  seg.style.gridTemplateColumns = `repeat(${modes.length}, minmax(max-content, 1fr))`;
   seg.replaceChildren(...modes.map((m) => el('button', { type: 'button', 'aria-pressed': String(m === e.mode), disabled: '', text: MODE[m] })));
   $('b-modus-noot').textContent =
     e.modeSource === 'override' ? 'Deze modus is met de hand gekozen.' : `Volgt het dagritme${e.occupied ? ', er is iemand thuis' : ', er is niemand thuis'}.`;
@@ -819,7 +820,7 @@ async function setupFeedback() {
   if (!zones.length) return;
   feedbackZone = zones[0].id;
   const seg = $('g-zones');
-  seg.style.gridTemplateColumns = `repeat(${zones.length}, minmax(0, 1fr))`;
+  seg.style.gridTemplateColumns = `repeat(${zones.length}, minmax(max-content, 1fr))`;
   const pick = (id) => {
     feedbackZone = id;
     for (const b of seg.children) b.setAttribute('aria-pressed', String(b.dataset.zone === id));

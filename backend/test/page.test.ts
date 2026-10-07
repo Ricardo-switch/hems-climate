@@ -83,6 +83,63 @@ async function liveSnapshot(): Promise<LiveSnapshot> {
 
 const DAYS = ['2026-09-28', '2026-09-29', '2026-09-30'];
 
+/**
+ * Hoe het scherm eruitziet, voor zover een test dat kan zeggen.
+ *
+ * De rest van deze test vraagt wat de pagina doet. Op 7 oktober lag er een
+ * lampicoon zo breed als het dak over de tekst van de zolder, en dat kwam door
+ * elke stap heen: de knop werkte gewoon. Daarom hier drie dingen die voor elk
+ * scherm gelden:
+ *
+ * - de pagina scrolt niet opzij;
+ * - een icoon houdt zijn maat, en tekst past in zijn vak;
+ * - tekst ligt nergens onder iets anders. Elk stuk tekst wordt in beeld
+ *   geschoven, en wat de browser in het midden ervan vindt, moet die tekst
+ *   zelf zijn, iets erin of iets eromheen.
+ */
+async function layoutProblems(p: Page): Promise<string[]> {
+  return p.evaluate<string[]>(LAYOUT_CHECK);
+}
+
+/** Draait in de browser; als tekst, zodat de backend geen DOM-typen nodig heeft. */
+const LAYOUT_CHECK = `(() => {
+  const out = [];
+  const doc = document.documentElement;
+  if (doc.scrollWidth > window.innerWidth + 1) out.push('de pagina is ' + doc.scrollWidth + ' px breed op ' + window.innerWidth + ' px');
+  const view = [...document.querySelectorAll('.view')].find((v) => !v.hidden) || document.body;
+  for (const svg of view.querySelectorAll('svg.icoon')) {
+    const r = svg.getBoundingClientRect();
+    if (r.width > 48 || r.height > 48) out.push('een icoon van ' + Math.round(r.width) + ' x ' + Math.round(r.height) + ' px in ' + (svg.parentElement ? svg.parentElement.className : '?'));
+  }
+  const nav = document.querySelector('.bottomnav');
+  const navTop = nav && nav.offsetParent ? nav.getBoundingClientRect().top : window.innerHeight;
+  const scrollY = window.scrollY;
+  for (const el of view.querySelectorAll('*')) {
+    // Alleen wat zelf tekst draagt, en zichtbaar is.
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent || '').trim() !== '');
+    if (!own || el.closest('[hidden]') || el.closest('svg')) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) continue;
+    el.scrollIntoView({ block: 'center', inline: 'nearest' });
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    // Tekst die over de rand van zijn eigen vak loopt, zoals een woord in een te smalle knop.
+    if (style.overflowX === 'visible' && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) {
+      out.push('"' + (el.textContent || '').trim().slice(0, 30) + '" past niet: ' + el.scrollWidth + ' px in ' + el.clientWidth + ' px');
+    }
+    const x = r.left + r.width / 2;
+    const y = r.top + Math.min(r.height / 2, 10);
+    if (y >= navTop || y < 0 || x < 0 || x > window.innerWidth) continue;
+    const hit = document.elementFromPoint(x, y);
+    if (hit == null || el.contains(hit) || hit.contains(el)) continue;
+    const owner = hit.closest('svg') || hit;
+    const cls = String(owner.getAttribute('class') || '').split(' ')[0];
+    out.push('"' + (el.textContent || '').trim().slice(0, 30) + '" ligt onder ' + owner.tagName.toLowerCase() + (cls ? '.' + cls : ''));
+  }
+  window.scrollTo(0, scrollY);
+  return out;
+})()`;
+
 /** Drie dagen logboek, één record per minuut, met afwijkingen erin. */
 async function writeLogs(dir: string): Promise<void> {
   for (const [d, day] of DAYS.entries()) {
@@ -275,6 +332,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#h-vandaag').waitFor({ state: 'visible' });
       expect(await p.locator('#v-grafiek svg').count()).toBe(1);
       expect(await p.locator(stand === 'portret' ? '.rail' : '.bottomnav').isVisible()).toBe(false);
+      expect(await layoutProblems(p), `Thuis in ${stand}`).toEqual([]);
+      // De controle zelf: een blok over de kop moet hij zien.
+      // Vlak na de kop en er met een negatieve marge overheen, zodat hij meeschuift
+      // met de kolom die scrolt (liggend scrolt niet het venster).
+      await p.evaluate(`(() => {
+        const t = document.querySelector('#h-titel');
+        const r = t.getBoundingClientRect();
+        const b = document.createElement('div');
+        b.id = 'proefblok';
+        Object.assign(b.style, { position: 'relative', zIndex: 50, background: 'red', width: r.width + 'px', height: r.height + 40 + 'px', marginTop: -(r.height + 20) + 'px' });
+        t.after(b);
+      })()`);
+      expect((await layoutProblems(p)).join(' ')).toContain('ligt onder div');
+      await p.evaluate(`document.querySelector('#proefblok').remove()`);
 
       // Gevoel vastleggen (besluit 84): de enige knop die iets bewaart.
       await p.locator('#h-gevoel').waitFor({ state: 'visible' });
@@ -297,9 +368,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.goto(`${baseUrl}/nieuw.html#huis`);
       // Wat nergens hangt, staat erbij, tot het indelen hieronder het een kamer gaf.
       if (stand === 'portret') await p.locator('#hu-lijst .note').filter({ hasText: 'in geen kamer' }).waitFor();
+      expect(await layoutProblems(p), `het huis in ${stand}`).toEqual([]);
       // Op de plek, niet op de naam: het indelen hieronder hernoemt de etage.
       await p.locator('#hu-lijst a.room[href="#huis/etage/bg"]').click();
       await p.locator('#hu-titel').filter({ hasNotText: 'Het huis' }).waitFor();
+      expect(await layoutProblems(p), `de begane grond in ${stand}`).toEqual([]);
       // Alles uit op de etage: alleen de lampen die het huis daar toont.
       lightCalls.length = 0;
       await p.locator('#hu-lijst button', { hasText: 'Alle lampen uit' }).click();
@@ -316,6 +389,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(lightCalls.at(-1)).toBe('turn_off light.sfeerverlichting');
       await p.locator('#hu-lijst a.room', { hasText: 'Woonkamer' }).click();
       await p.locator('#hu-titel').filter({ hasText: 'Woonkamer' }).waitFor();
+      expect(await layoutProblems(p), `de woonkamer in ${stand}`).toEqual([]);
       // In de kamer: het blad van de plafonnière. Hij brandt, dus de schakelaar zet hem uit; warm wit weer aan.
       await p.locator('#hu-lijst .tegel', { hasText: 'Plafonnière' }).click();
       await p.locator('#hu-blad [role="switch"]').click();
@@ -371,10 +445,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         expect(await p.locator('#hu-lijst').textContent()).toContain('Hal en trap');
       }
 
+      // Bediening: de modusbalk met vijf woorden naast elkaar.
+      await p.goto(`${baseUrl}/nieuw.html#bediening`);
+      await p.locator('#b-modus button').first().waitFor();
+      expect(await layoutProblems(p), `Bediening in ${stand}`).toEqual([]);
+
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);
       await p.locator('#o-hero .big').waitFor();
       expect(await p.locator('#o-hero').textContent()).toMatch(/kWh/);
+      expect(await layoutProblems(p), `Opbrengst in ${stand}`).toEqual([]);
       await context.close();
     }, 30_000);
   }

@@ -58,6 +58,7 @@ export const registers: HouseRegisters = {
     { id: 'd-badspot-1', area_id: 'badkamer', name: 'Badkamer spot 1' },
     { id: 'd-badspot-2', area_id: 'badkamer', name: 'Hue spot', name_by_user: 'Badkamer spot 2' },
     { id: 'd-zolderspot', area_id: 'zolder', name: 'Zolderspot' },
+    { id: 'd-bureaulamp', area_id: 'zolder', name: 'Bureaulamp' },
     { id: 'd-halsensor', area_id: 'hal', name: 'Bewegingssensor hal' },
     { id: 'd-nas', area_id: 'hal', name: 'NAS' },
     { id: 'd-f1', area_id: null, name: 'F1' },
@@ -94,6 +95,8 @@ export const registers: HouseRegisters = {
     // Een uitgezette spot die alleen nog in "Etage 2 alles" zit: die groep is geen lamp.
     entity('light.zolder_spot', 'd-zolderspot', { disabled_by: 'user' }),
     entity('light.etage2_alles', null, { platform: 'group' }),
+    // Een brandende lamp op de bovenste etage: daar staat het dak in de tekening.
+    entity('light.bureaulamp', 'd-bureaulamp'),
     // Meters: een bewegingssensor in de hal meet temperatuur en luchtvochtigheid.
     entity('sensor.bewegingssensor_hal_temperatuur', 'd-halsensor', { original_device_class: 'temperature', original_name: 'Temperatuur' }),
     entity('sensor.bewegingssensor_hal_luchtvochtigheid', 'd-halsensor', { original_device_class: 'humidity', original_name: 'Luchtvochtigheid' }),
@@ -129,6 +132,7 @@ export const states = new Map<string, HaEntityState>([
   ['sensor.f1_track_weather', state('sensor.f1_track_weather', '30')],
   // Een Hue-kamer met alleen uitgezette lampen: die is zelf de lamp.
   ['light.etage2_alles', state('light.etage2_alles', 'on', { friendly_name: 'Etage 2 alles', entity_id: ['light.zolder_spot'] })],
+  ['light.bureaulamp', state('light.bureaulamp', 'on', { friendly_name: 'Bureaulamp' })],
   ['light.hue_badkamer', state('light.hue_badkamer', 'off', { friendly_name: 'Badkamer', is_hue_group: true, lights: ['Badkamer spot 1', 'Badkamer spot 2'] })],
 ]);
 

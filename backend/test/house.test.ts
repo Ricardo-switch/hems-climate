@@ -57,7 +57,8 @@ describe('het voorstel uit Home Assistant', () => {
       ['licht', 'Sfeerverlichting', 'aan'],
     ]);
     expect(wk.lampenAan).toBe(3);
-    expect(house.lampenAan).toBe(3);
+    // De drie in de woonkamer en de bureaulamp op de zolder.
+    expect(house.lampenAan).toBe(4);
   });
 
   it('toont een meter in een kamer zonder regeling, met temperatuur en luchtvochtigheid', () => {
