@@ -153,7 +153,7 @@
       "title": "Uitleg · Inzoomen (geen scherm; de eerste keer een tip)",
       "w": 1280,
       "x": 0,
-      "y": 4920
+      "y": 5040
     },
     "Wand-Etage.dc.html": {
       "h": 800,
@@ -162,7 +162,7 @@
       "title": "Wand · Etage (begane grond)",
       "w": 1280,
       "x": 1360,
-      "y": 4920
+      "y": 5040
     },
     "Wand-Ruimte.dc.html": {
       "h": 800,
@@ -171,7 +171,7 @@
       "title": "Wand · Ruimte (woonzone, bedienen)",
       "w": 1280,
       "x": 2720,
-      "y": 4920
+      "y": 5040
     },
     "Etage.dc.html": {
       "h": 930,
@@ -180,7 +180,7 @@
       "title": "Etage",
       "w": 390,
       "x": 4080,
-      "y": 4920
+      "y": 5040
     },
     "Ruimte.dc.html": {
       "h": 844,
@@ -189,7 +189,7 @@
       "title": "Ruimte · licht bedienen",
       "w": 390,
       "x": 4550,
-      "y": 4920
+      "y": 5040
     },
     "Onboarding-Zon.dc.html": {
       "is_interactive": true,
@@ -215,7 +215,7 @@
       "w": 390,
       "title": "Lamp · kleur en scènes",
       "x": 5020,
-      "y": 4920,
+      "y": 5040,
       "h": 1090
     },
     "Lamp-wit.dc.html": {
@@ -224,7 +224,7 @@
       "w": 390,
       "title": "Lamp · wit, van warm tot koel",
       "x": 5490,
-      "y": 4920,
+      "y": 5040,
       "h": 1090
     },
     "Wand-Opbrengst.dc.html": {
@@ -237,7 +237,7 @@
       "y": 2060
     },
     "Opbrengst-terug.dc.html": {
-      "h": 2110,
+      "h": 2900,
       "is_interactive": true,
       "radius": 28,
       "title": "Opbrengst · terugkijken per maand",

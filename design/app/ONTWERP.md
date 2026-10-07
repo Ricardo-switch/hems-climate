@@ -355,6 +355,11 @@ week, maand of jaar, met pijltjes naar de vorige periode:
 
 - *Drie getallen:* stroom gebruikt (en hoeveel daarvan eigen zon), gas, en de
   kosten, met de periode ervoor ernaast.
+- *Je zonnepanelen:* wat ze opwekten, en hoe dat verdeeld is: zelf gebruikt en
+  naar het net, als één balk. Daaronder hoe zelfvoorzienend het huis was (welk
+  deel van de stroom van het eigen dak kwam) en de beste dag. Na 2027 is zelf
+  gebruiken meer waard dan terugleveren; daar laat Smart Climate de airco's op
+  wachten.
 - *Waar de energie heen ging:* een sankey van de bronnen (zon, het net, gas)
   naar de apparaten, de rest van het huis en wat teruggeleverd werd. De breedte
   is de hoeveelheid, op schaal. Drie standen: stroom, gas, of alles in kWh
@@ -363,6 +368,12 @@ week, maand of jaar, met pijltjes naar de vorige periode:
 - *Per apparaat:* kWh, welk deel eigen zon en welk deel van het net, en wat
   dat kostte. Tik op een apparaat voor zijn eigen periode.
 - *Per dag:* een balk per dag (eigen zon en net), met het gas als lijn.
+- *Vergelijken:* de periodes naast elkaar, met dezelfde periode een jaar eerder
+  gestippeld ernaast: bij Maand de twaalf maanden van het afgelopen jaar, bij
+  Week de laatste weken, bij Jaar de jaren. Te kiezen voor stroom, zon, gas of
+  kosten, met twee getallen: tegen de periode ervoor, en tegen een jaar eerder.
+  Ook van vóór Smart Climate: Home Assistant bewaart de meterstanden als
+  statistiek.
 - *Kosten:* stroom van het net, teruglevering, gas en vaste kosten, met het
   eigen tarief uit Bediening. Tot 2027 telt teruglevering weg tegen afname
   (salderen); daarna rekent het scherm met de vergoeding, en met E de

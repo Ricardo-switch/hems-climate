@@ -323,6 +323,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     it(`toont de nieuwe weergave in ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
       await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+      // Zonder de lettertypes van Google, zoals in de CI: het lettertype ernaast is
+      // breder, en de pagina moet ook daarmee passen (de CI ving dat, 7 oktober).
+      await context.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
       // Alleen bij een fout bewaard: zo is te zien wat de pagina deed, ook in de CI.
       await context.tracing.start({ screenshots: true, snapshots: true });
       onTestFailed(async () => {

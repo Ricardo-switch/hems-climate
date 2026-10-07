@@ -1148,7 +1148,8 @@ function roomScenes(room, say, live) {
     'div',
     { class: 'scenes' },
     ...room.scenes.map((sc) => {
-      const b = el('button', { type: 'button', text: sc.naam, 'aria-pressed': String(sc.actief) });
+      // In een eigen span, zodat een lange naam uit Hue afbreekt in plaats van uit te steken.
+      const b = el('button', { type: 'button', 'aria-pressed': String(sc.actief) }, el('span', { text: sc.naam }));
       b.disabled = !live;
       b.addEventListener('click', async () => {
         say('Even…');

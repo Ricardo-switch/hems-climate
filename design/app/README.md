@@ -40,7 +40,7 @@ wordt de app en blijft dun: alles wat hij toont, komt uit de dienst (besluit
 | Telefoon · Lamp | `Lamp.dc.html`, `Lamp-wit.dc.html` | Een lamp bedienen: helderheid, wit van warm tot koel, kleur, en de Hue-scènes van de ruimte (ONTWERP §4) |
 | Telefoon · Apparaten op zon | `Apparaten.dc.html` | Wasmachine, droger en vaatwasser: wanneer ze op zon beginnen, en klaar voor welke tijd (besluit 98) |
 | Telefoon · Onboarding stap 3 | `Onboarding-Zon.dc.html` | De panelen, de zonnesensor, de hoofdzekering en de apparaten op zon |
-| Opbrengst · terugkijken | `Opbrengst-terug.dc.html`, `Wand-Opbrengst.dc.html` | Per dag, week, maand of jaar: stroom, gas en kosten, een sankey van waar de energie heen ging, per apparaat en per dag |
+| Opbrengst · terugkijken | `Opbrengst-terug.dc.html`, `Wand-Opbrengst.dc.html` | Per dag, week, maand of jaar: stroom, gas en kosten, de zonnepanelen (zelf gebruikt en naar het net), een sankey van waar de energie heen ging, per apparaat, per dag, en vergelijken met de periode ervoor en een jaar eerder |
 
 `screens/` heeft van elk scherm een screenshot, en `Wand-aan-de-muur.png`
 laat het Thuis-scherm zien op een tablet aan de muur.
