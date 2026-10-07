@@ -501,10 +501,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await layoutProblems(p), `een kleurenlamp in ${stand}`).toEqual([]);
       // Het kleurenwiel: rechts aan de rand is rood en vol; indrukken en loslaten zet hem.
       const wheel = p.locator('#hu-blad-extra .kleurwiel');
-      // Meten pas als hij een maat heeft: vlak na het openen kan het blad nog opnieuw opbouwen.
-      await expect.poll(() => wheel.evaluate((e) => e.clientWidth)).toBeGreaterThan(0);
-      const size = await wheel.evaluate((e) => e.clientWidth);
-      await wheel.click({ position: { x: size * 0.95, y: size / 2 } });
+      // Meten en klikken samen opnieuw: het huis ververst het blad, en een losgekoppeld
+      // wiel meet 0 breed, waarna de klik op de hoek buiten de cirkel zou vallen.
+      for (let tries = 0; ; tries++) {
+        const size = await wheel.evaluate((e) => (e.isConnected ? e.clientWidth : 0));
+        const clicked = size > 0 && (await wheel.click({ position: { x: size * 0.95, y: size / 2 }, timeout: 1000 }).then(() => true, () => false));
+        if (clicked) break;
+        if (tries === 10) throw new Error('het kleurenwiel bleef onklikbaar');
+      }
       await p.locator('#hu-blad-zin').filter({ hasText: 'in de gekozen kleur' }).waitFor();
       expect(lightData.at(-1)).toEqual({ hs_color: [0, 90] });
       await p.locator('#hu-blad-extra .stalen button[aria-label="blauw"]').click();
