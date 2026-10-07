@@ -3838,6 +3838,13 @@ Gekozen op 5 oktober 2026.
 - **Ook in de proefomgeving geldt besluit 88:** wat er staat, is gemeten of
   komt uit een besluit. Voorbeeldgetallen horen alleen in schetsen.
 
+*Aangevuld 7 oktober 2026:* de stand per kamer komt uit de dienst. `/api/state`
+en de besluitenstroom geven naast het onbewerkte besluit `bewoner.kamers`: per
+kamer de soort, de korte stand voor de kaart ("Wacht op meer zon"), de zin van
+de assistent en wat het echte apparaat doet (`residentRooms`). De pagina rekent
+die niet meer zelf uit. Nog op de pagina: de kop van Thuis, de stromen in de
+tekening en de tijdlijn van Waarom; die volgen.
+
 *Wat dit verandert aan 76:* de testpagina is niet langer alleen een prototype
 dat niet verder groeit; hij is de proefomgeving die de app wordt, onder de
 regel dat hij niets zelf uitrekent. Het bewonerscontract en de contracttests

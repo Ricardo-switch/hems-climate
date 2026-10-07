@@ -200,9 +200,11 @@ describe('de stand opvragen', () => {
     const body = (await res.json()) as LiveSnapshot;
 
     expect(res.status).toBe(200);
-    // Onbewerkt: de weergave rekent niets uit, dus wat de kern zei moet er
-    // ongewijzigd uit komen.
-    expect(body).toEqual(snapshot());
+    // Onbewerkt: wat de kern zei, komt er ongewijzigd uit; het bewonerscontract
+    // staat er alleen naast (76, 94).
+    const { bewoner, ...core } = body as LiveSnapshot & { bewoner?: { kamers: { zoneId: string; kort: string }[] } };
+    expect(core).toEqual(snapshot());
+    expect(bewoner?.kamers.map((k) => k.zoneId)).toEqual(exampleSite.zones.map((z) => z.id));
     expect(res.headers.get('cache-control')).toBe('no-store');
   });
 
@@ -258,7 +260,10 @@ describe('de besluitenstroom', () => {
     const events = await readEvents(`${base}/api/events`, 1);
 
     expect(events).toHaveLength(1);
-    expect(events[0]).toEqual(snapshot());
+    // Het besluit onbewerkt, met het bewonerscontract ernaast (94).
+    const { bewoner, ...core } = events[0] as LiveSnapshot & { bewoner?: { kamers: unknown[] } };
+    expect(core).toEqual(snapshot());
+    expect(bewoner?.kamers).toHaveLength(exampleSite.zones.length);
   });
 
   it('duwt elk volgend besluit door, ook als het niet wijzigde', async () => {

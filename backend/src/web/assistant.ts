@@ -866,3 +866,187 @@ export function ask(question: Question, ctx: AskContext): Answer {
     }
   }
 }
+
+/* ------------------------------------------------- de stand per kamer, kort */
+
+/*
+ * Het bewonerscontract (76, 94): per kamer de soort, een korte stand voor de
+ * kaart ("Wacht op meer zon"), de lange zin van de assistent, en wat het echte
+ * apparaat doet. Uitgerekend in de dienst, zodat de pagina alleen toont.
+ */
+
+const SHORT = {
+  nl: {
+    failsafe: 'Storing: veilig gezet',
+    taken: 'Jij hebt het overgenomen',
+    takenUntil: (t: string) => `Jij hebt het tot ${t}`,
+    run: { cool: 'Koelt', heat: 'Verwarmt' },
+    onSun: ' op zon',
+    parked: 'Geparkeerd, klaar om te hervatten',
+    noMeasurement: 'Geen meting',
+    waitSun: 'Wacht op meer zon',
+    wait: (why: string) => `Wacht: ${why}`,
+    ok: 'Op temperatuur',
+    idle: 'Niets te doen',
+    idleWhy: (why: string) => `Niets te doen: ${why}`,
+    off: 'uit',
+    block: {
+      min_run_not_elapsed: 'moet eerst zijn minimale draaitijd halen',
+      min_rest_not_elapsed: 'moet nog even rusten',
+      stabilisation_active: 'wacht tot het verbruik stabiel is',
+      settling_after_switch: 'komt tot rust na een wissel',
+      insufficient_power_budget: 'te weinig zon over',
+      start_threshold_not_met: 'net te weinig zon om te starten',
+      capability_missing: 'het apparaat kan dit niet',
+      setpoint_out_of_range: 'doel buiten bereik van het apparaat',
+      superseded_by_higher_priority: 'een andere kamer ging voor',
+      no_change_needed: 'niets te veranderen',
+      resident_override: 'jij hebt het overgenomen',
+      insufficient_current_budget: 'de hoofdzekering zou te zwaar belast worden',
+    } satisfies Record<BlockCode, string>,
+    reason: {
+      zone_below_setpoint: 'onder het doel',
+      zone_above_setpoint: 'boven het doel',
+      zone_satisfied: 'op temperatuur',
+      buffering_free_energy: 'gratis zonnestroom opslaan als koelte of warmte',
+      surplus_available: 'er is zon over',
+      surplus_insufficient: 'te weinig zon over',
+      importing_from_grid: 'het huis haalt stroom van het net',
+      outside_active_hours: 'buiten de actieve uren',
+      mode_excludes_action: 'past niet bij deze modus',
+      nobody_home: 'niemand thuis',
+      failsafe_unreliable_input: 'een meting is onbetrouwbaar',
+    } satisfies Record<ReasonCode, string>,
+    action: { cool: 'koelen', heat: 'verwarmen', standby: 'geparkeerd', off: 'uit' } as Record<string, string>,
+    towards: 'naar',
+  },
+  en: {
+    failsafe: 'Fault: put in a safe state',
+    taken: 'You took it over',
+    takenUntil: (t: string) => `You have it until ${t}`,
+    run: { cool: 'Cooling', heat: 'Heating' },
+    onSun: ' on solar',
+    parked: 'Parked, ready to resume',
+    noMeasurement: 'No measurement',
+    waitSun: 'Waiting for more sun',
+    wait: (why: string) => `Waiting: ${why}`,
+    ok: 'At temperature',
+    idle: 'Nothing to do',
+    idleWhy: (why: string) => `Nothing to do: ${why}`,
+    off: 'off',
+    block: {
+      min_run_not_elapsed: 'must finish its minimum run time',
+      min_rest_not_elapsed: 'must rest for a moment',
+      stabilisation_active: 'waiting for the power use to settle',
+      settling_after_switch: 'settling after a switch',
+      insufficient_power_budget: 'too little solar to spare',
+      start_threshold_not_met: 'just too little solar to start',
+      capability_missing: 'the unit cannot do this',
+      setpoint_out_of_range: 'target outside the unit range',
+      superseded_by_higher_priority: 'another room came first',
+      no_change_needed: 'nothing to change',
+      resident_override: 'you took it over',
+      insufficient_current_budget: 'the main fuse would be overloaded',
+    } satisfies Record<BlockCode, string>,
+    reason: {
+      zone_below_setpoint: 'below target',
+      zone_above_setpoint: 'above target',
+      zone_satisfied: 'at temperature',
+      buffering_free_energy: 'storing free solar as cooling or heat',
+      surplus_available: 'solar to spare',
+      surplus_insufficient: 'too little solar to spare',
+      importing_from_grid: 'the house is drawing from the grid',
+      outside_active_hours: 'outside active hours',
+      mode_excludes_action: 'does not fit this mode',
+      nobody_home: 'nobody home',
+      failsafe_unreliable_input: 'a measurement is unreliable',
+    } satisfies Record<ReasonCode, string>,
+    action: { cool: 'cooling', heat: 'heating', standby: 'parked', off: 'off' } as Record<string, string>,
+    towards: 'at',
+  },
+} as const;
+
+export interface ResidentRoom {
+  readonly zoneId: string;
+  readonly soort: RoomKind;
+  /** De korte stand voor de kaart. */
+  readonly kort: string;
+  /** De zin van de assistent, met de getallen. */
+  readonly zin: string;
+  /** Wat de apparaten van de kamer werkelijk doen, of "uit". */
+  readonly echt: string;
+  /** Het apparaat dat draait volgens het besluit, voor de stromen in de tekening. */
+  readonly actuatorId: string | null;
+}
+
+function shortStatusOf(
+  config: SiteConfig,
+  snap: DecisionView,
+  zone: Zone,
+  lang: Lang,
+): { soort: RoomKind; kort: string; actuatorId: string | null } {
+  const w = SHORT[lang];
+  const e = snap.explanation;
+  const ids = new Set(zone.actuatorIds);
+  const pz = e.perZone.find((z) => z.zoneId === zone.id);
+  if (e.failsafe.active) return { soort: 'bad', kort: w.failsafe, actuatorId: null };
+  const taken = (e.overrides ?? []).find((o) => ids.has(o.actuatorId));
+  if (taken) {
+    if (taken.untilMs == null) return { soort: 'wait', kort: w.taken, actuatorId: null };
+    const t = new Intl.DateTimeFormat(lang === 'nl' ? 'nl-NL' : 'en-GB', {
+      timeZone: config.timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(taken.untilMs);
+    return { soort: 'wait', kort: w.takenUntil(t), actuatorId: null };
+  }
+  const mine = snap.accepted.filter((i) => ids.has(i.actuatorId));
+  const running = mine.find((i) => i.action === 'cool' || i.action === 'heat');
+  if (running && (running.action === 'cool' || running.action === 'heat')) {
+    const onSun = running.strategyId === 'pv-surplus';
+    return { soort: running.action, kort: `${w.run[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId };
+  }
+  if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
+  const wanting = pz != null && pz.demand !== 'none';
+  const blocked = snap.rejected.find((r) => r.intent.zoneId === zone.id);
+  if (blocked && wanting) {
+    const kort = blocked.blockedBy === 'insufficient_power_budget' ? w.waitSun : w.wait(w.block[blocked.blockedBy]);
+    return { soort: 'wait', kort, actuatorId: null };
+  }
+  if (pz == null || pz.temperatureC == null) return { soort: 'bad', kort: w.noMeasurement, actuatorId: null };
+  if (pz.reason === 'zone_satisfied') {
+    return pz.targetC == null ? { soort: 'idle', kort: w.idle, actuatorId: null } : { soort: 'ok', kort: w.ok, actuatorId: null };
+  }
+  if (wanting) return { soort: 'idle', kort: w.idleWhy(w.reason[pz.reason]), actuatorId: null };
+  return { soort: 'idle', kort: w.idle, actuatorId: null };
+}
+
+/** "Airco woonkamer koelen naar 22°", of "uit" als niets van de kamer aan staat. */
+function realShort(config: SiteConfig, snap: DecisionView, zone: Zone, lang: Lang): string {
+  const w = SHORT[lang];
+  const parts: string[] = [];
+  for (const a of actuatorsOf(config, zone)) {
+    const [state = '', sp] = (snap.observed[a.id] ?? '').split('@');
+    if (state === '' || state === 'off' || state === 'onbekend' || state === 'unavailable' || state === 'unknown') continue;
+    const word = w.action[state] ?? state;
+    const n = sp == null ? NaN : Number(sp);
+    const at = Number.isFinite(n) ? ` ${w.towards} ${lang === 'nl' ? String(Math.round(n * 10) / 10).replace('.', ',') : String(Math.round(n * 10) / 10)}°` : '';
+    parts.push(`${a.name} ${word}${at}`);
+  }
+  return parts.length === 0 ? w.off : parts.join(', ');
+}
+
+export function residentRooms(config: SiteConfig, snap: DecisionView, lang: Lang = 'nl', shadow = true): ResidentRoom[] {
+  return config.zones.map((zone) => {
+    const s = shortStatusOf(config, snap, zone, lang);
+    return {
+      zoneId: zone.id,
+      soort: s.soort,
+      kort: s.kort,
+      zin: roomStatus(config, snap, zone, lang, shadow).zin,
+      echt: realShort(config, snap, zone, lang),
+      actuatorId: s.actuatorId,
+    };
+  });
+}

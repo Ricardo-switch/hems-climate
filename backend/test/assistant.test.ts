@@ -15,7 +15,7 @@ import { decide } from '../src/core/decide.js';
 import type { Explanation } from '../src/core/decision.js';
 import { value } from '../src/core/state.js';
 import { defaultStrategies } from '../src/index.js';
-import { ask, findZone, LANGS, parseQuestion, roomStatus } from '../src/web/assistant.js';
+import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus } from '../src/web/assistant.js';
 import type { Answer, DecisionView, Question } from '../src/web/assistant.js';
 import type { TodayReport } from '../src/web/today.js';
 
@@ -389,6 +389,49 @@ describe('elk getal heeft een bron, in elke toestand', () => {
             const a = ask(q, { config, snapshot: snap, today: null, nowMs: state.nowMs, shadow, lang });
             check(a, `geval ${i}, ${lang}, ${shadow ? 'schaduw' : 'echt'}, ${JSON.stringify(q)}`);
           }
+        }
+      }
+    }
+  });
+});
+
+describe('de stand per kamer voor de kaart (besluit 94)', () => {
+  const room = (v: DecisionView, id: string) => residentRooms(config, v).find((r) => r.zoneId === id)!;
+
+  it('zegt kort wat Smart Climate zou doen, met het apparaat erbij', () => {
+    const r = room(view({ accepted: [coolOnSun] }), 'zolder');
+    expect([r.soort, r.kort, r.actuatorId]).toEqual(['cool', 'Koelt op zon', 'ac-zolder']);
+    expect(r.zin).toContain('Ik zou de zolder nu laten koelen op zon');
+  });
+
+  it('wacht op zon, of zegt waarom het wacht', () => {
+    expect(room(view({ rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_power_budget' }] }), 'zolder').kort).toBe('Wacht op meer zon');
+    expect(room(view({ rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_current_budget' }] }), 'zolder').kort).toBe(
+      'Wacht: de hoofdzekering zou te zwaar belast worden',
+    );
+  });
+
+  it('zegt wat het echte apparaat doet, of "uit"', () => {
+    expect(room(view(), 'zolder').echt).toBe('Airco zolder koelen naar 22°');
+    expect(room(view(), 'badkamer').echt).toBe('uit');
+  });
+
+  it('noemt een ingreep met de tijd tot wanneer', () => {
+    const v = view({ explanation: explanation({ overrides: [{ actuatorId: 'ac-zolder', sinceMs: AT - 60_000, untilMs: Date.parse('2026-10-05T13:00:00Z') }] }) });
+    expect(room(v, 'zolder').kort).toBe('Jij hebt het tot 15:00');
+  });
+
+  it('is in elke gegenereerde toestand gevuld, zonder interne codes', () => {
+    const k = dice(generator(20261007));
+    const strategies = defaultStrategies();
+    for (let i = 0; i < 300; i++) {
+      const state = entityState(k, config);
+      const d = decide({ config, state, strategies });
+      const v: DecisionView = { atMs: d.atMs, explanation: d.explanation, commands: d.commands, accepted: d.accepted, rejected: d.rejected, observed: { 'ac-zolder': 'cool@22.5', nest: 'heat@20' } };
+      for (const lang of LANGS) {
+        for (const r of residentRooms(config, v, lang)) {
+          expect(r.kort, `${i} ${lang}`).not.toBe('');
+          expect(`${r.kort} ${r.echt}`, `${i} ${lang}`).not.toMatch(/undefined|null|[a-z]+_[a-z_]+/);
         }
       }
     }

@@ -189,42 +189,15 @@ function tick() {
  * Soorten: cool, heat, wait, ok, idle, bad.
  */
 function zoneStatus(snap, zoneId) {
-  const e = snap.explanation;
-  const pz = e.perZone.find((z) => z.zoneId === zoneId);
-  if (e.failsafe?.active) return { kind: 'bad', text: 'Storing: veilig gezet' };
-  const ids = actuatorsOf(zoneId);
-  // Overgenomen door de bewoner (besluit 74): dat gaat voor alles behalve een storing.
-  const taken = (e.overrides ?? []).find((o) => ids.includes(o.actuatorId));
-  if (taken) {
-    return { kind: 'wait', text: taken.untilMs == null ? 'Jij hebt het overgenomen' : `Jij hebt het tot ${hhmm(taken.untilMs)}` };
-  }
-  const accepted = snap.accepted.filter((i) => ids.includes(i.actuatorId));
-  const running = accepted.find((i) => i.action === 'cool' || i.action === 'heat');
-  if (running) {
-    const onSun = running.strategyId === 'pv-surplus';
-    const word = running.action === 'cool' ? 'Koelt' : 'Verwarmt';
-    return { kind: running.action, text: onSun ? `${word} op zon` : word, actuatorId: running.actuatorId };
-  }
-  if (accepted.some((i) => i.action === 'standby')) return { kind: 'wait', text: 'Geparkeerd, klaar om te hervatten' };
-  const wanting = pz?.demand && pz.demand !== 'none';
-  const blocked = snap.rejected.find((r) => r.intent.zoneId === zoneId);
-  if (blocked && wanting) {
-    const why = blocked.blockedBy === 'insufficient_power_budget' ? 'Wacht op meer zon' : `Wacht: ${BLOCK[blocked.blockedBy] ?? 'nog niet'}`;
-    return { kind: 'wait', text: why };
-  }
-  if (pz?.temperatureC == null) return { kind: 'bad', text: 'Geen meting' };
-  if (pz.reason === 'zone_satisfied') return pz.targetC == null ? { kind: 'idle', text: 'Niets te doen' } : { kind: 'ok', text: 'Op temperatuur' };
-  if (wanting) return { kind: 'idle', text: `Niets te doen: ${REASON[pz.reason] ?? pz.reason}` };
-  return { kind: 'idle', text: 'Niets te doen' };
+  // De stand per kamer komt kant-en-klaar uit de dienst (besluit 94).
+  const room = snap.bewoner?.kamers?.find((k) => k.zoneId === zoneId);
+  if (room) return { kind: room.soort, text: room.kort, actuatorId: room.actuatorId ?? undefined };
+  return { kind: 'idle', text: '…' };
 }
 
-/** Wat het echte apparaat in deze kamer doet, voor de vergelijking. */
+/** Wat het echte apparaat in deze kamer doet, voor de vergelijking; ook uit de dienst. */
 function zoneReal(snap, zoneId) {
-  const parts = actuatorsOf(zoneId)
-    .map((id) => ({ id, o: parseObserved(snap.observed?.[id]) }))
-    .filter(({ o }) => o.action !== 'off' && o.action !== 'onbekend');
-  if (parts.length === 0) return 'uit';
-  return parts.map(({ id }) => `${actuatorName(id)} ${describeObserved(snap.observed[id])}`).join(', ');
+  return snap.bewoner?.kamers?.find((k) => k.zoneId === zoneId)?.echt ?? '…';
 }
 
 /* -------------------------------------------------------- het huis */
