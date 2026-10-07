@@ -98,6 +98,10 @@ verwijzing bestaat.
   niet ([41]).
 - **Home Assistant levert de apparaten, de app de kamers** ([72]). De opbouw is
   etage, kamer, zone: een deur maakt een kamer, open ruimte een zone ([95]).
+- **De zon en je aansluiting vraagt de app:** panelen, hoofdzekering,
+  stroomcontract en apparaten op zon. De regeling vult er bij het starten de
+  configuratie mee aan waar die zwijgt; wat de configuratie noemt, gaat voor
+  ([103]).
 
 ## Meten, data en analyse
 
@@ -277,4 +281,5 @@ verwijzing bestaat.
 [100]: DECISIONS.md#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97
 [101]: DECISIONS.md#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen
 [102]: DECISIONS.md#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant
+[103]: DECISIONS.md#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt
 <!-- links:einde -->

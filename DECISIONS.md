@@ -79,6 +79,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
 - [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten) — *aangevuld door 95*
 - [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant)
+- [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
 
 **Meten, data en analyse**
 
@@ -4500,6 +4501,72 @@ beide opbouwen. En bij de kosten staat de meter zelf als kostensensor
 euro telt. Dat neemt Smart Climate niet over: Meters en prijzen zegt het, en
 vraagt de prijzen. `GET /api/energie` geeft het dashboard ook letterlijk terug
 (`dashboard`), om zoiets na te gaan.
+
+---
+
+## 103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Een paar dingen haalt de app niet uit Home Assistant: waar de panelen liggen
+(93), hoe zwaar de hoofdzekering is (78), welk stroomcontract je hebt, en of
+een apparaat dat op afstand kan starten op zon mag beginnen (98). De schets
+`Onboarding-Zon` vraagt ze op één scherm. De onboarding van besluit 41 schrijft
+alleen bij een lege installatie, dus voor een huis dat al draait deed hij
+hiermee niets. Gekozen door de bewoner op 7 oktober 2026.
+
+*Besluit:*
+
+- **De antwoorden staan in de app** (`aansluiting.json` naast de dataset, en in
+  de export), te beheren via Bediening › Je huis › De zon en je aansluiting.
+  Bewaren vraagt een beheerder (99).
+- **De regeling leest mee waar de configuratie zwijgt.** Zonder `grid` worden
+  de zekering en de gevonden stroommeters het stroombudget (78); een apparaat
+  op zon dat de configuratie niet noemt, wordt uitstelbaar, met "uiterlijk om
+  15:00 beginnen" (98). Wat de configuratie wel noemt, gaat altijd voor, en de
+  app zegt dat erbij ("uit je configuratie").
+- **Bij het starten, door het eigen schema.** De dienst vult de configuratie
+  aan voordat de regeling begint, en alleen als het resultaat door
+  `parseSiteConfig` komt; anders draait hij zoals het bestand zegt, en zegt hij
+  waarom. Een nieuw antwoord gaat in bij de volgende start, en de app zegt dat
+  ook. Elk besluit blijft zo na te gaan: de vingerafdruk van de configuratie
+  (66) is die van de aangevulde.
+- **De pagina stuurt alleen antwoorden.** Welke stroommeters en apparaten erbij
+  horen, zoekt de dienst zelf in Home Assistant, zoals bij de onboarding (42);
+  de pagina krijgt en noemt nooit een entiteit (45). Een fase telt alleen met
+  één duidelijke meter, liefst die van het net: een verkeerde meter kost meer
+  dan geen meter (41). Kies je drie fasen terwijl de meter er één geeft, dan
+  bewaart de app het, maar rekent de regeling er nog niet mee, en zegt de app
+  waarom.
+- **Apparaten herkent de dienst aan "op afstand starten toegestaan"**, met de
+  bedrijfsstatus en de duur van het programma van hetzelfde apparaat. De soort
+  komt uit de naam of de modelcode (bij Bosch en Siemens is WT een droger, WA of
+  WG een wasmachine); het vermogen is een schatting per soort (droger 700 W,
+  vaatwasser 1.800 W, wasmachine 2.000 W, voor het opwarmen).
+- **Hoe snel de zonnesensor is, meet de dienst** (89): de mediaan tussen twee
+  nieuwe waarden, overdag, vanaf zes metingen. Trager dan eens per twee minuten
+  zegt de app, met de lokale weg voor het merk.
+- **De ligging van de panelen** (voorkant, achterkant, beide, plat, weet ik niet,
+  en hoeveel ongeveer) gaat nog niet naar de regeling: die is voor de meting
+  van besluit 93, die de bewoner daarna laat bevestigen.
+- **Het stroomcontract** (vast, dynamisch, weet ik niet) wordt bewaard voor E;
+  wat stroom en gas kosten, blijft bij Meters en prijzen (102).
+
+*Gebouwd op 7 oktober 2026.* `GET`/`POST /api/aansluiting` (alleen met een
+logmap en een configuratie; elke andere route blijft achter de muur, en bewaren
+vraagt een beheerder), `web/aansluiting.ts` met de herkenning, het bewaren, het
+aanvullen en het overzicht voor de pagina, en in `main.ts` het aanvullen bij
+het starten en de meting van de zonnesensor. In de app: het scherm met het huis
+van opzij (de panelen kleuren mee met je keuze), de zonnesensor, de
+hoofdzekering, het stroomcontract en de apparaten op zon; liggend in twee
+kolommen. Getoetst met het echte configuratiebestand: zonder `grid` en
+`deferrables` vult het aan tot een configuratie die het schema aanneemt, en met
+blijft hij gelijk.
+
+*Voor dit huis:* de zekering (1 × 35 A) en de droger staan al in de
+configuratie; het scherm toont ze als "uit je configuratie". Als eind 2026 de
+drie fasen komen, kan `grid` uit de configuratie, en zet de bewoner 3 × 25 A in
+de app; de dienst vindt dan zelf de drie stroommeters van de P1-meter.
 
 ---
 

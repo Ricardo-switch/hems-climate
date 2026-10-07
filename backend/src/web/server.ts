@@ -32,6 +32,7 @@ import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
+import { validateConnection, type ConnectionStore, type ConnectionView, type FoundAppliance, type FoundPhase } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
@@ -126,6 +127,15 @@ export interface WebOptions {
   readonly energy?: { readonly store: EnergyStore; readonly source: EnergySource };
   /** De map met scèneplaatjes van de bewoner (scene-pictures.ts); zonder dit geen route. */
   readonly scenePicturesDir?: string;
+  /**
+   * De zon en je aansluiting (besluit 103): antwoorden naar een eigen bestand
+   * naast de dataset. Zonder dit bestaat de route niet.
+   */
+  readonly connection?: {
+    readonly store: ConnectionStore;
+    readonly view: () => ConnectionView;
+    readonly found: () => { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
+  };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -399,6 +409,8 @@ export class WebServer {
       (this.#options.feedback != null && path === '/api/gevoel') ||
       (this.#options.uitstel != null && path === '/api/uitstel') ||
       (this.#options.energy != null && path === '/api/energie') ||
+      // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
+      (this.#options.connection != null && path === '/api/aansluiting') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
@@ -474,6 +486,11 @@ export class WebServer {
 
     if (path === '/api/energie') {
       await this.#energy(req, res, method);
+      return;
+    }
+
+    if (path === '/api/aansluiting') {
+      await this.#connection(req, res, method);
       return;
     }
 
@@ -884,6 +901,31 @@ export class WebServer {
       fout = `Home Assistant gaf de meters niet: ${(error as Error).message}`;
     }
     sendJson(res, 200, { instellingen: energy.store.current, voorstel, dashboardPrijzen, dashboard, meters, ...(fout ? { fout } : {}) });
+  }
+
+  /** De zon en je aansluiting (besluit 103): wat er staat, of de antwoorden bewaren. */
+  async #connection(req: IncomingMessage, res: ServerResponse, method: string): Promise<void> {
+    const connection = this.#options.connection;
+    if (connection == null) {
+      sendJson(res, 503, { wachten: 'De aansluiting staat niet aan' });
+      return;
+    }
+    if (method === 'POST') {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const checked = validateConnection(body, connection.found());
+      if (!checked.ok) {
+        sendJson(res, 400, { fout: checked.reden });
+        return;
+      }
+      await connection.store.save(checked.answers);
+    }
+    sendJson(res, 200, connection.view());
   }
 
   async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {

@@ -157,6 +157,8 @@ describe('de dataset exporteren', () => {
   it('neemt mee welke versie wanneer besliste, en laat de eigen stand thuis (besluit 66)', async () => {
     const dir = await decisionLogWith({ '2026-09-05': 'a\n' });
     await writeFile(join(dir, 'runs.ndjson'), '{"t":1,"commit":"abc1234","config":"x"}\n', 'utf-8');
+    // De antwoorden over de aansluiting vullen de configuratie aan (besluit 103).
+    await writeFile(join(dir, 'aansluiting.json'), '{"versie":1}', 'utf-8');
     // Werkbestanden van de dienst zelf, geen dataset.
     await writeFile(join(dir, 'own-state.json'), '{}', 'utf-8');
     await writeFile(join(dir, 'review-checkpoint.bin'), 'x', 'utf-8');
@@ -167,6 +169,7 @@ describe('de dataset exporteren', () => {
     await mkdir(unpackDir);
     await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uitgepakt'], { cwd: dir });
     expect((await readdir(join(unpackDir, 'hems-logboek-2026-09-30'))).sort()).toEqual([
+      'aansluiting.json',
       'decisions-2026-09-05.ndjson',
       'runs.ndjson',
     ]);

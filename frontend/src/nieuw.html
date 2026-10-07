@@ -1347,6 +1347,36 @@
         padding: 2px 16px;
         gap: 0;
       }
+      /* Een rij die naar een eigen scherm gaat, zoals De zon en je aansluiting. */
+      .rijlink {
+        color: inherit;
+        text-decoration: none;
+      }
+      .rijlink .pijl {
+        color: var(--muted);
+        font-size: 22px;
+      }
+      .z-huis svg {
+        display: block;
+        width: min(100%, 320px);
+        margin: 0 auto;
+      }
+      .z-keuzes {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .z-keuzes button {
+        flex: 1 1 auto;
+        padding-inline: 12px;
+        cursor: pointer;
+      }
+      .z-keuzes button:disabled {
+        cursor: not-allowed;
+      }
+      .z-aantal {
+        flex: 0 0 auto;
+        max-width: 160px;
+      }
       .switch {
         width: 52px;
         height: 32px;
@@ -1602,8 +1632,24 @@
         /* Waarom, Assistent en Bediening liggend: de hele breedte, in kolommen. */
         .view[data-view='waarom'],
         .view[data-view='assistent'],
-        .view[data-view='bediening'] {
+        .view[data-view='bediening'],
+        .view[data-view='aansluiting'] {
           max-width: none;
+        }
+        /* De zon en je aansluiting liggend: de vragen in twee kolommen, bewaren eronder. */
+        #z-inhoud {
+          display: block;
+          column-count: 2;
+          column-gap: 24px;
+        }
+        #z-inhoud > * {
+          break-inside: avoid;
+          margin-bottom: 16px;
+        }
+        #z-inhoud > .note,
+        #z-inhoud > .knoppen,
+        #z-inhoud > #z-zin {
+          column-span: all;
         }
         #tijdlijn {
           display: block;
@@ -1648,7 +1694,7 @@
         .view[data-view='bediening']:not([hidden]) {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          grid-template-areas: 'kop kop' 'account account' 'noot noot' 'modus wie' 'doelen wie';
+          grid-template-areas: 'kop kop' 'account account' 'noot noot' 'modus wie' 'doelen wie' 'doelen huis';
           column-gap: 24px;
           row-gap: 16px;
           align-items: start;
@@ -1670,6 +1716,9 @@
         }
         .b-wievak {
           grid-area: wie;
+        }
+        .b-huisvak {
+          grid-area: huis;
         }
         /* Opbrengst op de wand (Wand-Opbrengst): drie kolommen, over de hele breedte. */
         .view.narrow.breed {
@@ -1957,6 +2006,29 @@
             <div class="eyebrow">Wie stuurt</div>
             <div class="card rows" id="b-wie"></div>
           </div>
+          <div class="stack b-huisvak">
+            <div class="eyebrow">Je huis</div>
+            <div class="card rows">
+              <a class="row rijlink" href="#aansluiting">
+                <span class="l"><b>De zon en je aansluiting</b><span>Panelen, hoofdzekering, stroomcontract, apparaten op zon</span></span>
+                <span class="pijl" aria-hidden="true">›</span>
+              </a>
+              <a class="row rijlink" href="#energie">
+                <span class="l"><b>Meters en prijzen</b><span>Voor Opbrengst</span></span>
+                <span class="pijl" aria-hidden="true">›</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- De zon en je aansluiting (besluit 103, schets Onboarding-Zon) -->
+        <section class="view narrow" data-view="aansluiting" hidden>
+          <div class="stack">
+            <a class="terug" href="#bediening">‹ Bediening</a>
+            <h1 class="title">De zon en je aansluiting</h1>
+            <p class="lead">Een paar vragen die ik niet uit Home Assistant haal. Weet je het niet, dan meet ik het zelf en vraag ik het later na.</p>
+          </div>
+          <div class="stack" id="z-inhoud"></div>
         </section>
       </main>
 

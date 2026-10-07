@@ -12,10 +12,12 @@
  */
 
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
+import { parseSiteConfig } from './config/schema.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
 import {
   fetchRegistries,
@@ -31,6 +33,7 @@ import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
+import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { LightSwitch } from './web/lights.js';
@@ -305,6 +308,38 @@ try {
   }
 }
 
+/*
+ * De zon en je aansluiting (besluit 103): de antwoorden uit de app vullen de
+ * configuratie aan waar die zwijgt, zoals de zekering en apparaten op zon. Bij
+ * het starten, en alleen als het resultaat door het eigen schema komt; anders
+ * draait de dienst zoals het bestand zegt. Wat het bestand noemt, gaat voor.
+ */
+const connectionStore = logDir !== '' ? new ConnectionStore(logDir) : null;
+const answersAtStart = (await connectionStore?.load()) ?? null;
+const baseConfig = site?.config ?? null;
+let connectionApplied: Pick<Applied, 'toegevoegd' | 'overgeslagen'> = { toegevoegd: [], overgeslagen: [] };
+if (site && answersAtStart) {
+  try {
+    const applied = withConnection(JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>, answersAtStart);
+    const checked = applied.toegevoegd.length > 0 ? parseSiteConfig(applied.raw, { knownStrategies: strategies.ids }) : null;
+    if (checked == null) connectionApplied = applied;
+    else if (checked.ok) {
+      site = { ...site, config: checked.config };
+      connectionApplied = applied;
+    } else {
+      const first = checked.problems[0];
+      connectionApplied = {
+        toegevoegd: [],
+        overgeslagen: [...applied.overgeslagen, `de antwoorden passen niet in de configuratie (${first ? `${first.path}: ${first.message}` : 'onbekend'})`],
+      };
+    }
+  } catch {
+    // Het bestand was net te lezen; lukt het nu niet, dan zoals het was.
+  }
+  for (const t of connectionApplied.toegevoegd) console.log(`Uit de app (aansluiting.json): ${t}`);
+  for (const t of connectionApplied.overgeslagen) console.warn(`Uit de app niet overgenomen: ${t}`);
+}
+
 const client = new HaClient({
   url: url!,
   token: token!,
@@ -376,9 +411,15 @@ async function readHouseRegisters(): Promise<void> {
   ]);
   houseRegisters = { floors, areas, devices, entities };
 }
+// Hoe vaak de zonnesensor een nieuwe waarde geeft (besluit 89), overdag gemeten.
+const solarPace = new SensorPace();
 client.on('stateChanged', (state: HaEntityState) => {
   if (inHouse(state)) houseStates.set(state.entity_id, state);
   allStates.set(state.entity_id, state);
+  const solar = baseConfig?.solarProduction;
+  if (solar && state.entity_id === solar.id) {
+    solarPace.note(Date.now(), Number(solar.attribute ? state.attributes[solar.attribute] : state.state));
+  }
 });
 setInterval(() => void readHouseRegisters().catch(() => {}), 15 * 60_000).unref();
 
@@ -614,6 +655,8 @@ if (webPort != null) {
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
+    // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
+    ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {
@@ -627,6 +670,34 @@ if (webPort != null) {
         } : {}),
     version,
   });
+}
+
+function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseConfig>) {
+  // De stroommeters en apparaten zoekt de dienst zelf; de pagina noemt nooit een entiteit.
+  const found = () => ({
+    fasen: findPhases(allStates.values()),
+    apparaten: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices) : [],
+  });
+  const solarId = base.solarProduction?.id ?? null;
+  return {
+    store,
+    found,
+    view: () =>
+      connectionView({
+        base,
+        found: found(),
+        applied: connectionApplied,
+        answersAtStart,
+        answers: store.current,
+        solar: solarId
+          ? {
+              naam: String(allStates.get(solarId)?.attributes['friendly_name'] ?? 'je zonnesensor'),
+              intervalS: solarPace.intervalS,
+              platform: houseRegisters?.entities.find((e) => e.entity_id === solarId)?.platform ?? null,
+            }
+          : null,
+      }),
+  };
 }
 
 console.log('─'.repeat(64));

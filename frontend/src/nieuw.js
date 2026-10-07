@@ -133,9 +133,9 @@ function buildNav() {
 function showView() {
   const want = (location.hash || '#thuis').slice(1).split('/')[0];
   // Het huis staat niet in het menu: je komt er door op het huis te tikken.
-  const id = NAV.some(([n]) => n === want) || ['huis', 'apparaten', 'energie'].includes(want) ? want : 'thuis';
+  const id = NAV.some(([n]) => n === want) || ['huis', 'apparaten', 'energie', 'aansluiting'].includes(want) ? want : 'thuis';
   for (const v of document.querySelectorAll('.view')) v.hidden = v.dataset.view !== id;
-  const menu = id === 'huis' || id === 'apparaten' ? 'thuis' : id === 'energie' ? 'opbrengst' : id;
+  const menu = id === 'huis' || id === 'apparaten' ? 'thuis' : id === 'energie' ? 'opbrengst' : id === 'aansluiting' ? 'bediening' : id;
   for (const a of document.querySelectorAll('.navitem')) {
     if (a.dataset.target === menu) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
@@ -150,6 +150,7 @@ function showView() {
     void loadReview();
   }
   if (id === 'energie') void loadEnergy();
+  if (id === 'aansluiting') void loadConnection();
   if (id === 'waarom' || id === 'thuis') void loadToday();
 }
 
@@ -1233,6 +1234,230 @@ function renderEnergy() {
 
 function energySay(text) {
   const p = $('e-zin');
+  if (p) p.textContent = text;
+}
+
+/* ------------------------------------------------------- de zon en je aansluiting */
+
+/*
+ * De zon en je aansluiting (besluit 103, schets Onboarding-Zon). Een paar vragen
+ * die de app niet uit Home Assistant haalt. De pagina stuurt alleen antwoorden;
+ * welke meters en apparaten erbij horen, zoekt de dienst zelf. Bewaren vraagt
+ * een beheerder. De regeling neemt het mee bij de volgende start, en alleen waar
+ * de configuratie van het huis het niet al vastlegt.
+ */
+let connInfo = null;
+let connDraft = null;
+
+async function loadConnection() {
+  $('z-inhoud').replaceChildren(el('p', { class: 'small muted', text: 'Even laden…' }));
+  try {
+    const res = await fetch('api/aansluiting');
+    const out = await res.json();
+    if (!res.ok) {
+      $('z-inhoud').replaceChildren(el('p', { class: 'small muted', text: out.fout ?? out.wachten ?? 'Niet beschikbaar.' }));
+      return;
+    }
+    connInfo = out;
+    const a = out.antwoorden;
+    connDraft = {
+      panelen: { ligging: a?.panelen.ligging ?? null, aantal: a?.panelen.aantal ?? null },
+      zekering: a?.zekering ?? null,
+      tarief: a?.tarief ?? null,
+      opZon: { ...(a?.opZon ?? {}) },
+    };
+    renderConnection();
+  } catch {
+    $('z-inhoud').replaceChildren(el('p', { class: 'small muted', text: 'Geen verbinding met Smart Climate.' }));
+  }
+}
+
+/** Een rij keuzes waarvan er één aan staat. */
+function choices(label, options, current, onPick, disabled = false) {
+  const box = el('div', { class: 'seg z-keuzes', role: 'group', 'aria-label': label });
+  for (const [value, text] of options) {
+    const b = el('button', { type: 'button', 'aria-pressed': String(JSON.stringify(value) === JSON.stringify(current)), text });
+    b.disabled = disabled;
+    b.addEventListener('click', () => onPick(value));
+    box.append(b);
+  }
+  return box;
+}
+
+/** Het huis van opzij, met de panelen op de kant die je kiest. */
+function panelHouse(side) {
+  const on = (s) => side === 'beide' || side === s;
+  const roof = (s) => (on(s) ? 'var(--warm)' : 'rgba(255,255,255,0.10)');
+  const svg = `<svg viewBox="0 0 220 120" role="img" aria-label="Het huis van opzij">
+    <rect x="40" y="62" width="140" height="44" rx="3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>
+    ${side === 'plat'
+      ? `<rect x="36" y="56" width="148" height="7" rx="2" fill="rgba(255,255,255,0.18)"/><rect x="62" y="46" width="96" height="9" rx="2" fill="var(--warm)"/>`
+      : `<polygon points="30,64 110,18 110,64" fill="${roof('voorkant')}" opacity="0.9"/><polygon points="110,18 190,64 110,64" fill="${roof('achterkant')}" opacity="0.9"/>
+         <polyline points="30,64 110,18 190,64" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>`}
+    <rect x="60" y="78" width="18" height="28" rx="2" fill="rgba(255,255,255,0.14)"/>
+    <line x1="10" y1="106" x2="210" y2="106" stroke="rgba(255,255,255,0.25)"/>
+    <text x="52" y="118" fill="var(--muted)" font-size="10">voorkant</text>
+    <text x="142" y="118" fill="var(--muted)" font-size="10">achterkant</text>
+  </svg>`;
+  const box = el('div', { class: 'z-huis' });
+  box.innerHTML = svg;
+  return box;
+}
+
+function everyText(s) {
+  if (s == null) return null;
+  if (s < 90) return 'elke minuut';
+  if (s < 5400) return `eens per ${Math.round(s / 60)} minuten`;
+  return `eens per ${Math.round(s / 3600)} uur`;
+}
+
+function renderConnection() {
+  const info = connInfo;
+  const d = connDraft;
+  const redraw = () => renderConnection();
+  const parts = [];
+
+  // Waar de panelen liggen (besluit 93): twee vragen, de rest meet de app.
+  const conf = info.configuratie;
+  parts.push(
+    el(
+      'div',
+      { class: 'card stack' },
+      el('h2', { text: 'Waar liggen je panelen?' }),
+      panelHouse(d.panelen.ligging),
+      choices(
+        'Waar liggen je panelen',
+        [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet']],
+        d.panelen.ligging,
+        (v) => ((d.panelen.ligging = v), redraw()),
+      ),
+      (() => {
+        const i = el('input', { class: 'veld z-aantal', type: 'number', inputmode: 'numeric', min: '1', max: '200', step: '1', value: d.panelen.aantal ?? '', placeholder: 'bijvoorbeeld 12', 'aria-label': 'Hoeveel panelen ongeveer' });
+        i.addEventListener('change', () => (d.panelen.aantal = i.value === '' ? null : Math.round(Number(i.value))));
+        return el('label', { class: 'stack', style: 'gap: 4px' }, el('span', { class: 'small', text: 'Hoeveel ongeveer? Mag leeg blijven.' }), i);
+      })(),
+      el('p', { class: 'small muted', text: 'De richting en de helling meet ik zelf, de eerste zonnige dagen, uit wat je panelen per minuut leveren. Daarna laat ik het zien en vraag ik of het klopt.' }),
+      conf.panelen.length ? el('p', { class: 'tiny', text: `Nu bekend: ${conf.panelen.join(' en ')}.` }) : null,
+    ),
+  );
+
+  // Hoe snel de zonnesensor is (besluit 89).
+  const z = info.zonnesensor;
+  if (z) {
+    const every = everyText(z.intervalS);
+    const chip = z.snelGenoeg == null ? ['', 'Ik meet het nog'] : z.snelGenoeg ? ['good', 'Snel genoeg'] : ['bad', 'Traag'];
+    const text =
+      z.intervalS == null
+        ? `${z.naam}: ik meet nog hoe vaak hij een nieuwe waarde geeft. Dat lukt overdag, als de zon schijnt.`
+        : z.snelGenoeg
+          ? `${z.merk ? `${z.merk}, ` : ''}${every} een nieuwe waarde. Dan zie ik een wolk aankomen en zet ik niet onnodig iets aan of uit.`
+          : `Je zonnesensor geeft ${every} een waarde. Met een lokale koppeling zie ik een wolk binnen een minuut, in plaats van pas daarna.`;
+    parts.push(
+      el(
+        'div',
+        { class: 'card stack' },
+        el('div', { class: 'tussen' }, el('h2', { text: 'Je zonnesensor' }), el('span', { class: `chip ${chip[0]}`.trim(), text: chip[1] })),
+        el('p', { class: 'small', style: 'color: var(--soft)', text }),
+        z.snelGenoeg === false && z.weg ? el('p', { class: 'tiny', text: `Zo kan het lokaal: ${z.weg}` }) : null,
+      ),
+    );
+  }
+
+  // De hoofdzekering (besluit 78): met de stroom per fase het tweede budget.
+  const fixedFuse = conf.zekering;
+  const fuse = fixedFuse ?? d.zekering;
+  const fuseNote = fixedFuse
+    ? 'Staat in de configuratie van het huis; die gaat voor.'
+    : info.gevonden.fasen.length === 0
+      ? 'Ik vond geen stroommeting per fase. Zonder die meting bewaar ik de zekering wel, maar rekent de regeling er nog niet mee.'
+      : d.zekering?.fasen === 3 && info.gevonden.fasen.length < 3
+        ? `Je meter meet nu ${info.gevonden.fasen.length === 1 ? 'één fase' : `${info.gevonden.fasen.length} fasen`}. Bij drie fasen rekent de regeling er pas mee als de meter er drie geeft.`
+        : 'Het staat op de hoofdschakelaar in de meterkast, of in de app van je netbeheerder.';
+  parts.push(
+    el(
+      'div',
+      { class: 'card stack' },
+      el('div', { class: 'tussen' }, el('h2', { text: 'Je hoofdzekering' }), fixedFuse ? el('span', { class: 'chip', text: 'Uit je configuratie' }) : null),
+      el('p', { class: 'small', style: 'color: var(--soft)', text: 'Je slimme meter meet de stroom per fase. Met de zekering erbij zet ik nooit zoveel tegelijk aan dat hij eruit springt.' }),
+      choices(
+        'Je hoofdzekering',
+        [[{ fasen: 1, ampere: 25 }, '1 × 25 A'], [{ fasen: 1, ampere: 35 }, '1 × 35 A'], [{ fasen: 3, ampere: 25 }, '3 × 25 A'], ['weetniet', 'Weet ik niet']],
+        fuse,
+        (v) => ((d.zekering = v), redraw()),
+        fixedFuse != null,
+      ),
+      el('p', { class: 'tiny', text: fuseNote }),
+    ),
+  );
+
+  // Het stroomcontract: vast of dynamisch (later stap E).
+  parts.push(
+    el(
+      'div',
+      { class: 'card stack' },
+      el('h2', { text: 'Je stroomcontract' }),
+      choices('Je stroomcontract', [['vast', 'Vast'], ['dynamisch', 'Dynamisch, per uur'], ['weetniet', 'Weet ik niet']], d.tarief, (v) => ((d.tarief = v), redraw())),
+      el('p', { class: 'small muted', text: 'Met een dynamisch contract kan ik later stroom gebruiken als hij goedkoop is. Wat stroom en gas kosten, staat bij Meters en prijzen.' }),
+      el('a', { class: 'linkknop', href: '#energie', text: 'Meters en prijzen' }),
+    ),
+  );
+
+  // Apparaten op zon (besluit 98): wat op afstand kan starten.
+  const fixed = new Set(conf.apparaten.map((a) => a.id));
+  const devs = el('div', { class: 'card stack' }, el('h2', { text: 'Apparaten op zon' }));
+  for (const a of info.gevonden.apparaten) {
+    const name = a.naam.toLowerCase();
+    if (fixed.has(a.id)) {
+      devs.append(
+        el('div', { class: 'row' }, el('div', { class: 'l' }, el('b', { text: a.naam }), el('span', { text: 'Start op zon; staat in de configuratie van het huis.' })), el('span', { class: 'chip good', text: 'Op zon' })),
+      );
+      continue;
+    }
+    devs.append(
+      el('p', { class: 'small', style: 'color: var(--soft)', text: `Ik vond een ${name} die op afstand kan starten. Mag ik hem laten beginnen als er zon over is? Hoe laat hij klaar moet zijn, kies je per keer.` }),
+      choices(`${a.naam} op zon`, [[true, 'Ja, op zon'], [false, 'Nee, ik start zelf']], d.opZon[a.id] ?? null, (v) => ((d.opZon[a.id] = v), redraw())),
+    );
+  }
+  for (const a of conf.apparaten) {
+    if (info.gevonden.apparaten.some((x) => x.id === a.id)) continue;
+    devs.append(el('div', { class: 'row' }, el('div', { class: 'l' }, el('b', { text: a.naam }), el('span', { text: 'Start op zon; staat in de configuratie van het huis.' })), el('span', { class: 'chip good', text: 'Op zon' })));
+  }
+  if (!info.gevonden.apparaten.length && !conf.apparaten.length) {
+    devs.append(el('p', { class: 'small muted', text: 'Ik vond nog geen apparaat dat op afstand kan starten.' }));
+  }
+  devs.append(el('p', { class: 'tiny', text: 'Alleen als jij op het apparaat "op afstand starten" aanzet. Een wasmachine of vaatwasser die dat kan, komt hier vanzelf bij. Tot Smart Climate echt schakelt, kijk ik alleen mee.' }));
+  parts.push(devs);
+
+  // Wat de regeling ervan gebruikt.
+  const r = info.inDeRegeling;
+  const status = [
+    ...r.toegevoegd.map((t) => `In de regeling: ${t}.`),
+    ...r.overgeslagen.map((t) => `Niet overgenomen: ${t}.`),
+    info.volgendeStart ? 'Wat je veranderde, neemt de regeling mee bij de volgende start van Smart Climate.' : null,
+  ].filter(Boolean);
+  if (status.length) parts.push(el('div', { class: 'note' }, ...status.map((t) => el('p', { class: 'small', text: t }))));
+
+  const save = button('Bewaren', async () => {
+    connSay('Even…');
+    try {
+      const opZon = Object.fromEntries(Object.entries(d.opZon).filter(([, v]) => typeof v === 'boolean'));
+      const res = await postDoor('api/aansluiting', { panelen: d.panelen, zekering: d.zekering, tarief: d.tarief, opZon });
+      const out = await res.json();
+      if (res.status === 403) return connSay('Alleen een beheerder in Home Assistant kan dit bewaren.');
+      if (!res.ok) return connSay(out.fout ?? 'Niet bewaard.');
+      connInfo = out;
+      renderConnection();
+      connSay(out.volgendeStart ? 'Bewaard. De regeling neemt het mee bij de volgende start.' : 'Bewaard.');
+    } catch {
+      connSay('Geen verbinding met Smart Climate.');
+    }
+  });
+  parts.push(el('div', { class: 'knoppen' }, save, el('a', { class: 'knop', href: '#bediening', text: 'Naar Bediening' })), el('p', { class: 'small', id: 'z-zin', 'aria-live': 'polite', text: '' }));
+  $('z-inhoud').replaceChildren(...parts);
+}
+
+function connSay(text) {
+  const p = $('z-zin');
   if (p) p.textContent = text;
 }
 

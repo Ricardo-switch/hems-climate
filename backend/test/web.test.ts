@@ -26,6 +26,7 @@ import { LayoutStore, type Layout } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
+import { ConnectionStore, connectionView, type ConnectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -93,6 +94,7 @@ async function start(options: {
   uitstel?: UitstelStore;
   energy?: { store: EnergyStore; source: EnergySource };
   scenePicturesDir?: string;
+  connection?: { store: ConnectionStore; view: () => ConnectionView; found: () => { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[] } };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -117,6 +119,7 @@ async function start(options: {
         ...(options.uitstel ? { uitstel: options.uitstel } : {}),
         ...(options.energy ? { energy: options.energy } : {}),
         ...(options.scenePicturesDir ? { scenePicturesDir: options.scenePicturesDir } : {}),
+        ...(options.connection ? { connection: options.connection } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -205,6 +208,45 @@ describe('Opbrengst: meters, prijzen en terugkijken (besluit 102)', () => {
 
   it('bewaren vraagt een beheerder', () => {
     expect(DOOR_ROLES['/api/energie']).toBe('beheerder');
+  });
+});
+
+describe('De zon en je aansluiting (besluit 103)', () => {
+  const found = {
+    fasen: [{ id: 'L1', current: 'sensor.p1_current_l1' }] as FoundPhase[],
+    apparaten: [{ id: 'droger', naam: 'Droger', soort: 'droger', remoteStart: 'binary_sensor.droger_remote_start', estimatedW: 700 }] as FoundAppliance[],
+  };
+
+  it('bewaart alleen antwoorden, en de pagina krijgt geen entiteiten', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-aansluiting-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const store = new ConnectionStore(logDir);
+    const view = () =>
+      connectionView({ base: exampleSite, found, applied: { toegevoegd: [], overgeslagen: [] }, answersAtStart: null, answers: store.current, solar: null });
+    const { base } = await start({ connection: { store, view, found: () => found } });
+    const first = (await (await fetch(`${base}/api/aansluiting`)).json()) as { antwoorden: unknown; gevonden: { apparaten: unknown[] } };
+    expect(first.antwoorden).toBeNull();
+    expect(first.gevonden.apparaten).toEqual([{ id: 'droger', naam: 'Droger', soort: 'droger' }]);
+
+    const saved = await fetch(`${base}/api/aansluiting`, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ zekering: { fasen: 1, ampere: 35 }, opZon: { droger: true } }),
+    });
+    expect(saved.status).toBe(200);
+    const after = (await saved.json()) as { volgendeStart: boolean };
+    expect(after.volgendeStart).toBe(true);
+    expect(JSON.stringify(after)).not.toMatch(/sensor\./);
+    expect(JSON.parse(await readFile(join(logDir, 'aansluiting.json'), 'utf-8'))).toMatchObject({ apparaten: [{ id: 'droger', opZon: true }] });
+
+    const bad = await fetch(`${base}/api/aansluiting`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ opZon: { tv: true } }) });
+    expect(bad.status).toBe(400);
+  });
+
+  it('bestaat niet zonder de deur, en vraagt een beheerder', async () => {
+    const { base } = await start({});
+    expect((await fetch(`${base}/api/aansluiting`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
+    expect(DOOR_ROLES['/api/aansluiting']).toBe('beheerder');
   });
 });
 

@@ -43,6 +43,7 @@ import { LayoutStore } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
+import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 
 /**
  * Een Home Assistant met een Energie-dashboard (besluit 102): net, zon, gas en
@@ -242,6 +243,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let layoutStore: LayoutStore;
   let uitstel: UitstelStore;
   let energyStore: EnergyStore;
+  let connStore: ConnectionStore;
   const sessions = new SessionStore();
   let sessionId = '';
   const pageErrors: string[] = [];
@@ -264,6 +266,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     layoutStore = new LayoutStore({ logDir: dir, known: () => knownForLayout(exampleSite, houseRegisters, houseStates) });
     uitstel = new UitstelStore({ logDir: dir, config: exampleSite, status: () => 'waiting' });
     energyStore = new EnergyStore(dir);
+    // De zon en je aansluiting (besluit 103): de droger staat in de configuratie, een vaatwasser is nieuw.
+    connStore = new ConnectionStore(dir);
+    const connFound = {
+      fasen: [{ id: 'L1', current: 'sensor.p1_meter_current_phase_1' }] as FoundPhase[],
+      apparaten: [
+        { id: 'droger', naam: 'Droger', soort: 'droger', remoteStart: 'binary_sensor.droger_remote', estimatedW: 700 },
+        { id: 'vaatwasser', naam: 'Vaatwasser', soort: 'vaatwasser', remoteStart: 'binary_sensor.vaatwasser_remote', estimatedW: 1800 },
+      ] as FoundAppliance[],
+    };
 
     // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
     let port: number;
@@ -294,6 +305,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           uitstel,
           energy: { store: energyStore, source: ENERGY_SOURCE },
+          connection: {
+            store: connStore,
+            found: () => connFound,
+            view: () =>
+              connectionView({
+                base: exampleSite,
+                found: connFound,
+                applied: { toegevoegd: [], overgeslagen: [] },
+                answersAtStart: null,
+                answers: connStore.current,
+                solar: { naam: 'Zonnepanelen', intervalS: 61, platform: 'solaredge_modbus_multi' },
+              }),
+          },
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
           // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
           access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
@@ -587,6 +611,25 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Ingelogd: geen knop "Inloggen" bovenin.
       expect(await p.locator('#inlog-chip').isVisible()).toBe(false);
       expect(await layoutProblems(p), `Bediening in ${stand}`).toEqual([]);
+      // De zon en je aansluiting (besluit 103), via Je huis in Bediening.
+      await p.locator('.b-huisvak a', { hasText: 'De zon en je aansluiting' }).click();
+      await p.locator('#z-inhoud h2', { hasText: 'Waar liggen je panelen?' }).waitFor();
+      // De zekering en de droger staan in de configuratie; die gaan voor.
+      expect(await p.locator('#z-inhoud button[aria-pressed="true"]', { hasText: '1 × 35 A' }).isDisabled()).toBe(true);
+      expect(await p.locator('#z-inhoud').textContent()).toContain('Start op zon; staat in de configuratie van het huis.');
+      expect(await p.locator('#z-inhoud').textContent()).toContain('Snel genoeg');
+      expect(await layoutProblems(p), `Zon en aansluiting in ${stand}`).toEqual([]);
+      await p.locator('#z-inhoud button', { hasText: 'Beide kanten' }).click();
+      // Een invoerveld in een kolom groeit niet in de hoogte.
+      expect(await p.getByLabel('Hoeveel panelen ongeveer').evaluate((e) => e.getBoundingClientRect().height)).toBeLessThan(60);
+      await p.getByLabel('Hoeveel panelen ongeveer').fill('12');
+      await p.getByLabel('Hoeveel panelen ongeveer').press('Tab');
+      await p.locator('#z-inhoud [aria-label="Vaatwasser op zon"] button', { hasText: 'Ja, op zon' }).click();
+      await p.locator('#z-inhoud button', { hasText: 'Bewaren' }).click();
+      await p.locator('#z-zin').filter({ hasText: 'Bewaard' }).waitFor();
+      expect(connStore.current).toMatchObject({ panelen: { ligging: 'beide', aantal: 12 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
+      expect(await p.locator('#z-inhoud .note').textContent()).toContain('bij de volgende start');
+      expect(await layoutProblems(p), `Zon en aansluiting bewaard in ${stand}`).toEqual([]);
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.
       await p.goto(`${baseUrl}/nieuw.html#opbrengst`);

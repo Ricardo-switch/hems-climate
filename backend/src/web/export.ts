@@ -32,6 +32,7 @@ import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 import { RUNS_FILE } from '../adapters/runs.js';
 import { FEEDBACK_FILE } from './feedback.js';
 import { LAYOUT_FILE } from './layout.js';
+import { CONNECTION_FILE } from './aansluiting.js';
 
 const BLOCK = 512;
 
@@ -107,6 +108,12 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
     () => true,
     () => false,
   );
+  // De antwoorden over de aansluiting ook (besluit 103): ze vullen aan wat de regeling las.
+  const connection = join(logDir, CONNECTION_FILE);
+  const hasConnection = await stat(connection).then(
+    () => true,
+    () => false,
+  );
   return {
     decisionLog,
     everything: [
@@ -115,6 +122,7 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
       ...(hasRuns ? [runs] : []),
       ...(hasFeedback ? [feedback] : []),
       ...(hasLayout ? [layout] : []),
+      ...(hasConnection ? [connection] : []),
     ],
   };
 }
