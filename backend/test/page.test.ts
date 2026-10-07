@@ -462,8 +462,24 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       if (stand === 'portret') {
         await p.goto(`${baseUrl}/nieuw.html#huis`);
         await p.locator('#hu-lijst button', { hasText: 'Indeling bewerken' }).click();
+        // Een huis dat laat binnenkomt, terwijl je typt, wist het veld niet (de
+        // CI ving dat, 7 oktober): hier komt het expres pas na het typen.
+        let release = () => {};
+        const held = new Promise<void>((r) => (release = r));
+        await p.route('**/api/huis', async (route) => {
+          await held;
+          await route.continue();
+        });
+        const late = p.waitForResponse((r) => new URL(r.url()).pathname === '/api/huis');
+        await p.evaluate('void loadHouse(true)');
         const etage = p.getByLabel('Naam van Begane grond');
         await etage.fill('Beneden');
+        release();
+        await late;
+        await p.waitForTimeout(100);
+        await p.unroute('**/api/huis');
+        // Hetzelfde veld, nog met de cursor erin en wat je typte.
+        expect(await p.evaluate('document.activeElement?.value')).toBe('Beneden');
         await etage.press('Tab');
         await p.locator('#hu-bewerk-status').filter({ hasText: 'bewaard' }).waitFor();
         // Wat nergens hing, kan uit de app, en weer terug: op een plek naar keuze of zoals het was.

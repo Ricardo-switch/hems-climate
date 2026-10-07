@@ -840,6 +840,20 @@ function renderSession() {
 let house = null;
 let houseAt = 0;
 let houseTried = false;
+// Of er in een veld van het indelen getypt wordt dat nog niet bewaard is. Een
+// verversing die dan binnenkomt, bijvoorbeeld het laden bij het openen van het
+// huis, tekent niet opnieuw: anders is wat je typte weg voor het bewaren (de CI
+// ving dat, 7 oktober).
+let typing = false;
+for (const [type, value] of [
+  ['input', true],
+  ['change', false],
+  ['focusout', false],
+]) {
+  document.addEventListener(type, (ev) => {
+    if (editing && ev.target instanceof HTMLInputElement && ev.target.closest('#hu-lijst, #hu-blad')) typing = value;
+  });
+}
 
 async function loadHouse(force = false) {
   if (!force && Date.now() - houseAt < 20_000) return;
@@ -856,7 +870,7 @@ async function loadHouse(force = false) {
   // start, wist het huis niet: de laatste stand blijft staan (besluit 82).
   if (fresh || !house) house = fresh;
   houseTried = true;
-  renderHouse();
+  if (!(editing && typing)) renderHouse();
 }
 
 const floorKey = (f) => f.id ?? 'geen';
