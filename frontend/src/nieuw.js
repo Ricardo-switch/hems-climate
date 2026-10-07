@@ -1059,7 +1059,9 @@ function renderEnergy() {
     const noPrice = v.prijzen.stroom == null && v.prijzen.gas == null;
     const why = !noPrice
       ? ''
-      : dp.some((x) => x.kostenMeter)
+      : dp.some((x) => x.kostenIsMeter)
+        ? ' Bij de kosten staat de meter zelf als kostensensor, waardoor Home Assistant elke kWh en m³ als een euro telt. Vul hieronder je prijzen in; in Home Assistant pas je het aan bij Energie.'
+        : dp.some((x) => x.kostenMeter)
         ? ' Het houdt de kosten bij met een eigen kostensensor; die prijs kan ik niet overnemen, vul hem hieronder in.'
         : dp.some((x) => x.prijsEntiteit)
           ? ' De prijs komt uit een entiteit die nu geen getal heeft; vul hem hieronder in.'

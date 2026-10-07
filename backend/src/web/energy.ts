@@ -89,8 +89,10 @@ export function importFromPrefs(
   if (!isRecord(prefs) || !Array.isArray(prefs['energy_sources'])) return null;
   const nameOf = (id: string) => meters.find((m) => m.id === id)?.naam ?? id;
   // Een vast getal, of de stand van de entiteit die de prijs geeft.
-  const priceIn = (x: Record<string, unknown>) =>
-    price(x['number_energy_price']) ?? (typeof x['entity_energy_price'] === 'string' ? price(entityNumber(x['entity_energy_price'])) : null);
+  const priceIn = (x: Record<string, unknown>, suffix = '') => {
+    const entity = x[`entity_energy_price${suffix}`];
+    return price(x[`number_energy_price${suffix}`]) ?? (typeof entity === 'string' ? price(entityNumber(entity)) : null);
+  };
   const afname: string[] = [];
   const terug: string[] = [];
   const zon: string[] = [];
@@ -101,8 +103,12 @@ export function importFromPrefs(
   for (const src of prefs['energy_sources']) {
     if (!isRecord(src)) continue;
     if (src['type'] === 'grid') {
-      const from = Array.isArray(src['flow_from']) ? src['flow_from'] : [src];
-      const to = Array.isArray(src['flow_to']) ? src['flow_to'] : [src];
+      // Twee opbouwen: de oude met lijsten `flow_from` en `flow_to`, de nieuwe
+      // (2025) met een netbron per tarief, afname en teruglevering samen, en de
+      // prijs van teruglevering in velden met `_export` erachter.
+      const flat = !Array.isArray(src['flow_from']);
+      const from: unknown[] = flat ? [src] : (src['flow_from'] as unknown[]);
+      const to: unknown[] = flat ? [src] : Array.isArray(src['flow_to']) ? src['flow_to'] : [];
       for (const f of from) {
         const id = isRecord(f) ? str(f['stat_energy_from']) : null;
         if (id && !afname.includes(id)) afname.push(id);
@@ -111,7 +117,7 @@ export function importFromPrefs(
       for (const t of to) {
         const id = isRecord(t) ? str(t['stat_energy_to']) : null;
         if (id && !terug.includes(id)) terug.push(id);
-        if (isRecord(t)) terugPrijs ??= priceIn(t);
+        if (isRecord(t)) terugPrijs ??= priceIn(t, flat ? '_export' : '');
       }
     } else if (src['type'] === 'solar') {
       const id = str(src['stat_energy_from']);
@@ -144,24 +150,47 @@ export function importFromPrefs(
  * getal, een entiteit met de prijs, of een sensor met de totale kosten. Zo kan
  * de app zeggen waarom een prijs niet mee kwam.
  */
-export function pricesInPrefs(prefs: unknown): { readonly soort: string; readonly meter: string | null; readonly prijs: number | null; readonly prijsEntiteit: string | null; readonly kostenMeter: string | null }[] {
+export interface DashboardPrice {
+  readonly soort: string;
+  readonly meter: string | null;
+  readonly prijs: number | null;
+  readonly prijsEntiteit: string | null;
+  readonly kostenMeter: string | null;
+  /**
+   * De kostensensor is de meter zelf: dan telt Home Assistant elke kWh of m³
+   * als een euro. Zo stond het op 7 oktober in dit huis.
+   */
+  readonly kostenIsMeter: boolean;
+}
+
+export function pricesInPrefs(prefs: unknown): DashboardPrice[] {
   if (!isRecord(prefs) || !Array.isArray(prefs['energy_sources'])) return [];
-  const out: ReturnType<typeof pricesInPrefs> = [];
-  const add = (soort: string, x: unknown, key: string) => {
+  const out: DashboardPrice[] = [];
+  const text = (v: unknown) => (typeof v === 'string' ? v : null);
+  const add = (soort: string, x: unknown, key: string, suffix = '', costKey = 'stat_cost') => {
     if (!isRecord(x)) return;
+    const meter = text(x[key]);
+    const cost = text(x[costKey]);
+    const n = x[`number_energy_price${suffix}`];
     out.push({
       soort,
-      meter: typeof x[key] === 'string' ? x[key] : null,
-      prijs: typeof x['number_energy_price'] === 'number' ? x['number_energy_price'] : null,
-      prijsEntiteit: typeof x['entity_energy_price'] === 'string' ? x['entity_energy_price'] : null,
-      kostenMeter: typeof x['stat_cost'] === 'string' ? x['stat_cost'] : typeof x['stat_compensation'] === 'string' ? x['stat_compensation'] : null,
+      meter,
+      prijs: typeof n === 'number' ? n : null,
+      prijsEntiteit: text(x[`entity_energy_price${suffix}`]),
+      kostenMeter: cost,
+      kostenIsMeter: cost != null && cost === meter,
     });
   };
   for (const src of prefs['energy_sources']) {
     if (!isRecord(src)) continue;
     if (src['type'] === 'grid') {
-      for (const f of Array.isArray(src['flow_from']) ? src['flow_from'] : [src]) add('afname', f, 'stat_energy_from');
-      for (const t of Array.isArray(src['flow_to']) ? src['flow_to'] : []) add('teruglevering', t, 'stat_energy_to');
+      if (Array.isArray(src['flow_from'])) {
+        for (const f of src['flow_from']) add('afname', f, 'stat_energy_from');
+        for (const t of Array.isArray(src['flow_to']) ? src['flow_to'] : []) add('teruglevering', t, 'stat_energy_to', '', 'stat_compensation');
+      } else {
+        add('afname', src, 'stat_energy_from');
+        if (typeof src['stat_energy_to'] === 'string') add('teruglevering', src, 'stat_energy_to', '_export', 'stat_compensation');
+      }
     } else if (src['type'] === 'gas') add('gas', src, 'stat_energy_from');
   }
   return out;

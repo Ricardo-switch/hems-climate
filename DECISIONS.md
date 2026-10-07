@@ -4463,6 +4463,15 @@ met "Overnemen" uit Home Assistant en zelf kiezen. Zonder meters zegt
 Opbrengst eerst waar je ze instelt. De oude cijfers van het meekijken (−% voor
 de airco's) staan nu in die onderste kaart.
 
+*Wat het dashboard van dit huis liet zien (7 oktober):* Home Assistant gebruikt
+de nieuwe opbouw, met een netbron per tarief (afname en teruglevering samen)
+en de prijs van teruglevering in velden met `_export`; het overnemen leest
+beide opbouwen. En bij de kosten staat de meter zelf als kostensensor
+(`stat_cost` is de kWh-meter), waardoor Home Assistant elke kWh en m³ als een
+euro telt. Dat neemt Smart Climate niet over: Meters en prijzen zegt het, en
+vraagt de prijzen. `GET /api/energie` geeft het dashboard ook letterlijk terug
+(`dashboard`), om zoiets na te gaan.
+
 ---
 
 ## Wat nog een besluit wacht

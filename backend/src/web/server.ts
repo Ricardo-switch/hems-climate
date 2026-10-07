@@ -32,7 +32,7 @@ import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
-import { importFromPrefs, pricesInPrefs, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
+import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
 import { ask, parseQuestion } from './assistant.js';
@@ -851,7 +851,7 @@ export class WebServer {
     }
     // Wat er staat, wat Home Assistant voorstelt, en de meters om uit te kiezen.
     let voorstel = null;
-    let dashboardPrijzen: ReturnType<typeof pricesInPrefs> = [];
+    let dashboardPrijzen: readonly DashboardPrice[] = [];
     let dashboard: unknown = null;
     let meters: readonly MeterOption[] = [];
     let fout: string | null = null;

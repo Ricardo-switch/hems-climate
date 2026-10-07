@@ -183,9 +183,38 @@ describe('meters en prijzen in de app', () => {
   it('zegt per meter waar het dashboard zijn prijs vandaan haalt', () => {
     const p = { energy_sources: [{ type: 'grid', flow_from: [{ stat_energy_from: 'sensor.a', stat_cost: 'sensor.a_kosten', number_energy_price: null, entity_energy_price: null }], flow_to: [{ stat_energy_to: 'sensor.t', number_energy_price: 0.09 }] }] };
     expect(pricesInPrefs(p)).toEqual([
-      { soort: 'afname', meter: 'sensor.a', prijs: null, prijsEntiteit: null, kostenMeter: 'sensor.a_kosten' },
-      { soort: 'teruglevering', meter: 'sensor.t', prijs: 0.09, prijsEntiteit: null, kostenMeter: null },
+      { soort: 'afname', meter: 'sensor.a', prijs: null, prijsEntiteit: null, kostenMeter: 'sensor.a_kosten', kostenIsMeter: false },
+      { soort: 'teruglevering', meter: 'sensor.t', prijs: 0.09, prijsEntiteit: null, kostenMeter: null, kostenIsMeter: false },
     ]);
+  });
+
+  it('leest de nieuwe opbouw van het dashboard: een netbron per tarief, met de prijs van teruglevering apart', () => {
+    // Zoals Home Assistant het op 7 oktober in dit huis gaf, met prijzen erbij.
+    const p = {
+      energy_sources: [
+        {
+          type: 'grid',
+          stat_energy_from: 'sensor.p1_meter_energy_import_tariff_2',
+          stat_cost: 'sensor.p1_meter_energy_import_tariff_2',
+          entity_energy_price: null,
+          number_energy_price: null,
+          stat_energy_to: 'sensor.p1_meter_energy_export_tariff_1',
+          stat_compensation: 'sensor.p1_meter_energy_export_tariff_1',
+          number_energy_price_export: 0.07,
+        },
+        { type: 'grid', stat_energy_from: 'sensor.p1_meter_energy_import_tariff_1', number_energy_price: 0.27, stat_energy_to: 'sensor.p1_meter_energy_export_tariff_2' },
+        { type: 'gas', stat_energy_from: 'sensor.gas_meter_gas', stat_cost: 'sensor.gas_meter_gas' },
+      ],
+    };
+    const s = importFromPrefs(p)!;
+    expect(s.net).toEqual({
+      afname: ['sensor.p1_meter_energy_import_tariff_2', 'sensor.p1_meter_energy_import_tariff_1'],
+      teruglevering: ['sensor.p1_meter_energy_export_tariff_1', 'sensor.p1_meter_energy_export_tariff_2'],
+    });
+    expect(s.prijzen).toEqual({ stroom: 0.27, teruglevering: 0.07, gas: null, vastPerMaand: null });
+    const why = pricesInPrefs(p);
+    expect(why.filter((x) => x.kostenIsMeter).map((x) => x.soort)).toEqual(['afname', 'teruglevering', 'gas']);
+    expect(why.find((x) => x.meter === 'sensor.p1_meter_energy_export_tariff_1')?.prijs).toBe(0.07);
   });
 
   it('neemt een prijs uit een entiteit over met de stand van nu', () => {
