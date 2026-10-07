@@ -9,6 +9,7 @@
 
 import type { Geometry } from '../core/model.js';
 import { clearSkyOnPlaneWm2, incidenceDeg, sunOnPlane, sunPosition } from '../core/sun.js';
+import { factorFor, type SolarLearned } from './solar-learn.js';
 
 export interface Location {
   readonly latDeg: number;
@@ -41,6 +42,16 @@ export interface SunReport {
   }[];
   /** Alle vlakken samen bij een heldere lucht, afgekapt op de omvormer. */
   readonly heldereLuchtW: number;
+  /**
+   * Waar de lijn voor een heldere lucht vandaan komt: geleerd uit de eigen
+   * opbrengst, of nog een schatting (besluiten 88 en 93). `zin` is het
+   * onderschrift voor de grafiek.
+   */
+  readonly heldereLucht: {
+    readonly bron: 'geleerd' | 'geschat';
+    readonly dagen: number;
+    readonly zin: string;
+  };
   /** Per kwartier van vandaag, van middernacht tot middernacht. */
   readonly kwartieren: readonly { readonly tMs: number; readonly heldereLuchtW: number }[];
   /**
@@ -60,21 +71,28 @@ export interface SunReport {
 }
 
 /**
- * Hoeveel van de wattpiek de panelen bij een heldere lucht halen: warmte,
- * kabels en de omvormer kosten wat. Een begin; het huis leert het echte getal
- * uit zijn eigen opbrengst (besluit 93).
+ * Hoeveel van de wattpiek de panelen bij een heldere lucht halen, zolang het
+ * huis het nog niet zelf heeft geleerd: warmte, kabels en de omvormer kosten
+ * wat. Daarna neemt de geleerde factor per zonnestand het over (besluit 93,
+ * `solar-learn.ts`).
  */
 const PERFORMANCE = 0.85;
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-function clearSkyW(geometry: Geometry, location: Location, ms: number): number {
+function clearSkyW(geometry: Geometry, location: Location, ms: number, learned: SolarLearned | null): number {
   const sun = sunPosition(ms, location.latDeg, location.lonDeg);
-  const total = geometry.solarPlanes.reduce(
-    (sum, p) => sum + (clearSkyOnPlaneWm2(sun, p) / 1000) * p.peakW * PERFORMANCE,
-    0,
-  );
+  const { factor } = factorFor(learned, sun, PERFORMANCE);
+  const total = geometry.solarPlanes.reduce((sum, p) => sum + (clearSkyOnPlaneWm2(sun, p) / 1000) * p.peakW * factor, 0);
   return Math.round(Math.min(total, geometry.inverterMaxW ?? Infinity));
+}
+
+function clearSkyCaption(learned: SolarLearned | null): SunReport['heldereLucht'] {
+  if (learned != null && learned.overall != null) {
+    const dagen = learned.days;
+    return { bron: 'geleerd', dagen, zin: `Zon bij heldere lucht, geleerd uit ${dagen} ${dagen === 1 ? 'dag' : 'dagen'}` };
+  }
+  return { bron: 'geschat', dagen: learned?.days ?? 0, zin: 'Zon bij heldere lucht, nog geschat' };
 }
 
 export function sunReport(
@@ -82,8 +100,10 @@ export function sunReport(
   location: Location,
   nowMs: number,
   dayStartMs: number,
+  learned: SolarLearned | null = null,
 ): SunReport {
   const sun = sunPosition(nowMs, location.latDeg, location.lonDeg);
+  const { factor } = factorFor(learned, sun, PERFORMANCE);
   const facades = geometry.facades.map((f) => {
     const plane = { azimuthDeg: f.azimuthDeg, tiltDeg: 90 };
     const angle = incidenceDeg(sun, plane);
@@ -102,12 +122,12 @@ export function sunReport(
     hellingGraden: p.tiltDeg,
     wattpiek: p.peakW,
     bron: p.source,
-    heldereLuchtW: Math.round((clearSkyOnPlaneWm2(sun, p) / 1000) * p.peakW * PERFORMANCE),
+    heldereLuchtW: Math.round((clearSkyOnPlaneWm2(sun, p) / 1000) * p.peakW * factor),
   }));
   const quarters: { tMs: number; heldereLuchtW: number }[] = [];
   for (let t = dayStartMs; t < dayStartMs + 24 * 3_600_000; t += 15 * 60_000) {
     // Het midden van het kwartier, zoals het dagoverzicht het gemiddelde neemt.
-    quarters.push({ tMs: t, heldereLuchtW: clearSkyW(geometry, location, t + 7.5 * 60_000) });
+    quarters.push({ tMs: t, heldereLuchtW: clearSkyW(geometry, location, t + 7.5 * 60_000, learned) });
   }
   // Op- en ondergang en het hoogste punt van vandaag, minuut voor minuut.
   let opMs: number | null = null;
@@ -146,7 +166,8 @@ export function sunReport(
     },
     gevels: facades,
     panelen: planes,
-    heldereLuchtW: clearSkyW(geometry, location, nowMs),
+    heldereLuchtW: clearSkyW(geometry, location, nowMs, learned),
+    heldereLucht: clearSkyCaption(learned),
     kwartieren: quarters,
   };
 }

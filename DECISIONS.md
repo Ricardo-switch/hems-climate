@@ -3802,6 +3802,31 @@ app volgt eruit: een gevel meten uit een zonnesensor kan alleen als die vrij op
 de gevel hangt, en dat vraagt de app eerst ("hangt hij onder een goot of
 overstek?") voordat hij de richting eruit afleidt.
 
+*Aangevuld 7 oktober 2026: de lijn voor een heldere lucht is geleerd.* Naast
+de echte opbrengst van 26 dagen (10 september tot 6 oktober) bleek het model met
+zijn vaste 0,85 zo'n 20 tot 40% te laag: op de helderste kwartieren haalden de
+panelen 5 tot 25% méér dan het model zonder enig verlies, en bij een lage zon in
+het westen bijna de helft meer. Het model telt het verstrooide licht bij een
+lage zon te zuinig. De lijn heet nu geleerd:
+
+- **Per afgesloten dag de zon per kwartier,** uit het beslislogboek, bewaard in
+  `zon-kwartieren.json` in de logmap. Gewone wattages, zonder de ligging van het
+  huis; die blijft alleen in het geheugen.
+- **Per vak van de hemel** (15° richting, 5° hoogte) een factor op het model: de
+  op één na beste dag, zodat één wolkenrand die de zon even versterkt niet als
+  maximum telt. Pas na vijf dagen in een vak; daarbuiten het midden van de
+  geleerde vakken. Afgekapt door de omvormer telt niet mee.
+- **Lager dan het midden pas na vijftien dagen:** echte schaduw komt elke dag
+  terug, een reeks bewolkte dagen niet. In één najaar schuift de zon sneller
+  door de vakken, dus schaduw herkennen gaat langzaam. Dat is de voorzichtige
+  kant: tot dan blijft de lijn op het midden.
+- **De grafiek zegt het erbij:** "geleerd uit 26 dagen", of "nog geschat"
+  zolang er niets geleerd is (88). Een nieuw huis begint bij de schatting.
+
+Uitkomst voor dit huis: het midden is 0,99 in plaats van 0,85, met per vak
+0,89 tot 1,47. Onder 5° hoogte blijft het model het zwakst; dat vak leert pas
+wat als de zon er op heldere dagen genoeg langskomt.
+
 ---
 
 ## 94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app

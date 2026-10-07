@@ -577,6 +577,8 @@ function renderToday() {
   const top = t.kwartieren.reduce((m, k) => ((k.zonW ?? 0) > (m?.zonW ?? -1) ? k : m), null);
   $('v-piek').textContent = top && top.zonW > 0 ? `piek ${kw(top.zonW)} om ${hhmm(top.tMs + 450_000)}` : 'nog geen zon';
   $('v-helder').hidden = cpts.length < 2;
+  // Geleerd of nog geschat: de dienst zegt het (besluiten 88, 93).
+  if (sunInfo?.heldereLucht?.zin) $('v-helder-zin').textContent = sunInfo.heldereLucht.zin;
   $('h-vandaag').hidden = false;
 
   // Wat de zon vandaag opleverde.

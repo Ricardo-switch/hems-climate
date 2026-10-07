@@ -29,6 +29,7 @@ import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
 import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
+import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import { ask, parseQuestion, residentRooms } from './assistant.js';
 import { sunReport, type Location } from './sun.js';
@@ -293,6 +294,7 @@ export class WebServer {
   readonly #server: Server;
   readonly #listeners = new Set<Listener>();
   #today: TodayCache | null = null;
+  #solar: SolarHistory | null = null;
 
   constructor(options: WebOptions) {
     this.#options = {
@@ -515,8 +517,20 @@ export class WebServer {
         });
         return;
       }
+      // Wat de panelen werkelijk halen, geleerd uit de afgesloten dagen van het
+      // logboek. Zonder logboek, of als dat lezen faalt, blijft het een schatting.
+      let learned = null;
+      if (logDir != null) {
+        this.#solar ??= new SolarHistory({ logDir });
+        try {
+          await this.#solar.refresh();
+        } catch {
+          // Dan met wat er al was.
+        }
+        learned = learnSolar(this.#solar.current, config.geometry, location);
+      }
       const now = Date.now();
-      sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone)));
+      sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone), learned));
       return;
     }
 
