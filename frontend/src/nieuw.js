@@ -1887,28 +1887,67 @@ function lampColour(d, say, live) {
 }
 
 /** De scènes van de ruimte, uit Hue (besluit 100): één tik zet alle lampen ervan. */
-function roomScenes(room, say, live) {
-  const grid = el(
-    'div',
-    { class: 'scenes' },
-    ...room.scenes.map((sc) => {
-      // In een eigen span, zodat een lange naam uit Hue afbreekt in plaats van uit te steken.
-      const b = el('button', { type: 'button', 'aria-pressed': String(sc.actief) }, el('span', { text: sc.naam }));
-      b.disabled = !live;
-      b.addEventListener('click', async () => {
-        say('Even…');
-        const fout = await switchLights({ id: sc.id }, 'api/scene');
-        say(fout ?? `Scène ${sc.naam} in de ${room.naam.toLowerCase()}.`);
-      });
-      return b;
-    }),
-  );
+/** Welke scènelijsten helemaal open staan, per lamp en groep. */
+const scenesOpen = new Set();
+const SCENES_SHOWN = 6;
+
+/** Het bolletje van een scène: zijn kleuren, of een zacht verloop als die nog onbekend zijn. */
+function sceneDot(sc) {
+  const c = sc.kleuren ?? [];
+  const bg = c.length === 0 ? 'linear-gradient(135deg, var(--warm), var(--violet))' : c.length === 1 ? c[0] : `conic-gradient(from 210deg, ${[...c, c[0]].join(', ')})`;
+  return el('i', { class: 'scene-dot', 'aria-hidden': 'true', style: `background: ${bg}` });
+}
+
+/*
+ * De scènes bij een lamp (besluit 100): die van zijn eigen Hue-groep, zodat
+ * "Energie" van de border en van het tuinhuis niet naast elkaar staan. Hoort de
+ * lamp bij geen groep met scènes, dan die van de ruimte, per groep. De laatst
+ * gebruikte eerst, zes per groep, de rest achter "Alle scènes".
+ */
+function roomScenes(room, d, say, live) {
+  const lower = (x) => x.trim().toLowerCase();
+  const inGroup = (sc) => sc.groep && (lower(d.haNaam) === lower(sc.groep) || d.groepen.some((g) => lower(g) === lower(sc.groep)));
+  const mine = room.scenes.filter(inGroup);
+  const list = mine.length ? mine : room.scenes;
+  const groups = [...new Set(list.map((sc) => sc.groep ?? ''))];
+  const sections = groups.map((groep) => {
+    const all = list.filter((sc) => (sc.groep ?? '') === groep);
+    const key = `${d.id}|${groep}`;
+    const open = scenesOpen.has(key);
+    const grid = el(
+      'div',
+      { class: 'scenes' },
+      ...(open ? all : all.slice(0, SCENES_SHOWN)).map((sc) => {
+        // In een eigen span, zodat een lange naam uit Hue afbreekt in plaats van uit te steken.
+        const b = el('button', { type: 'button', 'aria-pressed': String(sc.actief) }, sceneDot(sc), el('span', { text: sc.naam }));
+        b.disabled = !live;
+        b.addEventListener('click', async () => {
+          say('Even…');
+          const fout = await switchLights({ id: sc.id }, 'api/scene');
+          say(fout ?? `Scène ${sc.naam}${sc.groep ? ` in ${sc.groep}` : ''}.`);
+        });
+        return b;
+      }),
+    );
+    const more =
+      all.length > SCENES_SHOWN
+        ? el('button', { type: 'button', class: 'linkknop', text: open ? 'Minder scènes' : `Alle scènes (${all.length})` })
+        : null;
+    more?.addEventListener('click', () => {
+      if (open) scenesOpen.delete(key);
+      else scenesOpen.add(key);
+      // Het blad opnieuw tekenen; het antwoord op de laatste knop blijft staan.
+      openDevice(room, d);
+    });
+    return el('div', { class: 'stack', style: 'gap: 8px', 'data-groep': groep }, groups.length > 1 ? el('span', { class: 'small muted', text: groep || room.naam }) : null, grid, more);
+  });
+  const title = mine.length && groups.length === 1 ? `Scènes van ${groups[0]}` : `Scènes in de ${room.naam.toLowerCase()}`;
   return el(
     'section',
     { class: 'scenebox stack' },
-    el('div', { class: 'tussen' }, el('b', { text: `Scènes in de ${room.naam.toLowerCase()}` }), el('span', { class: 'small muted', text: 'uit Hue' })),
-    grid,
-    el('p', { class: 'small muted', text: `Een scène zet alle lampen van de ${room.naam.toLowerCase()} in één keer. Je maakt en verandert ze in de Hue-app; hier kies je ze.` }),
+    el('div', { class: 'tussen' }, el('b', { text: title }), el('span', { class: 'small muted', text: 'uit Hue' })),
+    ...sections,
+    el('p', { class: 'small muted', text: 'Een scène zet alle lampen van zijn groep in één keer. Je maakt en verandert ze in de Hue-app; hier kies je ze. De kleuren leert de app als je een scène gebruikt.' }),
   );
 }
 
@@ -2439,7 +2478,7 @@ function openDevice(room, d) {
         ]);
       }
     }
-    if (room.scenes?.length) $('hu-blad-extra').append(roomScenes(room, say, live));
+    if (room.scenes?.length) $('hu-blad-extra').append(roomScenes(room, d, say, live));
     hint(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
   } else if (d.soort === 'meter') {
     $('hu-blad-extra').append(el('p', { class: 'small', text: meterLine(d) }));

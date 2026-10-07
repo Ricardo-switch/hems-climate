@@ -21,6 +21,7 @@
  */
 
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
+import { defaultSceneColors } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
 import { roomStatus, type DecisionView, type RoomKind } from './assistant.js';
@@ -139,8 +140,19 @@ export interface HouseRoom {
 export interface HouseScene {
   readonly id: string;
   readonly naam: string;
-  /** De laatst aangezette in deze ruimte: Hue zegt zelf niet welke er "aan" staat. */
+  /** De laatst aangezette van zijn Hue-groep: Hue zegt zelf niet welke er "aan" staat. */
   readonly actief: boolean;
+  /**
+   * De Hue-kamer of -zone waar hij bij hoort ("Tuinhuis overstek"), of null
+   * voor een scène uit Home Assistant. Een lamp toont alleen de scènes van zijn
+   * eigen groep: zo staan "Energie" van de border en van het tuinhuis niet
+   * naast elkaar.
+   */
+  readonly groep: string | null;
+  /** Wanneer hij voor het laatst aan ging; null als nooit. De lijst begint met de recentste. */
+  readonly gebruiktMs: number | null;
+  /** Zijn kleuren, zoals de lampen ze lieten zien, of die bij zijn naam; leeg als onbekend. */
+  readonly kleuren: readonly string[];
 }
 
 export interface HouseFloor {
@@ -282,6 +294,8 @@ function scenesPerRoom(
   rooms: readonly { readonly id: string; readonly naam: string; readonly devices: readonly HouseDevice[] }[],
   /** De ruimte van een scène via zijn gebied in Home Assistant, als laatste uitweg. */
   roomOfArea: (sceneId: string) => string | null = () => null,
+  /** De kleuren van een scène (scene-colors.ts). */
+  colorsOf: (sceneId: string, naam: string) => readonly string[] = () => [],
 ): Map<string, HouseScene[]> {
   const out = new Map<string, (HouseScene & { t: number })[]>();
   const lower = (s: string) => s.trim().toLowerCase();
@@ -319,14 +333,20 @@ function scenesPerRoom(
     const naam = own ?? (groupName && friendlyName.toLowerCase().startsWith(groupName.toLowerCase()) ? friendlyName.slice(groupName.length).trim() || friendlyName : friendlyName);
     const t = Date.parse(st.state);
     const list = out.get(roomId) ?? [];
-    list.push({ id, naam, actief: false, t: Number.isFinite(t) ? t : 0 });
+    list.push({ id, naam, actief: false, groep: groupName || null, gebruiktMs: Number.isFinite(t) ? t : null, kleuren: colorsOf(id, naam), t: Number.isFinite(t) ? t : 0 });
     out.set(roomId, list);
   }
   const result = new Map<string, HouseScene[]>();
   for (const [roomId, list] of out) {
-    const newest = Math.max(...list.map((s) => s.t));
-    list.sort((x, y) => x.naam.localeCompare(y.naam, 'nl'));
-    result.set(roomId, list.map((s) => ({ id: s.id, naam: s.naam, actief: newest > 0 && s.t === newest })));
+    // Actief per Hue-groep: de laatst aangezette van die groep.
+    const newest = new Map<string, number>();
+    for (const s of list) newest.set(s.groep ?? '', Math.max(newest.get(s.groep ?? '') ?? 0, s.t));
+    // De recentste eerst; wat nooit aan ging, op naam erachter.
+    list.sort((x, y) => y.t - x.t || x.naam.localeCompare(y.naam, 'nl'));
+    result.set(
+      roomId,
+      list.map((s) => ({ id: s.id, naam: s.naam, actief: s.t > 0 && s.t === newest.get(s.groep ?? ''), groep: s.groep, gebruiktMs: s.gebruiktMs, kleuren: s.kleuren })),
+    );
   }
   return result;
 }
@@ -818,6 +838,8 @@ export function buildHouse(
   states: ReadonlyMap<string, HaEntityState>,
   snapshot: DecisionView | null,
   saved: Layout | null = null,
+  /** De kleuren van de Hue-scènes, zoals de app ze zag (scene-colors.ts). */
+  sceneColors: (sceneId: string, naam: string) => readonly string[] = (_id, naam) => defaultSceneColors(naam),
 ): HouseReport {
   const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot);
   const base = saved ?? proposeLayout(config, registers, states);
@@ -877,6 +899,7 @@ export function buildHouse(
       const area = e?.area_id ?? (e?.device_id ? (deviceArea.get(e.device_id) ?? null) : null);
       return area ? (roomByArea.get(area)?.id ?? null) : null;
     },
+    sceneColors,
   );
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];

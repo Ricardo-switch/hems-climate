@@ -4383,6 +4383,16 @@ huis). Kleur kiest de bewoner nu op een kleurenwiel: de hoek is de tint, de
 afstand tot het midden de verzadiging; bij loslaten gaat de kleur naar de lamp.
 De vaste kleuren blijven eronder als snelkeuze.
 
+*Aangevuld 7 oktober 2026, 's avonds:* een ruimte als de achtertuin heeft in
+Hue meerdere kamers en zones (achtertuin, tuinhuis, border), elk met zijn eigen
+"Energie" en "Lezen": 58 scènes, veel dubbel. Een lamp toont nu alleen de
+scènes van zijn eigen Hue-groep, de laatst gebruikte eerst, zes per groep met
+"Alle scènes" erachter; actief is per groep. De plaatjes uit de Hue-app geeft
+Home Assistant niet door. In plaats daarvan krijgt een scène een bolletje in
+zijn eigen kleuren: zes tellen na het aanzetten kijkt de dienst naar de lampen
+van zijn groep en onthoudt hun kleur (`scene-kleuren.json`, alleen lezen). Tot
+dan hebben de standaardscènes van Hue vaste kleuren bij hun naam.
+
 ---
 
 ## 101. "Klaar voor" bij de droger is per keer te kiezen

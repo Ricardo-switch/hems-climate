@@ -28,6 +28,7 @@ import {
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
 import { UitstelStore } from './web/uitstel.js';
+import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { EnergyStore } from './web/energy.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -505,10 +506,40 @@ const layoutStore =
     : null;
 void layoutStore?.load();
 
+/* De kleuren van de Hue-scènes, zoals de lampen ze lieten zien (besluit 100). */
+const sceneColors = logDir !== '' ? new SceneColorStore(logDir) : null;
+await sceneColors?.load();
+
 const houseReport = () =>
   siteConfig && houseRegisters
-    ? buildHouse(siteConfig, houseRegisters, houseStates, runner?.latest ?? null, layoutStore?.current ?? null)
+    ? buildHouse(
+        siteConfig,
+        houseRegisters,
+        houseStates,
+        runner?.latest ?? null,
+        layoutStore?.current ?? null,
+        sceneColors ? (id, naam) => sceneColors.colors(id, naam) : undefined,
+      )
     : null;
+
+/*
+ * Gaat een scène aan (zijn stand is het tijdstip), dan kijken we zes tellen
+ * later naar de lampen van zijn Hue-groep, of anders van zijn ruimte, en
+ * onthouden hun kleuren. Alleen lezen.
+ */
+client.on('stateChanged', (state: HaEntityState) => {
+  if (!sceneColors || !state.entity_id.startsWith('scene.') || !Number.isFinite(Date.parse(state.state))) return;
+  setTimeout(() => {
+    const house = houseReport();
+    const room = house?.etages.flatMap((f) => f.ruimtes).find((r) => r.scenes.some((sc) => sc.id === state.entity_id));
+    const scene = room?.scenes.find((sc) => sc.id === state.entity_id);
+    if (!room || !scene) return;
+    const lower = (x: string) => x.trim().toLowerCase();
+    const group = scene.groep ? lower(scene.groep) : null;
+    const own = group ? room.apparaten.filter((d) => lower(d.haNaam) === group || d.groepen.some((g) => lower(g) === group)) : [];
+    void sceneColors.remember(state.entity_id, colorsFromLamps(own.length > 0 ? own : room.apparaten)).catch(() => {});
+  }, 6_000).unref?.();
+});
 
 /*
  * Licht bedienen (besluit 97): alleen de lampen die het huis toont, en alleen

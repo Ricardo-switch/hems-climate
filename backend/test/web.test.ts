@@ -932,7 +932,7 @@ describe('licht bedienen (besluit 97)', () => {
     lampenAan: apparaten.filter((d) => d.aan).length,
     samenvatting: summarize(apparaten),
     apparaten,
-    scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false }] : [],
+    scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false, groep: 'Hal', gebruiktMs: null, kleuren: [] }] : [],
   });
   const house: HouseReport = {
     indeling: 'eigen',

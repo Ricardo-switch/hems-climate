@@ -518,7 +518,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#hu-blad-zin').filter({ hasText: 'daglicht' }).waitFor();
       expect(lightData.at(-1)).toEqual({ color_temp_kelvin: 6500 });
       // De scènes van de woonkamer; de laatst gekozen staat aan.
-      expect(await p.locator('#hu-blad .scenes button[aria-pressed="true"]').textContent()).toBe('Ontspannen');
+      // Per Hue-groep, met de laatst gebruikte bovenaan en actief per groep.
+      expect(await p.locator('#hu-blad .scenes button[aria-pressed="true"]').allTextContents()).toEqual(['Ontspannen', 'Lezen']);
+      expect(await p.locator('#hu-blad .scenebox').textContent()).toContain('Keuken');
       await p.locator('#hu-blad .scenes button', { hasText: 'Lezen' }).click();
       await p.locator('#hu-blad-zin').filter({ hasText: 'Scène Lezen' }).waitFor();
       expect(sceneCalls.at(-1)).toBe('scene.keuken_lezen');
