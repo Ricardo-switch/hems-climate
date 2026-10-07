@@ -32,7 +32,7 @@ import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
-import { importFromPrefs, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
+import { importFromPrefs, pricesInPrefs, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
 import { ask, parseQuestion } from './assistant.js';
@@ -851,15 +851,18 @@ export class WebServer {
     }
     // Wat er staat, wat Home Assistant voorstelt, en de meters om uit te kiezen.
     let voorstel = null;
+    let dashboardPrijzen: ReturnType<typeof pricesInPrefs> = [];
     let meters: readonly MeterOption[] = [];
     let fout: string | null = null;
     try {
       meters = await energy.source.meters();
-      voorstel = importFromPrefs(await energy.source.prefs(), meters, (id) => energy.source.entityNumber?.(id) ?? null);
+      const prefs = await energy.source.prefs();
+      voorstel = importFromPrefs(prefs, meters, (id) => energy.source.entityNumber?.(id) ?? null);
+      dashboardPrijzen = pricesInPrefs(prefs);
     } catch (error) {
       fout = `Home Assistant gaf de meters niet: ${(error as Error).message}`;
     }
-    sendJson(res, 200, { instellingen: energy.store.current, voorstel, meters, ...(fout ? { fout } : {}) });
+    sendJson(res, 200, { instellingen: energy.store.current, voorstel, dashboardPrijzen, meters, ...(fout ? { fout } : {}) });
   }
 
   async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {

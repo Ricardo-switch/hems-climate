@@ -1054,8 +1054,18 @@ function renderEnergy() {
   const ha = el('div', { class: 'card' }, el('h2', { text: 'Uit Home Assistant' }));
   if (v) {
     const count = [v.net.afname.length ? `${v.net.afname.length} meter${v.net.afname.length > 1 ? 's' : ''} van het net` : null, v.net.teruglevering.length ? 'teruglevering' : null, v.zon.length ? 'zonnepanelen' : null, v.gas ? 'gas' : null, v.apparaten.length ? `${v.apparaten.length} apparaten` : null].filter(Boolean);
+    // Zonder prijzen: zeggen waarom, zodat de bewoner weet wat hij zelf invult.
+    const dp = info.dashboardPrijzen ?? [];
+    const noPrice = v.prijzen.stroom == null && v.prijzen.gas == null;
+    const why = !noPrice
+      ? ''
+      : dp.some((x) => x.kostenMeter)
+        ? ' Het houdt de kosten bij met een eigen kostensensor; die prijs kan ik niet overnemen, vul hem hieronder in.'
+        : dp.some((x) => x.prijsEntiteit)
+          ? ' De prijs komt uit een entiteit die nu geen getal heeft; vul hem hieronder in.'
+          : ' Er staan geen prijzen in; vul ze hieronder in.';
     ha.append(
-      el('p', { class: 'small', style: 'color: var(--soft)', text: `Je Energie-dashboard heeft ${count.join(', ')}${v.prijzen.stroom != null || v.prijzen.gas != null ? ', met prijzen' : ''}.` }),
+      el('p', { class: 'small', style: 'color: var(--soft)', text: `Je Energie-dashboard heeft ${count.join(', ')}${noPrice ? '' : ', met prijzen'}.${why}` }),
       button('Overnemen', () => {
         energyDraft = JSON.parse(JSON.stringify(v));
         renderEnergy();

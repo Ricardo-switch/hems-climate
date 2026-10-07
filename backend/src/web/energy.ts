@@ -139,6 +139,34 @@ export function importFromPrefs(
   };
 }
 
+/**
+ * Waar het Energie-dashboard zijn prijzen vandaan haalt, per meter: een vast
+ * getal, een entiteit met de prijs, of een sensor met de totale kosten. Zo kan
+ * de app zeggen waarom een prijs niet mee kwam.
+ */
+export function pricesInPrefs(prefs: unknown): { readonly soort: string; readonly meter: string | null; readonly prijs: number | null; readonly prijsEntiteit: string | null; readonly kostenMeter: string | null }[] {
+  if (!isRecord(prefs) || !Array.isArray(prefs['energy_sources'])) return [];
+  const out: ReturnType<typeof pricesInPrefs> = [];
+  const add = (soort: string, x: unknown, key: string) => {
+    if (!isRecord(x)) return;
+    out.push({
+      soort,
+      meter: typeof x[key] === 'string' ? x[key] : null,
+      prijs: typeof x['number_energy_price'] === 'number' ? x['number_energy_price'] : null,
+      prijsEntiteit: typeof x['entity_energy_price'] === 'string' ? x['entity_energy_price'] : null,
+      kostenMeter: typeof x['stat_cost'] === 'string' ? x['stat_cost'] : typeof x['stat_compensation'] === 'string' ? x['stat_compensation'] : null,
+    });
+  };
+  for (const src of prefs['energy_sources']) {
+    if (!isRecord(src)) continue;
+    if (src['type'] === 'grid') {
+      for (const f of Array.isArray(src['flow_from']) ? src['flow_from'] : [src]) add('afname', f, 'stat_energy_from');
+      for (const t of Array.isArray(src['flow_to']) ? src['flow_to'] : []) add('teruglevering', t, 'stat_energy_to');
+    } else if (src['type'] === 'gas') add('gas', src, 'stat_energy_from');
+  }
+  return out;
+}
+
 export type EnergyCheck = { readonly ok: true; readonly settings: EnergySettings } | { readonly ok: false; readonly reden: string };
 
 /** Toetst wat de app wil bewaren. Meters zijn statistiek-id's, prijzen 0 tot 10 euro. */

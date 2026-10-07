@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { HaClient } from '../src/adapters/homeassistant/client.js';
-import { EnergyStore, importFromPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
+import { EnergyStore, importFromPrefs, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
 import { partsIn, zonedMidnight } from '../src/web/today.js';
 import { periodRange, yieldReport } from '../src/web/yield.js';
 
@@ -178,6 +178,14 @@ describe('meters en prijzen in de app', () => {
     });
     expect(importFromPrefs(null)).toBeNull();
     expect(importFromPrefs({ energy_sources: 'x' })).toBeNull();
+  });
+
+  it('zegt per meter waar het dashboard zijn prijs vandaan haalt', () => {
+    const p = { energy_sources: [{ type: 'grid', flow_from: [{ stat_energy_from: 'sensor.a', stat_cost: 'sensor.a_kosten', number_energy_price: null, entity_energy_price: null }], flow_to: [{ stat_energy_to: 'sensor.t', number_energy_price: 0.09 }] }] };
+    expect(pricesInPrefs(p)).toEqual([
+      { soort: 'afname', meter: 'sensor.a', prijs: null, prijsEntiteit: null, kostenMeter: 'sensor.a_kosten' },
+      { soort: 'teruglevering', meter: 'sensor.t', prijs: 0.09, prijsEntiteit: null, kostenMeter: null },
+    ]);
   });
 
   it('neemt een prijs uit een entiteit over met de stand van nu', () => {
