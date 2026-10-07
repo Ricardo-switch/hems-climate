@@ -3625,6 +3625,33 @@ op meting) vraagt het vermogen van een airco die de arbiter zelf bestuurt; dat
 bestaat pas bij B. Kandidaten 3 en 4 zijn grenzen op starts en opdrachten per
 uur; die kan de replay nu al tellen, en dat is de volgende meting.
 
+*Aangevuld 7 oktober 2026: kandidaten 3 en 4 gemeten.* `src/replay/decision-90-limits.ts`
+telt per airco en per klokuur de starts en opdrachten, en speelt dezelfde
+minuten af met een grens erin. Een start of een nieuw setpoint boven de grens
+vervalt; afbouwen nooit. Augustus (14.476 minuten), woonkamer:
+
+| | starts | opdrachten | draaien (min) | netstroom (kWh) |
+| --- | --- | --- | --- | --- |
+| zoals nu | 84 | 391 | 3.092 | 10,76 |
+| hooguit 2 starts per uur | 79 | 372 | 2.983 | 10,57 |
+| hooguit 3 starts per uur | 84 | 391 | 3.092 | 10,76 |
+| hooguit 4 opdrachten per uur | 46 | 227 | 1.951 | 8,70 |
+| hooguit 6 opdrachten per uur | 63 | 301 | 2.608 | 9,75 |
+
+De zolder en het septembervenster laten hetzelfde beeld zien.
+
+- **Kandidaat 3 doet bij 3 starts per uur niets:** de regeling komt daar nooit
+  boven, door de stabilisatie (61) en één start per beslissing (68). Bij 2 per
+  uur vallen er een paar starts weg, maar ook ruim 100 minuten draaien. Dat is
+  minder comfort, dus geen winst. Hij mag als vangnet in de regeling, op 3: dan
+  verandert er niets, en beschermt hij de compressor als iets anders misgaat.
+- **Kandidaat 4 verliest.** De regeling geeft vaak drie of meer opdrachten per
+  uur, want één keer starten, parkeren en uitzetten is al vijf opdrachten (stand
+  en setpoint bij starten en parkeren). Een harde grens van 4 of 6 per uur kost
+  16 tot 37% van de draaitijd. Minder gepiep moet daarom uit deel 1 komen: stand
+  en temperatuur samen sturen, en niets sturen wat al goed staat. Dat hoort bij
+  de actuator-laag van B, niet bij de arbiter.
+
 ---
 
 ## 91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML
