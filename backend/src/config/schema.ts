@@ -24,6 +24,8 @@ import {
   type Actuator,
   type Facade,
   type Geometry,
+  type GridLimits,
+  type GridPhase,
   type SolarPlane,
   type ActuatorRole,
   type DeviceRef,
@@ -1247,6 +1249,38 @@ export function parseSiteConfig(
     }
   }
 
+  // De aansluiting: stroom per fase tegen de hoofdzekering (besluit 78).
+  // Optioneel; zonder blijft het alleen een vermogensbudget.
+  let grid: GridLimits | null = null;
+  const gridRawBlock = input['grid'];
+  if (gridRawBlock !== undefined) {
+    if (!isRecord(gridRawBlock)) {
+      p.error('grid', 'moet een object zijn');
+    } else {
+      const phasesRaw = arr(p, gridRawBlock, 'grid', 'phases', { minLength: 1 });
+      const phases: GridPhase[] = [];
+      const seen = new Set<string>();
+      (phasesRaw ?? []).forEach((f, i) => {
+        const path = join('grid.phases', i);
+        if (!isRecord(f)) {
+          p.error(path, 'moet een object zijn');
+          return;
+        }
+        const id = str(p, f, path, 'id');
+        if (id && seen.has(id)) p.error(join(path, 'id'), `fase "${id}" staat er twee keer`);
+        if (id) seen.add(id);
+        const current = f['current'] === undefined ? (p.error(join(path, 'current'), 'ontbreekt'), null) : ref(p, f['current'], join(path, 'current'), defaultAdapter);
+        const voltage = f['voltage'] === undefined ? null : ref(p, f['voltage'], join(path, 'voltage'), defaultAdapter);
+        const maxA = num(p, f, path, 'maxA', { min: 6, max: 250 });
+        if (id && current && maxA != null) phases.push({ id, current, maxA, ...(voltage ? { voltage } : {}) });
+      });
+      if (phases.length === 2 || phases.length > 3) p.error('grid.phases', 'een aansluiting heeft één of drie fasen');
+      const marginA = numOr(p, gridRawBlock, 'grid', 'marginA', 2, { min: 0, max: 50 });
+      if (phases.some((ph) => ph.maxA - marginA <= 0)) p.error('grid.marginA', 'de marge is groter dan de zekering');
+      grid = { phases, marginA };
+    }
+  }
+
   // Hoe het huis en de panelen liggen (besluit 93). Optioneel, en zonder valt
   // alleen de zoninval weg; de regeling leest het niet.
   let geometry: Geometry | null = null;
@@ -1482,6 +1516,7 @@ export function parseSiteConfig(
       ...(outdoorTemperature ? { outdoorTemperature } : {}),
       ...(solarProduction ? { solarProduction } : {}),
       ...(geometry ? { geometry } : {}),
+      ...(grid ? { grid } : {}),
       ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),
     },

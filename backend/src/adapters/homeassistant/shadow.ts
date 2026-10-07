@@ -572,6 +572,17 @@ export class ShadowRunner {
     const legacyChanged = legacy !== this.#lastLegacy;
     this.#lastLegacy = legacy;
 
+    // De stroom per fase en wat daarop geweigerd werd (besluit 78): op elk record,
+    // zodat de terugblik kan tellen hoe vaak de zekering een start zou tegenhouden.
+    const fasen = e.phases?.map((p) => [p.id, p.currentA, p.bron] as const);
+    const stroomGeweigerd = decision.rejected
+      .filter((r) => r.blockedBy === 'insufficient_current_budget')
+      .map((r) => r.intent.actuatorId);
+    const phaseFields = {
+      ...(fasen ? { fasen } : {}),
+      ...(stroomGeweigerd.length > 0 ? { stroomGeweigerd } : {}),
+    };
+
     const record = changed
       ? {
           t: decision.atMs,
@@ -590,6 +601,7 @@ export class ShadowRunner {
           rejected: decision.rejected,
           obs: observed,
           ...(legacy != null ? { legacy } : {}),
+          ...phaseFields,
         }
       : {
           t: decision.atMs,
@@ -610,6 +622,7 @@ export class ShadowRunner {
           obs: observed,
           ...(legacyChanged && legacy != null ? { legacy } : {}),
           ...(e.failsafe.active ? { failsafe: e.failsafe } : {}),
+          ...phaseFields,
         };
 
     const day = new Date(decision.atMs).toISOString().slice(0, 10);

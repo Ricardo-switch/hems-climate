@@ -71,6 +71,17 @@ om te *starten* in plaats van alleen door te draaien (besluit 51). Per
 beslissing start hij hooguit één apparaat op het budget (besluit 68). Wat niemand meer wil, bouwt hij af: eerst
 naar standby, na de stabilisatie uit (besluit 5).
 
+Naast het vermogen bewaakt hij de **stroom per fase** (besluit 78), als de
+configuratie een aansluiting kent (`grid.phases`, met de hoofdzekering en een
+marge). Een start mag de stroom op geen enkele fase boven de zekering min de
+marge brengen; anders volgt `insufficient_current_budget`, met in de detail
+hoeveel ampère gevraagd en hoeveel er over is. De stroom komt van de P1-meter;
+ontbreekt die, dan geschat uit het netvermogen, en ontbreken beide, dan start hij
+niets. Bij één fase volgt de richting uit het netvermogen (teruglevering maakt
+een start lichter), bij drie fasen telt de extra stroom altijd bovenop. Afbouwen,
+bijstellen en de failsafe gaan nooit langs dit budget. Het logboek legt per
+besluit `fasen` vast, en `stroomGeweigerd` als een start daarop sneuvelde.
+
 Elk besluit draagt een **`Explanation`**: modus, budget, per zone temperatuur,
 doel en vraag, plus buitentemperatuur en zonne-opbrengst als waarneming. Dat
 contract delen het logboek, de weergave, de analyse en straks het

@@ -199,6 +199,8 @@ export function arbitrate(
   const commands: Command[] = [];
   const claimed = new Set<string>();
   let allocatedW = 0;
+  // Wat de starts van deze beslissing al vragen, per fase (besluit 78).
+  const allocatedA = new Map<string, number>();
   let startedSomething = false;
   let parkedSomething = false;
 
@@ -248,6 +250,43 @@ export function arbitrate(
     if (timing) {
       reject(intent, timing);
       return;
+    }
+
+    /*
+     * Het stroombudget (besluit 78): een start mag de stroom op geen enkele fase
+     * boven de hoofdzekering min de marge brengen.
+     *
+     * Alleen bij een start, en bij elke start: ook een comfortvoorstel dat geen
+     * vermogensbudget vraagt, trekt stroom. Uitschakelen, parkeren en een
+     * draaiend apparaat bijstellen gaan nooit langs dit budget, en de failsafe
+     * ook niet: die maakt het huis veiliger, niet zwaarder.
+     *
+     * Zolang niet bekend is op welke fase een apparaat zit, telt het op elke
+     * fase. Bij één fase is de richting bekend: bij teruglevering maakt een
+     * extra apparaat de stroom door de zekering juist kleiner, en dan mag hij
+     * starten. Bij drie fasen geeft de meter geen richting per fase, en komt de
+     * extra stroom bovenop de gemeten stroom: voor een zekering is voorzichtig
+     * de goede kant.
+     */
+    const nowAction = current?.action.ok ? current.action.value : undefined;
+    const starts = (intent.action === 'heat' || intent.action === 'cool') && !isRunning(nowAction);
+    if (starts && intent.strategyId !== 'failsafe' && ctx.phases.length > 0) {
+      for (const phase of ctx.phases) {
+        if (phase.signedA == null) {
+          reject(intent, 'insufficient_current_budget', `fase ${phase.id}: geen stroommeting en geen netvermogen, dus niet starten`);
+          return;
+        }
+        const extraA = actuator.power.estimatedW / phase.voltageV;
+        const before = phase.signedA + (allocatedA.get(phase.id) ?? 0);
+        if (Math.abs(before + extraA) > phase.limitA) {
+          reject(
+            intent,
+            'insufficient_current_budget',
+            `fase ${phase.id}: ${extraA.toFixed(1)} A gevraagd, ${Math.max(0, phase.limitA - Math.abs(before)).toFixed(1)} A over (${phase.bron})`,
+          );
+          return;
+        }
+      }
     }
 
     if (consumesPower(intent)) {
@@ -320,6 +359,11 @@ export function arbitrate(
     const wasRunning = isRunning(current?.action.ok ? current.action.value : undefined);
     const willRun = intent.action === 'heat' || intent.action === 'cool';
     if (!wasRunning && willRun) startedSomething = true;
+    if (starts) {
+      for (const phase of ctx.phases) {
+        allocatedA.set(phase.id, (allocatedA.get(phase.id) ?? 0) + actuator.power.estimatedW / phase.voltageV);
+      }
+    }
     if (wasRunning && intent.action === 'standby') parkedSomething = true;
 
     commands.push(...cmds);

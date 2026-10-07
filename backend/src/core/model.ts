@@ -268,6 +268,32 @@ export interface Geometry {
   readonly inverterMaxW?: number;
 }
 
+/**
+ * Eén fase van de aansluiting (besluit 78): de stroommeter en de zekering.
+ *
+ * Een woning met één fase heeft er één; met drie fasen drie. De spanning is
+ * optioneel: zonder meting rekent de arbiter met 230 V.
+ */
+export interface GridPhase {
+  readonly id: string;
+  /** De stroom op deze fase in A, zoals de P1-meter hem meet. */
+  readonly current: DeviceRef;
+  /** De spanning op deze fase in V; weglaten is 230 V. */
+  readonly voltage?: DeviceRef;
+  /** De hoofdzekering op deze fase, in A. */
+  readonly maxA: number;
+}
+
+/**
+ * Het tweede budget naast vermogen (besluit 78): de stroom per fase blijft
+ * onder de hoofdzekering min een marge.
+ */
+export interface GridLimits {
+  readonly phases: readonly GridPhase[];
+  /** Hoeveel ampère onder de zekering de arbiter wegblijft. */
+  readonly marginA: number;
+}
+
 export interface OccupancySource {
   readonly id: string;
   readonly ref: DeviceRef;
@@ -402,6 +428,11 @@ export interface SiteConfig {
    * instralingsmeter die een woning met panelen al in huis heeft.
    */
   readonly solarProduction?: MeasurementPoint;
+  /**
+   * De aansluiting: stroom per fase tegen de hoofdzekering (besluit 78).
+   * Optioneel; zonder blijft het alleen een vermogensbudget, zoals het was.
+   */
+  readonly grid?: GridLimits;
   /**
    * Hoe het huis en de panelen liggen (besluit 93).
    *

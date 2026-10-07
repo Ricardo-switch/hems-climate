@@ -828,3 +828,107 @@ describe('wie zelf ingrijpt, wordt met rust gelaten (besluit 74)', () => {
     expect('overrides' in run(sunny()).explanation).toBe(false);
   });
 });
+
+describe('het stroombudget per fase (besluit 78)', () => {
+  /** Stroom en spanning per fase in de toestand; weglaten is "geen meting". */
+  const withPhases = (state: SystemState, phases: Record<string, { a?: number; v?: number }>): SystemState => ({
+    ...state,
+    power: {
+      ...state.power,
+      phases: Object.fromEntries(
+        Object.entries(phases).map(([id, p]) => [
+          id,
+          {
+            currentA: p.a == null ? unavailable<number>() : value(p.a, NOW),
+            voltageV: p.v == null ? unavailable<number>('missing') : value(p.v, NOW),
+          },
+        ]),
+      ),
+    },
+  });
+
+  /** Warm in de woonkamer: het comfortplafond van 26° start de airco, ook op netstroom. */
+  const hot = (gridPowerW: number) => buildState({ gridPowerW, livingRoomC: 27.0 });
+  const blocked = (d: ReturnType<typeof run>) =>
+    d.rejected.find((r) => r.intent.actuatorId === 'ac-woonkamer' && r.blockedBy === 'insufficient_current_budget');
+  const starts = (d: ReturnType<typeof run>) =>
+    d.commands.some((c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && c.action === 'cool');
+
+  it('start niet als de stroom op de ene fase boven de zekering min de marge zou komen', () => {
+    // 1 × 35 A, marge 2: grens 33 A. 31 A gemeten + 900 W / 230 V = 3,9 A.
+    const d = run(withPhases(hot(7000), { L1: { a: 31, v: 230 } }));
+    expect(starts(d)).toBe(false);
+    expect(blocked(d)?.detail).toBe('fase L1: 3.9 A gevraagd, 2.0 A over (gemeten)');
+    expect(d.explanation.phases).toEqual([{ id: 'L1', currentA: 31, limitA: 33, bron: 'gemeten' }]);
+  });
+
+  it('start wel als er genoeg stroom over is', () => {
+    const d = run(withPhases(hot(4000), { L1: { a: 18, v: 230 } }));
+    expect(starts(d)).toBe(true);
+    expect(blocked(d)).toBeUndefined();
+  });
+
+  it('laat bij teruglevering op één fase starten: dan wordt de stroom door de zekering kleiner', () => {
+    // 6 kW terug is 26 A de andere kant op; een airco erbij maakt dat 22 A.
+    const d = run(withPhases(buildState({ gridPowerW: -6000, livingRoomC: 24.5 }), { L1: { a: 26, v: 230 } }));
+    expect(blocked(d)).toBeUndefined();
+    expect(starts(d)).toBe(true);
+  });
+
+  it('kijkt bij drie fasen naar elke fase, en telt het apparaat overal mee', () => {
+    const three: SiteConfig = {
+      ...exampleSite,
+      grid: {
+        marginA: 2,
+        phases: ['L1', 'L2', 'L3'].map((id) => ({ id, current: { adapter: 'homeassistant', id: `sensor.${id}` }, maxA: 25 })),
+      },
+    };
+    const state = withPhases(hot(3000), { L1: { a: 10 }, L2: { a: 21 }, L3: { a: 5 } });
+    const d = decide({ config: three, state, strategies: defaultStrategies() });
+    expect(blocked(d)?.detail).toBe('fase L2: 3.9 A gevraagd, 2.0 A over (gemeten)');
+    // Bij drie fasen is de richting per fase onbekend: teruglevering helpt dan niet.
+    const exporting = decide({ config: three, state: withPhases(buildState({ gridPowerW: -3000, livingRoomC: 27 }), { L1: { a: 10 }, L2: { a: 21 }, L3: { a: 5 } }), strategies: defaultStrategies() });
+    expect(blocked(exporting)).toBeDefined();
+  });
+
+  it('schat uit het netvermogen als de stroommeting ontbreekt, en zegt dat erbij', () => {
+    // 7 kW afname is 30,4 A; met de airco erbij 34,3 A.
+    const d = run(withPhases(hot(7000), { L1: {} }));
+    expect(blocked(d)?.detail).toBe('fase L1: 3.9 A gevraagd, 2.6 A over (geschat)');
+    expect(d.explanation.phases?.[0]?.bron).toBe('geschat');
+  });
+
+  it('start niets als stroom en netvermogen allebei ontbreken, en zegt waarom', () => {
+    const noGrid: SystemState = { ...hot(0), power: { gridPowerW: unavailable<number>() } };
+    const d = run(withPhases(noGrid, { L1: {} }));
+    expect(starts(d)).toBe(false);
+    expect(blocked(d)?.detail).toBe('fase L1: geen stroommeting en geen netvermogen, dus niet starten');
+  });
+
+  it('houdt uitschakelen en terugschakelen nooit tegen, ook boven de zekering', () => {
+    // De airco draait, de kamer is koel genoeg, en de stroom staat al boven de grens.
+    const running = buildState({
+      gridPowerW: 9000,
+      livingRoomC: 20.0,
+      actuators: { 'ac-woonkamer': actuator('cool', { setpointC: 21, powerW: 900 }) },
+    });
+    const d = run(withPhases(running, { L1: { a: 40, v: 230 } }));
+    // Een start van een ander apparaat mag hier wel geweigerd worden (de Nest wil
+    // verwarmen); afbouwen nooit.
+    expect(
+      d.rejected.some(
+        (r) => r.blockedBy === 'insufficient_current_budget' && (r.intent.action === 'off' || r.intent.action === 'standby'),
+      ),
+    ).toBe(false);
+    expect(
+      d.commands.some((c) => c.kind === 'setAction' && c.actuatorId === 'ac-woonkamer' && (c.action === 'standby' || c.action === 'off')),
+    ).toBe(true);
+  });
+
+  it('verandert niets zonder aansluiting in de configuratie', () => {
+    const { grid: _g, ...without } = exampleSite;
+    const d = decide({ config: without, state: withPhases(hot(9000), { L1: { a: 40 } }), strategies: defaultStrategies() });
+    expect(blocked(d)).toBeUndefined();
+    expect('phases' in d.explanation).toBe(false);
+  });
+});

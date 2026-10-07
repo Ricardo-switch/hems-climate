@@ -1213,3 +1213,57 @@ describe('het websocket-eindpunt', () => {
     );
   });
 });
+
+describe('het stroombudget in de schaduw (besluit 78)', () => {
+  it('schrijft in het logboek dat de zekering een start tegenhoudt', async () => {
+    // Warm in de woonkamer (boven het comfortplafond van 26°), 7 kW van het net
+    // en 32 A op de fase: een airco erbij zou boven 35 − 2 A komen.
+    const states = shadowStates().map((s) => {
+      if (s.entity_id === 'sensor.p1_meter_power') return shadowEntity('sensor.p1_meter_power', '7000');
+      if (s.entity_id === 'sensor.beneden_temperatuur') return shadowEntity('sensor.beneden_temperatuur', '27.5');
+      return s;
+    });
+    states.push(shadowEntity('sensor.p1_meter_current_phase_1', '32'), shadowEntity('sensor.p1_meter_voltage_phase_1', '230'));
+    const ha = await startFakeHa({ states });
+    cleanups.push(() => ha.close());
+    const dir = await mkdtemp(join(tmpdir(), 'hems-fase-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN });
+    const runner = new ShadowRunner({
+      config: exampleSite,
+      strategies: defaultStrategies(),
+      client,
+      tickSeconds: 3600,
+      debounceMs: 10,
+      minIntervalSeconds: 0,
+      logDir: dir,
+      write: () => {},
+      now: () => SHADOW_NOW,
+    });
+    cleanups.push(() => runner.stop());
+    runner.start();
+    await waitUntil(runner, 1);
+    // De teller loopt vóór het wegschrijven op; wacht tot het record er echt staat.
+    let text = '';
+    for (let i = 0; i < 100 && text.trim() === ''; i++) {
+      const file = (await readdir(dir)).find((f) => f.startsWith('decisions-'));
+      text = file ? await readFile(join(dir, file), 'utf-8') : '';
+      if (text.trim() === '') await new Promise((r) => setTimeout(r, 20));
+    }
+    runner.stop();
+
+    const records = text
+      .split('\n')
+      .filter((l) => l.trim() !== '')
+      .map((l) => JSON.parse(l) as { fasen?: unknown; stroomGeweigerd?: string[]; rejected?: { blockedBy: string; detail?: string }[] });
+    const first = records[0]!;
+    expect(first.fasen).toEqual([['L1', 32, 'gemeten']]);
+    expect(first.stroomGeweigerd).toContain('ac-woonkamer');
+    expect(first.rejected?.find((r) => r.blockedBy === 'insufficient_current_budget')?.detail).toBe(
+      'fase L1: 3.9 A gevraagd, 1.0 A over (gemeten)',
+    );
+    // En het blijft de schaduw: niets naar Home Assistant.
+    expect(ha.received.some((m) => m['type'] === 'call_service')).toBe(false);
+  });
+});

@@ -48,6 +48,11 @@ export interface DecisionContext {
   readonly reclaimableW: number;
   /** Te verdelen vermogen: overschot + tolerantie + terugwinbaar. */
   readonly availableW: number;
+  /**
+   * Het stroombudget per fase (besluit 78); leeg als de configuratie geen
+   * aansluiting kent.
+   */
+  readonly phases: readonly PhaseDerived[];
   readonly stabilisationActive: boolean;
   /** Geen zon, geen overschot. Onbekend telt als onder de horizon. */
   readonly sunDown: boolean;
@@ -157,6 +162,57 @@ function currentZoneAction(
   return 'none';
 }
 
+/** Wat de arbiter over één fase weet. */
+export interface PhaseDerived {
+  readonly id: string;
+  /** De stroom nu in A, of null als hij niet gemeten en niet te schatten is. */
+  readonly currentA: number | null;
+  /**
+   * Dezelfde stroom met een richting: negatief bij teruglevering. Alleen bij één
+   * fase is die bekend, uit het teken van het netvermogen; bij drie fasen geeft
+   * de meter per fase geen richting, en geldt hij als afname (de veilige kant).
+   */
+  readonly signedA: number | null;
+  readonly voltageV: number;
+  /** De zekering min de marge. */
+  readonly limitA: number;
+  readonly bron: 'gemeten' | 'geschat' | 'onbekend';
+}
+
+/** Zonder spanningsmeting: de netspanning in Nederland. */
+const NOMINAL_VOLTAGE = 230;
+
+/**
+ * De stroom per fase, uit de meting of anders uit het netvermogen.
+ *
+ * Een ontbrekende of onbetrouwbare stroommeting is geen reden om alles stil te
+ * zetten: het netvermogen zegt het ook, zij het grof. Bij één fase is dat
+ * netvermogen ÷ spanning; bij drie fasen weten we niet hoe het verdeeld is, en
+ * nemen we de veilige kant: alles op elke fase. Pas als ook het netvermogen
+ * ontbreekt, is de stroom onbekend, en start de arbiter niets (zie arbiter.ts).
+ */
+function phasesOf(config: SiteConfig, state: SystemState): PhaseDerived[] {
+  if (!config.grid) return [];
+  const grid = state.power.gridPowerW;
+  const single = config.grid.phases.length === 1;
+  // Bij één fase zegt het netvermogen de richting; anders telt alles als afname.
+  const sign = single && grid.ok && grid.value < 0 ? -1 : 1;
+  return config.grid.phases.map((phase) => {
+    const s = state.power.phases?.[phase.id];
+    const voltageV = s?.voltageV.ok && s.voltageV.value > 100 ? s.voltageV.value : NOMINAL_VOLTAGE;
+    const limitA = phase.maxA - config.grid!.marginA;
+    if (s?.currentA.ok) {
+      const a = Math.abs(s.currentA.value);
+      return { id: phase.id, currentA: a, signedA: sign * a, voltageV, limitA, bron: 'gemeten' as const };
+    }
+    if (grid.ok) {
+      const a = Math.abs(grid.value) / voltageV;
+      return { id: phase.id, currentA: a, signedA: sign * a, voltageV, limitA, bron: 'geschat' as const };
+    }
+    return { id: phase.id, currentA: null, signedA: null, voltageV, limitA, bron: 'onbekend' as const };
+  });
+}
+
 export function buildContext(
   config: SiteConfig,
   state: SystemState,
@@ -253,6 +309,7 @@ export function buildContext(
       0,
       -gridPowerW + reclaimableW + config.power.stopImportW,
     ),
+    phases: phasesOf(config, state),
     stabilisationActive: timerActive(state.timers.stabilisation, state.nowMs),
     sunDown: !readOr(state.sunAboveHorizon, false),
     unreliableInputs,

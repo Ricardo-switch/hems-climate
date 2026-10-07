@@ -281,6 +281,25 @@ export function buildSystemState(
     actuators,
     power: {
       gridPowerW: grid == null ? unavailable<number>() : value(grid, nowMs),
+      // Stroom en spanning per fase (besluit 78). Een meter die niets geeft, is
+      // unavailable; de kern schat dan uit het netvermogen.
+      ...(config.grid
+        ? {
+            phases: Object.fromEntries(
+              config.grid.phases.map((ph) => {
+                const a = source.number(ph.current.id);
+                const v = ph.voltage ? source.number(ph.voltage.id) : null;
+                return [
+                  ph.id,
+                  {
+                    currentA: a == null ? unavailable<number>() : value(a, nowMs),
+                    voltageV: v == null ? unavailable<number>('missing') : value(v, nowMs),
+                  },
+                ];
+              }),
+            ),
+          }
+        : {}),
       // Alleen wanneer de schaduw iets veronderstelt. Zonder schaduw volgt het
       // verbruik uit de apparaten zelf, en rekent de kern het precies zo uit als
       // altijd — dat houdt de replay bit-identiek.
@@ -384,6 +403,10 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   if (config.timers?.manualOverride) ids.add(config.timers.manualOverride.id);
   if (config.outdoorTemperature) ids.add(config.outdoorTemperature.id);
   if (config.solarProduction) ids.add(config.solarProduction.id);
+  for (const phase of config.grid?.phases ?? []) {
+    ids.add(phase.current.id);
+    if (phase.voltage) ids.add(phase.voltage.id);
+  }
 
   for (const ref of config.criticalInputs) ids.add(ref.id);
   for (const zone of config.zones) {

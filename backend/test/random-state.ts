@@ -82,6 +82,20 @@ export function entityState(k: Dice, config: SiteConfig): SystemState {
     actuators: Object.fromEntries(config.actuators.map((a) => [a.id, actuator(k, config, a.id, now)])),
     power: {
       gridPowerW: k.chance(0.03) ? unavailable<number>() : value(k.int(-4000, 3000), NOW),
+      // Stroom per fase (besluit 78), tot boven de zekering; soms geen meting.
+      ...(config.grid
+        ? {
+            phases: Object.fromEntries(
+              config.grid.phases.map((ph) => [
+                ph.id,
+                {
+                  currentA: k.chance(0.1) ? unavailable<number>() : value(k.numberAttr(0, 40), NOW),
+                  voltageV: unavailable<number>('missing'),
+                },
+              ]),
+            ),
+          }
+        : {}),
     },
     timers: {
       stabilisation: { endsAtMs: k.chance(0.3) ? now + k.int(-10, 10) * 60_000 : null },

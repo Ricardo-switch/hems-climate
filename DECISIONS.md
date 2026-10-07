@@ -62,6 +62,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [85. Bij zon over: eerst comfort, dan de batterij, dan de auto](#85-bij-zon-over-eerst-comfort-dan-de-batterij-dan-de-auto)
 - [89. Elke omvormer werkt; de app meet hoe snel de zonnesensor is en wijst de lokale weg](#89-elke-omvormer-werkt-de-app-meet-hoe-snel-de-zonnesensor-is-en-wijst-de-lokale-weg)
 - [90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen](#90-alleen-sturen-wat-afwijkt-slimmere-timing-moet-eerst-in-de-replay-winnen)
+- [98. Uitstelbare apparaten: de droger draait op zon, via de arbiter](#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter)
 
 **Configuratie en onboarding**
 
@@ -3152,6 +3153,43 @@ start en stopt. De stroom per fase kan nu al mee de dataset in (65), net als de
 spanning: wat je niet vastlegt, krijg je niet terug. Begrenzen van de omvormer
 komt na stap E.
 
+*Aangevuld 6 en 7 oktober 2026: het stroombudget is gebouwd in de schaduwmodus.*
+Op 6 oktober koos de bewoner ervoor het niet na B te bouwen maar nu, in de
+schaduw: er wordt niets geschakeld, maar het logboek zegt wanneer de arbiter een
+start zou tegenhouden, en de dataset telt hoe vaak. Hoe het werkt:
+
+- **De configuratie** kent `grid`: per fase de stroommeter, eventueel de
+  spanning, en de zekering in ampère, plus een marge (standaard 2 A). Zonder
+  `grid` blijft alles zoals het was. Voor dit huis: één fase, `L1`, 1 × 35 A met
+  `sensor.p1_meter_current_phase_1` en `sensor.p1_meter_voltage_phase_1`, die
+  daarmee van `recordOnly` naar echte invoer gingen.
+- **Een start** wordt afgewezen met `insufficient_current_budget` als de stroom
+  op een fase plus wat het apparaat vraagt (geschat vermogen ÷ spanning) boven
+  de zekering min de marge komt. Zolang niet bekend is op welke fase een
+  apparaat zit, telt het op elke fase.
+- **De richting.** Bij één fase volgt die uit het netvermogen: bij teruglevering
+  maakt een start de stroom door de zekering juist kleiner. Bij drie fasen geeft
+  de P1-meter per fase geen richting, en komt de extra stroom bovenop: voor een
+  zekering is voorzichtig de goede kant. Een eerste versie telde ook bij één fase
+  altijd bovenop, en zou zo juist bij de meeste zon een start tegenhouden; een
+  test ving het.
+- **Een ontbrekende meting** is geen reden om stil te staan: dan schat de arbiter
+  de stroom uit het netvermogen (`bron: geschat`). Ontbreken beide, dan start
+  hij niets, en zegt waarom.
+- **Nooit tegengehouden:** afbouwen, parkeren, bijstellen, en de failsafe.
+- **Uitleg en logboek:** `Explanation.phases` (stroom, grens, bron), een zin
+  voor de assistent en de pagina, en in elk logrecord `fasen`, met
+  `stroomGeweigerd` als een start daarop sneuvelde.
+- **Bewaakt** door unit-tests (één fase, drie fasen, teruglevering, ontbrekende
+  meting, afbouwen), een regel voor duizenden gegenereerde toestanden die
+  faalt als de controle uit staat, en een schaduwtest die het logboek leest.
+  De vaste replay van 26 augustus blijft gelijk: die heeft geen stroommeting,
+  en de schatting uit het netvermogen komt daar nergens bij de grens.
+
+Nog niet: leren op welke fase een apparaat zit (deel 2 van dit besluit), de
+hoofdzekering vragen in de onboarding, en draaiende apparaten afschakelen bij
+overbelasting; dat laatste is ingrijpend en vraagt een bewuste keuze.
+
 ---
 
 ## 79. Wat een pushmelding krijgt, en wat in de app blijft
@@ -4011,6 +4049,59 @@ licht.
   bevestiging, met wat verbergen doet en hoe het terugkomt. Terughalen kan op
   een plek naar keuze, ook vanuit de kamer zelf ("Toevoegen aan deze kamer").
   Bij het indelen is een plek nu een kamer of meteen een zone erin.
+
+---
+
+## 98. Uitstelbare apparaten: de droger draait op zon, via de arbiter
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+De bewoner wil dat slimme grootverbruikers (wasmachine, droger, vaatwasser) op
+zon draaien zodra ze klaarstaan om op afstand gestart te worden. In dit huis is
+er één: een Bosch-warmtepompdroger (WTX87M) via Home Connect. Het oude systeem
+doet dat al met een automatisering: start bij meer dan 600 W overschot gedurende
+een minuut en een verwachting van meer dan 600 W in het komende uur
+(`sensor.power_production_next_hour`, Forecast.Solar), anders uiterlijk om 15:00,
+alleen als "start op afstand" aanstaat, en beveiligd tegen twee keer starten.
+Gekozen op 7 oktober 2026.
+
+*Besluit:* Smart Climate neemt dat over als een eigen soort apparaat in de
+arbiter, eerst in de schaduw.
+
+- **Een uitstelbaar apparaat** draait één programma en stopt dan; het is niet
+  halverwege te pauzeren. In de configuratie: de startknop, de sensor "start op
+  afstand toegestaan", de status en de resterende tijd, en een geschat vermogen.
+- **Eén budget.** De droger en de airco's delen het vermogensbudget en het
+  stroombudget (78), met hooguit één start per beslissing (68). Zo starten ze
+  niet samen op hetzelfde overschot, zoals de losse automatisering nu kan.
+- **Na de start houdt hij zijn deel vast** tot het programma klaar is: hij
+  kan niet terug, dus het budget rekent hem als draaiend. Hoe lang en hoeveel,
+  leert de dienst uit de programmaduur die Home Connect meldt en uit wat de
+  meter ziet.
+- **Een eindtijd van de bewoner** in plaats van vast 15:00: "klaar voor 18:00",
+  per keer, vanuit de app of de assistent. Komt er niet genoeg zon, dan start hij
+  op tijd om die eindtijd te halen, ook op netstroom.
+- **De machine houdt de veiligheid.** Smart Climate start alleen als de machine
+  "start op afstand toegestaan" meldt: de bewoner koos een programma, sloot de
+  deur en zette op afstand starten aan. Gaat de deur open of de machine uit, dan
+  vervalt de aanvraag, zoals de automatisering nu ook doet.
+- **Een prognose** helpt kiezen tussen nu en straks; Home Assistant heeft er al
+  een (Forecast.Solar, `sensor.power_production_next_hour`). Dat sluit aan op E.
+- **Schrijven is een nieuwe deur,** net als licht (97): alleen de startknop van
+  een apparaat dat in de configuratie als uitstelbaar staat, en alleen als
+  "start op afstand" aanstaat. Een eigen besluit en een test die bewijst dat de
+  rest blijft werpen, vóór het aangaat.
+- **Eerst in de schaduw:** de dienst zegt wanneer hij zou starten, naast wanneer
+  de oude automatisering startte, en de proefomgeving toont het als "dit zou ik
+  nu doen" (94). Zo is te zien of Smart Climate een beter moment kiest voordat
+  hij iets indrukt.
+
+*Voor dit huis:* de droger komt via twee koppelingen binnen (Home Connect en
+Home Connect Alt). Eén ervan wordt de bron; de andere blijft buiten de
+configuratie. De oude automatisering blijft draaien tot stap B.
+
+*Wanneer:* de schaduwversie kan nu, naast het werk aan de kern. Echt starten
+hoort bij B, met de schrijfdeur.
 
 ---
 

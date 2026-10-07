@@ -41,6 +41,8 @@ export const BLOCK_CODES = [
   'no_change_needed',
   // De bewoner heeft het apparaat zelf overgenomen (besluit 74).
   'resident_override',
+  // De stroom op een fase zou boven de hoofdzekering min de marge komen (besluit 78).
+  'insufficient_current_budget',
 ] as const;
 export type BlockCode = (typeof BLOCK_CODES)[number];
 
@@ -131,6 +133,17 @@ export interface Explanation {
   readonly outdoorTemperatureC: number | null;
   /** Opbrengst van de zonnepanelen in W. Zelfde reden, zie besluit 47. */
   readonly solarProductionW: number | null;
+  /**
+   * De stroom per fase tegen de grens (besluit 78), alleen als de configuratie
+   * een aansluiting kent. `bron` zegt of hij gemeten is of geschat uit het
+   * netvermogen; null als geen van beide er was.
+   */
+  readonly phases?: readonly {
+    readonly id: string;
+    readonly currentA: number | null;
+    readonly limitA: number;
+    readonly bron: 'gemeten' | 'geschat' | 'onbekend';
+  }[];
   /**
    * Apparaten die de bewoner nu zelf bedient, met sinds en tot wanneer
    * (besluit 74). Alleen aanwezig als er iets overgenomen is, zodat het logboek

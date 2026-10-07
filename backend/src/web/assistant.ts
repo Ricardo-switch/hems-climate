@@ -276,6 +276,7 @@ const WORDS = {
       superseded_by_higher_priority: 'een andere kamer voorgaat',
       no_change_needed: 'er niets te veranderen is',
       resident_override: 'jij het zelf hebt overgenomen',
+      insufficient_current_budget: 'de stroom op de hoofdzekering dan te hoog zou worden',
     } satisfies Record<BlockCode, string>,
   },
   en: {
@@ -324,6 +325,7 @@ const WORDS = {
       superseded_by_higher_priority: 'another room comes first',
       no_change_needed: 'nothing needs to change',
       resident_override: 'you took it over yourself',
+      insufficient_current_budget: 'the current on the main fuse would then get too high',
     } satisfies Record<BlockCode, string>,
   },
 } as const;

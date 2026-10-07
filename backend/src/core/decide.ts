@@ -100,6 +100,18 @@ function explain(
       const overrides = activeOverrides(state);
       return overrides.length > 0 ? { overrides } : {};
     })(),
+    // De stroom per fase, alleen als er een aansluiting is (besluit 78), zodat
+    // het logboek zonder aansluiting niet verandert.
+    ...(ctx.phases.length > 0
+      ? {
+          phases: ctx.phases.map((p) => ({
+            id: p.id,
+            currentA: p.currentA == null ? null : Math.round(p.currentA * 10) / 10,
+            limitA: p.limitA,
+            bron: p.bron,
+          })),
+        }
+      : {}),
   };
 }
 

@@ -63,9 +63,19 @@ export interface ZoneState {
   readonly humidityPct?: Reading<number>;
 }
 
+export interface PhaseState {
+  readonly currentA: Reading<number>;
+  readonly voltageV: Reading<number>;
+}
+
 export interface PowerState {
   /** Netvermogen in W. Negatief bij teruglevering. */
   readonly gridPowerW: Reading<number>;
+  /**
+   * Stroom en spanning per fase, op `GridPhase.id` (besluit 78). Alleen als de
+   * configuratie een aansluiting kent; weglaten is "niet gemeten".
+   */
+  readonly phases?: Readonly<Record<string, PhaseState>>;
   /**
    * Wat de bestuurde apparaten werkelijk opnemen, in W, wanneer dat iets
    * anders is dan hun stand in `actuators` doet vermoeden (besluit 49b).

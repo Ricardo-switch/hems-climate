@@ -34,6 +34,7 @@ const BLOCK = {
   superseded_by_higher_priority: 'een andere kamer ging voor',
   no_change_needed: 'niets te veranderen',
   resident_override: 'jij hebt het overgenomen',
+  insufficient_current_budget: 'de hoofdzekering zou te zwaar belast worden',
 };
 
 const REASON = {
@@ -625,6 +626,7 @@ const BECAUSE = {
   stabilisation_active: 'het verbruik nog niet stabiel was',
   min_rest_not_elapsed: 'hij eerst moest rusten',
   min_run_not_elapsed: 'hij zijn minimale draaitijd nog niet had',
+  insufficient_current_budget: 'de hoofdzekering dan te zwaar belast zou worden',
 };
 
 function duration(minutes) {

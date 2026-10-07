@@ -62,6 +62,31 @@ function validate(config: SiteConfig): string | null {
       return error(`${b.allocatedW} W toegewezen van ${b.availableW} W`);
     }
 
+    // Nooit een start boven het stroombudget (besluit 78). Onafhankelijk van de
+    // arbiter nagerekend: per fase de stroom met richting, plus wat de starts van
+    // dit besluit samen vragen, binnen de zekering min de marge.
+    if (config.grid) {
+      const phases = d.explanation.phases ?? [];
+      const grid = state.power.gridPowerW;
+      const sign = config.grid.phases.length === 1 && grid.ok && grid.value < 0 ? -1 : 1;
+      const started = d.commands.filter((c) => {
+        if (c.kind !== 'setAction' || (c.action !== 'heat' && c.action !== 'cool')) return false;
+        const before = action(state.actuators[c.actuatorId]);
+        const failsafe = d.accepted.some((i) => i.actuatorId === c.actuatorId && i.strategyId === 'failsafe');
+        return before !== 'heat' && before !== 'cool' && !failsafe;
+      });
+      for (const p of phases) {
+        if (started.length === 0) break;
+        if (p.currentA == null) return error(`gestart zonder stroom of netvermogen op fase ${p.id}`);
+        const v = 230;
+        const extra = started.reduce((sum, c) => sum + actuatorById(config, (c as { actuatorId: string }).actuatorId).power.estimatedW / v, 0);
+        // De uitleg rondt af op 0,1 A; een tiende marge voorkomt een vals alarm.
+        if (Math.abs(sign * p.currentA + extra) > p.limitA + 0.1) {
+          return error(`fase ${p.id}: ${(sign * p.currentA + extra).toFixed(1)} A na de start, grens ${p.limitA} A`);
+        }
+      }
+    }
+
     // In handmatig trekt de regeling zich terug, behalve bij de failsafe.
     if (isHandsOff(d.explanation.mode) && !d.explanation.failsafe.active && d.commands.length > 0) {
       return error('commando in handmatig zonder failsafe');
