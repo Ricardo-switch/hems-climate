@@ -226,6 +226,24 @@
       "x": 5490,
       "y": 4920,
       "h": 1090
+    },
+    "Wand-Opbrengst.dc.html": {
+      "h": 800,
+      "is_interactive": true,
+      "radius": 24,
+      "title": "Wand · Opbrengst (terugkijken, alles op een rij)",
+      "w": 1280,
+      "x": 4080,
+      "y": 2060
+    },
+    "Opbrengst-terug.dc.html": {
+      "h": 2110,
+      "is_interactive": true,
+      "radius": 28,
+      "title": "Opbrengst · terugkijken per maand",
+      "w": 390,
+      "x": 5440,
+      "y": 2060
     }
   },
   "createdOnFiles": {
@@ -255,7 +273,7 @@
     },
     "wand": {
       "kind": "title1",
-      "maxW": 4000,
+      "maxW": 5830,
       "text": "Tablet aan de muur · altijd aan, donker",
       "w": 240,
       "x": 0,
@@ -303,7 +321,9 @@
     "Onboarding-Zon.dc.html",
     "Apparaten.dc.html",
     "Lamp.dc.html",
-    "Lamp-wit.dc.html"
+    "Lamp-wit.dc.html",
+    "Wand-Opbrengst.dc.html",
+    "Opbrengst-terug.dc.html"
   ],
   "pages": [],
   "title": "Smart Climate app"

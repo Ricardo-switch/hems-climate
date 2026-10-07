@@ -1,7 +1,7 @@
 # De bewonersapp: de maatstaf
 
-Schetsen van hoe Smart Climate eruitziet voor wie erin woont: dertien
-telefoonschermen en twaalf schermen voor een tablet aan de muur, waarvan drie
+Schetsen van hoe Smart Climate eruitziet voor wie erin woont: veertien
+telefoonschermen en dertien schermen voor een tablet aan de muur, waarvan drie
 voor de winter en drie voor het inzoomen. Bijgewerkt op 7 oktober 2026 met wat
 er sindsdien gebouwd of besloten is: de zon op zijn boog over het huis, licht
 met kleur en scènes, de apparaten op zon, "Hoe voelt het?" en de hoofdzekering. Besluit 71 maakt
@@ -40,6 +40,7 @@ wordt de app en blijft dun: alles wat hij toont, komt uit de dienst (besluit
 | Telefoon · Lamp | `Lamp.dc.html`, `Lamp-wit.dc.html` | Een lamp bedienen: helderheid, wit van warm tot koel, kleur, en de Hue-scènes van de ruimte (ONTWERP §4) |
 | Telefoon · Apparaten op zon | `Apparaten.dc.html` | Wasmachine, droger en vaatwasser: wanneer ze op zon beginnen, en klaar voor welke tijd (besluit 98) |
 | Telefoon · Onboarding stap 3 | `Onboarding-Zon.dc.html` | De panelen, de zonnesensor, de hoofdzekering en de apparaten op zon |
+| Opbrengst · terugkijken | `Opbrengst-terug.dc.html`, `Wand-Opbrengst.dc.html` | Per dag, week, maand of jaar: stroom, gas en kosten, een sankey van waar de energie heen ging, per apparaat en per dag |
 
 `screens/` heeft van elk scherm een screenshot, en `Wand-aan-de-muur.png`
 laat het Thuis-scherm zien op een tablet aan de muur.

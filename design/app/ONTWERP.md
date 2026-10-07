@@ -348,6 +348,39 @@ onboarding (§4), of een eenvoudige indeling als Home Assistant het niet weet.
 | Sluipverbruik (kaart) | telefoon, wand | alle | Het verbruik van elke nacht, het verloop, en wat opviel | P1-meter; overdag ook de zonnesensor | nog geen schets |
 | Onboarding | telefoon | vóór leren | De vier stappen van §4 | 41, 42 | `Onboarding` |
 
+### Terugkijken: alles wat het huis gebruikte
+
+**Voorstel**, 7 oktober 2026, van de bewoner (`Opbrengst-terug`,
+`Wand-Opbrengst`). Opbrengst wordt het scherm om terug te kijken, per dag,
+week, maand of jaar, met pijltjes naar de vorige periode:
+
+- *Drie getallen:* stroom gebruikt (en hoeveel daarvan eigen zon), gas, en de
+  kosten, met de periode ervoor ernaast.
+- *Waar de energie heen ging:* een sankey van de bronnen (zon, het net, gas)
+  naar de apparaten, de rest van het huis en wat teruggeleverd werd. De breedte
+  is de hoeveelheid, op schaal. Drie standen: stroom, gas, of alles in kWh
+  (1 m³ gas is ongeveer 9,8 kWh warmte), zodat in de winter te zien is hoe
+  groot de cv is naast de airco's.
+- *Per apparaat:* kWh, welk deel eigen zon en welk deel van het net, en wat
+  dat kostte. Tik op een apparaat voor zijn eigen periode.
+- *Per dag:* een balk per dag (eigen zon en net), met het gas als lijn.
+- *Kosten:* stroom van het net, teruglevering, gas en vaste kosten, met het
+  eigen tarief uit Bediening. Tot 2027 telt teruglevering weg tegen afname
+  (salderen); daarna rekent het scherm met de vergoeding, en met E de
+  dynamische prijs per uur.
+- *Wat Smart Climate scheelde:* onderaan, gemeten terwijl hij meekeek; na de
+  winter ook in comfort.
+
+De regels: alleen wat een meter aantoont krijgt een naam (88). Een apparaat
+zonder eigen meter valt onder "rest van het huis", en gas splitst niet in cv
+en warm water zolang er één gasmeter is. Wat ervoor nodig is: de P1-meter
+(afname, teruglevering), de zonnesensor, de gasmeter (sinds 1 oktober 2026 in
+de dataset), het gemeten vermogen per apparaat waar dat er is, en een tarief.
+De dataset bewaart twee jaar per minuut en daarna per uur (83); genoeg voor de
+jaarstand. De terugblik van de dienst (`/api/divergence`, `/api/vandaag`)
+rekent per dag; een maand en een jaar zijn optellingen daarvan, in de dienst
+(94).
+
 ### Apparaten op zon
 
 **Vast** (98), **voorstel** in vorm (`Apparaten`, en een regel op `Main` en
