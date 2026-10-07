@@ -19,6 +19,7 @@ import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus } from '
 import { inSentence } from '../src/web/assistant.js';
 import type { Answer, DecisionView, Question } from '../src/web/assistant.js';
 import type { TodayReport } from '../src/web/today.js';
+import { decisionWords, residentFlows, residentView } from '../src/web/resident.js';
 
 const config = exampleSite;
 const zolder = config.zones.find((z) => z.id === 'zolder')!;
@@ -445,5 +446,88 @@ describe('namen midden in een zin', () => {
     expect(inSentence('Slaapkamer Mylan')).toBe('slaapkamer Mylan');
     expect(inSentence('Nest (beneden)')).toBe('Nest (beneden)');
     expect(inSentence('Voorgevel')).toBe('voorgevel');
+  });
+});
+
+describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
+  it('zegt in de kop dat het huis op zon wacht, met de kamers erbij', () => {
+    const v = view({ rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_power_budget' }] });
+    expect(residentView(config, v).kop).toEqual({
+      boven: 'Nu · Dag',
+      titel: 'Het huis wacht op zon',
+      zin: 'De zolder wil koelen zodra er genoeg zon over is.',
+    });
+  });
+
+  it('zegt welke kamer gekoeld wordt, en dat de bewoner de modus koos', () => {
+    const v = view({ accepted: [coolOnSun], explanation: explanation({ modeSource: 'override' }) });
+    const kop = residentView(config, v).kop;
+    expect(kop.boven).toBe('Nu · Dag (gekozen)');
+    expect(kop.titel).toBe('De zolder wordt gekoeld');
+    expect(kop.zin).toBe('Zolder: koelt op zon.');
+  });
+
+  it('zegt "er draait niets" als geen kamer iets wil', () => {
+    const kop = residentView(config, view({ explanation: explanation({ perZone: explanation().perZone.map((z) => ({ ...z, demand: 'none', reason: 'zone_satisfied' })) }) })).kop;
+    expect(kop.titel).toBe('Er draait niets');
+    expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
+  });
+
+  it('rondt de stromen zo af dat ze optellen', () => {
+    // 0,55 zon en 0,14 terug: los afgerond zou het 0,6 zon, 0,4 huis en 0,1 terug zijn.
+    const f = residentFlows(view({ explanation: explanation({ solarProductionW: 550, budget: { availableW: 0, allocatedW: 0, surplusW: 140, reclaimableW: 0, gridPowerW: -140 } }) }));
+    expect(f).toMatchObject({ zonKw: 0.6, netKw: -0.1, verbruikKw: 0.5, aircoKw: 0, huisKw: 0.5 });
+    // Wat er minder dan 0,05 kW van het net komt, is nul, en geen "-0".
+    expect(Object.is(residentFlows(view({ explanation: explanation({ budget: { ...explanation().budget, gridPowerW: -20 } }) })).netKw, 0)).toBe(true);
+    // Zonder zonmeting geen verbruik.
+    expect(residentFlows(view({ explanation: explanation({ solarProductionW: null }) })).verbruikKw).toBeNull();
+  });
+
+  it('telt in elke gegenereerde toestand op: zon plus net is airco plus huis', () => {
+    const k = dice(generator(20261008));
+    const strategies = defaultStrategies();
+    for (let i = 0; i < 300; i++) {
+      const d = decide({ config, state: entityState(k, config), strategies });
+      const f = residentFlows({ atMs: d.atMs, explanation: d.explanation, commands: d.commands, accepted: d.accepted, rejected: d.rejected, observed: {} });
+      if (f.zonKw == null || f.verbruikKw == null || f.huisKw == null) continue;
+      // In tienden van een kW, zodat afronding van de som zelf geen rol speelt.
+      const tenths = (n: number) => Math.round(n * 10);
+      expect(tenths(f.verbruikKw), `${i}`).toBe(Math.max(0, tenths(f.zonKw) + tenths(f.netKw)));
+      if (f.huisKw > 0) expect(tenths(f.aircoKw) + tenths(f.huisKw), `${i}`).toBe(tenths(f.verbruikKw));
+    }
+  });
+
+  it('zegt per apparaat wat Smart Climate zou doen, en de rest op één regel', () => {
+    const v = view({ accepted: [coolOnSun], rejected: [{ intent: { ...coolOnSun, zoneId: 'woonkamer', actuatorId: 'ac-woonkamer' }, blockedBy: 'insufficient_power_budget' }] });
+    const b = residentView(config, v);
+    expect(b.apparaten).toEqual([
+      { actuatorId: 'ac-woonkamer', naam: 'Airco woonkamer', soort: 'wait', tekst: 'zou koelen, maar te weinig zon over' },
+      { actuatorId: 'ac-zolder', naam: 'Airco zolder', soort: 'cool', tekst: 'koelen naar 23° · er is zon over' },
+    ].sort((a, c) => config.actuators.findIndex((x) => x.id === a.actuatorId) - config.actuators.findIndex((x) => x.id === c.actuatorId)));
+    expect(b.rust).toMatch(/: niets te doen$/);
+  });
+
+  it('zegt wat een besluit deed en waarom, ook voor de tijdlijn uit het logboek', () => {
+    const v = view({
+      accepted: [coolOnSun],
+      commands: [
+        { kind: 'setAction', actuatorId: 'ac-zolder', action: 'cool' },
+        { kind: 'setSetpoint', actuatorId: 'ac-zolder', setpointC: 22.5 },
+        { kind: 'startTimer', timerId: 'stabilisation', durationS: 300 },
+      ],
+    });
+    expect(residentView(config, v).besluit).toEqual({
+      wat: ['Airco zolder: koelen', 'Airco zolder: doel 22,5°', 'Stabiliseren, 5 minuten'],
+      waarom: ['Airco zolder: er is zon over'],
+    });
+    expect(residentView(config, view()).besluit).toBeNull();
+    expect(decisionWords(config, [], [{ actuatorId: 'ac-zolder', actie: 'off', reden: null }]).waarom).toEqual(['Airco zolder: uit']);
+  });
+
+  it('heeft in het Engels dezelfde vorm, zonder interne codes', () => {
+    const v = view({ accepted: [coolOnSun] });
+    const b = residentView(config, v, 'en');
+    expect(b.kop.titel).toBe('The Zolder is being cooled');
+    expect(JSON.stringify(b)).not.toMatch(/undefined|[a-z]+_[a-z_]+"/);
   });
 });

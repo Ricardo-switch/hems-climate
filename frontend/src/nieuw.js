@@ -22,35 +22,6 @@ const MODE = {
   handmatig: 'Handmatig',
 };
 
-const BLOCK = {
-  min_run_not_elapsed: 'moet eerst zijn minimale draaitijd halen',
-  min_rest_not_elapsed: 'moet nog even rusten',
-  stabilisation_active: 'wacht tot het verbruik stabiel is',
-  settling_after_switch: 'komt tot rust na een wissel',
-  insufficient_power_budget: 'te weinig zon over',
-  start_threshold_not_met: 'net te weinig zon om te starten',
-  capability_missing: 'het apparaat kan dit niet',
-  setpoint_out_of_range: 'doel buiten bereik van het apparaat',
-  superseded_by_higher_priority: 'een andere kamer ging voor',
-  no_change_needed: 'niets te veranderen',
-  resident_override: 'jij hebt het overgenomen',
-  insufficient_current_budget: 'de hoofdzekering zou te zwaar belast worden',
-};
-
-const REASON = {
-  zone_below_setpoint: 'onder het doel',
-  zone_above_setpoint: 'boven het doel',
-  zone_satisfied: 'op temperatuur',
-  buffering_free_energy: 'gratis zonnestroom opslaan als koelte of warmte',
-  surplus_available: 'er is zon over',
-  surplus_insufficient: 'te weinig zon over',
-  importing_from_grid: 'het huis haalt stroom van het net',
-  outside_active_hours: 'buiten de actieve uren',
-  mode_excludes_action: 'past niet bij deze modus',
-  nobody_home: 'niemand thuis',
-  failsafe_unreliable_input: 'een meting is onbetrouwbaar',
-};
-
 const ACTION = { cool: 'koelen', heat: 'verwarmen', standby: 'geparkeerd', off: 'uit' };
 
 /* --------------------------------------------------------------- hulp */
@@ -243,7 +214,8 @@ function drawHouse(snap) {
   svg.append(defs);
 
   const solar = e.solarProductionW;
-  const grid = e.budget.gridPowerW;
+  // De getallen in de tekening komen uit de dienst, zo afgerond dat ze optellen (besluit 94).
+  const fl = snap.bewoner?.stromen ?? { zonKw: null, netKw: 0, verbruikKw: null, aircoKw: 0, huisKw: null, geplandKw: 0 };
   const hour = new Date(snap.atMs).getHours();
   const sunny = solar != null && solar > 30;
   // Een zwakke zon tekenen we ook zwak: 100 W is geen stralende middag.
@@ -269,7 +241,7 @@ function drawHouse(snap) {
   if (sunny) {
     svg.append(s('circle', { cx: sx, cy: sy, r: 30 + 30 * strength, fill: 'url(#nSun)', opacity: strength }));
     svg.append(s('circle', { cx: sx, cy: sy, r: 20, fill: '#F5B342', filter: 'url(#nGlow)', opacity: 0.45 + 0.55 * strength }));
-    svg.append(s('text', { ...label, 'font-size': 24, 'font-weight': 700, fill: '#F5C66E' }, kw(solar)));
+    svg.append(s('text', { ...label, 'font-size': 24, 'font-weight': 700, fill: '#F5C66E' }, kw((fl.zonKw ?? 0) * 1000)));
   } else if (arc?.fractie != null) {
     // Overdag maar weinig zon: een bleke zon op zijn plek.
     svg.append(s('circle', { cx: sx, cy: sy, r: 16, fill: 'rgba(255,255,255,0.25)' }));
@@ -356,8 +328,6 @@ function drawHouse(snap) {
   }
 
   // Zon naar de airco die Smart Climate zou laten draaien, of anders naar het huis.
-  const climateW = e.budget.allocatedW ?? 0;
-  const useW = Math.max(0, (solar ?? 0) + grid);
   const toHouse = flows.length === 0 && sunny && n >= 2;
   if (toHouse) flows.push({ path: 'M372,150 C452,196 462,330 432,396' });
   for (const f of flows) {
@@ -365,10 +335,10 @@ function drawHouse(snap) {
     svg.append(s('path', { class: 'flow', d: f.path, fill: 'none', stroke: toHouse ? '#F5B342' : 'url(#nFlow)', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
   }
   if (flows.length > 0) {
-    const toHouseW = Math.min(solar ?? 0, useW);
+    const toHouseW = Math.min(fl.zonKw ?? 0, fl.verbruikKw ?? 0) * 1000;
     // In de schaduw is wat naar de airco's gaat een plan van Smart Climate, geen meting.
     const units = flows.length > 1 ? "airco's" : 'airco';
-    const big = toHouse ? kw(toHouseW) : climateW > 0 ? `≈ ${kw(climateW)}` : null;
+    const big = toHouse ? kw(toHouseW) : fl.geplandKw > 0 ? `≈ ${kw(fl.geplandKw * 1000)}` : null;
     const small = toHouse ? 'naar het huis' : site?.migrating ? `gepland voor ${units}` : `naar ${units}`;
     if (big) {
       // Een donkere rand om de letters houdt ze leesbaar boven de stippellijn.
@@ -380,35 +350,26 @@ function drawHouse(snap) {
 
   // Het net: een mast, en een stroom erheen of ervandaan.
   svg.append(s('path', { d: 'M478,470 L490,404 L502,470 M482,446 L498,446 M486,424 L494,424 M472,408 L508,408', fill: 'none', stroke: 'rgba(255,255,255,0.45)', 'stroke-width': 1.5, 'stroke-linecap': 'round' }));
-  if (Math.abs(grid) >= 20) {
-    const exporting = grid < 0;
+  // Het net, afgerond zoals de rest: wat hier staat, telt op met de zon en het huis.
+  if (fl.netKw !== 0) {
+    const exporting = fl.netKw < 0;
     svg.append(s('path', { class: 'flow', d: exporting ? 'M430,446 C452,446 466,436 484,418' : 'M484,418 C466,436 452,446 430,446', fill: 'none', stroke: exporting ? '#6FDCA6' : '#A9BAC2', 'stroke-width': 3.5, 'stroke-dasharray': '2 10', 'stroke-linecap': 'round', filter: 'url(#nGlow)' }));
-    if (Math.abs(grid) >= 50) {
-      svg.append(s('text', { x: 516, y: 496, 'text-anchor': 'end', 'font-size': 18, 'font-weight': 700, fill: exporting ? '#6FDCA6' : '#C9D6DC' }, exporting ? `${kw(grid)} terug` : `${kw(grid)} van het net`));
-    }
+    svg.append(s('text', { x: 516, y: 496, 'text-anchor': 'end', 'font-size': 18, 'font-weight': 700, fill: exporting ? '#6FDCA6' : '#C9D6DC' }, exporting ? `${kw(fl.netKw * 1000)} terug` : `${kw(fl.netKw * 1000)} van het net`));
   }
 
   const names = zones.map((z) => z.name).join(', ');
   svg.setAttribute('aria-label', `Doorsnede van het huis met ${names}`);
   $('huis').replaceChildren(svg);
 
-  const climate = e.budget.reclaimableW ?? 0;
-  const house = Math.max(0, (solar ?? 0) + grid - climate);
   $('legenda').replaceChildren(
     ...[
-      ['#F5B342', `Zon ${solar == null ? '—' : kw(solar)}`],
+      ['#F5B342', `Zon ${fl.zonKw == null ? '—' : kw(fl.zonKw * 1000)}`],
       // Gemeten: wat de airco's echt opnemen, ook als je huidige regeling ze stuurt.
-      ['#5CC8FF', `${site?.migrating ? 'Airco gemeten' : 'Airco'} ${kw(climate)}`],
-      ['#8FA3AD', `Huis ${kw(house)}`],
+      ['#5CC8FF', `${site?.migrating ? 'Airco gemeten' : 'Airco'} ${kw(fl.aircoKw * 1000)}`],
+      ['#8FA3AD', `Huis ${fl.huisKw == null ? '—' : kw(fl.huisKw * 1000)}`],
       ...(facadeLine() ? [['#F5C66E', facadeLine()]] : []),
     ].map(([c, t]) => el('span', {}, el('i', { style: `background: ${c}` }), t)),
   );
-}
-
-/** "woonkamer", "zolder" → "woonkamer en de zolder". */
-function joinNames(names) {
-  if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', de ')} en de ${names[names.length - 1]}`;
 }
 
 /** Kort genoeg voor in de tekening. */
@@ -422,28 +383,12 @@ function renderHome(snap) {
   const e = snap.explanation;
   const zones = site?.zones ?? e.perZone.map((z) => ({ id: z.zoneId, name: z.zoneId }));
   const statuses = zones.map((z) => ({ z, st: zoneStatus(snap, z.id) }));
-  const active = statuses.filter(({ st }) => st.kind === 'cool' || st.kind === 'heat');
-  const waiting = statuses.filter(({ st }) => st.kind === 'wait');
-  const solar = e.solarProductionW;
+  const b = snap.bewoner ?? {};
 
-  $('h-eyebrow').textContent = `Nu · ${MODE[e.mode] ?? e.mode}${e.modeSource === 'override' ? ' (gekozen)' : ''}`;
-  if (e.failsafe?.active) {
-    $('h-titel').textContent = 'Er is een storing';
-    $('h-zin').textContent = 'Een meting is onbetrouwbaar; Smart Climate zet de hulpapparaten veilig uit.';
-  } else if (active.length > 0) {
-    $('h-titel').textContent = active.length === 1 ? `De ${active[0].z.name.toLowerCase()} wordt ${active[0].st.kind === 'cool' ? 'gekoeld' : 'verwarmd'}` : 'Het huis wordt geregeld';
-    $('h-zin').textContent = active.map(({ z, st }) => `${z.name}: ${st.text.toLowerCase()}.`).join(' ') + (waiting.length ? ` ${waiting.map(({ z, st }) => `${z.name}: ${st.text.toLowerCase()}.`).join(' ')}` : '');
-  } else if (waiting.length > 0) {
-    const onSun = waiting.every(({ st }) => st.text === 'Wacht op meer zon');
-    const names = joinNames(waiting.map(({ z }) => z.name.toLowerCase()));
-    $('h-titel').textContent = onSun ? 'Het huis wacht op zon' : 'Er wacht iets';
-    $('h-zin').textContent = onSun
-      ? `De ${names} ${waiting.length > 1 ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`
-      : waiting.map(({ z, st }) => `${z.name}: ${st.text.toLowerCase()}.`).join(' ');
-  } else {
-    $('h-titel').textContent = 'Er draait niets';
-    $('h-zin').textContent = solar != null && solar > 30 ? 'Geen kamer heeft iets nodig.' : 'Geen zon, en geen kamer heeft iets nodig.';
-  }
+  // De kop, de lijst en de stromen komen uit de dienst (besluit 94).
+  $('h-eyebrow').textContent = b.kop?.boven ?? '';
+  $('h-titel').textContent = b.kop?.titel ?? '';
+  $('h-zin').textContent = b.kop?.zin ?? '';
 
   $('h-rooms').replaceChildren(
     ...statuses.map(({ z, st }) => {
@@ -463,27 +408,11 @@ function renderHome(snap) {
 
   // Wat Smart Climate per apparaat zou doen, met de reden. Wat niets te doen
   // heeft, komt samen op één regel; anders wint de lijst het van het huis.
-  const lines = [];
-  const quiet = [];
-  for (const a of site?.actuators ?? []) {
-    const acc = snap.accepted.find((i) => i.actuatorId === a.id);
-    const rej = snap.rejected.find((r) => r.intent.actuatorId === a.id);
-    let text;
-    let kind = 'idle';
-    if (acc && (acc.action === 'cool' || acc.action === 'heat')) {
-      kind = acc.action;
-      text = `${ACTION[acc.action]}${acc.setpointC != null ? ` naar ${nl(acc.setpointC)}°` : ''} · ${REASON[acc.reason] ?? acc.reason}`;
-    } else if (rej) {
-      kind = 'wait';
-      text = `zou ${ACTION[rej.intent.action] ?? rej.intent.action}, maar ${BLOCK[rej.blockedBy] ?? rej.blockedBy}`;
-    } else {
-      quiet.push(a.name);
-      continue;
-    }
-    lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: `dot k-${kind}`, style: 'margin-top: 5px' }), el('div', {}, el('b', { text: a.name }), el('div', { class: 'muted', text }))));
-  }
-  if (quiet.length) {
-    lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: 'dot k-idle', style: 'margin-top: 5px' }), el('div', { class: 'muted', text: `${quiet.join(', ')}: niets te doen` })));
+  const lines = (b.apparaten ?? []).map((d) =>
+    el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: `dot k-${d.soort}`, style: 'margin-top: 5px' }), el('div', {}, el('b', { text: d.naam }), el('div', { class: 'muted', text: d.tekst }))),
+  );
+  if (b.rust) {
+    lines.push(el('div', { style: 'display: flex; gap: 10px; align-items: flex-start' }, el('span', { class: 'dot k-idle', style: 'margin-top: 5px' }), el('div', { class: 'muted', text: b.rust })));
   }
   $('nu-lijst').replaceChildren(...lines);
   $('besluit-tijd').textContent = `besluit ${hhmm(snap.atMs)}`;
@@ -634,20 +563,10 @@ function renderNoticed() {
 
 /* ------------------------------------------------------- Waarom */
 
-function describeCommand(c) {
-  const who = actuatorName(c.actuatorId);
-  if (c.kind === 'setAction') return `${who}: ${ACTION[c.action] ?? c.action}`;
-  if (c.kind === 'setSetpoint') return `${who}: doel ${nl(c.setpointC)}°`;
-  if (c.kind === 'startTimer') return c.timerId === 'stabilisation' ? `Stabiliseren, ${Math.round(c.durationS / 60)} minuten` : `Timer ${c.timerId}`;
-  return c.kind;
-}
-
 function remember(snap) {
-  if (!snap.commands?.length) return;
-  const reasons = snap.accepted
-    .filter((i) => snap.commands.some((c) => c.actuatorId === i.actuatorId))
-    .map((i) => `${actuatorName(i.actuatorId)}: ${REASON[i.reason] ?? i.reason}`);
-  const entry = { t: snap.atMs, what: snap.commands.map(describeCommand), why: reasons };
+  const words = snap.bewoner?.besluit;
+  if (!snap.commands?.length || !words) return;
+  const entry = { t: snap.atMs, what: words.wat, why: words.waarom };
   if (log.some((x) => x.t === entry.t)) return;
   log.unshift(entry);
   log = log.slice(0, 100);
@@ -661,11 +580,7 @@ function remember(snap) {
 function renderLog() {
   const box = $('tijdlijn');
   if (today) {
-    const fromDay = today.besluiten.map((b) => ({
-      t: b.tMs,
-      what: b.opdrachten.map(describeCommand),
-      why: b.redenen.map((r) => `${actuatorName(r.actuatorId)}: ${REASON[r.reden] ?? r.reden ?? ACTION[r.actie] ?? r.actie}`),
-    }));
+    const fromDay = today.besluiten.map((b) => ({ t: b.tMs, what: b.wat ?? [], why: b.waarom ?? [] }));
     const newer = log.filter((x) => x.t > (today.besluiten[0]?.tMs ?? today.totMs));
     const all = [...newer, ...fromDay];
     $('w-lead').textContent = 'Wat Smart Climate vandaag besloot, met de reden. Nieuwste bovenaan.';

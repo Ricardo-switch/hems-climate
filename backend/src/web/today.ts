@@ -18,8 +18,10 @@
 
 import { basename } from 'node:path';
 
+import type { Command } from '../core/decision.js';
 import type { SiteConfig } from '../core/model.js';
 import { arbiterRunning, findLogFiles, observedRunning, readMoments } from '../divergence/read.js';
+import { decisionWords } from './resident.js';
 
 const QUARTER_MS = 15 * 60_000;
 /** Een gat groter dan dit in het logboek breekt een draaiperiode af. */
@@ -40,6 +42,9 @@ export interface TodayDecision {
   readonly tMs: number;
   readonly opdrachten: readonly { kind: string; actuatorId?: string; action?: string; setpointC?: number; timerId?: string; durationS?: number }[];
   readonly redenen: readonly { actuatorId: string; actie: string; strategie: string | null; reden: string | null }[];
+  /** In woorden, voor de tijdlijn van Waarom (besluit 94). */
+  readonly wat: readonly string[];
+  readonly waarom: readonly string[];
 }
 
 export interface TodayReport {
@@ -156,18 +161,17 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
 
     if (m.full && m.commands.length > 0) {
       const touched = new Set(m.commands.map((c) => c.actuatorId).filter((x): x is string => x != null));
-      decisions.push({
-        tMs: m.tMs,
-        opdrachten: m.commands,
-        redenen: m.accepted
-          .filter((a) => touched.has(a.actuatorId))
-          .map((a) => ({
-            actuatorId: a.actuatorId,
-            actie: a.action,
-            strategie: a.strategyId ?? null,
-            reden: (a as { reason?: string }).reason ?? null,
-          })),
-      });
+      const redenen = m.accepted
+        .filter((a) => touched.has(a.actuatorId))
+        .map((a) => ({
+          actuatorId: a.actuatorId,
+          actie: a.action,
+          strategie: a.strategyId ?? null,
+          reden: (a as { reason?: string }).reason ?? null,
+        }));
+      // Het logboek bewaart de opdrachten in dezelfde vorm als de kern ze gaf.
+      const words = decisionWords(config, m.commands as unknown as Command[], redenen);
+      decisions.push({ tMs: m.tMs, opdrachten: m.commands, redenen, wat: words.wat, waarom: words.waarom });
     }
   }
 

@@ -31,7 +31,8 @@ import { exportInfo, writeExport } from './export.js';
 import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
-import { ask, parseQuestion, residentRooms } from './assistant.js';
+import { ask, parseQuestion } from './assistant.js';
+import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
@@ -817,10 +818,10 @@ export class WebServer {
    * de stand in woorden, uitgerekend in de dienst. De kern blijft wat hij was;
    * de proefomgeving leest `bewoner`, de schaduwweergave de rest.
    */
-  #withResident(snapshot: LiveSnapshot): LiveSnapshot & { bewoner?: { kamers: ReturnType<typeof residentRooms> } } {
+  #withResident(snapshot: LiveSnapshot): LiveSnapshot & { bewoner?: ResidentView } {
     const config = this.#options.config;
     if (config == null) return snapshot;
-    return { ...snapshot, bewoner: { kamers: residentRooms(config, snapshot) } };
+    return { ...snapshot, bewoner: residentView(config, snapshot) };
   }
 
   /** Duwt een besluit naar alle kijkers. Hier hangt de runner zich aan. */

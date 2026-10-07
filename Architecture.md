@@ -124,7 +124,7 @@ niets. De schaduwdienst serveert ze zelf:
 
 | Route | Wat |
 | --- | --- |
-| `/api/state`, `/api/events` | het laatste besluit, en een stroom van elk volgend |
+| `/api/state`, `/api/events` | het laatste besluit, en een stroom van elk volgend; ernaast `bewoner` voor de proefomgeving: de stand per kamer, de kop van Thuis, de stromen (zo afgerond dat ze optellen), wat er per apparaat zou gebeuren en de woorden bij een besluit (besluit 94, `web/resident.ts`) |
 | `/api/divergence` | de terugblik over de logboeken, elk kwartier bijgewerkt vanaf de tussenstand (besluit 26, 63) |
 | `/api/site` | namen en apparaten per zone, voor de weergave |
 | `/api/vandaag` | de dag tot nu toe: zon per kwartier, wanneer elk apparaat draaide volgens Smart Climate en volgens de huidige regeling, en de besluiten; een minuut vastgehouden |

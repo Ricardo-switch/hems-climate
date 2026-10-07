@@ -3907,6 +3907,17 @@ de assistent en wat het echte apparaat doet (`residentRooms`). De pagina rekent
 die niet meer zelf uit. Nog op de pagina: de kop van Thuis, de stromen in de
 tekening en de tijdlijn van Waarom; die volgen.
 
+*Later op 7 oktober: de rest van Thuis en Waarom ook.* Naast `kamers` geeft
+`bewoner` nu de kop (`kop`: boven, titel, zin), de stromen in kW
+(`stromen`), wat Smart Climate per apparaat zou doen (`apparaten`, en `rust`
+voor de apparaten zonder iets te doen) en de woorden bij een besluit
+(`besluit`: wat en waarom). `/api/vandaag` geeft bij elk besluit van vandaag
+dezelfde woorden (`wat`, `waarom`). De stromen zijn zo afgerond dat ze
+optellen: zon plus net is wat het huis gebruikt, en dat is de airco plus de
+rest. Los afgerond zei de tekening eerder "zon 0,6, huis 0,4, 0,1 terug". Een
+test eist dat dit in duizenden gegenereerde toestanden klopt. Op de pagina
+staan nu geen woordenlijsten voor redenen en blokkades meer.
+
 *Wat dit verandert aan 76:* de testpagina is niet langer alleen een prototype
 dat niet verder groeit; hij is de proefomgeving die de app wordt, onder de
 regel dat hij niets zelf uitrekent. Het bewonerscontract en de contracttests

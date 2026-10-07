@@ -887,7 +887,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
  * apparaat doet. Uitgerekend in de dienst, zodat de pagina alleen toont.
  */
 
-const SHORT = {
+export const SHORT = {
   nl: {
     failsafe: 'Storing: veilig gezet',
     taken: 'Jij hebt het overgenomen',
