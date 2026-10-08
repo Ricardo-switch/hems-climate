@@ -29,13 +29,10 @@ describe('de verwachting lezen', () => {
     br('sensor.zonkans_1d', 'sunchance_1d'),
     br('sensor.regenkans_1d', 'rainchance_1d'),
     br('sensor.staat_1d', 'condition_1d'),
-    // De naam van de entiteit zegt niets: de sleutel telt.
-    br('sensor.volledige_staat_1d_2', 'conditionexact_1d'),
     br('sensor.zonkans_2d', 'sunchance_2d'),
     br('sensor.staat_2d', 'condition_2d'),
     // Het weer van nu, zonder achtervoegsel: dag 0.
     br('sensor.staat', 'condition'),
-    br('sensor.volledige_staat', 'conditionexact'),
     // De temperatuur van nu heeft geen sleutel en telt niet.
     { entity_id: 'sensor.temperatuur', platform: 'buienradar', translation_key: null },
     // Een andere integratie met dezelfde sleutel telt niet.
@@ -48,12 +45,10 @@ describe('de verwachting lezen', () => {
       state('sensor.zonkans_1d', '10'),
       state('sensor.regenkans_1d', '90'),
       state('sensor.staat_1d', 'rainy'),
-      state('sensor.volledige_staat_1d_2', 'Zwaar bewolkt en regen'),
       state('sensor.zonkans_2d', '40'),
       state('sensor.staat_2d', 'cloudy'),
       state('sensor.temperatuur', '14.4'),
       state('sensor.staat', 'cloudy'),
-      state('sensor.volledige_staat', 'Zwaar bewolkt'),
       state('sensor.ander_zonkans_3d', '80'),
     ].map((s) => [s.entity_id, s]),
   );
@@ -61,8 +56,9 @@ describe('de verwachting lezen', () => {
   it('vindt de dagen aan hun sleutel, morgen eerst', () => {
     const f = readForecast(entities, states);
     expect(f.map((d) => d.offset)).toEqual([0, 1, 2]);
-    expect(f[0]).toMatchObject({ offset: 0, soort: 'bewolkt', tekst: 'Zwaar bewolkt', maxC: null });
-    expect(f[1]).toEqual({ offset: 1, maxC: 17, minC: 10, regenkansPct: 90, zonkansPct: 10, soort: 'regen', tekst: 'Zwaar bewolkt en regen' });
+    // Eigen woorden: Buienradar praat de taal van Home Assistant, hier Engels.
+    expect(f[0]).toMatchObject({ offset: 0, soort: 'bewolkt', tekst: 'Bewolkt', maxC: null });
+    expect(f[1]).toEqual({ offset: 1, maxC: 17, minC: 10, regenkansPct: 90, zonkansPct: 10, soort: 'regen', tekst: 'Bewolkt met regen' });
     // Bewolkt met 40 % zonkans is half bewolkt.
     expect(f[2]).toMatchObject({ offset: 2, zonkansPct: 40, soort: 'half', maxC: null });
   });

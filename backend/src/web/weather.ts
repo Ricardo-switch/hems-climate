@@ -46,11 +46,11 @@ export interface ForecastDay {
   readonly regenkansPct: number | null;
   readonly zonkansPct: number | null;
   readonly soort: WeatherKind | null;
-  /** "Zwaar bewolkt en regen", zoals Buienradar het zegt. */
+  /** "Bewolkt met regen": eigen woorden, want Buienradar praat de taal van Home Assistant. */
   readonly tekst: string | null;
 }
 
-const KEY = /^(temperature|mintemp|rainchance|sunchance|condition|conditionexact)(?:_([1-5])d)?$/;
+const KEY = /^(temperature|mintemp|rainchance|sunchance|condition)(?:_([1-5])d)?$/;
 
 /** Het weer van nu en de vijf dagen van Buienradar, of een lege lijst als die er niet is. */
 export function readForecast(entities: readonly HaRegistryEntity[], states: ReadonlyMap<string, HaEntityState>): ForecastDay[] {
@@ -69,14 +69,16 @@ export function readForecast(entities: readonly HaRegistryEntity[], states: Read
     .sort(([a], [b]) => a - b)
     .map(([offset, d]) => {
       const zon = num(d['sunchance']);
+      const regen = num(d['rainchance']);
+      const soort = kindOf(d['condition'], zon);
       return {
         offset,
         maxC: num(d['temperature']),
         minC: num(d['mintemp']),
-        regenkansPct: num(d['rainchance']),
+        regenkansPct: regen,
         zonkansPct: zon,
-        soort: kindOf(d['condition'], zon),
-        tekst: d['conditionexact'] ?? null,
+        soort,
+        tekst: wordsFor(soort, regen),
       };
     });
 }
@@ -92,6 +94,28 @@ export function kindOf(condition: string | undefined, sunPct: number | null): We
   if (/clear|sunny|zon/.test(c)) return 'zon';
   if (/cloud|bewolk/.test(c)) return sunPct != null && sunPct >= 30 ? 'half' : 'bewolkt';
   return null;
+}
+
+/** De soort weer in gewone woorden, met de kans op regen erbij als die telt. */
+export function wordsFor(kind: WeatherKind | null, rainPct: number | null): string | null {
+  switch (kind) {
+    case 'zon':
+      return 'Zonnig';
+    case 'half':
+      return rainPct != null && rainPct >= 50 ? 'Zon en wolken, kans op een bui' : 'Zon en wolken';
+    case 'bewolkt':
+      return rainPct != null && rainPct >= 50 ? 'Bewolkt, kans op regen' : 'Bewolkt';
+    case 'regen':
+      return rainPct != null && rainPct < 50 ? 'Bewolkt, af en toe een bui' : 'Bewolkt met regen';
+    case 'onweer':
+      return 'Kans op onweer';
+    case 'sneeuw':
+      return 'Sneeuw';
+    case 'mist':
+      return 'Mist';
+    default:
+      return null;
+  }
 }
 
 /**
