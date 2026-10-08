@@ -16,16 +16,18 @@ let state = null;
 let huisData = null;
 let zon = null;
 let vandaag = null;
+let weer = null;
 let gekozenZone = null;
 
 /* ------------------------------------------------------- de gegevens */
 
 async function laadAlles() {
-  const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag')]);
+  const [s, h, z, v, w] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer')]);
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') vandaag = v.value;
+  if (w.status === 'fulfilled') weer = w.value;
   teken();
 }
 
@@ -174,8 +176,7 @@ function teken() {
   const kop = state.bewoner?.kop ?? {};
   zet('[data-kop]', kop.titel ?? 'Het huis');
   zet('[data-zin]', kop.zin ?? '');
-  zet('[data-buiten]', e.outdoorTemperatureC == null ? '' : `${nl(e.outdoorTemperatureC)}° buiten`);
-  $$('[data-buiten]').forEach((el) => (el.hidden = e.outdoorTemperatureC == null));
+  tekenWeerknop(e.outdoorTemperatureC);
   const modus = e.modeSource === 'schedule' ? 'Automatisch' : { dag: 'Dag', nacht: 'Nacht', afwezig: 'Afwezig', vakantie: 'Vakantie', handmatig: 'Handmatig' }[e.mode] ?? 'Automatisch';
   $$('[data-modus]').forEach((el) => (el.innerHTML = `${esc(modus)} <span aria-hidden="true" style="color: var(--gedempt)">▾</span>`));
 
@@ -229,7 +230,8 @@ function tekenVandaag() {
     <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">${banenSvg}${uren}</g>
   </svg>`;
   const kwh = (vandaag.zonWh ?? 0) / 1000;
-  zet('[data-opgewekt]', `${nl(kwh)} kWh opgewekt`);
+  const verwacht = weer?.vandaag?.verwachtKwh;
+  zet('[data-opgewekt]', verwacht != null && verwacht > kwh + 0.05 ? `${nl(kwh)} kWh, verwacht ${nl(verwacht)}` : `${nl(kwh)} kWh opgewekt`);
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
   zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. De stippellijn is de zon bij heldere lucht.` : 'De stippellijn is de zon bij heldere lucht.');
 }
@@ -295,9 +297,93 @@ function tekenKamersTel() {
     .join('');
 }
 
+/* ------------------------------------------------------------- het weer */
+
+/*
+ * Het weer (besluit 105): de knop met de temperatuur opent vandaag en de vijf
+ * dagen van Buienradar, met wat de panelen dan leveren. Dat rekent de dienst
+ * uit met wat de panelen op heldere dagen haalden; de pagina zet het neer.
+ */
+const WOLK = '<path d="M10 25h15a6 6 0 0 0 .6-12A8 8 0 0 0 10.4 15 5 5 0 0 0 10 25z" fill="#B8C4CF"/>';
+const WEER_ICOON = {
+  zon: '<circle cx="18" cy="18" r="7" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2.2" stroke-linecap="round"><path d="M18 4v3M18 29v3M4 18h3M29 18h3M8 8l2 2M26 26l2 2M8 28l2-2M26 10l2-2"/></g>',
+  half: '<circle cx="13" cy="13" r="6" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2" stroke-linecap="round"><path d="M13 3v2M3 13h2M6 6l1.5 1.5M20 6l-1.5 1.5"/></g><path d="M12 29h14a5.5 5.5 0 0 0 .5-11A7.5 7.5 0 0 0 12.4 20 4.5 4.5 0 0 0 12 29z" fill="#B8C4CF"/>',
+  bewolkt: WOLK,
+  regen: `${WOLK}<g stroke="#6FD3FF" stroke-width="2" stroke-linecap="round"><path d="M13 28l-1.5 4M19 28l-1.5 4M25 28l-1.5 4"/></g>`,
+  onweer: `${WOLK}<path d="M19 26l-4 6h4l-2 4 6-7h-4l2-3z" fill="#F7B548"/>`,
+  sneeuw: `${WOLK}<g fill="#EEF3F7"><circle cx="13" cy="30" r="1.6"/><circle cx="19" cy="32" r="1.6"/><circle cx="25" cy="30" r="1.6"/></g>`,
+  mist: '<g stroke="#B8C4CF" stroke-width="2.2" stroke-linecap="round"><path d="M6 13h24M9 19h22M6 25h20"/></g>',
+};
+const weerIcoon = (soort) => `<svg viewBox="0 0 36 36" aria-hidden="true">${WEER_ICOON[soort] ?? WEER_ICOON.bewolkt}</svg>`;
+
+function tekenWeerknop(buitenC) {
+  const icoon = weer?.vandaag?.soort ? weerIcoon(weer.vandaag.soort) : '';
+  for (const knop of $$('[data-buiten]')) {
+    const tel = knop.closest('#tel') != null;
+    const tekst = buitenC == null ? (weer ? 'Het weer' : '') : tel ? `${nl(buitenC, 0)}°` : `${nl(buitenC)}° buiten`;
+    knop.innerHTML = `${icoon}${esc(tekst)}`;
+    knop.hidden = !tekst;
+    knop.disabled = weer == null;
+    knop.setAttribute('aria-label', weer ? `${tekst}, het weer van de komende dagen` : tekst);
+  }
+  // Niet opnieuw opbouwen terwijl het open is: dan verspringt de focus.
+  if (weer && $$('[data-weer]').every((b) => b.hidden)) tekenWeer();
+}
+
+const DAGNAAM = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', timeZone: 'UTC' });
+const DATUM = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+function tekenWeer() {
+  const v = weer.vandaag;
+  const schaal = Math.max(1, v.heldereLuchtKwh, ...weer.dagen.map((d) => d.heldereLuchtKwh));
+  const balk = (kwh) => `<i><b style="width: ${Math.min(100, (kwh / schaal) * 100).toFixed(1)}%"></b></i>`;
+  const vandaagKwh = v.verwachtKwh ?? v.opgewektKwh;
+  const rijen = [
+    `<div class="rij">
+      <div class="dag">Vandaag<span>${esc(v.tekst ?? '')}</span></div>${weerIcoon(v.soort)}
+      <div class="temp"><span>${state?.explanation?.outdoorTemperatureC == null ? '' : `<b>${nl(state.explanation.outdoorTemperatureC)}°</b> nu`}</span><span>${v.zonkansPct == null ? '' : `${v.zonkansPct}% zon`}</span></div>
+      <div class="opbrengst">${balk(vandaagKwh)}<span>${v.verwachtKwh != null ? `${nl(v.verwachtKwh)} kWh` : `${nl(v.opgewektKwh)} kWh tot nu`}</span></div>
+    </div>`,
+    ...weer.dagen.map((d, i) => {
+      const datum = new Date(`${d.datum}T12:00:00Z`);
+      const naam = i === 0 ? 'Morgen' : DAGNAAM.format(datum).replace(/^./, (c) => c.toUpperCase());
+      return `<div class="rij">
+        <div class="dag">${naam}<span>${DATUM.format(datum)}</span></div>${weerIcoon(d.soort)}
+        <div class="temp"><span><b>${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}</b> ${d.minC == null ? '' : `/ ${nl(d.minC, 0)}°`}</span><span>${d.regenkansPct == null ? '' : `${d.regenkansPct}% regen`}</span></div>
+        <div class="opbrengst">${balk(d.verwachtKwh ?? 0)}<span>${d.verwachtKwh == null ? '' : `${nl(d.verwachtKwh)} kWh`}</span></div>
+      </div>`;
+    }),
+  ].join('');
+  const geleerd = weer.geleerd?.dagen ? ` Bijgesteld met ${weer.geleerd.dagen === 1 ? 'één dag' : `${weer.geleerd.dagen} dagen`} van je eigen panelen.` : '';
+  for (const blad of $$('[data-weer]')) {
+    blad.innerHTML = `
+      <div class="weerkop"><h2 class="kop-3">Het weer</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+      ${rijen}
+      <p class="mini voet">Van Buienradar. De balk is wat je panelen die dag leveren: de zonkans maal wat ze op een heldere dag halen.${geleerd}</p>`;
+    blad.querySelector('.sluit').addEventListener('click', sluitWeer);
+  }
+}
+
+function openWeer(knop) {
+  const blad = document.getElementById(knop.getAttribute('aria-controls'));
+  if (!blad || !weer) return;
+  blad.hidden = false;
+  if (blad.id === 'weer-tel') document.querySelector('[data-weer-achter]').hidden = false;
+  knop.setAttribute('aria-expanded', 'true');
+  blad.querySelector('.sluit')?.focus();
+}
+
+function sluitWeer() {
+  $$('[data-weer], [data-weer-achter]').forEach((el) => (el.hidden = true));
+  $$('[data-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+}
+
 /* -------------------------------------------------------------- starten */
 
 app.start('thuis');
+$$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
+document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
+addEventListener('keydown', (e) => e.key === 'Escape' && sluitWeer());
 $$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => (location.href = 'nieuw.html#huis')));
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);

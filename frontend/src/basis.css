@@ -10,6 +10,9 @@
 /* Bij een overstap naar een andere tab vloeit de pagina over in plaats van te knipperen. */
 @view-transition { navigation: auto; }
 
+/* Wat verborgen is, blijft verborgen, ook als een klasse het een display geeft. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 body { overflow: hidden; }
 body.tel-stand { overflow: auto; }

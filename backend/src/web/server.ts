@@ -40,6 +40,7 @@ import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, parseQuestion } from './assistant.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
+import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } from './weather.js';
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
 import type { LightSwitch } from './lights.js';
@@ -136,6 +137,12 @@ export interface WebOptions {
     readonly view: () => ConnectionView;
     readonly found: () => { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
   };
+  /**
+   * Het weer van de komende dagen (besluit 105): de verwachting van Buienradar
+   * uit Home Assistant, en de zonkans per dag zoals die de dag ervoor werd
+   * verwacht. Zonder dit bestaat de route niet.
+   */
+  readonly weather?: { readonly forecast: () => readonly ForecastDay[]; readonly log: WeatherLog };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -352,6 +359,8 @@ export class WebServer {
   readonly #server: Server;
   readonly #listeners = new Set<Listener>();
   #today: TodayCache | null = null;
+  /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
+  #weather: { atMs: number; report: WeatherReport } | null = null;
   #solar: SolarHistory | null = null;
 
   constructor(options: WebOptions) {
@@ -689,6 +698,56 @@ export class WebServer {
       }
       const now = Date.now();
       sendJson(res, 200, sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone), learned));
+      return;
+    }
+
+    /*
+     * Het weer van de komende dagen (besluit 105), met wat de panelen dan
+     * ongeveer leveren. Alleen om te tonen; de regeling gebruikt het niet.
+     */
+    if (path === '/api/weer') {
+      const config = this.#options.config;
+      const location = this.#options.location?.() ?? null;
+      const weather = this.#options.weather;
+      if (weather == null || config?.geometry == null || location == null || logDir == null) {
+        sendJson(res, 503, { wachten: 'het weer komt zodra de ligging van het huis en de panelen bekend zijn' });
+        return;
+      }
+      const now = Date.now();
+      if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000) {
+        sendJson(res, 200, this.#weather.report);
+        return;
+      }
+      const forecast = weather.forecast();
+      if (forecast.length === 0) {
+        sendJson(res, 503, { wachten: 'Home Assistant geeft geen verwachting van Buienradar' });
+        return;
+      }
+      this.#solar ??= new SolarHistory({ logDir });
+      this.#today ??= new TodayCache(logDir, config);
+      try {
+        await this.#solar.refresh();
+      } catch {
+        // Dan met wat er al was.
+      }
+      await weather.log.load();
+      const todayWh = await this.#today.get().then(
+        (t) => t.zonWh,
+        () => 0,
+      );
+      const report = weatherReport({
+        forecast,
+        predicted: weather.log.current,
+        solarDays: this.#solar.current,
+        geometry: config.geometry,
+        location,
+        learned: learnSolar(this.#solar.current, config.geometry, location),
+        todayWh,
+        nowMs: now,
+        timeZone: config.timezone,
+      });
+      this.#weather = { atMs: now, report };
+      sendJson(res, 200, report);
       return;
     }
 

@@ -64,6 +64,12 @@ export interface HaRegistryEntity {
   readonly original_device_class?: string | null;
   /** De integratie die deze entiteit levert, bijvoorbeeld "buienradar". */
   readonly platform?: string | null;
+  /**
+   * De vaste sleutel van de integratie, los van taal en naam: "sunchance_1d".
+   * Zo is een sensor te herkennen zonder de `unique_id`, waar Buienradar de
+   * ligging van het huis in zet.
+   */
+  readonly translation_key?: string | null;
 }
 
 export interface HaCoreConfig {

@@ -42,6 +42,29 @@
   .kamer .naam span { font-size: 13.5px; font-weight: 600; }
   .kamer .getal { font-size: 30px; }
   .weg { display: none !important; }
+
+  /* Het weer (besluit 105): een blad over de rechterkolom, op de telefoon onderin. */
+  button.pil { border: 0; color: inherit; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .weerknop svg { width: 20px; height: 20px; margin-left: -4px; }
+  .weer { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(12, 20, 34, 0.94); z-index: 5; }
+  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; }
+  #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; border-radius: 26px; z-index: 30; }
+  .weer-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
+  .weer .weerkop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .weer .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; }
+  .weer .rij { display: grid; grid-template-columns: 74px 30px 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .weer .rij:first-of-type { border-top: 0; }
+  .weer .dag { font-weight: 700; font-size: 15px; }
+  .weer .dag span { display: block; font-weight: 500; font-size: 12.5px; color: var(--gedempt); }
+  .weer .rij svg { width: 30px; height: 30px; }
+  .weer .temp { display: flex; justify-content: space-between; font-size: 14px; color: var(--zacht); }
+  .weer .temp b { color: var(--tekst); font-size: 15px; }
+  .weer .opbrengst { grid-column: 2 / 4; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--zacht); }
+  .weer .opbrengst i { flex: 1; position: relative; height: 8px; border-radius: 4px; background: rgba(247, 181, 72, 0.14); overflow: hidden; }
+  .weer .opbrengst i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
+  .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
+  .weer .voet { margin: auto 0 0; padding-top: 10px; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -51,7 +74,7 @@
       <div class="kopregel">
         <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
         <div class="chips">
-          <span class="pil" data-buiten></span>
+          <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
           <span class="pil" style="color: var(--mint)" data-fase><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
         </div>
@@ -79,6 +102,7 @@
           <p class="mini" style="margin: 8px 0 0" data-gevoel-zin></p>
         </section>
       </aside>
+      <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
       <div class="dok">
         <span class="bol adem" style="width: 46px; height: 46px"></span>
         <a class="vraag" href="nieuw.html#assistent">Tik om iets te vragen over je huis</a>
@@ -93,6 +117,7 @@
       <div class="kopregel">
         <span class="tijd" data-tijd>--:--</span>
         <span style="display: flex; gap: 8px; align-items: center">
+          <button class="pil weerknop" type="button" style="height: 32px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
           <span class="pil" style="height: 32px; font-size: 13px" data-modus></span>
           <a class="pil" href="nieuw.html#bediening" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
@@ -111,6 +136,8 @@
       <a class="glas-klein" href="nieuw.html#assistent" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; color: var(--zacht)"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</a>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <div class="weer-achter" hidden data-weer-achter></div>
+    <section class="glas weer" id="weer-tel" role="dialog" aria-label="Het weer" hidden data-weer></section>
   </div>
   <script src="kit/nav.js"></script>
   <script src="kit/huis.js"></script>

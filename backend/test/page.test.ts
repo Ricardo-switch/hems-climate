@@ -42,6 +42,7 @@ import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
+import { WeatherLog } from '../src/web/weather.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 
@@ -303,6 +304,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             callScene: async (id) => void sceneCalls.push(id),
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          // Het weer (besluit 105): twee dagen van een nagemaakte Buienradar.
+          weather: {
+            forecast: () => [
+              { offset: 0, maxC: null, minC: null, regenkansPct: null, zonkansPct: null, soort: 'bewolkt', tekst: 'Zwaar bewolkt' },
+              { offset: 1, maxC: 17, minC: 10, regenkansPct: 90, zonkansPct: 10, soort: 'regen', tekst: 'Zwaar bewolkt en regen' },
+              { offset: 2, maxC: 18, minC: 7, regenkansPct: 30, zonkansPct: 50, soort: 'half', tekst: null },
+            ],
+            log: new WeatherLog(dir),
+          },
           uitstel,
           energy: { store: energyStore, source: ENERGY_SOURCE },
           connection: {
@@ -729,9 +739,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       } else {
         expect(await p.evaluate('document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
       }
+      // Het weer (besluit 105): de knop met de temperatuur opent de komende dagen.
+      const knop = p.locator(`${zichtbaar} [data-buiten]`);
+      // Dicht tot erop getikt wordt.
+      expect(await p.locator(`${zichtbaar} [data-weer]`).isVisible()).toBe(false);
+      await knop.and(p.locator(':enabled')).waitFor({ timeout: 5000 });
+      await knop.click();
+      const blad = p.locator(`${zichtbaar} [data-weer]`);
+      await blad.waitFor({ timeout: 5000 });
+      expect(await blad.textContent()).toContain('Morgen');
+      expect(await blad.textContent()).toContain('90% regen');
+      expect(await blad.locator('.rij').count()).toBe(3);
+      await p.keyboard.press('Escape');
+      await blad.waitFor({ state: 'hidden', timeout: 5000 });
       expect(fouten).toEqual([]);
       await context.close();
-    });
+    }, 20_000);
   }
 
   /*

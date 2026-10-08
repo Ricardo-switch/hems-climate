@@ -115,6 +115,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [88. De app noemt alleen een oorzaak die gemeten is](#88-de-app-noemt-alleen-een-oorzaak-die-gemeten-is)
 - [94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app](#94-de-schaduwweergave-is-voor-de-cijfers-de-proefomgeving-voor-de-app)
 - [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
+- [105. Het weer van de komende dagen, met wat de panelen dan leveren](#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren)
 
 **Veiligheid**
 
@@ -4592,8 +4593,9 @@ ging verloren wat ze goed maakte. Gekozen door de bewoner op 8 oktober 2026.
   schetsen van besluit 71. De regels van 71 blijven gelden: elk getal is te
   herleiden, bij elk besluit een reden, eerst de lelijke momenten.
 - **De schets is de code.** Het huis, de stijlbasis, de sankey en de navigatie
-  staan in `design/app2/kit/`, en de app gebruikt diezelfde bestanden met de
-  echte gegevens. Het huis in de app is dus letterlijk het huis uit de schets.
+  staan in `frontend/kit/` (eerst `design/app2/kit/`; de NAS checkt `design/`
+  niet uit), en de schetsen en de app gebruiken diezelfde bestanden, de app met
+  de echte gegevens. Het huis in de app is dus letterlijk het huis uit de schets.
 - **Het huis in 3D, in de lucht van het moment.** Een opengewerkt huis dat zich
   opbouwt uit wat het huis heeft (de indeling, panelen, buitenunit, batterij,
   laadpaal met auto); wat er niet is, staat er niet. De achtergrond is de lucht
@@ -4619,6 +4621,44 @@ ging verloren wat ze goed maakte. Gekozen door de bewoner op 8 oktober 2026.
 Apparaten; Kamer met de bladen voor screen, airco, thermostaat en lamp, en de
 rondleiding; Vandaag en Opbrengst; Instellingen, de indeling, Leren en Wat je
 huis kan.
+
+---
+
+## 105. Het weer van de komende dagen, met wat de panelen dan leveren
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 8 oktober 2026 vond de bewoner dat de voorspelling op Thuis "totaal niet
+klopt". Er was geen voorspelling: de stippellijn bij Vandaag is wat de panelen
+bij een heldere lucht zouden leveren, een bovengrens. Op een bewolkte dag ligt
+die ver boven wat er komt, en dan leest hij als een voorspelling die mislukt.
+Home Assistant heeft Buienradar al, met per dag een verwachting voor vijf dagen.
+De bewoner vroeg of die samen met wat het huis weet bruikbaar is, en of het weer
+van vandaag aan te tikken is. Gekozen op 8 oktober 2026.
+
+*Besluit:*
+
+- **De dienst leest de verwachting van Buienradar** uit Home Assistant: per dag
+  de hoogste en laagste temperatuur, de kans op regen en op zon, en de soort
+  weer; en het weer van nu. Herkend aan de vaste `translation_key`
+  (`sunchance_1d`), niet aan de naam en nooit aan de `unique_id`, want daar zet
+  Buienradar de ligging van het huis in (besluit 93). `_1d` is morgen: de feed
+  begint bij de volgende dag.
+- **Wat de panelen leveren, komt van het huis.** Per dag de opbrengst bij een
+  heldere lucht zoals het huis die van zijn eigen panelen leerde (besluit 93),
+  maal een deel bij de zonkans. Dat deel begint als schatting (een vijfde bij
+  0 %, negen tiende bij 100 %) en schuift mee met wat de panelen werkelijk
+  haalden: elke tien minuten bewaart de dienst de zonkans van morgen
+  (`weer-verwachting.json`, in de export), en na die dag ligt hij naast de echte
+  opbrengst. Na vijf dagen weegt het geleerde even zwaar als de schatting.
+- **Vandaag** is wat er al was, plus de rest van de dag naar hoe hij tot nu toe
+  verliep en wat gisteren voor vandaag werd verwacht; hoe later op de dag, hoe
+  zwaarder het eerste weegt.
+- **Op Thuis** opent de knop met de buitentemperatuur het weer: vandaag en de
+  vijf dagen erna, elk met een balk voor de opbrengst. De kaart Vandaag noemt
+  naast wat er is opgewekt wat er verwacht wordt.
+- **Alleen om te tonen.** De regeling gebruikt het weer niet; dat komt met de
+  tarieven en de prognoses (E).
 
 ---
 

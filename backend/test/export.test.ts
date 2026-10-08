@@ -159,6 +159,8 @@ describe('de dataset exporteren', () => {
     await writeFile(join(dir, 'runs.ndjson'), '{"t":1,"commit":"abc1234","config":"x"}\n', 'utf-8');
     // De antwoorden over de aansluiting vullen de configuratie aan (besluit 103).
     await writeFile(join(dir, 'aansluiting.json'), '{"versie":1}', 'utf-8');
+    // De zonkans per dag is achteraf niet terug te halen (besluit 105).
+    await writeFile(join(dir, 'weer-verwachting.json'), '{"versie":1,"zonkans":{}}', 'utf-8');
     // Werkbestanden van de dienst zelf, geen dataset.
     await writeFile(join(dir, 'own-state.json'), '{}', 'utf-8');
     await writeFile(join(dir, 'review-checkpoint.bin'), 'x', 'utf-8');
@@ -172,6 +174,7 @@ describe('de dataset exporteren', () => {
       'aansluiting.json',
       'decisions-2026-09-05.ndjson',
       'runs.ndjson',
+      'weer-verwachting.json',
     ]);
   });
 

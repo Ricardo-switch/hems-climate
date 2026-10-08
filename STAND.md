@@ -134,6 +134,9 @@ verwijzing bestaat.
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
   gemeten is ([88]); toegankelijk en tweetalig ([86]); donker, later ook licht
   en met een eigen accentkleur ([87]).
+- **Het weer** van vandaag en vijf dagen komt van Buienradar uit Home Assistant,
+  met wat de panelen dan leveren: de geleerde heldere lucht maal de zonkans,
+  bijgesteld met de eigen opbrengst. Alleen om te tonen ([105]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -287,4 +290,5 @@ verwijzing bestaat.
 [102]: DECISIONS.md#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant
 [103]: DECISIONS.md#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt
 [104]: DECISIONS.md#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code
+[105]: DECISIONS.md#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren
 <!-- links:einde -->

@@ -33,6 +33,8 @@ import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
+import { partsIn, zonedMidnight } from './web/today.js';
+import { readForecast, WeatherLog } from './web/weather.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -625,6 +627,27 @@ if (startup.access.kind === 'sessions') {
   }
 }
 
+/*
+ * Het weer van de komende dagen (besluit 105). Elke tien minuten de zonkans
+ * van morgen bewaren, ook als niemand kijkt: na die dag legt het huis hem naast
+ * wat de panelen werkelijk haalden.
+ */
+const weatherLog = logDir === '' ? null : new WeatherLog(logDir);
+const forecastNow = () => (houseRegisters ? readForecast(houseRegisters.entities, allStates) : []);
+if (weatherLog && site) {
+  const timeZone = site.config.timezone;
+  const noteTomorrow = () => {
+    const morgen = forecastNow().find((f) => f.offset === 1);
+    if (morgen?.zonkansPct == null) return;
+    const p = partsIn(Date.now(), timeZone);
+    const d = partsIn(zonedMidnight(p.y, p.m, p.d + 1, timeZone) + 12 * 3_600_000, timeZone);
+    const day = `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`;
+    weatherLog.note(day, morgen.zonkansPct).catch((e: unknown) => console.warn(`Zonkans van morgen niet bewaard: ${(e as Error).message}`));
+  };
+  setInterval(noteTomorrow, 10 * 60_000).unref();
+  setTimeout(noteTomorrow, 60_000).unref();
+}
+
 if (webPort != null) {
   web = new WebServer({
     access,
@@ -657,6 +680,7 @@ if (webPort != null) {
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
+    ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog } } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {

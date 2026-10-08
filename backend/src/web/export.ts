@@ -33,6 +33,7 @@ import { RUNS_FILE } from '../adapters/runs.js';
 import { FEEDBACK_FILE } from './feedback.js';
 import { LAYOUT_FILE } from './layout.js';
 import { CONNECTION_FILE } from './aansluiting.js';
+import { WEATHER_FILE } from './weather.js';
 
 const BLOCK = 512;
 
@@ -114,6 +115,12 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
     () => true,
     () => false,
   );
+  // De zonkans zoals hij de dag ervoor werd verwacht (besluit 105): achteraf niet terug te halen.
+  const weather = join(logDir, WEATHER_FILE);
+  const hasWeather = await stat(weather).then(
+    () => true,
+    () => false,
+  );
   return {
     decisionLog,
     everything: [
@@ -123,6 +130,7 @@ async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; eve
       ...(hasFeedback ? [feedback] : []),
       ...(hasLayout ? [layout] : []),
       ...(hasConnection ? [connection] : []),
+      ...(hasWeather ? [weather] : []),
     ],
   };
 }
