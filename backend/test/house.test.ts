@@ -108,6 +108,8 @@ describe('het voorstel uit Home Assistant', () => {
     const tuin = proposeLayout(config, registers, states).kamers.find((k) => k.naam === 'Tuin')!;
     expect(house.zonderRuimte).toEqual([
       { id: 'light.zwerver', naam: 'light.zwerver', soort: 'licht', voorstel: null, groepen: ['Tuin alles'], voorstelKamer: tuin.id },
+      // Een uitstelbaar apparaat (besluit 98) zonder gebied: de bewoner geeft het een kamer.
+      { id: 'droger', naam: 'Droger', soort: 'apparaat', voorstel: null, groepen: [], voorstelKamer: null },
     ]);
   });
 
@@ -206,6 +208,7 @@ describe('een vastgelegde indeling', () => {
       'light.sfeerverlichting': { naam: 'Sfeer', kamer: woonkamer.id, zone: 'woonzone' },
       nest: { kamer: woonkamer.id, zone: 'keuken' },
       'light.zwerver': { naam: 'Tuinlamp', kamer: tuin.id, zone: null },
+      droger: { kamer: woonkamer.id, zone: null },
     },
   };
   const house = buildHouse(config, registers, states, snapshot, layout);
@@ -225,6 +228,10 @@ describe('een vastgelegde indeling', () => {
 
   it('haalt een ingedeeld apparaat uit "nog in te delen"', () => {
     expect(house.zonderRuimte).toEqual([]);
+    // De droger staat in de kamer die de bewoner koos, met zijn stand uit het besluit.
+    const droger = house.etages.flatMap((e) => e.ruimtes).find((r) => r.id === woonkamer.id)!.apparaten.find((d) => d.id === 'droger')!;
+    expect([droger.soort, droger.naam]).toEqual(['apparaat', 'Droger']);
+    expect(knownForLayout(config, registers, states).deviceIds.has('droger')).toBe(true);
     expect(house.etages.find((e) => e.id === 'buiten')!.ruimtes[0]!.apparaten.map((d) => d.naam)).toContain('Tuinlamp');
   });
 
@@ -233,6 +240,7 @@ describe('een vastgelegde indeling', () => {
     expect(without.zonderRuimte.map((d) => [d.naam, d.voorstel])).toEqual([
       ['Achtertuin', 'Tuin'],
       ['light.zwerver', null],
+      ['Droger', null],
     ]);
   });
 

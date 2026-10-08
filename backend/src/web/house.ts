@@ -43,7 +43,8 @@ export interface HouseRegisters {
   readonly entities: readonly HaRegistryEntity[];
 }
 
-export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter';
+/** `apparaat`: een uitstelbaar apparaat (besluit 98), zoals de droger. */
+export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat';
 
 /** Wat een klimaatapparaat of meter meet, uit Home Assistant. */
 export interface HouseReading {
@@ -208,7 +209,7 @@ export interface HouseReport {
   readonly onvindbaar: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
 }
 
-const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, meter: 3 };
+const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, meter: 4 };
 
 /** Wat geen kamer meet: het weer, telefoons, schijven, de buitenkant van een apparaat. */
 const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoelstemperatuur|battery|batterij|body|basal|cpu|processor|schijf|schijftemperatuur|disk|drive|nas|track)\b/i;
@@ -431,6 +432,36 @@ function climateOf(
   };
 }
 
+const APPLIANCE_WORD: Readonly<Record<string, string>> = {
+  running: 'draait',
+  would_start: 'zou nu starten',
+  waiting: 'klaargezet',
+  not_ready: 'uit',
+  unknown: 'onbekend',
+};
+
+/** Een uitstelbaar apparaat (besluit 98): de droger, met zijn stand van nu. */
+function applianceOf(id: string, name: string, state: string | undefined): HouseDevice {
+  return {
+    id,
+    naam: name,
+    haNaam: name,
+    soort: 'apparaat',
+    stand: APPLIANCE_WORD[state ?? 'unknown'] ?? 'onbekend',
+    aan: state === 'running',
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting: null,
+    klimaat: null,
+    meetKamer: false,
+  };
+}
+
 /** Een meter: een sensor in een kamer die temperatuur en luchtvochtigheid geeft. */
 function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean): HouseDevice {
   return {
@@ -623,6 +654,14 @@ function collect(
     const haNaam = dev?.name_by_user?.trim() || dev?.name?.trim() || friendly(states.get(id), id);
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = meterOf(id, haNaam, readingOf(r), zoneSensors.has(r.temp ?? ''));
     found.push({ device, haNaam, haArea: areaOf(id), groepen: [] });
+  }
+
+  // Uitstelbare apparaten (besluit 98): zo krijgt de droger een kamer in de indeling.
+  // Het gebied komt van het apparaat achter "start op afstand", als Home Assistant het kent.
+  for (const d of config.deferrables ?? []) {
+    const state = snapshot?.explanation.deferrables?.find((x) => x.id === d.id)?.state;
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = applianceOf(d.id, d.name, state);
+    found.push({ device, haNaam: d.name, haArea: areaOf(d.remoteStart.id), groepen: [] });
   }
 
   // Zonwering: één per apparaat (Somfy levert er per screen twee, ook een langzame).

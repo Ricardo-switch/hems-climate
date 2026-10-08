@@ -1888,6 +1888,7 @@ const ICON = {
   airco: '<rect x="2.5" y="5" width="19" height="8" rx="2"/><path d="M6 10h12M8 16.5c-.5 1-.5 2 0 3M12 16v3.5M16 16.5c.5 1 .5 2 0 3"/>',
   thermostaat: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/>',
   meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
+  apparaat: '<rect x="4.5" y="3" width="15" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>',
 };
 
 /** "21,4° · 55%": wat een meter of klimaatapparaat meet. */
@@ -2248,6 +2249,8 @@ function deviceRows(room, list) {
     rows.push(deviceLink(room, any, 'Screens', stands.length === 1 ? stands[0] : stands.join(', ')));
   }
   for (const d of list.filter((x) => x.soort === 'klimaat')) rows.push(deviceLink(room, d));
+  // Uitstelbare apparaten (besluit 98), zoals de droger.
+  for (const d of list.filter((x) => x.soort === 'apparaat')) rows.push(deviceLink(room, d));
   // Meters zijn informatie: temperatuur en luchtvochtigheid.
   for (const d of list.filter((x) => x.soort === 'meter')) rows.push(deviceLink(room, d));
   return rows;
@@ -2720,6 +2723,8 @@ function openDevice(room, d) {
     }
     if (room.scenes?.length) $('hu-blad-extra').append(roomScenes(room, d, say, live));
     hint(live ? 'Licht gaat rechtstreeks via Home Assistant; Smart Climate regelt het niet.' : 'Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.');
+  } else if (d.soort === 'apparaat') {
+    hint('Op zon: Smart Climate kiest het moment, starten doe je op het apparaat zelf. Klaar voor kiezen staat bij Apparaten.');
   } else if (d.soort === 'meter') {
     $('hu-blad-extra').append(el('p', { class: 'small', text: meterLine(d) }));
     hint(

@@ -630,7 +630,16 @@
           huis.push(`<polygon points="${b[0]},${b[1]} ${l1[0]},${l1[1]} ${r1[0]},${r1[1]}" fill="${kleur}" opacity="0.07"/>`);
         }
       } else if (app.soort === 'droger' || app.soort === 'wasmachine' || app.soort === 'vaatwasser') {
-        const dx = app.x != null ? x0 + (x1 - x0) * app.x : x1 - 0.7;
+        let dx = app.x != null ? x0 + (x1 - x0) * app.x : x1 - 0.7;
+        if (plafond) {
+          // Onder het dak: waar hij rechtop past, en zo ver mogelijk van het
+          // midden van de kamer, waar de naam en de temperatuur staan.
+          const past = (x) => Math.min(hoog(x), hoog(x + 0.5)) >= z0 + 0.8;
+          const plekken = [];
+          for (let x = x0 + 0.1; x <= x1 - 0.6; x += 0.05) if (past(x)) plekken.push(x);
+          plekken.sort((a, b) => Math.abs(b + 0.25 - xm) - Math.abs(a + 0.25 - xm));
+          dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - 0.6, W / 2 - 0.25));
+        }
         plek[app.soort] = [dx + 0.25, 0.4, z0 + 0.6];
         huis.push(doos(dx, 0.15, z0, 0.5, 0.5, 0.6, ['#e9eef2', '#d7dee5', '#b9c3cd']));
         if (app.soort !== 'vaatwasser') {

@@ -66,6 +66,8 @@ function kamerModel(r) {
   const klimaat = apps.filter((a) => a.soort === 'klimaat');
   const lampen = apps.filter((a) => a.soort === 'licht');
   const screens = apps.filter((a) => a.soort === 'screen');
+  // Uitstelbare apparaten (besluit 98): de droger draait zichtbaar in zijn kamer.
+  const witgoed = apps.filter((a) => a.soort === 'apparaat');
   const apparaten = [];
   for (const a of klimaat) {
     const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
@@ -75,6 +77,7 @@ function kamerModel(r) {
   }
   // Hooguit twee lampen in beeld: wat aan is eerst.
   [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
+  for (const a of witgoed.slice(0, 2)) apparaten.push({ soort: /vaat/i.test(a.naam) ? 'vaatwasser' : /was/i.test(a.naam) && !/droog|droger/i.test(a.naam) ? 'wasmachine' : 'droger', aan: a.aan });
   if (screens[0]) apparaten.push({ soort: 'screen', dicht: screens[0].positiePct == null ? 0 : 1 - screens[0].positiePct / 100 });
   const gewicht = klimaat.length ? 1.4 : GANG.test(r.naam) ? 0.55 : r.temperatuurC != null ? 1.0 : 0.8;
   return {

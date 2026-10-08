@@ -602,6 +602,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         await p.locator('#hu-lijst .groep').filter({ hasText: 'VERBORGEN' }).waitFor({ state: 'detached' });
         // En krijgt een kamer.
         await p.getByLabel('Kamer voor light.zwerver').selectOption({ label: 'Tuin (Buiten)' });
+        // De droger (besluit 98) krijgt ook een kamer; daarvoor stond hij nergens.
+        await p.getByLabel('Kamer voor Droger').selectOption({ index: 1 });
         await p.locator('#hu-lijst').filter({ hasNotText: 'NOG IN TE DELEN' }).waitFor();
         // Een kamer toevoegen op de begane grond, via de link: herladen zou de bewerkstand sluiten.
         await p.locator('#hu-lijst a[href="#huis/etage/bg"]').click();
