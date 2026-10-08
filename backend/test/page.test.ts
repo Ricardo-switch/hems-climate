@@ -999,10 +999,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/opbrengst.html`);
-    // Wachten tot de live-stroom open is.
-    await expect.poll(async () => ((await (await fetch(`${baseUrl}/api/health`)).json()) as { kijkers: number }).kijkers).toBeGreaterThan(0);
-    server.ring('camera.camera_oprit_vloeiend', 'Camera oprit');
-    await p.locator('.aanbel', { hasText: 'Er wordt aangebeld' }).waitFor();
+    // Bellen tot de pagina het laat zien: een kijker van een eerdere test kan
+    // nog als open tellen terwijl de stroom van deze pagina er nog niet is.
+    await expect
+      .poll(async () => {
+        server.ring('camera.camera_oprit_vloeiend', 'Camera oprit');
+        return p.locator('.aanbel', { hasText: 'Er wordt aangebeld' }).count();
+      }, { timeout: 10_000 })
+      .toBeGreaterThan(0);
     await expect.poll(() => p.evaluate<number>("document.querySelector('.aanbel img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
     await p.locator('.aanbel [data-bel-dicht]').click();
     await p.locator('.aanbel').waitFor({ state: 'detached' });
