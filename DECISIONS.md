@@ -4824,6 +4824,9 @@ het dak ook zonder panelen. Gekozen op 8 oktober 2026.
   apparaten komen uit het huis (`/api/huis`), de eerste kamer is die met een
   regeling op de laagste etage, en het dak toont het aantal panelen dat de
   bewoner opgaf, of een schatting uit de wattpiek; zonder panelen geen panelen.
+- **Een buitenruimte heeft een soort** in de indeling: oprit, tuin, terras of
+  balkon, met een auto of een tuinhuis erbij. Alleen op de etage Buiten. Zonder
+  keuze doet de dienst een voorstel uit de naam, en de tekening volgt het.
 - **Wat nog op dit huis leunt,** en in welke volgorde het een instelling wordt,
   staat in `docs/universeel.md`.
 

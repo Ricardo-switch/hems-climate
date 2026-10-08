@@ -250,7 +250,8 @@ function kamerBlad(d, k) {
     <button type="button" class="terug" data-naar-etage>‹ ${esc(etageNaam(d, k.etage))}</button>
     <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">gekozen</span></div>
     <div><label class="label" for="kamernaam-${esc(k.id)}">Naam</label><input class="veld" id="kamernaam-${esc(k.id)}" data-actie="kamernaam" value="${esc(k.naam)}" maxlength="40"></div>
-    <div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, k.regelzone ?? '')}</select></div>
+    ${buitenKeuze(k)}
+    ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, k.regelzone ?? '')}</select></div>`}
     <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips">${k.zones.map((z) => `<button type="button" class="chip" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">${esc(z.naam)}<span class="weg" aria-hidden="true">×</span></button>`).join('')}<input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>
     <div>
       <span class="label">${apps.length ? 'Apparaten, sleep om te verplaatsen' : 'Apparaten'}</span>
@@ -259,6 +260,25 @@ function kamerBlad(d, k) {
     ${erbij.length ? `<div><label class="label" for="erbij-${esc(k.id)}">Apparaat toevoegen</label><select class="veld" id="erbij-${esc(k.id)}" data-actie="erbij"><option value="">Kies een apparaat…</option>${opties(erbij, '')}</select></div>` : ''}
     <div><label class="label" for="etage-${esc(k.id)}">Etage</label><select class="veld" id="etage-${esc(k.id)}" data-actie="kameretage">${opties(etages, k.etage)}</select></div>
     <button type="button" class="knop gevaar" data-naar-weghalen style="margin-top: auto">Kamer weghalen</button>`;
+}
+
+/*
+ * Een buitenruimte (besluit 109): wat het is, en wat erbij hoort in de
+ * tekening. Alleen op de etage Buiten; staat hij nog op een etage binnen, dan
+ * zegt het blad hoe hij daar komt.
+ */
+const BUITEN_SOORTEN = [['oprit', 'Oprit'], ['tuin', 'Tuin'], ['terras', 'Terras'], ['balkon', 'Balkon']];
+function buitenNu(k) {
+  return k.buiten ?? ruimteVan(k.id)?.buiten ?? huismodel.soortBuiten(k);
+}
+function buitenKeuze(k) {
+  if (k.etage !== 'buiten') {
+    return huismodel.isBuiten({ id: k.etage }, k) ? '<p class="mini" style="margin: 0">Dit klinkt als buiten. Zet hem onderaan op de etage Buiten; dan kies je wat het is.</p>' : '';
+  }
+  const b = buitenNu(k);
+  const knop = (sleutel, w, t, aan) => `<button type="button" class="chip${aan ? '' : ' uitchip'}" data-buiten="${sleutel}" data-waarde="${esc(String(w))}" aria-pressed="${aan}">${esc(t)}</button>`;
+  return `<div><span class="label">Wat is het?</span><div class="chips" role="group" aria-label="Soort buitenruimte">${BUITEN_SOORTEN.map(([w, t]) => knop('soort', w, t, b.soort === w)).join('')}</div></div>
+    <div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort">${b.soort === 'oprit' ? knop('auto', !b.auto, 'Auto op de oprit', b.auto) : knop('tuinhuis', !b.tuinhuis, 'Tuinhuis of schuur', b.tuinhuis)}</div></div>`;
 }
 
 const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera' };
@@ -403,6 +423,19 @@ document.addEventListener('click', async (e) => {
     next.verborgen = [...new Set([...(next.verborgen ?? []), t.dataset.verberg])];
     delete next.apparaten[t.dataset.verberg];
     if (await bewaar(next, `${dev?.naam ?? 'Het apparaat'} is verborgen.`)) kies({ apparaat: null, blad: keuze.kamer ? 'kamer' : 'etage' });
+  } else if (t.dataset.buiten) {
+    // Wat een buitenruimte is (besluit 109).
+    const next = concept();
+    const k = next.kamers.find((x) => x.id === keuze.kamer);
+    if (!k) return;
+    const b = { ...buitenNu(k) };
+    if (t.dataset.buiten === 'soort') {
+      b.soort = t.dataset.waarde;
+      if (b.soort === 'oprit') b.tuinhuis = false;
+      else b.auto = false;
+    } else b[t.dataset.buiten] = t.dataset.waarde === 'true';
+    k.buiten = b;
+    await bewaar(next, `${k.naam} bewaard.`);
   } else if (t.hasAttribute('data-voorstellen')) {
     const next = concept();
     const lijst = (huisData?.zonderRuimte ?? []).filter((x) => x.voorstelKamer);
@@ -555,6 +588,11 @@ addEventListener('standwissel', teken);
 
 app.start('instellingen');
 void laadAlles();
+// Een kamer in het adres (`indeling.html#tuin`), ook als de pagina al open staat.
+addEventListener('hashchange', () => {
+  const id = decodeURIComponent(location.hash.slice(1));
+  if (id && info) kiesKamer(id);
+});
 // Wat er nieuw is in Home Assistant, af en toe opnieuw; niet onder de vinger.
 setInterval(async () => {
   if (sleep || document.activeElement?.matches('input, select')) return;

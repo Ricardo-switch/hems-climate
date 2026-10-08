@@ -44,6 +44,8 @@
   .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--tekst); border: 0; cursor: pointer; touch-action: none; user-select: none; }
   .chip.plus { background: transparent; border: 1px dashed rgba(111, 211, 255, 0.6); color: var(--ijs); touch-action: auto; }
   .chip.zon { background: transparent; border: 1px dashed var(--zon); }
+  .chip[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .chip.uitchip { color: var(--zacht); }
   .chip .weg { color: var(--gedempt); font-weight: 700; }
   .app { display: flex; align-items: center; gap: 10px; padding: 8px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.06); background: none; width: 100%; color: inherit; font: inherit; font-size: 14px; text-align: left; cursor: pointer; touch-action: none; user-select: none; }
   .app:first-of-type { border-top: 0; }

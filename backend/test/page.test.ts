@@ -940,6 +940,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await p.locator('#wand [data-actie="kamernaam"]').inputValue()).toBe(b.naam);
     await p.locator('#wand [data-ongedaan]').click();
     await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id).toBe(a.id);
+
+    // Een buitenruimte: kiezen wat het is (besluit 109).
+    const tuin = (layoutStore.current?.kamers ?? kamers).find((k) => k.etage === 'buiten' && !/oprit/i.test(k.naam))!;
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(tuin.id)}`);
+    await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click();
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort).toBe('terras');
+    await p.locator('#wand [data-buiten="soort"][aria-pressed="true"]', { hasText: 'Terras' }).waitFor();
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

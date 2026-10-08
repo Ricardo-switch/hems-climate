@@ -34,6 +34,7 @@ import {
   type Layout,
   type LayoutDevice,
   type LayoutKnown,
+  type LayoutOutside,
   type LayoutRoom,
 } from './layout.js';
 
@@ -137,6 +138,12 @@ export interface HouseRoom {
   readonly apparaten: readonly HouseDevice[];
   /** De scènes van deze ruimte, uit Hue (besluit 100); de laatst gekozen is actief. */
   readonly scenes: readonly HouseScene[];
+  /**
+   * Een buitenruimte (besluit 109): wat voor ruimte, en of er een auto of een
+   * tuinhuis bij hoort. Zoals de bewoner het in de indeling vastlegde, of
+   * anders een voorstel uit de naam. Null voor een kamer binnen.
+   */
+  readonly buiten: LayoutOutside | null;
 }
 
 export interface HouseScene {
@@ -852,6 +859,18 @@ function slug(text: string, taken: ReadonlySet<string>): string {
 const OUTSIDE = /tuin|oprit|terras|buiten|schuur|carport|balkon|veranda/i;
 
 /**
+ * Een voorstel voor een buitenruimte zonder eigen keuze (besluit 109): de soort
+ * uit de naam, een auto op een oprit, en een tuinhuis als een zone of een
+ * apparaat zo heet.
+ */
+export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devices: readonly Pick<HouseDevice, 'naam'>[]): LayoutOutside {
+  const n = room.naam;
+  const soort = /oprit|carport/i.test(n) ? 'oprit' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : 'tuin';
+  const huisje = /tuinhuis|schuur|berging|huisje/i;
+  return { soort, auto: soort === 'oprit', tuinhuis: soort === 'tuin' && (room.zones.some((z) => huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam))) };
+}
+
+/**
  * Het voorstel uit Home Assistant (95): elk gebied met iets erin wordt een kamer,
  * op de etage die bij het niveau hoort, en een gebied zonder etage op de begane
  * grond, of buiten als de naam daarop wijst. Een regelgebied hoort bij het gebied
@@ -1017,6 +1036,7 @@ export function buildHouse(
       samenvatting: summarize(devices),
       apparaten: devices,
       scenes: scenes.get(k.id) ?? [],
+      buiten: k.buiten ?? (k.etage === 'buiten' || OUTSIDE.test(k.naam) ? outsideFromNames(k, devices) : null),
     };
   });
 

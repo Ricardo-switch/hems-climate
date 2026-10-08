@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
-import { buildHouse, knownForLayout, lampsFor, proposeLayout } from '../src/web/house.js';
+import { buildHouse, knownForLayout, lampsFor, outsideFromNames, proposeLayout } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -31,6 +31,16 @@ describe('het voorstel uit Home Assistant', () => {
 
   it('zet een tuin of oprit buiten, ook als Home Assistant hem op de begane grond zet', () => {
     expect(house.etages.find((e) => e.id === 'bg')!.ruimtes.map((r) => r.naam)).not.toContain('Oprit');
+  });
+
+  it('zegt bij een buitenruimte wat het is, uit de naam zolang de bewoner niets koos (besluit 109)', () => {
+    const buiten = house.etages.find((e) => e.id === 'buiten')!.ruimtes;
+    expect(buiten.find((r) => r.naam === 'Oprit')!.buiten).toEqual({ soort: 'oprit', auto: true, tuinhuis: false });
+    expect(buiten.find((r) => r.naam === 'Tuin')!.buiten!.soort).toBe('tuin');
+    expect(house.etages.find((e) => e.id === 'bg')!.ruimtes.every((r) => r.buiten === null)).toBe(true);
+    expect(outsideFromNames({ naam: 'Achtertuin', zones: [] }, [{ naam: 'Tuinhuis overstek' }])).toEqual({ soort: 'tuin', auto: false, tuinhuis: true });
+    expect(outsideFromNames({ naam: 'Dakterras', zones: [] }, [])).toEqual({ soort: 'terras', auto: false, tuinhuis: false });
+    expect(outsideFromNames({ naam: 'Carport', zones: [] }, []).soort).toBe('oprit');
   });
 
   it('noemt een etage naar het precieze niveau, niet naar een "Dak" erboven', () => {

@@ -70,6 +70,18 @@ describe('de indeling toetsen', () => {
     }
   });
 
+  it('bewaart wat een buitenruimte is, alleen op de etage buiten (besluit 109)', () => {
+    const tuin = { id: 'tuin', naam: 'Tuin', etage: 'buiten', zones: [], regelzone: null, haGebied: null, buiten: { soort: 'terras', auto: false, tuinhuis: true } };
+    const r = validateLayout({ ...good, kamers: [...good.kamers, tuin] }, known);
+    expect(r.ok && r.layout.kamers.find((k) => k.id === 'tuin')!.buiten).toEqual({ soort: 'terras', auto: false, tuinhuis: true });
+    // Op een etage binnen valt het weg.
+    const binnen = validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, etage: 'bg' }] }, known);
+    expect(binnen.ok && 'buiten' in binnen.layout.kamers.find((k) => k.id === 'tuin')!).toBe(false);
+    // Een onbekende soort, of geen ja of nee, weigert.
+    expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'kelder', auto: false, tuinhuis: false } }] }, known).ok).toBe(false);
+    expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'tuin', auto: 'ja', tuinhuis: false } }] }, known).ok).toBe(false);
+  });
+
   it('laat een apparaat dat Home Assistant niet meer kent vallen, in plaats van te weigeren', () => {
     const r = validateLayout({ ...good, apparaten: { ...good.apparaten, 'light.uitgezet': { kamer: 'hal', zone: null } } }, known);
     expect(r.ok).toBe(true);

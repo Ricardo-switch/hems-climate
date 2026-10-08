@@ -38,10 +38,24 @@ export interface LayoutZone {
   readonly naam: string;
 }
 
+/** Wat een buitenruimte is, voor de tekening van het huis (besluit 109). */
+export const OUTSIDE_KINDS = ['oprit', 'tuin', 'terras', 'balkon'] as const;
+export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
+
+export interface LayoutOutside {
+  readonly soort: OutsideKind;
+  /** Een auto op de oprit. */
+  readonly auto: boolean;
+  /** Een tuinhuis of schuur in de tuin. */
+  readonly tuinhuis: boolean;
+}
+
 export interface LayoutRoom {
   readonly id: string;
   readonly naam: string;
   readonly etage: FloorId;
+  /** Alleen op de etage buiten: wat voor ruimte het is (besluit 109). Weg is: de naam zegt het. */
+  readonly buiten?: LayoutOutside;
   /** Delen van de kamer, als die ze heeft: keuken en zithoek (95). */
   readonly zones: readonly LayoutZone[];
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
@@ -175,7 +189,17 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     }
     const ha = k['haGebied'] ?? null;
     if (ha !== null && (typeof ha !== 'string' || ha.length > 80)) return { ok: false, reden: `kamer ${id} heeft een ongeldig gebied` };
-    kamers.push({ id, naam, etage: etage as FloorId, zones, regelzone: rz as string | null, haGebied: ha as string | null });
+    // Wat een buitenruimte is (besluit 109); op een andere etage valt het weg.
+    const bi = k['buiten'];
+    let buiten: LayoutOutside | undefined;
+    if (bi !== undefined && bi !== null && etage === 'buiten') {
+      const o = (typeof bi === 'object' && !Array.isArray(bi) ? bi : {}) as Record<string, unknown>;
+      if (!(OUTSIDE_KINDS as readonly unknown[]).includes(o['soort']) || typeof o['auto'] !== 'boolean' || typeof o['tuinhuis'] !== 'boolean') {
+        return { ok: false, reden: `buitenruimte ${id}: soort is ${OUTSIDE_KINDS.join(', ')}, met auto en tuinhuis als ja of nee` };
+      }
+      buiten = { soort: o['soort'] as OutsideKind, auto: o['auto'], tuinhuis: o['tuinhuis'] };
+    }
+    kamers.push({ id, naam, etage: etage as FloorId, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}) });
   }
 
   const appIn = b['apparaten'] ?? {};

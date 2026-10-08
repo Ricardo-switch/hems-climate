@@ -44,14 +44,18 @@ hier een voorstel voor.
   en aansluiting, of een schatting uit de wattpiek; zonder panelen geen.
 - **Vandaag:** kleur en zin hingen aan `ac-` en `nest` in de id. Nu aan wat het
   apparaat kan.
+- **Buitenruimtes:** het tuinhuis, de overstek en de auto op de oprit hingen aan
+  de naam van de ruimte en de lampen. Nu kies je in de indeling per
+  buitenruimte wat het is (oprit, tuin, terras, balkon) en of er een auto of een
+  tuinhuis bij hoort. Welke lamp het tuinhuis verlicht: een lamp in een zone die
+  zo heet. Zonder keuze doet de dienst een voorstel uit de naam.
 
 ## Wat er nog ligt, op volgorde
 
-1. **Buitenruimtes in de tekening.** Er past één oprit en één tuin. Het
-   tuinhuis, de overstek en de schijnwerper worden op naam van de lampen
-   herkend, en er staat altijd een auto op de oprit. Wordt: per buitenruimte een
-   soort in de indeling (oprit, tuin, terras, balkon), met "auto" en "tuinhuis"
-   als keuze.
+1. **Meer buitenruimtes in de tekening.** Er past één oprit en één tuin,
+   terras of balkon. Een tweede buitenruimte staat in de lijsten, niet in de
+   tekening. De lamp van de camera op de oprit wordt nog aan de naam herkend
+   ("camera", "schijnwerper").
 2. **Meer functies in de app.** Licht bedienen staat nu aan of uit in `.env`
    (`HEMS_LIGHTS`); dat wordt een functie, met `.env` als bovengrens. Het weer
    komt alleen van Buienradar; dat wordt een keuze uit elke weer-entiteit in

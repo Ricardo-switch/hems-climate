@@ -68,28 +68,49 @@
     };
   }
 
-  /** Ligt deze ruimte buiten (de tuin, de oprit)? Dan hoort hij niet als kamer in het huis. */
+  /**
+   * Ligt deze ruimte buiten (de tuin, de oprit)? Dan hoort hij niet als kamer in
+   * het huis. Het huis zegt het (`buiten`, besluit 109); de naam is de terugval
+   * voor een indeling die nog niet door de dienst ging.
+   */
   function isBuiten(etage, r) {
-    return etage.id === 'buiten' || BUITEN.test(r.naam) || BUITEN.test(r.id);
+    return r.buiten != null || etage.id === 'buiten' || BUITEN.test(r.naam) || BUITEN.test(r.id);
   }
 
-  /** De oprit met de auto en de camera, en de tuin met het tuinhuis, uit de buitenruimtes. */
+  /** Wat voor buitenruimte: zoals de bewoner het koos, of uit de naam. */
+  function soortBuiten(r) {
+    if (r.buiten) return r.buiten;
+    const oprit = /oprit|carport/i.test(r.naam);
+    return { soort: oprit ? 'oprit' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : 'tuin', auto: oprit, tuinhuis: !oprit };
+  }
+
+  /**
+   * De oprit en de tuin uit de buitenruimtes (besluit 109). De tekening heeft
+   * plek voor één oprit, en één tuin, terras of balkon; wat erbij hoort (een
+   * auto, een tuinhuis) komt uit de indeling. Welke lamp het tuinhuis verlicht:
+   * een lamp in een zone die zo heet, of die zelf zo heet.
+   */
   function buiten(ruimtes) {
     let oprit = null;
     let tuin = null;
     for (const r of ruimtes) {
+      const b = soortBuiten(r);
       const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
-      if (/oprit|carport/i.test(r.naam)) {
+      const zoneNaam = (a) => (r.zones ?? []).find((z) => z.id === a.zone)?.naam ?? '';
+      if (b.soort === 'oprit') {
+        if (oprit) continue;
         const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
-        oprit = { id: r.id, naam: r.naam, auto: {}, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null };
+        oprit = { id: r.id, naam: r.naam, auto: b.auto ? {} : null, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null };
       } else {
-        const huisje = lampen.filter((a) => /tuinhuis/i.test(a.id + a.naam));
-        const overstek = huisje.find((a) => /overstek/i.test(a.id + a.naam));
+        if (tuin) continue;
+        const huisje = b.tuinhuis ? lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)) : [];
+        const overstek = huisje.find((a) => /overstek|luifel/i.test(a.id + a.naam));
         const binnenlamp = huisje.find((a) => a !== overstek);
         const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
         tuin = {
           id: r.id,
           naam: r.naam,
+          tuinhuis: b.tuinhuis,
           tuinhuisAan: !!binnenlamp?.aan,
           overstekAan: !!overstek?.aan,
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
@@ -101,5 +122,5 @@
     return { oprit, tuin };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel, isBuiten, buiten };
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
 })(window);
