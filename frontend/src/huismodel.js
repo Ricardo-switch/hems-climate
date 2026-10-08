@@ -68,5 +68,38 @@
     };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel };
+  /** Ligt deze ruimte buiten (de tuin, de oprit)? Dan hoort hij niet als kamer in het huis. */
+  function isBuiten(etage, r) {
+    return etage.id === 'buiten' || BUITEN.test(r.naam) || BUITEN.test(r.id);
+  }
+
+  /** De oprit met de auto en de camera, en de tuin met het tuinhuis, uit de buitenruimtes. */
+  function buiten(ruimtes) {
+    let oprit = null;
+    let tuin = null;
+    for (const r of ruimtes) {
+      const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
+      if (/oprit|carport/i.test(r.naam)) {
+        const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
+        oprit = { id: r.id, naam: r.naam, auto: {}, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null };
+      } else {
+        const huisje = lampen.filter((a) => /tuinhuis/i.test(a.id + a.naam));
+        const overstek = huisje.find((a) => /overstek/i.test(a.id + a.naam));
+        const binnenlamp = huisje.find((a) => a !== overstek);
+        const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
+        tuin = {
+          id: r.id,
+          naam: r.naam,
+          tuinhuisAan: !!binnenlamp?.aan,
+          overstekAan: !!overstek?.aan,
+          overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
+          lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
+          zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
+        };
+      }
+    }
+    return { oprit, tuin };
+  }
+
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel, isBuiten, buiten };
 })(window);

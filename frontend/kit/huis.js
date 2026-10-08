@@ -213,10 +213,11 @@
 
     /* ---- grond: het perceel, de oprit ---- */
     // Ingezoomd op een etage: alleen een smalle rand grond om het huis.
-    const gx0 = model.zonderDak ? -0.45 : model.auto || model.oprit || spook(model, 'auto') || opts.ruimte ? -3.0 : -1.4;
-    const gx1 = model.zonderDak ? W + 0.75 : model.tuin ? W + 2.1 : W + 1.3;
-    const gy0 = model.zonderDak ? -0.35 : model.tuin ? -2.0 : -0.6;
-    const gy1 = model.zonderDak ? D + 0.7 : D + 1.9;
+    // Zonder dak strak om het huis, tenzij de oprit of de tuin erbij hoort (de begane grond).
+    const gx0 = model.auto || model.oprit || spook(model, 'auto') || opts.ruimte ? -3.0 : model.zonderDak ? -0.45 : -1.4;
+    const gx1 = model.tuin ? W + 2.1 : model.zonderDak ? W + 0.75 : W + 1.3;
+    const gy0 = model.tuin ? -2.0 : model.zonderDak ? -0.35 : -0.6;
+    const gy1 = model.oprit ? D + 1.9 : model.zonderDak ? D + 0.7 : D + 1.9;
     grond.push(poly([[gx0, gy0, 0], [gx1, gy0, 0], [gx1, gy1, 0], [gx0, gy1, 0]], `fill="url(#${id}-gras)"`));
     // De rand van het perceel, als een dikke plaat.
     grond.push(poly([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx0, gy1, -0.18]], `fill="#0b1219"`));
@@ -824,8 +825,18 @@
     }
 
     // Buiten om op te tikken: de oprit en de tuin, als ze een kamer in de indeling zijn.
-    if (model.oprit?.id) tik(model.oprit, [[-2.9, -0.4, 0], [-1.15, -0.4, 0], [-1.15, D + 1.7, 0], [-2.9, D + 1.7, 0]]);
-    if (model.tuin?.id) tik(model.tuin, [[W + 0.3, -1.95, 0], [W + 2.05, -1.95, 0], [W + 2.05, 0.25, 0], [W + 0.3, 0.25, 0]]);
+    // Gekozen (in Kamer): een omlijning; zonder dak staat de naam erbij op de grond.
+    const vlakOprit = [[-2.9, -0.4, 0.01], [-1.15, -0.4, 0.01], [-1.15, D + 1.7, 0.01], [-2.9, D + 1.7, 0.01]];
+    const vlakTuin = [[W + 0.3, -1.95, 0.01], [W + 2.05, -1.95, 0.01], [W + 2.05, 0.25, 0.01], [W + 0.3, 0.25, 0.01]];
+    for (const [deel, vlak, midden] of [[model.oprit, vlakOprit, [-2.02, D + 0.65, 0]], [model.tuin, vlakTuin, [W + 1.18, -0.85, 0]]]) {
+      if (!deel) continue;
+      if (deel.gekozen) grond.push(poly(vlak, `fill="${KLEUR.ijs}" fill-opacity="0.06" stroke="${KLEUR.ijs}" stroke-width="2" stroke-dasharray="7 5"`));
+      if (model.zonderDak && deel.naam) {
+        const t = P(...midden);
+        labels.push(`<text x="${t[0]}" y="${t[1] + 30}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="13" font-weight="700" fill="${deel.gekozen ? KLEUR.ijs : KLEUR.zacht}">${esc(deel.naam)}</text>`);
+      }
+      if (deel.id) tik(deel, vlak);
+    }
 
     return `<svg class="sc-huis" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="img" aria-label="${esc(model.beschrijving ?? 'Het huis')}">
       <defs>${defs.join('')}</defs>

@@ -69,30 +69,8 @@ function huisModel() {
   const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
   const maand = new Date().getMonth() + 1;
 
-  // Buiten: de oprit met de auto en de schijnwerper, de tuin met het tuinhuis.
-  let oprit = null;
-  let tuin = null;
-  for (const r of buitenRuimtes) {
-    const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
-    if (/oprit|carport/i.test(r.naam)) {
-      const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
-      oprit = { id: r.id, naam: r.naam, auto: {}, camera: cam ? { aan: cam.aan } : null };
-    } else {
-      const huisje = lampen.filter((a) => /tuinhuis/i.test(a.id + a.naam));
-      const overstek = huisje.find((a) => /overstek/i.test(a.id + a.naam));
-      const binnenlamp = huisje.find((a) => a !== overstek);
-      const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
-      tuin = {
-        id: r.id,
-        naam: r.naam,
-        tuinhuisAan: !!binnenlamp?.aan,
-        overstekAan: !!overstek?.aan,
-        overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
-        lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
-        zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
-      };
-    }
-  }
+  // Buiten: de oprit met de auto en de camera, de tuin met het tuinhuis.
+  const { oprit, tuin } = huismodel.buiten(buitenRuimtes);
 
   const stromen = [];
   const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));

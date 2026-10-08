@@ -131,26 +131,33 @@ function tekenNu() {
   }
 }
 
-/** De kamers binnen op een etage; een tuin of oprit alleen als die zelf gekozen is. */
-function binnenVan(etage, kamer) {
-  const buiten = (r) => etage.id === 'buiten' || huismodel.BUITEN.test(r.naam) || huismodel.BUITEN.test(r.id);
-  if (buiten(kamer)) return [kamer];
-  return etage.ruimtes.filter((r) => !buiten(r));
-}
-
 function tekenPodium(etage, kamer) {
+  // De laagste etage met kamers binnen is de begane grond: daar horen de oprit en de tuin bij.
+  // Is de gekozen ruimte zelf buiten, dan toont de pagina die begane grond met de buitenruimte gekozen.
+  const alle = huisData.etages ?? [];
+  const laagste = [...alle].reverse().find((e) => (e.ruimtes ?? []).some((r) => !huismodel.isBuiten(e, r))) ?? etage;
+  const toon = huismodel.isBuiten(etage, kamer) ? laagste : etage;
+  const binnen = toon.ruimtes.filter((r) => !huismodel.isBuiten(toon, r));
+  const buitenRuimtes = toon === laagste ? alle.flatMap((e) => (e.ruimtes ?? []).filter((r) => huismodel.isBuiten(e, r))) : [];
+  const { oprit, tuin } = huismodel.buiten(buitenRuimtes);
+  if (oprit) oprit.gekozen = oprit.id === kamer.id;
+  if (tuin) tuin.gekozen = tuin.id === kamer.id;
   const maand = new Date().getMonth() + 1;
   const zonKw = state?.bewoner?.stromen?.zonKw ?? 0;
   const helder = zon?.heldereLuchtW ?? 0;
   const model = {
-    beschrijving: `${etage.naam} van dichtbij, zonder dak. ${kamer.naam} is gekozen.`,
+    beschrijving: `${toon.naam} van dichtbij, zonder dak${oprit || tuin ? ', met wat er buiten bij hoort' : ''}. ${kamer.naam} is gekozen.`,
     tijd: app.tijdVanDeDag(zon),
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken: zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : 0.3) : 0.3,
     zonderDak: true,
-    etages: [{ naam: etage.naam, kamers: binnenVan(etage, kamer).map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
+    etages: [{ naam: toon.naam, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
+    ...(oprit ? { oprit } : {}),
+    ...(tuin ? { tuin } : {}),
   };
-  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: 1.2, schuifY: -10, tik: true });
+  // Met de oprit en de tuin erbij is het beeld breder: dan minder inzoomen, en wat naar links.
+  const buitenErbij = !!(oprit || tuin);
+  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
 }
 
@@ -177,7 +184,7 @@ function kamerBlad(k) {
   const onder = draait.length ? [klimaatZin === 'Er draait niets' ? '' : klimaatZin, ...draait].filter(Boolean).join('. ') : klimaatZin;
   const delen = [
     `<div class="bladkop"><div><h2 class="kop-2">${esc(k.naam)}</h2><p class="klein" style="margin: 4px 0 0">${esc(onder)}</p></div></div>`,
-    klimaat.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Klimaat</h3>${klimaat.map(rij).join('')}</div>` : '',
+    klimaat.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">${klimaat.some((d) => d.soort === 'klimaat') ? 'Klimaat' : 'Apparaten'}</h3>${klimaat.map(rij).join('')}</div>` : '',
     lampen.length
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
