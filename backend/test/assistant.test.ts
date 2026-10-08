@@ -164,7 +164,7 @@ describe('waarom', () => {
 
   it('zet het werkwoord achteraan na "omdat"', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ rejected: [{ intent: coolOnSun, blockedBy: 'min_rest_not_elapsed' }] }));
-    expect(a.antwoord).toContain('maar dat kan nu niet, omdat het apparaat eerst even moet rusten.');
+    expect(a.antwoord).toContain('maar dat kan nu niet, omdat het apparaat na het uitgaan eerst even moet pauzeren, dat spaart de compressor.');
   });
 
   it('laat een apparaat dat de bewoner overnam met rust, en zegt tot wanneer', () => {

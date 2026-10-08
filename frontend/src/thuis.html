@@ -7,6 +7,7 @@
 <title>Smart Climate</title>
 <link rel="stylesheet" href="kit/kit.css">
 <link rel="stylesheet" href="basis.css">
+<script>(function () { var d = document.documentElement; function s() { d.classList.toggle('tel-stand', innerWidth < 900 || innerHeight > innerWidth); d.style.setProperty('--wandschaal', Math.min(innerWidth / 1280, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
   .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
@@ -19,13 +20,16 @@
   .kaart { padding: 18px 20px; }
   .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
   .straks { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
+  .apparaatkaart { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; padding: 14px 18px; }
+  .apparaatkaart .ring { width: 54px; height: 54px; flex: none; }
+  .apparaatkaart b { display: block; font-size: 16px; }
   .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
   .gevoel button { height: 40px; border-radius: 12px; border: 0; font-weight: 700; font-size: 14px; cursor: pointer; }
   .gevoel button[aria-pressed='true'] { box-shadow: inset 0 0 0 2px currentColor; }
   .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
   .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
   .dok .vraag b { color: var(--tekst); }
-  .rond { position: absolute; left: 22px; top: 300px; z-index: 3; }
+  .uitlegknop { width: 34px; padding: 0; justify-content: center; font-weight: 800; color: var(--zacht); }
 
   /* De telefoon. */
   #tel .boven { padding: 18px 18px 0; }
@@ -48,7 +52,7 @@
   #tel .dim { position: fixed; z-index: 28; }
   body.rondleiding #wand .podium { z-index: 4; }
   body.rondleiding #tel .podium { position: relative; z-index: 29; }
-  body.rondleiding .rond { visibility: hidden; }
+
   .tik { position: absolute; z-index: 5; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.15), 0 0 30px rgba(111, 211, 255, 0.6); pointer-events: none; animation: tikken 1.6s ease-in-out infinite; transition: left 0.4s, top 0.4s; }
   @keyframes tikken { 50% { transform: scale(1.12); } }
   @media (prefers-reduced-motion: reduce) { .tik { animation: none; transition: none; } }
@@ -98,16 +102,7 @@
   .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
   #tel .weer::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: -6px auto 6px; flex-shrink: 0; }
-  .weer .terug { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
-  .weer .terug .weerkop { display: block; }
-  .weer .terug .weerkop .mini { display: block; margin-top: 2px; }
   #wand .weer .rij { padding: 7px 0; }
-  .terugrij { display: grid; grid-template-columns: 74px 1fr 92px; gap: 10px; align-items: center; font-size: 13px; color: var(--zacht); padding: 4px 0; }
-  .terugrij i { position: relative; height: 8px; border-radius: 4px; background: rgba(247, 181, 72, 0.12); }
-  .terugrij i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
-  .terugrij i em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--tekst); }
-  .terugrij span:last-child { text-align: right; color: var(--tekst); font-weight: 600; }
-  .terugrij small { color: var(--gedempt); font-weight: 500; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -120,13 +115,13 @@
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
           <span class="pil" style="color: var(--mint)" data-fase><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+          <button class="pil uitlegknop" type="button" data-uitleg aria-label="Zo werkt het huis" title="Zo werkt het huis">?</button>
         </div>
       </div>
       <div class="titel">
         <h1 class="kop-1" data-kop>Even laden</h1>
         <p class="lead" data-zin></p>
       </div>
-      <button class="info rond" type="button" data-uitleg><i>i</i>Zo werkt het huis</button>
       <div class="podium" id="podium-wand"></div>
       <div class="dim" data-rond hidden></div>
       <span class="tik" data-tik hidden aria-hidden="true"></span>
@@ -142,8 +137,10 @@
           <h2 class="kop-2" style="margin-top: 10px" data-straks-kop></h2>
           <p class="klein" style="margin: 8px 0 0" data-straks-zin></p>
         </section>
+        <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart hidden></a>
         <section class="glas kaart" data-gevoel-kaart>
           <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
+          <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg>Tik wat je nu voelt; daar leert het huis van wat jij prettig vindt.</p>
           <div class="gevoel" data-gevoel></div>
           <p class="mini" style="margin: 8px 0 0" data-gevoel-zin></p>
         </section>
@@ -165,13 +162,13 @@
         <span style="display: flex; gap: 8px; align-items: center">
           <button class="pil weerknop" type="button" style="height: 32px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
           <span class="pil" style="height: 32px; font-size: 13px" data-modus></span>
-          <a class="pil" href="nieuw.html#bediening" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
+          <button class="pil uitlegknop" type="button" data-uitleg aria-label="Zo werkt het huis" style="height: 32px; width: 32px">?</button>
+          <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>
       <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
     </div>
     <div class="podium" id="podium-tel"></div>
-    <div style="padding: 0 16px 10px; margin-top: -10px"><button class="info" type="button" data-uitleg><i>i</i>Zo werkt het huis</button></div>
     <div class="inhoud">
       <div data-kamers style="display: flex; flex-direction: column; gap: 12px"></div>
       <section class="glas kaart straks" data-straks hidden>

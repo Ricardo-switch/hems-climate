@@ -244,7 +244,7 @@ function tekenDag() {
     }),
     ...(vandaag?.apparaten ?? []).filter((a) => a.huidig.length || a.smartClimate.length).map((a) => ({ naam: NAAM(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: '#6FD3FF' })),
   ];
-  for (const box of $$('[data-dag]')) {
+  for (const box of $$(`${app.zicht()} [data-dag]`)) {
     const tel = box.closest('#tel') != null;
     if (!kw.length) {
       box.innerHTML = `<h2 class="kop-3">Vandaag</h2><p class="mini" style="margin: 6px 0 0">Nog geen metingen van vandaag.</p>`;
@@ -299,7 +299,7 @@ function tekenDag() {
 
 /* ------------------------------------------------------------ tekenen */
 
-function teken() {
+function tekenNu() {
   app.schaal();
   if (!state) return;
   app.luchtVan(zon, state.bewoner?.stromen?.zonKw ?? 0);
@@ -320,6 +320,10 @@ function teken() {
 }
 
 /* -------------------------------------------------------------- starten */
+
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
 
 app.start('apparaten');
 void laadAlles();

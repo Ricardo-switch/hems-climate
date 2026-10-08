@@ -113,6 +113,8 @@ async function stempel() {
     'index.html': ['app.css', 'app.js'],
     'nieuw.html': ['nieuw.js'],
     'thuis.html': ['thuis.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'instellingen.html': ['instellingen.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'huis-kan.html': ['huis-kan.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'assistent.html': ['assistent.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'opbrengst.html': ['opbrengst.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js', 'kit/sankey.js'],
     'vandaag.html': ['vandaag.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],

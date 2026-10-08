@@ -402,6 +402,8 @@ const inHouse = (st: HaEntityState) =>
   st.entity_id.startsWith('climate.') ||
   // De scènes van Hue, voor de ruimtes (besluit 100).
   st.entity_id.startsWith('scene.') ||
+  // De camera's (besluit 106): anders zei het huis "niet bereikbaar" terwijl er beeld was.
+  st.entity_id.startsWith('camera.') ||
   (st.entity_id.startsWith('sensor.') &&
     (st.attributes['device_class'] === 'temperature' || st.attributes['device_class'] === 'humidity'));
 let houseRegisters: HouseRegisters | null = null;

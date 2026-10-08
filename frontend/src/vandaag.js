@@ -320,7 +320,7 @@ function tekenTelefoon(r, verwacht, lijst) {
 
 /* ------------------------------------------------------------ tekenen */
 
-function teken() {
+function tekenNu() {
   app.schaal();
   app.luchtVan(zon, state?.bewoner?.stromen?.zonKw ?? 0);
   const keuzes = [['gisteren', 'Gisteren'], ['vandaag', 'Vandaag'], ['morgen', 'Morgen']];
@@ -331,12 +331,17 @@ function teken() {
   const r = dag === 'morgen' ? null : dagen[dag];
   const lijst = dag === 'morgen' ? [] : momenten(r);
   const verwacht = verwachtingen();
-  tekenTijdlijn(r, verwacht, lijst);
-  tekenKaarten(r, verwacht, lijst);
-  tekenTelefoon(r, verwacht, lijst);
+  if (!app.telStand()) {
+    tekenTijdlijn(r, verwacht, lijst);
+    tekenKaarten(r, verwacht, lijst);
+  } else tekenTelefoon(r, verwacht, lijst);
 }
 
 /* -------------------------------------------------------------- starten */
+
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
 
 app.start('vandaag');
 document.addEventListener('click', async (e) => {

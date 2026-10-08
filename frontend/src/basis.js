@@ -22,21 +22,18 @@
     apparaten: 'apparaten.html',
     opbrengst: 'opbrengst.html',
     assistent: 'assistent.html',
-    instellingen: 'nieuw.html#bediening',
+    instellingen: 'instellingen.html',
   };
 
   function telStand() {
     return innerWidth < 900 || innerHeight > innerWidth;
   }
 
+  /** De stand en de schaal, op <html>; het script in de <head> deed dit al vóór de eerste weergave. */
   function schaal() {
-    const tel = telStand();
-    document.body.classList.toggle('tel-stand', tel);
-    const wand = document.getElementById('wand');
-    if (!tel && wand) {
-      const s = Math.min(innerWidth / 1280, innerHeight / 800);
-      wand.style.transform = `translate(-50%, -50%) scale(${s})`;
-    }
+    const d = document.documentElement;
+    d.classList.toggle('tel-stand', telStand());
+    d.style.setProperty('--wandschaal', String(Math.min(innerWidth / 1280, innerHeight / 800)));
   }
 
   async function haal(pad) {
@@ -118,6 +115,26 @@
     }
   }
 
+  /**
+   * Tekenen, gebundeld: hoe vaak er ook om gevraagd wordt (een klik, de
+   * live-stroom, een verversing), hooguit één keer per beeld. Zonder dit liep
+   * de pagina vast bij snel klikken: elke klik tekende het hele huis opnieuw.
+   */
+  function gebundeld(fn) {
+    let gepland = false;
+    return () => {
+      if (gepland) return;
+      gepland = true;
+      requestAnimationFrame(() => {
+        gepland = false;
+        fn();
+      });
+    };
+  }
+
+  /** Welke stand er te zien is: '#wand' of '#tel'. Alleen die wordt getekend. */
+  const zicht = () => (telStand() ? '#tel' : '#wand');
+
   /** Zet de navigatie, de stand en de klok voor een tab. */
   function start(tab) {
     const balk = document.getElementById('balk');
@@ -128,11 +145,19 @@
       a.innerHTML = nav.svg('instellingen');
       a.setAttribute('href', LINKS.instellingen);
     });
-    addEventListener('resize', schaal);
+    // Wisselt de stand (de tablet draait), dan tekent de pagina de andere opnieuw.
+    let stand = telStand();
+    addEventListener('resize', () => {
+      schaal();
+      if (telStand() !== stand) {
+        stand = telStand();
+        dispatchEvent(new Event('standwissel'));
+      }
+    });
     schaal();
     klok();
     setInterval(klok, 10_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting };
+  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht };
 })(window);

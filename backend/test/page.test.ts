@@ -945,6 +945,29 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 20_000);
 
   /*
+   * Instellingen en Wat je huis kan (schetsen Instellingen, Wand-Leren en
+   * Wand-Huis-groeit): wie stuurt, wat het huis weet, en de stappen.
+   */
+  it('toont Instellingen, en daarvandaan Wat je huis kan', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/instellingen.html`);
+    await p.locator('#wand [data-stuurt] .fase').first().waitFor();
+    await p.locator('#wand [data-weet] .weet').first().waitFor();
+    expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    await p.locator('#wand [data-huis] a', { hasText: 'Wat je huis kan' }).click();
+    await p.locator('#wand h1', { hasText: 'Wat je huis kan' }).waitFor();
+    await p.locator('#wand .stap svg.sc-huis').first().waitFor();
+    expect(await p.locator('#wand .stap').count()).toBe(4);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
+  /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
    * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
    * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.

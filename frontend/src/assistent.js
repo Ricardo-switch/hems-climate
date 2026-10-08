@@ -154,11 +154,11 @@ function tekenHuis() {
   const top = etages.at(-1);
   if (top && (etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
   const model = { beschrijving: kamer ? `Het huis, met de ${huismodel.zoneNaam(kamer)} uitgelicht.` : 'Het huis.', tijd: app.tijdVanDeDag(zon), zon: zon?.dag ? { stand: zon.dag.fractie, aandeel: 0.4 } : { aandeel: 0 }, etages };
-  huis.teken(document.getElementById('podium-wand'), model, { breedte: 620, hoogte: 580, marge: 0.06 });
-  huis.teken(document.getElementById('podium-tel'), { ...model, etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.04 });
+  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 620, hoogte: 580, marge: 0.06 });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.04 });
 }
 
-function teken() {
+function tekenNu() {
   app.schaal();
   app.luchtVan(zon, state?.bewoner?.stromen?.zonKw ?? 0);
   const laatste = gesprek.at(-1);
@@ -169,6 +169,10 @@ function teken() {
 }
 
 /* -------------------------------------------------------------- starten */
+
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
 
 app.start('assistent');
 document.addEventListener('click', (e) => {

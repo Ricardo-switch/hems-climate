@@ -126,7 +126,7 @@ function perDag(r) {
 
 /* ------------------------------------------------------------ tekenen */
 
-function teken() {
+function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   const soorten = [['dag', 'Dag'], ['week', 'Week'], ['maand', 'Maand'], ['jaar', 'Jaar']];
@@ -157,6 +157,10 @@ function teken() {
 }
 
 /* -------------------------------------------------------------- starten */
+
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
 
 app.start('opbrengst');
 document.addEventListener('click', (e) => {

@@ -96,7 +96,7 @@ function standTekst(d) {
 
 /* ------------------------------------------------------------ tekenen */
 
-function teken() {
+function tekenNu() {
   app.schaal();
   if (!huisData) return;
   app.luchtVan(zon, state?.bewoner?.stromen?.zonKw ?? 0);
@@ -104,7 +104,7 @@ function teken() {
   if (!plek) return;
   const { etage, kamer, apparaat } = plek;
 
-  $$('[data-pad]').forEach((el) => (el.innerHTML = `<a href="thuis.html">Huis</a><span aria-hidden="true">›</span><span>${esc(etage.naam)}</span><span aria-hidden="true">›</span><b>${esc(kamer.naam)}</b>`));
+  $$('[data-pad]').forEach((el) => (el.innerHTML = `<a href="thuis.html">Huis</a><span aria-hidden="true">›</span><a href="#" data-etage="${esc(etage.id)}">${esc(etage.naam)}</a><span aria-hidden="true">›</span><b>${esc(kamer.naam)}</b>`));
   $$('[data-temp]').forEach((el) => (el.textContent = graden(kamer.temperatuurC)));
   $$('[data-naam]').forEach((el) => (el.textContent = kamer.naam));
   $$('[data-zin]').forEach((el) => (el.textContent = kamer.status?.zin ?? (kamer.lampenAan ? `${kamer.lampenAan === 1 ? 'Eén lamp' : `${kamer.lampenAan} lampen`} aan.` : '')));
@@ -119,12 +119,15 @@ function teken() {
   for (const blad of $$('[data-blad]')) {
     // Niet opnieuw opbouwen onder de vinger: een schuif of het kleurenwiel.
     if (bezig || (blad.contains(document.activeElement) && document.activeElement.matches('input'))) continue;
-    // Een lopend camerabeeld niet afbreken bij elke verversing.
-    if (apparaat?.soort === 'camera' && blad.querySelector(`[data-camera="${CSS.escape(apparaat.id)}"]`)) continue;
+    // Een lopend camerabeeld niet afbreken bij elke verversing: het oude vak terugzetten.
+    const lopend = new Map([...blad.querySelectorAll('[data-camera][data-gestart]')].map((b) => [b.dataset.camera, b]));
     blad.innerHTML = apparaat ? apparaatBlad(kamer, apparaat) : kamerBlad(kamer);
-    const beeld = blad.querySelector('[data-camera]');
-    // Alleen het zichtbare blad haalt beeld op: niet twee streams voor de wand en de telefoon.
-    if (beeld && blad.closest(app.telStand() ? '#tel' : '#wand')) void startCamera(beeld);
+    for (const beeld of blad.querySelectorAll('[data-camera]')) {
+      const oud = lopend.get(beeld.dataset.camera);
+      if (oud) beeld.replaceWith(oud);
+      // Alleen het zichtbare blad haalt beeld op: niet twee streams voor de wand en de telefoon.
+      else if (blad.closest(app.zicht())) void startCamera(beeld);
+    }
   }
 }
 
@@ -147,8 +150,8 @@ function tekenPodium(etage, kamer) {
     zonderDak: true,
     etages: [{ naam: etage.naam, kamers: binnenVan(etage, kamer).map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
   };
-  huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: 1.2, schuifY: -10, tik: true });
-  huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
+  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: 1.2, schuifY: -10, tik: true });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
 }
 
 /* --------------------------------------------------------- het kamerblad */
@@ -179,25 +182,35 @@ function kamerBlad(k) {
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
     scenes,
-    cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Camera</h3>${cameras.map(rij).join('')}</div>` : '',
+    cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     meters.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Meters</h3>${meters.map(rij).join('')}</div>` : '',
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
   ];
   return delen.join('');
 }
 
+/** Kamers waarvan de bewoner alle scènes wil zien. */
+const alleScenes = new Set();
+
 function scenesVan(k) {
-  const lijst = [...(k.scenes ?? [])].sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0)).slice(0, 6);
-  if (!lijst.length) return '';
+  const alles = [...(k.scenes ?? [])].sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0));
+  if (!alles.length) return '';
+  // Dezelfde naam uit verschillende groepen (Soho voor de tuin, de border, het tuinhuis): met de groep erbij.
+  const telling = new Map();
+  for (const sc of alles) telling.set(sc.naam, (telling.get(sc.naam) ?? 0) + 1);
+  const open = alleScenes.has(k.id);
+  const lijst = open ? alles : alles.slice(0, 6);
   const knop = (sc) => {
     const achter = sc.plaatje
       ? `background-image: url('${esc(sc.plaatje)}')`
       : sc.kleuren?.length
         ? `background: linear-gradient(160deg, ${sc.kleuren.map(esc).join(', ')}, #3a2a18)`
         : 'background: linear-gradient(160deg, #3a4656, #1d2633)';
-    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}</span></button>`;
+    const groep = telling.get(sc.naam) > 1 && sc.groep ? `<small>${esc(sc.groep)}</small>` : '';
+    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}${groep}</span></button>`;
   };
-  return `<div><div class="groepkop"><h3 class="kop-3">Scènes</h3><span class="mini">uit Hue</span></div><div class="scenes">${lijst.map(knop).join('')}</div></div>`;
+  const meer = alles.length > 6 ? `<button type="button" class="pil" data-meer-scenes style="border: 0; color: inherit; cursor: pointer; margin-top: 8px">${open ? 'Minder scènes' : `Alle ${alles.length} scènes`}</button>` : '';
+  return `<div><div class="groepkop"><h3 class="kop-3">Scènes</h3><span class="mini">uit Hue</span></div><div class="scenes">${lijst.map(knop).join('')}</div>${meer}</div>`;
 }
 
 /* ----------------------------------------------------- de apparaatbladen */
@@ -333,10 +346,14 @@ function screenBlad(k, d) {
  * De camera (besluit 106): het live beeld, via de dienst bij Home Assistant
  * opgehaald. Kijken vraagt de inlog; zonder staat er de weg ernaartoe.
  */
+function cameraBox(d) {
+  return `<div class="camerabeeld" data-camera="${esc(d.id)}" data-naam="${esc(d.naam)}"><p class="mini">Even laden…</p></div>`;
+}
+
 function cameraBlad(d) {
   return `${kopVan(d, '')}
-    <div class="camerabeeld" data-camera="${esc(d.id)}" data-naam="${esc(d.naam)}"><p class="mini">Even laden…</p></div>
-    <p class="mini" style="margin: 0">Alleen kijken. Het beeld komt via Home Assistant en wordt nergens bewaard.</p>`;
+    ${cameraBox(d)}
+    <p class="mini" style="margin: 0">Tik op het beeld om het schermvullend te zien. Alleen kijken: het beeld komt via Home Assistant en wordt nergens bewaard.</p>`;
 }
 
 async function startCamera(box) {
@@ -357,7 +374,8 @@ async function startCamera(box) {
     }
     // Eerst het plaatje, dan live erover: zo staat er meteen iets.
     const plaatje = URL.createObjectURL(await res.blob());
-    box.innerHTML = `<img alt="Live beeld van ${esc(naam)}" src="${plaatje}"><span class="live"><span class="stip"></span>Live</span>`;
+    box.dataset.gestart = '1';
+    box.innerHTML = `<img alt="Live beeld van ${esc(naam)}" src="${plaatje}"><span class="live"><span class="stip"></span>${esc(naam)}</span><button type="button" class="vol" data-vol aria-label="Schermvullend">⤢</button>`;
     const img = box.querySelector('img');
     const live = new Image();
     live.alt = img.alt;
@@ -433,6 +451,12 @@ async function vraag(kamer, d, wens) {
 
 function koppel(blad) {
   blad.addEventListener('click', (e) => {
+    const vak = e.target.closest('.camerabeeld[data-gestart]');
+    if (vak && (e.target.closest('[data-vol]') || e.target.closest('img'))) {
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else void vak.requestFullscreen?.().catch(() => {});
+      return;
+    }
     const plek = vind();
     if (!plek) return;
     const { kamer, apparaat } = plek;
@@ -445,6 +469,11 @@ function koppel(blad) {
       t.setAttribute('aria-checked', String(!d?.aan));
       void licht({ doel: 'lamp', id: t.dataset.schakel, aan: !d?.aan });
     } else if (t.hasAttribute('data-alles-uit')) void licht({ doel: 'kamer', id: kamer.id, aan: false });
+    else if (t.hasAttribute('data-meer-scenes')) {
+      if (alleScenes.has(kamer.id)) alleScenes.delete(kamer.id);
+      else alleScenes.add(kamer.id);
+      teken();
+    }
     else if (t.dataset.scene) {
       $$(`[data-scene]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === t.dataset.scene)));
       void licht({ id: t.dataset.scene }, 'api/scene');
@@ -510,6 +539,10 @@ function koppel(blad) {
 
 /* -------------------------------------------------------------- starten */
 
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
+
 app.start('thuis');
 $$('[data-blad]').forEach(koppel);
 // Een andere kamer op de etage, of een andere etage.
@@ -525,6 +558,7 @@ for (const id of ['podium-wand', 'podium-tel']) {
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-etage]');
   if (!b) return;
+  e.preventDefault();
   const etage = huisData?.etages.find((x) => x.id === b.dataset.etage);
   const eerste = etage?.ruimtes.find((r) => r.zoneId) ?? etage?.ruimtes[0];
   if (eerste) ga(eerste.id);

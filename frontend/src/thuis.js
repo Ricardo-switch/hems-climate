@@ -122,7 +122,7 @@ function huisModel() {
 
 /* ------------------------------------------------------------ tekenen */
 
-function teken() {
+function tekenNu() {
   app.schaal();
   if (!state || !huisData) return;
 
@@ -136,11 +136,12 @@ function teken() {
 
   const model = huisModel();
   lucht(model.tijd, model.seizoen, model.wolken);
-  huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
-  huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14 });
+  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
 
   tekenVandaag();
   tekenStraks();
+  tekenApparaat();
   tekenGevoel();
   tekenKamersTel();
 }
@@ -196,6 +197,26 @@ function tekenVandaag() {
  * Straks: wat het huis gaat doen zodra het kan. Uit de besluiten die nu op zon
  * wachten; het plan voor de middag komt met het thermisch model (D).
  */
+/** Een uitstelbaar apparaat dat draait of klaarstaat, als kaart: met de eindtijd (besluit 98). */
+function tekenApparaat() {
+  const kaart = document.querySelector('[data-apparaatkaart]');
+  const d = (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'running') ?? (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'waiting' || x.stand === 'would_start');
+  if (!d) {
+    kaart.hidden = true;
+    return;
+  }
+  const s = (vandaag?.uitstelbaar ?? []).find((u) => u.id === d.id)?.draaide?.at(-1);
+  const loopt = d.stand === 'running' && s && Date.now() - s.totMs < 5 * 60_000;
+  const klaar = loopt && d.duurMin ? s.vanMs + d.duurMin * 60_000 : null;
+  const deel = klaar ? Math.min(1, (Date.now() - s.vanMs) / (d.duurMin * 60_000)) : d.stand === 'running' ? 1 : 0;
+  const rest = klaar ? Math.max(0, Math.round((klaar - Date.now()) / 60_000)) : null;
+  const R = 2 * Math.PI * 24;
+  const ring = `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" ${d.stand === 'running' ? '' : 'stroke-dasharray="3 5"'}/>${deel > 0 ? `<circle cx="28" cy="28" r="24" fill="none" stroke="#F7B548" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * R).toFixed(1)} ${R.toFixed(1)}" transform="rotate(-90 28 28)"/>` : ''}${rest != null ? `<text x="28" y="33" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#EEF3F7">${rest >= 60 ? `${Math.floor(rest / 60)}u${String(rest % 60).padStart(2, '0')}` : `${rest}m`}</text>` : ''}</svg>`;
+  const zin = klaar ? `Draait, klaar rond ${new Date(klaar).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : d.kop;
+  kaart.innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
+  kaart.hidden = false;
+}
+
 function tekenStraks() {
   const wacht = (state.rejected ?? []).find((r) => r.blockedBy === 'insufficient_power_budget' && r.intent?.budgetW > 0);
   const kaarten = $$('[data-straks]');
@@ -221,7 +242,7 @@ function tekenGevoel() {
   if (!zones.length) return;
   gekozenZone ??= zones.find((r) => r.zoneId === 'woonkamer')?.zoneId ?? zones[0].zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
-  zet('[data-gevoel-kop]', `Hoe voelt het in de ${zoneNaam(kamer.zoneId)}?`);
+  zet('[data-gevoel-kop]', `Hoe voelt de ${zoneNaam(kamer.zoneId)} nu?`);
   const box = document.querySelector('[data-gevoel]');
   if (box.childElementCount) return;
   for (const [sleutel, tekst, achter, kleur] of GEVOEL) {
@@ -320,38 +341,9 @@ function tekenWeer() {
     blad.innerHTML = `
       <div class="weerkop"><h2 class="kop-3">Het weer</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
       ${rijen}
-      ${terugblik()}
       <p class="mini voet">Van Buienradar. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
     blad.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
-}
-
-/**
- * Zo goed klopte het (besluit 105): per dag wat de dag ervoor werd verwacht,
- * naast wat de panelen werkelijk leverden. Hoe meer dagen, hoe beter het huis
- * de verwachting bijstelt.
- */
-function terugblik() {
-  const dagen = weer.terugblik ?? [];
-  if (!dagen.length) {
-    return '<div class="terug"><h3 class="kop-3">Hoe goed het klopte</h3><p class="mini" style="margin: 4px 0 0">Vanaf morgen staat hier per dag wat er verwacht werd en wat er echt kwam.</p></div>';
-  }
-  const schaal = Math.max(1, ...dagen.map((d) => Math.max(d.verwachtKwh, d.werkelijkKwh)));
-  const afwijking = dagen.reduce((t, d) => t + Math.abs(d.werkelijkKwh - d.verwachtKwh), 0) / dagen.length;
-  const totaal = dagen.reduce((t, d) => t + d.werkelijkKwh, 0) / dagen.length;
-  const rijen = dagen
-    .slice(0, 7)
-    .map((d) => {
-      const datum = new Date(`${d.datum}T12:00:00Z`);
-      const pct = (kwh) => `${Math.min(100, (kwh / schaal) * 100).toFixed(1)}%`;
-      return `<div class="terugrij"><span>${DAGNAAM.format(datum).slice(0, 2)} ${DATUM.format(datum)}</span>
-        <i aria-hidden="true"><b style="width: ${pct(d.werkelijkKwh)}"></b><em style="left: ${pct(d.verwachtKwh)}"></em></i>
-        <span>${nl(d.werkelijkKwh)} <small>van ${nl(d.verwachtKwh)}</small></span></div>`;
-    })
-    .join('');
-  return `<div class="terug"><div class="weerkop" style="margin: 0"><h3 class="kop-3">Hoe goed het klopte</h3><span class="mini">gemiddeld ${nl(afwijking)} kWh ernaast${totaal > 0 ? `, ${Math.round((afwijking / totaal) * 100)}%` : ''}</span></div>
-    ${rijen}
-    <p class="mini" style="margin: 6px 0 0">De balk is wat er kwam, het streepje wat de dag ervoor werd verwacht.</p></div>`;
 }
 
 function openWeer(knop) {
@@ -509,6 +501,10 @@ function tekenStappenkaarten() {
 
 /* -------------------------------------------------------------- starten */
 
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
+
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
@@ -543,9 +539,10 @@ const openKamer = (e) => {
   const k = e.target.closest('[data-kamer]');
   if (k) location.href = `kamer.html#${encodeURIComponent(k.dataset.kamer)}`;
 };
-const podium = document.getElementById('podium-wand');
-podium.addEventListener('click', openKamer);
-podium.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openKamer(e)));
+for (const podium of [document.getElementById('podium-wand'), document.getElementById('podium-tel')]) {
+  podium.addEventListener('click', openKamer);
+  podium.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openKamer(e)));
+}
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
 app.live((nieuw) => {
