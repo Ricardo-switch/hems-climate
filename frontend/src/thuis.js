@@ -4,7 +4,7 @@
  * de gegevens van de dienst om naar de beschrijving van het huis; uitrekenen
  * doet de dienst (besluit 94).
  *
- * De wand is altijd 1280 × 800 en wordt als geheel naar het scherm geschaald,
+ * De wand is 800 hoog (1280 breed, of breder op een breed scherm) en wordt als geheel naar het scherm geschaald,
  * zodat er nooit gescrold hoeft te worden. Op een telefoon (smal of staand)
  * staat dezelfde inhoud onder elkaar.
  */
@@ -378,11 +378,11 @@ function gezien() {
   }
 }
 
-/** De plek van tikvlakken op de wand, in de maat van 1280 × 800. */
+/** De plek van tikvlakken op de wand, in de maat van de wand (800 hoog). */
 function plekOpWand(vlakken) {
   const wand = document.getElementById('wand');
   const w = wand.getBoundingClientRect();
-  const s = w.width / 1280;
+  const s = w.height / 800;
   const r = vlakken.map((v) => v.getBoundingClientRect());
   if (!r.length || !s) return null;
   const links = Math.min(...r.map((x) => x.left));

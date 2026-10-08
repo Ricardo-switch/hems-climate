@@ -19,11 +19,12 @@ body { overflow: hidden; }
 html.tel-stand body { overflow: auto; }
 
 /*
- * De wand: altijd 1280 × 800, als geheel geschaald naar het scherm. Nooit
- * scrollen. De schaal en de stand zet een klein script in de <head>, vóór de
+ * De wand: 800 hoog en 1280 breed, als geheel geschaald naar het scherm. Is
+ * het scherm breder dan 16:10, dan groeit de wand mee in de breedte (tot 1700),
+ * zodat er links en rechts geen lege rand blijft. Nooit scrollen. De schaal en de stand zet een klein script in de <head>, vóór de
  * eerste weergave: anders schoof de pagina bij het laden nog even op zijn plek.
  */
-#wand { position: fixed; left: 50%; top: 50%; width: 1280px; height: 800px; transform-origin: 50% 50%; transform: translate(-50%, -50%) scale(var(--wandschaal, 1)); grid-template-rows: 800px; }
+#wand { position: fixed; left: 50%; top: 50%; width: var(--wandbreedte, 1280px); height: 800px; transform-origin: 50% 50%; transform: translate(-50%, -50%) scale(var(--wandschaal, 1)); grid-template-rows: 800px; }
 html.tel-stand #wand { display: none; }
 html:not(.tel-stand) #tel { display: none; }
 /* De telefoon: de hele breedte, niet de 390 van de schets. */

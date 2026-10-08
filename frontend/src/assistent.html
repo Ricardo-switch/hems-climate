@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { d.classList.toggle('tel-stand', innerWidth < 900 || innerHeight > innerWidth); d.style.setProperty('--wandschaal', Math.min(innerWidth / 1280, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerWidth < 900 || innerHeight > innerWidth); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schets Wand-Assistent): het gesprek links, het huis rechts. */
   .gesprek { position: absolute; left: 22px; top: 36px; width: 580px; bottom: 110px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }

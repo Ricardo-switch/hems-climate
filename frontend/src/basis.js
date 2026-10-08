@@ -1,5 +1,5 @@
 /*
- * Wat elke tab van ontwerp 2 deelt (besluit 104): de wand van 1280 × 800 die
+ * Wat elke tab van ontwerp 2 deelt (besluit 104): de wand van 800 hoog (en 1280 of breder) die
  * als geheel naar het scherm schaalt, de navigatie, de lucht van het moment,
  * de klok, ophalen, de deuren met de inlog (besluit 99) en de live-stroom.
  *
@@ -33,7 +33,11 @@
   function schaal() {
     const d = document.documentElement;
     d.classList.toggle('tel-stand', telStand());
-    d.style.setProperty('--wandschaal', String(Math.min(innerWidth / 1280, innerHeight / 800)));
+    // Een breder scherm dan 16:10 (een tablet zonder de balken van het systeem):
+    // de wand groeit mee in de breedte, de hoogte blijft 800. Zo vult hij het scherm.
+    const breed = Math.min(1700, Math.max(1280, Math.round((800 * innerWidth) / innerHeight)));
+    d.style.setProperty('--wandbreedte', `${breed}px`);
+    d.style.setProperty('--wandschaal', String(Math.min(innerWidth / breed, innerHeight / 800)));
   }
 
   async function haal(pad) {

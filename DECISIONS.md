@@ -4646,6 +4646,12 @@ uit de proef van besluit 71 in de app, en is `nieuw.html` weggehaald. Wie na het
 inloggen geen terugweg heeft, komt op `thuis.html`. Zonder verbinding (besluit
 82) toont elke pagina de laatste stand grijs, met sinds wanneer.
 
+*Aanvulling 8 oktober 2026, 's avonds.* De wand is 800 hoog en minstens 1280
+breed. Is het scherm breder dan 16:10, zoals een tablet waar de balken van het
+systeem van de hoogte afgaan (de Tab A9+: 1280 × 728), dan groeit de wand mee
+in de breedte, tot 1700, en vult hij het scherm. Smaller dan 16:10 blijft hij
+1280 breed en past hij op de breedte.
+
 ---
 
 ## 105. Het weer van de komende dagen, met wat de panelen dan leveren

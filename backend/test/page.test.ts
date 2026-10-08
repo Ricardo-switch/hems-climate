@@ -454,6 +454,27 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Zonder verbinding (besluit 82): de laatste stand, grijs, met sinds wanneer,
    * en niets om op te drukken. Komt de verbinding terug, dan is het weg.
    */
+  /*
+   * Een tablet zonder de balken van het systeem is breder dan 16:10 (de Tab
+   * A9+: 1280 × 728). De wand groeit dan mee in de breedte: geen lege rand.
+   */
+  it('vult op een breed scherm de hele breedte, zonder te scrollen', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 728 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    for (const pagina of ['thuis.html', 'kamer.html', 'opbrengst.html', 'indeling.html']) {
+      await p.goto(`${baseUrl}/${pagina}`);
+      await p.locator('#wand main').waitFor();
+      const r = await p.evaluate<{ links: number; rechts: number; boven: number; onder: number }>("(() => { const b = document.getElementById('wand').getBoundingClientRect(); return { links: b.left, rechts: innerWidth - b.right, boven: b.top, onder: innerHeight - b.bottom }; })()");
+      expect(Math.abs(r.links), `${pagina} links`).toBeLessThan(1);
+      expect(Math.abs(r.rechts), `${pagina} rechts`).toBeLessThan(1);
+      expect(Math.abs(r.boven), `${pagina} boven`).toBeLessThan(1);
+      expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1'), `${pagina} scrolt`).toBe(true);
+    }
+    await context.close();
+  }, 30_000);
+
   it('toont zonder verbinding de laatste stand, grijs', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
