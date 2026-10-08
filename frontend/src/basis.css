@@ -43,7 +43,8 @@ html:not(.tel-stand) #tel { display: none; }
 .aanbel-kop > div { flex: 1; display: flex; flex-direction: column; }
 .aanbel-kop b { font-family: var(--kop); font-size: 26px; }
 .aanbel-kop span { color: var(--zacht); font-size: 15px; }
-.aanbel-beeld { flex: 1; min-height: 0; display: grid; place-items: center; border-radius: 18px; overflow: hidden; background: #000; color: var(--zacht); text-align: center; padding: 0; }
-.aanbel-beeld img { width: 100%; height: 100%; object-fit: contain; }
+.aanbel-beeld { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; border-radius: 18px; overflow: hidden; background: #000; color: var(--zacht); text-align: center; padding: 0; }
+/* Het hele beeld, zoals in de app van de camera: passend in het vak, niets afgesneden. */
+.aanbel-beeld img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .aanbel-beeld p { padding: 24px; max-width: 44ch; }
 .aanbel-beeld a { color: var(--ijs); font-weight: 700; }

@@ -1027,6 +1027,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       }, { timeout: 10_000 })
       .toBeGreaterThan(0);
     await expect.poll(() => p.evaluate<number>("document.querySelector('.aanbel img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
+    // Het hele beeld past in het vak, niets valt eronder weg.
+    const past = await p.evaluate<boolean>("(() => { const v = document.querySelector('.aanbel-beeld').getBoundingClientRect(); const i = document.querySelector('.aanbel img').getBoundingClientRect(); return i.bottom <= v.bottom + 1 && i.right <= v.right + 1 && i.height > 0; })()");
+    expect(past).toBe(true);
     await p.locator('.aanbel [data-bel-dicht]').click();
     await p.locator('.aanbel').waitFor({ state: 'detached' });
     expect(fouten).toEqual([]);
