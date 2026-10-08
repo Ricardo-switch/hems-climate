@@ -66,8 +66,8 @@
       [W, 0, Ht],
       [W, D, 0],
       [0, D, 0],
-      [-0.4, D + 0.6, 0],
-      [W + 0.8, D + 0.6, 0],
+      [-0.4, D + (model.zonderDak ? 0.7 : 0.6), 0],
+      [W + 0.8, D + (model.zonderDak ? 0.7 : 0.6), 0],
       [W + 0.6, -0.2, 0],
     ];
     if (model.auto || spook(model, 'auto') || opts.ruimte) pts.push([-2.7, D + 0.7, 0], [-2.7, D - 1.8, 0.9]);
@@ -197,14 +197,17 @@
     }
 
     /* ---- grond: het perceel, de oprit ---- */
-    const gx0 = model.auto || spook(model, 'auto') || opts.ruimte ? -3.0 : -1.4;
-    const gx1 = W + 1.3;
-    grond.push(poly([[gx0, -0.6, 0], [gx1, -0.6, 0], [gx1, D + 1.9, 0], [gx0, D + 1.9, 0]], `fill="url(#${id}-gras)"`));
+    // Ingezoomd op een etage: alleen een smalle rand grond om het huis.
+    const gx0 = model.zonderDak ? -0.45 : model.auto || spook(model, 'auto') || opts.ruimte ? -3.0 : -1.4;
+    const gx1 = model.zonderDak ? W + 0.75 : W + 1.3;
+    const gy0 = model.zonderDak ? -0.35 : -0.6;
+    const gy1 = model.zonderDak ? D + 0.7 : D + 1.9;
+    grond.push(poly([[gx0, gy0, 0], [gx1, gy0, 0], [gx1, gy1, 0], [gx0, gy1, 0]], `fill="url(#${id}-gras)"`));
     // De rand van het perceel, als een dikke plaat.
-    grond.push(poly([[gx0, D + 1.9, 0], [gx1, D + 1.9, 0], [gx1, D + 1.9, -0.18], [gx0, D + 1.9, -0.18]], `fill="#0b1219"`));
-    grond.push(poly([[gx1, -0.6, 0], [gx1, D + 1.9, 0], [gx1, D + 1.9, -0.18], [gx1, -0.6, -0.18]], `fill="#080e14"`));
+    grond.push(poly([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx0, gy1, -0.18]], `fill="#0b1219"`));
+    grond.push(poly([[gx1, gy0, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx1, gy0, -0.18]], `fill="#080e14"`));
     // Een pad van tegels naar de voordeur.
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < (model.zonderDak ? 0 : 4); i++) {
       const y0 = D + 0.35 + i * 0.36;
       grond.push(poly([[0.5, y0, 0.004], [1.0, y0, 0.004], [1.0, y0 + 0.26, 0.004], [0.5, y0 + 0.26, 0.004]], `fill="#ffffff" opacity="0.05"`));
     }
@@ -432,6 +435,13 @@
     function tekenKamer(kamer, x0, x1, z0, z1) {
       const xm = (x0 + x1) / 2;
       kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0, z1 });
+      // Een lege plek voor een nieuwe kamer, in de bewerkstand: alleen een stippellijn.
+      if (kamer.nieuw) {
+        huis.push(poly([[x0 + 0.06, 0.06, z0 + 0.01], [x1 - 0.06, 0.06, z0 + 0.01], [x1 - 0.06, D - 0.06, z0 + 0.01], [x0 + 0.06, D - 0.06, z0 + 0.01]], `fill="${KLEUR.ijs}" fill-opacity="0.05" stroke="${KLEUR.ijs}" stroke-opacity="0.7" stroke-width="1.6" stroke-dasharray="6 5"`));
+        const t = P(xm, D * 0.5, z0);
+        labels.push(`<g><circle cx="${t[0]}" cy="${t[1]}" r="16" fill="#0E1828" stroke="${KLEUR.ijs}" stroke-opacity="0.7"/><path d="M ${t[0] - 7} ${t[1]} h 14 M ${t[0]} ${t[1] - 7} v 14" stroke="${KLEUR.ijs}" stroke-width="2.2" stroke-linecap="round"/><text x="${t[0]}" y="${t[1] + 36}" text-anchor="middle" fill="${KLEUR.ijs}" font-family="Figtree, sans-serif" font-size="13" font-weight="700">${esc(kamer.naam ?? 'Kamer toevoegen')}</text></g>`);
+        return;
+      }
       const donker = nacht && !(kamer.apparaten ?? []).some((a) => a.soort === 'lamp' && a.aan);
       // Linkerwand (de tussenmuur of de buitenmuur), achterwand, vloer.
       huis.push(poly([[x0, 0, z0], [x0, D, z0], [x0, D, z1], [x0, 0, z1]], `fill="${donker ? '#121a26' : '#3a4a60'}"`));
@@ -455,6 +465,22 @@
       }
       sfeer(kamer, x0, x1, z0, z1);
       for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, z0, z1, false);
+      // In de bewerkstand: de gekozen kamer met een rand, de kamer waar iets heen gaat met een gloed.
+      if (kamer.gekozen || kamer.doel) {
+        const kl = kamer.doel ? KLEUR.mint : KLEUR.ijs;
+        huis.push(poly([[x0 + 0.03, 0.03, z0 + 0.01], [x1 - 0.03, 0.03, z0 + 0.01], [x1 - 0.03, D - 0.03, z0 + 0.01], [x0 + 0.03, D - 0.03, z0 + 0.01]], `fill="${kl}" fill-opacity="${kamer.doel ? 0.16 : 0.06}" stroke="${kl}" stroke-width="2" ${kamer.doel ? '' : 'stroke-dasharray="7 5"'}`));
+      }
+      // Zones in een kamer: een stippellijn over de vloer, met de naam erbij.
+      (kamer.zones ?? []).forEach((zone, i, alle) => {
+        if (i === 0) return;
+        const xs = x0 + ((x1 - x0) * i) / alle.length;
+        huis.push(line([[xs, 0.05, z0 + 0.012], [xs, D - 0.05, z0 + 0.012]], `stroke="#C9D6E2" stroke-opacity="0.45" stroke-width="1.4" stroke-dasharray="5 5"`));
+      });
+      (kamer.zones ?? []).forEach((zone, i, alle) => {
+        const xz = x0 + ((x1 - x0) * (i + 0.5)) / alle.length;
+        const t = P(xz, D - 0.2, z0 + 0.02);
+        labels.push(`<text x="${t[0]}" y="${t[1]}" text-anchor="middle" fill="${KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="11.5" font-weight="600" opacity="0.85">${esc(zone)}</text>`);
+      });
       // De muur ertussen als doorsnede.
       huis.push(line([[x0, D, z0], [x0, D, z1]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
       kamerLabel(kamer, x0 + 0.16, z1 - 0.2, false);

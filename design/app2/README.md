@@ -25,8 +25,10 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
   Instellen zit achter het tandwiel. Vandaag is Waarom en Plan samen.
 - **De uitleg van het huis** de eerste keer als rondleiding over het echte
   huis, daarna achter "Zo werkt het huis".
-- **De indeling** pas je aan in het huis zelf (een bewerkstand op de etage);
-  Instellingen › Kamers en indeling opent dezelfde bewerkstand.
+- **De indeling** zit achter het tandwiel (Instellingen › Kamers en
+  indeling): een bewerkstand op het huis zelf, waar je apparaten naar een kamer
+  sleept, zones maakt en kamers en etages toevoegt. Komt er een apparaat bij in
+  Home Assistant, dan staat er op Thuis één regel die ernaar wijst.
 
 ## Schermen
 
@@ -39,6 +41,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Opbrengst` | `Opbrengst` |
 | `Wand-Huis-groeit` (wat je huis kan) | `Instellingen`, `Onboarding-Zon` |
 | `Wand-Assistent` | |
+| `Wand-Indeling` (kamers en indeling, de bewerkstand) | |
 | `Wand-Leren` (leren, meekijken, regelen per apparaat) | |
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Kamers en indeling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kop { display: flex; justify-content: space-between; align-items: end; }
+  .etages { position: absolute; left: 22px; top: 120px; width: 190px; display: flex; flex-direction: column; gap: 8px; }
+  .etage { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--glas-rand); background: var(--glas); display: flex; flex-direction: column; gap: 2px; }
+  .etage b { font-size: 15px; }
+  .etage span { font-size: 12.5px; color: var(--gedempt); }
+  .etage.aan { border-color: rgba(111,211,255,0.55); background: rgba(111,211,255,0.1); }
+  .etage.nieuw { border-style: dashed; background: transparent; color: var(--ijs); font-weight: 700; font-size: 14px; align-items: center; }
+  .podium { position: absolute; left: 236px; top: 90px; width: 580px; height: 560px; }
+  .blad { position: absolute; right: 26px; top: 96px; bottom: 118px; width: 330px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .veld { height: 42px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 15px; font-weight: 600; }
+  .label { font-size: 12.5px; color: var(--gedempt); margin-bottom: 6px; display: block; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,0.07); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .chip.plus { background: transparent; border: 1px dashed rgba(111,211,255,0.6); color: var(--ijs); }
+  .app { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+  .app:first-of-type { border-top: 0; }
+  .greep { color: var(--gedempt); letter-spacing: -2px; font-weight: 700; }
+  .app .l { flex: 1; display: flex; flex-direction: column; }
+  .app .l span { font-size: 12px; color: var(--gedempt); }
+  .bak { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 82px; border-radius: 22px; border: 1px dashed rgba(247,181,72,0.5); background: rgba(247,181,72,0.05); display: flex; align-items: center; gap: 16px; padding: 0 20px; }
+  .sleep { position: absolute; z-index: 5; display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px 0 10px; border-radius: 14px; background: #f2f6f9; color: #0b1424; font-weight: 700; font-size: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.5); transform: rotate(-3deg); }
+  .sleep i { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff2d8, #ffc27a); display: block; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kop">
+      <div><div class="klein" style="font-weight: 600">‹ Instellingen</div><h1 class="kop-1" style="font-size: 40px; margin-top: 6px">Kamers en indeling</h1></div>
+      <div style="display: flex; gap: 10px; align-items: center">
+        <span class="mini">Verandert niets in Home Assistant</span>
+        <button class="knop">Ongedaan maken</button>
+        <button class="knop knop-licht">Klaar</button>
+      </div>
+    </div>
+
+    <div class="etages" role="list" aria-label="Etages">
+      <div class="etage" role="listitem"><b>Zolder</b><span>1 kamer, 2 apparaten</span></div>
+      <div class="etage" role="listitem"><b>Eerste verdieping</b><span>3 kamers, 9 apparaten</span></div>
+      <div class="etage aan" role="listitem" aria-current="true"><b>Begane grond</b><span>3 kamers, 11 apparaten</span></div>
+      <div class="etage" role="listitem"><b>Buiten</b><span>tuin, tuinhuis, 6 apparaten</span></div>
+      <div class="etage nieuw" role="listitem">+ Etage toevoegen</div>
+    </div>
+
+    <div class="podium" id="podium"></div>
+    <span aria-hidden="true" style="position: absolute; z-index: 4; left: 612px; top: 336px; height: 70px; border-left: 2px dashed var(--mint)"></span>
+    <span aria-hidden="true" style="position: absolute; z-index: 4; left: 605px; top: 400px; width: 16px; height: 16px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 16px var(--mint)"></span>
+    <div class="sleep" style="left: 540px; top: 292px" aria-hidden="true"><i></i>Lamp tuinhuis</div>
+
+    <aside class="glas blad">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2">Woonkamer</h2><span class="mini">gekozen</span></div>
+      <div><span class="label">Naam</span><div class="veld">Woonkamer<span class="mini">wijzig</span></div></div>
+      <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips"><span class="chip">Zithoek</span><span class="chip">Eethoek</span><span class="chip plus">+ Zone</span></div></div>
+      <div>
+        <span class="label">Apparaten, sleep om te verplaatsen</span>
+        <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Airco woonkamer</b><span>regelt de zithoek en de eethoek</span></div></div>
+        <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Plafondlamp</b><span>eethoek</span></div></div>
+        <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Leeslamp</b><span>zithoek</span></div></div>
+        <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Screen voorgevel</b><span>op de gevel van de zithoek</span></div></div>
+        <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Temperatuur zithoek</b><span>de meter van de kamer</span></div></div>
+      </div>
+      <button class="knop" style="margin-top: auto; color: #ffb090; border-color: rgba(255,122,77,0.35)">Kamer weghalen</button>
+    </aside>
+
+    <div class="bak">
+      <span class="getal zon-t" style="font-size: 30px">1</span>
+      <div style="flex: 1"><b>Nog in te delen</b><div class="klein">Nieuw in Home Assistant. Sleep het naar een kamer, of tik erop en kies de kamer.</div></div>
+      <span class="chip" style="opacity: 0.4; border: 1px dashed var(--zon)">Lamp tuinhuis</span>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'De begane grond in de bewerkstand: de hal, de keuken, de woonkamer met twee zones, en een lege plek voor een nieuwe kamer. Een lamp wordt naar de woonkamer gesleept.',
+    tijd: 'dag',
+    zonderDak: true,
+    etages: [
+      { kamers: [
+        { naam: 'Hal', gewicht: 0.45, apparaten: [{ soort: 'lamp', aan: false, x: 0.5 }] },
+        { naam: 'Keuken', gewicht: 0.9, apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] },
+        { naam: 'Woonkamer', gewicht: 1.6, doel: true, zones: ['Zithoek', 'Eethoek'], apparaten: [{ soort: 'airco', aan: false }, { soort: 'bank' }, { soort: 'lamp', aan: true, x: 0.25 }, { soort: 'lamp', aan: false, x: 0.78 }, { soort: 'screen', dicht: 0.4 }] },
+        { naam: 'Kamer toevoegen', gewicht: 0.7, nieuw: true },
+      ] },
+    ],
+  }, { breedte: 580, hoogte: 560, marge: 0.02, zoom: 1.12, schuifY: 0 });
+</script>
+</body>
+</html>
