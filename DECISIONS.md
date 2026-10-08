@@ -33,13 +33,14 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [44. De assistent is een vierde voorsteller, geen baas](#44-de-assistent-is-een-vierde-voorsteller-geen-baas)
 - [46. Het huis leert wat het ís, niet wat het moet doen](#46-het-huis-leert-wat-het-ís-niet-wat-het-moet-doen)
 - [70. Elke opstelling werkt; de regeling doet wat de opstelling toelaat](#70-elke-opstelling-werkt-de-regeling-doet-wat-de-opstelling-toelaat)
-- [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf)
+- [71. De schetsen van de app zijn de maatstaf](#71-de-schetsen-van-de-app-zijn-de-maatstaf) — *aangevuld door 104*
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
 - [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
 - [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet) — *aangevuld door 97*
 - [96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving](#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving)
+- [104. Ontwerp 2 is de maatstaf, en de schets is de code](#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code)
 
 **Kern en regeling**
 
@@ -2762,7 +2763,7 @@ niets aan dit huis, dus ze mogen ook eerder, zonder de winterdata te raken.
 
 ## 71. De schetsen van de app zijn de maatstaf
 
-*Onderwerp: visie en principes · Status: geldig*
+*Onderwerp: visie en principes · Status: aangevuld door 104*
 
 Op 1 oktober 2026 zijn de schermen van de bewonersapp geschetst: vijf voor de
 telefoon, vijf voor een tablet aan de muur. Ze staan in `design/app/`, met
@@ -4569,6 +4570,55 @@ blijft hij gelijk.
 configuratie; het scherm toont ze als "uit je configuratie". Als eind 2026 de
 drie fasen komen, kan `grid` uit de configuratie, en zet de bewoner 3 × 25 A in
 de app; de dienst vindt dan zelf de drie stroommeters van de P1-meter.
+
+---
+
+## 104. Ontwerp 2 is de maatstaf, en de schets is de code
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Op 8 oktober 2026 lag de app op de NAS naast de schetsen van besluit 71, en het
+verschil was groot. De schetsen toonden het mooiste moment (12:09, volle zon),
+de app moest elk moment tonen en had de lege momenten nooit ontworpen. Het huis
+was klein gemaakt en in een kader gezet, er was per besluit een kaartje
+bijgekomen en nooit een weggehaald, en wat bij het meekijken hoort ("je huidige
+regeling", "besluit 08:06") stond tussen wat de bewoner moet zien. En de
+schetsen waren getekende plaatjes: de app moest ze opnieuw bouwen, en onderweg
+ging verloren wat ze goed maakte. Gekozen door de bewoner op 8 oktober 2026.
+
+*Besluit:*
+
+- **Ontwerp 2 (`design/app2/`) is de maatstaf** voor de app, in plaats van de
+  schetsen van besluit 71. De regels van 71 blijven gelden: elk getal is te
+  herleiden, bij elk besluit een reden, eerst de lelijke momenten.
+- **De schets is de code.** Het huis, de stijlbasis, de sankey en de navigatie
+  staan in `design/app2/kit/`, en de app gebruikt diezelfde bestanden met de
+  echte gegevens. Het huis in de app is dus letterlijk het huis uit de schets.
+- **Het huis in 3D, in de lucht van het moment.** Een opengewerkt huis dat zich
+  opbouwt uit wat het huis heeft (de indeling, panelen, buitenunit, batterij,
+  laadpaal met auto); wat er niet is, staat er niet. De achtergrond is de lucht
+  van dat moment: dag, avond, nacht, bewolkt, winter. Het vermogen staat bij de
+  panelen, niet bij de zon.
+- **Vijf tabs:** Thuis, Vandaag, Apparaten, Opbrengst, Assistent. Bedienen
+  gebeurt in het huis (etage, kamer, apparaat), de modus staat bovenin Thuis,
+  en instellen zit achter het tandwiel, ook de indeling (de bewerkstand). Vandaag
+  is Waarom en Plan samen.
+- **De wand scrolt nooit.** De tablet draait schermvullend (kiosk). De
+  wandschermen zijn gebouwd op de maat van de schetsen, 1280 × 800, en worden
+  als geheel gelijkmatig naar het scherm geschaald: zo past alles altijd, en is
+  het pixel voor pixel de schets. De telefoon mag langer zijn en schaalt mee.
+- **Geen concessies aan het beeld; wel eerlijk over de data.** Wat er nog niet
+  is, wordt niet nagemaakt: het plan en de voorstellen komen met het thermisch
+  model (D), batterij en auto alleen als ze er zijn, en klimaat en screens
+  bedienen tot stap B als "zo zou ik het doen". De lampen en scènes werken echt.
+- **Elke stap wordt naast de schets gelegd.** De paginatest maakt van de echte
+  app schermafdrukken op de maten van de schetsen; een stap is pas klaar als ze
+  overeenkomen.
+
+*Volgorde:* de bouwstenen en Thuis op de wand en de telefoon; de navigatie en
+Apparaten; Kamer met de bladen voor screen, airco, thermostaat en lamp, en de
+rondleiding; Vandaag en Opbrengst; Instellingen, de indeling, Leren en Wat je
+huis kan.
 
 ---
 

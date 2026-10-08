@@ -36,7 +36,9 @@ verwijzing bestaat.
   meekijken ([28]), en doorloopt leren, meekijken en regelen, met de bewoner
   vanaf dag één ([73]).
 - **Twee applicaties:** het instrumentenpaneel en de bewonersapp ([29]). De
-  schetsen in `design/app/` zijn de maatstaf voor de app ([71]).
+  schetsen in `design/app2/` (ontwerp 2) zijn de maatstaf voor de app, en de
+  schets is de code: de app gebruikt dezelfde tekenmotor voor het huis ([71],
+  [104]).
 - **Elke opstelling werkt:** de regeling doet wat de opstelling toelaat en zegt
   wat ze daardoor niet kan ([70]). Geavanceerde functies volgen uit wat het huis
   heeft; ingrijpende vragen een bewuste keuze ([78]).
@@ -282,4 +284,5 @@ verwijzing bestaat.
 [101]: DECISIONS.md#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen
 [102]: DECISIONS.md#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant
 [103]: DECISIONS.md#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt
+[104]: DECISIONS.md#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code
 <!-- links:einde -->
