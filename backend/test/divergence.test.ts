@@ -159,6 +159,7 @@ describe('wat de arbiter zou doen', () => {
     solarW: null,
     full: true,
     handsOff: false,
+    deferrables: {},
     ...over,
   });
 

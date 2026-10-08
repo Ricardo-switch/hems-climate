@@ -78,6 +78,12 @@ export interface Moment {
    * bewoner, en dat hoort niet in dit rapport.
    */
   readonly handsOff: boolean;
+  /**
+   * De stand van elk uitstelbaar apparaat (besluit 98), op id: `running`,
+   * `would_start`, `waiting`, `not_ready` of `unknown`. Leeg in logboeken van
+   * vóór de uitstelbare apparaten.
+   */
+  readonly deferrables: Readonly<Record<string, string>>;
 }
 
 /** Modi waarin de regeling zich terugtrekt. Spiegelt `HANDS_OFF_MODES`. */
@@ -130,6 +136,8 @@ interface RawRecord {
   failsafe?: { active: boolean };
   buitenC?: number | null;
   zonW?: number | null;
+  /** Per uitstelbaar apparaat: id, stand, reden en soms "klaar voor". */
+  uitstel?: [string, string, string, number?][];
 }
 
 const EMPTY_BUDGET = {
@@ -282,6 +290,7 @@ export async function* readMoments(
         solarW: raw.zonW ?? null,
         full: raw.changed === true,
         handsOff: handsOffAt(mode, carry.lastLegacy),
+        deferrables: Object.fromEntries((raw.uitstel ?? []).map(([id, state]) => [id, state])),
       };
     }
   }

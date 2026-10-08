@@ -468,7 +468,9 @@ export function connectionView(c: ConnectionContext): ConnectionView {
           weg: brand?.weg ?? '',
         }
       : null,
-    inDeRegeling: c.applied,
+    // Alleen de twee lijsten: `withConnection` geeft ook de hele configuratie
+    // terug (`raw`), met entiteiten, en die hoort niet op de pagina (besluit 45).
+    inDeRegeling: { toegevoegd: c.applied.toegevoegd, overgeslagen: c.applied.overgeslagen },
     volgendeStart: relevant(c.answers) !== relevant(c.answersAtStart),
   };
 }

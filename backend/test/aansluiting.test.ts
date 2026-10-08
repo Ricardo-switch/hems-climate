@@ -230,7 +230,8 @@ describe('wat de pagina krijgt', () => {
     const view = connectionView({
       base: parsed.config,
       found,
-      applied: { toegevoegd: [], overgeslagen: [] },
+      // Zoals main.ts het doorgeeft: het hele resultaat, met de configuratie erin.
+      applied: { toegevoegd: [], overgeslagen: [], raw: real } as never,
       answersAtStart: null,
       answers: checked.answers,
       solar: { naam: 'SolarEdge AC-vermogen', intervalS: 61, platform: 'solaredge_modbus_multi' },
@@ -245,6 +246,8 @@ describe('wat de pagina krijgt', () => {
     // De pagina krijgt nooit een entiteit (besluit 45), ook niet bij de antwoorden.
     expect(view.gevonden.fasen).toEqual(['L1']);
     expect(JSON.stringify(view.gevonden)).not.toMatch(/sensor\./);
+    expect(view.inDeRegeling).toEqual({ toegevoegd: [], overgeslagen: [] });
+    expect(JSON.stringify(view)).not.toMatch(/sensor\.|binary_sensor\.|climate\./);
     expect(view.volgendeStart).toBe(true);
   });
 });

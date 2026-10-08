@@ -34,7 +34,7 @@ const MAX_DECISIONS = 200;
 export interface TodaySpan {
   readonly vanMs: number;
   readonly totMs: number;
-  /** 'cool' of 'heat'. */
+  /** 'cool' of 'heat'; 'run' bij een uitstelbaar apparaat. */
   readonly actie: string;
 }
 
@@ -59,6 +59,16 @@ export interface TodayReport {
     readonly actuatorId: string;
     readonly smartClimate: readonly TodaySpan[];
     readonly huidig: readonly TodaySpan[];
+  }[];
+  /**
+   * De uitstelbare apparaten (besluit 98): wanneer ze vandaag werkelijk
+   * draaiden, en wanneer Smart Climate ze zou starten. In schaduwmodus start
+   * hij niets, dus dat tweede is een voorstel, geen handeling.
+   */
+  readonly uitstelbaar: readonly {
+    readonly id: string;
+    readonly draaide: readonly TodaySpan[];
+    readonly zouStarten: readonly TodaySpan[];
   }[];
   /** Besluiten met een opdracht, nieuwste eerst. */
   readonly besluiten: readonly TodayDecision[];
@@ -143,6 +153,8 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
   type Open = { vanMs: number; totMs: number; actie: string } | null;
   const spans = new Map(ids.map((id) => [id, { sc: [] as TodaySpan[], now: [] as TodaySpan[], openSc: null as Open, openNow: null as Open }]));
   const decisions: TodayDecision[] = [];
+  const deferrableIds = (config.deferrables ?? []).map((d) => d.id);
+  const deferrableSpans = new Map(deferrableIds.map((id) => [id, { ran: [] as TodaySpan[], would: [] as TodaySpan[], openRan: null as Open, openWould: null as Open }]));
 
   /** Verlengt of sluit een draaiperiode met dit moment. */
   const step = (list: TodaySpan[], open: Open, tMs: number, actie: string | null): Open => {
@@ -189,6 +201,13 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
       s.openNow = step(s.now, s.openNow, m.tMs, real);
     }
 
+    for (const id of deferrableIds) {
+      const s = deferrableSpans.get(id)!;
+      const state = m.deferrables[id];
+      s.openRan = step(s.ran, s.openRan, m.tMs, state === 'running' ? 'run' : null);
+      s.openWould = step(s.would, s.openWould, m.tMs, state === 'would_start' ? 'run' : null);
+    }
+
     if (m.full && m.commands.length > 0) {
       const touched = new Set(m.commands.map((c) => c.actuatorId).filter((x): x is string => x != null));
       const redenen = m.accepted
@@ -212,6 +231,13 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     return { actuatorId: id, smartClimate: s.sc, huidig: s.now };
   });
 
+  const uitstelbaar = deferrableIds.map((id) => {
+    const s = deferrableSpans.get(id)!;
+    if (s.openRan) s.ran.push({ vanMs: s.openRan.vanMs, totMs: lastMs, actie: s.openRan.actie });
+    if (s.openWould) s.would.push({ vanMs: s.openWould.vanMs, totMs: lastMs, actie: s.openWould.actie });
+    return { id, draaide: s.ran, zouStarten: s.would };
+  });
+
   return {
     vanMs,
     totMs: nowMs,
@@ -224,6 +250,7 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     netAfWh: Math.round(netAfWh),
     netTerugWh: Math.round(netTerugWh),
     apparaten,
+    uitstelbaar,
     besluiten: decisions.reverse().slice(0, MAX_DECISIONS),
   };
 }

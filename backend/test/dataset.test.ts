@@ -31,6 +31,7 @@ function moment(over: Partial<Moment> & { tMs: number }): Moment {
     solarW: null,
     full: true,
     handsOff: false,
+    deferrables: {},
     ...over,
   };
 }

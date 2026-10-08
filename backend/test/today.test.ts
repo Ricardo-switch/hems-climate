@@ -110,6 +110,29 @@ describe('vandaag', () => {
     ]);
   });
 
+  it('weet wanneer een uitstelbaar apparaat draaide, en wanneer Smart Climate het zou starten', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
+    cleanup.push(dir);
+    // Wacht op zon tot 08:00, zou dan starten, de bewoner start hem om 08:20 zelf, klaar om 09:00.
+    const state = (t: number) => (t < at('2026-10-02T08:00:00Z') ? 'waiting' : t < at('2026-10-02T08:20:00Z') ? 'would_start' : t < at('2026-10-02T09:00:00Z') ? 'running' : 'not_ready');
+    const lines: string[] = [];
+    for (let t = at('2026-10-02T07:00:00Z'); t <= at('2026-10-02T10:00:00Z'); t += MIN) {
+      lines.push(JSON.stringify(record(t, { uitstel: [['droger', state(t), 'surplus_available']] })));
+    }
+    await writeFile(join(dir, 'decisions-2026-10-02.ndjson'), `${lines.join('\n')}\n`, 'utf-8');
+    const site = { ...exampleSite, deferrables: [{ id: 'droger', name: 'Droger', remoteStart: { adapter: 'homeassistant', id: 'binary_sensor.droger_remote' }, estimatedW: 700, latestStart: '15:00' }] };
+
+    const r = await todayReport(dir, site, at('2026-10-02T10:00:00Z'));
+
+    expect(r.uitstelbaar).toEqual([
+      {
+        id: 'droger',
+        draaide: [{ vanMs: at('2026-10-02T08:20:00Z'), totMs: at('2026-10-02T08:59:00Z'), actie: 'run' }],
+        zouStarten: [{ vanMs: at('2026-10-02T08:00:00Z'), totMs: at('2026-10-02T08:19:00Z'), actie: 'run' }],
+      },
+    ]);
+  });
+
   it('geeft een lege dag als er nog niets gelogd is', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
     cleanup.push(dir);
