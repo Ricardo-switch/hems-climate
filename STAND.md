@@ -126,8 +126,9 @@ verwijzing bestaat.
 
 - **Twee weergaven:** `index.html` voor de cijfers, en de app. De app wordt per
   tab herbouwd in ontwerp 2 ([104]): Thuis (`thuis.html`), Vandaag
-  (`vandaag.html`), Apparaten (`apparaten.html`), Opbrengst (`opbrengst.html`)
-  en Kamer met de bladen per apparaat (`kamer.html`) staan er; de andere tabs wijzen nog naar `nieuw.html`, de
+  (`vandaag.html`), Apparaten (`apparaten.html`), Opbrengst (`opbrengst.html`),
+  de Assistent (`assistent.html`) en Kamer met de bladen per apparaat
+  (`kamer.html`) staan er; de andere tabs wijzen nog naar `nieuw.html`, de
   proef, die verdwijnt als alles over is. De app blijft dun: alles komt
   kant-en-klaar uit de dienst ([94], [76]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere

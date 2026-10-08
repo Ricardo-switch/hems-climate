@@ -21,7 +21,7 @@
     vandaag: 'vandaag.html',
     apparaten: 'apparaten.html',
     opbrengst: 'opbrengst.html',
-    assistent: 'nieuw.html#assistent',
+    assistent: 'assistent.html',
     instellingen: 'nieuw.html#bediening',
   };
 

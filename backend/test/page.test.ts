@@ -922,6 +922,29 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 20_000);
 
   /*
+   * De assistent in ontwerp 2 (schets Wand-Assistent): een vraag uit het adres
+   * wordt meteen gesteld, en de knoppen stellen een volgende.
+   */
+  it('stelt de vraag uit het adres meteen, en een volgende met een knop', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/assistent.html#nu`);
+    await p.locator('#wand .jij', { hasText: 'Wat doe je nu?' }).waitFor();
+    await p.locator('#wand .antwoord').filter({ hasNotText: 'Even kijken' }).waitFor();
+    await p.locator('#wand [data-vragen] button', { hasText: 'Hoeveel zon vandaag?' }).click();
+    await p.locator('#wand .jij', { hasText: 'Hoeveel zon vandaag?' }).waitFor();
+    await p.locator('#wand .antwoord').filter({ hasNotText: 'Even kijken' }).waitFor();
+    // Geen ruwe codes bij de feiten.
+    expect(await p.locator('#wand .feiten').textContent().catch(() => '')).not.toMatch(/[a-z][A-Z]|_/);
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
+  /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
    * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
    * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.
