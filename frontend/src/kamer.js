@@ -124,10 +124,15 @@ function tekenNu() {
     blad.innerHTML = apparaat ? apparaatBlad(kamer, apparaat) : kamerBlad(kamer);
     for (const beeld of blad.querySelectorAll('[data-camera]')) {
       const oud = lopend.get(beeld.dataset.camera);
-      if (oud) beeld.replaceWith(oud);
+      if (oud) {
+        beeld.replaceWith(oud);
+        lopend.delete(beeld.dataset.camera);
+      }
       // Alleen het zichtbare blad haalt beeld op: niet twee streams voor de wand en de telefoon.
       else if (blad.closest(app.zicht())) void startCamera(beeld);
     }
+    // Een beeld dat weg is, stoppen: een losgelaten plaatje blijft anders doorladen.
+    for (const oud of lopend.values()) stopBeeld(oud);
   }
 }
 
@@ -373,7 +378,7 @@ function screenBlad(k, d) {
  * opgehaald. Kijken vraagt de inlog; zonder staat er de weg ernaartoe.
  */
 function cameraBox(d) {
-  return `<div class="camerabeeld" data-camera="${esc(d.id)}" data-naam="${esc(d.naam)}"><p class="mini">Even laden…</p></div>`;
+  return `<div class="camerabeeld" data-camera="${esc(d.id)}" data-cameranaam="${esc(d.naam)}"><p class="mini">Even laden…</p></div>`;
 }
 
 function cameraBlad(d) {
@@ -382,9 +387,14 @@ function cameraBlad(d) {
     <p class="mini" style="margin: 0">Tik op het beeld om het schermvullend te zien. Alleen kijken: het beeld komt via Home Assistant en wordt nergens bewaard.</p>`;
 }
 
+/** Het live beeld stoppen: de stroom loopt door tot het plaatje geen bron meer heeft. */
+function stopBeeld(box) {
+  for (const img of box.querySelectorAll('img')) img.removeAttribute('src');
+}
+
 async function startCamera(box) {
   const id = box.dataset.camera;
-  const naam = box.dataset.naam;
+  const naam = box.dataset.cameranaam;
   try {
     const res = await fetch(`api/camera?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!box.isConnected) return;
@@ -407,6 +417,7 @@ async function startCamera(box) {
     live.alt = img.alt;
     live.onload = () => {
       if (box.isConnected) img.replaceWith(live);
+      else live.src = '';
     };
     live.onerror = () => box.querySelector('.live')?.replaceChildren('Plaatje');
     live.src = `api/camera?id=${encodeURIComponent(id)}&live=1`;

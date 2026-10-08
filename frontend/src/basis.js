@@ -171,8 +171,10 @@
   }
   function sluitBel() {
     clearTimeout(belTimer);
-    // Het beeld weghalen stopt de stream.
-    document.querySelector('.aanbel')?.remove();
+    // Zonder bron stopt de stroom; alleen weghalen laat hem soms doorlopen.
+    const laag = document.querySelector('.aanbel');
+    laag?.querySelectorAll('img').forEach((img) => img.removeAttribute('src'));
+    laag?.remove();
   }
 
   /**

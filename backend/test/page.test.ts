@@ -249,6 +249,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   const sessions = new SessionStore();
   let sessionId = '';
   let stopCamera: () => Promise<void> = async () => {};
+  /** Hoeveel live-beelden de nagemaakte Home Assistant nu geeft. */
+  let liveOpen = 0;
   const pageErrors: string[] = [];
   const lightCalls: string[] = [];
   const lightData: Record<string, unknown>[] = [];
@@ -279,14 +281,31 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       ] as FoundAppliance[],
     };
 
-    // Een nagemaakte Home Assistant voor het camerabeeld: een klein grijs plaatje.
-    const haCamera = createServer((_req, res) => {
-      res.writeHead(200, { 'content-type': 'image/svg+xml' });
-      res.end('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36"><rect width="64" height="36" fill="#445"/></svg>');
+    // Een nagemaakte Home Assistant voor het camerabeeld: een klein grijs plaatje,
+    // en live een stroom van plaatjes zoals `camera_proxy_stream` die geeft.
+    const frame = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAkAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDCooorQAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//Z', 'base64');
+    const haCamera = createServer((req, res) => {
+      if (req.url?.includes('camera_proxy_stream')) {
+        liveOpen += 1;
+        res.writeHead(200, { 'content-type': 'multipart/x-mixed-replace; boundary=frame' });
+        const kop = Buffer.from(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${frame.length}\r\n\r\n`);
+        const tik = setInterval(() => res.write(Buffer.concat([kop, frame, Buffer.from('\r\n')])), 100);
+        req.on('close', () => {
+          clearInterval(tik);
+          liveOpen -= 1;
+        });
+        return;
+      }
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      res.end(frame);
     });
     await new Promise<void>((r) => haCamera.listen(0, '127.0.0.1', () => r()));
     const haCameraPort = (haCamera.address() as { port: number }).port;
-    stopCamera = () => new Promise<void>((r) => haCamera.close(() => r()));
+    stopCamera = () =>
+      new Promise<void>((r) => {
+        haCamera.closeAllConnections();
+        haCamera.close(() => r());
+      });
 
     // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
     let port: number;
@@ -1049,6 +1068,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const oprit = kamers.find((r) => r.apparaten.some((d) => d.soort === 'camera'))!;
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(oprit.id)}/camera.camera_oprit_vloeiend`);
     await p.locator('#wand .camerabeeld img').waitFor();
+
+    // In het blad van de oprit blijft het live beeld staan, ook als het huis ververst.
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(oprit.id)}`);
+    await p.locator('#wand .camerabeeld[data-gestart] img').waitFor();
+    await p.waitForTimeout(2500);
+    expect(await p.evaluate<number>("document.querySelector('#wand .camerabeeld img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
+    expect(liveOpen).toBe(1);
+    // Een andere kamer: het beeld stopt.
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metKlimaat.id)}`);
+    await expect.poll(() => liveOpen).toBe(0);
 
     // Een lamp: de schakelaar gaat via de deur naar Home Assistant.
     const voor = lightCalls.length;
