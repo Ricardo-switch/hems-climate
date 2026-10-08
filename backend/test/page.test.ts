@@ -920,8 +920,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const vergelijk = p.locator('#wand [data-blik="vergelijk"]');
     if (await vergelijk.count()) {
       await vergelijk.click();
+      await p.locator('#wand [data-blik="vergelijk"][aria-pressed="true"]').waitFor();
       await p.locator('#wand [data-staaf]').first().click();
-      expect(await p.locator('#wand .detail').textContent()).not.toContain('Tik op een staaf');
+      await p.locator('#wand .detail').filter({ hasNotText: 'Tik op een staaf' }).waitFor();
     }
     expect(await p.locator('#balk [aria-current="page"]').textContent()).toBe('Opbrengst');
     expect(fouten).toEqual([]);
