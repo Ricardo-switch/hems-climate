@@ -4402,6 +4402,13 @@ de naam van de scène, met een tabel van de Nederlandse naar de Engelse namen
 van de bekende verzameling. Smart Climate levert ze niet mee: ze zijn van
 Philips Hue (`deploy/README-NAS.md`).
 
+*Aanvulling 8 oktober 2026.* De scènes staan niet meer in het blad van de kamer,
+maar pas bij een lamp: alleen die van zijn eigen Hue-groep, uit het hele huis.
+Zit een lamp in meer groepen (het tuinhuis en de hele achtertuin), dan staat
+elke naam er één keer, die van de kleinste groep. Een lamp zonder kleur krijgt
+alleen de witte scènes: de witte standaardscènes, en een eigen scène waarvan de
+lampen wit lieten zien. Een scène uit de galerij van Hue telt als kleur.
+
 ---
 
 ## 101. "Klaar voor" bij de droger is per keer te kiezen

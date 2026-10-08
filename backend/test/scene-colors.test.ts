@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import type { HouseDevice } from '../src/web/house.js';
-import { SceneColorStore, colorsFromLamps, defaultSceneColors, hsCss } from '../src/web/scene-colors.js';
+import { SceneColorStore, colorsFromLamps, defaultSceneColors, hsCss, whiteScene } from '../src/web/scene-colors.js';
 
 const lamp = (aan: boolean, licht: HouseDevice['licht']): HouseDevice =>
   ({ id: 'light.x', naam: 'x', haNaam: 'x', soort: 'licht', aan, licht }) as unknown as HouseDevice;
@@ -33,6 +33,18 @@ describe('de kleuren van een scène', () => {
     expect(defaultSceneColors('Relax')).toEqual(['#ffc059', '#ffe0a8']);
     expect(defaultSceneColors('Tropische schemering')).toEqual(['#a03aa3', '#d37ad6']);
     expect(defaultSceneColors('Tyrell')).toEqual([]);
+  });
+
+  it('weet welke scènes een witte lamp kan: de witte, en wat de lampen wit lieten zien', () => {
+    expect(whiteScene('Gedimd', [])).toBe(true);
+    expect(whiteScene('Concentreren', [])).toBe(true);
+    // Een kleurscène van Hue, ook al lijkt zijn oranje op heel warm wit.
+    expect(whiteScene('Savanne zonsondergang', ['#ff7935'])).toBe(false);
+    // Uit de galerij van Hue en nog nooit gebruikt: kleur.
+    expect(whiteScene('Soho', [])).toBe(false);
+    // Een eigen scène die de lampen warm wit zette.
+    expect(whiteScene('Avondje', ['#ffa757', '#ffb46b'])).toBe(true);
+    expect(whiteScene('Feest', ['#ffa757', '#a03aa3'])).toBe(false);
   });
 
   it('onthoudt wat hij zag, en houdt het over een herstart', async () => {

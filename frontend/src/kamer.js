@@ -177,7 +177,6 @@ function kamerBlad(k) {
       <button type="button" class="naam" data-open="${esc(d.id)}" style="background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer"><b>${esc(d.naam)}</b><span>${esc(d.stand)}</span></button>
       <button type="button" class="schakel" role="switch" aria-checked="${d.aan}" aria-label="${esc(d.naam)}" data-schakel="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></button>
     </div>`;
-  const scenes = scenesVan(k);
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.
   const draait = apps.filter((d) => d.soort === 'apparaat' && d.aan).map((d) => `${d.naam} draait`);
   const klimaatZin = k.samenvatting?.klimaat ?? '';
@@ -188,7 +187,6 @@ function kamerBlad(k) {
     lampen.length
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
-    scenes,
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     meters.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Meters</h3>${meters.map(rij).join('')}</div>` : '',
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
@@ -196,16 +194,38 @@ function kamerBlad(k) {
   return delen.join('');
 }
 
-/** Kamers waarvan de bewoner alle scènes wil zien. */
+/** Lampen waarvan de bewoner alle scènes wil zien. */
 const alleScenes = new Set();
 
-function scenesVan(k) {
-  const alles = [...(k.scenes ?? [])].sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0));
+/*
+ * De scènes bij een lamp (besluit 100): alleen die van zijn eigen Hue-groep,
+ * uit het hele huis. Zit hij in meer groepen (het tuinhuis en de hele
+ * achtertuin), dan per naam één: die van de kleinste groep, want die zet het
+ * minst om de lamp heen. Een lamp zonder kleur krijgt alleen de witte scènes.
+ * Hoort hij bij geen groep met scènes, dan de scènes van de kamer zonder groep.
+ */
+function scenesBij(k, d) {
+  const laag = (x) => String(x ?? '').trim().toLowerCase();
+  const eigen = (sc) => sc.groep && (laag(d.haNaam) === laag(sc.groep) || (d.groepen ?? []).some((g) => laag(g) === laag(sc.groep)));
+  const lampen = (huisData.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten ?? [])).filter((x) => x.soort === 'licht');
+  const grootte = (groep) => lampen.filter((x) => laag(x.haNaam) === laag(groep) || (x.groepen ?? []).some((g) => laag(g) === laag(groep))).length || 99;
+  const uitHuis = new Map((huisData.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.scenes ?? [])).map((sc) => [sc.id, sc]));
+  let lijst = [...uitHuis.values()].filter(eigen);
+  if (!lijst.length) lijst = (k.scenes ?? []).filter((sc) => !sc.groep);
+  if (!d.licht?.kleur) lijst = lijst.filter((sc) => sc.wit);
+  const perNaam = new Map();
+  for (const sc of lijst) {
+    const al = perNaam.get(laag(sc.naam));
+    const beter = !al || grootte(sc.groep) < grootte(al.groep) || (grootte(sc.groep) === grootte(al.groep) && (sc.gebruiktMs ?? 0) > (al.gebruiktMs ?? 0));
+    if (beter) perNaam.set(laag(sc.naam), sc);
+  }
+  return [...perNaam.values()];
+}
+
+function scenesVan(d, alles) {
+  alles = [...alles].sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0) || a.naam.localeCompare(b.naam, 'nl'));
   if (!alles.length) return '';
-  // Dezelfde naam uit verschillende groepen (Soho voor de tuin, de border, het tuinhuis): met de groep erbij.
-  const telling = new Map();
-  for (const sc of alles) telling.set(sc.naam, (telling.get(sc.naam) ?? 0) + 1);
-  const open = alleScenes.has(k.id);
+  const open = alleScenes.has(d.id);
   const lijst = open ? alles : alles.slice(0, 6);
   const knop = (sc) => {
     const achter = sc.plaatje
@@ -213,8 +233,7 @@ function scenesVan(k) {
       : sc.kleuren?.length
         ? `background: linear-gradient(160deg, ${sc.kleuren.map(esc).join(', ')}, #3a2a18)`
         : 'background: linear-gradient(160deg, #3a4656, #1d2633)';
-    const groep = telling.get(sc.naam) > 1 && sc.groep ? `<small>${esc(sc.groep)}</small>` : '';
-    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}${groep}</span></button>`;
+    return `<button type="button" class="scene" data-scene="${esc(sc.id)}" aria-pressed="${!!sc.actief}" style="${achter}" ${huisData.lichtBedienen ? '' : 'disabled'}><span>${esc(sc.naam)}</span></button>`;
   };
   const meer = alles.length > 6 ? `<button type="button" class="pil" data-meer-scenes style="border: 0; color: inherit; cursor: pointer; margin-top: 8px">${open ? 'Minder scènes' : `Alle ${alles.length} scènes`}</button>` : '';
   return `<div><div class="groepkop"><h3 class="kop-3">Scènes</h3><span class="mini">uit Hue</span></div><div class="scenes">${lijst.map(knop).join('')}</div>${meer}</div>`;
@@ -418,7 +437,7 @@ function lampBlad(k, d) {
     delen.push(`<div class="wiel" role="slider" aria-label="Kleur van ${esc(d.naam)}" aria-valuetext="tint ${Math.round(h)}, verzadiging ${Math.round(s)}" data-wiel="${esc(d.id)}"><i style="left: ${(110 + Math.cos(a) * r).toFixed(1)}px; top: ${(110 + Math.sin(a) * r).toFixed(1)}px; background: hsl(${Math.round(h)} ${Math.round(s)}% 60%)"></i></div>`);
   }
   if (!bedienen) delen.push('<p class="mini" style="margin: 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>');
-  delen.push(scenesVan(k), `<p class="mini" data-fout style="margin: 0"></p>`);
+  delen.push(scenesVan(d, scenesBij(k, d)), `<p class="mini" data-fout style="margin: 0"></p>`);
   return delen.join('');
 }
 
@@ -477,8 +496,8 @@ function koppel(blad) {
       void licht({ doel: 'lamp', id: t.dataset.schakel, aan: !d?.aan });
     } else if (t.hasAttribute('data-alles-uit')) void licht({ doel: 'kamer', id: kamer.id, aan: false });
     else if (t.hasAttribute('data-meer-scenes')) {
-      if (alleScenes.has(kamer.id)) alleScenes.delete(kamer.id);
-      else alleScenes.add(kamer.id);
+      if (alleScenes.has(apparaat?.id)) alleScenes.delete(apparaat?.id);
+      else alleScenes.add(apparaat?.id);
       teken();
     }
     else if (t.dataset.scene) {

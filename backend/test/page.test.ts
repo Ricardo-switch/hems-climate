@@ -1055,6 +1055,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metLamp.id)}`);
     await p.locator('#wand [data-blad] [data-schakel]').first().click();
     await expect.poll(() => lightCalls.length).toBeGreaterThan(voor);
+
+    // Scènes pas bij een lamp, en dan alleen die erbij horen, elke naam één keer.
+    const metSfeer = kamers.find((r) => r.apparaten.some((d) => d.id === 'light.sfeerverlichting'))!;
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metSfeer.id)}`);
+    await p.locator('#wand [data-blad] .bladkop').waitFor();
+    expect(await p.locator('#wand [data-blad] .scene').count()).toBe(0);
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metSfeer.id)}/light.sfeerverlichting`);
+    await p.locator('#wand [data-blad] .scene').first().waitFor();
+    const namen = await p.locator('#wand [data-blad] .scene').allTextContents();
+    expect(new Set(namen).size).toBe(namen.length);
     expect(fouten).toEqual([]);
     await context.close();
   }, 20_000);

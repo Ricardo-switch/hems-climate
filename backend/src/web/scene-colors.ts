@@ -87,6 +87,32 @@ export function defaultSceneColors(naam: string): readonly string[] {
   return DEFAULTS.find(([re]) => re.test(n))?.[1] ?? [];
 }
 
+/** De standaardscènes van Hue die alleen wit zetten: die kan elke lamp. */
+const WHITE = /^(helder|bright|concentreren|concentrate|lezen|read|energie|energize|energise|ontspannen|relax|gedimd|dimmed|nachtlampje|nightlight|rusten|rest|natuurlijk licht|natural light)$/;
+
+/** Ligt een kleur dicht bij een kleurtemperatuur, dan is het wit. */
+function nearWhite(css: string): boolean {
+  const rgb = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const [r, g, b] = rgb(css);
+  return KELVIN.some(([, k]) => {
+    const [kr, kg, kb] = rgb(k);
+    return Math.hypot(r! - kr!, g! - kg!, b! - kb!) <= 30;
+  });
+}
+
+/**
+ * Kan een witte lamp deze scène laten zien? De witte standaardscènes wel, een
+ * andere standaardscène niet. Van de rest weten we het pas als hij een keer
+ * aan was: dan zegt de kleur van de lampen het. Tot dan telt hij als kleur,
+ * want de scènes uit de galerij van Hue zijn dat.
+ */
+export function whiteScene(naam: string, kleuren: readonly string[]): boolean {
+  const n = naam.trim().toLowerCase();
+  if (WHITE.test(n)) return true;
+  if (DEFAULTS.some(([re]) => re.test(n))) return false;
+  return kleuren.length > 0 && kleuren.every(nearWhite);
+}
+
 export class SceneColorStore {
   readonly #path: string;
   #current: Record<string, string[]> = {};

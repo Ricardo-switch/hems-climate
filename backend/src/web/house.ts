@@ -22,7 +22,7 @@
 
 import { findCameras } from './camera.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
-import { defaultSceneColors } from './scene-colors.js';
+import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
 import { roomStatus, type DecisionView, type RoomKind } from './assistant.js';
@@ -157,6 +157,8 @@ export interface HouseScene {
   readonly kleuren: readonly string[];
   /** Een plaatje uit `scene-plaatjes/` als de bewoner dat heeft (scene-pictures.ts), anders null. */
   readonly plaatje: string | null;
+  /** Zet hij alleen wit? Dan kan een lamp zonder kleur hem ook; anders niet (scene-colors.ts). */
+  readonly wit: boolean;
 }
 
 export interface HouseFloor {
@@ -339,7 +341,8 @@ function scenesPerRoom(
     const naam = own ?? (groupName && friendlyName.toLowerCase().startsWith(groupName.toLowerCase()) ? friendlyName.slice(groupName.length).trim() || friendlyName : friendlyName);
     const t = Date.parse(st.state);
     const list = out.get(roomId) ?? [];
-    list.push({ id, naam, actief: false, groep: groupName || null, gebruiktMs: Number.isFinite(t) ? t : null, kleuren: colorsOf(id, naam), plaatje: pictureOf(naam), t: Number.isFinite(t) ? t : 0 });
+    const kleuren = colorsOf(id, naam);
+    list.push({ id, naam, actief: false, groep: groupName || null, gebruiktMs: Number.isFinite(t) ? t : null, kleuren, plaatje: pictureOf(naam), wit: whiteScene(naam, kleuren), t: Number.isFinite(t) ? t : 0 });
     out.set(roomId, list);
   }
   const result = new Map<string, HouseScene[]>();
@@ -351,7 +354,7 @@ function scenesPerRoom(
     list.sort((x, y) => y.t - x.t || x.naam.localeCompare(y.naam, 'nl'));
     result.set(
       roomId,
-      list.map((s) => ({ id: s.id, naam: s.naam, actief: s.t > 0 && s.t === newest.get(s.groep ?? ''), groep: s.groep, gebruiktMs: s.gebruiktMs, kleuren: s.kleuren, plaatje: s.plaatje })),
+      list.map((s) => ({ id: s.id, naam: s.naam, actief: s.t > 0 && s.t === newest.get(s.groep ?? ''), groep: s.groep, gebruiktMs: s.gebruiktMs, kleuren: s.kleuren, plaatje: s.plaatje, wit: s.wit })),
     );
   }
   return result;
