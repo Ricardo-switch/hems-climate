@@ -975,6 +975,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 20_000);
 
+  it('is als app te installeren: een manifest met iconen, en een service worker', async () => {
+    const res = await fetch(`${baseUrl}/manifest.webmanifest`);
+    expect(res.headers.get('content-type')).toContain('application/manifest+json');
+    const m = (await res.json()) as { start_url: string; display: string; icons: { src: string; sizes: string }[] };
+    expect(m).toMatchObject({ start_url: 'thuis.html', display: 'standalone' });
+    for (const icoon of m.icons) expect((await fetch(`${baseUrl}/${icoon.src}`)).headers.get('content-type')).toBe('image/png');
+    expect((await fetch(`${baseUrl}/sw.js`)).status).toBe(200);
+    const thuis = await (await fetch(`${baseUrl}/thuis.html`)).text();
+    expect(thuis).toContain('rel="manifest"');
+  });
+
   /*
    * Aanbellen (besluit 107): elke open pagina toont het beeld van de deurbel,
    * en sluit het weer.

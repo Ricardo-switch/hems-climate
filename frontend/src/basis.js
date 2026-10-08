@@ -207,6 +207,8 @@
     });
     // De live-stroom, ook voor de deurbel op een pagina zonder live gegevens.
     stroom();
+    // Om de app te installeren; dat kan alleen over HTTPS (of met een uitzondering in Chrome).
+    if ('serviceWorker' in navigator && global.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
     addEventListener('keydown', (e) => e.key === 'Escape' && sluitBel());
     // Wisselt de stand (de tablet draait), dan tekent de pagina de andere opnieuw.
     let stand = telStand();
