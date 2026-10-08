@@ -35,7 +35,7 @@ import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight } from './web/today.js';
 import { readForecast, WeatherLog } from './web/weather.js';
-import { findCameras, httpBase } from './web/camera.js';
+import { findCameras, findDoorbells, httpBase } from './web/camera.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -418,7 +418,14 @@ async function readHouseRegisters(): Promise<void> {
 }
 // Hoe vaak de zonnesensor een nieuwe waarde geeft (besluit 89), overdag gemeten.
 const solarPace = new SensorPace();
+/** De melders van de deurbellen (besluit 107), opnieuw bepaald als de registers veranderen. */
+const doorbellOf = (id: string) => (houseRegisters ? findDoorbells(houseRegisters.entities, houseRegisters.devices, allStates).find((d) => d.sensor === id) : undefined);
 client.on('stateChanged', (state: HaEntityState) => {
+  // Aanbellen: de melder gaat aan. Dan toont elke open pagina het beeld.
+  if (state.entity_id.startsWith('binary_sensor.') && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') {
+    const bel = doorbellOf(state.entity_id);
+    if (bel) web?.ring(bel.camera, bel.naam);
+  }
   if (inHouse(state)) houseStates.set(state.entity_id, state);
   allStates.set(state.entity_id, state);
   const solar = baseConfig?.solarProduction;

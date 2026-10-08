@@ -1186,6 +1186,22 @@ export class WebServer {
     return { ...snapshot, bewoner: residentView(config, snapshot) };
   }
 
+  /**
+   * Er wordt aangebeld (besluit 107): elke open pagina toont het beeld van de
+   * deurbel. De melding zegt alleen welke camera; het beeld vraagt de inlog.
+   */
+  ring(camera: string, naam: string): void {
+    const data = JSON.stringify({ camera, naam, tMs: Date.now() });
+    for (const listener of this.#listeners) {
+      try {
+        listener.res.write(`event: aanbellen\ndata: ${data}\n\n`);
+      } catch {
+        clearInterval(listener.ping);
+        this.#listeners.delete(listener);
+      }
+    }
+  }
+
   /** Duwt een besluit naar alle kijkers. Hier hangt de runner zich aan. */
   publish(snapshot: LiveSnapshot): void {
     for (const listener of this.#listeners) {

@@ -976,6 +976,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 20_000);
 
   /*
+   * Aanbellen (besluit 107): elke open pagina toont het beeld van de deurbel,
+   * en sluit het weer.
+   */
+  it('toont het beeld van de deurbel als er wordt aangebeld', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/opbrengst.html`);
+    // Wachten tot de live-stroom open is.
+    await expect.poll(async () => ((await (await fetch(`${baseUrl}/api/health`)).json()) as { kijkers: number }).kijkers).toBeGreaterThan(0);
+    server.ring('camera.camera_oprit_vloeiend', 'Camera oprit');
+    await p.locator('.aanbel', { hasText: 'Er wordt aangebeld' }).waitFor();
+    await expect.poll(() => p.evaluate<number>("document.querySelector('.aanbel img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
+    await p.locator('.aanbel [data-bel-dicht]').click();
+    await p.locator('.aanbel').waitFor({ state: 'detached' });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
+  /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
    * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
    * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.

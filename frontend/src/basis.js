@@ -99,20 +99,80 @@
     return { punten: (zon?.kwartieren ?? []).map((q) => ({ tMs: q.tMs, w: q.heldereLuchtW ?? 0 })), naam: 'zon bij heldere lucht' };
   }
 
-  /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
-  function live(opState) {
+  /** Eén live-stroom per pagina: de besluiten, en de deurbel (besluit 107). */
+  let bron = null;
+  function stroom() {
+    if (bron) return bron;
     try {
-      const bron = new EventSource('api/events');
-      bron.onmessage = (ev) => {
+      bron = new EventSource('api/events');
+      bron.addEventListener('aanbellen', (ev) => {
         try {
-          opState(JSON.parse(ev.data));
+          aanbellen(JSON.parse(ev.data));
         } catch {
-          // Een half bericht: de volgende komt zo.
+          // Een half bericht.
         }
-      };
+      });
     } catch {
       // Geen EventSource: het verversen per minuut doet het werk.
     }
+    return bron;
+  }
+
+  /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
+  function live(opState) {
+    const b = stroom();
+    if (!b) return;
+    b.onmessage = (ev) => {
+      try {
+        opState(JSON.parse(ev.data));
+      } catch {
+        // Een half bericht: de volgende komt zo.
+      }
+    };
+  }
+
+  /*
+   * Er wordt aangebeld (besluit 107): het beeld van de deurbel schermvullend,
+   * op elke pagina, en na twee minuten weer weg. In Fully Kiosk Browser gaat
+   * ook het scherm aan; een gewone browser kan dat niet.
+   */
+  let belTimer = null;
+  function aanbellen(m) {
+    try {
+      global.fully?.turnScreenOn?.();
+      global.fully?.bringToForeground?.();
+    } catch {
+      // Geen Fully Kiosk.
+    }
+    let laag = document.querySelector('.aanbel');
+    if (!laag) {
+      laag = document.createElement('div');
+      laag.className = 'aanbel';
+      laag.setAttribute('role', 'dialog');
+      laag.setAttribute('aria-label', 'Er wordt aangebeld');
+      laag.addEventListener('click', (e) => {
+        if (e.target.closest('[data-bel-dicht]')) sluitBel();
+      });
+      document.body.append(laag);
+    }
+    const id = encodeURIComponent(m.camera);
+    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>Er wordt aangebeld</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
+      <div class="aanbel-beeld"><img alt="Live beeld van ${esc(m.naam ?? 'de deurbel')}" src="api/camera?id=${id}&live=1"></div>`;
+    laag.querySelector('img').addEventListener('error', async () => {
+      const res = await fetch(`api/camera?id=${id}`).catch(() => null);
+      const vak = laag.querySelector('.aanbel-beeld');
+      vak.innerHTML = res?.status === 401
+        ? `<p>Het beeld is alleen te zien als je bent ingelogd met je Home Assistant-account. <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">Inloggen</a></p>`
+        : '<p>De deurbel geeft nu geen beeld.</p>';
+    });
+    laag.querySelector('[data-bel-dicht]').focus();
+    clearTimeout(belTimer);
+    belTimer = setTimeout(sluitBel, 120_000);
+  }
+  function sluitBel() {
+    clearTimeout(belTimer);
+    // Het beeld weghalen stopt de stream.
+    document.querySelector('.aanbel')?.remove();
   }
 
   /**
@@ -145,6 +205,9 @@
       a.innerHTML = nav.svg('instellingen');
       a.setAttribute('href', LINKS.instellingen);
     });
+    // De live-stroom, ook voor de deurbel op een pagina zonder live gegevens.
+    stroom();
+    addEventListener('keydown', (e) => e.key === 'Escape' && sluitBel());
     // Wisselt de stand (de tablet draait), dan tekent de pagina de andere opnieuw.
     let stand = telStand();
     addEventListener('resize', () => {
@@ -159,5 +222,5 @@
     setInterval(klok, 10_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht };
+  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen };
 })(window);

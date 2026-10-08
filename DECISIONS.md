@@ -116,6 +116,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app](#94-de-schaduwweergave-is-voor-de-cijfers-de-proefomgeving-voor-de-app)
 - [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
 - [105. Het weer van de komende dagen, met wat de panelen dan leveren](#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren)
+- [107. Aanbellen: het beeld van de deurbel meteen op het scherm](#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm)
 
 **Veiligheid**
 
@@ -4697,6 +4698,32 @@ dezelfde camera's nog eens via de Synology-NAS. Gekozen op 8 oktober 2026.
   open op het thuisnetwerk en in het tailnet: het beeld van de oprit en de
   voordeur is privé. Alleen camera's die het huis toont, en hooguit vier live
   beelden tegelijk. Het beeld wordt nergens bewaard.
+
+---
+
+## 107. Aanbellen: het beeld van de deurbel meteen op het scherm
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 8 oktober 2026 vroeg de bewoner om bij aanbellen het scherm aan te zetten
+en het beeld van de deurbel direct te tonen. De Reolink-deurbel meldt een
+bezoeker met een eigen melder (`visitor`) op hetzelfde apparaat als de camera.
+Gekozen op 8 oktober 2026.
+
+*Besluit:*
+
+- **Gaat de bezoekersmelder van een deurbel aan,** dan stuurt de dienst over
+  de live-stroom een melding "aanbellen" met welke camera, naar elke open
+  pagina. Die toont het live beeld schermvullend, tot iemand het sluit of na
+  twee minuten.
+- **Het beeld vraagt de inlog van besluit 106,** ook bij aanbellen: zonder
+  inlog staat er de weg ernaartoe. De tablet aan de wand moet dus ingelogd
+  zijn om het beeld te tonen.
+- **Het scherm aanzetten** kan een webpagina niet. In Fully Kiosk Browser wel,
+  via zijn eigen JavaScript (`fully.turnScreenOn`); draait de app daarin, dan
+  gaat het scherm aan. In een gewone browser niet.
+- **Alleen lezen,** zoals bij 106: de dienst leest de melder en het beeld, en
+  stuurt niets naar de deurbel.
 
 ---
 
