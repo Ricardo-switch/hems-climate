@@ -139,6 +139,8 @@
     };
     // Waar apparaten staan, voor de labels.
     const plek = {};
+    /** Onder het dak hangt de airco tegen de linkermuur; dan staat de droger er niet onder. */
+    let aircoLinks = false;
 
     /* ---- verlopen ---- */
     defs.push(`
@@ -279,12 +281,24 @@
         huis.push(poly([[x0, 0, zt], [x1, 0, zt], [x1, D, zt], [x0, D, zt]], `fill="${donker ? '#0f151f' : '#1a2330'}"`));
         sfeer(kamer, x0, x1, zt, zt + R * 0.8);
         // Onder het dak volgt alles de schuine wand: het plafond is het dak zelf.
+        aircoLinks = (kamer.apparaten ?? []).some((a) => a.soort === 'airco');
         for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, (x) => dakZ(x) - 0.06);
+        aircoLinks = false;
         if (x0 > 0) huis.push(line([[x0, D, zt], [x0, D, dakZ(x0)]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
         kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0: zt, z1: zt + R });
         tik(kamer, stukGevel(x0, x1).map(([x, , z]) => [x, D, z]));
-        const vrij = dakZ(xm) - zt;
-        kamerLabel(kamer, xm, vrij * k < 96 ? zt + vrij * 0.58 : zt + vrij * 0.5, true, (x1 - x0) * (onderDak.length > 1 ? 0.8 : 0.6), vrij);
+        // Staat er een droger, dan de naam ernaast in plaats van eroverheen.
+        let xl = xm;
+        const toestel = (kamer.apparaten ?? []).find((a) => a.soort === 'droger' || a.soort === 'wasmachine' || a.soort === 'vaatwasser');
+        const opDePlek = toestel ? plek[toestel.soort] : null;
+        if (opDePlek) {
+          // Op het scherm vergelijken: de droger staat achterin en schuift daardoor naar rechts.
+          const half = ((kamer.naam ?? '').length * 6.9 + (kamer.temp ?? '').length * 8.8 + 6) / 2 / k;
+          const rechts = opDePlek[0] * AX + (D - opDePlek[1]) * BX + 0.3 * AX;
+          if (xm * AX - half < rechts + 0.08) xl = Math.min(x1 - half / AX - 0.05, (rechts + 0.08 + half) / AX);
+        }
+        const vrij = dakZ(xl) - zt;
+        kamerLabel(kamer, xl, vrij * k < 96 ? zt + vrij * 0.58 : zt + vrij * 0.5, true, (x1 - x0) * (onderDak.length > 1 ? 0.8 : 0.6), vrij);
         x0 = x1;
       }
     }
@@ -584,32 +598,36 @@
       const hoog = (x) => (plafond ? plafond(x) : z1);
       if (app.soort === 'airco') {
         const kleur = app.stand === 'warmt' ? KLEUR.gloed : KLEUR.ijs;
+        const KAST = ['#eef3f7', '#dfe7ee', '#b4c0cb'];
         if (plafond) {
-          // Onder het dak aan de achterwand, waar het dak het hoogst is.
-          // Zo dicht mogelijk bij de nok: daar is het dak het hoogst, en rechts van
-          // de nok valt de zolder achter het dakvlak met de panelen.
-          const ax = Math.max(x0 + 0.1, Math.min(x1 - 0.85, W / 2 - 0.375));
-          const az = Math.min(z0 + 0.45, Math.min(hoog(ax), hoog(ax + 0.75)) - 0.34);
-          plek[`airco:${app.naam ?? ''}`] = [ax + 0.38, 0.1, az];
-          huis.push(doos(ax, 0.02, az, 0.75, 0.16, 0.2, ['#dfe7ee', '#c9d3dc', '#aab6c1']));
+          // Onder het dak tegen de linkermuur, hoog: daar is hij altijd te zien,
+          // en de droger schuift naar rechts (zie hieronder).
+          const ay = 0.3;
+          const az = Math.min(z0 + 0.95, hoog(x0) - 0.4);
+          plek[`airco:${app.naam ?? ''}`] = [x0 + 0.2, ay + 0.4, az];
+          huis.push(doos(x0 + 0.01, ay, az, 0.2, 0.8, 0.26, KAST));
+          // De uitblaas aan de onderkant, naar de kamer toe.
+          huis.push(poly([[x0 + 0.212, ay + 0.08, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.08], [x0 + 0.212, ay + 0.08, az + 0.08]], 'fill="#7d8b99"'));
           if (app.aan) {
             for (let i = 0; i < 3; i++) {
-              const a = P(ax + 0.15 + i * 0.22, 0.3, az - 0.08);
-              const b = P(ax + 0.15 + i * 0.22, 0.75, az - 0.38);
-              huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${a[0] + 8} ${(a[1] + b[1]) / 2} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
+              const a = P(x0 + 0.24, ay + 0.2 + i * 0.2, az + 0.02);
+              const b = P(x0 + 0.7, ay + 0.25 + i * 0.2, az - 0.35);
+              huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${(a[0] + b[0]) / 2} ${a[1] + 4} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
             }
           }
         } else {
-          // Op een verdieping hoog aan de achterwand, net onder wat de vloer van de
-          // etage erboven aan het zicht onttrekt.
-          const ax = x1 - 0.95;
-          const az = z1 - BY * D - 0.3;
-          plek[`airco:${app.naam ?? ''}`] = [ax + 0.38, 0.1, az];
-          huis.push(doos(ax, 0.02, az, 0.75, 0.16, 0.2, ['#dfe7ee', '#c9d3dc', '#aab6c1']));
+          // Op een verdieping aan de achterwand, rechts in de kamer, net onder wat
+          // de vloer van de etage erboven aan het zicht onttrekt. Links kan niet:
+          // daar is de woonkamer de keuken.
+          const ax = x1 - 1.0;
+          const az = z1 - BY * D - 0.34;
+          plek[`airco:${app.naam ?? ''}`] = [ax + 0.4, 0.1, az];
+          huis.push(doos(ax, 0.02, az, 0.8, 0.2, 0.26, KAST));
+          huis.push(poly([[ax + 0.08, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.08], [ax + 0.08, 0.222, az + 0.08]], 'fill="#7d8b99"'));
           if (app.aan) {
             for (let i = 0; i < 3; i++) {
-              const a = P(ax + 0.15 + i * 0.22, 0.3, az - 0.08);
-              const b = P(ax + 0.15 + i * 0.22, 0.75, az - 0.38);
+              const a = P(ax + 0.16 + i * 0.24, 0.3, az - 0.02);
+              const b = P(ax + 0.16 + i * 0.24, 0.75, az - 0.38);
               huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${a[0] + 8} ${(a[1] + b[1]) / 2} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
             }
           }
@@ -648,8 +666,10 @@
           // Onder het dak: waar hij rechtop past, en zo ver mogelijk van het
           // midden van de kamer, waar de naam en de temperatuur staan.
           const past = (x) => Math.min(hoog(x), hoog(x + 0.5)) >= z0 + 0.8;
+          // Hangt er een airco tegen de linkermuur, dan niet daaronder.
+          const vanaf = aircoLinks ? x0 + 0.55 : x0 + 0.1;
           const plekken = [];
-          for (let x = x0 + 0.1; x <= x1 - 0.6; x += 0.05) if (past(x)) plekken.push(x);
+          for (let x = vanaf; x <= x1 - 0.6; x += 0.05) if (past(x)) plekken.push(x);
           plekken.sort((a, b) => Math.abs(b + 0.25 - xm) - Math.abs(a + 0.25 - xm));
           dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - 0.6, W / 2 - 0.25));
         }
