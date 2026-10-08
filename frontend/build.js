@@ -26,7 +26,8 @@ await mkdir(out, { recursive: true });
 
 /** Alles wat geen CSS is gaat ongewijzigd mee; Tailwind doet de rest. */
 async function copyStatic() {
-  const names = (await readdir(src)).filter((n) => !n.endsWith('.css'));
+  // input.css is de bron voor Tailwind; die bouwt app.css. Andere css gaat zo mee.
+  const names = (await readdir(src)).filter((n) => n !== 'input.css');
   await Promise.all(names.map((n) => copyFile(join(src, n), join(out, n))));
   return names;
 }
@@ -111,7 +112,8 @@ async function stempel() {
   const paginas = {
     'index.html': ['app.css', 'app.js'],
     'nieuw.html': ['nieuw.js'],
-    'thuis.html': ['thuis.js', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'thuis.html': ['thuis.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {
     const html = join(out, pagina);

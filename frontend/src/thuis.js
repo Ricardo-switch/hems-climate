@@ -10,20 +10,7 @@
  */
 'use strict';
 
-const $$ = (sel) => [...document.querySelectorAll(sel)];
-const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
-const zet = (sel, text) => $$(sel).forEach((e) => (e.textContent = text));
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-
-/* Waar de andere tabs nu staan: tot ze in ontwerp 2 zijn, in de proefomgeving. */
-const LINKS = {
-  thuis: 'thuis.html',
-  vandaag: 'nieuw.html#waarom',
-  apparaten: 'nieuw.html#apparaten',
-  opbrengst: 'nieuw.html#opbrengst',
-  assistent: 'nieuw.html#assistent',
-  instellingen: 'nieuw.html#bediening',
-};
+const { $$, nl, zet, esc, haal, deur, tijdVanDeDag, lucht } = app;
 
 let state = null;
 let huisData = null;
@@ -31,28 +18,7 @@ let zon = null;
 let vandaag = null;
 let gekozenZone = null;
 
-/* ------------------------------------------------------------ de stand */
-
-function telStand() {
-  return innerWidth < 900 || innerHeight > innerWidth;
-}
-
-function schaal() {
-  const tel = telStand();
-  document.body.classList.toggle('tel-stand', tel);
-  if (!tel) {
-    const s = Math.min(innerWidth / 1280, innerHeight / 800);
-    document.getElementById('wand').style.transform = `translate(-50%, -50%) scale(${s})`;
-  }
-}
-
 /* ------------------------------------------------------- de gegevens */
-
-async function haal(pad) {
-  const res = await fetch(pad, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`${pad}: ${res.status}`);
-  return res.json();
-}
 
 async function laadAlles() {
   const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag')]);
@@ -121,19 +87,6 @@ function kamerModel(r) {
   };
 }
 
-function tijdVanDeDag() {
-  const d = zon?.dag;
-  if (!zon?.zon?.boven) {
-    const na = d?.onderMs != null ? Date.now() - d.onderMs : Infinity;
-    const voor = d?.opMs != null ? d.opMs - Date.now() : Infinity;
-    if ((na > 0 && na < 60 * 60_000) || (voor > 0 && voor < 45 * 60_000)) return na < Infinity && na > 0 ? 'avond' : 'ochtend';
-    return 'nacht';
-  }
-  if (d?.fractie < 0.1) return 'ochtend';
-  if (d?.fractie > 0.9) return 'avond';
-  return 'dag';
-}
-
 function huisModel() {
   const s = state?.bewoner?.stromen ?? {};
   const zonKw = s.zonKw ?? 0;
@@ -156,7 +109,7 @@ function huisModel() {
 
   const alles = etagesBovenEerst.flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
   const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
-  const tijd = tijdVanDeDag();
+  const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
   const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
@@ -213,17 +166,8 @@ function huisModel() {
 
 /* ------------------------------------------------------------ tekenen */
 
-function lucht(tijd, seizoen, wolken) {
-  const b = document.body.classList;
-  for (const c of [...b]) if (c.startsWith('lucht-')) b.remove(c);
-  b.add(seizoen === 'winter' && tijd !== 'nacht' ? 'lucht-winter' : tijd === 'nacht' ? 'lucht-nacht' : tijd === 'avond' ? 'lucht-avond' : tijd === 'ochtend' ? 'lucht-ochtend' : wolken > 0.6 ? 'lucht-bewolkt' : 'lucht-dag');
-}
-
 function teken() {
-  schaal();
-  const nu = new Date();
-  zet('[data-tijd]', nu.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
-  zet('[data-datum]', nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+  app.schaal();
   if (!state || !huisData) return;
 
   const e = state.explanation ?? {};
@@ -330,11 +274,8 @@ function tekenGevoel() {
     b.style.color = kleur;
     b.addEventListener('click', async () => {
       $$('[data-gevoel] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      const res = await fetch('api/gevoel', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ zoneId: gekozenZone, gevoel: sleutel }) }).catch(() => null);
-      if (res?.status === 401) {
-        location.href = `auth/login?terug=${encodeURIComponent(location.pathname)}`;
-        return;
-      }
+      const res = await deur('api/gevoel', { zoneId: gekozenZone, gevoel: sleutel }).catch(() => undefined);
+      if (res === null) return;
       zet('[data-gevoel-zin]', res?.ok ? 'Genoteerd. Het huis leert ervan wat jij prettig vindt.' : 'Niet gelukt; probeer het zo nog eens.');
     });
     box.append(b);
@@ -356,25 +297,11 @@ function tekenKamersTel() {
 
 /* -------------------------------------------------------------- starten */
 
-nav.balk(document.getElementById('balk'), 'thuis', LINKS);
-nav.tabs(document.getElementById('tabs'), 'thuis', LINKS);
-$$('[data-tandwiel]').forEach((a) => (a.innerHTML = nav.svg('instellingen')));
+app.start('thuis');
 $$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => (location.href = 'nieuw.html#huis')));
-addEventListener('resize', schaal);
-schaal();
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
-setInterval(() => zet('[data-tijd]', new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })), 10_000);
-try {
-  const bron = new EventSource('api/events');
-  bron.onmessage = (ev) => {
-    try {
-      state = JSON.parse(ev.data);
-      teken();
-    } catch {
-      // Een half bericht: de volgende komt zo.
-    }
-  };
-} catch {
-  // Zonder live-stroom ververst de pagina elke minuut.
-}
+app.live((nieuw) => {
+  state = nieuw;
+  teken();
+});

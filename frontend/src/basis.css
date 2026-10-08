@@ -1,0 +1,28 @@
+/*
+ * Wat elke tab van ontwerp 2 deelt (besluit 104), naast kit/kit.css: de
+ * lettertypen, de wand en de telefoonstand.
+ */
+
+/* De lettertypen staan in de dienst zelf (build.js), niet bij Google. */
+@font-face { font-family: 'Figtree'; src: url('figtree.woff2') format('woff2'); font-weight: 300 900; font-display: swap; }
+@font-face { font-family: 'Bricolage Grotesque'; src: url('bricolage-grotesque.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+
+/* Bij een overstap naar een andere tab vloeit de pagina over in plaats van te knipperen. */
+@view-transition { navigation: auto; }
+
+html, body { height: 100%; }
+body { overflow: hidden; }
+body.tel-stand { overflow: auto; }
+
+/* De wand: altijd 1280 × 800, als geheel geschaald naar het scherm. Nooit scrollen. */
+#wand { position: fixed; left: 50%; top: 50%; width: 1280px; height: 800px; transform-origin: 50% 50%; grid-template-rows: 800px; }
+body.tel-stand #wand { display: none; }
+body:not(.tel-stand) #tel { display: none; }
+#wand main { position: relative; padding: 22px 26px 20px 22px; min-height: 0; }
+#tel .tabs { position: fixed; }
+
+/* Een keuze uit een paar tijden (klaar voor). */
+.keuze { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+.keuze button { height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+.keuze button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+.keuze button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }

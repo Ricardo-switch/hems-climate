@@ -124,9 +124,11 @@ verwijzing bestaat.
 
 ## Weergave
 
-- **Twee weergaven:** `index.html` voor de cijfers, `nieuw.html` als proef van de
-  app. Die wordt de app en blijft dun: alles komt kant-en-klaar uit de dienst
-  ([94], [76]).
+- **Twee weergaven:** `index.html` voor de cijfers, en de app. De app wordt per
+  tab herbouwd in ontwerp 2 ([104]): Thuis (`thuis.html`) en Apparaten
+  (`apparaten.html`) staan er; de andere tabs wijzen nog naar `nieuw.html`, de
+  proef, die verdwijnt als alles over is. De app blijft dun: alles komt
+  kant-en-klaar uit de dienst ([94], [76]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die

@@ -734,6 +734,51 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     });
   }
 
+  /*
+   * Apparaten in ontwerp 2 (besluit 104; schets Wand-Apparaten): de droger die
+   * klaarstaat met "klaar voor" (besluit 101), de vaatwasser die gevonden is
+   * maar niet op zon staat, en waar de stroom nu heen gaat.
+   */
+  for (const [stand, viewport] of [
+    ['wand', { width: 1340, height: 800 }],
+    ['telefoon', { width: 390, height: 844 }],
+  ] as const) {
+    it(`toont Apparaten van ontwerp 2 op de ${stand}`, async () => {
+      const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+      await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+      const p = await context.newPage();
+      const fouten: string[] = [];
+      p.on('pageerror', (e) => fouten.push(e.message));
+      await p.goto(`${baseUrl}/apparaten.html`);
+      const z = stand === 'wand' ? '#wand' : '#tel';
+      const droger = p.locator(`${z} .app`, { hasText: 'Droger' });
+      await droger.waitFor();
+      await p.locator(`${z} .app`, { hasText: 'Vaatwasser' }).filter({ hasText: 'Niet op zon' }).waitFor();
+      await p.locator(`${z} [data-verdeling] h2`).waitFor();
+      // De navigatie wijst Apparaten aan.
+      expect(await p.locator(`${stand === 'wand' ? '#balk' : '#tabs'} [aria-current="page"]`).textContent()).toBe('Apparaten');
+      if (stand === 'wand') {
+        expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight && document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
+        // Alles binnen de wand: de body scrolt niet, dus wat eronder valt is gewoon weg.
+        const wand = await p.locator('#wand').boundingBox();
+        const onder = await p.locator('#wand [data-verdeling]').boundingBox();
+        expect(onder && wand && onder.y + onder.height <= wand.y + wand.height + 1).toBe(true);
+      } else {
+        expect(await p.evaluate('document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
+      }
+      // Klaar voor kiezen gaat naar de dienst, en terug naar geen haast.
+      await droger.locator('.keuze button', { hasText: '18:00' }).click();
+      await droger.filter({ hasText: 'Genoteerd: klaar voor 18:00.' }).waitFor();
+      expect(Object.keys(uitstel.readyBy)).toEqual(['droger']);
+      await droger.locator('.keuze button', { hasText: 'Geen haast' }).click();
+      await droger.filter({ hasText: 'Geen haast: hij begint op zon' }).waitFor();
+      expect(uitstel.readyBy).toEqual({});
+      expect(fouten).toEqual([]);
+      await context.close();
+    }, 20_000);
+  }
+
   it('wijst wie niet is ingelogd bovenin de weg naar de inlog van Home Assistant (besluit 99)', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
