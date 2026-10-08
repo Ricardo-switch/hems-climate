@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Vandaag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  .dag { padding: 14px 16px 8px; }
+  .lijn { position: relative; padding-left: 72px; display: flex; flex-direction: column; gap: 12px; }
+  .lijn::before { content: ''; position: absolute; left: 58px; top: 6px; bottom: 6px; width: 2px; background: rgba(255,255,255,0.1); }
+  .moment { position: relative; padding: 12px 14px; }
+  .moment .tijd { position: absolute; left: -74px; top: 12px; width: 44px; text-align: right; font-family: var(--kop); font-weight: 600; font-size: 14px; color: var(--zacht); }
+  .moment::before { content: ''; position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--kleur, var(--zacht)); box-shadow: 0 0 0 4px #0f1b2e; }
+  .moment b { display: block; font-size: 15px; }
+  .plan { border-style: dashed; border-color: rgba(143,134,255,0.4); background: rgba(143,134,255,0.06); }
+  .nu { position: relative; display: flex; align-items: center; gap: 10px; margin: 2px 0; }
+  .nu span { background: var(--tekst); color: #0b1424; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; position: absolute; left: -74px; }
+  .nu i { flex: 1; height: 2px; background: var(--tekst); margin-left: -14px; }
+  .wissel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .wissel button { height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 700; font-size: 14px; }
+  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud">
+    <h1 class="kop-1" style="font-size: 34px">Vandaag</h1>
+    <div class="wissel" role="group" aria-label="Dag"><button>Gisteren</button><button aria-pressed="true">Vandaag</button><button>Morgen</button></div>
+    <section class="glas dag">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Zon</h2><span class="mini">9,6 kWh tot nu, nog 8 verwacht</span></div>
+      <svg viewBox="0 0 326 90" width="326" height="90" aria-label="De zon van vandaag, gemeten en verwacht">
+        <defs><linearGradient id="z" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient></defs>
+        <path d="M6 76 C 50 74, 70 30, 120 16 S 160 12, 170 14 L 170 76 Z" fill="url(#z)"/>
+        <path d="M6 76 C 50 74, 70 30, 120 16 S 160 12, 170 14" fill="none" stroke="#F7B548" stroke-width="2.2"/>
+        <path d="M170 14 C 200 16, 215 30, 230 34 S 270 60, 320 76" fill="none" stroke="#F7B548" stroke-width="2" stroke-dasharray="5 5"/>
+        <line x1="170" y1="4" x2="170" y2="80" stroke="#EEF3F7" stroke-opacity="0.7"/>
+        <g font-family="Figtree" font-size="10.5" fill="#7F8E9C"><text x="6" y="89">06</text><text x="112" y="89">12</text><text x="218" y="89">18</text><text x="304" y="89">22</text></g>
+      </svg>
+    </section>
+    <div class="lijn">
+      <div class="glas-klein moment" style="--kleur: var(--gloed)"><span class="tijd">06:40</span><b>De cv ging even aan</b><span class="klein">De badkamer was 19,8°, je wilde 21° bij het opstaan.</span></div>
+      <div class="glas-klein moment" style="--kleur: var(--mint)"><span class="tijd">10:05</span><b>De batterij begon te laden</b><span class="klein">De panelen leverden meer dan het huis vroeg.</span></div>
+      <div class="glas-klein moment" style="--kleur: var(--ijs)"><span class="tijd">11:05</span><b>De woonkamer ging koelen</b><span class="klein">1,4 kW zon over, en 24,1°. De zolder wachtte: voor allebei was er te weinig.</span></div>
+      <div class="glas-klein moment" style="--kleur: var(--zon)"><span class="tijd">12:07</span><b>De droger begon</b><span class="klein">Op zon. Klaar om 13:15, ruim voor je 18:00.</span></div>
+      <div class="nu"><span>12:41</span><i></i></div>
+      <div class="glas-klein moment plan" style="--kleur: var(--violet)"><span class="tijd">14:30</span><b>Stoppen met koelen</b><span class="klein">De woonkamer warmt daarna 0,3° per uur op en blijft tot 18:00 onder 24°.</span></div>
+      <div class="glas-klein moment plan" style="--kleur: var(--violet)"><span class="tijd">16:30</span><b>De auto is vol</b><span class="klein">Als de wolken van 15:00 meevallen.</span></div>
+      <div class="glas-klein moment plan" style="--kleur: var(--violet)"><span class="tijd">19:00</span><b>De batterij levert aan het huis</b><span class="klein">Tot ongeveer 01:30. Daarna van het net, het goedkoopste uur.</span></div>
+    </div>
+    <p class="mini" style="margin: 0 2px">Het plan komt uit wat het huis over zichzelf geleerd heeft: hoe snel elke kamer opwarmt en afkoelt.</p>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="kit/nav.js"></script>
+<script>nav.tabs(document.getElementById('tabs'), 'vandaag');</script>
+</body>
+</html>

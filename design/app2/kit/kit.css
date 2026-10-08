@@ -1,0 +1,400 @@
+/*
+ * Smart Climate, ontwerp 2: de stijlbasis.
+ *
+ * De achtergrond is de lucht van dit moment; het huis staat erin. Al het
+ * andere is rustig glas eromheen. Eén accent per betekenis: zon (opwek),
+ * ijs (koelen), gloed (verwarmen), mint (batterij en teruglevering).
+ */
+
+:root {
+  --inkt: #0b1424;
+  --diep: #101b2d;
+  --glas: rgba(255, 255, 255, 0.055);
+  --glas-rand: rgba(255, 255, 255, 0.09);
+  --tekst: #eef3f7;
+  --zacht: #b8c4cf;
+  --gedempt: #7f8e9c;
+  --zon: #f7b548;
+  --ijs: #6fd3ff;
+  --gloed: #ff7a4d;
+  --mint: #6ee7b7;
+  --net: #9aaabb;
+  --violet: #8f86ff;
+  --kop: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+  --romp: 'Figtree', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  background: var(--inkt);
+  color: var(--tekst);
+  font-family: var(--romp);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------------------------------------------------------------- de lucht */
+
+.lucht {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lucht::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.lucht-dag::before {
+  background:
+    radial-gradient(60% 55% at 46% 8%, rgba(247, 181, 72, 0.2), transparent 70%),
+    radial-gradient(70% 60% at 50% 105%, rgba(111, 211, 255, 0.1), transparent 70%),
+    linear-gradient(180deg, #1a3557 0%, #13253d 45%, #0d1828 100%);
+}
+.lucht-ochtend::before {
+  background:
+    radial-gradient(55% 45% at 18% 62%, rgba(255, 168, 110, 0.28), transparent 70%),
+    linear-gradient(180deg, #1b2a49 0%, #2a2f4c 52%, #3a3346 72%, #131b2b 100%);
+}
+.lucht-avond::before {
+  background:
+    radial-gradient(55% 45% at 86% 64%, rgba(255, 130, 90, 0.26), transparent 70%),
+    radial-gradient(60% 50% at 40% 0%, rgba(143, 134, 255, 0.22), transparent 70%),
+    linear-gradient(180deg, #1b1f42 0%, #2a2346 50%, #1a1a2e 78%, #0e1422 100%);
+}
+.lucht-nacht::before {
+  background:
+    radial-gradient(60% 50% at 30% 10%, rgba(143, 134, 255, 0.12), transparent 70%),
+    linear-gradient(180deg, #070c18 0%, #0a1222 55%, #0b1424 100%);
+}
+.lucht-winter::before {
+  background:
+    radial-gradient(60% 50% at 40% 10%, rgba(220, 230, 245, 0.1), transparent 70%),
+    linear-gradient(180deg, #2a3647 0%, #1e2938 50%, #121b28 100%);
+}
+.lucht-bewolkt::before {
+  background:
+    radial-gradient(60% 50% at 46% 8%, rgba(200, 210, 225, 0.12), transparent 70%),
+    linear-gradient(180deg, #253247 0%, #19243a 50%, #0e1828 100%);
+}
+
+/* ------------------------------------------------------------- typografie */
+
+.kop-1 {
+  font-family: var(--kop);
+  font-weight: 600;
+  font-size: 46px;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.kop-2 {
+  font-family: var(--kop);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.kop-3 {
+  font-family: var(--romp);
+  font-weight: 700;
+  font-size: 15px;
+  margin: 0;
+}
+.lead {
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--zacht);
+  margin: 0;
+  max-width: 34ch;
+}
+.klein {
+  font-size: 13px;
+  color: var(--zacht);
+  line-height: 1.4;
+}
+.mini {
+  font-size: 12px;
+  color: var(--gedempt);
+}
+.getal {
+  font-family: var(--kop);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.zon-t {
+  color: var(--zon);
+}
+.ijs-t {
+  color: var(--ijs);
+}
+.gloed-t {
+  color: var(--gloed);
+}
+.mint-t {
+  color: var(--mint);
+}
+
+/* ----------------------------------------------------------------- vlakken */
+
+.glas {
+  background: var(--glas);
+  border: 1px solid var(--glas-rand);
+  border-radius: 24px;
+  backdrop-filter: blur(14px);
+}
+.glas-klein {
+  background: var(--glas);
+  border: 1px solid var(--glas-rand);
+  border-radius: 16px;
+}
+.pil {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.stip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.knop {
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 14px;
+  border: 1px solid var(--glas-rand);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.knop-licht {
+  background: var(--tekst);
+  color: #0b1424;
+  border-color: transparent;
+}
+
+/* De bol van de assistent. */
+.bol {
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff 0, #a9eaff 18%, #6fd3ff 42%, #8f86ff 78%, #2b2266 100%);
+  box-shadow: 0 0 28px rgba(111, 211, 255, 0.45), 0 0 64px rgba(143, 134, 255, 0.3);
+  flex: none;
+}
+
+/* ------------------------------------------------------- de wand: raamwerk */
+
+.wand {
+  width: 1280px;
+  height: 800px;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+}
+.balk {
+  margin: 20px 0 20px 20px;
+  border-radius: 26px;
+  background: rgba(8, 14, 26, 0.45);
+  border: 1px solid var(--glas-rand);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 0;
+  backdrop-filter: blur(10px);
+}
+.balk .logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  margin-bottom: 14px;
+  background: conic-gradient(from 210deg, var(--ijs), var(--violet), var(--zon), var(--ijs));
+}
+.balk a {
+  width: 50px;
+  padding: 8px 0 6px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gedempt);
+}
+.balk a svg {
+  width: 22px;
+  height: 22px;
+}
+.balk a.onder {
+  margin-top: auto;
+}
+.balk a[aria-current='page'] {
+  color: #a9e6ff;
+  background: rgba(111, 211, 255, 0.13);
+}
+
+/* --------------------------------------------------- de telefoon: raamwerk */
+
+.tel {
+  width: 390px;
+  min-height: 844px;
+  position: relative;
+}
+.tabs {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 14px;
+  height: 66px;
+  border-radius: 24px;
+  background: rgba(10, 17, 30, 0.82);
+  border: 1px solid var(--glas-rand);
+  backdrop-filter: blur(16px);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: center;
+}
+.tabs a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gedempt);
+}
+.tabs a svg {
+  width: 22px;
+  height: 22px;
+}
+.tabs a[aria-current='page'] {
+  color: #a9e6ff;
+}
+
+/* De uitleg van het huis: de eerste keer als rondleiding, daarna achter dit knopje. */
+.info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--glas-rand);
+  background: rgba(9, 15, 28, 0.55);
+  color: var(--zacht);
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+.info i {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-family: var(--kop);
+  font-weight: 700;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--tekst);
+}
+
+/* Labels mogen over de rand van de tekening heen. */
+.sc-huis {
+  overflow: visible;
+}
+
+/* ----------------------------------------------------------------- beweging */
+
+@keyframes sc-stroom {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+@keyframes sc-draai {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes sc-damp {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.22;
+  }
+  100% {
+    transform: translateY(-26px);
+    opacity: 0;
+  }
+}
+@keyframes sc-puls {
+  50% {
+    opacity: 0.55;
+  }
+}
+@keyframes sc-adem {
+  50% {
+    transform: scale(1.05);
+  }
+}
+.sc-stroom {
+  animation: sc-stroom 1.6s linear infinite;
+}
+.sc-trommel,
+.sc-fan {
+  animation: sc-draai 1.4s linear infinite;
+}
+.sc-fan {
+  animation-duration: 0.9s;
+}
+.sc-damp {
+  animation: sc-damp 3s ease-out infinite;
+}
+.sc-puls,
+.sc-vlam {
+  animation: sc-puls 2.4s ease-in-out infinite;
+}
+.sc-lucht {
+  animation: sc-puls 2s ease-in-out infinite;
+}
+.bol.adem {
+  animation: sc-adem 4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sc-stroom,
+  .sc-trommel,
+  .sc-fan,
+  .sc-damp,
+  .sc-puls,
+  .sc-vlam,
+  .sc-lucht,
+  .bol.adem {
+    animation: none;
+  }
+}

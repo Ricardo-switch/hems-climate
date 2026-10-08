@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Apparaten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .kop { display: flex; justify-content: space-between; align-items: end; }
+  .zon { display: flex; align-items: center; gap: 16px; padding: 14px 18px; }
+  .raster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .app { padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+  .app .boven { display: flex; align-items: center; gap: 14px; }
+  .ring { width: 72px; height: 72px; flex: none; }
+  .app b { font-size: 18px; display: block; }
+  .strook { position: relative; height: 26px; border-radius: 8px; background: rgba(255,255,255,0.05); overflow: hidden; }
+  .strook i { position: absolute; top: 7px; height: 12px; border-radius: 6px; }
+  .strook .nu { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--tekst); left: 46%; }
+  .uren { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+  .keuze { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255,255,255,0.06); }
+  .keuze button { height: 34px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font-weight: 700; font-size: 13px; }
+  .keuze button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .niet { border-style: dashed; background: transparent; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kop">
+      <div><h1 class="kop-1">Apparaten</h1><p class="lead" style="max-width: 60ch; margin-top: 8px">Wat op zon kan draaien. De airco's gaan voor, en nooit meer tegelijk dan je zekering aankan.</p></div>
+      <div class="glas zon">
+        <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="9" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2.4" stroke-linecap="round"><path d="M20 3v4M20 33v4M3 20h4M33 20h4M8 8l3 3M29 29l3 3M8 32l3-3M29 11l3-3"/></g></svg>
+        <div><div class="kop-3">2,3 kW over</div><div class="mini">van 4,1 kW, na de woonkamer</div></div>
+      </div>
+    </div>
+    <div class="raster">
+      <section class="glas app">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-label="Droger, 70 procent klaar"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#F7B548" stroke-width="6" stroke-linecap="round" stroke-dasharray="119 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">34m</text></svg>
+          <div><b>Droger</b><span class="klein zon-t">Draait op zon, klaar 13:15</span></div>
+        </div>
+        <div><div class="strook"><i style="left: 40%; width: 6%; background: var(--zon)"></i><i style="left: 46%; width: 8%; background: var(--zon); opacity: 0.35"></i><span class="nu"></span></div><div class="uren"><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+        <p class="mini" style="margin: 0">Begon 12:07 met 1,1 kW over. Je wilde hem klaar voor 18:00.</p>
+      </section>
+      <section class="glas app">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-label="Auto, 62 procent"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#6EE7B7" stroke-width="6" stroke-linecap="round" stroke-dasharray="105 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">62%</text></svg>
+          <div><b>Auto</b><span class="klein mint-t">Laadt op zon, 1,4 kW</span></div>
+        </div>
+        <div><div class="strook"><i style="left: 36%; width: 10%; background: var(--mint)"></i><i style="left: 46%; width: 23%; background: var(--mint); opacity: 0.35"></i><span class="nu"></span></div><div class="uren"><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+        <div><div class="mini" style="margin-bottom: 6px">Vol om</div><div class="keuze" role="group" aria-label="Vol om"><button aria-pressed="true">16:30</button><button>18:00</button><button>Morgen</button><button>Nu, snel</button></div></div>
+      </section>
+      <section class="glas app">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-label="Batterij, 78 procent"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#6EE7B7" stroke-width="6" stroke-linecap="round" stroke-dasharray="132 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">78%</text></svg>
+          <div><b>Batterij</b><span class="klein mint-t">Laadt 0,8 kW, vol rond 14:45</span></div>
+        </div>
+        <div><div class="strook"><i style="left: 22%; width: 24%; background: var(--mint)"></i><i style="left: 46%; width: 9%; background: var(--mint); opacity: 0.35"></i><i style="left: 72%; width: 28%; background: repeating-linear-gradient(45deg, rgba(110,231,183,0.5) 0 3px, transparent 3px 6px)"></i><span class="nu"></span></div><div class="uren"><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+        <p class="mini" style="margin: 0">Vanavond levert hij aan het huis, tot ongeveer 01:30.</p>
+      </section>
+      <section class="glas app">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6" stroke-dasharray="4 6"/><circle cx="32" cy="32" r="11" fill="none" stroke="#B8C4CF" stroke-width="3"/></svg>
+          <div><b>Wasmachine</b><span class="klein">Klaargezet, begint rond 14:40</span></div>
+        </div>
+        <div><div class="mini" style="margin-bottom: 6px">Klaar voor</div><div class="keuze" role="group" aria-label="Klaar voor"><button>15:00</button><button aria-pressed="true">18:00</button><button>Vanavond</button><button>Nu</button></div></div>
+        <p class="mini" style="margin: 0">Na de droger, als er zon over is. Uiterlijk om 15:30, ook zonder zon.</p>
+      </section>
+      <section class="glas app niet">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg>
+          <div><b>Vaatwasser</b><span class="klein">Nog niet klaargezet</span></div>
+        </div>
+        <p class="mini" style="margin: 0">Zet "op afstand starten" aan op de vaatwasser; dan begint hij vanzelf op zon.</p>
+      </section>
+      <section class="glas app niet">
+        <div class="boven">
+          <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg>
+          <div><b>Apparaat toevoegen</b><span class="klein">Boiler, warmtepomp, zwembadpomp</span></div>
+        </div>
+        <p class="mini" style="margin: 0">Alles wat Home Assistant kan aan- en uitzetten en wat kan wachten op zon.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'apparaten');</script>
+</body>
+</html>

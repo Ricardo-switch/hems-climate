@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Screen, airco en thermostaat bedienen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .rij { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; }
+  .blad { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .blad .kop { display: flex; justify-content: space-between; align-items: start; }
+  .blad h2 { font-family: var(--kop); font-weight: 600; font-size: 22px; margin: 0; }
+  .beeld { display: grid; place-items: center; height: 300px; }
+  .keuze { display: grid; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .keuze button { height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .keuze button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .keuze button svg { width: 16px; height: 16px; }
+  .regel { display: flex; gap: 10px; align-items: start; font-size: 13.5px; line-height: 1.4; color: var(--zacht); padding: 10px 12px; border-radius: 12px; background: rgba(143,134,255,0.08); border: 1px solid rgba(143,134,255,0.25); }
+  .feit { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--zacht); }
+  .feit b { color: var(--tekst); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: end">
+      <div>
+        <div class="klein" style="font-weight: 600">Huis › Begane grond › Woonkamer</div>
+        <h1 class="kop-1" style="font-size: 40px; margin-top: 6px">Een apparaat bedienen</h1>
+      </div>
+      <p class="klein" style="max-width: 46ch; margin: 0">Elk blad laat zien wat je doet: het doek voor het raam, de lucht uit de airco, de gloed van de cv. Wat je kiest, geldt tot de tijd die je kiest; daarna regelt het huis weer zelf.</p>
+    </div>
+
+    <div class="rij">
+      <!-- De screen: het raam in beeld, het doek op de gekozen stand. -->
+      <section class="glas blad">
+        <div class="kop"><div><h2>Screen voorgevel</h2><span class="klein">60% dicht</span></div><span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon op deze gevel</span></div>
+        <div class="beeld">
+          <svg viewBox="0 0 300 290" width="300" height="290" role="img" aria-label="Het raam van de woonkamer met de screen voor 60 procent dicht, en de zon schuin op de gevel">
+            <defs>
+              <linearGradient id="lucht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d8fc0"/><stop offset="1" stop-color="#9cc1e0"/></linearGradient>
+              <pattern id="doek" width="8" height="6" patternUnits="userSpaceOnUse"><rect width="8" height="6" fill="#3d4a5a"/><rect width="8" height="1.2" fill="#4c5b6d"/></pattern>
+              <linearGradient id="straal" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient>
+            </defs>
+            <rect x="0" y="0" width="300" height="290" rx="16" fill="#26313f"/>
+            <polygon points="300,0 300,120 120,290 40,290" fill="url(#straal)" opacity="0.6"/>
+            <circle cx="282" cy="22" r="14" fill="#FFD27A"/>
+            <!-- kast van de screen -->
+            <rect x="46" y="26" width="208" height="20" rx="5" fill="#4a5768"/>
+            <!-- raam -->
+            <rect x="56" y="46" width="188" height="214" rx="4" fill="url(#lucht)" stroke="#6b7a8c" stroke-width="6"/>
+            <line x1="150" y1="46" x2="150" y2="260" stroke="#6b7a8c" stroke-width="5"/>
+            <rect x="64" y="160" width="76" height="92" fill="#ffffff" opacity="0.12"/>
+            <!-- het doek, 60% -->
+            <rect x="52" y="46" width="196" height="128" fill="url(#doek)"/>
+            <rect x="48" y="170" width="204" height="9" rx="4" fill="#5b6a7c"/>
+            <!-- de greep om te slepen -->
+            <rect x="126" y="166" width="48" height="17" rx="8.5" fill="#EEF3F7"/>
+            <line x1="138" y1="174.5" x2="162" y2="174.5" stroke="#0b1424" stroke-width="2" stroke-linecap="round"/>
+            <!-- de stand ernaast -->
+            <line x1="270" y1="46" x2="270" y2="260" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round"/>
+            <line x1="270" y1="46" x2="270" y2="174" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round"/>
+            <text x="262" y="196" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">60%</text>
+          </svg>
+        </div>
+        <div class="keuze" style="grid-template-columns: repeat(4, 1fr)" role="group" aria-label="Stand"><button>Open</button><button>Half</button><button aria-pressed="true">60%</button><button>Dicht</button></div>
+        <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px"></span><span>Het huis zou hem om 11:05 dichtdoen: de zon staat tot 14:20 op deze gevel, en dat scheelt de airco 0,3 kW.</span></div>
+      </section>
+
+      <!-- De airco: een draaiknop, de lucht, de stand. -->
+      <section class="glas blad">
+        <div class="kop"><div><h2>Airco woonkamer</h2><span class="klein ijs-t">Koelt, op zon</span></div><span class="getal" style="font-size: 18px">0,9 kW</span></div>
+        <div class="beeld">
+          <svg viewBox="0 0 300 290" width="300" height="290" role="img" aria-label="Doel 23 graden, nu 24,1 graden, koelen">
+            <defs><linearGradient id="ring" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#6FD3FF"/><stop offset="1" stop-color="#8F86FF"/></linearGradient>
+              <radialGradient id="koud"><stop offset="0" stop-color="#6FD3FF" stop-opacity="0.28"/><stop offset="1" stop-color="#6FD3FF" stop-opacity="0"/></radialGradient></defs>
+            <circle cx="150" cy="150" r="140" fill="url(#koud)"/>
+            <!-- schaal van 16 tot 30 graden, 270 graden rond -->
+            <path d="M 66.6 233.4 A 118 118 0 1 1 233.4 233.4" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="16" stroke-linecap="round"/>
+            <path d="M 66.6 233.4 A 118 118 0 0 1 150 32" fill="none" stroke="url(#ring)" stroke-width="16" stroke-linecap="round"/>
+            <circle cx="150" cy="32" r="13" fill="#EEF3F7"/>
+            <g font-family="Figtree" font-size="11" fill="#7F8E9C"><text x="54" y="262" text-anchor="middle">16°</text><text x="246" y="262" text-anchor="middle">30°</text></g>
+            <!-- nu, als streepje op de schaal -->
+            <line x1="188" y1="53.2" x2="196.8" y2="30.8" stroke="#F7B548" stroke-width="3" stroke-linecap="round"/>
+            <text x="150" y="146" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="58" fill="#EEF3F7">23,0°</text>
+            <text x="150" y="172" text-anchor="middle" font-family="Figtree" font-size="13" fill="#B8C4CF">nu 24,1°, over 40 min op doel</text>
+            <!-- de lucht uit de airco -->
+            <g stroke="#6FD3FF" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8"><path class="sc-lucht" d="M110 206 q 6 14 0 26"/><path class="sc-lucht" style="animation-delay: .3s" d="M150 206 q 6 14 0 26"/><path class="sc-lucht" style="animation-delay: .6s" d="M190 206 q 6 14 0 26"/></g>
+          </svg>
+        </div>
+        <div class="keuze" style="grid-template-columns: repeat(4, 1fr)" role="group" aria-label="Stand">
+          <button aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M4 6l16 12M20 6 4 18"/></svg>Koelen</button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Warm</button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>Drogen</button>
+          <button>Uit</button>
+        </div>
+        <div class="feit"><span>Ventilator</span><span style="display: flex; gap: 3px; align-items: end"><i style="width: 6px; height: 8px; background: var(--ijs); border-radius: 2px"></i><i style="width: 6px; height: 12px; background: var(--ijs); border-radius: 2px"></i><i style="width: 6px; height: 16px; background: rgba(255,255,255,0.15); border-radius: 2px"></i><i style="width: 6px; height: 20px; background: rgba(255,255,255,0.15); border-radius: 2px"></i><b style="margin-left: 8px">Automatisch</b></span></div>
+        <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px"></span><span>Tot vanavond. Het huis zou om 14:30 stoppen, om de batterij te vullen.</span></div>
+      </section>
+
+      <!-- De Nest: de ronde thermostaat met de gloed van de cv. -->
+      <section class="glas blad">
+        <div class="kop"><div><h2>Nest beneden</h2><span class="klein gloed-t">De cv brandt, nog 25 min</span></div><span class="pil" style="height: 30px; font-size: 12.5px">Volgt je schema</span></div>
+        <div class="beeld">
+          <svg viewBox="0 0 300 290" width="300" height="290" role="img" aria-label="Thermostaat: doel 21 graden, nu 19,6 graden, verwarmt">
+            <defs><radialGradient id="schijf" cx="0.45" cy="0.4"><stop offset="0" stop-color="#2a3442"/><stop offset="1" stop-color="#0e141c"/></radialGradient>
+              <radialGradient id="gloed"><stop offset="0.6" stop-color="#FF7A4D" stop-opacity="0.45"/><stop offset="1" stop-color="#FF7A4D" stop-opacity="0"/></radialGradient></defs>
+            <circle cx="150" cy="145" r="140" fill="url(#gloed)"/>
+            <circle cx="150" cy="145" r="112" fill="#c9d2db"/>
+            <circle cx="150" cy="145" r="104" fill="url(#schijf)"/>
+            <!-- de streepjes rond: oranje tot het doel -->
+            <g stroke-width="3" stroke-linecap="round" id="tikken"></g>
+            <text x="150" y="150" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="56" fill="#EEF3F7">21</text>
+            <text x="150" y="176" text-anchor="middle" font-family="Figtree" font-size="13" fill="#FFB090">verwarmt, nu 19,6°</text>
+          </svg>
+        </div>
+        <div>
+          <div style="margin-bottom: 6px"><b style="font-size: 14px">Vandaag</b><div class="mini" style="margin-top: 2px">21° tot 08:00, 18° overdag, 20,5° vanaf 17:00</div></div>
+          <svg viewBox="0 0 320 30" width="100%" height="30" aria-label="Het schema van vandaag">
+            <rect x="0" y="10" width="320" height="10" rx="5" fill="rgba(255,255,255,0.07)"/>
+            <rect x="80" y="10" width="27" height="10" rx="5" fill="#FF7A4D"/>
+            <rect x="227" y="10" width="67" height="10" rx="5" fill="#FF7A4D" opacity="0.7"/>
+            <rect x="160" y="10" width="33" height="10" rx="5" fill="#F7B548" opacity="0.8"/>
+            <line x1="95" y1="4" x2="95" y2="26" stroke="#EEF3F7" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px"></span><span>Voorstel: tussen 12:00 en 14:30 de woonkamer met de airco op zon voorverwarmen (amber). Dan hoeft de cv pas om 18:40 aan.</span></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  // De streepjes rond de thermostaat: oranje tot het doel, grijs daarna.
+  const g = document.getElementById('tikken');
+  for (let i = 0; i < 60; i++) {
+    const a = (-225 + (i / 59) * 270) * (Math.PI / 180);
+    const r1 = 92, r2 = i % 5 === 0 ? 80 : 85;
+    const x1 = 150 + Math.cos(a) * r1, y1 = 145 + Math.sin(a) * r1, x2 = 150 + Math.cos(a) * r2, y2 = 145 + Math.sin(a) * r2;
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    Object.entries({ x1, y1, x2, y2, stroke: i < 38 ? '#FF7A4D' : 'rgba(255,255,255,0.25)' }).forEach(([k, v]) => l.setAttribute(k, v));
+    g.append(l);
+  }
+</script>
+</body>
+</html>

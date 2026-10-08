@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Leren, meekijken, regelen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .titel { position: absolute; left: 22px; top: 26px; width: 480px; z-index: 2; }
+  .podium { position: absolute; left: 0; top: 120px; width: 640px; height: 540px; }
+  .rechts { position: absolute; right: 26px; top: 22px; width: 520px; display: flex; flex-direction: column; gap: 12px; }
+  .kaart { padding: 14px 18px; }
+  .app { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .app:first-of-type { border-top: 0; }
+  .app b { font-size: 15px; }
+  .app .zin { grid-column: 1 / -1; font-size: 13px; color: var(--gedempt); }
+  .fase { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,0.06); }
+  .fase i { font-style: normal; font-size: 12px; font-weight: 700; padding: 5px 9px; border-radius: 8px; color: var(--gedempt); }
+  .fase i.leren { background: rgba(143,134,255,0.25); color: #c9c3ff; }
+  .fase i.kijken { background: rgba(111,211,255,0.2); color: #a9e6ff; }
+  .fase i.regelen { background: rgba(110,231,183,0.2); color: var(--mint); }
+  .bewijs { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+  .bewijs .balkje { flex: 1; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .bewijs .balkje i { display: block; height: 100%; background: var(--ijs); }
+  .weet { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; font-size: 14px; }
+  .stip5 { display: inline-flex; gap: 3px; margin-left: 8px; }
+  .stip5 i { width: 14px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.12); }
+  .stip5 i.ja { background: var(--violet); }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 64px; border-radius: 20px; display: flex; align-items: center; gap: 16px; padding: 0 12px 0 18px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); }
+  .dok .klein { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="titel">
+      <h1 class="kop-1" style="font-size: 40px">Elk apparaat op zijn eigen tempo</h1>
+      <p class="lead" style="margin-top: 10px; max-width: 44ch">Eerst leren, dan meekijken, dan regelen. Jij beslist wanneer een apparaat een stap verder gaat, en terug kan altijd.</p>
+    </div>
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <h2 class="kop-3" style="margin-bottom: 2px">Per apparaat</h2>
+        <div class="app"><b>Airco woonkamer</b><span class="fase"><i>Leren</i><i>Meekijken</i><i class="regelen">Regelen</i></span><span class="zin">Regelt sinds 2 maart. 41 keer op zon gestart deze maand.</span></div>
+        <div class="app"><b>Airco zolder</b><span class="fase"><i>Leren</i><i class="kijken">Meekijken</i><i>Regelen</i></span>
+          <span class="bewijs"><span class="mini">24 van 30 dagen</span><span class="balkje"><i style="width: 80%"></i></span><button class="knop" style="height: 32px; font-size: 13px; padding: 0 12px" disabled>Verder naar regelen</button></span>
+          <span class="zin">Kijkt mee: deed wat jij deed in 92% van de gevallen. Nog 6 dagen.</span></div>
+        <div class="app"><b>Nest, cv</b><span class="fase"><i class="leren">Leren</i><i>Meekijken</i><i>Regelen</i></span><span class="zin">Weet nog niet hoe snel de cv opwarmt. Wacht op de eerste koude ochtend.</span></div>
+        <div class="app"><b>Batterij</b><span class="fase"><i>Leren</i><i class="kijken">Meekijken</i><i>Regelen</i></span><span class="zin">Kijkt mee naast de eigen regeling van de batterij. Klaar om te regelen.</span></div>
+        <div class="app"><b>Auto</b><span class="fase"><i class="leren">Leren</i><i>Meekijken</i><i>Regelen</i></span><span class="zin">Leert wanneer jullie weggaan. Dag 3 van ongeveer 14.</span></div>
+      </section>
+      <section class="glas kaart">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Wat het huis al weet</h2><span class="mini">hoe zeker</span></div>
+        <div class="weet"><span>Zon warmt de woonkamer op</span><span><b>+0,6° per uur</b><span class="stip5"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i class="ja"></i><i></i></span></span></div>
+        <div class="weet"><span>'s Nachts koelt de zolder af</span><span><b>−0,3° per uur</b><span class="stip5"><i class="ja"></i><i class="ja"></i><i class="ja"></i><i></i><i></i></span></span></div>
+        <div class="weet" style="color: var(--gedempt)"><span>De cv warmt de woonkamer op</span><span>nog niet<span class="stip5"><i></i><i></i><i></i><i></i><i></i></span></span></div>
+      </section>
+    </aside>
+
+    <div class="dok">
+      <span class="bol" style="width: 36px; height: 36px"></span>
+      <span class="klein">Sneller leren? Zet morgen om 14:00 de zolder-airco een uur aan; dan weet het huis in één middag hoe snel hij afkoelt.</span>
+      <button class="knop knop-licht" style="height: 42px">Doe ik</button>
+      <button class="knop" style="height: 42px">Liever niet</button>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis met bij elk apparaat zijn fase: leren, meekijken of regelen.',
+    tijd: 'avond',
+    zon: { aandeel: 0, panelen: 12 },
+    etages: [
+      { kamers: [{ naam: 'Bijkeuken', gewicht: 0.85, stil: true, apparaten: [{ soort: 'cv', aan: false }, { soort: 'lamp', aan: true, x: 0.6 }] }, { naam: 'Woonkamer', gewicht: 1.35, stil: true, stand: 'koelt', apparaten: [{ soort: 'airco', aan: true, naam: 'woon' }, { soort: 'bank' }, { soort: 'lamp', aan: true, x: 0.4 }] }] },
+      { kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil: true }, { naam: 'Slaapkamer', gewicht: 1.3, stil: true }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco', aan: false, naam: 'zolder' }] }] },
+    ],
+    buitenunit: { aan: true },
+    batterij: { procent: 64, stand: 'levert' },
+    auto: { procent: 48, stand: 'wacht', kleur: '#7f97b0' },
+    net: true,
+    labels: [
+      { bij: 'kamer:Zolder', titel: 'Airco zolder kijkt mee', toon: 'ijs', regels: ['nog 6 dagen'], dx: 70, dy: -130 },
+      { bij: 'kamer:Bijkeuken', titel: 'Cv leert', toon: 'violet', regels: ['wacht op een koude ochtend'], dx: -40, dy: -200 },
+      { bij: 'batterij', titel: 'Batterij kijkt mee', toon: 'ijs', dx: -10, dy: 110 },
+      { bij: 'auto', titel: 'Auto leert', toon: 'violet', regels: ['dag 3 van 14'], dx: -10, dy: 110 },
+    ],
+  }, { breedte: 640, hoogte: 540, schuifY: 20 });
+</script>
+</body>
+</html>

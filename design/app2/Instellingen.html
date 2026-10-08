@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Instellingen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  .modus { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modus button { text-align: left; padding: 14px; border-radius: 18px; border: 1px solid var(--glas-rand); background: var(--glas); display: flex; flex-direction: column; gap: 4px; }
+  .modus button b { font-size: 16px; }
+  .modus button span { font-size: 12.5px; color: var(--gedempt); }
+  .modus button[aria-pressed='true'] { background: rgba(110,231,183,0.12); border-color: rgba(110,231,183,0.5); }
+  .modus button[aria-pressed='true'] b { color: var(--mint); }
+  .kaart { padding: 4px 16px; }
+  .rij { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .rij:first-child { border-top: 0; }
+  .rij .l { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .rij .l b { font-size: 15px; }
+  .rij .l span { font-size: 12.5px; color: var(--gedempt); }
+  .fase { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,0.06); }
+  .fase i { font-style: normal; font-size: 11.5px; font-weight: 700; padding: 5px 8px; border-radius: 8px; color: var(--gedempt); }
+  .fase i.aan { background: var(--tekst); color: #0b1424; }
+  .band { width: 120px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); position: relative; }
+  .band i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, var(--ijs), var(--mint), var(--gloed)); }
+  .pijl { color: var(--gedempt); font-size: 20px; }
+  .sectie { font-size: 13px; font-weight: 700; color: var(--gedempt); margin: 6px 2px -4px; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud">
+    <a class="klein" href="#" style="font-weight: 600">‹ Thuis</a>
+    <h1 class="kop-1" style="font-size: 34px">Instellingen</h1>
+    <p class="klein" style="margin: -6px 0 0">Bedienen doe je in het huis: tik op een etage, een kamer of een apparaat. De modus staat bovenin op Thuis.</p>
+
+    <div class="sectie">Comfort per kamer</div>
+    <section class="glas kaart">
+      <div class="rij"><div class="l"><b>Woonkamer</b><span>nooit kouder dan 20°, nooit warmer dan 24°</span></div><span class="band"><i style="left: 30%; right: 25%"></i></span></div>
+      <div class="rij"><div class="l"><b>Slaapkamer</b><span>17 tot 22°, stil na 23:00</span></div><span class="band"><i style="left: 10%; right: 40%"></i></span></div>
+      <div class="rij"><div class="l"><b>Zolder</b><span>18 tot 25°</span></div><span class="band"><i style="left: 20%; right: 15%"></i></span></div>
+    </section>
+
+    <div class="sectie">Wie stuurt</div>
+    <section class="glas kaart">
+      <div class="rij"><div class="l"><b>Airco woonkamer</b><span>Smart Climate regelt</span></div><span class="fase"><i>Leren</i><i>Meekijken</i><i class="aan">Regelen</i></span></div>
+      <div class="rij"><div class="l"><b>Airco zolder</b><span>Kijkt mee, nog 6 dagen bewijs</span></div><span class="fase"><i>Leren</i><i class="aan">Meekijken</i><i>Regelen</i></span></div>
+      <div class="rij"><div class="l"><b>Nest beneden</b><span>Leert hoe snel de cv opwarmt</span></div><span class="fase"><i class="aan">Leren</i><i>Meekijken</i><i>Regelen</i></span></div>
+    </section>
+
+    <div class="sectie">Je huis</div>
+    <section class="glas kaart">
+      <a class="rij" href="#"><div class="l"><b>Wat je huis kan</b><span>Stap 3 van 4: zon, batterij, nog geen laadpaal</span></div><span class="pijl">›</span></a>
+      <a class="rij" href="#"><div class="l"><b>Kamers en indeling</b><span>3 etages, 6 kamers, 24 apparaten</span></div><span class="pijl">›</span></a>
+      <a class="rij" href="#"><div class="l"><b>Zon en aansluiting</b><span>12 panelen, 1 × 35 A, vast contract</span></div><span class="pijl">›</span></a>
+      <a class="rij" href="#"><div class="l"><b>Meters en prijzen</b><span>Voor Opbrengst</span></div><span class="pijl">›</span></a>
+      <a class="rij" href="#"><div class="l"><b>Gekoppeld</b><span>Batterij via Home Assistant, laadpaal via evcc</span></div><span class="pijl">›</span></a>
+    </section>
+    <p class="mini" style="margin: 0 2px">Ingelogd als Ricardo, beheerder. Uitloggen</p>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="kit/nav.js"></script>
+<script>nav.tabs(document.getElementById('tabs'), '');</script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Kamer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .pad { display: flex; gap: 8px; align-items: center; color: var(--gedempt); font-size: 14px; font-weight: 600; }
+  .pad b { color: var(--tekst); }
+  .kop { position: absolute; left: 22px; top: 62px; z-index: 2; }
+  .kop .temp { font-family: var(--kop); font-size: 76px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .podium { position: absolute; left: 0; top: 150px; width: 780px; height: 560px; }
+  .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: 400px; padding: 22px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+  .doel { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 18px; background: rgba(111,211,255,0.08); border: 1px solid rgba(111,211,255,0.2); }
+  .doel .getal { font-size: 46px; }
+  .rond { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--glas-rand); background: rgba(255,255,255,0.06); font-size: 26px; font-weight: 600; }
+  .keuze { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .keuze button { height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 700; font-size: 14px; }
+  .keuze button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .lamp { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .schakel { width: 50px; height: 30px; border-radius: 999px; background: rgba(255,255,255,0.12); position: relative; flex: none; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #c9d3dc; }
+  .schakel.aan { background: #f2c27a; }
+  .schakel.aan::after { left: 23px; background: #fff; }
+  .scenes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .scene { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--zacht); }
+  .scene i { width: 52px; height: 52px; border-radius: 16px; display: block; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="pad"><span>Huis</span><span>›</span><span>Begane grond</span><span>›</span><b>Woonkamer</b></div>
+    <div class="kop">
+      <div style="display: flex; align-items: baseline; gap: 16px"><span class="temp">24,1°</span><span class="kop-2">Woonkamer</span></div>
+      <p class="lead" style="margin-top: 8px">Koelt op zon naar 23°. Over ongeveer 40 minuten is hij er.</p>
+    </div>
+    <div class="podium" id="podium"></div>
+
+    <aside class="glas blad">
+      <div style="display: flex; justify-content: space-between; align-items: start">
+        <div><h2 class="kop-2">Airco woonkamer</h2><p class="klein" style="margin: 4px 0 0">Koelt, 0,9 kW, op zon</p></div>
+        <span class="pil" style="color: var(--ijs)"><span class="stip" style="background: var(--ijs)"></span>Aan</span>
+      </div>
+      <div class="doel">
+        <button class="rond" aria-label="Kouder">−</button>
+        <div style="text-align: center"><div class="getal">23,0°</div><div class="mini">doel</div></div>
+        <button class="rond" aria-label="Warmer">+</button>
+      </div>
+      <div class="keuze" role="group" aria-label="Stand"><button aria-pressed="true">Koelen</button><button>Verwarmen</button><button>Uit</button></div>
+      <div>
+        <h3 class="kop-3" style="margin-bottom: 8px">Hoe lang?</h3>
+        <div class="keuze" role="group" aria-label="Hoe lang"><button>Een uur</button><button aria-pressed="true">Tot vanavond</button><button>Tot ik het teruggeef</button></div>
+        <p class="mini" style="margin: 8px 0 0">Daarna regelt het huis weer zelf. Het zou om 14:30 stoppen, om de batterij te vullen.</p>
+      </div>
+      <div>
+        <h3 class="kop-3">Licht</h3>
+        <div class="lamp"><span class="stip" style="width: 12px; height: 12px; background: #FFC27A; box-shadow: 0 0 12px #FFC27A"></span><span style="flex: 1">Leeslamp</span><span class="mini">60%, warm</span><span class="schakel aan"></span></div>
+        <div class="lamp"><span class="stip" style="width: 12px; height: 12px; background: #3a4656"></span><span style="flex: 1">Plafond</span><span class="mini">uit</span><span class="schakel"></span></div>
+      </div>
+      <div>
+        <h3 class="kop-3" style="margin-bottom: 10px">Scènes uit Hue</h3>
+        <div class="scenes">
+          <span class="scene"><i style="background: radial-gradient(circle at 30% 30%, #ffe0a8, #ffc059 60%, #c98a2c)"></i>Ontspannen</span>
+          <span class="scene"><i style="background: radial-gradient(circle at 30% 30%, #fffde0, #fdfb9f 60%, #c9c56a)"></i>Lezen</span>
+          <span class="scene"><i style="background: conic-gradient(from 200deg, #ff7935, #ffb07a, #a03aa3, #ff7935)"></i>Zonsondergang</span>
+          <span class="scene"><i style="background: radial-gradient(circle at 30% 30%, #b88c4e, #8c642b 60%, #4d3616)"></i>Gedimd</span>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'De begane grond van dichtbij, zonder dak. De woonkamer koelt, de leeslamp brandt, de droger draait in de bijkeuken.',
+    tijd: 'dag',
+    zonderDak: true,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Bijkeuken', gewicht: 0.8, temp: '22,8°', zin: 'droger, nog 34 min', stand: 'wacht', apparaten: [{ soort: 'droger', aan: true, x: 0.55 }] },
+        { naam: 'Woonkamer', gewicht: 1.6, temp: '24,1°', zin: 'koelt naar 23°', stand: 'koelt', apparaten: [{ soort: 'airco', aan: true, naam: 'woon' }, { soort: 'bank' }, { soort: 'lamp', aan: true, kleur: '#FFC27A', x: 0.3 }, { soort: 'lamp', aan: false, x: 0.72 }, { soort: 'screen', dicht: 0.6 }] },
+      ] },
+    ],
+    buitenunit: { aan: true },
+    labels: [
+      { bij: 'airco:woon', titel: 'Airco', toon: 'ijs', regels: ['koelt, 0,9 kW'], dx: 30, dy: -70 },
+    ],
+  }, { breedte: 780, hoogte: 560, zoom: 1.0, schuifY: 30 });
+</script>
+</body>
+</html>

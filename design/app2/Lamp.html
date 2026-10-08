@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Lamp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .boven { padding: 18px 18px 0; }
+  .podium { height: 250px; }
+  .blad { margin: -14px 0 0; padding: 12px 18px 120px; border-radius: 28px 28px 0 0; background: rgba(12, 20, 34, 0.92); border-top: 1px solid var(--glas-rand); display: flex; flex-direction: column; gap: 16px; position: relative; }
+  .greep { width: 44px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.2); margin: 0 auto 4px; }
+  .rij { display: flex; align-items: center; gap: 14px; }
+  .schakel { width: 58px; height: 34px; border-radius: 999px; background: #f2c27a; position: relative; flex: none; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 27px; width: 28px; height: 28px; border-radius: 50%; background: #fff; }
+  .schuif { height: 44px; border-radius: 14px; background: linear-gradient(90deg, rgba(255,194,122,0.15), rgba(255,194,122,0.85)); position: relative; }
+  .schuif::after { content: ''; position: absolute; top: 4px; left: calc(60% - 18px); width: 36px; height: 36px; border-radius: 11px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+  .tabs2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .tabs2 button { height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 700; }
+  .tabs2 button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .wiel { width: 230px; height: 230px; border-radius: 50%; margin: 0 auto; position: relative; background: radial-gradient(circle closest-side, #fff 0, rgba(255,255,255,0) 100%), conic-gradient(from 90deg, hsl(0 100% 55%), hsl(60 100% 55%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 60%), hsl(300 100% 55%), hsl(360 100% 55%)); box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+  .wiel::after { content: ''; position: absolute; left: 150px; top: 92px; width: 26px; height: 26px; border-radius: 50%; border: 3px solid #fff; background: #ffb26b; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+  .scenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .scene { border-radius: 18px; overflow: hidden; position: relative; height: 92px; display: flex; align-items: end; padding: 10px; font-size: 13px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12); }
+  .scene.aan { box-shadow: inset 0 0 0 2px #fff; }
+  .scene span { position: relative; text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-avond">
+  <div class="boven">
+    <a class="klein" href="#" style="font-weight: 600">‹ Woonkamer</a>
+  </div>
+  <div class="podium" id="podium"></div>
+  <section class="blad">
+    <div class="greep"></div>
+    <div class="rij">
+      <div style="flex: 1"><h1 class="kop-2" style="font-size: 26px">Leeslamp</h1><p class="klein" style="margin: 2px 0 0">Aan, 60%, oranje</p></div>
+      <span class="schakel" role="switch" aria-checked="true" aria-label="Leeslamp"></span>
+    </div>
+    <div class="schuif" role="slider" aria-label="Helderheid" aria-valuenow="60"></div>
+    <div class="tabs2" role="group" aria-label="Wit of kleur"><button>Wit</button><button aria-pressed="true">Kleur</button></div>
+    <div class="wiel" role="slider" aria-label="Kleur"></div>
+    <div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px"><h2 class="kop-3">Scènes in de woonkamer</h2><span class="mini">uit Hue</span></div>
+      <div class="scenes">
+        <span class="scene aan" style="background: radial-gradient(circle at 70% 20%, #ffe0a8, #ffc059 40%, #b36a1d)"><span>Ontspannen</span></span>
+        <span class="scene" style="background: radial-gradient(circle at 70% 20%, #fffde0, #fdfb9f 45%, #a9a64a)"><span style="color: #20210a; text-shadow: none">Lezen</span></span>
+        <span class="scene" style="background: linear-gradient(160deg, #ffb07a, #ff7935 40%, #a03aa3)"><span>Zonsondergang</span></span>
+        <span class="scene" style="background: linear-gradient(160deg, #5be3c2, #00d0a0 40%, #1b5d8a)"><span>Noorderlicht</span></span>
+        <span class="scene" style="background: radial-gradient(circle at 70% 20%, #b88c4e, #8c642b 50%, #3d2a10)"><span>Gedimd</span></span>
+        <span class="scene" style="background: linear-gradient(160deg, #e08aa4, #ba496c 50%, #5a1e3a)"><span>Lentebloesem</span></span>
+      </div>
+    </div>
+  </section>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.tabs(document.getElementById('tabs'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'De woonkamer van dichtbij, in de avond. De leeslamp brandt oranje.',
+    tijd: 'avond',
+    zonderDak: true,
+    etages: [{ kamers: [{ naam: 'Woonkamer', stil: true, apparaten: [{ soort: 'tv', aan: false }, { soort: 'bank' }, { soort: 'lamp', aan: true, kleur: '#FFB26B', x: 0.3 }, { soort: 'lamp', aan: false, x: 0.75 }] }] }],
+    labels: [{ bij: [1.02, 0.63, 0.94], titel: 'Leeslamp', toon: 'zon', dx: 40, dy: -40 }],
+  }, { breedte: 390, hoogte: 250, marge: 0.02, zoom: 1.25, schuifY: 30 });
+</script>
+</body>
+</html>

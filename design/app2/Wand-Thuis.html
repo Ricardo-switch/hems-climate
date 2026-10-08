@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis, zomermiddag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 360px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .voorstel { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
+  .knoppen { display: flex; gap: 10px; margin-top: 14px; }
+  .knoppen .knop { flex: 1; }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel button { height: 40px; border-radius: 12px; border: 0; font-weight: 700; font-size: 14px; }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  .dok .vraag b { color: var(--tekst); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">12:41</span><span class="datum">woensdag 15 juli</span></div>
+      <div class="chips">
+        <span class="pil"><span class="stip" style="background: var(--zon)"></span>26° buiten, zonnig</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Regelt</span>
+      </div>
+    </div>
+
+    <div class="titel">
+      <h1 class="kop-1">Het huis koelt op zon</h1>
+      <p class="lead">Je panelen leveren meer dan het huis vraagt. De woonkamer koelt, de droger draait en de auto laadt mee.</p>
+    </div>
+
+    <div class="podium" id="podium"></div>
+
+    <button class="info" style="position: absolute; left: 22px; top: 300px; z-index: 3"><i>i</i>Zo werkt het huis</button>
+    <aside class="rechts">
+      <section class="glas kaart">
+        <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini">9,6 kWh opgewekt</span></div>
+        <svg viewBox="0 0 312 150" width="312" height="150" aria-label="De zon van vandaag, met wat er op draaide">
+          <defs>
+            <linearGradient id="zonvlak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient>
+          </defs>
+          <path d="M8 86 C 50 84, 70 30, 120 18 S 190 20, 226 52 S 280 86, 304 86" fill="none" stroke="#F7B548" stroke-opacity="0.35" stroke-dasharray="2 4"/>
+          <path d="M8 86 C 50 84, 70 30, 120 18 S 160 14, 168 16 L 168 86 Z" fill="url(#zonvlak)"/>
+          <path d="M8 86 C 50 84, 70 30, 120 18 S 160 14, 168 16" fill="none" stroke="#F7B548" stroke-width="2"/>
+          <line x1="168" y1="14" x2="168" y2="140" stroke="#EEF3F7" stroke-opacity="0.6"/>
+          <text x="168" y="10" fill="#B8C4CF" font-size="10" text-anchor="middle" font-family="Figtree">nu</text>
+          <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">
+            <text x="8" y="104">Woonkamer</text><rect x="96" y="97" width="72" height="7" rx="3.5" fill="#6FD3FF"/><rect x="168" y="97" width="22" height="7" rx="3.5" fill="#6FD3FF" opacity="0.3"/>
+            <text x="8" y="119">Droger</text><rect x="144" y="112" width="24" height="7" rx="3.5" fill="#F7B548"/><rect x="168" y="112" width="18" height="7" rx="3.5" fill="#F7B548" opacity="0.3"/>
+            <text x="8" y="134">Auto</text><rect x="132" y="127" width="36" height="7" rx="3.5" fill="#6EE7B7"/><rect x="168" y="127" width="58" height="7" rx="3.5" fill="#6EE7B7" opacity="0.3"/>
+          </g>
+          <g font-family="Figtree" font-size="10" fill="#7F8E9C"><text x="8" y="148">06</text><text x="112" y="148">12</text><text x="214" y="148">18</text><text x="292" y="148">22</text></g>
+        </svg>
+        <p class="mini" style="margin: 6px 0 0">Tot nu toe 81% zelf gebruikt. De lichte balken zijn het plan.</p>
+      </section>
+
+      <section class="glas kaart voorstel">
+        <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 24px; height: 24px"></span><span class="klein">Voorstel van je huis</span></div>
+        <h2 class="kop-2" style="margin-top: 10px">Om 14:30 stoppen met koelen</h2>
+        <p class="klein" style="margin: 8px 0 0">De woonkamer blijft dan tot het eten onder 24°. De zon gaat naar de batterij, voor vanavond.</p>
+        <div class="knoppen"><button class="knop knop-licht">Doe maar</button><button class="knop">Laat zien</button></div>
+      </section>
+
+      <section class="glas kaart">
+        <h2 class="kop-3">Hoe voelt het in de woonkamer?</h2>
+        <div class="gevoel">
+          <button style="background: rgba(111,211,255,0.14); color: #a9e6ff">Te koud</button>
+          <button style="background: rgba(110,231,183,0.14); color: var(--mint)">Goed</button>
+          <button style="background: rgba(255,122,77,0.14); color: #ffb090">Te warm</button>
+        </div>
+      </section>
+    </aside>
+
+    <div class="dok">
+      <span class="bol adem" style="width: 46px; height: 46px"></span>
+      <span class="vraag">Zeg <b>„Hé huis”</b> of tik om iets te vragen</span>
+      <span class="pil">Wanneer is de auto vol?</span>
+      <span class="pil">Waarom wacht de zolder?</span>
+      <span class="pil">We gaan weg</span>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis van opzij en van voren, opengewerkt. De woonkamer koelt op zon, de droger draait, de auto laadt en de batterij laadt.',
+    tijd: 'dag',
+    zon: { stand: 0.56, hoogte: 0.9, aandeel: 0.85, panelen: 12 },
+    wolken: 0.15,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Bijkeuken', gewicht: 0.85, temp: '22,8°', zin: 'droger, nog 34 min', stand: 'wacht', apparaten: [{ soort: 'droger', aan: true, x: 0.55 }] },
+        { naam: 'Woonkamer', gewicht: 1.35, temp: '24,1°', zin: 'koelt op zon', stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'bank' }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '23,5°', zin: 'op temperatuur', stand: 'goed', apparaten: [] },
+        { naam: 'Slaapkamer', gewicht: 1.3, temp: '23,0°', zin: 'wordt gemeten', apparaten: [{ soort: 'screen', dicht: 0.7 }] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '25,1°', zin: 'wacht op meer zon', stand: 'wacht', apparaten: [{ soort: 'airco', aan: false }] }] },
+    ],
+    buitenunit: { aan: true },
+    batterij: { procent: 78, stand: 'laadt' },
+    auto: { procent: 62, stand: 'laadt', bron: 'zon', kleur: '#7f97b0' },
+    net: true,
+    stromen: [
+      { van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 },
+      { van: 'zon', naar: 'batterij', sterkte: 0.4 },
+      { van: 'zon', naar: 'auto', sterkte: 0.55 },
+      { van: 'zon', naar: 'net', sterkte: 0.15 },
+    ],
+    labels: [
+      { bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 },
+      { bij: 'batterij', titel: 'Batterij 78%', toon: 'mint', regels: ['laadt 0,8 kW'], dx: 24, dy: 92 },
+      { bij: 'auto', titel: 'Auto 62%', toon: 'ijs', regels: ['laadt op zon, 1,4 kW', 'vol om 16:30'], dx: -24, dy: -96 },
+      { bij: 'net', titel: '0,3 kW terug', toon: 'mint', dx: -30, dy: 34 },
+    ],
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Uitleg, de eerste keer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; opacity: 0.35; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .dim { position: absolute; inset: 0; background: rgba(4, 8, 16, 0.62); z-index: 3; }
+  .podium { position: absolute; left: 150px; top: 70px; width: 760px; height: 560px; z-index: 4; }
+  .ballon { position: absolute; z-index: 6; width: 330px; padding: 20px 22px; border-radius: 22px; background: #f2f6f9; color: #0b1424; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  .ballon::after { content: ''; position: absolute; left: -10px; top: 46px; width: 20px; height: 20px; background: #f2f6f9; transform: rotate(45deg); border-radius: 3px; }
+  .ballon h2 { font-family: var(--kop); font-weight: 600; font-size: 24px; line-height: 1.12; margin: 0; letter-spacing: -0.01em; }
+  .ballon p { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: #34414f; }
+  .ballon .onder { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+  .stippen { display: flex; gap: 6px; }
+  .stippen i { width: 8px; height: 8px; border-radius: 50%; background: #c3ccd5; }
+  .stippen i.aan { background: #0b1424; width: 22px; border-radius: 4px; }
+  .ballon button { height: 40px; padding: 0 18px; border-radius: 12px; border: 0; background: #0b1424; color: #fff; font-weight: 700; font-size: 14px; }
+  .ballon .overslaan { background: transparent; color: #57636f; padding: 0 6px; }
+  .tik { position: absolute; z-index: 5; width: 54px; height: 54px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(255,255,255,0.15), 0 0 30px rgba(111,211,255,0.6); }
+  .stappen { position: absolute; z-index: 6; left: 22px; right: 26px; bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stap { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-radius: 18px; background: rgba(12, 20, 34, 0.9); border: 1px solid var(--glas-rand); }
+  .stap.nu { border-color: rgba(111,211,255,0.55); }
+  .stap .mini-huis { width: 92px; height: 70px; flex: none; }
+  .stap b { display: block; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel"><div><span class="tijd">09:20</span><span class="datum">maandag 5 oktober</span></div></div>
+    <div class="dim"></div>
+    <div class="podium" id="podium"></div>
+    <span class="tik" style="left: 660px; top: 492px" aria-hidden="true"></span>
+    <div class="ballon" style="left: 812px; top: 466px" role="dialog" aria-label="Uitleg, stap 1 van 3">
+      <h2>Dit is je huis</h2>
+      <p>Alles wat er nu gebeurt, staat erin: wat er koelt of verwarmt, de zon op het dak, de batterij en de auto. Tik op een etage om in te zoomen.</p>
+      <div class="onder"><span class="stippen" aria-hidden="true"><i class="aan"></i><i></i><i></i></span><span><button class="overslaan">Overslaan</button><button>Volgende</button></span></div>
+    </div>
+    <div class="stappen">
+      <div class="stap nu"><div class="mini-huis" id="s1"></div><div><b>Huis</b><span class="mini">Wat er nu gebeurt, alle stromen</span></div></div>
+      <div class="stap"><div class="mini-huis" id="s2"></div><div><b>Etage</b><span class="mini">De kamers, de lampen, de screens</span></div></div>
+      <div class="stap"><div class="mini-huis" id="s3"></div><div><b>Kamer en apparaat</b><span class="mini">Tik op een apparaat om het te bedienen</span></div></div>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  const etages = [
+    { naam: 'Begane grond', kamers: [{ naam: 'Keuken', gewicht: 0.85, temp: '23,1°', stand: 'rust', apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] }, { naam: 'Woonkamer', gewicht: 1.35, temp: '21,9°', zin: '2 lampen aan', stand: 'goed', apparaten: [{ soort: 'airco', aan: false }, { soort: 'bank' }, { soort: 'lamp', aan: true, x: 0.4 }, { soort: 'screen', dicht: 0.6 }] }] },
+    { naam: 'Eerste', kamers: [{ naam: 'Badkamer', gewicht: 0.8, temp: '21,0°' }, { naam: 'Slaapkamer', gewicht: 1.3, temp: '19,8°' }] },
+    { dak: true, kamers: [{ naam: 'Zolder', temp: '20,4°' }] },
+  ];
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis met een rondleiding: tik op een etage om in te zoomen.',
+    tijd: 'ochtend', zon: { stand: 0.22, hoogte: 0.35, aandeel: 0.35, panelen: 12 },
+    etages, buitenunit: { aan: false }, batterij: { procent: 40, stand: 'laadt' }, auto: { procent: 70, stand: 'klaar', kleur: '#7f97b0' }, net: true,
+    stromen: [{ van: 'zon', naar: 'batterij', sterkte: 0.3 }],
+  }, { breedte: 760, hoogte: 560 });
+  const mini = { breedte: 92, hoogte: 70, marge: 0.02 };
+  huis.teken(document.getElementById('s1'), { tijd: 'dag', etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })), zon: { aandeel: 0.4 }, buitenunit: { aan: false } }, mini);
+  huis.teken(document.getElementById('s2'), { tijd: 'dag', zonderDak: true, etages: [{ kamers: etages[0].kamers.map((k) => ({ ...k, stil: true })) }] }, mini);
+  huis.teken(document.getElementById('s3'), { tijd: 'dag', zonderDak: true, etages: [{ kamers: [{ ...etages[0].kamers[1], stil: true }] }] }, mini);
+</script>
+</body>
+</html>

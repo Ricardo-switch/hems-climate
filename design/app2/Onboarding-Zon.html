@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Onboarding, zon en aansluiting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .boven { padding: 18px 18px 0; display: flex; justify-content: space-between; align-items: center; }
+  .stappen { display: flex; gap: 6px; }
+  .stappen i { width: 26px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.14); }
+  .stappen i.klaar { background: var(--mint); }
+  .podium { height: 270px; }
+  .inhoud { padding: 0 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+  .vraag { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .keuzes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .keuzes button { height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--glas-rand); background: rgba(255,255,255,0.05); font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .keuzes button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; border-color: transparent; }
+  .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .veld { height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); display: flex; align-items: center; padding: 0 12px; font-size: 16px; font-weight: 600; }
+  .verder { height: 52px; border-radius: 16px; border: 0; background: var(--tekst); color: #0b1424; font-weight: 700; font-size: 16px; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="boven">
+    <span class="klein" style="font-weight: 600">‹ Terug</span>
+    <span class="stappen" aria-label="Stap 3 van 4"><i class="klaar"></i><i class="klaar"></i><i class="klaar"></i><i></i></span>
+  </div>
+  <div class="podium" id="podium"></div>
+  <div class="inhoud">
+    <h1 class="kop-1" style="font-size: 30px">Zon en aansluiting</h1>
+    <p class="klein" style="margin: -4px 0 4px">Gegevens die niet in Home Assistant staan. Je huis groeit mee met je antwoorden.</p>
+
+    <section class="glas vraag">
+      <h2 class="kop-3">Op welke kant van het dak liggen je panelen?</h2>
+      <div class="keuzes"><button>Voorkant</button><button>Achterkant</button><button aria-pressed="true">Beide kanten</button><button>Plat dak</button><button>Weet ik niet</button></div>
+      <div class="twee">
+        <label><span class="mini">Aantal voorkant</span><span class="veld">6</span></label>
+        <label><span class="mini">Aantal achterkant</span><span class="veld">6</span></label>
+      </div>
+    </section>
+
+    <section class="glas vraag">
+      <h2 class="kop-3">Hoofdzekering</h2>
+      <div class="keuzes"><button>1 × 25 A</button><button aria-pressed="true">1 × 35 A</button><button>3 × 25 A</button><button>Weet ik niet</button></div>
+      <p class="mini" style="margin: 0">Staat op de hoofdschakelaar in de meterkast. De regeling zet nooit zoveel tegelijk aan dat hij eruit gaat.</p>
+    </section>
+
+    <section class="glas vraag">
+      <h2 class="kop-3">Gevonden in Home Assistant</h2>
+      <div style="display: flex; align-items: center; gap: 10px"><span class="stip" style="background: var(--mint)"></span><span style="flex: 1">Batterij</span><span class="mini">via Home Assistant</span></div>
+      <div style="display: flex; align-items: center; gap: 10px"><span class="stip" style="background: var(--zon)"></span><span style="flex: 1">Droger, kan op afstand starten</span><span class="mini">op zon: ja</span></div>
+      <div style="display: flex; align-items: center; gap: 10px"><span class="stip" style="border: 1.5px dashed var(--gedempt); background: transparent"></span><span style="flex: 1; color: var(--gedempt)">Geen laadpaal gevonden</span><span class="mini ijs-t">Koppelen</span></div>
+    </section>
+
+    <button class="verder">Verder</button>
+  </div>
+</div>
+<script src="kit/huis.js"></script>
+<script>
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Je huis zoals het nu is opgebouwd: twee etages en een zolder, panelen, een batterij. Een laadpaal is er nog niet.',
+    tijd: 'dag',
+    zon: { stand: 0.5, hoogte: 0.85, aandeel: 0.6, panelen: 12 },
+    etages: [
+      { kamers: [{ naam: 'Bijkeuken', stil: true, gewicht: 0.85, apparaten: [{ soort: 'droger', x: 0.55 }] }, { naam: 'Woonkamer', stil: true, gewicht: 1.35, apparaten: [{ soort: 'airco' }, { soort: 'bank' }] }] },
+      { kamers: [{ naam: 'Badkamer', stil: true, gewicht: 0.8 }, { naam: 'Slaapkamer', stil: true, gewicht: 1.3 }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco' }] }] },
+    ],
+    buitenunit: { aan: false },
+    batterij: { procent: 50, stand: 'rust' },
+    net: true,
+    spook: ['auto'],
+    labels: [
+      { bij: 'panelen', titel: '12 panelen', toon: 'zon', regels: ['6 voor, 6 achter'], dx: -30, dy: -40 },
+      { bij: 'laadpaal', titel: 'Laadpaal?', toon: 'ijs', dx: -20, dy: -80 },
+    ],
+  }, { breedte: 390, hoogte: 270, marge: 0.03 });
+</script>
+</body>
+</html>

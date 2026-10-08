@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Opbrengst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; display: grid; grid-template-columns: 270px minmax(0, 1fr) 316px; min-width: 0; grid-template-rows: auto 1fr; gap: 18px 18px; height: 800px; }
+  .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .wissel button { height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 600; font-size: 14px; }
+  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .periode { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  .periode button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--glas-rand); background: transparent; font-size: 18px; }
+  .links { display: flex; flex-direction: column; gap: 22px; padding-top: 6px; }
+  .cijfer .getal { font-size: 40px; line-height: 1.05; }
+  .cijfer .getal small { font-family: var(--romp); font-size: 15px; color: var(--zacht); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+  .kaart { padding: 18px 20px; }
+  .rij { padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+  .rij:first-of-type { border-top: 0; }
+  .rij .boven { display: flex; justify-content: space-between; font-size: 14px; }
+  .verdeel { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255,255,255,0.07); margin-top: 7px; }
+  .verdeel i { display: block; height: 100%; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kop">
+      <div>
+        <h1 class="kop-1" style="font-size: 40px">77% van je stroom kwam van je eigen dak</h1>
+        <div class="periode"><button aria-label="Vorige maand">‹</button><span class="kop-3" style="font-size: 17px">September 2026</span><button aria-label="Volgende maand">›</button><span class="mini" style="margin-left: 6px">augustus: 69%</span></div>
+      </div>
+      <div class="wissel" role="group" aria-label="Periode"><button>Dag</button><button>Week</button><button aria-pressed="true">Maand</button><button>Jaar</button></div>
+    </div>
+
+    <div class="links">
+      <div class="cijfer"><div class="mini">Stroom gebruikt</div><div class="getal">533<small>kWh</small></div><div class="klein">120 van het net, de rest van je dak</div></div>
+      <div class="cijfer"><div class="mini">Kosten</div><div class="getal">€ 31,40</div><div class="klein">augustus € 46,10, zonder vaste kosten</div></div>
+      <div class="cijfer"><div class="mini">Gas</div><div class="getal">22<small>m³</small></div><div class="klein">alleen warm water</div></div>
+      <div class="glas kaart">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Je panelen</h2><span class="getal zon-t" style="font-size: 22px">480 kWh</span></div>
+        <div class="verdeel" style="height: 10px; margin-top: 12px"><i style="width: 87.5%; background: var(--zon)"></i><i style="width: 12.5%; background: var(--mint)"></i></div>
+        <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>420 zelf gebruikt</span><span>60 naar het net</span></div>
+      </div>
+    </div>
+
+    <section class="glas kaart" style="padding: 20px 22px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2">Waar je stroom heen ging</h2><span class="mini">de breedte is de hoeveelheid</span></div>
+      <div id="sankey" style="margin-top: 14px"></div>
+    </section>
+
+    <div style="display: flex; flex-direction: column; gap: 16px">
+      <section class="glas kaart">
+        <h2 class="kop-3" style="margin-bottom: 4px">Per apparaat</h2>
+        <div class="rij"><div class="boven"><b>Auto</b><span>150 kWh, € 8,20</span></div><div class="verdeel"><i style="width: 63%; background: var(--zon)"></i><i style="width: 37%; background: var(--net)"></i></div></div>
+        <div class="rij"><div class="boven"><b>Airco woonkamer</b><span>95 kWh, € 2,10</span></div><div class="verdeel"><i style="width: 88%; background: var(--zon)"></i><i style="width: 12%; background: var(--net)"></i></div></div>
+        <div class="rij"><div class="boven"><b>Airco zolder</b><span>50 kWh, € 1,70</span></div><div class="verdeel"><i style="width: 80%; background: var(--zon)"></i><i style="width: 20%; background: var(--net)"></i></div></div>
+        <div class="rij"><div class="boven"><b>Droger</b><span>28 kWh, € 0,30</span></div><div class="verdeel"><i style="width: 89%; background: var(--zon)"></i><i style="width: 11%; background: var(--net)"></i></div></div>
+        <div class="rij"><div class="boven"><b>Rest van het huis</b><span>210 kWh, € 19,10</span></div><div class="verdeel"><i style="width: 47%; background: var(--zon)"></i><i style="width: 33%; background: var(--mint)"></i><i style="width: 20%; background: var(--net)"></i></div></div>
+        <p class="mini" style="margin: 10px 0 0"><span class="stip" style="background: var(--zon)"></span> zon <span class="stip" style="background: var(--mint); margin-left: 8px"></span> batterij <span class="stip" style="background: var(--net); margin-left: 8px"></span> net</p>
+      </section>
+      <section class="glas kaart" style="background: linear-gradient(160deg, rgba(143,134,255,0.14), rgba(111,211,255,0.05)); border-color: rgba(143,134,255,0.3)">
+        <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Wat Smart Climate scheelde</span></div>
+        <div class="getal" style="font-size: 30px; margin-top: 8px">€ 14,60</div>
+        <p class="klein" style="margin: 4px 0 0">Door de airco's en de auto op zon te laten draaien, in plaats van wanneer het uitkwam. Berekend.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/sankey.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'opbrengst');
+  document.getElementById('sankey').innerHTML = sankey.svg({
+    breedte: 470, hoogte: 560, links: 80, rechts: 204,
+    beschrijving: 'Zon, net en batterij naar de auto, de airco’s, de droger, de rest van het huis, de batterij en het net.',
+    bronnen: [
+      { id: 'zon', naam: 'Zon', kleur: '#F7B548' },
+      { id: 'net', naam: 'Net', kleur: '#9AAABB' },
+      { id: 'bat', naam: 'Batterij', kleur: '#6EE7B7' },
+    ],
+    doelen: [
+      { id: 'auto', naam: 'Auto', kleur: '#6FD3FF' },
+      { id: 'airco', naam: 'Airco’s', kleur: '#6FD3FF' },
+      { id: 'droger', naam: 'Droger', kleur: '#F7B548' },
+      { id: 'rest', naam: 'Rest van het huis', kleur: '#9AAABB' },
+      { id: 'laden', naam: 'In de batterij', kleur: '#6EE7B7' },
+      { id: 'terug', naam: 'Naar het net', kleur: '#6EE7B7' },
+    ],
+    stromen: [
+      { van: 'zon', naar: 'auto', kwh: 95 }, { van: 'zon', naar: 'airco', kwh: 110 }, { van: 'zon', naar: 'droger', kwh: 25 }, { van: 'zon', naar: 'rest', kwh: 98 }, { van: 'zon', naar: 'laden', kwh: 92 }, { van: 'zon', naar: 'terug', kwh: 60 },
+      { van: 'net', naar: 'auto', kwh: 55 }, { van: 'net', naar: 'airco', kwh: 20 }, { van: 'net', naar: 'droger', kwh: 3 }, { van: 'net', naar: 'rest', kwh: 42 },
+      { van: 'bat', naar: 'airco', kwh: 15 }, { van: 'bat', naar: 'rest', kwh: 70 },
+    ],
+  });
+</script>
+</body>
+</html>

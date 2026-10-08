@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis, winterochtend</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 380px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .voorstel { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
+  .knoppen { display: flex; gap: 10px; margin-top: 14px; }
+  .knoppen .knop { flex: 1; }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  .dok .vraag b { color: var(--tekst); }
+  .bron { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; margin-top: 10px; font-size: 14px; }
+  .bron span:nth-child(even) { text-align: right; color: var(--zacht); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-winter">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">07:20</span><span class="datum">dinsdag 12 januari</span></div>
+      <div class="chips">
+        <span class="pil"><span class="stip" style="background: #c9d6e6"></span>−2° buiten, grijs</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Regelt</span>
+      </div>
+    </div>
+
+    <div class="titel">
+      <h1 class="kop-1">Warm voor het ontbijt</h1>
+      <p class="lead">De cv stookt de woonkamer en de badkamer op. Om 11:00 neemt de airco het over, op zon, en kan de cv uit.</p>
+    </div>
+
+    <div class="podium" id="podium"></div>
+
+    <button class="info" style="position: absolute; left: 22px; top: 300px; z-index: 3"><i>i</i>Zo werkt het huis</button>
+    <aside class="rechts">
+      <section class="glas kaart">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Waar de warmte vandaan komt</h2><span class="mini">vandaag</span></div>
+        <div class="bron">
+          <span><span class="stip" style="background: var(--gloed); margin-right: 8px"></span>Cv, gas</span><span>1,4 m³ tot nu</span>
+          <span><span class="stip" style="background: var(--zon); margin-right: 8px"></span>Airco op zon</span><span>vanaf 11:00, verwacht</span>
+          <span><span class="stip" style="background: var(--net); margin-right: 8px"></span>Vloerverwarming badkamer</span><span>0,6 kWh</span>
+        </div>
+      </section>
+
+      <section class="glas kaart voorstel">
+        <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 24px; height: 24px"></span><span class="klein">Voorstel van je huis</span></div>
+        <h2 class="kop-2" style="margin-top: 10px">Vanmiddag voorverwarmen op zon</h2>
+        <p class="klein" style="margin: 8px 0 0">Tussen 12:00 en 14:30 is er zon over. Dan de woonkamer naar 21,5°, zodat de cv pas om 18:40 aan hoeft in plaats van om 16:00.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px"><span class="pil">0,9 m³ gas minder</span><span class="pil">binnen je comfort</span></div>
+        <div class="knoppen"><button class="knop knop-licht">Doe maar</button><button class="knop">Laat zien</button></div>
+      </section>
+    </aside>
+
+    <div class="dok">
+      <span class="bol adem" style="width: 46px; height: 46px"></span>
+      <span class="vraag">Zeg <b>„Hé huis”</b> of tik om iets te vragen</span>
+      <span class="pil">Hoeveel gas vandaag?</span>
+      <span class="pil">Badkamer iets warmer</span>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op een koude ochtend. De cv stookt, de radiatoren in de woonkamer en de slaapkamer zijn warm, de badkamer verwarmt elektrisch.',
+    tijd: 'ochtend',
+    seizoen: 'winter',
+    wolken: 0.8,
+    zon: { aandeel: 0, panelen: 12 },
+    cv: { aan: true },
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Bijkeuken', gewicht: 0.85, temp: '17,9°', zin: 'cv brandt', stand: 'warmt', apparaten: [{ soort: 'cv', aan: true }, { soort: 'lamp', aan: true, x: 0.6 }] },
+        { naam: 'Woonkamer', gewicht: 1.35, temp: '19,6°', zin: 'warmt op naar 21°', stand: 'warmt', apparaten: [{ soort: 'radiator', aan: true }, { soort: 'lamp', aan: true, kleur: '#FFD39A', x: 0.6 }, { soort: 'bank' }, { soort: 'airco', aan: false }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '21,8°', zin: 'vloer warmt', stand: 'warmt', apparaten: [{ soort: 'vloer', aan: true }, { soort: 'lamp', aan: true, x: 0.5 }] },
+        { naam: 'Slaapkamer', gewicht: 1.3, temp: '17,2°', zin: 'nachtstand', apparaten: [{ soort: 'radiator', aan: false }, { soort: 'screen', dicht: 0.2 }] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '14,1°', zin: 'niet verwarmd', apparaten: [] }] },
+    ],
+    buitenunit: { aan: false },
+    batterij: { procent: 22, stand: 'rust' },
+    auto: { procent: 81, stand: 'klaar', kleur: '#7f97b0' },
+    net: true,
+    stromen: [{ van: 'net', naar: 'kamer:Badkamer', sterkte: 0.3 }],
+    labels: [
+      { bij: 'auto', titel: 'Auto 81%', toon: 'ijs', regels: ['klaar voor 08:00'], dx: -24, dy: -90 },
+      { bij: 'batterij', titel: 'Batterij 22%', toon: 'mint', regels: ['laadt straks op zon'], dx: -30, dy: 120 },
+    ],
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

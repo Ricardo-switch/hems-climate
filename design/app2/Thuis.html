@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Thuis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .boven { padding: 18px 18px 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: center; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 40px; letter-spacing: -0.03em; }
+  .titel { margin-top: 14px; }
+  .titel .kop-1 { font-size: 34px; }
+  .titel .lead { font-size: 15.5px; margin-top: 8px; max-width: none; }
+  .podium { height: 360px; margin-top: -6px; }
+  .inhoud { padding: 0 16px 110px; display: flex; flex-direction: column; gap: 12px; position: relative; }
+  .kamer { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .kamer .naam { flex: 1; }
+  .kamer .naam b { display: block; font-size: 16px; }
+  .kamer .naam span { font-size: 13.5px; font-weight: 600; }
+  .kamer .getal { font-size: 30px; }
+  .draait { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .draait div { padding: 12px; }
+  .draait .getal { font-size: 22px; display: block; margin-top: 2px; }
+  .voorstel { padding: 16px 18px; background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
+  .knoppen { display: flex; gap: 10px; margin-top: 14px; }
+  .knoppen .knop { flex: 1; }
+  .vraag { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--glas-rand); color: var(--zacht); }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="boven">
+    <div class="kopregel">
+      <span class="tijd">12:41</span>
+      <span style="display: flex; gap: 8px; align-items: center">
+        <span class="pil" style="height: 32px; font-size: 13px">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <a class="pil" href="#" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg></a>
+      </span>
+    </div>
+    <div class="titel">
+      <h1 class="kop-1">Het huis koelt op zon</h1>
+      <p class="lead">De woonkamer koelt, de droger draait en de auto laadt mee.</p>
+    </div>
+  </div>
+  <div class="podium" id="podium"></div>
+  <div style="padding: 0 16px 10px; margin-top: -10px"><button class="info"><i>i</i>Zo werkt het huis</button></div>
+  <div class="inhoud">
+    <a class="glas kamer" href="#"><span class="stip" style="width: 10px; height: 10px; background: var(--ijs)"></span><span class="naam"><b>Woonkamer</b><span class="ijs-t">Koelt op zon, naar 23°</span></span><span class="getal">24,1°</span></a>
+    <a class="glas kamer" href="#"><span class="stip" style="width: 10px; height: 10px; background: var(--zon)"></span><span class="naam"><b>Zolder</b><span class="zon-t">Wacht op meer zon</span></span><span class="getal">25,1°</span></a>
+    <a class="glas kamer" href="#"><span class="stip" style="width: 10px; height: 10px; background: var(--mint)"></span><span class="naam"><b>Badkamer</b><span class="mint-t">Op temperatuur</span></span><span class="getal">23,5°</span></a>
+
+    <div class="draait">
+      <div class="glas-klein"><span class="mini">Droger</span><span class="getal zon-t">34 min</span><span class="mini">op zon</span></div>
+      <div class="glas-klein"><span class="mini">Auto</span><span class="getal ijs-t">62%</span><span class="mini">vol 16:30</span></div>
+      <div class="glas-klein"><span class="mini">Batterij</span><span class="getal mint-t">78%</span><span class="mini">laadt</span></div>
+    </div>
+
+    <section class="glas voorstel">
+      <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Voorstel van je huis</span></div>
+      <h2 class="kop-2" style="margin-top: 8px">Om 14:30 stoppen met koelen</h2>
+      <p class="klein" style="margin: 6px 0 0">De woonkamer blijft dan tot het eten onder 24°. De zon gaat naar de batterij, voor vanavond.</p>
+      <div class="knoppen"><button class="knop knop-licht">Doe maar</button><button class="knop">Laat zien</button></div>
+    </section>
+
+    <div class="vraag"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</div>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="kit/nav.js"></script>
+<script src="kit/huis.js"></script>
+<script>
+  nav.tabs(document.getElementById('tabs'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis, opengewerkt. De woonkamer koelt, de droger draait, de auto en de batterij laden op zon.',
+    tijd: 'dag',
+    zon: { stand: 0.56, hoogte: 0.9, aandeel: 0.85, panelen: 12 },
+    wolken: 0.15,
+    etages: [
+      { kamers: [{ naam: 'Bijkeuken', gewicht: 0.85, stil: true, stand: 'wacht', apparaten: [{ soort: 'droger', aan: true, x: 0.55 }] }, { naam: 'Woonkamer', gewicht: 1.35, stil: true, stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'bank' }] }] },
+      { kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil: true, stand: 'goed' }, { naam: 'Slaapkamer', gewicht: 1.3, stil: true, apparaten: [{ soort: 'screen', dicht: 0.7 }] }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: 'wacht' }] },
+    ],
+    buitenunit: { aan: true },
+    batterij: { procent: 78, stand: 'laadt' },
+    auto: { procent: 62, stand: 'laadt', bron: 'zon', kleur: '#7f97b0' },
+    net: true,
+    stromen: [
+      { van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.6 },
+      { van: 'zon', naar: 'batterij', sterkte: 0.4 },
+      { van: 'zon', naar: 'auto', sterkte: 0.5 },
+    ],
+    labels: [{ bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen'], dx: -40, dy: -84 }],
+  }, { breedte: 390, hoogte: 360, marge: 0.03, zoom: 1.0, schuifY: 14 });
+</script>
+</body>
+</html>

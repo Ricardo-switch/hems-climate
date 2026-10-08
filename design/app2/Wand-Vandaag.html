@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Vandaag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .tijdlijn { padding: 18px 20px 12px; }
+  .onder { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .kaart { padding: 18px 22px; }
+  .kaart .wanneer { font-family: var(--kop); font-size: 15px; font-weight: 600; }
+  .zeker { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+  .zeker .balkje { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .zeker .balkje i { display: block; height: 100%; width: 80%; background: linear-gradient(90deg, var(--violet), var(--ijs)); }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .wissel button { height: 34px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 600; font-size: 14px; }
+  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Vandaag</h1>
+        <p class="lead" style="max-width: 60ch; margin-top: 8px">Links van nu wat het huis deed, en waarom. Rechts wat het van plan is.</p>
+      </div>
+      <div class="wissel" role="group" aria-label="Dag"><button>Gisteren</button><button aria-pressed="true">Vandaag</button><button>Morgen</button></div>
+    </div>
+
+    <section class="glas tijdlijn">
+      <svg viewBox="0 0 1116 380" width="1116" height="380" role="img" aria-label="De dag van 06:00 tot middernacht: de zon, de temperatuur in de woonkamer, en wat elk apparaat deed en gaat doen">
+        <defs>
+          <linearGradient id="zv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient>
+          <linearGradient id="zp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.16"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient>
+          <pattern id="streep" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="currentColor"/></pattern>
+          <linearGradient id="plan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8F86FF" stop-opacity="0.13"/><stop offset="1" stop-color="#8F86FF" stop-opacity="0.03"/></linearGradient>
+        </defs>
+        <!-- uren: 06:00 = x 140, 24:00 = x 1100; 53,3 px per uur -->
+        <rect x="520" y="0" width="580" height="350" fill="url(#plan)" rx="12"/>
+        <text x="1092" y="18" text-anchor="end" font-family="Figtree" font-size="12" font-weight="600" fill="#B7B0FF">Het plan, uit wat het huis geleerd heeft</text>
+        <g font-family="Figtree" font-size="11" fill="#7F8E9C">
+          <text x="140" y="372" text-anchor="middle">06</text><text x="300" y="372" text-anchor="middle">09</text><text x="460" y="372" text-anchor="middle">12</text><text x="620" y="372" text-anchor="middle">15</text><text x="780" y="372" text-anchor="middle">18</text><text x="940" y="372" text-anchor="middle">21</text><text x="1100" y="372" text-anchor="middle">24</text>
+        </g>
+        <g stroke="#ffffff" stroke-opacity="0.05"><line x1="140" y1="30" x2="140" y2="350"/><line x1="300" y1="30" x2="300" y2="350"/><line x1="460" y1="30" x2="460" y2="350"/><line x1="620" y1="30" x2="620" y2="350"/><line x1="780" y1="30" x2="780" y2="350"/><line x1="940" y1="30" x2="940" y2="350"/></g>
+
+        <!-- de zon: gemeten tot nu, verwacht daarna -->
+        <text x="0" y="66" font-family="Figtree" font-size="13" font-weight="700" fill="#EEF3F7">Zon</text>
+        <text x="0" y="84" font-family="Figtree" font-size="11.5" fill="#7F8E9C">je panelen</text>
+        <path d="M160 108 C 220 106, 260 70, 330 52 S 440 34, 520 36 L 520 108 Z" fill="url(#zv)"/>
+        <path d="M160 108 C 220 106, 260 70, 330 52 S 440 34, 520 36" fill="none" stroke="#F7B548" stroke-width="2.2"/>
+        <path d="M520 36 C 560 38, 590 44, 610 62 C 630 80, 650 60, 680 66 S 760 92, 860 108 Z" fill="url(#zp)"/>
+        <path d="M520 36 C 560 38, 590 44, 610 62 C 630 80, 650 60, 680 66 S 760 92, 860 108" fill="none" stroke="#F7B548" stroke-width="2" stroke-dasharray="5 5"/>
+        <g transform="translate(624 34)"><ellipse cx="0" cy="0" rx="20" ry="7" fill="#9aabc0" opacity="0.5"/><ellipse cx="7" cy="-4" rx="10" ry="6" fill="#a7b7ca" opacity="0.5"/></g>
+        <text x="652" y="30" font-family="Figtree" font-size="11.5" fill="#B8C4CF">wolken rond 15:00</text>
+
+        <!-- de woonkamer: gemeten, en wat het model verwacht -->
+        <text x="0" y="150" font-family="Figtree" font-size="13" font-weight="700" fill="#EEF3F7">Woonkamer</text>
+        <text x="0" y="168" font-family="Figtree" font-size="11.5" fill="#7F8E9C">22 tot 24° is goed</text>
+        <rect x="140" y="128" width="960" height="44" fill="#6EE7B7" opacity="0.06"/>
+        <path d="M140 158 C 200 156, 260 150, 330 138 S 400 126, 430 124 S 470 134, 520 140" fill="none" stroke="#EEF3F7" stroke-width="2.2"/>
+        <path d="M520 140 C 560 144, 600 146, 640 142 S 720 132, 780 130 S 860 136, 940 144 S 1040 150, 1100 152" fill="none" stroke="#EEF3F7" stroke-width="2" stroke-dasharray="5 5" stroke-opacity="0.8"/>
+        <path d="M520 140 C 600 138, 700 124, 780 120 L 780 140 C 700 142, 600 152, 520 140 Z" fill="#EEF3F7" opacity="0.08"/>
+        <circle cx="430" cy="124" r="4" fill="#EEF3F7"/><text x="420" y="116" font-family="Figtree" font-size="11.5" fill="#B8C4CF" text-anchor="end">24,4°, warmste moment</text>
+
+        <!-- wat elk apparaat deed en gaat doen -->
+        <g font-family="Figtree" font-size="13" font-weight="600" fill="#EEF3F7">
+          <text x="0" y="214">Airco woonkamer</text>
+          <text x="0" y="244">Airco zolder</text>
+          <text x="0" y="274">Droger</text>
+          <text x="0" y="304">Auto</text>
+          <text x="0" y="334">Batterij</text>
+        </g>
+        <!-- airco woonkamer: koelde 11:05 tot nu, plan tot 14:30 -->
+        <rect x="414" y="204" width="106" height="12" rx="6" fill="#6FD3FF"/>
+        <rect x="520" y="204" width="96" height="12" rx="6" fill="#6FD3FF" opacity="0.32"/>
+        <circle cx="414" cy="210" r="7" fill="#0b1424" stroke="#6FD3FF" stroke-width="2.5"/>
+        <!-- zolder: wacht, plan als de zon het toelaat -->
+        <rect x="560" y="234" width="80" height="12" rx="6" fill="url(#streep)" style="color: #6FD3FF" opacity="0.5"/>
+        <text x="648" y="244" font-family="Figtree" font-size="11.5" fill="#7F8E9C">als er genoeg zon over is</text>
+        <!-- droger -->
+        <rect x="498" y="264" width="22" height="12" rx="6" fill="#F7B548"/>
+        <rect x="520" y="264" width="32" height="12" rx="6" fill="#F7B548" opacity="0.32"/>
+        <text x="560" y="274" font-family="Figtree" font-size="11.5" fill="#7F8E9C">klaar 13:15, ruim voor 18:00</text>
+        <!-- auto -->
+        <rect x="433" y="294" width="87" height="12" rx="6" fill="#6EE7B7"/>
+        <rect x="520" y="294" width="205" height="12" rx="6" fill="#6EE7B7" opacity="0.32"/>
+        <text x="733" y="304" font-family="Figtree" font-size="11.5" fill="#7F8E9C">vol om 16:30</text>
+        <!-- batterij: laadt, levert vanavond -->
+        <rect x="360" y="324" width="160" height="12" rx="6" fill="#6EE7B7" opacity="0.85"/>
+        <rect x="520" y="324" width="40" height="12" rx="6" fill="#6EE7B7" opacity="0.32"/>
+        <rect x="796" y="324" width="304" height="12" rx="6" fill="url(#streep)" style="color: #6EE7B7" opacity="0.45"/>
+        <text x="806" y="318" font-family="Figtree" font-size="11.5" fill="#7F8E9C">levert aan het huis</text>
+
+        <!-- nu -->
+        <line x1="520" y1="26" x2="520" y2="352" stroke="#EEF3F7" stroke-width="1.5"/>
+        <rect x="498" y="352" width="44" height="22" rx="11" fill="#EEF3F7"/><text x="520" y="367" text-anchor="middle" font-family="Figtree" font-size="12" font-weight="700" fill="#0b1424">nu</text>
+        <!-- het plan-moment -->
+        <circle cx="616" cy="210" r="7" fill="#0b1424" stroke="#8F86FF" stroke-width="2.5"/>
+      </svg>
+    </section>
+
+    <div class="onder">
+      <section class="glas kaart">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="wanneer ijs-t">11:05, wat er gebeurde</span><span class="mini">gemeten</span></div>
+        <h2 class="kop-2" style="margin-top: 8px">De woonkamer ging koelen</h2>
+        <p class="klein" style="margin: 8px 0 0">Er was 1,4 kW zon over en het werd 24,1° in de woonkamer, boven je 24°. De zolder wachtte, want voor allebei was er te weinig.</p>
+      </section>
+      <section class="glas kaart" style="border-color: rgba(143,134,255,0.3)">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="wanneer" style="color: #B7B0FF">14:30, het plan</span><span class="mini">verwacht</span></div>
+        <h2 class="kop-2" style="margin-top: 8px">Stoppen met koelen, de batterij vullen</h2>
+        <p class="klein" style="margin: 8px 0 0">Na het koelen warmt de woonkamer ongeveer 0,3° per uur op. Dan blijft hij tot 18:00 onder 24°, en gaat de zon naar de batterij voor vanavond.</p>
+        <div class="zeker"><span class="mini">Zo zeker</span><span class="balkje"><i></i></span><span class="mini">na 34 dagen meten</span></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'vandaag');</script>
+</body>
+</html>

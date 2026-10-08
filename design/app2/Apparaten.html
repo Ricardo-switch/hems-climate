@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Apparaten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  .terug { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .zonbalk { padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+  .app { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .app .kop { display: flex; align-items: center; gap: 14px; }
+  .ring { width: 64px; height: 64px; flex: none; }
+  .app .naam { flex: 1; }
+  .app .naam b { font-size: 17px; display: block; }
+  .keuze { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255,255,255,0.06); }
+  .keuze button { height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font-weight: 700; font-size: 13px; }
+  .keuze button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .sectie { font-size: 13px; font-weight: 700; color: var(--gedempt); margin: 8px 2px 0; }
+  .niet { border-style: dashed; background: transparent; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <div class="inhoud">
+    <h1 class="kop-1" style="font-size: 34px">Apparaten</h1>
+    <div class="glas zonbalk">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="9" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2.4" stroke-linecap="round"><path d="M20 3v4M20 33v4M3 20h4M33 20h4M8 8l3 3M29 29l3 3M8 32l3-3M29 11l3-3"/></g></svg>
+      <div style="flex: 1"><div class="kop-3">2,3 kW over</div><div class="mini">na de woonkamer, die gaat voor</div></div>
+      <span class="getal zon-t" style="font-size: 26px">4,1 kW</span>
+    </div>
+
+    <div class="sectie">Nu</div>
+    <section class="glas app">
+      <div class="kop">
+        <svg class="ring" viewBox="0 0 64 64" aria-label="Droger, 70 procent klaar"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#F7B548" stroke-width="6" stroke-linecap="round" stroke-dasharray="119 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">34m</text></svg>
+        <div class="naam"><b>Droger</b><span class="klein zon-t">Draait op zon, klaar om 13:15</span></div>
+      </div>
+      <p class="mini" style="margin: 0">Begon om 12:07, toen er 1,1 kW over was. Je wilde hem klaar voor 18:00.</p>
+    </section>
+
+    <section class="glas app">
+      <div class="kop">
+        <svg class="ring" viewBox="0 0 64 64" aria-label="Auto, 62 procent"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#6EE7B7" stroke-width="6" stroke-linecap="round" stroke-dasharray="105 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">62%</text></svg>
+        <div class="naam"><b>Auto</b><span class="klein mint-t">Laadt op zon, 1,4 kW</span></div>
+        <span class="mini">via evcc</span>
+      </div>
+      <div><div class="mini" style="margin-bottom: 6px">Vol om</div><div class="keuze" role="group" aria-label="Vol om"><button aria-pressed="true">16:30</button><button>18:00</button><button>Morgen 7:00</button><button>Nu, snel</button></div></div>
+      <p class="mini" style="margin: 0">Op zon haalt hij 16:30. Kies je eerder, dan laadt hij bij wolken ook van het net.</p>
+    </section>
+
+    <section class="glas app">
+      <div class="kop">
+        <svg class="ring" viewBox="0 0 64 64" aria-label="Batterij, 78 procent"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/><circle cx="32" cy="32" r="27" fill="none" stroke="#6EE7B7" stroke-width="6" stroke-linecap="round" stroke-dasharray="132 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">78%</text></svg>
+        <div class="naam"><b>Batterij</b><span class="klein mint-t">Laadt 0,8 kW, vol rond 14:45</span></div>
+      </div>
+      <p class="mini" style="margin: 0">Vanavond levert hij aan het huis, tot ongeveer 01:30. Nooit meer tegelijk dan je zekering aankan.</p>
+    </section>
+
+    <div class="sectie">Klaargezet</div>
+    <section class="glas app">
+      <div class="kop">
+        <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6" stroke-dasharray="4 6"/><circle cx="32" cy="32" r="10" fill="none" stroke="#B8C4CF" stroke-width="3"/></svg>
+        <div class="naam"><b>Wasmachine</b><span class="klein">Begint als er zon over is</span></div>
+      </div>
+      <div><div class="mini" style="margin-bottom: 6px">Klaar voor</div><div class="keuze" role="group" aria-label="Klaar voor"><button>15:00</button><button aria-pressed="true">18:00</button><button>Vanavond</button><button>Nu starten</button></div></div>
+      <p class="mini" style="margin: 0">Verwacht: begint rond 14:40, na de droger. Uiterlijk om 15:30, ook zonder zon.</p>
+    </section>
+
+    <div class="sectie">Nog niet klaargezet</div>
+    <section class="glas app niet">
+      <div class="kop">
+        <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-dasharray="4 6"/></svg>
+        <div class="naam"><b>Vaatwasser</b><span class="klein">Zet "op afstand starten" aan op de vaatwasser</span></div>
+      </div>
+    </section>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="kit/nav.js"></script>
+<script>nav.tabs(document.getElementById('tabs'), 'apparaten');</script>
+</body>
+</html>
