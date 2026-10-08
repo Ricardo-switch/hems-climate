@@ -130,6 +130,13 @@
     const stromen = [];
     const labels = [];
     const kamers = [];
+    // Met `opts.tik`: per kamer een onzichtbaar vlak om op te tikken, bovenop alles.
+    const tikken = [];
+    const tik = (kamer, pts) => {
+      if (!opts.tik) return;
+      const naam = esc(kamer.naam ?? '');
+      tikken.push(poly(pts, `class="sc-tik" data-kamer="${esc(kamer.id ?? kamer.naam)}" fill="transparent" role="link" tabindex="0" aria-label="${naam}"`));
+    };
     // Waar apparaten staan, voor de labels.
     const plek = {};
 
@@ -274,6 +281,7 @@
         for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, (x) => dakZ(x) - 0.06);
         if (x0 > 0) huis.push(line([[x0, D, zt], [x0, D, dakZ(x0)]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
         kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0: zt, z1: zt + R });
+        tik(kamer, stukGevel(x0, x1).map(([x, , z]) => [x, D, z]));
         const vrij = dakZ(xm) - zt;
         kamerLabel(kamer, xm, vrij * k < 96 ? zt + vrij * 0.58 : zt + vrij * 0.5, true, (x1 - x0) * (onderDak.length > 1 ? 0.8 : 0.6), vrij);
         x0 = x1;
@@ -468,6 +476,7 @@
     function tekenKamer(kamer, x0, x1, z0, z1) {
       const xm = (x0 + x1) / 2;
       kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0, z1 });
+      if (!kamer.nieuw) tik(kamer, [[x0, D, z0], [x1, D, z0], [x1, D, z1], [x0, D, z1]]);
       // Een lege plek voor een nieuwe kamer, in de bewerkstand: alleen een stippellijn.
       if (kamer.nieuw) {
         huis.push(poly([[x0 + 0.06, 0.06, z0 + 0.01], [x1 - 0.06, 0.06, z0 + 0.01], [x1 - 0.06, D - 0.06, z0 + 0.01], [x0 + 0.06, D - 0.06, z0 + 0.01]], `fill="${KLEUR.ijs}" fill-opacity="0.05" stroke="${KLEUR.ijs}" stroke-opacity="0.7" stroke-width="1.6" stroke-dasharray="6 5"`));
@@ -819,6 +828,7 @@
       <g>${stromen.join('')}</g>
       <g>${buiten.join('')}</g>
       <g>${labels.join('')}</g>
+      ${tikken.length ? `<g>${tikken.join('')}</g>` : ''}
     </svg>`;
   }
 

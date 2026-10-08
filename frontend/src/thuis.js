@@ -205,12 +205,13 @@ function tekenVandaag() {
   const t1 = t0 + 24 * 3600_000;
   const x = (t) => 8 + ((t - t0) / (t1 - t0)) * (B - 16);
   const kw = vandaag.kwartieren;
-  const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...(zon?.kwartieren ?? []).map((q) => q.heldereLuchtW ?? 0));
+  const lijn2 = app.verwachting(zon, weer);
+  const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...lijn2.punten.map((q) => q.w));
   const y = (w) => 86 - (w / max) * 72;
   const lijn = kw.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.zonW ?? 0).toFixed(1)}`).join(' ');
   const laatste = kw[kw.length - 1];
   const vlak = `${lijn} L ${x(laatste.tMs).toFixed(1)} 86 L ${x(kw[0].tMs).toFixed(1)} 86 Z`;
-  const helder = (zon?.kwartieren ?? []).map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.heldereLuchtW ?? 0).toFixed(1)}`).join(' ');
+  const helder = lijn2.punten.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.w).toFixed(1)}`).join(' ');
   const nuX = x(Date.now());
   const namen = { 'ac-woonkamer': 'Airco woonkamer', 'ac-zolder': 'Airco zolder' };
   const banen = (vandaag.apparaten ?? []).filter((a) => /^ac-/.test(a.actuatorId)).slice(0, 3);
@@ -236,7 +237,8 @@ function tekenVandaag() {
   const verwacht = weer?.vandaag?.verwachtKwh;
   zet('[data-opgewekt]', verwacht != null && verwacht > kwh + 0.05 ? `${nl(kwh)} kWh, verwacht ${nl(verwacht)}` : `${nl(kwh)} kWh opgewekt`);
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
-  zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. De stippellijn is de zon bij heldere lucht.` : 'De stippellijn is de zon bij heldere lucht.');
+  const uitleg = `De stippellijn is de ${lijn2.naam}${lijn2.naam === 'verwachting' ? ' van vandaag, uit het weer en wat je panelen leerden' : ''}.`;
+  zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. ${uitleg}` : uitleg);
 }
 
 /*
@@ -362,7 +364,7 @@ function tekenWeer() {
     blad.innerHTML = `
       <div class="weerkop"><h2 class="kop-3">Het weer</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
       ${rijen}
-      <p class="mini voet">Van Buienradar. De balk is wat je panelen die dag leveren: de zonkans maal wat ze op een heldere dag halen.${geleerd}</p>`;
+      <p class="mini voet">Van Buienradar. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
     blad.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
 }

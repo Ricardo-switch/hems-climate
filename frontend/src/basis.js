@@ -92,6 +92,16 @@
     zet('[data-datum]', nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
   }
 
+  /**
+   * De stippellijn bij de zon van vandaag (besluit 105): de verwachting uit het
+   * weer en wat de panelen leerden, en zonder weer de zon bij een heldere lucht.
+   */
+  function verwachting(zon, weer) {
+    const kw = weer?.vandaag?.kwartieren ?? [];
+    if (kw.length) return { punten: kw.map((q) => ({ tMs: q.tMs, w: q.verwachtW })), naam: 'verwachting' };
+    return { punten: (zon?.kwartieren ?? []).map((q) => ({ tMs: q.tMs, w: q.heldereLuchtW ?? 0 })), naam: 'zon bij heldere lucht' };
+  }
+
   /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
   function live(opState) {
     try {
@@ -124,5 +134,5 @@
     setInterval(klok, 10_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start };
+  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting };
 })(window);

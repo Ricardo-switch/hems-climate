@@ -149,9 +149,23 @@ describe('het rapport', () => {
     expect(met.vandaag.opgewektKwh).toBe(3);
   });
 
-  it('weet vandaag niets als er nog niets te zien was en niets werd verwacht', () => {
-    const r = weatherReport({ ...base, forecast, predicted: {}, todayWh: 0, nowMs: Date.parse('2026-10-08T05:00:00Z') });
+  it('weet vandaag niets als er nog niets te zien was, niets werd verwacht en het weer van nu onbekend is', () => {
+    const r = weatherReport({ ...base, forecast: forecast.filter((f) => f.offset > 0), predicted: {}, todayWh: 0, nowMs: Date.parse('2026-10-08T05:00:00Z') });
     expect(r.vandaag.verwachtKwh).toBeNull();
+    expect(r.vandaag.kwartieren).toEqual([]);
+  });
+
+  it('geeft een verwachting per kwartier: de heldere lucht maal het deel bij het weer van vandaag', () => {
+    // Vroeg in de ochtend, zonder zonkans van gisteren: het weer van nu (bewolkt) telt.
+    const r = weatherReport({ ...base, forecast, predicted: {}, todayWh: 0, nowMs: Date.parse('2026-10-08T05:00:00Z') });
+    expect(r.vandaag.kwartieren).toHaveLength(96);
+    const middag = r.vandaag.kwartieren.reduce((a, b) => (b.verwachtW > a.verwachtW ? b : a));
+    expect(middag.verwachtW).toBeGreaterThan(0);
+    const helder = weatherReport({ ...base, forecast, predicted: { '2026-10-08': 100 }, todayWh: 0, nowMs: Date.parse('2026-10-08T05:00:00Z') });
+    expect(Math.max(...helder.vandaag.kwartieren.map((q) => q.verwachtW))).toBeGreaterThan(middag.verwachtW);
+    // De lijn telt op tot de verwachting van de dag.
+    const kwh = r.vandaag.kwartieren.reduce((t, q) => t + q.verwachtW / 4, 0) / 1000;
+    expect(kwh).toBeCloseTo(r.vandaag.verwachtKwh!, 0);
   });
 });
 

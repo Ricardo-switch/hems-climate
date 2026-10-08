@@ -206,6 +206,11 @@ export interface WeatherReport {
     /** Het weer van nu, zoals Buienradar het zegt. */
     readonly soort: WeatherKind | null;
     readonly tekst: string | null;
+    /**
+     * De verwachting per kwartier van vandaag, in W: de geleerde heldere lucht
+     * maal het deel bij het weer van vandaag. Leeg als er niets is om op te rekenen.
+     */
+    readonly kwartieren: readonly { readonly tMs: number; readonly verwachtW: number }[];
   };
   readonly dagen: readonly WeatherDay[];
   /** Hoeveel dagen het huis naast de verwachting kon leggen, en hoeveel het afwijkt van de schatting. */
@@ -219,16 +224,32 @@ const dateKey = (ms: number, timeZone: string) => {
 };
 
 /** De heldere-luchtopbrengst van een dag, en tot een moment, in Wh. */
-function clearSkyWh(geometry: Geometry, location: Location, learned: SolarLearned | null, fromMs: number, toMs: number, untilMs = toMs): { total: number; sofar: number } {
+function clearSkyWh(
+  geometry: Geometry,
+  location: Location,
+  learned: SolarLearned | null,
+  fromMs: number,
+  toMs: number,
+  untilMs = toMs,
+): { total: number; sofar: number; quarters: { tMs: number; w: number }[] } {
   let total = 0;
   let sofar = 0;
+  const quarters: { tMs: number; w: number }[] = [];
   for (let t = fromMs; t < toMs; t += QUARTER_MS) {
-    const wh = clearSkyW(geometry, location, t + QUARTER_MS / 2, learned) / 4;
-    total += wh;
-    if (t + QUARTER_MS <= untilMs) sofar += wh;
+    const w = clearSkyW(geometry, location, t + QUARTER_MS / 2, learned);
+    quarters.push({ tMs: t, w });
+    total += w / 4;
+    if (t + QUARTER_MS <= untilMs) sofar += w / 4;
   }
-  return { total, sofar };
+  return { total, sofar, quarters };
 }
+
+/**
+ * Het deel bij het weer van nu, voor als er voor vandaag nog geen zonkans van
+ * gisteren is en de dag nog te jong is om op te rekenen: de eerste dag, of
+ * vroeg in de ochtend.
+ */
+const SHARE_NOW: Readonly<Record<WeatherKind, number>> = { zon: 0.85, half: 0.55, bewolkt: 0.3, regen: 0.22, onweer: 0.25, sneeuw: 0.15, mist: 0.25 };
 
 /**
  * Hoeveel de werkelijke opbrengst afwijkt van de schatting bij de zonkans:
@@ -292,9 +313,12 @@ export function weatherReport(input: {
   const soFar = today.sofar >= 300 ? input.todayWh / today.sofar : null;
   const fromForecast = expected != null ? share(expected) : null;
   const passed = today.total > 0 ? today.sofar / today.total : 0;
-  const restShare = soFar != null && fromForecast != null ? passed * soFar + (1 - passed) * fromForecast : soFar ?? fromForecast;
-  const restWh = Math.max(0, today.total - today.sofar);
   const now = input.forecast.find((f) => f.offset === 0);
+  const fromNow = now?.soort != null ? SHARE_NOW[now.soort] * geleerd.factor : null;
+  // Wat gisteren voor vandaag werd verwacht; anders het weer van nu.
+  const prior = fromForecast ?? fromNow;
+  const restShare = soFar != null && prior != null ? passed * soFar + (1 - passed) * prior : soFar ?? prior;
+  const restWh = Math.max(0, today.total - today.sofar);
 
   return {
     bron: 'Buienradar',
@@ -306,6 +330,7 @@ export function weatherReport(input: {
       zonkansPct: expected ?? null,
       soort: now?.soort ?? null,
       tekst: now?.tekst ?? null,
+      kwartieren: restShare == null ? [] : today.quarters.map((q) => ({ tMs: q.tMs, verwachtW: Math.round(q.w * Math.min(1, restShare)) })),
     },
     dagen: input.forecast.filter((f) => f.offset >= 1).map((f) => {
       const from = dayStart(f.offset);

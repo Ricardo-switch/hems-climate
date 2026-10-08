@@ -48,9 +48,11 @@
   button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .weerknop svg { width: 20px; height: 20px; margin-left: -4px; }
   .weer { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(12, 20, 34, 0.94); z-index: 5; }
-  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; }
+  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; overflow: auto; }
   #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; border-radius: 26px; z-index: 30; }
   .weer-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
+  /* Niet krimpen: wat niet past, scrolt in het blad. */
+  .weer > * { flex-shrink: 0; }
   .weer .weerkop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
   .weer .sluit { width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; }
   .weer .rij { display: grid; grid-template-columns: 74px 30px 1fr; gap: 4px 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }

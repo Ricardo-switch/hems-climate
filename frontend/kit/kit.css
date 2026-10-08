@@ -328,6 +328,18 @@ button {
   overflow: visible;
 }
 
+/* Een kamer om op te tikken (huis.teken met `tik`): pas zichtbaar onder de vinger of met de toetsen. */
+.sc-tik {
+  cursor: pointer;
+  outline: none;
+}
+.sc-tik:hover,
+.sc-tik:focus-visible {
+  fill: rgba(238, 243, 247, 0.05);
+  stroke: rgba(238, 243, 247, 0.55);
+  stroke-width: 2;
+}
+
 /* ----------------------------------------------------------------- beweging */
 
 @keyframes sc-stroom {

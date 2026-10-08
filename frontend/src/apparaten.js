@@ -16,11 +16,13 @@ let state = null;
 let vandaag = null;
 let zon = null;
 let aansluiting = null;
+let weer = null;
 /** Het antwoord op de laatste keuze per apparaat, tot het volgende besluit het overneemt. */
 const gezegd = new Map();
 
 async function laadAlles() {
-  const [s, v, z, a] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting')]);
+  const [s, v, z, a, w] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting'), haal('api/weer')]);
+  if (w.status === 'fulfilled') weer = w.value;
   if (s.status === 'fulfilled') state = s.value;
   if (v.status === 'fulfilled') vandaag = v.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -261,12 +263,13 @@ function tekenDag() {
     const t0 = vandaag.vanMs + 6 * 3_600_000;
     const t1 = vandaag.vanMs + 24 * 3_600_000;
     const x = (t) => links + Math.max(0, Math.min(1, (t - t0) / (t1 - t0))) * (B - links);
-    const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...(zon?.kwartieren ?? []).map((q) => q.heldereLuchtW ?? 0));
+    const lijn2 = app.verwachting(zon, weer);
+    const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...lijn2.punten.map((q) => q.w));
     const y = (w) => 8 + zonH - (w / max) * zonH;
     const binnen = kw.filter((q) => q.tMs >= t0 - 15 * 60_000);
     const lijn = binnen.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.zonW ?? 0).toFixed(1)}`).join(' ');
     const vlak = binnen.length ? `${lijn} L ${x(binnen[binnen.length - 1].tMs).toFixed(1)} ${y(0)} L ${x(binnen[0].tMs).toFixed(1)} ${y(0)} Z` : '';
-    const helder = (zon?.kwartieren ?? []).filter((q) => q.tMs >= t0).map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.heldereLuchtW ?? 0).toFixed(1)}`).join(' ');
+    const helder = lijn2.punten.filter((q) => q.tMs >= t0).map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.w).toFixed(1)}`).join(' ');
     const top = y(0) + 14;
     const rijen = banen
       .map((b, i) => {
@@ -281,7 +284,7 @@ function tekenDag() {
     const uren = [6, 9, 12, 15, 18, 21, 24].filter((u) => !tel || u % 6 === 0).map((u) => `<text x="${x(vandaag.vanMs + u * 3_600_000).toFixed(1)}" y="${hoog - 4}" text-anchor="${u === 24 ? 'end' : u === 6 ? 'start' : 'middle'}">${String(u).padStart(2, '0')}</text>`).join('');
     const nuX = x(Date.now());
     box.innerHTML = `
-      <div class="dagkop"><h2 class="kop-3">Vandaag</h2><span class="mini legenda-dag"><span><i class="vlak"></i>draaide</span><span><i class="vlak zou"></i>zou Smart Climate doen</span><span><i class="streep"></i>zon bij heldere lucht</span></span></div>
+      <div class="dagkop"><h2 class="kop-3">Vandaag</h2><span class="mini legenda-dag"><span><i class="vlak"></i>draaide</span><span><i class="vlak zou"></i>zou Smart Climate doen</span><span><i class="streep"></i>${esc(lijn2.naam)}</span></span></div>
       <svg viewBox="0 0 ${B} ${hoog}" width="100%" role="img" aria-label="De zon van vandaag, en wanneer de apparaten draaiden">
         <defs><linearGradient id="dagzon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient><pattern id="dagrest" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="#F7B548" opacity="0.6"/></pattern></defs>
         ${helder ? `<path d="${helder}" fill="none" stroke="#F7B548" stroke-opacity="0.4" stroke-dasharray="2 4"/>` : ''}

@@ -4653,7 +4653,10 @@ van vandaag aan te tikken is. Gekozen op 8 oktober 2026.
   opbrengst. Na vijf dagen weegt het geleerde even zwaar als de schatting.
 - **Vandaag** is wat er al was, plus de rest van de dag naar hoe hij tot nu toe
   verliep en wat gisteren voor vandaag werd verwacht; hoe later op de dag, hoe
-  zwaarder het eerste weegt.
+  zwaarder het eerste weegt. Is er voor vandaag nog niets verwacht, dan telt het
+  weer van nu. Per kwartier wordt dat de stippellijn bij de zon van vandaag, op
+  Thuis en Apparaten: een echte verwachting in plaats van het gunstigste geval.
+  Alleen zonder weer staat er nog de zon bij een heldere lucht, met die naam.
 - **Op Thuis** opent de knop met de buitentemperatuur het weer: vandaag en de
   vijf dagen erna, elk met een balk voor de opbrengst. De kaart Vandaag noemt
   naast wat er is opgewekt wat er verwacht wordt.
