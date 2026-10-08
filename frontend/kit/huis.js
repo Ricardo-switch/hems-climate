@@ -639,7 +639,10 @@
           huis.push(`<polygon points="${b[0]},${b[1]} ${l1[0]},${l1[1]} ${r1[0]},${r1[1]}" fill="${kleur}" opacity="0.07"/>`);
         }
       } else if (app.soort === 'droger' || app.soort === 'wasmachine' || app.soort === 'vaatwasser') {
-        let dx = app.x != null ? x0 + (x1 - x0) * app.x : x1 - 0.7;
+        // In het midden en wat naar voren: rechts hangt de airco aan de
+        // achterwand, en linksboven staat de naam van de kamer.
+        let dx = app.x != null ? x0 + (x1 - x0) * app.x : x1 - x0 > 1.6 ? xm - 0.1 : x0 + 0.3;
+        const dy = app.x != null || plafond ? 0.15 : Math.max(0.15, D * 0.42);
         if (plafond) {
           // Onder het dak: waar hij rechtop past, en zo ver mogelijk van het
           // midden van de kamer, waar de naam en de temperatuur staan.
@@ -649,19 +652,19 @@
           plekken.sort((a, b) => Math.abs(b + 0.25 - xm) - Math.abs(a + 0.25 - xm));
           dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - 0.6, W / 2 - 0.25));
         }
-        plek[app.soort] = [dx + 0.25, 0.4, z0 + 0.6];
-        huis.push(doos(dx, 0.15, z0, 0.5, 0.5, 0.6, ['#e9eef2', '#d7dee5', '#b9c3cd']));
+        plek[app.soort] = [dx + 0.25, dy + 0.25, z0 + 0.6];
+        huis.push(doos(dx, dy, z0, 0.5, 0.5, 0.6, ['#e9eef2', '#d7dee5', '#b9c3cd']));
         if (app.soort !== 'vaatwasser') {
-          huis.push(cirkelOpVoorkant(dx + 0.25, 0.651, z0 + 0.27, 0.15, 'fill="#5e6c7b" stroke="#9aa7b4" stroke-width="1.5"'));
+          huis.push(cirkelOpVoorkant(dx + 0.25, dy + 0.501, z0 + 0.27, 0.15, 'fill="#5e6c7b" stroke="#9aa7b4" stroke-width="1.5"'));
           if (app.aan) {
-            const c = P(dx + 0.25, 0.652, z0 + 0.27);
-            huis.push(`<g class="sc-trommel" style="transform-origin:${c[0]}px ${c[1]}px">${cirkelOpVoorkant(dx + 0.25, 0.652, z0 + 0.27, 0.1, `fill="none" stroke="${KLEUR.zon}" stroke-width="2" stroke-dasharray="4 4"`)}</g>`);
+            const c = P(dx + 0.25, dy + 0.502, z0 + 0.27);
+            huis.push(`<g class="sc-trommel" style="transform-origin:${c[0]}px ${c[1]}px">${cirkelOpVoorkant(dx + 0.25, dy + 0.502, z0 + 0.27, 0.1, `fill="none" stroke="${KLEUR.zon}" stroke-width="2" stroke-dasharray="4 4"`)}</g>`);
           }
         } else {
-          huis.push(poly([[dx + 0.06, 0.651, z0 + 0.5], [dx + 0.44, 0.651, z0 + 0.5], [dx + 0.44, 0.651, z0 + 0.53], [dx + 0.06, 0.651, z0 + 0.53]], 'fill="#8a97a4"'));
+          huis.push(poly([[dx + 0.06, dy + 0.501, z0 + 0.5], [dx + 0.44, dy + 0.501, z0 + 0.5], [dx + 0.44, dy + 0.501, z0 + 0.53], [dx + 0.06, dy + 0.501, z0 + 0.53]], 'fill="#8a97a4"'));
         }
         if (app.aan) {
-          const c = P(dx + 0.25, 0.4, z0 + 0.62);
+          const c = P(dx + 0.25, dy + 0.25, z0 + 0.62);
           huis.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${k * 0.32}" fill="url(#${id}-zon)" opacity="0.35"/>`);
         }
       } else if (app.soort === 'cv') {

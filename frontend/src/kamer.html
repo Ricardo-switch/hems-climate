@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Kamer · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<style>
+  /* De wand (schets Wand-Kamer): het huis links, het blad rechts. */
+  .pad { display: flex; gap: 8px; align-items: center; color: var(--gedempt); font-size: 14px; font-weight: 600; }
+  .pad a { color: var(--zacht); text-decoration: none; }
+  .pad a:hover { color: var(--tekst); }
+  .pad b { color: var(--tekst); }
+  #wand .kop { position: absolute; left: 22px; top: 58px; width: 760px; z-index: 2; }
+  .temp { font-family: var(--kop); font-size: 76px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .kop .lead { margin-top: 8px; max-width: 54ch; }
+  .etages { display: flex; gap: 8px; margin-top: 14px; }
+  .etages button { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .etages button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  #wand .podium { position: absolute; left: 0; top: 230px; width: 800px; height: 560px; }
+  #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: 400px; padding: 22px; overflow: auto; }
+
+  .blad { display: flex; flex-direction: column; gap: 16px; }
+  .blad > * { flex-shrink: 0; }
+  .terug { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--zacht); background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+  .terug:hover { color: var(--tekst); }
+  .bladkop { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .bladkop h2 { margin: 0; }
+  .groepkop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .rij { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .rij:first-of-type { border-top: 0; }
+  .rij .naam { flex: 1; min-width: 0; }
+  .rij .naam b { display: block; font-size: 15px; font-weight: 600; }
+  .rij .naam span { font-size: 13px; color: var(--zacht); }
+  .rij .chev { color: var(--gedempt); font-size: 18px; }
+  .rij svg.ic { width: 22px; height: 22px; flex: none; color: var(--zacht); }
+  .rij.aan svg.ic { color: var(--zon); }
+  .gloei { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+  /* Een schakelaar: een echte knop met role switch. */
+  .schakel { width: 50px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); position: relative; flex: none; border: 0; cursor: pointer; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #c9d3dc; transition: left 0.15s; }
+  .schakel[aria-checked='true'] { background: #f2c27a; }
+  .schakel[aria-checked='true']::after { left: 23px; background: #fff; }
+  .schakel:focus-visible, .rij:focus-visible, .scene:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+
+  .scenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scene { border: 0; border-radius: 16px; overflow: hidden; position: relative; height: 74px; display: flex; align-items: end; padding: 8px 10px; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); background-size: cover; background-position: center; }
+  .scene[aria-pressed='true'] { box-shadow: inset 0 0 0 2px #fff; }
+  .scene span { position: relative; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); text-align: left; }
+
+  /* De bladen van de apparaten (schets Wand-Bedienen). */
+  .beeld { display: grid; place-items: center; }
+  .beeld svg { width: 100%; max-width: 300px; height: auto; }
+  .doelrij { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .rond { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.06); color: var(--tekst); font: inherit; font-size: 26px; font-weight: 600; cursor: pointer; }
+  .regel { display: flex; gap: 10px; align-items: start; font-size: 13.5px; line-height: 1.45; color: var(--zacht); padding: 10px 12px; border-radius: 12px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.25); }
+  .regel:empty { display: none; }
+  .feit { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--zacht); }
+  .feit b { color: var(--tekst); }
+  .strook { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+  .strook i { position: absolute; top: 0; height: 12px; border-radius: 6px; }
+  .strook .nu { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--tekst); }
+  .uren { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+
+  /* De lamp (schets Lamp): helderheid, wit of kleur. */
+  .schuif { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; border-radius: 14px; background: linear-gradient(90deg, rgba(255, 194, 122, 0.15), rgba(255, 194, 122, 0.85)); outline: none; margin: 0; }
+  .schuif::-webkit-slider-thumb { -webkit-appearance: none; width: 36px; height: 36px; border-radius: 11px; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4); cursor: pointer; }
+  .schuif::-moz-range-thumb { width: 36px; height: 36px; border-radius: 11px; background: #fff; border: 0; cursor: pointer; }
+  .schuif.wit { background: linear-gradient(90deg, #ffb46b, #fff1dc 55%, #cfe4ff); }
+  .schuif:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .wiel { width: 220px; height: 220px; border-radius: 50%; margin: 0 auto; position: relative; touch-action: none; cursor: crosshair; background: radial-gradient(circle closest-side, #fff 0, rgba(255, 255, 255, 0) 100%), conic-gradient(from 90deg, hsl(0 100% 55%), hsl(60 100% 55%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 60%), hsl(300 100% 55%), hsl(360 100% 55%)); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
+  .wiel i { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); pointer-events: none; }
+
+  /* De telefoon. */
+  #tel .boven { padding: 18px 18px 0; }
+  #tel .temp { font-size: 52px; }
+  #tel .kop .lead { font-size: 15px; }
+  #tel .podium { width: 100%; height: 280px; }
+  #tel .blad { padding: 16px 18px 120px; margin-top: -10px; border-radius: 28px 28px 0 0; background: rgba(12, 20, 34, 0.92); border-top: 1px solid var(--glas-rand); }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <main>
+      <div class="pad" data-pad></div>
+      <div class="kop">
+        <div style="display: flex; align-items: baseline; gap: 16px"><span class="temp" data-temp></span><span class="kop-2" data-naam></span></div>
+        <p class="lead" data-zin></p>
+        <div class="etages" role="group" aria-label="Etage" data-etages></div>
+      </div>
+      <div class="podium" id="podium-wand"></div>
+      <aside class="glas blad" data-blad aria-live="polite"></aside>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="boven">
+      <div class="pad" data-pad></div>
+      <div class="kop" style="margin-top: 10px">
+        <div style="display: flex; align-items: baseline; gap: 12px"><span class="temp" data-temp></span><span class="kop-2" data-naam></span></div>
+        <p class="lead" data-zin></p>
+      </div>
+    </div>
+    <div class="podium" id="podium-tel"></div>
+    <section class="blad" data-blad aria-live="polite"></section>
+    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  </div>
+  <script src="kit/nav.js"></script>
+  <script src="kit/huis.js"></script>
+  <script src="basis.js"></script>
+  <script src="huismodel.js"></script>
+  <script src="kamer.js"></script>
+</body>
+</html>

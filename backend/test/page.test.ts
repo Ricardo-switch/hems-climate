@@ -804,6 +804,46 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     }, 20_000);
   }
 
+  /*
+   * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
+   * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
+   * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.
+   */
+  it('toont Kamer van ontwerp 2, met het blad van een klimaatapparaat en een lamp die schakelt', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; zoneId: string | null; apparaten: { id: string; soort: string }[] }[] }[] };
+    const kamers = huisNu.etages.flatMap((e) => e.ruimtes);
+    const metKlimaat = kamers.find((r) => r.zoneId && r.apparaten.some((d) => d.soort === 'klimaat'))!;
+    const metLamp = kamers.find((r) => r.apparaten.some((d) => d.soort === 'licht'))!;
+
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metKlimaat.id)}`);
+    await p.locator('#wand [data-blad] .bladkop').waitFor();
+    // Het huis met tikvlakken, en de wand zonder scrollen.
+    await p.locator('#wand svg.sc-huis .sc-tik').first().waitFor();
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    // Een klimaatapparaat: het blad zegt wat het huis zou doen, en schakelt niets.
+    await p.locator('#wand [data-blad] .rij[data-open]').first().click();
+    await p.locator('#wand [data-blad] .doelrij').waitFor();
+    await p.locator('#wand [data-blad] [data-doel="0.5"]').click();
+    await p.locator('#wand [data-blad] [data-wens]').first().click();
+    await p.locator('#wand [data-gezegd]').filter({ hasText: 'zou' }).waitFor();
+    await p.locator('#wand [data-blad] [data-terug]').click();
+    await p.locator('#wand [data-blad] .bladkop').waitFor();
+
+    // Een lamp: de schakelaar gaat via de deur naar Home Assistant.
+    const voor = lightCalls.length;
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metLamp.id)}`);
+    await p.locator('#wand [data-blad] [data-schakel]').first().click();
+    await expect.poll(() => lightCalls.length).toBeGreaterThan(voor);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
   it('wijst wie niet is ingelogd bovenin de weg naar de inlog van Home Assistant (besluit 99)', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());

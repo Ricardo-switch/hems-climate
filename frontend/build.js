@@ -112,7 +112,8 @@ async function stempel() {
   const paginas = {
     'index.html': ['app.css', 'app.js'],
     'nieuw.html': ['nieuw.js'],
-    'thuis.html': ['thuis.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'thuis.html': ['thuis.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {

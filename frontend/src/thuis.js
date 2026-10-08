@@ -33,64 +33,8 @@ async function laadAlles() {
 
 /* --------------------------------------- van de dienst naar het huis */
 
-const ACTIEF = ['koelt', 'verwarmt', 'warmt voor', 'droogt', 'ventileert'];
-const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
-const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc)\b/i;
-
-function kleurVanLicht(a) {
-  const l = a.licht;
-  if (l?.tint) return `hsl(${Math.round(l.tint[0])} ${Math.round(Math.min(100, l.tint[1]))}% 70%)`;
-  if (l?.kelvin) return l.kelvin < 2800 ? '#FFC27A' : l.kelvin < 4000 ? '#FFD9A0' : '#FFF1DC';
-  return '#FFD9A0';
-}
-
-/** De naam van een zone in een zin: "woonkamer", zoals de regeling hem noemt. */
-function zoneNaam(zoneId) {
-  return String(zoneId).replace(/[-_]+/g, ' ').toLowerCase();
-}
-
-function standVan(zoneId) {
-  const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
-  if (!k) return null;
-  return { cool: 'koelt', heat: 'warmt', wait: 'wacht', ok: 'goed' }[k.soort] ?? null;
-}
-
-function kortVan(zoneId) {
-  const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
-  if (!k?.kort) return null;
-  return k.kort.charAt(0).toLowerCase() + k.kort.slice(1);
-}
-
-function kamerModel(r) {
-  const apps = r.apparaten ?? [];
-  const klimaat = apps.filter((a) => a.soort === 'klimaat');
-  const lampen = apps.filter((a) => a.soort === 'licht');
-  const screens = apps.filter((a) => a.soort === 'screen');
-  // Uitstelbare apparaten (besluit 98): de droger draait zichtbaar in zijn kamer.
-  const witgoed = apps.filter((a) => a.soort === 'apparaat');
-  const apparaten = [];
-  for (const a of klimaat) {
-    const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
-    const warm = /verwarmt|warmt voor/.test(a.klimaat?.actie ?? '');
-    if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
-    else apparaten.push({ soort: 'radiator', aan });
-  }
-  // Hooguit twee lampen in beeld: wat aan is eerst.
-  [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
-  for (const a of witgoed.slice(0, 2)) apparaten.push({ soort: /vaat/i.test(a.naam) ? 'vaatwasser' : /was/i.test(a.naam) && !/droog|droger/i.test(a.naam) ? 'wasmachine' : 'droger', aan: a.aan });
-  if (screens[0]) apparaten.push({ soort: 'screen', dicht: screens[0].positiePct == null ? 0 : 1 - screens[0].positiePct / 100 });
-  const gewicht = klimaat.length ? 1.4 : GANG.test(r.naam) ? 0.55 : r.temperatuurC != null ? 1.0 : 0.8;
-  return {
-    id: r.id,
-    naam: r.naam,
-    gewicht,
-    temp: r.temperatuurC == null ? null : `${nl(r.temperatuurC)}°`,
-    stand: r.zoneId ? standVan(r.zoneId) : null,
-    zin: r.zoneId ? kortVan(r.zoneId) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
-    zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
-    apparaten,
-  };
-}
+const { ACTIEF, BUITEN, kleurVanLicht, zoneNaam } = huismodel;
+const kamerModel = (r) => huismodel.kamerModel(r, state);
 
 function huisModel() {
   const s = state?.bewoner?.stromen ?? {};
@@ -185,7 +129,7 @@ function teken() {
 
   const model = huisModel();
   lucht(model.tijd, model.seizoen, model.wolken);
-  huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+  huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14 });
 
   tekenVandaag();
@@ -295,9 +239,9 @@ function tekenKamersTel() {
   const kamers = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
   box.innerHTML = kamers
     .map((r) => {
-      const stand = standVan(r.zoneId);
+      const stand = huismodel.standVan(r.zoneId, state);
       const kort = state.bewoner?.kamers?.find((x) => x.zoneId === r.zoneId)?.kort ?? '';
-      return `<a class="glas kamer" href="nieuw.html#huis"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span class="naam"><b>${esc(r.naam)}</b><span style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</span></span><span class="getal">${nl(r.temperatuurC)}°</span></a>`;
+      return `<a class="glas kamer" href="kamer.html#${encodeURIComponent(r.id)}"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span class="naam"><b>${esc(r.naam)}</b><span style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</span></span><span class="getal">${nl(r.temperatuurC)}°</span></a>`;
     })
     .join('');
 }
@@ -390,6 +334,14 @@ $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
 addEventListener('keydown', (e) => e.key === 'Escape' && sluitWeer());
 $$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => (location.href = 'nieuw.html#huis')));
+// Een tik op een kamer in het huis opent die kamer.
+const openKamer = (e) => {
+  const k = e.target.closest('[data-kamer]');
+  if (k) location.href = `kamer.html#${encodeURIComponent(k.dataset.kamer)}`;
+};
+const podium = document.getElementById('podium-wand');
+podium.addEventListener('click', openKamer);
+podium.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openKamer(e)));
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
 app.live((nieuw) => {
