@@ -138,6 +138,8 @@ verwijzing bestaat.
 - **Het weer** van vandaag en vijf dagen komt van Buienradar uit Home Assistant,
   met wat de panelen dan leveren: de geleerde heldere lucht maal de zonkans,
   bijgesteld met de eigen opbrengst. Alleen om te tonen ([105]).
+- **Camera's** zijn te bekijken in Kamer, alleen lezen en alleen met inlog
+  ([106]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -292,4 +294,5 @@ verwijzing bestaat.
 [103]: DECISIONS.md#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt
 [104]: DECISIONS.md#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code
 [105]: DECISIONS.md#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren
+[106]: DECISIONS.md#106-de-cameras-bekijken-in-de-app-alleen-lezen-en-alleen-met-inlog
 <!-- links:einde -->

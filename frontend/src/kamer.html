@@ -74,6 +74,13 @@
   .wiel { width: 220px; height: 220px; border-radius: 50%; margin: 0 auto; position: relative; touch-action: none; cursor: crosshair; background: radial-gradient(circle closest-side, #fff 0, rgba(255, 255, 255, 0) 100%), conic-gradient(from 90deg, hsl(0 100% 55%), hsl(60 100% 55%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 60%), hsl(300 100% 55%), hsl(360 100% 55%)); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
   .wiel i { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); pointer-events: none; }
 
+  /* De camera (besluit 106): het beeld op de breedte van het blad. */
+  .camerabeeld { position: relative; border-radius: 16px; overflow: hidden; background: #0b1424; min-height: 120px; display: grid; place-items: center; padding: 0; }
+  .camerabeeld:has(> p), .camerabeeld:has(> a) { padding: 18px; place-items: start; }
+  .camerabeeld img { display: block; width: 100%; height: auto; }
+  .camerabeeld .live { position: absolute; left: 10px; top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(4, 8, 16, 0.6); font-size: 12px; font-weight: 700; }
+  .camerabeeld .live .stip { width: 8px; height: 8px; background: #ff5d5d; }
+
   /* De telefoon. */
   #tel .boven { padding: 18px 18px 0; }
   #tel .temp { font-size: 52px; }

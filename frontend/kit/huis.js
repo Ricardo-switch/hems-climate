@@ -823,6 +823,10 @@
       return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
     }
 
+    // Buiten om op te tikken: de oprit en de tuin, als ze een kamer in de indeling zijn.
+    if (model.oprit?.id) tik(model.oprit, [[-2.9, -0.4, 0], [-1.15, -0.4, 0], [-1.15, D + 1.7, 0], [-2.9, D + 1.7, 0]]);
+    if (model.tuin?.id) tik(model.tuin, [[W + 0.3, -1.95, 0], [W + 2.05, -1.95, 0], [W + 2.05, 0.25, 0], [W + 0.3, 0.25, 0]]);
+
     return `<svg class="sc-huis" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="img" aria-label="${esc(model.beschrijving ?? 'Het huis')}">
       <defs>${defs.join('')}</defs>
       <g>${lucht.join('')}</g>

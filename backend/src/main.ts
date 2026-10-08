@@ -35,6 +35,7 @@ import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight } from './web/today.js';
 import { readForecast, WeatherLog } from './web/weather.js';
+import { findCameras, httpBase } from './web/camera.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -686,6 +687,12 @@ if (webPort != null) {
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog } } : {}),
+    // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
+    camera: {
+      base: httpBase(url!),
+      token: token!,
+      ids: () => new Set(houseRegisters ? findCameras(houseRegisters.entities, houseRegisters.devices, allStates).map((c) => c.entityId) : []),
+    },
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {

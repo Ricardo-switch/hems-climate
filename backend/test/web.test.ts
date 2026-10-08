@@ -9,6 +9,7 @@
 
 import { DOOR_ROLES, SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
 import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
+import { createServer } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -95,6 +96,7 @@ async function start(options: {
   energy?: { store: EnergyStore; source: EnergySource };
   scenePicturesDir?: string;
   connection?: { store: ConnectionStore; view: () => ConnectionView; found: () => { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[] } };
+  camera?: { base: string; token: string; ids: () => ReadonlySet<string> };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -120,6 +122,7 @@ async function start(options: {
         ...(options.energy ? { energy: options.energy } : {}),
         ...(options.scenePicturesDir ? { scenePicturesDir: options.scenePicturesDir } : {}),
         ...(options.connection ? { connection: options.connection } : {}),
+        ...(options.camera ? { camera: options.camera } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -1237,6 +1240,38 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
   }
 
   const gevoel = JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' });
+
+  it('laat een camera alleen zien na het inloggen, en alleen een camera van het huis (besluit 106)', async () => {
+    // Een nep-Home Assistant die het plaatje geeft, en onthoudt met welk token.
+    const gezien: string[] = [];
+    const ha = createServer((req, res) => {
+      gezien.push(`${req.url} ${req.headers.authorization}`);
+      res.writeHead(200, { 'content-type': 'image/jpeg' });
+      res.end(Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+    });
+    await new Promise<void>((r) => ha.listen(0, '127.0.0.1', () => r()));
+    cleanups.push(() => new Promise<void>((r) => ha.close(() => r())));
+    const haPort = (ha.address() as { port: number }).port;
+    const dir = await mkdtemp(join(tmpdir(), 'hems-camera-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin: false });
+    const access: Access = { kind: 'sessions', store: new SessionStore({ logDir: dir }), login };
+    const { base } = await start({ access, camera: { base: `http://127.0.0.1:${haPort}`, token: 'geheim', ids: () => new Set(['camera.oprit_vloeiend']) } });
+
+    const zonder = await fetch(`${base}/api/camera?id=camera.oprit_vloeiend`);
+    expect(zonder.status).toBe(401);
+    expect(gezien).toEqual([]);
+
+    const cookie = await logIn(base);
+    const onbekend = await fetch(`${base}/api/camera?id=camera.iets_anders`, { headers: { cookie } });
+    expect(onbekend.status).toBe(404);
+    const plaatje = await fetch(`${base}/api/camera?id=camera.oprit_vloeiend`, { headers: { cookie } });
+    expect(plaatje.status).toBe(200);
+    expect(plaatje.headers.get('content-type')).toBe('image/jpeg');
+    expect([...new Uint8Array(await plaatje.arrayBuffer())]).toEqual([0xff, 0xd8, 0xff, 0xd9]);
+    // Alleen lezen, met het token van de dienst; het token komt nooit bij de pagina.
+    expect(gezien).toEqual(['/api/camera_proxy/camera.oprit_vloeiend Bearer geheim']);
+  });
 
   it('weigert een deur zonder inlog, en wijst de weg naar binnen', async () => {
     const { base } = await withLogin(false);

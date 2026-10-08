@@ -24,6 +24,7 @@
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
@@ -247,6 +248,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let connStore: ConnectionStore;
   const sessions = new SessionStore();
   let sessionId = '';
+  let stopCamera: () => Promise<void> = async () => {};
   const pageErrors: string[] = [];
   const lightCalls: string[] = [];
   const lightData: Record<string, unknown>[] = [];
@@ -277,6 +279,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       ] as FoundAppliance[],
     };
 
+    // Een nagemaakte Home Assistant voor het camerabeeld: een klein grijs plaatje.
+    const haCamera = createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'image/svg+xml' });
+      res.end('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="36"><rect width="64" height="36" fill="#445"/></svg>');
+    });
+    await new Promise<void>((r) => haCamera.listen(0, '127.0.0.1', () => r()));
+    const haCameraPort = (haCamera.address() as { port: number }).port;
+    stopCamera = () => new Promise<void>((r) => haCamera.close(() => r()));
+
     // Niet zomaar poort 0: Chromium weigert dezelfde poorten. Zie ports.ts.
     let port: number;
     ({ server, port } = await onUsablePort(
@@ -304,6 +315,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             callScene: async (id) => void sceneCalls.push(id),
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          // De camera (besluit 106): een nagemaakte Home Assistant die een plaatje geeft.
+          camera: { base: `http://127.0.0.1:${haCameraPort}`, token: 'test', ids: () => new Set(['camera.camera_oprit_vloeiend']) },
           // Het weer (besluit 105): twee dagen van een nagemaakte Buienradar.
           weather: {
             forecast: () => [
@@ -364,6 +377,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
   afterAll(async () => {
     await browser?.close();
+    await stopCamera();
     await server?.stop();
     if (dir) await rm(dir, { recursive: true, force: true });
   });
@@ -736,6 +750,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.locator(`${zichtbaar} [data-kop]`).textContent()).toBe(stateNu.bewoner.kop.titel);
       if (stand === 'wand') {
         expect(await p.locator('#wand .sc-kamer').count()).toBeGreaterThan(0);
+        // Ook buiten is aan te tikken: de oprit en de tuin openen hun kamer.
+        const tikbaar = await p.locator('#wand .sc-tik').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+        expect(tikbaar).toEqual(expect.arrayContaining(['Oprit', 'Tuin']));
         // Nooit scrollen aan de muur, en de hele wand binnen het scherm.
         expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight && document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
         const vak = await p.locator('#wand').boundingBox();
@@ -914,6 +931,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-gezegd]').filter({ hasText: 'zou' }).waitFor();
     await p.locator('#wand [data-blad] [data-terug]').click();
     await p.locator('#wand [data-blad] .bladkop').waitFor();
+
+    // De camera op de oprit: het beeld, want deze browser is ingelogd.
+    const oprit = kamers.find((r) => r.apparaten.some((d) => d.soort === 'camera'))!;
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(oprit.id)}/camera.camera_oprit_vloeiend`);
+    await p.locator('#wand .camerabeeld img').waitFor();
 
     // Een lamp: de schakelaar gaat via de deur naar Home Assistant.
     const voor = lightCalls.length;

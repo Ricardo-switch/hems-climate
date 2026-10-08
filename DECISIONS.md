@@ -129,6 +129,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [97. Lampen aan en uit vanuit de app; "alles"-groepen zijn geen lamp](#97-lampen-aan-en-uit-vanuit-de-app-alles-groepen-zijn-geen-lamp) — *aangevuld door 100*
 - [99. Bedienen vraagt een inlog, met je Home Assistant-account; kijken blijft open](#99-bedienen-vraagt-een-inlog-met-je-home-assistant-account-kijken-blijft-open)
 - [100. Licht in kleur en wit, en de scènes van Hue (aanvulling op 97)](#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97)
+- [106. De camera's bekijken in de app, alleen lezen en alleen met inlog](#106-de-cameras-bekijken-in-de-app-alleen-lezen-en-alleen-met-inlog)
 
 **Uitrol en beheer**
 
@@ -4670,6 +4671,32 @@ van vandaag aan te tikken is. Gekozen op 8 oktober 2026.
   naast wat er is opgewekt wat er verwacht wordt.
 - **Alleen om te tonen.** De regeling gebruikt het weer niet; dat komt met de
   tarieven en de prognoses (E).
+
+---
+
+## 106. De camera's bekijken in de app, alleen lezen en alleen met inlog
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Op 8 oktober 2026 vroeg de bewoner of de camera op de oprit in de app te
+bekijken is, met de vloeiende stream. Home Assistant heeft twee Reolink-camera's
+(de oprit en de deurbel), elk met een vloeiende en een heldere stream, en
+dezelfde camera's nog eens via de Synology-NAS. Gekozen op 8 oktober 2026.
+
+*Besluit:*
+
+- **Een camera is een apparaat in het huis,** in de kamer van zijn apparaat in
+  Home Assistant, of waar de bewoner hem indeelt. Per camera één: de vloeiende
+  stream (Reolink `sub`), licht genoeg voor de tablet; een tweede integratie
+  met dezelfde camera telt niet dubbel, het buienradarplaatje is geen camera.
+- **Alleen lezen.** De dienst haalt het beeld op bij Home Assistant
+  (`camera_proxy` voor één plaatje, `camera_proxy_stream` voor live) met zijn
+  eigen token, en geeft het door. Het token komt nooit bij de pagina. Er gaat
+  niets naar een camera toe; de schrijfgrens van besluit 97 blijft gelijk.
+- **Kijken vraagt de inlog van besluit 99,** ook al is de rest van de weergave
+  open op het thuisnetwerk en in het tailnet: het beeld van de oprit en de
+  voordeur is privé. Alleen camera's die het huis toont, en hooguit vier live
+  beelden tegelijk. Het beeld wordt nergens bewaard.
 
 ---
 

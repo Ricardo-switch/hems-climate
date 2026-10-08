@@ -18,6 +18,7 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
+import { Readable } from 'node:stream';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -40,6 +41,7 @@ import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, parseQuestion } from './assistant.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
+import { CAMERA_ID } from './camera.js';
 import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } from './weather.js';
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
@@ -143,6 +145,11 @@ export interface WebOptions {
    * verwacht. Zonder dit bestaat de route niet.
    */
   readonly weather?: { readonly forecast: () => readonly ForecastDay[]; readonly log: WeatherLog };
+  /**
+   * De camera's bekijken (besluit 106): alleen lezen, via de proxy van Home
+   * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
+   */
+  readonly camera?: { readonly base: string; readonly token: string; readonly ids: () => ReadonlySet<string> };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -469,6 +476,15 @@ export class WebServer {
           return;
         }
       }
+    }
+
+    /*
+     * Een camera bekijken (besluit 106): live, of één plaatje. Alleen met inlog,
+     * alleen camera's die het huis toont, en alleen lezen bij Home Assistant.
+     */
+    if (path === '/api/camera' && (method === 'GET' || method === 'HEAD')) {
+      await this.#camera(req, res, url);
+      return;
     }
 
     if (path === '/api/sessie' || path.startsWith('/auth/')) {
@@ -1234,6 +1250,57 @@ export class WebServer {
       });
     }
     return report;
+  }
+
+  /** Hoeveel live-beelden er nu lopen; meer dan dit belast Home Assistant en de NAS te veel. */
+  #liveStreams = 0;
+
+  async #camera(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
+    const cam = this.#options.camera;
+    const access = this.#options.access;
+    if (cam == null) {
+      sendJson(res, 503, { wachten: 'camera’s bekijken staat niet aan' });
+      return;
+    }
+    if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) {
+      sendJson(res, 401, { fout: 'log eerst in om de camera te bekijken', inlog: '/auth/login' });
+      return;
+    }
+    const id = url.searchParams.get('id') ?? '';
+    if (!CAMERA_ID.test(id) || !cam.ids().has(id)) {
+      sendJson(res, 404, { fout: 'die camera kent het huis niet' });
+      return;
+    }
+    const live = url.searchParams.get('live') === '1';
+    if (live && this.#liveStreams >= 4) {
+      sendJson(res, 429, { fout: 'er kijken al vier schermen mee; probeer het zo nog eens' });
+      return;
+    }
+    const stop = new AbortController();
+    req.on('close', () => stop.abort());
+    let up: Response;
+    try {
+      up = await fetch(`${cam.base}/api/${live ? 'camera_proxy_stream' : 'camera_proxy'}/${id}`, {
+        headers: { authorization: `Bearer ${cam.token}` },
+        signal: stop.signal,
+      });
+    } catch {
+      if (!res.headersSent) sendJson(res, 502, { fout: 'Home Assistant gaf geen beeld' });
+      return;
+    }
+    if (!up.ok || up.body == null) {
+      sendJson(res, 502, { fout: 'Home Assistant gaf geen beeld' });
+      return;
+    }
+    res.writeHead(200, { 'content-type': up.headers.get('content-type') ?? 'image/jpeg', 'cache-control': 'no-store' });
+    if (live) this.#liveStreams += 1;
+    const klaar = () => {
+      if (live) this.#liveStreams = Math.max(0, this.#liveStreams - 1);
+    };
+    Readable.fromWeb(up.body as import('node:stream/web').ReadableStream<Uint8Array>)
+      .on('error', () => res.destroy())
+      .on('close', klaar)
+      .pipe(res);
   }
 
   async start(): Promise<number> {

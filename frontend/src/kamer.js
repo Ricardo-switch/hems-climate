@@ -75,6 +75,7 @@ const ICOON = {
   thermostaat: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/>',
   meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
   apparaat: '<rect x="4.5" y="3" width="15" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>',
+  camera: '<rect x="2.5" y="6.5" width="14" height="11" rx="2.5"/><path d="M16.5 10.5l5-3v9l-5-3z"/>',
 };
 const soortVan = (d) => (d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco' : 'thermostaat') : d.soort);
 const icoon = (d) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[soortVan(d)] ?? ICOON.thermostaat}</svg>`;
@@ -118,7 +119,12 @@ function teken() {
   for (const blad of $$('[data-blad]')) {
     // Niet opnieuw opbouwen onder de vinger: een schuif of het kleurenwiel.
     if (bezig || (blad.contains(document.activeElement) && document.activeElement.matches('input'))) continue;
+    // Een lopend camerabeeld niet afbreken bij elke verversing.
+    if (apparaat?.soort === 'camera' && blad.querySelector(`[data-camera="${CSS.escape(apparaat.id)}"]`)) continue;
     blad.innerHTML = apparaat ? apparaatBlad(kamer, apparaat) : kamerBlad(kamer);
+    const beeld = blad.querySelector('[data-camera]');
+    // Alleen het zichtbare blad haalt beeld op: niet twee streams voor de wand en de telefoon.
+    if (beeld && blad.closest(app.telStand() ? '#tel' : '#wand')) void startCamera(beeld);
   }
 }
 
@@ -152,6 +158,7 @@ function kamerBlad(k) {
   const klimaat = apps.filter((d) => d.soort === 'klimaat' || d.soort === 'screen' || d.soort === 'apparaat');
   const lampen = apps.filter((d) => d.soort === 'licht');
   const meters = apps.filter((d) => d.soort === 'meter');
+  const cameras = apps.filter((d) => d.soort === 'camera');
   const bedienen = huisData.lichtBedienen === true;
   const rij = (d) => `<button type="button" class="rij${d.aan ? ' aan' : ''}" data-open="${esc(d.id)}">${icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${esc(standTekst(d))}</span></span><span class="chev" aria-hidden="true">›</span></button>`;
   const lamp = (d) => `
@@ -172,6 +179,7 @@ function kamerBlad(k) {
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
     scenes,
+    cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Camera</h3>${cameras.map(rij).join('')}</div>` : '',
     meters.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Meters</h3>${meters.map(rij).join('')}</div>` : '',
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
   ];
@@ -202,6 +210,7 @@ function apparaatBlad(k, d) {
   else if (soort === 'thermostaat') inhoud = nestBlad(k, d);
   else if (soort === 'screen') inhoud = screenBlad(k, d);
   else if (soort === 'licht') inhoud = lampBlad(k, d);
+  else if (soort === 'camera') inhoud = cameraBlad(d);
   else if (soort === 'apparaat') inhoud = `${kopVan(d, 'zon-t')}<p class="klein" style="margin: 0">Op zon: Smart Climate kiest het moment, starten doe je op het apparaat zelf.</p><a class="pil" href="apparaten.html" style="align-self: start">Naar Apparaten</a>`;
   else inhoud = `${kopVan(d, '')}<p class="klein" style="margin: 0">${d.meetKamer ? 'Deze meter geeft de temperatuur waarop Smart Climate deze kamer regelt.' : 'Alleen informatie; aan een meter valt niets te bedienen.'}</p>`;
   return `${terug}${inhoud}`;
@@ -318,6 +327,48 @@ function screenBlad(k, d) {
   return `${kopVan(d, '', pil)}
     <div class="beeld">${svg}</div>
     <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span>Smart Climate bedient de screens nog niet; dat komt als het huis zelf mag schakelen. Nu kan het in Home Assistant of met de afstandsbediening.</span></div>`;
+}
+
+/*
+ * De camera (besluit 106): het live beeld, via de dienst bij Home Assistant
+ * opgehaald. Kijken vraagt de inlog; zonder staat er de weg ernaartoe.
+ */
+function cameraBlad(d) {
+  return `${kopVan(d, '')}
+    <div class="camerabeeld" data-camera="${esc(d.id)}" data-naam="${esc(d.naam)}"><p class="mini">Even laden…</p></div>
+    <p class="mini" style="margin: 0">Alleen kijken. Het beeld komt via Home Assistant en wordt nergens bewaard.</p>`;
+}
+
+async function startCamera(box) {
+  const id = box.dataset.camera;
+  const naam = box.dataset.naam;
+  try {
+    const res = await fetch(`api/camera?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+    if (!box.isConnected) return;
+    if (res.status === 401) {
+      const terug = encodeURIComponent(location.pathname + location.hash);
+      box.innerHTML = `<p class="klein" style="margin: 0 0 12px">Camerabeelden zijn alleen te zien als je bent ingelogd met je Home Assistant-account.</p><a class="pil" href="auth/login?terug=${terug}">Inloggen om te kijken</a>`;
+      return;
+    }
+    if (!res.ok) {
+      const uit = await res.json().catch(() => ({}));
+      box.innerHTML = `<p class="klein" style="margin: 0">${esc(uit.fout ?? uit.wachten ?? 'De camera geeft nu geen beeld.')}</p>`;
+      return;
+    }
+    // Eerst het plaatje, dan live erover: zo staat er meteen iets.
+    const plaatje = URL.createObjectURL(await res.blob());
+    box.innerHTML = `<img alt="Live beeld van ${esc(naam)}" src="${plaatje}"><span class="live"><span class="stip"></span>Live</span>`;
+    const img = box.querySelector('img');
+    const live = new Image();
+    live.alt = img.alt;
+    live.onload = () => {
+      if (box.isConnected) img.replaceWith(live);
+    };
+    live.onerror = () => box.querySelector('.live')?.replaceChildren('Plaatje');
+    live.src = `api/camera?id=${encodeURIComponent(id)}&live=1`;
+  } catch {
+    if (box.isConnected) box.innerHTML = '<p class="klein" style="margin: 0">Geen verbinding met Smart Climate.</p>';
+  }
 }
 
 function lampBlad(k, d) {

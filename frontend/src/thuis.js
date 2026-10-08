@@ -76,13 +76,15 @@ function huisModel() {
     const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
     if (/oprit|carport/i.test(r.naam)) {
       const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
-      oprit = { auto: {}, camera: cam ? { aan: cam.aan } : null };
+      oprit = { id: r.id, naam: r.naam, auto: {}, camera: cam ? { aan: cam.aan } : null };
     } else {
       const huisje = lampen.filter((a) => /tuinhuis/i.test(a.id + a.naam));
       const overstek = huisje.find((a) => /overstek/i.test(a.id + a.naam));
       const binnenlamp = huisje.find((a) => a !== overstek);
       const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
       tuin = {
+        id: r.id,
+        naam: r.naam,
         tuinhuisAan: !!binnenlamp?.aan,
         overstekAan: !!overstek?.aan,
         overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,

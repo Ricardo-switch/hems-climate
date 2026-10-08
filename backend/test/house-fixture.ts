@@ -64,6 +64,8 @@ export const registers: HouseRegisters = {
     { id: 'd-f1', area_id: null, name: 'F1' },
     // De Hue-kamer van de zolder, met zijn scènes (besluit 100).
     { id: 'd-hue-zolder', area_id: 'zolder', name: 'Zolderkamer' },
+    // De camera op de oprit (besluit 106).
+    { id: 'd-cam', area_id: 'oprit', name: 'Camera oprit' },
   ],
   entities: [
     entity(ref('ac-woonkamer'), 'd-ac-wk'),
@@ -107,10 +109,13 @@ export const registers: HouseRegisters = {
     entity('sensor.nas_temperatuur', 'd-nas', { device_class: 'temperature', entity_category: 'diagnostic' }),
     entity('sensor.temperatuur', null, { device_class: 'temperature', platform: 'buienradar' }),
     entity('sensor.f1_track_weather', 'd-f1', { device_class: 'temperature', platform: 'f1_sensor' }),
+    entity('camera.camera_oprit_vloeiend', 'd-cam', { platform: 'reolink', translation_key: 'sub' }),
+    entity('camera.camera_oprit_duidelijk', 'd-cam', { platform: 'reolink', translation_key: 'main' }),
   ],
 };
 
 export const states = new Map<string, HaEntityState>([
+  ['camera.camera_oprit_vloeiend', state('camera.camera_oprit_vloeiend', 'idle', { friendly_name: 'Camera oprit Vloeiend' })],
   ['light.woonkamer_plafonniere', state('light.woonkamer_plafonniere', 'on', { friendly_name: 'Woonkamer plafonnière', brightness: 178, supported_color_modes: ['color_temp'] })],
   ['light.sfeerverlichting', state('light.sfeerverlichting', 'on', { friendly_name: 'Sfeerverlichting', supported_color_modes: ['color_temp', 'hs'], color_mode: 'hs', hs_color: [30, 80], min_color_temp_kelvin: 2000, max_color_temp_kelvin: 6500 })],
   // Scènes (besluit 100): uit Hue met de naam van de Hue-kamer, uit Home Assistant

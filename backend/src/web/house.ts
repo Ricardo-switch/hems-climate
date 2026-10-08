@@ -20,6 +20,7 @@
  * verborgen zijn: die is zelf de lamp (een armatuur, zie `collect`).
  */
 
+import { findCameras } from './camera.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
@@ -43,8 +44,8 @@ export interface HouseRegisters {
   readonly entities: readonly HaRegistryEntity[];
 }
 
-/** `apparaat`: een uitstelbaar apparaat (besluit 98), zoals de droger. */
-export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat';
+/** `apparaat`: een uitstelbaar apparaat (besluit 98), zoals de droger; `camera`: om te bekijken (besluit 106). */
+export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat' | 'camera';
 
 /** Wat een klimaatapparaat of meter meet, uit Home Assistant. */
 export interface HouseReading {
@@ -209,7 +210,7 @@ export interface HouseReport {
   readonly onvindbaar: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
 }
 
-const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, meter: 4 };
+const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, camera: 4, meter: 5 };
 
 /** Wat geen kamer meet: het weer, telefoons, schijven, de buitenkant van een apparaat. */
 const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoelstemperatuur|battery|batterij|body|basal|cpu|processor|schijf|schijftemperatuur|disk|drive|nas|track)\b/i;
@@ -462,6 +463,28 @@ function applianceOf(id: string, name: string, state: string | undefined): House
   };
 }
 
+/** Een camera om te bekijken (besluit 106); de stand zegt alleen of hij bereikbaar is. */
+function cameraOf(id: string, name: string, bereikbaar: boolean): HouseDevice {
+  return {
+    id,
+    naam: name,
+    haNaam: name,
+    soort: 'camera',
+    stand: bereikbaar ? 'live te bekijken' : 'niet bereikbaar',
+    aan: false,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting: null,
+    klimaat: null,
+    meetKamer: false,
+  };
+}
+
 /** Een meter: een sensor in een kamer die temperatuur en luchtvochtigheid geeft. */
 function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean): HouseDevice {
   return {
@@ -662,6 +685,14 @@ function collect(
     const state = snapshot?.explanation.deferrables?.find((x) => x.id === d.id)?.state;
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = applianceOf(d.id, d.name, state);
     found.push({ device, haNaam: d.name, haArea: areaOf(d.remoteStart.id), groepen: [] });
+  }
+
+  // Camera's (besluit 106): één per camera, de vloeiende stream, in de kamer van het apparaat.
+  for (const cam of findCameras(registers.entities, registers.devices, states)) {
+    const st = states.get(cam.entityId)?.state;
+    const bereikbaar = st != null && st !== 'unavailable' && st !== 'unknown';
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = cameraOf(cam.entityId, cam.naam, bereikbaar);
+    found.push({ device, haNaam: cam.naam, haArea: areaOf(cam.entityId), groepen: [] });
   }
 
   // Zonwering: één per apparaat (Somfy levert er per screen twee, ook een langzame).
