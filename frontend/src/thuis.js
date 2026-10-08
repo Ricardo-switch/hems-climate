@@ -248,7 +248,7 @@ function tekenStraks() {
   const actie = wacht.intent.action === 'heat' ? 'warmen' : 'koelen';
   zet('[data-straks-kop]', `De ${zoneNaam(wacht.intent.zoneId)} gaat ${actie} bij ${nl(wacht.intent.budgetW / 1000)} kW zon`);
   const over = Math.max(0, state.explanation?.budget?.availableW ?? 0);
-  zet('[data-straks-zin]', `Nu is er ${nl(over / 1000)} kW over. Zodra er genoeg is, begint hij vanzelf.`);
+  zet('[data-straks-zin]', `${over >= 50 ? `Nu is er ${nl(over / 1000)} kW over.` : 'Nu is er geen zon over.'} Zodra er genoeg is, begint hij vanzelf.`);
   kaarten.forEach((k) => (k.hidden = false));
 }
 

@@ -171,11 +171,15 @@
     const mid = P(W / 2, D / 2, Ht + R * 0.6);
     const boog = k * Math.max(W, 4.2) * 0.95;
     if (model.zon?.stand != null && !nacht) {
-      const f = model.zon.stand; // 0 opkomst links, 1 ondergang rechts
-      const h = model.zon.hoogte ?? Math.sin(Math.PI * f);
-      const sx = mid[0] + (f - 0.5) * 2 * boog;
-      const sy = mid[1] - h * boog * 0.62 + boog * 0.12;
-      lucht.push(`<path d="M ${mid[0] - boog} ${mid[1] + boog * 0.12} A ${boog} ${boog * 0.74} 0 0 1 ${mid[0] + boog} ${mid[1] + boog * 0.12}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
+      // De zon staat óp de boog: een halve ellips van opkomst (links) tot
+      // ondergang (rechts), en `stand` is de hoek erlangs. Zo valt hij nooit
+      // naast de stippellijn, ook niet halverwege de ochtend.
+      const f = Math.max(0, Math.min(1, model.zon.stand));
+      const voet = mid[1] + boog * 0.12;
+      const ry = boog * 0.74;
+      const sx = mid[0] - boog * Math.cos(Math.PI * f);
+      const sy = voet - ry * Math.sin(Math.PI * f);
+      lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
       const r = k * 0.22;
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r * 3.2}" fill="url(#${id}-zon)" opacity="${(0.22 + 0.3 * (1 - (model.wolken ?? 0))).toFixed(2)}"/>`);
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r}" fill="#FFD27A" opacity="${(1 - 0.55 * (model.wolken ?? 0)).toFixed(2)}"/>`);
