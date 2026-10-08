@@ -35,11 +35,21 @@
   .verdeel i { display: block; height: 100%; }
   .legenda { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 0; }
   .legenda span { display: inline-flex; align-items: center; gap: 6px; }
-  .staven { display: flex; align-items: end; gap: 2px; height: 110px; margin-top: 12px; }
-  .staven div { flex: 1; height: 100%; display: flex; flex-direction: column-reverse; min-width: 0; }
-  .staven i { display: block; width: 100%; }
-  .staven i.zon { background: var(--zon); border-radius: 2px 2px 0 0; }
-  .staven i.net { background: #9AAABB; opacity: 0.7; }
+  .grafiekkop { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .blik, .maten { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); }
+  .maten { margin-top: 10px; }
+  .blik button, .maten button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--zacht); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .blik button[aria-pressed='true'], .maten button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .staven { display: flex; align-items: end; gap: 2px; height: 120px; margin-top: 12px; }
+  .staaf { flex: 1; height: 100%; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 3px; }
+  .staaf:hover, .staaf[aria-pressed='true'] { background: rgba(255, 255, 255, 0.07); }
+  .staaf:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
+  .staaf i { display: block; width: 100%; }
+  .staaf i.zon { background: var(--zon); border-radius: 2px 2px 0 0; order: 1; }
+  .staaf i.net { background: #9AAABB; opacity: 0.7; order: 2; }
+  .staaf i.eerder { position: absolute; left: 15%; right: 15%; bottom: 0; background: rgba(255, 255, 255, 0.18); border-radius: 2px 2px 0 0; }
+  .staaf i:not(.eerder) { position: relative; border-radius: 2px 2px 0 0; }
+  .detail { margin: 8px 0 0; min-height: 1.4em; color: var(--tekst); }
   .asje { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
 
   /* De telefoon (schets Opbrengst). */

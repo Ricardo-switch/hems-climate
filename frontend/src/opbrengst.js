@@ -114,14 +114,57 @@ function perApparaat(r) {
     <p class="mini legenda"><span><span class="stip" style="background: var(--zon)"></span>zon</span><span><span class="stip" style="background: ${NET}"></span>net</span></p>`;
 }
 
+/*
+ * De grafiek: deze periode (per uur, dag of maand), of vergelijken met de
+ * periodes ervoor en hetzelfde een jaar eerder. Een tik op een staaf zegt
+ * wat erin zit.
+ */
+const grafiek = { blik: 'periode', maat: 'stroom', gekozen: null };
+const MATEN = { stroom: ['Stroom', 'kWh'], zon: ['Zon', 'kWh'], gas: ['Gas', 'm³'], kosten: ['Kosten', '€'] };
+const waarde = (n, eenheid) => (n == null ? '–' : eenheid === '€' ? euro(n) : `${getal(n)} ${eenheid}`);
+
+function staven(r) {
+  if (grafiek.blik === 'periode') {
+    const b = r.perBucket;
+    const max = Math.max(0.1, ...b.map((x) => x.zonKwh + x.netKwh));
+    return {
+      titel: { dag: 'Per uur', week: 'Per dag', maand: 'Per dag', jaar: 'Per maand' }[r.periode.soort],
+      as: b.map((x) => x.label),
+      html: b.map((x, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(x.label)}: ${getal(x.zonKwh)} kWh zon, ${getal(x.netKwh)} kWh net"><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i></button>`),
+      detail: (i) => `${b[i].label}: ${getal(b[i].zonKwh)} kWh van je dak, ${getal(b[i].netKwh)} kWh van het net`,
+      legenda: `<span><span class="stip" style="background: var(--zon)"></span>zon</span><span><span class="stip" style="background: ${NET}"></span>net</span>`,
+    };
+  }
+  const reeks = r.vergelijk[grafiek.maat] ?? [];
+  const [naam, eenheid] = MATEN[grafiek.maat];
+  const max = Math.max(0.1, ...reeks.map((p) => Math.max(p.nu ?? 0, p.jaarEerder ?? 0)));
+  const kleur = { stroom: '#6FD3FF', zon: ZON, gas: '#FF8A4C', kosten: '#C4BCFF' }[grafiek.maat];
+  return {
+    titel: `${naam}, vergeleken`,
+    as: reeks.map((p) => p.label),
+    html: reeks.map((p, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(p.label)}: ${waarde(p.nu, eenheid)}${p.jaarEerder != null ? `, een jaar eerder ${waarde(p.jaarEerder, eenheid)}` : ''}">${p.jaarEerder != null ? `<i class="eerder" style="height: ${((p.jaarEerder / max) * 100).toFixed(1)}%"></i>` : ''}<i style="height: ${(((p.nu ?? 0) / max) * 100).toFixed(1)}%; background: ${kleur}"></i></button>`),
+    detail: (i) => `${reeks[i].label}: ${waarde(reeks[i].nu, eenheid)}${reeks[i].jaarEerder != null ? `, een jaar eerder ${waarde(reeks[i].jaarEerder, eenheid)}` : ''}`,
+    legenda: `<span><span class="stip" style="background: ${kleur}"></span>${r.periode.soort === 'jaar' ? 'per jaar' : 'deze periodes'}</span>${reeks.some((p) => p.jaarEerder != null) ? '<span><span class="stip" style="background: rgba(255,255,255,0.25)"></span>een jaar eerder</span>' : ''}`,
+  };
+}
+
 function perDag(r) {
-  const b = r.perBucket;
-  if (!b.length) return '';
-  const max = Math.max(0.1, ...b.map((x) => x.zonKwh + x.netKwh));
-  const naam = { dag: 'Per uur', week: 'Per dag', maand: 'Per dag', jaar: 'Per maand' }[r.periode.soort];
-  const staven = b.map((x) => `<div title="${esc(x.label)}: ${getal(x.zonKwh)} kWh zon, ${getal(x.netKwh)} kWh net"><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i></div>`).join('');
-  const as = [b[0].label, b[Math.floor(b.length / 2)].label, b[b.length - 1].label];
-  return `<h2 class="kop-3">${naam}</h2><div class="staven" role="img" aria-label="${naam} wat je gebruikte: van de zon en van het net">${staven}</div><div class="asje"><span>${esc(as[0])}</span><span>${esc(as[1])}</span><span>${esc(as[2])}</span></div>`;
+  const g = staven(r);
+  if (!g.as.length) return '';
+  const as = [g.as[0], g.as[Math.floor(g.as.length / 2)], g.as[g.as.length - 1]];
+  const gekozen = grafiek.gekozen != null && grafiek.gekozen < g.as.length ? grafiek.gekozen : null;
+  const maten = grafiek.blik === 'vergelijk'
+    ? `<div class="maten" role="group" aria-label="Wat vergelijken">${Object.entries(MATEN)
+        .filter(([k]) => (k !== 'gas' || r.heeft.gas) && (k !== 'zon' || r.heeft.zon) && (k !== 'kosten' || r.heeft.prijzen))
+        .map(([k, [l]]) => `<button type="button" data-maat="${k}" aria-pressed="${k === grafiek.maat}">${l}</button>`)
+        .join('')}</div>`
+    : '';
+  return `<div class="grafiekkop"><h2 class="kop-3">${esc(g.titel)}</h2><div class="blik" role="group" aria-label="Grafiek"><button type="button" data-blik="periode" aria-pressed="${grafiek.blik === 'periode'}">Deze periode</button><button type="button" data-blik="vergelijk" aria-pressed="${grafiek.blik === 'vergelijk'}">Vergelijken</button></div></div>
+    ${maten}
+    <div class="staven">${g.html.join('')}</div>
+    <div class="asje"><span>${esc(as[0])}</span><span>${esc(as[1])}</span><span>${esc(as[2])}</span></div>
+    <p class="mini detail" aria-live="polite">${gekozen != null ? esc(g.detail(gekozen)) : 'Tik op een staaf om te zien wat erin zit.'}</p>
+    <p class="mini legenda">${g.legenda}</p>`;
 }
 
 /* ------------------------------------------------------------ tekenen */
@@ -164,10 +207,31 @@ addEventListener('standwissel', teken);
 
 app.start('opbrengst');
 document.addEventListener('click', (e) => {
+  const staaf = e.target.closest('[data-staaf]');
+  if (staaf) {
+    grafiek.gekozen = Number(staaf.dataset.staaf);
+    teken();
+    return;
+  }
+  const blik = e.target.closest('[data-blik]');
+  if (blik) {
+    grafiek.blik = blik.dataset.blik;
+    grafiek.gekozen = null;
+    teken();
+    return;
+  }
+  const maat = e.target.closest('[data-maat]');
+  if (maat) {
+    grafiek.maat = maat.dataset.maat;
+    grafiek.gekozen = null;
+    teken();
+    return;
+  }
   const soort = e.target.closest('[data-soort]');
   if (soort) {
     keuze.soort = soort.dataset.soort;
     keuze.datum = null;
+    grafiek.gekozen = null;
     void laad();
     return;
   }

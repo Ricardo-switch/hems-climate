@@ -916,6 +916,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     await p.locator('#wand [data-soort="jaar"]').click();
     await p.locator('#wand [data-soort="jaar"][aria-pressed="true"]').waitFor();
+    // Vergelijken, en een tik op een staaf zegt wat erin zit.
+    const vergelijk = p.locator('#wand [data-blik="vergelijk"]');
+    if (await vergelijk.count()) {
+      await vergelijk.click();
+      await p.locator('#wand [data-staaf]').first().click();
+      expect(await p.locator('#wand .detail').textContent()).not.toContain('Tik op een staaf');
+    }
     expect(await p.locator('#balk [aria-current="page"]').textContent()).toBe('Opbrengst');
     expect(fouten).toEqual([]);
     await context.close();
