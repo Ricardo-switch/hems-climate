@@ -42,6 +42,12 @@ async function laadGisteren() {
 
 /* ------------------------------------------------------------ namen */
 
+/** Het apparaat bij een actuator of id, zoals het huis het noemt. */
+function apparaatVan(id) {
+  for (const e of huisData?.etages ?? []) for (const r of e.ruimtes ?? []) for (const d of r.apparaten ?? []) if (d.actuatorId === id || d.id === id) return d;
+  return null;
+}
+
 function naamVan(actuatorId) {
   for (const e of huisData?.etages ?? []) for (const r of e.ruimtes ?? []) for (const d of r.apparaten ?? []) if (d.actuatorId === actuatorId || d.id === actuatorId) return d.naam;
   return String(actuatorId).replace(/^ac-/, 'Airco ').replace(/[-_]+/g, ' ');
@@ -143,7 +149,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
   const zones = dag === 'morgen' ? [] : (r.zones ?? []).filter((z) => z.kwartieren.some((q) => q != null)).slice(0, 2);
   const banen = [];
   if (dag !== 'morgen') {
-    for (const a of r.apparaten ?? []) if (a.huidig.length || a.smartClimate.length) banen.push({ id: a.actuatorId, naam: naamVan(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: /heat/.test(a.huidig[0]?.actie ?? '') || /nest|cv/i.test(a.actuatorId) ? '#FF7A4D' : '#6FD3FF' });
+    for (const a of r.apparaten ?? []) if (a.huidig.length || a.smartClimate.length) banen.push({ id: a.actuatorId, naam: naamVan(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: /heat/.test(a.huidig[0]?.actie ?? '') || apparaatVan(a.actuatorId)?.klimaat?.kanKoelen === false ? '#FF7A4D' : '#6FD3FF' });
     for (const u of r.uitstelbaar ?? []) if (u.draaide.length || u.zouStarten.length) banen.push({ id: u.id, naam: naamVan(u.id), echt: u.draaide, zou: u.zouStarten, kleur: '#F7B548' });
   }
   for (const v of verwacht) if (!banen.some((b) => b.id === v.actuatorId)) banen.push({ id: v.actuatorId, naam: naamVan(v.actuatorId), echt: [], zou: [], kleur: '#6FD3FF' });
@@ -203,7 +209,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
         <rect x="${X0}" y="${yy}" width="${X1 - X0}" height="12" rx="6" fill="rgba(255,255,255,0.04)"/>
         ${b.zou.map((s) => blok(s, `fill="${b.kleur}" opacity="0.3"`)).join('')}
         ${b.echt.map((s) => blok(s, `fill="${b.kleur}"`)).join('')}
-        ${v ? `${blok({ vanMs: v.vanMs, totMs: v.totMs }, `fill="url(#streep)" style="color: ${b.kleur}" opacity="0.55"`)}<text x="${(x(v.totMs) + 8).toFixed(1)}" y="${yy + 11}" class="sub">${esc(b.id.startsWith('ac-') || /airco/i.test(b.naam) ? 'verwacht genoeg zon over' : 'nog te gaan')}</text>` : ''}
+        ${v ? `${blok({ vanMs: v.vanMs, totMs: v.totMs }, `fill="url(#streep)" style="color: ${b.kleur}" opacity="0.55"`)}<text x="${(x(v.totMs) + 8).toFixed(1)}" y="${yy + 11}" class="sub">${esc(apparaatVan(b.id)?.klimaat?.kanKoelen ? 'verwacht genoeg zon over' : 'nog te gaan')}</text>` : ''}
         ${dots}`;
     })
     .join('');

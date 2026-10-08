@@ -35,7 +35,8 @@ import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight } from './web/today.js';
 import { readForecast, WeatherLog } from './web/weather.js';
-import { findCameras, findDoorbells, httpBase } from './web/camera.js';
+import { httpBase } from './web/camera.js';
+import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -418,13 +419,35 @@ async function readHouseRegisters(): Promise<void> {
 }
 // Hoe vaak de zonnesensor een nieuwe waarde geeft (besluit 89), overdag gemeten.
 const solarPace = new SensorPace();
-/** De melders van de deurbellen (besluit 107), opnieuw bepaald als de registers veranderen. */
-const doorbellOf = (id: string) => (houseRegisters ? findDoorbells(houseRegisters.entities, houseRegisters.devices, allStates).find((d) => d.sensor === id) : undefined);
+/*
+ * Camera's en de deurbel (besluit 109): wat de bewoner vastlegde, of anders het
+ * voorstel uit wat Home Assistant heeft. Het voorstel wordt opnieuw bepaald als
+ * de registers veranderen, niet bij elke toestand: er komen er duizenden per uur.
+ */
+const functiesStore = logDir !== '' ? new FunctiesStore(logDir) : null;
+await functiesStore?.load();
+let gevondenVoor: HouseRegisters | null = null;
+let gevondenNu: FunctiesGevonden | null = null;
+const functiesKeuzes = (): FunctiesGevonden | null => {
+  if (!houseRegisters) return null;
+  if (gevondenVoor !== houseRegisters || gevondenNu == null) {
+    gevondenNu = functiesGevonden(houseRegisters.entities, houseRegisters.devices, allStates);
+    gevondenVoor = houseRegisters;
+  }
+  return gevondenNu;
+};
+const functiesNu = (): Functies | null => {
+  if (functiesStore?.current) return functiesStore.current;
+  const g = functiesKeuzes();
+  return g ? functiesVoorstel(g) : null;
+};
 client.on('stateChanged', (state: HaEntityState) => {
-  // Aanbellen: de melder gaat aan. Dan toont elke open pagina het beeld.
-  if (state.entity_id.startsWith('binary_sensor.') && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') {
-    const bel = doorbellOf(state.entity_id);
-    if (bel) web?.ring(bel.camera, bel.naam);
+  // Aanbellen: de melder van de deurbel gaat af. Dan toont elke open pagina het beeld.
+  const f = functiesNu();
+  if (f && aangebeld(f, state, allStates.get(state.entity_id))) {
+    const camera = f.deurbel.camera!;
+    const naam = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera))?.naam ?? 'Deurbel';
+    web?.ring(camera, naam, { seconden: f.deurbel.seconden, schermAan: f.deurbel.schermAan });
   }
   if (inHouse(state)) houseStates.set(state.entity_id, state);
   allStates.set(state.entity_id, state);
@@ -578,6 +601,8 @@ const houseReport = () =>
         layoutStore?.current ?? null,
         sceneColors ? (id, naam) => sceneColors.colors(id, naam) : undefined,
         scenePictures ? (naam) => scenePictures.pictureFor(naam) : undefined,
+        // Alleen de camera's die de bewoner koos; zonder keuze het voorstel (elke camera).
+        functiesStore?.current ? getoondeCameras(functiesStore.current) : null,
       )
     : null;
 
@@ -700,8 +725,13 @@ if (webPort != null) {
     camera: {
       base: httpBase(url!),
       token: token!,
-      ids: () => new Set(houseRegisters ? findCameras(houseRegisters.entities, houseRegisters.devices, allStates).map((c) => c.entityId) : []),
+      // De camera's die de app toont, en die van de deurbel (besluit 109).
+      ids: () => {
+        const f = functiesNu();
+        return new Set(f ? [...getoondeCameras(f), ...(f.deurbel.aan && f.deurbel.camera ? [f.deurbel.camera] : [])] : []);
+      },
     },
+    ...(functiesStore ? { functies: { store: functiesStore, gevonden: functiesKeuzes } } : {}),
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {

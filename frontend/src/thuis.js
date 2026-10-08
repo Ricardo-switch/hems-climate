@@ -17,6 +17,8 @@ let huisData = null;
 let zon = null;
 let vandaag = null;
 let weer = null;
+/** De antwoorden bij Zon en aansluiting: hoeveel panelen er liggen. */
+let aansluiting = null;
 let gekozenZone = null;
 
 /* ------------------------------------------------------- de gegevens */
@@ -24,12 +26,13 @@ let gekozenZone = null;
 let eersteKeer = true;
 
 async function laadAlles() {
-  const [s, h, z, v, w] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer')]);
+  const [s, h, z, v, w, a] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer'), haal('api/aansluiting')]);
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') vandaag = v.value;
   if (w.status === 'fulfilled') weer = w.value;
+  if (a.status === 'fulfilled') aansluiting = a.value;
   teken();
   // De eerste keer de rondleiding, zodra het huis er staat.
   if (eersteKeer && huisData && !gezien()) setTimeout(startRondleiding, 600);
@@ -87,7 +90,7 @@ function huisModel() {
     tijd,
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken,
-    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), panelen: Math.round(piekW / 390) || 12 } : { aandeel: 0 },
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), panelen: aantalPanelen(piekW) } : { aandeel: 0, panelen: aantalPanelen(piekW) },
     etages,
     buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)) } : null,
     net: true,
@@ -96,6 +99,24 @@ function huisModel() {
     stromen,
     labels,
   };
+}
+
+/**
+ * Hoeveel panelen het dak toont: wat de bewoner bij Zon en aansluiting
+ * invulde, anders geschat uit de wattpiek (een paneel van rond de 400 Wp).
+ * Zonder panelen in de configuratie: geen panelen op het dak.
+ */
+function aantalPanelen(piekW) {
+  const p = aansluiting?.antwoorden?.panelen;
+  const gezegd = p ? (p.ligging === 'beide' ? (p.voorkant ?? 0) + (p.achterkant ?? 0) : (p.aantal ?? 0)) : 0;
+  if (gezegd > 0) return gezegd;
+  return piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0;
+}
+
+/** Het klimaatapparaat bij een actuator, zoals het huis het noemt. */
+function apparaatVan(actuatorId) {
+  for (const e of huisData?.etages ?? []) for (const r of e.ruimtes ?? []) for (const d of r.apparaten ?? []) if (d.actuatorId === actuatorId) return d;
+  return null;
 }
 
 /* ------------------------------------------------------------ tekenen */
@@ -143,12 +164,12 @@ function tekenVandaag() {
   const vlak = `${lijn} L ${x(laatste.tMs).toFixed(1)} 86 L ${x(kw[0].tMs).toFixed(1)} 86 Z`;
   const helder = lijn2.punten.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.w).toFixed(1)}`).join(' ');
   const nuX = x(Date.now());
-  const namen = { 'ac-woonkamer': 'Airco woonkamer', 'ac-zolder': 'Airco zolder' };
-  const banen = (vandaag.apparaten ?? []).filter((a) => /^ac-/.test(a.actuatorId)).slice(0, 3);
+  // De apparaten die op zon kunnen koelen of verwarmen: de airco's en warmtepompen.
+  const banen = (vandaag.apparaten ?? []).filter((a) => apparaatVan(a.actuatorId)?.klimaat?.kanKoelen).slice(0, 3);
   const banenSvg = banen
     .map((a, i) => {
       const yy = 104 + i * 15;
-      const naam = namen[a.actuatorId] ?? a.actuatorId;
+      const naam = apparaatVan(a.actuatorId)?.naam ?? a.actuatorId;
       const stukken = (a.smartClimate ?? []).map((s) => `<rect x="${x(s.vanMs).toFixed(1)}" y="${yy - 7}" width="${Math.max(3, x(s.totMs) - x(s.vanMs)).toFixed(1)}" height="7" rx="3.5" fill="#6FD3FF"/>`).join('');
       return `<text x="8" y="${yy}">${esc(naam)}</text>${stukken}`;
     })
@@ -218,7 +239,8 @@ const GEVOEL = [
 function tekenGevoel() {
   const zones = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
   if (!zones.length) return;
-  gekozenZone ??= zones.find((r) => r.zoneId === 'woonkamer')?.zoneId ?? zones[0].zoneId;
+  // De eerste keer de kamer met een regeling op de laagste etage: meestal waar je woont.
+  gekozenZone ??= ([...huisData.etages].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.temperatuurC != null) ?? zones[0]).zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
   zet('[data-gevoel-kop]', `Hoe voelt de ${zoneNaam(kamer.zoneId)} nu?`);
   const box = document.querySelector('[data-gevoel]');

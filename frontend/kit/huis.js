@@ -339,7 +339,8 @@
     if (dak) {
     // Rechter dakvlak met panelen.
     huis.push(poly([[W / 2, -0.08, zt + R], [W + 0.14, -0.08, zt - 0.08], [W + 0.14, D + 0.08, zt - 0.08], [W / 2, D + 0.08, zt + R]], `fill="url(#${id}-dak)"`));
-    if (model.zon || spook(model, 'panelen')) {
+    // Panelen alleen als het huis ze heeft: `panelen: 0` is geen panelen.
+    if ((model.zon && model.zon.panelen !== 0) || spook(model, 'panelen')) {
       const rijen = 2;
       const kol = Math.max(3, Math.min(6, Math.round((model.zon?.panelen ?? 6) / rijen)));
       for (let r = 0; r < rijen; r++) {

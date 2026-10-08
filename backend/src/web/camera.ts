@@ -49,28 +49,6 @@ export function findCameras(entities: readonly HaRegistryEntity[], devices: read
   return uit.sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
 }
 
-export interface FoundDoorbell {
-  /** De melder die aangaat als er wordt aangebeld (Reolink: `visitor`). */
-  readonly sensor: string;
-  /** De camera van hetzelfde apparaat, zoals `findCameras` hem koos. */
-  readonly camera: string;
-  readonly naam: string;
-}
-
-/**
- * De deurbellen (besluit 107): een melder voor een bezoeker op een apparaat dat
- * ook een camera heeft. Zonder camera geen deurbel om te tonen.
- */
-export function findDoorbells(entities: readonly HaRegistryEntity[], devices: readonly HaDevice[], states: ReadonlyMap<string, HaEntityState>): FoundDoorbell[] {
-  const cameras = findCameras(entities, devices, states);
-  return entities
-    .filter((e) => e.entity_id.startsWith('binary_sensor.') && e.disabled_by == null && e.translation_key === 'visitor' && e.device_id)
-    .flatMap((e) => {
-      const cam = cameras.find((c) => c.deviceId === e.device_id);
-      return cam ? [{ sensor: e.entity_id, camera: cam.entityId, naam: cam.naam }] : [];
-    });
-}
-
 /**
  * De http(s)-basis van Home Assistant, uit wat er voor de websocket is
  * ingevuld: `ws://ha:8123/api/websocket` wordt `http://ha:8123`, en de

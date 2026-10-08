@@ -124,7 +124,8 @@ function jeHuis() {
     ${link('huis-kan.html', 'Wat je huis kan', 'Wat er met je huis kan, en wat er nog bij kan')}
     ${link('indeling.html', 'Kamers en indeling', `${etages.length} etages, ${kamers} kamers, ${apparaten} apparaten${nogInTeDelen ? `, ${nogInTeDelen} nog in te delen` : ''}`)}
     ${link('aansluiting.html', 'Zon en aansluiting', zonZin || 'Je panelen, je zekering en je contract')}
-    ${link('meters.html', 'Meters en prijzen', 'Voor Opbrengst')}`;
+    ${link('meters.html', 'Meters en prijzen', 'Voor Opbrengst')}
+    ${link('functies.html', 'Camera’s en deurbel', 'Welke camera’s, en wat er gebeurt als er wordt aangebeld')}`;
 }
 
 function inlog() {

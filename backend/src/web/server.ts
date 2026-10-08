@@ -46,6 +46,7 @@ import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } 
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
 import type { LightSwitch } from './lights.js';
+import { controleer as controleerFuncties, functiesVoorstel, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
 
@@ -150,6 +151,11 @@ export interface WebOptions {
    * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
    */
   readonly camera?: { readonly base: string; readonly token: string; readonly ids: () => ReadonlySet<string> };
+  /**
+   * Camera's en de deurbel als instelling (besluit 109): wat er gevonden is, en
+   * wat de bewoner vastlegde. Zonder dit bestaat `/api/functies` niet.
+   */
+  readonly functies?: { readonly store: FunctiesStore; readonly gevonden: () => FunctiesGevonden | null };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -430,6 +436,8 @@ export class WebServer {
       // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
       (this.#options.connection != null && path === '/api/aansluiting') ||
       (this.#options.layout != null && path === '/api/indeling') ||
+      // Camera's en de deurbel (besluit 109): alleen de keuzes, naar een eigen bestand.
+      (this.#options.functies != null && path === '/api/functies') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
       (this.#options.lights?.scenesEnabled === true && path === '/api/scene') ||
@@ -518,6 +526,11 @@ export class WebServer {
 
     if (path === '/api/aansluiting') {
       await this.#connection(req, res, method);
+      return;
+    }
+
+    if (path === '/api/functies') {
+      await this.#functies(req, res, method);
       return;
     }
 
@@ -1192,8 +1205,8 @@ export class WebServer {
    * Er wordt aangebeld (besluit 107): elke open pagina toont het beeld van de
    * deurbel. De melding zegt alleen welke camera; het beeld vraagt de inlog.
    */
-  ring(camera: string, naam: string): void {
-    const data = JSON.stringify({ camera, naam, tMs: Date.now() });
+  ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean } = { seconden: 120, schermAan: true }): void {
+    const data = JSON.stringify({ camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan });
     for (const listener of this.#listeners) {
       try {
         listener.res.write(`event: aanbellen\ndata: ${data}\n\n`);
@@ -1268,6 +1281,36 @@ export class WebServer {
       });
     }
     return report;
+  }
+
+  /**
+   * Camera's en de deurbel (besluit 109). GET geeft wat er gevonden is, het
+   * voorstel en wat er vastligt; POST legt de keuzes vast, na de controle dat
+   * Home Assistant elke camera en melder kent.
+   */
+  async #functies(req: IncomingMessage, res: ServerResponse, method: string): Promise<void> {
+    const door = this.#options.functies;
+    const gevonden = door?.gevonden() ?? null;
+    if (door == null || gevonden == null) {
+      sendJson(res, 503, { wachten: 'de camera’s en melders komen van Home Assistant zodra die verbonden is' });
+      return;
+    }
+    if (method === 'POST') {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const uit = controleerFuncties(body, gevonden);
+      if (!uit.ok) {
+        sendJson(res, 400, { fout: uit.reden });
+        return;
+      }
+      await door.store.save(uit.functies);
+    }
+    sendJson(res, 200, { instellingen: door.store.current, voorstel: functiesVoorstel(gevonden), gevonden });
   }
 
   /** Hoeveel live-beelden er nu lopen; meer dan dit belast Home Assistant en de NAS te veel. */

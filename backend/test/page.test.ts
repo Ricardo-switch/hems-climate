@@ -41,6 +41,7 @@ import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
 import { LayoutStore } from '../src/web/layout.js';
+import { FunctiesStore, functiesGevonden } from '../src/web/functies.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
 import { WeatherLog } from '../src/web/weather.js';
@@ -188,6 +189,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let uitstel: UitstelStore;
   let energyStore: EnergyStore;
   let connStore: ConnectionStore;
+  let functiesStore: FunctiesStore;
   const sessions = new SessionStore();
   let sessionId = '';
   let stopCamera: () => Promise<void> = async () => {};
@@ -215,6 +217,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     energyStore = new EnergyStore(dir);
     // De zon en je aansluiting (besluit 103): de droger staat in de configuratie, een vaatwasser is nieuw.
     connStore = new ConnectionStore(dir);
+    functiesStore = new FunctiesStore(dir);
     const connFound = {
       fasen: [{ id: 'L1', current: 'sensor.p1_meter_current_phase_1' }] as FoundPhase[],
       apparaten: [
@@ -278,6 +281,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           // De camera (besluit 106): een nagemaakte Home Assistant die een plaatje geeft.
           camera: { base: `http://127.0.0.1:${haCameraPort}`, token: 'test', ids: () => new Set(['camera.camera_oprit_vloeiend']) },
+          // Camera's en de deurbel als instelling (besluit 109).
+          functies: { store: functiesStore, gevonden: () => functiesGevonden(houseRegisters.entities, houseRegisters.devices, houseStates) },
           // Het weer (besluit 105): twee dagen van een nagemaakte Buienradar.
           weather: {
             forecast: () => [
@@ -472,6 +477,34 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(Math.abs(r.boven), `${pagina} boven`).toBeLessThan(1);
       expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1'), `${pagina} scrolt`).toBe(true);
     }
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Camera's en deurbel (besluit 109): het voorstel uit Home Assistant, een
+   * ander beeld kiezen, en opslaan in het eigen bestand.
+   */
+  it('stelt de camera\u2019s en de deurbel in', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/instellingen.html`);
+    await p.locator('#wand a[href="functies.html"]').click();
+    const wand = p.locator('#wand');
+    await wand.locator('.regelrij', { hasText: 'Camera oprit' }).waitFor();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    // Het voorstel: het vloeiende beeld. Nu het scherpe.
+    expect(await wand.locator('[aria-label="Beeld van Camera oprit"] button[aria-pressed="true"]').textContent()).toBe('Vloeiend');
+    await wand.locator('[aria-label="Beeld van Camera oprit"] button', { hasText: 'Scherp' }).click();
+    // Zonder deurbel in Home Assistant zegt de pagina dat.
+    expect(await wand.textContent()).toContain('Geen deurbel gevonden');
+    await wand.locator('[data-opslaan]').click();
+    await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
+    expect(functiesStore.current?.cameras).toEqual({ aan: true, lijst: ['camera.camera_oprit_duidelijk'] });
+    expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
 
@@ -891,9 +924,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Een apparaat uit het blad naar de andere kamer in het huis slepen.
     const rij = p.locator('#wand [data-blad] .app').first();
     const id = (await rij.getAttribute('data-app'))!;
-    const van = (await rij.boundingBox())!;
+    // Na "Ongedaan maken" tekent het blad zich opnieuw: wachten tot de rij stilstaat.
+    await rij.hover({ position: { x: 20, y: 10 } });
+    let van: { x: number; y: number; width: number; height: number } | null = null;
+    await expect.poll(async () => (van = await rij.boundingBox())).not.toBeNull();
+    van = van!;
     const naar = (await p.locator(`#wand .sc-tik[data-kamer="${b.id}"]`).boundingBox())!;
-    await p.mouse.move(van.x + 20, van.y + van.height / 2);
     await p.mouse.down();
     await p.mouse.move(van.x - 40, van.y + 10, { steps: 4 });
     await p.mouse.move(naar.x + naar.width / 2, naar.y + naar.height / 2, { steps: 8 });

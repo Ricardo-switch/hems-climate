@@ -598,6 +598,8 @@ function collect(
   registers: HouseRegisters,
   states: ReadonlyMap<string, HaEntityState>,
   snapshot: DecisionView | null,
+  /** De camera's die de app toont (besluit 109); null is het voorstel: elke camera. */
+  cameras: ReadonlySet<string> | null = null,
 ): Context {
   const deviceArea = new Map(registers.devices.map((d) => [d.id, d.area_id]));
   const registry = new Map(registers.entities.map((e) => [e.entity_id, e]));
@@ -690,8 +692,19 @@ function collect(
     found.push({ device, haNaam: d.name, haArea: areaOf(d.remoteStart.id), groepen: [] });
   }
 
-  // Camera's (besluit 106): één per camera, de vloeiende stream, in de kamer van het apparaat.
-  for (const cam of findCameras(registers.entities, registers.devices, states)) {
+  // Camera's (besluit 106): één per camera, in de kamer van het apparaat. Welke,
+  // en met welk beeld, legt de bewoner vast (besluit 109); anders het voorstel.
+  const deviceNames = new Map(registers.devices.map((d) => [d.id, (d.name_by_user ?? d.name ?? '').trim()]));
+  const shown =
+    cameras == null
+      ? findCameras(registers.entities, registers.devices, states)
+      : [...cameras].flatMap((id) => {
+          const e = registry.get(id);
+          if (!e) return [];
+          const naam = (e.device_id ? deviceNames.get(e.device_id) : '') || String(states.get(id)?.attributes['friendly_name'] ?? id);
+          return [{ entityId: id, naam, deviceId: e.device_id ?? null }];
+        });
+  for (const cam of shown) {
     const st = states.get(cam.entityId)?.state;
     const bereikbaar = st != null && st !== 'unavailable' && st !== 'unknown';
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = cameraOf(cam.entityId, cam.naam, bereikbaar);
@@ -919,8 +932,10 @@ export function buildHouse(
   sceneColors: (sceneId: string, naam: string) => readonly string[] = (_id, naam) => defaultSceneColors(naam),
   /** De plaatjes van de Hue-scènes, als de bewoner die heeft (scene-pictures.ts). */
   scenePicture: (naam: string) => string | null = () => null,
+  /** De camera's die de app toont (besluit 109); null is elke camera. */
+  cameras: ReadonlySet<string> | null = null,
 ): HouseReport {
-  const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot);
+  const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot, cameras);
   const base = saved ?? proposeLayout(config, registers, states);
   // Een lamp die sinds het indelen is uitgezet, geeft zijn plek door aan zijn groep.
   const deviceIds = new Set(found.map((f) => f.device.id));

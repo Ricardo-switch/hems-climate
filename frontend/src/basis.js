@@ -179,16 +179,19 @@
 
   /*
    * Er wordt aangebeld (besluit 107): het beeld van de deurbel schermvullend,
-   * op elke pagina, en na twee minuten weer weg. In Fully Kiosk Browser gaat
+   * op elke pagina, en na de ingestelde tijd weer weg (besluit 109). In Fully Kiosk Browser gaat
    * ook het scherm aan; een gewone browser kan dat niet.
    */
   let belTimer = null;
   function aanbellen(m) {
-    try {
-      global.fully?.turnScreenOn?.();
-      global.fully?.bringToForeground?.();
-    } catch {
-      // Geen Fully Kiosk.
+    // Het scherm aan, als dat zo is ingesteld (besluit 109); kan alleen in Fully Kiosk.
+    if (m.schermAan !== false) {
+      try {
+        global.fully?.turnScreenOn?.();
+        global.fully?.bringToForeground?.();
+      } catch {
+        // Geen Fully Kiosk.
+      }
     }
     let laag = document.querySelector('.aanbel');
     if (!laag) {
@@ -213,7 +216,7 @@
     });
     laag.querySelector('[data-bel-dicht]').focus();
     clearTimeout(belTimer);
-    belTimer = setTimeout(sluitBel, 120_000);
+    belTimer = setTimeout(sluitBel, Math.max(30, Math.min(600, Number(m.seconden) || 120)) * 1000);
   }
   function sluitBel() {
     clearTimeout(belTimer);

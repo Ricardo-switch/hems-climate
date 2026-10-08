@@ -147,6 +147,9 @@ verwijzing bestaat.
   ([107]).
 - **Als app op de telefoon** schermvullend via https in het eigen tailnet, met
   Tailscale serve en nooit Funnel ([108]).
+- **Wat per huis verschilt, is een instelling** die de app wegschrijft, met een
+  voorstel uit Home Assistant. Camera's en de deurbel eerst; de rest staat in
+  `docs/universeel.md` ([109]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -304,4 +307,5 @@ verwijzing bestaat.
 [106]: DECISIONS.md#106-de-cameras-bekijken-in-de-app-alleen-lezen-en-alleen-met-inlog
 [107]: DECISIONS.md#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm
 [108]: DECISIONS.md#108-https-in-het-tailnet-met-tailscale-serve
+[109]: DECISIONS.md#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst
 <!-- links:einde -->

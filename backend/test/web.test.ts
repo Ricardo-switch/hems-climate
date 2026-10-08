@@ -28,6 +28,7 @@ import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type ConnectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
+import { FunctiesStore, type FunctiesGevonden } from '../src/web/functies.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -97,6 +98,7 @@ async function start(options: {
   scenePicturesDir?: string;
   connection?: { store: ConnectionStore; view: () => ConnectionView; found: () => { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[] } };
   camera?: { base: string; token: string; ids: () => ReadonlySet<string> };
+  functies?: { store: FunctiesStore; gevonden: () => FunctiesGevonden | null };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -123,6 +125,7 @@ async function start(options: {
         ...(options.scenePicturesDir ? { scenePicturesDir: options.scenePicturesDir } : {}),
         ...(options.connection ? { connection: options.connection } : {}),
         ...(options.camera ? { camera: options.camera } : {}),
+        ...(options.functies ? { functies: options.functies } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -250,6 +253,37 @@ describe('De zon en je aansluiting (besluit 103)', () => {
     const { base } = await start({});
     expect((await fetch(`${base}/api/aansluiting`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
     expect(DOOR_ROLES['/api/aansluiting']).toBe('beheerder');
+  });
+});
+
+describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
+  const gevonden: FunctiesGevonden = {
+    cameras: [{ naam: 'Oprit', beelden: [{ id: 'camera.oprit_sub', naam: 'vloeiend', voorkeur: true }, { id: 'camera.oprit_main', naam: 'scherp', voorkeur: false }] }],
+    melders: [{ id: 'binary_sensor.bel', naam: 'Bel', camera: 'camera.oprit_sub', zeker: true }],
+  };
+
+  it('geeft het voorstel, bewaart een keuze in een eigen bestand, en weigert wat Home Assistant niet kent', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-functies-web-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const store = new FunctiesStore(logDir);
+    const { base } = await start({ functies: { store, gevonden: () => gevonden } });
+    const eerst = (await (await fetch(`${base}/api/functies`)).json()) as { instellingen: unknown; voorstel: { deurbel: { melder: string } } };
+    expect(eerst.instellingen).toBeNull();
+    expect(eerst.voorstel.deurbel.melder).toBe('binary_sensor.bel');
+
+    const keuze = { versie: 1, cameras: { aan: true, lijst: ['camera.oprit_main'] }, deurbel: { aan: true, melder: 'binary_sensor.bel', camera: 'camera.oprit_main', schermAan: false, seconden: 60 } };
+    const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
+    expect(bewaard.status).toBe(200);
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual(keuze);
+
+    const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
+    expect(fout.status).toBe(400);
+  });
+
+  it('bestaat niet zonder de deur, en vraagt een beheerder', async () => {
+    const { base } = await start({});
+    expect((await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
+    expect(DOOR_ROLES['/api/functies']).toBe('beheerder');
   });
 });
 

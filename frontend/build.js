@@ -119,6 +119,7 @@ async function stempel() {
     'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'aansluiting.html': ['aansluiting.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'functies.html': ['functies.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'meters.html': ['meters.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
   };

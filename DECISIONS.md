@@ -81,6 +81,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten) — *aangevuld door 95*
 - [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant)
 - [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
+- [109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst](#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst)
 
 **Meten, data en analyse**
 
@@ -4788,6 +4789,43 @@ app naar buiten zet. Gekozen op 8 oktober 2026.
 van de NAS en van het tailnet erin. Bereikbaar is het daardoor niet, maar de
 namen zijn niet meer geheim. Wie dat niet wil, geeft de NAS in Tailscale eerst
 een nietszeggende naam.
+
+---
+
+## 109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 8 oktober 2026 vroeg de bewoner om na te gaan wat er in de code op dit huis
+is toegesneden, met het oog op de add-on voor anderen (53, 77, 91). De
+regeling zelf staat al in de configuratie van het huis (9, 40, 41): zones,
+apparaten, vermogen, schema, zekering en zon. Wat op dit huis leunde, zat in de
+weergave en in wat de dienst vanzelf koos: elke camera met het beeld dat
+Reolink "sub" noemt, een deurbel die alleen een Reolink-melder kon zijn, vaste
+namen van de airco's in Thuis, "woonkamer" als eerste kamer, twaalf panelen op
+het dak ook zonder panelen. Gekozen op 8 oktober 2026.
+
+*Besluit:*
+
+- **Wat per huis verschilt, legt de app vast als instelling,** niet de code.
+  Zoals de indeling (96) en de aansluiting (103): de dienst doet een voorstel
+  uit wat Home Assistant heeft, de bewoner past het aan, en de app schrijft het
+  weg in een eigen bestand naast de dataset. Zonder bestand geldt het voorstel.
+  Nooit naar Home Assistant.
+- **Camera's en de deurbel zijn een functie** (`functies.json`, Instellingen ›
+  Camera's en deurbel): welke camera's de app toont en met welk beeld, en welke
+  melder de deurbel is, bij welke camera, of het scherm aangaat en hoe lang het
+  beeld blijft staan. Een deurbel herkent de dienst van verschillende merken:
+  de bezoekersmelder van Reolink, een gebeurtenis met de klasse deurbel (Ring,
+  Nest en andere), en als kandidaat wat alleen zo heet. Een gebeurtenis belt bij
+  een nieuw tijdstip, niet als hij terugkomt na een storing. Opslaan vraagt een
+  beheerder; alleen camera's en melders die Home Assistant kent, komen erin.
+- **De weergave noemt niets bij naam wat uit het huis komt.** Namen van
+  apparaten komen uit het huis (`/api/huis`), de eerste kamer is die met een
+  regeling op de laagste etage, en het dak toont het aantal panelen dat de
+  bewoner opgaf, of een schatting uit de wattpiek; zonder panelen geen panelen.
+- **Wat nog op dit huis leunt,** en in welke volgorde het een instelling wordt,
+  staat in `docs/universeel.md`.
 
 ---
 

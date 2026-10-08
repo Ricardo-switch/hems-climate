@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { findCameras, findDoorbells, httpBase } from '../src/web/camera.js';
+import { findCameras, httpBase } from '../src/web/camera.js';
 
 const cam = (entity_id: string, platform: string, device_id: string, translation_key: string | null, disabled_by: string | null = null): HaRegistryEntity => ({ entity_id, platform, device_id, translation_key, disabled_by });
 
@@ -33,20 +33,6 @@ describe('de camera’s van het huis', () => {
       { entityId: 'camera.camera_oprit_vloeiend', naam: 'Camera Oprit', deviceId: 'reo1' },
       { entityId: 'camera.deurbel_vloeiend', naam: 'Deurbel', deviceId: 'reo2' },
     ]);
-  });
-});
-
-describe('de deurbel (besluit 107)', () => {
-  it('is een melder voor een bezoeker op een apparaat met een camera', () => {
-    const entities = [
-      cam('camera.deurbel_vloeiend', 'reolink', 'reo2', 'sub'),
-      { entity_id: 'binary_sensor.deurbel_bezoeker', platform: 'reolink', device_id: 'reo2', translation_key: 'visitor' },
-      { entity_id: 'binary_sensor.deurbel_persoon', platform: 'reolink', device_id: 'reo2', translation_key: 'person' },
-      // Een bezoekersmelder zonder camera: geen deurbel om te tonen.
-      { entity_id: 'binary_sensor.losse_bel', platform: 'reolink', device_id: 'los', translation_key: 'visitor' },
-    ];
-    const devices = [{ id: 'reo2', area_id: null, name: 'Deurbel' }, { id: 'los', area_id: null, name: 'Los' }];
-    expect(findDoorbells(entities, devices, new Map())).toEqual([{ sensor: 'binary_sensor.deurbel_bezoeker', camera: 'camera.deurbel_vloeiend', naam: 'Deurbel' }]);
   });
 });
 
