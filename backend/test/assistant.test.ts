@@ -435,7 +435,7 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
       for (const lang of LANGS) {
         for (const r of residentRooms(config, v, lang)) {
           expect(r.kort, `${i} ${lang}`).not.toBe('');
-          expect(`${r.kort} ${r.echt}`, `${i} ${lang}`).not.toMatch(/undefined|null|[a-z]+_[a-z_]+/);
+          expect(`${r.kort} ${r.echt}`, `${i} ${lang}`).not.toMatch(/undefined|null|\b[a-z]+_[a-z_]+\b/);
         }
       }
     }

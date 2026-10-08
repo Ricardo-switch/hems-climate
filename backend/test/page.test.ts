@@ -902,6 +902,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }
 
   /*
+   * Opbrengst in ontwerp 2 (schetsen Wand-Opbrengst en Opbrengst): de cijfers,
+   * of de weg naar de meters, en wisselen van periode.
+   */
+  it('toont Opbrengst van ontwerp 2, en wisselt van periode', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/opbrengst.html`);
+    await p.locator('#wand [data-titel]').filter({ hasNotText: 'Even laden' }).waitFor();
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    await p.locator('#wand [data-soort="jaar"]').click();
+    await p.locator('#wand [data-soort="jaar"][aria-pressed="true"]').waitFor();
+    expect(await p.locator('#balk [aria-current="page"]').textContent()).toBe('Opbrengst');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
+  /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
    * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
    * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.

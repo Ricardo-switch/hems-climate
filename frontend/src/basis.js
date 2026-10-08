@@ -20,7 +20,7 @@
     thuis: 'thuis.html',
     vandaag: 'vandaag.html',
     apparaten: 'apparaten.html',
-    opbrengst: 'nieuw.html#opbrengst',
+    opbrengst: 'opbrengst.html',
     assistent: 'nieuw.html#assistent',
     instellingen: 'nieuw.html#bediening',
   };

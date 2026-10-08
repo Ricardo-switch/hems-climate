@@ -135,6 +135,11 @@ describe('een maand, en vergelijken', () => {
     expect(source.calls).toEqual(['hour', 'month']);
   });
 
+  it('geeft oktober, met de wintertijd erin, één vak per dag', async () => {
+    const r = (await yieldReport(fakeSource(), SETTINGS, 'maand', '2026-10-08', TZ, Date.UTC(2026, 9, 8, 12)))!;
+    expect(r.perBucket.map((b) => b.label)).toEqual(Array.from({ length: 31 }, (_, i) => String(i + 1)));
+  });
+
   it('kent dag, week, maand en jaar in de tijdzone van het huis, ook rond de wintertijd', () => {
     expect(periodRange('week', '2026-10-01', TZ)).toMatchObject({ label: 'Week 40 · 28 september – 4 oktober', prev: '2026-09-21', next: '2026-10-05' });
     const dst = periodRange('dag', '2026-10-25', TZ)!;

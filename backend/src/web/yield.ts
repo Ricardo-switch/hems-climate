@@ -416,8 +416,13 @@ function deltaOf(series: readonly YieldComparePoint[]): YieldDelta {
 function bucketLabels(kind: PeriodKind, range: Range, tz: string): string[] {
   if (kind === 'dag') return Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
   if (kind === 'jaar') return [...SHORT_MONTHS];
+  // Per dag één vak. Een maand met de wintertijd erin is een uur langer; in
+  // stappen van 24 uur leverde dat een 32e vak op, met de naam van de eerste dag.
   const out: string[] = [];
-  for (let t = range.startMs; t < range.endMs; t += 86_400_000) out.push(bucketKey(kind, t + 3 * 3_600_000, tz));
+  for (let t = range.startMs; t < range.endMs; t += 86_400_000) {
+    const key = bucketKey(kind, t + 3 * 3_600_000, tz);
+    if (!out.includes(key)) out.push(key);
+  }
   return out;
 }
 
