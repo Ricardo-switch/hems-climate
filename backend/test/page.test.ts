@@ -1101,6 +1101,62 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 20_000);
 
+  /*
+   * Kamers en indeling in ontwerp 2 (besluit 104; schets Wand-Indeling): een
+   * kamer kiezen en hernoemen, een apparaat naar een andere kamer slepen, en
+   * alles weer ongedaan maken. Alles via de deur van de indeling (besluit 96).
+   */
+  it('deelt het huis in op de wand: kiezen, hernoemen, slepen en ongedaan maken', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    type Kamer = { id: string; naam: string; etage: string };
+    const info = (await (await fetch(`${baseUrl}/api/indeling`)).json()) as { indeling: { kamers: Kamer[] } | null; voorstel: { kamers: Kamer[] } };
+    const kamers = (info.indeling ?? info.voorstel).kamers;
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: { id: string }[] }[] }[] };
+    const metApparaat = huisNu.etages.flatMap((e) => e.ruimtes).filter((r) => r.apparaten.length > 0);
+    // Een kamer met een apparaat, en een andere kamer op dezelfde etage (niet buiten).
+    const a = kamers.find((k) => k.etage !== 'buiten' && metApparaat.some((r) => r.id === k.id) && kamers.some((x) => x.etage === k.etage && x.id !== k.id && !/tuin|oprit/i.test(x.naam)))!;
+    const b = kamers.find((x) => x.etage === a.etage && x.id !== a.id && !/tuin|oprit/i.test(x.naam))!;
+
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
+    await p.locator('#wand [data-actie="kamernaam"]').waitFor();
+    expect(await p.locator('#wand [data-etages] .etage').count()).toBe(4);
+    // De wand scrolt niet.
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+
+    // Hernoemen, en ongedaan maken.
+    await p.locator('#wand [data-actie="kamernaam"]').fill('Testkamer');
+    await p.locator('#wand [data-actie="kamernaam"]').press('Tab');
+    await p.locator('#wand [data-status]', { hasText: 'Naam bewaard.' }).waitFor();
+    expect(layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam).toBe('Testkamer');
+    await p.locator('#wand [data-ongedaan]').click();
+    await p.locator('#wand [data-status]', { hasText: 'Teruggezet.' }).waitFor();
+    expect(layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam).toBe(a.naam);
+
+    // Een apparaat uit het blad naar de andere kamer in het huis slepen.
+    const rij = p.locator('#wand [data-blad] .app').first();
+    const id = (await rij.getAttribute('data-app'))!;
+    const van = (await rij.boundingBox())!;
+    const naar = (await p.locator(`#wand .sc-tik[data-kamer="${b.id}"]`).boundingBox())!;
+    await p.mouse.move(van.x + 20, van.y + van.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(van.x - 40, van.y + 10, { steps: 4 });
+    await p.mouse.move(naar.x + naar.width / 2, naar.y + naar.height / 2, { steps: 8 });
+    await p.mouse.up();
+    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer).toBe(b.id);
+    await p.locator('#wand [data-status]', { hasText: 'staat nu in' }).waitFor();
+    // Na het neerzetten staat de andere kamer open.
+    expect(await p.locator('#wand [data-actie="kamernaam"]').inputValue()).toBe(b.naam);
+    await p.locator('#wand [data-ongedaan]').click();
+    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id).toBe(a.id);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   it('wijst wie niet is ingelogd bovenin de weg naar de inlog van Home Assistant (besluit 99)', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());

@@ -491,7 +491,7 @@
     function tekenKamer(kamer, x0, x1, z0, z1) {
       const xm = (x0 + x1) / 2;
       kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0, z1 });
-      if (!kamer.nieuw) tik(kamer, [[x0, D, z0], [x1, D, z0], [x1, D, z1], [x0, D, z1]]);
+      tik(kamer, [[x0, D, z0], [x1, D, z0], [x1, D, z1], [x0, D, z1]]);
       // Een lege plek voor een nieuwe kamer, in de bewerkstand: alleen een stippellijn.
       if (kamer.nieuw) {
         huis.push(poly([[x0 + 0.06, 0.06, z0 + 0.01], [x1 - 0.06, 0.06, z0 + 0.01], [x1 - 0.06, D - 0.06, z0 + 0.01], [x0 + 0.06, D - 0.06, z0 + 0.01]], `fill="${KLEUR.ijs}" fill-opacity="0.05" stroke="${KLEUR.ijs}" stroke-opacity="0.7" stroke-width="1.6" stroke-dasharray="6 5"`));

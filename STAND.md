@@ -128,9 +128,10 @@ verwijzing bestaat.
   tab herbouwd in ontwerp 2 ([104]): Thuis (`thuis.html`), Vandaag
   (`vandaag.html`), Apparaten (`apparaten.html`), Opbrengst (`opbrengst.html`),
   de Assistent (`assistent.html`), Kamer met de bladen per apparaat
-  (`kamer.html`), Instellingen (`instellingen.html`) en Wat je huis kan
-  (`huis-kan.html`) staan er; de andere tabs wijzen nog naar `nieuw.html`, de
-  proef, die verdwijnt als alles over is. De app blijft dun: alles komt
+  (`kamer.html`), Instellingen (`instellingen.html`), Wat je huis kan
+  (`huis-kan.html`) en Kamers en indeling (`indeling.html`) staan er. Zon en
+  aansluiting, en Meters en prijzen staan nog in `nieuw.html`, de proef, die
+  verdwijnt als alles over is. De app blijft dun: alles komt
   kant-en-klaar uit de dienst ([94], [76]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).

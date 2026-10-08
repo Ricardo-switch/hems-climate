@@ -4631,6 +4631,14 @@ Apparaten; Kamer met de bladen voor screen, airco, thermostaat en lamp, en de
 rondleiding; Vandaag en Opbrengst; Instellingen, de indeling, Leren en Wat je
 huis kan.
 
+*Aanvulling 8 oktober 2026.* De indeling staat in `indeling.html` (schets
+Wand-Indeling): de etages links, de etage zonder dak in het midden, een blad
+met de gekozen kamer of het gekozen apparaat rechts, en onderin wat nog
+nergens staat. Een apparaat sleep je naar een kamer in het huis of in het blad,
+of je tikt erop en kiest de kamer. Elke wijziging gaat meteen door dezelfde
+deur als voorheen (besluit 96); "Ongedaan maken" zet de vorige indeling terug.
+Etages toevoegen kan niet: de vier etages liggen vast (besluit 95).
+
 ---
 
 ## 105. Het weer van de komende dagen, met wat de panelen dan leveren

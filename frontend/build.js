@@ -120,6 +120,7 @@ async function stempel() {
     'vandaag.html': ['vandaag.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {
     const html = join(out, pagina);
