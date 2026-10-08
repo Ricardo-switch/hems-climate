@@ -43,6 +43,36 @@
   .kamer .getal { font-size: 30px; }
   .weg { display: none !important; }
 
+  /* De rondleiding (schets Wand-Uitleg): het huis licht op, een ballon vertelt. */
+  .dim { position: absolute; inset: 0; background: rgba(4, 8, 16, 0.62); z-index: 3; }
+  #tel .dim { position: fixed; z-index: 28; }
+  body.rondleiding #wand .podium { z-index: 4; }
+  body.rondleiding #tel .podium { position: relative; z-index: 29; }
+  body.rondleiding .rond { visibility: hidden; }
+  .tik { position: absolute; z-index: 5; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 10px rgba(255, 255, 255, 0.15), 0 0 30px rgba(111, 211, 255, 0.6); pointer-events: none; animation: tikken 1.6s ease-in-out infinite; transition: left 0.4s, top 0.4s; }
+  @keyframes tikken { 50% { transform: scale(1.12); } }
+  @media (prefers-reduced-motion: reduce) { .tik { animation: none; transition: none; } }
+  .ballon { position: absolute; z-index: 6; width: 330px; padding: 20px 22px; border-radius: 22px; background: #f2f6f9; color: #0b1424; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); transition: left 0.4s, top 0.4s; }
+  .ballon::after { content: ''; position: absolute; top: 46px; width: 20px; height: 20px; background: #f2f6f9; transform: rotate(45deg); border-radius: 3px; }
+  .ballon.rechts::after { left: -10px; }
+  .ballon.links::after { right: -10px; }
+  #tel .ballon { position: fixed; left: 12px; right: 12px; top: 12px; width: auto; z-index: 31; }
+  #tel .ballon::after { display: none; }
+  .ballon h2 { font-family: var(--kop); font-weight: 600; font-size: 24px; line-height: 1.12; margin: 0; letter-spacing: -0.01em; }
+  .ballon p { margin: 8px 0 0; font-size: 15px; line-height: 1.45; color: #34414f; }
+  .ballon .onder { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+  .stippen { display: flex; gap: 6px; }
+  .stippen i { width: 8px; height: 8px; border-radius: 50%; background: #c3ccd5; }
+  .stippen i.aan { background: #0b1424; width: 22px; border-radius: 4px; }
+  .ballon button { height: 40px; padding: 0 18px; border-radius: 12px; border: 0; background: #0b1424; color: #fff; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .ballon .overslaan { background: transparent; color: #57636f; padding: 0 8px; }
+  .ballon button:focus-visible { outline: 2px solid #0b1424; outline-offset: 2px; }
+  .stappen { position: absolute; z-index: 6; left: 22px; right: 26px; bottom: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stap { display: flex; gap: 14px; align-items: center; padding: 12px 16px; border-radius: 18px; background: #0c1422; border: 1px solid var(--glas-rand); }
+  .stap.nu { border-color: rgba(111, 211, 255, 0.55); }
+  .stap .mini-huis { width: 92px; height: 70px; flex: none; }
+  .stap b { display: block; font-size: 15px; }
+
   /* Het weer (besluit 105): een blad over de rechterkolom, op de telefoon onderin. */
   button.pil { border: 0; color: inherit; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
   button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
@@ -87,6 +117,9 @@
       </div>
       <button class="info rond" type="button" data-uitleg><i>i</i>Zo werkt het huis</button>
       <div class="podium" id="podium-wand"></div>
+      <div class="dim" data-rond hidden></div>
+      <span class="tik" data-tik hidden aria-hidden="true"></span>
+      <div class="stappen" data-stappen hidden></div>
       <aside class="rechts">
         <section class="glas kaart">
           <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
@@ -138,6 +171,7 @@
       <a class="glas-klein" href="nieuw.html#assistent" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; color: var(--zacht)"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</a>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <div class="dim" data-rond hidden></div>
     <div class="weer-achter" hidden data-weer-achter></div>
     <section class="glas weer" id="weer-tel" role="dialog" aria-label="Het weer" hidden data-weer></section>
   </div>

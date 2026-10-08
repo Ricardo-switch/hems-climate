@@ -722,6 +722,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     it(`toont Thuis van ontwerp 2 op de ${stand}`, async () => {
       const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
       await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+      // De rondleiding is al gezien; die heeft hieronder een eigen test.
+      await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
       const p = await context.newPage();
       const fouten: string[] = [];
       p.on('pageerror', (e) => fouten.push(e.message));
@@ -803,6 +805,38 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await context.close();
     }, 20_000);
   }
+
+  /*
+   * De rondleiding (schets Wand-Uitleg): de eerste keer vanzelf, drie stappen,
+   * daarna niet meer vanzelf, maar wel achter "Zo werkt het huis".
+   */
+  it('toont de rondleiding de eerste keer, en daarna achter "Zo werkt het huis"', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/thuis.html`);
+    const ballon = p.locator('#wand .ballon');
+    await ballon.filter({ hasText: 'Dit is je huis' }).waitFor();
+    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(3);
+    await ballon.locator('[data-volgende]').click();
+    await ballon.filter({ hasText: 'Tik op een kamer' }).waitFor();
+    await ballon.locator('[data-volgende]').click();
+    await ballon.locator('[data-volgende]', { hasText: 'Klaar' }).click();
+    await ballon.waitFor({ state: 'detached' });
+    // Gezien: na herladen niet vanzelf, wel met de knop.
+    await p.reload();
+    await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+    await p.waitForTimeout(900);
+    expect(await ballon.count()).toBe(0);
+    await p.locator('#wand [data-uitleg]').click();
+    await ballon.filter({ hasText: 'Dit is je huis' }).waitFor();
+    await p.keyboard.press('Escape');
+    await ballon.waitFor({ state: 'detached' });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
 
   /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
