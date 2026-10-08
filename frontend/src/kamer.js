@@ -339,7 +339,7 @@ function lampBlad(k, d) {
     const [h, s] = l.tint ?? [30, 80];
     const a = (h * Math.PI) / 180;
     const r = (Math.min(100, s) / 100) * 110;
-    delen.push(`<div class="wiel" role="slider" aria-label="Kleur van ${esc(d.naam)}" aria-valuetext="tint ${Math.round(h)}, verzadiging ${Math.round(s)}" data-wiel="${esc(d.id)}"><i style="left: ${(110 + Math.cos(a) * r).toFixed(1)}px; top: ${(110 - Math.sin(a) * r).toFixed(1)}px; background: hsl(${Math.round(h)} ${Math.round(s)}% 60%)"></i></div>`);
+    delen.push(`<div class="wiel" role="slider" aria-label="Kleur van ${esc(d.naam)}" aria-valuetext="tint ${Math.round(h)}, verzadiging ${Math.round(s)}" data-wiel="${esc(d.id)}"><i style="left: ${(110 + Math.cos(a) * r).toFixed(1)}px; top: ${(110 + Math.sin(a) * r).toFixed(1)}px; background: hsl(${Math.round(h)} ${Math.round(s)}% 60%)"></i></div>`);
   }
   if (!bedienen) delen.push('<p class="mini" style="margin: 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>');
   delen.push(scenesVan(k), `<p class="mini" data-fout style="margin: 0"></p>`);
@@ -430,13 +430,14 @@ function koppel(blad) {
       const r = wiel.getBoundingClientRect();
       const schaal = r.width / 220;
       const x = (ev.clientX - r.left) / schaal - 110;
-      const y = 110 - (ev.clientY - r.top) / schaal;
+      // Het wiel loopt met de klok mee (rood rechts, geel onder): y naar beneden.
+      const y = (ev.clientY - r.top) / schaal - 110;
       const h = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
       const s = Math.min(100, (Math.hypot(x, y) / 110) * 100);
       const stip = wiel.querySelector('i');
       const a = (h * Math.PI) / 180;
       stip.style.left = `${110 + Math.cos(a) * (s / 100) * 110}px`;
-      stip.style.top = `${110 - Math.sin(a) * (s / 100) * 110}px`;
+      stip.style.top = `${110 + Math.sin(a) * (s / 100) * 110}px`;
       stip.style.background = `hsl(${Math.round(h)} ${Math.round(s)}% 60%)`;
       return [Math.round(h), Math.round(s)];
     };

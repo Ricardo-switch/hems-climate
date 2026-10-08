@@ -849,6 +849,42 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 20_000);
 
   /*
+   * Vandaag in ontwerp 2 (schetsen Wand-Vandaag en Vandaag): de tijdlijn, wat
+   * er gebeurde en wat er verwacht wordt, en wisselen naar gisteren en morgen.
+   */
+  for (const [stand, viewport] of [
+    ['wand', { width: 1340, height: 800 }],
+    ['telefoon', { width: 390, height: 844 }],
+  ] as const) {
+    it(`toont Vandaag van ontwerp 2 op de ${stand}, ook gisteren en morgen`, async () => {
+      const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+      const p = await context.newPage();
+      const fouten: string[] = [];
+      p.on('pageerror', (e) => fouten.push(e.message));
+      await p.goto(`${baseUrl}/vandaag.html`);
+      const z = stand === 'wand' ? '#wand' : '#tel';
+      if (stand === 'wand') {
+        await p.locator('#wand [data-tijdlijn] svg').waitFor();
+        await p.locator('#wand [data-momentkaart] h2').waitFor();
+        expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+        const onder = await p.locator('#wand .kaarten').boundingBox();
+        const wand = await p.locator('#wand').boundingBox();
+        expect(onder && wand && onder.y + onder.height <= wand.y + wand.height + 1).toBe(true);
+      } else {
+        await p.locator('#tel [data-zonkaart] svg').waitFor();
+      }
+      await p.locator(`${z} [data-dag="gisteren"]`).click();
+      await p.locator(`${z} h1`, { hasText: 'Gisteren' }).waitFor();
+      await p.locator(`${z} [data-dag="morgen"]`).click();
+      await p.locator(`${z} h1`, { hasText: 'Morgen' }).waitFor();
+      expect(await p.locator(`${stand === 'wand' ? '#balk' : '#tabs'} [aria-current="page"]`).textContent()).toBe('Vandaag');
+      expect(fouten).toEqual([]);
+      await context.close();
+    }, 20_000);
+  }
+
+  /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
    * etage met de gekozen kamer, het blad met wat erin is, en per apparaat een
    * blad. Klimaat zegt wat het huis zou doen; een lamp schakelt echt.

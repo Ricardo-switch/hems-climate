@@ -18,7 +18,7 @@
   /* Waar de tabs staan: tot ze in ontwerp 2 zijn, in de proefomgeving. */
   const LINKS = {
     thuis: 'thuis.html',
-    vandaag: 'nieuw.html#waarom',
+    vandaag: 'vandaag.html',
     apparaten: 'apparaten.html',
     opbrengst: 'nieuw.html#opbrengst',
     assistent: 'nieuw.html#assistent',
