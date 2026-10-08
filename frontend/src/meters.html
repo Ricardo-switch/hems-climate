@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Meters en prijzen · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement; function s() { d.classList.toggle('tel-stand', innerWidth < 900 || innerHeight > innerWidth); d.style.setProperty('--wandschaal', Math.min(innerWidth / 1280, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<style>
+  /* De wand (zelfde opbouw als Zon en aansluiting): drie kolommen, bewaren rechtsboven. */
+  #wand main { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 16px; height: 100%; }
+  .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 16px; }
+  .terugnaar { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .terugnaar:hover { color: var(--tekst); }
+  .kolom { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; }
+  .zijaanzicht svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
+  .notitie { padding: 12px 14px; border-radius: 14px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.25); font-size: 13px; color: var(--zacht); display: flex; flex-direction: column; gap: 4px; }
+  .notitie:empty { display: none; }
+
+  /* De telefoon. */
+  #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <main>
+      <div class="kop">
+        <div><a class="terugnaar" href="instellingen.html">‹ Instellingen</a><h1 class="kop-1" style="font-size: 40px; margin-top: 6px">Meters en prijzen</h1><p class="lead" style="margin-top: 6px">Welke meters Opbrengst gebruikt, en wat stroom en gas kosten.</p></div>
+        <div class="status-regel"><span class="meldtekst" data-melding aria-live="polite"></span><button type="button" class="knop knop-licht" data-opslaan>Bewaren</button></div>
+      </div>
+      <div class="kolom" data-kolom="1"></div>
+      <div class="kolom" data-kolom="2"></div>
+      <div class="kolom" data-kolom="3"></div>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="inhoud">
+      <a class="klein" href="instellingen.html" style="font-weight: 600">‹ Instellingen</a>
+      <h1 class="kop-1" style="font-size: 30px">Meters en prijzen</h1>
+      <p class="klein" style="margin: -4px 0 4px">Welke meters Opbrengst gebruikt, en wat stroom en gas kosten.</p>
+      <div data-kolom="1" style="display: contents"></div>
+      <div data-kolom="2" style="display: contents"></div>
+      <div data-kolom="3" style="display: contents"></div>
+      <div class="status-regel" style="justify-content: space-between"><span class="meldtekst" data-melding aria-live="polite" style="text-align: left"></span><button type="button" class="knop knop-licht" data-opslaan>Bewaren</button></div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  </div>
+  <script src="kit/nav.js"></script>
+  <script src="basis.js"></script>
+  <script src="meters.js"></script>
+</body>
+</html>

@@ -177,7 +177,7 @@ function tekenNu() {
 
   if (!data) {
     const tekst = melding === 'meters'
-      ? `<section class="glas kaart"><h2 class="kop-3">Eerst je meters</h2><p class="klein" style="margin: 8px 0 12px">Om terug te kijken moet Smart Climate weten welke meters je huis heeft en wat stroom en gas kosten.</p><a class="pil" href="nieuw.html#energie">Meters en prijzen instellen</a></section>`
+      ? `<section class="glas kaart"><h2 class="kop-3">Eerst je meters</h2><p class="klein" style="margin: 8px 0 12px">Om terug te kijken moet Smart Climate weten welke meters je huis heeft en wat stroom en gas kosten.</p><a class="pil" href="meters.html">Meters en prijzen instellen</a></section>`
       : `<p class="klein">${esc(melding ?? 'Even laden…')}</p>`;
     $$('[data-titel]').forEach((el) => (el.textContent = melding === 'meters' ? 'Opbrengst' : melding ? 'Opbrengst' : 'Even laden'));
     document.querySelector('[data-links]').innerHTML = tekst;

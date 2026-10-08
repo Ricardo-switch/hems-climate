@@ -106,12 +106,10 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
  * Wijzigt het niet, dan blijft de URL gelijk en werkt de cache gewoon.
  */
 async function stempel() {
-  // Per pagina de bestanden die ze laadt. nieuw.html is de testversie van de
-  // bewonersapp (besluit 71); hij heeft zijn opmaak in de pagina zelf.
-  // thuis.html is de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
+  // Per pagina de bestanden die ze laadt. thuis.html en de pagina's ernaast zijn
+  // de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
   const paginas = {
     'index.html': ['app.css', 'app.js'],
-    'nieuw.html': ['nieuw.js'],
     'thuis.html': ['thuis.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'instellingen.html': ['instellingen.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'huis-kan.html': ['huis-kan.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
@@ -120,6 +118,8 @@ async function stempel() {
     'vandaag.html': ['vandaag.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'aansluiting.html': ['aansluiting.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'meters.html': ['meters.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {

@@ -35,9 +35,9 @@ describe('alleen bekende hostnamen', () => {
 
 describe('de terugweg na het inloggen', () => {
   it('is altijd een pad op deze dienst', () => {
-    expect(safeReturn('/nieuw.html#huis')).toBe('/nieuw.html#huis');
+    expect(safeReturn('/kamer.html#woonkamer')).toBe('/kamer.html#woonkamer');
     for (const bad of [null, '//vreemd.example', 'https://vreemd.example', '/\\vreemd.example']) {
-      expect(safeReturn(bad)).toBe('/nieuw.html');
+      expect(safeReturn(bad)).toBe('/thuis.html');
     }
   });
 });

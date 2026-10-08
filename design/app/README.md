@@ -13,10 +13,9 @@ Ook te bekijken als canvas op claude.ai (privé, alleen voor de eigenaar):
 
 Hoe het samenhangt, wat vastligt en wat nog open is: [ONTWERP.md](ONTWERP.md).
 
-De proefomgeving staat naast de schaduwpagina: `nieuw.html` op de NAS (bron
-in `frontend/src/nieuw.html` en `nieuw.js`), op dezelfde live gegevens. Hij
-wordt de app en blijft dun: alles wat hij toont, komt uit de dienst (besluit
-94).
+De proefomgeving `nieuw.html` is op 8 oktober 2026 weggehaald: de app staat
+nu in ontwerp 2 (`design/app2/`, besluit 104), een pagina per tab. Hij blijft
+dun: alles wat hij toont, komt uit de dienst (besluit 94).
 
 ## Wat er staat
 

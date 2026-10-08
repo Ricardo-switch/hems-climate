@@ -275,7 +275,7 @@ export type Access =
 
 /** Een terugweg na het inloggen: alleen een pad op deze dienst, nooit een andere site. */
 export function safeReturn(raw: string | null): string {
-  if (raw == null || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '/nieuw.html';
+  if (raw == null || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '/thuis.html';
   return raw;
 }
 

@@ -48,3 +48,38 @@ html:not(.tel-stand) #tel { display: none; }
 .aanbel-beeld img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .aanbel-beeld p { padding: 24px; max-width: 44ch; }
 .aanbel-beeld a { color: var(--ijs); font-weight: 700; }
+
+/* ---------------------------------------------------------- formulieren (Zon en aansluiting, Meters en prijzen) */
+.vraag { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.vraag h2 { margin: 0; }
+.vraag .kopregel { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.keuzes { display: flex; flex-wrap: wrap; gap: 6px; }
+.keuzes button { height: 38px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.05); font: inherit; font-weight: 700; font-size: 14px; color: var(--zacht); cursor: pointer; }
+.keuzes button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; border-color: transparent; }
+.keuzes button:disabled { cursor: default; opacity: 0.55; }
+.keuzes button:focus-visible, .invoer:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+.invoer { width: 100%; height: 44px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: var(--tekst); padding: 0 12px; font: inherit; font-size: 15px; font-weight: 600; }
+select.invoer { cursor: pointer; }
+select.invoer option, select.invoer optgroup { background: #13203a; color: var(--tekst); }
+.twee { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.veldnaam { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--gedempt); }
+.vraag .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
+.vraag .mini { margin: 0; }
+.status-regel { display: flex; align-items: center; gap: 10px; }
+.status-regel .knop { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; text-decoration: none; }
+.meldtekst { font-size: 12.5px; color: var(--gedempt); max-width: 36ch; text-align: right; }
+.meldtekst.fout { color: #ffb090; }
+.label-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+.label-chip.goed { background: rgba(110, 231, 183, 0.15); color: var(--mint); }
+.label-chip.traag { background: rgba(247, 181, 72, 0.15); color: var(--zon); }
+.meterchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.meterchips button { height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.meterchips button span { color: var(--gedempt); margin-left: 4px; }
+.regelrij { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.regelrij:first-of-type { border-top: 0; }
+.regelrij .l { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.regelrij .l span { font-size: 12.5px; color: var(--gedempt); }
+
+/* Zonder verbinding (besluit 82): de laatste stand, grijs, en niets om op te drukken. */
+body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); opacity: 0.7; pointer-events: none; }
+.geenverbinding { position: fixed; z-index: 900; left: 50%; top: 14px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 14px; background: rgba(20, 28, 44, 0.95); border: 1px solid rgba(247, 181, 72, 0.5); color: var(--tekst); font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }

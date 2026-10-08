@@ -123,8 +123,8 @@ function jeHuis() {
   return `<h2 class="kop-3">Je huis</h2>
     ${link('huis-kan.html', 'Wat je huis kan', 'Wat er met je huis kan, en wat er nog bij kan')}
     ${link('indeling.html', 'Kamers en indeling', `${etages.length} etages, ${kamers} kamers, ${apparaten} apparaten${nogInTeDelen ? `, ${nogInTeDelen} nog in te delen` : ''}`)}
-    ${link('nieuw.html#aansluiting', 'Zon en aansluiting', zonZin || 'Je panelen, je zekering en je contract')}
-    ${link('nieuw.html#energie', 'Meters en prijzen', 'Voor Opbrengst')}`;
+    ${link('aansluiting.html', 'Zon en aansluiting', zonZin || 'Je panelen, je zekering en je contract')}
+    ${link('meters.html', 'Meters en prijzen', 'Voor Opbrengst')}`;
 }
 
 function inlog() {

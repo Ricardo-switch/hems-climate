@@ -1227,12 +1227,12 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
 
   /** Loopt de inlog door zoals een browser: naar Home Assistant en terug. */
   async function logIn(base: string): Promise<string> {
-    const go = await fetch(`${base}/auth/login?terug=/nieuw.html%23huis`, { redirect: 'manual' });
+    const go = await fetch(`${base}/auth/login?terug=/kamer.html%23woonkamer`, { redirect: 'manual' });
     expect(go.status).toBe(302);
     const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
     const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
     expect(back.status).toBe(302);
-    expect(back.headers.get('location')).toBe('/nieuw.html#huis');
+    expect(back.headers.get('location')).toBe('/kamer.html#woonkamer');
     const cookie = back.headers.get('set-cookie')!;
     expect(cookie).toMatch(/HttpOnly/);
     expect(cookie).toMatch(/SameSite=Strict/);
@@ -1312,7 +1312,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const go = await fetch(`${base}/auth/login?terug=//vreemd.example/x`, { redirect: 'manual' });
     const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
     const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
-    expect(back.headers.get('location')).toBe('/nieuw.html');
+    expect(back.headers.get('location')).toBe('/thuis.html');
   });
 
   it('logt uit: daarna is de sessie weg', async () => {

@@ -117,10 +117,12 @@ registers van Home Assistant een configuratie voor en besluit niet (besluit 41).
 Een stiltetest eist dat elk veld ergens gelezen wordt of met een reden op een
 lijst staat (besluit 54).
 
-**De weergave (`frontend/`).** Twee pagina's, vanilla JS: `index.html` voor de schaduw
-(Tailwind lokaal gebouwd) en `nieuw.html`, de testversie van de bewonersapp in de
-ontwerptaal van `design/app/` (besluit 71). Ze lezen `Explanation` en herberekenen
-niets. De schaduwdienst serveert ze zelf:
+**De weergave (`frontend/`).** Vanilla JS: `index.html` voor de schaduw (Tailwind
+lokaal gebouwd), en de bewonersapp in ontwerp 2 (besluit 104), één pagina per tab:
+`thuis.html`, `vandaag.html`, `apparaten.html`, `opbrengst.html`, `assistent.html`,
+`kamer.html`, `instellingen.html`, `indeling.html`, `aansluiting.html`,
+`meters.html` en `huis-kan.html`, met de tekenmotor uit `frontend/kit/`. Ze lezen
+wat de dienst kant-en-klaar geeft en herberekenen niets. De schaduwdienst serveert ze zelf:
 
 | Route | Wat |
 | --- | --- |

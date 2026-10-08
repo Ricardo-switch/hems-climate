@@ -37,9 +37,40 @@
   }
 
   async function haal(pad) {
-    const res = await fetch(pad, { cache: 'no-store' });
+    let res;
+    try {
+      res = await fetch(pad, { cache: 'no-store' });
+    } catch (fout) {
+      // Geen antwoord van de NAS: de laatste stand blijft, grijs (besluit 82).
+      offline();
+      throw fout;
+    }
+    online();
     if (!res.ok) throw new Error(`${pad}: ${res.status}`);
     return res.json();
+  }
+
+  /*
+   * Zonder verbinding (besluit 82): de pagina houdt de laatste stand, grijs, met
+   * sinds wanneer. De regeling draait op de NAS gewoon door; alleen deze pagina
+   * hoort niets meer. Komt er weer antwoord, dan is het weg.
+   */
+  let wegSinds = null;
+  function offline(sinds = Date.now()) {
+    if (wegSinds != null) return;
+    wegSinds = sinds;
+    document.body.classList.add('offline');
+    const balk = document.createElement('div');
+    balk.className = 'geenverbinding';
+    balk.setAttribute('role', 'status');
+    balk.textContent = `Geen verbinding met Smart Climate sinds ${klokVan(sinds)}. De regeling loopt gewoon door; dit is de laatste stand.`;
+    document.body.append(balk);
+  }
+  function online() {
+    if (wegSinds == null) return;
+    wegSinds = null;
+    document.body.classList.remove('offline');
+    document.querySelector('.geenverbinding')?.remove();
   }
 
   /**
@@ -105,6 +136,17 @@
     if (bron) return bron;
     try {
       bron = new EventSource('api/events');
+      // Valt de stroom weg en komt hij niet snel terug, dan zonder verbinding.
+      let wacht = null;
+      bron.addEventListener('error', () => {
+        const toen = Date.now();
+        clearTimeout(wacht);
+        wacht = setTimeout(() => bron.readyState !== EventSource.OPEN && offline(toen), 15_000);
+      });
+      bron.addEventListener('open', () => {
+        clearTimeout(wacht);
+        online();
+      });
       bron.addEventListener('aanbellen', (ev) => {
         try {
           aanbellen(JSON.parse(ev.data));
@@ -226,5 +268,5 @@
     setInterval(klok, 10_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen };
+  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
 })(window);

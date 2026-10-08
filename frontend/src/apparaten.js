@@ -166,7 +166,7 @@ async function kies(d, optie, groep, knop, antwoord) {
 function nietOpZon(a) {
   const el = document.createElement('a');
   el.className = 'glas app niet';
-  el.href = 'nieuw.html#aansluiting';
+  el.href = 'aansluiting.html';
   el.innerHTML = `
     <div class="boven">${ring({ gestippeld: true })}<div><b>${esc(a.naam)}</b><span class="klein">Niet op zon</span></div></div>
     <p class="mini zin">Zet hem op zon bij Zon en aansluiting. Dan wacht hij op zonnestroom als hij klaarstaat.</p>`;
@@ -176,7 +176,7 @@ function nietOpZon(a) {
 function toevoegen() {
   const el = document.createElement('a');
   el.className = 'glas app niet';
-  el.href = 'nieuw.html#aansluiting';
+  el.href = 'aansluiting.html';
   el.innerHTML = `
     <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>Apparaat toevoegen</b><span class="klein">Wasmachine, vaatwasser, boiler</span></div></div>
     <p class="mini zin">Alles wat Home Assistant op afstand kan starten en kan wachten op zon. Kies het bij Zon en aansluiting.</p>`;

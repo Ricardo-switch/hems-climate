@@ -129,9 +129,10 @@ verwijzing bestaat.
   (`vandaag.html`), Apparaten (`apparaten.html`), Opbrengst (`opbrengst.html`),
   de Assistent (`assistent.html`), Kamer met de bladen per apparaat
   (`kamer.html`), Instellingen (`instellingen.html`), Wat je huis kan
-  (`huis-kan.html`) en Kamers en indeling (`indeling.html`) staan er. Zon en
-  aansluiting, en Meters en prijzen staan nog in `nieuw.html`, de proef, die
-  verdwijnt als alles over is. De app blijft dun: alles komt
+  (`huis-kan.html`), Kamers en indeling (`indeling.html`), Zon en aansluiting
+  (`aansluiting.html`) en Meters en prijzen (`meters.html`). De proef
+  `nieuw.html` is weg. Zonder verbinding toont elke pagina de laatste stand,
+  grijs ([82]). De app blijft dun: alles komt
   kant-en-klaar uit de dienst ([94], [76]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).

@@ -4639,6 +4639,12 @@ of je tikt erop en kiest de kamer. Elke wijziging gaat meteen door dezelfde
 deur als voorheen (besluit 96); "Ongedaan maken" zet de vorige indeling terug.
 Etages toevoegen kan niet: de vier etages liggen vast (besluit 95).
 
+*Aanvulling 8 oktober 2026, later.* Zon en aansluiting (`aansluiting.html`) en
+Meters en prijzen (`meters.html`) staan nu ook in ontwerp 2. Daarmee stond alles
+uit de proef van besluit 71 in de app, en is `nieuw.html` weggehaald. Wie na het
+inloggen geen terugweg heeft, komt op `thuis.html`. Zonder verbinding (besluit
+82) toont elke pagina de laatste stand grijs, met sinds wanneer.
+
 ---
 
 ## 105. Het weer van de komende dagen, met wat de panelen dan leveren
