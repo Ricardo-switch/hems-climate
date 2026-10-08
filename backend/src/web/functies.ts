@@ -69,6 +69,10 @@ const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp
 const GEEN_BEELD = new Set(['buienradar']);
 /** Een melder die naar een deurbel klinkt. */
 const BEL_NAAM = /deurbel|doorbell|aanbel|bezoeker|visitor|\bding\b|\bbel\b|\bring\b/i;
+/** Wat op een deurbel zit maar geen bel is. */
+const GEEN_BEL = /beweging|motion|persoon|person|mens|human|dier|pet|voertuig|vehicle|pakket|package|gezicht|face/i;
+/** De koppeling waar een tweede beeld van dezelfde camera vandaan komt. */
+const KOPPELING: Readonly<Record<string, string>> = { synology_dsm: 'via de Synology', unifiprotect: 'via UniFi', frigate: 'via Frigate', generic: 'via een stream', onvif: 'via ONVIF' };
 /** De sleutels en klassen waarmee merken een deurbel melden. */
 const BEL_SLEUTEL = new Set(['visitor', 'doorbell', 'ding', 'button_press', 'doorbell_press']);
 
@@ -80,20 +84,25 @@ function friendly(states: ReadonlyMap<string, HaEntityState>, id: string): strin
 export function functiesGevonden(entities: readonly HaRegistryEntity[], devices: readonly HaDevice[], states: ReadonlyMap<string, HaEntityState>): FunctiesGevonden {
   const deviceName = new Map(devices.map((d) => [d.id, (d.name_by_user ?? d.name ?? '').trim()]));
   const voorkeur = new Set(findCameras(entities, devices, states).map((c) => c.entityId));
-  const perApparaat = new Map<string, { naam: string; beelden: { id: string; naam: string; voorkeur: boolean }[] }>();
+  // Eén camera per naam: dezelfde camera via een tweede koppeling (de Synology)
+  // is een tweede beeld van die camera, geen tweede camera.
+  const perCamera = new Map<string, { naam: string; beelden: { id: string; naam: string; voorkeur: boolean }[] }>();
+  const camVanApparaat = new Map<string, string>();
   for (const e of entities) {
     if (!e.entity_id.startsWith('camera.') || e.disabled_by != null || GEEN_BEELD.has(e.platform ?? '') || !CAMERA_ID.test(e.entity_id)) continue;
-    const sleutel = e.device_id ?? e.entity_id;
     const naam = (e.device_id ? deviceName.get(e.device_id) : '') || friendly(states, e.entity_id);
-    const groep = perApparaat.get(sleutel) ?? { naam, beelden: [] };
-    groep.beelden.push({ id: e.entity_id, naam: BEELD[e.translation_key ?? ''] ?? friendly(states, e.entity_id), voorkeur: voorkeur.has(e.entity_id) });
-    perApparaat.set(sleutel, groep);
+    const sleutel = naam.toLowerCase().replace(/[^a-z0-9]+/g, '') || e.entity_id;
+    if (e.device_id) camVanApparaat.set(e.device_id, sleutel);
+    const groep = perCamera.get(sleutel) ?? { naam, beelden: [] };
+    const beeld = BEELD[e.translation_key ?? ''] ?? KOPPELING[e.platform ?? ''] ?? friendly(states, e.entity_id);
+    groep.beelden.push({ id: e.entity_id, naam: beeld, voorkeur: voorkeur.has(e.entity_id) });
+    perCamera.set(sleutel, groep);
   }
-  const cameras = [...perApparaat.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  const cameras = [...perCamera.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
 
   const cameraVan = (deviceId: string | null | undefined) => {
-    if (!deviceId) return null;
-    const groep = perApparaat.get(deviceId);
+    const sleutel = deviceId ? camVanApparaat.get(deviceId) : undefined;
+    const groep = sleutel ? perCamera.get(sleutel) : undefined;
     return groep ? (groep.beelden.find((b) => b.voorkeur) ?? groep.beelden[0])?.id ?? null : null;
   };
   const melders: MelderKeuze[] = [];
@@ -106,7 +115,7 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
     const zeker = BEL_SLEUTEL.has(sleutel) || klasse === 'doorbell';
     // Op naam alleen wat verder niets is: een persoon of beweging op de deurbel
     // heet ook "deurbel", maar is geen bel.
-    if (!zeker && (sleutel !== '' || klasse !== '' || !BEL_NAAM.test(naam))) continue;
+    if (!zeker && (sleutel !== '' || klasse !== '' || !BEL_NAAM.test(naam) || GEEN_BEL.test(naam))) continue;
     melders.push({ id, naam: friendly(states, id), camera: cameraVan(e.device_id), zeker });
   }
   // De zekere eerst, en die met een camera.

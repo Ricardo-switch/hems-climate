@@ -27,6 +27,10 @@ const entities: HaRegistryEntity[] = [
   { entity_id: 'binary_sensor.deurbel_knop', platform: 'zha', device_id: 'zig1' },
   // Een sensor die "Spring" heet is geen deurbel.
   { entity_id: 'binary_sensor.spring_sensor', platform: 'zha', device_id: 'zig2' },
+  // Beweging op de deurbel, zonder sleutel van het merk: geen bel.
+  { entity_id: 'binary_sensor.deurbel_beweging', platform: 'reolink', device_id: 'reo2' },
+  // Dezelfde camera via de Synology: een tweede beeld, geen tweede camera.
+  { entity_id: 'camera.camera_oprit', platform: 'synology_dsm', device_id: 'syn1' },
 ];
 const devices = [
   { id: 'reo1', area_id: null, name: 'Camera Oprit' },
@@ -34,6 +38,7 @@ const devices = [
   { id: 'ring1', area_id: null, name: 'Voordeur' },
   { id: 'zig1', area_id: null, name: 'Knop' },
   { id: 'zig2', area_id: null, name: 'Spring' },
+  { id: 'syn1', area_id: null, name: 'Camera Oprit' },
 ];
 const g = functiesGevonden(entities, devices, new Map());
 const state = (entity_id: string, s: string): HaEntityState => ({ entity_id, state: s, attributes: {}, last_changed: '', last_updated: '' }) as unknown as HaEntityState;
@@ -41,7 +46,14 @@ const state = (entity_id: string, s: string): HaEntityState => ({ entity_id, sta
 describe('camera’s en de deurbel vinden (besluit 109)', () => {
   it('geeft per camera zijn beelden, met het lichtste als voorkeur, zonder het buienradarplaatje', () => {
     expect(g.cameras).toEqual([
-      { naam: 'Camera Oprit', beelden: [{ id: 'camera.camera_oprit_duidelijk', naam: 'scherp', voorkeur: false }, { id: 'camera.camera_oprit_vloeiend', naam: 'vloeiend', voorkeur: true }] },
+      {
+        naam: 'Camera Oprit',
+        beelden: [
+          { id: 'camera.camera_oprit_duidelijk', naam: 'scherp', voorkeur: false },
+          { id: 'camera.camera_oprit_vloeiend', naam: 'vloeiend', voorkeur: true },
+          { id: 'camera.camera_oprit', naam: 'via de Synology', voorkeur: false },
+        ],
+      },
       { naam: 'Deurbel', beelden: [{ id: 'camera.deurbel_vloeiend', naam: 'vloeiend', voorkeur: true }] },
     ]);
   });
