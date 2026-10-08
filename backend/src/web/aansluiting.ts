@@ -63,7 +63,16 @@ export interface FoundAppliance {
 
 export interface ConnectionAnswers {
   readonly versie: 1;
-  readonly panelen: { readonly ligging: PanelSide | null; readonly aantal: number | null };
+  /**
+   * Bij panelen op beide kanten het aantal per kant; `aantal` is dan de som, als
+   * beide bekend zijn. Anders alleen `aantal`.
+   */
+  readonly panelen: {
+    readonly ligging: PanelSide | null;
+    readonly aantal: number | null;
+    readonly voorkant: number | null;
+    readonly achterkant: number | null;
+  };
   readonly zekering: Fuse | 'weetniet' | null;
   readonly tarief: Tariff | null;
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
@@ -286,10 +295,17 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
 
   const ligging = p['ligging'] ?? null;
   if (ligging !== null && !PANEL_SIDES.includes(ligging as PanelSide)) return { ok: false, reden: 'onbekende ligging van de panelen' };
-  const aantal = p['aantal'] ?? null;
-  if (aantal !== null && !(Number.isInteger(aantal) && (aantal as number) >= 1 && (aantal as number) <= 200)) {
+  const count = (v: unknown): number | null | false =>
+    v == null ? null : Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 200 ? (v as number) : false;
+  const both = ligging === 'beide';
+  const voorkant = both ? count(p['voorkant']) : null;
+  const achterkant = both ? count(p['achterkant']) : null;
+  const given = count(p['aantal']);
+  if (voorkant === false || achterkant === false || given === false) {
     return { ok: false, reden: 'het aantal panelen is een heel getal van 1 tot 200' };
   }
+  // Bij beide kanten telt het aantal per kant; het totaal volgt daaruit.
+  const aantal = both && voorkant != null && achterkant != null ? voorkant + achterkant : given;
 
   let zekering: Fuse | 'weetniet' | null = null;
   const z = b['zekering'] ?? null;
@@ -317,7 +333,7 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
     ok: true,
     answers: {
       versie: 1,
-      panelen: { ligging: ligging as PanelSide | null, aantal: aantal as number | null },
+      panelen: { ligging: ligging as PanelSide | null, aantal, voorkant, achterkant },
       zekering,
       tarief: tarief as Tariff | null,
       fasen: [...found.fasen],

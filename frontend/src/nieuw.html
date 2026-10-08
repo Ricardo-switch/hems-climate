@@ -1377,6 +1377,11 @@
         flex: 0 0 auto;
         max-width: 160px;
       }
+      .z-aantallen {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
       .switch {
         width: 52px;
         height: 32px;
@@ -2010,7 +2015,7 @@
             <div class="eyebrow">Je huis</div>
             <div class="card rows">
               <a class="row rijlink" href="#aansluiting">
-                <span class="l"><b>De zon en je aansluiting</b><span>Panelen, hoofdzekering, stroomcontract, apparaten op zon</span></span>
+                <span class="l"><b>Zon en aansluiting</b><span>Zonnepanelen, hoofdzekering, stroomcontract, apparaten op zon</span></span>
                 <span class="pijl" aria-hidden="true">›</span>
               </a>
               <a class="row rijlink" href="#energie">
@@ -2025,8 +2030,8 @@
         <section class="view narrow" data-view="aansluiting" hidden>
           <div class="stack">
             <a class="terug" href="#bediening">‹ Bediening</a>
-            <h1 class="title">De zon en je aansluiting</h1>
-            <p class="lead">Een paar vragen die ik niet uit Home Assistant haal. Weet je het niet, dan meet ik het zelf en vraag ik het later na.</p>
+            <h1 class="title">Zon en aansluiting</h1>
+            <p class="lead">Gegevens die niet in Home Assistant staan. Weet je iets niet, kies dan "Weet ik niet"; de app meet het dan zelf.</p>
           </div>
           <div class="stack" id="z-inhoud"></div>
         </section>

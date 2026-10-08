@@ -612,23 +612,24 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.locator('#inlog-chip').isVisible()).toBe(false);
       expect(await layoutProblems(p), `Bediening in ${stand}`).toEqual([]);
       // De zon en je aansluiting (besluit 103), via Je huis in Bediening.
-      await p.locator('.b-huisvak a', { hasText: 'De zon en je aansluiting' }).click();
-      await p.locator('#z-inhoud h2', { hasText: 'Waar liggen je panelen?' }).waitFor();
+      await p.locator('.b-huisvak a', { hasText: 'Zon en aansluiting' }).click();
+      await p.locator('#z-inhoud h2', { hasText: 'Zonnepanelen' }).waitFor();
       // De zekering en de droger staan in de configuratie; die gaan voor.
       expect(await p.locator('#z-inhoud button[aria-pressed="true"]', { hasText: '1 × 35 A' }).isDisabled()).toBe(true);
-      expect(await p.locator('#z-inhoud').textContent()).toContain('Start op zon; staat in de configuratie van het huis.');
+      expect(await p.locator('#z-inhoud').textContent()).toContain('Start bij zonne-overschot. Ingesteld in de configuratie.');
       expect(await p.locator('#z-inhoud').textContent()).toContain('Snel genoeg');
       expect(await layoutProblems(p), `Zon en aansluiting in ${stand}`).toEqual([]);
       await p.locator('#z-inhoud button', { hasText: 'Beide kanten' }).click();
-      // Een invoerveld in een kolom groeit niet in de hoogte.
-      expect(await p.getByLabel('Hoeveel panelen ongeveer').evaluate((e) => e.getBoundingClientRect().height)).toBeLessThan(60);
-      await p.getByLabel('Hoeveel panelen ongeveer').fill('12');
-      await p.getByLabel('Hoeveel panelen ongeveer').press('Tab');
-      await p.locator('#z-inhoud [aria-label="Vaatwasser op zon"] button', { hasText: 'Ja, op zon' }).click();
-      await p.locator('#z-inhoud button', { hasText: 'Bewaren' }).click();
-      await p.locator('#z-zin').filter({ hasText: 'Bewaard' }).waitFor();
-      expect(connStore.current).toMatchObject({ panelen: { ligging: 'beide', aantal: 12 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
-      expect(await p.locator('#z-inhoud .note').textContent()).toContain('bij de volgende start');
+      // Bij beide kanten een veld per kant; een invoerveld in een kolom groeit niet in de hoogte.
+      expect(await p.getByLabel('Aantal aan de voorkant').evaluate((e) => e.getBoundingClientRect().height)).toBeLessThan(60);
+      await p.getByLabel('Aantal aan de voorkant').fill('6');
+      await p.getByLabel('Aantal aan de achterkant').fill('6');
+      await p.getByLabel('Aantal aan de achterkant').press('Tab');
+      await p.locator('#z-inhoud [aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
+      await p.locator('#z-inhoud button', { hasText: 'Opslaan' }).click();
+      await p.locator('#z-zin').filter({ hasText: 'Opgeslagen' }).waitFor();
+      expect(connStore.current).toMatchObject({ panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
+      expect(await p.locator('#z-inhoud .note').textContent()).toContain('na de volgende herstart');
       expect(await layoutProblems(p), `Zon en aansluiting bewaard in ${stand}`).toEqual([]);
 
       // De terugblik op zijn eigen tabblad, met het percentage uit dezelfde bron als index.html.

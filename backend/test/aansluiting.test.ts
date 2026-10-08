@@ -146,6 +146,15 @@ describe('bewaren', () => {
     expect(validateConnection({ zekering: 'weetniet' }, found)).toMatchObject({ ok: true, answers: { zekering: 'weetniet', panelen: { ligging: null } } });
   });
 
+  it('telt bij beide kanten per kant, en het totaal volgt daaruit', () => {
+    const both = validateConnection({ panelen: { ligging: 'beide', voorkant: 6, achterkant: 6 } }, found);
+    expect(both.ok && both.answers.panelen).toEqual({ ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 });
+    // Bij één kant telt alleen het aantal; een aantal per kant valt weg.
+    const one = validateConnection({ panelen: { ligging: 'voorkant', aantal: 8, voorkant: 3 } }, found);
+    expect(one.ok && one.answers.panelen).toEqual({ ligging: 'voorkant', aantal: 8, voorkant: null, achterkant: null });
+    expect(validateConnection({ panelen: { ligging: 'beide', voorkant: 0 } }, found).ok).toBe(false);
+  });
+
   it('weigert wat niet kan', () => {
     expect(validateConnection({ panelen: { ligging: 'zuid' } }, found).ok).toBe(false);
     expect(validateConnection({ panelen: { aantal: 0 } }, found).ok).toBe(false);

@@ -4518,7 +4518,7 @@ hiermee niets. Gekozen door de bewoner op 7 oktober 2026.
 *Besluit:*
 
 - **De antwoorden staan in de app** (`aansluiting.json` naast de dataset, en in
-  de export), te beheren via Bediening › Je huis › De zon en je aansluiting.
+  de export), te beheren via Bediening › Je huis › Zon en aansluiting.
   Bewaren vraagt een beheerder (99).
 - **De regeling leest mee waar de configuratie zwijgt.** Zonder `grid` worden
   de zekering en de gevonden stroommeters het stroombudget (78); een apparaat
@@ -4547,10 +4547,12 @@ hiermee niets. Gekozen door de bewoner op 7 oktober 2026.
   nieuwe waarden, overdag, vanaf zes metingen. Trager dan eens per twee minuten
   zegt de app, met de lokale weg voor het merk.
 - **De ligging van de panelen** (voorkant, achterkant, beide, plat, weet ik niet,
-  en hoeveel ongeveer) gaat nog niet naar de regeling: die is voor de meting
+  en het aantal; bij beide kanten per kant) gaat nog niet naar de regeling: die is voor de meting
   van besluit 93, die de bewoner daarna laat bevestigen.
 - **Het stroomcontract** (vast, dynamisch, weet ik niet) wordt bewaard voor E;
   wat stroom en gas kosten, blijft bij Meters en prijzen (102).
+- **Gewone teksten.** Het scherm spreekt niet als "ik", maar zegt kort wat iets
+  is en wat de regeling ermee doet (op verzoek van de bewoner, 8 oktober 2026).
 
 *Gebouwd op 7 oktober 2026.* `GET`/`POST /api/aansluiting` (alleen met een
 logmap en een configuratie; elke andere route blijft achter de muur, en bewaren
