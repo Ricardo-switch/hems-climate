@@ -205,6 +205,30 @@ Hue-app ("Helder"). Een eigen plaatje met de Nederlandse naam in kleine letters
 (`helder.png`, `arctische_dageraad.png`) gaat voor. De map wordt elke tien
 minuten opnieuw gelezen.
 
+### Als app op de telefoon: https in je tailnet (besluit 108)
+
+Chrome installeert de app alleen schermvullend over https. Binnen je eigen
+tailnet kan dat met **Tailscale serve** (nooit `tailscale funnel`: dat zet het
+adres op internet).
+
+1. In de beheerpagina van Tailscale, onder *DNS*: zet **MagicDNS** aan, en
+   daaronder **HTTPS Certificates**.
+2. Op de NAS, via SSH:
+
+   ```
+   sudo tailscale serve --bg --https=443 http://127.0.0.1:8099
+   ```
+
+   Lukt poort 443 niet, gebruik dan `--https=8443`; het adres krijgt dan
+   `:8443` erachter.
+3. Controleer met `sudo tailscale serve status`. Daar hoort "(tailnet only)"
+   bij te staan, en het adres, zoals `https://nas.tail1234.ts.net`.
+4. Open dat adres op de telefoon (met Tailscale aan), log één keer in, en kies
+   in het menu van Chrome *App installeren*.
+
+Uitzetten: `sudo tailscale serve --https=443 off`. De app op het gewone adres
+blijft gewoon werken.
+
 ### Niet achter de reverse proxy
 
 DSM's reverse proxy publiceert op `*.synology.me`, dus buiten je huis. Deze

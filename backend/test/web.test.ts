@@ -9,7 +9,7 @@
 
 import { DOOR_ROLES, SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
 import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
-import { createServer } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -1240,6 +1240,33 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
   }
 
   const gevoel = JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' });
+
+  /** Een verzoek zoals Tailscale serve het doorgeeft: met de naam in het tailnet en https erbij. */
+  function viaTailscale(base: string, path: string): Promise<{ status: number; location: string; cookie: string }> {
+    return new Promise((ok, fail) => {
+      const u = new URL(base);
+      const req = httpRequest({ host: u.hostname, port: u.port, path, headers: { host: 'nas.tail1234.ts.net', 'x-forwarded-proto': 'https', 'x-forwarded-host': 'nas.tail1234.ts.net' } }, (res) => {
+        res.resume();
+        ok({ status: res.statusCode ?? 0, location: String(res.headers.location ?? ''), cookie: String(res.headers['set-cookie'] ?? '') });
+      });
+      req.on('error', fail);
+      req.end();
+    });
+  }
+
+  it('logt in via het https-adres in het tailnet (besluit 108)', async () => {
+    const { base } = await withLogin(true);
+    const go = await viaTailscale(base, '/auth/login?terug=/thuis.html');
+    expect(go.status).toBe(302);
+    // Home Assistant krijgt het https-adres als app, en stuurt daarheen terug.
+    const naar = new URL(go.location);
+    expect(naar.searchParams.get('client_id')).toBe('https://nas.tail1234.ts.net/');
+    const back = await viaTailscale(base, `/auth/callback?code=abc&state=${naar.searchParams.get('state')}`);
+    expect(back.status).toBe(302);
+    expect(back.location).toBe('/thuis.html');
+    // Over https krijgt het cookie Secure.
+    expect(back.cookie).toMatch(/Secure/);
+  });
 
   it('laat een camera alleen zien na het inloggen, en alleen een camera van het huis (besluit 106)', async () => {
     // Een nep-Home Assistant die het plaatje geeft, en onthoudt met welk token.

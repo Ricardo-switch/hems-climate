@@ -117,6 +117,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
 - [105. Het weer van de komende dagen, met wat de panelen dan leveren](#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren)
 - [107. Aanbellen: het beeld van de deurbel meteen op het scherm](#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm)
+- [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve)
 
 **Veiligheid**
 
@@ -4745,6 +4746,42 @@ Gekozen op 8 oktober 2026.
   gaat het scherm aan. In een gewone browser niet.
 - **Alleen lezen,** zoals bij 106: de dienst leest de melder en het beeld, en
   stuurt niets naar de deurbel.
+
+---
+
+## 108. Https in het tailnet, met Tailscale serve
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 8 oktober 2026 stond de app geïnstalleerd op de telefoon, maar met de
+adresbalk erboven. Chrome laat een geïnstalleerde app alleen schermvullend
+draaien over https, en de NAS geeft de app over gewone http (besluit 23). De
+uitzondering in `chrome://flags` maakt installeren mogelijk, niet de balk weg.
+Een reverse proxy was uitgesloten (besluiten 23 en 99), omdat die op de NAS de
+app naar buiten zet. Gekozen op 8 oktober 2026.
+
+*Besluit:*
+
+- **Tailscale serve, nooit Funnel.** De NAS geeft de app binnen het eigen
+  tailnet ook over https, onder zijn naam daar (`<nas>.<tailnet>.ts.net`), met
+  een echt certificaat van Tailscale. Alleen apparaten in het tailnet kunnen
+  erbij; van buiten is er niets bijgekomen. Funnel, dat het adres op internet
+  zet, blijft uitgesloten.
+- **Serve wijst alleen naar de dienst** op de NAS zelf (`http://127.0.0.1:8099`).
+  Geen andere poort, geen andere dienst, geen portforward.
+- **De dienst hoeft er niets voor te veranderen.** Hij antwoordt al op een naam
+  op `.ts.net`, leest https uit wat Tailscale meegeeft (`X-Forwarded-Proto`),
+  geeft Home Assistant dat adres bij het inloggen, en zet het cookie dan
+  `Secure`. Een test legt dat vast.
+- **Inloggen gaat per adres.** Wie de app via het https-adres opent, logt daar
+  één keer opnieuw in; een sessie op het gewone adres telt daar niet.
+- **Het gewone adres blijft,** voor de tablet aan de wand en voor wie thuis
+  zonder Tailscale kijkt.
+
+*Kosten:* het certificaat komt in de openbare certificaatlogboeken, met de naam
+van de NAS en van het tailnet erin. Bereikbaar is het daardoor niet, maar de
+namen zijn niet meer geheim. Wie dat niet wil, geeft de NAS in Tailscale eerst
+een nietszeggende naam.
 
 ---
 
