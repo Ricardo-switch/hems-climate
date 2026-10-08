@@ -4657,6 +4657,14 @@ van vandaag aan te tikken is. Gekozen op 8 oktober 2026.
   weer van nu. Per kwartier wordt dat de stippellijn bij de zon van vandaag, op
   Thuis en Apparaten: een echte verwachting in plaats van het gunstigste geval.
   Alleen zonder weer staat er nog de zon bij een heldere lucht, met die naam.
+- **Nakijken en beter worden.** Elke tien minuten bewaart de dienst wat hij
+  voor morgen verwacht, in kWh en per kwartier; de laatste stand voor
+  middernacht telt. Na die dag staat in het weerblad "Hoe goed het klopte":
+  verwacht naast werkelijk, met de gemiddelde afwijking, en op Vandaag legt
+  Gisteren de verwachte lijn naast wat er kwam. Met tien of meer dagen met
+  genoeg verschil in zonkans leert het huis het hele verband tussen zonkans en
+  opbrengst, in plaats van alleen een factor op de schatting; hoe meer dagen,
+  hoe zwaarder dat weegt.
 - **Op Thuis** opent de knop met de buitentemperatuur het weer: vandaag en de
   vijf dagen erna, elk met een balk voor de opbrengst. De kaart Vandaag noemt
   naast wat er is opgewekt wat er verwacht wordt.

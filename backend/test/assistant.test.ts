@@ -266,6 +266,7 @@ describe('zon', () => {
     netTerugWh: 2860,
     apparaten: [],
     uitstelbaar: [],
+    zones: [],
     besluiten: [],
   };
 

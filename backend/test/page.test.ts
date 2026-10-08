@@ -756,6 +756,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await blad.locator('.rij').count()).toBe(3);
       await p.keyboard.press('Escape');
       await blad.waitFor({ state: 'hidden', timeout: 5000 });
+      // Ook dicht door ernaast te tikken, en door nog eens op de knop te tikken.
+      await knop.click();
+      await blad.waitFor({ timeout: 5000 });
+      await p.locator(`${zichtbaar} [data-kop]`).click({ force: true });
+      await blad.waitFor({ state: 'hidden', timeout: 5000 });
+      await knop.click();
+      await blad.waitFor({ timeout: 5000 });
+      // Op de telefoon ligt het donkere vlak over de knop; een tik daar sluit het ook.
+      await knop.click({ force: true });
+      await blad.waitFor({ state: 'hidden', timeout: 5000 });
       expect(fouten).toEqual([]);
       await context.close();
     }, 20_000);

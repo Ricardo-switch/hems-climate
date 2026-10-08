@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { kindOf, learnShare, priorShare, readForecast, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
+import { kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
 import { exampleSite } from './site.js';
 
 const cleanup: string[] = [];
@@ -104,7 +104,28 @@ describe('de opbrengst bij een zonkans', () => {
     const gaps = Array.from({ length: 96 }, (_, i) => (i < 40 ? 500 : null));
     expect(learnShare({ '2026-09-01': 50 }, { '2026-09-01': gaps }, () => 10_000).dagen).toBe(0);
     expect(learnShare({ '2026-09-01': 50 }, { '2026-09-01': Array(96).fill(5) }, () => 800).dagen).toBe(0);
-    expect(learnShare({}, {}, () => 10_000)).toEqual({ dagen: 0, factor: 1 });
+    expect(learnShare({}, {}, () => 10_000)).toEqual({ dagen: 0, factor: 1, lijn: null });
+  });
+
+  it('leert met genoeg verschillende dagen het eigen verband tussen zonkans en opbrengst', () => {
+    // Twaalf dagen: het huis haalt 0,1 + 0,6 × zonkans van de heldere lucht, minder dan de schatting.
+    const days: Record<string, (number | null)[]> = {};
+    const predicted: Record<string, number> = {};
+    for (let i = 1; i <= 12; i++) {
+      const day = `2026-09-${String(i).padStart(2, '0')}`;
+      const s = (i - 1) * 9;
+      predicted[day] = s;
+      const wh = 10_000 * (0.1 + (0.6 * s) / 100);
+      days[day] = Array.from({ length: 96 }, () => (wh * 4) / 96);
+    }
+    const geleerd = learnShare(predicted, days, () => 10_000);
+    expect(geleerd.lijn).toEqual({ a: 0.1, b: 0.6 });
+    // Met twaalf dagen weegt het eigen verband al iets zwaarder dan de schatting.
+    const bij50 = shareFor(geleerd, 50);
+    expect(Math.abs(bij50 - 0.4)).toBeLessThan(Math.abs(priorShare(50) * geleerd.factor - 0.4));
+    // Te weinig spreiding in zonkans: geen lijn.
+    const vlak = Object.fromEntries(Object.keys(predicted).map((d) => [d, 50]));
+    expect(learnShare(vlak, days, () => 10_000).lijn).toBeNull();
   });
 });
 
@@ -130,7 +151,12 @@ describe('het rapport', () => {
     expect(r.dagen[0]!.heldereLuchtKwh).toBeGreaterThan(5);
     expect(r.dagen[0]!.verwachtKwh).toBeLessThan(r.dagen[1]!.verwachtKwh!);
     expect(r.dagen[1]!.verwachtKwh).toBeLessThanOrEqual(r.dagen[1]!.heldereLuchtKwh);
-    expect(r.geleerd).toEqual({ dagen: 0, factor: 1 });
+    // Morgen ook per kwartier, voor de tijdlijn; de dagen erna niet.
+    expect(r.dagen[0]!.kwartieren).toHaveLength(96);
+    expect(r.dagen[1]!.kwartieren).toBeUndefined();
+    expect(r.geleerd).toEqual({ dagen: 0, factor: 1, lijn: null });
+    expect(r.terugblik).toEqual([]);
+    expect(r.gisteren).toBeNull();
     expect(r.vandaag).toMatchObject({ datum: '2026-10-08', soort: 'bewolkt', tekst: 'Zwaar bewolkt' });
   });
 
@@ -176,9 +202,31 @@ describe('de zonkans per dag bewaren', () => {
     const log = new WeatherLog(dir);
     await log.note('2026-10-09', 10);
     await log.note('2026-10-09', 20);
-    expect(JSON.parse(await readFile(join(dir, WEATHER_FILE), 'utf-8'))).toEqual({ versie: 1, zonkans: { '2026-10-09': 20 } });
+    expect(JSON.parse(await readFile(join(dir, WEATHER_FILE), 'utf-8'))).toEqual({ versie: 2, zonkans: { '2026-10-09': 20 }, verwacht: {} });
+    // Met de verwachting erbij: de kWh en de lijn per kwartier.
+    await log.note('2026-10-09', 20, { kwh: 4.2, kwartieren: [0, 100, 0] });
     const again = new WeatherLog(dir);
     await again.load();
     expect(again.current).toEqual({ '2026-10-09': 20 });
+    expect(again.expected).toEqual({ '2026-10-09': { kwh: 4.2, kwartieren: [0, 100, 0] } });
+  });
+
+  it('legt een bewaarde verwachting na die dag naast de werkelijke opbrengst, en geeft de lijn van gisteren', () => {
+    const location = { latDeg: 52.1, lonDeg: 5.1 };
+    const kwartieren = Array.from({ length: 96 }, (_, i) => (i > 30 && i < 70 ? 400 : 0));
+    const r = weatherReport({
+      forecast: [{ offset: 1, maxC: 15, minC: 8, regenkansPct: 20, zonkansPct: 40, soort: 'half', tekst: null }],
+      predicted: { '2026-10-07': 40 },
+      expected: { '2026-10-07': { kwh: 4.0, kwartieren } },
+      solarDays: { '2026-10-07': Array.from({ length: 96 }, (_, i) => (i > 30 && i < 70 ? 450 : 0)) },
+      geometry: exampleSite.geometry!,
+      location,
+      learned: null,
+      todayWh: 0,
+      nowMs: Date.parse('2026-10-08T10:00:00Z'),
+      timeZone: 'Europe/Amsterdam',
+    });
+    expect(r.terugblik).toEqual([{ datum: '2026-10-07', zonkansPct: 40, verwachtKwh: 4, werkelijkKwh: 4.4 }]);
+    expect(r.gisteren).toEqual({ datum: '2026-10-07', kwartieren });
   });
 });

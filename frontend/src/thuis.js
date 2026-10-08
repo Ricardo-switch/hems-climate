@@ -308,19 +308,58 @@ function tekenWeer() {
       </div>`;
     }),
   ].join('');
-  const geleerd = weer.geleerd?.dagen ? ` Bijgesteld met ${weer.geleerd.dagen === 1 ? 'één dag' : `${weer.geleerd.dagen} dagen`} van je eigen panelen.` : '';
+  const g = weer.geleerd ?? { dagen: 0 };
+  const geleerd = g.lijn
+    ? ` Het verband tussen zonkans en opbrengst komt uit ${g.dagen} dagen van je eigen panelen.`
+    : g.dagen
+      ? ` Bijgesteld met ${g.dagen === 1 ? 'één dag' : `${g.dagen} dagen`} van je eigen panelen.`
+      : '';
   for (const blad of $$('[data-weer]')) {
     blad.innerHTML = `
       <div class="weerkop"><h2 class="kop-3">Het weer</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
       ${rijen}
+      ${terugblik()}
       <p class="mini voet">Van Buienradar. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
     blad.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
 }
 
+/**
+ * Zo goed klopte het (besluit 105): per dag wat de dag ervoor werd verwacht,
+ * naast wat de panelen werkelijk leverden. Hoe meer dagen, hoe beter het huis
+ * de verwachting bijstelt.
+ */
+function terugblik() {
+  const dagen = weer.terugblik ?? [];
+  if (!dagen.length) {
+    return '<div class="terug"><h3 class="kop-3">Hoe goed het klopte</h3><p class="mini" style="margin: 4px 0 0">Vanaf morgen staat hier per dag wat er verwacht werd en wat er echt kwam.</p></div>';
+  }
+  const schaal = Math.max(1, ...dagen.map((d) => Math.max(d.verwachtKwh, d.werkelijkKwh)));
+  const afwijking = dagen.reduce((t, d) => t + Math.abs(d.werkelijkKwh - d.verwachtKwh), 0) / dagen.length;
+  const totaal = dagen.reduce((t, d) => t + d.werkelijkKwh, 0) / dagen.length;
+  const rijen = dagen
+    .slice(0, 7)
+    .map((d) => {
+      const datum = new Date(`${d.datum}T12:00:00Z`);
+      const pct = (kwh) => `${Math.min(100, (kwh / schaal) * 100).toFixed(1)}%`;
+      return `<div class="terugrij"><span>${DAGNAAM.format(datum).slice(0, 2)} ${DATUM.format(datum)}</span>
+        <i aria-hidden="true"><b style="width: ${pct(d.werkelijkKwh)}"></b><em style="left: ${pct(d.verwachtKwh)}"></em></i>
+        <span>${nl(d.werkelijkKwh)} <small>van ${nl(d.verwachtKwh)}</small></span></div>`;
+    })
+    .join('');
+  return `<div class="terug"><div class="weerkop" style="margin: 0"><h3 class="kop-3">Hoe goed het klopte</h3><span class="mini">gemiddeld ${nl(afwijking)} kWh ernaast${totaal > 0 ? `, ${Math.round((afwijking / totaal) * 100)}%` : ''}</span></div>
+    ${rijen}
+    <p class="mini" style="margin: 6px 0 0">De balk is wat er kwam, het streepje wat de dag ervoor werd verwacht.</p></div>`;
+}
+
 function openWeer(knop) {
   const blad = document.getElementById(knop.getAttribute('aria-controls'));
   if (!blad || !weer) return;
+  // Nog eens op de knop: weer dicht.
+  if (!blad.hidden) {
+    sluitWeer();
+    return;
+  }
   blad.hidden = false;
   if (blad.id === 'weer-tel') document.querySelector('[data-weer-achter]').hidden = false;
   knop.setAttribute('aria-expanded', 'true');
@@ -471,6 +510,26 @@ function tekenStappenkaarten() {
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
+// Tikken naast het blad sluit het ook, net als Escape.
+document.addEventListener('pointerdown', (e) => {
+  const open = $$('[data-weer]').some((b) => !b.hidden);
+  if (open && !e.target.closest('[data-weer], [data-buiten]')) sluitWeer();
+});
+// Op de telefoon: het blad naar beneden vegen.
+const telBlad = document.getElementById('weer-tel');
+let veegVan = null;
+telBlad.addEventListener('touchstart', (e) => (veegVan = telBlad.scrollTop <= 0 ? e.touches[0].clientY : null), { passive: true });
+telBlad.addEventListener('touchmove', (e) => {
+  if (veegVan == null) return;
+  const dy = Math.max(0, e.touches[0].clientY - veegVan);
+  telBlad.style.transform = `translateY(${dy}px)`;
+}, { passive: true });
+telBlad.addEventListener('touchend', (e) => {
+  const dy = veegVan == null ? 0 : e.changedTouches[0].clientY - veegVan;
+  telBlad.style.transform = '';
+  veegVan = null;
+  if (dy > 70) sluitWeer();
+});
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   sluitWeer();

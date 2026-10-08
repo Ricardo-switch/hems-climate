@@ -637,6 +637,11 @@ const forecastNow = () => (houseRegisters ? readForecast(houseRegisters.entities
 if (weatherLog && site) {
   const timeZone = site.config.timezone;
   const noteTomorrow = () => {
+    // Met de weergave rekent die ook de verwachting van morgen uit en bewaart hem.
+    if (web) {
+      web.weatherNow().catch((e: unknown) => console.warn(`Weer van morgen niet bewaard: ${(e as Error).message}`));
+      return;
+    }
     const morgen = forecastNow().find((f) => f.offset === 1);
     if (morgen?.zonkansPct == null) return;
     const p = partsIn(Date.now(), timeZone);

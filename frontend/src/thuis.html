@@ -97,6 +97,17 @@
   .weer .opbrengst i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
   .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
+  #tel .weer::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: -6px auto 6px; flex-shrink: 0; }
+  .weer .terug { padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .weer .terug .weerkop { display: block; }
+  .weer .terug .weerkop .mini { display: block; margin-top: 2px; }
+  #wand .weer .rij { padding: 7px 0; }
+  .terugrij { display: grid; grid-template-columns: 74px 1fr 92px; gap: 10px; align-items: center; font-size: 13px; color: var(--zacht); padding: 4px 0; }
+  .terugrij i { position: relative; height: 8px; border-radius: 4px; background: rgba(247, 181, 72, 0.12); }
+  .terugrij i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
+  .terugrij i em { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--tekst); }
+  .terugrij span:last-child { text-align: right; color: var(--tekst); font-weight: 600; }
+  .terugrij small { color: var(--gedempt); font-weight: 500; }
 </style>
 </head>
 <body class="lucht lucht-dag">

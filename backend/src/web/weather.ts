@@ -33,6 +33,10 @@ const QUARTER_MS = 15 * 60_000;
 const KEEP_DAYS = 400;
 /** Vanaf zoveel dagen weegt wat het huis leerde even zwaar als de schatting. */
 const HALF_WEIGHT_DAYS = 5;
+/** Zoveel dagen, met genoeg verschil in zonkans, voordat het huis het hele verband leert. */
+const FIT_DAYS = 10;
+/** Zoveel spreiding in zonkans (procentpunten) is nodig om een lijn te trekken. */
+const FIT_SPREAD = 15;
 /** Een dag zonder zon van betekenis zegt niets over de verhouding. */
 const MIN_CLEAR_WH = 1500;
 
@@ -134,9 +138,16 @@ export function priorShare(sunPct: number): number {
  * "morgen" werd verwacht. Wordt overschreven tot die dag begint; daarna staat
  * hij vast en kan het huis hem naast de werkelijke opbrengst leggen.
  */
+/** Wat de dienst de dag ervoor voor een dag verwachtte: in kWh, en per kwartier in W. */
+export interface StoredExpectation {
+  readonly kwh: number;
+  readonly kwartieren: readonly number[];
+}
+
 export class WeatherLog {
   readonly #file: string;
   #days: Record<string, number> = {};
+  #expected: Record<string, StoredExpectation> = {};
   #loaded: Promise<void> | null = null;
   #writing: Promise<void> = Promise.resolve();
 
@@ -147,8 +158,9 @@ export class WeatherLog {
   load(): Promise<void> {
     this.#loaded ??= readFile(this.#file, 'utf-8')
       .then((t) => {
-        const saved = JSON.parse(t) as { zonkans?: Record<string, number> };
+        const saved = JSON.parse(t) as { zonkans?: Record<string, number>; verwacht?: Record<string, StoredExpectation> };
         this.#days = { ...(saved.zonkans ?? {}) };
+        this.#expected = { ...(saved.verwacht ?? {}) };
       })
       .catch(() => {
         // Nog niets bewaard: dan begint het hier.
@@ -156,17 +168,29 @@ export class WeatherLog {
     return this.#loaded;
   }
 
+  /** De zonkans per dag, zoals hij de dag ervoor werd verwacht. */
   get current(): Readonly<Record<string, number>> {
     return this.#days;
   }
 
-  /** Noteert de zonkans van morgen. Schrijft alleen als hij veranderde. */
-  async note(day: string, sunPct: number): Promise<void> {
+  /** De verwachting per dag, zoals hij de dag ervoor werd uitgerekend. */
+  get expected(): Readonly<Record<string, StoredExpectation>> {
+    return this.#expected;
+  }
+
+  /**
+   * Noteert de zonkans van morgen, en wat de dienst daarbij verwacht. Schrijft
+   * alleen als er iets veranderde; tot middernacht wint de laatste.
+   */
+  async note(day: string, sunPct: number, expectation?: StoredExpectation): Promise<void> {
     await this.load();
-    if (this.#days[day] === sunPct) return;
-    const keep = Object.keys(this.#days).sort().slice(-KEEP_DAYS);
-    this.#days = { ...Object.fromEntries(keep.map((d) => [d, this.#days[d]!])), [day]: sunPct };
-    const data = JSON.stringify({ versie: 1, zonkans: this.#days });
+    const same = this.#days[day] === sunPct && (expectation == null || this.#expected[day]?.kwh === expectation.kwh);
+    if (same) return;
+    const keep = new Set(Object.keys(this.#days).sort().slice(-KEEP_DAYS));
+    this.#days = { ...Object.fromEntries([...keep].map((d) => [d, this.#days[d]!])), [day]: sunPct };
+    const kept = Object.entries(this.#expected).filter(([d]) => keep.has(d) || d === day);
+    this.#expected = { ...Object.fromEntries(kept), ...(expectation ? { [day]: expectation } : {}) };
+    const data = JSON.stringify({ versie: 2, zonkans: this.#days, verwacht: this.#expected });
     this.#writing = this.#writing.then(async () => {
       const temp = `${this.#file}.tmp`;
       await writeFile(temp, data, 'utf-8');
@@ -190,6 +214,8 @@ export interface WeatherDay {
   readonly heldereLuchtKwh: number;
   /** Wat ze bij deze zonkans ongeveer leveren, in kWh; null zonder zonkans. */
   readonly verwachtKwh: number | null;
+  /** Alleen voor morgen: de verwachting per kwartier, in W, voor de tijdlijn van Vandaag. */
+  readonly kwartieren?: readonly { readonly tMs: number; readonly verwachtW: number }[];
 }
 
 export interface WeatherReport {
@@ -213,8 +239,20 @@ export interface WeatherReport {
     readonly kwartieren: readonly { readonly tMs: number; readonly verwachtW: number }[];
   };
   readonly dagen: readonly WeatherDay[];
-  /** Hoeveel dagen het huis naast de verwachting kon leggen, en hoeveel het afwijkt van de schatting. */
-  readonly geleerd: { readonly dagen: number; readonly factor: number };
+  /** Hoeveel dagen het huis naast de verwachting kon leggen, en wat het daaruit leerde. */
+  readonly geleerd: LearnedShare;
+  /**
+   * Zo goed klopte het: per afgesloten dag wat de dag ervoor werd verwacht en
+   * wat de panelen werkelijk leverden, nieuwste eerst, hooguit twee weken.
+   */
+  readonly terugblik: readonly {
+    readonly datum: string;
+    readonly zonkansPct: number | null;
+    readonly verwachtKwh: number;
+    readonly werkelijkKwh: number;
+  }[];
+  /** De verwachte lijn van gisteren, per kwartier in W, om naast wat er kwam te leggen. */
+  readonly gisteren: { readonly datum: string; readonly kwartieren: readonly number[] } | null;
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -256,12 +294,35 @@ const SHARE_NOW: Readonly<Record<WeatherKind, number>> = { zon: 0.85, half: 0.55
  * het midden van werkelijk / geschat over de dagen waarvan beide bekend zijn,
  * en hoe meer dagen, hoe zwaarder dat weegt tegenover 1.
  */
+export interface LearnedShare {
+  readonly dagen: number;
+  readonly factor: number;
+  /**
+   * Het verband dat het huis zelf vond, als er genoeg dagen met verschillende
+   * zonkansen zijn: deel = a + b × zonkans/100. Anders null.
+   */
+  readonly lijn: { readonly a: number; readonly b: number } | null;
+}
+
+/**
+ * Het deel van de heldere-luchtopbrengst bij een zonkans: de schatting, maal
+ * de geleerde factor, en met genoeg dagen steeds meer het eigen verband.
+ */
+export function shareFor(learned: LearnedShare, sunPct: number): number {
+  const prior = priorShare(sunPct) * learned.factor;
+  if (!learned.lijn) return Math.min(1, prior);
+  const own = learned.lijn.a + (learned.lijn.b * Math.max(0, Math.min(100, sunPct))) / 100;
+  const w = learned.dagen / (learned.dagen + FIT_DAYS);
+  return Math.max(0.03, Math.min(1, (1 - w) * prior + w * own));
+}
+
 export function learnShare(
   predicted: Readonly<Record<string, number>>,
   solarDays: QuarterDays,
   clearOf: (day: string) => number,
-): { dagen: number; factor: number } {
+): LearnedShare {
   const ratios: number[] = [];
+  const points: { s: number; r: number }[] = [];
   for (const [day, sunPct] of Object.entries(predicted)) {
     const quarters = solarDays[day];
     if (!quarters) continue;
@@ -272,18 +333,36 @@ export function learnShare(
     const clear = clearOf(day);
     if (clear < MIN_CLEAR_WH) continue;
     ratios.push(actualWh / clear / priorShare(sunPct));
+    points.push({ s: sunPct / 100, r: actualWh / clear });
   }
-  if (ratios.length === 0) return { dagen: 0, factor: 1 };
+  if (ratios.length === 0) return { dagen: 0, factor: 1, lijn: null };
   const sorted = [...ratios].sort((a, b) => a - b);
   const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2]! : (sorted[sorted.length / 2 - 1]! + sorted[sorted.length / 2]!) / 2;
   const w = ratios.length / (ratios.length + HALF_WEIGHT_DAYS);
   const factor = Math.max(0.5, Math.min(1.6, 1 + w * (mid - 1)));
-  return { dagen: ratios.length, factor: Math.round(factor * 100) / 100 };
+  return { dagen: ratios.length, factor: Math.round(factor * 100) / 100, lijn: fitLine(points) };
+}
+
+/** Een rechte lijn door (zonkans, deel), met de kleinste kwadraten; null bij te weinig of te gelijke dagen. */
+function fitLine(points: readonly { s: number; r: number }[]): { a: number; b: number } | null {
+  if (points.length < FIT_DAYS) return null;
+  const n = points.length;
+  const ms = points.reduce((t, p) => t + p.s, 0) / n;
+  const mr = points.reduce((t, p) => t + p.r, 0) / n;
+  const vs = points.reduce((t, p) => t + (p.s - ms) ** 2, 0) / n;
+  if (Math.sqrt(vs) * 100 < FIT_SPREAD) return null;
+  const cov = points.reduce((t, p) => t + (p.s - ms) * (p.r - mr), 0) / n;
+  // Meer zon geeft nooit minder opbrengst; een dalende lijn is ruis.
+  const b = Math.max(0, cov / vs);
+  const a = Math.max(0, Math.min(0.8, mr - b * ms));
+  return { a: Math.round(a * 1000) / 1000, b: Math.round(b * 1000) / 1000 };
 }
 
 export function weatherReport(input: {
   readonly forecast: readonly ForecastDay[];
   readonly predicted: Readonly<Record<string, number>>;
+  /** Wat de dienst de dag ervoor verwachtte, per dag; leeg als het nog niet bewaard werd. */
+  readonly expected?: Readonly<Record<string, StoredExpectation>>;
   readonly solarDays: QuarterDays;
   readonly geometry: Geometry;
   readonly location: Location;
@@ -304,7 +383,7 @@ export function weatherReport(input: {
     return clearSkyWh(geometry, location, learned, from, from + 24 * 3_600_000).total;
   };
   const geleerd = learnShare(input.predicted, input.solarDays, clearOf);
-  const share = (sunPct: number) => Math.min(1, priorShare(sunPct) * geleerd.factor);
+  const share = (sunPct: number) => shareFor(geleerd, sunPct);
 
   // Vandaag: wat er al was, plus de rest naar hoe de dag tot nu verliep en wat er werd verwacht.
   const today = clearSkyWh(geometry, location, learned, dayStart(0), dayStart(1), nowMs);
@@ -314,7 +393,7 @@ export function weatherReport(input: {
   const fromForecast = expected != null ? share(expected) : null;
   const passed = today.total > 0 ? today.sofar / today.total : 0;
   const now = input.forecast.find((f) => f.offset === 0);
-  const fromNow = now?.soort != null ? SHARE_NOW[now.soort] * geleerd.factor : null;
+  const fromNow = now?.soort != null ? Math.min(1, SHARE_NOW[now.soort] * geleerd.factor) : null;
   // Wat gisteren voor vandaag werd verwacht; anders het weer van nu.
   const prior = fromForecast ?? fromNow;
   const restShare = soFar != null && prior != null ? passed * soFar + (1 - passed) * prior : soFar ?? prior;
@@ -334,7 +413,9 @@ export function weatherReport(input: {
     },
     dagen: input.forecast.filter((f) => f.offset >= 1).map((f) => {
       const from = dayStart(f.offset);
-      const clear = clearSkyWh(geometry, location, learned, from, dayStart(f.offset + 1)).total;
+      const dag = clearSkyWh(geometry, location, learned, from, dayStart(f.offset + 1));
+      const clear = dag.total;
+      const deel = f.zonkansPct == null ? null : share(f.zonkansPct);
       return {
         datum: dateKey(from + 12 * 3_600_000, timeZone),
         maxC: f.maxC,
@@ -344,9 +425,36 @@ export function weatherReport(input: {
         soort: f.soort,
         tekst: f.tekst,
         heldereLuchtKwh: round1(clear / 1000),
-        verwachtKwh: f.zonkansPct == null ? null : round1((clear * share(f.zonkansPct)) / 1000),
+        verwachtKwh: deel == null ? null : round1((clear * deel) / 1000),
+        ...(f.offset === 1 && deel != null ? { kwartieren: dag.quarters.map((q) => ({ tMs: q.tMs, verwachtW: Math.round(q.w * deel) })) } : {}),
       };
     }),
     geleerd,
+    terugblik: lookBack(input.expected ?? {}, input.predicted, input.solarDays, todayKey),
+    gisteren: (() => {
+      const key = dateKey(dayStart(-1) + 12 * 3_600_000, timeZone);
+      const e = input.expected?.[key];
+      return e ? { datum: key, kwartieren: e.kwartieren } : null;
+    })(),
   };
+}
+
+/** De afgesloten dagen waarvan de verwachting en de opbrengst allebei bekend zijn. */
+function lookBack(
+  expected: Readonly<Record<string, StoredExpectation>>,
+  predicted: Readonly<Record<string, number>>,
+  solarDays: QuarterDays,
+  todayKey: string,
+): WeatherReport['terugblik'] {
+  return Object.keys(expected)
+    .filter((day) => day < todayKey)
+    .sort()
+    .reverse()
+    .flatMap((day) => {
+      const quarters = solarDays[day];
+      if (!quarters || quarters.filter((q) => q != null).length < 60) return [];
+      const actualWh = quarters.reduce<number>((t, q) => t + (q ?? 0) / 4, 0);
+      return [{ datum: day, zonkansPct: predicted[day] ?? null, verwachtKwh: expected[day]!.kwh, werkelijkKwh: round1(actualWh / 1000) }];
+    })
+    .slice(0, 14);
 }

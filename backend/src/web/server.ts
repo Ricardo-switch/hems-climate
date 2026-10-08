@@ -611,7 +611,9 @@ export class WebServer {
       }
       this.#today ??= new TodayCache(logDir, config);
       try {
-        sendJson(res, 200, await this.#today.get());
+        // ?dag=gisteren: de hele dag ervoor, in dezelfde vorm.
+        const gisteren = url.searchParams.get('dag') === 'gisteren';
+        sendJson(res, 200, await (gisteren ? this.#today.yesterday() : this.#today.get()));
       } catch (error) {
         sendJson(res, 500, { fout: (error as Error).message });
       }
@@ -706,48 +708,9 @@ export class WebServer {
      * ongeveer leveren. Alleen om te tonen; de regeling gebruikt het niet.
      */
     if (path === '/api/weer') {
-      const config = this.#options.config;
-      const location = this.#options.location?.() ?? null;
-      const weather = this.#options.weather;
-      if (weather == null || config?.geometry == null || location == null || logDir == null) {
-        sendJson(res, 503, { wachten: 'het weer komt zodra de ligging van het huis en de panelen bekend zijn' });
-        return;
-      }
-      const now = Date.now();
-      if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000) {
-        sendJson(res, 200, this.#weather.report);
-        return;
-      }
-      const forecast = weather.forecast();
-      if (forecast.length === 0) {
-        sendJson(res, 503, { wachten: 'Home Assistant geeft geen verwachting van Buienradar' });
-        return;
-      }
-      this.#solar ??= new SolarHistory({ logDir });
-      this.#today ??= new TodayCache(logDir, config);
-      try {
-        await this.#solar.refresh();
-      } catch {
-        // Dan met wat er al was.
-      }
-      await weather.log.load();
-      const todayWh = await this.#today.get().then(
-        (t) => t.zonWh,
-        () => 0,
-      );
-      const report = weatherReport({
-        forecast,
-        predicted: weather.log.current,
-        solarDays: this.#solar.current,
-        geometry: config.geometry,
-        location,
-        learned: learnSolar(this.#solar.current, config.geometry, location),
-        todayWh,
-        nowMs: now,
-        timeZone: config.timezone,
-      });
-      this.#weather = { atMs: now, report };
-      sendJson(res, 200, report);
+      const uit = await this.weatherNow();
+      if ('wachten' in uit) sendJson(res, 503, uit);
+      else sendJson(res, 200, uit);
       return;
     }
 
@@ -1219,6 +1182,58 @@ export class WebServer {
         this.#listeners.delete(listener);
       }
     }
+  }
+
+  /**
+   * Het weer van de komende dagen (besluit 105), tien minuten vastgehouden. Bewaart
+   * meteen wat er voor morgen verwacht wordt, zodat het huis die verwachting na
+   * die dag naast de werkelijke opbrengst kan leggen; main roept dit daarom elke
+   * tien minuten aan, ook als niemand kijkt.
+   */
+  async weatherNow(): Promise<WeatherReport | { wachten: string }> {
+    const config = this.#options.config;
+    const location = this.#options.location?.() ?? null;
+    const weather = this.#options.weather;
+    const logDir = this.#options.logDir;
+    if (weather == null || config?.geometry == null || location == null || logDir == null) {
+      return { wachten: 'het weer komt zodra de ligging van het huis en de panelen bekend zijn' };
+    }
+    const now = Date.now();
+    if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000) return this.#weather.report;
+    const forecast = weather.forecast();
+    if (forecast.length === 0) return { wachten: 'Home Assistant geeft geen verwachting van Buienradar' };
+    this.#solar ??= new SolarHistory({ logDir });
+    this.#today ??= new TodayCache(logDir, config);
+    try {
+      await this.#solar.refresh();
+    } catch {
+      // Dan met wat er al was.
+    }
+    await weather.log.load();
+    const todayWh = await this.#today.get().then(
+      (t) => t.zonWh,
+      () => 0,
+    );
+    const report = weatherReport({
+      forecast,
+      predicted: weather.log.current,
+      expected: weather.log.expected,
+      solarDays: this.#solar.current,
+      geometry: config.geometry,
+      location,
+      learned: learnSolar(this.#solar.current, config.geometry, location),
+      todayWh,
+      nowMs: now,
+      timeZone: config.timezone,
+    });
+    this.#weather = { atMs: now, report };
+    const morgen = report.dagen[0];
+    if (morgen?.zonkansPct != null && morgen.verwachtKwh != null && morgen.kwartieren) {
+      await weather.log.note(morgen.datum, morgen.zonkansPct, { kwh: morgen.verwachtKwh, kwartieren: morgen.kwartieren.map((q) => q.verwachtW) }).catch(() => {
+        // Niet bewaard: de volgende keer opnieuw.
+      });
+    }
+    return report;
   }
 
   async start(): Promise<number> {

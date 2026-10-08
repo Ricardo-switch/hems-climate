@@ -70,6 +70,16 @@ export interface TodayReport {
     readonly draaide: readonly TodaySpan[];
     readonly zouStarten: readonly TodaySpan[];
   }[];
+  /**
+   * Per zone de temperatuur per kwartier, gemiddeld, of null zonder meting; en
+   * wat er goed is: tussen het doel voor verwarmen en voor koelen in de dagstand.
+   */
+  readonly zones: readonly {
+    readonly zoneId: string;
+    readonly naam: string;
+    readonly goed: { readonly vanC: number | null; readonly totC: number | null };
+    readonly kwartieren: readonly (number | null)[];
+  }[];
   /** Besluiten met een opdracht, nieuwste eerst. */
   readonly besluiten: readonly TodayDecision[];
 }
@@ -138,12 +148,19 @@ export function startOfLocalDay(nowMs: number, timeZone: string): number {
 
 const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
-export async function todayReport(logDir: string, config: SiteConfig, nowMs: number): Promise<TodayReport> {
-  const vanMs = startOfLocalDay(nowMs, config.timezone);
-  const days = new Set([utcDay(vanMs), utcDay(nowMs)]);
+/**
+ * Vandaag tot nu, of met `dag: 'gisteren'` de hele dag ervoor: dezelfde vorm,
+ * zodat de pagina tussen de twee kan wisselen.
+ */
+export async function todayReport(logDir: string, config: SiteConfig, nowMs: number, dag: 'vandaag' | 'gisteren' = 'vandaag'): Promise<TodayReport> {
+  const today = startOfLocalDay(nowMs, config.timezone);
+  const p0 = partsIn(today + 12 * 3_600_000, config.timezone);
+  const vanMs = dag === 'gisteren' ? zonedMidnight(p0.y, p0.m, p0.d - 1, config.timezone) : today;
+  const endMs = dag === 'gisteren' ? today : nowMs;
+  const days = new Set([utcDay(vanMs), utcDay(endMs - 1)]);
   const files = (await findLogFiles(logDir)).filter((f) => days.has(basename(f).slice(10, 20)));
 
-  const quarters = Math.ceil((nowMs - vanMs) / QUARTER_MS);
+  const quarters = Math.ceil((endMs - vanMs) / QUARTER_MS);
   const sums = Array.from({ length: Math.max(0, quarters) }, () => ({ zon: 0, zonN: 0, net: 0, netN: 0 }));
   let zonWh = 0;
   let netAfWh = 0;
@@ -153,6 +170,7 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
   type Open = { vanMs: number; totMs: number; actie: string } | null;
   const spans = new Map(ids.map((id) => [id, { sc: [] as TodaySpan[], now: [] as TodaySpan[], openSc: null as Open, openNow: null as Open }]));
   const decisions: TodayDecision[] = [];
+  const zoneSums = new Map(config.zones.map((z) => [z.id, Array.from({ length: Math.max(0, quarters) }, () => ({ som: 0, n: 0 }))]));
   const deferrableIds = (config.deferrables ?? []).map((d) => d.id);
   const deferrableSpans = new Map(deferrableIds.map((id) => [id, { ran: [] as TodaySpan[], would: [] as TodaySpan[], openRan: null as Open, openWould: null as Open }]));
 
@@ -171,10 +189,17 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
   let lastMs = vanMs;
 
   for await (const m of readMoments(files)) {
-    if (m.tMs < vanMs || m.tMs > nowMs) continue;
+    if (m.tMs < vanMs || m.tMs > endMs) continue;
     lastMs = m.tMs;
 
     const q = Math.floor((m.tMs - vanMs) / QUARTER_MS);
+    for (const z of m.zones) {
+      const vak = zoneSums.get(z.id)?.[q];
+      if (vak && z.temperatureC != null) {
+        vak.som += z.temperatureC;
+        vak.n += 1;
+      }
+    }
     const bucket = sums[q];
     if (bucket) {
       if (m.solarW != null) {
@@ -238,9 +263,16 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     return { id, draaide: s.ran, zouStarten: s.would };
   });
 
+  const zones = config.zones.map((z) => ({
+    zoneId: z.id,
+    naam: z.name,
+    goed: { vanC: z.setpoints.dag?.heat ?? null, totC: z.setpoints.dag?.cool ?? null },
+    kwartieren: (zoneSums.get(z.id) ?? []).map((v) => (v.n > 0 ? Math.round((v.som / v.n) * 10) / 10 : null)),
+  }));
+
   return {
     vanMs,
-    totMs: nowMs,
+    totMs: endMs,
     kwartieren: sums.map((b, i) => ({
       tMs: vanMs + i * QUARTER_MS,
       zonW: b.zonN > 0 ? Math.round(b.zon / b.zonN) : null,
@@ -251,6 +283,7 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     netTerugWh: Math.round(netTerugWh),
     apparaten,
     uitstelbaar,
+    zones,
     besluiten: decisions.reverse().slice(0, MAX_DECISIONS),
   };
 }
@@ -274,11 +307,26 @@ export class TodayCache {
   readonly #now: () => number;
   #at = 0;
   #pending: Promise<TodayReport> | null = null;
+  #yesterday: { day: number; report: Promise<TodayReport> } | null = null;
 
   constructor(logDir: string, config: SiteConfig, now: () => number = Date.now) {
     this.#logDir = logDir;
     this.#config = config;
     this.#now = now;
+  }
+
+  /** De dag van gisteren; die verandert niet meer, dus één keer per dag lezen. */
+  yesterday(): Promise<TodayReport> {
+    const now = this.#now();
+    const day = startOfLocalDay(now, this.#config.timezone);
+    if (this.#yesterday?.day !== day) {
+      const report = todayReport(this.#logDir, this.#config, now, 'gisteren');
+      this.#yesterday = { day, report };
+      report.catch(() => {
+        this.#yesterday = null;
+      });
+    }
+    return this.#yesterday.report;
   }
 
   get(): Promise<TodayReport> {

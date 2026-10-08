@@ -133,6 +133,30 @@ describe('vandaag', () => {
     ]);
   });
 
+  it('geeft per zone de temperatuur per kwartier, en wat er goed is', async () => {
+    const dir = await writeDay();
+    const r = await todayReport(dir, exampleSite, at('2026-10-02T10:00:00Z'));
+    const woonkamer = r.zones.find((z) => z.zoneId === 'woonkamer')!;
+    expect(woonkamer.kwartieren).toHaveLength(48);
+    expect(woonkamer.kwartieren[0]).toBe(24);
+    const zone = exampleSite.zones.find((z) => z.id === 'woonkamer')!;
+    expect(woonkamer.goed).toEqual({ vanC: zone.setpoints.dag?.heat ?? null, totC: zone.setpoints.dag?.cool ?? null });
+    // Een zone zonder metingen heeft lege kwartieren, geen nullen.
+    const ander = r.zones.find((z) => z.zoneId !== 'woonkamer');
+    if (ander) expect(ander.kwartieren.every((q) => q === null)).toBe(true);
+  });
+
+  it('geeft met "gisteren" de hele dag ervoor, in dezelfde vorm', async () => {
+    const dir = await writeDay();
+    // Op 3 oktober is 2 oktober gisteren: van middernacht tot middernacht in Amsterdam.
+    const r = await todayReport(dir, exampleSite, at('2026-10-03T09:00:00Z'), 'gisteren');
+    expect(r.vanMs).toBe(at('2026-10-01T22:00:00Z'));
+    expect(r.totMs).toBe(at('2026-10-02T22:00:00Z'));
+    expect(r.kwartieren).toHaveLength(96);
+    expect(r.zonWh).toBe(2000);
+    expect(r.apparaten.find((a) => a.actuatorId === 'ac-zolder')!.huidig).toHaveLength(1);
+  });
+
   it('geeft een lege dag als er nog niets gelogd is', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-today-'));
     cleanup.push(dir);
