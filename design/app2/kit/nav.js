@@ -25,11 +25,13 @@
   ];
   const svg = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[id]}</svg>`;
 
-  function balk(el, actief) {
-    el.innerHTML = `<span class="logo" aria-hidden="true"></span>${NAMEN.map(([id, naam]) => `<a href="#" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam}</a>`).join('')}<a href="#" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="Instellingen">${svg('instellingen')}</a>`;
+  /** `links` geeft per plek het adres; zonder staat er "#". */
+  function balk(el, actief, links = {}) {
+    const href = (id) => links[id] ?? '#';
+    el.innerHTML = `<span class="logo" aria-hidden="true"></span>${NAMEN.map(([id, naam]) => `<a href="${href(id)}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam}</a>`).join('')}<a href="${href('instellingen')}" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="Instellingen">${svg('instellingen')}</a>`;
   }
-  function tabs(el, actief) {
-    el.innerHTML = NAMEN.map(([id, naam]) => `<a href="#" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam}</a>`).join('');
+  function tabs(el, actief, links = {}) {
+    el.innerHTML = NAMEN.map(([id, naam]) => `<a href="${links[id] ?? '#'}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam}</a>`).join('');
   }
   global.nav = { balk, tabs, svg };
 })(window);

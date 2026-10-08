@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<style>
+  /* De lettertypen staan in de dienst zelf (build.js), niet bij Google. */
+  @font-face { font-family: 'Figtree'; src: url('figtree.woff2') format('woff2'); font-weight: 300 900; font-display: swap; }
+  @font-face { font-family: 'Bricolage Grotesque'; src: url('bricolage-grotesque.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+  body.tel-stand { overflow: auto; }
+
+  /* De wand: altijd 1280 × 800, als geheel geschaald naar het scherm (besluit 104). */
+  #wand { position: fixed; left: 50%; top: 50%; width: 1280px; height: 800px; transform-origin: 50% 50%; }
+  body.tel-stand #wand { display: none; }
+  body:not(.tel-stand) #tel { display: none; }
+  #wand main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 380px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .straks { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel button { height: 40px; border-radius: 12px; border: 0; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .gevoel button[aria-pressed='true'] { box-shadow: inset 0 0 0 2px currentColor; }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  .dok .vraag b { color: var(--tekst); }
+  .rond { position: absolute; left: 22px; top: 300px; z-index: 3; }
+
+  /* De telefoon. */
+  #tel .boven { padding: 18px 18px 0; }
+  #tel .kopregel { align-items: center; }
+  #tel .tijd { font-size: 40px; }
+  #tel .titel { position: static; width: auto; margin-top: 14px; }
+  #tel .titel .kop-1 { font-size: 34px; }
+  #tel .titel .lead { font-size: 15.5px; margin-top: 8px; max-width: none; }
+  #tel .podium { position: static; width: 100%; height: 360px; margin-top: -6px; }
+  #tel .inhoud { padding: 0 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  .kamer { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .kamer .naam { flex: 1; min-width: 0; }
+  .kamer .naam b { display: block; font-size: 16px; }
+  .kamer .naam span { font-size: 13.5px; font-weight: 600; }
+  .kamer .getal { font-size: 30px; }
+  #tel .tabs { position: fixed; }
+  .weg { display: none !important; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <main>
+      <div class="kopregel">
+        <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
+        <div class="chips">
+          <span class="pil" data-buiten></span>
+          <span class="pil" data-modus></span>
+          <span class="pil" style="color: var(--mint)" data-fase><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+        </div>
+      </div>
+      <div class="titel">
+        <h1 class="kop-1" data-kop>Even laden</h1>
+        <p class="lead" data-zin></p>
+      </div>
+      <button class="info rond" type="button" data-uitleg><i>i</i>Zo werkt het huis</button>
+      <div class="podium" id="podium-wand"></div>
+      <aside class="rechts">
+        <section class="glas kaart">
+          <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
+          <div data-dag></div>
+          <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+        </section>
+        <section class="glas kaart straks" data-straks hidden>
+          <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 24px; height: 24px"></span><span class="klein">Straks</span></div>
+          <h2 class="kop-2" style="margin-top: 10px" data-straks-kop></h2>
+          <p class="klein" style="margin: 8px 0 0" data-straks-zin></p>
+        </section>
+        <section class="glas kaart" data-gevoel-kaart>
+          <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
+          <div class="gevoel" data-gevoel></div>
+          <p class="mini" style="margin: 8px 0 0" data-gevoel-zin></p>
+        </section>
+      </aside>
+      <div class="dok">
+        <span class="bol adem" style="width: 46px; height: 46px"></span>
+        <a class="vraag" href="nieuw.html#assistent">Tik om iets te vragen over je huis</a>
+        <a class="pil" href="nieuw.html#assistent">Wat doe je nu?</a>
+        <a class="pil" href="nieuw.html#assistent">Hoeveel zon vandaag?</a>
+      </div>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="boven">
+      <div class="kopregel">
+        <span class="tijd" data-tijd>--:--</span>
+        <span style="display: flex; gap: 8px; align-items: center">
+          <span class="pil" style="height: 32px; font-size: 13px" data-modus></span>
+          <a class="pil" href="nieuw.html#bediening" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
+        </span>
+      </div>
+      <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
+    </div>
+    <div class="podium" id="podium-tel"></div>
+    <div style="padding: 0 16px 10px; margin-top: -10px"><button class="info" type="button" data-uitleg><i>i</i>Zo werkt het huis</button></div>
+    <div class="inhoud">
+      <div data-kamers style="display: flex; flex-direction: column; gap: 12px"></div>
+      <section class="glas kaart straks" data-straks hidden>
+        <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Straks</span></div>
+        <h2 class="kop-2" style="margin-top: 8px" data-straks-kop></h2>
+        <p class="klein" style="margin: 6px 0 0" data-straks-zin></p>
+      </section>
+      <a class="glas-klein" href="nieuw.html#assistent" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; color: var(--zacht)"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</a>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  </div>
+  <script src="kit/nav.js"></script>
+  <script src="kit/huis.js"></script>
+  <script src="thuis.js"></script>
+</body>
+</html>

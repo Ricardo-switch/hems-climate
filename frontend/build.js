@@ -34,6 +34,17 @@ async function copyStatic() {
 const copied = await copyStatic();
 
 /*
+ * De tekenmotor en de stijlbasis van ontwerp 2 (besluit 104): de schets is de
+ * code. Lokaal staan ze in design/app2/kit, in de container naast dit script.
+ */
+const kitDir = existsSync(join(here, 'kit')) ? join(here, 'kit') : join(here, '..', 'design', 'app2', 'kit');
+await mkdir(join(out, 'kit'), { recursive: true });
+for (const n of await readdir(kitDir)) {
+  await copyFile(join(kitDir, n), join(out, 'kit', n));
+  copied.push(`kit/${n}`);
+}
+
+/*
  * De lettertypen staan in de dienst zelf, niet bij Google: de app werkt zo ook
  * zonder internet, en een bezoek lekt niets naar buiten. Uit de npm-pakketten
  * van Fontsource (OFL), alleen de Latijnse set: die heeft ook €, ³, ° en −.
@@ -96,9 +107,15 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
 async function stempel() {
   // Per pagina de bestanden die ze laadt. nieuw.html is de testversie van de
   // bewonersapp (besluit 71); hij heeft zijn opmaak in de pagina zelf.
-  const paginas = { 'index.html': ['app.css', 'app.js'], 'nieuw.html': ['nieuw.js'] };
+  // thuis.html is de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
+  const paginas = {
+    'index.html': ['app.css', 'app.js'],
+    'nieuw.html': ['nieuw.js'],
+    'thuis.html': ['thuis.js', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+  };
   for (const [pagina, namen] of Object.entries(paginas)) {
     const html = join(out, pagina);
+    if (!existsSync(html)) continue;
     let inhoud = await readFile(html, 'utf-8');
     for (const naam of namen) {
       const hash = createHash('sha256')

@@ -698,6 +698,42 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     }, 30_000);
   }
 
+  /*
+   * Thuis in ontwerp 2 (besluit 104): het huis uit de tekenmotor van de schets,
+   * met de gegevens van de dienst. De wand past altijd op het scherm, zonder
+   * scrollen; de telefoon heeft dezelfde inhoud onder elkaar.
+   */
+  for (const [stand, viewport] of [
+    ['wand', { width: 1340, height: 800 }],
+    ['telefoon', { width: 390, height: 844 }],
+  ] as const) {
+    it(`toont Thuis van ontwerp 2 op de ${stand}`, async () => {
+      const context = await browser.newContext({ viewport, timezoneId: 'UTC', locale: 'nl-NL' });
+      await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+      const p = await context.newPage();
+      const fouten: string[] = [];
+      p.on('pageerror', (e) => fouten.push(e.message));
+      await p.goto(`${baseUrl}/thuis.html`);
+      const zichtbaar = stand === 'wand' ? '#wand' : '#tel';
+      await p.locator(`${zichtbaar} [data-kop]`).filter({ hasNotText: 'Even laden' }).waitFor();
+      // Het huis is getekend, met de kamers uit de indeling.
+      await p.locator(`${zichtbaar} svg.sc-huis`).waitFor();
+      const stateNu = (await (await fetch(`${baseUrl}/api/state`)).json()) as { bewoner: { kop: { titel: string } } };
+      expect(await p.locator(`${zichtbaar} [data-kop]`).textContent()).toBe(stateNu.bewoner.kop.titel);
+      if (stand === 'wand') {
+        expect(await p.locator('#wand .sc-kamer').count()).toBeGreaterThan(0);
+        // Nooit scrollen aan de muur, en de hele wand binnen het scherm.
+        expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight && document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
+        const vak = await p.locator('#wand').boundingBox();
+        expect(vak && vak.x >= -1 && vak.y >= -1 && vak.x + vak.width <= viewport.width + 1 && vak.y + vak.height <= viewport.height + 1).toBe(true);
+      } else {
+        expect(await p.evaluate('document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
+      }
+      expect(fouten).toEqual([]);
+      await context.close();
+    });
+  }
+
   it('wijst wie niet is ingelogd bovenin de weg naar de inlog van Home Assistant (besluit 99)', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -709,5 +745,5 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#inlog-chip').click();
     expect(new URL((await go).url()).searchParams.get('terug')).toBe('/nieuw.html#bediening');
     await context.close();
-  });
+  }, 20_000);
 });

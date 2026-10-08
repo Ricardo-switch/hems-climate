@@ -1,0 +1,380 @@
+/*
+ * Thuis, in ontwerp 2 (besluit 104). De schets is de code: het huis komt uit
+ * kit/huis.js, dezelfde tekenmotor als in design/app2. Deze pagina zet alleen
+ * de gegevens van de dienst om naar de beschrijving van het huis; uitrekenen
+ * doet de dienst (besluit 94).
+ *
+ * De wand is altijd 1280 × 800 en wordt als geheel naar het scherm geschaald,
+ * zodat er nooit gescrold hoeft te worden. Op een telefoon (smal of staand)
+ * staat dezelfde inhoud onder elkaar.
+ */
+'use strict';
+
+const $$ = (sel) => [...document.querySelectorAll(sel)];
+const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+const zet = (sel, text) => $$(sel).forEach((e) => (e.textContent = text));
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+/* Waar de andere tabs nu staan: tot ze in ontwerp 2 zijn, in de proefomgeving. */
+const LINKS = {
+  thuis: 'thuis.html',
+  vandaag: 'nieuw.html#waarom',
+  apparaten: 'nieuw.html#apparaten',
+  opbrengst: 'nieuw.html#opbrengst',
+  assistent: 'nieuw.html#assistent',
+  instellingen: 'nieuw.html#bediening',
+};
+
+let state = null;
+let huisData = null;
+let zon = null;
+let vandaag = null;
+let gekozenZone = null;
+
+/* ------------------------------------------------------------ de stand */
+
+function telStand() {
+  return innerWidth < 900 || innerHeight > innerWidth;
+}
+
+function schaal() {
+  const tel = telStand();
+  document.body.classList.toggle('tel-stand', tel);
+  if (!tel) {
+    const s = Math.min(innerWidth / 1280, innerHeight / 800);
+    document.getElementById('wand').style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+}
+
+/* ------------------------------------------------------- de gegevens */
+
+async function haal(pad) {
+  const res = await fetch(pad, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`${pad}: ${res.status}`);
+  return res.json();
+}
+
+async function laadAlles() {
+  const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag')]);
+  if (s.status === 'fulfilled') state = s.value;
+  if (h.status === 'fulfilled') huisData = h.value;
+  if (z.status === 'fulfilled') zon = z.value;
+  if (v.status === 'fulfilled') vandaag = v.value;
+  teken();
+}
+
+/* --------------------------------------- van de dienst naar het huis */
+
+const ACTIEF = ['koelt', 'verwarmt', 'warmt voor', 'droogt', 'ventileert'];
+const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
+const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc)\b/i;
+
+function kleurVanLicht(a) {
+  const l = a.licht;
+  if (l?.tint) return `hsl(${Math.round(l.tint[0])} ${Math.round(Math.min(100, l.tint[1]))}% 70%)`;
+  if (l?.kelvin) return l.kelvin < 2800 ? '#FFC27A' : l.kelvin < 4000 ? '#FFD9A0' : '#FFF1DC';
+  return '#FFD9A0';
+}
+
+/** De naam van een zone in een zin: "woonkamer", zoals de regeling hem noemt. */
+function zoneNaam(zoneId) {
+  return String(zoneId).replace(/[-_]+/g, ' ').toLowerCase();
+}
+
+function standVan(zoneId) {
+  const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
+  if (!k) return null;
+  return { cool: 'koelt', heat: 'warmt', wait: 'wacht', ok: 'goed' }[k.soort] ?? null;
+}
+
+function kortVan(zoneId) {
+  const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
+  if (!k?.kort) return null;
+  return k.kort.charAt(0).toLowerCase() + k.kort.slice(1);
+}
+
+function kamerModel(r) {
+  const apps = r.apparaten ?? [];
+  const klimaat = apps.filter((a) => a.soort === 'klimaat');
+  const lampen = apps.filter((a) => a.soort === 'licht');
+  const screens = apps.filter((a) => a.soort === 'screen');
+  const apparaten = [];
+  for (const a of klimaat) {
+    const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
+    const warm = /verwarmt|warmt voor/.test(a.klimaat?.actie ?? '');
+    if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
+    else apparaten.push({ soort: 'radiator', aan });
+  }
+  // Hooguit twee lampen in beeld: wat aan is eerst.
+  [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
+  if (screens[0]) apparaten.push({ soort: 'screen', dicht: screens[0].positiePct == null ? 0 : 1 - screens[0].positiePct / 100 });
+  const gewicht = klimaat.length ? 1.4 : GANG.test(r.naam) ? 0.55 : r.temperatuurC != null ? 1.0 : 0.8;
+  return {
+    id: r.id,
+    naam: r.naam,
+    gewicht,
+    temp: r.temperatuurC == null ? null : `${nl(r.temperatuurC)}°`,
+    stand: r.zoneId ? standVan(r.zoneId) : null,
+    zin: r.zoneId ? kortVan(r.zoneId) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
+    zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
+    apparaten,
+  };
+}
+
+function tijdVanDeDag() {
+  const d = zon?.dag;
+  if (!zon?.zon?.boven) {
+    const na = d?.onderMs != null ? Date.now() - d.onderMs : Infinity;
+    const voor = d?.opMs != null ? d.opMs - Date.now() : Infinity;
+    if ((na > 0 && na < 60 * 60_000) || (voor > 0 && voor < 45 * 60_000)) return na < Infinity && na > 0 ? 'avond' : 'ochtend';
+    return 'nacht';
+  }
+  if (d?.fractie < 0.1) return 'ochtend';
+  if (d?.fractie > 0.9) return 'avond';
+  return 'dag';
+}
+
+function huisModel() {
+  const s = state?.bewoner?.stromen ?? {};
+  const zonKw = s.zonKw ?? 0;
+  const netKw = s.netKw ?? 0;
+  const etagesBovenEerst = huisData?.etages ?? [];
+  // Wat buiten ligt (de tuin, de oprit), haalt de app uit het huis en zet het ernaast.
+  const buitenRuimtes = [];
+  const etages = [];
+  for (const e of [...etagesBovenEerst].reverse()) {
+    const binnen = [];
+    for (const r of e.ruimtes ?? []) {
+      if (e.id === 'buiten' || BUITEN.test(r.naam) || BUITEN.test(r.id)) buitenRuimtes.push(r);
+      else binnen.push(r);
+    }
+    if (binnen.length) etages.push({ naam: e.naam, id: e.id, kamers: binnen.map(kamerModel) });
+  }
+  // De bovenste etage ligt onder het dak als het huis drie lagen heeft, of als hij zo heet.
+  const top = etages[etages.length - 1];
+  if (top && (etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
+
+  const alles = etagesBovenEerst.flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
+  const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
+  const tijd = tijdVanDeDag();
+  const helder = zon?.heldereLuchtW ?? 0;
+  const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
+  const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  const maand = new Date().getMonth() + 1;
+
+  // Buiten: de oprit met de auto en de schijnwerper, de tuin met het tuinhuis.
+  let oprit = null;
+  let tuin = null;
+  for (const r of buitenRuimtes) {
+    const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
+    if (/oprit|carport/i.test(r.naam)) {
+      const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
+      oprit = { auto: {}, camera: cam ? { aan: cam.aan } : null };
+    } else {
+      const huisje = lampen.filter((a) => /tuinhuis/i.test(a.id + a.naam));
+      const overstek = huisje.find((a) => /overstek/i.test(a.id + a.naam));
+      const binnenlamp = huisje.find((a) => a !== overstek);
+      const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
+      tuin = {
+        tuinhuisAan: !!binnenlamp?.aan,
+        overstekAan: !!overstek?.aan,
+        overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
+        lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
+        zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
+      };
+    }
+  }
+
+  const stromen = [];
+  const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));
+  if (zonKw > 0.05) stromen.push({ van: 'zon', naar: koelend ? `kamer:${koelend.naam}` : 'huis', sterkte: Math.min(1, zonKw / 3) });
+  if (netKw < -0.05) stromen.push({ van: 'zon', naar: 'net', sterkte: Math.min(1, -netKw / 3) });
+  if (netKw > 0.05) stromen.push({ van: 'net', naar: 'huis', sterkte: Math.min(1, netKw / 3) });
+
+  const labels = [];
+  if (zonKw > 0.05) labels.push({ bij: 'panelen', titel: `${nl(zonKw)} kW`, groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 });
+  labels.push({ bij: 'net', titel: netKw > 0.05 ? `${nl(netKw)} kW van het net` : netKw < -0.05 ? `${nl(-netKw)} kW terug` : 'Niets van het net', toon: netKw > 0.05 ? 'net' : 'mint', dx: -30, dy: 34 });
+
+  return {
+    beschrijving: `${state?.bewoner?.kop?.titel ?? 'Het huis'}. ${state?.bewoner?.kop?.zin ?? ''}`,
+    tijd,
+    seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
+    wolken,
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), panelen: Math.round(piekW / 390) || 12 } : { aandeel: 0 },
+    etages,
+    buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)) } : null,
+    net: true,
+    oprit,
+    tuin,
+    stromen,
+    labels,
+  };
+}
+
+/* ------------------------------------------------------------ tekenen */
+
+function lucht(tijd, seizoen, wolken) {
+  const b = document.body.classList;
+  for (const c of [...b]) if (c.startsWith('lucht-')) b.remove(c);
+  b.add(seizoen === 'winter' && tijd !== 'nacht' ? 'lucht-winter' : tijd === 'nacht' ? 'lucht-nacht' : tijd === 'avond' ? 'lucht-avond' : tijd === 'ochtend' ? 'lucht-ochtend' : wolken > 0.6 ? 'lucht-bewolkt' : 'lucht-dag');
+}
+
+function teken() {
+  schaal();
+  const nu = new Date();
+  zet('[data-tijd]', nu.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }));
+  zet('[data-datum]', nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+  if (!state || !huisData) return;
+
+  const e = state.explanation ?? {};
+  const kop = state.bewoner?.kop ?? {};
+  zet('[data-kop]', kop.titel ?? 'Het huis');
+  zet('[data-zin]', kop.zin ?? '');
+  zet('[data-buiten]', e.outdoorTemperatureC == null ? '' : `${nl(e.outdoorTemperatureC)}° buiten`);
+  $$('[data-buiten]').forEach((el) => (el.hidden = e.outdoorTemperatureC == null));
+  const modus = e.modeSource === 'schedule' ? 'Automatisch' : { dag: 'Dag', nacht: 'Nacht', afwezig: 'Afwezig', vakantie: 'Vakantie', handmatig: 'Handmatig' }[e.mode] ?? 'Automatisch';
+  $$('[data-modus]').forEach((el) => (el.innerHTML = `${esc(modus)} <span aria-hidden="true" style="color: var(--gedempt)">▾</span>`));
+
+  const model = huisModel();
+  lucht(model.tijd, model.seizoen, model.wolken);
+  huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+  huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14 });
+
+  tekenVandaag();
+  tekenStraks();
+  tekenGevoel();
+  tekenKamersTel();
+}
+
+function tekenVandaag() {
+  const box = document.querySelector('[data-dag]');
+  if (!vandaag?.kwartieren?.length) {
+    box.innerHTML = '<p class="mini">Nog geen metingen van vandaag.</p>';
+    return;
+  }
+  const B = 312;
+  const t0 = vandaag.vanMs;
+  const t1 = t0 + 24 * 3600_000;
+  const x = (t) => 8 + ((t - t0) / (t1 - t0)) * (B - 16);
+  const kw = vandaag.kwartieren;
+  const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...(zon?.kwartieren ?? []).map((q) => q.heldereLuchtW ?? 0));
+  const y = (w) => 86 - (w / max) * 72;
+  const lijn = kw.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.zonW ?? 0).toFixed(1)}`).join(' ');
+  const laatste = kw[kw.length - 1];
+  const vlak = `${lijn} L ${x(laatste.tMs).toFixed(1)} 86 L ${x(kw[0].tMs).toFixed(1)} 86 Z`;
+  const helder = (zon?.kwartieren ?? []).map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.heldereLuchtW ?? 0).toFixed(1)}`).join(' ');
+  const nuX = x(Date.now());
+  const namen = { 'ac-woonkamer': 'Airco woonkamer', 'ac-zolder': 'Airco zolder' };
+  const banen = (vandaag.apparaten ?? []).filter((a) => /^ac-/.test(a.actuatorId)).slice(0, 3);
+  const banenSvg = banen
+    .map((a, i) => {
+      const yy = 104 + i * 15;
+      const naam = namen[a.actuatorId] ?? a.actuatorId;
+      const stukken = (a.smartClimate ?? []).map((s) => `<rect x="${x(s.vanMs).toFixed(1)}" y="${yy - 7}" width="${Math.max(3, x(s.totMs) - x(s.vanMs)).toFixed(1)}" height="7" rx="3.5" fill="#6FD3FF"/>`).join('');
+      return `<text x="8" y="${yy}">${esc(naam)}</text>${stukken}`;
+    })
+    .join('');
+  const uren = [6, 12, 18, 22].map((u) => `<text x="${x(t0 + u * 3600_000).toFixed(1)}" y="${104 + banen.length * 15 + 12}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
+  const hoog = 104 + banen.length * 15 + 16;
+  box.innerHTML = `<svg viewBox="0 0 ${B} ${hoog}" width="${B}" height="${hoog}" aria-label="De zon van vandaag, en wanneer de airco's draaiden">
+    <defs><linearGradient id="zonvlak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
+    ${helder ? `<path d="${helder}" fill="none" stroke="#F7B548" stroke-opacity="0.35" stroke-dasharray="2 4"/>` : ''}
+    <path d="${vlak}" fill="url(#zonvlak)"/><path d="${lijn}" fill="none" stroke="#F7B548" stroke-width="2"/>
+    <line x1="${nuX}" y1="14" x2="${nuX}" y2="${hoog - 14}" stroke="#EEF3F7" stroke-opacity="0.6"/>
+    <text x="${nuX}" y="10" fill="#B8C4CF" font-size="10" text-anchor="middle" font-family="Figtree">nu</text>
+    <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">${banenSvg}${uren}</g>
+  </svg>`;
+  const kwh = (vandaag.zonWh ?? 0) / 1000;
+  zet('[data-opgewekt]', `${nl(kwh)} kWh opgewekt`);
+  const terug = (vandaag.netTerugWh ?? 0) / 1000;
+  zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. De stippellijn is de zon bij heldere lucht.` : 'De stippellijn is de zon bij heldere lucht.');
+}
+
+/*
+ * Straks: wat het huis gaat doen zodra het kan. Uit de besluiten die nu op zon
+ * wachten; het plan voor de middag komt met het thermisch model (D).
+ */
+function tekenStraks() {
+  const wacht = (state.rejected ?? []).find((r) => r.blockedBy === 'insufficient_power_budget' && r.intent?.budgetW > 0);
+  const kaarten = $$('[data-straks]');
+  if (!wacht) {
+    kaarten.forEach((k) => (k.hidden = true));
+    return;
+  }
+  const actie = wacht.intent.action === 'heat' ? 'warmen' : 'koelen';
+  zet('[data-straks-kop]', `De ${zoneNaam(wacht.intent.zoneId)} gaat ${actie} bij ${nl(wacht.intent.budgetW / 1000)} kW zon`);
+  const over = Math.max(0, state.explanation?.budget?.availableW ?? 0);
+  zet('[data-straks-zin]', `Nu is er ${nl(over / 1000)} kW over. Zodra er genoeg is, begint hij vanzelf.`);
+  kaarten.forEach((k) => (k.hidden = false));
+}
+
+const GEVOEL = [
+  ['te_koud', 'Te koud', 'rgba(111,211,255,0.14)', '#a9e6ff'],
+  ['goed', 'Goed', 'rgba(110,231,183,0.14)', 'var(--mint)'],
+  ['te_warm', 'Te warm', 'rgba(255,122,77,0.14)', '#ffb090'],
+];
+
+function tekenGevoel() {
+  const zones = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+  if (!zones.length) return;
+  gekozenZone ??= zones.find((r) => r.zoneId === 'woonkamer')?.zoneId ?? zones[0].zoneId;
+  const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
+  zet('[data-gevoel-kop]', `Hoe voelt het in de ${zoneNaam(kamer.zoneId)}?`);
+  const box = document.querySelector('[data-gevoel]');
+  if (box.childElementCount) return;
+  for (const [sleutel, tekst, achter, kleur] of GEVOEL) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = tekst;
+    b.style.background = achter;
+    b.style.color = kleur;
+    b.addEventListener('click', async () => {
+      $$('[data-gevoel] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      const res = await fetch('api/gevoel', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ zoneId: gekozenZone, gevoel: sleutel }) }).catch(() => null);
+      if (res?.status === 401) {
+        location.href = `auth/login?terug=${encodeURIComponent(location.pathname)}`;
+        return;
+      }
+      zet('[data-gevoel-zin]', res?.ok ? 'Genoteerd. Het huis leert ervan wat jij prettig vindt.' : 'Niet gelukt; probeer het zo nog eens.');
+    });
+    box.append(b);
+  }
+}
+
+function tekenKamersTel() {
+  const box = document.querySelector('[data-kamers]');
+  const kleur = { koelt: 'var(--ijs)', warmt: 'var(--gloed)', wacht: 'var(--zon)', goed: 'var(--mint)' };
+  const kamers = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+  box.innerHTML = kamers
+    .map((r) => {
+      const stand = standVan(r.zoneId);
+      const kort = state.bewoner?.kamers?.find((x) => x.zoneId === r.zoneId)?.kort ?? '';
+      return `<a class="glas kamer" href="nieuw.html#huis"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span class="naam"><b>${esc(r.naam)}</b><span style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</span></span><span class="getal">${nl(r.temperatuurC)}°</span></a>`;
+    })
+    .join('');
+}
+
+/* -------------------------------------------------------------- starten */
+
+nav.balk(document.getElementById('balk'), 'thuis', LINKS);
+nav.tabs(document.getElementById('tabs'), 'thuis', LINKS);
+$$('[data-tandwiel]').forEach((a) => (a.innerHTML = nav.svg('instellingen')));
+$$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => (location.href = 'nieuw.html#huis')));
+addEventListener('resize', schaal);
+schaal();
+void laadAlles();
+setInterval(() => void laadAlles(), 60_000);
+setInterval(() => zet('[data-tijd]', new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })), 10_000);
+try {
+  const bron = new EventSource('api/events');
+  bron.onmessage = (ev) => {
+    try {
+      state = JSON.parse(ev.data);
+      teken();
+    } catch {
+      // Een half bericht: de volgende komt zo.
+    }
+  };
+} catch {
+  // Zonder live-stroom ververst de pagina elke minuut.
+}

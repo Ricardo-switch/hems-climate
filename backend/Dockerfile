@@ -26,6 +26,8 @@ RUN npm ci
 
 COPY frontend/build.js ./
 COPY frontend/src ./src
+# De tekenmotor van ontwerp 2: de schets is de code (besluit 104).
+COPY design/app2/kit ./kit
 
 # Naar een vaste map, los van de mappenstructuur van het project: de backend
 # hoeft niet te weten waar de bron stond.
