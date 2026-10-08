@@ -29,8 +29,6 @@ automatic_backup_*
 legacy_code
 ha-fixes
 design
-# Behalve de tekenmotor van ontwerp 2: de app gebruikt hem (besluit 104).
-!design/app2/kit
 HA export
 config
 deploy

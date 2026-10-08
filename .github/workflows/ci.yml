@@ -77,7 +77,23 @@ jobs:
     # vorige versie, maar elke vijf minuten mislukte het bouwen opnieuw. Dus
     # bouwt de CI nu ook het image, met dezelfde Dockerfile en context.
     steps:
+      # Alleen de mappen die de NAS uitcheckt (SPARSE_MAPPEN in deploy.sh).
+      # Op 8 oktober bouwde de CI groen met design/ erbij, terwijl de NAS het
+      # zonder design/ moest doen en faalde.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            backend
+            frontend
+            config
+            deploy
+
+      - name: dezelfde mappen als de NAS
+        run: |
+          nas=$(sed -n 's/^SPARSE_MAPPEN="\(.*\)"/\1/p' deploy/deploy.sh | xargs -n1 | sort | xargs)
+          ci=$(git sparse-checkout list | sort | xargs)
+          echo "NAS: $nas"; echo "CI:  $ci"
+          test -n "$nas" && test "$nas" = "$ci"
 
       - name: docker build, zoals deploy.sh op de NAS
         run: >

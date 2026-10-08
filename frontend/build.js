@@ -35,9 +35,9 @@ const copied = await copyStatic();
 
 /*
  * De tekenmotor en de stijlbasis van ontwerp 2 (besluit 104): de schets is de
- * code. Lokaal staan ze in design/app2/kit, in de container naast dit script.
+ * code. Ze staan in frontend/kit; de schetsen in design/app2 laden ze daarvandaan.
  */
-const kitDir = existsSync(join(here, 'kit')) ? join(here, 'kit') : join(here, '..', 'design', 'app2', 'kit');
+const kitDir = join(here, 'kit');
 await mkdir(join(out, 'kit'), { recursive: true });
 for (const n of await readdir(kitDir)) {
   await copyFile(join(kitDir, n), join(out, 'kit', n));

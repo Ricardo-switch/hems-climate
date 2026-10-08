@@ -10,7 +10,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 ## Wat er anders is
 
 - **Het huis in 3D.** Een opengewerkt poppenhuis, schuin van voren, getekend
-  door `kit/huis.js` (SVG, geen 3D-motor: licht genoeg voor de tablet). Het
+  door `frontend/kit/huis.js` (SVG, geen 3D-motor: licht genoeg voor de tablet). Het
   bouwt zich op uit een beschrijving: etages en kamers uit de indeling, en
   alleen wat het huis heeft: panelen, buitenunit, batterij, laadpaal met auto.
   Wat er nog niet is, kan gestippeld staan (`spook`).
@@ -47,3 +47,8 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 
 Voorbeeldgetallen. Schermafdrukken in `screens/`, opnieuw te maken met
 `node render.cjs Wand-Thuis.html:1280:800 Thuis.html:390:844:vol`.
+
+De tekenmotor en de stijlbasis staan in `frontend/kit/` en niet hier: de app
+gebruikt precies die bestanden (besluit 104), en de NAS checkt `design/` niet
+uit. De schetsen laden ze via `../../frontend/kit/`. Voor het overzicht op
+claude.ai gaan ze mee als `kit/…`, met de verwijzingen in een kopie herschreven.
