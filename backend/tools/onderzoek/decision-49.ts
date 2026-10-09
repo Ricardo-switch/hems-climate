@@ -26,12 +26,12 @@
 
 import { basename, resolve } from 'node:path';
 
-import { exampleSite, withLegacyStabilisation } from './site.js';
-import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
-import { ShadowActuators } from '../adapters/shadow-actuators.js';
-import { decide } from '../core/decide.js';
-import type { Action, SiteConfig, Zone } from '../core/model.js';
-import { defaultStrategies } from '../index.js';
+import { exampleSite, withLegacyStabilisation } from '../../src/replay/site.js';
+import { Cursor, configAt, loadHistory, snapshot } from '../../src/replay/reconstruct.js';
+import { ShadowActuators } from '../../src/adapters/shadow-actuators.js';
+import { decide } from '../../src/core/decide.js';
+import type { Action, SiteConfig, Zone } from '../../src/core/model.js';
+import { defaultStrategies } from '../../src/index.js';
 
 const TICK_MS = 60_000;
 

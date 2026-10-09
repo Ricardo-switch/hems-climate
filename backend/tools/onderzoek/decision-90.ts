@@ -33,17 +33,17 @@
 
 import { basename, join, resolve } from 'node:path';
 
-import { exampleSite } from './site.js';
-import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
-import { OwnState } from '../adapters/own-state.js';
-import { ShadowActuators } from '../adapters/shadow-actuators.js';
-import { decide } from '../core/decide.js';
-import type { Command, Decision } from '../core/decision.js';
-import type { Action, SiteConfig } from '../core/model.js';
-import { linesOf } from '../divergence/read.js';
-import { defaultStrategies } from '../index.js';
-import { SolarHistory, learnSolar, type QuarterDays } from '../web/solar-learn.js';
-import { clearSkyW, type Location } from '../web/sun.js';
+import { exampleSite } from '../../src/replay/site.js';
+import { Cursor, configAt, loadHistory, snapshot } from '../../src/replay/reconstruct.js';
+import { OwnState } from '../../src/adapters/own-state.js';
+import { ShadowActuators } from '../../src/adapters/shadow-actuators.js';
+import { decide } from '../../src/core/decide.js';
+import type { Command, Decision } from '../../src/core/decision.js';
+import type { Action, SiteConfig } from '../../src/core/model.js';
+import { linesOf } from '../../src/divergence/read.js';
+import { defaultStrategies } from '../../src/index.js';
+import { SolarHistory, learnSolar, type QuarterDays } from '../../src/web/solar-learn.js';
+import { clearSkyW, type Location } from '../../src/web/sun.js';
 
 const TICK_MS = 60_000;
 /** Hoe ver vooruit de kandidaat kijkt: de stabilisatie, met wat marge. */

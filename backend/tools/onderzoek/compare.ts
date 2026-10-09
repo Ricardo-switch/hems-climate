@@ -8,8 +8,8 @@
  * het systeem dacht dat het deed.
  */
 
-import type { Action } from '../core/model.js';
-import type { Decision } from '../core/decision.js';
+import type { Action } from '../../src/core/model.js';
+import type { Decision } from '../../src/core/decision.js';
 
 /** De assist-apparaten; alleen daarover doen beide systemen uitspraken. */
 export const ASSIST_IDS = ['ac-woonkamer', 'ac-zolder'] as const;

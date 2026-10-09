@@ -24,12 +24,12 @@
  * eindafrekening.
  */
 
-import { exampleSite } from './site.js';
-import { decide } from '../core/decide.js';
-import type { SiteConfig } from '../core/model.js';
-import { defaultStrategies } from '../index.js';
-import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
-import { OwnState } from '../adapters/own-state.js';
+import { exampleSite } from '../../src/replay/site.js';
+import { decide } from '../../src/core/decide.js';
+import type { SiteConfig } from '../../src/core/model.js';
+import { defaultStrategies } from '../../src/index.js';
+import { Cursor, configAt, loadHistory, snapshot } from '../../src/replay/reconstruct.js';
+import { OwnState } from '../../src/adapters/own-state.js';
 
 const TICK_MINUTES = 1;
 const TICK_MS = TICK_MINUTES * 60_000;

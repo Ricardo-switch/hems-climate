@@ -16,9 +16,9 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { exampleSite } from './site.js';
-import { decide } from '../core/decide.js';
-import { defaultStrategies } from '../index.js';
+import { exampleSite } from '../../src/replay/site.js';
+import { decide } from '../../src/core/decide.js';
+import { defaultStrategies } from '../../src/index.js';
 import {
   ASSIST_IDS,
   accumulate,
@@ -29,8 +29,8 @@ import {
   type AssistId,
   type TickComparison,
 } from './compare.js';
-import { Cursor, configAt, loadHistory, snapshot } from './reconstruct.js';
-import { OwnState } from '../adapters/own-state.js';
+import { Cursor, configAt, loadHistory, snapshot } from '../../src/replay/reconstruct.js';
+import { OwnState } from '../../src/adapters/own-state.js';
 
 const TICK_MINUTES = 1;
 const TICK_MS = TICK_MINUTES * 60_000;

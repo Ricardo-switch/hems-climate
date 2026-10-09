@@ -76,10 +76,10 @@ hier een voorstel voor.
 7. **Taal.** Alles is Nederlands, ook de woordenlijst waarmee de assistent
    kamers en apparaten herkent. Tweetalig staat in besluit 86, en is nog niet
    gebouwd.
-8. **Onderzoeksgereedschap apart.** `tools/export-history.ts` en de
-   replay-scripts (`backend/src/replay/decision-*.ts`, `compare.ts`,
-   `sweep.ts`) noemen entiteiten en personen van dit huis bij naam. Ze horen
-   niet in de app of de add-on; ze gaan naar een eigen map, buiten het image.
+8. ~~**Onderzoeksgereedschap apart.**~~ Gedaan op 9 oktober: de lijst met
+   entiteiten en personen van dit huis staat in `tools/export-history.ts`, en
+   de replay-scripts die dit huis bij naam noemen in `backend/tools/onderzoek/`.
+   Daarmee zitten ze niet in de dienst en niet in de add-on.
 9. **De wizard.** Als 1 tot en met 6 er zijn, zet de wizard de schermen achter
    elkaar: gevonden apparaten, je huis, zon en aansluiting, meters en prijzen,
    camera's en deurbel, comfort per kamer. Samen met de add-on en de integratie

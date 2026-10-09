@@ -1873,7 +1873,7 @@ simulatie. Daardoor is het bovenstaande een bovengrens: onder echte regeling was
 de zone eerder koud en de vraag eerder weg.
 
 *De replay blijft bit-identiek* (938 bytes, sha256 `81a74044…`), want die geeft
-geen eigen stand mee. `src/replay/decision-49.ts` rekent het verschil door over
+geen eigen stand mee. `tools/onderzoek/decision-49.ts` rekent het verschil door over
 beide vensters.
 
 ### 49b. De veronderstelling blijft bij de meter en bij de bewoner
@@ -1965,7 +1965,7 @@ maakt de bewoner, niet het schema. Weglaten geeft het gedrag van vóór dit
 besluit. Een plafond onder het koeldoel levert een waarschuwing: dan is de dure
 regel strenger dan de zuinige en koelt hij altijd op netstroom.
 
-*Wat de hoogte kost, over beide vensters* (`src/replay/decision-50.ts`, met
+*Wat de hoogte kost, over beide vensters* (`tools/onderzoek/decision-50.ts`, met
 besluit 49 aan). De betrouwbare kolom is hoe lang de zone boven het plafond zat,
 want die hangt niet af van wat koelen met de temperatuur doet:
 
@@ -2346,7 +2346,7 @@ belangrijkste vertalingen:
 | `bovenComfortplafond`, `bovenPlafond` | `aboveComfortCeiling`, `aboveCeiling` |
 | `versieUitOmgeving`, `Versie` | `versionFromEnv`, `Version` |
 | `ontdek`, `pasKeuzesToe`, `Voorstel`, `Keuze` | `discover`, `applyChoices`, `Proposal`, `Choice` |
-| `src/replay/besluit49.ts`, `besluit50.ts` | `src/replay/decision-49.ts`, `decision-50.ts` |
+| `src/replay/besluit49.ts`, `besluit50.ts` | `tools/onderzoek/decision-49.ts`, `decision-50.ts` |
 | `npm run besluiten:index`, `npm run replay:vastleggen` | `npm run decisions:index`, `npm run replay:record` |
 
 ---
@@ -2370,7 +2370,7 @@ dienst houdt de timer zelf bij, zoals besluit 39 al mogelijk maakte.
 schema per timer optioneel worden: het eiste de stabilisatietimer zodra er een
 `timers`-blok stond, terwijl besluit 39 "per timer afzonderlijk" beloofde.
 
-*Gemeten* (`src/replay/decision-60.ts`, beide vensters, met alles zoals het op
+*Gemeten* (`tools/onderzoek/decision-60.ts`, beide vensters, met alles zoals het op
 de NAS draait):
 
 | | augustus | september |
@@ -2674,7 +2674,7 @@ ronde al iets gestart", en komt na de stabilisatie opnieuw aan de beurt.
 Hervatten uit standby telt ook als start. Wat niet op het budget start, valt
 erbuiten, zoals comfort met een primair apparaat.
 
-*Gemeten* (`src/replay/decision-60.ts`, met en zonder deze regel). Alleen de
+*Gemeten* (`tools/onderzoek/decision-60.ts`, met en zonder deze regel). Alleen de
 zolder in het augustusvenster verandert; in september kwam het niet voor.
 
 | Zolder, augustus | Was | Nu |
@@ -3614,7 +3614,7 @@ plafond per zonnestand kan nu al worden uitgerekend uit de dataset; daarvoor
 is sinds 4 oktober de zonnestroom per minuut er (89).
 
 *Aangevuld 7 oktober 2026: kandidaat 2 gemeten.* Het plafond per zonnestand
-wordt nu geleerd (aanvulling bij 93), en `src/replay/decision-90.ts` speelt
+wordt nu geleerd (aanvulling bij 93), en `tools/onderzoek/decision-90.ts` speelt
 dezelfde minuten af met en zonder de kandidaat. Het plafond komt telkens uit
 de andere dagen, nooit uit de dag die wordt afgespeeld. Venster 20 tot 30
 september (15.262 minuten; de zon uit het beslislogboek, want dat venster kent
@@ -3645,7 +3645,7 @@ op meting) vraagt het vermogen van een airco die de arbiter zelf bestuurt; dat
 bestaat pas bij B. Kandidaten 3 en 4 zijn grenzen op starts en opdrachten per
 uur; die kan de replay nu al tellen, en dat is de volgende meting.
 
-*Aangevuld 7 oktober 2026: kandidaten 3 en 4 gemeten.* `src/replay/decision-90-limits.ts`
+*Aangevuld 7 oktober 2026: kandidaten 3 en 4 gemeten.* `tools/onderzoek/decision-90-limits.ts`
 telt per airco en per klokuur de starts en opdrachten, en speelt dezelfde
 minuten af met een grens erin. Een start of een nieuw setpoint boven de grens
 vervalt; afbouwen nooit. Augustus (14.476 minuten), woonkamer:
