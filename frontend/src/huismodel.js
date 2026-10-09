@@ -81,22 +81,40 @@
   function soortBuiten(r) {
     if (r.buiten) return r.buiten;
     const oprit = /oprit|carport/i.test(r.naam);
-    return { soort: oprit ? 'oprit' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : 'tuin', auto: oprit, tuinhuis: !oprit };
+    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : 'tuin';
+    return { soort, auto: oprit, tuinhuis: soort === 'tuin' };
   }
 
   /**
-   * De oprit en de tuin uit de buitenruimtes (besluit 109). De tekening heeft
-   * plek voor één oprit, en één tuin, terras of balkon; wat erbij hoort (een
-   * auto, een tuinhuis) komt uit de indeling. Welke lamp het tuinhuis verlicht:
+   * De buitenruimtes voor de tekening (besluiten 109 en 113): een oprit, een
+   * tuin achter, een terras, een voortuin en een balkon, elk op zijn eigen plek;
+   * wat erbij hoort (een auto, een tuinhuis) komt uit de indeling. Welke lamp het tuinhuis verlicht:
    * een lamp in een zone die zo heet, of die zelf zo heet.
    */
   function buiten(ruimtes) {
     let oprit = null;
     let tuin = null;
+    let terras = null;
+    let balkon = null;
+    let voortuin = null;
     for (const r of ruimtes) {
       const b = soortBuiten(r);
       const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
       const zoneNaam = (a) => (r.zones ?? []).find((z) => z.id === a.zone)?.naam ?? '';
+      const lampAan = lampen.some((a) => a.aan);
+      // Een terras, balkon of voortuin heeft zijn eigen plek (besluit 113); een tweede tuin wordt de voortuin.
+      if (b.soort === 'terras') {
+        terras ??= { id: r.id, naam: r.naam, lampAan };
+        continue;
+      }
+      if (b.soort === 'balkon') {
+        balkon ??= { id: r.id, naam: r.naam, lampAan };
+        continue;
+      }
+      if (b.soort === 'voortuin' || (b.soort === 'tuin' && tuin && !voortuin)) {
+        voortuin ??= { id: r.id, naam: r.naam, lampAan };
+        continue;
+      }
       if (b.soort === 'oprit') {
         if (oprit) continue;
         const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
@@ -119,7 +137,7 @@
         };
       }
     }
-    return { oprit, tuin };
+    return { oprit, tuin, terras, balkon, voortuin };
   }
 
   global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };

@@ -41,6 +41,8 @@ describe('het voorstel uit Home Assistant', () => {
     expect(outsideFromNames({ naam: 'Achtertuin', zones: [] }, [{ naam: 'Tuinhuis overstek' }])).toEqual({ soort: 'tuin', auto: false, tuinhuis: true });
     expect(outsideFromNames({ naam: 'Dakterras', zones: [] }, [])).toEqual({ soort: 'terras', auto: false, tuinhuis: false });
     expect(outsideFromNames({ naam: 'Carport', zones: [] }, []).soort).toBe('oprit');
+    // Een voortuin heeft zijn eigen plek in de tekening (besluit 113).
+    expect(outsideFromNames({ naam: 'Voortuin', zones: [] }, []).soort).toBe('voortuin');
   });
 
   it('raadt welke etage onder het dak ligt, en volgt wat de bewoner koos (besluit 111)', () => {

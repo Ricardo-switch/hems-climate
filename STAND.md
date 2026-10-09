@@ -156,7 +156,9 @@ verwijzing bestaat.
   maand of jaar ([110]).
 - **Licht bedienen en de weerbron** stel je in bij Functies; `HEMS_LIGHTS` blijft
   de grens van de installatie, en het weer komt van Buienradar of van elke
-  weerentiteit van Home Assistant ([111]).
+  weerentiteit van Home Assistant ([111]), alleen van een weerdienst ([113]).
+- **Buitenruimtes** hebben elk hun plek in de tekening: oprit, tuin, terras,
+  voortuin en balkon ([113]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -318,4 +320,5 @@ verwijzing bestaat.
 [110]: DECISIONS.md#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten
 [111]: DECISIONS.md#111-licht-bedienen-en-de-weerbron-zijn-een-functie
 [112]: DECISIONS.md#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel
+[113]: DECISIONS.md#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten
 <!-- links:einde -->

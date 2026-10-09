@@ -163,12 +163,27 @@ export function forecastFromEntity(state: HaEntityState | undefined, forecast: r
   return out.sort((a, b) => a.offset - b.offset);
 }
 
-/** De weerbronnen om uit te kiezen: Buienradar als die er is, en elke weerentiteit. */
+/**
+ * De koppelingen in Home Assistant die het weer van het eigen huis geven.
+ * Andere weerentiteiten horen bij iets anders: het circuit van een Formule
+ * 1-sensor, een stad in een reisplanner. Die staan niet in de keuze.
+ */
+const WEERDIENSTEN = new Set([
+  'met', 'buienradar', 'knmi', 'openweathermap', 'accuweather', 'pirateweather', 'tomorrowio', 'open_meteo', 'meteoblue',
+  'weatherflow', 'weatherflow_cloud', 'nws', 'environment_canada', 'metoffice', 'bom', 'smhi', 'ipma', 'aemet', 'meteo_france',
+  'dwd_weather', 'zamg', 'meteoswiss', 'irm_kmi', 'weatherkit', 'google_weather', 'yr', 'foreca', 'climacell', 'darksky',
+]);
+
+/** De weerbronnen om uit te kiezen: Buienradar als die er is, en elke weerentiteit van een weerdienst. */
 export function weatherSources(entities: readonly HaRegistryEntity[], states: ReadonlyMap<string, HaEntityState>): { id: string; naam: string }[] {
   const out: { id: string; naam: string }[] = [];
-  if (entities.some((e) => e.platform === 'buienradar' && e.disabled_by == null && e.translation_key != null && KEY.test(e.translation_key))) out.push({ id: 'buienradar', naam: 'Buienradar' });
+  const metSensoren = entities.some((e) => e.platform === 'buienradar' && e.disabled_by == null && e.translation_key != null && KEY.test(e.translation_key));
+  if (metSensoren) out.push({ id: 'buienradar', naam: 'Buienradar' });
   for (const e of entities) {
     if (!e.entity_id.startsWith('weather.') || e.disabled_by != null || !/^weather\.[a-z0-9_]+$/.test(e.entity_id)) continue;
+    if (!WEERDIENSTEN.has(e.platform ?? '')) continue;
+    // Buienradar staat er al, met zijn vijf dagen uit de sensoren: niet nog eens als weerentiteit.
+    if (e.platform === 'buienradar' && metSensoren) continue;
     out.push({ id: e.entity_id, naam: String(states.get(e.entity_id)?.attributes['friendly_name'] ?? e.entity_id) });
   }
   return out;

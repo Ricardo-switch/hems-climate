@@ -122,6 +122,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [105. Het weer van de komende dagen, met wat de panelen dan leveren](#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren)
 - [107. Aanbellen: het beeld van de deurbel meteen op het scherm](#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm)
 - [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve)
+- [113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten](#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten)
 
 **Veiligheid**
 
@@ -4929,6 +4930,31 @@ paste daar niet in (`docs/universeel.md`, punt 4). Gekozen door de bewoner op
   laagste etage die geen kelder is.
 
 *Nog niet:* de tekening zet een kelder als laagste laag op de grond, niet eronder.
+
+---
+
+## 113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten
+
+*Onderwerp: weergave · Status: geldig*
+
+Punt 1 uit `docs/universeel.md`: de tekening had plek voor één oprit en één
+tuin. En in de keuze voor het weer stond Buienradar twee keer (de sensoren en
+de eigen weerentiteit), en het weer van een Formule 1-circuit. Gekozen op 9
+oktober 2026.
+
+*Besluit:*
+
+- **Elke soort buitenruimte heeft een eigen plek:** de oprit links met de auto,
+  de tuin rechtsachter met het tuinhuis, een terras rechts naast het huis (tegels,
+  een tafel met stoelen), een voortuin voor het huis (gras met een haag), en een
+  balkon aan de zijgevel op de eerste verdieping. Een tweede tuin wordt de
+  voortuin. Brandt er een lamp in de ruimte, dan gloeit die plek. Elke plek is aan
+  te tikken. Een balkon staat alleen in de tekening van het hele huis, want
+  ingezoomd op de begane grond is er geen eerste verdieping.
+- **Voortuin is een soort** in de indeling, naast oprit, tuin, terras en balkon.
+- **Weerbronnen zijn alleen weerdiensten** (Met.no, KNMI, OpenWeatherMap en
+  andere): een weerentiteit van een andere koppeling staat niet in de keuze.
+  Buienradar staat er één keer, met zijn vijf dagen uit de sensoren.
 
 ---
 

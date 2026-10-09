@@ -104,7 +104,14 @@ describe('de keuzes controleren (besluit 109)', () => {
 
 describe('weer en licht als functie (besluit 111)', () => {
   const metWeer = functiesGevonden(
-    [...entities, { entity_id: 'weather.forecast_home', platform: 'met' }, { entity_id: 'sensor.sunchance_1d', platform: 'buienradar', translation_key: 'sunchance_1d' }],
+    [
+      ...entities,
+      { entity_id: 'weather.forecast_home', platform: 'met' },
+      { entity_id: 'sensor.sunchance_1d', platform: 'buienradar', translation_key: 'sunchance_1d' },
+      // Buienradar als weerentiteit, en het weer van een Formule 1-circuit: niet in de keuze.
+      { entity_id: 'weather.buienradar', platform: 'buienradar' },
+      { entity_id: 'weather.marina_bay', platform: 'f1_sensor' },
+    ],
     devices,
     new Map(),
   );

@@ -52,10 +52,9 @@ hier een voorstel voor.
 
 ## Wat er nog ligt, op volgorde
 
-1. **Meer buitenruimtes in de tekening.** Er past één oprit en één tuin,
-   terras of balkon. Een tweede buitenruimte staat in de lijsten, niet in de
-   tekening. De lamp van de camera op de oprit wordt nog aan de naam herkend
-   ("camera", "schijnwerper").
+1. ~~**Meer buitenruimtes in de tekening.**~~ Gedaan op 9 oktober (besluit
+   113): oprit, tuin, terras, voortuin en balkon hebben elk hun plek. De lamp van
+   de camera op de oprit wordt nog aan de naam herkend.
 2. ~~**Meer functies in de app.**~~ Gedaan op 9 oktober (besluit 111): licht
    bedienen en de weerbron staan bij Functies.
 3. ~~**De tekening van het huis.**~~ Gedaan op 9 oktober (besluit 111): liggen

@@ -74,7 +74,7 @@ function huisModel() {
   const maand = new Date().getMonth() + 1;
 
   // Buiten: de oprit met de auto en de camera, de tuin met het tuinhuis.
-  const { oprit, tuin } = huismodel.buiten(buitenRuimtes);
+  const { oprit, tuin, terras, balkon, voortuin } = huismodel.buiten(buitenRuimtes);
 
   const stromen = [];
   const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));
@@ -97,6 +97,9 @@ function huisModel() {
     net: true,
     oprit,
     tuin,
+    terras,
+    balkon,
+    voortuin,
     stromen,
     labels,
   };

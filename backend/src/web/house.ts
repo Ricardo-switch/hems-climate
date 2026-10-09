@@ -868,7 +868,7 @@ const OUTSIDE = /tuin|oprit|terras|buiten|schuur|carport|balkon|veranda/i;
  */
 export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devices: readonly Pick<HouseDevice, 'naam'>[]): LayoutOutside {
   const n = room.naam;
-  const soort = /oprit|carport/i.test(n) ? 'oprit' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : 'tuin';
+  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : 'tuin';
   const huisje = /tuinhuis|schuur|berging|huisje/i;
   return { soort, auto: soort === 'oprit', tuinhuis: soort === 'tuin' && (room.zones.some((z) => huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam))) };
 }

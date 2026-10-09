@@ -147,24 +147,22 @@ function tekenPodium(etage, kamer) {
   const toon = huismodel.isBuiten(etage, kamer) ? laagste : etage;
   const binnen = toon.ruimtes.filter((r) => !huismodel.isBuiten(toon, r));
   const buitenRuimtes = huismodel.isBuiten(etage, kamer) ? alle.flatMap((e) => (e.ruimtes ?? []).filter((r) => huismodel.isBuiten(e, r))) : [];
-  const { oprit, tuin } = huismodel.buiten(buitenRuimtes);
-  if (oprit) oprit.gekozen = oprit.id === kamer.id;
-  if (tuin) tuin.gekozen = tuin.id === kamer.id;
+  const buitenDelen = huismodel.buiten(buitenRuimtes);
+  for (const b of Object.values(buitenDelen)) if (b) b.gekozen = b.id === kamer.id;
   const maand = new Date().getMonth() + 1;
   const zonKw = state?.bewoner?.stromen?.zonKw ?? 0;
   const helder = zon?.heldereLuchtW ?? 0;
   const model = {
-    beschrijving: `${toon.naam} van dichtbij, zonder dak${oprit || tuin ? ', met wat er buiten bij hoort' : ''}. ${kamer.naam} is gekozen.`,
+    beschrijving: `${toon.naam} van dichtbij, zonder dak${Object.values(buitenDelen).some(Boolean) ? ', met wat er buiten bij hoort' : ''}. ${kamer.naam} is gekozen.`,
     tijd: app.tijdVanDeDag(zon),
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken: zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : 0.3) : 0.3,
     zonderDak: true,
     etages: [{ naam: toon.naam, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
-    ...(oprit ? { oprit } : {}),
-    ...(tuin ? { tuin } : {}),
+    ...Object.fromEntries(Object.entries(buitenDelen).filter(([, v]) => v)),
   };
   // Met de oprit en de tuin erbij is het beeld breder: dan minder inzoomen, en wat naar links.
-  const buitenErbij = !!(oprit || tuin);
+  const buitenErbij = Object.values(buitenDelen).some(Boolean);
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
 }

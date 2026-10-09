@@ -76,6 +76,7 @@ describe('de indeling toetsen', () => {
     const tuin = { id: 'tuin', naam: 'Tuin', etage: 'buiten', zones: [], regelzone: null, haGebied: null, buiten: { soort: 'terras', auto: false, tuinhuis: true } };
     const r = validateLayout({ ...good, kamers: [...good.kamers, tuin] }, known);
     expect(r.ok && r.layout.kamers.find((k) => k.id === 'tuin')!.buiten).toEqual({ soort: 'terras', auto: false, tuinhuis: true });
+    expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'voortuin', auto: false, tuinhuis: false } }] }, known).ok).toBe(true);
     // Op een etage binnen valt het weg.
     const binnen = validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, etage: 'bg' }] }, known);
     expect(binnen.ok && 'buiten' in binnen.layout.kamers.find((k) => k.id === 'tuin')!).toBe(false);

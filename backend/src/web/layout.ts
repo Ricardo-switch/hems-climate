@@ -64,7 +64,7 @@ export interface LayoutZone {
 }
 
 /** Wat een buitenruimte is, voor de tekening van het huis (besluit 109). */
-export const OUTSIDE_KINDS = ['oprit', 'tuin', 'terras', 'balkon'] as const;
+export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon'] as const;
 export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
 
 export interface LayoutOutside {

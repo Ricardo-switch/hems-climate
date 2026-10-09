@@ -76,6 +76,8 @@
     if (model.net) pts.push([-0.9, D + 1.4, 0]);
     if (model.oprit) pts.push([-2.9, D + 1.5, 0], [-2.8, D + 1.4, 1.5], [-2.7, D - 1.8, 0.9]);
     if (model.tuin) pts.push([g.W + 2.0, -1.9, 0], [g.W + 2.0, -1.9, 1.0]);
+    if (model.terras) pts.push([g.W + 2.0, D + 0.4, 0], [g.W + 2.0, 0.4, 0.8]);
+    if (model.voortuin) pts.push([W + 0.1, D + 1.7, 0], [1.3, D + 1.7, 0]);
     if (model.zon) pts.push([W / 2, D / 2, Ht + R + 1.6]);
     return pts;
   }
@@ -217,9 +219,9 @@
     // Ingezoomd op een etage: alleen een smalle rand grond om het huis.
     // Zonder dak strak om het huis, tenzij de oprit of de tuin erbij hoort (de begane grond).
     const gx0 = model.auto || model.oprit || spook(model, 'auto') || opts.ruimte ? -3.0 : model.zonderDak ? -0.45 : -1.4;
-    const gx1 = model.tuin ? W + 2.1 : model.zonderDak ? W + 0.75 : W + 1.3;
+    const gx1 = model.tuin || model.terras ? W + 2.1 : model.zonderDak ? W + 0.75 : W + 1.3;
     const gy0 = model.tuin ? -2.0 : model.zonderDak ? -0.35 : -0.6;
-    const gy1 = model.oprit ? D + 1.9 : model.zonderDak ? D + 0.7 : D + 1.9;
+    const gy1 = model.oprit || model.voortuin ? D + 1.9 : model.zonderDak ? D + 0.7 : D + 1.9;
     grond.push(poly([[gx0, gy0, 0], [gx1, gy0, 0], [gx1, gy1, 0], [gx0, gy1, 0]], `fill="url(#${id}-gras)"`));
     // De rand van het perceel, als een dikke plaat.
     grond.push(poly([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx0, gy1, -0.18]], `fill="#0b1219"`));
@@ -403,6 +405,9 @@
     if (model.buitenunit) bouwBuitenunit(model.buitenunit, W, 0.25);
     if (model.batterij || spook(model, 'batterij')) bouwBatterij(model.batterij, spook(model, 'batterij'));
     if (model.tuin) bouwTuin(model.tuin);
+    if (model.terras) bouwTerras(model.terras);
+    if (model.voortuin) bouwVoortuin(model.voortuin);
+    if (model.balkon && g.etages.filter((e) => !e.dak).length >= 2) bouwBalkon(model.balkon);
     if (model.auto || spook(model, 'auto')) bouwAuto(model.auto, spook(model, 'auto'), true);
     else if (model.oprit?.auto) bouwAuto({ stand: 'geparkeerd', kleur: model.oprit.auto.kleur }, false, false);
     if (model.oprit?.camera) bouwCamera(model.oprit.camera);
@@ -821,6 +826,51 @@
         buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.9}" ry="${k * 0.4}" fill="#FFF1C9" opacity="0.18" filter="url(#${id}-zacht)"/>`);
       }
     }
+    /** Een terras rechts naast het huis: tegels, een tafel en twee stoelen (besluit 113). */
+    function bouwTerras(t) {
+      const x0 = W + 0.3;
+      const x1 = W + 2.05;
+      const y0 = 0.45;
+      const y1 = D + 0.4;
+      buiten.push(poly([[x0, y0, 0.006], [x1, y0, 0.006], [x1, y1, 0.006], [x0, y1, 0.006]], 'fill="#3b4652"'));
+      for (let x = x0 + 0.35; x < x1 - 0.05; x += 0.35) buiten.push(line([[x, y0, 0.008], [x, y1, 0.008]], 'stroke="#2c353f" stroke-width="1"'));
+      for (let y = y0 + 0.35; y < y1 - 0.05; y += 0.35) buiten.push(line([[x0, y, 0.008], [x1, y, 0.008]], 'stroke="#2c353f" stroke-width="1"'));
+      const tx = x0 + 0.75;
+      const ty = (y0 + y1) / 2 - 0.2;
+      buiten.push(doos(tx, ty, 0.42, 0.5, 0.4, 0.05, ['#c9d3dc', '#9aa7b4', '#7d8a97']));
+      buiten.push(doos(tx + 0.22, ty + 0.17, 0, 0.06, 0.06, 0.42, ['#7d8a97', '#6b7885', '#5d6976']));
+      for (const sx of [tx - 0.32, tx + 0.62]) buiten.push(doos(sx, ty + 0.08, 0, 0.22, 0.24, 0.26, ['#55626f', '#46525f', '#3a4552']));
+      if (t.lampAan) {
+        const c = P(tx + 0.25, ty + 0.2, 0.47);
+        buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.6}" ry="${k * 0.28}" fill="#FFD39A" opacity="0.25" filter="url(#${id}-zacht)"/>`);
+      }
+    }
+    /** Een voortuin voor het huis: gras met een lage haag langs de rand (besluit 113). */
+    function bouwVoortuin(t) {
+      const x0 = 1.3;
+      const x1 = W + 0.1;
+      const yh = D + 1.55;
+      buiten.push(doos(x0, yh, 0, x1 - x0, 0.14, 0.18, ['#2f5a3c', '#26492f', '#1f3d27']));
+      for (let x = x0 + 0.4; x < x1 - 0.2; x += 0.7) {
+        const c = P(x, D + 0.9, 0.02);
+        buiten.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${k * 0.06}" fill="${t.lampAan ? '#FFD39A' : '#6e9a6f'}" opacity="0.8"/>`);
+      }
+    }
+    /** Een balkon aan de zijgevel, op de eerste verdieping, met een reling (besluit 113). */
+    function bouwBalkon(b) {
+      const z = FH;
+      const y0 = 0.35;
+      const y1 = 1.15;
+      buiten.push(doos(W, y0, z - 0.06, 0.55, y1 - y0, 0.06, ['#9aa7b4', '#7d8a97', '#6b7885']));
+      const rz = z + 0.42;
+      buiten.push(line([[W + 0.55, y0, rz], [W + 0.55, y1, rz]], 'stroke="#C9D6E2" stroke-width="1.6"'));
+      buiten.push(line([[W, y1, rz], [W + 0.55, y1, rz]], 'stroke="#C9D6E2" stroke-width="1.6"'));
+      for (let y = y0; y <= y1 + 0.001; y += 0.2) buiten.push(line([[W + 0.55, y, z], [W + 0.55, y, rz]], 'stroke="#C9D6E2" stroke-opacity="0.7" stroke-width="1"'));
+      if (b.lampAan) {
+        const c = P(W + 0.28, (y0 + y1) / 2, z + 0.02);
+        buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.4}" ry="${k * 0.2}" fill="#FFD39A" opacity="0.3" filter="url(#${id}-zacht)"/>`);
+      }
+    }
     function bouwTuin(t) {
       // Het tuinhuis rechtsachter, met een overstek en de lamp eronder; lampen langs het pad.
       // Alleen als de tuin er een heeft (`tuinhuis: false` is geen tuinhuis).
@@ -868,7 +918,17 @@
     // Gekozen (in Kamer): een omlijning; zonder dak staat de naam erbij op de grond.
     const vlakOprit = [[-2.9, -0.4, 0.01], [-1.15, -0.4, 0.01], [-1.15, D + 1.7, 0.01], [-2.9, D + 1.7, 0.01]];
     const vlakTuin = [[W + 0.3, -1.95, 0.01], [W + 2.05, -1.95, 0.01], [W + 2.05, 0.25, 0.01], [W + 0.3, 0.25, 0.01]];
-    for (const [deel, vlak, midden] of [[model.oprit, vlakOprit, [-2.02, D + 0.65, 0]], [model.tuin, vlakTuin, [W + 1.18, -0.85, 0]]]) {
+    const vlakTerras = [[W + 0.3, 0.45, 0.01], [W + 2.05, 0.45, 0.01], [W + 2.05, D + 0.4, 0.01], [W + 0.3, D + 0.4, 0.01]];
+    const vlakVoortuin = [[1.3, D + 0.3, 0.01], [W + 0.1, D + 0.3, 0.01], [W + 0.1, D + 1.7, 0.01], [1.3, D + 1.7, 0.01]];
+    const vlakBalkon = [[W, 0.35, FH], [W + 0.55, 0.35, FH], [W + 0.55, 1.15, FH], [W, 1.15, FH]];
+    const metBalkon = model.balkon && g.etages.filter((e) => !e.dak).length >= 2 ? model.balkon : null;
+    for (const [deel, vlak, midden] of [
+      [model.oprit, vlakOprit, [-2.02, D + 0.65, 0]],
+      [model.tuin, vlakTuin, [W + 1.18, -0.85, 0]],
+      [model.terras, vlakTerras, [W + 1.18, D / 2 + 0.4, 0]],
+      [model.voortuin, vlakVoortuin, [(1.3 + W) / 2, D + 1.0, 0]],
+      [metBalkon, vlakBalkon, [W + 0.28, 0.75, FH]],
+    ]) {
       if (!deel) continue;
       if (deel.gekozen) grond.push(poly(vlak, `fill="${KLEUR.ijs}" fill-opacity="0.06" stroke="${KLEUR.ijs}" stroke-width="2" stroke-dasharray="7 5"`));
       if (model.zonderDak && deel.naam) {

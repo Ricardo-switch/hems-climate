@@ -236,8 +236,8 @@ function tekenPodium(d) {
   const binnen = d.kamers.filter((k) => k.etage === etage && !alleBuiten(k));
   // Buiten toont de begane grond met wat eromheen ligt; de begane grond zelf, ingezoomd, zonder.
   const metBuiten = keuze.etage === 'buiten';
-  const { oprit, tuin } = metBuiten ? huismodel.buiten(d.kamers.filter(alleBuiten).map(ruimte)) : {};
-  for (const b of [oprit, tuin]) if (b) b.gekozen = b.id === keuze.kamer || b.id === sleepDoel;
+  const buitenDelen = metBuiten ? huismodel.buiten(d.kamers.filter(alleBuiten).map(ruimte)) : {};
+  for (const b of Object.values(buitenDelen)) if (b) b.gekozen = b.id === keuze.kamer || b.id === sleepDoel;
   // Bij het indelen alleen de naam en de temperatuur: geen zin over wat de kamer doet.
   const kamers = binnen.map((k) => ({ ...huismodel.kamerModel(ruimte(k), state), zin: null, stand: null, naam: k.naam, zones: k.zones.length > 1 ? k.zones.map((z) => z.naam) : undefined, gekozen: k.id === keuze.kamer && k.id !== sleepDoel, doel: k.id === sleepDoel }));
   kamers.push({ id: '__nieuw', naam: 'Kamer toevoegen', gewicht: 0.7, nieuw: true });
@@ -246,10 +246,9 @@ function tekenPodium(d) {
     tijd: 'dag',
     zonderDak: true,
     etages: [{ naam: etageNaam(d, etage), kamers }],
-    ...(oprit ? { oprit } : {}),
-    ...(tuin ? { tuin } : {}),
+    ...Object.fromEntries(Object.entries(buitenDelen).filter(([, v]) => v)),
   };
-  const breed = !!(oprit || tuin);
+  const breed = Object.values(buitenDelen).some(Boolean);
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 580, hoogte: 560, marge: 0.02, zoom: breed ? 1.12 : 1.05, schuifX: breed ? 30 : 10, schuifY: breed ? -20 : 0, tik: true });
   else huis.teken(document.getElementById('podium-tel'), model, { breedte: 390, hoogte: 260, marge: 0.03, zoom: breed ? 1.1 : 1, tik: true });
 }
@@ -320,7 +319,7 @@ function kamerBlad(d, k) {
  * tekening. Alleen op de etage Buiten; staat hij nog op een etage binnen, dan
  * zegt het blad hoe hij daar komt.
  */
-const BUITEN_SOORTEN = [['oprit', 'Oprit'], ['tuin', 'Tuin'], ['terras', 'Terras'], ['balkon', 'Balkon']];
+const BUITEN_SOORTEN = [['oprit', 'Oprit'], ['tuin', 'Tuin'], ['voortuin', 'Voortuin'], ['terras', 'Terras'], ['balkon', 'Balkon']];
 function buitenNu(k) {
   return k.buiten ?? ruimteVan(k.id)?.buiten ?? huismodel.soortBuiten(k);
 }
@@ -331,7 +330,7 @@ function buitenKeuze(k) {
   const b = buitenNu(k);
   const knop = (sleutel, w, t, aan) => `<button type="button" class="chip${aan ? '' : ' uitchip'}" data-buiten="${sleutel}" data-waarde="${esc(String(w))}" aria-pressed="${aan}">${esc(t)}</button>`;
   return `<div><span class="label">Wat is het?</span><div class="chips" role="group" aria-label="Soort buitenruimte">${BUITEN_SOORTEN.map(([w, t]) => knop('soort', w, t, b.soort === w)).join('')}</div></div>
-    <div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort">${b.soort === 'oprit' ? knop('auto', !b.auto, 'Auto op de oprit', b.auto) : knop('tuinhuis', !b.tuinhuis, 'Tuinhuis of schuur', b.tuinhuis)}</div></div>`;
+    <div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort">${b.soort === 'oprit' ? knop('auto', !b.auto, 'Auto op de oprit', b.auto) : b.soort === 'tuin' ? knop('tuinhuis', !b.tuinhuis, 'Tuinhuis of schuur', b.tuinhuis) : '<span class="mini">Niets om te kiezen.</span>'}</div></div>`;
 }
 
 const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera' };
