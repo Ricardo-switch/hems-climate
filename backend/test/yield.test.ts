@@ -166,6 +166,25 @@ describe('een maand, en vergelijken', () => {
     expect(yearStartOf('2024-02-29')).toEqual({ m: 3, d: 1 });
   });
 
+  it('zegt vanaf wanneer er gemeten is, en telt de vaste kosten alleen over die dagen', async () => {
+    const vol = fakeSource();
+    // Home Assistant heeft pas historie vanaf 1 maart 2026.
+    const vanaf = Date.UTC(2026, 1, 28, 23);
+    const laat: EnergySource = {
+      ...vol,
+      async changes(ids, startMs, endMs, period) {
+        const rows = await vol.changes(ids, startMs, endMs, period);
+        return Object.fromEntries(Object.entries(rows).map(([id, r]) => [id, r.filter((x) => x.startMs >= vanaf)]));
+      },
+    };
+    const settings = { ...SETTINGS, prijzen: { ...SETTINGS.prijzen, vast: [{ naam: 'Netbeheer', bedrag: 1, per: 'dag' as const, soort: 'stroom' as const }] } };
+    const r = (await yieldReport(laat, settings, 'jaar', '2026-06-01', TZ, Date.UTC(2027, 0, 5)))!;
+    expect(r.dekking).toEqual({ vanaf: '2026-03-01', dagen: 306, vanDagen: 365 });
+    expect(r.kosten.regels.find((x) => x.naam === 'Vaste kosten stroom')?.euro).toBe(306);
+    // Een hele gemeten periode heeft geen dekking nodig.
+    expect((await yieldReport(fakeSource(), settings, 'maand', '2026-09-20', TZ, Date.UTC(2026, 9, 1)))!.dekking).toBeNull();
+  });
+
   it('telt de grafiek van een contractjaar vanaf zijn eigen maand', async () => {
     const r = (await yieldReport(fakeSource(), { ...SETTINGS, prijzen: { ...SETTINGS.prijzen, contractStart: '2025-07-01' } }, 'jaar', '2026-09-15', TZ, Date.UTC(2026, 8, 20)))!;
     expect(r.periode.label).toBe('1 juli 2026 – 30 juni 2027');

@@ -55,9 +55,19 @@ function titel(r) {
   return `Je gebruikte ${getal(r.stroom.verbruikKwh)} kWh stroom`;
 }
 
+const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+/** "2025-02-05" wordt "5 februari 2025". */
+const datumNl = (iso) => {
+  const [j, m, d] = iso.split('-').map(Number);
+  return `${d} ${MAANDEN[m - 1]} ${j}`;
+};
+
 function periode(r) {
   const p = r.periode;
-  const vorige = r.stroom.vorigeKwh != null ? `<span class="mini" style="margin-left: 6px">${esc(p.vorigeNaam)}: ${getal(r.stroom.vorigeKwh)} kWh gebruikt</span>` : '';
+  // Begint de meting later dan de periode, dan zegt de regel dat eerst.
+  const vorige = r.dekking
+    ? `<span class="mini" style="margin-left: 6px" data-dekking>Gemeten vanaf ${esc(datumNl(r.dekking.vanaf))}: ${r.dekking.dagen} van de ${r.dekking.vanDagen} dagen</span>`
+    : r.stroom.vorigeKwh != null ? `<span class="mini" style="margin-left: 6px">${esc(p.vorigeNaam)}: ${getal(r.stroom.vorigeKwh)} kWh gebruikt</span>` : '';
   return `<button type="button" aria-label="Eerder" data-naar="${esc(p.vorige)}">‹</button><span class="kop-3" style="font-size: 17px">${esc(p.label)}</span><button type="button" aria-label="Later" ${p.volgende ? `data-naar="${esc(p.volgende)}"` : 'disabled'}>›</button>${vorige}`;
 }
 
@@ -66,7 +76,7 @@ function cijfers(r, klein = false) {
   const k = r.kosten;
   const stroom = `<div class="cijfer"><div class="mini">Stroom gebruikt</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${r.heeft.zon ? `${getal(s.vanNetKwh)} van het net, de rest van je dak` : 'van het net'}</div></div>`;
   const vast = k.regels.find((x) => /vast/i.test(x.naam));
-  const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">Kosten</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${k.vorige != null ? `${esc(r.periode.vorigeNaam)} ${euro(k.vorige)}` : ''}${vast?.euro == null ? `${k.vorige != null ? ', ' : ''}zonder vaste kosten` : ''}</div></div>`;
+  const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">Kosten</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${r.dekking ? `over ${r.dekking.dagen} gemeten dagen` : k.vorige != null ? `${esc(r.periode.vorigeNaam)} ${euro(k.vorige)}` : ''}${vast?.euro == null ? `${k.vorige != null || r.dekking ? ', ' : ''}zonder vaste kosten` : ''}</div></div>`;
   const gas = r.gas ? `<div class="cijfer"><div class="mini">Gas</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';
   if (klein) {
     const blok = (naam, waarde, onder) => `<div class="glas-klein"><span class="mini">${naam}</span><span class="getal">${waarde}</span><span class="mini">${onder}</span></div>`;

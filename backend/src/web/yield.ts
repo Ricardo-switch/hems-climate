@@ -81,6 +81,13 @@ export interface YieldReport {
     /** Hoe de vorige periode heet: "augustus", "vorige week". */
     readonly vorigeNaam: string;
   };
+  /**
+   * Begint de meting pas na het begin van de periode (Home Assistant had nog
+   * geen historie), dan vanaf welke dag, en over hoeveel van de dagen. Null
+   * als de hele periode gemeten is. De vaste kosten tellen dan ook alleen over
+   * de gemeten dagen, zodat het totaal bij het verbruik past.
+   */
+  readonly dekking: { readonly vanaf: string; readonly dagen: number; readonly vanDagen: number } | null;
   /** Welke meters er zijn; wat ontbreekt, laat de pagina weg. */
   readonly heeft: { readonly net: boolean; readonly zon: boolean; readonly gas: boolean; readonly prijzen: boolean };
   readonly stroom: {
@@ -371,7 +378,14 @@ export async function yieldReport(
   const use = afnameKwh + selfTotal;
   // De kosten (besluit 110): normaal en dal, salderen of niet, de vaste posten
   // over de dagen die er al waren.
-  const dagen = (Math.min(range.endMs, nowMs) - range.startMs) / 86_400_000;
+  // Begint de meting later dan de periode, dan tellen de vaste kosten vanaf de
+  // eerste meting: een jaarafrekening over dagen zonder verbruik klopt niet.
+  const eerste = Math.min(...[afname, terug, zon, gas].flatMap((m) => [...m.keys()]));
+  const totMs = Math.min(range.endMs, nowMs);
+  const vanMs = Number.isFinite(eerste) && eerste - range.startMs > 86_400_000 ? Math.min(eerste, totMs) : range.startMs;
+  const dagen = (totMs - vanMs) / 86_400_000;
+  const vanP = partsIn(vanMs + 3 * 3_600_000, tz);
+  const dekking = vanMs > range.startMs ? { vanaf: iso(vanP.y, vanP.m, vanP.d), dagen: Math.round(dagen), vanDagen: Math.round((totMs - range.startMs) / 86_400_000) } : null;
   const kosten = kostenVan(s.prijzen, { ...gebruik, gasM3, dagen: Math.max(0, dagen), heelJaar: kind === 'jaar' }, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null });
   const stroomPrijs = kosten.stroomPerKwh;
 
@@ -435,6 +449,7 @@ export async function yieldReport(
       volgende: range.endMs > nowMs ? null : range.next,
       vorigeNaam: range.prevName,
     },
+    dekking,
     heeft: { net: s.net.afname.length > 0, zon: hasSun, gas: s.gas != null, prijzen: p.stroom != null || p.gas != null },
     stroom: {
       verbruikKwh: r1(use),

@@ -5038,6 +5038,22 @@ past daar niet op.
   dan je verbruikt, telt over het contractjaar.
 - Een startdatum op 29 februari begint elk jaar op 1 maart.
 
+*Aangevuld 9 oktober 2026: wat er niet gemeten is.* Naast de jaarafrekening
+over 18 november 2024 tot en met 17 november 2025 (€ 1.999,91) gaf de app
+€ 1.116,58. Het verschil zat niet in de prijzen: de historie in Home Assistant
+begint pas in februari 2025, dus de koudste drie maanden ontbraken (ruim 1.000
+kWh van het net en zo'n 450 m³ gas). Met het verbruik van de afrekening en de
+prijzen uit de app komt het uit op ongeveer € 2.013; het restje is het verschil
+tussen de prijzen van 2025 en van nu. Daarom:
+
+- **Opbrengst zegt het als de meting later begint dan de periode:** "Gemeten
+  vanaf 5 februari 2025: 286 van de 365 dagen".
+- **De vaste kosten tellen dan alleen over de gemeten dagen,** zodat het totaal
+  bij het verbruik past in plaats van een jaar vaste kosten op een half jaar
+  verbruik.
+- De app rekent met de prijzen van nu, ook voor een eerder jaar. Prijzen per
+  contractjaar bewaren is niet gekozen: de jaarafrekening is daar de bron voor.
+
 ---
 
 ## 117. De hoofdzekering stel je in de app in; die gaat voor de configuratie
