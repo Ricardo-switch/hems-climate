@@ -87,7 +87,7 @@ function panelen(r) {
   </section>`;
 }
 
-function sankeyVan(r, breedte, hoogte, links, rechts) {
+function sankeyVan(r, breedte, hoogte, links, rechts, vul = false) {
   const stroom = r.stromen.filter((s) => s.van !== 'gas' && s.kwh > 0.05);
   if (!stroom.length) return '<p class="klein">In deze periode is er nog niets gemeten.</p>';
   const namen = new Map(r.apparaten.map((a) => [a.id, a.rest ? 'Rest van het huis' : kort(a.naam)]));
@@ -100,7 +100,7 @@ function sankeyVan(r, breedte, hoogte, links, rechts) {
     ...(stroom.some((s) => s.van === 'zon') ? [{ id: 'zon', naam: 'Zon', kleur: ZON }] : []),
     ...(stroom.some((s) => s.van === 'net') ? [{ id: 'net', naam: 'Net', kleur: NET }] : []),
   ];
-  return sankey.svg({ breedte, hoogte, links, rechts, bronnen, doelen, stromen: stroom, beschrijving: 'Waar je stroom heen ging: van de zon en het net naar de apparaten, de rest van het huis en terug naar het net.' });
+  return sankey.svg({ breedte, hoogte, links, rechts, vul, bronnen, doelen, stromen: stroom, beschrijving: 'Waar je stroom heen ging: van de zon en het net naar de apparaten, de rest van het huis en terug naar het net.' });
 }
 
 function perApparaat(r) {
@@ -194,7 +194,7 @@ function tekenNu() {
   document.querySelector('[data-apparaten]').innerHTML = perApparaat(r);
   document.querySelector('[data-perdag]').innerHTML = perDag(r);
   document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}
-    <section class="glas kaart"><h2 class="kop-3">Waar je stroom heen ging</h2><div style="margin-top: 10px">${sankeyVan(r, 326, 330, 52, 200)}</div></section>
+    <section class="glas kaart"><h2 class="kop-3">Waar je stroom heen ging</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
     <section class="glas kaart">${perApparaat(r)}</section>
     <section class="glas kaart">${perDag(r)}</section>`;
 }
