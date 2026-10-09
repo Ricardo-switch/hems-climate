@@ -258,6 +258,7 @@
     });
     // De live-stroom, ook voor de deurbel op een pagina zonder live gegevens.
     stroom();
+    inrichtBalk();
     // Om de app te installeren; dat kan alleen over HTTPS (of met een uitzondering in Chrome).
     if ('serviceWorker' in navigator && global.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
     addEventListener('keydown', (e) => e.key === 'Escape' && sluitBel());
@@ -273,6 +274,24 @@
     schaal();
     klok();
     setInterval(klok, 10_000);
+  }
+
+  /*
+   * Geopend vanuit de wizard (`?inrichten=<stap>`, besluit 114): een balk terug
+   * naar het overzicht en naar de volgende stap, zodat je er in één keer
+   * doorheen loopt.
+   */
+  const INRICHT_STAPPEN = ['welkom', 'huis', 'klimaat', 'zon', 'meters', 'functies', 'klaar'];
+  function inrichtBalk() {
+    const stap = new URLSearchParams(location.search).get('inrichten');
+    const i = INRICHT_STAPPEN.indexOf(stap ?? '');
+    if (i < 0) return;
+    const volgende = INRICHT_STAPPEN[i + 1] ?? 'klaar';
+    const balk = document.createElement('nav');
+    balk.className = 'inrichtbalk';
+    balk.setAttribute('aria-label', 'Inrichten');
+    balk.innerHTML = `<a href="inrichten.html#${stap}">‹ Inrichten</a><span>Stap ${i + 1} van ${INRICHT_STAPPEN.length}</span><a class="verder" href="inrichten.html#${volgende}">Volgende stap ›</a>`;
+    document.body.append(balk);
   }
 
   global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };

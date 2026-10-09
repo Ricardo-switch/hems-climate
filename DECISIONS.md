@@ -85,6 +85,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten](#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten)
 - [111. Licht bedienen en de weerbron zijn een functie](#111-licht-bedienen-en-de-weerbron-zijn-een-functie)
 - [112. Etages vrij toevoegen, met de vaste namen als voorstel](#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel)
+- [114. Inrichten: een wizard over de schermen die er al zijn](#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn)
 
 **Meten, data en analyse**
 
@@ -4955,6 +4956,30 @@ oktober 2026.
 - **Weerbronnen zijn alleen weerdiensten** (Met.no, KNMI, OpenWeatherMap en
   andere): een weerentiteit van een andere koppeling staat niet in de keuze.
   Buienradar staat er één keer, met zijn vijf dagen uit de sensoren.
+
+---
+
+## 114. Inrichten: een wizard over de schermen die er al zijn
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Punt 9 uit `docs/universeel.md`, naar voren gehaald door de bewoner op 9
+oktober 2026. Een nieuwe gebruiker moest zelf uitzoeken welke schermen er
+waren en in welke volgorde.
+
+*Besluit:*
+
+- **Inrichten** (`inrichten.html`) zet de stappen op een rij: welkom, je huis,
+  klimaat, zon en aansluiting, meters en prijzen, functies, klaar. Elke stap
+  ziet aan de dienst of hij gedaan is (een eigen indeling, antwoorden, prijzen,
+  vastgelegde functies) en zegt in een paar regels wat er al is.
+- **Geen tweede scherm per onderwerp:** een stap opent de pagina die er al is,
+  met `?inrichten=<stap>`. Daar staat dan een balk terug naar het overzicht en
+  door naar de volgende stap. De wizard schrijft zelf niets.
+- **De ingang:** bij Instellingen bovenaan Je huis, en op Thuis een knop
+  Inrichten zolang het huis nog het voorstel uit Home Assistant is.
+- **Klimaat** toont nog alleen wat de configuratie heeft; het nakijken per
+  apparaat komt met punt 5 (de klimaatapparaten herkennen).
 
 ---
 

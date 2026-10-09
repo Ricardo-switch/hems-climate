@@ -159,6 +159,8 @@ verwijzing bestaat.
   weerentiteit van Home Assistant ([111]), alleen van een weerdienst ([113]).
 - **Buitenruimtes** hebben elk hun plek in de tekening: oprit, tuin, terras,
   voortuin en balkon ([113]).
+- **Inrichten** zet de schermen per huis op een rij, met een balk naar de
+  volgende stap ([114]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -321,4 +323,5 @@ verwijzing bestaat.
 [111]: DECISIONS.md#111-licht-bedienen-en-de-weerbron-zijn-een-functie
 [112]: DECISIONS.md#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel
 [113]: DECISIONS.md#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten
+[114]: DECISIONS.md#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn
 <!-- links:einde -->

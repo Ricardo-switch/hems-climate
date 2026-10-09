@@ -80,10 +80,9 @@ hier een voorstel voor.
    entiteiten en personen van dit huis staat in `tools/export-history.ts`, en
    de replay-scripts die dit huis bij naam noemen in `backend/tools/onderzoek/`.
    Daarmee zitten ze niet in de dienst en niet in de add-on.
-9. **De wizard.** Als 1 tot en met 6 er zijn, zet de wizard de schermen achter
-   elkaar: gevonden apparaten, je huis, zon en aansluiting, meters en prijzen,
-   camera's en deurbel, comfort per kamer. Samen met de add-on en de integratie
-   (53, 77, 91).
+9. ~~**De wizard.**~~ Gedaan op 9 oktober (besluit 114): Inrichten zet de
+   stappen op een rij en loopt langs de schermen die er al zijn. De stap Klimaat
+   groeit mee met punt 5.
 
 ## Bewust zo, en geen probleem
 

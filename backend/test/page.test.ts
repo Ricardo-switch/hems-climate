@@ -522,6 +522,38 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Inrichten (besluit 114): de stappen, wat er al klaar is, en vanaf een
+   * stap naar de pagina en via de balk door naar de volgende.
+   */
+  it('loopt door het inrichten, met een balk naar de volgende stap', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/instellingen.html`);
+    await p.locator('#wand a[href="inrichten.html"]').click();
+    const wand = p.locator('#wand');
+    await wand.locator('.stapknop').first().waitFor();
+    expect(await wand.locator('.stapknop').count()).toBe(7);
+    expect(await wand.locator('[data-voortgang]').textContent()).toMatch(/van 5 stappen klaar/);
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    await wand.locator('.stapknop', { hasText: 'Zon en aansluiting' }).click();
+    await wand.locator('[data-stapblad] h2', { hasText: 'Zon en aansluiting' }).waitFor();
+    await wand.locator('[data-stapblad] a', { hasText: /Instellen|Nakijken/ }).click();
+    await p.waitForURL(/aansluiting\.html\?inrichten=zon/);
+    const balk = p.locator('.inrichtbalk');
+    await balk.waitFor();
+    expect(await balk.textContent()).toContain('Stap 4 van 7');
+    await balk.locator('a', { hasText: 'Volgende stap' }).click();
+    await p.waitForURL(/inrichten\.html#meters/);
+    await wand.locator('[data-stapblad] h2', { hasText: 'Meters en prijzen' }).waitFor();
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   it('toont zonder verbinding de laatste stand, grijs', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
