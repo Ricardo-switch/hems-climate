@@ -109,22 +109,39 @@ function zonnesensor() {
   </section>`;
 }
 
+/** De gangbare hoofdzekeringen in Nederland; een andere kan via Anders. */
+const GANGBAAR = [
+  { fasen: 1, ampere: 25 },
+  { fasen: 1, ampere: 35 },
+  { fasen: 1, ampere: 40 },
+  { fasen: 3, ampere: 25 },
+  { fasen: 3, ampere: 35 },
+  { fasen: 3, ampere: 40 },
+  { fasen: 3, ampere: 50 },
+];
+/** Een eigen waarde invullen; zolang die niet compleet is, staat hij hier. */
+let zelf = null;
+
 function zekering() {
   const vast = info.configuratie.zekering;
+  const huidigeKeuze = vast ?? concept.zekering;
+  const anders = huidigeKeuze && huidigeKeuze !== 'weetniet' && !GANGBAAR.some((z) => gelijk(z, huidigeKeuze));
+  const anderZichtbaar = zelf != null;
   const fasen = info.gevonden.fasen.length;
   const een = fasen === 1 ? 'één fase' : `${fasen} fasen`;
-  const huidig = vast ?? concept.zekering;
+  const huidig = huidigeKeuze;
   const noot = vast
     ? 'Ingesteld in de configuratie van het huis; die waarde geldt.'
     : fasen === 0
       ? 'Er is geen stroommeting per fase gevonden. De waarde wordt bewaard, maar de regeling gebruikt hem pas met zo’n meting.'
       : concept.zekering?.fasen === 3 && fasen < 3
-        ? `De meter meet nu ${een}. Met 3 × 25 A rekent de regeling pas als de meter drie fasen meet.`
+        ? `De meter meet nu ${een}. Met drie fasen rekent de regeling pas als de meter drie fasen meet.`
         : 'Staat op de hoofdschakelaar in de meterkast, of in de app van je netbeheerder.';
   return `<section class="glas vraag">
     <div class="kopregel"><h2 class="kop-3">Hoofdzekering</h2>${vast ? '<span class="label-chip">Ingesteld</span>' : ''}</div>
     <p class="uitleg">De regeling zet nooit zoveel tegelijk aan dat de hoofdzekering eruit gaat.</p>
-    ${keuzes('Hoofdzekering', 'zekering', [[{ fasen: 1, ampere: 25 }, '1 × 25 A'], [{ fasen: 1, ampere: 35 }, '1 × 35 A'], [{ fasen: 3, ampere: 25 }, '3 × 25 A'], ['weetniet', 'Weet ik niet']], huidig, vast != null)}
+    ${keuzes('Hoofdzekering', 'zekering', [...GANGBAAR.map((z) => [z, `${z.fasen} × ${z.ampere} A`]), ...(anders ? [[huidig, `${huidig.fasen} × ${huidig.ampere} A`]] : []), ['anders', 'Anders…'], ['weetniet', 'Weet ik niet']], anderZichtbaar ? 'anders' : huidig, vast != null)}
+    ${anderZichtbaar && !vast ? `<div class="twee"><label class="veldnaam">Fasen<select class="invoer" data-zekering="fasen"><option value="1" ${zelf.fasen === 1 ? 'selected' : ''}>1 fase</option><option value="3" ${zelf.fasen === 3 ? 'selected' : ''}>3 fasen</option></select></label><label class="veldnaam">Ampère per fase<input class="invoer" type="number" inputmode="numeric" min="6" max="250" step="1" data-zekering="ampere" value="${zelf.ampere ?? ''}"></label></div>` : ''}
     <p class="mini">${esc(noot)}</p>
   </section>`;
 }
@@ -183,7 +200,13 @@ document.addEventListener('click', async (e) => {
     const w = JSON.parse(knop.dataset.waarde);
     const s = knop.dataset.kies;
     if (s === 'ligging') concept.panelen.ligging = w;
-    else if (s === 'zekering') concept.zekering = w;
+    else if (s === 'zekering') {
+      if (w === 'anders') zelf = { fasen: concept.zekering?.fasen ?? 1, ampere: concept.zekering?.ampere ?? null };
+      else {
+        zelf = null;
+        concept.zekering = w;
+      }
+    }
     else if (s === 'tarief') concept.tarief = w;
     else if (s.startsWith('opZon:')) concept.opZon[s.slice(6)] = w;
     zeg('Nog niet opgeslagen.');
@@ -194,6 +217,14 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', (e) => {
+  // Een eigen hoofdzekering: compleet als er fasen en ampère zijn.
+  const z = e.target.closest('[data-zekering]');
+  if (z && zelf && concept) {
+    zelf[z.dataset.zekering] = z.value === '' ? null : Math.round(Number(z.value));
+    if (zelf.fasen && zelf.ampere >= 6 && zelf.ampere <= 250) concept.zekering = { fasen: zelf.fasen, ampere: zelf.ampere };
+    zeg('Nog niet opgeslagen.');
+    return;
+  }
   const veld = e.target.closest('[data-aantal]');
   if (!veld || !concept) return;
   concept.panelen[veld.dataset.aantal] = veld.value === '' ? null : Math.round(Number(veld.value));

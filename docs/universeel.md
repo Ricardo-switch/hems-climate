@@ -71,8 +71,8 @@ hier een voorstel voor.
    Assistant geeft andere standen, grenzen en wel of geen vermogensmeting. De
    ontdekking (41) doet een voorstel; een wizard moet het per apparaat laten
    nakijken, en eerlijk zeggen wat niet wordt ondersteund.
-6. **Aansluiting en regels.** De hoofdzekering kent alleen 1 × 25, 1 × 35 en
-   3 × 25 A; daar horen ook 1 × 40, 3 × 35, 3 × 40 en een eigen waarde bij.
+6. **Regels per land.** (De hoofdzekering kent sinds 9 oktober de gangbare
+   maten, 1 × 25 tot 3 × 50 A, en een eigen waarde.)
    De prijzen volgen sinds besluit 110 een Nederlands contract (normaal en dal,
    salderen tot 2027, vaste posten); de daltijden en het salderen zijn
    Nederlandse regels en worden een instelling per land.
