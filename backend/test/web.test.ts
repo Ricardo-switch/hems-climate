@@ -1205,9 +1205,9 @@ describe('de indeling (besluit 96)', () => {
 
   it('weigert een indeling die niet deugt, met een reden', async () => {
     const { base } = await withLayout();
-    const res = await fetch(`${base}/api/indeling`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...layout, etages: { kelder: 'x' } }) });
+    const res = await fetch(`${base}/api/indeling`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...layout, etages: { vliering: 'x' } }) });
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { fout: string }).fout).toContain('kelder');
+    expect(((await res.json()) as { fout: string }).fout).toContain('vliering');
   });
 
   it('houdt de muur overeind voor elke andere route en methode', async () => {

@@ -922,7 +922,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
     await p.locator('#wand [data-actie="kamernaam"]').waitFor();
-    expect(await p.locator('#wand [data-etages] .etage').count()).toBe(4);
+    expect(await p.locator('#wand [data-etages] .etage[data-etage]').count()).toBe(4);
     // De wand scrolt niet.
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
 
@@ -954,6 +954,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await p.locator('#wand [data-actie="kamernaam"]').inputValue()).toBe(b.naam);
     await p.locator('#wand [data-ongedaan]').click();
     await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id).toBe(a.id);
+
+    // Een etage toevoegen, verschuiven en weer weghalen (besluit 112).
+    await p.locator('#wand [data-etage-erbij]').click();
+    await p.locator('#wand [data-etage-vast]', { hasText: 'Kelder' }).click();
+    await expect.poll(() => layoutStore.current?.volgorde?.at(-1)).toBe('kelder');
+    await p.locator('#wand .etage[aria-pressed="true"]', { hasText: 'Kelder' }).waitFor();
+    await p.locator('#wand [data-etage-schuif="-1"]').click();
+    await expect.poll(() => layoutStore.current?.volgorde?.at(-2)).toBe('kelder');
+    await p.locator('#wand [data-etage-weg]').click();
+    await expect.poll(() => layoutStore.current?.volgorde?.includes('kelder')).toBe(false);
 
     // Een buitenruimte: kiezen wat het is (besluit 109).
     const tuin = (layoutStore.current?.kamers ?? kamers).find((k) => k.etage === 'buiten' && !/oprit/i.test(k.naam))!;

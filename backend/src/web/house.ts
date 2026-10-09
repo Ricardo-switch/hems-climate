@@ -27,9 +27,10 @@ import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/ho
 import type { SiteConfig } from '../core/model.js';
 import { roomStatus, type DecisionView, type RoomKind } from './assistant.js';
 import {
-  FLOORS,
-  FLOOR_NAMES,
+  OUTSIDE_FLOOR,
   carryOver,
+  floorName,
+  floorOrder,
   type FloorId,
   type Layout,
   type LayoutDevice,
@@ -889,14 +890,15 @@ export function proposeLayout(
     // Een tuin of oprit is buiten, ook als Home Assistant hem op de begane grond zet.
     if (OUTSIDE.test(area.name)) return 'buiten';
     const f = area.floor_id ? floorById.get(area.floor_id) : undefined;
-    if (f && f.level != null) return f.level <= 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
+    // Onder de grond is de kelder (besluit 112); hoger dan de eerste verdieping de tweede.
+    if (f && f.level != null) return f.level < 0 ? 'kelder' : f.level === 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
     return 'bg';
   };
 
   // De naam van een etage komt van de etage op precies dat niveau; een "Dak" op
   // niveau 3 geeft de tweede verdieping geen naam.
   const etages: Partial<Record<FloorId, string>> = {};
-  for (const [id, level] of [['bg', 0], ['e1', 1], ['e2', 2]] as const) {
+  for (const [id, level] of [['kelder', -1], ['bg', 0], ['e1', 1], ['e2', 2]] as const) {
     const f = registers.floors.find((x) => x.level === level && x.name.trim() !== '');
     if (f) etages[id] = f.name.trim();
   }
@@ -1043,14 +1045,15 @@ export function buildHouse(
   });
 
   const floors: HouseFloor[] = [];
-  for (const id of FLOORS) {
+  // Van boven naar beneden (besluit 112), en buiten als laatste.
+  for (const id of [...floorOrder(layout), OUTSIDE_FLOOR]) {
     const ruimtes = rooms.filter((r) => layout.kamers.find((k) => k.id === r.id)?.etage === id);
-    // Een etage zonder kamers alleen als de bewoner hem een naam gaf: dan wil hij
-    // er iets mee, en daar voegt hij de eerste kamer toe.
-    if (ruimtes.length === 0 && !(saved && saved.etages[id])) continue;
+    // Een etage zonder kamers alleen als de bewoner hem een naam gaf of zelf
+    // toevoegde: dan wil hij er iets mee, en daar komt de eerste kamer.
+    if (ruimtes.length === 0 && !(saved && (saved.etages[id] || saved.volgorde?.includes(id)))) continue;
     floors.push({
       id,
-      naam: layout.etages[id] ?? FLOOR_NAMES[id],
+      naam: layout.etages[id] ?? floorName(id),
       lampenAan: ruimtes.reduce((n, r) => n + r.lampenAan, 0),
       samenvatting: summarize(ruimtes.flatMap((r) => r.apparaten)),
       ruimtes,

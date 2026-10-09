@@ -22,16 +22,41 @@ import { join } from 'node:path';
 
 export const LAYOUT_FILE = 'indeling.json';
 
-/** De vaste etages (95), van boven naar beneden zoals de doorsnede ze tekent. */
-export const FLOORS = ['e2', 'e1', 'bg', 'buiten'] as const;
-export type FloorId = (typeof FLOORS)[number];
+/**
+ * De etages (95, vrij sinds 112). Een etage heeft een id en een naam; de vaste
+ * etages hieronder zijn het voorstel, van boven naar beneden. Buiten is er
+ * altijd, en staat los van de volgorde: het is de grond rond het huis.
+ */
+export type FloorId = string;
+export const OUTSIDE_FLOOR = 'buiten';
+export const STANDARD_FLOORS: readonly { readonly id: string; readonly naam: string }[] = [
+  { id: 'e3', naam: '3e verdieping' },
+  { id: 'e2', naam: '2e verdieping' },
+  { id: 'e1', naam: '1e verdieping' },
+  { id: 'bg', naam: 'Begane grond' },
+  { id: 'kelder', naam: 'Kelder' },
+];
+/** Zonder eigen volgorde: de etages van een gewoon huis. */
+const DEFAULT_ORDER = ['e2', 'e1', 'bg'];
+const MAX_FLOORS = 10;
 
-export const FLOOR_NAMES: Readonly<Record<FloorId, string>> = {
-  e2: '2e verdieping',
-  e1: '1e verdieping',
-  bg: 'Begane grond',
-  buiten: 'Buiten',
-};
+/** De standaardnaam van een etage, of het id als het een eigen etage is. */
+export function floorName(id: string): string {
+  return id === OUTSIDE_FLOOR ? 'Buiten' : (STANDARD_FLOORS.find((f) => f.id === id)?.naam ?? id);
+}
+
+/**
+ * De etages binnen van een indeling, van boven naar beneden: de eigen volgorde,
+ * of anders de gewone drie met wat de kamers nog meer gebruiken op hun vaste
+ * plek. Buiten staat er niet bij.
+ */
+export function floorOrder(layout: Pick<Layout, 'volgorde' | 'kamers'>): string[] {
+  if (layout.volgorde?.length) return [...layout.volgorde];
+  const used = new Set([...DEFAULT_ORDER, ...layout.kamers.map((k) => k.etage).filter((e) => e !== OUTSIDE_FLOOR)]);
+  const standard = STANDARD_FLOORS.map((f) => f.id).filter((id) => used.has(id));
+  const own = [...used].filter((id) => !STANDARD_FLOORS.some((f) => f.id === id));
+  return [...standard, ...own];
+}
 
 export interface LayoutZone {
   readonly id: string;
@@ -73,8 +98,10 @@ export interface LayoutDevice {
 
 export interface Layout {
   readonly versie: 1;
-  /** Eigen namen voor de etages; een etage zonder naam heet zoals in `FLOOR_NAMES`. */
+  /** Eigen namen voor de etages; een etage zonder naam heet zoals in `floorName`. */
   readonly etages: Readonly<Partial<Record<FloorId, string>>>;
+  /** De etages binnen, van boven naar beneden (besluit 112). Weg: zie `floorOrder`. */
+  readonly volgorde?: readonly string[];
   readonly kamers: readonly LayoutRoom[];
   /** Per apparaat, op de sleutel die het huis gebruikt (actuator-id of entity-ID). */
   readonly apparaten: Readonly<Record<string, LayoutDevice>>;
@@ -148,14 +175,27 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
   const b = body as Record<string, unknown>;
   if (b['versie'] !== 1) return { ok: false, reden: 'versie moet 1 zijn' };
 
+  // De volgorde van de etages binnen (besluit 112): eigen ids mogen, buiten niet.
+  const volgordeIn = b['volgorde'];
+  let volgorde: string[] | undefined;
+  if (volgordeIn !== undefined) {
+    if (!Array.isArray(volgordeIn) || volgordeIn.length === 0 || volgordeIn.length > MAX_FLOORS) return { ok: false, reden: `volgorde is een lijst van 1 tot ${MAX_FLOORS} etages` };
+    volgorde = [];
+    for (const id of volgordeIn) {
+      if (typeof id !== 'string' || !ID.test(id) || id === OUTSIDE_FLOOR || volgorde.includes(id)) return { ok: false, reden: 'volgorde heeft een ongeldige of dubbele etage' };
+      volgorde.push(id);
+    }
+  }
+  const bekend = (id: string) => id === OUTSIDE_FLOOR || (volgorde ? volgorde.includes(id) : STANDARD_FLOORS.some((f) => f.id === id));
+
   const etagesIn = b['etages'] ?? {};
   if (typeof etagesIn !== 'object' || etagesIn == null || Array.isArray(etagesIn)) return { ok: false, reden: 'etages is een object' };
   const etages: Partial<Record<FloorId, string>> = {};
   for (const [k, v] of Object.entries(etagesIn as Record<string, unknown>)) {
-    if (!(FLOORS as readonly string[]).includes(k)) return { ok: false, reden: `onbekende etage "${k}"; kies uit ${FLOORS.join(', ')}` };
+    if (!bekend(k)) return { ok: false, reden: `onbekende etage "${k}"` };
     const n = name(v, 40);
     if (n == null) return { ok: false, reden: `de naam van etage ${k} is leeg of te lang` };
-    etages[k as FloorId] = n;
+    etages[k] = n;
   }
 
   const kamersIn = b['kamers'];
@@ -173,7 +213,7 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     const naam = name(k['naam'], 40);
     if (naam == null) return { ok: false, reden: `de naam van kamer ${id} is leeg of te lang` };
     const etage = k['etage'];
-    if (typeof etage !== 'string' || !(FLOORS as readonly string[]).includes(etage)) return { ok: false, reden: `kamer ${id} staat op een onbekende etage` };
+    if (typeof etage !== 'string' || !bekend(etage)) return { ok: false, reden: `kamer ${id} staat op een onbekende etage` };
     const zonesIn = k['zones'] ?? [];
     if (!Array.isArray(zonesIn) || zonesIn.length > MAX_ZONES) return { ok: false, reden: `kamer ${id}: zones is een lijst van hooguit ${MAX_ZONES}` };
     const zones: LayoutZone[] = [];
@@ -204,7 +244,7 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       }
       buiten = { soort: o['soort'] as OutsideKind, auto: o['auto'], tuinhuis: o['tuinhuis'] };
     }
-    kamers.push({ id, naam, etage: etage as FloorId, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}) });
+    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}) });
   }
 
   const appIn = b['apparaten'] ?? {};
@@ -232,8 +272,11 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
   const verborgen = [...new Set(verborgenIn.filter((id): id is string => typeof id === 'string' && known.deviceIds.has(id)))];
 
   const dak = b['dak'];
-  if (dak !== undefined && dak !== 'geen' && (typeof dak !== 'string' || !['e2', 'e1', 'bg'].includes(dak))) return { ok: false, reden: 'dak is e2, e1, bg of geen' };
-  return { ok: true, layout: { versie: 1, etages, kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}) } };
+  if (dak !== undefined && dak !== 'geen' && (typeof dak !== 'string' || dak === OUTSIDE_FLOOR || !bekend(dak))) return { ok: false, reden: 'dak is een etage binnen, of geen' };
+  return {
+    ok: true,
+    layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}) },
+  };
 }
 
 export interface LayoutStoreOptions {

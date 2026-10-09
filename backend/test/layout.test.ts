@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { LAYOUT_FILE, LayoutStore, validateLayout, type LayoutKnown } from '../src/web/layout.js';
+import { LAYOUT_FILE, LayoutStore, floorOrder, validateLayout, type LayoutKnown } from '../src/web/layout.js';
 
 const known: LayoutKnown = {
   deviceIds: new Set(['nest', 'light.sfeerverlichting', 'cover.screen']),
@@ -52,8 +52,10 @@ describe('de indeling toetsen', () => {
     const bad: [string, unknown][] = [
       ['geen object', 'hoi'],
       ['verkeerde versie', { ...good, versie: 2 }],
-      ['onbekende etage', { ...good, etages: { kelder: 'Kelder' } }],
-      ['kamer op een onbekende etage', { ...good, kamers: [{ ...good.kamers[0], etage: 'kelder' }] }],
+      ['onbekende etage', { ...good, etages: { vliering: 'Vliering' } }],
+      ['kamer op een onbekende etage', { ...good, kamers: [{ ...good.kamers[0], etage: 'vliering' }] }],
+      ['buiten in de volgorde', { ...good, volgorde: ['bg', 'buiten'] }],
+      ['een etage twee keer', { ...good, volgorde: ['bg', 'bg'] }],
       ['dubbel kamer-id', { ...good, kamers: [good.kamers[0], good.kamers[0]], apparaten: {} }],
       ['ongeldig id', { ...good, kamers: [{ ...good.kamers[0], id: 'Woon Kamer!' }], apparaten: {} }],
       ['lege naam', { ...good, kamers: [{ ...good.kamers[0], naam: '   ' }] }],
@@ -80,6 +82,17 @@ describe('de indeling toetsen', () => {
     // Een onbekende soort, of geen ja of nee, weigert.
     expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'kelder', auto: false, tuinhuis: false } }] }, known).ok).toBe(false);
     expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'tuin', auto: 'ja', tuinhuis: false } }] }, known).ok).toBe(false);
+  });
+
+  it('neemt eigen etages aan in een eigen volgorde, en de vaste als voorstel (besluit 112)', () => {
+    const vliering = { id: 'vliering', naam: 'Vliering', etage: 'vliering', zones: [], regelzone: null, haGebied: null };
+    const r = validateLayout({ ...good, volgorde: ['vliering', 'bg', 'kelder'], etages: { vliering: 'Vliering' }, kamers: [...good.kamers, vliering] }, known);
+    expect(r).toMatchObject({ ok: true, layout: { volgorde: ['vliering', 'bg', 'kelder'] } });
+    // Een kelder kan ook zonder eigen volgorde: het is een van de vaste etages.
+    expect(validateLayout({ ...good, kamers: [{ ...good.kamers[1], etage: 'kelder' }, good.kamers[0]] }, known).ok).toBe(true);
+    expect(floorOrder({ kamers: [{ etage: 'kelder' }, { etage: 'bg' }, { etage: 'buiten' }] as never })).toEqual(['e2', 'e1', 'bg', 'kelder']);
+    // Een kamer op een etage die niet in de eigen volgorde staat, weigert.
+    expect(validateLayout({ ...good, volgorde: ['bg'] , kamers: [{ ...good.kamers[0], etage: 'e1' }] }, known).ok).toBe(false);
   });
 
   it('bewaart welke etage onder het dak ligt (besluit 111)', () => {

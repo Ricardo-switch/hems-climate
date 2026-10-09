@@ -89,7 +89,9 @@ async function stuur(next) {
       return false;
     }
     info = { ...info, indeling: body };
-    await laadHuis();
+    // De etages kunnen veranderd zijn (besluit 112): de lijst opnieuw ophalen.
+    const [vers] = await Promise.allSettled([haal('api/indeling'), laadHuis()]);
+    if (vers.status === 'fulfilled') info = vers.value;
     return true;
   } catch {
     zeg('Niet bewaard: geen verbinding met Smart Climate.', true);
@@ -184,17 +186,53 @@ function tekenEtages(d) {
         const kamers = d.kamers.filter((k) => k.etage === id);
         const n = kamers.reduce((t, k) => t + apparatenIn(k.id).length, 0);
         const wat = kamers.length ? `${kamers.length === 1 ? '1 kamer' : `${kamers.length} kamers`}, ${n === 1 ? '1 apparaat' : `${n} apparaten`}` : 'nog leeg';
-        return `<button type="button" class="etage" data-etage="${esc(id)}" aria-pressed="${id === keuze.etage}"><b>${esc(etageNaam(d, id))}</b><span>${wat}</span></button>`;
+        return `<button type="button" class="etage" data-etage="${esc(id)}" aria-pressed="${id === keuze.etage && keuze.blad !== 'nieuweEtage'}"><b>${esc(etageNaam(d, id))}</b><span>${wat}</span></button>`;
       })
-      .join('');
+      .join('') + `<button type="button" class="etage nieuw" data-etage-erbij aria-pressed="${keuze.blad === 'nieuweEtage'}">+ Etage toevoegen</button>`;
   });
+}
+
+/* ------------------------------------------------------------ de etages (besluit 112) */
+
+/** De etages binnen, van boven naar beneden, zoals de indeling ze nu heeft. */
+function volgordeVan(d) {
+  return d.volgorde?.length ? [...d.volgorde] : info.etages.map((e) => e.id).filter((id) => id !== 'buiten');
+}
+
+/** Een vaste etage op zijn plek: de kelder onderaan, de derde verdieping bovenaan. */
+function opZijnPlek(volgorde, id) {
+  const plek = (x) => (info.standaard ?? []).findIndex((s) => s.id === x);
+  const mijn = plek(id);
+  const voor = volgorde.findIndex((x) => plek(x) > mijn && plek(x) !== -1);
+  const uit = [...volgorde];
+  uit.splice(voor === -1 ? uit.length : voor, 0, id);
+  return uit;
+}
+
+function nieuweEtageBlad(d) {
+  const nu = new Set(volgordeVan(d));
+  const vast = (info.standaard ?? []).filter((s) => !nu.has(s.id));
+  return `
+    <div class="bladkop"><h2 class="kop-2">Etage toevoegen</h2></div>
+    ${vast.length ? `<div><span class="label">Een van de vaste etages</span><div class="chips">${vast.map((s) => `<button type="button" class="chip" data-etage-vast="${esc(s.id)}">${esc(s.naam)}</button>`).join('')}</div></div>` : ''}
+    <div><label class="label" for="nieuweetage">Of een eigen naam</label><input class="veld" id="nieuweetage" data-nieuwe-etage placeholder="Bijvoorbeeld Vliering" maxlength="40"></div>
+    <div class="rijknoppen"><button type="button" class="knop" data-etage-eigen="boven">Bovenaan</button><button type="button" class="knop" data-etage-eigen="onder">Onderaan</button></div>
+    <p class="mini" style="margin: 0">De volgorde zet je daarna bij de etage zelf, met hoger en lager.</p>`;
+}
+
+async function etageErbij(id, naam, waar) {
+  const next = concept();
+  const volgorde = volgordeVan(next);
+  next.volgorde = waar === 'boven' ? [id, ...volgorde] : waar === 'onder' ? [...volgorde, id] : opZijnPlek(volgorde, id);
+  if (naam) next.etages[id] = naam;
+  if (await bewaar(next, `${naam || etageNaam(next, id)} toegevoegd.`)) kies({ etage: id, kamer: null, apparaat: null, blad: 'etage' });
 }
 
 function tekenPodium(d) {
   const alleBuiten = (k) => k.etage === 'buiten' || huismodel.isBuiten({ id: k.etage }, k);
   const ruimte = (k) => ruimteVan(k.id) ?? { id: k.id, naam: k.naam, apparaten: [], zones: k.zones };
   // Buiten tekent de begane grond met de oprit en de tuin eromheen, zoals de kamer dat doet.
-  const etage = keuze.etage === 'buiten' ? 'bg' : keuze.etage;
+  const etage = keuze.etage === 'buiten' ? (volgordeVan(d).includes('bg') ? 'bg' : volgordeVan(d).filter((x) => x !== 'kelder').at(-1) ?? 'bg') : keuze.etage;
   const binnen = d.kamers.filter((k) => k.etage === etage && !alleBuiten(k));
   // Buiten toont de begane grond met wat eromheen ligt; de begane grond zelf, ingezoomd, zonder.
   const metBuiten = keuze.etage === 'buiten';
@@ -225,6 +263,7 @@ function blad(d) {
   if (keuze.blad === 'verborgen') return verborgenBlad(d);
   if (keuze.blad === 'weghalen' && k) return weghaalBlad(k);
   if (keuze.blad === 'kamer' && k) return kamerBlad(d, k);
+  if (keuze.blad === 'nieuweEtage') return nieuweEtageBlad(d);
   return etageBlad(d);
 }
 
@@ -238,7 +277,19 @@ function etageBlad(d) {
     ${id === 'buiten' ? '' : `<div><span class="label">Onder het schuine dak?</span><div class="chips" role="group" aria-label="Onder het schuine dak">${[[true, 'Ja'], [false, 'Nee']].map(([w, t]) => `<button type="button" class="chip" data-dak="${w}" aria-pressed="${(huisData?.dakEtage === id) === w}">${t}</button>`).join('')}</div></div>`}
     <div><span class="label">Kamers</span>${kamers.length ? kamers.map((k) => `<button type="button" class="kamerrij" data-kamer="${esc(k.id)}">${esc(k.naam)}<span>${apparatenIn(k.id).length} ›</span></button>`).join('') : '<p class="klein" style="margin: 0">Nog geen kamers op deze etage.</p>'}</div>
     <div><label class="label" for="nieuwekamer-${id}">Nieuwe kamer</label><div style="display: flex; gap: 8px"><input class="veld" id="nieuwekamer-${id}" data-nieuwe-kamer placeholder="Bijvoorbeeld Hal en trap" maxlength="40"><button type="button" class="knop" data-kamer-toevoegen>Toevoegen</button></div></div>
-    <p class="mini" style="margin: 0">Een deur ertussen maakt een eigen kamer. Open, zoals keuken en zithoek, maak je een zone in dezelfde kamer.</p>`;
+    <p class="mini" style="margin: 0">Een deur ertussen maakt een eigen kamer. Open, zoals keuken en zithoek, maak je een zone in dezelfde kamer.</p>
+    ${id === 'buiten' ? '' : etageSchuiven(d, id, kamers.length)}`;
+}
+
+/** Hoger, lager, of weg als hij leeg is (besluit 112). Buiten blijft altijd. */
+function etageSchuiven(d, id, kamers) {
+  const v = volgordeVan(d);
+  const i = v.indexOf(id);
+  return `<div class="rijknoppen">
+    <button type="button" class="knop" data-etage-schuif="-1" ${i <= 0 ? 'disabled' : ''}>Hoger</button>
+    <button type="button" class="knop" data-etage-schuif="1" ${i === -1 || i >= v.length - 1 ? 'disabled' : ''}>Lager</button>
+    ${kamers === 0 && v.length > 1 ? '<button type="button" class="knop gevaar" data-etage-weg>Etage weghalen</button>' : ''}
+  </div>`;
 }
 
 function kamerBlad(d, k) {
@@ -425,6 +476,31 @@ document.addEventListener('click', async (e) => {
     next.verborgen = [...new Set([...(next.verborgen ?? []), t.dataset.verberg])];
     delete next.apparaten[t.dataset.verberg];
     if (await bewaar(next, `${dev?.naam ?? 'Het apparaat'} is verborgen.`)) kies({ apparaat: null, blad: keuze.kamer ? 'kamer' : 'etage' });
+  } else if (t.hasAttribute('data-etage-erbij')) {
+    kies({ kamer: null, apparaat: null, blad: 'nieuweEtage' });
+  } else if (t.dataset.etageVast) {
+    await etageErbij(t.dataset.etageVast, null, null);
+  } else if (t.dataset.etageEigen) {
+    const naam = t.closest('[data-blad]').querySelector('[data-nieuwe-etage]')?.value.trim() ?? '';
+    if (!naam) return zeg('Geef de etage eerst een naam.', true);
+    const bezet = new Set([...volgordeVan(concept()), 'buiten', ...(info.standaard ?? []).map((s) => s.id)]);
+    await etageErbij(idVan(naam, bezet), naam, t.dataset.etageEigen);
+  } else if (t.dataset.etageSchuif) {
+    const next = concept();
+    const v = volgordeVan(next);
+    const i = v.indexOf(keuze.etage);
+    const j = i + Number(t.dataset.etageSchuif);
+    if (i < 0 || j < 0 || j >= v.length) return;
+    [v[i], v[j]] = [v[j], v[i]];
+    next.volgorde = v;
+    await bewaar(next, `${etageNaam(next, keuze.etage)} ${Number(t.dataset.etageSchuif) < 0 ? 'hoger' : 'lager'} gezet.`);
+  } else if (t.hasAttribute('data-etage-weg')) {
+    const next = concept();
+    const naam = etageNaam(next, keuze.etage);
+    next.volgorde = volgordeVan(next).filter((x) => x !== keuze.etage);
+    delete next.etages[keuze.etage];
+    if (next.dak === keuze.etage) delete next.dak;
+    if (await bewaar(next, `${naam} weggehaald.`)) kies({ etage: next.volgorde[next.volgorde.length - 1] ?? 'bg', blad: 'etage' });
   } else if (t.dataset.dak) {
     // Welke etage onder het schuine dak ligt (besluit 111).
     const next = concept();

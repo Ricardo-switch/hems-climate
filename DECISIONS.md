@@ -79,11 +79,12 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [41. De ontdekking stelt voor en besluit niet](#41-de-ontdekking-stelt-voor-en-besluit-niet)
 - [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
 - [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten) — *aangevuld door 95*
-- [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant)
+- [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant) — *aangevuld door 112*
 - [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
 - [109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst](#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst)
 - [110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten](#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten)
 - [111. Licht bedienen en de weerbron zijn een functie](#111-licht-bedienen-en-de-weerbron-zijn-een-functie)
+- [112. Etages vrij toevoegen, met de vaste namen als voorstel](#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel)
 
 **Meten, data en analyse**
 
@@ -3985,7 +3986,7 @@ licht met een vaste zin. De paginatest loopt die weg door.
 
 ## 95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant
 
-*Onderwerp: configuratie en onboarding · Status: geldig*
+*Onderwerp: configuratie en onboarding · Status: aangevuld door 112*
 
 Op 5 oktober 2026 las de dienst voor het eerst het huis uit Home Assistant
 (`/api/huis`). Het klopte maar half. De Nest hing in een gebied "Beneden" zonder
@@ -4899,6 +4900,35 @@ van Buienradar (besluit 105). Gekozen op 9 oktober 2026.
   omtrek, zodat de zolder zichtbaar blijft. Welke etage onder het schuine dak
   ligt, kies je in de indeling (`dak`); zonder keuze raadt de dienst het aan de
   naam of aan drie lagen.
+
+---
+
+## 112. Etages vrij toevoegen, met de vaste namen als voorstel
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Besluit 95 legde vier etages vast: tweede verdieping, eerste, begane grond en
+buiten. Een kelder, een appartement op één laag of een huis met meer lagen
+paste daar niet in (`docs/universeel.md`, punt 4). Gekozen door de bewoner op
+9 oktober 2026: vrij toevoegen, met de vaste namen.
+
+*Besluit:*
+
+- **De indeling heeft een eigen volgorde van etages** (`volgorde`, van boven
+  naar beneden). Een etage heeft een id en een naam. De vaste etages zijn het
+  voorstel: 3e verdieping, 2e, 1e, begane grond en kelder; een eigen etage, zoals
+  een vliering, mag ook. Buiten is er altijd en staat los van de volgorde.
+- **Zonder eigen volgorde** blijft het zoals het was: de gewone drie etages,
+  met een kelder erbij als een kamer daar staat. Een bestaande indeling hoeft
+  niets.
+- **Uit Home Assistant** wordt een etage onder de grond de kelder.
+- **In de indeling** voeg je een etage toe (een vaste op zijn plek, een eigen
+  bovenaan of onderaan), zet je hem hoger of lager, en haal je een lege etage
+  weg.
+- **Waar de oprit en de tuin bij horen,** blijft de begane grond; zonder, de
+  laagste etage die geen kelder is.
+
+*Nog niet:* de tekening zet een kelder als laagste laag op de grond, niet eronder.
 
 ---
 

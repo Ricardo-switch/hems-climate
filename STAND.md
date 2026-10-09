@@ -100,6 +100,7 @@ verwijzing bestaat.
   niet ([41]).
 - **Home Assistant levert de apparaten, de app de kamers** ([72]). De opbouw is
   etage, kamer, zone: een deur maakt een kamer, open ruimte een zone ([95]).
+  Etages voeg je vrij toe, met de vaste namen als voorstel ([112]).
 - **De zon en je aansluiting vraagt de app:** panelen, hoofdzekering,
   stroomcontract en apparaten op zon. De regeling vult er bij het starten de
   configuratie mee aan waar die zwijgt; wat de configuratie noemt, gaat voor
@@ -316,4 +317,5 @@ verwijzing bestaat.
 [109]: DECISIONS.md#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst
 [110]: DECISIONS.md#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten
 [111]: DECISIONS.md#111-licht-bedienen-en-de-weerbron-zijn-een-functie
+[112]: DECISIONS.md#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel
 <!-- links:einde -->

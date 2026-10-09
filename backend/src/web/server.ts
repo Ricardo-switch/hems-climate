@@ -44,7 +44,7 @@ import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
 import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } from './weather.js';
 import type { HouseReport } from './house.js';
-import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
+import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, type LayoutStore } from './layout.js';
 import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
@@ -774,7 +774,10 @@ export class WebServer {
       sendJson(res, 200, {
         indeling: door.store.current,
         voorstel: door.proposal(),
-        etages: FLOORS.map((id) => ({ id, standaardNaam: FLOOR_NAMES[id] })),
+        // De etages van deze indeling, van boven naar beneden, en buiten (besluit 112);
+        // de vaste etages als voorstel om toe te voegen.
+        etages: [...floorOrder(door.store.current ?? door.proposal() ?? { kamers: [] }), OUTSIDE_FLOOR].map((id) => ({ id, standaardNaam: floorName(id) })),
+        standaard: STANDARD_FLOORS,
         regelzones: config.zones.map((z) => ({ id: z.id, naam: z.name })),
       });
       return;
