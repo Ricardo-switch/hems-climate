@@ -21,6 +21,13 @@ async function laad() {
 
 const meervoud = (n, een, veel) => `${n} ${n === 1 ? een : veel}`;
 
+/** De hoofdzekering: gekozen in de app, anders wat de configuratie zegt (besluit 117). */
+function zekeringZin(gekozen, uitConfig) {
+  if (gekozen && gekozen !== 'weetniet') return `Hoofdzekering ${gekozen.fasen} × ${gekozen.ampere} A`;
+  if (uitConfig) return `Hoofdzekering ${uitConfig.fasen} × ${uitConfig.ampere} A, uit de configuratie; nakijken`;
+  return gekozen === 'weetniet' ? 'Hoofdzekering: weet ik niet' : 'Hoofdzekering: nog niet ingevuld';
+}
+
 /** De stappen, met wat er al is en of hij klaar is. */
 function stappen() {
   const h = data.huis;
@@ -62,7 +69,7 @@ function stappen() {
       kop: 'Zon en aansluiting',
       klaar: a != null,
       zin: 'Waar je panelen liggen, je hoofdzekering, je contract, en welke apparaten op zon mogen starten.',
-      wat: a ? [a.panelen?.ligging ? `Panelen: ${a.panelen.ligging === 'beide' ? 'beide kanten' : a.panelen.ligging}` : 'Panelen: nog niet ingevuld', a.zekering && a.zekering !== 'weetniet' ? `Hoofdzekering ${a.zekering.fasen} × ${a.zekering.ampere} A` : 'Hoofdzekering: nog niet ingevuld'] : ['Nog niets ingevuld'],
+      wat: a ? [a.panelen?.ligging ? `Panelen: ${a.panelen.ligging === 'beide' ? 'beide kanten' : a.panelen.ligging}` : 'Panelen: nog niet ingevuld', zekeringZin(a.zekering, data.aansluiting.configuratie?.zekering)] : ['Nog niets ingevuld'],
       pagina: 'aansluiting.html',
     },
     {

@@ -403,8 +403,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/aansluiting.html`);
     const wand = p.locator('#wand');
     await wand.locator('h2', { hasText: 'Op welke kant van het dak' }).waitFor();
-    // De zekering en de droger staan in de configuratie; die gaan voor.
-    expect(await wand.locator('button[aria-pressed="true"]', { hasText: '1 × 35 A' }).isDisabled()).toBe(true);
+    // De zekering uit de configuratie staat voorgekozen, en is te wijzigen (besluit 117).
+    const zekering = wand.locator('button[aria-pressed="true"]', { hasText: '1 × 35 A' });
+    expect(await zekering.isDisabled()).toBe(false);
+    expect(await wand.textContent()).toContain('uit de configuratie van het huis');
+    await zekering.click();
     expect(await wand.textContent()).toContain('Start bij zonne-overschot. Ingesteld in de configuratie.');
     expect(await wand.textContent()).toContain('Snel genoeg');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
@@ -415,7 +418,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('[aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
     await wand.locator('[data-opslaan]').click();
     await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
-    expect(connStore.current).toMatchObject({ panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
+    expect(connStore.current).toMatchObject({ zekering: { fasen: 1, ampere: 35 }, panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
     expect(await wand.locator('.notitie').textContent()).toContain('na de volgende herstart');
     // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
     const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
@@ -550,6 +553,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await balk.locator('a', { hasText: 'Volgende stap' }).click();
     await p.waitForURL(/inrichten\.html#meters/);
     await wand.locator('[data-stapblad] h2', { hasText: 'Meters en prijzen' }).waitFor();
+    // Op de telefoon: de balk op één regel, binnen het scherm.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.goto(`${baseUrl}/aansluiting.html?inrichten=zon`);
+    const vak = (await p.locator('.inrichtbalk').boundingBox())!;
+    expect(vak.x).toBeGreaterThanOrEqual(0);
+    expect(vak.x + vak.width).toBeLessThanOrEqual(390);
+    expect(vak.height).toBeLessThan(64);
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

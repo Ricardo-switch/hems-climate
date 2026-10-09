@@ -80,12 +80,13 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [43. Een meetwaarde mag in een attribuut zitten](#43-een-meetwaarde-mag-in-een-attribuut-zitten)
 - [72. Kamers en zones horen bij de app; Home Assistant levert de apparaten](#72-kamers-en-zones-horen-bij-de-app-home-assistant-levert-de-apparaten) — *aangevuld door 95*
 - [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant) — *aangevuld door 112*
-- [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
+- [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt) — *aangevuld door 117*
 - [109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst](#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst)
 - [110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten](#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten)
 - [111. Licht bedienen en de weerbron zijn een functie](#111-licht-bedienen-en-de-weerbron-zijn-een-functie)
 - [112. Etages vrij toevoegen, met de vaste namen als voorstel](#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel)
 - [114. Inrichten: een wizard over de schermen die er al zijn](#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn)
+- [117. De hoofdzekering stel je in de app in; die gaat voor de configuratie](#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie)
 
 **Meten, data en analyse**
 
@@ -154,10 +155,11 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [33. De uitrol vraagt het nieuwe image of het de oude configuratie snapt](#33-de-uitrol-vraagt-het-nieuwe-image-of-het-de-oude-configuratie-snapt)
 - [35. Een server draagt alleen wat hij draait](#35-een-server-draagt-alleen-wat-hij-draait)
 - [36. De add-on is dezelfde dienst, niet een tweede](#36-de-add-on-is-dezelfde-dienst-niet-een-tweede)
-- [37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt](#37-de-add-on-wordt-platgeslagen-voordat-de-supervisor-hem-bouwt)
+- [37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt](#37-de-add-on-wordt-platgeslagen-voordat-de-supervisor-hem-bouwt) — *aangevuld door 118*
 - [53. De NAS is de primaire omgeving; de add-on wacht tot stap B](#53-de-nas-is-de-primaire-omgeving-de-add-on-wacht-tot-stap-b)
 - [64. Echt schakelen pas met een complete winter en alle functies](#64-echt-schakelen-pas-met-een-complete-winter-en-alle-functies)
 - [67. Een mail als de opname stilvalt](#67-een-mail-als-de-opname-stilvalt)
+- [118. Uitrollen via een eigen add-on-bibliotheek op GitHub](#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github)
 
 **Kwaliteitsbewaking**
 
@@ -1298,7 +1300,7 @@ te draaien, en dus te testen.
 
 ## 37. De add-on wordt platgeslagen voordat de Supervisor hem bouwt
 
-*Onderwerp: uitrol en beheer · Status: geldig*
+*Onderwerp: uitrol en beheer · Status: aangevuld door 118*
 
 De add-on stond in `addon/`, met `COPY backend/...` en `COPY frontend/...` naar
 een niveau hoger. Dat werkt bij een handmatige `docker build` vanuit de
@@ -4526,7 +4528,7 @@ vraagt de prijzen. `GET /api/energie` geeft het dashboard ook letterlijk terug
 
 ## 103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt
 
-*Onderwerp: configuratie en onboarding · Status: geldig*
+*Onderwerp: configuratie en onboarding · Status: aangevuld door 117*
 
 Een paar dingen haalt de app niet uit Home Assistant: waar de panelen liggen
 (93), hoe zwaar de hoofdzekering is (78), welk stroomcontract je hebt, en of
@@ -5035,6 +5037,71 @@ past daar niet op.
 - **De jaarafrekening rekent mee:** wat je over een heel jaar meer teruglevert
   dan je verbruikt, telt over het contractjaar.
 - Een startdatum op 29 februari begint elk jaar op 1 maart.
+
+---
+
+## 117. De hoofdzekering stel je in de app in; die gaat voor de configuratie
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Gezien door de bewoner op 9 oktober 2026: Inrichten zei "hoofdzekering nog niet
+ingevuld", bij Zon en aansluiting stond hij op "Ingesteld" maar was hij niet te
+kiezen, omdat de configuratie van het huis hem al noemde en die voorging
+(besluit 103). Voor een app die op elk huis moet werken, hoort de keuze in de
+app.
+
+*Besluit:*
+
+- **De zekering uit de app gaat voor.** Noemt de configuratie de stroommeters
+  per fase al, dan blijven die meters en komt alleen de zekering uit de app.
+  Anders gebruikt de dienst de stroommeters die hij zelf vond, zoals eerder.
+- **Op de pagina** staat de waarde uit de configuratie voorgekozen, met de
+  zin dat hij daar vandaan komt. Tik je hem aan en sla je op, dan is hij
+  ingesteld; "Ingesteld" staat er alleen bij een keuze in de app.
+- **Inrichten** noemt de zekering uit de configuratie, met "nakijken", in
+  plaats van "nog niet ingevuld".
+- Zoals elk antwoord van deze pagina gaat hij in bij de volgende herstart.
+- Apparaten op zon blijven zoals ze waren: de configuratie gaat voor.
+
+---
+
+## 118. Uitrollen via een eigen add-on-bibliotheek op GitHub
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Gevraagd door de bewoner op 9 oktober 2026: kan de hele app, dienst en
+pagina's, via HACS, zodat bijwerken via GitHub vanzelf gaat? Vastgelegd als
+plan voor na de winter, als de dataset klaar is. Er wordt nu niets gebouwd.
+
+*Waarom niet HACS voor de app:* HACS installeert alleen wat ín Home Assistant
+draait: integraties in Python en kaarten voor het dashboard. Smart Climate is
+een eigen dienst met een eigen opslag; die kan HACS niet draaien.
+
+*Besluit:*
+
+- **De app komt als add-on uit een eigen, openbare add-on-bibliotheek op
+  GitHub.** De bewoner voegt bij de add-on-winkel één keer het adres toe en
+  installeert Smart Climate. Elke nieuwe versie verschijnt in Home Assistant
+  als "update beschikbaar".
+- **Kant-en-klare images, geen bouw door de Supervisor.** GitHub bouwt bij een
+  nieuwe versie de image voor amd64 en aarch64 en zet hem in het eigen
+  pakketregister. De add-on noemt die image, dus de Supervisor hoeft niets te
+  bouwen. Daarmee vervalt het platslaan van besluit 37 voor de winkel.
+- **Alleen wat groen is.** Een versie komt in de bibliotheek pas als de CI
+  groen is, zoals de NAS nu alleen stable volgt.
+- **De instellingen staan in de map van de add-on** (indeling, aansluiting,
+  meters en prijzen, functies), en gaan mee in de back-ups van Home Assistant.
+- **HACS alleen voor de integratie** van besluit 91: de vragen voor Assist en
+  de stand per kamer als sensoren. Die zit niet in Home Assistant zelf, dus tot
+  dan via HACS.
+- **Zonder Supervisor** (Home Assistant in Docker of los) draait dezelfde image
+  met een docker compose-bestand, zoals nu op de NAS.
+
+*Nog te kiezen:* of de broncode openbaar wordt, of alleen de bibliotheek en de
+images. En de naam van de bibliotheek.
+
+*Wanneer:* bij het product (H), na de winter, als het moment van echt schakelen
+er is (besluit 64) en de add-on weer de plek wordt om te regelen (53).
 
 ---
 

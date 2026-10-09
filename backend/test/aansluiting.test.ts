@@ -201,11 +201,18 @@ describe('wat de regeling overneemt', () => {
     expect(parsed.config.deferrables?.map((d) => [d.id, d.estimatedW, d.latestStart])).toEqual([['droger', 700, '15:00']]);
   });
 
-  it('laat de configuratie voorgaan', async () => {
+  it('laat de zekering uit de app voorgaan, met de meters uit de configuratie (besluit 117)', async () => {
     const real = JSON.parse(await readFile(join(import.meta.dirname, '..', '..', 'config', 'sites', 'huis-cornelissen.json'), 'utf-8')) as Record<string, unknown>;
-    const applied = withConnection(real, answers({ zekering: { fasen: 1, ampere: 25 } }));
-    expect(applied.toegevoegd).toEqual([]);
-    expect(applied.raw).toEqual(real);
+    const applied = withConnection(real, answers({ zekering: { fasen: 1, ampere: 25 }, apparaten: [] }));
+    expect(applied.toegevoegd).toEqual(['de hoofdzekering: 1 × 25 A']);
+    const grid = applied.raw['grid'] as { phases: { current: unknown; maxA: number }[]; marginA: number };
+    const was = real['grid'] as typeof grid;
+    expect(grid.phases.map((p) => p.maxA)).toEqual([25]);
+    expect(grid.phases[0]!.current).toEqual(was.phases[0]!.current);
+    expect(grid.marginA).toBe(was.marginA);
+    expect(parseSiteConfig(applied.raw, { knownStrategies: defaultStrategies().ids }).ok).toBe(true);
+    // Dezelfde zekering als de configuratie: niets te doen.
+    expect(withConnection(real, answers({ zekering: { fasen: 1, ampere: 35 }, apparaten: [] })).raw).toEqual(real);
   });
 
   it('zegt het als er voor drie fasen te weinig meters zijn', () => {

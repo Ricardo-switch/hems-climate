@@ -123,25 +123,27 @@ const GANGBAAR = [
 let zelf = null;
 
 function zekering() {
-  const vast = info.configuratie.zekering;
-  const huidigeKeuze = vast ?? concept.zekering;
+  // Wat je hier kiest, gaat voor de configuratie (besluit 117); die is alleen
+  // het begin.
+  const uitConfig = info.configuratie.zekering;
+  const huidigeKeuze = concept.zekering ?? uitConfig;
   const anders = huidigeKeuze && huidigeKeuze !== 'weetniet' && !GANGBAAR.some((z) => gelijk(z, huidigeKeuze));
   const anderZichtbaar = zelf != null;
   const fasen = info.gevonden.fasen.length;
   const een = fasen === 1 ? 'één fase' : `${fasen} fasen`;
   const huidig = huidigeKeuze;
-  const noot = vast
-    ? 'Ingesteld in de configuratie van het huis; die waarde geldt.'
+  const noot = concept.zekering == null && uitConfig
+    ? `Nu ${uitConfig.fasen} × ${uitConfig.ampere} A, uit de configuratie van het huis. Klopt dat, tik hem dan aan en sla op.`
     : fasen === 0
       ? 'Er is geen stroommeting per fase gevonden. De waarde wordt bewaard, maar de regeling gebruikt hem pas met zo’n meting.'
       : concept.zekering?.fasen === 3 && fasen < 3
         ? `De meter meet nu ${een}. Met drie fasen rekent de regeling pas als de meter drie fasen meet.`
         : 'Staat op de hoofdschakelaar in de meterkast, of in de app van je netbeheerder.';
   return `<section class="glas vraag">
-    <div class="kopregel"><h2 class="kop-3">Hoofdzekering</h2>${vast ? '<span class="label-chip">Ingesteld</span>' : ''}</div>
+    <div class="kopregel"><h2 class="kop-3">Hoofdzekering</h2>${concept.zekering != null && concept.zekering !== 'weetniet' ? '<span class="label-chip">Ingesteld</span>' : ''}</div>
     <p class="uitleg">De regeling zet nooit zoveel tegelijk aan dat de hoofdzekering eruit gaat.</p>
-    ${keuzes('Hoofdzekering', 'zekering', [...GANGBAAR.map((z) => [z, `${z.fasen} × ${z.ampere} A`]), ...(anders ? [[huidig, `${huidig.fasen} × ${huidig.ampere} A`]] : []), ['anders', 'Anders…'], ['weetniet', 'Weet ik niet']], anderZichtbaar ? 'anders' : huidig, vast != null)}
-    ${anderZichtbaar && !vast ? `<div class="twee"><label class="veldnaam">Fasen<select class="invoer" data-zekering="fasen"><option value="1" ${zelf.fasen === 1 ? 'selected' : ''}>1 fase</option><option value="3" ${zelf.fasen === 3 ? 'selected' : ''}>3 fasen</option></select></label><label class="veldnaam">Ampère per fase<input class="invoer" type="number" inputmode="numeric" min="6" max="250" step="1" data-zekering="ampere" value="${zelf.ampere ?? ''}"></label></div>` : ''}
+    ${keuzes('Hoofdzekering', 'zekering', [...GANGBAAR.map((z) => [z, `${z.fasen} × ${z.ampere} A`]), ...(anders ? [[huidig, `${huidig.fasen} × ${huidig.ampere} A`]] : []), ['anders', 'Anders…'], ['weetniet', 'Weet ik niet']], anderZichtbaar ? 'anders' : huidig)}
+    ${anderZichtbaar ? `<div class="twee"><label class="veldnaam">Fasen<select class="invoer" data-zekering="fasen"><option value="1" ${zelf.fasen === 1 ? 'selected' : ''}>1 fase</option><option value="3" ${zelf.fasen === 3 ? 'selected' : ''}>3 fasen</option></select></label><label class="veldnaam">Ampère per fase<input class="invoer" type="number" inputmode="numeric" min="6" max="250" step="1" data-zekering="ampere" value="${zelf.ampere ?? ''}"></label></div>` : ''}
     <p class="mini">${esc(noot)}</p>
   </section>`;
 }

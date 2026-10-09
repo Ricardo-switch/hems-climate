@@ -292,6 +292,7 @@
     balk.setAttribute('aria-label', 'Inrichten');
     balk.innerHTML = `<a href="inrichten.html#${stap}">‹ Inrichten</a><span>Stap ${i + 1} van ${INRICHT_STAPPEN.length}</span><a class="verder" href="inrichten.html#${volgende}">Volgende stap ›</a>`;
     document.body.append(balk);
+    document.documentElement.classList.add('met-inrichtbalk');
   }
 
   global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };

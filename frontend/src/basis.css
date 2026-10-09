@@ -95,7 +95,9 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 
 /* De wizard (besluit 114): terug naar het overzicht en door naar de volgende stap. */
 .inrichtbalk { position: fixed; z-index: 800; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 8px 10px 8px 16px; border-radius: 999px; background: rgba(14, 22, 38, 0.95); border: 1px solid rgba(111, 211, 255, 0.4); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45); font-size: 14px; font-weight: 600; }
-.inrichtbalk a { color: var(--zacht); text-decoration: none; }
-.inrichtbalk span { color: var(--gedempt); font-size: 13px; }
+.inrichtbalk a { color: var(--zacht); text-decoration: none; white-space: nowrap; }
+.inrichtbalk span { color: var(--gedempt); font-size: 13px; white-space: nowrap; }
 .inrichtbalk a.verder { color: #0b1424; background: var(--tekst); padding: 8px 14px; border-radius: 999px; }
-html.tel-stand .inrichtbalk { bottom: 100px; }
+/* Op de telefoon over de hele breedte, boven de tabs; de pagina krijgt onderaan ruimte, zodat de balk niets afdekt. */
+html.tel-stand .inrichtbalk { bottom: 100px; left: 16px; right: 16px; transform: none; justify-content: space-between; gap: 8px; padding-left: 14px; }
+html.tel-stand.met-inrichtbalk #tel .inhoud { padding-bottom: 180px; }

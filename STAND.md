@@ -164,6 +164,10 @@ verwijzing bestaat.
 - **De assistent** leest ook een vraag in eigen woorden, over het huis en over
   de app, met een woordzoeker ([115]).
 - **Het jaar in Opbrengst** begint op de startdatum van het contract ([116]).
+- **De hoofdzekering** stel je in de app in, en die gaat voor de configuratie
+  ([117]).
+- **Uitrollen** gaat na de winter via een eigen add-on-bibliotheek op GitHub;
+  HACS alleen voor de integratie ([118]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -329,4 +333,6 @@ verwijzing bestaat.
 [114]: DECISIONS.md#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn
 [115]: DECISIONS.md#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker
 [116]: DECISIONS.md#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract
+[117]: DECISIONS.md#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie
+[118]: DECISIONS.md#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github
 <!-- links:einde -->

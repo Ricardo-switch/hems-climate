@@ -6,11 +6,11 @@
  * apparaat dat op afstand kan starten op zon mag beginnen. Die vraagt de app,
  * en de antwoorden staan in `aansluiting.json` naast de dataset.
  *
- * De regeling leest mee waar de configuratie van het huis zwijgt: zonder `grid`
- * wordt de zekering met de gevonden stroommeters het stroombudget (78), en een
- * apparaat op zon dat de configuratie niet noemt, wordt uitstelbaar (98). Wat
- * de configuratie wel noemt, gaat altijd voor. Dat gebeurt bij het starten van
- * de dienst; een nieuw antwoord gaat in bij de volgende start.
+ * De regeling leest mee: de zekering wordt met de gevonden stroommeters het
+ * stroombudget (78), en een apparaat op zon dat de configuratie niet noemt,
+ * wordt uitstelbaar (98). De zekering uit de app gaat voor die uit de
+ * configuratie (besluit 117): de app is waar je hem instelt. Dat gebeurt bij
+ * het starten van de dienst; een nieuw antwoord gaat in bij de volgende start.
  *
  * De pagina stuurt alleen antwoorden. Welke stroommeters en apparaten erbij
  * horen, zoekt deze kant zelf op in Home Assistant, zoals bij de onboarding
@@ -237,7 +237,8 @@ export interface Applied {
 }
 
 /**
- * Vult de configuratie aan met de antwoorden, alleen waar hij zwijgt.
+ * Vult de configuratie aan met de antwoorden. De zekering uit de app gaat voor
+ * (besluit 117); apparaten op zon alleen waar de configuratie zwijgt.
  *
  * Zuiver: het resultaat gaat daarna door het eigen schema, en deugt het niet,
  * dan start de dienst met de configuratie zoals hij was.
@@ -249,10 +250,18 @@ export function withConnection(raw: Record<string, unknown>, answers: Connection
   const overgeslagen: string[] = [];
 
   const fuse = answers.zekering;
-  if (fuse != null && fuse !== 'weetniet' && raw['grid'] === undefined) {
+  if (fuse != null && fuse !== 'weetniet') {
+    const grid = typeof raw['grid'] === 'object' && raw['grid'] != null ? (raw['grid'] as Record<string, unknown>) : null;
+    const configPhases = Array.isArray(grid?.['phases']) ? (grid['phases'] as Record<string, unknown>[]) : [];
     const phases = answers.fasen.slice(0, fuse.fasen);
-    if (phases.length === fuse.fasen) {
-      out['grid'] = { phases: phases.map((ph) => ({ ...ph, maxA: fuse.ampere })), marginA: 2 };
+    if (configPhases.length === fuse.fasen) {
+      // De configuratie noemt de meters al: alleen de zekering komt uit de app.
+      if (configPhases.some((ph) => ph['maxA'] !== fuse.ampere)) {
+        out['grid'] = { ...grid, phases: configPhases.map((ph) => ({ ...ph, maxA: fuse.ampere })) };
+        toegevoegd.push(`de hoofdzekering: ${fuse.fasen} × ${fuse.ampere} A`);
+      }
+    } else if (phases.length === fuse.fasen) {
+      out['grid'] = { phases: phases.map((ph) => ({ ...ph, maxA: fuse.ampere })), marginA: typeof grid?.['marginA'] === 'number' ? grid['marginA'] : 2 };
       toegevoegd.push(`het stroombudget: ${fuse.fasen} × ${fuse.ampere} A`);
     } else {
       overgeslagen.push(`${fuse.fasen} × ${fuse.ampere} A, maar ${answers.fasen.length === 1 ? 'één stroommeter' : `${answers.fasen.length} stroommeters`} per fase gevonden`);
