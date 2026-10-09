@@ -46,7 +46,7 @@ import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } 
 import type { HouseReport } from './house.js';
 import { FLOORS, FLOOR_NAMES, type Layout, type LayoutStore } from './layout.js';
 import type { LightSwitch } from './lights.js';
-import { controleer as controleerFuncties, functiesVoorstel, type FunctiesGevonden, type FunctiesStore } from './functies.js';
+import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
 
@@ -156,6 +156,11 @@ export interface WebOptions {
    * wat de bewoner vastlegde. Zonder dit bestaat `/api/functies` niet.
    */
   readonly functies?: { readonly store: FunctiesStore; readonly gevonden: () => FunctiesGevonden | null };
+  /**
+   * Of de bewoner licht bedienen in de app aan heeft staan (besluit 111). Kan
+   * alleen iets uitzetten: zonder `lights` (HEMS_LIGHTS) is er niets aan te zetten.
+   */
+  readonly lichtAan?: () => boolean;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -782,13 +787,13 @@ export class WebServer {
         return;
       }
       // Of de knoppen voor licht echt schakelen, of zeggen dat het nog niet mag.
-      sendJson(res, 200, { ...house, lichtBedienen: this.#options.lights != null });
+      sendJson(res, 200, { ...house, lichtBedienen: this.#lichtMag() });
       return;
     }
 
     if (path === '/api/scene') {
       const lights = this.#options.lights;
-      if (lights == null || !lights.scenesEnabled) {
+      if (lights == null || !lights.scenesEnabled || !this.#lichtMag()) {
         sendJson(res, 503, { wachten: 'scènes staan niet aan' });
         return;
       }
@@ -811,7 +816,7 @@ export class WebServer {
 
     if (path === '/api/licht') {
       const lights = this.#options.lights;
-      if (lights == null) {
+      if (lights == null || !this.#lichtMag()) {
         sendJson(res, 503, { wachten: 'licht bedienen staat niet aan' });
         return;
       }
@@ -1310,7 +1315,13 @@ export class WebServer {
       }
       await door.store.save(uit.functies);
     }
-    sendJson(res, 200, { instellingen: door.store.current, voorstel: functiesVoorstel(gevonden), gevonden });
+    // Of de installatie licht bedienen toestaat (HEMS_LIGHTS): anders valt er niets aan te zetten.
+    sendJson(res, 200, { instellingen: door.store.current ? volledig(door.store.current, gevonden) : null, voorstel: functiesVoorstel(gevonden), gevonden, lichtMogelijk: this.#options.lights != null });
+  }
+
+  /** Licht bedienen: de installatie staat het toe, en de bewoner heeft het aan (besluit 111). */
+  #lichtMag(): boolean {
+    return this.#options.lights != null && (this.#options.lichtAan?.() ?? true);
   }
 
   /** Hoeveel live-beelden er nu lopen; meer dan dit belast Home Assistant en de NAS te veel. */

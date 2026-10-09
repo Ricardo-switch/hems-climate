@@ -83,6 +83,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
 - [109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst](#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst)
 - [110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten](#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten)
+- [111. Licht bedienen en de weerbron zijn een functie](#111-licht-bedienen-en-de-weerbron-zijn-een-functie)
 
 **Meten, data en analyse**
 
@@ -4868,6 +4869,31 @@ op 9 oktober 2026.
 
 *Nog niet:* een korting op de leveringskosten (zoals 7,5 % Thuisvoordeel), en
 een dynamisch contract met een prijs per uur (stap E).
+
+---
+
+## 111. Licht bedienen en de weerbron zijn een functie
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Tweede stap uit `docs/universeel.md` (besluit 109). Licht bedienen stond aan
+of uit in `.env` op de NAS (`HEMS_LIGHTS`, besluit 97), en het weer kwam alleen
+van Buienradar (besluit 105). Gekozen op 9 oktober 2026.
+
+*Besluit:*
+
+- **Licht en scènes bedienen** staat bij Instellingen › Functies aan of uit.
+  `HEMS_LIGHTS` blijft de grens van de installatie: zonder die kan de app niets
+  aanzetten, alleen zeggen dat het niet mag. Staat het in de app uit, dan
+  weigeren de deuren van licht en scènes, en tonen de bladen geen schakelaars.
+- **De weerbron is een keuze:** Buienradar als die er is, of elke weerentiteit
+  van Home Assistant (zoals Met.no, standaard in elke installatie). Van een
+  weerentiteit volgt de dienst de dagverwachting via `weather/subscribe_forecast`,
+  een abonnement dat alleen leest, net als de toestanden. De zonkans is dan 100
+  min de bewolking, of een schatting uit de toestand als de bron geen bewolking
+  geeft.
+- **Een ouder bestand** zonder deze keuzes krijgt het voorstel: Buienradar als
+  die er is, en licht aan.
 
 ---
 

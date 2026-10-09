@@ -1,6 +1,7 @@
 /*
- * Camera's en deurbel, in ontwerp 2 (besluiten 104 en 109). Welke camera's de
- * app toont en met welk beeld, en welke melder de deurbel is, bij welke camera.
+ * Functies, in ontwerp 2 (besluiten 104, 109 en 111). Welke camera's de app
+ * toont en met welk beeld, welke melder de deurbel is, of je licht bedient in
+ * de app, en waar het weer vandaan komt.
  * De dienst doet een voorstel uit wat Home Assistant heeft; wat je hier kiest,
  * legt hij vast in een eigen bestand. Opslaan vraagt een beheerder.
  */
@@ -20,6 +21,8 @@ async function laad() {
   if (f.status === 'fulfilled') {
     info = f.value;
     concept = JSON.parse(JSON.stringify(info.instellingen ?? info.voorstel));
+    concept.weer ??= info.voorstel.weer;
+    concept.licht ??= info.voorstel.licht;
     if (!info.instellingen) zeg('Dit is het voorstel uit Home Assistant. Opslaan legt het vast.');
   } else {
     zeg('Niet beschikbaar: geen verbinding met Smart Climate, of Home Assistant is nog niet gelezen.', true);
@@ -85,12 +88,29 @@ function deurbel() {
   </section>`;
 }
 
+function licht() {
+  const mag = info.lichtMogelijk === true;
+  return `<section class="glas vraag">
+    <h2 class="kop-3">Licht en scènes</h2>
+    ${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], mag && concept.licht.bedienen, !mag)}
+    <p class="mini">${mag ? 'Lampen en scènes aan en uit vanuit de app, met je inlog. Klimaat en screens bedient Smart Climate nog niet.' : 'Deze installatie staat licht bedienen niet toe (HEMS_LIGHTS op de NAS).'}</p>
+  </section>`;
+}
+
+function weer() {
+  const bronnen = info.gevonden.weerbronnen ?? [];
+  return `<section class="glas vraag">
+    <h2 class="kop-3">Het weer</h2>
+    ${bronnen.length ? keuzes('Weerbron', 'weerBron', [...bronnen.map((b) => [b.id, b.naam]), [null, 'Geen']], concept.weer.bron) : '<p class="uitleg">Geen weer gevonden in Home Assistant.</p>'}
+    <p class="mini">Voor het weer van vandaag en de komende dagen, en wat je panelen dan leveren.</p>
+  </section>`;
+}
+
 function uitleg() {
   return `<section class="glas vraag">
-    <h2 class="kop-3">Zo werkt het</h2>
-    <p class="uitleg">Wordt er aangebeld, dan toont elke open pagina meteen het beeld van de deurbel, tot je het sluit of de tijd om is.</p>
-    <p class="uitleg">Het scherm aanzetten kan alleen in Fully Kiosk Browser, zoals op een tablet aan de muur. In een gewone browser verschijnt het beeld als de pagina open staat.</p>
-    <p class="uitleg">Smart Climate kijkt alleen: er gaat niets naar de camera's of de deurbel.</p>
+    <h2 class="kop-3">Zo werkt de deurbel</h2>
+    <p class="uitleg">Wordt er aangebeld, dan toont elke open pagina meteen het beeld, tot je het sluit of de tijd om is. Het scherm aanzetten kan alleen in Fully Kiosk Browser.</p>
+    <p class="mini">Smart Climate kijkt alleen: er gaat niets naar de camera's of de deurbel.</p>
   </section>`;
 }
 
@@ -98,7 +118,7 @@ function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
-  const kolommen = { 1: cameras(), 2: deurbel(), 3: uitleg() };
+  const kolommen = { 1: cameras(), 2: deurbel() + uitleg(), 3: licht() + weer() };
   $$('[data-kolom]').forEach((el) => (el.innerHTML = kolommen[el.dataset.kolom]));
   if (melding) zeg(melding, meldingFout);
 }
@@ -121,6 +141,8 @@ document.addEventListener('click', async (e) => {
         concept.deurbel.camera ??= m?.camera ?? null;
       }
     } else if (s === 'schermAan') concept.deurbel.schermAan = w;
+    else if (s === 'lichtAan') concept.licht.bedienen = w;
+    else if (s === 'weerBron') concept.weer.bron = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s.startsWith('camera:')) {
       // Per camera één beeld: het andere beeld van dezelfde camera gaat eruit.

@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import { CAMERA_ID, findCameras } from './camera.js';
+import { weatherSources } from './weather.js';
 
 export const FUNCTIES_FILE = 'functies.json';
 
@@ -42,6 +43,17 @@ export interface Functies {
     readonly schermAan: boolean;
     readonly seconden: number;
   };
+  /**
+   * Waar het weer vandaan komt (besluit 111): `buienradar`, een weerentiteit
+   * (`weather.…`), of null voor geen weer. Weg in een ouder bestand: het voorstel.
+   */
+  readonly weer?: { readonly bron: string | null };
+  /**
+   * Licht en scènes bedienen in de app (besluit 111). Kan alleen aan als de
+   * installatie het toestaat (`HEMS_LIGHTS`, besluit 97); dit zet het binnen
+   * die grens aan of uit. Weg in een ouder bestand: aan.
+   */
+  readonly licht?: { readonly bedienen: boolean };
 }
 
 /** Een camera zoals Home Assistant hem heeft: één apparaat, soms met meer beelden. */
@@ -63,6 +75,8 @@ export interface MelderKeuze {
 export interface FunctiesGevonden {
   readonly cameras: readonly CameraKeuze[];
   readonly melders: readonly MelderKeuze[];
+  /** De weerbronnen om uit te kiezen (besluit 111). Weg in een oudere vorm: geen. */
+  readonly weerbronnen?: readonly { readonly id: string; readonly naam: string }[];
 }
 
 const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp', ext: 'breed', snapshots_sub: 'plaatjes vloeiend', snapshots_main: 'plaatjes scherp' };
@@ -120,7 +134,7 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
   }
   // De zekere eerst, en die met een camera.
   melders.sort((a, b) => Number(b.zeker) - Number(a.zeker) || Number(b.camera != null) - Number(a.camera != null) || a.naam.localeCompare(b.naam, 'nl'));
-  return { cameras, melders };
+  return { cameras, melders, weerbronnen: weatherSources(entities, states) };
 }
 
 /** Het voorstel: elke camera met het lichtste beeld, en de deurbel als die er zeker is. */
@@ -131,7 +145,14 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     versie: 1,
     cameras: { aan: lijst.length > 0, lijst },
     deurbel: { aan: bel != null, melder: bel?.id ?? null, camera: bel?.camera ?? null, schermAan: true, seconden: BEL_SECONDEN.standaard },
+    weer: { bron: g.weerbronnen?.[0]?.id ?? null },
+    licht: { bedienen: true },
   };
+}
+
+/** Een ouder bestand aangevuld met het voorstel voor wat er toen nog niet in stond. */
+export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null }; licht: { bedienen: boolean } } {
+  return { ...f, weer: f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null }, licht: f.licht ?? { bedienen: true } };
 }
 
 export type FunctiesUitkomst = { readonly ok: true; readonly functies: Functies } | { readonly ok: false; readonly reden: string };
@@ -160,12 +181,30 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
   if (typeof seconden !== 'number' || !Number.isInteger(seconden) || seconden < BEL_SECONDEN.min || seconden > BEL_SECONDEN.max) {
     return { ok: false, reden: `deurbel.seconden is een heel getal van ${BEL_SECONDEN.min} tot ${BEL_SECONDEN.max}` };
   }
+  // Weer en licht (besluit 111): weg is het voorstel.
+  const weerIn = b['weer'];
+  let bron: string | null = g.weerbronnen?.[0]?.id ?? null;
+  if (weerIn !== undefined) {
+    const w = (typeof weerIn === 'object' && weerIn != null ? weerIn : {}) as Record<string, unknown>;
+    const v = w['bron'] ?? null;
+    if (v !== null && (typeof v !== 'string' || !(g.weerbronnen ?? []).some((x) => x.id === v))) return { ok: false, reden: 'die weerbron kent Home Assistant niet' };
+    bron = v as string | null;
+  }
+  const lichtIn = b['licht'];
+  let bedienen = true;
+  if (lichtIn !== undefined) {
+    const l = (typeof lichtIn === 'object' && lichtIn != null ? lichtIn : {}) as Record<string, unknown>;
+    if (typeof l['bedienen'] !== 'boolean') return { ok: false, reden: 'licht.bedienen is ja of nee' };
+    bedienen = l['bedienen'];
+  }
   return {
     ok: true,
     functies: {
       versie: 1,
       cameras: { aan: cam['aan'], lijst },
       deurbel: { aan: bel['aan'], melder: melder as string | null, camera: camera as string | null, schermAan: bel['schermAan'], seconden },
+      weer: { bron },
+      licht: { bedienen },
     },
   };
 }

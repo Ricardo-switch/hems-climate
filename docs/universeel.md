@@ -56,10 +56,8 @@ hier een voorstel voor.
    terras of balkon. Een tweede buitenruimte staat in de lijsten, niet in de
    tekening. De lamp van de camera op de oprit wordt nog aan de naam herkend
    ("camera", "schijnwerper").
-2. **Meer functies in de app.** Licht bedienen staat nu aan of uit in `.env`
-   (`HEMS_LIGHTS`); dat wordt een functie, met `.env` als bovengrens. Het weer
-   komt alleen van Buienradar; dat wordt een keuze uit elke weer-entiteit in
-   Home Assistant.
+2. ~~**Meer functies in de app.**~~ Gedaan op 9 oktober (besluit 111): licht
+   bedienen en de weerbron staan bij Functies.
 3. **De tekening van het huis.** Panelen liggen altijd op het rechter dakvlak;
    de ligging uit Zon en aansluiting (voorkant, achterkant, beide, plat) moet
    meetellen. Het dak wordt herkend aan de naam "zolder" of aan drie lagen; dat

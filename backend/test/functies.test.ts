@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { FunctiesStore, aangebeld, controleer, functiesGevonden, functiesVoorstel, getoondeCameras, type Functies } from '../src/web/functies.js';
+import { FunctiesStore, aangebeld, controleer, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies } from '../src/web/functies.js';
 
 const entities: HaRegistryEntity[] = [
   { entity_id: 'camera.camera_oprit_duidelijk', platform: 'reolink', device_id: 'reo1', translation_key: 'main' },
@@ -82,7 +82,8 @@ describe('de keuzes controleren (besluit 109)', () => {
   const goed: Functies = { versie: 1, cameras: { aan: true, lijst: ['camera.camera_oprit_duidelijk'] }, deurbel: { aan: true, melder: 'event.voordeur_ding', camera: 'camera.camera_oprit_vloeiend', schermAan: false, seconden: 60 } };
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: goed });
+    // Zonder weerbron in Home Assistant: geen weer; licht staat aan tot je het uitzet.
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: null }, licht: { bedienen: true } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
   });
 
@@ -98,6 +99,32 @@ describe('de keuzes controleren (besluit 109)', () => {
 
   it('toont geen camera als de camera’s uit staan', () => {
     expect(getoondeCameras({ ...goed, cameras: { aan: false, lijst: ['camera.camera_oprit_duidelijk'] } })).toEqual(new Set());
+  });
+});
+
+describe('weer en licht als functie (besluit 111)', () => {
+  const metWeer = functiesGevonden(
+    [...entities, { entity_id: 'weather.forecast_home', platform: 'met' }, { entity_id: 'sensor.sunchance_1d', platform: 'buienradar', translation_key: 'sunchance_1d' }],
+    devices,
+    new Map(),
+  );
+  const goed = { ...functiesVoorstel(metWeer) };
+
+  it('vindt Buienradar en elke weerentiteit, en stelt Buienradar voor', () => {
+    expect(metWeer.weerbronnen).toEqual([{ id: 'buienradar', naam: 'Buienradar' }, { id: 'weather.forecast_home', naam: 'weather.forecast_home' }]);
+    expect(goed.weer).toEqual({ bron: 'buienradar' });
+    expect(goed.licht).toEqual({ bedienen: true });
+  });
+
+  it('neemt een andere weerbron aan, en licht uit; weigert een onbekende bron', () => {
+    expect(controleer({ ...goed, weer: { bron: 'weather.forecast_home' }, licht: { bedienen: false } }, metWeer)).toMatchObject({ ok: true, functies: { weer: { bron: 'weather.forecast_home' }, licht: { bedienen: false } } });
+    expect(controleer({ ...goed, weer: { bron: 'weather.van_de_buren' } }, metWeer).ok).toBe(false);
+    expect(controleer({ ...goed, licht: { bedienen: 'ja' } }, metWeer).ok).toBe(false);
+  });
+
+  it('vult een ouder bestand aan met het voorstel', () => {
+    const oud: Functies = { versie: 1, cameras: { aan: true, lijst: [] }, deurbel: { aan: false, melder: null, camera: null, schermAan: true, seconden: 120 } };
+    expect(volledig(oud, metWeer)).toMatchObject({ weer: { bron: 'buienradar' }, licht: { bedienen: true } });
   });
 });
 

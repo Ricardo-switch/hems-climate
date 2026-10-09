@@ -100,6 +100,80 @@ export function kindOf(condition: string | undefined, sunPct: number | null): We
   return null;
 }
 
+/**
+ * De zonkans bij een toestand van Home Assistant, als de bron geen bewolking
+ * geeft: een schatting, ruw maar beter dan niets (besluit 111).
+ */
+const ZONKANS_BIJ: Readonly<Record<string, number>> = {
+  sunny: 85,
+  'clear-night': 85,
+  partlycloudy: 50,
+  cloudy: 15,
+  fog: 10,
+  rainy: 10,
+  pouring: 5,
+  'lightning-rainy': 10,
+  lightning: 15,
+  snowy: 10,
+  'snowy-rainy': 5,
+  hail: 10,
+  windy: 50,
+  'windy-variant': 30,
+  exceptional: 30,
+};
+
+/** Een verwachting zoals een weerentiteit van Home Assistant hem geeft (`weather/subscribe_forecast`). */
+export interface EntityForecast {
+  readonly datetime: string;
+  readonly condition?: string | null;
+  readonly temperature?: number | null;
+  readonly templow?: number | null;
+  readonly precipitation_probability?: number | null;
+  readonly cloud_coverage?: number | null;
+}
+
+/**
+ * Het weer van nu en de komende dagen uit een weerentiteit van Home Assistant
+ * (besluit 111), in dezelfde vorm als Buienradar: dag 0 is nu, 1 is morgen.
+ * De zonkans is 100 min de bewolking, of anders een schatting uit de toestand.
+ */
+export function forecastFromEntity(state: HaEntityState | undefined, forecast: readonly EntityForecast[], nowMs: number, tz: string): ForecastDay[] {
+  const out: ForecastDay[] = [];
+  const zonkans = (condition: string | null | undefined, wolken: number | null | undefined) =>
+    wolken != null && Number.isFinite(wolken) ? Math.round(100 - Math.max(0, Math.min(100, wolken))) : condition ? (ZONKANS_BIJ[condition] ?? null) : null;
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  if (state && state.state !== 'unavailable' && state.state !== 'unknown') {
+    const zon = zonkans(state.state, num(state.attributes['cloud_coverage']));
+    const soort = kindOf(state.state, zon);
+    out.push({ offset: 0, maxC: null, minC: null, regenkansPct: null, zonkansPct: zon, soort, tekst: wordsFor(soort, null) });
+  }
+  const vandaag = partsIn(nowMs, tz);
+  const begin = zonedMidnight(vandaag.y, vandaag.m, vandaag.d, tz);
+  for (const f of forecast) {
+    const t = Date.parse(f.datetime);
+    if (!Number.isFinite(t)) continue;
+    const p = partsIn(t + 3_600_000, tz);
+    const offset = Math.round((zonedMidnight(p.y, p.m, p.d, tz) - begin) / 86_400_000);
+    if (offset < 1 || offset > 5 || out.some((d) => d.offset === offset)) continue;
+    const zon = zonkans(f.condition, f.cloud_coverage);
+    const regen = num(f.precipitation_probability);
+    const soort = kindOf(f.condition ?? undefined, zon);
+    out.push({ offset, maxC: num(f.temperature), minC: num(f.templow), regenkansPct: regen, zonkansPct: zon, soort, tekst: wordsFor(soort, regen) });
+  }
+  return out.sort((a, b) => a.offset - b.offset);
+}
+
+/** De weerbronnen om uit te kiezen: Buienradar als die er is, en elke weerentiteit. */
+export function weatherSources(entities: readonly HaRegistryEntity[], states: ReadonlyMap<string, HaEntityState>): { id: string; naam: string }[] {
+  const out: { id: string; naam: string }[] = [];
+  if (entities.some((e) => e.platform === 'buienradar' && e.disabled_by == null && e.translation_key != null && KEY.test(e.translation_key))) out.push({ id: 'buienradar', naam: 'Buienradar' });
+  for (const e of entities) {
+    if (!e.entity_id.startsWith('weather.') || e.disabled_by != null || !/^weather\.[a-z0-9_]+$/.test(e.entity_id)) continue;
+    out.push({ id: e.entity_id, naam: String(states.get(e.entity_id)?.attributes['friendly_name'] ?? e.entity_id) });
+  }
+  return out;
+}
+
 /** De soort weer in gewone woorden, met de kans op regen erbij als die telt. */
 export function wordsFor(kind: WeatherKind | null, rainPct: number | null): string | null {
   switch (kind) {

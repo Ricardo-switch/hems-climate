@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
+import { forecastFromEntity, kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
 import { exampleSite } from './site.js';
 
 const cleanup: string[] = [];
@@ -75,6 +75,29 @@ describe('de verwachting lezen', () => {
     expect(kindOf('snowy', 0)).toBe('sneeuw');
     expect(kindOf('fog', 0)).toBe('mist');
     expect(kindOf(undefined, 50)).toBeNull();
+  });
+});
+
+describe('de verwachting uit een weerentiteit (besluit 111)', () => {
+  it('maakt van de dagen van Home Assistant dezelfde dagen als bij Buienradar', () => {
+    const nu = Date.UTC(2026, 9, 9, 8); // vrijdag 9 oktober, 10:00 in Nederland
+    const state = { entity_id: 'weather.forecast_home', state: 'partlycloudy', attributes: { cloud_coverage: 40 } } as unknown as HaEntityState;
+    const dagen = forecastFromEntity(
+      state,
+      [
+        { datetime: '2026-10-09T10:00:00+00:00', condition: 'sunny', temperature: 17 },
+        { datetime: '2026-10-10T10:00:00+00:00', condition: 'rainy', temperature: 14, templow: 9, precipitation_probability: 80 },
+        { datetime: '2026-10-11T10:00:00+00:00', condition: 'cloudy', temperature: 13, templow: 8, cloud_coverage: 90 },
+      ],
+      nu,
+      'Europe/Amsterdam',
+    );
+    expect(dagen.map((d) => [d.offset, d.zonkansPct, d.soort, d.maxC, d.minC, d.regenkansPct])).toEqual([
+      [0, 60, 'half', null, null, null],
+      [1, 10, 'regen', 14, 9, 80],
+      [2, 10, 'bewolkt', 13, 8, null],
+    ]);
+    expect(dagen[1]!.tekst).toBe('Bewolkt met regen');
   });
 });
 

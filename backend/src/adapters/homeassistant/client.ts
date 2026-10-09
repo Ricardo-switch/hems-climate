@@ -142,6 +142,8 @@ export declare interface HaClient {
   on(event: 'stateChanged', listener: (state: HaEntityState) => void): this;
   on(event: 'disconnected', listener: (reason: string) => void): this;
   on(event: 'error', listener: (error: Error) => void): this;
+  /** De dagverwachting van de gevolgde weerentiteit (besluit 111). */
+  on(event: 'forecast', listener: (entityId: string | null, forecast: unknown[]) => void): this;
 }
 
 export class HaClient extends EventEmitter {
@@ -252,6 +254,9 @@ export class HaClient extends EventEmitter {
             type: 'get_states',
           })) as HaEntityState[];
           this.#subscriptionId = await this.#subscribe();
+          // Na een herverbinding opnieuw de verwachting volgen, als dat gevraagd was.
+          this.#forecastSub = null;
+          if (this.#forecastEntity) void this.#followForecast().catch((e: Error) => this.#emitError(e));
           this.emit('ready', states);
         } catch (error) {
           this.#emitError(error as Error);
@@ -273,6 +278,12 @@ export class HaClient extends EventEmitter {
       }
 
       case 'event': {
+        // De verwachting van een weerentiteit (besluit 111): alleen lezen.
+        if (this.#forecastSub != null && msg['id'] === this.#forecastSub) {
+          const ev = msg['event'] as { forecast?: unknown } | undefined;
+          if (Array.isArray(ev?.forecast)) this.emit('forecast', this.#forecastEntity, ev.forecast);
+          return;
+        }
         if (msg['id'] !== this.#subscriptionId) return;
         const event = msg['event'] as StateChangedEvent | undefined;
         if (event?.event_type !== 'state_changed') return;
@@ -284,6 +295,34 @@ export class HaClient extends EventEmitter {
       default:
         return;
     }
+  }
+
+  /** De weerentiteit waarvan de dienst de verwachting volgt, en het abonnement erop. */
+  #forecastEntity: string | null = null;
+  #forecastSub: number | null = null;
+
+  /**
+   * Volgt de dagverwachting van een weerentiteit (besluit 111). Home Assistant
+   * geeft die alleen via een abonnement (`weather/subscribe_forecast`); dat is
+   * lezen, net als de toestanden. Null stopt het volgen. Elke nieuwe
+   * verwachting komt als `forecast` (entiteit, lijst).
+   */
+  async followForecast(entityId: string | null): Promise<void> {
+    if (entityId != null && !/^weather\.[a-z0-9_]+$/.test(entityId)) throw new Error(`geen weerentiteit: ${entityId}`);
+    if (entityId === this.#forecastEntity && this.#forecastSub != null) return;
+    if (this.#forecastSub != null) {
+      const oud = this.#forecastSub;
+      this.#forecastSub = null;
+      await this.#command({ type: 'unsubscribe_events', subscription: oud }).catch(() => {});
+    }
+    this.#forecastEntity = entityId;
+    if (entityId) await this.#followForecast();
+  }
+
+  async #followForecast(): Promise<void> {
+    const id = this.#nextId;
+    this.#forecastSub = id;
+    await this.#command({ type: 'weather/subscribe_forecast', entity_id: this.#forecastEntity, forecast_type: 'daily' });
   }
 
   async #subscribe(): Promise<number> {

@@ -509,11 +509,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Het voorstel: het vloeiende beeld. Nu het scherpe.
     expect(await wand.locator('[aria-label="Beeld van Camera oprit"] button[aria-pressed="true"]').textContent()).toBe('Vloeiend');
     await wand.locator('[aria-label="Beeld van Camera oprit"] button', { hasText: 'Scherp' }).click();
+    // Licht: de installatie staat het toe, dus bedienen staat aan; hier op alleen kijken (besluit 111).
+    expect(await wand.locator('[aria-label="Licht bedienen"] button[aria-pressed="true"]').textContent()).toBe('Bedienen in de app');
+    await wand.locator('[aria-label="Licht bedienen"] button', { hasText: 'Alleen kijken' }).click();
     // Zonder deurbel in Home Assistant zegt de pagina dat.
     expect(await wand.textContent()).toContain('Geen deurbel gevonden');
     await wand.locator('[data-opslaan]').click();
     await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
     expect(functiesStore.current?.cameras).toEqual({ aan: true, lijst: ['camera.camera_oprit_duidelijk'] });
+    expect(functiesStore.current?.licht).toEqual({ bedienen: false });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

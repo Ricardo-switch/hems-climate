@@ -99,6 +99,7 @@ async function start(options: {
   connection?: { store: ConnectionStore; view: () => ConnectionView; found: () => { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[] } };
   camera?: { base: string; token: string; ids: () => ReadonlySet<string> };
   functies?: { store: FunctiesStore; gevonden: () => FunctiesGevonden | null };
+  lichtAan?: () => boolean;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -126,6 +127,7 @@ async function start(options: {
         ...(options.connection ? { connection: options.connection } : {}),
         ...(options.camera ? { camera: options.camera } : {}),
         ...(options.functies ? { functies: options.functies } : {}),
+        ...(options.lichtAan ? { lichtAan: options.lichtAan } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -274,7 +276,8 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const keuze = { versie: 1, cameras: { aan: true, lijst: ['camera.oprit_main'] }, deurbel: { aan: true, melder: 'binary_sensor.bel', camera: 'camera.oprit_main', schermAan: false, seconden: 60 } };
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual(keuze);
+    // Weer en licht vult de dienst aan met het voorstel (besluit 111).
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null }, licht: { bedienen: true } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);
@@ -1073,6 +1076,22 @@ describe('licht bedienen (besluit 97)', () => {
     expect((await post({ id: 'scene.garage_feest' })).status).toBe(404);
     expect((await post({ id: 'light.hal' })).status).toBe(400);
     expect(scenes).toEqual(['scene.hal_avond']);
+  });
+
+  it('schakelt niets als licht bedienen in de app uit staat, en zegt dat (besluit 111)', async () => {
+    let aan = false;
+    const calls: string[] = [];
+    const lights = new LightSwitch({ house: () => house, call: async (service) => void calls.push(service), callScene: async (id) => void calls.push(id) });
+    const started = await start({ house: () => house, lights, lichtAan: () => aan });
+    const post = (pad: string, body: unknown) => fetch(`${started.base}${pad}`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    expect((await post('/api/licht', { doel: 'lamp', id: 'light.hal', aan: true })).status).toBe(503);
+    expect((await post('/api/scene', { id: 'scene.hal_avond' })).status).toBe(503);
+    expect(((await (await fetch(`${started.base}/api/huis`)).json()) as { lichtBedienen: boolean }).lichtBedienen).toBe(false);
+    expect(calls).toEqual([]);
+    // Weer aan: dan schakelt het, binnen de grens van de installatie.
+    aan = true;
+    expect((await post('/api/licht', { doel: 'lamp', id: 'light.hal', aan: true })).status).toBe(200);
+    expect(calls.length).toBe(1);
   });
 
   it('heeft geen scènedeur zonder scènes', async () => {

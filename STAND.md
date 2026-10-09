@@ -153,6 +153,9 @@ verwijzing bestaat.
 - **Prijzen zoals op het contract:** normaal en dal (de meter zegt welk tarief),
   salderen tot 2027 en daarna een vergoeding min kosten, en vaste posten per dag,
   maand of jaar ([110]).
+- **Licht bedienen en de weerbron** stel je in bij Functies; `HEMS_LIGHTS` blijft
+  de grens van de installatie, en het weer komt van Buienradar of van elke
+  weerentiteit van Home Assistant ([111]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -312,4 +315,5 @@ verwijzing bestaat.
 [108]: DECISIONS.md#108-https-in-het-tailnet-met-tailscale-serve
 [109]: DECISIONS.md#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst
 [110]: DECISIONS.md#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten
+[111]: DECISIONS.md#111-licht-bedienen-en-de-weerbron-zijn-een-functie
 <!-- links:einde -->

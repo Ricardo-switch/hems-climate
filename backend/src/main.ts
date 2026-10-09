@@ -34,9 +34,9 @@ import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight } from './web/today.js';
-import { readForecast, WeatherLog } from './web/weather.js';
+import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } from './web/weather.js';
 import { httpBase } from './web/camera.js';
-import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, type Functies, type FunctiesGevonden } from './web/functies.js';
+import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
@@ -668,7 +668,35 @@ if (startup.access.kind === 'sessions') {
  * wat de panelen werkelijk haalden.
  */
 const weatherLog = logDir === '' ? null : new WeatherLog(logDir);
-const forecastNow = () => (houseRegisters ? readForecast(houseRegisters.entities, allStates) : []);
+/*
+ * Waar het weer vandaan komt (besluit 111): Buienradar, of een weerentiteit
+ * van Home Assistant, zoals de bewoner koos. Van een weerentiteit volgt de
+ * dienst de dagverwachting; die komt alleen via een abonnement.
+ */
+let entityForecast: { entity: string | null; days: EntityForecast[] } = { entity: null, days: [] };
+client.on('forecast', (entity, days) => {
+  entityForecast = { entity, days: days as EntityForecast[] };
+});
+const weerZone: string = baseConfig?.timezone ?? 'Europe/Amsterdam';
+const weerBron = (): string | null => {
+  const f = functiesNu();
+  return f ? volledig(f, functiesKeuzes()).weer.bron : null;
+};
+const volgWeer = () => {
+  const bron = weerBron();
+  client.followForecast(bron?.startsWith('weather.') ? bron : null).catch((e: unknown) => console.warn(`Verwachting van ${bron} niet te volgen: ${(e as Error).message}`));
+};
+setInterval(volgWeer, 60_000).unref();
+setTimeout(volgWeer, 15_000).unref();
+const forecastNow = () => {
+  if (!houseRegisters) return [];
+  const bron = weerBron();
+  if (bron === 'buienradar') return readForecast(houseRegisters.entities, allStates);
+  if (bron?.startsWith('weather.')) {
+    return forecastFromEntity(allStates.get(bron), entityForecast.entity === bron ? entityForecast.days : [], Date.now(), weerZone);
+  }
+  return [];
+};
 if (weatherLog && site) {
   const timeZone = site.config.timezone;
   const noteTomorrow = () => {
@@ -732,6 +760,11 @@ if (webPort != null) {
       },
     },
     ...(functiesStore ? { functies: { store: functiesStore, gevonden: functiesKeuzes } } : {}),
+    // Licht bedienen aan of uit in de app (besluit 111), binnen wat HEMS_LIGHTS toestaat.
+    lichtAan: () => {
+      const f = functiesNu();
+      return f ? volledig(f, functiesKeuzes()).licht.bedienen : true;
+    },
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {
           energy: {
