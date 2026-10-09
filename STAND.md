@@ -163,6 +163,7 @@ verwijzing bestaat.
   volgende stap ([114]).
 - **De assistent** leest ook een vraag in eigen woorden, over het huis en over
   de app, met een woordzoeker ([115]).
+- **Het jaar in Opbrengst** begint op de startdatum van het contract ([116]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -327,4 +328,5 @@ verwijzing bestaat.
 [113]: DECISIONS.md#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten
 [114]: DECISIONS.md#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn
 [115]: DECISIONS.md#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker
+[116]: DECISIONS.md#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract
 <!-- links:einde -->

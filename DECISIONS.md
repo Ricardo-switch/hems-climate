@@ -125,6 +125,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve)
 - [113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten](#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten)
 - [115. De assistent leest een vraag in eigen woorden, met een woordzoeker](#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker)
+- [116. Het jaar van Opbrengst begint op de startdatum van het contract](#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract)
 
 **Veiligheid**
 
@@ -5012,6 +5013,28 @@ je de indeling aanpast of waar je de prijzen invult.
 - **Op de pagina:** het veld staat in de balk onder de Assistent, boven de vaste
   vragen; op de telefoon bovenaan. Vanaf Thuis opent "Tik om iets te vragen"
   de Assistent met de cursor in het veld (`#typ`).
+
+---
+
+## 116. Het jaar van Opbrengst begint op de startdatum van het contract
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 9 oktober 2026: een energiecontract loopt zelden
+van 1 januari, en de jaarafrekening ook niet. Een jaar dat op 1 januari begint,
+past daar niet op.
+
+*Besluit:*
+
+- **Startdatum contract** staat bij Meters en prijzen, bij de vaste kosten.
+  Leeg is 1 januari, zoals eerder.
+- **Het jaar in Opbrengst** loopt van die dag tot dezelfde dag een jaar later,
+  en heet dan "15 maart 2026 – 14 maart 2027"; in de vergelijking "2026/27".
+  De grafiek begint bij de maand van de startdatum. Een maand die het jaar in
+  tweeën deelt, is één staaf.
+- **De jaarafrekening rekent mee:** wat je over een heel jaar meer teruglevert
+  dan je verbruikt, telt over het contractjaar.
+- Een startdatum op 29 februari begint elk jaar op 1 maart.
 
 ---
 

@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { HaClient } from '../src/adapters/homeassistant/client.js';
 import { EnergyStore, importFromPrefs, meterRole, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
 import { partsIn, zonedMidnight } from '../src/web/today.js';
-import { periodRange, yieldReport } from '../src/web/yield.js';
+import { periodRange, yearStartOf, yieldReport } from '../src/web/yield.js';
 
 const TZ = 'Europe/Amsterdam';
 
@@ -147,6 +147,31 @@ describe('een maand, en vergelijken', () => {
     expect(periodRange('jaar', '2026-06-01', TZ)).toMatchObject({ label: '2026', startMs: Date.UTC(2025, 11, 31, 23) });
     expect(periodRange('maand', '2026-02-30', TZ)).toBeNull();
   });
+
+  it('laat het jaar beginnen op de startdatum van het contract (besluit 116)', () => {
+    const start = yearStartOf('2024-03-15');
+    // 1 juni 2026 valt in het contractjaar van 15 maart 2026.
+    expect(periodRange('jaar', '2026-06-01', TZ, start)).toMatchObject({
+      label: '15 maart 2026 – 14 maart 2027',
+      startMs: Date.UTC(2026, 2, 14, 23),
+      endMs: Date.UTC(2027, 2, 14, 23),
+      prev: '2025-03-15',
+      next: '2027-03-15',
+      prevName: '2025/26',
+    });
+    // Vóór 15 maart hoort een dag bij het jaar ervoor.
+    expect(periodRange('jaar', '2026-03-14', TZ, start)).toMatchObject({ prev: '2024-03-15' });
+    // Zonder datum: het kalenderjaar; een 29 februari wordt 1 maart.
+    expect(yearStartOf(null)).toEqual({ m: 1, d: 1 });
+    expect(yearStartOf('2024-02-29')).toEqual({ m: 3, d: 1 });
+  });
+
+  it('telt de grafiek van een contractjaar vanaf zijn eigen maand', async () => {
+    const r = (await yieldReport(fakeSource(), { ...SETTINGS, prijzen: { ...SETTINGS.prijzen, contractStart: '2025-07-01' } }, 'jaar', '2026-09-15', TZ, Date.UTC(2026, 8, 20)))!;
+    expect(r.periode.label).toBe('1 juli 2026 – 30 juni 2027');
+    expect(r.perBucket.map((b) => b.label).slice(0, 3)).toEqual(['jul', 'aug', 'sep']);
+    expect(r.vergelijk.stroom.at(-1)?.label).toBe('2026/27');
+  });
 });
 
 describe('meters en prijzen in de app', () => {
@@ -258,6 +283,8 @@ describe('meters en prijzen in de app', () => {
     expect(validateEnergy({ ...SETTINGS, zon: ['geen meter'] })).toMatchObject({ ok: false });
     expect(validateEnergy({ ...SETTINGS, prijzen: { stroom: 25 } })).toMatchObject({ ok: false });
     expect(validateEnergy({ ...SETTINGS, apparaten: [{ id: 'sensor.x', naam: '' }] })).toMatchObject({ ok: false });
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...SETTINGS.prijzen, contractStart: '2025-02-30' } })).toMatchObject({ ok: false });
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...SETTINGS.prijzen, contractStart: '2025-03-15' } })).toMatchObject({ ok: true, settings: { prijzen: { contractStart: '2025-03-15' } } });
     const dir = await mkdtemp(join(tmpdir(), 'hems-energie-'));
     const store = new EnergyStore(dir);
     expect(await store.load()).toBeNull();

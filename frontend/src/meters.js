@@ -29,6 +29,7 @@ function aanvullen(c) {
   p.dalUren ??= 'nl';
   p.vanaf2027 ??= { vergoeding: null, kosten: null };
   p.vast ??= [];
+  p.contractStart ??= null;
   // De oude vaste kosten per maand worden een post.
   if (p.vastPerMaand != null && !p.vast.length) p.vast.push({ naam: 'Vaste kosten', bedrag: p.vastPerMaand, per: 'maand', soort: 'stroom' });
   p.vastPerMaand = null;
@@ -159,6 +160,8 @@ function vasteKosten() {
   const erbij = VOORSTELLEN.filter((x) => !posten.some((v) => v.naam.toLowerCase() === x.naam.toLowerCase()));
   return `<section class="glas vraag">
     <h2 class="kop-3">Vaste kosten</h2>
+    <label class="veldnaam">Startdatum contract<input class="invoer" type="date" data-contract value="${esc(concept.prijzen.contractStart ?? '')}" min="2000-01-01" max="2100-12-31"></label>
+    <p class="mini">Het jaar in Opbrengst loopt vanaf deze dag, zoals je jaarafrekening. Leeg is vanaf 1 januari.</p>
     ${rijen || '<p class="uitleg">Nog geen vaste posten.</p>'}
     <div class="meterchips">${erbij.map((x) => `<button type="button" data-vast-erbij="${esc(x.naam)}">+ ${esc(x.naam)}</button>`).join('')}<button type="button" data-vast-erbij="">+ Andere post</button></div>
     <p class="mini">Zoals op je contract: per dag, maand of jaar, met btw. Een aftrek, zoals de vermindering energiebelasting, telt de app als min.</p>
@@ -330,6 +333,9 @@ document.addEventListener('change', (e) => {
     const [a, b] = t.dataset.prijs.split('.');
     if (b) p[a][b] = v;
     else p[a] = v;
+    veranderd();
+  } else if (t.hasAttribute('data-contract')) {
+    p.contractStart = /^\d{4}-\d{2}-\d{2}$/.test(t.value) ? t.value : null;
     veranderd();
   } else if (t.dataset.vast) {
     const post = p.vast[Number(t.dataset.i)];

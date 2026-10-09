@@ -154,8 +154,31 @@ interface Range {
   readonly prevName: string;
 }
 
+/** Maand en dag waarop het jaar begint: de startdatum van het contract, of 1 januari (besluit 116). */
+export interface YearStart {
+  readonly m: number;
+  readonly d: number;
+}
+
+/** Leest de startdatum van het contract; zonder datum 1 januari. Een 29 februari wordt 1 maart. */
+export function yearStartOf(contractStart: string | null | undefined): YearStart {
+  const p = contractStart ? parseDate(contractStart) : null;
+  if (!p) return { m: 1, d: 1 };
+  return p.m === 2 && p.d === 29 ? { m: 3, d: 1 } : { m: p.m, d: p.d };
+}
+
+/** Het jaar (van het contract) waarin een datum valt: het beginjaar. */
+function yearOf(p: { y: number; m: number; d: number }, start: YearStart): number {
+  return p.m > start.m || (p.m === start.m && p.d >= start.d) ? p.y : p.y - 1;
+}
+
+/** "2026" bij een kalenderjaar, anders "2026/27". */
+function yearName(y: number, start: YearStart): string {
+  return start.m === 1 && start.d === 1 ? String(y) : `${y}/${String((y + 1) % 100).padStart(2, '0')}`;
+}
+
 /** De periode rond een datum, in de tijdzone van het huis. */
-export function periodRange(kind: PeriodKind, date: string, tz: string): Range | null {
+export function periodRange(kind: PeriodKind, date: string, tz: string, start: YearStart = { m: 1, d: 1 }): Range | null {
   const p = parseDate(date);
   if (!p) return null;
   const { y, m, d } = p;
@@ -199,14 +222,18 @@ export function periodRange(kind: PeriodKind, date: string, tz: string): Range |
       prevName: MONTHS[(m + 10) % 12]!,
     };
   }
+  // Een jaar: een kalenderjaar, of een contractjaar vanaf de startdatum.
+  const j = yearOf(p, start);
+  const kalender = start.m === 1 && start.d === 1;
+  const eind = new Date(Date.UTC(j + 1, start.m - 1, start.d - 1));
   return {
-    startMs: zonedMidnight(y, 1, 1, tz),
-    endMs: zonedMidnight(y + 1, 1, 1, tz),
-    first: { y, m: 1, d: 1 },
-    prev: iso(y - 1, 1, 1),
-    next: iso(y + 1, 1, 1),
-    label: String(y),
-    prevName: String(y - 1),
+    startMs: zonedMidnight(j, start.m, start.d, tz),
+    endMs: zonedMidnight(j + 1, start.m, start.d, tz),
+    first: { y: j, m: start.m, d: start.d },
+    prev: iso(j - 1, start.m, start.d),
+    next: iso(j + 1, start.m, start.d),
+    label: kalender ? String(j) : `${start.d} ${MONTHS[start.m - 1]} ${j} – ${eind.getUTCDate()} ${MONTHS[eind.getUTCMonth()]} ${eind.getUTCFullYear()}`,
+    prevName: kalender ? String(j - 1) : yearName(j - 1, start),
   };
 }
 
@@ -280,7 +307,7 @@ export async function yieldReport(
   tz: string,
   nowMs: number,
 ): Promise<YieldReport | null> {
-  const range = periodRange(kind, date, tz);
+  const range = periodRange(kind, date, tz, yearStartOf(settings.prijzen.contractStart));
   if (!range) return null;
   const s = settings;
   const deviceIds = s.apparaten.map((a) => a.id);
@@ -451,7 +478,9 @@ function deltaOf(series: readonly YieldComparePoint[]): YieldDelta {
 /** De vakken van de grafiek, in volgorde. */
 function bucketLabels(kind: PeriodKind, range: Range, tz: string): string[] {
   if (kind === 'dag') return Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
-  if (kind === 'jaar') return [...SHORT_MONTHS];
+  // Een contractjaar begint bij zijn eigen maand; een maand die het jaar in
+  // tweeën deelt, is één vak.
+  if (kind === 'jaar') return Array.from({ length: 12 }, (_, i) => SHORT_MONTHS[(range.first.m - 1 + i) % 12]!);
   // Per dag één vak. Een maand met de wintertijd erin is een uur langer; in
   // stappen van 24 uur leverde dat een 32e vak op, met de naam van de eerste dag.
   const out: string[] = [];
@@ -476,7 +505,7 @@ async function compareSeries(source: EnergySource, s: EnergySettings, kind: Peri
     if (kind === 'dag') starts.push({ ms: zonedMidnight(y, m, d - i, tz), label: String(new Date(Date.UTC(y, m - 1, d - i)).getUTCDate()) });
     else if (kind === 'week') starts.push({ ms: zonedMidnight(y, m, d - 7 * i, tz), label: `wk ${weekOf(y, m, d - 7 * i).week}` });
     else if (kind === 'maand') starts.push({ ms: zonedMidnight(y, m - i, 1, tz), label: SHORT_MONTHS[(((m - 1 - i) % 12) + 12) % 12]! });
-    else starts.push({ ms: zonedMidnight(y - i, 1, 1, tz), label: String(y - i) });
+    else starts.push({ ms: zonedMidnight(y - i, m, d, tz), label: yearName(y - i, { m, d }) });
   }
   const yearBack = (ms: number) => {
     const p = partsIn(ms + 3 * 3_600_000, tz);

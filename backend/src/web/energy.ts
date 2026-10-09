@@ -295,6 +295,16 @@ export function validateEnergy(body: unknown): EnergyCheck {
   const terugKosten = bedrag('vanaf2027.kosten', na['kosten'], 10);
   if (typeof vergoeding === 'string') return { ok: false, reden: vergoeding };
   if (typeof terugKosten === 'string') return { ok: false, reden: terugKosten };
+  const startRaw = p['contractStart'] ?? null;
+  let contractStart: string | null = null;
+  if (startRaw !== null) {
+    const m = typeof startRaw === 'string' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(startRaw) : null;
+    const t = m ? new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))) : null;
+    if (!m || !t || t.getUTCMonth() !== Number(m[2]) - 1 || t.getUTCDate() !== Number(m[3]) || Number(m[1]) < 2000 || Number(m[1]) > 2100) {
+      return { ok: false, reden: 'prijzen.contractStart is een datum als 2025-03-15, of null' };
+    }
+    contractStart = startRaw as string;
+  }
   const vastRaw = p['vast'] ?? [];
   if (!Array.isArray(vastRaw) || vastRaw.length > 20) return { ok: false, reden: 'prijzen.vast is een lijst van hooguit 20 posten' };
   const vast: VastePost[] = [];
@@ -314,6 +324,7 @@ export function validateEnergy(body: unknown): EnergyCheck {
     dalUren: dalUren as DalRegio,
     vanaf2027: { vergoeding, kosten: terugKosten },
     vast,
+    contractStart,
   };
   const bron = body['bron'] === 'home-assistant' ? 'home-assistant' : 'zelf';
   return { ok: true, settings: { versie: 1, bron, net: { afname, teruglevering: terug, ...(dal ? { dal } : {}) }, zon, gas, apparaten, prijzen } };

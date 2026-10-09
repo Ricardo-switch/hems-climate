@@ -70,7 +70,7 @@ function cijfers(r, klein = false) {
   const gas = r.gas ? `<div class="cijfer"><div class="mini">Gas</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';
   if (klein) {
     const blok = (naam, waarde, onder) => `<div class="glas-klein"><span class="mini">${naam}</span><span class="getal">${waarde}</span><span class="mini">${onder}</span></div>`;
-    return `<div class="drie">${blok('Stroom', getal(s.verbruikKwh), 'kWh')}${k.totaal == null ? '' : blok('Kosten', `€ ${nl(k.totaal, 0)}`, k.vorige != null ? `${esc(r.periode.vorigeNaam.slice(0, 4))}. € ${nl(k.vorige, 0)}` : '')}${r.gas ? blok('Gas', getal(r.gas.m3), 'm³') : ''}</div>`;
+    return `<div class="drie">${blok('Stroom', getal(s.verbruikKwh), 'kWh')}${k.totaal == null ? '' : blok('Kosten', `€ ${nl(k.totaal, 0)}`, k.vorige != null ? `${esc(/^\d/.test(r.periode.vorigeNaam) ? r.periode.vorigeNaam : `${r.periode.vorigeNaam.slice(0, 4)}.`)} € ${nl(k.vorige, 0)}` : '')}${r.gas ? blok('Gas', getal(r.gas.m3), 'm³') : ''}</div>`;
   }
   return `${stroom}${kosten}${gas}`;
 }

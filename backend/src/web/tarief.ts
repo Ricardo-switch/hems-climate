@@ -40,6 +40,12 @@ export interface Tarieven {
   readonly gas: number | null;
   /** De vaste posten van het contract. */
   readonly vast?: readonly VastePost[];
+  /**
+   * De startdatum van het contract, "2025-03-15" (besluit 116). Het jaar van
+   * Opbrengst en de jaarafrekening lopen dan van die dag tot dezelfde dag een
+   * jaar later; zonder datum is het een kalenderjaar.
+   */
+  readonly contractStart?: string | null;
   /** Oud: alle vaste kosten samen per maand. Geldt alleen zolang er geen vaste posten zijn. */
   readonly vastPerMaand: number | null;
 }
