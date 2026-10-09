@@ -196,7 +196,8 @@ function tekenPodium(d) {
   // Buiten tekent de begane grond met de oprit en de tuin eromheen, zoals de kamer dat doet.
   const etage = keuze.etage === 'buiten' ? 'bg' : keuze.etage;
   const binnen = d.kamers.filter((k) => k.etage === etage && !alleBuiten(k));
-  const metBuiten = etage === 'bg';
+  // Buiten toont de begane grond met wat eromheen ligt; de begane grond zelf, ingezoomd, zonder.
+  const metBuiten = keuze.etage === 'buiten';
   const { oprit, tuin } = metBuiten ? huismodel.buiten(d.kamers.filter(alleBuiten).map(ruimte)) : {};
   for (const b of [oprit, tuin]) if (b) b.gekozen = b.id === keuze.kamer || b.id === sleepDoel;
   // Bij het indelen alleen de naam en de temperatuur: geen zin over wat de kamer doet.

@@ -84,3 +84,11 @@ select.invoer option, select.invoer optgroup { background: #13203a; color: var(-
 /* Zonder verbinding (besluit 82): de laatste stand, grijs, en niets om op te drukken. */
 body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); opacity: 0.7; pointer-events: none; }
 .geenverbinding { position: fixed; z-index: 900; left: 50%; top: 14px; transform: translateX(-50%); max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 14px; background: rgba(20, 28, 44, 0.95); border: 1px solid rgba(247, 181, 72, 0.5); color: var(--tekst); font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+/* Meters en prijzen (besluit 110): vaste posten en het tarief per meter. */
+.vastrij { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.vastrij:first-of-type { border-top: 0; }
+.vastregel { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; }
+.vastregel select.invoer { width: auto; padding: 0 8px; }
+.vastregel .knop { height: 44px; padding: 0 14px; }
+.meterchip { display: inline-flex; gap: 2px; }
+.tariefknop { height: 32px; padding: 0 10px; border-radius: 999px; border: 1px dashed rgba(111, 211, 255, 0.6) !important; background: transparent !important; color: var(--ijs) !important; font-size: 12px !important; font-weight: 700; }

@@ -14,6 +14,8 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+import { raadDal, type DalRegio, type Tarieven, type VastePost } from './tarief.js';
+
 export const ENERGY_FILE = 'energie.json';
 
 export interface EnergyDevice {
@@ -22,22 +24,18 @@ export interface EnergyDevice {
   readonly naam: string;
 }
 
-export interface EnergyPrices {
-  /** Euro per kWh van het net. */
-  readonly stroom: number | null;
-  /** Euro per kWh terug; null is "zoals stroom", zolang er gesaldeerd wordt. */
-  readonly teruglevering: number | null;
-  /** Euro per m³ gas. */
-  readonly gas: number | null;
-  /** Vaste kosten per maand, stroom en gas samen. */
-  readonly vastPerMaand: number | null;
-}
+/** Wat stroom en gas kosten, zoals het contract het zegt (besluit 110, `tarief.ts`). */
+export type EnergyPrices = Tarieven;
 
 export interface EnergySettings {
   readonly versie: 1;
   /** Overgenomen uit Home Assistant, of zelf ingesteld. */
   readonly bron: 'home-assistant' | 'zelf';
-  readonly net: { readonly afname: readonly string[]; readonly teruglevering: readonly string[] };
+  /**
+   * De meters van het net. `dal` zegt welke het daltarief tellen (tarief 1 van
+   * de slimme meter, besluit 110); zonder lijst raadt de dienst het aan de naam.
+   */
+  readonly net: { readonly afname: readonly string[]; readonly teruglevering: readonly string[]; readonly dal?: readonly string[] };
   readonly zon: readonly string[];
   readonly gas: string | null;
   readonly apparaten: readonly EnergyDevice[];
@@ -175,7 +173,8 @@ export function importFromPrefs(
   return {
     versie: 1,
     bron: 'home-assistant',
-    net: { afname, teruglevering: terug },
+    // Welke meters het daltarief tellen: tarief 1 van de slimme meter.
+    net: { afname, teruglevering: terug, dal: [...afname, ...terug].filter(raadDal) },
     zon,
     gas,
     apparaten,
@@ -268,16 +267,56 @@ export function validateEnergy(body: unknown): EnergyCheck {
     if (!id || !naam || naam.length > 40) return { ok: false, reden: 'een apparaat heeft een meter en een naam van hooguit 40 tekens' };
     if (!apparaten.some((a) => a.id === id)) apparaten.push({ id, naam });
   }
-  const p = isRecord(body['prijzen']) ? body['prijzen'] : {};
-  const prijzen: Record<keyof EnergyPrices, number | null> = { stroom: null, teruglevering: null, gas: null, vastPerMaand: null };
-  for (const k of Object.keys(prijzen) as (keyof EnergyPrices)[]) {
-    const v = p[k] ?? null;
-    const max = k === 'vastPerMaand' ? 500 : 10;
-    if (v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > max)) return { ok: false, reden: `prijzen.${k} is een bedrag van 0 tot ${max} euro, of null` };
-    prijzen[k] = v === null ? null : Math.round(v * 100_000) / 100_000;
+  // Welke meters het daltarief tellen; alleen meters van het net.
+  const dalRaw = net['dal'];
+  let dal: string[] | undefined;
+  if (dalRaw !== undefined) {
+    const d = ids(dalRaw, 'net.dal');
+    if (typeof d === 'string') return { ok: false, reden: d };
+    if (d.some((id) => !afname.includes(id) && !terug.includes(id))) return { ok: false, reden: 'net.dal noemt een meter die niet bij het net staat' };
+    dal = d;
   }
+  const p = isRecord(body['prijzen']) ? body['prijzen'] : {};
+  const bedrag = (k: string, v: unknown, max: number): number | null | string => {
+    if (v === undefined || v === null) return null;
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > max) return `prijzen.${k} is een bedrag van 0 tot ${max} euro, of null`;
+    return Math.round(v * 100_000) / 100_000;
+  };
+  const enkel: Record<'stroom' | 'stroomDal' | 'teruglevering' | 'gas' | 'vastPerMaand', number | null> = { stroom: null, stroomDal: null, teruglevering: null, gas: null, vastPerMaand: null };
+  for (const k of Object.keys(enkel) as (keyof typeof enkel)[]) {
+    const v = bedrag(k, p[k], k === 'vastPerMaand' ? 500 : 10);
+    if (typeof v === 'string') return { ok: false, reden: v };
+    enkel[k] = v;
+  }
+  const dalUren = p['dalUren'] ?? 'nl';
+  if (dalUren !== 'nl' && dalUren !== 'zuid') return { ok: false, reden: 'prijzen.dalUren is nl of zuid' };
+  const na = isRecord(p['vanaf2027']) ? p['vanaf2027'] : {};
+  const vergoeding = bedrag('vanaf2027.vergoeding', na['vergoeding'], 10);
+  const terugKosten = bedrag('vanaf2027.kosten', na['kosten'], 10);
+  if (typeof vergoeding === 'string') return { ok: false, reden: vergoeding };
+  if (typeof terugKosten === 'string') return { ok: false, reden: terugKosten };
+  const vastRaw = p['vast'] ?? [];
+  if (!Array.isArray(vastRaw) || vastRaw.length > 20) return { ok: false, reden: 'prijzen.vast is een lijst van hooguit 20 posten' };
+  const vast: VastePost[] = [];
+  for (const x of vastRaw) {
+    const naam = isRecord(x) && typeof x['naam'] === 'string' ? x['naam'].trim().replace(/\s+/g, ' ') : '';
+    const b = isRecord(x) ? x['bedrag'] : null;
+    const per = isRecord(x) ? x['per'] : null;
+    const soort = isRecord(x) ? x['soort'] : null;
+    if (!naam || naam.length > 40) return { ok: false, reden: 'een vaste post heeft een naam van hooguit 40 tekens' };
+    if (typeof b !== 'number' || !Number.isFinite(b) || Math.abs(b) > 5000) return { ok: false, reden: `vaste post ${naam}: het bedrag is van -5000 tot 5000 euro` };
+    if (per !== 'dag' && per !== 'maand' && per !== 'jaar') return { ok: false, reden: `vaste post ${naam}: per dag, maand of jaar` };
+    if (soort !== 'stroom' && soort !== 'gas') return { ok: false, reden: `vaste post ${naam}: stroom of gas` };
+    vast.push({ naam, bedrag: Math.round(b * 100_000) / 100_000, per, soort });
+  }
+  const prijzen: EnergyPrices = {
+    ...enkel,
+    dalUren: dalUren as DalRegio,
+    vanaf2027: { vergoeding, kosten: terugKosten },
+    vast,
+  };
   const bron = body['bron'] === 'home-assistant' ? 'home-assistant' : 'zelf';
-  return { ok: true, settings: { versie: 1, bron, net: { afname, teruglevering: terug }, zon, gas, apparaten, prijzen } };
+  return { ok: true, settings: { versie: 1, bron, net: { afname, teruglevering: terug, ...(dal ? { dal } : {}) }, zon, gas, apparaten, prijzen } };
 }
 
 export type EnergySaveResult = { readonly ok: true; readonly settings: EnergySettings } | { readonly ok: false; readonly status: number; readonly reden: string };

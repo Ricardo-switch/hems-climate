@@ -106,7 +106,7 @@ describe('een dag terugkijken', () => {
       ['Vaste kosten', null],
     ]);
     expect(r.kosten.totaal).toBe(0.21);
-    expect(r.kosten.regels.map((x) => x.uitleg)).toEqual(['6,8 kWh × € 0,25', '7 kWh, gesaldeerd tot 2027', '0,2 m³ × € 1,30', 'nog niet ingesteld']);
+    expect(r.kosten.regels.map((x) => x.uitleg)).toEqual(['6,8 kWh × € 0,25', '7 kWh, gesaldeerd tegen je stroomprijs', '0,2 m³ × € 1,30', 'nog niet ingesteld']);
   });
 
   it('zonder zonnepanelen geen zon, en alles van het net', async () => {
@@ -172,7 +172,12 @@ describe('meters en prijzen in de app', () => {
     expect(s).toEqual({
       versie: 1,
       bron: 'home-assistant',
-      net: { afname: ['sensor.p1_meter_energy_import_tariff_1', 'sensor.p1_meter_energy_import_tariff_2'], teruglevering: ['sensor.p1_meter_energy_export_tariff_1'] },
+      net: {
+        afname: ['sensor.p1_meter_energy_import_tariff_1', 'sensor.p1_meter_energy_import_tariff_2'],
+        teruglevering: ['sensor.p1_meter_energy_export_tariff_1'],
+        // Tarief 1 van de slimme meter is het daltarief (besluit 110).
+        dal: ['sensor.p1_meter_energy_import_tariff_1', 'sensor.p1_meter_energy_export_tariff_1'],
+      },
       zon: ['sensor.solaredge_lifetime_energy'],
       gas: 'sensor.gas_meter_gas',
       apparaten: [
@@ -235,6 +240,7 @@ describe('meters en prijzen in de app', () => {
     expect(s.net).toEqual({
       afname: ['sensor.p1_meter_energy_import_tariff_2', 'sensor.p1_meter_energy_import_tariff_1'],
       teruglevering: ['sensor.p1_meter_energy_export_tariff_1', 'sensor.p1_meter_energy_export_tariff_2'],
+      dal: ['sensor.p1_meter_energy_import_tariff_1', 'sensor.p1_meter_energy_export_tariff_1'],
     });
     expect(s.prijzen).toEqual({ stroom: 0.27, teruglevering: 0.07, gas: null, vastPerMaand: null });
     const why = pricesInPrefs(p);
@@ -255,9 +261,10 @@ describe('meters en prijzen in de app', () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-energie-'));
     const store = new EnergyStore(dir);
     expect(await store.load()).toBeNull();
-    expect(await store.save(SETTINGS)).toEqual({ ok: true, settings: SETTINGS });
+    const saved = await store.save(SETTINGS);
+    expect(saved).toMatchObject({ ok: true, settings: { ...SETTINGS, prijzen: SETTINGS.prijzen } });
     const again = new EnergyStore(dir);
-    expect(await again.load()).toEqual(SETTINGS);
+    expect(await again.load()).toEqual(saved.ok ? saved.settings : null);
   });
 
   it('leest uit Home Assistant alleen wat op de lijst staat, en geeft nergens anders velden aan mee', async () => {

@@ -448,9 +448,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       ['Past hierbij', ['Tv energie']],
       ['Andere meters', ['P1 import totaal']],
     ]);
+    // De prijzen zoals op een contract (besluit 110): normaal en dal, en een vaste post per jaar.
+    await wand.locator('[data-kies="tarief"]', { hasText: 'Normaal en dal' }).click();
+    await wand.locator('[data-prijs="stroomDal"]').waitFor();
+    await wand.locator('[data-prijs="stroom"]').fill('0.27142');
+    await wand.locator('[data-prijs="stroomDal"]').fill('0.269');
+    await wand.locator('[data-prijs="stroomDal"]').press('Tab');
+    await wand.locator('[data-vast-erbij]', { hasText: 'Vermindering energiebelasting' }).click();
+    await wand.locator('[data-vast="bedrag"]').last().fill('628.96');
+    await wand.locator('[data-vast="per"]').last().selectOption('jaar');
     await wand.locator('[data-opslaan]').click();
     await wand.locator('[data-melding]', { hasText: 'Bewaard' }).waitFor();
     expect(energyStore.current?.zon).toEqual(['sensor.zon']);
+    expect(energyStore.current?.prijzen).toMatchObject({ stroom: 0.27142, stroomDal: 0.269, vast: [{ naam: 'Vermindering energiebelasting', bedrag: -628.96, per: 'jaar', soort: 'stroom' }] });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

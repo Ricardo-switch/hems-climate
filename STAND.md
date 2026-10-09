@@ -150,6 +150,9 @@ verwijzing bestaat.
 - **Wat per huis verschilt, is een instelling** die de app wegschrijft, met een
   voorstel uit Home Assistant. Camera's en de deurbel eerst; de rest staat in
   `docs/universeel.md` ([109]).
+- **Prijzen zoals op het contract:** normaal en dal (de meter zegt welk tarief),
+  salderen tot 2027 en daarna een vergoeding min kosten, en vaste posten per dag,
+  maand of jaar ([110]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -308,4 +311,5 @@ verwijzing bestaat.
 [107]: DECISIONS.md#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm
 [108]: DECISIONS.md#108-https-in-het-tailnet-met-tailscale-serve
 [109]: DECISIONS.md#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst
+[110]: DECISIONS.md#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten
 <!-- links:einde -->

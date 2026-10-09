@@ -137,13 +137,14 @@ function tekenNu() {
 }
 
 function tekenPodium(etage, kamer) {
-  // De laagste etage met kamers binnen is de begane grond: daar horen de oprit en de tuin bij.
-  // Is de gekozen ruimte zelf buiten, dan toont de pagina die begane grond met de buitenruimte gekozen.
+  // De laagste etage met kamers binnen is de begane grond. Is de gekozen ruimte buiten, dan
+  // toont de pagina die begane grond met de oprit en de tuin eromheen; kies je een kamer
+  // binnen, dan zoomt hij in op de etage zelf, zonder buiten.
   const alle = huisData.etages ?? [];
   const laagste = [...alle].reverse().find((e) => (e.ruimtes ?? []).some((r) => !huismodel.isBuiten(e, r))) ?? etage;
   const toon = huismodel.isBuiten(etage, kamer) ? laagste : etage;
   const binnen = toon.ruimtes.filter((r) => !huismodel.isBuiten(toon, r));
-  const buitenRuimtes = toon === laagste ? alle.flatMap((e) => (e.ruimtes ?? []).filter((r) => huismodel.isBuiten(e, r))) : [];
+  const buitenRuimtes = huismodel.isBuiten(etage, kamer) ? alle.flatMap((e) => (e.ruimtes ?? []).filter((r) => huismodel.isBuiten(e, r))) : [];
   const { oprit, tuin } = huismodel.buiten(buitenRuimtes);
   if (oprit) oprit.gekozen = oprit.id === kamer.id;
   if (tuin) tuin.gekozen = tuin.id === kamer.id;

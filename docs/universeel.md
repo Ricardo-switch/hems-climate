@@ -73,8 +73,9 @@ hier een voorstel voor.
    nakijken, en eerlijk zeggen wat niet wordt ondersteund.
 6. **Aansluiting en regels.** De hoofdzekering kent alleen 1 × 25, 1 × 35 en
    3 × 25 A; daar horen ook 1 × 40, 3 × 35, 3 × 40 en een eigen waarde bij.
-   Salderen tot 2027 en prijzen in euro zijn Nederlandse regels; die worden een
-   instelling per land.
+   De prijzen volgen sinds besluit 110 een Nederlands contract (normaal en dal,
+   salderen tot 2027, vaste posten); de daltijden en het salderen zijn
+   Nederlandse regels en worden een instelling per land.
 7. **Taal.** Alles is Nederlands, ook de woordenlijst waarmee de assistent
    kamers en apparaten herkent. Tweetalig staat in besluit 86, en is nog niet
    gebouwd.

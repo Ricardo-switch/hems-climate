@@ -20,6 +20,7 @@
  * De pagina tekent; rekenen gebeurt hier (besluit 94).
  */
 
+import { SALDEREN_TOT_MS, dalAandeel, kostenVan, raadDal, type Gebruik } from './tarief.js';
 import type { EnergySettings, EnergySource } from './energy.js';
 import { partsIn, zonedMidnight } from './today.js';
 
@@ -228,12 +229,47 @@ function bucketKey(kind: PeriodKind, ms: number, tz: string): string {
   return kind === 'week' ? DAYS[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()]!.slice(0, 2) : String(p.d);
 }
 
-/** Wat stroom en gas samen kosten in een periode, met de prijzen van nu. */
-function costOf(s: EnergySettings, netKwh: number, terugKwh: number, gasM3: number): number | null {
+/**
+ * Welke meters van het net het daltarief tellen (besluit 110): wat de bewoner
+ * koos, of geraden aan de naam (tarief 1 van de slimme meter). Telt het net
+ * niet per tarief, dan verdeelt de dienst op de tijden van het daltarief.
+ */
+function tariefMeters(s: EnergySettings): { dal: Set<string>; perMeter: boolean } {
+  const dal = new Set(s.net.dal ?? [...s.net.afname, ...s.net.teruglevering].filter(raadDal));
+  const perMeter = s.net.afname.some((id) => dal.has(id)) && s.net.afname.some((id) => !dal.has(id));
+  return { dal, perMeter };
+}
+
+/** Het gebruik in [van, tot) verdeeld over normaal, dal en na het salderen. */
+function verdeel(
+  s: EnergySettings,
+  af: number,
+  afDal: number | null,
+  terug: number,
+  terugDal: number | null,
+  van: number,
+  tot: number,
+  tz: string,
+): Pick<Gebruik, 'afNormaal' | 'afDal' | 'terugNormaal' | 'terugDal' | 'terugNa'> {
+  const p = s.prijzen;
+  let ad = 0;
+  let td = 0;
+  if (p.stroomDal != null) {
+    // De meter zegt het; anders de tijden van het daltarief.
+    const deel = afDal == null ? dalAandeel(van, tot, tz, p.dalUren ?? 'nl') : 0;
+    ad = afDal ?? af * deel;
+    td = terugDal ?? terug * deel;
+  }
+  const na = van >= SALDEREN_TOT_MS;
+  return { afNormaal: af - ad, afDal: ad, terugNormaal: na ? 0 : terug - td, terugDal: na ? 0 : td, terugNa: na ? terug : 0 };
+}
+
+/** Wat stroom en gas samen kosten in een periode, de vaste posten erbij. */
+function costOf(s: EnergySettings, g: Gebruik): number | null {
   const p = s.prijzen;
   if (p.stroom == null && p.gas == null) return null;
-  const terugPrijs = p.teruglevering ?? p.stroom ?? 0;
-  return r2((p.stroom ?? 0) * netKwh - terugPrijs * terugKwh + (p.gas ?? 0) * gasM3);
+  const k = kostenVan(p, g, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null });
+  return k.variabel == null ? null : r2(k.variabel + (k.vast ?? 0));
 }
 
 export async function yieldReport(
@@ -255,6 +291,12 @@ export async function yieldReport(
   const rows = await source.changes(all, range.startMs, range.endMs, fine);
   const afname = sumBy(rows, s.net.afname);
   const terug = sumBy(rows, s.net.teruglevering);
+  // Normaal en dal (besluit 110): per meter als het net per tarief telt.
+  const tm = tariefMeters(s);
+  const afnameDal = tm.perMeter ? sumBy(rows, s.net.afname.filter((id) => tm.dal.has(id))) : null;
+  const terugDal = tm.perMeter ? sumBy(rows, s.net.teruglevering.filter((id) => tm.dal.has(id))) : null;
+  const stap = fine === 'hour' ? 3_600_000 : 86_400_000;
+  const gebruik = { afNormaal: 0, afDal: 0, terugNormaal: 0, terugDal: 0, terugNa: 0 };
   const zon = sumBy(rows, s.zon);
   const gas = s.gas ? sumBy(rows, [s.gas]) : new Map<number, number>();
   const hasSun = s.zon.length > 0;
@@ -269,6 +311,8 @@ export async function yieldReport(
   for (const t of times) {
     const a = afname.get(t) ?? 0;
     const tr = terug.get(t) ?? 0;
+    const v = verdeel(s, a, afnameDal ? (afnameDal.get(t) ?? 0) : null, tr, terugDal ? (terugDal.get(t) ?? 0) : null, t, t + stap, tz);
+    for (const k of Object.keys(gebruik) as (keyof typeof gebruik)[]) gebruik[k] += v[k];
     const self = hasSun ? Math.max(0, (zon.get(t) ?? 0) - tr) : 0;
     const use = a + self;
     const share = use > 0 ? self / use : 0;
@@ -298,7 +342,11 @@ export async function yieldReport(
   const zonKwh = total(zon);
   const gasM3 = total(gas);
   const use = afnameKwh + selfTotal;
-  const stroomPrijs = s.prijzen.stroom;
+  // De kosten (besluit 110): normaal en dal, salderen of niet, de vaste posten
+  // over de dagen die er al waren.
+  const dagen = (Math.min(range.endMs, nowMs) - range.startMs) / 86_400_000;
+  const kosten = kostenVan(s.prijzen, { ...gebruik, gasM3, dagen: Math.max(0, dagen), heelJaar: kind === 'jaar' }, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null });
+  const stroomPrijs = kosten.stroomPerKwh;
 
   // Vakken in de grafiek: ook de lege, zodat een dag zonder meting een gat is.
   const perBucket = bucketLabels(kind, range, tz).map((label) => {
@@ -345,21 +393,9 @@ export async function yieldReport(
   const prevPoint = vergelijk.stroom.at(-2);
   const prev = (series: readonly YieldComparePoint[]) => series.at(-2)?.nu ?? null;
 
-  const regels: { naam: string; uitleg: string; euro: number | null }[] = [];
   const p = s.prijzen;
-  const eur = (n: number) => `€ ${n.toFixed(2).replace('.', ',')}`;
-  // In de zin met een komma, zoals de rest van de app.
-  const nlNum = (n: number) => String(n).replace('.', ',');
-  if (s.net.afname.length) regels.push({ naam: 'Stroom van het net', uitleg: p.stroom == null ? `${nlNum(r1(afnameKwh))} kWh, prijs nog niet ingesteld` : `${nlNum(r1(afnameKwh))} kWh × ${eur(p.stroom)}`, euro: p.stroom == null ? null : r2(afnameKwh * p.stroom) });
-  if (s.net.teruglevering.length) {
-    const tp = p.teruglevering ?? p.stroom;
-    const uitleg = p.teruglevering == null ? `${nlNum(r1(terugKwh))} kWh, gesaldeerd tot 2027` : `${nlNum(r1(terugKwh))} kWh × ${eur(p.teruglevering)}`;
-    regels.push({ naam: 'Teruggeleverd', uitleg, euro: tp == null ? null : -r2(terugKwh * tp) });
-  }
-  if (s.gas) regels.push({ naam: 'Gas', uitleg: p.gas == null ? `${nlNum(r2(gasM3))} m³, prijs nog niet ingesteld` : `${nlNum(r2(gasM3))} m³ × ${eur(p.gas)}`, euro: p.gas == null ? null : r2(gasM3 * p.gas) });
-  const months = (range.endMs - range.startMs) / (30.44 * 86_400_000);
-  regels.push({ naam: 'Vaste kosten', uitleg: p.vastPerMaand == null ? 'nog niet ingesteld' : `${eur(p.vastPerMaand)} per maand`, euro: p.vastPerMaand == null ? null : r2(p.vastPerMaand * months) });
-  const variable = costOf(s, afnameKwh, terugKwh, gasM3);
+  const regels = kosten.regels;
+  const variable = kosten.variabel == null ? null : r2(kosten.variabel + (kosten.vast ?? 0));
 
   return {
     periode: {
@@ -451,6 +487,8 @@ async function compareSeries(source: EnergySource, s: EnergySettings, kind: Peri
   const from = kind === 'jaar' ? starts[0]!.ms : yearBack(starts[0]!.ms);
   const rows = await source.changes(ids, from, range.endMs, period);
   const sums = { afname: sumBy(rows, s.net.afname), terug: sumBy(rows, s.net.teruglevering), zon: sumBy(rows, s.zon), gas: s.gas ? sumBy(rows, [s.gas]) : new Map<number, number>() };
+  const tm = tariefMeters(s);
+  const dalSums = tm.perMeter ? { afname: sumBy(rows, s.net.afname.filter((id) => tm.dal.has(id))), terug: sumBy(rows, s.net.teruglevering.filter((id) => tm.dal.has(id))) } : null;
 
   /** Optellen over [van, tot): een maand is één rij, een jaar twaalf. */
   const between = (map: Map<number, number>, a: number, b: number): number | null => {
@@ -470,11 +508,12 @@ async function compareSeries(source: EnergySource, s: EnergySettings, kind: Peri
     const zo = between(sums.zon, a, b);
     const ga = between(sums.gas, a, b);
     const self = zo == null ? 0 : Math.max(0, zo - tr);
+    const v = verdeel(s, af ?? 0, dalSums ? (between(dalSums.afname, a, b) ?? 0) : null, tr, dalSums ? (between(dalSums.terug, a, b) ?? 0) : null, a, b, tz);
     return {
       stroom: af == null ? null : r1(af + self),
       zon: zo == null ? null : r1(zo),
       gas: ga == null ? null : r2(ga),
-      kosten: af == null && ga == null ? null : costOf(s, af ?? 0, tr, ga ?? 0),
+      kosten: af == null && ga == null ? null : costOf(s, { ...v, gasM3: ga ?? 0, dagen: (b - a) / 86_400_000, heelJaar: kind === 'jaar' }),
     };
   };
   const ends = [...starts.slice(1).map((x) => x.ms), range.endMs];

@@ -82,6 +82,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [95. Etage, kamer en zone: een vaste opbouw in de app, herkend uit Home Assistant](#95-etage-kamer-en-zone-een-vaste-opbouw-in-de-app-herkend-uit-home-assistant)
 - [103. De zon en je aansluiting: de app vraagt, de regeling vult aan waar de configuratie zwijgt](#103-de-zon-en-je-aansluiting-de-app-vraagt-de-regeling-vult-aan-waar-de-configuratie-zwijgt)
 - [109. Wat van dit huis is, wordt een instelling; camera's en de deurbel eerst](#109-wat-van-dit-huis-is-wordt-een-instelling-cameras-en-de-deurbel-eerst)
+- [110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten](#110-prijzen-zoals-op-het-contract-normaal-en-dal-salderen-vaste-posten)
 
 **Meten, data en analyse**
 
@@ -4829,6 +4830,44 @@ het dak ook zonder panelen. Gekozen op 8 oktober 2026.
   keuze doet de dienst een voorstel uit de naam, en de tekening volgt het.
 - **Wat nog op dit huis leunt,** en in welke volgorde het een instelling wordt,
   staat in `docs/universeel.md`.
+
+---
+
+## 110. Prijzen zoals op het contract: normaal en dal, salderen, vaste posten
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 9 oktober 2026 liet de bewoner zijn contract en jaarafrekening zien: een
+normaal- en een daltarief, vaste kosten per dag en per jaar (levering,
+netbeheer, de vermindering energiebelasting als aftrek, terugleverkosten), een
+vergoeding voor wat boven het verbruik wordt teruggeleverd, en andere bedragen
+vanaf 2027. De app kende één prijs per kWh en vaste kosten per maand. Gekozen
+op 9 oktober 2026.
+
+*Besluit:*
+
+- **De prijzen zoals het contract ze noemt** (`tarief.ts`): de totaalprijs per
+  kWh (met belasting en btw), normaal en dal of één tarief; gas per m³; en
+  vaste posten met een naam, een bedrag, per dag, maand of jaar, voor stroom of
+  gas. Een vermindering of korting telt als aftrek.
+- **Welke kWh dal is, zegt bij voorkeur de meter:** tarief 1 van de slimme meter
+  is het daltarief, tarief 2 normaal. De dienst raadt het aan de naam, de
+  bewoner kan het per meter omzetten. Telt het net niet per tarief, dan gelden
+  de tijden: op werkdagen van 23 tot 7 uur (in Noord-Brabant en Limburg vanaf
+  21 uur), en het weekend en de feestdagen.
+- **Teruglevering tot 2027:** salderen tegen het eigen tarief. Wat over een heel
+  jaar meer terugging dan er verbruikt werd, krijgt de vergoeding "boven
+  verbruik"; in een kortere periode is dat niet te weten en telt alles als
+  gesaldeerd. **Vanaf 1 januari 2027:** een vergoeding min terugleverkosten per
+  kWh, zonder salderen.
+- **De kosten in Opbrengst tellen de vaste posten mee,** over de dagen die al
+  voorbij zijn, net als de jaarafrekening. Per apparaat rekent Opbrengst met
+  wat een kWh van het net in die periode gemiddeld kostte.
+- **Wat een oudere instelling had, blijft gelden:** de vaste kosten per maand
+  worden in het scherm een post.
+
+*Nog niet:* een korting op de leveringskosten (zoals 7,5 % Thuisvoordeel), en
+een dynamisch contract met een prijs per uur (stap E).
 
 ---
 
