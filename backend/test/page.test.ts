@@ -981,7 +981,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const b = kamers.find((x) => x.etage === a.etage && x.id !== a.id && !/tuin|oprit/i.test(x.naam))!;
 
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
-    await p.locator('#wand [data-actie="kamernaam"]').waitFor();
+    await p.locator('#wand [data-actie="kamernaam"]').waitFor({ timeout: 10_000 });
     expect(await p.locator('#wand [data-etages] .etage[data-etage]').count()).toBe(4);
     // De wand scrolt niet.
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
@@ -989,48 +989,48 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Hernoemen, en ongedaan maken.
     await p.locator('#wand [data-actie="kamernaam"]').fill('Testkamer');
     await p.locator('#wand [data-actie="kamernaam"]').press('Tab');
-    await p.locator('#wand [data-status]', { hasText: 'Naam bewaard.' }).waitFor();
-    expect(layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam).toBe('Testkamer');
-    await p.locator('#wand [data-ongedaan]').click();
-    await p.locator('#wand [data-status]', { hasText: 'Teruggezet.' }).waitFor();
-    expect(layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam).toBe(a.naam);
+    // Wachten op wat bewaard is, niet op een melding die alweer weg kan zijn;
+    // en met een eigen grens, zodat een hapering zegt waar hij zat.
+    const kort = { timeout: 5000 };
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam, kort).toBe('Testkamer');
+    await p.locator('#wand [data-ongedaan]').click(kort);
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === a.id)?.naam, kort).toBe(a.naam);
 
     // Een apparaat uit het blad naar de andere kamer in het huis slepen.
     const rij = p.locator('#wand [data-blad] .app').first();
     const id = (await rij.getAttribute('data-app'))!;
     // Na "Ongedaan maken" tekent het blad zich opnieuw: wachten tot de rij stilstaat.
-    await rij.hover({ position: { x: 20, y: 10 } });
+    await rij.hover({ position: { x: 20, y: 10 }, ...kort });
     let van: { x: number; y: number; width: number; height: number } | null = null;
-    await expect.poll(async () => (van = await rij.boundingBox())).not.toBeNull();
+    await expect.poll(async () => (van = await rij.boundingBox()), kort).not.toBeNull();
     van = van!;
     const naar = (await p.locator(`#wand .sc-tik[data-kamer="${b.id}"]`).boundingBox())!;
     await p.mouse.down();
     await p.mouse.move(van.x - 40, van.y + 10, { steps: 4 });
     await p.mouse.move(naar.x + naar.width / 2, naar.y + naar.height / 2, { steps: 8 });
     await p.mouse.up();
-    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer).toBe(b.id);
-    await p.locator('#wand [data-status]', { hasText: 'staat nu in' }).waitFor();
+    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer, kort).toBe(b.id);
     // Na het neerzetten staat de andere kamer open.
-    expect(await p.locator('#wand [data-actie="kamernaam"]').inputValue()).toBe(b.naam);
-    await p.locator('#wand [data-ongedaan]').click();
-    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id).toBe(a.id);
+    await expect.poll(() => p.locator('#wand [data-actie="kamernaam"]').inputValue(), kort).toBe(b.naam);
+    await p.locator('#wand [data-ongedaan]').click(kort);
+    await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id, kort).toBe(a.id);
 
     // Een etage toevoegen, verschuiven en weer weghalen (besluit 112).
-    await p.locator('#wand [data-etage-erbij]').click();
-    await p.locator('#wand [data-etage-vast]', { hasText: 'Kelder' }).click();
-    await expect.poll(() => layoutStore.current?.volgorde?.at(-1)).toBe('kelder');
-    await p.locator('#wand .etage[aria-pressed="true"]', { hasText: 'Kelder' }).waitFor();
-    await p.locator('#wand [data-etage-schuif="-1"]').click();
-    await expect.poll(() => layoutStore.current?.volgorde?.at(-2)).toBe('kelder');
-    await p.locator('#wand [data-etage-weg]').click();
-    await expect.poll(() => layoutStore.current?.volgorde?.includes('kelder')).toBe(false);
+    await p.locator('#wand [data-etage-erbij]').click(kort);
+    await p.locator('#wand [data-etage-vast]', { hasText: 'Kelder' }).click(kort);
+    await expect.poll(() => layoutStore.current?.volgorde?.at(-1), kort).toBe('kelder');
+    await p.locator('#wand .etage[aria-pressed="true"]', { hasText: 'Kelder' }).waitFor(kort);
+    await p.locator('#wand [data-etage-schuif="-1"]').click(kort);
+    await expect.poll(() => layoutStore.current?.volgorde?.at(-2), kort).toBe('kelder');
+    await p.locator('#wand [data-etage-weg]').click(kort);
+    await expect.poll(() => layoutStore.current?.volgorde?.includes('kelder'), kort).toBe(false);
 
     // Een buitenruimte: kiezen wat het is (besluit 109).
     const tuin = (layoutStore.current?.kamers ?? kamers).find((k) => k.etage === 'buiten' && !/oprit/i.test(k.naam))!;
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(tuin.id)}`);
-    await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click();
-    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort).toBe('terras');
-    await p.locator('#wand [data-buiten="soort"][aria-pressed="true"]', { hasText: 'Terras' }).waitFor();
+    await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click(kort);
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort, kort).toBe('terras');
+    await p.locator('#wand [data-buiten="soort"][aria-pressed="true"]', { hasText: 'Terras' }).waitFor(kort);
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
