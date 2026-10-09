@@ -5097,8 +5097,20 @@ een eigen dienst met een eigen opslag; die kan HACS niet draaien.
 - **Zonder Supervisor** (Home Assistant in Docker of los) draait dezelfde image
   met een docker compose-bestand, zoals nu op de NAS.
 
-*Nog te kiezen:* of de broncode openbaar wordt, of alleen de bibliotheek en de
-images. En de naam van de bibliotheek.
+*De broncode wordt openbaar* (de bewoner, 9 oktober 2026): Home Assistant is
+open source, en Smart Climate wordt het ook. Voor het openbaar maken:
+
+- **Een schone start.** De geschiedenis van deze repository bevat dit huis: de
+  configuratie met namen en entiteiten, het logboek met besluiten over dit
+  huis, en exports uit Home Assistant die nooit gecommit mochten worden. De
+  openbare repository begint daarom met een schone geschiedenis, of deze wordt
+  eerst nagelopen en opgeschoond.
+- **Dit huis wordt een voorbeeld.** De configuratie van dit huis gaat eruit of
+  wordt een voorbeeldhuis zonder echte namen; alles wat per huis verschilt, staat
+  in de instellingen van de app (`docs/universeel.md`).
+- **Een licentie kiezen.** Home Assistant gebruikt Apache 2.0.
+
+*Nog te kiezen:* de licentie, en de naam van de bibliotheek.
 
 *Wanneer:* bij het product (H), na de winter, als het moment van echt schakelen
 er is (besluit 64) en de add-on weer de plek wordt om te regelen (53).
