@@ -5,7 +5,12 @@
  * huis met de kamer waar het over gaat.
  *
  * Het adres kan een vraag meegeven: `assistent.html#nu`, `#zon`, `#straks`,
- * `#waarom/zolder`. Zo stellen de knoppen op Thuis hun vraag meteen.
+ * `#waarom/zolder`. Zo stellen de knoppen op Thuis hun vraag meteen. Met
+ * `#typ` staat de cursor in het veld.
+ *
+ * Een vraag in eigen woorden (besluit 115) gaat als `v=vrij` naar de dienst;
+ * de woordzoeker daar maakt er een vaste vraag van, of antwoordt over de app
+ * met een knop naar de pagina.
  */
 'use strict';
 
@@ -49,12 +54,16 @@ async function vraag(v) {
   while (gesprek.length > 5) gesprek.shift();
   teken();
   try {
-    const q = new URLSearchParams({ v: v.soort, ...(v.kamer ? { kamer: v.kamer } : {}) });
+    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst } : { v: v.soort, ...(v.kamer ? { kamer: v.kamer } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json();
     item.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Geen antwoord.';
     item.kamerId = body.kamer ?? item.kamerId;
     item.feiten = body.feiten ?? [];
+    // Wat de woordzoeker ervan maakte: de grafiek hoort bij de vaste vraag.
+    if (v.soort === 'vrij' && res.ok) item.soort = body.vraag;
+    item.link = body.link ?? null;
+    item.voorbeelden = body.voorbeelden ?? [];
   } catch {
     item.antwoord = 'Geen verbinding met Smart Climate.';
   }
@@ -136,6 +145,7 @@ function tekenGesprek() {
             <p class="antwoord${kop.length > 90 ? ' lang' : ''}">${laatste.antwoord == null ? 'Even kijken…' : esc(kop)}</p>
             ${rest ? `<p class="uitleg">${esc(rest)}</p>` : ''}
             ${feiten ? `<div class="feiten" aria-label="Waar het antwoord op steunt">${feiten}</div>` : ''}
+            ${laatste.link || laatste.voorbeelden?.length ? `<div class="verder">${laatste.link ? `<a class="knop knop-licht" href="${esc(laatste.link.href)}">${esc(laatste.link.label)}</a>` : ''}${(laatste.voorbeelden ?? []).map((t) => `<button type="button" class="pil" data-voorbeeld="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''}
             ${laatste.antwoord == null ? '' : grafiek(laatste)}
           </div></div>
           ${eerder ? `<div class="eerder"><span class="mini">Eerder:</span>${eerder}</div>` : ''}`;
@@ -182,6 +192,11 @@ document.addEventListener('click', (e) => {
     void vraag(vragen()[Number(b.dataset.vraag)]);
     return;
   }
+  const vb = e.target.closest('[data-voorbeeld]');
+  if (vb) {
+    vrij(vb.dataset.voorbeeld);
+    return;
+  }
   const t = e.target.closest('[data-terug]');
   if (t) {
     const [item] = gesprek.splice(Number(t.dataset.terug), 1);
@@ -189,6 +204,23 @@ document.addEventListener('click', (e) => {
     teken();
   }
 });
+/** Een vraag in eigen woorden. */
+function vrij(tekst) {
+  const t = String(tekst ?? '').trim().slice(0, 200);
+  if (t) void vraag({ label: t, soort: 'vrij', tekst: t });
+}
+document.addEventListener('submit', (e) => {
+  const f = e.target.closest('[data-vrij]');
+  if (!f) return;
+  e.preventDefault();
+  const veld = f.elements.tekst;
+  vrij(veld.value);
+  veld.value = '';
+});
+if (location.hash === '#typ') {
+  const veld = document.querySelector(`${app.telStand() ? '#tel' : '#wand'} [data-vrij] input`);
+  veld?.focus();
+}
 void laadAlles().then(() => {
   // Een vraag uit het adres: #nu, #zon, #straks, #waarom/zolder.
   const [soort, kamer] = decodeURIComponent(location.hash.slice(1)).split('/');

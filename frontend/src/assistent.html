@@ -14,7 +14,7 @@
 <script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerWidth < 900 || innerHeight > innerWidth); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schets Wand-Assistent): het gesprek links, het huis rechts. */
-  .gesprek { position: absolute; left: 22px; top: 36px; width: 580px; bottom: 110px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
+  .gesprek { position: absolute; left: 22px; top: 36px; width: 580px; bottom: 170px; display: flex; flex-direction: column; gap: 20px; overflow: hidden; }
   .jij { align-self: flex-start; display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 20px 20px 20px 6px; background: rgba(255, 255, 255, 0.08); font-size: 18px; font-weight: 600; }
   .antwoordrij { display: flex; gap: 16px; align-items: start; min-height: 0; }
   .antwoordrij > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
@@ -29,7 +29,16 @@
   .eerder { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
   .eerder button { border: 0; background: none; color: var(--gedempt); font: inherit; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
   #wand .podium { position: absolute; right: 0; top: 50px; width: 620px; height: 580px; }
-  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; min-height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid rgba(111, 211, 255, 0.35); backdrop-filter: blur(12px); flex-wrap: wrap; }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid rgba(111, 211, 255, 0.35); backdrop-filter: blur(12px); }
+  /* Een vraag in eigen woorden (besluit 115). */
+  .vrij { display: flex; align-items: center; gap: 10px; }
+  .vrij .invoer { flex: 1; height: 46px; border-radius: 14px; font-size: 16px; font-weight: 500; }
+  .vrij .invoer::placeholder { color: var(--gedempt); }
+  .vrij button { flex: none; height: 46px; padding: 0 18px; border: 0; border-radius: 14px; background: var(--tekst); color: #0b1424; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .vrij button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .verder { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .verder .knop { text-decoration: none; display: inline-flex; align-items: center; }
+  .verder button { border: 0; color: inherit; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
   .vragen { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
   .vragen button { border: 0; color: inherit; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
   .vragen button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
@@ -50,14 +59,18 @@
     <main>
       <div class="gesprek" data-gesprek aria-live="polite"></div>
       <div class="podium" id="podium-wand"></div>
-      <div class="dok"><span class="bol adem" style="width: 46px; height: 46px; flex: none"></span><div class="vragen" role="group" aria-label="Vraag iets" data-vragen></div></div>
+      <div class="dok">
+        <form class="vrij" data-vrij><span class="bol adem" style="width: 46px; height: 46px; flex: none"></span><input class="invoer" type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ een vraag, bijvoorbeeld: waar vul ik de prijzen in?"><button type="submit">Vraag</button></form>
+        <div class="vragen" role="group" aria-label="Vaste vragen" data-vragen></div>
+      </div>
     </main>
   </div>
 
   <div id="tel" class="tel">
     <div class="inhoud">
       <h1 class="kop-1" style="font-size: 34px">Assistent</h1>
-      <div class="vragen" role="group" aria-label="Vraag iets" data-vragen></div>
+      <form class="vrij" data-vrij><input class="invoer" type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ een vraag"><button type="submit">Vraag</button></form>
+      <div class="vragen" role="group" aria-label="Vaste vragen" data-vragen></div>
       <div class="gesprek" data-gesprek aria-live="polite"></div>
       <div class="podium" id="podium-tel"></div>
     </div>

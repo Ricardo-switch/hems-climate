@@ -797,6 +797,34 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 20_000);
 
+  /* Een vraag in eigen woorden (besluit 115): over de app komt er een knop bij. */
+  it('beantwoordt een getypte vraag, met een knop naar de pagina', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/assistent.html#typ`);
+    const veld = p.locator('#wand [data-vrij] input');
+    await expect.poll(() => p.evaluate('document.activeElement?.closest("#wand [data-vrij]") != null')).toBe(true);
+    await veld.fill('Waar vul ik de prijzen in?');
+    await veld.press('Enter');
+    await p.locator('#wand .jij', { hasText: 'Waar vul ik de prijzen in?' }).waitFor();
+    const knop = p.locator('#wand .verder a', { hasText: 'Naar Meters en prijzen' });
+    await knop.waitFor();
+    expect(await knop.getAttribute('href')).toBe('meters.html');
+    expect(await veld.inputValue()).toBe('');
+    // Niets herkend: voorbeelden om op te tikken.
+    await veld.fill('banaan');
+    await veld.press('Enter');
+    await p.locator('#wand .verder button', { hasText: 'Hoe pas ik de indeling aan?' }).click();
+    await p.locator('#wand .verder a', { hasText: 'Naar Indeling' }).waitFor();
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
   /*
    * Instellingen en Wat je huis kan (schetsen Instellingen, Wand-Leren en
    * Wand-Huis-groeit): wie stuurt, wat het huis weet, en de stappen.

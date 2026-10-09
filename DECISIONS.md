@@ -124,6 +124,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [107. Aanbellen: het beeld van de deurbel meteen op het scherm](#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm)
 - [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve)
 - [113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten](#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten)
+- [115. De assistent leest een vraag in eigen woorden, met een woordzoeker](#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker)
 
 **Veiligheid**
 
@@ -4980,6 +4981,37 @@ waren en in welke volgorde.
   Inrichten zolang het huis nog het voorstel uit Home Assistant is.
 - **Klimaat** toont nog alleen wat de configuratie heeft; het nakijken per
   apparaat komt met punt 5 (de klimaatapparaten herkennen).
+
+---
+
+## 115. De assistent leest een vraag in eigen woorden, met een woordzoeker
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 9 oktober 2026: een invulveld is makkelijker dan
+alleen vaste knoppen, en het moet ook vragen over de app begrijpen, zoals hoe
+je de indeling aanpast of waar je de prijzen invult.
+
+*Besluit:*
+
+- **Een woordzoeker, geen taalmodel** (`web/woordzoeker.ts`). Hij maakt de
+  tekst gewoon (kleine letters, zonder accenten en leestekens), zoekt woorden
+  en kamernamen, en kiest het onderwerp met de meeste treffers. Sterke woorden
+  ("prijzen", "indeling", "deurbel") tellen dubbel; "waar" of "hoe" geeft een
+  vraag over de app voorrang.
+- **Over het huis** wordt het een van de vaste vragen (nu, waarom met de kamer,
+  straks, zon, of een wens voor een kamer), met precies hetzelfde antwoord als
+  de knoppen. De regel van besluit 88 blijft: elk getal heeft zijn bron. Een
+  wens als "koel de zolder" schakelt niets, zoals eerder.
+- **Over de app** komt er een kort antwoord met een knop naar de pagina:
+  indeling, meters en prijzen, zon en aansluiting, functies, inrichten,
+  inloggen, opbrengst, vandaag, apparaten, bedienen en het meekijken.
+- **Niets herkend:** een paar voorbeelden om op te tikken.
+- **In de dienst:** `api/vraag?v=vrij&tekst=…`, hooguit 200 tekens. De tekst
+  wordt niet bewaard en niet gelogd.
+- **Op de pagina:** het veld staat in de balk onder de Assistent, boven de vaste
+  vragen; op de telefoon bovenaan. Vanaf Thuis opent "Tik om iets te vragen"
+  de Assistent met de cursor in het veld (`#typ`).
 
 ---
 

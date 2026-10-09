@@ -943,6 +943,28 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     const post = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen`, { method: 'POST' });
     expect(post.status).toBe(405);
   });
+
+  it('begrijpt een vraag in eigen woorden (besluit 115)', async () => {
+    const { base } = await start({ latest: () => snapshot() });
+    const vraag = async (tekst: string) => {
+      const res = await fetch(`${base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst })}`);
+      return { status: res.status, body: (await res.json()) as { vraag: string; kamer: string | null; antwoord: string; link?: { href: string }; voorbeelden?: string[] } };
+    };
+    // Over het huis: dezelfde antwoorden als de vaste vragen.
+    const huis = await vraag('Waarom koelt de zolder?');
+    expect(huis.body.vraag).toBe('waarom');
+    expect(huis.body.kamer).toBe('zolder');
+    expect(huis.body.antwoord).toContain('24,5°');
+    // Over de app: een antwoord met een knop.
+    const app = await vraag('Waar vul ik de prijzen in?');
+    expect(app.body.vraag).toBe('app');
+    expect(app.body.link?.href).toBe('meters.html');
+    // Niets herkend: voorbeelden.
+    expect((await vraag('banaan')).body.voorbeelden?.length).toBeGreaterThan(0);
+    // Leeg of te lang wordt geweigerd.
+    expect((await vraag('')).status).toBe(400);
+    expect((await vraag('x'.repeat(201))).status).toBe(400);
+  });
 });
 
 describe('de zoninval (besluit 93)', () => {

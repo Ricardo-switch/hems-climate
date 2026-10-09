@@ -38,7 +38,9 @@ import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource,
 import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
 import { PICTURE_FILE } from './scene-pictures.js';
-import { ask, parseQuestion } from './assistant.js';
+import { ask, LANGS, parseQuestion } from './assistant.js';
+import type { Lang, Question } from './assistant.js';
+import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
@@ -667,10 +669,34 @@ export class WebServer {
         sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
         return;
       }
-      const parsed = parseQuestion(url.searchParams);
-      if (!parsed.ok) {
-        sendJson(res, 400, { fout: parsed.reden });
-        return;
+      // Een vraag in eigen woorden (besluit 115): de woordzoeker maakt er een
+      // vaste vraag van, of antwoordt zelf over de app.
+      let parsed: { question: Question; lang: Lang };
+      if ((url.searchParams.get('v') ?? '').toLowerCase() === 'vrij') {
+        const taal = (url.searchParams.get('taal') ?? 'nl').toLowerCase();
+        const lang: Lang = (LANGS as readonly string[]).includes(taal) ? (taal as Lang) : 'nl';
+        const tekst = (url.searchParams.get('tekst') ?? '').trim();
+        if (tekst === '' || tekst.length > MAX_TEKST) {
+          sendJson(res, 400, { fout: `tekst moet 1 tot ${MAX_TEKST} tekens zijn` });
+          return;
+        }
+        const b = begrijp(tekst, config, lang);
+        if (b.soort === 'app') {
+          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link });
+          return;
+        }
+        if (b.soort === 'onbekend') {
+          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden });
+          return;
+        }
+        parsed = { question: b.vraag, lang };
+      } else {
+        const p = parseQuestion(url.searchParams);
+        if (!p.ok) {
+          sendJson(res, 400, { fout: p.reden });
+          return;
+        }
+        parsed = p;
       }
       let today = null;
       if (parsed.question.kind === 'zon' && logDir != null) {

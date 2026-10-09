@@ -161,6 +161,8 @@ verwijzing bestaat.
   voortuin en balkon ([113]).
 - **Inrichten** zet de schermen per huis op een rij, met een balk naar de
   volgende stap ([114]).
+- **De assistent** leest ook een vraag in eigen woorden, over het huis en over
+  de app, met een woordzoeker ([115]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -324,4 +326,5 @@ verwijzing bestaat.
 [112]: DECISIONS.md#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel
 [113]: DECISIONS.md#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten
 [114]: DECISIONS.md#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn
+[115]: DECISIONS.md#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker
 <!-- links:einde -->
