@@ -179,6 +179,8 @@ export interface HouseFloor {
 export interface HouseReport {
   /** "eigen" als de bewoner de indeling vastlegde, anders "voorstel" uit Home Assistant. */
   readonly indeling: 'eigen' | 'voorstel';
+  /** De etage onder het schuine dak (besluit 111), of null: dan geen schuin dak in de tekening. */
+  readonly dakEtage: FloorId | null;
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -1057,8 +1059,14 @@ export function buildHouse(
 
   homeless.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
   hidden.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || a.naam.localeCompare(b.naam, 'nl'));
+  // Onder het dak: wat de bewoner koos, of de bovenste etage als die zo heet of het huis drie lagen heeft.
+  const binnen = floors.filter((f) => f.id !== 'buiten' && f.ruimtes.length > 0);
+  const boven = binnen[0];
+  const dakEtage: FloorId | null =
+    layout.dak === 'geen' ? null : layout.dak ?? (boven && (binnen.length >= 3 || /zolder|dak|vliering/i.test(boven.naam)) ? boven.id : null);
   return {
     indeling: saved ? 'eigen' : 'voorstel',
+    dakEtage,
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten))),

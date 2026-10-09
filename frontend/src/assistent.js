@@ -152,7 +152,8 @@ function tekenHuis() {
     if (binnen.length) etages.push({ naam: e.naam, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), stil: !!kamer && r.zoneId !== kamer, gekozen: !!kamer && r.zoneId === kamer })) });
   }
   const top = etages.at(-1);
-  if (top && (etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
+  // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het hier.
+  if (top && (huisData.dakEtage !== undefined ? top.id === huisData.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
   const model = { beschrijving: kamer ? `Het huis, met de ${huismodel.zoneNaam(kamer)} uitgelicht.` : 'Het huis.', tijd: app.tijdVanDeDag(zon), zon: zon?.dag ? { stand: zon.dag.fractie, aandeel: 0.4 } : { aandeel: 0 }, etages };
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 620, hoogte: 580, marge: 0.06 });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.04 });

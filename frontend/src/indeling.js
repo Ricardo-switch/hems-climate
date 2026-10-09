@@ -235,6 +235,7 @@ function etageBlad(d) {
   return `
     <div class="bladkop"><h2 class="kop-2">${esc(etageNaam(d, id))}</h2><span class="mini">etage</span></div>
     <div><label class="label" for="etagenaam-${id}">Naam van de etage</label><input class="veld" id="etagenaam-${id}" data-actie="etagenaam" value="${esc(d.etages[id] ?? '')}" placeholder="${esc(standaard)}" maxlength="40"></div>
+    ${id === 'buiten' ? '' : `<div><span class="label">Onder het schuine dak?</span><div class="chips" role="group" aria-label="Onder het schuine dak">${[[true, 'Ja'], [false, 'Nee']].map(([w, t]) => `<button type="button" class="chip" data-dak="${w}" aria-pressed="${(huisData?.dakEtage === id) === w}">${t}</button>`).join('')}</div></div>`}
     <div><span class="label">Kamers</span>${kamers.length ? kamers.map((k) => `<button type="button" class="kamerrij" data-kamer="${esc(k.id)}">${esc(k.naam)}<span>${apparatenIn(k.id).length} ›</span></button>`).join('') : '<p class="klein" style="margin: 0">Nog geen kamers op deze etage.</p>'}</div>
     <div><label class="label" for="nieuwekamer-${id}">Nieuwe kamer</label><div style="display: flex; gap: 8px"><input class="veld" id="nieuwekamer-${id}" data-nieuwe-kamer placeholder="Bijvoorbeeld Hal en trap" maxlength="40"><button type="button" class="knop" data-kamer-toevoegen>Toevoegen</button></div></div>
     <p class="mini" style="margin: 0">Een deur ertussen maakt een eigen kamer. Open, zoals keuken en zithoek, maak je een zone in dezelfde kamer.</p>`;
@@ -424,6 +425,13 @@ document.addEventListener('click', async (e) => {
     next.verborgen = [...new Set([...(next.verborgen ?? []), t.dataset.verberg])];
     delete next.apparaten[t.dataset.verberg];
     if (await bewaar(next, `${dev?.naam ?? 'Het apparaat'} is verborgen.`)) kies({ apparaat: null, blad: keuze.kamer ? 'kamer' : 'etage' });
+  } else if (t.dataset.dak) {
+    // Welke etage onder het schuine dak ligt (besluit 111).
+    const next = concept();
+    if (t.dataset.dak === 'true') next.dak = keuze.etage;
+    else if (huisData?.dakEtage === keuze.etage || next.dak === keuze.etage) next.dak = 'geen';
+    else return;
+    await bewaar(next, t.dataset.dak === 'true' ? `${etageNaam(next, keuze.etage)} ligt onder het dak.` : 'Geen schuin dak boven deze etage.');
   } else if (t.dataset.buiten) {
     // Wat een buitenruimte is (besluit 109).
     const next = concept();

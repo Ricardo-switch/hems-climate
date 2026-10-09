@@ -4894,6 +4894,11 @@ van Buienradar (besluit 105). Gekozen op 9 oktober 2026.
   geeft.
 - **Een ouder bestand** zonder deze keuzes krijgt het voorstel: Buienradar als
   die er is, en licht aan.
+- **De tekening volgt het huis:** liggen de panelen op beide kanten (Zon en
+  aansluiting), dan staan ze op beide dakvlakken; het open vlak toont ze als
+  omtrek, zodat de zolder zichtbaar blijft. Welke etage onder het schuine dak
+  ligt, kies je in de indeling (`dak`); zonder keuze raadt de dienst het aan de
+  naam of aan drie lagen.
 
 ---
 

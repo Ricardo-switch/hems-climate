@@ -62,7 +62,8 @@ function huisModel() {
   }
   // De bovenste etage ligt onder het dak als het huis drie lagen heeft, of als hij zo heet.
   const top = etages[etages.length - 1];
-  if (top && (etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
+  // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het hier.
+  if (top && (huisData.dakEtage !== undefined ? top.id === huisData.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
 
   const alles = etagesBovenEerst.flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
   const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
@@ -90,7 +91,7 @@ function huisModel() {
     tijd,
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken,
-    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), panelen: aantalPanelen(piekW) } : { aandeel: 0, panelen: aantalPanelen(piekW) },
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...panelenOpDak(piekW) } : { aandeel: 0, ...panelenOpDak(piekW) },
     etages,
     buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)) } : null,
     net: true,
@@ -111,6 +112,19 @@ function aantalPanelen(piekW) {
   const gezegd = p ? (p.ligging === 'beide' ? (p.voorkant ?? 0) + (p.achterkant ?? 0) : (p.aantal ?? 0)) : 0;
   if (gezegd > 0) return gezegd;
   return piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0;
+}
+
+/**
+ * Hoe de panelen over het dak liggen (besluit 111): op beide kanten verdeeld,
+ * zoals de bewoner opgaf of half om half; anders alles op het zichtbare vlak.
+ */
+function panelenOpDak(piekW) {
+  const totaal = aantalPanelen(piekW);
+  const p = aansluiting?.antwoorden?.panelen;
+  if (p?.ligging !== 'beide' || totaal === 0) return { panelen: totaal, panelenLinks: 0 };
+  const voor = p.voorkant ?? Math.ceil(totaal / 2);
+  const achter = p.achterkant ?? totaal - voor;
+  return { panelen: voor || Math.ceil(totaal / 2), panelenLinks: achter };
 }
 
 /** Het klimaatapparaat bij een actuator, zoals het huis het noemt. */

@@ -43,6 +43,13 @@ describe('het voorstel uit Home Assistant', () => {
     expect(outsideFromNames({ naam: 'Carport', zones: [] }, []).soort).toBe('oprit');
   });
 
+  it('raadt welke etage onder het dak ligt, en volgt wat de bewoner koos (besluit 111)', () => {
+    expect(house.dakEtage).toBe('e2');
+    const eigen = proposeLayout(config, registers, states);
+    expect(buildHouse(config, registers, states, snapshot, { ...eigen, dak: 'geen' }).dakEtage).toBeNull();
+    expect(buildHouse(config, registers, states, snapshot, { ...eigen, dak: 'e1' }).dakEtage).toBe('e1');
+  });
+
   it('noemt een etage naar het precieze niveau, niet naar een "Dak" erboven', () => {
     expect(proposeLayout(config, registers, states).etages.e2).toBe('Zolder');
   });

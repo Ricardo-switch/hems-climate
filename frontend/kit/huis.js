@@ -355,6 +355,22 @@
           else huis.push(poly(pts, `fill="url(#${id}-paneel)" stroke="#5b7aa0" stroke-opacity="0.6" stroke-width="0.8"`));
         }
       }
+      // Panelen op het andere dakvlak (besluit 111): dat vlak is open om de zolder te
+      // tonen, dus daar alleen de omtrek en een zweem, zodat de zolder zichtbaar blijft.
+      const links = model.zon?.panelenLinks ?? 0;
+      if (links > 0) {
+        const kolL = Math.max(2, Math.min(6, Math.round(links / rijen)));
+        for (let r = 0; r < rijen; r++) {
+          for (let c = 0; c < kolL; c++) {
+            const u0 = 0.12 + r * 0.42;
+            const u1 = u0 + 0.38;
+            const v0 = 0.12 + c * ((D - 0.24) / kolL);
+            const v1 = v0 + (D - 0.24) / kolL - 0.06;
+            const q = (u, v) => [u * (W / 2) - 0.02, v, zt + u * R + 0.02];
+            huis.push(poly([q(u0, v0), q(u0, v1), q(u1, v1), q(u1, v0)], `fill="#4d7eac" fill-opacity="0.18" stroke="#7fa6cf" stroke-opacity="0.55" stroke-width="0.8"`));
+          }
+        }
+      }
       if (zonKracht > 0) {
         // Het licht dat de panelen vangen, als een glans over het dakvlak.
         const q = (u, v) => [W - u * (W / 2) + 0.03, v, zt + u * R + 0.03];

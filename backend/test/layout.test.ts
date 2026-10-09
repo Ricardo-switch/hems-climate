@@ -82,6 +82,12 @@ describe('de indeling toetsen', () => {
     expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'tuin', auto: 'ja', tuinhuis: false } }] }, known).ok).toBe(false);
   });
 
+  it('bewaart welke etage onder het dak ligt (besluit 111)', () => {
+    expect(validateLayout({ ...good, dak: 'e2' }, known)).toMatchObject({ ok: true, layout: { dak: 'e2' } });
+    expect(validateLayout({ ...good, dak: 'geen' }, known)).toMatchObject({ ok: true, layout: { dak: 'geen' } });
+    expect(validateLayout({ ...good, dak: 'buiten' }, known).ok).toBe(false);
+  });
+
   it('laat een apparaat dat Home Assistant niet meer kent vallen, in plaats van te weigeren', () => {
     const r = validateLayout({ ...good, apparaten: { ...good.apparaten, 'light.uitgezet': { kamer: 'hal', zone: null } } }, known);
     expect(r.ok).toBe(true);

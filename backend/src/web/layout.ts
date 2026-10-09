@@ -80,6 +80,11 @@ export interface Layout {
   readonly apparaten: Readonly<Record<string, LayoutDevice>>;
   /** Apparaten die de bewoner in de app niet wil zien, zoals een lamp die nergens hoort. */
   readonly verborgen?: readonly string[];
+  /**
+   * Welke etage onder het schuine dak ligt (besluit 111), of `geen` voor een
+   * plat dak of een huis zonder zolder. Weg: de dienst raadt het.
+   */
+  readonly dak?: FloorId | 'geen';
 }
 
 export interface LayoutKnown {
@@ -226,7 +231,9 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
   if (!Array.isArray(verborgenIn) || verborgenIn.length > MAX_DEVICES) return { ok: false, reden: `verborgen is een lijst van hooguit ${MAX_DEVICES} apparaten` };
   const verborgen = [...new Set(verborgenIn.filter((id): id is string => typeof id === 'string' && known.deviceIds.has(id)))];
 
-  return { ok: true, layout: { versie: 1, etages, kamers, apparaten, verborgen } };
+  const dak = b['dak'];
+  if (dak !== undefined && dak !== 'geen' && (typeof dak !== 'string' || !['e2', 'e1', 'bg'].includes(dak))) return { ok: false, reden: 'dak is e2, e1, bg of geen' };
+  return { ok: true, layout: { versie: 1, etages, kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}) } };
 }
 
 export interface LayoutStoreOptions {

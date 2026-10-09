@@ -58,10 +58,9 @@ hier een voorstel voor.
    ("camera", "schijnwerper").
 2. ~~**Meer functies in de app.**~~ Gedaan op 9 oktober (besluit 111): licht
    bedienen en de weerbron staan bij Functies.
-3. **De tekening van het huis.** Panelen liggen altijd op het rechter dakvlak;
-   de ligging uit Zon en aansluiting (voorkant, achterkant, beide, plat) moet
-   meetellen. Het dak wordt herkend aan de naam "zolder" of aan drie lagen; dat
-   wordt een keuze bij de etage.
+3. ~~**De tekening van het huis.**~~ Gedaan op 9 oktober (besluit 111): liggen
+   de panelen op beide kanten, dan staan ze in de tekening op beide dakvlakken;
+   welke etage onder het schuine dak ligt, kies je in de indeling.
 4. **De etages.** Vier vaste etages (besluit 95): tweede verdieping, eerste,
    begane grond, buiten. Een kelder, een appartement op één laag of een huis met
    meer lagen past daar niet in. Besluit 95 moet daarvoor herzien.
