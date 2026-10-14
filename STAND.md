@@ -183,6 +183,8 @@ verwijzing bestaat.
   toetsenbord niets, en zegt een kamer in de schaduw "zou" ([124]).
 - **Het screen** sleep je zoals in de schets; **Opbrengst** onthoudt wat al
   uitgerekend is ([125]).
+- **Radiatorknoppen** en ander klimaat buiten de configuratie staan in het huis
+  en in het logboek; via ZHA zegt de app wat Zigbee2MQTT erbij geeft ([126]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -357,4 +359,5 @@ verwijzing bestaat.
 [123]: DECISIONS.md#123-meten-met-per-kamer-zelf-de-sensoren-kiezen
 [124]: DECISIONS.md#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw
 [125]: DECISIONS.md#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is
+[126]: DECISIONS.md#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen
 <!-- links:einde -->

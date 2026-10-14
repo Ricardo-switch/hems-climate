@@ -43,9 +43,14 @@ export class EntityStore implements EntitySource {
     this.#triggers = triggers ?? null;
   }
 
-  /** Bewaren we deze entiteit? */
+  /**
+   * Bewaren we deze entiteit? Elk klimaatapparaat altijd, ook als de
+   * configuratie het niet noemt, zoals een radiatorknop (besluit 126): dan staat
+   * het in het logboek voor het thermisch model. Het is geen aanleiding om
+   * opnieuw te beslissen.
+   */
   isRelevant(entityId: string): boolean {
-    return this.#tracked == null || this.#tracked.has(entityId);
+    return this.#tracked == null || this.#tracked.has(entityId) || entityId.startsWith('climate.');
   }
 
   /** Is een wijziging hierin reden om opnieuw te beslissen? */

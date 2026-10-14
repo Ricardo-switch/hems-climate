@@ -49,6 +49,9 @@ export interface HaDevice {
   readonly area_id: string | null;
   readonly name?: string | null;
   readonly name_by_user?: string | null;
+  /** Merk en type, zoals "SONOFF" en "TRVZB" (besluit 126). */
+  readonly manufacturer?: string | null;
+  readonly model?: string | null;
 }
 
 export interface HaRegistryEntity {

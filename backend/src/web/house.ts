@@ -115,6 +115,12 @@ export interface HouseDevice {
   readonly scherm?: { readonly terugmelding: boolean; readonly standKiezen: boolean };
   /** De batterij van het apparaat in procenten, als het er een heeft (besluit 122). */
   readonly batterijPct?: number;
+  /**
+   * Een radiatorknop (besluit 126), zoals de Sonoff TRVZB: hoe hij gekoppeld is
+   * (ZHA of Zigbee2MQTT), en hoe ver de klep open staat als hij dat meldt.
+   * Alleen kijken: tot stap B bedient Smart Climate geen klimaat.
+   */
+  readonly radiatorknop?: { readonly koppeling: 'zha' | 'zigbee2mqtt' | 'anders'; readonly klepPct: number | null };
 }
 
 /**
@@ -448,6 +454,30 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
   return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
 }
 
+/**
+ * Is dit een radiatorknop (besluit 126)? Aan het type ("TRV", "thermostatic",
+ * "radiator"), of een klimaatapparaat dat alleen kan verwarmen en op een
+ * batterij werkt.
+ */
+function isRadiatorKnob(dev: { model?: string | null; manufacturer?: string | null; name?: string | null } | undefined, modes: readonly string[]): boolean {
+  const tekst = `${dev?.manufacturer ?? ''} ${dev?.model ?? ''} ${dev?.name ?? ''}`;
+  if (/trv|thermostatic|radiator|radiatorknop|thermostaatknop/i.test(tekst)) return true;
+  return modes.length > 0 && !modes.some((m) => m === 'cool' || m === 'heat_cool' || m === 'dry' || m === 'fan_only') && /sonoff|tuya|danfoss|eurotronic|moes|aqara|bosch/i.test(tekst);
+}
+
+/** Hoe ver de klep open staat (0 tot 100%), als het apparaat dat meldt. */
+function valveOf(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>, deviceId: string | null): number | null {
+  if (!deviceId) return null;
+  for (const e of registers.entities) {
+    if (e.device_id !== deviceId || !e.entity_id.startsWith('sensor.') || !/valve|klep/i.test(e.entity_id)) continue;
+    // Een grens als "valve_opening_degree" is een instelling, geen stand: alleen een sensor telt.
+    const s = states.get(e.entity_id);
+    const n = Number(s?.state);
+    if (s && s.attributes['unit_of_measurement'] === '%' && Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
 /** De temperatuur van een sensor of klimaatapparaat (besluit 123), of null. */
 function readTemperature(state: HaEntityState | undefined, id: string): number | null {
   if (state == null) return null;
@@ -745,6 +775,50 @@ function collect(
       klimaat,
     });
     found.push({ device, haNaam: a.name, haArea: areaOf(a.ref.id), groepen: [] });
+  }
+
+  /*
+   * Klimaatapparaten die Home Assistant kent maar de configuratie niet (besluit
+   * 126), zoals een radiatorknop: in het huis om te zien wat ze meten en doen,
+   * en in "Meten met". Alleen kijken.
+   */
+  const inConfig = new Set(config.actuators.map((a) => a.ref.id));
+  const devById = new Map(registers.devices.map((d) => [d.id, d]));
+  for (const e of registers.entities) {
+    if (!e.entity_id.startsWith('climate.') || e.disabled_by || e.hidden_by || inConfig.has(e.entity_id)) continue;
+    const st = states.get(e.entity_id);
+    const modes = Array.isArray(st?.attributes['hvac_modes']) ? (st!.attributes['hvac_modes'] as unknown[]).map(String) : [];
+    const own = sensorsOf.get(e.device_id ?? '');
+    const fromSensors = readingOf(own);
+    const meting: HouseReading = {
+      temperatuurC: num(st?.attributes['current_temperature']) ?? fromSensors.temperatuurC,
+      vochtPct: num(st?.attributes['current_humidity']) ?? fromSensors.vochtPct,
+    };
+    const action = st?.attributes['hvac_action'];
+    const klimaat: HouseClimate = {
+      kanKoelen: modes.some((m) => m === 'cool' || m === 'heat_cool'),
+      kanVerwarmen: modes.some((m) => m === 'heat' || m === 'heat_cool' || m === 'auto'),
+      doelC: num(st?.attributes['temperature']),
+      actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+    };
+    const naam = friendly(st, e.entity_id);
+    const sp = num(st?.attributes['temperature']);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...basis } = climateOf(e.entity_id, naam, st ? `${st.state}${sp != null ? `@${sp}` : ''}` : undefined, {
+      meting: meting.temperatuurC != null || meting.vochtPct != null ? meting : null,
+      klimaat,
+    });
+    const dev = e.device_id ? devById.get(e.device_id) : undefined;
+    const knop = isRadiatorKnob(dev, modes) ? { koppeling: e.platform === 'zha' ? ('zha' as const) : e.platform === 'mqtt' ? ('zigbee2mqtt' as const) : ('anders' as const), klepPct: valveOf(registers, states, e.device_id ?? null) } : null;
+    // Zijn stand is wat hij echt doet: een knop staat altijd op verwarmen, en brandt alleen soms.
+    const bezig = action === 'heating' || action === 'cooling';
+    const doel = sp != null ? `doel ${nl1(sp)}°` : null;
+    const stand = st == null || st.state === 'unavailable' || st.state === 'unknown'
+      ? 'onbekend'
+      : st.state === 'off'
+        ? 'uit'
+        : [bezig ? (action === 'heating' ? 'verwarmt' : 'koelt') : 'staat klaar', doel].filter(Boolean).join(', ');
+    const device = { ...basis, stand, aan: bezig, actuatorId: null, ...(knop ? { radiatorknop: knop } : {}) };
+    found.push({ device, haNaam: naam, haArea: areaOf(e.entity_id), groepen: [] });
   }
 
   /*

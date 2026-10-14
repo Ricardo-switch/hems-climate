@@ -108,6 +108,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [66. Bij elk besluit is na te gaan welke versie het nam](#66-bij-elk-besluit-is-na-te-gaan-welke-versie-het-nam)
 - [83. Ruwe data twee jaar, daarna samengevat](#83-ruwe-data-twee-jaar-daarna-samengevat)
 - [93. Hoe het huis en de panelen liggen, meet de app zelf; de bewoner bevestigt](#93-hoe-het-huis-en-de-panelen-liggen-meet-de-app-zelf-de-bewoner-bevestigt)
+- [126. Radiatorknoppen en ander klimaat buiten de configuratie: zien en vastleggen](#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen)
 
 **Weergave**
 
@@ -5336,6 +5337,32 @@ Gevraagd door de bewoner op 14 oktober 2026.
   uitgerekend als hij ouder is dan twee minuten. Na de eerste vraag rekent de
   dienst dag, week, maand en jaar van vandaag alvast uit. Hooguit honderd
   periodes, de oudste eruit.
+
+---
+
+## 126. Radiatorknoppen en ander klimaat buiten de configuratie: zien en vastleggen
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+De bewoner koppelde op 14 oktober 2026 de eerste van zes Sonoff-radiatorknoppen
+(TRVZB, Zigbee) aan Home Assistant. Het huis toonde alleen de klimaatapparaten
+uit de configuratie; de knop stond nergens, en het logboek volgde hem niet.
+
+*Besluit:*
+
+- **Elk klimaatapparaat staat in het huis,** ook als de configuratie het niet
+  noemt: met wat het meet, het doel, en wat het echt doet. Een knop staat
+  altijd op verwarmen; "verwarmt" en "draait" alleen als hij werkelijk brandt
+  (`hvac_action`), anders "staat klaar". Alleen kijken: klimaat bedient Smart
+  Climate pas in stap B. Zo staat de knop ook in "Meten met" (123).
+- **Een radiatorknop** herkent de dienst aan het type in Home Assistant (TRV,
+  thermostatic, radiator), of aan een merk van knoppen bij een apparaat dat
+  alleen kan verwarmen. Hij toont hoe hij gekoppeld is: via ZHA zegt de app wat
+  Zigbee2MQTT erbij geeft (de klepstand, en later de temperatuur van de kamer
+  naar de knop). Meldt hij hoe ver de klep open staat, dan staat dat erbij.
+- **Het logboek volgt elk klimaatapparaat** (`climate.*`), met gemeten en
+  ingestelde temperatuur en `hvac_action`, voor het thermisch model (D). Het is
+  geen aanleiding om opnieuw te beslissen.
 
 ---
 

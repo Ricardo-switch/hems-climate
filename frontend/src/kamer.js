@@ -326,6 +326,22 @@ function aircoBlad(k, d) {
     ${strookVandaag(d, kleur)}`;
 }
 
+/*
+ * Een radiatorknop (besluit 126): hoe hij gekoppeld is, en de klep. Via ZHA zegt
+ * de app wat Zigbee2MQTT erbij geeft.
+ */
+function knopRegel(d) {
+  const knop = d.radiatorknop;
+  if (!knop) return '';
+  const klep = knop.klepPct != null ? `<div class="feit"><span>Klep</span><b>${nl(knop.klepPct, 0)}% open</b></div>` : '';
+  const via = knop.koppeling === 'zha'
+    ? 'Deze radiatorknop loopt via ZHA. Met Zigbee2MQTT zie je hoe ver de klep open staat, en kan de knop later de temperatuur van de kamer gebruiken in plaats van zijn eigen, die naast de warme radiator te hoog meet.'
+    : knop.koppeling === 'zigbee2mqtt'
+      ? 'Deze radiatorknop loopt via Zigbee2MQTT. Hij meet naast de radiator, dus vaak te warm; kies bij Indeling liever een thermometer in de kamer om mee te meten.'
+      : 'Een radiatorknop. Hij meet naast de radiator, dus vaak te warm.';
+  return `${klep}<p class="mini" style="margin: 0">${esc(via)} Smart Climate bedient hem pas als het huis zelf mag schakelen.</p>`;
+}
+
 function nestBlad(k, d) {
   const doel = doelen.get(d.id) ?? d.klimaat?.doelC ?? 20;
   const nu = d.meting?.temperatuurC ?? k.temperatuurC;
@@ -345,13 +361,14 @@ function nestBlad(k, d) {
     <circle cx="150" cy="145" r="104" fill="url(#schijf)"/>
     <g stroke-width="3" stroke-linecap="round">${tikken.join('')}</g>
     <text x="150" y="150" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="56" fill="#EEF3F7">${nl(doel, Number.isInteger(doel) ? 0 : 1)}</text>
-    <text x="150" y="176" text-anchor="middle" font-family="Figtree" font-size="13" fill="${brandt ? '#FFB090' : '#B8C4CF'}">${brandt ? 'verwarmt' : 'staat uit'}${nu == null ? '' : `, nu ${nl(nu)}°`}</text>
+    <text x="150" y="176" text-anchor="middle" font-family="Figtree" font-size="13" fill="${brandt ? '#FFB090' : '#B8C4CF'}">${brandt ? 'verwarmt' : d.radiatorknop && d.stand !== 'uit' ? 'staat klaar' : 'staat uit'}${nu == null ? '' : `, nu ${nl(nu)}°`}</text>
   </svg>`;
   return `${kopVan(d, brandt ? 'gloed-t' : '')}
     <div class="beeld">${svg}</div>
     <div class="doelrij"><button type="button" class="rond" data-doel="-0.5" aria-label="Kouder">−</button><span class="mini">doel</span><button type="button" class="rond" data-doel="0.5" aria-label="Warmer">+</button></div>
     ${k.zoneId ? `<div class="keuze" role="group" aria-label="Wat zou het huis doen"><button type="button" data-wens="verwarmen">Verwarmen</button><button type="button" data-wens="uit">Uit</button></div>` : ''}
     <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span data-gezegd>${esc(gezegd.get(d.id) ?? MEEKIJKEN)}</span></div>
+    ${knopRegel(d)}
     ${strookVandaag(d, '#FF7A4D')}`;
 }
 

@@ -122,6 +122,29 @@ describe('het voorstel uit Home Assistant', () => {
     expect(metIo.scherm).toEqual({ terugmelding: true, standKiezen: true });
   });
 
+  it('toont een radiatorknop die de configuratie niet kent, met hoe hij gekoppeld is (besluit 126)', () => {
+    const basis = states.get('cover.screen')!;
+    const area = registers.areas.find((x) => x.name === 'Badkamer')!.area_id;
+    const metKnop = {
+      ...registers,
+      devices: [...registers.devices, { id: 'd-trv', area_id: area, name: 'Radiator badkamer', name_by_user: null, manufacturer: 'SONOFF', model: 'TRVZB' }],
+      entities: [
+        ...registers.entities,
+        { entity_id: 'climate.radiator_badkamer', device_id: 'd-trv', platform: 'zha' },
+        { entity_id: 'sensor.radiator_badkamer_valve_position', device_id: 'd-trv', platform: 'zha' },
+      ],
+    };
+    const metStand = new Map(states);
+    metStand.set('climate.radiator_badkamer', { ...basis, entity_id: 'climate.radiator_badkamer', state: 'heat', attributes: { friendly_name: 'Radiator badkamer', hvac_modes: ['off', 'heat'], current_temperature: 19.5, temperature: 20, hvac_action: 'idle' } });
+    metStand.set('sensor.radiator_badkamer_valve_position', { ...basis, entity_id: 'sensor.radiator_badkamer_valve_position', state: '35', attributes: { unit_of_measurement: '%' } });
+    const h = buildHouse(config, metKnop, metStand, snapshot);
+    const knop = h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'climate.radiator_badkamer')!;
+    expect([knop.soort, knop.stand, knop.aan, knop.actuatorId]).toEqual(['klimaat', 'staat klaar, doel 20°', false, null]);
+    expect(knop.radiatorknop).toEqual({ koppeling: 'zha', klepPct: 35 });
+    expect(knop.meting?.temperatuurC).toBe(19.5);
+    expect(knop.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true, doelC: 20 });
+  });
+
   it('toont in een kamer zonder regeling het gemiddelde van de gekozen sensoren (besluit 123)', () => {
     const eigen = proposeLayout(config, registers, states);
     const zonder = eigen.kamers.find((k) => k.etage !== 'buiten' && k.regelzone == null)!;
