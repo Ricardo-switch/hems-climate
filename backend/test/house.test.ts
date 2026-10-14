@@ -109,7 +109,7 @@ describe('het voorstel uit Home Assistant', () => {
 
   it('zegt of een scherm zijn stand terugmeldt (Somfy io) of niet (Somfy RTS, besluit 121)', () => {
     const screen = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
-    expect(screen.scherm).toEqual({ terugmelding: true, standKiezen: false });
+    expect(screen.scherm).toEqual({ terugmelding: true, standKiezen: true });
     // Een RTS-scherm: Home Assistant neemt de stand aan.
     const rts = new Map(states);
     rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'open', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, supported_features: 15 } });

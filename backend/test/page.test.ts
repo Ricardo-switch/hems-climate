@@ -546,10 +546,21 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((d) => d.id === 'cover.screen'))!;
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(kamer.id)}/cover.screen`);
     const wand = p.locator('#wand');
-    await wand.locator('[data-scherm="dicht"]').click({ timeout: 10_000 });
-    await expect.poll(() => coverCalls.at(-1)).toBe('close_cover cover.screen');
-    await wand.locator('[data-scherm="stop"]').click();
-    await expect.poll(() => coverCalls.at(-1)).toBe('stop_cover cover.screen');
+    // Een io-screen (schets Wand-Bedienen): Open, Half, de stand van nu en Dicht.
+    await wand.locator('[data-scherm]').first().waitFor({ timeout: 10_000 });
+    expect(await wand.locator('[data-scherm]').allTextContents()).toEqual(['Open', 'Half', '60%', 'Dicht']);
+    await wand.locator('[data-scherm="stand:100"]').click({ timeout: 10_000 });
+    await expect.poll(() => coverCalls.at(-1)).toBe('set_cover_position cover.screen 0');
+    // De greep slepen: helemaal omhoog is open.
+    const doek = wand.locator('[data-schermsleep]');
+    const vak = (await doek.boundingBox())!;
+    const greep = (await wand.locator('[data-greep] rect').boundingBox())!;
+    await p.mouse.move(greep.x + greep.width / 2, greep.y + greep.height / 2);
+    await p.mouse.down();
+    await p.mouse.move(greep.x + greep.width / 2, vak.y + 4, { steps: 6 });
+    await p.mouse.up();
+    await expect.poll(() => coverCalls.at(-1)).toBe('set_cover_position cover.screen 100');
+    if (process.env.HEMS_PAGE_SHOT) await wand.locator('.blad').screenshot({ path: process.env.HEMS_PAGE_SHOT });
     expect(await wand.textContent()).toContain('De regeling doet er niets mee');
 
     // Een batterij onder de 10%: een pil op Thuis, naar zijn kamer.

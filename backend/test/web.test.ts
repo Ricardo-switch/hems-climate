@@ -219,6 +219,27 @@ describe('Opbrengst: meters, prijzen en terugkijken (besluit 102)', () => {
     expect(bad.status).toBe(400);
   });
 
+  it('bewaart een periode: elke datum in hetzelfde jaar vindt hem, en bewaren gooit hem weg (besluit 125)', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-energie-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const store = new EnergyStore(logDir);
+    let vragen = 0;
+    const tellend: EnergySource = { ...source, changes: async (ids, startMs, endMs, period) => (vragen++, source.changes(ids, startMs, endMs, period)) };
+    const { base } = await start({ energy: { store, source: tellend } });
+    const info = (await (await fetch(`${base}/api/energie`)).json()) as { voorstel: unknown };
+    await fetch(`${base}/api/energie`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(info.voorstel) });
+    expect((await fetch(`${base}/api/opbrengst?soort=jaar&datum=2025-03-01`)).status).toBe(200);
+    // Na de eerste vraag rekent de dienst de periodes van vandaag alvast uit; wachten tot dat klaar is.
+    await new Promise((r) => setTimeout(r, 200));
+    const na = vragen;
+    expect((await fetch(`${base}/api/opbrengst?soort=jaar&datum=2025-11-20`)).status).toBe(200);
+    expect(vragen).toBe(na);
+    // Nieuwe meters of prijzen: opnieuw uitrekenen.
+    await fetch(`${base}/api/energie`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(info.voorstel) });
+    expect((await fetch(`${base}/api/opbrengst?soort=jaar&datum=2025-11-20`)).status).toBe(200);
+    expect(vragen).toBeGreaterThan(na);
+  });
+
   it('bewaren vraagt een beheerder', () => {
     expect(DOOR_ROLES['/api/energie']).toBe('beheerder');
   });

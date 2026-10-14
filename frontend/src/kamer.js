@@ -355,14 +355,46 @@ function nestBlad(k, d) {
     ${strookVandaag(d, '#FF7A4D')}`;
 }
 
+/*
+ * Het screen (besluit 121, schets Wand-Bedienen): het raam met het doek op zijn
+ * stand. Bij een screen dat zijn stand terugmeldt en er een kan kiezen (Somfy
+ * io), sleep je de greep omhoog of omlaag, of kies je Open, Half of Dicht. Een
+ * scherm zonder terugmelding (Somfy RTS) heeft alleen Open, Stop en Dicht.
+ */
+const DOEK = { boven: 46, hoogte: 214 };
+
+/** Zet het doek op een stand (0 is open, 1 is dicht), in een getekend raam. */
+function zetDoek(svg, dicht) {
+  const h = Math.round(DOEK.hoogte * dicht);
+  const doek = svg.querySelector('[data-doek]');
+  if (doek) {
+    doek.setAttribute('height', String(h));
+    doek.style.display = h > 0 ? '' : 'none';
+  }
+  svg.querySelector('[data-lat]')?.setAttribute('y', String(42 + h));
+  svg.querySelector('[data-greep]')?.setAttribute('transform', `translate(0 ${h})`);
+  const lijn = svg.querySelector('[data-standlijn]');
+  if (lijn) {
+    lijn.setAttribute('y2', String(DOEK.boven + h));
+    lijn.style.display = h > 0 ? '' : 'none';
+  }
+  const tekst = svg.querySelector('[data-standtekst]');
+  if (tekst) {
+    tekst.setAttribute('y', String(Math.min(250, 72 + h)));
+    tekst.textContent = h > 0 ? `${Math.round(dicht * 100)}%` : 'open';
+  }
+}
+
 function screenBlad(k, d) {
   // Somfy RTS meldt zijn stand niet terug (besluit 121): dan geen stand in de tekening.
   const terug = d.scherm?.terugmelding !== false;
+  const sleep = terug && d.scherm?.standKiezen === true;
+  const bedienen = huisData.schermenBedienen === true;
   const open = terug ? d.positiePct ?? (d.aan ? 0 : 100) : 100;
   const dicht = 1 - open / 100;
-  const doekH = Math.round(214 * dicht);
+  const doekH = Math.round(DOEK.hoogte * dicht);
   const zonNu = (zon?.gevels ?? []).filter((g) => g.inDeZon).map((g) => g.naam.toLowerCase());
-  const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="Het raam met de screen ${Math.round(dicht * 100)} procent dicht">
+  const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="Het raam met de screen ${Math.round(dicht * 100)} procent dicht" ${sleep && bedienen ? `data-schermsleep="${esc(d.id)}" style="touch-action: none; cursor: ns-resize"` : ''}>
     <defs><linearGradient id="raamlucht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d8fc0"/><stop offset="1" stop-color="#9cc1e0"/></linearGradient>
       <pattern id="doek" width="8" height="6" patternUnits="userSpaceOnUse"><rect width="8" height="6" fill="#3d4a5a"/><rect width="8" height="1.2" fill="#4c5b6d"/></pattern>
       <linearGradient id="straal" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0"/></linearGradient></defs>
@@ -372,24 +404,28 @@ function screenBlad(k, d) {
     <rect x="56" y="46" width="188" height="214" rx="4" fill="url(#raamlucht)" stroke="#6b7a8c" stroke-width="6"/>
     <line x1="150" y1="46" x2="150" y2="260" stroke="#6b7a8c" stroke-width="5"/>
     <rect x="64" y="160" width="76" height="92" fill="#ffffff" opacity="0.12"/>
-    ${doekH > 0 ? `<rect x="52" y="46" width="196" height="${doekH}" fill="url(#doek)"/>` : ''}
-    <rect x="48" y="${42 + doekH}" width="204" height="9" rx="4" fill="#5b6a7c"/>
+    <rect data-doek x="52" y="46" width="196" height="${doekH}" fill="url(#doek)" ${doekH > 0 ? '' : 'style="display: none"'}/>
+    <rect data-lat x="48" y="${42 + doekH}" width="204" height="9" rx="4" fill="#5b6a7c"/>
+    ${sleep && bedienen ? `<g data-greep transform="translate(0 ${doekH})"><rect x="126" y="38" width="48" height="17" rx="8.5" fill="#EEF3F7"/><line x1="138" y1="46.5" x2="162" y2="46.5" stroke="#0b1424" stroke-width="2" stroke-linecap="round"/></g>` : ''}
     <line x1="270" y1="46" x2="270" y2="260" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round"/>
-    ${doekH > 0 ? `<line x1="270" y1="46" x2="270" y2="${46 + doekH}" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round"/>` : ''}
-    <text x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${!terug ? 'stand onbekend' : doekH > 0 ? `${Math.round(dicht * 100)}%` : 'open'}</text>
+    <line data-standlijn x1="270" y1="46" x2="270" y2="${46 + doekH}" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round" ${doekH > 0 && terug ? '' : 'style="display: none"'}/>
+    <text data-standtekst x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${!terug ? 'stand onbekend' : doekH > 0 ? `${Math.round(dicht * 100)}%` : 'open'}</text>
   </svg>`;
-  const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon nu op de ${esc(zonNu.join(' en '))}</span>` : '';
-  const bedienen = huisData.schermenBedienen === true;
-  const knoppen = `<div class="keuze" role="group" aria-label="${esc(d.naam)} bedienen">${[['open', 'Open'], ['stop', 'Stop'], ['dicht', 'Dicht']].map(([a, t]) => `<button type="button" data-scherm="${a}" ${bedienen ? '' : 'disabled'}>${t}</button>`).join('')}</div>`;
-  const schuif = d.scherm?.standKiezen
-    ? `<div><div class="feit" style="margin-bottom: 8px"><b>Hoe ver dicht</b><span data-schermstand-tekst>${Math.round(dicht * 100)}%</span></div><input class="schuif" type="range" min="0" max="100" step="5" value="${Math.round(dicht * 100)}" aria-label="Hoe ver ${esc(d.naam)} dicht is" data-schermstand="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></div>`
-    : '';
+  const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon op deze gevel</span>` : '';
+  // Open, Half, de stand van nu en Dicht; zonder stand kiezen Open, Stop en Dicht.
+  const nu = Math.round(dicht * 100);
+  const keuzes = sleep
+    ? [['stand:0', 'Open', nu === 0], ['stand:50', 'Half', nu === 50], ...(nu !== 0 && nu !== 50 && nu !== 100 ? [[`stand:${nu}`, `${nu}%`, true]] : []), ['stand:100', 'Dicht', nu === 100]]
+    : [['open', 'Open', false], ['stop', 'Stop', false], ['dicht', 'Dicht', false]];
+  const knoppen = `<div class="keuze" style="grid-template-columns: repeat(${keuzes.length}, 1fr)" role="group" aria-label="${esc(d.naam)} bedienen">${keuzes.map(([a, t, aan]) => `<button type="button" data-scherm="${a}" aria-pressed="${aan}" ${bedienen ? '' : 'disabled'}>${t}</button>`).join('')}</div>`;
   const uitleg = !terug
     ? 'Dit scherm meldt zijn stand niet terug (Somfy RTS). Open, dicht en stop werken; waar hij staat, weet de app niet. Daarom gaat hij ook later niet mee in de regeling.'
-    : 'Je bedient het scherm hier zelf. De regeling doet er niets mee.';
+    : sleep
+      ? 'Sleep de greep omhoog of omlaag, of kies een stand. De regeling doet er niets mee.'
+      : 'Je bedient het scherm hier zelf. De regeling doet er niets mee.';
   return `${kopVan(d, '', pil)}
     <div class="beeld">${svg}</div>
-    ${bedienen ? `${knoppen}${schuif}` : ''}
+    ${bedienen ? knoppen : ''}
     <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span>${bedienen ? uitleg : 'Schermen bedienen staat uit. Zet het aan bij Functies.'}</span></div>
     <p class="mini" data-fout style="margin: 0; color: var(--gloed)"></p>`;
 }
@@ -549,19 +585,50 @@ function koppel(blad) {
       teken();
     } else if (t.dataset.kleur && apparaat) void licht({ doel: 'lamp', id: apparaat.id, aan: true, kleur: t.dataset.kleur });
     // Een scherm open, dicht of stoppen (besluit 121).
-    else if (t.dataset.scherm && apparaat) void licht({ id: apparaat.id, actie: t.dataset.scherm }, 'api/scherm');
+    else if (t.dataset.scherm && apparaat) {
+      const [actie, pct] = t.dataset.scherm.split(':');
+      if (actie === 'stand') {
+        $$('[data-scherm]').forEach((b) => b.setAttribute('aria-pressed', String(b === t)));
+        $$('[data-schermsleep]').forEach((svg) => zetDoek(svg, Number(pct) / 100));
+        void licht({ id: apparaat.id, actie: 'stand', standPct: 100 - Number(pct) }, 'api/scherm');
+      } else void licht({ id: apparaat.id, actie }, 'api/scherm');
+    }
   });
   blad.addEventListener('input', (e) => {
     if (e.target.dataset.helder != null) $$('[data-helder-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
-    if (e.target.dataset.schermstand != null) $$('[data-schermstand-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
   });
   blad.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.helder) void licht({ doel: 'lamp', id: t.dataset.helder, aan: true, helderheidPct: Number(t.value) });
     else if (t.dataset.kelvin) void licht({ doel: 'lamp', id: t.dataset.kelvin, aan: true, kelvin: Number(t.value) });
-    // De schuif zegt hoe ver dicht; Home Assistant wil hoe ver open.
-    else if (t.dataset.schermstand) void licht({ id: t.dataset.schermstand, actie: 'stand', standPct: 100 - Number(t.value) }, 'api/scherm');
     t.blur();
+  });
+  // Het screen: de greep slepen zet het doek, loslaten stuurt de stand (besluit 121).
+  blad.addEventListener('pointerdown', (e) => {
+    const svg = e.target.closest('[data-schermsleep]');
+    if (!svg || !huisData.schermenBedienen) return;
+    e.preventDefault();
+    bezig = true;
+    svg.setPointerCapture(e.pointerId);
+    const zet = (ev) => {
+      const r = svg.getBoundingClientRect();
+      const y = ((ev.clientY - r.top) / r.height) * 290;
+      const dicht = Math.round(Math.max(0, Math.min(1, (y - DOEK.boven) / DOEK.hoogte)) * 20) / 20;
+      zetDoek(svg, dicht);
+      return dicht;
+    };
+    let laatste = zet(e);
+    const beweeg = (ev) => (laatste = zet(ev));
+    const klaar = (sturen) => () => {
+      svg.removeEventListener('pointermove', beweeg);
+      bezig = false;
+      if (!sturen) return;
+      $$('[data-scherm]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scherm === `stand:${Math.round(laatste * 100)}`)));
+      void licht({ id: svg.dataset.schermsleep, actie: 'stand', standPct: Math.round(100 - laatste * 100) }, 'api/scherm');
+    };
+    svg.addEventListener('pointermove', beweeg);
+    svg.addEventListener('pointerup', klaar(true), { once: true });
+    svg.addEventListener('pointercancel', klaar(false), { once: true });
   });
   // Het kleurenwiel: slepen zet de stip, loslaten stuurt de kleur.
   blad.addEventListener('pointerdown', (e) => {

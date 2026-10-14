@@ -132,6 +132,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [119. Kamers krijgen een soort; ingezoomd staat de inrichting erin](#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin)
 - [120. Een liggende telefoon toont de tabletweergave](#120-een-liggende-telefoon-toont-de-tabletweergave)
 - [124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw](#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw)
+- [125. Het screen zoals de schets, en Opbrengst onthoudt wat al uitgerekend is](#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is)
 
 **Veiligheid**
 
@@ -5312,6 +5313,29 @@ thermostaat uit stond.
   schakelt.
 - **Batterijen:** de dienst houdt nu ook de standen van batterijsensoren bij;
   zonder die standen bleef de lijst van besluit 122 leeg.
+
+---
+
+## 125. Het screen zoals de schets, en Opbrengst onthoudt wat al uitgerekend is
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026.
+
+*Besluit:*
+
+- **Het screen zoals in de schets Wand-Bedienen.** Bij een screen dat zijn stand
+  terugmeldt en er een kan kiezen (Somfy io) sleep je de greep onder aan het
+  doek omhoog of omlaag; loslaten stuurt de stand. Daaronder Open, Half, de
+  stand van nu en Dicht. Een scherm zonder terugmelding (Somfy RTS) houdt Open,
+  Stop en Dicht, zonder greep.
+- **Opbrengst onthoudt per periode.** De sleutel is het begin van de periode,
+  dus elke datum in hetzelfde jaar vindt hetzelfde. Een afgelopen periode
+  verandert niet meer en blijft tot de meters of prijzen veranderen. De lopende
+  periode komt meteen uit wat er is, en wordt op de achtergrond opnieuw
+  uitgerekend als hij ouder is dan twee minuten. Na de eerste vraag rekent de
+  dienst dag, week, maand en jaar van vandaag alvast uit. Hooguit honderd
+  periodes, de oudste eruit.
 
 ---
 

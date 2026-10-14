@@ -35,7 +35,7 @@ import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
 import { validateConnection, type ConnectionStore, type ConnectionView, type FoundAppliance, type FoundPhase } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
-import { PERIODS, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
+import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn } from './today.js';
 import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, LANGS, parseQuestion } from './assistant.js';
@@ -977,8 +977,15 @@ export class WebServer {
    * `/auth/callback` met een code. De dienst wisselt die in voor wie het is,
    * maakt een eigen sessie en gooit het token van Home Assistant weg.
    */
-  /** De terugblik per periode, even bewaard: de statistiek verandert per uur. */
+  /**
+   * Opbrengst per periode, bewaard (besluit 125). Een afgelopen periode
+   * verandert niet meer: die blijft tot de meters of prijzen veranderen. De
+   * lopende periode komt meteen uit de bewaarde, en wordt op de achtergrond
+   * opnieuw uitgerekend als hij ouder is dan twee minuten. De sleutel is het
+   * begin van de periode, zodat elke datum in hetzelfde jaar hetzelfde vindt.
+   */
   readonly #yieldCache = new Map<string, { atMs: number; report: YieldReport }>();
+  readonly #yieldBusy = new Map<string, Promise<YieldReport | null>>();
 
   async #energy(req: IncomingMessage, res: ServerResponse, method: string): Promise<void> {
     const energy = this.#options.energy;
@@ -1064,24 +1071,71 @@ export class WebServer {
     }
     const now = Date.now();
     const today = partsIn(now, config.timezone);
-    const datum = params.get('datum') ?? `${today.y}-${String(today.m).padStart(2, '0')}-${String(today.d).padStart(2, '0')}`;
-    const key = `${soort}:${datum}`;
+    const vandaag = `${today.y}-${String(today.m).padStart(2, '0')}-${String(today.d).padStart(2, '0')}`;
+    const datum = params.get('datum') ?? vandaag;
+    const range = periodRange(soort, datum, config.timezone, yearStartOf(settings.prijzen.contractStart));
+    if (range == null) {
+      sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
+      return;
+    }
+    const key = `${soort}:${range.startMs}`;
     const hit = this.#yieldCache.get(key);
-    if (hit && now - hit.atMs < 120_000) {
+    // Klaar is klaar: uitgerekend na het einde van de periode.
+    const fresh = (h: { atMs: number; report: YieldReport }) => h.atMs >= h.report.periode.totMs || now - h.atMs < 120_000;
+    if (hit) {
       sendJson(res, 200, hit.report);
+      if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now).catch(() => null);
+      this.#yieldWarm(vandaag);
       return;
     }
     try {
-      const report = await yieldReport(energy.source, settings, soort, datum, config.timezone, now);
+      const report = await this.#yieldCompute(key, soort, datum, now);
       if (report == null) {
         sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
         return;
       }
-      if (this.#yieldCache.size > 50) this.#yieldCache.clear();
-      this.#yieldCache.set(key, { atMs: now, report });
       sendJson(res, 200, report);
+      this.#yieldWarm(vandaag);
     } catch (error) {
       sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
+    }
+  }
+
+  /** Rekent één periode uit, één keer tegelijk per periode, en bewaart hem. */
+  #yieldCompute(key: string, soort: PeriodKind, datum: string, now: number): Promise<YieldReport | null> {
+    const busy = this.#yieldBusy.get(key);
+    if (busy) return busy;
+    const energy = this.#options.energy!;
+    const config = this.#options.config!;
+    const settings = energy.store.current!;
+    const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now)
+      .then((report) => {
+        if (report != null) {
+          // Hooguit honderd periodes; de oudste eruit.
+          if (this.#yieldCache.size >= 100) this.#yieldCache.delete(this.#yieldCache.keys().next().value!);
+          this.#yieldCache.delete(key);
+          this.#yieldCache.set(key, { atMs: now, report });
+        }
+        return report;
+      })
+      .finally(() => this.#yieldBusy.delete(key));
+    this.#yieldBusy.set(key, job);
+    return job;
+  }
+
+  /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */
+  #yieldWarm(vandaag: string): void {
+    const config = this.#options.config;
+    const settings = this.#options.energy?.store.current;
+    if (config == null || settings == null) return;
+    const now = Date.now();
+    for (const soort of PERIODS) {
+      const range = periodRange(soort, vandaag, config.timezone, yearStartOf(settings.prijzen.contractStart));
+      if (range == null) continue;
+      const key = `${soort}:${range.startMs}`;
+      const hit = this.#yieldCache.get(key);
+      if (hit && (hit.atMs >= hit.report.periode.totMs || now - hit.atMs < 120_000)) continue;
+      void this.#yieldCompute(key, soort, vandaag, now).catch(() => null);
     }
   }
 

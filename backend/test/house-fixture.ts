@@ -126,7 +126,8 @@ export const states = new Map<string, HaEntityState>([
   ['scene.zolderkamer_helder', state('scene.zolderkamer_helder', '2026-10-05T06:00:00+00:00', { friendly_name: 'Zolderkamer Helder', group_name: 'Zolderkamer', name: 'Helder' })],
   ['scene.garage_feest', state('scene.garage_feest', '2026-10-05T08:00:00+00:00', { friendly_name: 'Garage Feest', group_name: 'Garage', name: 'Feest' })],
   ['light.woonkamer_alles', state('light.woonkamer_alles', 'on', { friendly_name: 'Woonkamer alles', entity_id: ['light.woonkamer_plafonniere'] })],
-  ['cover.screen', state('cover.screen', 'open', { friendly_name: 'Screen', current_position: 40 })],
+  // Een io-screen: meldt zijn stand, en kan naar een stand (supported_features 15).
+  ['cover.screen', state('cover.screen', 'open', { friendly_name: 'Screen', current_position: 40, supported_features: 15 })],
   ['cover.screen_low_speed', state('cover.screen_low_speed', 'open', { friendly_name: 'Screen low speed', current_position: 40 })],
   ['light.achtertuin', state('light.achtertuin', 'off', { friendly_name: 'Achtertuin' })],
   // Een groep die een lamp zonder gebied bevat, en een Hue-kamer die zijn lampen alleen bij naam noemt.
