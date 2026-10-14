@@ -88,6 +88,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [114. Inrichten: een wizard over de schermen die er al zijn](#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn)
 - [117. De hoofdzekering stel je in de app in; die gaat voor de configuratie](#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie)
 - [122. Batterijen bij het apparaat, en de verwarming met haar aanvoertemperatuur](#122-batterijen-bij-het-apparaat-en-de-verwarming-met-haar-aanvoertemperatuur)
+- [123. Meten met: per kamer zelf de sensoren kiezen](#123-meten-met-per-kamer-zelf-de-sensoren-kiezen)
 
 **Meten, data en analyse**
 
@@ -5248,6 +5249,38 @@ radiatorknoppen van Sonoff (Zigbee) en een slimme cv-regeling.
   stadsverwarming of weet ik niet, en de aanvoertemperatuur op de ketel (25 tot
   90 °C, leeg als je hem niet weet). Het thermisch model gebruikt het later:
   een lagere aanvoer warmt een kamer langzamer op.
+
+---
+
+## 123. Meten met: per kamer zelf de sensoren kiezen
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026: per kamer zelf één of meer
+sensoren kiezen die de regeling gebruikt. Tot nu toe stond de sensor per zone
+vast in de configuratie van dit huis; voor een app die op elk huis moet werken,
+hoort die keuze in de app. Het is ook de voorbereiding op de radiatorknoppen.
+
+*Besluit:*
+
+- **Bij Indeling, per kamer: "Meten met".** Eerst de thermometers en
+  klimaatapparaten in de kamer, en een sensor uit een andere kamer kan erbij;
+  hooguit zes. De keuze staat in de indeling (`meten`).
+- **Meer sensoren: het gemiddelde van wat meldt.** Een sensor die wegvalt, telt
+  niet mee; meldt er geen enkele, dan is de temperatuur onbekend. Een
+  klimaatapparaat meet met zijn eigen thermometer (`current_temperature`).
+- **In een kamer met een regeling** vult de dienst bij het starten de
+  configuratie aan (`temperatures`, de eerste ook als `temperature`), zoals de
+  antwoorden over de aansluiting (103). Een nieuwe keuze gaat dus in bij de
+  volgende start. **In een kamer zonder regeling** toont de app meteen het
+  gemiddelde.
+- **De dataset weet het.** Bij elke start waarbij de sensoren per zone anders
+  zijn dan de vorige keer, schrijft de dienst ze met de tijd in
+  `sensoren.ndjson` naast de dataset. Zo weet de analyse vanaf wanneer welke
+  sensor telde.
+- **De radiatorknop** (Sonoff via Zigbee) komt hier straks als bron bij. Hij
+  hangt naast de radiator en meet vaak te warm; daarom kiest de app hem niet
+  vanzelf.
 
 ---
 

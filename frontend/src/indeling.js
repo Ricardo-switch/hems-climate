@@ -304,6 +304,7 @@ function kamerBlad(d, k) {
     <div><label class="label" for="kamernaam-${esc(k.id)}">Naam</label><input class="veld" id="kamernaam-${esc(k.id)}" data-actie="kamernaam" value="${esc(k.naam)}" maxlength="40"></div>
     ${buitenKeuze(k)}
     ${soortKeuze(k)}
+    ${metenKeuze(k)}
     ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, k.regelzone ?? '')}</select></div>`}
     <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips">${k.zones.map((z) => `<button type="button" class="chip" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">${esc(z.naam)}<span class="weg" aria-hidden="true">×</span></button>`).join('')}<input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>
     <div>
@@ -344,6 +345,31 @@ const KAMER_SOORTEN = [
   ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
   ['wasruimte', 'Wasruimte'], ['berging', 'Berging of zolder'], ['leeg', 'Leeg'],
 ];
+/*
+ * Meten met (besluit 123): één of meer sensoren, waarvan het gemiddelde de
+ * temperatuur van de kamer is. Eerst wat in de kamer staat; een sensor uit een
+ * andere kamer kan erbij.
+ */
+function temperatuurBronnen() {
+  return (huisData?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((d) => d.meting?.temperatuurC != null).map((d) => ({ id: d.id, naam: d.naam, kamerId: r.id, kamer: r.naam, c: d.meting.temperatuurC }))));
+}
+function metenKeuze(k) {
+  if (k.etage === 'buiten' || huismodel.isBuiten({ id: k.etage }, k)) return '';
+  const bronnen = temperatuurBronnen();
+  const gekozen = new Set(k.meten ?? []);
+  const hier = bronnen.filter((b) => b.kamerId === k.id || gekozen.has(b.id));
+  const elders = bronnen.filter((b) => b.kamerId !== k.id && !gekozen.has(b.id));
+  const graad = (c) => `${String(Math.round(c * 10) / 10).replace('.', ',')}°`;
+  const chip = (b) => `<button type="button" class="chip${gekozen.has(b.id) ? '' : ' uitchip'}" data-meten="${esc(b.id)}" aria-pressed="${gekozen.has(b.id)}">${esc(b.naam)}${b.kamerId !== k.id ? ` (${esc(b.kamer)})` : ''} · ${graad(b.c)}</button>`;
+  const uitleg = !gekozen.size
+    ? k.regelzone ? 'Niets gekozen: de regeling meet zoals ingesteld.' : 'Niets gekozen: de app neemt een meter in de kamer.'
+    : k.regelzone ? `Het gemiddelde telt voor de regeling na de volgende herstart van Smart Climate.` : 'De temperatuur in de app is het gemiddelde.';
+  return `<div><span class="label">Meten met</span>
+    <div class="chips" role="group" aria-label="Meten met">${hier.length ? hier.map(chip).join('') : '<span class="mini">Geen thermometer in deze kamer.</span>'}</div>
+    ${elders.length ? `<select class="veld" data-actie="meten-erbij" aria-label="Sensor uit een andere kamer" style="margin-top: 6px"><option value="">Sensor uit een andere kamer…</option>${elders.map((b) => `<option value="${esc(b.id)}">${esc(b.naam)} (${esc(b.kamer)}) · ${graad(b.c)}</option>`).join('')}</select>` : ''}
+    <p class="mini" style="margin: 6px 0 0">${uitleg}</p></div>`;
+}
+
 function soortKeuze(k) {
   if (k.etage === 'buiten' || huismodel.isBuiten({ id: k.etage }, k)) return '';
   const r = ruimteVan(k.id);
@@ -529,6 +555,17 @@ document.addEventListener('click', async (e) => {
     else if (huisData?.dakEtage === keuze.etage || next.dak === keuze.etage) next.dak = 'geen';
     else return;
     await bewaar(next, t.dataset.dak === 'true' ? `${etageNaam(next, keuze.etage)} ligt onder het dak.` : 'Geen schuin dak boven deze etage.');
+  } else if (t.dataset.meten) {
+    // Meten met (besluit 123): een sensor aan of uit voor deze kamer.
+    const next = concept();
+    const k = next.kamers.find((x) => x.id === keuze.kamer);
+    if (!k) return;
+    const lijst = new Set(k.meten ?? []);
+    if (lijst.has(t.dataset.meten)) lijst.delete(t.dataset.meten);
+    else lijst.add(t.dataset.meten);
+    if (lijst.size) k.meten = [...lijst].slice(0, 6);
+    else delete k.meten;
+    await bewaar(next, 'Meten met bewaard.');
   } else if (t.dataset.buiten) {
     // Wat een buitenruimte is (besluit 109).
     const next = concept();
@@ -581,6 +618,10 @@ document.addEventListener('change', async (e) => {
     for (const x of next.kamers) if (v && x.regelzone === v) x.regelzone = null;
     k.regelzone = v || null;
     await bewaar(next, 'Regeling bewaard.');
+  } else if (t.dataset.actie === 'meten-erbij' && k && v) {
+    // Een sensor uit een andere kamer erbij (besluit 123).
+    k.meten = [...new Set([...(k.meten ?? []), v])].slice(0, 6);
+    await bewaar(next, 'Meten met bewaard.');
   } else if (t.dataset.actie === 'soort' && k) {
     // Wat voor kamer (besluit 119); leeg is weer het voorstel uit de naam.
     if (v) k.soort = v;

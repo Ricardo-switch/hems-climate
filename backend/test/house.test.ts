@@ -122,6 +122,19 @@ describe('het voorstel uit Home Assistant', () => {
     expect(metIo.scherm).toEqual({ terugmelding: true, standKiezen: true });
   });
 
+  it('toont in een kamer zonder regeling het gemiddelde van de gekozen sensoren (besluit 123)', () => {
+    const eigen = proposeLayout(config, registers, states);
+    const zonder = eigen.kamers.find((k) => k.etage !== 'buiten' && k.regelzone == null)!;
+    const basis = states.get('cover.screen')!;
+    const metStand = new Map(states);
+    metStand.set('sensor.a', { ...basis, entity_id: 'sensor.a', state: '19.0', attributes: {} });
+    metStand.set('climate.b', { ...basis, entity_id: 'climate.b', state: 'heat', attributes: { current_temperature: 21.2 } });
+    const h = buildHouse(config, registers, metStand, snapshot, { ...eigen, kamers: eigen.kamers.map((k) => (k.id === zonder.id ? { ...k, meten: ['sensor.a', 'climate.b', 'sensor.weg'] } : k)) });
+    const kamer = h.etages.flatMap((e) => e.ruimtes).find((r) => r.id === zonder.id)!;
+    expect(kamer.temperatuurC).toBe(20.1);
+    expect(kamer.gemetenDoor).toBeNull();
+  });
+
   it('zet de batterij bij het apparaat, en geeft alle batterijen met de leegste eerst (besluit 122)', () => {
     const basis = states.get('cover.screen')!;
     const metAccu = {

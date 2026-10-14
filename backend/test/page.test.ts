@@ -510,6 +510,28 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /* Meten met (besluit 123): een sensor aan- en weer uitzetten bij Indeling. */
+  it('kiest bij Indeling met welke sensor een kamer meet', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((d) => d.meting?.temperatuurC != null))!;
+    const bron = kamer.apparaten.find((d) => d.meting?.temperatuurC != null)!;
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}`);
+    const chip = p.locator(`#wand [data-meten="${bron.id}"]`);
+    await chip.click({ timeout: 10_000 });
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.meten).toEqual([bron.id]);
+    await p.locator(`#wand [data-meten="${bron.id}"][aria-pressed="true"]`).click({ timeout: 5000 });
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.meten ?? null).toBeNull();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   /* Schermen (besluit 121) en batterijen (besluit 122). */
   it('bedient een scherm vanuit Kamer, en meldt een lege batterij op Thuis', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });

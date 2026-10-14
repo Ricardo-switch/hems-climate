@@ -162,6 +162,12 @@ export interface Zone {
   readonly id: string;
   readonly name: string;
   readonly temperature: MeasurementPoint;
+  /**
+   * Meet de zone met meer sensoren (besluit 123), dan staan ze hier, de eerste
+   * gelijk aan `temperature`. De temperatuur van de zone is dan het gemiddelde
+   * van wat er meldt; een sensor die wegvalt, telt niet mee.
+   */
+  readonly temperatures?: readonly MeasurementPoint[];
   readonly humidity?: MeasurementPoint;
   /** Verwijst naar Actuator.id. Volgorde is niet betekenisvol. */
   readonly actuatorIds: readonly string[];

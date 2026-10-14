@@ -652,6 +652,20 @@ function zone(
   const id = str(p, value, path, 'id');
   const name = strOr(p, value, path, 'name', id ?? '');
   const temperature = measurementPoint(p, value['temperature'], join(path, 'temperature'), defaultAdapter);
+  // Meer sensoren voor één zone (besluit 123): de gemiddelde temperatuur.
+  const temperaturesRaw = value['temperatures'];
+  let temperatures: MeasurementPoint[] | null = null;
+  if (temperaturesRaw !== undefined) {
+    if (!Array.isArray(temperaturesRaw) || temperaturesRaw.length === 0 || temperaturesRaw.length > 6) {
+      p.error(join(path, 'temperatures'), 'moet een lijst van 1 tot 6 meetpunten zijn');
+    } else {
+      temperatures = [];
+      temperaturesRaw.forEach((t, i) => {
+        const m = measurementPoint(p, t, join(join(path, 'temperatures'), i), defaultAdapter);
+        if (m) temperatures!.push(m);
+      });
+    }
+  }
   const humidityRaw = value['humidity'];
   const humidity =
     humidityRaw === undefined
@@ -769,6 +783,7 @@ function zone(
     id,
     name,
     temperature,
+    ...(temperatures && temperatures.length ? { temperatures } : {}),
     ...(humidity ? { humidity } : {}),
     actuatorIds,
     priority,

@@ -94,6 +94,13 @@ function readPoint(source: EntitySource, point: MeasurementPoint): number | null
     : source.attrNumber(point.id, point.attribute);
 }
 
+/** Het gemiddelde van de meetpunten die een getal geven, of null als er geen meldt. */
+function zoneTemperature(source: EntitySource, points: readonly MeasurementPoint[]): number | null {
+  const values = points.map((p) => readPoint(source, p)).filter((v): v is number => v != null && Number.isFinite(v));
+  if (values.length === 0) return null;
+  return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100;
+}
+
 function timerAt(source: EntitySource, entityId: string): TimerState {
   if (source.state(entityId) !== 'active') return { endsAtMs: null };
   const finishes = source.attr(entityId, 'finishes_at');
@@ -216,7 +223,8 @@ export function buildSystemState(
 
   const zones: SystemState['zones'] = Object.fromEntries(
     config.zones.map((zone) => {
-      const t = readPoint(source, zone.temperature);
+      // Met meer sensoren (besluit 123) het gemiddelde van wat er meldt.
+      const t = zoneTemperature(source, zone.temperatures ?? [zone.temperature]);
       // Luchtvochtigheid is waarneming en geen invoer, net als de
       // buitentemperatuur (besluit 30). Hij stond al in de filter — en lokte
       // dus herberekeningen uit — terwijl niemand hem uitlas.
@@ -459,6 +467,7 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
   for (const ref of config.criticalInputs) ids.add(ref.id);
   for (const zone of config.zones) {
     ids.add(zone.temperature.id);
+    for (const t of zone.temperatures ?? []) ids.add(t.id);
     if (zone.humidity) ids.add(zone.humidity.id);
   }
   for (const actuator of config.actuators) {

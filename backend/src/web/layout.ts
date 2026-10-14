@@ -88,6 +88,12 @@ export interface LayoutRoom {
   readonly etage: FloorId;
   /** Alleen binnen: wat voor kamer het is (besluit 119). Weg is: de naam zegt het. */
   readonly soort?: RoomType;
+  /**
+   * Meten met (besluit 123): de sensoren waarvan het gemiddelde de temperatuur
+   * van de kamer is, sensoren en klimaatapparaten uit het huis. Weg is: zoals
+   * de configuratie het zegt.
+   */
+  readonly meten?: readonly string[];
   /** Alleen op de etage buiten: wat voor ruimte het is (besluit 109). Weg is: de naam zegt het. */
   readonly buiten?: LayoutOutside;
   /** Delen van de kamer, als die ze heeft: keuken en zithoek (95). */
@@ -257,7 +263,16 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     const so = k['soort'];
     if (so !== undefined && so !== null && !(ROOM_TYPES as readonly unknown[]).includes(so)) return { ok: false, reden: `kamer ${id}: soort is ${ROOM_TYPES.join(', ')}` };
     const soort = so != null && etage !== OUTSIDE_FLOOR ? (so as RoomType) : undefined;
-    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}) });
+    // Meten met (besluit 123): apparaten die het huis kent, hooguit zes, geen dubbele.
+    const me = k['meten'];
+    let meten: string[] | undefined;
+    if (me !== undefined && me !== null) {
+      if (!Array.isArray(me) || me.length > 6 || me.some((x) => typeof x !== 'string' || !known.deviceIds.has(x)) || new Set(me).size !== me.length) {
+        return { ok: false, reden: `kamer ${id}: meten is een lijst van hooguit zes bekende sensoren` };
+      }
+      if (me.length > 0) meten = me as string[];
+    }
+    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}) });
   }
 
   const appIn = b['apparaten'] ?? {};

@@ -29,6 +29,7 @@ import {
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
+import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -343,6 +344,33 @@ if (site && answersAtStart) {
   }
   for (const t of connectionApplied.toegevoegd) console.log(`Uit de app (aansluiting.json): ${t}`);
   for (const t of connectionApplied.overgeslagen) console.warn(`Uit de app niet overgenomen: ${t}`);
+}
+
+/*
+ * Meten met (besluit 123): de sensoren die de bewoner per kamer koos, na de
+ * aansluiting. Ook hier: alleen als het resultaat door het schema komt. Daarna
+ * in het logboek welke sensoren per zone meetellen, als dat anders is dan de
+ * vorige start.
+ */
+if (site && logDir !== '') {
+  try {
+    const layoutAtStart = await readLayoutFile(logDir);
+    const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
+    const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
+    const metMeten = withMeasurement(metAansluiting, layoutAtStart);
+    if (metMeten.toegevoegd.length) {
+      const checked = parseSiteConfig(metMeten.raw, { knownStrategies: strategies.ids });
+      if (checked.ok) {
+        site = { ...site, config: checked.config };
+        for (const t of metMeten.toegevoegd) console.log(`Uit de app (indeling.json): ${t}`);
+      } else {
+        console.warn(`Meten met uit de app niet overgenomen: ${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? ''}`);
+      }
+    }
+  } catch {
+    // Niet te lezen: dan meet elke zone zoals de configuratie zegt.
+  }
+  if (site) await noteSensors(logDir, site.config, Date.now()).catch(() => false);
 }
 
 const client = new HaClient({

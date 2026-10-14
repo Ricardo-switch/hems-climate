@@ -72,6 +72,17 @@ describe('de indeling toetsen', () => {
     }
   });
 
+  it('bewaart met welke sensoren een kamer meet, alleen bekende en hooguit zes (besluit 123)', () => {
+    const kamer = good.kamers[0]!;
+    const met = validateLayout({ ...good, kamers: [{ ...kamer, meten: ['nest', 'cover.screen'] }, ...good.kamers.slice(1)] }, known);
+    expect(met.ok && met.layout.kamers[0]!.meten).toEqual(['nest', 'cover.screen']);
+    for (const meten of [['sensor.onbekend'], ['nest', 'nest'], 'nest', [1]]) {
+      expect(validateLayout({ ...good, kamers: [{ ...kamer, meten }, ...good.kamers.slice(1)] }, known).ok, JSON.stringify(meten)).toBe(false);
+    }
+    const leeg = validateLayout({ ...good, kamers: [{ ...kamer, meten: [] }, ...good.kamers.slice(1)] }, known);
+    expect(leeg.ok && 'meten' in leeg.layout.kamers[0]!).toBe(false);
+  });
+
   it('bewaart wat voor kamer het is, alleen binnen (besluit 119)', () => {
     const kamer = good.kamers[0]!;
     const met = validateLayout({ ...good, kamers: [{ ...kamer, soort: 'kinderkamer' }, ...good.kamers.slice(1)] }, known);

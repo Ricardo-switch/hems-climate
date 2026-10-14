@@ -448,6 +448,14 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
   return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
 }
 
+/** De temperatuur van een sensor of klimaatapparaat (besluit 123), of null. */
+function readTemperature(state: HaEntityState | undefined, id: string): number | null {
+  if (state == null) return null;
+  const raw = id.startsWith('climate.') ? state.attributes['current_temperature'] : state.state;
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : NaN;
+  return Number.isFinite(n) && n > -40 && n < 70 ? n : null;
+}
+
 /** Kan dit scherm naar een stand (SUPPORT_SET_POSITION, bit 4)? */
 const COVER_SET_POSITION = 4;
 
@@ -747,7 +755,7 @@ function collect(
   const climateDevices = new Set(
     registers.entities.filter((e) => e.entity_id.startsWith('climate.') && e.device_id).map((e) => e.device_id as string),
   );
-  const zoneSensors = new Set(config.zones.map((z) => z.temperature.id));
+  const zoneSensors = new Set(config.zones.flatMap((z) => [z.temperature.id, ...(z.temperatures ?? []).map((t) => t.id)]));
   for (const [deviceId, r] of sensorsOf) {
     if (climateDevices.has(deviceId)) continue;
     const id = r.temp ?? r.hum;
@@ -1134,15 +1142,19 @@ export function buildHouse(
     const pz = zone ? snapshot?.explanation.perZone.find((z) => z.zoneId === zone.id) : undefined;
     // Zonder regelgebied meet een meter in de kamer, zoals in de hal of op zolder.
     const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null);
+    // Meten met (besluit 123): het gemiddelde van de gekozen sensoren. Met een
+    // regeling rekent de regeling er na de volgende start zelf mee.
+    const gekozen = (k.meten ?? []).map((id) => readTemperature(states.get(id), id)).filter((v): v is number => v != null);
+    const gekozenC = gekozen.length ? Math.round((gekozen.reduce((a, b) => a + b, 0) / gekozen.length) * 10) / 10 : null;
     const status = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
     return {
       id: k.id,
       naam: k.naam,
       zoneId: zone?.id ?? null,
       zones: k.zones.map((z) => ({ id: z.id, naam: z.naam })),
-      temperatuurC: pz?.temperatureC ?? meterTemp?.meting?.temperatuurC ?? null,
+      temperatuurC: pz?.temperatureC ?? gekozenC ?? meterTemp?.meting?.temperatuurC ?? null,
       vochtPct: pz?.humidityPct ?? devices.find((d) => d.meting?.vochtPct != null)?.meting?.vochtPct ?? null,
-      gemetenDoor: pz?.temperatureC == null && meterTemp ? meterTemp.naam : null,
+      gemetenDoor: pz?.temperatureC == null && gekozenC == null && meterTemp ? meterTemp.naam : null,
       status: status ? { soort: status.kind, zin: status.zin } : null,
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
       samenvatting: summarize(devices),
