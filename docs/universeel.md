@@ -62,8 +62,9 @@ hier een voorstel voor.
    welke etage onder het schuine dak ligt, kies je in de indeling.
 4. ~~**De etages.**~~ Gedaan op 9 oktober (besluit 112): etages voeg je vrij
    toe in de indeling, met de vaste namen (3e tot begane grond, kelder) als
-   voorstel. Nog over: de tekening zet een kelder op de grond in plaats van
-   eronder.
+   voorstel. Een kelder of trapkast blijft bij de begane grond (besluit 119,
+   aangevuld 14 oktober); er komt geen tekening onder de grond. Wat voor kamer
+   elke kamer is, kies je ook in de indeling (besluit 119).
 5. **De klimaatapparaten herkennen.** Het grootste stuk. Elke koppeling in Home
    Assistant geeft andere standen, grenzen en wel of geen vermogensmeting. De
    ontdekking (41) doet een voorstel; een wizard moet het per apparaat laten

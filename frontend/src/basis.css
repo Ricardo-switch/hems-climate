@@ -24,7 +24,7 @@ html.tel-stand body { overflow: auto; }
  * zodat er links en rechts geen lege rand blijft. Nooit scrollen. De schaal en de stand zet een klein script in de <head>, vóór de
  * eerste weergave: anders schoof de pagina bij het laden nog even op zijn plek.
  */
-#wand { position: fixed; left: 50%; top: 50%; width: var(--wandbreedte, 1280px); height: 800px; transform-origin: 50% 50%; transform: translate(-50%, -50%) scale(var(--wandschaal, 1)); grid-template-rows: 800px; }
+#wand { position: fixed; left: calc(50% + var(--wandmidden, 0px)); top: 50%; width: var(--wandbreedte, 1280px); height: 800px; transform-origin: 50% 50%; transform: translate(-50%, -50%) scale(var(--wandschaal, 1)); grid-template-rows: 800px; }
 html.tel-stand #wand { display: none; }
 html:not(.tel-stand) #tel { display: none; }
 /* De telefoon: de hele breedte, niet de 390 van de schets. */

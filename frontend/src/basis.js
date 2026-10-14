@@ -25,19 +25,41 @@
     instellingen: 'instellingen.html',
   };
 
+  /**
+   * De telefoonweergave alleen staand, of op een heel smal scherm. Een telefoon
+   * die ligt, krijgt de wand van de tablet, verkleind tot hij past. Dezelfde
+   * regel staat in het script in de <head> van elke pagina.
+   */
   function telStand() {
-    return innerWidth < 900 || innerHeight > innerWidth;
+    return innerHeight > innerWidth || innerWidth < 560;
   }
 
   /** De stand en de schaal, op <html>; het script in de <head> deed dit al vóór de eerste weergave. */
+  /** Een onzichtbaar vak om de inkeping van een telefoon te meten (safe-area). */
+  let peil = null;
+  function inzet() {
+    if (!peil) {
+      peil = document.createElement('div');
+      peil.setAttribute('aria-hidden', 'true');
+      peil.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)';
+      document.documentElement.append(peil);
+    }
+    const s = getComputedStyle(peil);
+    return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0 };
+  }
+
   function schaal() {
     const d = document.documentElement;
     d.classList.toggle('tel-stand', telStand());
+    // Een liggende telefoon heeft een inkeping aan de zijkant: de wand blijft ernaast.
+    const { l, r } = inzet();
+    const vrij = innerWidth - l - r;
     // Een breder scherm dan 16:10 (een tablet zonder de balken van het systeem):
     // de wand groeit mee in de breedte, de hoogte blijft 800. Zo vult hij het scherm.
-    const breed = Math.min(1700, Math.max(1280, Math.round((800 * innerWidth) / innerHeight)));
+    const breed = Math.min(1700, Math.max(1280, Math.round((800 * vrij) / innerHeight)));
     d.style.setProperty('--wandbreedte', `${breed}px`);
-    d.style.setProperty('--wandschaal', String(Math.min(innerWidth / breed, innerHeight / 800)));
+    d.style.setProperty('--wandschaal', String(Math.min(vrij / breed, innerHeight / 800)));
+    d.style.setProperty('--wandmidden', `${(l - r) / 2}px`);
   }
 
   async function haal(pad) {

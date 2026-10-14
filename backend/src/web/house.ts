@@ -893,6 +893,7 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
   if (zegt(/bad|douche|bathroom|shower/)) return 'badkamer';
   if (zegt(/eetkamer|eethoek|dining/)) return 'eetkamer';
   if (zegt(/woon|zitkamer|zithoek|living|lounge|tv-kamer|tv kamer|serre|huiskamer|salon/)) return 'woonkamer';
+  if (zegt(/trapkast|meterkast|kast onder de trap/)) return 'berging';
   if (zegt(/^(hal|gang|overloop|entree|portaal|vide|trap|trappenhuis|hall|landing|hallway)\b/)) return 'hal';
   if (zegt(/werk|kantoor|studeer|hobby|office|studio|bureau|game|thuiswerk|atelier|knutsel/)) return 'werkkamer';
   if (zegt(/zolder|vliering|berg|opslag|kelder|garage|schuur|attic|storage|basement/)) return 'berging';
@@ -931,15 +932,16 @@ export function proposeLayout(
     // Een tuin of oprit is buiten, ook als Home Assistant hem op de begane grond zet.
     if (OUTSIDE.test(area.name)) return 'buiten';
     const f = area.floor_id ? floorById.get(area.floor_id) : undefined;
-    // Onder de grond is de kelder (besluit 112); hoger dan de eerste verdieping de tweede.
-    if (f && f.level != null) return f.level < 0 ? 'kelder' : f.level === 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
+    // Een kelder blijft bij de begane grond, net als een trapkast (besluit 119): de
+    // tekening gaat niet onder de grond. Hoger dan de eerste verdieping is de tweede.
+    if (f && f.level != null) return f.level <= 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
     return 'bg';
   };
 
   // De naam van een etage komt van de etage op precies dat niveau; een "Dak" op
   // niveau 3 geeft de tweede verdieping geen naam.
   const etages: Partial<Record<FloorId, string>> = {};
-  for (const [id, level] of [['kelder', -1], ['bg', 0], ['e1', 1], ['e2', 2]] as const) {
+  for (const [id, level] of [['bg', 0], ['e1', 1], ['e2', 2]] as const) {
     const f = registers.floors.find((x) => x.level === level && x.name.trim() !== '');
     if (f) etages[id] = f.name.trim();
   }

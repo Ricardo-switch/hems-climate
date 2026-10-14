@@ -128,6 +128,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [115. De assistent leest een vraag in eigen woorden, met een woordzoeker](#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker)
 - [116. Het jaar van Opbrengst begint op de startdatum van het contract](#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract)
 - [119. Kamers krijgen een soort; ingezoomd staat de inrichting erin](#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin)
+- [120. Een liggende telefoon toont de tabletweergave](#120-een-liggende-telefoon-toont-de-tabletweergave)
 
 **Veiligheid**
 
@@ -5170,8 +5171,30 @@ een andere naam voor een kamer, een kelder, een overloop, een kinderkamer.
   blok, en geen meubel mag door een apparaat, een ander meubel, een muur of het
   dak.
 
-*Nog open:* een kelder wordt nog op de grond getekend, niet eronder
-(`docs/universeel.md`).
+*Aangevuld 14 oktober 2026: een kelder blijft bij de begane grond.* Gekozen
+door de bewoner: een kelder of trapkast hoort bij de begane grond, er komt geen
+tekening onder de grond. Een gebied dat Home Assistant onder de grond zet,
+staat in het voorstel op de begane grond; een trapkast of meterkast is een
+smalle berging. Wie toch een eigen etage Kelder maakt, ziet die als onderste
+etage.
+
+---
+
+## 120. Een liggende telefoon toont de tabletweergave
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026. Tot nu toe kreeg elk scherm
+smaller dan 900 punten de telefoonweergave, ook een liggende telefoon.
+
+*Besluit:*
+
+- **De telefoonweergave alleen staand,** of op een heel smal scherm (smaller
+  dan 560 punten). Een liggende telefoon krijgt de wand van de tablet, verkleind
+  tot hij past. Draai je hem rechtop, dan wisselt de pagina meteen.
+- **De wand blijft naast de inkeping** van een liggende telefoon: de schaal en
+  het midden rekenen met de vrije ruimte (safe-area).
+- De regel staat in `basis.js` en in het script in de `<head>` van elke pagina.
 
 ---
 

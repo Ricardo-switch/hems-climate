@@ -86,6 +86,7 @@
     if (/bad|douche|bathroom/.test(n)) return 'badkamer';
     if (/eetkamer|eethoek|dining/.test(n)) return 'eetkamer';
     if (/woon|zithoek|zitkamer|lounge|living|serre|huiskamer/.test(n)) return 'woonkamer';
+    if (/trapkast|meterkast/.test(n)) return 'berging';
     if (/^(hal|gang|overloop|entree|portaal|vide|trap|hall|landing)\b/.test(n)) return 'hal';
     if (/werk|kantoor|studeer|hobby|office|studio|bureau|game|atelier/.test(n)) return 'werkkamer';
     if (/zolder|vliering|berg|attic|opslag|kelder|garage/.test(n)) return 'berging';

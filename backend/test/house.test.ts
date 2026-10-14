@@ -82,6 +82,15 @@ describe('het voorstel uit Home Assistant', () => {
     expect(buildHouse(config, registers, states, snapshot, { ...eigen, dak: 'e1' }).dakEtage).toBe('e1');
   });
 
+  it('zet een kelder bij de begane grond, net als een trapkast (besluit 119)', () => {
+    const metKelder = { ...registers, floors: [...registers.floors, { floor_id: 'kelder', name: 'Kelder', level: -1 }], areas: registers.areas.map((a) => (a.area_id === 'hal' ? { ...a, floor_id: 'kelder' } : a)) };
+    const voorstel = proposeLayout(config, metKelder, states);
+    expect(voorstel.kamers.find((k) => k.naam === 'Hal')!.etage).toBe('bg');
+    expect(voorstel.etages).not.toHaveProperty('kelder');
+    expect(roomTypeFromNames({ naam: 'Trapkast', etage: 'bg', zones: [] })).toBe('berging');
+    expect(roomTypeFromNames({ naam: 'Meterkast', etage: 'bg', zones: [] })).toBe('berging');
+  });
+
   it('noemt een etage naar het precieze niveau, niet naar een "Dak" erboven', () => {
     expect(proposeLayout(config, registers, states).etages.e2).toBe('Zolder');
   });

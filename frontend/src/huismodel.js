@@ -10,7 +10,7 @@
 
   const ACTIEF = ['koelt', 'verwarmt', 'warmt voor', 'droogt', 'ventileert'];
   const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
-  const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc)\b/i;
+  const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc|trapkast|meterkast)\b/i;
 
   function kleurVanLicht(a) {
     const l = a.licht;

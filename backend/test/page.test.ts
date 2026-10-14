@@ -493,6 +493,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /* Een liggende telefoon krijgt de wand van de tablet, staand de telefoon (besluit 120). */
+  it('toont op een liggende telefoon de tabletweergave, en staand de telefoon', async () => {
+    const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    for (const pagina of ['thuis.html', 'kamer.html', 'opbrengst.html']) {
+      await p.goto(`${baseUrl}/${pagina}`);
+      await p.locator('#wand main').waitFor();
+      expect(await p.evaluate<boolean>("document.documentElement.classList.contains('tel-stand')"), pagina).toBe(false);
+      expect(await p.locator('#wand').isVisible(), pagina).toBe(true);
+      const r = await p.evaluate<{ links: number; rechts: number; boven: number; onder: number }>("(() => { const b = document.getElementById('wand').getBoundingClientRect(); return { links: b.left, rechts: innerWidth - b.right, boven: b.top, onder: innerHeight - b.bottom }; })()");
+      // Binnen het scherm, en het vult de hoogte.
+      expect(r.links, `${pagina} links`).toBeGreaterThanOrEqual(-1);
+      expect(r.rechts, `${pagina} rechts`).toBeGreaterThanOrEqual(-1);
+      expect(Math.abs(r.boven), `${pagina} boven`).toBeLessThan(1);
+      expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1'), `${pagina} scrolt`).toBe(true);
+    }
+    // Draai je hem rechtop, dan de telefoon.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await expect.poll(() => p.evaluate<boolean>("document.documentElement.classList.contains('tel-stand')")).toBe(true);
+    await context.close();
+  }, 30_000);
+
   /*
    * Camera's en deurbel (besluit 109): het voorstel uit Home Assistant, een
    * ander beeld kiezen, en opslaan in het eigen bestand.
