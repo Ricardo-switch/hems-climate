@@ -127,12 +127,19 @@ function verwachtingen() {
 
 /* --------------------------------------------------------- de tijdlijn */
 
-const W = 1116;
+/*
+ * De breedte volgt het vak (besluit 129): op een bredere wand, zoals een liggende
+ * telefoon, groeide de grafiek anders mee in de hoogte en duwde hij de kaarten
+ * eronder van het scherm.
+ */
+let W = 1116;
 const X0 = 140;
-const X1 = 1100;
+let X1 = 1100;
 
 function tekenTijdlijn(r, verwacht, lijst) {
   const box = document.querySelector('[data-tijdlijn]');
+  W = Math.max(1116, Math.round(box.clientWidth - 40) || 1116);
+  X1 = W - 16;
   if (!r && dag !== 'morgen') {
     box.innerHTML = '<p class="klein" style="margin: 8px 0">Van deze dag is niets gelogd.</p>';
     return;

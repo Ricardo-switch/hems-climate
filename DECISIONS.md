@@ -5447,6 +5447,9 @@ Gevraagd door de bewoner op 14 oktober 2026.
   en de bol onderin vraagt de assistent wat het huis nu doet.
 - **Boven en onder** houdt de wand vrij van de balken van het systeem; op een
   liggende telefoon viel de onderkant weg achter de balk met de veegstreep.
+- **De tijdlijn van Vandaag** volgt de breedte van zijn vak en houdt zijn hoogte;
+  op een bredere wand groeide hij anders mee in de hoogte en vielen Eerder en
+  Later onderin van het scherm.
 
 ---
 
