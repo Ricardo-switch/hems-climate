@@ -438,7 +438,10 @@ const inHouse = (st: HaEntityState) =>
   // De camera's (besluit 106): anders zei het huis "niet bereikbaar" terwijl er beeld was.
   st.entity_id.startsWith('camera.') ||
   (st.entity_id.startsWith('sensor.') &&
-    (st.attributes['device_class'] === 'temperature' || st.attributes['device_class'] === 'humidity'));
+    (st.attributes['device_class'] === 'temperature' ||
+      st.attributes['device_class'] === 'humidity' ||
+      // Batterijen (besluit 122): bij het apparaat, en een melding onder de 10%.
+      st.attributes['device_class'] === 'battery'));
 let houseRegisters: HouseRegisters | null = null;
 async function readHouseRegisters(): Promise<void> {
   const [floors, areas, devices, entities] = await Promise.all([

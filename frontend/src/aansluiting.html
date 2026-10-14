@@ -11,14 +11,14 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schets Onboarding-Zon, op de wand): drie kolommen met vragen, bewaren rechtsboven. */
   #wand main { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 16px; height: 100%; }
   .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 16px; }
   .terugnaar { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
   .terugnaar:hover { color: var(--tekst); }
-  .kolom { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; }
+  .kolom { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .zijaanzicht svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
   .notitie { padding: 12px 14px; border-radius: 14px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.25); font-size: 13px; color: var(--zacht); display: flex; flex-direction: column; gap: 4px; }
   .notitie:empty { display: none; }

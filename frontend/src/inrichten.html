@@ -11,13 +11,13 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wizard (besluit 114): de stappen links, de gekozen stap groot rechts. */
   #wand main { display: grid; grid-template-columns: 330px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 18px; height: 100%; }
   .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 16px; }
   .terugnaar { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
-  .stappenlijst { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; }
+  .stappenlijst { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .stapknop { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--glas-rand); background: var(--glas); color: inherit; text-decoration: none; }
   .stapknop.nu { border-color: rgba(111, 211, 255, 0.55); background: rgba(111, 211, 255, 0.1); }
   .stapknop:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }

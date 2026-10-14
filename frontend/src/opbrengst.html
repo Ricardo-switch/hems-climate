@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schets Wand-Opbrengst): de cijfers, de sankey, per apparaat. */
   #wand main { display: grid; grid-template-columns: 270px minmax(0, 1fr) 316px; grid-template-rows: auto minmax(0, 1fr); gap: 18px; height: 100%; min-width: 0; }
@@ -77,9 +77,9 @@
         </div>
         <div class="wissel" role="group" aria-label="Periode" data-wissel></div>
       </div>
-      <div class="links" data-links></div>
+      <div class="links schuift" data-links></div>
       <section class="glas kaart midden"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2">Waar je stroom heen ging</h2><span class="mini">de breedte is de hoeveelheid</span></div><div data-sankey style="margin-top: 14px"></div></section>
-      <div class="rechts"><section class="glas kaart" data-apparaten></section><section class="glas kaart" data-perdag></section></div>
+      <div class="rechts schuift"><section class="glas kaart" data-apparaten></section><section class="glas kaart" data-perdag></section></div>
     </main>
   </div>
 

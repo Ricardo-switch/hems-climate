@@ -110,6 +110,9 @@ const HEAD = {
     fault: ['Er is een storing', 'Een meting is onbetrouwbaar; Smart Climate zet de hulpapparaten veilig uit.'],
     one: (room: string, cool: boolean) => `De ${room} wordt ${cool ? 'gekoeld' : 'verwarmd'}`,
     many: 'Het huis wordt geregeld',
+    // Tijdens de schaduw gebeurt het niet echt (besluit 124).
+    oneWould: (room: string, cool: boolean) => `De ${room} zou ${cool ? 'koelen' : 'verwarmen'}`,
+    manyWould: 'Het huis zou regelen',
     waitSun: 'Het huis wacht op zon',
     waitSunWhy: (rooms: string, many: boolean) => `De ${rooms} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
     waitOther: 'Er wacht iets',
@@ -142,6 +145,8 @@ const HEAD = {
     fault: ['There is a fault', 'A measurement is unreliable; Smart Climate switches the helper units off safely.'],
     one: (room: string, cool: boolean) => `The ${room} is being ${cool ? 'cooled' : 'heated'}`,
     many: 'The house is being managed',
+    oneWould: (room: string, cool: boolean) => `The ${room} would ${cool ? 'cool' : 'heat'}`,
+    manyWould: 'The house would act',
     waitSun: 'The house is waiting for sun',
     waitSunWhy: (rooms: string) => `The ${rooms} will cool as soon as there is enough solar to spare.`,
     waitOther: 'Something is waiting',
@@ -180,7 +185,7 @@ function joinRooms(names: readonly string[], lang: Lang): string {
   return `${names.slice(0, -1).join(w.comma)}${w.and}${names[names.length - 1]}`;
 }
 
-export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: readonly ResidentRoom[], lang: Lang = 'nl'): ResidentHeadline {
+export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: readonly ResidentRoom[], lang: Lang = 'nl', shadow = true): ResidentHeadline {
   const w = HEAD[lang];
   const e = snap.explanation;
   const boven = `${w.now} · ${MODE[lang][e.mode] ?? e.mode}${e.modeSource === 'override' ? w.chosen : ''}`;
@@ -192,7 +197,7 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   const waiting = named.filter(({ r }) => r.soort === 'wait');
   if (e.failsafe.active) return { boven, titel: w.fault[0], zin: w.fault[1] };
   if (active.length > 0) {
-    const titel = active.length === 1 ? w.one(mid(active[0]!.name), active[0]!.r.soort === 'cool') : w.many;
+    const titel = active.length === 1 ? (shadow ? w.oneWould : w.one)(mid(active[0]!.name), active[0]!.r.soort === 'cool') : shadow ? w.manyWould : w.many;
     return { boven, titel, zin: [line(active), line(waiting)].filter((x) => x !== '').join(' ') };
   }
   if (waiting.length > 0) {
@@ -288,7 +293,7 @@ export function residentView(config: SiteConfig, snap: DecisionView, lang: Lang 
     .map((i) => ({ actuatorId: i.actuatorId, actie: i.action, reden: i.reason }));
   return {
     kamers,
-    kop: residentHeadline(config, snap, kamers, lang),
+    kop: residentHeadline(config, snap, kamers, lang, shadow),
     stromen: residentFlows(snap),
     apparaten,
     rust,

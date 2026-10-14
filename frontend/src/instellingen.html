@@ -11,12 +11,14 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schetsen Instellingen en Wand-Leren): comfort, wie stuurt, wat het huis weet, je huis. */
   #wand main { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 16px; height: 100%; }
   .kop { grid-column: 1 / -1; }
   .kolom { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  #wand .kolom { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding-bottom: 4px; }
+  #wand .kolom > * { flex: none; }
   .kaart { padding: 6px 18px 10px; }
   .kaart h2 { margin: 12px 0 2px; }
   .rij { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: inherit; text-decoration: none; }

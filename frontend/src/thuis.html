@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
   .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
@@ -20,7 +20,8 @@
   .titel { position: absolute; left: 22px; top: 108px; width: 380px; z-index: 2; }
   .titel .lead { margin-top: 12px; }
   .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
-  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .rechts { position: absolute; right: 26px; top: 96px; bottom: 108px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  #wand .rechts > * { flex: none; }
   .kaart { padding: 18px 20px; }
   .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
   .straks { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
@@ -86,8 +87,8 @@
   button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .weerknop svg { width: 20px; height: 20px; margin-left: -4px; }
   .weer { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(12, 20, 34, 0.94); z-index: 5; }
-  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; overflow: auto; }
-  #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; border-radius: 26px; z-index: 30; }
+  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; border-radius: 26px; z-index: 30; }
   .weer-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
   /* Niet krimpen: wat niet past, scrolt in het blad. */
   .weer > * { flex-shrink: 0; }
@@ -134,7 +135,7 @@
       <div class="dim" data-rond hidden></div>
       <span class="tik" data-tik hidden aria-hidden="true"></span>
       <div class="stappen" data-stappen hidden></div>
-      <aside class="rechts">
+      <aside class="rechts schuift">
         <section class="glas kaart">
           <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
           <div data-dag></div>

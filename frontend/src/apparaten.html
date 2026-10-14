@@ -11,12 +11,13 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   #wand main { display: flex; flex-direction: column; gap: 16px; height: 100%; }
   .kop { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
   .zonchip { display: flex; align-items: center; gap: 16px; padding: 14px 18px; flex: none; }
   .raster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-content: start; }
+  #wand .raster { flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
   .app { padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
   .app .boven { display: flex; align-items: center; gap: 14px; }
   .app .boven > div { min-width: 0; }

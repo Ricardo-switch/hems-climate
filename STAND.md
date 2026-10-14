@@ -179,6 +179,8 @@ verwijzing bestaat.
   ([122]).
 - **Meten met:** per kamer kies je zelf de sensoren; de regeling rekent met het
   gemiddelde, en `sensoren.ndjson` houdt bij welke telden ([123]).
+- **Op de tablet** schuiven volle vakken met de vinger, verschuift het
+  toetsenbord niets, en zegt een kamer in de schaduw "zou" ([124]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -351,4 +353,5 @@ verwijzing bestaat.
 [121]: DECISIONS.md#121-schermen-bedien-je-in-de-app-alleen-somfy-io-mag-later-in-de-regeling
 [122]: DECISIONS.md#122-batterijen-bij-het-apparaat-en-de-verwarming-met-haar-aanvoertemperatuur
 [123]: DECISIONS.md#123-meten-met-per-kamer-zelf-de-sensoren-kiezen
+[124]: DECISIONS.md#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw
 <!-- links:einde -->

@@ -564,6 +564,44 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Het schermtoetsenbord (besluit 124): de wand houdt zijn maat en schuift
+   * omhoog tot het veld zichtbaar is; daarna staat alles weer op zijn plek. En
+   * een te volle kolom schuift binnen zijn vak.
+   */
+  it('houdt de maat bij een schermtoetsenbord, en laat volle kolommen schuiven', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/assistent.html`);
+    const veld = p.locator('#wand [data-vrij] input');
+    await veld.waitFor();
+    const schaal = () => p.evaluate<string>("getComputedStyle(document.documentElement).getPropertyValue('--wandschaal').trim()");
+    const voor = await schaal();
+    await veld.focus();
+    // Het toetsenbord komt: het scherm is nog 430 hoog.
+    await p.setViewportSize({ width: 1280, height: 430 });
+    await expect.poll(async () => (await veld.boundingBox())!.y + (await veld.boundingBox())!.height, { timeout: 5000 }).toBeLessThanOrEqual(430);
+    expect(await schaal()).toBe(voor);
+    // Het toetsenbord gaat weg.
+    await veld.evaluate((el) => (el as unknown as { blur: () => void }).blur());
+    await p.setViewportSize({ width: 1280, height: 800 });
+    await expect.poll(() => p.evaluate<string>("getComputedStyle(document.documentElement).getPropertyValue('--toetsschuif').trim()")).toBe('0px');
+    expect(await schaal()).toBe(voor);
+    // Instellingen: elke kolom schuift zelf, de pagina niet.
+    await p.goto(`${baseUrl}/instellingen.html`);
+    await p.locator('#wand .kolom').first().waitFor();
+    const kolommen = await p.evaluate<string[]>("[...document.querySelectorAll('#wand .kolom')].map((k) => getComputedStyle(k).overflowY)");
+    expect(kolommen.every((o) => o === 'auto')).toBe(true);
+    await p.goto(`${baseUrl}/thuis.html`);
+    expect(await p.evaluate<string>("getComputedStyle(document.querySelector('#wand .rechts')).overflowY")).toBe('auto');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   /* Een liggende telefoon krijgt de wand van de tablet, staand de telefoon (besluit 120). */
   it('toont op een liggende telefoon de tabletweergave, en staand de telefoon', async () => {
     const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });

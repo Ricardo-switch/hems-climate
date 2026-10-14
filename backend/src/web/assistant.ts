@@ -893,6 +893,8 @@ export const SHORT = {
     taken: 'Jij hebt het overgenomen',
     takenUntil: (t: string) => `Jij hebt het tot ${t}`,
     run: { cool: 'Koelt', heat: 'Verwarmt' },
+    // Tijdens de schaduw doet het apparaat het niet echt: "zou" (besluit 124).
+    wouldRun: { cool: 'Zou koelen', heat: 'Zou verwarmen' },
     onSun: ' op zon',
     parked: 'Staat klaar om verder te gaan',
     noMeasurement: 'Geen meting',
@@ -937,6 +939,7 @@ export const SHORT = {
     taken: 'You took it over',
     takenUntil: (t: string) => `You have it until ${t}`,
     run: { cool: 'Cooling', heat: 'Heating' },
+    wouldRun: { cool: 'Would cool', heat: 'Would heat' },
     onSun: ' on solar',
     parked: 'Parked, ready to resume',
     noMeasurement: 'No measurement',
@@ -996,6 +999,7 @@ function shortStatusOf(
   snap: DecisionView,
   zone: Zone,
   lang: Lang,
+  shadow = true,
 ): { soort: RoomKind; kort: string; actuatorId: string | null } {
   const w = SHORT[lang];
   const e = snap.explanation;
@@ -1017,7 +1021,7 @@ function shortStatusOf(
   const running = mine.find((i) => i.action === 'cool' || i.action === 'heat');
   if (running && (running.action === 'cool' || running.action === 'heat')) {
     const onSun = running.strategyId === 'pv-surplus';
-    return { soort: running.action, kort: `${w.run[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId };
+    return { soort: running.action, kort: `${(shadow ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId };
   }
   if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
   const wanting = pz != null && pz.demand !== 'none';
@@ -1051,7 +1055,7 @@ function realShort(config: SiteConfig, snap: DecisionView, zone: Zone, lang: Lan
 
 export function residentRooms(config: SiteConfig, snap: DecisionView, lang: Lang = 'nl', shadow = true): ResidentRoom[] {
   return config.zones.map((zone) => {
-    const s = shortStatusOf(config, snap, zone, lang);
+    const s = shortStatusOf(config, snap, zone, lang, shadow);
     return {
       zoneId: zone.id,
       soort: s.soort,

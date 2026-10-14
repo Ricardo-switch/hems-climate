@@ -48,8 +48,37 @@
     return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0 };
   }
 
+  /**
+   * Het schermtoetsenbord (besluit 124): komt het in beeld, dan wordt het scherm
+   * even hoog als wat erboven overblijft. Dat is geen nieuwe stand: de wand
+   * houdt zijn maat, en schuift alleen omhoog tot het veld waarin je typt
+   * zichtbaar is. Gaat het toetsenbord weg, dan staat alles weer op zijn plek.
+   */
+  let maat = { w: 0, h: 0 };
+  const typt = () => /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName ?? '');
+  function toetsenbord() {
+    const d = document.documentElement;
+    const veld = document.activeElement;
+    if (telStand() || !typt() || !veld?.closest?.('#wand')) {
+      d.style.setProperty('--toetsschuif', '0px');
+      return;
+    }
+    const zicht = global.visualViewport?.height ?? innerHeight;
+    const r = veld.getBoundingClientRect();
+    const nu = parseFloat(getComputedStyle(d).getPropertyValue('--toetsschuif')) || 0;
+    const nodig = Math.max(0, r.bottom + nu + 12 - zicht);
+    d.style.setProperty('--toetsschuif', `${Math.round(nodig)}px`);
+  }
+
   function schaal() {
     const d = document.documentElement;
+    // Een toetsenbord: zelfde breedte, minder hoog, en je typt. Dan niets herschalen.
+    if (maat.w === innerWidth && innerHeight < maat.h && typt()) {
+      toetsenbord();
+      return;
+    }
+    maat = { w: innerWidth, h: innerHeight };
+    d.style.setProperty('--toetsschuif', '0px');
     d.classList.toggle('tel-stand', telStand());
     // Een liggende telefoon heeft een inkeping aan de zijkant: de wand blijft ernaast.
     const { l, r } = inzet();
@@ -284,6 +313,12 @@
     // Om de app te installeren; dat kan alleen over HTTPS (of met een uitzondering in Chrome).
     if ('serviceWorker' in navigator && global.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
     addEventListener('keydown', (e) => e.key === 'Escape' && sluitBel());
+    // Het toetsenbord gaat weg als het veld de focus verliest: dan weer op zijn plek.
+    global.visualViewport?.addEventListener('resize', toetsenbord);
+    document.addEventListener('focusin', () => setTimeout(toetsenbord, 350));
+    document.addEventListener('focusout', () => setTimeout(() => {
+      if (!typt()) schaal();
+    }, 50));
     // Wisselt de stand (de tablet draait), dan tekent de pagina de andere opnieuw.
     let stand = telStand();
     addEventListener('resize', () => {

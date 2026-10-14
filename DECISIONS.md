@@ -131,6 +131,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [116. Het jaar van Opbrengst begint op de startdatum van het contract](#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract)
 - [119. Kamers krijgen een soort; ingezoomd staat de inrichting erin](#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin)
 - [120. Een liggende telefoon toont de tabletweergave](#120-een-liggende-telefoon-toont-de-tabletweergave)
+- [124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw](#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw)
 
 **Veiligheid**
 
@@ -5281,6 +5282,36 @@ hoort die keuze in de app. Het is ook de voorbereiding op de radiatorknoppen.
 - **De radiatorknop** (Sonoff via Zigbee) komt hier straks als bron bij. Hij
   hangt naast de radiator en meet vaak te warm; daarom kiest de app hem niet
   vanzelf.
+
+---
+
+## 124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw
+
+*Onderwerp: weergave · Status: geldig*
+
+Gezien door de bewoner op de Tab A9+ aan de muur (Fully Kiosk), 14 oktober
+2026: rechts op Thuis stond meer dan er paste en dat kon niet schuiven; bij
+Instellingen viel Functies buiten beeld; als het schermtoetsenbord kwam of
+ging, zoomde de wand in of uit; en de badkamer heette "verwarmt" terwijl de
+thermostaat uit stond.
+
+*Besluit:*
+
+- **De wand schuift nooit, een vol vak wel.** De kolom rechts op Thuis, de
+  kolommen bij Instellingen, links en rechts bij Opbrengst en het raster bij
+  Apparaten schuiven binnen hun vak, ook met een vinger in een kiosk-browser
+  (`overflow-y: auto`, `touch-action: pan-y`, het schuiven blijft in het vak).
+- **Het schermtoetsenbord is geen nieuwe stand.** Komt het in beeld (zelfde
+  breedte, minder hoog, en je typt), dan houdt de wand zijn maat en schuift hij
+  alleen omhoog tot het veld zichtbaar is. Gaat het weg, dan staat alles weer
+  op zijn plek. In het script in de `<head>` en in `basis.js`.
+- **In de schaduw zegt een kamer "zou".** De korte stand per kamer en de kop
+  op Thuis zeiden "Verwarmt" en "De zolder wordt gekoeld" als Smart Climate dat
+  zou doen. Tijdens de schaduw is dat nu "Zou verwarmen" en "De zolder zou
+  koelen"; "verwarmt" alleen als het apparaat het echt doet, zodra het huis zelf
+  schakelt.
+- **Batterijen:** de dienst houdt nu ook de standen van batterijsensoren bij;
+  zonder die standen bleef de lijst van besluit 122 leeg.
 
 ---
 

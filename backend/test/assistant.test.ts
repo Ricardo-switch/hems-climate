@@ -404,7 +404,9 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
 
   it('zegt kort wat Smart Climate zou doen, met het apparaat erbij', () => {
     const r = room(view({ accepted: [coolOnSun] }), 'zolder');
-    expect([r.soort, r.kort, r.actuatorId]).toEqual(['cool', 'Koelt op zon', 'ac-zolder']);
+    // In de schaduw "zou" (besluit 124); als hij echt schakelt "koelt".
+    expect([r.soort, r.kort, r.actuatorId]).toEqual(['cool', 'Zou koelen op zon', 'ac-zolder']);
+    expect(residentRooms(config, view({ accepted: [coolOnSun] }), 'nl', false).find((x) => x.zoneId === 'zolder')!.kort).toBe('Koelt op zon');
     expect(r.zin).toContain('Ik zou de zolder nu laten koelen op zon');
   });
 
@@ -465,8 +467,9 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     const v = view({ accepted: [coolOnSun], explanation: explanation({ modeSource: 'override' }) });
     const kop = residentView(config, v).kop;
     expect(kop.boven).toBe('Nu · Dag (gekozen)');
-    expect(kop.titel).toBe('De zolder wordt gekoeld');
-    expect(kop.zin).toBe('Zolder: koelt op zon.');
+    expect(kop.titel).toBe('De zolder zou koelen');
+    expect(kop.zin).toBe('Zolder: zou koelen op zon.');
+    expect(residentView(config, v, 'nl', false).kop.titel).toBe('De zolder wordt gekoeld');
   });
 
   it('zegt "er draait niets" als geen kamer iets wil', () => {
@@ -529,7 +532,7 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
   it('heeft in het Engels dezelfde vorm, zonder interne codes', () => {
     const v = view({ accepted: [coolOnSun] });
     const b = residentView(config, v, 'en');
-    expect(b.kop.titel).toBe('The Zolder is being cooled');
+    expect(b.kop.titel).toBe('The Zolder would cool');
     expect(JSON.stringify(b)).not.toMatch(/undefined|[a-z]+_[a-z_]+"/);
   });
 });

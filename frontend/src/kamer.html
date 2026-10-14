@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement; function s() { var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
   /* De wand (schets Wand-Kamer): het huis links, het blad rechts. */
   .pad { display: flex; gap: 8px; align-items: center; color: var(--gedempt); font-size: 14px; font-weight: 600; }
@@ -25,7 +25,7 @@
   .etages button { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .etages button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
   #wand .podium { position: absolute; left: 0; top: 230px; width: 800px; height: 560px; }
-  #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: 400px; padding: 22px; overflow: auto; }
+  #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: 400px; padding: 22px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
 
   .blad { display: flex; flex-direction: column; gap: 16px; }
   .blad > * { flex-shrink: 0; }
