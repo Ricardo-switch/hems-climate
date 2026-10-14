@@ -111,18 +111,21 @@ async function stempel() {
   const paginas = {
     'index.html': ['app.css', 'app.js'],
     'thuis.html': ['thuis.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'instellingen.html': ['instellingen.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'huis-kan.html': ['huis-kan.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'instellingen.html': ['instellingen.js', 'stand.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'huis-kan.html': ['huis-kan.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'assistent.html': ['assistent.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'opbrengst.html': ['opbrengst.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js', 'kit/sankey.js'],
     'vandaag.html': ['vandaag.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'aansluiting.html': ['aansluiting.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'inrichten.html': ['inrichten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'functies.html': ['functies.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'meters.html': ['meters.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'functies.html': ['functies.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    // De groepen achter het tandwiel (besluit 130).
+    'comfort.html': ['comfort.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'energie.html': ['energie.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'regeling.html': ['regeling.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'toegang.html': ['toegang.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {
     const html = join(out, pagina);

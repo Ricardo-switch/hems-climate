@@ -5475,6 +5475,27 @@ veel later bij kwam.
   `/api/comfort` vraagt een bewoner.
 - **Camera's:** heeft een camera eigen beelden van zijn merk, dan geen beeld
   via een tweede koppeling zoals de Synology; dat gaf hier geen beeld.
+- **Instellingen in zes groepen:** Je huis, Comfort, Energie, Regeling,
+  Functies, en App en toegang. Bovenaan wat er nog mist, met een knop er direct
+  naartoe (een stroomprijs, een zekering, apparaten zonder kamer), en een
+  zoekveld. Elke groep heeft één opbouw: links de delen met hun stand, in het
+  midden het gekozen deel, rechts waarvoor het nodig is en waar je het vindt.
+  Wat je verandert, wordt meteen bewaard; er is geen opslaan-knop meer.
+- **Energie** voegt Zon en aansluiting en Meters en prijzen samen: het contract
+  en de prijzen stonden op twee pagina's. De oude adressen sturen door.
+  Apparaten op zon staan bij **Regeling**, met wie wat regelt. Inloggen, je
+  gegevens en de versie staan bij **App en toegang**.
+- **Weg of verplaatst:** "Wat het huis al weet" (nu Leert nog bij Wat je huis
+  kan), Comfort per kamer als alleen-lezen lijst, het weer van Buienradar als
+  eerste keuze (Open-Meteo voorop, de rest onder "Andere bron"), en knoppen
+  voor licht en screens die de installatie niet toestaat.
+- **Wat je huis kan** toont elke functie, voor elk huis, met een stand: Werkt,
+  Kijkt mee (tot het zelf regelt, besluit 64), Leert nog, Vul in (een instelling
+  mist), Staat uit, of wat er nodig is (een batterij, een laadpaal, een ander
+  contract). Een tik geeft het blad: wat het is, wat het nu doet, hoe en
+  wanneer het werkt. "Haal er meer uit" rekent met de eigen meters, zoals wat
+  een thuisbatterij vanaf 2027 oplevert; een schatting, geen belofte. Er staat
+  niets in over wat er in Smart Climate nog moet komen.
 
 ---
 

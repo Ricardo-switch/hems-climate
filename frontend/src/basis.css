@@ -118,3 +118,48 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 /* Op de telefoon over de hele breedte, boven de tabs; de pagina krijgt onderaan ruimte, zodat de balk niets afdekt. */
 html.tel-stand .inrichtbalk { bottom: 100px; left: 16px; right: 16px; transform: none; justify-content: space-between; gap: 8px; padding-left: 14px; }
 html.tel-stand.met-inrichtbalk #tel .inhoud { padding-bottom: 180px; }
+
+/*
+ * Een groep achter het tandwiel (besluit 130): links de delen, in het midden het
+ * gekozen deel, rechts waarvoor het nodig is. Op de telefoon onder elkaar, met
+ * de delen als een rij om opzij te vegen.
+ */
+#wand main.groep { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
+.groep .terugje, #tel .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+.groep .groepkop { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.groep .groepkop .lead { margin-top: 6px; max-width: 60ch; }
+.bewaard { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--mint); white-space: nowrap; }
+.groepveld { flex: 1; display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 16px; min-height: 0; }
+.delen { padding: 10px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+.delen h4 { margin: 10px 12px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+.delen h4:first-child { margin-top: 4px; }
+.deel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: center; padding: 10px 12px; border-radius: 14px; color: var(--tekst); text-decoration: none; }
+.deel b { font-size: 15px; font-weight: 600; }
+.deel span:not(.stip) { grid-column: 1; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deel .stip { grid-row: 1 / 3; grid-column: 2; }
+.deel.nu { background: rgba(255, 255, 255, 0.09); }
+.deel:focus-visible { outline: 2px solid var(--tekst); outline-offset: -2px; }
+.vorm { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.vorm > * { flex-shrink: 0; }
+.vorm h2 { margin: 0; }
+.naast { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.naast > * { flex-shrink: 0; }
+.naast .glas { padding: 16px 18px; }
+.naast h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+.naast p, .naast li { font-size: 13.5px; color: var(--zacht); line-height: 1.45; }
+.naast ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.naast li { display: flex; gap: 8px; }
+.naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
+.melding { display: flex; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 14px; background: rgba(255, 122, 77, 0.08); border: 1px solid rgba(255, 122, 77, 0.3); font-size: 13.5px; color: var(--zacht); }
+.melding .stip { margin-top: 6px; flex: none; }
+.vraagrij { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 6px 18px; align-items: center; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.vraagrij:first-of-type { border-top: 0; padding-top: 0; }
+.vraagrij > .label { font-size: 14.5px; font-weight: 600; }
+.vraagrij .uitleg { grid-column: 2; font-size: 12.5px; color: var(--gedempt); margin: 0; }
+.invoer.leeg { border-color: var(--gloed); background: rgba(255, 122, 77, 0.07); }
+#tel .groepkop { display: flex; flex-direction: column; gap: 6px; }
+#tel .delen { flex-direction: row; overflow-x: auto; padding: 6px; gap: 6px; scroll-snap-type: x proximity; }
+#tel .delen h4 { display: none; }
+#tel .deel { flex: none; min-width: 150px; scroll-snap-align: start; }
+#tel .vraagrij { grid-template-columns: 1fr; }
+#tel .vraagrij .uitleg { grid-column: 1; }

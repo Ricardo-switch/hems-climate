@@ -89,34 +89,49 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   },
   {
     id: 'prijzen',
-    href: 'meters.html',
+    href: 'energie.html#prijzen',
     sterk: ['prijs*', 'prijzen', 'tarief*', 'daltarief', 'dal', 'normaal tarief', 'netbeheer*', 'vastrecht', 'vaste kosten', 'contract', 'energieprijs*', 'stroomprijs*', 'gasprijs*', 'salder*', 'teruglever*', 'energiebelasting', 'price*', 'tariff*'],
     zwak: ['kosten', 'meter', 'meters', 'kwh', 'gas', 'stroom', 'energie', 'leverancier', 'rekening'],
     nl: {
       antwoord:
-        'De prijzen vul je in bij Instellingen, onder Meters en prijzen. Neem ze over van je contract: stroom normaal en dal, teruglevering, gas, en eventueel de vaste kosten per dag, maand of jaar.',
-      label: 'Naar Meters en prijzen',
+        'De prijzen vul je in bij Instellingen, onder Energie: Contract en prijzen. Neem ze over van je contract: stroom normaal en dal, teruglevering, gas, en eventueel de vaste kosten per dag, maand of jaar.',
+      label: 'Naar Contract en prijzen',
     },
     en: {
       antwoord:
-        'You enter prices under Settings, Meters and prices. Copy them from your contract: electricity normal and off-peak, feed-in, gas, and if you like the fixed costs per day, month or year.',
-      label: 'Go to Meters and prices',
+        'You enter prices under Settings, Energy: Contract and prices. Copy them from your contract: electricity normal and off-peak, feed-in, gas, and if you like the fixed costs per day, month or year.',
+      label: 'Go to Contract and prices',
     },
   },
   {
     id: 'aansluiting',
-    href: 'aansluiting.html',
+    href: 'energie.html#aansluiting',
     sterk: ['zekering*', 'hoofdzekering*', 'aansluiting', 'fase*', 'ampere', 'omvormer', 'ligging', 'fuse*', 'connection'],
     zwak: ['panelen', 'zonnepanelen', 'dak', 'dakvlak*', 'netaansluiting'],
     nl: {
       antwoord:
-        'Je aansluiting stel je in bij Instellingen, onder Zon en aansluiting: waar je panelen liggen, je hoofdzekering, je contract, en welke apparaten op zon mogen starten.',
-      label: 'Naar Zon en aansluiting',
+        'Je aansluiting stel je in bij Instellingen, onder Energie: waar je panelen liggen, je hoofdzekering en je verwarming. Welke apparaten op zon mogen starten, staat bij Regeling.',
+      label: 'Naar Energie',
     },
     en: {
       antwoord:
-        'You set up your connection under Settings, Sun and connection: where your panels are, your main fuse, your contract, and which devices may start on sun.',
-      label: 'Go to Sun and connection',
+        'You set up your connection under Settings, Energy: where your panels are, your main fuse and your heating. Which devices may start on sun is under Control.',
+      label: 'Go to Energy',
+    },
+  },
+  {
+    id: 'comfort',
+    href: 'comfort.html',
+    // Smal: "hoe warm is het op zolder" is een vraag over het huis, geen instelling.
+    sterk: ['comfort', 'dagdeel', 'dagdelen', 'nachttemperatuur', 'vakantie', 'temperature'],
+    zwak: ['temperatuur', 'instellen'],
+    nl: {
+      antwoord: 'Hoe warm of koel je het wilt, zet je bij Instellingen, onder Comfort: per kamer en per dagdeel, en wanneer de dag en de nacht beginnen. De regeling rekent er meteen mee.',
+      label: 'Naar Comfort',
+    },
+    en: {
+      antwoord: 'How warm or cool you want it is under Settings, Comfort: per room and per part of the day, and when day and night begin. The control uses it right away.',
+      label: 'Go to Comfort',
     },
   },
   {
@@ -153,17 +168,17 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   },
   {
     id: 'inloggen',
-    href: 'instellingen.html',
+    href: 'toegang.html',
     sterk: ['inloggen', 'inlog*', 'aanmelden', 'uitloggen', 'wachtwoord', 'login', 'log in', 'sign in'],
     zwak: ['account', 'toegang'],
     nl: {
       antwoord:
-        'Kijken kan zonder inloggen. Om te bedienen log je in met je account van Home Assistant, bij Instellingen.',
-      label: 'Naar Instellingen',
+        'Kijken kan zonder inloggen. Om te bedienen log je in met je account van Home Assistant, bij Instellingen, onder App en toegang.',
+      label: 'Naar App en toegang',
     },
     en: {
-      antwoord: 'Viewing works without logging in. To operate, log in with your Home Assistant account under Settings.',
-      label: 'Go to Settings',
+      antwoord: 'Viewing works without logging in. To operate, log in with your Home Assistant account under Settings, App and access.',
+      label: 'Go to App and access',
     },
   },
   {
@@ -226,18 +241,18 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   },
   {
     id: 'schakelen',
-    href: 'instellingen.html',
+    href: 'huis-kan.html',
     sterk: ['schaduw*', 'meekijken', 'echt schakelen', 'echt regelen', 'zelf regelen', 'bewijs', 'leert', 'leren', 'shadow'],
     zwak: ['slim', 'slimme'],
     nl: {
       antwoord:
-        'Smart Climate kijkt nu mee: het zegt wat het zou doen en leert van je huis, maar schakelt het klimaat nog niet zelf. Bij Instellingen zie je hoeveel het al weet.',
-      label: 'Naar Instellingen',
+        'Smart Climate kijkt nu mee: het zegt wat het zou doen en leert van je huis, maar schakelt het klimaat nog niet zelf. Bij Wat je huis kan zie je per functie hoe het ervoor staat.',
+      label: 'Naar Wat je huis kan',
     },
     en: {
       antwoord:
-        'Smart Climate is watching for now: it says what it would do and learns from your house, but does not switch the climate itself yet. Settings shows how much it knows.',
-      label: 'Go to Settings',
+        'Smart Climate is watching for now: it says what it would do and learns from your house, but does not switch the climate itself yet. What your house can do shows each function and where it stands.',
+      label: 'Go to What your house can do',
     },
   },
 ];

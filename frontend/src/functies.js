@@ -1,19 +1,17 @@
 /*
- * Functies, in ontwerp 2 (besluiten 104, 109 en 111). Welke camera's de app
- * toont en met welk beeld, welke melder de deurbel is, of je licht bedient in
- * de app, en waar het weer vandaan komt.
- * De dienst doet een voorstel uit wat Home Assistant heeft; wat je hier kiest,
- * legt hij vast in een eigen bestand. Opslaan vraagt een beheerder.
+ * Functies (besluiten 109, 111 en 130). Welke camera's de app toont en met
+ * welk beeld, welke melder de deurbel is, of je licht en screens bedient in de
+ * app, en waar het weer vandaan komt. In de opbouw van elke groep (130): links
+ * de delen, wat je kiest wordt meteen bewaard. Bewaren vraagt een beheerder.
+ * De dienst doet een voorstel uit wat Home Assistant heeft.
  */
 'use strict';
 
-const { $$, esc, haal, deur } = app;
+const { $$, esc, haal } = app;
 
 let info = null;
 let concept = null;
 let zon = null;
-let melding = '';
-let meldingFout = false;
 
 async function laad() {
   const [f, z] = await Promise.allSettled([haal('api/functies'), haal('api/zon')]);
@@ -24,20 +22,8 @@ async function laad() {
     concept.weer ??= info.voorstel.weer;
     concept.licht ??= info.voorstel.licht;
     concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
-    if (!info.instellingen) zeg('Dit is het voorstel uit Home Assistant. Opslaan legt het vast.');
-  } else {
-    zeg('Niet beschikbaar: geen verbinding met Smart Climate, of Home Assistant is nog niet gelezen.', true);
   }
   teken();
-}
-
-function zeg(tekst, fout = false) {
-  melding = tekst;
-  meldingFout = fout;
-  $$('[data-melding]').forEach((el) => {
-    el.textContent = tekst;
-    el.classList.toggle('fout', fout);
-  });
 }
 
 /* ------------------------------------------------------------ tekenen */
@@ -59,12 +45,10 @@ function cameras() {
       return `<div class="regelrij" style="flex-direction: column; align-items: stretch"><div class="l"><b>${esc(c.naam)}</b><span>${beeld ? 'In de app, in de kamer waar hij staat' : 'Niet in de app'}</span></div>${keuzes(`Beeld van ${c.naam}`, `camera:${i}`, opties, beeld, !aan)}</div>`;
     })
     .join('');
-  return `<section class="glas vraag">
-    <div class="kopregel"><h2 class="kop-3">Camera's</h2></div>
+  return `<h2 class="kop-2">Camera's</h2>
     ${keuzes("Camera's in de app", 'camerasAan', [[true, 'Aan'], [false, 'Uit']], aan)}
-    ${lijst.length ? rijen : '<p class="uitleg">Geen camera’s gevonden in Home Assistant.</p>'}
-    <p class="mini">Vloeiend is lichter voor de tablet; scherp heeft meer detail. Kijken vraagt de inlog met je Home Assistant-account.</p>
-  </section>`;
+    <div>${lijst.length ? rijen : '<p class="uitleg">Geen camera’s gevonden in Home Assistant.</p>'}</div>
+    <p class="mini">Vloeiend is lichter voor de tablet; scherp heeft meer detail. Kijken vraagt de inlog met je Home Assistant-account.</p>`;
 }
 
 function deurbel() {
@@ -76,63 +60,86 @@ function deurbel() {
   const misschien = melders.filter((m) => !m.zeker);
   const melderOpties = `<option value="">Kies de melder…</option>${zeker.length ? `<optgroup label="Een deurbel">${zeker.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}${misschien.length ? `<optgroup label="Heet als een deurbel">${misschien.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}`;
   const uit = !d.aan;
-  return `<section class="glas vraag">
-    <h2 class="kop-3">Deurbel</h2>
+  return `<h2 class="kop-2">Deurbel</h2>
     ${keuzes('Deurbel', 'belAan', [[true, 'Aan'], [false, 'Uit']], d.aan, !melders.length)}
     ${melders.length ? '' : '<p class="uitleg">Geen deurbel gevonden in Home Assistant. Een deurbel met een melder (Reolink, Ring, Nest, UniFi en andere) verschijnt hier vanzelf.</p>'}
     <label class="veldnaam">Melder die afgaat als er wordt aangebeld<select class="invoer" data-veld="melder" ${uit ? 'disabled' : ''}>${melderOpties}</select></label>
     <label class="veldnaam">Beeld dat dan verschijnt<select class="invoer" data-veld="camera" ${uit ? 'disabled' : ''}>${opt(beelden, d.camera, 'Kies een camera…')}</select></label>
-    <span class="veldnaam">Scherm aanzetten</span>
+    <span class="veldnaam">Het scherm van de tablet aanzetten</span>
     ${keuzes('Scherm aanzetten', 'schermAan', [[true, 'Ja'], [false, 'Nee']], d.schermAan, uit)}
     <span class="veldnaam">Hoe lang het beeld blijft staan</span>
-    ${keuzes('Hoe lang', 'seconden', [[60, '1 minuut'], [120, '2 minuten'], [300, '5 minuten']], d.seconden, uit)}
-  </section>`;
+    ${keuzes('Hoe lang', 'seconden', [[60, '1 minuut'], [120, '2 minuten'], [300, '5 minuten']], d.seconden, uit)}`;
 }
 
 function licht() {
   const mag = info.lichtMogelijk === true;
   const schermMag = info.schermMogelijk === true;
-  return `<section class="glas vraag">
-    <h2 class="kop-3">Bedienen in de app</h2>
-    <span class="veldnaam">Licht en scènes</span>
-    ${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], mag && concept.licht.bedienen, !mag)}
-    <span class="veldnaam">Screens en zonnescherm</span>
-    ${keuzes('Schermen bedienen', 'schermenAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], schermMag && concept.schermen.bedienen, !schermMag)}
-    <p class="mini">${mag || schermMag ? 'Met je inlog. Klimaat bedient Smart Climate nog niet, en de regeling doet niets met de schermen.' : 'Deze installatie staat bedienen niet toe (HEMS_LIGHTS op de NAS).'}</p>
-  </section>`;
+  // Alleen wat deze installatie toestaat (besluit 130): een knop die niets kan, staat er niet.
+  return `<h2 class="kop-2">Licht en screens</h2>
+    ${mag ? `<span class="veldnaam">Licht en scènes</span>${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.licht.bedienen)}` : ''}
+    ${schermMag ? `<span class="veldnaam">Screens en zonnescherm</span>${keuzes('Schermen bedienen', 'schermenAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.schermen.bedienen)}` : ''}
+    <p class="mini">${mag || schermMag ? 'Met je inlog. Bedienen doe je in het huis, bij de kamer.' : 'Deze installatie staat bedienen in de app niet toe; je ziet wel wat er aan staat. Aanzetten gaat op de NAS, met HEMS_LIGHTS.'}</p>`;
 }
 
 function weer() {
   const bronnen = info.gevonden.weerbronnen ?? [];
-  return `<section class="glas vraag">
-    <h2 class="kop-3">Het weer</h2>
-    ${bronnen.length ? keuzes('Weerbron', 'weerBron', [...bronnen.map((b) => [b.id, b.naam]), [null, 'Geen']], concept.weer.bron) : '<p class="uitleg">Geen weer gevonden in Home Assistant.</p>'}
+  // Open-Meteo voorop (besluit 130): werkt voor elk huis. De rest onder "Andere bron".
+  const meteo = bronnen.find((b) => b.id === 'open-meteo');
+  const andere = bronnen.filter((b) => b.id !== 'open-meteo');
+  const anderGekozen = concept.weer.bron !== 'open-meteo';
+  return `<h2 class="kop-2">Weer</h2>
+    ${meteo ? keuzes('Weerbron', 'weerBron', [['open-meteo', 'Open-Meteo, via internet']], concept.weer.bron) : ''}
     <p class="mini">Voor het weer van vandaag en de komende dagen, en wat je panelen dan leveren.</p>
+    <details ${anderGekozen ? 'open' : ''}><summary class="mini" style="cursor: pointer; font-weight: 700; color: var(--zacht)">Andere bron</summary>
+      <div style="margin-top: 8px">${keuzes('Andere weerbron', 'weerBron', [...andere.map((b) => [b.id, b.naam]), [null, 'Geen']], concept.weer.bron)}</div>
+    </details>
+    <span class="veldnaam">De verwachting per uur bewaren</span>
     ${keuzes('Verwachting per uur', 'weerUren', [[true, 'Bewaren'], [false, 'Niet bewaren']], concept.weer.uren !== false)}
-    <p class="mini">Elk uur de verwachting van Open-Meteo voor twee dagen: buitentemperatuur, zon en wind. Daarmee leert het huis later de temperatuur in je kamers vooruit te rekenen. Alleen de ligging op ongeveer tien kilometer gaat naar Open-Meteo.</p>
-  </section>`;
+    <p class="mini">Elk uur de verwachting voor twee dagen: buitentemperatuur, zon en wind. Daarmee leert het huis later de temperatuur in je kamers vooruit te rekenen. Alleen de ligging op ongeveer tien kilometer gaat naar Open-Meteo.</p>`;
 }
 
-function uitleg() {
-  return `<section class="glas vraag">
-    <h2 class="kop-3">Zo werkt de deurbel</h2>
-    <p class="uitleg">Wordt er aangebeld, dan toont elke open pagina meteen het beeld, tot je het sluit of de tijd om is. Het scherm aanzetten kan alleen in Fully Kiosk Browser.</p>
-    <p class="mini">Smart Climate kijkt alleen: er gaat niets naar de camera's of de deurbel.</p>
-  </section>`;
+const NAAST = {
+  cameras: ['Zo werkt het', ['De camera staat in de kamer waar hij hangt, bij Thuis', 'Smart Climate kijkt alleen: er gaat niets naar de camera']],
+  deurbel: ['Zo werkt de deurbel', ['Wordt er aangebeld, dan toont elke open pagina meteen het beeld', 'Tot je het sluit, of de tijd om is', 'Het scherm aanzetten kan alleen in Fully Kiosk Browser']],
+  licht: ['Zo werkt het', ['Bedienen doe je in het huis: tik op een kamer, dan op de lamp of het screen', 'De regeling raakt je lampen en screens niet aan']],
+  weer: ['Waarvoor dit nodig is', ['Het weer van vandaag en de komende dagen', 'Wat je panelen dan naar verwachting leveren', 'Later: de temperatuur per kamer vooruit rekenen']],
+};
+
+function delen() {
+  if (!info || !concept) return [];
+  const f = concept;
+  const beelden = f.cameras.aan ? f.cameras.lijst.length : 0;
+  const weerNaam = (info.gevonden.weerbronnen ?? []).find((b) => b.id === f.weer.bron)?.naam?.replace(' (via internet)', '') ?? 'geen';
+  return [
+    { id: 'cameras', titel: "Camera's", zin: f.cameras.aan ? `${beelden} in de app` : 'uit', stand: 'goed' },
+    { id: 'deurbel', titel: 'Deurbel', zin: f.deurbel.aan ? `beeld ${f.deurbel.seconden / 60 >= 1 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit', stand: f.deurbel.aan && (!f.deurbel.melder || !f.deurbel.camera) ? 'mist' : 'goed' },
+    { id: 'licht', titel: 'Licht en screens', zin: info.lichtMogelijk || info.schermMogelijk ? (f.licht.bedienen ? 'bedienen in de app' : 'alleen kijken') : 'alleen kijken', stand: 'goed' },
+    { id: 'weer', titel: 'Weer', zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
+  ];
 }
 
 function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
-  const kolommen = { 1: cameras(), 2: deurbel() + uitleg(), 3: licht() + weer() };
-  $$('[data-kolom]').forEach((el) => (el.innerHTML = kolommen[el.dataset.kolom]));
-  if (melding) zeg(melding, meldingFout);
+  const nu = groep.tekenDelen(delen());
+  const vorm = { cameras, deurbel, licht, weer }[nu]?.() ?? '';
+  $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
+  const [kopje, lijst] = NAAST[nu] ?? NAAST.cameras;
+  $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
+}
+
+function bewaar() {
+  groep.bewaarStraks(async () => {
+    const uit = await groep.stuur('api/functies', concept);
+    if (uit?.ok) info = uit.antwoord;
+    return uit;
+  });
 }
 
 /* ------------------------------------------------------------ doen */
 
-document.addEventListener('click', async (e) => {
+document.addEventListener('click', (e) => {
   const knop = e.target.closest('button');
   if (!knop || knop.disabled || !concept) return;
   if (knop.dataset.kies) {
@@ -160,10 +167,10 @@ document.addEventListener('click', async (e) => {
       concept.cameras.lijst = concept.cameras.lijst.filter((id) => !anders.has(id));
       if (w) concept.cameras.lijst.push(w);
     }
-    zeg('Nog niet opgeslagen.');
     teken();
-  } else if (knop.hasAttribute('data-opslaan')) {
-    await opslaan();
+    // Een deurbel aan zonder melder of beeld kan de dienst niet bewaren: eerst kiezen.
+    if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', 'Kies de melder en het beeld van de deurbel');
+    bewaar();
   }
 });
 
@@ -177,32 +184,17 @@ document.addEventListener('change', (e) => {
     const m = info.gevonden.melders.find((x) => x.id === v);
     if (m?.camera && !concept.deurbel.camera) concept.deurbel.camera = m.camera;
   } else if (veld.dataset.veld === 'camera') concept.deurbel.camera = v;
-  zeg('Nog niet opgeslagen.');
   teken();
+  if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', 'Kies de melder en het beeld van de deurbel');
+  bewaar();
 });
-
-async function opslaan() {
-  zeg('Even…');
-  try {
-    const res = await deur('api/functies', concept);
-    if (res === null) return;
-    const uit = await res.json().catch(() => ({}));
-    if (res.status === 403) return zeg('Alleen de beheerder kan dit opslaan.', true);
-    if (!res.ok) return zeg(uit.fout ?? 'Niet opgeslagen.', true);
-    info = uit;
-    concept = JSON.parse(JSON.stringify(uit.instellingen));
-    zeg('Opgeslagen.');
-    teken();
-  } catch {
-    zeg('Niet opgeslagen: geen verbinding met Smart Climate.', true);
-  }
-}
 
 /* ------------------------------------------------------------ starten */
 
 /** Gebundeld: hooguit één keer per beeld (basis.js). */
 const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
+addEventListener('hashchange', teken);
 
 app.start('instellingen');
 void laad();

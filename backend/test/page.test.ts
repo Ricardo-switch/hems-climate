@@ -34,7 +34,6 @@ import { chromium, type Browser, type Page } from 'playwright';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { recordRun } from '../src/adapters/runs.js';
 import { decide } from '../src/core/decide.js';
-import { defaultStrategies } from '../src/index.js';
 import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstruct.js';
 import { DivergenceCache } from '../src/web/divergence.js';
 import { FeedbackLog } from '../src/web/feedback.js';
@@ -105,6 +104,29 @@ let extraBatterijen: HouseBattery[] = [];
 const metBatterijen = (h: HouseReport): HouseReport => (extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h);
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
+import { readFileSync } from 'node:fs';
+import { resolveConfigPathSync } from '../src/config/load.js';
+import { parseSiteConfig } from '../src/config/schema.js';
+import { defaultStrategies } from '../src/index.js';
+import { comfortView, controleerComfort, withComfort, type Comfort } from '../src/web/comfort.js';
+import type { SiteConfig } from '../src/core/model.js';
+
+/* Comfort (besluit 130): in het geheugen, met hetzelfde schema als de dienst. */
+const rauweConfig = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+let comfortNu: Comfort | null = null;
+let configNu: SiteConfig = exampleSite;
+const comfortDeur = {
+  view: () => comfortView(configNu, comfortNu),
+  save: async (body: unknown) => {
+    const c = controleerComfort(body, configNu);
+    if (!c.ok) return { ok: false as const, status: 400, reden: c.reden };
+    const checked = parseSiteConfig(withComfort(rauweConfig, c.comfort).raw, { knownStrategies: defaultStrategies().ids });
+    if (!checked.ok) return { ok: false as const, status: 400, reden: checked.problems[0]?.message ?? 'past niet' };
+    comfortNu = c.comfort;
+    configNu = checked.config;
+    return { ok: true as const, view: comfortView(configNu, comfortNu) };
+  },
+};
 
 const ENABLED = process.env['HEMS_PAGE_TEST'] === '1';
 const WEB_DIR = fileURLToPath(new URL('../web', import.meta.url));
@@ -269,6 +291,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           host: '127.0.0.1',
           webDir: WEB_DIR,
           config: exampleSite,
+          configNow: () => configNu,
+          comfort: comfortDeur,
           latest: () => live,
           divergence: () => review.latest,
           logDir: dir,
@@ -399,7 +423,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * vastlegt gaat voor, en de antwoorden gaan door de eigen deur. De pagina haalt
    * niets van buiten, ook de lettertypen niet.
    */
-  it('toont Zon en aansluiting, en bewaart de antwoorden', async () => {
+  it('toont Energie en Regeling, en bewaart meteen wat je kiest (besluit 130)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     const outside: string[] = [];
@@ -413,30 +437,39 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
+    // Het oude adres stuurt door naar het deel van Energie.
     await p.goto(`${baseUrl}/aansluiting.html`);
+    await p.waitForURL(/energie\.html#panelen/);
     const wand = p.locator('#wand');
-    await wand.locator('h2', { hasText: 'Op welke kant van het dak' }).waitFor();
-    // De zekering uit de configuratie staat voorgekozen, en is te wijzigen (besluit 117).
-    const zekering = wand.locator('button[aria-pressed="true"]', { hasText: '1 × 35 A' });
-    expect(await zekering.isDisabled()).toBe(false);
-    expect(await wand.textContent()).toContain('uit de configuratie van het huis');
-    await zekering.click();
-    expect(await wand.textContent()).toContain('Start bij zonne-overschot. Ingesteld in de configuratie.');
+    await wand.locator('h3', { hasText: 'Op welke kant van het dak' }).waitFor();
     expect(await wand.textContent()).toContain('Snel genoeg');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     await wand.locator('button', { hasText: 'Beide kanten' }).click();
     await wand.getByLabel('Aantal aan de voorkant').fill('6');
+    await wand.getByLabel('Aantal aan de voorkant').press('Tab');
     await wand.getByLabel('Aantal aan de achterkant').fill('6');
     await wand.getByLabel('Aantal aan de achterkant').press('Tab');
-    await wand.locator('[aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
+    // De zekering uit de configuratie staat voorgekozen, en is te wijzigen (besluit 117).
+    await wand.locator('[data-delen] .deel', { hasText: 'Aansluiting' }).click();
+    await wand.locator('[data-vorm] h2', { hasText: 'Aansluiting' }).waitFor();
+    const zekering = wand.locator('button[aria-pressed="true"]', { hasText: '1 × 35 A' });
+    expect(await wand.textContent()).toContain('uit de configuratie van het huis');
+    await zekering.click();
     // De verwarming (besluit 122): wat het is en de aanvoertemperatuur.
+    await wand.locator('[data-delen] .deel', { hasText: 'Verwarming' }).click();
+    await wand.locator('[data-vorm] h2', { hasText: 'Verwarming' }).waitFor();
     await wand.locator('[aria-label="Verwarming"] button', { hasText: 'Cv-ketel' }).click();
     await wand.locator('[data-aanvoer]').fill('60');
     await wand.locator('[data-aanvoer]').press('Tab');
-    await wand.locator('[data-opslaan]').click();
-    await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
-    expect(connStore.current).toMatchObject({ verwarming: { soort: 'cv', aanvoerC: 60 }, zekering: { fasen: 1, ampere: 35 }, panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
-    expect(await wand.locator('.notitie').textContent()).toContain('na de volgende herstart');
+    await expect.poll(() => connStore.current, { timeout: 5_000 }).toMatchObject({ verwarming: { soort: 'cv', aanvoerC: 60 }, zekering: { fasen: 1, ampere: 35 }, panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 } });
+    await wand.locator('[data-bewaard]', { hasText: 'Bewaard' }).waitFor();
+    // Apparaten op zon staan bij Regeling.
+    await p.goto(`${baseUrl}/regeling.html#opzon`);
+    await wand.locator('[aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
+    expect(await wand.textContent()).toContain('Start bij zonne-overschot. Ingesteld in de configuratie.');
+    await expect.poll(() => connStore.current?.apparaten, { timeout: 5_000 }).toMatchObject([{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }]);
+    // De verwarming bleef staan toen Regeling bewaarde.
+    expect(connStore.current).toMatchObject({ verwarming: { soort: 'cv', aanvoerC: 60 } });
     // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
     const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
     expect(fonts).toEqual(expect.arrayContaining(['Figtree', 'Bricolage Grotesque']));
@@ -449,7 +482,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Meters en prijzen in ontwerp 2 (besluiten 102 en 104): overnemen uit het
    * Energie-dashboard, de meters die bij een rol passen eerst, en bewaren.
    */
-  it('toont Meters en prijzen, neemt de meters over en bewaart', async () => {
+  it('toont de meters en prijzen bij Energie, neemt de meters over en bewaart', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -457,11 +490,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/meters.html`);
+    await p.waitForURL(/energie\.html#meters/);
     const wand = p.locator('#wand');
-    await wand.locator('.vraag', { hasText: 'Je Energie-dashboard heeft' }).waitFor();
+    await wand.locator('.deelvraag', { hasText: 'Je Energie-dashboard heeft' }).waitFor();
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     await wand.locator('[data-overnemen]').click();
     await wand.locator('.meterchips button', { hasText: 'SolarEdge opgewekt' }).waitFor();
+    await expect.poll(() => energyStore.current?.zon, { timeout: 5_000 }).toEqual(['sensor.zon']);
     // Apparaat erbij: eerst wat een apparaat is (de tv), de P1-meter pas onder "Andere meters".
     const groepen = await wand.locator('select[aria-label="Apparaat erbij"] optgroup').evaluateAll((gs) => gs.map((g) => [g.getAttribute('label'), [...g.querySelectorAll('option')].map((o) => o.textContent)]));
     expect(groepen).toEqual([
@@ -469,18 +504,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       ['Andere meters', ['P1 import totaal']],
     ]);
     // De prijzen zoals op een contract (besluit 110): normaal en dal, en een vaste post per jaar.
-    await wand.locator('[data-kies="tarief"]', { hasText: 'Normaal en dal' }).click();
+    await wand.locator('[data-delen] .deel', { hasText: 'Contract en prijzen' }).click();
+    await wand.locator('[data-vorm] h2', { hasText: 'Contract en prijzen' }).waitFor();
+    await wand.locator('[data-kies="stroomtarief"]', { hasText: 'Normaal en dal' }).click();
     await wand.locator('[data-prijs="stroomDal"]').waitFor();
     await wand.locator('[data-prijs="stroom"]').fill('0.27142');
+    await wand.locator('[data-prijs="stroom"]').press('Tab');
     await wand.locator('[data-prijs="stroomDal"]').fill('0.269');
     await wand.locator('[data-prijs="stroomDal"]').press('Tab');
     await wand.locator('[data-vast-erbij]', { hasText: 'Vermindering energiebelasting' }).click();
     await wand.locator('[data-vast="bedrag"]').last().fill('628.96');
+    await wand.locator('[data-vast="bedrag"]').last().press('Tab');
     await wand.locator('[data-vast="per"]').last().selectOption('jaar');
-    await wand.locator('[data-opslaan]').click();
-    await wand.locator('[data-melding]', { hasText: 'Bewaard' }).waitFor();
-    expect(energyStore.current?.zon).toEqual(['sensor.zon']);
-    expect(energyStore.current?.prijzen).toMatchObject({ stroom: 0.27142, stroomDal: 0.269, vast: [{ naam: 'Vermindering energiebelasting', bedrag: -628.96, per: 'jaar', soort: 'stroom' }] });
+    await expect.poll(() => energyStore.current?.prijzen, { timeout: 5_000 }).toMatchObject({ stroom: 0.27142, stroomDal: 0.269, vast: [{ naam: 'Vermindering energiebelasting', bedrag: -628.96, per: 'jaar', soort: 'stroom' }] });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
@@ -596,6 +632,48 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * omhoog tot het veld zichtbaar is; daarna staat alles weer op zijn plek. En
    * een te volle kolom schuift binnen zijn vak.
    */
+  /*
+   * Comfort (besluit 130): per kamer een balk per dagdeel. Een greep slepen
+   * bewaart meteen, en de dienst rekent ermee.
+   */
+  it('zet comfort per kamer met een greep, en bewaart meteen', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const zone = exampleSite.zones[0]!;
+    await p.goto(`${baseUrl}/comfort.html#${zone.id}`);
+    const wand = p.locator('#wand');
+    await wand.locator('[data-delen] .deel').first().waitFor({ timeout: 10_000 });
+    const delen = await wand.locator('[data-delen] .deel b').allTextContents();
+    expect(delen).toEqual([...exampleSite.zones.map((z) => z.name), 'Dagdelen', 'Afwezig en vakantie']);
+    // De verwarmgreep van overdag een stuk naar rechts.
+    const greep = wand.locator('[data-modus="dag"] [data-greep="heat"]');
+    const vak = (await wand.locator('[data-modus="dag"] .schaal').boundingBox())!;
+    const g = (await greep.boundingBox())!;
+    await p.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+    await p.mouse.down();
+    // 10 tot 30 graden over de balk: naar 75% is 25°, maar koelen ligt erboven, dus een graad eronder.
+    await p.mouse.move(vak.x + vak.width * 0.5, g.y + g.height / 2, { steps: 5 });
+    await p.mouse.up();
+    await expect.poll(() => comfortNu?.kamers[zone.id]?.modi.dag?.heat, { timeout: 5_000 }).toBe(20);
+    expect(configNu.zones[0]!.setpoints.dag.heat).toBe(20);
+    await expect.poll(() => wand.locator('[data-bewaard]').textContent()).toContain('Bewaard');
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
+    // Met de pijltjes een halve graad omhoog.
+    await wand.locator('[data-modus="dag"] [data-greep="heat"]').focus();
+    await p.keyboard.press('ArrowRight');
+    await expect.poll(() => comfortNu?.kamers[zone.id]?.modi.dag?.heat, { timeout: 5_000 }).toBe(20.5);
+    // De dagdelen: overdag een uur later.
+    await wand.locator('[data-delen] .deel', { hasText: 'Dagdelen' }).click();
+    await wand.locator('[data-uur="dag:1"]').click();
+    await expect.poll(() => configNu.schedule.dayFromHour, { timeout: 5_000 }).toBe(exampleSite.schedule.dayFromHour + 1);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   it('houdt de maat bij een schermtoetsenbord, en laat volle kolommen schuiven', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
@@ -618,11 +696,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.setViewportSize({ width: 1280, height: 800 });
     await expect.poll(() => p.evaluate<string>("getComputedStyle(document.documentElement).getPropertyValue('--toetsschuif').trim()")).toBe('0px');
     expect(await schaal()).toBe(voor);
-    // Instellingen: elke kolom schuift zelf, de pagina niet.
-    await p.goto(`${baseUrl}/instellingen.html`);
-    await p.locator('#wand .kolom').first().waitFor();
-    const kolommen = await p.evaluate<string[]>("[...document.querySelectorAll('#wand .kolom')].map((k) => getComputedStyle(k).overflowY)");
-    expect(kolommen.every((o) => o === 'auto')).toBe(true);
+    // Een groep achter het tandwiel: elk vak schuift zelf, de pagina niet (besluit 130).
+    await p.goto(`${baseUrl}/energie.html#prijzen`);
+    await p.locator('#wand [data-vorm] h2').first().waitFor();
+    const vakken = await p.evaluate<string[]>("['[data-delen]', '[data-vorm]', '[data-naast]'].map((s) => getComputedStyle(document.querySelector('#wand ' + s)).overflowY)");
+    expect(vakken.every((o) => o === 'auto')).toBe(true);
     await p.goto(`${baseUrl}/thuis.html`);
     expect(await p.evaluate<string>("getComputedStyle(document.querySelector('#wand .rechts')).overflowY")).toBe('auto');
     expect(fouten).toEqual([]);
@@ -657,7 +735,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Camera's en deurbel (besluit 109): het voorstel uit Home Assistant, een
    * ander beeld kiezen, en opslaan in het eigen bestand.
    */
-  it('stelt de camera\u2019s en de deurbel in', async () => {
+  it('stelt de camera\u2019s en de deurbel in, en bewaart meteen', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -665,22 +743,24 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
-    await p.locator('#wand a[href="functies.html"]').click();
+    await p.locator('#wand a.tegel[href="functies.html"]').click();
     const wand = p.locator('#wand');
     await wand.locator('.regelrij', { hasText: 'Camera oprit' }).waitFor();
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Het voorstel: het vloeiende beeld. Nu het scherpe.
     expect(await wand.locator('[aria-label="Beeld van Camera oprit"] button[aria-pressed="true"]').textContent()).toBe('Vloeiend');
     await wand.locator('[aria-label="Beeld van Camera oprit"] button', { hasText: 'Scherp' }).click();
+    await expect.poll(() => functiesStore.current?.cameras, { timeout: 5_000 }).toEqual({ aan: true, lijst: ['camera.camera_oprit_duidelijk'] });
     // Licht: de installatie staat het toe, dus bedienen staat aan; hier op alleen kijken (besluit 111).
+    await wand.locator('[data-delen] .deel', { hasText: 'Licht en screens' }).click();
+    await wand.locator('[data-vorm] h2', { hasText: 'Licht en screens' }).waitFor();
     expect(await wand.locator('[aria-label="Licht bedienen"] button[aria-pressed="true"]').textContent()).toBe('Bedienen in de app');
     await wand.locator('[aria-label="Licht bedienen"] button', { hasText: 'Alleen kijken' }).click();
+    await expect.poll(() => functiesStore.current?.licht, { timeout: 5_000 }).toEqual({ bedienen: false });
     // Zonder deurbel in Home Assistant zegt de pagina dat.
+    await wand.locator('[data-delen] .deel', { hasText: 'Deurbel' }).click();
+    await wand.locator('[data-vorm] h2', { hasText: 'Deurbel' }).waitFor();
     expect(await wand.textContent()).toContain('Geen deurbel gevonden');
-    await wand.locator('[data-opslaan]').click();
-    await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
-    expect(functiesStore.current?.cameras).toEqual({ aan: true, lijst: ['camera.camera_oprit_duidelijk'] });
-    expect(functiesStore.current?.licht).toEqual({ bedienen: false });
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
@@ -706,7 +786,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('.stapknop', { hasText: 'Zon en aansluiting' }).click();
     await wand.locator('[data-stapblad] h2', { hasText: 'Zon en aansluiting' }).waitFor();
     await wand.locator('[data-stapblad] a', { hasText: /Instellen|Nakijken/ }).click();
-    await p.waitForURL(/aansluiting\.html\?inrichten=zon/);
+    await p.waitForURL(/energie\.html\?inrichten=zon/);
     const balk = p.locator('.inrichtbalk');
     await balk.waitFor();
     expect(await balk.textContent()).toContain('Stap 4 van 7');
@@ -716,6 +796,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Op de telefoon: de balk op één regel, binnen het scherm.
     await p.setViewportSize({ width: 390, height: 844 });
     await p.goto(`${baseUrl}/aansluiting.html?inrichten=zon`);
+    await p.waitForURL(/energie\.html\?inrichten=zon#panelen/);
+    await p.locator('.inrichtbalk').waitFor();
     const vak = (await p.locator('.inrichtbalk').boundingBox())!;
     expect(vak.x).toBeGreaterThanOrEqual(0);
     expect(vak.x + vak.width).toBeLessThanOrEqual(390);
@@ -1062,9 +1144,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await veld.fill('Waar vul ik de prijzen in?');
     await veld.press('Enter');
     await p.locator('#wand .jij', { hasText: 'Waar vul ik de prijzen in?' }).waitFor();
-    const knop = p.locator('#wand .verder a', { hasText: 'Naar Meters en prijzen' });
+    const knop = p.locator('#wand .verder a', { hasText: 'Naar Contract en prijzen' });
     await knop.waitFor();
-    expect(await knop.getAttribute('href')).toBe('meters.html');
+    expect(await knop.getAttribute('href')).toBe('energie.html#prijzen');
     expect(await veld.inputValue()).toBe('');
     // Niets herkend: voorbeelden om op te tikken.
     await veld.fill('banaan');
@@ -1081,21 +1163,32 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Instellingen en Wat je huis kan (schetsen Instellingen, Wand-Leren en
    * Wand-Huis-groeit): wie stuurt, wat het huis weet, en de stappen.
    */
-  it('toont Instellingen, en daarvandaan Wat je huis kan', async () => {
+  it('toont Instellingen in zes groepen, en daarvandaan Wat je huis kan (besluit 130)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
-    await p.locator('#wand [data-stuurt] .fase').first().waitFor();
-    await p.locator('#wand [data-weet] .weet').first().waitFor();
+    await p.locator('#wand [data-groepen] .tegel').first().waitFor();
+    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'App en toegang']);
     expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
-    await p.locator('#wand [data-huis] a', { hasText: 'Wat je huis kan' }).click();
+    // Zoeken: "zekering" vindt de aansluiting bij Energie.
+    await p.locator('#wand [data-zoek]').fill('zekering');
+    await p.locator('#wand [data-gevonden] a', { hasText: 'Hoofdzekering' }).waitFor();
+    expect(await p.locator('#wand [data-gevonden] a').first().getAttribute('href')).toBe('energie.html#aansluiting');
+    await p.locator('#wand [data-zoek]').press('Escape');
+    await p.locator('#wand a.kan').click();
     await p.locator('#wand h1', { hasText: 'Wat je huis kan' }).waitFor();
-    await p.locator('#wand .stap svg.sc-huis').first().waitFor();
-    expect(await p.locator('#wand .stap').count()).toBe(4);
+    await p.locator('#wand svg.sc-huis').first().waitFor();
+    expect(await p.locator('#wand [data-vakken] .vak h3').allTextContents()).toEqual(['Comfort', 'Zon en kosten', 'Gemak', 'Overzicht']);
+    // Een tik opent het blad, met wat het is en wanneer het werkt.
+    await p.locator('#wand [data-vakken] .regel', { hasText: 'Thuisbatterij' }).click();
+    await p.locator('#wand [data-blad]', { hasText: 'Wanneer het werkt' }).waitFor();
+    await p.locator('#wand [data-blad] [data-sluit]').click();
+    await expect.poll(() => p.locator('#wand [data-blad]').isHidden()).toBe(true);
+    expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     expect(fouten).toEqual([]);
     await context.close();
   }, 20_000);
@@ -1183,7 +1276,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand .camerabeeld[data-gestart] img').waitFor();
     await p.waitForTimeout(2500);
     expect(await p.evaluate<number>("document.querySelector('#wand .camerabeeld img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
-    expect(liveOpen).toBe(1);
+    // Een beeld van een vorige test kan nog even open tellen tot de verbinding dicht is.
+    await expect.poll(() => liveOpen, { timeout: 5_000 }).toBe(1);
     // Een andere kamer: het beeld stopt.
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metKlimaat.id)}`);
     await expect.poll(() => liveOpen).toBe(0);
@@ -1297,13 +1391,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
-    await p.goto(`${baseUrl}/instellingen.html`);
-    const inlog = p.locator('#tel [data-inlog] a', { hasText: 'Inloggen' });
+    await p.goto(`${baseUrl}/toegang.html`);
+    const inlog = p.locator('#tel [data-vorm] a', { hasText: 'Inloggen' });
     await inlog.waitFor();
     // Zonder te volgen: de dienst stuurt door naar het inlogscherm van Home Assistant.
     const go = p.waitForRequest((r) => new URL(r.url()).pathname === '/auth/login');
     await inlog.click();
-    expect(new URL((await go).url()).searchParams.get('terug')).toBe('/instellingen.html');
+    expect(new URL((await go).url()).searchParams.get('terug')).toBe('/toegang.html');
     await context.close();
   }, 20_000);
 });

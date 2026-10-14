@@ -28,14 +28,16 @@ describe('woordzoeker', () => {
   });
 
   it('vindt de pagina bij een vraag over de app', () => {
-    expect(app('Waar vul ik de prijzen in?')).toBe('meters.html');
-    expect(app('Hoe stel ik het daltarief in')).toBe('meters.html');
+    expect(app('Waar vul ik de prijzen in?')).toBe('energie.html#prijzen');
+    expect(app('Hoe stel ik het daltarief in')).toBe('energie.html#prijzen');
     expect(app('Hoe pas ik de indeling aan?')).toBe('indeling.html');
     expect(app('Hoe voeg ik een etage toe')).toBe('indeling.html');
-    expect(app('Waar stel ik mijn hoofdzekering in')).toBe('aansluiting.html');
+    expect(app('Waar stel ik mijn hoofdzekering in')).toBe('energie.html#aansluiting');
+    // Comfort zet je in de app (besluit 130).
+    expect(app('Waar stel ik de temperatuur in?')).toBe('comfort.html');
     expect(app('Hoe zet ik de deurbel aan')).toBe('functies.html');
     expect(app('Welke camera’s zie ik')).toBe('functies.html');
-    expect(app('Hoe kan ik inloggen')).toBe('instellingen.html');
+    expect(app('Hoe kan ik inloggen')).toBe('toegang.html');
     expect(app('Hoeveel heb ik bespaard')).toBe('opbrengst.html');
     expect(app('Waar zie ik het verbruik')).toBe('vandaag.html');
     expect(app('Opnieuw inrichten')).toBe('inrichten.html');
@@ -45,8 +47,8 @@ describe('woordzoeker', () => {
     const b = begrijp('waar vul ik de prijzen in', config, 'nl');
     expect(b.soort).toBe('app');
     if (b.soort !== 'app') return;
-    expect(b.antwoord).toContain('Meters en prijzen');
-    expect(b.link.label).toBe('Naar Meters en prijzen');
+    expect(b.antwoord).toContain('Contract en prijzen');
+    expect(b.link.label).toBe('Naar Contract en prijzen');
     expect(b.antwoord).not.toMatch(/\d/);
   });
 
@@ -76,7 +78,7 @@ describe('woordzoeker', () => {
 
   it('kan ook Engels', () => {
     const b = begrijp('Where do I enter the prices?', config, 'en');
-    expect(b.soort === 'app' && b.link).toEqual({ href: 'meters.html', label: 'Go to Meters and prices' });
+    expect(b.soort === 'app' && b.link).toEqual({ href: 'energie.html#prijzen', label: 'Go to Contract and prices' });
     expect(begrijp('What are you doing now', config, 'en')).toEqual({ soort: 'huis', vraag: { kind: 'nu' } });
   });
 

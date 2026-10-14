@@ -1,151 +1,180 @@
 /*
- * Instellingen, in ontwerp 2 (besluit 104; schetsen Instellingen en
- * Wand-Leren). Achter het tandwiel: wat er goed is per kamer, wie stuurt,
- * wat het huis al weet, en hoe het huis is ingericht.
- *
- * Eerlijk over leren: wat er staat, heeft het huis echt geleerd (de zon op je
- * panelen, het verband tussen zonkans en opbrengst). Hoe snel een kamer
- * opwarmt en afkoelt komt met het thermisch model (D), en staat er als "nog
- * niet". Klimaat kijkt mee tot het bewijs er is (besluit 64).
+ * Instellingen (besluit 130, schets Wand-Instellingen). Achter het tandwiel:
+ * wat er nog mist, Wat je huis kan, en zes groepen die je herkent aan wat ze
+ * regelen. Elke groep toont zijn belangrijkste waarden en of er iets mist.
+ * Bedienen doe je in het huis; hier stel je in.
  */
 'use strict';
 
 const { $$, nl, esc, haal } = app;
 
-let site = null;
-let vandaag = null;
-let zon = null;
-let weer = null;
-let terugblik = null;
-let sessie = null;
-let aansluiting = null;
-let huisData = null;
+/** Alles wat de pagina leest, per deur; null zolang die niets gaf. */
+const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null };
 
 async function laadAlles() {
-  const r = await Promise.allSettled([haal('api/site'), haal('api/vandaag'), haal('api/zon'), haal('api/weer'), haal('api/divergence'), haal('api/sessie'), haal('api/aansluiting'), haal('api/huis')]);
-  const [s, v, z, w, d, se, a, h] = r.map((x) => (x.status === 'fulfilled' ? x.value : null));
-  site = s ?? site;
-  vandaag = v ?? vandaag;
-  zon = z ?? zon;
-  weer = w ?? weer;
-  terugblik = d ?? terugblik;
-  sessie = se ?? sessie;
-  aansluiting = a ?? aansluiting;
-  huisData = h ?? huisData;
+  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon' };
+  const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
+  Object.keys(deuren).forEach((k, i) => {
+    if (r[i].status === 'fulfilled') d[k] = r[i].value;
+  });
   teken();
 }
 
-/* ------------------------------------------------------------ de kaarten */
+/* ----------------------------------------------------------- wat mist */
 
-function comfort() {
-  const zones = vandaag?.zones ?? [];
-  if (!zones.length) return '<h2 class="kop-3">Comfort per kamer</h2><p class="mini" style="margin: 8px 0">Nog niet bekend.</p>';
-  const lo = 14;
-  const hi = 28;
-  const pct = (c) => ((Math.max(lo, Math.min(hi, c)) - lo) / (hi - lo)) * 100;
-  const rij = (z) => {
-    const van = z.goed.vanC;
-    const tot = z.goed.totC;
-    const zin = van != null && tot != null ? `nooit kouder dan ${nl(van, 0)}°, nooit warmer dan ${nl(tot, 0)}°` : van != null ? `nooit kouder dan ${nl(van, 0)}°` : tot != null ? `nooit warmer dan ${nl(tot, 0)}°` : 'geen grenzen ingesteld';
-    const band = van != null && tot != null ? `<span class="band" aria-hidden="true"><i style="left: ${pct(van).toFixed(0)}%; right: ${(100 - pct(tot)).toFixed(0)}%"></i></span>` : '';
-    return `<div class="rij"><div class="l"><b>${esc(z.naam)}</b><span>${esc(zin)}</span></div>${band}</div>`;
-  };
-  return `<h2 class="kop-3">Comfort per kamer</h2>${zones.map(rij).join('')}<p class="mini" style="margin: 4px 0 6px">Overdag. Aanpassen gaat nu nog in de configuratie.</p>`;
+function mist() {
+  const lijst = stand.nogTeDoen(d);
+  if (!lijst.length) {
+    return { klaar: true, html: '<h2 class="kop-3"><span class="stip" style="background: var(--mint)"></span>Alles staat goed</h2><p class="mini" style="margin: 2px 0 0">Er mist niets wat Smart Climate nodig heeft. Wat er nog bij kan, staat bij Wat je huis kan.</p>' };
+  }
+  const rijen = lijst.slice(0, 3).map((x) => `<div class="regel"><div><b>${esc(x.wat)}</b><span>${esc(x.waarom)}</span></div><a class="doe" href="${x.href}">${esc(x.knop)}</a></div>`).join('');
+  return { klaar: false, html: `<h2 class="kop-3"><span class="stip" style="background: var(--gloed)"></span>Nog te doen</h2>${rijen}${lijst.length > 3 ? `<p class="mini" style="margin: 6px 0 0">En nog ${lijst.length - 3}.</p>` : ''}` };
 }
 
-const FASEN = [['leren', 'Leren'], ['kijken', 'Meekijken'], ['regelen', 'Regelen']];
-const fase = (nu) => `<span class="fase" role="img" aria-label="${FASEN.find(([k]) => k === nu)[1]}">${FASEN.map(([k, l]) => `<i class="${k === nu ? k : ''}">${l}</i>`).join('')}</span>`;
-
-function stuurt() {
-  const winter = terugblik?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter');
-  const sinds = terugblik?.dataset?.vanMs ? new Date(terugblik.dataset.vanMs).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
-  const klimaat = (site?.actuators ?? []).map(
-    (a) => `<div class="rij"><div class="l"><b>${esc(a.name)}</b><span>Kijkt mee${sinds ? ` sinds ${esc(sinds)}` : ''}; schakelt nog niets</span></div>${fase('kijken')}</div>`,
-  );
-  const uitstel = (huisData?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).filter((d) => d.soort === 'apparaat');
-  const andere = [
-    ...uitstel.map((d) => `<div class="rij"><div class="l"><b>${esc(d.naam)}</b><span>Kijkt mee: zegt wanneer hij op zon zou starten</span></div>${fase('kijken')}</div>`),
-    `<div class="rij"><div class="l"><b>Lampen en scènes</b><span>Bedien je zelf in de app; Smart Climate regelt ze niet</span></div></div>`,
-  ];
-  const bewijs = winter
-    ? `<div class="bewijs"><span class="mini">Winterdagen: ${nl(winter.dagen, 0)} van ${winter.doel}</span><span class="balkje"><i style="width: ${Math.min(100, (winter.dagen / winter.doel) * 100).toFixed(0)}%"></i></span></div>
-       <p class="mini" style="margin: 0 0 8px">Klimaat gaat pas regelen na ${winter.doel} winterdagen meekijken waarin het minstens zo goed zou doen als nu. Jij beslist, en terug kan altijd.</p>`
+function kan() {
+  const k = window.stand.kan ? stand.kan(d) : null;
+  const tel = (s) => (k ? k.filter((x) => x.stand === s).length : 0);
+  const standen = k
+    ? [['werkt', 'werken', 'werkt'], ['kijkt', 'kijken mee', 'kijkt mee'], ['leert', 'leren nog', 'leert nog'], ['mis', 'vul in', 'vul in'], ['uit', 'staan uit', 'staat uit'], ['nodig', 'met iets erbij', 'met iets erbij']]
+        .map(([s, veel, een]) => (tel(s) ? `<span class="stand ${s}">${tel(s)} ${tel(s) === 1 ? een : veel}</span>` : ''))
+        .join('')
     : '';
-  return `<h2 class="kop-3">Wie stuurt</h2>${klimaat.join('')}${bewijs}${andere.join('')}`;
+  return `<h2 class="kop-3">Wat je huis kan</h2><p class="mini" style="margin: 4px 0 0">Alles wat Smart Climate voor je doet, en hoe het ervoor staat.</p><div class="standen">${standen}</div>`;
 }
 
-function weet() {
-  const stip = (n) => `<span class="stip5" aria-label="${n} van 5">${[0, 1, 2, 3, 4].map((i) => `<i class="${i < n ? 'ja' : ''}"></i>`).join('')}</span>`;
-  const rijen = [];
-  const hl = zon?.heldereLucht;
-  if (hl) {
-    const n = hl.bron === 'geleerd' ? Math.min(5, Math.ceil(hl.dagen / 6)) : 0;
-    rijen.push(`<div class="weet"><span>Wat je panelen halen bij heldere lucht</span><span>${hl.bron === 'geleerd' ? `<b>${hl.dagen} dagen</b>` : '<span class="uit">geschat</span>'}${stip(n)}</span></div>`);
+/* --------------------------------------------------------- de groepen */
+
+const ICOON = {
+  huis: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--ijs)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>',
+  comfort: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>',
+  energie: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zon)" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/></svg>',
+  regeling: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg>',
+  functies: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
+  toegang: '<svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M10 18h4"/></svg>',
+};
+
+const euro = (v) => (v == null ? null : `€ ${nl(v, 2)}`);
+const graden = (c) => `${nl(c, Number.isInteger(c) ? 0 : 1)}°`;
+
+function feitenVan(id) {
+  const kamers = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []);
+  switch (id) {
+    case 'huis': {
+      const etages = (d.huis?.etages ?? []).filter((e) => e.id !== 'buiten' && e.ruimtes?.length).length;
+      const apps = kamers.reduce((t, r) => t + r.apparaten.length, 0);
+      const zonder = d.huis?.zonderRuimte?.length ?? 0;
+      return [
+        ['Etages en kamers', d.huis ? `${etages} etages, ${kamers.length} kamers` : '…'],
+        ['Apparaten in een kamer', d.huis ? `${apps} van ${apps + zonder}` : '…'],
+        ['Verborgen', d.huis ? `${d.huis.verborgen?.length ?? 0} apparaten` : '…'],
+      ];
+    }
+    case 'comfort': {
+      const k = d.comfort?.kamers ?? [];
+      const zin = (x) => {
+        const p = x.modi.dag;
+        return p.heat != null && p.cool != null ? `${nl(p.heat, Number.isInteger(p.heat) ? 0 : 1)} tot ${graden(p.cool)}` : p.heat != null ? graden(p.heat) : p.cool != null ? `tot ${graden(p.cool)}` : 'niets';
+      };
+      const dd = d.comfort?.dagdelen;
+      return [...k.slice(0, 2).map((x) => [`${x.naam} overdag`, zin(x)]), ['Dagdelen', dd ? `${dd.dag}:00 tot ${dd.nacht}:00` : '…']];
+    }
+    case 'energie': {
+      const a = d.aansluiting;
+      const p = d.energie?.instellingen?.prijzen;
+      const panelen = a?.antwoorden?.panelen?.aantal ? `${a.antwoorden.panelen.aantal}${a.antwoorden.panelen.ligging === 'beide' ? ', twee kanten' : ''}` : (a?.configuratie?.panelen ?? []).length ? `${a.configuratie.panelen.length} vlakken` : null;
+      const z = a?.antwoorden?.zekering ?? a?.configuratie?.zekering;
+      return [
+        ['Panelen', panelen, !a ? '…' : 'nog kiezen'],
+        ['Hoofdzekering', z ? `${z.fasen} × ${z.ampere} A` : null, !a ? '…' : 'nog kiezen'],
+        ['Stroomprijs', euro(p?.stroom), d.energie ? 'nog invullen' : '…'],
+      ];
+    }
+    case 'regeling': {
+      const acts = d.site?.actuators ?? [];
+      const airco = acts.filter((x) => x.capabilities?.canCool).length;
+      const warm = acts.filter((x) => !x.capabilities?.canCool).length;
+      const opZon = Object.values(d.aansluiting?.antwoorden?.opZon ?? {}).filter(Boolean).length + (d.aansluiting?.configuratie?.apparaten?.length ?? 0);
+      return [
+        ["Airco's", airco ? `${airco}, kijkt mee` : 'geen'],
+        ['Cv en thermostaten', warm ? `${warm}, kijkt mee` : 'geen'],
+        ['Apparaten op zon', opZon ? `${opZon}` : 'geen'],
+      ];
+    }
+    case 'functies': {
+      const f = d.functies?.instellingen ?? d.functies?.voorstel;
+      const weer = (d.functies?.gevonden?.weerbronnen ?? []).find((b) => b.id === f?.weer?.bron)?.naam ?? (f?.weer?.bron ? f.weer.bron : 'geen');
+      return [
+        ['Licht en screens', f ? (f.licht?.bedienen === false ? 'alleen kijken' : 'bedienen in de app') : '…'],
+        ['Deurbel', f ? (f.deurbel?.aan ? `beeld ${f.deurbel.seconden} tellen` : 'uit') : '…'],
+        ['Weer', f ? weer.replace(' (via internet)', '') : '…'],
+      ];
+    }
+    case 'toegang': {
+      const s = d.sessie;
+      const ingelogd = !s ? '…' : s.toegang !== 'sessions' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'niet ingelogd';
+      const dagen = d.export?.bestanden != null ? `${d.export.bestanden} dagen` : '…';
+      return [
+        ['Ingelogd', ingelogd],
+        ['Je gegevens', dagen],
+        ['Versie', d.health?.versie?.commit ?? '…'],
+      ];
+    }
+    default:
+      return [];
   }
-  if (weer?.geleerd) {
-    const g = weer.geleerd;
-    const n = Math.min(5, Math.ceil(g.dagen / 3));
-    rijen.push(`<div class="weet"><span>Hoe zonkans en opbrengst samenhangen</span><span>${g.dagen ? `<b>${g.dagen} ${g.dagen === 1 ? 'dag' : 'dagen'}</b>` : '<span class="uit">vanaf morgen</span>'}${stip(n)}</span></div>`);
-  }
-  const t = weer?.terugblik ?? [];
-  if (t.length) {
-    const fout = t.reduce((s, d) => s + Math.abs(d.werkelijkKwh - d.verwachtKwh), 0) / t.length;
-    rijen.push(`<div class="weet"><span>Hoe goed de verwachting van de zon klopte</span><span><b>${nl(fout)} kWh ernaast</b></span></div>${klopte(t)}`);
-  } else {
-    rijen.push(`<div class="weet"><span>Hoe goed de verwachting van de zon klopte</span><span class="uit">vanaf morgen</span></div>`);
-  }
-  rijen.push(`<div class="weet"><span>Hoe snel elke kamer opwarmt en afkoelt</span><span class="uit">nog niet${stip(0)}</span></div>`);
-  const ds = terugblik?.dataset;
-  if (ds) rijen.push(`<div class="weet"><span>Gemeten</span><span><b>${nl(ds.dagenOpgenomen, 0)} dagen</b></span></div>`);
-  return `<div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Wat het huis al weet</h2><span class="mini">hoe zeker</span></div>${rijen.join('')}
-    <p class="mini" style="margin: 4px 0 8px">Hoe snel kamers opwarmen en afkoelen leert het huis met het thermisch model; dan komt er ook een plan per kamer.</p>`;
 }
 
-/** Per dag wat de dag ervoor werd verwacht (streepje), en wat er kwam (balk). */
-function klopte(dagen) {
-  const schaal = Math.max(1, ...dagen.map((d) => Math.max(d.verwachtKwh, d.werkelijkKwh)));
-  const pct = (kwh) => `${Math.min(100, (kwh / schaal) * 100).toFixed(1)}%`;
-  const fmt = new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
-  return `<div class="klopte">${dagen
-    .slice(0, 7)
-    .map((d) => `<div class="terugrij"><span>${fmt.format(new Date(`${d.datum}T12:00:00Z`))}</span><i aria-hidden="true"><b style="width: ${pct(d.werkelijkKwh)}"></b><em style="left: ${pct(d.verwachtKwh)}"></em></i><span>${nl(d.werkelijkKwh)} <small>van ${nl(d.verwachtKwh)}</small></span></div>`)
-    .join('')}<p class="mini" style="margin: 4px 0 0">De balk is wat er kwam, het streepje wat de dag ervoor werd verwacht.</p></div>`;
+const GROEPEN = [
+  ['huis', 'Je huis', 'Kamers, etages, sensoren'],
+  ['comfort', 'Comfort', 'Temperaturen, dagdelen, vakantie'],
+  ['energie', 'Energie', 'Panelen, zekering, meters, prijzen'],
+  ['regeling', 'Regeling', 'Wie wat regelt, apparaten op zon'],
+  ['functies', 'Functies', "Licht, screens, camera's, weer"],
+  ['toegang', 'App en toegang', 'Inloggen, gegevens, versie'],
+];
+
+function groepen() {
+  const mis = stand.nogTeDoen(d);
+  return GROEPEN.map(([id, titel, onder]) => {
+    const n = mis.filter((x) => x.groep === id).length;
+    const feiten = feitenVan(id)
+      .map(([naam, waarde, leeg]) => `<li>${esc(naam)}<b class="${waarde == null && leeg !== '…' ? 'leeg' : ''}">${esc(waarde ?? leeg ?? '')}</b></li>`)
+      .join('');
+    return `<a class="glas tegel${n ? ' aandacht' : ''}" href="${stand.GROEPEN[id]}">
+      <div class="titel"><span class="icoon">${ICOON[id]}</span><h3>${esc(titel)}</h3><span class="pijl" aria-hidden="true">›</span></div>
+      <ul>${feiten}</ul>
+      <div class="onder"><span>${esc(onder)}</span>${n ? `<span class="stand mis">${n} mist</span>` : '<span class="stand werkt">Klaar</span>'}</div>
+    </a>`;
+  }).join('');
 }
 
-function jeHuis() {
-  const etages = (huisData?.etages ?? []).filter((e) => e.ruimtes?.length);
-  const kamers = etages.reduce((t, e) => t + e.ruimtes.length, 0);
-  const apparaten = etages.reduce((t, e) => t + e.ruimtes.reduce((u, r) => u + r.apparaten.length, 0), 0);
-  const nogInTeDelen = huisData?.zonderRuimte?.length ?? 0;
-  const conf = aansluiting?.configuratie;
-  const zonZin = conf ? [conf.panelen?.length ? `${conf.panelen.length} ${conf.panelen.length === 1 ? 'vlak' : 'vlakken'} panelen` : null, conf.zekering ? `${conf.zekering.fasen} × ${conf.zekering.ampere} A` : null].filter(Boolean).join(', ') : '';
-  const link = (href, titel, zin) => `<a class="rij" href="${href}"><div class="l"><b>${titel}</b><span>${esc(zin)}</span></div><span class="pijl" aria-hidden="true">›</span></a>`;
-  return `<h2 class="kop-3">Je huis</h2>
-    ${link('huis-kan.html', 'Wat je huis kan', 'Wat er met je huis kan, en wat er nog bij kan')}
-    ${link('indeling.html', 'Kamers en indeling', `${etages.length} etages, ${kamers} kamers, ${apparaten} apparaten${nogInTeDelen ? `, ${nogInTeDelen} nog in te delen` : ''}`)}
-    ${link('aansluiting.html', 'Zon en aansluiting', zonZin || 'Je panelen, je zekering en je contract')}
-    ${link('meters.html', 'Meters en prijzen', 'Voor Opbrengst')}
-    ${link('functies.html', 'Functies', 'Camera’s, de deurbel, licht en het weer')}`;
-}
+/* -------------------------------------------------------------- zoeken */
 
-function inlog() {
-  if (!sessie || sessie.toegang !== 'sessions') return '<p class="mini" style="margin: 10px 0">Deze weergave vraagt geen inlog.</p>';
-  if (sessie.ingelogd) return `<p class="mini inlog" style="margin: 10px 0">Ingelogd als ${esc(sessie.naam ?? '')}${sessie.rol ? `, ${esc(sessie.rol)}` : ''}. <button type="button" data-uitloggen>Uitloggen</button></p>`;
-  return `<p class="mini inlog" style="margin: 10px 0">Niet ingelogd. Kijken kan zo; bedienen en de camera vragen je Home Assistant-account. <a href="auth/login?terug=${encodeURIComponent(location.pathname)}" style="color: var(--ijs); font-weight: 700">Inloggen</a></p>`;
+const ZOEKVELD = '<label class="zoek"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" data-zoek placeholder="Zoek een instelling, zoals &quot;zekering&quot;" aria-label="Zoek een instelling" autocomplete="off"></label><div class="gevonden" data-gevonden hidden></div>';
+
+function toonGevonden(veld) {
+  const vak = veld.closest('[data-zoekvak]').querySelector('[data-gevonden]');
+  const lijst = stand.zoek(veld.value);
+  vak.hidden = veld.value.trim().length < 2;
+  vak.innerHTML = lijst.length ? lijst.map((z) => `<a href="${z.href}">${esc(z.titel)}<span>${esc(z.waar)}</span></a>`).join('') : '<p>Niets gevonden. Probeer een ander woord, zoals "prijs" of "deurbel".</p>';
 }
 
 /* ------------------------------------------------------------ tekenen */
 
 function tekenNu() {
   app.schaal();
-  app.luchtVan(zon, 0);
-  $$('[data-comfort]').forEach((el) => (el.innerHTML = comfort()));
-  $$('[data-stuurt]').forEach((el) => (el.innerHTML = stuurt()));
-  $$('[data-weet]').forEach((el) => (el.innerHTML = weet()));
-  $$('[data-huis]').forEach((el) => (el.innerHTML = jeHuis()));
-  $$('[data-inlog]').forEach((el) => (el.innerHTML = inlog()));
-  // Op de telefoon staat de kop boven de kaart.
-  $$('#tel .kaart > h2:first-child, #tel .kaart > div:first-child > h2').forEach((h) => (h.hidden = true));
+  app.luchtVan(d.zon, 0);
+  const m = mist();
+  $$('[data-mist]').forEach((el) => {
+    el.innerHTML = m.html;
+    el.classList.toggle('klaar', m.klaar);
+  });
+  $$('[data-kan]').forEach((el) => (el.innerHTML = kan()));
+  $$('[data-groepen]').forEach((el) => (el.innerHTML = groepen()));
+  // Het zoekveld één keer neerzetten: anders verdwijnt wat je typt.
+  $$('[data-zoekvak]').forEach((el) => {
+    if (!el.querySelector('[data-zoek]')) el.innerHTML = ZOEKVELD;
+  });
 }
 
 /* -------------------------------------------------------------- starten */
@@ -155,11 +184,21 @@ const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
 
 app.start('instellingen');
-document.addEventListener('click', async (e) => {
-  if (!e.target.closest('[data-uitloggen]')) return;
-  await fetch('auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
-  sessie = await haal('api/sessie').catch(() => sessie);
-  teken();
+document.addEventListener('input', (e) => {
+  if (e.target.matches('[data-zoek]')) toonGevonden(e.target);
+});
+document.addEventListener('keydown', (e) => {
+  if (!e.target.matches?.('[data-zoek]')) return;
+  if (e.key === 'Enter') {
+    const eerste = e.target.closest('[data-zoekvak]').querySelector('[data-gevonden] a');
+    if (eerste) location.href = eerste.getAttribute('href');
+  } else if (e.key === 'Escape') {
+    e.target.value = '';
+    toonGevonden(e.target);
+  }
+});
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('[data-zoekvak]')) $$('[data-gevonden]').forEach((el) => (el.hidden = true));
 });
 void laadAlles();
 setInterval(() => void laadAlles(), 5 * 60_000);

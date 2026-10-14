@@ -987,7 +987,7 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     // Over de app: een antwoord met een knop.
     const app = await vraag('Waar vul ik de prijzen in?');
     expect(app.body.vraag).toBe('app');
-    expect(app.body.link?.href).toBe('meters.html');
+    expect(app.body.link?.href).toBe('energie.html#prijzen');
     // Niets herkend: voorbeelden.
     expect((await vraag('banaan')).body.voorbeelden?.length).toBeGreaterThan(0);
     // Leeg of te lang wordt geweigerd.

@@ -1,62 +1,155 @@
 /*
- * Wat je huis kan (besluit 104; schets Wand-Huis-groeit). Vier stappen; waar
- * dit huis staat, volgt uit wat het heeft: een airco, panelen, een batterij,
- * een laadpaal. Wat er nog niet is, staat gestippeld.
+ * Wat je huis kan (besluit 130, schets Wand-Huis-kan). Alles wat Smart Climate
+ * voor je doet, per onderwerp, en hoe het ervoor staat: werkt, kijkt mee, leert
+ * nog, staat uit, vul in, of wat er nodig is. Links het huis met aanwijzers, en
+ * wat er het meeste bij zou opleveren, gerekend met je eigen meters. Een tik
+ * opent het blad: wat het is, wat het nu doet, hoe het werkt en wanneer.
+ * Wat er staat, rekent stand.js uit; deze pagina zet het neer.
  */
 'use strict';
 
 const { $$, esc, haal } = app;
 
-let site = null;
-let zon = null;
+const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, zon: null };
+/** Laat alleen deze stand zien, of alles. */
+let filter = null;
 
 async function laadAlles() {
-  const [s, z] = await Promise.allSettled([haal('api/site'), haal('api/zon')]);
-  if (s.status === 'fulfilled') site = s.value;
-  if (z.status === 'fulfilled') zon = z.value;
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon' };
+  const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
+  Object.keys(deuren).forEach((k, i) => {
+    if (r[i].status === 'fulfilled') d[k] = r[i].value;
+  });
   teken();
 }
 
-function stappen() {
-  const airco = (site?.actuators ?? []).some((a) => a.capabilities?.canCool);
-  const panelen = (zon?.panelen ?? []).length > 0;
-  return [
-    { kort: 'Begin', kop: 'Klimaat', heeft: airco || (site?.actuators ?? []).length > 0, kan: [['Elke kamer op temperatuur', true], ['Uitleg bij elk besluit', true], ['Koelen op zon: met panelen', panelen]], nodig: ['Home Assistant en een airco of thermostaat'] },
-    { kort: 'Met panelen', kop: 'Op zon', heeft: panelen, kan: [['Koelen en verwarmen op zon', panelen], ['De droger op zon', panelen], ['Opbrengst per apparaat', panelen]], nodig: ['P1-meter', 'zonnesensor'] },
-    { kort: 'Met een batterij', kop: 'Ook ’s avonds zon', heeft: false, kan: [['Zon van de middag voor de avond', false], ['Laden als stroom goedkoop is', false], ['Nooit meer dan je zekering', true]], nodig: ['Batterij via Home Assistant'] },
-    { kort: 'Met een laadpaal', kop: 'De auto op zon', heeft: false, kan: [['Laden met wat er over is', false], ['Vol op de tijd die jij kiest', false], ['Samen met airco en batterij', false]], nodig: ['Laadpaal via evcc'] },
-  ];
+const GROEPEN = [['comfort', 'Comfort'], ['zon', 'Zon en kosten'], ['gemak', 'Gemak'], ['overzicht', 'Overzicht']];
+const STANDEN = [['werkt', 'Werkt'], ['kijkt', 'Kijkt mee'], ['leert', 'Leert nog'], ['mis', 'Vul in'], ['uit', 'Staat uit'], ['nodig', 'Iets nodig']];
+const STIP = { werkt: 'var(--mint)', kijkt: 'var(--ijs)', leert: 'var(--ijs)', mis: 'var(--gloed)', uit: 'var(--gedempt)', nodig: 'transparent; box-shadow: inset 0 0 0 1.5px var(--zon)' };
+const gekozen = () => decodeURIComponent(location.hash.slice(1));
+
+/* ------------------------------------------------------------ tekenen */
+
+function legenda(lijst) {
+  return STANDEN.map(([s, t]) => {
+    const n = lijst.filter((x) => x.stand === s).length;
+    return n ? `<button type="button" data-filter="${s}" aria-pressed="${filter === s}"><span class="stip" style="background: ${STIP[s]}"></span>${esc(t)} <b>${n}</b></button>` : '';
+  }).join('');
 }
 
-function teken() {
-  app.schaal();
-  app.luchtVan(zon, 0);
-  const lijst = stappen();
-  const nu = lijst.reduce((n, s, i) => (s.heeft ? i : n), 0);
-  $$('[data-stap]').forEach((el) => (el.innerHTML = `<span class="stip" style="background: var(--mint)"></span>Jouw huis: stap ${nu + 1}`));
-  const tel = app.telStand();
-  const box = document.querySelector(tel ? '#tel [data-stappen]' : '#wand [data-stappen]');
-  box.innerHTML = lijst
-    .map((s, i) => `<section class="glas stap${i === nu ? ' nu' : i > nu ? ' straks' : ''}"><div class="huisje" data-huisje="${i}"></div>
-      <span class="mini${i === nu ? ' mint-t' : ''}">${esc(s.kort)}${i === nu ? ', nu' : ''}</span><h2 class="kop-2">${esc(s.kop)}</h2>
-      <ul class="kan">${s.kan.map(([t, ja]) => `<li class="${ja ? '' : 'niet'}">${esc(t)}</li>`).join('')}</ul>
-      <div class="moeite">${s.nodig.map((n) => `<span class="tag">${esc(n)}</span>`).join('')}</div></section>`)
-    .join('');
-  const etages = (koelt) => [
-    { kamers: [{ naam: 'Woonkamer', stil: true, stand: koelt ? 'koelt' : 'rust', apparaten: [{ soort: 'airco', aan: koelt }, { soort: 'bank' }] }] },
-    { kamers: [{ naam: 'Slaapkamer', stil: true, apparaten: [] }] },
-  ];
-  const opt = { breedte: 300, hoogte: tel ? 220 : 280, marge: 0.02, ruimte: true };
-  const zonOp = { stand: 0.5, hoogte: 0.8, aandeel: 0.8 };
-  const modellen = [
-    { tijd: 'dag', zon: { ...zonOp, aandeel: 0 }, etages: etages(false), buitenunit: { aan: false }, spook: ['panelen'] },
-    { tijd: 'dag', zon: zonOp, etages: etages(true), buitenunit: { aan: true }, net: true, spook: ['batterij'], stromen: [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.6 }] },
-    { tijd: 'dag', zon: zonOp, etages: etages(true), buitenunit: { aan: true }, net: true, batterij: { procent: 70, stand: 'laadt' }, spook: ['auto'], stromen: [{ van: 'zon', naar: 'batterij', sterkte: 0.4 }] },
-    { tijd: 'dag', zon: zonOp, etages: etages(true), buitenunit: { aan: true }, net: true, batterij: { procent: 70, stand: 'laadt' }, auto: { procent: 60, stand: 'laadt', bron: 'zon', kleur: '#7f97b0' }, stromen: [{ van: 'zon', naar: 'auto', sterkte: 0.5 }] },
-  ];
-  modellen.forEach((m, i) => huis.teken(box.querySelector(`[data-huisje="${i}"]`), { beschrijving: `Stap ${i + 1}: ${lijst[i].kop}`, ...m }, opt));
+function vakken(lijst) {
+  return GROEPEN.map(([g, titel]) => {
+    const rijen = lijst.filter((x) => x.groep === g).map((x) => `<button type="button" class="regel${gekozen() === x.id ? ' gekozen' : ''}${filter && x.stand !== filter ? ' weg' : ''}" data-open="${x.id}"><div><b>${esc(x.titel)}</b><span class="nu">${esc(x.nu)}</span></div><span class="stand ${x.stand}">${esc(x.label)}</span></button>`).join('');
+    return `<div class="glas vak"><h3>${esc(titel)}</h3>${rijen}</div>`;
+  }).join('');
 }
+
+/** Wat er het meeste bij zou opleveren: een batterij met een som, anders het eerste dat iets nodig heeft. */
+function meer(lijst) {
+  const accu = lijst.find((x) => x.id === 'batterij' && x.som);
+  const x = accu ?? lijst.find((y) => y.stand === 'nodig');
+  if (!x) return '';
+  return `<button type="button" class="glas meer" data-open="${x.id}">
+    <span class="wanneer">Haal er meer uit</span><h2 class="kop-3" style="margin: 0">${esc(x.id === 'batterij' ? 'Een thuisbatterij' : x.titel)}</h2>
+    <p class="mini" style="margin: 2px 0 0">${esc(accu ? `Zon van de middag voor de avond. Gerekend met je meters van ${accu.som.maand}, vanaf 2027.` : x.wat)}</p>
+    ${accu ? `<div class="bedrag"><b>± € ${accu.som.euro}</b><span class="mini">per maand</span></div>` : ''}
+  </button>`;
+}
+
+function blad(x) {
+  const som = x.som
+    ? `<div class="som"><h4>Wat het jou zou opleveren</h4><div class="getal">± € ${x.som.euro} <small>per maand, vanaf 2027</small></div>
+        <p class="mini" style="margin: 8px 0 0">In ${esc(x.som.maand)} ging er ${x.som.terugKwh} kWh naar het net. Een batterij had daarvan zo'n ${x.som.kwh} kWh 's avonds zelf gebruikt. Zolang er gesaldeerd wordt, levert dat nog weinig op. Een schatting uit je eigen cijfers, geen belofte.</p></div>`
+    : '';
+  // Wat er nodig is, koop je zelf; dan is er geen knop, behalve naar wat het nu oplevert.
+  const ga = x.stand === 'mis' ? 'Invullen' : x.stand === 'uit' ? 'Aanzetten' : x.stand === 'nodig' ? (x.som ? 'Naar Opbrengst' : null) : 'Bekijken';
+  return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p></div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
+    <div class="nu"><span class="stand ${x.stand}">Nu</span>${esc(x.nu)}</div>
+    ${som}
+    <div class="twee"><div><h4>Zo werkt het</h4><ul class="lijst">${x.zo.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div><div><h4>Wanneer het werkt</h4><ul class="lijst">${x.wanneer.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div></div>
+    ${ga ? `<div class="onder"><a href="${x.href}">${ga}</a></div>` : ''}`;
+}
+
+/** Het huis, met aanwijzers naar wat het doet en wat erbij kan. */
+function huisModel(lijst) {
+  const per = (id) => lijst.find((x) => x.id === id);
+  const etages = [];
+  for (const e of [...(d.huis?.etages ?? [])].reverse()) {
+    const binnen = (e.ruimtes ?? []).filter((r) => e.id !== 'buiten' && !huismodel.BUITEN.test(r.naam));
+    if (binnen.length) etages.push({ naam: e.naam, id: e.id, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null })) });
+  }
+  const top = etages[etages.length - 1];
+  if (top && (d.huis?.dakEtage !== undefined ? top.id === d.huis.dakEtage : etages.length >= 3)) top.dak = true;
+  const piekW = (d.zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  const KORT = { opzon: 'Op zon', temperatuur: 'Comfort', batterij: 'Batterij', auto: 'Auto op zon' };
+  const label = (bij, id, dx, dy) => {
+    const x = per(id);
+    return x ? { bij, titel: KORT[id] ?? x.titel, toon: { werkt: 'mint', kijkt: 'ijs', leert: 'ijs', mis: 'gloed', uit: 'zacht', nodig: 'zon' }[x.stand], regels: [x.label.toLowerCase()], dx, dy } : null;
+  };
+  const kamer = etages[0]?.kamers?.[0]?.naam;
+  return {
+    beschrijving: 'Het huis, met wat Smart Climate erin doet.',
+    tijd: 'dag',
+    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0 },
+    wolken: 0.2,
+    etages,
+    buitenunit: per('opzon') ? { aan: false } : null,
+    net: true,
+    spook: ['batterij', 'auto'],
+    labels: [
+      piekW > 0 ? label('panelen', 'opzon', -120, -90) : null,
+      kamer ? label(`kamer:${kamer}`, 'temperatuur', -40, 96) : null,
+      label('batterij', 'batterij', -26, 84),
+      label('auto', 'auto', -8, -70),
+    ].filter(Boolean),
+  };
+}
+
+function tekenNu() {
+  app.schaal();
+  app.luchtVan(d.zon, 0);
+  const lijst = stand.kan(d);
+  $$('[data-legenda]').forEach((el) => (el.innerHTML = legenda(lijst)));
+  $$('[data-vakken]').forEach((el) => (el.innerHTML = vakken(lijst)));
+  $$('[data-meer]').forEach((el) => (el.innerHTML = meer(lijst)));
+  const x = lijst.find((y) => y.id === gekozen());
+  $$('[data-blad]').forEach((el) => {
+    el.hidden = !x;
+    if (x) el.innerHTML = blad(x);
+  });
+  $$('[data-achter]').forEach((el) => (el.hidden = !x));
+  if (!d.huis) return;
+  const tel = app.telStand();
+  const podium = document.getElementById(tel ? 'podium-tel' : 'podium-wand');
+  // Op de telefoon zonder aanwijzers: daar is het huis te smal voor kaartjes ernaast.
+  const model = huisModel(lijst);
+  if (tel) model.labels = [];
+  huis.teken(podium, model, { breedte: podium.clientWidth || 440, hoogte: tel ? 300 : podium.clientHeight || 470, marge: tel ? 0.03 : 0.08, schuifX: tel ? 0 : 14, schuifY: 0 });
+}
+
+/* -------------------------------------------------------------- starten */
+
+/** Gebundeld: hooguit één keer per beeld (basis.js). */
+const teken = app.gebundeld(tekenNu);
+addEventListener('standwissel', teken);
+addEventListener('hashchange', teken);
 
 app.start('instellingen');
-addEventListener('resize', () => teken());
+document.addEventListener('click', (e) => {
+  const open = e.target.closest('[data-open]');
+  const f = e.target.closest('[data-filter]');
+  if (open) location.hash = open.dataset.open;
+  else if (e.target.closest('[data-sluit], [data-achter]')) history.replaceState(null, '', location.pathname), teken();
+  else if (f) {
+    filter = filter === f.dataset.filter ? null : f.dataset.filter;
+    teken();
+  }
+});
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && gekozen()) {
+    history.replaceState(null, '', location.pathname);
+    teken();
+  }
+});
 void laadAlles();
+setInterval(() => void laadAlles(), 5 * 60_000);

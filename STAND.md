@@ -192,7 +192,9 @@ verwijzing bestaat.
   Vandaag ([128]).
 - **Airco's** krijgen drogen en hun filter, met een melding onder 10%; gekleurd
   licht is te zien in het huis ([129]).
-- **Comfort** zet je in de app, en de regeling neemt het meteen over ([130]).
+- **Instellingen** staan in zes groepen met één opbouw, en wat mist staat
+  bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
+  **Wat je huis kan** toont per functie hoe het ervoor staat ([130]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 

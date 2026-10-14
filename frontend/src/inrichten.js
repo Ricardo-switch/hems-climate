@@ -63,8 +63,8 @@ function stappen() {
       kop: 'Klimaat',
       klaar: acts.length > 0,
       zin: 'De airco’s, warmtepompen en thermostaten die Smart Climate regelt, en per kamer de gewenste temperatuur.',
-      wat: acts.length ? [`${meervoud(aircos, 'airco', 'airco’s')}${acts.length - aircos ? `, ${meervoud(acts.length - aircos, 'ander apparaat', 'andere apparaten')}` : ''}`, `${meervoud(zones, 'kamer met een regeling', 'kamers met een regeling')}`, 'Nakijken per apparaat komt in een volgende versie'] : ['Nog geen klimaatapparaten in de configuratie'],
-      pagina: 'instellingen.html',
+      wat: acts.length ? [`${meervoud(aircos, 'airco', 'airco’s')}${acts.length - aircos ? `, ${meervoud(acts.length - aircos, 'ander apparaat', 'andere apparaten')}` : ''}`, `${meervoud(zones, 'kamer met een regeling', 'kamers met een regeling')}`, 'De temperatuur per kamer zet je bij Comfort'] : ['Nog geen klimaatapparaten in de configuratie'],
+      pagina: 'comfort.html',
     },
     {
       id: 'zon',
@@ -72,7 +72,8 @@ function stappen() {
       klaar: a != null,
       zin: 'Waar je panelen liggen, je hoofdzekering, je contract, en welke apparaten op zon mogen starten.',
       wat: a ? [a.panelen?.ligging ? `Panelen: ${a.panelen.ligging === 'beide' ? 'beide kanten' : a.panelen.ligging}` : 'Panelen: nog niet ingevuld', zekeringZin(a.zekering, data.aansluiting.configuratie?.zekering)] : ['Nog niets ingevuld'],
-      pagina: 'aansluiting.html',
+      pagina: 'energie.html',
+      deel: 'panelen',
     },
     {
       id: 'meters',
@@ -80,7 +81,8 @@ function stappen() {
       klaar: e != null && e.prijzen?.stroom != null,
       zin: 'Welke meters Opbrengst gebruikt, en wat stroom en gas kosten, zoals op je contract.',
       wat: e ? [`${meervoud(e.net?.afname?.length ?? 0, 'meter', 'meters')} van het net${e.zon?.length ? ', zonnepanelen' : ''}${e.gas ? ', gas' : ''}`, e.prijzen?.stroom != null ? (e.prijzen.stroomDal != null ? 'Normaal en dal' : 'Eén tarief') : 'Prijzen nog niet ingevuld', `${meervoud(e.prijzen?.vast?.length ?? 0, 'vaste post', 'vaste posten')}`] : ['Nog niets ingesteld'],
-      pagina: 'meters.html',
+      pagina: 'energie.html',
+      deel: 'meters',
     },
     {
       id: 'functies',
@@ -123,7 +125,7 @@ function tekenNu() {
   const volgende = lijst[i + 1];
   const knoppen = nu.id === 'klaar'
     ? '<a class="knop knop-licht" href="thuis.html">Naar Thuis</a>'
-    : `${nu.pagina ? `<a class="knop knop-licht" href="${nu.pagina}?inrichten=${nu.id}">${nu.klaar ? 'Nakijken' : 'Instellen'}</a>` : ''}${volgende ? `<a class="knop" href="#${volgende.id}">${nu.pagina ? 'Overslaan' : 'Beginnen'}</a>` : ''}`;
+    : `${nu.pagina ? `<a class="knop knop-licht" href="${nu.pagina}?inrichten=${nu.id}${nu.deel ? `#${nu.deel}` : ''}">${nu.klaar ? 'Nakijken' : 'Instellen'}</a>` : ''}${volgende ? `<a class="knop" href="#${volgende.id}">${nu.pagina ? 'Overslaan' : 'Beginnen'}</a>` : ''}`;
   $$('[data-stapblad]').forEach((el) => {
     el.innerHTML = `<span class="mini">Stap ${i + 1} van ${lijst.length}</span>
       <h2 class="kop-1" style="font-size: 36px; margin: 4px 0 0">${esc(nu.kop)}</h2>

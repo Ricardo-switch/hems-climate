@@ -13,48 +13,42 @@
 <link rel="apple-touch-icon" href="icoon-192.png">
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
-  /* De wand (zelfde opbouw als Zon en aansluiting): de camera's, de deurbel, en hoe het werkt. */
-  #wand main { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); gap: 16px; height: 100%; }
-  .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 16px; }
-  .terugnaar { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
-  .terugnaar:hover { color: var(--tekst); }
-  .kolom { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
-  .zijaanzicht svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
-  .notitie { padding: 12px 14px; border-radius: 14px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.25); font-size: 13px; color: var(--zacht); display: flex; flex-direction: column; gap: 4px; }
-  .notitie:empty { display: none; }
-
-  /* De telefoon. */
-  #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  /* Functies (besluit 130): camera's, de deurbel, licht en screens, het weer. */
+  .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
+  .vorm .mini { margin: 0; }
+  #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
 </style>
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
     <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
-    <main>
-      <div class="kop">
-        <div><a class="terugnaar" href="instellingen.html">‹ Instellingen</a><h1 class="kop-1" style="font-size: 40px; margin-top: 6px">Functies</h1><p class="lead" style="margin-top: 6px">Camera's, de deurbel, licht en het weer: wat de app doet, en hoe.</p></div>
-        <div class="status-regel"><span class="meldtekst" data-melding aria-live="polite"></span><button type="button" class="knop knop-licht" data-opslaan>Opslaan</button></div>
+    <main class="groep">
+      <a class="terugje" href="instellingen.html">‹ Instellingen</a>
+      <div class="groepkop">
+        <div><h1 class="kop-1">Functies</h1><p class="lead">Camera's, de deurbel, licht en screens, en het weer.</p></div>
+        <span class="bewaard" data-bewaard></span>
       </div>
-      <div class="kolom" data-kolom="1"></div>
-      <div class="kolom" data-kolom="2"></div>
-      <div class="kolom" data-kolom="3"></div>
+      <div class="groepveld">
+        <nav class="glas delen schuift" aria-label="Delen van Functies" data-delen></nav>
+        <section class="glas vorm schuift" data-vorm></section>
+        <aside class="naast schuift" data-naast></aside>
+      </div>
     </main>
   </div>
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <a class="klein" href="instellingen.html" style="font-weight: 600">‹ Instellingen</a>
-      <h1 class="kop-1" style="font-size: 30px">Functies</h1>
-      <p class="klein" style="margin: -4px 0 4px">Camera's, de deurbel, licht en het weer: wat de app doet, en hoe.</p>
-      <div data-kolom="1" style="display: contents"></div>
-      <div data-kolom="2" style="display: contents"></div>
-      <div data-kolom="3" style="display: contents"></div>
-      <div class="status-regel" style="justify-content: space-between"><span class="meldtekst" data-melding aria-live="polite" style="text-align: left"></span><button type="button" class="knop knop-licht" data-opslaan>Opslaan</button></div>
+      <a class="terugje" href="instellingen.html">‹ Instellingen</a>
+      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px">Functies</h1><span class="bewaard" data-bewaard></span></div>
+      <nav class="glas delen" aria-label="Delen van Functies" data-delen></nav>
+      <section class="glas vorm" data-vorm></section>
+      <div class="naast" data-naast></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
   </div>
   <script src="kit/nav.js"></script>
   <script src="basis.js"></script>
+  <script src="groep.js"></script>
   <script src="functies.js"></script>
 </body>
 </html>
