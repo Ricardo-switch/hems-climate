@@ -138,6 +138,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [128. Wat je koos blijft staan, het zonnescherm, het weer per uur en een bredere wand](#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand)
 - [129. Drogen en het filter van de airco, gekleurd licht, en wat er nog wegviel](#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel)
 - [130. Instellingen in zes groepen, en comfort zet je in de app](#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app)
+- [131. Versie 0.9.0, één naam per kamer, en wat na een grondige test niet klopte](#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte)
 
 **Veiligheid**
 
@@ -5496,6 +5497,55 @@ veel later bij kwam.
   wanneer het werkt. "Haal er meer uit" rekent met de eigen meters, zoals wat
   een thuisbatterij vanaf 2027 oplevert; een schatting, geen belofte. Er staat
   niets in over wat er in Smart Climate nog moet komen.
+
+---
+
+## 131. Versie 0.9.0, één naam per kamer, en wat na een grondige test niet klopte
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, na een grondige test, met de
+schetsen `Wand-Huis-kan`, `Wand-Indeling-Warmte`, `Wand-Instellingen-Comfort`,
+`Wand-Meldingen`, `Wand-Gevoel`, `Wand-Inrichten`, `Wand-Film` en
+`Wand-Rondleiding` in `design/app2`. Die schetsen horen bij dit besluit en de
+volgende (verwarmen en koelen per kamer, voorrang per seizoen, meldingen,
+inrichten in één keer); dit besluit is het eerste deel: wat nu niet klopt.
+
+*Besluit:*
+
+- **Een versienummer:** 0.9.0. Het eerste getal gaat omhoog bij een grote stap
+  (1.0 is de dag dat het huis zelf regelt, besluit 64), het tweede bij iets
+  nieuws, het derde bij een reparatie. De bron is `backend/src/version.ts`, met
+  per versie wat er nieuw is in gewone taal; een test houdt de nummers van de
+  dienst en de weergave gelijk. `/api/health` en het nieuwe `/api/versie`
+  geven het nummer, en of Smart Climate als add-on draait of op een eigen
+  server. App en toegang toont het met "Wat is er nieuw". Elke versie krijgt
+  in git een markering `v<nummer>`.
+- **Eén naam per kamer:** wat de app laat zien, heet zoals in de indeling. Een
+  zone krijgt de naam van de kamer die hem regelt, een apparaat de naam die de
+  bewoner het in Indeling gaf, en de zones staan in de volgorde van het huis
+  (`withLayoutNames`). Alleen voor de app; de regeling rekent met de id's. In
+  een zin krijgt een gewoon kamerwoord "de" ("de zolder"), een eigen naam niet
+  ("Beneden"); een apparaat houdt "de" ("de Nest").
+- **De etages:** naast elkaar van beneden naar boven, buiten achteraan; onder
+  elkaar zoals het huis staat, de zolder boven.
+- **De airco in de tekening** op ware grootte (zo'n 90 bij 30 centimeter), hoog
+  onder het plafond en nooit voor het raam. Past hij niet naast het raam, dan
+  hangt hij aan de zijmuur. Een test bewaakt het raam.
+- **Comfort:** per dagdeel een schakelaar voor verwarmen en een voor koelen. Het
+  kruisje om uit te zetten werkte wel, maar viel niet op.
+- **Batterijen en filters** zijn altijd te bekijken, ook als niets bijna leeg
+  is: `thuis.html#batterijen`, vanuit Wat je huis kan en het zoekveld. Bijna
+  leeg staat daar in zacht oranje, niet als fout.
+- **Grafieken:** een label bij het laatste punt staat links als het rechts
+  buiten de grafiek valt (bij de assistent), en de verwachting in Vandaag ook.
+- **Teksten voor elk huis:** geen NAS, geen omgevingsvariabelen, geen manier
+  van uitrollen in de app. Een test leest de pagina's en bewaakt het.
+- **Kleiner:** een apparaat zonder verbinding heet "geen verbinding" in plaats
+  van "onbekend", een uitstelbaar apparaat dat nog niets meldde "meldt nog
+  niets"; Inrichten telt welkom en klaar niet meer mee als stap.
+- **Niet veranderd:** de zin op Thuis eindigt met een punt; op een scherm met
+  weinig pixels leek die op een komma, tegen de g van "nodig" aan.
 
 ---
 

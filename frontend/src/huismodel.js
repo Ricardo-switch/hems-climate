@@ -19,10 +19,28 @@
     return '#FFD9A0';
   }
 
-  /** De naam van een zone in een zin: "woonkamer", zoals de regeling hem noemt. */
-  function zoneNaam(zoneId) {
-    return String(zoneId).replace(/[-_]+/g, ' ').toLowerCase();
+  /** Gewone kamerwoorden krijgen "de"; een eigen naam als "Beneden" niet (besluit 131). */
+  const GEWOON = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone)/i;
+  /**
+   * De naam van een zone in een zin, zoals de kamer in de indeling heet (besluit
+   * 131): "de woonkamer", of "Beneden". Zonder huis de id, zoals de regeling hem noemt.
+   */
+  function zoneNaam(zoneId, huis) {
+    const kamer = (huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).find((r) => r.zoneId === zoneId);
+    const naam = kamer?.naam ?? String(zoneId).replace(/[-_]+/g, ' ');
+    return GEWOON.test(naam) ? `de ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
+  /**
+   * De etages naast elkaar, zoals je ze telt (besluit 131): de begane grond
+   * links, de zolder rechts, buiten achteraan. Onder elkaar blijven ze zoals
+   * het huis staat, met de zolder boven; zo komen ze uit api/huis.
+   */
+  function etagesNaast(etages) {
+    const binnen = (etages ?? []).filter((e) => e.id !== 'buiten');
+    return [...binnen.reverse(), ...(etages ?? []).filter((e) => e.id === 'buiten')];
+  }
+  /** Met een hoofdletter, aan het begin van een zin. */
+  const metHoofdletter = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
   function standVan(zoneId, state) {
     const k = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId);
@@ -142,5 +160,5 @@
     return { oprit, tuin, terras, balkon, voortuin };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metHoofdletter, etagesNaast, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
 })(window);

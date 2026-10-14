@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Rondleiding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De uitgebreide rondleiding (schets, 14 oktober 2026), als draaiboek. Na
+   * het filmpje, aan het eind van het inrichten. Zeven stops door de hele app,
+   * elk op de echte pagina: het scherm wordt donker, het ding waar het om gaat
+   * licht op, een ballon vertelt (zoals Wand-Uitleg). Volgende loopt vanzelf
+   * naar de volgende pagina. Overslaan kan altijd; terugkijken met het
+   * vraagteken op Thuis. Of je hem zag, onthoudt de app per persoon.
+   */
+  main { padding: 26px 28px; display: flex; flex-direction: column; gap: 16px; height: 800px; box-sizing: border-box; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .stops { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; }
+  .stop { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .stop .boven { display: flex; align-items: center; gap: 10px; }
+  .stop .nr { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 600; font-size: 14px; background: rgba(255, 255, 255, 0.1); }
+  .stop .waar { font-size: 12.5px; font-weight: 700; color: var(--gedempt); display: inline-flex; align-items: center; gap: 6px; }
+  .stop .waar svg { width: 15px; height: 15px; }
+  .stop h2 { margin: 0; font-family: var(--kop); font-size: 18px; font-weight: 600; }
+  .stop p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .stop .licht { margin-top: auto; font-size: 12px; color: var(--ijs); display: flex; gap: 6px; align-items: center; }
+  .stop .licht::before { content: ''; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ijs); box-shadow: 0 0 8px var(--ijs); }
+  .stop.eind { background: linear-gradient(160deg, rgba(110, 231, 183, 0.12), rgba(255, 255, 255, 0.03)); border-color: rgba(110, 231, 183, 0.3); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" style="grid-template-columns: 1fr">
+  <main>
+    <div class="kopregel">
+      <div><span class="mini">Draaiboek, na het filmpje, ongeveer 2 minuten</span><h1 class="kop-1" style="font-size: 40px; margin-top: 4px">De rondleiding</h1></div>
+      <span class="mini" style="max-width: 50ch; text-align: right">Elke stop op de echte pagina, met jouw huis. Het scherm wordt donker en licht op waar het om gaat.</span>
+    </div>
+    <div class="stops" id="stops"></div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  const S = [
+    ['thuis', 'Thuis', 'Dit is je huis', 'Alles wat er nu gebeurt. De kleur van een kamer zegt wat hij doet: blauw koelt, oranje warmt, groen is goed.', 'het huis'],
+    ['thuis', 'Thuis', 'Tik op een kamer', 'Dan zie je de etage van dichtbij. Lampen, scènes en screens bedien je daar meteen.', 'een kamer'],
+    ['thuis', 'Thuis', 'Hoe voelt het?', 'Tik wat je voelt. Het huis leert ervan wat jij prettig vindt, en stelt voor wat het anders kan.', 'de kaart rechts'],
+    ['assistent', 'Thuis', 'Vraag het je huis', 'Waarom koelt de zolder? Wat doe je nu? Bij elk besluit zegt het huis waarom.', 'de balk onderin'],
+    ['vandaag', 'Vandaag', 'Wat er vandaag gebeurt', 'Uur voor uur: de zon, het weer en wat het huis deed of nog gaat doen.', 'de tijdlijn'],
+    ['opbrengst', 'Opbrengst', 'Wat je dak opleverde', 'In kWh en in euro, per dag, maand en jaar. En wat er op zon draaide.', 'de grafiek'],
+    ['instellingen', 'Balk', 'Meldingen en instellingen', 'De bel zegt als er iets nieuws is of iets niet reageert. Het tandwiel heeft Comfort en Wat je huis kan.', 'de bel en het tandwiel'],
+  ];
+  document.getElementById('stops').innerHTML = S.map(([ik, waar, kop, tekst, licht], i) => `
+    <section class="glas stop"><div class="boven"><span class="nr">${i + 1}</span><span class="waar">${nav.svg(ik)}${waar}</span></div>
+    <h2>${kop}</h2><p>${tekst}</p><span class="licht">licht op: ${licht}</span></section>`).join('') + `
+    <section class="glas stop eind"><div class="boven"><span class="nr" style="background: rgba(110, 231, 183, 0.25); color: var(--mint)">✓</span><span class="waar">Thuis</span></div>
+    <h2>Klaar</h2><p>Het huis kijkt mee. Na 30 winterdagen weet het genoeg om zelf te regelen; je ziet het groeien bij Wat je huis kan. Terugkijken: het vraagteken op Thuis.</p></section>`;
+</script>
+</body>
+</html>

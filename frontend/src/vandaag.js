@@ -202,6 +202,11 @@ function tekenTijdlijn(r, verwacht, lijst) {
     .join('');
 
   // De apparaten: vol wat het deed, licht wat Smart Climate zou doen, gestreept wat er verwacht wordt.
+  // Achter het blok, of ervoor als het anders buiten de tijdlijn valt (besluit 131).
+  const verwachtTekst = (v, tekst, yy) => {
+    const rechts = x(v.totMs) + 8 + tekst.length * 6.4 <= X1;
+    return `<text x="${(rechts ? x(v.totMs) + 8 : x(v.vanMs) - 8).toFixed(1)}" y="${yy + 11}" text-anchor="${rechts ? 'start' : 'end'}" class="sub">${esc(tekst)}</text>`;
+  };
   const baanSvg = banen
     .map((b, i) => {
       const yy = baanTop + i * baan;
@@ -216,7 +221,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
         <rect x="${X0}" y="${yy}" width="${X1 - X0}" height="12" rx="6" fill="rgba(255,255,255,0.04)"/>
         ${b.zou.map((s) => blok(s, `fill="${b.kleur}" opacity="0.3"`)).join('')}
         ${b.echt.map((s) => blok(s, `fill="${b.kleur}"`)).join('')}
-        ${v ? `${blok({ vanMs: v.vanMs, totMs: v.totMs }, `fill="url(#streep)" style="color: ${b.kleur}" opacity="0.55"`)}<text x="${(x(v.totMs) + 8).toFixed(1)}" y="${yy + 11}" class="sub">${esc(apparaatVan(b.id)?.klimaat?.kanKoelen ? 'verwacht genoeg zon over' : 'nog te gaan')}</text>` : ''}
+        ${v ? `${blok({ vanMs: v.vanMs, totMs: v.totMs }, `fill="url(#streep)" style="color: ${b.kleur}" opacity="0.55"`)}${verwachtTekst(v, apparaatVan(b.id)?.klimaat?.kanKoelen ? 'verwacht genoeg zon over' : 'nog te gaan', yy)}` : ''}
         ${dots}`;
     })
     .join('');

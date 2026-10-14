@@ -54,16 +54,21 @@ import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
+import { NIEUW, VERSIE } from '../version.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
+  /** Het versienummer (besluit 131), uit de code zelf. */
+  readonly nummer: string;
+  /** Hoe Smart Climate draait: als add-on in Home Assistant, of op een eigen server. */
+  readonly installatie: 'add-on' | 'server';
   /** Korte commit-hash, of `onbekend`. */
   readonly commit: string;
   /** Bouwtijd in ISO 8601, of null. */
   readonly gebouwd: string | null;
 }
 
-export const UNKNOWN_VERSION: Version = { commit: 'onbekend', gebouwd: null };
+export const UNKNOWN_VERSION: Version = { nummer: VERSIE, installatie: 'server', commit: 'onbekend', gebouwd: null };
 
 /**
  * Leest de versie uit de omgeving. Het image zet `HEMS_COMMIT` en `HEMS_GEBOUWD`
@@ -74,6 +79,9 @@ export function versionFromEnv(env: NodeJS.ProcessEnv): Version {
   const commit = env['HEMS_COMMIT']?.trim();
   const built = env['HEMS_GEBOUWD']?.trim();
   return {
+    nummer: VERSIE,
+    // Een add-on krijgt van de Supervisor een token mee; een eigen server niet.
+    installatie: env['SUPERVISOR_TOKEN'] ? 'add-on' : 'server',
     commit: commit && commit !== '' ? commit : UNKNOWN_VERSION.commit,
     gebouwd: built && built !== '' ? built : null,
   };
@@ -965,6 +973,12 @@ export class WebServer {
         return;
       }
       await writeExport(logDir, res);
+      return;
+    }
+
+    // De versie en wat er nieuw is (besluit 131), voor App en toegang.
+    if (path === '/api/versie') {
+      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW });
       return;
     }
 

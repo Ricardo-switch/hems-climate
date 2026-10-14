@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Meldingen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Meldingen (schets, 14 oktober 2026). Een bel in de balk, boven het
+   * tandwiel, op elke pagina; een getal als er iets is. Een tik opent het blad
+   * over de pagina heen. Bovenaan wat je aandacht vraagt, met één knop die het
+   * oplost; daaronder wat er eerder was. Lost iets zichzelf op, dan schuift het
+   * naar Eerder met "weer goed". Onderaan altijd Onderhoud: alle batterijen en
+   * filters, ook als niets bijna leeg is. Standen: zonder hash het blad met
+   * meldingen, #leeg zonder meldingen, #onderhoud de lijst.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .klok { font-family: var(--kop); font-size: 56px; font-weight: 600; line-height: 1; }
+  .podium { position: absolute; left: 60px; top: 150px; width: 720px; height: 560px; opacity: 0.5; }
+  .bel { position: absolute; left: 22px; bottom: 96px; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; color: var(--zacht); background: rgba(255, 255, 255, 0.1); }
+  .bel svg { width: 24px; height: 24px; }
+  .bel b { position: absolute; top: 4px; right: 4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--gloed); color: #fff; font-size: 11.5px; display: grid; place-items: center; }
+  .achter { position: absolute; inset: 0; background: rgba(4, 8, 16, 0.45); }
+
+  .blad { position: absolute; top: 20px; right: 20px; bottom: 20px; width: 470px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; background: rgba(12, 20, 34, 0.97); z-index: 5; }
+  .blad .kop { display: flex; justify-content: space-between; align-items: center; }
+  .sluit { width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center; font-size: 18px; }
+  .blad h3 { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .melding { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 4px 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); }
+  .melding .ik { grid-row: 1 / 4; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; }
+  .melding .ik svg { width: 20px; height: 20px; }
+  .melding b { font-size: 15px; }
+  .melding p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+  .melding .acties { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+  .melding .acties span { height: 34px; padding: 0 14px; border-radius: 11px; display: inline-flex; align-items: center; font-size: 13px; font-weight: 700; background: rgba(255, 255, 255, 0.08); }
+  .melding .acties span.licht { background: var(--tekst); color: var(--inkt); }
+  .melding .tijd { margin-left: auto; font-size: 12px; color: var(--gedempt); }
+  .melding.oud { background: transparent; border-color: transparent; padding: 4px 14px; }
+  .melding.oud b { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .melding.oud .ik { width: 30px; height: 30px; }
+  .rood { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
+  .geel { background: rgba(247, 181, 72, 0.14); color: var(--zon); }
+  .blauw { background: rgba(111, 211, 255, 0.14); color: var(--ijs); }
+  .groen { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+  .paars { background: rgba(143, 134, 255, 0.14); color: var(--violet); }
+  .onderhoud { margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); }
+  .onderhoud b { display: block; font-size: 14.5px; }
+  .onderhoud span { font-size: 12.5px; color: var(--gedempt); }
+  .onderhoud .pijl { margin-left: auto; color: var(--gedempt); font-size: 18px; }
+  .stil { padding: 26px 10px; text-align: center; color: var(--zacht); }
+  .stil b { display: block; font-family: var(--kop); font-size: 22px; color: var(--tekst); margin: 10px 0 4px; }
+  .regel { display: grid; grid-template-columns: minmax(0, 1fr) 120px 44px; gap: 12px; align-items: center; padding: 9px 4px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .regel b { display: block; font-size: 14.5px; font-weight: 600; }
+  .regel span { font-size: 12.5px; color: var(--gedempt); }
+  .meter { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 4px; background: var(--mint); }
+  .regel .pct { text-align: right; font-family: var(--kop); font-weight: 600; font-size: 15px; }
+  [data-stand] { display: none !important; }
+  body[data-toon='lijst'] [data-stand='lijst'], body[data-toon='leeg'] [data-stand='leeg'], body[data-toon='onderhoud'] [data-stand='onderhoud'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="klok">21:31</div>
+    <div class="podium" id="podium"></div>
+  </main>
+  <div class="achter"></div>
+  <span class="bel" id="bel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><b>3</b></span>
+
+  <!-- Met meldingen. -->
+  <aside class="glas blad" data-stand="lijst" aria-label="Meldingen">
+    <div class="kop"><h2 class="kop-2" style="margin: 0">Meldingen</h2><span class="sluit">×</span></div>
+    <h3>Vraagt aandacht</h3>
+    <div class="melding">
+      <span class="ik blauw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <b>Nieuw in Home Assistant: Lamp tuinhuis</b>
+      <p>Zet hem in een kamer, dan staat hij in het huis en kun je hem bedienen.</p>
+      <div class="acties"><span class="licht">Zet in een kamer</span><span>Negeer</span><span class="tijd">10 min</span></div>
+    </div>
+    <div class="melding">
+      <span class="ik rood"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/></svg></span>
+      <b>De droger reageert niet meer</b>
+      <p>Al 3 uur geen bericht, op de zolder. Staat de stekker erin, of is de wifi weg?</p>
+      <div class="acties"><span>Bekijk</span><span class="tijd">18:20</span></div>
+    </div>
+    <div class="melding">
+      <span class="ik geel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M5 10v4"/></svg></span>
+      <b>Batterij bijna leeg: schakelaar badkamer</b>
+      <p>Nog 9%. Een nieuwe batterij en hij doet het weer maanden.</p>
+      <div class="acties"><span>Bekijk</span><span class="tijd">gisteren</span></div>
+    </div>
+    <h3>Eerder</h3>
+    <div class="melding oud"><span class="ik groen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span><b>Airco zolder weer goed</b><p>Na 20 minuten zonder verbinding, om 14:05.</p></div>
+    <div class="melding oud"><span class="ik paars"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg></span><b>Versie 0.9.1: wat is er nieuw</b><p>Voorrang bij koelen en verwarmen apart.</p></div>
+    <div class="onderhoud"><span class="ik groen" style="width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg></span><div><b>Onderhoud</b><span>14 batterijen en 2 filters</span></div><span class="pijl">›</span></div>
+  </aside>
+
+  <!-- Zonder meldingen. -->
+  <aside class="glas blad" data-stand="leeg" aria-label="Meldingen">
+    <div class="kop"><h2 class="kop-2" style="margin: 0">Meldingen</h2><span class="sluit">×</span></div>
+    <div class="stil"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg><b>Alles werkt</b>Komt er iets nieuws bij, of reageert iets niet meer, dan staat het hier.</div>
+    <h3>Eerder</h3>
+    <div class="melding oud"><span class="ik groen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span><b>Airco zolder weer goed</b><p>Na 20 minuten zonder verbinding, om 14:05.</p></div>
+    <div class="onderhoud"><span class="ik groen" style="width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg></span><div><b>Onderhoud</b><span>14 batterijen en 2 filters, alles goed</span></div><span class="pijl">›</span></div>
+  </aside>
+
+  <!-- Onderhoud: altijd te zien. -->
+  <aside class="glas blad" data-stand="onderhoud" aria-label="Onderhoud">
+    <div class="kop"><div><span class="mini">‹ Meldingen</span><h2 class="kop-2" style="margin: 2px 0 0">Onderhoud</h2></div><span class="sluit">×</span></div>
+    <h3>Batterijen, de leegste eerst</h3>
+    <div style="display: flex; flex-direction: column">
+      <div class="regel"><div><b>Schakelaar badkamer</b><span>1e verdieping</span></div><div class="meter"><i style="width: 9%; background: var(--gloed)"></i></div><span class="pct" style="color: #ffb090">9%</span></div>
+      <div class="regel"><div><b>Bewegingsmelder hal</b><span>begane grond</span></div><div class="meter"><i style="width: 34%; background: var(--zon)"></i></div><span class="pct">34%</span></div>
+      <div class="regel"><div><b>Afstandsbediening woonkamer</b><span>begane grond</span></div><div class="meter"><i style="width: 61%"></i></div><span class="pct">61%</span></div>
+      <div class="regel"><div><b>Radiatorknop</b><span>begane grond</span></div><div class="meter"><i style="width: 100%"></i></div><span class="pct">100%</span></div>
+      <div class="regel"><div><b>Screen groot</b><span>begane grond</span></div><div class="meter"><i style="width: 100%"></i></div><span class="pct">100%</span></div>
+      <span class="mini" style="padding: 8px 4px">en nog 9, allemaal boven de 60%</span>
+    </div>
+    <h3>Filters van de airco's</h3>
+    <div style="display: flex; flex-direction: column">
+      <div class="regel"><div><b>Airco woonkamer</b><span>nog ongeveer 3 maanden</span></div><div class="meter"><i style="width: 64%"></i></div><span class="pct">64%</span></div>
+      <div class="regel"><div><b>Airco zolder</b><span>nog ongeveer 5 maanden</span></div><div class="meter"><i style="width: 82%"></i></div><span class="pct">82%</span></div>
+    </div>
+    <p class="mini" style="margin: auto 0 0">Onder de 10% komt er een melding. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>
+  </aside>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  const toon = { '#leeg': 'leeg', '#onderhoud': 'onderhoud' }[location.hash] ?? 'lijst';
+  document.body.dataset.toon = toon;
+  if (toon === 'leeg') document.querySelector('#bel b').remove();
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op de achtergrond.',
+    tijd: 'avond',
+    zon: { aandeel: 0, panelen: 12 },
+    etages: [
+      { kamers: [{ naam: 'Beneden', gewicht: 1.5, stil: true, apparaten: [{ soort: 'airco' }, { soort: 'lamp', aan: true, x: 0.4 }] }, { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] }] },
+      { kamers: [{ naam: 'Badkamer', stil: true, apparaten: [] }, { naam: 'Hobbykamer', stil: true, apparaten: [] }, { naam: 'Slaapkamer', stil: true, apparaten: [] }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco' }, { soort: 'droger' }] }] },
+    ],
+    net: true,
+  }, { breedte: 720, hoogte: 560, marge: 0.06 });
+</script>
+</body>
+</html>

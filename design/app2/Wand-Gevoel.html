@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Hoe voelt het?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Hoe voelt het? (schets, 14 oktober 2026). Op Thuis, rechts. Je kiest de
+   * kamer met de chips; tikken kan zonder inlog. Na een tik komt er meteen een
+   * antwoord: wat het huis ermee doet, en een voorstel voor Comfort (dat
+   * vraagt wel om inlog). Na een paar weken laat de kaart zien wat het huis
+   * leerde: elke tik als een stip op de temperatuur van dat moment.
+   * Standen: zonder hash kiezen, #antwoord na een tik, #leerde na weken.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 420px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+  .kamers { display: flex; gap: 6px; flex-wrap: wrap; }
+  .kamers span { height: 32px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .kamers span.aan { background: var(--tekst); color: var(--inkt); }
+  .kamers span small { font-size: 12px; opacity: 0.7; }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .gevoel span { height: 42px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .gevoel .koud { background: rgba(111, 211, 255, 0.14); color: #a9e6ff; }
+  .gevoel .goed { background: rgba(110, 231, 183, 0.14); color: var(--mint); }
+  .gevoel .warm { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
+  .gevoel .gekozen { box-shadow: inset 0 0 0 2px currentColor; }
+  .antwoord { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .antwoord b { color: var(--tekst); }
+  .voorstel { padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(143, 134, 255, 0.35); background: linear-gradient(160deg, rgba(143, 134, 255, 0.14), rgba(255, 255, 255, 0.02)); font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .voorstel .wie { display: block; color: var(--violet); font-weight: 700; font-size: 13px; margin-bottom: 2px; }
+  .voorstel .knoppen { display: flex; gap: 8px; margin-top: 10px; }
+  .voorstel .knoppen span { flex: 1; height: 36px; border-radius: 11px; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+  .voorstel .knoppen span.licht { background: var(--tekst); color: var(--inkt); }
+  .strook { position: relative; height: 64px; margin-top: 4px; }
+  .strook .baan { position: absolute; left: 0; right: 0; top: 30px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+  .strook .prettig { position: absolute; top: 22px; height: 20px; border-radius: 10px; background: rgba(110, 231, 183, 0.18); border: 1px solid rgba(110, 231, 183, 0.4); }
+  .strook i { position: absolute; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; }
+  .strook .maat { position: absolute; top: 48px; font-size: 11px; color: var(--gedempt); transform: translateX(-50%); }
+  .legenda { display: flex; gap: 14px; font-size: 12px; color: var(--gedempt); }
+  .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+  .legenda i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  [data-stand] { display: none !important; }
+  body[data-toon='kies'] [data-stand~='kies'], body[data-toon='antwoord'] [data-stand~='antwoord'], body[data-toon='leerde'] [data-stand~='leerde'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">19:42</span><span class="datum">woensdag 14 oktober</span></div>
+      <div class="chips">
+        <span class="pil">12,5° buiten</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--ijs)"><span class="stip" style="background: var(--ijs)"></span>Kijkt mee</span>
+      </div>
+    </div>
+    <div class="titel">
+      <h1 class="kop-1">Er draait niets</h1>
+      <p class="lead">Geen zon, en elke kamer is op temperatuur.</p>
+    </div>
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <h2 class="kop-3" style="margin: 0">Hoe voelt het nu?</h2>
+        <div class="kamers"><span class="aan">Beneden <small>20,8°</small></span><span>Badkamer <small>20,5°</small></span><span>Zolder <small>21,4°</small></span></div>
+        <div class="gevoel"><span class="koud" id="koud">Te koud</span><span class="goed">Goed</span><span class="warm">Te warm</span></div>
+
+        <p class="mini" style="margin: 0" data-stand="kies">Tik wat je voelt. Daar leert het huis van wat jij prettig vindt.</p>
+
+        <div class="antwoord" data-stand="antwoord" style="flex-direction: column">
+          <span><b>Genoteerd: te koud bij 20,8°.</b> Het huis zou nu bijverwarmen tot 21°. Het kijkt nog mee; zelf warmer zetten doe je nu op de thermostaat.</span>
+        </div>
+        <div class="voorstel" data-stand="antwoord" style="flex-direction: column">
+          <span class="wie">Voortaan warmer?</span>
+          <span>Het is de 3e keer deze week te koud rond de 20,5°. Overdag pas tevreden boven 21°?</span>
+          <div class="knoppen"><span class="licht">Ja, 21°</span><span>Nee, alleen nu</span></div>
+        </div>
+
+        <div class="voorstel" data-stand="leerde" style="flex-direction: column">
+          <span class="wie">Wat het huis leerde</span>
+          <span>In Beneden vind je het prettig tussen <b style="color: var(--tekst)">21 en 22,5°</b>. Gemeten uit 23 tikken in 4 weken.</span>
+          <div class="strook">
+            <div class="baan"></div>
+            <div class="prettig" style="left: 41.7%; width: 25%"></div>
+            <i style="left: 25%; top: 25px; background: var(--ijs)"></i><i style="left: 30%; top: 30px; background: var(--ijs)"></i><i style="left: 33%; top: 22px; background: var(--ijs)"></i><i style="left: 36%; top: 28px; background: var(--ijs)"></i>
+            <i style="left: 44%; top: 26px; background: var(--mint)"></i><i style="left: 48%; top: 22px; background: var(--mint)"></i><i style="left: 50%; top: 30px; background: var(--mint)"></i><i style="left: 54%; top: 25px; background: var(--mint)"></i><i style="left: 58%; top: 28px; background: var(--mint)"></i><i style="left: 61%; top: 23px; background: var(--mint)"></i><i style="left: 64%; top: 29px; background: var(--mint)"></i>
+            <i style="left: 72%; top: 26px; background: var(--gloed)"></i><i style="left: 78%; top: 30px; background: var(--gloed)"></i>
+            <span class="maat" style="left: 0%">18°</span><span class="maat" style="left: 41.7%">21°</span><span class="maat" style="left: 66.7%">22,5°</span><span class="maat" style="left: 100%">24°</span>
+          </div>
+          <div class="legenda"><span><i style="background: var(--ijs)"></i>te koud</span><span><i style="background: var(--mint)"></i>goed</span><span><i style="background: var(--gloed)"></i>te warm</span></div>
+          <div class="knoppen"><span class="licht">Zet Comfort op 21 tot 22,5°</span></div>
+        </div>
+      </section>
+    </aside>
+
+    <div class="dok">
+      <span class="bol adem" style="width: 46px; height: 46px"></span>
+      <span class="vraag">Tik om iets te vragen over je huis</span>
+      <span class="pil">Wat doe je nu?</span>
+      <span class="pil">Waarom is het koud?</span>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  const toon = { '#antwoord': 'antwoord', '#leerde': 'leerde' }[location.hash] ?? 'kies';
+  document.body.dataset.toon = toon;
+  if (toon === 'antwoord') document.getElementById('koud').classList.add('gekozen');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op een avond in oktober.',
+    tijd: 'avond',
+    zon: { aandeel: 0, panelen: 12 },
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Beneden', gewicht: 1.5, temp: '20,8°', zin: 'op temperatuur', stand: 'goed', apparaten: [{ soort: 'airco', aan: false }, { soort: 'radiator' }, { soort: 'lamp', aan: true, x: 0.4 }] },
+        { naam: 'Hal', gewicht: 0.6, temp: '20,5°', apparaten: [] },
+      ] },
+      { naam: '1e verdieping', kamers: [
+        { naam: 'Badkamer', temp: '20,5°', zin: 'op temperatuur', stand: 'goed', apparaten: [{ soort: 'vloer' }] },
+        { naam: 'Hobbykamer', apparaten: [] },
+        { naam: 'Slaapkamer', gewicht: 1.3, apparaten: [] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '21,4°', zin: 'op temperatuur', stand: 'goed', apparaten: [{ soort: 'airco', aan: false }, { soort: 'droger' }] }] },
+    ],
+    buitenunit: { aan: false },
+    net: true,
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

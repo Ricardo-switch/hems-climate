@@ -120,6 +120,21 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     },
   },
   {
+    // Alle batterijen en filters, ook als niets bijna leeg is (besluit 131).
+    id: 'batterijen',
+    href: 'thuis.html#batterijen',
+    sterk: ['batterij', 'batterijen', 'batterijtje', 'filter', 'filters', 'battery', 'batteries'],
+    zwak: ['leeg', 'vervangen', 'vol'],
+    nl: {
+      antwoord: 'Alle apparaten met een batterij, de leegste eerst, en de filters van de airco staan op Thuis. Onder de 10% komt er vanzelf een melding bij.',
+      label: 'Naar de batterijen',
+    },
+    en: {
+      antwoord: 'Every device with a battery, emptiest first, and the air conditioner filters are on Home. Below 10% a notice appears by itself.',
+      label: 'Go to the batteries',
+    },
+  },
+  {
     id: 'comfort',
     href: 'comfort.html',
     // Smal: "hoe warm is het op zolder" is een vraag over het huis, geen instelling.

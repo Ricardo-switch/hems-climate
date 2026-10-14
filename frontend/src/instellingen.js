@@ -116,7 +116,7 @@ function feitenVan(id) {
       return [
         ['Ingelogd', ingelogd],
         ['Je gegevens', dagen],
-        ['Versie', d.health?.versie?.commit ?? '…'],
+        ['Versie', d.health?.versie?.nummer ?? '…'],
       ];
     }
     default:

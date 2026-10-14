@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="../../frontend/kit/kit.css">
 <style>
   /*
-   * Comfort (schets, 14 oktober 2026), in de opbouw van elke groep: links de
+   * Comfort (schets, tweede ronde, 14 oktober 2026): een schakelaar per
+   * dagdeel, voorrang in twee lijsten, en Klaar om per kamer. Eerste ronde:, in de opbouw van elke groep: links de
    * kamers en de dagdelen, in het midden de gekozen kamer. Per dagdeel een
    * balk van 14 tot 28 graden: onder de blauwe streep warmt het huis op, boven
    * de oranje koelt het; daartussen is het goed. Rechts wat het huis leerde.
@@ -67,6 +68,58 @@
   .dag { position: relative; height: 34px; border-radius: 10px; overflow: hidden; display: flex; margin-top: 4px; }
   .dag i { height: 100%; }
   .dagmaat { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--gedempt); margin-top: 4px; }
+  /* Ronde 2: per dagdeel een schakelaar voor verwarmen en voor koelen. */
+  .band { grid-template-columns: 120px minmax(0, 1fr) 200px; }
+  .aanuit { display: flex; flex-direction: column; gap: 6px; }
+  .aanuit span { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; color: var(--zacht); }
+  .aanuit b { font-family: var(--kop); font-size: 15px; color: var(--tekst); }
+  .aanuit .uitgezet { color: var(--gedempt); }
+  .sw { width: 38px; height: 22px; border-radius: 999px; position: relative; flex: none; background: rgba(255, 255, 255, 0.14); }
+  .sw::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #c9d3dc; }
+  .sw.warm { background: var(--gloed); }
+  .sw.koel { background: var(--ijs); }
+  .sw.warm::after, .sw.koel::after { left: auto; right: 3px; background: #fff; }
+  /* Voorrang: twee lijsten. */
+  .lijsten { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rang { padding: 14px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
+  .rang h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .rang .r { display: grid; grid-template-columns: 26px minmax(0, 1fr) 18px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .rang .r i { font-style: normal; font-family: var(--kop); font-size: 18px; font-weight: 600; color: var(--zacht); text-align: center; }
+  .rang .r b { display: block; font-size: 15px; }
+  .rang .r span { font-size: 12.5px; color: var(--gedempt); }
+  .rang .r em { font-style: normal; color: var(--gedempt); letter-spacing: -2px; font-weight: 700; }
+  .rang .niet { font-size: 12.5px; color: var(--gedempt); padding: 2px 4px; margin: 0; }
+  [data-stand] { display: none !important; }
+  body[data-toon='kamer'] [data-stand='kamer'], body[data-toon='voorrang'] [data-stand='voorrang'], body[data-toon='zolder'] [data-stand='zolder'] { display: flex !important; }
+  .klaar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); margin-bottom: 6px; font-size: 13.5px; color: var(--zacht); }
+  .klaar b { color: var(--tekst); }
+  .klaar.uitgezet { opacity: 0.6; }
+  /* Ronde 2: per dagdeel een schakelaar voor verwarmen en voor koelen. */
+  .band { grid-template-columns: 120px minmax(0, 1fr) 200px; }
+  .aanuit { display: flex; flex-direction: column; gap: 6px; }
+  .aanuit span { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; color: var(--zacht); }
+  .aanuit b { font-family: var(--kop); font-size: 15px; color: var(--tekst); }
+  .aanuit .uitgezet { color: var(--gedempt); }
+  .sw { width: 38px; height: 22px; border-radius: 999px; position: relative; flex: none; background: rgba(255, 255, 255, 0.14); }
+  .sw::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #c9d3dc; }
+  .sw.warm { background: var(--gloed); }
+  .sw.koel { background: var(--ijs); }
+  .sw.warm::after, .sw.koel::after { left: auto; right: 3px; background: #fff; }
+  /* Voorrang: twee lijsten. */
+  .lijsten { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rang { padding: 14px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
+  .rang h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .rang .r { display: grid; grid-template-columns: 26px minmax(0, 1fr) 18px; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .rang .r i { font-style: normal; font-family: var(--kop); font-size: 18px; font-weight: 600; color: var(--zacht); text-align: center; }
+  .rang .r b { display: block; font-size: 15px; }
+  .rang .r span { font-size: 12.5px; color: var(--gedempt); }
+  .rang .r em { font-style: normal; color: var(--gedempt); letter-spacing: -2px; font-weight: 700; }
+  .rang .niet { font-size: 12.5px; color: var(--gedempt); padding: 2px 4px; margin: 0; }
+  [data-stand] { display: none !important; }
+  body[data-toon='kamer'] [data-stand='kamer'], body[data-toon='voorrang'] [data-stand='voorrang'], body[data-toon='zolder'] [data-stand='zolder'] { display: flex !important; }
+  .klaar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); margin-bottom: 6px; font-size: 13.5px; color: var(--zacht); }
+  .klaar b { color: var(--tekst); }
+  .klaar.uitgezet { opacity: 0.6; }
 </style>
 </head>
 <body>
@@ -85,61 +138,131 @@
     <div class="veld">
       <nav class="glas delen" aria-label="Delen van Comfort">
         <h4>Kamers</h4>
-        <div class="deel nu"><b>Woonkamer</b><span>overdag 20 tot 22°</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel" id="d-kamer"><b>Woonkamer</b><span>overdag 20 tot 22°</span><span class="stip" style="background: var(--mint)"></span></div>
         <div class="deel"><b>Badkamer</b><span>overdag 18°, 's nachts 16°</span><span class="stip" style="background: var(--mint)"></span></div>
-        <div class="deel"><b>Zolder</b><span>overdag 18 tot 22,5°</span><span class="stip" style="background: var(--mint)"></span></div>
-        <div class="deel"><b>Slaapkamers</b><span>nog geen wens</span><span class="stip" style="background: var(--gedempt)"></span></div>
+        <div class="deel" id="d-zolder"><b>Zolder</b><span>koel om 22:00</span><span class="stip" style="background: var(--mint)"></span></div>
         <h4>Het hele huis</h4>
         <div class="deel"><b>Dagdelen</b><span>dag 8:00, nacht 22:00</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel" id="d-voorrang"><b>Voorrang</b><span>koelen: zolder eerst</span><span class="stip" style="background: var(--mint)"></span></div>
         <div class="deel"><b>Afwezig en vakantie</b><span>vanzelf als niemand thuis is</span><span class="stip" style="background: var(--mint)"></span></div>
       </nav>
 
-      <section class="glas vorm">
-        <div class="bovenrij"><h2 class="kop-2" style="margin: 0">Woonkamer</h2><span class="nu-temp">nu <b>21,8°</b></span></div>
-        <!-- Schaal van 14 tot 28: 1 graad is 100/14 procent. -->
+      <section class="glas vorm" data-stand="kamer" style="flex-direction: column">
+        <div class="bovenrij"><h2 class="kop-2" style="margin: 0">Woonkamer</h2><span class="nu-temp">nu <b>20,8°</b></span></div>
         <div class="band">
           <div class="naam"><b>Overdag</b><span>8:00 tot 22:00</span></div>
-          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 42.9%; width: 14.3%"></div><span class="greep" style="left: 42.9%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 57.1%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 42.9%">20°</span><span class="maat" style="left: 57.1%">22°</span><span class="maat" style="left: 100%">28°</span></div>
-          <div class="waarden"><span>verwarmen onder <b>20°</b></span><span>koelen boven <b>22°</b></span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 42.9%; width: 14.2%"></div><span class="greep" style="left: 42.9%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 57.1%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 42.9%">20°</span><span class="maat" style="left: 57.1%">22°</span><span class="maat" style="left: 100%">28°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>20°</b><i class="sw warm"></i></span><span>koelen boven <b>22°</b><i class="sw koel"></i></span></div>
         </div>
         <div class="band">
           <div class="naam"><b>'s Nachts</b><span>22:00 tot 6:00</span></div>
-          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 28.6%; width: 35.7%"></div><span class="greep" style="left: 28.6%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 64.3%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 28.6%">18°</span><span class="maat" style="left: 64.3%">23°</span></div>
-          <div class="waarden"><span>verwarmen onder <b>18°</b></span><span>koelen boven <b>23°</b></span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 21.4%; width: 78.6%; opacity: 0.5"></div><span class="greep" style="left: 21.4%"><i style="background: var(--gloed)"></i></span><span class="maat" style="left: 21.4%">17°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>17°</b><i class="sw warm"></i></span><span class="uitgezet">koelen uit<i class="sw"></i></span></div>
         </div>
         <div class="band">
           <div class="naam"><b>Afwezig</b><span>als niemand thuis is</span></div>
           <div class="schaal"><div class="baan"></div><div class="goed" style="left: 14.3%; width: 57.1%"></div><span class="greep" style="left: 14.3%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 71.4%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 14.3%">16°</span><span class="maat" style="left: 71.4%">24°</span></div>
-          <div class="waarden"><span>verwarmen onder <b>16°</b></span><span>koelen boven <b>24°</b></span></div>
+          <div class="aanuit"><span>verwarmen onder <b>16°</b><i class="sw warm"></i></span><span>koelen boven <b>24°</b><i class="sw koel"></i></span></div>
         </div>
         <div class="band">
           <div class="naam"><b>Vakantie</b><span>als jij het aanzet</span></div>
           <div class="schaal"><div class="baan"></div><div class="goed" style="left: 0%; width: 85.7%"></div><span class="greep" style="left: 0%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 85.7%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">12°</span><span class="maat" style="left: 85.7%">26°</span></div>
-          <div class="waarden"><span>vorstvrij, <b>12°</b></span><span>koelen boven <b>26°</b></span></div>
+          <div class="aanuit"><span>verwarmen onder <b>12°</b><i class="sw warm"></i></span><span>koelen boven <b>26°</b><i class="sw koel"></i></span></div>
         </div>
-        <div class="rij2">
+        <div class="rij2" style="grid-template-columns: 1fr">
           <div><span class="label">Nooit warmer dan</span><div class="stapper"><span class="rond">−</span><b>26°</b><span class="rond">+</span></div><p class="uitleg">Dan koelt de airco ook zonder zon, met stroom van het net.</p></div>
-          <div><span class="label">Voorrang bij weinig zon</span><div class="keuze"><span class="aan">Eerst</span><span>Daarna</span><span>Laatst</span></div><p class="uitleg">Is er zon voor één airco, dan gaat deze kamer voor.</p></div>
         </div>
       </section>
 
+      <section class="glas vorm" data-stand="zolder" style="flex-direction: column">
+        <div class="bovenrij"><h2 class="kop-2" style="margin: 0">Zolder</h2><span class="nu-temp">nu <b>21,4°</b></span></div>
+        <div class="band">
+          <div class="naam"><b>Overdag</b><span>8:00 tot 22:00</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 28.6%; width: 32.1%"></div><span class="greep" style="left: 28.6%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 60.7%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 28.6%">18°</span><span class="maat" style="left: 60.7%">22,5°</span><span class="maat" style="left: 100%">28°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>18°</b><i class="sw warm"></i></span><span>koelen boven <b>22,5°</b><i class="sw koel"></i></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>'s Nachts</b><span>22:00 tot 6:00</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 14.3%; width: 35.7%"></div><span class="greep" style="left: 14.3%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 50%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 14.3%">16°</span><span class="maat" style="left: 50%">21°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>16°</b><i class="sw warm"></i></span><span>koelen boven <b>21°</b><i class="sw koel"></i></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>Afwezig</b><span>als niemand thuis is</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 14.3%; width: 64.3%"></div><span class="greep" style="left: 14.3%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 78.6%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 14.3%">16°</span><span class="maat" style="left: 78.6%">25°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>16°</b><i class="sw warm"></i></span><span>koelen boven <b>25°</b><i class="sw koel"></i></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>Vakantie</b><span>als jij het aanzet</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 0%; width: 85.7%"></div><span class="greep" style="left: 0%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 85.7%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">12°</span><span class="maat" style="left: 85.7%">26°</span></div>
+          <div class="aanuit"><span>verwarmen onder <b>12°</b><i class="sw warm"></i></span><span>koelen boven <b>26°</b><i class="sw koel"></i></span></div>
+        </div>
+        <div class="rij2">
+          <div><span class="label">Klaar om</span>
+            <div class="klaar"><span><b>Koel om 22:00</b> voor het slapen</span><i class="sw koel"></i></div>
+            <div class="klaar uitgezet"><span><b>Warm om 7:00</b> als je opstaat</span><i class="sw"></i></div>
+            <p class="uitleg">Het huis begint op tijd, het liefst met zon van de middag. Hoe vroeg, leert het van de kamer.</p></div>
+          <div><span class="label">Nooit warmer dan</span><div class="stapper"><span class="rond">−</span><b>25°</b><span class="rond">+</span></div><p class="uitleg">Dan koelt de airco ook zonder zon, met stroom van het net.</p></div>
+        </div>
+      </section>
+
+      <section class="glas vorm" data-stand="voorrang" style="flex-direction: column">
+        <div class="bovenrij"><h2 class="kop-2" style="margin: 0">Voorrang</h2></div>
+        <p class="lead" style="margin: -4px 0 0; font-size: 15px">Is er zon voor maar één kamer, wie gaat dan voor? Sleep om de volgorde te veranderen. Het huis kiest zelf de lijst die past bij wat er nodig is.</p>
+        <div class="lijsten">
+          <div class="rang">
+            <h3><span class="stip" style="background: var(--ijs)"></span>Als het huis koelt</h3>
+            <div class="r"><i>1</i><div><b>Zolder</b><span>onder het dak, wordt het eerst warm</span></div><em>⋮⋮</em></div>
+            <div class="r"><i>2</i><div><b>Woonkamer</b><span>airco</span></div><em>⋮⋮</em></div>
+            <p class="niet">De badkamer kan niet koelen.</p>
+          </div>
+          <div class="rang">
+            <h3><span class="stip" style="background: var(--gloed)"></span>Als het huis verwarmt</h3>
+            <div class="r"><i>1</i><div><b>Woonkamer</b><span>daar ben je het meest</span></div><em>⋮⋮</em></div>
+            <div class="r"><i>2</i><div><b>Badkamer</b><span>vloer en paneel, 1150 W</span></div><em>⋮⋮</em></div>
+            <div class="r"><i>3</i><div><b>Zolder</b><span>airco</span></div><em>⋮⋮</em></div>
+          </div>
+        </div>
+        <p class="mini" style="margin: 0">Een voorstel om mee te beginnen: koelen hoog in huis eerst, verwarmen waar je overdag bent.</p>
+      </section>
+
       <aside class="naast">
-        <div class="glas voorstel">
+        <div class="glas voorstel" data-stand="kamer" style="flex-direction: column">
           <h3 style="color: var(--violet)">Wat het huis leerde</h3>
           <p class="mini" style="margin: 0; font-size: 13.5px; color: var(--zacht)">Je tikte 4 keer "te koud" in de woonkamer, steeds rond de 20°. Zal het huis overdag pas verwarmen onder 20,5°?</p>
           <div class="knoppen"><button type="button">Ja, 20,5°</button><button class="zacht" type="button">Laat 20°</button></div>
         </div>
-        <div class="glas">
+        <div class="glas" data-stand="kamer" style="flex-direction: column">
           <h3>Zo gebruikt het huis dit</h3>
-          <p class="mini" style="margin: 0 0 8px">Tussen de twee strepen is het goed: dan doet het huis niets. Is er zon over, dan mag het al eerder koelen, tot de onderste streep.</p>
+          <p class="mini" style="margin: 0 0 8px">Tussen de twee grepen is het goed: dan doet het huis niets. Staat koelen uit, dan koelt het in dat dagdeel nooit, ook niet op zon.</p>
           <div class="dag"><i style="flex: 6; background: rgba(143, 134, 255, 0.35)"></i><i style="flex: 2; background: rgba(255, 122, 77, 0.35)"></i><i style="flex: 14; background: rgba(110, 231, 183, 0.35)"></i><i style="flex: 2; background: rgba(143, 134, 255, 0.35)"></i></div>
           <div class="dagmaat"><span>0</span><span>6 voorverwarmen</span><span>8 dag</span><span>22 nacht</span></div>
+        </div>
+        <div class="glas voorstel" data-stand="zolder" style="flex-direction: column">
+          <h3 style="color: var(--violet)">Zo gaat het vanavond</h3>
+          <p class="mini" style="margin: 0; font-size: 13.5px; color: var(--zacht)">Om 15:00 is het er 24°. Met de zon van de middag koelt de airco tot 21°; de rest van de avond houdt het dak het warm, dus om 22:00 is het er 22°.</p>
+        </div>
+        <div class="glas" data-stand="zolder" style="flex-direction: column">
+          <h3>Klaar om, of de dagdelen?</h3>
+          <p class="mini" style="margin: 0">De dagdelen zeggen hoe warm het moet zijn. Klaar om zegt wanneer: dan begint het huis eerder, als er zon is, in plaats van pas om 22:00 met stroom van het net.</p>
+        </div>
+        <div class="glas" data-stand="voorrang" style="flex-direction: column">
+          <h3>Zo ging het gisteren</h3>
+          <p class="mini" style="margin: 0; font-size: 13.5px; color: var(--zacht)">Om 14:10 was er zon voor één airco. De zolder was 25° en de woonkamer 23°: de zolder ging voor. Om 15:30 was er genoeg voor allebei.</p>
+        </div>
+        <div class="glas" data-stand="voorrang" style="flex-direction: column">
+          <h3>Waarom twee lijsten</h3>
+          <p class="mini" style="margin: 0">In de zomer wil je de zolder koel voor de nacht, in de winter de woonkamer warm. Op een koude ochtend en een warme middag in het voorjaar gaat het zo allebei goed.</p>
         </div>
       </aside>
     </div>
   </main>
 </div>
 <script src="../../frontend/kit/nav.js"></script>
-<script>nav.balk(document.getElementById('balk'), 'instellingen');</script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  const toon = { '#voorrang': 'voorrang', '#zolder': 'zolder' }[location.hash] ?? 'kamer';
+  document.body.dataset.toon = toon;
+  document.getElementById('d-' + toon).classList.add('nu');
+</script>
 </body>
 </html>

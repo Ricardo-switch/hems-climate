@@ -8,12 +8,11 @@
 <link rel="stylesheet" href="../../frontend/kit/kit.css">
 <style>
   /*
-   * Wat je huis kan (schets, tweede ronde, 14 oktober 2026). Zoals het eruitziet
-   * als alles werkt, voor elk huis. Links het huis met aanwijzers. Rechts alles
-   * wat Smart Climate voor je doet, per onderwerp. Elke regel zegt wat het nu
-   * doet, en heeft rechts een stand: Werkt, Leert nog, Staat uit, of wat er
-   * nodig is. Een tik opent het blad met de uitleg, wat het opleverde en een
-   * schakelaar.
+   * Wat je huis kan (schets, derde ronde, 14 oktober 2026). Werkt iets maar in
+   * een paar kamers, dan zegt de regel waar het werkt, niet hoeveel er
+   * ontbreekt. Wat er nog bij kan, is een idee: in het blad, en de drie beste
+   * linksonder bij "Haal er meer uit", met wat het oplevert. Geen tellers,
+   * geen rood, geen "mist".
    */
   main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
   .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
@@ -27,13 +26,17 @@
   .links { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
   .podium { flex: 1; min-height: 0; margin: -6px -10px 0 -18px; }
 
-  /* Meer uit je huis: wat er het meeste bij zou opleveren. */
-  .meer { padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; align-items: center; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgba(255, 255, 255, 0.03)); }
-  .meer .wanneer { color: var(--zon); font-size: 13px; font-weight: 700; }
-  .meer .bedrag { grid-row: 1 / 4; grid-column: 2; text-align: right; }
-  .meer .bedrag b { display: block; font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1; color: var(--zon); }
+  /* Haal er meer uit: de drie beste ideeën, de grootste winst eerst. */
+  .meer { padding: 14px 16px 8px; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgba(255, 255, 255, 0.03)); }
+  .meer .wanneer { display: block; color: var(--zon); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .idee { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .idee:first-of-type { border-top: 0; }
+  .idee b { display: block; font-size: 14px; font-weight: 600; }
+  .idee span { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .idee .wint { text-align: right; font-family: var(--kop); font-size: 17px; font-weight: 600; color: var(--zon); line-height: 1.1; }
+  .idee .wint small { display: block; font-family: var(--tekst-font, inherit); font-size: 11.5px; font-weight: 500; color: var(--gedempt); }
+  .idee .wint.zacht { font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
 
-  /* Vier onderwerpen, elk een vak met regels. */
   .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; }
   .vak { padding: 12px 16px 6px; display: flex; flex-direction: column; min-height: 0; }
   .vak h3 { margin: 0 0 2px; font-family: var(--kop); font-size: 16px; font-weight: 600; }
@@ -42,40 +45,40 @@
   .regel svg { width: 20px; height: 20px; }
   .regel b { display: block; font-size: 14px; font-weight: 600; }
   .regel span.nu { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel span.nu em { font-style: normal; color: var(--zacht); }
+  .regel span.nu.let { color: #ffb090; }
   .regel.gekozen { background: rgba(255, 255, 255, 0.07); border-radius: 12px; margin: 0 -8px; padding: 6px 8px; border-top-color: transparent; }
 
-  /* De stand van een functie. */
   .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .werkt { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
-  .leert { color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
+  .kijkt, .leert { color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
   .uit { color: var(--gedempt); background: rgba(255, 255, 255, 0.06); }
   .nodig { color: var(--zon); background: transparent; box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
   .nodig::before { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
-  /* Een instelling ontbreekt: werkt pas als je hem invult. */
-  .mist { color: var(--gloed); background: rgba(255, 122, 77, 0.12); }
 
-  /* Het blad: over de vakken heen, zoals het weer op Thuis. */
-  .blad { position: absolute; left: 436px; right: 0; top: 0; bottom: 0; padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr auto; gap: 14px 22px; background: rgba(12, 20, 34, 0.96); z-index: 5; }
+  /* Het blad. */
+  .blad { position: absolute; left: 436px; right: 0; top: 0; bottom: 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; background: rgba(12, 20, 34, 0.96); z-index: 5; }
   .blad[hidden] { display: none; }
-  .blad .bovenaan { grid-column: 1 / 3; display: flex; justify-content: space-between; align-items: start; gap: 16px; }
-  .blad .rechtsboven { display: flex; gap: 10px; align-items: center; }
-  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; }
-  .schakel { width: 50px; height: 28px; border-radius: 999px; background: var(--mint); position: relative; }
-  .schakel::after { content: ''; position: absolute; right: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; }
-  .blad h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
-  .blad p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--zacht); }
-  .blad .bewijs { grid-column: 1 / 3; padding: 14px 16px; border-radius: 18px; background: rgba(110, 231, 183, 0.06); border: 1px solid rgba(110, 231, 183, 0.25); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 18px; }
-  .blad .bewijs .getal { font-family: var(--kop); font-size: 32px; font-weight: 600; line-height: 1.05; }
-  .blad .bewijs .getal small { font-size: 15px; color: var(--zacht); font-weight: 500; }
-  .blad .bewijs .wat { font-size: 12.5px; color: var(--gedempt); }
-  .blad .bewijs .laatst { grid-column: 1 / 4; display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 13.5px; color: var(--zacht); }
-  .blad .lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--zacht); }
-  .blad .lijst li { display: flex; gap: 8px; }
-  .blad .lijst li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-top: 7px; }
-  .blad .onder { grid-column: 1 / 3; display: flex; gap: 10px; align-items: center; }
-  .blad .onder .knop { height: 42px; padding: 0 18px; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 14px; }
-  .blad .onder .knop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+  .blad .bovenaan { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; flex: none; }
+  .blad h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .blad p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--zacht); }
+  .waar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .kamerkaart { padding: 12px 14px; border-radius: 16px; background: rgba(110, 231, 183, 0.06); border: 1px solid rgba(110, 231, 183, 0.22); }
+  .kamerkaart b { display: block; font-size: 15px; }
+  .kamerkaart span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 2px; }
+  .kamerkaart .stand { display: inline-flex; margin-top: 8px; color: var(--ijs); }
+  .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
+  .lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--zacht); }
+  .lijst li { display: flex; gap: 8px; }
+  .lijst li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-top: 7px; }
+  .kanook { padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; }
+  .kanook .wanneer { color: var(--zon); font-size: 13px; font-weight: 700; }
+  .kanook b { font-size: 16px; }
+  .kanook .knop { grid-row: 1 / 4; grid-column: 2; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; border: 0; }
+  .blad .onder { margin-top: auto; display: flex; gap: 10px; }
+  .blad .onder .knop { height: 42px; padding: 0 18px; border-radius: 14px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-weight: 700; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -86,13 +89,12 @@
     <div class="kopregel">
       <div>
         <h1 class="kop-1">Wat je huis kan</h1>
-        <p class="lead">Alles wat Smart Climate voor je doet, en hoe het ervoor staat. Tik op iets voor de uitleg en wat het opleverde.</p>
+        <p class="lead">Alles wat Smart Climate voor je doet, en waar. Tik op iets voor de uitleg.</p>
       </div>
       <div class="legenda" role="group" aria-label="Laat zien">
-        <span class="pil"><span class="stip" style="background: var(--mint)"></span>Werkt <b>12</b></span>
-        <span class="pil" style="color: var(--gloed)"><span class="stip" style="background: var(--gloed)"></span>Vul in <b>1</b></span>
+        <span class="pil"><span class="stip" style="background: var(--mint)"></span>Werkt <b>9</b></span>
+        <span class="pil"><span class="stip" style="background: var(--ijs)"></span>Kijkt mee <b>5</b></span>
         <span class="pil"><span class="stip" style="background: var(--ijs)"></span>Leert nog <b>1</b></span>
-        <span class="pil"><span class="stip" style="background: var(--gedempt)"></span>Staat uit <b>1</b></span>
         <span class="pil"><span class="stip" style="background: transparent; box-shadow: inset 0 0 0 1.5px var(--zon)"></span>Iets nodig <b>3</b></span>
       </div>
     </div>
@@ -102,84 +104,76 @@
         <div class="podium" id="podium"></div>
         <div class="glas meer">
           <span class="wanneer">Haal er meer uit</span>
-          <h2 class="kop-3">Een thuisbatterij</h2>
-          <p class="mini" style="margin: 2px 0 0">Zon van de middag voor de avond. Gerekend met je eigen meters van oktober.</p>
-          <div class="bedrag"><b>± € 8</b><span class="mini">per maand</span></div>
+          <div class="idee"><div><b>De badkamer warm op zon</b><span>de vloer en het paneel kunnen het al</span></div><div class="wint">± € 7<small>per maand, in de winter</small></div></div>
+          <div class="idee"><div><b>Een thuisbatterij</b><span>zon van de middag voor de avond</span></div><div class="wint">± € 10<small>per maand, vanaf 2027</small></div></div>
+          <div class="idee"><div><b>Het paneel in de hobbykamer slim</b><span>met een module achter de schakelaar</span></div><div class="wint zacht">ook op zon</div></div>
         </div>
       </section>
 
       <section class="vakken">
         <div class="glas vak">
           <h3>Comfort</h3>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg><div><b>Elke kamer op temperatuur</b><span class="nu">4 van 5 kamers goed, zolder koelt</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c3-8 6-10 8-10s4 3 8 0"/><path d="M4 21h16"/></svg><div><b>Op tijd warm of koel</b><span class="nu">kent 3 van 5 kamers, nog 9 dagen</span></div><span class="stand leert">Leert nog</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v18M16 3v18M4 8h16M4 16h16"/></svg><div><b>Verwarmen per kamer</b><span class="nu">6 radiatorknoppen, cv op 45°</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M12 21a5 5 0 0 1-5-5c0-3 5-8 5-8s5 5 5 8a5 5 0 0 1-5 5z"/></svg><div><b>Leert wat jij prettig vindt</b><span class="nu">woonkamer nu 21,5°, was 21°</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg><div><b>Op temperatuur</b><span class="nu">in <em>Woonkamer, Badkamer en Zolder</em></span></div><span class="stand kijkt">Kijkt mee</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 18c3-8 6-10 8-10s4 3 8 0"/><path d="M4 21h16"/></svg><div><b>Op tijd warm of koel</b><span class="nu">kent de woonkamer al, nog 9 dagen</span></div><span class="stand leert">Leert nog</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v18M16 3v18M4 8h16M4 16h16"/></svg><div><b>Verwarmen per kamer</b><span class="nu">in <em>Woonkamer en Badkamer</em></span></div><span class="stand kijkt">Kijkt mee</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M12 21a5 5 0 0 1-5-5c0-3 5-8 5-8s5 5 5 8a5 5 0 0 1-5 5z"/></svg><div><b>Leert wat jij prettig vindt</b><span class="nu">tik op Thuis hoe het voelt</span></div><span class="stand werkt">Werkt</span></div>
         </div>
 
         <div class="glas vak">
           <h3>Zon en kosten</h3>
-          <div class="regel gekozen"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg><div><b>Koelen en verwarmen op zon</b><span class="nu">woonkamer koelt nu op zon</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="13" r="4"/></svg><div><b>Apparaten op zon</b><span class="nu">droger klaar om 18:00, start op zon</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M12 9l-2 4h4l-2 4"/></svg><div><b>Thuisbatterij</b><span class="nu">± € 8 per maand voor jou</span></div><span class="stand nodig">Batterij nodig</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h3l3-7 4 14 3-7h5"/></svg><div><b>Goedkope uren</b><span class="nu">koelen en wassen als stroom goedkoop is</span></div><span class="stand nodig">Ander contract</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 15l2-5h12l2 5v3H4z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/></svg><div><b>De auto op zon</b><span class="nu">laden met wat er over is</span></div><span class="stand nodig">Laadpaal nodig</span></div>
+          <div class="regel gekozen"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg><div><b>Koelen en verwarmen op zon</b><span class="nu">in <em>Woonkamer en Zolder</em></span></div><span class="stand kijkt">Kijkt mee</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="13" r="4"/></svg><div><b>Apparaten op zon</b><span class="nu">de droger start als er zon over is</span></div><span class="stand kijkt">Kijkt mee</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M12 9l-2 4h4l-2 4"/></svg><div><b>Thuisbatterij</b><span class="nu">± € 10 per maand vanaf 2027</span></div><span class="stand nodig">Batterij nodig</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h3l3-7 4 14 3-7h5"/></svg><div><b>Goedkope uren</b><span class="nu">met een contract dat per uur rekent</span></div><span class="stand nodig">Ander contract</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 15l2-5h12l2 5v3H4z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/></svg><div><b>De auto op zon</b><span class="nu">met een laadpaal die Home Assistant kent</span></div><span class="stand nodig">Laadpaal nodig</span></div>
         </div>
 
         <div class="glas vak">
           <h3>Gemak</h3>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg><div><b>Licht en scènes</b><span class="nu">3 lampen aan in de woonkamer</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8"/><path d="M6 13h12"/></svg><div><b>Screens tegen de zon</b><span class="nu">jij bedient ze zelf</span></div><span class="stand uit">Staat uit</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><div><b>Afwezig en vakantie</b><span class="nu">vanaf 23:00 nacht, morgen 7:00 weer warm</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg><div><b>Licht en scènes</b><span class="nu">in 7 kamers, 3 lampen aan</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8"/><path d="M6 13h12"/></svg><div><b>Screens en zonnescherm</b><span class="nu">in <em>Woonkamer en Achtertuin</em></span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><div><b>Afwezig en vakantie</b><span class="nu">vanzelf als niemand thuis is</span></div><span class="stand kijkt">Kijkt mee</span></div>
           <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/></svg><div><b>Vraag het je huis</b><span class="nu">"waarom koelt de zolder?"</span></div><span class="stand werkt">Werkt</span></div>
         </div>
 
         <div class="glas vak">
           <h3>Overzicht</h3>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><div><b>Opbrengst en kosten</b><span class="nu">kWh klopt, euro's nog niet</span></div><span class="stand mist">Stroomprijs</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><div><b>Nooit meer dan je zekering</b><span class="nu">nu 2,4 van 8 kW in gebruik</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><div><b>Opbrengst en kosten</b><span class="nu">37% van je eigen dak</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><div><b>Nooit meer dan je zekering</b><span class="nu">1 × 35 A</span></div><span class="stand kijkt">Kijkt mee</span></div>
           <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/></svg><div><b>Camera's en deurbel</b><span class="nu">beeld op elk scherm als er wordt aangebeld</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg><div><b>Batterijen en filters</b><span class="nu">1 batterij bijna leeg</span></div><span class="stand werkt">Werkt</span></div>
-          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/></svg><div><b>Elke dag terugkijken</b><span class="nu">wat het huis deed, en waarom</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/></svg><div><b>Batterijen en filters</b><span class="nu let">de schakelaar in de badkamer is bijna leeg</span></div><span class="stand werkt">Werkt</span></div>
+          <div class="regel"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.8" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/></svg><div><b>Weer en zon</b><span class="nu">van Open-Meteo</span></div><span class="stand werkt">Werkt</span></div>
         </div>
       </section>
 
-      <!-- Het blad, als je op "Koelen en verwarmen op zon" tikt. -->
+      <!-- Het blad, als je op "Koelen en verwarmen op zon" tikt (#koelen). -->
       <aside class="glas blad" id="blad" hidden>
         <div class="bovenaan">
           <div>
-            <span class="stand werkt">Werkt, sinds 5 september</span>
+            <span class="stand kijkt">Kijkt mee, nog 21 winterdagen</span>
             <h2 class="kop-2" style="margin-top: 10px">Koelen en verwarmen op zon</h2>
-            <p class="lead" style="margin-top: 4px; max-width: 48ch">De airco's draaien op de stroom van je eigen dak, als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.</p>
+            <p class="lead" style="margin-top: 4px; max-width: 52ch">De airco's draaien op de stroom van je eigen dak als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.</p>
           </div>
-          <div class="rechtsboven"><span class="schakel" role="switch" aria-checked="true" aria-label="Aan"></span><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
-        </div>
-        <div class="bewijs">
-          <div><div class="getal">62 <small>kWh</small></div><div class="wat">op zon gekoeld en verwarmd in oktober</div></div>
-          <div><div class="getal">€ 14</div><div class="wat">wat die stroom van het net had gekost</div></div>
-          <div><div class="getal">31 <small>uur</small></div><div class="wat">dat een airco op zon draaide</div></div>
-          <div class="laatst"><span class="stand werkt">Nu</span>De woonkamer koelt op 1,2 kW zon, tot het er 22° is. Daarna gaat de zon naar de zolder.</div>
+          <button class="sluit" type="button" aria-label="Sluiten">×</button>
         </div>
         <div>
-          <h4>Zo werkt het</h4>
-          <ul class="lijst">
-            <li>Elke paar minuten kijkt het huis hoeveel zon er over is</li>
-            <li>Is het genoeg, dan gaat de kamer die het meest nodig heeft voor</li>
-            <li>Wordt het bewolkt, dan stopt de airco rustig, niet meteen</li>
-          </ul>
+          <h4>Waar het werkt</h4>
+          <div class="waar">
+            <div class="kamerkaart"><b>Woonkamer</b><span>airco, koelt en verwarmt</span><span class="stand kijkt">zou nu niets doen</span></div>
+            <div class="kamerkaart"><b>Zolder</b><span>airco, koelt en verwarmt</span><span class="stand kijkt">zou nu niets doen</span></div>
+          </div>
         </div>
-        <div>
-          <h4>Wanneer het werkt</h4>
-          <ul class="lijst">
-            <li>Er is meer dan 0,6 kW zon over</li>
-            <li>Een kamer is warmer of kouder dan je comfort</li>
-            <li>Iemand is thuis, of komt binnen een uur thuis</li>
-          </ul>
+        <div class="kanook">
+          <span class="wanneer">Idee</span>
+          <b>De badkamer warm op zon</b>
+          <p>De vloer en het infraroodpaneel (1150 W) hangen al aan een thermostaat. Dan warmt de badkamer 's middags op met je eigen zon, in plaats van 's avonds met stroom van het net.</p>
+          <button class="knop" type="button">Zet aan</button>
         </div>
-        <div class="onder">
-          <button class="knop" type="button">Bekijk vandaag</button>
-          <button class="knop zacht" type="button">Comfort per kamer</button>
+        <div class="twee">
+          <div><h4>Zo werkt het</h4><ul class="lijst"><li>Elke paar minuten kijkt het huis hoeveel zon er over is</li><li>Is het genoeg, dan gaat de kamer die het meest nodig heeft voor</li><li>Wordt het bewolkt, dan stopt de airco rustig, niet meteen</li></ul></div>
+          <div><h4>Wanneer het werkt</h4><ul class="lijst"><li>Er is meer dan 0,6 kW zon over</li><li>Een kamer is warmer of kouder dan je comfort</li><li>Na het meekijken: dan schakelt het huis zelf</li></ul></div>
         </div>
+        <div class="onder"><button class="knop" type="button">Comfort per kamer</button><button class="knop" type="button">Bekijk vandaag</button></div>
       </aside>
     </div>
   </main>
@@ -188,8 +182,7 @@
 <script src="../../frontend/kit/huis.js"></script>
 <script>
   nav.balk(document.getElementById('balk'), 'instellingen');
-  // Met #zon: het blad van "Koelen en verwarmen op zon" open, en de stroom in het huis aangewezen.
-  const blad = location.hash === '#zon';
+  const blad = location.hash === '#koelen';
   document.getElementById('blad').hidden = !blad;
   huis.teken(document.getElementById('podium'), {
     beschrijving: 'Het huis met wat het voor je doet.',
@@ -198,31 +191,25 @@
     wolken: 0.2,
     etages: [
       { naam: 'Begane grond', kamers: [
-        { naam: 'Woonkamer', gewicht: 1.5, stil: true, stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'screen', dicht: 0.5 }] },
+        { naam: 'Woonkamer', gewicht: 1.5, stil: true, stand: 'goed', apparaten: [{ soort: 'airco', aan: false }, { soort: 'radiator' }, { soort: 'screen', dicht: 0.5 }] },
         { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] },
       ] },
-      { naam: 'Eerste', kamers: [
-        { naam: 'Badkamer', gewicht: 0.8, stil: true, stand: 'goed', apparaten: [{ soort: 'radiator' }] },
-        { naam: 'Slaapkamers', gewicht: 1.3, stil: true, stand: 'goed', apparaten: [{ soort: 'radiator' }] },
+      { naam: '1e verdieping', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, stil: true, stand: 'goed', apparaten: [{ soort: 'vloer', aan: true }] },
+        { naam: 'Hobbykamer', gewicht: 0.8, stil: true, apparaten: [] },
+        { naam: 'Slaapkamers', gewicht: 1.3, stil: true, apparaten: [] },
       ] },
-      { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: 'wacht', apparaten: [{ soort: 'airco', aan: false }, { soort: 'droger', aan: false }] }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: 'goed', apparaten: [{ soort: 'airco', aan: false }, { soort: 'droger', aan: false }] }] },
     ],
-    buitenunit: { aan: true },
+    buitenunit: { aan: false },
     net: true,
     spook: ['batterij', 'auto'],
-    stromen: [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.6 }],
-    labels: blad
-      ? [
-          { bij: 'panelen', titel: '1,2 kW', groot: true, toon: 'zon', regels: ['naar de woonkamer'], dx: -110, dy: -110 },
-          { bij: 'kamer:Woonkamer', titel: 'Koelt op zon', toon: 'ijs', regels: ['tot 22°'], dx: -40, dy: 96 },
-        ]
-      : [
-          { bij: 'panelen', titel: 'Op zon', toon: 'mint', regels: ['werkt'], dx: 40, dy: -60 },
-          { bij: 'kamer:Badkamer', titel: 'Per kamer warm', toon: 'mint', regels: ['werkt'], dx: -70, dy: -96 },
-          { bij: 'auto', titel: 'Auto op zon', toon: 'zon', regels: ['laadpaal nodig'], dx: -8, dy: -70 },
-          { bij: 'kamer:Woonkamer', titel: 'Op tijd koel', toon: 'ijs', regels: ['leert nog'], dx: -40, dy: 96 },
-          { bij: 'batterij', titel: 'Batterij', toon: 'zon', regels: ['± € 8 per maand'], dx: -26, dy: 84 },
-        ],
+    labels: [
+      { bij: 'panelen', titel: 'Op zon', toon: 'ijs', regels: ['kijkt mee'], dx: 40, dy: -60 },
+      { bij: 'kamer:Badkamer', titel: 'Badkamer op zon', toon: 'zon', regels: ['idee'], dx: -70, dy: -96 },
+      { bij: 'kamer:Woonkamer', titel: 'Comfort', toon: 'ijs', regels: ['kijkt mee'], dx: -40, dy: 96 },
+      { bij: 'batterij', titel: 'Batterij', toon: 'zon', regels: ['± € 10 per maand'], dx: -26, dy: 84 },
+    ],
   }, { breedte: 440, hoogte: 470, marge: 0.08, schuifX: 14, schuifY: 0 });
 </script>
 </body>

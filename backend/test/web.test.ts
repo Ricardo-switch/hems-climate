@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { WebServer, versionFromEnv, type Version } from '../src/web/server.js';
+import { NIEUW, VERSIE } from '../src/version.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
 import { FeedbackLog } from '../src/web/feedback.js';
@@ -322,12 +323,12 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
 describe('welke versie er draait (besluit 54)', () => {
   it('staat in /api/health', async () => {
     const { base } = await start({
-      version: { commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' },
+      version: { nummer: VERSIE, installatie: 'server', commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' },
     });
     const health = (await (await fetch(`${base}/api/health`)).json()) as {
       versie: Version;
     };
-    expect(health.versie).toEqual({ commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' });
+    expect(health.versie).toEqual({ nummer: VERSIE, installatie: 'server', commit: '6f029de', gebouwd: '2026-09-30T18:20:00Z' });
   });
 
   it('zegt eerlijk dat hij het niet weet', async () => {
@@ -337,16 +338,33 @@ describe('welke versie er draait (besluit 54)', () => {
     const health = (await (await fetch(`${base}/api/health`)).json()) as {
       versie: Version;
     };
-    expect(health.versie).toEqual({ commit: 'onbekend', gebouwd: null });
+    expect(health.versie).toEqual({ nummer: VERSIE, installatie: 'server', commit: 'onbekend', gebouwd: null });
   });
 
   it('leest de omgeving en behandelt leeg als ontbrekend', () => {
+    const zo = { nummer: VERSIE, installatie: 'server' };
     expect(versionFromEnv({ HEMS_COMMIT: 'abc1234', HEMS_GEBOUWD: '2026-10-01T08:00:00Z' }))
-      .toEqual({ commit: 'abc1234', gebouwd: '2026-10-01T08:00:00Z' });
+      .toEqual({ ...zo, commit: 'abc1234', gebouwd: '2026-10-01T08:00:00Z' });
     // Zo komt hij uit de Dockerfile wanneer niemand iets meegaf.
     expect(versionFromEnv({ HEMS_COMMIT: 'onbekend', HEMS_GEBOUWD: '' }))
-      .toEqual({ commit: 'onbekend', gebouwd: null });
-    expect(versionFromEnv({})).toEqual({ commit: 'onbekend', gebouwd: null });
+      .toEqual({ ...zo, commit: 'onbekend', gebouwd: null });
+    expect(versionFromEnv({})).toEqual({ ...zo, commit: 'onbekend', gebouwd: null });
+    // Als add-on krijgt hij een token van de Supervisor mee (besluit 131).
+    expect(versionFromEnv({ SUPERVISOR_TOKEN: 'x' }).installatie).toBe('add-on');
+  });
+
+  /* Een versienummer (besluit 131): één bron, en de lijst begint bij de versie van nu. */
+  it('heeft één versienummer, en zegt wat er nieuw is', async () => {
+    const pakket = async (pad: string) => (JSON.parse(await readFile(new URL(pad, import.meta.url), 'utf-8')) as { version: string }).version;
+    expect(VERSIE).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(await pakket('../package.json')).toBe(VERSIE);
+    expect(await pakket('../../frontend/package.json')).toBe(VERSIE);
+    expect(NIEUW[0]?.versie).toBe(VERSIE);
+    for (const n of NIEUW) expect(n.punten.length).toBeGreaterThan(0);
+    const { base } = await start({ version: versionFromEnv({ HEMS_COMMIT: 'abc1234' }) });
+    const v = (await (await fetch(`${base}/api/versie`)).json()) as Version & { nieuw: typeof NIEUW };
+    expect(v).toMatchObject({ nummer: VERSIE, commit: 'abc1234' });
+    expect(v.nieuw[0]?.versie).toBe(VERSIE);
   });
 });
 

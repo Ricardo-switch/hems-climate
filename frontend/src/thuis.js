@@ -34,8 +34,12 @@ async function laadAlles() {
   if (w.status === 'fulfilled') weer = w.value;
   if (a.status === 'fulfilled') aansluiting = a.value;
   teken();
+  // Met #batterijen meteen de lijst, ook als niets bijna leeg is (besluit 131).
+  if (eersteKeer && location.hash === '#batterijen') {
+    history.replaceState(null, '', location.pathname);
+    openWeer(document.querySelector(app.telStand() ? '#tel [data-buiten]' : '#wand [data-buiten]'), 'batterij');
+  } else if (eersteKeer && huisData && !gezien()) setTimeout(startRondleiding, 600);
   // De eerste keer de rondleiding, zodra het huis er staat.
-  if (eersteKeer && huisData && !gezien()) setTimeout(startRondleiding, 600);
   eersteKeer = false;
 }
 
@@ -262,7 +266,7 @@ function tekenStraks() {
     return;
   }
   const actie = wacht.intent.action === 'heat' ? 'warmen' : 'koelen';
-  zet('[data-straks-kop]', `De ${zoneNaam(wacht.intent.zoneId)} gaat ${actie} bij ${nl(wacht.intent.budgetW / 1000)} kW zon`);
+  zet('[data-straks-kop]', `${huismodel.metHoofdletter(zoneNaam(wacht.intent.zoneId, huisData))} gaat ${actie} bij ${nl(wacht.intent.budgetW / 1000)} kW zon`);
   const over = Math.max(0, state.explanation?.budget?.availableW ?? 0);
   zet('[data-straks-zin]', `${over >= 50 ? `Nu is er ${nl(over / 1000)} kW over.` : 'Nu is er geen zon over.'} Zodra er genoeg is, begint hij vanzelf.`);
   kaarten.forEach((k) => (k.hidden = false));
@@ -280,7 +284,7 @@ function tekenGevoel() {
   // De eerste keer de kamer met een regeling op de laagste etage: meestal waar je woont.
   gekozenZone ??= ([...huisData.etages].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.temperatuurC != null) ?? zones[0]).zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
-  zet('[data-gevoel-kop]', `Hoe voelt de ${zoneNaam(kamer.zoneId)} nu?`);
+  zet('[data-gevoel-kop]', `Hoe voelt ${zoneNaam(kamer.zoneId, huisData)} nu?`);
   const box = document.querySelector('[data-gevoel]');
   if (box.childElementCount) return;
   for (const [sleutel, tekst, achter, kleur] of GEVOEL) {

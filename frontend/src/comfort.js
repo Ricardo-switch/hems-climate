@@ -75,13 +75,17 @@ function schaal(k, m) {
   </div>`;
 }
 
+/** Per dagdeel een schakelaar voor verwarmen en een voor koelen (besluit 131, schets Comfort). */
 function waarden(k, m) {
   const p = k.modi[m];
   const regel = (soort, woord) => {
-    const v = p[soort];
     const kan = soort === 'heat' ? k.kanVerwarmen : k.kanKoelen;
-    if (v != null) return `<span>${woord} <b>${graden(v)}</b><button type="button" class="weg" data-uit="${soort}" aria-label="${woord} uitzetten">×</button></span>`;
-    return kan ? `<span><button type="button" data-aan="${soort}">${soort === 'heat' ? 'Verwarmen aanzetten' : 'Koelen aanzetten'}</button></span>` : '';
+    if (!kan) return '';
+    const v = p[soort];
+    const aan = v != null;
+    const wat = soort === 'heat' ? 'Verwarmen' : 'Koelen';
+    const tekst = aan ? `${woord} <b>${graden(v)}</b>` : `<span class="uitgezet">${wat.toLowerCase()} uit</span>`;
+    return `<span class="aanuit">${tekst}<button type="button" class="schakel ${soort}" role="switch" aria-checked="${aan}" aria-label="${wat}, ${NAAM[m].toLowerCase()}" ${aan ? `data-uit="${soort}"` : `data-aan="${soort}"`}></button></span>`;
   };
   return `<div class="waarden">${regel('heat', 'verwarmen onder')}${regel('cool', 'koelen boven')}</div>`;
 }

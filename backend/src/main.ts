@@ -29,7 +29,7 @@ import {
   type HaRegistryEntity,
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
-import { LayoutStore } from './web/layout.js';
+import { LayoutStore, withLayoutNames } from './web/layout.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from './web/comfort.js';
 import { UitstelStore } from './web/uitstel.js';
@@ -665,10 +665,13 @@ const scenePictures = logDir !== '' ? new ScenePictures(logDir) : null;
 await scenePictures?.refresh();
 if (scenePictures) setInterval(() => void scenePictures.refresh(), 10 * 60_000).unref();
 
+/** De configuratie zoals de app hem laat zien: met de namen en de volgorde uit de indeling (besluit 131). */
+const webConfig = () => (siteConfig ? withLayoutNames(siteConfig, layoutStore?.current ?? null) : null);
+
 const houseReport = () => {
   const h = siteConfig && houseRegisters
     ? buildHouse(
-        siteConfig,
+        webConfig()!,
         houseRegisters,
         houseStates,
         runner?.latest ?? null,
@@ -859,11 +862,12 @@ if (webPort != null) {
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
-    configNow: () => siteConfig,
+    // Wat de app laat zien, heet zoals in de indeling (besluit 131).
+    configNow: webConfig,
     ...(comfortStore && siteConfig
       ? {
           comfort: {
-            view: () => comfortView(siteConfig!, comfortStore.current),
+            view: () => comfortView(webConfig()!, comfortStore.current),
             save: async (body: unknown) => {
               const check = controleerComfort(body, siteConfig!);
               if (!check.ok) return { ok: false as const, status: 400, reden: check.reden };
@@ -872,7 +876,7 @@ if (webPort != null) {
               if (runner && !runner.setConfig(met.config)) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
               await comfortStore.save(check.comfort);
               siteConfig = met.config;
-              return { ok: true as const, view: comfortView(met.config, check.comfort) };
+              return { ok: true as const, view: comfortView(webConfig()!, check.comfort) };
             },
           },
         }

@@ -88,7 +88,7 @@ export interface AskContext {
 /** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
 function facadeSentence(zoninval: AskContext['zoninval'], lang: Lang): string | null {
   if (zoninval == null || !zoninval.boven) return null;
-  const list = zoninval.gevels.map((n) => (lang === 'nl' ? `de ${inSentence(n)}` : `the ${inSentence(n)}`));
+  const list = zoninval.gevels.map((n) => withArticle(n, lang));
   if (list.length === 0) {
     return lang === 'nl' ? 'De zon staat nu op geen van de gevels.' : 'The sun is not on any of the facades right now.';
   }
@@ -346,16 +346,26 @@ export function inSentence(name: string): string {
   return COMMON.test(name) ? name.charAt(0).toLowerCase() + name.slice(1) : name;
 }
 
-/** "Zolder" → "de zolder"; in het Engels de naam zoals hij is. */
+/**
+ * Een naam in een zin: "Zolder" wordt "de zolder", maar een eigen naam zoals
+ * "Beneden" of "Kamer van Sam" blijft zoals hij is (besluit 131). De kamers
+ * heten zoals in de indeling, dus het kan allebei.
+ */
+export function withArticle(name: string, lang: Lang): string {
+  if (!COMMON.test(name)) return name;
+  return lang === 'nl' ? `de ${inSentence(name)}` : `the ${name}`;
+}
+
 function zoneName(zone: Zone, lang: Lang): string {
-  return lang === 'nl' ? `de ${inSentence(zone.name)}` : `the ${zone.name}`;
+  return withArticle(zone.name, lang);
 }
 
 function deviceName(actuator: Actuator, lang: Lang): string {
+  // Een apparaat altijd met lidwoord: "de Nest", "de airco woonkamer".
   return lang === 'nl' ? `de ${inSentence(actuator.name)}` : `the ${actuator.name}`;
 }
 
-function cap(s: string): string {
+export function cap(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 

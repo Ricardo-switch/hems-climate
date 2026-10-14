@@ -181,7 +181,8 @@ function tekenNu() {
 
 function tekenEtages(d) {
   $$('[data-etages]').forEach((el) => {
-    el.innerHTML = info.etages
+    // Op de telefoon staan ze naast elkaar: dan van beneden naar boven (besluit 131).
+    el.innerHTML = (el.closest('#tel') ? huismodel.etagesNaast(info.etages) : info.etages)
       .map(({ id }) => {
         const kamers = d.kamers.filter((k) => k.etage === id);
         const n = kamers.reduce((t, k) => t + apparatenIn(k.id).length, 0);

@@ -15,7 +15,7 @@ import { decide } from '../src/core/decide.js';
 import type { Explanation } from '../src/core/decision.js';
 import { value } from '../src/core/state.js';
 import { defaultStrategies } from '../src/index.js';
-import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus } from '../src/web/assistant.js';
+import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus, withArticle } from '../src/web/assistant.js';
 import { inSentence } from '../src/web/assistant.js';
 import type { Answer, DecisionView, Question } from '../src/web/assistant.js';
 import type { TodayReport } from '../src/web/today.js';
@@ -560,5 +560,16 @@ describe('de droger in de lijst van Thuis (besluit 98)', () => {
     const b = residentView(config, withDryer('not_ready', 'remote_start_not_allowed'));
     expect(b.apparaten.some((d) => d.actuatorId === 'droger')).toBe(false);
     expect(b.rust).toContain('Droger');
+  });
+});
+
+/* Een kamer met een eigen naam krijgt geen lidwoord (besluit 131). */
+describe('kamernamen in een zin', () => {
+  it('zegt "de zolder", maar "Beneden"', () => {
+    expect(withArticle('Zolder', 'nl')).toBe('de zolder');
+    expect(withArticle('Slaapkamer Sam', 'nl')).toBe('de slaapkamer Sam');
+    expect(withArticle('Beneden', 'nl')).toBe('Beneden');
+    expect(withArticle('Beneden', 'en')).toBe('Beneden');
+    expect(withArticle('Zolder', 'en')).toBe('the Zolder');
   });
 });

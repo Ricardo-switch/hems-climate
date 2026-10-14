@@ -195,6 +195,9 @@ verwijzing bestaat.
 - **Instellingen** staan in zes groepen met één opbouw, en wat mist staat
   bovenaan; **Comfort** zet je in de app, en de regeling neemt het meteen over;
   **Wat je huis kan** toont per functie hoe het ervoor staat ([130]).
+- **Versie 0.9.0**, met wat er nieuw is; elke kamer heet overal zoals in
+  Indeling; Comfort heeft een schakelaar per dagdeel; de batterijen zijn altijd
+  te zien ([131]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -374,4 +377,5 @@ verwijzing bestaat.
 [128]: DECISIONS.md#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand
 [129]: DECISIONS.md#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel
 [130]: DECISIONS.md#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app
+[131]: DECISIONS.md#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte
 <!-- links:einde -->

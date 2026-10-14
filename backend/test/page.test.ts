@@ -108,6 +108,7 @@ import { readFileSync } from 'node:fs';
 import { resolveConfigPathSync } from '../src/config/load.js';
 import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
+import { VERSIE } from '../src/version.js';
 import { comfortView, controleerComfort, withComfort, type Comfort } from '../src/web/comfort.js';
 import type { SiteConfig } from '../src/core/model.js';
 
@@ -315,7 +316,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
             call: async (service, id, data) => void coverCalls.push(`${service} ${id}${data['position'] != null ? ` ${String(data['position'])}` : ''}`),
           }),
-          version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
+          version: { nummer: VERSIE, installatie: 'server', commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           // De camera (besluit 106): een nagemaakte Home Assistant die een plaatje geeft.
           camera: { base: `http://127.0.0.1:${haCameraPort}`, token: 'test', ids: () => new Set(['camera.camera_oprit_vloeiend']) },
           // Camera's en de deurbel als instelling (besluit 109).
@@ -781,7 +782,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const wand = p.locator('#wand');
     await wand.locator('.stapknop').first().waitFor();
     expect(await wand.locator('.stapknop').count()).toBe(7);
-    expect(await wand.locator('[data-voortgang]').textContent()).toMatch(/van 5 stappen klaar/);
+    expect(await wand.locator('[data-voortgang]').textContent()).toMatch(/van 5 stappen klaar|Alle stappen klaar/);
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     await wand.locator('.stapknop', { hasText: 'Zon en aansluiting' }).click();
     await wand.locator('[data-stapblad] h2', { hasText: 'Zon en aansluiting' }).waitFor();
@@ -1122,6 +1123,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         for (const n of meubels) if (n !== m && n.kamer === m.kamer && overlap(m, n) && m.x0 <= n.x0) problemen.push(`${naam}: door een ander meubel`);
       }
     }
+    // Een airco hangt nooit voor het raam (besluit 131).
+    for (const [soort, lijst] of Object.entries(uitkomst.per) as [string, Blok[]][]) {
+      for (const a of lijst.filter((b) => b.wat === 'apparaat' && b.soort === 'airco')) {
+        for (const r of lijst.filter((b) => b.wat === 'raam' && b.kamer === a.kamer)) {
+          if (a.y0 < 0.3 && a.x0 < r.x1 && r.x0 < a.x1 && a.z0 < r.z1 && r.z0 < a.z1) problemen.push(`${soort}: de airco in ${a.kamer} hangt voor het raam`);
+        }
+      }
+    }
     expect(problemen).toEqual([]);
     // Witgoed maakt een wasruimte; een hal zonder etage erboven heeft geen trap.
     expect((uitkomst.per['slaapkamer'] as Blok[]).some((b) => b.kamer === 'slaapkamer-4' && b.wat === 'meubel' && b.x1 - b.x0 > 0.5)).toBe(false);
@@ -1257,6 +1266,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Het huis met tikvlakken, en de wand zonder scrollen.
     await p.locator('#wand svg.sc-huis .sc-tik').first().waitFor();
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+    // De etages naast elkaar van beneden naar boven, buiten achteraan (besluit 131).
+    const naast = await p.locator('#wand [data-etages] button').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-etage')));
+    const binnen = huisNu.etages.map((e) => (e as unknown as { id: string }).id).filter((id) => id !== 'buiten' && naast.includes(id));
+    expect(naast.filter((id) => id !== 'buiten')).toEqual([...binnen].reverse());
+    if (naast.includes('buiten')) expect(naast.at(-1)).toBe('buiten');
     // Een klimaatapparaat: het blad zegt wat het huis zou doen, en schakelt niets.
     await p.locator('#wand [data-blad] .rij[data-open]').first().click();
     await p.locator('#wand [data-blad] .doelrij').waitFor();
@@ -1398,6 +1412,19 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const go = p.waitForRequest((r) => new URL(r.url()).pathname === '/auth/login');
     await inlog.click();
     expect(new URL((await go).url()).searchParams.get('terug')).toBe('/toegang.html');
+    await context.close();
+  }, 20_000);
+
+  /* Een versienummer, en wat er nieuw is (besluit 131). */
+  it('toont de versie en wat er nieuw is', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    await p.goto(`${baseUrl}/toegang.html#versie`);
+    const vorm = p.locator('#wand [data-vorm]');
+    await vorm.locator('h2', { hasText: `Versie ${VERSIE}` }).waitFor();
+    expect(await vorm.locator('.nieuw').first().textContent()).toContain(`Versie ${VERSIE}`);
+    expect(await vorm.textContent()).not.toMatch(/NAS/);
     await context.close();
   }, 20_000);
 });

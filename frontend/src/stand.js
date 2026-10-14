@@ -247,7 +247,7 @@
         wanneer: ["Camera's en deurbel staan aan bij Functies"],
       }] : []),
       {
-        id: 'batterijen', groep: 'overzicht', titel: 'Batterijen en filters', stand: 'werkt', nu: leegB || volF ? [leegB ? `${leegB} ${leegB === 1 ? 'batterij' : 'batterijen'} bijna leeg` : null, volF ? `${volF} ${volF === 1 ? 'filter' : 'filters'} vol` : null].filter(Boolean).join(', ') : 'alles in orde', href: 'thuis.html',
+        id: 'batterijen', groep: 'overzicht', titel: 'Batterijen en filters', stand: 'werkt', let: leegB > 0 || volF > 0, nu: leegB || volF ? [leegB ? `${leegB} ${leegB === 1 ? 'batterij' : 'batterijen'} bijna leeg` : null, volF ? `${volF} ${volF === 1 ? 'filter' : 'filters'} vol` : null].filter(Boolean).join(', ') : 'alles in orde', href: 'thuis.html#batterijen',
         wat: 'Een batterij onder 10% of een vol airco-filter staat op Thuis, met een tik naar het apparaat.',
         zo: ['Alle kleine apparaten met een batterij, ook knoppen die de app verder niet gebruikt', 'Telefoons, een thuisbatterij en een auto tellen niet mee'],
         wanneer: ['Altijd'],

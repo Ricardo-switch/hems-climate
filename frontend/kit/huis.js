@@ -95,6 +95,8 @@
   // Afmetingen in eenheden van het huis.
   const FH = 1.55; // hoogte van een etage
   const D = 1.5; // diepte van het huis
+  /** Een binnenunit op ware grootte: zo'n 90 bij 30 centimeter, bij een etage van 2,6 meter (besluit 131). */
+  const AIRCO = { b: 0.56, h: 0.19, d: 0.15 };
   // Hoogte van het dak; hoger als er kamers onder liggen, zoals een zolderverdieping.
   let R = 1.15;
   const KAMER = 1.7; // breedte per gewicht van een kamer
@@ -243,6 +245,8 @@
     let erBoven = false;
     /** De kamer waarvan nu de apparaten getekend worden, voor de controle. */
     let blokKamer = null;
+    /** En die kamer zelf: de airco zoekt een plek naast het raam (besluit 131). */
+    let dezeKamer = null;
     /** Met `opts.controle`: elk meubel en apparaat als blok, voor de tests. */
     const controle = [];
 
@@ -641,9 +645,10 @@
       huis.push(poly([[x0, 0, z0], [x0, D, z0], [x0, D, z0 + 0.25], [x0, 0, z0 + 0.25]], `fill="url(#${id}-hoek)"`));
 
       // Een raam in de achtermuur, met de lucht erachter.
-      if (x1 - x0 > 1.15 && !kamer.geenRaam) {
-        const rx0 = x0 + 0.28;
-        const rx1 = Math.min(x0 + 0.95, x1 - 1.05 > x0 + 0.95 ? x0 + 0.95 : x1 - 0.25);
+      const raamPlek = raamVan(kamer, x0, x1);
+      if (raamPlek) {
+        const [rx0, rx1] = raamPlek;
+        if (opts.controle) controle.push({ kamer: kamer.id ?? kamer.naam, wat: 'raam', ruimte: [x0, x1], x0: rx0, x1: rx1, y0: 0, y1: 0.02, z0: z0 + 0.42, z1: z1 - 0.28 });
         const raam = [[rx0, 0.005, z0 + 0.42], [rx1, 0.005, z0 + 0.42], [rx1, 0.005, z1 - 0.28], [rx0, 0.005, z1 - 0.28]];
         huis.push(poly(raam, `fill="${nacht ? '#0a1222' : winter ? '#7f93a8' : '#4d7eac'}" stroke="#55657a" stroke-width="1.5"`));
         if (!nacht) huis.push(poly([raam[0], [rx0 + (rx1 - rx0) * 0.45, 0.005, z0 + 0.42], [rx0, 0.005, z1 - 0.45]], 'fill="#ffffff" opacity="0.12"'));
@@ -652,6 +657,7 @@
       sfeer(kamer, x0, x1, z0, z1);
       inrichten(kamer, x0, x1, z0, z1, null, donker);
       blokKamer = kamer.id ?? kamer.naam;
+      dezeKamer = kamer;
       for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, z0, z1, false);
       radiatorZij = false;
       // In de bewerkstand: de gekozen kamer met een rand, de kamer waar iets heen gaat met een gloed.
@@ -745,9 +751,32 @@
       }
       return poly(pts, attrs);
     }
-    /** Waar de binnenunit aan de achterwand begint: zo ver van de rechtermuur dat hij in beeld niet over de hoek vooraan valt. */
-    function aircoX(x0, x1) {
-      return Math.max(x0 + 0.1, x1 - 1.75);
+    /** Het raam in de achtermuur van een gewone kamer: [van, tot], of null. */
+    function raamVan(kamer, x0, x1) {
+      if (!(x1 - x0 > 1.15) || kamer?.geenRaam) return null;
+      return [x0 + 0.28, Math.min(x0 + 0.95, x1 - 1.05 > x0 + 0.95 ? x0 + 0.95 : x1 - 0.25)];
+    }
+    /**
+     * Waar de binnenunit van een gewone kamer hangt (besluit 131): hoog, en
+     * nooit voor het raam. Op de achterwand rechts van het raam, waar hij in
+     * beeld niet achter de muur met de volgende kamer valt. Staat er een etage
+     * boven, dan net onder wat de vloer erboven aan het zicht onttrekt. Past hij
+     * daar niet, dan aan de linkermuur, vooraan, waar hij altijd te zien is.
+     */
+    function aircoPlek(kamer, x0, x1, z1) {
+      const raam = raamVan(kamer, x0, x1);
+      const vanaf = raam ? raam[1] + 0.12 : x0 + 0.15;
+      // Rechts valt de achterwand in beeld achter de muur met de volgende kamer.
+      const tot = x1 - 0.7;
+      // Alleen een etage die erboven getekend wordt, onttrekt iets aan het zicht.
+      const vloerBoven = erBoven && !model.zonderDak;
+      if (tot - vanaf >= AIRCO.b) {
+        const top = vloerBoven ? z1 - BY * D - 0.04 : z1 - 0.12;
+        return { wand: 'achter', ax: Math.max(vanaf, tot - AIRCO.b), az: top - AIRCO.h };
+      }
+      const ay = 0.2;
+      const top = vloerBoven ? z1 - (D - ay) * BY - 0.04 : z1 - 0.12;
+      return { wand: 'links', ay, az: top - AIRCO.h };
     }
     function apparaat(app, x0, x1, z0, z1, onderDak, plafond) {
       const xm = (x0 + x1) / 2;
@@ -762,13 +791,14 @@
         if (plafond) {
           // Onder het dak tegen de linkermuur, hoog: daar is hij altijd te zien,
           // en de droger schuift naar rechts (zie hieronder).
-          const ay = 0.3;
-          const az = Math.min(z0 + 0.95, hoog(x0) - 0.4);
-          plek[`airco:${app.naam ?? ''}`] = [x0 + 0.2, ay + 0.4, az];
-          blok(x0 + 0.01, x0 + 0.21, ay, ay + 0.8, az, az + 0.26);
-          huis.push(doos(x0 + 0.01, ay, az, 0.2, 0.8, 0.26, KAST));
+          const { b: AB, h: AH, d: AD } = AIRCO;
+          const ay = 0.4;
+          const az = Math.min(z0 + 0.95, hoog(x0) - 0.34);
+          plek[`airco:${app.naam ?? ''}`] = [x0 + 0.2, ay + AB / 2, az];
+          blok(x0 + 0.01, x0 + 0.01 + AD, ay, ay + AB, az, az + AH);
+          huis.push(doos(x0 + 0.01, ay, az, AD, AB, AH, KAST));
           // De uitblaas aan de onderkant, naar de kamer toe.
-          huis.push(poly([[x0 + 0.212, ay + 0.08, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.08], [x0 + 0.212, ay + 0.08, az + 0.08]], 'fill="#7d8b99"'));
+          huis.push(poly([[x0 + 0.012 + AD, ay + 0.05, az + 0.035], [x0 + 0.012 + AD, ay + AB - 0.05, az + 0.035], [x0 + 0.012 + AD, ay + AB - 0.05, az + 0.06], [x0 + 0.012 + AD, ay + 0.05, az + 0.06]], 'fill="#7d8b99"'));
           if (app.aan) {
             for (let i = 0; i < 3; i++) {
               const a = P(x0 + 0.24, ay + 0.2 + i * 0.2, az + 0.02);
@@ -777,22 +807,35 @@
             }
           }
         } else {
-          // Op een verdieping aan de achterwand, rechts in de kamer, net onder wat
-          // de vloer van de etage erboven aan het zicht onttrekt. Links kan niet:
-          // daar is de woonkamer de keuken.
-          // Ver genoeg van de rechtermuur dat hij in beeld niet over de hoek met de
-          // volgende kamer valt; in een smalle kamer zo ver als het kan.
-          const ax = aircoX(x0, x1);
-          const az = z1 - BY * D - 0.34;
-          plek[`airco:${app.naam ?? ''}`] = [ax + 0.4, 0.1, az];
-          blok(ax, ax + 0.8, 0.02, 0.22, az, az + 0.26);
-          huis.push(doos(ax, 0.02, az, 0.8, 0.2, 0.26, KAST));
-          huis.push(poly([[ax + 0.08, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.08], [ax + 0.08, 0.222, az + 0.08]], 'fill="#7d8b99"'));
-          if (app.aan) {
-            for (let i = 0; i < 3; i++) {
-              const a = P(ax + 0.16 + i * 0.24, 0.3, az - 0.02);
-              const b = P(ax + 0.16 + i * 0.24, 0.75, az - 0.38);
-              huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${a[0] + 8} ${(a[1] + b[1]) / 2} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
+          // Op een gewone etage: hoog, naast het raam (besluit 131, zie aircoPlek).
+          const { b: AB, h: AH, d: AD } = AIRCO;
+          const p = aircoPlek(dezeKamer, x0, x1, z1);
+          const az = p.az;
+          if (p.wand === 'achter') {
+            const ax = p.ax;
+            plek[`airco:${app.naam ?? ''}`] = [ax + AB / 2, 0.1, az];
+            blok(ax, ax + AB, 0.02, 0.02 + AD, az, az + AH);
+            huis.push(doos(ax, 0.02, az, AB, AD, AH, KAST));
+            huis.push(poly([[ax + 0.05, 0.022 + AD, az + 0.035], [ax + AB - 0.05, 0.022 + AD, az + 0.035], [ax + AB - 0.05, 0.022 + AD, az + 0.06], [ax + 0.05, 0.022 + AD, az + 0.06]], 'fill="#7d8b99"'));
+            if (app.aan) {
+              for (let i = 0; i < 3; i++) {
+                const a = P(ax + 0.11 + i * 0.17, 0.25, az - 0.02);
+                const b = P(ax + 0.11 + i * 0.17, 0.7, az - 0.36);
+                huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${a[0] + 8} ${(a[1] + b[1]) / 2} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
+              }
+            }
+          } else {
+            const ay = p.ay;
+            plek[`airco:${app.naam ?? ''}`] = [x0 + 0.1, ay + AB / 2, az];
+            blok(x0 + 0.01, x0 + 0.01 + AD, ay, ay + AB, az, az + AH);
+            huis.push(doos(x0 + 0.01, ay, az, AD, AB, AH, KAST));
+            huis.push(poly([[x0 + 0.012 + AD, ay + 0.05, az + 0.035], [x0 + 0.012 + AD, ay + AB - 0.05, az + 0.035], [x0 + 0.012 + AD, ay + AB - 0.05, az + 0.06], [x0 + 0.012 + AD, ay + 0.05, az + 0.06]], 'fill="#7d8b99"'));
+            if (app.aan) {
+              for (let i = 0; i < 3; i++) {
+                const a = P(x0 + 0.2, ay + 0.11 + i * 0.17, az - 0.02);
+                const b = P(x0 + 0.62, ay + 0.15 + i * 0.17, az - 0.34);
+                huis.push(`<path class="sc-lucht" style="animation-delay:${i * 0.35}s" d="M ${a[0]} ${a[1]} Q ${(a[0] + b[0]) / 2} ${a[1] + 4} ${b[0]} ${b[1]}" fill="none" stroke="${kleur}" stroke-width="2" stroke-linecap="round" opacity="0.7"/>`);
+              }
             }
           }
         }
@@ -912,10 +955,14 @@
       radiatorZij = !plafond && ACHTERWAND.includes(soorten[0]) && apps.some((a) => a.soort === 'radiator');
       // Waar op de achterwand niets hoogs mag: [van, tot, vanaf welke hoogte].
       const bezet = [];
-      if (!plafond && x1 - x0 > 1.15 && !kamer.geenRaam) bezet.push([x0 + 0.22, Math.min(x0 + 0.95, x1 - 1.05 > x0 + 0.95 ? x0 + 0.95 : x1 - 0.25) + 0.06, 0.38, 'raam']);
+      const raam = plafond ? null : raamVan(kamer, x0, x1);
+      if (raam) bezet.push([raam[0] - 0.06, raam[1] + 0.06, 0.38, 'raam']);
       if (apps.some((a) => a.soort === 'radiator') && !radiatorZij) bezet.push([x0 + 0.2, x0 + 1.1, 0]);
       if (apps.some((a) => a.soort === 'cv')) bezet.push([x0 + 0.15, x0 + 0.67, 0.45]);
-      if (!plafond && apps.some((a) => a.soort === 'airco')) bezet.push([aircoX(x0, x1) - 0.05, aircoX(x0, x1) + 0.85, z1 - BY * D - 0.36 - z0]);
+      if (!plafond && apps.some((a) => a.soort === 'airco')) {
+        const p = aircoPlek(kamer, x0, x1, z1);
+        if (p.wand === 'achter') bezet.push([p.ax - 0.05, p.ax + AIRCO.b + 0.05, p.az - 0.02 - z0]);
+      }
       if (plafond && apps.some((a) => a.soort === 'airco')) bezet.push([x0, x0 + 0.5, 0.6]);
       const hoogte = (x) => (plafond ? plafond(x) - z0 : z1 - z0);
       // De hanglampen, zoals apparaat() ze tekent: hun onderkant boven de vloer.

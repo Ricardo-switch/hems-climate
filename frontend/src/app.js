@@ -675,7 +675,7 @@ const SEASON_NAME = {
 /** Wat een ontbrekend onderdeel betekent, in gewone taal. */
 const WHY = {
   vakantie: 'de vakantiestand is nog nooit aangezet',
-  'heat-assist': 'heat-assist is nog nooit afgegaan — de Nest meldde nooit dat hij brandt',
+  'heat-assist': 'heat-assist is nog nooit afgegaan — de thermostaat meldde nooit dat hij brandt',
   heat: 'er is nog nooit een verwarmingscommando uitgegaan',
   zone_below_setpoint: 'een zone is nog nooit ónder zijn doel geweest',
   buffering_free_energy: 'er is nog nooit gebufferd op gratis stroom',

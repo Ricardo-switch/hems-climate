@@ -18,7 +18,7 @@
 import type { Command, DeferrableExplanation, DeferrableStateCode } from '../core/decision.js';
 import { FALLBACK_PROGRAM_MIN } from '../core/deferrable.js';
 import type { Deferrable, SiteConfig } from '../core/model.js';
-import { SHORT, inSentence, residentRooms, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
+import { SHORT, cap, residentRooms, withArticle, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
 import { clockIn, nextLocalTime } from './today.js';
 
 export interface ResidentHeadline {
@@ -108,13 +108,13 @@ const HEAD = {
     now: 'Nu',
     chosen: ' (gekozen)',
     fault: ['Er is een storing', 'Een meting is onbetrouwbaar; Smart Climate zet de hulpapparaten veilig uit.'],
-    one: (room: string, cool: boolean) => `De ${room} wordt ${cool ? 'gekoeld' : 'verwarmd'}`,
+    one: (room: string, cool: boolean) => `${cap(room)} wordt ${cool ? 'gekoeld' : 'verwarmd'}`,
     many: 'Het huis wordt geregeld',
     // Tijdens de schaduw gebeurt het niet echt (besluit 124).
-    oneWould: (room: string, cool: boolean) => `De ${room} zou ${cool ? 'koelen' : 'verwarmen'}`,
+    oneWould: (room: string, cool: boolean) => `${cap(room)} zou ${cool ? 'koelen' : 'verwarmen'}`,
     manyWould: 'Het huis zou regelen',
     waitSun: 'Het huis wacht op zon',
-    waitSunWhy: (rooms: string, many: boolean) => `De ${rooms} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
+    waitSunWhy: (rooms: string, many: boolean) => `${cap(rooms)} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
     waitOther: 'Er wacht iets',
     nothing: 'Er draait niets',
     nothingSun: 'Geen kamer heeft iets nodig.',
@@ -143,12 +143,12 @@ const HEAD = {
     now: 'Now',
     chosen: ' (chosen)',
     fault: ['There is a fault', 'A measurement is unreliable; Smart Climate switches the helper units off safely.'],
-    one: (room: string, cool: boolean) => `The ${room} is being ${cool ? 'cooled' : 'heated'}`,
+    one: (room: string, cool: boolean) => `${cap(room)} is being ${cool ? 'cooled' : 'heated'}`,
     many: 'The house is being managed',
-    oneWould: (room: string, cool: boolean) => `The ${room} would ${cool ? 'cool' : 'heat'}`,
+    oneWould: (room: string, cool: boolean) => `${cap(room)} would ${cool ? 'cool' : 'heat'}`,
     manyWould: 'The house would act',
     waitSun: 'The house is waiting for sun',
-    waitSunWhy: (rooms: string) => `The ${rooms} will cool as soon as there is enough solar to spare.`,
+    waitSunWhy: (rooms: string) => `${cap(rooms)} will cool as soon as there is enough solar to spare.`,
     waitOther: 'Something is waiting',
     nothing: 'Nothing is running',
     nothingSun: 'No room needs anything.',
@@ -191,7 +191,7 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   const boven = `${w.now} · ${MODE[lang][e.mode] ?? e.mode}${e.modeSource === 'override' ? w.chosen : ''}`;
   const named = rooms.map((r) => ({ r, name: config.zones.find((z) => z.id === r.zoneId)?.name ?? r.zoneId }));
   // Midden in een Nederlandse zin gaat een gewoon woord klein; in het Engels blijft een naam een naam.
-  const mid = (name: string) => (lang === 'nl' ? inSentence(name) : name);
+  const mid = (name: string) => withArticle(name, lang);
   const line = (list: typeof named) => list.map(({ r, name }) => `${name}: ${r.kort.toLowerCase()}.`).join(' ');
   const active = named.filter(({ r }) => r.soort === 'cool' || r.soort === 'heat');
   const waiting = named.filter(({ r }) => r.soort === 'wait');

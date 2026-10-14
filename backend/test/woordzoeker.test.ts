@@ -35,6 +35,8 @@ describe('woordzoeker', () => {
     expect(app('Waar stel ik mijn hoofdzekering in')).toBe('energie.html#aansluiting');
     // Comfort zet je in de app (besluit 130).
     expect(app('Waar stel ik de temperatuur in?')).toBe('comfort.html');
+    // De batterijen, ook als niets bijna leeg is (besluit 131).
+    expect(app('Waar zie ik alle batterijen?')).toBe('thuis.html#batterijen');
     expect(app('Hoe zet ik de deurbel aan')).toBe('functies.html');
     expect(app('Welke camera’s zie ik')).toBe('functies.html');
     expect(app('Hoe kan ik inloggen')).toBe('toegang.html');

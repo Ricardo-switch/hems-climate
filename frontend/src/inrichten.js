@@ -115,7 +115,8 @@ function tekenNu() {
   const nu = gekozen(lijst);
   const te = lijst.filter((s) => s.id !== 'welkom' && s.id !== 'klaar');
   const gedaan = te.filter((s) => s.klaar).length;
-  $$('[data-voortgang]').forEach((el) => (el.textContent = `${gedaan} van ${te.length} stappen klaar`));
+  // Welkom en Klaar tellen niet mee, in de pil niet en in de kop niet (besluit 131).
+  $$('[data-voortgang]').forEach((el) => (el.textContent = gedaan === te.length ? 'Alle stappen klaar' : `${gedaan} van ${te.length} stappen klaar`));
   $$('[data-stappen]').forEach((el) => {
     el.innerHTML = lijst
       .map((s, i) => `<a class="stapknop${s.id === nu.id ? ' nu' : ''}" href="#${s.id}" aria-current="${s.id === nu.id ? 'step' : 'false'}"><span class="nummer ${s.klaar && s.id !== 'klaar' ? 'klaar' : ''}">${s.klaar && s.id !== 'welkom' && s.id !== 'klaar' ? '✓' : i + 1}</span><span class="l"><b>${esc(s.kop)}</b><span>${s.id === 'welkom' || s.id === 'klaar' ? '' : s.klaar ? 'klaar' : 'nog te doen'}</span></span></a>`)
@@ -127,7 +128,7 @@ function tekenNu() {
     ? '<a class="knop knop-licht" href="thuis.html">Naar Thuis</a>'
     : `${nu.pagina ? `<a class="knop knop-licht" href="${nu.pagina}?inrichten=${nu.id}${nu.deel ? `#${nu.deel}` : ''}">${nu.klaar ? 'Nakijken' : 'Instellen'}</a>` : ''}${volgende ? `<a class="knop" href="#${volgende.id}">${nu.pagina ? 'Overslaan' : 'Beginnen'}</a>` : ''}`;
   $$('[data-stapblad]').forEach((el) => {
-    el.innerHTML = `<span class="mini">Stap ${i + 1} van ${lijst.length}</span>
+    el.innerHTML = `<span class="mini">${te.includes(nu) ? `Stap ${te.indexOf(nu) + 1} van ${te.length}` : nu.id === 'klaar' ? 'Klaar' : 'Welkom'}</span>
       <h2 class="kop-1" style="font-size: 36px; margin: 4px 0 0">${esc(nu.kop)}</h2>
       <p class="lead" style="margin: 10px 0 0; max-width: 60ch">${esc(nu.zin)}</p>
       ${nu.wat.length ? `<ul class="wat">${nu.wat.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}

@@ -39,7 +39,7 @@ function legenda(lijst) {
 
 function vakken(lijst) {
   return GROEPEN.map(([g, titel]) => {
-    const rijen = lijst.filter((x) => x.groep === g).map((x) => `<button type="button" class="regel${gekozen() === x.id ? ' gekozen' : ''}${filter && x.stand !== filter ? ' weg' : ''}" data-open="${x.id}"><div><b>${esc(x.titel)}</b><span class="nu">${esc(x.nu)}</span></div><span class="stand ${x.stand}">${esc(x.label)}</span></button>`).join('');
+    const rijen = lijst.filter((x) => x.groep === g).map((x) => `<button type="button" class="regel${gekozen() === x.id ? ' gekozen' : ''}${filter && x.stand !== filter ? ' weg' : ''}" data-open="${x.id}"><div><b>${esc(x.titel)}</b><span class="nu${x.let ? ' let' : ''}">${esc(x.nu)}</span></div><span class="stand ${x.stand}">${esc(x.label)}</span></button>`).join('');
     return `<div class="glas vak"><h3>${esc(titel)}</h3>${rijen}</div>`;
   }).join('');
 }

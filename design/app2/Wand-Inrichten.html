@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Inrichten in één keer (schets, 14 oktober 2026). De eerste keer, over het
+   * hele scherm, zonder menu. Bovenaan de stappen. Links groeit het huis mee
+   * met elk antwoord; rechts één kaart met de vraag. Wat Home Assistant al
+   * weet, staat er al: je bevestigt, je hoeft niets op te zoeken. Elke stap
+   * kan later. Aan het eind het filmpje, en daarna de rondleiding.
+   * Standen: zonder hash welkom, #huis, #warmte, #comfort, #zon, #klaar.
+   */
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven b { font-family: var(--kop); font-size: 18px; }
+  .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .stap i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.08); }
+  .stap.klaar { color: var(--zacht); }
+  .stap.klaar i { background: rgba(110, 231, 183, 0.2); color: var(--mint); }
+  .stap.nu { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
+  .stap.nu i { background: var(--tekst); color: var(--inkt); }
+  .podium { position: absolute; left: 0; top: 80px; width: 760px; height: 700px; }
+  .kaart { position: absolute; right: 32px; top: 92px; bottom: 32px; width: 460px; padding: 26px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart .klein { font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .kaart h1 { margin: 0; }
+  .kaart .lead { margin: 0; }
+  .gevonden { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .gevonden span { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 13px; color: var(--zacht); }
+  .gevonden b { display: block; font-family: var(--kop); font-size: 24px; color: var(--tekst); }
+  .rij { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij:first-of-type { border-top: 0; }
+  .rij > b { font-size: 14.5px; padding-top: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .chip.ok { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+  .chip.aan { background: var(--tekst); color: var(--inkt); }
+  .chip.plus { background: transparent; border: 1px dashed rgba(111, 211, 255, 0.55); color: var(--ijs); }
+  .chip.niets { background: transparent; color: var(--gedempt); padding: 0 4px; }
+  .onder { margin-top: auto; display: flex; align-items: center; gap: 10px; }
+  .onder .later { color: var(--zacht); font-weight: 600; font-size: 14px; margin-right: auto; }
+  .onder .knop-groot { height: 48px; padding: 0 22px; border-radius: 15px; display: inline-flex; align-items: center; font-weight: 700; font-size: 15px; background: var(--tekst); color: var(--inkt); }
+  .onder .knop-groot.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+  .schuif { position: relative; height: 54px; margin-top: 4px; }
+  .schuif .baan { position: absolute; left: 0; right: 0; top: 18px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(255, 122, 77, 0.35), rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(111, 211, 255, 0.35)); }
+  .schuif .goed { position: absolute; top: 16px; height: 12px; border-radius: 6px; background: rgba(110, 231, 183, 0.55); }
+  .schuif .greep { position: absolute; top: 10px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+  .schuif .greep i { width: 8px; height: 8px; border-radius: 50%; }
+  .schuif .maat { position: absolute; top: 36px; font-size: 11px; color: var(--gedempt); transform: translateX(-50%); }
+  .tip { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 13px; color: var(--zacht); line-height: 1.5; }
+  .film { position: relative; height: 170px; border-radius: 18px; overflow: hidden; background: linear-gradient(160deg, #1d3354, #0f1a2e); display: grid; place-items: center; }
+  .film .speel { width: 64px; height: 64px; border-radius: 50%; background: rgba(255, 255, 255, 0.92); display: grid; place-items: center; }
+  .film .speel::after { content: ''; margin-left: 5px; border-left: 20px solid var(--inkt); border-top: 12px solid transparent; border-bottom: 12px solid transparent; }
+  .film .titel { position: absolute; left: 14px; bottom: 12px; font-size: 13px; font-weight: 600; color: var(--zacht); }
+  [data-stand] { display: none !important; }
+  body[data-toon='welkom'] [data-stand='welkom'], body[data-toon='huis'] [data-stand='huis'], body[data-toon='warmte'] [data-stand='warmte'], body[data-toon='comfort'] [data-stand='comfort'], body[data-toon='klaar'] [data-stand='klaar'], body[data-toon='zon'] [data-stand='zon'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="scherm lucht lucht-dag">
+  <div class="boven">
+    <span class="logo"></span><b>Smart Climate</b>
+    <div class="stappen" id="stappen"></div>
+  </div>
+  <div class="podium" id="podium"></div>
+
+  <!-- Welkom. -->
+  <section class="glas kaart" data-stand="welkom">
+    <span class="klein">Welkom</span>
+    <h1 class="kop-1" style="font-size: 40px">Laten we je huis neerzetten</h1>
+    <p class="lead">Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Het duurt een minuut of vijf.</p>
+    <div class="gevonden">
+      <span><b>4</b>etages</span><span><b>10</b>ruimtes</span>
+      <span><b>48</b>apparaten</span><span><b>3</b>om te verwarmen of koelen</span>
+    </div>
+    <div class="tip">Er verandert niets in Home Assistant. Smart Climate kijkt eerst mee en zegt wat het zou doen.</div>
+    <div class="onder"><span class="knop-groot">Begin</span></div>
+  </section>
+
+  <!-- Je huis. -->
+  <section class="glas kaart" data-stand="huis">
+    <span class="klein">Stap 1 · Je huis</span>
+    <h1 class="kop-2" style="margin: 0">Klopt je huis?</h1>
+    <p class="lead" style="font-size: 15px">De ruimtes uit Home Assistant, per etage. Tik op een kamer om hem te hernoemen of te verplaatsen.</p>
+    <div>
+      <div class="rij"><b>Zolder</b><div class="chips"><span class="chip">Slaapkamer</span><span class="chip">Wasruimte</span><span class="chip plus">+</span></div></div>
+      <div class="rij"><b>1e verdieping</b><div class="chips"><span class="chip">Badkamer</span><span class="chip">Hobbykamer</span><span class="chip">Slaapkamer</span><span class="chip">Kinderkamer</span><span class="chip plus">+</span></div></div>
+      <div class="rij"><b>Begane grond</b><div class="chips"><span class="chip">Woonkamer</span><span class="chip">Hal</span><span class="chip plus">+</span></div></div>
+      <div class="rij"><b>Buiten</b><div class="chips"><span class="chip">Achtertuin</span><span class="chip">Oprit</span><span class="chip plus">+</span></div></div>
+    </div>
+    <div class="tip">Een open keuken en zithoek zijn één kamer. Een deur ertussen maakt twee kamers.</div>
+    <div class="onder"><span class="later">Terug</span><span class="knop-groot">Klopt</span></div>
+  </section>
+
+  <!-- Verwarmen en koelen. -->
+  <section class="glas kaart" data-stand="warmte">
+    <span class="klein">Stap 3 · Verwarmen en koelen</span>
+    <h1 class="kop-2" style="margin: 0">Wat verwarmt en koelt er?</h1>
+    <p class="lead" style="font-size: 15px">Wat groen is, vond Smart Climate al. Vul aan wat er nog hangt; met de hand is ook goed.</p>
+    <div>
+      <div class="rij"><b>Woonkamer</b><div class="chips"><span class="chip ok">✓ Airco</span><span class="chip ok">✓ Cv met thermostaat</span><span class="chip ok">✓ Radiatorknop</span></div></div>
+      <div class="rij"><b>Badkamer</b><div class="chips"><span class="chip ok">✓ Thermostaat badkamer</span><span class="chip">Wat hangt eraan? ▾</span></div></div>
+      <div class="rij"><b>Zolder</b><div class="chips"><span class="chip ok">✓ Airco</span></div></div>
+      <div class="rij"><b>Hobbykamer</b><div class="chips"><span class="chip plus">+ Iets toevoegen</span></div></div>
+      <div class="rij"><b>Slaapkamers</b><div class="chips"><span class="chip niets">niets, dat is goed</span></div></div>
+    </div>
+    <div class="onder"><span class="later">Later</span><span class="knop-groot">Volgende</span></div>
+  </section>
+
+  <!-- Comfort. -->
+  <section class="glas kaart" data-stand="comfort">
+    <span class="klein">Stap 4 · Comfort</span>
+    <h1 class="kop-2" style="margin: 0">Hoe warm wil je het?</h1>
+    <p class="lead" style="font-size: 15px">Eén keer voor het hele huis. Per kamer en per dagdeel kan later bij Comfort.</p>
+    <div class="schuif"><div class="baan"></div><div class="goed" style="left: 42.9%; width: 14.3%"></div><span class="greep" style="left: 42.9%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 57.1%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 42.9%">20°</span><span class="maat" style="left: 57.1%">22°</span><span class="maat" style="left: 100%">28°</span></div>
+    <div class="rij"><b>Overdag</b><div class="chips"><span class="chip">warm onder 20°, koel boven 22°</span></div></div>
+    <div class="rij"><b>'s Nachts</b><div class="chips"><span class="chip aan">2° koeler</span><span class="chip">Hetzelfde</span><span class="chip">Uit</span></div></div>
+    <div class="rij"><b>De dag</b><div class="chips"><span class="chip">van 7:00</span><span class="chip">tot 22:00</span></div></div>
+    <div class="onder"><span class="later">Later</span><span class="knop-groot">Volgende</span></div>
+  </section>
+
+  <!-- Zon en energie. -->
+  <section class="glas kaart" data-stand="zon">
+    <span class="klein">Stap 5 · Zon en energie</span>
+    <h1 class="kop-2" style="margin: 0">Je panelen en je aansluiting</h1>
+    <p class="lead" style="font-size: 15px">Wat Smart Climate al vond, staat er. Weet je iets niet, dan kan het later; het huis werkt toch.</p>
+    <div>
+      <div class="rij"><b>Panelen</b><div class="chips"><span class="chip ok">✓ 12 panelen, 4,8 kWp</span><span class="chip">dak op het zuiden ▾</span></div></div>
+      <div class="rij"><b>Hoofdzekering</b><div class="chips"><span class="chip aan">1 × 35 A</span><span class="chip">3 × 25 A</span><span class="chip">anders</span><span class="chip">weet ik niet</span></div></div>
+      <div class="rij"><b>Meters</b><div class="chips"><span class="chip ok">✓ slimme meter</span><span class="chip ok">✓ gas</span></div></div>
+      <div class="rij"><b>Stroomprijs</b><div class="chips"><span class="chip">€ ___ per kWh</span><span class="chip">weet ik niet</span></div></div>
+      <div class="rij"><b>Verwarming</b><div class="chips"><span class="chip aan">Cv-ketel</span><span class="chip">Warmtepomp</span><span class="chip">Stadsverwarming</span></div></div>
+    </div>
+    <div class="tip">De stroomprijs staat op je jaarafrekening of in de app van je leverancier. Zonder prijs rekent Opbrengst in kWh, niet in euro.</div>
+    <div class="onder"><span class="later">Later</span><span class="knop-groot">Volgende</span></div>
+  </section>
+
+  <!-- Klaar: het filmpje, daarna de rondleiding. -->
+  <section class="glas kaart" data-stand="klaar">
+    <span class="klein">Klaar</span>
+    <h1 class="kop-1" style="font-size: 40px">Je huis staat erin</h1>
+    <p class="lead">Smart Climate kijkt vanaf nu mee. Zo leert het je huis kennen:</p>
+    <div class="film"><span class="speel"></span><span class="titel">Hoe je huis leert · 1 minuut</span></div>
+    <div class="tip">Daarna laten we je de app zien, in zeven stops van een paar seconden. Overslaan kan altijd; terugkijken bij het vraagteken op Thuis.</div>
+    <div class="tip" style="background: rgba(247, 181, 72, 0.06); border: 1px solid rgba(247, 181, 72, 0.25)">Nog 2 dingen voor later: de stroomprijs en wat er in de hobbykamer hangt. Ze staan bij Instellingen, onder Nog te doen.</div>
+    <div class="onder"><span class="later">Overslaan</span><span class="knop-groot">Speel af</span></div>
+  </section>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#huis': 'huis', '#warmte': 'warmte', '#comfort': 'comfort', '#klaar': 'klaar', '#zon': 'zon' }[location.hash] ?? 'welkom';
+  document.body.dataset.toon = toon;
+  const STAPPEN = ['Je huis', 'Apparaten', 'Verwarmen en koelen', 'Comfort', 'Zon en energie'];
+  const nu = { welkom: -1, huis: 0, warmte: 2, comfort: 3, zon: 4, klaar: 5 }[toon];
+  document.getElementById('stappen').innerHTML = STAPPEN.map((s, i) => `<span class="stap ${i < nu ? 'klaar' : i === nu ? 'nu' : ''}"><i>${i < nu ? '✓' : i + 1}</i>${i === nu || STAPPEN.length < 6 ? s : ''}</span>`).join('');
+  // Het huis groeit met de stappen: eerst alleen de grond, dan de kamers, dan wat erin hangt.
+  const leeg = toon === 'welkom';
+  const met = ['warmte', 'comfort', 'zon', 'klaar'].includes(toon);
+  const stand = toon === 'comfort' || toon === 'klaar';
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Je huis, zoals het tijdens het inrichten groeit.',
+    tijd: 'dag',
+    zon: { stand: 0.6, hoogte: 0.8, aandeel: ['zon', 'klaar'].includes(toon) ? 0.6 : 0, panelen: ['zon', 'klaar'].includes(toon) ? 12 : 0 },
+    wolken: 0.2,
+    etages: leeg
+      ? [{ kamers: [{ naam: '', stil: true, apparaten: [] }] }, { kamers: [{ naam: '', stil: true, apparaten: [] }] }, { dak: true, kamers: [{ naam: '', stil: true, apparaten: [] }] }]
+      : [
+          { naam: 'Begane grond', kamers: [
+            { naam: 'Woonkamer', gewicht: 1.5, stil: !stand, temp: stand ? '20,8°' : null, stand: stand ? 'goed' : null, apparaten: met ? [{ soort: 'airco' }, { soort: 'radiator' }, { soort: 'bank' }] : [{ soort: 'bank' }] },
+            { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] },
+          ] },
+          { naam: '1e verdieping', kamers: [
+            { naam: 'Badkamer', stil: !stand, temp: stand ? '20,5°' : null, stand: stand ? 'goed' : null, apparaten: met ? [{ soort: 'vloer', aan: true }] : [] },
+            { naam: 'Hobbykamer', stil: true, apparaten: [] },
+            { naam: 'Slaapkamer', stil: true, apparaten: [] },
+            { naam: 'Kinderkamer', stil: true, apparaten: [] },
+          ] },
+          { dak: true, kamers: [{ naam: 'Zolder', stil: !stand, temp: stand ? '21,4°' : null, stand: stand ? 'goed' : null, apparaten: met ? [{ soort: 'airco' }, { soort: 'droger' }] : [] }] },
+        ],
+    buitenunit: met ? { aan: false } : null,
+    net: !leeg,
+  }, { breedte: 760, hoogte: 700, marge: 0.08, schuifX: 10, schuifY: 10 });
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Hoe je huis leert (filmpje)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Het filmpje (schets, 14 oktober 2026), als draaiboek: vier beelden van een
+   * minuut. Geen videobestand: het is je eigen huis, getekend door de app, en
+   * de tijd loopt door. Tussen de beelden schuift de lucht en gaat het licht
+   * aan; de tekst komt onderin. Zonder beweging (instelling van het apparaat)
+   * zie je de vier beelden als plaatjes met Volgende. Altijd over te slaan.
+   */
+  main { padding: 26px 28px; display: flex; flex-direction: column; gap: 16px; height: 800px; box-sizing: border-box; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .beelden { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; min-height: 0; }
+  .beeld { position: relative; border-radius: 24px; overflow: hidden; border: 1px solid var(--glas-rand); display: flex; flex-direction: column; }
+  .beeld .lucht { position: absolute; inset: 0; }
+  .beeld .podium { position: relative; flex: 1; min-height: 0; }
+  .beeld .tekst { position: relative; padding: 14px 16px 16px; background: linear-gradient(180deg, transparent, rgba(6, 12, 22, 0.85) 30%); }
+  .beeld .tijdcode { font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .beeld h2 { margin: 2px 0 4px; font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .beeld p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--zacht); }
+  .leren { position: absolute; left: 14px; right: 14px; top: 18px; padding: 12px 14px; border-radius: 16px; background: rgba(9, 15, 28, 0.75); border: 1px solid var(--glas-rand); }
+  .leren b { font-size: 13px; }
+  .leren svg { display: block; margin-top: 6px; }
+  .balk2 { display: flex; align-items: center; gap: 14px; }
+  .voortgang { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+  .voortgang i { display: block; width: 38%; height: 100%; background: var(--tekst); }
+  .balk2 .pil { height: 38px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-nacht" style="grid-template-columns: 1fr">
+  <main>
+    <div class="kopregel">
+      <div><span class="mini">Draaiboek, 1 minuut</span><h1 class="kop-1" style="font-size: 40px; margin-top: 4px">Hoe je huis leert</h1></div>
+      <span class="mini" style="max-width: 46ch; text-align: right">Je eigen huis, met je eigen kamers. Getekend door de app, dus geen video om te laden.</span>
+    </div>
+    <div class="beelden">
+      <section class="beeld"><div class="lucht lucht-nacht"></div><div class="podium" id="b1"></div>
+        <div class="tekst"><span class="tijdcode">0:00 · nacht</span><h2>Dit is je huis</h2><p>Elke kamer, elk apparaat. Smart Climate kijkt de hele dag mee.</p></div></section>
+      <section class="beeld"><div class="lucht lucht-dag"></div><div class="podium" id="b2"></div>
+        <div class="tekst"><span class="tijdcode">0:12 · middag</span><h2>Zon over? Dan koelt de zolder</h2><p>Op stroom van je eigen dak, in plaats van later van het net.</p></div></section>
+      <section class="beeld"><div class="lucht lucht-avond"></div><div class="podium" id="b3"></div>
+        <div class="tekst"><span class="tijdcode">0:26 · avond</span><h2>Op tijd warm</h2><p>De badkamer is warm als je hem nodig hebt. Het huis zegt bij elk besluit waarom.</p></div></section>
+      <section class="beeld"><div class="lucht lucht-ochtend"></div><div class="podium" id="b4"></div>
+        <div class="leren"><b>Hoe snel de woonkamer warm wordt</b>
+          <svg viewBox="0 0 240 80" width="100%" height="80" aria-hidden="true">
+            <path d="M8 70 C 60 66, 90 40, 232 14" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="2" stroke-dasharray="3 5"/>
+            <path d="M8 70 C 50 60, 70 30, 232 22" fill="none" stroke="#6ee7b7" stroke-width="2.5"/>
+            <text x="8" y="12" font-family="Figtree" font-size="11" fill="#8a9bb0">dag 1: een gok</text>
+            <text x="150" y="40" font-family="Figtree" font-size="11" fill="#6ee7b7">dag 30: weet het</text>
+          </svg></div>
+        <div class="tekst"><span class="tijdcode">0:40 · elke dag</span><h2>Elke dag een beetje slimmer</h2><p>Na 30 winterdagen weet het hoe je huis warm en koel wordt. Dan kan het zelf regelen.</p></div></section>
+    </div>
+    <div class="balk2"><span class="pil">❚❚</span><div class="voortgang"><i></i></div><span class="pil">Overslaan</span></div>
+  </main>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const kamers = (o) => [
+    { naam: 'Begane grond', kamers: [{ naam: 'Woonkamer', gewicht: 1.5, stil: true, stand: o.woon, apparaten: [{ soort: 'airco' }, { soort: 'radiator', aan: o.cv }, { soort: 'lamp', aan: o.licht, x: 0.4 }] }, { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] }] },
+    { naam: '1e verdieping', kamers: [{ naam: 'Badkamer', stil: true, stand: o.bad, apparaten: [{ soort: 'vloer', aan: o.vloer }] }, { naam: 'Slaapkamer', gewicht: 1.4, stil: true, apparaten: [{ soort: 'lamp', aan: o.licht, x: 0.5 }] }] },
+    { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: o.zolder, apparaten: [{ soort: 'airco', aan: o.koel }, { soort: 'droger', aan: o.droger }] }] },
+  ];
+  const maat = { breedte: 290, hoogte: 420, marge: 0.06 };
+  huis.teken(document.getElementById('b1'), { tijd: 'nacht', zon: { aandeel: 0, panelen: 12 }, etages: kamers({}), net: true }, maat);
+  huis.teken(document.getElementById('b2'), { tijd: 'dag', zon: { stand: 0.55, hoogte: 0.9, aandeel: 0.85, panelen: 12 }, etages: kamers({ koel: true, droger: true, zolder: 'koelt' }), buitenunit: { aan: true }, net: true, stromen: [{ van: 'zon', naar: 'kamer:Zolder', sterkte: 0.7 }] }, maat);
+  huis.teken(document.getElementById('b3'), { tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, etages: kamers({ vloer: true, licht: true, bad: 'warmt' }), net: true }, maat);
+  huis.teken(document.getElementById('b4'), { tijd: 'ochtend', zon: { stand: 0.2, hoogte: 0.3, aandeel: 0.2, panelen: 12 }, etages: kamers({ cv: true, woon: 'warmt' }), net: true }, maat);
+</script>
+</body>
+</html>

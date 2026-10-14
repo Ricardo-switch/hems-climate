@@ -160,7 +160,8 @@ function tekenNu() {
   $$('[data-zin]').forEach((el) => (el.textContent = kamer.status?.zin ?? (kamer.lampenAan ? `${kamer.lampenAan === 1 ? 'Eén lamp' : `${kamer.lampenAan} lampen`} aan.` : '')));
   document.title = `${kamer.naam} · Smart Climate`;
 
-  const etages = (huisData.etages ?? []).filter((e) => (e.ruimtes ?? []).length);
+  // Naast elkaar van beneden naar boven, buiten achteraan (besluit 131).
+  const etages = huismodel.etagesNaast(huisData.etages).filter((e) => (e.ruimtes ?? []).length);
   $$('[data-etages]').forEach((el) => {
     el.innerHTML = etages.map((e) => `<button type="button" data-etage="${esc(e.id)}" aria-pressed="${e.id === etage.id}">${esc(e.naam)}</button>`).join('');
   });

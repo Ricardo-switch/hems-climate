@@ -78,7 +78,7 @@ function licht() {
   return `<h2 class="kop-2">Licht en screens</h2>
     ${mag ? `<span class="veldnaam">Licht en scènes</span>${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.licht.bedienen)}` : ''}
     ${schermMag ? `<span class="veldnaam">Screens en zonnescherm</span>${keuzes('Schermen bedienen', 'schermenAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.schermen.bedienen)}` : ''}
-    <p class="mini">${mag || schermMag ? 'Met je inlog. Bedienen doe je in het huis, bij de kamer.' : 'Deze installatie staat bedienen in de app niet toe; je ziet wel wat er aan staat. Aanzetten gaat op de NAS, met HEMS_LIGHTS.'}</p>`;
+    <p class="mini">${mag || schermMag ? 'Met je inlog. Bedienen doe je in het huis, bij de kamer.' : 'Deze installatie staat bedienen in de app niet toe; je ziet wel wat er aan staat. Wie Smart Climate installeerde, kan het aanzetten.'}</p>`;
 }
 
 function weer() {

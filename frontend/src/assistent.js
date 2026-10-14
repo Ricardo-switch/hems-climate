@@ -122,10 +122,15 @@ function grafiek(item) {
   const lijn = punten.map((p, i) => `${i ? 'L' : 'M'} ${x(p.t).toFixed(1)} ${y(p.c).toFixed(1)}`).join(' ');
   const band = z.goed.vanC != null && z.goed.totC != null ? `<rect x="10" y="${y(z.goed.totC).toFixed(1)}" width="450" height="${(y(z.goed.vanC) - y(z.goed.totC)).toFixed(1)}" fill="#6EE7B7" opacity="0.08"/>` : '';
   const laatste = punten.at(-1);
-  return `<section class="glas grafiek"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">De ${esc(z.naam.toLowerCase())} vandaag</h2><span class="mini">${z.goed.vanC != null && z.goed.totC != null ? `${nl(z.goed.vanC, 0)} tot ${nl(z.goed.totC, 0)}° is goed` : ''}</span></div>
-    <svg viewBox="0 0 470 120" role="img" aria-label="De temperatuur van de ${esc(z.naam.toLowerCase())} vandaag">
+  // Het label bij het laatste punt: rechts ervan, of links als het anders buiten de grafiek valt (besluit 131).
+  const lx = x(laatste.t);
+  const links = lx > 470 - 104;
+  const label = `<text x="${(links ? lx - 8 : lx + 8).toFixed(1)}" y="${(y(laatste.c) + (links ? -9 : 4)).toFixed(1)}" text-anchor="${links ? 'end' : 'start'}" font-family="Figtree" font-size="12" fill="#B8C4CF">${nl(laatste.c)}° om ${klokVan(laatste.t)}</text>`;
+  const kamerNaam = huismodel.zoneNaam(item.kamerId, huisData);
+  return `<section class="glas grafiek"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">${esc(huismodel.metHoofdletter(kamerNaam))} vandaag</h2><span class="mini">${z.goed.vanC != null && z.goed.totC != null ? `${nl(z.goed.vanC, 0)} tot ${nl(z.goed.totC, 0)}° is goed` : ''}</span></div>
+    <svg viewBox="0 0 470 120" role="img" aria-label="De temperatuur in ${esc(kamerNaam)} vandaag">
       ${band}<path d="${lijn}" fill="none" stroke="#EEF3F7" stroke-width="2.2"/>
-      <circle cx="${x(laatste.t).toFixed(1)}" cy="${y(laatste.c).toFixed(1)}" r="4" fill="#EEF3F7"/><text x="${(x(laatste.t) + 8).toFixed(1)}" y="${(y(laatste.c) + 4).toFixed(1)}" font-family="Figtree" font-size="12" fill="#B8C4CF">${nl(laatste.c)}° om ${klokVan(laatste.t)}</text>
+      <circle cx="${lx.toFixed(1)}" cy="${y(laatste.c).toFixed(1)}" r="4" fill="#EEF3F7"/>${label}
       <g font-family="Figtree" font-size="11" fill="#7F8E9C">${[0, 6, 12, 18, 24].map((u) => `<text x="${x(t0 + u * 3_600_000).toFixed(1)}" y="116" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('')}</g>
     </svg></section>`;
 }
@@ -164,7 +169,7 @@ function tekenHuis() {
   const top = etages.at(-1);
   // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het hier.
   if (top && (huisData.dakEtage !== undefined ? top.id === huisData.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
-  const model = { beschrijving: kamer ? `Het huis, met de ${huismodel.zoneNaam(kamer)} uitgelicht.` : 'Het huis.', tijd: app.tijdVanDeDag(zon), zon: zon?.dag ? { stand: zon.dag.fractie, aandeel: 0.4 } : { aandeel: 0 }, etages };
+  const model = { beschrijving: kamer ? `Het huis, met ${huismodel.zoneNaam(kamer, huisData)} uitgelicht.` : 'Het huis.', tijd: app.tijdVanDeDag(zon), zon: zon?.dag ? { stand: zon.dag.fractie, aandeel: 0.4 } : { aandeel: 0 }, etages };
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 620, hoogte: 580, marge: 0.06 });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.04 });
 }

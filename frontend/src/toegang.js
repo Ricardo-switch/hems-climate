@@ -12,7 +12,7 @@ let health = null;
 let zon = null;
 
 async function laadAlles() {
-  const [s, g, h, z] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/health'), haal('api/zon')]);
+  const [s, g, h, z] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/versie'), haal('api/zon')]);
   if (s.status === 'fulfilled') sessie = s.value;
   if (g.status === 'fulfilled') gegevens = g.value;
   if (h.status === 'fulfilled') health = h.value;
@@ -25,7 +25,7 @@ function delen() {
   return [
     { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
     { id: 'gegevens', titel: 'Je gegevens', zin: gegevens?.bestanden != null ? `${gegevens.bestanden} dagen bewaard` : '…', stand: gegevens ? 'goed' : null },
-    { id: 'versie', titel: 'Versie', zin: health?.versie?.commit ?? '…', stand: health ? 'goed' : null },
+    { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
   ];
 }
 
@@ -45,23 +45,31 @@ function gegevensVorm() {
   const g = gegevens;
   const mb = g?.bytes != null ? nl(g.bytes / 1_000_000, 0) : null;
   return `<h2 class="kop-2">Je gegevens</h2>
-    <p class="klein" style="margin: 0">Wat het huis meet en besluit, staat op je eigen NAS, één bestand per dag. ${g?.bestanden != null ? `Nu ${g.bestanden} dagen${mb ? `, samen ${mb} MB` : ''}.` : ''}</p>
+    <p class="klein" style="margin: 0">Wat het huis meet en besluit, blijft bij jou thuis, op de plek waar Smart Climate draait: één bestand per dag. ${g?.bestanden != null ? `Nu ${g.bestanden} dagen${mb ? `, samen ${mb} MB` : ''}.` : ''}</p>
     ${g?.bestanden ? '<a class="knop knop-licht" href="api/export" download style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Alles downloaden</a>' : ''}
     <p class="mini" style="margin: 0">Er gaat niets naar buiten. Alleen het weer vraagt de dienst op bij Open-Meteo, met je ligging op ongeveer tien kilometer.</p>`;
 }
 
+/** De versie en wat er nieuw is (besluit 131). */
 function versieVorm() {
-  const v = health?.versie;
-  const gebouwd = v?.gebouwd ? new Date(v.gebouwd).toLocaleString('nl-NL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : null;
-  return `<h2 class="kop-2">Versie</h2>
-    <p class="klein" style="margin: 0">${v ? `Versie <b>${esc(v.commit)}</b>${gebouwd ? `, van ${esc(gebouwd)}` : ''}.` : 'Onbekend.'}</p>
-    <p class="mini" style="margin: 0">Een nieuwe versie komt vanzelf: de NAS haalt hem op zodra hij klaar en getest is.</p>`;
+  const v = health;
+  if (!v?.nummer) return '<h2 class="kop-2">Versie</h2><p class="klein" style="margin: 0">Onbekend.</p>';
+  const gebouwd = v.gebouwd ? new Date(v.gebouwd).toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  const dag = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+  const nieuw = (v.nieuw ?? []).slice(0, 3).map((n) => `<div class="nieuw"><b>Versie ${esc(n.versie)}</b><span class="mini">${esc(dag(n.datum))}</span><ul>${n.punten.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+  const komt = v.installatie === 'add-on'
+    ? 'Een nieuwe versie zie je in Home Assistant, bij Add-ons. Daar werk je hem bij.'
+    : 'Een nieuwe versie komt op de server waar Smart Climate draait. Werkt die vanzelf bij, dan hoef je niets te doen.';
+  return `<h2 class="kop-2">Versie ${esc(v.nummer)}</h2>
+    <p class="klein" style="margin: 0">${gebouwd ? `Gebouwd op ${esc(gebouwd)}. ` : ''}${esc(komt)}</p>
+    ${nieuw ? `<h3 class="kop-3" style="margin: 6px 0 0">Wat is er nieuw</h3>${nieuw}` : ''}
+    <p class="mini" style="margin: 0">Bouw ${esc(v.commit)}</p>`;
 }
 
 const NAAST = {
   inloggen: ['Waarom inloggen', ['Kijken kan iedereen op je eigen netwerk', 'Bedienen vraagt je Home Assistant-account', 'De tablet aan de muur logt één keer in']],
   gegevens: ['Waarvoor je gegevens zijn', ['Terugkijken bij Vandaag en Opbrengst', 'Het bewijs dat het huis het goed zou doen, voordat het zelf regelt', 'Later: het thermisch model, dat leert hoe elke kamer opwarmt']],
-  versie: ['Zo blijft het bij', ['Elke versie wordt eerst getest', 'Daarna haalt de NAS hem vanzelf op']],
+  versie: ['Hoe de nummers werken', ['Het derde getal gaat omhoog bij een reparatie', 'Het tweede bij iets nieuws', 'Versie 1.0 is de dag dat het huis zelf regelt', 'Elke versie wordt eerst getest']],
 };
 
 function tekenNu() {

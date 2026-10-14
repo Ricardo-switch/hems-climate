@@ -19,6 +19,7 @@
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { SiteConfig } from '../core/model.js';
 
 export const LAYOUT_FILE = 'indeling.json';
 
@@ -305,6 +306,41 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     ok: true,
     layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}) },
   };
+}
+
+/**
+ * Eén naam per kamer (besluit 131): wat de app laat zien, heet zoals in de
+ * indeling. Een zone krijgt de naam van de kamer die hem regelt, een apparaat
+ * de naam die de bewoner het in de app gaf, en de zones staan in de volgorde
+ * van het huis. Alleen voor wat de app laat zien; de regeling zelf rekent met
+ * de id's.
+ */
+export function withLayoutNames(config: SiteConfig, layout: Pick<Layout, 'kamers' | 'apparaten' | 'volgorde'> | null): SiteConfig {
+  if (layout == null) return config;
+  let anders = false;
+  // In de volgorde van het huis, de zolder boven: zo staan ze ook in lijsten onder elkaar.
+  const etages = floorOrder(layout);
+  const plek = (zoneId: string) => {
+    const kamer = layout.kamers.find((k) => k.regelzone === zoneId);
+    if (!kamer) return Number.MAX_SAFE_INTEGER;
+    const e = etages.indexOf(kamer.etage);
+    return (e === -1 ? etages.length : e) * 1000 + layout.kamers.indexOf(kamer);
+  };
+  const volgorde = [...config.zones].sort((a, b) => plek(a.id) - plek(b.id));
+  if (volgorde.some((z, i) => z !== config.zones[i])) anders = true;
+  const zones = volgorde.map((z) => {
+    const naam = layout.kamers.find((k) => k.regelzone === z.id)?.naam.trim();
+    if (!naam || naam === z.name) return z;
+    anders = true;
+    return { ...z, name: naam };
+  });
+  const actuators = config.actuators.map((a) => {
+    const naam = layout.apparaten[a.id]?.naam?.trim();
+    if (!naam || naam === a.name) return a;
+    anders = true;
+    return { ...a, name: naam };
+  });
+  return anders ? { ...config, zones, actuators } : config;
 }
 
 export interface LayoutStoreOptions {

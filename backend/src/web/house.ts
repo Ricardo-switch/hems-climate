@@ -589,7 +589,7 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   const laatste: 'open' | 'dicht' | null = !terugmelding && state?.state === 'open' ? 'open' : !terugmelding && state?.state === 'closed' ? 'dicht' : null;
   const scherm = { terugmelding, standKiezen: terugmelding && (features & COVER_SET_POSITION) !== 0, ...(zonnescherm ? { zonnescherm } : {}), ...(laatste ? { laatste } : {}) };
   let stand: string;
-  if (state == null || state.state === 'unavailable') stand = 'onbekend';
+  if (state == null || state.state === 'unavailable') stand = 'geen verbinding';
   else if (!terugmelding) stand = laatste ? standNaOpdracht(laatste, zonnescherm) : 'zonder terugmelding';
   else if (state.state === 'opening') stand = zonnescherm ? 'vouwt uit' : 'gaat open';
   else if (state.state === 'closing') stand = zonnescherm ? 'klapt in' : 'gaat dicht';
@@ -650,7 +650,8 @@ const APPLIANCE_WORD: Readonly<Record<string, string>> = {
   would_start: 'zou nu starten',
   waiting: 'klaargezet',
   not_ready: 'uit',
-  unknown: 'onbekend',
+  // Nog geen melding van het apparaat: dat is iets anders dan kapot (besluit 131).
+  unknown: 'meldt nog niets',
 };
 
 /** Een uitstelbaar apparaat (besluit 98): de droger, met zijn stand van nu. */
@@ -660,7 +661,7 @@ function applianceOf(id: string, name: string, state: string | undefined): House
     naam: name,
     haNaam: name,
     soort: 'apparaat',
-    stand: APPLIANCE_WORD[state ?? 'unknown'] ?? 'onbekend',
+    stand: APPLIANCE_WORD[state ?? 'unknown'] ?? 'meldt nog niets',
     aan: state === 'running',
     helderheidPct: null,
     positiePct: null,
@@ -925,7 +926,7 @@ function collect(
     const bezig = action === 'heating' || action === 'cooling';
     const doel = sp != null ? `doel ${nl1(sp)}°` : null;
     const stand = st == null || st.state === 'unavailable' || st.state === 'unknown'
-      ? 'onbekend'
+      ? 'geen verbinding'
       : st.state === 'off'
         ? 'uit'
         : [bezig ? (action === 'heating' ? 'verwarmt' : 'koelt') : 'staat klaar', doel].filter(Boolean).join(', ');

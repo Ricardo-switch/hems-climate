@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { LAYOUT_FILE, LayoutStore, floorOrder, validateLayout, type LayoutKnown } from '../src/web/layout.js';
+import { LAYOUT_FILE, LayoutStore, floorOrder, validateLayout, withLayoutNames, type LayoutKnown } from '../src/web/layout.js';
+import { exampleSite } from './site.js';
 
 const known: LayoutKnown = {
   deviceIds: new Set(['nest', 'light.sfeerverlichting', 'cover.screen']),
@@ -209,5 +210,31 @@ describe('de indeling bewaren', () => {
     const r = await store.save({ ...good, versie: 3 });
     expect(r.ok).toBe(false);
     await expect(readFile(join(d, LAYOUT_FILE), 'utf-8')).rejects.toThrow();
+  });
+});
+
+/* Eén naam per kamer (besluit 131): de app noemt een kamer zoals de indeling. */
+describe('de namen uit de indeling', () => {
+  const kamer = (id: string, naam: string, etage: string, regelzone: string | null) => ({ id, naam, etage, zones: [], regelzone, haGebied: null });
+  it('geeft een zone de naam van zijn kamer, en een apparaat zijn eigen naam', () => {
+    const layout = {
+      kamers: [kamer('k1', 'Beneden', 'bg', 'woonkamer'), kamer('k2', 'Wasruimte', 'e2', 'zolder'), kamer('k3', 'Badkamer', 'e1', 'badkamer')],
+      apparaten: { nest: { kamer: 'k1', zone: null, naam: 'Thermostaat' } },
+    };
+    const c = withLayoutNames(exampleSite, layout);
+    expect(c.zones.find((z) => z.id === 'woonkamer')?.name).toBe('Beneden');
+    expect(c.zones.find((z) => z.id === 'zolder')?.name).toBe('Wasruimte');
+    expect(c.actuators.find((a) => a.id === 'nest')?.name).toBe('Thermostaat');
+    // In de volgorde van het huis, de zolder boven.
+    expect(c.zones.map((z) => z.id)).toEqual(['zolder', 'badkamer', 'woonkamer']);
+    // De regeling zelf houdt zijn eigen configuratie.
+    expect(exampleSite.zones.find((z) => z.id === 'woonkamer')?.name).toBe('Woonkamer');
+  });
+
+  it('laat de configuratie zoals hij is zonder indeling, of als er niets anders is', () => {
+    expect(withLayoutNames(exampleSite, null)).toBe(exampleSite);
+    const zelfde = { kamers: exampleSite.zones.map((z, i) => kamer(`k${i}`, z.name, ['e2', 'e1', 'bg'][i] ?? 'bg', z.id)), apparaten: {} };
+    const volgorde = withLayoutNames(exampleSite, zelfde).zones.map((z) => z.id);
+    expect(volgorde.length).toBe(exampleSite.zones.length);
   });
 });
