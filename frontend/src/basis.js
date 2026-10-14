@@ -41,11 +41,13 @@
     if (!peil) {
       peil = document.createElement('div');
       peil.setAttribute('aria-hidden', 'true');
-      peil.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)';
+      peil.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
       document.documentElement.append(peil);
     }
     const s = getComputedStyle(peil);
-    return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0 };
+    // Boven en onder ook (besluit 129): op een liggende telefoon tekent de browser
+    // tot onder de balk met de veegstreep, en daar viel de onderkant van de wand weg.
+    return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0, t: parseFloat(s.paddingTop) || 0, b: parseFloat(s.paddingBottom) || 0 };
   }
 
   /**
@@ -81,14 +83,16 @@
     d.style.setProperty('--toetsschuif', '0px');
     d.classList.toggle('tel-stand', telStand());
     // Een liggende telefoon heeft een inkeping aan de zijkant: de wand blijft ernaast.
-    const { l, r } = inzet();
+    const { l, r, t, b } = inzet();
     const vrij = innerWidth - l - r;
+    const hoog = innerHeight - t - b;
     // Een breder scherm dan 16:10 (een tablet zonder de balken van het systeem):
     // de wand groeit mee in de breedte, de hoogte blijft 800. Zo vult hij het scherm.
-    const breed = Math.min(1700, Math.max(1280, Math.round((800 * vrij) / innerHeight)));
+    const breed = Math.min(1700, Math.max(1280, Math.round((800 * vrij) / hoog)));
     d.style.setProperty('--wandbreedte', `${breed}px`);
-    d.style.setProperty('--wandschaal', String(Math.min(vrij / breed, innerHeight / 800)));
+    d.style.setProperty('--wandschaal', String(Math.min(vrij / breed, hoog / 800)));
     d.style.setProperty('--wandmidden', `${(l - r) / 2}px`);
+    d.style.setProperty('--wandmiddenY', `${(t - b) / 2}px`);
   }
 
   async function haal(pad) {

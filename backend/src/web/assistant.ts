@@ -39,7 +39,7 @@ export type Lang = (typeof LANGS)[number];
 export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
-export type Wish = 'koelen' | 'verwarmen' | 'uit';
+export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit';
 
 export type Question =
   | { readonly kind: 'nu' }
@@ -108,6 +108,10 @@ const WISHES: Readonly<Record<string, Wish>> = {
   heat: 'verwarmen',
   uit: 'uit',
   off: 'uit',
+  // Drogen (besluit 129): een airco die de lucht droger maakt, zonder doel.
+  drogen: 'drogen',
+  droog: 'drogen',
+  dry: 'drogen',
 };
 
 export type Parsed =
@@ -139,7 +143,7 @@ export function parseQuestion(params: URLSearchParams): Parsed {
     case 'doe': {
       if (kamer === '') return { ok: false, reden: 'doe vraagt een kamer' };
       const wens = WISHES[(params.get('wens') ?? '').trim().toLowerCase()];
-      if (wens == null) return { ok: false, reden: 'wens moet koelen, verwarmen of uit zijn' };
+      if (wens == null) return { ok: false, reden: 'wens moet koelen, verwarmen, drogen of uit zijn' };
       const raw = (params.get('temperatuur') ?? '').trim().replace(',', '.');
       let temperatuurC: number | null = null;
       if (raw !== '') {
@@ -238,7 +242,7 @@ const WORDS = {
       vakantie: 'vakantie',
       handmatig: 'handmatig',
     } satisfies Record<Mode, string>,
-    wish: { koelen: 'koelen', verwarmen: 'verwarmen', uit: 'uit' } satisfies Record<Wish, string>,
+    wish: { koelen: 'koelen', verwarmen: 'verwarmen', drogen: 'drogen', uit: 'uit' } satisfies Record<Wish, string>,
     doing: { cool: 'koelt', heat: 'verwarmt' },
     infinitive: { cool: 'koelen', heat: 'verwarmen' },
     observed: {
@@ -288,7 +292,7 @@ const WORDS = {
       vakantie: 'holiday',
       handmatig: 'manual',
     } satisfies Record<Mode, string>,
-    wish: { koelen: 'cool', verwarmen: 'heat', uit: 'off' } satisfies Record<Wish, string>,
+    wish: { koelen: 'cool', verwarmen: 'heat', drogen: 'dry', uit: 'off' } satisfies Record<Wish, string>,
     doing: { cool: 'is cooling', heat: 'is heating' },
     infinitive: { cool: 'cool', heat: 'heat' },
     observed: {
@@ -837,6 +841,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
       }
 
       const heat = question.wens === 'verwarmen';
+      // Drogen kan wat kan koelen: een airco.
       const able = devices.filter((a) => (heat ? a.capabilities.canHeat : a.capabilities.canCool));
       // Verwarmen eerst met wat de basiswarmte levert; koelen kan alleen een airco.
       const device = able.find((a) => a.role === 'primary') ?? able[0];
@@ -850,7 +855,8 @@ export function ask(question: Question, ctx: AskContext): Answer {
       }
       const dn = deviceName(device, lang);
       let target = '';
-      if (question.temperatuurC != null) {
+      // Drogen heeft geen doel.
+      if (question.temperatuurC != null && question.wens !== 'drogen') {
         const [min, max] = device.capabilities.setpointRange;
         if (question.temperatuurC < min || question.temperatuurC > max) {
           const asked = f.temp('vraag.temperatuur', question.temperatuurC);

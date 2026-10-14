@@ -163,6 +163,15 @@ function tekenNu() {
     el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg><span>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}</span>`;
   });
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
+  // Een airco-filter onder de 10% (besluit 129): net als een batterij, met een tik naar de airco.
+  const vol = huisData?.filters ?? [];
+  $$('[data-filter]').forEach((el) => {
+    el.hidden = vol.length === 0;
+    if (!vol.length) return;
+    const f = vol[0];
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 12h10M7 15h10"/></svg><span>Filter schoonmaken: ${esc(f.naam)}, ${f.pct}%</span>`;
+    el.href = `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}`;
+  });
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });

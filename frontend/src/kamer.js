@@ -34,6 +34,8 @@ let bezig = false;
 const gewenst = new Map();
 function wens(id, w) {
   gewenst.set(id, { ...w, tot: Date.now() + (w.positiePct != null ? 120_000 : 8_000) });
+  // Meteen ook in wat er nu staat: anders tekent de volgende ronde de oude stand.
+  huisData = metWens(huisData);
 }
 function metWens(h) {
   if (!h || gewenst.size === 0) return h;
@@ -41,18 +43,27 @@ function metWens(h) {
   for (const e of h.etages ?? []) for (const k of e.ruimtes ?? []) for (const d of k.apparaten ?? []) {
     const w = gewenst.get(d.id);
     if (!w) continue;
+    // Al aangepast: alleen een verse stand van de dienst zegt of het klaar is.
+    if (d.gewenst) continue;
     const klaar = w.aan != null ? d.aan === w.aan : d.positiePct != null && Math.abs(d.positiePct - w.positiePct) <= 3;
     if (klaar || nu > w.tot) {
       gewenst.delete(d.id);
       continue;
     }
+    d.gewenst = true;
     if (w.aan != null) {
       d.aan = w.aan;
       d.stand = w.aan ? 'gaat aan' : 'gaat uit';
-    } else if (!['gaat open', 'gaat dicht', 'vouwt uit', 'klapt in'].includes(d.stand)) {
+    } else {
+      // Het doek op de gekozen stand (besluit 129): anders sprong hij terug naar open
+      // tot Home Assistant de nieuwe stand meldde.
       const z = d.scherm?.zonnescherm === true;
+      d.aan = z ? w.positiePct > 0 : w.positiePct < 100;
+      const was = d.positiePct;
+      d.positiePct = w.positiePct;
+      if (['gaat open', 'gaat dicht', 'vouwt uit', 'klapt in'].includes(d.stand)) continue;
       d.stand = z
-        ? w.positiePct >= (d.positiePct ?? 0) ? 'vouwt uit' : 'klapt in'
+        ? w.positiePct >= (was ?? 0) ? 'vouwt uit' : 'klapt in'
         : w.positiePct >= 100 ? 'gaat open' : w.positiePct <= 0 ? 'gaat dicht' : `gaat naar ${100 - w.positiePct}% dicht`;
     }
   }
@@ -214,7 +225,6 @@ function kamerBlad(k) {
   const apps = k.apparaten ?? [];
   const klimaat = apps.filter((d) => d.soort === 'klimaat' || d.soort === 'screen' || d.soort === 'apparaat');
   const lampen = apps.filter((d) => d.soort === 'licht');
-  const meters = apps.filter((d) => d.soort === 'meter');
   const cameras = apps.filter((d) => d.soort === 'camera');
   const bedienen = huisData.lichtBedienen === true;
   const rij = (d) => `<button type="button" class="rij${d.aan ? ' aan' : ''}" data-open="${esc(d.id)}">${icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${esc(standTekst(d))}</span></span><span class="chev" aria-hidden="true">›</span></button>`;
@@ -235,7 +245,7 @@ function kamerBlad(k) {
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
-    meters.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Meters</h3>${meters.map(rij).join('')}</div>` : '',
+    // Geen meters (besluit 129): welke sensoren meten kies je bij Indeling, en het gemiddelde staat bovenaan.
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
   ];
   return delen.join('');
@@ -350,13 +360,23 @@ function aircoBlad(k, d) {
     ${lucht}
   </svg>`;
   const kan = d.klimaat ?? { kanKoelen: true, kanVerwarmen: true };
-  const keuzes = [kan.kanKoelen ? ['Koelen', 'koelen'] : null, kan.kanVerwarmen ? ['Verwarmen', 'verwarmen'] : null, ['Uit', 'uit']].filter(Boolean);
+  const keuzes = [kan.kanKoelen ? ['Koelen', 'koelen'] : null, kan.kanVerwarmen ? ['Verwarmen', 'verwarmen'] : null, kan.kanDrogen ? ['Drogen', 'drogen'] : null, ['Uit', 'uit']].filter(Boolean);
   return `${kopVan(d, warm ? 'gloed-t' : d.aan ? 'ijs-t' : '')}
     <div class="beeld">${svg}</div>
     <div class="doelrij"><button type="button" class="rond" data-doel="-0.5" aria-label="Kouder">−</button><span class="mini">doel</span><button type="button" class="rond" data-doel="0.5" aria-label="Warmer">+</button></div>
     ${k.zoneId ? `<div class="keuze" role="group" aria-label="Wat zou het huis doen">${keuzes.map(([l, w]) => `<button type="button" data-wens="${w}">${l}</button>`).join('')}</div>` : '<p class="mini" style="margin: 0">Deze kamer heeft geen regeling; Smart Climate stuurt dit apparaat hier niet.</p>'}
     <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span data-gezegd>${esc(gezegd.get(d.id) ?? MEEKIJKEN)}</span></div>
+    ${filterRegel(d)}
     ${strookVandaag(d, kleur)}`;
+}
+
+/** Hoe lang het filter nog meegaat (besluit 129); onder 10% schoonmaken. */
+function filterRegel(d) {
+  const f = d.klimaat?.filter;
+  if (!f) return '';
+  const leeg = f.pct != null && f.pct < 10;
+  const wat = f.pct != null ? `${nl(f.pct, 0)}% over` : `nog ${nl(f.uren, 0)} uur`;
+  return `<div class="feit"><span>Filter</span><b style="${leeg ? 'color: var(--gloed)' : ''}">${leeg ? `schoonmaken, ${wat}` : wat}</b></div>`;
 }
 
 /*
@@ -630,9 +650,10 @@ function koppel(blad) {
     else if (t.hasAttribute('data-terug')) ga(kamer.id);
     else if (t.dataset.schakel) {
       const d = kamer.apparaten.find((x) => x.id === t.dataset.schakel);
-      t.setAttribute('aria-checked', String(!d?.aan));
-      wens(t.dataset.schakel, { aan: !d?.aan });
-      void licht({ doel: 'lamp', id: t.dataset.schakel, aan: !d?.aan });
+      const aan = !d?.aan;
+      t.setAttribute('aria-checked', String(aan));
+      wens(t.dataset.schakel, { aan });
+      void licht({ doel: 'lamp', id: t.dataset.schakel, aan });
     } else if (t.hasAttribute('data-alles-uit')) {
       for (const d of kamer.apparaten) if (d.soort === 'licht' && d.aan) wens(d.id, { aan: false });
       void licht({ doel: 'kamer', id: kamer.id, aan: false });

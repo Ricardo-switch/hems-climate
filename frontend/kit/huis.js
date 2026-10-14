@@ -108,6 +108,23 @@
 
   let uid = 0;
 
+  /**
+   * Een gekleurde lamp (besluit 129): drie tinten van zijn kleur, licht tot
+   * donker, voor de kap. Null voor wit licht (een hex-kleur).
+   */
+  function tintenVan(kleur) {
+    const m = /^hsl\((\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%/.exec(kleur ?? '');
+    if (!m) return null;
+    const h = Math.round(Number(m[1]));
+    const sat = Math.max(55, Math.min(100, Number(m[2])));
+    return [`hsl(${h} ${sat}% 80%)`, `hsl(${h} ${sat}% 66%)`, `hsl(${h} ${sat}% 54%)`];
+  }
+
+  /** De kleur van de eerste gekleurde lamp die brandt in een kamer, of null. */
+  function kleurlampVan(kamer) {
+    return (kamer.apparaten ?? []).find((a) => a.soort === 'lamp' && a.aan && tintenVan(a.kleur))?.kleur ?? null;
+  }
+
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -193,6 +210,18 @@
     const lucht = [];
     const grond = [];
     const huis = [];
+    /** Een kamer in de kleur van zijn gekleurde lamp, 's avonds (besluit 129): een verloop per kleur. */
+    const wassen = new Map();
+    function kleurWas(kamer) {
+      const kleur = kleurlampVan(kamer);
+      if (!kleur) return null;
+      if (!wassen.has(kleur)) {
+        const n = `k${wassen.size}`;
+        wassen.set(kleur, n);
+        huis.push(`<defs><linearGradient id="${id}-w-${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${kleur}" stop-opacity="0.3"/><stop offset="1" stop-color="${kleur}" stop-opacity="0.58"/></linearGradient></defs>`);
+      }
+      return wassen.get(kleur);
+    }
     const buiten = [];
     const stromen = [];
     const labels = [];
@@ -353,7 +382,7 @@
         const donker = nacht && !lampAan;
         if (x0 > 0) huis.push(poly([[x0, 0, zt], [x0, D, zt], [x0, D, dakZ(x0)], [x0, 0, dakZ(x0)]], `fill="${donker ? '#121a26' : '#3a4a60'}"`));
         huis.push(poly(stukGevel(x0, x1), `fill="${donker ? '#141c29' : kleurAchter(kamer)}"`));
-        const tint = (nacht || schemer) && lampAan ? 'lamp' : kamer.stand ?? 'rust';
+        const tint = (nacht || schemer) && lampAan ? kleurWas(kamer) ?? 'lamp' : kamer.stand ?? 'rust';
         if (!donker) huis.push(poly(stukGevel(x0, x1), `fill="url(#${id}-w-${tint})"`));
         huis.push(poly([[x0, 0, zt], [x1, 0, zt], [x1, D, zt], [x0, D, zt]], `fill="${donker ? '#0f151f' : '#1a2330'}"`));
         sfeer(kamer, x0, x1, zt, zt + R * 0.8);
@@ -604,7 +633,7 @@
       huis.push(poly([[x0, 0, z0], [x0, D, z0], [x0, D, z1], [x0, 0, z1]], `fill="${donker ? '#121a26' : '#3a4a60'}"`));
       huis.push(poly([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], `fill="${donker ? '#141c29' : '#33425a'}"`));
       const lampAan = (kamer.apparaten ?? []).some((a) => a.soort === 'lamp' && a.aan);
-      const tint = (nacht || schemer) && lampAan ? 'lamp' : kamer.stand ?? 'rust';
+      const tint = (nacht || schemer) && lampAan ? kleurWas(kamer) ?? 'lamp' : kamer.stand ?? 'rust';
       if (!donker) huis.push(poly([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]], `fill="url(#${id}-w-${tint})"`));
       huis.push(poly([[x0, 0, z0], [x1, 0, z0], [x1, D, z0], [x0, D, z0]], `fill="${donker ? '#0f151f' : `url(#${id}-vloer)`}"`));
       // Donkere hoeken waar muur en vloer elkaar raken.
@@ -787,16 +816,20 @@
         const top = Math.min(hoog(lx), z1);
         huis.push(line([[lx, ly, top], [lx, ly, top - 0.28]], 'stroke="#8090a0" stroke-width="1"'));
         blok(lx - 0.09, lx + 0.09, ly - 0.09, ly + 0.09, top - 0.36, top);
-        huis.push(doos(lx - 0.09, ly - 0.09, top - 0.36, 0.18, 0.18, 0.09, [app.aan ? '#FFE2B0' : '#5c6876', app.aan ? '#e8b878' : '#4a5664', app.aan ? '#d6a565' : '#3c4755']));
+        // Een gekleurde lamp (besluit 129): de kap in zijn kleur, en een sterkere gloed.
+        const tinten = app.aan ? tintenVan(app.kleur) : null;
+        const kap = tinten ?? (app.aan ? ['#FFE2B0', '#e8b878', '#d6a565'] : ['#5c6876', '#4a5664', '#3c4755']);
+        huis.push(doos(lx - 0.09, ly - 0.09, top - 0.36, 0.18, 0.18, 0.09, kap));
         if (app.aan) {
           const kleur = app.kleur ?? '#FFD9A0';
           const v = P(lx, ly, z0);
           const r = k * 0.62;
-          huis.push(`<ellipse cx="${v[0]}" cy="${v[1]}" rx="${r}" ry="${r * 0.5}" fill="${kleur}" opacity="0.22" filter="url(#${id}-zacht)"/>`);
+          huis.push(`<ellipse cx="${v[0]}" cy="${v[1]}" rx="${r}" ry="${r * 0.5}" fill="${kleur}" opacity="${tinten ? 0.4 : 0.22}" filter="url(#${id}-zacht)"/>`);
           const b = P(lx, ly, top - 0.36);
           const l1 = P(lx - 0.45, ly, z0 + 0.05);
           const r1 = P(lx + 0.45, ly, z0 + 0.05);
-          huis.push(`<polygon points="${b[0]},${b[1]} ${l1[0]},${l1[1]} ${r1[0]},${r1[1]}" fill="${kleur}" opacity="0.07"/>`);
+          huis.push(`<polygon points="${b[0]},${b[1]} ${l1[0]},${l1[1]} ${r1[0]},${r1[1]}" fill="${kleur}" opacity="${tinten ? 0.16 : 0.07}"/>`);
+          if (tinten) huis.push(`<circle cx="${b[0]}" cy="${b[1]}" r="${(k * 0.22).toFixed(1)}" fill="${kleur}" opacity="0.5" filter="url(#${id}-zacht)"/>`);
         }
       } else if (app.soort === 'droger' || app.soort === 'wasmachine' || app.soort === 'vaatwasser') {
         // In het midden en wat naar voren: rechts hangt de airco aan de

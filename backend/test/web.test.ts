@@ -1041,6 +1041,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
       verborgen: [],
       onvindbaar: [],
       batterijen: [],
+      filters: [],
     };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
@@ -1100,6 +1101,7 @@ describe('licht bedienen (besluit 97)', () => {
     verborgen: [],
     onvindbaar: [],
     batterijen: [],
+    filters: [],
   };
 
   async function withLights() {

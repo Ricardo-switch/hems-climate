@@ -551,6 +551,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await wand.locator('[data-scherm]').allTextContents()).toEqual(['Open', 'Half', '60%', 'Dicht']);
     await wand.locator('[data-scherm="stand:100"]').click({ timeout: 10_000 });
     await expect.poll(() => coverCalls.at(-1)).toBe('set_cover_position cover.screen 0');
+    // Home Assistant meldt de nieuwe stand hier nooit: het doek blijft toch dicht staan (besluit 129).
+    await p.waitForTimeout(1500);
+    expect(await wand.locator('[data-standtekst]').textContent()).toBe('100%');
     // De greep slepen: helemaal omhoog is open.
     const doek = wand.locator('[data-schermsleep]');
     const vak = (await doek.boundingBox())!;

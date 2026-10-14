@@ -443,8 +443,8 @@ const inHouse = (st: HaEntityState) =>
       st.attributes['device_class'] === 'humidity' ||
       // Batterijen (besluit 122): bij het apparaat, en een melding onder de 10%.
       st.attributes['device_class'] === 'battery' ||
-      // De klep van een radiatorknop (besluit 126).
-      /valve|klep/i.test(st.entity_id)));
+      // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
+      /valve|klep|filter/i.test(st.entity_id)));
 let houseRegisters: HouseRegisters | null = null;
 async function readHouseRegisters(): Promise<void> {
   const [floors, areas, devices, entities] = await Promise.all([

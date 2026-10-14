@@ -28,6 +28,9 @@
   .rechts { position: absolute; right: 26px; top: 96px; bottom: 108px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
   #wand .rechts > * { flex: none; }
   .kaart { padding: 18px 20px; }
+  /* Een kaart die ergens heen gaat (besluit 129): Vandaag naar de dag, Straks naar de assistent. */
+  a.kaartlink { display: block; color: inherit; text-decoration: none; cursor: pointer; }
+  a.kaartlink:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
   .straks { background: linear-gradient(160deg, rgba(143,134,255,0.16), rgba(111,211,255,0.06)); border-color: rgba(143,134,255,0.32); }
   .apparaatkaart { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; padding: 14px 18px; }
@@ -145,6 +148,7 @@
         <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
         <div class="chips">
           <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-wand" hidden></button>
+          <a class="pil batterijpil" href="#" data-filter hidden></a>
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs); text-decoration: none">Inrichten</a>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
@@ -161,16 +165,16 @@
       <span class="tik" data-tik hidden aria-hidden="true"></span>
       <div class="stappen" data-stappen hidden></div>
       <aside class="rechts schuift">
-        <section class="glas kaart">
+        <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken">
           <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
           <div data-dag></div>
           <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
-        </section>
-        <section class="glas kaart straks" data-straks hidden>
+        </a>
+        <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks hidden>
           <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 24px; height: 24px"></span><span class="klein">Straks</span></div>
           <h2 class="kop-2" style="margin-top: 10px" data-straks-kop></h2>
           <p class="klein" style="margin: 8px 0 0" data-straks-zin></p>
-        </section>
+        </a>
         <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart hidden></a>
         <section class="glas kaart" data-gevoel-kaart>
           <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
@@ -181,7 +185,7 @@
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
       <div class="dok">
-        <span class="bol adem" style="width: 46px; height: 46px"></span>
+        <a class="bol adem" href="assistent.html#nu" aria-label="Vraag de assistent wat het huis nu doet" style="width: 46px; height: 46px; flex: none"></a>
         <a class="vraag" href="assistent.html#typ">Tik om iets te vragen over je huis</a>
         <a class="pil" href="assistent.html#nu">Wat doe je nu?</a>
         <a class="pil" href="assistent.html#zon">Hoeveel zon vandaag?</a>
@@ -202,15 +206,16 @@
       </div>
       <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
       <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-tel" hidden style="align-self: flex-start"></button>
+      <a class="pil batterijpil" href="#" data-filter hidden style="align-self: flex-start"></a>
     </div>
     <div class="podium" id="podium-tel"></div>
     <div class="inhoud">
       <div data-kamers style="display: flex; flex-direction: column; gap: 12px"></div>
-      <section class="glas kaart straks" data-straks hidden>
+      <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks hidden>
         <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Straks</span></div>
         <h2 class="kop-2" style="margin-top: 8px" data-straks-kop></h2>
         <p class="klein" style="margin: 6px 0 0" data-straks-zin></p>
-      </section>
+      </a>
       <a class="glas-klein" href="assistent.html#typ" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; color: var(--zacht)"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</a>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>

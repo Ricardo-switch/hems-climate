@@ -182,6 +182,36 @@ describe('het voorstel uit Home Assistant', () => {
     expect(ids(buildHouse(config, ander, metStand, snapshot))).toContain('climate.air_conditioning_boven_2');
   });
 
+  it('geeft een airco drogen en zijn filter, ook van een tweede koppeling, en meldt een vol filter (besluit 129)', () => {
+    const basis = states.get('cover.screen')!;
+    const ac = config.actuators.find((a) => a.ref.id.startsWith('climate.') && a.capabilities.canCool)!;
+    const area = registers.areas[0]!.area_id;
+    const metFilter = {
+      ...registers,
+      devices: [
+        ...registers.devices,
+        { id: 'd-lg', area_id: area, name: 'Airco boven', name_by_user: null, manufacturer: 'LGE', model: 'RAC_056905_WW' },
+        { id: 'd-lg2', area_id: area, name: 'Airco boven', name_by_user: null, manufacturer: 'LG', model: 'RAC_056905_WW-RAC' },
+      ],
+      entities: [
+        ...registers.entities.filter((e) => e.entity_id !== ac.ref.id),
+        { entity_id: ac.ref.id, device_id: 'd-lg' },
+        { entity_id: 'sensor.airco_filter_resterend', device_id: 'd-lg', translation_key: 'filter_lifetime' },
+        { entity_id: 'sensor.airco_boven_filter_remaining_life', device_id: 'd-lg2' },
+      ],
+    };
+    const metStand = new Map(states);
+    metStand.set(ac.ref.id, { ...basis, entity_id: ac.ref.id, state: 'off', attributes: { hvac_modes: ['off', 'cool', 'dry', 'heat'] } });
+    metStand.set('sensor.airco_filter_resterend', { ...basis, entity_id: 'sensor.airco_filter_resterend', state: '120', attributes: { unit_of_measurement: 'h' } });
+    metStand.set('sensor.airco_boven_filter_remaining_life', { ...basis, entity_id: 'sensor.airco_boven_filter_remaining_life', state: '8', attributes: { unit_of_measurement: '%' } });
+    const h = buildHouse(config, metFilter, metStand, snapshot);
+    const airco = h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === ac.id)!;
+    expect(airco.klimaat).toMatchObject({ kanDrogen: true, filter: { pct: 8, uren: 120 } });
+    expect(h.filters.map((f) => [f.id, f.pct])).toEqual([[ac.id, 8]]);
+    // Een vol filter is geen batterij.
+    expect(h.batterijen.some((b) => b.pct === 8)).toBe(false);
+  });
+
   it('toont alleen kleine batterijen in huis: geen telefoon, thuisbatterij of auto (besluit 127)', () => {
     const basis = states.get('cover.screen')!;
     const accu = (id: string, pct: string) => [id, { ...basis, entity_id: id, state: pct, attributes: { unit_of_measurement: '%' } }] as const;

@@ -136,6 +136,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw](#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw)
 - [125. Het screen zoals de schets, en Opbrengst onthoudt wat al uitgerekend is](#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is)
 - [128. Wat je koos blijft staan, het zonnescherm, het weer per uur en een bredere wand](#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand)
+- [129. Drogen en het filter van de airco, gekleurd licht, en wat er nog wegviel](#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel)
 
 **Veiligheid**
 
@@ -5417,6 +5418,35 @@ Gevraagd door de bewoner op 14 oktober 2026.
   over het vak beweegt of erin werkt.
 - **De airco aan de achterwand** hangt verder van de rechtermuur, zodat hij in
   beeld niet over de hoek met de volgende kamer valt.
+
+---
+
+## 129. Drogen en het filter van de airco, gekleurd licht, en wat er nog wegviel
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026.
+
+*Besluit:*
+
+- **Drogen** staat bij een airco die het kan (`dry` in Home Assistant), naast
+  koelen en verwarmen. Net als die twee zegt de assistent wat het huis zou doen;
+  drogen heeft geen doel.
+- **Het filter** van een airco staat in zijn blad: in procenten, of in uren als
+  de koppeling alleen dat geeft, ook van een tweede koppeling van hetzelfde
+  apparaat (SmartThinQ naast LG ThinQ). Onder 10% staat er net als bij een
+  batterij een melding op Thuis, met een tik naar de airco. Een filter is geen
+  batterij.
+- **Een gekleurde lamp** heeft in het huis een kap in zijn kleur en een sterkere
+  gloed; 's avonds kleurt de kamer mee.
+- **Een screen dat je sleept** blijft staan waar je het losliet, tot Home
+  Assistant de nieuwe stand meldt; voorheen sprong het in de app terug naar open.
+- **Meters** staan niet meer in het blad van een kamer: welke sensoren meten kies
+  je bij Indeling (123), en het gemiddelde staat bovenaan.
+- **Vandaag op Thuis** opent de dag, **Straks** opent de assistent met de uitleg,
+  en de bol onderin vraagt de assistent wat het huis nu doet.
+- **Boven en onder** houdt de wand vrij van de balken van het systeem; op een
+  liggende telefoon viel de onderkant weg achter de balk met de veegstreep.
 
 ---
 

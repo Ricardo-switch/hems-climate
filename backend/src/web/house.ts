@@ -60,6 +60,14 @@ export interface HouseReading {
 export interface HouseClimate {
   readonly kanKoelen: boolean;
   readonly kanVerwarmen: boolean;
+  /** Kan drogen (`dry` in Home Assistant, besluit 129); weg is nee. */
+  readonly kanDrogen?: boolean;
+  /**
+   * Hoeveel het filter nog meegaat (besluit 129): in procenten, of in uren als
+   * de koppeling alleen dat geeft. Ook van een tweede koppeling van hetzelfde
+   * apparaat, zoals SmartThinQ naast LG ThinQ.
+   */
+  readonly filter?: { readonly pct: number | null; readonly uren: number | null };
   /** Het doel dat Home Assistant nu heeft, of null. */
   readonly doelC: number | null;
   /** Wat het apparaat nu werkelijk doet: "verwarmt", "koelt", "staat stil", of null. */
@@ -260,6 +268,8 @@ export interface HouseReport {
    * de 10% meldt het startscherm het.
    */
   readonly batterijen: readonly HouseBattery[];
+  /** Filters van airco's die bijna op zijn (onder 10%, besluit 129), de leegste eerst. */
+  readonly filters: readonly HouseBattery[];
 }
 
 export interface HouseBattery {
@@ -516,6 +526,30 @@ function sameDevice(a: HaDevice, b: HaDevice): boolean {
   if (naam(a) !== '' && naam(a) === naam(b)) return true;
   const type = (d: HaDevice) => /^[a-z0-9_]{4,}/i.exec((d.model ?? '').trim())?.[0].toLowerCase() ?? '';
   return a.area_id != null && a.area_id === b.area_id && type(a) !== '' && type(a) === type(b);
+}
+
+/**
+ * Hoeveel het filter van een airco nog meegaat (besluit 129): een sensor met
+ * "filter" in de naam of sleutel, op het apparaat of op een tweede koppeling
+ * ervan. Procenten winnen van uren.
+ */
+function filterOf(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>, deviceId: string | null): { pct: number | null; uren: number | null } | null {
+  if (!deviceId) return null;
+  const own = registers.devices.find((d) => d.id === deviceId);
+  const devices = new Set(own ? registers.devices.filter((d) => sameDevice(own, d)).map((d) => d.id) : [deviceId]);
+  let pct: number | null = null;
+  let uren: number | null = null;
+  for (const e of registers.entities) {
+    if (!e.device_id || !devices.has(e.device_id) || e.disabled_by || !e.entity_id.startsWith('sensor.')) continue;
+    if (!/filter/i.test(`${e.entity_id} ${e.translation_key ?? ''}`)) continue;
+    const s = states.get(e.entity_id);
+    const n = Number(s?.state);
+    if (s == null || s.state === '' || !Number.isFinite(n)) continue;
+    const unit = s.attributes['unit_of_measurement'];
+    if (unit === '%' && n >= 0 && n <= 100) pct ??= n;
+    else if (unit === 'h' && n >= 0) uren ??= n;
+  }
+  return pct == null && uren == null ? null : { pct, uren };
 }
 
 /** Hoe ver de klep open staat (0 tot 100%), als het apparaat dat meldt. */
@@ -826,9 +860,13 @@ function collect(
       vochtPct: num(st?.attributes['current_humidity']) ?? fromSensors.vochtPct,
     };
     const action = st?.attributes['hvac_action'];
+    const modes = Array.isArray(st?.attributes['hvac_modes']) ? (st!.attributes['hvac_modes'] as unknown[]).map(String) : [];
+    const filter = filterOf(registers, states, registry.get(a.ref.id)?.device_id ?? null);
     const klimaat: HouseClimate = {
       kanKoelen: a.capabilities.canCool,
       kanVerwarmen: a.capabilities.canHeat,
+      ...(modes.includes('dry') ? { kanDrogen: true } : {}),
+      ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
       actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
     };
@@ -866,9 +904,12 @@ function collect(
       vochtPct: num(st?.attributes['current_humidity']) ?? fromSensors.vochtPct,
     };
     const action = st?.attributes['hvac_action'];
+    const filter = filterOf(registers, states, e.device_id ?? null);
     const klimaat: HouseClimate = {
       kanKoelen: modes.some((m) => m === 'cool' || m === 'heat_cool'),
       kanVerwarmen: modes.some((m) => m === 'heat' || m === 'heat_cool' || m === 'auto'),
+      ...(modes.includes('dry') ? { kanDrogen: true } : {}),
+      ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
       actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
     };
@@ -1346,6 +1387,12 @@ export function buildHouse(
     const kamer = kamerVanApparaat.get(id) ?? (area ? (roomByArea.get(area) ?? null) : null);
     return { id, naam: apparaatNaam.get(id) ?? id, pct, kamer: kamer?.naam ?? null, kamerId: kamer?.id ?? null };
   }).sort((a, b) => a.pct - b.pct || a.naam.localeCompare(b.naam, 'nl'));
+  // Filters die bijna op zijn (besluit 129): net als een batterij een melding op Thuis.
+  const filters: HouseBattery[] = rooms
+    .flatMap((r) => r.apparaten.map((d) => ({ r, d })))
+    .filter(({ d }) => d.klimaat?.filter?.pct != null && d.klimaat.filter.pct < BATTERIJ_LEEG_PCT)
+    .map(({ r, d }) => ({ id: d.id, naam: d.naam, pct: d.klimaat!.filter!.pct!, kamer: r.naam, kamerId: r.id }))
+    .sort((a, b) => a.pct - b.pct);
   return {
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
@@ -1357,6 +1404,7 @@ export function buildHouse(
     verborgen: hidden,
     onvindbaar: unreachable,
     batterijen,
+    filters,
   };
 }
 

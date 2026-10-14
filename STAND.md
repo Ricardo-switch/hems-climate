@@ -190,6 +190,8 @@ verwijzing bestaat.
 - **Wat je koos blijft staan** tot Home Assistant het doorgeeft; het
   **zonnescherm** toont de laatste opdracht; het **weer per uur** staat onder
   Vandaag ([128]).
+- **Airco's** krijgen drogen en hun filter, met een melding onder 10%; gekleurd
+  licht is te zien in het huis ([129]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -367,4 +369,5 @@ verwijzing bestaat.
 [126]: DECISIONS.md#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen
 [127]: DECISIONS.md#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen
 [128]: DECISIONS.md#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand
+[129]: DECISIONS.md#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel
 <!-- links:einde -->

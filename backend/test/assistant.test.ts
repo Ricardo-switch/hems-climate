@@ -307,6 +307,14 @@ describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
     );
   });
 
+  it('droogt met de airco, zonder doel (besluit 129)', () => {
+    const a = askNl({ kind: 'doe', kamer: 'zolder', wens: 'drogen', temperatuurC: 21 });
+    expect(a.antwoord).toContain('de airco zolder op drogen zetten');
+    expect(a.antwoord).not.toContain('21°');
+    expect(parseQuestion(new URLSearchParams('v=doe&kamer=zolder&wens=drogen'))).toMatchObject({ ok: true, question: { wens: 'drogen' } });
+    expect(askNl({ kind: 'doe', kamer: 'badkamer', wens: 'drogen', temperatuurC: null }).antwoord).toBe('De badkamer heeft geen apparaat dat kan drogen.');
+  });
+
   it('verwarmt eerst met wat de basiswarmte levert', () => {
     const a = askNl({ kind: 'doe', kamer: 'woonkamer', wens: 'verwarmen', temperatuurC: 21 });
     expect(a.antwoord).toContain('de Nest (beneden) op verwarmen naar 21°');
