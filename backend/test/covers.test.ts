@@ -49,6 +49,20 @@ describe('schermen bedienen (besluit 121)', () => {
     expect(calls).toEqual([]);
   });
 
+  it('onthoudt de laatste opdracht bij een scherm zonder terugmelding (besluit 128)', async () => {
+    const { sw } = opzet();
+    const zs = (h: HouseReport | null) => h!.etages[0]!.ruimtes[0]!.apparaten.find((d) => d.id === 'cover.zonnescherm')!;
+    expect(sw.withLast(house)).toBe(house);
+    await sw.move({ id: 'cover.zonnescherm', actie: 'dicht' });
+    expect([zs(sw.withLast(house)).stand, zs(sw.withLast(house)).scherm?.laatste]).toEqual(['dicht, volgens de laatste opdracht', 'dicht']);
+    // Een scherm met terugmelding houdt zijn eigen stand.
+    await sw.move({ id: 'cover.screen', actie: 'dicht' });
+    expect(sw.withLast(house)!.etages[0]!.ruimtes[0]!.apparaten[0]!.stand).toBe('open');
+    // Na stop weet niemand het meer.
+    await sw.move({ id: 'cover.zonnescherm', actie: 'stop' });
+    expect(zs(sw.withLast(house)).scherm?.laatste).toBeUndefined();
+  });
+
   it('houdt een grens op het tempo', async () => {
     const { sw } = opzet(2);
     await sw.move({ id: 'cover.screen', actie: 'open' });

@@ -44,7 +44,8 @@ import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
-import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } from './weather.js';
+import { weatherReport, type ForecastDay, type HourColumns, type WeatherLog, type WeatherReport } from './weather.js';
+import { kindOfCode } from './open-meteo.js';
 import type { HouseReport } from './house.js';
 import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, type LayoutStore } from './layout.js';
 import type { CoverSwitch } from './covers.js';
@@ -148,7 +149,13 @@ export interface WebOptions {
    * uit Home Assistant, en de zonkans per dag zoals die de dag ervoor werd
    * verwacht. Zonder dit bestaat de route niet.
    */
-  readonly weather?: { readonly forecast: () => readonly ForecastDay[]; readonly log: WeatherLog; readonly bron?: () => string };
+  readonly weather?: {
+    readonly forecast: () => readonly ForecastDay[];
+    readonly log: WeatherLog;
+    readonly bron?: () => string;
+    /** Het weer per uur van Open-Meteo (besluit 128), of null. */
+    readonly uren?: () => HourColumns | null;
+  };
   /**
    * De camera's bekijken (besluit 106): alleen lezen, via de proxy van Home
    * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
@@ -1391,6 +1398,7 @@ export class WebServer {
       nowMs: now,
       timeZone: config.timezone,
       ...(weather.bron ? { bron: weather.bron() } : {}),
+      ...(weather.uren ? { uren: weather.uren(), soortVanCode: kindOfCode } : {}),
     });
     this.#weather = { atMs: now, report };
     const morgen = report.dagen[0];

@@ -43,6 +43,8 @@ export interface HourlyForecast {
   readonly diffuusWm2: readonly (number | null)[];
   readonly windMs: readonly (number | null)[];
   readonly regenkansPct: readonly (number | null)[];
+  /** De WMO-weercode per uur (besluit 128); weg in een oudere regel. */
+  readonly code?: readonly (number | null)[];
 }
 
 export interface OpenMeteoWeer {
@@ -57,9 +59,9 @@ export function openMeteoUrl(location: { readonly latDeg: number; readonly lonDe
   const q = new URLSearchParams({
     latitude: r1(location.latDeg),
     longitude: r1(location.lonDeg),
-    hourly: 'temperature_2m,relative_humidity_2m,cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,wind_speed_10m,precipitation_probability',
+    hourly: 'temperature_2m,relative_humidity_2m,cloud_cover,shortwave_radiation,direct_radiation,diffuse_radiation,wind_speed_10m,precipitation_probability,weather_code',
     daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunshine_duration,daylight_duration',
-    current: 'weather_code,cloud_cover',
+    current: 'weather_code,cloud_cover,temperature_2m',
     timezone: timeZone,
     timeformat: 'unixtime',
     wind_speed_unit: 'ms',
@@ -110,6 +112,7 @@ export function parseOpenMeteo(body: unknown, nowMs: number): OpenMeteoWeer | nu
     diffuusWm2: kolom('diffuse_radiation'),
     windMs: kolom('wind_speed_10m'),
     regenkansPct: kolom('precipitation_probability'),
+    code: kolom('weather_code'),
   };
 
   const dagen: ForecastDay[] = [];
@@ -117,7 +120,7 @@ export function parseOpenMeteo(body: unknown, nowMs: number): OpenMeteoWeer | nu
   if (c) {
     const wolken = num(c['cloud_cover']);
     const soort = kindOfCode(num(c['weather_code']), wolken);
-    dagen.push({ offset: 0, maxC: null, minC: null, regenkansPct: null, zonkansPct: wolken == null ? null : Math.round(100 - wolken), soort, tekst: wordsFor(soort, null) });
+    dagen.push({ offset: 0, maxC: null, minC: null, regenkansPct: null, zonkansPct: wolken == null ? null : Math.round(100 - wolken), soort, tekst: wordsFor(soort, null), nuC: num(c['temperature_2m']) });
   }
   const code = list(d['weather_code']).map(num);
   const max = list(d['temperature_2m_max']).map(num);

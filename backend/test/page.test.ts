@@ -1188,8 +1188,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Een lamp: de schakelaar gaat via de deur naar Home Assistant.
     const voor = lightCalls.length;
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metLamp.id)}`);
-    await p.locator('#wand [data-blad] [data-schakel]').first().click();
+    const schakel = p.locator('#wand [data-blad] [data-schakel]').first();
+    const was = await schakel.getAttribute('aria-checked');
+    await schakel.click();
     await expect.poll(() => lightCalls.length).toBeGreaterThan(voor);
+    // Home Assistant meldt de nieuwe stand hier nooit: de schakelaar blijft toch
+    // staan op wat je koos, en springt niet terug (besluit 128).
+    await p.waitForTimeout(1500);
+    expect(await p.locator('#wand [data-blad] [data-schakel]').first().getAttribute('aria-checked')).toBe(String(was !== 'true'));
 
     // Scènes pas bij een lamp, en dan alleen die erbij horen, elke naam één keer.
     const metSfeer = kamers.find((r) => r.apparaten.some((d) => d.id === 'light.sfeerverlichting'))!;

@@ -146,7 +146,7 @@ function tekenNu() {
   const kop = state.bewoner?.kop ?? {};
   zet('[data-kop]', kop.titel ?? 'Het huis');
   zet('[data-zin]', kop.zin ?? '');
-  tekenWeerknop(e.outdoorTemperatureC);
+  tekenWeerknop();
   const modus = e.modeSource === 'schedule' ? 'Automatisch' : { dag: 'Dag', nacht: 'Nacht', afwezig: 'Afwezig', vakantie: 'Vakantie', handmatig: 'Handmatig' }[e.mode] ?? 'Automatisch';
   $$('[data-modus]').forEach((el) => (el.innerHTML = `${esc(modus)} <span aria-hidden="true" style="color: var(--gedempt)">▾</span>`));
 
@@ -160,10 +160,11 @@ function tekenNu() {
     el.hidden = leeg.length === 0;
     if (!leeg.length) return;
     const b = leeg[0];
-    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}`;
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg><span>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}</span>`;
   });
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
-  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
+  const wandPodium = document.getElementById('podium-wand');
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
 
   tekenVandaag();
@@ -318,14 +319,25 @@ const WEER_ICOON = {
   onweer: `${WOLK}<path d="M19 26l-4 6h4l-2 4 6-7h-4l2-3z" fill="#F7B548"/>`,
   sneeuw: `${WOLK}<g fill="#EEF3F7"><circle cx="13" cy="30" r="1.6"/><circle cx="19" cy="32" r="1.6"/><circle cx="25" cy="30" r="1.6"/></g>`,
   mist: '<g stroke="#B8C4CF" stroke-width="2.2" stroke-linecap="round"><path d="M6 13h24M9 19h22M6 25h20"/></g>',
+  // Een heldere nacht (besluit 128): een maan, met een wolk erbij als het half bewolkt is.
+  nacht: '<path d="M22 7a10 10 0 1 0 8 15A9 9 0 0 1 22 7z" fill="#DDE6F0"/>',
+  nachthalf: '<path d="M18 5a8 8 0 1 0 7 12A7 7 0 0 1 18 5z" fill="#DDE6F0"/><path d="M12 29h14a5.5 5.5 0 0 0 .5-11A7.5 7.5 0 0 0 12.4 20 4.5 4.5 0 0 0 12 29z" fill="#B8C4CF"/>',
 };
 const weerIcoon = (soort) => `<svg viewBox="0 0 36 36" aria-hidden="true">${WEER_ICOON[soort] ?? WEER_ICOON.bewolkt}</svg>`;
+/** Een uur 's nachts: de maan in plaats van de zon. */
+const uurIcoon = (u) => weerIcoon(u.nacht && u.soort === 'zon' ? 'nacht' : u.nacht && u.soort === 'half' ? 'nachthalf' : u.soort);
+const UUR = new Intl.DateTimeFormat('nl-NL', { hour: '2-digit', minute: '2-digit' });
 
-function tekenWeerknop(buitenC) {
+/** De buitentemperatuur: van de eigen sensor, of anders van de weerbron (besluit 128). */
+const buitenNu = () => state?.explanation?.outdoorTemperatureC ?? weer?.vandaag?.buitenC ?? null;
+
+function tekenWeerknop() {
+  const buitenC = buitenNu();
   const icoon = weer?.vandaag?.soort ? weerIcoon(weer.vandaag.soort) : '';
   for (const knop of $$('[data-buiten]')) {
     const tel = knop.closest('#tel') != null;
-    const tekst = buitenC == null ? (weer ? 'Het weer' : '') : tel ? `${nl(buitenC, 0)}°` : `${nl(buitenC)}° buiten`;
+    // Zonder temperatuur het weer in woorden, zoals "Zonnig".
+    const tekst = buitenC == null ? (weer ? (weer.vandaag?.tekst ?? 'Het weer') : '') : tel ? `${nl(buitenC, 0)}°` : `${nl(buitenC)}° buiten`;
     knop.innerHTML = `${icoon}${esc(tekst)}`;
     knop.hidden = !tekst;
     knop.disabled = weer == null;
@@ -376,9 +388,9 @@ function tekenWeer() {
   const rijen = [
     `<div class="rij">
       <div class="dag">Vandaag<span>${esc(v.tekst ?? '')}</span></div>${weerIcoon(v.soort)}
-      <div class="temp"><span>${state?.explanation?.outdoorTemperatureC == null ? '' : `<b>${nl(state.explanation.outdoorTemperatureC)}°</b> nu`}</span><span>${v.zonkansPct == null ? '' : `${v.zonkansPct}% zon`}</span></div>
+      <div class="temp"><span>${buitenNu() == null ? '' : `<b>${nl(buitenNu())}°</b> nu`}</span><span>${v.zonkansPct == null ? '' : `${v.zonkansPct}% zon`}</span></div>
       <div class="opbrengst">${balk(vandaagKwh)}<span>${v.verwachtKwh != null ? `${nl(v.verwachtKwh)} kWh` : `${nl(v.opgewektKwh)} kWh tot nu`}</span></div>
-    </div>`,
+    </div>${urenStrook(v.uren ?? [])}`,
     ...weer.dagen.map((d, i) => {
       const datum = new Date(`${d.datum}T12:00:00Z`);
       const naam = i === 0 ? 'Morgen' : DAGNAAM.format(datum).replace(/^./, (c) => c.toUpperCase());
@@ -404,6 +416,16 @@ function tekenWeer() {
       <p class="mini voet">Van ${esc(weer.bron ?? 'Buienradar')}. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
     blad.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
+}
+
+/**
+ * Het weer per uur, de komende 24 uur (besluit 128): een strook om opzij te
+ * vegen, met de regenkans als die er toe doet.
+ */
+function urenStrook(uren) {
+  if (!uren.length) return '';
+  const cellen = uren.map((u, i) => `<div class="uur"><span>${i === 0 ? 'Nu' : esc(UUR.format(new Date(u.tMs)))}</span>${uurIcoon(u)}<b>${u.buitenC == null ? '–' : `${nl(u.buitenC, 0)}°`}</b><span class="kans">${u.regenkansPct != null && u.regenkansPct >= 30 ? `${u.regenkansPct}%` : ''}</span></div>`).join('');
+  return `<div class="uren" role="list" aria-label="Het weer per uur">${cellen}</div>`;
 }
 
 function openWeer(knop, soort = 'weer') {

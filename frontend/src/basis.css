@@ -20,7 +20,19 @@ body { overflow: hidden; }
  * De wand schuift nooit, maar een vak dat te vol wordt wel: met een vinger, ook
  * in een kiosk-browser als Fully (besluit 124). Het schuiven blijft in het vak.
  */
-.wand [data-schuift], #wand .schuift { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+.wand [data-schuift], #wand .schuift { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+/*
+ * Schuifbalken (besluit 128): smal, in de kleur van de app, en alleen te zien
+ * terwijl je over het vak beweegt of erin werkt. Een vak dat niet te vol is,
+ * heeft er geen. Op een telefoon of tablet tekent het systeem zijn eigen dunne
+ * balk, alleen tijdens het schuiven.
+ */
+* { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+*:hover, *:focus-within { scrollbar-color: rgba(184, 196, 207, 0.38) transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+:hover::-webkit-scrollbar-thumb { background: rgba(184, 196, 207, 0.38); }
 html.tel-stand body { overflow: auto; }
 
 /*

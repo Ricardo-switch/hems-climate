@@ -24,8 +24,9 @@
   .etages { display: flex; gap: 8px; margin-top: 14px; }
   .etages button { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .etages button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
-  #wand .podium { position: absolute; left: 0; top: 230px; width: 800px; height: 560px; }
-  #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: 400px; padding: 22px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  /* Een bredere wand (besluit 128): het blad een derde van wat erbij komt, de rest het huis. */
+  #wand .podium { position: absolute; left: 0; top: 230px; right: calc(480px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 560px; }
+  #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: calc(400px + (var(--wandbreedte, 1280px) - 1280px) / 3); padding: 22px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
 
   .blad { display: flex; flex-direction: column; gap: 16px; }
   .blad > * { flex-shrink: 0; }

@@ -187,6 +187,9 @@ verwijzing bestaat.
   en in het logboek; via ZHA zegt de app wat Zigbee2MQTT erbij geeft ([126]).
 - **Open-Meteo** geeft weer zonder Home Assistant en de verwachting per uur
   wordt bewaard; de **batterijlijst** opent op Thuis ([127]).
+- **Wat je koos blijft staan** tot Home Assistant het doorgeeft; het
+  **zonnescherm** toont de laatste opdracht; het **weer per uur** staat onder
+  Vandaag ([128]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -363,4 +366,5 @@ verwijzing bestaat.
 [125]: DECISIONS.md#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is
 [126]: DECISIONS.md#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen
 [127]: DECISIONS.md#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen
+[128]: DECISIONS.md#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand
 <!-- links:einde -->

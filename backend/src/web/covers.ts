@@ -16,7 +16,7 @@
  * - één scherm per opdracht, en een grens op het tempo.
  */
 
-import type { HouseDevice, HouseReport } from './house.js';
+import { standNaOpdracht, type HouseDevice, type HouseReport } from './house.js';
 
 export type CoverAction = 'open' | 'dicht' | 'stop' | 'stand';
 
@@ -72,6 +72,8 @@ export class CoverSwitch {
   readonly #now: () => number;
   readonly #limit: number;
   #recent: number[] = [];
+  /** De laatste opdracht per scherm uit de app, open of dicht (besluit 128). */
+  readonly #laatste = new Map<string, 'open' | 'dicht'>();
 
   constructor(options: CoverSwitchOptions) {
     this.#options = options;
@@ -94,7 +96,27 @@ export class CoverSwitch {
     } catch (error) {
       return { ok: false, status: 502, reden: `Home Assistant weigerde: ${(error as Error).message}` };
     }
+    // Na stop staat hij ergens halverwege: dan weet niemand het meer.
+    if (actie === 'open' || actie === 'dicht') this.#laatste.set(id, actie);
+    else this.#laatste.delete(id);
     return { ok: true };
+  }
+
+  /**
+   * Het huis met de laatste opdracht uit de app bij elk scherm zonder
+   * terugmelding (Somfy RTS, besluit 128), zodat er niet "onbekend" staat.
+   */
+  withLast(house: HouseReport | null): HouseReport | null {
+    if (house == null || this.#laatste.size === 0) return house;
+    const patch = (d: HouseDevice): HouseDevice => {
+      const laatste = this.#laatste.get(d.id);
+      if (d.soort !== 'screen' || !d.scherm || d.scherm.terugmelding || laatste == null) return d;
+      return { ...d, stand: standNaOpdracht(laatste, d.scherm.zonnescherm === true), scherm: { ...d.scherm, laatste } };
+    };
+    return {
+      ...house,
+      etages: house.etages.map((f) => ({ ...f, ruimtes: f.ruimtes.map((r) => ({ ...r, apparaten: r.apparaten.map(patch) })) })),
+    };
   }
 
   #take(): boolean {

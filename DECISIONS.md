@@ -135,6 +135,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [120. Een liggende telefoon toont de tabletweergave](#120-een-liggende-telefoon-toont-de-tabletweergave)
 - [124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw](#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw)
 - [125. Het screen zoals de schets, en Opbrengst onthoudt wat al uitgerekend is](#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is)
+- [128. Wat je koos blijft staan, het zonnescherm, het weer per uur en een bredere wand](#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand)
 
 **Veiligheid**
 
@@ -5388,6 +5389,34 @@ Gevraagd door de bewoner op 14 oktober 2026.
   `battery_charging`, vermogen én energie samen, of het merk.
 - **Eén apparaat via twee koppelingen** (zoals LG ThinQ en SmartThinQ) staat één
   keer in het huis: dezelfde naam, of dezelfde ruimte en hetzelfde type.
+
+---
+
+## 128. Wat je koos blijft staan, het zonnescherm, het weer per uur en een bredere wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026.
+
+*Besluit:*
+
+- **Wat je koos blijft staan** tot Home Assistant het doorgeeft: een lamp
+  hooguit acht tellen, een screen twee minuten. Een lamp meldt zich pas na een
+  tel of twee als aan; zonder dit sprong de schakelaar even terug.
+- **Een scherm zonder terugmelding** (Somfy RTS) toont de laatste opdracht, uit
+  de app of uit Home Assistant, met "volgens de laatste opdracht" erbij. Na stop
+  of een herstart is die weg, en een afstandsbediening hoort niemand. Een
+  zonnescherm (`awning`) vouw je uit en klap je in.
+- **Het weer per uur** van Open-Meteo (127) staat onder Vandaag in het weerblad,
+  de komende 24 uur, 's nachts met een maan. Geeft de eigen buitensensor niets,
+  dan komt de buitentemperatuur van Open-Meteo, en anders het weer in woorden.
+- **Een bredere wand dan 1280** (een liggende telefoon): een derde van wat erbij
+  komt gaat naar de rechterkolom of het blad, de rest naar het huis, dat in het
+  midden van zijn vak staat.
+- **Schuifbalken** zijn smal, in de kleur van de app, en alleen te zien als je
+  over het vak beweegt of erin werkt.
+- **De airco aan de achterwand** hangt verder van de rechtermuur, zodat hij in
+  beeld niet over de hoek met de volgende kamer valt.
 
 ---
 

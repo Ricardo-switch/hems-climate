@@ -629,8 +629,8 @@ const scenePictures = logDir !== '' ? new ScenePictures(logDir) : null;
 await scenePictures?.refresh();
 if (scenePictures) setInterval(() => void scenePictures.refresh(), 10 * 60_000).unref();
 
-const houseReport = () =>
-  siteConfig && houseRegisters
+const houseReport = () => {
+  const h = siteConfig && houseRegisters
     ? buildHouse(
         siteConfig,
         houseRegisters,
@@ -643,6 +643,9 @@ const houseReport = () =>
         functiesStore?.current ? getoondeCameras(functiesStore.current) : null,
       )
     : null;
+  // Met de laatste opdracht bij een scherm zonder terugmelding (besluit 128).
+  return coverSwitch ? coverSwitch.withLast(h) : h;
+};
 
 /*
  * Gaat een scène aan (zijn stand is het tijdstip), dan kijken we zes tellen
@@ -820,7 +823,7 @@ if (webPort != null) {
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
-    ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam } } : {}),
+    ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {
       base: httpBase(url!),

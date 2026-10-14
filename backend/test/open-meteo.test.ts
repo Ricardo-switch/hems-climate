@@ -5,6 +5,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { kindOfCode, OpenMeteo, openMeteoUrl, parseOpenMeteo, UREN_FILE, UREN_VOORUIT } from '../src/web/open-meteo.js';
+import { weatherReport } from '../src/web/weather.js';
+import { exampleSite } from './site.js';
 
 const H = 3_600_000;
 /** Middernacht in UTC, en een antwoord zoals Open-Meteo het geeft: drie dagen per uur, zes dagen per dag. */
@@ -12,7 +14,7 @@ const T0 = Date.UTC(2026, 9, 14);
 function antwoord() {
   const uren = Array.from({ length: 72 }, (_, i) => i);
   return {
-    current: { weather_code: 3, cloud_cover: 90 },
+    current: { weather_code: 3, cloud_cover: 90, temperature_2m: 13.4 },
     hourly: {
       time: uren.map((i) => (T0 + i * H) / 1000),
       temperature_2m: uren.map((i) => 10 + (i % 24) / 2),
@@ -23,6 +25,7 @@ function antwoord() {
       diffuse_radiation: uren.map(() => 50),
       wind_speed_10m: uren.map(() => 3.2),
       precipitation_probability: uren.map(() => 10),
+      weather_code: uren.map((i) => (i % 24 === 12 ? 61 : 1)),
     },
     daily: {
       weather_code: [3, 0, 2, 61, 81, 95],
@@ -62,7 +65,38 @@ describe('Open-Meteo (besluit 127)', () => {
       [5, 'onweer', 18, 15],
     ]);
     expect(weer.dagen[4]!.tekst).toBe('Zon en wolken, kans op een bui');
+    // De temperatuur van nu en de weercode per uur (besluit 128).
+    expect(weer.dagen[0]!.nuC).toBe(13.4);
+    expect(weer.uren.code?.slice(0, 3)).toEqual([1, 1, 61]);
     expect(parseOpenMeteo({ foutje: true }, T0)).toBeNull();
+  });
+
+  it('geeft Vandaag de temperatuur van nu en het weer per uur (besluit 128)', () => {
+    const nu = T0 + 10 * H + 20 * 60_000;
+    const weer = parseOpenMeteo(antwoord(), nu)!;
+    const report = weatherReport({
+      forecast: weer.dagen,
+      predicted: {},
+      solarDays: {},
+      geometry: exampleSite.geometry!,
+      location: { latDeg: 52, lonDeg: 5.9 },
+      learned: null,
+      todayWh: 0,
+      nowMs: nu,
+      timeZone: 'UTC',
+      bron: 'Open-Meteo',
+      uren: weer.uren,
+      soortVanCode: kindOfCode,
+    });
+    expect(report.bron).toBe('Open-Meteo');
+    expect(report.vandaag.buitenC).toBe(13.4);
+    expect(report.vandaag.uren).toHaveLength(24);
+    expect(report.vandaag.uren.slice(0, 3).map((u) => [u.tMs, u.buitenC, u.soort, u.nacht])).toEqual([
+      [T0 + 10 * H, 15, 'zon', false],
+      [T0 + 11 * H, 15.5, 'zon', false],
+      [T0 + 12 * H, 16, 'regen', false],
+    ]);
+    expect(report.vandaag.uren[10]!.nacht).toBe(true);
   });
 
   it('kent de weercodes', () => {

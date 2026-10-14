@@ -114,7 +114,17 @@ describe('het voorstel uit Home Assistant', () => {
     const rts = new Map(states);
     rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'open', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, supported_features: 15 } });
     const metRts = buildHouse(config, registers, rts, snapshot).etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
-    expect([metRts.stand, metRts.positiePct, metRts.aan, metRts.scherm]).toEqual(['zonder terugmelding', null, false, { terugmelding: false, standKiezen: false }]);
+    // Home Assistant onthoudt de laatste opdracht; die staat er (besluit 128).
+    expect([metRts.stand, metRts.positiePct, metRts.aan, metRts.scherm]).toEqual(['open, volgens de laatste opdracht', null, false, { terugmelding: false, standKiezen: false, laatste: 'open' }]);
+    // Een zonnescherm: uitgevouwen en ingeklapt; zonder opdracht geen stand.
+    rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'closed', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, device_class: 'awning' } });
+    const zonnescherm = () => buildHouse(config, registers, rts, snapshot).etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
+    expect([zonnescherm().stand, zonnescherm().scherm]).toEqual(['ingeklapt, volgens de laatste opdracht', { terugmelding: false, standKiezen: false, zonnescherm: true, laatste: 'dicht' }]);
+    rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'unknown', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, device_class: 'awning' } });
+    expect([zonnescherm().stand, zonnescherm().scherm?.laatste]).toEqual(['zonder terugmelding', undefined]);
+    // Een zonnescherm met terugmelding: 100 is helemaal uitgevouwen.
+    rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'open', attributes: { friendly_name: 'Zonnescherm', device_class: 'awning', current_position: 60, supported_features: 15 } });
+    expect([zonnescherm().stand, zonnescherm().aan]).toEqual(['60% uitgevouwen', true]);
     // Een io-scherm met een stand en de functie om er een te kiezen.
     const io = new Map(states);
     io.set('cover.screen', { ...states.get('cover.screen')!, attributes: { friendly_name: 'Screen', current_position: 40, supported_features: 15 } });

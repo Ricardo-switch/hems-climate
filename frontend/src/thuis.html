@@ -15,12 +15,17 @@
 <style>
   .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
   .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
-  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; white-space: nowrap; }
   .chips { display: flex; gap: 10px; align-items: center; }
   .titel { position: absolute; left: 22px; top: 108px; width: 380px; z-index: 2; }
   .titel .lead { margin-top: 12px; }
-  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
-  .rechts { position: absolute; right: 26px; top: 96px; bottom: 108px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  /*
+   * Een bredere wand dan 1280 (een liggende telefoon, besluit 128): een derde
+   * van wat erbij komt naar de rechterkolom, de rest naar het huis, dat er
+   * groter en in het midden van zijn vak in staat.
+   */
+  .podium { position: absolute; left: 0; top: 96px; right: calc(420px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; bottom: 108px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
   #wand .rechts > * { flex: none; }
   .kaart { padding: 18px 20px; }
   .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
@@ -87,7 +92,7 @@
   button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .weerknop svg { width: 20px; height: 20px; margin-left: -4px; }
   .weer { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; background: rgba(12, 20, 34, 0.94); z-index: 5; }
-  #wand .weer { position: absolute; right: 26px; top: 96px; width: 352px; bottom: 108px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  #wand .weer { position: absolute; right: 26px; top: 96px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 108px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
   #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; border-radius: 26px; z-index: 30; }
   .weer-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
   /* Niet krimpen: wat niet past, scrolt in het blad. */
@@ -106,10 +111,20 @@
   .weer .opbrengst i b { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--zon); }
   .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
+  /* Het weer per uur (besluit 128): een strook om opzij te vegen. */
+  .weer .uren { display: flex; gap: 4px; overflow-x: auto; overscroll-behavior: contain; touch-action: pan-x; padding: 2px 0 10px; margin-bottom: 2px; }
+  .weer .uur { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border-radius: 12px; background: rgba(255, 255, 255, 0.04); font-size: 12px; color: var(--zacht); }
+  .weer .uur:first-child { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
+  .weer .uur svg { width: 24px; height: 24px; }
+  .weer .uur b { font-size: 14px; color: var(--tekst); }
+  .weer .uur .kans { color: var(--ijs); min-height: 14px; font-size: 11px; }
   #tel .weer::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: -6px auto 6px; flex-shrink: 0; }
   #wand .weer .rij { padding: 7px 0; }
   /* Een batterij bijna leeg (besluit 122): een rustige maar duidelijke pil. */
-  .batterijpil { color: var(--gloed); text-decoration: none; gap: 6px; }
+  /* Een knop (besluit 127): button.pil zet de kleur anders terug naar wit. */
+  button.pil.batterijpil, .batterijpil { color: var(--gloed); text-decoration: none; gap: 6px; min-width: 0; max-width: 400px; }
+  .batterijpil span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .batterijpil svg { flex: none; }
   /* De lijst van batterijen (besluit 127), in hetzelfde blad als het weer. */
   .weer .accu { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: inherit; text-decoration: none; }
   .weer .accu:first-of-type { border-top: 0; }

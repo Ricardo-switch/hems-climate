@@ -112,7 +112,18 @@ export interface HouseDevice {
    * of niet (Somfy RTS: de stand is een aanname), en of je een stand kunt kiezen.
    * Alleen een scherm met terugmelding mag later in de regeling.
    */
-  readonly scherm?: { readonly terugmelding: boolean; readonly standKiezen: boolean };
+  readonly scherm?: {
+    readonly terugmelding: boolean;
+    readonly standKiezen: boolean;
+    /** Een zonnescherm (`awning`, besluit 128): dat vouw je uit en klap je in. */
+    readonly zonnescherm?: boolean;
+    /**
+     * Zonder terugmelding: de laatste opdracht, open (uitgevouwen) of dicht
+     * (ingeklapt), van Home Assistant of uit de app (besluit 128). Niet zeker:
+     * een afstandsbediening hoort niemand.
+     */
+    readonly laatste?: 'open' | 'dicht';
+  };
   /** De batterij van het apparaat in procenten, als het er een heeft (besluit 122). */
   readonly batterijPct?: number;
   /**
@@ -538,19 +549,29 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   // Somfy RTS (en elk scherm dat zijn stand niet terugmeldt): Home Assistant
   // zegt "assumed_state", of kent geen stand en geen open of dicht.
   const terugmelding = state != null && state.attributes['assumed_state'] !== true && (pos != null || state.state === 'open' || state.state === 'closed' || state.state === 'opening' || state.state === 'closing');
-  const scherm = { terugmelding, standKiezen: terugmelding && (features & COVER_SET_POSITION) !== 0 };
+  // Een zonnescherm (besluit 128): open is uitgevouwen, dicht is ingeklapt.
+  const zonnescherm = state?.attributes['device_class'] === 'awning';
+  // Zonder terugmelding onthoudt Home Assistant soms de laatste opdracht.
+  const laatste: 'open' | 'dicht' | null = !terugmelding && state?.state === 'open' ? 'open' : !terugmelding && state?.state === 'closed' ? 'dicht' : null;
+  const scherm = { terugmelding, standKiezen: terugmelding && (features & COVER_SET_POSITION) !== 0, ...(zonnescherm ? { zonnescherm } : {}), ...(laatste ? { laatste } : {}) };
   let stand: string;
   if (state == null || state.state === 'unavailable') stand = 'onbekend';
-  else if (!terugmelding) stand = 'zonder terugmelding';
-  else if (state.state === 'opening') stand = 'gaat open';
-  else if (state.state === 'closing') stand = 'gaat dicht';
-  else if (pos == null) stand = state.state === 'closed' ? 'dicht' : 'open';
-  else if (pos >= 100) stand = 'open';
-  else if (pos <= 0) stand = 'dicht';
-  else stand = `${100 - pos}% dicht`;
-  // "Aan" is voor een screen: hij hangt (deels) voor het raam.
-  const down = pos != null ? pos < 100 : state?.state === 'closed';
+  else if (!terugmelding) stand = laatste ? standNaOpdracht(laatste, zonnescherm) : 'zonder terugmelding';
+  else if (state.state === 'opening') stand = zonnescherm ? 'vouwt uit' : 'gaat open';
+  else if (state.state === 'closing') stand = zonnescherm ? 'klapt in' : 'gaat dicht';
+  else if (pos == null) stand = zonnescherm ? (state.state === 'closed' ? 'ingeklapt' : 'uitgevouwen') : state.state === 'closed' ? 'dicht' : 'open';
+  else if (pos >= 100) stand = zonnescherm ? 'uitgevouwen' : 'open';
+  else if (pos <= 0) stand = zonnescherm ? 'ingeklapt' : 'dicht';
+  else stand = zonnescherm ? `${pos}% uitgevouwen` : `${100 - pos}% dicht`;
+  // "Aan": een screen hangt (deels) voor het raam, een zonnescherm is (deels) uit.
+  const down = zonnescherm ? (pos != null ? pos > 0 : state?.state === 'open') : pos != null ? pos < 100 : state?.state === 'closed';
   return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: terugmelding && down, helderheidPct: null, positiePct: terugmelding ? pos : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm };
+}
+
+/** De stand van een scherm zonder terugmelding, naar de laatste opdracht (besluit 128). */
+export function standNaOpdracht(laatste: 'open' | 'dicht', zonnescherm: boolean): string {
+  const wat = zonnescherm ? (laatste === 'open' ? 'uitgevouwen' : 'ingeklapt') : laatste === 'open' ? 'open' : 'dicht';
+  return `${wat}, volgens de laatste opdracht`;
 }
 
 function climateOf(

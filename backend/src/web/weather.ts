@@ -52,6 +52,28 @@ export interface ForecastDay {
   readonly soort: WeatherKind | null;
   /** "Bewolkt met regen": eigen woorden, want Buienradar praat de taal van Home Assistant. */
   readonly tekst: string | null;
+  /** Alleen bij dag 0, als de bron het geeft: de temperatuur van nu (besluit 128). */
+  readonly nuC?: number | null;
+}
+
+/** Het weer per uur zoals Open-Meteo het geeft, als kolommen vanaf `vanMs`. */
+export interface HourColumns {
+  readonly vanMs: number;
+  readonly buitenC: readonly (number | null)[];
+  readonly wolkenPct: readonly (number | null)[];
+  readonly zonWm2: readonly (number | null)[];
+  readonly regenkansPct: readonly (number | null)[];
+  readonly code?: readonly (number | null)[];
+}
+
+/** Het weer per uur voor Vandaag (besluit 128). */
+export interface WeatherHour {
+  readonly tMs: number;
+  readonly buitenC: number | null;
+  readonly soort: WeatherKind | null;
+  readonly regenkansPct: number | null;
+  /** Geen zon op de grond: dan een maan in plaats van een zon. */
+  readonly nacht: boolean;
 }
 
 const KEY = /^(temperature|mintemp|rainchance|sunchance|condition)(?:_([1-5])d)?$/;
@@ -322,6 +344,10 @@ export interface WeatherReport {
     /** Het weer van nu, zoals Buienradar het zegt. */
     readonly soort: WeatherKind | null;
     readonly tekst: string | null;
+    /** De buitentemperatuur van de weerbron, als die hem geeft (besluit 128). */
+    readonly buitenC: number | null;
+    /** Het weer per uur, de komende 24 uur, als de bron dat geeft (Open-Meteo). */
+    readonly uren: readonly WeatherHour[];
     /**
      * De verwachting per kwartier van vandaag, in W: de geleerde heldere lucht
      * maal het deel bij het weer van vandaag. Leeg als er niets is om op te rekenen.
@@ -463,6 +489,10 @@ export function weatherReport(input: {
   readonly timeZone: string;
   /** De naam van de weerbron; weg is Buienradar. */
   readonly bron?: string;
+  /** Het weer per uur, als kolommen (open-meteo.ts). */
+  readonly uren?: HourColumns | null;
+  /** WMO-code naar een soort; meegegeven om geen kring van imports te maken. */
+  readonly soortVanCode?: (code: number | null, wolkenPct: number | null) => WeatherKind | null;
 }): WeatherReport {
   const { geometry, location, learned, nowMs, timeZone } = input;
   const p = partsIn(nowMs, timeZone);
@@ -501,6 +531,8 @@ export function weatherReport(input: {
       zonkansPct: expected ?? null,
       soort: now?.soort ?? null,
       tekst: now?.tekst ?? null,
+      buitenC: now?.nuC ?? null,
+      uren: hoursFrom(input.uren ?? null, nowMs, input.soortVanCode),
       kwartieren: restShare == null ? [] : today.quarters.map((q) => ({ tMs: q.tMs, verwachtW: Math.round(q.w * Math.min(1, restShare)) })),
     },
     dagen: input.forecast.filter((f) => f.offset >= 1).map((f) => {
@@ -529,6 +561,26 @@ export function weatherReport(input: {
       return e ? { datum: key, kwartieren: e.kwartieren } : null;
     })(),
   };
+}
+
+/** De komende 24 uur, vanaf het uur van nu. */
+function hoursFrom(
+  u: HourColumns | null,
+  nowMs: number,
+  soortVanCode: ((code: number | null, wolkenPct: number | null) => WeatherKind | null) | undefined,
+): WeatherHour[] {
+  if (u == null) return [];
+  const out: WeatherHour[] = [];
+  for (let i = 0; i < u.buitenC.length && out.length < 24; i++) {
+    const tMs = u.vanMs + i * 3_600_000;
+    if (tMs + 3_600_000 <= nowMs) continue;
+    const wolken = u.wolkenPct[i] ?? null;
+    const regen = u.regenkansPct[i] ?? null;
+    const code = u.code?.[i] ?? null;
+    const soort = soortVanCode && code != null ? soortVanCode(code, wolken) : wolken == null ? null : regen != null && regen >= 50 ? 'regen' : wolken < 25 ? 'zon' : wolken < 70 ? 'half' : 'bewolkt';
+    out.push({ tMs, buitenC: u.buitenC[i] ?? null, soort, regenkansPct: regen, nacht: (u.zonWm2[i] ?? 0) <= 0 });
+  }
+  return out;
 }
 
 /** De afgesloten dagen waarvan de verwachting en de opbrengst allebei bekend zijn. */

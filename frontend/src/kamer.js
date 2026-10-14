@@ -26,11 +26,43 @@ const gezegd = new Map();
 const lampModus = new Map();
 /** Waar terwijl iemand het kleurenwiel sleept: dan het blad niet opnieuw opbouwen. */
 let bezig = false;
+/**
+ * Wat de bewoner net koos, tot Home Assistant het doorgeeft (besluit 128). Een
+ * lamp meldt zich pas na een tel of twee als aan; zonder dit sprong de schakelaar
+ * even terug naar uit. Een lamp wacht hooguit acht tellen, een screen twee minuten.
+ */
+const gewenst = new Map();
+function wens(id, w) {
+  gewenst.set(id, { ...w, tot: Date.now() + (w.positiePct != null ? 120_000 : 8_000) });
+}
+function metWens(h) {
+  if (!h || gewenst.size === 0) return h;
+  const nu = Date.now();
+  for (const e of h.etages ?? []) for (const k of e.ruimtes ?? []) for (const d of k.apparaten ?? []) {
+    const w = gewenst.get(d.id);
+    if (!w) continue;
+    const klaar = w.aan != null ? d.aan === w.aan : d.positiePct != null && Math.abs(d.positiePct - w.positiePct) <= 3;
+    if (klaar || nu > w.tot) {
+      gewenst.delete(d.id);
+      continue;
+    }
+    if (w.aan != null) {
+      d.aan = w.aan;
+      d.stand = w.aan ? 'gaat aan' : 'gaat uit';
+    } else if (!['gaat open', 'gaat dicht', 'vouwt uit', 'klapt in'].includes(d.stand)) {
+      const z = d.scherm?.zonnescherm === true;
+      d.stand = z
+        ? w.positiePct >= (d.positiePct ?? 0) ? 'vouwt uit' : 'klapt in'
+        : w.positiePct >= 100 ? 'gaat open' : w.positiePct <= 0 ? 'gaat dicht' : `gaat naar ${100 - w.positiePct}% dicht`;
+    }
+  }
+  return h;
+}
 
 async function laadAlles() {
   const [s, h, z, v] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag')]);
   if (s.status === 'fulfilled') state = s.value;
-  if (h.status === 'fulfilled') huisData = h.value;
+  if (h.status === 'fulfilled') huisData = metWens(h.value);
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') vandaag = v.value;
   teken();
@@ -38,7 +70,7 @@ async function laadAlles() {
 
 async function laadHuis() {
   try {
-    huisData = await haal('api/huis');
+    huisData = metWens(await haal('api/huis'));
   } catch {
     // De volgende keer.
   }
@@ -171,7 +203,8 @@ function tekenPodium(etage, kamer) {
   };
   // Met de oprit en de tuin erbij is het beeld breder: dan minder inzoomen, en wat naar links.
   const buitenErbij = Object.values(buitenDelen).some(Boolean);
-  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true, meubels: true });
+  const wandPodium = document.getElementById('podium-wand');
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true, meubels: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
 }
 
@@ -337,7 +370,7 @@ function knopRegel(d) {
   const via = knop.koppeling === 'zha'
     ? 'Deze radiatorknop loopt via ZHA. Met Zigbee2MQTT zie je hoe ver de klep open staat, en kan de knop later de temperatuur van de kamer gebruiken in plaats van zijn eigen, die naast de warme radiator te hoog meet.'
     : knop.koppeling === 'zigbee2mqtt'
-      ? 'Deze radiatorknop loopt via Zigbee2MQTT. Hij meet naast de radiator, dus vaak te warm; kies bij Indeling liever een thermometer in de kamer om mee te meten.'
+      ? 'Deze radiatorknop loopt via Zigbee2MQTT. Zo kan hij later de temperatuur van een thermometer in de kamer gebruiken in plaats van zijn eigen, die naast de radiator te warm meet. Kies bij Indeling alvast een thermometer om mee te meten.'
       : 'Een radiatorknop. Hij meet naast de radiator, dus vaak te warm.';
   return `${klep}<p class="mini" style="margin: 0">${esc(via)} Smart Climate bedient hem pas als het huis zelf mag schakelen.</p>`;
 }
@@ -402,13 +435,29 @@ function zetDoek(svg, dicht) {
   }
 }
 
+/**
+ * Een zonnescherm (besluit 128): open is uitgevouwen, en het doek in de tekening
+ * is hoe ver hij uit is. Bij een screen is het doek hoe ver hij dicht is.
+ */
+const naarHa = (d, doekPct) => (d.scherm?.zonnescherm ? doekPct : 100 - doekPct);
+
+/** Wat er in de tekening staat. */
+function standWoord(d, terug, laatste, dicht) {
+  const z = d.scherm?.zonnescherm === true;
+  if (!terug) return laatste ? (z ? (laatste === 'open' ? 'uitgevouwen' : 'ingeklapt') : laatste) : 'stand onbekend';
+  if (dicht <= 0) return z ? 'ingeklapt' : 'open';
+  return z && dicht >= 1 ? 'uitgevouwen' : `${Math.round(dicht * 100)}%`;
+}
+
 function screenBlad(k, d) {
-  // Somfy RTS meldt zijn stand niet terug (besluit 121): dan geen stand in de tekening.
+  // Somfy RTS meldt zijn stand niet terug (besluit 121): dan de laatste opdracht, als die er is (128).
   const terug = d.scherm?.terugmelding !== false;
+  const zonnescherm = d.scherm?.zonnescherm === true;
+  const laatste = terug ? null : d.scherm?.laatste ?? null;
   const sleep = terug && d.scherm?.standKiezen === true;
   const bedienen = huisData.schermenBedienen === true;
-  const open = terug ? d.positiePct ?? (d.aan ? 0 : 100) : 100;
-  const dicht = 1 - open / 100;
+  const pos = d.positiePct ?? (zonnescherm ? (d.aan ? 100 : 0) : d.aan ? 0 : 100);
+  const dicht = terug ? naarHa(d, pos) / 100 : laatste ? ((laatste === 'open') === zonnescherm ? 1 : 0) : 0;
   const doekH = Math.round(DOEK.hoogte * dicht);
   const zonNu = (zon?.gevels ?? []).filter((g) => g.inDeZon).map((g) => g.naam.toLowerCase());
   const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="Het raam met de screen ${Math.round(dicht * 100)} procent dicht" ${sleep && bedienen ? `data-schermsleep="${esc(d.id)}" style="touch-action: none; cursor: ns-resize"` : ''}>
@@ -426,17 +475,21 @@ function screenBlad(k, d) {
     ${sleep && bedienen ? `<g data-greep transform="translate(0 ${doekH})"><rect x="126" y="38" width="48" height="17" rx="8.5" fill="#EEF3F7"/><line x1="138" y1="46.5" x2="162" y2="46.5" stroke="#0b1424" stroke-width="2" stroke-linecap="round"/></g>` : ''}
     <line x1="270" y1="46" x2="270" y2="260" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round"/>
     <line data-standlijn x1="270" y1="46" x2="270" y2="${46 + doekH}" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round" ${doekH > 0 && terug ? '' : 'style="display: none"'}/>
-    <text data-standtekst x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${!terug ? 'stand onbekend' : doekH > 0 ? `${Math.round(dicht * 100)}%` : 'open'}</text>
+    <text data-standtekst x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${esc(standWoord(d, terug, laatste, dicht))}</text>
   </svg>`;
   const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon op deze gevel</span>` : '';
   // Open, Half, de stand van nu en Dicht; zonder stand kiezen Open, Stop en Dicht.
   const nu = Math.round(dicht * 100);
+  const [OPEN, DICHT] = zonnescherm ? ['Ingeklapt', 'Uitgevouwen'] : ['Open', 'Dicht'];
   const keuzes = sleep
-    ? [['stand:0', 'Open', nu === 0], ['stand:50', 'Half', nu === 50], ...(nu !== 0 && nu !== 50 && nu !== 100 ? [[`stand:${nu}`, `${nu}%`, true]] : []), ['stand:100', 'Dicht', nu === 100]]
-    : [['open', 'Open', false], ['stop', 'Stop', false], ['dicht', 'Dicht', false]];
+    ? [['stand:0', OPEN, nu === 0], ['stand:50', 'Half', nu === 50], ...(nu !== 0 && nu !== 50 && nu !== 100 ? [[`stand:${nu}`, `${nu}%`, true]] : []), ['stand:100', DICHT, nu === 100]]
+    : zonnescherm
+      ? [['open', 'Uitvouwen', laatste === 'open'], ['stop', 'Stop', false], ['dicht', 'Inklappen', laatste === 'dicht']]
+      : [['open', 'Open', laatste === 'open'], ['stop', 'Stop', false], ['dicht', 'Dicht', laatste === 'dicht']];
   const knoppen = `<div class="keuze" style="grid-template-columns: repeat(${keuzes.length}, 1fr)" role="group" aria-label="${esc(d.naam)} bedienen">${keuzes.map(([a, t, aan]) => `<button type="button" data-scherm="${a}" aria-pressed="${aan}" ${bedienen ? '' : 'disabled'}>${t}</button>`).join('')}</div>`;
+  const wat = zonnescherm ? 'Dit zonnescherm' : 'Dit scherm';
   const uitleg = !terug
-    ? 'Dit scherm meldt zijn stand niet terug (Somfy RTS). Open, dicht en stop werken; waar hij staat, weet de app niet. Daarom gaat hij ook later niet mee in de regeling.'
+    ? `${wat} meldt niet terug waar het staat (Somfy RTS). Er staat wat het laatst gevraagd is, in de app of in Home Assistant; een afstandsbediening hoort niemand. Daarom gaat het ook later niet mee in de regeling.`
     : sleep
       ? 'Sleep de greep omhoog of omlaag, of kies een stand. De regeling doet er niets mee.'
       : 'Je bedient het scherm hier zelf. De regeling doet er niets mee.';
@@ -537,8 +590,8 @@ async function licht(body, door = 'api/licht') {
       $$('[data-fout]').forEach((el) => (el.textContent = uit.fout ?? uit.wachten ?? 'Niet gelukt.'));
       return;
     }
-    // Even wachten tot Home Assistant de nieuwe stand doorgeeft.
-    setTimeout(() => void laadHuis(), 800);
+    // Even wachten tot Home Assistant de nieuwe stand doorgeeft; tot dan staat er wat je koos.
+    for (const t of [800, 2500, 6000]) setTimeout(() => void laadHuis(), t);
   } catch {
     $$('[data-fout]').forEach((el) => (el.textContent = 'Geen verbinding met Smart Climate.'));
   }
@@ -578,8 +631,12 @@ function koppel(blad) {
     else if (t.dataset.schakel) {
       const d = kamer.apparaten.find((x) => x.id === t.dataset.schakel);
       t.setAttribute('aria-checked', String(!d?.aan));
+      wens(t.dataset.schakel, { aan: !d?.aan });
       void licht({ doel: 'lamp', id: t.dataset.schakel, aan: !d?.aan });
-    } else if (t.hasAttribute('data-alles-uit')) void licht({ doel: 'kamer', id: kamer.id, aan: false });
+    } else if (t.hasAttribute('data-alles-uit')) {
+      for (const d of kamer.apparaten) if (d.soort === 'licht' && d.aan) wens(d.id, { aan: false });
+      void licht({ doel: 'kamer', id: kamer.id, aan: false });
+    }
     else if (t.hasAttribute('data-meer-scenes')) {
       if (alleScenes.has(apparaat?.id)) alleScenes.delete(apparaat?.id);
       else alleScenes.add(apparaat?.id);
@@ -600,14 +657,18 @@ function koppel(blad) {
     } else if (t.dataset.modus && apparaat) {
       lampModus.set(apparaat.id, t.dataset.modus);
       teken();
-    } else if (t.dataset.kleur && apparaat) void licht({ doel: 'lamp', id: apparaat.id, aan: true, kleur: t.dataset.kleur });
+    } else if (t.dataset.kleur && apparaat) {
+      wens(apparaat.id, { aan: true });
+      void licht({ doel: 'lamp', id: apparaat.id, aan: true, kleur: t.dataset.kleur });
+    }
     // Een scherm open, dicht of stoppen (besluit 121).
     else if (t.dataset.scherm && apparaat) {
       const [actie, pct] = t.dataset.scherm.split(':');
       if (actie === 'stand') {
         $$('[data-scherm]').forEach((b) => b.setAttribute('aria-pressed', String(b === t)));
         $$('[data-schermsleep]').forEach((svg) => zetDoek(svg, Number(pct) / 100));
-        void licht({ id: apparaat.id, actie: 'stand', standPct: 100 - Number(pct) }, 'api/scherm');
+        wens(apparaat.id, { positiePct: naarHa(apparaat, Number(pct)) });
+        void licht({ id: apparaat.id, actie: 'stand', standPct: naarHa(apparaat, Number(pct)) }, 'api/scherm');
       } else void licht({ id: apparaat.id, actie }, 'api/scherm');
     }
   });
@@ -616,6 +677,7 @@ function koppel(blad) {
   });
   blad.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.dataset.helder || t.dataset.kelvin) wens(t.dataset.helder || t.dataset.kelvin, { aan: true });
     if (t.dataset.helder) void licht({ doel: 'lamp', id: t.dataset.helder, aan: true, helderheidPct: Number(t.value) });
     else if (t.dataset.kelvin) void licht({ doel: 'lamp', id: t.dataset.kelvin, aan: true, kelvin: Number(t.value) });
     t.blur();
@@ -641,7 +703,10 @@ function koppel(blad) {
       bezig = false;
       if (!sturen) return;
       $$('[data-scherm]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scherm === `stand:${Math.round(laatste * 100)}`)));
-      void licht({ id: svg.dataset.schermsleep, actie: 'stand', standPct: Math.round(100 - laatste * 100) }, 'api/scherm');
+      const d = vind()?.apparaat;
+      const standPct = d ? naarHa(d, Math.round(laatste * 100)) : Math.round(100 - laatste * 100);
+      wens(svg.dataset.schermsleep, { positiePct: standPct });
+      void licht({ id: svg.dataset.schermsleep, actie: 'stand', standPct }, 'api/scherm');
     };
     svg.addEventListener('pointermove', beweeg);
     svg.addEventListener('pointerup', klaar(true), { once: true });
@@ -673,6 +738,7 @@ function koppel(blad) {
     const los = () => {
       wiel.removeEventListener('pointermove', beweeg);
       bezig = false;
+      wens(wiel.dataset.wiel, { aan: true });
       void licht({ doel: 'lamp', id: wiel.dataset.wiel, aan: true, tint: laatste });
     };
     wiel.addEventListener('pointermove', beweeg);
