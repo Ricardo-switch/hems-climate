@@ -46,6 +46,7 @@ import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
 import { weatherReport, type ForecastDay, type HourColumns, type WeatherLog, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
+import type { ComfortView } from './comfort.js';
 import type { HouseReport } from './house.js';
 import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, type LayoutStore } from './layout.js';
 import type { CoverSwitch } from './covers.js';
@@ -95,6 +96,16 @@ export interface WebOptions {
    * onboarding het enige wat deze server te bieden heeft.
    */
   readonly config: SiteConfig | null;
+  /** De configuratie zoals hij nu is, als comfort uit de app hem verving (besluit 130). */
+  readonly configNow?: () => SiteConfig | null;
+  /**
+   * Comfort uit de app (besluit 130): de temperaturen per kamer en de dagdelen.
+   * Zonder dit bestaat de route niet.
+   */
+  readonly comfort?: {
+    readonly view: () => ComfortView;
+    readonly save: (body: unknown) => Promise<{ readonly ok: true; readonly view: ComfortView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+  };
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -457,6 +468,8 @@ export class WebServer {
       (this.#options.layout != null && path === '/api/indeling') ||
       // Camera's en de deurbel (besluit 109): alleen de keuzes, naar een eigen bestand.
       (this.#options.functies != null && path === '/api/functies') ||
+      // Comfort (besluit 130): doelen voor de regeling, naar een eigen bestand.
+      (this.#options.comfort != null && path === '/api/comfort') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Schermen (besluit 121): open, dicht, stop of een stand, voor de bewoner.
       (this.#options.covers != null && path === '/api/scherm') ||
@@ -524,7 +537,7 @@ export class WebServer {
     }
 
     if (path === '/api/site') {
-      const config = this.#options.config;
+      const config = this.#config();
       if (config == null) {
         // 503 en niet 404: de installatie bestaat, hij is alleen nog niet
         // ingesteld. De pagina kan daar iets nuttigs mee doen.
@@ -552,6 +565,29 @@ export class WebServer {
 
     if (path === '/api/functies') {
       await this.#functies(req, res, method);
+      return;
+    }
+
+    if (path === '/api/comfort') {
+      const comfort = this.#options.comfort;
+      if (comfort == null) {
+        sendJson(res, 503, { wachten: 'comfort instellen kan pas met een configuratie en een logmap' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 200, comfort.view());
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await comfort.save(body);
+      if (result.ok) sendJson(res, 200, result.view);
+      else sendJson(res, result.status, { fout: result.reden });
       return;
     }
 
@@ -656,7 +692,7 @@ export class WebServer {
      * logboek, dus alleen waar er gelogd wordt.
      */
     if (path === '/api/vandaag') {
-      const config = this.#options.config;
+      const config = this.#config();
       if (logDir == null || config == null) {
         sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er is geen dag om te tonen' });
         return;
@@ -678,7 +714,7 @@ export class WebServer {
      * "zet de zolder op 21"; de muur hierboven blijft staan.
      */
     if (path === '/api/vraag') {
-      const config = this.#options.config;
+      const config = this.#config();
       if (config == null) {
         sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
         return;
@@ -751,7 +787,7 @@ export class WebServer {
      * wat de panelen bij een heldere lucht zouden leveren.
      */
     if (path === '/api/zon') {
-      const config = this.#options.config;
+      const config = this.#config();
       const location = this.#options.location?.() ?? null;
       if (config?.geometry == null || location == null) {
         sendJson(res, 503, {
@@ -792,7 +828,7 @@ export class WebServer {
 
     if (path === '/api/indeling') {
       const door = this.#options.layout;
-      const config = this.#options.config;
+      const config = this.#config();
       if (door == null || config == null) {
         sendJson(res, 503, { wachten: 'indelen staat niet aan' });
         return;
@@ -1061,7 +1097,7 @@ export class WebServer {
 
   async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {
     const energy = this.#options.energy;
-    const config = this.#options.config;
+    const config = this.#config();
     if (energy == null || config == null) {
       sendJson(res, 503, { wachten: 'Opbrengst staat niet aan' });
       return;
@@ -1113,7 +1149,7 @@ export class WebServer {
     const busy = this.#yieldBusy.get(key);
     if (busy) return busy;
     const energy = this.#options.energy!;
-    const config = this.#options.config!;
+    const config = this.#config()!;
     const settings = energy.store.current!;
     const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now)
       .then((report) => {
@@ -1132,7 +1168,7 @@ export class WebServer {
 
   /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */
   #yieldWarm(vandaag: string): void {
-    const config = this.#options.config;
+    const config = this.#config();
     const settings = this.#options.energy?.store.current;
     if (config == null || settings == null) return;
     const now = Date.now();
@@ -1321,7 +1357,7 @@ export class WebServer {
    * de proefomgeving leest `bewoner`, de schaduwweergave de rest.
    */
   #withResident(snapshot: LiveSnapshot): LiveSnapshot & { bewoner?: ResidentView } {
-    const config = this.#options.config;
+    const config = this.#config();
     if (config == null) return snapshot;
     return { ...snapshot, bewoner: residentView(config, snapshot) };
   }
@@ -1362,8 +1398,13 @@ export class WebServer {
    * die dag naast de werkelijke opbrengst kan leggen; main roept dit daarom elke
    * tien minuten aan, ook als niemand kijkt.
    */
+  /** De configuratie zoals hij nu is (besluit 130). */
+  #config(): SiteConfig | null {
+    return this.#options.configNow?.() ?? this.#options.config;
+  }
+
   async weatherNow(): Promise<WeatherReport | { wachten: string }> {
-    const config = this.#options.config;
+    const config = this.#config();
     const location = this.#options.location?.() ?? null;
     const weather = this.#options.weather;
     const logDir = this.#options.logDir;

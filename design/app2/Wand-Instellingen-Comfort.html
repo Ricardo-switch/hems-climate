@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Instellingen › Comfort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Comfort (schets, 14 oktober 2026), in de opbouw van elke groep: links de
+   * kamers en de dagdelen, in het midden de gekozen kamer. Per dagdeel een
+   * balk van 14 tot 28 graden: onder de blauwe streep warmt het huis op, boven
+   * de oranje koelt het; daartussen is het goed. Rechts wat het huis leerde.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .bewaard { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--mint); }
+  .veld { flex: 1; display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 16px; min-height: 0; }
+
+  .delen { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .delen h4 { margin: 8px 12px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .deel { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; align-items: center; padding: 10px 12px; border-radius: 14px; }
+  .deel b { font-size: 15px; font-weight: 600; }
+  .deel span { grid-column: 1; font-size: 12.5px; color: var(--gedempt); }
+  .deel .stip { grid-row: 1 / 3; grid-column: 2; }
+  .deel.nu { background: rgba(255, 255, 255, 0.09); }
+
+  .vorm { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .vorm .bovenrij { display: flex; justify-content: space-between; align-items: baseline; }
+  .nu-temp { font-family: var(--kop); font-size: 15px; color: var(--zacht); }
+  .nu-temp b { font-size: 22px; color: var(--tekst); }
+
+  /* Per dagdeel een band. */
+  .band { display: grid; grid-template-columns: 120px minmax(0, 1fr) 150px; gap: 14px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .band:first-of-type { border-top: 0; }
+  .band .naam b { display: block; font-size: 15px; font-weight: 600; }
+  .band .naam span { font-size: 12.5px; color: var(--gedempt); }
+  .schaal { position: relative; height: 38px; }
+  .schaal .baan { position: absolute; left: 0; right: 0; top: 15px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(255, 122, 77, 0.35), rgba(255, 255, 255, 0.08) 40%, rgba(255, 255, 255, 0.08) 60%, rgba(111, 211, 255, 0.35)); }
+  .schaal .goed { position: absolute; top: 13px; height: 12px; border-radius: 6px; background: rgba(110, 231, 183, 0.55); }
+  .schaal .greep { position: absolute; top: 7px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); display: grid; place-items: center; }
+  .schaal .greep i { width: 8px; height: 8px; border-radius: 50%; }
+  .schaal .maat { position: absolute; top: 30px; font-size: 10.5px; color: var(--gedempt); transform: translateX(-50%); }
+  .waarden { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--zacht); text-align: right; }
+  .waarden b { font-family: var(--kop); font-size: 15px; color: var(--tekst); }
+  .band.uit .schaal, .band.uit .waarden { opacity: 0.35; }
+
+  .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij2 .label { font-size: 14.5px; font-weight: 600; display: block; margin-bottom: 6px; }
+  .rij2 .uitleg { font-size: 12.5px; color: var(--gedempt); margin-top: 4px; }
+  .stapper { display: flex; align-items: center; gap: 10px; }
+  .stapper .rond { width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.08); display: grid; place-items: center; font-size: 18px; }
+  .stapper b { font-family: var(--kop); font-size: 22px; min-width: 60px; text-align: center; }
+  .keuze { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .keuze span { height: 34px; display: grid; place-items: center; border-radius: 9px; color: var(--zacht); font-weight: 700; font-size: 13px; }
+  .keuze span.aan { background: var(--tekst); color: var(--inkt); }
+
+  .naast { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .naast .glas { padding: 16px 18px; }
+  .naast h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+  .voorstel { border-color: rgba(143, 134, 255, 0.4); background: linear-gradient(160deg, rgba(143, 134, 255, 0.12), rgba(255, 255, 255, 0.03)); }
+  .voorstel .knoppen { display: flex; gap: 8px; margin-top: 12px; }
+  .voorstel button { height: 36px; padding: 0 14px; border-radius: 12px; border: 0; font: inherit; font-weight: 700; font-size: 13px; background: var(--tekst); color: var(--inkt); }
+  .voorstel button.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+  .dag { position: relative; height: 34px; border-radius: 10px; overflow: hidden; display: flex; margin-top: 4px; }
+  .dag i { height: 100%; }
+  .dagmaat { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--gedempt); margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <span class="terugje">‹ Instellingen</span>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Comfort</h1>
+        <p class="lead" style="margin-top: 6px">Hoe warm of koel je het wilt, per kamer en per dagdeel.</p>
+      </div>
+      <span class="bewaard"><span class="stip" style="background: var(--mint)"></span>Alles wordt meteen bewaard</span>
+    </div>
+
+    <div class="veld">
+      <nav class="glas delen" aria-label="Delen van Comfort">
+        <h4>Kamers</h4>
+        <div class="deel nu"><b>Woonkamer</b><span>overdag 20 tot 22°</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Badkamer</b><span>overdag 18°, 's nachts 16°</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Zolder</b><span>overdag 18 tot 22,5°</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Slaapkamers</b><span>nog geen wens</span><span class="stip" style="background: var(--gedempt)"></span></div>
+        <h4>Het hele huis</h4>
+        <div class="deel"><b>Dagdelen</b><span>dag 8:00, nacht 22:00</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Afwezig en vakantie</b><span>vanzelf als niemand thuis is</span><span class="stip" style="background: var(--mint)"></span></div>
+      </nav>
+
+      <section class="glas vorm">
+        <div class="bovenrij"><h2 class="kop-2" style="margin: 0">Woonkamer</h2><span class="nu-temp">nu <b>21,8°</b></span></div>
+        <!-- Schaal van 14 tot 28: 1 graad is 100/14 procent. -->
+        <div class="band">
+          <div class="naam"><b>Overdag</b><span>8:00 tot 22:00</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 42.9%; width: 14.3%"></div><span class="greep" style="left: 42.9%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 57.1%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 42.9%">20°</span><span class="maat" style="left: 57.1%">22°</span><span class="maat" style="left: 100%">28°</span></div>
+          <div class="waarden"><span>verwarmen onder <b>20°</b></span><span>koelen boven <b>22°</b></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>'s Nachts</b><span>22:00 tot 6:00</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 28.6%; width: 35.7%"></div><span class="greep" style="left: 28.6%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 64.3%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 28.6%">18°</span><span class="maat" style="left: 64.3%">23°</span></div>
+          <div class="waarden"><span>verwarmen onder <b>18°</b></span><span>koelen boven <b>23°</b></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>Afwezig</b><span>als niemand thuis is</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 14.3%; width: 57.1%"></div><span class="greep" style="left: 14.3%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 71.4%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 14.3%">16°</span><span class="maat" style="left: 71.4%">24°</span></div>
+          <div class="waarden"><span>verwarmen onder <b>16°</b></span><span>koelen boven <b>24°</b></span></div>
+        </div>
+        <div class="band">
+          <div class="naam"><b>Vakantie</b><span>als jij het aanzet</span></div>
+          <div class="schaal"><div class="baan"></div><div class="goed" style="left: 0%; width: 85.7%"></div><span class="greep" style="left: 0%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 85.7%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">12°</span><span class="maat" style="left: 85.7%">26°</span></div>
+          <div class="waarden"><span>vorstvrij, <b>12°</b></span><span>koelen boven <b>26°</b></span></div>
+        </div>
+        <div class="rij2">
+          <div><span class="label">Nooit warmer dan</span><div class="stapper"><span class="rond">−</span><b>26°</b><span class="rond">+</span></div><p class="uitleg">Dan koelt de airco ook zonder zon, met stroom van het net.</p></div>
+          <div><span class="label">Voorrang bij weinig zon</span><div class="keuze"><span class="aan">Eerst</span><span>Daarna</span><span>Laatst</span></div><p class="uitleg">Is er zon voor één airco, dan gaat deze kamer voor.</p></div>
+        </div>
+      </section>
+
+      <aside class="naast">
+        <div class="glas voorstel">
+          <h3 style="color: var(--violet)">Wat het huis leerde</h3>
+          <p class="mini" style="margin: 0; font-size: 13.5px; color: var(--zacht)">Je tikte 4 keer "te koud" in de woonkamer, steeds rond de 20°. Zal het huis overdag pas verwarmen onder 20,5°?</p>
+          <div class="knoppen"><button type="button">Ja, 20,5°</button><button class="zacht" type="button">Laat 20°</button></div>
+        </div>
+        <div class="glas">
+          <h3>Zo gebruikt het huis dit</h3>
+          <p class="mini" style="margin: 0 0 8px">Tussen de twee strepen is het goed: dan doet het huis niets. Is er zon over, dan mag het al eerder koelen, tot de onderste streep.</p>
+          <div class="dag"><i style="flex: 6; background: rgba(143, 134, 255, 0.35)"></i><i style="flex: 2; background: rgba(255, 122, 77, 0.35)"></i><i style="flex: 14; background: rgba(110, 231, 183, 0.35)"></i><i style="flex: 2; background: rgba(143, 134, 255, 0.35)"></i></div>
+          <div class="dagmaat"><span>0</span><span>6 voorverwarmen</span><span>8 dag</span><span>22 nacht</span></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'instellingen');</script>
+</body>
+</html>

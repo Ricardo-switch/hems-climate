@@ -30,6 +30,7 @@ import { UitstelStore } from '../src/web/uitstel.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type ConnectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
 import { FunctiesStore, type FunctiesGevonden } from '../src/web/functies.js';
+import { comfortView, controleerComfort, type ComfortView } from '../src/web/comfort.js';
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -103,6 +104,7 @@ async function start(options: {
   functies?: { store: FunctiesStore; gevonden: () => FunctiesGevonden | null };
   lichtAan?: () => boolean;
   schermenAan?: () => boolean;
+  comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -133,6 +135,7 @@ async function start(options: {
         ...(options.functies ? { functies: options.functies } : {}),
         ...(options.lichtAan ? { lichtAan: options.lichtAan } : {}),
         ...(options.schermenAan ? { schermenAan: options.schermenAan } : {}),
+        ...(options.comfort ? { comfort: options.comfort } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -1294,6 +1297,36 @@ describe('de indeling (besluit 96)', () => {
     for (const method of ['PUT', 'PATCH', 'DELETE']) {
       expect((await fetch(`${base}/api/indeling`, { method })).status, method).toBe(405);
     }
+  });
+});
+
+describe('comfort instellen (besluit 130)', () => {
+  it('geeft wat er geldt, en neemt alleen goede waarden aan', async () => {
+    const zone = exampleSite.zones[0]!;
+    let bewaard: unknown = null;
+    const { base } = await start({
+      comfort: {
+        view: () => comfortView(exampleSite, null),
+        save: async (body) => {
+          const c = controleerComfort(body, exampleSite);
+          if (!c.ok) return { ok: false, status: 400, reden: c.reden };
+          bewaard = c.comfort;
+          return { ok: true, view: comfortView(exampleSite, c.comfort) };
+        },
+      },
+    });
+    const v = (await (await fetch(`${base}/api/comfort`)).json()) as ComfortView;
+    expect(v.kamers[0]!.id).toBe(zone.id);
+    const goed = await fetch(`${base}/api/comfort`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ kamers: { [zone.id]: { modi: { dag: { heat: 20.5, cool: 23 } } } } }) });
+    expect(goed.status).toBe(200);
+    expect(bewaard).toMatchObject({ kamers: { [zone.id]: { modi: { dag: { heat: 20.5, cool: 23 } } } } });
+    const fout = await fetch(`${base}/api/comfort`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ kamers: { kelder: { modi: {} } } }) });
+    expect(fout.status).toBe(400);
+  });
+
+  it('bestaat niet zonder configuratie en logmap', async () => {
+    const { base } = await start({});
+    expect((await fetch(`${base}/api/comfort`)).status).toBe(503);
   });
 });
 

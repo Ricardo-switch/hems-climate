@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Instellingen › Energie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Eén opbouw voor elke groep (schets, 14 oktober 2026): links de delen van
+   * de groep, elk met zijn stand; in het midden het deel dat je kiest, met
+   * gewone vragen; rechts waarvoor het nodig is en waar je het vindt. Wat je
+   * verandert, wordt meteen bewaard.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .bewaard { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--mint); }
+  .veld { flex: 1; display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 16px; min-height: 0; }
+
+  /* De delen van de groep. */
+  .delen { padding: 10px; display: flex; flex-direction: column; gap: 2px; }
+  .deel { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; align-items: center; padding: 11px 12px; border-radius: 14px; color: var(--zacht); }
+  .deel b { font-size: 15px; color: var(--tekst); font-weight: 600; }
+  .deel span { grid-column: 1; font-size: 12.5px; color: var(--gedempt); }
+  .deel .stip { grid-row: 1 / 3; grid-column: 2; }
+  .deel.nu { background: rgba(255, 255, 255, 0.09); }
+  .delen .hulp { margin-top: auto; padding: 12px; font-size: 12.5px; color: var(--gedempt); }
+
+  /* Het gekozen deel. */
+  .vorm { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+  .vorm h2 { margin: 0; }
+  .vraag { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 6px 18px; align-items: center; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .vraag:first-of-type { border-top: 0; padding-top: 0; }
+  .vraag > label, .vraag > .label { font-size: 14.5px; font-weight: 600; }
+  .vraag .uitleg { grid-column: 2; font-size: 12.5px; color: var(--gedempt); }
+  .velden { display: flex; gap: 10px; }
+  .veldje { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .veldje small { font-size: 12px; color: var(--gedempt); font-weight: 600; }
+  .invoer { height: 44px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: var(--tekst); padding: 0 12px; display: flex; align-items: center; font-size: 15px; font-weight: 600; }
+  .invoer .eenheid { margin-left: auto; color: var(--gedempt); font-weight: 500; font-size: 13px; }
+  .invoer.leeg { border-color: var(--gloed); background: rgba(255, 122, 77, 0.07); color: var(--gedempt); font-weight: 500; }
+  .keuze { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .keuze span { height: 36px; display: grid; place-items: center; border-radius: 9px; color: var(--zacht); font-weight: 700; font-size: 13.5px; }
+  .keuze span.aan { background: var(--tekst); color: var(--inkt); }
+  .kosten { display: flex; flex-direction: column; gap: 6px; }
+  .kost { display: grid; grid-template-columns: minmax(0, 1fr) 120px 30px; gap: 8px; align-items: center; }
+  .kost .weg { color: var(--gedempt); text-align: center; }
+  .erbij { font-size: 13.5px; font-weight: 700; color: var(--ijs); }
+  .melding { display: flex; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 14px; background: rgba(255, 122, 77, 0.08); border: 1px solid rgba(255, 122, 77, 0.3); font-size: 13.5px; color: var(--zacht); }
+
+  /* Ernaast: waarvoor en waar je het vindt. */
+  .naast { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .naast .glas { padding: 16px 18px; }
+  .naast h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+  .naast ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; color: var(--zacht); }
+  .naast li { display: flex; gap: 8px; }
+  .naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
+  .rekening { margin-top: 10px; border-radius: 12px; background: #eef1f4; padding: 10px 12px; color: #2a3442; font-size: 11.5px; line-height: 1.6; }
+  .rekening .rij { display: flex; justify-content: space-between; }
+  .rekening .hier { background: rgba(255, 122, 77, 0.25); border-radius: 4px; margin: 0 -4px; padding: 0 4px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <span class="terugje">‹ Instellingen</span>
+    <div class="kopregel">
+      <div>
+        <h1 class="kop-1">Energie</h1>
+        <p class="lead" style="margin-top: 6px">Je panelen, je aansluiting, je meters en wat je betaalt.</p>
+      </div>
+      <span class="bewaard"><span class="stip" style="background: var(--mint)"></span>Alles wordt meteen bewaard</span>
+    </div>
+
+    <div class="veld">
+      <nav class="glas delen" aria-label="Delen van Energie">
+        <div class="deel"><b>Zonnepanelen</b><span>12 panelen, oost en west</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Aansluiting</b><span>1 × 35 A, P1-meter</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel"><b>Meters</b><span>stroom, gas, 2 airco's</span><span class="stip" style="background: var(--mint)"></span></div>
+        <div class="deel nu"><b>Contract en prijzen</b><span>stroomprijs ontbreekt</span><span class="stip" style="background: var(--gloed)"></span></div>
+        <div class="deel"><b>Verwarming</b><span>cv-ketel, aanvoer 45°</span><span class="stip" style="background: var(--mint)"></span></div>
+        <p class="hulp">Een groen bolletje: klaar. Oranje: er mist iets wat Smart Climate nodig heeft.</p>
+      </nav>
+
+      <section class="glas vorm">
+        <h2 class="kop-2">Contract en prijzen</h2>
+        <div class="melding"><span class="stip" style="background: var(--gloed); margin-top: 6px"></span>Zonder stroomprijs rekent Opbrengst alleen in kWh. Vul hem in zoals hij op je rekening staat, met btw.</div>
+        <div class="vraag"><span class="label">Soort contract</span><div class="keuze"><span class="aan">Vaste prijs</span><span>Per uur (dynamisch)</span></div></div>
+        <div class="vraag"><label>Begint op</label><div class="invoer">18 november<span class="eenheid">elk jaar</span></div><span class="uitleg">Opbrengst rekent per contractjaar, net als je jaarafrekening.</span></div>
+        <div class="vraag"><span class="label">Stroom</span>
+          <div class="velden"><div class="veldje"><small>Normaal</small><div class="invoer leeg">€ 0,—<span class="eenheid">per kWh</span></div></div><div class="veldje"><small>Dal</small><div class="invoer leeg">€ 0,—<span class="eenheid">per kWh</span></div></div></div>
+          <span class="uitleg">Heb je één prijs voor de hele dag, vul dan twee keer hetzelfde in.</span></div>
+        <div class="vraag"><span class="label">Teruglevering</span><div class="velden"><div class="veldje"><small>Je krijgt</small><div class="invoer">€ 0,05<span class="eenheid">per kWh</span></div></div><div class="veldje"><small>Je betaalt</small><div class="invoer">€ 0,11<span class="eenheid">per kWh</span></div></div></div></div>
+        <div class="vraag"><span class="label">Gas</span><div class="invoer" style="max-width: 50%">€ 1,32<span class="eenheid">per m³</span></div></div>
+        <div class="vraag"><span class="label">Vaste kosten</span>
+          <div class="kosten">
+            <div class="kost"><div class="invoer">Vastrecht stroom</div><div class="invoer">€ 6,75<span class="eenheid">/mnd</span></div><span class="weg">×</span></div>
+            <div class="kost"><div class="invoer">Netbeheer stroom</div><div class="invoer">€ 39,48<span class="eenheid">/mnd</span></div><span class="weg">×</span></div>
+            <div class="kost"><div class="invoer">Vermindering energiebelasting</div><div class="invoer">− € 52,07<span class="eenheid">/mnd</span></div><span class="weg">×</span></div>
+            <span class="erbij">+ Vaste post erbij</span>
+          </div></div>
+      </section>
+
+      <aside class="naast">
+        <div class="glas">
+          <h3>Waarvoor dit nodig is</h3>
+          <ul><li>Opbrengst: wat je betaalde en bespaarde</li><li>Wat je huis kan: wat een batterij jou oplevert</li><li>Met een dynamisch contract: koelen en wassen als stroom goedkoop is</li></ul>
+        </div>
+        <div class="glas">
+          <h3>Waar staat het op je rekening?</h3>
+          <p class="mini" style="margin: 0">Bij "Leveringskosten", per kWh, inclusief btw.</p>
+          <div class="rekening">
+            <div class="rij"><span>Leveringskosten stroom</span><span></span></div>
+            <div class="rij hier"><span>Normaal 1.230 kWh × € 0,27</span><span>€ 332,10</span></div>
+            <div class="rij hier"><span>Dal 1.410 kWh × € 0,25</span><span>€ 352,50</span></div>
+            <div class="rij"><span>Vaste leveringskosten</span><span>€ 81,00</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'instellingen');</script>
+</body>
+</html>

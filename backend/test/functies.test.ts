@@ -49,13 +49,13 @@ const state = (entity_id: string, s: string): HaEntityState => ({ entity_id, sta
 
 describe('camera’s en de deurbel vinden (besluit 109)', () => {
   it('geeft per camera zijn beelden, met het lichtste als voorkeur, zonder het buienradarplaatje', () => {
+    // Met eigen beelden van het merk geen beeld via de Synology (besluit 130).
     expect(g.cameras).toEqual([
       {
         naam: 'Camera Oprit',
         beelden: [
           { id: 'camera.camera_oprit_duidelijk', naam: 'scherp', voorkeur: false },
           { id: 'camera.camera_oprit_vloeiend', naam: 'vloeiend', voorkeur: true },
-          { id: 'camera.camera_oprit', naam: 'via de Synology', voorkeur: false },
         ],
       },
       { naam: 'Deurbel', beelden: [{ id: 'camera.deurbel_vloeiend', naam: 'vloeiend', voorkeur: true }] },

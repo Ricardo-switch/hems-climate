@@ -41,6 +41,8 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/energie': 'beheerder',
   '/api/aansluiting': 'beheerder',
   '/api/functies': 'beheerder',
+  // Comfort zet de bewoner zelf (besluit 130).
+  '/api/comfort': 'bewoner',
   '/api/onboarding': 'beheerder',
 };
 

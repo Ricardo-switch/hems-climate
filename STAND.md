@@ -192,6 +192,7 @@ verwijzing bestaat.
   Vandaag ([128]).
 - **Airco's** krijgen drogen en hun filter, met een melding onder 10%; gekleurd
   licht is te zien in het huis ([129]).
+- **Comfort** zet je in de app, en de regeling neemt het meteen over ([130]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -370,4 +371,5 @@ verwijzing bestaat.
 [127]: DECISIONS.md#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen
 [128]: DECISIONS.md#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand
 [129]: DECISIONS.md#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel
+[130]: DECISIONS.md#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app
 <!-- links:einde -->

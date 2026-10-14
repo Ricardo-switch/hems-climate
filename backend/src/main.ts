@@ -18,6 +18,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { parseSiteConfig } from './config/schema.js';
+import type { SiteConfig } from './core/model.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
 import {
   fetchRegistries,
@@ -30,6 +31,7 @@ import {
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore } from './web/layout.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
+import { ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from './web/comfort.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -278,7 +280,7 @@ const strategies = defaultStrategies();
 // De configuratie wordt hier gelezen én gecontroleerd. Een fout erin is een
 // opstartfout met een aanwijzing, niet een storing die zich pas 's nachts laat
 // zien wanneer de regeling iets onmogelijks probeert.
-let site;
+let site: Awaited<ReturnType<typeof loadSiteConfig>> | undefined;
 try {
   site = await loadSiteConfig({
     explicitPath: startup.configPath ?? undefined,
@@ -353,9 +355,11 @@ if (site && answersAtStart) {
  * in het logboek welke sensoren per zone meetellen, als dat anders is dan de
  * vorige start.
  */
+// De indeling zoals hij bij het starten was: comfort (besluit 130) bouwt erop voort.
+let layoutAtStart: Awaited<ReturnType<typeof readLayoutFile>> = null;
 if (site && logDir !== '') {
   try {
-    const layoutAtStart = await readLayoutFile(logDir);
+    layoutAtStart = await readLayoutFile(logDir);
     const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
     const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
     const metMeten = withMeasurement(metAansluiting, layoutAtStart);
@@ -372,6 +376,38 @@ if (site && logDir !== '') {
     // Niet te lezen: dan meet elke zone zoals de configuratie zegt.
   }
   if (site) await noteSensors(logDir, site.config, Date.now()).catch(() => false);
+}
+
+/*
+ * Comfort uit de app (besluit 130): de temperaturen per kamer en de dagdelen,
+ * over alles hierboven. Bij het starten, en daarna meteen als de bewoner iets
+ * verandert: dan neemt de regeling het over zonder herstart.
+ */
+const comfortStore = logDir !== '' ? new ComfortStore(logDir) : null;
+await comfortStore?.load();
+/** De ruwe configuratie met alles wat de app erover legt, en comfort zoals gegeven. */
+async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; config: SiteConfig; toegevoegd: string[] } | { ok: false; reden: string }> {
+  if (!site) return { ok: false, reden: 'er is geen configuratie' };
+  const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
+  const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
+  const metMeten = withMeasurement(metAansluiting, layoutAtStart).raw;
+  const metComfort = withComfort(metMeten, comfort);
+  const checked = parseSiteConfig(metComfort.raw, { knownStrategies: strategies.ids });
+  if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
+  return { ok: true, config: checked.config, toegevoegd: metComfort.toegevoegd };
+}
+if (site && comfortStore?.current) {
+  try {
+    const met = await configWithComfort(comfortStore.current);
+    if (met.ok) {
+      site = { ...site, config: met.config };
+      for (const t of met.toegevoegd) console.log(`Uit de app (comfort.json): ${t}`);
+    } else {
+      console.warn(`Comfort uit de app niet overgenomen: ${met.reden}`);
+    }
+  } catch {
+    // Niet te lezen: dan zoals de configuratie zegt.
+  }
 }
 
 const client = new HaClient({
@@ -605,8 +641,8 @@ const onboarding =
       })
     : null;
 
-// Vast na het laden; de functies hieronder lezen hem later.
-const siteConfig = site?.config ?? null;
+// Na het laden; comfort uit de app (besluit 130) kan hem later vervangen.
+let siteConfig = site?.config ?? null;
 
 /*
  * De indeling van het huis (besluit 96): alleen als er gelogd wordt, want hij
@@ -616,7 +652,7 @@ const layoutStore =
   logDir !== '' && siteConfig
     ? new LayoutStore({
         logDir,
-        known: () => (houseRegisters ? knownForLayout(siteConfig, houseRegisters, houseStates) : null),
+        known: () => (houseRegisters ? knownForLayout(siteConfig!, houseRegisters, houseStates) : null),
       })
     : null;
 void layoutStore?.load();
@@ -810,7 +846,7 @@ if (webPort != null) {
       ? {
           layout: {
             store: layoutStore,
-            proposal: () => (houseRegisters ? proposeLayout(siteConfig, houseRegisters, houseStates) : null),
+            proposal: () => (houseRegisters ? proposeLayout(siteConfig!, houseRegisters, houseStates) : null),
           },
         }
       : {}),
@@ -823,6 +859,24 @@ if (webPort != null) {
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
+    configNow: () => siteConfig,
+    ...(comfortStore && siteConfig
+      ? {
+          comfort: {
+            view: () => comfortView(siteConfig!, comfortStore.current),
+            save: async (body: unknown) => {
+              const check = controleerComfort(body, siteConfig!);
+              if (!check.ok) return { ok: false as const, status: 400, reden: check.reden };
+              const met = await configWithComfort(check.comfort);
+              if (!met.ok) return { ok: false as const, status: 400, reden: `past niet in de regeling: ${met.reden}` };
+              if (runner && !runner.setConfig(met.config)) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
+              await comfortStore.save(check.comfort);
+              siteConfig = met.config;
+              return { ok: true as const, view: comfortView(met.config, check.comfort) };
+            },
+          },
+        }
+      : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {

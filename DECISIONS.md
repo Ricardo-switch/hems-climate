@@ -137,6 +137,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [125. Het screen zoals de schets, en Opbrengst onthoudt wat al uitgerekend is](#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is)
 - [128. Wat je koos blijft staan, het zonnescherm, het weer per uur en een bredere wand](#128-wat-je-koos-blijft-staan-het-zonnescherm-het-weer-per-uur-en-een-bredere-wand)
 - [129. Drogen en het filter van de airco, gekleurd licht, en wat er nog wegviel](#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel)
+- [130. Instellingen in zes groepen, en comfort zet je in de app](#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app)
 
 **Veiligheid**
 
@@ -5450,6 +5451,30 @@ Gevraagd door de bewoner op 14 oktober 2026.
 - **De tijdlijn van Vandaag** volgt de breedte van zijn vak en houdt zijn hoogte;
   op een bredere wand groeide hij anders mee in de hoogte en vielen Eerder en
   Later onderin van het scherm.
+
+---
+
+## 130. Instellingen in zes groepen, en comfort zet je in de app
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, met de schetsen
+`Wand-Instellingen`, `Wand-Instellingen-Energie` en `Wand-Instellingen-Comfort`
+in `design/app2`. Alles achter het tandwiel was moeilijk te vinden, omdat er
+veel later bij kwam.
+
+*Besluit:*
+
+- **Comfort zet de bewoner in de app,** in `comfort.json` naast de dataset: per
+  kamer verwarmen onder en koelen boven, per dagdeel (dag, nacht, afwezig,
+  vakantie), nooit warmer dan, en voorrang; en de uren van de dagdelen.
+  Voorverwarmen volgt de dag. Net als 103 en 123 over de configuratie gelegd en
+  door het eigen schema; wat de app zegt, gaat voor. Anders dan die twee gaat
+  het meteen in: de regeling neemt het over zolang ze dezelfde entiteiten volgt
+  (`ShadowRunner.setConfig`). Er gaat niets naar Home Assistant. De deur
+  `/api/comfort` vraagt een bewoner.
+- **Camera's:** heeft een camera eigen beelden van zijn merk, dan geen beeld
+  via een tweede koppeling zoals de Synology; dat gaf hier geen beeld.
 
 ---
 

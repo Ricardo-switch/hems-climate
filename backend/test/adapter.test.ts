@@ -467,6 +467,18 @@ describe('ShadowRunner', () => {
       expect.arrayContaining(['auth', 'get_states', 'subscribe_events']),
     );
   });
+
+  it('neemt nieuw comfort over zolang het dezelfde entiteiten volgt (besluit 130)', () => {
+    const client = new HaClient({ url: 'http://127.0.0.1:9', token: TOKEN });
+    const runner = new ShadowRunner({ config: exampleSite, strategies: defaultStrategies(), client, tickSeconds: 3600, now: () => SHADOW_NOW });
+    const warmer = { ...exampleSite, zones: exampleSite.zones.map((z, i) => (i === 0 ? { ...z, setpoints: { ...z.setpoints, dag: { heat: 21.5 } } } : z)) };
+    expect(runner.setConfig(warmer)).toBe(true);
+    expect(runner.config.zones[0]!.setpoints.dag.heat).toBe(21.5);
+    // Een andere meter is geen comfort: dan blijft het zoals het was.
+    const andereMeter = { ...exampleSite, zones: exampleSite.zones.map((z, i) => (i === 0 ? { ...z, temperature: { ...z.temperature, id: 'sensor.iets_anders' } } : z)) };
+    expect(runner.setConfig(andereMeter)).toBe(false);
+    expect(runner.config.zones[0]!.setpoints.dag.heat).toBe(21.5);
+  });
 });
 
 describe('zonder helpers in Home Assistant', () => {

@@ -110,6 +110,8 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
   // is een tweede beeld van die camera, geen tweede camera.
   const perCamera = new Map<string, { naam: string; beelden: { id: string; naam: string; voorkeur: boolean }[] }>();
   const camVanApparaat = new Map<string, string>();
+  const eigenBeeld = new Set<string>();
+  const via = new Set<string>();
   for (const e of entities) {
     if (!e.entity_id.startsWith('camera.') || e.disabled_by != null || GEEN_BEELD.has(e.platform ?? '') || !CAMERA_ID.test(e.entity_id)) continue;
     const naam = (e.device_id ? deviceName.get(e.device_id) : '') || friendly(states, e.entity_id);
@@ -118,7 +120,17 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
     const groep = perCamera.get(sleutel) ?? { naam, beelden: [] };
     const beeld = BEELD[e.translation_key ?? ''] ?? KOPPELING[e.platform ?? ''] ?? friendly(states, e.entity_id);
     groep.beelden.push({ id: e.entity_id, naam: beeld, voorkeur: voorkeur.has(e.entity_id) });
+    if (BEELD[e.translation_key ?? '']) eigenBeeld.add(sleutel);
+    else via.add(e.entity_id);
     perCamera.set(sleutel, groep);
+  }
+  /*
+   * Heeft een camera eigen beelden van zijn merk (vloeiend, scherp), dan geen
+   * beeld via een tweede koppeling zoals de Synology (besluit 130): dat gaf
+   * hier geen beeld, en het is dezelfde camera.
+   */
+  for (const [sleutel, groep] of perCamera) {
+    if (eigenBeeld.has(sleutel)) groep.beelden = groep.beelden.filter((b) => !via.has(b.id));
   }
   const cameras = [...perCamera.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
 

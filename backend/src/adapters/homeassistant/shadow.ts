@@ -169,6 +169,11 @@ export class ShadowRunner {
     readyBy: () => Readonly<Record<string, number>>;
   };
   readonly #store: EntityStore;
+  /**
+   * De configuratie waarmee beslist wordt. Comfort uit de app (besluit 130) kan
+   * hem vervangen terwijl de dienst draait, zolang hij dezelfde entiteiten volgt.
+   */
+  #config: SiteConfig;
   #timer: NodeJS.Timeout | null = null;
   #debounce: NodeJS.Timeout | null = null;
   #ready = false;
@@ -222,6 +227,7 @@ export class ShadowRunner {
     const triggers = relevantEntities(options.config);
     const observed = observedEntities(options.config);
     this.#store = new EntityStore(new Set([...triggers, ...observed]), triggers);
+    this.#config = options.config;
     this.#options = {
       config: options.config,
       strategies: options.strategies,
@@ -399,6 +405,25 @@ export class ShadowRunner {
     this.#request('modus');
   }
 
+  /**
+   * Nieuwe comfortwaarden uit de app (besluit 130): de temperaturen per kamer en
+   * de dagdelen. Alleen als de nieuwe configuratie precies dezelfde entiteiten
+   * volgt; anders blijft de oude staan en geeft hij false. Daarna meteen opnieuw
+   * beslissen.
+   */
+  setConfig(next: SiteConfig): boolean {
+    const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every((x) => b.has(x));
+    if (!same(relevantEntities(next), relevantEntities(this.#config)) || !same(observedEntities(next), observedEntities(this.#config))) return false;
+    this.#config = next;
+    if (this.#ready) this.#request('comfort');
+    return true;
+  }
+
+  /** De configuratie waarmee nu beslist wordt. */
+  get config(): SiteConfig {
+    return this.#config;
+  }
+
   /** Opnieuw beslissen omdat de bewoner iets koos, zoals "klaar voor" (besluit 101). */
   nudge(trigger: string): void {
     if (this.#ready) this.#request(trigger);
@@ -428,9 +453,9 @@ export class ShadowRunner {
   /** Meetpunten uit de configuratie die HA niet blijkt te kennen. */
   #missingEntities(): string[] {
     const needed = new Set<string>();
-    for (const ref of this.#options.config.criticalInputs) needed.add(ref.id);
-    for (const zone of this.#options.config.zones) needed.add(zone.temperature.id);
-    for (const actuator of this.#options.config.actuators) {
+    for (const ref of this.#config.criticalInputs) needed.add(ref.id);
+    for (const zone of this.#config.zones) needed.add(zone.temperature.id);
+    for (const actuator of this.#config.actuators) {
       needed.add(actuator.ref.id);
       if (actuator.power.sensor) needed.add(actuator.power.sensor.id);
     }
@@ -440,7 +465,7 @@ export class ShadowRunner {
   async #evaluate(trigger: string): Promise<void> {
     const nowMs = this.#options.now();
     this.#lastEvalMs = nowMs;
-    const config = configFrom(this.#options.config, this.#store);
+    const config = configFrom(this.#config, this.#store);
     const state = withReadyBy(
       buildSystemState(config, this.#store, nowMs, this.#own, this.#shadowActuators),
       this.#options.readyBy(),
@@ -490,7 +515,7 @@ export class ShadowRunner {
    */
   #observation(): Record<string, string> {
     const out: Record<string, string> = {};
-    for (const actuator of this.#options.config.actuators) {
+    for (const actuator of this.#config.actuators) {
       const s = this.#store.state(actuator.ref.id);
       if (s == null) {
         out[actuator.id] = 'onbekend';
@@ -541,7 +566,7 @@ export class ShadowRunner {
     }
 
     const observed = this.#observation();
-    const legacyRef = this.#options.config.migration?.legacyExplanation;
+    const legacyRef = this.#config.migration?.legacyExplanation;
     const legacy = legacyRef ? this.#store.state(legacyRef.id) : null;
 
     // De weergave krijgt élk besluit, ook wanneer er niets wijzigde: de
