@@ -47,6 +47,7 @@ import { CAMERA_ID } from './camera.js';
 import { weatherReport, type ForecastDay, type WeatherLog, type WeatherReport } from './weather.js';
 import type { HouseReport } from './house.js';
 import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, type LayoutStore } from './layout.js';
+import type { CoverSwitch } from './covers.js';
 import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
@@ -163,6 +164,8 @@ export interface WebOptions {
    * alleen iets uitzetten: zonder `lights` (HEMS_LIGHTS) is er niets aan te zetten.
    */
   readonly lichtAan?: () => boolean;
+  /** Schermen bedienen staat aan bij Functies (besluit 121); weg is aan. */
+  readonly schermenAan?: () => boolean;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -197,6 +200,8 @@ export interface WebOptions {
    * ook voor `/api/licht`.
    */
   readonly lights?: LightSwitch;
+  /** Schermen bedienen voor de bewoner (besluit 121); weg als de installatie het niet toestaat. */
+  readonly covers?: CoverSwitch;
   /**
    * Wie mag bedienen (besluit 99): een eigen inlog via Home Assistant, Ingress
    * van de add-on, of open (alleen voor tests). Verplicht, zodat een nieuwe
@@ -446,6 +451,8 @@ export class WebServer {
       // Camera's en de deurbel (besluit 109): alleen de keuzes, naar een eigen bestand.
       (this.#options.functies != null && path === '/api/functies') ||
       (this.#options.lights != null && path === '/api/licht') ||
+      // Schermen (besluit 121): open, dicht, stop of een stand, voor de bewoner.
+      (this.#options.covers != null && path === '/api/scherm') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
       (this.#options.lights?.scenesEnabled === true && path === '/api/scene') ||
       // Uitloggen (besluit 99): alleen de eigen sessie weg, verder niets.
@@ -816,7 +823,7 @@ export class WebServer {
         return;
       }
       // Of de knoppen voor licht echt schakelen, of zeggen dat het nog niet mag.
-      sendJson(res, 200, { ...house, lichtBedienen: this.#lichtMag() });
+      sendJson(res, 200, { ...house, lichtBedienen: this.#lichtMag(), schermenBedienen: this.#schermMag() });
       return;
     }
 
@@ -839,6 +846,29 @@ export class WebServer {
       }
       const result = await lights.scene(body);
       if (result.ok) sendJson(res, 200, { aan: true });
+      else sendJson(res, result.status, { fout: result.reden });
+      return;
+    }
+
+    if (path === '/api/scherm') {
+      const covers = this.#options.covers;
+      if (covers == null || !this.#schermMag()) {
+        sendJson(res, 503, { wachten: 'schermen bedienen staat niet aan' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 405, { fout: 'een scherm bedien je met een POST' });
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await covers.move(body);
+      if (result.ok) sendJson(res, 200, { ok: true });
       else sendJson(res, result.status, { fout: result.reden });
       return;
     }
@@ -1345,7 +1375,12 @@ export class WebServer {
       await door.store.save(uit.functies);
     }
     // Of de installatie licht bedienen toestaat (HEMS_LIGHTS): anders valt er niets aan te zetten.
-    sendJson(res, 200, { instellingen: door.store.current ? volledig(door.store.current, gevonden) : null, voorstel: functiesVoorstel(gevonden), gevonden, lichtMogelijk: this.#options.lights != null });
+    sendJson(res, 200, { instellingen: door.store.current ? volledig(door.store.current, gevonden) : null, voorstel: functiesVoorstel(gevonden), gevonden, lichtMogelijk: this.#options.lights != null, schermMogelijk: this.#options.covers != null });
+  }
+
+  /** Schermen bedienen: de installatie staat het toe, en het staat aan bij Functies (besluit 121). */
+  #schermMag(): boolean {
+    return this.#options.covers != null && (this.#options.schermenAan?.() ?? true);
   }
 
   /** Licht bedienen: de installatie staat het toe, en de bewoner heeft het aan (besluit 111). */

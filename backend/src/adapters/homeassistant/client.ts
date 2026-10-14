@@ -75,6 +75,13 @@ export interface HaClientOptions {
    * andere dienst blijft werpen, ook `hue.activate_scene`.
    */
   readonly allowScenes?: boolean;
+  /**
+   * Of deze client een scherm mag bedienen voor de bewoner (besluit 121):
+   * `cover.open_cover`, `close_cover`, `stop_cover` of `set_cover_position`
+   * met alleen een stand, op precies één `cover.`-entiteit. De regeling stuurt
+   * hier niets doorheen; klimaat en elke andere dienst blijven werpen.
+   */
+  readonly allowCovers?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   readonly reconnectMaxMs?: number;
@@ -105,6 +112,23 @@ function isLightCall(domain: string, service: string, data: Record<string, unkno
 }
 
 const LIGHT_FIELDS: ReadonlySet<string> = new Set(['brightness_pct', 'color_temp_kelvin', 'hs_color']);
+
+const COVER_SERVICES: ReadonlySet<string> = new Set(['open_cover', 'close_cover', 'stop_cover', 'set_cover_position']);
+
+/**
+ * Een scherm bedienen (besluit 121): open, dicht, stop, of een stand van 0 tot
+ * 100, op één `cover.`-entiteit. Geen kanteling, geen groep, geen gebied.
+ */
+function isCoverCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
+  if (domain !== 'cover' || !COVER_SERVICES.has(service)) return false;
+  if (Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  const id = target['entity_id'];
+  if (typeof id !== 'string' || !/^cover\.[a-z0-9_]+$/.test(id)) return false;
+  if (service !== 'set_cover_position') return Object.keys(data).length === 0;
+  const keys = Object.keys(data);
+  const pos = data['position'];
+  return keys.length === 1 && keys[0] === 'position' && typeof pos === 'number' && Number.isInteger(pos) && pos >= 0 && pos <= 100;
+}
 
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
@@ -147,10 +171,11 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers'>> & {
     allowWrites: boolean;
     allowLights: boolean;
     allowScenes: boolean;
+    allowCovers: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -167,6 +192,7 @@ export class HaClient extends EventEmitter {
       allowWrites: options.allowWrites ?? false,
       allowLights: options.allowLights ?? false,
       allowScenes: options.allowScenes ?? false,
+      allowCovers: options.allowCovers ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
@@ -178,6 +204,10 @@ export class HaClient extends EventEmitter {
 
   get lightsAllowed(): boolean {
     return this.#options.allowLights;
+  }
+
+  get coversAllowed(): boolean {
+    return this.#options.allowCovers;
   }
 
   connect(): void {
@@ -393,8 +423,9 @@ export class HaClient extends EventEmitter {
 
   /**
    * Roept een dienst aan in Home Assistant. Werpt zolang `allowWrites` uit
-   * staat — in schaduwmodus is dat de bedoeling. De enige uitzondering is licht
-   * (`allowLights`), zie `isLightCall`.
+   * staat — in schaduwmodus is dat de bedoeling. De uitzonderingen zijn smal:
+   * licht (`isLightCall`), scènes (`isSceneCall`) en schermen voor de bewoner
+   * (`isCoverCall`).
    */
   async callService(
     domain: string,
@@ -405,7 +436,8 @@ export class HaClient extends EventEmitter {
     const allowed =
       this.#options.allowWrites ||
       (this.#options.allowLights && isLightCall(domain, service, data, target)) ||
-      (this.#options.allowScenes && isSceneCall(domain, service, data, target));
+      (this.#options.allowScenes && isSceneCall(domain, service, data, target)) ||
+      (this.#options.allowCovers && isCoverCall(domain, service, data, target));
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

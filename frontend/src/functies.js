@@ -23,6 +23,7 @@ async function laad() {
     concept = JSON.parse(JSON.stringify(info.instellingen ?? info.voorstel));
     concept.weer ??= info.voorstel.weer;
     concept.licht ??= info.voorstel.licht;
+    concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
     if (!info.instellingen) zeg('Dit is het voorstel uit Home Assistant. Opslaan legt het vast.');
   } else {
     zeg('Niet beschikbaar: geen verbinding met Smart Climate, of Home Assistant is nog niet gelezen.', true);
@@ -90,10 +91,14 @@ function deurbel() {
 
 function licht() {
   const mag = info.lichtMogelijk === true;
+  const schermMag = info.schermMogelijk === true;
   return `<section class="glas vraag">
-    <h2 class="kop-3">Licht en scènes</h2>
+    <h2 class="kop-3">Bedienen in de app</h2>
+    <span class="veldnaam">Licht en scènes</span>
     ${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], mag && concept.licht.bedienen, !mag)}
-    <p class="mini">${mag ? 'Lampen en scènes aan en uit vanuit de app, met je inlog. Klimaat en screens bedient Smart Climate nog niet.' : 'Deze installatie staat licht bedienen niet toe (HEMS_LIGHTS op de NAS).'}</p>
+    <span class="veldnaam">Screens en zonnescherm</span>
+    ${keuzes('Schermen bedienen', 'schermenAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], schermMag && concept.schermen.bedienen, !schermMag)}
+    <p class="mini">${mag || schermMag ? 'Met je inlog. Klimaat bedient Smart Climate nog niet, en de regeling doet niets met de schermen.' : 'Deze installatie staat bedienen niet toe (HEMS_LIGHTS op de NAS).'}</p>
   </section>`;
 }
 
@@ -142,6 +147,7 @@ document.addEventListener('click', async (e) => {
       }
     } else if (s === 'schermAan') concept.deurbel.schermAan = w;
     else if (s === 'lichtAan') concept.licht.bedienen = w;
+    else if (s === 'schermenAan') concept.schermen.bedienen = w;
     else if (s === 'weerBron') concept.weer.bron = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s.startsWith('camera:')) {

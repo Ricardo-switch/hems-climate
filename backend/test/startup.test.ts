@@ -120,6 +120,19 @@ describe('licht bedienen (besluit 97)', () => {
   });
 });
 
+describe('schermen bedienen (besluit 121)', () => {
+  it('volgt licht bedienen, tenzij HEMS_SCREENS het anders zegt', () => {
+    expect(readStartup(NAS).screens.enabled).toBe(false);
+    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1' }).screens.enabled).toBe(true);
+    expect(readStartup({ ...NAS, HEMS_LIGHTS: '1', HEMS_SCREENS: '0' }).screens.enabled).toBe(false);
+    expect(readStartup({ ...NAS, HEMS_SCREENS: '1' }).screens.enabled).toBe(true);
+    expect(readStartup(ADDON).screens.enabled).toBe(true);
+    const o = readStartup({ ...NAS, HEMS_SCREENS: 'ja' });
+    expect(o.screens.enabled).toBe(false);
+    expect(o.errors.join(' ')).toContain('HEMS_SCREENS');
+  });
+});
+
 describe('instellingen die niet kloppen, vallen op', () => {
   it('weigert een poort die er geen is', () => {
     for (const port of ['0', '70000', '80a', '8.5']) {

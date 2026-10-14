@@ -24,6 +24,7 @@ import { defaultStrategies } from '../src/index.js';
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { summarize, type HouseReport } from '../src/web/house.js';
 import { LayoutStore, type Layout } from '../src/web/layout.js';
+import { CoverSwitch } from '../src/web/covers.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
@@ -92,6 +93,7 @@ async function start(options: {
   house?: () => HouseReport | null;
   layout?: { store: LayoutStore; proposal: () => Layout | null };
   lights?: LightSwitch;
+  covers?: CoverSwitch;
   access?: Access;
   uitstel?: UitstelStore;
   energy?: { store: EnergyStore; source: EnergySource };
@@ -100,6 +102,7 @@ async function start(options: {
   camera?: { base: string; token: string; ids: () => ReadonlySet<string> };
   functies?: { store: FunctiesStore; gevonden: () => FunctiesGevonden | null };
   lichtAan?: () => boolean;
+  schermenAan?: () => boolean;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -121,6 +124,7 @@ async function start(options: {
         ...(options.house ? { house: options.house } : {}),
         ...(options.layout ? { layout: options.layout } : {}),
         ...(options.lights ? { lights: options.lights } : {}),
+        ...(options.covers ? { covers: options.covers } : {}),
         ...(options.uitstel ? { uitstel: options.uitstel } : {}),
         ...(options.energy ? { energy: options.energy } : {}),
         ...(options.scenePicturesDir ? { scenePicturesDir: options.scenePicturesDir } : {}),
@@ -128,6 +132,7 @@ async function start(options: {
         ...(options.camera ? { camera: options.camera } : {}),
         ...(options.functies ? { functies: options.functies } : {}),
         ...(options.lichtAan ? { lichtAan: options.lichtAan } : {}),
+        ...(options.schermenAan ? { schermenAan: options.schermenAan } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -277,7 +282,7 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
     // Weer en licht vult de dienst aan met het voorstel (besluit 111).
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null }, licht: { bedienen: true } });
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null }, licht: { bedienen: true }, schermen: { bedienen: true } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);
@@ -1018,7 +1023,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ...house, lichtBedienen: false });
+    expect(await res.json()).toEqual({ ...house, lichtBedienen: false, schermenBedienen: false });
     expect((await fetch(`${base}/api/huis`, { method: 'POST' })).status).toBe(405);
   });
 });
@@ -1118,6 +1123,28 @@ describe('licht bedienen (besluit 97)', () => {
     aan = true;
     expect((await post('/api/licht', { doel: 'lamp', id: 'light.hal', aan: true })).status).toBe(200);
     expect(calls.length).toBe(1);
+  });
+
+  it('bedient een scherm alleen als het mag, en geeft een RTS-scherm geen stand (besluit 121)', async () => {
+    const scherm = (id: string, terugmelding: boolean) => ({ id, naam: id, haNaam: id, soort: 'screen' as const, stand: 'open', aan: false, helderheidPct: null, positiePct: terugmelding ? 100 : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm: { terugmelding, standKiezen: terugmelding } });
+    const metSchermen = { ...house, etages: house.etages.map((e, i) => (i === 0 ? { ...e, ruimtes: e.ruimtes.map((r, j) => (j === 0 ? { ...r, apparaten: [...r.apparaten, scherm('cover.screen', true), scherm('cover.zonnescherm', false)] } : r)) } : e)) };
+    let aan = false;
+    const calls: [string, string, Record<string, unknown>][] = [];
+    const covers = new CoverSwitch({ house: () => metSchermen, call: async (service, id, data) => void calls.push([service, id, data]) });
+    const started = await start({ house: () => metSchermen, covers, schermenAan: () => aan });
+    const post = (body: unknown) => fetch(`${started.base}/api/scherm`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    expect((await post({ id: 'cover.screen', actie: 'dicht' })).status).toBe(503);
+    expect(((await (await fetch(`${started.base}/api/huis`)).json()) as { schermenBedienen: boolean }).schermenBedienen).toBe(false);
+    aan = true;
+    expect((await post({ id: 'cover.screen', actie: 'stand', standPct: 40 })).status).toBe(200);
+    expect((await post({ id: 'cover.zonnescherm', actie: 'stand', standPct: 40 })).status).toBe(400);
+    expect((await post({ id: 'cover.zonnescherm', actie: 'open' })).status).toBe(200);
+    expect((await post({ id: 'cover.garagedeur', actie: 'open' })).status).toBe(404);
+    expect(calls).toEqual([['set_cover_position', 'cover.screen', { position: 40 }], ['open_cover', 'cover.zonnescherm', {}]]);
+    expect((await fetch(`${started.base}/api/scherm`)).status).toBe(405);
+    // Zonder schermbediening bestaat de deur niet.
+    const zonder = await start({ house: () => metSchermen });
+    expect((await fetch(`${zonder.base}/api/scherm`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
   });
 
   it('heeft geen scènedeur zonder scènes', async () => {
@@ -1409,6 +1436,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const { DOOR_ROLES } = await import('../src/web/auth.js');
     expect(DOOR_ROLES['/api/indeling']).toBe('beheerder');
     expect(DOOR_ROLES['/api/licht']).toBe('bewoner');
+    expect(DOOR_ROLES['/api/scherm']).toBe('bewoner');
     expect((await fetch(`${base}/api/indeling`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: '{}' })).status).toBe(405);
   });
 

@@ -301,6 +301,38 @@ describe('schrijfbeveiliging', () => {
     await expect(client.callService('light', 'turn_off', { brightness_pct: 10 }, { entity_id: 'light.hal' })).rejects.toThrow(/Schrijven staat uit/);
   });
 
+  it('laat met allowCovers alleen open, dicht, stop en een stand op één scherm door (besluit 121)', async () => {
+    const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowCovers: true });
+    expect(client.coversAllowed).toBe(true);
+    expect(client.writesAllowed).toBe(false);
+    const refused: [string, string, Record<string, unknown>, Record<string, unknown>][] = [
+      // Klimaat en al het andere blijft dicht.
+      ['climate', 'set_temperature', { temperature: 21 }, { entity_id: 'climate.beneden' }],
+      ['climate', 'turn_off', {}, { entity_id: 'climate.beneden' }],
+      ['light', 'turn_on', {}, { entity_id: 'light.hal' }],
+      ['scene', 'turn_on', {}, { entity_id: 'scene.a' }],
+      ['switch', 'turn_on', {}, { entity_id: 'switch.pomp' }],
+      // Alleen de vier diensten, op één scherm, met alleen een stand.
+      ['cover', 'toggle', {}, { entity_id: 'cover.screen' }],
+      ['cover', 'open_cover_tilt', {}, { entity_id: 'cover.screen' }],
+      ['cover', 'set_cover_tilt_position', { tilt_position: 50 }, { entity_id: 'cover.screen' }],
+      ['cover', 'close_cover', {}, { entity_id: ['cover.screen', 'cover.zonnescherm'] }],
+      ['cover', 'close_cover', {}, { area_id: 'woonkamer' }],
+      ['cover', 'close_cover', {}, { entity_id: 'cover.screen', area_id: 'woonkamer' }],
+      ['cover', 'close_cover', {}, { entity_id: 'climate.beneden' }],
+      ['cover', 'close_cover', { position: 0 }, { entity_id: 'cover.screen' }],
+      ['cover', 'set_cover_position', { position: 150 }, { entity_id: 'cover.screen' }],
+      ['cover', 'set_cover_position', { position: 50.5 }, { entity_id: 'cover.screen' }],
+      ['cover', 'set_cover_position', { position: 50, tilt_position: 10 }, { entity_id: 'cover.screen' }],
+    ];
+    for (const [domain, service, data, target] of refused) {
+      await expect(client.callService(domain, service, data, target), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
+    }
+    // Zonder allowCovers ook geen scherm, ook niet met licht aan.
+    const licht = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowLights: true, allowScenes: true });
+    await expect(licht.callService('cover', 'open_cover', {}, { entity_id: 'cover.screen' })).rejects.toThrow(/Schrijven staat uit/);
+  });
+
   it('laat met allowScenes alleen scene.turn_on op één scène door (besluit 100)', async () => {
     const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowScenes: true });
     const refused: [string, string, Record<string, unknown>, Record<string, unknown>][] = [

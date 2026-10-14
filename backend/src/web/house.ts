@@ -107,6 +107,12 @@ export interface HouseDevice {
   readonly klimaat: HouseClimate | null;
   /** Een meter die de temperatuur van een regelgebied levert. */
   readonly meetKamer: boolean;
+  /**
+   * Alleen bij een scherm (besluit 121): of het zijn stand terugmeldt (Somfy io)
+   * of niet (Somfy RTS: de stand is een aanname), en of je een stand kunt kiezen.
+   * Alleen een scherm met terugmelding mag later in de regeling.
+   */
+  readonly scherm?: { readonly terugmelding: boolean; readonly standKiezen: boolean };
 }
 
 /**
@@ -402,11 +408,20 @@ function lightOf(id: string, state: HaEntityState | undefined, name: string): Ho
   return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
 }
 
+/** Kan dit scherm naar een stand (SUPPORT_SET_POSITION, bit 4)? */
+const COVER_SET_POSITION = 4;
+
 function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
   const p = state?.attributes['current_position'];
   const pos = typeof p === 'number' ? p : null;
+  const features = Number(state?.attributes['supported_features'] ?? 0);
+  // Somfy RTS (en elk scherm dat zijn stand niet terugmeldt): Home Assistant
+  // zegt "assumed_state", of kent geen stand en geen open of dicht.
+  const terugmelding = state != null && state.attributes['assumed_state'] !== true && (pos != null || state.state === 'open' || state.state === 'closed' || state.state === 'opening' || state.state === 'closing');
+  const scherm = { terugmelding, standKiezen: terugmelding && (features & COVER_SET_POSITION) !== 0 };
   let stand: string;
-  if (state == null || state.state === 'unavailable' || state.state === 'unknown') stand = 'onbekend';
+  if (state == null || state.state === 'unavailable') stand = 'onbekend';
+  else if (!terugmelding) stand = 'zonder terugmelding';
   else if (state.state === 'opening') stand = 'gaat open';
   else if (state.state === 'closing') stand = 'gaat dicht';
   else if (pos == null) stand = state.state === 'closed' ? 'dicht' : 'open';
@@ -415,7 +430,7 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   else stand = `${100 - pos}% dicht`;
   // "Aan" is voor een screen: hij hangt (deels) voor het raam.
   const down = pos != null ? pos < 100 : state?.state === 'closed';
-  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: down, helderheidPct: null, positiePct: pos, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false };
+  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: terugmelding && down, helderheidPct: null, positiePct: terugmelding ? pos : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm };
 }
 
 function climateOf(

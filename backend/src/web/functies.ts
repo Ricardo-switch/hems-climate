@@ -54,6 +54,8 @@ export interface Functies {
    * die grens aan of uit. Weg in een ouder bestand: aan.
    */
   readonly licht?: { readonly bedienen: boolean };
+  /** Schermen bedienen in de app (besluit 121); weg is aan. */
+  readonly schermen?: { readonly bedienen: boolean };
 }
 
 /** Een camera zoals Home Assistant hem heeft: één apparaat, soms met meer beelden. */
@@ -150,12 +152,13 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     deurbel: { aan: bel != null, melder: bel?.id ?? null, camera: bel?.camera ?? null, schermAan: true, seconden: BEL_SECONDEN.standaard },
     weer: { bron: g.weerbronnen?.[0]?.id ?? null },
     licht: { bedienen: true },
+    schermen: { bedienen: true },
   };
 }
 
 /** Een ouder bestand aangevuld met het voorstel voor wat er toen nog niet in stond. */
-export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null }; licht: { bedienen: boolean } } {
-  return { ...f, weer: f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null }, licht: f.licht ?? { bedienen: true } };
+export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null }; licht: { bedienen: boolean }; schermen: { bedienen: boolean } } {
+  return { ...f, weer: f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null }, licht: f.licht ?? { bedienen: true }, schermen: f.schermen ?? { bedienen: true } };
 }
 
 export type FunctiesUitkomst = { readonly ok: true; readonly functies: Functies } | { readonly ok: false; readonly reden: string };
@@ -200,6 +203,13 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     if (typeof l['bedienen'] !== 'boolean') return { ok: false, reden: 'licht.bedienen is ja of nee' };
     bedienen = l['bedienen'];
   }
+  const schermIn = b['schermen'];
+  let schermen = true;
+  if (schermIn !== undefined) {
+    const sc = (typeof schermIn === 'object' && schermIn != null ? schermIn : {}) as Record<string, unknown>;
+    if (typeof sc['bedienen'] !== 'boolean') return { ok: false, reden: 'schermen.bedienen is ja of nee' };
+    schermen = sc['bedienen'];
+  }
   return {
     ok: true,
     functies: {
@@ -208,6 +218,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
       deurbel: { aan: bel['aan'], melder: melder as string | null, camera: camera as string | null, schermAan: bel['schermAan'], seconden },
       weer: { bron },
       licht: { bedienen },
+      schermen: { bedienen: schermen },
     },
   };
 }

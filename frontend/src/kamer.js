@@ -3,9 +3,10 @@
  * Links de etage van dichtbij, met de gekozen kamer; rechts een blad met wat er
  * in de kamer is. Een tik op een apparaat opent zijn eigen blad.
  *
- * Wat werkt en wat niet, eerlijk: lampen en scènes schakelen echt (besluiten 97
- * en 100). Klimaat en screens schakelt Smart Climate tot stap B niet; hun blad
- * zegt wat het huis zou doen, in de woorden van de assistent (besluit 75).
+ * Wat werkt en wat niet, eerlijk: lampen, scènes en schermen bedien je echt
+ * (besluiten 97, 100 en 121). Klimaat schakelt Smart Climate tot stap B niet;
+ * dat blad zegt wat het huis zou doen, in de woorden van de assistent (75).
+ * De regeling doet niets met de schermen.
  *
  * Het adres is `kamer.html#<kamer>` of `kamer.html#<kamer>/<apparaat>`.
  */
@@ -349,7 +350,9 @@ function nestBlad(k, d) {
 }
 
 function screenBlad(k, d) {
-  const open = d.positiePct ?? 100;
+  // Somfy RTS meldt zijn stand niet terug (besluit 121): dan geen stand in de tekening.
+  const terug = d.scherm?.terugmelding !== false;
+  const open = terug ? d.positiePct ?? (d.aan ? 0 : 100) : 100;
   const dicht = 1 - open / 100;
   const doekH = Math.round(214 * dicht);
   const zonNu = (zon?.gevels ?? []).filter((g) => g.inDeZon).map((g) => g.naam.toLowerCase());
@@ -367,12 +370,22 @@ function screenBlad(k, d) {
     <rect x="48" y="${42 + doekH}" width="204" height="9" rx="4" fill="#5b6a7c"/>
     <line x1="270" y1="46" x2="270" y2="260" stroke="#ffffff" stroke-opacity="0.15" stroke-width="4" stroke-linecap="round"/>
     ${doekH > 0 ? `<line x1="270" y1="46" x2="270" y2="${46 + doekH}" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round"/>` : ''}
-    <text x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${doekH > 0 ? `${Math.round(dicht * 100)}%` : 'open'}</text>
+    <text x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${!terug ? 'stand onbekend' : doekH > 0 ? `${Math.round(dicht * 100)}%` : 'open'}</text>
   </svg>`;
   const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon nu op de ${esc(zonNu.join(' en '))}</span>` : '';
+  const bedienen = huisData.schermenBedienen === true;
+  const knoppen = `<div class="keuze" role="group" aria-label="${esc(d.naam)} bedienen">${[['open', 'Open'], ['stop', 'Stop'], ['dicht', 'Dicht']].map(([a, t]) => `<button type="button" data-scherm="${a}" ${bedienen ? '' : 'disabled'}>${t}</button>`).join('')}</div>`;
+  const schuif = d.scherm?.standKiezen
+    ? `<div><div class="feit" style="margin-bottom: 8px"><b>Hoe ver dicht</b><span data-schermstand-tekst>${Math.round(dicht * 100)}%</span></div><input class="schuif" type="range" min="0" max="100" step="5" value="${Math.round(dicht * 100)}" aria-label="Hoe ver ${esc(d.naam)} dicht is" data-schermstand="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></div>`
+    : '';
+  const uitleg = !terug
+    ? 'Dit scherm meldt zijn stand niet terug (Somfy RTS). Open, dicht en stop werken; waar hij staat, weet de app niet. Daarom gaat hij ook later niet mee in de regeling.'
+    : 'Je bedient het scherm hier zelf. De regeling doet er niets mee.';
   return `${kopVan(d, '', pil)}
     <div class="beeld">${svg}</div>
-    <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span>Smart Climate bedient de screens nog niet; dat komt als het huis zelf mag schakelen. Nu kan het in Home Assistant of met de afstandsbediening.</span></div>`;
+    ${bedienen ? `${knoppen}${schuif}` : ''}
+    <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span>${bedienen ? uitleg : 'Schermen bedienen staat uit. Zet het aan bij Functies.'}</span></div>
+    <p class="mini" data-fout style="margin: 0; color: var(--gloed)"></p>`;
 }
 
 /*
@@ -529,14 +542,19 @@ function koppel(blad) {
       lampModus.set(apparaat.id, t.dataset.modus);
       teken();
     } else if (t.dataset.kleur && apparaat) void licht({ doel: 'lamp', id: apparaat.id, aan: true, kleur: t.dataset.kleur });
+    // Een scherm open, dicht of stoppen (besluit 121).
+    else if (t.dataset.scherm && apparaat) void licht({ id: apparaat.id, actie: t.dataset.scherm }, 'api/scherm');
   });
   blad.addEventListener('input', (e) => {
     if (e.target.dataset.helder != null) $$('[data-helder-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
+    if (e.target.dataset.schermstand != null) $$('[data-schermstand-tekst]').forEach((el) => (el.textContent = `${e.target.value}%`));
   });
   blad.addEventListener('change', (e) => {
     const t = e.target;
     if (t.dataset.helder) void licht({ doel: 'lamp', id: t.dataset.helder, aan: true, helderheidPct: Number(t.value) });
     else if (t.dataset.kelvin) void licht({ doel: 'lamp', id: t.dataset.kelvin, aan: true, kelvin: Number(t.value) });
+    // De schuif zegt hoe ver dicht; Home Assistant wil hoe ver open.
+    else if (t.dataset.schermstand) void licht({ id: t.dataset.schermstand, actie: 'stand', standPct: 100 - Number(t.value) }, 'api/scherm');
     t.blur();
   });
   // Het kleurenwiel: slepen zet de stip, loslaten stuurt de kleur.

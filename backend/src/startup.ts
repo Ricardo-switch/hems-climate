@@ -43,6 +43,11 @@ export interface Startup {
    */
   readonly lights: { readonly enabled: boolean; readonly withoutIngress: boolean };
   /**
+   * Mag de bewoner schermen bedienen in de app (besluit 121)? Volgt licht
+   * bedienen, tenzij `HEMS_SCREENS` het anders zegt (1 of 0).
+   */
+  readonly screens: { readonly enabled: boolean };
+  /**
    * Wie mag bedienen (besluit 99). In de add-on staat Ingress ervoor; elders een
    * eigen inlog via Home Assistant, met het adres waaronder de browser Home
    * Assistant bereikt. `HEMS_OPEN=1` zet alles open, zoals vóór 99, met een
@@ -136,6 +141,11 @@ export function readStartup(env: Environment): Startup {
     errors.push(`HEMS_LIGHTS is 1 (licht bedienen) of 0 (niet), niet "${lightsRaw}".`);
   }
   const lightsOn = port != null && (lightsRaw === '1' || (asAddon && lightsRaw !== '0'));
+  const screensRaw = readPoint(env, 'HEMS_SCREENS');
+  if (screensRaw != null && screensRaw !== '0' && screensRaw !== '1') {
+    errors.push(`HEMS_SCREENS is 1 (schermen bedienen) of 0 (niet), niet "${screensRaw}".`);
+  }
+  const screensOn = port != null && (screensRaw === '1' || (screensRaw == null && lightsOn));
 
   const openRaw = readPoint(env, 'HEMS_OPEN');
   if (openRaw != null && openRaw !== '0' && openRaw !== '1') {
@@ -163,6 +173,7 @@ export function readStartup(env: Environment): Startup {
     onboarding: { enabled: onboardingOn, withoutIngress: onboardingOn && !asAddon },
     // Zonder Ingress en zonder inlog kan iedereen die de weergave opent schakelen.
     lights: { enabled: lightsOn, withoutIngress: lightsOn && access.kind === 'open' },
+    screens: { enabled: screensOn },
     access,
     // Een lege SHADOW_LOG_DIR betekent bewust: niet loggen. Dus niet `lees`.
     logDir: env['SHADOW_LOG_DIR'] ?? 'data/shadow',

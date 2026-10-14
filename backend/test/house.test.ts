@@ -107,6 +107,21 @@ describe('het voorstel uit Home Assistant', () => {
     expect(wk.status?.zin).toContain('heeft niets nodig');
   });
 
+  it('zegt of een scherm zijn stand terugmeldt (Somfy io) of niet (Somfy RTS, besluit 121)', () => {
+    const screen = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
+    expect(screen.scherm).toEqual({ terugmelding: true, standKiezen: false });
+    // Een RTS-scherm: Home Assistant neemt de stand aan.
+    const rts = new Map(states);
+    rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'open', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, supported_features: 15 } });
+    const metRts = buildHouse(config, registers, rts, snapshot).etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
+    expect([metRts.stand, metRts.positiePct, metRts.aan, metRts.scherm]).toEqual(['zonder terugmelding', null, false, { terugmelding: false, standKiezen: false }]);
+    // Een io-scherm met een stand en de functie om er een te kiezen.
+    const io = new Map(states);
+    io.set('cover.screen', { ...states.get('cover.screen')!, attributes: { friendly_name: 'Screen', current_position: 40, supported_features: 15 } });
+    const metIo = buildHouse(config, registers, io, snapshot).etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
+    expect(metIo.scherm).toEqual({ terugmelding: true, standKiezen: true });
+  });
+
   it('toont lampen, zonwering en klimaat, zonder groepen of uitgezette entiteiten', () => {
     const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
     expect(wk.apparaten.map((d) => [d.soort, d.naam, d.stand])).toEqual([

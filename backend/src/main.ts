@@ -40,6 +40,7 @@ import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeC
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
+import { CoverSwitch } from './web/covers.js';
 import { LightSwitch } from './web/lights.js';
 import { SessionStore, homeAssistantLogin, type Access } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
@@ -354,6 +355,9 @@ const client = new HaClient({
   allowLights: startup.lights.enabled,
   // Scènes horen bij het licht (besluit 100): dezelfde schakelaar, een eigen deur.
   allowScenes: startup.lights.enabled,
+  // Schermen open, dicht, stop of een stand, voor de bewoner (besluit 121). De
+  // regeling stuurt hier niets doorheen.
+  allowCovers: startup.screens.enabled,
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -643,6 +647,17 @@ const lightSwitch = startup.lights.enabled
   : null;
 
 /*
+ * Schermen bedienen (besluit 121): alleen schermen die het huis toont, één per
+ * opdracht. Een knop voor de bewoner; de regeling doet niets met schermen.
+ */
+const coverSwitch = startup.screens.enabled
+  ? new CoverSwitch({
+      house: houseReport,
+      call: (service, entityId, data) => client.callService('cover', service, data, { entity_id: entityId }),
+    })
+  : null;
+
+/*
  * Wie mag bedienen (besluit 99). Op de NAS een eigen inlog via Home Assistant;
  * de sessies staan naast de dataset, alleen als vingerafdruk.
  */
@@ -731,6 +746,7 @@ if (webPort != null) {
     location: () => location,
     house: houseReport,
     ...(lightSwitch ? { lights: lightSwitch } : {}),
+    ...(coverSwitch ? { covers: coverSwitch } : {}),
     ...(layoutStore && siteConfig
       ? {
           layout: {
@@ -764,6 +780,11 @@ if (webPort != null) {
     lichtAan: () => {
       const f = functiesNu();
       return f ? volledig(f, functiesKeuzes()).licht.bedienen : true;
+    },
+    // Schermen bedienen aan of uit in de app (besluit 121), binnen wat HEMS_SCREENS toestaat.
+    schermenAan: () => {
+      const f = functiesNu();
+      return f ? volledig(f, functiesKeuzes()).schermen.bedienen : true;
     },
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {

@@ -143,6 +143,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [99. Bedienen vraagt een inlog, met je Home Assistant-account; kijken blijft open](#99-bedienen-vraagt-een-inlog-met-je-home-assistant-account-kijken-blijft-open)
 - [100. Licht in kleur en wit, en de scènes van Hue (aanvulling op 97)](#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97)
 - [106. De camera's bekijken in de app, alleen lezen en alleen met inlog](#106-de-cameras-bekijken-in-de-app-alleen-lezen-en-alleen-met-inlog)
+- [121. Schermen bedien je in de app; alleen Somfy io mag later in de regeling](#121-schermen-bedien-je-in-de-app-alleen-somfy-io-mag-later-in-de-regeling)
 
 **Uitrol en beheer**
 
@@ -5195,6 +5196,35 @@ smaller dan 900 punten de telefoonweergave, ook een liggende telefoon.
 - **De wand blijft naast de inkeping** van een liggende telefoon: de schaal en
   het midden rekenen met de vrije ruimte (safe-area).
 - De regel staat in `basis.js` en in het script in de `<head>` van elke pagina.
+
+---
+
+## 121. Schermen bedien je in de app; alleen Somfy io mag later in de regeling
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026. De screens zijn Somfy io: ze
+melden hun stand terug. Het zonnescherm is Somfy RTS: het krijgt een opdracht,
+maar zegt nooit waar het is; in de app stond het daarom op "onbekend". De
+bewoner wil ze in de app kunnen bedienen; de oude regeling doet er niets mee.
+
+*Besluit:*
+
+- **Een vijfde smalle deur, voor de bewoner:** `cover.open_cover`,
+  `close_cover`, `stop_cover` en `set_cover_position` met alleen een stand,
+  op precies één `cover.`-entiteit (`allowCovers` in de client, `/api/scherm`
+  achter de inlog als bewoner). Geen kanteling, geen groep, geen gebied, een
+  grens op het tempo, en alleen schermen die het huis toont. Een test bewijst
+  dat klimaat en elke andere dienst blijven werpen.
+- **Aan of uit:** de installatie volgt licht bedienen, tenzij `HEMS_SCREENS`
+  het anders zegt; bij Functies zet de bewoner het aan of uit.
+- **Terugmelding:** de dienst ziet aan Home Assistant of een scherm zijn stand
+  terugmeldt (`assumed_state`, of geen stand en geen open of dicht). Zonder
+  terugmelding (RTS) zegt de app "zonder terugmelding", tekent hij geen stand
+  en biedt hij alleen open, dicht en stop.
+- **De regeling doet niets met de schermen** en leest hun stand niet als
+  zeker. Komen schermen later in de regeling (stap B), dan alleen schermen met
+  terugmelding, zoals Somfy io: RTS is daar te onbetrouwbaar voor.
 
 ---
 

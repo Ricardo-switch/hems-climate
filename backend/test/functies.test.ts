@@ -88,7 +88,7 @@ describe('de keuzes controleren (besluit 109)', () => {
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
     // Zonder weerbron in Home Assistant: geen weer; licht staat aan tot je het uitzet.
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: null }, licht: { bedienen: true } } });
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: null }, licht: { bedienen: true }, schermen: { bedienen: true } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
   });
 

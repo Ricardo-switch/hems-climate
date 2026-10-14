@@ -34,6 +34,7 @@ export interface Visitor {
 export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/licht': 'bewoner',
   '/api/scene': 'bewoner',
+  '/api/scherm': 'bewoner',
   '/api/gevoel': 'bewoner',
   '/api/uitstel': 'bewoner',
   '/api/indeling': 'beheerder',

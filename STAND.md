@@ -172,6 +172,8 @@ verwijzing bestaat.
   naam; ingezoomd staat de inrichting erin ([119]). Een kelder of trapkast
   blijft bij de begane grond.
 - **Een liggende telefoon** toont de tabletweergave ([120]).
+- **Schermen** bedien je in de app; RTS zonder terugmelding alleen open, dicht
+  en stop, en alleen io mag later in de regeling ([121]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -341,4 +343,5 @@ verwijzing bestaat.
 [118]: DECISIONS.md#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github
 [119]: DECISIONS.md#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin
 [120]: DECISIONS.md#120-een-liggende-telefoon-toont-de-tabletweergave
+[121]: DECISIONS.md#121-schermen-bedien-je-in-de-app-alleen-somfy-io-mag-later-in-de-regeling
 <!-- links:einde -->
