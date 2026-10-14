@@ -82,9 +82,12 @@ export interface FunctiesGevonden {
 const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp', ext: 'breed', snapshots_sub: 'plaatjes vloeiend', snapshots_main: 'plaatjes scherp' };
 const GEEN_BEELD = new Set(['buienradar']);
 /** Een melder die naar een deurbel klinkt. */
-const BEL_NAAM = /deurbel|doorbell|aanbel|bezoeker|visitor|\bding\b|\bbel\b|\bring\b/i;
-/** Wat op een deurbel zit maar geen bel is. */
-const GEEN_BEL = /beweging|motion|persoon|person|mens|human|dier|pet|voertuig|vehicle|pakket|package|gezicht|face/i;
+const BEL_NAAM = /deurbel|doorbell|aanbel|bezoeker|visitor|(?<![a-z])(?:ding|bel|ring)(?![a-z])/i;
+/**
+ * Wat op een deurbel zit maar geen bel is. Een liggend streepje telt als grens,
+ * ook hierboven: entiteiten heten deurbel_mens en voordeur_bel.
+ */
+const GEEN_BEL = /beweging|motion|persoon|person|(?<![a-z])mens|human|dier|(?<![a-z])pet(?![a-z])|voertuig|vehicle|pakket|package|gezicht|face/i;
 /** De koppeling waar een tweede beeld van dezelfde camera vandaan komt. */
 const KOPPELING: Readonly<Record<string, string>> = { synology_dsm: 'via de Synology', unifiprotect: 'via UniFi', frigate: 'via Frigate', generic: 'via een stream', onvif: 'via ONVIF' };
 /** De sleutels en klassen waarmee merken een deurbel melden. */

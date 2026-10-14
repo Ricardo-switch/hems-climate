@@ -25,10 +25,14 @@ const entities: HaRegistryEntity[] = [
   { entity_id: 'event.voordeur_ding', platform: 'ring', device_id: 'ring1', original_device_class: 'doorbell' },
   // Iets wat alleen zo heet: een kandidaat, geen zekerheid.
   { entity_id: 'binary_sensor.deurbel_knop', platform: 'zha', device_id: 'zig1' },
+  { entity_id: 'binary_sensor.voordeur_bel', platform: 'zha', device_id: 'zig3' },
   // Een sensor die "Spring" heet is geen deurbel.
   { entity_id: 'binary_sensor.spring_sensor', platform: 'zha', device_id: 'zig2' },
   // Beweging op de deurbel, zonder sleutel van het merk: geen bel.
   { entity_id: 'binary_sensor.deurbel_beweging', platform: 'reolink', device_id: 'reo2' },
+  // Een mens of een huisdier gezien bij de deurbel: ook geen bel.
+  { entity_id: 'binary_sensor.deurbel_mens', platform: 'reolink', device_id: 'reo2' },
+  { entity_id: 'binary_sensor.deurbel_pet', platform: 'reolink', device_id: 'reo2' },
   // Dezelfde camera via de Synology: een tweede beeld, geen tweede camera.
   { entity_id: 'camera.camera_oprit', platform: 'synology_dsm', device_id: 'syn1' },
 ];
@@ -63,6 +67,7 @@ describe('camera’s en de deurbel vinden (besluit 109)', () => {
       ['binary_sensor.deurbel_bezoeker', true, 'camera.deurbel_vloeiend'],
       ['event.voordeur_ding', true, null],
       ['binary_sensor.deurbel_knop', false, null],
+      ['binary_sensor.voordeur_bel', false, null],
     ]);
   });
 
