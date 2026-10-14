@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import { CAMERA_ID, findCameras } from './camera.js';
+import { OPEN_METEO, OPEN_METEO_NAAM } from './open-meteo.js';
 import { weatherSources } from './weather.js';
 
 export const FUNCTIES_FILE = 'functies.json';
@@ -45,9 +46,11 @@ export interface Functies {
   };
   /**
    * Waar het weer vandaan komt (besluit 111): `buienradar`, een weerentiteit
-   * (`weather.…`), of null voor geen weer. Weg in een ouder bestand: het voorstel.
+   * (`weather.…`), `open-meteo` (besluit 127), of null voor geen weer. Weg in
+   * een ouder bestand: het voorstel. `uren`: de verwachting per uur van
+   * Open-Meteo bewaren voor het thermisch model; weg is aan.
    */
-  readonly weer?: { readonly bron: string | null };
+  readonly weer?: { readonly bron: string | null; readonly uren?: boolean };
   /**
    * Licht en scènes bedienen in de app (besluit 111). Kan alleen aan als de
    * installatie het toestaat (`HEMS_LIGHTS`, besluit 97); dit zet het binnen
@@ -139,7 +142,8 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
   }
   // De zekere eerst, en die met een camera.
   melders.sort((a, b) => Number(b.zeker) - Number(a.zeker) || Number(b.camera != null) - Number(a.camera != null) || a.naam.localeCompare(b.naam, 'nl'));
-  return { cameras, melders, weerbronnen: weatherSources(entities, states) };
+  // Open-Meteo kan altijd (besluit 127): dan heeft elk huis weer, ook zonder Home Assistant.
+  return { cameras, melders, weerbronnen: [...weatherSources(entities, states), { id: OPEN_METEO, naam: OPEN_METEO_NAAM }] };
 }
 
 /** Het voorstel: elke camera met het lichtste beeld, en de deurbel als die er zeker is. */
@@ -150,15 +154,16 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     versie: 1,
     cameras: { aan: lijst.length > 0, lijst },
     deurbel: { aan: bel != null, melder: bel?.id ?? null, camera: bel?.camera ?? null, schermAan: true, seconden: BEL_SECONDEN.standaard },
-    weer: { bron: g.weerbronnen?.[0]?.id ?? null },
+    weer: { bron: g.weerbronnen?.[0]?.id ?? null, uren: true },
     licht: { bedienen: true },
     schermen: { bedienen: true },
   };
 }
 
 /** Een ouder bestand aangevuld met het voorstel voor wat er toen nog niet in stond. */
-export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null }; licht: { bedienen: boolean }; schermen: { bedienen: boolean } } {
-  return { ...f, weer: f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null }, licht: f.licht ?? { bedienen: true }, schermen: f.schermen ?? { bedienen: true } };
+export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean } } {
+  const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
+  return { ...f, weer: { bron: weer.bron, uren: weer.uren ?? true }, licht: f.licht ?? { bedienen: true }, schermen: f.schermen ?? { bedienen: true } };
 }
 
 export type FunctiesUitkomst = { readonly ok: true; readonly functies: Functies } | { readonly ok: false; readonly reden: string };
@@ -190,11 +195,14 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
   // Weer en licht (besluit 111): weg is het voorstel.
   const weerIn = b['weer'];
   let bron: string | null = g.weerbronnen?.[0]?.id ?? null;
+  let uren = true;
   if (weerIn !== undefined) {
     const w = (typeof weerIn === 'object' && weerIn != null ? weerIn : {}) as Record<string, unknown>;
     const v = w['bron'] ?? null;
     if (v !== null && (typeof v !== 'string' || !(g.weerbronnen ?? []).some((x) => x.id === v))) return { ok: false, reden: 'die weerbron kent Home Assistant niet' };
     bron = v as string | null;
+    if (w['uren'] !== undefined && typeof w['uren'] !== 'boolean') return { ok: false, reden: 'weer.uren is ja of nee' };
+    uren = w['uren'] !== false;
   }
   const lichtIn = b['licht'];
   let bedienen = true;
@@ -216,7 +224,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
       versie: 1,
       cameras: { aan: cam['aan'], lijst },
       deurbel: { aan: bel['aan'], melder: melder as string | null, camera: camera as string | null, schermAan: bel['schermAan'], seconden },
-      weer: { bron },
+      weer: { bron, uren },
       licht: { bedienen },
       schermen: { bedienen: schermen },
     },

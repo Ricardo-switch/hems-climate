@@ -87,8 +87,8 @@ describe('de keuzes controleren (besluit 109)', () => {
   const goed: Functies = { versie: 1, cameras: { aan: true, lijst: ['camera.camera_oprit_duidelijk'] }, deurbel: { aan: true, melder: 'event.voordeur_ding', camera: 'camera.camera_oprit_vloeiend', schermAan: false, seconden: 60 } };
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
-    // Zonder weerbron in Home Assistant: geen weer; licht staat aan tot je het uitzet.
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: null }, licht: { bedienen: true }, schermen: { bedienen: true } } });
+    // Zonder weerbron in Home Assistant: Open-Meteo (besluit 127); licht staat aan tot je het uitzet.
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
   });
 
@@ -123,8 +123,8 @@ describe('weer en licht als functie (besluit 111)', () => {
   const goed = { ...functiesVoorstel(metWeer) };
 
   it('vindt Buienradar en elke weerentiteit, en stelt Buienradar voor', () => {
-    expect(metWeer.weerbronnen).toEqual([{ id: 'buienradar', naam: 'Buienradar' }, { id: 'weather.forecast_home', naam: 'weather.forecast_home' }]);
-    expect(goed.weer).toEqual({ bron: 'buienradar' });
+    expect(metWeer.weerbronnen).toEqual([{ id: 'buienradar', naam: 'Buienradar' }, { id: 'weather.forecast_home', naam: 'weather.forecast_home' }, { id: 'open-meteo', naam: 'Open-Meteo (via internet)' }]);
+    expect(goed.weer).toEqual({ bron: 'buienradar', uren: true });
     expect(goed.licht).toEqual({ bedienen: true });
   });
 
@@ -132,6 +132,9 @@ describe('weer en licht als functie (besluit 111)', () => {
     expect(controleer({ ...goed, weer: { bron: 'weather.forecast_home' }, licht: { bedienen: false } }, metWeer)).toMatchObject({ ok: true, functies: { weer: { bron: 'weather.forecast_home' }, licht: { bedienen: false } } });
     expect(controleer({ ...goed, weer: { bron: 'weather.van_de_buren' } }, metWeer).ok).toBe(false);
     expect(controleer({ ...goed, licht: { bedienen: 'ja' } }, metWeer).ok).toBe(false);
+    // Open-Meteo kan altijd, en de verwachting per uur kan uit (besluit 127).
+    expect(controleer({ ...goed, weer: { bron: 'open-meteo', uren: false } }, metWeer)).toMatchObject({ ok: true, functies: { weer: { bron: 'open-meteo', uren: false } } });
+    expect(controleer({ ...goed, weer: { bron: 'open-meteo', uren: 'ja' } }, metWeer).ok).toBe(false);
   });
 
   it('vult een ouder bestand aan met het voorstel', () => {

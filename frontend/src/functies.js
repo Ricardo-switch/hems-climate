@@ -108,6 +108,8 @@ function weer() {
     <h2 class="kop-3">Het weer</h2>
     ${bronnen.length ? keuzes('Weerbron', 'weerBron', [...bronnen.map((b) => [b.id, b.naam]), [null, 'Geen']], concept.weer.bron) : '<p class="uitleg">Geen weer gevonden in Home Assistant.</p>'}
     <p class="mini">Voor het weer van vandaag en de komende dagen, en wat je panelen dan leveren.</p>
+    ${keuzes('Verwachting per uur', 'weerUren', [[true, 'Bewaren'], [false, 'Niet bewaren']], concept.weer.uren !== false)}
+    <p class="mini">Elk uur de verwachting van Open-Meteo voor twee dagen: buitentemperatuur, zon en wind. Daarmee leert het huis later de temperatuur in je kamers vooruit te rekenen. Alleen de ligging op ongeveer tien kilometer gaat naar Open-Meteo.</p>
   </section>`;
 }
 
@@ -149,6 +151,7 @@ document.addEventListener('click', async (e) => {
     else if (s === 'lichtAan') concept.licht.bedienen = w;
     else if (s === 'schermenAan') concept.schermen.bedienen = w;
     else if (s === 'weerBron') concept.weer.bron = w;
+    else if (s === 'weerUren') concept.weer.uren = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s.startsWith('camera:')) {
       // Per camera één beeld: het andere beeld van dezelfde camera gaat eruit.

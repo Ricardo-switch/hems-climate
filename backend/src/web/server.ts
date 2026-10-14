@@ -148,7 +148,7 @@ export interface WebOptions {
    * uit Home Assistant, en de zonkans per dag zoals die de dag ervoor werd
    * verwacht. Zonder dit bestaat de route niet.
    */
-  readonly weather?: { readonly forecast: () => readonly ForecastDay[]; readonly log: WeatherLog };
+  readonly weather?: { readonly forecast: () => readonly ForecastDay[]; readonly log: WeatherLog; readonly bron?: () => string };
   /**
    * De camera's bekijken (besluit 106): alleen lezen, via de proxy van Home
    * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
@@ -1366,7 +1366,7 @@ export class WebServer {
     const now = Date.now();
     if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000) return this.#weather.report;
     const forecast = weather.forecast();
-    if (forecast.length === 0) return { wachten: 'Home Assistant geeft geen verwachting van Buienradar' };
+    if (forecast.length === 0) return { wachten: 'er is nog geen weerverwachting; kies een weerbron bij Functies' };
     this.#solar ??= new SolarHistory({ logDir });
     this.#today ??= new TodayCache(logDir, config);
     try {
@@ -1390,6 +1390,7 @@ export class WebServer {
       todayWh,
       nowMs: now,
       timeZone: config.timezone,
+      ...(weather.bron ? { bron: weather.bron() } : {}),
     });
     this.#weather = { atMs: now, report };
     const morgen = report.dagen[0];

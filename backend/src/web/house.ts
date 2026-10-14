@@ -265,15 +265,45 @@ export interface HouseBattery {
 export const BATTERIJ_LEEG_PCT = 10;
 
 /**
+ * Koppelingen van telefoons en tablets: die laden zichzelf op, en zijn geen
+ * apparaat in huis (besluit 127).
+ */
+const ZELF_LADEN = new Set(['mobile_app', 'fully_kiosk']);
+/**
+ * Een apparaat met een van deze klassen is een thuisbatterij, een omvormer of
+ * een auto: het bewaart energie, laadt, of heeft een actieradius (besluit 127).
+ * Vermogen én energie samen telt ook; vermogen alleen niet, want een screen op
+ * zonne-energie meet wat zijn paneeltje levert.
+ */
+const GROTE_ACCU = new Set(['energy_storage', 'distance', 'battery_charging']);
+/** Merken van omvormers, thuisbatterijen en auto's, voor als de klassen ontbreken. */
+const OPSLAG_MERK = /solaredge|huawei|growatt|victron|fronius|goodwe|sungrow|enphase|powerwall|tesla|byd|sessy|marstek|zendure|solix|ecoflow|volkswagen|renault|kia|hyundai|polestar|bmw|mercedes|audi|skoda|nissan/i;
+
+/**
  * De batterijen per apparaat in Home Assistant (besluit 122): elke sensor met de
- * klasse batterij en een percentage, de laagste per apparaat.
+ * klasse batterij en een percentage, de laagste per apparaat. Alleen de kleine
+ * apparaten in huis, zoals een knop, een sensor of een radiatorknop, ook als de
+ * app ze verder niet gebruikt; geen telefoon, thuisbatterij of auto (besluit 127).
  */
 function batteriesPerDevice(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>): Map<string, number> {
+  const klasseVan = (e: HaRegistryEntity) => e.device_class ?? e.original_device_class ?? (states.get(e.entity_id)?.attributes['device_class'] as string | undefined);
+  const groot = new Set<string>();
+  const vermogen = new Set<string>();
+  const energie = new Set<string>();
+  for (const e of registers.entities) {
+    if (!e.device_id || e.disabled_by) continue;
+    const klasse = klasseVan(e);
+    if (ZELF_LADEN.has(e.platform ?? '') || (klasse != null && GROTE_ACCU.has(klasse))) groot.add(e.device_id);
+    if (klasse === 'power') vermogen.add(e.device_id);
+    if (klasse === 'energy') energie.add(e.device_id);
+  }
+  for (const d of vermogen) if (energie.has(d)) groot.add(d);
+  for (const d of registers.devices) if (OPSLAG_MERK.test(`${d.manufacturer ?? ''} ${d.model ?? ''}`)) groot.add(d.id);
   const out = new Map<string, number>();
   for (const e of registers.entities) {
-    if (!e.device_id || e.disabled_by || !e.entity_id.startsWith('sensor.')) continue;
+    if (!e.device_id || e.disabled_by || !e.entity_id.startsWith('sensor.') || groot.has(e.device_id)) continue;
     const s = states.get(e.entity_id);
-    const klasse = e.device_class ?? e.original_device_class ?? (s?.attributes['device_class'] as string | undefined);
+    const klasse = klasseVan(e);
     if (klasse !== 'battery' || s?.attributes['unit_of_measurement'] !== '%') continue;
     const pct = Number(s.state);
     if (s.state === '' || !Number.isFinite(pct) || pct < 0 || pct > 100) continue;
@@ -463,6 +493,18 @@ function isRadiatorKnob(dev: { model?: string | null; manufacturer?: string | nu
   const tekst = `${dev?.manufacturer ?? ''} ${dev?.model ?? ''} ${dev?.name ?? ''}`;
   if (/trv|thermostatic|radiator|radiatorknop|thermostaatknop/i.test(tekst)) return true;
   return modes.length > 0 && !modes.some((m) => m === 'cool' || m === 'heat_cool' || m === 'dry' || m === 'fan_only') && /sonoff|tuya|danfoss|eurotronic|moes|aqara|bosch/i.test(tekst);
+}
+
+/**
+ * Zijn dit twee koppelingen van hetzelfde apparaat (besluit 127)? Dezelfde
+ * naam, of in dezelfde ruimte met hetzelfde type ("RAC_056905_WW").
+ */
+function sameDevice(a: HaDevice, b: HaDevice): boolean {
+  if (a.id === b.id) return true;
+  const naam = (d: HaDevice) => (d.name_by_user ?? d.name ?? '').trim().toLowerCase();
+  if (naam(a) !== '' && naam(a) === naam(b)) return true;
+  const type = (d: HaDevice) => /^[a-z0-9_]{4,}/i.exec((d.model ?? '').trim())?.[0].toLowerCase() ?? '';
+  return a.area_id != null && a.area_id === b.area_id && type(a) !== '' && type(a) === type(b);
 }
 
 /** Hoe ver de klep open staat (0 tot 100%), als het apparaat dat meldt. */
@@ -784,8 +826,16 @@ function collect(
    */
   const inConfig = new Set(config.actuators.map((a) => a.ref.id));
   const devById = new Map(registers.devices.map((d) => [d.id, d]));
+  // Hetzelfde apparaat via een tweede koppeling (besluit 127), zoals een LG-airco
+  // via LG ThinQ en via SmartThinQ uit HACS: één keer in het huis, niet twee.
+  const configDevs = registers.entities
+    .filter((e) => inConfig.has(e.entity_id) && e.device_id)
+    .map((e) => devById.get(e.device_id!))
+    .filter((d): d is HaDevice => d != null);
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('climate.') || e.disabled_by || e.hidden_by || inConfig.has(e.entity_id)) continue;
+    const eigen = e.device_id ? devById.get(e.device_id) : undefined;
+    if (eigen && configDevs.some((c) => sameDevice(c, eigen))) continue;
     const st = states.get(e.entity_id);
     const modes = Array.isArray(st?.attributes['hvac_modes']) ? (st!.attributes['hvac_modes'] as unknown[]).map(String) : [];
     const own = sensorsOf.get(e.device_id ?? '');

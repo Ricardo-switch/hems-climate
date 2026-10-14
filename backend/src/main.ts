@@ -36,6 +36,7 @@ import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight } from './web/today.js';
 import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } from './web/weather.js';
+import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
@@ -736,9 +737,31 @@ const volgWeer = () => {
 };
 setInterval(volgWeer, 60_000).unref();
 setTimeout(volgWeer, 15_000).unref();
-const forecastNow = () => {
-  if (!houseRegisters) return [];
+/*
+ * Open-Meteo (besluit 127): het weer zonder Home Assistant. Elk uur de
+ * verwachting per uur bewaren voor het thermisch model, tenzij de bewoner dat
+ * bij Functies uitzette; en de dagverwachting als hij Open-Meteo als weerbron
+ * koos. Alleen de ligging op één decimaal gaat de deur uit.
+ */
+const openMeteo = new OpenMeteo({ location: () => location, timeZone: weerZone, logDir: logDir === '' ? null : logDir });
+const haalWeer = () => {
+  const f = functiesNu();
+  const w = f ? volledig(f, functiesKeuzes()).weer : null;
+  if (w == null || (!w.uren && w.bron !== OPEN_METEO)) return;
+  openMeteo.refresh(w.uren).catch((e: unknown) => console.warn(`Weer van Open-Meteo niet opgehaald: ${(e as Error).message}`));
+};
+setInterval(haalWeer, 5 * 60_000).unref();
+setTimeout(haalWeer, 20_000).unref();
+const weerNaam = (): string => {
   const bron = weerBron();
+  if (bron === OPEN_METEO) return 'Open-Meteo';
+  if (bron?.startsWith('weather.')) return String(allStates.get(bron)?.attributes['friendly_name'] ?? 'je weerdienst');
+  return 'Buienradar';
+};
+const forecastNow = () => {
+  const bron = weerBron();
+  if (bron === OPEN_METEO) return [...(openMeteo.latest?.dagen ?? [])];
+  if (!houseRegisters) return [];
   if (bron === 'buienradar') return readForecast(houseRegisters.entities, allStates);
   if (bron?.startsWith('weather.')) {
     return forecastFromEntity(allStates.get(bron), entityForecast.entity === bron ? entityForecast.days : [], Date.now(), weerZone);
@@ -797,7 +820,7 @@ if (webPort != null) {
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),
-    ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog } } : {}),
+    ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam } } : {}),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {
       base: httpBase(url!),

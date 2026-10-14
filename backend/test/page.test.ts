@@ -563,13 +563,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     if (process.env.HEMS_PAGE_SHOT) await wand.locator('.blad').screenshot({ path: process.env.HEMS_PAGE_SHOT });
     expect(await wand.textContent()).toContain('De regeling doet er niets mee');
 
-    // Een batterij onder de 10%: een pil op Thuis, naar zijn kamer.
-    extraBatterijen = [{ id: 'd-knop', naam: 'Knop bank', pct: 7, kamer: kamer.naam, kamerId: kamer.id }];
+    // Een batterij onder de 10%: een pil op Thuis; een tik opent de lijst (besluit 127).
+    extraBatterijen = [
+      { id: 'd-knop', naam: 'Knop bank', pct: 7, kamer: kamer.naam, kamerId: kamer.id },
+      { id: 'd-dimmer', naam: 'Hue dimmer switch', pct: 64, kamer: null, kamerId: null },
+    ];
     await p.goto(`${baseUrl}/thuis.html`);
     const pil = wand.locator('[data-batterij]');
     await expect.poll(() => pil.isVisible(), { timeout: 10_000 }).toBe(true);
     expect(await pil.textContent()).toContain('Batterij bijna leeg: Knop bank, 7%');
-    expect(await pil.getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}`);
+    await pil.click();
+    const lijst = wand.locator('#weer-wand');
+    await expect.poll(() => lijst.isVisible()).toBe(true);
+    expect(await lijst.getAttribute('aria-label')).toBe('Batterijen');
+    const rijen = await lijst.locator('.accu').allTextContents();
+    expect(rijen).toHaveLength(2);
+    expect(rijen[0]).toMatch(/Knop bank\s*7%/);
+    expect(rijen[1]).toMatch(/Hue dimmer switch\s*64%\s*Nog in geen kamer/);
+    expect(await lijst.locator('a.accu').getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}`);
+    await lijst.locator('.sluit').click();
+    await expect.poll(() => lijst.isVisible()).toBe(false);
     extraBatterijen = [];
     expect(fouten).toEqual([]);
     await context.close();

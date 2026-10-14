@@ -145,6 +145,70 @@ describe('het voorstel uit Home Assistant', () => {
     expect(knop.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true, doelC: 20 });
   });
 
+  it('toont een airco via een tweede koppeling niet nog eens (besluit 127)', () => {
+    const basis = states.get('cover.screen')!;
+    const ac = config.actuators.find((a) => a.ref.id.startsWith('climate.'))!;
+    const eigen = registers.entities.find((e) => e.entity_id === ac.ref.id);
+    const area = registers.areas[0]!.area_id;
+    const metTwee = {
+      ...registers,
+      devices: [
+        ...registers.devices,
+        { id: 'd-lg', area_id: area, name: 'Airco boven', name_by_user: null, manufacturer: 'LGE', model: 'RAC_056905_WW (DEVICE_AIR_CONDITIONER)' },
+        { id: 'd-lg2', area_id: area, name: 'Air Conditioning boven', name_by_user: null, manufacturer: 'LG', model: 'RAC_056905_WW-RAC (AC)' },
+      ],
+      entities: [
+        ...registers.entities.filter((e) => e.entity_id !== ac.ref.id),
+        { ...(eigen ?? { entity_id: ac.ref.id }), device_id: 'd-lg' },
+        { entity_id: 'climate.air_conditioning_boven_2', device_id: 'd-lg2', platform: 'smartthinq_sensors' },
+      ],
+    };
+    const metStand = new Map(states);
+    metStand.set('climate.air_conditioning_boven_2', { ...basis, entity_id: 'climate.air_conditioning_boven_2', state: 'off', attributes: { hvac_modes: ['off', 'cool', 'heat'] } });
+    const ids = (h: ReturnType<typeof buildHouse>) => h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).map((d) => d.id);
+    expect(ids(buildHouse(config, metTwee, metStand, snapshot))).not.toContain('climate.air_conditioning_boven_2');
+    // Een ander type in dezelfde ruimte is een tweede apparaat, en staat er wel.
+    const ander = { ...metTwee, devices: metTwee.devices.map((d) => (d.id === 'd-lg2' ? { ...d, name: 'Mobiele airco', model: 'PAC_2000' } : d)) };
+    expect(ids(buildHouse(config, ander, metStand, snapshot))).toContain('climate.air_conditioning_boven_2');
+  });
+
+  it('toont alleen kleine batterijen in huis: geen telefoon, thuisbatterij of auto (besluit 127)', () => {
+    const basis = states.get('cover.screen')!;
+    const accu = (id: string, pct: string) => [id, { ...basis, entity_id: id, state: pct, attributes: { unit_of_measurement: '%' } }] as const;
+    const metAccu = {
+      ...registers,
+      devices: [
+        ...registers.devices,
+        { id: 'd-dimmer', area_id: null, name: 'Hue dimmer switch', name_by_user: null, manufacturer: 'Signify Netherlands B.V.', model: 'Hue dimmer switch' },
+        { id: 'd-tel', area_id: null, name: 'Telefoon', name_by_user: null },
+        { id: 'd-thuisaccu', area_id: null, name: 'Thuisbatterij', name_by_user: null },
+        { id: 'd-omvormer', area_id: null, name: 'Omvormer B1', name_by_user: null, manufacturer: 'SolarEdge', model: 'StorEdge' },
+        { id: 'd-auto', area_id: null, name: 'Auto', name_by_user: null },
+        { id: 'd-zonscreen', area_id: null, name: 'Screen op zon', name_by_user: null, manufacturer: 'Somfy', model: 'RollerShutter' },
+      ],
+      entities: [
+        ...registers.entities,
+        { entity_id: 'sensor.dimmer_batterij', device_id: 'd-dimmer', original_device_class: 'battery', platform: 'hue' },
+        { entity_id: 'sensor.telefoon_batterij', device_id: 'd-tel', original_device_class: 'battery', platform: 'mobile_app' },
+        { entity_id: 'sensor.thuisaccu_soc', device_id: 'd-thuisaccu', original_device_class: 'battery' },
+        { entity_id: 'sensor.thuisaccu_vermogen', device_id: 'd-thuisaccu', original_device_class: 'power' },
+        { entity_id: 'sensor.thuisaccu_geladen', device_id: 'd-thuisaccu', original_device_class: 'energy' },
+        { entity_id: 'sensor.omvormer_soe', device_id: 'd-omvormer', original_device_class: 'battery' },
+        { entity_id: 'sensor.auto_accu', device_id: 'd-auto', original_device_class: 'battery' },
+        { entity_id: 'sensor.auto_bereik', device_id: 'd-auto', original_device_class: 'distance' },
+        { entity_id: 'sensor.zonscreen_batterij', device_id: 'd-zonscreen', original_device_class: 'battery' },
+        { entity_id: 'sensor.zonscreen_zon', device_id: 'd-zonscreen', original_device_class: 'power' },
+      ],
+    };
+    const metStand = new Map(states);
+    for (const [id, st] of [accu('sensor.dimmer_batterij', '9'), accu('sensor.telefoon_batterij', '3'), accu('sensor.thuisaccu_soc', '0'), accu('sensor.omvormer_soe', '0'), accu('sensor.auto_accu', '5'), accu('sensor.zonscreen_batterij', '80')]) metStand.set(id, st);
+    const h = buildHouse(config, metAccu, metStand, snapshot);
+    expect(h.batterijen.map((b) => [b.naam, b.pct])).toEqual([
+      ['Hue dimmer switch', 9],
+      ['Screen op zon', 80],
+    ]);
+  });
+
   it('toont in een kamer zonder regeling het gemiddelde van de gekozen sensoren (besluit 123)', () => {
     const eigen = proposeLayout(config, registers, states);
     const zonder = eigen.kamers.find((k) => k.etage !== 'buiten' && k.regelzone == null)!;

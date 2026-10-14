@@ -154,15 +154,15 @@ function tekenNu() {
   lucht(model.tijd, model.seizoen, model.wolken);
   // Een nieuw huis (nog het voorstel uit Home Assistant): de weg naar Inrichten (besluit 114).
   $$('[data-inrichten]').forEach((el) => (el.hidden = huisData?.indeling !== 'voorstel'));
-  // Een batterij onder de 10% (besluit 122): de leegste, met een tik naar zijn kamer.
+  // Een batterij onder de 10% (besluit 122): de leegste; een tik opent de lijst (besluit 127).
   const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10);
   $$('[data-batterij]').forEach((el) => {
     el.hidden = leeg.length === 0;
     if (!leeg.length) return;
     const b = leeg[0];
     el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}`;
-    el.href = b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}` : 'instellingen.html';
   });
+  if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
 
@@ -335,6 +335,36 @@ function tekenWeerknop(buitenC) {
   if (weer && $$('[data-weer]').every((b) => b.hidden)) tekenWeer();
 }
 
+/** Wat het blad nu toont: het weer of de batterijen (besluit 127). */
+let blad = 'weer';
+
+/**
+ * De batterijen in huis (besluit 127): elk klein apparaat met een batterij, de
+ * leegste eerst, met een tik naar zijn kamer. Telefoons, een thuisbatterij en
+ * een auto staan er niet in; dat doet de dienst.
+ */
+function tekenBatterijen() {
+  blad = 'batterij';
+  const lijst = huisData?.batterijen ?? [];
+  const rijen = lijst.map((b) => {
+    const tag = b.kamerId ? 'a' : 'div';
+    const href = b.kamerId ? ` href="kamer.html#${encodeURIComponent(b.kamerId)}"` : '';
+    return `<${tag} class="accu${b.pct < 10 ? ' leeg' : ''}"${href}>
+      <b>${esc(b.naam)}</b><span class="pct">${b.pct}%</span>
+      <span>${esc(b.kamer ?? 'Nog in geen kamer')}</span>
+      <i><b style="width: ${Math.max(2, Math.min(100, b.pct))}%"></b></i>
+    </${tag}>`;
+  }).join('');
+  for (const el of $$('[data-weer]')) {
+    el.setAttribute('aria-label', 'Batterijen');
+    el.innerHTML = `
+      <div class="weerkop"><h2 class="kop-3">Batterijen</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
+      ${rijen || '<p class="mini">Geen apparaten met een batterij gevonden.</p>'}
+      <p class="mini voet">Onder de 10% staat een batterij op het startscherm. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
+    el.querySelector('.sluit').addEventListener('click', sluitWeer);
+  }
+}
+
 const DAGNAAM = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', timeZone: 'UTC' });
 const DATUM = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', timeZone: 'UTC' });
 
@@ -365,23 +395,27 @@ function tekenWeer() {
     : g.dagen
       ? ` Bijgesteld met ${g.dagen === 1 ? 'één dag' : `${g.dagen} dagen`} van je eigen panelen.`
       : '';
+  blad = 'weer';
   for (const blad of $$('[data-weer]')) {
+    blad.setAttribute('aria-label', 'Het weer');
     blad.innerHTML = `
       <div class="weerkop"><h2 class="kop-3">Het weer</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
       ${rijen}
-      <p class="mini voet">Van Buienradar. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
+      <p class="mini voet">Van ${esc(weer.bron ?? 'Buienradar')}. De balk is wat je panelen naar verwachting leveren: wat ze op een heldere dag halen, maal het deel bij de zonkans.${geleerd}</p>`;
     blad.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
 }
 
-function openWeer(knop) {
+function openWeer(knop, soort = 'weer') {
   const blad = document.getElementById(knop.getAttribute('aria-controls'));
-  if (!blad || !weer) return;
+  if (!blad || (soort === 'weer' && !weer)) return;
   // Nog eens op de knop: weer dicht.
   if (!blad.hidden) {
     sluitWeer();
     return;
   }
+  if (soort === 'batterij') tekenBatterijen();
+  else tekenWeer();
   blad.hidden = false;
   if (blad.id === 'weer-tel') document.querySelector('[data-weer-achter]').hidden = false;
   knop.setAttribute('aria-expanded', 'true');
@@ -390,7 +424,7 @@ function openWeer(knop) {
 
 function sluitWeer() {
   $$('[data-weer], [data-weer-achter]').forEach((el) => (el.hidden = true));
-  $$('[data-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+  $$('[data-buiten], [data-batterij]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
 }
 
 /* -------------------------------------------------------- de rondleiding */
@@ -535,11 +569,12 @@ addEventListener('standwissel', teken);
 
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
+$$('[data-batterij]').forEach((k) => k.addEventListener('click', () => openWeer(k, 'batterij')));
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
 // Tikken naast het blad sluit het ook, net als Escape.
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);
-  if (open && !e.target.closest('[data-weer], [data-buiten]')) sluitWeer();
+  if (open && !e.target.closest('[data-weer], [data-buiten], [data-batterij]')) sluitWeer();
 });
 // Op de telefoon: het blad naar beneden vegen.
 const telBlad = document.getElementById('weer-tel');

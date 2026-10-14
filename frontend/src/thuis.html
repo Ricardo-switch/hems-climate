@@ -110,6 +110,16 @@
   #wand .weer .rij { padding: 7px 0; }
   /* Een batterij bijna leeg (besluit 122): een rustige maar duidelijke pil. */
   .batterijpil { color: var(--gloed); text-decoration: none; gap: 6px; }
+  /* De lijst van batterijen (besluit 127), in hetzelfde blad als het weer. */
+  .weer .accu { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: inherit; text-decoration: none; }
+  .weer .accu:first-of-type { border-top: 0; }
+  .weer .accu b { font-size: 15px; }
+  .weer .accu span { font-size: 12.5px; color: var(--gedempt); }
+  .weer .accu .pct { grid-row: 1 / 3; grid-column: 2; font-weight: 700; font-size: 15px; color: var(--zacht); }
+  .weer .accu.leeg .pct { color: var(--gloed); }
+  .weer .accu i { grid-column: 1; position: relative; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 4px; }
+  .weer .accu i b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--groen, #5ad19a); }
+  .weer .accu.leeg i b { background: var(--gloed); }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -119,7 +129,7 @@
       <div class="kopregel">
         <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
         <div class="chips">
-          <a class="pil batterijpil" href="#" data-batterij hidden></a>
+          <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-wand" hidden></button>
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs); text-decoration: none">Inrichten</a>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
@@ -176,7 +186,7 @@
         </span>
       </div>
       <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
-      <a class="pil batterijpil" href="#" data-batterij hidden style="align-self: flex-start"></a>
+      <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-tel" hidden style="align-self: flex-start"></button>
     </div>
     <div class="podium" id="podium-tel"></div>
     <div class="inhoud">

@@ -109,6 +109,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [83. Ruwe data twee jaar, daarna samengevat](#83-ruwe-data-twee-jaar-daarna-samengevat)
 - [93. Hoe het huis en de panelen liggen, meet de app zelf; de bewoner bevestigt](#93-hoe-het-huis-en-de-panelen-liggen-meet-de-app-zelf-de-bewoner-bevestigt)
 - [126. Radiatorknoppen en ander klimaat buiten de configuratie: zien en vastleggen](#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen)
+- [127. Het weer van Open-Meteo, de batterijlijst, en een apparaat via twee koppelingen](#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen)
 
 **Weergave**
 
@@ -5363,6 +5364,30 @@ uit de configuratie; de knop stond nergens, en het logboek volgde hem niet.
 - **Het logboek volgt elk klimaatapparaat** (`climate.*`), met gemeten en
   ingestelde temperatuur en `hvac_action`, voor het thermisch model (D). Het is
   geen aanleiding om opnieuw te beslissen.
+
+---
+
+## 127. Het weer van Open-Meteo, de batterijlijst, en een apparaat via twee koppelingen
+
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026.
+
+*Besluit:*
+
+- **Open-Meteo, zonder Home Assistant.** Elk uur bewaart de dienst de
+  verwachting per uur voor twee dagen (buitentemperatuur, vocht, bewolking,
+  zon, wind, regenkans) in `weer-uren.ndjson`, voor het thermisch model (D).
+  Open-Meteo is ook een weerbron om uit te kiezen, en het voorstel als Home
+  Assistant geen weer heeft. Alleen de ligging op één decimaal gaat de deur uit
+  (besluit 90), nooit in een logregel. Bij Functies kan het bewaren uit.
+- **De batterijlijst** opent met een tik op de pil op Thuis. Alleen kleine
+  apparaten in huis, ook knoppen die de app verder niet gebruikt (Hue). Geen
+  telefoons of tablets (`mobile_app`, `fully_kiosk`), en geen thuisbatterij,
+  omvormer of auto: herkend aan `energy_storage`, `distance`,
+  `battery_charging`, vermogen én energie samen, of het merk.
+- **Eén apparaat via twee koppelingen** (zoals LG ThinQ en SmartThinQ) staat één
+  keer in het huis: dezelfde naam, of dezelfde ruimte en hetzelfde type.
 
 ---
 

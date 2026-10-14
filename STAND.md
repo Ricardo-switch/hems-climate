@@ -185,6 +185,8 @@ verwijzing bestaat.
   uitgerekend is ([125]).
 - **Radiatorknoppen** en ander klimaat buiten de configuratie staan in het huis
   en in het logboek; via ZHA zegt de app wat Zigbee2MQTT erbij geeft ([126]).
+- **Open-Meteo** geeft weer zonder Home Assistant en de verwachting per uur
+  wordt bewaard; de **batterijlijst** opent op Thuis ([127]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -360,4 +362,5 @@ verwijzing bestaat.
 [124]: DECISIONS.md#124-op-de-tablet-volle-vakken-schuiven-het-toetsenbord-verschuift-niets-en-zou-in-de-schaduw
 [125]: DECISIONS.md#125-het-screen-zoals-de-schets-en-opbrengst-onthoudt-wat-al-uitgerekend-is
 [126]: DECISIONS.md#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen
+[127]: DECISIONS.md#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen
 <!-- links:einde -->

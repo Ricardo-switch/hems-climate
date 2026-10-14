@@ -87,7 +87,7 @@ function stappen() {
       kop: 'Functies',
       klaar: f != null,
       zin: 'Welke camera’s de app toont, de deurbel, licht bedienen, en waar het weer vandaan komt.',
-      wat: f ? [`${meervoud(f.cameras?.aan ? f.cameras.lijst.length : 0, 'camera', 'camera’s')}`, f.deurbel?.aan ? 'Deurbel aan' : 'Geen deurbel', f.weer?.bron ? `Weer: ${f.weer.bron === 'buienradar' ? 'Buienradar' : 'weerdienst'}` : 'Geen weer'] : ['Het voorstel uit Home Assistant staat aan; kijk het na en sla op'],
+      wat: f ? [`${meervoud(f.cameras?.aan ? f.cameras.lijst.length : 0, 'camera', 'camera’s')}`, f.deurbel?.aan ? 'Deurbel aan' : 'Geen deurbel', f.weer?.bron ? `Weer: ${f.weer.bron === 'buienradar' ? 'Buienradar' : f.weer.bron === 'open-meteo' ? 'Open-Meteo' : 'weerdienst'}` : 'Geen weer'] : ['Het voorstel uit Home Assistant staat aan; kijk het na en sla op'],
       pagina: 'functies.html',
     },
     {

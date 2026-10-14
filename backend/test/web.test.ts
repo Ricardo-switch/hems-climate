@@ -303,7 +303,7 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
     // Weer en licht vult de dienst aan met het voorstel (besluit 111).
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null }, licht: { bedienen: true }, schermen: { bedienen: true } });
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);

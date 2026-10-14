@@ -252,7 +252,7 @@ function tekenKaarten(r, verwacht, lijst) {
   if (dag === 'morgen') {
     const m = weer?.dagen?.[0];
     links.innerHTML = m
-      ? `<div class="bovenrij"><span class="wanneer zon-t">Morgen, het weer</span><span class="mini">Buienradar</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(m.tekst ?? 'Het weer')}${m.maxC != null ? `, ${nl(m.maxC, 0)}°` : ''}</h2><p class="klein" style="margin: 8px 0 0">${m.zonkansPct != null ? `${m.zonkansPct}% kans op zon` : ''}${m.regenkansPct != null ? `, ${m.regenkansPct}% kans op regen` : ''}. Je panelen leveren naar verwachting ${m.verwachtKwh == null ? 'onbekend' : `${nl(m.verwachtKwh)} kWh`}.</p>`
+      ? `<div class="bovenrij"><span class="wanneer zon-t">Morgen, het weer</span><span class="mini">${esc(weer?.bron ?? 'Buienradar')}</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(m.tekst ?? 'Het weer')}${m.maxC != null ? `, ${nl(m.maxC, 0)}°` : ''}</h2><p class="klein" style="margin: 8px 0 0">${m.zonkansPct != null ? `${m.zonkansPct}% kans op zon` : ''}${m.regenkansPct != null ? `, ${m.regenkansPct}% kans op regen` : ''}. Je panelen leveren naar verwachting ${m.verwachtKwh == null ? 'onbekend' : `${nl(m.verwachtKwh)} kWh`}.</p>`
       : '<p class="klein">Er is nog geen verwachting voor morgen.</p>';
   } else if (i < 0) {
     links.innerHTML = `<span class="wanneer">${dag === 'gisteren' ? 'Gisteren' : 'Vandaag'}</span><h2 class="kop-2" style="margin-top: 8px">Er gebeurde nog niets</h2><p class="klein" style="margin: 8px 0 0">Geen enkel apparaat kreeg een andere stand.</p>`;

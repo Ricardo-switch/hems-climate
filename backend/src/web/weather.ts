@@ -308,7 +308,8 @@ export interface WeatherDay {
 }
 
 export interface WeatherReport {
-  readonly bron: 'Buienradar';
+  /** De naam van de weerbron, voor onder het blad: "Buienradar", "Open-Meteo". */
+  readonly bron: string;
   readonly vandaag: {
     readonly datum: string;
     /** Tot nu toe, gemeten. */
@@ -460,6 +461,8 @@ export function weatherReport(input: {
   readonly todayWh: number;
   readonly nowMs: number;
   readonly timeZone: string;
+  /** De naam van de weerbron; weg is Buienradar. */
+  readonly bron?: string;
 }): WeatherReport {
   const { geometry, location, learned, nowMs, timeZone } = input;
   const p = partsIn(nowMs, timeZone);
@@ -489,7 +492,7 @@ export function weatherReport(input: {
   const restWh = Math.max(0, today.total - today.sofar);
 
   return {
-    bron: 'Buienradar',
+    bron: input.bron ?? 'Buienradar',
     vandaag: {
       datum: todayKey,
       opgewektKwh: round1(input.todayWh / 1000),
