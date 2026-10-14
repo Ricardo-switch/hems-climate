@@ -104,7 +104,7 @@ function dagbalk() {
   const stuk = (van, tot, kleur) => (tot > van ? `<i style="flex: ${tot - van}; background: ${kleur}"></i>` : '');
   const nacht = 'rgba(143, 134, 255, 0.35)';
   return `<div class="dag" aria-hidden="true">${stuk(0, d.voorverwarmen, nacht)}${stuk(d.voorverwarmen, d.dag, 'rgba(255, 122, 77, 0.35)')}${stuk(d.dag, d.nacht, 'rgba(110, 231, 183, 0.35)')}${stuk(d.nacht, 24, nacht)}</div>
-    <div class="dagmaat">${[0, d.voorverwarmen, d.dag, d.nacht, 24].map((u) => `<span style="left: ${((u / 24) * 100).toFixed(1)}%">${u}</span>`).join('')}</div>
+    <div class="dagmaat">${[0, d.voorverwarmen, d.dag, d.nacht].map((u) => `<span style="left: ${((u / 24) * 100).toFixed(1)}%">${u}</span>`).join('')}</div>
     <div class="daglegenda"><span><i style="background: rgba(255, 122, 77, 0.7)"></i>voorverwarmen</span><span><i style="background: rgba(110, 231, 183, 0.7)"></i>overdag</span><span><i style="background: rgba(143, 134, 255, 0.7)"></i>nacht</span></div>`;
 }
 
