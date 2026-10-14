@@ -64,6 +64,8 @@
       stand: r.zoneId ? standVan(r.zoneId, state) : null,
       zin: r.zoneId ? kortVan(r.zoneId, state) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
       zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
+      // Wat voor kamer, voor de inrichting ingezoomd (besluit 119).
+      inrichting: r.soort ?? undefined,
       apparaten,
     };
   }

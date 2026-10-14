@@ -808,6 +808,88 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 20_000);
 
   /* Een vraag in eigen woorden (besluit 115): over de app komt er een knop bij. */
+  /*
+   * De inrichting van een kamer (besluit 119): elke soort, in drie breedtes,
+   * met en zonder apparaten, op een gewone etage en onder het dak. De tekening
+   * geeft met `controle` elk meubel en apparaat als blok; geen meubel mag door
+   * een apparaat, een ander meubel, een muur of het dak.
+   */
+  it('richt elke soort kamer in zonder dat een meubel ergens doorheen steekt', async () => {
+    const context = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/manifest.webmanifest`);
+    await p.setContent(`<!doctype html><body style="margin:0;background:#0b1424"><div id="uit" style="display:grid;grid-template-columns:repeat(2,700px)"></div><script src="${baseUrl}/kit/huis.js"></script></body>`);
+    await p.waitForFunction('window.huis != null');
+    type Blok = { kamer?: string; wat: string; soort?: string; x0: number; x1: number; y0: number; y1: number; z0: number; z1: number; ruimte: [number, number]; plafond?: number };
+    const uitkomst = await p.evaluate(() => {
+      const w = globalThis as unknown as { huis: { svg: (m: unknown, o: unknown) => string }; document: { getElementById: (id: string) => { innerHTML: string } } };
+      const soorten = ['woonkamer', 'woonkeuken', 'keuken', 'eetkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'badkamer', 'toilet', 'hal', 'werkkamer', 'wasruimte', 'berging', 'leeg'];
+      const apparaten = [
+        [],
+        [{ soort: 'radiator', aan: false }, { soort: 'lamp', aan: true, x: 0.35 }],
+        [{ soort: 'airco', aan: true, naam: 'a' }, { soort: 'lamp', aan: false, x: 0.35 }, { soort: 'lamp', aan: false, x: 0.72 }],
+        [{ soort: 'cv', aan: true }, { soort: 'radiator', aan: true }],
+      ];
+      const kamer = (soort: string, i: number, gewicht: number, apps: unknown[]) => ({ id: `${soort}-${i}`, naam: soort, gewicht, inrichting: soort, temp: '20,0°', apparaten: apps });
+      const per: Record<string, unknown[]> = {};
+      const html: string[] = [];
+      for (const soort of soorten) {
+        const model = {
+          tijd: 'dag',
+          etages: [
+            { naam: 'bg', kamers: [kamer(soort, 0, 0.55, apparaten[0]!), kamer(soort, 1, 1.0, apparaten[1]!), kamer(soort, 2, 1.4, apparaten[2]!)] },
+            { naam: 'e1', kamers: [kamer(soort, 3, 1.4, apparaten[3]!), kamer(soort, 4, 0.8, [{ soort: 'droger', aan: true }])] },
+            { naam: 'dak', dak: true, kamers: [kamer(soort, 5, 1, apparaten[2]!), kamer(soort, 6, 1, apparaten[1]!)] },
+          ],
+        };
+        const svg = w.huis.svg(model, { breedte: 700, hoogte: 520, meubels: true, controle: true });
+        html.push(svg);
+        const desc = /<desc class="sc-controle">(.*?)<\/desc>/s.exec(svg)?.[1] ?? '[]';
+        per[soort] = JSON.parse(desc.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+      }
+      // Eén verdieping zonder dak erboven: een hal zonder trap.
+      const plat = w.huis.svg({ tijd: 'dag', zonderDak: true, etages: [{ naam: 'bg', kamers: [kamer('hal', 9, 1, [])] }] }, { breedte: 700, hoogte: 520, meubels: true, controle: true });
+      const vlak = JSON.parse((/<desc class="sc-controle">(.*?)<\/desc>/s.exec(plat)?.[1] ?? '[]').replace(/&quot;/g, '"'));
+      // Ingezoomd op één etage zegt de pagina zelf dat er een etage boven is.
+      const los = w.huis.svg({ tijd: 'dag', zonderDak: true, etages: [{ naam: 'bg', erBoven: true, kamers: [kamer('hal', 8, 1, [])] }] }, { breedte: 700, hoogte: 520, meubels: true, controle: true });
+      const metTrap = JSON.parse((/<desc class="sc-controle">(.*?)<\/desc>/s.exec(los)?.[1] ?? '[]').replace(/&quot;/g, '"'));
+      w.document.getElementById('uit').innerHTML = html.map((x) => `<div style="width:700px;height:520px">${x}</div>`).join('');
+      return { per, vlak, metTrap };
+    });
+    const overlap = (a: Blok, b: Blok, marge = 0.01) =>
+      a.x0 < b.x1 - marge && b.x0 < a.x1 - marge && a.y0 < b.y1 - marge && b.y0 < a.y1 - marge && a.z0 < b.z1 - marge && b.z0 < a.z1 - marge;
+    const problemen: string[] = [];
+    for (const [soort, lijst] of Object.entries(uitkomst.per) as [string, Blok[]][]) {
+      const meubels = lijst.filter((b) => b.wat === 'meubel');
+      const apps = lijst.filter((b) => b.wat === 'apparaat');
+      if (soort !== 'leeg' && meubels.length === 0) problemen.push(`${soort}: geen enkel meubel`);
+      if (soort === 'leeg' && meubels.length > 0) problemen.push('leeg: toch meubels');
+      for (const m of meubels) {
+        const naam = `${m.kamer} (${m.x0.toFixed(2)}–${m.x1.toFixed(2)})`;
+        if (m.x0 < m.ruimte[0] - 1e-6 || m.x1 > m.ruimte[1] + 1e-6) problemen.push(`${naam}: door de zijmuur`);
+        if (m.y0 < -1e-6 || m.y1 > 1.5 + 1e-6) problemen.push(`${naam}: buiten de kamer`);
+        if (m.plafond != null && m.z1 > m.plafond + 1e-6) problemen.push(`${naam}: door het plafond of dak`);
+        for (const a of apps) {
+          // Een trap mag onder een hanglamp door: die hangt in het trapgat.
+          if (a.kamer !== m.kamer || (a.soort === 'lamp' && soort === 'hal')) continue;
+          if (overlap(m, a)) problemen.push(`${naam}: door ${a.soort}`);
+        }
+        for (const n of meubels) if (n !== m && n.kamer === m.kamer && overlap(m, n) && m.x0 <= n.x0) problemen.push(`${naam}: door een ander meubel`);
+      }
+    }
+    expect(problemen).toEqual([]);
+    // Witgoed maakt een wasruimte; een hal zonder etage erboven heeft geen trap.
+    expect((uitkomst.per['slaapkamer'] as Blok[]).some((b) => b.kamer === 'slaapkamer-4' && b.wat === 'meubel' && b.x1 - b.x0 > 0.5)).toBe(false);
+    expect((uitkomst.vlak as Blok[]).filter((b) => b.wat === 'meubel')).toEqual([]);
+    expect((uitkomst.metTrap as Blok[]).filter((b) => b.wat === 'meubel').length).toBeGreaterThan(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT, fullPage: true });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   it('beantwoordt een getypte vraag, met een knop naar de pagina', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());

@@ -72,6 +72,20 @@ describe('de indeling toetsen', () => {
     }
   });
 
+  it('bewaart wat voor kamer het is, alleen binnen (besluit 119)', () => {
+    const kamer = good.kamers[0]!;
+    const met = validateLayout({ ...good, kamers: [{ ...kamer, soort: 'kinderkamer' }, ...good.kamers.slice(1)] }, known);
+    expect(met.ok && met.layout.kamers[0]!.soort).toBe('kinderkamer');
+    // Een onbekende soort weigert; null is: het voorstel uit de naam.
+    expect(validateLayout({ ...good, kamers: [{ ...kamer, soort: 'zwembad' }, ...good.kamers.slice(1)] }, known).ok).toBe(false);
+    const leeg = validateLayout({ ...good, kamers: [{ ...kamer, soort: null }, ...good.kamers.slice(1)] }, known);
+    expect(leeg.ok && 'soort' in leeg.layout.kamers[0]!).toBe(false);
+    // Buiten valt het weg.
+    const tuin = { id: 'tuin', naam: 'Tuin', etage: 'buiten', zones: [], regelzone: null, haGebied: null, soort: 'keuken' };
+    const r = validateLayout({ ...good, kamers: [...good.kamers, tuin] }, known);
+    expect(r.ok && 'soort' in r.layout.kamers.find((k) => k.id === 'tuin')!).toBe(false);
+  });
+
   it('bewaart wat een buitenruimte is, alleen op de etage buiten (besluit 109)', () => {
     const tuin = { id: 'tuin', naam: 'Tuin', etage: 'buiten', zones: [], regelzone: null, haGebied: null, buiten: { soort: 'terras', auto: false, tuinhuis: true } };
     const r = validateLayout({ ...good, kamers: [...good.kamers, tuin] }, known);

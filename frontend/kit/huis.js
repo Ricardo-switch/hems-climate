@@ -27,6 +27,70 @@
     gedempt: '#7F8E9C',
   };
 
+  /* De kleuren en soorten van de inrichting (zie inrichten). */
+  const MEUBEL = {
+    hout: ['#8a7660', '#76634f', '#634f3f'],
+    donker: ['#55647a', '#47556a', '#3b475a'],
+    stof: ['#62759a', '#55678a', '#495a79'],
+    kussen: ['#7b8eb3', '#6b7ea2', '#5f7091'],
+    wit: ['#dfe6ec', '#c9d2db', '#b0bcc7'],
+    blad: ['#c3ccd5', '#aeb8c2', '#99a4af'],
+    dek: ['#7d93b8', '#6a80a5', '#5c7194'],
+    doos: ['#a08460', '#8a7151', '#765f44'],
+    groen: '#5d9c78',
+    kleed: '#8c7aa8',
+  };
+  const WITGOED = /^(droger|wasmachine|vaatwasser)$/;
+  /**
+   * Een lijn-icoon per soort kamer, in de stijl van het menu (24 bij 24, lijn
+   * 1,8). Het staat voor de naam van de kamer; op het startscherm is dat alles
+   * wat er van de inrichting te zien is.
+   */
+  const KAMER_ICOON = {
+    slaapkamer: '<path d="M3 19v-8h18v8"/><path d="M3 15h18"/><path d="M6 11V8.5A1.5 1.5 0 0 1 7.5 7h3A1.5 1.5 0 0 1 12 8.5V11"/>',
+    logeerkamer: '<path d="M3 19v-8h18v8"/><path d="M3 15h18"/><path d="M6 11V8.5A1.5 1.5 0 0 1 7.5 7h3A1.5 1.5 0 0 1 12 8.5V11"/>',
+    kinderkamer: '<path d="M3 19v-7h13v7"/><path d="M3 16h13"/><path d="M5.5 12v-2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/><path d="M19 3l.7 1.6 1.6.7-1.6.7L19 7.6l-.7-1.6-1.6-.7 1.6-.7z"/>',
+    woonkamer: '<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 12a2 2 0 0 1 2 2v1h14v-1a2 2 0 1 1 2 2v2H3v-2a2 2 0 0 1 0-4z"/><path d="M5 18v2M19 18v2"/>',
+    woonkeuken: '<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 12a2 2 0 0 1 2 2v1h14v-1a2 2 0 1 1 2 2v2H3v-2a2 2 0 0 1 0-4z"/><path d="M5 18v2M19 18v2"/>',
+    keuken: '<path d="M3 11h14v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M17 12h4"/><path d="M8 7.5c0-1.2 1-1.3 1-2.5M12 7.5c0-1.2 1-1.3 1-2.5"/>',
+    eetkamer: '<path d="M6 3v5a2 2 0 0 0 4 0V3M8 10v11"/><path d="M17 3c-2 1.2-3 3.4-3 6.5V13h3v8"/>',
+    badkamer: '<path d="M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M6 12V6.5a2.5 2.5 0 0 1 5 0"/><path d="M7 19l-1 2M17 19l1 2"/>',
+    toilet: '<path d="M7 3h6v6H7z"/><path d="M5 9h14a6 6 0 0 1-6 6h-2l1 6H8l1-6"/>',
+    hal: '<path d="M3 20h5v-4h4v-4h4V8h5"/>',
+    werkkamer: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+    wasruimte: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M7 6.5h2"/>',
+    berging: '<path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9"/>',
+    kamer: '<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path d="M14.5 12h.01"/>',
+  };
+  /**
+   * De soort van een hele kamer: zoals de dienst hem doorgeeft (`inrichting`,
+   * gekozen of voorgesteld, besluit 119), of anders uit de naam en de zones.
+   */
+  function soortVanKamer(kamer) {
+    if (kamer.inrichting) return kamer.inrichting;
+    const zones = (kamer.zones ?? []).map(soortVan).filter(Boolean);
+    if (zones.includes('keuken') && zones.includes('woonkamer')) return 'woonkeuken';
+    return soortVan(kamer.naam) ?? zones[0] ?? null;
+  }
+  /** De terugval als de dienst geen soort meegeeft; de dienst raadt ruimer (house.ts). */
+  function soortVan(naam) {
+    const n = String(naam ?? '').toLowerCase();
+    if (/woonkeuken|open keuken|leefkeuken/.test(n)) return 'woonkeuken';
+    if (/bijkeuken|wasruimte|washok|laundry/.test(n)) return 'wasruimte';
+    if (/keuken|kitchen/.test(n)) return 'keuken';
+    if (/logeer|gast|guest/.test(n)) return 'logeerkamer';
+    if (/kinder|baby|speelkamer/.test(n)) return 'kinderkamer';
+    if (/^(hoofd|ouder|grote |master )?slaapkamer$|master|bedroom$/.test(n)) return 'slaapkamer';
+    if (/slaap|bedroom/.test(n)) return 'kinderkamer';
+    if (/^(toilet|wc)\b/.test(n)) return 'toilet';
+    if (/bad|douche|bathroom/.test(n)) return 'badkamer';
+    if (/eetkamer|eethoek|dining/.test(n)) return 'eetkamer';
+    if (/woon|zithoek|zitkamer|lounge|living|serre|huiskamer/.test(n)) return 'woonkamer';
+    if (/^(hal|gang|overloop|entree|portaal|vide|trap|hall|landing)\b/.test(n)) return 'hal';
+    if (/werk|kantoor|studeer|hobby|office|studio|bureau|game|atelier/.test(n)) return 'werkkamer';
+    if (/zolder|vliering|berg|attic|opslag|kelder|garage/.test(n)) return 'berging';
+    return null;
+  }
   // Afmetingen in eenheden van het huis.
   const FH = 1.55; // hoogte van een etage
   const D = 1.5; // diepte van het huis
@@ -143,6 +207,14 @@
     const plek = {};
     /** Onder het dak hangt de airco tegen de linkermuur; dan staat de droger er niet onder. */
     let aircoLinks = false;
+    /** Heeft de inrichting de achterwand nodig, dan hangt de radiator aan de zijmuur. */
+    let radiatorZij = false;
+    /** Is er een etage boven de kamer die nu getekend wordt? Alleen dan een trap. */
+    let erBoven = false;
+    /** De kamer waarvan nu de apparaten getekend worden, voor de controle. */
+    let blokKamer = null;
+    /** Met `opts.controle`: elk meubel en apparaat als blok, voor de tests. */
+    const controle = [];
 
     /* ---- verlopen ---- */
     defs.push(`
@@ -241,8 +313,10 @@
     let z0 = 0;
     const gewoon = g.etages.filter((e) => !e.dak);
     const dakEtage = g.etages.find((e) => e.dak);
-    for (const etage of gewoon) {
+    for (const [ei, etage] of gewoon.entries()) {
       const z1 = z0 + FH;
+      // Een etage die alleen getekend wordt (ingezoomd), zegt het zelf: `erBoven`.
+      erBoven = ei < gewoon.length - 1 || (dakEtage?.kamers ?? []).length > 0 || etage.erBoven === true;
       const totaal = etage.kamers.reduce((s, k2) => s + (k2.gewicht ?? 1), 0);
       let x0 = 0;
       for (const kamer of etage.kamers) {
@@ -282,8 +356,11 @@
         if (!donker) huis.push(poly(stukGevel(x0, x1), `fill="url(#${id}-w-${tint})"`));
         huis.push(poly([[x0, 0, zt], [x1, 0, zt], [x1, D, zt], [x0, D, zt]], `fill="${donker ? '#0f151f' : '#1a2330'}"`));
         sfeer(kamer, x0, x1, zt, zt + R * 0.8);
+        erBoven = false;
+        inrichten(kamer, x0, x1, zt, zt + R * 0.85, (x) => dakZ(x) - 0.06, donker);
         // Onder het dak volgt alles de schuine wand: het plafond is het dak zelf.
         aircoLinks = (kamer.apparaten ?? []).some((a) => a.soort === 'airco');
+        blokKamer = kamer.id ?? kamer.naam;
         for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, (x) => dakZ(x) - 0.06);
         aircoLinks = false;
         if (x0 > 0) huis.push(line([[x0, D, zt], [x0, D, dakZ(x0)]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
@@ -543,7 +620,10 @@
         huis.push(line([[(rx0 + rx1) / 2, 0.006, z0 + 0.42], [(rx0 + rx1) / 2, 0.006, z1 - 0.28]], 'stroke="#55657a" stroke-width="1.2"'));
       }
       sfeer(kamer, x0, x1, z0, z1);
+      inrichten(kamer, x0, x1, z0, z1, null, donker);
+      blokKamer = kamer.id ?? kamer.naam;
       for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, z0, z1, false);
+      radiatorZij = false;
       // In de bewerkstand: de gekozen kamer met een rand, de kamer waar iets heen gaat met een gloed.
       if (kamer.gekozen || kamer.doel) {
         const kl = kamer.doel ? KLEUR.mint : KLEUR.ijs;
@@ -571,11 +651,23 @@
      */
     function kamerLabel(kamer, xl, zl, midden, breedte, hoogte) {
       if (!kamer.naam || kamer.stil) return;
+      // Het icoon hoort bij de inrichting: alleen ingezoomd (`opts.meubels`).
+      const soortIcoon = soortVanKamer(kamer);
+      const icoon = opts.meubels && soortIcoon !== 'leeg' ? KAMER_ICOON[soortIcoon ?? 'kamer'] : null;
+      /** Het icoon met de linkerbovenhoek op (x, y), `sz` groot, in de kleur van de naam. */
+      const tekenIcoon = (x, y, sz) => (!icoon ? '' : `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(sz / 24).toFixed(3)})" fill="none" stroke="${KLEUR.zacht}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icoon}</g>`);
       // Weinig hoogte, zoals onder de schuine kant van het dak: alles op één regel.
       if (hoogte != null && hoogte * k < 96) {
         const t1 = P(xl, D, zl);
         const kl = { koelt: KLEUR.ijs, warmt: KLEUR.gloed, wacht: KLEUR.zon, goed: KLEUR.mint }[kamer.stand] ?? KLEUR.zacht;
-        labels.push(`<g class="sc-kamer" data-kamer="${esc(kamer.id ?? kamer.naam)}"><text x="${t1[0]}" y="${t1[1]}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="12.5" font-weight="600" fill="${KLEUR.zacht}">${esc(kamer.naam)}${kamer.temp ? ` <tspan font-family="Bricolage Grotesque, Figtree, sans-serif" font-size="16" fill="${KLEUR.tekst}">${esc(kamer.temp)}</tspan>` : ''}</text>${kamer.stand ? `<circle cx="${t1[0]}" cy="${t1[1] + 12}" r="4" fill="${kl}"><title>${esc(kamer.zin ?? '')}</title></circle>` : ''}</g>`);
+        // Het icoon links van de regel, als er naast de tekst ruimte voor is.
+        const breedTekst = kamer.naam.length * 12.5 * 0.55 + (kamer.temp ? 6 + kamer.temp.length * 16 * 0.55 : 0);
+        const metIcoon = !!icoon && (breedte == null || breedte * AX * k > breedTekst + 40);
+        const sz1 = 15;
+        const ix = t1[0] - breedTekst / 2 - (metIcoon ? (sz1 + 5) / 2 : 0);
+        // Past het er niet naast, dan erboven.
+        const boven = metIcoon ? '' : tekenIcoon(t1[0] - sz1 / 2, t1[1] - sz1 - 16, sz1);
+        labels.push(`<g class="sc-kamer" data-kamer="${esc(kamer.id ?? kamer.naam)}">${metIcoon ? tekenIcoon(ix, t1[1] - sz1 + 2, sz1) : boven}<text x="${metIcoon ? t1[0] + (sz1 + 5) / 2 : t1[0]}" y="${t1[1]}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="12.5" font-weight="600" fill="${KLEUR.zacht}">${esc(kamer.naam)}${kamer.temp ? ` <tspan font-family="Bricolage Grotesque, Figtree, sans-serif" font-size="16" fill="${KLEUR.tekst}">${esc(kamer.temp)}</tspan>` : ''}</text>${kamer.stand ? `<circle cx="${t1[0]}" cy="${t1[1] + 12}" r="4" fill="${kl}"><title>${esc(kamer.zin ?? '')}</title></circle>` : ''}</g>`);
         return;
       }
       const t = P(xl, D, zl);
@@ -589,7 +681,15 @@
       const regels = past(kamer.naam, naamPx) || woorden.length < 2 ? [kamer.naam] : [woorden.slice(0, -1).join(' '), woorden[woorden.length - 1]];
       const tempPx = Math.min(28, k * 0.32, ruimte / 3.2);
       let y = t[1];
-      const delen = regels.map((r, i) => `<text x="${t[0]}" y="${y + i * 14}" text-anchor="${anker}" fill="${KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="${naamPx}" font-weight="600">${esc(r)}</text>`);
+      // Het icoon voor de eerste regel van de naam; past het er niet bij, dan valt het weg.
+      const sz = Math.round(naamPx * 1.25);
+      const regelBreed = Math.max(...regels.map((r) => r.length * naamPx * 0.55));
+      const metIcoon = !!icoon && regelBreed + sz + 6 <= ruimte;
+      const schuif = metIcoon ? sz + 6 : 0;
+      const ix = midden ? t[0] - (regelBreed + schuif) / 2 : t[0];
+      const delen = regels.map((r, i) => `<text x="${midden ? t[0] + schuif / 2 : t[0] + (i === 0 ? schuif : 0)}" y="${y + i * 14}" text-anchor="${anker}" fill="${KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="${naamPx}" font-weight="600">${esc(r)}</text>`);
+      // Past het er niet naast, dan erboven.
+      delen.unshift(metIcoon ? tekenIcoon(ix, y - sz + 3, sz) : tekenIcoon(midden ? t[0] - sz / 2 : t[0], y - naamPx - sz - 3, sz));
       y += (regels.length - 1) * 14;
       if (kamer.temp) delen.push(`<text x="${t[0]}" y="${y + tempPx + 2}" text-anchor="${anker}" fill="${KLEUR.tekst}" font-family="Bricolage Grotesque, Figtree, sans-serif" font-size="${tempPx.toFixed(1)}" font-weight="600">${esc(kamer.temp)}</text>`);
       const zinY = y + (kamer.temp ? tempPx + 20 : 18);
@@ -617,6 +717,10 @@
     }
     function apparaat(app, x0, x1, z0, z1, onderDak, plafond) {
       const xm = (x0 + x1) / 2;
+      /** Met `opts.controle`: waar dit apparaat staat, als blok. */
+      const blok = (bx0, bx1, by0, by1, bz0, bz1) => {
+        if (opts.controle) controle.push({ kamer: blokKamer, wat: 'apparaat', soort: app.soort, ruimte: [x0, x1], x0: bx0, x1: bx1, y0: by0, y1: by1, z0: bz0, z1: bz1 });
+      };
       const hoog = (x) => (plafond ? plafond(x) : z1);
       if (app.soort === 'airco') {
         const kleur = app.stand === 'warmt' ? KLEUR.gloed : KLEUR.ijs;
@@ -627,6 +731,7 @@
           const ay = 0.3;
           const az = Math.min(z0 + 0.95, hoog(x0) - 0.4);
           plek[`airco:${app.naam ?? ''}`] = [x0 + 0.2, ay + 0.4, az];
+          blok(x0 + 0.01, x0 + 0.21, ay, ay + 0.8, az, az + 0.26);
           huis.push(doos(x0 + 0.01, ay, az, 0.2, 0.8, 0.26, KAST));
           // De uitblaas aan de onderkant, naar de kamer toe.
           huis.push(poly([[x0 + 0.212, ay + 0.08, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.05], [x0 + 0.212, ay + 0.72, az + 0.08], [x0 + 0.212, ay + 0.08, az + 0.08]], 'fill="#7d8b99"'));
@@ -644,6 +749,7 @@
           const ax = x1 - 1.0;
           const az = z1 - BY * D - 0.34;
           plek[`airco:${app.naam ?? ''}`] = [ax + 0.4, 0.1, az];
+          blok(ax, ax + 0.8, 0.02, 0.22, az, az + 0.26);
           huis.push(doos(ax, 0.02, az, 0.8, 0.2, 0.26, KAST));
           huis.push(poly([[ax + 0.08, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.05], [ax + 0.72, 0.222, az + 0.08], [ax + 0.08, 0.222, az + 0.08]], 'fill="#7d8b99"'));
           if (app.aan) {
@@ -655,10 +761,15 @@
           }
         }
       } else if (app.soort === 'radiator') {
+        const kl = ['#4b5664', app.aan ? '#c4704f' : '#5a6574', '#3d4754'];
+        // Tegen de zijmuur als de achterwand een keuken heeft; anders onder het raam.
         const rx = x0 + 0.25;
-        huis.push(doos(rx, 0.02, z0 + 0.12, 0.8, 0.08, 0.36, ['#4b5664', app.aan ? '#c4704f' : '#5a6574', '#3d4754']));
+        if (radiatorZij) huis.push(doos(x0 + 0.02, 0.5, z0 + 0.12, 0.08, 0.8, 0.36, [kl[0], kl[2], kl[1]]));
+        else huis.push(doos(rx, 0.02, z0 + 0.12, 0.8, 0.08, 0.36, kl));
+        if (radiatorZij) blok(x0 + 0.02, x0 + 0.1, 0.5, 1.3, z0 + 0.12, z0 + 0.48);
+        else blok(rx, rx + 0.8, 0.02, 0.1, z0 + 0.12, z0 + 0.48);
         if (app.aan) {
-          const c = P(rx + 0.4, 0.3, z0 + 0.45);
+          const c = radiatorZij ? P(x0 + 0.4, 0.9, z0 + 0.4) : P(rx + 0.4, 0.3, z0 + 0.45);
           huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.35}" fill="url(#${id}-warm)"/>`);
         }
       } else if (app.soort === 'vloer') {
@@ -668,6 +779,7 @@
         const ly = D * 0.42;
         const top = Math.min(hoog(lx), z1);
         huis.push(line([[lx, ly, top], [lx, ly, top - 0.28]], 'stroke="#8090a0" stroke-width="1"'));
+        blok(lx - 0.09, lx + 0.09, ly - 0.09, ly + 0.09, top - 0.36, top);
         huis.push(doos(lx - 0.09, ly - 0.09, top - 0.36, 0.18, 0.18, 0.09, [app.aan ? '#FFE2B0' : '#5c6876', app.aan ? '#e8b878' : '#4a5664', app.aan ? '#d6a565' : '#3c4755']));
         if (app.aan) {
           const kleur = app.kleur ?? '#FFD9A0';
@@ -696,6 +808,7 @@
           dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - 0.6, W / 2 - 0.25));
         }
         plek[app.soort] = [dx + 0.25, dy + 0.25, z0 + 0.6];
+        blok(dx, dx + 0.5, dy, dy + 0.5, z0, z0 + 0.6);
         huis.push(doos(dx, dy, z0, 0.5, 0.5, 0.6, ['#e9eef2', '#d7dee5', '#b9c3cd']));
         if (app.soort !== 'vaatwasser') {
           huis.push(cirkelOpVoorkant(dx + 0.25, dy + 0.501, z0 + 0.27, 0.15, 'fill="#5e6c7b" stroke="#9aa7b4" stroke-width="1.5"'));
@@ -713,6 +826,7 @@
       } else if (app.soort === 'cv') {
         const cx = x0 + 0.2;
         plek.cv = [cx + 0.21, 0.1, z0 + 1.05];
+        blok(cx, cx + 0.42, 0.02, 0.24, z0 + 0.5, z0 + 1.05);
         huis.push(doos(cx, 0.02, z0 + 0.5, 0.42, 0.22, 0.55, ['#e2e7ec', '#cfd6de', '#aeb8c2']));
         if (app.aan) {
           const c = P(cx + 0.21, 0.25, z0 + 0.62);
@@ -723,6 +837,282 @@
       } else if (app.soort === 'bank') {
         huis.push(doos(x0 + 0.25, D - 0.85, z0, 1.1, 0.45, 0.28, ['#46536a', '#3a465a', '#2f394a']));
       }
+    }
+
+    /* ---- de inrichting van een kamer ---- */
+    /*
+     * Een paar meubels per soort kamer (slaapkamer, woonkamer, keuken,
+     * badkamer, hal, werkkamer, wasruimte, zolder, eetkamer), zodat je ziet
+     * wat voor kamer het is. De soort komt uit de naam, of per zone uit de
+     * naam van de zone ("Keuken", "Zithoek"); `kamer.inrichting` gaat voor.
+     *
+     * De apparaten blijven te zien: een meubel tegen de achterwand blijft weg
+     * bij het raam, de radiator, de cv en de airco, onder het dak alleen waar
+     * het rechtop past, en staat er witgoed, dan blijft het midden vrij. De
+     * meubels zijn gedempt van kleur, zodat de naam en de temperatuur van de
+     * kamer de blikvanger blijven.
+     */
+    function inrichten(kamer, x0, x1, z0, z1, plafond, donker) {
+      if (!opts.meubels) return;
+      const apps = kamer.apparaten ?? [];
+      const witgoed = apps.some((a) => WITGOED.test(a.soort));
+      // Welke delen: een gekozen soort geldt voor de hele kamer, een woonkamer met
+      // open keuken is links keuken en rechts zithoek, en anders per zone of de naam.
+      // Witgoed houdt het midden vrij.
+      const zones = (kamer.zones ?? []).length > 1 ? kamer.zones : [null];
+      const gekozen = kamer.inrichting ?? (zones.length > 1 ? null : soortVanKamer(kamer));
+      const delen = gekozen === 'woonkeuken'
+        ? [['keuken', 0, zones.length === 2 ? 0.5 : 0.45], ['woonkamer', zones.length === 2 ? 0.5 : 0.45, 1]]
+        : gekozen
+          ? [[gekozen, 0, 1]]
+          : zones.map((zone, i) => [soortVan(zone) ?? soortVan(kamer.naam), i / zones.length, (i + 1) / zones.length]);
+      const soorten = delen.map(([soort]) => (witgoed && soort !== 'leeg' ? 'wasruimte' : soort));
+      // Heeft het grootste meubel de achterwand nodig, dan hangt de radiator aan de zijmuur.
+      const ACHTERWAND = ['keuken', 'badkamer', 'toilet', 'woonkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'werkkamer'];
+      radiatorZij = !plafond && ACHTERWAND.includes(soorten[0]) && apps.some((a) => a.soort === 'radiator');
+      // Waar op de achterwand niets hoogs mag: [van, tot, vanaf welke hoogte].
+      const bezet = [];
+      if (!plafond && x1 - x0 > 1.15 && !kamer.geenRaam) bezet.push([x0 + 0.22, Math.min(x0 + 0.95, x1 - 1.05 > x0 + 0.95 ? x0 + 0.95 : x1 - 0.25) + 0.06, 0.38, 'raam']);
+      if (apps.some((a) => a.soort === 'radiator') && !radiatorZij) bezet.push([x0 + 0.2, x0 + 1.1, 0]);
+      if (apps.some((a) => a.soort === 'cv')) bezet.push([x0 + 0.15, x0 + 0.67, 0.45]);
+      if (!plafond && apps.some((a) => a.soort === 'airco')) bezet.push([x1 - 1.05, x1 - 0.15, z1 - BY * D - 0.36 - z0]);
+      if (plafond && apps.some((a) => a.soort === 'airco')) bezet.push([x0, x0 + 0.5, 0.6]);
+      const hoogte = (x) => (plafond ? plafond(x) - z0 : z1 - z0);
+      // De hanglampen, zoals apparaat() ze tekent: hun onderkant boven de vloer.
+      const lampen = apps.filter((a) => a.soort === 'lamp').map((a) => {
+        const lx = a.x != null ? x0 + (x1 - x0) * a.x : (x0 + x1) / 2;
+        return { x0: lx - 0.12, x1: lx + 0.12, onder: Math.min(hoogte(lx) + z0, z1) - 0.36 - z0 };
+      });
+      // Rechts staat de muur van de volgende kamer: die schuift achterin over wat
+      // er vlak voor staat. Daar blijft een strook vrij.
+      let rechts = x1 < W - 0.01 ? x1 - 0.5 : x1;
+      /** Wat al tegen de achterwand staat, houdt zijn plek. */
+      const neem = (x, w) => bezet.push([x - 0.03, x + w + 0.03, -1]);
+      /** Past iets van `w` breed en `h` hoog hier: niet tegen iets op de achterwand, en onder het dak rechtop. */
+      const past = (x, w, h, tegenMuur, voorRaam = false, diep = 0.5) =>
+        (!tegenMuur || x + w <= rechts + 1e-9) &&
+        hoogte(x) >= h + 0.04 &&
+        hoogte(x + w) >= h + 0.04 &&
+        (!tegenMuur || !bezet.some(([a, b, vanaf, wat]) => x < b && x + w > a && h > vanaf && !(voorRaam && wat === 'raam'))) &&
+        // Onder een hanglamp blijft ruimte; alleen wat diep de kamer in staat, komt eronder.
+        !(diep > 0.5 && lampen.some((l) => x < l.x1 && x + w > l.x0 && h > l.onder - 0.03));
+      /** De beste plek voor iets van `w` breed in [a, b): `kant` links, rechts of midden. */
+      const zoek = (a, b, w, h, kant, tegenMuur = true, voorRaam = false, diep = 0.5) => {
+        const kandidaten = [];
+        for (let x = a + 0.08; x <= b - w - 0.08 + 1e-9; x += 0.04) if (past(x, w, h, tegenMuur, voorRaam, diep)) kandidaten.push(x);
+        // Past het nergens met de strook vrij, dan maar tot aan de muur.
+        if (!kandidaten.length && rechts < x1) {
+          const was = rechts;
+          rechts = x1;
+          for (let x = a + 0.08; x <= b - w - 0.08 + 1e-9; x += 0.04) if (past(x, w, h, tegenMuur, voorRaam, diep)) kandidaten.push(x);
+          rechts = was;
+        }
+        if (!kandidaten.length) return null;
+        const doel = kant === 'links' ? a : kant === 'rechts' ? b - w : (a + b - w) / 2;
+        return kandidaten.sort((p, q) => Math.abs(p - doel) - Math.abs(q - doel))[0];
+      };
+      const stukken = [];
+      /** Een meubel op (x, y); `maat` is [breed, diep, hoog], voor de controle. */
+      const zet = (y, x, svgTekst, maat) => {
+        stukken.push({ y, x, svgTekst });
+        if (opts.controle && maat) {
+          const [w, d, h, vanaf = 0] = maat;
+          controle.push({ kamer: kamer.id ?? kamer.naam, wat: 'meubel', x0: x, x1: x + w, y0: y, y1: y + d, z0: z0 + vanaf, z1: z0 + vanaf + h, ruimte: [x0, x1], plafond: z0 + Math.min(hoogte(x), hoogte(x + w)) });
+        }
+      };
+
+      const tafel = (x, y, w, d, h, kl = MEUBEL.hout) => {
+        const poot = 0.035;
+        return [
+          doos(x + 0.03, y + 0.03, z0, poot, poot, h - 0.03, kl),
+          doos(x + w - 0.03 - poot, y + 0.03, z0, poot, poot, h - 0.03, kl),
+          doos(x + 0.03, y + d - 0.03 - poot, z0, poot, poot, h - 0.03, kl),
+          doos(x + w - 0.03 - poot, y + d - 0.03 - poot, z0, poot, poot, h - 0.03, kl),
+          doos(x, y, z0 + h - 0.03, w, d, 0.03, kl),
+        ].join('');
+      };
+      const stoel = (x, y, rugAchter = false) =>
+        doos(x, y, z0, 0.2, 0.2, 0.2, MEUBEL.donker) + (rugAchter ? doos(x, y, z0 + 0.2, 0.2, 0.04, 0.2, MEUBEL.donker) : doos(x, y + 0.16, z0 + 0.2, 0.2, 0.04, 0.2, MEUBEL.donker));
+      const plant = (x, y) => {
+        const c = P(x + 0.07, y + 0.07, z0 + 0.36);
+        return `${doos(x, y, z0, 0.14, 0.14, 0.16, MEUBEL.doos)}<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * 0.13).toFixed(1)}" ry="${(k * 0.17).toFixed(1)}" fill="${MEUBEL.groen}"/><ellipse cx="${(c[0] - k * 0.05).toFixed(1)}" cy="${(c[1] - k * 0.06).toFixed(1)}" rx="${(k * 0.06).toFixed(1)}" ry="${(k * 0.08).toFixed(1)}" fill="#76b48f" opacity="0.8"/>`;
+      };
+      const kleed = (a, b, y0, y1) => poly([[a, y0, z0 + 0.004], [b, y0, z0 + 0.004], [b, y1, z0 + 0.004], [a, y1, z0 + 0.004]], `fill="${MEUBEL.kleed}" opacity="0.3"`);
+
+      function bed(a, b, breed) {
+        // Past een tweepersoonsbed niet, dan een eenpersoons.
+        if (breed && zoek(a, b, 0.95, 0.34, 'midden', true, false, 1.16) == null) breed = false;
+        const bw = breed ? 0.95 : 0.55;
+        const L = breed ? 1.12 : 0.98;
+        const x = zoek(a, b, bw, 0.34, breed ? 'midden' : 'links', true, false, L + 0.04);
+        if (x == null) return;
+        const y = 0.04;
+        neem(x, bw);
+        const kussens = breed ? [x + 0.08, x + bw / 2 + 0.02] : [x + 0.08];
+        const kw = breed ? bw / 2 - 0.1 : bw - 0.16;
+        zet(y, x, [
+          doos(x, y, z0, bw, 0.06, 0.34, MEUBEL.hout),
+          doos(x, y + 0.06, z0, bw, L - 0.06, 0.14, MEUBEL.hout),
+          doos(x + 0.03, y + 0.08, z0 + 0.14, bw - 0.06, L - 0.12, 0.07, MEUBEL.wit),
+          ...kussens.map((kx) => doos(kx, y + 0.1, z0 + 0.21, kw, 0.2, 0.05, MEUBEL.wit)),
+          doos(x + 0.02, y + 0.38, z0 + 0.18, bw - 0.04, L - 0.44, 0.07, MEUBEL.dek),
+        ].join(''), [bw, L, 0.34]);
+        // Een nachtkastje ernaast, als het past.
+        if (past(x + bw + 0.05, 0.22, 0.26, true) && x + bw + 0.3 <= b) {
+          zet(y, x + bw + 0.05, doos(x + bw + 0.05, y, z0, 0.22, 0.22, 0.24, MEUBEL.hout), [0.22, 0.22, 0.24]);
+          neem(x + bw + 0.05, 0.22);
+        }
+        else if (breed && past(x - 0.27, 0.22, 0.26, true) && x - 0.27 >= a) zet(y, x - 0.27, doos(x - 0.27, y, z0, 0.22, 0.22, 0.24, MEUBEL.hout), [0.22, 0.22, 0.24]);
+      }
+      function bureau(a, b) {
+        const x = zoek(a, b, 0.7, 0.62, 'rechts', true, true);
+        if (x == null) return;
+        neem(x, 0.7);
+        zet(0.04, x, `${tafel(x, 0.04, 0.7, 0.34, 0.42)}${doos(x + 0.22, 0.1, z0 + 0.42, 0.28, 0.03, 0.2, ['#2a3443', '#1c2430', '#161d27'])}`, [0.7, 0.34, 0.62]);
+        zet(0.55, x + 0.25, stoel(x + 0.25, 0.55), [0.2, 0.2, 0.4]);
+      }
+      function kast(a, b) {
+        // Een boekenkast tegen de achterwand, met planken.
+        const x = zoek(a, b, 0.42, 0.7, 'links');
+        if (x == null) return;
+        neem(x, 0.42);
+        const planken = [0.24, 0.46].map((h) => line([[x + 0.03, 0.26, z0 + h], [x + 0.39, 0.26, z0 + h]], 'stroke="#4e4135" stroke-width="1.2"')).join('');
+        zet(0.03, x, `${doos(x, 0.03, z0, 0.42, 0.24, 0.7, MEUBEL.hout)}${planken}`, [0.42, 0.24, 0.7]);
+      }
+
+      function meubels(soort, a, b) {
+        const w = b - a;
+        if (soort === 'slaapkamer' || soort === 'kinderkamer' || soort === 'logeerkamer') {
+          bed(a, b, soort !== 'kinderkamer' && w > 1.3);
+          if (soort === 'kinderkamer' && w > 1.4) {
+            const x = zoek(a, b, 0.5, 0.36, 'rechts');
+            if (x != null) {
+              neem(x, 0.5);
+              zet(0.04, x, tafel(x, 0.04, 0.5, 0.3, 0.36), [0.5, 0.3, 0.36]);
+            }
+          }
+        } else if (soort === 'woonkamer') {
+          const sw = Math.min(1.15, w - 0.35);
+          if (sw < 0.6) return;
+          const x = zoek(a, b, sw, 0.42, 'midden');
+          if (x != null) {
+            neem(x - 0.06, sw + 0.12);
+            stukken.push({ y: -1, x, svgTekst: kleed(x + 0.05, x + sw - 0.05, 0.5, 1.2) });
+            zet(0.04, x, [
+              doos(x, 0.04, z0, sw, 0.14, 0.42, MEUBEL.stof),
+              doos(x, 0.18, z0, sw, 0.3, 0.2, MEUBEL.stof),
+              doos(x + 0.04, 0.18, z0 + 0.2, (sw - 0.08) / 2 - 0.01, 0.28, 0.05, MEUBEL.kussen),
+              doos(x + sw / 2 + 0.01, 0.18, z0 + 0.2, (sw - 0.08) / 2 - 0.01, 0.28, 0.05, MEUBEL.kussen),
+              doos(x - 0.06, 0.04, z0, 0.08, 0.44, 0.3, MEUBEL.stof),
+              doos(x + sw - 0.02, 0.04, z0, 0.08, 0.44, 0.3, MEUBEL.stof),
+            ].join(''), [sw, 0.44, 0.42]);
+            const tw = Math.min(0.55, sw * 0.5);
+            zet(0.66, x + (sw - tw) / 2, tafel(x + (sw - tw) / 2, 0.66, tw, 0.32, 0.17), [tw, 0.32, 0.17]);
+          }
+          if (w > 1.5 && past(b - 0.3, 0.14, 0.4, true)) zet(0.06, b - 0.3, plant(b - 0.3, 0.06), [0.14, 0.14, 0.4]);
+        } else if (soort === 'keuken') {
+          // Het aanrecht langs de achterwand, de koelkast aan het eind.
+          const kl = Math.min(w - 0.25, 1.6);
+          const x = a + 0.1;
+          const koel = past(x + kl - 0.38, 0.38, 1.0, true) && kl > 0.9;
+          const ak = koel ? kl - 0.4 : kl;
+          // Het aanrecht mag onder het raam: daar staat de gootsteen.
+          if (ak > 0.3 && past(x, ak, 0.36, true)) {
+            zet(0.03, x, [
+              doos(x, 0.03, z0, ak, 0.32, 0.4, ['#6c7d93', '#5d6d82', '#4f5d70']),
+              doos(x - 0.01, 0.02, z0 + 0.4, ak + 0.02, 0.34, 0.03, MEUBEL.blad),
+              poly([[x + 0.12, 0.08, z0 + 0.432], [x + 0.36, 0.08, z0 + 0.432], [x + 0.36, 0.26, z0 + 0.432], [x + 0.12, 0.26, z0 + 0.432]], 'fill="#5b6876"'),
+              ak > 0.8 ? [0, 1].map((i) => { const c = P(x + ak - 0.32 + i * 0.16, 0.18, z0 + 0.433); return `<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * 0.055).toFixed(1)}" ry="${(k * 0.028).toFixed(1)}" fill="#2a323d"/>`; }).join('') : '',
+            ].join(''), [ak, 0.33, 0.43]);
+            neem(x, ak);
+            // Kastjes aan de muur, alleen waar geen raam of airco zit.
+            for (let ux = x; ux + 0.3 <= x + ak + 1e-9; ux += 0.32) {
+              if (past(ux, 0.3, 1.18, true) && hoogte(ux) > 1.25) zet(0.02, ux, doos(ux, 0.02, z0 + 0.88, 0.3, 0.2, 0.3, ['#7a8aa0', '#6a7a8f', '#5b6a7e']), [0.3, 0.2, 0.3, 0.88]);
+            }
+          }
+          if (koel) zet(0.03, x + kl - 0.38, doos(x + kl - 0.38, 0.03, z0, 0.38, 0.34, 1.0, MEUBEL.wit) + line([[x + kl - 0.38, 0.37, z0 + 0.62], [x + kl, 0.37, z0 + 0.62]], 'stroke="#9aa6b2" stroke-width="1"'), [0.38, 0.34, 1.0]);
+        } else if (soort === 'eetkamer') {
+          const tw = Math.min(0.9, w - 0.5);
+          if (tw < 0.4) return;
+          const x = a + (w - tw) / 2;
+          if (!past(x, tw, 0.4, false, false, 0.9)) return;
+          const plekken = tw >= 0.7 ? [x + 0.12, x + tw - 0.32] : [x + (tw - 0.2) / 2];
+          for (const sx of plekken) zet(0.28, sx, stoel(sx, 0.28, true), [0.2, 0.2, 0.4]);
+          zet(0.5, x, tafel(x, 0.5, tw, 0.45, 0.36), [tw, 0.45, 0.36]);
+          for (const sx of plekken) zet(0.97, sx, stoel(sx, 0.97), [0.2, 0.2, 0.4]);
+        } else if (soort === 'badkamer' || soort === 'toilet') {
+          // Een bad als het past; anders een douche met glas in de hoek.
+          const bad = soort === 'badkamer' && w > 1.6 ? zoek(a, b, 0.85, 0.32, 'rechts') : null;
+          if (bad != null) {
+            const x = bad;
+            neem(x, 0.85);
+            zet(0.04, x, [
+              doos(x, 0.04, z0, 0.85, 0.42, 0.3, MEUBEL.wit),
+              poly([[x + 0.07, 0.1, z0 + 0.301], [x + 0.78, 0.1, z0 + 0.301], [x + 0.78, 0.4, z0 + 0.301], [x + 0.07, 0.4, z0 + 0.301]], 'fill="#8fc6e0" opacity="0.75"'),
+            ].join(''), [0.85, 0.42, 0.3]);
+          } else if (soort === 'badkamer') {
+            const x = zoek(a, b, 0.5, 1.1, 'rechts');
+            if (x != null) neem(x, 0.5);
+            if (x != null) zet(0.04, x, `${doos(x, 0.04, z0, 0.5, 0.5, 0.04, MEUBEL.wit)}${doos(x, 0.04, z0 + 0.04, 0.5, 0.5, 1.05, ['#bfe3f2', '#9fd3ea', '#8cc6e0']).replace(/fill="/g, 'fill-opacity="0.22" fill="')}`, [0.5, 0.5, 1.09]);
+          }
+          // De wastafel, een kastje met een wasbak; hij mag onder het raam.
+          const xw = zoek(a, b, 0.4, 0.36, 'links');
+          if (xw != null) neem(xw, 0.4);
+          if (xw != null) zet(0.04, xw, `${doos(xw, 0.04, z0, 0.4, 0.26, 0.3, MEUBEL.hout)}${doos(xw - 0.01, 0.03, z0 + 0.3, 0.42, 0.28, 0.08, MEUBEL.wit)}`, [0.4, 0.27, 0.38]);
+          if (soort === 'toilet' || w > 2.2) {
+            const xt = zoek(a, b, 0.22, 0.4, soort === 'toilet' ? 'rechts' : 'midden');
+            if (xt != null) neem(xt, 0.22);
+            if (xt != null) zet(0.04, xt, `${doos(xt, 0.04, z0 + 0.2, 0.22, 0.1, 0.2, MEUBEL.wit)}${doos(xt + 0.02, 0.14, z0, 0.18, 0.26, 0.22, MEUBEL.wit)}`, [0.22, 0.36, 0.4]);
+          }
+        } else if (soort === 'hal') {
+          // Een trap omhoog langs de zijmuur, van voor naar achter; alleen als er een etage boven is.
+          const sw = Math.min(0.45, w - 0.3);
+          if (sw < 0.3 || !erBoven) return;
+          const n = 8;
+          const h = hoogte(a + 0.1);
+          const xs = zoek(a, b, sw, h - 0.05, 'links', true, true);
+          if (xs == null) return;
+          neem(xs, sw);
+          const diep = 1.25 / n;
+          for (let i = n - 1; i >= 0; i--) {
+            const y = 0.05 + i * diep;
+            const hi = (h - 0.05) * ((n - i) / n);
+            zet(y, xs, doos(xs, y, z0, sw, diep, hi, MEUBEL.hout), [sw, diep, hi]);
+          }
+        } else if (soort === 'werkkamer') {
+          bureau(a, b);
+          if (w > 1.5) kast(a, b);
+        } else if (soort === 'wasruimte') {
+          const x = zoek(a, b, 0.32, 0.3, 'links');
+          if (x != null) zet(0.06, x, doos(x, 0.06, z0, 0.32, 0.26, 0.26, ['#c7b9a0', '#b1a389', '#9b8e75']), [0.32, 0.26, 0.26]);
+        } else if (soort === 'berging') {
+          // Dozen, en in een brede ruimte een stellingkast.
+          const x = zoek(a, b, 0.73, 0.5, 'midden');
+          if (x != null) {
+            neem(x, 0.73);
+            zet(0.06, x, `${doos(x, 0.06, z0, 0.4, 0.34, 0.26, MEUBEL.doos)}${doos(x + 0.05, 0.1, z0 + 0.26, 0.3, 0.26, 0.2, MEUBEL.doos)}`, [0.4, 0.34, 0.46]);
+            zet(0.06, x + 0.45, doos(x + 0.45, 0.06, z0, 0.28, 0.3, 0.22, MEUBEL.doos), [0.28, 0.3, 0.22]);
+          }
+          if (w > 1.5) kast(a, b);
+        } else if (soort === 'leeg') {
+          // Bewust leeg.
+        } else {
+          // Een kamer zonder bekende soort: een kastje en een plant.
+          const x = zoek(a, b, 0.6, 0.4, 'midden');
+          if (x != null) {
+            neem(x, 0.6);
+            zet(0.04, x, doos(x, 0.04, z0, 0.6, 0.28, 0.36, MEUBEL.hout), [0.6, 0.28, 0.36]);
+          }
+          if (w > 1.2 && past(b - 0.3, 0.14, 0.4, true)) zet(0.06, b - 0.3, plant(b - 0.3, 0.06), [0.14, 0.14, 0.4]);
+        }
+      }
+
+      // Langs een radiator aan de zijmuur blijft een strook vrij.
+      soorten.forEach((soort, i) => meubels(soort, x0 + (x1 - x0) * delen[i][1] + (radiatorZij && i === 0 ? 0.12 : 0), x0 + (x1 - x0) * delen[i][2]));
+      if (!stukken.length) return;
+      // Van achter naar voor, en van links naar rechts: wat dichterbij staat, komt erover.
+      stukken.sort((p, q) => p.y - q.y || p.x - q.x);
+      huis.push(`<g class="sc-meubels"${donker ? ' opacity="0.4"' : ''}>${stukken.map((s) => s.svgTekst).join('')}</g>`);
     }
 
     /* ---- buiten ---- */
@@ -938,7 +1328,7 @@
       if (deel.id) tik(deel, vlak);
     }
 
-    return `<svg class="sc-huis" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="img" aria-label="${esc(model.beschrijving ?? 'Het huis')}">
+    return `<svg class="sc-huis${opts.meubels ? ' sc-ingericht' : ''}" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="img" aria-label="${esc(model.beschrijving ?? 'Het huis')}">
       <defs>${defs.join('')}</defs>
       <g>${lucht.join('')}</g>
       <g>${grond.join('')}</g>
@@ -947,8 +1337,9 @@
       <g>${buiten.join('')}</g>
       <g>${labels.join('')}</g>
       ${tikken.length ? `<g>${tikken.join('')}</g>` : ''}
+      ${opts.controle ? `<desc class="sc-controle">${esc(JSON.stringify(controle))}</desc>` : ''}
     </svg>`;
   }
 
-  global.huis = { teken, svg, KLEUR };
+  global.huis = { teken, svg, KLEUR, KAMER_ICOON, soortVan };
 })(window);

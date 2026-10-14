@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
-import { buildHouse, knownForLayout, lampsFor, outsideFromNames, proposeLayout } from '../src/web/house.js';
+import { buildHouse, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -43,6 +43,36 @@ describe('het voorstel uit Home Assistant', () => {
     expect(outsideFromNames({ naam: 'Carport', zones: [] }, []).soort).toBe('oprit');
     // Een voortuin heeft zijn eigen plek in de tekening (besluit 113).
     expect(outsideFromNames({ naam: 'Voortuin', zones: [] }, []).soort).toBe('voortuin');
+  });
+
+  it('raadt wat voor kamer het is uit de naam, de zones en de etage (besluit 119)', () => {
+    const soort = (naam: string, zones: string[] = [], etage = 'e1') => roomTypeFromNames({ naam, etage, zones: zones.map((z, i) => ({ id: `z${i}`, naam: z })) });
+    const verwacht: [string, string | null][] = [
+      ['Woonkamer', 'woonkamer'], ['Huiskamer', 'woonkamer'], ['Serre', 'woonkamer'], ['Living', 'woonkamer'],
+      ['Woonkeuken', 'woonkeuken'], ['Keuken', 'keuken'], ['Bijkeuken', 'wasruimte'], ['Eetkamer', 'eetkamer'],
+      ['Slaapkamer', 'slaapkamer'], ['Ouderslaapkamer', 'slaapkamer'], ['Master bedroom', 'slaapkamer'],
+      ['Slaapkamer Matts', 'kinderkamer'], ['Kinderslaapkamer', 'kinderkamer'], ['Babykamer', 'kinderkamer'], ['Speelkamer', 'kinderkamer'],
+      ['Logeerkamer', 'logeerkamer'], ['Gastenkamer', 'logeerkamer'],
+      ['Badkamer', 'badkamer'], ['Douche', 'badkamer'], ['Toilet', 'toilet'], ['WC beneden', 'toilet'],
+      ['Hal', 'hal'], ['Overloop', 'hal'], ['Gang', 'hal'], ['Entree', 'hal'],
+      ['Werkkamer', 'werkkamer'], ['Kantoor', 'werkkamer'], ['Hobbykamer', 'werkkamer'], ['Studeerkamer', 'werkkamer'],
+      ['Wasruimte', 'wasruimte'], ['Washok', 'wasruimte'], ['Zolder', 'berging'], ['Berging', 'berging'], ['Kelder', 'berging'],
+      ['Kamer Lisa', null], ['Beneden', null],
+    ];
+    for (const [naam, soortVerwacht] of verwacht) expect(soort(naam), naam).toBe(soortVerwacht);
+    // Een kamer met een keuken en een zithoek: een woonkamer met open keuken.
+    expect(soort('Beneden', ['Keuken', 'Zithoek'])).toBe('woonkeuken');
+    // Een kelder zonder naam die iets zegt: een berging.
+    expect(soort('Ruimte 1', [], 'kelder')).toBe('berging');
+    // Wat er staat, helpt: een droger maakt een wasruimte.
+    expect(roomTypeFromNames({ naam: 'Achterkamer', etage: 'e2', zones: [] }, [{ naam: 'Droger', soort: 'apparaat' }])).toBe('wasruimte');
+    // In het huis: de keuze gaat voor, anders het voorstel; buiten geen soort.
+    const eigen = proposeLayout(config, registers, states);
+    const binnen = eigen.kamers.find((k) => k.etage !== 'buiten')!;
+    const met = buildHouse(config, registers, states, snapshot, { ...eigen, kamers: eigen.kamers.map((k) => (k.id === binnen.id ? { ...k, soort: 'werkkamer' as const } : k)) });
+    const eerste = met.etages.flatMap((e) => e.ruimtes).find((r) => r.id === binnen.id)!;
+    expect([eerste.soort, eerste.soortGekozen]).toEqual(['werkkamer', true]);
+    expect(met.etages.find((e) => e.id === 'buiten')!.ruimtes.every((r) => r.soort === null)).toBe(true);
   });
 
   it('raadt welke etage onder het dak ligt, en volgt wat de bewoner koos (besluit 111)', () => {

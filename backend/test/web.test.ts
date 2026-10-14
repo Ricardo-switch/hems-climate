@@ -1056,6 +1056,8 @@ describe('licht bedienen (besluit 97)', () => {
     apparaten,
     scenes: id === 'hal' ? [{ id: 'scene.hal_avond', naam: 'Avond', actief: false, groep: 'Hal', gebruiktMs: null, kleuren: [], plaatje: null, wit: false }] : [],
     buiten: null,
+    soort: null,
+    soortGekozen: false,
   });
   const house: HouseReport = {
     indeling: 'eigen',

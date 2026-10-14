@@ -127,6 +127,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten](#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten)
 - [115. De assistent leest een vraag in eigen woorden, met een woordzoeker](#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker)
 - [116. Het jaar van Opbrengst begint op de startdatum van het contract](#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract)
+- [119. Kamers krijgen een soort; ingezoomd staat de inrichting erin](#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin)
 
 **Veiligheid**
 
@@ -5130,6 +5131,47 @@ open source, en Smart Climate wordt het ook. Voor het openbaar maken:
 
 *Wanneer:* bij het product (H), na de winter, als het moment van echt schakelen
 er is (besluit 64) en de add-on weer de plek wordt om te regelen (53).
+
+---
+
+## 119. Kamers krijgen een soort; ingezoomd staat de inrichting erin
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026: de kamers wat opleuken, met een
+standaard inrichting per soort kamer en de apparaten er nog in. Het startscherm
+werd daarvan te druk; ingezoomd viel het goed. De zorg was het universele stuk:
+een andere naam voor een kamer, een kelder, een overloop, een kinderkamer.
+
+*Besluit:*
+
+- **Elke kamer binnen heeft een soort:** woonkamer, woonkamer met open keuken,
+  keuken, eetkamer, slaapkamer, kinderkamer, logeerkamer, badkamer, toilet,
+  hal of overloop, werkkamer, wasruimte, berging of zolder, of leeg. De soort
+  staat in de indeling (`soort`) en is te kiezen bij Indeling. Zonder keuze
+  doet de dienst een voorstel uit de naam, de zones, de etage en wat er staat
+  (`roomTypeFromNames`): een kamer met een keuken en een zithoek als zones is
+  een woonkamer met open keuken, een kelder een berging, een kamer met een
+  droger een wasruimte. Zegt niets iets, dan geen voorstel. Inrichten noemt
+  de kamers waarvan de soort niet uit de naam volgt.
+- **Het startscherm blijft zoals het was.** De meubels en een icoon bij de naam
+  staan alleen ingezoomd (Kamer), en op de telefoon nergens.
+- **De apparaten blijven te zien.** Een meubel blijft weg bij het raam (behalve
+  een aanrecht, wastafel, bureau of trap ervoor), de airco, de cv en het
+  witgoed, past onder het schuine dak, staat niet onder een te laag hangende
+  lamp, en houdt afstand van de muur van de buurkamer. Heeft het grootste
+  meubel de achterwand nodig, dan hangt de radiator aan de zijmuur. Witgoed
+  maakt een kamer een wasruimte, tenzij hij leeg is gekozen.
+- **Een trap alleen met een etage erboven.** Ingezoomd geeft de pagina dat mee,
+  want dan staat er maar één etage in de tekening.
+- **Getoetst:** een proef in de paginatests richt elke soort in, in drie
+  breedtes, met en zonder radiator, airco, cv, lampen en witgoed, op een
+  gewone etage en onder het dak. De tekening geeft elk meubel en apparaat als
+  blok, en geen meubel mag door een apparaat, een ander meubel, een muur of het
+  dak.
+
+*Nog open:* een kelder wordt nog op de grond getekend, niet eronder
+(`docs/universeel.md`).
 
 ---
 

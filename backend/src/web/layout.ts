@@ -75,10 +75,19 @@ export interface LayoutOutside {
   readonly tuinhuis: boolean;
 }
 
+/**
+ * Wat voor kamer het is, voor de inrichting in de tekening (besluit 119).
+ * Weg is: een voorstel uit de naam. "leeg" tekent niets.
+ */
+export const ROOM_TYPES = ['woonkamer', 'woonkeuken', 'keuken', 'eetkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'badkamer', 'toilet', 'hal', 'werkkamer', 'wasruimte', 'berging', 'leeg'] as const;
+export type RoomType = (typeof ROOM_TYPES)[number];
+
 export interface LayoutRoom {
   readonly id: string;
   readonly naam: string;
   readonly etage: FloorId;
+  /** Alleen binnen: wat voor kamer het is (besluit 119). Weg is: de naam zegt het. */
+  readonly soort?: RoomType;
   /** Alleen op de etage buiten: wat voor ruimte het is (besluit 109). Weg is: de naam zegt het. */
   readonly buiten?: LayoutOutside;
   /** Delen van de kamer, als die ze heeft: keuken en zithoek (95). */
@@ -244,7 +253,11 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       }
       buiten = { soort: o['soort'] as OutsideKind, auto: o['auto'], tuinhuis: o['tuinhuis'] };
     }
-    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}) });
+    // Wat voor kamer het is (besluit 119); buiten valt het weg.
+    const so = k['soort'];
+    if (so !== undefined && so !== null && !(ROOM_TYPES as readonly unknown[]).includes(so)) return { ok: false, reden: `kamer ${id}: soort is ${ROOM_TYPES.join(', ')}` };
+    const soort = so != null && etage !== OUTSIDE_FLOOR ? (so as RoomType) : undefined;
+    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}) });
   }
 
   const appIn = b['apparaten'] ?? {};

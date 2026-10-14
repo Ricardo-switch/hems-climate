@@ -37,6 +37,7 @@ import {
   type LayoutKnown,
   type LayoutOutside,
   type LayoutRoom,
+  type RoomType,
 } from './layout.js';
 
 export interface HouseRegisters {
@@ -145,6 +146,14 @@ export interface HouseRoom {
    * anders een voorstel uit de naam. Null voor een kamer binnen.
    */
   readonly buiten: LayoutOutside | null;
+  /**
+   * Wat voor kamer het is, voor de inrichting in de tekening (besluit 119):
+   * zoals de bewoner koos, of een voorstel uit de naam; null buiten, of als
+   * de naam niets zegt.
+   */
+  readonly soort: RoomType | null;
+  /** Of de soort door de bewoner gekozen is, of een voorstel. */
+  readonly soortGekozen: boolean;
 }
 
 export interface HouseScene {
@@ -862,6 +871,38 @@ function slug(text: string, taken: ReadonlySet<string>): string {
 const OUTSIDE = /tuin|oprit|terras|buiten|schuur|carport|balkon|veranda/i;
 
 /**
+ * Een voorstel voor de soort van een kamer zonder eigen keuze (besluit 119),
+ * uit de naam, de zones, de etage en wat er staat. De keuze van de bewoner gaat
+ * altijd voor; dit is alleen het begin. Null als niets iets zegt.
+ */
+export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'etage'>, devices: readonly Pick<HouseDevice, 'naam' | 'soort'>[] = []): RoomType | null {
+  const n = room.naam.toLowerCase().trim();
+  const zones = room.zones.map((z) => z.naam.toLowerCase());
+  const zegt = (re: RegExp) => re.test(n);
+  // Een kamer met een keuken en een zithoek als zones is een woonkamer met open keuken.
+  if (zones.some((z) => /keuken|kitchen/.test(z)) && zones.some((z) => /woon|zit|lounge|living|bank|tv/.test(z))) return 'woonkeuken';
+  if (zegt(/woonkeuken|open keuken|leefkeuken/)) return 'woonkeuken';
+  if (zegt(/bijkeuken|wasruimte|washok|wasplaats|laundry|stookhok|technische ruimte|cv-ruimte/)) return 'wasruimte';
+  if (zegt(/keuken|kitchen/)) return 'keuken';
+  if (zegt(/logeer|gast|guest/)) return 'logeerkamer';
+  if (zegt(/kinder|baby|speelkamer|jongenskamer|meisjeskamer|tienerkamer|nursery|kids/)) return 'kinderkamer';
+  // "Slaapkamer" alleen, of die van de ouders: een tweepersoonsbed. Met een naam erachter: een kind.
+  if (zegt(/^(hoofd|ouder|grote |master )?slaapkamer$|master|ouderslaapkamer|bedroom$/)) return 'slaapkamer';
+  if (zegt(/slaapkamer|slaap|bedroom/)) return 'kinderkamer';
+  if (zegt(/^(toilet|wc)\b|toilet|^wc /)) return 'toilet';
+  if (zegt(/bad|douche|bathroom|shower/)) return 'badkamer';
+  if (zegt(/eetkamer|eethoek|dining/)) return 'eetkamer';
+  if (zegt(/woon|zitkamer|zithoek|living|lounge|tv-kamer|tv kamer|serre|huiskamer|salon/)) return 'woonkamer';
+  if (zegt(/^(hal|gang|overloop|entree|portaal|vide|trap|trappenhuis|hall|landing|hallway)\b/)) return 'hal';
+  if (zegt(/werk|kantoor|studeer|hobby|office|studio|bureau|game|thuiswerk|atelier|knutsel/)) return 'werkkamer';
+  if (zegt(/zolder|vliering|berg|opslag|kelder|garage|schuur|attic|storage|basement/)) return 'berging';
+  // Een kelder zonder naam die iets zegt, is een berging.
+  if (room.etage === 'kelder') return 'berging';
+  if (devices.some((d) => d.soort === 'apparaat' && /was|droog|droger/i.test(d.naam))) return 'wasruimte';
+  return null;
+}
+
+/**
  * Een voorstel voor een buitenruimte zonder eigen keuze (besluit 109): de soort
  * uit de naam, een auto op een oprit, en een tuinhuis als een zone of een
  * apparaat zo heet.
@@ -1041,6 +1082,8 @@ export function buildHouse(
       apparaten: devices,
       scenes: scenes.get(k.id) ?? [],
       buiten: k.buiten ?? (k.etage === 'buiten' || OUTSIDE.test(k.naam) ? outsideFromNames(k, devices) : null),
+      soort: k.etage === OUTSIDE_FLOOR ? null : (k.soort ?? roomTypeFromNames(k, devices)),
+      soortGekozen: k.etage !== OUTSIDE_FLOOR && k.soort != null,
     };
   });
 

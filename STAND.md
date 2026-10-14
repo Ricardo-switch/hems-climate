@@ -168,6 +168,8 @@ verwijzing bestaat.
   ([117]).
 - **Uitrollen** gaat na de winter via een eigen add-on-bibliotheek op GitHub;
   HACS alleen voor de integratie ([118]).
+- **Kamers hebben een soort,** te kiezen bij Indeling, met een voorstel uit de
+  naam; ingezoomd staat de inrichting erin ([119]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -335,4 +337,5 @@ verwijzing bestaat.
 [116]: DECISIONS.md#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract
 [117]: DECISIONS.md#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie
 [118]: DECISIONS.md#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github
+[119]: DECISIONS.md#119-kamers-krijgen-een-soort-ingezoomd-staat-de-inrichting-erin
 <!-- links:einde -->

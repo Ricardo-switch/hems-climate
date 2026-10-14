@@ -158,12 +158,13 @@ function tekenPodium(etage, kamer) {
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken: zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : 0.3) : 0.3,
     zonderDak: true,
-    etages: [{ naam: toon.naam, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
+    // Een trap in de hal alleen als er een etage boven deze is (besluit 119).
+    etages: [{ naam: toon.naam, erBoven: alle.slice(0, alle.indexOf(toon)).some(binnenEtage), kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, state), gekozen: r.id === kamer.id })) }],
     ...Object.fromEntries(Object.entries(buitenDelen).filter(([, v]) => v)),
   };
   // Met de oprit en de tuin erbij is het beeld breder: dan minder inzoomen, en wat naar links.
   const buitenErbij = Object.values(buitenDelen).some(Boolean);
-  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true });
+  if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 800, hoogte: 560, zoom: buitenErbij ? 0.92 : 1.2, schuifX: buitenErbij ? -30 : 0, schuifY: -10, tik: true, meubels: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 280, marge: 0.03, tik: true });
 }
 

@@ -398,6 +398,13 @@ button {
 .bol.adem {
   animation: sc-adem 4s ease-in-out infinite;
 }
+/* Ingezoomd, met meubels: de naam en temperatuur van een kamer blijven leesbaar. */
+.sc-ingericht .sc-kamer text {
+  paint-order: stroke;
+  stroke: rgba(14, 24, 40, 0.6);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 @media (prefers-reduced-motion: reduce) {
   .sc-stroom,
   .sc-trommel,

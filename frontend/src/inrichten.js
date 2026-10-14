@@ -34,6 +34,8 @@ function stappen() {
   const etages = (h?.etages ?? []).filter((e) => e.id !== 'buiten' && e.ruimtes?.length);
   const kamers = etages.reduce((t, e) => t + e.ruimtes.length, 0);
   const los = h?.zonderRuimte?.length ?? 0;
+  // Kamers waarvan de soort niet uit de naam volgt en niet gekozen is (besluit 119).
+  const onbekend = etages.reduce((t, e) => t + e.ruimtes.filter((r) => r.soort == null).length, 0);
   const acts = data.site?.actuators ?? [];
   const aircos = acts.filter((a) => a.capabilities?.canCool).length;
   const zones = data.site?.zones?.length ?? 0;
@@ -52,8 +54,8 @@ function stappen() {
       id: 'huis',
       kop: 'Je huis',
       klaar: h?.indeling === 'eigen',
-      zin: 'De etages en kamers, en welk apparaat waar staat. De app doet een voorstel uit Home Assistant; jij kijkt het na.',
-      wat: [h ? `${meervoud(etages.length, 'etage', 'etages')}, ${meervoud(kamers, 'kamer', 'kamers')}` : 'Nog niet gelezen uit Home Assistant', los ? `${meervoud(los, 'apparaat', 'apparaten')} nog in te delen` : 'Alles heeft een plek', h?.indeling === 'eigen' ? 'Vastgelegd' : 'Nog het voorstel uit Home Assistant'],
+      zin: 'De etages en kamers, wat voor kamer elke kamer is, en welk apparaat waar staat. De app doet een voorstel uit Home Assistant; jij kijkt het na.',
+      wat: [h ? `${meervoud(etages.length, 'etage', 'etages')}, ${meervoud(kamers, 'kamer', 'kamers')}` : 'Nog niet gelezen uit Home Assistant', los ? `${meervoud(los, 'apparaat', 'apparaten')} nog in te delen` : 'Alles heeft een plek', ...(onbekend ? [`Bij ${meervoud(onbekend, 'kamer', 'kamers')} zegt de naam niet wat voor kamer het is`] : []), h?.indeling === 'eigen' ? 'Vastgelegd' : 'Nog het voorstel uit Home Assistant'],
       pagina: 'indeling.html',
     },
     {

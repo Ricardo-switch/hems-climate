@@ -303,6 +303,7 @@ function kamerBlad(d, k) {
     <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">gekozen</span></div>
     <div><label class="label" for="kamernaam-${esc(k.id)}">Naam</label><input class="veld" id="kamernaam-${esc(k.id)}" data-actie="kamernaam" value="${esc(k.naam)}" maxlength="40"></div>
     ${buitenKeuze(k)}
+    ${soortKeuze(k)}
     ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, k.regelzone ?? '')}</select></div>`}
     <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips">${k.zones.map((z) => `<button type="button" class="chip" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">${esc(z.naam)}<span class="weg" aria-hidden="true">×</span></button>`).join('')}<input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>
     <div>
@@ -331,6 +332,27 @@ function buitenKeuze(k) {
   const knop = (sleutel, w, t, aan) => `<button type="button" class="chip${aan ? '' : ' uitchip'}" data-buiten="${sleutel}" data-waarde="${esc(String(w))}" aria-pressed="${aan}">${esc(t)}</button>`;
   return `<div><span class="label">Wat is het?</span><div class="chips" role="group" aria-label="Soort buitenruimte">${BUITEN_SOORTEN.map(([w, t]) => knop('soort', w, t, b.soort === w)).join('')}</div></div>
     <div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort">${b.soort === 'oprit' ? knop('auto', !b.auto, 'Auto op de oprit', b.auto) : b.soort === 'tuin' ? knop('tuinhuis', !b.tuinhuis, 'Tuinhuis of schuur', b.tuinhuis) : '<span class="mini">Niets om te kiezen.</span>'}</div></div>`;
+}
+
+/*
+ * Wat voor kamer het is (besluit 119): bepaalt de inrichting als je inzoomt.
+ * Zonder keuze een voorstel uit de naam; de keuze gaat voor.
+ */
+const KAMER_SOORTEN = [
+  ['woonkamer', 'Woonkamer'], ['woonkeuken', 'Woonkamer met open keuken'], ['keuken', 'Keuken'], ['eetkamer', 'Eetkamer'],
+  ['slaapkamer', 'Slaapkamer'], ['kinderkamer', 'Kinderkamer'], ['logeerkamer', 'Logeerkamer'],
+  ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
+  ['wasruimte', 'Wasruimte'], ['berging', 'Berging of zolder'], ['leeg', 'Leeg'],
+];
+function soortKeuze(k) {
+  if (k.etage === 'buiten' || huismodel.isBuiten({ id: k.etage }, k)) return '';
+  const r = ruimteVan(k.id);
+  const voorstel = r && !r.soortGekozen ? r.soort : null;
+  const naam = (w) => KAMER_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
+  const nu = k.soort ?? '';
+  const icoon = huis.KAMER_ICOON?.[k.soort ?? voorstel ?? 'kamer'];
+  const opties = [['', voorstel ? `Uit de naam: ${naam(voorstel)}` : 'Uit de naam: niets herkend'], ...KAMER_SOORTEN];
+  return `<div><label class="label soortlabel" for="soort-${esc(k.id)}">${icoon ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icoon}</svg>` : ''}Soort kamer</label><select class="veld" id="soort-${esc(k.id)}" data-actie="soort">${opties.map(([v, t]) => `<option value="${esc(v)}" ${v === nu ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`;
 }
 
 const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera' };
@@ -559,6 +581,11 @@ document.addEventListener('change', async (e) => {
     for (const x of next.kamers) if (v && x.regelzone === v) x.regelzone = null;
     k.regelzone = v || null;
     await bewaar(next, 'Regeling bewaard.');
+  } else if (t.dataset.actie === 'soort' && k) {
+    // Wat voor kamer (besluit 119); leeg is weer het voorstel uit de naam.
+    if (v) k.soort = v;
+    else delete k.soort;
+    await bewaar(next, 'Soort bewaard.');
   } else if (t.dataset.actie === 'kameretage' && k) {
     k.etage = v;
     if (await bewaar(next, `${k.naam} staat nu op ${etageNaam(next, v)}.`)) kies({ etage: v });
