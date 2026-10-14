@@ -179,6 +179,18 @@ describe('bewaren', () => {
   });
 });
 
+describe('de verwarming (besluit 122)', () => {
+  it('bewaart wat het is en de aanvoertemperatuur, en weigert onzin', () => {
+    const goed = validateConnection({ verwarming: { soort: 'cv', aanvoerC: 60 } }, found);
+    expect(goed.ok && goed.answers.verwarming).toEqual({ soort: 'cv', aanvoerC: 60 });
+    const leeg = validateConnection({}, found);
+    expect(leeg.ok && leeg.answers.verwarming).toEqual({ soort: null, aanvoerC: null });
+    for (const v of [{ soort: 'kachel' }, { aanvoerC: 10 }, { aanvoerC: 95 }, { aanvoerC: 55.5 }, { aanvoerC: '60' }]) {
+      expect(validateConnection({ verwarming: v }, found).ok, JSON.stringify(v)).toBe(false);
+    }
+  });
+});
+
 describe('wat de regeling overneemt', () => {
   const answers = (over: Partial<ConnectionAnswers> = {}): ConnectionAnswers => {
     const checked = validateConnection({ zekering: { fasen: 1, ampere: 35 }, opZon: { droger: true, vaatwasser: false } }, found);

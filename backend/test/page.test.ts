@@ -95,6 +95,14 @@ const ENERGY_SOURCE: EnergySource = {
 };
 import { SessionStore } from '../src/web/auth.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
+import { CoverSwitch } from '../src/web/covers.js';
+import type { HouseBattery, HouseReport } from '../src/web/house.js';
+
+/** Schermopdrachten die de nagemaakte Home Assistant kreeg (besluit 121). */
+const coverCalls: string[] = [];
+/** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
+let extraBatterijen: HouseBattery[] = [];
+const metBatterijen = (h: HouseReport): HouseReport => (extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h);
 import { onUsablePort } from './ports.js';
 import { exampleSite } from './site.js';
 
@@ -266,7 +274,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           logDir: dir,
           feedback: new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) }),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
-          house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
+          house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
           layout: { store: layoutStore, proposal: () => proposeLayout(exampleSite, houseRegisters, houseStates) },
           // Licht bedienen (besluit 97), met een Home Assistant die alleen onthoudt wat er kwam.
           lights: new LightSwitch({
@@ -277,6 +285,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             },
             // Scènes (besluit 100): alleen onthouden welke.
             callScene: async (id) => void sceneCalls.push(id),
+          }),
+          // Schermen bedienen (besluit 121): alleen onthouden wat er kwam.
+          covers: new CoverSwitch({
+            house: () => buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current),
+            call: async (service, id, data) => void coverCalls.push(`${service} ${id}${data['position'] != null ? ` ${String(data['position'])}` : ''}`),
           }),
           version: { commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           // De camera (besluit 106): een nagemaakte Home Assistant die een plaatje geeft.
@@ -416,9 +429,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.getByLabel('Aantal aan de achterkant').fill('6');
     await wand.getByLabel('Aantal aan de achterkant').press('Tab');
     await wand.locator('[aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
+    // De verwarming (besluit 122): wat het is en de aanvoertemperatuur.
+    await wand.locator('[aria-label="Verwarming"] button', { hasText: 'Cv-ketel' }).click();
+    await wand.locator('[data-aanvoer]').fill('60');
+    await wand.locator('[data-aanvoer]').press('Tab');
     await wand.locator('[data-opslaan]').click();
     await wand.locator('[data-melding]', { hasText: 'Opgeslagen' }).waitFor();
-    expect(connStore.current).toMatchObject({ zekering: { fasen: 1, ampere: 35 }, panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
+    expect(connStore.current).toMatchObject({ verwarming: { soort: 'cv', aanvoerC: 60 }, zekering: { fasen: 1, ampere: 35 }, panelen: { ligging: 'beide', aantal: 12, voorkant: 6, achterkant: 6 }, apparaten: [{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }] });
     expect(await wand.locator('.notitie').textContent()).toContain('na de volgende herstart');
     // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
     const fonts = await p.evaluate("document.fonts.ready.then(() => [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replaceAll('\"', '')))");
@@ -490,6 +507,38 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(Math.abs(r.boven), `${pagina} boven`).toBeLessThan(1);
       expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1'), `${pagina} scrolt`).toBe(true);
     }
+    await context.close();
+  }, 30_000);
+
+  /* Schermen (besluit 121) en batterijen (besluit 122). */
+  it('bedient een scherm vanuit Kamer, en meldt een lege batterij op Thuis', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport & { schermenBedienen: boolean };
+    expect(huis.schermenBedienen).toBe(true);
+    const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((d) => d.id === 'cover.screen'))!;
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(kamer.id)}/cover.screen`);
+    const wand = p.locator('#wand');
+    await wand.locator('[data-scherm="dicht"]').click({ timeout: 10_000 });
+    await expect.poll(() => coverCalls.at(-1)).toBe('close_cover cover.screen');
+    await wand.locator('[data-scherm="stop"]').click();
+    await expect.poll(() => coverCalls.at(-1)).toBe('stop_cover cover.screen');
+    expect(await wand.textContent()).toContain('De regeling doet er niets mee');
+
+    // Een batterij onder de 10%: een pil op Thuis, naar zijn kamer.
+    extraBatterijen = [{ id: 'd-knop', naam: 'Knop bank', pct: 7, kamer: kamer.naam, kamerId: kamer.id }];
+    await p.goto(`${baseUrl}/thuis.html`);
+    const pil = wand.locator('[data-batterij]');
+    await expect.poll(() => pil.isVisible(), { timeout: 10_000 }).toBe(true);
+    expect(await pil.textContent()).toContain('Batterij bijna leeg: Knop bank, 7%');
+    expect(await pil.getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}`);
+    extraBatterijen = [];
+    expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
 

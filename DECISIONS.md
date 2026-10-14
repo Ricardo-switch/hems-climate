@@ -87,6 +87,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [112. Etages vrij toevoegen, met de vaste namen als voorstel](#112-etages-vrij-toevoegen-met-de-vaste-namen-als-voorstel)
 - [114. Inrichten: een wizard over de schermen die er al zijn](#114-inrichten-een-wizard-over-de-schermen-die-er-al-zijn)
 - [117. De hoofdzekering stel je in de app in; die gaat voor de configuratie](#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie)
+- [122. Batterijen bij het apparaat, en de verwarming met haar aanvoertemperatuur](#122-batterijen-bij-het-apparaat-en-de-verwarming-met-haar-aanvoertemperatuur)
 
 **Meten, data en analyse**
 
@@ -5225,6 +5226,28 @@ bewoner wil ze in de app kunnen bedienen; de oude regeling doet er niets mee.
 - **De regeling doet niets met de schermen** en leest hun stand niet als
   zeker. Komen schermen later in de regeling (stap B), dan alleen schermen met
   terugmelding, zoals Somfy io: RTS is daar te onbetrouwbaar voor.
+
+---
+
+## 122. Batterijen bij het apparaat, en de verwarming met haar aanvoertemperatuur
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, als voorbereiding op de
+radiatorknoppen van Sonoff (Zigbee) en een slimme cv-regeling.
+
+*Besluit:*
+
+- **Batterijen:** de dienst zoekt per apparaat in Home Assistant de sensor met
+  de klasse batterij en een percentage, en neemt de laagste. Bij elk apparaat
+  in een kamer staat "batterij 62%". Het huis geeft ook de lijst van alle
+  batterijen, de leegste eerst, met de kamer.
+- **Onder de 10%** meldt het startscherm het met een pil: de leegste, of hoeveel
+  het er zijn, met een tik naar de kamer.
+- **De verwarming** staat bij Zon en aansluiting: cv-ketel, warmtepomp,
+  stadsverwarming of weet ik niet, en de aanvoertemperatuur op de ketel (25 tot
+  90 °C, leeg als je hem niet weet). Het thermisch model gebruikt het later:
+  een lagere aanvoer warmt een kamer langzamer op.
 
 ---
 

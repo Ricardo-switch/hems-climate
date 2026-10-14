@@ -86,7 +86,13 @@ function meting(m) {
   if (!m) return '';
   return [m.temperatuurC == null ? null : graden(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}%`].filter(Boolean).join(', ');
 }
+/** De batterij erbij, als het apparaat er een heeft (besluit 122). */
+const accu = (d) => (d.batterijPct == null ? '' : ` · batterij ${d.batterijPct}%`);
+
 function standTekst(d) {
+  return standZonderAccu(d) + accu(d);
+}
+function standZonderAccu(d) {
   if (d.soort === 'meter') return meting(d.meting);
   if (d.soort === 'klimaat') {
     const m = d.meting?.temperatuurC;
@@ -182,7 +188,7 @@ function kamerBlad(k) {
   const lamp = (d) => `
     <div class="rij${d.aan ? ' aan' : ''}" style="cursor: default">
       <span class="gloei" style="background: ${d.aan ? huismodel.kleurVanLicht(d) : '#3a4656'}; ${d.aan ? `box-shadow: 0 0 12px ${huismodel.kleurVanLicht(d)}` : ''}"></span>
-      <button type="button" class="naam" data-open="${esc(d.id)}" style="background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer"><b>${esc(d.naam)}</b><span>${esc(d.stand)}</span></button>
+      <button type="button" class="naam" data-open="${esc(d.id)}" style="background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer"><b>${esc(d.naam)}</b><span>${esc(d.stand + accu(d))}</span></button>
       <button type="button" class="schakel" role="switch" aria-checked="${d.aan}" aria-label="${esc(d.naam)}" data-schakel="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></button>
     </div>`;
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.

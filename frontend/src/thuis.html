@@ -107,6 +107,8 @@
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
   #tel .weer::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: -6px auto 6px; flex-shrink: 0; }
   #wand .weer .rij { padding: 7px 0; }
+  /* Een batterij bijna leeg (besluit 122): een rustige maar duidelijke pil. */
+  .batterijpil { color: var(--gloed); text-decoration: none; gap: 6px; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -116,6 +118,7 @@
       <div class="kopregel">
         <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
         <div class="chips">
+          <a class="pil batterijpil" href="#" data-batterij hidden></a>
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs); text-decoration: none">Inrichten</a>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
@@ -172,6 +175,7 @@
         </span>
       </div>
       <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
+      <a class="pil batterijpil" href="#" data-batterij hidden style="align-self: flex-start"></a>
     </div>
     <div class="podium" id="podium-tel"></div>
     <div class="inhoud">

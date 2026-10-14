@@ -30,6 +30,11 @@ export const PANEL_SIDES = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet
 export type PanelSide = (typeof PANEL_SIDES)[number];
 export const TARIFFS = ['vast', 'dynamisch', 'weetniet'] as const;
 export type Tariff = (typeof TARIFFS)[number];
+/** Waar de warmte vandaan komt (besluit 122). */
+export const HEATERS = ['cv', 'warmtepomp', 'stadsverwarming', 'weetniet'] as const;
+export type Heater = (typeof HEATERS)[number];
+/** De aanvoertemperatuur die op een ketel of warmtepomp kan staan, in °C. */
+export const SUPPLY_C = { min: 25, max: 90 } as const;
 /** De zekeringen uit de schets; een andere waarde mag ook, binnen het schema. */
 export const FUSES = [
   { fasen: 1, ampere: 25 },
@@ -75,6 +80,12 @@ export interface ConnectionAnswers {
   };
   readonly zekering: Fuse | 'weetniet' | null;
   readonly tarief: Tariff | null;
+  /**
+   * De verwarming (besluit 122): wat het is, en de aanvoertemperatuur die op de
+   * ketel staat, als de bewoner die weet. Voor het thermisch model: een lagere
+   * aanvoer warmt een kamer langzamer op.
+   */
+  readonly verwarming?: { readonly soort: Heater | null; readonly aanvoerC: number | null };
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
   readonly fasen: readonly FoundPhase[];
   readonly apparaten: readonly (FoundAppliance & { readonly opZon: boolean })[];
@@ -332,6 +343,15 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
   const tarief = b['tarief'] ?? null;
   if (tarief !== null && !TARIFFS.includes(tarief as Tariff)) return { ok: false, reden: 'onbekend stroomcontract' };
 
+  // De verwarming (besluit 122): wat het is en de aanvoertemperatuur; allebei mag leeg.
+  const vw = (typeof b['verwarming'] === 'object' && b['verwarming'] != null ? b['verwarming'] : {}) as Record<string, unknown>;
+  const soort = vw['soort'] ?? null;
+  if (soort !== null && !HEATERS.includes(soort as Heater)) return { ok: false, reden: 'onbekende verwarming' };
+  const aanvoer = vw['aanvoerC'] ?? null;
+  if (aanvoer !== null && (typeof aanvoer !== 'number' || !Number.isInteger(aanvoer) || aanvoer < SUPPLY_C.min || aanvoer > SUPPLY_C.max)) {
+    return { ok: false, reden: `de aanvoertemperatuur is een heel getal van ${SUPPLY_C.min} tot ${SUPPLY_C.max} °C` };
+  }
+
   const opZonRaw = (typeof b['opZon'] === 'object' && b['opZon'] != null ? b['opZon'] : {}) as Record<string, unknown>;
   for (const [id, v] of Object.entries(opZonRaw)) {
     if (typeof v !== 'boolean') return { ok: false, reden: `"op zon" is ja of nee (${id})` };
@@ -345,6 +365,7 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
       panelen: { ligging: ligging as PanelSide | null, aantal, voorkant, achterkant },
       zekering,
       tarief: tarief as Tariff | null,
+      verwarming: { soort: soort as Heater | null, aanvoerC: aanvoer as number | null },
       fasen: [...found.fasen],
       apparaten: found.apparaten.map((a) => ({ ...a, opZon: opZonRaw[a.id] === true })),
     },
@@ -414,6 +435,7 @@ export interface ConnectionView {
     readonly panelen: ConnectionAnswers['panelen'];
     readonly zekering: ConnectionAnswers['zekering'];
     readonly tarief: Tariff | null;
+    readonly verwarming: { readonly soort: Heater | null; readonly aanvoerC: number | null };
     readonly opZon: Readonly<Record<string, boolean>>;
   } | null;
   readonly gevonden: { readonly fasen: readonly FoundPhase['id'][]; readonly apparaten: readonly { id: string; naam: string; soort: ApplianceKind }[] };
@@ -458,6 +480,7 @@ export function connectionView(c: ConnectionContext): ConnectionView {
           panelen: c.answers.panelen,
           zekering: c.answers.zekering,
           tarief: c.answers.tarief,
+          verwarming: c.answers.verwarming ?? { soort: null, aanvoerC: null },
           opZon: Object.fromEntries(c.answers.apparaten.map((a) => [a.id, a.opZon])),
         }
       : null,

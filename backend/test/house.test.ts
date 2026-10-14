@@ -122,6 +122,33 @@ describe('het voorstel uit Home Assistant', () => {
     expect(metIo.scherm).toEqual({ terugmelding: true, standKiezen: true });
   });
 
+  it('zet de batterij bij het apparaat, en geeft alle batterijen met de leegste eerst (besluit 122)', () => {
+    const basis = states.get('cover.screen')!;
+    const metAccu = {
+      ...registers,
+      entities: [
+        ...registers.entities,
+        { entity_id: 'sensor.screen_batterij', device_id: 'd-screen', original_device_class: 'battery' },
+        { entity_id: 'sensor.screen_batterij_spanning', device_id: 'd-screen', original_device_class: 'voltage' },
+        { entity_id: 'sensor.knop_batterij', device_id: 'd-knop', device_class: 'battery' },
+      ],
+      devices: [...registers.devices, { id: 'd-knop', area_id: 'woonkamer', name: 'Knop bank', name_by_user: null }],
+    };
+    const metStand = new Map(states);
+    metStand.set('sensor.screen_batterij', { ...basis, entity_id: 'sensor.screen_batterij', state: '62', attributes: { unit_of_measurement: '%' } });
+    metStand.set('sensor.screen_batterij_spanning', { ...basis, entity_id: 'sensor.screen_batterij_spanning', state: '3', attributes: { unit_of_measurement: 'V' } });
+    metStand.set('sensor.knop_batterij', { ...basis, entity_id: 'sensor.knop_batterij', state: '8', attributes: { unit_of_measurement: '%' } });
+    const h = buildHouse(config, metAccu, metStand, snapshot);
+    const screen = h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
+    expect(screen.batterijPct).toBe(62);
+    expect(h.batterijen.map((b) => [b.naam, b.pct, b.kamer])).toEqual([
+      ['Knop bank', 8, 'Woonkamer'],
+      [h.batterijen[1]!.naam, 62, 'Woonkamer'],
+    ]);
+    // Zonder batterij geen veld.
+    expect(house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).some((d) => 'batterijPct' in d)).toBe(false);
+  });
+
   it('toont lampen, zonwering en klimaat, zonder groepen of uitgezette entiteiten', () => {
     const wk = house.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
     expect(wk.apparaten.map((d) => [d.soort, d.naam, d.stand])).toEqual([

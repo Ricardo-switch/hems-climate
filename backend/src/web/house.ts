@@ -113,6 +113,8 @@ export interface HouseDevice {
    * Alleen een scherm met terugmelding mag later in de regeling.
    */
   readonly scherm?: { readonly terugmelding: boolean; readonly standKiezen: boolean };
+  /** De batterij van het apparaat in procenten, als het er een heeft (besluit 122). */
+  readonly batterijPct?: number;
 }
 
 /**
@@ -235,6 +237,44 @@ export interface HouseReport {
    * aanzetten in Home Assistant, of in een eigen Hue-zone, maakt ze zichtbaar.
    */
   readonly onvindbaar: readonly { readonly id: string; readonly naam: string; readonly groepen: readonly string[] }[];
+  /**
+   * Elk apparaat met een batterij (besluit 122), de leegste eerst: de naam van
+   * het apparaat, het percentage en de kamer waar het hoort, als die er is. Onder
+   * de 10% meldt het startscherm het.
+   */
+  readonly batterijen: readonly HouseBattery[];
+}
+
+export interface HouseBattery {
+  /** Het apparaat in Home Assistant. */
+  readonly id: string;
+  readonly naam: string;
+  readonly pct: number;
+  /** De kamer in de indeling, met naam en id, of null. */
+  readonly kamer: string | null;
+  readonly kamerId: string | null;
+}
+
+/** Onder dit percentage meldt het startscherm een batterij (besluit 122). */
+export const BATTERIJ_LEEG_PCT = 10;
+
+/**
+ * De batterijen per apparaat in Home Assistant (besluit 122): elke sensor met de
+ * klasse batterij en een percentage, de laagste per apparaat.
+ */
+function batteriesPerDevice(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const e of registers.entities) {
+    if (!e.device_id || e.disabled_by || !e.entity_id.startsWith('sensor.')) continue;
+    const s = states.get(e.entity_id);
+    const klasse = e.device_class ?? e.original_device_class ?? (s?.attributes['device_class'] as string | undefined);
+    if (klasse !== 'battery' || s?.attributes['unit_of_measurement'] !== '%') continue;
+    const pct = Number(s.state);
+    if (s.state === '' || !Number.isFinite(pct) || pct < 0 || pct > 100) continue;
+    const prev = out.get(e.device_id);
+    out.set(e.device_id, prev == null ? pct : Math.min(prev, pct));
+  }
+  return out;
 }
 
 const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, camera: 4, meter: 5 };
@@ -1077,6 +1117,16 @@ export function buildHouse(
     sceneColors,
     scenePicture,
   );
+  // Batterijen (besluit 122): per apparaat in Home Assistant, bij elk apparaat in een kamer.
+  const accu = batteriesPerDevice(registers, states);
+  const deviceOf = (entityId: string) => registry.get(entityId)?.device_id ?? null;
+  for (const [roomId, list] of perRoom) {
+    perRoom.set(roomId, list.map((d) => {
+      const dev = deviceOf(d.id);
+      const pct = dev ? accu.get(dev) : undefined;
+      return pct == null ? d : { ...d, batterijPct: pct };
+    }));
+  }
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];
     devices.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || Number(b.aan) - Number(a.aan) || a.naam.localeCompare(b.naam, 'nl'));
@@ -1127,6 +1177,18 @@ export function buildHouse(
   const boven = binnen[0];
   const dakEtage: FloorId | null =
     layout.dak === 'geen' ? null : layout.dak ?? (boven && (binnen.length >= 3 || /zolder|dak|vliering/i.test(boven.naam)) ? boven.id : null);
+  // De lijst van batterijen: de naam van het apparaat, en de kamer waar het staat of hoort.
+  const kamerVanApparaat = new Map<string, { id: string; naam: string }>();
+  for (const room of rooms) for (const d of room.apparaten) {
+    const dev = deviceOf(d.id);
+    if (dev) kamerVanApparaat.set(dev, { id: room.id, naam: room.naam });
+  }
+  const apparaatNaam = new Map(registers.devices.map((d) => [d.id, d.name_by_user ?? d.name ?? null]));
+  const batterijen: HouseBattery[] = [...accu].map(([id, pct]) => {
+    const area = deviceArea.get(id);
+    const kamer = kamerVanApparaat.get(id) ?? (area ? (roomByArea.get(area) ?? null) : null);
+    return { id, naam: apparaatNaam.get(id) ?? id, pct, kamer: kamer?.naam ?? null, kamerId: kamer?.id ?? null };
+  }).sort((a, b) => a.pct - b.pct || a.naam.localeCompare(b.naam, 'nl'));
   return {
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
@@ -1137,6 +1199,7 @@ export function buildHouse(
     lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue, overzicht: g.overzicht })),
     verborgen: hidden,
     onvindbaar: unreachable,
+    batterijen,
   };
 }
 

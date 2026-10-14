@@ -5,7 +5,7 @@
  * doet de dienst (besluit 94).
  *
  * De wand is 800 hoog (1280 breed, of breder op een breed scherm) en wordt als geheel naar het scherm geschaald,
- * zodat er nooit gescrold hoeft te worden. Op een telefoon (smal of staand)
+ * zodat er nooit gescrold hoeft te worden. Op een telefoon (staand, of heel smal)
  * staat dezelfde inhoud onder elkaar.
  */
 'use strict';
@@ -154,6 +154,15 @@ function tekenNu() {
   lucht(model.tijd, model.seizoen, model.wolken);
   // Een nieuw huis (nog het voorstel uit Home Assistant): de weg naar Inrichten (besluit 114).
   $$('[data-inrichten]').forEach((el) => (el.hidden = huisData?.indeling !== 'voorstel'));
+  // Een batterij onder de 10% (besluit 122): de leegste, met een tik naar zijn kamer.
+  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10);
+  $$('[data-batterij]').forEach((el) => {
+    el.hidden = leeg.length === 0;
+    if (!leeg.length) return;
+    const b = leeg[0];
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}`;
+    el.href = b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}` : 'instellingen.html';
+  });
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
 

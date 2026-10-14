@@ -25,6 +25,7 @@ async function laad() {
       panelen: { ligging: x?.panelen.ligging ?? null, aantal: x?.panelen.aantal ?? null, voorkant: x?.panelen.voorkant ?? null, achterkant: x?.panelen.achterkant ?? null },
       zekering: x?.zekering ?? null,
       tarief: x?.tarief ?? null,
+      verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null },
       opZon: { ...(x?.opZon ?? {}) },
     };
   } else {
@@ -157,6 +158,20 @@ function contract() {
   </section>`;
 }
 
+/*
+ * De verwarming (besluit 122): wat het is, en de aanvoertemperatuur op de ketel.
+ * Het thermisch model rekent ermee: een lagere aanvoer warmt langzamer op.
+ */
+function verwarming() {
+  const v = concept.verwarming;
+  return `<section class="glas vraag">
+    <h2 class="kop-3">Verwarming</h2>
+    ${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
+    <label class="veldnaam">Aanvoertemperatuur op de ketel, °C<input class="invoer" type="number" inputmode="numeric" min="25" max="90" step="1" data-aanvoer value="${v.aanvoerC ?? ''}" placeholder="bijvoorbeeld 60"></label>
+    <p class="mini">Staat op de ketel of in de app van je ketel. Weet je het niet, laat het dan leeg.</p>
+  </section>`;
+}
+
 function opZon() {
   const vast = new Set(info.configuratie.apparaten.map((a) => a.id));
   const ingesteld = (naam) => `<div class="regelrij"><div class="l"><b>${esc(naam)}</b><span>Start bij zonne-overschot. Ingesteld in de configuratie.</span></div><span class="label-chip goed">Aan</span></div>`;
@@ -188,7 +203,7 @@ function tekenNu() {
   if (!info || !concept) return;
   // Niet onder de vinger opnieuw opbouwen.
   if (document.activeElement?.matches('input')) return;
-  const kolommen = { 1: panelen() + zonnesensor(), 2: zekering() + contract(), 3: opZon() + inGebruik() };
+  const kolommen = { 1: panelen() + zonnesensor(), 2: zekering() + contract() + verwarming(), 3: opZon() + inGebruik() };
   $$('[data-kolom]').forEach((el) => (el.innerHTML = kolommen[el.dataset.kolom]));
   if (melding) zeg(melding, meldingFout);
 }
@@ -210,6 +225,7 @@ document.addEventListener('click', async (e) => {
       }
     }
     else if (s === 'tarief') concept.tarief = w;
+    else if (s === 'verwarming') concept.verwarming.soort = w;
     else if (s.startsWith('opZon:')) concept.opZon[s.slice(6)] = w;
     zeg('Nog niet opgeslagen.');
     teken();
@@ -227,6 +243,15 @@ document.addEventListener('change', (e) => {
     zeg('Nog niet opgeslagen.');
     return;
   }
+  // De aanvoertemperatuur: een heel getal, of leeg als je het niet weet.
+  const aanvoer = e.target.closest('[data-aanvoer]');
+  if (aanvoer && concept) {
+    const n = Math.round(Number(aanvoer.value));
+    concept.verwarming.aanvoerC = aanvoer.value === '' || !Number.isFinite(n) ? null : Math.min(90, Math.max(25, n));
+    if (concept.verwarming.aanvoerC != null) aanvoer.value = String(concept.verwarming.aanvoerC);
+    zeg('Nog niet opgeslagen.');
+    return;
+  }
   const veld = e.target.closest('[data-aantal]');
   if (!veld || !concept) return;
   concept.panelen[veld.dataset.aantal] = veld.value === '' ? null : Math.round(Number(veld.value));
@@ -239,7 +264,7 @@ async function opslaan() {
   zeg('Even…');
   try {
     const opZon = Object.fromEntries(Object.entries(concept.opZon).filter(([, v]) => typeof v === 'boolean'));
-    const res = await deur('api/aansluiting', { panelen: concept.panelen, zekering: concept.zekering, tarief: concept.tarief, opZon });
+    const res = await deur('api/aansluiting', { panelen: concept.panelen, zekering: concept.zekering, tarief: concept.tarief, verwarming: concept.verwarming, opZon });
     if (res === null) return;
     const uit = await res.json().catch(() => ({}));
     if (res.status === 403) return zeg('Alleen de beheerder kan dit opslaan.', true);
