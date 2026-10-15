@@ -341,6 +341,11 @@ export interface WeatherReport {
     readonly heldereLuchtKwh: number;
     /** De zonkans die gisteren voor vandaag werd verwacht. */
     readonly zonkansPct: number | null;
+    /**
+     * Wat de dag ervoor voor vandaag werd verwacht, in kWh: om aan het eind van
+     * de dag naast wat er kwam te leggen. Null als het niet bewaard werd.
+     */
+    readonly verwachtVoorafKwh: number | null;
     /** Het weer van nu, zoals Buienradar het zegt. */
     readonly soort: WeatherKind | null;
     readonly tekst: string | null;
@@ -529,6 +534,7 @@ export function weatherReport(input: {
       verwachtKwh: restShare == null ? null : round1((input.todayWh + restWh * Math.min(1, restShare)) / 1000),
       heldereLuchtKwh: round1(today.total / 1000),
       zonkansPct: expected ?? null,
+      verwachtVoorafKwh: input.expected?.[todayKey]?.kwh ?? null,
       soort: now?.soort ?? null,
       tekst: now?.tekst ?? null,
       buitenC: now?.nuC ?? null,
@@ -554,7 +560,7 @@ export function weatherReport(input: {
       };
     }),
     geleerd,
-    terugblik: lookBack(input.expected ?? {}, input.predicted, input.solarDays, todayKey),
+    terugblik: expectedAndActual(input.expected ?? {}, input.predicted, input.solarDays, (day) => day < todayKey).slice(0, 14),
     gisteren: (() => {
       const key = dateKey(dayStart(-1) + 12 * 3_600_000, timeZone);
       const e = input.expected?.[key];
@@ -583,15 +589,18 @@ function hoursFrom(
   return out;
 }
 
-/** De afgesloten dagen waarvan de verwachting en de opbrengst allebei bekend zijn. */
-function lookBack(
+/**
+ * De dagen waarvan de verwachting en de opbrengst allebei bekend zijn, nieuwste
+ * eerst. Een dag met gaten in het logboek telt niet: de opbrengst zou te laag uitvallen.
+ */
+export function expectedAndActual(
   expected: Readonly<Record<string, StoredExpectation>>,
   predicted: Readonly<Record<string, number>>,
   solarDays: QuarterDays,
-  todayKey: string,
+  keep: (day: string) => boolean,
 ): WeatherReport['terugblik'] {
   return Object.keys(expected)
-    .filter((day) => day < todayKey)
+    .filter(keep)
     .sort()
     .reverse()
     .flatMap((day) => {
@@ -599,6 +608,21 @@ function lookBack(
       if (!quarters || quarters.filter((q) => q != null).length < 60) return [];
       const actualWh = quarters.reduce<number>((t, q) => t + (q ?? 0) / 4, 0);
       return [{ datum: day, zonkansPct: predicted[day] ?? null, verwachtKwh: expected[day]!.kwh, werkelijkKwh: round1(actualWh / 1000) }];
-    })
-    .slice(0, 14);
+    });
+}
+
+/** Verwacht naast echt over een periode (Opbrengst): opgeteld over de dagen waarvan beide bekend zijn. */
+export interface ExpectedTotal {
+  readonly dagen: number;
+  readonly verwachtKwh: number;
+  readonly werkelijkKwh: number;
+}
+
+export function expectedTotal(days: WeatherReport['terugblik']): ExpectedTotal | null {
+  if (days.length === 0) return null;
+  return {
+    dagen: days.length,
+    verwachtKwh: round1(days.reduce((t, d) => t + d.verwachtKwh, 0)),
+    werkelijkKwh: round1(days.reduce((t, d) => t + d.werkelijkKwh, 0)),
+  };
 }

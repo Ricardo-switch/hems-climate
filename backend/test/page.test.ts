@@ -1140,8 +1140,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       } else {
         await p.locator('#tel [data-zonkaart] svg').waitFor();
       }
+      // Verwacht naast echt (besluit 137): het getal van vandaag, en bij gisteren hoe het klopte.
+      if (stand === 'wand') expect(await p.locator('#wand [data-tijdlijn] svg').textContent()).toContain('tot nu toe');
       await p.locator(`${z} [data-dag="gisteren"]`).click();
       await p.locator(`${z} h1`, { hasText: 'Gisteren' }).waitFor();
+      await p.locator(stand === 'wand' ? '#wand [data-verwacht]' : '#tel [data-klopte]', { hasText: 'Zo klopte de verwachting' }).waitFor();
       await p.locator(`${z} [data-dag="morgen"]`).click();
       await p.locator(`${z} h1`, { hasText: 'Morgen' }).waitFor();
       expect(await p.locator(`${stand === 'wand' ? '#balk' : '#tabs'} [aria-current="page"]`).textContent()).toBe('Vandaag');

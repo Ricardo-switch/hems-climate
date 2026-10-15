@@ -32,6 +32,20 @@
   .kaart .bladeren button { height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.05); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .kaart .bladeren button:disabled { opacity: 0.35; cursor: default; }
   .plan { border-color: rgba(143, 134, 255, 0.3); }
+  /* Zo klopte de verwachting (besluit 137): per dag gestippeld verwacht, vol opgewekt. */
+  .klopte { flex: 1; min-height: 70px; max-height: 150px; display: grid; grid-template-columns: repeat(var(--dagen), 1fr); gap: 6px; margin-top: 10px; }
+  .klopte .dag { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 0; }
+  .klopte .paar { flex: 1; min-height: 0; width: 100%; display: flex; justify-content: center; align-items: flex-end; gap: 3px; }
+  .klopte i, .legenda i { display: block; width: min(14px, 40%); border-radius: 4px 4px 2px 2px; }
+  .klopte .v, .legenda .v { border: 1.5px dashed rgba(247, 181, 72, 0.85); }
+  .klopte .e, .legenda .e { background: var(--zon); }
+  .klopte b { font-family: var(--kop); font-size: 11.5px; font-weight: 600; }
+  .klopte span { font-size: 11px; color: var(--gedempt); white-space: nowrap; }
+  .legenda { display: inline-flex; gap: 12px; font-size: 12px; color: var(--zacht); white-space: nowrap; }
+  .legenda > span { display: inline-flex; gap: 5px; align-items: center; }
+  .legenda i { width: 10px; height: 10px; }
+  .klopte-tel { padding: 14px 16px; }
+  .klopte-tel .klopte { height: 120px; flex: none; }
 
   /* De telefoon (schets Vandaag): de dag als lijst van momenten. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
@@ -71,6 +85,7 @@
       <h1 class="kop-1" style="font-size: 34px">Vandaag</h1>
       <div class="wissel" role="group" aria-label="Dag" data-wissel></div>
       <section class="glas zonkaart" data-zonkaart></section>
+      <section class="glas klopte-tel" data-klopte hidden></section>
       <div class="lijn" data-lijn></div>
       <p class="mini" style="margin: 0 2px" data-voet></p>
     </div>

@@ -229,8 +229,10 @@ function tekenVandaag() {
     <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">${banenSvg}${uren}</g>
   </svg>`;
   const kwh = (vandaag.zonWh ?? 0) / 1000;
+  // Naast wat de dag ervoor werd verwacht (besluit 137); anders wat er nog komt.
+  const vooraf = weer?.vandaag?.verwachtVoorafKwh;
   const verwacht = weer?.vandaag?.verwachtKwh;
-  zet('[data-opgewekt]', verwacht != null && verwacht > kwh + 0.05 ? `${nl(kwh)} kWh, verwacht ${nl(verwacht)}` : `${nl(kwh)} kWh opgewekt`);
+  zet('[data-opgewekt]', vooraf != null ? `${nl(kwh)} kWh, verwacht ${nl(vooraf)}` : verwacht != null && verwacht > kwh + 0.05 ? `${nl(kwh)} kWh, verwacht ${nl(verwacht)}` : `${nl(kwh)} kWh opgewekt`);
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
   const uitleg = `De stippellijn is de ${lijn2.naam}${lijn2.naam === 'verwachting' ? ' van vandaag, uit het weer en wat je panelen leerden' : ''}.`;
   zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. ${uitleg}` : uitleg);

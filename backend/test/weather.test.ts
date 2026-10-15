@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { forecastFromEntity, kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
+import { expectedAndActual, expectedTotal, forecastFromEntity, kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
 import { exampleSite } from './site.js';
 
 const cleanup: string[] = [];
@@ -251,5 +251,30 @@ describe('de zonkans per dag bewaren', () => {
     });
     expect(r.terugblik).toEqual([{ datum: '2026-10-07', zonkansPct: 40, verwachtKwh: 4, werkelijkKwh: 4.4 }]);
     expect(r.gisteren).toEqual({ datum: '2026-10-07', kwartieren });
+  });
+
+  it('geeft de verwachting van de dag ervoor voor vandaag, en telt verwacht naast echt op over een periode (besluit 137)', () => {
+    const kwartieren = Array.from({ length: 96 }, () => 0);
+    const zon = (w: number) => Array.from({ length: 96 }, (_, i) => (i > 30 && i < 70 ? w : 0));
+    const expected = { '2026-10-06': { kwh: 3, kwartieren }, '2026-10-07': { kwh: 4, kwartieren }, '2026-10-08': { kwh: 6.6, kwartieren } };
+    const r = weatherReport({
+      forecast: [{ offset: 1, maxC: 15, minC: 8, regenkansPct: 20, zonkansPct: 40, soort: 'half', tekst: null }],
+      predicted: {},
+      expected,
+      solarDays: { '2026-10-06': zon(300), '2026-10-07': zon(450) },
+      geometry: exampleSite.geometry!,
+      location: { latDeg: 52.1, lonDeg: 5.1 },
+      learned: null,
+      todayWh: 0,
+      nowMs: Date.parse('2026-10-08T10:00:00Z'),
+      timeZone: 'Europe/Amsterdam',
+    });
+    expect(r.vandaag.verwachtVoorafKwh).toBe(6.6);
+    // Vandaag telt nog niet mee: de dag is niet om.
+    expect(r.terugblik.map((d) => d.datum)).toEqual(['2026-10-07', '2026-10-06']);
+    const week = expectedAndActual(expected, {}, { '2026-10-06': zon(300), '2026-10-07': zon(450) }, (d) => d >= '2026-10-07' && d < '2026-10-08');
+    expect(expectedTotal(week)).toEqual({ dagen: 1, verwachtKwh: 4, werkelijkKwh: 4.4 });
+    expect(expectedTotal(r.terugblik)).toEqual({ dagen: 2, verwachtKwh: 7, werkelijkKwh: 7.3 });
+    expect(expectedTotal([])).toBeNull();
   });
 });

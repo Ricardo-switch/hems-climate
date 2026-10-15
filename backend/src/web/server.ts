@@ -36,7 +36,7 @@ import type { UitstelStore } from './uitstel.js';
 import { validateConnection, type ConnectionStore, type ConnectionView, type FoundAppliance, type FoundPhase } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
-import { partsIn } from './today.js';
+import { partsIn, zonedMidnight } from './today.js';
 import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, LANGS, parseQuestion } from './assistant.js';
 import type { Lang, Question } from './assistant.js';
@@ -44,7 +44,7 @@ import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
-import { weatherReport, type ForecastDay, type HourColumns, type WeatherLog, type WeatherReport } from './weather.js';
+import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type ForecastDay, type HourColumns, type WeatherLog, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
 import type { ComfortView } from './comfort.js';
 import type { HouseReport } from './house.js';
@@ -1175,8 +1175,10 @@ export class WebServer {
     const hit = this.#yieldCache.get(key);
     // Klaar is klaar: uitgerekend na het einde van de periode.
     const fresh = (h: { atMs: number; report: YieldReport }) => h.atMs >= h.report.periode.totMs || now - h.atMs < 120_000;
+    // Verwacht naast echt over de dagen van de periode (besluit 137); los van de statistiek.
+    const verwacht = await this.#expectedIn(range.startMs, range.endMs, config.timezone).catch(() => null);
     if (hit) {
-      sendJson(res, 200, hit.report);
+      sendJson(res, 200, { ...hit.report, verwacht });
       if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now).catch(() => null);
       this.#yieldWarm(vandaag);
       return;
@@ -1187,11 +1189,34 @@ export class WebServer {
         sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
         return;
       }
-      sendJson(res, 200, report);
+      sendJson(res, 200, { ...report, verwacht });
       this.#yieldWarm(vandaag);
     } catch (error) {
       sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
     }
+  }
+
+  /**
+   * Wat de dag ervoor werd verwacht en wat de panelen leverden, opgeteld over
+   * de afgesloten dagen tussen twee momenten (besluit 137). Null zonder weer of
+   * zonder zulke dagen.
+   */
+  async #expectedIn(vanMs: number, totMs: number, timeZone: string): Promise<ExpectedTotal | null> {
+    const weather = this.#options.weather;
+    const logDir = this.#options.logDir;
+    if (weather == null || logDir == null) return null;
+    await weather.log.load();
+    if (Object.keys(weather.log.expected).length === 0) return null;
+    this.#solar ??= new SolarHistory({ logDir });
+    if (Object.keys(this.#solar.current).length === 0) await this.#solar.refresh().catch(() => undefined);
+    const p = partsIn(Date.now(), timeZone);
+    const today = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+    const binnen = (day: string) => {
+      const [y, m, d] = day.split('-').map(Number);
+      const middag = zonedMidnight(y!, m!, d!, timeZone) + 12 * 3_600_000;
+      return day < today && middag >= vanMs && middag < totMs;
+    };
+    return expectedTotal(expectedAndActual(weather.log.expected, weather.log.current, this.#solar.current, binnen));
   }
 
   /** Rekent één periode uit, één keer tegelijk per periode, en bewaart hem. */

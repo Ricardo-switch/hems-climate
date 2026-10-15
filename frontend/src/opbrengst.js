@@ -94,7 +94,20 @@ function panelen(r) {
     <div class="verdeel" style="height: 10px; margin-top: 12px"><i style="width: ${zelf.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zelf).toFixed(1)}%; background: var(--mint)"></i></div>
     <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>${getal(z.zelfKwh)} zelf gebruikt</span><span>${getal(z.terugKwh)} naar het net</span></div>
     ${z.besteDag ? `<p class="mini" style="margin: 8px 0 0">Beste dag: ${esc(z.besteDag.label)}, ${getal(z.besteDag.kwh)} kWh</p>` : ''}
+    ${verwachtRegel(r.verwacht, r.periode.soort)}
   </section>`;
+}
+
+/**
+ * Verwacht naast echt (besluit 137): wat de dag ervoor werd verwacht, opgeteld
+ * over de dagen van de periode waarvan het bewaard is.
+ */
+function verwachtRegel(v, soort) {
+  if (!v || !(v.verwachtKwh > 0)) return '';
+  const p = Math.round(((v.werkelijkKwh - v.verwachtKwh) / v.verwachtKwh) * 100);
+  const af = p > 0 ? `+${p}%` : p < 0 ? `−${-p}%` : 'precies';
+  const over = soort === 'dag' ? '' : `, over ${v.dagen} ${v.dagen === 1 ? 'dag' : 'dagen'} met een verwachting`;
+  return `<p class="mini" style="margin: 6px 0 0">Verwacht ${getal(v.verwachtKwh)} kWh, opgewekt ${getal(v.werkelijkKwh)} (${af})${over}</p>`;
 }
 
 function sankeyVan(r, breedte, hoogte, links, rechts, vul = false) {

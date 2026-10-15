@@ -7,6 +7,10 @@
  * thermisch model (D). Tot dan staat rechts van nu wat het weer en het huis
  * zelf zeggen: de verwachte zon (besluit 105), en per kamer die op zon wacht
  * wanneer er naar verwachting genoeg over is.
+ *
+ * Verwacht naast echt (besluit 137): boven de grafiek wat er opgewekt is naast
+ * wat de dag ervoor werd verwacht, en bij Gisteren per dag van de afgelopen
+ * twee weken hoe goed de verwachting klopte.
  */
 'use strict';
 
@@ -53,6 +57,73 @@ function naamVan(actuatorId) {
   return String(actuatorId).replace(/^ac-/, 'Airco ').replace(/[-_]+/g, ' ');
 }
 const hoofd = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/* ------------------------------------------------- verwacht naast echt */
+
+/** Hoeveel er meer of minder kwam dan verwacht, als "+41%" of "−20%"; null zonder verwachting. */
+function verschil(echt, verwacht) {
+  if (echt == null || !(verwacht > 0)) return null;
+  const p = Math.round(((echt - verwacht) / verwacht) * 100);
+  return p > 0 ? `+${p}%` : p < 0 ? `−${-p}%` : '0%';
+}
+
+/** De verwachting van gisteren, naast wat er kwam: uit de terugblik, of anders uit de dag zelf. */
+function gisterenGetallen(r) {
+  const t = (weer?.terugblik ?? []).find((d) => d.datum === weer?.gisteren?.datum);
+  return { echt: t?.werkelijkKwh ?? (r ? r.zonWh / 1000 : null), verwacht: t?.verwachtKwh ?? null };
+}
+
+/** De getallen boven de grafiek: [waarde, wat het is], en hoeveel het afweek. */
+function getallen(r) {
+  if (dag === 'gisteren') {
+    const g = gisterenGetallen(r);
+    if (g.echt == null) return null;
+    const zelf = r && r.zonWh > 0 ? Math.round(Math.max(0, Math.min(100, ((r.zonWh - r.netTerugWh) / r.zonWh) * 100))) : null;
+    return {
+      rij: [[`${nl(g.echt)} kWh`, 'opgewekt'], ...(g.verwacht != null ? [[`${nl(g.verwacht)} kWh`, 'verwacht, de dag ervoor']] : [])],
+      afwijking: verschil(g.echt, g.verwacht),
+      noot: zelf != null ? `${zelf}% zelf gebruikt` : '',
+    };
+  }
+  if (dag === 'vandaag') {
+    const kwh = r ? r.zonWh / 1000 : weer?.vandaag?.opgewektKwh;
+    if (kwh == null) return null;
+    const vooraf = weer?.vandaag?.verwachtVoorafKwh;
+    const nu = weer?.vandaag?.verwachtKwh;
+    const v = vooraf != null ? [`${nl(vooraf)} kWh`, 'verwacht, de dag ervoor'] : nu != null ? [`${nl(nu)} kWh`, 'verwacht vandaag'] : null;
+    return { rij: [[`${nl(kwh)} kWh`, 'tot nu toe'], ...(v ? [v] : [])], afwijking: null, noot: '' };
+  }
+  const m = weer?.dagen?.[0];
+  if (m?.verwachtKwh == null) return null;
+  return { rij: [[`${nl(m.verwachtKwh)} kWh`, 'verwacht'], ...(m.zonkansPct != null ? [[`${m.zonkansPct}%`, 'kans op zon']] : [])], afwijking: null, noot: '' };
+}
+
+const KORTE_DAG = new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+
+/**
+ * Zo klopte de verwachting: per dag een paar balken, gestippeld wat de dag
+ * ervoor werd verwacht en vol wat er kwam, oudste links.
+ */
+function klopteHtml() {
+  const lijst = [...(weer?.terugblik ?? [])].reverse();
+  if (!lijst.length) {
+    return { balken: '', zin: 'Na de eerste dag met een verwachting en metingen staat hier hoe goed de verwachting klopte.', dagen: 0 };
+  }
+  const max = Math.max(1, ...lijst.map((d) => Math.max(d.verwachtKwh, d.werkelijkKwh)));
+  const h = (kwh) => `${Math.max(2, (kwh / max) * 100).toFixed(1)}%`;
+  const balken = lijst
+    .map((d) => {
+      const label = KORTE_DAG.format(new Date(`${d.datum}T12:00:00Z`)).replace('.', '');
+      return `<div class="dag" role="listitem" aria-label="${esc(`${label}: ${nl(d.verwachtKwh)} kWh verwacht, ${nl(d.werkelijkKwh)} kWh opgewekt`)}"><b>${nl(d.werkelijkKwh)}</b><div class="paar"><i class="v" style="height: ${h(d.verwachtKwh)}"></i><i class="e" style="height: ${h(d.werkelijkKwh)}"></i></div><span>${esc(label)}</span></div>`;
+    })
+    .join('');
+  const ernaast = lijst.reduce((t, d) => t + Math.abs(d.werkelijkKwh - d.verwachtKwh), 0) / lijst.length;
+  const f = weer?.geleerd;
+  const bij = f && f.dagen > 0 ? (Math.abs(f.factor - 1) < 0.02 ? ' Het huis houdt de verwachting zo, uit wat het leerde.' : ` Het huis rekent de verwachting nu ${Math.round(Math.abs(f.factor - 1) * 100)}% ${f.factor > 1 ? 'hoger' : 'lager'}, uit wat het leerde.`) : '';
+  return { balken: `<div class="klopte" role="list" style="--dagen: ${lijst.length}">${balken}</div>`, zin: `Gemiddeld ${nl(ernaast)} kWh ernaast.${bij}`, dagen: lijst.length };
+}
+
+const LEGENDA = '<span class="legenda"><span><i class="v"></i>verwacht</span><span><i class="e"></i>opgewekt</span></span>';
 
 /* ------------------------------------------------------- de momenten */
 
@@ -197,7 +268,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
       const goed = z.goed.vanC != null && z.goed.totC != null ? `${nl(z.goed.vanC, 0)} tot ${nl(z.goed.totC, 0)}° is goed` : '';
       return `${band}<text x="0" y="${top + 20}" class="rij">${esc(z.naam)}</text><text x="0" y="${top + 38}" class="sub">${esc(goed)}</text>
         <path d="${lijn}" fill="none" stroke="#EEF3F7" stroke-width="2.2"/>
-        ${warmst ? `<circle cx="${x(warmst.tMs).toFixed(1)}" cy="${yt(warmst.c).toFixed(1)}" r="4" fill="#EEF3F7"/><text x="${(x(warmst.tMs) - 8).toFixed(1)}" y="${(yt(warmst.c) - 8).toFixed(1)}" text-anchor="end" class="sub">${nl(warmst.c)}°, warmste moment</text>` : ''}`;
+        ${warmst ? `<circle cx="${x(warmst.tMs).toFixed(1)}" cy="${yt(warmst.c).toFixed(1)}" r="4" fill="#EEF3F7"/><text x="${(x(warmst.tMs) - 8 < X0 + 150 ? x(warmst.tMs) + 8 : x(warmst.tMs) - 8).toFixed(1)}" y="${(yt(warmst.c) - 8).toFixed(1)}" text-anchor="${x(warmst.tMs) - 8 < X0 + 150 ? 'start' : 'end'}" class="sub">${nl(warmst.c)}°, warmste moment</text>` : ''}`;
     })
     .join('');
 
@@ -229,6 +300,10 @@ function tekenTijdlijn(r, verwacht, lijst) {
   const uren = [6, 9, 12, 15, 18, 21, 24].map((u) => `<text x="${x(t0 + u * 3_600_000).toFixed(1)}" y="${hoog - 8}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
   const rasters = [6, 9, 12, 15, 18, 21].map((u) => `<line x1="${x(t0 + u * 3_600_000).toFixed(1)}" y1="26" x2="${x(t0 + u * 3_600_000).toFixed(1)}" y2="${hoog - 30}"/>`).join('');
   const planVlak = dag === 'vandaag' ? `<rect x="${nuX.toFixed(1)}" y="0" width="${(X1 - nuX).toFixed(1)}" height="${hoog - 30}" fill="url(#plan)" rx="12"/><text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : dag === 'morgen' ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : weer?.gisteren ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Gestippeld: wat er de dag ervoor werd verwacht</text>` : '';
+  const g = getallen(r);
+  const getallenSvg = g
+    ? `<text x="${X0}" y="20">${g.rij.map(([w, l], i) => `<tspan class="getal"${i ? ' dx="22" fill="#B8C4CF"' : ''}>${esc(w)}</tspan><tspan class="sub" dx="6">${esc(l)}</tspan>`).join('')}${g.afwijking ? `<tspan class="af${g.afwijking.startsWith('+') ? '' : ' min'}" dx="16">${esc(g.afwijking)}</tspan>` : ''}${g.noot ? `<tspan class="sub" dx="16">${esc(g.noot)}</tspan>` : ''}</text>`
+    : '';
   const nuStreep = nuX == null ? '' : `<line x1="${nuX.toFixed(1)}" y1="26" x2="${nuX.toFixed(1)}" y2="${hoog - 30}" stroke="#EEF3F7" stroke-width="1.5"/><rect x="${(nuX - 22).toFixed(1)}" y="${hoog - 30}" width="44" height="20" rx="10" fill="#EEF3F7"/><text x="${nuX.toFixed(1)}" y="${hoog - 16}" text-anchor="middle" class="nu">nu</text>`;
 
   box.innerHTML = `<svg viewBox="0 0 ${W} ${hoog}" role="img" aria-label="De dag van 06:00 tot middernacht: de zon, de temperatuur per kamer, en wat elk apparaat deed">
@@ -236,9 +311,10 @@ function tekenTijdlijn(r, verwacht, lijst) {
       <linearGradient id="zv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient>
       <linearGradient id="plan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8F86FF" stop-opacity="0.13"/><stop offset="1" stop-color="#8F86FF" stop-opacity="0.03"/></linearGradient>
       <pattern id="streep" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="currentColor"/></pattern>
-      <style>.rij{font:600 13px Figtree,sans-serif;fill:#EEF3F7}.sub{font:11.5px Figtree,sans-serif;fill:#7F8E9C}.plan{font:600 12px Figtree,sans-serif;fill:#B7B0FF}.nu{font:700 12px Figtree,sans-serif;fill:#0b1424}</style>
+      <style>.rij{font:600 13px Figtree,sans-serif;fill:#EEF3F7}.sub{font:11.5px Figtree,sans-serif;fill:#7F8E9C}.plan{font:600 12px Figtree,sans-serif;fill:#B7B0FF}.nu{font:700 12px Figtree,sans-serif;fill:#0b1424}.getal{font:600 18px 'Bricolage Grotesque',Figtree,sans-serif;fill:#EEF3F7}.af{font:700 12.5px Figtree,sans-serif;fill:#6EE7B7}.af.min{fill:#B8C4CF}</style>
     </defs>
     ${planVlak}
+    ${getallenSvg}
     <g stroke="#ffffff" stroke-opacity="0.05">${rasters}</g>
     <text x="0" y="66" class="rij">Zon</text><text x="0" y="84" class="sub">je panelen</text>
     ${echtVlak ? `<path d="${echtVlak}" fill="url(#zv)"/><path d="${echtPad}" fill="none" stroke="#F7B548" stroke-width="2.2"/>` : ''}
@@ -285,9 +361,10 @@ function tekenKaarten(r, verwacht, lijst) {
       ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">${v.vanMs ? `${klokVan(v.vanMs)}, verwacht` : 'Straks'}</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(v.kop)}</h2><p class="klein" style="margin: 8px 0 0">${esc(v.zin)}</p><p class="mini" style="margin-top: auto; padding-top: 10px">${plan}</p>`
       : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">De rest van vandaag</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${rest != null && rest > 0.05 ? `Nog ${nl(rest)} kWh zon verwacht` : 'Er komt vandaag weinig zon meer'}</h2><p class="klein" style="margin: 8px 0 0">Niets wacht nu op zon.</p><p class="mini" style="margin-top: auto; padding-top: 10px">${plan}</p>`;
   } else if (dag === 'gisteren') {
-    const t = (weer?.terugblik ?? []).find((d) => d.datum === weer?.gisteren?.datum);
-    const zelf = r && r.zonWh > 0 ? Math.round(Math.max(0, Math.min(100, ((r.zonWh - r.netTerugWh) / r.zonWh) * 100))) : null;
-    rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Gisteren, de zon</span><span class="mini">gemeten</span></div><h2 class="kop-2" style="margin-top: 8px">${r ? `${nl(r.zonWh / 1000)} kWh van je panelen` : 'Geen metingen'}</h2><p class="klein" style="margin: 8px 0 0">${t ? `Verwacht was ${nl(t.verwachtKwh)} kWh. ` : ''}${zelf != null ? `${zelf}% zelf gebruikt.` : ''}</p>`;
+    const k = klopteHtml();
+    rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Zo klopte de verwachting</span><span class="mini">${k.dagen ? `${k.dagen} ${k.dagen === 1 ? 'dag' : 'dagen'}` : ''}</span></div>
+      ${k.balken}
+      <div class="bovenrij" style="margin-top: 8px"><p class="mini" style="margin: 0">${esc(k.zin)}</p>${k.dagen ? LEGENDA : ''}</div>`;
   } else {
     rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, het plan</span></div><h2 class="kop-2" style="margin-top: 8px">Nog geen plan</h2><p class="klein" style="margin: 8px 0 0">${plan} Tot dan regelt het huis per moment, op de zon die er is.</p>`;
   }
@@ -307,16 +384,35 @@ function tekenTelefoon(r, verwacht, lijst) {
   const y = (w) => 76 - (w / max) * 66;
   const echt = gemeten.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.zonW ?? 0).toFixed(1)}`).join(' ');
   const komt = verwachtLijn.filter((q) => dag !== 'morgen' || q.tMs >= (weer?.dagen?.[0]?.kwartieren?.[0]?.tMs ?? 0)).map((q, i) => `${i ? 'L' : 'M'} ${x(dag === 'morgen' ? q.tMs - 86_400_000 : q.tMs).toFixed(1)} ${y(q.verwachtW).toFixed(1)}`).join(' ');
+  const gisterLijn = dag === 'gisteren' && weer?.gisteren && r ? weer.gisteren.kwartieren.map((w, i) => ({ tMs: r.vanMs + i * 15 * 60_000, w })).filter((q) => q.tMs >= tA) : [];
+  const was = gisterLijn.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.w).toFixed(1)}`).join(' ');
   const kwh = dag === 'morgen' ? null : (r?.zonWh ?? 0) / 1000;
   const rest = dag === 'vandaag' && weer?.vandaag?.verwachtKwh != null ? Math.max(0, weer.vandaag.verwachtKwh - kwh) : null;
-  const regel = dag === 'morgen' ? `${weer?.dagen?.[0]?.verwachtKwh == null ? '' : `${nl(weer.dagen[0].verwachtKwh)} kWh verwacht`}` : `${nl(kwh)} kWh${rest != null ? `, nog ${nl(rest)} verwacht` : ''}`;
+  const regel = (() => {
+    if (dag === 'morgen') return weer?.dagen?.[0]?.verwachtKwh == null ? '' : `${nl(weer.dagen[0].verwachtKwh)} kWh verwacht`;
+    if (dag === 'gisteren') {
+      const t = gisterenGetallen(r);
+      return t.echt == null ? '' : `${nl(t.echt)} kWh${t.verwacht != null ? `, verwacht ${nl(t.verwacht)} (${verschil(t.echt, t.verwacht)})` : ''}`;
+    }
+    const vooraf = weer?.vandaag?.verwachtVoorafKwh;
+    return vooraf != null ? `${nl(kwh)} kWh, verwacht ${nl(vooraf)}` : `${nl(kwh)} kWh${rest != null ? `, nog ${nl(rest)} verwacht` : ''}`;
+  })();
   kaart.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Zon</h2><span class="mini">${esc(regel)}</span></div>
     <svg viewBox="0 0 326 92" width="100%" aria-label="De zon van ${dag}, gemeten en verwacht">
       ${echt ? `<path d="${echt}" fill="none" stroke="#F7B548" stroke-width="2.2"/>` : ''}
       ${komt ? `<path d="${komt}" fill="none" stroke="#F7B548" stroke-width="2" stroke-dasharray="5 5"/>` : ''}
+      ${was ? `<path d="${was}" fill="none" stroke="#EEF3F7" stroke-width="1.5" stroke-dasharray="4 5" opacity="0.6"/>` : ''}
       ${dag === 'vandaag' ? `<line x1="${x(Date.now()).toFixed(1)}" y1="4" x2="${x(Date.now()).toFixed(1)}" y2="80" stroke="#EEF3F7" stroke-opacity="0.7"/>` : ''}
       <g font-family="Figtree" font-size="10.5" fill="#7F8E9C"><text x="6" y="91">06</text><text x="112" y="91">12</text><text x="218" y="91">18</text><text x="304" y="91">22</text></g>
     </svg>`;
+
+  // Bij gisteren: zo klopte de verwachting, de afgelopen twee weken.
+  const klopte = document.querySelector('[data-klopte]');
+  klopte.hidden = dag !== 'gisteren';
+  if (dag === 'gisteren') {
+    const k = klopteHtml();
+    klopte.innerHTML = `<h2 class="kop-3">Zo klopte de verwachting</h2>${k.balken}${k.dagen ? `<div style="margin-top: 8px">${LEGENDA}</div>` : ''}<p class="mini" style="margin: 6px 0 0">${esc(k.zin)}</p>`;
+  }
 
   const lijn = document.querySelector('[data-lijn]');
   if (dag === 'morgen') {

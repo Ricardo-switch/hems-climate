@@ -209,6 +209,9 @@ verwijzing bestaat.
   daarna weer via GitHub ([135]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]).
+- **Verwacht naast echt:** bij Vandaag, Thuis en Opbrengst staat de
+  zonverwachting naast wat er kwam, en bij Gisteren hoe het de afgelopen twee
+  weken klopte ([137]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -394,4 +397,5 @@ verwijzing bestaat.
 [134]: DECISIONS.md#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord
 [135]: DECISIONS.md#135-tot-1-november-vrijgeven-op-de-eigen-pc
 [136]: DECISIONS.md#136-meldingen-in-de-app
+[137]: DECISIONS.md#137-verwacht-naast-echt-of-de-zonverwachting-klopte
 <!-- links:einde -->

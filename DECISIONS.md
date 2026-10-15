@@ -143,6 +143,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [131. Versie 0.9.0, één naam per kamer, en wat na een grondige test niet klopte](#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte)
 - [133. Comfort zegt wanneer en waarmee: aan en uit, zon en net](#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net)
 - [136. Meldingen in de app](#136-meldingen-in-de-app)
+- [137. Verwacht naast echt: of de zonverwachting klopte](#137-verwacht-naast-echt-of-de-zonverwachting-klopte)
 
 **Veiligheid**
 
@@ -5745,6 +5746,39 @@ dit is de lijst in de app zelf.
   Assistant. Een melding op de telefoon blijft voor later, met een eigen
   besluit over schrijven (79).
 - **Versie 0.13.0.**
+
+---
+
+## 137. Verwacht naast echt: of de zonverwachting klopte
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 15 oktober 2026, met de schets
+`Wand-Vandaag-Verwacht` in `design/app2`. Nergens was terug te vinden of de
+verwachte opbrengst van de panelen klopte. De dienst bewaarde het al sinds
+besluit 105: per dag wat de dag ervoor werd verwacht.
+
+*Besluit:*
+
+- **Vandaag, bij Gisteren:** boven de grafiek wat er opgewekt is naast wat de
+  dag ervoor werd verwacht, hoeveel het afweek ("+41%") en welk deel zelf
+  gebruikt werd; gestippeld de verwachte lijn. Rechts "Zo klopte de
+  verwachting": per dag van de afgelopen twee weken een paar balken,
+  gestippeld verwacht en vol opgewekt, met hoeveel het gemiddeld ernaast zat
+  en hoe het huis de verwachting daardoor bijstelt. Op de telefoon hetzelfde
+  blok onder de zon.
+- **Vandaag zelf:** wat er tot nu toe is, naast wat de dag ervoor voor
+  vandaag werd verwacht. **Morgen:** de verwachting en de kans op zon.
+- **Thuis:** in de kaart Vandaag het opgewekte naast de verwachting van de
+  dag ervoor.
+- **Opbrengst:** bij Je panelen verwacht naast opgewekt, opgeteld over de
+  dagen van de periode waarvan een verwachting bewaard is, met hoeveel dagen
+  dat zijn. Per dag, week, maand en jaar.
+- **Eerlijk tellen:** alleen afgesloten dagen, en alleen dagen zonder gaten in
+  het logboek; vandaag telt pas mee als hij om is.
+- **Opslag:** niets nieuws. `weer-verwachting.json` bewaarde de verwachting
+  al, ruim een jaar. Er gaat niets naar Home Assistant.
+- **Versie 0.14.0.**
 
 ---
 

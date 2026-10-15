@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Vandaag, verwacht en echt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Verwacht naast echt (schets, 15 oktober 2026). Op Vandaag, bij Gisteren:
+   * de zon die kwam als vlak, de verwachting van de dag ervoor gestippeld, en
+   * rechts per dag van de afgelopen twee weken wat verwacht werd en wat er
+   * kwam, als paar balken. Bovenaan elke dag de twee getallen naast elkaar.
+   * De cijfers zijn de echte van 9 tot 14 oktober.
+   */
+  main { padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .keuze3 { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .keuze3 span { height: 36px; padding: 0 14px; display: grid; place-items: center; border-radius: 10px; font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .keuze3 span.aan { background: var(--tekst); color: var(--inkt); }
+  .grafiek { padding: 16px 20px; position: relative; }
+  .getallen { position: absolute; right: 20px; top: 14px; display: flex; gap: 18px; align-items: baseline; }
+  .getallen div { text-align: right; }
+  .getallen b { display: block; font-family: var(--kop); font-size: 26px; font-weight: 600; line-height: 1; }
+  .getallen span { font-size: 12px; color: var(--gedempt); }
+  .getallen .verschil { padding: 4px 10px; border-radius: 999px; background: rgba(110, 231, 183, 0.12); color: var(--mint); font-weight: 700; font-size: 13px; }
+  .onder { flex: 1; display: grid; grid-template-columns: 1fr 1.25fr; gap: 16px; min-height: 0; }
+  .vak { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .wanneer { font-size: 13px; font-weight: 700; color: #B7B0FF; }
+  .balken { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; align-items: end; height: 150px; margin-top: 6px; }
+  .dag { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .paar { display: flex; gap: 4px; align-items: flex-end; height: 120px; }
+  .paar i { width: 16px; border-radius: 5px 5px 2px 2px; display: block; }
+  .paar .v { border: 1.5px dashed rgba(247, 181, 72, 0.8); background: transparent; }
+  .paar .e { background: var(--zon); }
+  .dag span { font-size: 11.5px; color: var(--gedempt); }
+  .dag b { font-size: 12px; font-family: var(--kop); }
+  .legenda { display: flex; gap: 16px; font-size: 12px; color: var(--zacht); }
+  .legenda span { display: inline-flex; gap: 6px; align-items: center; }
+  .legenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><h1 class="kop-1">Vandaag</h1><p class="lead" style="margin-top: 6px">Links van nu wat het huis deed, en waarom. Rechts wat er verwacht wordt.</p></div>
+      <div class="keuze3"><span class="aan">Gisteren</span><span>Vandaag</span><span>Morgen</span></div>
+    </div>
+    <section class="glas grafiek">
+      <div class="getallen">
+        <div><b>9,3 kWh</b><span>echt opgewekt</span></div>
+        <div><b style="color: var(--zacht)">6,6 kWh</b><span>verwacht, de dag ervoor</span></div>
+        <span class="verschil">+41%</span>
+      </div>
+      <svg viewBox="0 0 1100 230" width="100%" height="230" aria-label="De zon van gisteren, en wat er verwacht werd">
+        <defs><linearGradient id="z" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
+        <text x="0" y="96" font-family="Figtree" font-size="14" font-weight="600" fill="#EEF3F7">Zon</text>
+        <text x="0" y="114" font-family="Figtree" font-size="12" fill="#7F8E9C">je panelen</text>
+        <path d="M150 190 C 260 188, 330 120, 420 70 S 560 40, 620 52 S 760 110, 860 188 L 860 190 Z" fill="url(#z)"/>
+        <path d="M150 190 C 260 188, 330 120, 420 70 S 560 40, 620 52 S 760 110, 860 188" fill="none" stroke="#F7B548" stroke-width="2.5"/>
+        <path d="M150 190 C 260 189, 340 150, 430 118 S 560 100, 620 108 S 760 140, 860 189" fill="none" stroke="#F7B548" stroke-width="2" stroke-dasharray="6 6" opacity="0.8"/>
+        <text x="640" y="128" font-family="Figtree" font-size="12" fill="#B8C4CF">gestippeld: verwacht</text>
+        <g font-family="Figtree" font-size="11" fill="#7F8E9C"><text x="150" y="222">06</text><text x="330" y="222">09</text><text x="510" y="222">12</text><text x="690" y="222">15</text><text x="870" y="222">18</text><text x="1050" y="222">21</text></g>
+      </svg>
+    </section>
+    <div class="onder">
+      <section class="glas vak">
+        <span class="wanneer">Gisteren</span>
+        <h2 class="kop-2" style="margin: 0">Zonniger dan verwacht</h2>
+        <p class="klein" style="margin: 0">50% kans op zon werd 6,6 kWh. Er kwam 9,3 kWh: de middag was helderder dan de verwachting zei. 47% zelf gebruikt.</p>
+      </section>
+      <section class="glas vak">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><span class="wanneer">Zo klopte de verwachting</span><span class="mini">6 dagen</span></div>
+        <div class="balken">
+          <div class="dag"><b>1,3</b><div class="paar"><i class="v" style="height: 29px"></i><i class="e" style="height: 13px"></i></div><span>vr 9</span></div>
+          <div class="dag"><b>8,7</b><div class="paar"><i class="v" style="height: 31px"></i><i class="e" style="height: 89px"></i></div><span>za 10</span></div>
+          <div class="dag"><b>3,6</b><div class="paar"><i class="v" style="height: 27px"></i><i class="e" style="height: 37px"></i></div><span>zo 11</span></div>
+          <div class="dag"><b>10,7</b><div class="paar"><i class="v" style="height: 110px"></i><i class="e" style="height: 109px"></i></div><span>ma 12</span></div>
+          <div class="dag"><b>2,9</b><div class="paar"><i class="v" style="height: 67px"></i><i class="e" style="height: 30px"></i></div><span>di 13</span></div>
+          <div class="dag"><b>9,3</b><div class="paar"><i class="v" style="height: 67px"></i><i class="e" style="height: 95px"></i></div><span>wo 14</span></div>
+        </div>
+        <div class="legenda"><span><i style="border: 1.5px dashed rgba(247,181,72,0.8)"></i>verwacht</span><span><i style="background: var(--zon)"></i>echt</span></div>
+        <p class="mini" style="margin: 0">Gemiddeld 2,5 kWh ernaast. Het huis rekent de verwachting al 8% hoger, uit wat het leerde.</p>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'vandaag');</script>
+</body>
+</html>
