@@ -1464,7 +1464,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Een buitenruimte: kiezen wat het is (besluit 109).
     const tuin = (layoutStore.current?.kamers ?? kamers).find((k) => k.etage === 'buiten' && !/oprit/i.test(k.naam))!;
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(tuin.id)}`);
-    await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click(kort);
+    // De pagina tekent opnieuw zodra alles binnen is; eerst rustig laten worden, en
+    // klikt het toch net tijdens het tekenen, dan nog eens (in de CI eens misgegaan).
+    await p.waitForLoadState('networkidle');
+    const soortNu = () => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort;
+    await expect
+      .poll(async () => {
+        if (soortNu() !== 'terras') await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click({ timeout: 1500 }).catch(() => undefined);
+        return soortNu();
+      }, { timeout: 10_000 })
+      .toBe('terras');
     await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort, kort).toBe('terras');
     await p.locator('#wand [data-buiten="soort"][aria-pressed="true"]', { hasText: 'Terras' }).waitFor(kort);
     expect(fouten).toEqual([]);
