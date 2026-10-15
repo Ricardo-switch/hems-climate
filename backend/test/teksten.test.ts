@@ -19,7 +19,7 @@ const WOORDEN: readonly [RegExp, string][] = [
   [/\bSynology\b/, 'een merk alsof iedereen het heeft'],
   [/Cornelissen|Matts|Mylan/, 'een naam uit één huis'],
   // "Warmen" klinkt niet gewoon (15 oktober 2026): verwarmen, en opwarmen mag.
-  [/'warmen'|(?:gaat|zou|kan|mag) warmen|[a-z] warmt (?!op)[a-z]/, 'warmen: zeg verwarmen'],
+  [/'warmen'|\b(?:gaat|zou|kan|mag) warmen\b|[a-z] warmt (?!op\b)[a-z]/, 'warmen: zeg verwarmen'],
 ];
 
 /** Zonder commentaar: daar mag uitgelegd worden hoe het hier zit. */

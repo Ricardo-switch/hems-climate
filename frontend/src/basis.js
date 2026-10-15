@@ -14,6 +14,20 @@
   const zet = (sel, text) => $$(sel).forEach((e) => (e.textContent = text));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  /**
+   * Wanneer iets was: de klok vandaag, "gisteren" met de klok, of de datum.
+   * Kort (voor een melding): binnen het uur in minuten, en gisteren zonder klok.
+   */
+  function wanneer(ms, { kort = false } = {}) {
+    const min = Math.round((Date.now() - ms) / 60_000);
+    if (kort && min < 60) return `${Math.max(1, min)} min`;
+    const d = new Date(ms);
+    const vandaag = new Date();
+    if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
+    const gisteren = new Date(vandaag.getTime() - 86_400_000);
+    if (d.toDateString() === gisteren.toDateString()) return kort ? 'gisteren' : `gisteren ${klokVan(ms)}`;
+    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+  }
 
   /* Waar de tabs staan: tot ze in ontwerp 2 zijn, in de proefomgeving. */
   const LINKS = {
@@ -363,15 +377,7 @@
     const [kleur, pad] = MELDICOON[soort] ?? MELDICOON.nieuw;
     return `<span class="ik ${kleur}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg></span>`;
   };
-  function wanneerMeld(ms) {
-    const min = Math.round((Date.now() - ms) / 60_000);
-    if (min < 60) return `${Math.max(1, min)} min`;
-    const d = new Date(ms);
-    const vandaag = new Date();
-    if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
-    const gisteren = new Date(vandaag.getTime() - 86_400_000);
-    return d.toDateString() === gisteren.toDateString() ? 'gisteren' : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
-  }
+  const wanneerMeld = (ms) => wanneer(ms, { kort: true });
 
   /*
    * Elke melding is aan te tikken en weg te halen (aangevuld 15 oktober): een
@@ -584,5 +590,5 @@
     setInterval(() => void kijkVersie(), 10 * 60_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
+  global.app = { $$, nl, zet, esc, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
 })(window);

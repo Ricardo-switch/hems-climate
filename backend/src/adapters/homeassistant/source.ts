@@ -24,3 +24,31 @@ export interface EntitySource {
   /** Sinds wanneer die `hvac_action` onafgebroken geldt, in epoch-ms. */
   hvacActionSince(entityId: string): number | null;
 }
+
+/*
+ * Hoe een state gelezen wordt, voor alle bronnen hetzelfde: live uit Home
+ * Assistant (`EntityStore`) en bij het terugspelen (`Cursor`).
+ */
+
+/** De state als getal, of null wanneer die niet te lezen valt. */
+export function stateNumber(s: string | null): number | null {
+  if (s == null) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** De state als ja/nee: `on`, `home` en `above_horizon` gelden als waar. */
+export function stateBool(s: string | null): boolean | null {
+  if (s == null) return null;
+  return s === 'on' || s === 'home' || s === 'above_horizon';
+}
+
+/** Een attribuut als getal; een getal als tekst telt ook. */
+export function attrToNumber(v: string | number | null): number | null {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && v !== '') {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}

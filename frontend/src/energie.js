@@ -140,7 +140,7 @@ function panelenVorm() {
     ${blok('Op welke kant van het dak liggen ze?', `${zijaanzicht(kant)}
       ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet']], kant)}
       ${aantallen}${aantallen ? '<p class="mini">Het aantal is niet verplicht.</p>' : ''}
-      <p class="uitleg">Richting en hellingshoek bepaalt de app zelf, uit de opbrengst van de eerste zonnige dagen.</p>${nu}`)}
+      <p class="uitleg">Richting en hellingshoek zijn een schatting. Wat je panelen werkelijk halen, leert de app uit de zonnige dagen, en daarmee rekent hij.</p>${nu}`)}
     ${sensor}`;
 }
 
@@ -210,14 +210,15 @@ function rol(titel, plek, ids, rolNaam, soort, een = false) {
 function metersVorm() {
   const v = eInfo.voorstel;
   const wat = v ? [
-    v.net.afname.length ? `${v.net.afname.length === 1 ? 'een meter' : `${v.net.afname.length} meters`} van het net` : null,
+    v.net.afname.length ? 'stroom van het net' : null,
     v.net.teruglevering.length ? 'teruglevering' : null,
     v.zon.length ? 'zonnepanelen' : null,
     v.gas ? 'gas' : null,
-    v.apparaten.length ? `${v.apparaten.length} apparaten` : null,
+    v.apparaten.length ? `${v.apparaten.length === 1 ? 'één apparaat' : `${v.apparaten.length} apparaten`}` : null,
   ].filter(Boolean) : [];
+  const lijst = wat.length > 1 ? `${wat.slice(0, -1).join(', ')} en ${wat.at(-1)}` : wat[0];
   const uitHa = v
-    ? blok('Uit Home Assistant', `<p class="uitleg">Je Energie-dashboard heeft ${esc(wat.join(', ') || 'nog niets')}. Overnemen zet de meters goed.</p><button type="button" class="knop" data-overnemen style="align-self: start">Meters overnemen</button>`)
+    ? blok('Uit Home Assistant', `<p class="uitleg">In je Energie-dashboard staan ${esc(lijst ?? 'nog geen meters')}. Overnemen zet ze hieronder goed.</p><button type="button" class="knop" data-overnemen style="align-self: start">Meters overnemen</button>`)
     : blok('Uit Home Assistant', `<p class="uitleg">${esc(eInfo.fout ?? 'Het Energie-dashboard van Home Assistant is niet ingericht. Kies je meters hieronder zelf.')}</p>`);
   const rijen = e.apparaten.map((x, i) => `<div class="regelrij"><div class="l"><input class="invoer" data-apparaatnaam="${i}" value="${esc(x.naam)}" maxlength="40" aria-label="Naam van ${esc(naamVan(x.id))}"><span>${esc(naamVan(x.id))}</span></div><button type="button" class="knop" data-apparaat-weg="${i}" aria-label="${esc(x.naam)} weghalen">Weg</button></div>`).join('');
   return `${kop('Meters')}

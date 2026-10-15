@@ -963,17 +963,19 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     const { base } = await start({ latest: () => snapshot() });
     const res = await fetch(`${base}/api/vraag?v=waarom&kamer=zolder`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { vraag: string; kamer: string; antwoord: string };
+    const body = (await res.json()) as { vraag: string; kamer: string; antwoord: string; gesproken: string };
     expect(body.vraag).toBe('waarom');
     expect(body.kamer).toBe('zolder');
     expect(body.antwoord).toContain('24,5°');
-    expect(body.antwoord).toContain('Ik kijk nog alleen mee');
+    // Hoe het klinkt, voor de stem van het apparaat (besluit 142).
+    expect(body.gesproken).toContain('24,5 graden');
+    expect(body.gesproken).not.toContain('°');
   });
 
   it('spreekt Engels als dat gevraagd wordt', async () => {
     const { base } = await start({ latest: () => snapshot() });
     const body = (await (await fetch(`${base}/api/vraag?v=nu&taal=en`)).json()) as { antwoord: string };
-    expect(body.antwoord).toContain('I am only watching');
+    expect(body.antwoord).toContain('I do not switch anything myself yet');
   });
 
   it('weigert een vraag die hij niet kent, met een reden', async () => {
@@ -989,7 +991,7 @@ describe('de assistent die uitlegt (ONTWERP §7, fase 1)', () => {
     const { base } = await start({ latest: () => snapshot() });
     const res = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen&temperatuur=21`);
     expect(res.status).toBe(200);
-    expect(((await res.json()) as { antwoord: string }).antwoord).toContain('mag nog niet schakelen');
+    expect(((await res.json()) as { antwoord: string }).antwoord).toContain('Schakelen mag ik nog niet');
     const post = await fetch(`${base}/api/vraag?v=doe&kamer=zolder&wens=koelen`, { method: 'POST' });
     expect(post.status).toBe(405);
   });
@@ -1098,6 +1100,7 @@ describe('licht bedienen (besluit 97)', () => {
     id,
     naam: id,
     zoneId: null,
+    meedoenMet: null,
     zones: [],
     temperatuurC: null,
     vochtPct: null,

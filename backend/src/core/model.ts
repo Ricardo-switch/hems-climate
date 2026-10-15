@@ -549,8 +549,8 @@ export function actuatorById(config: SiteConfig, id: string): Actuator {
   return found;
 }
 
-/** Alle actuatoren van een zone, in configuratievolgorde. */
+/** Alle actuatoren van een zone, in configuratievolgorde; een onbekend id valt weg. */
 export function actuatorsOf(config: SiteConfig, zone: Zone): Actuator[] {
-  return zone.actuatorIds.map((id) => actuatorById(config, id));
+  return zone.actuatorIds.map((id) => config.actuators.find((a) => a.id === id)).filter((a): a is Actuator => a != null);
 }
 

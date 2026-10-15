@@ -109,6 +109,21 @@ describe('een dag terugkijken', () => {
     expect(r.kosten.regels.map((x) => x.uitleg)).toEqual(['6,8 kWh × € 0,25', '7 kWh, gesaldeerd tegen je stroomprijs', '0,2 m³ × € 1,30', 'nog niet ingesteld']);
   });
 
+  it('houdt zelf gebruikt plus terug gelijk aan opgewekt, ook als de zonnemeter een uur achterloopt', async () => {
+    // De zonnemeter telt een uur later dan de meter van het net (opgelost 15 oktober).
+    const bron = fakeSource();
+    const echt = bron.changes.bind(bron);
+    bron.changes = async (ids, startMs, endMs, period) => {
+      const uit = await echt(ids, startMs, endMs, period);
+      const zon = uit['sensor.zon'];
+      return zon ? { ...uit, 'sensor.zon': zon.map((r) => ({ ...r, change: HOURLY['sensor.zon']!(partsIn(r.startMs, TZ).h - 1) })) } : uit;
+    };
+    const r = (await yieldReport(bron, SETTINGS, 'dag', '2026-09-15', TZ, Date.UTC(2026, 9, 7, 12)))!;
+    expect(r.zon).toMatchObject({ opgewektKwh: 14, zelfKwh: 7, terugKwh: 7, zelfPct: 50 });
+    const from = (src: string) => r.stromen.filter((s) => s.van === src).reduce((a, s) => a + s.kwh, 0);
+    expect(from('zon')).toBeCloseTo(14);
+  });
+
   it('zonder zonnepanelen geen zon, en alles van het net', async () => {
     const r = (await yieldReport(fakeSource(), { ...SETTINGS, zon: [], net: { afname: ['sensor.afname'], teruglevering: [] } }, 'dag', '2026-09-15', TZ, Date.UTC(2026, 9, 7)))!;
     expect(r.zon).toBeNull();

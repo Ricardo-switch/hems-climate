@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
-import { validateLayout } from '../src/web/layout.js';
+import { herstelMeedoen, validateLayout, type LayoutRoom } from '../src/web/layout.js';
+import { withMeasurement } from '../src/web/meten.js';
 import { controleerRollen, rollenUitConfig, vermogensVan, withRegeling, type RegelKamer } from '../src/web/regeling.js';
 import { exampleSite } from './site.js';
 
@@ -110,6 +111,39 @@ describe('de regeling per kamer (besluit 138)', () => {
     expect(vermogensVan(undefined)).toBeNull();
   });
 
+  it('laat een kamer meedoen met de regeling van een andere kamer (besluit 142)', () => {
+    const known = { deviceIds: new Set(['ac-zolder', 'sensor.slaap']), zoneIds: new Set(['woonkamer']) };
+    const kamer = (id: string, extra: Record<string, unknown> = {}) => ({ id, naam: id, etage: 'e2', zones: [], regelzone: null, haGebied: null, ...extra });
+    const uit = validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('wasruimte', { rollen: { 'ac-zolder': 'zon' } }), kamer('slaapkamer', { meedoenMet: 'wasruimte', regelzone: 'woonkamer', meten: ['sensor.slaap'] })] }, known);
+    expect(uit.ok).toBe(true);
+    if (!uit.ok) return;
+    // Wie meedoet, heeft geen eigen regelzone; de wasruimte krijgt de zijne.
+    expect(uit.layout.kamers.map((k) => [k.id, k.regelzone, k.meedoenMet ?? null])).toEqual([['wasruimte', 'wasruimte', null], ['slaapkamer', null, 'wasruimte']]);
+    // Meedoen met een kamer die er niet is, of met zichzelf, of een keten: nee.
+    for (const md of ['kelder', 'slaapkamer']) {
+      expect(validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('wasruimte'), kamer('slaapkamer', { meedoenMet: md })] }, known).ok, md).toBe(false);
+    }
+    expect(validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('a'), kamer('b', { meedoenMet: 'a' }), kamer('c', { meedoenMet: 'b' })] }, known).ok).toBe(false);
+    // Een thermometer in de kamer die meedoet, telt mee in de regeling.
+    const raw = { zones: [{ id: 'wasruimte', name: 'Wasruimte', temperature: 'sensor.was' }], actuators: [] };
+    const met = withMeasurement(raw, uit.layout);
+    expect((met.raw['zones'] as Record<string, unknown>[])[0]!['temperatures']).toEqual(['sensor.was', 'sensor.slaap']);
+  });
+
+  it('herstelt wat "Geregeld als" verhuisde: de oude zone terug, en de andere kamer doet mee (besluit 142)', () => {
+    // Zo stond het op 15 oktober: de slaapkamer hield de zone van de wasruimte vast, en die kreeg zolder-2.
+    const kamer = (id: string, extra: Record<string, unknown> = {}) => ({ id, naam: id, etage: 'e2', zones: [], regelzone: null, haGebied: null, ...extra }) as LayoutRoom;
+    const voor = [kamer('slaapkamer', { regelzone: 'zolder' }), kamer('zolder', { regelzone: 'zolder-2', rollen: { 'ac-zolder': 'zon' } }), kamer('badkamer', { regelzone: 'badkamer', rollen: { badkamer: 'houdt' } })];
+    const na = herstelMeedoen(voor);
+    expect(na.map((k) => [k.id, k.regelzone, k.meedoenMet ?? null])).toEqual([['slaapkamer', null, 'zolder'], ['zolder', 'zolder', null], ['badkamer', 'badkamer', null]]);
+    // Wat al klopt, blijft zoals het is.
+    expect(herstelMeedoen(na)).toEqual(na);
+    // Ook als de pagina zo'n indeling bewaart.
+    const known = { deviceIds: new Set(['ac-zolder', 'badkamer']), zoneIds: new Set(['zolder-2', 'badkamer']) };
+    const uit = validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: voor }, known);
+    expect(uit.ok && uit.layout.kamers.map((k) => [k.id, k.regelzone, k.meedoenMet ?? null])).toEqual([['slaapkamer', null, 'zolder'], ['zolder', 'zolder', null], ['badkamer', 'badkamer', null]]);
+  });
+
   it('bewaart rollen bij de kamer, en geeft een nieuwe kamer een eigen zone', () => {
     expect(controleerRollen('x', { 'climate.a': 'zon', weg: 'houdt' }, new Set(['climate.a']))).toEqual({ ok: true, rollen: { 'climate.a': 'zon' } });
     expect(controleerRollen('x', { 'climate.a': 'baas' }, new Set(['climate.a'])).ok).toBe(false);
@@ -119,8 +153,9 @@ describe('de regeling per kamer (besluit 138)', () => {
     expect(uit.ok).toBe(true);
     if (!uit.ok) return;
     expect(uit.layout.kamers.map((k) => k.regelzone)).toEqual(['woonkamer', 'slaapkamer', null]);
-    // Een zone die de configuratie niet kent, mag alleen bij een kamer met rollen.
-    expect(validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('hal', { regelzone: 'hal' })] }, known).ok).toBe(false);
+    // Een zone die de configuratie niet kent, mag alleen bij een kamer met rollen; anders valt hij weg (besluit 142).
+    const los = validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('hal', { regelzone: 'hal' })] }, known);
+    expect(los.ok && los.layout.kamers[0]!.regelzone).toBeNull();
     expect(validateLayout({ versie: 1, etages: {}, apparaten: {}, kamers: [kamer('hal', { regelzone: 'hal', rollen: {} })] }, known).ok).toBe(true);
   });
 });

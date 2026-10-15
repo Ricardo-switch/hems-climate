@@ -7,10 +7,13 @@
  * elk getal komt uit wat het huis meet en besluit, er is geen taalmodel en er
  * gaat niets het huis uit. De stem is Piper in Home Assistant (`api/stem`); is
  * die er niet, dan een Nederlandse stem van het apparaat zelf, en anders
- * alleen tekst. Geluid kan pas na een tik: dat bepaalt de browser.
+ * alleen tekst. Geluid kan pas na een tik: dat bepaalt de browser; een tik
+ * op Thuis telt mee.
  *
  * Het adres kan een vraag meegeven: `#nu`, `#zon`, `#straks`, `#vandaag`,
- * `#warm`, `#waarom/zolder`; met `#typ` staat de cursor in het veld.
+ * `#warm`, `#morgen`, `#kosten`, `#waarom/zolder`; met `#typ` staat de cursor
+ * in het veld. Zo'n vraag komt van een tik op Thuis: dan probeert het huis
+ * meteen te spreken.
  */
 'use strict';
 
@@ -22,6 +25,8 @@ let zon = null;
 let weer = null;
 let vandaag = null;
 let stemNaam = null;
+/** Of een vraag uit het adres kwam (een tik op Thuis): dan meteen proberen te spreken. */
+let vanAdres = false;
 
 async function laadAlles() {
   const [s, h, z, w, v, st] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/vandaag'), haal('api/stem')]);
@@ -59,7 +64,6 @@ function groet() {
   return u < 6 ? 'Goedenacht' : u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond';
 }
 
-const metHoofd = (s) => huismodel.metHoofdletter(s);
 const zoneNaam = (id) => huismodel.zoneNaam(id, huisData);
 
 /* ------------------------------------------------------------ de vragen */
@@ -72,6 +76,7 @@ const IK = {
   koel: ['', '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></svg>'],
   warm: ['warm', '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.9" stroke-linecap="round"><path d="M12 21c-3.3 0-6-2.5-6-6 0-4 4-6 4-10 2.5 1.5 4 4 4 6 1-.8 1.5-2 1.5-3 1.6 1.4 2.5 3.8 2.5 7 0 3.5-2.7 6-6 6z"/></svg>'],
   nu: ['violet', '<svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg>'],
+  weer: ['', '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.9" stroke-linecap="round"><path d="M7 17h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 17z"/></svg>'],
 };
 
 /** Wachten op zon: per kamer wat er nodig is en wat er over is. */
@@ -100,10 +105,14 @@ function suggesties() {
   }
   const z = weer?.vandaag;
   const zonOp = zon?.zon?.boven;
-  if (z) uit.push({ label: zonOp ? 'Hoeveel zon komt er nog?' : 'Hoeveel zon was er vandaag?', hint: z.verwachtKwh != null ? `${nl(z.opgewektKwh)} kWh, verwacht ${nl(z.verwachtKwh)}` : `${nl(z.opgewektKwh)} kWh`, ik: 'grafiek', v: { soort: 'zon' } });
+  // Naast de verwachting van vanochtend, net als op Thuis en Vandaag (opgelost 15 oktober).
+  const vooraf = z?.verwachtVoorafKwh ?? null;
+  if (z) uit.push({ label: zonOp ? 'Hoeveel zon komt er nog?' : 'Hoeveel zon was er vandaag?', hint: vooraf != null ? `${nl(z.opgewektKwh)} kWh, verwacht ${nl(vooraf)}` : `${nl(z.opgewektKwh)} kWh`, ik: 'grafiek', v: { soort: 'zon' } });
   else uit.push({ label: 'Hoeveel zon vandaag?', hint: '', ik: 'grafiek', v: { soort: 'zon' } });
-  const n = vandaag?.besluiten?.length ?? 0;
-  uit.push({ label: 'Wat deed je vandaag?', hint: n ? `${n} keer iets besloten` : 'de dag tot nu toe', ik: 'klok', v: { soort: 'vandaag' } });
+  uit.push({ label: 'Wat deed je vandaag?', hint: 'de dag tot nu toe', ik: 'klok', v: { soort: 'vandaag' } });
+  // 's Avonds is morgen interessanter dan straks (besluit 142).
+  const m = weer?.dagen?.[0];
+  if (m && !zonOp) uit.push({ label: 'Wat wordt het weer morgen?', hint: [m.tekst, m.maxC != null ? `${nl(m.maxC, 0)}°` : null].filter(Boolean).join(', '), ik: 'weer', v: { soort: 'morgen' } });
   const temps = (huisData?.etages ?? []).flatMap((e) => e.ruimtes ?? []).filter((r) => r.zoneId && r.temperatuurC != null).map((r) => r.temperatuurC);
   uit.push({ label: 'Hoe warm is het overal?', hint: temps.length ? `${nl(Math.min(...temps))} tot ${nl(Math.max(...temps))}°` : '', ik: 'temp', v: { soort: 'warm' } });
   uit.push({ label: 'Wat doe je nu?', hint: state?.bewoner?.kop?.titel ?? '', ik: 'nu', v: { soort: 'nu' } });
@@ -122,6 +131,8 @@ function vervolg(item) {
     straks: ['zon', 'nu', 'vandaag'],
     vandaag: ['zon', 'warm', 'nu'],
     warm: ['waarom', 'nu', 'vandaag'],
+    morgen: ['zon', 'straks', 'warm'],
+    kosten: ['vandaag', 'zon', 'nu'],
   }[item?.soort] ?? ['nu', 'zon', 'warm'];
   const vast = {
     straks: { label: 'Wat ga je straks doen?', hint: 'het schema en de zon', ik: 'klok', v: { soort: 'straks' } },
@@ -154,10 +165,12 @@ async function vraag(v) {
     if (v.soort === 'vrij' && res.ok) nu.soort = body.vraag;
     nu.link = body.link ?? null;
     nu.voorbeelden = body.voorbeelden ?? [];
+    // Zoals het klinkt (besluit 142): eenheden voluit, tijden in woorden.
+    nu.gesproken = body.gesproken ?? null;
   } catch {
     nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
   }
-  void zeg(nu.antwoord);
+  void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
 }
 
 /* ------------------------------------------------------------ praten */
@@ -192,9 +205,10 @@ function zetGezegd(i) {
 
 function stopPraten() {
   cancelAnimationFrame(rafId);
-  if (audio) {
-    audio.pause();
-    audio.src = '';
+  for (const el of [audio, kaal]) {
+    if (!el) continue;
+    el.pause();
+    el.src = '';
   }
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   if (klaar) {
@@ -254,15 +268,21 @@ function apparaatStem() {
   return speechSynthesis.getVoices().find((v) => v.localService && /^nl/i.test(v.lang)) ?? null;
 }
 
+/** Of de browser het geluid weigerde: dan zegt de bol "Tik om te horen". */
+let tikOmTeHoren = false;
+let kaal = null;
+
 /**
  * Zegt een tekst: hardop als het mag en kan, en altijd met de woorden die
- * meekomen. Daarna vraagt het huis of het nog iets kan doen.
+ * meekomen. Daarna vraagt het huis of het nog iets kan doen. `gesproken` is
+ * de tekst zoals hij klinkt (besluit 142), voor de stem van het apparaat.
  */
-function zeg(tekst) {
+function zeg(tekst, gesproken = tekst) {
   return new Promise((ok) => {
     woorden = splitsWoorden(tekst);
     zegtNu = tekst;
     stand = 'praat';
+    tikOmTeHoren = false;
     teken();
     zetGezegd(0);
     klaar = () => {
@@ -284,59 +304,89 @@ function zeg(tekst) {
         if (p >= 1 && klaar) klaar();
       });
     };
-    const apparaat = () => zegMetApparaat(tekst, totLetter, lezen);
-    if (!voorlezen || !ontgrendeld) return lezen();
-    if (stemNaam) {
-      audio ??= new Audio();
-      audio.crossOrigin = 'anonymous';
-      try {
-        ctx ??= new (window.AudioContext || window.webkitAudioContext)();
-        if (!bron) {
-          bron = ctx.createMediaElementSource(audio);
-          analyser = ctx.createAnalyser();
-          analyser.fftSize = 128;
-          bron.connect(analyser);
-          analyser.connect(ctx.destination);
-        }
-        void ctx.resume();
-      } catch {
-        analyser = null;
-      }
-      audio.src = `api/stem?tekst=${encodeURIComponent(tekst)}`;
-      audio.onended = () => klaar?.();
-      audio.onerror = () => {
-        if (!klaar) return;
-        stemNaam = null;
-        apparaat();
-      };
-      audio.play().then(
-        () => leefMee(() => {
-          if (!audio.duration || !isFinite(audio.duration)) return;
-          const i = totLetter((audio.currentTime / audio.duration) * tekst.length);
-          zetGezegd(i < 0 ? woorden.length : i);
-        }),
-        () => lezen(),
-      );
-      return;
-    }
+    // De browser wilde geen geluid: lezen, en de bol zegt dat een tik het laat horen.
+    const geweigerd = () => {
+      tikOmTeHoren = true;
+      vanAdres = false;
+      lezen();
+    };
+    const apparaat = () => zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd);
+    // Een vraag via een tik op Thuis mag meteen proberen (opgelost 15 oktober).
+    if (!voorlezen || !(ontgrendeld || vanAdres)) return lezen();
+    if (stemNaam) return void zegMetPiper(tekst, totLetter, apparaat, geweigerd);
     apparaat();
   });
 }
 
+/**
+ * Piper uit Home Assistant. De stralen leven mee met het echte geluid, maar
+ * alleen als de browser Web Audio al toestaat; anders speelt het geluid
+ * gewoon, met een rustige golf. Een stilgezette Web Audio zou het geluid
+ * inslikken.
+ */
+async function zegMetPiper(tekst, totLetter, apparaat, geweigerd) {
+  let golf = false;
+  try {
+    ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state !== 'running') await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 250))]);
+    golf = ctx.state === 'running';
+  } catch {
+    golf = false;
+  }
+  if (!klaar) return;
+  let el;
+  if (golf) {
+    audio ??= new Audio();
+    audio.crossOrigin = 'anonymous';
+    if (!bron) {
+      bron = ctx.createMediaElementSource(audio);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 128;
+      bron.connect(analyser);
+      analyser.connect(ctx.destination);
+    }
+    el = audio;
+  } else {
+    kaal ??= new Audio();
+    el = kaal;
+  }
+  const golfVan = golf ? analyser : null;
+  el.src = `api/stem?tekst=${encodeURIComponent(tekst)}`;
+  el.onended = () => klaar?.();
+  el.onerror = () => {
+    if (!klaar) return;
+    stemNaam = null;
+    apparaat();
+  };
+  el.play().then(
+    () => {
+      ontgrendeld = true;
+      analyser = golfVan;
+      leefMee(() => {
+        if (!el.duration || !isFinite(el.duration)) return;
+        const i = totLetter((el.currentTime / el.duration) * tekst.length);
+        zetGezegd(i < 0 ? woorden.length : i);
+      });
+    },
+    (e) => (e?.name === 'NotAllowedError' ? geweigerd() : apparaat()),
+  );
+}
+
 /** De stem van het apparaat, of alleen de woorden als die er niet is. Hoort bij zeg(). */
-function zegMetApparaat(tekst, totLetter, lezen) {
+function zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd) {
   const v = apparaatStem();
   if (!v) return lezen();
-  const u = new SpeechSynthesisUtterance(tekst);
+  const u = new SpeechSynthesisUtterance(gesproken);
   u.voice = v;
   u.lang = v.lang;
   u.rate = 1;
+  // Wat klinkt is langer dan wat er staat; de plek gaat naar rato.
   u.onboundary = (e) => {
-    const i = totLetter(e.charIndex);
+    const i = totLetter((e.charIndex / Math.max(1, gesproken.length)) * tekst.length);
     zetGezegd(i < 0 ? woorden.length : i);
   };
   u.onend = () => klaar?.();
-  u.onerror = () => klaar?.();
+  u.onerror = (e) => (e?.error === 'not-allowed' ? geweigerd() : klaar?.());
   analyser = null;
   leefMee();
   speechSynthesis.speak(u);
@@ -345,13 +395,14 @@ function zegMetApparaat(tekst, totLetter, lezen) {
 /* ------------------------------------------------------------ tekenen */
 
 /** Waar een feit vandaan komt, in gewone woorden; wat hier niet staat, toont de pagina niet. */
-const FEIT = { temperatuur: 'temperatuur', doel: 'doel', zonWh: 'opgewekt', piekW: 'het meeste', piekTijd: 'om', netAfWh: 'van het net', netTerugWh: 'terug', vermogen: 'zon nu', besluiten: 'keer besloten', zelfPct: 'zelf gebruikt', rest: 'komt nog', verwacht: 'verwacht vandaag' };
+const FEIT = { temperatuur: 'temperatuur', doel: 'doel', zonWh: 'opgewekt', piekW: 'het meeste', piekTijd: 'om', netAfWh: 'van het net', netTerugWh: 'terug', vermogen: 'zon nu', zelfPct: 'zelf gebruikt', rest: 'komt nog', vooraf: 'verwacht', verwacht: 'van je dak', maxC: 'warmst', regenkans: 'kans op regen', euro: 'kosten' };
 function feiten(item) {
   return (item?.feiten ?? [])
     .map((f) => {
       const d = String(f.bron).split('.');
       let naam = FEIT[d.at(-1)];
       if (d[0] === 'zone' && d.length === 3 && naam) naam = `${zoneNaam(d[1])}${d[2] === 'temperatuur' ? '' : `, ${naam}`}`;
+      if (d[1] === 'morgen' && naam) naam = `morgen, ${naam}`;
       return naam ? `<div class="feit"><b>${esc(f.tekst)}</b><span>${esc(naam)}</span></div>` : '';
     })
     .filter(Boolean)
@@ -443,7 +494,7 @@ function tekenNu() {
     el.hidden = !eerder.length || stand === 'begin';
     el.innerHTML = `Eerder: ${eerder.map((e, i) => `<button type="button" data-eerder-vraag="${i}">${esc(e.label)}</button>`).join('')}`;
   });
-  $$('[data-tik]').forEach((el) => (el.textContent = !ontgrendeld && voorlezen && stand === 'begin' ? 'Tik om te praten' : ''));
+  $$('[data-tik]').forEach((el) => (el.textContent = tikOmTeHoren && stand === 'verder' ? 'Tik om te horen' : !ontgrendeld && voorlezen && stand === 'begin' ? 'Tik om te praten' : ''));
   $$('[data-stop]').forEach((el) => (el.hidden = stand !== 'praat'));
   $$('[data-voorlezen]').forEach((el) => {
     el.hidden = stand === 'praat';
@@ -502,7 +553,7 @@ document.addEventListener('click', (e) => {
   if (t.hasAttribute('data-kern')) {
     if (stand === 'praat') return stopPraten();
     // De bol: het huis begroet je, of herhaalt het laatste antwoord.
-    if (nu?.antwoord && stand === 'verder') return void zeg(nu.antwoord);
+    if (nu?.antwoord && stand === 'verder') return void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
     stand = 'begin';
     void zeg(`${groet()}. Waarmee kan ik je helpen?`).then(() => {
       stand = 'begin';
@@ -524,10 +575,12 @@ document.addEventListener('submit', (e) => {
 });
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 if (location.hash === '#typ') document.querySelector(`${app.zicht()} [data-vrij] input`)?.focus();
-/** Een vraag uit het adres: #nu, #zon, #straks, #vandaag, #warm, #waarom/zolder. */
+/** Een vraag uit het adres: #nu, #zon, #straks, #vandaag, #warm, #morgen, #kosten, #waarom/zolder. */
 function vraagUitAdres() {
   const [soort, kamer] = decodeURIComponent(location.hash.slice(1)).split('/');
-  const labels = { nu: 'Wat doe je nu?', zon: 'Hoeveel zon vandaag?', straks: 'Wat ga je straks doen?', vandaag: 'Wat deed je vandaag?', warm: 'Hoe warm is het overal?' };
+  const labels = { nu: 'Wat doe je nu?', zon: 'Hoeveel zon vandaag?', straks: 'Wat ga je straks doen?', vandaag: 'Wat deed je vandaag?', warm: 'Hoe warm is het overal?', morgen: 'Wat wordt het weer morgen?', kosten: 'Wat kosten de apparaten?' };
+  // Een tik op Thuis bracht je hier: dan meteen hardop (opgelost 15 oktober).
+  if (labels[soort] || (soort === 'waarom' && kamer)) vanAdres = true;
   if (labels[soort]) void vraag({ soort, label: labels[soort] });
   else if (soort === 'waarom' && kamer) void vraag({ soort, kamer, label: `Waarom ${zoneNaam(kamer)}?` });
 }

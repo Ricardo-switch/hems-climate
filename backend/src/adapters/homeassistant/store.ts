@@ -8,7 +8,7 @@
  */
 
 import type { HaEntityState } from './client.js';
-import type { EntitySource } from './source.js';
+import { type EntitySource, attrToNumber, stateBool, stateNumber } from './source.js';
 
 const UNUSABLE = new Set(['unavailable', 'unknown', 'none', '']);
 
@@ -124,16 +124,11 @@ export class EntityStore implements EntitySource {
   }
 
   number(entityId: string): number | null {
-    const s = this.state(entityId);
-    if (s == null) return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
+    return stateNumber(this.state(entityId));
   }
 
   bool(entityId: string): boolean | null {
-    const s = this.state(entityId);
-    if (s == null) return null;
-    return s === 'on' || s === 'home' || s === 'above_horizon';
+    return stateBool(this.state(entityId));
   }
 
   attr(entityId: string, key: string): string | number | null {
@@ -143,13 +138,7 @@ export class EntityStore implements EntitySource {
   }
 
   attrNumber(entityId: string, key: string): number | null {
-    const v = this.attr(entityId, key);
-    if (typeof v === 'number') return v;
-    if (typeof v === 'string' && v !== '') {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
-    }
-    return null;
+    return attrToNumber(this.attr(entityId, key));
   }
 
   changedAt(entityId: string): number | null {

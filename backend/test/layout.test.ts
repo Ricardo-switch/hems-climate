@@ -60,7 +60,6 @@ describe('de indeling toetsen', () => {
       ['dubbel kamer-id', { ...good, kamers: [good.kamers[0], good.kamers[0]], apparaten: {} }],
       ['ongeldig id', { ...good, kamers: [{ ...good.kamers[0], id: 'Woon Kamer!' }], apparaten: {} }],
       ['lege naam', { ...good, kamers: [{ ...good.kamers[0], naam: '   ' }] }],
-      ['onbekend regelgebied', { ...good, kamers: [{ ...good.kamers[0], regelzone: 'kelder' }] }],
       ['regelgebied twee keer', { ...good, kamers: [good.kamers[0], { ...good.kamers[1], regelzone: 'woonkamer' }] }],
       ['apparaat in een onbekende kamer', { ...good, apparaten: { nest: { kamer: 'kelder', zone: null } } }],
       ['zone die de kamer niet heeft', { ...good, apparaten: { nest: { kamer: 'hal', zone: 'keuken' } } }],
@@ -71,6 +70,12 @@ describe('de indeling toetsen', () => {
       expect(r.ok, label).toBe(false);
       if (!r.ok) expect(r.reden, label).not.toBe('');
     }
+  });
+
+  it('laat een regelgebied dat er niet meer is los, in plaats van alles te weigeren (besluit 142)', () => {
+    const r = validateLayout({ ...good, kamers: [{ ...good.kamers[0], regelzone: 'kelder' }, ...good.kamers.slice(1)] }, known);
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.layout.kamers[0]!.regelzone).toBeNull();
   });
 
   it('bewaart met welke sensoren een kamer meet, alleen bekende en hooguit zes (besluit 123)', () => {

@@ -111,6 +111,13 @@ export interface LayoutRoom {
   readonly rollen?: Rollen;
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
   readonly regelzone: string | null;
+  /**
+   * Doet mee met de regeling van een andere kamer (besluit 142), op het id van
+   * die kamer: zoals een slaapkamer op zolder die de airco in de wasruimte
+   * warm houdt. Dan heeft deze kamer geen eigen regelzone; een thermometer
+   * die hier gekozen is, telt mee in het gemiddelde van die regeling.
+   */
+  readonly meedoenMet?: string;
   /** Het gebied in Home Assistant waar deze kamer uit kwam; daar komen nieuwe apparaten vandaan. */
   readonly haGebied: string | null;
 }
@@ -196,6 +203,32 @@ function name(v: unknown, max: number): string | null {
  * Toetst een indeling en geeft alleen de bekende velden terug, of een reden.
  * Zuiver, zodat de tests elke regel los kunnen raken.
  */
+/**
+ * Het herstel (besluit 142). "Geregeld als" verhuisde eerst de regeling van
+ * een kamer naar een andere, in plaats van ze te delen. De kamer met de
+ * apparaten kreeg toen een nieuwe zone (`zolder-2`), en de andere hield een
+ * zone vast die niet meer bestond. Zo'n kamer doet voortaan mee met de kamer
+ * die zijn zone kreeg, en die krijgt de oude zone terug, met het comfort dat
+ * erbij hoorde. `weg` zegt welke kamer welke verdwenen zone had; zonder is
+ * het elke kamer zonder eigen apparaten die zo'n zone vasthoudt.
+ */
+export function herstelMeedoen(kamers: readonly LayoutRoom[], weg?: ReadonlyMap<string, string>): LayoutRoom[] {
+  const uit = [...kamers];
+  const kandidaten = weg ?? new Map(kamers.filter((k) => k.regelzone != null && k.meedoenMet == null && !doetMee(k.rollen)).map((k) => [k.id, k.regelzone!] as const));
+  for (const [kid, oud] of kandidaten) {
+    const i = uit.findIndex((x) => x.id === kid);
+    const kamer = uit[i];
+    if (!kamer || kamer.meedoenMet != null) continue;
+    const afgeleid = (z: string | null) => z != null && z.startsWith(`${oud}-`) && /^\d+$/.test(z.slice(oud.length + 1));
+    const j = uit.findIndex((x) => x.id !== kid && afgeleid(x.regelzone) && doetMee(x.rollen));
+    if (j < 0 || uit.some((x, n) => n !== i && x.regelzone === oud)) continue;
+    const eigenaar = uit[j]!;
+    uit[j] = { ...eigenaar, regelzone: oud };
+    uit[i] = { ...kamer, regelzone: null, meedoenMet: eigenaar.id };
+  }
+  return uit;
+}
+
 export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; layout: Layout } | { ok: false; reden: string } {
   if (typeof body !== 'object' || body == null || Array.isArray(body)) return { ok: false, reden: 'verwacht een object' };
   const b = body as Record<string, unknown>;
@@ -230,6 +263,8 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
   const kamers: LayoutRoom[] = [];
   const roomIds = new Set<string>();
   const regelzones = new Set<string>();
+  /** Kamers met een zone die er niet meer is, met die zone (besluit 142). */
+  const weg = new Map<string, string>();
   for (const [i, r] of kamersIn.entries()) {
     if (typeof r !== 'object' || r == null || Array.isArray(r)) return { ok: false, reden: `kamer ${i} is geen object` };
     const k = r as Record<string, unknown>;
@@ -259,13 +294,24 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       if (!c.ok) return { ok: false, reden: c.reden };
       rollen = c.rollen;
     }
-    const rz = k['regelzone'] ?? null;
+    let rz = k['regelzone'] ?? null;
     if (rz !== null) {
+      if (typeof rz !== 'string' || !ID.test(rz)) return { ok: false, reden: `kamer ${id} regelt een onbekende zone` };
       // Een kamer met rollen mag een eigen zone hebben, ook als de configuratie hem (nog) niet kent.
-      if (typeof rz !== 'string' || !(known.zoneIds.has(rz) || (rollen && ID.test(rz)))) return { ok: false, reden: `kamer ${id} regelt een onbekende zone` };
-      if (regelzones.has(rz)) return { ok: false, reden: `zone ${rz} hoort al bij een andere kamer` };
-      regelzones.add(rz);
+      if (!(known.zoneIds.has(rz) || rollen !== undefined)) {
+        // Een zone die er niet meer is (besluit 142): niet weigeren, want dan kan
+        // de bewoner niets meer bewaren; hieronder komt het goed.
+        weg.set(id, rz);
+        rz = null;
+      } else {
+        if (regelzones.has(rz)) return { ok: false, reden: `zone ${rz} hoort al bij een andere kamer` };
+        regelzones.add(rz);
+      }
     }
+    // Meedoen met een andere kamer (besluit 142); wie dat is, staat hieronder vast als alle kamers er zijn.
+    const md = k['meedoenMet'];
+    if (md !== undefined && md !== null && (typeof md !== 'string' || !ID.test(md) || md === id)) return { ok: false, reden: `kamer ${id} doet mee met een onbekende kamer` };
+    const meedoenMet = typeof md === 'string' && etage !== OUTSIDE_FLOOR ? md : undefined;
     const ha = k['haGebied'] ?? null;
     if (ha !== null && (typeof ha !== 'string' || ha.length > 80)) return { ok: false, reden: `kamer ${id} heeft een ongeldig gebied` };
     // Wat een buitenruimte is (besluit 109); op een andere etage valt het weg.
@@ -301,8 +347,19 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       bronnen = c.bronnen.map((b) => (b.apparaat && !known.deviceIds.has(b.apparaat) ? (({ apparaat: _a, opZon: _z, ...rest }) => rest)(b) : b));
       if (bronnen.length === 0) bronnen = undefined;
     }
-    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}), ...(bronnen ? { bronnen } : {}), ...(rollen ? { rollen } : {}) });
+    kamers.push({ id, naam, etage, zones, regelzone: meedoenMet ? null : (rz as string | null), haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}), ...(bronnen ? { bronnen } : {}), ...(rollen ? { rollen } : {}), ...(meedoenMet ? { meedoenMet } : {}) });
+    if (meedoenMet && rz) regelzones.delete(rz);
   }
+  // Wie meedoet, doet mee met een kamer die er is en zelf niet meedoet met een ander.
+  for (const k of kamers) {
+    if (k.meedoenMet == null) continue;
+    const doel = kamers.find((x) => x.id === k.meedoenMet);
+    if (!doel || doel.meedoenMet != null || doel.etage === OUTSIDE_FLOOR) return { ok: false, reden: `kamer ${k.id} doet mee met een kamer die zelf geen regeling heeft` };
+  }
+  // Het herstel van "Geregeld als" (besluit 142).
+  for (const [i, k] of herstelMeedoen(kamers, weg).entries()) kamers[i] = k;
+  regelzones.clear();
+  for (const k of kamers) if (k.regelzone != null) regelzones.add(k.regelzone);
   // Een kamer die voor het eerst meedoet, krijgt een eigen zone, met haar eigen id als dat vrij is.
   for (const [i, k] of kamers.entries()) {
     if (k.regelzone != null || !doetMee(k.rollen)) continue;

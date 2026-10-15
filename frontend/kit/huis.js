@@ -295,7 +295,8 @@
       const voet = mid[1] + boog * 0.12;
       const ry = boog * 0.74;
       const sx = mid[0] - boog * Math.cos(Math.PI * f);
-      const sy = voet - ry * Math.sin(Math.PI * f);
+      // Nooit boven de tekening uit: daar staat op een pagina de tekst (opgelost 15 oktober).
+      const sy = Math.max(k * 0.3, voet - ry * Math.sin(Math.PI * f));
       lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
       const r = k * 0.22;
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r * 3.2}" fill="url(#${id}-zon)" opacity="${(0.22 + 0.3 * (1 - (model.wolken ?? 0))).toFixed(2)}"/>`);
@@ -308,7 +309,7 @@
         lucht.push(`<circle cx="${(rnd() * breed).toFixed(0)}" cy="${(rnd() * hoog * 0.5).toFixed(0)}" r="${(0.5 + rnd() * 1.1).toFixed(1)}" fill="#fff" opacity="${(0.25 + rnd() * 0.5).toFixed(2)}"/>`);
       }
       const mx = mid[0] + boog * 0.5;
-      const my = mid[1] - boog * 0.55;
+      const my = Math.max(k * 0.5, mid[1] - boog * 0.55);
       lucht.push(`<circle cx="${mx}" cy="${my}" r="${k * 0.42}" fill="#E8EEF8" opacity="0.08"/><circle cx="${mx}" cy="${my}" r="${k * 0.2}" fill="#E9EEF6"/><circle cx="${mx + k * 0.08}" cy="${my - k * 0.05}" r="${k * 0.18}" fill="#101a2b"/>`);
     }
     if (model.wolken) {

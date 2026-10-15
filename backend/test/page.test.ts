@@ -500,7 +500,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/meters.html`);
     await p.waitForURL(/energie\.html#meters/);
     const wand = p.locator('#wand');
-    await wand.locator('.deelvraag', { hasText: 'Je Energie-dashboard heeft' }).waitFor();
+    await wand.locator('.deelvraag', { hasText: 'In je Energie-dashboard staan' }).waitFor();
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     await wand.locator('[data-overnemen]').click();
     await wand.locator('.meterchips button', { hasText: 'SolarEdge opgewekt' }).waitFor();
@@ -1369,7 +1369,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-stop]').click();
     await p.locator('#wand [data-eerder]', { hasText: 'Wat doe je nu?' }).waitFor();
     // Geen ruwe codes bij de feiten.
-    expect(await p.locator('#wand .feiten').textContent().catch(() => '')).not.toMatch(/[a-z][A-Z]|_/);
+    expect(((await p.locator('#wand .feiten').textContent().catch(() => '')) ?? '').replace(/kWh|kW/g, '')).not.toMatch(/[a-z][A-Z]|_/);
     await shot('as-verder');
     await p.locator('#wand [data-nee]').click();
     await p.locator('#wand [data-zegt]', { hasText: 'Ik ben er als je me nodig hebt' }).waitFor();

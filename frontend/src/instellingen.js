@@ -105,16 +105,16 @@ function feitenVan(id) {
       const weer = (d.functies?.gevonden?.weerbronnen ?? []).find((b) => b.id === f?.weer?.bron)?.naam ?? (f?.weer?.bron ? f.weer.bron : 'geen');
       return [
         ['Licht en screens', f ? (f.licht?.bedienen === false ? 'alleen kijken' : 'bedienen in de app') : '…'],
-        ['Deurbel', f ? (f.deurbel?.aan ? `beeld ${f.deurbel.seconden} tellen` : 'uit') : '…'],
+        ['Deurbel', f ? (f.deurbel?.aan ? `beeld ${f.deurbel.seconden >= 60 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit') : '…'],
         ['Weer', f ? weer.replace(' (via internet)', '') : '…'],
       ];
     }
     case 'toegang': {
       const s = d.sessie;
-      const ingelogd = !s ? '…' : s.toegang !== 'sessions' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'niet ingelogd';
+      const ingelogd = !s ? '…' : s.toegang !== 'sessions' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'nog niet';
       const dagen = d.export?.bestanden != null ? `${d.export.bestanden} dagen` : '…';
       return [
-        ['Ingelogd', ingelogd],
+        ['Inloggen', ingelogd],
         ['Je gegevens', dagen],
         ['Versie', d.health?.versie?.nummer ?? '…'],
       ];

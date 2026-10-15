@@ -39,7 +39,8 @@ import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type Y
 import { partsIn, zonedMidnight } from './today.js';
 import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, LANGS, parseQuestion } from './assistant.js';
-import type { Lang, Question } from './assistant.js';
+import type { AskContext, Lang, Question } from './assistant.js';
+import { uitspraak } from './uitspraak.js';
 import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
@@ -841,27 +842,33 @@ export class WebServer {
         const r = sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone));
         zoninval = { boven: r.zon.boven, gevels: r.gevels.filter((g) => g.inDeZon).map((g) => g.naam) };
       }
-      // De weersverwachting bij de zon en straks (besluit 141); uit dezelfde bron als Vandaag.
+      // De weersverwachting bij de zon, straks en morgen (besluit 141, 142); uit dezelfde bron als Vandaag.
       let weer = null;
-      if (parsed.question.kind === 'zon' || parsed.question.kind === 'straks') {
+      const kind = parsed.question.kind;
+      if (kind === 'zon' || kind === 'straks' || kind === 'morgen') {
         const w = await this.weatherNow().catch(() => null);
-        if (w && 'vandaag' in w) weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh };
+        if (w && 'vandaag' in w) {
+          const m = w.dagen[0];
+          const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
+          weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, morgen };
+        }
       }
-      sendJson(
-        res,
-        200,
-        ask(parsed.question, {
-          weer,
-          zoninval,
-          config,
-          snapshot: this.#options.latest(),
-          today,
-          nowMs: Date.now(),
-          // Tot stap B schrijft de dienst niets (besluit 15): hij is altijd schaduw.
-          shadow: true,
-          lang: parsed.lang,
-        }),
-      );
+      // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.
+      const kosten = kind === 'kosten' ? await this.#kostenDezeMaand(config).catch(() => null) : null;
+      const antwoord = ask(parsed.question, {
+        weer,
+        kosten,
+        zoninval,
+        config,
+        snapshot: this.#options.latest(),
+        today,
+        nowMs: Date.now(),
+        // Tot stap B schrijft de dienst niets (besluit 15): hij is altijd schaduw.
+        shadow: true,
+        lang: parsed.lang,
+      });
+      // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
+      sendJson(res, 200, { ...antwoord, gesproken: uitspraak(antwoord.antwoord) });
       return;
     }
 
@@ -1279,6 +1286,23 @@ export class WebServer {
       .finally(() => this.#yieldBusy.delete(key));
     this.#yieldBusy.set(key, job);
     return job;
+  }
+
+  /** Wat de apparaten met een eigen meter deze maand kostten, voor de assistent (besluit 142). */
+  async #kostenDezeMaand(config: SiteConfig): Promise<NonNullable<AskContext['kosten']> | null> {
+    const settings = this.#options.energy?.store.current;
+    if (settings == null) return null;
+    const now = Date.now();
+    const p = partsIn(now, config.timezone);
+    const datum = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+    const range = periodRange('maand', datum, config.timezone, yearStartOf(settings.prijzen.contractStart));
+    if (range == null) return null;
+    const key = `maand:${range.startMs}`;
+    const hit = this.#yieldCache.get(key);
+    const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now);
+    if (report == null) return null;
+    const maand = report.periode.label.split(' ')[0]!.toLowerCase();
+    return { maand, apparaten: report.apparaten.filter((a) => !a.rest).map((a) => ({ id: a.id, naam: a.naam, kwh: a.kwh, zonKwh: a.zonKwh, euro: a.kosten })) };
   }
 
   /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */

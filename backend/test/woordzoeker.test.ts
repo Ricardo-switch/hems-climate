@@ -91,4 +91,14 @@ describe('woordzoeker', () => {
     expect(begrijp('Wat heb je vandaag gedaan?', exampleSite, 'nl')).toEqual({ soort: 'huis', vraag: { kind: 'vandaag' } });
     expect(begrijp('Hoe warm is het overal?', exampleSite, 'nl')).toEqual({ soort: 'huis', vraag: { kind: 'warm' } });
   });
+
+  it('herkent het weer van morgen en wat iets kost (besluit 142)', () => {
+    // "Morgen" ging eerst naar wat het huis straks doet (opgelost 15 oktober).
+    expect(huis('Gaat het morgen regenen?')).toEqual({ kind: 'morgen' });
+    expect(huis('Hoe wordt het weer morgen')).toEqual({ kind: 'morgen' });
+    expect(huis('Wat ga je straks doen')).toEqual({ kind: 'straks' });
+    expect(huis('Wat kost de airco?')).toEqual({ kind: 'kosten' });
+    expect(huis('Hoeveel geld kostte de airco deze maand')).toEqual({ kind: 'kosten' });
+    expect(app('Waar komt het weer vandaan?')).toBe('functies.html');
+  });
 });

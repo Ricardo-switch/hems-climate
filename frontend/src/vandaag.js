@@ -137,7 +137,49 @@ function momentVan(b) {
   const reden = (b.waarom[0] ?? '').split(': ').slice(1).join(': ');
   const kop = actie ? `${naam} ${DOET[actie] ?? actie}` : hoofd(b.wat[0] ?? 'Een besluit');
   const zin = [reden ? `${hoofd(reden)}.` : '', doel && actie !== 'uit' ? `Doel ${doel}.` : ''].filter(Boolean).join(' ');
-  return { tMs: b.tMs, kop, zin, kleur: KLEUR[actie] ?? 'var(--zacht)', actuatorId: b.redenen?.[0]?.actuatorId ?? null };
+  return { tMs: b.tMs, kop, zin, kleur: KLEUR[actie] ?? 'var(--zacht)', actuatorId: b.redenen?.[0]?.actuatorId ?? null, naam, actie };
+}
+
+/** Zo heet een reeks in de verleden tijd. */
+const DEED = { koelen: 'koelde', verwarmen: 'verwarmde', drogen: 'droogde', ventileren: 'ventileerde' };
+
+/**
+ * Een apparaat dat met de zon mee aan en uit gaat, geeft veel losse momenten
+ * ("ging verwarmen", "wacht even", "ging verwarmen"). Momenten van hetzelfde
+ * apparaat die binnen een half uur op elkaar volgen, worden één regel; tik
+ * erop voor de losse momenten (rapport 15 oktober).
+ */
+function groepeer(lijst) {
+  const uit = [];
+  const open = new Map();
+  for (const m of lijst) {
+    const g = m.actuatorId && m.actie ? open.get(m.actuatorId) : null;
+    if (g && m.tMs - g.leden.at(-1).tMs <= 30 * 60_000) {
+      g.leden.push(m);
+      continue;
+    }
+    if (m.actuatorId && m.actie) {
+      const nieuw = { ...m, leden: [m] };
+      open.set(m.actuatorId, nieuw);
+      uit.push(nieuw);
+    } else uit.push(m);
+  }
+  return uit.map((g) => {
+    if (!g.leden || g.leden.length < 3) return g.leden ? g.leden : [g];
+    const werk = g.leden.map((x) => x.actie).find((a) => DEED[a]);
+    const starts = g.leden.filter((x) => DEED[x.actie]).length;
+    if (!werk || starts < 2) return g.leden;
+    const wachtte = g.leden.some((x) => x.actie === 'geparkeerd');
+    const eind = g.leden.at(-1);
+    return [{
+      tMs: g.tMs,
+      kop: `${g.naam} ${DEED[werk]} met de zon mee`,
+      zin: `${klokVan(g.tMs)} tot ${klokVan(eind.tMs)}: ${starts} keer gestart${wachtte ? ', en tussendoor gewacht op meer zon' : ''}.`,
+      kleur: KLEUR[werk] ?? 'var(--zacht)',
+      actuatorId: g.actuatorId,
+      leden: g.leden,
+    }];
+  }).flat();
 }
 
 /** Alle momenten van de dag, op tijd: de besluiten, en wanneer een uitstelbaar apparaat begon en klaar was. */
@@ -150,7 +192,7 @@ function momenten(r) {
       if (r.totMs - s.totMs > 5 * 60_000) lijst.push({ tMs: s.totMs, kop: `${naam} is klaar`, zin: `Het programma liep ${duur(s.totMs - s.vanMs)}.`, kleur: 'var(--mint)', actuatorId: u.id });
     }
   }
-  return lijst.sort((a, b) => a.tMs - b.tMs);
+  return groepeer(lijst.sort((a, b) => a.tMs - b.tMs));
 }
 
 const duur = (ms) => {
@@ -356,20 +398,29 @@ function tekenKaarten(r, verwacht, lijst) {
   }
 
   const rechts = document.querySelector('[data-verwacht]');
-  const plan = 'Een plan per kamer komt met het thermisch model: hoe snel elke kamer opwarmt en afkoelt.';
+  const m = weer?.dagen?.[0];
+  // Wat er morgen van je dak komt, in één zin; voor de avond en voor Morgen.
+  const morgenZin = m?.verwachtKwh != null ? `Morgen verwacht: ${nl(m.verwachtKwh)} kWh${m.tekst ? `, ${m.tekst.toLowerCase()}` : ''}.` : '';
   if (dag === 'vandaag') {
     const v = verwacht[0];
     const rest = weer?.vandaag?.verwachtKwh != null && weer?.vandaag?.opgewektKwh != null ? Math.max(0, weer.vandaag.verwachtKwh - weer.vandaag.opgewektKwh) : null;
+    const onder = zon?.zon?.boven === false;
     rechts.innerHTML = v
-      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">${v.vanMs ? `${klokVan(v.vanMs)}, verwacht` : 'Straks'}</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(v.kop)}</h2><p class="klein" style="margin: 8px 0 0">${esc(v.zin)}</p><p class="mini" style="margin-top: auto; padding-top: 10px">${plan}</p>`
-      : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">De rest van vandaag</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${rest != null && rest > 0.05 ? `Nog ${nl(rest)} kWh zon verwacht` : 'Er komt vandaag weinig zon meer'}</h2><p class="klein" style="margin: 8px 0 0">Niets wacht nu op zon.</p><p class="mini" style="margin-top: auto; padding-top: 10px">${plan}</p>`;
+      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">${v.vanMs ? `${klokVan(v.vanMs)}, verwacht` : 'Straks'}</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(v.kop)}</h2><p class="klein" style="margin: 8px 0 0">${esc(v.zin)}</p>`
+      : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">De rest van vandaag</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${!onder && rest != null && rest > 0.05 ? `Nog ${nl(rest)} kWh zon verwacht` : onder ? 'De zon is onder' : 'Er komt vandaag weinig zon meer'}</h2><p class="klein" style="margin: 8px 0 0">${!onder && rest != null && rest > 0.05 ? 'Niets wacht nu op zon.' : esc(morgenZin || 'Niets wacht nu op zon.')}</p>`;
   } else if (dag === 'gisteren') {
     const k = klopteHtml();
     rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Zo klopte de verwachting</span><span class="mini">${k.dagen ? `${k.dagen} ${k.dagen === 1 ? 'dag' : 'dagen'}` : ''}</span></div>
       ${k.balken}
       <div class="bovenrij" style="margin-top: 8px"><p class="mini" style="margin: 0">${esc(k.zin)}</p>${k.dagen ? LEGENDA : ''}</div>`;
   } else {
-    rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, het plan</span></div><h2 class="kop-2" style="margin-top: 8px">Nog geen plan</h2><p class="klein" style="margin: 8px 0 0">${plan} Tot dan regelt het huis per moment, op de zon die er is.</p>`;
+    // Wanneer de zon er morgen is: de kwartieren boven 60% van het hoogste punt.
+    const kw = m?.kwartieren ?? [];
+    const piek = Math.max(0, ...kw.map((q) => q.verwachtW));
+    const goed = kw.filter((q) => piek > 0 && q.verwachtW >= piek * 0.6);
+    rechts.innerHTML = goed.length && piek >= 200
+      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de meeste zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Tussen ${klokVan(goed[0].tMs)} en ${klokVan(goed.at(-1).tMs + 15 * 60_000)}</h2><p class="klein" style="margin: 8px 0 0">Tot ${nl(piek / 1000)} kW van je dak. Dan is er de meeste ruimte voor apparaten op zon.</p>`
+      : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Weinig zon verwacht</h2><p class="klein" style="margin: 8px 0 0">${esc(morgenZin || 'Er is nog geen verwachting voor morgen.')}</p>`;
   }
 }
 
@@ -421,7 +472,9 @@ function tekenTelefoon(r, verwacht, lijst) {
   if (dag === 'morgen') {
     lijn.innerHTML = '';
   } else {
-    const rij = (m, klasse = '') => `<div class="glas-klein moment ${klasse}" style="--kleur: ${m.kleur}"><span class="tijd">${klokVan(m.tMs)}</span><b>${esc(m.kop)}</b><span class="klein">${esc(m.zin)}</span></div>`;
+    const enkel = (m, klasse = '') => `<div class="glas-klein moment ${klasse}" style="--kleur: ${m.kleur}"><span class="tijd">${klokVan(m.tMs)}</span><b>${esc(m.kop)}</b><span class="klein">${esc(m.zin)}</span></div>`;
+    // Een reeks met de zon mee: dicht één regel, open de losse momenten.
+    const rij = (m, klasse = '') => (m.leden ? `<details class="reeks"><summary>${enkel(m, `${klasse} groep`)}</summary>${m.leden.map((x) => enkel(x, 'lid')).join('')}</details>` : enkel(m, klasse));
     const later = verwacht.filter((v) => v.vanMs != null).map((v) => rij({ tMs: v.vanMs, kop: v.kop, zin: v.zin, kleur: 'var(--violet)' }, 'verwacht'));
     lijn.innerHTML = [
       ...lijst.map((m) => rij(m)),
@@ -431,8 +484,8 @@ function tekenTelefoon(r, verwacht, lijst) {
   }
   document.querySelector('[data-voet]').textContent =
     dag === 'morgen'
-      ? 'Morgen: de verwachte zon uit het weer en wat je panelen leerden. Een plan per kamer komt met het thermisch model.'
-      : 'Gestippeld: wat er verwacht wordt, uit het weer en wat je panelen leerden. Een plan per kamer komt met het thermisch model.';
+      ? 'Morgen: de zon zoals het weer hem verwacht.'
+      : 'Gestippeld: de verwachting, uit het weer.';
 }
 
 /* ------------------------------------------------------------ tekenen */

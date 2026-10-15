@@ -50,9 +50,15 @@ export function withMeasurement(raw: Record<string, unknown>, layout: Pick<Layou
   };
   const toegevoegd: string[] = [];
   const next = zones.map((z) => {
-    const kamer = layout.kamers.find((k) => k.regelzone === z['id'] && (k.meten?.length ?? 0) > 0);
+    const kamer = layout.kamers.find((k) => k.regelzone === z['id']);
     if (!kamer) return z;
-    const points = kamer.meten!.slice(0, MAX_METEN).map((id) => pointFor(entiteit(id)));
+    const eigen = kamer.meten ?? [];
+    // Een kamer die meedoet (besluit 142): wat daar gekozen is, telt mee.
+    const mee = layout.kamers.filter((k) => k.meedoenMet === kamer.id).flatMap((k) => k.meten ?? []);
+    if (eigen.length === 0 && mee.length === 0) return z;
+    const ids = [...new Set([...eigen, ...mee])].slice(0, MAX_METEN);
+    // Zonder eigen keuze blijft de thermometer van de configuratie de eerste.
+    const points = eigen.length ? ids.map((id) => pointFor(entiteit(id))) : [z['temperature'], ...ids.map((id) => pointFor(entiteit(id)))].slice(0, MAX_METEN);
     toegevoegd.push(`${kamer.naam} meet met ${points.length === 1 ? 'één sensor' : `${points.length} sensoren`}`);
     return { ...z, temperature: points[0], temperatures: points };
   });

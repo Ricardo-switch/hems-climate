@@ -26,7 +26,7 @@ import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
-import { roomStatus, type DecisionView, type RoomKind } from './assistant.js';
+import { roomStatus, withArticle, type DecisionView, type RoomKind } from './assistant.js';
 import {
   OUTSIDE_FLOOR,
   carryOver,
@@ -211,6 +211,12 @@ export interface HouseRoom {
   readonly soortGekozen: boolean;
   /** Wat er verwarmt en koelt, zoals de bewoner het vastlegde (besluit 132); leeg als nog niets. */
   readonly bronnen: readonly Warmtebron[];
+  /**
+   * Doet mee met de regeling van een andere kamer (besluit 142): welke kamer,
+   * en zijn regelzone. Dan komen de stand en, zonder eigen meter, de
+   * temperatuur van die regeling. Null als de kamer niet meedoet.
+   */
+  readonly meedoenMet: { readonly kamerId: string; readonly naam: string; readonly zoneId: string | null } | null;
 }
 
 export interface HouseScene {
@@ -1393,7 +1399,10 @@ export function buildHouse(
   const rooms = layout.kamers.map((k): HouseRoom => {
     const devices = perRoom.get(k.id) ?? [];
     devices.sort((a, b) => ORDER[a.soort] - ORDER[b.soort] || Number(b.aan) - Number(a.aan) || a.naam.localeCompare(b.naam, 'nl'));
-    const zone = k.regelzone ? config.zones.find((z) => z.id === k.regelzone) : undefined;
+    // Doet de kamer mee met een andere (besluit 142), dan geldt de regeling van die kamer.
+    const doel = k.meedoenMet ? layout.kamers.find((x) => x.id === k.meedoenMet) : undefined;
+    const zoneId = doel ? doel.regelzone : k.regelzone;
+    const zone = zoneId ? config.zones.find((z) => z.id === zoneId) : undefined;
     const pz = zone ? snapshot?.explanation.perZone.find((z) => z.zoneId === zone.id) : undefined;
     // Zonder regelgebied meet een meter in de kamer, zoals in de hal of op zolder.
     const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null);
@@ -1405,7 +1414,8 @@ export function buildHouse(
       .map((id) => readTemperature(states.get(id), id))
       .filter((v): v is number => v != null);
     const gekozenC = gekozen.length ? Math.round((gekozen.reduce((a, b) => a + b, 0) / gekozen.length) * 10) / 10 : null;
-    const status = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
+    const eigen = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
+    const status = eigen && doel ? { ...eigen, zin: `Doet mee met de regeling van ${withArticle(doel.naam, 'nl')}. ${eigen.zin}` } : eigen;
     // De namen zoals de app ze toont: een sensor heet naar zijn meter, een entiteit van de regeling naar zijn apparaat.
     const naamVan = (entity: string) => {
       const viaApparaat = config.actuators.find((a) => a.ref.id === entity)?.id;
@@ -1427,9 +1437,11 @@ export function buildHouse(
     return {
       id: k.id,
       naam: k.naam,
-      zoneId: zone?.id ?? null,
+      // Wie meedoet, heeft geen eigen regelzone: zo staat elke regeling één keer in de app.
+      zoneId: doel ? null : (zone?.id ?? null),
       zones: k.zones.map((z) => ({ id: z.id, naam: z.naam })),
-      temperatuurC: pz?.temperatureC ?? gekozenC ?? meterTemp?.meting?.temperatuurC ?? null,
+      // Meedoen: een eigen meter wint; anders de temperatuur van de regeling.
+      temperatuurC: doel ? (gekozenC ?? meterTemp?.meting?.temperatuurC ?? pz?.temperatureC ?? null) : (pz?.temperatureC ?? gekozenC ?? meterTemp?.meting?.temperatuurC ?? null),
       vochtPct: pz?.humidityPct ?? devices.find((d) => d.meting?.vochtPct != null)?.meting?.vochtPct ?? null,
       gemetenDoor: pz?.temperatureC == null && gekozenC == null && meterTemp ? meterTemp.naam : null,
       meetMet: [...new Set(meetMet)],
@@ -1442,6 +1454,7 @@ export function buildHouse(
       soort: k.etage === OUTSIDE_FLOOR ? null : (k.soort ?? roomTypeFromNames(k, devices)),
       soortGekozen: k.etage !== OUTSIDE_FLOOR && k.soort != null,
       bronnen: k.bronnen ?? [],
+      meedoenMet: doel ? { kamerId: doel.id, naam: doel.naam, zoneId: zone?.id ?? null } : null,
     };
   });
 

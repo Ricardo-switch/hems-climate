@@ -83,10 +83,6 @@ select.invoer option, select.invoer optgroup { background: #13203a; color: var(-
 .veldnaam { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--gedempt); }
 .vraag .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
 .vraag .mini { margin: 0; }
-.status-regel { display: flex; align-items: center; gap: 10px; }
-.status-regel .knop { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; text-decoration: none; }
-.meldtekst { font-size: 12.5px; color: var(--gedempt); max-width: 36ch; text-align: right; }
-.meldtekst.fout { color: #ffb090; }
 .label-chip { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
 .label-chip.goed { background: rgba(110, 231, 183, 0.15); color: var(--mint); }
 .label-chip.traag { background: rgba(247, 181, 72, 0.15); color: var(--zon); }
@@ -144,17 +140,11 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 .naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
 .melding { display: flex; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 14px; background: rgba(255, 122, 77, 0.08); border: 1px solid rgba(255, 122, 77, 0.3); font-size: 13.5px; color: var(--zacht); }
 .melding .stip { margin-top: 6px; flex: none; }
-.vraagrij { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 6px 18px; align-items: center; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
-.vraagrij:first-of-type { border-top: 0; padding-top: 0; }
-.vraagrij > .label { font-size: 14.5px; font-weight: 600; }
-.vraagrij .uitleg { grid-column: 2; font-size: 12.5px; color: var(--gedempt); margin: 0; }
 .invoer.leeg { border-color: var(--gloed); background: rgba(255, 122, 77, 0.07); }
 #tel .groepkop { display: flex; flex-direction: column; gap: 6px; }
 #tel .delen { flex-direction: row; overflow-x: auto; padding: 6px; gap: 6px; scroll-snap-type: x proximity; }
 #tel .delen h4 { display: none; }
 #tel .deel { flex: none; min-width: 150px; scroll-snap-align: start; }
-#tel .vraagrij { grid-template-columns: 1fr; }
-#tel .vraagrij .uitleg { grid-column: 1; }
 
 /* Hoe voelt het? (besluit 134, schets Wand-Gevoel): op Thuis en bij een kamer. */
 .gevoelblok { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

@@ -104,7 +104,21 @@ describe('het voorstel uit Home Assistant', () => {
     expect(wk.zoneId).toBe('woonkamer');
     expect(wk.temperatuurC).toBe(21.9);
     expect(wk.status?.soort).toBe('ok');
-    expect(wk.status?.zin).toContain('heeft niets nodig');
+    expect(wk.status?.zin).toContain('precies goed');
+  });
+
+  it('laat een kamer die meedoet de stand en temperatuur van die regeling zien (besluit 142)', () => {
+    const eigen = proposeLayout(config, registers, states);
+    const wk = eigen.kamers.find((k) => k.regelzone === 'woonkamer')!;
+    const hal = eigen.kamers.find((k) => k.naam === 'Hal')!;
+    const met = { ...eigen, kamers: eigen.kamers.map((k) => (k.id === hal.id ? { ...k, regelzone: null, meedoenMet: wk.id } : k)) };
+    const h = buildHouse(config, registers, states, snapshot, met);
+    const r = h.etages.flatMap((e) => e.ruimtes).find((x) => x.id === hal.id)!;
+    // Geen eigen regelzone, zodat de regeling één keer in de app staat.
+    expect(r.zoneId).toBeNull();
+    expect(r.meedoenMet).toEqual({ kamerId: wk.id, naam: wk.naam, zoneId: 'woonkamer' });
+    expect(r.status?.zin).toMatch(/^Doet mee met de regeling van .+\. .+ is het 21,9°, precies goed\./);
+    expect(h.etages.flatMap((e) => e.ruimtes).filter((x) => x.zoneId === 'woonkamer')).toHaveLength(1);
   });
 
   it('zegt of een scherm zijn stand terugmeldt (Somfy io) of niet (Somfy RTS, besluit 121)', () => {

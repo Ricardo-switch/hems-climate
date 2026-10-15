@@ -294,7 +294,11 @@ function etageSchuiven(d, id, kamers) {
 }
 
 function kamerBlad(d, k) {
-  const regel = [['', 'Niet geregeld'], ...info.regelzones.map((z) => [z.id, `Geregeld als ${z.naam}`])];
+  // De eigen regeling, een zone die nog geen kamer heeft, of meedoen met een kamer die er een heeft (besluit 142).
+  const vrij = info.regelzones.filter((z) => !d.kamers.some((x) => x.id !== k.id && x.regelzone === z.id));
+  const andere = d.kamers.filter((x) => x.id !== k.id && x.etage !== 'buiten' && !x.meedoenMet && (x.regelzone || Object.values(x.rollen ?? {}).some((r) => r !== 'kijken')));
+  const regel = [['', 'Niet geregeld'], ...vrij.map((z) => [`zone:${z.id}`, z.id === k.regelzone ? 'Eigen regeling' : `Geregeld als ${z.naam}`]), ...andere.map((x) => [`kamer:${x.id}`, `Doet mee met ${x.naam}`])];
+  const regelNu = k.meedoenMet ? `kamer:${k.meedoenMet}` : k.regelzone ? `zone:${k.regelzone}` : '';
   const etages = info.etages.map((e) => [e.id, etageNaam(d, e.id)]);
   const zoneNaam = (z) => k.zones.find((x) => x.id === z)?.naam;
   const apps = apparatenIn(k.id);
@@ -308,7 +312,7 @@ function kamerBlad(d, k) {
     ${buitenKeuze(k)}
     ${soortKeuze(k)}
     ${metenKeuze(k)}
-    ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, k.regelzone ?? '')}</select></div>`}
+    ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, regelNu)}</select></div>`}
     <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips">${k.zones.map((z) => `<button type="button" class="chip" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">${esc(z.naam)}<span class="weg" aria-hidden="true">×</span></button>`).join('')}<input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>
     <div>
       <span class="label">${apps.length ? 'Apparaten, sleep om te verplaatsen' : 'Apparaten'}</span>
@@ -428,7 +432,11 @@ function warmteBlad(d, k) {
   }
   const leeg = !kaarten.length ? '<p class="klein" style="margin: 0">Nog niets. Hangt er een radiator, vloerverwarming, een paneel of een airco? Voeg het toe; met de hand is ook goed.</p>' : '';
   const doetMee = Object.values(rollenNu(k)).some((x) => x !== 'kijken');
-  const nietMee = kaarten.length && !doetMee ? '<div class="uitleg"><b>Deze kamer doet nog niet mee in de regeling.</b>Kies bij een apparaat Houdt op temperatuur of Helpt op zon.</div>' : '';
+  // Meedoen met een andere kamer (besluit 142): dat zegt de kaart, in plaats van "doet nog niet mee".
+  const met = k.meedoenMet ? concept()?.kamers.find((x) => x.id === k.meedoenMet) : null;
+  const nietMee = met
+    ? `<div class="uitleg"><b>Doet mee met ${esc(met.naam)}.</b>De regeling daar houdt deze kamer mee op temperatuur. Een thermometer hier telt mee.</div>`
+    : kaarten.length && !doetMee ? '<div class="uitleg"><b>Deze kamer doet nog niet mee in de regeling.</b>Kies bij een apparaat Houdt op temperatuur of Helpt op zon, of laat hem meedoen met een andere kamer.</div>' : '';
   return `${kop}${meetRij}${kaarten.join('')}${leeg}${nietMee}
     <button type="button" class="plus" data-bron-nieuw="">+ Iets toevoegen</button>
     <p class="mini" style="margin: 0">Het huis rekent elektrische warmte mee voor je zekering, en ziet zo waarom een kamer opwarmt.</p>`;
@@ -857,10 +865,16 @@ document.addEventListener('change', async (e) => {
     k.naam = v;
     await bewaar(next, 'Naam bewaard.');
   } else if (t.dataset.actie === 'regeling' && k) {
-    // Elk regelgebied hoort bij hooguit één kamer.
-    for (const x of next.kamers) if (v && x.regelzone === v) x.regelzone = null;
-    k.regelzone = v || null;
-    await bewaar(next, 'Regeling bewaard.');
+    // Een eigen regeling, of meedoen met die van een andere kamer (besluit 142). Eerst
+    // verhuisde "Geregeld als" de regeling van een andere kamer; nu deel je hem.
+    const [soort, wie] = v.split(':');
+    delete k.meedoenMet;
+    k.regelzone = soort === 'zone' ? wie : null;
+    if (soort === 'kamer') k.meedoenMet = wie;
+    // Wie met deze kamer meedeed, en hij heeft geen regeling meer: niet meer meedoen.
+    if (soort !== 'zone') for (const x of next.kamers) if (x.meedoenMet === k.id) delete x.meedoenMet;
+    const doel = next.kamers.find((x) => x.id === wie);
+    await bewaar(next, soort === 'kamer' && doel ? `${k.naam} doet mee met ${doel.naam}.` : 'Regeling bewaard.');
   } else if (t.dataset.actie === 'meten-erbij' && k && v) {
     // Een sensor uit een andere kamer erbij (besluit 123).
     k.meten = [...new Set([...(k.meten ?? []), v])].slice(0, 6);

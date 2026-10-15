@@ -244,7 +244,7 @@ function tekenVandaag() {
   const verwacht = weer?.vandaag?.verwachtKwh;
   zet('[data-opgewekt]', vooraf != null ? `${nl(kwh)} kWh, verwacht ${nl(vooraf)}` : verwacht != null && verwacht > kwh + 0.05 ? `${nl(kwh)} kWh, verwacht ${nl(verwacht)}` : `${nl(kwh)} kWh opgewekt`);
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
-  const uitleg = `De stippellijn is de ${lijn2.naam}${lijn2.naam === 'verwachting' ? ' van vandaag, uit het weer en wat je panelen leerden' : ''}.`;
+  const uitleg = `Gestippeld: de ${lijn2.naam}.`;
   zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. ${uitleg}` : uitleg);
 }
 

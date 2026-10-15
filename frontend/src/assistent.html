@@ -86,8 +86,6 @@
   .stemknop[aria-pressed='true'] svg { color: var(--mint); }
   .stemknop[aria-pressed='false'] svg { opacity: 0.5; }
   .stop { height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
-  .mic { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.06); border: 0; color: var(--gedempt); flex: none; cursor: not-allowed; }
-  .mic svg { width: 24px; height: 24px; }
   .eerder { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--gedempt); }
   .eerder button { border: 0; background: none; color: var(--zacht); font: inherit; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
   [hidden] { display: none !important; }
@@ -137,7 +135,6 @@
         <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ een vraag"></form>
         <button type="button" class="stemknop" data-voorlezen aria-pressed="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Voorlezen aan</span></button>
         <button type="button" class="stop" data-stop hidden>Stop</button>
-        <button type="button" class="mic" aria-disabled="true" title="Praten komt met Hé huis" aria-label="Praten komt met Hé huis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
       </div>
     </main>
   </div>

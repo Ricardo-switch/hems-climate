@@ -10,6 +10,8 @@
  * gemaakt wordt.
  */
 
+import { uitspraak } from './uitspraak.js';
+
 export interface StemOpties {
   /** De http-basis van Home Assistant, zoals voor de camera's. */
   readonly base: string;
@@ -60,7 +62,8 @@ export class Stem {
   }
 
   async zeg(tekst: string): Promise<Geluid> {
-    const zin = tekst.replace(/\s+/g, ' ').trim().slice(0, MAX_ZEG);
+    // Zoals hij klinkt (besluit 142): eenheden voluit, tijden in woorden.
+    const zin = uitspraak(tekst).slice(0, MAX_ZEG);
     if (zin === '') throw new Error('niets te zeggen');
     const stem = this.naam;
     if (stem == null) throw new Error('geen lokale stem in Home Assistant');

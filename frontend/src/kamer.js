@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const { $$, nl, esc, klokVan, haal, deur } = app;
+const { $$, nl, esc, klokVan, wanneer, haal, deur } = app;
 
 let state = null;
 let huisData = null;
@@ -125,14 +125,6 @@ const soortVan = (d) => (d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco'
 const icoon = (d) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[soortVan(d)] ?? ICOON.thermostaat}</svg>`;
 
 const graden = (c) => (c == null ? '' : `${nl(c)}°`);
-/** Wanneer iets was: de klok vandaag, anders "gisteren" of de datum. */
-function wanneer(ms) {
-  const d = new Date(ms);
-  const vandaag = new Date();
-  if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
-  const gisteren = new Date(vandaag.getTime() - 86_400_000);
-  return d.toDateString() === gisteren.toDateString() ? `gisteren ${klokVan(ms)}` : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
-}
 function meting(m) {
   if (!m) return '';
   return [m.temperatuurC == null ? null : graden(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}%`].filter(Boolean).join(', ');
@@ -163,7 +155,11 @@ function tekenNu() {
   const { etage, kamer, apparaat } = plek;
 
   $$('[data-pad]').forEach((el) => (el.innerHTML = `<a href="thuis.html">Huis</a><span aria-hidden="true">›</span><a href="#" data-etage="${esc(etage.id)}">${esc(etage.naam)}</a><span aria-hidden="true">›</span><b>${esc(kamer.naam)}</b>`));
-  $$('[data-temp]').forEach((el) => (el.textContent = graden(kamer.temperatuurC)));
+  $$('[data-temp]').forEach((el) => {
+    el.textContent = graden(kamer.temperatuurC);
+    // Zonder thermometer geen lege plek voor de naam (opgelost 15 oktober).
+    el.hidden = kamer.temperatuurC == null;
+  });
   $$('[data-naam]').forEach((el) => (el.textContent = kamer.naam));
   $$('[data-zin]').forEach((el) => (el.textContent = kamer.status?.zin ?? (kamer.lampenAan ? `${kamer.lampenAan === 1 ? 'Eén lamp' : `${kamer.lampenAan} lampen`} aan.` : '')));
   document.title = `${kamer.naam} · Smart Climate`;
@@ -286,7 +282,8 @@ function kamerBlad(k) {
     meters.length || sensoren.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Sensoren</h3>${meters.map(meterRij).join('')}${sensoren.map(battRij).join('')}</div>` : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     // Hoe voelt het hier (besluit 134): dezelfde knoppen als op Thuis.
-    k.zoneId ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Hoe voelt het hier?</h3><div class="gevoelblok">${gevoel.html({ zoneId: k.zoneId, state, kort: true })}</div></div>` : '',
+    // Ook in een kamer die meedoet (besluit 142): het gevoel telt voor die regeling.
+    (k.zoneId ?? k.meedoenMet?.zoneId) ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Hoe voelt het hier?</h3><div class="gevoelblok">${gevoel.html({ zoneId: k.zoneId ?? k.meedoenMet.zoneId, state, kort: true })}</div></div>` : '',
     // Geen meters (besluit 129): welke sensoren meten kies je bij Indeling, en het gemiddelde staat bovenaan.
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
   ];

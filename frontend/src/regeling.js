@@ -62,9 +62,14 @@ function klimaatVorm() {
   const van = terugblik?.dataset?.vanMs ?? terugblik?.vanMs;
   const sinds = van ? new Date(van).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
   const rijen = huisData
-    ? kamersMee().map((r) => `<a class="regelrij kamerrij" href="${naarKamer(r)}"><div class="l"><b>${esc(r.naam)}</b><span>${esc(actiefIn(r).map((a) => `${a.naam} ${ROL_ZIN[a.klimaat.rol]}`).join(', '))}</span></div><span class="pijl" aria-hidden="true">›</span></a>`).join('')
+    ? kamersMee().map((r) => {
+        // Kamers die meedoen met deze (besluit 142), erbij genoemd.
+        const mee = binnenKamers().filter((x) => x.meedoenMet?.kamerId === r.id).map((x) => x.naam);
+        const wat = actiefIn(r).map((a) => `${a.naam} ${ROL_ZIN[a.klimaat.rol]}`).join(', ');
+        return `<a class="regelrij kamerrij" href="${naarKamer(r)}"><div class="l"><b>${esc([r.naam, ...mee].join(' en '))}</b><span>${esc(wat)}</span></div><span class="pijl" aria-hidden="true">›</span></a>`;
+      }).join('')
     : '';
-  const nietMee = binnenKamers().filter((r) => !actiefIn(r).length);
+  const nietMee = binnenKamers().filter((r) => !actiefIn(r).length && !r.meedoenMet);
   const rest = nietMee.length
     ? `<p class="klein" style="margin: 0">Doen nog niet mee: ${nietMee.map((r) => `<a href="${naarKamer(r)}">${esc(r.naam)}</a>`).join(', ')}. Kies bij de kamer wat er regelt.</p>`
     : '';

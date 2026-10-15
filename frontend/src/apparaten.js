@@ -176,7 +176,7 @@ function klimaatKaart({ a, r }) {
   const stand = bew?.soort === 'wait' ? ['Wacht op zon', 'var(--zon)'] : doet ? [huismodel.metHoofdletter(actie), /koelt/.test(actie) ? 'var(--ijs)' : 'var(--gloed)'] : [huismodel.metHoofdletter(a.stand ?? 'Onbekend'), 'var(--mint)'];
   const zin = bew?.tekst
     ? `${huismodel.metHoofdletter(bew.tekst)}.${wacht ? ` Begint vanzelf bij ${nl(wacht.intent.budgetW / 1000)} kW.` : ''}`
-    : a.klimaat?.doelC != null ? `Doel ${nl(a.klimaat.doelC)}°.` : '';
+    : a.klimaat?.doelC != null && !/doel/i.test(a.stand ?? '') ? `Doel ${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°.` : '';
   const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>kW nu</span>` : '–<span>geen meter</span>';
   // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.
   const meter = (opbrengst?.apparaten ?? []).find((m) => m.id === a.klimaat?.energieMeter);
@@ -216,8 +216,8 @@ function toevoegen() {
   el.className = 'glas app niet';
   el.href = 'regeling.html#opzon';
   el.innerHTML = `
-    <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>Apparaat toevoegen</b><span class="klein">Airco, thermostaat, wasmachine</span></div></div>
-    <p class="mini zin">Een airco of thermostaat zet je bij de kamer, bij Indeling. Iets dat op zon kan wachten, kies je bij Regeling.</p>`;
+    <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>Apparaat toevoegen</b><span class="klein">Airco, thermostaat of wasmachine</span></div></div>
+    <p class="mini zin">Via Indeling of Regeling, bij Instellingen.</p>`;
   return el;
 }
 

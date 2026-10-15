@@ -148,6 +148,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [137. Verwacht naast echt: of de zonverwachting klopte](#137-verwacht-naast-echt-of-de-zonverwachting-klopte)
 - [140. Vandaag is de tijd, Apparaten is het nu](#140-vandaag-is-de-tijd-apparaten-is-het-nu)
 - [141. De assistent als gesprek, met een stem](#141-de-assistent-als-gesprek-met-een-stem)
+- [142. Een kwaliteitsronde: een kamer doet mee met een andere, en de assistent klinkt als een mens](#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens)
 
 **Veiligheid**
 
@@ -5982,7 +5983,8 @@ gegevens. Dit is het begin; "Hé huis" komt later.
   terug te halen.
 - **Luisteren** ("Hé huis") komt pas met Whisper en een wekwoord in Home
   Assistant. De luisterfunctie van de browser stuurt je stem naar buiten;
-  die gebruikt de app niet. De microfoon staat er, maar doet nog niets.
+  die gebruikt de app niet. De microfoon staat er pas als hij iets doet
+  (besluit 142).
 - **Versie 0.20.0.**
 - **Beweging (versie 0.20.1):** een bewegingsmelder hoort bij de meter van
   hetzelfde apparaat. De kamer toont onder Sensoren wat hij meet, zijn
@@ -5995,6 +5997,74 @@ gegevens. Dit is het begin; "Hé huis" komt later.
   Piper heeft (`tts/engine/list` en `tts/engine/voices`, twee leesvragen op de
   vaste lijst) en geeft Nederlands en een Nederlandse stem mee. Heeft Piper
   geen Nederlands, dan spreekt het apparaat zelf, en anders alleen tekst.
+
+## 142. Een kwaliteitsronde: een kamer doet mee met een andere, en de assistent klinkt als een mens
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 15 oktober 2026 vroeg de bewoner om een grondige controle van de hele app:
+dode en dubbele code, teksten die als een machine klinken, elk scherm op de
+wand en de telefoon, en hoe goed de voorspellingen zijn. Het rapport staat als
+pagina bij de bewoner. Vijf punten had hij zelf al gevonden; die zitten erin.
+
+*Besluit:*
+
+- **Meedoen met een andere kamer.** "Geregeld als" bij een kamer verhuisde de
+  regeling van een andere kamer, in plaats van ze te delen. Zo nam de
+  slaapkamer op zolder de zone van de wasruimte over; de wasruimte kreeg een
+  nieuwe zone (`zolder-2`) met het standaardcomfort (20 tot 24° in plaats van
+  18 tot 22,5°), de lijn op Vandaag stopte, en de dienst weigerde daarna elke
+  wijziging in de indeling, want de slaapkamer wees naar een zone die er niet
+  meer was. Nu kiest een kamer "Doet mee met …" (`meedoenMet` in de
+  indeling): de regeling van die kamer houdt hem mee op temperatuur, een
+  thermometer in de kamer telt mee in het gemiddelde, en de kamer toont de
+  stand en de temperatuur van die regeling. Een zone die er niet meer is, valt
+  los in plaats van alles te blokkeren. Het herstel draait de oude schade
+  terug: de kamer met de apparaten krijgt zijn oude zone en comfort terug, en
+  de andere doet mee. De dienst doet dat bij het starten één keer met wat er
+  al bewaard staat.
+- **De assistent klinkt als een mens.** Eerst het antwoord, dan hooguit twee
+  zinnen met wat er speelt, warm en met de cijfers die het huis heeft. "Ik
+  kijk nog alleen mee" zegt hij alleen als je vraagt wat hij doet; "In
+  werkelijkheid staat…" is "Nu staat…". Zon noemt de verwachting van
+  vanochtend en hoeveel je zelf gebruikte; 's avonds wat morgen van je dak
+  komt.
+- **Uitspraak:** wat Piper krijgt, gaat eerst door uitspraakregels
+  (`uitspraak.ts`): kilowattuur en kilowatt voluit, een tijd zoals je hem
+  zegt ("kwart voor twee"), graden, procent, euro en cent, en "airco" zoals
+  het klinkt. Op het scherm blijft "13:45" staan. Het antwoord krijgt de
+  gesproken versie mee, voor de stem van het apparaat.
+- **Geluid na een tik op Thuis:** een vraag uit het adres probeert meteen te
+  spreken. Weigert de browser, dan staat er "Tik om te horen". Web Audio
+  (voor de stralen) gaat alleen mee als de browser hem al toestaat; anders
+  zou die het geluid inslikken.
+- **Twee nieuwe vragen:** het weer en de zon van morgen, en wat de apparaten
+  met een eigen meter deze maand kostten (alleen wat van het net kwam).
+  "Gaat het morgen regenen?" ging eerst over de nachtstand. "Hoe" alleen
+  maakt een vraag niet meer tot een vraag over de app: "hoe wordt het weer"
+  gaat over het huis.
+- **Opbrengst telt op:** liep de zonnemeter in een uur achter op de meter van
+  het net, dan viel dat verschil weg en was zelf gebruikt te hoog (125 kWh
+  opgewekt, maar 127 in het stroomschema). Het tekort schuift nu door naar
+  het volgende uur.
+- **Vandaag:** aan, wachten, aan van hetzelfde apparaat binnen een half uur is
+  één regel ("verwarmde met de zon mee, 2 keer gestart"); een tik toont de
+  losse momenten. Na zonsondergang staat er dat de zon onder is, met de
+  verwachting voor morgen. Bij Morgen staat wanneer de meeste zon komt.
+- **Geen beloftes op het scherm:** de zinnen over het thermisch model, de
+  microfoon die niets deed, en "de app bepaalt de richting van de panelen
+  zelf" zijn weg of eerlijk gemaakt.
+- **Kleine fouten:** een afgeknipte zin bij Apparaten, het doel dat er twee
+  keer stond, de naam van een kamer zonder thermometer die scheef stond, de
+  maan die op de telefoon over de tekst viel, "beeld 60 tellen", "Ingelogd:
+  niet ingelogd", en een onduidelijke zin bij de meters.
+- **Opruimen (5S):** weg zijn twee lege doorverwijspagina's, een ongebruikt
+  bestand in de configuratie en vier ongebruikte stijlregels. Eén keer in
+  plaats van twee: een state lezen (live en bij het terugspelen), "wanneer
+  was dat", en de apparaten van een kamer opzoeken. Een tekstcontrole die
+  door een onzichtbaar teken nooit iets vond, werkt weer. Het huis tekenen
+  staat nog op vijf plekken; dat wordt één bij het nieuwe huis.
+- **Versie 0.21.0.**
 
 ---
 

@@ -17,7 +17,7 @@ import { value } from '../src/core/state.js';
 import { defaultStrategies } from '../src/index.js';
 import { ask, findZone, LANGS, parseQuestion, residentRooms, roomStatus, withArticle } from '../src/web/assistant.js';
 import { inSentence } from '../src/web/assistant.js';
-import type { Answer, DecisionView, Question } from '../src/web/assistant.js';
+import type { Answer, AskContext, DecisionView, Question } from '../src/web/assistant.js';
 import type { TodayReport } from '../src/web/today.js';
 import { decisionWords, residentFlows, residentView } from '../src/web/resident.js';
 
@@ -67,11 +67,13 @@ const coolOnSun = {
   reason: 'surplus_available' as const,
 };
 
-function askNl(question: Question, snapshot: DecisionView | null = view(), extra: { shadow?: boolean; nowMs?: number; today?: TodayReport | null } = {}): Answer {
+function askNl(question: Question, snapshot: DecisionView | null = view(), extra: { shadow?: boolean; nowMs?: number; today?: TodayReport | null; weer?: AskContext['weer']; kosten?: AskContext['kosten'] } = {}): Answer {
   return ask(question, {
     config,
     snapshot,
     today: extra.today ?? null,
+    weer: extra.weer ?? null,
+    kosten: extra.kosten ?? null,
     nowMs: extra.nowMs ?? AT,
     shadow: extra.shadow ?? true,
     lang: 'nl',
@@ -112,22 +114,22 @@ describe('waarom', () => {
   it('zegt dat hij zou koelen op zon, met de getallen uit het besluit', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ accepted: [coolOnSun] }));
     expect(a.kamer).toBe('zolder');
-    expect(a.antwoord).toContain('Ik zou de zolder nu laten koelen op zon: het is er 24,3°, het doel is 23°.');
-    expect(a.antwoord).toContain('De panelen leveren 1,8 kW.');
-    // Tijdens de schaduw ook wat het apparaat echt doet, zonder te zeggen wie het zo zette (88).
-    expect(a.antwoord).toContain('In werkelijkheid staat de airco zolder op koelen naar 22°.');
-    expect(a.antwoord).toContain('Ik kijk nog alleen mee');
+    expect(a.antwoord).toBe(
+      'Ik zou de zolder nu laten koelen op zon: het is er 24,3° en het doel is 23°. Je panelen leveren 1,8 kW, dus dat kan op eigen stroom. ' +
+        // Tijdens de schaduw ook wat het apparaat echt doet, zonder te zeggen wie het zo zette (88).
+        'Nu staat de airco zolder op koelen naar 22°.',
+    );
   });
 
   it('zegt "staat uit" voor een apparaat dat uit staat', () => {
     const a = askNl({ kind: 'waarom', kamer: 'woonkamer' });
-    expect(a.antwoord).toContain('In werkelijkheid staat de Nest (beneden) op verwarmen naar 20°, en staat de airco woonkamer uit.');
+    expect(a.antwoord).toContain('Nu staat de Nest (beneden) op verwarmen naar 20° en de airco woonkamer uit.');
   });
 
   it('zegt "koelt" in plaats van "zou" zodra hij echt schakelt', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ accepted: [coolOnSun] }), { shadow: false });
     expect(a.antwoord).toContain('De zolder koelt op zon');
-    expect(a.antwoord).not.toContain('In werkelijkheid');
+    expect(a.antwoord).not.toContain('Nu staat');
   });
 
   it('zegt waarom iets wacht, en wat er van het net komt', () => {
@@ -139,7 +141,7 @@ describe('waarom', () => {
       }),
     );
     expect(a.antwoord).toContain(
-      'De zolder wil koelen (het is er 24,3°, het doel is 23°), maar dat kan nu niet, omdat er net te weinig zon over is om te starten.',
+      'De zolder wil koelen: het is er 24,3° en het doel is 23°. Dat wacht nog even, omdat er net te weinig zon over is om te starten.',
     );
     expect(a.antwoord).toContain('Er gaat nu 300 W terug naar het net.');
   });
@@ -153,18 +155,18 @@ describe('waarom', () => {
     );
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ explanation: { ...e, perZone } }));
     expect(a.antwoord).toContain(
-      'De zolder heeft niets nodig: het is er 22,3°, tussen het doel voor verwarmen (20°) en dat voor koelen (22,5°).',
+      'Op de zolder is het 22,3°, precies goed. Ik zou pas ingrijpen onder 20° of boven 22,5°.',
     );
   });
 
   it('valt bij een ouder besluit zonder beide doelen terug op het ene doel', () => {
     const a = askNl({ kind: 'waarom', kamer: 'woonkamer' });
-    expect(a.antwoord).toContain('De woonkamer heeft niets nodig: het is er 21,4°, en het doel voor verwarmen is 21°.');
+    expect(a.antwoord).toContain('In de woonkamer is het 21,4°, warm genoeg. Pas onder 21° zou ik gaan verwarmen.');
   });
 
   it('zet het werkwoord achteraan na "omdat"', () => {
     const a = askNl({ kind: 'waarom', kamer: 'zolder' }, view({ rejected: [{ intent: coolOnSun, blockedBy: 'min_rest_not_elapsed' }] }));
-    expect(a.antwoord).toContain('maar dat kan nu niet, omdat het apparaat na het uitgaan eerst even moet pauzeren, dat spaart de compressor.');
+    expect(a.antwoord).toContain('Dat wacht nog even, omdat het apparaat na het uitgaan eerst even moet pauzeren, dat spaart de compressor.');
   });
 
   it('laat een apparaat dat de bewoner overnam met rust, en zegt tot wanneer', () => {
@@ -172,7 +174,7 @@ describe('waarom', () => {
       { kind: 'waarom', kamer: 'zolder' },
       view({ explanation: explanation({ overrides: [{ actuatorId: 'ac-zolder', sinceMs: AT - 600_000, untilMs: Date.parse('2026-10-05T13:00:00Z') }] }) }),
     );
-    expect(a.antwoord).toContain('Je hebt de airco zolder zelf overgenomen, tot 15:00. Ik laat hem met rust.');
+    expect(a.antwoord).toContain('Je hebt de airco zolder zelf in handen, tot 15:00. Tot dan blijf ik eraf.');
   });
 
   it('noemt bij een storing wat er onbetrouwbaar is, zonder entity-ID', () => {
@@ -186,11 +188,11 @@ describe('waarom', () => {
   it('kent een kamer niet, en zegt welke wel', () => {
     const a = askNl({ kind: 'waarom', kamer: 'kelder' });
     expect(a.kamer).toBeNull();
-    expect(a.antwoord).toBe('De kamer "kelder" ken ik niet. Ik ken: woonkamer, badkamer, zolder.');
+    expect(a.antwoord).toBe('"kelder" ken ik niet als kamer. Ik ken woonkamer, badkamer en zolder.');
   });
 
   it('zegt eerlijk dat er nog geen besluit is', () => {
-    expect(askNl({ kind: 'waarom', kamer: 'zolder' }, null).antwoord).toContain('nog geen besluit');
+    expect(askNl({ kind: 'waarom', kamer: 'zolder' }, null).antwoord).toContain('nog niets besloten');
   });
 });
 
@@ -222,8 +224,8 @@ describe('nu', () => {
   it('noemt alleen de kamers waar iets speelt, en de stroom', () => {
     const a = askNl({ kind: 'nu' }, view({ accepted: [coolOnSun] }));
     expect(a.antwoord).toBe(
-      'Ik zou de zolder nu laten koelen op zon: het is er 24,3°, het doel is 23°. De panelen leveren 1,8 kW. ' +
-        'Er gaat nu 900 W terug naar het net. Ik kijk nog alleen mee en schakel zelf niets.',
+      'Ik zou de zolder nu laten koelen op zon: het is er 24,3° en het doel is 23°. Je panelen leveren 1,8 kW, dus dat kan op eigen stroom. ' +
+        'Er gaat nu 900 W terug naar het net. Zelf schakel ik nog niets: ik kijk mee en leer je huis kennen.',
     );
   });
 
@@ -236,9 +238,10 @@ describe('nu', () => {
 describe('straks', () => {
   it('noemt de volgende stand van de klok', () => {
     const a = askNl({ kind: 'straks' }, view(), { nowMs: Date.parse('2026-10-05T19:30:00Z') });
-    expect(a.antwoord).toContain('Om 22:00 ga ik naar de nachtstand.');
-    expect(a.antwoord).toContain('Brandt er dan nog licht');
-    expect(a.antwoord).toContain('een weersverwachting heb ik nog niet');
+    expect(a.antwoord).toBe(
+      'Om 22:00 ga ik naar de nachtstand, of later als er dan nog licht brandt en er iemand thuis is. ' +
+        'Wat de zon gaat doen, weet ik nog niet: er is nog geen weersverwachting.',
+    );
   });
 
   it('gaat na middernacht door naar de volgende ochtend', () => {
@@ -248,7 +251,7 @@ describe('straks', () => {
 
   it('zegt dat een stand die met de hand gezet is niet vanzelf verandert', () => {
     const a = askNl({ kind: 'straks' }, view({ explanation: explanation({ mode: 'vakantie', modeSource: 'override' }) }));
-    expect(a.antwoord).toContain('De stand is met de hand op vakantie gezet');
+    expect(a.antwoord).toContain('De stand staat met de hand op vakantie');
   });
 });
 
@@ -272,16 +275,19 @@ describe('zon', () => {
 
   it('vat de dag samen uit het dagoverzicht', () => {
     const a = askNl({ kind: 'zon' }, view(), { today });
-    expect(a.antwoord).toBe(
-      'Vandaag leverden de panelen tot nu toe 5,3 kWh. Het meeste was 1,9 kW, in het kwartier van 12:15. ' +
-        'Je huis leverde 2,9 kWh terug en haalde 1,2 kWh van het net. Nu leveren ze 1,8 kW.',
+    expect(a.antwoord).toBe('Je panelen leverden vandaag 5,3 kWh. Je gebruikte er 46% zelf van; 2,9 kWh ging terug naar het net. Nu leveren ze 1,8 kW.');
+    // Met de verwachting van vanochtend erbij (besluit 137), en na zonsondergang het hoogste punt.
+    const weer = { opgewektKwh: 5.3, verwachtKwh: 5.3, voorafKwh: 4.2, morgen: { tekst: 'Zonnig', minC: 8, maxC: 17, regenkansPct: 5, verwachtKwh: 9.1 } };
+    const avond = ask({ kind: 'zon' }, { config, snapshot: view({ explanation: explanation({ solarProductionW: 0 }) }), today, nowMs: AT, shadow: true, lang: 'nl', zoninval: { boven: false, gevels: [] }, weer });
+    expect(avond.antwoord).toBe(
+      'Je panelen leverden vandaag 5,3 kWh, meer dan de 4,2 kWh die verwacht werd. Je gebruikte er 46% zelf van; 2,9 kWh ging terug naar het net. ' +
+        'Het meeste was 1,9 kW, rond 12:15; nu is de zon onder.',
     );
   });
 
   it('zegt "nog vrijwel niets" in plaats van 0 kWh', () => {
     const a = askNl({ kind: 'zon' }, view(), { today: { ...today, zonWh: 3, netTerugWh: 0, netAfWh: 640, kwartieren: [] } });
-    expect(a.antwoord).toContain('Vandaag leverden de panelen nog vrijwel niets.');
-    expect(a.antwoord).toContain('Je huis leverde nog niets terug en haalde 640 Wh van het net.');
+    expect(a.antwoord).toContain('Je panelen hebben vandaag nog bijna niets geleverd.');
   });
 
   it('zegt op welke gevel de zon staat, als de ligging bekend is', () => {
@@ -299,10 +305,14 @@ describe('zon', () => {
 
   it('zegt wat er nog verwacht wordt, uit het weer (besluit 141)', () => {
     const met = ask({ kind: 'zon' }, { config, snapshot: view(), today, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 6.4, voorafKwh: 6 } });
-    expect(met.antwoord).toContain('Er komt vandaag naar verwachting nog 1,1 kWh bij, samen 6,4 kWh.');
-    const straks = ask({ kind: 'straks' }, { config, snapshot: view(), today: null, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 5.3, voorafKwh: null } });
-    expect(straks.antwoord).toContain('Er komt vandaag naar verwachting weinig zon meer bij.');
-    expect(straks.antwoord).not.toContain('weersverwachting heb ik nog niet');
+    // Hooguit drie zinnen: de rest van de dag past er dan niet meer bij.
+    expect(met.antwoord).not.toContain('nog ongeveer');
+    const straks = ask({ kind: 'straks' }, { config, snapshot: view(), today: null, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 6.4, voorafKwh: 6 } });
+    expect(straks.antwoord).toContain('Er komt vandaag nog ongeveer 1,1 kWh zon bij.');
+    const morgen = { tekst: null, minC: null, maxC: null, regenkansPct: null, verwachtKwh: 3.7 };
+    const avond = ask({ kind: 'straks' }, { config, snapshot: view(), today: null, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 5.3, voorafKwh: null, morgen } });
+    expect(avond.antwoord).toContain('Vandaag komt er weinig zon meer bij; morgen verwacht ik 3,7 kWh van je dak.');
+    expect(avond.antwoord).not.toContain('nog geen weersverwachting');
   });
 });
 
@@ -327,9 +337,10 @@ describe('vandaag en hoe warm (besluit 141)', () => {
   it('vat samen wat het huis vandaag deed', () => {
     const a = askNl({ kind: 'vandaag' }, view(), { today });
     expect(a.antwoord).toBe(
-      'Vandaag besloot ik 13 keer iets. Ik zou de airco zolder 1,5 uur hebben laten draaien. Echt aan stond de airco zolder 25 minuten. ' +
-        'Je dak leverde 7,8 kWh, en 52% daarvan gebruikte je zelf. Ik kijk nog alleen mee en schakel zelf niets.',
+      'Ik had de airco zolder 1,5 uur laten draaien. Echt aan stond de airco zolder 25 minuten. Je dak leverde 7,8 kWh, en 52% daarvan gebruikte je zelf.',
     );
+    const rustig = askNl({ kind: 'vandaag' }, view(), { today: { ...today, apparaten: [], zonWh: 0 } });
+    expect(rustig.antwoord).toBe('Een rustige dag: ik had niets aan hoeven zetten, en er stond ook niets aan.');
   });
 
   it('zegt hoe warm het overal is', () => {
@@ -339,12 +350,39 @@ describe('vandaag en hoe warm (besluit 141)', () => {
   });
 });
 
+describe('morgen en kosten (besluit 142)', () => {
+  it('zegt het weer en de zon van morgen', () => {
+    const weer = { opgewektKwh: 4, verwachtKwh: 4, voorafKwh: 5, morgen: { tekst: 'Bewolkt, af en toe een bui', minC: 10.6, maxC: 13.8, regenkansPct: 47, verwachtKwh: 3.7 } };
+    const a = askNl({ kind: 'morgen' }, view(), { weer });
+    expect(a.antwoord).toBe('Morgen wordt het bewolkt, af en toe een bui, tussen 10,6° en 13,8°. De kans op regen is 47%. Van je dak verwacht ik 3,7 kWh.');
+    const droog = askNl({ kind: 'morgen' }, view(), { weer: { ...weer, morgen: { ...weer.morgen, tekst: 'Zonnig', regenkansPct: 5 } } });
+    expect(droog.antwoord).toContain('Waarschijnlijk blijft het droog.');
+    expect(askNl({ kind: 'morgen' }).antwoord).toBe('Voor morgen heb ik nog geen weersverwachting.');
+  });
+
+  it('zegt wat de apparaten deze maand kostten, en dat alleen het net telt', () => {
+    const kosten = {
+      maand: 'oktober',
+      apparaten: [
+        { id: 'w', naam: 'Airco woonkamer', kwh: 8, zonKwh: 6.3, euro: 0.45 },
+        { id: 'z', naam: 'Airco zolder', kwh: 4.5, zonKwh: 2.4, euro: 0.56 },
+      ],
+    };
+    const a = askNl({ kind: 'kosten' }, view(), { kosten });
+    expect(a.antwoord).toBe(
+      'In oktober kostte de airco zolder € 0,56 en de airco woonkamer € 0,45. De airco woonkamer draaide vooral op je eigen zon. Ik reken alleen wat van het net kwam.',
+    );
+    const een = askNl({ kind: 'kosten' }, view(), { kosten: { ...kosten, apparaten: [kosten.apparaten[1]!] } });
+    expect(een.antwoord).toContain('De airco zolder kostte in oktober € 0,56, voor 4,5 kWh.');
+    expect(askNl({ kind: 'kosten' }).antwoord).toContain('eigen meter');
+  });
+});
+
 describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
   it('zegt wat hij zou doen, en dat hij nog niet mag schakelen', () => {
     const a = askNl({ kind: 'doe', kamer: 'zolder', wens: 'koelen', temperatuurC: 21 });
     expect(a.antwoord).toBe(
-      'Dan zou ik de airco zolder op koelen naar 21° zetten, tot het volgende dagdeel. ' +
-        'Maar ik kijk nog alleen mee en mag nog niet schakelen. Wil je het nu, zet het dan zelf.',
+      'Dan zou ik de airco zolder op koelen naar 21° zetten, tot het volgende dagdeel. Schakelen mag ik nog niet, dus zet het nu even zelf.',
     );
   });
 
@@ -374,8 +412,8 @@ describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
 describe('Engels (besluit 86)', () => {
   it('zegt hetzelfde in het Engels', () => {
     const a = ask({ kind: 'waarom', kamer: 'zolder' }, { config, snapshot: view({ accepted: [coolOnSun] }), today: null, nowMs: AT, shadow: true, lang: 'en' });
-    expect(a.antwoord).toContain('I would cool the Zolder now on solar power: it is 24.3°, the target is 23°.');
-    expect(a.antwoord).toContain('The panels are producing 1.8 kW.');
+    expect(a.antwoord).toContain('I would cool the Zolder now on solar power: it is 24.3° and the target is 23°.');
+    expect(a.antwoord).toContain('Your panels are producing 1.8 kW, so it can run on your own power.');
   });
 });
 
@@ -430,6 +468,8 @@ describe('elk getal heeft een bron, in elke toestand', () => {
         { kind: 'zon' },
         { kind: 'vandaag' },
         { kind: 'warm' },
+        { kind: 'morgen' },
+        { kind: 'kosten' },
         ...config.zones.map((z) => ({ kind: 'waarom' as const, kamer: z.name })),
         ...config.zones.map((z) => ({
           kind: 'doe' as const,
@@ -438,10 +478,40 @@ describe('elk getal heeft een bron, in elke toestand', () => {
           temperatuurC: k.chance(0.5) ? null : k.numberAttr(10, 35),
         })),
       ];
+      // Het weer, de kosten en de dag (besluit 142): ook die getallen hebben een bron.
+      const zonWh = k.chance(0.2) ? k.int(0, 4) : k.int(0, 30_000);
+      const span = (min: number) => ({ vanMs: state.nowMs - min * 60_000, totMs: state.nowMs, actie: 'cool' });
+      const today: TodayReport | null = k.chance(0.3)
+        ? null
+        : {
+            vanMs: state.nowMs - 12 * 3_600_000,
+            totMs: state.nowMs,
+            kwartieren: Array.from({ length: k.int(0, 5) }, (_, j) => ({ tMs: state.nowMs - j * 900_000, zonW: k.chance(0.2) ? null : k.int(0, 5000), netW: null })),
+            zonWh,
+            netAfWh: k.int(0, 20_000),
+            netTerugWh: k.chance(0.3) ? 0 : k.int(0, zonWh),
+            apparaten: config.actuators.map((a) => ({ actuatorId: a.id, smartClimate: k.chance(0.5) ? [span(k.int(0, 300))] : [], huidig: k.chance(0.5) ? [span(k.int(0, 300))] : [] })),
+            uitstelbaar: [],
+            zones: [],
+            besluiten: [],
+          };
+      const num = (lo: number, hi: number) => (k.chance(0.2) ? null : k.numberAttr(lo, hi));
+      const weer = k.chance(0.2)
+        ? null
+        : {
+            opgewektKwh: zonWh / 1000,
+            verwachtKwh: num(0, 40),
+            voorafKwh: num(0, 40),
+            morgen: k.chance(0.2) ? null : { tekst: k.pick([null, 'Zonnig', 'Bewolkt met regen']), minC: num(-10, 20), maxC: num(-5, 35), regenkansPct: num(0, 100), verwachtKwh: num(0, 40) },
+          };
+      const kosten = k.chance(0.2)
+        ? null
+        : { maand: 'oktober', apparaten: config.actuators.slice(0, k.int(0, 3)).map((a) => ({ id: a.id, naam: a.name, kwh: k.numberAttr(0, 300), zonKwh: k.numberAttr(0, 100), euro: num(0, 90) })) };
+      const zoninval = k.chance(0.3) ? null : { boven: k.chance(0.5), gevels: k.chance(0.5) ? ['Voorgevel'] : [] };
       for (const lang of LANGS) {
         for (const shadow of [true, false]) {
           for (const q of questions) {
-            const a = ask(q, { config, snapshot: snap, today: null, nowMs: state.nowMs, shadow, lang });
+            const a = ask(q, { config, snapshot: snap, today, weer, kosten, zoninval, nowMs: state.nowMs, shadow, lang });
             check(a, `geval ${i}, ${lang}, ${shadow ? 'schaduw' : 'echt'}, ${JSON.stringify(q)}`);
           }
         }

@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 7 oktober 2026.*
+*Stand: 15 oktober 2026.*
 
 ## Waar het project staat
 
@@ -221,7 +221,10 @@ verwijzing bestaat.
   kaart met wat het doet, vraagt en vandaag op zon deed ([140]).
 - **De assistent** is een gesprek: het huis begroet je, leest zijn antwoord
   voor met Piper uit Home Assistant, en vraagt of het nog iets kan doen
-  ([141]).
+  ([141]). Hij zegt eerst het antwoord, kort en warm, spreekt eenheden en
+  tijden uit zoals je ze zegt, en kent ook morgen en wat iets kost ([142]).
+- **Een kamer doet mee** met de regeling van een andere kamer, zoals een
+  slaapkamer met de airco in de wasruimte ([142]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -412,4 +415,5 @@ verwijzing bestaat.
 [139]: DECISIONS.md#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding
 [140]: DECISIONS.md#140-vandaag-is-de-tijd-apparaten-is-het-nu
 [141]: DECISIONS.md#141-de-assistent-als-gesprek-met-een-stem
+[142]: DECISIONS.md#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens
 <!-- links:einde -->

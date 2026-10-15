@@ -342,12 +342,19 @@ export async function yieldReport(
   let selfTotal = 0;
   let restZon = 0;
   let restNet = 0;
+  // Telt de meter van het net in een uur meer terug dan de zonnemeter opwekte,
+  // dan loopt een van de twee achter. Dat tekort schuift door naar het volgende
+  // uur, zodat zelf gebruikt plus terug gelijk blijft aan opgewekt (opgelost
+  // 15 oktober: 125 kWh opgewekt, maar 127 in het stroomschema).
+  let tekort = 0;
   for (const t of times) {
     const a = afname.get(t) ?? 0;
     const tr = terug.get(t) ?? 0;
     const v = verdeel(s, a, afnameDal ? (afnameDal.get(t) ?? 0) : null, tr, terugDal ? (terugDal.get(t) ?? 0) : null, t, t + stap, tz);
     for (const k of Object.keys(gebruik) as (keyof typeof gebruik)[]) gebruik[k] += v[k];
-    const self = hasSun ? Math.max(0, (zon.get(t) ?? 0) - tr) : 0;
+    const z = zon.get(t) ?? 0;
+    const self = hasSun ? Math.max(0, z - tr - tekort) : 0;
+    tekort = hasSun ? Math.max(0, tr + tekort - z) : 0;
     const use = a + self;
     const share = use > 0 ? self / use : 0;
     selfTotal += self;

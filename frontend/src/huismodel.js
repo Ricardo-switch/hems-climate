@@ -102,14 +102,16 @@
     [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
     for (const a of witgoed.slice(0, 2)) apparaten.push({ soort: /vaat/i.test(a.naam) ? 'vaatwasser' : /was/i.test(a.naam) && !/droog|droger/i.test(a.naam) ? 'wasmachine' : 'droger', aan: a.aan });
     if (screens[0]) apparaten.push({ soort: 'screen', dicht: screens[0].positiePct == null ? 0 : 1 - screens[0].positiePct / 100 });
+    const zid = r.zoneId ?? r.meedoenMet?.zoneId ?? null;
     const gewicht = klimaat.length ? 1.4 : GANG.test(r.naam) ? 0.55 : r.temperatuurC != null ? 1.0 : 0.8;
     return {
       id: r.id,
       naam: r.naam,
       gewicht,
       temp: r.temperatuurC == null ? null : `${nl(r.temperatuurC)}°`,
-      stand: r.zoneId ? standVan(r.zoneId, state) : null,
-      zin: r.zoneId ? kortVan(r.zoneId, state) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
+      // Een kamer die meedoet met een andere (besluit 142), kleurt mee met die regeling.
+      stand: zid ? standVan(zid, state) : null,
+      zin: zid ? kortVan(zid, state) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
       zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
       // Wat voor kamer, voor de inrichting ingezoomd (besluit 119).
       inrichting: r.soort ?? undefined,

@@ -152,8 +152,9 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   {
     id: 'functies',
     href: 'functies.html',
-    sterk: ['camera*', 'deurbel*', 'bel', 'aanbellen', 'weerbericht', 'weer', 'buienradar', 'weerdienst', 'functie*', 'doorbell', 'weather'],
-    zwak: ['beeld', 'videodeurbel', 'lampen bedienen', 'licht bedienen'],
+    // Het weer zelf is een vraag over morgen (besluit 142); hier alleen waar het vandaan komt.
+    sterk: ['camera*', 'deurbel*', 'bel', 'aanbellen', 'buienradar', 'weerdienst', 'weerbron', 'functie*', 'doorbell', 'weather source'],
+    zwak: ['beeld', 'videodeurbel', 'lampen bedienen', 'licht bedienen', 'weer', 'weather'],
     nl: {
       antwoord:
         'Camera’s, de deurbel, licht bedienen en het weer stel je in bij Instellingen, onder Functies. Daar kies je welke camera’s de app toont, wat er gebeurt als er wordt aangebeld, en waar het weer vandaan komt.',
@@ -272,14 +273,21 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   },
 ];
 
-/** Woorden die zeggen dat het om de app gaat: waar of hoe iets moet. */
-const HULP = ['waar', 'hoe', 'instel*', 'invul*', 'aanpas*', 'wijzig*', 'verander*', 'toevoeg*', 'voeg', 'verwijder*', 'vind', 'vinden', 'kan ik', 'moet ik', 'where', 'how', 'change', 'set', 'add'];
+/**
+ * Woorden die zeggen dat het om de app gaat: waar of hoe iets moet. "Hoe" alleen
+ * telt niet: "hoe warm is het" en "hoe wordt het weer" gaan over het huis.
+ */
+const HULP = ['waar', 'hoe stel', 'hoe pas', 'hoe voeg', 'hoe zet', 'hoe kan', 'hoe moet', 'hoe werkt', 'hoe doe', 'hoe vul', 'instel*', 'invul*', 'aanpas*', 'wijzig*', 'verander*', 'toevoeg*', 'voeg', 'verwijder*', 'vind', 'vinden', 'kan ik', 'moet ik', 'where', 'how do', 'how can', 'how to', 'change', 'set', 'add'];
 
 /* -------------------------------------------------------- over het huis */
 
 const NU = ['nu', 'momenteel', 'op dit moment', 'wat doe je', 'wat doe', 'wat gebeurt', 'gebeurt er', 'bezig', 'now', 'doing'];
 const STRAKS = ['straks', 'later', 'wanneer', 'vanavond', 'vannacht', 'morgen', 'zo meteen', 'gaat doen', 'ga je', 'gaan', 'plan*', 'tonight', 'tomorrow'];
 const ZON = ['zon', 'zonnig', 'zonne*', 'zonnestroom', 'opgewekt', 'opwek*', 'zonuren', 'sun', 'sunny', 'solar'];
+/** Het weer en de zon van morgen (besluit 142). */
+const MORGEN = ['morgen', 'overmorgen', 'regen', 'regent', 'regenen', 'bui', 'buien', 'weer', 'weersverwachting', 'weerbericht', 'tomorrow', 'rain', 'weather', 'forecast'];
+/** Wat iets kost (besluit 142). */
+const KOSTEN = ['kost', 'kosten', 'kostte', 'kostten', 'geld', 'euro', 'cost', 'costs'];
 const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why'];
 
 /** Koel, verwarm of zet uit; null als er geen wens in staat. */
@@ -318,7 +326,7 @@ function kamerIn(config: SiteConfig, tekst: string): string | null {
 export function voorbeelden(config: SiteConfig, lang: Lang): string[] {
   const kamer = config.zones[0]?.name.toLowerCase();
   return lang === 'nl'
-    ? ['Wat doe je nu?', 'Hoe warm is het overal?', 'Wat deed je vandaag?', 'Waar vul ik de prijzen in?']
+    ? ['Wat doe je nu?', 'Hoe warm is het overal?', 'Wat wordt het weer morgen?', 'Wat kosten de airco’s?', 'Waar vul ik de prijzen in?']
     : ['What are you doing now?', ...(kamer ? [`Why the ${kamer}?`] : []), 'Where do I enter prices?', 'How do I change the layout?'];
 }
 
@@ -356,6 +364,11 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   if (vandaag) huis.push({ vraag: { kind: 'vandaag' }, score: 3 * vandaag });
   const overal = telt(['overal', 'alle kamers', 'elke kamer', 'in huis', 'everywhere', 'every room'], tekst, los);
   if (overal && kamer == null && telt(['warm', 'koud', 'temperatuur', 'graden', 'temperature'], tekst, los)) huis.push({ vraag: { kind: 'warm' }, score: 5 });
+  // Het weer van morgen, en wat iets kost (besluit 142).
+  const morgen = telt(MORGEN, tekst, los);
+  if (morgen && kamer == null) huis.push({ vraag: { kind: 'morgen' }, score: 3 * morgen });
+  const kosten = telt(KOSTEN, tekst, los);
+  if (kosten) huis.push({ vraag: { kind: 'kosten' }, score: 3 * kosten });
   const nu = telt(NU, tekst, los);
   // "Waarom staat de airco aan?" zonder kamer gaat over wat hij nu doet.
   if (nu || (waarom && kamer == null)) huis.push({ vraag: { kind: 'nu' }, score: Math.max(1, 2 * nu - 1) });

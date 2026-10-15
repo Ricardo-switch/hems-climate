@@ -33,7 +33,7 @@ import {
   type HaRegistryEntity,
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
-import { LayoutStore, withLayoutNames, type Layout } from './web/layout.js';
+import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web/layout.js';
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from './web/comfort.js';
@@ -702,7 +702,7 @@ layoutNu = () => layoutStore?.current ?? layoutAtStart;
  * rollen in de indeling. Daarna is de app de plek; het bestand houdt alleen
  * wat de app nog niet kent.
  */
-void layoutStore?.load().then(async (l) => {
+async function rollenOvernemen(l: Layout | null): Promise<void> {
   if (!l || !site || l.kamers.some((k) => k.rollen !== undefined)) return;
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
   const raw = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
@@ -714,6 +714,11 @@ void layoutStore?.load().then(async (l) => {
     }),
   }));
   if (over) console.log(`Uit het bestand naar de app (besluit 138): ${over.kamers.filter((k) => k.rollen).map((k) => k.naam).join(', ')}`);
+}
+// Daarna het herstel van "Geregeld als" (besluit 142), ook voor wat al bewaard staat; na elkaar, zodat de een de ander niet overschrijft.
+void layoutStore?.load().then(rollenOvernemen).then(async () => {
+  const hersteld = await layoutStore!.overnemen((x) => ({ ...x, kamers: herstelMeedoen(x.kamers) }));
+  if (hersteld) console.log(`Hersteld (besluit 142): ${hersteld.kamers.filter((k) => k.meedoenMet).map((k) => `${k.naam} doet mee met ${hersteld.kamers.find((x) => x.id === k.meedoenMet)?.naam}`).join(', ')}`);
 });
 
 /** Alles uit de app opnieuw over de configuratie, en de regeling neemt het over als het kan. */

@@ -59,6 +59,14 @@
   .moment::before { content: ''; position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--kleur, var(--zacht)); box-shadow: 0 0 0 4px #0f1b2e; }
   .moment b { display: block; font-size: 15px; }
   .moment.verwacht { border-style: dashed; border-color: rgba(143, 134, 255, 0.4); background: rgba(143, 134, 255, 0.06); }
+  /* Een reeks met de zon mee: één regel, open met een tik (rapport 15 oktober). */
+  .reeks > summary { list-style: none; cursor: pointer; }
+  .reeks > summary::-webkit-details-marker { display: none; }
+  .reeks[open] { display: flex; flex-direction: column; gap: 8px; }
+  .moment.groep b::after { content: " ›"; color: var(--zacht); font-weight: 500; }
+  .reeks[open] .moment.groep b::after { content: " ⌄"; }
+  .moment.lid { margin-left: 14px; padding: 8px 12px; opacity: 0.85; }
+  .moment.lid b { font-size: 14px; }
   .nu { position: relative; display: flex; align-items: center; gap: 10px; margin: 2px 0; }
   .nu span { background: var(--tekst); color: #0b1424; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; position: absolute; left: -74px; }
   .nu i { flex: 1; height: 2px; background: var(--tekst); margin-left: -14px; }
