@@ -1,7 +1,9 @@
 /*
- * Apparaten, in ontwerp 2 (besluit 104; schets Wand-Apparaten). Wat op zon kan
- * draaien: per apparaat wat het doet, een strook van de dag, en "klaar voor"
- * (besluit 101). De zinnen en de keuzes komen kant-en-klaar van de dienst
+ * Apparaten, in ontwerp 2 (besluit 104; schets Wand-Apparaten-Nu, besluit 140).
+ * Het nu, naast Vandaag dat de tijd is: per apparaat een kaart met wat het
+ * doet, wat het nu vraagt, wat het vandaag gebruikte en welk deel op eigen
+ * zon, of hoe lang het aan stond als er geen meter is. Wat iets doet, staat
+ * bovenaan. Een uitstelbaar apparaat kiest hier "klaar voor" (besluit 101). De zinnen en de keuzes komen kant-en-klaar van de dienst
  * (besluit 94); de pagina zet ze neer en rekent alleen de resterende tijd uit.
  *
  * Eerlijk over wat er is (besluit 104): een batterij of een auto staat hier pas
@@ -17,12 +19,16 @@ let vandaag = null;
 let zon = null;
 let aansluiting = null;
 let weer = null;
+let huisData = null;
+let opbrengst = null;
 /** Het antwoord op de laatste keuze per apparaat, tot het volgende besluit het overneemt. */
 const gezegd = new Map();
 
 async function laadAlles() {
-  const [s, v, z, a, w] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting'), haal('api/weer')]);
+  const [s, v, z, a, w, h, o] = await Promise.allSettled([haal('api/state'), haal('api/vandaag'), haal('api/zon'), haal('api/aansluiting'), haal('api/weer'), haal('api/huis'), haal('api/opbrengst?soort=dag')]);
   if (w.status === 'fulfilled') weer = w.value;
+  if (h.status === 'fulfilled') huisData = h.value;
+  if (o.status === 'fulfilled') opbrengst = o.value;
   if (s.status === 'fulfilled') state = s.value;
   if (v.status === 'fulfilled') vandaag = v.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -45,27 +51,6 @@ function ring({ deel = 0, kleur = '#F7B548', tekst = '', label, gestippeld = fal
 }
 
 const duurTekst = (min) => (min >= 60 ? `${Math.floor(min / 60)}u${String(Math.round(min % 60)).padStart(2, '0')}` : `${Math.max(1, Math.round(min))}m`);
-
-/* ----------------------------------------------------------- de strook */
-
-/** De strook van 06 tot 24 uur: wanneer hij draaide, en wanneer Smart Climate hem zou starten. */
-function strook(spans, rest) {
-  if (!vandaag) return '';
-  const t0 = vandaag.vanMs + 6 * 3_600_000;
-  const t1 = vandaag.vanMs + 24 * 3_600_000;
-  const pct = (t) => Math.max(0, Math.min(100, ((t - t0) / (t1 - t0)) * 100));
-  const blok = (van, tot, stijl) => {
-    const l = pct(van);
-    const w = Math.max(1.2, pct(tot) - l);
-    return `<i style="left: ${l.toFixed(2)}%; width: ${w.toFixed(2)}%; ${stijl}"></i>`;
-  };
-  const delen = [
-    ...(spans?.zouStarten ?? []).map((s) => blok(s.vanMs, s.totMs, 'background: var(--zon); opacity: 0.35')),
-    ...(spans?.draaide ?? []).map((s) => blok(s.vanMs, s.totMs, 'background: var(--zon)')),
-    rest ? blok(rest.van, rest.tot, 'background: repeating-linear-gradient(45deg, rgba(247,181,72,0.6) 0 3px, transparent 3px 6px)') : '',
-  ].join('');
-  return `<div><div class="strook">${delen}<span class="nu" style="left: ${pct(Date.now()).toFixed(2)}%"></span></div><div class="uren"><span>06</span><span>12</span><span>18</span><span>24</span></div></div>`;
-}
 
 /* ------------------------------------------------------- een apparaat */
 
@@ -114,15 +99,16 @@ function kaart(d) {
   } else {
     boven = ring({ gestippeld: true });
   }
-  const leeg = d.stand === 'not_ready' || d.stand === 'unknown';
-  const metStrook = (spans?.draaide?.length || spans?.zouStarten?.length || rest) && !leeg;
-
+  void rest;
+  const draaide = (spans?.draaide ?? []).reduce((t, x) => t + (x.totMs - x.vanMs), 0);
   const el = document.createElement('section');
-  el.className = `glas app${leeg ? ' niet' : ''}`;
+  el.className = 'glas app';
+  el.dataset.actief = String(d.stand === 'running' || d.stand === 'would_start' || d.stand === 'waiting');
   el.innerHTML = `
     <div class="boven">${boven}<div><b>${esc(d.naam)}</b><span class="klein ${toon}">${esc(d.kop)}</span></div></div>
-    ${metStrook ? strook(spans, rest) : ''}
-    <p class="mini zin">${esc(zin)}</p>`;
+    <p class="mini zin">${esc(zin)}</p>
+    <div class="labels"><span class="label zon">Start op zon</span></div>
+    <div class="vandaag"><span>Vandaag</span><b>${draaide > 0 ? `${uren(draaide)} gedraaid` : 'niet gedraaid'}</b></div>`;
 
   if (d.kanKiezen) {
     const opties = [{ tekst: 'Geen haast', waarde: null }, ...d.keuzes];
@@ -162,6 +148,58 @@ async function kies(d, optie, groep, knop, antwoord) {
   }
 }
 
+/* ------------------------------------------------------- het klimaat */
+
+const uren = (ms) => {
+  const min = Math.round(ms / 60_000);
+  return min < 60 ? `${Math.max(1, min)} minuten` : `${nl(min / 60)} uur`;
+};
+const ROL = { houdt: 'Houdt op temperatuur', zon: 'Helpt op zon', kijken: 'Alleen kijken' };
+const IK = {
+  airco: '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.8" stroke-linecap="round"><rect x="2.5" y="5" width="19" height="8" rx="2"/><path d="M6 10h12M8 16.5c-.5 1-.5 2 0 3M12 16v3.5M16 16.5c.5 1 .5 2 0 3"/></svg>',
+  warm: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/></svg>',
+};
+
+/** Elk klimaatapparaat in een kamer, met zijn kamer. */
+const klimaat = () => (huisData?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat').map((a) => ({ a, r }))));
+
+/**
+ * Een klimaatapparaat nu: wat het doet (uit wat de dienst zegt, of wat Home
+ * Assistant meldt), wat het vraagt, en wat het vandaag deed.
+ */
+function klimaatKaart({ a, r }) {
+  const id = a.actuatorId ?? a.id;
+  const bew = state?.bewoner?.apparaten?.find((x) => x.actuatorId === id);
+  const wacht = (state?.rejected ?? []).find((x) => x.blockedBy === 'insufficient_power_budget' && x.intent?.actuatorId === id && x.intent?.budgetW > 0);
+  const actie = a.klimaat?.actie ?? '';
+  const doet = /koelt|verwarmt|droogt|ventileert/.test(actie);
+  const stand = bew?.soort === 'wait' ? ['Wacht op zon', 'var(--zon)'] : doet ? [huismodel.metHoofdletter(actie), /koelt/.test(actie) ? 'var(--ijs)' : 'var(--gloed)'] : [huismodel.metHoofdletter(a.stand ?? 'Onbekend'), 'var(--mint)'];
+  const zin = bew?.tekst
+    ? `${huismodel.metHoofdletter(bew.tekst)}.${wacht ? ` Begint vanzelf bij ${nl(wacht.intent.budgetW / 1000)} kW.` : ''}`
+    : a.klimaat?.doelC != null ? `Doel ${nl(a.klimaat.doelC)}°.` : '';
+  const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>kW nu</span>` : '–<span>geen meter</span>';
+  // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.
+  const meter = (opbrengst?.apparaten ?? []).find((m) => m.id === a.klimaat?.energieMeter);
+  const aan = (vandaag?.apparaten ?? []).find((x) => x.actuatorId === id)?.huidig ?? [];
+  const aanMs = aan.reduce((t, x) => t + (x.totMs - x.vanMs), 0);
+  const zonPct = meter && meter.kwh > 0 ? Math.round((meter.zonKwh / meter.kwh) * 100) : 0;
+  const dag = meter
+    ? `<div class="vandaag"><span>Vandaag</span><b>${nl(meter.kwh)} kWh, ${zonPct}% eigen zon</b></div><div class="verdeel"><i style="width: ${zonPct}%; background: var(--zon)"></i><i style="width: ${100 - zonPct}%; background: #8796a8"></i></div>`
+    : `<div class="vandaag"><span>Vandaag</span><b>${aanMs > 0 ? `${uren(aanMs)} aan` : 'niet aan geweest'}</b></div>`;
+  const labels = [a.klimaat?.rol ? `<span class="label${a.klimaat.rol === 'zon' ? ' zon' : ''}">${ROL[a.klimaat.rol]}</span>` : '', a.klimaat?.filter?.pct != null ? `<span class="label">filter ${a.klimaat.filter.pct}%</span>` : ''].join('');
+  const el = document.createElement('a');
+  el.className = 'glas app';
+  el.href = `kamer.html#${encodeURIComponent(r.id)}/${encodeURIComponent(a.id)}`;
+  el.dataset.actief = String(doet || bew?.soort === 'wait');
+  el.innerHTML = `
+    <div class="kopje"><span class="ik${a.klimaat?.kanKoelen ? '' : ' warm'}">${a.klimaat?.kanKoelen ? IK.airco : IK.warm}</span><div><b>${esc(a.naam)}</b><span class="mini">${esc(r.naam)}</span></div><div class="kw">${kw}</div></div>
+    <div class="stand"><i style="background: ${stand[1]}"></i>${esc(stand[0])}</div>
+    ${zin ? `<p class="mini zin">${esc(zin)}</p>` : ''}
+    ${labels ? `<div class="labels">${labels}</div>` : ''}
+    ${dag}`;
+  return el;
+}
+
 /** Een apparaat dat de dienst vond maar dat (nog) niet op zon staat. */
 function nietOpZon(a) {
   const el = document.createElement('a');
@@ -178,8 +216,8 @@ function toevoegen() {
   el.className = 'glas app niet';
   el.href = 'regeling.html#opzon';
   el.innerHTML = `
-    <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>Apparaat toevoegen</b><span class="klein">Wasmachine, vaatwasser, boiler</span></div></div>
-    <p class="mini zin">Alles wat Home Assistant op afstand kan starten en kan wachten op zon. Kies het bij Regeling.</p>`;
+    <div class="boven"><svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 20v24M20 32h24" stroke="#7F8E9C" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="2" stroke-dasharray="4 6"/></svg><div><b>Apparaat toevoegen</b><span class="klein">Airco, thermostaat, wasmachine</span></div></div>
+    <p class="mini zin">Een airco of thermostaat zet je bij de kamer, bij Indeling. Iets dat op zon kan wachten, kies je bij Regeling.</p>`;
   return el;
 }
 
@@ -226,77 +264,6 @@ function tekenVerdeling() {
   $$('[data-verdeling]').forEach((el) => (el.innerHTML = `<h2 class="kop-3">${titel}</h2><div class="balkje" aria-hidden="true">${balk}</div><div class="legenda">${legenda}</div>`));
 }
 
-/* ---------------------------------------------- de dag van de apparaten */
-
-const NAAM = (id) => state?.bewoner?.apparaten?.find((a) => a.actuatorId === id)?.naam ?? state?.bewoner?.uitstelbaar?.find((d) => d.id === id)?.naam ?? String(id).replace(/^ac-/, 'Airco ').replace(/[-_]+/g, ' ');
-
-/**
- * De zon van vandaag met daaronder per apparaat wanneer het draaide, en licht
- * wanneer Smart Climate het zou doen. Zo is te zien of het op zon gebeurde.
- */
-function tekenDag() {
-  const kw = vandaag?.kwartieren ?? [];
-  const banen = [
-    ...(vandaag?.uitstelbaar ?? []).map((u) => {
-      const d = state?.bewoner?.uitstelbaar?.find((x) => x.id === u.id);
-      const loop = d ? looptijd(d) : null;
-      return { naam: NAAM(u.id), echt: u.draaide, zou: u.zouStarten, rest: loop?.klaar && loop.klaar > Date.now() ? { vanMs: Date.now(), totMs: loop.klaar } : null, kleur: '#F7B548' };
-    }),
-    ...(vandaag?.apparaten ?? []).filter((a) => a.huidig.length || a.smartClimate.length).map((a) => ({ naam: NAAM(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: '#6FD3FF' })),
-  ];
-  for (const box of $$(`${app.zicht()} [data-dag]`)) {
-    const tel = box.closest('#tel') != null;
-    if (!kw.length) {
-      box.innerHTML = `<h2 class="kop-3">Vandaag</h2><p class="mini" style="margin: 6px 0 0">Nog geen metingen van vandaag.</p>`;
-      continue;
-    }
-    const B = tel ? 326 : 1150;
-    const links = tel ? 0 : 150;
-    const baan = tel ? 30 : 24;
-    // Op de wand vult de dag de ruimte die de rest overlaat: 800 hoog, min de
-    // kop, de kaarten, de verdeling, de tussenruimtes en de randen van main.
-    const main = box.parentElement;
-    const anderen = [...main.children].filter((c) => c !== box).reduce((t, c) => t + c.offsetHeight, 0);
-    const ruimte = tel ? 0 : 800 - 42 - anderen - 16 * (main.children.length - 1);
-    const vrij = ruimte - 28 - 40 - banen.length * baan - 52;
-    const zonH = tel ? 70 : Math.max(70, Math.min(200, vrij));
-    const t0 = vandaag.vanMs + 6 * 3_600_000;
-    const t1 = vandaag.vanMs + 24 * 3_600_000;
-    const x = (t) => links + Math.max(0, Math.min(1, (t - t0) / (t1 - t0))) * (B - links);
-    const lijn2 = app.verwachting(zon, weer);
-    const max = Math.max(1500, ...kw.map((q) => q.zonW ?? 0), ...lijn2.punten.map((q) => q.w));
-    const y = (w) => 8 + zonH - (w / max) * zonH;
-    const binnen = kw.filter((q) => q.tMs >= t0 - 15 * 60_000);
-    const lijn = binnen.map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.zonW ?? 0).toFixed(1)}`).join(' ');
-    const vlak = binnen.length ? `${lijn} L ${x(binnen[binnen.length - 1].tMs).toFixed(1)} ${y(0)} L ${x(binnen[0].tMs).toFixed(1)} ${y(0)} Z` : '';
-    const helder = lijn2.punten.filter((q) => q.tMs >= t0).map((q, i) => `${i ? 'L' : 'M'} ${x(q.tMs).toFixed(1)} ${y(q.w).toFixed(1)}`).join(' ');
-    const top = y(0) + 14;
-    const rijen = banen
-      .map((b, i) => {
-        const yy = top + i * baan + (tel ? 16 : 0);
-        const blok = (s, licht) => `<rect x="${x(s.vanMs).toFixed(1)}" y="${yy}" width="${Math.max(3, x(s.totMs) - x(s.vanMs)).toFixed(1)}" height="10" rx="5" fill="${b.kleur}" ${licht ? 'opacity="0.32"' : ''}/>`;
-        const naam = tel ? `<text x="0" y="${yy - 5}">${esc(b.naam)}</text>` : `<text x="0" y="${yy + 9}">${esc(b.naam)}</text>`;
-        const rest = b.rest ? `<rect x="${x(b.rest.vanMs).toFixed(1)}" y="${yy}" width="${Math.max(3, x(b.rest.totMs) - x(b.rest.vanMs)).toFixed(1)}" height="10" rx="5" fill="url(#dagrest)"/>` : '';
-        return `${naam}<rect x="${links}" y="${yy}" width="${B - links}" height="10" rx="5" fill="rgba(255,255,255,0.05)"/>${b.zou.map((s) => blok(s, true)).join('')}${b.echt.map((s) => blok(s, false)).join('')}${rest}`;
-      })
-      .join('');
-    const hoog = top + banen.length * baan + (tel ? 16 : 0) + 18;
-    const uren = [6, 9, 12, 15, 18, 21, 24].filter((u) => !tel || u % 6 === 0).map((u) => `<text x="${x(vandaag.vanMs + u * 3_600_000).toFixed(1)}" y="${hoog - 4}" text-anchor="${u === 24 ? 'end' : u === 6 ? 'start' : 'middle'}">${String(u).padStart(2, '0')}</text>`).join('');
-    const nuX = x(Date.now());
-    box.innerHTML = `
-      <div class="dagkop"><h2 class="kop-3">Vandaag</h2><span class="mini legenda-dag"><span><i class="vlak"></i>draaide</span><span><i class="vlak zou"></i>zou Smart Climate doen</span><span><i class="streep"></i>${esc(lijn2.naam)}</span></span></div>
-      <svg viewBox="0 0 ${B} ${hoog}" width="100%" role="img" aria-label="De zon van vandaag, en wanneer de apparaten draaiden">
-        <defs><linearGradient id="dagzon" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient><pattern id="dagrest" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="#F7B548" opacity="0.6"/></pattern></defs>
-        ${helder ? `<path d="${helder}" fill="none" stroke="#F7B548" stroke-opacity="0.4" stroke-dasharray="2 4"/>` : ''}
-        ${vlak ? `<path d="${vlak}" fill="url(#dagzon)"/><path d="${lijn}" fill="none" stroke="#F7B548" stroke-width="2"/>` : ''}
-        ${tel ? '' : `<text x="0" y="${y(0) - 4}" class="as">Zon</text>`}
-        <line x1="${nuX}" y1="4" x2="${nuX}" y2="${hoog - 16}" stroke="#EEF3F7" stroke-opacity="0.55"/>
-        <g font-family="Figtree" font-size="${tel ? 12 : 13}" fill="#B8C4CF">${rijen}</g>
-        <g font-family="Figtree" font-size="11" fill="#7F8E9C">${uren}</g>
-      </svg>`;
-  }
-}
-
 /* ------------------------------------------------------------ tekenen */
 
 function tekenNu() {
@@ -312,11 +279,12 @@ function tekenNu() {
   for (const box of $$('[data-apparaten]')) {
     // Een knop met focus niet onder de vinger weghalen.
     if (box.contains(document.activeElement) && document.activeElement !== document.body) continue;
-    box.replaceChildren(...lijst.map(kaart), ...gevonden.map(nietOpZon), toevoegen());
-    box.classList.toggle('vol', box.childElementCount > 3);
+    // Wat nu iets doet eerst (besluit 140); verder de volgorde van het huis.
+    const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart)];
+    const voor = kaarten.filter((k) => k.dataset.actief === 'true');
+    const na = kaarten.filter((k) => k.dataset.actief !== 'true');
+    box.replaceChildren(...voor, ...na, ...gevonden.map(nietOpZon), toevoegen());
   }
-  // Na de kaarten: op de wand krijgt de dag de ruimte die zij overlaten.
-  tekenDag();
 }
 
 /* -------------------------------------------------------------- starten */

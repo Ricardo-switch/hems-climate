@@ -24,10 +24,26 @@
   .ring { width: 72px; height: 72px; flex: none; }
   .app b { font-size: 18px; display: block; }
   .app .zin { margin: 0; }
-  .strook { position: relative; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); overflow: hidden; }
-  .strook i { position: absolute; top: 7px; height: 12px; border-radius: 6px; }
-  .strook .nu { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--tekst); }
-  .uren { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+  /* Een apparaat nu (besluit 140): wat het doet, wat het vraagt, en vandaag. */
+  #wand .raster { flex: 1; }
+  .app { gap: 9px; }
+  .app .kopje { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+  .app .kopje b { font-size: 16px; }
+  .app .ik { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(111, 211, 255, 0.14); }
+  .app .ik.warm { background: rgba(255, 122, 77, 0.14); }
+  .app .ik svg { width: 22px; height: 22px; }
+  .app .kw { font-family: var(--kop); font-size: 22px; font-weight: 600; text-align: right; line-height: 1.1; }
+  .app .kw span { display: block; font-family: Figtree, sans-serif; font-size: 11.5px; font-weight: 500; color: var(--gedempt); }
+  .app .stand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+  .app .stand i { width: 8px; height: 8px; border-radius: 50%; display: block; flex: none; }
+  .labels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .label { height: 24px; padding: 0 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .label.zon { background: rgba(247, 181, 72, 0.14); color: var(--zon); }
+  .vandaag { margin-top: auto; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, 0.06); display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--gedempt); }
+  .vandaag b { color: var(--tekst); font-weight: 600; font-size: 12.5px; }
+  .verdeel { height: 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; display: flex; }
+  .verdeel i { display: block; height: 100%; }
+  #wand .app .ring { width: 56px; height: 56px; }
   .niet { border-style: dashed; background: transparent; }
   a.app { color: inherit; text-decoration: none; }
   .gezegd:empty { display: none; }
@@ -40,19 +56,6 @@
   .legenda span { display: inline-flex; align-items: center; gap: 8px; }
   .legenda .stip { width: 10px; height: 10px; }
   .legenda b { color: var(--tekst); font-weight: 700; }
-
-  /* De dag van de apparaten, naast de zon. */
-  .dag { padding: 16px 20px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
-  #wand .dag { flex: 1; justify-content: center; overflow: hidden; }
-  .dagkop { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
-  .legenda-dag { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; }
-  .legenda-dag > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-  .legenda-dag .vlak { display: inline-block; width: 14px; height: 8px; border-radius: 4px; background: #B8C4CF; }
-  .legenda-dag .vlak.zou { opacity: 0.35; }
-  .legenda-dag .streep { display: inline-block; width: 16px; border-top: 2px dashed rgba(247, 181, 72, 0.6); }
-  .dag .as { font-family: Figtree, sans-serif; font-size: 13px; fill: #7F8E9C; }
-  /* Met veel apparaten is er op de wand geen plek voor de dag; die staat ook op Vandaag. */
-  #wand .raster.vol + .dag { display: none; }
 
   /* De telefoon. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
@@ -68,11 +71,10 @@
     <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
     <main>
       <div class="kop">
-        <div><h1 class="kop-1">Apparaten</h1><p class="lead" style="max-width: 60ch; margin-top: 8px">Wat op zon kan draaien. De airco's gaan voor, en nooit meer tegelijk dan je zekering aankan.</p></div>
+        <div><h1 class="kop-1">Apparaten</h1><p class="lead" style="max-width: 64ch; margin-top: 8px">Wat elk apparaat nu doet en vraagt, en wat het vandaag op eigen zon deed. De dag zelf staat bij Vandaag.</p></div>
         <div class="glas zonchip" data-zonchip></div>
       </div>
       <div class="raster" data-apparaten></div>
-      <section class="glas dag" data-dag></section>
       <section class="glas verdeling" data-verdeling></section>
     </main>
   </div>
@@ -85,13 +87,13 @@
       </div>
       <div class="glas zonchip" data-zonchip></div>
       <div data-apparaten style="display: flex; flex-direction: column; gap: 12px"></div>
-      <section class="glas dag" data-dag></section>
       <section class="glas verdeling" data-verdeling></section>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
   </div>
   <script src="kit/nav.js"></script>
   <script src="basis.js"></script>
+  <script src="huismodel.js"></script>
   <script src="apparaten.js"></script>
 </body>
 </html>

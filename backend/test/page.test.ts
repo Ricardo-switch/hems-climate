@@ -1154,6 +1154,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await droger.waitFor();
       await p.locator(`${z} .app`, { hasText: 'Vaatwasser' }).filter({ hasText: 'Niet op zon' }).waitFor();
       await p.locator(`${z} [data-verdeling] h2`).waitFor();
+      // Het nu (besluit 140): elk klimaatapparaat als kaart naar zijn kamer, en geen grafiek van de dag meer.
+      const klimaatKaart = p.locator(`${z} a.app[href^="kamer.html#"]`);
+      await klimaatKaart.first().waitFor();
+      expect(await klimaatKaart.first().textContent()).toMatch(/Vandaag/);
+      expect(await p.locator(`${z} [data-dag]`).count()).toBe(0);
       // De navigatie wijst Apparaten aan.
       expect(await p.locator(`${stand === 'wand' ? '#balk' : '#tabs'} [aria-current="page"]`).textContent()).toBe('Apparaten');
       if (stand === 'wand') {

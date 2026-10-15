@@ -498,6 +498,8 @@ const inHouse = (st: HaEntityState) =>
       st.attributes['device_class'] === 'humidity' ||
       // Batterijen (besluit 122): bij het apparaat, en een melding onder de 10%.
       st.attributes['device_class'] === 'battery' ||
+      // Wat een apparaat nu vraagt, voor Apparaten (15 oktober 2026).
+      st.attributes['device_class'] === 'power' ||
       // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
       /valve|klep|filter/i.test(st.entity_id)));
 let houseRegisters: HouseRegisters | null = null;

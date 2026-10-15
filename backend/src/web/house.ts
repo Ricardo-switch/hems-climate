@@ -78,6 +78,10 @@ export interface HouseClimate {
    * helpt op zon, of kijkt alleen.
    */
   readonly rol: 'houdt' | 'zon' | 'kijken';
+  /** Wat het nu vraagt, in W, als er een stroommeter bij is (Apparaten, 15 oktober 2026); anders weg. */
+  readonly vermogenW?: number | null;
+  /** De kWh-meter van hetzelfde apparaat in Home Assistant, om het verbruik van vandaag te vinden. */
+  readonly energieMeter?: string;
 }
 
 export interface HouseDevice {
@@ -865,6 +869,22 @@ function collect(
     vochtPct: r?.hum ? num(states.get(r.hum)?.state) : null,
   });
 
+  /*
+   * Wat een klimaatapparaat nu vraagt en welke kWh-meter erbij hoort (Apparaten,
+   * 15 oktober 2026): de stroommeter uit de configuratie, of een sensor van
+   * hetzelfde apparaat in Home Assistant die vermogen of energie meet.
+   */
+  const vermogenEnMeter = (powerId: string | null, deviceId: string | null): { vermogenW?: number | null; energieMeter?: string } => {
+    const vanApparaat = deviceId ? registers.entities.filter((e) => e.device_id === deviceId && e.entity_id.startsWith('sensor.') && !e.disabled_by) : [];
+    const klasse = (e: HaRegistryEntity) => e.device_class ?? e.original_device_class ?? states.get(e.entity_id)?.attributes['device_class'];
+    const meter = vanApparaat.find((e) => klasse(e) === 'energy') ?? vanApparaat.find((e) => /kwh|energie|energy/i.test(e.entity_id) && !/current|power|vermogen/i.test(e.entity_id));
+    const stroomId = powerId ?? vanApparaat.find((e) => klasse(e) === 'power')?.entity_id ?? null;
+    const st = stroomId ? states.get(stroomId) : undefined;
+    const w = num(st?.state);
+    const watt = w == null ? null : String(st?.attributes['unit_of_measurement'] ?? 'W').toLowerCase() === 'kw' ? w * 1000 : w;
+    return { ...(stroomId ? { vermogenW: watt == null ? null : Math.round(watt) } : {}), ...(meter ? { energieMeter: meter.entity_id } : {}) };
+  };
+
   // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen en meten.
   for (const a of config.actuators) {
     const st = states.get(a.ref.id);
@@ -885,6 +905,7 @@ function collect(
       doelC: num(st?.attributes['temperature']),
       actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
       rol: config.zones.some((z) => z.actuatorIds.includes(a.id)) ? (a.role === 'assist' ? 'zon' : 'houdt') : 'kijken',
+      ...vermogenEnMeter(a.power.sensor?.id ?? null, registry.get(a.ref.id)?.device_id ?? null),
     };
     const hasReading = meting.temperatuurC != null || meting.vochtPct != null;
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id], {
@@ -922,6 +943,7 @@ function collect(
     const action = st?.attributes['hvac_action'];
     const filter = filterOf(registers, states, e.device_id ?? null);
     const klimaat: HouseClimate = {
+      ...vermogenEnMeter(null, e.device_id ?? null),
       kanKoelen: modes.some((m) => m === 'cool' || m === 'heat_cool'),
       kanVerwarmen: modes.some((m) => m === 'heat' || m === 'heat_cool' || m === 'auto'),
       ...(modes.includes('dry') ? { kanDrogen: true } : {}),

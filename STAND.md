@@ -217,6 +217,8 @@ verwijzing bestaat.
   apparaat doet meteen mee ([138]).
 - **Inrichten** gebeurt op één pagina: links het huis dat meegroeit, rechts
   één vraag per stap, alles meteen bewaard ([139]).
+- **Vandaag** is de dag in de tijd; **Apparaten** is het nu, per apparaat een
+  kaart met wat het doet, vraagt en vandaag op zon deed ([140]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -405,4 +407,5 @@ verwijzing bestaat.
 [137]: DECISIONS.md#137-verwacht-naast-echt-of-de-zonverwachting-klopte
 [138]: DECISIONS.md#138-de-regeling-per-kamer-in-de-app
 [139]: DECISIONS.md#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding
+[140]: DECISIONS.md#140-vandaag-is-de-tijd-apparaten-is-het-nu
 <!-- links:einde -->

@@ -146,6 +146,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [133. Comfort zegt wanneer en waarmee: aan en uit, zon en net](#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net)
 - [136. Meldingen in de app](#136-meldingen-in-de-app)
 - [137. Verwacht naast echt: of de zonverwachting klopte](#137-verwacht-naast-echt-of-de-zonverwachting-klopte)
+- [140. Vandaag is de tijd, Apparaten is het nu](#140-vandaag-is-de-tijd-apparaten-is-het-nu)
 
 **Veiligheid**
 
@@ -5899,6 +5900,37 @@ voelde als instellingen, niet als je huis neerzetten.
   altijd. Waar hij is, onthoudt het tabblad, zodat hij over de pagina's
   loopt; of hij gezien is, onthoudt de browser. Hij vervangt de rondleiding
   van drie stappen op Thuis.
+
+---
+
+## 140. Vandaag is de tijd, Apparaten is het nu
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 15 oktober 2026, met de schets
+`Wand-Apparaten-Nu` in `design/app2`. Vandaag en Apparaten leken op elkaar:
+allebei de zon van de dag met daaronder per apparaat wanneer het draaide.
+
+*Besluit:*
+
+- **Vandaag is de tijd:** het verhaal van de dag. De zon, de temperatuur van
+  elke kamer met een regeling (eerst stonden er hooguit twee), wanneer iets
+  draaide en waarom, en bij Gisteren of de verwachting klopte.
+- **Apparaten is het nu:** per apparaat een kaart. Wat het nu doet, wat het
+  nu vraagt in kW, wat het vandaag gebruikte en welk deel op eigen zon. Een
+  apparaat zonder stroommeter zegt hoe lang het vandaag aan stond, geen
+  geschatte kWh. De rol bij de regeling en het filter staan erbij. Wat nu
+  iets doet, staat bovenaan. Een tik opent het apparaat in zijn kamer.
+- **De grafiek van de dag op Apparaten is weg;** die staat bij Vandaag. De
+  verdeling van de stroom van nu blijft onderaan.
+- **Het verbruik per apparaat** komt van de kWh-meter van hetzelfde apparaat
+  in Home Assistant, dezelfde als bij Opbrengst; het vermogen van nu van de
+  stroommeter erbij.
+- **Batterijen bij de kamer (versie 0.18.1):** een schakelaar of sensor met
+  een batterij is in Home Assistant een apparaat apart. De kamer toont hem nu,
+  een schakelaar bij Licht en een sensor onder Sensoren, oranje als hij bijna
+  leeg is; een melding brengt je er met een tik heen en licht hem op.
+- **Versie 0.19.0.**
 
 ---
 
