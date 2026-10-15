@@ -246,6 +246,8 @@ function kamerBlad(k) {
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
+    // Hoe voelt het hier (besluit 134): dezelfde knoppen als op Thuis.
+    k.zoneId ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Hoe voelt het hier?</h3><div class="gevoelblok">${gevoel.html({ zoneId: k.zoneId, state, kort: true })}</div></div>` : '',
     // Geen meters (besluit 129): welke sensoren meten kies je bij Indeling, en het gemiddelde staat bovenaan.
     `<p class="mini regel-fout" data-fout style="margin: 0"></p>`,
   ];
@@ -808,3 +810,6 @@ app.live((nieuw) => {
   state = nieuw;
   teken();
 });
+
+// Een antwoord of voorstel bij Hoe voelt het: het blad opnieuw tekenen (besluit 134).
+gevoel.bij(() => teken());

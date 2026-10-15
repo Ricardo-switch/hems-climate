@@ -33,6 +33,16 @@ export interface FeedbackRecord {
   readonly zoneId: string;
   readonly gevoel?: Feeling;
   readonly toelichting?: Note;
+  /** De temperatuur van de zone op dat moment (besluit 134), als de dienst die had. */
+  readonly c?: number;
+  /** Het dagdeel op dat moment, zoals de regeling het had (dag, nacht, ...). */
+  readonly dagdeel?: string;
+}
+
+/** Wat de dienst erbij weet op het moment van de tik (besluit 134). */
+export interface FeedbackContext {
+  readonly temperatuurC?: number | null;
+  readonly dagdeel?: string | null;
 }
 
 export type FeedbackResult =
@@ -64,7 +74,7 @@ export class FeedbackLog {
   }
 
   /** Toetst een verzoek en schrijft het weg, of zegt waarom niet. */
-  async add(body: unknown): Promise<FeedbackResult> {
+  async add(body: unknown, context: FeedbackContext = {}): Promise<FeedbackResult> {
     if (typeof body !== 'object' || body == null || Array.isArray(body)) {
       return { ok: false, status: 400, reden: 'verwacht een object' };
     }
@@ -96,9 +106,13 @@ export class FeedbackLog {
 
     // Alleen de bekende velden, in een vaste volgorde: wat er verder in het
     // verzoek stond, komt niet in de dataset.
+    const erbij = {
+      ...(typeof context.temperatuurC === 'number' && Number.isFinite(context.temperatuurC) ? { c: Math.round(context.temperatuurC * 10) / 10 } : {}),
+      ...(typeof context.dagdeel === 'string' && /^[a-z]{2,20}$/.test(context.dagdeel) ? { dagdeel: context.dagdeel } : {}),
+    };
     const record: FeedbackRecord = hasFeeling
-      ? { t, zoneId, gevoel: gevoel as Feeling }
-      : { t, zoneId, toelichting: toelichting as Note };
+      ? { t, zoneId, gevoel: gevoel as Feeling, ...erbij }
+      : { t, zoneId, toelichting: toelichting as Note, ...erbij };
     await appendFile(this.#path, `${JSON.stringify(record)}\n`, 'utf-8');
     return { ok: true, record };
   }

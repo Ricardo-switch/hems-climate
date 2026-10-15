@@ -55,6 +55,7 @@ function delen() {
     ...comfort.kamers.map((k) => ({ id: k.id, titel: k.naam, zin: samenvatting(k), stand: leeg(k) ? 'leeg' : 'goed' })),
     { kop: 'Het hele huis' },
     { id: 'dagdelen', titel: 'Dagdelen', zin: `dag ${d.dag}:00, nacht ${d.nacht}:00`, stand: 'goed' },
+    ...(comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1 ? [{ id: 'voorrang', titel: 'Voorrang', zin: voorrangZin(), stand: 'goed' }] : []),
     { id: 'afwezig', titel: 'Afwezig en vakantie', zin: 'per kamer, vanzelf of zelf', stand: 'goed' },
   ];
 }
@@ -156,11 +157,10 @@ function kamerVorm(k) {
   const nu = pz?.temperatureC;
   // Overdag en 's nachts; afwezig en vakantie hebben hun eigen deel (besluit 133).
   const banden = ['dag', 'nacht'].map((m) => band(k, m)).join('');
-  const voorrang = `<div><span class="label">Voorrang bij weinig zon</span><div class="keuze" role="group" aria-label="Voorrang">${[[1, 'Eerst'], [2, 'Daarna'], [3, 'Laatst']].map(([v, t]) => `<button type="button" data-voorrang="${v}" aria-pressed="${k.voorrang === v}">${t}</button>`).join('')}</div><p class="uitleg">Is er zon voor één apparaat, dan gaat de kamer met voorrang eerst.</p></div>`;
   return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${nu != null ? `<span class="nu-temp">nu <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
     ${banden}
     ${zonEnNet(k)}
-    <div class="rij2">${voorrang}</div>`;
+`;
 }
 
 function dagbalk() {
@@ -191,7 +191,46 @@ function afwezigVorm() {
     ${band(k, 'afwezig')}${band(k, 'vakantie')}`;
 }
 
+/* ------------------------------------------------- voorrang (besluit 134) */
+
+const naamVan = (id) => comfort.kamers.find((k) => k.id === id)?.naam ?? id;
+function voorrangZin() {
+  const k = comfort.voorrang?.koelen?.[0];
+  const w = comfort.voorrang?.verwarmen?.[0];
+  return [k ? `koelen: ${naamVan(k).toLowerCase()} eerst` : null, w && !k ? `verwarmen: ${naamVan(w).toLowerCase()} eerst` : null].filter(Boolean).join(', ');
+}
+/** Een voorstel om mee te beginnen: koelen hoog in huis eerst, verwarmen laag in huis eerst. */
+function voorrangVoorstel() {
+  // De kamers staan in de volgorde van het huis, de zolder boven (besluit 131).
+  const op = comfort.kamers.map((k) => k.id);
+  return {
+    koelen: op.filter((id) => comfort.voorrang.koelen.includes(id)),
+    verwarmen: [...op].reverse().filter((id) => comfort.voorrang.verwarmen.includes(id)),
+  };
+}
+
+function voorrangVorm() {
+  const v = comfort.voorrang;
+  const lijst = (richting, titel, kleur, wie) => {
+    const ids = v[richting] ?? [];
+    const niet = comfort.kamers.filter((k) => !ids.includes(k.id)).map((k) => k.naam);
+    return `<div class="rang"><h3><span class="stip" style="background: ${kleur}"></span>${titel}</h3>
+      ${ids.map((id, i) => `<div class="r"><i>${i + 1}</i><b>${esc(naamVan(id))}</b><span class="schuif"><button type="button" data-schuif="${richting}:${esc(id)}:-1" aria-label="${esc(naamVan(id))} hoger" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-schuif="${richting}:${esc(id)}:1" aria-label="${esc(naamVan(id))} lager" ${i === ids.length - 1 ? 'disabled' : ''}>↓</button></span></div>`).join('')}
+      ${niet.length ? `<p class="niet">${esc(niet.join(' en '))} ${niet.length === 1 ? 'kan' : 'kunnen'} niet ${wie}.</p>` : ''}</div>`;
+  };
+  const voorstel = voorrangVoorstel();
+  const anders = JSON.stringify(voorstel) !== JSON.stringify({ koelen: v.koelen, verwarmen: v.verwarmen });
+  return `<h2 class="kop-2">Voorrang</h2>
+    <p class="klein" style="margin: 0">Is er zon voor maar één kamer, wie gaat dan voor? Het huis kiest zelf de lijst die past bij wat er nodig is: koelen of verwarmen.</p>
+    <div class="lijsten">${v.koelen.length ? lijst('koelen', 'Als het huis koelt', 'var(--ijs)', 'koelen') : ''}${v.verwarmen.length ? lijst('verwarmen', 'Als het huis verwarmt', 'var(--gloed)', 'verwarmen') : ''}</div>
+    ${anders ? '<div class="voorstelrij"><span class="mini">Een voorstel: koelen hoog in huis eerst, verwarmen laag in huis eerst.</span><button type="button" class="knop" data-voorrang-voorstel>Neem over</button></div>' : ''}`;
+}
+
 function naast(id) {
+  if (id === 'voorrang') {
+    return `<div class="glas"><h3>Waarom twee lijsten</h3><p style="margin: 0">In de zomer wil je de bovenverdieping koel voor de nacht, in de winter de woonkamer warm. Zo gaat het op een koude ochtend en een warme middag allebei goed.</p></div>
+      <div class="glas"><h3>Wanneer het telt</h3><p style="margin: 0">Alleen als er niet genoeg zon is voor alles. Is er genoeg, dan krijgt elke kamer wat hij nodig heeft.</p></div>`;
+  }
   const k = comfort.kamers.find((x) => x.id === id);
   const kort = k ? state?.bewoner?.kamers?.find((x) => x.zoneId === k.id)?.kort : null;
   return `${kort ? `<div class="glas"><h3>Nu</h3><p style="margin: 0">${esc(kort)}</p></div>` : ''}
@@ -211,7 +250,7 @@ function tekenNu() {
   if (sleept) return;
   const nu = groep.tekenDelen(delen());
   const k = comfort.kamers.find((x) => x.id === nu);
-  const vorm = k ? kamerVorm(k) : nu === 'dagdelen' ? dagdelenVorm() : afwezigVorm();
+  const vorm = k ? kamerVorm(k) : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : afwezigVorm();
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
 }
@@ -222,6 +261,7 @@ function bewaar() {
   const body = {
     kamers: Object.fromEntries(comfort.kamers.map((k) => [k.id, { modi: k.modi, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }])),
     dagdelen: comfort.dagdelen,
+    ...(comfort.voorrang ? { voorrang: { koelen: comfort.voorrang.koelen, verwarmen: comfort.voorrang.verwarmen } } : {}),
   };
   groep.bewaarStraks(async () => {
     const uit = await groep.stuur('api/comfort', body);
@@ -332,8 +372,17 @@ document.addEventListener('click', (e) => {
     if (v === 'geen') k.nooitWarmerC = null;
     else if (v === 'aan') k.nooitWarmerC = Math.max(min, (k.modi.dag.cool ?? 24) + 2);
     else k.nooitWarmerC = Math.max(min, Math.min(max, (k.nooitWarmerC ?? 26) + Number(v)));
-  } else if (k && t.dataset.voorrang) {
-    k.voorrang = Number(t.dataset.voorrang);
+  } else if (t.dataset.schuif) {
+    // Een kamer hoger of lager in de lijst (besluit 134).
+    const [richting, id, stap] = t.dataset.schuif.split(':');
+    const l = [...comfort.voorrang[richting]];
+    const i = l.indexOf(id);
+    const j = i + Number(stap);
+    if (i < 0 || j < 0 || j >= l.length) return;
+    [l[i], l[j]] = [l[j], l[i]];
+    comfort.voorrang = { ...comfort.voorrang, [richting]: l };
+  } else if (t.hasAttribute('data-voorrang-voorstel')) {
+    comfort.voorrang = { ...comfort.voorrang, ...voorrangVoorstel() };
   } else if (t.dataset.uur) {
     const [sleutel, stap] = t.dataset.uur.split(':');
     const d = { ...comfort.dagdelen, [sleutel]: Math.max(0, Math.min(23, comfort.dagdelen[sleutel] + Number(stap))) };

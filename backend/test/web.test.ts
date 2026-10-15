@@ -1408,7 +1408,9 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin });
     const access: Access = { kind: 'sessions', store: new SessionStore({ logDir: dir }), login };
     const feedback = new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] });
-    const started = await start({ feedback, access });
+    // Comfort als deur die een bewoner vraagt; gevoel mag zonder inlog (besluit 134).
+    const comfort = { view: () => comfortView(exampleSite, null), save: async () => ({ ok: true as const, view: comfortView(exampleSite, null) }) };
+    const started = await start({ feedback, access, comfort });
     return { ...started, login, dir };
   }
 
@@ -1427,6 +1429,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
   }
 
   const gevoel = JSON.stringify({ zoneId: 'woonkamer', gevoel: 'goed' });
+  const comfortBody = JSON.stringify({ kamers: {} });
 
   /** Een verzoek zoals Tailscale serve het doorgeeft: met de naam in het tailnet en https erbij. */
   function viaTailscale(base: string, path: string): Promise<{ status: number; location: string; cookie: string }> {
@@ -1489,11 +1492,12 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
 
   it('weigert een deur zonder inlog, en wijst de weg naar binnen', async () => {
     const { base } = await withLogin(false);
-    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: gevoel });
+    const res = await fetch(`${base}/api/comfort`, { method: 'POST', headers: JSON_HEADERS, body: comfortBody });
     expect(res.status).toBe(401);
     expect(await res.json()).toMatchObject({ inlog: '/auth/login' });
-    // Kijken blijft open.
-    expect((await fetch(`${base}/api/gevoel`)).status).toBe(200);
+    // Kijken blijft open, en zeggen hoe het voelt ook (besluit 134): dat verandert niets aan het huis.
+    expect((await fetch(`${base}/api/comfort`)).status).toBe(200);
+    expect((await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: gevoel })).status).toBe(200);
   });
 
   it('laat een bewoner na het inloggen door, en zegt wie hij is', async () => {
@@ -1535,7 +1539,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const cookie = await logIn(base);
     const out = await fetch(`${base}/auth/logout`, { method: 'POST', headers: { ...JSON_HEADERS, cookie, origin: base }, body: '{}' });
     expect(out.status).toBe(200);
-    const res = await fetch(`${base}/api/gevoel`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: gevoel });
+    const res = await fetch(`${base}/api/comfort`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: comfortBody });
     expect(res.status).toBe(401);
   });
 

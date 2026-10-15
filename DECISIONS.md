@@ -69,6 +69,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [98. Uitstelbare apparaten: de droger draait op zon, via de arbiter](#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter) — *aangevuld door 101*
 - [101. "Klaar voor" bij de droger is per keer te kiezen](#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen)
 - [132. Verwarmen en koelen per kamer, op zon, en waar het werkt](#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt)
+- [134. Voorrang per richting, en Hoe voelt het met een antwoord](#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord)
 
 **Configuratie en onboarding**
 
@@ -5639,6 +5640,47 @@ zon of van het net gebeurt.
   open staan met de pagina van toen, en zocht daarom nog met het oude zoeken.
   Elke pagina kijkt bij openen en elke tien minuten welke versie draait; is
   die anders, dan laadt hij opnieuw, nooit terwijl je typt.
+
+---
+
+## 134. Voorrang per richting, en Hoe voelt het met een antwoord
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, met de schetsen
+`Wand-Instellingen-Comfort` (#voorrang) en `Wand-Gevoel` in `design/app2`.
+Voorrang was één getal per kamer, voor koelen en verwarmen samen. En "Hoe
+voelt de woonkamer nu" deed niets zichtbaars: zonder inlog stuurde de knop
+naar het inloggen, met inlog verscheen er alleen "Genoteerd".
+
+*Besluit:*
+
+- **Voorrang per richting:** een zone kan `priorityByAction` hebben, een
+  voorrang bij verwarmen en een bij koelen; weg is `priority`. De arbiter
+  ordent een voorstel op de voorrang van zijn richting (`zonePriorityFor`).
+  Zonder het veld verandert er niets. In de app is Voorrang een eigen deel van
+  Comfort met twee lijsten, elk met omhoog en omlaag, en een voorstel: koelen
+  hoog in huis eerst, verwarmen laag in huis eerst. Alleen kamers die het
+  kunnen. Bewaard in `comfort.json` als `voorrang`, de plek in de lijst wordt
+  de voorrang. De keuze per kamer (eerst, daarna, laatst) is weg uit de app.
+- **Hoe voelt het mag zonder inlog** (`/api/gevoel` vraagt geen bewoner meer):
+  het verandert niets aan het huis, en het wandscherm is waar je het tikt. Het
+  blijft een eigen bestand met vaste woorden en een grens op het tempo (84).
+  Een voorstel overnemen in Comfort vraagt wel een inlog.
+- **Bij elke tik** bewaart de dienst de temperatuur van de zone en het dagdeel
+  van dat moment (`c`, `dagdeel`), niet wat de pagina stuurt. `/api/gevoel`
+  geeft tot acht weken terug.
+- **Na een tik een antwoord:** wat het huis noteerde en wat het nu doet. Drie
+  keer hetzelfde in twee weken, in hetzelfde dagdeel (overdag of 's nachts),
+  geeft een voorstel voor Comfort: een halve graad warmer of koeler, met
+  "Ja" en "Nee, alleen nu".
+- **Wat het huis leerde,** vanaf acht tikken met een temperatuur waarvan drie
+  goed: elke tik als stip op de temperatuur van toen, en tussen welke
+  temperaturen het goed voelde.
+- **Kiezen welke kamer** op Thuis, en dezelfde knoppen op de kamerpagina.
+- **Klaar om** (een kamer koel om 22:00) wacht op het thermisch model (stap D):
+  hoe vroeg het moet beginnen, is wat dat model leert. De schets ligt klaar.
+- **Versie 0.12.0.**
 
 ---
 

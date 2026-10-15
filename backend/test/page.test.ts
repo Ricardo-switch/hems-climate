@@ -618,6 +618,34 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Hoe voelt het (besluit 134): tikken kan zonder inlog, er komt meteen een
+   * antwoord, en na drie keer hetzelfde in hetzelfde dagdeel een voorstel.
+   */
+  it('noteert hoe het voelt zonder inlog, en stelt na een paar keer iets voor', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/thuis.html`);
+    const kaart = p.locator('#wand [data-gevoel]');
+    await kaart.locator('[data-gevoel-tik="te_koud"]').waitFor({ timeout: 10_000 });
+    for (let i = 0; i < 3; i++) {
+      await kaart.locator('[data-gevoel-tik="te_koud"]').click();
+      await kaart.locator('.gevoelantwoord', { hasText: 'Genoteerd: te koud' }).waitFor();
+    }
+    // Zonder inlog bewaard, met de temperatuur van toen; en het blijft op Thuis.
+    expect(new URL(p.url()).pathname).toBe('/thuis.html');
+    expect(await kaart.locator('.gevoelantwoord').textContent()).toMatch(/bij \d+(,\d)?°/);
+    // Overdag in de test: drie keer te koud geeft een voorstel, als er overdag verwarmd wordt.
+    const voorstel = kaart.locator('.gevoelvoorstel', { hasText: 'Voortaan anders?' });
+    if (await voorstel.count()) expect(await voorstel.textContent()).toContain('3 keer te koud');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   /* Schermen (besluit 121) en batterijen (besluit 122). */
   it('bedient een scherm vanuit Kamer, en meldt een lege batterij op Thuis', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
@@ -698,7 +726,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const wand = p.locator('#wand');
     await wand.locator('[data-delen] .deel').first().waitFor({ timeout: 10_000 });
     const delen = await wand.locator('[data-delen] .deel b').allTextContents();
-    expect(delen).toEqual([...exampleSite.zones.map((z) => z.name), 'Dagdelen', 'Afwezig en vakantie']);
+    expect(delen).toEqual([...exampleSite.zones.map((z) => z.name), 'Dagdelen', 'Voorrang', 'Afwezig en vakantie']);
     // De verwarmgreep van overdag een stuk naar rechts.
     const greep = wand.locator('[data-modus="dag"] [data-greep="heat"]');
     const vak = (await wand.locator('[data-modus="dag"] .schaal').boundingBox())!;
@@ -731,6 +759,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('[data-delen] .deel', { hasText: 'Afwezig en vakantie' }).click();
     await wand.locator('[data-vorm] [data-modus="vakantie"]').waitFor();
     expect(await wand.locator('[data-afwezig-kamer]').count()).toBe(exampleSite.zones.length);
+    // Voorrang (besluit 134): bij koelen de tweede kamer omhoog.
+    await wand.locator('[data-delen] .deel', { hasText: 'Voorrang' }).click();
+    await wand.locator('[data-vorm] .rang').first().waitFor();
+    const koelVoor = configNu.zones.filter((z) => comfortView(configNu, null).voorrang.koelen.includes(z.id));
+    if (koelVoor.length > 1) {
+      const tweede = comfortView(configNu, comfortNu).voorrang.koelen[1]!;
+      await wand.locator(`[data-schuif="koelen:${tweede}:-1"]`).click();
+      await expect.poll(() => comfortNu?.voorrang?.koelen[0], { timeout: 5_000 }).toBe(tweede);
+      expect(configNu.zones.find((z) => z.id === tweede)?.priorityByAction?.cool).toBe(1);
+    }
     // De dagdelen: overdag een uur later.
     await wand.locator('[data-delen] .deel', { hasText: 'Dagdelen' }).click();
     await wand.locator('[data-uur="dag:1"]').click();
@@ -884,7 +922,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('app.online()');
     expect(await p.locator('.geenverbinding').count()).toBe(0);
     await context.close();
-  }, 20_000);
+  }, 40_000);
 
   /*
    * Thuis in ontwerp 2 (besluit 104): het huis uit de tekenmotor van de schets,

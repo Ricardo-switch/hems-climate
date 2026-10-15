@@ -17,6 +17,7 @@ import type {
 } from './decision.js';
 import type { DecisionContext } from './context.js';
 import { actuatorById } from './model.js';
+import { zonePriorityFor } from './voorrang.js';
 import type { Action, Actuator } from './model.js';
 import { isOverridden } from './override.js';
 import { minutesSinceChange } from './state.js';
@@ -47,14 +48,16 @@ function consumesPower(intent: Intent): boolean {
  * uitkomst reproduceerbaar is en de replay-harness kan vergelijken.
  */
 function ordered(intents: readonly Intent[], ctx: DecisionContext): Intent[] {
-  const zonePriority = new Map(ctx.config.zones.map((z) => [z.id, z.priority]));
+  // Voorrang per richting (besluit 134): koelen en verwarmen elk in hun eigen volgorde.
+  const zoneById = new Map(ctx.config.zones.map((z) => [z.id, z]));
+  const zonePriority = { get: (id: string, action: string) => { const z = zoneById.get(id); return z ? zonePriorityFor(z, action) : undefined; } };
   const roleRank = (id: string): number =>
     actuatorById(ctx.config, id).role === 'primary' ? 0 : 1;
 
   return [...intents].sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
-    const za = zonePriority.get(a.zoneId) ?? Number.MAX_SAFE_INTEGER;
-    const zb = zonePriority.get(b.zoneId) ?? Number.MAX_SAFE_INTEGER;
+    const za = zonePriority.get(a.zoneId, a.action) ?? Number.MAX_SAFE_INTEGER;
+    const zb = zonePriority.get(b.zoneId, b.action) ?? Number.MAX_SAFE_INTEGER;
     if (za !== zb) return za - zb;
     const ra = roleRank(a.actuatorId);
     const rb = roleRank(b.actuatorId);

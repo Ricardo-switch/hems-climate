@@ -40,6 +40,19 @@ describe('gevoel en toelichting (besluit 84)', () => {
     expect((await l.since(1_500)).map((r) => r.zoneId)).toEqual(['zolder']);
   });
 
+  it('bewaart de temperatuur en het dagdeel van dat moment (besluit 134), maar niet wat de pagina zelf stuurt', async () => {
+    const { log: l } = await log({ now: () => 5_000 });
+    expect(await l.add({ zoneId: 'woonkamer', gevoel: 'te_koud', c: 99 }, { temperatuurC: 20.84, dagdeel: 'dag' })).toEqual({
+      ok: true,
+      record: { t: 5_000, zoneId: 'woonkamer', gevoel: 'te_koud', c: 20.8, dagdeel: 'dag' },
+    });
+    // Zonder meting of met iets raars: dan zonder.
+    expect(await l.add({ zoneId: 'woonkamer', gevoel: 'goed' }, { temperatuurC: Number.NaN, dagdeel: 'Dag; drop' })).toEqual({
+      ok: true,
+      record: { t: 5_000, zoneId: 'woonkamer', gevoel: 'goed' },
+    });
+  });
+
   it('neemt alleen de bekende velden over', async () => {
     const { dir, log: l } = await log();
     await l.add({ zoneId: 'woonkamer', gevoel: 'goed', naam: 'Ricardo', extra: 'x'.repeat(100) });

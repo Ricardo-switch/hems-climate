@@ -203,6 +203,8 @@ verwijzing bestaat.
   ([132]).
 - **Comfort** zegt per dagdeel wanneer het aan- en uitgaat, wat er op zon
   gebeurt, en per kamer of koelen van het net mag ([133]).
+- **Voorrang** geldt per richting, koelen en verwarmen; **Hoe voelt het** werkt
+  zonder inlog, geeft een antwoord en een voorstel ([134]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -385,4 +387,5 @@ verwijzing bestaat.
 [131]: DECISIONS.md#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte
 [132]: DECISIONS.md#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt
 [133]: DECISIONS.md#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net
+[134]: DECISIONS.md#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord
 <!-- links:einde -->

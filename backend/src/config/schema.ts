@@ -700,6 +700,18 @@ function zone(
     max: 999,
     integer: true,
   });
+  // Voorrang per richting (besluit 134); weg is `priority`.
+  const pbaRaw = value['priorityByAction'];
+  let priorityByAction: { heat?: number; cool?: number } | undefined;
+  if (pbaRaw !== undefined) {
+    const pPath = join(path, 'priorityByAction');
+    const blok = blockOf(p, pbaRaw, pPath);
+    if (blok) {
+      const heat = blok['heat'] === undefined ? undefined : numOr(p, blok, pPath, 'heat', priority ?? order, { min: 1, max: 999, integer: true });
+      const cool = blok['cool'] === undefined ? undefined : numOr(p, blok, pPath, 'cool', priority ?? order, { min: 1, max: 999, integer: true });
+      priorityByAction = { ...(heat != null ? { heat } : {}), ...(cool != null ? { cool } : {}) };
+    }
+  }
   // `medium` raakt niemand hard: het bepaalt hoe ver vooruit er geladen mag
   // worden, en dat staat standaard toch uit.
   const thermalMass = oneOfOr(p, value, path, 'thermalMass', THERMAL_MASS, 'medium');
@@ -798,6 +810,7 @@ function zone(
     ...(humidity ? { humidity } : {}),
     actuatorIds,
     priority,
+    ...(priorityByAction && Object.keys(priorityByAction).length ? { priorityByAction } : {}),
     thermalMass,
     hysteresis,
     buffering,

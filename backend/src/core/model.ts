@@ -179,6 +179,12 @@ export interface Zone {
   readonly actuatorIds: readonly string[];
   /** Lager wint bij schaarste. 1 is de belangrijkste zone. */
   readonly priority: number;
+  /**
+   * Voorrang per richting (besluit 134): bij koelen een andere volgorde dan bij
+   * verwarmen, zoals de zolder eerst koelen en de woonkamer eerst verwarmen.
+   * Weg is `priority`.
+   */
+  readonly priorityByAction?: { readonly heat?: number; readonly cool?: number };
   readonly thermalMass: ThermalMass;
   readonly hysteresis: Hysteresis;
   readonly setpoints: Readonly<Record<Mode, SetpointPair>>;
@@ -547,3 +553,4 @@ export function actuatorById(config: SiteConfig, id: string): Actuator {
 export function actuatorsOf(config: SiteConfig, zone: Zone): Actuator[] {
   return zone.actuatorIds.map((id) => actuatorById(config, id));
 }
+

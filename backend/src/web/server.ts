@@ -641,13 +641,18 @@ export class WebServer {
           sendJson(res, 400, { fout: (error as Error).message });
           return;
         }
-        const result = await feedback.add(body);
+        // De temperatuur en het dagdeel van nu erbij (besluit 134): daaruit leert het huis wat jij prettig vindt.
+        const snap = this.#options.latest();
+        const zoneId = typeof body === 'object' && body != null ? (body as Record<string, unknown>)['zoneId'] : null;
+        const pz = snap?.explanation.perZone.find((z) => z.zoneId === zoneId);
+        const result = await feedback.add(body, { temperatuurC: pz?.temperatureC ?? null, dagdeel: snap?.explanation.mode ?? null });
         if (result.ok) sendJson(res, 200, result.record);
         else sendJson(res, result.status, { fout: result.reden });
         return;
       }
-      // Wat er de afgelopen 24 uur is vastgelegd, voor de bevestiging op de pagina.
-      sendJson(res, 200, await feedback.since(Date.now() - 86_400_000));
+      // Wat er is vastgelegd: standaard de afgelopen 24 uur, of tot acht weken terug (besluit 134).
+      const dagen = Math.max(1, Math.min(56, Number(url.searchParams.get('dagen')) || 1));
+      sendJson(res, 200, await feedback.since(Date.now() - dagen * 86_400_000));
       return;
     }
 

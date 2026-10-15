@@ -112,3 +112,31 @@ describe('op zon, en wanneer het aan- en uitgaat', () => {
     expect(v.koeltVanNet).toBe(false);
   });
 });
+
+/* Voorrang per richting (besluit 134). */
+describe('voorrang bij koelen en bij verwarmen', () => {
+  const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+  const opties = { knownStrategies: defaultStrategies().ids };
+
+  it('geeft per richting alleen de kamers die het kunnen, op volgorde', () => {
+    const v = comfortView(exampleSite, null).voorrang;
+    expect(v.koelen).toEqual(['woonkamer', 'zolder']);
+    expect(v.verwarmen).toEqual(['woonkamer', 'badkamer', 'zolder']);
+  });
+
+  it('maakt van de plek in de lijst de voorrang', () => {
+    const c = controleerComfort({ kamers: {}, voorrang: { koelen: ['zolder', 'woonkamer'], verwarmen: ['woonkamer', 'badkamer', 'zolder'] } }, exampleSite);
+    expect(c.ok).toBe(true);
+    if (!c.ok) return;
+    const parsed = parseSiteConfig(withComfort(raw, c.comfort).raw, opties);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.config.zones.find((z) => z.id === 'zolder')?.priorityByAction).toEqual({ heat: 3, cool: 1 });
+    expect(comfortView(parsed.config, c.comfort).voorrang.koelen).toEqual(['zolder', 'woonkamer']);
+  });
+
+  it('weigert een onbekende of dubbele kamer', () => {
+    expect(controleerComfort({ kamers: {}, voorrang: { koelen: ['kelder'], verwarmen: [] } }, exampleSite).ok).toBe(false);
+    expect(controleerComfort({ kamers: {}, voorrang: { koelen: ['zolder', 'zolder'], verwarmen: [] } }, exampleSite).ok).toBe(false);
+  });
+});

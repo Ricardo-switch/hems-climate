@@ -110,13 +110,13 @@ async function stempel() {
   // de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
   const paginas = {
     'index.html': ['app.css', 'app.js'],
-    'thuis.html': ['thuis.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'thuis.html': ['thuis.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'instellingen.html': ['instellingen.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'huis-kan.html': ['huis-kan.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'assistent.html': ['assistent.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'opbrengst.html': ['opbrengst.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js', 'kit/sankey.js'],
     'vandaag.html': ['vandaag.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'kamer.html': ['kamer.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'kamer.html': ['kamer.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'inrichten.html': ['inrichten.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'functies.html': ['functies.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],

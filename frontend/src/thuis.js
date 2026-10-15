@@ -272,36 +272,31 @@ function tekenStraks() {
   kaarten.forEach((k) => (k.hidden = false));
 }
 
-const GEVOEL = [
-  ['te_koud', 'Te koud', 'rgba(111,211,255,0.14)', '#a9e6ff'],
-  ['goed', 'Goed', 'rgba(110,231,183,0.14)', 'var(--mint)'],
-  ['te_warm', 'Te warm', 'rgba(255,122,77,0.14)', '#ffb090'],
-];
-
+/*
+ * Hoe voelt het? (besluit 134): de kaart komt uit gevoel.js. Kiezen welke
+ * kamer kan met de knoppen erboven; de eerste keer de kamer met een regeling
+ * op de laagste etage, meestal waar je woont.
+ */
 function tekenGevoel() {
   const zones = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
   if (!zones.length) return;
-  // De eerste keer de kamer met een regeling op de laagste etage: meestal waar je woont.
   gekozenZone ??= ([...huisData.etages].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.temperatuurC != null) ?? zones[0]).zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
-  zet('[data-gevoel-kop]', `Hoe voelt ${zoneNaam(kamer.zoneId, huisData)} nu?`);
-  const box = document.querySelector('[data-gevoel]');
-  if (box.childElementCount) return;
-  for (const [sleutel, tekst, achter, kleur] of GEVOEL) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = tekst;
-    b.style.background = achter;
-    b.style.color = kleur;
-    b.addEventListener('click', async () => {
-      $$('[data-gevoel] button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      const res = await deur('api/gevoel', { zoneId: gekozenZone, gevoel: sleutel }).catch(() => undefined);
-      if (res === null) return;
-      zet('[data-gevoel-zin]', res?.ok ? 'Genoteerd. Het huis leert ervan wat jij prettig vindt.' : 'Niet gelukt; probeer het zo nog eens.');
-    });
-    box.append(b);
-  }
+  zet('[data-gevoel-kop]', 'Hoe voelt het nu?');
+  $$('[data-gevoel-uitleg]').forEach((el) => (el.hidden = true));
+  const html = gevoel.html({ zoneId: kamer.zoneId, kamers: zones.map((r) => ({ zoneId: r.zoneId, naam: r.naam, c: r.temperatuurC })), state });
+  $$('[data-gevoel]').forEach((el) => {
+    if (el.dataset.html !== html) {
+      el.innerHTML = html;
+      el.dataset.html = html;
+    }
+  });
 }
+gevoel.bij(() => teken());
+addEventListener('gevoelzone', (e) => {
+  gekozenZone = e.detail;
+  teken();
+});
 
 function tekenKamersTel() {
   const box = document.querySelector('[data-kamers]');

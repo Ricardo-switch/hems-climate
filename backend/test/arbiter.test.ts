@@ -967,3 +967,21 @@ describe('een primary die ook op zon mag (besluit 132)', () => {
     expect(voorBadkamer(d).some((i) => i.strategyId === 'comfort' && i.action === 'off')).toBe(true);
   });
 });
+
+/* Voorrang per richting (besluit 134): bij koelen een andere volgorde dan bij verwarmen. */
+describe('voorrang bij koelen en bij verwarmen (besluit 134)', () => {
+  const decideWith = (config: SiteConfig, state: SystemState) => decide({ config, state, strategies: defaultStrategies() });
+  // Warm, maar onder nooit warmer dan: alleen koelen op zon, en zon voor één airco.
+  const warm = () => buildState({ gridPowerW: -1000, livingRoomC: 23.5, atticC: 24.5 });
+  const wie = (config: SiteConfig) => decideWith(config, warm()).accepted.filter((i) => i.action === 'cool').map((i) => i.actuatorId);
+
+  it('koelt bij weinig zon eerst de kamer die bij koelen voorgaat', () => {
+    // Zonder voorrang per richting gaat de woonkamer voor, zoals altijd.
+    expect(wie(exampleSite)[0]).toBe('ac-woonkamer');
+    const zolderEerst: SiteConfig = {
+      ...exampleSite,
+      zones: exampleSite.zones.map((z) => (z.id === 'zolder' ? { ...z, priorityByAction: { cool: 1 } } : z.id === 'woonkamer' ? { ...z, priorityByAction: { cool: 2 } } : z)),
+    };
+    expect(wie(zolderEerst)[0]).toBe('ac-zolder');
+  });
+});

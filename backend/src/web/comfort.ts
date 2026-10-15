@@ -17,6 +17,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { SiteConfig } from '../core/model.js';
+import { zonePriorityFor } from '../core/voorrang.js';
 
 export const COMFORT_FILE = 'comfort.json';
 
@@ -50,9 +51,16 @@ export interface ComfortRoom {
   readonly opZonC?: number;
 }
 
+/** Voorrang per richting (besluit 134): de zones op volgorde, de eerste gaat voor. */
+export interface ComfortVoorrang {
+  readonly koelen: readonly string[];
+  readonly verwarmen: readonly string[];
+}
+
 export interface Comfort {
   readonly versie: 1;
   readonly kamers: Readonly<Record<string, ComfortRoom>>;
+  readonly voorrang?: ComfortVoorrang;
   readonly dagdelen?: { readonly voorverwarmen: number; readonly dag: number; readonly nacht: number };
 }
 
@@ -83,6 +91,8 @@ export interface ComfortRoomView {
 
 export interface ComfortView {
   readonly kamers: readonly ComfortRoomView[];
+  /** Wie voorgaat bij weinig zon, per richting (besluit 134): alleen kamers die het kunnen. */
+  readonly voorrang: ComfortVoorrang;
   readonly dagdelen: { readonly voorverwarmen: number; readonly dag: number; readonly nacht: number };
   readonly bereik: typeof COMFORT_RANGE;
 }
@@ -111,7 +121,14 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
     };
   });
   const s = config.schedule;
-  return { kamers, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
+  const opVolgorde = (actie: 'heat' | 'cool', kan: (k: ComfortRoomView) => boolean) =>
+    config.zones
+      .filter((z) => { const k = kamers.find((x) => x.id === z.id); return k != null && kan(k); })
+      .map((z, i) => ({ id: z.id, p: zonePriorityFor(z, actie), i }))
+      .sort((a, b) => a.p - b.p || a.i - b.i)
+      .map((x) => x.id);
+  const voorrang = { koelen: opVolgorde('cool', (k) => k.kanKoelen), verwarmen: opVolgorde('heat', (k) => k.kanVerwarmen) };
+  return { kamers, voorrang, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
 }
 
 /* -------------------------------------------------------- over het bestand */
@@ -147,7 +164,18 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
     toegevoegd.push(`comfort van ${String(zone['name'] ?? id)}`);
     return uit;
   });
-  const out: Record<string, unknown> = { ...raw, zones: nieuweZones };
+  // Voorrang per richting (besluit 134): de plek in de lijst wordt de voorrang.
+  const metVoorrang = comfort.voorrang
+    ? nieuweZones.map((zone) => {
+        const id = String(zone['id'] ?? '');
+        const k = comfort.voorrang!.koelen.indexOf(id);
+        const w = comfort.voorrang!.verwarmen.indexOf(id);
+        if (k < 0 && w < 0) return zone;
+        return { ...zone, priorityByAction: { ...(w >= 0 ? { heat: w + 1 } : {}), ...(k >= 0 ? { cool: k + 1 } : {}) } };
+      })
+    : nieuweZones;
+  if (comfort.voorrang) toegevoegd.push('de voorrang bij koelen en verwarmen');
+  const out: Record<string, unknown> = { ...raw, zones: metVoorrang };
   if (comfort.dagdelen) {
     const schedule = { ...((raw['schedule'] as Record<string, unknown> | undefined) ?? {}) };
     schedule['preheatFromHour'] = comfort.dagdelen.voorverwarmen;
@@ -213,6 +241,14 @@ export function controleerComfort(body: unknown, config: SiteConfig): ComfortChe
     }
     kamers[id] = kamer;
   }
+  // Voorrang per richting (besluit 134): bekende zones, elk hooguit één keer.
+  let voorrang: ComfortVoorrang | undefined;
+  if (b['voorrang'] !== undefined && b['voorrang'] !== null) {
+    const v = b['voorrang'] as Record<string, unknown>;
+    const lijst = (x: unknown) => Array.isArray(x) && x.every((id) => typeof id === 'string' && config.zones.some((z) => z.id === id)) && new Set(x).size === x.length;
+    if (!lijst(v['koelen']) || !lijst(v['verwarmen'])) return { ok: false, reden: 'voorrang is per richting een lijst van kamers, elk één keer' };
+    voorrang = { koelen: v['koelen'] as string[], verwarmen: v['verwarmen'] as string[] };
+  }
   let dagdelen: Comfort['dagdelen'];
   if (b['dagdelen'] !== undefined && b['dagdelen'] !== null) {
     const d = b['dagdelen'] as Record<string, unknown>;
@@ -222,7 +258,7 @@ export function controleerComfort(body: unknown, config: SiteConfig): ComfortChe
     if (!(v < dg && dg < n)) return { ok: false, reden: 'voorverwarmen begint voor de dag, en de dag voor de nacht' };
     dagdelen = { voorverwarmen: v, dag: dg, nacht: n };
   }
-  return { ok: true, comfort: { versie: 1, kamers, ...(dagdelen ? { dagdelen } : {}) } };
+  return { ok: true, comfort: { versie: 1, kamers, ...(voorrang ? { voorrang } : {}), ...(dagdelen ? { dagdelen } : {}) } };
 }
 
 /* -------------------------------------------------------------- bewaren */

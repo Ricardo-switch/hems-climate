@@ -46,6 +46,19 @@
   .zonnet .label { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .zonnet .uitleg { margin: 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.45; }
   .zonnet .stapper b { font-size: 17px; min-width: 96px; }
+  /* Voorrang in twee lijsten (besluit 134, schets Wand-Instellingen-Comfort#voorrang). */
+  .lijsten { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .rang { padding: 14px 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
+  .rang h3 { margin: 0; display: flex; align-items: center; gap: 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .rang .r { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .rang .r i { font-style: normal; font-family: var(--kop); font-size: 17px; font-weight: 600; color: var(--zacht); text-align: center; }
+  .rang .r b { font-size: 15px; }
+  .rang .schuif { display: flex; gap: 4px; }
+  .rang .schuif button { width: 32px; height: 32px; border-radius: 10px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 15px; cursor: pointer; }
+  .rang .schuif button:disabled { opacity: 0.3; cursor: default; }
+  .rang .niet { margin: 0; font-size: 12.5px; color: var(--gedempt); }
+  .voorstelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+  #tel .lijsten { grid-template-columns: 1fr; }
   .kamerkeuze { display: flex; gap: 6px; flex-wrap: wrap; }
   .kamerkeuze button { height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .kamerkeuze button[aria-pressed='true'] { background: var(--tekst); color: var(--inkt); }
