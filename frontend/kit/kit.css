@@ -251,6 +251,45 @@ button {
 .balk a.onder {
   margin-top: auto;
 }
+/* De bel (besluit 136): boven het tandwiel, met een getal als er iets aandacht vraagt. */
+.balk .meldbel {
+  position: relative;
+  margin-top: auto;
+  width: 50px;
+  height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--gedempt);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.balk .meldbel svg {
+  width: 22px;
+  height: 22px;
+}
+.balk .meldbel + a.onder {
+  margin-top: 0;
+}
+.meldbel b {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--gloed);
+  color: #fff;
+  font-size: 11.5px;
+  line-height: 18px;
+  text-align: center;
+}
+.meldbel[aria-expanded='true'] {
+  color: #a9e6ff;
+  background: rgba(111, 211, 255, 0.13);
+}
 .balk a[aria-current='page'] {
   color: #a9e6ff;
   background: rgba(111, 211, 255, 0.13);

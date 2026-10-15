@@ -45,6 +45,15 @@
   /* De telefoon. */
   #tel .boven { padding: 18px 18px 0; }
   #tel .kopregel { align-items: center; }
+  /* De bel en het tandwiel even groot als de andere knoppen (besluit 136). */
+  #tel .kopregel .pil svg { width: 17px; height: 17px; flex: none; }
+  /* Past het niet naast de klok, zoals bij Afwezig, dan schuift het naar een tweede regel. */
+  #tel .kopregel { gap: 10px; }
+  #tel .kopregel > [data-tijd] { flex: none; }
+  #tel .kopregel > span:last-child { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; min-width: 0; }
+  #tel .meldbel b { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
+  /* Een lange naam bij een lege batterij past binnen het scherm. */
+  #tel .batterijpil { max-width: 100%; }
   #tel .tijd { font-size: 40px; }
   #tel .titel { position: static; width: auto; margin-top: 14px; }
   #tel .titel .kop-1 { font-size: 34px; }
@@ -198,6 +207,7 @@
           <button class="pil weerknop" type="button" style="height: 32px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
           <span class="pil" style="height: 32px; font-size: 13px" data-modus></span>
           <button class="pil uitlegknop" type="button" data-uitleg aria-label="Zo werkt het huis" style="height: 32px; width: 32px">?</button>
+          <button type="button" class="pil meldbel" aria-label="Meldingen" aria-haspopup="dialog" style="position: relative; height: 32px; width: 32px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer" data-meldbel data-meldicoon><b data-meldaantal hidden></b></button>
           <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>

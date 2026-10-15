@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.12.0';
+export const VERSIE = '0.13.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,18 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.13.0',
+    datum: '2026-10-15',
+    nieuw: [
+      'Meldingen: een bel in het menu, met een getal als er iets aandacht vraagt',
+      'Een melding als iets nieuws in Home Assistant staat, iets niet meer reageert, een batterij of filter bijna op is, of de slimme meter niets meer levert',
+      'Onderhoud: alle batterijen en filters, altijd te bekijken',
+      'Na een update één keer: wat is er nieuw',
+    ],
+    beter: ['Wat vanzelf weer goed komt, schuift naar Eerder', 'Op de telefoon staat de stand bovenaan alleen als die niet automatisch is'],
+    opgelost: ['Op de telefoon liep de kop van Thuis en een lange batterijmelding buiten het scherm'],
+  },
   {
     versie: '0.12.0',
     datum: '2026-10-15',

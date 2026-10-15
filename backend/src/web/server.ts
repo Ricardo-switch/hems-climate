@@ -54,6 +54,7 @@ import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
+import type { MeldingenStore } from './meldingen.js';
 import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -147,6 +148,8 @@ export interface WebOptions {
   readonly feedback?: FeedbackLog;
   /** "Klaar voor" bij de droger (besluit 101); zonder dit bestaat de route niet. */
   readonly uitstel?: UitstelStore;
+  /** Meldingen in de app (besluit 136): wat aandacht vraagt, en Eerder. */
+  readonly meldingen?: MeldingenStore;
   /**
    * Opbrengst (besluit 102): de meters en prijzen van de app, en de statistiek
    * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.
@@ -470,6 +473,8 @@ export class WebServer {
       (this.#options.onboarding != null && path === '/api/onboarding') ||
       (this.#options.feedback != null && path === '/api/gevoel') ||
       (this.#options.uitstel != null && path === '/api/uitstel') ||
+      // Een melding niet meer laten zien (besluit 136): alleen in het eigen bestand.
+      (this.#options.meldingen != null && path === '/api/meldingen') ||
       (this.#options.energy != null && path === '/api/energie') ||
       // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
       (this.#options.connection != null && path === '/api/aansluiting') ||
@@ -601,6 +606,31 @@ export class WebServer {
 
     if (path === '/api/opbrengst') {
       await this.#yield(res, url.searchParams);
+      return;
+    }
+
+    if (path === '/api/meldingen') {
+      const store = this.#options.meldingen;
+      if (store == null) {
+        sendJson(res, 200, { actief: [], eerder: [] });
+        return;
+      }
+      if (method === 'POST') {
+        let body: unknown;
+        try {
+          body = await readJson(req);
+        } catch (error) {
+          sendJson(res, 400, { fout: (error as Error).message });
+          return;
+        }
+        const id = typeof body === 'object' && body != null ? (body as Record<string, unknown>)['negeer'] : null;
+        if (!store.negeer(id)) {
+          sendJson(res, 400, { fout: 'die melding is er niet' });
+          return;
+        }
+        await store.bewaar().catch(() => undefined);
+      }
+      sendJson(res, 200, store.lijst(Date.now()));
       return;
     }
 

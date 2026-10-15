@@ -193,3 +193,56 @@ html.tel-stand.met-inrichtbalk #tel .inhoud { padding-bottom: 180px; }
 .gevoellegenda { display: flex; gap: 12px; font-size: 11.5px; color: var(--gedempt); }
 .gevoellegenda span { display: inline-flex; align-items: center; gap: 5px; }
 .gevoellegenda i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* Meldingen (besluit 136, schets Wand-Meldingen): het blad over de pagina. */
+.meldachter { position: fixed; inset: 0; z-index: 60; background: rgba(4, 8, 16, 0.5); }
+.meldachter[hidden], .meldblad[hidden] { display: none; }
+.meldblad { position: fixed; z-index: 61; top: 16px; right: 16px; bottom: 16px; width: min(440px, calc(100vw - 32px)); padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; overflow: auto; overscroll-behavior: contain; background: rgba(12, 20, 34, 0.98); border-radius: 26px; }
+html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 86vh; }
+.meldblad .kop { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.meldblad .kop h2 { margin: 0; }
+.meldblad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; flex: none; }
+.meldblad h3 { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--gedempt); }
+.melding { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 3px 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); }
+.melding .ik { grid-row: 1 / 4; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; }
+.melding .ik svg { width: 20px; height: 20px; }
+.melding b { font-size: 14.5px; }
+.melding a { color: inherit; text-decoration: none; }
+.melding p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+.melding .acties { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
+.melding .acties a, .melding .acties button { height: 34px; padding: 0 14px; border-radius: 11px; border: 0; display: inline-flex; align-items: center; font: inherit; font-size: 13px; font-weight: 700; background: rgba(255, 255, 255, 0.08); color: var(--tekst); cursor: pointer; }
+.melding .acties a.licht { background: var(--tekst); color: #0b1424; }
+.melding .tijd { margin-left: auto; font-size: 12px; color: var(--gedempt); }
+.melding.oud { background: transparent; border-color: transparent; padding: 4px 14px; }
+.melding.oud b { font-size: 14px; font-weight: 600; color: var(--zacht); }
+.melding.oud .ik { width: 30px; height: 30px; }
+.melding .ik.rood { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
+.melding .ik.geel { background: rgba(247, 181, 72, 0.14); color: var(--zon); }
+.melding .ik.blauw { background: rgba(111, 211, 255, 0.14); color: var(--ijs); }
+.melding .ik.groen, .onderhoud .ik { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+.melding .ik.paars { background: rgba(143, 134, 255, 0.14); color: var(--violet); }
+.meldblad .stil { padding: 22px 10px 12px; text-align: center; color: var(--zacht); font-size: 13.5px; }
+.meldblad .stil b { display: block; font-family: var(--kop); font-size: 21px; color: var(--tekst); margin: 8px 0 4px; }
+.meldblad .onderhoud { margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; border: 0; background: rgba(255, 255, 255, 0.05); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.meldblad .onderhoud .ik { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+.meldblad .onderhoud .ik svg { width: 20px; height: 20px; }
+.meldblad .onderhoud b { display: block; font-size: 14.5px; }
+.meldblad .onderhoud span span { font-size: 12.5px; color: var(--gedempt); }
+.meldblad .onderhoud .pijl { margin-left: auto; color: var(--gedempt); font-size: 18px; }
+.meldblad .terugmeld { border: 0; background: none; padding: 0; color: var(--gedempt); font: inherit; font-size: 13px; cursor: pointer; }
+.meldblad .regel { display: grid; grid-template-columns: minmax(0, 1fr) 110px 44px; gap: 12px; align-items: center; padding: 8px 2px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.meldblad .regel b { display: block; font-size: 14px; font-weight: 600; }
+.meldblad .regel span { font-size: 12.5px; color: var(--gedempt); }
+.meldblad .meter { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.meldblad .meter i { display: block; height: 100%; border-radius: 4px; }
+.meldblad .regel .pct { text-align: right; font-family: var(--kop); font-weight: 600; font-size: 15px; color: var(--tekst); }
+.meldblad button:focus-visible, .meldblad a:focus-visible, .nieuwpop button:focus-visible, .nieuwpop a:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+/* Wat is er nieuw: één keer na een update. */
+.nieuwpop { position: fixed; z-index: 62; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(480px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 22px 24px; display: flex; flex-direction: column; gap: 10px; background: rgba(12, 20, 34, 0.98); border-radius: 26px; }
+.nieuwpop .soort .label { display: inline-flex; height: 22px; padding: 0 9px; border-radius: 999px; align-items: center; font-size: 12px; font-weight: 700; }
+.nieuwpop .soort.nieuw .label { color: var(--mint); background: rgba(110, 231, 183, 0.12); }
+.nieuwpop .soort.beter .label { color: var(--ijs); background: rgba(111, 211, 255, 0.12); }
+.nieuwpop .soort.opgelost .label { color: var(--zon); background: rgba(247, 181, 72, 0.12); }
+.nieuwpop ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--zacht); }
+.nieuwpop .knoppen { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.nieuwpop .knop { display: inline-flex; align-items: center; text-decoration: none; }

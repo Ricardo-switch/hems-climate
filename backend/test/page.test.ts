@@ -36,6 +36,7 @@ import { recordRun } from '../src/adapters/runs.js';
 import { decide } from '../src/core/decide.js';
 import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstruct.js';
 import { DivergenceCache } from '../src/web/divergence.js';
+import { MeldingenStore } from '../src/web/meldingen.js';
 import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
@@ -298,6 +299,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           divergence: () => review.latest,
           logDir: dir,
           feedback: new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) }),
+          // Meldingen (besluit 136): één apparaat dat al twee uur niet reageert.
+          meldingen: (() => {
+            const m = new MeldingenStore({ logDir: dir });
+            m.bij({ nu: Date.now(), zonderRuimte: [], volgen: [{ id: 'switch.droger', naam: 'De droger', kamer: 'Zolder', kamerId: 'zolder', onbereikbaarSindsMs: Date.now() - 2 * 3_600_000 }], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null });
+            return m;
+          })(),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
           layout: { store: layoutStore, proposal: () => proposeLayout(exampleSite, houseRegisters, houseStates) },
@@ -643,6 +650,47 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Overdag in de test: drie keer te koud geeft een voorstel, als er overdag verwarmd wordt.
     const voorstel = kaart.locator('.gevoelvoorstel', { hasText: 'Voortaan anders?' });
     if (await voorstel.count()) expect(await voorstel.textContent()).toContain('3 keer te koud');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /* Meldingen (besluit 136): de bel met een getal, het blad, Onderhoud, en na een update wat er nieuw is. */
+  it('toont meldingen achter de bel, Onderhoud, en na een update wat er nieuw is', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => {
+      localStorage.setItem('sc-rondleiding-gezien', '1');
+      // Een oudere versie gezien: dan komt er één keer de pop-up.
+      if (!sessionStorage.getItem('al')) {
+        localStorage.setItem('sc-versie-gezien', '0.0.1');
+        sessionStorage.setItem('al', '1');
+      }
+    });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/vandaag.html`);
+    // Wat is er nieuw, één keer.
+    const pop = p.locator('[data-nieuwpop]');
+    await pop.waitFor({ timeout: 10_000 });
+    expect(await pop.textContent()).toContain(`Wat is er nieuw in ${VERSIE}`);
+    await p.locator('[data-nieuw-dicht]').click();
+    expect(await pop.count()).toBe(0);
+    // De bel met een getal, op elke pagina.
+    const bel = p.locator('#wand [data-meldbel]');
+    await expect.poll(() => bel.locator('[data-meldaantal]').textContent(), { timeout: 10_000 }).toBe('1');
+    await bel.click();
+    const blad = p.locator('[data-meldblad]');
+    await blad.locator('.melding', { hasText: 'De droger reageert niet meer' }).waitFor();
+    await blad.locator('[data-meld-onderhoud]').click();
+    await blad.locator('h2', { hasText: 'Onderhoud' }).waitFor();
+    await blad.locator('[data-meld-sluit]').click();
+    expect(await blad.isHidden()).toBe(true);
+    // De volgende keer geen pop-up meer.
+    await p.reload();
+    await bel.waitFor();
+    await p.waitForTimeout(1600);
+    expect(await pop.count()).toBe(0);
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

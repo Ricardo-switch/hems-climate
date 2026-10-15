@@ -336,6 +336,171 @@
     klok();
     setInterval(klok, 10_000);
     nieuweVersie();
+    meldingenStart();
+  }
+
+  /* ------------------------------------------------- meldingen (besluit 136) */
+
+  /*
+   * De bel in het menu (schets Wand-Meldingen): een getal als er iets aandacht
+   * vraagt, een blad met Vraagt aandacht, Eerder en Onderhoud. Elke twee
+   * minuten bij, en als je de app weer opent. Na een update één keer "Wat is
+   * er nieuw", als pop-up.
+   */
+  let meld = { actief: [], eerder: [] };
+  let meldZicht = 'lijst';
+  const MELDICOON = {
+    nieuw: ['blauw', '<path d="M12 5v14M5 12h14"/>'],
+    stil: ['rood', '<path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/>'],
+    batterij: ['geel', '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M5 10v4"/>'],
+    filter: ['geel', '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>'],
+    meter: ['rood', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
+    versie: ['paars', '<path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/>'],
+    mijlpaal: ['blauw', '<path d="M4 18c3-8 6-10 8-10s4 3 8 0"/>'],
+    goed: ['groen', '<path d="M5 12l5 5 9-10"/>'],
+  };
+  const meldIcoon = (soort) => {
+    const [kleur, pad] = MELDICOON[soort] ?? MELDICOON.nieuw;
+    return `<span class="ik ${kleur}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg></span>`;
+  };
+  function wanneerMeld(ms) {
+    const min = Math.round((Date.now() - ms) / 60_000);
+    if (min < 60) return `${Math.max(1, min)} min`;
+    const d = new Date(ms);
+    const vandaag = new Date();
+    if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
+    const gisteren = new Date(vandaag.getTime() - 86_400_000);
+    return d.toDateString() === gisteren.toDateString() ? 'gisteren' : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+  }
+
+  function meldLijst() {
+    const kaart = (m) => `<div class="melding">${meldIcoon(m.soort)}<b>${esc(m.titel)}</b><p>${esc(m.tekst)}</p>
+      <div class="acties">${m.actie ? `<a class="licht" href="${esc(m.actie.href)}">${esc(m.actie.label)}</a>` : ''}${m.soort === 'nieuw' ? `<button type="button" data-meld-negeer="${esc(m.id)}">Negeer</button>` : ''}<span class="tijd">${esc(wanneerMeld(m.sindsMs))}</span></div></div>`;
+    const oud = (m) => `<div class="melding oud">${meldIcoon(m.soort === 'versie' || m.soort === 'mijlpaal' ? m.soort : 'goed')}${m.actie ? `<a href="${esc(m.actie.href)}"><b>${esc(m.titel)}</b></a>` : `<b>${esc(m.titel)}</b>`}<p>${esc(m.tekst)}</p></div>`;
+    const aandacht = meld.actief.length
+      ? `<h3>Vraagt aandacht</h3>${meld.actief.map(kaart).join('')}`
+      : '<div class="stil"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><b>Alles werkt</b>Komt er iets nieuws bij, of reageert iets niet meer, dan staat het hier.</div>';
+    const eerder = meld.eerder.length ? `<h3>Eerder</h3>${meld.eerder.slice(0, 5).map(oud).join('')}` : '';
+    return `<div class="kop"><h2 class="kop-2">Meldingen</h2><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
+      ${aandacht}${eerder}
+      <button type="button" class="onderhoud" data-meld-onderhoud>${meldIcoon('goed')}<span><b>Onderhoud</b><span>Alle batterijen en filters</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
+  }
+
+  async function meldOnderhoud() {
+    let huis = null;
+    try {
+      huis = await haal('api/huis');
+    } catch {
+      // Dan een lege lijst.
+    }
+    const balk = (pct) => `<div class="meter"><i style="width: ${Math.max(2, pct)}%; background: ${pct < 10 ? 'var(--gloed)' : pct < 40 ? 'var(--zon)' : 'var(--mint)'}"></i></div>`;
+    const regel = (naam, onder, pct) => `<div class="regel"><div><b>${esc(naam)}</b><span>${esc(onder ?? '')}</span></div>${balk(pct)}<span class="pct">${pct}%</span></div>`;
+    const batt = huis?.batterijen ?? [];
+    const filters = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.klimaat?.filter?.pct != null).map((a) => ({ naam: a.naam, kamer: r.naam, pct: a.klimaat.filter.pct }))));
+    return `<div class="kop"><div><button type="button" class="terugmeld" data-meld-terug>‹ Meldingen</button><h2 class="kop-2" style="margin: 2px 0 0">Onderhoud</h2></div><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
+      <h3>Batterijen, de leegste eerst</h3>
+      ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct)).join('') : '<p class="mini" style="margin: 0">Geen apparaten met een batterij gevonden.</p>'}
+      ${filters.length ? `<h3>Filters van de airco's</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct)).join('')}` : ''}
+      <p class="mini" style="margin: auto 0 0">Onder de 10% komt er een melding. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
+  }
+
+  function meldGetal() {
+    const n = meld.actief.length;
+    $$('[data-meldaantal]').forEach((b) => {
+      b.hidden = n === 0;
+      b.textContent = n > 9 ? '9+' : String(n);
+    });
+    $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-label', n ? `Meldingen, ${n} ${n === 1 ? 'vraagt' : 'vragen'} aandacht` : 'Meldingen'));
+  }
+
+  async function meldLaad() {
+    try {
+      meld = await haal('api/meldingen');
+    } catch {
+      return;
+    }
+    meldGetal();
+    const blad = document.querySelector('[data-meldblad]');
+    if (blad && !blad.hidden && meldZicht === 'lijst') blad.innerHTML = meldLijst();
+  }
+
+  function meldBlad() {
+    let blad = document.querySelector('[data-meldblad]');
+    if (!blad) {
+      document.body.insertAdjacentHTML('beforeend', '<div class="meldachter" data-meld-achter hidden></div><aside class="glas meldblad" role="dialog" aria-label="Meldingen" data-meldblad hidden></aside>');
+      blad = document.querySelector('[data-meldblad]');
+    }
+    return blad;
+  }
+  async function meldOpen(zicht = 'lijst') {
+    const blad = meldBlad();
+    meldZicht = zicht;
+    blad.innerHTML = zicht === 'lijst' ? meldLijst() : await meldOnderhoud();
+    blad.hidden = false;
+    document.querySelector('[data-meld-achter]').hidden = false;
+    $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-expanded', 'true'));
+    blad.querySelector('[data-meld-sluit]')?.focus();
+  }
+  function meldDicht() {
+    $$('[data-meldblad], [data-meld-achter]').forEach((el) => (el.hidden = true));
+    $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  }
+
+  /** Na een update één keer: wat is er nieuw (besluit 136). De eerste keer ooit niet: dan is alles nieuw. */
+  const VERSIE_GEZIEN = 'sc-versie-gezien';
+  async function watIsErNieuw() {
+    let v;
+    try {
+      v = await haal('api/versie');
+    } catch {
+      return;
+    }
+    let gezien = null;
+    try {
+      gezien = localStorage.getItem(VERSIE_GEZIEN);
+      localStorage.setItem(VERSIE_GEZIEN, v.nummer);
+    } catch {
+      return;
+    }
+    const n = v.nieuw?.[0];
+    if (gezien == null || gezien === v.nummer || !n || n.versie !== v.nummer) return;
+    const SOORT = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
+    const delen = SOORT.filter(([k]) => (n[k] ?? []).length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+    document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop>
+      <span class="mini">Bijgewerkt</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Wat is er nieuw in ${esc(v.nummer)}</h2>${delen}
+      <div class="knoppen"><a class="knop" href="toegang.html#versie">Alle versies</a><button type="button" class="knop knop-licht" data-nieuw-dicht>Mooi</button></div></div>`);
+    document.querySelector('[data-nieuw-dicht]').focus();
+  }
+
+  function meldingenStart() {
+    $$('[data-meldicoon]').forEach((b) => b.insertAdjacentHTML('afterbegin', nav.svg('meldingen')));
+    void meldLaad();
+    setInterval(() => void meldLaad(), 2 * 60_000);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void meldLaad());
+    setTimeout(() => void watIsErNieuw(), 1200);
+    document.addEventListener('click', async (e) => {
+      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-negeer], [data-nieuw-dicht], [data-nieuw-achter]');
+      if (!t) return;
+      if (t.matches('[data-nieuw-dicht], [data-nieuw-achter]')) {
+        $$('[data-nieuwpop], [data-nieuw-achter]').forEach((el) => el.remove());
+      } else if (t.matches('[data-meldbel]')) {
+        if (document.querySelector('[data-meldblad]:not([hidden])')) meldDicht();
+        else await meldOpen('lijst');
+      } else if (t.matches('[data-meld-sluit], [data-meld-achter]')) meldDicht();
+      else if (t.matches('[data-meld-onderhoud]')) await meldOpen('onderhoud');
+      else if (t.matches('[data-meld-terug]')) await meldOpen('lijst');
+      else if (t.dataset.meldNegeer) {
+        const res = await deur('api/meldingen', { negeer: t.dataset.meldNegeer }).catch(() => null);
+        if (res?.ok) meld = await res.json();
+        meldGetal();
+        await meldOpen('lijst');
+      }
+    });
+    addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if (document.querySelector('[data-nieuwpop]')) $$('[data-nieuwpop], [data-nieuw-achter]').forEach((el) => el.remove());
+      else meldDicht();
+    });
   }
 
   /*

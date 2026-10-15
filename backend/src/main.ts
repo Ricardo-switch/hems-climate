@@ -11,6 +11,8 @@
  * op stuklopen.
  */
 
+import { MeldingenStore } from './web/meldingen.js';
+import { NIEUW, VERSIE } from './version.js';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -688,6 +690,50 @@ if (scenePictures) setInterval(() => void scenePictures.refresh(), 10 * 60_000).
 /** De configuratie zoals de app hem laat zien: met de namen en de volgorde uit de indeling (besluit 131). */
 const webConfig = () => (siteConfig ? withLayoutNames(siteConfig, layoutStore?.current ?? null) : null);
 
+/*
+ * Meldingen in de app (besluit 136): elke minuut uit wat de dienst weet, naar
+ * een eigen bestand naast de dataset. Niets naar Home Assistant.
+ */
+const meldingen = logDir !== '' ? new MeldingenStore({ logDir }) : null;
+await meldingen?.load();
+function meldingenRonde(): void {
+  const cfg = siteConfig;
+  const h = cfg ? houseReport() : null;
+  if (!meldingen || !cfg || !h || allStates.size === 0) return;
+  const entiteit = (d: { id: string; actuatorId: string | null }) =>
+    d.actuatorId ? (cfg.actuators.find((a) => a.id === d.actuatorId)?.ref.id ?? null) : d.id.includes('.') ? d.id : null;
+  const volgen = h.etages.flatMap((e) =>
+    e.ruimtes.flatMap((r) =>
+      r.apparaten.map((d) => {
+        const id = entiteit(d);
+        const st = id ? allStates.get(id) : undefined;
+        return { id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, onbereikbaarSindsMs: st && st.state === 'unavailable' ? Date.parse(st.last_changed) : null };
+      }),
+    ),
+  );
+  // Is bijna alles tegelijk weg, dan is Home Assistant zelf weg; dat is geen melding per apparaat.
+  const weg = volgen.filter((v) => v.onbereikbaarSindsMs != null).length;
+  if (volgen.length > 4 && weg > volgen.length / 2) return;
+  const grid = cfg.power.gridPower;
+  const gst = grid ? allStates.get(grid.id) : undefined;
+  const nieuwste = NIEUW[0];
+  meldingen.bij({
+    nu: Date.now(),
+    zonderRuimte: h.zonderRuimte.map((d) => ({ id: d.id, naam: d.naam })),
+    volgen,
+    batterijen: h.batterijen,
+    filters: h.filters,
+    meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
+    versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
+    winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
+  });
+  void meldingen.bewaar().catch(() => undefined);
+}
+if (meldingen) {
+  setTimeout(meldingenRonde, 30_000).unref();
+  setInterval(meldingenRonde, 60_000).unref();
+}
+
 const houseReport = () => {
   const h = siteConfig && houseRegisters
     ? buildHouse(
@@ -879,6 +925,7 @@ if (webPort != null) {
       ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
+    ...(meldingen ? { meldingen } : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),

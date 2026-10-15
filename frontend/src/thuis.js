@@ -153,6 +153,8 @@ function tekenNu() {
   tekenWeerknop();
   const modus = e.modeSource === 'schedule' ? 'Automatisch' : { dag: 'Dag', nacht: 'Nacht', afwezig: 'Afwezig', vakantie: 'Vakantie', handmatig: 'Handmatig' }[e.mode] ?? 'Automatisch';
   $$('[data-modus]').forEach((el) => (el.innerHTML = `${esc(modus)} <span aria-hidden="true" style="color: var(--gedempt)">▾</span>`));
+  // Op de telefoon alleen een stand die afwijkt (besluit 136): anders past de bel er niet naast.
+  $$('#tel [data-modus]').forEach((el) => (el.hidden = modus === 'Automatisch'));
 
   const model = huisModel();
   lucht(model.tijd, model.seizoen, model.wolken);

@@ -142,6 +142,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [130. Instellingen in zes groepen, en comfort zet je in de app](#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app)
 - [131. Versie 0.9.0, één naam per kamer, en wat na een grondige test niet klopte](#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte)
 - [133. Comfort zegt wanneer en waarmee: aan en uit, zon en net](#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net)
+- [136. Meldingen in de app](#136-meldingen-in-de-app)
 
 **Veiligheid**
 
@@ -5707,6 +5708,43 @@ kreeg de NAS niets nieuws (besluit 54).
   vrijgave. Pas als alles goed is, schuift `stable` vooruit, alleen vooruit.
 - **Vanaf 1 november** weer bij elke push via GitHub: de trigger `push` terug
   in `ci.yml`. Het script blijft voor als het nog eens nodig is.
+
+---
+
+## 136. Meldingen in de app
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, met de schets `Wand-Meldingen` in
+`design/app2`. Er was geen plek waar de app zei dat er iets nieuws was, of
+dat iets niet meer werkte. Besluit 79 zegt wat later een pushmelding krijgt;
+dit is de lijst in de app zelf.
+
+*Besluit:*
+
+- **Een bel in het menu,** boven het tandwiel, op elke pagina; op de telefoon
+  op Thuis naast het tandwiel. Een getal als er iets aandacht vraagt. Een tik
+  opent een blad over de pagina: Vraagt aandacht, Eerder, en onderaan
+  Onderhoud.
+- **Wat een melding krijgt:** een apparaat dat in geen kamer staat (na tien
+  minuten, met "Zet in een kamer" en "Negeer"); een apparaat in een kamer dat
+  een uur onbereikbaar is, en "weer goed" als het terug is; een batterij of
+  airco-filter onder de 10%; een slimme meter die een half uur niets levert.
+  Ter informatie, niet in het getal: een nieuwe versie, en 10, 20 en 30
+  winterdagen meegekeken.
+- **Tegen te veel:** een wachttijd per soort; wat binnen een etmaal terugkomt,
+  opent hetzelfde bericht weer; wat vanzelf goed komt, gaat naar Eerder en
+  verdwijnt na een week; is bijna alles tegelijk weg, dan is Home Assistant
+  zelf weg en komt er geen melding per apparaat.
+- **Onderhoud:** alle batterijen, de leegste eerst, en de filters van de
+  airco's, altijd te bekijken.
+- **Wat is er nieuw:** na een update één keer een pop-up met de punten van de
+  nieuwe versie (besluit 133). De eerste keer ooit niet: dan is alles nieuw.
+- **Opslag:** `meldingen.json` naast de dataset, elke minuut bijgewerkt. Lezen
+  kan iedereen; "Negeer" vraagt een bewoner. Er gaat niets naar Home
+  Assistant. Een melding op de telefoon blijft voor later, met een eigen
+  besluit over schrijven (79).
+- **Versie 0.13.0.**
 
 ---
 
