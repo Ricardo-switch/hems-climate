@@ -500,6 +500,7 @@ const inHouse = (st: HaEntityState) =>
       st.attributes['device_class'] === 'battery' ||
       // Wat een apparaat nu vraagt, voor Apparaten (15 oktober 2026).
       st.attributes['device_class'] === 'power' ||
+      st.attributes['device_class'] === 'energy' ||
       // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
       /valve|klep|filter/i.test(st.entity_id)));
 let houseRegisters: HouseRegisters | null = null;
