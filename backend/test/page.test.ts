@@ -1236,6 +1236,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-zoek]').fill('zekering');
     await p.locator('#wand [data-gevonden] a', { hasText: 'Hoofdzekering' }).waitFor();
     expect(await p.locator('#wand [data-gevonden] a').first().getAttribute('href')).toBe('energie.html#aansluiting');
+    // Meervoud, een hoofdletter, en ook wat niet in de vaste lijst staat: een kamer van dit huis (besluit 132).
+    await p.locator('#wand [data-zoek]').fill('Batterijen');
+    await p.locator('#wand [data-gevonden] a', { hasText: 'Batterijen en filters' }).waitFor();
+    const eenKamer = (((await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport).etages[0]?.ruimtes[0]?.naam) ?? '';
+    await p.locator('#wand [data-zoek]').fill(eenKamer.toLowerCase());
+    await p.locator('#wand [data-gevonden] a', { hasText: eenKamer }).first().waitFor();
     await p.locator('#wand [data-zoek]').press('Escape');
     await p.locator('#wand a.kan').click();
     await p.locator('#wand h1', { hasText: 'Wat je huis kan' }).waitFor();

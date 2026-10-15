@@ -5593,6 +5593,10 @@ werkte.
 - **De tekening:** een thermostaat met vloerverwarming eraan tekent de vloer,
   niet een radiator.
 - **Versie 0.10.0.**
+- **Zoeken bij Instellingen** (0.10.1) zoekt op losse woorden, het begin of een
+  deel van een woord, zonder accenten en meervoud, en vindt ook de kamers en
+  apparaten van het huis en alles uit Wat je huis kan. "Batterij" vond eerst
+  niets.
 
 ---
 

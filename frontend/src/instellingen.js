@@ -154,7 +154,7 @@ const ZOEKVELD = '<label class="zoek"><svg viewBox="0 0 24 24" fill="none" strok
 
 function toonGevonden(veld) {
   const vak = veld.closest('[data-zoekvak]').querySelector('[data-gevonden]');
-  const lijst = stand.zoek(veld.value);
+  const lijst = stand.zoek(veld.value, d);
   vak.hidden = veld.value.trim().length < 2;
   vak.innerHTML = lijst.length ? lijst.map((z) => `<a href="${z.href}">${esc(z.titel)}<span>${esc(z.waar)}</span></a>`).join('') : '<p>Niets gevonden. Probeer een ander woord, zoals "prijs" of "deurbel".</p>';
 }

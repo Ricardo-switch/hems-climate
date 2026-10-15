@@ -74,10 +74,54 @@
     { titel: 'Je gegevens exporteren', waar: 'App en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
   ];
 
-  function zoek(tekst) {
-    const t = tekst.trim().toLowerCase();
-    if (t.length < 2) return [];
-    return ZOEK.filter((z) => `${z.titel} ${z.woorden}`.toLowerCase().includes(t)).slice(0, 6);
+  ZOEK.push(
+    { titel: 'Batterijen en filters', waar: 'Thuis', href: 'thuis.html#batterijen', woorden: 'batterij batterijen accu leeg bijna vervangen filter filters airco onderhoud knop schakelaar sensor' },
+    { titel: 'Verwarmen en koelen per kamer', waar: 'Je huis', href: 'indeling.html', woorden: 'radiator vloerverwarming vloer infrarood paneel kachel elektrisch airco thermostaat knop stekker module vermogen watt op zon bron' },
+    { titel: 'Een apparaat een eigen naam geven', waar: 'Je huis', href: 'indeling.html', woorden: 'naam hernoemen apparaat verbergen verplaatsen' },
+    { titel: 'Wat je huis kan', waar: 'Instellingen', href: 'huis-kan.html', woorden: 'functies kan werkt meekijken leert ideeen idee meer uit besparen' },
+    { titel: 'Versie en wat is er nieuw', waar: 'App en toegang', href: 'toegang.html#versie', woorden: 'versie update nieuw bijwerken' },
+  );
+
+  /*
+   * Zoeken (besluit 132): op losse woorden, het begin van een woord, zonder
+   * accenten en zonder meervoud. Behalve de vaste lijst ook de kamers en
+   * apparaten van dit huis en alles uit Wat je huis kan, als `d` er is.
+   */
+  const plat = (t) => String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ');
+  const stam = (w) => (w.length > 5 ? w.replace(/(tjes|jes|en|s)$/, '') : w);
+  const woordenVan = (t) => plat(t).split(/\s+/).filter(Boolean).map(stam);
+  function lijstVoor(d) {
+    const uit = [...ZOEK];
+    if (!d) return uit;
+    for (const x of kan(d)) uit.push({ titel: x.titel, waar: 'Wat je huis kan', href: `huis-kan.html#${x.id}`, woorden: `${x.wat ?? ''} ${x.nu ?? ''}` });
+    for (const e of d.huis?.etages ?? []) {
+      for (const r of e.ruimtes ?? []) {
+        uit.push({ titel: r.naam, waar: `Kamer, ${e.naam}`, href: `indeling.html#${encodeURIComponent(r.id)}`, woorden: 'kamer' });
+        for (const a of r.apparaten ?? []) uit.push({ titel: a.naam, waar: r.naam, href: `kamer.html#${encodeURIComponent(r.id)}/${encodeURIComponent(a.id)}`, woorden: `${a.haNaam ?? ''} ${a.soort}` });
+      }
+    }
+    return uit;
+  }
+  function zoek(tekst, d) {
+    const vraag = woordenVan(tekst).filter((w) => w.length >= 2);
+    if (!vraag.length || plat(tekst).trim().length < 2) return [];
+    // Ook midden in een samengesteld woord: "zekering" in "hoofdzekering".
+    const past = (w, lijst) => lijst.some((x) => x.startsWith(w) || (w.length >= 4 && x.includes(w)) || (w.length >= 4 && x.length >= 4 && w.startsWith(x)));
+    const gezien = new Set();
+    return lijstVoor(d)
+      .map((z) => {
+        const titel = woordenVan(z.titel);
+        const rest = woordenVan(z.woorden ?? '');
+        let score = 0;
+        for (const w of vraag) score += past(w, titel) ? 3 : past(w, rest) ? 1 : -10;
+        return { z, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((x) => x.z)
+      // Dezelfde titel één keer: de vaste lijst gaat voor.
+      .filter((z) => (gezien.has(plat(z.titel)) ? false : gezien.add(plat(z.titel))))
+      .slice(0, 7);
   }
 
   /* ------------------------------------------------- wat je huis kan */

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Telefoon · Comfort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Comfort op de telefoon (schets, 15 oktober 2026): per dagdeel de balk over
+   * de hele breedte, daaronder twee regels onder elkaar, elk met de schakelaar
+   * rechts. Wanneer het begint en stopt, klein eronder.
+   */
+  body { margin: 0; width: 390px; min-height: 844px; }
+  .inhoud { padding: 54px 16px 30px; display: flex; flex-direction: column; gap: 12px; }
+  .kaart { padding: 16px; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; }
+  .dagdeel { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .dagdeel:first-of-type { border-top: 0; padding-top: 0; }
+  .dagdeel .naam { display: flex; justify-content: space-between; align-items: baseline; }
+  .dagdeel .naam b { font-size: 16px; }
+  .dagdeel .naam span { font-size: 12.5px; color: var(--gedempt); }
+  .schaal { position: relative; height: 34px; margin: 4px 6px 0; }
+  .baan { position: absolute; left: 0; right: 0; top: 13px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, rgba(255, 122, 77, 0.3), rgba(255, 255, 255, 0.07) 40%, rgba(255, 255, 255, 0.07) 60%, rgba(111, 211, 255, 0.3)); }
+  .goed { position: absolute; top: 11px; height: 10px; border-radius: 5px; background: rgba(110, 231, 183, 0.5); }
+  .zonband { position: absolute; top: 11px; height: 10px; border-radius: 5px; background: repeating-linear-gradient(135deg, rgba(247, 181, 72, 0.55) 0 4px, rgba(247, 181, 72, 0.15) 4px 8px); }
+  .greep { position: absolute; top: 4px; width: 24px; height: 24px; margin-left: -12px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); display: grid; place-items: center; }
+  .greep i { width: 8px; height: 8px; border-radius: 50%; }
+  .zon { position: absolute; top: -6px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--zon); box-shadow: 0 0 10px rgba(247, 181, 72, 0.7); }
+  .maat { position: absolute; top: 27px; font-size: 10.5px; color: var(--gedempt); transform: translateX(-50%); }
+  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+  .regel .wat { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+  .regel .wat i { width: 8px; height: 8px; border-radius: 50%; }
+  .regel .wat b { font-family: var(--kop); font-size: 17px; }
+  .regel .wat em { font-style: normal; font-weight: 500; color: var(--zacht); }
+  .regel small { grid-column: 1 / 3; font-size: 12.5px; color: var(--gedempt); line-height: 1.45; }
+  .regel small .z { color: var(--zon); }
+  .regel.uit .wat { color: var(--gedempt); }
+  .sw { width: 40px; height: 24px; border-radius: 999px; position: relative; background: rgba(255, 255, 255, 0.14); }
+  .sw::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c9d3dc; }
+  .sw.aan.warm { background: var(--gloed); }
+  .sw.aan.koel { background: var(--ijs); }
+  .sw.aan::after { left: auto; right: 3px; background: #fff; }
+</style>
+</head>
+<body class="lucht lucht-nacht">
+  <div class="inhoud">
+    <span class="mini" style="font-weight: 600">‹ Comfort</span>
+    <h1 class="kop-1" style="font-size: 32px; margin: 0">Beneden</h1>
+    <section class="glas kaart">
+      <div class="dagdeel">
+        <div class="naam"><b>Overdag</b><span>8:00 tot 22:00</span></div>
+        <div class="schaal"><div class="baan"></div><div class="goed" style="left: 42.9%; width: 14.3%"></div><div class="zonband" style="left: 42.9%; width: 14.2%"></div><span class="zon" style="left: 50%"></span><span class="greep" style="left: 42.9%"><i style="background: var(--gloed)"></i></span><span class="greep" style="left: 57.1%"><i style="background: var(--ijs)"></i></span><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 42.9%">20°</span><span class="maat" style="left: 57.1%">22°</span><span class="maat" style="left: 100%">28°</span></div>
+        <div class="regel"><span class="wat"><i style="background: var(--gloed)"></i>Verwarmen <em>onder</em> <b>20°</b></span><span class="sw aan warm"></span><small>Aan onder 19,7°, uit bij 20,2°. <span class="z">Op zon tot 21°.</span></small></div>
+        <div class="regel"><span class="wat"><i style="background: var(--ijs)"></i>Koelen <em>boven</em> <b>22°</b></span><span class="sw aan koel"></span><small><span class="z">Op zon al vanaf 21°.</span> Van het net pas boven 26°.</small></div>
+      </div>
+      <div class="dagdeel">
+        <div class="naam"><b>'s Nachts</b><span>22:00 tot 6:00</span></div>
+        <div class="schaal"><div class="baan"></div><span class="maat" style="left: 0%">14°</span><span class="maat" style="left: 100%">28°</span></div>
+        <div class="regel uit"><span class="wat"><i style="background: var(--gedempt)"></i>Verwarmen uit</span><span class="sw"></span><small>Zet hem aan voor een temperatuur.</small></div>
+        <div class="regel uit"><span class="wat"><i style="background: var(--gedempt)"></i>Koelen uit</span><span class="sw"></span><small>Behalve boven 26°: nooit warmer dan.</small></div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
