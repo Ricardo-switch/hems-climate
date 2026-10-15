@@ -5890,6 +5890,15 @@ voelde als instellingen, niet als je huis neerzetten.
   test die het bewaakt. Gewone kamernamen krijgen weer "de" ("de badkamer"):
   een onzichtbaar stuurteken in de regel daarvoor hield dat sinds besluit 131
   tegen.
+- **De rondleiding (versie 0.18.0):** zeven stops op de echte pagina's (Thuis
+  vier keer, Vandaag, Opbrengst, en de bel en het tandwiel), dan Klaar, met
+  het filmpje nog eens als je wilt. Het scherm wordt donker en licht op waar
+  het om gaat; de kaart staat ernaast, op de telefoon over de breedte. Na het
+  filmpje of Overslaan bij Inrichten, en de eerste keer op Thuis, komt hij
+  vanzelf; daarna achter het vraagteken op Thuis. Overslaan en Escape kunnen
+  altijd. Waar hij is, onthoudt het tabblad, zodat hij over de pagina's
+  loopt; of hij gezien is, onthoudt de browser. Hij vervangt de rondleiding
+  van drie stappen op Thuis.
 
 ---
 

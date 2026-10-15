@@ -1178,36 +1178,64 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }
 
   /*
-   * De rondleiding (schets Wand-Uitleg): de eerste keer vanzelf, drie stappen,
-   * daarna niet meer vanzelf, maar wel achter "Zo werkt het huis".
+   * De rondleiding (besluit 139): zeven stops op de echte pagina's en dan
+   * Klaar, de eerste keer vanzelf, daarna achter het vraagteken op Thuis.
    */
-  it('toont de rondleiding de eerste keer, en daarna achter "Zo werkt het huis"', async () => {
-    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+  it('loopt de rondleiding door Thuis, Vandaag en Opbrengst, en daarna achter het vraagteken', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
     await p.goto(`${baseUrl}/thuis.html`);
-    const ballon = p.locator('#wand .ballon');
-    await ballon.filter({ hasText: 'Dit is je huis' }).waitFor();
-    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(3);
-    await ballon.locator('[data-volgende]').click();
-    await ballon.filter({ hasText: 'Tik op een kamer' }).waitFor();
-    await ballon.locator('[data-volgende]').click();
-    await ballon.locator('[data-volgende]', { hasText: 'Klaar' }).click();
-    await ballon.waitFor({ state: 'detached' });
-    // Gezien: na herladen niet vanzelf, wel met de knop.
+    const kaart = p.locator('.rl-kaart');
+    const volgende = async (kop: string, naam: string) => {
+      await kaart.filter({ hasText: kop }).waitFor({ timeout: 10_000 });
+      await p.waitForTimeout(450);
+      await shot(naam);
+      await kaart.locator('[data-rl-volgende]').click();
+    };
+    await volgende('Dit is je huis', 'rl-1');
+    await volgende('Tik op een kamer', 'rl-2');
+    await volgende('Hoe voelt het?', 'rl-3');
+    await volgende('Vraag het je huis', 'rl-4');
+    await p.waitForURL(/vandaag\.html$/);
+    await volgende('Wat er vandaag gebeurt', 'rl-5');
+    await p.waitForURL(/opbrengst\.html$/);
+    await volgende('Wat je dak opleverde', 'rl-6');
+    await p.waitForURL(/thuis\.html$/);
+    await volgende('Meldingen en instellingen', 'rl-7');
+    await kaart.filter({ hasText: 'Klaar' }).locator('[data-rl-klaar]').waitFor();
+    await shot('rl-klaar');
+    await kaart.locator('[data-rl-klaar]').click();
+    await kaart.waitFor({ state: 'detached' });
+    expect(await p.evaluate('localStorage.getItem("sc-rondleiding-gezien")')).toBe('1');
+    // Gezien: na herladen niet vanzelf, wel achter het vraagteken; Escape stopt.
     await p.reload();
     await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
     await p.waitForTimeout(900);
-    expect(await ballon.count()).toBe(0);
+    expect(await kaart.count()).toBe(0);
     await p.locator('#wand [data-uitleg]').click();
-    await ballon.filter({ hasText: 'Dit is je huis' }).waitFor();
+    await kaart.filter({ hasText: 'Dit is je huis' }).waitFor();
     await p.keyboard.press('Escape');
-    await ballon.waitFor({ state: 'detached' });
+    await kaart.waitFor({ state: 'detached' });
+    // Op de telefoon: de kaart over de breedte, binnen het scherm.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-uitleg]').click();
+    await kaart.filter({ hasText: 'Dit is je huis' }).waitFor();
+    await volgende('Dit is je huis', 'rl-tel-1');
+    await kaart.filter({ hasText: 'Tik op een kamer' }).waitFor();
+    const vak = (await kaart.boundingBox())!;
+    expect(vak.x).toBeGreaterThanOrEqual(0);
+    expect(vak.x + vak.width).toBeLessThanOrEqual(390);
+    await p.waitForTimeout(450);
+    await shot('rl-tel-2');
     expect(fouten).toEqual([]);
     await context.close();
-  }, 20_000);
+  }, 60_000);
 
   /*
    * Vandaag in ontwerp 2 (schetsen Wand-Vandaag en Vandaag): de tijdlijn, wat

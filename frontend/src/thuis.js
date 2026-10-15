@@ -38,8 +38,7 @@ async function laadAlles() {
   if (eersteKeer && location.hash === '#batterijen') {
     history.replaceState(null, '', location.pathname);
     openWeer(document.querySelector(app.telStand() ? '#tel [data-buiten]' : '#wand [data-buiten]'), 'batterij');
-  } else if (eersteKeer && huisData && !gezien()) setTimeout(startRondleiding, 600);
-  // De eerste keer de rondleiding, zodra het huis er staat.
+  }
   eersteKeer = false;
 }
 
@@ -461,140 +460,6 @@ function sluitWeer() {
   $$('[data-buiten], [data-batterij]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
 }
 
-/* -------------------------------------------------------- de rondleiding */
-
-/*
- * De rondleiding (schets Wand-Uitleg): de eerste keer vanzelf, daarna achter
- * "Zo werkt het huis". Het huis licht op boven een donker vlak; een ring wijst
- * aan, een ballon vertelt. Of hij gezien is, onthoudt alleen deze browser.
- */
-const GEZIEN = 'sc-rondleiding-gezien';
-const STAPPEN = [
-  {
-    kop: 'Dit is je huis',
-    tekst: 'Alles wat er nu gebeurt, staat erin: wat er koelt of verwarmt, de zon op het dak, de lampen die branden. De kleur van een kamer zegt wat hij doet.',
-    kaart: ['Huis', 'Wat er nu gebeurt, alle stromen'],
-  },
-  {
-    kop: 'Tik op een kamer',
-    tekst: 'Dan zie je de etage van dichtbij en alles wat erin is: de lampen, de screens, de airco of de thermostaat.',
-    kaart: ['Etage', 'De kamers, de lampen, de screens'],
-  },
-  {
-    kop: 'Tik op een apparaat',
-    tekst: 'Lampen en scènes bedien je meteen. Bij klimaat en screens zegt het huis wat het zou doen; zelf schakelen doet het pas na het meekijken.',
-    kaart: ['Kamer en apparaat', 'Tik op een apparaat om het te bedienen'],
-  },
-];
-let stap = -1;
-
-function gezien() {
-  try {
-    return localStorage.getItem(GEZIEN) === '1';
-  } catch {
-    return true;
-  }
-}
-
-/** De plek van tikvlakken op de wand, in de maat van de wand (800 hoog). */
-function plekOpWand(vlakken) {
-  const wand = document.getElementById('wand');
-  const w = wand.getBoundingClientRect();
-  const s = w.height / 800;
-  const r = vlakken.map((v) => v.getBoundingClientRect());
-  if (!r.length || !s) return null;
-  const links = Math.min(...r.map((x) => x.left));
-  const rechts = Math.max(...r.map((x) => x.right));
-  const boven = Math.min(...r.map((x) => x.top));
-  const onder = Math.max(...r.map((x) => x.bottom));
-  return { x: ((links + rechts) / 2 - w.left) / s, y: ((boven + onder) / 2 - w.top) / s };
-}
-
-function startRondleiding() {
-  stap = 0;
-  document.body.classList.add('rondleiding');
-  $$('[data-rond]').forEach((el) => (el.hidden = false));
-  tekenStappenkaarten();
-  toonStap();
-}
-
-function stopRondleiding() {
-  stap = -1;
-  document.body.classList.remove('rondleiding');
-  $$('[data-rond], [data-tik], [data-stappen]').forEach((el) => (el.hidden = true));
-  $$('.ballon').forEach((b) => b.remove());
-  try {
-    localStorage.setItem(GEZIEN, '1');
-  } catch {
-    // Dan de volgende keer opnieuw; dat is niet erg.
-  }
-  document.querySelector(app.telStand() ? '#tel [data-uitleg]' : '#wand [data-uitleg]')?.focus();
-}
-
-function volgende() {
-  if (stap >= STAPPEN.length - 1) stopRondleiding();
-  else {
-    stap += 1;
-    toonStap();
-  }
-}
-
-function toonStap() {
-  const s = STAPPEN[stap];
-  const laatste = stap === STAPPEN.length - 1;
-  const stippen = STAPPEN.map((_, i) => `<i class="${i === stap ? 'aan' : ''}"></i>`).join('');
-  const knoppen = `${laatste ? '' : '<button type="button" class="overslaan" data-overslaan>Overslaan</button>'}<button type="button" data-volgende>${laatste ? 'Klaar' : 'Volgende'}</button>`;
-  for (const plek of ['wand', 'tel']) {
-    const ouder = plek === 'wand' ? document.querySelector('#wand main') : document.getElementById('tel');
-    let ballon = ouder.querySelector('.ballon');
-    if (!ballon) {
-      ballon = document.createElement('div');
-      ballon.className = 'ballon';
-      ballon.setAttribute('role', 'dialog');
-      ballon.addEventListener('click', (e) => {
-        if (e.target.closest('[data-overslaan]')) stopRondleiding();
-        else if (e.target.closest('[data-volgende]')) volgende();
-      });
-      ouder.append(ballon);
-    }
-    ballon.setAttribute('aria-label', `Uitleg, stap ${stap + 1} van ${STAPPEN.length}`);
-    ballon.innerHTML = `<h2>${esc(s.kop)}</h2><p>${esc(s.tekst)}</p><div class="onder"><span class="stippen" aria-hidden="true">${stippen}</span><span>${knoppen}</span></div>`;
-  }
-  // Op de wand: de ring op het huis, daarna op de kamer met een regeling.
-  const vlakken = [...document.querySelectorAll('#podium-wand .sc-tik')];
-  // De kamer met een regeling op de laagste etage: meestal de woonkamer.
-  const zoneKamer = [...(huisData?.etages ?? [])].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && vlakken.some((v) => v.dataset.kamer === r.id))?.id;
-  const kamer = vlakken.find((v) => v.dataset.kamer === zoneKamer) ?? vlakken[0];
-  const doel = plekOpWand(stap === 0 ? vlakken : kamer ? [kamer] : []) ?? { x: 430, y: 420 };
-  const tik = document.querySelector('[data-tik]');
-  tik.hidden = false;
-  tik.style.left = `${doel.x}px`;
-  tik.style.top = `${doel.y}px`;
-  const ballon = document.querySelector('#wand .ballon');
-  const rechts = doel.x + 50 + 330 < 1250;
-  ballon.className = `ballon ${rechts ? 'rechts' : 'links'}`;
-  ballon.style.left = `${rechts ? doel.x + 50 : doel.x - 50 - 330}px`;
-  ballon.style.top = `${Math.max(90, Math.min(470, doel.y - 56))}px`;
-  $$('.stap').forEach((el, i) => el.classList.toggle('nu', i === stap));
-  document.querySelector(`${app.telStand() ? '#tel' : '#wand'} .ballon [data-volgende]`)?.focus();
-}
-
-/** De drie stappen onderaan, elk met een klein huis: het hele huis, een etage, een kamer. */
-function tekenStappenkaarten() {
-  const box = document.querySelector('[data-stappen]');
-  box.hidden = false;
-  box.innerHTML = STAPPEN.map((s, i) => `<div class="stap${i === 0 ? ' nu' : ''}"><div class="mini-huis" data-mini="${i}"></div><div><b>${esc(s.kaart[0])}</b><span class="mini">${esc(s.kaart[1])}</span></div></div>`).join('');
-  if (!huisData) return;
-  const model = huisModel();
-  const stil = (k) => ({ ...k, stil: true });
-  const etage = model.etages.find((e) => e.kamers.some((k) => k.stand)) ?? model.etages[0];
-  const kamer = etage?.kamers.find((k) => k.stand) ?? etage?.kamers[0];
-  const mini = { breedte: 92, hoogte: 70, marge: 0.02 };
-  huis.teken(box.querySelector('[data-mini="0"]'), { tijd: model.tijd, etages: model.etages.map((e) => ({ ...e, kamers: e.kamers.map(stil) })), zon: { aandeel: model.zon.aandeel ?? 0 } }, mini);
-  if (etage) huis.teken(box.querySelector('[data-mini="1"]'), { tijd: model.tijd, zonderDak: true, etages: [{ kamers: etage.kamers.map(stil) }] }, mini);
-  if (kamer) huis.teken(box.querySelector('[data-mini="2"]'), { tijd: model.tijd, zonderDak: true, etages: [{ kamers: [stil(kamer)] }] }, mini);
-}
-
 /* -------------------------------------------------------------- starten */
 
 /** Gebundeld: hooguit één keer per beeld (basis.js). */
@@ -628,9 +493,9 @@ telBlad.addEventListener('touchend', (e) => {
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   sluitWeer();
-  if (stap >= 0) stopRondleiding();
 });
-$$('[data-uitleg]').forEach((b) => b.addEventListener('click', startRondleiding));
+// De rondleiding (besluit 139): de eerste keer vanzelf (rondleiding.js), daarna achter het vraagteken.
+$$('[data-uitleg]').forEach((b) => b.addEventListener('click', () => rondleiding.start()));
 // Een tik op een kamer in het huis opent die kamer.
 const openKamer = (e) => {
   const k = e.target.closest('[data-kamer]');
