@@ -224,7 +224,8 @@ function tekenTijdlijn(r, verwacht, lijst) {
   const nuX = dag === 'vandaag' ? x(nu) : null;
 
   // De rijen: de zon, de kamers met een regeling en metingen, de apparaten.
-  const zones = dag === 'morgen' ? [] : (r.zones ?? []).filter((z) => z.kwartieren.some((q) => q != null)).slice(0, 2);
+  // Elke kamer met een regeling (15 oktober 2026): eerst stonden er hooguit twee, en viel Beneden weg.
+  const zones = dag === 'morgen' ? [] : (r.zones ?? []).filter((z) => z.kwartieren.some((q) => q != null));
   const banen = [];
   if (dag !== 'morgen') {
     for (const a of r.apparaten ?? []) if (a.huidig.length || a.smartClimate.length) banen.push({ id: a.actuatorId, naam: naamVan(a.actuatorId), echt: a.huidig, zou: a.smartClimate, kleur: /heat/.test(a.huidig[0]?.actie ?? '') || apparaatVan(a.actuatorId)?.klimaat?.kanKoelen === false ? '#FF7A4D' : '#6FD3FF' });
@@ -235,7 +236,9 @@ function tekenTijdlijn(r, verwacht, lijst) {
   const zonTop = 30;
   const zonH = 80;
   const zoneTop = zonTop + zonH + 18;
-  const zoneH = 50;
+  // Meer kamers: smallere rijen, zodat de wand niet gaat scrollen.
+  const ruimte = 330 - zoneTop - Math.max(1, banen.length) * 22;
+  const zoneH = zones.length ? Math.max(26, Math.min(50, ruimte / zones.length - 10)) : 50;
   const baanTop = zoneTop + zones.length * (zoneH + 10) + 8;
   const baan = Math.min(30, Math.max(22, (346 - baanTop) / Math.max(1, banen.length)));
   const hoog = Math.max(380, baanTop + banen.length * baan + 30);
@@ -266,7 +269,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
       const lijn = punten.map((p, k) => `${k ? 'L' : 'M'} ${x(p.tMs).toFixed(1)} ${yt(p.c).toFixed(1)}`).join(' ');
       const warmst = punten.reduce((a, b) => (b.c > (a?.c ?? -Infinity) ? b : a), null);
       const goed = z.goed.vanC != null && z.goed.totC != null ? `${nl(z.goed.vanC, 0)} tot ${nl(z.goed.totC, 0)}° is goed` : '';
-      return `${band}<text x="0" y="${top + 20}" class="rij">${esc(z.naam)}</text><text x="0" y="${top + 38}" class="sub">${esc(goed)}</text>
+      return `${band}<text x="0" y="${top + Math.min(20, zoneH / 2 + 4)}" class="rij">${esc(z.naam)}</text>${zoneH >= 40 ? `<text x="0" y="${top + 38}" class="sub">${esc(goed)}</text>` : ''}
         <path d="${lijn}" fill="none" stroke="#EEF3F7" stroke-width="2.2"/>
         ${warmst ? `<circle cx="${x(warmst.tMs).toFixed(1)}" cy="${yt(warmst.c).toFixed(1)}" r="4" fill="#EEF3F7"/><text x="${(x(warmst.tMs) - 8 < X0 + 150 ? x(warmst.tMs) + 8 : x(warmst.tMs) - 8).toFixed(1)}" y="${(yt(warmst.c) - 8).toFixed(1)}" text-anchor="${x(warmst.tMs) - 8 < X0 + 150 ? 'start' : 'end'}" class="sub">${nl(warmst.c)}°, warmste moment</text>` : ''}`;
     })

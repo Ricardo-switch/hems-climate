@@ -173,6 +173,15 @@ function tekenNu() {
     // Een lopend camerabeeld niet afbreken bij elke verversing: het oude vak terugzetten.
     const lopend = new Map([...blad.querySelectorAll('[data-camera][data-gestart]')].map((b) => [b.dataset.camera, b]));
     blad.innerHTML = apparaat ? apparaatBlad(kamer, apparaat) : kamerBlad(kamer);
+    // Van een melding over een batterij: die regel in beeld, even opgelicht.
+    const naar = adres().apparaat;
+    if (!apparaat && naar.startsWith('batterij-') && blad.closest(app.zicht())) {
+      const r = blad.querySelector(`#${CSS.escape(naar)}`);
+      if (r && !r.dataset.gezien) {
+        r.classList.add('oplicht');
+        r.scrollIntoView({ block: 'nearest' });
+      }
+    }
     for (const beeld of blad.querySelectorAll('[data-camera]')) {
       const oud = lopend.get(beeld.dataset.camera);
       if (oud) {
@@ -235,6 +244,18 @@ function kamerBlad(k) {
       <button type="button" class="naam" data-open="${esc(d.id)}" style="background: none; border: 0; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer"><b>${esc(d.naam)}</b><span>${esc(d.stand + accu(d))}</span></button>
       <button type="button" class="schakel" role="switch" aria-checked="${d.aan}" aria-label="${esc(d.naam)}" data-schakel="${esc(d.id)}" ${bedienen ? '' : 'disabled'}></button>
     </div>`;
+  /*
+   * Schakelaars en sensoren met een batterij (15 oktober 2026): in Home Assistant
+   * een apparaat apart, zoals de verlichtingsschakelaar. Een schakelaar staat bij
+   * Licht, een sensor onder Sensoren; bijna leeg is oranje. Een melding wijst er
+   * met #kamer/batterij-<id> naartoe.
+   */
+  const gezienAccu = new Set(apps.filter((d) => d.batterijPct != null).map((d) => d.naam));
+  const batt = (huisData?.batterijen ?? []).filter((b) => b.kamerId === k.id && !gezienAccu.has(b.naam));
+  const isSchakelaar = (b) => /schakel|switch|dimmer|knop|tap|button|afstandsbediening|remote/i.test(b.naam);
+  const schakelaars = batt.filter(isSchakelaar);
+  const sensoren = batt.filter((b) => !isSchakelaar(b));
+  const battRij = (b) => `<div class="rij batt${b.pct < 10 ? ' leeg' : ''}" id="batterij-${esc(b.id)}" style="cursor: default"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M21.5 11v2"/><rect x="5" y="9.5" width="${Math.max(1, Math.round((Math.min(100, b.pct) / 100) * 12))}" height="5" rx="1" fill="currentColor" stroke="none"/></svg><span class="naam"><b>${esc(b.naam)}</b><span>batterij ${nl(b.pct, 0)}%${b.pct < 10 ? ', bijna leeg: tijd voor een nieuwe' : ''}</span></span></div>`;
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.
   const draait = apps.filter((d) => d.soort === 'apparaat' && d.aan).map((d) => `${d.naam} draait`);
   const klimaatZin = k.samenvatting?.klimaat ?? '';
@@ -242,9 +263,10 @@ function kamerBlad(k) {
   const delen = [
     `<div class="bladkop"><div><h2 class="kop-2">${esc(k.naam)}</h2><p class="klein" style="margin: 4px 0 0">${esc(onder)}</p></div></div>`,
     klimaat.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">${klimaat.some((d) => d.soort === 'klimaat') ? 'Klimaat' : 'Apparaten'}</h3>${klimaat.map(rij).join('')}</div>` : '',
-    lampen.length
-      ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${bedienen ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
+    lampen.length || schakelaars.length
+      ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${schakelaars.map(battRij).join('')}${bedienen || !lampen.length ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
+    sensoren.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Sensoren</h3>${sensoren.map(battRij).join('')}</div>` : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     // Hoe voelt het hier (besluit 134): dezelfde knoppen als op Thuis.
     k.zoneId ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Hoe voelt het hier?</h3><div class="gevoelblok">${gevoel.html({ zoneId: k.zoneId, state, kort: true })}</div></div>` : '',

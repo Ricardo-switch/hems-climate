@@ -105,7 +105,7 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
   }
   for (const b of bron.batterijen) {
     if (b.pct >= 10) continue;
-    uit.push({ id: `batterij:${b.id}`, soort: 'batterij', aandacht: true, titel: `Batterij bijna leeg: ${b.naam}`, tekst: `Nog ${b.pct}%. Een nieuwe batterij en het doet het weer maanden.`, actie: { label: 'Bekijk', href: kamerHref(b.kamerId) }, klaar: { titel: `Nieuwe batterij in ${b.naam}`, tekst: 'Weer boven de 10%.' } });
+    uit.push({ id: `batterij:${b.id}`, soort: 'batterij', aandacht: true, titel: `Batterij bijna leeg: ${b.naam}`, tekst: `Nog ${b.pct}%. Een nieuwe batterij en het doet het weer maanden.`, actie: { label: 'Bekijk', href: kamerHref(b.kamerId, `batterij-${b.id}`) }, klaar: { titel: `Nieuwe batterij in ${b.naam}`, tekst: 'Weer boven de 10%.' } });
   }
   for (const f of bron.filters) {
     uit.push({ id: `filter:${f.id}`, soort: 'filter', aandacht: true, titel: `Filter bijna vol: ${f.naam}`, tekst: `Nog ${f.pct}%. Een schoon filter koelt en verwarmt zuiniger.`, actie: { label: 'Bekijk', href: kamerHref(f.kamerId) }, klaar: { titel: `Filter schoon: ${f.naam}`, tekst: 'Het filter is weer goed.' } });

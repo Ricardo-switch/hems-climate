@@ -70,6 +70,8 @@ describe('meldingen (besluit 136)', () => {
       meters: [{ id: 'sensor.p1', naam: 'De slimme meter', laatsteMs: T0 - UUR }],
     }));
     expect(s.lijst(T0).actief.map((m) => m.soort).sort()).toEqual(['batterij', 'filter', 'meter']);
+    // Bekijk wijst naar die batterij in de kamer, ook als hij bij een schakelaar hoort.
+    expect(s.lijst(T0).actief.find((m) => m.soort === 'batterij')?.actie?.href).toBe('kamer.html#bad/batterij-sensor.knop');
     // Een nieuwe batterij: opgelost, met wat er gebeurde.
     s.bij(leeg({ nu: T0 + UUR, batterijen: [{ id: 'sensor.knop', naam: 'Schakelaar badkamer', pct: 100, kamerId: 'bad' }] }));
     expect(s.lijst(T0 + UUR).eerder.map((m) => m.titel)).toContain('Nieuwe batterij in Schakelaar badkamer');
