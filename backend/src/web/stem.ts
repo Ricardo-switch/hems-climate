@@ -16,7 +16,17 @@ export interface StemOpties {
   readonly token: string;
   /** De spraakentiteiten die Home Assistant nu kent. */
   readonly stemmen: () => readonly string[];
+  /** Welke talen een stem heeft, uit Home Assistant (`tts/engine/list`). */
+  readonly talen?: (stem: string) => Promise<readonly string[]>;
+  /** Welke stemmen er voor een taal zijn (`tts/engine/voices`). */
+  readonly stemmenVoor?: (stem: string, taal: string) => Promise<readonly { readonly voice_id: string; readonly name: string }[]>;
   readonly fetch?: typeof fetch;
+}
+
+/** Nederlands, en anders Vlaams: wat er voor Nederlands is, in welke schrijfwijze ook. */
+export function kiesTaal(talen: readonly string[]): string | null {
+  const nl = talen.filter((t) => /^nl([_-]|$)/i.test(t));
+  return nl.find((t) => /^nl[_-]nl$/i.test(t)) ?? nl.find((t) => /^nl$/i.test(t)) ?? nl[0] ?? null;
 }
 
 export interface Geluid {
@@ -37,6 +47,8 @@ export class Stem {
   readonly #o: StemOpties;
   readonly #bewaard = new Map<string, Geluid>();
   readonly #bezig = new Map<string, Promise<Geluid>>();
+  /** Per stem de Nederlandse taal en stem, één keer opgezocht. */
+  #nederlands: { stem: string; taal: string | null; voice: string | null } | null = null;
 
   constructor(opties: StemOpties) {
     this.#o = opties;
@@ -68,10 +80,40 @@ export class Stem {
     return job;
   }
 
+  /**
+   * De Nederlandse taal en stem (opgelost 15 oktober 2026): zonder taal kiest
+   * Piper zijn eerste stem, en dat was Engels; dan klinkt Nederlands vreemd.
+   */
+  async nederlands(): Promise<{ taal: string | null; voice: string | null }> {
+    const stem = this.naam;
+    if (stem == null) return { taal: null, voice: null };
+    if (this.#nederlands?.stem === stem) return this.#nederlands;
+    let taal: string | null = null;
+    let voice: string | null = null;
+    try {
+      taal = kiesTaal((await this.#o.talen?.(stem)) ?? []);
+      if (taal) {
+        const lijst = (await this.#o.stemmenVoor?.(stem, taal)) ?? [];
+        voice = lijst[0]?.voice_id ?? null;
+      }
+    } catch {
+      // Dan zonder; de volgende keer opnieuw.
+      return { taal, voice };
+    }
+    this.#nederlands = { stem, taal, voice };
+    return this.#nederlands;
+  }
+
   async #maak(stem: string, zin: string): Promise<Geluid> {
     const f = this.#o.fetch ?? fetch;
     const kop = { authorization: `Bearer ${this.#o.token}`, 'content-type': 'application/json' };
-    const r = await f(`${this.#o.base}/api/tts_get_url`, { method: 'POST', headers: kop, body: JSON.stringify({ engine_id: stem, message: zin, cache: true }) });
+    const nl = await this.nederlands();
+    if (this.#o.talen && nl.taal == null) throw new Error('de stem in Home Assistant heeft geen Nederlands');
+    const r = await f(`${this.#o.base}/api/tts_get_url`, {
+      method: 'POST',
+      headers: kop,
+      body: JSON.stringify({ engine_id: stem, message: zin, cache: true, ...(nl.taal ? { language: nl.taal } : {}), ...(nl.voice ? { options: { voice: nl.voice } } : {}) }),
+    });
     if (!r.ok) throw new Error(`Home Assistant gaf geen geluid (${r.status})`);
     const { path, url } = (await r.json()) as { path?: string; url?: string };
     // Altijd via de eigen basis: de url kan een adres buiten het huis noemen.

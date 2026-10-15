@@ -5990,6 +5990,11 @@ gegevens. Dit is het begin; "Hé huis" komt later.
   iets zag; in het huis dijen twee ringen uit over de vloer van die kamer.
   De kamer kijkt elke vijf seconden, Thuis elke vijftien, alleen als de
   pagina in beeld is. Alleen kijken: er wordt niets geschakeld.
+- **Nederlands (versie 0.20.2):** zonder taal koos Piper zijn eerste stem, en
+  die was Engels. De dienst vraagt Home Assistant nu welke talen en stemmen
+  Piper heeft (`tts/engine/list` en `tts/engine/voices`, twee leesvragen op de
+  vaste lijst) en geeft Nederlands en een Nederlandse stem mee. Heeft Piper
+  geen Nederlands, dan spreekt het apparaat zelf, en anders alleen tekst.
 
 ---
 

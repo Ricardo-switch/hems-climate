@@ -766,7 +766,9 @@ export class WebServer {
       const stem = this.#options.stem;
       const tekst = url.searchParams.get('tekst');
       if (tekst == null) {
-        sendJson(res, 200, { stem: stem?.naam ?? null });
+        // Welke stem, en of die Nederlands kan; zonder Nederlands gebruikt de pagina de stem van het apparaat.
+        const nl = stem ? await stem.nederlands().catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
+        sendJson(res, 200, { stem: stem?.naam ?? null, taal: nl.taal, voice: nl.voice });
         return;
       }
       if (stem == null || stem.naam == null) {

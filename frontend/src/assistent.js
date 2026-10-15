@@ -30,7 +30,8 @@ async function laadAlles() {
   if (z.status === 'fulfilled') zon = z.value;
   if (w.status === 'fulfilled' && w.value?.vandaag) weer = w.value;
   if (v.status === 'fulfilled') vandaag = v.value;
-  if (st.status === 'fulfilled') stemNaam = st.value?.stem ?? null;
+  // Piper alleen als die Nederlands kan; anders klinkt het Engels (opgelost 15 oktober).
+  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal ? st.value.stem : null;
   teken();
 }
 
@@ -283,6 +284,7 @@ function zeg(tekst) {
         if (p >= 1 && klaar) klaar();
       });
     };
+    const apparaat = () => zegMetApparaat(tekst, totLetter, lezen);
     if (!voorlezen || !ontgrendeld) return lezen();
     if (stemNaam) {
       audio ??= new Audio();
@@ -305,7 +307,7 @@ function zeg(tekst) {
       audio.onerror = () => {
         if (!klaar) return;
         stemNaam = null;
-        lezen();
+        apparaat();
       };
       audio.play().then(
         () => leefMee(() => {
@@ -317,22 +319,27 @@ function zeg(tekst) {
       );
       return;
     }
-    const v = apparaatStem();
-    if (!v) return lezen();
-    const u = new SpeechSynthesisUtterance(tekst);
-    u.voice = v;
-    u.lang = v.lang;
-    u.rate = 1;
-    u.onboundary = (e) => {
-      const i = totLetter(e.charIndex);
-      zetGezegd(i < 0 ? woorden.length : i);
-    };
-    u.onend = () => klaar?.();
-    u.onerror = () => klaar?.();
-    analyser = null;
-    leefMee();
-    speechSynthesis.speak(u);
+    apparaat();
   });
+}
+
+/** De stem van het apparaat, of alleen de woorden als die er niet is. Hoort bij zeg(). */
+function zegMetApparaat(tekst, totLetter, lezen) {
+  const v = apparaatStem();
+  if (!v) return lezen();
+  const u = new SpeechSynthesisUtterance(tekst);
+  u.voice = v;
+  u.lang = v.lang;
+  u.rate = 1;
+  u.onboundary = (e) => {
+    const i = totLetter(e.charIndex);
+    zetGezegd(i < 0 ? woorden.length : i);
+  };
+  u.onend = () => klaar?.();
+  u.onerror = () => klaar?.();
+  analyser = null;
+  leefMee();
+  speechSynthesis.speak(u);
 }
 
 /* ------------------------------------------------------------ tekenen */

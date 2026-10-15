@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { kiesStem, Stem } from '../src/web/stem.js';
+import { kiesStem, kiesTaal, Stem } from '../src/web/stem.js';
 
 function nep() {
   const vragen: { url: string; methode: string; body: unknown }[] = [];
@@ -42,5 +42,26 @@ describe('de stem (besluit 141)', () => {
     const stem = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => [], fetch: f });
     expect(stem.naam).toBeNull();
     await expect(stem.zeg('Hallo')).rejects.toThrow('geen lokale stem');
+  });
+
+  it('spreekt Nederlands: met de taal en een Nederlandse stem erbij (opgelost 15 oktober)', async () => {
+    expect(kiesTaal(['en_US', 'nl_BE', 'nl_NL'])).toBe('nl_NL');
+    expect(kiesTaal(['en_US', 'nl_BE'])).toBe('nl_BE');
+    expect(kiesTaal(['en-US', 'nl'])).toBe('nl');
+    expect(kiesTaal(['en_US'])).toBeNull();
+    const { vragen, f } = nep();
+    const stem = new Stem({
+      base: 'http://ha.local:8123',
+      token: 't',
+      stemmen: () => ['tts.piper'],
+      talen: async () => ['en_US', 'nl_NL'],
+      stemmenVoor: async (_s, taal) => (taal === 'nl_NL' ? [{ voice_id: 'nl_NL-mls-medium', name: 'mls' }] : []),
+      fetch: f,
+    });
+    await stem.zeg('Hallo');
+    expect(vragen[0]!.body).toEqual({ engine_id: 'tts.piper', message: 'Hallo', cache: true, language: 'nl_NL', options: { voice: 'nl_NL-mls-medium' } });
+    // Zonder Nederlands: geen Engels geluid, maar een fout, zodat de pagina een andere stem kiest.
+    const engels = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper'], talen: async () => ['en_US'], fetch: f });
+    await expect(engels.zeg('Hallo')).rejects.toThrow('geen Nederlands');
   });
 });

@@ -1001,7 +1001,17 @@ if (webPort != null) {
       : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
     // De stem van het huis (besluit 141): Piper in Home Assistant; er wordt niets geschakeld.
-    stem: new Stem({ base: httpBase(url!), token: token!, stemmen: () => [...allStates.keys()].filter((id) => id.startsWith('tts.')) }),
+    stem: new Stem({
+      base: httpBase(url!),
+      token: token!,
+      stemmen: () => [...allStates.keys()].filter((id) => id.startsWith('tts.')),
+      // Welke talen en stemmen Piper heeft: lezen, zoals de registers.
+      talen: async (stem) => {
+        const r = await client.query<{ providers?: { engine_id: string; supported_languages?: string[] }[] }>('tts/engine/list');
+        return r.providers?.find((p) => p.engine_id === stem)?.supported_languages ?? [];
+      },
+      stemmenVoor: async (stem, taal) => (await client.query<{ voices?: { voice_id: string; name: string }[] | null }>('tts/engine/voices', { engine_id: stem, language: taal })).voices ?? [],
+    }),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {
       base: httpBase(url!),

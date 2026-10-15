@@ -30,10 +30,13 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'energy/get_prefs',
   'recorder/list_statistic_ids',
   'recorder/statistics_during_period',
+  // De stem van het huis (besluit 141): welke talen en stemmen Piper heeft.
+  'tts/engine/list',
+  'tts/engine/voices',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
-const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period']);
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices']);
 
 export interface HaEntityState {
   readonly entity_id: string;
