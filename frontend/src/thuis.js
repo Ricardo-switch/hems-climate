@@ -526,6 +526,16 @@ for (const podium of [document.getElementById('podium-wand'), document.getElemen
 }
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
+// Beweging in het huis (15 oktober 2026): elke vijftien seconden, als de pagina in beeld is.
+setInterval(async () => {
+  if (document.visibilityState !== 'visible') return;
+  try {
+    huisData = await haal('api/huis');
+    teken();
+  } catch {
+    // De volgende keer.
+  }
+}, 15_000);
 app.live((nieuw) => {
   state = nieuw;
   teken();

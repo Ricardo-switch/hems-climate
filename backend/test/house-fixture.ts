@@ -105,6 +105,8 @@ export const registers: HouseRegisters = {
     // Meters: een bewegingssensor in de hal meet temperatuur en luchtvochtigheid.
     entity('sensor.bewegingssensor_hal_temperatuur', 'd-halsensor', { original_device_class: 'temperature', original_name: 'Temperatuur' }),
     entity('sensor.bewegingssensor_hal_luchtvochtigheid', 'd-halsensor', { original_device_class: 'humidity', original_name: 'Luchtvochtigheid' }),
+    // Beweging (15 oktober 2026): bij hetzelfde apparaat als de meter.
+    entity('binary_sensor.bewegingssensor_hal_beweging', 'd-halsensor', { original_device_class: 'motion', original_name: 'Beweging' }),
     // Geen meters: een schijf van de NAS, het weer, en het weer van een raceweekend.
     entity('sensor.nas_temperatuur', 'd-nas', { device_class: 'temperature', entity_category: 'diagnostic' }),
     entity('sensor.temperatuur', null, { device_class: 'temperature', platform: 'buienradar' }),
@@ -143,6 +145,7 @@ export const states = new Map<string, HaEntityState>([
   [ref('ac-woonkamer'), state(ref('ac-woonkamer'), 'cool', { current_temperature: 22.4, temperature: 22, hvac_action: 'cooling' })],
   ['sensor.bewegingssensor_hal_temperatuur', state('sensor.bewegingssensor_hal_temperatuur', '19.5')],
   ['sensor.bewegingssensor_hal_luchtvochtigheid', state('sensor.bewegingssensor_hal_luchtvochtigheid', '61.4')],
+  ['binary_sensor.bewegingssensor_hal_beweging', { ...state('binary_sensor.bewegingssensor_hal_beweging', 'on', { device_class: 'motion' }), last_changed: '2026-10-15T13:40:00Z' }],
   ['sensor.nas_temperatuur', state('sensor.nas_temperatuur', '41')],
   ['sensor.temperatuur', state('sensor.temperatuur', '13')],
   ['sensor.f1_track_weather', state('sensor.f1_track_weather', '30')],

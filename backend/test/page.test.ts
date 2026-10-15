@@ -666,6 +666,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /* Sensoren in de kamer (15 oktober 2026): wat ze meten, hun batterij, en beweging nu. */
+  it('toont de bewegingsmelder in de kamer, met beweging nu', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((d) => d.meting?.beweging?.nu))!;
+    await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(kamer.id)}`);
+    const rij = p.locator('#wand .meterrij', { hasText: 'Beweging, nu' });
+    await rij.waitFor({ timeout: 10_000 });
+    await p.locator('#wand .beweegt').first().waitFor();
+    expect(await p.locator('#wand .sc-beweging').count()).toBeGreaterThan(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-beweging.png') });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   /*
    * Hoe voelt het (besluit 134): tikken kan zonder inlog, er komt meteen een
    * antwoord, en na drie keer hetzelfde in hetzelfde dagdeel een voorstel.

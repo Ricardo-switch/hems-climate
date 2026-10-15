@@ -494,6 +494,8 @@ const inHouse = (st: HaEntityState) =>
   st.entity_id.startsWith('scene.') ||
   // De camera's (besluit 106): anders zei het huis "niet bereikbaar" terwijl er beeld was.
   st.entity_id.startsWith('camera.') ||
+  // Beweging, voor de kamer en het huis (15 oktober 2026).
+  (st.entity_id.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence'].includes(String(st.attributes['device_class']))) ||
   (st.entity_id.startsWith('sensor.') &&
     (st.attributes['device_class'] === 'temperature' ||
       st.attributes['device_class'] === 'humidity' ||

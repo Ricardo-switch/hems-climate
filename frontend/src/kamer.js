@@ -125,6 +125,14 @@ const soortVan = (d) => (d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco'
 const icoon = (d) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[soortVan(d)] ?? ICOON.thermostaat}</svg>`;
 
 const graden = (c) => (c == null ? '' : `${nl(c)}°`);
+/** Wanneer iets was: de klok vandaag, anders "gisteren" of de datum. */
+function wanneer(ms) {
+  const d = new Date(ms);
+  const vandaag = new Date();
+  if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
+  const gisteren = new Date(vandaag.getTime() - 86_400_000);
+  return d.toDateString() === gisteren.toDateString() ? `gisteren ${klokVan(ms)}` : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+}
 function meting(m) {
   if (!m) return '';
   return [m.temperatuurC == null ? null : graden(m.temperatuurC), m.vochtPct == null ? null : `${Math.round(m.vochtPct)}%`].filter(Boolean).join(', ');
@@ -236,6 +244,8 @@ function kamerBlad(k) {
   const klimaat = apps.filter((d) => d.soort === 'klimaat' || d.soort === 'screen' || d.soort === 'apparaat');
   const lampen = apps.filter((d) => d.soort === 'licht');
   const cameras = apps.filter((d) => d.soort === 'camera');
+  // Sensoren (15 oktober 2026): wat ze meten, of ze beweging zien, en hun batterij.
+  const meters = apps.filter((d) => d.soort === 'meter');
   const bedienen = huisData.lichtBedienen === true;
   const rij = (d) => `<button type="button" class="rij${d.aan ? ' aan' : ''}" data-open="${esc(d.id)}">${icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${esc(standTekst(d))}</span></span><span class="chev" aria-hidden="true">›</span></button>`;
   const lamp = (d) => `
@@ -256,6 +266,13 @@ function kamerBlad(k) {
   const schakelaars = batt.filter(isSchakelaar);
   const sensoren = batt.filter((b) => !isSchakelaar(b));
   const battRij = (b) => `<div class="rij batt${b.pct < 10 ? ' leeg' : ''}" id="batterij-${esc(b.id)}" style="cursor: default"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M21.5 11v2"/><rect x="5" y="9.5" width="${Math.max(1, Math.round((Math.min(100, b.pct) / 100) * 12))}" height="5" rx="1" fill="currentColor" stroke="none"/></svg><span class="naam"><b>${esc(b.naam)}</b><span>batterij ${nl(b.pct, 0)}%${b.pct < 10 ? ', bijna leeg: tijd voor een nieuwe' : ''}</span></span></div>`;
+  const meterRij = (d) => {
+    const m = d.meting ?? {};
+    const b = m.beweging;
+    const delen = [m.temperatuurC != null ? `${nl(m.temperatuurC)}°` : null, m.vochtPct != null ? `${Math.round(m.vochtPct)}% vocht` : null, b && !b.nu && b.sindsMs ? `beweging om ${wanneer(b.sindsMs)}` : null, d.batterijPct != null ? `batterij ${d.batterijPct}%` : null].filter(Boolean);
+    const leeg = d.batterijPct != null && d.batterijPct < 10;
+    return `<div class="rij meterrij${leeg ? ' batt leeg' : ''}" style="cursor: default">${b?.nu ? '<span class="beweegt" aria-hidden="true"><i></i></span>' : icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${b?.nu ? '<em class="nu">Beweging, nu</em> · ' : ''}${esc(delen.join(' · '))}</span></span></div>`;
+  };
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.
   const draait = apps.filter((d) => d.soort === 'apparaat' && d.aan).map((d) => `${d.naam} draait`);
   const klimaatZin = k.samenvatting?.klimaat ?? '';
@@ -266,7 +283,7 @@ function kamerBlad(k) {
     lampen.length || schakelaars.length
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${schakelaars.map(battRij).join('')}${bedienen || !lampen.length ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
-    sensoren.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Sensoren</h3>${sensoren.map(battRij).join('')}</div>` : '',
+    meters.length || sensoren.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Sensoren</h3>${meters.map(meterRij).join('')}${sensoren.map(battRij).join('')}</div>` : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     // Hoe voelt het hier (besluit 134): dezelfde knoppen als op Thuis.
     k.zoneId ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Hoe voelt het hier?</h3><div class="gevoelblok">${gevoel.html({ zoneId: k.zoneId, state, kort: true })}</div></div>` : '',
@@ -828,6 +845,8 @@ addEventListener('hashchange', () => {
 });
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
+// Beweging zie je zodra het gebeurt (15 oktober 2026): het huis elke vijf seconden, als de pagina in beeld is.
+setInterval(() => document.visibilityState === 'visible' && void laadHuis(), 5_000);
 app.live((nieuw) => {
   state = nieuw;
   teken();

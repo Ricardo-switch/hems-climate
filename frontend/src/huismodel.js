@@ -113,6 +113,8 @@
       zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
       // Wat voor kamer, voor de inrichting ingezoomd (besluit 119).
       inrichting: r.soort ?? undefined,
+      // Beweging nu (15 oktober 2026): een melder in de kamer ziet iemand.
+      beweging: apps.some((a) => a.meting?.beweging?.nu) || undefined,
       apparaten,
     };
   }

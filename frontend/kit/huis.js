@@ -620,6 +620,15 @@
       const r = k * (x1 - x0) * 0.55;
       if (kamer.stand === 'koelt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-koel)"/>`);
       if (kamer.stand === 'warmt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-warm)"/>`);
+      // Beweging (15 oktober 2026): twee zachte ringen over de vloer, die uitdijen en vervagen.
+      if (kamer.beweging) {
+        const rb = Math.min(r * 0.7, k * 0.9);
+        const stil = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (stil) huis.push(`<ellipse class="sc-beweging" cx="${c[0]}" cy="${c[1]}" rx="${rb * 0.6}" ry="${rb * 0.36}" fill="none" stroke="${KLEUR.mint}" stroke-width="2" stroke-opacity="0.7"/>`);
+        else for (const vertraging of [0, 1.1]) {
+          huis.push(`<ellipse class="sc-beweging" cx="${c[0]}" cy="${c[1]}" rx="${rb * 0.2}" ry="${rb * 0.12}" fill="none" stroke="${KLEUR.mint}" stroke-width="2"><animate attributeName="rx" values="${rb * 0.2};${rb}" dur="2.2s" begin="${vertraging}s" repeatCount="indefinite"/><animate attributeName="ry" values="${rb * 0.12};${rb * 0.6}" dur="2.2s" begin="${vertraging}s" repeatCount="indefinite"/><animate attributeName="stroke-opacity" values="0.9;0" dur="2.2s" begin="${vertraging}s" repeatCount="indefinite"/></ellipse>`);
+        }
+      }
     }
     function tekenKamer(kamer, x0, x1, z0, z1) {
       const xm = (x0 + x1) / 2;

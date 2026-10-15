@@ -44,6 +44,14 @@
   .rij svg.ic { width: 22px; height: 22px; flex: none; color: var(--zacht); }
   .rij.aan svg.ic { color: var(--zon); }
   .rij.batt.leeg svg.ic, .rij.batt.leeg .naam span { color: var(--gloed); }
+  /* Beweging nu (15 oktober 2026): een stip met een zachte golf. */
+  .beweegt { position: relative; width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
+  .beweegt i { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 10px var(--mint); }
+  .beweegt::before, .beweegt::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--mint); opacity: 0; animation: golfje 2.2s ease-out infinite; }
+  .beweegt::after { animation-delay: 1.1s; }
+  @keyframes golfje { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .beweegt::before, .beweegt::after { animation: none; } }
+  .meterrij em.nu { font-style: normal; color: var(--mint); font-weight: 700; }
   .rij.oplicht { border-radius: 12px; box-shadow: 0 0 0 2px rgba(255, 122, 77, 0.7); padding-left: 8px; padding-right: 8px; }
   .gloei { width: 12px; height: 12px; border-radius: 50%; flex: none; }
 

@@ -568,4 +568,9 @@ describe('de duur van een programma (besluit 101)', () => {
     expect(programMinutes(source('95', 'min'), 'x')).toBe(95);
     expect(programMinutes(source('1.5', 'h'), 'x')).toBe(90);
   });
+  it('ziet beweging bij de meter van hetzelfde apparaat (15 oktober 2026)', () => {
+    const house = buildHouse(config, registers, states, snapshot);
+    const meter = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'sensor.bewegingssensor_hal_temperatuur')!;
+    expect(meter.meting?.beweging).toEqual({ nu: true, sindsMs: Date.parse('2026-10-15T13:40:00Z') });
+  });
 });

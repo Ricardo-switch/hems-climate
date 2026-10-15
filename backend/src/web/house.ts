@@ -55,6 +55,12 @@ export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat' |
 export interface HouseReading {
   readonly temperatuurC: number | null;
   readonly vochtPct: number | null;
+  /**
+   * Beweging (15 oktober 2026): van een bewegingsmelder bij hetzelfde
+   * apparaat. `nu` als hij nu beweging ziet; `sindsMs` wanneer dat veranderde.
+   * Weg als het apparaat geen beweging meet.
+   */
+  readonly beweging?: { readonly nu: boolean; readonly sindsMs: number | null };
 }
 
 /** Wat een klimaatapparaat kan en doet: de knoppen volgen wat het kan. */
@@ -851,11 +857,18 @@ function collect(
    * verborgen, geen telefoon, en niets wat naar weer, buiten of een schijf klinkt.
    */
   const devices = new Map(registers.devices.map((d) => [d.id, d]));
-  const sensorsOf = new Map<string, { temp?: string; hum?: string }>();
+  const sensorsOf = new Map<string, { temp?: string; hum?: string; motion?: string }>();
   for (const e of registers.entities) {
-    if (!e.entity_id.startsWith('sensor.') || !e.device_id || e.entity_category || e.disabled_by || e.hidden_by) continue;
-    if (e.platform === 'mobile_app') continue;
+    if (!e.device_id || e.entity_category || e.disabled_by || e.hidden_by || e.platform === 'mobile_app') continue;
     const dc = e.device_class ?? e.original_device_class ?? states.get(e.entity_id)?.attributes['device_class'];
+    // Een bewegingsmelder: bij hetzelfde apparaat als de meter, of een eigen meter.
+    if (e.entity_id.startsWith('binary_sensor.') && (dc === 'motion' || dc === 'occupancy' || dc === 'presence')) {
+      const r = sensorsOf.get(e.device_id) ?? {};
+      r.motion ??= e.entity_id;
+      sensorsOf.set(e.device_id, r);
+      continue;
+    }
+    if (!e.entity_id.startsWith('sensor.')) continue;
     if (dc !== 'temperature' && dc !== 'humidity') continue;
     const label = `${e.entity_id} ${e.original_name ?? ''} ${e.name ?? ''}`.replace(/[._]/g, ' ');
     if (NOT_A_ROOM.test(label)) continue;
@@ -864,10 +877,15 @@ function collect(
     else r.hum ??= e.entity_id;
     sensorsOf.set(e.device_id, r);
   }
-  const readingOf = (r: { temp?: string; hum?: string } | undefined): HouseReading => ({
-    temperatuurC: r?.temp ? num(states.get(r.temp)?.state) : null,
-    vochtPct: r?.hum ? num(states.get(r.hum)?.state) : null,
-  });
+  const readingOf = (r: { temp?: string; hum?: string; motion?: string } | undefined): HouseReading => {
+    const m = r?.motion ? states.get(r.motion) : undefined;
+    const sinds = m ? Date.parse(m.last_changed) : NaN;
+    return {
+      temperatuurC: r?.temp ? num(states.get(r.temp)?.state) : null,
+      vochtPct: r?.hum ? num(states.get(r.hum)?.state) : null,
+      ...(r?.motion ? { beweging: { nu: m?.state === 'on', sindsMs: Number.isFinite(sinds) ? sinds : null } } : {}),
+    };
+  };
 
   /*
    * Wat een klimaatapparaat nu vraagt en welke kWh-meter erbij hoort (Apparaten,
@@ -995,7 +1013,7 @@ function collect(
   const zoneSensors = new Set(config.zones.flatMap((z) => [z.temperature.id, ...(z.temperatures ?? []).map((t) => t.id)]));
   for (const [deviceId, r] of sensorsOf) {
     if (climateDevices.has(deviceId)) continue;
-    const id = r.temp ?? r.hum;
+    const id = r.temp ?? r.hum ?? r.motion;
     if (!id) continue;
     const dev = devices.get(deviceId);
     const haNaam = dev?.name_by_user?.trim() || dev?.name?.trim() || friendly(states.get(id), id);

@@ -5984,6 +5984,12 @@ gegevens. Dit is het begin; "Hé huis" komt later.
   Assistant. De luisterfunctie van de browser stuurt je stem naar buiten;
   die gebruikt de app niet. De microfoon staat er, maar doet nog niets.
 - **Versie 0.20.0.**
+- **Beweging (versie 0.20.1):** een bewegingsmelder hoort bij de meter van
+  hetzelfde apparaat. De kamer toont onder Sensoren wat hij meet, zijn
+  batterij, en "Beweging, nu" met een zachte golf, of wanneer hij het laatst
+  iets zag; in het huis dijen twee ringen uit over de vloer van die kamer.
+  De kamer kijkt elke vijf seconden, Thuis elke vijftien, alleen als de
+  pagina in beeld is. Alleen kijken: er wordt niets geschakeld.
 
 ---
 
