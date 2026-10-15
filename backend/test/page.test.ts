@@ -665,6 +665,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         sessionStorage.setItem('al', '1');
       }
     });
+    // Weghalen vraagt een bewoner, zoals Negeer (besluit 136).
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
@@ -674,6 +676,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const pop = p.locator('[data-nieuwpop]');
     await pop.waitFor({ timeout: 10_000 });
     expect(await pop.textContent()).toContain(`Wat is er nieuw in ${VERSIE}`);
+    expect(await p.locator('[data-nieuw-dicht]').textContent()).toBe('Oké');
     await p.locator('[data-nieuw-dicht]').click();
     expect(await pop.count()).toBe(0);
     // De bel met een getal, op elke pagina.
@@ -684,6 +687,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await blad.locator('.melding', { hasText: 'De droger reageert niet meer' }).waitFor();
     await blad.locator('[data-meld-onderhoud]').click();
     await blad.locator('h2', { hasText: 'Onderhoud' }).waitFor();
+    // Een melding weghalen met het kruisje: het getal verdwijnt (aangevuld 15 oktober).
+    await blad.locator('[data-meld-terug]').click();
+    await blad.locator('.melding', { hasText: 'De droger reageert niet meer' }).locator('[data-meld-weg]').click();
+    await blad.locator('.stil', { hasText: 'Alles werkt' }).waitFor();
+    expect(await bel.locator('[data-meldaantal]').isHidden()).toBe(true);
     await blad.locator('[data-meld-sluit]').click();
     expect(await blad.isHidden()).toBe(true);
     // De volgende keer geen pop-up meer.
@@ -965,8 +973,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     await p.goto(`${baseUrl}/thuis.html`);
     await p.locator('#wand svg.sc-huis').first().waitFor();
-    await p.evaluate('app.offline(Date.now())');
-    await p.locator('.geenverbinding', { hasText: 'De regeling loopt gewoon door' }).waitFor();
+    // Echt geen verbinding meer: anders haalt een vraag die nog onderweg was de balk weer weg.
+    await context.route((url) => url.pathname.startsWith('/api/'), (route) => route.abort());
+    await expect.poll(async () => {
+      await p.evaluate('app.offline(Date.now())');
+      return p.locator('.geenverbinding', { hasText: 'De regeling loopt gewoon door' }).isVisible();
+    }, { timeout: 20_000 }).toBe(true);
     expect(await p.evaluate("getComputedStyle(document.querySelector('#wand main')).pointerEvents")).toBe('none');
     await p.evaluate('app.online()');
     expect(await p.locator('.geenverbinding').count()).toBe(0);

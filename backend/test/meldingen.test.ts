@@ -86,6 +86,24 @@ describe('meldingen (besluit 136)', () => {
     expect(l.eerder.map((m) => m.titel).sort()).toEqual(['10 winterdagen meegekeken', 'Versie 0.13.0: wat is er nieuw']);
   });
 
+  it('haalt elke melding weg: wat nog speelt tot het voorbij is, wat voorbij is meteen', async () => {
+    const { s } = await store();
+    s.bij(leeg({ volgen: [droger(T0 - 2 * UUR)], batterijen: [{ id: 'sensor.knop', naam: 'Knop', pct: 5, kamerId: null }] }));
+    expect(s.verwijder('stil:switch.droger')).toBe(true);
+    expect(s.lijst(T0).actief.map((m) => m.soort)).toEqual(['batterij']);
+    s.bij(leeg({ nu: T0 + UUR, versie: { nummer: '0.13.0' } }));
+    s.bij(leeg({ nu: T0 + 2 * UUR, versie: { nummer: '0.14.0', eerste: 'Verwacht naast echt' } }));
+    const eerder = s.lijst(T0 + 2 * UUR).eerder;
+    expect(eerder.map((m) => m.id)).toContain('versie:0.14.0');
+    expect(s.verwijder('versie:0.14.0')).toBe(true);
+    expect(s.lijst(T0 + 2 * UUR).eerder.map((m) => m.id)).not.toContain('versie:0.14.0');
+    // Komt niet terug bij de volgende ronde.
+    s.bij(leeg({ nu: T0 + 3 * UUR, versie: { nummer: '0.14.0' } }));
+    expect(s.lijst(T0 + 3 * UUR).eerder.map((m) => m.id)).not.toContain('versie:0.14.0');
+    expect(s.verwijder('bestaat:niet')).toBe(false);
+    expect(s.verwijder(42)).toBe(false);
+  });
+
   it('onthoudt het in een eigen bestand', async () => {
     const { dir, s } = await store();
     s.bij(leeg({ volgen: [droger(T0 - 2 * UUR)] }));

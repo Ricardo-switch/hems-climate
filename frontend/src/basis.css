@@ -203,12 +203,17 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .meldblad .kop h2 { margin: 0; }
 .meldblad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; flex: none; }
 .meldblad h3 { margin: 6px 0 0; font-size: 13px; font-weight: 700; color: var(--gedempt); }
-.melding { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 3px 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); }
+.melding { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 3px 12px; padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); }
 .melding .ik { grid-row: 1 / 4; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; }
 .melding .ik svg { width: 20px; height: 20px; }
 .melding b { font-size: 14.5px; }
 .melding a { color: inherit; text-decoration: none; }
 .melding p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+.melding p, .melding .acties { grid-column: 2 / 4; }
+.melding[data-meld-href], .melding[data-meld-versie] { cursor: pointer; }
+.melding .meldweg { grid-column: 3; grid-row: 1; align-self: start; width: 30px; height: 30px; margin: -5px -6px -8px 0; border-radius: 50%; border: 0; background: transparent; color: var(--gedempt); font-size: 18px; line-height: 1; cursor: pointer; }
+.melding .meldweg:hover { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+.melding.gaat { opacity: 0.4; }
 .melding .acties { display: flex; gap: 8px; margin-top: 6px; align-items: center; }
 .melding .acties a, .melding .acties button { height: 34px; padding: 0 14px; border-radius: 11px; border: 0; display: inline-flex; align-items: center; font: inherit; font-size: 13px; font-weight: 700; background: rgba(255, 255, 255, 0.08); color: var(--tekst); cursor: pointer; }
 .melding .acties a.licht { background: var(--tekst); color: #0b1424; }
@@ -216,10 +221,11 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .melding.oud { background: transparent; border-color: transparent; padding: 4px 14px; }
 .melding.oud b { font-size: 14px; font-weight: 600; color: var(--zacht); }
 .melding.oud .ik { width: 30px; height: 30px; }
+.meldblad .ik.grijs { background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
 .melding .ik.rood { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
-.melding .ik.geel { background: rgba(247, 181, 72, 0.14); color: var(--zon); }
+.meldblad .ik.geel { background: rgba(247, 181, 72, 0.14); color: var(--zon); }
 .melding .ik.blauw { background: rgba(111, 211, 255, 0.14); color: var(--ijs); }
-.melding .ik.groen, .onderhoud .ik { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+.melding .ik.groen { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
 .melding .ik.paars { background: rgba(143, 134, 255, 0.14); color: var(--violet); }
 .meldblad .stil { padding: 22px 10px 12px; text-align: center; color: var(--zacht); font-size: 13.5px; }
 .meldblad .stil b { display: block; font-family: var(--kop); font-size: 21px; color: var(--tekst); margin: 8px 0 4px; }

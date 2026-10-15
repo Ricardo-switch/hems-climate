@@ -358,6 +358,7 @@
     versie: ['paars', '<path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/>'],
     mijlpaal: ['blauw', '<path d="M4 18c3-8 6-10 8-10s4 3 8 0"/>'],
     goed: ['groen', '<path d="M5 12l5 5 9-10"/>'],
+    onderhoud: ['grijs', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
   };
   const meldIcoon = (soort) => {
     const [kleur, pad] = MELDICOON[soort] ?? MELDICOON.nieuw;
@@ -373,17 +374,30 @@
     return d.toDateString() === gisteren.toDateString() ? 'gisteren' : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
   }
 
+  /*
+   * Elke melding is aan te tikken en weg te halen (aangevuld 15 oktober): een
+   * versie opent weer wat er nieuw was, de rest gaat naar het apparaat.
+   */
+  const weg = (m) => `<button type="button" class="meldweg" data-meld-weg="${esc(m.id)}" aria-label="${esc(`Verwijder: ${m.titel}`)}">×</button>`;
+  const doel = (m) => (m.soort === 'versie' ? `data-meld-versie="${esc(m.id.replace(/^versie:/, ''))}"` : m.actie ? `data-meld-href="${esc(m.actie.href)}"` : '');
   function meldLijst() {
-    const kaart = (m) => `<div class="melding">${meldIcoon(m.soort)}<b>${esc(m.titel)}</b><p>${esc(m.tekst)}</p>
-      <div class="acties">${m.actie ? `<a class="licht" href="${esc(m.actie.href)}">${esc(m.actie.label)}</a>` : ''}${m.soort === 'nieuw' ? `<button type="button" data-meld-negeer="${esc(m.id)}">Negeer</button>` : ''}<span class="tijd">${esc(wanneerMeld(m.sindsMs))}</span></div></div>`;
-    const oud = (m) => `<div class="melding oud">${meldIcoon(m.soort === 'versie' || m.soort === 'mijlpaal' ? m.soort : 'goed')}${m.actie ? `<a href="${esc(m.actie.href)}"><b>${esc(m.titel)}</b></a>` : `<b>${esc(m.titel)}</b>`}<p>${esc(m.tekst)}</p></div>`;
+    const kaart = (m) => `<div class="melding" ${doel(m)}>${meldIcoon(m.soort)}<b>${esc(m.titel)}</b>${weg(m)}<p>${esc(m.tekst)}</p>
+      <div class="acties">${m.actie ? `<a class="licht" href="${esc(m.actie.href)}">${esc(m.actie.label)}</a>` : ''}<span class="tijd">${esc(wanneerMeld(m.sindsMs))}</span></div></div>`;
+    const oud = (m) => `<div class="melding oud" ${doel(m)}>${meldIcoon(m.soort === 'versie' || m.soort === 'mijlpaal' ? m.soort : 'goed')}<b>${esc(m.titel)}</b>${weg(m)}<p>${esc(m.tekst)}</p></div>`;
     const aandacht = meld.actief.length
       ? `<h3>Vraagt aandacht</h3>${meld.actief.map(kaart).join('')}`
       : '<div class="stil"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><b>Alles werkt</b>Komt er iets nieuws bij, of reageert iets niet meer, dan staat het hier.</div>';
     const eerder = meld.eerder.length ? `<h3>Eerder</h3>${meld.eerder.slice(0, 5).map(oud).join('')}` : '';
     return `<div class="kop"><h2 class="kop-2">Meldingen</h2><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
       ${aandacht}${eerder}
-      <button type="button" class="onderhoud" data-meld-onderhoud>${meldIcoon('goed')}<span><b>Onderhoud</b><span>Alle batterijen en filters</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
+      ${onderhoudKnop()}`;
+  }
+
+  /** De knop naar Onderhoud: geel met wat bijna op is, anders gewoon. */
+  function onderhoudKnop() {
+    const op = meld.actief.filter((m) => m.soort === 'batterij' || m.soort === 'filter');
+    const zin = !op.length ? 'Alle batterijen en filters' : op.length === 1 ? (op[0].soort === 'batterij' ? 'Een batterij is bijna leeg' : 'Een filter is bijna vol') : `${op.length} batterijen of filters bijna op`;
+    return `<button type="button" class="onderhoud" data-meld-onderhoud>${meldIcoon(op.length ? op[0].soort : 'onderhoud')}<span><b>Onderhoud</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
   }
 
   async function meldOnderhoud() {
@@ -448,27 +462,37 @@
 
   /** Na een update één keer: wat is er nieuw (besluit 136). De eerste keer ooit niet: dan is alles nieuw. */
   const VERSIE_GEZIEN = 'sc-versie-gezien';
-  async function watIsErNieuw() {
+  async function watIsErNieuw(welke = null) {
     let v;
     try {
       v = await haal('api/versie');
     } catch {
       return;
     }
-    let gezien = null;
-    try {
-      gezien = localStorage.getItem(VERSIE_GEZIEN);
-      localStorage.setItem(VERSIE_GEZIEN, v.nummer);
-    } catch {
-      return;
+    let n;
+    if (welke) {
+      // Opnieuw geopend vanuit Meldingen.
+      n = (v.nieuw ?? []).find((x) => x.versie === welke);
+      if (!n) {
+        location.href = 'toegang.html#versie';
+        return;
+      }
+    } else {
+      let gezien = null;
+      try {
+        gezien = localStorage.getItem(VERSIE_GEZIEN);
+        localStorage.setItem(VERSIE_GEZIEN, v.nummer);
+      } catch {
+        return;
+      }
+      n = v.nieuw?.[0];
+      if (gezien == null || gezien === v.nummer || !n || n.versie !== v.nummer) return;
     }
-    const n = v.nieuw?.[0];
-    if (gezien == null || gezien === v.nummer || !n || n.versie !== v.nummer) return;
     const SOORT = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
     const delen = SOORT.filter(([k]) => (n[k] ?? []).length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
     document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop>
-      <span class="mini">Bijgewerkt</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Wat is er nieuw in ${esc(v.nummer)}</h2>${delen}
-      <div class="knoppen"><a class="knop" href="toegang.html#versie">Alle versies</a><button type="button" class="knop knop-licht" data-nieuw-dicht>Mooi</button></div></div>`);
+      <span class="mini">${welke ? esc(new Date(`${n.datum}T12:00:00Z`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })) : 'Bijgewerkt'}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Wat is er nieuw in ${esc(n.versie)}</h2>${delen}
+      <div class="knoppen"><a class="knop" href="toegang.html#versie">Alle versies</a><button type="button" class="knop knop-licht" data-nieuw-dicht>Oké</button></div></div>`);
     document.querySelector('[data-nieuw-dicht]').focus();
   }
 
@@ -479,8 +503,9 @@
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void meldLaad());
     setTimeout(() => void watIsErNieuw(), 1200);
     document.addEventListener('click', async (e) => {
-      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-negeer], [data-nieuw-dicht], [data-nieuw-achter]');
-      if (!t) return;
+      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-weg], [data-nieuw-dicht], [data-nieuw-achter], a, [data-meld-versie], [data-meld-href]');
+      if (!t || (t.matches('a') && !t.closest('[data-meldblad]'))) return;
+      if (t.matches('a')) return meldDicht();
       if (t.matches('[data-nieuw-dicht], [data-nieuw-achter]')) {
         $$('[data-nieuwpop], [data-nieuw-achter]').forEach((el) => el.remove());
       } else if (t.matches('[data-meldbel]')) {
@@ -489,11 +514,17 @@
       } else if (t.matches('[data-meld-sluit], [data-meld-achter]')) meldDicht();
       else if (t.matches('[data-meld-onderhoud]')) await meldOpen('onderhoud');
       else if (t.matches('[data-meld-terug]')) await meldOpen('lijst');
-      else if (t.dataset.meldNegeer) {
-        const res = await deur('api/meldingen', { negeer: t.dataset.meldNegeer }).catch(() => null);
+      else if (t.dataset.meldWeg) {
+        t.closest('.melding')?.classList.add('gaat');
+        const res = await deur('api/meldingen', { verwijder: t.dataset.meldWeg }).catch(() => null);
         if (res?.ok) meld = await res.json();
         meldGetal();
         await meldOpen('lijst');
+      } else if (t.dataset.meldVersie) {
+        meldDicht();
+        await watIsErNieuw(t.dataset.meldVersie);
+      } else if (t.dataset.meldHref) {
+        location.href = t.dataset.meldHref;
       }
     });
     addEventListener('keydown', (e) => {

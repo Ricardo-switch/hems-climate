@@ -25,11 +25,11 @@
    */
   function tekenDelen(delen) {
     const nu = actief(delen);
-    const kleur = { goed: 'var(--mint)', mist: 'var(--gloed)', leeg: 'var(--gedempt)' };
+    // Alleen wat ontbreekt krijgt een bolletje; wat goed staat, zegt niets extra (15 oktober).
     const html = delen
       .map((d) => (d.kop
         ? `<h4>${esc(d.kop)}</h4>`
-        : `<a class="deel${d.id === nu ? ' nu' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}><b>${esc(d.titel)}</b><span>${esc(d.zin ?? '')}</span>${d.stand ? `<span class="stip" style="background: ${kleur[d.stand] ?? kleur.leeg}" aria-label="${d.stand === 'mist' ? 'er mist iets' : d.stand === 'goed' ? 'klaar' : ''}"></span>` : ''}</a>`))
+        : `<a class="deel${d.id === nu ? ' nu' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}><b>${esc(d.titel)}</b><span>${esc(d.zin ?? '')}</span>${d.stand === 'mist' ? '<span class="stip" style="background: var(--gloed)" aria-label="er mist iets"></span>' : ''}</a>`))
       .join('');
     $$('[data-delen]').forEach((el) => (el.innerHTML = html));
     // Op de telefoon staan de delen in een rij: het gekozen deel in beeld.
@@ -42,10 +42,11 @@
   let wacht = null;
   let bezig = Promise.resolve();
   function zegBewaard(stand, tekst) {
-    const kleur = { bezig: 'var(--zacht)', ok: 'var(--mint)', fout: 'var(--gloed)' }[stand];
+    // Een bolletje alleen als het misging; anders gewoon de tekst.
+    const kleur = { rust: 'var(--gedempt)', bezig: 'var(--zacht)', ok: 'var(--mint)', fout: 'var(--gloed)' }[stand];
     $$('[data-bewaard]').forEach((el) => {
       el.style.color = kleur;
-      el.innerHTML = `<span class="stip" style="background: ${kleur}"></span>${esc(tekst)}`;
+      el.innerHTML = `${stand === 'fout' ? `<span class="stip" style="background: ${kleur}"></span>` : ''}${esc(tekst)}`;
     });
   }
 
@@ -82,5 +83,5 @@
 
   global.groep = { actief, tekenDelen, bewaarStraks, stuur, zegBewaard };
   // Bij het openen staat er wat er geldt.
-  addEventListener('DOMContentLoaded', () => zegBewaard('ok', 'Alles wordt meteen bewaard'));
+  addEventListener('DOMContentLoaded', () => zegBewaard('rust', 'Alles wordt meteen bewaard'));
 })(window);

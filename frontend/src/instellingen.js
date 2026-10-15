@@ -25,7 +25,7 @@ async function laadAlles() {
 function mist() {
   const lijst = stand.nogTeDoen(d);
   if (!lijst.length) {
-    return { klaar: true, html: '<h2 class="kop-3"><span class="stip" style="background: var(--mint)"></span>Alles staat goed</h2><p class="mini" style="margin: 2px 0 0">Er mist niets wat Smart Climate nodig heeft. Wat er nog bij kan, staat bij Wat je huis kan.</p>' };
+    return { klaar: true, html: '<h2 class="kop-3">Alles staat goed</h2><p class="mini" style="margin: 2px 0 0">Er mist niets wat Smart Climate nodig heeft. Wat er nog bij kan, staat bij Wat je huis kan.</p>' };
   }
   const rijen = lijst.slice(0, 3).map((x) => `<div class="regel"><div><b>${esc(x.wat)}</b><span>${esc(x.waarom)}</span></div><a class="doe" href="${x.href}">${esc(x.knop)}</a></div>`).join('');
   return { klaar: false, html: `<h2 class="kop-3"><span class="stip" style="background: var(--gloed)"></span>Nog te doen</h2>${rijen}${lijst.length > 3 ? `<p class="mini" style="margin: 6px 0 0">En nog ${lijst.length - 3}.</p>` : ''}` };

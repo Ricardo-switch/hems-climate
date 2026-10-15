@@ -623,8 +623,10 @@ export class WebServer {
           sendJson(res, 400, { fout: (error as Error).message });
           return;
         }
-        const id = typeof body === 'object' && body != null ? (body as Record<string, unknown>)['negeer'] : null;
-        if (!store.negeer(id)) {
+        const vraag = typeof body === 'object' && body != null ? (body as Record<string, unknown>) : {};
+        // "verwijder" haalt elke melding weg; "negeer" blijft voor wat er al was.
+        const gelukt = vraag['verwijder'] != null ? store.verwijder(vraag['verwijder']) : store.negeer(vraag['negeer']);
+        if (!gelukt) {
           sendJson(res, 400, { fout: 'die melding is er niet' });
           return;
         }

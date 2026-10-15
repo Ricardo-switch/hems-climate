@@ -5746,6 +5746,15 @@ dit is de lijst in de app zelf.
   Assistant. Een melding op de telefoon blijft voor later, met een eigen
   besluit over schrijven (79).
 - **Versie 0.13.0.**
+- **Aangevuld op 15 oktober 2026 (versie 0.14.1),** na de eerste dag gebruik:
+  elke melding heeft een kruisje om hem weg te halen. Wat nog speelt, komt
+  dan niet terug tot het voorbij is; wat al voorbij is, gaat uit de lijst. Dat
+  vervangt "Negeer". Een melding is ook later aan te tikken: een versie opent
+  weer wat er nieuw was, de rest gaat naar het apparaat. Onderhoud kleurt geel
+  als er iets bijna op is, in plaats van altijd een groen vinkje. De knop van
+  de pop-up heet "Oké". In de instellingen staat alleen nog een bolletje waar
+  iets ontbreekt; groen voor "staat goed" viel weg, omdat het overal stond en
+  niets zei.
 
 ---
 

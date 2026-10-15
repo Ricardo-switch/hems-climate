@@ -199,7 +199,7 @@ export class MeldingenStore {
     const wacht = (m: Melding) => m.soort === 'nieuw' && nu - m.sindsMs < NIEUW_NA_MS;
     const actief = b.meldingen.filter((m) => m.opgelostMs == null && m.aandacht && !b.negeer.includes(m.id) && !wacht(m)).sort((x, y) => y.sindsMs - x.sindsMs);
     const eerder = b.meldingen
-      .filter((m) => m.opgelostMs != null && (m.soort !== 'nieuw') && (m.klaar != null || !m.aandacht))
+      .filter((m) => m.opgelostMs != null && m.soort !== 'nieuw' && (m.klaar != null || !m.aandacht) && !b.negeer.includes(m.id))
       .sort((x, y) => (y.opgelostMs ?? 0) - (x.opgelostMs ?? 0))
       .slice(0, 10)
       .map((m) => (m.klaar ? { ...m, titel: m.klaar.titel, tekst: `${m.klaar.tekst} Om ${klok(m.opgelostMs!)}.` } : m));
@@ -213,6 +213,20 @@ export class MeldingenStore {
       this.#bestand = { ...this.#bestand, negeer: [...this.#bestand.negeer, id] };
       this.#vies = true;
     }
+    return true;
+  }
+
+  /**
+   * Weghalen (besluit 136, aangevuld 15 oktober): wat nog speelt, laat de app
+   * niet meer zien tot het voorbij is; wat al voorbij is, gaat uit de lijst.
+   */
+  verwijder(id: unknown): boolean {
+    if (typeof id !== 'string') return false;
+    if (this.#bestand.meldingen.some((m) => m.id === id && m.opgelostMs == null)) return this.negeer(id);
+    const over = this.#bestand.meldingen.filter((m) => m.id !== id);
+    if (over.length === this.#bestand.meldingen.length) return false;
+    this.#bestand = { ...this.#bestand, meldingen: over };
+    this.#vies = true;
     return true;
   }
 
