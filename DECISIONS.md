@@ -92,6 +92,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [117. De hoofdzekering stel je in de app in; die gaat voor de configuratie](#117-de-hoofdzekering-stel-je-in-de-app-in-die-gaat-voor-de-configuratie)
 - [122. Batterijen bij het apparaat, en de verwarming met haar aanvoertemperatuur](#122-batterijen-bij-het-apparaat-en-de-verwarming-met-haar-aanvoertemperatuur)
 - [123. Meten met: per kamer zelf de sensoren kiezen](#123-meten-met-per-kamer-zelf-de-sensoren-kiezen)
+- [139. Inrichten in één keer, het filmpje en de rondleiding](#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding)
 
 **Meten, data en analyse**
 
@@ -5844,6 +5845,39 @@ versie.
 - **Grens:** alles kijkt mee tot stap B (besluit 64). Er gaat niets naar Home
   Assistant.
 - **Versie 0.15.0.**
+
+---
+
+## 139. Inrichten in één keer, het filmpje en de rondleiding
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Gevraagd in het plan van 14 oktober 2026, met de schetsen `Wand-Inrichten`,
+`Wand-Film` en `Wand-Rondleiding` in `design/app2`; akkoord met "Ook later te
+openen", "Met de echte cijfers", "Met geluid" en "Iedereen de eerste keer".
+Inrichten (besluit 114) stuurde je naar zes pagina's met een balk ertussen; dat
+voelde als instellingen, niet als je huis neerzetten.
+
+*Besluit:*
+
+- **Eén pagina, over het hele scherm, zonder menu.** Bovenaan vijf stappen
+  (Je huis, Apparaten, Verwarmen en koelen, Comfort, Zon en energie), links
+  het huis dat meegroeit, rechts één vraag. Een stap met een vinkje is af,
+  gezien aan wat de dienst zegt, niet aan wat er geklikt is.
+- **Wat Home Assistant al weet, staat klaar.** Je huis: de ruimtes per
+  etage, om te hernoemen, te verplaatsen of aan te vullen; "Klopt" maakt het
+  voorstel de eigen indeling. Apparaten: wat nog los staat, met de kamer die
+  Home Assistant voorstelt. Verwarmen en koelen: per kamer de apparaten met de
+  drie keuzes van besluit 138, en iets toevoegen uit Home Assistant. Comfort:
+  één keer voor het hele huis (verwarmen onder, koelen boven, de nacht, de
+  dag). Zon en energie: de panelen, de hoofdzekering, de meters, de
+  stroomprijs en de verwarming.
+- **Meteen bewaard,** langs dezelfde deuren als bij Instellingen. Er komt in
+  de dienst niets nieuws bij.
+- **Overslaan kan altijd.** Bij Klaar staat wat nog openstaat, met een tik
+  erheen; Inrichten blijft te openen bij Instellingen.
+- De balk tussen de pagina's van besluit 114 is weg.
+- **Versie 0.16.0.**
 
 ---
 

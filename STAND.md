@@ -215,6 +215,8 @@ verwijzing bestaat.
 - **De regeling per kamer** staat in de app: bij Indeling per apparaat of het
   de kamer op temperatuur houdt, op zon helpt of alleen kijkt; een nieuw
   apparaat doet meteen mee ([138]).
+- **Inrichten** gebeurt op één pagina: links het huis dat meegroeit, rechts
+  één vraag per stap, alles meteen bewaard ([139]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -402,4 +404,5 @@ verwijzing bestaat.
 [136]: DECISIONS.md#136-meldingen-in-de-app
 [137]: DECISIONS.md#137-verwacht-naast-echt-of-de-zonverwachting-klopte
 [138]: DECISIONS.md#138-de-regeling-per-kamer-in-de-app
+[139]: DECISIONS.md#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding
 <!-- links:einde -->

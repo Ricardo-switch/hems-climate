@@ -967,45 +967,63 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 30_000);
 
   /*
-   * Inrichten (besluit 114): de stappen, wat er al klaar is, en vanaf een
-   * stap naar de pagina en via de balk door naar de volgende.
+   * Inrichten in één keer (besluit 139): over het hele scherm, de stappen
+   * bovenaan, links het huis en rechts één vraag. Van Instellingen naar
+   * Inrichten, en zonder van pagina te wisselen door alle stappen.
    */
-  it('loopt door het inrichten, met een balk naar de volgende stap', async () => {
-    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+  it('loopt in één pagina door het inrichten', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand a[href="inrichten.html"]').click();
-    const wand = p.locator('#wand');
-    await wand.locator('.stapknop').first().waitFor();
-    expect(await wand.locator('.stapknop').count()).toBe(7);
-    expect(await wand.locator('[data-voortgang]').textContent()).toMatch(/van 5 stappen klaar|Alle stappen klaar/);
+    const kaart = p.locator('#wand [data-kaart]');
+    await kaart.locator('h1', { hasText: 'Laten we je huis neerzetten' }).waitFor({ timeout: 10_000 });
+    await kaart.locator('.cijfers').waitFor();
+    await p.waitForTimeout(400);
+    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(5);
+    expect(await p.locator('#wand #balk').count()).toBe(0);
+    await shot('welkom');
+    await kaart.locator('a', { hasText: 'Begin' }).click();
+    await kaart.locator('h1', { hasText: 'Klopt je huis?' }).waitFor();
+    // Een kamer aantikken: de naam en de etage om te veranderen.
+    await kaart.locator('[data-kamer]').first().click();
+    await kaart.locator('[data-naam]').waitFor();
+    await shot('huis');
+    await kaart.locator('[data-klopt]').click();
+    await p.waitForURL(/#apparaten$/);
+    await kaart.locator('.waar', { hasText: 'Stap 2' }).waitFor();
+    await shot('apparaten');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Wat verwarmt en koelt er?' }).waitFor();
+    expect(await kaart.locator('[data-rol]').count()).toBeGreaterThan(0);
+    await shot('warmte');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Hoe warm wil je het?' }).waitFor();
+    await kaart.locator('[data-comfort="warm"]').waitFor();
+    await shot('comfort');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Je panelen en je aansluiting' }).waitFor();
+    await shot('zon');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
+    await shot('klaar');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
-    await wand.locator('.stapknop', { hasText: 'Zon en aansluiting' }).click();
-    await wand.locator('[data-stapblad] h2', { hasText: 'Zon en aansluiting' }).waitFor();
-    await wand.locator('[data-stapblad] a', { hasText: /Instellen|Nakijken/ }).click();
-    await p.waitForURL(/energie\.html\?inrichten=zon/);
-    const balk = p.locator('.inrichtbalk');
-    await balk.waitFor();
-    expect(await balk.textContent()).toContain('Stap 4 van 7');
-    await balk.locator('a', { hasText: 'Volgende stap' }).click();
-    await p.waitForURL(/inrichten\.html#meters/);
-    await wand.locator('[data-stapblad] h2', { hasText: 'Meters en prijzen' }).waitFor();
-    // Op de telefoon: de balk op één regel, binnen het scherm.
+    // Op de telefoon: alles onder elkaar, binnen het scherm.
     await p.setViewportSize({ width: 390, height: 844 });
-    await p.goto(`${baseUrl}/aansluiting.html?inrichten=zon`);
-    await p.waitForURL(/energie\.html\?inrichten=zon#panelen/);
-    await p.locator('.inrichtbalk').waitFor();
-    const vak = (await p.locator('.inrichtbalk').boundingBox())!;
-    expect(vak.x).toBeGreaterThanOrEqual(0);
-    expect(vak.x + vak.width).toBeLessThanOrEqual(390);
-    expect(vak.height).toBeLessThan(64);
+    await p.goto(`${baseUrl}/inrichten.html#warmte`);
+    await p.locator('#tel [data-kaart] h1', { hasText: 'Wat verwarmt en koelt er?' }).waitFor();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    await shot('telefoon');
     expect(fouten).toEqual([]);
     await context.close();
-  }, 30_000);
+  }, 40_000);
 
   it('toont zonder verbinding de laatste stand, grijs', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
