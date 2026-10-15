@@ -1102,6 +1102,7 @@ describe('licht bedienen (besluit 97)', () => {
     temperatuurC: null,
     vochtPct: null,
     gemetenDoor: null,
+    meetMet: [],
     status: null,
     lampenAan: apparaten.filter((d) => d.aan).length,
     samenvatting: summarize(apparaten),

@@ -73,6 +73,11 @@ export interface HouseClimate {
   readonly doelC: number | null;
   /** Wat het apparaat nu werkelijk doet: "verwarmt", "koelt", "staat stil", of null. */
   readonly actie: string | null;
+  /**
+   * Wat de regeling ermee doet (besluit 138): houdt de kamer op temperatuur,
+   * helpt op zon, of kijkt alleen.
+   */
+  readonly rol: 'houdt' | 'zon' | 'kijken';
 }
 
 export interface HouseDevice {
@@ -168,6 +173,12 @@ export interface HouseRoom {
   readonly vochtPct: number | null;
   /** De meter waar de temperatuur vandaan komt, als het niet het regelgebied is. */
   readonly gemetenDoor: string | null;
+  /**
+   * Waarmee de kamer meet (besluit 138): de namen van de sensoren of
+   * apparaten waar de regeling mee rekent, of die bij Meten met gekozen zijn.
+   * Leeg als er niets meet.
+   */
+  readonly meetMet: readonly string[];
   readonly status: { readonly soort: RoomKind; readonly zin: string } | null;
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -873,6 +884,7 @@ function collect(
       ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
       actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+      rol: config.zones.some((z) => z.actuatorIds.includes(a.id)) ? (a.role === 'assist' ? 'zon' : 'houdt') : 'kijken',
     };
     const hasReading = meting.temperatuurC != null || meting.vochtPct != null;
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id], {
@@ -916,6 +928,7 @@ function collect(
       ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
       actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+      rol: 'kijken',
     };
     const naam = friendly(st, e.entity_id);
     const sp = num(st?.attributes['temperature']);
@@ -1341,6 +1354,20 @@ export function buildHouse(
       .filter((v): v is number => v != null);
     const gekozenC = gekozen.length ? Math.round((gekozen.reduce((a, b) => a + b, 0) / gekozen.length) * 10) / 10 : null;
     const status = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
+    // De namen zoals de app ze toont: een sensor heet naar zijn meter, een entiteit van de regeling naar zijn apparaat.
+    const naamVan = (entity: string) => {
+      const viaApparaat = config.actuators.find((a) => a.ref.id === entity)?.id;
+      for (const lijst of perRoom.values()) {
+        const d = lijst.find((x) => x.id === entity || (viaApparaat != null && (x.actuatorId === viaApparaat || x.id === viaApparaat)));
+        if (d) return d.naam;
+      }
+      return friendly(states.get(entity), entity);
+    };
+    const meetMet = zone
+      ? (zone.temperatures ?? [zone.temperature]).map((t) => naamVan(t.id))
+      : k.meten?.length
+        ? k.meten.map((id) => naamVan(config.actuators.find((a) => a.id === id)?.ref.id ?? id))
+        : meterTemp ? [meterTemp.naam] : [];
     return {
       id: k.id,
       naam: k.naam,
@@ -1349,6 +1376,7 @@ export function buildHouse(
       temperatuurC: pz?.temperatureC ?? gekozenC ?? meterTemp?.meting?.temperatuurC ?? null,
       vochtPct: pz?.humidityPct ?? devices.find((d) => d.meting?.vochtPct != null)?.meting?.vochtPct ?? null,
       gemetenDoor: pz?.temperatureC == null && gekozenC == null && meterTemp ? meterTemp.naam : null,
+      meetMet: [...new Set(meetMet)],
       status: status ? { soort: status.kind, zin: status.zin } : null,
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
       samenvatting: summarize(devices),

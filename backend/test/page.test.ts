@@ -626,6 +626,47 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 30_000);
 
   /*
+   * De regeling per kamer (besluit 138): bij Verwarmen en koelen per apparaat
+   * wat de regeling ermee doet, en bovenaan waarmee de kamer meet.
+   */
+  it('kiest bij Indeling per apparaat wat de regeling ermee doet', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    // Een kamer met een airco die op zon helpt.
+    const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.apparaten.some((d) => d.klimaat?.rol === 'zon'))!;
+    const airco = kamer.apparaten.find((d) => d.klimaat?.rol === 'zon')!;
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
+    const blad = p.locator('#wand [data-blad]');
+    await blad.locator('.meetrij', { hasText: 'Meet met' }).waitFor({ timeout: 10_000 });
+    expect(kamer.meetMet.length).toBeGreaterThan(0);
+    const keuze = blad.locator(`[data-rol="${airco.actuatorId}"]`);
+    expect(await keuze.inputValue()).toBe('zon');
+    await blad.locator('.rolzin').first().waitFor();
+    await keuze.selectOption('houdt');
+    const rollen = () => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.rollen ?? null;
+    await expect.poll(rollen).toEqual(expect.objectContaining({ [airco.actuatorId!]: 'houdt' }));
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
+    // Terug zoals het was, voor de andere tests.
+    await blad.locator(`[data-rol="${airco.actuatorId}"]`).selectOption('zon');
+    await expect.poll(() => rollen()?.[airco.actuatorId!]).toBe('zon');
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    // Het overzicht bij Regeling: per kamer wat er regelt, met een tik naar de kamer.
+    await p.goto(`${baseUrl}/regeling.html#klimaat`);
+    const rij = p.locator('#wand .kamerrij', { hasText: kamer.naam });
+    await rij.waitFor({ timeout: 10_000 });
+    expect(await rij.textContent()).toContain('helpt op zon');
+    expect(await rij.getAttribute('href')).toBe(`indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-regeling.png') });
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
    * Hoe voelt het (besluit 134): tikken kan zonder inlog, er komt meteen een
    * antwoord, en na drie keer hetzelfde in hetzelfde dagdeel een voorstel.
    */

@@ -10,7 +10,7 @@
  */
 'use strict';
 
-const { $$, esc, haal, deur } = app;
+const { $$, esc, haal, deur, nl } = app;
 
 let info = null;
 let huisData = null;
@@ -350,16 +350,55 @@ const ICOON_RADIATOR = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" st
 const ICOON_KOEL = '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg>';
 const ICOON_THERMO = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>';
 
+/*
+ * De regeling per kamer (besluit 138, schets Wand-Indeling-Regeling): per
+ * klimaatapparaat wat de regeling ermee doet. Wat de kamer nog niet vastlegde,
+ * staat zoals de dienst het nu regelt.
+ */
+const ROL_KEUZE = [
+  ['houdt', 'Houdt op temperatuur', 'Warmt of koelt tot het doel bij Comfort, ook van het net.'],
+  ['zon', 'Helpt op zon', 'Springt bij als er eigen zon over is. Van het net alleen als Comfort dat zegt.'],
+  ['kijken', 'Alleen kijken', 'Het huis volgt hem, maar regelt hem niet.'],
+];
+function rolVan(k, sleutel) {
+  if (k.rollen) return k.rollen[sleutel] ?? 'kijken';
+  return klimaatToestellen().find((x) => x.sleutel === sleutel)?.a.klimaat?.rol ?? 'kijken';
+}
+/** Alle klimaatapparaten in de kamer met hun rol, zoals ze nu staan. */
+function rollenNu(k) {
+  const rollen = {};
+  for (const a of (ruimteVan(k.id)?.apparaten ?? []).filter((x) => x.soort === 'klimaat')) rollen[a.actuatorId ?? a.id] = rolVan(k, a.actuatorId ?? a.id);
+  for (const [s, r] of Object.entries(k.rollen ?? {})) if (!(s in rollen)) rollen[s] = r;
+  return rollen;
+}
+/** Wat de app voorstelt voor een apparaat dat erbij komt: een airco helpt op zon, de eerste verwarming houdt de kamer warm. */
+function rolVoorstel(k, sleutel) {
+  const a = klimaatToestellen().find((x) => x.sleutel === sleutel)?.a;
+  if (a?.klimaat?.kanKoelen) return 'zon';
+  const alHoudt = Object.entries(rollenNu(k)).some(([s, r]) => s !== sleutel && r === 'houdt');
+  return alHoudt ? 'kijken' : 'houdt';
+}
+function rolRegel(k, sleutel) {
+  const rol = rolVan(k, sleutel);
+  const id = `rol-${sleutel.replace(/[^a-z0-9_-]/gi, '-')}`;
+  return `<div class="rolrij"><label for="${esc(id)}">De regeling</label><select class="veld rolkeuze" id="${esc(id)}" data-rol="${esc(sleutel)}">${ROL_KEUZE.map(([w, t]) => `<option value="${w}" ${w === rol ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>${rol === 'zon' ? '<p class="rolzin">Op eigen zon springt hij bij. Van het net alleen als Comfort dat zegt.</p>' : ''}`;
+}
+function rolKeuzes(gekozen) {
+  return `<div class="keuzes" role="radiogroup" aria-label="Wat de regeling ermee doet">${ROL_KEUZE.map(([w, t, u]) => `<button type="button" class="keuze${w === gekozen ? ' aan' : ''}" role="radio" aria-checked="${w === gekozen}" data-bron-rol="${w}"><i></i><span><b>${esc(t)}</b><span>${esc(u)}</span></span></button>`).join('')}</div>`;
+}
+
 function bronKaart(kop, wat, ikoon, koel, rechts, regels = '', attrs = '') {
   return `<div class="bron"${attrs}><div class="boven"><span class="ikoon${koel ? ' koel' : ''}">${ikoon}</span><div><b>${esc(kop)}</b><span class="wat">${esc(wat)}</span></div>${rechts}</div>${regels}</div>`;
 }
 
 function warmteBlad(d, k) {
   const kop = `<button type="button" class="terug" data-naar-etage>‹ ${esc(etageNaam(d, k.etage))}</button>
-    <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">${ruimteVan(k.id)?.temperatuurC != null ? `${String(ruimteVan(k.id).temperatuurC).replace('.', ',')}°` : 'geen meter'}</span></div>
+    <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">${ruimteVan(k.id)?.temperatuurC != null ? `${nl(ruimteVan(k.id).temperatuurC)}°` : 'geen meter'}</span></div>
     ${kamerTabs(k)}`;
   if (bronVorm) return kop + bronFormulier(k);
   const r = ruimteVan(k.id);
+  const meet = r?.meetMet ?? [];
+  const meetRij = `<button type="button" class="meetrij" data-kamertab="kamer"><span class="ikoon">${ICOON_THERMO}</span><span><span class="mini">Meet met</span><b>${esc(meet.length ? meet.join(' en ') : 'Nog niets')}</b></span><span class="wissel">Wijzig</span></button>`;
   const bronnen = k.bronnen ?? [];
   const vast = new Set(bronnen.map((b) => b.apparaat).filter(Boolean));
   const gevonden = (r?.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !vast.has(a.actuatorId ?? a.id));
@@ -368,9 +407,10 @@ function warmteBlad(d, k) {
   for (const a of gevonden) {
     const sleutel = a.actuatorId ?? a.id;
     const via = `<div class="regelt">via <b>${esc(a.naam)}</b>${a.klimaat?.filter?.pct != null ? `<span class="mini">filter ${a.klimaat.filter.pct}%</span>` : ''}${a.radiatorknop?.klepPct != null ? `<span class="mini">klep ${a.radiatorknop.klepPct}%</span>` : ''}</div>`;
-    if (a.klimaat?.kanKoelen) kaarten.push(bronKaart('Airco', [a.klimaat.kanVerwarmen ? 'koelt, verwarmt' : 'koelt', a.klimaat.kanDrogen ? 'droogt' : null].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' en $1'), ICOON_KOEL, true, slim, via));
-    else if (a.radiatorknop) kaarten.push(bronKaart('Radiator met een slimme knop', 'op de cv', ICOON_RADIATOR, false, slim, via));
-    else kaarten.push(bronKaart('Thermostaat', 'gevonden in Home Assistant', ICOON_THERMO, false, slim, `${via}<button type="button" class="vraagknop" data-bron-nieuw="${esc(sleutel)}">Wat hangt eraan?</button>`));
+    const rol = rolRegel(k, sleutel);
+    if (a.klimaat?.kanKoelen) kaarten.push(bronKaart('Airco', [a.klimaat.kanVerwarmen ? 'koelt, verwarmt' : 'koelt', a.klimaat.kanDrogen ? 'droogt' : null].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' en $1'), ICOON_KOEL, true, slim, via + rol));
+    else if (a.radiatorknop) kaarten.push(bronKaart('Radiator met een slimme knop', 'op de cv', ICOON_RADIATOR, false, slim, via + rol));
+    else kaarten.push(bronKaart('Thermostaat', 'gevonden in Home Assistant', ICOON_THERMO, false, slim, `${via}${rol}<button type="button" class="vraagknop" data-bron-nieuw="${esc(sleutel)}">Wat hangt eraan?</button>`));
   }
   for (const b of bronnen) {
     const elektrisch = b.soorten.some((x) => huismodel.ELEKTRISCH.has(x));
@@ -379,6 +419,7 @@ function warmteBlad(d, k) {
     const ikoon = b.soorten.includes('airco') ? ICOON_KOEL : b.soorten.includes('radiator') ? ICOON_RADIATOR : ICOON_WARM;
     let regels = '';
     if (b.apparaat) regels += `<div class="regelt">via <b>${esc(toestelNaam(b.apparaat))}</b>${b.aan !== 'hand' && b.vermogenW ? slim : ''}</div>`;
+    if (b.apparaat && klimaatToestellen().some((x) => x.sleutel === b.apparaat && x.kamer.id === k.id)) regels += rolRegel(k, b.apparaat);
     // Op zon (besluit 132): alleen elektrisch, met vermogen, en een apparaat van de regeling in deze kamer.
     const vanRegeling = !!b.apparaat && !!r?.zoneId && (r?.apparaten ?? []).some((a) => a.soort === 'klimaat' && a.actuatorId === b.apparaat);
     if (huismodel.isElektrischSlim(b) && b.vermogenW && vanRegeling) regels += `<div class="opzon">Mag opwarmen op zon<button type="button" class="schakel" role="switch" aria-checked="${!!b.opZon}" aria-label="Mag opwarmen op zon" data-bron-zon="${esc(b.id)}"></button></div>`;
@@ -386,7 +427,9 @@ function warmteBlad(d, k) {
     kaarten.push(bronKaart(huismodel.bronNaam(b), wat, ikoon, b.soorten.includes('airco'), rechts, regels, ` data-bron-open="${esc(b.id)}" role="button" tabindex="0"`));
   }
   const leeg = !kaarten.length ? '<p class="klein" style="margin: 0">Nog niets. Hangt er een radiator, vloerverwarming, een paneel of een airco? Voeg het toe; met de hand is ook goed.</p>' : '';
-  return `${kop}${kaarten.join('')}${leeg}
+  const doetMee = Object.values(rollenNu(k)).some((x) => x !== 'kijken');
+  const nietMee = kaarten.length && !doetMee ? '<div class="uitleg"><b>Deze kamer doet nog niet mee in de regeling.</b>Kies bij een apparaat Houdt op temperatuur of Helpt op zon.</div>' : '';
+  return `${kop}${meetRij}${kaarten.join('')}${leeg}${nietMee}
     <button type="button" class="plus" data-bron-nieuw="">+ Iets toevoegen</button>
     <p class="mini" style="margin: 0">Het huis rekent elektrische warmte mee voor je zekering, en ziet zo waarom een kamer opwarmt.</p>`;
 }
@@ -401,6 +444,9 @@ function bronFormulier(k) {
   const welke = v.aan && v.aan !== 'hand'
     ? `<div class="vraag"><label class="label" for="bron-apparaat">Welk apparaat? Uit Home Assistant.</label><select class="veld" id="bron-apparaat" data-bron-apparaat><option value="">Kies…</option>${toestellen.map((x) => `<option value="${esc(x.sleutel)}" ${x.sleutel === v.apparaat ? 'selected' : ''}>${esc(x.a.naam)} (${esc(x.kamer.naam)})</option>`).join('')}</select></div>`
     : '';
+  const rol = v.apparaat && v.aan && v.aan !== 'hand' && toestellen.some((x) => x.sleutel === v.apparaat)
+    ? `<div class="vraag"><span class="label">Wat doet de regeling ermee?</span>${rolKeuzes(v.rol ?? rolVoorstel(k, v.apparaat))}</div>`
+    : '';
   const vermogen = elektrisch && v.aan && v.aan !== 'hand'
     ? `<div class="vraag"><label class="label" for="bron-w">${v.soorten.size > 1 ? 'Samen hoeveel' : 'Hoeveel'} vermogen? Het staat op het typeplaatje.</label><div class="invoer"><input id="bron-w" inputmode="numeric" data-bron-w value="${v.vermogenW ?? ''}" placeholder="bijvoorbeeld 800"><span>watt</span></div><span class="mini">Zo weet het huis wanneer er genoeg zon voor is.</span></div>`
     : '';
@@ -410,6 +456,7 @@ function bronFormulier(k) {
     ${v.soorten.size ? `<div class="vraag"><span class="label">Hoe gaat het aan?</span><div class="chips">${aanOpties.map(([w, t]) => chip('bron-aan', w, t, v.aan === w)).join('')}</div></div>` : ''}
     ${welke}
     ${vermogen}
+    ${rol}
     <div class="knoppenrij" style="margin-top: auto">${v.id ? '<button type="button" class="knop gevaar" data-bron-weg>Weghalen</button>' : ''}<button type="button" class="knop" data-bron-annuleer>Annuleren</button><button type="button" class="knop knop-licht" data-bron-bewaar ${v.soorten.size && v.aan ? '' : 'disabled'}>${v.id ? 'Bewaren' : 'Toevoegen'}</button></div>`;
 }
 
@@ -434,7 +481,7 @@ async function bronKlik(t) {
     kies({ tab: t.dataset.kamertab });
   } else if (t.dataset.bronNieuw !== undefined) {
     const a = t.dataset.bronNieuw;
-    bronVorm = { id: null, soorten: new Set(), vloer: 'elektrisch', aan: a ? 'thermostaat' : null, apparaat: a || null, vermogenW: null };
+    bronVorm = { id: null, soorten: new Set(), vloer: 'elektrisch', aan: a ? 'thermostaat' : null, apparaat: a || null, vermogenW: null, rol: null };
     teken();
   } else if (t.dataset.bronOpen) {
     const b = (k.bronnen ?? []).find((x) => x.id === t.dataset.bronOpen);
@@ -454,12 +501,23 @@ async function bronKlik(t) {
     bronVorm.vermogenW = Number(document.querySelector(`${app.zicht()} [data-bron-w]`)?.value) || bronVorm.vermogenW;
     bronVorm.aan = t.dataset.bronAan;
     teken();
+  } else if (t.dataset.bronRol) {
+    bronVorm.vermogenW = Number(document.querySelector(`${app.zicht()} [data-bron-w]`)?.value) || bronVorm.vermogenW;
+    bronVorm.rol = t.dataset.bronRol;
+    teken();
   } else if (t.hasAttribute('data-bron-annuleer')) {
     bronVorm = null;
     teken();
   } else if (t.hasAttribute('data-bron-bewaar')) {
     const b = bronUitVorm(k);
     k.bronnen = [...(k.bronnen ?? []).filter((x) => x.id !== b.id), b];
+    // Een klimaatapparaat (besluit 138): het komt in deze kamer, met wat de regeling ermee doet.
+    if (b.apparaat && klimaatToestellen().some((x) => x.sleutel === b.apparaat)) {
+      const rol = bronVorm.rol ?? rolVoorstel(k, b.apparaat);
+      for (const x of next.kamers) if (x.id !== k.id && x.rollen && b.apparaat in x.rollen) delete x.rollen[b.apparaat];
+      k.rollen = { ...rollenNu(k), [b.apparaat]: rol };
+      next.apparaten[b.apparaat] = { ...(next.apparaten[b.apparaat] ?? {}), kamer: k.id, zone: next.apparaten[b.apparaat]?.kamer === k.id ? (next.apparaten[b.apparaat].zone ?? null) : null };
+    }
     const naam = huismodel.bronNaam(b);
     if (await bewaar(next, `${naam} bewaard.`)) bronVorm = null;
     teken();
@@ -774,6 +832,15 @@ document.addEventListener('change', async (e) => {
   }
   if (t.hasAttribute('data-bron-w') && bronVorm) {
     bronVorm.vermogenW = Number(t.value.replace(/\D/g, '')) || null;
+    return;
+  }
+  if (t.dataset.rol) {
+    const next = concept();
+    const k = next?.kamers.find((x) => x.id === keuze.kamer);
+    if (!k) return;
+    k.rollen = { ...rollenNu(k), [t.dataset.rol]: t.value };
+    const naam = toestelNaam(t.dataset.rol);
+    await bewaar(next, t.value === 'houdt' ? `${naam} houdt de kamer op temperatuur.` : t.value === 'zon' ? `${naam} helpt op zon.` : `${naam} kijkt alleen mee.`);
     return;
   }
   const next = concept();

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.14.2';
+export const VERSIE = '0.15.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,16 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.15.0',
+    datum: '2026-10-15',
+    nieuw: [
+      'De regeling per kamer in de app: bij Indeling kies je per apparaat of het de kamer op temperatuur houdt, op zon helpt of alleen kijkt',
+      'Een airco of thermostaat uit Home Assistant doet meteen mee, zonder herstart',
+      'Bij Regeling per kamer wat er regelt, en welke kamers nog niet meedoen',
+    ],
+    beter: ['Bij Verwarmen en koelen staat bovenaan waarmee de kamer meet'],
+  },
   {
     versie: '0.14.2',
     datum: '2026-10-15',

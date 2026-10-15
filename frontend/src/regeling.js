@@ -38,7 +38,7 @@ const uitstelbaar = () => (huisData?.etages ?? []).flatMap((e) => e.ruimtes).fla
 function delen() {
   const opZonAan = Object.values(opZon).filter(Boolean).length + (aInfo?.configuratie?.apparaten?.length ?? 0);
   return [
-    { id: 'klimaat', titel: 'Klimaat', zin: klimaat().length ? `${klimaat().length} apparaten, kijkt mee` : '…', stand: site ? 'goed' : null },
+    { id: 'klimaat', titel: 'Klimaat', zin: huisData ? `${kamersMee().length} ${kamersMee().length === 1 ? 'kamer' : 'kamers'}, kijkt mee` : klimaat().length ? `${klimaat().length} apparaten, kijkt mee` : '…', stand: site ? 'goed' : null },
     { id: 'opzon', titel: 'Apparaten op zon', zin: aInfo ? (opZonAan ? `${opZonAan} op zon` : 'geen') : '…', stand: aInfo ? 'goed' : null },
     { id: 'licht', titel: 'Licht en screens', zin: 'bedien je zelf', stand: 'goed' },
   ];
@@ -47,18 +47,37 @@ function delen() {
 const FASEN = [['leren', 'Leren'], ['kijken', 'Kijkt mee'], ['regelen', 'Regelt']];
 const fase = (nu) => `<span class="fase" role="img" aria-label="${FASEN.find(([k]) => k === nu)[1]}">${FASEN.map(([k, l]) => `<i class="${k === nu ? k : ''}">${l}</i>`).join('')}</span>`;
 
+/*
+ * Per kamer wat er regelt (besluit 138). Vastleggen gebeurt bij de kamer, in
+ * Indeling bij Verwarmen en koelen; hier het overzicht, met een tik erheen.
+ */
+const ROL_ZIN = { houdt: 'houdt op temperatuur', zon: 'helpt op zon' };
+const binnenKamers = () => (huisData?.etages ?? []).filter((e) => e.id !== 'buiten').flatMap((e) => e.ruimtes ?? []);
+const actiefIn = (r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat' && a.klimaat?.rol && a.klimaat.rol !== 'kijken').sort((a, b) => (a.klimaat.rol === b.klimaat.rol ? 0 : a.klimaat.rol === 'houdt' ? -1 : 1));
+const kamersMee = () => binnenKamers().filter((r) => actiefIn(r).length);
+const naarKamer = (r) => `indeling.html#${encodeURIComponent(r.id)}/warmte`;
+
 function klimaatVorm() {
   const winter = terugblik?.dataset?.seizoenen?.find((x) => x.seizoen === 'winter');
   const van = terugblik?.dataset?.vanMs ?? terugblik?.vanMs;
   const sinds = van ? new Date(van).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
-  const rijen = klimaat().map((x) => `<div class="regelrij"><div class="l"><b>${esc(x.name)}</b><span>Kijkt mee${sinds ? ` sinds ${esc(sinds)}` : ''}: zegt wat het zou doen, en schakelt nog niets</span></div>${fase('kijken')}</div>`).join('');
+  const rijen = huisData
+    ? kamersMee().map((r) => `<a class="regelrij kamerrij" href="${naarKamer(r)}"><div class="l"><b>${esc(r.naam)}</b><span>${esc(actiefIn(r).map((a) => `${a.naam} ${ROL_ZIN[a.klimaat.rol]}`).join(', '))}</span></div><span class="pijl" aria-hidden="true">›</span></a>`).join('')
+    : '';
+  const nietMee = binnenKamers().filter((r) => !actiefIn(r).length);
+  const rest = nietMee.length
+    ? `<p class="klein" style="margin: 0">Doen nog niet mee: ${nietMee.map((r) => `<a href="${naarKamer(r)}">${esc(r.naam)}</a>`).join(', ')}. Kies bij de kamer wat er regelt.</p>`
+    : '';
+  const stand = `<div class="regelrij"><div class="l"><b>Kijkt mee${sinds ? ` sinds ${esc(sinds)}` : ''}</b><span>Zegt wat het zou doen, en schakelt nog niets</span></div>${fase('kijken')}</div>`;
   const bewijs = winter
     ? `<div class="bewijs"><span class="mini">Winterdagen: ${nl(winter.dagen, 0)} van ${winter.doel}</span><span class="balkje"><i style="width: ${Math.min(100, (winter.dagen / winter.doel) * 100).toFixed(0)}%"></i></span></div>
        <p class="mini" style="margin: 0">Klimaat gaat pas zelf regelen na ${winter.doel} winterdagen meekijken waarin het minstens zo goed zou doen als nu. Jij beslist, en terug kan altijd.</p>`
     : '';
   return `<h2 class="kop-2">Klimaat</h2>
-    <p class="klein" style="margin: 0">Je airco's, de cv en de thermostaten. Wat ze doen, zie je in het huis en bij Vandaag.</p>
-    <div>${rijen || '<p class="klein">Nog geen klimaatapparaten.</p>'}</div>
+    <p class="klein" style="margin: 0">Per kamer wat er regelt. Tik op een kamer om het te veranderen.</p>
+    ${stand}
+    <div>${rijen || '<p class="klein">Nog geen kamer doet mee.</p>'}</div>
+    ${rest}
     ${bewijs}`;
 }
 

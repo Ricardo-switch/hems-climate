@@ -100,6 +100,25 @@
   .schakel[aria-checked='true']::after { left: 21px; background: #fff; }
   .bron .idee { padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); font-size: 13px; color: var(--zacht); line-height: 1.45; }
   .bron .idee b { display: block; color: var(--zon); font-size: 13px; margin-bottom: 2px; }
+  /* De regeling per kamer (besluit 138). */
+  .meetrij { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; border: 0; background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .meetrij .ikoon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .meetrij .ikoon svg { width: 20px; height: 20px; }
+  .meetrij > span:nth-child(2) { min-width: 0; }
+  .meetrij b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meetrij .wissel { font-weight: 700; color: var(--ijs); font-size: 13px; }
+  .rolrij { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px; color: var(--gedempt); }
+  .rolrij .veld { width: auto; height: 34px; padding: 0 10px; font-size: 13px; font-weight: 700; }
+  .rolzin { margin: 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .keuzes { display: flex; flex-direction: column; gap: 6px; }
+  .keuze { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .keuze.aan { border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); }
+  .keuze i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--gedempt); margin-top: 2px; box-sizing: border-box; }
+  .keuze.aan i { border: 5px solid var(--tekst); }
+  .keuze b { display: block; font-size: 13.5px; }
+  .keuze span span { font-size: 12px; color: var(--gedempt); line-height: 1.35; }
+  .uitleg { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+  .uitleg b { color: var(--zacht); }
   .vraagknop { align-self: start; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px dashed rgba(111, 211, 255, 0.55); background: none; color: var(--ijs); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .plus { height: 42px; border-radius: 14px; border: 1px dashed rgba(111, 211, 255, 0.55); background: none; color: var(--ijs); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
   .vraag { display: flex; flex-direction: column; gap: 6px; }

@@ -11,6 +11,7 @@
  * op stuklopen.
  */
 
+import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { NIEUW, VERSIE } from './version.js';
 import { existsSync } from 'node:fs';
@@ -394,17 +395,27 @@ async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; c
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
   const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
   // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
-  const metMeten = withMeasurement(metAansluiting, layoutNu?.() ?? layoutAtStart).raw;
+  const layout = layoutNu?.() ?? layoutAtStart;
+  // De regeling per kamer uit de app (besluit 138): welke apparaten een kamer regelen, en hoe.
+  const metRegeling = withRegeling(metAansluiting, layout?.kamers ?? null, {
+    state: (id) => allStates.get(id),
+    vermogenSensor,
+    kamerVan: (id) => layout?.apparaten[id]?.kamer ?? null,
+  });
+  for (const t of metRegeling.overgeslagen) console.warn(`Regeling uit de app: ${t}`);
+  // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
+  const metMeten = withMeasurement(metRegeling.raw, layout).raw;
   // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
   const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
   const metComfort = withComfort(metBronnen.raw, comfort);
-  const checked = parseSiteConfig(metComfort.raw, { knownStrategies: strategies.ids });
+  // Een kamer die een apparaat kwijtraakte (besluit 138): doelen binnen wat de apparaten kunnen.
+  const checked = parseSiteConfig(metRegeling.toegevoegd.length || (layout?.kamers ?? []).some((k) => k.rollen) ? doelenBinnenBereik(metComfort.raw) : metComfort.raw, { knownStrategies: strategies.ids });
   if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
-  return { ok: true, config: checked.config, toegevoegd: [...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
+  return { ok: true, config: checked.config, toegevoegd: [...metRegeling.toegevoegd, ...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
 }
 /** De indeling van nu, zodra de opslag er is; daarvoor die van het starten. */
 let layoutNu: (() => Layout | null) | null = null;
-if (site && (comfortStore?.current || (layoutAtStart?.kamers ?? []).some((k) => (k.bronnen ?? []).some((b) => b.opZon)))) {
+if (site && (comfortStore?.current || (layoutAtStart?.kamers ?? []).some((k) => k.rollen || (k.bronnen ?? []).some((b) => b.opZon)))) {
   try {
     const met = await configWithComfort(comfortStore?.current ?? null);
     if (met.ok) {
@@ -490,6 +501,15 @@ const inHouse = (st: HaEntityState) =>
       // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
       /valve|klep|filter/i.test(st.entity_id)));
 let houseRegisters: HouseRegisters | null = null;
+/** De stroommeter bij hetzelfde apparaat in Home Assistant, zoals bij een airco (besluit 138). */
+function vermogenSensor(entityId: string): string | null {
+  const device = houseRegisters?.entities.find((e) => e.entity_id === entityId)?.device_id;
+  if (!device) return null;
+  const meter = houseRegisters!.entities.find(
+    (e) => e.device_id === device && e.entity_id.startsWith('sensor.') && !e.disabled_by && allStates.get(e.entity_id)?.attributes['device_class'] === 'power',
+  );
+  return meter?.entity_id ?? null;
+}
 async function readHouseRegisters(): Promise<void> {
   const [floors, areas, devices, entities] = await Promise.all([
     client.query<HaFloor[]>('config/floor_registry/list').catch(() => [] as HaFloor[]),
@@ -546,9 +566,14 @@ client.on('ready', (states: HaEntityState[]) => {
     if (inHouse(s)) houseStates.set(s.entity_id, s);
     allStates.set(s.entity_id, s);
   }
-  void readHouseRegisters().catch(() => {
-    // Zonder registers is er geen huis te tonen; de volgende verbinding opnieuw.
-  });
+  void readHouseRegisters()
+    .then(() => {
+      // Een apparaat uit Home Assistant in de regeling (besluit 138) kan pas met zijn stand erbij.
+      if ((layoutNu?.()?.kamers ?? []).some((k) => Object.entries(k.rollen ?? {}).some(([id, r]) => r !== 'kijken' && id.startsWith('climate.')))) void herlaadUitDeApp('de verbinding');
+    })
+    .catch(() => {
+      // Zonder registers is er geen huis te tonen; de volgende verbinding opnieuw.
+    });
   if (location == null) {
     client
       .query<HaCoreConfig>('get_config')
@@ -665,8 +690,25 @@ const layoutStore =
         onSaved: () => void herlaadUitDeApp('de indeling'),
       })
     : null;
-void layoutStore?.load();
 layoutNu = () => layoutStore?.current ?? layoutAtStart;
+/*
+ * De eenmalige overstap (besluit 138): wat het bestand per zone zegt, komt als
+ * rollen in de indeling. Daarna is de app de plek; het bestand houdt alleen
+ * wat de app nog niet kent.
+ */
+void layoutStore?.load().then(async (l) => {
+  if (!l || !site || l.kamers.some((k) => k.rollen !== undefined)) return;
+  const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
+  const raw = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
+  const over = await layoutStore!.overnemen((x) => ({
+    ...x,
+    kamers: x.kamers.map((k) => {
+      const rollen = rollenUitConfig(raw, k.regelzone);
+      return rollen ? { ...k, rollen } : k;
+    }),
+  }));
+  if (over) console.log(`Uit het bestand naar de app (besluit 138): ${over.kamers.filter((k) => k.rollen).map((k) => k.naam).join(', ')}`);
+});
 
 /** Alles uit de app opnieuw over de configuratie, en de regeling neemt het over als het kan. */
 async function herlaadUitDeApp(waarom: string): Promise<void> {

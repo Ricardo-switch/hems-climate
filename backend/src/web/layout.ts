@@ -20,6 +20,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SiteConfig } from '../core/model.js';
+import { controleerRollen, doetMee, type Rol, type Rollen } from './regeling.js';
 import { controleerBronnen, type Warmtebron } from './warmte.js';
 
 export const LAYOUT_FILE = 'indeling.json';
@@ -102,6 +103,12 @@ export interface LayoutRoom {
   readonly zones: readonly LayoutZone[];
   /** Alleen binnen: wat er warmt en koelt (besluit 132). Weg is: nog niets vastgelegd. */
   readonly bronnen?: readonly Warmtebron[];
+  /**
+   * Wat de regeling met elk klimaatapparaat in de kamer doet (besluit 138):
+   * houdt op temperatuur, helpt op zon, of alleen kijken. Weg is: zoals de
+   * configuratie het zegt; een apparaat dat er niet in staat, kijkt alleen.
+   */
+  readonly rollen?: Rollen;
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
   readonly regelzone: string | null;
   /** Het gebied in Home Assistant waar deze kamer uit kwam; daar komen nieuwe apparaten vandaan. */
@@ -245,9 +252,17 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       zoneIds.add(zid);
       zones.push({ id: zid, naam: zn });
     }
+    // De regeling per kamer (besluit 138); buiten valt het weg.
+    let rollen: Record<string, Rol> | undefined;
+    if (k['rollen'] !== undefined && k['rollen'] !== null && etage !== OUTSIDE_FLOOR) {
+      const c = controleerRollen(id, k['rollen'], known.deviceIds);
+      if (!c.ok) return { ok: false, reden: c.reden };
+      rollen = c.rollen;
+    }
     const rz = k['regelzone'] ?? null;
     if (rz !== null) {
-      if (typeof rz !== 'string' || !known.zoneIds.has(rz)) return { ok: false, reden: `kamer ${id} regelt een onbekende zone` };
+      // Een kamer met rollen mag een eigen zone hebben, ook als de configuratie hem (nog) niet kent.
+      if (typeof rz !== 'string' || !(known.zoneIds.has(rz) || (rollen && ID.test(rz)))) return { ok: false, reden: `kamer ${id} regelt een onbekende zone` };
       if (regelzones.has(rz)) return { ok: false, reden: `zone ${rz} hoort al bij een andere kamer` };
       regelzones.add(rz);
     }
@@ -286,7 +301,15 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       bronnen = c.bronnen.map((b) => (b.apparaat && !known.deviceIds.has(b.apparaat) ? (({ apparaat: _a, opZon: _z, ...rest }) => rest)(b) : b));
       if (bronnen.length === 0) bronnen = undefined;
     }
-    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}), ...(bronnen ? { bronnen } : {}) });
+    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}), ...(bronnen ? { bronnen } : {}), ...(rollen ? { rollen } : {}) });
+  }
+  // Een kamer die voor het eerst meedoet, krijgt een eigen zone, met haar eigen id als dat vrij is.
+  for (const [i, k] of kamers.entries()) {
+    if (k.regelzone != null || !doetMee(k.rollen)) continue;
+    let zid = k.id;
+    for (let n = 2; regelzones.has(zid) || known.zoneIds.has(zid); n++) zid = `${k.id}-${n}`;
+    regelzones.add(zid);
+    kamers[i] = { ...k, regelzone: zid };
   }
 
   const appIn = b['apparaten'] ?? {};
@@ -403,6 +426,25 @@ export class LayoutStore {
   /** De indeling zoals hij nu is, zonder te wachten; null zolang er geen is. */
   get current(): Layout | null {
     return this.#current;
+  }
+
+  /**
+   * Een overstap door de dienst zelf, zoals de rollen uit het bestand (besluit
+   * 138): zonder de toets van de bewoner, want het komt niet van een pagina.
+   * Schrijft alleen als er iets verandert; geeft de nieuwe indeling, of null.
+   */
+  async overnemen(fn: (layout: Layout) => Layout): Promise<Layout | null> {
+    const nu = await this.load();
+    if (nu == null) return null;
+    const next = fn(nu);
+    if (JSON.stringify(next) === JSON.stringify(nu)) return null;
+    const tmp = `${this.#path}.nieuw`;
+    await writeFile(tmp, `${JSON.stringify(next, null, 2)}
+`, 'utf-8');
+    await rename(tmp, this.#path);
+    this.#current = next;
+    this.#onSaved?.(next);
+    return next;
   }
 
   async save(body: unknown): Promise<LayoutResult> {

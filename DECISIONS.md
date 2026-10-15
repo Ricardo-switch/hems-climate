@@ -70,6 +70,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [101. "Klaar voor" bij de droger is per keer te kiezen](#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen)
 - [132. Verwarmen en koelen per kamer, op zon, en waar het werkt](#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt)
 - [134. Voorrang per richting, en Hoe voelt het met een antwoord](#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord)
+- [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
 
 **Configuratie en onboarding**
 
@@ -5796,6 +5797,53 @@ besluit 105: per dag wat de dag ervoor werd verwacht.
 - **Opslag:** niets nieuws. `weer-verwachting.json` bewaarde de verwachting
   al, ruim een jaar. Er gaat niets naar Home Assistant.
 - **Versie 0.14.0.**
+
+---
+
+## 138. De regeling per kamer in de app
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Gevraagd in het plan van 14 oktober 2026 en akkoord op 15 oktober, met de
+schets `Wand-Indeling-Regeling` in `design/app2`. Welk apparaat welke kamer
+regelt, stond alleen in het vaste bestand. Een nieuwe gebruiker kon het in de
+app nergens instellen, en de regeling nam een nieuw apparaat pas na een
+herstart over. Dit is het fundament onder Inrichten en onder een openbare
+versie.
+
+*Besluit:*
+
+- **Waar:** in Indeling, bij de kamer, bij Verwarmen en koelen. Per
+  klimaatapparaat een regel "De regeling" met drie keuzes: **Houdt op
+  temperatuur** (warmt of koelt tot het doel bij Comfort, ook van het net),
+  **Helpt op zon** (springt bij als er eigen zon over is; van het net alleen
+  als Comfort dat zegt) en **Alleen kijken** (het huis volgt het, maar regelt
+  het niet). Bovenaan staat waarmee de kamer meet, met een tik naar Meten met.
+- **Iets toevoegen** uit Home Assistant zet het apparaat in de kamer, met de
+  drie keuzes en hun uitleg. De app stelt voor: een airco helpt op zon, de
+  eerste verwarming houdt de kamer op temperatuur, een tweede regelaar in
+  dezelfde kamer kijkt alleen (twee regelaars kunnen elkaar tegenwerken).
+- **Wat de app zelf invult:** wat het apparaat kan en tussen welke graden,
+  uit Home Assistant; de stroommeter van hetzelfde apparaat als die er is;
+  anders voor een airco 1000 W. Hoe snel het aan en uit mag, krijgt een
+  veilige waarde per soort (een airco 15 minuten aan, 5 rust) en staat niet
+  in de app. Zonder eigen sensor meet een kamer met het apparaat zelf.
+- **Een kamer die voor het eerst meedoet** krijgt een eigen zone met veilige
+  doelen; Comfort zet daarna de temperaturen. Doelen die geen apparaat meer
+  kan halen, schuiven binnen het bereik, zodat bewaren altijd lukt.
+- **De overstap:** bij de eerste start zet de dienst wat het bestand per zone
+  zegt eenmalig om in rollen bij de kamer (de Nest houdt op temperatuur, de
+  airco's helpen op zon, de thermostaat van de badkamer houdt op
+  temperatuur). Daarna is de app de plek; het bestand houdt wat de app nog
+  niet kent.
+- **Meteen:** de regeling neemt een nieuw apparaat of een andere sensor over
+  zonder herstart. Ze volgt dan andere entiteiten, en het logboek krijgt hun
+  beginstand voor de replay.
+- **Overzicht:** bij Instellingen › Regeling › Klimaat per kamer wat er
+  regelt, en welke kamers nog niet meedoen, met een tik naar de kamer.
+- **Grens:** alles kijkt mee tot stap B (besluit 64). Er gaat niets naar Home
+  Assistant.
+- **Versie 0.15.0.**
 
 ---
 

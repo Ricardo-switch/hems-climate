@@ -212,6 +212,9 @@ verwijzing bestaat.
 - **Verwacht naast echt:** bij Vandaag, Thuis en Opbrengst staat de
   zonverwachting naast wat er kwam, en bij Gisteren hoe het de afgelopen twee
   weken klopte ([137]).
+- **De regeling per kamer** staat in de app: bij Indeling per apparaat of het
+  de kamer op temperatuur houdt, op zon helpt of alleen kijkt; een nieuw
+  apparaat doet meteen mee ([138]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -398,4 +401,5 @@ verwijzing bestaat.
 [135]: DECISIONS.md#135-tot-1-november-vrijgeven-op-de-eigen-pc
 [136]: DECISIONS.md#136-meldingen-in-de-app
 [137]: DECISIONS.md#137-verwacht-naast-echt-of-de-zonverwachting-klopte
+[138]: DECISIONS.md#138-de-regeling-per-kamer-in-de-app
 <!-- links:einde -->
