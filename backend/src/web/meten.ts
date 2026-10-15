@@ -41,11 +41,18 @@ export interface MeasurementApplied {
 export function withMeasurement(raw: Record<string, unknown>, layout: Pick<Layout, 'kamers'> | null): MeasurementApplied {
   if (layout == null) return { raw, toegevoegd: [] };
   const zones = Array.isArray(raw['zones']) ? (raw['zones'] as Record<string, unknown>[]) : [];
+  const actuators = Array.isArray(raw['actuators']) ? (raw['actuators'] as Record<string, unknown>[]) : [];
+  // Een apparaat van de regeling staat in de indeling onder zijn eigen id, zoals "nest";
+  // de regeling meet met de entiteit in Home Assistant erachter (hersteld 15 oktober).
+  const entiteit = (id: string) => {
+    const ref = actuators.find((a) => a['id'] === id)?.['ref'];
+    return typeof ref === 'string' ? ref : typeof ref === 'object' && ref != null && typeof (ref as Record<string, unknown>)['id'] === 'string' ? String((ref as Record<string, unknown>)['id']) : id;
+  };
   const toegevoegd: string[] = [];
   const next = zones.map((z) => {
     const kamer = layout.kamers.find((k) => k.regelzone === z['id'] && (k.meten?.length ?? 0) > 0);
     if (!kamer) return z;
-    const points = kamer.meten!.slice(0, MAX_METEN).map(pointFor);
+    const points = kamer.meten!.slice(0, MAX_METEN).map((id) => pointFor(entiteit(id)));
     toegevoegd.push(`${kamer.naam} meet met ${points.length === 1 ? 'één sensor' : `${points.length} sensoren`}`);
     return { ...z, temperature: points[0], temperatures: points };
   });

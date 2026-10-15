@@ -5296,6 +5296,14 @@ hoort die keuze in de app. Het is ook de voorbereiding op de radiatorknoppen.
   hangt naast de radiator en meet vaak te warm; daarom kiest de app hem niet
   vanzelf.
 
+*Hersteld op 15 oktober 2026 (versie 0.14.2):* bij Meten met een
+apparaat van de regeling kiezen, zoals de Nest of de airco, telde niet: de
+indeling bewaart het onder zijn eigen naam ("nest") en de regeling zocht een
+sensor met die naam. Nu meet de regeling met de entiteit erachter, toont het
+huis het gemiddelde, en neemt de regeling een andere sensor meteen over: met
+de stand van nu volgt ze andere entiteiten zonder herstart, en het logboek
+krijgt hun beginstand.
+
 ---
 
 ## 124. Op de tablet: volle vakken schuiven, het toetsenbord verschuift niets, en "zou" in de schaduw

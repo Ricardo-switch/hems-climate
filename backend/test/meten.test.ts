@@ -70,6 +70,19 @@ describe('meten met meer sensoren (besluit 123)', () => {
     expect(pointFor('sensor.x')).toBe('sensor.x');
   });
 
+  it('meet met een apparaat van de regeling via de entiteit erachter, zoals "nest" (hersteld 15 oktober)', () => {
+    const raw = JSON.parse(JSON.stringify(exampleSite)) as Record<string, unknown>;
+    const layout = { kamers: [{ id: 'woonkamer', naam: 'Beneden', etage: 'bg', zones: [], regelzone: 'woonkamer', haGebied: null, meten: ['nest', 'ac-woonkamer'] }] };
+    const uit = withMeasurement(raw, layout);
+    const z = (uit.raw['zones'] as Record<string, unknown>[]).find((x) => x['id'] === 'woonkamer')!;
+    expect(z['temperatures']).toEqual([
+      { id: 'climate.beneden', attribute: 'current_temperature' },
+      { id: 'climate.air_conditioning_woonkamer', attribute: 'current_temperature' },
+    ]);
+    const ok = parseSiteConfig(uit.raw, { knownStrategies: defaultStrategies().ids });
+    expect(ok.ok).toBe(true);
+  });
+
   it('schrijft welke sensoren meetellen in het logboek, alleen als het verandert', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'hems-meten-'));
     expect(await noteSensors(dir, exampleSite, NOW)).toBe(true);

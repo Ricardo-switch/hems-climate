@@ -411,9 +411,18 @@ export class ShadowRunner {
    * volgt; anders blijft de oude staan en geeft hij false. Daarna meteen opnieuw
    * beslissen.
    */
-  setConfig(next: SiteConfig): boolean {
+  setConfig(next: SiteConfig, states?: Iterable<HaEntityState>): boolean {
     const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) => a.size === b.size && [...a].every((x) => b.has(x));
-    if (!same(relevantEntities(next), relevantEntities(this.#config)) || !same(observedEntities(next), observedEntities(this.#config))) return false;
+    const triggers = relevantEntities(next);
+    const observed = observedEntities(next);
+    if (!same(triggers, relevantEntities(this.#config)) || !same(observed, observedEntities(this.#config))) {
+      // Andere sensoren of apparaten (besluit 138): zonder de stand van nu kan het pas na een herstart.
+      if (!states) return false;
+      const added = this.#store.retrack(new Set([...triggers, ...observed]), triggers, states);
+      // In het logboek de beginstand van wat erbij kwam, zodat de replay ermee verder kan.
+      if (added.length) this.#history?.record(added);
+      this.#log(`de regeling volgt nu ${this.#store.size} entiteiten${added.length ? `, nieuw: ${added.map((s) => s.entity_id).join(', ')}` : ''}`);
+    }
     this.#config = next;
     if (this.#ready) this.#request('comfort');
     return true;

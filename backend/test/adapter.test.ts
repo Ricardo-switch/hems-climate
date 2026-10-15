@@ -478,6 +478,10 @@ describe('ShadowRunner', () => {
     const andereMeter = { ...exampleSite, zones: exampleSite.zones.map((z, i) => (i === 0 ? { ...z, temperature: { ...z.temperature, id: 'sensor.iets_anders' } } : z)) };
     expect(runner.setConfig(andereMeter)).toBe(false);
     expect(runner.config.zones[0]!.setpoints.dag.heat).toBe(21.5);
+    // Met de stand van nu volgt hij de andere meter meteen (besluit 138).
+    const stand = { entity_id: 'sensor.iets_anders', state: '21.1', attributes: {}, last_changed: '2026-10-15T10:00:00Z', last_updated: '2026-10-15T10:00:00Z' };
+    expect(runner.setConfig(andereMeter, [stand])).toBe(true);
+    expect(runner.config.zones[0]!.temperature.id).toBe('sensor.iets_anders');
   });
 });
 

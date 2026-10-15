@@ -25,8 +25,8 @@ interface Entry {
 
 export class EntityStore implements EntitySource {
   readonly #entries = new Map<string, Entry>();
-  readonly #tracked: ReadonlySet<string> | null;
-  readonly #triggers: ReadonlySet<string> | null;
+  #tracked: ReadonlySet<string> | null;
+  #triggers: ReadonlySet<string> | null;
 
   /**
    * @param tracked Alleen deze entiteiten bewaren. Weglaten bewaart alles.
@@ -57,6 +57,25 @@ export class EntityStore implements EntitySource {
   isTrigger(entityId: string): boolean {
     if (this.#triggers == null) return this.isRelevant(entityId);
     return this.#triggers.has(entityId);
+  }
+
+  /**
+   * Andere entiteiten volgen zonder opnieuw te verbinden (besluit 138): wat
+   * erbij komt, neemt de stand over uit `seed`; wat niet meer gevolgd wordt,
+   * valt weg. Geeft de stand terug van wat er nieuw bij kwam.
+   */
+  retrack(tracked: ReadonlySet<string>, triggers: ReadonlySet<string>, seed: Iterable<HaEntityState>): HaEntityState[] {
+    const before = new Set(this.#entries.keys());
+    this.#tracked = tracked;
+    this.#triggers = triggers;
+    for (const id of before) if (!this.isRelevant(id)) this.#entries.delete(id);
+    const added: HaEntityState[] = [];
+    for (const s of seed) {
+      if (before.has(s.entity_id) || !this.isRelevant(s.entity_id)) continue;
+      this.apply(s);
+      added.push(s);
+    }
+    return added;
   }
 
   /** Vult de hele store, bij het opzetten of herstellen van de verbinding. */

@@ -393,7 +393,8 @@ async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; c
   if (!site) return { ok: false, reden: 'er is geen configuratie' };
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
   const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
-  const metMeten = withMeasurement(metAansluiting, layoutAtStart).raw;
+  // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
+  const metMeten = withMeasurement(metAansluiting, layoutNu?.() ?? layoutAtStart).raw;
   // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
   const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
   const metComfort = withComfort(metBronnen.raw, comfort);
@@ -672,8 +673,10 @@ async function herlaadUitDeApp(waarom: string): Promise<void> {
   try {
     const met = await configWithComfort(comfortStore?.current ?? null);
     if (!met.ok) return console.warn(`Na ${waarom}: niet overgenomen, ${met.reden}`);
-    if (runner && !runner.setConfig(met.config)) return console.warn(`Na ${waarom}: de regeling neemt het over na de volgende start`);
+    // Met de stand van nu kan de regeling ook andere sensoren en apparaten meteen volgen (besluit 138).
+    if (runner && !runner.setConfig(met.config, allStates.values())) return console.warn(`Na ${waarom}: de regeling neemt het over na de volgende start`);
     siteConfig = met.config;
+    if (logDir !== '') await noteSensors(logDir, met.config, Date.now()).catch(() => false);
   } catch {
     // Niet te lezen: dan blijft het zoals het was.
   }
@@ -940,7 +943,7 @@ if (webPort != null) {
               if (!check.ok) return { ok: false as const, status: 400, reden: check.reden };
               const met = await configWithComfort(check.comfort);
               if (!met.ok) return { ok: false as const, status: 400, reden: `past niet in de regeling: ${met.reden}` };
-              if (runner && !runner.setConfig(met.config)) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
+              if (runner && !runner.setConfig(met.config, allStates.values())) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
               await comfortStore.save(check.comfort);
               siteConfig = met.config;
               return { ok: true as const, view: comfortView(webConfig()!, check.comfort) };

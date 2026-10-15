@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Indeling › Regeling per kamer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De regeling per kamer in de app (schets, 15 oktober 2026, besluit 138).
+   * Bij Verwarmen en koelen staat per apparaat wat de regeling ermee doet:
+   * Houdt op temperatuur, Helpt op zon of Alleen kijken. Bovenaan waarmee de
+   * kamer meet. Standen: Beneden (zonder hash), de zolder die met de airco
+   * zelf meet (#zolder), een kamer die nog niet meedoet (#slaap) en een
+   * apparaat uit Home Assistant toevoegen (#nieuw).
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .veld { flex: 1; display: grid; grid-template-columns: 190px minmax(0, 1fr) 360px; gap: 16px; min-height: 0; }
+  .etages { display: flex; flex-direction: column; gap: 8px; }
+  .etage { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--glas-rand); background: var(--glas); display: flex; flex-direction: column; gap: 2px; }
+  .etage b { font-size: 15px; }
+  .etage span { font-size: 12.5px; color: var(--gedempt); }
+  .etage.aan { border-color: rgba(111, 211, 255, 0.55); background: rgba(111, 211, 255, 0.1); }
+  .podium { min-height: 0; }
+
+  .blad { padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 12px; overflow: hidden; }
+  .blad .kop { display: flex; justify-content: space-between; align-items: baseline; }
+  .soorten { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .soorten span { height: 32px; display: grid; place-items: center; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--zacht); }
+  .soorten span.aan { background: var(--tekst); color: var(--inkt); }
+  .label { font-size: 12.5px; color: var(--gedempt); font-weight: 600; }
+
+  /* Een bron: wat het is, hoe het warmt, hoe je het regelt. */
+  .bron { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
+  .bron .boven { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .bron .ikoon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 122, 77, 0.14); }
+  .bron .ikoon.koel { background: rgba(111, 211, 255, 0.14); }
+  .bron .ikoon svg { width: 20px; height: 20px; }
+  .bron b { display: block; font-size: 15px; }
+  .bron .wat { font-size: 12.5px; color: var(--gedempt); }
+  .bron .w { font-family: var(--kop); font-size: 16px; font-weight: 600; color: var(--zacht); }
+  .regelt { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--zacht); padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .regelt .stand { margin-left: auto; }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .stand.slim { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .stand.hand { color: var(--zacht); background: rgba(255, 255, 255, 0.07); }
+  .opzon { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--zacht); }
+  .opzon .schakel { margin-left: auto; width: 44px; height: 26px; border-radius: 999px; background: var(--mint); position: relative; flex: none; }
+  .opzon .schakel::after { content: ''; position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .idee { padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .idee b { display: block; color: var(--zon); font-size: 13px; margin-bottom: 2px; }
+  .plus { height: 42px; border-radius: 14px; border: 1px dashed rgba(111, 211, 255, 0.55); color: var(--ijs); display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+
+  /* Iets toevoegen. */
+  .vraag { display: flex; flex-direction: column; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 34px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .chip.aan { background: var(--tekst); color: var(--inkt); }
+  .invoer { height: 40px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 14.5px; font-weight: 600; }
+  .invoer span { color: var(--gedempt); font-weight: 500; }
+  .knoppen { margin-top: auto; display: flex; gap: 8px; }
+  .knoppen span { flex: 1; height: 42px; border-radius: 14px; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); }
+  .knoppen span.licht { background: var(--tekst); color: var(--inkt); }
+  [data-stand] { display: none; }
+  body[data-toon='bad'] [data-stand='bad'], body[data-toon='hobby'] [data-stand='hobby'], body[data-toon='nieuw'] [data-stand='nieuw'], body[data-toon='woon'] [data-stand='woon'] { display: flex; }
+
+  /* De regeling bovenaan het blad. */
+  .meet { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 12.5px; color: var(--gedempt); }
+  .meet .ikoon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .meet .ikoon svg { width: 20px; height: 20px; }
+  .meet b { display: block; font-size: 14px; color: var(--tekst); }
+  .meet .wissel { font-weight: 700; color: var(--ijs); font-size: 13px; }
+  .rol { display: grid; grid-template-columns: auto auto auto; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, 0.06); }
+  .rol span { height: 30px; display: grid; place-items: center; border-radius: 8px; padding: 0 8px; font-size: 12.5px; font-weight: 700; color: var(--zacht); white-space: nowrap; }
+  .rol span.aan { background: var(--tekst); color: var(--inkt); }
+  .rolrij { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 13px; color: var(--gedempt); }
+  .rolrij b { height: 30px; padding: 0 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.08); display: inline-flex; align-items: center; font-size: 13px; color: var(--tekst); }
+  .keuzes { display: flex; flex-direction: column; gap: 6px; }
+  .keuze { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 9px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; }
+  .keuze.aan { border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); }
+  .keuze i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--gedempt); margin-top: 2px; }
+  .keuze.aan i { border: 5px solid var(--tekst); }
+  .keuze b { display: block; font-size: 13.5px; }
+  .keuze span { font-size: 12px; color: var(--gedempt); line-height: 1.35; }
+  .rolzin { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; margin: 0; }
+  .gevonden { padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(111, 211, 255, 0.35); background: rgba(111, 211, 255, 0.07); font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .gevonden b { display: block; color: var(--ijs); font-size: 13px; margin-bottom: 2px; }
+  .lijst { display: flex; flex-direction: column; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12); overflow: hidden; }
+  .lijst span { padding: 9px 12px; font-size: 13.5px; font-weight: 600; display: flex; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .lijst span:first-child { border-top: 0; }
+  .lijst span.aan { background: rgba(255, 255, 255, 0.09); }
+  .lijst span i { font-style: normal; font-weight: 500; color: var(--gedempt); font-size: 12.5px; }
+  .uitleg { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+  .uitleg b { color: var(--zacht); }
+  body[data-toon='zolder'] [data-stand='zolder'], body[data-toon='slaap'] [data-stand='slaap'] { display: flex; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <span class="terugje">‹ Instellingen</span>
+    <div class="kopregel">
+      <h1 class="kop-1" style="font-size: 40px">Kamers en indeling</h1>
+      <span class="mini">Verandert niets in Home Assistant</span>
+    </div>
+    <div class="veld">
+      <div class="etages" role="list" aria-label="Etages">
+        <div class="etage" data-etage="zo" role="listitem"><b>Zolder</b><span>2 kamers, 6 apparaten</span></div>
+        <div class="etage" data-etage="e1" role="listitem"><b>1e verdieping</b><span>4 kamers, 6 apparaten</span></div>
+        <div class="etage" data-etage="bg" role="listitem"><b>Begane grond</b><span>2 kamers, 13 apparaten</span></div>
+        <div class="etage" role="listitem"><b>Buiten</b><span>2 plekken, 7 apparaten</span></div>
+      </div>
+      <div class="podium" id="podium"></div>
+
+      <!-- Beneden: de cv houdt de kamer op temperatuur, de airco helpt op zon, de radiatorknop kijkt nog mee. -->
+      <aside class="glas blad" data-stand="woon">
+        <div class="kop"><h2 class="kop-2" style="margin: 0">Beneden</h2><span class="mini">20,8°</span></div>
+        <div class="soorten"><span>Apparaten</span><span class="aan">Verwarmen en koelen</span></div>
+        <div class="meet"><span class="ikoon"><svg viewBox="0 0 24 24" fill="none" stroke="#B8C4CF" stroke-width="1.8" stroke-linecap="round"><path d="M10 4a2 2 0 1 1 4 0v10a4 4 0 1 1-4 0z"/><path d="M12 9v7"/></svg></span><div><span>Meet met</span><b>Temperatuur beneden</b></div><span class="wissel">Wijzig</span></div>
+        <div class="bron">
+          <div class="boven"><span class="ikoon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M6 4v16M10 4v16M14 4v16M18 4v16M4 8h16M4 16h16"/></svg></span><div><b>Nest (beneden)</b><span class="wat">de cv-ketel, voor het hele huis</span></div><span class="mini">12–24°</span></div>
+          <div class="rolrij"><span>De regeling</span><b>Houdt op temperatuur ▾</b></div>
+        </div>
+        <div class="bron">
+          <div class="boven"><span class="ikoon koel"><svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco woonkamer</b><span class="wat">koelt en verwarmt, 900 W</span></div><span class="mini">16–30°</span></div>
+          <div class="rolrij"><span>De regeling</span><b>Helpt op zon ▾</b></div>
+          <p class="rolzin">Op eigen zon koelt of verwarmt hij mee. Van het net koelt hij alleen boven 26°, zoals bij Comfort.</p>
+        </div>
+        <div class="bron">
+          <div class="boven"><span class="ikoon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><path d="M12 8v4l2 2"/></svg></span><div><b>Radiatorknop</b><span class="wat">Sonoff, batterij 100%</span></div><span class="mini">5–35°</span></div>
+          <div class="rolrij"><span>De regeling</span><b>Alleen kijken ▾</b></div>
+        </div>
+        <span class="plus">+ Iets toevoegen</span>
+      </aside>
+
+      <!-- De zolder: zonder losse sensor meet de airco zelf. -->
+      <aside class="glas blad" data-stand="zolder">
+        <div class="kop"><h2 class="kop-2" style="margin: 0">Zolder</h2><span class="mini">23,4°</span></div>
+        <div class="soorten"><span>Apparaten</span><span class="aan">Verwarmen en koelen</span></div>
+        <div class="meet"><span class="ikoon"><svg viewBox="0 0 24 24" fill="none" stroke="#B8C4CF" stroke-width="1.8" stroke-linecap="round"><path d="M10 4a2 2 0 1 1 4 0v10a4 4 0 1 1-4 0z"/><path d="M12 9v7"/></svg></span><div><span>Meet met</span><b>De airco zelf</b></div><span class="wissel">Wijzig</span></div>
+        <div class="idee"><b>Idee: een losse sensor</b>De airco meet bij het plafond, waar het warmer is. Een sensor op ooghoogte meet wat je voelt.</div>
+        <div class="bron">
+          <div class="boven"><span class="ikoon koel"><svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg></span><div><b>Airco zolder</b><span class="wat">koelt en verwarmt, 750 W</span></div><span class="mini">16–30°</span></div>
+          <div class="rolrij"><span>De regeling</span><b>Helpt op zon ▾</b></div>
+          <p class="rolzin">Is hij het enige in de kamer en mag hij ook van het net verwarmen? Kies dan Houdt op temperatuur.</p>
+        </div>
+        <span class="plus">+ Iets toevoegen</span>
+      </aside>
+
+      <!-- Een slaapkamer die nog niet meedoet. -->
+      <aside class="glas blad" data-stand="slaap">
+        <div class="kop"><h2 class="kop-2" style="margin: 0">Slaapkamer Matts</h2><span class="mini">geen meter</span></div>
+        <div class="soorten"><span>Apparaten</span><span class="aan">Verwarmen en koelen</span></div>
+        <div class="bron">
+          <div class="boven"><span class="ikoon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M6 4v16M10 4v16M14 4v16M18 4v16M4 8h16M4 16h16"/></svg></span><div><b>Radiator</b><span class="wat">op de cv, zonder slimme knop</span></div><span class="stand hand">Met de hand</span></div>
+        </div>
+        <div class="uitleg"><b>Deze kamer doet nog niet mee in de regeling.</b>Er is hier nog niets wat het huis kan regelen. De radiator volgt de cv, en die volgt de thermostaat beneden.</div>
+        <div class="idee"><b>Idee: een slimme radiatorknop</b>Dan warmt deze kamer apart, alleen als het nodig is, en meet de knop meteen de temperatuur.</div>
+        <span class="plus">+ Iets toevoegen</span>
+      </aside>
+
+      <!-- Iets toevoegen uit Home Assistant. Doet meteen mee, zonder herstart. -->
+      <aside class="glas blad" data-stand="nieuw">
+        <div class="kop"><h2 class="kop-2" style="margin: 0">Iets toevoegen</h2><span class="mini">Slaapkamer Matts</span></div>
+        <div class="vraag"><span class="label">Wat hangt er?</span><div class="chips"><span class="chip">Radiator</span><span class="chip">Vloerverwarming</span><span class="chip">Infraroodpaneel</span><span class="chip">Elektrische kachel</span><span class="chip aan">Airco</span></div></div>
+        <div class="vraag"><span class="label">Welke? Uit Home Assistant, nog in geen kamer.</span>
+          <div class="lijst"><span class="aan">Airco slaapkamer<i>koelt en verwarmt</i></span></div></div>
+        <div class="gevonden"><b>Gevonden</b>Koelt en verwarmt, van 16 tot 30°, met een stroommeter. Hij meet zelf de temperatuur.</div>
+        <div class="vraag"><span class="label">Wat doet de regeling ermee?</span><div class="keuzes"><div class="keuze"><i></i><div><b>Houdt op temperatuur</b><span>Warmt of koelt tot het doel bij Comfort, ook van het net.</span></div></div><div class="keuze aan"><i></i><div><b>Helpt op zon</b><span>Springt bij als er eigen zon over is. Van het net alleen als Comfort dat zegt.</span></div></div><div class="keuze"><i></i><div><b>Alleen kijken</b><span>Het huis volgt hem, maar regelt hem niet.</span></div></div></div></div>
+        <div class="knoppen"><span>Annuleren</span><span class="licht">Toevoegen</span></div>
+        <p class="mini" style="margin: 0">Doet meteen mee, zonder herstart. Het huis kijkt mee: het zegt wat het zou doen en schakelt nog niets.</p>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  const toon = { '#zolder': 'zolder', '#slaap': 'slaap', '#nieuw': 'nieuw' }[location.hash] ?? 'woon';
+  document.body.dataset.toon = toon;
+  document.querySelector(`[data-etage="${toon === 'woon' ? 'bg' : toon === 'zolder' ? 'zo' : 'e1'}"]`).classList.add('aan');
+  const modellen = {
+    woon: { beschrijving: 'De begane grond zonder dak: Beneden met de cv, een airco en een radiatorknop, en de hal.', tijd: 'dag', zonderDak: true, etages: [{ kamers: [
+      { naam: 'Beneden', soort: 'woonkamer', gewicht: 1.6, doel: true, apparaten: [{ soort: 'airco', aan: false }, { soort: 'radiator', aan: true }, { soort: 'bank' }, { soort: 'lamp', aan: true, x: 0.3 }] },
+      { naam: 'Hal', soort: 'hal', gewicht: 0.6, apparaten: [] } ] }] },
+    zolder: { beschrijving: 'De zolder met de airco, en de wasruimte.', tijd: 'dag', zonderDak: true, etages: [{ kamers: [
+      { naam: 'Zolder', soort: 'slaapkamer', gewicht: 1.4, doel: true, apparaten: [{ soort: 'airco', aan: true, stand: 'koelt' }] },
+      { naam: 'Wasruimte', soort: 'hal', gewicht: 0.8, apparaten: [] } ] }] },
+    e1: { beschrijving: 'De eerste verdieping zonder dak.', tijd: 'dag', zonderDak: true, etages: [{ kamers: [
+      { naam: 'Badkamer', soort: 'badkamer', gewicht: 0.9, apparaten: [{ soort: 'vloer', aan: true }] },
+      { naam: 'Hobbykamer', soort: 'werkkamer', gewicht: 0.9, apparaten: [{ soort: 'radiator', aan: false }] },
+      { naam: 'Slaapkamer Matts', soort: 'kinderkamer', gewicht: 0.8, doel: true, apparaten: toon === 'nieuw' ? [{ soort: 'airco', aan: false }, { soort: 'radiator', aan: false }] : [{ soort: 'radiator', aan: false }] },
+      { naam: 'Slaapkamer Mylan', soort: 'kinderkamer', gewicht: 0.8, apparaten: [] } ] }] },
+  };
+  huis.teken(document.getElementById('podium'), modellen[toon === 'woon' || toon === 'zolder' ? toon : 'e1'], { breedte: 520, hoogte: 560, marge: 0.03, zoom: 1.05, schuifY: 0 });
+</script>
+</body>
+</html>

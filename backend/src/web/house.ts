@@ -1334,7 +1334,11 @@ export function buildHouse(
     const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null);
     // Meten met (besluit 123): het gemiddelde van de gekozen sensoren. Met een
     // regeling rekent de regeling er na de volgende start zelf mee.
-    const gekozen = (k.meten ?? []).map((id) => readTemperature(states.get(id), id)).filter((v): v is number => v != null);
+    // Een apparaat van de regeling staat er onder zijn eigen id; de stand hoort bij de entiteit erachter.
+    const gekozen = (k.meten ?? [])
+      .map((id) => config.actuators.find((a) => a.id === id)?.ref.id ?? id)
+      .map((id) => readTemperature(states.get(id), id))
+      .filter((v): v is number => v != null);
     const gekozenC = gekozen.length ? Math.round((gekozen.reduce((a, b) => a + b, 0) / gekozen.length) * 10) / 10 : null;
     const status = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
     return {

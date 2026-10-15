@@ -526,7 +526,7 @@ function metenKeuze(k) {
   const chip = (b) => `<button type="button" class="chip${gekozen.has(b.id) ? '' : ' uitchip'}" data-meten="${esc(b.id)}" aria-pressed="${gekozen.has(b.id)}">${esc(b.naam)}${b.kamerId !== k.id ? ` (${esc(b.kamer)})` : ''} · ${graad(b.c)}</button>`;
   const uitleg = !gekozen.size
     ? k.regelzone ? 'Niets gekozen: de regeling meet zoals ingesteld.' : 'Niets gekozen: de app neemt een meter in de kamer.'
-    : k.regelzone ? `Het gemiddelde telt voor de regeling na de volgende herstart van Smart Climate.` : 'De temperatuur in de app is het gemiddelde.';
+    : k.regelzone ? 'Het gemiddelde telt meteen voor de regeling.' : 'De temperatuur in de app is het gemiddelde.';
   return `<div><span class="label">Meten met</span>
     <div class="chips" role="group" aria-label="Meten met">${hier.length ? hier.map(chip).join('') : '<span class="mini">Geen thermometer in deze kamer.</span>'}</div>
     ${elders.length ? `<select class="veld" data-actie="meten-erbij" aria-label="Sensor uit een andere kamer" style="margin-top: 6px"><option value="">Sensor uit een andere kamer…</option>${elders.map((b) => `<option value="${esc(b.id)}">${esc(b.naam)} (${esc(b.kamer)}) · ${graad(b.c)}</option>`).join('')}</select>` : ''}
