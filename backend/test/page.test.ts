@@ -1014,6 +1014,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');
+    // Het filmpje (besluit 139): je eigen huis, vier beelden, pauzeren, het geluid uit en overslaan.
+    await kaart.locator('button', { hasText: 'Speel af' }).click();
+    const film = p.locator('.film');
+    await film.locator('h2', { hasText: 'Dit is je huis' }).waitFor({ timeout: 10_000 });
+    await film.locator('[data-film-huis] svg').waitFor();
+    await shot('film-0');
+    await film.locator('[data-film-pauze]').click();
+    expect(await film.locator('[data-film-pauze]').getAttribute('aria-label')).toBe('Verder afspelen');
+    await film.locator('[data-film-geluid]').click();
+    expect(await film.locator('[data-film-geluid]').getAttribute('aria-pressed')).toBe('false');
+    await film.locator('[data-film-klaar]').click();
+    await p.waitForURL(/thuis\.html#rondleiding$/);
+    // Elk beeld, los afgespeeld.
+    await p.goto(`${baseUrl}/inrichten.html#klaar`);
+    await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
+    for (const [i, kop] of [[1, 'Zon over?'], [2, 'Op tijd warm'], [3, 'Elke dag een beetje slimmer']] as const) {
+      await p.evaluate(`film.speel({}).then((f) => (window.__film = f))`);
+      await p.waitForFunction('window.__film != null');
+      await p.evaluate(`window.__film.naar(${i})`);
+      await p.locator('.film h2', { hasText: kop }).waitFor({ timeout: 10_000 });
+      await p.waitForTimeout(700);
+      await shot(`film-${i}`);
+      await p.evaluate('window.__film.stop(); window.__film = null');
+    }
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, binnen het scherm.
     await p.setViewportSize({ width: 390, height: 844 });

@@ -371,10 +371,11 @@ function klaarStap() {
     waar: 'Klaar',
     kop: 'Je huis staat erin',
     groot: true,
-    uitleg: 'Smart Climate kijkt vanaf nu mee. Het zegt wat het zou doen, en leert hoe je huis warm en koel wordt. Na 30 winterdagen weet het genoeg om zelf te regelen; dat kies jij.',
-    inhoud: later,
-    links: '<a class="zachtknop" href="#zon">Terug</a>',
-    rechts: '<a class="knop knop-licht" href="thuis.html">Naar je huis</a>',
+    uitleg: 'Smart Climate kijkt vanaf nu mee. Zo leert het je huis kennen:',
+    inhoud: `<button type="button" class="filmkaart" data-film aria-label="Speel het filmpje af: hoe je huis leert, een minuut"><span class="speel" aria-hidden="true"></span><span>Hoe je huis leert · 1 minuut</span></button>
+      <div class="noot">Daarna laten we je de app zien, in zeven stops van een paar seconden. Overslaan kan altijd; terugkijken bij het vraagteken op Thuis.</div>${later}`,
+    links: '<a class="zachtknop" href="thuis.html#rondleiding">Overslaan</a>',
+    rechts: '<button type="button" class="knop knop-licht" data-film>Speel af</button>',
   };
 }
 
@@ -413,6 +414,11 @@ const teken = app.gebundeld(tekenNu);
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('button, a');
   if (!t) return;
+  if (t.hasAttribute('data-film')) {
+    // Het filmpje (besluit 139), en daarna de rondleiding op Thuis.
+    void film.speel({ opEinde: () => (location.href = 'thuis.html#rondleiding') });
+    return;
+  }
   if (t.hasAttribute('data-later')) {
     naar(volgende(stapNu()));
     return;

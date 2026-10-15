@@ -295,7 +295,7 @@ const NAAST = {
   aansluiting: ['Waarvoor dit nodig is', ['Nooit zoveel tegelijk aan dat de zekering eruit gaat', 'Hoeveel airco’s en apparaten samen mogen draaien'], 'Waar vind je het?', 'Op de hoofdschakelaar in de meterkast: bijvoorbeeld "1 × 35 A" of "3 × 25 A".'],
   meters: ['Waarvoor dit nodig is', ['Opbrengst: wat je huis gebruikt en teruglevert', 'Wat elk apparaat met een eigen meter kost'], 'Waar vind je het?', 'In Home Assistant, bij Instellingen › Dashboards › Energie.'],
   prijzen: ['Waarvoor dit nodig is', ['Opbrengst: wat je betaalde en bespaarde', 'Wat een thuisbatterij jou zou opleveren', 'Met een dynamisch contract: koelen en wassen als stroom goedkoop is'], 'Waar vind je het?', 'Op je contract of jaarafrekening, bij de leveringskosten: per kWh en per m³, met btw.'],
-  verwarming: ['Waarvoor dit nodig is', ['Hoe snel een kamer opwarmt: een lagere aanvoer warmt langzamer', 'Later: de cv per kamer, met radiatorknoppen'], 'Waar vind je het?', 'Op het scherm van de ketel, of in de app van je ketel of warmtepomp.'],
+  verwarming: ['Waarvoor dit nodig is', ['Hoe snel een kamer opwarmt: met een lagere aanvoer gaat verwarmen langzamer', 'Later: de cv per kamer, met radiatorknoppen'], 'Waar vind je het?', 'Op het scherm van de ketel, of in de app van je ketel of warmtepomp.'],
 };
 
 function naast(id) {

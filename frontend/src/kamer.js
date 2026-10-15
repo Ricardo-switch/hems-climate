@@ -401,7 +401,7 @@ function knopRegel(d) {
 function nestBlad(k, d) {
   const doel = doelen.get(d.id) ?? d.klimaat?.doelC ?? 20;
   const nu = d.meting?.temperatuurC ?? k.temperatuurC;
-  const brandt = /verwarmt|warmt/.test(d.klimaat?.actie ?? d.stand);
+  const brandt = /verwarmt/.test(d.klimaat?.actie ?? d.stand);
   const tikken = [];
   for (let i = 0; i < 60; i++) {
     const a = ((-225 + (i / 59) * 270) * Math.PI) / 180;

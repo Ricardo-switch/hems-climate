@@ -18,6 +18,8 @@ const WOORDEN: readonly [RegExp, string][] = [
   [/\bTailscale\b|\bdeploy\b|\bDocker\b/i, 'hoe het bij één huis uitgerold wordt'],
   [/\bSynology\b/, 'een merk alsof iedereen het heeft'],
   [/Cornelissen|Matts|Mylan/, 'een naam uit één huis'],
+  // "Warmen" klinkt niet gewoon (15 oktober 2026): verwarmen, en opwarmen mag.
+  [/'warmen'|(?:gaat|zou|kan|mag) warmen|[a-z] warmt (?!op)[a-z]/, 'warmen: zeg verwarmen'],
 ];
 
 /** Zonder commentaar: daar mag uitgelegd worden hoe het hier zit. */

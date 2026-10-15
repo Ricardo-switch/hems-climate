@@ -8,7 +8,7 @@
 (function (global) {
   const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-  const ACTIEF = ['koelt', 'verwarmt', 'warmt voor', 'droogt', 'ventileert'];
+  const ACTIEF = ['koelt', 'verwarmt', 'verwarmt voor', 'droogt', 'ventileert'];
   const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
   const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc|trapkast|meterkast)\b/i;
 
@@ -20,7 +20,7 @@
   }
 
   /** Gewone kamerwoorden krijgen "de"; een eigen naam als "Beneden" niet (besluit 131). */
-  const GEWOON = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone)/i;
+  const GEWOON = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone)\b/i;
   /**
    * De naam van een zone in een zin, zoals de kamer in de indeling heet (besluit
    * 131): "de woonkamer", of "Beneden". Zonder huis de id, zoals de regeling hem noemt.
@@ -28,6 +28,10 @@
   function zoneNaam(zoneId, huis) {
     const kamer = (huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).find((r) => r.zoneId === zoneId);
     const naam = kamer?.naam ?? String(zoneId).replace(/[-_]+/g, ' ');
+    return metLidwoord(naam);
+  }
+  /** "de badkamer" bij een gewone kamer, en een eigen naam zoals hij is. */
+  function metLidwoord(naam) {
     return GEWOON.test(naam) ? `de ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
   /**
@@ -85,7 +89,7 @@
     const vloer = (b) => b.soorten.some((x) => x === 'vloer' || x === 'vloer-elektrisch');
     for (const a of klimaat) {
       const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
-      const warm = /verwarmt|warmt voor/.test(a.klimaat?.actie ?? '');
+      const warm = /verwarmt/.test(a.klimaat?.actie ?? '');
       const b = bronVan(a);
       if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
       else if (b && !b.soorten.includes('radiator')) {
@@ -185,5 +189,5 @@
     return { oprit, tuin, terras, balkon, voortuin };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
 })(window);

@@ -173,7 +173,7 @@ function verwachtingen() {
     if (r.blockedBy !== 'insufficient_power_budget' || !(r.intent?.budgetW > 0) || gezien.has(r.intent.actuatorId)) continue;
     gezien.add(r.intent.actuatorId);
     const genoeg = kw.filter((q) => q.tMs + 15 * 60_000 > nu && q.verwachtW - huisW >= r.intent.budgetW);
-    const actie = r.intent.action === 'heat' ? 'warmen' : 'koelen';
+    const actie = r.intent.action === 'heat' ? 'verwarmen' : 'koelen';
     const zone = String(r.intent.zoneId).replace(/[-_]+/g, ' ');
     uit.push({
       actuatorId: r.intent.actuatorId,

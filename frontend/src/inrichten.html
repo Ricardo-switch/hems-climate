@@ -71,6 +71,10 @@
   .prijs input { width: 64px; border: 0; background: none; color: var(--tekst); font: inherit; font-weight: 700; }
   .prijs input:focus { outline: none; }
   .prijs:focus-within { outline: 2px solid var(--ijs); }
+  .filmkaart { position: relative; height: 210px; border-radius: 20px; border: 0; background: radial-gradient(120% 120% at 30% 10%, #1e3157 0%, #0e1830 70%); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: end; padding: 16px 18px; cursor: pointer; text-align: left; }
+  .filmkaart .speel { position: absolute; left: 50%; top: 44%; width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 50%; background: var(--tekst); }
+  .filmkaart .speel::after { content: ''; position: absolute; left: 29px; top: 22px; border-left: 22px solid #0b1424; border-top: 14px solid transparent; border-bottom: 14px solid transparent; }
+  .filmkaart:focus-visible { outline: 2px solid var(--tekst); outline-offset: 3px; }
   .melding-inr { min-height: 18px; font-size: 13px; color: var(--mint); }
   .melding-inr.fout { color: var(--gloed); }
   /* De telefoon: de stappen klein bovenaan, het huis klein, de vraag eronder. */
@@ -105,6 +109,7 @@
   <script src="kit/huis.js"></script>
   <script src="basis.js"></script>
   <script src="huismodel.js"></script>
+  <script src="film.js"></script>
   <script src="inrichten.js"></script>
 </body>
 </html>

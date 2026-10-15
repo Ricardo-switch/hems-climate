@@ -199,7 +199,7 @@ export interface HouseRoom {
   readonly soort: RoomType | null;
   /** Of de soort door de bewoner gekozen is, of een voorstel. */
   readonly soortGekozen: boolean;
-  /** Wat er warmt en koelt, zoals de bewoner het vastlegde (besluit 132); leeg als nog niets. */
+  /** Wat er verwarmt en koelt, zoals de bewoner het vastlegde (besluit 132); leeg als nog niets. */
   readonly bronnen: readonly Warmtebron[];
 }
 
@@ -355,7 +355,7 @@ const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoels
 
 const HVAC_ACTION: Readonly<Record<string, string>> = {
   heating: 'verwarmt',
-  preheating: 'warmt voor',
+  preheating: 'verwarmt voor',
   cooling: 'koelt',
   drying: 'droogt',
   fan: 'ventileert',

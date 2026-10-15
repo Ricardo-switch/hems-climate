@@ -269,7 +269,7 @@ function tekenStraks() {
     kaarten.forEach((k) => (k.hidden = true));
     return;
   }
-  const actie = wacht.intent.action === 'heat' ? 'warmen' : 'koelen';
+  const actie = wacht.intent.action === 'heat' ? 'verwarmen' : 'koelen';
   zet('[data-straks-kop]', `${huismodel.metHoofdletter(zoneNaam(wacht.intent.zoneId, huisData))} gaat ${actie} bij ${nl(wacht.intent.budgetW / 1000)} kW zon`);
   const over = Math.max(0, state.explanation?.budget?.availableW ?? 0);
   zet('[data-straks-zin]', `${over >= 50 ? `Nu is er ${nl(over / 1000)} kW over.` : 'Nu is er geen zon over.'} Zodra er genoeg is, begint hij vanzelf.`);

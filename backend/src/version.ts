@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.16.0';
+export const VERSIE = '0.17.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,13 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.17.0',
+    datum: '2026-10-15',
+    nieuw: ['Het filmpje: hoe je huis leert, in een minuut, met je eigen huis en je eigen cijfers'],
+    beter: ['Verwarmen in plaats van warmen'],
+    opgelost: ['Gewone kamernamen krijgen weer "de", zoals "de badkamer"'],
+  },
   {
     versie: '0.16.0',
     datum: '2026-10-15',
@@ -123,7 +130,7 @@ export const NIEUW: readonly Nieuw[] = [
     versie: '0.10.0',
     datum: '2026-10-15',
     nieuw: [
-      'Bij Indeling per kamer wat er warmt en koelt: radiator, vloerverwarming, infraroodpaneel, kachel of airco',
+      'Bij Indeling per kamer wat er verwarmt en koelt: radiator, vloerverwarming, infraroodpaneel, kachel of airco',
       'Een elektrische bron met een vermogen mag opwarmen op zon',
       'Haal er meer uit: de drie beste ideeën voor je huis',
     ],

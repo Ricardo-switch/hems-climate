@@ -5878,6 +5878,18 @@ voelde als instellingen, niet als je huis neerzetten.
   erheen; Inrichten blijft te openen bij Instellingen.
 - De balk tussen de pagina's van besluit 114 is weg.
 - **Versie 0.16.0.**
+- **Het filmpje (versie 0.17.0):** bij Klaar, en daarna te openen. Geen
+  videobestand: het eigen huis, getekend door de app, in vier beelden van
+  samen een minuut (de nacht, de middag met zon, de avond, elke dag een
+  beetje slimmer). De cijfers zijn echt: hoeveel kamers en apparaten, wat het
+  dak gisteren leverde, hoe vaak het huis vandaag zei waarom, en hoeveel
+  winterdagen er al zijn. Het geluid maakt de browser zelf, een zacht akkoord
+  per beeld; uit te zetten, en de keuze blijft. Pauzeren en overslaan kan
+  altijd; wie minder beweging wil, krijgt de beelden zonder beweging.
+- **Gewone woorden (15 oktober):** "verwarmen" in plaats van "warmen", en een
+  test die het bewaakt. Gewone kamernamen krijgen weer "de" ("de badkamer"):
+  een onzichtbaar stuurteken in de regel daarvoor hield dat sinds besluit 131
+  tegen.
 
 ---
 

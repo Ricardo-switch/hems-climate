@@ -176,7 +176,7 @@ function dagdelenVorm() {
   const d = comfort.dagdelen;
   const uur = (sleutel, titel) => `<div><span class="label" style="font-size: 14.5px; font-weight: 600; display: block; margin-bottom: 6px">${titel}</span><div class="stapper"><button type="button" data-uur="${sleutel}:-1" aria-label="Eerder">−</button><b>${d[sleutel]}:00</b><button type="button" data-uur="${sleutel}:1" aria-label="Later">+</button></div></div>`;
   return `<h2 class="kop-2">Dagdelen</h2>
-    <p class="klein" style="margin: 0">Voor het hele huis. 's Ochtends warmt het huis voor tot de temperatuur van overdag; 's nachts geldt de nachttemperatuur van elke kamer.</p>
+    <p class="klein" style="margin: 0">Voor het hele huis. 's Ochtends verwarmt het huis alvast tot de temperatuur van overdag; 's nachts geldt de nachttemperatuur van elke kamer.</p>
     <div class="uren">${uur('voorverwarmen', 'Voorverwarmen vanaf')}${uur('dag', 'Overdag vanaf')}${uur('nacht', 'Nacht vanaf')}</div>
     ${dagbalk()}`;
 }
