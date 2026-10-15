@@ -726,6 +726,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await bel.click();
     const blad = p.locator('[data-meldblad]');
     await blad.locator('.melding', { hasText: 'De droger reageert niet meer' }).waitFor();
+    // Gelezen (15 oktober): het getal is weg, de melding staat er nog.
+    expect(await bel.locator('[data-meldaantal]').isHidden()).toBe(true);
     await blad.locator('[data-meld-onderhoud]').click();
     await blad.locator('h2', { hasText: 'Onderhoud' }).waitFor();
     // Een melding weghalen met het kruisje: het getal verdwijnt (aangevuld 15 oktober).
@@ -784,10 +786,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       { id: 'd-dimmer', naam: 'Hue dimmer switch', pct: 64, kamer: null, kamerId: null },
     ];
     await p.goto(`${baseUrl}/thuis.html`);
-    const pil = wand.locator('[data-batterij]');
-    await expect.poll(() => pil.isVisible(), { timeout: 10_000 }).toBe(true);
-    expect(await pil.textContent()).toContain('Batterij bijna leeg: Knop bank, 7%');
-    await pil.click();
+    // Onderhoud (15 oktober): ingeklapt een sleutel, een tik klapt open, Bekijk gaat naar de knop in de kamer.
+    const sleutel = wand.locator('[data-onderhoud-knop]');
+    await expect.poll(() => sleutel.isVisible(), { timeout: 10_000 }).toBe(true);
+    await sleutel.click();
+    const open = wand.locator('.onderhoudtekst');
+    expect(await open.textContent()).toContain('Batterij bijna leeg: Knop bank, 7%');
+    expect(await open.locator('a', { hasText: 'Bekijk' }).getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}/batterij-d-knop`);
+    // De hele lijst blijft achter het weer.
+    await p.evaluate("location.hash = '#batterijen'; location.reload()");
     const lijst = wand.locator('#weer-wand');
     await expect.poll(() => lijst.isVisible()).toBe(true);
     expect(await lijst.getAttribute('aria-label')).toBe('Batterijen');

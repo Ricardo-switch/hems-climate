@@ -5931,6 +5931,13 @@ allebei de zon van de dag met daaronder per apparaat wanneer het draaide.
   een schakelaar bij Licht en een sensor onder Sensoren, oranje als hij bijna
   leeg is; een melding brengt je er met een tik heen en licht hem op.
 - **Versie 0.19.0.**
+- **Thuis, aangevuld op 15 oktober (versie 0.19.1):** een begroeting naar de
+  tijd van de dag boven de kop. Onderhoud staat bovenin als een sleutel, alleen
+  als er een batterij of filter bijna op is; een tik klapt hem open met wat er
+  te doen is en Bekijk. De vraagbalk van de assistent staat alleen nog onder
+  het huis, zodat de kaarten rechts tot onderaan lopen. Het getal bij de bel
+  telt alleen wat je nog niet zag: open je de meldingen, dan verdwijnt het; de
+  melding zelf blijft staan tot hij opgelost of weggehaald is.
 
 ---
 

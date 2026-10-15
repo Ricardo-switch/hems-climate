@@ -25,7 +25,7 @@
    * groter en in het midden van zijn vak in staat.
    */
   .podium { position: absolute; left: 0; top: 96px; right: calc(420px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 612px; }
-  .rechts { position: absolute; right: 26px; top: 96px; bottom: 108px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
+  .rechts { position: absolute; right: 26px; top: 96px; bottom: 20px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
   #wand .rechts > * { flex: none; }
   .kaart { padding: 18px 20px; }
   /* Een kaart die ergens heen gaat (besluit 129): Vandaag naar de dag, Straks naar de assistent. */
@@ -37,9 +37,21 @@
   .apparaatkaart .ring { width: 54px; height: 54px; flex: none; }
   .apparaatkaart b { display: block; font-size: 16px; }
 
-  .dok { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok { position: absolute; left: 22px; right: calc(26px + 352px + 14px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
   .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
   .dok .vraag b { color: var(--tekst); }
+  /* De begroeting (15 oktober 2026): klein boven de kop. */
+  .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
+  /* Onderhoud (15 oktober 2026): een sleutel bovenin, alleen als er iets te doen is; een tik klapt hem open. */
+  .onderhoud { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .onderhoud[hidden] { display: none; }
+  .onderhoud .pil { color: var(--gloed); gap: 8px; min-width: 0; }
+  .onderhoudknop { width: 40px; padding: 0; justify-content: center; position: relative; }
+  .onderhoudknop b { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
+  .onderhoudtekst { max-width: 420px; }
+  #wand .onderhoudtekst { max-width: 290px; }
+  .onderhoudtekst span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .onderhoudtekst a, .onderhoudtekst button { flex: none; color: var(--tekst); font: inherit; font-weight: 700; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; }
   .uitlegknop { width: 34px; padding: 0; justify-content: center; font-weight: 800; color: var(--zacht); }
 
   /* De telefoon. */
@@ -124,8 +136,7 @@
       <div class="kopregel">
         <div><span class="tijd" data-tijd>--:--</span><span class="datum" data-datum></span></div>
         <div class="chips">
-          <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-wand" hidden></button>
-          <a class="pil batterijpil" href="#" data-filter hidden></a>
+          <span class="onderhoud" data-onderhoud hidden></span>
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs); text-decoration: none">Inrichten</a>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
@@ -134,6 +145,7 @@
         </div>
       </div>
       <div class="titel">
+        <span class="groet" data-groet></span>
         <h1 class="kop-1" data-kop>Even laden</h1>
         <p class="lead" data-zin></p>
       </div>
@@ -178,9 +190,8 @@
           <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>
-      <div class="titel"><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
-      <button class="pil batterijpil" type="button" data-batterij aria-haspopup="dialog" aria-controls="weer-tel" hidden style="align-self: flex-start"></button>
-      <a class="pil batterijpil" href="#" data-filter hidden style="align-self: flex-start"></a>
+      <div class="titel"><span class="groet" data-groet></span><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
+      <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>
     <div class="inhoud">

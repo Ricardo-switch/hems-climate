@@ -417,8 +417,30 @@
       <p class="mini" style="margin: auto 0 0">Onder de 10% komt er een melding. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
   }
 
+  /*
+   * Gelezen (15 oktober 2026): wat je in het blad zag, telt niet meer mee in het
+   * getal bij de bel. De melding blijft staan tot hij is opgelost of weg is.
+   * Onthouden in deze browser.
+   */
+  const GELEZEN = 'sc-meldingen-gelezen';
+  const gelezen = () => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(GELEZEN) ?? '[]'));
+    } catch {
+      return new Set();
+    }
+  };
+  function markeerGelezen() {
+    try {
+      localStorage.setItem(GELEZEN, JSON.stringify(meld.actief.map((m) => m.id)));
+    } catch {
+      // Dan telt hij de volgende keer nog mee.
+    }
+    meldGetal();
+  }
   function meldGetal() {
-    const n = meld.actief.length;
+    const al = gelezen();
+    const n = meld.actief.filter((m) => !al.has(m.id)).length;
     $$('[data-meldaantal]').forEach((b) => {
       b.hidden = n === 0;
       b.textContent = n > 9 ? '9+' : String(n);
@@ -450,6 +472,7 @@
     meldZicht = zicht;
     blad.innerHTML = zicht === 'lijst' ? meldLijst() : await meldOnderhoud();
     blad.hidden = false;
+    if (zicht === 'lijst') markeerGelezen();
     document.querySelector('[data-meld-achter]').hidden = false;
     $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-expanded', 'true'));
     blad.querySelector('[data-meld-sluit]')?.focus();

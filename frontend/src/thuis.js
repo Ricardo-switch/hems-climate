@@ -159,24 +159,11 @@ function tekenNu() {
   lucht(model.tijd, model.seizoen, model.wolken);
   // Een nieuw huis (nog het voorstel uit Home Assistant): de weg naar Inrichten (besluit 114).
   $$('[data-inrichten]').forEach((el) => (el.hidden = huisData?.indeling !== 'voorstel'));
-  // Een batterij onder de 10% (besluit 122): de leegste; een tik opent de lijst (besluit 127).
-  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10);
-  $$('[data-batterij]').forEach((el) => {
-    el.hidden = leeg.length === 0;
-    if (!leeg.length) return;
-    const b = leeg[0];
-    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2"/><path d="M5 10v4"/></svg><span>${leeg.length === 1 ? `Batterij bijna leeg: ${esc(b.naam)}, ${b.pct}%` : `${leeg.length} batterijen bijna leeg, ${esc(b.naam)} ${b.pct}%`}</span>`;
-  });
+  // De begroeting (15 oktober 2026), naar de tijd van de dag.
+  const uur = new Date().getHours();
+  zet('[data-groet]', uur < 6 ? 'Goedenacht' : uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond');
+  tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
-  // Een airco-filter onder de 10% (besluit 129): net als een batterij, met een tik naar de airco.
-  const vol = huisData?.filters ?? [];
-  $$('[data-filter]').forEach((el) => {
-    el.hidden = vol.length === 0;
-    if (!vol.length) return;
-    const f = vol[0];
-    el.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 12h10M7 15h10"/></svg><span>Filter schoonmaken: ${esc(f.naam)}, ${f.pct}%</span>`;
-    el.href = `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}`;
-  });
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
@@ -186,6 +173,30 @@ function tekenNu() {
   tekenApparaat();
   tekenGevoel();
   tekenKamersTel();
+}
+
+/*
+ * Onderhoud (15 oktober 2026): een batterij onder de 10% (besluit 122) of een
+ * airco-filter dat bijna vol is (besluit 129). Ingeklapt een sleutel met een
+ * getal; een tik klapt hem open met wat er te doen is en Bekijk. Niets te doen:
+ * niets te zien.
+ */
+let onderhoudOpen = false;
+function onderhoudLijst() {
+  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10).map((b) => ({ tekst: `Batterij bijna leeg: ${b.naam}, ${b.pct}%`, href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
+  const vol = (huisData?.filters ?? []).map((f) => ({ tekst: `Filter schoonmaken: ${f.naam}, ${f.pct}%`, href: `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}` }));
+  return [...leeg, ...vol];
+}
+function tekenOnderhoud() {
+  const lijst = onderhoudLijst();
+  if (!lijst.length) onderhoudOpen = false;
+  const eerste = lijst[0];
+  const bekijk = lijst.length === 1 && eerste.href ? `<a href="${esc(eerste.href)}">Bekijk</a>` : '<button type="button" data-onderhoud-alles>Bekijk</button>';
+  $$('[data-onderhoud]').forEach((el) => {
+    el.hidden = lijst.length === 0;
+    if (!lijst.length) return;
+    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="Onderhoud: ${lijst.length} ${lijst.length === 1 ? 'ding' : 'dingen'} te doen"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>${lijst.length > 1 ? `<b>${lijst.length}</b>` : ''}</button>${onderhoudOpen ? `<span class="pil onderhoudtekst"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst}, en nog ${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
+  });
 }
 
 function tekenVandaag() {
@@ -457,7 +468,7 @@ function openWeer(knop, soort = 'weer') {
 
 function sluitWeer() {
   $$('[data-weer], [data-weer-achter]').forEach((el) => (el.hidden = true));
-  $$('[data-buiten], [data-batterij]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
+  $$('[data-buiten]').forEach((k) => k.setAttribute('aria-expanded', 'false'));
 }
 
 /* -------------------------------------------------------------- starten */
@@ -468,12 +479,20 @@ addEventListener('standwissel', teken);
 
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
-$$('[data-batterij]').forEach((k) => k.addEventListener('click', () => openWeer(k, 'batterij')));
+// Onderhoud: openklappen, en bij meer dan één de lijst met batterijen en filters.
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-onderhoud-knop]')) {
+    onderhoudOpen = !onderhoudOpen;
+    tekenOnderhoud();
+  } else if (e.target.closest('[data-onderhoud-alles]')) {
+    openWeer(document.querySelector(`${app.zicht()} [data-buiten]`), 'batterij');
+  }
+});
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
 // Tikken naast het blad sluit het ook, net als Escape.
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);
-  if (open && !e.target.closest('[data-weer], [data-buiten], [data-batterij]')) sluitWeer();
+  if (open && !e.target.closest('[data-weer], [data-buiten], [data-onderhoud]')) sluitWeer();
 });
 // Op de telefoon: het blad naar beneden vegen.
 const telBlad = document.getElementById('weer-tel');
