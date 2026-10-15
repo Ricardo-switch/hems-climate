@@ -85,3 +85,30 @@ describe('comfort uit de app (besluit 130)', () => {
     });
   });
 });
+
+/* Zon en net, en wanneer het aan- en uitgaat (besluit 133). */
+describe('op zon, en wanneer het aan- en uitgaat', () => {
+  const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+  const opties = { knownStrategies: defaultStrategies().ids };
+
+  it('neemt op zon als buffer van de zone, ook uit', () => {
+    for (const [v, aan] of [[2, true], [0, false]] as const) {
+      const c = controleerComfort({ kamers: { woonkamer: { modi: {}, opZonC: v } } }, exampleSite);
+      expect(c.ok).toBe(true);
+      if (!c.ok) return;
+      const parsed = parseSiteConfig(withComfort(raw, c.comfort).raw, opties);
+      expect(parsed.ok && parsed.config.zones.find((z) => z.id === 'woonkamer')?.buffering).toMatchObject({ enabled: aan, bandC: v });
+    }
+    expect(controleerComfort({ kamers: { woonkamer: { modi: {}, opZonC: 3 } } }, exampleSite).ok).toBe(false);
+  });
+
+  it('zegt per kamer wanneer het aan- en uitgaat, en wat er op zon kan', () => {
+    const v = comfortView(exampleSite, null).kamers.find((k) => k.id === 'woonkamer')!;
+    const z = exampleSite.zones.find((x) => x.id === 'woonkamer')!;
+    expect(v.hysterese).toEqual({ aan: z.hysteresis.onDelta, uit: z.hysteresis.offDelta });
+    expect(v.opZonC).toBe(z.buffering.enabled ? z.buffering.bandC : 0);
+    // De woonkamer heeft een airco die op zon koelt en verwarmt, en een cv die niet koelt.
+    expect(v.opZon).toEqual({ verwarmen: true, koelen: true });
+    expect(v.koeltVanNet).toBe(false);
+  });
+});

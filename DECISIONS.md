@@ -140,6 +140,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [129. Drogen en het filter van de airco, gekleurd licht, en wat er nog wegviel](#129-drogen-en-het-filter-van-de-airco-gekleurd-licht-en-wat-er-nog-wegviel)
 - [130. Instellingen in zes groepen, en comfort zet je in de app](#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app)
 - [131. Versie 0.9.0, één naam per kamer, en wat na een grondige test niet klopte](#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte)
+- [133. Comfort zegt wanneer en waarmee: aan en uit, zon en net](#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net)
 
 **Veiligheid**
 
@@ -5597,6 +5598,40 @@ werkte.
   deel van een woord, zonder accenten en meervoud, en vindt ook de kamers en
   apparaten van het huis en alles uit Wat je huis kan. "Batterij" vond eerst
   niets.
+
+---
+
+## 133. Comfort zegt wanneer en waarmee: aan en uit, zon en net
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 15 oktober 2026, met de schetsen
+`Wand-Comfort-Regels` en `Comfort-Tel` in `design/app2`. De schakelaars waren
+niet mooi, en nergens stond wanneer verwarmen of koelen stopt, of dat het op
+zon of van het net gebeurt.
+
+*Besluit:*
+
+- **Per dagdeel twee regels,** verwarmen en koelen, met een kleinere
+  schakelaar rechts. Wanneer het aan- en uitgaat staat er pas na een tik op
+  de regel: verwarmen aan onder doel min `onDelta`, uit bij doel plus
+  `offDelta` (de hysterese van de zone, besluit 39); op zon tot doel plus de
+  buffer; koelen op zon al vanaf doel min de buffer, van het net pas boven
+  nooit warmer dan. 's Nachts en op vakantie niet op zon, net als in
+  `pv-surplus`. De woorden noemen geen cv: het apparaat verschilt per huis.
+- **Op de balk** een geel gestreept stuk met een zonnetje: tot waar het op zon
+  mag.
+- **Zon en net, per kamer:** "Op zon mag het" niet, een halve, een of twee
+  graden verder dan het doel (de buffer van de zone, `opZonC` in
+  `comfort.json`); alleen als er een apparaat is dat op zon mag. "Koelen van
+  het net": nooit, of boven een temperatuur; dat is het oude nooit warmer dan,
+  in woorden die zeggen wat het doet. Verwarmen doet het hoofdapparaat altijd.
+- **Per kamer alleen overdag en 's nachts;** afwezig en vakantie hebben hun
+  eigen deel met een keuze per kamer. Zo past een kamer op de wand zonder te
+  scrollen.
+- **De volgorde verschuift:** voorrang per seizoen, Klaar om en Hoe voelt het
+  worden besluit 134.
+- **Versie 0.11.0.**
 
 ---
 

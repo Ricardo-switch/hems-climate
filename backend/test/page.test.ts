@@ -716,6 +716,21 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('[data-modus="dag"] [data-greep="heat"]').focus();
     await p.keyboard.press('ArrowRight');
     await expect.poll(() => comfortNu?.kamers[zone.id]?.modi.dag?.heat, { timeout: 5_000 }).toBe(20.5);
+    // Een tik op de regel: wanneer het aan- en uitgaat (besluit 133).
+    await wand.locator('[data-modus="dag"] [data-uitleg$=":heat"]').click();
+    expect(await wand.locator('[data-modus="dag"] .regel small').first().textContent()).toMatch(/^Aan onder .*, uit bij /);
+    // Per kamer alleen overdag en 's nachts; op zon mag het 2 graden verder.
+    expect(await wand.locator('[data-vorm] [data-modus]').evaluateAll((els) => els.map((e) => e.getAttribute('data-modus')))).toEqual(['dag', 'nacht']);
+    const opZon = wand.locator('[data-opzon="2"]');
+    if (await opZon.count()) {
+      await opZon.click();
+      await expect.poll(() => comfortNu?.kamers[zone.id]?.opZonC, { timeout: 5_000 }).toBe(2);
+      expect(configNu.zones[0]!.buffering).toMatchObject({ enabled: true, bandC: 2 });
+    }
+    // Afwezig en vakantie in hun eigen deel, per kamer te kiezen.
+    await wand.locator('[data-delen] .deel', { hasText: 'Afwezig en vakantie' }).click();
+    await wand.locator('[data-vorm] [data-modus="vakantie"]').waitFor();
+    expect(await wand.locator('[data-afwezig-kamer]').count()).toBe(exampleSite.zones.length);
     // De dagdelen: overdag een uur later.
     await wand.locator('[data-delen] .deel', { hasText: 'Dagdelen' }).click();
     await wand.locator('[data-uur="dag:1"]').click();

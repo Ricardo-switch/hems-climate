@@ -12,6 +12,12 @@ const { $$, nl, esc, haal } = app;
 let comfort = null;
 let state = null;
 let zon = null;
+/** Welke regels hun uitleg tonen (besluit 133): "kamer:dagdeel:soort". */
+const open = new Set();
+/** De kamer die Afwezig en vakantie laat zien. */
+let afwezigKamer = null;
+/** Dagdelen waarin het huis niet op zon laadt, zoals in pv-surplus. */
+const ZONLOOS = new Set(['nacht', 'vakantie']);
 
 /** De schaal van de balk, in graden. */
 const MIN = 10;
@@ -61,46 +67,100 @@ function wanneer(m) {
 }
 const NAAM = { dag: 'Overdag', nacht: "'s Nachts", afwezig: 'Afwezig', vakantie: 'Vakantie' };
 
+/** Tot waar het op zon mag, per soort, of null (besluit 133). */
+function zonGrens(k, m, soort) {
+  const p = k.modi[m];
+  if (ZONLOOS.has(m) || !(k.opZonC > 0)) return null;
+  if (soort === 'heat' && p.heat != null && k.opZon?.verwarmen) return p.heat + k.opZonC;
+  if (soort === 'cool' && p.cool != null && k.opZon?.koelen) return p.cool - k.opZonC;
+  return null;
+}
+
 function schaal(k, m) {
   const p = k.modi[m];
+  const zw = zonGrens(k, m, 'heat');
+  const zk = zonGrens(k, m, 'cool');
+  const zonStuk = (a, b) => `<div class="zonband" style="left: ${pct(Math.min(a, b)).toFixed(2)}%; width: ${Math.abs(pct(b) - pct(a)).toFixed(2)}%"></div>`;
+  const zonStip = [zw, zk].filter((x) => x != null).map((x) => `<span class="zonstip" style="left: ${pct(x).toFixed(2)}%" title="op zon"></span>`).join('');
   const goed = p.heat != null && p.cool != null ? [pct(p.heat), pct(p.cool)] : p.heat != null ? [pct(p.heat), 100] : p.cool != null ? [0, pct(p.cool)] : null;
   const greep = (soort, c) => `<button type="button" class="greep" role="slider" aria-label="${soort === 'heat' ? 'Verwarmen onder' : 'Koelen boven'}, ${NAAM[m].toLowerCase()}" aria-valuemin="${MIN}" aria-valuemax="${MAX}" aria-valuenow="${c}" aria-valuetext="${graden(c)}" data-greep="${soort}" style="left: ${pct(c).toFixed(2)}%"><i style="background: ${soort === 'heat' ? 'var(--gloed)' : 'var(--ijs)'}"></i></button>`;
   const maten = [MIN, ...(p.heat != null ? [p.heat] : []), ...(p.cool != null ? [p.cool] : []), MAX];
   return `<div class="schaal" data-schaal="${m}">
     <div class="baan"></div>
     ${goed ? `<div class="goed" style="left: ${goed[0].toFixed(2)}%; width: ${(goed[1] - goed[0]).toFixed(2)}%"></div>` : ''}
+    ${zw != null ? zonStuk(p.heat, zw) : ''}${zk != null ? zonStuk(zk, p.cool) : ''}${zonStip}
     ${p.heat != null ? greep('heat', p.heat) : ''}${p.cool != null ? greep('cool', p.cool) : ''}
     ${maten.map((c) => `<span class="maat" style="left: ${pct(c).toFixed(2)}%">${graden(c)}</span>`).join('')}
     ${p.heat == null && p.cool == null ? '<span class="niets">doet niets</span>' : ''}
   </div>`;
 }
 
-/** Per dagdeel een schakelaar voor verwarmen en een voor koelen (besluit 131, schets Comfort). */
-function waarden(k, m) {
+/**
+ * Per dagdeel een regel voor verwarmen en een voor koelen (besluit 133, schets
+ * Wand-Comfort-Regels): rechts een schakelaar. Wanneer het aan- en uitgaat en
+ * wat op zon gebeurt, staat eronder na een tik op de regel.
+ */
+function regels(k, m) {
   const p = k.modi[m];
-  const regel = (soort, woord) => {
+  const regel = (soort) => {
     const kan = soort === 'heat' ? k.kanVerwarmen : k.kanKoelen;
     if (!kan) return '';
     const v = p[soort];
     const aan = v != null;
+    const sleutel = `${k.id}:${m}:${soort}`;
+    const h = k.hysterese ?? { aan: 0.3, uit: 0.2 };
+    const zg = zonGrens(k, m, soort);
+    let uitleg;
+    if (soort === 'heat') {
+      uitleg = aan ? `Aan onder ${graden(v - h.aan)}, uit bij ${graden(v + h.uit)}.${zg != null ? ` <span class="z">Op zon tot ${graden(zg)}.</span>` : ''}` : 'Zet hem aan voor een temperatuur.';
+    } else {
+      const net = k.koeltVanNet ? (aan ? `Aan boven ${graden(v + h.aan)}, uit bij ${graden(v - h.uit)}.` : '') : k.nooitWarmerC != null ? `Van het net pas boven ${graden(k.nooitWarmerC)}.` : 'Van het net niet.';
+      uitleg = aan ? `${zg != null ? `<span class="z">Op zon al vanaf ${graden(zg)}.</span> ` : ''}${net}` : `Zonder koelen, ${k.nooitWarmerC != null && !k.koeltVanNet ? `behalve boven ${graden(k.nooitWarmerC)}.` : 'ook niet van het net.'}`;
+    }
+    const kleur = soort === 'heat' ? 'var(--gloed)' : 'var(--ijs)';
     const wat = soort === 'heat' ? 'Verwarmen' : 'Koelen';
-    const tekst = aan ? `${woord} <b>${graden(v)}</b>` : `<span class="uitgezet">${wat.toLowerCase()} uit</span>`;
-    return `<span class="aanuit">${tekst}<button type="button" class="schakel ${soort}" role="switch" aria-checked="${aan}" aria-label="${wat}, ${NAAM[m].toLowerCase()}" ${aan ? `data-uit="${soort}"` : `data-aan="${soort}"`}></button></span>`;
+    const label = aan ? `${wat} <em>${soort === 'heat' ? 'onder' : 'boven'}</em> <b>${graden(v)}</b>` : `${wat} uit`;
+    return `<div class="regel${aan ? '' : ' uit'}${open.has(sleutel) ? ' open' : ''}">
+      <button type="button" class="wat" data-uitleg="${esc(sleutel)}" aria-expanded="${open.has(sleutel)}"><i style="background: ${aan ? kleur : 'var(--gedempt)'}"></i>${label}</button>
+      <button type="button" class="schakel ${soort}" role="switch" aria-checked="${aan}" aria-label="${wat}, ${NAAM[m].toLowerCase()}" ${aan ? `data-uit="${soort}"` : `data-aan="${soort}"`}></button>
+      ${open.has(sleutel) ? `<small>${uitleg}</small>` : ''}
+    </div>`;
   };
-  return `<div class="waarden">${regel('heat', 'verwarmen onder')}${regel('cool', 'koelen boven')}</div>`;
+  return `<div class="regels">${regel('heat')}${regel('cool')}</div>`;
+}
+
+/** Een dagdeel: de naam, de balk en de twee regels. */
+function band(k, m) {
+  return `<div class="band" data-modus="${m}"><div class="naam"><b>${NAAM[m]}</b><span>${esc(wanneer(m))}</span></div>${schaal(k, m)}${regels(k, m)}</div>`;
+}
+
+/** Zon en net, per kamer (besluit 133): hoeveel verder op zon, en of koelen van het net mag. */
+function zonEnNet(k) {
+  const zon = k.opZon?.verwarmen || k.opZon?.koelen
+    ? `<div class="blok"><span class="label"><span class="stip" style="background: var(--zon)"></span>Op zon mag het</span>
+        <div class="keuze" role="group" aria-label="Op zon mag het">${[[0, 'Niet'], [0.5, '½°'], [1, '1°'], [2, '2°']].map(([v, t]) => `<button type="button" data-opzon="${v}" aria-pressed="${k.opZonC === v}">${t}</button>`).join('')}</div>
+        <p class="uitleg">verder dan je doel${k.opZon.koelen && k.opZon.verwarmen ? ', koeler of warmer' : k.opZon.koelen ? ', koeler' : ', warmer'}. Zo bewaart de kamer de zon van de middag voor later.</p></div>`
+    : '';
+  const net = k.kanKoelen && !k.koeltVanNet
+    ? `<div class="blok"><span class="label"><span class="stip" style="background: var(--ijs)"></span>Koelen van het net</span>
+        ${k.nooitWarmerC != null
+          ? `<div class="stapper"><button type="button" data-plafond="-0.5" aria-label="Lager">−</button><b>boven ${graden(k.nooitWarmerC)}</b><button type="button" data-plafond="0.5" aria-label="Hoger">+</button><button type="button" class="geen" data-plafond="geen">Nooit</button></div>`
+          : '<div class="keuze" role="group" aria-label="Koelen van het net"><button type="button" aria-pressed="true">Nooit</button><button type="button" data-plafond="aan" aria-pressed="false">Boven een temperatuur</button></div>'}
+        <p class="uitleg">${k.nooitWarmerC != null ? 'Zonder zon koelt de airco alleen als het warmer wordt dan dit.' : 'Zonder zon koelt de airco niet.'}</p></div>`
+    : '';
+  return zon || net ? `<div class="zonnet">${zon}${net}</div>` : '';
 }
 
 function kamerVorm(k) {
   const pz = state?.explanation?.perZone?.find((z) => z.zoneId === k.id);
   const nu = pz?.temperatureC;
-  const banden = MODI.map((m) => `<div class="band" data-modus="${m}"><div class="naam"><b>${NAAM[m]}</b><span>${esc(wanneer(m))}</span></div>${schaal(k, m)}${waarden(k, m)}</div>`).join('');
-  const plafond = k.kanKoelen
-    ? `<div><span class="label">Nooit warmer dan</span><div class="stapper">${k.nooitWarmerC != null ? `<button type="button" data-plafond="-0.5" aria-label="Lager">−</button><b>${graden(k.nooitWarmerC)}</b><button type="button" data-plafond="0.5" aria-label="Hoger">+</button><button type="button" class="geen" data-plafond="geen">Geen</button>` : `<b>geen</b><button type="button" class="geen" data-plafond="aan">Instellen</button>`}</div><p class="uitleg">${k.nooitWarmerC != null ? 'Dan koelt de airco ook zonder zon, met stroom van het net.' : 'Zonder grens koelt de airco alleen als er zon over is.'}</p></div>`
-    : '';
+  // Overdag en 's nachts; afwezig en vakantie hebben hun eigen deel (besluit 133).
+  const banden = ['dag', 'nacht'].map((m) => band(k, m)).join('');
   const voorrang = `<div><span class="label">Voorrang bij weinig zon</span><div class="keuze" role="group" aria-label="Voorrang">${[[1, 'Eerst'], [2, 'Daarna'], [3, 'Laatst']].map(([v, t]) => `<button type="button" data-voorrang="${v}" aria-pressed="${k.voorrang === v}">${t}</button>`).join('')}</div><p class="uitleg">Is er zon voor één apparaat, dan gaat de kamer met voorrang eerst.</p></div>`;
   return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${nu != null ? `<span class="nu-temp">nu <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
     ${banden}
-    <div class="rij2">${plafond}${voorrang}</div>`;
+    ${zonEnNet(k)}
+    <div class="rij2">${voorrang}</div>`;
 }
 
 function dagbalk() {
@@ -122,15 +182,13 @@ function dagdelenVorm() {
 }
 
 function afwezigVorm() {
-  const rij = (k) => {
-    const a = k.modi.afwezig;
-    const v = k.modi.vakantie;
-    const zin = (p) => (p.heat != null && p.cool != null ? `${graden(p.heat)} tot ${graden(p.cool)}` : p.heat != null ? `niet onder ${graden(p.heat)}` : p.cool != null ? `niet boven ${graden(p.cool)}` : 'niets');
-    return `<a href="#${encodeURIComponent(k.id)}"><b>${esc(k.naam)}</b><span>afwezig ${esc(zin(a))}, vakantie ${esc(zin(v))}</span></a>`;
-  };
+  const k = comfort.kamers.find((x) => x.id === afwezigKamer) ?? comfort.kamers[0];
+  if (!k) return '<h2 class="kop-2">Afwezig en vakantie</h2>';
+  afwezigKamer = k.id;
   return `<h2 class="kop-2">Afwezig en vakantie</h2>
-    <p class="klein" style="margin: 0">Afwezig gaat vanzelf als niemand thuis is. Vakantie zet je zelf, op Thuis bij de stand bovenin. Wat het huis dan aanhoudt, staat per kamer:</p>
-    <div class="kamerlijst">${comfort.kamers.map(rij).join('')}</div>`;
+    <p class="klein" style="margin: 0">Afwezig gaat vanzelf als niemand thuis is. Vakantie zet je zelf, op Thuis bij de stand bovenin.</p>
+    <div class="kamerkeuze" role="group" aria-label="Kamer">${comfort.kamers.map((x) => `<button type="button" data-afwezig-kamer="${esc(x.id)}" aria-pressed="${x.id === k.id}">${esc(x.naam)}</button>`).join('')}</div>
+    ${band(k, 'afwezig')}${band(k, 'vakantie')}`;
 }
 
 function naast(id) {
@@ -138,7 +196,7 @@ function naast(id) {
   const kort = k ? state?.bewoner?.kamers?.find((x) => x.zoneId === k.id)?.kort : null;
   return `${kort ? `<div class="glas"><h3>Nu</h3><p style="margin: 0">${esc(kort)}</p></div>` : ''}
     <div class="glas"><h3>Zo gebruikt het huis dit</h3>
-      <p style="margin: 0 0 10px">Tussen de twee grepen is het goed: dan doet het huis niets. Is er zon over, dan mag een airco al eerder koelen of verwarmen, zolang het goed blijft.</p>
+      <p style="margin: 0 0 10px">Tussen de twee grepen is het goed: dan doet het huis niets. Het gele stuk is waar het op zon naartoe mag. Tik op een regel om te zien wanneer het aan- en uitgaat.</p>
       ${dagbalk()}
     </div>`;
 }
@@ -162,7 +220,7 @@ function tekenNu() {
 
 function bewaar() {
   const body = {
-    kamers: Object.fromEntries(comfort.kamers.map((k) => [k.id, { modi: k.modi, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang }])),
+    kamers: Object.fromEntries(comfort.kamers.map((k) => [k.id, { modi: k.modi, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }])),
     dagdelen: comfort.dagdelen,
   };
   groep.bewaarStraks(async () => {
@@ -178,7 +236,11 @@ function bewaar() {
   });
 }
 
-const huidig = () => comfort?.kamers.find((x) => x.id === groep.actief(delen()));
+/** De kamer die nu getoond wordt: de gekozen kamer, of bij Afwezig en vakantie die daar. */
+const huidig = () => {
+  const nu = groep.actief(delen());
+  return comfort?.kamers.find((x) => x.id === (nu === 'afwezig' ? afwezigKamer : nu));
+};
 
 /** Een greep op een nieuwe waarde, met minstens een graad tussen verwarmen en koelen. */
 function zet(k, m, soort, c) {
@@ -194,9 +256,9 @@ function zet(k, m, soort, c) {
 /** Werkt de balk bij zonder alles opnieuw te tekenen, tijdens het slepen. */
 function balkBij(rij, k, m) {
   const tmp = document.createElement('div');
-  tmp.innerHTML = schaal(k, m) + waarden(k, m);
+  tmp.innerHTML = schaal(k, m) + regels(k, m);
   rij.querySelector('.schaal').replaceWith(tmp.querySelector('.schaal'));
-  rij.querySelector('.waarden').replaceWith(tmp.querySelector('.waarden'));
+  rij.querySelector('.regels').replaceWith(tmp.querySelector('.regels'));
 }
 
 let sleept = false;
@@ -248,7 +310,19 @@ document.addEventListener('click', (e) => {
   if (!t || !comfort) return;
   const k = huidig();
   const rij = t.closest('[data-modus]');
-  if (k && rij && (t.dataset.aan || t.dataset.uit)) {
+  if (t.dataset.uitleg) {
+    // Alleen tonen of verbergen; niets te bewaren.
+    if (open.has(t.dataset.uitleg)) open.delete(t.dataset.uitleg);
+    else open.add(t.dataset.uitleg);
+    return teken();
+  }
+  if (t.dataset.afwezigKamer) {
+    afwezigKamer = t.dataset.afwezigKamer;
+    return teken();
+  }
+  if (k && t.dataset.opzon != null) {
+    k.opZonC = Number(t.dataset.opzon);
+  } else if (k && rij && (t.dataset.aan || t.dataset.uit)) {
     const m = rij.dataset.modus;
     if (t.dataset.aan) zet(k, m, t.dataset.aan, NIEUW[t.dataset.aan][m]);
     else k.modi = { ...k.modi, [m]: { ...k.modi[m], [t.dataset.uit]: null } };

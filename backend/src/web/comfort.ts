@@ -30,6 +30,8 @@ export const COMFORT_RANGE = { verwarmen: { min: 5, max: 28 }, koelen: { min: 16
 export const COMFORT_GAP_C = 1;
 /** Voorrang: eerst, daarna, laatst. */
 export const PRIORITIES = [1, 2, 3] as const;
+/** Hoeveel verder dan het doel het op zon mag (besluit 133); 0 is niet. */
+export const OP_ZON_KEUZES = [0, 0.5, 1, 2] as const;
 
 export interface ComfortPair {
   /** Verwarmen onder deze temperatuur; null is niet verwarmen. */
@@ -44,6 +46,8 @@ export interface ComfortRoom {
   readonly nooitWarmerC?: number | null;
   /** 1 eerst, 2 daarna, 3 laatst. */
   readonly voorrang?: number;
+  /** Op zon mag het zoveel graden verder dan het doel (besluit 133); 0 is niet. Weg is zoals het bestand. */
+  readonly opZonC?: number;
 }
 
 export interface Comfort {
@@ -64,6 +68,17 @@ export interface ComfortRoomView {
   readonly voorrang: number;
   /** Of de bewoner deze kamer in de app zette (anders: het bestand). */
   readonly uitApp: boolean;
+  /**
+   * Wanneer het aan- en uitgaat (besluit 133): verwarmen gaat aan onder doel
+   * min `aan`, en uit bij doel plus `uit`; koelen andersom.
+   */
+  readonly hysterese: { readonly aan: number; readonly uit: number };
+  /** Op zon mag het zoveel verder dan het doel; 0 is niet. */
+  readonly opZonC: number;
+  /** Wat er op zon kan: verwarmen, koelen. Alleen een assist of een apparaat dat ook op zon mag. */
+  readonly opZon: { readonly verwarmen: boolean; readonly koelen: boolean };
+  /** Of het hoofdapparaat zelf koelt, van het net; anders koelt het van het net pas boven nooit warmer dan. */
+  readonly koeltVanNet: boolean;
 }
 
 export interface ComfortView {
@@ -86,6 +101,13 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
       nooitWarmerC: z.comfortMaxC ?? null,
       voorrang: Math.max(1, Math.min(3, z.priority)),
       uitApp: comfort?.kamers[z.id] != null,
+      hysterese: { aan: z.hysteresis.onDelta, uit: z.hysteresis.offDelta },
+      opZonC: z.buffering.enabled ? z.buffering.bandC : 0,
+      opZon: {
+        verwarmen: devices.some((a) => a.capabilities.canHeat && (a.role === 'assist' || a.onSurplus === true)),
+        koelen: devices.some((a) => a.capabilities.canCool && (a.role === 'assist' || a.onSurplus === true)),
+      },
+      koeltVanNet: devices.some((a) => a.role === 'primary' && a.capabilities.canCool),
     };
   });
   const s = config.schedule;
@@ -120,6 +142,8 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
       else uit['comfortMaxC'] = kamer.nooitWarmerC;
     }
     if (kamer.voorrang != null) uit['priority'] = kamer.voorrang;
+    // Op zon (besluit 133): de buffer van de zone.
+    if (kamer.opZonC != null) uit['buffering'] = { ...((zone['buffering'] as Record<string, unknown> | undefined) ?? {}), enabled: kamer.opZonC > 0, bandC: kamer.opZonC };
     toegevoegd.push(`comfort van ${String(zone['name'] ?? id)}`);
     return uit;
   });
@@ -182,6 +206,10 @@ export function controleerComfort(body: unknown, config: SiteConfig): ComfortChe
     if (w['voorrang'] !== undefined) {
       if (!(PRIORITIES as readonly unknown[]).includes(w['voorrang'])) return { ok: false, reden: `${zone.name}: voorrang is 1, 2 of 3` };
       kamer.voorrang = w['voorrang'] as number;
+    }
+    if (w['opZonC'] !== undefined && w['opZonC'] !== null) {
+      if (!(OP_ZON_KEUZES as readonly unknown[]).includes(w['opZonC'])) return { ok: false, reden: `${zone.name}: op zon is ${OP_ZON_KEUZES.join(', ')} graden` };
+      kamer.opZonC = w['opZonC'] as number;
     }
     kamers[id] = kamer;
   }

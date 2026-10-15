@@ -201,6 +201,8 @@ verwijzing bestaat.
 - **Per kamer** staat bij Indeling wat er warmt en koelt; een elektrische bron
   mag op zon opwarmen, en Wat je huis kan zegt in welke kamers iets werkt
   ([132]).
+- **Comfort** zegt per dagdeel wanneer het aan- en uitgaat, wat er op zon
+  gebeurt, en per kamer of koelen van het net mag ([133]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -382,4 +384,5 @@ verwijzing bestaat.
 [130]: DECISIONS.md#130-instellingen-in-zes-groepen-en-comfort-zet-je-in-de-app
 [131]: DECISIONS.md#131-versie-090-één-naam-per-kamer-en-wat-na-een-grondige-test-niet-klopte
 [132]: DECISIONS.md#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt
+[133]: DECISIONS.md#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net
 <!-- links:einde -->
