@@ -72,6 +72,46 @@
   .sleep i { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff2d8, #ffc27a); display: block; }
   .sleept { opacity: 0.4; }
 
+  /* Verwarmen en koelen per kamer (besluit 132, schets Wand-Indeling-Warmte). */
+  .kamertabs { display: grid; grid-template-columns: 0.7fr 1.3fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .kamertabs button { height: 32px; white-space: nowrap; border: 0; border-radius: 9px; background: none; color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .kamertabs button[aria-selected='true'] { background: var(--tekst); color: var(--inkt); }
+  .bron { padding: 12px 14px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.07); display: flex; flex-direction: column; gap: 8px; }
+  .bron[data-bron-open] { cursor: pointer; }
+  .bron[data-bron-open]:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .bron .boven { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .bron .ikoon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 122, 77, 0.14); }
+  .bron .ikoon.koel { background: rgba(111, 211, 255, 0.14); }
+  .bron .ikoon svg { width: 20px; height: 20px; }
+  .bron b { display: block; font-size: 15px; }
+  .bron .wat { font-size: 12.5px; color: var(--gedempt); }
+  .bron .w { font-family: var(--kop); font-size: 16px; font-weight: 600; color: var(--zacht); white-space: nowrap; }
+  .bron .regelt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--zacht); padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .bron .regelt b { display: inline; font-size: 13px; }
+  .bron .regelt .mini, .bron .regelt .stand { margin-left: auto; }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .stand.slim { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .stand.hand { color: var(--zacht); background: rgba(255, 255, 255, 0.07); }
+  .bron .opzon { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--zacht); }
+  .schakel { position: relative; flex: none; margin-left: auto; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); cursor: pointer; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; transition: left 0.15s; }
+  .schakel[aria-checked='true'] { background: var(--mint); }
+  .schakel[aria-checked='true']::after { left: 21px; background: #fff; }
+  .bron .idee { padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .bron .idee b { display: block; color: var(--zon); font-size: 13px; margin-bottom: 2px; }
+  .vraagknop { align-self: start; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px dashed rgba(111, 211, 255, 0.55); background: none; color: var(--ijs); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .plus { height: 42px; border-radius: 14px; border: 1px dashed rgba(111, 211, 255, 0.55); background: none; color: var(--ijs); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .vraag { display: flex; flex-direction: column; gap: 6px; }
+  .vraag .label { margin: 0; }
+  .invoer { display: flex; align-items: center; gap: 8px; height: 42px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); padding: 0 12px; }
+  .invoer input { flex: 1; min-width: 0; border: 0; background: none; color: var(--tekst); font: inherit; font-size: 15px; font-weight: 600; }
+  .invoer input:focus { outline: none; }
+  .invoer:focus-within { outline: 2px solid var(--ijs); outline-offset: 1px; }
+  .invoer span { color: var(--gedempt); font-size: 13px; }
+  .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
+  .knoppenrij .knop { flex: 1; }
+
   /* De telefoon. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   #tel .etages { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }

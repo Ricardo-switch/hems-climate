@@ -555,8 +555,19 @@ function actuator(
     };
   }
 
+  // Ook op zon (besluit 132): net als een assist alleen met een vermogen, anders past hij altijd.
+  const onSurplusRaw = value['onSurplus'];
+  let onSurplus = false;
+  if (onSurplusRaw !== undefined) {
+    if (typeof onSurplusRaw !== 'boolean') p.error(join(path, 'onSurplus'), 'is waar of onwaar');
+    else onSurplus = onSurplusRaw;
+  }
+  if (onSurplus && power && power.estimatedW <= 0) {
+    p.error(join(join(path, 'power'), 'estimatedW'), 'ontbreekt; een apparaat dat op zon mag, verdeelt overschot en heeft een vermogen nodig');
+  }
+
   if (!id || !name || !refValue || !role || !capabilities || !power || !timing) return null;
-  return { id, name, ref: refValue, role, capabilities, power, timing };
+  return { id, name, ref: refValue, role, capabilities, power, timing, ...(onSurplus ? { onSurplus: true } : {}) };
 }
 
 /*

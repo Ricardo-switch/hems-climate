@@ -569,6 +569,55 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Verwarmen en koelen per kamer (besluit 132): wat er hangt toevoegen, een
+   * thermostaat aanvullen met vermogen, en op zon aanzetten.
+   */
+  it('legt bij Indeling vast wat er in een kamer warmt, en zet het op zon', async () => {
+    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    // Een kamer met een regeling en een thermostaat die alleen verwarmt.
+    const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.apparaten.some((d) => d.soort === 'klimaat' && d.actuatorId && d.klimaat?.kanVerwarmen && !d.klimaat.kanKoelen))!;
+    const thermo = kamer.apparaten.find((d) => d.soort === 'klimaat' && d.actuatorId && !d.klimaat?.kanKoelen)!;
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
+    const blad = p.locator('#wand [data-blad]');
+    await blad.locator('[data-kamertab="warmte"][aria-selected="true"]').waitFor({ timeout: 10_000 });
+    // De thermostaat staat er al; wat hangt eraan?
+    await blad.locator(`[data-bron-nieuw="${thermo.actuatorId}"]`).click();
+    await blad.locator('[data-bron-soort="vloer"]').click();
+    await blad.locator('[data-bron-vloer="elektrisch"]').click();
+    await blad.locator('[data-bron-soort="paneel"]').click();
+    await blad.locator('[data-bron-w]').fill('1150');
+    await blad.locator('[data-bron-bewaar]').click();
+    const bronnen = () => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.bronnen ?? null;
+    await expect.poll(bronnen).toEqual([expect.objectContaining({ soorten: ['vloer-elektrisch', 'paneel'], aan: 'thermostaat', apparaat: thermo.actuatorId, vermogenW: 1150 })]);
+    // Op zon: meteen in de regeling.
+    await blad.locator('[data-bron-zon]').click();
+    await expect.poll(() => bronnen()?.[0]?.opZon).toBe(true);
+    // Een paneel met de hand: geen vermogen, wel een idee.
+    await blad.locator('[data-bron-nieuw=""]').click();
+    await blad.locator('[data-bron-soort="kachel"]').click();
+    await blad.locator('[data-bron-aan="hand"]').click();
+    expect(await blad.locator('[data-bron-w]').count()).toBe(0);
+    await blad.locator('[data-bron-bewaar]').click();
+    await expect.poll(() => bronnen()?.length).toBe(2);
+    await blad.locator('.bron .idee').first().waitFor();
+    expect(bronnen()?.[1]).toEqual(expect.objectContaining({ soorten: ['kachel'], aan: 'hand' }));
+    expect(bronnen()?.[1]?.vermogenW).toBeUndefined();
+    // Weer weghalen.
+    await blad.locator(`[data-bron-open="${bronnen()?.[1]?.id}"]`).click();
+    await blad.locator('[data-bron-weg]').click();
+    await expect.poll(() => bronnen()?.length).toBe(1);
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
   /* Schermen (besluit 121) en batterijen (besluit 122). */
   it('bedient een scherm vanuit Kamer, en meldt een lege batterij op Thuis', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });

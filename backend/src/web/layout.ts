@@ -20,6 +20,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SiteConfig } from '../core/model.js';
+import { controleerBronnen, type Warmtebron } from './warmte.js';
 
 export const LAYOUT_FILE = 'indeling.json';
 
@@ -99,6 +100,8 @@ export interface LayoutRoom {
   readonly buiten?: LayoutOutside;
   /** Delen van de kamer, als die ze heeft: keuken en zithoek (95). */
   readonly zones: readonly LayoutZone[];
+  /** Alleen binnen: wat er warmt en koelt (besluit 132). Weg is: nog niets vastgelegd. */
+  readonly bronnen?: readonly Warmtebron[];
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
   readonly regelzone: string | null;
   /** Het gebied in Home Assistant waar deze kamer uit kwam; daar komen nieuwe apparaten vandaan. */
@@ -273,7 +276,17 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       }
       if (me.length > 0) meten = me as string[];
     }
-    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}) });
+    // Wat er warmt en koelt (besluit 132); buiten valt het weg. Een apparaat dat
+    // het huis niet meer kent, valt weg, en daarmee op zon: anders kan de
+    // bewoner niets meer bewaren als er iets uit Home Assistant verdwijnt.
+    let bronnen: Warmtebron[] | undefined;
+    if (k['bronnen'] !== undefined && k['bronnen'] !== null && etage !== OUTSIDE_FLOOR) {
+      const c = controleerBronnen(id, k['bronnen']);
+      if (!c.ok) return { ok: false, reden: c.reden };
+      bronnen = c.bronnen.map((b) => (b.apparaat && !known.deviceIds.has(b.apparaat) ? (({ apparaat: _a, opZon: _z, ...rest }) => rest)(b) : b));
+      if (bronnen.length === 0) bronnen = undefined;
+    }
+    kamers.push({ id, naam, etage, zones, regelzone: rz as string | null, haGebied: ha as string | null, ...(buiten ? { buiten } : {}), ...(soort ? { soort } : {}), ...(meten ? { meten } : {}), ...(bronnen ? { bronnen } : {}) });
   }
 
   const appIn = b['apparaten'] ?? {};
@@ -350,11 +363,14 @@ export interface LayoutStoreOptions {
   readonly now?: () => number;
   /** Zoveel keer opslaan per tien minuten. */
   readonly perTenMinutes?: number;
+  /** Na het bewaren, bijvoorbeeld om de regeling bij te werken (besluit 132). */
+  readonly onSaved?: (layout: Layout) => void;
 }
 
 const WINDOW_MS = 10 * 60_000;
 
 export class LayoutStore {
+  readonly #onSaved: ((layout: Layout) => void) | undefined;
   readonly #path: string;
   readonly #known: () => LayoutKnown | null;
   readonly #now: () => number;
@@ -364,6 +380,7 @@ export class LayoutStore {
   #loaded = false;
 
   constructor(options: LayoutStoreOptions) {
+    this.#onSaved = options.onSaved;
     this.#path = join(options.logDir, LAYOUT_FILE);
     this.#known = options.known;
     this.#now = options.now ?? Date.now;
@@ -408,6 +425,7 @@ export class LayoutStore {
     await rename(tmp, this.#path);
     this.#current = checked.layout;
     this.#loaded = true;
+    this.#onSaved?.(checked.layout);
     return { ok: true, layout: checked.layout };
   }
 }

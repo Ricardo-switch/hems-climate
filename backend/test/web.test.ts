@@ -1107,6 +1107,7 @@ describe('licht bedienen (besluit 97)', () => {
     buiten: null,
     soort: null,
     soortGekozen: false,
+    bronnen: [],
   });
   const house: HouseReport = {
     indeling: 'eigen',

@@ -30,10 +30,17 @@
   .veld { position: relative; flex: 1; display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px; min-height: 0; }
   .links { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
   .podium { flex: 1; min-height: 0; margin: -6px -10px 0 -18px; }
-  .meer { padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgba(255, 255, 255, 0.03)); color: inherit; text-decoration: none; cursor: pointer; text-align: left; font: inherit; }
-  .meer .wanneer { color: var(--zon); font-size: 13px; font-weight: 700; }
-  .meer .bedrag { grid-row: 1 / 4; grid-column: 2; text-align: right; }
-  .meer .bedrag b { display: block; font-family: var(--kop); font-size: 28px; font-weight: 600; line-height: 1; color: var(--zon); }
+  /* Haal er meer uit (besluit 132): de drie beste ideeën, de grootste winst eerst. */
+  .meer { padding: 14px 16px 8px; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgba(255, 255, 255, 0.03)); }
+  .meer .wanneer { display: block; color: var(--zon); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .idee { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: inherit; text-decoration: none; }
+  .idee:first-of-type { border-top: 0; }
+  .idee b { display: block; font-size: 14px; font-weight: 600; }
+  .idee span { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .idee .wint { text-align: right; font-family: var(--kop); font-size: 17px; font-weight: 600; color: var(--zon); line-height: 1.1; }
+  .idee .wint small { display: block; font-family: var(--tekst, inherit); font-size: 11.5px; font-weight: 500; color: var(--gedempt); }
+  .idee .wint.zacht { font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
+  .idee:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 10px; }
 
   .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; min-height: 0; }
   .vak { padding: 12px 16px 6px; display: flex; flex-direction: column; min-height: 0; }
@@ -71,6 +78,15 @@
   .blad .som { padding: 14px 16px; border-radius: 18px; background: rgba(247, 181, 72, 0.07); border: 1px solid rgba(247, 181, 72, 0.25); }
   .blad .som .getal { font-family: var(--kop); font-size: 34px; font-weight: 600; line-height: 1.05; color: var(--zon); }
   .blad .som .getal small { font-size: 16px; color: var(--zacht); font-weight: 500; }
+  .blad .waar { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .kamerkaart { padding: 12px 14px; border-radius: 16px; background: rgba(110, 231, 183, 0.06); border: 1px solid rgba(110, 231, 183, 0.22); }
+  .kamerkaart b { display: block; font-size: 15px; }
+  .kamerkaart span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 2px; }
+  .kanook { padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; color: inherit; text-decoration: none; }
+  .kanook .wanneer { color: var(--zon); font-size: 13px; font-weight: 700; }
+  .kanook b { font-size: 16px; }
+  .kanook p { margin: 0; font-size: 14px; color: var(--zacht); }
+  .kanook .knop { grid-row: 1 / 4; grid-column: 2; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; }
   .blad .onder { margin-top: auto; display: flex; gap: 10px; align-items: center; }
   .blad .onder a { height: 42px; padding: 0 18px; border-radius: 14px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
   .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }

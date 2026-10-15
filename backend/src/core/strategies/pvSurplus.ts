@@ -70,7 +70,8 @@ export const pvSurplus: Strategy = {
 
       for (const actuatorId of derived.zone.actuatorIds) {
         const actuator = actuatorById(ctx.config, actuatorId);
-        if (actuator.role !== 'assist') continue;
+        // Assist, of een primary die ook op zon mag (besluit 132).
+        if (actuator.role !== 'assist' && actuator.onSurplus !== true) continue;
 
         // Niets te bufferen: geen voorstel. Een strategie drukt vraag uit; het
         // afbouwen bij afwezige vraag doet de arbiter, die als enige weet wat

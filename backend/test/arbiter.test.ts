@@ -932,3 +932,38 @@ describe('het stroombudget per fase (besluit 78)', () => {
     expect('phases' in d.explanation).toBe(false);
   });
 });
+
+/*
+ * Ook op zon (besluit 132): een primary die ook op zon mag, zoals elektrische
+ * vloerverwarming. Comfort regelt hem gewoon; is er zon over, dan warmt hij
+ * door tot boven het doel. Zonder de vlag verandert er niets.
+ */
+describe('een primary die ook op zon mag (besluit 132)', () => {
+  const opZon: SiteConfig = {
+    ...exampleSite,
+    actuators: exampleSite.actuators.map((a) => (a.id === 'badkamer' ? { ...a, onSurplus: true, power: { ...a.power, estimatedW: 1150 } } : a)),
+    zones: exampleSite.zones.map((z) => (z.id === 'badkamer' ? { ...z, buffering: { ...z.buffering, enabled: true, bandC: 1 } } : z)),
+  };
+  const decideWith = (config: SiteConfig, state: SystemState) => decide({ config, state, strategies: defaultStrategies() });
+  const voorBadkamer = (d: ReturnType<typeof decideWith>) => [...d.accepted, ...d.rejected.map((r) => r.intent)].filter((i) => i.actuatorId === 'badkamer');
+
+  it('warmt op zon door, ook als comfort tevreden is', () => {
+    const d = decideWith(opZon, buildState({ gridPowerW: -4000, bathroomC: 18.4 }));
+    const zon = d.accepted.find((i) => i.actuatorId === 'badkamer' && i.strategyId === 'pv-surplus');
+    expect(zon?.action).toBe('heat');
+    expect(zon?.budgetW).toBe(1150);
+    // Comfort zet hem niet uit: dan kwam de zon er nooit aan.
+    expect(voorBadkamer(d).some((i) => i.strategyId === 'comfort' && i.action === 'off')).toBe(false);
+  });
+
+  it('doet zonder zon over niets extra', () => {
+    const d = decideWith(opZon, buildState({ gridPowerW: 500, bathroomC: 18.4 }));
+    expect(d.accepted.some((i) => i.actuatorId === 'badkamer' && i.action === 'heat')).toBe(false);
+  });
+
+  it('verandert niets zonder de vlag', () => {
+    const d = decideWith(exampleSite, buildState({ gridPowerW: -4000, bathroomC: 18.4 }));
+    expect(voorBadkamer(d).some((i) => i.strategyId === 'pv-surplus')).toBe(false);
+    expect(voorBadkamer(d).some((i) => i.strategyId === 'comfort' && i.action === 'off')).toBe(true);
+  });
+});

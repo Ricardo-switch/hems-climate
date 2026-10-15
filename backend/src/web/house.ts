@@ -20,6 +20,7 @@
  * verborgen zijn: die is zelf de lamp (een armatuur, zie `collect`).
  */
 
+import type { Warmtebron } from './warmte.js';
 import { findCameras } from './camera.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
@@ -187,6 +188,8 @@ export interface HouseRoom {
   readonly soort: RoomType | null;
   /** Of de soort door de bewoner gekozen is, of een voorstel. */
   readonly soortGekozen: boolean;
+  /** Wat er warmt en koelt, zoals de bewoner het vastlegde (besluit 132); leeg als nog niets. */
+  readonly bronnen: readonly Warmtebron[];
 }
 
 export interface HouseScene {
@@ -1350,6 +1353,7 @@ export function buildHouse(
       buiten: k.buiten ?? (k.etage === 'buiten' || OUTSIDE.test(k.naam) ? outsideFromNames(k, devices) : null),
       soort: k.etage === OUTSIDE_FLOOR ? null : (k.soort ?? roomTypeFromNames(k, devices)),
       soortGekozen: k.etage !== OUTSIDE_FLOOR && k.soort != null,
+      bronnen: k.bronnen ?? [],
     };
   });
 

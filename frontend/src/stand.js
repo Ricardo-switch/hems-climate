@@ -100,6 +100,42 @@
     return { kwh: Math.round(kwh), euro: Math.round(kwh * na2027), maand: d.opbrengst.periode?.label?.split(' ')[0]?.toLowerCase() ?? 'deze maand', terugKwh: Math.round(s.terugKwh) };
   }
 
+  /*
+   * Waar het werkt (besluit 132): niet hoeveel er ontbreekt, maar in welke
+   * kamers. Wat er nog bij kan, is een idee, en staat apart.
+   */
+  const binnen = (d) => (d.huis?.etages ?? []).filter((e) => e.id !== 'buiten').flatMap((e) => e.ruimtes ?? []);
+  const klimaatIn = (r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat');
+  /** Een kamer met eigen warmte: een thermostaat, een radiatorknop of een slimme bron die geen airco is. */
+  const warmtPerKamer = (r) => klimaatIn(r).some((a) => a.radiatorknop || (a.klimaat?.kanVerwarmen && !a.klimaat?.kanKoelen)) || (r.bronnen ?? []).some((b) => b.aan !== 'hand' && b.soorten.some((x) => x !== 'airco'));
+  const aircoIn = (r) => klimaatIn(r).filter((a) => a.klimaat?.kanKoelen);
+  const opZonIn = (r) => (r.bronnen ?? []).filter((b) => b.opZon);
+  const warmteVan = (r) => [...(r.bronnen ?? []).filter((b) => b.soorten.some((x) => x !== 'airco')).map((b) => huismodel.bronNaam(b).toLowerCase()), ...klimaatIn(r).filter((a) => a.radiatorknop).map(() => 'radiatorknop')];
+
+  /**
+   * Wat je huis nog slimmer maakt (besluit 132), de grootste winst eerst: wat
+   * het al kan maar uit staat, dan wat je eigen meters uitrekenen, dan wat er
+   * te koop is. Een bedrag alleen als de meters het kunnen uitrekenen.
+   */
+  function ideeen(d) {
+    const uit = [];
+    for (const r of binnen(d)) {
+      for (const b of r.bronnen ?? []) {
+        if (huismodel.isElektrischSlim(b) && b.vermogenW && b.apparaat && !b.opZon) uit.push({ id: `zon-${r.id}`, soort: 'aan', titel: `${huismodel.metHoofdletter(huismodel.zoneNaam(r.zoneId ?? r.id, d.huis))} warm op zon`, zin: `de ${huismodel.bronNaam(b).toLowerCase()} kan het al`, wint: 'zonder iets te kopen', href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
+      }
+    }
+    const accu = batterijSom(d);
+    if (accu) uit.push({ id: 'batterij', soort: 'som', titel: 'Een thuisbatterij', zin: 'zon van de middag voor de avond', euro: accu.euro, wint: 'per maand, vanaf 2027', href: 'opbrengst.html' });
+    for (const r of binnen(d)) {
+      for (const b of r.bronnen ?? []) {
+        if (b.aan === 'hand' && b.soorten.some((x) => huismodel.ELEKTRISCH.has(x))) uit.push({ id: `slim-${r.id}-${b.id}`, soort: 'koop', titel: `De ${huismodel.bronNaam(b).toLowerCase()} in ${r.naam} slim`, zin: 'met een slimme stekker of module', wint: 'ook op zon', href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
+      }
+    }
+    const zonderMeting = binnen(d).filter((r) => r.temperatuurC == null && !huismodel.GANG.test(r.naam));
+    if (zonderMeting.length) uit.push({ id: 'meten', soort: 'koop', titel: zonderMeting.length === 1 ? `Meten in ${zonderMeting[0].naam}` : `Meten in ${zonderMeting.length} kamers`, zin: 'met een temperatuursensor per kamer', wint: 'zie waar het te warm wordt', href: 'indeling.html' });
+    return uit;
+  }
+
   /**
    * Alles wat Smart Climate voor je doet, per onderwerp, met een stand: werkt,
    * kijkt mee (de schaduw, besluit 64: tot het zelf regelt), leert nog, staat
@@ -114,13 +150,11 @@
     // Klimaat kijkt mee tot het zelf regelt (besluit 64); dan wordt het "werkt".
     const meekijk = 'kijkt';
     const kamers = d.state?.bewoner?.kamers ?? [];
-    const goed = kamers.filter((k) => k.soort === 'ok').length;
     const f = d.functies?.instellingen ?? d.functies?.voorstel;
     const e = d.energie?.instellingen;
     const p = e?.prijzen;
     const winter = d.divergence?.dataset?.seizoenen?.find((x) => x.seizoen === 'winter');
     const bewijs = winter ? `${winter.dagen} van ${winter.doel} winterdagen` : null;
-    const knoppen = alles.filter((x) => x.radiatorknop);
     const lampenAan = alles.filter((x) => x.soort === 'licht' && x.aan).length;
     const screens = alles.filter((x) => x.soort === 'screen');
     const leegB = (d.huis?.batterijen ?? []).filter((b) => b.pct < 10).length;
@@ -134,12 +168,19 @@
     const dagen = d.divergence?.dataset?.dagenOpgenomen != null ? Math.round(d.divergence.dataset.dagenOpgenomen) : null;
     const zonderMeter = d.energie && (e?.net?.afname ?? []).length === 0;
     const zonderPrijs = d.energie && !zonderMeter && p?.stroom == null;
+    // Waar het werkt (besluit 132).
+    const geregeld = binnen(d).filter((r) => r.zoneId);
+    const perKamer = binnen(d).filter(warmtPerKamer);
+    const opZonKamers = binnen(d).filter((r) => aircoIn(r).length || opZonIn(r).length);
+    const idee = ideeen(d);
 
     const lijst = [
       // Comfort
       {
-        id: 'temperatuur', groep: 'comfort', titel: 'Elke kamer op temperatuur', stand: acts.length ? meekijk : 'nodig', label: acts.length ? null : 'Airco of thermostaat nodig',
-        nu: kamers.length ? `${goed} van ${kamers.length} kamers goed${bewijs ? `, ${bewijs}` : ''}` : 'wat je wilt per kamer', href: 'comfort.html',
+        id: 'temperatuur', groep: 'comfort', titel: 'Op temperatuur', stand: acts.length ? meekijk : 'nodig', label: acts.length ? null : 'Airco of thermostaat nodig',
+        nu: geregeld.length ? huismodel.inKamers(geregeld.map((r) => r.naam)) : 'wat je wilt per kamer', href: 'comfort.html',
+        waar: geregeld.map((r) => ({ naam: r.naam, wat: kamers.find((k) => k.zoneId === r.zoneId)?.kort ?? (r.temperatuurC != null ? `${String(r.temperatuurC).replace('.', ',')}°` : '') })),
+        extra: bewijs ? `Meegekeken: ${bewijs}.` : null,
         wat: 'Elke kamer warm of koel genoeg, zoals jij het per dagdeel instelt.',
         zo: ['Per kamer verwarmen onder en koelen boven een temperatuur', 'De goedkoopste manier eerst: de zon, dan het net', 'Bij elk besluit staat waarom'],
         wanneer: ['Een kamer is kouder of warmer dan je comfort', 'Kijkt mee: het huis zegt wat het zou doen, tot het na 30 winterdagen zelf regelt'],
@@ -151,11 +192,13 @@
         wanneer: ['Na genoeg dagen met verschillend weer', 'Per kamer: een kamer die het al kent, doet al mee'],
       },
       {
-        id: 'perkamer', groep: 'comfort', titel: 'Verwarmen per kamer', stand: knoppen.length ? meekijk : 'nodig', label: knoppen.length ? null : 'Radiatorknoppen nodig',
-        nu: knoppen.length ? `${knoppen.length} radiatorknop${knoppen.length === 1 ? '' : 'pen'}` : 'een eigen temperatuur per kamer', href: 'indeling.html',
-        wat: 'Met slimme radiatorknoppen krijgt elke kamer zijn eigen temperatuur, ook met één cv-ketel.',
+        id: 'perkamer', groep: 'comfort', titel: 'Verwarmen per kamer', stand: perKamer.length ? meekijk : 'nodig', label: perKamer.length ? null : 'Radiatorknoppen nodig',
+        nu: perKamer.length ? huismodel.inKamers(perKamer.map((r) => r.naam)) : 'een eigen temperatuur per kamer', href: 'indeling.html',
+        waar: perKamer.map((r) => ({ naam: r.naam, wat: warmteVan(r).join(', ') || 'thermostaat' })),
+        idee: idee.find((x) => x.soort === 'koop' && x.id.startsWith('slim-')) ?? null,
+        wat: 'Met een eigen thermostaat, slimme radiatorknoppen of een slimme elektrische bron krijgt elke kamer zijn eigen temperatuur, ook met één cv-ketel.',
         zo: ['De knop houdt de radiator dicht in een kamer die warm genoeg is', 'De cv brandt alleen als een kamer warmte vraagt', 'Zigbee-knoppen zoals de Sonoff TRVZB werken via Home Assistant'],
-        wanneer: ['De knoppen zijn gekoppeld in Home Assistant', 'Je kiest bij Indeling welke kamer welke knop heeft'],
+        wanneer: ['Het apparaat is gekoppeld in Home Assistant', 'Bij Indeling, onder Verwarmen en koelen, staat per kamer wat er hangt'],
       },
       {
         id: 'gevoel', groep: 'comfort', titel: 'Leert wat jij prettig vindt', stand: 'werkt', nu: 'tik op Thuis hoe het voelt', href: 'thuis.html',
@@ -166,7 +209,9 @@
       // Zon en kosten
       ...(airco ? [{
         id: 'opzon', groep: 'zon', titel: 'Koelen en verwarmen op zon', stand: panelen ? meekijk : 'nodig', label: panelen ? null : 'Zonnepanelen nodig',
-        nu: panelen ? (kop ?? 'wacht op zon over') : 'airco op je eigen stroom', href: 'vandaag.html',
+        nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? 'wacht op zon over') : 'airco op je eigen stroom', href: 'vandaag.html',
+        waar: opZonKamers.map((r) => ({ naam: r.naam, wat: [...aircoIn(r).map((a) => (a.klimaat?.kanVerwarmen ? 'airco, koelt en verwarmt' : 'airco, koelt')), ...opZonIn(r).map((b) => `${huismodel.bronNaam(b).toLowerCase()}, warmt op zon`)].join(' · ') })),
+        idee: idee.find((x) => x.soort === 'aan') ?? null,
         wat: "De airco's draaien op de stroom van je eigen dak, als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.",
         zo: ['Elke paar minuten kijkt het huis hoeveel zon er over is', 'Is het genoeg, dan gaat de kamer die het meest nodig heeft voor', 'Wordt het bewolkt, dan stopt de airco rustig, niet meteen'],
         wanneer: ['Er is genoeg zon over voor een airco', 'Een kamer is warmer of kouder dan je comfort'],
@@ -262,5 +307,5 @@
     return lijst.map((x) => ({ ...x, label: x.label ?? LABEL[x.stand] ?? x.stand }));
   }
 
-  global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom };
+  global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom, ideeen };
 })(window);

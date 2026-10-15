@@ -103,6 +103,11 @@ export const comfort: Strategy = {
             budgetW: 0,
             reason: 'zone_above_setpoint',
           });
+        } else if (actuator.onSurplus === true) {
+          // Tevreden, maar hij mag ook op zon (besluit 132): niet uitzetten,
+          // anders claimt comfort hem en komt pv-surplus er nooit aan. Wil
+          // niemand hem, dan bouwt de arbiter hem af, net als een assist.
+          continue;
         } else {
           intents.push({
             strategyId: comfort.id,

@@ -68,6 +68,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [90. Alleen sturen wat afwijkt; slimmere timing moet eerst in de replay winnen](#90-alleen-sturen-wat-afwijkt-slimmere-timing-moet-eerst-in-de-replay-winnen)
 - [98. Uitstelbare apparaten: de droger draait op zon, via de arbiter](#98-uitstelbare-apparaten-de-droger-draait-op-zon-via-de-arbiter) — *aangevuld door 101*
 - [101. "Klaar voor" bij de droger is per keer te kiezen](#101-klaar-voor-bij-de-droger-is-per-keer-te-kiezen)
+- [132. Verwarmen en koelen per kamer, op zon, en waar het werkt](#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt)
 
 **Configuratie en onboarding**
 
@@ -5546,6 +5547,52 @@ inrichten in één keer); dit besluit is het eerste deel: wat nu niet klopt.
   niets"; Inrichten telt welkom en klaar niet meer mee als stap.
 - **Niet veranderd:** de zin op Thuis eindigt met een punt; op een scherm met
   weinig pixels leek die op een komma, tegen de g van "nodig" aan.
+
+---
+
+## 132. Verwarmen en koelen per kamer, op zon, en waar het werkt
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Gevraagd door de bewoner op 14 oktober 2026, met de schetsen
+`Wand-Indeling-Warmte` en `Wand-Huis-kan` in `design/app2`. Een kamer met een
+radiator, elektrische vloerverwarming of een infraroodpaneel was nergens in te
+stellen, en Wat je huis kan zei "werkt" bij iets dat in één van zes kamers
+werkte.
+
+*Besluit:*
+
+- **Per kamer, bij Indeling, onder Verwarmen en koelen:** wat er hangt
+  (radiator, vloerverwarming op water of elektrisch, infraroodpaneel,
+  elektrische kachel, airco; meer tegelijk als ze samen aangaan), hoe het
+  aangaat (thermostaat, slimme radiatorknop, slimme stekker of module, met de
+  hand), en welk apparaat het schakelt. Een vermogen alleen bij elektrisch dat
+  slim aangaat; met de hand heeft een vermogen of aansluiting geen zin, daar
+  staat een idee. Wat Home Assistant al kent (airco, radiatorknop, thermostaat),
+  staat er als gevonden; een thermostaat vraagt wat eraan hangt. Bewaard in de
+  indeling (`bronnen` per kamer); een apparaat dat het huis niet meer kent,
+  valt weg, zodat bewaren blijft werken.
+- **Op zon:** een elektrische bron met een vermogen, geschakeld door een
+  apparaat van de regeling in die kamer, mag opwarmen op zon als de bewoner
+  dat aanzet. Over de configuratie gelegd (`withHeatSources`): het apparaat
+  krijgt `onSurplus` en zijn vermogen, de zone buffert 1 graad boven het doel.
+  In de kern mag `pv-surplus` een primary met `onSurplus` doorladen zoals een
+  assist, en zet comfort hem niet uit als de kamer tevreden is (anders kwam de
+  zon er nooit aan); wil niemand hem, dan bouwt de arbiter hem af. Zonder de
+  vlag verandert er niets, en een test houdt dat vast. Een primary met
+  `onSurplus` moet een vermogen hebben, net als een assist. De regeling neemt
+  het meteen over na het bewaren van de indeling. Er gaat niets naar Home
+  Assistant; het blijft meekijken tot stap B.
+- **Wat je huis kan zegt waar het werkt:** "in Beneden en Zolder", niet hoeveel
+  er ontbreekt; meer dan drie kamers wordt "in 5 kamers". Het blad toont per
+  kamer wat er werkt, en een idee als er iets bij kan. Geen tellers, geen rood.
+- **Haal er meer uit:** de drie beste ideeën, de grootste winst eerst: wat het
+  huis al kan maar uit staat (een bron op zon), dan wat je meters uitrekenen
+  (een thuisbatterij), dan wat te koop is (een slimme stekker, sensoren in
+  kamers zonder meting). Een bedrag alleen als de eigen meters het uitrekenen.
+- **De tekening:** een thermostaat met vloerverwarming eraan tekent de vloer,
+  niet een radiator.
+- **Versie 0.10.0.**
 
 ---
 

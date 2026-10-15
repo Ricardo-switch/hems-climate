@@ -44,16 +44,15 @@ function vakken(lijst) {
   }).join('');
 }
 
-/** Wat er het meeste bij zou opleveren: een batterij met een som, anders het eerste dat iets nodig heeft. */
-function meer(lijst) {
-  const accu = lijst.find((x) => x.id === 'batterij' && x.som);
-  const x = accu ?? lijst.find((y) => y.stand === 'nodig');
-  if (!x) return '';
-  return `<button type="button" class="glas meer" data-open="${x.id}">
-    <span class="wanneer">Haal er meer uit</span><h2 class="kop-3" style="margin: 0">${esc(x.id === 'batterij' ? 'Een thuisbatterij' : x.titel)}</h2>
-    <p class="mini" style="margin: 2px 0 0">${esc(accu ? `Zon van de middag voor de avond. Gerekend met je meters van ${accu.som.maand}, vanaf 2027.` : x.wat)}</p>
-    ${accu ? `<div class="bedrag"><b>± € ${accu.som.euro}</b><span class="mini">per maand</span></div>` : ''}
-  </button>`;
+/**
+ * Haal er meer uit (besluit 132): de drie beste ideeën, de grootste winst
+ * eerst. Een bedrag alleen als je meters het uitrekenen; anders wat het doet.
+ */
+function meer() {
+  const lijst = stand.ideeen(d).slice(0, 3);
+  if (!lijst.length) return '';
+  const regel = (x) => `<a class="idee" href="${x.id === 'batterij' ? '#batterij' : x.href}"${x.id === 'batterij' ? ' data-open="batterij"' : ''}><div><b>${esc(x.titel)}</b><span>${esc(x.zin)}</span></div><div class="wint${x.euro != null ? '' : ' zacht'}">${x.euro != null ? `± € ${x.euro}<small>${esc(x.wint)}</small>` : esc(x.wint)}</div></a>`;
+  return `<div class="glas meer"><span class="wanneer">Haal er meer uit</span>${lijst.map(regel).join('')}</div>`;
 }
 
 function blad(x) {
@@ -63,8 +62,14 @@ function blad(x) {
     : '';
   // Wat er nodig is, koop je zelf; dan is er geen knop, behalve naar wat het nu oplevert.
   const ga = x.stand === 'mis' ? 'Invullen' : x.stand === 'uit' ? 'Aanzetten' : x.stand === 'nodig' ? (x.som ? 'Naar Opbrengst' : null) : 'Bekijken';
-  return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p></div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
-    <div class="nu"><span class="stand ${x.stand}">Nu</span>${esc(x.nu)}</div>
+  // Waar het werkt (besluit 132): per kamer, en wat er nog kan als idee, niet als tekort.
+  const waar = x.waar?.length
+    ? `<div><h4>Waar het werkt</h4><div class="waar">${x.waar.map((k) => `<div class="kamerkaart"><b>${esc(k.naam)}</b><span>${esc(k.wat)}</span></div>`).join('')}</div></div>`
+    : `<div class="nu"><span class="stand ${x.stand}">Nu</span>${esc(x.nu)}</div>`;
+  const idee = x.idee ? `<a class="kanook" href="${x.idee.href}"><span class="wanneer">Idee</span><b>${esc(x.idee.titel)}</b><p>${esc(x.idee.zin)}, ${esc(x.idee.wint)}.</p><span class="knop">${x.idee.soort === 'aan' ? 'Zet aan' : 'Bekijk'}</span></a>` : '';
+  return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p>${x.extra ? `<p class="mini" style="margin: 6px 0 0">${esc(x.extra)}</p>` : ''}</div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
+    ${waar}
+    ${idee}
     ${som}
     <div class="twee"><div><h4>Zo werkt het</h4><ul class="lijst">${x.zo.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div><div><h4>Wanneer het werkt</h4><ul class="lijst">${x.wanneer.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div></div>
     ${ga ? `<div class="onder"><a href="${x.href}">${ga}</a></div>` : ''}`;
@@ -111,7 +116,7 @@ function tekenNu() {
   const lijst = stand.kan(d);
   $$('[data-legenda]').forEach((el) => (el.innerHTML = legenda(lijst)));
   $$('[data-vakken]').forEach((el) => (el.innerHTML = vakken(lijst)));
-  $$('[data-meer]').forEach((el) => (el.innerHTML = meer(lijst)));
+  $$('[data-meer]').forEach((el) => (el.innerHTML = meer()));
   const x = lijst.find((y) => y.id === gekozen());
   $$('[data-blad]').forEach((el) => {
     el.hidden = !x;

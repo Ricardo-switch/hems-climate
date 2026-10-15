@@ -29,7 +29,8 @@ import {
   type HaRegistryEntity,
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
-import { LayoutStore, withLayoutNames } from './web/layout.js';
+import { LayoutStore, withLayoutNames, type Layout } from './web/layout.js';
+import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from './web/comfort.js';
 import { UitstelStore } from './web/uitstel.js';
@@ -391,17 +392,21 @@ async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; c
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
   const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
   const metMeten = withMeasurement(metAansluiting, layoutAtStart).raw;
-  const metComfort = withComfort(metMeten, comfort);
+  // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
+  const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
+  const metComfort = withComfort(metBronnen.raw, comfort);
   const checked = parseSiteConfig(metComfort.raw, { knownStrategies: strategies.ids });
   if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
-  return { ok: true, config: checked.config, toegevoegd: metComfort.toegevoegd };
+  return { ok: true, config: checked.config, toegevoegd: [...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
 }
-if (site && comfortStore?.current) {
+/** De indeling van nu, zodra de opslag er is; daarvoor die van het starten. */
+let layoutNu: (() => Layout | null) | null = null;
+if (site && (comfortStore?.current || (layoutAtStart?.kamers ?? []).some((k) => (k.bronnen ?? []).some((b) => b.opZon)))) {
   try {
-    const met = await configWithComfort(comfortStore.current);
+    const met = await configWithComfort(comfortStore?.current ?? null);
     if (met.ok) {
       site = { ...site, config: met.config };
-      for (const t of met.toegevoegd) console.log(`Uit de app (comfort.json): ${t}`);
+      for (const t of met.toegevoegd) console.log(`Uit de app (comfort.json, indeling.json): ${t}`);
     } else {
       console.warn(`Comfort uit de app niet overgenomen: ${met.reden}`);
     }
@@ -653,9 +658,24 @@ const layoutStore =
     ? new LayoutStore({
         logDir,
         known: () => (houseRegisters ? knownForLayout(siteConfig!, houseRegisters, houseStates) : null),
+        // Een bron die op zon mag (besluit 132): de regeling neemt het meteen over, net als comfort.
+        onSaved: () => void herlaadUitDeApp('de indeling'),
       })
     : null;
 void layoutStore?.load();
+layoutNu = () => layoutStore?.current ?? layoutAtStart;
+
+/** Alles uit de app opnieuw over de configuratie, en de regeling neemt het over als het kan. */
+async function herlaadUitDeApp(waarom: string): Promise<void> {
+  try {
+    const met = await configWithComfort(comfortStore?.current ?? null);
+    if (!met.ok) return console.warn(`Na ${waarom}: niet overgenomen, ${met.reden}`);
+    if (runner && !runner.setConfig(met.config)) return console.warn(`Na ${waarom}: de regeling neemt het over na de volgende start`);
+    siteConfig = met.config;
+  } catch {
+    // Niet te lezen: dan blijft het zoals het was.
+  }
+}
 
 /* De kleuren van de Hue-scènes, zoals de lampen ze lieten zien (besluit 100). */
 const sceneColors = logDir !== '' ? new SceneColorStore(logDir) : null;

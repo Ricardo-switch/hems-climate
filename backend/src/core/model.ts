@@ -128,6 +128,12 @@ export interface Actuator {
   readonly capabilities: ActuatorCapabilities;
   readonly power: ActuatorPower;
   readonly timing: ActuatorTiming;
+  /**
+   * Een primary die ook op zon over mag draaien (besluit 132), zoals
+   * elektrische vloerverwarming: comfort regelt hem gewoon, en is er zon over,
+   * dan mag `pv-surplus` hem net als een assist doorladen. Weg is nee.
+   */
+  readonly onSurplus?: boolean;
 }
 
 /**

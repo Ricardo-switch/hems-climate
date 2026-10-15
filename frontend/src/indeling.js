@@ -47,8 +47,9 @@ async function laadHuis() {
 function beginKeuze() {
   const d = concept();
   if (!d) return;
-  const wie = decodeURIComponent(location.hash.slice(1));
+  const [wie, tab] = decodeURIComponent(location.hash.slice(1)).split('/');
   const kamer = d.kamers.find((k) => k.id === wie);
+  if (tab === 'warmte') keuze.tab = 'warmte';
   keuze.etage = kamer?.etage ?? (d.kamers.some((k) => k.etage === 'bg') ? 'bg' : (d.kamers[0]?.etage ?? 'bg'));
   if (kamer) Object.assign(keuze, { kamer: kamer.id, blad: 'kamer' });
 }
@@ -262,7 +263,7 @@ function blad(d) {
   if (keuze.blad === 'verbergen' && keuze.apparaat) return verbergBlad(toestelVan(keuze.apparaat));
   if (keuze.blad === 'verborgen') return verborgenBlad(d);
   if (keuze.blad === 'weghalen' && k) return weghaalBlad(k);
-  if (keuze.blad === 'kamer' && k) return kamerBlad(d, k);
+  if (keuze.blad === 'kamer' && k) return keuze.tab === 'warmte' && !alleBuitenEtage(k) ? warmteBlad(d, k) : kamerBlad(d, k);
   if (keuze.blad === 'nieuweEtage') return nieuweEtageBlad(d);
   return etageBlad(d);
 }
@@ -302,6 +303,7 @@ function kamerBlad(d, k) {
   return `
     <button type="button" class="terug" data-naar-etage>‹ ${esc(etageNaam(d, k.etage))}</button>
     <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">gekozen</span></div>
+    ${kamerTabs(k)}
     <div><label class="label" for="kamernaam-${esc(k.id)}">Naam</label><input class="veld" id="kamernaam-${esc(k.id)}" data-actie="kamernaam" value="${esc(k.naam)}" maxlength="40"></div>
     ${buitenKeuze(k)}
     ${soortKeuze(k)}
@@ -315,6 +317,166 @@ function kamerBlad(d, k) {
     ${erbij.length ? `<div><label class="label" for="erbij-${esc(k.id)}">Apparaat toevoegen</label><select class="veld" id="erbij-${esc(k.id)}" data-actie="erbij"><option value="">Kies een apparaat…</option>${opties(erbij, '')}</select></div>` : ''}
     <div><label class="label" for="etage-${esc(k.id)}">Etage</label><select class="veld" id="etage-${esc(k.id)}" data-actie="kameretage">${opties(etages, k.etage)}</select></div>
     <button type="button" class="knop gevaar" data-naar-weghalen style="margin-top: auto">Kamer weghalen</button>`;
+}
+
+/* ------------------------------------------------- verwarmen en koelen (besluit 132) */
+
+/*
+ * Per kamer wat er warmt en koelt (schets Wand-Indeling-Warmte). Wat Home
+ * Assistant al weet, staat er als "gevonden": een airco, een radiatorknop, een
+ * thermostaat. Wat de bewoner toevoegt, gaat met de indeling mee. Een
+ * elektrische bron die slim aangaat, krijgt een vermogen en mag op zon; wat
+ * met de hand gaat, krijgt een idee in plaats van een tekort.
+ */
+const BRON_KEUZE = [['radiator', 'Radiator'], ['vloer', 'Vloerverwarming'], ['paneel', 'Infraroodpaneel'], ['kachel', 'Elektrische kachel'], ['airco', 'Airco']];
+const AAN_KEUZE = [['thermostaat', 'Met een thermostaat'], ['knop', 'Met een slimme radiatorknop'], ['stekker', 'Met een slimme stekker of module'], ['hand', 'Met de hand']];
+/** Het formulier van een bron, of null. */
+let bronVorm = null;
+
+function kamerTabs(k) {
+  if (alleBuitenEtage(k)) return '';
+  const tab = keuze.tab === 'warmte' ? 'warmte' : 'kamer';
+  return `<div class="kamertabs" role="tablist" aria-label="Kamer"><button type="button" role="tab" data-kamertab="kamer" aria-selected="${tab === 'kamer'}">Kamer</button><button type="button" role="tab" data-kamertab="warmte" aria-selected="${tab === 'warmte'}">Verwarmen en koelen</button></div>`;
+}
+
+/** De klimaatapparaten die het huis kent, met de sleutel waarmee een bron ernaar wijst. */
+function klimaatToestellen() {
+  return (huisData?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat').map((a) => ({ sleutel: a.actuatorId ?? a.id, a, kamer: r }))));
+}
+const toestelNaam = (sleutel) => klimaatToestellen().find((x) => x.sleutel === sleutel)?.a.naam ?? (huisData?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []).find((a) => a.id === sleutel)?.naam ?? sleutel;
+
+const ICOON_WARM = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M3 19h18M6 15c1.5-1.5 1.5-3 0-4.5S4.5 7.5 6 6M12 15c1.5-1.5 1.5-3 0-4.5S10.5 7.5 12 6M18 15c1.5-1.5 1.5-3 0-4.5S16.5 7.5 18 6"/></svg>';
+const ICOON_RADIATOR = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M6 4v16M10 4v16M14 4v16M18 4v16M4 8h16M4 16h16"/></svg>';
+const ICOON_KOEL = '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3M17 18c0-1.5 1-2 1-3"/></svg>';
+const ICOON_THERMO = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.8" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg>';
+
+function bronKaart(kop, wat, ikoon, koel, rechts, regels = '', attrs = '') {
+  return `<div class="bron"${attrs}><div class="boven"><span class="ikoon${koel ? ' koel' : ''}">${ikoon}</span><div><b>${esc(kop)}</b><span class="wat">${esc(wat)}</span></div>${rechts}</div>${regels}</div>`;
+}
+
+function warmteBlad(d, k) {
+  const kop = `<button type="button" class="terug" data-naar-etage>‹ ${esc(etageNaam(d, k.etage))}</button>
+    <div class="bladkop"><h2 class="kop-2">${esc(k.naam)}</h2><span class="mini">${ruimteVan(k.id)?.temperatuurC != null ? `${String(ruimteVan(k.id).temperatuurC).replace('.', ',')}°` : 'geen meter'}</span></div>
+    ${kamerTabs(k)}`;
+  if (bronVorm) return kop + bronFormulier(k);
+  const r = ruimteVan(k.id);
+  const bronnen = k.bronnen ?? [];
+  const vast = new Set(bronnen.map((b) => b.apparaat).filter(Boolean));
+  const gevonden = (r?.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !vast.has(a.actuatorId ?? a.id));
+  const slim = '<span class="stand slim">Slim</span>';
+  const kaarten = [];
+  for (const a of gevonden) {
+    const sleutel = a.actuatorId ?? a.id;
+    const via = `<div class="regelt">via <b>${esc(a.naam)}</b>${a.klimaat?.filter?.pct != null ? `<span class="mini">filter ${a.klimaat.filter.pct}%</span>` : ''}${a.radiatorknop?.klepPct != null ? `<span class="mini">klep ${a.radiatorknop.klepPct}%</span>` : ''}</div>`;
+    if (a.klimaat?.kanKoelen) kaarten.push(bronKaart('Airco', [a.klimaat.kanVerwarmen ? 'koelt, verwarmt' : 'koelt', a.klimaat.kanDrogen ? 'droogt' : null].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' en $1'), ICOON_KOEL, true, slim, via));
+    else if (a.radiatorknop) kaarten.push(bronKaart('Radiator met een slimme knop', 'op de cv', ICOON_RADIATOR, false, slim, via));
+    else kaarten.push(bronKaart('Thermostaat', 'gevonden in Home Assistant', ICOON_THERMO, false, slim, `${via}<button type="button" class="vraagknop" data-bron-nieuw="${esc(sleutel)}">Wat hangt eraan?</button>`));
+  }
+  for (const b of bronnen) {
+    const elektrisch = b.soorten.some((x) => huismodel.ELEKTRISCH.has(x));
+    const wat = b.aan === 'hand' ? 'gaat aan met de hand' : [elektrisch ? 'elektrisch' : b.soorten.includes('airco') ? null : 'op de cv', b.soorten.length > 1 ? 'gaan samen aan' : null].filter(Boolean).join(', ') || AAN_KEUZE.find(([v]) => v === b.aan)?.[1].toLowerCase();
+    const rechts = b.aan === 'hand' ? '<span class="stand hand">Met de hand</span>' : b.vermogenW ? `<span class="w">${b.vermogenW} W</span>` : slim;
+    const ikoon = b.soorten.includes('airco') ? ICOON_KOEL : b.soorten.includes('radiator') ? ICOON_RADIATOR : ICOON_WARM;
+    let regels = '';
+    if (b.apparaat) regels += `<div class="regelt">via <b>${esc(toestelNaam(b.apparaat))}</b>${b.aan !== 'hand' && b.vermogenW ? slim : ''}</div>`;
+    // Op zon (besluit 132): alleen elektrisch, met vermogen, en een apparaat van de regeling in deze kamer.
+    const vanRegeling = !!b.apparaat && !!r?.zoneId && (r?.apparaten ?? []).some((a) => a.soort === 'klimaat' && a.actuatorId === b.apparaat);
+    if (huismodel.isElektrischSlim(b) && b.vermogenW && vanRegeling) regels += `<div class="opzon">Mag opwarmen op zon<button type="button" class="schakel" role="switch" aria-checked="${!!b.opZon}" aria-label="Mag opwarmen op zon" data-bron-zon="${esc(b.id)}"></button></div>`;
+    if (b.aan === 'hand' && elektrisch) regels += '<div class="idee"><b>Idee: maak hem slim</b>Met een slimme stekker of een module achter de schakelaar kan hij opwarmen op zon. Dan hoort hij bij de regeling.</div>';
+    kaarten.push(bronKaart(huismodel.bronNaam(b), wat, ikoon, b.soorten.includes('airco'), rechts, regels, ` data-bron-open="${esc(b.id)}" role="button" tabindex="0"`));
+  }
+  const leeg = !kaarten.length ? '<p class="klein" style="margin: 0">Nog niets. Hangt er een radiator, vloerverwarming, een paneel of een airco? Voeg het toe; met de hand is ook goed.</p>' : '';
+  return `${kop}${kaarten.join('')}${leeg}
+    <button type="button" class="plus" data-bron-nieuw="">+ Iets toevoegen</button>
+    <p class="mini" style="margin: 0">Het huis rekent elektrische warmte mee voor je zekering, en ziet zo waarom een kamer opwarmt.</p>`;
+}
+
+function bronFormulier(k) {
+  const v = bronVorm;
+  const chip = (attr, waarde, tekst, aan) => `<button type="button" class="chip${aan ? ' aan' : ''}" data-${attr}="${esc(waarde)}" aria-pressed="${aan}">${esc(tekst)}</button>`;
+  const vloer = v.soorten.has('vloer');
+  const elektrisch = v.soorten.has('paneel') || v.soorten.has('kachel') || (vloer && v.vloer === 'elektrisch');
+  const aanOpties = AAN_KEUZE.filter(([w]) => w !== 'knop' || v.soorten.has('radiator'));
+  const toestellen = klimaatToestellen();
+  const welke = v.aan && v.aan !== 'hand'
+    ? `<div class="vraag"><label class="label" for="bron-apparaat">Welk apparaat? Uit Home Assistant.</label><select class="veld" id="bron-apparaat" data-bron-apparaat><option value="">Kies…</option>${toestellen.map((x) => `<option value="${esc(x.sleutel)}" ${x.sleutel === v.apparaat ? 'selected' : ''}>${esc(x.a.naam)} (${esc(x.kamer.naam)})</option>`).join('')}</select></div>`
+    : '';
+  const vermogen = elektrisch && v.aan && v.aan !== 'hand'
+    ? `<div class="vraag"><label class="label" for="bron-w">${v.soorten.size > 1 ? 'Samen hoeveel' : 'Hoeveel'} vermogen? Het staat op het typeplaatje.</label><div class="invoer"><input id="bron-w" inputmode="numeric" data-bron-w value="${v.vermogenW ?? ''}" placeholder="bijvoorbeeld 800"><span>watt</span></div><span class="mini">Zo weet het huis wanneer er genoeg zon voor is.</span></div>`
+    : '';
+  return `<div class="bladkop" style="margin-top: 4px"><h3 class="kop-3" style="margin: 0">${v.id ? 'Aanpassen' : 'Iets toevoegen'}</h3></div>
+    <div class="vraag"><span class="label">Wat hangt er? Kies er meer als ze samen aangaan.</span><div class="chips">${BRON_KEUZE.map(([w, t]) => chip('bron-soort', w, t, v.soorten.has(w))).join('')}</div></div>
+    ${vloer ? `<div class="vraag"><span class="label">De vloerverwarming is</span><div class="chips">${chip('bron-vloer', 'water', 'Op water, van de cv', v.vloer !== 'elektrisch')}${chip('bron-vloer', 'elektrisch', 'Elektrisch', v.vloer === 'elektrisch')}</div></div>` : ''}
+    ${v.soorten.size ? `<div class="vraag"><span class="label">Hoe gaat het aan?</span><div class="chips">${aanOpties.map(([w, t]) => chip('bron-aan', w, t, v.aan === w)).join('')}</div></div>` : ''}
+    ${welke}
+    ${vermogen}
+    <div class="knoppenrij" style="margin-top: auto">${v.id ? '<button type="button" class="knop gevaar" data-bron-weg>Weghalen</button>' : ''}<button type="button" class="knop" data-bron-annuleer>Annuleren</button><button type="button" class="knop knop-licht" data-bron-bewaar ${v.soorten.size && v.aan ? '' : 'disabled'}>${v.id ? 'Bewaren' : 'Toevoegen'}</button></div>`;
+}
+
+/** Het formulier naar een bron zoals de dienst hem bewaart. */
+function bronUitVorm(k) {
+  const v = bronVorm;
+  const soorten = [...v.soorten].map((x) => (x === 'vloer' && v.vloer === 'elektrisch' ? 'vloer-elektrisch' : x));
+  const w = Number(String(document.querySelector(`${app.zicht()} [data-bron-w]`)?.value ?? v.vermogenW ?? '').replace(/\D/g, ''));
+  const b = { id: v.id ?? idVan(soorten.join('-'), new Set((k.bronnen ?? []).map((x) => x.id))), soorten, aan: v.aan };
+  if (v.aan !== 'hand' && v.apparaat) b.apparaat = v.apparaat;
+  if (huismodel.isElektrischSlim(b) && w >= 50) b.vermogenW = Math.round(w);
+  if (v.opZon && b.vermogenW) b.opZon = true;
+  return b;
+}
+
+async function bronKlik(t) {
+  const next = concept();
+  const k = next?.kamers.find((x) => x.id === keuze.kamer);
+  if (!k) return false;
+  if (t.dataset.kamertab) {
+    bronVorm = null;
+    kies({ tab: t.dataset.kamertab });
+  } else if (t.dataset.bronNieuw !== undefined) {
+    const a = t.dataset.bronNieuw;
+    bronVorm = { id: null, soorten: new Set(), vloer: 'elektrisch', aan: a ? 'thermostaat' : null, apparaat: a || null, vermogenW: null };
+    teken();
+  } else if (t.dataset.bronOpen) {
+    const b = (k.bronnen ?? []).find((x) => x.id === t.dataset.bronOpen);
+    if (!b) return true;
+    bronVorm = { id: b.id, soorten: new Set(b.soorten.map((x) => (x === 'vloer-elektrisch' ? 'vloer' : x))), vloer: b.soorten.includes('vloer-elektrisch') ? 'elektrisch' : 'water', aan: b.aan, apparaat: b.apparaat ?? null, vermogenW: b.vermogenW ?? null, opZon: !!b.opZon };
+    teken();
+  } else if (t.dataset.bronSoort) {
+    const w = t.dataset.bronSoort;
+    if (bronVorm.soorten.has(w)) bronVorm.soorten.delete(w);
+    else bronVorm.soorten.add(w);
+    if (bronVorm.aan === 'knop' && !bronVorm.soorten.has('radiator')) bronVorm.aan = null;
+    teken();
+  } else if (t.dataset.bronVloer) {
+    bronVorm.vloer = t.dataset.bronVloer;
+    teken();
+  } else if (t.dataset.bronAan) {
+    bronVorm.vermogenW = Number(document.querySelector(`${app.zicht()} [data-bron-w]`)?.value) || bronVorm.vermogenW;
+    bronVorm.aan = t.dataset.bronAan;
+    teken();
+  } else if (t.hasAttribute('data-bron-annuleer')) {
+    bronVorm = null;
+    teken();
+  } else if (t.hasAttribute('data-bron-bewaar')) {
+    const b = bronUitVorm(k);
+    k.bronnen = [...(k.bronnen ?? []).filter((x) => x.id !== b.id), b];
+    const naam = huismodel.bronNaam(b);
+    if (await bewaar(next, `${naam} bewaard.`)) bronVorm = null;
+    teken();
+  } else if (t.hasAttribute('data-bron-weg')) {
+    const id = bronVorm?.id;
+    k.bronnen = (k.bronnen ?? []).filter((x) => x.id !== id);
+    if (!k.bronnen.length) delete k.bronnen;
+    if (await bewaar(next, 'Weggehaald.')) bronVorm = null;
+    teken();
+  } else if (t.dataset.bronZon) {
+    const b = (k.bronnen ?? []).find((x) => x.id === t.dataset.bronZon);
+    if (!b) return true;
+    b.opZon = !b.opZon;
+    if (!b.opZon) delete b.opZon;
+    await bewaar(next, b.opZon ? 'Mag opwarmen op zon. Het huis rekent er meteen mee.' : 'Niet meer op zon.');
+  } else return false;
+  return true;
 }
 
 /*
@@ -449,6 +611,7 @@ function bak() {
 /* ------------------------------------------------------------ doen */
 
 function kies(wat) {
+  if ('kamer' in wat && wat.kamer !== keuze.kamer) bronVorm = null;
   Object.assign(keuze, wat);
   teken();
 }
@@ -473,10 +636,13 @@ document.addEventListener('click', async (e) => {
     netGesleept = false;
     return;
   }
-  const t = e.target.closest('button, [data-kamer]');
+  const t = e.target.closest('button, [data-kamer], [data-bron-open]');
   if (!t || t.disabled) return;
   const d = concept();
   if (!d) return;
+  // Een knop in een bronkaart gaat voor de kaart zelf.
+  if (t.matches('[data-bron-open]') && e.target.closest('button')) return;
+  if (await bronKlik(t)) return;
   if (t.dataset.etage) kies({ etage: t.dataset.etage, kamer: null, apparaat: null, blad: 'etage' });
   else if (t.dataset.kamer) kiesKamer(t.dataset.kamer);
   else if (t.dataset.app) kies({ apparaat: t.dataset.app, blad: 'apparaat' });
@@ -601,6 +767,15 @@ async function kamerErbij(naam) {
 
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  // Het apparaat van een bron: pas bewaard bij Toevoegen (besluit 132).
+  if (t.hasAttribute('data-bron-apparaat') && bronVorm) {
+    bronVorm.apparaat = t.value || null;
+    return;
+  }
+  if (t.hasAttribute('data-bron-w') && bronVorm) {
+    bronVorm.vermogenW = Number(t.value.replace(/\D/g, '')) || null;
+    return;
+  }
   const next = concept();
   if (!next) return;
   const k = next.kamers.find((x) => x.id === keuze.kamer);
@@ -649,6 +824,11 @@ document.addEventListener('change', async (e) => {
 // Enter in "Nieuwe kamer" voegt hem toe.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.matches?.('[data-nieuwe-kamer]')) void kamerErbij(e.target.value.trim());
+  // Een bronkaart opent met Enter of spatie, net als een knop.
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-bron-open]')) {
+    e.preventDefault();
+    e.target.click();
+  }
 });
 
 /* ------------------------------------------------------------ slepen */

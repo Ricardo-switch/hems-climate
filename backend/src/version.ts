@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.9.0';
+export const VERSIE = '0.10.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -21,6 +21,17 @@ export interface Nieuw {
 
 /** De nieuwste versie eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.10.0',
+    datum: '2026-10-15',
+    punten: [
+      'Bij Indeling per kamer wat er warmt en koelt: radiator, vloerverwarming, infraroodpaneel, kachel of airco',
+      'Wat Home Assistant al weet, staat er al; een thermostaat vraagt wat eraan hangt',
+      'Een elektrische bron met een vermogen mag opwarmen op zon',
+      'Wat je huis kan zegt in welke kamers iets werkt',
+      'Haal er meer uit: de drie beste ideeën voor je huis',
+    ],
+  },
   {
     versie: '0.9.0',
     datum: '2026-10-14',

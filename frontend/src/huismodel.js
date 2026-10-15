@@ -39,6 +39,21 @@
     const binnen = (etages ?? []).filter((e) => e.id !== 'buiten');
     return [...binnen.reverse(), ...(etages ?? []).filter((e) => e.id === 'buiten')];
   }
+  /** Wat er in een kamer warmt of koelt (besluit 132), in woorden. */
+  const BRON_NAAM = { radiator: 'radiator', vloer: 'vloerverwarming', 'vloer-elektrisch': 'elektrische vloerverwarming', paneel: 'infraroodpaneel', kachel: 'elektrische kachel', airco: 'airco' };
+  const ELEKTRISCH = new Set(['vloer-elektrisch', 'paneel', 'kachel']);
+  /** "Vloerverwarming en infraroodpaneel". */
+  function bronNaam(b) {
+    const w = b.soorten.map((s) => BRON_NAAM[s] ?? s);
+    const t = w.length > 1 ? `${w.slice(0, -1).join(', ')} en ${w.at(-1)}` : w[0] ?? '';
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+  const isElektrischSlim = (b) => b.aan !== 'hand' && b.soorten.some((s) => ELEKTRISCH.has(s));
+  /** "in Beneden en Zolder", of "in 5 kamers" als het er meer dan drie zijn. */
+  function inKamers(namen) {
+    if (namen.length > 3) return `in ${namen.length} kamers`;
+    return `in ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} en ${namen.at(-1)}` : namen[0] ?? ''}`;
+  }
   /** Met een hoofdletter, aan het begin van een zin. */
   const metHoofdletter = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -63,12 +78,22 @@
     // Uitstelbare apparaten (besluit 98): de droger draait zichtbaar in zijn kamer.
     const witgoed = apps.filter((a) => a.soort === 'apparaat');
     const apparaten = [];
+    // Wat de bewoner bij de kamer vastlegde (besluit 132): een thermostaat met
+    // vloerverwarming eraan tekent de vloer, niet een radiator.
+    const bronnen = r.bronnen ?? [];
+    const bronVan = (a) => bronnen.find((b) => b.apparaat && (b.apparaat === a.actuatorId || b.apparaat === a.id));
+    const vloer = (b) => b.soorten.some((x) => x === 'vloer' || x === 'vloer-elektrisch');
     for (const a of klimaat) {
       const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
       const warm = /verwarmt|warmt voor/.test(a.klimaat?.actie ?? '');
+      const b = bronVan(a);
       if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
-      else apparaten.push({ soort: 'radiator', aan });
+      else if (b && !b.soorten.includes('radiator')) {
+        if (vloer(b)) apparaten.push({ soort: 'vloer', aan });
+      } else apparaten.push({ soort: 'radiator', aan });
     }
+    if (bronnen.some((b) => vloer(b) && !klimaat.some((a) => bronVan(a) === b)) && !apparaten.some((x) => x.soort === 'vloer')) apparaten.push({ soort: 'vloer', aan: false });
+    if (bronnen.some((b) => b.soorten.includes('radiator')) && !apparaten.some((x) => x.soort === 'radiator')) apparaten.push({ soort: 'radiator', aan: false });
     // Hooguit twee lampen in beeld: wat aan is eerst.
     [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
     for (const a of witgoed.slice(0, 2)) apparaten.push({ soort: /vaat/i.test(a.naam) ? 'vaatwasser' : /was/i.test(a.naam) && !/droog|droger/i.test(a.naam) ? 'wasmachine' : 'droger', aan: a.aan });
@@ -160,5 +185,5 @@
     return { oprit, tuin, terras, balkon, voortuin };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metHoofdletter, etagesNaast, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
 })(window);
