@@ -791,7 +791,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(() => sleutel.isVisible(), { timeout: 10_000 }).toBe(true);
     await sleutel.click();
     const open = wand.locator('.onderhoudtekst');
-    expect(await open.textContent()).toContain('Batterij bijna leeg: Knop bank, 7%');
+    expect(await open.textContent()).toContain(`${kamer.naam}: batterij 7%`);
     expect(await open.locator('a', { hasText: 'Bekijk' }).getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(kamer.id)}/batterij-d-knop`);
     // De hele lijst blijft achter het weer.
     await p.evaluate("location.hash = '#batterijen'; location.reload()");
@@ -1320,24 +1320,43 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * De assistent in ontwerp 2 (schets Wand-Assistent): een vraag uit het adres
    * wordt meteen gesteld, en de knoppen stellen een volgende.
    */
-  it('stelt de vraag uit het adres meteen, en een volgende met een knop', async () => {
-    const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+  it('stelt de vraag uit het adres meteen, praat, en vraagt of het nog iets kan doen (besluit 141)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    // Het begin: een begroeting en vragen die nu ergens over gaan.
+    await p.goto(`${baseUrl}/assistent.html`);
+    await p.locator('#wand [data-zegt]', { hasText: 'Waarmee kan ik je helpen?' }).waitFor({ timeout: 10_000 });
+    await p.locator('#wand [data-sug]').first().waitFor();
+    expect(await p.locator('#wand [data-sug]').count()).toBeGreaterThanOrEqual(3);
+    expect(await p.locator('#wand [data-suggesties]').textContent()).not.toMatch(/de beneden|de Beneden/);
+    await shot('as-begin');
+    // Een vraag uit het adres: hij praat, met de woorden die meekomen; Stop maakt het af.
     await p.goto(`${baseUrl}/assistent.html#nu`);
-    await p.locator('#wand .jij', { hasText: 'Wat doe je nu?' }).waitFor();
-    await p.locator('#wand .antwoord').filter({ hasNotText: 'Even kijken' }).waitFor();
-    await p.locator('#wand [data-vragen] button', { hasText: 'Hoeveel zon vandaag?' }).click();
-    await p.locator('#wand .jij', { hasText: 'Hoeveel zon vandaag?' }).waitFor();
-    await p.locator('#wand .antwoord').filter({ hasNotText: 'Even kijken' }).waitFor();
+    await p.locator('#wand .jij', { hasText: 'Wat doe je nu?' }).waitFor({ timeout: 10_000 });
+    await p.locator('body[data-stand="praat"]').waitFor();
+    await shot('as-praat');
+    await p.locator('#wand [data-stop]').click();
+    await p.locator('#wand .klein-zegt', { hasText: 'Kan ik je nog ergens mee helpen?' }).waitFor();
+    // Een vervolgvraag, en dan "Nee, dank je".
+    await p.locator('#wand [data-sug]').first().click();
+    await p.locator('body[data-stand="praat"]').waitFor();
+    await p.locator('#wand [data-stop]').click();
+    await p.locator('#wand [data-eerder]', { hasText: 'Wat doe je nu?' }).waitFor();
     // Geen ruwe codes bij de feiten.
     expect(await p.locator('#wand .feiten').textContent().catch(() => '')).not.toMatch(/[a-z][A-Z]|_/);
+    await shot('as-verder');
+    await p.locator('#wand [data-nee]').click();
+    await p.locator('#wand [data-zegt]', { hasText: 'Ik ben er als je me nodig hebt' }).waitFor();
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     expect(fouten).toEqual([]);
     await context.close();
-  }, 20_000);
+  }, 40_000);
 
   /* Een vraag in eigen woorden (besluit 115): over de app komt er een knop bij. */
   /*
@@ -1442,6 +1461,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await veld.fill('Waar vul ik de prijzen in?');
     await veld.press('Enter');
     await p.locator('#wand .jij', { hasText: 'Waar vul ik de prijzen in?' }).waitFor();
+    await p.locator('#wand [data-stop]').click();
     const knop = p.locator('#wand .verder a', { hasText: 'Naar Contract en prijzen' });
     await knop.waitFor();
     expect(await knop.getAttribute('href')).toBe('energie.html#prijzen');
@@ -1449,8 +1469,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Niets herkend: voorbeelden om op te tikken.
     await veld.fill('banaan');
     await veld.press('Enter');
-    await p.locator('#wand .verder button', { hasText: 'Hoe pas ik de indeling aan?' }).click();
-    await p.locator('#wand .verder a', { hasText: 'Naar Indeling' }).waitFor();
+    await p.locator('#wand [data-stop]').click();
+    await p.locator('#wand [data-sug]', { hasText: 'Waar vul ik de prijzen in?' }).click();
+    await p.locator('#wand [data-stop]').click();
+    await p.locator('#wand .verder a', { hasText: 'Naar Contract en prijzen' }).waitFor();
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
     expect(fouten).toEqual([]);

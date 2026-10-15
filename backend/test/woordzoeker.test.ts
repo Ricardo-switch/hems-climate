@@ -87,4 +87,8 @@ describe('woordzoeker', () => {
   it('leest niet verder dan de grens', () => {
     expect(begrijp(`${'x '.repeat(MAX_TEKST)} prijzen`, config, 'nl').soort).toBe('onbekend');
   });
+  it('herkent wat het huis vandaag deed, en hoe warm het overal is (besluit 141)', () => {
+    expect(begrijp('Wat heb je vandaag gedaan?', exampleSite, 'nl')).toEqual({ soort: 'huis', vraag: { kind: 'vandaag' } });
+    expect(begrijp('Hoe warm is het overal?', exampleSite, 'nl')).toEqual({ soort: 'huis', vraag: { kind: 'warm' } });
+  });
 });

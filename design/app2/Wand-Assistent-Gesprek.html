@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Assistent, het gesprek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De assistent als gesprek (schets, 15 oktober 2026). Het huis praat zelf.
+   * Vier standen: #begin (zonder hash) begroet en vraagt hoe het kan helpen;
+   * #praat leest een antwoord voor, met de bol die meeleeft, de woorden die
+   * meekomen en de kamer die oplicht; #verder vraagt of het nog iets kan doen;
+   * #luistert is voor later, met "Hé huis". Elk getal komt uit wat het huis
+   * meet en besluit; er is geen taalmodel en niets gaat het huis uit. De stem
+   * is Piper, lokaal in Home Assistant. Cijfers van 15 oktober, kwart voor vier.
+   */
+  :root { --ring: rgba(143, 196, 255, 0.55); }
+  main { position: relative; padding: 0; overflow: hidden; }
+
+  /* Het huis rechts, gedimd; de kamer waar het over gaat licht op. */
+  .podium { position: absolute; right: 0; top: 150px; width: 400px; height: 470px; opacity: 0.55; transition: opacity 0.6s; }
+  body[data-toon='praat'] .podium, body[data-toon='verder'] .podium { opacity: 1; }
+
+  /* De bol: het hart van de pagina. */
+  .kern { position: absolute; left: 66px; top: 120px; width: 300px; height: 300px; display: grid; place-items: center; }
+  .bol { width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 60px rgba(111, 170, 255, 0.55), 0 0 140px rgba(143, 134, 255, 0.35), inset -18px -24px 40px rgba(20, 10, 70, 0.55); position: relative; z-index: 2; }
+  .ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(143, 196, 255, 0.18); }
+  .ring.r2 { inset: 22px; border-color: rgba(143, 196, 255, 0.28); }
+  .ring.r3 { inset: 44px; border: 1px dashed rgba(143, 196, 255, 0.3); }
+  .boog { position: absolute; inset: 10px; border-radius: 50%; border: 2px solid transparent; border-top-color: var(--ring); border-right-color: rgba(143, 196, 255, 0.15); animation: draai 9s linear infinite; }
+  .boog.b2 { inset: 32px; border-top-color: transparent; border-left-color: rgba(183, 176, 255, 0.6); animation-duration: 14s; animation-direction: reverse; }
+  @keyframes draai { to { transform: rotate(360deg); } }
+  /* Tijdens het praten: de stem als stralen rond de bol. */
+  .golf { position: absolute; inset: 0; z-index: 1; opacity: 0; }
+  body[data-toon='praat'] .golf { opacity: 1; }
+  body[data-toon='praat'] .bol { transform: scale(1.08); box-shadow: 0 0 80px rgba(111, 170, 255, 0.75), 0 0 200px rgba(143, 134, 255, 0.5), inset -18px -24px 40px rgba(20, 10, 70, 0.55); }
+  body[data-toon='luistert'] .bol { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 70px rgba(110, 231, 183, 0.55), 0 0 160px rgba(110, 231, 183, 0.25), inset -18px -24px 40px rgba(5, 40, 40, 0.55); }
+  body[data-toon='luistert'] .golf { opacity: 1; filter: hue-rotate(-60deg); }
+  @media (prefers-reduced-motion: reduce) { .boog { animation: none; } }
+
+  /* Wat het zegt. */
+  .spraak { position: absolute; left: 390px; top: 112px; width: 430px; }
+  .wie { font-size: 14px; font-weight: 600; color: #B7B0FF; display: flex; align-items: center; gap: 8px; }
+  .wie i { width: 8px; height: 8px; border-radius: 50%; background: #B7B0FF; display: block; box-shadow: 0 0 10px #B7B0FF; }
+  .zegt { font-family: var(--kop); font-weight: 600; font-size: 34px; line-height: 1.12; letter-spacing: -0.01em; margin: 10px 0 0; }
+  .zegt .nog { color: rgba(238, 243, 247, 0.28); }
+  .zegt .nu { color: #fff; text-shadow: 0 0 18px rgba(143, 196, 255, 0.6); }
+  .zegt .getal { color: var(--zon); }
+  .klein-zegt { margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: var(--zacht); max-width: 46ch; }
+
+  /* Waar het op gebaseerd is: de feiten, klein onder het antwoord. */
+  .feiten { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .feit { display: flex; flex-direction: column; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); min-width: 108px; }
+  .feit b { font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .feit span { font-size: 12px; color: var(--gedempt); }
+
+  /* Vragen die nu ergens over gaan. */
+  .suggesties { position: absolute; left: 66px; right: 430px; bottom: 126px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sug { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgba(12, 20, 34, 0.72); border: 1px solid var(--glas-rand); backdrop-filter: blur(10px); }
+  .sug .ik { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgba(111, 211, 255, 0.14); }
+  .sug .ik.zon { background: rgba(247, 181, 72, 0.16); }
+  .sug .ik.violet { background: rgba(143, 134, 255, 0.18); }
+  .sug .ik svg { width: 19px; height: 19px; }
+  .sug b { display: block; font-size: 15px; }
+  .sug span { font-size: 12.5px; color: var(--gedempt); }
+  .sug.nee { grid-template-columns: 1fr; background: transparent; border-style: dashed; color: var(--zacht); text-align: center; font-weight: 600; }
+
+  /* De balk onderaan: typen, of praten. */
+  .balkje { position: absolute; left: 66px; right: 26px; bottom: 26px; height: 74px; border-radius: 24px; display: flex; align-items: center; gap: 12px; padding: 0 12px 0 22px; background: rgba(9, 15, 28, 0.7); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); }
+  .balkje .typ { flex: 1; font-size: 17px; color: var(--gedempt); }
+  .mic { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); position: relative; }
+  .mic svg { width: 24px; height: 24px; }
+  .mic small { position: absolute; top: -24px; right: 0; white-space: nowrap; font-size: 11px; color: var(--gedempt); }
+  body[data-toon='luistert'] .mic { background: var(--mint); }
+  .stem { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); font-size: 13.5px; font-weight: 600; color: var(--zacht); }
+  .stem i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); display: block; }
+  .stop { display: grid; height: 44px; padding: 0 18px; border-radius: 999px; background: var(--tekst); color: var(--inkt); font-weight: 700; display: grid; place-items: center; font-size: 14.5px; }
+
+  [data-stand] { display: none !important; }
+  body[data-toon='begin'] [data-stand~='begin'], body[data-toon='praat'] [data-stand~='praat'], body[data-toon='verder'] [data-stand~='verder'], body[data-toon='luistert'] [data-stand~='luistert'] { display: revert !important; }
+  body[data-toon='begin'] .suggesties[data-stand~='begin'], body[data-toon='verder'] .suggesties[data-stand~='verder'] { display: grid !important; }
+  body[data-toon] .feiten[data-stand] { display: none !important; }
+  body[data-toon='praat'] .feiten[data-stand~='praat'], body[data-toon='verder'] .feiten[data-stand~='verder'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="podium" id="podium"></div>
+
+    <div class="kern" aria-hidden="true">
+      <svg class="golf" viewBox="0 0 300 300" id="golf"></svg>
+      <div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div>
+      <div class="boog"></div><div class="boog b2"></div>
+      <div class="bol"></div>
+    </div>
+
+    <!-- Het begin: begroeten, en vragen hoe het kan helpen. -->
+    <div class="spraak" data-stand="begin">
+      <span class="wie"><i></i>Je huis</span>
+      <p class="zegt">Goedemiddag. Waarmee kan ik je helpen?</p>
+      <p class="klein-zegt">Er draait nu niets. De wasruimte wacht op zon: er is 0,5 kW over, de airco heeft 0,8 nodig.</p>
+    </div>
+
+    <!-- Praten: de woorden komen mee, het getal in zonnekleur. -->
+    <div class="spraak" data-stand="praat">
+      <span class="wie"><i></i>Je huis, aan het praten</span>
+      <p class="zegt"><span class="nu">De wasruimte wacht op zon.</span> <span class="nog">De airco heeft <span class="getal">0,8 kW</span> nodig en er is nu 0,5 over. Rond half vijf zakt de zon weg; dan wacht hij tot morgen.</span></p>
+    </div>
+
+    <!-- Verder: het antwoord staat, en het huis vraagt of het nog iets kan doen. -->
+    <div class="spraak" data-stand="verder">
+      <span class="wie"><i></i>Je huis</span>
+      <p class="zegt" style="font-size: 30px">De wasruimte wacht op zon. De airco heeft <span class="getal">0,8 kW</span> nodig en er is nu 0,5 over.</p>
+      <p class="klein-zegt" style="color: var(--tekst); font-weight: 600">Kan ik je nog ergens mee helpen?</p>
+    </div>
+
+    <!-- Luisteren, later: "Hé huis". -->
+    <div class="spraak" data-stand="luistert">
+      <span class="wie"><i style="background: var(--mint); box-shadow: 0 0 10px var(--mint)"></i>Ik luister</span>
+      <p class="zegt"><span class="nu">Waarom is het warm</span> <span class="nog">op zolder…</span></p>
+      <p class="klein-zegt">Komt met "Hé huis": je stem blijft in huis, via Whisper en een wekwoord in Home Assistant.</p>
+    </div>
+
+    <div class="spraak" style="top: 400px" data-stand="praat verder">
+      <div class="feiten">
+        <div class="feit"><b>0,5 kW</b><span>zon over, nu</span></div>
+        <div class="feit"><b>0,8 kW</b><span>wat de airco vraagt</span></div>
+        <div class="feit"><b>16:30</b><span>daarna te weinig zon</span></div>
+      </div>
+    </div>
+
+    <!-- Vragen die nu ergens over gaan, uit wat het huis meet. -->
+    <div class="suggesties" data-stand="begin">
+      <div class="sug"><span class="ik zon"><svg viewBox="0 0 24 24" fill="none" stroke="#F7B548" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg></span><div><b>Waarom wacht de wasruimte?</b><span>0,5 van de 0,8 kW zon</span></div></div>
+      <div class="sug"><span class="ik zon"><svg viewBox="0 0 24 24" fill="none" stroke="#F7B548" stroke-width="1.9" stroke-linecap="round"><path d="M4 18h16M7 14l3-4 3 3 4-6"/></svg></span><div><b>Hoeveel zon komt er nog?</b><span>7,8 kWh, verwacht 8,9</span></div></div>
+      <div class="sug"><span class="ik violet"><svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><div><b>Wat deed je vandaag?</b><span>13 keer iets besloten</span></div></div>
+      <div class="sug"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.9" stroke-linecap="round"><path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/></svg></span><div><b>Hoe warm is het overal?</b><span>19,0 tot 21,7°</span></div></div>
+    </div>
+
+    <div class="suggesties" data-stand="verder">
+      <div class="sug"><span class="ik violet"><svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><div><b>Wanneer begint hij dan?</b><span>uit de verwachting van morgen</span></div></div>
+      <div class="sug"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.9" stroke-linecap="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span><div><b>Wat kost koelen van het net?</b><span>met je stroomprijs</span></div></div>
+      <div class="sug"><span class="ik zon"><svg viewBox="0 0 24 24" fill="none" stroke="#F7B548" stroke-width="1.9" stroke-linecap="round"><path d="M4 18h16M7 14l3-4 3 3 4-6"/></svg></span><div><b>Hoe is het morgen?</b><span>zonkans en verwachting</span></div></div>
+      <div class="sug nee">Nee, dank je</div>
+    </div>
+
+    <div class="balkje">
+      <span class="typ" data-stand="begin verder">Typ een vraag, of tik op de microfoon</span>
+      <span class="typ" data-stand="praat" style="color: var(--zacht)">Tik ergens om te stoppen</span>
+      <span class="typ" data-stand="luistert" style="color: var(--mint)">Ik luister…</span>
+      <span data-stand="begin verder"><span class="stem"><i></i>Voorlezen aan</span></span>
+      <span data-stand="praat"><span class="stop">Stop</span></span>
+      <span class="mic"><small data-stand="begin verder">komt met Hé huis</small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'assistent');
+  const toon = { '#praat': 'praat', '#verder': 'verder', '#luistert': 'luistert' }[location.hash] ?? 'begin';
+  document.body.dataset.toon = toon;
+  // De stem als stralen rond de bol: in de app volgt de lengte wat Piper zegt.
+  const golf = document.getElementById('golf');
+  const stralen = [];
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2;
+    const l = 14 + Math.abs(Math.sin(i * 0.9) * 26 + Math.sin(i * 0.37) * 14);
+    const r0 = 92;
+    stralen.push(`<line x1="${150 + Math.cos(a) * r0}" y1="${150 + Math.sin(a) * r0}" x2="${150 + Math.cos(a) * (r0 + l)}" y2="${150 + Math.sin(a) * (r0 + l)}" stroke="url(#gl)" stroke-width="2.6" stroke-linecap="round"/>`);
+  }
+  golf.innerHTML = `<defs><linearGradient id="gl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fc4ff"/><stop offset="1" stop-color="#b7b0ff"/></linearGradient></defs>${stralen.join('')}`;
+  const lichtOp = toon === 'praat' || toon === 'verder';
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Je huis, met de wasruimte opgelicht.',
+    tijd: 'dag', wolken: 0.3,
+    zon: { stand: 0.72, hoogte: 0.5, aandeel: 0.5, panelen: 12 },
+    etages: [
+      { naam: 'Begane grond', kamers: [{ naam: 'Beneden', soort: 'woonkamer', gewicht: 1.6, temp: '21,7°', apparaten: [{ soort: 'airco', aan: false }, { soort: 'radiator', aan: false }] }, { naam: 'Hal', gewicht: 0.6, temp: '20,3°', apparaten: [] }] },
+      { naam: '1e verdieping', kamers: [{ naam: 'Badkamer', soort: 'badkamer', gewicht: 0.9, temp: '19,0°', apparaten: [] }, { naam: 'Hobbykamer', gewicht: 0.8, apparaten: [] }, { naam: 'Slaapkamer', gewicht: 0.8, apparaten: [] }] },
+      { naam: 'Zolder', dak: true, kamers: [{ naam: 'Wasruimte', gewicht: 1.4, temp: '21,7°', stand: lichtOp ? 'wacht' : null, doel: lichtOp, apparaten: [{ soort: 'airco', aan: false }, { soort: 'droger', aan: false }] }] },
+    ],
+    buitenunit: { aan: false }, net: true, stromen: lichtOp ? [{ van: 'zon', naar: 'kamer:Wasruimte', sterkte: 0.4 }] : [], labels: [],
+  }, { breedte: 400, hoogte: 470, marge: 0.03, zoom: 1 });
+</script>
+</body>
+</html>

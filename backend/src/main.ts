@@ -11,6 +11,7 @@
  * op stuklopen.
  */
 
+import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { NIEUW, VERSIE } from './version.js';
@@ -997,6 +998,8 @@ if (webPort != null) {
         }
       : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
+    // De stem van het huis (besluit 141): Piper in Home Assistant; er wordt niets geschakeld.
+    stem: new Stem({ base: httpBase(url!), token: token!, stemmen: () => [...allStates.keys()].filter((id) => id.startsWith('tts.')) }),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {
       base: httpBase(url!),

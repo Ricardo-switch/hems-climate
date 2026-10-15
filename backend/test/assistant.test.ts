@@ -296,6 +296,47 @@ describe('zon', () => {
   it('zegt het als er geen dag wordt bijgehouden', () => {
     expect(askNl({ kind: 'zon' }).antwoord).toContain('houd ik geen dag bij');
   });
+
+  it('zegt wat er nog verwacht wordt, uit het weer (besluit 141)', () => {
+    const met = ask({ kind: 'zon' }, { config, snapshot: view(), today, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 6.4, voorafKwh: 6 } });
+    expect(met.antwoord).toContain('Er komt vandaag naar verwachting nog 1,1 kWh bij, samen 6,4 kWh.');
+    const straks = ask({ kind: 'straks' }, { config, snapshot: view(), today: null, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 5.3, voorafKwh: null } });
+    expect(straks.antwoord).toContain('Er komt vandaag naar verwachting weinig zon meer bij.');
+    expect(straks.antwoord).not.toContain('weersverwachting heb ik nog niet');
+  });
+});
+
+describe('vandaag en hoe warm (besluit 141)', () => {
+  const span = (van: string, tot: string) => ({ vanMs: Date.parse(van), totMs: Date.parse(tot), actie: 'cool' });
+  const today: TodayReport = {
+    vanMs: AT - 13 * 3_600_000,
+    totMs: AT,
+    kwartieren: [],
+    zonWh: 7800,
+    netAfWh: 3600,
+    netTerugWh: 3744,
+    apparaten: [
+      { actuatorId: 'ac-zolder', smartClimate: [span('2026-10-05T10:00:00Z', '2026-10-05T11:30:00Z')], huidig: [span('2026-10-05T10:00:00Z', '2026-10-05T10:25:00Z')] },
+      { actuatorId: 'nest', smartClimate: [], huidig: [] },
+    ],
+    uitstelbaar: [],
+    zones: [],
+    besluiten: Array.from({ length: 13 }, () => ({}) as TodayReport['besluiten'][number]),
+  };
+
+  it('vat samen wat het huis vandaag deed', () => {
+    const a = askNl({ kind: 'vandaag' }, view(), { today });
+    expect(a.antwoord).toBe(
+      'Vandaag besloot ik 13 keer iets. Ik zou de airco zolder 1,5 uur hebben laten draaien. Echt aan stond de airco zolder 25 minuten. ' +
+        'Je dak leverde 7,8 kWh, en 52% daarvan gebruikte je zelf. Ik kijk nog alleen mee en schakel zelf niets.',
+    );
+  });
+
+  it('zegt hoe warm het overal is', () => {
+    const a = askNl({ kind: 'warm' });
+    expect(a.antwoord).toMatch(/^.+ is het \d+(,\d)?°/);
+    expect(a.feiten.length).toBeGreaterThan(0);
+  });
 });
 
 describe('doe (fase 1: alleen zeggen wat hij zou doen)', () => {
@@ -387,6 +428,8 @@ describe('elk getal heeft een bron, in elke toestand', () => {
         { kind: 'nu' },
         { kind: 'straks' },
         { kind: 'zon' },
+        { kind: 'vandaag' },
+        { kind: 'warm' },
         ...config.zones.map((z) => ({ kind: 'waarom' as const, kamer: z.name })),
         ...config.zones.map((z) => ({
           kind: 'doe' as const,

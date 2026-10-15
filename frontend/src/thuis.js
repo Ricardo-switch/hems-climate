@@ -183,8 +183,8 @@ function tekenNu() {
  */
 let onderhoudOpen = false;
 function onderhoudLijst() {
-  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10).map((b) => ({ tekst: `Batterij bijna leeg: ${b.naam}, ${b.pct}%`, href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
-  const vol = (huisData?.filters ?? []).map((f) => ({ tekst: `Filter schoonmaken: ${f.naam}, ${f.pct}%`, href: `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}` }));
+  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10).map((b) => ({ tekst: `${b.kamer ?? b.naam}: batterij ${b.pct}%`, lang: `Batterij bijna leeg: ${b.naam}, ${b.pct}%`, href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
+  const vol = (huisData?.filters ?? []).map((f) => ({ tekst: `${f.naam}: filter ${f.pct}%`, lang: `Filter schoonmaken: ${f.naam}, ${f.pct}%`, href: `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}` }));
   return [...leeg, ...vol];
 }
 function tekenOnderhoud() {
@@ -195,7 +195,7 @@ function tekenOnderhoud() {
   $$('[data-onderhoud]').forEach((el) => {
     el.hidden = lijst.length === 0;
     if (!lijst.length) return;
-    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="Onderhoud: ${lijst.length} ${lijst.length === 1 ? 'ding' : 'dingen'} te doen"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>${lijst.length > 1 ? `<b>${lijst.length}</b>` : ''}</button>${onderhoudOpen ? `<span class="pil onderhoudtekst"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst}, en nog ${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
+    el.innerHTML = `<button type="button" class="pil onderhoudknop" data-onderhoud-knop aria-expanded="${onderhoudOpen}" aria-label="Onderhoud: ${lijst.length} ${lijst.length === 1 ? 'ding' : 'dingen'} te doen"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg>${lijst.length > 1 ? `<b>${lijst.length}</b>` : ''}</button>${onderhoudOpen ? `<span class="pil onderhoudtekst" title="${esc(lijst.map((x) => x.lang).join(', '))}"><span>${esc(lijst.length === 1 ? eerste.tekst : `${eerste.tekst} +${lijst.length - 1}`)}</span>${bekijk}</span>` : ''}`;
   });
 }
 

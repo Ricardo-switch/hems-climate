@@ -219,6 +219,9 @@ verwijzing bestaat.
   één vraag per stap, alles meteen bewaard ([139]).
 - **Vandaag** is de dag in de tijd; **Apparaten** is het nu, per apparaat een
   kaart met wat het doet, vraagt en vandaag op zon deed ([140]).
+- **De assistent** is een gesprek: het huis begroet je, leest zijn antwoord
+  voor met Piper uit Home Assistant, en vraagt of het nog iets kan doen
+  ([141]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -408,4 +411,5 @@ verwijzing bestaat.
 [138]: DECISIONS.md#138-de-regeling-per-kamer-in-de-app
 [139]: DECISIONS.md#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding
 [140]: DECISIONS.md#140-vandaag-is-de-tijd-apparaten-is-het-nu
+[141]: DECISIONS.md#141-de-assistent-als-gesprek-met-een-stem
 <!-- links:einde -->

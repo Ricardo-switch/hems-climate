@@ -318,7 +318,7 @@ function kamerIn(config: SiteConfig, tekst: string): string | null {
 export function voorbeelden(config: SiteConfig, lang: Lang): string[] {
   const kamer = config.zones[0]?.name.toLowerCase();
   return lang === 'nl'
-    ? ['Wat doe je nu?', ...(kamer ? [`Waarom de ${kamer}?`] : []), 'Waar vul ik de prijzen in?', 'Hoe pas ik de indeling aan?']
+    ? ['Wat doe je nu?', 'Hoe warm is het overal?', 'Wat deed je vandaag?', 'Waar vul ik de prijzen in?']
     : ['What are you doing now?', ...(kamer ? [`Why the ${kamer}?`] : []), 'Where do I enter prices?', 'How do I change the layout?'];
 }
 
@@ -351,6 +351,11 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   if (straks) huis.push({ vraag: { kind: 'straks' }, score: 2 * straks });
   const zon = telt(ZON, tekst, los);
   if (zon) huis.push({ vraag: { kind: 'zon' }, score: 2 * zon });
+  // Wat het huis vandaag deed, en hoe warm het overal is (besluit 141).
+  const vandaag = telt(['vandaag gedaan', 'wat deed je', 'heb je gedaan', 'vandaag besloten', 'besloten', 'today did', 'what did you do'], tekst, los);
+  if (vandaag) huis.push({ vraag: { kind: 'vandaag' }, score: 3 * vandaag });
+  const overal = telt(['overal', 'alle kamers', 'elke kamer', 'in huis', 'everywhere', 'every room'], tekst, los);
+  if (overal && kamer == null && telt(['warm', 'koud', 'temperatuur', 'graden', 'temperature'], tekst, los)) huis.push({ vraag: { kind: 'warm' }, score: 5 });
   const nu = telt(NU, tekst, los);
   // "Waarom staat de airco aan?" zonder kamer gaat over wat hij nu doet.
   if (nu || (waarom && kamer == null)) huis.push({ vraag: { kind: 'nu' }, score: Math.max(1, 2 * nu - 1) });

@@ -55,6 +55,7 @@ import { controleer as controleerFuncties, functiesVoorstel, volledig, type Func
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
 import type { MeldingenStore } from './meldingen.js';
+import { MAX_ZEG, type Stem } from './stem.js';
 import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
@@ -183,6 +184,8 @@ export interface WebOptions {
    * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
    */
   readonly camera?: { readonly base: string; readonly token: string; readonly ids: () => ReadonlySet<string> };
+  /** De stem van het huis (besluit 141): Piper in Home Assistant. Zonder dit zegt de assistent niets hardop. */
+  readonly stem?: Stem;
   /**
    * Camera's en de deurbel als instelling (besluit 109): wat er gevonden is, en
    * wat de bewoner vastlegde. Zonder dit bestaat `/api/functies` niet.
@@ -758,6 +761,32 @@ export class WebServer {
      * antwoord in woorden uit het laatste besluit. Leest alleen, ook voor
      * "zet de zolder op 21"; de muur hierboven blijft staan.
      */
+    // De stem (besluit 141): het geluid van een zin, of welke stem er is.
+    if (path === '/api/stem') {
+      const stem = this.#options.stem;
+      const tekst = url.searchParams.get('tekst');
+      if (tekst == null) {
+        sendJson(res, 200, { stem: stem?.naam ?? null });
+        return;
+      }
+      if (stem == null || stem.naam == null) {
+        sendJson(res, 404, { fout: 'er is geen lokale stem in Home Assistant' });
+        return;
+      }
+      if (tekst.trim() === '' || tekst.length > MAX_ZEG) {
+        sendJson(res, 400, { fout: `tekst moet 1 tot ${MAX_ZEG} tekens zijn` });
+        return;
+      }
+      try {
+        const g = await stem.zeg(tekst);
+        res.writeHead(200, { 'content-type': g.type, 'content-length': g.data.length, 'cache-control': 'private, max-age=3600' });
+        res.end(g.data);
+      } catch (error) {
+        sendJson(res, 502, { fout: (error as Error).message });
+      }
+      return;
+    }
+
     if (path === '/api/vraag') {
       const config = this.#config();
       if (config == null) {
@@ -794,7 +823,7 @@ export class WebServer {
         parsed = p;
       }
       let today = null;
-      if (parsed.question.kind === 'zon' && logDir != null) {
+      if ((parsed.question.kind === 'zon' || parsed.question.kind === 'vandaag') && logDir != null) {
         this.#today ??= new TodayCache(logDir, config);
         try {
           today = await this.#today.get();
@@ -810,10 +839,17 @@ export class WebServer {
         const r = sunReport(config.geometry, location, now, startOfLocalDay(now, config.timezone));
         zoninval = { boven: r.zon.boven, gevels: r.gevels.filter((g) => g.inDeZon).map((g) => g.naam) };
       }
+      // De weersverwachting bij de zon en straks (besluit 141); uit dezelfde bron als Vandaag.
+      let weer = null;
+      if (parsed.question.kind === 'zon' || parsed.question.kind === 'straks') {
+        const w = await this.weatherNow().catch(() => null);
+        if (w && 'vandaag' in w) weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh };
+      }
       sendJson(
         res,
         200,
         ask(parsed.question, {
+          weer,
           zoninval,
           config,
           snapshot: this.#options.latest(),

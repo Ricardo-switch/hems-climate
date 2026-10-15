@@ -147,6 +147,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [136. Meldingen in de app](#136-meldingen-in-de-app)
 - [137. Verwacht naast echt: of de zonverwachting klopte](#137-verwacht-naast-echt-of-de-zonverwachting-klopte)
 - [140. Vandaag is de tijd, Apparaten is het nu](#140-vandaag-is-de-tijd-apparaten-is-het-nu)
+- [141. De assistent als gesprek, met een stem](#141-de-assistent-als-gesprek-met-een-stem)
 
 **Veiligheid**
 
@@ -5938,6 +5939,51 @@ allebei de zon van de dag met daaronder per apparaat wanneer het draaide.
   het huis, zodat de kaarten rechts tot onderaan lopen. Het getal bij de bel
   telt alleen wat je nog niet zag: open je de meldingen, dan verdwijnt het; de
   melding zelf blijft staan tot hij opgelost of weggehaald is.
+
+---
+
+## 141. De assistent als gesprek, met een stem
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 15 oktober 2026, met de schets
+`Wand-Assistent-Gesprek` in `design/app2`: de pagina waar de visie ligt, met
+het gevoel van een assistent die er is, maar lokaal en alleen uit de eigen
+gegevens. Dit is het begin; "Hé huis" komt later.
+
+*Besluit:*
+
+- **Het huis praat zelf,** in de ik-vorm (de assistent mag "ik" zeggen). Het
+  begroet je naar de tijd van de dag en vraagt waarmee het kan helpen; na een
+  antwoord vraagt het of het nog iets kan doen, met drie vervolgvragen die bij
+  dat antwoord horen en "Nee, dank je".
+- **Vragen die nu ergens over gaan,** uit wat het huis meet: een kamer die op
+  zon wacht ("Waarom wacht de wasruimte?", met "0,5 van de 0,8 kW zon"), een
+  kamer die koelt of verwarmt, de zon, de dag en de temperatuur. Geen vaste
+  lijst meer met "Waarom de beneden?".
+- **Twee nieuwe vragen:** "Wat deed je vandaag?" (hoe vaak het huis iets
+  besloot, wat het zou laten draaien, wat echt aan stond, wat het dak
+  leverde) en "Hoe warm is het overal?". De zon en straks noemen nu ook wat
+  er volgens het weer nog komt. "Waarom wacht…" zegt nu ook wat er op zon nog
+  zou gebeuren en waarom dat niet kan. Elk getal heeft nog steeds een bron
+  (besluit 88); de test daarvan dekt de nieuwe vragen.
+- **De stem is Piper,** lokaal in Home Assistant. De dienst vraagt Home
+  Assistant om het geluid van een zin (`/api/tts_get_url`) en geeft het door
+  (`/api/stem`). Dat is geen schakelen: er verandert niets in het huis en er
+  gaat niets naar buiten. Een stem uit de cloud kiest de app nooit. Zonder
+  Piper: een Nederlandse stem van het apparaat zelf, en anders alleen tekst.
+  Hardop kan pas na een tik; dat bepaalt de browser. Voorlezen staat aan en
+  is uit te zetten.
+- **Het effect:** de bol krijgt stralen die meeslaan op de echte stem; de
+  woorden komen mee terwijl het huis praat, getallen in zonnekleur; de kamer
+  waar het over gaat licht op in het huis, bij de zon de panelen. Tikken
+  stopt het praten. Wie minder beweging wil, krijgt geen stralen.
+- **Eén antwoord tegelijk,** groot; eerdere vragen staan klein bovenaan om
+  terug te halen.
+- **Luisteren** ("Hé huis") komt pas met Whisper en een wekwoord in Home
+  Assistant. De luisterfunctie van de browser stuurt je stem naar buiten;
+  die gebruikt de app niet. De microfoon staat er, maar doet nog niets.
+- **Versie 0.20.0.**
 
 ---
 

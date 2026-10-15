@@ -36,7 +36,7 @@ export interface DecisionView {
 export const LANGS = ['nl', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
 
-export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe'] as const;
+export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
 export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit';
@@ -46,6 +46,10 @@ export type Question =
   | { readonly kind: 'waarom'; readonly kamer: string }
   | { readonly kind: 'straks' }
   | { readonly kind: 'zon' }
+  /** Wat het huis vandaag deed (besluit 141). */
+  | { readonly kind: 'vandaag' }
+  /** Hoe warm het overal is (besluit 141). */
+  | { readonly kind: 'warm' }
   | {
       readonly kind: 'doe';
       readonly kamer: string;
@@ -83,6 +87,12 @@ export interface AskContext {
    * niets over.
    */
   readonly zoninval?: { readonly boven: boolean; readonly gevels: readonly string[] } | null;
+  /**
+   * Wat het weer verwacht voor de zon van vandaag (besluit 141): wat er al
+   * was, wat er samen verwacht wordt, en wat de dag ervoor werd verwacht. Weg
+   * of null zonder weerbron.
+   */
+  readonly weer?: { readonly opgewektKwh: number; readonly verwachtKwh: number | null; readonly voorafKwh: number | null } | null;
 }
 
 /** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
@@ -94,6 +104,22 @@ function facadeSentence(zoninval: AskContext['zoninval'], lang: Lang): string | 
   }
   const joined = list.join(lang === 'nl' ? ' en ' : ' and ');
   return lang === 'nl' ? `De zon staat nu op ${joined}.` : `The sun is on ${joined} right now.`;
+}
+
+/** "a, b en c". */
+function joinList(items: readonly string[], lang: Lang): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} ${lang === 'nl' ? 'en' : 'and'} ${items.at(-1)}`;
+}
+
+/** Wat er vandaag nog aan zon komt, uit de weersverwachting (besluit 141). */
+function restSentence(f: Facts, weer: AskContext['weer'], lang: Lang): string | null {
+  if (weer == null || weer.verwachtKwh == null) return null;
+  const rest = Math.max(0, weer.verwachtKwh - weer.opgewektKwh);
+  if (rest < 0.05) return lang === 'nl' ? 'Er komt vandaag naar verwachting weinig zon meer bij.' : 'Little more sun is expected today.';
+  const r = f.energy('weer.rest', rest * 1000);
+  const tot = f.energy('weer.verwacht', weer.verwachtKwh * 1000);
+  return lang === 'nl' ? `Er komt vandaag naar verwachting nog ${r} bij, samen ${tot}.` : `Another ${r} is expected today, ${tot} in total.`;
 }
 
 /* ---------------------------------------------------------------- vragen */
@@ -136,6 +162,8 @@ export function parseQuestion(params: URLSearchParams): Parsed {
     case 'nu':
     case 'straks':
     case 'zon':
+    case 'vandaag':
+    case 'warm':
       return { ok: true, lang, question: { kind: v } };
     case 'waarom':
       if (kamer === '') return { ok: false, reden: 'waarom vraagt een kamer' };
@@ -217,6 +245,23 @@ class Facts {
   energy(bron: string, wh: number): string {
     const a = Math.abs(wh);
     return this.#add(bron, a < 1000 ? `${Math.round(a / 10) * 10} Wh` : `${this.#num(a / 1000)} kWh`);
+  }
+
+  /** Een aantal, zoals "13 keer". */
+  count(bron: string, n: number): string {
+    return this.#add(bron, String(Math.round(n)));
+  }
+
+  pct(bron: string, p: number): string {
+    return this.#add(bron, `${Math.round(p)}%`);
+  }
+
+  /** Een duur in gewone woorden: "25 minuten", "1,5 uur". */
+  duration(bron: string, ms: number): string {
+    const min = Math.round(ms / 60_000);
+    const nl = this.#lang === 'nl';
+    if (min < 60) return this.#add(bron, `${Math.max(1, min)} ${nl ? 'minuten' : 'minutes'}`);
+    return this.#add(bron, `${this.#num(min / 60)} ${nl ? 'uur' : 'hours'}`);
   }
 
   time(bron: string, ms: number): string {
@@ -340,7 +385,7 @@ const WORDS = {
  * Mylan" en "Nest (beneden)" blijft "Nest (beneden)". Een merk of een naam
  * houdt zijn hoofdletter.
  */
-const COMMON = /^(airco|thermostaat|zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|zone|lamp|screen|zonnescherm|droger|wasmachine|vaatwasser|verwarming|vloerverwarming|radiator|ventilatie|warmtepomp|boiler|voorgevel|achtergevel|zijgevel|gevel)\b/i;
+const COMMON = /^(airco|thermostaat|zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone|lamp|screen|zonnescherm|droger|wasmachine|vaatwasser|verwarming|vloerverwarming|radiator|ventilatie|warmtepomp|boiler|voorgevel|achtergevel|zijgevel|gevel)\b/i;
 
 export function inSentence(name: string): string {
   return COMMON.test(name) ? name.charAt(0).toLowerCase() + name.slice(1) : name;
@@ -575,12 +620,26 @@ function statusOf(
         : h
           ? `and the heating target is ${h}`
           : `and the cooling target is ${c}`;
+  // Op zon zou het nog verder mogen (besluit 133), maar er is te weinig over (besluit 141).
+  const opZon = snap.rejected.find((r) => r.intent.zoneId === zone.id && (r.blockedBy === 'insufficient_power_budget' || r.blockedBy === 'start_threshold_not_met') && r.intent.budgetW > 0 && (r.intent.action === 'cool' || r.intent.action === 'heat'));
+  let zon = '';
+  if (opZon) {
+    const a = opZon.intent.action as 'cool' | 'heat';
+    const doel = opZon.intent.setpointC != null ? f.temp(`zone.${zone.id}.opZonDoel`, opZon.intent.setpointC) : null;
+    const vraagt = f.power(`opzon.${opZon.intent.actuatorId}.vraagt`, opZon.intent.budgetW);
+    const over = Math.max(0, e.budget?.surplusW ?? 0);
+    const rest = over >= 50 ? f.power('zon.over', over) : null;
+    zon =
+      lang === 'nl'
+        ? ` Op zon zou ik nog ${w.infinitive[a]}${doel ? ` tot ${doel}` : ''}, maar daar is nu te weinig zon voor: dat vraagt ${vraagt}${rest ? ` en er is ${rest} over` : ' en er is niets over'}.`
+        : ` On solar I would ${w.infinitive[a]}${doel ? ` to ${doel}` : ''}, but there is too little sun for it now: it needs ${vraagt}${rest ? ` and ${rest} is spare` : ' and nothing is spare'}.`;
+  }
   return {
     kind: 'ok',
     zin:
       lang === 'nl'
-        ? `${cap(zn)} heeft niets nodig: het is er ${t}, ${band}.`
-        : `${cap(zn)} needs nothing: it is ${t}, ${band}.`,
+        ? `${cap(zn)} heeft niets nodig: het is er ${t}, ${band}.${zon}`
+        : `${cap(zn)} needs nothing: it is ${t}, ${band}.${zon}`,
   };
 }
 
@@ -766,10 +825,12 @@ export function ask(question: Question, ctx: AskContext): Answer {
           );
         }
       }
+      const rest = restSentence(f, ctx.weer, lang);
       out.push(
-        lang === 'nl'
-          ? 'Wat de zon gaat doen, weet ik nog niet: een weersverwachting heb ik nog niet.'
-          : 'I do not know yet what the sun will do: I have no weather forecast yet.',
+        rest ??
+          (lang === 'nl'
+            ? 'Wat de zon gaat doen, weet ik nog niet: een weersverwachting heb ik nog niet.'
+            : 'I do not know yet what the sun will do: I have no weather forecast yet.'),
       );
       return done(out.join(' '));
     }
@@ -829,7 +890,69 @@ export function ask(question: Question, ctx: AskContext): Answer {
               : 'Right now they are producing nothing.',
         );
       }
+      const rest = restSentence(f, ctx.weer, lang);
+      if (rest) out.push(rest);
       if (facade) out.push(facade);
+      return done(out.join(' '));
+    }
+
+    case 'vandaag': {
+      const t = ctx.today;
+      if (t == null) {
+        return done(lang === 'nl' ? 'In deze installatie houd ik geen dag bij, dus dat weet ik niet.' : 'This installation does not keep a daily record, so I do not know.');
+      }
+      const out: string[] = [];
+      const n = t.besluiten.length;
+      if (n === 0) out.push(lang === 'nl' ? 'Vandaag hoefde ik nog niets te besluiten.' : 'I have not had to decide anything yet today.');
+      else {
+        const k = f.count('vandaag.besluiten', n);
+        out.push(lang === 'nl' ? `Vandaag besloot ik ${k} keer iets.` : `Today I decided something ${k} times.`);
+      }
+      const duur = (spans: readonly { vanMs: number; totMs: number }[]) => spans.reduce((s, x) => s + Math.max(0, x.totMs - x.vanMs), 0);
+      const lijst = (key: 'smartClimate' | 'huidig') =>
+        t.apparaten
+          .map((a) => ({ a, ms: duur(a[key]), dev: config.actuators.find((x) => x.id === a.actuatorId) }))
+          .filter((x) => x.dev && x.ms >= 60_000)
+          .sort((x, y) => y.ms - x.ms)
+          .slice(0, 3)
+          .map((x) => `${deviceName(x.dev!, lang)} ${f.duration(`vandaag.${key}.${x.a.actuatorId}`, x.ms)}`);
+      const zou = lijst('smartClimate');
+      if (zou.length) out.push(lang === 'nl' ? `Ik zou ${joinList(zou, lang)} hebben laten draaien.` : `I would have run ${joinList(zou, lang)}.`);
+      const echt = lijst('huidig');
+      out.push(
+        echt.length
+          ? lang === 'nl' ? `Echt aan stond ${joinList(echt, lang)}.` : `Actually on: ${joinList(echt, lang)}.`
+          : lang === 'nl' ? 'Echt aan stond vandaag niets.' : 'Nothing was actually on today.',
+      );
+      if (t.zonWh >= 50) {
+        const zon = f.energy('vandaag.zonWh', t.zonWh);
+        const zelf = f.pct('vandaag.zelfPct', Math.max(0, Math.min(100, ((t.zonWh - t.netTerugWh) / t.zonWh) * 100)));
+        out.push(lang === 'nl' ? `Je dak leverde ${zon}, en ${zelf} daarvan gebruikte je zelf.` : `Your roof produced ${zon}, and you used ${zelf} of it yourself.`);
+      }
+      if (shadow) out.push(lang === 'nl' ? 'Ik kijk nog alleen mee en schakel zelf niets.' : 'I am only watching for now and do not switch anything myself.');
+      return done(out.join(' '));
+    }
+
+    case 'warm': {
+      if (snapshot == null) return done(noDecision(lang));
+      const e = snapshot.explanation;
+      const delen = config.zones
+        .map((z) => ({ z, c: e.perZone.find((p) => p.zoneId === z.id)?.temperatureC ?? null }))
+        .filter((x): x is { z: Zone; c: number } => x.c != null)
+        .map((x) => ({ naam: zoneName(x.z, lang), c: f.temp(`zone.${x.z.id}.temperatuur`, x.c) }));
+      const out: string[] = [];
+      // "Beneden is het 21,7°, in de badkamer 19,0° en in de wasruimte 21,7°."
+      const plek = (naam: string) => (naam === cap(naam) ? naam : `in ${naam}`);
+      if (delen.length === 0) out.push(lang === 'nl' ? 'Ik meet nu nergens een temperatuur.' : 'I am not measuring a temperature anywhere right now.');
+      else if (lang === 'nl') {
+        const [eerste, ...rest] = delen;
+        const kop = `${cap(plek(eerste!.naam))} is het ${eerste!.c}`;
+        out.push(`${joinList([kop, ...rest.map((d) => `${plek(d.naam)} ${d.c}`)], lang)}.`);
+      } else out.push(`${joinList(delen.map((d) => `${cap(d.naam)} ${d.c}`), lang)}.`);
+      if (e.outdoorTemperatureC != null) {
+        const b = f.temp('buiten.temperatuur', e.outdoorTemperatureC);
+        out.push(lang === 'nl' ? `Buiten is het ${b}.` : `Outside it is ${b}.`);
+      }
       return done(out.join(' '));
     }
 
