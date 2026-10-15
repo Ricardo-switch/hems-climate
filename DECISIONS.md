@@ -5632,6 +5632,9 @@ zon of van het net gebeurt.
 - **De volgorde verschuift:** voorrang per seizoen, Klaar om en Hoe voelt het
   worden besluit 134.
 - **Versie 0.11.0.**
+- **Wat is er nieuw** (0.11.1): per versie verdeeld in nieuw, beter en opgelost;
+  alleen de nieuwste staat open, de rest is ingeklapt, en de app laat hooguit
+  tien versies terug zien.
 
 ---
 

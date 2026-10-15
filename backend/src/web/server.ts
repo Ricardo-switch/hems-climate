@@ -54,7 +54,7 @@ import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
 import { startOfLocalDay } from './today.js';
-import { NIEUW, VERSIE } from '../version.js';
+import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
 export interface Version {
@@ -978,7 +978,8 @@ export class WebServer {
 
     // De versie en wat er nieuw is (besluit 131), voor App en toegang.
     if (path === '/api/versie') {
-      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW });
+      // Hooguit tien versies terug (besluit 133).
+      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW.slice(0, TERUGKIJKEN) });
       return;
     }
 

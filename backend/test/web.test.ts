@@ -360,11 +360,14 @@ describe('welke versie er draait (besluit 54)', () => {
     expect(await pakket('../package.json')).toBe(VERSIE);
     expect(await pakket('../../frontend/package.json')).toBe(VERSIE);
     expect(NIEUW[0]?.versie).toBe(VERSIE);
-    for (const n of NIEUW) expect(n.punten.length).toBeGreaterThan(0);
+    // Elke versie zegt iets, in nieuw, beter of opgelost (besluit 133).
+    for (const n of NIEUW) expect([...(n.nieuw ?? []), ...(n.beter ?? []), ...(n.opgelost ?? [])].length).toBeGreaterThan(0);
+    expect(new Set(NIEUW.map((n) => n.versie)).size).toBe(NIEUW.length);
     const { base } = await start({ version: versionFromEnv({ HEMS_COMMIT: 'abc1234' }) });
     const v = (await (await fetch(`${base}/api/versie`)).json()) as Version & { nieuw: typeof NIEUW };
     expect(v).toMatchObject({ nummer: VERSIE, commit: 'abc1234' });
     expect(v.nieuw[0]?.versie).toBe(VERSIE);
+    expect(v.nieuw.length).toBeLessThanOrEqual(10);
   });
 });
 

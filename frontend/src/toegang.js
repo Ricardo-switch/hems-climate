@@ -56,7 +56,11 @@ function versieVorm() {
   if (!v?.nummer) return '<h2 class="kop-2">Versie</h2><p class="klein" style="margin: 0">Onbekend.</p>';
   const gebouwd = v.gebouwd ? new Date(v.gebouwd).toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
   const dag = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
-  const nieuw = (v.nieuw ?? []).slice(0, 3).map((n) => `<div class="nieuw"><b>Versie ${esc(n.versie)}</b><span class="mini">${esc(dag(n.datum))}</span><ul>${n.punten.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+  // De nieuwste open, de rest ingeklapt, hooguit tien terug; per versie nieuw, beter en opgelost (besluit 133).
+  const SOORTEN = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
+  const inhoud = (n) => SOORTEN.filter(([k]) => (n[k] ?? []).length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+  const kort = (n) => SOORTEN.filter(([k]) => (n[k] ?? []).length).map(([k, t]) => `${n[k].length} ${t.toLowerCase()}`).join(', ');
+  const nieuw = (v.nieuw ?? []).slice(0, 10).map((n, i) => `<details class="nieuw"${i === 0 ? ' open' : ''}><summary><b>Versie ${esc(n.versie)}</b><span class="mini">${esc(dag(n.datum))}${i === 0 || !kort(n) ? '' : ` · ${esc(kort(n))}`}</span></summary>${inhoud(n)}</details>`).join('');
   const komt = v.installatie === 'add-on'
     ? 'Een nieuwe versie zie je in Home Assistant, bij Add-ons. Daar werk je hem bij.'
     : 'Een nieuwe versie komt op de server waar Smart Climate draait. Werkt die vanzelf bij, dan hoef je niets te doen.';

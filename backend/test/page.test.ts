@@ -1494,6 +1494,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const vorm = p.locator('#wand [data-vorm]');
     await vorm.locator('h2', { hasText: `Versie ${VERSIE}` }).waitFor();
     expect(await vorm.locator('.nieuw').first().textContent()).toContain(`Versie ${VERSIE}`);
+    // Alleen de nieuwste open (besluit 133), en hooguit tien.
+    expect(await vorm.locator('details.nieuw[open]').count()).toBe(1);
+    expect(await vorm.locator('details.nieuw').count()).toBeLessThanOrEqual(10);
+    expect(await vorm.locator('details.nieuw[open] .soort').count()).toBeGreaterThan(0);
     expect(await vorm.textContent()).not.toMatch(/NAS/);
     await context.close();
   }, 20_000);
