@@ -5635,6 +5635,10 @@ zon of van het net gebeurt.
 - **Wat is er nieuw** (0.11.1): per versie verdeeld in nieuw, beter en opgelost;
   alleen de nieuwste staat open, de rest is ingeklapt, en de app laat hooguit
   tien versies terug zien.
+- **Een nieuwe versie laadt vanzelf** (0.11.2): een app op de telefoon bleef
+  open staan met de pagina van toen, en zocht daarom nog met het oude zoeken.
+  Elke pagina kijkt bij openen en elke tien minuten welke versie draait; is
+  die anders, dan laadt hij opnieuw, nooit terwijl je typt.
 
 ---
 

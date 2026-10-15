@@ -335,6 +335,35 @@
     schaal();
     klok();
     setInterval(klok, 10_000);
+    nieuweVersie();
+  }
+
+  /*
+   * Een nieuwe versie op de server (besluit 133): de app op een telefoon of
+   * tablet blijft vaak open staan met de pagina van toen. Is er intussen een
+   * andere versie, dan laadt de pagina opnieuw: als je de app weer opent, of
+   * hooguit elke tien minuten, en nooit terwijl je typt.
+   */
+  let draaitNu = null;
+  async function versieNu() {
+    try {
+      const r = await fetch('api/health', { cache: 'no-store' });
+      const h = await r.json();
+      return h?.versie?.commit && h.versie.commit !== 'onbekend' ? h.versie.commit : null;
+    } catch {
+      return null;
+    }
+  }
+  async function kijkVersie() {
+    const v = await versieNu();
+    if (!v) return;
+    if (draaitNu == null) draaitNu = v;
+    else if (v !== draaitNu && !typt() && !document.querySelector('dialog[open]')) location.reload();
+  }
+  function nieuweVersie() {
+    void kijkVersie();
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void kijkVersie());
+    setInterval(() => void kijkVersie(), 10 * 60_000);
   }
 
   /*
