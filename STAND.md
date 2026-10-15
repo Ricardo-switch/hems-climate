@@ -205,6 +205,8 @@ verwijzing bestaat.
   gebeurt, en per kamer of koelen van het net mag ([133]).
 - **Voorrang** geldt per richting, koelen en verwarmen; **Hoe voelt het** werkt
   zonder inlog, geeft een antwoord en een voorstel ([134]).
+- **Vrijgeven** gaat tot 1 november op de eigen pc met `tools/vrijgeven.sh`;
+  daarna weer via GitHub ([135]).
 - **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
@@ -388,4 +390,5 @@ verwijzing bestaat.
 [132]: DECISIONS.md#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt
 [133]: DECISIONS.md#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net
 [134]: DECISIONS.md#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord
+[135]: DECISIONS.md#135-tot-1-november-vrijgeven-op-de-eigen-pc
 <!-- links:einde -->

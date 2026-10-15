@@ -13,10 +13,11 @@
 
 name: ci
 
+# Tot 1 november 2026 alleen met de hand (besluit 135): de minuten van GitHub
+# waren op. Vrijgeven gaat zolang met tools/vrijgeven.sh op de eigen pc, die
+# hetzelfde doet en daarna stable vooruitzet. Vanaf 1 november weer bij elke
+# push: zet dan `push: branches: [main]` hieronder terug.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -167,7 +168,7 @@ jobs:
   stable:
     name: stable bijwerken
     needs: [test, image, deploy, page]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

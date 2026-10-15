@@ -176,6 +176,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [64. Echt schakelen pas met een complete winter en alle functies](#64-echt-schakelen-pas-met-een-complete-winter-en-alle-functies)
 - [67. Een mail als de opname stilvalt](#67-een-mail-als-de-opname-stilvalt)
 - [118. Uitrollen via een eigen add-on-bibliotheek op GitHub](#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github)
+- [135. Tot 1 november vrijgeven op de eigen pc](#135-tot-1-november-vrijgeven-op-de-eigen-pc)
 
 **Kwaliteitsbewaking**
 
@@ -5684,7 +5685,35 @@ naar het inloggen, met inlog verscheen er alleen "Genoteerd".
 
 ---
 
+## 135. Tot 1 november vrijgeven op de eigen pc
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Op 15 oktober 2026 waren de minuten van GitHub Actions voor deze maand op;
+vanaf 1 november zijn ze er weer. Zonder CI schoof `stable` niet meer mee en
+kreeg de NAS niets nieuws (besluit 54).
+
+*Besluit:*
+
+- **Tot 1 november draait de CI alleen met de hand** (`workflow_dispatch`).
+  Een push naar main kost dan geen minuten.
+- **Vrijgeven met `tools/vrijgeven.sh`** op de eigen pc: dezelfde stappen als
+  de CI, in dezelfde volgorde (typecheck, lint, tests, build, de weergave, de
+  pagina in een browser, deploy.sh), plus de index van de besluiten. Het image
+  zoals de NAS het bouwt, met alleen de mappen van de NAS: met Docker als die
+  draait, anders zonder (typecheck en build in een kopie met alleen die
+  mappen, met de pakketten van hier gekoppeld, niets gedownload). ShellCheck
+  alleen als `deploy/` of `addon/` veranderde; staat hij er dan niet, dan geen
+  vrijgave. Pas als alles goed is, schuift `stable` vooruit, alleen vooruit.
+- **Vanaf 1 november** weer bij elke push via GitHub: de trigger `push` terug
+  in `ci.yml`. Het script blijft voor als het nog eens nodig is.
+
+---
+
 ## Wat nog een besluit wacht
+
+- **1 november 2026: de CI weer bij elke push** (besluit 135). Zet in
+  `.github/workflows/ci.yml` `push: branches: [main]` terug onder `on:`.
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
   Een centrale kast met afzuiging in wc, badkamer, zolder en woonkamer, één

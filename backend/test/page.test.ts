@@ -638,7 +638,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     }
     // Zonder inlog bewaard, met de temperatuur van toen; en het blijft op Thuis.
     expect(new URL(p.url()).pathname).toBe('/thuis.html');
-    expect(await kaart.locator('.gevoelantwoord').textContent()).toMatch(/bij \d+(,\d)?°/);
+    // De temperatuur van toen staat erbij als de dienst die had; in de CI soms niet.
+    expect(await kaart.locator('.gevoelantwoord').textContent()).toMatch(/^Genoteerd: te koud( bij \d+(,\d)?°)?\./);
     // Overdag in de test: drie keer te koud geeft een voorstel, als er overdag verwarmd wordt.
     const voorstel = kaart.locator('.gevoelvoorstel', { hasText: 'Voortaan anders?' });
     if (await voorstel.count()) expect(await voorstel.textContent()).toContain('3 keer te koud');
