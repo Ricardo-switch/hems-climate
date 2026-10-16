@@ -6279,6 +6279,25 @@ bewoners pas na een eerste inlog, niet alles uit Home Assistant.
   QR-code om anderen te laten inloggen.
 - **Later:** kamers met een eigenaar (een slaapkamer volgt zijn bewoner).
 - **Versie 0.25.0.**
+- **Een gast** (16 oktober 2026, op verzoek): iemand die in de app inlogde, zet
+  de hoofdgebruiker of een beheerder op "gast". Een gast staat niet in de
+  volgorde en telt nooit mee voor het comfort; hij kijkt mee, en bedient licht,
+  scènes en screens alleen als zijn aanwezigheid zegt dat hij thuis is. Van een
+  gast wordt niets bewaard: geen comfort, geen gevoel, geen instellingen, en
+  zijn gegevens downloaden kan hij niet. Ook als hij in Home Assistant beheerder
+  is. De dienst toetst het zelf, niet alleen de pagina. Gasten staan bij
+  Bewoners onder Schermen en gasten, en de wand begroet ze als ze thuis zijn.
+- **Reparatie (0.26.0):** na het inloggen bij Home Assistant stond je weer bij
+  het inloggen. Het cookie is `SameSite=Strict`, en een doorverwijzing die
+  begint op de site van Home Assistant neemt het niet mee. Nu geeft de
+  terugkeer een kleine pagina die zelf verder gaat, vanaf deze site; een
+  browsertest met een nagemaakt Home Assistant op een andere site (localhost
+  tegen 127.0.0.1) bewaakt het. Wie vóór 0.25.0 al ingelogd was, krijgt bij de
+  eerste pagina alsnog "wie ben je?". Een account met een persoon in Home
+  Assistant kan op het welkom ook "Dit is een scherm" kiezen, en blijft dat. Bij
+  Bewoners staan alleen accounts die in de app inlogden, niet de
+  aanwezigheidsbronnen uit Home Assistant. Gast en reparatie samen: versie
+  0.26.0.
 
 ---
 

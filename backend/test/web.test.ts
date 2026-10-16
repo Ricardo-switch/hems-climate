@@ -1422,15 +1422,27 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     return { ...started, login, dir };
   }
 
+  /**
+   * Waar de pagina na het inloggen heen gaat. Geen doorverwijzing maar een
+   * kleine pagina die zelf verder gaat: vanaf Home Assistant, een andere site,
+   * gaat een cookie met SameSite=Strict bij een doorverwijzing niet mee.
+   */
+  async function verderNaar(res: Response): Promise<string | null> {
+    if (res.status !== 200) return null;
+    const m = /location\.replace\("([^"]*)"\)/.exec(await res.text());
+    return m ? m[1]! : null;
+  }
+
   /** Loopt de inlog door zoals een browser: naar Home Assistant en terug. */
   async function logIn(base: string): Promise<string> {
     const go = await fetch(`${base}/auth/login?terug=/kamer.html%23woonkamer`, { redirect: 'manual' });
     expect(go.status).toBe(302);
     const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
     const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
-    expect(back.status).toBe(302);
-    expect(back.headers.get('location')).toBe('/kamer.html#woonkamer');
+    expect(back.status).toBe(200);
+    expect(back.headers.get('location')).toBeNull();
     const cookie = back.headers.get('set-cookie')!;
+    expect(await verderNaar(back)).toBe('/kamer.html#woonkamer');
     expect(cookie).toMatch(/HttpOnly/);
     expect(cookie).toMatch(/SameSite=Strict/);
     return cookie.split(';')[0]!;
@@ -1444,8 +1456,14 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     return new Promise((ok, fail) => {
       const u = new URL(base);
       const req = httpRequest({ host: u.hostname, port: u.port, path, headers: { host: 'nas.tail1234.ts.net', 'x-forwarded-proto': 'https', 'x-forwarded-host': 'nas.tail1234.ts.net' } }, (res) => {
-        res.resume();
-        ok({ status: res.statusCode ?? 0, location: String(res.headers.location ?? ''), cookie: String(res.headers['set-cookie'] ?? '') });
+        let tekst = '';
+        res.setEncoding('utf8');
+        res.on('data', (d: string) => (tekst += d));
+        res.on('end', () => {
+          // Na het inloggen: de pagina die zelf verder gaat, in plaats van een doorverwijzing.
+          const verder = /location\.replace\("([^"]*)"\)/.exec(tekst)?.[1];
+          ok({ status: res.statusCode ?? 0, location: String(res.headers.location ?? verder ?? ''), cookie: String(res.headers['set-cookie'] ?? '') });
+        });
       });
       req.on('error', fail);
       req.end();
@@ -1460,7 +1478,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const naar = new URL(go.location);
     expect(naar.searchParams.get('client_id')).toBe('https://nas.tail1234.ts.net/');
     const back = await viaTailscale(base, `/auth/callback?code=abc&state=${naar.searchParams.get('state')}`);
-    expect(back.status).toBe(302);
+    expect(back.status).toBe(200);
     expect(back.location).toBe('/thuis.html');
     // Over https krijgt het cookie Secure.
     expect(back.cookie).toMatch(/Secure/);
@@ -1603,13 +1621,27 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const naar = async () => {
       const go = await fetch(`${base}/auth/login?terug=/thuis.html`, { redirect: 'manual' });
       const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
-      return (await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' })).headers.get('location');
+      return verderNaar(await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' }));
     };
     expect(await naar()).toBe('/welkom.html?terug=%2Fthuis.html#welkom');
     antwoord = 'vraag';
     expect(await naar()).toBe('/welkom.html?terug=%2Fthuis.html#vraag');
     antwoord = null;
     expect(await naar()).toBe('/thuis.html');
+  });
+
+  it('vraagt wie al ingelogd was maar nog niet koos eerst "wie ben je?" (besluit 147)', async () => {
+    const { base } = await withLogin(false, { herken: async () => 'vraag' });
+    const go = await fetch(`${base}/auth/login?terug=/thuis.html`, { redirect: 'manual' });
+    const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
+    const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
+    const cookie = back.headers.get('set-cookie')!.split(';')[0]!;
+    const pagina = await fetch(`${base}/vandaag.html`, { redirect: 'manual', headers: { cookie } });
+    expect(pagina.status).toBe(302);
+    expect(pagina.headers.get('location')).toBe('/welkom.html?terug=%2Fvandaag.html#vraag');
+    // Het welkom zelf, en vragen aan de dienst, gaan gewoon door.
+    expect((await fetch(`${base}/welkom.html`, { redirect: 'manual', headers: { cookie } })).status).not.toBe(302);
+    expect((await fetch(`${base}/api/comfort`, { headers: { cookie } })).status).toBe(200);
   });
 
   it('laat een bewoner na het inloggen door, en zegt wie hij is', async () => {
@@ -1643,7 +1675,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const go = await fetch(`${base}/auth/login?terug=//vreemd.example/x`, { redirect: 'manual' });
     const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
     const back = await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' });
-    expect(back.headers.get('location')).toBe('/thuis.html');
+    expect(await verderNaar(back)).toBe('/thuis.html');
   });
 
   it('logt uit: daarna is de sessie weg', async () => {

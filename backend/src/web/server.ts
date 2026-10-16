@@ -130,6 +130,8 @@ export interface WebOptions {
     readonly view: (wie: Wie) => BewonersView;
     readonly actie: (body: unknown, wie: Wie & { readonly naam: string }) => Promise<{ readonly ok: true; readonly view: BewonersView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
     readonly herken: (account: { readonly userId: string; readonly naam: string }) => Promise<'welkom' | 'vraag' | null>;
+    /** Is dit account een gast, en is hij thuis? Een gast kijkt, en bedient alleen thuis. */
+    readonly gast?: (userId: string | null) => { readonly gast: boolean; readonly thuis: boolean | null };
   };
   /** De sleutel waarmee de assistent van Home Assistant zonder inlog een vraag stelt (besluit 147). */
   readonly sleutel?: string;
@@ -424,6 +426,13 @@ async function sendFile(
   return true;
 }
 
+/** Een pagina die na het inloggen zelf verder gaat, vanaf deze site (zie de terugkeer van het inloggen). */
+function verderNa(naar: string): string {
+  const html = naar.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const js = JSON.stringify(naar).replace(/</g, '\\u003c');
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${html}"><title>Ingelogd · Smart Climate</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1424;color:#eef3f7;font-family:system-ui,sans-serif}</style></head><body><p>Ingelogd. <a href="${html}" style="color:#6fd3ff">Verder</a></p><script>location.replace(${js});</script></body></html>`;
+}
+
 /** Eén open SSE-verbinding. */
 interface Listener {
   readonly res: ServerResponse;
@@ -491,6 +500,16 @@ export class WebServer {
           res.end();
         }
         return;
+      }
+      // Al ingelogd, maar nog nooit langs "wie ben je?" (wie inlogde vóór besluit 147): eerst dat.
+      const pagina = path === '/' || path.endsWith('.html');
+      if (pagina && path !== '/welkom.html' && visitor.userId != null && this.#options.bewoners) {
+        const eerst = await this.#options.bewoners.herken({ userId: visitor.userId, naam: visitor.naam }).catch(() => null);
+        if (eerst != null) {
+          res.writeHead(302, { location: `/welkom.html?terug=${encodeURIComponent(path === '/' ? '/thuis.html' : path)}#${eerst}`, 'cache-control': 'no-store' });
+          res.end();
+          return;
+        }
       }
     }
 
@@ -572,6 +591,19 @@ export class WebServer {
         }
         if (role === 'beheerder' && visitor.rol !== 'beheerder') {
           sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
+          return;
+        }
+      }
+      // Een gast (besluit 147): bedienen alleen als hij thuis is, en verder niets bewaren.
+      const gast = access.kind === 'sessions' && path !== '/auth/logout' ? await this.#gast(req) : null;
+      if (gast?.gast) {
+        const bedienen = path === '/api/licht' || path === '/api/scene' || path === '/api/scherm';
+        if (!bedienen) {
+          sendJson(res, 403, { fout: 'als gast kun je kijken; dit verandert iets aan het huis' });
+          return;
+        }
+        if (gast.thuis !== true) {
+          sendJson(res, 403, { fout: 'als gast bedien je alleen als je thuis bent' });
           return;
         }
       }
@@ -1112,6 +1144,11 @@ export class WebServer {
     }
 
     if (path === '/api/export') {
+      // Je gegevens downloaden is meer dan kijken: niet voor een gast (besluit 147).
+      if ((await this.#gast(req))?.gast) {
+        sendJson(res, 403, { fout: 'als gast kun je de gegevens niet downloaden' });
+        return;
+      }
       if (logDir == null) {
         sendJson(res, 503, { wachten: 'er wordt niet gelogd, dus er valt niets te exporteren' });
         return;
@@ -1397,12 +1434,21 @@ export class WebServer {
     }
   }
 
-  /** Wie er kijkt (besluit 147): het account, of het een beheerder is, en de naam. */
+  /** Wie er kijkt (besluit 147): het account, of het een beheerder is, en de naam. Een gast is nooit beheerder. */
   async #wie(req: IncomingMessage): Promise<Wie & { readonly naam: string }> {
     const access = this.#options.access;
     if (access.kind === 'open') return { userId: null, beheerder: true, naam: '' };
     const v: Visitor | null = access.kind === 'ingress' ? ingressVisitor(req) : await access.store.visitor(cookieValue(req, SESSION_COOKIE));
-    return { userId: v?.userId ?? null, beheerder: v?.rol === 'beheerder', naam: v?.naam ?? '' };
+    const gast = this.#options.bewoners?.gast?.(v?.userId ?? null).gast === true;
+    return { userId: v?.userId ?? null, beheerder: v?.rol === 'beheerder' && !gast, naam: v?.naam ?? '' };
+  }
+
+  /** Of wie er kijkt een gast is, en thuis (besluit 147). */
+  async #gast(req: IncomingMessage): Promise<{ readonly gast: boolean; readonly thuis: boolean | null } | null> {
+    const access = this.#options.access;
+    if (access.kind !== 'sessions' || this.#options.bewoners?.gast == null) return null;
+    const v = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+    return this.#options.bewoners.gast(v?.userId ?? null);
   }
 
   /** Een vraag van de assistent van Home Assistant met de juiste sleutel (besluit 147). */
@@ -1461,8 +1507,15 @@ export class WebServer {
         // Wie is het (besluit 147)? Een nieuwe bewoner krijgt het welkom, een account zonder persoon de vraag.
         const eerst = (await this.#options.bewoners?.herken({ userId: user.userId, naam: user.naam }).catch(() => null)) ?? null;
         const naar = eerst == null ? pending.terug : `/welkom.html?terug=${encodeURIComponent(pending.terug)}#${eerst}`;
-        res.writeHead(302, { location: naar, 'set-cookie': sessionCookie(id, secure), 'cache-control': 'no-store' });
-        res.end();
+        /*
+         * Niet meteen doorsturen (16 oktober 2026): de browser komt hier vanaf
+         * Home Assistant, een andere site, en een cookie met SameSite=Strict gaat
+         * dan bij de doorverwijzing niet mee. Sinds de hele app een inlog vraagt
+         * (besluit 147), stond je zo weer bij het inloggen. Een kleine pagina die
+         * zelf verder gaat, is een stap vanaf deze site: dan gaat het cookie mee.
+         */
+        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'set-cookie': sessionCookie(id, secure), 'cache-control': 'no-store' });
+        res.end(verderNa(naar));
       } catch (error) {
         res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
         res.end(`Inloggen lukte niet: ${(error as Error).message}\n`);

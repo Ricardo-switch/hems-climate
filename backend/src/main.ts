@@ -37,7 +37,7 @@ import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, controleerComfort, withComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
-import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, herken as herkenBewoner, hoofdVan, leesActie, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, herken as herkenBewoner, hoofdVan, leesActie, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -1088,6 +1088,8 @@ if (webPort != null) {
               await herlaadUitDeApp('een nieuwe bewoner');
               return 'welkom' as const;
             },
+            // Een gast (besluit 147): thuis volgens zijn aanwezigheid in Home Assistant.
+            gast: (userId: string | null) => gastStand(bewonersStore.current, userId, siteConfig!.occupancy, (id) => allStates.get(id)),
           },
         }
       : {}),

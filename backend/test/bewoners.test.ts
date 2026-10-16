@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { OccupancySource } from '../src/core/model.js';
 import { exampleSite } from './site.js';
-import { GEEN_BEWONERS, comfortVanBewoner, herken, hoofdVan, leesActie, personenUit, profielenVoor, roepnaam, voerUit, wisselHoofd, type Bewoners } from '../src/web/bewoners.js';
+import { GEEN_BEWONERS, comfortVanBewoner, gastStand, herken, hoofdVan, leesActie, personenUit, profielenVoor, roepnaam, voerUit, wisselHoofd, type Bewoners } from '../src/web/bewoners.js';
 import type { Comfort } from '../src/web/comfort.js';
 
 const NU = Date.UTC(2026, 9, 16, 17, 0, 0);
@@ -121,5 +121,45 @@ describe('wiens comfort je ziet', () => {
     const v = comfortVanBewoner(exampleSite, metZijn, eigen, shira, null).view;
     expect(v.van?.volgt).toBe(false);
     expect(v.kamers.find((k) => k.id === 'woonkamer')?.modi.dag).toEqual({ heat: 22.5, cool: 26 });
+  });
+});
+
+describe('een tablet met een persoon', () => {
+  it('wordt een scherm en geen bewoner, en blijft dat bij een volgende inlog', () => {
+    const b = tweeBewoners();
+    const uit = voerUit(b, comfort, { actie: 'scherm' }, { userId: 'u-shira', naam: 'Shira', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(uit.bewoners.volgorde).toEqual(['ricardo']);
+    expect(herken(uit.bewoners, { userId: 'u-shira', naam: 'Shira' }, personen, occupancy, NU).soort).toBe('scherm');
+    // De hoofdgebruiker wordt geen scherm zolang er anderen zijn.
+    expect(voerUit(b, comfort, { actie: 'scherm' }, { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false }, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
+  });
+});
+
+describe('een gast (besluit 147)', () => {
+  it('staat niet in de volgorde, heeft geen comfort, verandert niets, en wordt weer bewoner als je dat kiest', () => {
+    const b = tweeBewoners();
+    const ricardo = { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false };
+    const met: Comfort = { ...comfort, profielen: { shira: { woonkamer: { modi: { dag: { heat: 22, cool: 25 } } } } } };
+    const gast = voerUit(b, met, { actie: 'gast', id: 'shira', gast: true }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners; comfort: Comfort };
+    expect(gast.bewoners.volgorde).toEqual(['ricardo']);
+    expect(gast.bewoners.bewoners['shira']).toMatchObject({ gast: true, comfort: 'volgt' });
+    expect(gast.comfort.profielen).toEqual({});
+    expect(profielenVoor(gast.bewoners, gast.comfort, occupancy).map((x) => x.id)).toEqual(['ricardo']);
+    // Een gast verandert niets, ook niet aan zichzelf.
+    expect(voerUit(gast.bewoners, gast.comfort, { actie: 'naam', id: 'shira', naam: 'S' }, { userId: 'u-shira', naam: 'Shira', beheerder: true }, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    // De hoofdgebruiker kan geen gast zijn; Shira kan weer bewoner worden, achteraan.
+    expect(voerUit(b, comfort, { actie: 'gast', id: 'ricardo', gast: true }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
+    const terug = voerUit(gast.bewoners, gast.comfort, { actie: 'gast', id: 'shira', gast: false }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(terug.bewoners.volgorde).toEqual(['ricardo', 'shira']);
+    expect(terug.bewoners.bewoners['shira']?.gast).toBeUndefined();
+  });
+
+  it('is thuis volgens zijn aanwezigheid; wie geen gast is, telt hier niet', () => {
+    const b = tweeBewoners();
+    const gast = (voerUit(b, comfort, { actie: 'gast', id: 'shira', gast: true }, { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners }).bewoners;
+    const thuis = (s: string) => () => ({ entity_id: 'person.shira', state: s, attributes: {}, last_changed: '', last_updated: '' });
+    expect(gastStand(gast, 'u-shira', occupancy, thuis('home'))).toEqual({ gast: true, thuis: true });
+    expect(gastStand(gast, 'u-shira', occupancy, thuis('not_home'))).toEqual({ gast: true, thuis: false });
+    expect(gastStand(gast, 'u-ricardo', occupancy, thuis('home'))).toEqual({ gast: false, thuis: null });
   });
 });

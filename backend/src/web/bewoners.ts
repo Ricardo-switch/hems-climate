@@ -36,6 +36,12 @@ export interface Bewoner {
   /** Een eigen comfort, of dat van de hoofdgebruiker volgen. */
   readonly comfort: 'volgt' | 'eigen';
   readonly sindsMs: number;
+  /**
+   * Een gast (besluit 147): kijkt mee, en bedient licht en screens alleen als
+   * hij thuis is. Staat niet in de volgorde, heeft geen comfort, en van hem
+   * wordt niets bewaard.
+   */
+  readonly gast?: boolean;
 }
 
 export interface Scherm {
@@ -230,8 +236,9 @@ export function comfortVanBewoner(config: SiteConfig, huis: Comfort | null, b: B
   const hoofd = hoofdVan(b);
   if (hoofd == null) return { id: null, view: comfortView(config, huis) };
   const ik = Object.values(b.bewoners).find((x) => wie.userId != null && x.haUser === wie.userId) ?? null;
-  const beheert = wie.beheerder || ik?.id === hoofd.id;
-  const doel = (gevraagd != null ? b.bewoners[gevraagd] : null) ?? ik ?? hoofd;
+  const beheert = !ik?.gast && (wie.beheerder || ik?.id === hoofd.id);
+  // Een gast heeft geen comfort: hij ziet dat van de hoofdgebruiker, alleen om te kijken.
+  const doel = (gevraagd != null ? b.bewoners[gevraagd] : null) ?? (ik?.gast ? null : ik) ?? hoofd;
   const eigen = doel.id !== hoofd.id && doel.comfort === 'eigen' ? huis?.profielen?.[doel.id] : undefined;
   const view = eigen ? comfortViewVoorProfiel(config, eigen) : comfortView(config, huis);
   return {
@@ -244,11 +251,22 @@ export function comfortVanBewoner(config: SiteConfig, huis: Comfort | null, b: B
         hoofd: doel.id === hoofd.id,
         volgt: doel.id !== hoofd.id && eigen == null,
         hoofdNaam: hoofd.naam,
-        magAanpassen: beheert || ik?.id === doel.id,
+        magAanpassen: beheert || (!ik?.gast && ik?.id === doel.id),
         bewoners: beheert ? b.volgorde.flatMap((id) => (b.bewoners[id] ? [{ id, naam: b.bewoners[id].naam }] : [])) : [],
       },
     },
   };
+}
+
+/**
+ * Is dit account een gast, en is hij thuis (besluit 147)? Thuis volgens zijn
+ * aanwezigheid in Home Assistant; zonder aanwezigheid weet het huis het niet.
+ */
+export function gastStand(b: Bewoners, userId: string | null, occupancy: readonly OccupancySource[], state: (entityId: string) => HaEntityState | undefined): { readonly gast: boolean; readonly thuis: boolean | null } {
+  const x = Object.values(b.bewoners).find((y) => userId != null && y.haUser === userId);
+  if (!x?.gast) return { gast: false, thuis: null };
+  const o = x.aanwezigheid != null ? occupancy.find((y) => y.id === x.aanwezigheid) : undefined;
+  return { gast: true, thuis: o ? thuisVan(state(o.ref.id)) : null };
 }
 
 /* ------------------------------------------------------------- bewaren */
@@ -305,14 +323,15 @@ export interface BewonerView {
   readonly geldt: boolean;
   readonly ik: boolean;
   readonly sindsMs: number;
+  readonly gast: boolean;
 }
 
 export interface BewonersView {
-  readonly ik: { readonly soort: 'bewoner' | 'scherm' | 'onbekend'; readonly id: string | null; readonly naam: string | null; readonly magBeheren: boolean };
+  readonly ik: { readonly soort: 'bewoner' | 'gast' | 'scherm' | 'onbekend'; readonly id: string | null; readonly naam: string | null; readonly magBeheren: boolean };
   readonly bewoners: readonly BewonerView[];
+  /** Gasten: ingelogd in de app, maar zonder plek in de volgorde. */
+  readonly gasten: readonly BewonerView[];
   readonly schermen: readonly { readonly naam: string; readonly sindsMs: number }[];
-  /** Aanwezigheid zonder bewoner: gasten, die alleen als "iemand thuis" tellen. */
-  readonly gasten: readonly { readonly id: string; readonly naam: string; readonly thuis: boolean | null }[];
   /** Alle bronnen, om er een te kiezen; van is de bewoner die hem al heeft. */
   readonly bronnen: readonly { readonly id: string; readonly naam: string; readonly thuis: boolean | null; readonly van: string | null }[];
   readonly geldt: { readonly id: string; readonly naam: string; readonly waarom: 'thuis' | 'niemand' | 'gekozen'; readonly thuis: readonly string[] } | null;
@@ -342,31 +361,32 @@ export function bewonersView(
   const ikScherm = wie.userId != null && b.schermen[wie.userId] != null;
   const hoofd = hoofdVan(b);
   const bron = (id: string | null) => (id == null ? undefined : occupancy.find((o) => o.id === id));
-  const bewoners = b.volgorde.flatMap((id, i): BewonerView[] => {
-    const x = b.bewoners[id];
-    if (x == null) return [];
+  const view = (x: Bewoner, i: number): BewonerView => {
     const o = bron(x.aanwezigheid);
     const s = o ? state(o.ref.id) : undefined;
     const sinds = s ? Date.parse(s.last_changed) : NaN;
-    return [{
-      id, naam: x.naam, haNaam: x.haNaam, plek: i + 1, hoofd: i === 0,
+    return {
+      id: x.id, naam: x.naam, haNaam: x.haNaam, plek: i + 1, hoofd: !x.gast && i === 0,
       aanwezigheid: o ? o.id : null, aanwezigheidNaam: o ? naamVan(s, o.id) : null,
       thuis: o ? thuisVan(s) : null, thuisSindsMs: Number.isFinite(sinds) ? sinds : null,
-      comfort: i === 0 ? 'eigen' : x.comfort, geldt: profile?.id === id, ik: ikB?.id === id, sindsMs: x.sindsMs,
-    }];
-  });
+      comfort: i === 0 ? 'eigen' : x.comfort, geldt: profile?.id === x.id, ik: ikB?.id === x.id, sindsMs: x.sindsMs, gast: x.gast === true,
+    };
+  };
+  const bewoners = b.volgorde.flatMap((id, i): BewonerView[] => (b.bewoners[id] && !b.bewoners[id].gast ? [view(b.bewoners[id], i)] : []));
+  const gasten = Object.values(b.bewoners).filter((x) => x.gast).map((x) => view(x, -1));
   const gebruikt = new Map(Object.values(b.bewoners).filter((x) => x.aanwezigheid != null).map((x) => [x.aanwezigheid!, x.naam]));
   const bronnen = occupancy.map((o) => ({ id: o.id, naam: naamVan(state(o.ref.id), o.id), thuis: thuisVan(state(o.ref.id)), van: gebruikt.get(o.id) ?? null }));
   return {
     ik: {
-      soort: ikB ? 'bewoner' : ikScherm ? 'scherm' : 'onbekend',
+      soort: ikB ? (ikB.gast ? 'gast' : 'bewoner') : ikScherm ? 'scherm' : 'onbekend',
       id: ikB?.id ?? null,
       naam: ikB?.naam ?? null,
-      magBeheren: wie.beheerder || (hoofd != null && ikB?.id === hoofd.id) || b.volgorde.length === 0,
+      // Een gast beheert nooit, ook niet als hij in Home Assistant beheerder is.
+      magBeheren: !ikB?.gast && (wie.beheerder || (hoofd != null && ikB?.id === hoofd.id) || b.volgorde.length === 0),
     },
     bewoners,
+    gasten,
     schermen: Object.values(b.schermen).map((s) => ({ naam: s.naam, sindsMs: s.sindsMs })),
-    gasten: bronnen.filter((x) => x.van == null).map((x) => ({ id: x.id, naam: x.naam, thuis: x.thuis })),
     bronnen,
     geldt: profile ? { id: profile.id, naam: profile.name, waarom: profile.reason, thuis: profile.home } : null,
   };
@@ -382,7 +402,11 @@ export type Actie =
   | { readonly actie: 'volgorde'; readonly volgorde: readonly string[] }
   | { readonly actie: 'hoofd'; readonly id: string }
   | { readonly actie: 'weg'; readonly id: string }
-  | { readonly actie: 'vasthouden'; readonly id: string | null };
+  | { readonly actie: 'vasthouden'; readonly id: string | null }
+  /** Dit account is een scherm, ook als het een persoon in Home Assistant heeft (zoals een tablet). */
+  | { readonly actie: 'scherm' }
+  /** Een gast of weer een bewoner (besluit 147). */
+  | { readonly actie: 'gast'; readonly id: string; readonly gast: boolean };
 
 export type Uitkomst =
   | { readonly ok: true; readonly bewoners: Bewoners; readonly comfort?: Comfort | null }
@@ -410,6 +434,10 @@ export function leesActie(body: unknown): Actie | null {
       return id ? { actie: 'weg', id } : null;
     case 'vasthouden':
       return { actie: 'vasthouden', id };
+    case 'scherm':
+      return { actie: 'scherm' };
+    case 'gast':
+      return id && typeof x['gast'] === 'boolean' ? { actie: 'gast', id, gast: x['gast'] } : null;
     default:
       return null;
   }
@@ -422,6 +450,8 @@ export function leesActie(body: unknown): Actie | null {
  */
 export function voerUit(b: Bewoners, comfort: Comfort | null, a: Actie, wie: Wie & { readonly naam: string }, occupancy: readonly OccupancySource[], thuis: readonly string[], nowMs: number): Uitkomst {
   const ik = Object.values(b.bewoners).find((x) => wie.userId != null && x.haUser === wie.userId) ?? null;
+  // Een gast kijkt alleen: van hem wordt niets bewaard, en hij verandert niets.
+  if (ik?.gast) return { ok: false, status: 403, reden: 'een gast kan alleen kijken' };
   const hoofd = hoofdVan(b);
   const beheert = wie.beheerder || (hoofd != null && ik?.id === hoofd.id);
   const mag = (id: string) => beheert || ik?.id === id;
@@ -481,6 +511,28 @@ export function voerUit(b: Bewoners, comfort: Comfort | null, a: Actie, wie: Wie
       const w = haalWeg(b, comfort, a.id);
       if (w == null) return { ok: false, status: 400, reden: 'maak eerst een ander hoofdgebruiker' };
       return { ok: true, bewoners: w.bewoners, comfort: w.comfort };
+    }
+    case 'gast': {
+      const x = bewoner(a.id);
+      if (x == null) return { ok: false, status: 404, reden: 'die bewoner is er niet' };
+      if (!beheert) return { ok: false, status: 403, reden: 'dat kan alleen de hoofdgebruiker' };
+      if (a.gast && hoofd?.id === a.id) return { ok: false, status: 400, reden: 'de hoofdgebruiker kan geen gast zijn' };
+      if (a.gast === (x.gast === true)) return { ok: true, bewoners: b };
+      if (a.gast) {
+        // Gast: uit de volgorde, en zonder eigen comfort; er blijft niets van hem bewaard.
+        const { [a.id]: _eigen, ...profielen } = comfort?.profielen ?? {};
+        const zonder: Bewoners = { ...b, volgorde: b.volgorde.filter((id) => id !== a.id), bewoners: { ...b.bewoners, [a.id]: { ...x, gast: true, comfort: 'volgt' } } };
+        return { ok: true, bewoners: b.vasthouden?.id === a.id ? zonderVasthouden(zonder) : zonder, comfort: comfort ? { ...comfort, profielen } : null };
+      }
+      const { gast: _g, ...weerBewoner } = x;
+      return { ok: true, bewoners: { ...b, volgorde: [...b.volgorde, a.id], bewoners: { ...b.bewoners, [a.id]: weerBewoner } } };
+    }
+    case 'scherm': {
+      if (wie.userId == null) return { ok: false, status: 403, reden: 'log eerst in' };
+      // Een tablet met een persoon in Home Assistant: geen bewoner, maar een scherm, en dat blijft het.
+      const weg = ik ? haalWeg(b, comfort, ik.id) : { bewoners: b, comfort };
+      if (weg == null) return { ok: false, status: 400, reden: 'maak eerst een ander hoofdgebruiker' };
+      return { ok: true, bewoners: alsScherm(weg.bewoners, { userId: wie.userId, naam: wie.naam }, nowMs), comfort: weg.comfort };
     }
     case 'vasthouden': {
       if (wie.userId == null) return { ok: false, status: 403, reden: 'log eerst in' };

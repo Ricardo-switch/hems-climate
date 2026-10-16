@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.25.0';
+export const VERSIE = '0.26.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,17 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.26.0',
+    datum: '2026-10-16',
+    nieuw: ['Een gast: kijkt mee, en bedient licht en screens alleen als hij thuis is; van een gast wordt niets bewaard'],
+    opgelost: [
+      'Na het inloggen bij Home Assistant kom je weer echt binnen, in plaats van terug bij het inloggen',
+      'Wie al ingelogd was, kiest bij de eerste pagina of hij hier woont of een scherm is',
+      'Een tablet met een persoon in Home Assistant kan op het welkom "Dit is een scherm" kiezen',
+      'Bij Bewoners staan alleen wie in de app inlogde, niet iedereen uit Home Assistant',
+    ],
+  },
   {
     versie: '0.25.0',
     datum: '2026-10-16',

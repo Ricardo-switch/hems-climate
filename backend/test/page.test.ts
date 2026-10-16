@@ -94,7 +94,7 @@ const ENERGY_SOURCE: EnergySource = {
   },
 };
 import { SessionStore } from '../src/web/auth.js';
-import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, herken, leesActie, personenUit, voegToe, voerUit } from '../src/web/bewoners.js';
+import { BewonersStore, GEEN_BEWONERS, alsScherm, bewonersView, comfortVanBewoner, gastStand, herken, leesActie, personenUit, voegToe, voerUit, type Bewoners } from '../src/web/bewoners.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { CoverSwitch } from '../src/web/covers.js';
 import type { HouseBattery, HouseReport } from '../src/web/house.js';
@@ -227,6 +227,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let sessionId = '';
   /** Bewoners (besluit 147), met een echt bestand. */
   let bewonersStore: BewonersStore;
+  const startBewoners: Bewoners = alsScherm(GEEN_BEWONERS, { userId: 'u', naam: 'Test' }, Date.now());
+  /** Waar het inloggen van Home Assistant staat; een test kan er een nagemaakt Home Assistant op een andere site van maken. */
+  let haInlog = 'http://ha.local/';
   /** De echte fetch: hieronder krijgt elke vraag aan de testdienst de inlog mee. */
   const echteFetch = globalThis.fetch;
   let stopCamera: () => Promise<void> = async () => {};
@@ -256,6 +259,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     connStore = new ConnectionStore(dir);
     functiesStore = new FunctiesStore(dir);
     bewonersStore = new BewonersStore(dir);
+    // De testgebruiker is een scherm (besluit 147): anders vraagt elke pagina eerst "wie ben je?".
+    await bewonersStore.save(startBewoners);
     const connFound = {
       fasen: [{ id: 'L1', current: 'sensor.p1_meter_current_phase_1' }] as FoundPhase[],
       apparaten: [
@@ -361,7 +366,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           },
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
           // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
-          access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
+          access: { kind: 'sessions', store: sessions, login: { authorizeUrl: (_origin, state) => `${haInlog}?state=${state}`, identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
           // Bewoners (besluit 147): dezelfde deur als de dienst, met wie er geldt uit het laatste besluit.
           bewoners: {
             view: (wie) => bewonersView(bewonersStore.current, wie, exampleSite.occupancy, (id) => houseStates.get(id), live.explanation.profile ?? null),
@@ -380,6 +385,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
               await bewonersStore.save(r.bewoners);
               return 'welkom' as const;
             },
+            gast: (userId) => gastStand(bewonersStore.current, userId, exampleSite.occupancy, (id) => houseStates.get(id)),
           },
           sleutel: 'test-sleutel-voor-de-assistent-12345',
           // De ligging, zoals Home Assistant hem geeft: op één decimaal (besluit 93).
@@ -2031,6 +2037,36 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /*
+   * Inloggen via Home Assistant op een andere site (16 oktober 2026): na het
+   * inloggen kom je echt binnen. Het cookie is SameSite=Strict, en ging bij een
+   * doorverwijzing vanaf de site van Home Assistant niet mee: dan stond je
+   * weer bij het inloggen.
+   */
+  it('laat je na het inloggen bij Home Assistant echt binnen, ook vanaf een andere site', async () => {
+    // Het nagemaakte Home Assistant, op localhost: voor de browser een andere site dan 127.0.0.1.
+    const ha = createServer((req, res) => {
+      const state = new URL(req.url ?? '/', 'http://localhost').searchParams.get('state') ?? '';
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end(`<script>location.href = ${JSON.stringify(`${baseUrl}/auth/callback?code=abc&state=`)} + ${JSON.stringify(state)};</script>`);
+    });
+    await new Promise<void>((r) => ha.listen(0, 'localhost', () => r()));
+    const vorige = haInlog;
+    haInlog = `http://localhost:${(ha.address() as { port: number }).port}/`;
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
+    await context.route((url) => !url.href.startsWith(baseUrl) && url.hostname !== 'localhost', (route) => route.abort());
+    const p = await context.newPage();
+    await p.goto(`${baseUrl}/vandaag.html`);
+    await p.waitForURL(/\/inloggen\.html/);
+    await p.locator('a', { hasText: 'Inloggen met Home Assistant' }).click();
+    await p.waitForURL(/\/vandaag\.html$/, { timeout: 10_000 });
+    await p.waitForTimeout(800);
+    expect(new URL(p.url()).pathname).toBe('/vandaag.html');
+    await context.close();
+    haInlog = vorige;
+    ha.close();
+  }, 30_000);
+
   it('stuurt wie niet is ingelogd naar het inloggen, en van daar naar Home Assistant (besluit 99 en 147)', async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, zonderInlog: true } as BrowserContextOptions);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2135,6 +2171,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await wandL.locator('[data-wie] option').count()).toBe(2);
     await shot(p, 'comfort-shira');
 
+    // Een gast (besluit 147): Shira wordt gast. Ze staat dan bij Schermen en gasten, niet in de volgorde.
+    await p.goto(`${baseUrl}/bewoners.html#shira`);
+    await wandL.locator('[data-blad] [data-gast="ja"]').click();
+    await expect.poll(() => bewonersStore.current.bewoners['shira']?.gast, kort).toBe(true);
+    expect(bewonersStore.current.volgorde).toEqual(['test']);
+    await wandL.locator('[data-schermen] .gastrij', { hasText: 'Shira' }).waitFor();
+    await shot(p, 'bewoners-gast');
+    // Als gast: bedienen alleen thuis, en verder niets.
+    const gastSessie = await sessions.create({ userId: 'u-shira', naam: 'Shira Cornelissen', rol: 'beheerder' });
+    const alsGast = (pad: string, body: unknown) => fetch(`${baseUrl}${pad}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl, cookie: `hems_sessie=${gastSessie}` }, body: JSON.stringify(body) });
+    const lamp = { doel: 'huis', id: null, aan: false };
+    const weg = await alsGast('/api/licht', lamp);
+    expect(weg.status).toBe(403);
+    expect(((await weg.json()) as { fout: string }).fout).toMatch(/thuis/);
+    expect((await alsGast('/api/comfort', { kamers: {} })).status).toBe(403);
+    expect((await alsGast('/api/bewoners', { actie: 'naam', id: 'shira', naam: 'S' })).status).toBe(403);
+    houseStates.set('person.shira', { entity_id: 'person.shira', state: 'home', attributes: { friendly_name: 'Shira' }, last_changed: new Date().toISOString(), last_updated: new Date().toISOString() });
+    try {
+      expect((await alsGast('/api/licht', lamp)).status).not.toBe(403);
+    } finally {
+      houseStates.delete('person.shira');
+    }
+    expect((await fetch(`${baseUrl}/api/export`, { headers: { cookie: `hems_sessie=${gastSessie}` } })).status).toBe(403);
+
     // De inlogpagina, voor wie nog niet is ingelogd: alleen een huis als silhouet en de knop.
     const buiten = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
     await buiten.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2146,7 +2206,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await buiten.close();
 
     live = voor;
-    await bewonersStore.save(GEEN_BEWONERS);
+    await bewonersStore.save(startBewoners);
     await wand.close();
     await ctx.close();
   }, 60_000);

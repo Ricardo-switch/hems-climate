@@ -56,7 +56,8 @@ function welkom() {
     <div class="vak"><label for="naam">Zo noemt het huis je</label><input class="veld" id="naam" data-naam value="${esc(ik.naam)}" maxlength="40" autocomplete="nickname"><span class="hint">Uit Home Assistant: ${esc(ik.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
     <div class="vak"><span>Thuis volgens</span>${thuis}</div>
     <span class="fout" data-fout></span>
-    <div class="voet"><a class="zacht" href="${esc(terug)}">Later</a><button type="button" class="knop knop-licht" data-klopt>Klopt</button></div>`;
+    <div class="voet"><a class="zacht" href="${esc(terug)}">Later</a><button type="button" class="knop knop-licht" data-klopt>Klopt</button></div>
+    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
 }
 
 function vraag() {
@@ -111,6 +112,9 @@ kaart.addEventListener('click', async (e) => {
       await stuur({ actie: 'ik', soort: 'bewoner', ...(bron ? { aanwezigheid: bron } : {}) });
       stap = 'welkom';
       teken();
+    } else if (t.hasAttribute('data-wordt-scherm')) {
+      await stuur({ actie: 'scherm' });
+      location.href = terug;
     } else if (t.hasAttribute('data-klopt')) {
       const ik = bewoners?.bewoners.find((b) => b.ik);
       const naam = kaart.querySelector('[data-naam]')?.value.trim();

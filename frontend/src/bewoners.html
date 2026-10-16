@@ -47,7 +47,11 @@
   .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .klein-kaart { padding: 14px 18px; }
   .klein-kaart h3 { margin: 0 0 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
-  .klein-kaart .r { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .klein-kaart .r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .klein-kaart .gastrij { cursor: pointer; border-radius: 10px; margin: 0 -8px; padding: 7px 8px; }
+  .klein-kaart .gastrij.gekozen { background: rgba(255, 255, 255, 0.08); }
+  .klein-kaart .gastrij:focus-visible { outline: 2px solid var(--tekst); }
+  .klein-kaart .r .n { color: var(--tekst); font-size: 14px; text-align: left; overflow-wrap: anywhere; }
   .klein-kaart .r:first-of-type { border-top: 0; }
   .klein-kaart .r span { color: var(--zacht); font-size: 13px; text-align: right; }
   .erbij { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; }
