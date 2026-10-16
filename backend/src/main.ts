@@ -415,7 +415,8 @@ async function configWithComfort(comfort: Comfort | null, bewoners: Bewoners = b
   const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
   const metComfort = withComfort(metBronnen.raw, comfort);
   // Comfort per bewoner (besluit 147): de profielen op volgorde, en "toch die van" als iemand dat koos.
-  const profiles = profielenVoor(bewoners, comfort, site.config.occupancy);
+  const zoneIds = new Set((Array.isArray(metComfort.raw['zones']) ? (metComfort.raw['zones'] as Record<string, unknown>[]) : []).map((z) => String(z['id'])));
+  const profiles = profielenVoor(bewoners, comfort, site.config.occupancy, zoneIds);
   if (profiles.length > 0) {
     metComfort.raw = { ...metComfort.raw, profiles, ...(bewoners.vasthouden ? { profileHold: { id: bewoners.vasthouden.id, home: bewoners.vasthouden.home } } : {}) };
     metComfort.toegevoegd.push(`comfort per bewoner: ${profiles.map((x) => x.name).join(', ')}`);
@@ -801,6 +802,7 @@ function meldingenRonde(): void {
     volgen,
     batterijen: h.batterijen,
     filters: h.filters,
+    drempels: h.drempels,
     meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
     versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
@@ -830,6 +832,8 @@ const houseReport = () => {
         scenePictures ? (naam) => scenePictures.pictureFor(naam) : undefined,
         // Alleen de camera's die de bewoner koos; zonder keuze het voorstel (elke camera).
         functiesStore?.current ? getoondeCameras(functiesStore.current) : null,
+        // Wanneer een batterij of filter een melding geeft (besluit 149).
+        functiesStore?.current?.meldingen,
       )
     : null;
   // Met de laatste opdracht bij een scherm zonder terugmelding (besluit 128).

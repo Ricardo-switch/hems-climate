@@ -155,6 +155,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [141. De assistent als gesprek, met een stem](#141-de-assistent-als-gesprek-met-een-stem)
 - [142. Een kwaliteitsronde: een kamer doet mee met een andere, en de assistent klinkt als een mens](#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens)
 - [148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin](#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin)
+- [149. Wanneer een batterij of filter een melding geeft, een scherm beheren, en een eigen comfort dat weer lukt](#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt)
 
 **Veiligheid**
 
@@ -6372,6 +6373,46 @@ kaartjes met wat er veranderde blijven.
   of dat het het te druk heeft, dan vraagt de assistent het een tijd niet:
   tot het moment dat het model noemt (hooguit een dag), twee minuten bij
   "te druk". Tot dan komt het vaste antwoord meteen, zonder te wachten.
+
+---
+
+## 149. Wanneer een batterij of filter een melding geeft, een scherm beheren, en een eigen comfort dat weer lukt
+
+*Onderwerp: weergave · Status: geldig*
+
+Gemeld door de bewoner op 16 oktober 2026, na een dag met twee bewoners: er
+was geen instelling voor wanneer filters en batterijen een melding geven; een
+scherm dat eenmaal was ingesteld, kon je niet meer beheren; en Shira, de
+tweede bewoner, kreeg een foutmelding als ze een eigen comfort koos. Er is geen
+schets voor; het volgt de opbouw van Functies en Bewoners zoals ze er al
+waren.
+
+*Besluit:*
+
+- **Wanneer een melding** (aanvulling op besluit 136): bij Instellingen ›
+  Functies › Meldingen kies je per soort, batterij en airco-filter, onder
+  welk percentage er een melding komt: 5, 10, 20 of 30%, of nooit. Zonder
+  keuze 10%, zoals het was. Het staat in `functies.json` (`meldingen`), net
+  als de andere functies, en bewaren vraagt een beheerder. De dienst geeft de
+  drempels mee in het huis (`drempels`), zodat de bel, Thuis, de kamer en
+  Onderhoud dezelfde grens gebruiken; Onderhoud zegt welke grens geldt en
+  linkt ernaartoe. Onderhoud toont nog steeds altijd alle batterijen en
+  filters.
+- **Een scherm beheren** (aanvulling op besluit 147): bij Bewoners › Schermen
+  en gasten is een scherm aan te tikken. Je geeft het een andere naam (de
+  naam uit Home Assistant blijft erbij staan), of haalt het weg. Weghalen maakt
+  er geen bewoner van: bij de volgende pagina vraagt dat account opnieuw "woon
+  je hier, of is dit een scherm?". Dat mag de hoofdgebruiker, een beheerder,
+  en het scherm zelf. De dienst toetst het, niet alleen de pagina.
+- **Een eigen comfort dat weer lukt** (reparatie op besluit 147): wie "Eigen"
+  koos, kreeg een kopie van het comfort van het huis, met elke kamer die daar
+  ooit in stond. Ging een kamer sindsdien uit de regeling (besluit 138), dan
+  weigerde de controle het hele profiel: "die zone bestaat niet". Nu krijgt
+  de regeling alleen de kamers die ze nu heeft; de rest blijft bewaard, voor
+  als de kamer terugkomt. Dat de fout bij Shira precies deze was, is
+  nagespeeld en niet op de NAS gezien; het is de enige weg die we vonden
+  waarop "Eigen" kon mislukken.
+- **Versie 0.28.0.**
 
 ---
 

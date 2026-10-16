@@ -70,6 +70,7 @@
     { titel: 'Deurbel', waar: 'Functies', href: 'functies.html#deurbel', woorden: 'deurbel bel aanbellen bezoeker scherm' },
     { titel: 'Licht en screens bedienen', waar: 'Functies', href: 'functies.html#licht', woorden: 'licht lamp scene screen zonnescherm bedienen' },
     { titel: 'Weer', waar: 'Functies', href: 'functies.html#weer', woorden: 'weer buienradar open-meteo verwachting uur' },
+    { titel: 'Wanneer een batterij of filter een melding geeft', waar: 'Functies', href: 'functies.html#meldingen', woorden: 'melding batterij filter leeg vol onderhoud procent bel' },
     { titel: 'Bewoners', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'bewoner bewoners gebruiker hoofdgebruiker naam volgorde aanwezig thuis weg wie' },
     { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
     { titel: 'Inloggen', waar: 'Bewoners en toegang', href: 'toegang.html#inloggen', woorden: 'inloggen uitloggen account wachtwoord toegang' },
@@ -204,7 +205,7 @@
     const bewijs = winter ? `${winter.dagen} van ${winter.doel} winterdagen` : null;
     const lampenAan = alles.filter((x) => x.soort === 'licht' && x.aan).length;
     const screens = alles.filter((x) => x.soort === 'screen');
-    const leegB = (d.huis?.batterijen ?? []).filter((b) => b.pct < 10).length;
+    const leegB = (d.huis?.batterijen ?? []).filter((b) => app.bijnaOp(b.pct, 'batterij', d.huis)).length;
     const volF = (d.huis?.filters ?? []).length;
     const z = d.aansluiting?.antwoorden?.zekering ?? d.aansluiting?.configuratie?.zekering;
     const opZon = Object.values(d.aansluiting?.antwoorden?.opZon ?? {}).filter(Boolean).length + (d.aansluiting?.configuratie?.apparaten?.length ?? 0);
@@ -340,7 +341,7 @@
       }] : []),
       {
         id: 'batterijen', groep: 'overzicht', titel: 'Batterijen en filters', stand: 'werkt', let: leegB > 0 || volF > 0, nu: leegB || volF ? [leegB ? `${leegB} ${leegB === 1 ? 'batterij' : 'batterijen'} bijna leeg` : null, volF ? `${volF} ${volF === 1 ? 'filter' : 'filters'} vol` : null].filter(Boolean).join(', ') : 'alles in orde', href: 'thuis.html#batterijen',
-        wat: 'Een batterij onder 10% of een vol airco-filter staat op Thuis, met een tik naar het apparaat.',
+        wat: 'Een bijna lege batterij of een vol airco-filter staat op Thuis, met een tik naar het apparaat. Wanneer, kies je bij Functies.',
         zo: ['Alle kleine apparaten met een batterij, ook knoppen die de app verder niet gebruikt', 'Telefoons, een thuisbatterij en een auto tellen niet mee'],
         wanneer: ['Altijd'],
       },

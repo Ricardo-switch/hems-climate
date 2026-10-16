@@ -69,6 +69,17 @@ describe('comfort per bewoner', () => {
     expect(eigen.comfort.profielen?.['shira']).toEqual(comfort.kamers);
   });
 
+  it('een eigen comfort met een kamer die niet meer meedoet, past toch in de regeling (besluit 149)', () => {
+    // Shira koos "Eigen" en kreeg een kopie van het huis, met de zolder, die sindsdien uit de regeling ging.
+    const b = tweeBewoners();
+    const huis: Comfort = { versie: 1, kamers: { ...comfort.kamers, zolder: { modi: { dag: { heat: 18, cool: 23 } } } } };
+    const eigen = voerUit(b, huis, { actie: 'comfort', id: 'shira', comfort: 'eigen' }, { userId: 'u-shira', naam: 'Shira', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners; comfort: Comfort };
+    const profielen = profielenVoor(eigen.bewoners, eigen.comfort, occupancy, new Set(['woonkamer', 'badkamer']));
+    expect(Object.keys(profielen[1]!.zones)).toEqual(['woonkamer']);
+    // Bewaard blijft hij wel: komt de zolder terug, dan is Shira's zolder er ook weer.
+    expect(eigen.comfort.profielen?.['shira']?.['zolder']).toBeDefined();
+  });
+
   it('een andere hoofdgebruiker neemt zijn eigen comfort mee, en de oude het zijne', () => {
     const b = tweeBewoners();
     const met: Comfort = { ...comfort, profielen: { shira: { woonkamer: { modi: { dag: { heat: 21.5, cool: 24 } } } } } };
@@ -121,6 +132,37 @@ describe('wiens comfort je ziet', () => {
     const v = comfortVanBewoner(exampleSite, metZijn, eigen, shira, null).view;
     expect(v.van?.volgt).toBe(false);
     expect(v.kamers.find((k) => k.id === 'woonkamer')?.modi.dag).toEqual({ heat: 22.5, cool: 26 });
+  });
+});
+
+describe('een scherm beheren (besluit 149)', () => {
+  const metWand = () => {
+    const uit = voerUit(tweeBewoners(), comfort, { actie: 'ik', soort: 'scherm', aanwezigheid: null }, { userId: 'u-wand', naam: 'Tablet hal', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    return uit.bewoners;
+  };
+  const ricardo = { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false };
+  const shira = { userId: 'u-shira', naam: 'Shira', beheerder: false };
+
+  it('krijgt een andere naam van de hoofdgebruiker, en houdt de naam uit Home Assistant', () => {
+    const b = metWand();
+    const uit = voerUit(b, comfort, leesActie({ actie: 'schermNaam', id: 'u-wand', naam: '  De wand ' })!, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(uit.bewoners.schermen['u-wand']).toMatchObject({ naam: 'De wand', haNaam: 'Tablet hal' });
+    const v = bewonersView(uit.bewoners, ricardo, occupancy, () => undefined, null);
+    expect(v.schermen).toEqual([{ id: 'u-wand', naam: 'De wand', haNaam: 'Tablet hal', sindsMs: NU, ik: false }]);
+    // Een andere bewoner niet; het scherm zelf wel.
+    expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: 'Hal' }, shira, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: 'Hal' }, { userId: 'u-wand', naam: 'Tablet hal', beheerder: false }, occupancy, [], NU).ok).toBe(true);
+    expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: '   ' }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
+  });
+
+  it('weghalen: bij de volgende inlog vraagt de app weer wat het is', () => {
+    const b = metWand();
+    expect(voerUit(b, comfort, { actie: 'schermWeg', id: 'u-wand' }, shira, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    const uit = voerUit(b, comfort, { actie: 'schermWeg', id: 'u-wand' }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(uit.bewoners.schermen).toEqual({});
+    expect(uit.bewoners.volgorde).toEqual(['ricardo', 'shira']);
+    expect(herken(uit.bewoners, { userId: 'u-wand', naam: 'Tablet hal' }, personen, occupancy, NU).soort).toBe('vraag');
+    expect(voerUit(uit.bewoners, comfort, { actie: 'schermWeg', id: 'u-wand' }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 404 });
   });
 });
 

@@ -77,6 +77,16 @@ describe('meldingen (besluit 136)', () => {
     expect(s.lijst(T0 + UUR).eerder.map((m) => m.titel)).toContain('Nieuwe batterij in Schakelaar badkamer');
   });
 
+  it('meldt onder de drempel die de bewoner koos, en nooit als hij dat koos (besluit 149)', async () => {
+    const { s } = await store();
+    const batterijen = [{ id: 'sensor.knop', naam: 'Knop', pct: 15, kamerId: null }];
+    const filters = [{ id: 'sensor.filter', naam: 'Airco zolder', pct: 4, kamerId: 'zolder' }];
+    s.bij(leeg({ batterijen, filters, drempels: { batterij: 20, filter: null } }));
+    expect(s.lijst(T0).actief.map((m) => m.soort)).toEqual(['batterij']);
+    s.bij(leeg({ nu: T0 + UUR, batterijen: [{ ...batterijen[0]!, pct: 90 }], drempels: { batterij: 20, filter: null } }));
+    expect(s.lijst(T0 + UUR).eerder[0]?.tekst).toMatch(/^Weer boven de 20%\./);
+  });
+
   it('noemt een nieuwe versie en een mijlpaal één keer, ter informatie', async () => {
     const { s } = await store();
     s.bij(leeg({ versie: { nummer: '0.12.0' } }));

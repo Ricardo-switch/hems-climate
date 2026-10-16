@@ -10,7 +10,7 @@
  */
 'use strict';
 
-const { $$, nl, zet, esc, haal, deur, tijdVanDeDag, lucht } = app;
+const { $$, nl, zet, esc, haal, deur, tijdVanDeDag, lucht, bijnaOp } = app;
 
 let state = null;
 let huisData = null;
@@ -171,7 +171,7 @@ function tekenNu() {
  */
 let onderhoudOpen = false;
 function onderhoudLijst() {
-  const leeg = (huisData?.batterijen ?? []).filter((b) => b.pct < 10).map((b) => ({ tekst: `${b.kamer ?? b.naam}: batterij ${b.pct}%`, lang: `Batterij bijna leeg: ${b.naam}, ${b.pct}%`, href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
+  const leeg = (huisData?.batterijen ?? []).filter((b) => bijnaOp(b.pct, 'batterij', huisData)).map((b) => ({ tekst: `${b.kamer ?? b.naam}: batterij ${b.pct}%`, lang: `Batterij bijna leeg: ${b.naam}, ${b.pct}%`, href: b.kamerId ? `kamer.html#${encodeURIComponent(b.kamerId)}/${encodeURIComponent(`batterij-${b.id}`)}` : null }));
   const vol = (huisData?.filters ?? []).map((f) => ({ tekst: `${f.naam}: filter ${f.pct}%`, lang: `Filter schoonmaken: ${f.naam}, ${f.pct}%`, href: `kamer.html#${encodeURIComponent(f.kamerId)}/${encodeURIComponent(f.id)}` }));
   return [...leeg, ...vol];
 }
@@ -402,7 +402,7 @@ function tekenBatterijen() {
   const rijen = lijst.map((b) => {
     const tag = b.kamerId ? 'a' : 'div';
     const href = b.kamerId ? ` href="kamer.html#${encodeURIComponent(b.kamerId)}"` : '';
-    return `<${tag} class="accu${b.pct < 10 ? ' leeg' : ''}"${href}>
+    return `<${tag} class="accu${bijnaOp(b.pct, 'batterij', huisData) ? ' leeg' : ''}"${href}>
       <b>${esc(b.naam)}</b><span class="pct">${b.pct}%</span>
       <span>${esc(b.kamer ?? 'Nog in geen kamer')}</span>
       <i><b style="width: ${Math.max(2, Math.min(100, b.pct))}%"></b></i>
@@ -413,7 +413,7 @@ function tekenBatterijen() {
     el.innerHTML = `
       <div class="weerkop"><h2 class="kop-3">Batterijen</h2><button class="sluit" type="button" aria-label="Sluiten">×</button></div>
       ${rijen || '<p class="mini">Geen apparaten met een batterij gevonden.</p>'}
-      <p class="mini voet">Onder de 10% staat een batterij op het startscherm. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
+      <p class="mini voet">${esc(huisData?.drempels?.batterij === null ? 'Batterijen geven geen melding.' : `Onder de ${huisData?.drempels?.batterij ?? 10}% staat een batterij op het startscherm.`)} <a href="functies.html#meldingen">Wanneer ›</a> Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
     el.querySelector('.sluit').addEventListener('click', sluitWeer);
   }
 }

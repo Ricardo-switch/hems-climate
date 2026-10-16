@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import { CAMERA_ID, findCameras } from './camera.js';
+import { DREMPEL_KEUZES, STANDAARD_DREMPELS, type Drempels } from './house.js';
 import { OPEN_METEO, OPEN_METEO_NAAM } from './open-meteo.js';
 import { weatherSources } from './weather.js';
 
@@ -66,6 +67,11 @@ export interface Functies {
    * licht en schermen bedienen toestaan; weg is aan.
    */
   readonly praten?: { readonly taalmodel: string | null; readonly bedienen: boolean };
+  /**
+   * Wanneer een batterij of een airco-filter een melding geeft (besluit 149):
+   * onder dit percentage, of null voor nooit. Weg is 10%, zoals het was.
+   */
+  readonly meldingen?: Drempels;
 }
 
 /** Een camera zoals Home Assistant hem heeft: één apparaat, soms met meer beelden. */
@@ -185,6 +191,7 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     schermen: { bedienen: true },
     // Het taalmodel staat standaard uit (besluit 148): het vaste antwoord werkt altijd.
     praten: { taalmodel: null, bedienen: true },
+    meldingen: STANDAARD_DREMPELS,
   };
 }
 
@@ -192,7 +199,7 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean } } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean }; meldingen: Drempels } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
@@ -200,6 +207,7 @@ export function volledig(
     licht: f.licht ?? { bedienen: true },
     schermen: f.schermen ?? { bedienen: true },
     praten: f.praten ?? { taalmodel: null, bedienen: true },
+    meldingen: f.meldingen ?? STANDAARD_DREMPELS,
   };
 }
 
@@ -265,6 +273,15 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     if (typeof pr['bedienen'] !== 'boolean') return { ok: false, reden: 'praten.bedienen is ja of nee' };
     praten = { taalmodel: model as string | null, bedienen: pr['bedienen'] };
   }
+  // Wanneer een batterij of filter een melding geeft (besluit 149): een van de keuzes, of nooit.
+  const meldingenIn = b['meldingen'];
+  let meldingen: Drempels = STANDAARD_DREMPELS;
+  if (meldingenIn !== undefined) {
+    const m = (typeof meldingenIn === 'object' && meldingenIn != null ? meldingenIn : {}) as Record<string, unknown>;
+    const keuze = (v: unknown) => v === null || (DREMPEL_KEUZES as readonly unknown[]).includes(v);
+    if (!keuze(m['batterij']) || !keuze(m['filter'])) return { ok: false, reden: `meldingen: onder ${DREMPEL_KEUZES.join(', ')}%, of nooit` };
+    meldingen = { batterij: m['batterij'] as number | null, filter: m['filter'] as number | null };
+  }
   return {
     ok: true,
     functies: {
@@ -275,6 +292,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
       licht: { bedienen },
       schermen: { bedienen: schermen },
       praten,
+      meldingen,
     },
   };
 }

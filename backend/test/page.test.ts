@@ -861,8 +861,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
     // Een batterij onder de 10%: een pil op Thuis; een tik opent de lijst (besluit 127).
     extraBatterijen = [
-      { id: 'd-knop', naam: 'Knop bank', pct: 7, kamer: kamer.naam, kamerId: kamer.id },
-      { id: 'd-dimmer', naam: 'Hue dimmer switch', pct: 64, kamer: null, kamerId: null },
+      { id: 'd-knop', naam: 'Knop bank', pct: 7, kamer: kamer.naam, kamerId: kamer.id, leeg: true },
+      { id: 'd-dimmer', naam: 'Hue dimmer switch', pct: 64, kamer: null, kamerId: null, leeg: false },
     ];
     await p.goto(`${baseUrl}/thuis.html`);
     // Onderhoud (15 oktober): ingeklapt een sleutel, een tik klapt open, Bekijk gaat naar de knop in de kamer.
@@ -1044,6 +1044,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await wand.locator('[aria-label="Licht bedienen"] button[aria-pressed="true"]').textContent()).toBe('Bedienen in de app');
     await wand.locator('[aria-label="Licht bedienen"] button', { hasText: 'Alleen kijken' }).click();
     await expect.poll(() => functiesStore.current?.licht, { timeout: 5_000 }).toEqual({ bedienen: false });
+    // Meldingen (besluit 149): een batterij al onder de 20%, een filter nooit.
+    await wand.locator('[data-delen] .deel', { hasText: 'Meldingen' }).click();
+    await wand.locator('[aria-label="Batterij bijna leeg onder"] button', { hasText: '20%' }).click();
+    await wand.locator('[aria-label="Filter bijna vol onder"] button', { hasText: 'Nooit' }).click();
+    await expect.poll(() => functiesStore.current?.meldingen, { timeout: 5_000 }).toEqual({ batterij: 20, filter: null });
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Zonder deurbel in Home Assistant zegt de pagina dat.
     await wand.locator('[data-delen] .deel', { hasText: 'Deurbel' }).click();
     await wand.locator('[data-vorm] h2', { hasText: 'Deurbel' }).waitFor();
@@ -2194,6 +2200,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       houseStates.delete('person.shira');
     }
     expect((await fetch(`${baseUrl}/api/export`, { headers: { cookie: `hems_sessie=${gastSessie}` } })).status).toBe(403);
+
+    // Een scherm beheren (besluit 149): de wand een andere naam geven, en weghalen.
+    await p.goto(`${baseUrl}/bewoners.html`);
+    await wandL.locator('[data-schermen] [data-kies="scherm:u-wand"]').click();
+    const schermNaam = wandL.locator('[data-blad] [data-schermnaam]');
+    await schermNaam.waitFor();
+    await shot(p, 'bewoners-scherm');
+    await schermNaam.fill('Tablet hal');
+    await schermNaam.evaluate((el) => (el as unknown as { blur: () => void }).blur());
+    await expect.poll(() => bewonersStore.current.schermen['u-wand']?.naam, kort).toBe('Tablet hal');
+    expect(bewonersStore.current.schermen['u-wand']?.haNaam).toBe('Wand');
+    p.once('dialog', (d) => void d.accept());
+    await wandL.locator('[data-blad] [data-schermweg]').click();
+    await expect.poll(() => bewonersStore.current.schermen['u-wand'], kort).toBeUndefined();
 
     // De inlogpagina, voor wie nog niet is ingelogd: alleen een huis als silhouet en de knop.
     const buiten = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);

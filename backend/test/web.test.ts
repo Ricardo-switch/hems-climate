@@ -313,7 +313,7 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
     // Weer en licht vult de dienst aan met het voorstel (besluit 111).
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true } });
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true }, meldingen: { batterij: 10, filter: 10 } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);
@@ -1074,6 +1074,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
       onvindbaar: [],
       batterijen: [],
       filters: [],
+      drempels: { batterij: 10, filter: 10 },
     };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
@@ -1137,6 +1138,7 @@ describe('licht bedienen (besluit 97)', () => {
     onvindbaar: [],
     batterijen: [],
     filters: [],
+    drempels: { batterij: 10, filter: 10 },
   };
 
   async function withLights() {

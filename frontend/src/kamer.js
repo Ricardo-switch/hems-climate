@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const { $$, nl, esc, klokVan, wanneer, haal, deur } = app;
+const { $$, nl, esc, klokVan, wanneer, haal, deur, bijnaOp } = app;
 
 let state = null;
 let huisData = null;
@@ -263,12 +263,12 @@ function kamerBlad(k) {
   const isSchakelaar = (b) => /schakel|switch|dimmer|knop|tap|button|afstandsbediening|remote/i.test(b.naam);
   const schakelaars = batt.filter(isSchakelaar);
   const sensoren = batt.filter((b) => !isSchakelaar(b));
-  const battRij = (b) => `<div class="rij batt${b.pct < 10 ? ' leeg' : ''}" id="batterij-${esc(b.id)}" style="cursor: default"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M21.5 11v2"/><rect x="5" y="9.5" width="${Math.max(1, Math.round((Math.min(100, b.pct) / 100) * 12))}" height="5" rx="1" fill="currentColor" stroke="none"/></svg><span class="naam"><b>${esc(b.naam)}</b><span>batterij ${nl(b.pct, 0)}%${b.pct < 10 ? ', bijna leeg: tijd voor een nieuwe' : ''}</span></span></div>`;
+  const battRij = (b) => `<div class="rij batt${bijnaOp(b.pct, 'batterij', huisData) ? ' leeg' : ''}" id="batterij-${esc(b.id)}" style="cursor: default"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="7" width="17" height="10" rx="2"/><path d="M21.5 11v2"/><rect x="5" y="9.5" width="${Math.max(1, Math.round((Math.min(100, b.pct) / 100) * 12))}" height="5" rx="1" fill="currentColor" stroke="none"/></svg><span class="naam"><b>${esc(b.naam)}</b><span>batterij ${nl(b.pct, 0)}%${bijnaOp(b.pct, 'batterij', huisData) ? ', bijna leeg: tijd voor een nieuwe' : ''}</span></span></div>`;
   const meterRij = (d) => {
     const m = d.meting ?? {};
     const b = m.beweging;
     const delen = [m.temperatuurC != null ? `${nl(m.temperatuurC)}°` : null, m.vochtPct != null ? `${Math.round(m.vochtPct)}% vocht` : null, b && !b.nu && b.sindsMs ? `beweging om ${wanneer(b.sindsMs)}` : null, d.batterijPct != null ? `batterij ${d.batterijPct}%` : null].filter(Boolean);
-    const leeg = d.batterijPct != null && d.batterijPct < 10;
+    const leeg = bijnaOp(d.batterijPct, 'batterij', huisData);
     return `<div class="rij meterrij${leeg ? ' batt leeg' : ''}" style="cursor: default">${b?.nu ? '<span class="beweegt" aria-hidden="true"><i></i></span>' : icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${b?.nu ? '<em class="nu">Beweging, nu</em> · ' : ''}${esc(delen.join(' · '))}</span></span></div>`;
   };
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.
@@ -411,11 +411,11 @@ function aircoBlad(k, d) {
     ${strookVandaag(d, kleur)}`;
 }
 
-/** Hoe lang het filter nog meegaat (besluit 129); onder 10% schoonmaken. */
+/** Hoe lang het filter nog meegaat (besluit 129); onder de drempel schoonmaken (149). */
 function filterRegel(d) {
   const f = d.klimaat?.filter;
   if (!f) return '';
-  const leeg = f.pct != null && f.pct < 10;
+  const leeg = bijnaOp(f.pct, 'filter', huisData);
   const wat = f.pct != null ? `${nl(f.pct, 0)}% over` : `nog ${nl(f.uren, 0)} uur`;
   return `<div class="feit"><span>Filter</span><b style="${leeg ? 'color: var(--gloed)' : ''}">${leeg ? `schoonmaken, ${wat}` : wat}</b></div>`;
 }

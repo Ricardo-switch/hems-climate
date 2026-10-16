@@ -131,7 +131,7 @@ const GROEPEN = [
   ['comfort', 'Comfort', 'Temperaturen, dagdelen, vakantie'],
   ['energie', 'Energie', 'Panelen, zekering, meters, prijzen'],
   ['regeling', 'Regeling', 'Wie wat regelt, apparaten op zon'],
-  ['functies', 'Functies', "Licht, screens, camera's, weer"],
+  ['functies', 'Functies', "Licht, screens, camera's, weer, meldingen"],
   ['toegang', 'Bewoners en toegang', 'Wie hier woont, inloggen, gegevens'],
 ];
 

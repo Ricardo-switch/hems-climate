@@ -208,7 +208,8 @@ verwijzing bestaat.
 - **Vrijgeven** gaat tot 1 november op de eigen pc met `tools/vrijgeven.sh`;
   daarna weer via GitHub ([135]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
-  wat er nieuw is ([136]).
+  wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
+  kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
 - **Verwacht naast echt:** bij Vandaag, Thuis en Opbrengst staat de
   zonverwachting naast wat er kwam, en bij Gisteren hoe het de afgelopen twee
   weken klopte ([137]).
@@ -239,7 +240,8 @@ verwijzing bestaat.
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
   thuis is, bepaalt het comfort, na tien minuten rust. Bewoners komen erbij
   door één keer in te loggen; de wand is een scherm. De hele app vraagt een
-  inlog; de assistent van Home Assistant heeft een sleutel ([147]).
+  inlog; de assistent van Home Assistant heeft een sleutel ([147]). Een scherm
+  krijgt bij Bewoners een andere naam, of gaat weg ([149]).
 - **Comfort uit de app gaat voor** de helpers van het oude systeem; het huis
   heeft een voordeur, de meterkast, de camera, de tuin en de buitenunits zoals
   ze zijn ([143]).
@@ -439,4 +441,5 @@ verwijzing bestaat.
 [146]: DECISIONS.md#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis
 [147]: DECISIONS.md#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app
 [148]: DECISIONS.md#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin
+[149]: DECISIONS.md#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt
 <!-- links:einde -->

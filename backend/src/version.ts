@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.27.1';
+export const VERSIE = '0.28.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,15 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.28.0',
+    datum: '2026-10-17',
+    nieuw: [
+      'Bij Functies › Meldingen kies je wanneer een batterij of een airco-filter een melding geeft: onder 5, 10, 20 of 30%, of nooit',
+      'Een scherm zoals de wand beheer je bij Bewoners: een andere naam geven, of weghalen',
+    ],
+    opgelost: ['Een tweede bewoner kan weer een eigen comfort kiezen, ook als er een kamer uit de regeling ging'],
+  },
   {
     versie: '0.27.1',
     datum: '2026-10-16',

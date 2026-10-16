@@ -13,6 +13,14 @@
   const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
   const zet = (sel, text) => $$(sel).forEach((e) => (e.textContent = text));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  /**
+   * Bijna op (besluit 149): onder de drempel die de bewoner koos bij Functies,
+   * per soort ('batterij' of 'filter'). Zonder huis 10%; null is nooit.
+   */
+  const bijnaOp = (pct, soort, huis) => {
+    const d = huis?.drempels?.[soort];
+    return pct != null && (d === undefined ? pct < 10 : d != null && pct < d);
+  };
   const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
   /**
    * Wanneer iets was: de klok vandaag, "gisteren" met de klok, of de datum.
@@ -417,6 +425,16 @@
     return `<button type="button" class="onderhoud" data-meld-onderhoud>${meldIcoon(op.length ? op[0].soort : 'onderhoud')}<span><b>Onderhoud</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
   }
 
+  /** Wanneer er een melding komt, in een zin (besluit 149). */
+  function drempelZin(d) {
+    const b = d ? d.batterij : 10;
+    const f = d ? d.filter : 10;
+    if (b == null && f == null) return 'Batterijen en filters geven geen melding.';
+    if (b === f) return `Onder de ${b}% komt er een melding.`;
+    const deel = (pct, wat) => (pct == null ? `${wat} nooit` : `${wat} onder de ${pct}%`);
+    return `Een melding: ${deel(b, 'een batterij')}, ${deel(f, 'een filter')}.`;
+  }
+
   async function meldOnderhoud() {
     let huis = null;
     try {
@@ -424,15 +442,15 @@
     } catch {
       // Dan een lege lijst.
     }
-    const balk = (pct) => `<div class="meter"><i style="width: ${Math.max(2, pct)}%; background: ${pct < 10 ? 'var(--gloed)' : pct < 40 ? 'var(--zon)' : 'var(--mint)'}"></i></div>`;
-    const regel = (naam, onder, pct) => `<div class="regel"><div><b>${esc(naam)}</b><span>${esc(onder ?? '')}</span></div>${balk(pct)}<span class="pct">${pct}%</span></div>`;
+    const balk = (pct, soort) => `<div class="meter"><i style="width: ${Math.max(2, pct)}%; background: ${bijnaOp(pct, soort, huis) ? 'var(--gloed)' : pct < 40 ? 'var(--zon)' : 'var(--mint)'}"></i></div>`;
+    const regel = (naam, onder, pct, soort) => `<div class="regel"><div><b>${esc(naam)}</b><span>${esc(onder ?? '')}</span></div>${balk(pct, soort)}<span class="pct">${pct}%</span></div>`;
     const batt = huis?.batterijen ?? [];
     const filters = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.klimaat?.filter?.pct != null).map((a) => ({ naam: a.naam, kamer: r.naam, pct: a.klimaat.filter.pct }))));
     return `<div class="kop"><div><button type="button" class="terugmeld" data-meld-terug>‹ Meldingen</button><h2 class="kop-2" style="margin: 2px 0 0">Onderhoud</h2></div><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
       <h3>Batterijen, de leegste eerst</h3>
-      ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct)).join('') : '<p class="mini" style="margin: 0">Geen apparaten met een batterij gevonden.</p>'}
-      ${filters.length ? `<h3>Filters van de airco's</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct)).join('')}` : ''}
-      <p class="mini" style="margin: auto 0 0">Onder de 10% komt er een melding. Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
+      ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct, 'batterij')).join('') : '<p class="mini" style="margin: 0">Geen apparaten met een batterij gevonden.</p>'}
+      ${filters.length ? `<h3>Filters van de airco's</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct, 'filter')).join('')}` : ''}
+      <p class="mini" style="margin: auto 0 0">${esc(drempelZin(huis?.drempels))} <a href="functies.html#meldingen">Wanneer een melding ›</a> Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
   }
 
   /*
@@ -602,5 +620,5 @@
     setInterval(() => void kijkVersie(), 10 * 60_000);
   }
 
-  global.app = { $$, nl, zet, esc, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
+  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
 })(window);

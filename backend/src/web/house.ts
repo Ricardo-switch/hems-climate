@@ -304,8 +304,16 @@ export interface HouseReport {
    * de 10% meldt het startscherm het.
    */
   readonly batterijen: readonly HouseBattery[];
-  /** Filters van airco's die bijna op zijn (onder 10%, besluit 129), de leegste eerst. */
+  /** Filters van airco's die bijna op zijn (onder de drempel, besluit 129), de leegste eerst. */
   readonly filters: readonly HouseBattery[];
+  /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); null is nooit. */
+  readonly drempels: Drempels;
+}
+
+/** Wanneer een batterij of filter een melding geeft (besluit 149): onder dit percentage; null is nooit. */
+export interface Drempels {
+  readonly batterij: number | null;
+  readonly filter: number | null;
 }
 
 export interface HouseBattery {
@@ -316,10 +324,17 @@ export interface HouseBattery {
   /** De kamer in de indeling, met naam en id, of null. */
   readonly kamer: string | null;
   readonly kamerId: string | null;
+  /** Onder de drempel (besluit 149): dan meldt de app het. */
+  readonly leeg: boolean;
 }
 
-/** Onder dit percentage meldt het startscherm een batterij (besluit 122). */
+/** Onder dit percentage meldt het startscherm een batterij (besluit 122), tot de bewoner iets anders kiest (149). */
 export const BATTERIJ_LEEG_PCT = 10;
+/** Wat de bewoner kan kiezen (besluit 149); daarnaast "nooit". */
+export const DREMPEL_KEUZES = [5, 10, 20, 30] as const;
+export const STANDAARD_DREMPELS: Drempels = { batterij: BATTERIJ_LEEG_PCT, filter: BATTERIJ_LEEG_PCT };
+/** Onder de drempel; zonder drempel nooit. */
+export const onderDrempel = (pct: number, drempel: number | null): boolean => drempel != null && pct < drempel;
 
 /**
  * Koppelingen van telefoons en tablets: die laden zichzelf op, en zijn geen
@@ -1363,6 +1378,8 @@ export function buildHouse(
   scenePicture: (naam: string) => string | null = () => null,
   /** De camera's die de app toont (besluit 109); null is elke camera. */
   cameras: ReadonlySet<string> | null = null,
+  /** Wanneer een batterij of filter een melding geeft (besluit 149). */
+  drempels: Drempels = STANDAARD_DREMPELS,
 ): HouseReport {
   const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot, cameras);
   const base = saved ?? proposeLayout(config, registers, states);
@@ -1531,13 +1548,13 @@ export function buildHouse(
   const batterijen: HouseBattery[] = [...accu].map(([id, pct]) => {
     const area = deviceArea.get(id);
     const kamer = kamerVanApparaat.get(id) ?? (area ? (roomByArea.get(area) ?? null) : null);
-    return { id, naam: apparaatNaam.get(id) ?? id, pct, kamer: kamer?.naam ?? null, kamerId: kamer?.id ?? null };
+    return { id, naam: apparaatNaam.get(id) ?? id, pct, kamer: kamer?.naam ?? null, kamerId: kamer?.id ?? null, leeg: onderDrempel(pct, drempels.batterij) };
   }).sort((a, b) => a.pct - b.pct || a.naam.localeCompare(b.naam, 'nl'));
   // Filters die bijna op zijn (besluit 129): net als een batterij een melding op Thuis.
   const filters: HouseBattery[] = rooms
     .flatMap((r) => r.apparaten.map((d) => ({ r, d })))
-    .filter(({ d }) => d.klimaat?.filter?.pct != null && d.klimaat.filter.pct < BATTERIJ_LEEG_PCT)
-    .map(({ r, d }) => ({ id: d.id, naam: d.naam, pct: d.klimaat!.filter!.pct!, kamer: r.naam, kamerId: r.id }))
+    .filter(({ d }) => d.klimaat?.filter?.pct != null && onderDrempel(d.klimaat.filter.pct, drempels.filter))
+    .map(({ r, d }) => ({ id: d.id, naam: d.naam, pct: d.klimaat!.filter!.pct!, kamer: r.naam, kamerId: r.id, leeg: true }))
     .sort((a, b) => a.pct - b.pct);
   return {
     indeling: saved ? 'eigen' : 'voorstel',
@@ -1551,6 +1568,7 @@ export function buildHouse(
     onvindbaar: unreachable,
     batterijen,
     filters,
+    drempels,
   };
 }
 

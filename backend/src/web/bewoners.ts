@@ -46,7 +46,10 @@ export interface Bewoner {
 
 export interface Scherm {
   readonly haUser: string;
+  /** Zo heet het scherm in de app; in de app te veranderen (besluit 149). */
   readonly naam: string;
+  /** De naam van het account in Home Assistant, als de naam in de app anders werd. */
+  readonly haNaam?: string;
   readonly sindsMs: number;
 }
 
@@ -164,9 +167,11 @@ export function alsScherm(b: Bewoners, account: Account, nowMs: number): Bewoner
  * De doelen van een eigen comfort, zoals de kern ze per zone wil. Net als bij
  * het comfort van het huis volgt voorverwarmen de dag.
  */
-export function profielZones(kamers: Readonly<Record<string, ComfortRoom>>): Record<string, ProfileZone> {
+export function profielZones(kamers: Readonly<Record<string, ComfortRoom>>, zones?: ReadonlySet<string>): Record<string, ProfileZone> {
   const uit: Record<string, ProfileZone> = {};
   for (const [zone, kamer] of Object.entries(kamers)) {
+    // Een kamer die niet meer meedoet in de regeling (besluit 138): overslaan, maar bewaard houden voor als hij terugkomt.
+    if (zones != null && !zones.has(zone)) continue;
     const setpoints: Record<string, SetpointPair> = {};
     for (const [m, pair] of Object.entries(kamer.modi)) {
       if (pair == null) continue;
@@ -181,15 +186,17 @@ export function profielZones(kamers: Readonly<Record<string, ComfortRoom>>): Rec
 /**
  * De profielen voor de configuratie, op volgorde. De hoofdgebruiker heeft het
  * comfort van het huis zelf (de zones); wie volgt ook. Een eigen comfort komt
- * als eigen doelen per zone.
+ * als eigen doelen per zone, alleen voor zones die de regeling nu heeft
+ * (`zones`): een eigen comfort is een kopie van dat van het huis, en daar kan
+ * een kamer in staan die sindsdien niet meer meedoet.
  */
-export function profielenVoor(b: Bewoners, comfort: Comfort | null, occupancy: readonly OccupancySource[]): ComfortProfile[] {
+export function profielenVoor(b: Bewoners, comfort: Comfort | null, occupancy: readonly OccupancySource[], zones?: ReadonlySet<string>): ComfortProfile[] {
   const bekend = new Set(occupancy.map((o) => o.id));
   return b.volgorde.flatMap((id, i) => {
     const x = b.bewoners[id];
     if (x == null) return [];
     const eigen = i > 0 && x.comfort === 'eigen' ? comfort?.profielen?.[id] : undefined;
-    return [{ id, name: x.naam, occupancyIds: x.aanwezigheid != null && bekend.has(x.aanwezigheid) ? [x.aanwezigheid] : [], zones: eigen ? profielZones(eigen) : {} }];
+    return [{ id, name: x.naam, occupancyIds: x.aanwezigheid != null && bekend.has(x.aanwezigheid) ? [x.aanwezigheid] : [], zones: eigen ? profielZones(eigen, zones) : {} }];
   });
 }
 
@@ -347,7 +354,8 @@ export interface BewonersView {
   readonly bewoners: readonly BewonerView[];
   /** Gasten: ingelogd in de app, maar zonder plek in de volgorde. */
   readonly gasten: readonly BewonerView[];
-  readonly schermen: readonly { readonly naam: string; readonly sindsMs: number }[];
+  /** Schermen zoals de wand (besluit 149): op account, met een naam die je kunt veranderen. */
+  readonly schermen: readonly { readonly id: string; readonly naam: string; readonly haNaam: string; readonly sindsMs: number; readonly ik: boolean }[];
   /** Wat wie er kijkt als aanwezigheid kan kiezen, bij de eerste inlog. */
   readonly kiesbaarVoorMij: readonly Bron[];
   readonly geldt: { readonly id: string; readonly naam: string; readonly waarom: 'thuis' | 'niemand' | 'gekozen'; readonly thuis: readonly string[] } | null;
@@ -416,7 +424,7 @@ export function bewonersView(
     },
     bewoners,
     gasten,
-    schermen: Object.values(b.schermen).map((s) => ({ naam: s.naam, sindsMs: s.sindsMs })),
+    schermen: Object.values(b.schermen).map((s) => ({ id: s.haUser, naam: s.naam, haNaam: s.haNaam ?? s.naam, sindsMs: s.sindsMs, ik: wie.userId === s.haUser })),
     kiesbaarVoorMij: kiesbaarVoor(wie.userId, ikB?.aanwezigheid ?? null),
     geldt: profile ? { id: profile.id, naam: profile.name, waarom: profile.reason, thuis: profile.home } : null,
   };
@@ -433,6 +441,9 @@ export type Actie =
   | { readonly actie: 'hoofd'; readonly id: string }
   | { readonly actie: 'weg'; readonly id: string }
   | { readonly actie: 'vasthouden'; readonly id: string | null }
+  /** Een scherm een andere naam geven, of weghalen (besluit 149); het id is het account. */
+  | { readonly actie: 'schermNaam'; readonly id: string; readonly naam: string }
+  | { readonly actie: 'schermWeg'; readonly id: string }
   /** Dit account is een scherm, ook als het een persoon in Home Assistant heeft (zoals een tablet). */
   | { readonly actie: 'scherm' }
   /** Een gast of weer een bewoner (besluit 147). */
@@ -466,6 +477,10 @@ export function leesActie(body: unknown): Actie | null {
       return { actie: 'vasthouden', id };
     case 'scherm':
       return { actie: 'scherm' };
+    case 'schermNaam':
+      return id && typeof x['naam'] === 'string' ? { actie: 'schermNaam', id, naam: x['naam'] } : null;
+    case 'schermWeg':
+      return id ? { actie: 'schermWeg', id } : null;
     case 'gast':
       return id && typeof x['gast'] === 'boolean' ? { actie: 'gast', id, gast: x['gast'] } : null;
     default:
@@ -576,6 +591,25 @@ export function voerUit(
       const weg = ik ? haalWeg(b, comfort, ik.id) : { bewoners: b, comfort };
       if (weg == null) return { ok: false, status: 400, reden: 'maak eerst een ander hoofdgebruiker' };
       return { ok: true, bewoners: alsScherm(weg.bewoners, { userId: wie.userId, naam: wie.naam }, nowMs), comfort: weg.comfort };
+    }
+    /*
+     * Een scherm beheren (besluit 149): de hoofdgebruiker, een beheerder, of het
+     * scherm zelf. Weghalen maakt er geen bewoner van: bij de volgende pagina
+     * vraagt dat account opnieuw wat het is.
+     */
+    case 'schermNaam': {
+      const sc = b.schermen[a.id];
+      if (sc == null) return { ok: false, status: 404, reden: 'dat scherm is er niet' };
+      if (!beheert && wie.userId !== a.id) return { ok: false, status: 403, reden: 'een scherm beheert de hoofdgebruiker' };
+      const naam = a.naam.trim().replace(/\s+/g, ' ');
+      if (naam === '' || naam.length > 40) return { ok: false, status: 400, reden: 'een naam van 1 tot 40 tekens' };
+      return { ok: true, bewoners: { ...b, schermen: { ...b.schermen, [a.id]: { ...sc, naam, haNaam: sc.haNaam ?? sc.naam } } } };
+    }
+    case 'schermWeg': {
+      if (b.schermen[a.id] == null) return { ok: false, status: 404, reden: 'dat scherm is er niet' };
+      if (!beheert && wie.userId !== a.id) return { ok: false, status: 403, reden: 'een scherm beheert de hoofdgebruiker' };
+      const { [a.id]: _weg, ...schermen } = b.schermen;
+      return { ok: true, bewoners: { ...b, schermen } };
     }
     case 'vasthouden': {
       if (wie.userId == null) return { ok: false, status: 403, reden: 'log eerst in' };

@@ -88,7 +88,7 @@ describe('de keuzes controleren (besluit 109)', () => {
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
     // Zonder weerbron in Home Assistant: Open-Meteo (besluit 127); licht staat aan tot je het uitzet.
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true } } });
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true }, meldingen: { batterij: 10, filter: 10 } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
   });
 
@@ -112,6 +112,14 @@ describe('de keuzes controleren (besluit 109)', () => {
     expect(controleer({ ...goed, cameras: { aan: true, lijst: ['camera.camera_oprit_duidelijk', 'camera.camera_oprit_duidelijk'] } }, g).ok).toBe(false);
     // Uit mag zonder melder.
     expect(controleer({ ...goed, deurbel: { aan: false, melder: null, camera: null, schermAan: true, seconden: 120 } }, g).ok).toBe(true);
+  });
+
+  it('neemt een drempel voor meldingen aan uit de keuzes, of nooit (besluit 149)', () => {
+    expect(controleer({ ...goed, meldingen: { batterij: 20, filter: null } }, g)).toMatchObject({ ok: true, functies: { meldingen: { batterij: 20, filter: null } } });
+    expect(controleer({ ...goed, meldingen: { batterij: 15, filter: 10 } }, g).ok).toBe(false);
+    expect(controleer({ ...goed, meldingen: { batterij: 10 } }, g).ok).toBe(false);
+    // Een ouder bestand zonder drempels: 10%, zoals het was.
+    expect(volledig(goed, g).meldingen).toEqual({ batterij: 10, filter: 10 });
   });
 
   it('toont geen camera als de camera’s uit staan', () => {

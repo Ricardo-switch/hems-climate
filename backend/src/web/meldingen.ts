@@ -7,7 +7,8 @@
  * - nieuw in Home Assistant: een apparaat dat in geen kamer staat;
  * - reageert niet meer: een apparaat in een kamer dat al een uur onbereikbaar
  *   is, en "weer goed" als het terug is;
- * - een batterij of een airco-filter onder de 10%;
+ * - een batterij of een airco-filter onder de 10%, of wat de bewoner koos
+ *   (besluit 149);
  * - een meter die niets meer levert: zonder meter kloppen de cijfers niet;
  * - een nieuwe versie, en een mijlpaal zoals 10, 20 of 30 winterdagen.
  *
@@ -20,6 +21,8 @@
 
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+
+import { STANDAARD_DREMPELS, onderDrempel, type Drempels } from './house.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
@@ -53,6 +56,8 @@ export interface MeldingenBron {
   readonly filters: readonly { readonly id: string; readonly naam: string; readonly pct: number; readonly kamerId: string | null }[];
   /** Meters die altijd moeten leveren, met hun laatste meting. */
   readonly meters: readonly { readonly id: string; readonly naam: string; readonly laatsteMs: number | null }[];
+  /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); weg is 10%. */
+  readonly drempels?: Drempels;
   readonly versie: { readonly nummer: string; readonly eerste?: string } | null;
   readonly winterdagen: number | null;
   /**
@@ -110,11 +115,13 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
       klaar: { titel: `${d.naam} weer goed`, tekst: `Na ${duur(bron.nu - d.onbereikbaarSindsMs)} zonder verbinding.` },
     });
   }
+  const drempels = bron.drempels ?? STANDAARD_DREMPELS;
   for (const b of bron.batterijen) {
-    if (b.pct >= 10) continue;
-    uit.push({ id: `batterij:${b.id}`, soort: 'batterij', aandacht: true, titel: `Batterij bijna leeg: ${b.naam}`, tekst: `Nog ${b.pct}%. Een nieuwe batterij en het doet het weer maanden.`, actie: { label: 'Bekijk', href: kamerHref(b.kamerId, `batterij-${b.id}`) }, klaar: { titel: `Nieuwe batterij in ${b.naam}`, tekst: 'Weer boven de 10%.' } });
+    if (!onderDrempel(b.pct, drempels.batterij)) continue;
+    uit.push({ id: `batterij:${b.id}`, soort: 'batterij', aandacht: true, titel: `Batterij bijna leeg: ${b.naam}`, tekst: `Nog ${b.pct}%. Een nieuwe batterij en het doet het weer maanden.`, actie: { label: 'Bekijk', href: kamerHref(b.kamerId, `batterij-${b.id}`) }, klaar: { titel: `Nieuwe batterij in ${b.naam}`, tekst: `Weer boven de ${drempels.batterij}%.` } });
   }
   for (const f of bron.filters) {
+    if (!onderDrempel(f.pct, drempels.filter)) continue;
     uit.push({ id: `filter:${f.id}`, soort: 'filter', aandacht: true, titel: `Filter bijna vol: ${f.naam}`, tekst: `Nog ${f.pct}%. Een schoon filter koelt en verwarmt zuiniger.`, actie: { label: 'Bekijk', href: kamerHref(f.kamerId) }, klaar: { titel: `Filter schoon: ${f.naam}`, tekst: 'Het filter is weer goed.' } });
   }
   for (const m of bron.meters) {

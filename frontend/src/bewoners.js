@@ -21,6 +21,12 @@ const dag = (ms) => new Date(ms).toLocaleDateString('nl-NL', { day: 'numeric', m
 
 /** Bewoners en gasten samen, om er een te kiezen. */
 const iedereen = () => [...(data?.bewoners ?? []), ...(data?.gasten ?? [])];
+/** Een scherm (besluit 149) kies je met `#scherm:<account>`. */
+const SCHERM = 'scherm:';
+function gekozenScherm() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  return id.startsWith(SCHERM) ? (data?.schermen ?? []).find((s) => s.id === id.slice(SCHERM.length)) ?? null : null;
+}
 function gekozen() {
   const id = decodeURIComponent(location.hash.slice(1));
   return iedereen().find((b) => b.id === id) ?? iedereen().find((b) => b.ik) ?? data?.bewoners[0] ?? data?.gasten?.[0] ?? null;
@@ -47,7 +53,7 @@ function zeg(tekst) {
 
 function lijst() {
   const volgorde = sleepVolgorde ?? data.bewoners.map((b) => b.id);
-  const nu = gekozen();
+  const nu = gekozenScherm() ? null : gekozen();
   const rijen = volgorde.map((id, i) => {
     const b = data.bewoners.find((x) => x.id === id);
     const onder = [b.hoofd ? 'Hoofdgebruiker' : null, b.hoofd ? 'eigen comfort' : b.comfort === 'eigen' ? 'eigen comfort' : `volgt ${esc(data.bewoners[0]?.naam ?? '')}`].filter(Boolean).join(' · ');
@@ -78,7 +84,19 @@ function lijst() {
   return rijen.length ? rijen.join('') + uitleg : '<p class="klein" style="margin: 0">Nog niemand. Wie met zijn account van Home Assistant inlogt, komt hier te staan; de eerste wordt hoofdgebruiker.</p>';
 }
 
+/** Een scherm zoals de wand (besluit 149): een andere naam, of weghalen. */
+function schermBlad(s) {
+  const kan = data.ik.magBeheren || s.ik;
+  return `<div class="kop"><span class="gezicht" style="background: #5b6b80">${esc(s.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(s.naam)}</h2><span class="mini">Scherm, ingelogd sinds ${esc(dag(s.sindsMs))}</span></div></div>
+    <div class="vak"><label for="scherm-naam">Naam van dit scherm</label><input class="veld" id="scherm-naam" data-schermnaam value="${esc(s.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">In Home Assistant: ${esc(s.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
+    <div class="vak"><span>Wat het doet</span><span class="hint">Een scherm is geen bewoner: het telt niet mee voor het comfort, en begroet wie er thuis is.</span></div>
+    <span class="fout" data-fout></span>
+    ${kan ? `<div class="knoppenrij"><button type="button" class="knop gevaar" data-schermweg>Weghalen</button></div><span class="hint">Daarna vraagt ${s.ik ? 'dit scherm' : 'het scherm'} bij de volgende pagina opnieuw: woon je hier, of is dit een scherm?</span>` : '<span class="hint">Een scherm beheert de hoofdgebruiker.</span>'}`;
+}
+
 function blad() {
+  const sc = gekozenScherm();
+  if (sc) return schermBlad(sc);
   const b = gekozen();
   if (!b) return '<p class="klein" style="margin: 0">Kies een bewoner.</p>';
   const kan = mag(b);
@@ -146,9 +164,9 @@ function erbij() {
 
 /* Alleen wat in de app is ingelogd: schermen zoals de wand, en gasten (besluit 147). */
 function schermen() {
-  const nu = gekozen();
+  const nu = gekozenScherm() ? null : gekozen();
   const r = [
-    ...data.schermen.map((s) => `<div class="r"><span class="n">${esc(s.naam)}</span><span>scherm, begroet wie thuis is</span></div>`),
+    ...data.schermen.map((s) => `<div class="r gastrij${gekozenScherm()?.id === s.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(SCHERM + s.id)}"><span class="n">${esc(s.naam)}${s.ik ? ' (dit scherm)' : ''}</span><span>scherm, begroet wie thuis is</span></div>`),
     ...(data.gasten ?? []).map((g) => `<div class="r gastrij${g.id === nu?.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(g.id)}"><span class="n">${esc(g.naam)}${g.ik ? ' (jij)' : ''}</span><span>gast${g.thuis == null ? '' : g.thuis ? ', thuis' : ', weg'}</span></div>`),
   ];
   return `<h3>Schermen en gasten</h3>${r.length ? r.join('') : '<p class="klein" style="margin: 0; color: var(--zacht)">Nog geen schermen of gasten. Een tablet aan de muur logt één keer in en kiest "Dit is een scherm"; een bewoner maak je hier gast.</p>'}`;
@@ -160,7 +178,7 @@ function tekenNu() {
   if (!data) return;
   // Niet onder de vinger opnieuw opbouwen terwijl iemand een naam typt.
   const actief = document.activeElement;
-  if (actief?.matches?.('[data-naam]')) return;
+  if (actief?.matches?.('[data-naam], [data-schermnaam]')) return;
   $$('[data-lijst]').forEach((el) => (el.innerHTML = lijst()));
   $$('[data-blad]').forEach((el) => (el.innerHTML = blad()));
   $$('[data-erbij]').forEach((el) => (el.innerHTML = erbij()));
@@ -177,8 +195,12 @@ document.addEventListener('click', async (e) => {
   if (!t || !data) return;
   if (t.closest('[data-greep]')) return;
   const b = gekozen();
+  const sc = gekozenScherm();
   if (t.dataset.kies) {
     location.hash = encodeURIComponent(t.dataset.kies);
+  } else if (t.hasAttribute('data-schermweg') && sc) {
+    if (!confirm(`${sc.naam} weghalen? Bij de volgende pagina vraagt het opnieuw: woon je hier, of is dit een scherm?`)) return;
+    if (await stuur({ actie: 'schermWeg', id: sc.id })) location.hash = '';
   } else if (t.dataset.gast && b) {
     await stuur({ actie: 'gast', id: b.id, gast: t.dataset.gast === 'ja' });
   } else if (t.dataset.comfort && b) {
@@ -210,6 +232,13 @@ document.addEventListener('keydown', (e) => {
 });
 document.addEventListener('change', async (e) => {
   const t = e.target;
+  const sc = gekozenScherm();
+  if (sc && t.matches('[data-schermnaam]')) {
+    const naam = t.value.trim();
+    t.blur();
+    if (naam && naam !== sc.naam) await stuur({ actie: 'schermNaam', id: sc.id, naam });
+    return;
+  }
   const b = gekozen();
   if (!b) return;
   if (t.matches('[data-naam]')) {

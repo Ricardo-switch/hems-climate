@@ -3,7 +3,8 @@
  * welk beeld, welke melder de deurbel is, of je licht en screens bedient in de
  * app, en waar het weer vandaan komt. Praten met je huis (besluit 148): welk
  * taalmodel uit Home Assistant de assistent laat praten in eigen woorden, en of
- * hij met een zin mag bedienen. In de opbouw van elke groep (130): links
+ * hij met een zin mag bedienen. Meldingen (besluit 149): wanneer een batterij of
+ * een airco-filter een melding geeft. In de opbouw van elke groep (130): links
  * de delen, wat je kiest wordt meteen bewaard. Bewaren vraagt een beheerder.
  * De dienst doet een voorstel uit wat Home Assistant heeft.
  */
@@ -27,6 +28,7 @@ async function laad() {
     concept.licht ??= info.voorstel.licht;
     concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
     concept.praten ??= info.voorstel.praten ?? { taalmodel: null, bedienen: true };
+    concept.meldingen ??= info.voorstel.meldingen ?? { batterij: 10, filter: 10 };
   }
   teken();
 }
@@ -128,11 +130,24 @@ function weer() {
     <p class="mini">Elk uur de verwachting voor twee dagen: buitentemperatuur, zon en wind. Daarmee leert het huis later de temperatuur in je kamers vooruit te rekenen. Alleen de ligging op ongeveer tien kilometer gaat naar Open-Meteo.</p>`;
 }
 
+/** Meldingen (besluit 149): onder welk percentage een batterij of filter een melding geeft. */
+const DREMPELS = [[null, 'Nooit'], [5, '5%'], [10, '10%'], [20, '20%'], [30, '30%']];
+function meldingen() {
+  const m = concept.meldingen;
+  return `<h2 class="kop-2">Meldingen</h2>
+    <span class="veldnaam">Een batterij is bijna leeg onder</span>
+    ${keuzes('Batterij bijna leeg onder', 'drempelBatterij', DREMPELS, m.batterij)}
+    <span class="veldnaam">Een filter van een airco is bijna vol onder</span>
+    ${keuzes('Filter bijna vol onder', 'drempelFilter', DREMPELS, m.filter)}
+    <p class="mini">Dan staat het bij de bel en op Thuis. Bij Onderhoud zie je altijd alle batterijen en filters.</p>`;
+}
+
 const NAAST = {
   cameras: ['Zo werkt het', ['De camera staat in de kamer waar hij hangt, bij Thuis', 'Smart Climate kijkt alleen: er gaat niets naar de camera']],
   deurbel: ['Zo werkt de deurbel', ['Wordt er aangebeld, dan toont elke open pagina meteen het beeld', 'Tot je het sluit, of de tijd om is', 'Het scherm aanzetten kan alleen in Fully Kiosk Browser']],
   licht: ['Zo werkt het', ['Bedienen doe je in het huis: tik op een kamer, dan op de lamp of het screen', 'De regeling raakt je lampen en screens niet aan']],
   praten: ['Zo werkt het', ['Het vaste antwoord blijft de basis: het taalmodel zegt het alleen anders', 'Elk getal moet kloppen met wat het huis meet, anders hoor je het vaste antwoord', '"Stop" stopt een scherm dat beweegt', 'Is het gratis gebruik op, dan werkt bedienen gewoon door']],
+  meldingen: ['Zo werkt het', ['Een melding komt bij de bel en op Thuis, met een tik naar het apparaat', 'Is het weer goed, dan schuift de melding naar Eerder', 'Een sensor op 20% doet het vaak nog maanden']],
   weer: ['Waarvoor dit nodig is', ['Het weer van vandaag en de komende dagen', 'Wat je panelen dan naar verwachting leveren', 'Later: de temperatuur per kamer vooruit rekenen']],
 };
 
@@ -146,8 +161,14 @@ function delen() {
     { id: 'deurbel', titel: 'Deurbel', zin: f.deurbel.aan ? `beeld ${f.deurbel.seconden / 60 >= 1 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit', stand: f.deurbel.aan && (!f.deurbel.melder || !f.deurbel.camera) ? 'mist' : 'goed' },
     { id: 'licht', titel: 'Licht en screens', zin: info.lichtMogelijk || info.schermMogelijk ? (f.licht.bedienen ? 'bedienen in de app' : 'alleen kijken') : 'alleen kijken', stand: 'goed' },
     { id: 'weer', titel: 'Weer', zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
+    { id: 'meldingen', titel: 'Meldingen', zin: drempelZin(f.meldingen), stand: 'goed' },
     { id: 'praten', titel: 'Praten met je huis', zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? 'eigen woorden' : 'vaste zinnen', stand: 'goed' },
   ];
+}
+
+function drempelZin(m) {
+  const t = (v) => (v == null ? 'nooit' : `onder ${v}%`);
+  return m.batterij === m.filter ? t(m.batterij) : `batterij ${t(m.batterij)}, filter ${t(m.filter)}`;
 }
 
 function tekenNu() {
@@ -155,7 +176,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
-  const vorm = { cameras, deurbel, licht, weer, praten }[nu]?.() ?? '';
+  const vorm = { cameras, deurbel, licht, weer, praten, meldingen }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   const [kopje, lijst] = NAAST[nu] ?? NAAST.cameras;
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
@@ -206,6 +227,8 @@ document.addEventListener('click', (e) => {
       proef = null;
     } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
+    else if (s === 'drempelBatterij') concept.meldingen.batterij = w;
+    else if (s === 'drempelFilter') concept.meldingen.filter = w;
     else if (s.startsWith('camera:')) {
       // Per camera één beeld: het andere beeld van dezelfde camera gaat eruit.
       const c = info.gevonden.cameras[Number(s.slice(7))];
