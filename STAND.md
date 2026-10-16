@@ -219,6 +219,9 @@ verwijzing bestaat.
   één vraag per stap, alles meteen bewaard ([139]). Vijf hoofdstukken met
   kleine stappen, van buiten tot de wand; daarna een film van twintig tellen
   met je eigen cijfers en een rondleiding langs alle tabbladen ([144]).
+  Een zone heeft een soort, zoals zithoek of keuken; kamers en zones schuiven
+  naar links of rechts. Een scherm hangt aan een gevel, en zegt alleen zon als
+  die op zijn gevel staat ([145]).
 - **Vandaag** is de dag in de tijd; **Apparaten** is het nu, per apparaat een
   kaart met wat het doet, vraagt en vandaag op zon deed ([140]).
 - **De assistent** is een gesprek: het huis begroet je, leest zijn antwoord
@@ -423,4 +426,5 @@ verwijzing bestaat.
 [142]: DECISIONS.md#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens
 [143]: DECISIONS.md#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is
 [144]: DECISIONS.md#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles
+[145]: DECISIONS.md#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven
 <!-- links:einde -->

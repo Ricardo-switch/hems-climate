@@ -14,6 +14,7 @@ import { exampleSite } from './site.js';
 const known: LayoutKnown = {
   deviceIds: new Set(['nest', 'light.sfeerverlichting', 'cover.screen']),
   zoneIds: new Set(['woonkamer', 'zolder']),
+  gevelIds: new Set(['voorgevel', 'achtergevel']),
 };
 
 const good = {
@@ -49,6 +50,21 @@ describe('de indeling toetsen', () => {
     expect('extra' in r.layout).toBe(false);
   });
 
+  it('bewaart de gevel van een scherm (besluit 145)', () => {
+    const r = validateLayout({ ...good, apparaten: { ...good.apparaten, 'cover.screen': { kamer: 'woonkamer', zone: null, gevel: 'achtergevel' } } }, known);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.layout.apparaten['cover.screen']!.gevel).toBe('achtergevel');
+  });
+
+  it('bewaart de soort van een zone, en de volgorde van zones en kamers (besluit 145)', () => {
+    const zones = [{ id: 'zit', naam: 'Hoek bij het raam', soort: 'woonkamer' }, { id: 'keuken', naam: 'Keuken' }];
+    const r = validateLayout({ ...good, kamers: [good.kamers[1], { ...good.kamers[0], zones }] }, known);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.layout.kamers.map((k) => k.id)).toEqual(['hal', 'woonkamer']);
+    expect(r.layout.kamers[1]!.zones).toEqual([{ id: 'zit', naam: 'Hoek bij het raam', soort: 'woonkamer' }, { id: 'keuken', naam: 'Keuken' }]);
+  });
+
   it('weigert wat niet klopt, met een reden', () => {
     const bad: [string, unknown][] = [
       ['geen object', 'hoi'],
@@ -58,6 +74,8 @@ describe('de indeling toetsen', () => {
       ['buiten in de volgorde', { ...good, volgorde: ['bg', 'buiten'] }],
       ['een etage twee keer', { ...good, volgorde: ['bg', 'bg'] }],
       ['dubbel kamer-id', { ...good, kamers: [good.kamers[0], good.kamers[0]], apparaten: {} }],
+      ['een scherm aan een onbekende gevel', { ...good, apparaten: { ...good.apparaten, 'cover.screen': { kamer: 'woonkamer', zone: null, gevel: 'dakkapel' } } }],
+      ['een zone met een onbekende soort', { ...good, kamers: [{ ...good.kamers[0], zones: [{ id: 'keuken', naam: 'Keuken', soort: 'balzaal' }] }, good.kamers[1]] }],
       ['ongeldig id', { ...good, kamers: [{ ...good.kamers[0], id: 'Woon Kamer!' }], apparaten: {} }],
       ['lege naam', { ...good, kamers: [{ ...good.kamers[0], naam: '   ' }] }],
       ['regelgebied twee keer', { ...good, kamers: [good.kamers[0], { ...good.kamers[1], regelzone: 'woonkamer' }] }],

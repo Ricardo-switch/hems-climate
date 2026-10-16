@@ -112,9 +112,10 @@
       // Een kamer die meedoet met een andere (besluit 142), kleurt mee met die regeling.
       stand: zid ? standVan(zid, state) : null,
       zin: zid ? kortVan(zid, state) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
-      zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => z.naam) : undefined,
-      // Wat voor kamer, voor de inrichting ingezoomd (besluit 119).
-      inrichting: r.soort ?? undefined,
+      zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => (z.soort ? { naam: z.naam, soort: z.soort } : z.naam)) : undefined,
+      // Wat voor kamer, voor de inrichting ingezoomd (besluit 119). Hebben de zones
+      // een gekozen soort en de kamer niet, dan per zone (besluit 145).
+      inrichting: (r.soortGekozen || !(r.zones ?? []).some((z) => z.soort) ? r.soort : null) ?? undefined,
       // Beweging nu (15 oktober 2026): een melder in de kamer ziet iemand.
       beweging: apps.some((a) => a.meting?.beweging?.nu) || undefined,
       apparaten,

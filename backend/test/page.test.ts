@@ -1758,6 +1758,52 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-ongedaan]').click(kort);
     await expect.poll(() => layoutStore.current?.apparaten[id]?.kamer ?? a.id, kort).toBe(a.id);
 
+    // Zones met een soort, schuiven, en een kamer naar links of rechts (besluit 145).
+    // Alleen het hekje wisselen opent de kamer niet: opnieuw laden.
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
+    await p.reload();
+    await p.waitForLoadState('networkidle');
+    await expect.poll(() => p.locator('#wand [data-actie="kamernaam"]').inputValue(), kort).toBe(a.naam);
+    const zonesVan = () => layoutStore.current?.kamers.find((k) => k.id === a.id)?.zones ?? [];
+    const voorZones = zonesVan().length;
+    for (const naam of ['Keukenhoek', 'Bij het raam']) {
+      await p.locator('#wand [data-nieuwe-zone]').fill(naam, kort);
+      await p.locator('#wand [data-nieuwe-zone]').press('Tab');
+      await expect.poll(() => zonesVan().some((z) => z.naam === naam), kort).toBe(true);
+    }
+    const raam = zonesVan().find((z) => z.naam === 'Bij het raam')!;
+    await p.locator(`#wand [data-zone-soort="${raam.id}"]`).selectOption('woonkamer', kort);
+    await expect.poll(() => zonesVan().find((z) => z.id === raam.id)?.soort, kort).toBe('woonkamer');
+    await p.locator(`#wand [data-zone-schuif="-1"][data-zone="${raam.id}"]`).click(kort);
+    await expect.poll(() => zonesVan().at(-2)?.id, kort).toBe(raam.id);
+    const plek = () => (layoutStore.current?.kamers ?? []).filter((k) => k.etage === a.etage).findIndex((k) => k.id === a.id);
+    const plekVoor = plek();
+    const schuif = plekVoor === 0 ? '1' : '-1';
+    await p.locator(`#wand [data-kamer-schuif="${schuif}"]`).click(kort);
+    await expect.poll(plek, kort).toBe(plekVoor + Number(schuif));
+    if (process.env.HEMS_PAGE_SHOT) {
+      await p.locator(`#wand [data-zone-soort="${raam.id}"]`).scrollIntoViewIfNeeded();
+      await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-zones.png') });
+    }
+    // En alles weer terug.
+    for (let n = 0; n < 5; n++) await p.locator('#wand [data-ongedaan]').click(kort);
+    await expect.poll(() => zonesVan().length, kort).toBe(voorZones);
+    await expect.poll(plek, kort).toBe(plekVoor);
+
+    // De gevel van een scherm kiezen (besluit 145).
+    const metScreen = huisNu.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((x) => x.id === 'cover.screen'))!;
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(metScreen.id)}`);
+    await p.reload();
+    await p.waitForLoadState('networkidle');
+    await p.locator('#wand .app[data-app="cover.screen"]').click(kort);
+    await p.locator('#wand [data-app-gevel]').selectOption('achtergevel', kort);
+    await p.locator('#wand [data-app-bewaar="cover.screen"]').click(kort);
+    await expect.poll(() => layoutStore.current?.apparaten['cover.screen']?.gevel, kort).toBe('achtergevel');
+    const huisNa = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { apparaten: { id: string; scherm?: { gevel?: { id: string; gekozen: boolean } } }[] }[] }[] };
+    expect(huisNa.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((x) => x.id === 'cover.screen')?.scherm?.gevel).toMatchObject({ id: 'achtergevel', gekozen: true });
+    await p.locator('#wand [data-ongedaan]').click(kort);
+    await expect.poll(() => layoutStore.current?.apparaten['cover.screen']?.gevel, kort).toBeUndefined();
+
     // Een etage toevoegen, verschuiven en weer weghalen (besluit 112).
     await p.locator('#wand [data-etage-erbij]').click(kort);
     await p.locator('#wand [data-etage-vast]', { hasText: 'Kelder' }).click(kort);

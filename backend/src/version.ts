@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.23.0';
+export const VERSIE = '0.23.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,19 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.23.1',
+    datum: '2026-10-16',
+    beter: [
+      'Bij Indeling krijgt een zone een soort, zoals zithoek of keuken, en die komt in de tekening',
+      'Kamers en zones schuif je naar links of rechts',
+    ],
+    opgelost: [
+      'Een screen of zonnescherm zegt alleen "zon" als de zon op zijn eigen gevel staat; kies de gevel bij Indeling',
+      'Een bewegingsmelder heeft zijn eigen icoon, ook als hij de temperatuur meet',
+      'De assistent zegt voorgevel met een lange e, niet als voorge-vel',
+    ],
+  },
   {
     versie: '0.23.0',
     datum: '2026-10-16',

@@ -28,6 +28,8 @@ const KLANK: readonly (readonly [RegExp, string])[] = [
   [/\bairco's\b/gi, "erko's"],
   [/\bairco\b/gi, 'erko'],
   [/\bcv\b/gi, 'cee vee'],
+  // Gevel met een lange e, niet als het voorvoegsel ge-: voorgeevel, niet voorge-vel.
+  [/\b(voor|achter|zij)?gevel(s?)\b/gi, '$1geevel$2'],
 ];
 
 /** Een zin zoals hij hardop klinkt. */

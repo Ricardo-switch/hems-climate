@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
-import { buildHouse, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
+import { buildHouse, gevelVan, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -64,6 +64,9 @@ describe('het voorstel uit Home Assistant', () => {
     expect(soort('Beneden', ['Keuken', 'Zithoek'])).toBe('woonkeuken');
     // Een kelder zonder naam die iets zegt: een berging.
     expect(soort('Ruimte 1', [], 'kelder')).toBe('berging');
+    // Een gekozen soort van een zone gaat voor zijn naam (besluit 145).
+    const zones = [{ id: 'a', naam: 'Hoek', soort: 'keuken' as const }, { id: 'b', naam: 'Bij het raam', soort: 'woonkamer' as const }];
+    expect(roomTypeFromNames({ naam: 'Beneden', etage: 'bg', zones })).toBe('woonkeuken');
     // Wat er staat, helpt: een droger maakt een wasruimte.
     expect(roomTypeFromNames({ naam: 'Achterkamer', etage: 'e2', zones: [] }, [{ naam: 'Droger', soort: 'apparaat' }])).toBe('wasruimte');
     // In het huis: de keuze gaat voor, anders het voorstel; buiten geen soort.
@@ -133,7 +136,7 @@ describe('het voorstel uit Home Assistant', () => {
     // Een zonnescherm: uitgevouwen en ingeklapt; zonder opdracht geen stand.
     rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'closed', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, device_class: 'awning' } });
     const zonnescherm = () => buildHouse(config, registers, rts, snapshot).etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'cover.screen')!;
-    expect([zonnescherm().stand, zonnescherm().scherm]).toEqual(['ingeklapt, volgens de laatste opdracht', { terugmelding: false, standKiezen: false, zonnescherm: true, laatste: 'dicht' }]);
+    expect([zonnescherm().stand, zonnescherm().scherm]).toEqual(['ingeklapt, volgens de laatste opdracht', { terugmelding: false, standKiezen: false, zonnescherm: true, laatste: 'dicht', gevel: { id: 'achtergevel', naam: 'Achtergevel', gekozen: false } }]);
     rts.set('cover.screen', { ...states.get('cover.screen')!, state: 'unknown', attributes: { friendly_name: 'Zonnescherm', assumed_state: true, device_class: 'awning' } });
     expect([zonnescherm().stand, zonnescherm().scherm?.laatste]).toEqual(['zonder terugmelding', undefined]);
     // Een zonnescherm met terugmelding: 100 is helemaal uitgevouwen.
@@ -586,5 +589,21 @@ describe('de duur van een programma (besluit 101)', () => {
     const house = buildHouse(config, registers, states, snapshot);
     const meter = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'sensor.bewegingssensor_hal_temperatuur')!;
     expect(meter.meting?.beweging).toEqual({ nu: true, sindsMs: Date.parse('2026-10-15T13:40:00Z') });
+  });
+});
+
+describe('de gevel van een scherm (besluit 145)', () => {
+  const gevels = [{ id: 'voorgevel', name: 'Voorgevel' }, { id: 'achtergevel', name: 'Achtergevel' }];
+  it('neemt de keuze, en anders een voorstel uit de naam', () => {
+    expect(gevelVan('voorgevel', 'Zonnescherm', true, gevels)).toEqual({ id: 'voorgevel', naam: 'Voorgevel', gekozen: true });
+    expect(gevelVan(null, 'Screen achter', false, gevels)).toEqual({ id: 'achtergevel', naam: 'Achtergevel', gekozen: false });
+    expect(gevelVan(null, 'Screens voorkant', false, gevels)?.id).toBe('voorgevel');
+    // Een zonnescherm hangt meestal bij het terras, aan de achterkant.
+    expect(gevelVan(null, 'Zonnescherm', true, gevels)?.id).toBe('achtergevel');
+  });
+  it('zegt niets als het huis het niet weet', () => {
+    expect(gevelVan(null, 'Screen', false, gevels)).toBeNull();
+    expect(gevelVan('dakkapel', 'Screen', false, gevels)).toBeNull();
+    expect(gevelVan(null, 'Screen achter', false, [])).toBeNull();
   });
 });

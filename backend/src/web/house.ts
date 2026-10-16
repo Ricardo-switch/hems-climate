@@ -25,7 +25,7 @@ import { findCameras } from './camera.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
-import type { SiteConfig } from '../core/model.js';
+import type { Facade, SiteConfig } from '../core/model.js';
 import { roomStatus, withArticle, type DecisionView, type RoomKind } from './assistant.js';
 import {
   OUTSIDE_FLOOR,
@@ -142,6 +142,12 @@ export interface HouseDevice {
     /** Een zonnescherm (`awning`, besluit 128): dat vouw je uit en klap je in. */
     readonly zonnescherm?: boolean;
     /**
+     * De gevel waar het scherm hangt (besluit 145): gekozen bij Indeling, of
+     * een voorstel uit de naam. Weg als het huis het niet weet; dan zegt de
+     * app niet of de zon erop staat.
+     */
+    readonly gevel?: { readonly id: string; readonly naam: string; readonly gekozen: boolean };
+    /**
      * Zonder terugmelding: de laatste opdracht, open (uitgevouwen) of dicht
      * (ingeklapt), van Home Assistant of uit de app (besluit 128). Niet zeker:
      * een afstandsbediening hoort niemand.
@@ -177,7 +183,7 @@ export interface HouseRoom {
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
   readonly zoneId: string | null;
   /** De delen van de kamer (95), leeg als hij er geen heeft. */
-  readonly zones: readonly { readonly id: string; readonly naam: string }[];
+  readonly zones: readonly { readonly id: string; readonly naam: string; readonly soort?: RoomType }[];
   /** Van het regelgebied, of anders van een meter in de kamer. */
   readonly temperatuurC: number | null;
   readonly vochtPct: number | null;
@@ -601,6 +607,22 @@ function readTemperature(state: HaEntityState | undefined, id: string): number |
   const raw = id.startsWith('climate.') ? state.attributes['current_temperature'] : state.state;
   const n = typeof raw === 'number' ? raw : typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : NaN;
   return Number.isFinite(n) && n > -40 && n < 70 ? n : null;
+}
+
+/**
+ * De gevel van een scherm (besluit 145). Gekozen gaat voor; anders zegt de naam
+ * het ("screen achter", "voorgevel"), en een zonnescherm hangt meestal aan de
+ * achterkant, bij het terras. Weet het huis het niet, dan null: beter niets
+ * zeggen dan zon op de verkeerde gevel.
+ */
+export function gevelVan(gekozen: string | null, naam: string, zonnescherm: boolean, facades: readonly Pick<Facade, 'id' | 'name'>[]): { id: string; naam: string; gekozen: boolean } | null {
+  const vind = (id: string | null) => (id ? facades.find((f) => f.id === id) : undefined);
+  const keuze = vind(gekozen);
+  if (keuze) return { id: keuze.id, naam: keuze.name, gekozen: true };
+  const soort = (re: RegExp) => facades.find((f) => re.test(`${f.id} ${f.name}`.toLowerCase()));
+  const n = naam.toLowerCase();
+  const voorstel = /achter|terras|tuin/.test(n) ? soort(/achter/) : /voor|straat/.test(n) ? soort(/voor/) : /zij/.test(n) ? soort(/zij/) : zonnescherm ? soort(/achter/) : undefined;
+  return voorstel ? { id: voorstel.id, naam: voorstel.name, gekozen: false } : null;
 }
 
 /** Kan dit scherm naar een stand (SUPPORT_SET_POSITION, bit 4)? */
@@ -1173,6 +1195,7 @@ export function knownForLayout(
   return {
     deviceIds: new Set(found.map((f) => f.device.id)),
     zoneIds: new Set(config.zones.map((z) => z.id)),
+    gevelIds: new Set((config.geometry?.facades ?? []).map((f) => f.id)),
     opvolgers: successors,
   };
 }
@@ -1201,10 +1224,10 @@ const OUTSIDE = /tuin|oprit|terras|buiten|schuur|carport|balkon|veranda/i;
  */
 export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'etage'>, devices: readonly Pick<HouseDevice, 'naam' | 'soort'>[] = []): RoomType | null {
   const n = room.naam.toLowerCase().trim();
-  const zones = room.zones.map((z) => z.naam.toLowerCase());
   const zegt = (re: RegExp) => re.test(n);
-  // Een kamer met een keuken en een zithoek als zones is een woonkamer met open keuken.
-  if (zones.some((z) => /keuken|kitchen/.test(z)) && zones.some((z) => /woon|zit|lounge|living|bank|tv/.test(z))) return 'woonkeuken';
+  // Een kamer met een keuken en een zithoek als zones is een woonkamer met open keuken; een gekozen soort gaat voor de naam.
+  const zone = (soort: RoomType, re: RegExp) => room.zones.some((z) => (z.soort ? z.soort === soort : re.test(z.naam.toLowerCase())));
+  if (zone('keuken', /keuken|kitchen/) && zone('woonkamer', /woon|zit|lounge|living|bank|tv/)) return 'woonkeuken';
   if (zegt(/woonkeuken|open keuken|leefkeuken/)) return 'woonkeuken';
   if (zegt(/bijkeuken|wasruimte|washok|wasplaats|laundry|stookhok|technische ruimte|cv-ruimte/)) return 'wasruimte';
   if (zegt(/keuken|kitchen/)) return 'keuken';
@@ -1369,7 +1392,10 @@ export function buildHouse(
     }
     const zone = own?.zone && room.zones.some((z) => z.id === own.zone) ? own.zone : null;
     const list = perRoom.get(room.id) ?? [];
-    list.push({ ...f.device, naam, haNaam: f.haNaam, zone, groepen: f.groepen });
+    // Een scherm en zijn gevel (besluit 145): de keuze, of een voorstel uit de naam.
+    const gevel = f.device.scherm ? gevelVan(own?.gevel ?? null, naam, f.device.scherm.zonnescherm === true, config.geometry?.facades ?? []) : null;
+    const scherm = f.device.scherm && gevel ? { ...f.device.scherm, gevel } : undefined;
+    list.push({ ...f.device, naam, haNaam: f.haNaam, zone, groepen: f.groepen, ...(scherm ? { scherm } : {}) });
     perRoom.set(room.id, list);
   }
 
@@ -1437,7 +1463,7 @@ export function buildHouse(
       naam: k.naam,
       // Wie meedoet, heeft geen eigen regelzone: zo staat elke regeling één keer in de app.
       zoneId: doel ? null : (zone?.id ?? null),
-      zones: k.zones.map((z) => ({ id: z.id, naam: z.naam })),
+      zones: k.zones.map((z) => ({ id: z.id, naam: z.naam, ...(z.soort ? { soort: z.soort } : {}) })),
       // Meedoen: een eigen meter wint; anders de temperatuur van de regeling.
       temperatuurC: doel ? (gekozenC ?? meterTemp?.meting?.temperatuurC ?? pz?.temperatureC ?? null) : (pz?.temperatureC ?? gekozenC ?? meterTemp?.meting?.temperatuurC ?? null),
       vochtPct: pz?.humidityPct ?? devices.find((d) => d.meting?.vochtPct != null)?.meting?.vochtPct ?? null,

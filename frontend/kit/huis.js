@@ -68,9 +68,12 @@
    * De soort van een hele kamer: zoals de dienst hem doorgeeft (`inrichting`,
    * gekozen of voorgesteld, besluit 119), of anders uit de naam en de zones.
    */
+  /** Een zone is een naam, of { naam, soort } met een gekozen soort (besluit 145). */
+  const zoneNaam = (zone) => (typeof zone === 'string' ? zone : zone?.naam ?? '');
+  const zoneSoort = (zone) => (typeof zone === 'object' && zone?.soort ? zone.soort : soortVan(zoneNaam(zone)));
   function soortVanKamer(kamer) {
     if (kamer.inrichting) return kamer.inrichting;
-    const zones = (kamer.zones ?? []).map(soortVan).filter(Boolean);
+    const zones = (kamer.zones ?? []).map(zoneSoort).filter(Boolean);
     if (zones.includes('keuken') && zones.includes('woonkamer')) return 'woonkeuken';
     return soortVan(kamer.naam) ?? zones[0] ?? null;
   }
@@ -732,7 +735,7 @@
       (kamer.stil ? [] : kamer.zones ?? []).forEach((zone, i, alle) => {
         const xz = x0 + ((x1 - x0) * (i + 0.5)) / alle.length;
         const t = P(xz, D - 0.2, z0 + 0.02);
-        labels.push(`<text x="${t[0]}" y="${t[1]}" text-anchor="middle" fill="${KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="11.5" font-weight="600" opacity="0.85">${esc(zone)}</text>`);
+        labels.push(`<text x="${t[0]}" y="${t[1]}" text-anchor="middle" fill="${KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="11.5" font-weight="600" opacity="0.85">${esc(zoneNaam(zone))}</text>`);
       });
       // De muur ertussen als doorsnede.
       huis.push(line([[x0, D, z0], [x0, D, z1]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
@@ -1007,7 +1010,7 @@
         ? [['keuken', 0, zones.length === 2 ? 0.5 : 0.45], ['woonkamer', zones.length === 2 ? 0.5 : 0.45, 1]]
         : gekozen
           ? [[gekozen, 0, 1]]
-          : zones.map((zone, i) => [soortVan(zone) ?? soortVan(kamer.naam), i / zones.length, (i + 1) / zones.length]);
+          : zones.map((zone, i) => [(zone && zoneSoort(zone)) ?? soortVan(kamer.naam), i / zones.length, (i + 1) / zones.length]);
       const soorten = delen.map(([soort]) => (witgoed && soort !== 'leeg' ? 'wasruimte' : soort));
       // Heeft het grootste meubel de achterwand nodig, dan hangt de radiator aan de zijmuur.
       const ACHTERWAND = ['keuken', 'badkamer', 'toilet', 'woonkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'werkkamer'];

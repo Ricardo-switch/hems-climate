@@ -64,6 +64,8 @@ export function floorOrder(layout: Pick<Layout, 'volgorde' | 'kamers'>): string[
 export interface LayoutZone {
   readonly id: string;
   readonly naam: string;
+  /** Wat voor deel het is, zoals keuken of zithoek (besluit 145). Weg is: de naam zegt het. */
+  readonly soort?: RoomType;
 }
 
 /** Wat een buitenruimte is, voor de tekening van het huis (besluit 109). */
@@ -127,6 +129,8 @@ export interface LayoutDevice {
   readonly naam?: string;
   readonly kamer: string;
   readonly zone: string | null;
+  /** Alleen bij een scherm: de gevel waar het hangt, op het id uit de configuratie (besluit 145). Weg is: het voorstel uit de naam. */
+  readonly gevel?: string;
 }
 
 export interface Layout {
@@ -152,6 +156,8 @@ export interface LayoutKnown {
   readonly deviceIds: ReadonlySet<string>;
   /** De regelgebieden uit de configuratie. */
   readonly zoneIds: ReadonlySet<string>;
+  /** De gevels uit de configuratie (besluit 145); weg is: geen gevels, dus geen gevel per scherm. */
+  readonly gevelIds?: ReadonlySet<string>;
   /**
    * Per lamp die niet meer los in het huis staat (uitgezet of verborgen in Home
    * Assistant), de groep die hem nu als één lamp toont.
@@ -285,7 +291,9 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       const zn = name(zz['naam'], 40);
       if (typeof zid !== 'string' || !ID.test(zid) || zoneIds.has(zid) || zn == null) return { ok: false, reden: `kamer ${id} heeft een ongeldige zone` };
       zoneIds.add(zid);
-      zones.push({ id: zid, naam: zn });
+      const zs = zz['soort'];
+      if (zs !== undefined && zs !== null && !(ROOM_TYPES as readonly unknown[]).includes(zs)) return { ok: false, reden: `zone ${zid}: soort is ${ROOM_TYPES.join(', ')}` };
+      zones.push({ id: zid, naam: zn, ...(zs != null && etage !== OUTSIDE_FLOOR ? { soort: zs as RoomType } : {}) });
     }
     // De regeling per kamer (besluit 138); buiten valt het weg.
     let rollen: Record<string, Rol> | undefined;
@@ -385,7 +393,9 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     const hasName = d['naam'] !== undefined && d['naam'] !== null && d['naam'] !== '';
     const naam = hasName ? name(d['naam'], 60) : null;
     if (hasName && naam == null) return { ok: false, reden: `de naam van apparaat ${id} is te lang` };
-    apparaten[id] = { ...(naam ? { naam } : {}), kamer: room.id, zone: zone as string | null };
+    const gevel = d['gevel'] ?? null;
+    if (gevel !== null && (typeof gevel !== 'string' || !(known.gevelIds ?? new Set()).has(gevel))) return { ok: false, reden: `apparaat ${id} hangt aan een gevel die het huis niet kent` };
+    apparaten[id] = { ...(naam ? { naam } : {}), kamer: room.id, zone: zone as string | null, ...(gevel ? { gevel } : {}) };
   }
 
   // Verbergen kan alleen wat het huis kent; wat het niet meer kent, valt weg, net als hierboven.

@@ -95,6 +95,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [139. Inrichten in één keer, het filmpje en de rondleiding](#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding)
 - [143. Comfort uit de app gaat voor de oude helpers, en het huis zoals het is](#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is)
 - [144. Na Inrichten is de app af, een film van twintig tellen, en een rondleiding langs alles](#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles)
+- [145. Een zone heeft een soort, en kamers en zones schuiven](#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven)
 
 **Meten, data en analyse**
 
@@ -6145,6 +6146,43 @@ rondleiding alleen op Thuis, Vandaag en Opbrengst kwam. Schetsen:
 - **Een sensor zonder naam** in Home Assistant heet bij "meet met" naar zijn
   entiteit ("Beneden temperatuur"), niet `sensor.beneden_temperatuur`.
 - **Versie 0.23.0.**
+
+## 145. Een zone heeft een soort, en kamers en zones schuiven
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+De bewoner vond op 16 oktober 2026 bij Indeling dat een nieuwe zone geen soort
+kreeg (een zithoek of keuken was niet te kiezen), dat kamers en zones niet te
+verplaatsen waren, en dat een bewegingsmelder het icoon van een thermometer had.
+En dat de screens aan de voorgevel (ochtendzon) en het zonnescherm aan de
+achtergevel allebei "Zon op deze gevel" zeiden: de app wist niet aan welke
+gevel een scherm hangt, en toonde het zodra de zon op een gevel stond.
+
+*Besluit:*
+
+- **Een zone heeft een soort** (`soort` in de zone, dezelfde lijst als een
+  kamer, besluit 119), zoals zithoek, keuken of eethoek. Zonder keuze een
+  voorstel uit de naam. De soort bepaalt de inrichting van dat deel in de
+  tekening; heeft de kamer zelf geen gekozen soort, dan gaat de tekening per
+  zone. Een keuken en een zithoek samen maken de kamer een woonkamer met open
+  keuken, ook als hun namen dat niet zeggen.
+- **Schuiven:** een zone gaat met pijlen een plek naar links of rechts in de
+  kamer, en een kamer een plek naar links of rechts op zijn etage. De volgorde
+  in de indeling is de volgorde in de tekening. Per zone kan ook de naam
+  veranderen.
+- **Een bewegingsmelder** heeft een eigen icoon en heet bij Indeling
+  "bewegingsmelder", ook als hij de temperatuur meet. Die temperatuur staat
+  ernaast als tekst, en de melder blijft te kiezen bij "meet met"
+  (besluit 123).
+- **Een scherm hangt aan een gevel** (`gevel` bij het apparaat in de
+  indeling, op het id uit `geometry.facades`). Gekozen bij Indeling; anders
+  een voorstel uit de naam ("achter", "terras", "voor"), en een zonnescherm
+  hangt meestal aan de achterkant. Bij het scherm staat "Zon op de voorgevel"
+  alleen als de zon op díe gevel staat. Weet het huis de gevel niet, dan zegt
+  de app niets over zon op het scherm, in plaats van te gokken.
+- **Gevel** zegt de stem met een lange e ("voorgeevel"), niet als het
+  voorvoegsel ge-.
+- **Versie 0.23.1.**
 
 ---
 

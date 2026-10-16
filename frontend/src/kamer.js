@@ -120,8 +120,10 @@ const ICOON = {
   meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
   apparaat: '<rect x="4.5" y="3" width="15" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>',
   camera: '<rect x="2.5" y="6.5" width="14" height="11" rx="2.5"/><path d="M16.5 10.5l5-3v9l-5-3z"/>',
+  beweging: '<circle cx="13" cy="4.5" r="1.8"/><path d="M9.5 21l2-6 3 3v3M8 12.5l2.5-4.5 3 1 2.5 3.5 2.5.5M11 9.5l-1.5 5"/>',
 };
-const soortVan = (d) => (d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco' : 'thermostaat') : d.soort);
+// Een bewegingsmelder is een melder, ook als hij de temperatuur meet; die staat ernaast als tekst.
+const soortVan = (d) => (d.soort === 'klimaat' ? (d.klimaat?.kanKoelen ? 'airco' : 'thermostaat') : d.soort === 'meter' && d.meting?.beweging ? 'beweging' : d.soort);
 const icoon = (d) => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[soortVan(d)] ?? ICOON.thermostaat}</svg>`;
 
 const graden = (c) => (c == null ? '' : `${nl(c)}°`);
@@ -518,7 +520,9 @@ function screenBlad(k, d) {
   const pos = d.positiePct ?? (zonnescherm ? (d.aan ? 100 : 0) : d.aan ? 0 : 100);
   const dicht = terug ? naarHa(d, pos) / 100 : laatste ? ((laatste === 'open') === zonnescherm ? 1 : 0) : 0;
   const doekH = Math.round(DOEK.hoogte * dicht);
-  const zonNu = (zon?.gevels ?? []).filter((g) => g.inDeZon).map((g) => g.naam.toLowerCase());
+  // Zon op dit scherm: alleen op de gevel waar het hangt (besluit 145); weet het huis die niet, dan niets.
+  const gevel = d.scherm?.gevel ? (zon?.gevels ?? []).find((g) => g.id === d.scherm.gevel.id) : null;
+  const zonNu = gevel?.inDeZon ? [gevel.naam.toLowerCase()] : [];
   const svg = `<svg viewBox="0 0 300 290" role="img" aria-label="Het raam met de screen ${Math.round(dicht * 100)} procent dicht" ${sleep && bedienen ? `data-schermsleep="${esc(d.id)}" style="touch-action: none; cursor: ns-resize"` : ''}>
     <defs><linearGradient id="raamlucht" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d8fc0"/><stop offset="1" stop-color="#9cc1e0"/></linearGradient>
       <pattern id="doek" width="8" height="6" patternUnits="userSpaceOnUse"><rect width="8" height="6" fill="#3d4a5a"/><rect width="8" height="1.2" fill="#4c5b6d"/></pattern>
@@ -536,7 +540,7 @@ function screenBlad(k, d) {
     <line data-standlijn x1="270" y1="46" x2="270" y2="${46 + doekH}" stroke="#EEF3F7" stroke-width="4" stroke-linecap="round" ${doekH > 0 && terug ? '' : 'style="display: none"'}/>
     <text data-standtekst x="262" y="${Math.min(250, 72 + doekH)}" text-anchor="end" font-family="Bricolage Grotesque" font-weight="600" font-size="20" fill="#EEF3F7">${esc(standWoord(d, terug, laatste, dicht))}</text>
   </svg>`;
-  const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon op deze gevel</span>` : '';
+  const pil = zonNu.length ? `<span class="pil zon-t" style="height: 30px; font-size: 12.5px"><span class="stip" style="background: var(--zon)"></span>Zon op de ${esc(zonNu[0])}</span>` : '';
   // Open, Half, de stand van nu en Dicht; zonder stand kiezen Open, Stop en Dicht.
   const nu = Math.round(dicht * 100);
   const [OPEN, DICHT] = zonnescherm ? ['Ingeklapt', 'Uitgevouwen'] : ['Open', 'Dicht'];

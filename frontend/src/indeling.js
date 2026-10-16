@@ -313,13 +313,14 @@ function kamerBlad(d, k) {
     ${soortKeuze(k)}
     ${metenKeuze(k)}
     ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, regelNu)}</select></div>`}
-    <div><span class="label">Zones, voor als één kamer twee delen heeft</span><div class="chips">${k.zones.map((z) => `<button type="button" class="chip" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">${esc(z.naam)}<span class="weg" aria-hidden="true">×</span></button>`).join('')}<input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>
+    ${zonesKeuze(k)}
     <div>
       <span class="label">${apps.length ? 'Apparaten, sleep om te verplaatsen' : 'Apparaten'}</span>
       ${apps.length ? apps.map((a) => `<button type="button" class="app" data-app="${esc(a.id)}" data-naam="${esc(a.naam)}"><span class="greep" aria-hidden="true">⋮⋮</span><span class="l"><b>${esc(a.naam)}</b><span>${esc(zoneNaam(a.zone) ?? soortTekst(a))}</span></span></button>`).join('') : '<p class="klein" style="margin: 0">Nog niets in deze kamer. Sleep een apparaat van onderen hierheen, of kies er een.</p>'}
     </div>
     ${erbij.length ? `<div><label class="label" for="erbij-${esc(k.id)}">Apparaat toevoegen</label><select class="veld" id="erbij-${esc(k.id)}" data-actie="erbij"><option value="">Kies een apparaat…</option>${opties(erbij, '')}</select></div>` : ''}
     <div><label class="label" for="etage-${esc(k.id)}">Etage</label><select class="veld" id="etage-${esc(k.id)}" data-actie="kameretage">${opties(etages, k.etage)}</select></div>
+    ${plekKeuze(d, k)}
     <button type="button" class="knop gevaar" data-naar-weghalen style="margin-top: auto">Kamer weghalen</button>`;
 }
 
@@ -610,8 +611,44 @@ function soortKeuze(k) {
   return `<div><label class="label soortlabel" for="soort-${esc(k.id)}">${icoon ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icoon}</svg>` : ''}Soort kamer</label><select class="veld" id="soort-${esc(k.id)}" data-actie="soort">${opties.map(([v, t]) => `<option value="${esc(v)}" ${v === nu ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`;
 }
 
+/*
+ * Zones (besluit 145): de delen van een kamer, van links naar rechts zoals in
+ * de tekening. Elk deel heeft een soort, zoals keuken of zithoek; die bepaalt
+ * de inrichting van dat deel. Zonder keuze een voorstel uit de naam.
+ */
+const ZONE_SOORTEN = [
+  ['woonkamer', 'Zithoek'], ['keuken', 'Keuken'], ['eetkamer', 'Eethoek'], ['werkkamer', 'Werkplek'],
+  ['slaapkamer', 'Slaaphoek'], ['kinderkamer', 'Kinderhoek'], ['badkamer', 'Badkamer'], ['toilet', 'Toilet'],
+  ['wasruimte', 'Washoek'], ['hal', 'Doorloop'], ['berging', 'Berging'], ['leeg', 'Leeg'],
+];
+function zonesKeuze(k) {
+  const naam = (w) => ZONE_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
+  const pijl = (z, i, stap, teken, wat) => `<button type="button" class="knop klein-knop" data-zone-schuif="${stap}" data-zone="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} ${wat}" ${i + stap < 0 || i + stap >= k.zones.length ? 'disabled' : ''}>${teken}</button>`;
+  const rijen = k.zones.map((z, i) => {
+    const voorstel = huis.soortVan?.(z.naam);
+    const opties = [['', voorstel && naam(voorstel) ? `Uit de naam: ${naam(voorstel)}` : 'Uit de naam: niets herkend'], ...ZONE_SOORTEN];
+    return `<div class="zonerij${k.zones.length > 1 ? '' : ' enkel'}">
+      <input class="veld" data-zone-naam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="Naam van zone ${esc(z.naam)}">
+      <select class="veld" data-zone-soort="${esc(z.id)}" aria-label="Soort van zone ${esc(z.naam)}">${opties.map(([v, t]) => `<option value="${esc(v)}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+      ${k.zones.length > 1 ? pijl(z, i, -1, '‹', 'naar links') + pijl(z, i, 1, '›', 'naar rechts') : ''}
+      <button type="button" class="knop klein-knop" data-zone-weg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">×</button>
+    </div>`;
+  });
+  return `<div><span class="label">Zones, voor als één kamer meer delen heeft, van links naar rechts</span>${rijen.join('')}<div class="chips"><input class="chip plus" data-nieuwe-zone placeholder="+ Zone" aria-label="Nieuwe zone" maxlength="40" style="width: 110px"></div></div>`;
+}
+/* De plek van een kamer op zijn etage, van links naar rechts zoals in de tekening. */
+function plekKeuze(d, k) {
+  const buren = d.kamers.filter((x) => x.etage === k.etage);
+  if (buren.length < 2) return '';
+  const i = buren.findIndex((x) => x.id === k.id);
+  return `<div><span class="label">Plek op de etage: ${i + 1} van ${buren.length}, van links</span><div class="knoppenrij">
+    <button type="button" class="knop" data-kamer-schuif="-1" ${i <= 0 ? 'disabled' : ''}>‹ Naar links</button>
+    <button type="button" class="knop" data-kamer-schuif="1" ${i >= buren.length - 1 ? 'disabled' : ''}>Naar rechts ›</button>
+  </div></div>`;
+}
+
 const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera' };
-const soortTekst = (a) => SOORT[a.soort] ?? a.soort;
+const soortTekst = (a) => (a.soort === 'meter' && a.meting?.beweging ? 'bewegingsmelder' : SOORT[a.soort] ?? a.soort);
 
 function apparaatBlad(d, t) {
   if (!t) return etageBlad(d);
@@ -628,7 +665,22 @@ function apparaatBlad(d, t) {
     <div><label class="label" for="appnaam">Naam, overal in de app en voor de assistent</label><input class="veld" id="appnaam" data-app-naam value="${esc(t.naam)}" placeholder="${esc(t.haNaam ?? t.naam)}" maxlength="60"></div>
     <div><label class="label" for="appkamer">Kamer</label><select class="veld" id="appkamer" data-app-kamer>${kamerId ? '' : '<option value="" selected>Kies een kamer…</option>'}${kamers}</select></div>
     <div data-zonevak ${zones ? '' : 'hidden'}><label class="label" for="appzone">Zone</label><select class="veld" id="appzone" data-app-zone><option value="">Geen zone</option>${zones}</select></div>
+    ${gevelKeuze(t)}
     <div class="rijknoppen"><button type="button" class="knop knop-licht" data-app-bewaar="${esc(t.id)}">Bewaren</button>${t.waar === 'verborgen' ? '' : `<button type="button" class="knop" data-naar-verbergen>Verbergen…</button>`}</div>`;
+}
+
+/*
+ * De gevel van een scherm (besluit 145): zo weet de app of de zon op dit scherm
+ * staat. Zonder keuze een voorstel uit de naam; weet het huis het niet, dan
+ * zegt de app niets over zon op het scherm.
+ */
+function gevelKeuze(t) {
+  const gevels = zon?.gevels ?? [];
+  if (t.soort !== 'screen' || !gevels.length) return '';
+  const g = t.scherm?.gevel;
+  const nu = g?.gekozen ? g.id : '';
+  const opties = [['', g && !g.gekozen ? `Uit de naam: ${g.naam}` : 'Weet ik niet'], ...gevels.map((x) => [x.id, x.naam])];
+  return `<div><label class="label" for="appgevel">Aan welke gevel hangt hij?</label><select class="veld" id="appgevel" data-app-gevel>${opties.map(([v, n]) => `<option value="${esc(v)}" ${v === nu ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select><span class="mini">Zo weet de app wanneer de zon op dit ${t.scherm?.zonnescherm ? 'zonnescherm' : 'screen'} staat.</span></div>`;
 }
 
 function verbergBlad(t) {
@@ -722,6 +774,28 @@ document.addEventListener('click', async (e) => {
   else if (t.hasAttribute('data-kamer-toevoegen')) {
     const veld = t.parentElement.querySelector('[data-nieuwe-kamer]');
     await kamerErbij(veld?.value.trim() ?? '');
+  } else if (t.dataset.zoneSchuif) {
+    // Een zone een plek naar links of rechts in de kamer (besluit 145).
+    const next = concept();
+    const k = next.kamers.find((x) => x.id === keuze.kamer);
+    const i = k.zones.findIndex((x) => x.id === t.dataset.zone);
+    const j = i + Number(t.dataset.zoneSchuif);
+    if (i < 0 || j < 0 || j >= k.zones.length) return;
+    const zones = [...k.zones];
+    [zones[i], zones[j]] = [zones[j], zones[i]];
+    k.zones = zones;
+    await bewaar(next, `Zone ${zones[j].naam} naar ${j < i ? 'links' : 'rechts'}.`);
+  } else if (t.dataset.kamerSchuif) {
+    // Een kamer een plek naar links of rechts op zijn etage: wisselen met de buurkamer (besluit 145).
+    const next = concept();
+    const k = next.kamers.find((x) => x.id === keuze.kamer);
+    const buren = next.kamers.filter((x) => x.etage === k.etage);
+    const buur = buren[buren.findIndex((x) => x.id === k.id) + Number(t.dataset.kamerSchuif)];
+    if (!buur) return;
+    const a = next.kamers.indexOf(k);
+    const b = next.kamers.indexOf(buur);
+    [next.kamers[a], next.kamers[b]] = [next.kamers[b], next.kamers[a]];
+    await bewaar(next, `${k.naam} staat nu ${Number(t.dataset.kamerSchuif) < 0 ? 'links' : 'rechts'} van ${buur.naam}.`);
   } else if (t.dataset.zoneWeg) {
     const next = concept();
     const k = next.kamers.find((x) => x.id === keuze.kamer);
@@ -747,7 +821,8 @@ document.addEventListener('click', async (e) => {
     }
     const naam = vak.querySelector('[data-app-naam]').value.trim();
     const next = concept();
-    next.apparaten[id] = { ...(naam && naam !== (dev.haNaam ?? dev.naam) ? { naam } : {}), kamer, zone: vak.querySelector('[data-app-zone]').value || null };
+    const gevel = vak.querySelector('[data-app-gevel]')?.value || null;
+    next.apparaten[id] = { ...(naam && naam !== (dev.haNaam ?? dev.naam) ? { naam } : {}), kamer, zone: vak.querySelector('[data-app-zone]').value || null, ...(gevel ? { gevel } : {}) };
     next.verborgen = (next.verborgen ?? []).filter((x) => x !== id);
     if (await bewaar(next, `${naam || dev.naam} bewaard.`)) kies({ kamer, apparaat: null, blad: 'kamer', etage: next.kamers.find((x) => x.id === kamer)?.etage ?? keuze.etage });
   } else if (t.dataset.verberg) {
@@ -896,6 +971,18 @@ document.addEventListener('change', async (e) => {
     const zones = vak.querySelector('[data-zonevak]');
     zones.hidden = !(kamer?.zones ?? []).length;
     zones.querySelector('select').innerHTML = `<option value="">Geen zone</option>${(kamer?.zones ?? []).map((z) => `<option value="${esc(z.id)}">${esc(z.naam)}</option>`).join('')}`;
+  } else if (t.dataset.zoneSoort && k) {
+    // Wat voor deel van de kamer (besluit 145); leeg is weer het voorstel uit de naam.
+    const z = k.zones.find((x) => x.id === t.dataset.zoneSoort);
+    if (!z) return;
+    if (v) z.soort = v;
+    else delete z.soort;
+    await bewaar(next, `Zone ${z.naam} bewaard.`);
+  } else if (t.dataset.zoneNaam && k && v) {
+    const z = k.zones.find((x) => x.id === t.dataset.zoneNaam);
+    if (!z || z.naam === v) return;
+    z.naam = v;
+    await bewaar(next, `Zone heet nu ${v}.`);
   } else if (t.hasAttribute('data-nieuwe-zone') && k && v) {
     k.zones.push({ id: idVan(v, new Set(k.zones.map((z) => z.id))), naam: v });
     await bewaar(next, `Zone ${v} toegevoegd.`);

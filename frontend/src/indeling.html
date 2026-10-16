@@ -130,6 +130,17 @@
   .invoer span { color: var(--gedempt); font-size: 13px; }
   .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
   .knoppenrij .knop { flex: 1; }
+  /* Een zone per rij: naam, soort, schuiven en weghalen (besluit 145). */
+  .zonerij { display: grid; grid-template-columns: minmax(0, 1fr) 40px 40px; grid-template-areas: "naam naam weg" "soort links rechts"; gap: 6px; align-items: center; margin-bottom: 10px; }
+  .zonerij.enkel { grid-template-areas: "naam naam weg" "soort soort soort"; }
+  .zonerij .veld { min-width: 0; }
+  .zonerij [data-zone-naam] { grid-area: naam; }
+  .zonerij [data-zone-soort] { grid-area: soort; }
+  .zonerij [data-zone-schuif="-1"] { grid-area: links; }
+  .zonerij [data-zone-schuif="1"] { grid-area: rechts; }
+  .zonerij [data-zone-weg] { grid-area: weg; }
+  .zonerij .klein-knop { width: 40px; min-width: 40px; height: 40px; padding: 0; justify-content: center; }
+  .zonerij .klein-knop[disabled] { opacity: 0.35; }
 
   /* De telefoon. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
