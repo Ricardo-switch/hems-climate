@@ -48,7 +48,7 @@ function welkom() {
     ? 'Je bent de hoofdgebruiker: jouw comfort geldt als je thuis bent, en als er niemand thuis is.'
     : `Je woont hier. Je comfort is eerst hetzelfde als dat van ${esc(hoofd?.naam ?? 'de hoofdgebruiker')}, tot je zelf iets verandert.`;
   const thuis = ik.aanwezigheidNaam
-    ? `<div class="bron" aria-pressed="true" style="cursor: default">${esc(ik.aanwezigheidNaam)}<span class="${ik.thuis ? 'thuis' : ''}">${ik.thuis == null ? '' : ik.thuis ? 'thuis' : 'weg'}</span></div>`
+    ? `<div class="bron" aria-pressed="true" style="cursor: default">${esc(ik.aanwezigheidNaam)}${ik.gekoppeld ? ' in Home Assistant' : ''}<span class="${ik.thuis ? 'thuis' : ''}">${ik.thuis == null ? '' : ik.thuis ? 'thuis' : 'weg'}</span></div>${ik.gekoppeld ? '<span class="hint">Gekoppeld aan je account.</span>' : ''}`
     : '<p class="hint">Nog niet bekend. Kies het later bij Instellingen › Bewoners.</p>';
   kaart.innerHTML = `${merk}
     <h1>Welkom, ${esc(ik.naam)}</h1>
@@ -70,12 +70,13 @@ function vraag() {
 }
 
 function waarThuis() {
-  const vrij = (bewoners?.bronnen ?? []).filter((b) => b.van == null);
+  // Wat jou kan volgen: geen persoon van een ander account, en niets wat al bij een ander hoort.
+  const vrij = bewoners?.kiesbaarVoorMij ?? [];
   const knop = (id, naam, rechts, klasse = '') => `<button type="button" class="bron" data-bron="${esc(id)}" aria-pressed="${bron === id}">${esc(naam)}<span class="${klasse}">${esc(rechts)}</span></button>`;
   kaart.innerHTML = `${merk}
-    <h1>Hoe weet het huis of je thuis bent?</h1>
-    <p>Kies wat jou volgt. Zo weet het huis wiens comfort er geldt. Wat al bij een andere bewoner hoort, staat er niet bij.</p>
-    ${vrij.map((b) => knop(b.id, b.naam, b.thuis == null ? '' : b.thuis ? 'thuis' : 'weg', b.thuis ? 'thuis' : '')).join('')}
+    <h1>Welke sensor ziet of je thuis bent?</h1>
+    <p>Zo weet het huis wiens comfort er geldt. Wat al bij een ander hoort, staat er niet bij.</p>
+    ${vrij.map((b) => knop(b.id, b.naam, `${b.soort === 'persoon' ? 'persoon' : 'sensor'}${b.thuis == null ? '' : b.thuis ? ', thuis' : ', weg'}`, b.thuis ? 'thuis' : '')).join('')}
     ${knop('', 'Nog niet', 'dan telt alleen je naam')}
     <span class="fout" data-fout></span>
     <div class="voet"><button type="button" class="zacht" data-terug-vraag>Terug</button><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>`;

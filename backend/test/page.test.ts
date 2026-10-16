@@ -2117,7 +2117,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/welkom.html?terug=%2Fbewoners.html#vraag`);
     await p.locator('[data-keus="bewoner"]').click();
     await p.locator('[data-verder]').click();
-    await p.locator('h1', { hasText: 'Hoe weet het huis of je thuis bent?' }).waitFor();
+    await p.locator('h1', { hasText: 'Welke sensor ziet of je thuis bent?' }).waitFor();
     await p.locator('[data-bron="ricardo"]').click();
     await p.locator('[data-klaar]').click();
     await p.locator('h1', { hasText: 'Welkom, Test' }).waitFor();

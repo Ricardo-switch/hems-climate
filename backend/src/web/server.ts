@@ -43,6 +43,8 @@ import { ask, LANGS, parseQuestion } from './assistant.js';
 import type { AskContext, Lang, Question } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
 import { begrijp, MAX_TEKST } from './woordzoeker.js';
+import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
+import { inEigenWoorden, kies, type Vraag } from './taalmodel.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
@@ -217,6 +219,18 @@ export interface WebOptions {
   readonly lichtAan?: () => boolean;
   /** Schermen bedienen staat aan bij Functies (besluit 121); weg is aan. */
   readonly schermenAan?: () => boolean;
+  /**
+   * Praten met je huis (besluit 148): de AI-taak die de bewoner bij Functies
+   * koos, als functie die om een tekst vraagt, of null (uit). `proef` vraagt een
+   * bepaalde AI-taak, voor "Nog een keer proberen". `bedienen`: of de assistent
+   * licht en schermen mag bedienen met een zin. Weg: geen taalmodel, wel
+   * bedienen met de woordzoeker.
+   */
+  readonly praten?: {
+    readonly model: () => Vraag | null;
+    readonly proef: (entityId: string) => Vraag;
+    readonly bedienen: () => boolean;
+  };
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -901,9 +915,14 @@ export class WebServer {
         sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
         return;
       }
+      // Het taalmodel (besluit 148), als de bewoner er een koos; anders null.
+      const model = this.#options.praten?.model() ?? null;
+      // De assistent van Home Assistant (147) bedient niets: die schakelt zelf.
+      const viaSleutel = this.#metSleutel(req, url, path);
       // Een vraag in eigen woorden (besluit 115): de woordzoeker maakt er een
       // vaste vraag van, of antwoordt zelf over de app.
       let parsed: { question: Question; lang: Lang };
+      let vrijeTekst: string | null = null;
       if ((url.searchParams.get('v') ?? '').toLowerCase() === 'vrij') {
         const taal = (url.searchParams.get('taal') ?? 'nl').toLowerCase();
         const lang: Lang = (LANGS as readonly string[]).includes(taal) ? (taal as Lang) : 'nl';
@@ -912,7 +931,25 @@ export class WebServer {
           sendJson(res, 400, { fout: `tekst moet 1 tot ${MAX_TEKST} tekens zijn` });
           return;
         }
-        const b = begrijp(tekst, config, lang);
+        vrijeTekst = tekst;
+        // Bedienen met een zin (besluit 148): eerst de woordzoeker, en wat die
+        // niet begrijpt het taalmodel. De pagina stuurt de opdracht naar de deur.
+        const lijst = viaSleutel || this.#options.praten?.bedienen() === false ? null : this.#bedienbaar();
+        const herkend = lijst ? herkenOpdracht(tekst, lijst, lang, url.searchParams.get('scherm')) : null;
+        if (herkend) {
+          sendJson(res, 200, await this.#opdrachtAntwoord(herkend, tekst, lang, model));
+          return;
+        }
+        let b = begrijp(tekst, config, lang);
+        if (b.soort === 'onbekend' && model != null) {
+          const zones = config.zones.map((z) => ({ id: z.id, naam: z.name }));
+          const keuze = await kies(model, tekst, lijst ?? bedienbaar(null, { licht: false, scenes: false, schermen: false }), zones, lang);
+          if (keuze.soort === 'opdracht') {
+            sendJson(res, 200, await this.#opdrachtAntwoord(keuze.herkend, tekst, lang, model));
+            return;
+          }
+          if (keuze.soort === 'vraag') b = { soort: 'huis', vraag: keuze.vraag };
+        }
         if (b.soort === 'app') {
           sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link });
           return;
@@ -972,8 +1009,30 @@ export class WebServer {
         shadow: true,
         lang: parsed.lang,
       });
+      // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
+      const eigen = model ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
       // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
-      sendJson(res, 200, { ...antwoord, gesproken: uitspraak(antwoord.antwoord) });
+      sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord) });
+      return;
+    }
+
+    /*
+     * Praten met je huis (besluit 148): één vraag aan een AI-taak, voor "Nog
+     * een keer proberen" bij Functies. Alleen een AI-taak die Home Assistant
+     * kent; er verandert niets.
+     */
+    if (path === '/api/praten/proef') {
+      const praten = this.#options.praten;
+      const config = this.#config();
+      const id = url.searchParams.get('model') ?? '';
+      const kent = this.#options.functies?.gevonden()?.taalmodellen?.some((m) => m.id === id) ?? false;
+      if (praten == null || config == null || !kent) {
+        sendJson(res, 404, { fout: 'die AI-taak kent Home Assistant niet' });
+        return;
+      }
+      const vast = ask({ kind: 'nu' }, { config, snapshot: this.#options.latest(), today: null, nowMs: Date.now(), shadow: true, lang: 'nl' });
+      const eigen = await inEigenWoorden(praten.proef(id), 'Wat doe je nu?', vast, 'nl');
+      sendJson(res, 200, { vast: vast.antwoord, eigen: eigen.eigen ? eigen.antwoord : null });
       return;
     }
 
@@ -1768,6 +1827,33 @@ export class WebServer {
     }
     // Of de installatie licht bedienen toestaat (HEMS_LIGHTS): anders valt er niets aan te zetten.
     sendJson(res, 200, { instellingen: door.store.current ? volledig(door.store.current, gevonden) : null, voorstel: functiesVoorstel(gevonden), gevonden, lichtMogelijk: this.#options.lights != null, schermMogelijk: this.#options.covers != null });
+  }
+
+  /** Wat de assistent nu mag bedienen (besluit 148): dezelfde grenzen als de knoppen. */
+  #bedienbaar(): Bedienbaar {
+    const licht = this.#lichtMag();
+    return bedienbaar(this.#options.house?.() ?? null, { licht, scenes: licht && this.#options.lights?.scenesEnabled === true, schermen: this.#schermMag() });
+  }
+
+  /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
+  async #opdrachtAntwoord(h: Herkend, tekst: string, lang: Lang, model: Vraag | null): Promise<Record<string, unknown>> {
+    if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord) };
+    const o = h.opdracht;
+    const eigen = model ? await inEigenWoorden(model, tekst, o, lang) : { antwoord: o.antwoord, eigen: false };
+    return {
+      vraag: 'bedien',
+      taal: lang,
+      kamer: null,
+      ruimte: o.ruimte,
+      antwoord: eigen.antwoord,
+      eigen: eigen.eigen,
+      feiten: o.feiten,
+      gesproken: uitspraak(eigen.antwoord),
+      opdracht: { pad: o.pad, body: o.body },
+      gedaan: o.gedaan,
+      beweegt: o.beweegt,
+      vervolg: o.vervolg,
+    };
   }
 
   /** Schermen bedienen: de installatie staat het toe, en het staat aan bij Functies (besluit 121). */

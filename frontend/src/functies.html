@@ -13,10 +13,20 @@
 <link rel="apple-touch-icon" href="icoon-192.png">
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
-  /* Functies (besluit 130): camera's, de deurbel, licht en screens, het weer. */
+  /* Functies (besluit 130): camera's, de deurbel, licht en screens, het weer, en praten met je huis (148). */
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  /* Praten met je huis (besluit 148): het vaste antwoord naast eigen woorden, en wat er naar buiten gaat. */
+  .proef { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .proef div { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 14px; line-height: 1.45; }
+  .proef div span { display: block; font-size: 11.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .proef .eigen { background: rgba(143, 134, 255, 0.1); border: 1px solid rgba(143, 134, 255, 0.25); }
+  .buiten { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; line-height: 1.45; color: var(--zacht); }
+  .buiten b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .buiten .wel { color: var(--zon); }
+  .buiten .niet { color: var(--mint); }
+  #tel .proef, #tel .buiten { grid-template-columns: 1fr; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -25,7 +35,7 @@
     <main class="groep">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <div class="groepkop">
-        <div><h1 class="kop-1">Functies</h1><p class="lead">Camera's, de deurbel, licht en screens, en het weer.</p></div>
+        <div><h1 class="kop-1">Functies</h1><p class="lead">Camera's, de deurbel, licht en screens, het weer, en praten met je huis.</p></div>
         <span class="bewaard" data-bewaard></span>
       </div>
       <div class="groepveld">

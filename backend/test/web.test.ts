@@ -107,6 +107,7 @@ async function start(options: {
   schermenAan?: () => boolean;
   comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
   sleutel?: string;
+  praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean };
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null>;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
@@ -140,6 +141,7 @@ async function start(options: {
         ...(options.schermenAan ? { schermenAan: options.schermenAan } : {}),
         ...(options.comfort ? { comfort: options.comfort } : {}),
         ...(options.sleutel ? { sleutel: options.sleutel } : {}),
+        ...(options.praten ? { praten: options.praten } : {}),
         ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
@@ -311,7 +313,7 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
     // Weer en licht vult de dienst aan met het voorstel (besluit 111).
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true } });
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);
@@ -1203,6 +1205,34 @@ describe('licht bedienen (besluit 97)', () => {
     // Zonder schermbediening bestaat de deur niet.
     const zonder = await start({ house: () => metSchermen });
     expect((await fetch(`${zonder.base}/api/scherm`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
+  });
+
+  it('bedient met een zin via dezelfde deur, en zegt het in eigen woorden (besluit 148)', async () => {
+    const calls: { service: string; ids: readonly string[]; data: Record<string, unknown> }[] = [];
+    const lights = new LightSwitch({ house: () => house, call: async (service, ids, data) => void calls.push({ service, ids, data }) });
+    let antwoordModel: unknown = 'Klaar, het licht in de hal is uit.';
+    const model = async () => antwoordModel;
+    const started = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => model, proef: () => model, bedienen: () => true } });
+    const vraag = async (tekst: string) =>
+      (await (await fetch(`${started.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst })}`)).json()) as { vraag: string; antwoord: string; eigen?: boolean; ruimte?: string; opdracht?: { pad: string; body: unknown } };
+    const b = await vraag('licht hal uit');
+    expect(b).toMatchObject({ vraag: 'bedien', opdracht: { pad: 'api/licht', body: { doel: 'kamer', id: 'hal', aan: false } }, antwoord: 'Klaar, het licht in de hal is uit.', eigen: true, ruimte: 'hal' });
+    // De vraag zelf schakelt niets: de pagina stuurt de opdracht naar de deur.
+    expect(calls).toEqual([]);
+    expect((await fetch(`${started.base}/${b.opdracht!.pad}`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(b.opdracht!.body) })).status).toBe(200);
+    expect(calls).toEqual([{ service: 'turn_off', ids: ['light.hal', 'light.trap'], data: {} }]);
+    // Een getal dat er niet stond: het vaste antwoord.
+    antwoordModel = 'Het licht in de hal is uit, 3 lampen.';
+    expect(await vraag('licht hal uit')).toMatchObject({ antwoord: 'Het licht in de hal is uit.', eigen: false });
+    // Wat de woordzoeker niet begrijpt, kiest het model uit de lijst.
+    antwoordModel = { soort: 'licht', id: 'light.trap', actie: 'aan' };
+    expect((await vraag('het is te donker op de trap')).opdracht?.body).toEqual({ doel: 'lamp', id: 'light.trap', aan: true });
+    // Iets buiten de lijst wordt niets.
+    antwoordModel = { soort: 'scherm', id: 'cover.garagedeur', actie: 'open' };
+    expect((await vraag('doe de garage open')).opdracht).toBeUndefined();
+    // Zonder bedienen bij Functies: alleen praten.
+    const zonder = await start({ latest: () => snapshot(), house: () => house, lights, praten: { model: () => null, proef: () => model, bedienen: () => false } });
+    expect(((await (await fetch(`${zonder.base}/api/vraag?${new URLSearchParams({ v: 'vrij', tekst: 'licht hal uit' })}`)).json()) as { opdracht?: unknown }).opdracht).toBeUndefined();
   });
 
   it('heeft geen scènedeur zonder scènes', async () => {

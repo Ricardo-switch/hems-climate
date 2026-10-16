@@ -625,6 +625,20 @@ export function gevelVan(gekozen: string | null, naam: string, zonnescherm: bool
   return voorstel ? { id: voorstel.id, naam: voorstel.name, gekozen: false } : null;
 }
 
+/** De klassen van een `cover.` die toegang geven in plaats van zon weren. */
+const TOEGANG = new Set(['garage', 'gate', 'door']);
+
+/**
+ * Een garagedeur, poort of deur (besluit 148): geen scherm, en dus nooit met de
+ * knoppen of de assistent te openen. Op klasse, en anders op naam.
+ */
+export function geenScherm(e: HaRegistryEntity, state: HaEntityState | undefined): boolean {
+  const klasse = e.device_class ?? e.original_device_class ?? (state?.attributes['device_class'] as string | undefined);
+  if (klasse != null && TOEGANG.has(klasse)) return true;
+  const naam = `${e.entity_id} ${e.name ?? ''} ${e.original_name ?? ''} ${String(state?.attributes['friendly_name'] ?? '')}`.toLowerCase();
+  return /garage|poort|(?<![a-z])hek(?![a-z])|deur|(?<![a-z])gate|(?<![a-z])door/.test(naam);
+}
+
 /** Kan dit scherm naar een stand (SUPPORT_SET_POSITION, bit 4)? */
 const COVER_SET_POSITION = 4;
 
@@ -1080,6 +1094,8 @@ function collect(
   const coverPerDevice = new Map<string, string>();
   for (const e of registers.entities) {
     if (!e.entity_id.startsWith('cover.') || e.disabled_by || e.hidden_by) continue;
+    // Een garagedeur, poort of deur is geen scherm (besluit 148): die bedient de app niet.
+    if (geenScherm(e, states.get(e.entity_id))) continue;
     const key = e.device_id ?? e.entity_id;
     const prev = coverPerDevice.get(key);
     if (prev == null || e.entity_id.length < prev.length) coverPerDevice.set(key, e.entity_id);

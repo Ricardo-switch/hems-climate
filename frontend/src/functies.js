@@ -1,7 +1,9 @@
 /*
  * Functies (besluiten 109, 111 en 130). Welke camera's de app toont en met
  * welk beeld, welke melder de deurbel is, of je licht en screens bedient in de
- * app, en waar het weer vandaan komt. In de opbouw van elke groep (130): links
+ * app, en waar het weer vandaan komt. Praten met je huis (besluit 148): welk
+ * taalmodel uit Home Assistant de assistent laat praten in eigen woorden, en of
+ * hij met een zin mag bedienen. In de opbouw van elke groep (130): links
  * de delen, wat je kiest wordt meteen bewaard. Bewaren vraagt een beheerder.
  * De dienst doet een voorstel uit wat Home Assistant heeft.
  */
@@ -12,6 +14,8 @@ const { $$, esc, haal } = app;
 let info = null;
 let concept = null;
 let zon = null;
+/** Het laatste proefantwoord van het taalmodel (besluit 148): vast naast eigen woorden. */
+let proef = null;
 
 async function laad() {
   const [f, z] = await Promise.allSettled([haal('api/functies'), haal('api/zon')]);
@@ -22,6 +26,7 @@ async function laad() {
     concept.weer ??= info.voorstel.weer;
     concept.licht ??= info.voorstel.licht;
     concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
+    concept.praten ??= info.voorstel.praten ?? { taalmodel: null, bedienen: true };
   }
   teken();
 }
@@ -81,6 +86,29 @@ function licht() {
     <p class="mini">${mag || schermMag ? 'Met je inlog. Bedienen doe je in het huis, bij de kamer.' : 'Deze installatie staat bedienen in de app niet toe; je ziet wel wat er aan staat. Wie Smart Climate installeerde, kan het aanzetten.'}</p>`;
 }
 
+/** Praten met je huis (besluit 148, schets Wand-Instellingen-Praten). */
+function praten() {
+  const modellen = info.gevonden.taalmodellen ?? [];
+  const p = concept.praten;
+  const bedienKan = info.lichtMogelijk === true || info.schermMogelijk === true;
+  const proefHtml = !p.taalmodel
+    ? ''
+    : proef === 'bezig'
+      ? '<p class="mini">Even proberen…</p>'
+      : proef
+        ? `<div class="proef"><div><span>Vast antwoord</span>${esc(proef.vast)}</div><div class="eigen"><span>In eigen woorden</span>${proef.eigen ? esc(proef.eigen) : 'Lukte niet; dan hoor je het vaste antwoord.'}</div></div>`
+        : '';
+  return `<h2 class="kop-2">Antwoorden in eigen woorden</h2>
+    ${modellen.length ? keuzes('Taalmodel', 'taalmodel', [[null, 'Uit'], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : '<p class="uitleg">Geen AI-taak gevonden in Home Assistant. Voeg er een toe, zoals Google Gemini bij Apparaten en diensten; dan staat hij hier.</p>'}
+    <p class="mini">De assistent zegt het vaste antwoord op zijn eigen manier, met een taalmodel uit Home Assistant. Klopt een getal niet, of duurt het langer dan 3 seconden, dan hoor je het vaste antwoord.</p>
+    ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${proef && proef !== 'bezig' ? 'Nog een keer proberen' : 'Proberen'}</button></div>` : ''}
+    ${proefHtml}
+    <div class="buiten"><div><b class="wel">Gaat naar het taalmodel</b><span>Je vraag als tekst, het vaste antwoord met de getallen, en de namen van kamers, lampen en schermen</span></div><div><b class="niet">Blijft in huis</b><span>Je stem, camerabeelden, en wie er thuis is</span></div></div>
+    ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">Bedienen met de assistent</h2>
+    ${keuzes('Bedienen met de assistent', 'pratenBedienen', [[true, 'Aan'], [false, 'Uit']], p.bedienen)}
+    <p class="mini">Zeg wat je wilt, zoals "doe het licht beneden wat zachter" of "screen dicht". Het gebeurt meteen, en het huis zegt wat het deed. Lampen en scènes${info.schermMogelijk ? ', screens en het zonnescherm' : ''}, zoals bij Licht en screens. Een garagedeur, poort of deur nooit; airco's en cv pas als Smart Climate mag regelen.</p>` : ''}`;
+}
+
 function weer() {
   const bronnen = info.gevonden.weerbronnen ?? [];
   // Open-Meteo voorop (besluit 130): werkt voor elk huis. De rest onder "Andere bron".
@@ -102,6 +130,7 @@ const NAAST = {
   cameras: ['Zo werkt het', ['De camera staat in de kamer waar hij hangt, bij Thuis', 'Smart Climate kijkt alleen: er gaat niets naar de camera']],
   deurbel: ['Zo werkt de deurbel', ['Wordt er aangebeld, dan toont elke open pagina meteen het beeld', 'Tot je het sluit, of de tijd om is', 'Het scherm aanzetten kan alleen in Fully Kiosk Browser']],
   licht: ['Zo werkt het', ['Bedienen doe je in het huis: tik op een kamer, dan op de lamp of het screen', 'De regeling raakt je lampen en screens niet aan']],
+  praten: ['Zo werkt het', ['Het vaste antwoord blijft de basis: het taalmodel zegt het alleen anders', 'Elk getal moet kloppen met wat het huis meet, anders hoor je het vaste antwoord', '"Stop" stopt een scherm dat beweegt', 'Is het gratis gebruik op, dan werkt bedienen gewoon door']],
   weer: ['Waarvoor dit nodig is', ['Het weer van vandaag en de komende dagen', 'Wat je panelen dan naar verwachting leveren', 'Later: de temperatuur per kamer vooruit rekenen']],
 };
 
@@ -115,6 +144,7 @@ function delen() {
     { id: 'deurbel', titel: 'Deurbel', zin: f.deurbel.aan ? `beeld ${f.deurbel.seconden / 60 >= 1 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit', stand: f.deurbel.aan && (!f.deurbel.melder || !f.deurbel.camera) ? 'mist' : 'goed' },
     { id: 'licht', titel: 'Licht en screens', zin: info.lichtMogelijk || info.schermMogelijk ? (f.licht.bedienen ? 'bedienen in de app' : 'alleen kijken') : 'alleen kijken', stand: 'goed' },
     { id: 'weer', titel: 'Weer', zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
+    { id: 'praten', titel: 'Praten met je huis', zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? 'eigen woorden' : 'vaste zinnen', stand: 'goed' },
   ];
 }
 
@@ -123,7 +153,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
-  const vorm = { cameras, deurbel, licht, weer }[nu]?.() ?? '';
+  const vorm = { cameras, deurbel, licht, weer, praten }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   const [kopje, lijst] = NAAST[nu] ?? NAAST.cameras;
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
@@ -142,6 +172,16 @@ function bewaar() {
 document.addEventListener('click', (e) => {
   const knop = e.target.closest('button');
   if (!knop || knop.disabled || !concept) return;
+  // Proberen (besluit 148): één vraag aan het gekozen taalmodel, er verandert niets.
+  if (knop.hasAttribute('data-proef') && concept.praten.taalmodel) {
+    proef = 'bezig';
+    teken();
+    void haal(`api/praten/proef?model=${encodeURIComponent(concept.praten.taalmodel)}`).then(
+      (r) => ((proef = r), teken()),
+      () => ((proef = { vast: 'Het taalmodel gaf geen antwoord.', eigen: null }), teken()),
+    );
+    return;
+  }
   if (knop.dataset.kies) {
     const w = JSON.parse(knop.dataset.waarde);
     const s = knop.dataset.kies;
@@ -159,6 +199,10 @@ document.addEventListener('click', (e) => {
     else if (s === 'schermenAan') concept.schermen.bedienen = w;
     else if (s === 'weerBron') concept.weer.bron = w;
     else if (s === 'weerUren') concept.weer.uren = w;
+    else if (s === 'taalmodel') {
+      concept.praten.taalmodel = w;
+      proef = null;
+    } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s.startsWith('camera:')) {
       // Per camera één beeld: het andere beeld van dezelfde camera gaat eruit.

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.26.0';
+export const VERSIE = '0.27.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,20 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.27.0',
+    datum: '2026-10-16',
+    nieuw: [
+      'Lampen, scènes en schermen bedien je met een zin bij de Assistent, zoals "doe het licht beneden wat zachter" of "screen dicht"',
+      'Terwijl een scherm beweegt, stopt "Stop het screen" het scherm en "Stil" het praten; "stop" typen kan ook',
+      'Bij Functies › Praten met je huis kies je een taalmodel uit Home Assistant: dan zegt de assistent het in eigen woorden',
+    ],
+    beter: ['Onder het antwoord staat wat er veranderde, zoals "40%, plafonnière, was 80%", met wat je daarna kunt doen'],
+    opgelost: [
+      'Een garagedeur, poort of deur staat niet meer als scherm in de app, en gaat dus nooit met een knop open',
+      'Bij Bewoners staan alleen nog je eigen persoon in Home Assistant en sensors om uit te kiezen, geen andere mensen',
+    ],
+  },
   {
     versie: '0.26.0',
     datum: '2026-10-16',

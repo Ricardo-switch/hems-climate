@@ -101,6 +101,8 @@ interface FakeHa {
 async function startFakeHa(options: {
   states?: HaEntityState[];
   rejectAuth?: boolean;
+  /** Wat een AI-taak antwoordt (besluit 148). */
+  aiTask?: unknown;
 }): Promise<FakeHa> {
   const received: Record<string, unknown>[] = [];
   const sockets = new Set<WsSocket>();
@@ -149,6 +151,10 @@ async function startFakeHa(options: {
         socket.send(
           JSON.stringify({ id: msg['id'], type: 'result', success: true, result: null }),
         );
+        return;
+      }
+      if (msg['type'] === 'call_service' && msg['domain'] === 'ai_task' && msg['return_response'] === true) {
+        socket.send(JSON.stringify({ id: msg['id'], type: 'result', success: true, result: { context: {}, response: { conversation_id: 'x', data: options.aiTask ?? null } } }));
         return;
       }
       socket.send(
@@ -348,6 +354,45 @@ describe('schrijfbeveiliging', () => {
     for (const [domain, service, data, target] of refused) {
       await expect(client.callService(domain, service, data, target), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
     }
+  });
+
+  it('vraagt met allowAiTask alleen een AI-taak om een tekst, en schakelt niets (besluit 148)', async () => {
+    const uit = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowLights: true, allowCovers: true, allowScenes: true });
+    await expect(uit.generateData('ai_task.google_ai_task', 'Zeg hallo.')).rejects.toThrow(/staat uit/);
+    const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowAiTask: true });
+    // De deur is generateData, niet callService: daar blijft alles dicht.
+    for (const [domain, service] of [['ai_task', 'generate_data'], ['conversation', 'process'], ['light', 'turn_on'], ['cover', 'open_cover'], ['climate', 'turn_off']] as const) {
+      await expect(client.callService(domain, service, {}, { entity_id: 'light.hal' }), `${domain}.${service}`).rejects.toThrow(/Schrijven staat uit/);
+    }
+    await expect(client.generateData('conversation.google_ai', 'Zeg hallo.')).rejects.toThrow(/geen AI-taak/);
+    await expect(client.generateData('ai_task.x, light.hal', 'Zeg hallo.')).rejects.toThrow(/geen AI-taak/);
+    await expect(client.generateData('ai_task.google_ai_task', '')).rejects.toThrow(/opdracht/);
+    await expect(client.generateData('ai_task.google_ai_task', 'x'.repeat(7000))).rejects.toThrow(/opdracht/);
+    await expect(client.generateData('ai_task.google_ai_task', 'Zeg hallo.', { 'Verkeerd veld': { description: 'x' } })).rejects.toThrow(/veld/);
+  });
+
+  it('stuurt een AI-taak echt naar Home Assistant en geeft het antwoord terug', async () => {
+    const ha = await startFakeHa({ aiTask: 'Goedemiddag!' });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN, allowAiTask: true });
+    cleanups.push(() => client.close());
+    const ready = new Promise((resolve) => client.on('ready', resolve));
+    client.connect();
+    await ready;
+    expect(await client.generateData('ai_task.google_ai_task', 'Zeg hallo.', { zin: { description: 'de zin', required: true } })).toBe('Goedemiddag!');
+    expect(ha.received.find((m) => m['type'] === 'call_service')).toEqual({
+      type: 'call_service',
+      domain: 'ai_task',
+      service: 'generate_data',
+      service_data: {
+        task_name: 'smart_climate',
+        entity_id: 'ai_task.google_ai_task',
+        instructions: 'Zeg hallo.',
+        structure: { zin: { description: 'de zin', required: true, selector: { text: {} } } },
+      },
+      return_response: true,
+      id: expect.any(Number),
+    });
   });
 
   it('stuurt een toegestane lichtopdracht echt naar Home Assistant', async () => {

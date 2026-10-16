@@ -4,8 +4,13 @@
  * helpen, leest zijn antwoord voor en vraagt daarna of het nog iets kan doen.
  *
  * De antwoorden komen kant-en-klaar uit de dienst (`api/vraag`, besluit 94):
- * elk getal komt uit wat het huis meet en besluit, er is geen taalmodel en er
- * gaat niets het huis uit. De stem is Piper in Home Assistant (`api/stem`); is
+ * elk getal komt uit wat het huis meet en besluit. Heeft de bewoner bij
+ * Functies een taalmodel gekozen, dan zegt de dienst het in eigen woorden
+ * (besluit 148); de getallen blijven dezelfde. Een opdracht ("licht beneden
+ * zachter", "screen dicht") komt terug als opdracht: deze pagina stuurt die
+ * naar dezelfde deur als de knoppen, en het huis zegt wat het deed. Terwijl een
+ * scherm beweegt, stopt "Stop het screen" het scherm en "Stil" het praten.
+ * De stem is Piper in Home Assistant (`api/stem`); is
  * die er niet, dan een Nederlandse stem van het apparaat zelf, en anders
  * alleen tekst. Geluid kan pas na een tik: dat bepaalt de browser; een tik
  * op Thuis telt mee.
@@ -29,6 +34,10 @@ let stemNaam = null;
 let vanAdres = false;
 /** Wie hier woont (besluit 147): voor de begroeting met je naam. */
 let bewoners = null;
+/** Het scherm dat de assistent net liet bewegen (besluit 148), met wanneer; "stop" geldt daarvoor. */
+let beweegt = null;
+const BEWEEGT_MS = 60_000;
+const beweegtNog = () => (beweegt && Date.now() - beweegt.sinds < BEWEEGT_MS ? beweegt : null);
 
 async function laadAlles() {
   const [s, h, z, w, v, st, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/vandaag'), haal('api/stem'), haal('api/bewoners')]);
@@ -83,6 +92,9 @@ const IK = {
   warm: ['warm', '<svg viewBox="0 0 24 24" fill="none" stroke="#ffb090" stroke-width="1.9" stroke-linecap="round"><path d="M12 21c-3.3 0-6-2.5-6-6 0-4 4-6 4-10 2.5 1.5 4 4 4 6 1-.8 1.5-2 1.5-3 1.6 1.4 2.5 3.8 2.5 7 0 3.5-2.7 6-6 6z"/></svg>'],
   nu: ['violet', '<svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg>'],
   weer: ['', '<svg viewBox="0 0 24 24" fill="none" stroke="#a9e6ff" stroke-width="1.9" stroke-linecap="round"><path d="M7 17h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.3 3.3 0 0 0 7 17z"/></svg>'],
+  licht: ['lamp', '<svg viewBox="0 0 24 24" fill="none" stroke="#FFB765" stroke-width="1.9" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>'],
+  scene: ['violet', '<svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><circle cx="12" cy="16" r="3"/></svg>'],
+  scherm: ['', '<svg viewBox="0 0 24 24" fill="none" stroke="#6FD3FF" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8M6 13h12"/></svg>'],
 };
 
 /** Wachten op zon: per kamer wat er nodig is en wat er over is. */
@@ -128,6 +140,11 @@ function suggesties() {
 
 /** Na een antwoord: wat er logisch op volgt. */
 function vervolg(item) {
+  // Na bedienen: wat er nu kan, uit de dienst (besluit 148).
+  if (item?.vervolg?.length) {
+    const ik = item.gedaan?.[0]?.soort === 'scherm' ? 'scherm' : 'licht';
+    return item.vervolg.slice(0, 3).map((x) => ({ label: x.label, hint: '', ik: /^Scène/.test(x.label) ? 'scene' : ik, v: { soort: 'vrij', tekst: x.tekst } }));
+  }
   const alle = suggesties();
   const al = (v) => item && v.soort === item.soort && (v.kamer ?? null) === (item.kamer ?? null);
   const voorkeur = {
@@ -162,7 +179,8 @@ async function vraag(v) {
   stand = 'denkt';
   teken();
   try {
-    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst } : { v: v.soort, ...(v.kamer ? { kamer: v.kamer } : {}) });
+    const scherm = beweegtNog()?.id;
+    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, ...(scherm ? { scherm } : {}) } : { v: v.soort, ...(v.kamer ? { kamer: v.kamer } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json();
     nu.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.';
@@ -173,10 +191,38 @@ async function vraag(v) {
     nu.voorbeelden = body.voorbeelden ?? [];
     // Zoals het klinkt (besluit 142): eenheden voluit, tijden in woorden.
     nu.gesproken = body.gesproken ?? null;
+    nu.ruimte = body.ruimte ?? null;
+    nu.vervolg = body.vervolg ?? [];
+    // Een opdracht (besluit 148): meteen naar dezelfde deur als de knoppen.
+    if (res.ok && body.opdracht) await voerUit(body);
   } catch {
     nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
   }
   void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
+}
+
+/** Stuurt een opdracht naar zijn deur; lukt het niet, dan zegt het huis waarom. */
+async function voerUit(body) {
+  try {
+    const res = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) });
+    if (!res.ok) {
+      const fout = await res.json().catch(() => ({}));
+      nu.antwoord = `Dat lukte niet: ${String(fout.fout ?? fout.wachten ?? 'Home Assistant gaf geen antwoord').replace(/\.$/, '')}.`;
+      nu.gesproken = null;
+      nu.feiten = [];
+      nu.vervolg = [];
+      return;
+    }
+  } catch {
+    nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
+    nu.gesproken = null;
+    return;
+  }
+  nu.gedaan = body.gedaan ?? [];
+  // Een scherm dat beweegt: "stop" geldt daarvoor, en er komt een knop bij.
+  beweegt = body.beweegt ? { ...body.beweegt, sinds: Date.now() } : body.opdracht.body?.actie === 'stop' ? null : beweegt;
+  // Het huis laat zien wat er veranderde, zodra Home Assistant het weet.
+  setTimeout(() => void laadAlles(), 1500);
 }
 
 /* ------------------------------------------------------------ praten */
@@ -417,6 +463,16 @@ function feiten(item) {
     .join('');
 }
 
+/** Wat er veranderde (besluit 148): een kaartje per apparaat. */
+function gedaanHtml(item) {
+  return (item?.gedaan ?? [])
+    .map((k) => {
+      const [klasse, svg] = IK[k.soort] ?? IK.licht;
+      return `<div class="ding${k.soort === 'scherm' && beweegtNog() ? ' beweegt' : ''}"><span class="ik ${klasse}">${svg}</span><b>${esc(k.waarde)}</b><span>${esc(k.uitleg)}</span></div>`;
+    })
+    .join('');
+}
+
 const woordHtml = (tekst) => splitsWoorden(tekst).map((w) => `<span class="w${/\d/.test(w.w) ? ' getal' : ''}">${esc(w.w)}</span>`).join(' ');
 
 function spraakHtml() {
@@ -434,7 +490,7 @@ function spraakHtml() {
   const verder = stand === 'verder';
   return `${wie(stand === 'praat' ? 'Je huis, aan het praten' : 'Je huis')}${jij}
     <p class="zegt${lang ? ' lang' : ''}${verder ? '' : ' loopt'}" data-zegt>${woordHtml(nu.antwoord ?? '')}</p>
-    ${verder ? `<div class="feiten">${feiten(nu)}</div>` : ''}
+    ${verder ? (nu.gedaan?.length ? `<div class="gedaan">${gedaanHtml(nu)}</div>` : `<div class="feiten">${feiten(nu)}</div>`) : ''}
     ${verder && nu.link ? `<div class="verder"><a class="knop knop-licht" href="${esc(nu.link.href)}">${esc(nu.link.label)}</a></div>` : ''}
     ${verder ? '<p class="klein-zegt nogiets">Kan ik je nog ergens mee helpen?</p>' : ''}`;
 }
@@ -448,14 +504,16 @@ let getoond = [];
 function tekenHuis() {
   if (!huisData) return;
   const kamer = stand === 'praat' || stand === 'verder' ? nu?.kamerId ?? null : null;
+  // De ruimte van een opdracht (besluit 148): die licht op, ook zonder regelgebied.
+  const ruimte = stand === 'praat' || stand === 'verder' ? nu?.ruimte ?? null : null;
   const alles = stand !== 'begin' && nu?.soort === 'warm';
   // De tekening uit huismodel, net als op Thuis (5S); de kamer waar het over gaat licht op.
   const t = huismodel.tekening(huisData, {
     zon,
     kamer: (r) => {
       const k = huismodel.kamerModel(r, state);
-      const dit = kamer && (r.zoneId ?? r.meedoenMet?.zoneId) === kamer;
-      return { ...k, stil: !!kamer && !dit && !alles, doel: !!dit };
+      const dit = (kamer && (r.zoneId ?? r.meedoenMet?.zoneId) === kamer) || (ruimte && r.id === ruimte);
+      return { ...k, stil: !!(kamer || ruimte) && !dit && !alles, doel: !!dit };
     },
   });
   const { etages } = t;
@@ -496,7 +554,18 @@ function tekenNu() {
     el.innerHTML = `Eerder: ${eerder.map((e, i) => `<button type="button" data-eerder-vraag="${i}">${esc(e.label)}</button>`).join('')}`;
   });
   $$('[data-tik]').forEach((el) => (el.textContent = tikOmTeHoren && stand === 'verder' ? 'Tik om te horen' : !ontgrendeld && voorlezen && stand === 'begin' ? 'Tik om te praten' : ''));
-  $$('[data-stop]').forEach((el) => (el.hidden = stand !== 'praat'));
+  // Twee soorten stoppen (besluit 148): het praten, en het scherm. Nooit dezelfde knop.
+  const scherm = beweegtNog();
+  $$('[data-stop]').forEach((el) => {
+    el.hidden = stand !== 'praat';
+    el.textContent = scherm ? 'Stil' : 'Stop';
+    el.classList.toggle('zacht', !!scherm);
+  });
+  $$('[data-stopscherm]').forEach((el) => {
+    el.hidden = !scherm;
+    const naam = scherm?.naam ?? '';
+    el.querySelector('span').textContent = `Stop ${/^(screen|zonnescherm|scherm)/i.test(naam) ? `het ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam}`;
+  });
   $$('[data-voorlezen]').forEach((el) => {
     el.hidden = stand === 'praat';
     el.setAttribute('aria-pressed', String(voorlezen));
@@ -536,6 +605,11 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.hasAttribute('data-stop')) return stopPraten();
+  if (t.hasAttribute('data-stopscherm')) {
+    const scherm = beweegtNog();
+    if (scherm) void vraag({ label: 'Stop', soort: 'vrij', tekst: `stop ${scherm.naam}` });
+    return;
+  }
   if (t.hasAttribute('data-voorlezen')) {
     voorlezen = !voorlezen;
     try {

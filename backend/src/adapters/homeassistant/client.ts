@@ -85,6 +85,14 @@ export interface HaClientOptions {
    * hier niets doorheen; klimaat en elke andere dienst blijven werpen.
    */
   readonly allowCovers?: boolean;
+  /**
+   * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
+   * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
+   * alleen een taaknaam, een opdracht, één `ai_task.`-entiteit en eventueel
+   * de velden van het antwoord. Er verandert niets in het huis; `callService`
+   * laat ook dit niet door.
+   */
+  readonly allowAiTask?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   readonly reconnectMaxMs?: number;
@@ -174,11 +182,12 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask'>> & {
     allowWrites: boolean;
     allowLights: boolean;
     allowScenes: boolean;
     allowCovers: boolean;
+    allowAiTask: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -196,6 +205,7 @@ export class HaClient extends EventEmitter {
       allowLights: options.allowLights ?? false,
       allowScenes: options.allowScenes ?? false,
       allowCovers: options.allowCovers ?? false,
+      allowAiTask: options.allowAiTask ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
@@ -455,4 +465,40 @@ export class HaClient extends EventEmitter {
       target,
     });
   }
+
+  /**
+   * Vraagt een AI-taak van Home Assistant om een tekst (besluit 148). Werpt
+   * zonder `allowAiTask`, en voor alles wat geen gewone opdracht aan één
+   * `ai_task.`-entiteit is. Geeft terug wat de taak antwoordt (`data`): een
+   * tekst, of een object met de gevraagde velden.
+   */
+  async generateData(entityId: string, instructions: string, structure?: Readonly<Record<string, AiTaskField>>): Promise<unknown> {
+    if (!this.#options.allowAiTask) throw new Error('Een AI-taak vragen staat uit: ai_task.generate_data is niet verstuurd.');
+    if (!/^ai_task\.[a-z0-9_]+$/.test(entityId)) throw new Error(`geen AI-taak: ${entityId}`);
+    if (typeof instructions !== 'string' || instructions.trim() === '' || instructions.length > AI_TASK_MAX) {
+      throw new Error(`een opdracht is 1 tot ${AI_TASK_MAX} tekens`);
+    }
+    const data: Record<string, unknown> = { task_name: 'smart_climate', entity_id: entityId, instructions };
+    if (structure) {
+      for (const [naam, veld] of Object.entries(structure)) {
+        if (!/^[a-z_]{1,32}$/.test(naam) || typeof veld.description !== 'string') throw new Error(`geen geldig veld: ${naam}`);
+      }
+      data['structure'] = Object.fromEntries(
+        Object.entries(structure).map(([naam, veld]) => [naam, { description: veld.description, required: veld.required === true, selector: { text: {} } }]),
+      );
+    }
+    const result = (await this.#command({ type: 'call_service', domain: 'ai_task', service: 'generate_data', service_data: data, return_response: true })) as {
+      response?: { data?: unknown };
+    } | null;
+    return result?.response?.data ?? null;
+  }
+}
+
+/** Hoe lang een opdracht aan een AI-taak mag zijn (besluit 148). */
+export const AI_TASK_MAX = 6000;
+
+/** Een veld in het antwoord van een AI-taak: altijd tekst. */
+export interface AiTaskField {
+  readonly description: string;
+  readonly required?: boolean;
 }

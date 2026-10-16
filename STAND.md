@@ -230,6 +230,10 @@ verwijzing bestaat.
   voor met Piper uit Home Assistant, en vraagt of het nog iets kan doen
   ([141]). Hij zegt eerst het antwoord, kort en warm, spreekt eenheden en
   tijden uit zoals je ze zegt, en kent ook morgen en wat iets kost ([142]).
+  Met een taalmodel uit Home Assistant (een AI-taak, standaard uit) zegt hij
+  het vaste antwoord in eigen woorden; elk getal moet kloppen, anders het vaste
+  antwoord. Lampen, scènes en schermen bedien je met een zin, via dezelfde
+  deuren als de knoppen; een garagedeur is geen scherm meer ([148]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -434,4 +438,5 @@ verwijzing bestaat.
 [145]: DECISIONS.md#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven
 [146]: DECISIONS.md#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis
 [147]: DECISIONS.md#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app
+[148]: DECISIONS.md#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin
 <!-- links:einde -->

@@ -37,7 +37,7 @@ import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, controleerComfort, withComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
-import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, herken as herkenBewoner, hoofdVan, leesActie, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, persoonsAccount, herken as herkenBewoner, hoofdVan, leesActie, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -453,6 +453,9 @@ const client = new HaClient({
   // Schermen open, dicht, stop of een stand, voor de bewoner (besluit 121). De
   // regeling stuurt hier niets doorheen.
   allowCovers: startup.screens.enabled,
+  // Een AI-taak om een tekst vragen (besluit 148): de assistent in eigen woorden.
+  // Er verandert niets in het huis; welke taak, kiest de bewoner bij Functies.
+  allowAiTask: true,
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -1069,7 +1072,8 @@ if (webPort != null) {
               const a = leesActie(body);
               if (a == null) return { ok: false as const, status: 400, reden: 'dat is geen actie die de app kent' };
               const thuis = runner?.latest?.explanation.profile?.home ?? [];
-              const uit = voerUit(bewonersStore.current, comfortStore?.current ?? null, a, wie, siteConfig!.occupancy, thuis, Date.now());
+              const bronAccount = (id: string) => { const o = siteConfig!.occupancy.find((x) => x.id === id); return o ? persoonsAccount(o, (e) => allStates.get(e)) : null; };
+              const uit = voerUit(bewonersStore.current, comfortStore?.current ?? null, a, wie, siteConfig!.occupancy, thuis, Date.now(), bronAccount);
               if (!uit.ok) return uit;
               const comfort = uit.comfort !== undefined ? uit.comfort : (comfortStore?.current ?? null);
               const met = await configWithComfort(comfort, uit.bewoners);
@@ -1127,6 +1131,19 @@ if (webPort != null) {
     schermenAan: () => {
       const f = functiesNu();
       return f ? volledig(f, functiesKeuzes()).schermen.bedienen : true;
+    },
+    // Praten met je huis (besluit 148): de AI-taak die bij Functies gekozen is, standaard uit.
+    praten: {
+      model: () => {
+        const f = functiesNu();
+        const id = f ? volledig(f, functiesKeuzes()).praten.taalmodel : null;
+        return id && allStates.has(id) ? (opdracht, velden) => client.generateData(id, opdracht, velden) : null;
+      },
+      proef: (id) => (opdracht, velden) => client.generateData(id, opdracht, velden),
+      bedienen: () => {
+        const f = functiesNu();
+        return f ? volledig(f, functiesKeuzes()).praten.bedienen : true;
+      },
     },
     // Opbrengst (besluit 102): meters en prijzen naast de dataset, de cijfers uit Home Assistant.
     ...(energyStore ? {

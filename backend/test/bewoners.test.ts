@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { OccupancySource } from '../src/core/model.js';
 import { exampleSite } from './site.js';
-import { GEEN_BEWONERS, comfortVanBewoner, gastStand, herken, hoofdVan, leesActie, personenUit, profielenVoor, roepnaam, voerUit, wisselHoofd, type Bewoners } from '../src/web/bewoners.js';
+import { GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, herken, hoofdVan, leesActie, personenUit, profielenVoor, roepnaam, voerUit, wisselHoofd, type Bewoners } from '../src/web/bewoners.js';
 import type { Comfort } from '../src/web/comfort.js';
 
 const NU = Date.UTC(2026, 9, 16, 17, 0, 0);
@@ -161,5 +161,28 @@ describe('een gast (besluit 147)', () => {
     expect(gastStand(gast, 'u-shira', occupancy, thuis('home'))).toEqual({ gast: true, thuis: true });
     expect(gastStand(gast, 'u-shira', occupancy, thuis('not_home'))).toEqual({ gast: true, thuis: false });
     expect(gastStand(gast, 'u-ricardo', occupancy, thuis('home'))).toEqual({ gast: false, thuis: null });
+  });
+});
+
+describe('thuis volgens (besluit 147)', () => {
+  const states = new Map([
+    ['person.ricardo_cornelissen', { entity_id: 'person.ricardo_cornelissen', state: 'home', attributes: { user_id: 'u-ricardo', friendly_name: 'Ricardo' }, last_changed: '', last_updated: '' }],
+    ['person.shira', { entity_id: 'person.shira', state: 'not_home', attributes: { user_id: 'u-shira', friendly_name: 'Shira' }, last_changed: '', last_updated: '' }],
+    ['binary_sensor.saskia_thuis_gestabiliseerd', { entity_id: 'binary_sensor.saskia_thuis_gestabiliseerd', state: 'off', attributes: { friendly_name: 'Saskia aanwezig (Wi-Fi)' }, last_changed: '', last_updated: '' }],
+  ]);
+  const state = (id: string) => states.get(id);
+  it('toont een eigen persoon als gekoppeld, en laat geen persoon van een ander account kiezen', () => {
+    const r = herken(GEEN_BEWONERS, { userId: 'u-ricardo', naam: 'Ricardo' }, personenUit(states.values()), occupancy, NU);
+    if (r.soort !== 'bewoner') throw new Error('Ricardo hoort bewoner te worden');
+    const v = bewonersView(r.bewoners, { userId: 'u-ricardo', beheerder: false }, occupancy, state, null);
+    expect(v.bewoners[0]).toMatchObject({ gekoppeld: true, aanwezigheid: 'ricardo' });
+    // Shira's persoon hangt aan haar account: die staat er niet bij; de sensor van Saskia wel.
+    expect(v.bewoners[0]!.kiesbaar.map((x) => [x.id, x.soort])).toEqual([['ricardo', 'persoon'], ['saskia', 'sensor']]);
+    // Een account zonder persoon ziet de sensor, en Shira's persoon niet.
+    expect(bewonersView(r.bewoners, { userId: 'u-saskia', beheerder: false }, occupancy, state, null).kiesbaarVoorMij.map((x) => x.id)).toEqual(['saskia']);
+    // En de dienst weigert het ook.
+    const account = (id: string) => (id === 'shira' ? 'u-shira' : id === 'ricardo' ? 'u-ricardo' : null);
+    expect(voerUit(r.bewoners, comfort, { actie: 'aanwezigheid', id: 'ricardo', bron: 'shira' }, { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false }, occupancy, [], NU, account)).toMatchObject({ ok: false, status: 400 });
+    expect(voerUit(r.bewoners, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'shira' }, { userId: 'u-saskia', naam: 'Saskia', beheerder: false }, occupancy, [], NU, account)).toMatchObject({ ok: false, status: 400 });
   });
 });

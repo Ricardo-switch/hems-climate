@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Instellingen, praten met je huis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Praten met je huis (schets, 16 oktober 2026), onder Instellingen ›
+   * Functies. Links: de eigen woorden, met het model dat in Home Assistant
+   * staat (een AI-taak, zoals Google Gemini) en wat er het huis uit gaat.
+   * Rechts: wat de assistent mag bedienen. Dezelfde smalle deuren als de
+   * knoppen (97, 100, 121); klimaat en de garagedeur staan er nooit op.
+   * Standaard staat het taalmodel uit: het vaste antwoord werkt altijd.
+   */
+  main { position: relative; padding: 22px 26px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .pad { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .twee { flex: 1; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; min-height: 0; }
+  .vak { padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .vak h2 { margin: 0; font-family: var(--kop); font-size: 21px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .vak p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--zacht); }
+
+  .schakel { margin-left: auto; width: 52px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); position: relative; flex: none; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--tekst); }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 25px; background: var(--inkt); }
+  .schakel.vast { opacity: 0.35; }
+
+  .veld { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; align-items: center; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .veld small { grid-column: 1 / -1; font-size: 12px; color: var(--gedempt); font-weight: 600; }
+  .veld b { font-size: 16px; }
+  .veld .kies { color: var(--gedempt); font-size: 20px; }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* Proberen: één zin heen en weer, vast antwoord naast eigen woorden. */
+  .proef { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .proef div { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); font-size: 14px; line-height: 1.45; }
+  .proef div span { display: block; font-size: 11.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .proef .eigen { background: rgba(143, 134, 255, 0.1); border: 1px solid rgba(143, 134, 255, 0.25); }
+  .knopjes { display: flex; gap: 10px; }
+  .knopje { height: 38px; padding: 0 16px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 13.5px; background: rgba(255, 255, 255, 0.08); }
+  .knopje.wit { background: var(--tekst); color: var(--inkt); }
+
+  /* Wat er naar buiten gaat, en wat niet. */
+  .buiten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13.5px; }
+  .buiten ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--zacht); }
+  .buiten b { font-size: 13px; }
+  .buiten .wel b { color: var(--zon); }
+  .buiten .niet b { color: var(--mint); }
+
+  /* Wat de assistent mag bedienen. */
+  .rij { display: grid; grid-template-columns: 40px 1fr auto; gap: 2px 14px; align-items: center; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij:first-of-type { border-top: 0; }
+  .rij .ik { grid-column: 1; grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .rij .ik svg { width: 21px; height: 21px; }
+  .rij b { grid-column: 2; grid-row: 1; font-size: 15.5px; }
+  .rij .uitleg { grid-column: 2; grid-row: 2; font-size: 13px; color: var(--zacht); }
+  .rij .schakel { grid-row: 1 / span 2; grid-column: 3; }
+  .rij .nooit { grid-row: 1 / span 2; grid-column: 3; font-size: 12.5px; font-weight: 700; color: var(--gedempt); padding: 0 10px; height: 26px; display: grid; place-items: center; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.12); }
+  .rij.uit b, .rij.uit .ik { opacity: 0.55; }
+  .noot { margin-top: auto; padding: 12px 14px; border-radius: 14px; background: rgba(111, 211, 255, 0.07); font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .noot b { color: var(--tekst); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div>
+      <div class="pad">Instellingen › Functies</div>
+      <h1 class="kop-1" style="margin-top: 4px">Praten met je huis</h1>
+    </div>
+
+    <div class="twee">
+      <section class="glas vak">
+        <h2>Antwoorden in eigen woorden <span class="schakel aan" role="switch" aria-checked="true"></span></h2>
+        <p>De assistent zegt het vaste antwoord op zijn eigen manier, met een taalmodel uit Home Assistant. Klopt een getal niet, of duurt het langer dan 3 seconden, dan hoor je het vaste antwoord.</p>
+
+        <div class="veld"><small>Taalmodel in Home Assistant</small><b>Google AI Task <span style="color: var(--gedempt); font-weight: 500">· Gemini</span></b><span class="stand">Werkt</span></div>
+
+        <div class="proef">
+          <div><span>Vast antwoord</span>De plafonnière beneden staat op 40%.</div>
+          <div class="eigen"><span>In eigen woorden</span>Gedaan, de plafonnière staat op 40%. Lekker rustig voor de avond.</div>
+        </div>
+        <div class="knopjes"><span class="knopje wit">Nog een keer proberen</span><span class="knopje">Ander model</span></div>
+
+        <div class="buiten">
+          <div class="wel"><b>Gaat naar het taalmodel</b><ul><li>Je vraag, als tekst</li><li>Het vaste antwoord en de getallen</li><li>Namen van kamers, lampen en schermen</li></ul></div>
+          <div class="niet"><b>Blijft in huis</b><ul><li>Je stem</li><li>Camerabeelden</li><li>Wie er thuis is</li></ul></div>
+        </div>
+      </section>
+
+      <section class="glas vak">
+        <h2>Bedienen met de assistent</h2>
+        <p>Zeg wat je wilt, zoals "doe het licht beneden wat zachter". Het gebeurt meteen, en het huis zegt wat het deed.</p>
+        <div>
+          <div class="rij"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB765" stroke-width="1.9" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></span><b>Lampen en scènes</b><span class="uitleg">de lampen die de app toont, en de scènes van Hue</span><span class="schakel aan"></span></div>
+          <div class="rij"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#6FD3FF" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8M6 13h12"/></svg></span><b>Screen woonkamer</b><span class="uitleg">open, dicht, stop en een stand</span><span class="schakel aan"></span></div>
+          <div class="rij"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#6FD3FF" stroke-width="1.9" stroke-linecap="round"><path d="M3 8h18l-3 6H6z"/><path d="M12 14v6"/></svg></span><b>Zonnescherm</b><span class="uitleg">open, dicht en stop; hij meldt niet terug</span><span class="schakel aan"></span></div>
+          <div class="rij uit"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.9" stroke-linecap="round"><path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-8h10v8M7 16h10"/></svg></span><b>Garagedeur</b><span class="uitleg">nooit met de assistent</span><span class="nooit">Nooit</span></div>
+          <div class="rij uit"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="var(--zacht)" stroke-width="1.9" stroke-linecap="round"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg></span><b>Airco's en cv</b><span class="uitleg">zegt wat hij zou doen, tot Smart Climate mag regelen</span><span class="nooit">Nog niet</span></div>
+        </div>
+        <div class="noot"><b>"Stop"</b> stopt een scherm dat beweegt, ook midden in een zin. Is het gratis gebruik van het taalmodel voor vandaag op, dan werkt bedienen gewoon door met de vaste zinnen.</div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>nav.balk(document.getElementById('balk'), 'instellingen');</script>
+</body>
+</html>

@@ -154,6 +154,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [140. Vandaag is de tijd, Apparaten is het nu](#140-vandaag-is-de-tijd-apparaten-is-het-nu)
 - [141. De assistent als gesprek, met een stem](#141-de-assistent-als-gesprek-met-een-stem)
 - [142. Een kwaliteitsronde: een kamer doet mee met een andere, en de assistent klinkt als een mens](#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens)
+- [148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin](#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin)
 
 **Veiligheid**
 
@@ -6298,6 +6299,70 @@ bewoners pas na een eerste inlog, niet alles uit Home Assistant.
   Bewoners staan alleen accounts die in de app inlogden, niet de
   aanwezigheidsbronnen uit Home Assistant. Gast en reparatie samen: versie
   0.26.0.
+- **Thuis volgens (0.27.0):** je eigen persoon in Home Assistant staat vast
+  als "<naam> in Home Assistant, gekoppeld aan je account", zonder keuzelijst.
+  Zonder persoon kies je onder "Welke sensor ziet of je thuis bent?" een
+  sensor of persoon. Personen van een ander account, en bronnen die al bij een
+  andere bewoner horen, staan er niet in; de dienst weigert ze ook.
+
+---
+
+## 148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 16 oktober 2026: de vaste zinnen van de assistent
+klinken houterig, en met een taalmodel komt het huis menselijker over. Hij
+wilde er ook lampen en screens mee bedienen. Na de schetsen
+`Wand-Assistent-Bedienen` en `Wand-Instellingen-Praten` koos hij: Gemini,
+gratis, via Home Assistant; alles gaat meteen, ook schermen; het huis zegt wat
+het deed, en "stop" stopt een scherm; bij een vage zin ("het is hier zo fel")
+mag het huis ook meteen iets doen; het mag zelf een vervolg voorstellen; en de
+kaartjes met wat er veranderde blijven.
+
+*Besluit:*
+
+- **Het taalmodel staat in Home Assistant, niet in de app.** De dienst vraagt
+  een AI-taak van Home Assistant (`ai_task.generate_data`) om een tekst. Welk
+  model dat is, en de sleutel ervan, kiest de bewoner in Home Assistant; de app
+  heeft geen eigen sleutel en noemt geen merk. Zo kan een ander huis net zo
+  goed een lokaal model kiezen. Het is een **zesde smalle deur** in de client
+  (`allowAiTask`): alleen die ene dienst, met alleen een taaknaam, een
+  opdracht, een AI-taak-entiteit en eventueel de velden van het antwoord. Er
+  verandert niets in het huis; alles daarbuiten blijft werpen (besluit 15).
+- **Standaard uit.** Bij Instellingen › Functies › Praten met je huis kiest de
+  bewoner een AI-taak. Daar staat ook wat er naar het model gaat (de vraag als
+  tekst, het vaste antwoord met zijn getallen, de namen van kamers, lampen en
+  schermen) en wat niet (de stem, camerabeelden, wie er thuis is).
+- **Het vaste antwoord blijft de basis.** Het model zegt het alleen anders.
+  Elk getal in de nieuwe zin moet letterlijk een feit uit het vaste antwoord
+  zijn (besluit 88), getallen in woorden die er niet stonden zijn niet
+  toegestaan, en het blijft kort (hooguit drie zinnen). Klopt dat niet, duurt
+  het langer dan drie seconden, of is het gratis gebruik op, dan komt het
+  vaste antwoord. De controle draait bij elk antwoord, niet alleen in een test.
+- **Bedienen met een zin, via dezelfde deuren als de knoppen** (97, 100,
+  121). De woordzoeker herkent een opdracht zelf ("licht beneden uit", "doe
+  het screen dicht", "plafonnière op 40%", "stop"); alleen wat hij niet
+  begrijpt, gaat naar het model, en dat kiest uit de lijst van wat de app mag
+  bedienen of uit de vaste vragen. Het model roept zelf niets aan. De dienst
+  toetst de keuze en geeft de pagina de opdracht; de pagina stuurt die naar
+  `/api/licht`, `/api/scene` of `/api/scherm`, met dezelfde inlog, dezelfde
+  regels voor een gast en dezelfde grens op het tempo. "Aan" voor een hele
+  etage of het huis kan ook nu niet.
+- **Alles gaat meteen.** Het huis zegt wat het deed, met een kaartje per
+  apparaat ("40%, plafonnière, was 80%"). Terwijl een scherm beweegt, staan er
+  twee knoppen: **Stil** stopt het praten, **Stop het screen** het scherm, en
+  "stop" zeggen of typen doet dat ook.
+- **Nooit met de assistent:** klimaat (tot stap B zegt hij wat hij zou doen),
+  en een garagedeur, poort of deur. Die laatste zijn ook geen scherm meer in
+  het huis: tot nu toe kwam elke `cover.` als scherm in de app, ook
+  `cover.garagedeur`, en kon die met de schermknoppen open.
+- **Via de sleutel van de assistent van Home Assistant** (147) bedient de
+  dienst niets: Home Assistant heeft zijn eigen manier om lampen te schakelen.
+  De eigen woorden krijgt die vraag wel.
+- **Spraak** (de microfoon met Whisper in Home Assistant) is een volgende
+  stap. Tot dan typ je de zin.
+- **Versie 0.27.0.**
 
 ---
 

@@ -88,8 +88,20 @@ describe('de keuzes controleren (besluit 109)', () => {
 
   it('neemt een ander beeld en een andere melder aan, als Home Assistant ze kent', () => {
     // Zonder weerbron in Home Assistant: Open-Meteo (besluit 127); licht staat aan tot je het uitzet.
-    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true } } });
+    expect(controleer(goed, g)).toEqual({ ok: true, functies: { ...goed, weer: { bron: 'open-meteo', uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true } } });
     expect(getoondeCameras(goed)).toEqual(new Set(['camera.camera_oprit_duidelijk']));
+  });
+
+  it('kiest alleen een AI-taak die Home Assistant kent als taalmodel (besluit 148)', () => {
+    const st = (entity_id: string, state = 'unknown') => ({ entity_id, state, attributes: { friendly_name: 'Google AI Task' }, last_changed: '', last_updated: '' });
+    const metModel = functiesGevonden(entities, devices, new Map([['ai_task.google_ai_task', st('ai_task.google_ai_task')], ['ai_task.weg', st('ai_task.weg', 'unavailable')], ['conversation.google', st('conversation.google')]]));
+    expect(metModel.taalmodellen).toEqual([{ id: 'ai_task.google_ai_task', naam: 'Google AI Task' }]);
+    // Standaard uit: het vaste antwoord werkt altijd.
+    expect(functiesVoorstel(metModel).praten).toEqual({ taalmodel: null, bedienen: true });
+    expect(controleer({ ...goed, praten: { taalmodel: 'ai_task.google_ai_task', bedienen: false } }, metModel)).toMatchObject({ ok: true, functies: { praten: { taalmodel: 'ai_task.google_ai_task', bedienen: false } } });
+    expect(controleer({ ...goed, praten: { taalmodel: 'conversation.google', bedienen: true } }, metModel).ok).toBe(false);
+    expect(controleer({ ...goed, praten: { taalmodel: 'ai_task.weg', bedienen: true } }, metModel).ok).toBe(false);
+    expect(controleer({ ...goed, praten: { taalmodel: null } }, metModel).ok).toBe(false);
   });
 
   it('weigert wat Home Assistant niet kent, een deurbel zonder melder, en een rare duur', () => {

@@ -83,7 +83,19 @@ function blad() {
   if (!b) return '<p class="klein" style="margin: 0">Kies een bewoner.</p>';
   const kan = mag(b);
   const hoofd = data.bewoners[0];
-  const bronnen = data.bronnen.filter((x) => x.van == null || x.id === b.aanwezigheid);
+  /*
+   * Thuis volgens: hangt de persoon in Home Assistant aan dit account, dan valt
+   * er niets te kiezen. Anders een lijst, met bij elke bron wat het is; een
+   * persoon van een ander account en een bron van een ander staan er niet bij.
+   */
+  const thuisVak = (magKiezen, zonder) => {
+    if (b.gekoppeld) {
+      return `<div class="vak"><span>Thuis volgens</span><div class="veld vast">${esc(b.aanwezigheidNaam ?? '')} in Home Assistant</div><span class="hint">Gekoppeld aan ${b.ik ? 'je' : 'het'} account. ${thuisHint}</span></div>`;
+    }
+    const wie = b.ik ? 'je thuis bent' : `${b.naam} thuis is`;
+    const opties = b.kiesbaar.map((x) => `<option value="${esc(x.id)}" ${x.id === b.aanwezigheid ? 'selected' : ''}>${esc(x.naam)} · ${x.soort === 'persoon' ? 'persoon in Home Assistant' : 'sensor'}</option>`).join('');
+    return `<div class="vak"><label for="bron-${esc(b.id)}">Welke sensor ziet of ${esc(wie)}?</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${magKiezen ? '' : 'disabled'}><option value="">Geen: het huis weet het niet</option>${opties}</select><span class="hint">${b.aanwezigheid ? thuisHint : zonder}</span></div>`;
+  };
   const thuisHint = b.aanwezigheid ? (b.thuis == null ? 'Het huis weet nu niet of het zo is.' : b.thuis ? `Thuis${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.` : `Weg${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.`) : 'Zonder aanwezigheid telt deze bewoner niet mee bij wie er thuis is.';
   // Bewoner of gast (besluit 147): alleen de hoofdgebruiker kiest, en de hoofdgebruiker zelf is geen gast.
   const soort = data.ik.magBeheren && !b.hoofd
@@ -94,7 +106,7 @@ function blad() {
     : '';
   if (b.gast) {
     return `<div class="kop"><span class="gezicht" style="background: #9aa8b6">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">Gast, ingelogd sinds ${esc(dag(b.sindsMs))}</span></div></div>
-      <div class="vak"><label for="bron-${esc(b.id)}">Thuis volgens</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${data.ik.magBeheren ? '' : 'disabled'}><option value="">Het huis weet het niet</option>${bronnen.map((x) => `<option value="${esc(x.id)}" ${x.id === b.aanwezigheid ? 'selected' : ''}>${esc(x.naam)}</option>`).join('')}</select><span class="hint">${b.aanwezigheid ? thuisHint : 'Zonder aanwezigheid bedient een gast niets: het huis weet niet of hij thuis is.'}</span></div>
+      ${thuisVak(data.ik.magBeheren, 'Zonder aanwezigheid bedient een gast niets: het huis weet niet of hij thuis is.')}
       ${soort}
       <span class="fout" data-fout></span>
       ${data.ik.magBeheren ? '<div class="knoppenrij"><button type="button" class="knop gevaar" data-weg>Weghalen</button></div>' : ''}`;
@@ -111,7 +123,7 @@ function blad() {
   ].join('');
   return `<div class="kop"><span class="gezicht" style="background: ${kleur(data.bewoners.indexOf(b))}">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">Ingelogd sinds ${esc(dag(b.sindsMs))}</span></div></div>
     <div class="vak"><label for="naam-${esc(b.id)}">Zo noemt het huis ${b.ik ? 'je' : esc(b.naam)}</label><input class="veld" id="naam-${esc(b.id)}" data-naam value="${esc(b.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">In Home Assistant: ${esc(b.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
-    <div class="vak"><label for="bron-${esc(b.id)}">Thuis volgens</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${kan ? '' : 'disabled'}><option value="">Het huis weet het niet</option>${bronnen.map((x) => `<option value="${esc(x.id)}" ${x.id === b.aanwezigheid ? 'selected' : ''}>${esc(x.naam)}</option>`).join('')}</select><span class="hint">${thuisHint}</span></div>
+    ${thuisVak(kan, thuisHint)}
     <div class="vak"><span>Comfort</span>${comfort}</div>
     ${soort}
     <span class="fout" data-fout></span>

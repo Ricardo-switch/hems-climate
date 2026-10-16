@@ -324,6 +324,22 @@ export interface BewonerView {
   readonly ik: boolean;
   readonly sindsMs: number;
   readonly gast: boolean;
+  /** Volgt zijn eigen persoon in Home Assistant, die aan zijn account hangt: dan valt er niets te kiezen. */
+  readonly gekoppeld: boolean;
+  /** Wat deze bewoner als aanwezigheid kan kiezen. */
+  readonly kiesbaar: readonly Bron[];
+}
+
+/**
+ * Een aanwezigheidsbron om te kiezen: een persoon in Home Assistant of een
+ * sensor, zoals wifi. Een persoon die aan het account van een ander hangt, en
+ * een bron die al bij een andere bewoner hoort, staat er niet bij.
+ */
+export interface Bron {
+  readonly id: string;
+  readonly naam: string;
+  readonly soort: 'persoon' | 'sensor';
+  readonly thuis: boolean | null;
 }
 
 export interface BewonersView {
@@ -332,8 +348,8 @@ export interface BewonersView {
   /** Gasten: ingelogd in de app, maar zonder plek in de volgorde. */
   readonly gasten: readonly BewonerView[];
   readonly schermen: readonly { readonly naam: string; readonly sindsMs: number }[];
-  /** Alle bronnen, om er een te kiezen; van is de bewoner die hem al heeft. */
-  readonly bronnen: readonly { readonly id: string; readonly naam: string; readonly thuis: boolean | null; readonly van: string | null }[];
+  /** Wat wie er kijkt als aanwezigheid kan kiezen, bij de eerste inlog. */
+  readonly kiesbaarVoorMij: readonly Bron[];
   readonly geldt: { readonly id: string; readonly naam: string; readonly waarom: 'thuis' | 'niemand' | 'gekozen'; readonly thuis: readonly string[] } | null;
 }
 
@@ -348,6 +364,13 @@ const naamVan = (s: HaEntityState | undefined, id: string): string => {
   return typeof n === 'string' && n.trim() !== '' ? n.trim() : id;
 };
 
+/** Het account in Home Assistant achter een bron: alleen bij een persoon die aan een account hangt. */
+export function persoonsAccount(o: OccupancySource, state: (entityId: string) => HaEntityState | undefined): string | null {
+  if (!o.ref.id.startsWith('person.')) return null;
+  const u = state(o.ref.id)?.attributes['user_id'];
+  return typeof u === 'string' && u !== '' ? u : null;
+}
+
 export type ProfielNu = { readonly id: string; readonly name: string; readonly reason: 'thuis' | 'niemand' | 'gekozen'; readonly home: readonly string[] };
 
 export function bewonersView(
@@ -361,6 +384,13 @@ export function bewonersView(
   const ikScherm = wie.userId != null && b.schermen[wie.userId] != null;
   const hoofd = hoofdVan(b);
   const bron = (id: string | null) => (id == null ? undefined : occupancy.find((o) => o.id === id));
+  const accountVan = (o: OccupancySource) => persoonsAccount(o, state);
+  /** Wat iemand met dit account kan kiezen; de bron die hij al heeft, telt mee. */
+  const kiesbaarVoor = (haUser: string | null, eigen: string | null): Bron[] =>
+    occupancy
+      .filter((o) => o.id === eigen || !Object.values(b.bewoners).some((y) => y.aanwezigheid === o.id))
+      .filter((o) => { const a = accountVan(o); return a == null || a === haUser; })
+      .map((o) => ({ id: o.id, naam: naamVan(state(o.ref.id), o.id), soort: o.ref.id.startsWith('person.') ? 'persoon' : 'sensor', thuis: thuisVan(state(o.ref.id)) }));
   const view = (x: Bewoner, i: number): BewonerView => {
     const o = bron(x.aanwezigheid);
     const s = o ? state(o.ref.id) : undefined;
@@ -370,12 +400,12 @@ export function bewonersView(
       aanwezigheid: o ? o.id : null, aanwezigheidNaam: o ? naamVan(s, o.id) : null,
       thuis: o ? thuisVan(s) : null, thuisSindsMs: Number.isFinite(sinds) ? sinds : null,
       comfort: i === 0 ? 'eigen' : x.comfort, geldt: profile?.id === x.id, ik: ikB?.id === x.id, sindsMs: x.sindsMs, gast: x.gast === true,
+      gekoppeld: o != null && accountVan(o) === x.haUser,
+      kiesbaar: kiesbaarVoor(x.haUser, x.aanwezigheid),
     };
   };
   const bewoners = b.volgorde.flatMap((id, i): BewonerView[] => (b.bewoners[id] && !b.bewoners[id].gast ? [view(b.bewoners[id], i)] : []));
   const gasten = Object.values(b.bewoners).filter((x) => x.gast).map((x) => view(x, -1));
-  const gebruikt = new Map(Object.values(b.bewoners).filter((x) => x.aanwezigheid != null).map((x) => [x.aanwezigheid!, x.naam]));
-  const bronnen = occupancy.map((o) => ({ id: o.id, naam: naamVan(state(o.ref.id), o.id), thuis: thuisVan(state(o.ref.id)), van: gebruikt.get(o.id) ?? null }));
   return {
     ik: {
       soort: ikB ? (ikB.gast ? 'gast' : 'bewoner') : ikScherm ? 'scherm' : 'onbekend',
@@ -387,7 +417,7 @@ export function bewonersView(
     bewoners,
     gasten,
     schermen: Object.values(b.schermen).map((s) => ({ naam: s.naam, sindsMs: s.sindsMs })),
-    bronnen,
+    kiesbaarVoorMij: kiesbaarVoor(wie.userId, ikB?.aanwezigheid ?? null),
     geldt: profile ? { id: profile.id, naam: profile.name, waarom: profile.reason, thuis: profile.home } : null,
   };
 }
@@ -448,7 +478,18 @@ export function leesActie(body: unknown): Actie | null {
  * beheerder ook aan een ander. "Toch die van" mag iedereen die ingelogd is,
  * ook de wand; thuis zijn de bewoners die nu thuis zijn, uit de kern.
  */
-export function voerUit(b: Bewoners, comfort: Comfort | null, a: Actie, wie: Wie & { readonly naam: string }, occupancy: readonly OccupancySource[], thuis: readonly string[], nowMs: number): Uitkomst {
+export function voerUit(
+  b: Bewoners,
+  comfort: Comfort | null,
+  a: Actie,
+  wie: Wie & { readonly naam: string },
+  occupancy: readonly OccupancySource[],
+  thuis: readonly string[],
+  nowMs: number,
+  /** Het account achter een bron, als het een persoon met een account is: die is alleen voor dat account. */
+  accountVan: (bronId: string) => string | null = () => null,
+): Uitkomst {
+  const vanEenAnder = (bronId: string | null, haUser: string | null) => { const acc = bronId == null ? null : accountVan(bronId); return acc != null && acc !== haUser; };
   const ik = Object.values(b.bewoners).find((x) => wie.userId != null && x.haUser === wie.userId) ?? null;
   // Een gast kijkt alleen: van hem wordt niets bewaard, en hij verandert niets.
   if (ik?.gast) return { ok: false, status: 403, reden: 'een gast kan alleen kijken' };
@@ -462,6 +503,7 @@ export function voerUit(b: Bewoners, comfort: Comfort | null, a: Actie, wie: Wie
       if (ik) return { ok: true, bewoners: b };
       if (a.soort === 'scherm') return { ok: true, bewoners: alsScherm(b, { userId: wie.userId, naam: wie.naam }, nowMs) };
       if (a.aanwezigheid != null && !occupancy.some((o) => o.id === a.aanwezigheid)) return { ok: false, status: 400, reden: 'die aanwezigheid kent het huis niet' };
+      if (vanEenAnder(a.aanwezigheid, wie.userId)) return { ok: false, status: 400, reden: 'die persoon hoort bij een ander account' };
       return { ok: true, bewoners: voegToe(b, { userId: wie.userId, naam: wie.naam }, a.aanwezigheid, nowMs) };
     }
     case 'naam': {
@@ -478,6 +520,7 @@ export function voerUit(b: Bewoners, comfort: Comfort | null, a: Actie, wie: Wie
       if (!mag(a.id)) return { ok: false, status: 403, reden: 'alleen je eigen, of als hoofdgebruiker' };
       if (a.bron != null && !occupancy.some((o) => o.id === a.bron)) return { ok: false, status: 400, reden: 'die aanwezigheid kent het huis niet' };
       if (a.bron != null && Object.values(b.bewoners).some((y) => y.id !== a.id && y.aanwezigheid === a.bron)) return { ok: false, status: 400, reden: 'die hoort al bij een andere bewoner' };
+      if (vanEenAnder(a.bron, x.haUser)) return { ok: false, status: 400, reden: 'die persoon hoort bij een ander account' };
       return { ok: true, bewoners: { ...b, bewoners: { ...b.bewoners, [a.id]: { ...x, aanwezigheid: a.bron } } } };
     }
     case 'comfort': {

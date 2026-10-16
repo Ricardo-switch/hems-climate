@@ -18,6 +18,8 @@
    * huis praat zelf: het begroet, vraagt hoe het kan helpen, leest zijn
    * antwoord voor en vraagt of het nog iets kan doen. De bol leeft mee met de
    * stem, de woorden komen mee, en de kamer waar het over gaat licht op.
+   * Bedienen met een zin (besluit 148, schets Wand-Assistent-Bedienen): een
+   * kaartje per apparaat, en terwijl een scherm beweegt een eigen stopknop.
    */
   #wand main { position: relative; overflow: hidden; }
 
@@ -60,6 +62,16 @@
   .feit b { font-family: var(--kop); font-size: 19px; font-weight: 600; }
   .feit span { font-size: 12px; color: var(--gedempt); }
   .verder a.knop { margin-top: 16px; text-decoration: none; display: inline-flex; align-items: center; }
+  /* Wat er veranderde (besluit 148): het apparaat met zijn nieuwe stand. */
+  .gedaan { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .ding { display: grid; grid-template-columns: 38px auto; gap: 1px 12px; align-items: center; padding: 9px 15px 9px 9px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .ding.beweegt { border-color: rgba(111, 211, 255, 0.4); }
+  .ding .ik { grid-row: span 2; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(111, 211, 255, 0.12); }
+  .ding .ik.lamp { background: rgba(255, 183, 101, 0.16); }
+  .ding .ik.violet { background: rgba(143, 134, 255, 0.18); }
+  .ding .ik svg { width: 20px; height: 20px; }
+  .ding b { font-family: var(--kop); font-size: 19px; font-weight: 600; }
+  .ding span:last-child { font-size: 12.5px; color: var(--gedempt); }
 
   /* Vragen die nu ergens over gaan. */
   .suggesties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -70,6 +82,7 @@
   .sug .ik.zon { background: rgba(247, 181, 72, 0.16); }
   .sug .ik.violet { background: rgba(143, 134, 255, 0.18); }
   .sug .ik.warm { background: rgba(255, 122, 77, 0.16); }
+  .sug .ik.lamp { background: rgba(255, 183, 101, 0.16); }
   .sug .ik svg { width: 19px; height: 19px; }
   .sug b { display: block; font-size: 15px; }
   .sug span { font-size: 12.5px; color: var(--gedempt); }
@@ -86,6 +99,11 @@
   .stemknop[aria-pressed='true'] svg { color: var(--mint); }
   .stemknop[aria-pressed='false'] svg { opacity: 0.5; }
   .stop { height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
+  /* Terwijl een scherm beweegt: "Stil" voor het praten, en een grote knop voor het scherm. */
+  .stop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--zacht); font-weight: 600; }
+  .stopscherm { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 16px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; white-space: nowrap; }
+  .stopscherm i { width: 13px; height: 13px; border-radius: 3px; background: #0b1424; display: block; }
+  #tel .stopscherm { height: 44px; padding: 0 14px 0 12px; font-size: 14px; }
   .eerder { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--gedempt); }
   .eerder button { border: 0; background: none; color: var(--zacht); font: inherit; font-size: 13px; cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
   [hidden] { display: none !important; }
@@ -132,9 +150,10 @@
       <div class="podium" id="podium-wand" aria-hidden="true"></div>
       <div class="suggesties" data-suggesties role="group" aria-label="Vragen"></div>
       <div class="balkje">
-        <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ een vraag"></form>
+        <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ wat je wilt"></form>
         <button type="button" class="stemknop" data-voorlezen aria-pressed="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Voorlezen aan</span></button>
         <button type="button" class="stop" data-stop hidden>Stop</button>
+        <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span>Stop het screen</span></button>
       </div>
     </main>
   </div>
@@ -157,9 +176,10 @@
       <div class="podium" id="podium-tel" aria-hidden="true"></div>
     </div>
     <div class="balkje">
-      <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ een vraag"></form>
+      <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ wat je wilt"></form>
       <button type="button" class="stemknop" data-voorlezen aria-pressed="true" aria-label="Voorlezen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Voorlezen aan</span></button>
       <button type="button" class="stop" data-stop hidden>Stop</button>
+      <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span>Stop het screen</span></button>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
   </div>

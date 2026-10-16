@@ -59,6 +59,13 @@ export interface Functies {
   readonly licht?: { readonly bedienen: boolean };
   /** Schermen bedienen in de app (besluit 121); weg is aan. */
   readonly schermen?: { readonly bedienen: boolean };
+  /**
+   * Praten met je huis (besluit 148): de AI-taak van Home Assistant die het
+   * vaste antwoord in eigen woorden zegt, of null (uit, het voorstel). En of de
+   * assistent licht, scènes en schermen mag bedienen met een zin, binnen wat
+   * licht en schermen bedienen toestaan; weg is aan.
+   */
+  readonly praten?: { readonly taalmodel: string | null; readonly bedienen: boolean };
 }
 
 /** Een camera zoals Home Assistant hem heeft: één apparaat, soms met meer beelden. */
@@ -82,6 +89,8 @@ export interface FunctiesGevonden {
   readonly melders: readonly MelderKeuze[];
   /** De weerbronnen om uit te kiezen (besluit 111). Weg in een oudere vorm: geen. */
   readonly weerbronnen?: readonly { readonly id: string; readonly naam: string }[];
+  /** De AI-taken in Home Assistant (besluit 148), om een taalmodel te kiezen. */
+  readonly taalmodellen?: readonly { readonly id: string; readonly naam: string }[];
 }
 
 const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp', ext: 'breed', snapshots_sub: 'plaatjes vloeiend', snapshots_main: 'plaatjes scherp' };
@@ -155,7 +164,12 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
   // De zekere eerst, en die met een camera.
   melders.sort((a, b) => Number(b.zeker) - Number(a.zeker) || Number(b.camera != null) - Number(a.camera != null) || a.naam.localeCompare(b.naam, 'nl'));
   // Open-Meteo kan altijd (besluit 127): dan heeft elk huis weer, ook zonder Home Assistant.
-  return { cameras, melders, weerbronnen: [...weatherSources(entities, states), { id: OPEN_METEO, naam: OPEN_METEO_NAAM }] };
+  // De AI-taken (besluit 148): wat de bewoner in Home Assistant als taalmodel heeft staan.
+  const taalmodellen = [...states.keys()]
+    .filter((id) => /^ai_task\.[a-z0-9_]+$/.test(id) && states.get(id)?.state !== 'unavailable')
+    .map((id) => ({ id, naam: friendly(states, id) }))
+    .sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  return { cameras, melders, weerbronnen: [...weatherSources(entities, states), { id: OPEN_METEO, naam: OPEN_METEO_NAAM }], taalmodellen };
 }
 
 /** Het voorstel: elke camera met het lichtste beeld, en de deurbel als die er zeker is. */
@@ -169,13 +183,24 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     weer: { bron: g.weerbronnen?.[0]?.id ?? null, uren: true },
     licht: { bedienen: true },
     schermen: { bedienen: true },
+    // Het taalmodel staat standaard uit (besluit 148): het vaste antwoord werkt altijd.
+    praten: { taalmodel: null, bedienen: true },
   };
 }
 
 /** Een ouder bestand aangevuld met het voorstel voor wat er toen nog niet in stond. */
-export function volledig(f: Functies, g: FunctiesGevonden | null): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean } } {
+export function volledig(
+  f: Functies,
+  g: FunctiesGevonden | null,
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean } } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
-  return { ...f, weer: { bron: weer.bron, uren: weer.uren ?? true }, licht: f.licht ?? { bedienen: true }, schermen: f.schermen ?? { bedienen: true } };
+  return {
+    ...f,
+    weer: { bron: weer.bron, uren: weer.uren ?? true },
+    licht: f.licht ?? { bedienen: true },
+    schermen: f.schermen ?? { bedienen: true },
+    praten: f.praten ?? { taalmodel: null, bedienen: true },
+  };
 }
 
 export type FunctiesUitkomst = { readonly ok: true; readonly functies: Functies } | { readonly ok: false; readonly reden: string };
@@ -230,6 +255,16 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
     if (typeof sc['bedienen'] !== 'boolean') return { ok: false, reden: 'schermen.bedienen is ja of nee' };
     schermen = sc['bedienen'];
   }
+  // Praten met je huis (besluit 148): alleen een AI-taak die Home Assistant kent.
+  const pratenIn = b['praten'];
+  let praten = { taalmodel: null as string | null, bedienen: true };
+  if (pratenIn !== undefined) {
+    const pr = (typeof pratenIn === 'object' && pratenIn != null ? pratenIn : {}) as Record<string, unknown>;
+    const model = pr['taalmodel'] ?? null;
+    if (model !== null && (typeof model !== 'string' || !(g.taalmodellen ?? []).some((x) => x.id === model))) return { ok: false, reden: 'die AI-taak kent Home Assistant niet' };
+    if (typeof pr['bedienen'] !== 'boolean') return { ok: false, reden: 'praten.bedienen is ja of nee' };
+    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'] };
+  }
   return {
     ok: true,
     functies: {
@@ -239,6 +274,7 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
       weer: { bron, uren },
       licht: { bedienen },
       schermen: { bedienen: schermen },
+      praten,
     },
   };
 }
