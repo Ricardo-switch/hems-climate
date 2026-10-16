@@ -1015,6 +1015,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('.cijfers').waitFor();
     await p.waitForTimeout(400);
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(5);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(11);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     await kaart.locator('a', { hasText: 'Begin' }).click();
@@ -1024,9 +1025,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-naam]').waitFor();
     await shot('huis');
     await kaart.locator('[data-klopt]').click();
+    // Zes hoofdstukken met kleine stappen (besluit 144).
+    await p.waitForURL(/#buiten$/);
+    await kaart.locator('h1', { hasText: 'Wat ligt er rond je huis?' }).waitFor();
+    await shot('buiten');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
     await p.waitForURL(/#apparaten$/);
-    await kaart.locator('.waar', { hasText: 'Stap 2' }).waitFor();
+    await kaart.locator('.waar', { hasText: '2. Apparaten' }).waitFor();
     await shot('apparaten');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Welke thermometer telt per kamer?' }).waitFor();
+    await shot('meten');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Wat verwarmt en koelt er?' }).waitFor();
     expect(await kaart.locator('[data-rol]').count()).toBeGreaterThan(0);
@@ -1036,15 +1045,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-comfort="warm"]').waitFor();
     await shot('comfort');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
-    await kaart.locator('h1', { hasText: 'Je panelen en je aansluiting' }).waitFor();
+    await kaart.locator('h1', { hasText: 'Je panelen en je verwarming' }).waitFor();
     await shot('zon');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Hoe zwaar is je aansluiting?' }).waitFor();
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: 'Wat betaal je per kWh?' }).waitFor();
+    await shot('prijzen');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('h1', { hasText: "Licht en camera's" }).waitFor();
+    await shot('functies');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    await kaart.locator('.waar', { hasText: '5. Gemak · De wand' }).waitFor();
+    await shot('wand');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');
-    // Het filmpje (besluit 139): je eigen huis, vier beelden, pauzeren, het geluid uit en overslaan.
+    // De film (besluit 144): je eigen huis, beelden van drie tellen, pauzeren, het geluid uit en overslaan.
     await kaart.locator('button', { hasText: 'Speel af' }).click();
     const film = p.locator('.film');
-    await film.locator('h2', { hasText: 'Dit is je huis' }).waitFor({ timeout: 10_000 });
+    await film.locator('.groot').waitFor({ timeout: 10_000 });
     await film.locator('[data-film-huis] svg').waitFor();
     await shot('film-0');
     await film.locator('[data-film-pauze]').click();
@@ -1056,15 +1076,23 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Elk beeld, los afgespeeld.
     await p.goto(`${baseUrl}/inrichten.html#klaar`);
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
-    for (const [i, kop] of [[1, 'Zon over?'], [2, 'Op tijd warm'], [3, 'Elke dag een beetje slimmer']] as const) {
-      await p.evaluate(`film.speel({}).then((f) => (window.__film = f))`);
-      await p.waitForFunction('window.__film != null');
-      await p.evaluate(`window.__film.naar(${i})`);
-      await p.locator('.film h2', { hasText: kop }).waitFor({ timeout: 10_000 });
-      await p.waitForTimeout(700);
+    await p.evaluate(`film.speel({}).then((f) => (window.__film = f))`);
+    await p.waitForFunction('window.__film != null');
+    const aantal = await p.evaluate<number>('window.__film.aantal');
+    expect(aantal).toBeGreaterThanOrEqual(3);
+    const titels: string[] = [];
+    for (let i = 0; i < aantal; i++) {
+      await p.evaluate(`window.__film.pauze(true); window.__film.naar(${i}); window.__film.pauze(false)`);
+      await p.waitForTimeout(400);
+      titels.push((await p.locator('.film .titel').textContent()) ?? '');
+      // Elk beeld een groot getal of woord en een zin, en nooit iets leegs.
+      expect(((await p.locator('.film .groot').textContent()) ?? '').trim()).not.toBe('');
+      expect(await p.locator('.film h2').textContent()).not.toMatch(/undefined|NaN|null/);
       await shot(`film-${i}`);
-      await p.evaluate('window.__film.stop(); window.__film = null');
     }
+    await p.evaluate('window.__film.stop(); window.__film = null');
+    expect(titels).toContain('Vraag het je huis');
+    expect(titels.at(-1)).toBe('Klaar');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, binnen het scherm.
     await p.setViewportSize({ width: 390, height: 844 });
@@ -1210,10 +1238,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }
 
   /*
-   * De rondleiding (besluit 139): zeven stops op de echte pagina's en dan
-   * Klaar, de eerste keer vanzelf, daarna achter het vraagteken op Thuis.
+   * De rondleiding (besluit 139 en 144): twaalf stops op de echte pagina's en
+   * dan Klaar, de eerste keer vanzelf, daarna achter het vraagteken op Thuis.
    */
-  it('loopt de rondleiding door Thuis, Vandaag en Opbrengst, en daarna achter het vraagteken', async () => {
+  it('loopt de rondleiding langs alle tabbladen en een kamer, en daarna achter het vraagteken', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
@@ -1232,14 +1260,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     };
     await volgende('Dit is je huis', 'rl-1');
     await volgende('Tik op een kamer', 'rl-2');
-    await volgende('Hoe voelt het?', 'rl-3');
-    await volgende('Vraag het je huis', 'rl-4');
+    await p.waitForURL(/kamer\.html$/);
+    await volgende('De kamer van dichtbij', 'rl-3');
+    await p.waitForURL(/thuis\.html$/);
+    await volgende('Hoe voelt het?', 'rl-4');
     await p.waitForURL(/vandaag\.html$/);
     await volgende('Wat er vandaag gebeurt', 'rl-5');
+    await volgende('Gisteren en morgen', 'rl-6');
+    await p.waitForURL(/apparaten\.html$/);
+    await volgende('Wat elk apparaat nu doet', 'rl-7');
     await p.waitForURL(/opbrengst\.html$/);
-    await volgende('Wat je dak opleverde', 'rl-6');
+    await volgende('Wat je dak opleverde', 'rl-8');
+    await p.waitForURL(/assistent\.html$/);
+    await volgende('Vraag het je huis', 'rl-9');
     await p.waitForURL(/thuis\.html$/);
-    await volgende('Meldingen en instellingen', 'rl-7');
+    await volgende('De bel', 'rl-10');
+    await p.waitForURL(/instellingen\.html$/);
+    await volgende('Het tandwiel', 'rl-11');
+    await p.waitForURL(/huis-kan\.html$/);
+    await volgende('Hoe ver het huis is', 'rl-12');
+    await p.waitForURL(/thuis\.html$/);
     await kaart.filter({ hasText: 'Klaar' }).locator('[data-rl-klaar]').waitFor();
     await shot('rl-klaar');
     await kaart.locator('[data-rl-klaar]').click();

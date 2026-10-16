@@ -1,6 +1,7 @@
 /*
- * De rondleiding (besluit 139, schets Wand-Rondleiding): zeven stops op de
- * echte pagina's, met je eigen huis, en dan Klaar. Het scherm wordt donker en
+ * De rondleiding (besluit 139 en 144, schets Wand-Inrichten-Compleet): twaalf
+ * stops op de echte pagina's, langs alle tabbladen en een kamer, met je eigen
+ * huis, en dan Klaar. Het scherm wordt donker en
  * licht op waar het om gaat; een kaart vertelt. Iedereen krijgt hem de eerste
  * keer, na het filmpje of de eerste keer op Thuis; daarna achter het vraagteken
  * op Thuis. Overslaan kan altijd.
@@ -15,7 +16,7 @@
   const GEZIEN = 'sc-rondleiding-gezien';
   const WAAR = 'sc-rondleiding';
 
-  /** Per stop: de pagina, wat er staat, en waar het licht op valt (wand, telefoon). */
+  /** Per stop: de pagina, wat er staat, en waar het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144). */
   const STOPS = [
     {
       pagina: 'thuis.html',
@@ -28,9 +29,16 @@
       pagina: 'thuis.html',
       plek: 'Thuis',
       kop: 'Tik op een kamer',
-      tekst: 'Dan zie je de kamer van dichtbij. Lampen, scènes en screens bedien je daar meteen.',
+      tekst: 'Dan zie je hem van dichtbij. Dat doen we nu even voor je.',
       doel: ['#podium-wand .sc-tik', '#tel [data-kamers] > *'],
       eerste: true,
+    },
+    {
+      pagina: 'kamer.html',
+      plek: 'Een kamer',
+      kop: 'De kamer van dichtbij',
+      tekst: 'De temperatuur, wat er draait, en de lampen, scènes en screens om meteen te bedienen.',
+      doel: ['#wand [data-blad]', '#tel [data-blad]'],
     },
     {
       pagina: 'thuis.html',
@@ -40,18 +48,25 @@
       doel: ['#wand [data-gevoel-kaart]', '#tel [data-gevoel]'],
     },
     {
-      pagina: 'thuis.html',
-      plek: 'Thuis',
-      kop: 'Vraag het je huis',
-      tekst: 'Wat doe je nu? Hoeveel zon vandaag? Bij elk besluit zegt het huis waarom.',
-      doel: ['#wand .dok', '#tel a[href="assistent.html#typ"]'],
+      pagina: 'vandaag.html',
+      plek: 'Vandaag',
+      kop: 'Wat er vandaag gebeurt',
+      tekst: 'Uur voor uur: de zon, de kamers en wat het huis deed, en waarom.',
+      doel: ['#wand [data-tijdlijn]', '#tel [data-zonkaart]'],
     },
     {
       pagina: 'vandaag.html',
       plek: 'Vandaag',
-      kop: 'Wat er vandaag gebeurt',
-      tekst: 'Uur voor uur: de zon, het weer en wat het huis deed of nog gaat doen. Bij Gisteren zie je of de verwachting klopte.',
-      doel: ['#wand [data-tijdlijn]', '#tel [data-zonkaart]'],
+      kop: 'Gisteren en morgen',
+      tekst: 'Bij Gisteren zie je of de verwachting klopte; bij Morgen wanneer de zon komt.',
+      doel: ['#wand [data-wissel]', '#tel [data-wissel]'],
+    },
+    {
+      pagina: 'apparaten.html',
+      plek: 'Apparaten',
+      kop: 'Wat elk apparaat nu doet',
+      tekst: 'Per apparaat wat het doet en vraagt, en wat het vandaag op eigen zon deed.',
+      doel: ['#wand [data-apparaten]', '#tel [data-apparaten]'],
     },
     {
       pagina: 'opbrengst.html',
@@ -61,11 +76,32 @@
       doel: ['#wand .midden', '#tel [data-sankey]'],
     },
     {
+      pagina: 'assistent.html',
+      plek: 'Assistent',
+      kop: 'Vraag het je huis',
+      tekst: 'Tik op de bol en het huis praat. Vraag wat het doet, waarom, of wat morgen brengt.',
+      doel: ['#wand [data-kern]', '#tel [data-kern]'],
+    },
+    {
       pagina: 'thuis.html',
       plek: 'Thuis',
-      kop: 'Meldingen en instellingen',
-      tekst: 'De bel zegt als er iets nieuws is of iets niet reageert. Het tandwiel heeft Comfort, Inrichten en Wat je huis kan.',
-      doel: ['#balk [data-meldbel], #balk a[href="instellingen.html"]', '#tel [data-meldbel], #tel [data-tandwiel]'],
+      kop: 'De bel',
+      tekst: 'Hier staat wat nieuw is, en wat aandacht vraagt, zoals een batterij die bijna leeg is.',
+      doel: ['#balk [data-meldbel]', '#tel [data-meldbel]'],
+    },
+    {
+      pagina: 'instellingen.html',
+      plek: 'Instellingen',
+      kop: 'Het tandwiel',
+      tekst: 'Comfort, de regeling, energie en je huis. Alles wat je bij Inrichten koos, staat hier.',
+      doel: ['#wand [data-groepen]', '#tel [data-groepen]'],
+    },
+    {
+      pagina: 'huis-kan.html',
+      plek: 'Wat je huis kan',
+      kop: 'Hoe ver het huis is',
+      tekst: 'Per functie of hij werkt, meekijkt of nog leert, en wat er nog bij kan.',
+      doel: ['#wand [data-vakken]', '#tel [data-vakken]'],
     },
     {
       pagina: 'thuis.html',

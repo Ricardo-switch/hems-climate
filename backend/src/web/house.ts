@@ -1423,11 +1423,9 @@ export function buildHouse(
         const d = lijst.find((x) => x.id === entity || (viaApparaat != null && (x.actuatorId === viaApparaat || x.id === viaApparaat)));
         if (d) return d.naam;
       }
-      const st = states.get(entity);
-      if (st) return friendly(st, entity);
-      // Een sensor die het huis niet volgt: zijn naam uit de entiteit, zoals "Badkamer huidige temperatuur".
+      // Een sensor die het huis niet volgt, of zonder naam: zijn naam uit de entiteit, zoals "Badkamer huidige temperatuur".
       const kaal = entity.replace(/^[a-z_]+\./, '').replace(/_/g, ' ').trim();
-      return kaal ? kaal.charAt(0).toUpperCase() + kaal.slice(1) : entity;
+      return friendly(states.get(entity), kaal ? kaal.charAt(0).toUpperCase() + kaal.slice(1) : entity);
     };
     const meetMet = zone
       ? (zone.temperatures ?? [zone.temperature]).map((t) => naamVan(t.id))

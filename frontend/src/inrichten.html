@@ -31,6 +31,12 @@
   .stap.nu { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
   .stap.nu .n { background: var(--tekst); color: #0b1424; }
   .stap:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  /* Per hoofdstuk de stapjes erin (besluit 144). */
+  .stap .stipjes { display: inline-flex; gap: 3px; }
+  .stap .stipjes i { width: 10px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+  .stap .stipjes i.al { background: var(--mint); }
+  .stap .stipjes i.nu { background: var(--tekst); }
+  #tel .stap .stipjes { display: none; }
   .veldje { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 20px; min-height: 0; }
   .podium { min-height: 0; display: grid; place-items: center; }
   .kaart { padding: 26px 28px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; }

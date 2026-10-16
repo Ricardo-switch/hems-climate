@@ -94,6 +94,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [123. Meten met: per kamer zelf de sensoren kiezen](#123-meten-met-per-kamer-zelf-de-sensoren-kiezen)
 - [139. Inrichten in één keer, het filmpje en de rondleiding](#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding)
 - [143. Comfort uit de app gaat voor de oude helpers, en het huis zoals het is](#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is)
+- [144. Na Inrichten is de app af, een film van twintig tellen, en een rondleiding langs alles](#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles)
 
 **Meten, data en analyse**
 
@@ -6104,6 +6105,46 @@ wonnen van de app. Daar was nooit over besloten. De bewoner koos op
   verwacht werd, en de zon per kwartier, zonder ligging: om de zonverwachting
   per uur na te rekenen (rapport, besluit 142).
 - **Versie 0.22.0.**
+
+## 144. Na Inrichten is de app af, een film van twintig tellen, en een rondleiding langs alles
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Het kwaliteitsrapport (besluit 142) vond dat Inrichten stappen oversloeg, dat
+de film traag was en vooral liet zien wat er in het huis staat, en dat de
+rondleiding alleen op Thuis, Vandaag en Opbrengst kwam. Schetsen:
+`Wand-Inrichten-Compleet` en `Wand-Film-Trailer` in `design/app2`.
+
+*Besluit:*
+
+- **Inrichten in hoofdstukken.** Bovenaan staan de hoofdstukken, met per
+  hoofdstuk stipjes voor de kleine stappen, zodat de balk rustig blijft: je
+  huis (kamers, buiten), apparaten (per kamer, meten met), klimaat (wat elk
+  apparaat doet, comfort), energie (panelen, zekering, prijzen en meters) en
+  gemak (licht en camera's, de wand). Daarna Klaar met de film. Nieuw zijn
+  buiten (wat elke buitenruimte is, met de auto en het tuinhuis, besluit 109),
+  meten met (besluit 123), meedoen met een andere kamer bij een kamer zonder
+  eigen apparaat (besluit 142), de zekering als eigen stap, het daltarief en
+  de meters overnemen uit het Energie-dashboard, licht, screens en camera's
+  (besluit 130), en de wand die één keer inlogt. Elke stap staat al ingevuld
+  met wat Home Assistant weet, gaat langs dezelfde deuren als Instellingen,
+  en kan later.
+- **De film is een trailer:** zeven beelden van drie tellen op een beat van
+  120 per minuut uit de browser zelf, samen zo'n twintig seconden. Elk beeld
+  één ding dat de app echt doet, met een groot getal uit je eigen huis:
+  gisteren van je dak, je kamers en apparaten, je dak op zijn best, de zon van
+  morgen, hoe warm een kamer nu is, de assistent, en hoeveel van je stroom van
+  je eigen dak kwam. Een beeld zonder zijn cijfer valt weg; er staat nooit een
+  getal dat niet uit het huis komt, en geen belofte die de app nog niet
+  waarmaakt. Het huis komt uit dezelfde opbouw als Thuis
+  (`huismodel.tekening`, besluit 143).
+- **De rondleiding** loopt in twaalf stops langs alle tabbladen en een kamer:
+  Thuis, een kamer van dichtbij, hoe voelt het, Vandaag met gisteren en
+  morgen, Apparaten, Opbrengst, de assistent, de bel, het tandwiel en Wat je
+  huis kan.
+- **Een sensor zonder naam** in Home Assistant heet bij "meet met" naar zijn
+  entiteit ("Beneden temperatuur"), niet `sensor.beneden_temperatuur`.
+- **Versie 0.23.0.**
 
 ---
 

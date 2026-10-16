@@ -216,7 +216,9 @@ verwijzing bestaat.
   de kamer op temperatuur houdt, op zon helpt of alleen kijkt; een nieuw
   apparaat doet meteen mee ([138]).
 - **Inrichten** gebeurt op één pagina: links het huis dat meegroeit, rechts
-  één vraag per stap, alles meteen bewaard ([139]).
+  één vraag per stap, alles meteen bewaard ([139]). Vijf hoofdstukken met
+  kleine stappen, van buiten tot de wand; daarna een film van twintig tellen
+  met je eigen cijfers en een rondleiding langs alle tabbladen ([144]).
 - **Vandaag** is de dag in de tijd; **Apparaten** is het nu, per apparaat een
   kaart met wat het doet, vraagt en vandaag op zon deed ([140]).
 - **De assistent** is een gesprek: het huis begroet je, leest zijn antwoord
@@ -420,4 +422,5 @@ verwijzing bestaat.
 [141]: DECISIONS.md#141-de-assistent-als-gesprek-met-een-stem
 [142]: DECISIONS.md#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens
 [143]: DECISIONS.md#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is
+[144]: DECISIONS.md#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles
 <!-- links:einde -->
