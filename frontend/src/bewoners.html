@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Bewoners · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<style>
+  /*
+   * Bewoners (besluit 147, schets Wand-Bewoners): wie hier woont, op volgorde.
+   * De eerste die thuis is, bepaalt het comfort; de hoofdgebruiker staat
+   * bovenaan. Links de lijst, rechts één bewoner; onderaan wie er nu geldt,
+   * iemand erbij, en schermen en gasten.
+   */
+  #wand main.bew { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .veld2 { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; flex: 1; min-height: 0; }
+  .links { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .lijst { padding: 14px 18px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+  .bewoner { display: grid; grid-template-columns: 26px 28px 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px; margin: 0 -10px; border-radius: 16px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: calc(100% + 20px); }
+  .bewoner + .bewoner { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .bewoner.gekozen { background: rgba(255, 255, 255, 0.08); }
+  .bewoner.sleept { opacity: 0.6; }
+  .bewoner:focus-visible { outline: 2px solid var(--tekst); outline-offset: -2px; }
+  .greep { color: var(--gedempt); font-size: 16px; letter-spacing: -2px; cursor: grab; touch-action: none; user-select: none; padding: 8px 0; text-align: center; }
+  .plek { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .plek.een { background: var(--zon); color: #0b1424; }
+  .gezicht { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; font-size: 18px; color: #0b1424; }
+  .bewoner b { display: block; font-size: 16px; }
+  .bewoner .onder { display: block; font-size: 13px; color: var(--zacht); margin-top: 2px; }
+  .labels { display: flex; gap: 6px; justify-content: end; flex-wrap: wrap; }
+  .label { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .label.thuis { color: var(--mint); background: rgba(110, 231, 183, 0.12); }
+  .label.weg { color: var(--gedempt); background: rgba(255, 255, 255, 0.06); }
+  .label.geldt { color: var(--zon); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.5); }
+  .label.geldt::before { display: none; }
+  .uitleg { margin: auto 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; color: var(--zacht); line-height: 1.5; }
+  .uitleg b { color: var(--tekst); }
+  .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .klein-kaart { padding: 14px 18px; }
+  .klein-kaart h3 { margin: 0 0 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .klein-kaart .r { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .klein-kaart .r:first-of-type { border-top: 0; }
+  .klein-kaart .r span { color: var(--zacht); font-size: 13px; text-align: right; }
+  .erbij { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .qr { width: 92px; height: 92px; border-radius: 12px; background: #EEF3F7; padding: 7px; box-sizing: border-box; display: grid; place-items: center; }
+  .qr svg { width: 100%; height: 100%; }
+  .erbij .klein { color: var(--zacht); }
+  .erbij a { color: var(--ijs); font-weight: 600; word-break: break-all; }
+  .blad { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; }
+  .blad .kop { display: flex; align-items: center; gap: 14px; }
+  .blad .kop .gezicht { width: 56px; height: 56px; font-size: 24px; }
+  .vak { display: flex; flex-direction: column; gap: 6px; }
+  .vak > label, .vak > span:first-child { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .veld { height: 46px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: var(--tekst); font: inherit; font-size: 16px; font-weight: 600; color-scheme: dark; width: 100%; box-sizing: border-box; }
+  .veld option { background: #14203a; }
+  .veld:disabled { opacity: 0.6; }
+  .hint { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .hint a { color: var(--ijs); font-weight: 700; text-decoration: none; }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
+  .seg button { flex: 1; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gedempt); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.15); color: var(--tekst); }
+  .seg button:disabled { cursor: default; }
+  .knoppenrij { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
+  .knoppenrij .knop { flex: 1; white-space: nowrap; }
+  .gevaar { color: #ffb090; }
+  .fout { min-height: 18px; font-size: 13px; color: var(--gloed); }
+  #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  #tel .rij2 { grid-template-columns: 1fr; }
+  #tel .lijst { overflow: visible; }
+  #tel .blad { overflow: visible; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <main class="bew">
+      <div class="kopregel">
+        <div><a class="terugje" href="instellingen.html" style="font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none">‹ Instellingen</a><h1 class="kop-1" style="margin-top: 4px">Bewoners</h1></div>
+        <span class="mini" style="max-width: 48ch; text-align: right">Wie hier woont, op volgorde. De eerste die thuis is, bepaalt het comfort. Sleep aan het greepje om de volgorde te veranderen.</span>
+      </div>
+      <div class="veld2">
+        <div class="links">
+          <section class="glas lijst" data-lijst aria-label="Bewoners op volgorde"></section>
+          <div class="rij2"><section class="glas klein-kaart" data-erbij></section><section class="glas klein-kaart" data-schermen></section></div>
+        </div>
+        <aside class="glas blad" data-blad aria-live="polite"></aside>
+      </div>
+    </main>
+  </div>
+  <div id="tel" class="tel">
+    <div class="inhoud">
+      <a class="terugje" href="instellingen.html" style="font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none">‹ Instellingen</a>
+      <h1 class="kop-1" style="font-size: 34px; margin: 0">Bewoners</h1>
+      <section class="glas lijst" data-lijst aria-label="Bewoners op volgorde"></section>
+      <aside class="glas blad" data-blad aria-live="polite"></aside>
+      <div class="rij2"><section class="glas klein-kaart" data-erbij></section><section class="glas klein-kaart" data-schermen></section></div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  </div>
+  <script src="kit/nav.js"></script>
+  <script src="qrcode.js"></script>
+  <script src="basis.js"></script>
+  <script src="bewoners.js"></script>
+</body>
+</html>

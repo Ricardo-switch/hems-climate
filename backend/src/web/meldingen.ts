@@ -23,7 +23,7 @@ import { join } from 'node:path';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal';
+export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -55,6 +55,11 @@ export interface MeldingenBron {
   readonly meters: readonly { readonly id: string; readonly naam: string; readonly laatsteMs: number | null }[];
   readonly versie: { readonly nummer: string; readonly eerste?: string } | null;
   readonly winterdagen: number | null;
+  /**
+   * Wiens comfort er geldt (besluit 147), uit het laatste besluit; weg zonder
+   * bewoners. Wisselt het, dan staat het één keer bij de bel.
+   */
+  readonly comfort?: { readonly id: string; readonly naam: string; readonly waarom: 'thuis' | 'niemand' | 'gekozen'; readonly hoofdNaam: string; readonly hoofd: boolean } | null;
 }
 
 /** Zo lang onbereikbaar voor het een melding is: kort haperen hoort er niet in. */
@@ -73,6 +78,8 @@ interface Bestand {
   readonly negeer: string[];
   readonly laatsteVersie: string | null;
   readonly mijlpalen: number[];
+  /** Wiens comfort er het laatst gold (besluit 147). */
+  readonly laatsteComfort?: string | null;
 }
 
 const duur = (ms: number) => {
@@ -138,7 +145,7 @@ export class MeldingenStore {
     try {
       const b = JSON.parse(await readFile(this.#path, 'utf-8')) as Partial<Bestand>;
       if (b.versie === 1 && Array.isArray(b.meldingen)) {
-        this.#bestand = { versie: 1, meldingen: b.meldingen, negeer: Array.isArray(b.negeer) ? b.negeer : [], laatsteVersie: b.laatsteVersie ?? null, mijlpalen: Array.isArray(b.mijlpalen) ? b.mijlpalen : [] };
+        this.#bestand = { versie: 1, meldingen: b.meldingen, negeer: Array.isArray(b.negeer) ? b.negeer : [], laatsteVersie: b.laatsteVersie ?? null, mijlpalen: Array.isArray(b.mijlpalen) ? b.mijlpalen : [], laatsteComfort: typeof b.laatsteComfort === 'string' ? b.laatsteComfort : null };
       }
     } catch {
       // Nog geen bestand, of niet te lezen: dan begint de lijst leeg.
@@ -183,10 +190,20 @@ export class MeldingenStore {
       mijlpalen.push(n);
       meldingen.push({ id: `mijlpaal:winter-${n}`, soort: 'mijlpaal', aandacht: false, sindsMs: nu, opgelostMs: nu, titel: `${n} winterdagen meegekeken`, tekst: n < 30 ? `Nog ${30 - n} te gaan, dan weet het huis genoeg om zelf te regelen.` : 'Genoeg om zelf te regelen. Wanneer dat begint, kies jij.', actie: { label: 'Bekijk', href: 'huis-kan.html' } });
     }
+    // Wiens comfort er geldt (besluit 147): wisselt het, dan één keer ter informatie.
+    let laatsteComfort = b.laatsteComfort ?? null;
+    const c = bron.comfort;
+    if (c && c.id !== laatsteComfort) {
+      if (laatsteComfort != null) {
+        const tekst = c.waarom === 'gekozen' ? 'Gekozen op een scherm, tot er iemand thuiskomt of weggaat.' : c.waarom === 'niemand' ? 'Er is niemand thuis.' : c.hoofd ? `${c.naam} is thuis.` : `${c.hoofdNaam} is weg; ${c.naam} is thuis.`;
+        meldingen.push({ id: `comfort:${c.id}:${nu}`, soort: 'comfort', aandacht: false, sindsMs: nu, opgelostMs: nu, titel: c.hoofd && c.waarom !== 'gekozen' ? `Het comfort van ${c.naam} geldt weer` : `Het comfort van ${c.naam} geldt nu`, tekst, actie: { label: 'Bewoners', href: 'bewoners.html' } });
+      }
+      laatsteComfort = c.id;
+    }
     // Wat lang geleden opgelost is, gaat weg; zo blijft het bestand klein.
     const bewaar = meldingen.filter((m) => m.opgelostMs == null || nu - m.opgelostMs < EERDER_MS);
     const negeer = b.negeer.filter((id) => ids.has(id) || bewaar.some((m) => m.id === id));
-    const nieuw: Bestand = { versie: 1, meldingen: bewaar, negeer, laatsteVersie, mijlpalen };
+    const nieuw: Bestand = { versie: 1, meldingen: bewaar, negeer, laatsteVersie, mijlpalen, laatsteComfort };
     if (JSON.stringify(nieuw) !== JSON.stringify(b)) {
       this.#bestand = nieuw;
       this.#vies = true;

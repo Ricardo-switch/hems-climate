@@ -189,12 +189,12 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     zwak: ['account', 'toegang'],
     nl: {
       antwoord:
-        'Kijken kan zonder inloggen. Om te bedienen log je in met je account van Home Assistant, bij Instellingen, onder App en toegang.',
-      label: 'Naar App en toegang',
+        'Je logt in met je account van Home Assistant; de hele app vraagt dat. Uitloggen kan bij Instellingen, onder Bewoners en toegang.',
+      label: 'Naar Bewoners en toegang',
     },
     en: {
-      antwoord: 'Viewing works without logging in. To operate, log in with your Home Assistant account under Settings, App and access.',
-      label: 'Go to App and access',
+      antwoord: 'You log in with your Home Assistant account; the whole app asks for it. Logging out is under Settings, Residents and access.',
+      label: 'Go to Residents and access',
     },
   },
   {

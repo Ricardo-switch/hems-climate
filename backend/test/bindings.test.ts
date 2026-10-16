@@ -185,7 +185,8 @@ describe('losse meetpunten', () => {
     const state = buildSystemState(config, sourceOfFile({ 'person.gast': 'home' }), NOW);
 
     expect(Object.keys(state.occupancy)).toEqual(['gast']);
-    expect(state.occupancy['gast']).toEqual({ ok: true, value: true, atMs: NOW });
+    // De tijd is sinds wanneer iemand thuis is (besluit 147); niet bekend telt als lang geleden.
+    expect(state.occupancy['gast']).toEqual({ ok: true, value: true, atMs: 0 });
   });
 });
 

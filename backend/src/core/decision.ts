@@ -189,6 +189,17 @@ export interface Explanation {
     readonly sinceMs: number;
     readonly untilMs: number | null;
   }[];
+  /**
+   * Welk comfort er gold (besluit 147): van welk profiel en waarom, en welke
+   * profielen thuis waren. Alleen met profielen, zodat het logboek anders niet
+   * verandert. Wie er per uur thuis was, staat er niet in: alleen profielen.
+   */
+  readonly profile?: {
+    readonly id: string;
+    readonly name: string;
+    readonly reason: 'thuis' | 'niemand' | 'gekozen';
+    readonly home: readonly string[];
+  };
 }
 
 export interface ZoneExplanation {

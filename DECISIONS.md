@@ -97,6 +97,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [144. Na Inrichten is de app af, een film van twintig tellen, en een rondleiding langs alles](#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles)
 - [145. Een zone heeft een soort, en kamers en zones schuiven](#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven)
 - [146. Inrichten zoals de schets, en de film als een dag in je huis](#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis)
+- [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
 
 **Meten, data en analyse**
 
@@ -6219,6 +6220,65 @@ seconden; een dag in je huis als verhaal; en muziek die de app zelf speelt.
   begrenzer: tot 0,8 ongemoeid, nooit boven 0,95 (versie 0.24.1; de ruis kon
   net boven het maximum uitkomen).
 - **Versie 0.24.0.**
+
+## 147. Comfort per bewoner, en inloggen voor de hele app
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 16 oktober 2026 vroeg de bewoner om comfort per gebruiker die thuis is,
+een instelbare hoofdgebruiker, begroeten met een eigen naam, en inloggen voor
+de hele app in plaats van alleen voor bedienen. Na een plan met vier keuzes en
+de schetsen `Wand-Bewoners`, `Wand-Eerste-inlog`, `Wand-Thuis-Bewoners` en
+`Wand-Inloggen` koos hij: een vaste volgorde; vanzelf wisselen, met een
+melding; comfort voor het hele huis; een eigen account voor de wand; en
+bewoners pas na een eerste inlog, niet alles uit Home Assistant.
+
+*Besluit:*
+
+- **Bewoners** (`bewoners.json` naast de dataset): wie hier woont, op
+  volgorde; de eerste is de hoofdgebruiker. Een bewoner komt er alleen bij door
+  één keer in te loggen. Heeft het account een persoon in Home Assistant, dan
+  wordt hij meteen bewoner, met die persoon als aanwezigheid als de
+  configuratie hem volgt. Zonder persoon vraagt de app: woon je hier, of is dit
+  een scherm? Een scherm, zoals de wand, is geen bewoner. Gasten zonder account
+  tellen alleen als "iemand thuis". De naam is de voornaam uit Home Assistant
+  en in de app te veranderen; er gaat niets naar Home Assistant.
+- **Welk comfort geldt, in de kern** (`chooseProfile`): de configuratie krijgt
+  `profiles` op volgorde, elk met zijn aanwezigheid en eigen doelen per zone.
+  De eerste op de lijst die thuis is, bepaalt; is er niemand thuis, dan de
+  hoofdgebruiker. Wie net thuiskwam of wegging, telt de eerste tien minuten nog
+  zoals ervoor (de meting draagt nu sinds wanneer, niet "nu"). Zuiver, dus de
+  schaduw en het terugspelen rekenen hetzelfde; de uitleg van elk besluit zegt
+  welk profiel gold en waarom, en welke profielen thuis waren, maar niet wie
+  er per uur thuis was.
+- **Comfort per bewoner:** het comfort van het huis is van de hoofdgebruiker.
+  Een nieuwe bewoner volgt hem, tot hij zelf iets verandert; dan krijgt hij een
+  eigen comfort, met alleen de doelen en het plafond per kamer. Voorrang, op
+  zon en de dagdelen blijven van het huis. Wordt een ander hoofdgebruiker, dan
+  neemt de oude zijn comfort mee en brengt de nieuwe het zijne in. Aan jezelf
+  mag je alles; de hoofdgebruiker en een beheerder ook aan een ander.
+- **Vanzelf, met een melding:** wisselt het comfort, dan staat het één keer bij
+  de bel, en op Thuis staat "Comfort van Shira" met de reden. "Toch die van
+  Ricardo" houdt dat comfort vast tot er iemand thuiskomt of weggaat
+  (`profileHold`); daarna ruimt de dienst het op, zodat het later niet vanzelf
+  terugkomt.
+- **Begroeten:** op je telefoon met je eigen naam, op een scherm met wie er
+  thuis is ("Goedenavond, Shira en Matts"); de assistent net zo. Bij "Wat doe
+  je nu?" zegt hij wiens comfort geldt, als het niet dat van de hoofdgebruiker
+  is.
+- **Inloggen voor de hele app:** elke pagina en elke vraag aan de dienst vraagt
+  een inlog (besluit 99 gold alleen voor bedienen). Zonder inlog gaat een
+  pagina naar `inloggen.html`: een huis als silhouet, zonder namen of getallen,
+  en één knop naar Home Assistant. Open blijven het inloggen zelf, of de dienst
+  draait (`/api/health`, voor de NAS) en opmaak en script. De assistent van
+  Home Assistant vraagt `/api/vraag` met een eigen sleutel
+  (`sleutel-assistent.txt` in de logmap), die een beheerder ziet bij
+  Instellingen › Bewoners en toegang. Achter Ingress verandert er niets.
+- **Waar het staat:** Instellingen › Bewoners en toegang › Bewoners, Comfort
+  met wiens comfort het is, en bij Inrichten de stap "Wie woont hier?" met een
+  QR-code om anderen te laten inloggen.
+- **Later:** kamers met een eigenaar (een slaapkamer volgt zijn bewoner).
+- **Versie 0.25.0.**
 
 ---
 

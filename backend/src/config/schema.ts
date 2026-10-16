@@ -22,6 +22,9 @@ import {
   GEOMETRY_SOURCES,
   MODES,
   type Actuator,
+  type ComfortProfile,
+  type ProfileHold,
+  type ProfileZone,
   type Facade,
   type Geometry,
   type GridLimits,
@@ -1082,6 +1085,57 @@ export function parseSiteConfig(
     p.warn('occupancy', 'zonder aanwezigheidsbronnen staat het huis altijd op afwezig');
   }
 
+  // Comfort per bewoner (besluit 147): profielen op volgorde, met bekende
+  // aanwezigheidsbronnen en zones, en doelen binnen wat het schema toestaat.
+  const profiles: ComfortProfile[] = [];
+  const profilesRaw = input['profiles'] === undefined ? null : arr(p, input, '', 'profiles');
+  const zoneIdsKnown = new Set(zones.map((z) => z.id));
+  profilesRaw?.forEach((v, i) => {
+    const path = `profiles[${i}]`;
+    if (!isRecord(v)) {
+      p.error(path, 'moet een object zijn met id, name, occupancyIds en zones');
+      return;
+    }
+    const pid = str(p, v, path, 'id');
+    const pname = str(p, v, path, 'name');
+    if (pid && profiles.some((x) => x.id === pid)) p.error(join(path, 'id'), `"${pid}" komt twee keer voor`);
+    const ids = Array.isArray(v['occupancyIds']) ? v['occupancyIds'] : [];
+    if (!ids.every((x) => typeof x === 'string' && seenOccupancy.has(x))) p.error(join(path, 'occupancyIds'), 'alleen aanwezigheidsbronnen uit occupancy');
+    const zonesIn = isRecord(v['zones']) ? v['zones'] : {};
+    const pz: Record<string, ProfileZone> = {};
+    for (const [zid, zv] of Object.entries(zonesIn)) {
+      const zpath = join(join(path, 'zones'), zid);
+      if (!zoneIdsKnown.has(zid)) {
+        p.error(zpath, 'die zone bestaat niet');
+        continue;
+      }
+      if (!isRecord(zv)) continue;
+      const sp: Partial<Record<Mode, SetpointPair>> = {};
+      for (const [m, pair] of Object.entries(isRecord(zv['setpoints']) ? zv['setpoints'] : {})) {
+        if (!(MODES as readonly string[]).includes(m) || !isRecord(pair)) {
+          p.error(join(zpath, m), `"${m}" is geen bekende modus`);
+          continue;
+        }
+        const geldig = (t: unknown) => t === undefined || (typeof t === 'number' && t >= 5 && t <= 35);
+        if (!geldig(pair['heat']) || !geldig(pair['cool'])) {
+          p.error(join(zpath, m), 'heat en cool liggen tussen 5 en 35 °C');
+          continue;
+        }
+        sp[m as Mode] = { ...(typeof pair['heat'] === 'number' ? { heat: pair['heat'] } : {}), ...(typeof pair['cool'] === 'number' ? { cool: pair['cool'] } : {}) };
+      }
+      const max = zv['comfortMaxC'];
+      if (max !== undefined && max !== null && !(typeof max === 'number' && max >= 15 && max <= 40)) p.error(join(zpath, 'comfortMaxC'), 'ligt tussen 15 en 40 °C');
+      pz[zid] = { ...(Object.keys(sp).length ? { setpoints: sp } : {}), ...(max === null ? { comfortMaxC: null } : typeof max === 'number' ? { comfortMaxC: max } : {}) };
+    }
+    if (pid && pname) profiles.push({ id: pid, name: pname, occupancyIds: ids as string[], zones: pz });
+  });
+  let profileHold: ProfileHold | undefined;
+  if (isRecord(input['profileHold'])) {
+    const h = input['profileHold'];
+    const home = Array.isArray(h['home']) ? h['home'].filter((x): x is string => typeof x === 'string') : [];
+    if (typeof h['id'] === 'string' && profiles.some((x) => x.id === h['id'])) profileHold = { id: h['id'], home };
+  }
+
   // Een dagritme dat voor de meeste huishoudens klopt. Wie er anders in staat
   // zet het zelf, maar niemand hoeft erover na te denken om te kunnen starten.
   type Schedule = SiteConfig['schedule'];
@@ -1586,6 +1640,8 @@ export function parseSiteConfig(
       actuators,
       power: power as Power,
       occupancy,
+      ...(profiles.length > 0 ? { profiles } : {}),
+      ...(profileHold ? { profileHold } : {}),
       schedule: schedule as Schedule,
       enabledStrategies,
       criticalInputs,

@@ -70,8 +70,11 @@
     { titel: 'Deurbel', waar: 'Functies', href: 'functies.html#deurbel', woorden: 'deurbel bel aanbellen bezoeker scherm' },
     { titel: 'Licht en screens bedienen', waar: 'Functies', href: 'functies.html#licht', woorden: 'licht lamp scene screen zonnescherm bedienen' },
     { titel: 'Weer', waar: 'Functies', href: 'functies.html#weer', woorden: 'weer buienradar open-meteo verwachting uur' },
-    { titel: 'Inloggen', waar: 'App en toegang', href: 'toegang.html', woorden: 'inloggen uitloggen account wachtwoord toegang' },
-    { titel: 'Je gegevens exporteren', waar: 'App en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
+    { titel: 'Bewoners', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'bewoner bewoners gebruiker hoofdgebruiker naam volgorde aanwezig thuis weg wie' },
+    { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
+    { titel: 'Inloggen', waar: 'Bewoners en toegang', href: 'toegang.html#inloggen', woorden: 'inloggen uitloggen account wachtwoord toegang' },
+    { titel: 'Sleutel voor de assistent', waar: 'Bewoners en toegang', href: 'toegang.html#assistent', woorden: 'sleutel assistent home assistant spraak voice token' },
+    { titel: 'Je gegevens exporteren', waar: 'Bewoners en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
   ];
 
   ZOEK.push(
@@ -79,7 +82,7 @@
     { titel: 'Verwarmen en koelen per kamer', waar: 'Je huis', href: 'indeling.html', woorden: 'radiator vloerverwarming vloer infrarood paneel kachel elektrisch airco thermostaat knop stekker module vermogen watt op zon bron' },
     { titel: 'Een apparaat een eigen naam geven', waar: 'Je huis', href: 'indeling.html', woorden: 'naam hernoemen apparaat verbergen verplaatsen' },
     { titel: 'Wat je huis kan', waar: 'Instellingen', href: 'huis-kan.html', woorden: 'functies kan werkt meekijken leert ideeen idee meer uit besparen' },
-    { titel: 'Versie en wat is er nieuw', waar: 'App en toegang', href: 'toegang.html#versie', woorden: 'versie update nieuw bijwerken' },
+    { titel: 'Versie en wat is er nieuw', waar: 'Bewoners en toegang', href: 'toegang.html#versie', woorden: 'versie update nieuw bijwerken' },
   );
 
   /*

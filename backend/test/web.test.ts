@@ -106,6 +106,8 @@ async function start(options: {
   lichtAan?: () => boolean;
   schermenAan?: () => boolean;
   comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
+  sleutel?: string;
+  herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null>;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -137,6 +139,8 @@ async function start(options: {
         ...(options.lichtAan ? { lichtAan: options.lichtAan } : {}),
         ...(options.schermenAan ? { schermenAan: options.schermenAan } : {}),
         ...(options.comfort ? { comfort: options.comfort } : {}),
+        ...(options.sleutel ? { sleutel: options.sleutel } : {}),
+        ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -1406,7 +1410,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     };
   }
 
-  async function withLogin(isAdmin: boolean) {
+  async function withLogin(isAdmin: boolean, extra: { sleutel?: string; herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null> } = {}) {
     const dir = await mkdtemp(join(tmpdir(), 'hems-inlog-'));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin });
@@ -1414,7 +1418,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const feedback = new FeedbackLog({ logDir: dir, zoneIds: ['woonkamer'] });
     // Comfort als deur die een bewoner vraagt; gevoel mag zonder inlog (besluit 134).
     const comfort = { view: () => comfortView(exampleSite, null), save: async () => ({ ok: true as const, view: comfortView(exampleSite, null) }) };
-    const started = await start({ feedback, access, comfort });
+    const started = await start({ feedback, access, comfort, ...extra });
     return { ...started, login, dir };
   }
 
@@ -1566,9 +1570,46 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     const res = await fetch(`${base}/api/comfort`, { method: 'POST', headers: JSON_HEADERS, body: comfortBody });
     expect(res.status).toBe(401);
     expect(await res.json()).toMatchObject({ inlog: '/auth/login' });
-    // Kijken blijft open, en zeggen hoe het voelt ook (besluit 134): dat verandert niets aan het huis.
-    expect((await fetch(`${base}/api/comfort`)).status).toBe(200);
-    expect((await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: gevoel })).status).toBe(200);
+    // Kijken vraagt sinds besluit 147 ook een inlog, en zeggen hoe het voelt dus ook.
+    expect((await fetch(`${base}/api/comfort`)).status).toBe(401);
+    expect((await fetch(`${base}/api/gevoel`, { method: 'POST', headers: JSON_HEADERS, body: gevoel })).status).toBe(401);
+  });
+
+  it('vraagt een inlog voor de hele app, en laat alleen het inloggen, de gezondheid en opmaak open (besluit 147)', async () => {
+    const { base } = await withLogin(false, { sleutel: 'een-lange-sleutel-voor-de-assistent' });
+    // Een pagina gaat naar het inloggen, met de weg terug.
+    const pagina = await fetch(`${base}/vandaag.html`, { redirect: 'manual' });
+    expect(pagina.status).toBe(302);
+    expect(pagina.headers.get('location')).toBe('/inloggen.html?terug=%2Fvandaag.html');
+    expect((await fetch(`${base}/`, { redirect: 'manual' })).headers.get('location')).toBe('/inloggen.html?terug=%2Fthuis.html');
+    // Een vraag aan de dienst krijgt 401.
+    expect((await fetch(`${base}/api/huis`)).status).toBe(401);
+    // Open: het inloggen, de gezondheid en wie er ingelogd is.
+    expect((await fetch(`${base}/api/health`)).status).toBe(200);
+    expect((await fetch(`${base}/api/sessie`)).status).toBe(200);
+    expect((await fetch(`${base}/auth/login`, { redirect: 'manual' })).status).toBe(302);
+    // De assistent van Home Assistant met de sleutel: wel door de poort; zonder, of met een verkeerde, niet.
+    expect((await fetch(`${base}/api/vraag?v=nu`)).status).toBe(401);
+    expect((await fetch(`${base}/api/vraag?v=nu`, { headers: { authorization: 'Bearer fout-fout-fout-fout-fout-fout-fout-12' } })).status).toBe(401);
+    expect((await fetch(`${base}/api/vraag?v=nu`, { headers: { authorization: 'Bearer een-lange-sleutel-voor-de-assistent' } })).status).not.toBe(401);
+    // Ingelogd mag alles weer.
+    const cookie = await logIn(base);
+    expect((await fetch(`${base}/api/comfort`, { headers: { cookie } })).status).toBe(200);
+  });
+
+  it('stuurt een nieuwe bewoner na het inloggen naar het welkom, en een account zonder persoon naar de vraag (besluit 147)', async () => {
+    let antwoord: 'welkom' | 'vraag' | null = 'welkom';
+    const { base } = await withLogin(false, { herken: async () => antwoord });
+    const naar = async () => {
+      const go = await fetch(`${base}/auth/login?terug=/thuis.html`, { redirect: 'manual' });
+      const state = new URL(go.headers.get('location')!).searchParams.get('state')!;
+      return (await fetch(`${base}/auth/callback?code=abc&state=${state}`, { redirect: 'manual' })).headers.get('location');
+    };
+    expect(await naar()).toBe('/welkom.html?terug=%2Fthuis.html#welkom');
+    antwoord = 'vraag';
+    expect(await naar()).toBe('/welkom.html?terug=%2Fthuis.html#vraag');
+    antwoord = null;
+    expect(await naar()).toBe('/thuis.html');
   });
 
   it('laat een bewoner na het inloggen door, en zegt wie hij is', async () => {

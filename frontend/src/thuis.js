@@ -20,13 +20,16 @@ let weer = null;
 /** De antwoorden bij Zon en aansluiting: hoeveel panelen er liggen. */
 let aansluiting = null;
 let gekozenZone = null;
+/** Wie hier woont en wiens comfort geldt (besluit 147); null zonder bewoners. */
+let bewoners = null;
 
 /* ------------------------------------------------------- de gegevens */
 
 let eersteKeer = true;
 
 async function laadAlles() {
-  const [s, h, z, v, w, a] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer'), haal('api/aansluiting')]);
+  const [s, h, z, v, w, a, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer'), haal('api/aansluiting'), haal('api/bewoners')]);
+  if (b.status === 'fulfilled') bewoners = b.value;
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -141,9 +144,12 @@ function tekenNu() {
   lucht(model.tijd, model.seizoen, model.wolken);
   // Een nieuw huis (nog het voorstel uit Home Assistant): de weg naar Inrichten (besluit 114).
   $$('[data-inrichten]').forEach((el) => (el.hidden = huisData?.indeling !== 'voorstel'));
-  // De begroeting (15 oktober 2026), naar de tijd van de dag.
+  // De begroeting (15 oktober 2026), naar de tijd van de dag, met wie je bent (besluit 147).
   const uur = new Date().getHours();
-  zet('[data-groet]', uur < 6 ? 'Goedenacht' : uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond');
+  const groet = uur < 6 ? 'Goedenacht' : uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond';
+  const namen = huismodel.groetNamen(bewoners);
+  $$('[data-groet]').forEach((el) => (el.innerHTML = namen.length ? `${esc(groet)}, ${namen.map((n) => `<b>${esc(n)}</b>`).reduce((t, n, i, a) => (i === 0 ? n : `${t}${i === a.length - 1 ? ' en ' : ', '}${n}`), '')}` : esc(groet)));
+  tekenGeldt();
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
@@ -267,6 +273,37 @@ function tekenStraks() {
   zet('[data-straks-zin]', `${over >= 50 ? `Nu is er ${nl(over / 1000)} kW over.` : 'Nu is er geen zon over.'} Zodra er genoeg is, begint hij vanzelf.`);
   kaarten.forEach((k) => (k.hidden = false));
 }
+
+/*
+ * Welk comfort geldt (besluit 147, schets Wand-Thuis-Bewoners): alleen als het
+ * niet dat van de hoofdgebruiker is, of als iemand er een koos. Eén tik zet
+ * het terug: "toch die van" de hoofdgebruiker, tot er iemand thuiskomt of
+ * weggaat.
+ */
+function tekenGeldt() {
+  const g = bewoners?.geldt;
+  const hoofd = bewoners?.bewoners?.[0];
+  const toon = g && hoofd && (g.id !== hoofd.id || g.waarom === 'gekozen');
+  $$('[data-geldt]').forEach((el) => {
+    el.hidden = !toon;
+    if (!toon) return;
+    const wie = bewoners.bewoners.find((b) => b.id === g.id);
+    const zin = g.waarom === 'gekozen'
+      ? 'Gekozen tot er iemand thuiskomt of weggaat.'
+      : `${hoofd.naam} is weg${hoofd.thuisSindsMs ? ` sinds ${new Date(hoofd.thuisSindsMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : ''}. ${wie?.naam ?? g.naam} staat daarna.`;
+    const knop = g.waarom === 'gekozen' ? '<button type="button" class="terug" data-vasthouden="">Weer vanzelf</button>' : `<button type="button" class="terug" data-vasthouden="${esc(hoofd.id)}">Toch die van ${esc(hoofd.naam)}</button>`;
+    el.innerHTML = `<span class="gezicht" aria-hidden="true">${esc((wie?.naam ?? g.naam).charAt(0).toUpperCase())}</span><span><b>Comfort van ${esc(wie?.naam ?? g.naam)}</b><span>${esc(zin)}</span></span>${knop}`;
+  });
+}
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-vasthouden]');
+  if (!t) return;
+  const res = await fetch('api/bewoners', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actie: 'vasthouden', id: t.dataset.vasthouden || null }) });
+  if (res.ok) {
+    bewoners = await res.json();
+    tekenGeldt();
+  }
+});
 
 /*
  * Hoe voelt het? (besluit 134): de kaart komt uit gevoel.js. Kiezen welke

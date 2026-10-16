@@ -15,11 +15,11 @@
 
 const { $$, esc, haal, deur, nl } = app;
 
-const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null };
+const d = { huis: null, ind: null, comfort: null, aans: null, energie: null, zon: null, functies: null, sessie: null, bewoners: null };
 
 async function laad() {
-  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie'];
-  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie'].map((p) => haal(p)));
+  const namen = ['huis', 'ind', 'comfort', 'aans', 'energie', 'zon', 'functies', 'sessie', 'bewoners'];
+  const uit = await Promise.allSettled(['api/huis', 'api/indeling', 'api/comfort', 'api/aansluiting', 'api/energie', 'api/zon', 'api/functies', 'api/sessie', 'api/bewoners'].map((p) => haal(p)));
   uit.forEach((r, i) => {
     if (r.status === 'fulfilled') d[namen[i]] = r.value;
   });
@@ -30,7 +30,7 @@ async function laad() {
 
 /** Zes hoofdstukken, elk met kleine stappen (besluit 144). */
 const HOOFDSTUKKEN = [
-  ['Je huis', [['huis', 'Kamers en etages'], ['buiten', 'Buiten']]],
+  ['Je huis', [['huis', 'Kamers en etages'], ['buiten', 'Buiten'], ['bewoners', 'Wie woont hier']]],
   ['Apparaten', [['apparaten', 'Per kamer'], ['meten', 'Meten met']]],
   ['Klimaat', [['warmte', 'Wat elk apparaat doet'], ['comfort', 'Comfort']]],
   ['Energie', [['zon', 'Panelen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
@@ -63,6 +63,7 @@ function gedaan(id) {
   if (id === 'prijzen') return d.energie?.instellingen?.prijzen?.stroom != null;
   if (id === 'functies') return d.functies?.instellingen != null;
   if (id === 'wand') return d.sessie != null && (d.sessie.toegang !== 'sessions' || d.sessie.ingelogd);
+  if (id === 'bewoners') return (d.bewoners?.bewoners ?? []).length > 0;
   if (id === 'klaar') return STAPPEN.every(([x]) => gedaan(x));
   return false;
 }
@@ -256,6 +257,36 @@ function buitenStap() {
     kop: 'Wat ligt er rond je huis?',
     uitleg: kamers.length ? 'Kies per ruimte wat het is. Bij een oprit of tuin zet je daarna aan wat erbij hoort, zoals de auto of een tuinhuis.' : 'Er staat nog geen buitenruimte in je huis. Een tuin of oprit voeg je toe bij Indeling, op de etage Buiten.',
     inhoud: `${kamers.length ? `<div class="rijen">${rijen.join('')}</div>` : ''}${wat.length ? `<div class="noot">Gevonden buiten: ${esc(wat.join(', '))}. Die komen in de tekening.</div>` : ''}`,
+    links: '<button type="button" class="zachtknop" data-later>Later</button>',
+    rechts: '<a class="knop knop-licht" href="#bewoners">Volgende</a>',
+  };
+}
+
+/*
+ * Wie woont hier (besluit 147): wie al ingelogd is, en een code om anderen
+ * één keer te laten inloggen. Een bewoner komt er alleen zo bij; de app haalt
+ * niet iedereen uit Home Assistant.
+ */
+function bewonersStap() {
+  const b = d.bewoners;
+  const adres = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}inloggen.html`;
+  let qr = '';
+  try {
+    const q = window.qrcode(0, 'M');
+    q.addData(adres);
+    q.make();
+    qr = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
+  } catch {
+    qr = '';
+  }
+  const rijen = (b?.bewoners ?? []).map((x) => `<div class="waarderij">${esc(x.naam)}${x.ik ? ' (jij)' : ''}<span>${x.hoofd ? 'hoofdgebruiker' : 'volgt het comfort van de hoofdgebruiker'}</span></div>`).join('');
+  return {
+    waar: waarVan('bewoners'),
+    kop: 'Wie woont hier?',
+    uitleg: 'Wie één keer inlogt, staat erbij. De eerste die thuis is, bepaalt het comfort; de hoofdgebruiker staat bovenaan.',
+    inhoud: `${rijen ? `<div>${rijen}</div>` : '<p class="zacht" style="padding: 0">Nog niemand.</p>'}
+      <div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="zacht" style="padding: 0">Laat de anderen deze code scannen en één keer inloggen met Home Assistant. De wand aan de muur kiest bij zijn eerste inlog "Dit is een scherm".</span></div>
+      <div class="noot">De volgorde en wie wat volgt, zet je later bij Instellingen › Bewoners.</div>`,
     links: '<button type="button" class="zachtknop" data-later>Later</button>',
     rechts: '<a class="knop knop-licht" href="#apparaten">Volgende</a>',
   };
@@ -502,7 +533,7 @@ function wandStap() {
   return {
     waar: waarVan('wand'),
     kop: nodig && !s.ingelogd ? 'Log de wand één keer in' : 'De wand is klaar',
-    uitleg: !s ? 'Even kijken…' : !nodig ? 'Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.' : s.ingelogd ? `Ingelogd als ${s.naam ?? 'bewoner'}. Licht, screens en de deurbel werken vanaf hier.` : 'Kijken kan zonder. Licht, screens en de deurbel bedienen vraagt je account van Home Assistant, één keer op dit scherm.',
+    uitleg: !s ? 'Even kijken…' : !nodig ? 'Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.' : s.ingelogd ? `Ingelogd als ${s.naam ?? 'bewoner'}. Licht, screens en de deurbel werken vanaf hier.` : 'Log één keer in met je account van Home Assistant. Een tablet aan de muur kiest daarna "Dit is een scherm".',
     inhoud: `${wandRijen()}${nodig && !s.ingelogd ? `<a class="knop knop-licht" href="auth/login?terug=${terug}" style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Inloggen met Home Assistant</a>` : ''}`,
     links: '<button type="button" class="zachtknop" data-later>Later</button>',
     rechts: '<a class="knop knop-licht" href="#klaar">Volgende</a>',
@@ -560,7 +591,7 @@ function tekenNu() {
       return `<a class="stap${hier ? ' nu' : ''}${klaar ? ' klaar' : ''}" href="#${stappen[0][0]}" ${hier ? 'aria-current="step"' : ''}><span class="n" aria-hidden="true">${klaar && !hier ? '✓' : i + 1}</span><span class="kort">${esc(titel)}</span><span class="naam">${i + 1}. ${esc(titel)}</span><span class="stipjes" aria-hidden="true">${stipjes}</span><span class="sub">${esc(sub)}</span></a>`;
     }).join('');
   });
-  const v = { welkom, huis: huisStap, buiten: buitenStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
+  const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
   const actief = document.activeElement;
   // Niet onder de vinger opnieuw opbouwen terwijl iemand typt.
   if (actief && actief.matches?.('[data-kaart] input[type="text"], [data-kaart] input:not([type])') && actief.closest('[data-kaart]')) return;

@@ -244,7 +244,9 @@ export function buildSystemState(
   const occupancy: SystemState['occupancy'] = Object.fromEntries(
     config.occupancy.map((resident) => {
       const b = source.bool(resident.ref.id);
-      return [resident.id, b == null ? unavailable<boolean>() : value(b, nowMs)];
+      // Sinds wanneer iemand thuis of weg is, niet "nu": de keuze van het comfort
+      // wacht tien minuten (besluit 147). Onbekend telt als lang geleden.
+      return [resident.id, b == null ? unavailable<boolean>() : value(b, source.changedAt(resident.ref.id) ?? 0)];
     }),
   );
 

@@ -59,7 +59,10 @@ export interface ComfortVoorrang {
 
 export interface Comfort {
   readonly versie: 1;
+  /** Het comfort van het huis: dat van de hoofdgebruiker, en van wie hem volgt (besluit 147). */
   readonly kamers: Readonly<Record<string, ComfortRoom>>;
+  /** Een eigen comfort per bewoner (besluit 147): alleen de doelen en het plafond per kamer. */
+  readonly profielen?: Readonly<Record<string, Readonly<Record<string, ComfortRoom>>>>;
   readonly voorrang?: ComfortVoorrang;
   readonly dagdelen?: { readonly voorverwarmen: number; readonly dag: number; readonly nacht: number };
 }
@@ -89,7 +92,22 @@ export interface ComfortRoomView {
   readonly koeltVanNet: boolean;
 }
 
+/** Wiens comfort het is (besluit 147), en of je het mag aanpassen. */
+export interface ComfortVan {
+  readonly id: string | null;
+  readonly naam: string | null;
+  readonly hoofd: boolean;
+  /** Volgt de hoofdgebruiker: aanpassen maakt het een eigen comfort. */
+  readonly volgt: boolean;
+  readonly hoofdNaam: string | null;
+  readonly magAanpassen: boolean;
+  /** De bewoners om tussen te kiezen, als je dat mag. */
+  readonly bewoners: readonly { readonly id: string; readonly naam: string }[];
+}
+
 export interface ComfortView {
+  /** Wiens comfort dit is (besluit 147); weg zonder bewoners. */
+  readonly van?: ComfortVan;
   readonly kamers: readonly ComfortRoomView[];
   /** Wie voorgaat bij weinig zon, per richting (besluit 134): alleen kamers die het kunnen. */
   readonly voorrang: ComfortVoorrang;
@@ -129,6 +147,28 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
       .map((x) => x.id);
   const voorrang = { koelen: opVolgorde('cool', (k) => k.kanKoelen), verwarmen: opVolgorde('heat', (k) => k.kanVerwarmen) };
   return { kamers, voorrang, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
+}
+
+/**
+ * Het eigen comfort van een bewoner (besluit 147), als weergave: de zones met
+ * zijn doelen en plafond erover. Voorrang, op zon en de dagdelen zijn van het
+ * huis; die blijven zoals ze zijn.
+ */
+export function comfortViewVoorProfiel(config: SiteConfig, kamers: Readonly<Record<string, ComfortRoom>>): ComfortView {
+  const zones = config.zones.map((z) => {
+    const k = kamers[z.id];
+    if (k == null) return z;
+    const setpoints = { ...z.setpoints };
+    for (const m of COMFORT_MODES) {
+      const pair = k.modi[m];
+      if (pair == null) continue;
+      setpoints[m] = { ...(pair.heat != null ? { heat: pair.heat } : {}), ...(pair.cool != null ? { cool: pair.cool } : {}) };
+    }
+    const { comfortMaxC: _plafond, ...rest } = z;
+    const plafond = k.nooitWarmerC === undefined ? z.comfortMaxC : k.nooitWarmerC;
+    return { ...rest, setpoints, ...(plafond != null ? { comfortMaxC: plafond } : {}) };
+  });
+  return comfortView({ ...config, zones }, { versie: 1, kamers });
 }
 
 /* -------------------------------------------------------- over het bestand */

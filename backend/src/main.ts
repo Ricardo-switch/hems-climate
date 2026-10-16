@@ -36,7 +36,8 @@ import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from '
 import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web/layout.js';
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
-import { ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from './web/comfort.js';
+import { ComfortStore, controleerComfort, withComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, herken as herkenBewoner, hoofdVan, leesActie, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
 import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -51,7 +52,7 @@ import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
 import { LightSwitch } from './web/lights.js';
-import { SessionStore, homeAssistantLogin, type Access } from './web/auth.js';
+import { SessionStore, homeAssistantLogin, leesOfMaakSleutel, type Access } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -390,8 +391,11 @@ if (site && logDir !== '') {
  */
 const comfortStore = logDir !== '' ? new ComfortStore(logDir) : null;
 await comfortStore?.load();
+/* Bewoners (besluit 147): wie hier woont, op volgorde, met elk een eigen comfort of dat van de hoofdgebruiker. */
+const bewonersStore = logDir !== '' ? new BewonersStore(logDir) : null;
+await bewonersStore?.load();
 /** De ruwe configuratie met alles wat de app erover legt, en comfort zoals gegeven. */
-async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; config: SiteConfig; toegevoegd: string[] } | { ok: false; reden: string }> {
+async function configWithComfort(comfort: Comfort | null, bewoners: Bewoners = bewonersStore?.current ?? GEEN_BEWONERS): Promise<{ ok: true; config: SiteConfig; toegevoegd: string[] } | { ok: false; reden: string }> {
   if (!site) return { ok: false, reden: 'er is geen configuratie' };
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
   const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
@@ -409,6 +413,12 @@ async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; c
   // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
   const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
   const metComfort = withComfort(metBronnen.raw, comfort);
+  // Comfort per bewoner (besluit 147): de profielen op volgorde, en "toch die van" als iemand dat koos.
+  const profiles = profielenVoor(bewoners, comfort, site.config.occupancy);
+  if (profiles.length > 0) {
+    metComfort.raw = { ...metComfort.raw, profiles, ...(bewoners.vasthouden ? { profileHold: { id: bewoners.vasthouden.id, home: bewoners.vasthouden.home } } : {}) };
+    metComfort.toegevoegd.push(`comfort per bewoner: ${profiles.map((x) => x.name).join(', ')}`);
+  }
   // Een kamer die een apparaat kwijtraakte (besluit 138): doelen binnen wat de apparaten kunnen.
   const checked = parseSiteConfig(metRegeling.toegevoegd.length || (layout?.kamers ?? []).some((k) => k.rollen) ? doelenBinnenBereik(metComfort.raw) : metComfort.raw, { knownStrategies: strategies.ids });
   if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
@@ -416,7 +426,7 @@ async function configWithComfort(comfort: Comfort | null): Promise<{ ok: true; c
 }
 /** De indeling van nu, zodra de opslag er is; daarvoor die van het starten. */
 let layoutNu: (() => Layout | null) | null = null;
-if (site && (comfortStore?.current || (layoutAtStart?.kamers ?? []).some((k) => k.rollen || (k.bronnen ?? []).some((b) => b.opZon)))) {
+if (site && (comfortStore?.current || (bewonersStore?.current.volgorde.length ?? 0) > 0 || (layoutAtStart?.kamers ?? []).some((k) => k.rollen || (k.bronnen ?? []).some((b) => b.opZon)))) {
   try {
     const met = await configWithComfort(comfortStore?.current ?? null);
     if (met.ok) {
@@ -782,6 +792,12 @@ function meldingenRonde(): void {
     meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
     versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
+    // Wiens comfort er geldt (besluit 147), voor één melding bij een wissel.
+    comfort: (() => {
+      const p = runner?.latest?.explanation.profile;
+      const hoofd = bewonersStore ? hoofdVan(bewonersStore.current) : null;
+      return p && hoofd ? { id: p.id, naam: p.name, waarom: p.reason, hoofdNaam: hoofd.naam, hoofd: p.id === hoofd.id } : null;
+    })(),
   });
   void meldingen.bewaar().catch(() => undefined);
 }
@@ -951,6 +967,31 @@ if (weatherLog && site) {
   setTimeout(noteTomorrow, 60_000).unref();
 }
 
+/**
+ * Wiens comfort (besluit 147): dat van de gevraagde bewoner, anders van wie er
+ * kijkt, anders van de hoofdgebruiker. Wie volgt, ziet dat van de
+ * hoofdgebruiker; aanpassen maakt het een eigen comfort.
+ */
+function comfortVoor(wie: Wie, gevraagd: string | null): { id: string | null; view: ComfortView } {
+  return comfortVanBewoner(webConfig()!, comfortStore?.current ?? null, bewonersStore?.current ?? GEEN_BEWONERS, wie, gevraagd);
+}
+
+/*
+ * De sleutel voor de assistent van Home Assistant (besluit 147): de hele app
+ * vraagt een inlog, en de vraag van de assistent komt zonder mens erachter.
+ * Eén keer gemaakt, in de logmap; bij Instellingen › App en toegang te zien.
+ */
+const sleutel = logDir !== '' ? await leesOfMaakSleutel(join(logDir, 'sleutel-assistent.txt')) : null;
+
+// "Toch die van" voorbij (besluit 147): opruimen, zodat hij later niet vanzelf terugkomt.
+if (bewonersStore) {
+  setInterval(() => {
+    const snap = runner?.latest;
+    if (!vasthoudenVoorbij(bewonersStore.current, snap ? { atMs: snap.atMs, reden: snap.explanation.profile?.reason ?? null } : null)) return;
+    void bewonersStore.save(zonderVasthoudenVan(bewonersStore.current)).then(() => herlaadUitDeApp('toch die van is voorbij'));
+  }, 60_000).unref();
+}
+
 if (webPort != null) {
   web = new WebServer({
     access,
@@ -990,20 +1031,67 @@ if (webPort != null) {
     ...(comfortStore && siteConfig
       ? {
           comfort: {
-            view: () => comfortView(webConfig()!, comfortStore.current),
-            save: async (body: unknown) => {
+            view: (wie: Wie, bewoner: string | null) => comfortVoor(wie, bewoner).view,
+            save: async (body: unknown, wie: Wie, bewoner: string | null) => {
+              const doel = comfortVoor(wie, bewoner);
+              if (!doel.view.van?.magAanpassen && doel.view.van != null) return { ok: false as const, status: 403, reden: 'alleen je eigen comfort, of als hoofdgebruiker' };
               const check = controleerComfort(body, siteConfig!);
               if (!check.ok) return { ok: false as const, status: 400, reden: check.reden };
-              const met = await configWithComfort(check.comfort);
+              const huidig = comfortStore.current;
+              const b = bewonersStore?.current ?? GEEN_BEWONERS;
+              let comfort: Comfort;
+              let bewoners = b;
+              if (doel.id == null || doel.id === hoofdVan(b)?.id) {
+                // Het comfort van het huis, van de hoofdgebruiker; de eigen comforts blijven.
+                comfort = { ...check.comfort, ...(huidig?.profielen ? { profielen: huidig.profielen } : {}) };
+              } else {
+                // Een eigen comfort (besluit 147): alleen de doelen en het plafond per kamer.
+                const eigen: Record<string, ComfortRoom> = Object.fromEntries(Object.entries(check.comfort.kamers).map(([k, v]) => [k, { modi: v.modi, ...(v.nooitWarmerC !== undefined ? { nooitWarmerC: v.nooitWarmerC } : {}) }]));
+                comfort = { ...(huidig ?? { versie: 1, kamers: {} }), profielen: { ...huidig?.profielen, [doel.id]: eigen } };
+                bewoners = { ...b, bewoners: { ...b.bewoners, [doel.id]: { ...b.bewoners[doel.id]!, comfort: 'eigen' } } };
+              }
+              const met = await configWithComfort(comfort, bewoners);
               if (!met.ok) return { ok: false as const, status: 400, reden: `past niet in de regeling: ${met.reden}` };
               if (runner && !runner.setConfig(met.config, allStates.values())) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
-              await comfortStore.save(check.comfort);
+              await comfortStore.save(comfort);
+              if (bewoners !== b) await bewonersStore!.save(bewoners);
               siteConfig = met.config;
-              return { ok: true as const, view: comfortView(webConfig()!, check.comfort) };
+              return { ok: true as const, view: comfortVoor(wie, doel.id).view };
             },
           },
         }
       : {}),
+    ...(bewonersStore && siteConfig
+      ? {
+          bewoners: {
+            view: (wie: Wie) => bewonersView(bewonersStore.current, wie, siteConfig!.occupancy, (id) => allStates.get(id), runner?.latest?.explanation.profile ?? null),
+            actie: async (body: unknown, wie: Wie & { readonly naam: string }) => {
+              const a = leesActie(body);
+              if (a == null) return { ok: false as const, status: 400, reden: 'dat is geen actie die de app kent' };
+              const thuis = runner?.latest?.explanation.profile?.home ?? [];
+              const uit = voerUit(bewonersStore.current, comfortStore?.current ?? null, a, wie, siteConfig!.occupancy, thuis, Date.now());
+              if (!uit.ok) return uit;
+              const comfort = uit.comfort !== undefined ? uit.comfort : (comfortStore?.current ?? null);
+              const met = await configWithComfort(comfort, uit.bewoners);
+              if (!met.ok) return { ok: false as const, status: 400, reden: `past niet in de regeling: ${met.reden}` };
+              if (runner && !runner.setConfig(met.config, allStates.values())) return { ok: false as const, status: 409, reden: 'de regeling kon het niet overnemen; het gaat in na de volgende start' };
+              if (uit.comfort !== undefined && uit.comfort != null) await comfortStore?.save(uit.comfort);
+              await bewonersStore.save(uit.bewoners);
+              siteConfig = met.config;
+              return { ok: true as const, view: bewonersView(uit.bewoners, wie, siteConfig.occupancy, (id) => allStates.get(id), runner?.latest?.explanation.profile ?? null) };
+            },
+            herken: async (account: { readonly userId: string; readonly naam: string }) => {
+              const r = herkenBewoner(bewonersStore.current, account, personenUit(allStates.values()), siteConfig!.occupancy, Date.now());
+              if (r.soort === 'vraag') return 'vraag' as const;
+              if (r.soort !== 'bewoner' || !r.nieuw) return null;
+              await bewonersStore.save(r.bewoners);
+              await herlaadUitDeApp('een nieuwe bewoner');
+              return 'welkom' as const;
+            },
+          },
+        }
+      : {}),
+    ...(sleutel ? { sleutel } : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
     // De stem van het huis (besluit 141): Piper in Home Assistant; er wordt niets geschakeld.
     stem: new Stem({

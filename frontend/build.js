@@ -58,6 +58,9 @@ for (const [name, from] of Object.entries(FONTS)) {
   await copyFile(join(here, 'node_modules', from), join(out, name));
   copied.push(name);
 }
+/* De QR-code bij Bewoners (besluit 147): qrcode-generator (MIT), lokaal, zonder internet. */
+await copyFile(join(here, 'node_modules', 'qrcode-generator/dist/qrcode.js'), join(out, 'qrcode.js'));
+copied.push('qrcode.js');
 
 const args = [
   '--input',
@@ -118,7 +121,7 @@ async function stempel() {
     'vandaag.html': ['vandaag.js', 'rondleiding.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'kamer.html': ['kamer.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'rondleiding.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'inrichten.html': ['inrichten.js', 'film.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'inrichten.html': ['inrichten.js', 'film.js', 'qrcode.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'functies.html': ['functies.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     // De groepen achter het tandwiel (besluit 130).
@@ -126,6 +129,10 @@ async function stempel() {
     'energie.html': ['energie.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'regeling.html': ['regeling.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'toegang.html': ['toegang.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    // Bewoners en inloggen (besluit 147).
+    'bewoners.html': ['bewoners.js', 'qrcode.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'welkom.html': ['welkom.js', 'basis.js', 'basis.css', 'kit/kit.css'],
+    'inloggen.html': ['kit/kit.css', 'basis.css', 'kit/huis.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {
     const html = join(out, pagina);

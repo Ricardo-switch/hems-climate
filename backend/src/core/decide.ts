@@ -113,6 +113,8 @@ function explain(
           })),
         }
       : {}),
+    // Welk comfort er gold (besluit 147), alleen met profielen.
+    ...(ctx.profile ? { profile: ctx.profile } : {}),
   };
 }
 

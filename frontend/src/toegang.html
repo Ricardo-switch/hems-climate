@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="only dark">
-<title>App en toegang · Smart Climate</title>
+<title>Bewoners en toegang · Smart Climate</title>
 <link rel="stylesheet" href="kit/kit.css">
 <link rel="stylesheet" href="basis.css">
 <link rel="manifest" href="manifest.webmanifest">
@@ -13,7 +13,11 @@
 <link rel="apple-touch-icon" href="icoon-192.png">
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
-  /* App en toegang (besluit 130): inloggen, je gegevens, de versie. */
+  /* Bewoners en toegang (besluit 130 en 147): wie hier woont, inloggen, de sleutel voor de assistent, je gegevens, de versie. */
+  .sleutel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); word-break: break-all; user-select: all; }
+  .rij-b { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14.5px; }
+  .rij-b:first-of-type { border-top: 0; }
+  .rij-b span { color: var(--zacht); font-size: 13px; }
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
@@ -40,11 +44,11 @@
     <main class="groep">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <div class="groepkop">
-        <div><h1 class="kop-1">App en toegang</h1><p class="lead">Wie er ingelogd is, je gegevens, en welke versie er draait.</p></div>
+        <div><h1 class="kop-1">Bewoners en toegang</h1><p class="lead">Wie hier woont, wie er ingelogd is, je gegevens, en welke versie er draait.</p></div>
         <span class="bewaard" data-bewaard></span>
       </div>
       <div class="groepveld">
-        <nav class="glas delen schuift" aria-label="Delen van App en toegang" data-delen></nav>
+        <nav class="glas delen schuift" aria-label="Delen van Bewoners en toegang" data-delen></nav>
         <section class="glas vorm schuift" data-vorm></section>
         <aside class="naast schuift" data-naast></aside>
       </div>
@@ -54,8 +58,8 @@
   <div id="tel" class="tel">
     <div class="inhoud">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
-      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px">App en toegang</h1><span class="bewaard" data-bewaard></span></div>
-      <nav class="glas delen" aria-label="Delen van App en toegang" data-delen></nav>
+      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px">Bewoners en toegang</h1><span class="bewaard" data-bewaard></span></div>
+      <nav class="glas delen" aria-label="Delen van Bewoners en toegang" data-delen></nav>
       <section class="glas vorm" data-vorm></section>
       <div class="naast" data-naast></div>
     </div>

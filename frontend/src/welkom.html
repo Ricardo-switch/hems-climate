@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Welkom · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<style>
+  /*
+   * De eerste inlog (besluit 147, schets Wand-Eerste-inlog). Eén kaart midden
+   * op het scherm: het welkom met je naam, of de vraag of je hier woont of dat
+   * dit een scherm is, en daarna hoe het huis weet of je thuis bent.
+   */
+  html, body { margin: 0; min-height: 100%; }
+  body { color: var(--tekst); }
+  main { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; box-sizing: border-box; }
+  .kaart { width: min(460px, 100%); padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
+  .merk { display: flex; align-items: center; gap: 10px; font-family: var(--kop); font-weight: 600; font-size: 15px; color: var(--zacht); }
+  .merk i { width: 26px; height: 26px; border-radius: 8px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  h1 { margin: 4px 0 0; font-family: var(--kop); font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--zacht); }
+  .vak { display: flex; flex-direction: column; gap: 6px; }
+  .vak > label, .vak > span:first-child { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .veld { height: 48px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); color: var(--tekst); font: inherit; font-size: 17px; font-weight: 600; }
+  .veld:focus-visible { outline: 2px solid var(--ijs); outline-offset: 1px; }
+  .hint { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .keus { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: center; padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .keus[aria-pressed="true"] { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.1); }
+  .keus .ik { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); }
+  .keus .ik svg { width: 24px; height: 24px; }
+  .keus b { display: block; font-size: 17px; }
+  .keus span span { display: block; font-size: 13.5px; color: var(--zacht); margin-top: 2px; line-height: 1.4; }
+  .keus:focus-visible, .bron:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .bron { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 46px; padding: 0 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
+  .bron[aria-pressed="true"] { background: rgba(255, 255, 255, 0.14); }
+  .bron span { font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
+  .bron span.thuis { color: var(--mint); }
+  .voet { margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .zacht { border: 0; background: none; color: var(--zacht); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 0; text-decoration: none; }
+  .fout { min-height: 18px; font-size: 13px; color: var(--gloed); }
+</style>
+</head>
+<body class="lucht lucht-avond">
+  <main><section class="glas kaart" data-kaart aria-live="polite"><p>Even kijken…</p></section></main>
+  <script src="basis.js"></script>
+  <script src="welkom.js"></script>
+</body>
+</html>

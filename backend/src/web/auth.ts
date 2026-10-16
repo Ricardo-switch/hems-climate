@@ -28,6 +28,8 @@ export type Role = 'bewoner' | 'beheerder';
 export interface Visitor {
   readonly naam: string;
   readonly rol: Role;
+  /** Het account in Home Assistant (besluit 147); null als dat niet bekend is. */
+  readonly userId: string | null;
 }
 
 /** Wat elke deur vraagt (besluit 99). De indeling en de onboarding zijn voor de beheerder. */
@@ -45,6 +47,8 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/functies': 'beheerder',
   // Comfort zet de bewoner zelf (besluit 130).
   '/api/comfort': 'bewoner',
+  // Bewoners (besluit 147): iedereen die ingelogd is; wat je aan een ander mag, toetst de deur zelf.
+  '/api/bewoners': 'bewoner',
   '/api/onboarding': 'beheerder',
 };
 
@@ -158,7 +162,7 @@ export class SessionStore {
       s.seenMs = now;
       await this.#save();
     }
-    return { naam: s.naam, rol: s.rol };
+    return { naam: s.naam, rol: s.rol, userId: s.userId };
   }
 
   async remove(id: string | null): Promise<void> {
@@ -283,6 +287,44 @@ export type Access =
 export function safeReturn(raw: string | null): string {
   if (raw == null || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return '/thuis.html';
   return raw;
+}
+
+/** Achter Ingress heeft Home Assistant de bezoeker al vastgesteld (besluit 42), met zijn account. */
+export function ingressVisitor(req: IncomingMessage): Visitor {
+  const id = req.headers['x-remote-user-id'];
+  return {
+    naam: String(req.headers['x-remote-user-display-name'] ?? req.headers['x-remote-user-name'] ?? 'bewoner'),
+    rol: 'beheerder',
+    userId: typeof id === 'string' && id !== '' ? id : null,
+  };
+}
+
+/**
+ * Wat zonder inlog mag (besluit 147): de inlogpagina en het inloggen zelf,
+ * of de dienst draait, en de bestanden voor opmaak en script, waar niets
+ * persoonlijks in zit. Elke pagina en elke vraag aan de dienst vraagt een inlog.
+ */
+export function openZonderInlog(path: string): boolean {
+  if (path.startsWith('/auth/') || path === '/api/sessie' || path === '/api/health' || path === '/inloggen.html') return true;
+  if (path === '/' || path.startsWith('/api/') || path.startsWith('/scene-plaatjes/') || path.endsWith('.html')) return false;
+  return /\.(js|css|woff2|png|svg|webmanifest|ico)$/.test(path);
+}
+
+/**
+ * De sleutel voor de assistent van Home Assistant (besluit 147): één keer
+ * gemaakt en daarna dezelfde, zodat Home Assistant hem kan onthouden.
+ */
+export async function leesOfMaakSleutel(file: string): Promise<string> {
+  try {
+    const bestaand = (await readFile(file, 'utf-8')).trim();
+    if (bestaand.length >= 24) return bestaand;
+  } catch {
+    // Nog geen sleutel.
+  }
+  const nieuw = randomBytes(24).toString('base64url');
+  await writeFile(file, `${nieuw}
+`, { encoding: 'utf-8', mode: 0o600 });
+  return nieuw;
 }
 
 /** Een willekeurige waarde die een inlogpoging aan zijn terugkeer koppelt. */

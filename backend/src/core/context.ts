@@ -7,11 +7,59 @@
  * anders dan in de sensor die het dashboard voedde.
  */
 
-import type { Mode, SiteConfig, Zone } from './model.js';
-import { actuatorById } from './model.js';
+import type { ComfortProfile, Mode, SiteConfig, Zone } from './model.js';
+import { actuatorById, PROFILE_SETTLE_MS } from './model.js';
 import { isOverridden } from './override.js';
 import type { SystemState } from './state.js';
 import { readOr, timerActive } from './state.js';
+
+/**
+ * Welk comfort er geldt (besluit 147): van welk profiel, en waarom. `home` zijn
+ * de profielen die nu thuis zijn, na de rust van tien minuten.
+ */
+export interface ProfileChoice {
+  readonly id: string;
+  readonly name: string;
+  readonly reason: 'thuis' | 'niemand' | 'gekozen';
+  readonly home: readonly string[];
+}
+
+/**
+ * Thuis, met rust: wie net thuiskwam, telt de eerste tien minuten nog als weg,
+ * en wie net wegging nog als thuis. Zo wisselt het comfort niet bij een
+ * boodschap. De meting draagt sinds wanneer ze zo staat.
+ */
+function settledHome(state: SystemState, sourceId: string): boolean {
+  const r = state.occupancy[sourceId];
+  if (!r?.ok) return false;
+  return state.nowMs - r.atMs < PROFILE_SETTLE_MS ? !r.value : r.value;
+}
+
+/** Het profiel dat geldt, of null zonder profielen. Zuiver: dezelfde toestand geeft dezelfde keuze. */
+export function chooseProfile(config: SiteConfig, state: SystemState): ProfileChoice | null {
+  const profiles = config.profiles ?? [];
+  if (profiles.length === 0) return null;
+  const home = profiles.filter((p) => p.occupancyIds.some((id) => settledHome(state, id))).map((p) => p.id);
+  const pick = (p: ComfortProfile, reason: ProfileChoice['reason']): ProfileChoice => ({ id: p.id, name: p.name, reason, home });
+  const hold = config.profileHold;
+  const held = hold ? profiles.find((p) => p.id === hold.id) : undefined;
+  if (held && hold && hold.home.length === home.length && hold.home.every((id) => home.includes(id))) return pick(held, 'gekozen');
+  const first = profiles.find((p) => home.includes(p.id));
+  return first ? pick(first, 'thuis') : pick(profiles[0]!, 'niemand');
+}
+
+/** De zone zoals het geldende profiel hem wil: eigen doelen en plafond over die van de zone. */
+function zoneFor(zone: Zone, profile: ComfortProfile | undefined): Zone {
+  const own = profile?.zones[zone.id];
+  if (own == null) return zone;
+  const { comfortMaxC: _plafond, ...rest } = zone;
+  const plafond = own.comfortMaxC === undefined ? zone.comfortMaxC : own.comfortMaxC;
+  return {
+    ...rest,
+    setpoints: own.setpoints ? ({ ...zone.setpoints, ...own.setpoints } as Zone['setpoints']) : zone.setpoints,
+    ...(plafond != null ? { comfortMaxC: plafond } : {}),
+  };
+}
 
 export interface ZoneDerived {
   readonly zone: Zone;
@@ -60,6 +108,8 @@ export interface DecisionContext {
   readonly unreliableInputs: readonly string[];
   readonly failsafeActive: boolean;
   readonly zones: readonly ZoneDerived[];
+  /** Welk comfort er geldt (besluit 147); null zonder profielen. */
+  readonly profile: ProfileChoice | null;
 }
 
 /**
@@ -271,7 +321,10 @@ export function buildContext(
     .filter((ref) => state.inputHealth[ref.id] !== true)
     .map((ref) => ref.id);
 
-  const zones: ZoneDerived[] = config.zones.map((zone) => {
+  const profile = chooseProfile(config, state);
+  const profileConfig = profile ? config.profiles?.find((p) => p.id === profile.id) : undefined;
+  const zones: ZoneDerived[] = config.zones.map((raw) => {
+    const zone = zoneFor(raw, profileConfig);
     const reading = state.zones[zone.id]?.temperatureC;
     const temperatureC = reading?.ok ? reading.value : null;
     const pair = zone.setpoints[mode];
@@ -315,6 +368,7 @@ export function buildContext(
     unreliableInputs,
     failsafeActive: unreliableInputs.length > 0,
     zones,
+    profile,
   };
 }
 

@@ -340,6 +340,40 @@ export interface OccupancySource {
   readonly ref: DeviceRef;
 }
 
+/**
+ * Comfort per bewoner (besluit 147). De profielen staan op volgorde: de eerste
+ * is de hoofdgebruiker. Wie het eerst op de lijst thuis is, bepaalt het
+ * comfort; is er niemand thuis, dan geldt de hoofdgebruiker. Een zone die een
+ * profiel niet noemt, volgt de zone zelf, en die is van de hoofdgebruiker.
+ */
+export interface ComfortProfile {
+  readonly id: string;
+  readonly name: string;
+  /** De aanwezigheidsbronnen (`occupancy[].id`) van deze bewoner; leeg telt nooit als thuis. */
+  readonly occupancyIds: readonly string[];
+  /** Eigen doelen per zone; weg is zoals de zone zelf. */
+  readonly zones: Readonly<Record<string, ProfileZone>>;
+}
+
+export interface ProfileZone {
+  readonly setpoints?: Readonly<Partial<Record<Mode, SetpointPair>>>;
+  /** Nooit warmer dan; null is geen plafond. Weg is zoals de zone. */
+  readonly comfortMaxC?: number | null;
+}
+
+/**
+ * "Toch die van Ricardo" (besluit 147): dit profiel geldt zolang precies deze
+ * profielen thuis zijn. Komt er iemand thuis of gaat er iemand weg, dan
+ * vervalt het vanzelf.
+ */
+export interface ProfileHold {
+  readonly id: string;
+  readonly home: readonly string[];
+}
+
+/** Zo lang moet iemand thuis of weg zijn voordat het comfort wisselt: een boodschap laat het met rust. */
+export const PROFILE_SETTLE_MS = 10 * 60_000;
+
 export interface DayScheduleConfig {
   /** Uur waarop voorverwarmen begint, 0-23. */
   readonly preheatFromHour: number;
@@ -416,6 +450,9 @@ export interface SiteConfig {
   readonly actuators: readonly Actuator[];
   readonly power: PowerSources;
   readonly occupancy: readonly OccupancySource[];
+  /** Comfort per bewoner, op volgorde (besluit 147); weg is één comfort voor het huis. */
+  readonly profiles?: readonly ComfortProfile[];
+  readonly profileHold?: ProfileHold;
   readonly schedule: DayScheduleConfig;
   /** Strategie-ID's in volgorde van afnemende voorrang. */
   readonly enabledStrategies: readonly string[];

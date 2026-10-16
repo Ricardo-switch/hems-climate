@@ -823,6 +823,16 @@ export function ask(question: Question, ctx: AskContext): Answer {
       const saidSun = f.list.some((x) => x.bron === 'zon.vermogen');
       const power = powerSentence(f, e, lang, !saidSun);
       if (power) out.push(power);
+      // Wiens comfort er geldt (besluit 147), alleen als het niet dat van de hoofdgebruiker is.
+      const profiel = snapshot.explanation.profile;
+      const hoofd = config.profiles?.[0];
+      if (profiel && hoofd && (profiel.id !== hoofd.id || profiel.reason === 'gekozen')) {
+        out.push(
+          profiel.reason === 'gekozen'
+            ? nl ? `Het comfort van ${profiel.name} is gekozen, tot er iemand thuiskomt of weggaat.` : `${profiel.name}'s comfort was chosen, until someone comes home or leaves.`
+            : nl ? `Het comfort van ${profiel.name} geldt, want ${hoofd.name} is weg.` : `${profiel.name}'s comfort applies, because ${hoofd.name} is away.`,
+        );
+      }
       if (shadow) out.push(nl ? 'Zelf schakel ik nog niets: ik kijk mee en leer je huis kennen.' : 'I do not switch anything myself yet: I watch and learn your house.');
       return done(out.join(' '));
     }

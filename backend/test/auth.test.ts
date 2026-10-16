@@ -49,12 +49,12 @@ describe('sessies', () => {
     let now = 1_000_000;
     const store = new SessionStore({ logDir: dir, now: () => now });
     const id = await store.create({ userId: 'u1', naam: 'Ricardo', rol: 'beheerder' });
-    expect(await store.visitor(id)).toEqual({ naam: 'Ricardo', rol: 'beheerder' });
+    expect(await store.visitor(id)).toEqual({ naam: 'Ricardo', rol: 'beheerder', userId: 'u1' });
     expect(await store.visitor('verzonnen')).toBeNull();
 
     // Na een herstart, uit het bestand.
     const again = new SessionStore({ logDir: dir, now: () => now });
-    expect(await again.visitor(id)).toEqual({ naam: 'Ricardo', rol: 'beheerder' });
+    expect(await again.visitor(id)).toEqual({ naam: 'Ricardo', rol: 'beheerder', userId: 'u1' });
     expect(await readFile(join(dir, 'sessies.json'), 'utf-8')).not.toContain(id);
 
     now += SESSION_IDLE_MS + 1;

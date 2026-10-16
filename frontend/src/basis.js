@@ -119,6 +119,11 @@
       throw fout;
     }
     online();
+    // Niet (meer) ingelogd (besluit 147): naar het inloggen, met de weg terug naar deze pagina.
+    if (res.status === 401) {
+      location.href = `inloggen.html?terug=${encodeURIComponent(location.pathname + location.hash)}`;
+      throw new Error(`${pad}: log eerst in`);
+    }
     if (!res.ok) throw new Error(`${pad}: ${res.status}`);
     return res.json();
   }
@@ -375,6 +380,8 @@
     meter: ['rood', '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>'],
     versie: ['paars', '<path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/>'],
     mijlpaal: ['blauw', '<path d="M4 18c3-8 6-10 8-10s4 3 8 0"/>'],
+    // Wiens comfort geldt (besluit 147): een persoon.
+    comfort: ['geel', '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'],
     goed: ['groen', '<path d="M5 12l5 5 9-10"/>'],
     onderhoud: ['grijs', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
   };

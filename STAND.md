@@ -203,8 +203,8 @@ verwijzing bestaat.
   ([132]).
 - **Comfort** zegt per dagdeel wanneer het aan- en uitgaat, wat er op zon
   gebeurt, en per kamer of koelen van het net mag ([133]).
-- **Voorrang** geldt per richting, koelen en verwarmen; **Hoe voelt het** werkt
-  zonder inlog, geeft een antwoord en een voorstel ([134]).
+- **Voorrang** geldt per richting, koelen en verwarmen; **Hoe voelt het** geeft
+  een antwoord en een voorstel ([134]); sinds [147] vraagt ook dat een inlog.
 - **Vrijgeven** gaat tot 1 november op de eigen pc met `tools/vrijgeven.sh`;
   daarna weer via GitHub ([135]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
@@ -232,6 +232,10 @@ verwijzing bestaat.
   tijden uit zoals je ze zegt, en kent ook morgen en wat iets kost ([142]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
+- **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
+  thuis is, bepaalt het comfort, na tien minuten rust. Bewoners komen erbij
+  door één keer in te loggen; de wand is een scherm. De hele app vraagt een
+  inlog; de assistent van Home Assistant heeft een sleutel ([147]).
 - **Comfort uit de app gaat voor** de helpers van het oude systeem; het huis
   heeft een voordeur, de meterkast, de camera, de tuin en de buitenunits zoals
   ze zijn ([143]).
@@ -245,10 +249,9 @@ verwijzing bestaat.
   Ingress ([42]), gevoel ([84]), indeling ([96]) en "klaar voor" bij de droger
   ([101]) naar eigen bestanden, lampen aan en uit ([97]) en de scènes van de
   eigen ruimtes ([100]). Klimaat en screens blijven dicht tot B.
-- **De weergave luistert,** maar alleen om te lezen ([23]). Kijken blijft open
-  op het thuisnetwerk en in het tailnet; bedienen vraagt een inlog met je
-  Home Assistant-account, en de dienst antwoordt alleen op bekende hostnamen
-  ([99]).
+- **De weergave luistert,** maar alleen om te lezen ([23]). De hele app vraagt
+  een inlog met je Home Assistant-account, ook kijken ([147]); de dienst
+  antwoordt alleen op bekende hostnamen ([99]).
 - **Licht in kleur en wit gaat door de deur van de lampen; Hue-scènes van de
   eigen ruimtes krijgen een eigen smalle deur** ([100]).
 - **De ruwe export van Home Assistant** hoort niet in git ([38]).
@@ -430,4 +433,5 @@ verwijzing bestaat.
 [144]: DECISIONS.md#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles
 [145]: DECISIONS.md#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven
 [146]: DECISIONS.md#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis
+[147]: DECISIONS.md#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app
 <!-- links:einde -->

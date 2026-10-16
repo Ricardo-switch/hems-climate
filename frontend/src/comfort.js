@@ -11,6 +11,11 @@ const { $$, nl, esc, haal } = app;
 
 let comfort = null;
 let state = null;
+/** Wiens comfort (besluit 147): uit het adres, anders dat van wie er kijkt. */
+const vanBewoner = new URLSearchParams(location.search).get('bewoner');
+const deur = `api/comfort${vanBewoner ? `?bewoner=${encodeURIComponent(vanBewoner)}` : ''}`;
+/** Voorrang en de dagdelen zijn van het huis: alleen bij het comfort van de hoofdgebruiker. */
+const vanHetHuis = () => !comfort?.van || comfort.van.hoofd;
 let zon = null;
 /** Welke regels hun uitleg tonen (besluit 133): "kamer:dagdeel:soort". */
 const open = new Set();
@@ -29,7 +34,7 @@ const MODI = ['dag', 'nacht', 'afwezig', 'vakantie'];
 const NIEUW = { heat: { dag: 20, nacht: 17, afwezig: 16, vakantie: 12 }, cool: { dag: 24, nacht: 24, afwezig: 26, vakantie: 28 } };
 
 async function laadAlles() {
-  const [c, s, z] = await Promise.allSettled([haal('api/comfort'), haal('api/state'), haal('api/zon')]);
+  const [c, s, z] = await Promise.allSettled([haal(deur), haal('api/state'), haal('api/zon')]);
   if (c.status === 'fulfilled') comfort = c.value;
   if (s.status === 'fulfilled') state = s.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -54,8 +59,8 @@ function delen() {
     { kop: 'Kamers' },
     ...comfort.kamers.map((k) => ({ id: k.id, titel: k.naam, zin: samenvatting(k), stand: leeg(k) ? 'leeg' : 'goed' })),
     { kop: 'Het hele huis' },
-    { id: 'dagdelen', titel: 'Dagdelen', zin: `dag ${d.dag}:00, nacht ${d.nacht}:00`, stand: 'goed' },
-    ...(comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1 ? [{ id: 'voorrang', titel: 'Voorrang', zin: voorrangZin(), stand: 'goed' }] : []),
+    ...(vanHetHuis() ? [{ id: 'dagdelen', titel: 'Dagdelen', zin: `dag ${d.dag}:00, nacht ${d.nacht}:00`, stand: 'goed' }] : []),
+    ...(vanHetHuis() && (comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1) ? [{ id: 'voorrang', titel: 'Voorrang', zin: voorrangZin(), stand: 'goed' }] : []),
     { id: 'afwezig', titel: 'Afwezig en vakantie', zin: 'per kamer, vanzelf of zelf', stand: 'goed' },
   ];
 }
@@ -248,12 +253,41 @@ function tekenNu() {
   if (!comfort) return;
   // Niet onder de vinger opnieuw opbouwen.
   if (sleept) return;
+  tekenWie();
   const nu = groep.tekenDelen(delen());
   const k = comfort.kamers.find((x) => x.id === nu);
   const vorm = k ? kamerVorm(k) : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : afwezigVorm();
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
 }
+
+/*
+ * Wiens comfort (besluit 147): jouw comfort, of dat van een ander als je de
+ * hoofdgebruiker bent. Wie volgt, ziet dat van de hoofdgebruiker; iets
+ * veranderen maakt het een eigen comfort.
+ */
+function tekenWie() {
+  const v = comfort?.van;
+  if (!v) return;
+  const titel = v.hoofd && !vanBewoner ? 'Comfort' : vanBewoner && v.id !== vanBewoner ? 'Comfort' : `Comfort van ${v.naam}`;
+  const lead = !v.magAanpassen
+    ? `Het comfort van ${v.naam}. Alleen ${v.naam} of de hoofdgebruiker past het aan.`
+    : v.hoofd
+      ? 'Hoe warm of koel je het wilt, per kamer en per dagdeel. Dit geldt als de hoofdgebruiker thuis is, en als er niemand thuis is.'
+      : v.volgt
+        ? `Volgt nu ${v.hoofdNaam}. Verander je iets, dan wordt het een eigen comfort.`
+        : `Een eigen comfort. Het geldt als ${v.naam} thuis is en eerder op de lijst staat dan wie er verder thuis is.`;
+  const kies = v.bewoners.length > 1
+    ? `<select class="veld wiekies" data-wie aria-label="Wiens comfort">${v.bewoners.map((b) => `<option value="${esc(b.id)}" ${b.id === v.id ? 'selected' : ''}>${esc(b.naam)}${b.id === v.bewoners[0].id ? ' (hoofdgebruiker)' : ''}</option>`).join('')}</select>`
+    : '';
+  $$('[data-titel]').forEach((el) => (el.textContent = titel));
+  $$('[data-lead]').forEach((el) => (el.textContent = lead));
+  $$('[data-wiekies]').forEach((el) => (el.innerHTML = kies));
+}
+document.addEventListener('change', (e) => {
+  const t = e.target.closest?.('[data-wie]');
+  if (t) location.href = `comfort.html?bewoner=${encodeURIComponent(t.value)}`;
+});
 
 /* ------------------------------------------------------------ bewaren */
 
@@ -264,7 +298,7 @@ function bewaar() {
     ...(comfort.voorrang ? { voorrang: { koelen: comfort.voorrang.koelen, verwarmen: comfort.voorrang.verwarmen } } : {}),
   };
   groep.bewaarStraks(async () => {
-    const uit = await groep.stuur('api/comfort', body);
+    const uit = await groep.stuur(deur, body);
     if (uit?.ok) {
       comfort = uit.antwoord;
       teken();

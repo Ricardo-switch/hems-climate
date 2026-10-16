@@ -29,7 +29,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { chromium, type Browser, type Page } from 'playwright';
+import { chromium, type Browser, type BrowserContextOptions, type Page } from 'playwright';
 
 import type { LiveSnapshot } from '../src/adapters/homeassistant/shadow.js';
 import { recordRun } from '../src/adapters/runs.js';
@@ -94,6 +94,7 @@ const ENERGY_SOURCE: EnergySource = {
   },
 };
 import { SessionStore } from '../src/web/auth.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, herken, leesActie, personenUit, voegToe, voerUit } from '../src/web/bewoners.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { CoverSwitch } from '../src/web/covers.js';
 import type { HouseBattery, HouseReport } from '../src/web/house.js';
@@ -224,6 +225,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   let functiesStore: FunctiesStore;
   const sessions = new SessionStore();
   let sessionId = '';
+  /** Bewoners (besluit 147), met een echt bestand. */
+  let bewonersStore: BewonersStore;
+  /** De echte fetch: hieronder krijgt elke vraag aan de testdienst de inlog mee. */
+  const echteFetch = globalThis.fetch;
   let stopCamera: () => Promise<void> = async () => {};
   /** Hoeveel live-beelden de nagemaakte Home Assistant nu geeft. */
   let liveOpen = 0;
@@ -250,6 +255,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // De zon en je aansluiting (besluit 103): de droger staat in de configuratie, een vaatwasser is nieuw.
     connStore = new ConnectionStore(dir);
     functiesStore = new FunctiesStore(dir);
+    bewonersStore = new BewonersStore(dir);
     const connFound = {
       fasen: [{ id: 'L1', current: 'sensor.p1_meter_current_phase_1' }] as FoundPhase[],
       apparaten: [
@@ -294,7 +300,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           webDir: WEB_DIR,
           config: exampleSite,
           configNow: () => configNu,
-          comfort: comfortDeur,
+          // Wiens comfort (besluit 147): dat van wie er kijkt, of van wie er gevraagd wordt.
+          comfort: { view: (wie, bewoner) => comfortVanBewoner(configNu, comfortNu, bewonersStore.current, wie, bewoner).view, save: comfortDeur.save },
           latest: () => live,
           divergence: () => review.latest,
           logDir: dir,
@@ -355,6 +362,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // De inlog van besluit 99, met een nep-Home Assistant; de browser krijgt
           // hieronder een sessie als beheerder, zodat de deuren echt op slot zitten.
           access: { kind: 'sessions', store: sessions, login: { authorizeUrl: () => 'http://ha.local/', identify: async () => ({ userId: 'u', naam: 'Test', isAdmin: true }) } },
+          // Bewoners (besluit 147): dezelfde deur als de dienst, met wie er geldt uit het laatste besluit.
+          bewoners: {
+            view: (wie) => bewonersView(bewonersStore.current, wie, exampleSite.occupancy, (id) => houseStates.get(id), live.explanation.profile ?? null),
+            actie: async (body, wie) => {
+              const a = leesActie(body);
+              if (a == null) return { ok: false as const, status: 400, reden: 'onbekende actie' };
+              const uit = voerUit(bewonersStore.current, comfortNu, a, wie, exampleSite.occupancy, live.explanation.profile?.home ?? [], Date.now());
+              if (!uit.ok) return uit;
+              await bewonersStore.save(uit.bewoners);
+              return { ok: true as const, view: bewonersView(uit.bewoners, wie, exampleSite.occupancy, (id) => houseStates.get(id), live.explanation.profile ?? null) };
+            },
+            herken: async (account) => {
+              const r = herken(bewonersStore.current, account, personenUit(houseStates.values()), exampleSite.occupancy, Date.now());
+              if (r.soort === 'vraag') return 'vraag' as const;
+              if (r.soort !== 'bewoner' || !r.nieuw) return null;
+              await bewonersStore.save(r.bewoners);
+              return 'welkom' as const;
+            },
+          },
+          sleutel: 'test-sleutel-voor-de-assistent-12345',
           // De ligging, zoals Home Assistant hem geeft: op één decimaal (besluit 93).
           location: () => ({ latDeg: 52.1, lonDeg: 5.1 }),
           write: () => {},
@@ -369,6 +396,31 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
 
     const channel = process.env['HEMS_PAGE_BROWSER'];
     browser = await chromium.launch(channel ? { channel } : {});
+    /*
+     * De hele app vraagt een inlog (besluit 147). Elk nieuw venster krijgt de
+     * inlog van de beheerder, tenzij een test juist zonder wil kijken
+     * (`zonderInlog: true`); en elke vraag aan de testdienst ook.
+     */
+    const nieuwVenster = browser.newContext.bind(browser);
+    browser.newContext = (async (o?: BrowserContextOptions & { zonderInlog?: boolean }) => {
+      const { zonderInlog, ...rest } = o ?? {};
+      const c = await nieuwVenster(rest);
+      if (!zonderInlog) await c.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+      return c;
+    }) as typeof browser.newContext;
+    browser.newPage = (async (o?: BrowserContextOptions & { zonderInlog?: boolean }) => {
+      const c = await browser.newContext(o);
+      const p = await c.newPage();
+      p.on('close', () => void c.close());
+      return p;
+    }) as typeof browser.newPage;
+    globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+      const adres = input instanceof Request ? input.url : String(input);
+      if (!adres.startsWith(baseUrl)) return echteFetch(input, init);
+      const kop = new Headers(init?.headers);
+      if (!kop.has('cookie')) kop.set('cookie', `hems_sessie=${sessionId}`);
+      return echteFetch(input, { ...init, headers: kop });
+    }) as typeof fetch;
     // UTC, net als de rest van de suite in de CI: de tijdlijn en de
     // versiemarkering rekenen dan in dezelfde dagen.
     const context = await browser.newContext({ timezoneId: 'UTC', locale: 'nl-NL' });
@@ -387,6 +439,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 60_000);
 
   afterAll(async () => {
+    globalThis.fetch = echteFetch;
     await browser?.close();
     await stopCamera();
     await server?.stop();
@@ -1015,7 +1068,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('.cijfers').waitFor();
     await p.waitForTimeout(400);
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(6);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(12);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(13);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     await kaart.locator('a', { hasText: 'Begin' }).click();
@@ -1029,6 +1082,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForURL(/#buiten$/);
     await kaart.locator('h1', { hasText: 'Wat ligt er rond je huis?' }).waitFor();
     await shot('buiten');
+    await kaart.locator('a', { hasText: 'Volgende' }).click();
+    // Wie woont hier (besluit 147): wie al ingelogd is, en de code om anderen te laten inloggen.
+    await kaart.locator('h1', { hasText: 'Wie woont hier?' }).waitFor();
+    await kaart.locator('.qr svg').waitFor();
+    await shot('bewoners');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await p.waitForURL(/#apparaten$/);
     await kaart.locator('.waar', { hasText: '2. Apparaten' }).waitFor();
@@ -1691,7 +1749,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     p.on('pageerror', (e) => fouten.push(e.message));
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand [data-groepen] .tegel').first().waitFor();
-    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'App en toegang']);
+    expect(await p.locator('#wand [data-groepen] .tegel h3').allTextContents()).toEqual(['Je huis', 'Comfort', 'Energie', 'Regeling', 'Functies', 'Bewoners en toegang']);
     expect(await p.locator('#balk [aria-current="page"]').getAttribute('aria-label')).toBe('Instellingen');
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     // Zoeken: "zekering" vindt de aansluiting bij Energie.
@@ -1973,12 +2031,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
-  it('wijst wie niet is ingelogd de weg naar de inlog van Home Assistant (besluit 99)', async () => {
-    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  it('stuurt wie niet is ingelogd naar het inloggen, en van daar naar Home Assistant (besluit 99 en 147)', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, zonderInlog: true } as BrowserContextOptions);
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     const p = await context.newPage();
+    // De hele app vraagt een inlog: een pagina gaat naar het inloggen, met de weg terug.
     await p.goto(`${baseUrl}/toegang.html`);
-    const inlog = p.locator('#tel [data-vorm] a', { hasText: 'Inloggen' });
+    await p.waitForURL(/\/inloggen\.html\?terug=%2Ftoegang\.html$/);
+    const inlog = p.locator('a', { hasText: 'Inloggen met Home Assistant' });
     await inlog.waitFor();
     // Zonder te volgen: de dienst stuurt door naar het inlogscherm van Home Assistant.
     const go = p.waitForRequest((r) => new URL(r.url()).pathname === '/auth/login');
@@ -1986,6 +2046,110 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(new URL((await go).url()).searchParams.get('terug')).toBe('/toegang.html');
     await context.close();
   }, 20_000);
+
+  /*
+   * Bewoners (besluit 147): de eerste inlog als scherm en als bewoner, de
+   * pagina Bewoners, Thuis met de begroeting en het comfort dat geldt, en
+   * Comfort van een ander.
+   */
+  it('laat bewoners binnen bij hun eerste inlog, en toont wie er thuis is en wiens comfort geldt', async () => {
+    const shot = async (pp: Page, naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await pp.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    const kort = { timeout: 5000 };
+    await bewonersStore.save(GEEN_BEWONERS);
+
+    // De wand: een account zonder persoon kiest "Dit is een scherm" en wordt geen bewoner.
+    const wandSessie = await sessions.create({ userId: 'u-wand', naam: 'Wand', rol: 'bewoner' });
+    const wand = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
+    await wand.addCookies([{ name: 'hems_sessie', value: wandSessie, url: baseUrl }]);
+    await wand.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const w = await wand.newPage();
+    await w.goto(`${baseUrl}/welkom.html?terug=%2Fthuis.html#vraag`);
+    await w.locator('h1', { hasText: 'Woon je hier, of is dit een scherm?' }).waitFor();
+    await shot(w, 'welkom-vraag');
+    await w.locator('[data-keus="scherm"]').click();
+    await w.locator('[data-verder]').click();
+    await w.waitForURL(/\/thuis\.html$/);
+    expect(bewonersStore.current.schermen['u-wand']?.naam).toBe('Wand');
+    expect(bewonersStore.current.volgorde).toEqual([]);
+
+    // De beheerder ("Test") woont hier: hij kiest wat hem volgt, en wordt de eerste, dus hoofdgebruiker.
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await ctx.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await ctx.newPage();
+    await p.goto(`${baseUrl}/welkom.html?terug=%2Fbewoners.html#vraag`);
+    await p.locator('[data-keus="bewoner"]').click();
+    await p.locator('[data-verder]').click();
+    await p.locator('h1', { hasText: 'Hoe weet het huis of je thuis bent?' }).waitFor();
+    await p.locator('[data-bron="ricardo"]').click();
+    await p.locator('[data-klaar]').click();
+    await p.locator('h1', { hasText: 'Welkom, Test' }).waitFor();
+    await shot(p, 'welkom');
+    await p.locator('[data-naam]').fill('Ricardo');
+    await p.locator('[data-klopt]').click();
+    await p.waitForURL(/\/bewoners\.html$/);
+    await expect.poll(() => bewonersStore.current.bewoners['test']?.naam, kort).toBe('Ricardo');
+    expect(bewonersStore.current.bewoners['test']).toMatchObject({ aanwezigheid: 'ricardo', comfort: 'volgt' });
+
+    // Shira logt later in; zij volgt eerst Ricardo.
+    await bewonersStore.save(voegToe(bewonersStore.current, { userId: 'u-shira', naam: 'Shira Cornelissen' }, 'shira', Date.now()));
+    await p.reload();
+    const wandL = p.locator('#wand');
+    await wandL.locator('[data-lijst] [data-rij]').nth(1).waitFor();
+    expect(await wandL.locator('[data-lijst] [data-rij] b').allTextContents()).toEqual(['Ricardo (jij)', 'Shira']);
+    await wandL.locator('[data-kies="shira"]').click();
+    await wandL.locator('[data-blad] h2', { hasText: 'Shira' }).waitFor();
+    await wandL.locator('[data-blad] [data-comfort="eigen"]').click();
+    await expect.poll(() => bewonersStore.current.bewoners['shira']?.comfort, kort).toBe('eigen');
+    // De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar hoofdgebruiker; en weer terug.
+    await wandL.locator('[data-greep="shira"]').focus();
+    await p.keyboard.press('ArrowUp');
+    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['shira', 'test']);
+    await wandL.locator('[data-greep="test"]').focus();
+    await p.keyboard.press('ArrowUp');
+    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['test', 'shira']);
+    await shot(p, 'bewoners');
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    // Op de telefoon: alles onder elkaar, niets zijwaarts buiten beeld.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-lijst] [data-rij]').nth(1).waitFor();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    await shot(p, 'bewoners-tel');
+    await p.setViewportSize({ width: 1280, height: 800 });
+
+    // Thuis: Ricardo is weg, Shira is thuis. De begroeting noemt wie er ingelogd is, en het strookje wiens comfort geldt.
+    const voor = live;
+    live = { ...live, explanation: { ...live.explanation, profile: { id: 'shira', name: 'Shira', reason: 'thuis', home: ['shira'] } } };
+    await p.goto(`${baseUrl}/thuis.html`);
+    await wandL.locator('[data-groet]', { hasText: 'Ricardo' }).waitFor();
+    const strook = wandL.locator('[data-geldt]');
+    await strook.locator('b', { hasText: 'Comfort van Shira' }).waitFor();
+    await shot(p, 'thuis-geldt');
+    await strook.locator('[data-vasthouden]', { hasText: 'Toch die van Ricardo' }).click();
+    await expect.poll(() => bewonersStore.current.vasthouden, kort).toMatchObject({ id: 'test', home: ['shira'] });
+
+    // Comfort van Shira, bekeken door de hoofdgebruiker: met de keuze wiens comfort.
+    await p.goto(`${baseUrl}/comfort.html?bewoner=shira`);
+    await wandL.locator('[data-titel]', { hasText: 'Comfort van Shira' }).waitFor();
+    expect(await wandL.locator('[data-wie] option').count()).toBe(2);
+    await shot(p, 'comfort-shira');
+
+    // De inlogpagina, voor wie nog niet is ingelogd: alleen een huis als silhouet en de knop.
+    const buiten = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
+    await buiten.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const b = await buiten.newPage();
+    await b.goto(`${baseUrl}/thuis.html`);
+    await b.locator('a', { hasText: 'Inloggen met Home Assistant' }).waitFor();
+    expect(await b.locator('body').textContent()).not.toMatch(/Ricardo|Shira|kWh/);
+    await shot(b, 'inloggen');
+    await buiten.close();
+
+    live = voor;
+    await bewonersStore.save(GEEN_BEWONERS);
+    await wand.close();
+    await ctx.close();
+  }, 60_000);
 
   /* Een versienummer, en wat er nieuw is (besluit 131). */
   it('toont de versie en wat er nieuw is', async () => {

@@ -27,9 +27,12 @@ let vandaag = null;
 let stemNaam = null;
 /** Of een vraag uit het adres kwam (een tik op Thuis): dan meteen proberen te spreken. */
 let vanAdres = false;
+/** Wie hier woont (besluit 147): voor de begroeting met je naam. */
+let bewoners = null;
 
 async function laadAlles() {
-  const [s, h, z, w, v, st] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/vandaag'), haal('api/stem')]);
+  const [s, h, z, w, v, st, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/weer'), haal('api/vandaag'), haal('api/stem'), haal('api/bewoners')]);
+  if (b.status === 'fulfilled') bewoners = b.value;
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -59,9 +62,12 @@ let voorlezen = (() => {
   }
 })();
 
+/** De begroeting naar de tijd van de dag, met je naam, of op een scherm met wie er thuis is (besluit 147). */
 function groet() {
   const u = new Date().getHours();
-  return u < 6 ? 'Goedenacht' : u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond';
+  const tijd = u < 6 ? 'Goedenacht' : u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond';
+  const namen = huismodel.groetNamen(bewoners);
+  return namen.length ? `${tijd}, ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} en ${namen.at(-1)}` : namen[0]}` : tijd;
 }
 
 const zoneNaam = (id) => huismodel.zoneNaam(id, huisData);

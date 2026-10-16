@@ -99,6 +99,9 @@
   #tel .schakel[aria-checked='true']::after { left: 19px; }
   #tel .rij2, #tel .uren { grid-template-columns: 1fr; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  /* Wiens comfort (besluit 147). */
+  .wiekies { height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: var(--tekst); font: inherit; font-size: 14.5px; font-weight: 600; color-scheme: dark; }
+  .wiekies option { background: #14203a; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -107,8 +110,8 @@
     <main class="groep">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <div class="groepkop">
-        <div><h1 class="kop-1">Comfort</h1><p class="lead">Hoe warm of koel je het wilt, per kamer en per dagdeel.</p></div>
-        <span class="bewaard" data-bewaard></span>
+        <div><h1 class="kop-1" data-titel>Comfort</h1><p class="lead" data-lead>Hoe warm of koel je het wilt, per kamer en per dagdeel.</p></div>
+        <div style="display: flex; align-items: center; gap: 14px"><span data-wiekies></span><span class="bewaard" data-bewaard></span></div>
       </div>
       <div class="groepveld">
         <nav class="glas delen schuift" aria-label="Delen van Comfort" data-delen></nav>
@@ -121,7 +124,9 @@
   <div id="tel" class="tel">
     <div class="inhoud">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
-      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px">Comfort</h1><span class="bewaard" data-bewaard></span></div>
+      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px" data-titel>Comfort</h1><span class="bewaard" data-bewaard></span></div>
+      <p class="lead" data-lead style="margin: 0; font-size: 15px"></p>
+      <span data-wiekies></span>
       <nav class="glas delen" aria-label="Delen van Comfort" data-delen></nav>
       <section class="glas vorm" data-vorm></section>
       <div class="naast" data-naast></div>

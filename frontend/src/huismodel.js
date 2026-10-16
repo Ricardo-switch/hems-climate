@@ -240,5 +240,15 @@
     };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, tekening };
+  /**
+   * Wie de begroeting noemt (besluit 147): op je telefoon jij; op een scherm
+   * zoals de wand wie er thuis is, op volgorde. Zonder bewoners niemand.
+   */
+  function groetNamen(bewoners) {
+    if (!bewoners?.bewoners?.length) return [];
+    if (bewoners.ik?.soort === 'bewoner') return bewoners.ik.naam ? [bewoners.ik.naam] : [];
+    return bewoners.bewoners.filter((b) => b.thuis).map((b) => b.naam);
+  }
+
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, tekening, groetNamen };
 })(window);

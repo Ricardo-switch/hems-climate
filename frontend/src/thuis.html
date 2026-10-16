@@ -42,6 +42,15 @@
   .dok .vraag b { color: var(--tekst); }
   /* De begroeting (15 oktober 2026): klein boven de kop. */
   .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
+  .groet b { color: var(--tekst); }
+  /* Welk comfort geldt (besluit 147): een gezicht, de reden, en terugzetten. */
+  .geldt { margin-top: 14px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgba(9, 15, 28, 0.55); border: 1px solid rgba(247, 181, 72, 0.35); backdrop-filter: blur(10px); }
+  .geldt[hidden] { display: none; }
+  .geldt .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; background: #f7b548; }
+  .geldt b { display: block; font-size: 14.5px; }
+  .geldt span span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 1px; }
+  .geldt .terug { grid-column: 2; justify-self: start; height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .geldt .terug:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   /* Onderhoud (15 oktober 2026): een sleutel bovenin, alleen als er iets te doen is; een tik klapt hem open. */
   .onderhoud { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
   .onderhoud[hidden] { display: none; }
@@ -148,6 +157,7 @@
         <span class="groet" data-groet></span>
         <h1 class="kop-1" data-kop>Even laden</h1>
         <p class="lead" data-zin></p>
+        <div class="geldt" data-geldt hidden></div>
       </div>
       <div class="podium" id="podium-wand"></div>
       <aside class="rechts schuift">
@@ -190,7 +200,7 @@
           <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>
-      <div class="titel"><span class="groet" data-groet></span><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
+      <div class="titel"><span class="groet" data-groet></span><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p><div class="geldt" data-geldt hidden></div></div>
       <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>

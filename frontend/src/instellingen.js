@@ -9,10 +9,10 @@
 const { $$, nl, esc, haal } = app;
 
 /** Alles wat de pagina leest, per deur; null zolang die niets gaf. */
-const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null };
+const d = { energie: null, aansluiting: null, huis: null, functies: null, comfort: null, site: null, sessie: null, export: null, health: null, zon: null, bewoners: null };
 
 async function laadAlles() {
-  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon' };
+  const deuren = { energie: 'api/energie', aansluiting: 'api/aansluiting', huis: 'api/huis', functies: 'api/functies', comfort: 'api/comfort', site: 'api/site', sessie: 'api/sessie', export: 'api/export/info', health: 'api/health', zon: 'api/zon', bewoners: 'api/bewoners' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -113,9 +113,11 @@ function feitenVan(id) {
       const s = d.sessie;
       const ingelogd = !s ? '…' : s.toegang !== 'sessions' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'nog niet';
       const dagen = d.export?.bestanden != null ? `${d.export.bestanden} dagen` : '…';
+      // Bewoners (besluit 147): wie hier woont, de hoofdgebruiker eerst.
+      const namen = d.bewoners ? d.bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
       return [
+        ['Bewoners', namen],
         ['Inloggen', ingelogd],
-        ['Je gegevens', dagen],
         ['Versie', d.health?.versie?.nummer ?? '…'],
       ];
     }
@@ -130,7 +132,7 @@ const GROEPEN = [
   ['energie', 'Energie', 'Panelen, zekering, meters, prijzen'],
   ['regeling', 'Regeling', 'Wie wat regelt, apparaten op zon'],
   ['functies', 'Functies', "Licht, screens, camera's, weer"],
-  ['toegang', 'App en toegang', 'Inloggen, gegevens, versie'],
+  ['toegang', 'Bewoners en toegang', 'Wie hier woont, inloggen, gegevens'],
 ];
 
 function groepen() {

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.24.2';
+export const VERSIE = '0.25.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,17 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.25.0',
+    datum: '2026-10-16',
+    nieuw: [
+      'Comfort per bewoner: wie het eerst op de lijst thuis is, bepaalt het comfort; de hoofdgebruiker staat bovenaan',
+      'Het huis begroet je met je naam; de wand begroet wie er thuis is',
+      'Bij Instellingen › Bewoners en toegang: de volgorde, je naam, wat je volgt en je eigen comfort',
+      'De hele app vraagt een inlog; wie voor het eerst inlogt, kiest of hij hier woont of een scherm is',
+    ],
+    beter: ['Toch die van Ricardo: het comfort terugzetten met één tik, tot er iemand thuiskomt of weggaat'],
+  },
   {
     versie: '0.24.2',
     datum: '2026-10-16',

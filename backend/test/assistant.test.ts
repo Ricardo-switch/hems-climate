@@ -693,3 +693,14 @@ describe('kamernamen in een zin', () => {
     expect(withArticle('Zolder', 'en')).toBe('the Zolder');
   });
 });
+
+describe('wiens comfort (besluit 147)', () => {
+  it('zegt bij "nu" wiens comfort geldt, als het niet dat van de hoofdgebruiker is', () => {
+    const met = { ...exampleSite, profiles: [{ id: 'ricardo', name: 'Ricardo', occupancyIds: ['ricardo'], zones: {} }, { id: 'shira', name: 'Shira', occupancyIds: ['shira'], zones: {} }] };
+    const vraag = (profile: { id: string; name: string; reason: 'thuis' | 'niemand' | 'gekozen'; home: string[] }) =>
+      ask({ kind: 'nu' }, { config: met, snapshot: view({ explanation: explanation({ profile }) }), today: null, nowMs: AT, shadow: true, lang: 'nl' }).antwoord;
+    expect(vraag({ id: 'shira', name: 'Shira', reason: 'thuis', home: ['shira'] })).toContain('Het comfort van Shira geldt, want Ricardo is weg.');
+    expect(vraag({ id: 'ricardo', name: 'Ricardo', reason: 'gekozen', home: ['shira'] })).toContain('Het comfort van Ricardo is gekozen, tot er iemand thuiskomt of weggaat.');
+    expect(vraag({ id: 'ricardo', name: 'Ricardo', reason: 'thuis', home: ['ricardo'] })).not.toContain('comfort van');
+  });
+});

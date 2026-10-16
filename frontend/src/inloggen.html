@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Inloggen · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<style>
+  /*
+   * Inloggen (besluit 147, schets Wand-Inloggen). De hele app vraagt een
+   * inlog. Wie niet ingelogd is, ziet alleen dit: een huis als silhouet in de
+   * lucht van nu, zonder namen of getallen, en één knop naar Home Assistant.
+   * Deze pagina haalt niets bij de dienst op.
+   */
+  html, body { margin: 0; height: 100%; }
+  body { position: relative; overflow: hidden; color: var(--tekst); font-family: var(--tekstfont, Figtree, system-ui, sans-serif); min-height: 100vh; }
+  .silhouet { position: fixed; right: 4vw; bottom: 3vh; width: min(560px, 48vw); height: min(500px, 70vh); opacity: 0.6; filter: saturate(0.4) brightness(0.7); }
+  .kaartje { position: fixed; left: max(24px, 6vw); top: 50%; transform: translateY(-50%); width: min(420px, calc(100vw - 48px)); padding: 30px 30px 26px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
+  .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 700; font-size: 20px; }
+  .merk i { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  h1 { margin: 6px 0 0; font-family: var(--kop); font-size: 36px; font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; }
+  p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--zacht); }
+  .hagknop { display: flex; align-items: center; justify-content: center; gap: 10px; height: 54px; border-radius: 16px; background: var(--tekst); color: var(--inkt, #0b1424); font-size: 17px; font-weight: 700; text-decoration: none; }
+  .hagknop svg { width: 22px; height: 22px; }
+  .hagknop:focus-visible { outline: 2px solid var(--tekst); outline-offset: 3px; }
+  .klein { font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+  /* De telefoon: het huis boven, de kaart onderaan. */
+  @media (max-width: 640px), (orientation: portrait) {
+    .silhouet { left: 50%; right: auto; top: 6vh; bottom: auto; width: min(340px, 80vw); height: 40vh; transform: translateX(-50%); }
+    .kaartje { left: 16px; right: 16px; top: auto; bottom: 20px; width: auto; transform: none; padding: 24px 22px; }
+    h1 { font-size: 30px; }
+  }
+</style>
+</head>
+<body class="lucht lucht-avond">
+  <div class="silhouet" id="silhouet" aria-hidden="true"></div>
+  <main class="glas kaartje">
+    <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+    <h1>Log in om je huis te zien</h1>
+    <p>Met je account van Home Assistant. Daarna weet het huis wie je bent, en begroet het je met je naam.</p>
+    <a class="hagknop" data-inloggen href="auth/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><circle cx="12" cy="14" r="2"/></svg>Inloggen met Home Assistant</a>
+    <span class="klein">Op de wand doe je dit maar één keer; hij blijft ingelogd.</span>
+  </main>
+  <script src="kit/huis.js"></script>
+  <script>
+    (function () {
+      // Terug naar waar je heen wilde, alleen een pad op deze dienst (de dienst toetst het nog eens).
+      var terug = new URLSearchParams(location.search).get('terug') || '/thuis.html';
+      if (terug.charAt(0) !== '/' || terug.charAt(1) === '/') terug = '/thuis.html';
+      document.querySelector('[data-inloggen]').setAttribute('href', 'auth/login?terug=' + encodeURIComponent(terug));
+      // De lucht van nu, uit de klok: zonder inlog weet de pagina verder niets.
+      var u = new Date().getHours();
+      var tijd = u < 6 || u >= 22 ? 'nacht' : u < 9 ? 'ochtend' : u < 18 ? 'dag' : 'avond';
+      document.body.className = 'lucht lucht-' + tijd;
+      // Het huis als silhouet: geen namen, geen getallen.
+      var el = document.getElementById('silhouet');
+      var kamer = function (g) { return { naam: '', gewicht: g, stil: true, apparaten: [] }; };
+      huis.teken(el, {
+        beschrijving: 'Een huis als silhouet.',
+        tijd: tijd === 'nacht' ? 'nacht' : tijd, zon: { aandeel: 0, panelen: 0 }, wolken: 0.4, net: true,
+        etages: [{ naam: '', kamers: [kamer(0.6), kamer(1.5)] }, { naam: '', kamers: [kamer(0.8), kamer(1.2)] }, { dak: true, kamers: [kamer(1)] }],
+        labels: [],
+      }, { breedte: el.clientWidth || 480, hoogte: el.clientHeight || 440, marge: 0.04 });
+    })();
+  </script>
+</body>
+</html>

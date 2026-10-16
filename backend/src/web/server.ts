@@ -18,6 +18,7 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
+import { timingSafeEqual } from 'node:crypto';
 import { Readable, pipeline } from 'node:stream';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -53,7 +54,8 @@ import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, typ
 import type { CoverSwitch } from './covers.js';
 import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
-import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, newState, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
+import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
+import type { BewonersView, Wie } from './bewoners.js';
 import { startOfLocalDay } from './today.js';
 import type { MeldingenStore } from './meldingen.js';
 import { MAX_ZEG, type Stem } from './stem.js';
@@ -114,9 +116,23 @@ export interface WebOptions {
    * Zonder dit bestaat de route niet.
    */
   readonly comfort?: {
-    readonly view: () => ComfortView;
-    readonly save: (body: unknown) => Promise<{ readonly ok: true; readonly view: ComfortView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+    /** Het comfort van een bewoner (besluit 147); null is van wie er kijkt, of de hoofdgebruiker. */
+    readonly view: (wie: Wie, bewoner: string | null) => ComfortView;
+    readonly save: (body: unknown, wie: Wie, bewoner: string | null) => Promise<{ readonly ok: true; readonly view: ComfortView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
   };
+  /**
+   * Bewoners (besluit 147): wie hier woont, op volgorde, en wat een bewoner
+   * aan zichzelf of als hoofdgebruiker aan een ander verandert. `herken` kijkt
+   * na het inloggen wie het is: een nieuwe bewoner krijgt het welkom, een
+   * account zonder persoon de vraag of het een bewoner of een scherm is.
+   */
+  readonly bewoners?: {
+    readonly view: (wie: Wie) => BewonersView;
+    readonly actie: (body: unknown, wie: Wie & { readonly naam: string }) => Promise<{ readonly ok: true; readonly view: BewonersView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+    readonly herken: (account: { readonly userId: string; readonly naam: string }) => Promise<'welkom' | 'vraag' | null>;
+  };
+  /** De sleutel waarmee de assistent van Home Assistant zonder inlog een vraag stelt (besluit 147). */
+  readonly sleutel?: string;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -459,6 +475,26 @@ export class WebServer {
     }
 
     /*
+     * Inloggen voor de hele app (besluit 147), niet alleen voor bedienen. Elke
+     * pagina en elke vraag aan de dienst vraagt een inlog; zonder gaat een
+     * pagina naar het inloggen en krijgt een vraag 401. Open blijven het
+     * inloggen zelf, of de dienst draait, en opmaak en script. De assistent van
+     * Home Assistant stelt zijn vraag met een eigen sleutel.
+     */
+    if (access.kind === 'sessions' && !openZonderInlog(path) && !this.#metSleutel(req, url, path)) {
+      const visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+      if (visitor == null) {
+        if (path.startsWith('/api/') || path.startsWith('/scene-plaatjes/')) {
+          sendJson(res, 401, { fout: 'log eerst in', inlog: '/auth/login' });
+        } else {
+          res.writeHead(302, { location: `/inloggen.html?terug=${encodeURIComponent(path === '/' ? '/thuis.html' : path)}`, 'cache-control': 'no-store' });
+          res.end();
+        }
+        return;
+      }
+    }
+
+    /*
      * Read-only als grens, niet als afspraak — met sinds fase 6e stap 4 één
      * deur erin.
      *
@@ -487,6 +523,8 @@ export class WebServer {
       (this.#options.functies != null && path === '/api/functies') ||
       // Comfort (besluit 130): doelen voor de regeling, naar een eigen bestand.
       (this.#options.comfort != null && path === '/api/comfort') ||
+      // Bewoners (besluit 147): naar een eigen bestand, en nooit naar Home Assistant.
+      (this.#options.bewoners != null && path === '/api/bewoners') ||
       (this.#options.lights != null && path === '/api/licht') ||
       // Schermen (besluit 121): open, dicht, stop of een stand, voor de bewoner.
       (this.#options.covers != null && path === '/api/scherm') ||
@@ -591,8 +629,10 @@ export class WebServer {
         sendJson(res, 503, { wachten: 'comfort instellen kan pas met een configuratie en een logmap' });
         return;
       }
+      const wie = await this.#wie(req);
+      const van = url.searchParams.get('bewoner');
       if (method !== 'POST') {
-        sendJson(res, 200, comfort.view());
+        sendJson(res, 200, comfort.view(wie, van));
         return;
       }
       let body: unknown;
@@ -602,7 +642,7 @@ export class WebServer {
         sendJson(res, 400, { fout: (error as Error).message });
         return;
       }
-      const result = await comfort.save(body);
+      const result = await comfort.save(body, wie, van);
       if (result.ok) sendJson(res, 200, result.view);
       else sendJson(res, result.status, { fout: result.reden });
       return;
@@ -610,6 +650,39 @@ export class WebServer {
 
     if (path === '/api/opbrengst') {
       await this.#yield(res, url.searchParams);
+      return;
+    }
+
+    if (path === '/api/bewoners') {
+      const bewoners = this.#options.bewoners;
+      if (bewoners == null) {
+        sendJson(res, 503, { wachten: 'bewoners kan pas met een configuratie en een logmap' });
+        return;
+      }
+      const wie = await this.#wie(req);
+      if (method !== 'POST') {
+        sendJson(res, 200, bewoners.view(wie));
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await bewoners.actie(body, wie);
+      if (result.ok) sendJson(res, 200, result.view);
+      else sendJson(res, result.status, { fout: result.reden });
+      return;
+    }
+
+    // De sleutel voor de assistent van Home Assistant (besluit 147): alleen voor een beheerder.
+    if (path === '/api/sleutel') {
+      const wie = await this.#wie(req);
+      if (!wie.beheerder) sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
+      else if (this.#options.sleutel == null) sendJson(res, 404, { fout: 'er is geen sleutel' });
+      else sendJson(res, 200, { sleutel: this.#options.sleutel });
       return;
     }
 
@@ -1324,13 +1397,30 @@ export class WebServer {
     }
   }
 
+  /** Wie er kijkt (besluit 147): het account, of het een beheerder is, en de naam. */
+  async #wie(req: IncomingMessage): Promise<Wie & { readonly naam: string }> {
+    const access = this.#options.access;
+    if (access.kind === 'open') return { userId: null, beheerder: true, naam: '' };
+    const v: Visitor | null = access.kind === 'ingress' ? ingressVisitor(req) : await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+    return { userId: v?.userId ?? null, beheerder: v?.rol === 'beheerder', naam: v?.naam ?? '' };
+  }
+
+  /** Een vraag van de assistent van Home Assistant met de juiste sleutel (besluit 147). */
+  #metSleutel(req: IncomingMessage, url: URL, path: string): boolean {
+    const sleutel = this.#options.sleutel;
+    if (sleutel == null || path !== '/api/vraag') return false;
+    const kop = String(req.headers.authorization ?? '');
+    const gegeven = kop.startsWith('Bearer ') ? kop.slice(7).trim() : (url.searchParams.get('sleutel') ?? '');
+    return gegeven.length === sleutel.length && timingSafeEqual(Buffer.from(gegeven), Buffer.from(sleutel));
+  }
+
   async #auth(req: IncomingMessage, res: ServerResponse, method: string, path: string, url: URL): Promise<void> {
     const access = this.#options.access;
     if (path === '/api/sessie') {
       let visitor: Visitor | null = null;
       if (access.kind === 'sessions') visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
-      else if (access.kind === 'ingress') visitor = { naam: String(req.headers['x-remote-user-display-name'] ?? req.headers['x-remote-user-name'] ?? 'bewoner'), rol: 'beheerder' };
-      else visitor = { naam: 'iedereen', rol: 'beheerder' };
+      else if (access.kind === 'ingress') visitor = ingressVisitor(req);
+      else visitor = { naam: 'iedereen', rol: 'beheerder', userId: null };
       sendJson(res, 200, {
         toegang: access.kind,
         ingelogd: visitor != null,
@@ -1368,7 +1458,10 @@ export class WebServer {
       try {
         const user = await access.login.identify(code, origin);
         const id = await access.store.create({ userId: user.userId, naam: user.naam, rol: user.isAdmin ? 'beheerder' : 'bewoner' });
-        res.writeHead(302, { location: pending.terug, 'set-cookie': sessionCookie(id, secure), 'cache-control': 'no-store' });
+        // Wie is het (besluit 147)? Een nieuwe bewoner krijgt het welkom, een account zonder persoon de vraag.
+        const eerst = (await this.#options.bewoners?.herken({ userId: user.userId, naam: user.naam }).catch(() => null)) ?? null;
+        const naar = eerst == null ? pending.terug : `/welkom.html?terug=${encodeURIComponent(pending.terug)}#${eerst}`;
+        res.writeHead(302, { location: naar, 'set-cookie': sessionCookie(id, secure), 'cache-control': 'no-store' });
         res.end();
       } catch (error) {
         res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
