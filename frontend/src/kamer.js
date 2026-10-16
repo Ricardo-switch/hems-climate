@@ -599,7 +599,10 @@ async function startCamera(box) {
       return;
     }
     // Eerst het plaatje, dan live erover: zo staat er meteen iets.
-    const plaatje = URL.createObjectURL(await res.blob());
+    const blob = await res.blob();
+    // Weg terwijl het plaatje laadde (een ander blad): dan ook geen live beeld starten.
+    if (!box.isConnected) return;
+    const plaatje = URL.createObjectURL(blob);
     box.dataset.gestart = '1';
     box.innerHTML = `<img alt="Live beeld van ${esc(naam)}" src="${plaatje}"><span class="live"><span class="stip"></span>${esc(naam)}</span><button type="button" class="vol" data-vol aria-label="Schermvullend">⤢</button>`;
     const img = box.querySelector('img');

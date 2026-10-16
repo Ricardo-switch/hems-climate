@@ -1494,6 +1494,73 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     expect(gezien).toEqual(['/api/camera_proxy/camera.oprit_vloeiend Bearer geheim']);
   });
 
+  it('laat geen live beeld openstaan als de kijker ophangt terwijl de inlog nog wordt bekeken', async () => {
+    // Een nep-Home Assistant met een stroom van plaatjes, die telt hoeveel er openstaan.
+    let open = 0;
+    const ha = createServer((_req, res) => {
+      open += 1;
+      res.writeHead(200, { 'content-type': 'multipart/x-mixed-replace; boundary=frame' });
+      const tik = setInterval(() => res.write('--frame\r\n\r\n'), 20);
+      res.on('close', () => {
+        clearInterval(tik);
+        open -= 1;
+      });
+    });
+    await new Promise<void>((r) => ha.listen(0, '127.0.0.1', () => r()));
+    cleanups.push(
+      () =>
+        new Promise<void>((r) => {
+          ha.closeAllConnections();
+          ha.close(() => r());
+        }),
+    );
+    const haPort = (ha.address() as { port: number }).port;
+    const dir = await mkdtemp(join(tmpdir(), 'hems-camera-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    // De inlog bekijken duurt even, zolang de test dat wil.
+    let traag = false;
+    let verder: (() => void) | null = null;
+    class TrageSessies extends SessionStore {
+      override async visitor(id: string | null) {
+        if (traag) await new Promise<void>((r) => (verder = r));
+        return super.visitor(id);
+      }
+    }
+    const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin: false });
+    const access: Access = { kind: 'sessions', store: new TrageSessies({ logDir: dir }), login };
+    const { base } = await start({ access, camera: { base: `http://127.0.0.1:${haPort}`, token: 'geheim', ids: () => new Set(['camera.oprit_vloeiend']) } });
+    const cookie = await logIn(base);
+    const u = new URL(base);
+    const kijk = (cb?: (status: number) => void) => {
+      const req = httpRequest({ host: u.hostname, port: u.port, path: '/api/camera?id=camera.oprit_vloeiend&live=1', headers: { cookie } }, (res) => cb?.(res.statusCode ?? 0));
+      req.on('error', () => {});
+      req.end();
+      return req;
+    };
+
+    // Vijf keer: de kijker hangt op terwijl de dienst nog wacht, daarna pas gaat het verder.
+    traag = true;
+    for (let i = 0; i < 5; i++) {
+      verder = null;
+      const req = kijk();
+      await expect.poll(() => verder).not.toBeNull();
+      req.destroy();
+      await new Promise((r) => setTimeout(r, 30));
+      verder!();
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    traag = false;
+    expect(open).toBe(0);
+
+    // En wie daarna gewoon kijkt, krijgt beeld: de teller van vier kijkers liep niet vol.
+    let status = 0;
+    const req = kijk((s) => (status = s));
+    await expect.poll(() => status).toBe(200);
+    expect(open).toBe(1);
+    req.destroy();
+    await expect.poll(() => open).toBe(0);
+  });
+
   it('weigert een deur zonder inlog, en wijst de weg naar binnen', async () => {
     const { base } = await withLogin(false);
     const res = await fetch(`${base}/api/comfort`, { method: 'POST', headers: JSON_HEADERS, body: comfortBody });

@@ -274,6 +274,8 @@
       document.body.append(laag);
     }
     const id = encodeURIComponent(m.camera);
+    // Belt er opnieuw iemand terwijl het beeld er staat: eerst het oude beeld stoppen.
+    stopBeelden(laag);
     laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>Er wordt aangebeld</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
       <div class="aanbel-beeld"><img alt="Live beeld van ${esc(m.naam ?? 'de deurbel')}" src="api/camera?id=${id}&live=1"></div>`;
     laag.querySelector('img').addEventListener('error', async () => {
@@ -289,10 +291,13 @@
   }
   function sluitBel() {
     clearTimeout(belTimer);
-    // Zonder bron stopt de stroom; alleen weghalen laat hem soms doorlopen.
     const laag = document.querySelector('.aanbel');
-    laag?.querySelectorAll('img').forEach((img) => img.removeAttribute('src'));
+    if (laag) stopBeelden(laag);
     laag?.remove();
+  }
+  /** Zonder bron stopt de stroom; alleen weghalen laat hem soms doorlopen. */
+  function stopBeelden(laag) {
+    laag.querySelectorAll('img').forEach((img) => img.removeAttribute('src'));
   }
 
   /**
