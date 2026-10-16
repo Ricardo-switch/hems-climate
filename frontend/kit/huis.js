@@ -298,10 +298,11 @@
       // naast de stippellijn, ook niet halverwege de ochtend.
       const f = Math.max(0, Math.min(1, model.zon.stand));
       const voet = mid[1] + boog * 0.12;
-      const ry = boog * 0.74;
+      // Nooit boven de tekening uit: daar staat op een pagina de tekst (15 oktober).
+      // Dan wordt de hele boog lager, niet alleen de zon: zo blijft hij op de lijn (16 oktober).
+      const ry = Math.min(boog * 0.74, voet - k * 0.3);
       const sx = mid[0] - boog * Math.cos(Math.PI * f);
-      // Nooit boven de tekening uit: daar staat op een pagina de tekst (opgelost 15 oktober).
-      const sy = Math.max(k * 0.3, voet - ry * Math.sin(Math.PI * f));
+      const sy = voet - ry * Math.sin(Math.PI * f);
       lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
       const r = k * 0.22;
       lucht.push(`<circle cx="${sx}" cy="${sy}" r="${r * 3.2}" fill="url(#${id}-zon)" opacity="${(0.22 + 0.3 * (1 - (model.wolken ?? 0))).toFixed(2)}"/>`);

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Bewoners (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Bewoners (schets, 16 oktober 2026). Wie hier woont, op volgorde: de
+   * eerste die thuis is, bepaalt het comfort; de hoofdgebruiker staat
+   * bovenaan. Een bewoner komt erbij door één keer in te loggen, niet door
+   * alles uit Home Assistant te halen. Links de lijst, rechts één bewoner.
+   * Onderaan wie er nu geldt, schermen zoals de wand, en gasten zonder
+   * account die alleen als "iemand thuis" tellen.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .terug { color: var(--zacht); font-size: 14px; font-weight: 600; }
+  .veld2 { display: grid; grid-template-columns: minmax(0, 1fr) 430px; gap: 16px; flex: 1; min-height: 0; }
+  .links { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .lijst { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; }
+  .lijst .uitleg { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .lijst h2 { margin: 0 0 4px; }
+  .bewoner { display: grid; grid-template-columns: 22px 30px 44px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 10px; border-radius: 16px; margin: 0 -10px; }
+  .bewoner + .bewoner { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .bewoner.gekozen { background: rgba(255, 255, 255, 0.08); }
+  .greep { color: var(--gedempt); font-size: 16px; letter-spacing: -2px; }
+  .plek { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .plek.een { background: var(--zon); color: var(--inkt); }
+  .gezicht { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; font-size: 18px; color: var(--inkt); }
+  .bewoner b { display: block; font-size: 16px; }
+  .bewoner .onder { display: block; font-size: 13px; color: var(--zacht); margin-top: 2px; }
+  .label { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .thuis { color: var(--mint); background: rgba(110, 231, 183, 0.12); }
+  .weg { color: var(--gedempt); background: rgba(255, 255, 255, 0.06); }
+  .geldt { color: var(--zon); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.5); }
+  .geldt::before { display: none; }
+  .uitleg { margin: 10px 0 0; font-size: 13.5px; color: var(--zacht); line-height: 1.5; }
+  .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .klein-kaart { padding: 14px 18px; }
+  .klein-kaart h3 { margin: 0 0 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
+  .klein-kaart .r { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .klein-kaart .r:first-of-type { border-top: 0; }
+  .klein-kaart .r span { color: var(--zacht); font-size: 13px; text-align: right; }
+  .erbij { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .qr { width: 92px; height: 92px; border-radius: 12px; background: #EEF3F7; padding: 8px; box-sizing: border-box; }
+  /* Rechts: één bewoner. */
+  .blad { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .blad .kop { display: flex; align-items: center; gap: 14px; }
+  .blad .kop .gezicht { width: 56px; height: 56px; font-size: 24px; }
+  .vak { display: flex; flex-direction: column; gap: 6px; }
+  .vak > span:first-child { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .invoer { display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 16px; font-weight: 600; }
+  .invoer i { font-style: normal; color: var(--gedempt); font-size: 13px; font-weight: 500; }
+  .hint { font-size: 12.5px; color: var(--gedempt); }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
+  .seg span { flex: 1; height: 38px; display: grid; place-items: center; border-radius: 9px; font-size: 14px; font-weight: 600; color: var(--gedempt); }
+  .seg span.aan { background: rgba(255, 255, 255, 0.15); color: var(--tekst); }
+  .knoppenrij { display: flex; gap: 8px; margin-top: auto; }
+  .knoppenrij .knop { flex: 1; }
+  .gevaar { color: #ffb090; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="terug">‹ Instellingen</span><h1 class="kop-1" style="margin-top: 4px">Bewoners</h1></div>
+      <span class="mini" style="max-width: 48ch; text-align: right">Wie hier woont, op volgorde. De eerste die thuis is, bepaalt het comfort. Sleep om de volgorde te veranderen.</span>
+    </div>
+    <div class="veld2">
+      <div class="links">
+        <section class="glas lijst">
+          <div class="bewoner">
+            <span class="greep" aria-hidden="true">⋮⋮</span><span class="plek een">1</span>
+            <span class="gezicht" style="background: #6fd3ff">R</span>
+            <span><b>Ricardo</b><span class="onder">Hoofdgebruiker · eigen comfort</span></span>
+            <span class="label weg">weg sinds 17:10</span><span></span>
+          </div>
+          <div class="bewoner gekozen">
+            <span class="greep" aria-hidden="true">⋮⋮</span><span class="plek">2</span>
+            <span class="gezicht" style="background: #f7b548">S</span>
+            <span><b>Shira</b><span class="onder">eigen comfort</span></span>
+            <span class="label thuis">thuis</span><span class="label geldt">geldt nu</span>
+          </div>
+          <div class="bewoner">
+            <span class="greep" aria-hidden="true">⋮⋮</span><span class="plek">3</span>
+            <span class="gezicht" style="background: #6ee7b7">M</span>
+            <span><b>Matts</b><span class="onder">volgt Ricardo</span></span>
+            <span class="label thuis">thuis</span><span></span>
+          </div>
+          <p class="uitleg"><b style="color: var(--tekst)">Nu geldt het comfort van Shira.</b> Ricardo is weg; Shira staat daarna en is thuis. Komt Ricardo thuis, dan geldt het zijne weer, na tien minuten.</p>
+        </section>
+        <div class="rij2">
+          <section class="glas klein-kaart">
+            <h3>Iemand erbij</h3>
+            <div class="erbij">
+              <svg class="qr" viewBox="0 0 21 21" aria-label="QR-code naar de app"><path fill="#0b1424" d="M0 0h7v7H0zM2 2v3h3V2zM14 0h7v7h-7zm2 2v3h3V2zM0 14h7v7H0zm2 2v3h3v-3zM9 0h2v2H9zm2 2h2v3h-2zM9 5h2v3H9zm3 3h3v2h-3zm-4 2h3v2H8zm9 0h2v3h-2zm-3 3h3v2h-3zM9 13h2v4H9zm3 4h2v2h-2zm4-1h3v2h-3zm-2 3h2v2h-2zm5 0h2v2h-2zM8 19h3v2H8z"/></svg>
+              <span class="klein" style="color: var(--zacht)">Laat diegene deze code scannen en één keer inloggen met Home Assistant. Dan staat hij hier, met het comfort van Ricardo.</span>
+            </div>
+          </section>
+          <section class="glas klein-kaart">
+            <h3>Schermen en gasten</h3>
+            <div class="r">Wand<span>scherm, begroet wie thuis is</span></div>
+            <div class="r">Rob, Dini<span>zonder account: tellen als iemand thuis</span></div>
+          </section>
+        </div>
+      </div>
+      <aside class="glas blad">
+        <div class="kop"><span class="gezicht" style="background: #f7b548">S</span><div><h2 class="kop-2" style="margin: 0">Shira</h2><span class="mini">Ingelogd sinds 14 oktober, op haar telefoon</span></div></div>
+        <div class="vak"><span>Zo noemt het huis je</span><div class="invoer">Shira<i>bewerk</i></div><span class="hint">In Home Assistant: Shira Cornelissen. Hier veranderen verandert niets in Home Assistant.</span></div>
+        <div class="vak"><span>Thuis volgens</span><div class="invoer">Shira in Home Assistant<i>▾</i></div><span class="hint">Gekoppeld aan haar account. Thuis sinds 16:42.</span></div>
+        <div class="vak"><span>Comfort</span><div class="seg"><span class="aan">Eigen</span><span>Volgt Ricardo</span></div><span class="hint">Eigen sinds ze op 14 oktober de woonkamer op 21° zette. <b style="color: var(--ijs)">Bekijk haar comfort ›</b></span></div>
+        <div class="knoppenrij"><button class="knop" style="white-space: nowrap">Hoofdgebruiker maken</button><button class="knop gevaar">Weghalen</button></div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+</script>
+</body>
+</html>

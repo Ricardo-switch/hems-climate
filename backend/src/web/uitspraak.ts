@@ -29,7 +29,9 @@ const KLANK: readonly (readonly [RegExp, string])[] = [
   [/\bairco\b/gi, 'erko'],
   [/\bcv\b/gi, 'cee vee'],
   // Gevel met een lange e, niet als het voorvoegsel ge-: voorgeevel, niet voorge-vel.
-  [/\b(voor|achter|zij)?gevel(s?)\b/gi, '$1geevel$2'],
+  // Bij achter en zij knipt Piper het lange woord toch verkeerd: dan twee woorden.
+  [/\b(achter|zij)gevel(s?)\b/gi, '$1 geevel$2'],
+  [/\b(voor)?gevel(s?)\b/gi, '$1geevel$2'],
 ];
 
 /** Een zin zoals hij hardop klinkt. */

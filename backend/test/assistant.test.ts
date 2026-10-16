@@ -244,6 +244,13 @@ describe('straks', () => {
     );
   });
 
+  it('begint met wat op zon wacht, net als de kaart Straks op Thuis', () => {
+    const e = explanation({ budget: { availableW: 500, allocatedW: 0, surplusW: 500, reclaimableW: 0, gridPowerW: -500 } });
+    const a = askNl({ kind: 'straks' }, view({ explanation: e, rejected: [{ intent: coolOnSun, blockedBy: 'insufficient_power_budget' }] }), { nowMs: Date.parse('2026-10-05T12:30:00Z') });
+    expect(a.antwoord.startsWith('De zolder gaat koelen zodra er 600 W zon over is. Nu is dat 500 W; het begint vanzelf.')).toBe(true);
+    expect(a.antwoord).toContain('ga ik naar');
+  });
+
   it('gaat na middernacht door naar de volgende ochtend', () => {
     const a = askNl({ kind: 'straks' }, view(), { nowMs: Date.parse('2026-10-05T21:30:00Z') });
     expect(a.antwoord).toContain('Om 06:00 ga ik naar voorverwarmen.');

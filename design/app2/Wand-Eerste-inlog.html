@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · De eerste inlog (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De eerste inlog (schets, 16 oktober 2026). Wie voor het eerst inlogt,
+   * krijgt één vraag. Heeft het account een persoon in Home Assistant, dan
+   * weet het huis al wie het is: alleen de naam bevestigen (links). Zonder
+   * persoon: woon je hier, of is dit een scherm zoals de wand (midden)? Wie
+   * hier woont, kiest daarna hoe het huis weet of hij thuis is (rechts).
+   * Drie momenten naast elkaar; in de app is het één kaart midden op het
+   * scherm, over het huis heen.
+   */
+  main { padding: 22px 26px; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 16px; height: 800px; box-sizing: border-box; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .drie { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; min-height: 0; }
+  .moment { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .moment > .mini { font-weight: 700; }
+  .kaart { flex: 1; padding: 24px 24px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .merk { display: flex; align-items: center; gap: 10px; font-family: var(--kop); font-weight: 600; font-size: 15px; color: var(--zacht); }
+  .merk i { width: 26px; height: 26px; border-radius: 8px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  .kaart h2 { margin: 6px 0 0; font-family: var(--kop); font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .kaart p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--zacht); }
+  .vak { display: flex; flex-direction: column; gap: 6px; }
+  .vak > span:first-child { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .invoer { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); font-size: 17px; font-weight: 600; }
+  .invoer i { font-style: normal; color: var(--gedempt); font-size: 13px; font-weight: 500; }
+  .hint { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .keus { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: center; padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+  .keus.aan { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.1); }
+  .keus .ik { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); }
+  .keus .ik svg { width: 24px; height: 24px; }
+  .keus b { display: block; font-size: 17px; }
+  .keus span span { display: block; font-size: 13.5px; color: var(--zacht); margin-top: 2px; line-height: 1.4; }
+  .bron { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); font-size: 15px; font-weight: 600; }
+  .bron.aan { background: rgba(255, 255, 255, 0.12); }
+  .bron span { font-size: 12.5px; font-weight: 600; }
+  .bron .thuis { color: var(--mint); }
+  .bron .weg { color: var(--gedempt); }
+  .voet { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+  .zacht { color: var(--zacht); font-size: 15px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond" style="grid-template-columns: 1fr">
+  <main>
+    <div class="kopregel">
+      <div><span class="mini">Schets · de eerste inlog · één vraag</span><h1 class="kop-1" style="font-size: 38px; margin-top: 4px">Wie ben je?</h1></div>
+      <span class="mini" style="max-width: 52ch; text-align: right">Een bewoner komt erbij door één keer in te loggen. Het huis haalt niet iedereen uit Home Assistant.</span>
+    </div>
+    <div class="drie">
+      <div class="moment">
+        <span class="mini">Met een persoon in Home Assistant</span>
+        <section class="glas kaart">
+          <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+          <h2>Welkom, Shira</h2>
+          <p>Je woont hier. Je comfort is eerst hetzelfde als dat van Ricardo, tot je zelf iets verandert.</p>
+          <div class="vak"><span>Zo noemt het huis je</span><div class="invoer">Shira<i>bewerk</i></div><span class="hint">Uit Home Assistant: Shira Cornelissen. Hier veranderen verandert niets in Home Assistant.</span></div>
+          <div class="vak"><span>Thuis volgens</span><div class="bron aan">Shira in Home Assistant<span class="thuis">thuis</span></div></div>
+          <div class="voet"><span class="zacht">Later</span><button class="knop knop-licht">Klopt</button></div>
+        </section>
+      </div>
+      <div class="moment">
+        <span class="mini">Zonder persoon</span>
+        <section class="glas kaart">
+          <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+          <h2>Woon je hier, of is dit een scherm?</h2>
+          <p>Je bent ingelogd als <b style="color: var(--tekst)">Wand</b>.</p>
+          <div class="keus"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span><span><b>Ik woon hier</b><span>Met je eigen naam, en je eigen comfort als je dat wilt.</span></span></div>
+          <div class="keus aan"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span><b>Dit is een scherm</b><span>Zoals de wand of een tablet in de keuken. Begroet wie er thuis is, en telt niet als bewoner.</span></span></div>
+          <div class="voet"><span></span><button class="knop knop-licht">Verder</button></div>
+        </section>
+      </div>
+      <div class="moment">
+        <span class="mini">Ik woon hier, en dan</span>
+        <section class="glas kaart">
+          <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+          <h2>Hoe weet het huis of je thuis bent?</h2>
+          <p>Kies wat jou volgt. Zo weet het huis wiens comfort er geldt. Wat al bij een andere bewoner hoort, staat er niet bij.</p>
+          <div class="bron aan">Saskia thuis<span class="thuis">thuis</span></div>
+          <div class="bron">Rob thuis<span class="weg">weg</span></div>
+          <div class="bron">Dini thuis<span class="weg">weg</span></div>
+          <div class="bron">Nog niet<span class="weg">dan telt alleen je naam</span></div>
+          <div class="voet"><span class="zacht">Terug</span><button class="knop knop-licht">Klaar</button></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

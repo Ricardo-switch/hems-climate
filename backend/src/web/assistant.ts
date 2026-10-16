@@ -839,6 +839,20 @@ export function ask(question: Question, ctx: AskContext): Answer {
     case 'straks': {
       const out: string[] = [];
       const e = snapshot?.explanation;
+      // Eerst wat op zon wacht, net als de kaart Straks op Thuis (16 oktober 2026): daar tik je vandaan.
+      const wacht = (snapshot?.rejected ?? []).find((r) => r.blockedBy === 'insufficient_power_budget' && r.intent.budgetW > 0 && (r.intent.action === 'cool' || r.intent.action === 'heat'));
+      const wachtZone = wacht ? config.zones.find((z) => z.id === wacht.intent.zoneId) : undefined;
+      if (wacht && wachtZone) {
+        const a = wacht.intent.action as 'cool' | 'heat';
+        const vraagt = f.power(`opzon.${wacht.intent.actuatorId}.vraagt`, wacht.intent.budgetW);
+        const over = Math.max(0, e?.budget?.availableW ?? 0);
+        const nu = over >= 50 ? f.power('budget.beschikbaar', over) : null;
+        out.push(
+          nl
+            ? `${cap(zoneName(wachtZone, lang))} gaat ${WORDS.nl.infinitive[a]} zodra er ${vraagt} zon over is. Nu is dat ${nu ?? 'nog niets'}; het begint vanzelf.`
+            : `${cap(zoneName(wachtZone, lang))} will ${WORDS.en.infinitive[a]} as soon as ${vraagt} of solar is spare. Right now that is ${nu ?? 'nothing yet'}; it starts by itself.`,
+        );
+      }
       for (const o of e?.overrides ?? []) {
         if (o.untilMs == null || o.untilMs <= ctx.nowMs) continue;
         const dev = config.actuators.find((a) => a.id === o.actuatorId);

@@ -41,8 +41,11 @@
   .stap .stipjes i.al { background: var(--mint); }
   .stap .stipjes i.nu { background: var(--tekst); }
   /* Wat elk apparaat doet: drie knoppen naast elkaar, zon in zijn kleur. */
-  .seg { display: inline-flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, 0.05); flex-shrink: 0; }
-  .seg button { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--gedempt); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, 0.05); }
+  /* Het apparaat boven, de drie knoppen eronder over de volle breedte: zo past "Op temperatuur". */
+  .toestel:has(.seg) { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; }
+  .toestel:has(.seg) > .seg { width: 100%; box-sizing: border-box; }
+  .seg button { flex: 1 1 auto; white-space: nowrap; height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--gedempt); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.15); color: var(--tekst); }
   .seg button.zon[aria-pressed="true"] { background: rgba(247, 181, 72, 0.22); color: var(--zon); }
   .seg button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
@@ -55,6 +58,14 @@
   .invul:focus-within { outline: 2px solid var(--ijs); }
   .invul .veld { height: 34px; font-family: var(--kop); font-size: 16px; font-weight: 700; }
   .invul .klein { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  /* Buiten: een vraagje boven de keuzes, en wat erbij hoort als schakelaar. */
+  .vraagje { font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
+  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding: 8px 10px 8px 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
+  .schakelrij i { position: relative; width: 44px; height: 26px; border-radius: 13px; background: rgba(255, 255, 255, 0.16); flex-shrink: 0; transition: background 0.15s; }
+  .schakelrij i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+  .schakelrij[aria-checked="true"] i { background: var(--mint); }
+  .schakelrij[aria-checked="true"] i::after { transform: translateX(18px); }
+  .schakelrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .waarderij { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 15px; }
   .waarderij:first-child { border-top: 0; }
   .waarderij span { color: var(--zacht); text-align: right; }

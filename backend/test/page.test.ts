@@ -1579,6 +1579,110 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Instellingen en Wat je huis kan (schetsen Instellingen, Wand-Leren en
    * Wand-Huis-groeit): wie stuurt, wat het huis weet, en de stappen.
    */
+  /*
+   * De zon op zijn boog (16 oktober 2026): ook als de tekening laag is en de
+   * boog omlaag moet, staat de zon op de stippellijn, bij elke stand.
+   */
+  it('zet de zon in de tekening altijd op zijn boog', async () => {
+    const p = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await p.goto(`${baseUrl}/thuis.html`);
+    await p.waitForFunction('window.huis != null');
+    const afwijkingen = await p.evaluate<number[]>(`(() => {
+      const uit = [];
+      const doos = document.createElement('div');
+      document.body.append(doos);
+      const etages = [{ naam: 'Begane grond', kamers: [{ naam: 'Woonkamer', apparaten: [] }] }, { dak: true, kamers: [{ naam: 'Zolder', apparaten: [] }] }];
+      for (const hoogte of [612, 420, 300, 220]) {
+        for (const stand of [0.05, 0.2, 0.5, 0.8, 0.95]) {
+          huis.teken(doos, { tijd: 'dag', zon: { stand, hoogte: 0.6, aandeel: 0.5, panelen: 8 }, etages, net: true, labels: [] }, { breedte: 860, hoogte });
+          const [x0, y0, rx, ry, , , , x1] = doos.querySelector('path[stroke-dasharray="2 7"]').getAttribute('d').match(/-?[0-9.]+/g).map(Number);
+          const zon = doos.querySelector('circle[fill="#FFD27A"]');
+          const sx = Number(zon.getAttribute('cx'));
+          const sy = Number(zon.getAttribute('cy'));
+          uit.push(Math.abs(((sx - (x0 + x1) / 2) / rx) ** 2 + ((sy - y0) / ry) ** 2 - 1));
+        }
+      }
+      return uit;
+    })()`);
+    await p.close();
+    expect(Math.max(...afwijkingen)).toBeLessThan(0.01);
+  });
+
+  /*
+   * Vegen op de tablet (16 oktober 2026): elke lijst die kan schuiven, schuift
+   * met de vinger, ook als de vinger op een regel landt die je kunt slepen. Een
+   * echte veeg via Chrome zelf, op elke pagina van de wand.
+   */
+  it('laat op de tablet elke schuivende lijst met de vinger schuiven', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true, isMobile: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const cdp = await context.newCDPSession(p);
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
+    const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
+    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'inrichten.html#warmte'];
+    const vast: string[] = [];
+    let geveegd = 0;
+    for (const pagina of paginas) {
+      await p.goto(`${baseUrl}/${pagina}`);
+      // Een open stroom houdt het netwerk nooit stil: gewoon even laten tekenen.
+      await p.waitForTimeout(1500);
+      // Alles wat kan schuiven en meer inhoud heeft dan past, met een punt erop dat zichtbaar is.
+      const lijsten = await p.evaluate<{ sel: string; x: number; y: number }[]>(`(() => {
+        const uit = [];
+        document.querySelectorAll('#wand *').forEach((el, i) => {
+          const st = getComputedStyle(el);
+          if (!/(auto|scroll)/.test(st.overflowY) || el.scrollHeight <= el.clientHeight + 24) return;
+          const r = el.getBoundingClientRect();
+          if (r.width < 60 || r.height < 80) return;
+          const x = r.left + r.width / 2;
+          const y = r.top + Math.min(r.height * 0.6, r.height - 30);
+          const raak = document.elementFromPoint(x, y);
+          if (!raak || !el.contains(raak)) return;
+          el.dataset.veegtest = String(i);
+          uit.push({ sel: '[data-veegtest="' + i + '"]', x, y });
+        });
+        return uit;
+      })()`);
+      for (const l of lijsten) {
+        const voor = await p.locator(l.sel).evaluate((el) => el.scrollTop);
+        // Vinger neer, omhoog vegen, los: zoals op het scherm zelf.
+        const x = Math.round(l.x);
+        const y = Math.round(l.y);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+        for (let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - i * 14 }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await p.waitForTimeout(250);
+        const na = await p.locator(l.sel).evaluate((el) => el.scrollTop);
+        geveegd++;
+        if (na <= voor) vast.push(`${pagina}: ${l.sel}`);
+      }
+    }
+    // En slepen met de vinger blijft werken: een apparaat zijwaarts naar een andere kamer.
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(vol.id)}`);
+    await p.waitForTimeout(1500);
+    const rij = p.locator('#wand [data-blad] .app').first();
+    await rij.scrollIntoViewIfNeeded();
+    await p.waitForTimeout(300);
+    const appId = (await rij.getAttribute('data-app'))!;
+    const andere = p.locator(`#wand .sc-tik[data-kamer]:not([data-kamer="${vol.id}"]):not([data-kamer="__nieuw"])`).first();
+    const naarKamer = (await andere.getAttribute('data-kamer'))!;
+    const van = (await rij.boundingBox())!;
+    const naar = (await andere.boundingBox())!;
+    const [x0, y0] = [Math.round(van.x + 30), Math.round(van.y + van.height / 2)];
+    const [x1, y1] = [Math.round(naar.x + naar.width / 2), Math.round(naar.y + naar.height / 2)];
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+    for (let i = 1; i <= 16; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: Math.round(x0 + ((x1 - x0) * i) / 16), y: Math.round(y0 + ((y1 - y0) * Math.max(0, i - 4)) / 12) }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect.poll(() => layoutStore.current?.apparaten[appId]?.kamer, { timeout: 5000 }).toBe(naarKamer);
+    await p.locator('#wand [data-ongedaan]').click({ timeout: 5000 });
+    await expect.poll(() => layoutStore.current?.apparaten[appId]?.kamer ?? vol.id, { timeout: 5000 }).toBe(vol.id);
+    await context.close();
+    expect(geveegd).toBeGreaterThan(0);
+    expect(vast).toEqual([]);
+  }, 90_000);
+
   it('toont Instellingen in zes groepen, en daarvandaan Wat je huis kan (besluit 130)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());

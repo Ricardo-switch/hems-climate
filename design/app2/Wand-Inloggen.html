@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inloggen (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Inloggen (schets, 16 oktober 2026). De hele app vraagt nu een inlog, niet
+   * alleen het bedienen. Wie niet ingelogd is, ziet alleen dit: je huis als
+   * silhouet in de lucht van nu, zonder namen of getallen, en één knop naar
+   * Home Assistant. De wand logt één keer in en blijft ingelogd. Links de
+   * wand, rechts dezelfde pagina op de telefoon.
+   */
+  .doek { position: relative; height: 800px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1fr); gap: 34px; padding: 22px 34px 22px 26px; box-sizing: border-box; }
+  .scherm { position: relative; min-height: 0; border-radius: 26px; overflow: hidden; border: 1px solid var(--glas-rand); }
+  .scherm .lucht { position: absolute; inset: 0; }
+  .silhouet { position: absolute; right: 30px; bottom: 30px; width: 480px; height: 440px; opacity: 0.6; filter: saturate(0.4) brightness(0.7); }
+  .tel .silhouet { left: 50%; right: auto; top: 50px; bottom: auto; width: 300px; height: 280px; transform: translateX(-50%); }
+  .kaartje { position: absolute; left: 56px; top: 50%; transform: translateY(-50%); width: 400px; padding: 30px 30px 26px; display: flex; flex-direction: column; gap: 16px; }
+  .tel .kaartje { left: 18px; right: 18px; width: auto; top: auto; bottom: 22px; transform: none; padding: 24px 22px; }
+  .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 700; font-size: 20px; }
+  .merk i { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  .kaartje h1 { margin: 6px 0 0; font-family: var(--kop); font-size: 36px; font-weight: 700; line-height: 1.08; letter-spacing: -0.02em; }
+  .tel .kaartje h1 { font-size: 30px; }
+  .kaartje p { margin: 0; font-size: 15.5px; line-height: 1.5; color: var(--zacht); }
+  .hagknop { display: flex; align-items: center; justify-content: center; gap: 10px; height: 54px; border-radius: 16px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-size: 17px; font-weight: 700; }
+  .hagknop svg { width: 22px; height: 22px; }
+  .klein { font-size: 13px; color: var(--gedempt); line-height: 1.45; }
+  .uitleg { position: absolute; left: 26px; top: 22px; font-size: 13px; color: var(--gedempt); font-weight: 600; z-index: 2; }
+  .tel { border-radius: 40px; }
+</style>
+</head>
+<body>
+<div class="wand" style="grid-template-columns: 1fr; background: #070d18">
+  <div class="doek">
+    <div class="scherm">
+      <div class="lucht lucht-avond"></div>
+      <div class="silhouet" id="huis-wand"></div>
+      <section class="glas kaartje">
+        <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+        <h1>Log in om je huis te zien</h1>
+        <p>Met je account van Home Assistant. Daarna weet het huis wie je bent, en begroet het je met je naam.</p>
+        <button class="hagknop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><circle cx="12" cy="14" r="2"/></svg>Inloggen met Home Assistant</button>
+        <span class="klein">Op de wand hoef je dit maar één keer te doen; hij blijft ingelogd. Inloggen kan alleen thuis of via Tailscale.</span>
+      </section>
+    </div>
+    <div class="scherm tel">
+      <div class="lucht lucht-avond"></div>
+      <div class="silhouet" id="huis-tel"></div>
+      <section class="glas kaartje">
+        <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+        <h1>Log in om je huis te zien</h1>
+        <p>Met je account van Home Assistant.</p>
+        <button class="hagknop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><circle cx="12" cy="14" r="2"/></svg>Inloggen met Home Assistant</button>
+      </section>
+    </div>
+  </div>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  // Het huis als silhouet: geen namen, geen getallen, niets wat iemand zonder inlog wijzer maakt.
+  const stil = {
+    beschrijving: 'Een huis als silhouet in de avondlucht.',
+    tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, wolken: 0.4, net: true,
+    etages: [
+      { naam: '', kamers: [{ naam: '', gewicht: 0.6, stil: true, apparaten: [] }, { naam: '', gewicht: 1.5, stil: true, apparaten: [] }] },
+      { naam: '', kamers: [{ naam: '', gewicht: 0.8, stil: true, apparaten: [] }, { naam: '', gewicht: 1.2, stil: true, apparaten: [] }] },
+      { dak: true, kamers: [{ naam: '', stil: true, apparaten: [] }] },
+    ],
+    labels: [],
+  };
+  huis.teken(document.getElementById('huis-wand'), stil, { breedte: 480, hoogte: 440, marge: 0.04 });
+  huis.teken(document.getElementById('huis-tel'), stil, { breedte: 300, hoogte: 280, marge: 0.04 });
+</script>
+</body>
+</html>

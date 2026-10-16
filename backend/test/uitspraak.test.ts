@@ -29,8 +29,8 @@ describe('de uitspraak (besluit 142)', () => {
   });
 
   it('zegt gevel met een lange e', () => {
-    expect(uitspraak('De zon staat nu op de voorgevel en de zijgevels.')).toBe('De zon staat nu op de voorgeevel en de zijgeevels.');
-    expect(uitspraak('Gevel en achtergevel, maar een gevelde boom blijft.')).toBe('geevel en achtergeevel, maar een gevelde boom blijft.');
+    expect(uitspraak('De zon staat nu op de voorgevel en de zijgevels.')).toBe('De zon staat nu op de voorgeevel en de zij geevels.');
+    expect(uitspraak('Gevel en achtergevel, maar een gevelde boom blijft.')).toBe('geevel en achter geevel, maar een gevelde boom blijft.');
   });
 
   it('laat gewone tekst met rust', () => {

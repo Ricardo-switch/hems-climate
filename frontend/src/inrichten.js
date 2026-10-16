@@ -246,13 +246,15 @@ function buitenStap() {
   const wat = [gevonden.some((a) => a.soort === 'camera') ? 'camera' : null, gevonden.some((a) => a.soort === 'screen') ? 'zonnescherm' : null, gevonden.some((a) => a.soort === 'licht') ? 'buitenlampen' : null].filter(Boolean);
   const rijen = kamers.map((k) => {
     const b = buitenNu(k);
-    const extra = b.soort === 'oprit' ? knop(`data-bauto="${esc(k.id)}"`, 'Auto', !!b.auto) : b.soort === 'tuin' ? knop(`data-btuinhuis="${esc(k.id)}"`, 'Tuinhuis', !!b.tuinhuis) : '';
-    return rij(k.naam, BUITEN_SOORTEN.map(([w, t]) => knop(`data-bsoort="${esc(k.id)}" data-waarde="${w}"`, t, b.soort === w)).join('') + extra);
+    // Eerst wat het is (één keuze), dan apart wat erbij hoort, als schakelaar: zo zie je dat dat aan of uit gaat.
+    const schakel = (attr, tekst, aan) => `<button type="button" class="schakelrij" role="switch" aria-checked="${aan}" ${attr}><span>${esc(tekst)}</span><i aria-hidden="true"></i></button>`;
+    const extra = b.soort === 'oprit' ? schakel(`data-bauto="${esc(k.id)}"`, 'Auto op de oprit', !!b.auto) : b.soort === 'tuin' ? schakel(`data-btuinhuis="${esc(k.id)}"`, 'Tuinhuis of schuur erbij', !!b.tuinhuis) : '';
+    return `<div class="rij"><b>${esc(k.naam)}</b><div class="kolom"><span class="vraagje">Wat is het?</span><div class="chips">${BUITEN_SOORTEN.map(([w, t]) => knop(`data-bsoort="${esc(k.id)}" data-waarde="${w}"`, t, b.soort === w)).join('')}</div>${extra}</div></div>`;
   });
   return {
     waar: waarVan('buiten'),
     kop: 'Wat ligt er rond je huis?',
-    uitleg: kamers.length ? 'Zo komt het in de tekening: de oprit met de auto, de tuin met het tuinhuis.' : 'Er staat nog geen buitenruimte in je huis. Een tuin of oprit voeg je toe bij Indeling, op de etage Buiten.',
+    uitleg: kamers.length ? 'Kies per ruimte wat het is. Bij een oprit of tuin zet je daarna aan wat erbij hoort, zoals de auto of een tuinhuis.' : 'Er staat nog geen buitenruimte in je huis. Een tuin of oprit voeg je toe bij Indeling, op de etage Buiten.',
     inhoud: `${kamers.length ? `<div class="rijen">${rijen.join('')}</div>` : ''}${wat.length ? `<div class="noot">Gevonden buiten: ${esc(wat.join(', '))}. Die komen in de tekening.</div>` : ''}`,
     links: '<button type="button" class="zachtknop" data-later>Later</button>',
     rechts: '<a class="knop knop-licht" href="#apparaten">Volgende</a>',
@@ -284,7 +286,7 @@ function metenStap() {
 }
 
 /* De regeling per kamer (besluit 138): dezelfde drie keuzes als bij Indeling. */
-const ROLLEN = [['houdt', 'Houdt op temperatuur', 'Houdt'], ['zon', 'Helpt op zon', 'Zon'], ['kijken', 'Alleen kijken', 'Kijkt']];
+const ROLLEN = [['houdt', 'Houdt de kamer op temperatuur', 'Op temperatuur'], ['zon', 'Helpt als er zon over is', 'Op zon'], ['kijken', 'Kijkt alleen mee', 'Kijkt mee']];
 const rolVan = (k, r, key) => (k?.rollen ? (k.rollen[key] ?? 'kijken') : (klimaatIn(r).find((a) => sleutel(a) === key)?.klimaat?.rol ?? 'kijken'));
 let toevoegenIn = null;
 function warmteStap() {
@@ -293,7 +295,7 @@ function warmteStap() {
   const los = (d.huis?.zonderRuimte ?? []).filter((x) => x.soort === 'klimaat');
   const rijen = binnen().map((r) => {
     const k = c?.kamers.find((x) => x.id === r.id);
-    // Drie knoppen naast elkaar, zoals de schets: houdt, zon, kijkt (besluit 146).
+    // Drie knoppen naast elkaar, zoals de schets: op temperatuur, op zon, kijkt mee (besluit 146).
     const toestellen = klimaatIn(r).map((a) => {
       const nuRol = rolVan(k, r, sleutel(a));
       const knoppen = ROLLEN.map(([w, t, kort]) => `<button type="button" class="${w === 'zon' ? 'zon' : ''}" data-rolwaarde="${w}" aria-pressed="${w === nuRol}" title="${t}">${kort}</button>`).join('');

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis, met wie er thuis is (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Thuis met bewoners (schets, 16 oktober 2026). De wand is van iedereen:
+   * hij begroet wie er thuis is, met de naam uit de app. Daaronder welk
+   * comfort er nu geldt, en waarom; één tik zet het terug. Wisselt het, dan
+   * staat het één keer bij de bel. Op de telefoon begroet de app wie er
+   * ingelogd is ("Goedenavond, Shira").
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 104px; width: 380px; z-index: 2; }
+  .groet { font-size: 17px; font-weight: 600; color: var(--zacht); }
+  .groet b { color: var(--tekst); }
+  .titel h1 { margin-top: 6px; }
+  .titel .lead { margin-top: 10px; }
+  /* Welk comfort er geldt: een strookje met een gezicht, de reden en terugzetten. */
+  .geldt { margin-top: 16px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgba(9, 15, 28, 0.55); border: 1px solid rgba(247, 181, 72, 0.35); backdrop-filter: blur(10px); }
+  .geldt .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: var(--inkt); background: #f7b548; }
+  .geldt b { display: block; font-size: 14.5px; }
+  .geldt span span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 1px; }
+  .geldt .terug { grid-column: 2; justify-self: start; margin-top: 4px; height: 30px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 700; }
+  .podium { position: absolute; left: 40px; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel button { height: 40px; border-radius: 12px; border: 0; font-weight: 700; font-size: 14px; }
+  /* De melding bij de bel, één keer bij een wissel. */
+  .melding { position: absolute; left: 98px; bottom: 58px; width: 340px; padding: 14px 16px; border-radius: 18px; background: rgba(15, 22, 40, 0.92); border: 1px solid var(--glas-rand); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45); }
+  .melding b { display: block; font-size: 15px; }
+  .melding span { display: block; font-size: 13px; color: var(--zacht); margin-top: 4px; line-height: 1.4; }
+  .melding::after { content: ''; position: absolute; left: -7px; bottom: 26px; width: 14px; height: 14px; background: rgba(15, 22, 40, 0.92); border-left: 1px solid var(--glas-rand); border-bottom: 1px solid var(--glas-rand); transform: rotate(45deg); }
+  .wie { display: flex; gap: 8px; margin-top: 10px; }
+  .wie span { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); font-size: 13px; font-weight: 600; }
+  .wie span i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; color: var(--inkt); }
+  .wie span.weg { color: var(--gedempt); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">18:05</span><span class="datum">vrijdag 16 oktober</span></div>
+      <div class="chips">
+        <span class="pil"><span class="stip" style="background: var(--ijs)"></span>11° buiten, bewolkt</span>
+        <span class="pil" style="color: var(--zacht)"><span class="stip" style="background: var(--zacht)"></span>Kijkt mee</span>
+      </div>
+    </div>
+
+    <div class="titel">
+      <span class="groet">Goedenavond, <b>Shira</b> en <b>Matts</b></span>
+      <h1 class="kop-1">Het huis warmt de woonkamer op</h1>
+      <p class="lead">Naar 21°, zoals Shira het wil. Het is er nu 19,6°.</p>
+      <div class="geldt">
+        <span class="gezicht">S</span>
+        <span><b>Comfort van Shira</b><span>Ricardo is weg sinds 17:10. Shira staat daarna.</span></span>
+        <button class="terug">Toch die van Ricardo</button>
+      </div>
+    </div>
+
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <h2 class="kop-3">Wie er thuis is</h2>
+        <div class="wie">
+          <span><i style="background: #f7b548">S</i>Shira</span>
+          <span><i style="background: #6ee7b7">M</i>Matts</span>
+          <span class="weg"><i style="background: #4a5a6c; color: var(--tekst)">R</i>Ricardo, weg</span>
+        </div>
+        <p class="mini" style="margin: 10px 0 0">De eerste op de lijst die thuis is, bepaalt het comfort. De volgorde staat bij Instellingen › Bewoners.</p>
+      </section>
+      <section class="glas kaart">
+        <h2 class="kop-3">Hoe voelt het in de woonkamer?</h2>
+        <div class="gevoel">
+          <button style="background: rgba(111,211,255,0.14); color: #a9e6ff">Te koud</button>
+          <button style="background: rgba(110,231,183,0.14); color: var(--mint)">Goed</button>
+          <button style="background: rgba(255,122,77,0.14); color: #ffb090">Te warm</button>
+        </div>
+        <p class="mini" style="margin: 8px 0 0">Telt voor het comfort van Shira, want dat geldt nu.</p>
+      </section>
+    </aside>
+
+    <div class="melding">
+      <b>Shira is thuis: haar comfort geldt nu</b>
+      <span>Ricardo is weg. De woonkamer gaat naar 21° in plaats van 20°.</span>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op een herfstavond. De woonkamer warmt op, de lampen branden.',
+    tijd: 'avond',
+    zon: { aandeel: 0, panelen: 12 },
+    wolken: 0.5,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Hal', gewicht: 0.6, temp: '18,9°', apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] },
+        { naam: 'Woonkamer', gewicht: 1.5, temp: '19,6°', zin: 'warmt naar 21°', stand: 'warmt', apparaten: [{ soort: 'radiator', aan: true }, { soort: 'lamp', aan: true, x: 0.35 }, { soort: 'bank' }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '20,4°', apparaten: [] },
+        { naam: 'Slaapkamer Matts', gewicht: 1.2, temp: '19,1°', apparaten: [{ soort: 'lamp', aan: true, x: 0.5 }] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Wasruimte', temp: '20,8°', apparaten: [{ soort: 'airco', aan: false }] }] },
+    ],
+    net: true,
+    labels: [],
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>
