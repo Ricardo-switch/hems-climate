@@ -6338,7 +6338,7 @@ kaartjes met wat er veranderde blijven.
   Elk getal in de nieuwe zin moet letterlijk een feit uit het vaste antwoord
   zijn (besluit 88), getallen in woorden die er niet stonden zijn niet
   toegestaan, en het blijft kort (hooguit drie zinnen). Klopt dat niet, duurt
-  het langer dan drie seconden, of is het gratis gebruik op, dan komt het
+  het langer dan vijf seconden, of is het gratis gebruik op, dan komt het
   vaste antwoord. De controle draait bij elk antwoord, niet alleen in een test.
 - **Bedienen met een zin, via dezelfde deuren als de knoppen** (97, 100,
   121). De woordzoeker herkent een opdracht zelf ("licht beneden uit", "doe
@@ -6363,6 +6363,15 @@ kaartjes met wat er veranderde blijven.
 - **Spraak** (de microfoon met Whisper in Home Assistant) is een volgende
   stap. Tot dan typ je de zin.
 - **Versie 0.27.0.**
+- **Reparatie (0.27.1):** "Proberen" lukte nooit. De app werkte, maar
+  gemini-3.8-flash deed er 9 tot 15 seconden over, waar de assistent er drie
+  wachtte, en het gratis gebruik van dat model is 20 vragen per dag. De
+  assistent wacht nu vijf seconden; een snel model (flash-lite) antwoordt in
+  een à twee. "Proberen" wacht tot dertig seconden, en zegt hoe lang het model
+  erover deed en waarom het niet lukte. Zegt het model dat het gebruik op is,
+  of dat het het te druk heeft, dan vraagt de assistent het een tijd niet:
+  tot het moment dat het model noemt (hooguit een dag), twee minuten bij
+  "te druk". Tot dan komt het vaste antwoord meteen, zonder te wachten.
 
 ---
 

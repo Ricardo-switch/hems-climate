@@ -46,6 +46,7 @@ import { partsIn, zonedMidnight } from './web/today.js';
 import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } from './web/weather.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
+import { Pauze } from './web/taalmodel.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
@@ -498,6 +499,14 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 const houseStates = new Map<string, HaEntityState>();
 // Alle standen, voor de namen van meters en een prijs uit een entiteit (besluit 102).
 const allStates = new Map<string, HaEntityState>();
+
+/** Per AI-taak een pauze na "gebruik op" of "te druk" (besluit 148). */
+const pauzes = new Map<string, Pauze>();
+function pauzeVan(id: string): Pauze {
+  let p = pauzes.get(id);
+  if (!p) pauzes.set(id, (p = new Pauze()));
+  return p;
+}
 // Lampen en screens, klimaat, en sensoren die temperatuur of luchtvochtigheid meten.
 const inHouse = (st: HaEntityState) =>
   st.entity_id.startsWith('light.') ||
@@ -1137,9 +1146,11 @@ if (webPort != null) {
       model: () => {
         const f = functiesNu();
         const id = f ? volledig(f, functiesKeuzes()).praten.taalmodel : null;
-        return id && allStates.has(id) ? (opdracht, velden) => client.generateData(id, opdracht, velden) : null;
+        return id && allStates.has(id) ? pauzeVan(id).om((opdracht, velden) => client.generateData(id, opdracht, velden)) : null;
       },
-      proef: (id) => (opdracht, velden) => client.generateData(id, opdracht, velden),
+      proef: (id) => pauzeVan(id).om((opdracht, velden) => client.generateData(id, opdracht, velden)),
+      // Na "gebruik op" of "te druk" even niet vragen, per AI-taak (besluit 148).
+      pauze: (id) => pauzeVan(id).stand,
       bedienen: () => {
         const f = functiesNu();
         return f ? volledig(f, functiesKeuzes()).praten.bedienen : true;

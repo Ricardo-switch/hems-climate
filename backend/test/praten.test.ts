@@ -9,7 +9,7 @@ import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.j
 import type { HouseDevice, HouseReport } from '../src/web/house.js';
 import { geenScherm } from '../src/web/house.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend, type Opdracht } from '../src/web/opdracht.js';
-import { controleerZin, inEigenWoorden, kies, opdrachtKiezen, vanKeuze } from '../src/web/taalmodel.js';
+import { controleerZin, inEigenWoorden, kies, opdrachtKiezen, Pauze, vanKeuze } from '../src/web/taalmodel.js';
 
 const apparaat = (d: Partial<HouseDevice> & Pick<HouseDevice, 'id' | 'naam' | 'soort'>): HouseDevice =>
   ({ haNaam: d.naam, stand: '', aan: false, helderheidPct: null, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, ...d }) as HouseDevice;
@@ -180,13 +180,44 @@ describe('in eigen woorden', () => {
     expect(controleerZin(42, vast)).toBeNull();
   });
 
-  it('valt terug op het vaste antwoord bij een fout, een slechte zin of wachten', async () => {
-    expect(await inEigenWoorden(async () => 'De wasruimte wacht op meer zon: 0,8 kW nodig, 0,5 kW over.', null, vast, 'nl')).toEqual({ antwoord: 'De wasruimte wacht op meer zon: 0,8 kW nodig, 0,5 kW over.', eigen: true });
-    expect(await inEigenWoorden(async () => ({ zin: 'Nog even wachten op de zon.' }), null, vast, 'nl')).toEqual({ antwoord: 'Nog even wachten op de zon.', eigen: true });
-    expect(await inEigenWoorden(async () => 'Er is 3 kW over.', null, vast, 'nl')).toEqual({ antwoord: vast.antwoord, eigen: false });
-    expect(await inEigenWoorden(async () => { throw new Error('quota'); }, null, vast, 'nl')).toEqual({ antwoord: vast.antwoord, eigen: false });
+  it('valt terug op het vaste antwoord bij een fout, een slechte zin of wachten, en zegt waarom', async () => {
+    expect(await inEigenWoorden(async () => 'De wasruimte wacht op meer zon: 0,8 kW nodig, 0,5 kW over.', null, vast, 'nl')).toMatchObject({ antwoord: 'De wasruimte wacht op meer zon: 0,8 kW nodig, 0,5 kW over.', eigen: true, reden: null });
+    expect(await inEigenWoorden(async () => ({ zin: 'Nog even wachten op de zon.' }), null, vast, 'nl')).toMatchObject({ antwoord: 'Nog even wachten op de zon.', eigen: true });
+    expect(await inEigenWoorden(async () => 'Er is 3 kW over.', null, vast, 'nl')).toMatchObject({ antwoord: vast.antwoord, eigen: false, reden: expect.stringContaining('klopte niet') });
+    expect(await inEigenWoorden(async () => { throw new Error('You exceeded your current quota'); }, null, vast, 'nl')).toMatchObject({ antwoord: vast.antwoord, eigen: false, reden: 'Het gratis gebruik van dit model is op.' });
     const traag = () => new Promise<string>((ok) => setTimeout(() => ok('Te laat.'), 200));
-    expect(await inEigenWoorden(traag, null, vast, 'nl', 20)).toEqual({ antwoord: vast.antwoord, eigen: false });
+    expect(await inEigenWoorden(traag, null, vast, 'nl', 20)).toMatchObject({ antwoord: vast.antwoord, eigen: false, reden: expect.stringContaining('langer dan') });
+  });
+
+  it('vraagt na "gebruik op" of "te druk" even niets, zodat een vraag niet eerst op de fout wacht', async () => {
+    let nu = 0;
+    const pauze = new Pauze(() => nu);
+    let vragen = 0;
+    let fout: Error | null = new Error('Sorry, I had a problem getting a response from Google Generative AI.: {"error":{"code":429,"message":"You exceeded your current quota. Quota exceeded for metric: generate_content_free_tier_requests, limit: 20\nPlease retry in 3h21m52.6s.","status":"RESOURCE_EXHAUSTED"}}');
+    const model = pauze.om(async () => {
+      vragen += 1;
+      if (fout) throw fout;
+      return 'Goed.';
+    });
+    await expect(model('x')).rejects.toThrow(/quota/);
+    expect(pauze.stand).toEqual({ tot: (3 * 3600 + 21 * 60 + 52.6) * 1000, reden: 'Het gratis gebruik van dit model is op.' });
+    // Tijdens de pauze: meteen een fout, zonder het model te vragen.
+    await expect(model('x')).rejects.toThrow(/^pauze: /);
+    expect(vragen).toBe(1);
+    expect((await inEigenWoorden(model, null, vast, 'nl')).reden).toBe('Het gratis gebruik van dit model is op.');
+    // Daarna weer gewoon.
+    nu = 4 * 3600_000;
+    fout = null;
+    expect(await model('x')).toBe('Goed.');
+    // Te druk: twee minuten.
+    fout = new Error('{"error":{"code":503,"message":"This model is currently experiencing high demand.","status":"UNAVAILABLE"}}');
+    await expect(model('x')).rejects.toThrow();
+    expect(pauze.stand).toEqual({ tot: nu + 120_000, reden: 'Het model heeft het nu te druk.' });
+    // Een andere fout: geen pauze.
+    nu += 200_000;
+    fout = new Error('iets anders');
+    await expect(model('x')).rejects.toThrow();
+    expect(pauze.stand).toBeNull();
   });
 
   it('vraagt het model om de getallen precies over te nemen', async () => {

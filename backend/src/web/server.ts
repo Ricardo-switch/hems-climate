@@ -44,7 +44,7 @@ import type { AskContext, Lang, Question } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
 import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
-import { inEigenWoorden, kies, type Vraag } from './taalmodel.js';
+import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
@@ -229,6 +229,8 @@ export interface WebOptions {
   readonly praten?: {
     readonly model: () => Vraag | null;
     readonly proef: (entityId: string) => Vraag;
+    /** De pauze na een fout van deze AI-taak, zoals een op gebruik: tot wanneer, en waarom. */
+    readonly pauze?: (entityId: string) => { readonly tot: number; readonly reden: string } | null;
     readonly bedienen: () => boolean;
   };
   /**
@@ -1031,8 +1033,21 @@ export class WebServer {
         return;
       }
       const vast = ask({ kind: 'nu' }, { config, snapshot: this.#options.latest(), today: null, nowMs: Date.now(), shadow: true, lang: 'nl' });
-      const eigen = await inEigenWoorden(praten.proef(id), 'Wat doe je nu?', vast, 'nl');
-      sendJson(res, 200, { vast: vast.antwoord, eigen: eigen.eigen ? eigen.antwoord : null });
+      // Tijdens een pauze (gebruik op, te druk): zeggen tot wanneer, zonder het model te vragen.
+      const pauze = praten.pauze?.(id) ?? null;
+      if (pauze) {
+        const om = new Intl.DateTimeFormat('nl-NL', { hour: '2-digit', minute: '2-digit', timeZone: config.timezone }).format(pauze.tot);
+        sendJson(res, 200, { vast: vast.antwoord, eigen: null, reden: `${pauze.reden} Rond ${om} probeert de assistent het weer; tot dan hoor je het vaste antwoord.`, ms: null });
+        return;
+      }
+      // Lang genoeg wachten om te zien hoe traag het model is; de assistent zelf wacht korter.
+      const eigen = await inEigenWoorden(praten.proef(id), 'Wat doe je nu?', vast, 'nl', PROEF_MS);
+      const seconden = (ms: number) => (ms / 1000).toFixed(1).replace('.', ',');
+      const traag = eigen.ms != null && eigen.ms > WACHT_MS;
+      const reden = traag
+        ? `Het model deed er ${seconden(eigen.ms!)} seconden over. De assistent wacht hooguit ${WACHT_MS / 1000} seconden; daarna hoor je het vaste antwoord. Kies een sneller model, zoals een met flash-lite in de naam.`
+        : eigen.reden;
+      sendJson(res, 200, { vast: vast.antwoord, eigen: eigen.eigen ? eigen.antwoord : null, reden, ms: eigen.ms, snel: eigen.eigen && !traag });
       return;
     }
 

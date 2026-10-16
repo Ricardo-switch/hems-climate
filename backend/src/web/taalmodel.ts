@@ -24,8 +24,14 @@ import { lichtOpdracht, sceneOpdracht, schermOpdracht } from './opdracht.js';
 /** Vraagt de AI-taak om een tekst; geeft terug wat de taak antwoordt. */
 export type Vraag = (instructions: string, structure?: Readonly<Record<string, AiTaskField>>) => Promise<unknown>;
 
-/** Zo lang wacht de assistent op het model; daarna het vaste antwoord. */
-export const WACHT_MS = 3_000;
+/**
+ * Zo lang wacht de assistent op het model; daarna het vaste antwoord. Een
+ * snel model (flash-lite) antwoordt in een à twee seconden; een groter model
+ * kan er tien seconden over doen, en dan is het vaste antwoord beter.
+ */
+export const WACHT_MS = 5_000;
+/** Zo lang wacht "Proberen" bij Functies: lang genoeg om te zien hoe traag het model is. */
+export const PROEF_MS = 30_000;
 /** Zo lang mag een zin in eigen woorden zijn. */
 export const MAX_ZIN = 400;
 
@@ -100,6 +106,15 @@ export function opdrachtEigenWoorden(vraag: string | null, vast: { readonly antw
   ].filter(Boolean).join('\n');
 }
 
+export interface EigenWoorden {
+  readonly antwoord: string;
+  readonly eigen: boolean;
+  /** Waarom het het vaste antwoord werd, in gewone woorden; null als het lukte. */
+  readonly reden: string | null;
+  /** Hoe lang het model erover deed, of null als het niet antwoordde. */
+  readonly ms: number | null;
+}
+
 /** Het vaste antwoord in eigen woorden, of het vaste antwoord als dat niet lukt. */
 export async function inEigenWoorden(
   vraagModel: Vraag,
@@ -107,16 +122,90 @@ export async function inEigenWoorden(
   vast: { readonly antwoord: string; readonly feiten: readonly Fact[] },
   lang: Lang,
   wachtMs = WACHT_MS,
-): Promise<{ readonly antwoord: string; readonly eigen: boolean }> {
+): Promise<EigenWoorden> {
+  const t0 = Date.now();
   try {
     const data = await opTijd(vraagModel(opdrachtEigenWoorden(vraag, vast, lang)), wachtMs);
+    const ms = Date.now() - t0;
     const tekst = typeof data === 'object' && data != null ? (data as Record<string, unknown>)['zin'] : data;
     const zin = controleerZin(tekst, vast);
-    if (zin != null) return { antwoord: zin, eigen: true };
-  } catch {
+    if (zin != null) return { antwoord: zin, eigen: true, reden: null, ms };
+    return { antwoord: vast.antwoord, eigen: false, reden: 'Het antwoord van het model klopte niet met de getallen, of was te lang.', ms };
+  } catch (e) {
     // Geen model, te laat, of het gratis gebruik is op: dan het vaste antwoord.
+    const te = /te lang over/.test((e as Error).message);
+    return { antwoord: vast.antwoord, eigen: false, reden: te ? `Het model deed er langer dan ${Math.round(wachtMs / 1000)} seconden over.` : foutInWoorden(e), ms: null };
   }
-  return { antwoord: vast.antwoord, eigen: false };
+}
+
+/* ------------------------------------------------------- pauze na een fout */
+
+/** Een fout van het model in gewone woorden, zonder de technische rest. */
+export function foutInWoorden(e: unknown): string {
+  const m = e instanceof Error ? e.message : String(e);
+  if (/^pauze: /.test(m)) return m.slice(7);
+  if (/quota|exceeded|RESOURCE_EXHAUSTED|\b429\b|rate.?limit/i.test(m)) return 'Het gratis gebruik van dit model is op.';
+  if (/high demand|overloaded|UNAVAILABLE|\b503\b/i.test(m)) return 'Het model heeft het nu te druk.';
+  if (/insufficient funds|billing|credit/i.test(m)) return 'Er staat geen tegoed op het account van dit model.';
+  if (/staat uit|geen AI-taak/i.test(m)) return 'Dit taalmodel mag de app niet gebruiken.';
+  return 'Het model gaf een fout terug.';
+}
+
+/** "Please retry in 3h21m52.6s" als milliseconden, of null. */
+export function opnieuwOver(m: string): number | null {
+  const r = /retry in ((?:\d+h)?(?:\d+m)?(?:[\d.]+s)?)/i.exec(m)?.[1];
+  if (!r) return null;
+  const deel = (x: string) => Number(new RegExp(`([\\d.]+)${x}`).exec(r)?.[1] ?? 0);
+  const ms = (deel('h') * 3600 + deel('m') * 60 + deel('s')) * 1000;
+  return ms > 0 ? ms : null;
+}
+
+/**
+ * Na een fout even niet vragen (besluit 148). Is het gratis gebruik op, of
+ * heeft het model het te druk, dan heeft elke vraag daarna geen zin: zonder
+ * pauze wacht iedere vraag eerst op dezelfde fout. Tijdens de pauze geeft de
+ * assistent meteen het vaste antwoord.
+ */
+export class Pauze {
+  #tot = 0;
+  #reden = '';
+  readonly #nu: () => number;
+
+  constructor(nu: () => number = Date.now) {
+    this.#nu = nu;
+  }
+
+  /** Tot wanneer, en waarom; null zonder pauze. */
+  get stand(): { readonly tot: number; readonly reden: string } | null {
+    return this.#nu() < this.#tot ? { tot: this.#tot, reden: this.#reden } : null;
+  }
+
+  /** Dezelfde vraag, maar met de pauze ervoor en erna. */
+  om(vraag: Vraag): Vraag {
+    return async (opdracht, velden) => {
+      const s = this.stand;
+      if (s) throw new Error(`pauze: ${s.reden}`);
+      try {
+        return await vraag(opdracht, velden);
+      } catch (e) {
+        this.#na(e);
+        throw e;
+      }
+    };
+  }
+
+  #na(e: unknown): void {
+    const m = e instanceof Error ? e.message : String(e);
+    const reden = foutInWoorden(e);
+    let ms = 0;
+    if (/quota|exceeded|RESOURCE_EXHAUSTED|\b429\b|rate.?limit/i.test(m)) ms = Math.min(24 * 3600_000, opnieuwOver(m) ?? 3600_000);
+    else if (/high demand|overloaded|UNAVAILABLE|\b503\b/i.test(m)) ms = 2 * 60_000;
+    else if (/insufficient funds|billing|credit/i.test(m)) ms = 3600_000;
+    if (ms > 0) {
+      this.#tot = this.#nu() + ms;
+      this.#reden = reden;
+    }
+  }
 }
 
 /* ------------------------------------------------------------ kiezen */

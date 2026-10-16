@@ -96,11 +96,13 @@ function praten() {
     : proef === 'bezig'
       ? '<p class="mini">Even proberen…</p>'
       : proef
-        ? `<div class="proef"><div><span>Vast antwoord</span>${esc(proef.vast)}</div><div class="eigen"><span>In eigen woorden</span>${proef.eigen ? esc(proef.eigen) : 'Lukte niet; dan hoor je het vaste antwoord.'}</div></div>`
+        ? `<div class="proef"><div><span>Vast antwoord</span>${esc(proef.vast)}</div><div class="eigen"><span>In eigen woorden</span>${proef.eigen ? esc(proef.eigen) : 'Lukte niet; dan hoor je het vaste antwoord.'}</div></div>
+          ${proef.snel && proef.ms != null ? `<p class="mini">Antwoord na ${esc((proef.ms / 1000).toFixed(1).replace('.', ','))} seconden.</p>` : ''}
+          ${proef.reden ? `<p class="uitleg" style="color: var(--zon)">${esc(proef.reden)}</p>` : ''}`
         : '';
   return `<h2 class="kop-2">Antwoorden in eigen woorden</h2>
     ${modellen.length ? keuzes('Taalmodel', 'taalmodel', [[null, 'Uit'], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : '<p class="uitleg">Geen AI-taak gevonden in Home Assistant. Voeg er een toe, zoals Google Gemini bij Apparaten en diensten; dan staat hij hier.</p>'}
-    <p class="mini">De assistent zegt het vaste antwoord op zijn eigen manier, met een taalmodel uit Home Assistant. Klopt een getal niet, of duurt het langer dan 3 seconden, dan hoor je het vaste antwoord.</p>
+    <p class="mini">De assistent zegt het vaste antwoord op zijn eigen manier, met een taalmodel uit Home Assistant. Klopt een getal niet, of duurt het langer dan 5 seconden, dan hoor je het vaste antwoord.</p>
     ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${proef && proef !== 'bezig' ? 'Nog een keer proberen' : 'Proberen'}</button></div>` : ''}
     ${proefHtml}
     <div class="buiten"><div><b class="wel">Gaat naar het taalmodel</b><span>Je vraag als tekst, het vaste antwoord met de getallen, en de namen van kamers, lampen en schermen</span></div><div><b class="niet">Blijft in huis</b><span>Je stem, camerabeelden, en wie er thuis is</span></div></div>
