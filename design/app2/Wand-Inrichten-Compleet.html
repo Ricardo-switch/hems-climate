@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten, compleet (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Inrichten, compleet (schets, 15 oktober 2026). De eerste keer moet de app
+   * daarna af zijn. Inrichten liep langs huis, apparaten, warmte, comfort en
+   * zon; erbij komen buiten, meten met, wat elk apparaat doet (ook meedoen met
+   * een andere kamer), de zekering, prijzen en meters, licht en camera's, en
+   * de wand die één keer inlogt. Zes hoofdstukken bovenaan, met kleine stappen
+   * erin, zodat de balk rustig blijft. Elke stap staat al ingevuld met wat
+   * Home Assistant weet; jij bevestigt. Daarna de film, en de rondleiding langs
+   * alle tabbladen en een kamer (rechts).
+   */
+  main { padding: 22px 26px; display: grid; grid-template-rows: auto auto 1fr; gap: 14px; height: 800px; box-sizing: border-box; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .hoofdstukken { display: flex; gap: 8px; }
+  .hs { flex: 1; padding: 10px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--glas-rand); display: flex; flex-direction: column; gap: 6px; }
+  .hs b { font-size: 13.5px; }
+  .hs .stipjes { display: flex; gap: 4px; }
+  .hs .stipjes i { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+  .hs .stipjes i.al { background: var(--mint); }
+  .hs .stipjes i.nu { background: var(--tekst); }
+  .hs span { font-size: 11.5px; color: var(--gedempt); line-height: 1.3; }
+  .hs.nu { border-color: rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); }
+  .onder { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; min-height: 0; }
+  .raster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 1fr 1fr; gap: 12px; min-height: 0; }
+  .stapkaart { border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; min-height: 0; overflow: hidden; }
+  .stapkaart .waar { font-size: 11.5px; font-weight: 700; color: var(--gedempt); }
+  .stapkaart h3 { margin: 0; font-family: var(--kop); font-size: 18px; font-weight: 600; line-height: 1.15; }
+  .stapkaart p { margin: 0; font-size: 12.5px; color: var(--zacht); line-height: 1.4; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .chip.aan { background: var(--tekst); color: var(--inkt); }
+  .rij { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 12.5px; }
+  .rij:first-of-type { border-top: 0; }
+  .rij .k { color: var(--zacht); }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+  .seg span { padding: 3px 7px; border-radius: 7px; font-size: 11px; font-weight: 600; color: var(--gedempt); }
+  .seg span.aan { background: rgba(255, 255, 255, 0.14); color: var(--tekst); }
+  .seg span.zon { background: rgba(247, 181, 72, 0.2); color: var(--zon); }
+  .invul { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); font-size: 12.5px; }
+  .invul b { font-family: var(--kop); }
+  .mini-huis { height: 96px; margin: -4px -6px; }
+  .knopje { align-self: start; padding: 7px 12px; border-radius: 999px; background: var(--tekst); color: var(--inkt); font-size: 12.5px; font-weight: 700; }
+  .tour { border-radius: 20px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .tour h3 { margin: 0 0 4px; font-family: var(--kop); font-size: 18px; font-weight: 600; }
+  .stop { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 12.5px; }
+  .stop i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .stop b { display: block; font-size: 13px; }
+  .stop span { color: var(--gedempt); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond" style="grid-template-columns: 1fr">
+  <main>
+    <div class="kopregel">
+      <div><span class="mini">Schets · Inrichten, compleet · de eerste keer</span><h1 class="kop-1" style="font-size: 36px; margin-top: 4px">Na Inrichten is de app af</h1></div>
+      <span class="mini" style="max-width: 50ch; text-align: right">Zes hoofdstukken met kleine stappen. Alles staat al ingevuld met wat Home Assistant weet: jij kijkt of het klopt. Elke stap kan later, bij Instellingen.</span>
+    </div>
+    <div class="hoofdstukken">
+      <div class="hs"><b>1. Je huis</b><div class="stipjes"><i class="al"></i><i class="al"></i></div><span>Kamers en etages · buiten</span></div>
+      <div class="hs"><b>2. Apparaten</b><div class="stipjes"><i class="al"></i><i class="al"></i></div><span>Per kamer · meten met</span></div>
+      <div class="hs nu"><b>3. Klimaat</b><div class="stipjes"><i class="nu"></i><i></i></div><span>Wat elk apparaat doet · comfort</span></div>
+      <div class="hs"><b>4. Energie</b><div class="stipjes"><i></i><i></i><i></i></div><span>Panelen · zekering · prijzen en meters</span></div>
+      <div class="hs"><b>5. Gemak</b><div class="stipjes"><i></i><i></i></div><span>Licht en camera's · de wand</span></div>
+      <div class="hs"><b>6. Klaar</b><div class="stipjes"><i></i><i></i></div><span>De film · de rondleiding</span></div>
+    </div>
+    <div class="onder">
+      <div class="raster">
+        <section class="glas stapkaart">
+          <span class="waar">1. Je huis · buiten</span>
+          <h3>Wat ligt er rond je huis?</h3>
+          <div class="mini-huis" id="buiten"></div>
+          <div class="chips"><span class="chip aan">Oprit</span><span class="chip aan">Auto</span><span class="chip aan">Tuin</span><span class="chip aan">Tuinhuis</span><span class="chip">Terras</span><span class="chip">Balkon</span></div>
+          <p>Gevonden: een camera op de oprit, lampen in het tuinhuis en een zonnescherm. Die komen in de tekening.</p>
+        </section>
+        <section class="glas stapkaart">
+          <span class="waar">2. Apparaten · meten met</span>
+          <h3>Welke thermometer telt per kamer?</h3>
+          <div class="rij"><span>Beneden</span><span class="k">Nest en airco, gemiddeld</span></div>
+          <div class="rij"><span>Wasruimte</span><span class="k">airco en bewegingssensor</span></div>
+          <div class="rij"><span>Badkamer</span><span class="k">thermostaat</span></div>
+          <div class="rij"><span>Hal</span><span class="k">bewegingssensor</span></div>
+          <p>Een kamer met twee meters rekent met het gemiddelde.</p>
+        </section>
+        <section class="glas stapkaart" style="border-color: rgba(255, 255, 255, 0.35)">
+          <span class="waar">3. Klimaat · wat elk apparaat doet</span>
+          <h3>Wie houdt welke kamer op temperatuur?</h3>
+          <div class="rij"><span>Nest, Beneden</span><span class="seg"><span class="aan">Houdt</span><span>Zon</span><span>Kijkt</span></span></div>
+          <div class="rij"><span>Airco woonkamer</span><span class="seg"><span>Houdt</span><span class="zon">Zon</span><span>Kijkt</span></span></div>
+          <div class="rij"><span>Airco zolder</span><span class="seg"><span>Houdt</span><span class="zon">Zon</span><span>Kijkt</span></span></div>
+          <div class="rij"><span>Slaapkamer</span><span class="k">doet mee met Wasruimte</span></div>
+          <p>Voorstel: de cv houdt warm, de airco's helpen op zon.</p>
+        </section>
+        <section class="glas stapkaart">
+          <span class="waar">4. Energie · zekering</span>
+          <h3>Hoe zwaar is je aansluiting?</h3>
+          <div class="chips"><span class="chip aan">1 fase</span><span class="chip">3 fasen</span></div>
+          <div class="invul"><span>Hoofdzekering</span><b>35 A</b></div>
+          <p>Staat op de meterkast. Zo zet het huis nooit meer aan dan je zekering aankan.</p>
+        </section>
+        <section class="glas stapkaart">
+          <span class="waar">4. Energie · prijzen en meters</span>
+          <h3>Wat betaal je per kWh?</h3>
+          <div class="invul"><span>Stroom normaal</span><b>€ 0,27</b></div>
+          <div class="invul"><span>Stroom dal</span><b>€ 0,25</b></div>
+          <div class="invul"><span>Terug, gesaldeerd</span><b>zelfde prijs</b></div>
+          <p>Uit je Energie-dashboard: 2 meters van het net, de panelen en gas. Overgenomen.</p>
+        </section>
+        <section class="glas stapkaart">
+          <span class="waar">5. Gemak · de wand</span>
+          <h3>Log de wand één keer in</h3>
+          <p>Kijken kan zonder. Licht, screens en de deurbel bedienen vraagt je account van Home Assistant, één keer op dit scherm.</p>
+          <div class="rij"><span>Licht en screens</span><span class="k">bedienen in de app</span></div>
+          <div class="rij"><span>Camera's</span><span class="k">oprit en deurbel</span></div>
+          <span class="knopje">Inloggen met Home Assistant</span>
+        </section>
+      </div>
+      <aside class="glas tour">
+        <h3>Daarna: de rondleiding</h3>
+        <span class="mini" style="margin-bottom: 4px">Twaalf stops van een paar tellen, langs alles.</span>
+        <div class="stop"><i>1</i><div><b>Thuis: je huis</b><span>de kleur zegt wat een kamer doet</span></div></div>
+        <div class="stop"><i>2</i><div><b>Een kamer openen</b><span>tik op de wasruimte</span></div></div>
+        <div class="stop"><i>3</i><div><b>Bedienen</b><span>lampen, screens, scènes</span></div></div>
+        <div class="stop"><i>4</i><div><b>Hoe voelt het?</b><span>het huis leert wat jij fijn vindt</span></div></div>
+        <div class="stop"><i>5</i><div><b>Vandaag</b><span>wat er gebeurde, en waarom</span></div></div>
+        <div class="stop"><i>6</i><div><b>Morgen</b><span>de zon en het weer vooruit</span></div></div>
+        <div class="stop"><i>7</i><div><b>Apparaten</b><span>wat elk apparaat nu doet</span></div></div>
+        <div class="stop"><i>8</i><div><b>Opbrengst</b><span>kWh en euro, en waarheen</span></div></div>
+        <div class="stop"><i>9</i><div><b>Assistent</b><span>tik de bol, het huis praat</span></div></div>
+        <div class="stop"><i>10</i><div><b>De bel</b><span>meldingen en onderhoud</span></div></div>
+        <div class="stop"><i>11</i><div><b>Het tandwiel</b><span>comfort en de regeling</span></div></div>
+        <div class="stop"><i>12</i><div><b>Wat je huis kan</b><span>hoe ver het is met leren</span></div></div>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  huis.teken(document.getElementById('buiten'), {
+    tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, net: true,
+    etages: [{ naam: 'Begane grond', kamers: [{ naam: 'Beneden', gewicht: 1.6, stil: true, apparaten: [] }, { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] }] }, { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [] }] }],
+    oprit: { auto: true }, tuin: { tuinhuis: true },
+  }, { breedte: 320, hoogte: 110, marge: 0.02 });
+</script>
+</body>
+</html>

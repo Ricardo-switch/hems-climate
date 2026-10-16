@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · De film, snel (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De film, opnieuw (schets, 15 oktober 2026). De vorige was een minuut rustige
+   * beelden met veel tekst. Deze is een trailer: zeven beelden van drie tellen
+   * op een beat van 120 per minuut, samen ongeveer twintig seconden. Elk beeld
+   * laat één ding zien dat de app echt kan, met de cijfers van je eigen huis:
+   * groot getal, korte zin, en het huis dat meebeweegt. De wissel valt op de
+   * beat. Geen video: de app tekent het, dus het is altijd jouw huis.
+   *
+   * Boven: het voorbeeld, dat echt afspeelt. Onder: het draaiboek.
+   */
+  main { padding: 22px 28px; display: grid; grid-template-rows: auto 1fr auto; gap: 14px; height: 800px; box-sizing: border-box; }
+  .kopregel { display: flex; justify-content: space-between; align-items: end; }
+  .speler { position: relative; border-radius: 26px; overflow: hidden; border: 1px solid var(--glas-rand); min-height: 0; }
+  .speler .lucht { position: absolute; inset: 0; transition: opacity 0.6s; }
+  .speler .podium { position: absolute; right: 2%; top: 4%; width: 58%; height: 92%; transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s; }
+  .speler .woord { position: absolute; left: 5%; top: 50%; transform: translateY(-50%); max-width: 42%; }
+  .speler .groot { font-family: var(--kop); font-weight: 800; font-size: 104px; line-height: 0.92; letter-spacing: -0.04em; }
+  .speler .zin { margin-top: 14px; font-family: var(--kop); font-weight: 600; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; color: var(--tekst); }
+  .speler .klein { margin-top: 10px; font-size: 16px; color: var(--zacht); }
+  .speler .in { animation: in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .speler .in2 { animation: in 0.55s 0.12s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .speler .in3 { animation: in 0.55s 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  @keyframes in { from { opacity: 0; transform: translateY(18px) scale(0.98); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  .flits { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .flits.aan { animation: flits 0.35s ease-out; }
+  @keyframes flits { from { opacity: 0.22; } to { opacity: 0; } }
+  .beat { position: absolute; left: 5%; bottom: 6%; display: flex; gap: 6px; }
+  .beat i { width: 34px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+  .beat i.al { background: var(--tekst); }
+  .knoppen { position: absolute; right: 18px; bottom: 16px; display: flex; gap: 8px; }
+  .knoppen .pil { height: 36px; }
+  .strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .kaartje { border-radius: 16px; border: 1px solid var(--glas-rand); padding: 10px 12px; background: rgba(255, 255, 255, 0.03); display: flex; flex-direction: column; gap: 3px; cursor: pointer; }
+  .kaartje[aria-current="true"] { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.07); }
+  .kaartje .tc { font-size: 11.5px; font-weight: 700; color: var(--gedempt); }
+  .kaartje b { font-family: var(--kop); font-size: 15px; font-weight: 600; line-height: 1.2; }
+  .kaartje span { font-size: 12px; color: var(--zacht); line-height: 1.35; }
+  @media (prefers-reduced-motion: reduce) { .speler .in, .speler .in2, .speler .in3, .flits.aan { animation: none; } .speler .podium { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-nacht" style="grid-template-columns: 1fr">
+  <main>
+    <div class="kopregel">
+      <div><span class="mini">Schets · de film, snel · 20 seconden op een beat</span><h1 class="kop-1" style="font-size: 38px; margin-top: 4px">Wat je huis kan, in twintig tellen</h1></div>
+      <span class="mini" style="max-width: 52ch; text-align: right">Zeven beelden van drie tellen. Elk beeld één ding dat de app echt doet, met jouw eigen cijfers. De wissel valt op de beat. Overslaan kan altijd.</span>
+    </div>
+    <section class="speler" aria-label="Voorbeeld van de film">
+      <div class="lucht lucht-nacht" data-lucht></div>
+      <div class="podium" id="podium"></div>
+      <div class="woord" data-woord></div>
+      <div class="flits" data-flits></div>
+      <div class="beat" data-beat></div>
+      <div class="knoppen"><button type="button" class="pil" data-speel>Opnieuw</button><span class="pil">Overslaan</span></div>
+    </section>
+    <div class="strip" data-strip></div>
+  </main>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  // Voorbeeldcijfers; in de app komen ze uit je eigen huis.
+  const etages = (o = {}) => [
+    { naam: 'Begane grond', kamers: [{ naam: 'Beneden', gewicht: 1.6, temp: o.temp ? '21,4°' : null, stand: o.beneden, stil: o.stil, apparaten: [{ soort: 'airco', aan: o.airco }, { soort: 'radiator', aan: o.cv }, { soort: 'lamp', aan: o.licht, x: 0.4 }] }, { naam: 'Hal', gewicht: 0.6, temp: o.temp ? '20,7°' : null, stil: o.stil, apparaten: [] }] },
+    { naam: '1e verdieping', kamers: [{ naam: 'Badkamer', temp: o.temp ? '19,0°' : null, stand: o.bad, stil: o.stil, apparaten: [{ soort: 'vloer', aan: o.vloer }] }, { naam: 'Slaapkamer', gewicht: 1.3, stil: o.stil, apparaten: [{ soort: 'lamp', aan: o.licht, x: 0.5 }] }] },
+    { dak: true, kamers: [{ naam: 'Wasruimte', temp: o.temp ? '22,3°' : null, stand: o.zolder, stil: o.stil, apparaten: [{ soort: 'airco', aan: o.koel }, { soort: 'droger', aan: o.droger }] }] },
+  ];
+  const BEELDEN = [
+    { tc: '0:00', lucht: 'nacht', titel: 'Gisteren, van je dak', groot: '9,3 kWh', kleur: 'var(--zon)', zin: 'Zoveel zon gaf je dak gisteren.', klein: 'Smart Climate weet wat je huis doet, elke minuut.', huis: { tijd: 'nacht', zon: { aandeel: 0, panelen: 12 }, etages: etages({ stil: true }), net: true }, zoom: 0.9 },
+    { tc: '0:03', lucht: 'ochtend', titel: 'Je hele huis', groot: '10', kleur: 'var(--tekst)', zin: 'kamers, 34 apparaten. Eén huis.', klein: 'Gevonden in Home Assistant. Jij kijkt of het klopt.', huis: { tijd: 'ochtend', zon: { stand: 0.2, hoogte: 0.3, aandeel: 0.2, panelen: 12 }, etages: etages({ temp: true }), net: true }, zoom: 1 },
+    { tc: '0:06', lucht: 'dag', titel: 'Zon over? Gratis koel', groot: '1,8 kW', kleur: 'var(--zon)', zin: 'zon over. De wasruimte koelt ermee.', klein: 'Op stroom van je eigen dak, niet van het net.', huis: { tijd: 'dag', zon: { stand: 0.55, hoogte: 0.9, aandeel: 0.85, panelen: 12 }, etages: etages({ temp: true, koel: true, zolder: 'koelt', droger: true }), buitenunit: { aan: true }, net: true, stromen: [{ van: 'zon', naar: 'kamer:Wasruimte', sterkte: 0.8 }], labels: [{ bij: 'panelen', titel: '1,8 kW', groot: true, toon: 'zon', regels: ['zon over'], dx: 50, dy: -60 }] }, zoom: 1.08 },
+    { tc: '0:09', lucht: 'avond', titel: 'Kijkt vooruit', groot: '9,1 kWh', kleur: 'var(--violet)', zin: 'zon morgen. Het huis weet het al.', klein: 'Uit het weer en wat je panelen leerden.', huis: { tijd: 'avond', zon: { aandeel: 0, panelen: 12 }, etages: etages({ temp: true, licht: true }), net: true }, zoom: 1 },
+    { tc: '0:12', lucht: 'avond', titel: 'Op tijd warm', groot: '19°', kleur: 'var(--gloed)', zin: 'in de badkamer, net als jij opstaat.', klein: 'Bij elk besluit zegt het huis waarom.', huis: { tijd: 'ochtend', zon: { stand: 0.15, hoogte: 0.2, aandeel: 0.1, panelen: 12 }, etages: etages({ temp: true, vloer: true, bad: 'warmt' }), net: true }, zoom: 1.12 },
+    { tc: '0:15', lucht: 'dag', titel: 'Vraag het je huis', groot: '“Waarom?”', kleur: 'var(--ijs)', zin: 'Het huis antwoordt, hardop.', klein: 'Lokaal, met je eigen gegevens. Niets gaat het huis uit.', huis: { tijd: 'dag', zon: { stand: 0.6, hoogte: 0.85, aandeel: 0.6, panelen: 12 }, etages: etages({ temp: true, koel: true, zolder: 'koelt' }), net: true }, zoom: 0.95 },
+    { tc: '0:18', lucht: 'dag', titel: 'Klaar', groot: '38%', kleur: 'var(--mint)', zin: 'van je stroom kwam deze maand van je eigen dak.', klein: 'Smart Climate. Tik om te beginnen.', huis: { tijd: 'dag', zon: { stand: 0.5, hoogte: 0.9, aandeel: 0.7, panelen: 12 }, etages: etages({ temp: true }), net: true, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.6 }] }, zoom: 1 },
+  ];
+  const strip = document.querySelector('[data-strip]');
+  strip.innerHTML = BEELDEN.map((b, i) => `<button type="button" class="kaartje" data-ga="${i}"><span class="tc">${b.tc}</span><b>${b.titel}</b><span>${b.groot} ${b.zin}</span></button>`).join('');
+  document.querySelector('[data-beat]').innerHTML = BEELDEN.map(() => '<i></i>').join('');
+  let i = 0;
+  let klok = 0;
+  function toon(n) {
+    i = n;
+    const b = BEELDEN[n];
+    document.querySelector('[data-lucht]').className = `lucht lucht-${b.lucht}`;
+    huis.teken(document.getElementById('podium'), b.huis, { breedte: 640, hoogte: 560, marge: 0.05 });
+    document.getElementById('podium').style.transform = `scale(${b.zoom})`;
+    document.querySelector('[data-woord]').innerHTML = `<div class="groot in" style="color: ${b.kleur}">${b.groot}</div><div class="zin in2">${b.zin}</div><div class="klein in3">${b.klein}</div>`;
+    const f = document.querySelector('[data-flits]');
+    f.classList.remove('aan');
+    void f.offsetWidth;
+    f.classList.add('aan');
+    document.querySelectorAll('[data-beat] i').forEach((x, k) => x.classList.toggle('al', k <= n));
+    strip.querySelectorAll('.kaartje').forEach((x, k) => x.setAttribute('aria-current', String(k === n)));
+  }
+  function speel() {
+    clearInterval(klok);
+    toon(0);
+    // 120 per minuut: zes tellen van een halve seconde per beeld.
+    klok = setInterval(() => (i < BEELDEN.length - 1 ? toon(i + 1) : clearInterval(klok)), 3000);
+  }
+  strip.addEventListener('click', (e) => {
+    const k = e.target.closest('[data-ga]');
+    if (!k) return;
+    clearInterval(klok);
+    toon(Number(k.dataset.ga));
+  });
+  document.querySelector('[data-speel]').addEventListener('click', speel);
+  speel();
+</script>
+</body>
+</html>

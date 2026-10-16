@@ -34,6 +34,8 @@ import { FEEDBACK_FILE } from './feedback.js';
 import { LAYOUT_FILE } from './layout.js';
 import { CONNECTION_FILE } from './aansluiting.js';
 import { WEATHER_FILE } from './weather.js';
+import { UREN_FILE } from './open-meteo.js';
+import { SOLAR_FILE } from './solar-learn.js';
 
 const BLOCK = 512;
 
@@ -92,47 +94,24 @@ export interface ExportInfo {
 async function exportFiles(logDir: string): Promise<{ decisionLog: string[]; everything: string[] }> {
   const decisionLog = await findLogFiles(logDir);
   const history = await findHistoryFiles(logDir);
-  const runs = join(logDir, RUNS_FILE);
-  const hasRuns = await stat(runs).then(
-    () => true,
-    () => false,
-  );
-  // Gevoel en toelichting horen bij de dataset (besluit 84).
-  const feedback = join(logDir, FEEDBACK_FILE);
-  const hasFeedback = await stat(feedback).then(
-    () => true,
-    () => false,
-  );
-  // De indeling ook (besluit 96): zonder weet de dataset niet welke lamp waar staat.
-  const layout = join(logDir, LAYOUT_FILE);
-  const hasLayout = await stat(layout).then(
-    () => true,
-    () => false,
-  );
-  // De antwoorden over de aansluiting ook (besluit 103): ze vullen aan wat de regeling las.
-  const connection = join(logDir, CONNECTION_FILE);
-  const hasConnection = await stat(connection).then(
-    () => true,
-    () => false,
-  );
-  // De zonkans zoals hij de dag ervoor werd verwacht (besluit 105): achteraf niet terug te halen.
-  const weather = join(logDir, WEATHER_FILE);
-  const hasWeather = await stat(weather).then(
-    () => true,
-    () => false,
-  );
-  return {
-    decisionLog,
-    everything: [
-      ...decisionLog,
-      ...history,
-      ...(hasRuns ? [runs] : []),
-      ...(hasFeedback ? [feedback] : []),
-      ...(hasLayout ? [layout] : []),
-      ...(hasConnection ? [connection] : []),
-      ...(hasWeather ? [weather] : []),
-    ],
-  };
+  // De losse bestanden naast de dataset, als ze er zijn.
+  const los = [
+    RUNS_FILE,
+    // Gevoel en toelichting horen bij de dataset (besluit 84).
+    FEEDBACK_FILE,
+    // De indeling ook (besluit 96): zonder weet de dataset niet welke lamp waar staat.
+    LAYOUT_FILE,
+    // De antwoorden over de aansluiting ook (besluit 103): ze vullen aan wat de regeling las.
+    CONNECTION_FILE,
+    // De zonkans zoals hij de dag ervoor werd verwacht (besluit 105): achteraf niet terug te halen.
+    WEATHER_FILE,
+    // Het weer per uur zoals het verwacht werd, en de zon per kwartier (besluit 142):
+    // om de zonverwachting per uur na te rekenen. Zonder ligging: die staat er niet in.
+    UREN_FILE,
+    SOLAR_FILE,
+  ].map((naam) => join(logDir, naam));
+  const er = await Promise.all(los.map((pad) => stat(pad).then(() => true, () => false)));
+  return { decisionLog, everything: [...decisionLog, ...history, ...los.filter((_, i) => er[i])] };
 }
 
 export async function exportInfo(logDir: string): Promise<ExportInfo> {

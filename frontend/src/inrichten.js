@@ -109,38 +109,29 @@ function idVan(naam, bezet) {
 
 /** Het huis zoals het nu is, voor links: elke stap laat meer zien. */
 function model(stap) {
-  const etagesBovenEerst = d.huis?.etages ?? [];
-  const buitenRuimtes = [];
-  const etages = [];
   const i = ALLE.indexOf(stap);
-  for (const e of [...etagesBovenEerst].reverse()) {
-    const kamers = [];
-    for (const r of e.ruimtes ?? []) {
-      if (huismodel.isBuiten(e, r)) buitenRuimtes.push(r);
-      else {
-        const k = huismodel.kamerModel(r, null);
-        // Pas vanaf de apparaten staan ze erin; bij comfort en verder de temperatuur.
-        if (i < ALLE.indexOf('apparaten')) k.apparaten = [];
-        if (i < ALLE.indexOf('comfort')) k.temp = null;
-        if (stap === 'comfort' && r.zoneId) k.stand = 'goed';
-        kamers.push(k);
-      }
-    }
-    if (kamers.length) etages.push({ naam: e.naam, id: e.id, kamers });
-  }
-  const top = etages[etages.length - 1];
-  if (top && (d.huis?.dakEtage !== undefined ? top.id === d.huis.dakEtage : etages.length >= 3)) top.dak = true;
-  const piekW = (d.zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  // De tekening uit huismodel, net als op Thuis (5S); elke stap laat meer zien.
+  const t = huismodel.tekening(d.huis, {
+    zon: d.zon,
+    kamer: (r) => {
+      const k = huismodel.kamerModel(r, null);
+      // Pas vanaf de apparaten staan ze erin; bij comfort en verder de temperatuur.
+      if (i < ALLE.indexOf('apparaten')) k.apparaten = [];
+      if (i < ALLE.indexOf('comfort')) k.temp = null;
+      if (stap === 'comfort' && r.zoneId) k.stand = 'goed';
+      return k;
+    },
+  });
+  const { etages, oprit, tuin, terras, balkon, voortuin } = t;
   const metZon = i >= ALLE.indexOf('zon');
-  const aircos = binnen().flatMap(klimaatIn).filter((a) => a.klimaat?.kanKoelen);
-  const { oprit, tuin, terras, balkon, voortuin } = huismodel.buiten(buitenRuimtes);
   return {
     beschrijving: 'Je huis, zoals Smart Climate het nu kent.',
     tijd: app.tijdVanDeDag(d.zon),
     wolken: 0.3,
-    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, panelen: metZon && piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0 },
+    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, panelen: metZon ? t.panelen : 0 },
     etages,
-    buitenunit: i >= ALLE.indexOf('apparaten') && aircos.length ? { aan: false } : null,
+    voordeur: t.voordeur,
+    buitenunit: i >= ALLE.indexOf('apparaten') && t.buitenunit ? { ...t.buitenunit, aan: false } : null,
     net: true,
     oprit,
     tuin,

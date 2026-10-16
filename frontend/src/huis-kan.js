@@ -78,14 +78,10 @@ function blad(x) {
 /** Het huis, met aanwijzers naar wat het doet en wat erbij kan. */
 function huisModel(lijst) {
   const per = (id) => lijst.find((x) => x.id === id);
-  const etages = [];
-  for (const e of [...(d.huis?.etages ?? [])].reverse()) {
-    const binnen = (e.ruimtes ?? []).filter((r) => e.id !== 'buiten' && !huismodel.BUITEN.test(r.naam));
-    if (binnen.length) etages.push({ naam: e.naam, id: e.id, kamers: binnen.map((r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null })) });
-  }
-  const top = etages[etages.length - 1];
-  if (top && (d.huis?.dakEtage !== undefined ? top.id === d.huis.dakEtage : etages.length >= 3)) top.dak = true;
-  const piekW = (d.zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  // De tekening uit huismodel, net als op Thuis (5S).
+  const t = huismodel.tekening(d.huis, { zon: d.zon, kamer: (r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null }) });
+  const { etages } = t;
+  const piekW = t.piekW;
   const KORT = { opzon: 'Op zon', temperatuur: 'Comfort', batterij: 'Batterij', auto: 'Auto op zon' };
   const label = (bij, id, dx, dy) => {
     const x = per(id);
@@ -95,7 +91,8 @@ function huisModel(lijst) {
   return {
     beschrijving: 'Het huis, met wat Smart Climate erin doet.',
     tijd: 'dag',
-    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0 },
+    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: t.panelen },
+    voordeur: t.voordeur,
     wolken: 0.2,
     etages,
     buitenunit: per('opzon') ? { aan: false } : null,

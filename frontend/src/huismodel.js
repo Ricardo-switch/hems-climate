@@ -193,5 +193,51 @@
     return { oprit, tuin, terras, balkon, voortuin };
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten };
+  /**
+   * De tekening van het huis, één keer voor alle pagina's (5S, rapport 15
+   * oktober): de etages van onder naar boven met het dak erop, wat er buiten
+   * is, de voordeur met de deurbel, de buitenunits en hoeveel panelen. `kamer`
+   * maakt van een ruimte een kamer in de tekening (null laat hem weg);
+   * `aantalPanelen` is wat de bewoner opgaf.
+   */
+  function tekening(huis, { kamer = (r) => kamerModel(r, null), aantalPanelen = null, zon = null } = {}) {
+    const buitenRuimtes = [];
+    const etages = [];
+    for (const e of [...(huis?.etages ?? [])].reverse()) {
+      const kamers = [];
+      for (const r of e.ruimtes ?? []) {
+        if (isBuiten(e, r)) buitenRuimtes.push(r);
+        else {
+          const k = kamer(r, e);
+          if (k) kamers.push(k);
+        }
+      }
+      if (kamers.length) etages.push({ naam: e.naam, id: e.id, kamers });
+    }
+    // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het.
+    const top = etages.at(-1);
+    if (top && (huis?.dakEtage !== undefined ? top.id === huis.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
+    const alles = (huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
+    const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
+    const delen = buiten(buitenRuimtes);
+    // De deurbel en de camera op de oprit, met hun bewegingsmelders (rapport 15 oktober).
+    const naam = (a) => `${a.id} ${a.naam}`;
+    const isBel = (a) => /deurbel|doorbell/i.test(naam(a));
+    const bel = alles.find((a) => a.soort === 'camera' && isBel(a));
+    const belZiet = alles.find((a) => a.meting?.beweging && isBel(a));
+    const camZiet = alles.find((a) => a.meting?.beweging && /camera/i.test(naam(a)) && !isBel(a));
+    if (delen.oprit?.camera) delen.oprit.camera.beweging = !!camZiet?.meting.beweging.nu;
+    const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+    return {
+      etages,
+      buitenRuimtes,
+      ...delen,
+      voordeur: { deurbel: bel || belZiet ? { beweging: !!belZiet?.meting.beweging.nu } : null },
+      buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)), aantal: aircos.length } : null,
+      piekW,
+      panelen: aantalPanelen ?? (piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0),
+    };
+  }
+
+  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, tekening };
 })(window);

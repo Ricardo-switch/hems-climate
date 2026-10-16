@@ -44,40 +44,21 @@ async function laadAlles() {
 
 /* --------------------------------------- van de dienst naar het huis */
 
-const { ACTIEF, BUITEN, kleurVanLicht, zoneNaam } = huismodel;
+const { kleurVanLicht, zoneNaam } = huismodel;
 const kamerModel = (r) => huismodel.kamerModel(r, state);
 
 function huisModel() {
   const s = state?.bewoner?.stromen ?? {};
   const zonKw = s.zonKw ?? 0;
   const netKw = s.netKw ?? 0;
-  const etagesBovenEerst = huisData?.etages ?? [];
-  // Wat buiten ligt (de tuin, de oprit), haalt de app uit het huis en zet het ernaast.
-  const buitenRuimtes = [];
-  const etages = [];
-  for (const e of [...etagesBovenEerst].reverse()) {
-    const binnen = [];
-    for (const r of e.ruimtes ?? []) {
-      if (e.id === 'buiten' || BUITEN.test(r.naam) || BUITEN.test(r.id)) buitenRuimtes.push(r);
-      else binnen.push(r);
-    }
-    if (binnen.length) etages.push({ naam: e.naam, id: e.id, kamers: binnen.map(kamerModel) });
-  }
-  // De bovenste etage ligt onder het dak als het huis drie lagen heeft, of als hij zo heet.
-  const top = etages[etages.length - 1];
-  // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het hier.
-  if (top && (huisData.dakEtage !== undefined ? top.id === huisData.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
-
-  const alles = etagesBovenEerst.flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
-  const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
+  // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
+  const t = huismodel.tekening(huisData, { kamer: kamerModel, zon, aantalPanelen: aantalPanelen(0) || null });
+  const { etages, oprit, tuin, terras, balkon, voortuin } = t;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
-  const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  const piekW = t.piekW;
   const maand = new Date().getMonth() + 1;
-
-  // Buiten: de oprit met de auto en de camera, de tuin met het tuinhuis.
-  const { oprit, tuin, terras, balkon, voortuin } = huismodel.buiten(buitenRuimtes);
 
   const stromen = [];
   const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));
@@ -96,7 +77,8 @@ function huisModel() {
     wolken,
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...panelenOpDak(piekW) } : { aandeel: 0, ...panelenOpDak(piekW) },
     etages,
-    buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)) } : null,
+    buitenunit: t.buitenunit,
+    voordeur: t.voordeur,
     net: true,
     oprit,
     tuin,

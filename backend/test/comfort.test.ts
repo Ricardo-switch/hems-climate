@@ -67,6 +67,18 @@ describe('comfort uit de app (besluit 130)', () => {
     expect(comfortView(checked.config, c.comfort).kamers[0]!.uitApp).toBe(true);
   });
 
+  it('gaat voor de helpers van het oude systeem, alleen voor de kamers uit de app (besluit 143)', () => {
+    const helpers = { [zone.id]: { dag: { heat: 'input_number.oud' } }, ander: { dag: { heat: 'input_number.ander' } } };
+    const metHelpers = { ...raw, migration: { ...((raw['migration'] as Record<string, unknown>) ?? {}), setpoints: helpers } };
+    const c = controleerComfort({ kamers: { [zone.id]: { modi: { dag: { heat: 18, cool: 22.5 } } } } }, exampleSite);
+    if (!c.ok) throw new Error(c.reden);
+    const met = withComfort(metHelpers, c.comfort);
+    expect((met.raw['migration'] as { setpoints: Record<string, unknown> }).setpoints).toEqual({ ander: helpers.ander });
+    expect(met.toegevoegd).toContain('comfort uit de app gaat voor de helpers van het oude systeem');
+    // Zonder comfort voor die kamer blijven de helpers.
+    expect(withComfort(metHelpers, { versie: 1, kamers: {} }).raw['migration']).toEqual(metHelpers.migration);
+  });
+
   describe('bewaren', () => {
     let dir: string | null = null;
     afterEach(async () => {

@@ -93,6 +93,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [122. Batterijen bij het apparaat, en de verwarming met haar aanvoertemperatuur](#122-batterijen-bij-het-apparaat-en-de-verwarming-met-haar-aanvoertemperatuur)
 - [123. Meten met: per kamer zelf de sensoren kiezen](#123-meten-met-per-kamer-zelf-de-sensoren-kiezen)
 - [139. Inrichten in één keer, het filmpje en de rondleiding](#139-inrichten-in-één-keer-het-filmpje-en-de-rondleiding)
+- [143. Comfort uit de app gaat voor de oude helpers, en het huis zoals het is](#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is)
 
 **Meten, data en analyse**
 
@@ -6065,6 +6066,44 @@ pagina bij de bewoner. Vijf punten had hij zelf al gevonden; die zitten erin.
   door een onzichtbaar teken nooit iets vond, werkt weer. Het huis tekenen
   staat nog op vijf plekken; dat wordt één bij het nieuwe huis.
 - **Versie 0.21.0.**
+
+## 143. Comfort uit de app gaat voor de oude helpers, en het huis zoals het is
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Bij de kwaliteitsronde (besluit 142) bleek dat de regeling beneden rekende met
+20 tot 22° en in de wasruimte met 20°, terwijl Comfort in de app 18 tot 22,5°
+liet zien. Tijdens het meekijken leest de regeling de doelen live uit de
+helpers van het oude systeem (`migration.setpoints`, besluit 31), en die
+wonnen van de app. Daar was nooit over besloten. De bewoner koos op
+16 oktober 2026: de app wint.
+
+*Besluit:*
+
+- **Comfort uit de app gaat voor.** Een kamer met comfort uit de app rekent
+  met dat comfort; de helpers van het oude systeem tellen alleen nog voor een
+  kamer die in de app niet is ingesteld. De vergelijking met de oude regeling
+  is voor die kamers daardoor iets minder een-op-een; dat weegt minder dan dat
+  wat je instelt ook geldt.
+- **Het huis zoals het is** (schets `Wand-Huis-Nieuw`): een voordeur in de
+  hal, half open, met de deurbel ernaast die oplicht bij beweging; het pad
+  loopt naar de deur. De meterkast hangt in de hal naast de deur, en de kabel
+  van het net komt aan de straat het perceel in. De camera van de oprit staat
+  op een paal naast het huis, met een warme bundel als de schijnwerper aan is
+  en een koele met een ring als hij beweging ziet. De buitenunits staan op
+  ware grootte tegen de zijgevel, één per airco, de tweede op een steun, los
+  van het zonnescherm. De tuin is gras, met een terras onder het zonnescherm
+  en de border als lage lampjes in hun kleur. Witgoed staat op ware grootte,
+  en de naam van een kamer past binnen zijn muren.
+- **Eén opbouw van de tekening** (`huismodel.tekening`) voor Thuis, de
+  assistent, Inrichten en Wat je huis kan; de film volgt bij de nieuwe film.
+- **De kosten noemen het apparaat** zoals de app het noemt, niet zijn meter.
+- **De stem van het apparaat** die meteen faalt, stopt het antwoord niet meer:
+  dan komen de woorden in leestempo.
+- **De download van je gegevens** heeft nu ook het weer per uur zoals het
+  verwacht werd, en de zon per kwartier, zonder ligging: om de zonverwachting
+  per uur na te rekenen (rapport, besluit 142).
+- **Versie 0.22.0.**
 
 ---
 

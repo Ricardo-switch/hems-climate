@@ -386,7 +386,8 @@ function zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd) {
     zetGezegd(i < 0 ? woorden.length : i);
   };
   u.onend = () => klaar?.();
-  u.onerror = (e) => (e?.error === 'not-allowed' ? geweigerd() : klaar?.());
+  // Geweigerd: tik om te horen. Gestopt: klaar. Iets anders mis: dan de woorden in leestempo.
+  u.onerror = (e) => (e?.error === 'not-allowed' ? geweigerd() : e?.error === 'interrupted' || e?.error === 'canceled' ? klaar?.() : lezen());
   analyser = null;
   leefMee();
   speechSynthesis.speak(u);
@@ -442,31 +443,25 @@ function tekenHuis() {
   if (!huisData) return;
   const kamer = stand === 'praat' || stand === 'verder' ? nu?.kamerId ?? null : null;
   const alles = stand !== 'begin' && nu?.soort === 'warm';
-  const etages = [];
-  for (const e of [...(huisData.etages ?? [])].reverse()) {
-    const binnen = (e.ruimtes ?? []).filter((r) => !huismodel.isBuiten(e, r));
-    if (binnen.length) {
-      etages.push({
-        naam: e.naam,
-        id: e.id,
-        kamers: binnen.map((r) => {
-          const k = huismodel.kamerModel(r, state);
-          const dit = kamer && r.zoneId === kamer;
-          return { ...k, stil: !!kamer && !dit && !alles, doel: !!dit };
-        }),
-      });
-    }
-  }
-  const top = etages.at(-1);
-  if (top && (huisData.dakEtage !== undefined ? top.id === huisData.dakEtage : etages.length >= 3)) top.dak = true;
+  // De tekening uit huismodel, net als op Thuis (5S); de kamer waar het over gaat licht op.
+  const t = huismodel.tekening(huisData, {
+    zon,
+    kamer: (r) => {
+      const k = huismodel.kamerModel(r, state);
+      const dit = kamer && (r.zoneId ?? r.meedoenMet?.zoneId) === kamer;
+      return { ...k, stil: !!kamer && !dit && !alles, doel: !!dit };
+    },
+  });
+  const { etages } = t;
   const overZon = stand !== 'begin' && (nu?.soort === 'zon' || nu?.soort === 'straks');
-  const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
   const zonKw = state?.bewoner?.stromen?.zonKw ?? 0;
   const model = {
     beschrijving: kamer ? `Het huis, met ${zoneNaam(kamer)} uitgelicht.` : 'Het huis.',
     tijd: app.tijdVanDeDag(zon),
-    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: overZon ? 0.9 : 0.4, panelen: piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0 } : { aandeel: 0 },
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: overZon ? 0.9 : 0.4, panelen: t.panelen } : { aandeel: 0, panelen: t.panelen },
     etages,
+    voordeur: t.voordeur,
+    buitenunit: t.buitenunit,
     net: true,
     stromen: kamer && zonKw > 0.05 ? [{ van: 'zon', naar: `kamer:${etages.flatMap((e) => e.kamers).find((k) => k.doel)?.naam ?? ''}`, sterkte: 0.5 }] : [],
     labels: overZon && zonKw > 0.05 ? [{ bij: 'panelen', titel: `${nl(zonKw)} kW`, groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 40, dy: -60 }] : [],

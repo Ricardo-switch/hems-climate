@@ -176,6 +176,18 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
     : nieuweZones;
   if (comfort.voorrang) toegevoegd.push('de voorrang bij koelen en verwarmen');
   const out: Record<string, unknown> = { ...raw, zones: metVoorrang };
+  /*
+   * De app wint (besluit 143). Tijdens het meekijken las de regeling de doelen
+   * live uit de helpers van het oude systeem (`migration.setpoints`); die
+   * overschreven wat de bewoner in de app zette. Een kamer met comfort uit de
+   * app rekent nu met dat comfort; de helpers tellen alleen nog voor de rest.
+   */
+  const mig = raw['migration'] as Record<string, unknown> | undefined;
+  const sp = mig?.['setpoints'] as Record<string, unknown> | undefined;
+  if (sp && Object.keys(sp).some((z) => comfort.kamers[z] != null)) {
+    out['migration'] = { ...mig, setpoints: Object.fromEntries(Object.entries(sp).filter(([z]) => comfort.kamers[z] == null)) };
+    toegevoegd.push('comfort uit de app gaat voor de helpers van het oude systeem');
+  }
   if (comfort.dagdelen) {
     const schedule = { ...((raw['schedule'] as Record<string, unknown> | undefined) ?? {}) };
     schedule['preheatFromHour'] = comfort.dagdelen.voorverwarmen;

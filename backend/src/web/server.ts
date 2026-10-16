@@ -1302,7 +1302,10 @@ export class WebServer {
     const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now);
     if (report == null) return null;
     const maand = report.periode.label.split(' ')[0]!.toLowerCase();
-    return { maand, apparaten: report.apparaten.filter((a) => !a.rest).map((a) => ({ id: a.id, naam: a.naam, kwh: a.kwh, zonKwh: a.zonKwh, euro: a.kosten })) };
+    // Een apparaat heet zoals in de app, niet zoals zijn meter (het klimaatapparaat bij die meter).
+    const apparaten = (this.#options.house?.()?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
+    const naamVan = (meter: string, terug: string) => apparaten.find((d) => d.klimaat?.energieMeter === meter)?.naam ?? terug;
+    return { maand, apparaten: report.apparaten.filter((a) => !a.rest).map((a) => ({ id: a.id, naam: naamVan(a.id, a.naam), kwh: a.kwh, zonKwh: a.zonKwh, euro: a.kosten })) };
   }
 
   /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */
