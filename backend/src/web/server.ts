@@ -18,7 +18,7 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
-import { Readable } from 'node:stream';
+import { Readable, pipeline } from 'node:stream';
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -1644,6 +1644,11 @@ export class WebServer {
       sendJson(res, 503, { wachten: 'camera’s bekijken staat niet aan' });
       return;
     }
+    // Meteen luisteren of de kijker ophangt, nog vóór het wachten op de inlog: een
+    // luisteraar die later komt, hoort het niet meer, en dan liep de stroom bij
+    // Home Assistant door zonder kijker (16 oktober 2026).
+    const stop = new AbortController();
+    res.on('close', () => stop.abort());
     if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) {
       sendJson(res, 401, { fout: 'log eerst in om de camera te bekijken', inlog: '/auth/login' });
       return;
@@ -1658,8 +1663,7 @@ export class WebServer {
       sendJson(res, 429, { fout: 'er kijken al vier schermen mee; probeer het zo nog eens' });
       return;
     }
-    const stop = new AbortController();
-    req.on('close', () => stop.abort());
+    if (stop.signal.aborted || res.destroyed) return;
     let up: Response;
     try {
       up = await fetch(`${cam.base}/api/${live ? 'camera_proxy_stream' : 'camera_proxy'}/${id}`, {
@@ -1671,18 +1675,20 @@ export class WebServer {
       return;
     }
     if (!up.ok || up.body == null) {
-      sendJson(res, 502, { fout: 'Home Assistant gaf geen beeld' });
+      await up.body?.cancel().catch(() => {});
+      if (!res.destroyed) sendJson(res, 502, { fout: 'Home Assistant gaf geen beeld' });
+      return;
+    }
+    if (res.destroyed) {
+      await up.body.cancel().catch(() => {});
       return;
     }
     res.writeHead(200, { 'content-type': up.headers.get('content-type') ?? 'image/jpeg', 'cache-control': 'no-store' });
     if (live) this.#liveStreams += 1;
-    const klaar = () => {
+    // Samen dicht: hangt de kijker op, dan stopt ook de stroom van Home Assistant.
+    pipeline(Readable.fromWeb(up.body as import('node:stream/web').ReadableStream<Uint8Array>), res, () => {
       if (live) this.#liveStreams = Math.max(0, this.#liveStreams - 1);
-    };
-    Readable.fromWeb(up.body as import('node:stream/web').ReadableStream<Uint8Array>)
-      .on('error', () => res.destroy())
-      .on('close', klaar)
-      .pipe(res);
+    });
   }
 
   async start(): Promise<number> {
