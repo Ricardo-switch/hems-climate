@@ -6215,7 +6215,9 @@ seconden; een dag in je huis als verhaal; en muziek die de app zelf speelt.
   met pompende akkoorden, een bas op de tegentel en een melodie; en een slot
   op G, A, D dat uitklinkt. Alles door een compressor. Een test neemt de
   muziek op zonder luidspreker en eist dat de opbouw voller is dan de intro en
-  de drop het voluit, zonder te kraken.
+  de drop het voluit, zonder te kraken. Als laatste schakel een zachte
+  begrenzer: tot 0,8 ongemoeid, nooit boven 0,95 (versie 0.24.1; de ruis kon
+  net boven het maximum uitkomen).
 - **Versie 0.24.0.**
 
 ---

@@ -65,7 +65,17 @@
     pers.release.value = 0.2;
     const hoofd = ctx.createGain();
     hoofd.gain.value = 0;
-    pers.connect(hoofd).connect(ctx.destination);
+    // Als laatste een zachte begrenzer: tot 0,8 ongemoeid, daarboven afgerond, nooit boven 0,95.
+    const grens = ctx.createWaveShaper();
+    const kromme = new Float32Array(2048);
+    for (let i = 0; i < kromme.length; i++) {
+      const x = (i / (kromme.length - 1)) * 2 - 1;
+      const a = Math.abs(x);
+      kromme[i] = a <= 0.8 ? x : Math.sign(x) * (0.8 + 0.18 * Math.tanh((a - 0.8) / 0.18));
+    }
+    grens.curve = kromme;
+    grens.oversample = '2x';
+    pers.connect(hoofd).connect(grens).connect(ctx.destination);
     // Een galm uit ruis die uitsterft, en een echo op drie zestienden.
     const galm = ctx.createConvolver();
     const lengte = Math.round(ctx.sampleRate * 2.8);

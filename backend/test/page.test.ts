@@ -1127,7 +1127,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(luid.intro).toBeGreaterThan(0.005);
     expect(luid.opbouw).toBeGreaterThan(luid.intro);
     expect(luid.drop).toBeGreaterThan(luid.opbouw);
-    expect(luid.piek).toBeLessThanOrEqual(1);
+    expect(luid.piek).toBeLessThan(0.96);
     console.log('muziek', JSON.stringify(luid));
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, binnen het scherm.
