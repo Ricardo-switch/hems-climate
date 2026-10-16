@@ -96,6 +96,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [143. Comfort uit de app gaat voor de oude helpers, en het huis zoals het is](#143-comfort-uit-de-app-gaat-voor-de-oude-helpers-en-het-huis-zoals-het-is)
 - [144. Na Inrichten is de app af, een film van twintig tellen, en een rondleiding langs alles](#144-na-inrichten-is-de-app-af-een-film-van-twintig-tellen-en-een-rondleiding-langs-alles)
 - [145. Een zone heeft een soort, en kamers en zones schuiven](#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven)
+- [146. Inrichten zoals de schets, en de film als een dag in je huis](#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis)
 
 **Meten, data en analyse**
 
@@ -6183,6 +6184,39 @@ gevel een scherm hangt, en toonde het zodra de zon op een gevel stond.
 - **Gevel** zegt de stem met een lange e ("voorgeevel"), niet als het
   voorvoegsel ge-.
 - **Versie 0.23.1.**
+
+## 146. Inrichten zoals de schets, en de film als een dag in je huis
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 16 oktober 2026 vond de bewoner dat Inrichten niet op de schets
+`Wand-Inrichten-Compleet` leek, en dat de film van besluit 144 te snel ging,
+geen intro en afsluiting had, en muziek die nergens op sloeg. Hij koos: de
+balk en de kaart zoals de schets, met het huis links; een film van zo'n 45
+seconden; een dag in je huis als verhaal; en muziek die de app zelf speelt.
+
+*Besluit:*
+
+- **Inrichten:** zes hoofdstukkaarten over de hele breedte, met een balkje per
+  stap en wat erin zit, ook Klaar. Wat elk apparaat doet, kies je met drie
+  knoppen naast elkaar (Houdt, Zon, Kijkt; zon in zijn kleur). De zekering is
+  eerst 1 of 3 fasen en dan de ampère in een vak. De prijzen staan in vakken
+  ("Stroom normaal … € 0,27"), met de meters in één zin eronder. De wand toont
+  wat je er kunt: licht en screens, en welke camera's.
+- **De film is een dag in je huis**, op 112 tellen per minuut, alles op de
+  maat. Intro (vier maten): donker, de zon komt op, het huis verschijnt, met
+  Smart Climate en "Dit is je huis". Dan zes beelden van twee maten (ruim vier
+  seconden), van de ochtend tot de avond, die langzaam inzoomen. Het slot (vijf
+  maten): de lampen gaan aan, het wordt nacht, het getal van je eigen dak, het
+  logo en Begin. Het laatste beeld blijft staan tot je tikt.
+- **De muziek** speelt de browser zelf, in D groot op I, V, vi, IV: een pad
+  die opengaat in de intro; een opbouw met bas, kick en arpeggio; een maat
+  aanloop met stijgende ruis en een roffel; een drop op het beeld van je dak
+  met pompende akkoorden, een bas op de tegentel en een melodie; en een slot
+  op G, A, D dat uitklinkt. Alles door een compressor. Een test neemt de
+  muziek op zonder luidspreker en eist dat de opbouw voller is dan de intro en
+  de drop het voluit, zonder te kraken.
+- **Versie 0.24.0.**
 
 ---
 

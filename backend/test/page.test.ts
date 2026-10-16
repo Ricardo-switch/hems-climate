@@ -1014,8 +1014,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('h1', { hasText: 'Laten we je huis neerzetten' }).waitFor({ timeout: 10_000 });
     await kaart.locator('.cijfers').waitFor();
     await p.waitForTimeout(400);
-    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(5);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(11);
+    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(6);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(12);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     await kaart.locator('a', { hasText: 'Begin' }).click();
@@ -1039,6 +1039,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Wat verwarmt en koelt er?' }).waitFor();
     expect(await kaart.locator('[data-rol]').count()).toBeGreaterThan(0);
+    // Drie knoppen per apparaat, zoals de schets (besluit 146).
+    const seg = kaart.locator('[data-rol]').first();
+    const doel = (await seg.locator('[aria-pressed="true"]').getAttribute('data-rolwaarde')) === 'zon' ? 'kijken' : 'zon';
+    await seg.locator(`[data-rolwaarde="${doel}"]`).click();
+    await kaart.locator(`[data-rol] [data-rolwaarde="${doel}"][aria-pressed="true"]`).first().waitFor({ timeout: 5000 });
     await shot('warmte');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Hoe warm wil je het?' }).waitFor();
@@ -1049,6 +1054,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await shot('zon');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Hoe zwaar is je aansluiting?' }).waitFor();
+    // Eerst de fasen, dan de ampère in een vak.
+    await kaart.locator('[data-fasen="3"]').click();
+    await kaart.locator('[data-fasen="3"][aria-pressed="true"]').waitFor({ timeout: 5000 });
+    await kaart.locator('[data-ampere]').selectOption('40');
+    await expect.poll(async () => ((await (await fetch(`${baseUrl}/api/aansluiting`, { headers: { cookie: `hems_sessie=${sessionId}` } })).json()) as { antwoorden?: { zekering?: unknown } }).antwoorden?.zekering, { timeout: 5000 }).toEqual({ fasen: 3, ampere: 40 });
+    await shot('zekering');
     await kaart.locator('a', { hasText: 'Volgende' }).click();
     await kaart.locator('h1', { hasText: 'Wat betaal je per kWh?' }).waitFor();
     await shot('prijzen');
@@ -1080,10 +1091,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForFunction('window.__film != null');
     const aantal = await p.evaluate<number>('window.__film.aantal');
     expect(aantal).toBeGreaterThanOrEqual(3);
+    // Zo'n 45 seconden: een intro, de beelden en een slot (besluit 146).
+    const lengte = await p.evaluate<number>('window.__film.lengteS');
+    expect(lengte).toBeGreaterThan(30);
+    expect(lengte).toBeLessThan(55);
     const titels: string[] = [];
     for (let i = 0; i < aantal; i++) {
       await p.evaluate(`window.__film.pauze(true); window.__film.naar(${i}); window.__film.pauze(false)`);
-      await p.waitForTimeout(400);
+      // De intro laat zijn woorden later komen, met de zon.
+      await p.waitForTimeout(i === 0 ? 5200 : 1300);
       titels.push((await p.locator('.film .titel').textContent()) ?? '');
       // Elk beeld een groot getal of woord en een zin, en nooit iets leegs.
       expect(((await p.locator('.film .groot').textContent()) ?? '').trim()).not.toBe('');
@@ -1093,6 +1109,26 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('window.__film.stop(); window.__film = null');
     expect(titels).toContain('Vraag het je huis');
     expect(titels.at(-1)).toBe('Klaar');
+    // De muziek bouwt op: stil begin, voller in de opbouw, het hardst in de drop, en hij kraakt nergens.
+    const luid = await p.evaluate<{ intro: number; opbouw: number; drop: number; slot: number; piek: number }>(`(async () => {
+      const plan = { intro: 4, drop: 10, slot: 16, eind: 21 };
+      const buf = await film.opname(plan);
+      const kan = buf.getChannelData(0);
+      const rms = (vanMaat, totMaat) => {
+        const a = Math.floor(vanMaat * film.MAAT * buf.sampleRate), b = Math.floor(totMaat * film.MAAT * buf.sampleRate);
+        let s = 0;
+        for (let i = a; i < b; i++) s += kan[i] * kan[i];
+        return Math.sqrt(s / (b - a));
+      };
+      let piek = 0;
+      for (let i = 0; i < kan.length; i++) piek = Math.max(piek, Math.abs(kan[i]));
+      return { intro: rms(0, 4), opbouw: rms(4, 9), drop: rms(10, 16), slot: rms(16, 19), piek };
+    })()`);
+    expect(luid.intro).toBeGreaterThan(0.005);
+    expect(luid.opbouw).toBeGreaterThan(luid.intro);
+    expect(luid.drop).toBeGreaterThan(luid.opbouw);
+    expect(luid.piek).toBeLessThanOrEqual(1);
+    console.log('muziek', JSON.stringify(luid));
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, binnen het scherm.
     await p.setViewportSize({ width: 390, height: 844 });
