@@ -134,6 +134,26 @@ describe('de indeling toetsen', () => {
     expect(validateLayout({ ...good, kamers: [...good.kamers, { ...tuin, buiten: { soort: 'tuin', auto: 'ja', tuinhuis: false } }] }, known).ok).toBe(false);
   });
 
+  it('kent een tuinhuis als buitenruimte (besluit 158)', () => {
+    const huisje = { id: 'tuinhuis', naam: 'Tuinhuis', etage: 'buiten', zones: [], regelzone: null, haGebied: null, buiten: { soort: 'tuinhuis', auto: false, tuinhuis: false } };
+    const r = validateLayout({ ...good, kamers: [...good.kamers, huisje] }, known);
+    expect(r.ok && r.layout.kamers.find((k) => k.id === 'tuinhuis')!.buiten).toEqual({ soort: 'tuinhuis', auto: false, tuinhuis: false });
+  });
+
+  it('bewaart wat er rond het huis is, elk deel ja of nee (besluit 158)', () => {
+    const rond = { oprit: true, auto: true, voortuin: false, tuin: true, terras: true, balkon: false, tuinhuis: true };
+    expect(validateLayout({ ...good, rond }, known)).toMatchObject({ ok: true, layout: { rond } });
+    // Weg is: de buitenruimtes zeggen het.
+    const zonder = validateLayout(good, known);
+    expect(zonder.ok && 'rond' in zonder.layout).toBe(false);
+    // Een deel dat ontbreekt, of geen ja of nee, weigert; wat er niet bij hoort, valt weg.
+    const { balkon: _b, ...half } = rond;
+    expect(validateLayout({ ...good, rond: half }, known).ok).toBe(false);
+    expect(validateLayout({ ...good, rond: { ...rond, oprit: 'ja' } }, known).ok).toBe(false);
+    const extra = validateLayout({ ...good, rond: { ...rond, zwembad: true } }, known);
+    expect(extra.ok && extra.layout.rond).toEqual(rond);
+  });
+
   it('neemt eigen etages aan in een eigen volgorde, en de vaste als voorstel (besluit 112)', () => {
     const vliering = { id: 'vliering', naam: 'Vliering', etage: 'vliering', zones: [], regelzone: null, haGebied: null };
     const r = validateLayout({ ...good, volgorde: ['vliering', 'bg', 'kelder'], etages: { vliering: 'Vliering' }, kamers: [...good.kamers, vliering] }, known);

@@ -68,8 +68,11 @@ export interface LayoutZone {
   readonly soort?: RoomType;
 }
 
-/** Wat een buitenruimte is, voor de tekening van het huis (besluit 109). */
-export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon'] as const;
+/**
+ * Wat een buitenruimte is, voor de tekening van het huis (besluit 109). Een
+ * tuinhuis geeft zijn lampen aan het tuinhuis in de tuin (besluit 157).
+ */
+export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon', 'tuinhuis'] as const;
 export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
 
 export interface LayoutOutside {
@@ -79,6 +82,15 @@ export interface LayoutOutside {
   /** Een tuinhuis of schuur in de tuin. */
   readonly tuinhuis: boolean;
 }
+
+/**
+ * Wat er rond het huis is (besluit 157), los van de ruimtes in Home Assistant:
+ * zo tekent het huis zijn buitenkant. Een ruimte buiten zegt alleen nog bij
+ * welk deel zijn lampen en camera horen.
+ */
+export const AROUND_PARTS = ['oprit', 'auto', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis'] as const;
+export type AroundPart = (typeof AROUND_PARTS)[number];
+export type LayoutAround = Readonly<Record<AroundPart, boolean>>;
 
 /**
  * Wat voor kamer het is, voor de inrichting in de tekening (besluit 119).
@@ -149,6 +161,8 @@ export interface Layout {
    * plat dak of een huis zonder zolder. Weg: de dienst raadt het.
    */
   readonly dak?: FloorId | 'geen';
+  /** Wat er rond het huis is (besluit 157). Weg: de buitenruimtes zeggen het. */
+  readonly rond?: LayoutAround;
 }
 
 export interface LayoutKnown {
@@ -405,9 +419,17 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
 
   const dak = b['dak'];
   if (dak !== undefined && dak !== 'geen' && (typeof dak !== 'string' || dak === OUTSIDE_FLOOR || !bekend(dak))) return { ok: false, reden: 'dak is een etage binnen, of geen' };
+  // Wat er rond het huis is (besluit 157): elk deel ja of nee.
+  const rondIn = b['rond'] ?? null;
+  let rond: LayoutAround | undefined;
+  if (rondIn !== null) {
+    const r = (typeof rondIn === 'object' && !Array.isArray(rondIn) ? rondIn : {}) as Record<string, unknown>;
+    if (AROUND_PARTS.some((x) => typeof r[x] !== 'boolean')) return { ok: false, reden: `rond zegt per deel ja of nee: ${AROUND_PARTS.join(', ')}` };
+    rond = Object.fromEntries(AROUND_PARTS.map((x) => [x, r[x] as boolean])) as LayoutAround;
+  }
   return {
     ok: true,
-    layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}) },
+    layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}), ...(rond ? { rond } : {}) },
   };
 }
 

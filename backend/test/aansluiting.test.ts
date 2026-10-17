@@ -155,6 +155,12 @@ describe('bewaren', () => {
     expect(validateConnection({ panelen: { ligging: 'beide', voorkant: 0 } }, found).ok).toBe(false);
   });
 
+  it('kent een huis zonder panelen, en dan geen aantal (besluit 158)', () => {
+    const geen = validateConnection({ panelen: { ligging: 'geen', aantal: 12 }, verwarming: { soort: 'hybride' } }, found);
+    expect(geen.ok && geen.answers.panelen).toEqual({ ligging: 'geen', aantal: null, voorkant: null, achterkant: null });
+    expect(geen.ok && geen.answers.verwarming).toEqual({ soort: 'hybride', aanvoerC: null });
+  });
+
   it('weigert wat niet kan', () => {
     expect(validateConnection({ panelen: { ligging: 'zuid' } }, found).ok).toBe(false);
     expect(validateConnection({ panelen: { aantal: 0 } }, found).ok).toBe(false);

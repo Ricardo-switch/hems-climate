@@ -54,6 +54,15 @@ function welkom() {
   const thuis = ik.aanwezigheidNaam
     ? `<div class="bron" aria-pressed="true" style="cursor: default">${esc(ik.aanwezigheidNaam)}${ik.gekoppeld ? ' in Home Assistant' : ''}<span class="${ik.thuis ? 'thuis' : ''}">${ik.thuis == null ? '' : ik.thuis ? 'thuis' : 'weg'}</span></div>${ik.gekoppeld ? '<span class="hint">Gekoppeld aan je account.</span>' : ''}`
     : '<p class="hint">Nog niet bekend. Kies het later bij Instellingen › Bewoners.</p>';
+  // Klopt iets niet (besluit 158): per regel waar je het verandert.
+  const nietGoed = [
+    ik.hoofd
+      ? 'Ben jij niet de hoofdgebruiker? De eerste die inlogt, wordt het. Wie bovenaan staat, verander je bij Instellingen › Bewoners.'
+      : `Wie de hoofdgebruiker is, verander je bij Instellingen › Bewoners.`,
+    ik.gekoppeld
+      ? `Volgt het huis de verkeerde persoon? ${esc(ik.aanwezigheidNaam ?? '')} is in Home Assistant aan je account gekoppeld. Een andere koppel je in Home Assistant, bij Instellingen › Personen.`
+      : 'Volgt het huis de verkeerde sensor? Kies een andere bij Instellingen › Bewoners.',
+  ];
   kaart.innerHTML = `${merk}
     <h1>Welkom, ${esc(ik.naam)}</h1>
     <p>${comfort}</p>
@@ -61,6 +70,7 @@ function welkom() {
     <div class="vak"><span>Thuis volgens</span>${thuis}</div>
     <span class="fout" data-fout></span>
     <div class="voet"><a class="zacht" href="${esc(terug)}">Later</a><button type="button" class="knop knop-licht" data-klopt>Klopt</button></div>
+    <details class="nietgoed"><summary>Klopt iets niet?</summary>${nietGoed.map((z) => `<p class="hint">${z}</p>`).join('')}<a class="knop" href="bewoners.html">Naar Bewoners</a></details>
     <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
 }
 

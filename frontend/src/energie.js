@@ -93,7 +93,7 @@ function delen() {
     { id: 'aansluiting', titel: 'Aansluiting', zin: z ? `${z.fasen} × ${z.ampere} A` : 'hoofdzekering kiezen', stand: !aInfo ? null : z ? 'goed' : 'mist' },
     { id: 'meters', titel: 'Meters', zin: e ? [e.net.afname.length ? 'stroom' : null, e.gas ? 'gas' : null, e.apparaten.length ? `${e.apparaten.length} apparaten` : null].filter(Boolean).join(', ') || 'nog kiezen' : '…', stand: !e ? null : e.net.afname.length ? 'goed' : 'mist' },
     { id: 'prijzen', titel: 'Contract en prijzen', zin: !e ? '…' : p.stroom == null ? 'stroomprijs ontbreekt' : `stroom € ${nl(p.stroom, 2)} per kWh`, stand: !e ? null : prijsMist ? 'mist' : 'goed' },
-    { id: 'verwarming', titel: 'Verwarming', zin: a?.verwarming.soort ? { cv: 'cv-ketel', warmtepomp: 'warmtepomp', stadsverwarming: 'stadsverwarming', weetniet: 'weet ik niet' }[a.verwarming.soort] + (a.verwarming.aanvoerC ? `, aanvoer ${a.verwarming.aanvoerC}°` : '') : 'nog kiezen', stand: !aInfo ? null : a.verwarming.soort ? 'goed' : 'leeg' },
+    { id: 'verwarming', titel: 'Verwarming', zin: a?.verwarming.soort ? { cv: 'cv-ketel', warmtepomp: 'warmtepomp', hybride: 'hybride warmtepomp', stadsverwarming: 'stadsverwarming', weetniet: 'weet ik niet' }[a.verwarming.soort] + (a.verwarming.aanvoerC ? `, aanvoer ${a.verwarming.aanvoerC}°` : '') : 'nog kiezen', stand: !aInfo ? null : a.verwarming.soort ? 'goed' : 'leeg' },
   ];
 }
 
@@ -103,7 +103,7 @@ function zijaanzicht(kant) {
   const op = (s) => kant === 'beide' || kant === s;
   const dak = (s) => (op(s) ? 'var(--zon)' : 'rgba(255,255,255,0.10)');
   const plat = kant === 'plat';
-  return `<div class="zijaanzicht"><svg viewBox="0 0 220 124" role="img" aria-label="Het huis van opzij${kant && kant !== 'weetniet' ? `, met de panelen ${plat ? 'op het platte dak' : kant === 'beide' ? 'aan beide kanten' : `aan de ${kant}`}` : ''}">
+  return `<div class="zijaanzicht"><svg viewBox="0 0 220 124" role="img" aria-label="Het huis van opzij${kant && kant !== 'weetniet' && kant !== 'geen' ? `, met de panelen ${plat ? 'op het platte dak' : kant === 'beide' ? 'aan beide kanten' : `aan de ${kant}`}` : ''}">
     <rect x="40" y="62" width="140" height="44" rx="3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>
     ${plat
       ? '<rect x="36" y="56" width="148" height="7" rx="2" fill="rgba(255,255,255,0.18)"/><rect x="62" y="46" width="96" height="9" rx="2" fill="var(--zon)"/>'
@@ -127,7 +127,7 @@ function elke(s) {
 
 function panelenVorm() {
   const kant = a.panelen.ligging;
-  const aantallen = kant === 'beide' ? `<div class="twee">${aantal('Aantal aan de voorkant', 'voorkant')}${aantal('Aantal aan de achterkant', 'achterkant')}</div>` : kant && kant !== 'weetniet' ? aantal('Aantal panelen', 'aantal') : '';
+  const aantallen = kant === 'beide' ? `<div class="twee">${aantal('Aantal aan de voorkant', 'voorkant')}${aantal('Aantal aan de achterkant', 'achterkant')}</div>` : kant && kant !== 'weetniet' && kant !== 'geen' ? aantal('Aantal panelen', 'aantal') : '';
   const nu = aInfo.configuratie.panelen.length ? `<p class="mini">Nu ingesteld: ${esc(aInfo.configuratie.panelen.join(' en '))}.</p>` : '';
   const z = aInfo.zonnesensor;
   const chip = !z ? null : z.snelGenoeg == null ? ['', 'Wordt gemeten'] : z.snelGenoeg ? ['goed', 'Snel genoeg'] : ['traag', 'Traag'];
@@ -138,7 +138,7 @@ function panelenVorm() {
     : '';
   return `${kop('Zonnepanelen')}
     ${blok('Op welke kant van het dak liggen ze?', `${zijaanzicht(kant)}
-      ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet']], kant)}
+      ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet'], ['geen', 'Geen panelen']], kant)}
       ${aantallen}${aantallen ? '<p class="mini">Het aantal is niet verplicht.</p>' : ''}
       <p class="uitleg">Richting en hellingshoek zijn een schatting. Wat je panelen werkelijk halen, leert de app uit de zonnige dagen, en daarmee rekent hij.</p>${nu}`)}
     ${sensor}`;
@@ -284,7 +284,7 @@ function prijzenVorm() {
 function verwarmingVorm() {
   const v = a.verwarming;
   return `${kop('Verwarming')}
-    ${blok('Waar komt de warmte vandaan?', `${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
+    ${blok('Waar komt de warmte vandaan?', `${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['hybride', 'Hybride'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
       <label class="veldnaam">Aanvoertemperatuur op de ketel, °C<input class="invoer" type="number" inputmode="numeric" min="25" max="90" step="1" data-aanvoer value="${v.aanvoerC ?? ''}" placeholder="bijvoorbeeld 60"></label>
       <p class="mini">Staat op de ketel of in de app van je ketel. Weet je het niet, laat het dan leeg.</p>`)}`;
 }

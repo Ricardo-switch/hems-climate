@@ -35,6 +35,7 @@ import {
   type FloorId,
   type Layout,
   type LayoutDevice,
+  type LayoutAround,
   type LayoutKnown,
   type LayoutOutside,
   type LayoutRoom,
@@ -260,6 +261,8 @@ export interface HouseReport {
   readonly indeling: 'eigen' | 'voorstel';
   /** De etage onder het schuine dak (besluit 111), of null: dan geen schuin dak in de tekening. */
   readonly dakEtage: FloorId | null;
+  /** Wat er rond het huis is, zoals de bewoner het zei (besluit 157); null: de buitenruimtes zeggen het. */
+  readonly rond: LayoutAround | null;
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -1216,6 +1219,20 @@ function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[])
   return null;
 }
 
+/**
+ * Een kamer uit de naam van het apparaat (besluit 157): "Bewegingssensor entree"
+ * hoort in de Entree. Hele woorden, en bij twee kamers de langste naam: dan wint
+ * "Slaapkamer Mylan" van "Slaapkamer".
+ */
+export function roomForName(naam: string, rooms: readonly LayoutRoom[]): string | null {
+  const woorden = ` ${naam.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')} `;
+  const raak = rooms
+    .map((r) => ({ r, n: r.naam.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim() }))
+    .filter(({ n }) => n.length >= 3 && woorden.includes(` ${n} `))
+    .sort((a, b) => b.n.length - a.n.length);
+  return raak[0]?.r.id ?? null;
+}
+
 /** Wat het huis nu kent: de sleutels die een indeling mag gebruiken. */
 export function knownForLayout(
   config: SiteConfig,
@@ -1288,7 +1305,7 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
  */
 export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devices: readonly Pick<HouseDevice, 'naam'>[]): LayoutOutside {
   const n = room.naam;
-  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : 'tuin';
+  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : 'tuin';
   const huisje = /tuinhuis|schuur|berging|huisje/i;
   return { soort, auto: soort === 'oprit', tuinhuis: soort === 'tuin' && (room.zones.some((z) => huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam))) };
 }
@@ -1440,7 +1457,7 @@ export function buildHouse(
         soort: f.device.soort,
         voorstel: f.haArea ? (areaName.get(f.haArea) ?? null) : null,
         groepen: f.groepen,
-        voorstelKamer: roomForGroups(f.groepen, layout.kamers),
+        voorstelKamer: roomForGroups(f.groepen, layout.kamers) ?? roomForName(naam, layout.kamers),
       });
       continue;
     }
@@ -1580,6 +1597,7 @@ export function buildHouse(
   return {
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
+    rond: layout.rond ?? null,
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten))),

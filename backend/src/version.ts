@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.32.1';
+export const VERSIE = '0.34.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,25 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.34.0',
+    datum: '2026-10-17',
+    nieuw: [
+      'Inrichten: kamers samenvoegen tot één ruimte met zones, zoals keuken en zithoek',
+      'Inrichten: per deel aan of uit wat er rond je huis is, van oprit tot tuinhuis',
+      'Inrichten: tik op een getal op het startscherm voor de lijst, en haal weg wat er niet bij hoort',
+      'Prijzen: eerst je soort contract, met gas en wat je vanaf 2027 voor teruglevering krijgt en betaalt',
+    ],
+    beter: [
+      'Inrichten heeft overal Terug en Volgende, en Volgende bewaart wat er staat',
+      'De stappen bovenaan zeggen wat je al nagelopen hebt en wat al klaarstond',
+      'Panelen: ook "geen panelen", en het aantal per kant van het dak',
+      'Een los apparaat krijgt een kamer voorgesteld uit zijn naam',
+      'Comfort voor het hele huis laat kamers met een eigen waarde zoals ze zijn',
+      'Bij de eerste inlog zegt "Klopt iets niet?" waar je het verandert',
+    ],
+    opgelost: ['"Waar staan 1 dit apparaat?" is nu "Waar staat dit apparaat?"', 'Het startscherm telt Buiten niet meer als etage'],
+  },
   {
     versie: '0.32.1',
     datum: '2026-10-17',

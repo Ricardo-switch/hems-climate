@@ -569,12 +569,7 @@ function buitenKeuze(k) {
  * Wat voor kamer het is (besluit 119): bepaalt de inrichting als je inzoomt.
  * Zonder keuze een voorstel uit de naam; de keuze gaat voor.
  */
-const KAMER_SOORTEN = [
-  ['woonkamer', 'Woonkamer'], ['woonkeuken', 'Woonkamer met open keuken'], ['keuken', 'Keuken'], ['eetkamer', 'Eetkamer'],
-  ['slaapkamer', 'Slaapkamer'], ['kinderkamer', 'Kinderkamer'], ['logeerkamer', 'Logeerkamer'],
-  ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
-  ['wasruimte', 'Wasruimte'], ['berging', 'Berging of zolder'], ['leeg', 'Leeg'],
-];
+const { KAMER_SOORTEN, ZONE_SOORTEN } = huismodel;
 /*
  * Meten met (besluit 123): één of meer sensoren, waarvan het gemiddelde de
  * temperatuur van de kamer is. Eerst wat in de kamer staat; een sensor uit een
@@ -616,11 +611,6 @@ function soortKeuze(k) {
  * de tekening. Elk deel heeft een soort, zoals keuken of zithoek; die bepaalt
  * de inrichting van dat deel. Zonder keuze een voorstel uit de naam.
  */
-const ZONE_SOORTEN = [
-  ['woonkamer', 'Zithoek'], ['keuken', 'Keuken'], ['eetkamer', 'Eethoek'], ['werkkamer', 'Werkplek'],
-  ['slaapkamer', 'Slaaphoek'], ['kinderkamer', 'Kinderhoek'], ['badkamer', 'Badkamer'], ['toilet', 'Toilet'],
-  ['wasruimte', 'Washoek'], ['hal', 'Doorloop'], ['berging', 'Berging'], ['leeg', 'Leeg'],
-];
 function zonesKeuze(k) {
   const naam = (w) => ZONE_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
   const pijl = (z, i, stap, teken, wat) => `<button type="button" class="knop klein-knop" data-zone-schuif="${stap}" data-zone="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} ${wat}" ${i + stap < 0 || i + stap >= k.zones.length ? 'disabled' : ''}>${teken}</button>`;

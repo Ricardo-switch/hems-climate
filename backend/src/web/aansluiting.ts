@@ -26,12 +26,13 @@ import type { SiteConfig } from '../core/model.js';
 
 export const CONNECTION_FILE = 'aansluiting.json';
 
-export const PANEL_SIDES = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet'] as const;
+/** Waar de panelen liggen; `geen` is een huis zonder panelen (besluit 158). */
+export const PANEL_SIDES = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet', 'geen'] as const;
 export type PanelSide = (typeof PANEL_SIDES)[number];
 export const TARIFFS = ['vast', 'dynamisch', 'weetniet'] as const;
 export type Tariff = (typeof TARIFFS)[number];
 /** Waar de warmte vandaan komt (besluit 122). */
-export const HEATERS = ['cv', 'warmtepomp', 'stadsverwarming', 'weetniet'] as const;
+export const HEATERS = ['cv', 'warmtepomp', 'hybride', 'stadsverwarming', 'weetniet'] as const;
 export type Heater = (typeof HEATERS)[number];
 /** De aanvoertemperatuur die op een ketel of warmtepomp kan staan, in °C. */
 export const SUPPLY_C = { min: 25, max: 90 } as const;
@@ -320,7 +321,8 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
   const both = ligging === 'beide';
   const voorkant = both ? count(p['voorkant']) : null;
   const achterkant = both ? count(p['achterkant']) : null;
-  const given = count(p['aantal']);
+  // Zonder panelen geen aantal (besluit 158).
+  const given = ligging === 'geen' ? null : count(p['aantal']);
   if (voorkant === false || achterkant === false || given === false) {
     return { ok: false, reden: 'het aantal panelen is een heel getal van 1 tot 200' };
   }

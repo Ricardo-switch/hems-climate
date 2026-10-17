@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
-import { buildHouse, gevelVan, houseBeforeSetup, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
+import { buildHouse, gevelVan, houseBeforeSetup, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomForName, roomTypeFromNames } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -435,6 +435,16 @@ describe('het voorstel uit Home Assistant', () => {
     expect(at('Slaapkamer')).toBe('slaapkamer');
     expect(at('Slaapkamer Mylan')).toBeNull();
     expect(at('Halfopen')).toBeNull();
+  });
+
+  it('stelt een kamer voor uit de naam van het apparaat, als heel woord en de langste eerst (besluit 158)', () => {
+    const kamer = (id: string, naam: string) => ({ id, naam, etage: 'bg' as const, zones: [], regelzone: null, haGebied: null });
+    const rooms = [kamer('entree', 'Entree'), kamer('slaapkamer', 'Slaapkamer'), kamer('mylan', 'Slaapkamer Mylan'), kamer('hal', 'Hal')];
+    expect(roomForName('Bewegingssensor entree', rooms)).toBe('entree');
+    expect(roomForName('Lamp slaapkamer Mylan', rooms)).toBe('mylan');
+    expect(roomForName('Slaapkamer-lamp', rooms)).toBe('slaapkamer');
+    expect(roomForName('Halogeen spot', rooms)).toBeNull();
+    expect(roomForName('Droger', rooms)).toBeNull();
   });
 
   it('toont een groep met verborgen peren als één lamp, in de kamer van die peren', () => {
