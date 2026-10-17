@@ -65,6 +65,9 @@ fi
 stap "7. het image, met alleen de mappen van de NAS"
 MAPPEN=$(sed -n 's/^SPARSE_MAPPEN="\(.*\)"/\1/p' deploy/deploy.sh)
 [ -n "$MAPPEN" ] || stop "SPARSE_MAPPEN niet gevonden in deploy.sh"
+# Een map die niet in git staat, laat de NAS gewoon leeg; `git archive` weigert
+# hem. Sinds de repository openbaar is, staat `config` er niet meer in.
+MAPPEN=$(for m in $MAPPEN; do git cat-file -e "HEAD:$m" 2>/dev/null && echo "$m"; done)
 echo "mappen: $MAPPEN"
 if docker info >/dev/null 2>&1; then
   # shellcheck disable=SC2086
