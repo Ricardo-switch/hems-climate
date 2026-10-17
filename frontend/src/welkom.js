@@ -16,9 +16,10 @@
 
 const { esc, haal } = app;
 
+// Een pad op deze dienst, of achter Ingress een pagina naast deze (besluit 154): nooit een andere site.
 const terug = (() => {
-  const t = new URLSearchParams(location.search).get('terug') || '/thuis.html';
-  return t.startsWith('/') && !t.startsWith('//') ? t : '/thuis.html';
+  const t = new URLSearchParams(location.search).get('terug') || 'thuis.html';
+  return (t.startsWith('/') && !t.startsWith('//')) || /^[a-z-]+\.html([?#][^/\\]*)?$/.test(t) ? t : 'thuis.html';
 })();
 const kaart = document.querySelector('[data-kaart]');
 let bewoners = null;

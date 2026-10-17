@@ -32,7 +32,7 @@ import {
   type HaFloor,
   type HaRegistryEntity,
 } from './adapters/homeassistant/discovery.js';
-import { buildHouse, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
+import { buildHouse, houseBeforeSetup, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web/layout.js';
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
@@ -1132,7 +1132,14 @@ if (webPort != null) {
     ...(analyse ? { divergence: () => analyse.latest } : {}),
     // Alleen wanneer er werkelijk gelogd wordt; anders geen exportknop.
     ...(logDir === '' ? {} : { logDir }),
-    ...(onboarding ? { onboarding } : {}),
+    ...(onboarding
+      ? {
+          onboarding,
+          // Het welkom in een leeg huis (besluit 154): het huis uit Home Assistant, en na het opslaan opnieuw starten.
+          welkomHuis: () => (siteConfig == null && houseRegisters ? houseBeforeSetup(houseRegisters, houseStates, Intl.DateTimeFormat().resolvedOptions().timeZone) : null),
+          naOnboarding: herstart,
+        }
+      : {}),
     location: () => location,
     house: houseReport,
     ...(lightSwitch ? { lights: lightSwitch } : {}),

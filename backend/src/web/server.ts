@@ -188,6 +188,16 @@ export interface WebOptions {
    */
   readonly onboarding?: Onboarding;
   /**
+   * Het huis uit Home Assistant zolang er geen configuratie is, voor het welkom
+   * (besluit 154). Gaat mee in het antwoord van `api/onboarding`.
+   */
+  readonly welkomHuis?: () => HouseReport | null;
+  /**
+   * Na het opslaan van de configuratie: opnieuw starten, zodat de regeling
+   * hem leest (besluit 154). De add-on start dan vanzelf weer (besluit 151).
+   */
+  readonly naOnboarding?: () => void;
+  /**
    * Gevoel en toelichting van de bewoner (besluit 84), of weg wanneer die niet
    * mogen. Zelfde schakelaar als de onboarding: zonder dit object bestaat de
    * route niet, en staat de muur er ook voor `/api/gevoel`.
@@ -600,6 +610,33 @@ export class WebServer {
           res.writeHead(302, { location: `/welkom.html?terug=${encodeURIComponent(path === '/' ? '/thuis.html' : path)}#${eerst}`, 'cache-control': 'no-store' });
           res.end();
           return;
+        }
+      }
+    }
+
+    /*
+     * In de add-on is de app de voordeur (besluit 154). Zonder configuratie is
+     * het huis leeg: elke pagina van de app gaat dan naar het welkom. De
+     * cijferpagina blijft bestaan voor wie hem direct opent.
+     *
+     * Achter Ingress altijd een relatief adres: de app staat daar onder een pad
+     * van Home Assistant, en `/thuis.html` zou naar Home Assistant zelf gaan.
+     */
+    if (this.#options.onboarding != null && (method === 'GET' || method === 'HEAD') && (path === '/' || path.endsWith('.html'))) {
+      const pagina = path.slice(1);
+      const leeg = this.#options.config == null;
+      const naar = (doel: string) => {
+        res.writeHead(302, { location: doel, 'cache-control': 'no-store' });
+        res.end();
+      };
+      if (leeg && pagina !== '' && pagina !== 'begin.html' && pagina !== 'index.html') return naar('begin.html');
+      if (!leeg && pagina === 'begin.html') return naar('thuis.html');
+      // Wie voor het eerst komt, krijgt eerst "wie ben je?" (besluit 147), ook achter Ingress.
+      if (!leeg && access.kind === 'ingress' && pagina !== 'welkom.html' && pagina !== 'index.html' && this.#options.bewoners) {
+        const visitor = ingressVisitor(req);
+        if (visitor.userId != null) {
+          const eerst = await this.#options.bewoners.herken({ userId: visitor.userId, naam: visitor.naam }).catch(() => null);
+          if (eerst != null) return naar(`welkom.html?terug=${encodeURIComponent(pagina || 'thuis.html')}#${eerst}`);
         }
       }
     }
@@ -1360,7 +1397,8 @@ export class WebServer {
     }
 
     const headOnly = method === 'HEAD';
-    const target = path === '/' ? 'index.html' : path;
+    // De voordeur: op de NAS de cijfers, in de add-on de app of het welkom (besluit 154).
+    const target = path !== '/' ? path : this.#options.onboarding == null ? 'index.html' : this.#options.config == null ? 'begin.html' : 'thuis.html';
     const since = req.headers['if-modified-since'];
     if (
       await sendFile(
@@ -1776,8 +1814,9 @@ export class WebServer {
           onboarding.existing(),
         ]);
         // `bestaande` erbij, zodat de pagina kan zeggen dat er al iets staat
-        // vóórdat iemand op een knop drukt die toch zou weigeren.
-        sendJson(res, 200, { ...proposal, bestaande: existing });
+        // vóórdat iemand op een knop drukt die toch zou weigeren. En het huis
+        // zoals Home Assistant het kent, voor het welkom (besluit 154).
+        sendJson(res, 200, { ...proposal, bestaande: existing, namen: onboarding.namen(), huis: this.#options.welkomHuis?.() ?? null });
       } catch (error) {
         // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
         // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen
@@ -1814,6 +1853,8 @@ export class WebServer {
 
     const result = await onboarding.save(clean);
     sendJson(res, result.ok ? 200 : 422, result);
+    // Eerst het antwoord, dan opnieuw starten: de pagina wacht tot de dienst terug is.
+    if (result.ok) this.#options.naOnboarding?.();
   }
 
   /**

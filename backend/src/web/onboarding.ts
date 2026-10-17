@@ -62,8 +62,20 @@ export class Onboarding {
   async proposal(): Promise<Proposal> {
     const registers = await this.#options.registers();
     this.#latest = discover(registers);
+    this.#namen = namenVoor(this.#latest, registers);
     return this.#latest;
   }
+
+  /**
+   * De namen uit Home Assistant bij de keuzes van het laatste voorstel: de
+   * bewoner ziet nooit een entity-ID (besluit 45), ook niet in het welkom
+   * (besluit 154).
+   */
+  namen(): Readonly<Record<string, string>> {
+    return this.#namen;
+  }
+
+  #namen: Readonly<Record<string, string>> = {};
 
   /**
    * Welke configuraties er al staan.
@@ -160,4 +172,17 @@ export class Onboarding {
     await writeFile(path, `${JSON.stringify(config, null, 2)}\n`, 'utf-8');
     return { ok: true, pad: path };
   }
+}
+
+/** Per optie van een keuze de naam zoals Home Assistant hem toont. */
+function namenVoor(proposal: Proposal, registers: Registers): Record<string, string> {
+  const ids = new Set(proposal.keuzes.flatMap((k) => k.opties));
+  const uit: Record<string, string> = {};
+  for (const id of ids) {
+    const staat = registers.states.find((s) => s.entity_id === id)?.attributes['friendly_name'];
+    const register = registers.entities.find((e) => e.entity_id === id);
+    const naam = typeof staat === 'string' && staat.trim() ? staat : register?.name ?? register?.original_name;
+    if (naam) uit[id] = naam;
+  }
+  return uit;
 }

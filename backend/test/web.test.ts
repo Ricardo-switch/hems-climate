@@ -114,6 +114,8 @@ async function start(options: {
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
   logDir?: string;
   gegevens?: NonNullable<ConstructorParameters<typeof WebServer>[0]['gegevens']>;
+  welkomHuis?: () => HouseReport | null;
+  naOnboarding?: () => void;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -129,6 +131,8 @@ async function start(options: {
         latest: options.latest ?? (() => null),
         ...(options.divergence ? { divergence: options.divergence } : {}),
         ...(options.onboarding ? { onboarding: options.onboarding } : {}),
+        ...(options.welkomHuis ? { welkomHuis: options.welkomHuis } : {}),
+        ...(options.naOnboarding ? { naOnboarding: options.naOnboarding } : {}),
         ...(options.feedback ? { feedback: options.feedback } : {}),
         ...(options.version ? { version: options.version } : {}),
         ...(options.location !== undefined ? { location: () => options.location ?? null } : {}),
@@ -904,6 +908,69 @@ describe('de onboarding', () => {
     const res = await fetch(`${base}/api/site`);
     expect(res.status).toBe(503);
     expect(await res.text()).toContain('nog geen installatie');
+  });
+
+  /* Het welkom in een leeg huis (besluit 154). */
+  async function paginas(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-web-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    for (const naam of ['index.html', 'thuis.html', 'begin.html', 'welkom.html', 'inrichten.html']) await writeFile(join(dir, naam), `<title>${naam}</title>`, 'utf-8');
+    return dir;
+  }
+
+  it('opent in de add-on zonder configuratie het welkom, en elke pagina van de app gaat erheen', async () => {
+    const { onboarding } = await createOnboarding();
+    const { base } = await start({ onboarding, withoutConfig: true, webDir: await paginas() });
+    expect(await (await fetch(`${base}/`)).text()).toContain('begin.html');
+    for (const pagina of ['thuis.html', 'inrichten.html', 'welkom.html']) {
+      const res = await fetch(`${base}/${pagina}`, { redirect: 'manual' });
+      expect(res.status, pagina).toBe(302);
+      // Relatief: achter Ingress staat de app onder een pad van Home Assistant.
+      expect(res.headers.get('location'), pagina).toBe('begin.html');
+    }
+    // De cijferpagina blijft voor wie hem direct opent.
+    expect(await (await fetch(`${base}/index.html`)).text()).toContain('index.html');
+  });
+
+  it('opent in de add-on met een configuratie de app, en het welkom is dan voorbij', async () => {
+    const { onboarding } = await createOnboarding();
+    const { base } = await start({ onboarding, webDir: await paginas() });
+    expect(await (await fetch(`${base}/`)).text()).toContain('thuis.html');
+    const res = await fetch(`${base}/begin.html`, { redirect: 'manual' });
+    expect(res.headers.get('location')).toBe('thuis.html');
+  });
+
+  it('opent op de NAS gewoon de cijfers', async () => {
+    const { base } = await start({ webDir: await paginas() });
+    expect(await (await fetch(`${base}/`)).text()).toContain('index.html');
+    expect((await fetch(`${base}/begin.html`, { redirect: 'manual' })).status).toBe(200);
+  });
+
+  it('vraagt achter Ingress wie je bent bij je eerste bezoek, met een relatieve weg terug', async () => {
+    const { onboarding } = await createOnboarding();
+    const { base } = await start({ onboarding, webDir: await paginas(), access: { kind: 'ingress' }, herken: async () => 'welkom' });
+    const res = await fetch(`${base}/`, { redirect: 'manual', headers: { 'x-remote-user-id': 'u-1', 'x-remote-user-name': 'ricardo' } });
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('welkom.html?terug=thuis.html#welkom');
+    // Welkom zelf niet, anders kom je er nooit.
+    expect((await fetch(`${base}/welkom.html`, { redirect: 'manual', headers: { 'x-remote-user-id': 'u-1' } })).status).toBe(200);
+  });
+
+  it('geeft bij het voorstel het huis uit Home Assistant, en start na het opslaan opnieuw', async () => {
+    const { onboarding, dir } = await createOnboarding();
+    const huis = { etages: [] } as unknown as HouseReport;
+    let herstart = 0;
+    const { base } = await start({ onboarding, withoutConfig: true, welkomHuis: () => huis, naOnboarding: () => (herstart += 1) });
+    const voorstel = (await (await fetch(`${base}/api/onboarding`)).json()) as { huis: unknown };
+    expect(voorstel.huis).toEqual(huis);
+    const post = () => fetch(`${base}/api/onboarding`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ antwoorden: {} }) });
+    // Geweigerd (er staat al iets): niet opnieuw starten.
+    await writeFile(join(dir, 'al-iets.json'), '{}', 'utf-8');
+    expect((await post()).status).toBe(422);
+    expect(herstart).toBe(0);
+    await rm(join(dir, 'al-iets.json'));
+    expect((await post()).status).toBe(200);
+    expect(herstart).toBe(1);
   });
 });
 

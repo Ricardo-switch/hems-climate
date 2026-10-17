@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
-import { buildHouse, gevelVan, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
+import { buildHouse, gevelVan, houseBeforeSetup, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomTypeFromNames } from '../src/web/house.js';
 import type { Layout } from '../src/web/layout.js';
 import { registers, snapshot, states } from './house-fixture.js';
 import { exampleSite } from './site.js';
@@ -605,5 +605,19 @@ describe('de gevel van een scherm (besluit 145)', () => {
     expect(gevelVan(null, 'Screen', false, gevels)).toBeNull();
     expect(gevelVan('dakkapel', 'Screen', false, gevels)).toBeNull();
     expect(gevelVan(null, 'Screen achter', false, [])).toBeNull();
+  });
+});
+
+describe('het huis vóór het inrichten (besluit 154)', () => {
+  it('toont de etages, kamers en apparaten die Home Assistant kent, zonder regeling', () => {
+    const huis = houseBeforeSetup(registers, states, 'Europe/Amsterdam');
+    const kamers = huis.etages.flatMap((e) => e.ruimtes.map((r) => r.naam));
+    expect(kamers).toEqual(expect.arrayContaining(['Woonkamer', 'Badkamer', 'Zolder', 'Hal']));
+    // De begane grond, de eerste verdieping en de zolder, elk met hun kamers.
+    expect(huis.etages.find((e) => e.ruimtes.some((r) => r.naam === 'Badkamer'))?.naam).toBe('Eerste verdieping');
+    const apparaten = huis.etages.flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.map((a) => a.id)));
+    expect(apparaten).toEqual(expect.arrayContaining(['climate.air_conditioning_woonkamer', 'climate.air_conditioning_zolder']));
+    // Niets in de regeling: geen kamer met een zone.
+    expect(huis.etages.flatMap((e) => e.ruimtes).every((r) => r.zoneId == null)).toBe(true);
   });
 });

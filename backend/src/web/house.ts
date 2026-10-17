@@ -1351,6 +1351,27 @@ export function proposeLayout(
   return { versie: 1, etages, kamers, apparaten: {} };
 }
 
+/**
+ * Het huis vóór er een configuratie is (besluit 154): wat Home Assistant kent,
+ * zonder regeling. Voor het welkom in een leeg huis, dat het huis laat groeien
+ * terwijl je leest. Geen zone en geen apparaat in de regeling, dus alles in het
+ * huis komt uit de registers.
+ */
+export function houseBeforeSetup(registers: HouseRegisters, states: ReadonlyMap<string, HaEntityState>, timezone: string): HouseReport {
+  const leeg: SiteConfig = {
+    id: 'nog-niet-ingericht',
+    timezone,
+    zones: [],
+    actuators: [],
+    power: { gridPower: { adapter: 'homeassistant', id: 'sensor.nog_niet_ingericht' }, startSurplusW: 0, stopImportW: 0, resumeSurplusW: 0, stabilisationMinutes: 0 },
+    occupancy: [],
+    schedule: { preheatFromHour: 6, dayFromHour: 8, nightFromHour: 22, eveningExtensionLights: [] },
+    enabledStrategies: [],
+    criticalInputs: [],
+  };
+  return buildHouse(leeg, registers, states, null);
+}
+
 /** "2 lampen aan", "Screens 60% dicht", "Er draait niets": over een lijst apparaten. */
 export function summarize(devices: readonly HouseDevice[]): HouseSummary {
   const lampenAan = devices.filter((d) => d.soort === 'licht' && d.aan).length;
