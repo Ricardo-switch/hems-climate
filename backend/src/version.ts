@@ -45,7 +45,11 @@ export const NIEUW: readonly Nieuw[] = [
       'Comfort voor het hele huis laat kamers met een eigen waarde zoals ze zijn',
       'Bij de eerste inlog zegt "Klopt iets niet?" waar je het verandert',
     ],
-    opgelost: ['"Waar staan 1 dit apparaat?" is nu "Waar staat dit apparaat?"', 'Het startscherm telt Buiten niet meer als etage'],
+    opgelost: [
+      '"Waar staan 1 dit apparaat?" is nu "Waar staat dit apparaat?"',
+      'Het startscherm telt Buiten niet meer als etage',
+      'Na het terugzetten van een back-up laadt de pagina vanzelf opnieuw',
+    ],
   },
   {
     versie: '0.33.0',
