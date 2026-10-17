@@ -79,6 +79,14 @@ describe('een back-up (besluit 151)', () => {
     await writeFile(h.config, JSON.stringify({ id: 'ander' }), 'utf-8');
     expect((await zetTerug(h.log, gelezen.backup, { configPad: h.config, sitesDir: h.sites })).configuratie).toBe('bleef');
     expect(JSON.parse(await readFile(h.config, 'utf-8'))).toEqual({ id: 'ander' });
+
+    // In de add-on maakte de app hem zelf: dan komt die uit de back-up ervoor in de plaats, en nooit twee naast elkaar.
+    const zelf = join(h.sites, 'mijn-huis.json');
+    await rm(h.config);
+    await writeFile(zelf, JSON.stringify({ id: 'ontdekt' }), 'utf-8');
+    expect((await zetTerug(h.log, gelezen.backup, { configPad: zelf, sitesDir: h.sites, vervang: true })).configuratie).toBe('vervangen');
+    expect((await readdir(h.sites)).sort()).toEqual(['thuis.json']);
+    expect(JSON.parse(await readFile(join(h.sites, 'thuis.json'), 'utf-8'))).toEqual({ id: 'thuis' });
   });
 
   it('weigert wat geen back-up is, slaat onbekende bestanden over, en toetst de configuratie', () => {

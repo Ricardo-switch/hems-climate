@@ -180,21 +180,33 @@ export async function bewaardeBackups(logDir: string): Promise<string[]> {
 export async function zetTerug(
   logDir: string,
   backup: Backup,
-  plek: { readonly configPad: string | null; readonly sitesDir: string },
-): Promise<{ readonly bestanden: string[]; readonly configuratie: 'neergezet' | 'bleef' | 'geen' }> {
+  plek: {
+    readonly configPad: string | null;
+    readonly sitesDir: string;
+    /**
+     * Een configuratie die de app zelf maakte (de add-on, met de onboarding),
+     * vervangen door die uit de back-up (17 oktober 2026). Anders bleef de
+     * ontdekte configuratie staan, zonder bijvoorbeeld de panelen, terwijl de
+     * back-up ze wel had. Een configuratie van de beheerder (de NAS) blijft.
+     */
+    readonly vervang?: boolean;
+  },
+): Promise<{ readonly bestanden: string[]; readonly configuratie: 'neergezet' | 'vervangen' | 'bleef' | 'geen' }> {
   const bestanden: string[] = [];
   for (const [naam, inhoud] of Object.entries(backup.bestanden)) {
     if (!IN_BACKUP.has(naam)) continue;
     await zetNeer(join(logDir, naam), inhoud);
     bestanden.push(naam);
   }
-  let configuratie: 'neergezet' | 'bleef' | 'geen' = 'geen';
+  let configuratie: 'neergezet' | 'vervangen' | 'bleef' | 'geen' = 'geen';
   if (backup.configuratie) {
-    if (plek.configPad != null) configuratie = 'bleef';
+    if (plek.configPad != null && !plek.vervang) configuratie = 'bleef';
     else {
+      // Eerst de oude weg: twee configuraties naast elkaar laat de lader niet toe.
+      if (plek.configPad != null) await rm(plek.configPad, { force: true });
       await mkdir(plek.sitesDir, { recursive: true });
       await zetNeer(join(plek.sitesDir, basename(backup.configuratie.naam)), backup.configuratie.inhoud);
-      configuratie = 'neergezet';
+      configuratie = plek.configPad != null ? 'vervangen' : 'neergezet';
     }
   }
   return { bestanden, configuratie };

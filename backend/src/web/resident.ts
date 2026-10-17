@@ -113,6 +113,9 @@ const HEAD = {
     // Tijdens de schaduw gebeurt het niet echt (besluit 124).
     oneWould: (room: string, cool: boolean) => `${cap(room)} zou ${cool ? 'koelen' : 'verwarmen'}`,
     manyWould: 'Het huis zou regelen',
+    // Onder de kop over één kamer de getallen, niet nog eens de kop (17 oktober 2026).
+    numbers: (temp: string, goal: string | null) => `Het is er ${temp}°${goal != null ? `, het doel is ${goal}°` : ''}.`,
+    ownSun: ' Dat kan op eigen zon.',
     waitSun: 'Het huis wacht op zon',
     waitSunWhy: (rooms: string, many: boolean) => `${cap(rooms)} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
     waitOther: 'Er wacht iets',
@@ -147,6 +150,8 @@ const HEAD = {
     many: 'The house is being managed',
     oneWould: (room: string, cool: boolean) => `${cap(room)} would ${cool ? 'cool' : 'heat'}`,
     manyWould: 'The house would act',
+    numbers: (temp: string, goal: string | null) => `It is ${temp}° there${goal != null ? `, the target is ${goal}°` : ''}.`,
+    ownSun: ' That can run on your own solar.',
     waitSun: 'The house is waiting for sun',
     waitSunWhy: (rooms: string) => `${cap(rooms)} will cool as soon as there is enough solar to spare.`,
     waitOther: 'Something is waiting',
@@ -198,7 +203,13 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   if (e.failsafe.active) return { boven, titel: w.fault[0], zin: w.fault[1] };
   if (active.length > 0) {
     const titel = active.length === 1 ? (shadow ? w.oneWould : w.one)(mid(active[0]!.name), active[0]!.r.soort === 'cool') : shadow ? w.manyWould : w.many;
-    return { boven, titel, zin: [line(active), line(waiting)].filter((x) => x !== '').join(' ') };
+    // Eén kamer: de kop zegt het al, dus eronder hoe warm het er is en wat het doel is.
+    const een = active.length === 1 ? e.perZone.find((z) => z.zoneId === active[0]!.r.zoneId) : undefined;
+    const getallen =
+      een?.temperatureC != null
+        ? w.numbers(decimal(een.temperatureC, lang), een.targetC != null ? decimal(een.targetC, lang) : null) + (active[0]!.r.kort.endsWith(SHORT[lang].onSun) ? w.ownSun : '')
+        : null;
+    return { boven, titel, zin: [getallen ?? line(active), line(waiting)].filter((x) => x !== '').join(' ') };
   }
   if (waiting.length > 0) {
     const onSun = waiting.every(({ r }) => r.kort === SHORT[lang].waitSun);

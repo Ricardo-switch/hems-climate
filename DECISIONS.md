@@ -159,6 +159,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [150. Praten met je stem: de microfoon, en "Hé huis" op de wand](#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand)
 - [154. De add-on opent de app, en een leeg huis begint met een welkom](#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom)
 - [155. Volledig scherm in Home Assistant, per apparaat](#155-volledig-scherm-in-home-assistant-per-apparaat)
+- [156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie](#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie)
 
 **Veiligheid**
 
@@ -6676,7 +6677,46 @@ Die kioskmodus werkt alleen op dashboards, niet op het paneel van een app.
 
 ---
 
+## 156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 17 oktober 2026, de eerste middag van de add-on op de Pi, zag de bewoner op
+Thuis "0,2 kWh opgewekt", een zon die om vijf uur begon en geen verwachting.
+Onder de kop "De badkamer zou verwarmen" stond nog eens "Badkamer: zou
+verwarmen."
+
+*Besluit:*
+
+- **Vandaag vult aan uit Home Assistant.** Het eigen logboek begint pas als
+  Smart Climate draait. Een kwartier zonder eigen meting komt uit de
+  statistiek van Home Assistant: het gemiddelde vermogen van de panelen en het
+  net per vijf minuten, met dezelfde leesvraag als Opbrengst (besluit 102).
+  Dat telt mee in wat er opgewekt is, van het net kwam en terugging. Gemeten
+  op 17 oktober: 6,77 kWh tegen 6,98 kWh op de energiemeter van de panelen.
+- **Onder de kop over één kamer de getallen:** "Het is er 19,5°, het doel is
+  20°.", en "Dat kan op eigen zon." als dat zo is.
+- **Een back-up vervangt in de add-on de configuratie** (aanvulling op besluit
+  151). Daar maakte de app hem zelf, uit de ontdekking; die van de back-up kwam
+  er niet in als er al een stond, en daarmee bleven bijvoorbeeld de panelen
+  weg. Op de NAS is de configuratie van de beheerder, en die blijft.
+- **Wat het aan het licht bracht:** de ligging van de panelen (richting,
+  helling, vermogen) staat alleen in een configuratie die met de hand is
+  geschreven. Een nieuw huis zonder die regels heeft geen Zon, geen
+  verwachting en geen gestippelde lijn. Zie Wat nog een besluit wacht.
+- **Versie 0.32.1.**
+
+---
+
 ## Wat nog een besluit wacht
+
+- **De panelen van een nieuw huis.** Richting, helling en vermogen van de
+  panelen staan nu alleen in een configuratie die met de hand is geschreven
+  (besluit 156). Inrichten vraagt de kant en het aantal, maar niet de richting
+  in graden, de helling of het vermogen per paneel, en de app meet ze nog niet
+  zelf (besluit 93). Zonder die drie geen Zon, geen weer met opbrengst en geen
+  verwachting. Te kiezen: vragen in Inrichten, zelf afleiden uit een paar
+  heldere dagen opbrengst, of allebei.
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
   Een centrale kast met afzuiging in wc, badkamer, zolder en woonkamer, één

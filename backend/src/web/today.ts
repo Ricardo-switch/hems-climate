@@ -288,6 +288,53 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
   };
 }
 
+/** Een rij uit de statistiek van Home Assistant: het gemiddelde vermogen over vijf minuten. */
+export interface PowerRow {
+  readonly startMs: number;
+  readonly meanW: number;
+}
+
+/** Vijf minuten in uren, voor Wh uit een gemiddeld vermogen. */
+const FIVE_MIN_H = 5 / 60;
+
+/**
+ * Vult de kwartieren zonder eigen meting aan uit de statistiek van Home
+ * Assistant (17 oktober 2026).
+ *
+ * Het eigen logboek begint pas als Smart Climate draait. Een nieuwe installatie
+ * zag daardoor 's middags "0,2 kWh opgewekt" en een zon die om vijf uur begon,
+ * terwijl Home Assistant de hele dag kende. Een kwartier mét eigen meting blijft
+ * zoals het is; de rest komt uit de gemiddelden per vijf minuten, en telt mee
+ * in de opbrengst en in wat er van het net kwam en terugging.
+ */
+export function withHistory(report: TodayReport, zon: readonly PowerRow[], net: readonly PowerRow[]): TodayReport {
+  let zonWh = report.zonWh;
+  let netAfWh = report.netAfWh;
+  let netTerugWh = report.netTerugWh;
+  const in15 = (rows: readonly PowerRow[], t: number) => rows.filter((r) => r.startMs >= t && r.startMs < t + QUARTER_MS);
+  const gemiddeld = (rows: readonly PowerRow[]) => Math.round(rows.reduce((s, r) => s + r.meanW, 0) / rows.length);
+  const kwartieren = report.kwartieren.map((q) => {
+    let { zonW, netW } = q;
+    if (zonW == null) {
+      const rows = in15(zon, q.tMs);
+      if (rows.length) {
+        zonW = Math.max(0, gemiddeld(rows));
+        zonWh += rows.reduce((s, r) => s + Math.max(0, r.meanW), 0) * FIVE_MIN_H;
+      }
+    }
+    if (netW == null) {
+      const rows = in15(net, q.tMs);
+      if (rows.length) {
+        netW = gemiddeld(rows);
+        netAfWh += rows.reduce((s, r) => s + Math.max(0, r.meanW), 0) * FIVE_MIN_H;
+        netTerugWh += rows.reduce((s, r) => s + Math.max(0, -r.meanW), 0) * FIVE_MIN_H;
+      }
+    }
+    return { tMs: q.tMs, zonW, netW };
+  });
+  return { ...report, kwartieren, zonWh: Math.round(zonWh), netAfWh: Math.round(netAfWh), netTerugWh: Math.round(netTerugWh) };
+}
+
 /** "cool@22" → "cool". */
 function actionOf(observed: string | undefined): string | null {
   if (observed == null) return null;

@@ -224,6 +224,9 @@ verwijzing bestaat.
 - **Volledig scherm** kies je per apparaat bij Bewoners en toegang › Dit
   scherm: Home Assistant verbergt dan zelf zijn zijbalk en kopbalk, en een
   knop boven de bel brengt je terug ([155]).
+- **Vandaag** vult wat het eigen logboek nog niet heeft aan uit de statistiek
+  van Home Assistant; een back-up zet in de add-on ook de configuratie terug
+  ([156]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -470,4 +473,5 @@ verwijzing bestaat.
 [153]: DECISIONS.md#153-de-add-on-komt-kant-en-klaar-van-github
 [154]: DECISIONS.md#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom
 [155]: DECISIONS.md#155-volledig-scherm-in-home-assistant-per-apparaat
+[156]: DECISIONS.md#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie
 <!-- links:einde -->

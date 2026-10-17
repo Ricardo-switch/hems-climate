@@ -22,7 +22,7 @@ import { dirname, join, resolve } from 'node:path';
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { parseSiteConfig } from './config/schema.js';
-import type { SiteConfig } from './core/model.js';
+import type { DeviceRef, MeasurementPoint, SiteConfig } from './core/model.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
 import {
   fetchRegistries,
@@ -44,7 +44,7 @@ import { UitstelStore } from './web/uitstel.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
-import { partsIn, zonedMidnight } from './web/today.js';
+import { partsIn, zonedMidnight, type PowerRow } from './web/today.js';
 import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } from './web/weather.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
@@ -838,6 +838,45 @@ if (meldingen) {
   setInterval(meldingenRonde, 60_000).unref();
 }
 
+/*
+ * Vandaag uit de statistiek van Home Assistant (17 oktober 2026): het vermogen
+ * van de panelen en het net per vijf minuten, voor de kwartieren die het eigen
+ * logboek nog niet heeft, zoals op de eerste dag van een nieuwe installatie.
+ * Alleen lezen, met dezelfde vraag als Opbrengst. Vijf minuten bewaard; een
+ * afgesloten dag (gisteren) verandert niet meer.
+ */
+const historieBewaard = new Map<number, { at: number; rijen: { zon: PowerRow[]; net: PowerRow[] } }>();
+async function historieVan(vanMs: number, totMs: number): Promise<{ zon: PowerRow[]; net: PowerRow[] } | null> {
+  const config = siteConfig;
+  if (!config) return null;
+  const punt = (p: MeasurementPoint | DeviceRef | undefined) => (p && !('attribute' in p && p.attribute) ? p.id : null);
+  const zonId = punt(config.solarProduction);
+  const netId = punt(config.power.gridPower);
+  const ids = [zonId, netId].filter((x): x is string => x != null);
+  if (ids.length === 0) return null;
+  const bewaard = historieBewaard.get(vanMs);
+  if (bewaard && (totMs < Date.now() - 3_600_000 || Date.now() - bewaard.at < 5 * 60_000)) return bewaard.rijen;
+  const raw = await client.query<Record<string, { start: number | string; mean?: number | null }[]>>('recorder/statistics_during_period', {
+    start_time: new Date(vanMs).toISOString(),
+    end_time: new Date(Math.min(totMs, Date.now())).toISOString(),
+    statistic_ids: ids,
+    period: '5minute',
+    types: ['mean'],
+    units: { power: 'W' },
+  });
+  const rijen = (id: string | null): PowerRow[] =>
+    id == null
+      ? []
+      : (raw?.[id] ?? [])
+          .filter((r) => typeof r.mean === 'number' && Number.isFinite(r.mean))
+          .map((r) => ({ startMs: typeof r.start === 'number' ? r.start : Date.parse(r.start), meanW: r.mean as number }));
+  const uit = { zon: rijen(zonId), net: rijen(netId) };
+  historieBewaard.set(vanMs, { at: Date.now(), rijen: uit });
+  // Alleen vandaag en gisteren zijn nodig.
+  for (const k of historieBewaard.keys()) if (k < vanMs - 2 * 86_400_000) historieBewaard.delete(k);
+  return uit;
+}
+
 const houseReport = () => {
   const h = siteConfig && houseRegisters
     ? buildHouse(
@@ -1091,7 +1130,8 @@ const gegevens =
             // Eerst wat er nu is, zodat terugzetten zelf ook terug kan.
             await bewaarBackup(logDir, await maakBackup(logDir, site?.source ?? null, VERSIE));
             stilzetten();
-            const uit = await zetTerug(logDir, gelezen.backup, { configPad: site?.source ?? null, sitesDir });
+            // In de add-on is de configuratie van de app zelf, net als bij opnieuw beginnen (besluit 151).
+            const uit = await zetTerug(logDir, gelezen.backup, { configPad: site?.source ?? null, sitesDir, vervang: onboarding != null });
             console.log(`Back-up teruggezet (besluit 151): ${uit.bestanden.join(', ') || 'geen bestanden'}; configuratie ${uit.configuratie}`);
             return { ok: true as const, bestanden: uit.bestanden, configuratie: uit.configuratie };
           } catch (error) {
@@ -1141,6 +1181,7 @@ if (webPort != null) {
         }
       : {}),
     location: () => location,
+    historie: historieVan,
     house: houseReport,
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),

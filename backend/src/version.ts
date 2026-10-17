@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.32.0';
+export const VERSIE = '0.32.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,15 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.32.1',
+    datum: '2026-10-17',
+    beter: [
+      'Onder de kop over één kamer staat hoe warm het er is en wat het doel is, in plaats van nog eens hetzelfde',
+      'Een back-up terugzetten in Home Assistant neemt ook de configuratie mee, met je panelen',
+    ],
+    opgelost: ['Vandaag op Thuis toont de hele dag, ook op de eerste dag: wat er nog niet gemeten is, komt uit Home Assistant'],
+  },
   {
     versie: '0.32.0',
     datum: '2026-10-17',

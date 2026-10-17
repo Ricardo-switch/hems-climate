@@ -31,7 +31,7 @@ import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
 import { exportInfo, writeExport, type AnalyseExtra } from './export.js';
 import { MAX_BACKUP, backupNaam, type Backup } from './gegevens.js';
-import { TodayCache } from './today.js';
+import { TodayCache, withHistory, type PowerRow } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
@@ -192,6 +192,12 @@ export interface WebOptions {
    * (besluit 154). Gaat mee in het antwoord van `api/onboarding`.
    */
   readonly welkomHuis?: () => HouseReport | null;
+  /**
+   * Het vermogen van de panelen en het net per vijf minuten uit de statistiek
+   * van Home Assistant, voor de kwartieren van Vandaag die het eigen logboek
+   * nog niet heeft (17 oktober 2026). Null als die statistiek er niet is.
+   */
+  readonly historie?: (vanMs: number, totMs: number) => Promise<{ zon: readonly PowerRow[]; net: readonly PowerRow[] } | null>;
   /**
    * Na het opslaan van de configuratie: opnieuw starten, zodat de regeling
    * hem leest (besluit 154). De add-on start dan vanzelf weer (besluit 151).
@@ -986,7 +992,14 @@ export class WebServer {
       try {
         // ?dag=gisteren: de hele dag ervoor, in dezelfde vorm.
         const gisteren = url.searchParams.get('dag') === 'gisteren';
-        sendJson(res, 200, await (gisteren ? this.#today.yesterday() : this.#today.get()));
+        let rapport = await (gisteren ? this.#today.yesterday() : this.#today.get());
+        // Kwartieren zonder eigen meting uit de statistiek van Home Assistant (17 oktober 2026).
+        const historie = this.#options.historie;
+        if (historie && rapport.kwartieren.some((q) => q.zonW == null || q.netW == null)) {
+          const h = await historie(rapport.vanMs, rapport.totMs).catch(() => null);
+          if (h) rapport = withHistory(rapport, h.zon, h.net);
+        }
+        sendJson(res, 200, rapport);
       } catch (error) {
         sendJson(res, 500, { fout: (error as Error).message });
       }
