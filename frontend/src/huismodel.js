@@ -122,6 +122,20 @@
     };
   }
 
+  /** Wat voor kamer (besluit 119), voor Indeling en Inrichten. */
+  const KAMER_SOORTEN = [
+    ['woonkamer', 'Woonkamer'], ['woonkeuken', 'Woonkamer met open keuken'], ['keuken', 'Keuken'], ['eetkamer', 'Eetkamer'],
+    ['slaapkamer', 'Slaapkamer'], ['kinderkamer', 'Kinderkamer'], ['logeerkamer', 'Logeerkamer'],
+    ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
+    ['wasruimte', 'Wasruimte'], ['berging', 'Berging of zolder'], ['leeg', 'Leeg'],
+  ];
+  /** Wat voor deel van een kamer (besluit 145): dezelfde soorten, met namen voor een deel. */
+  const ZONE_SOORTEN = [
+    ['woonkamer', 'Zithoek'], ['keuken', 'Keuken'], ['eetkamer', 'Eethoek'], ['werkkamer', 'Werkplek'],
+    ['slaapkamer', 'Slaaphoek'], ['kinderkamer', 'Kinderhoek'], ['badkamer', 'Badkamer'], ['toilet', 'Toilet'],
+    ['wasruimte', 'Washoek'], ['hal', 'Doorloop'], ['berging', 'Berging'], ['leeg', 'Leeg'],
+  ];
+
   /**
    * Ligt deze ruimte buiten (de tuin, de oprit)? Dan hoort hij niet als kamer in
    * het huis. Het huis zegt het (`buiten`, besluit 109); de naam is de terugval
@@ -135,7 +149,7 @@
   function soortBuiten(r) {
     if (r.buiten) return r.buiten;
     const oprit = /oprit|carport/i.test(r.naam);
-    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : 'tuin';
+    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : /tuinhuis|schuur/i.test(r.naam) ? 'tuinhuis' : 'tuin';
     return { soort, auto: oprit, tuinhuis: soort === 'tuin' };
   }
 
@@ -143,16 +157,25 @@
    * De buitenruimtes voor de tekening (besluiten 109 en 113): een oprit, een
    * tuin achter, een terras, een voortuin en een balkon, elk op zijn eigen plek;
    * wat erbij hoort (een auto, een tuinhuis) komt uit de indeling. Welke lamp het tuinhuis verlicht:
-   * een lamp in een zone die zo heet, of die zelf zo heet.
+   * een lamp in een zone die zo heet, of die zelf zo heet, of een lamp in een
+   * ruimte die zelf het tuinhuis is (besluit 158).
+   *
+   * `rond` is wat de bewoner zei dat er rond het huis is (besluit 158). Dat gaat
+   * voor de ruimtes: een deel dat er niet is, valt weg; een deel zonder ruimte
+   * komt erbij, zonder lampen en zonder iets om op te tikken.
    */
-  function buiten(ruimtes) {
+  function buiten(ruimtes, rond = null) {
     let oprit = null;
     let tuin = null;
     let terras = null;
     let balkon = null;
     let voortuin = null;
+    // De lampen van een ruimte die het tuinhuis is, horen bij het tuinhuis in de tuin.
+    const huisjes = ruimtes.filter((r) => soortBuiten(r).soort === 'tuinhuis');
+    const huisjeLampen = huisjes.flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'licht'));
     for (const r of ruimtes) {
       const b = soortBuiten(r);
+      if (b.soort === 'tuinhuis') continue;
       const lampen = (r.apparaten ?? []).filter((a) => a.soort === 'licht');
       const zoneNaam = (a) => (r.zones ?? []).find((z) => z.id === a.zone)?.naam ?? '';
       const lampAan = lampen.some((a) => a.aan);
@@ -175,14 +198,14 @@
         oprit = { id: r.id, naam: r.naam, auto: b.auto ? {} : null, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null };
       } else {
         if (tuin) continue;
-        const huisje = b.tuinhuis ? lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)) : [];
+        const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
         const overstek = huisje.find((a) => /overstek|luifel/i.test(a.id + a.naam));
         const binnenlamp = huisje.find((a) => a !== overstek);
         const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
         tuin = {
           id: r.id,
           naam: r.naam,
-          tuinhuis: b.tuinhuis,
+          tuinhuis: b.tuinhuis || huisjes.length > 0,
           tuinhuisAan: !!binnenlamp?.aan,
           overstekAan: !!overstek?.aan,
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
@@ -191,7 +214,29 @@
         };
       }
     }
+    // Alleen een tuinhuis in Home Assistant: dan is er een tuin om hem in te zetten.
+    if (!tuin && huisjes.length) tuin = { id: null, naam: 'Tuin', tuinhuis: true, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
+    if (rond) {
+      const leeg = (naam) => ({ id: null, naam, lampAan: false });
+      oprit = rond.oprit ? (oprit ?? { id: null, naam: 'Oprit', auto: null, camera: null }) : null;
+      if (oprit) oprit = { ...oprit, auto: rond.auto ? (oprit.auto ?? {}) : null };
+      tuin = rond.tuin || rond.tuinhuis ? { ...(tuin ?? { id: null, naam: 'Tuin', tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      terras = rond.terras ? (terras ?? leeg('Terras')) : null;
+      balkon = rond.balkon ? (balkon ?? leeg('Balkon')) : null;
+      voortuin = rond.voortuin ? (voortuin ?? leeg('Voortuin')) : null;
+    }
     return { oprit, tuin, terras, balkon, voortuin };
+  }
+
+  /**
+   * Wat er rond het huis is, zoals de tekening het nu laat zien (besluit 158):
+   * het startpunt voor de vraag "Wat is er rond je huis?".
+   */
+  function rondNu(huis) {
+    if (huis?.rond) return { ...huis.rond };
+    const ruimtes = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).filter((r) => isBuiten(e, r)));
+    const b = buiten(ruimtes);
+    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis };
   }
 
   /**
@@ -220,7 +265,7 @@
     if (top && (huis?.dakEtage !== undefined ? top.id === huis.dakEtage : etages.length >= 3 || /zolder|dak/i.test(top.naam))) top.dak = true;
     const alles = (huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
     const aircos = alles.filter((a) => a.soort === 'klimaat' && a.klimaat?.kanKoelen);
-    const delen = buiten(buitenRuimtes);
+    const delen = buiten(buitenRuimtes, huis?.rond ?? null);
     // De deurbel en de camera op de oprit, met hun bewegingsmelders (rapport 15 oktober).
     const naam = (a) => `${a.id} ${a.naam}`;
     const isBel = (a) => /deurbel|doorbell/i.test(naam(a));
@@ -252,5 +297,5 @@
     return iedereen.filter((b) => b.thuis).map((b) => b.naam);
   }
 
-  global.huismodel = { ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, tekening, groetNamen };
+  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, groetNamen };
 })(window);

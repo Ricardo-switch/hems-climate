@@ -149,7 +149,11 @@ function gegevensVorm() {
     <button type="button" class="knop gevaar" data-opnieuw style="align-self: start">Opnieuw beginnen</button>`;
 }
 
-/** Wacht tot Smart Climate weer antwoordt na opnieuw starten, en laadt dan de pagina. */
+/**
+ * Wacht tot Smart Climate weer antwoordt na opnieuw starten, en laadt dan de
+ * pagina; zonder `naar` deze pagina opnieuw. Naar dezelfde pagina met een #
+ * springen laadt niets: dan bleef "start opnieuw…" staan met de oude stand.
+ */
 async function wachtOpHerstart(naar) {
   const begin = Date.now();
   await new Promise((ok) => setTimeout(ok, 4000));
@@ -157,7 +161,8 @@ async function wachtOpHerstart(naar) {
     try {
       const r = await fetch('api/health', { cache: 'no-store' });
       if (r.ok) {
-        location.href = naar;
+        if (naar) location.href = naar;
+        else location.reload();
         return;
       }
     } catch {
@@ -274,7 +279,7 @@ document.addEventListener('click', async (e) => {
       bevestig = null;
       melding = 'De back-up staat terug. Smart Climate start opnieuw…';
       teken();
-      void wachtOpHerstart(location.pathname + location.hash);
+      void wachtOpHerstart();
       return;
     } else {
       return;

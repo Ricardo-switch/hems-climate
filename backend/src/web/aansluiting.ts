@@ -23,15 +23,17 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
+import { VOORKANT_ZON, aantalVan, dakUitAanpassing, dakUitMeting, liggingView, type Dak, type LiggingView, type Meting, type VoorkantZon } from './ligging.js';
 
 export const CONNECTION_FILE = 'aansluiting.json';
 
-export const PANEL_SIDES = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet'] as const;
+/** Waar de panelen liggen; `geen` is een huis zonder panelen (besluit 158). */
+export const PANEL_SIDES = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet', 'geen'] as const;
 export type PanelSide = (typeof PANEL_SIDES)[number];
 export const TARIFFS = ['vast', 'dynamisch', 'weetniet'] as const;
 export type Tariff = (typeof TARIFFS)[number];
 /** Waar de warmte vandaan komt (besluit 122). */
-export const HEATERS = ['cv', 'warmtepomp', 'stadsverwarming', 'weetniet'] as const;
+export const HEATERS = ['cv', 'warmtepomp', 'hybride', 'stadsverwarming', 'weetniet'] as const;
 export type Heater = (typeof HEATERS)[number];
 /** De aanvoertemperatuur die op een ketel of warmtepomp kan staan, in °C. */
 export const SUPPLY_C = { min: 25, max: 90 } as const;
@@ -86,6 +88,13 @@ export interface ConnectionAnswers {
    * aanvoer warmt een kamer langzamer op.
    */
   readonly verwarming?: { readonly soort: Heater | null; readonly aanvoerC: number | null };
+  /**
+   * Hoe de panelen liggen (besluit 157): wanneer de zon op de voorkant schijnt,
+   * en wat de bewoner van de meting bevestigde of verbeterde. Weg of null: nog
+   * niet bevestigd; dan geldt de configuratie, de meting of een schatting.
+   */
+  readonly voorkantZon?: VoorkantZon | null;
+  readonly dak?: Dak | null;
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
   readonly fasen: readonly FoundPhase[];
   readonly apparaten: readonly (FoundAppliance & { readonly opZon: boolean })[];
@@ -308,7 +317,10 @@ export type ConnectionCheck = { ok: true; answers: ConnectionAnswers } | { ok: f
  * komen van deze kant (`found`), en alleen een apparaat dat daar bij staat,
  * kan op zon.
  */
-export function validateConnection(body: unknown, found: { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[] }): ConnectionCheck {
+export function validateConnection(
+  body: unknown,
+  found: { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[]; meting?: Meting | null; omvormerGevonden?: number | null },
+): ConnectionCheck {
   if (typeof body !== 'object' || body == null || Array.isArray(body)) return { ok: false, reden: 'verwacht een object' };
   const b = body as Record<string, unknown>;
   const p = (typeof b['panelen'] === 'object' && b['panelen'] != null ? b['panelen'] : {}) as Record<string, unknown>;
@@ -320,7 +332,8 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
   const both = ligging === 'beide';
   const voorkant = both ? count(p['voorkant']) : null;
   const achterkant = both ? count(p['achterkant']) : null;
-  const given = count(p['aantal']);
+  // Zonder panelen geen aantal (besluit 158).
+  const given = ligging === 'geen' ? null : count(p['aantal']);
   if (voorkant === false || achterkant === false || given === false) {
     return { ok: false, reden: 'het aantal panelen is een heel getal van 1 tot 200' };
   }
@@ -352,6 +365,13 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
     return { ok: false, reden: `de aanvoertemperatuur is een heel getal van ${SUPPLY_C.min} tot ${SUPPLY_C.max} °C` };
   }
 
+  // Wanneer de zon op de voorkant schijnt, en het dak (besluit 157).
+  const voorkantZon = b['voorkantZon'] ?? null;
+  if (voorkantZon !== null && !VOORKANT_ZON.includes(voorkantZon as VoorkantZon)) return { ok: false, reden: 'onbekend antwoord bij de voorkant' };
+  const panelen = { ligging: ligging as PanelSide | null, aantal, voorkant, achterkant };
+  const dak = readDak(b['dak'] ?? null, panelen, voorkantZon as VoorkantZon | null, found);
+  if (dak !== null && 'fout' in dak) return { ok: false, reden: dak.fout };
+
   const opZonRaw = (typeof b['opZon'] === 'object' && b['opZon'] != null ? b['opZon'] : {}) as Record<string, unknown>;
   for (const [id, v] of Object.entries(opZonRaw)) {
     if (typeof v !== 'boolean') return { ok: false, reden: `"op zon" is ja of nee (${id})` };
@@ -362,13 +382,66 @@ export function validateConnection(body: unknown, found: { fasen: readonly Found
     ok: true,
     answers: {
       versie: 1,
-      panelen: { ligging: ligging as PanelSide | null, aantal, voorkant, achterkant },
+      panelen,
       zekering,
       tarief: tarief as Tariff | null,
       verwarming: { soort: soort as Heater | null, aanvoerC: aanvoer as number | null },
+      voorkantZon: voorkantZon as VoorkantZon | null,
+      dak,
       fasen: [...found.fasen],
       apparaten: found.apparaten.map((a) => ({ ...a, opZon: opZonRaw[a.id] === true })),
     },
+  };
+}
+
+const getal = (v: unknown, min: number, max: number) => typeof v === 'number' && Number.isFinite(v) && v >= min && v <= max;
+
+/**
+ * Het dak zoals de pagina het stuurt (besluit 157): `"voorstel"` (klopt, de
+ * meting van nu), `{ aanpassen: … }` (verbeterd), het bewaarde dak terug, of
+ * null. Een bewaard dak dat niet meer bij de kant van het dak past, vervalt.
+ */
+function readDak(
+  raw: unknown,
+  panelen: ConnectionAnswers['panelen'],
+  zon: VoorkantZon | null,
+  found: { meting?: Meting | null; omvormerGevonden?: number | null },
+): Dak | { fout: string } | null {
+  if (raw == null) return null;
+  if (raw === 'voorstel') {
+    if (found.meting == null) return { fout: 'er is nog geen meting om te bevestigen' };
+    return dakUitMeting(found.meting, panelen, zon, found.omvormerGevonden ?? null);
+  }
+  if (typeof raw !== 'object' || Array.isArray(raw)) return { fout: 'onbekend dak' };
+  const r = raw as Record<string, unknown>;
+  const omvormer = (v: unknown) => (v == null ? null : getal(v, 100, 100_000) ? Math.round(v as number) : false);
+  if (typeof r['aanpassen'] === 'object' && r['aanpassen'] != null) {
+    const a = r['aanpassen'] as Record<string, unknown>;
+    const omvormerW = omvormer(a['omvormerW']);
+    if (!getal(a['voorgevelDeg'], 0, 360) || !getal(a['hellingDeg'], 0, 90) || !getal(a['wpPerPaneel'], 50, 1000) || omvormerW === false) {
+      return { fout: 'de voorkant is 0 tot 360°, de helling 0 tot 90°, een paneel 50 tot 1000 Wp' };
+    }
+    return dakUitAanpassing({ voorgevelDeg: a['voorgevelDeg'] as number, hellingDeg: a['hellingDeg'] as number, wpPerPaneel: a['wpPerPaneel'] as number, omvormerW }, panelen, found.meting ?? null);
+  }
+  const vlakken = Array.isArray(r['vlakken']) ? (r['vlakken'] as Record<string, unknown>[]) : [];
+  const omvormerW = omvormer(r['omvormerW']);
+  const ok =
+    (r['voorgevelDeg'] == null || getal(r['voorgevelDeg'], 0, 360)) &&
+    vlakken.length >= 1 &&
+    vlakken.length <= 4 &&
+    vlakken.every((v) => typeof v === 'object' && v != null && getal(v['azimuthDeg'], 0, 360) && getal(v['tiltDeg'], 0, 90) && getal(v['peakW'], 1, 100_000)) &&
+    omvormerW !== false &&
+    (r['bron'] === 'gemeten' || r['bron'] === 'bewoner');
+  if (!ok) return { fout: 'onbekend dak' };
+  // Een andere kant van het dak of een ander aantal dan bij het bevestigen: dan klopt het niet meer.
+  if ((r['kant'] ?? null) !== panelen.ligging || (r['aantal'] ?? null) !== (aantalVan(panelen)?.totaal ?? null)) return null;
+  return {
+    voorgevelDeg: r['voorgevelDeg'] == null ? null : (r['voorgevelDeg'] as number),
+    vlakken: vlakken.map((v) => ({ azimuthDeg: v['azimuthDeg'] as number, tiltDeg: v['tiltDeg'] as number, peakW: v['peakW'] as number })),
+    omvormerW,
+    bron: r['bron'] as Dak['bron'],
+    kant: panelen.ligging,
+    aantal: aantalVan(panelen)?.totaal ?? null,
   };
 }
 
@@ -436,8 +509,12 @@ export interface ConnectionView {
     readonly zekering: ConnectionAnswers['zekering'];
     readonly tarief: Tariff | null;
     readonly verwarming: { readonly soort: Heater | null; readonly aanvoerC: number | null };
+    readonly voorkantZon: VoorkantZon | null;
+    readonly dak: Dak | null;
     readonly opZon: Readonly<Record<string, boolean>>;
   } | null;
+  /** Hoe de panelen liggen (besluit 157): wat geldt, het voorstel uit de meting, en de dag erbij. */
+  readonly ligging: LiggingView;
   readonly gevonden: { readonly fasen: readonly FoundPhase['id'][]; readonly apparaten: readonly { id: string; naam: string; soort: ApplianceKind }[] };
   /** Wat de configuratie van het huis al vastlegt; dat gaat voor. */
   readonly configuratie: {
@@ -467,6 +544,10 @@ export interface ConnectionContext {
   readonly answersAtStart: ConnectionAnswers | null;
   readonly answers: ConnectionAnswers | null;
   readonly solar: { readonly naam: string; readonly intervalS: number | null; readonly platform: string | null } | null;
+  /** De ligging gemeten uit de opbrengst, of null (besluit 157). */
+  readonly meting?: Meting | null;
+  /** De omvormer uit zijn typenummer in Home Assistant. */
+  readonly omvormerGevonden?: number | null;
 }
 
 export function connectionView(c: ConnectionContext): ConnectionView {
@@ -481,9 +562,19 @@ export function connectionView(c: ConnectionContext): ConnectionView {
           zekering: c.answers.zekering,
           tarief: c.answers.tarief,
           verwarming: c.answers.verwarming ?? { soort: null, aanvoerC: null },
+          voorkantZon: c.answers.voorkantZon ?? null,
+          dak: c.answers.dak ?? null,
           opZon: Object.fromEntries(c.answers.apparaten.map((a) => [a.id, a.opZon])),
         }
       : null,
+    ligging: liggingView({
+      configuratie: c.base.geometry,
+      dak: c.answers?.dak ?? null,
+      meting: c.meting ?? null,
+      panelen: c.answers?.panelen ?? null,
+      voorkantZon: c.answers?.voorkantZon ?? null,
+      omvormerGevonden: c.omvormerGevonden ?? null,
+    }),
     gevonden: { fasen: c.found.fasen.map((f) => f.id), apparaten: c.found.apparaten.map(({ id, naam, soort }) => ({ id, naam, soort })) },
     configuratie: {
       zekering: grid && grid.phases.length > 0 ? { fasen: grid.phases.length === 3 ? 3 : 1, ampere: grid.phases[0]!.maxA } : null,

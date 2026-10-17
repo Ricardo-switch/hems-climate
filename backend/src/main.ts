@@ -52,6 +52,7 @@ import { Pauze } from './web/taalmodel.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
+import { kiesLigging, meetLigging, omvormerUitType, type Meting } from './web/ligging.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
@@ -784,8 +785,92 @@ const scenePictures = logDir !== '' ? new ScenePictures(logDir) : null;
 await scenePictures?.refresh();
 if (scenePictures) setInterval(() => void scenePictures.refresh(), 10 * 60_000).unref();
 
+/*
+ * Hoe de panelen liggen (besluit 157): de opbrengst van de afgelopen tien
+ * dagen, per vijf minuten uit de statistiek van Home Assistant (zo lang bewaart
+ * hij die), om de drie uur opnieuw. De meting rekent opnieuw als de antwoorden
+ * over het dak veranderen. Alleen lezen, met dezelfde vraag als Opbrengst.
+ */
+let liggingRijen: { at: number; rijen: PowerRow[] } | null = null;
+async function leesLigging(): Promise<void> {
+  const p = siteConfig?.solarProduction;
+  if (!p || ('attribute' in p && p.attribute)) return;
+  const nu = Date.now();
+  const raw = await client.query<Record<string, { start: number | string; mean?: number | null }[]>>('recorder/statistics_during_period', {
+    start_time: new Date(nu - 10 * 86_400_000).toISOString(),
+    end_time: new Date(nu).toISOString(),
+    statistic_ids: [p.id],
+    period: '5minute',
+    types: ['mean'],
+    units: { power: 'W' },
+  });
+  const rijen = (raw?.[p.id] ?? [])
+    .filter((r) => typeof r.mean === 'number' && Number.isFinite(r.mean))
+    .map((r) => ({ startMs: typeof r.start === 'number' ? r.start : Date.parse(r.start), meanW: r.mean as number }));
+  liggingRijen = { at: nu, rijen };
+}
+// Eerst kort na het verbinden, daarna om de drie uur; mislukt het, dan over tien minuten opnieuw.
+setInterval(() => {
+  if (liggingRijen == null || Date.now() - liggingRijen.at > 3 * 3_600_000) void leesLigging().catch(() => {});
+}, 10 * 60_000).unref();
+setTimeout(() => void leesLigging().catch(() => {}), 45_000).unref();
+
+/** De omvormer uit zijn typenummer: van het apparaat van de zonnesensor, of de enige die er is. */
+function omvormerGevonden(): number | null {
+  const regs = houseRegisters;
+  if (!regs) return null;
+  const id = siteConfig?.solarProduction?.id;
+  const device = id ? regs.entities.find((e) => e.entity_id === id)?.device_id : null;
+  const eigen = device ? omvormerUitType(regs.devices.find((d) => d.id === device)?.model) : null;
+  if (eigen != null) return eigen;
+  const alle = [...new Set(regs.devices.map((d) => omvormerUitType(d.model)).filter((w): w is number => w != null))];
+  return alle.length === 1 ? alle[0]! : null;
+}
+
+let metingBewaard: { sleutel: string; meting: Meting | null } | null = null;
+/** De ligging gemeten uit de opbrengst, of null zonder heldere dag; bewaard tot er iets verandert. */
+function metingNu(): Meting | null {
+  const r = liggingRijen;
+  const cfg = siteConfig;
+  if (!r || !location || !cfg) return null;
+  const a = connectionStore?.current ?? null;
+  const panelen = a?.panelen ?? { ligging: null, aantal: null, voorkant: null, achterkant: null };
+  const omvormerW = a?.dak?.omvormerW ?? omvormerGevonden();
+  const sleutel = JSON.stringify([r.at, location, panelen, omvormerW]);
+  if (metingBewaard?.sleutel !== sleutel) metingBewaard = { sleutel, meting: meetLigging(r.rijen, location, panelen, { timeZone: cfg.timezone, omvormerW }) };
+  return metingBewaard.meting;
+}
+
+/**
+ * De ligging die geldt, over de configuratie: wat de bewoner bevestigde gaat
+ * voor (zoals de zekering, besluit 117), dan het bestand, dan de meting, dan
+ * een schatting. De regeling leest hem niet (93), dus dit kan zonder herstart.
+ */
+let liggingBewaard: { sleutel: string; gekozen: ReturnType<typeof kiesLigging> } | null = null;
+function metLigging(c: SiteConfig): SiteConfig {
+  const a = connectionStore?.current ?? null;
+  const input = {
+    configuratie: c.geometry,
+    dak: a?.dak ?? null,
+    meting: metingNu(),
+    panelen: a?.panelen ?? null,
+    voorkantZon: a?.voorkantZon ?? null,
+    omvormerGevonden: omvormerGevonden(),
+  };
+  // Hetzelfde object zolang er niets verandert: de weercache kijkt ernaar.
+  const sleutel = JSON.stringify(input);
+  if (liggingBewaard?.sleutel !== sleutel) liggingBewaard = { sleutel, gekozen: kiesLigging(input) };
+  const gekozen = liggingBewaard.gekozen;
+  if (gekozen == null) {
+    if (c.geometry == null) return c;
+    const { geometry: _weg, ...zonder } = c;
+    return zonder;
+  }
+  return gekozen.geometry === c.geometry ? c : { ...c, geometry: gekozen.geometry };
+}
+
 /** De configuratie zoals de app hem laat zien: met de namen en de volgorde uit de indeling (besluit 131). */
-const webConfig = () => (siteConfig ? withLayoutNames(siteConfig, layoutStore?.current ?? null) : null);
+const webConfig = () => (siteConfig ? metLigging(withLayoutNames(siteConfig, layoutStore?.current ?? null)) : null);
 
 /*
  * Meldingen in de app (besluit 136): elke minuut uit wat de dienst weet, naar
@@ -823,6 +908,8 @@ function meldingenRonde(): void {
     drempels: h.drempels,
     meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
     versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
+    // Hoe de panelen liggen (besluit 157): gemeten, en nog niet bevestigd.
+    panelen: { voorstel: connectionStore?.current?.dak == null && metingNu() != null },
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
     // Wiens comfort er geldt (besluit 147), voor één melding bij een wissel.
     comfort: (() => {
@@ -1354,6 +1441,9 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
   const found = () => ({
     fasen: findPhases(allStates.values()),
     apparaten: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices) : [],
+    // Hoe de panelen liggen (besluit 157): om "klopt" te kunnen bewaren.
+    meting: metingNu(),
+    omvormerGevonden: omvormerGevonden(),
   });
   const solarId = base.solarProduction?.id ?? null;
   return {
@@ -1366,6 +1456,8 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
         applied: connectionApplied,
         answersAtStart,
         answers: store.current,
+        meting: metingNu(),
+        omvormerGevonden: omvormerGevonden(),
         solar: solarId
           ? {
               naam: String(allStates.get(solarId)?.attributes['friendly_name'] ?? 'je zonnesensor'),

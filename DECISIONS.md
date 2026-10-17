@@ -119,6 +119,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [93. Hoe het huis en de panelen liggen, meet de app zelf; de bewoner bevestigt](#93-hoe-het-huis-en-de-panelen-liggen-meet-de-app-zelf-de-bewoner-bevestigt)
 - [126. Radiatorknoppen en ander klimaat buiten de configuratie: zien en vastleggen](#126-radiatorknoppen-en-ander-klimaat-buiten-de-configuratie-zien-en-vastleggen)
 - [127. Het weer van Open-Meteo, de batterijlijst, en een apparaat via twee koppelingen](#127-het-weer-van-open-meteo-de-batterijlijst-en-een-apparaat-via-twee-koppelingen)
+- [157. Hoe de panelen liggen, gemeten uit tien dagen opbrengst; de bewoner bevestigt](#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt)
 
 **Weergave**
 
@@ -160,6 +161,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [154. De add-on opent de app, en een leeg huis begint met een welkom](#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom)
 - [155. Volledig scherm in Home Assistant, per apparaat](#155-volledig-scherm-in-home-assistant-per-apparaat)
 - [156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie](#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie)
+- [158. Inrichten: overal Terug en Volgende, en wat de bewoner tegenkwam](#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam)
 
 **Veiligheid**
 
@@ -6703,20 +6705,164 @@ verwarmen."
 - **Wat het aan het licht bracht:** de ligging van de panelen (richting,
   helling, vermogen) staat alleen in een configuratie die met de hand is
   geschreven. Een nieuw huis zonder die regels heeft geen Zon, geen
-  verwachting en geen gestippelde lijn. Zie Wat nog een besluit wacht.
+  verwachting en geen gestippelde lijn. Opgelost in besluit 157.
 - **Versie 0.32.1.**
 
 ---
 
-## Wat nog een besluit wacht
+## 157. Hoe de panelen liggen, gemeten uit tien dagen opbrengst; de bewoner bevestigt
 
-- **De panelen van een nieuw huis.** Richting, helling en vermogen van de
-  panelen staan nu alleen in een configuratie die met de hand is geschreven
-  (besluit 156). Inrichten vraagt de kant en het aantal, maar niet de richting
-  in graden, de helling of het vermogen per paneel, en de app meet ze nog niet
-  zelf (besluit 93). Zonder die drie geen Zon, geen weer met opbrengst en geen
-  verwachting. Te kiezen: vragen in Inrichten, zelf afleiden uit een paar
-  heldere dagen opbrengst, of allebei.
+*Onderwerp: meten, data en analyse · Status: geldig*
+
+Besluit 156 bracht het aan het licht: de ligging van de panelen (richting,
+helling, vermogen) stond alleen in een configuratie die met de hand was
+geschreven. Een nieuw huis via de add-on kreeg hem nooit, en had dus geen Zon,
+geen weer met opbrengst en geen verwachting op Thuis en Vandaag. Besluit 93 zei
+al dat de app het zelf meet en de bewoner bevestigt; dat bestond nog niet.
+Gekozen op 17 oktober 2026 door de bewoner, uit vragen, zelf afleiden of
+allebei, met de schets `Wand-Inrichten-Panelen` (en `Panelen-Tel`).
+
+*Besluit:*
+
+- **Meten uit de statistiek van Home Assistant.** De opbrengst van de
+  afgelopen tien dagen, per vijf minuten (zo lang bewaart Home Assistant die
+  standaard), om de drie uur opnieuw. Per tijdstip van de dag telt de hoogste
+  dag: één heldere dag in tien is genoeg. Elke richting en helling gaat langs,
+  per graad, met één vlak of twee tegenover elkaar, naar de kant van het dak
+  uit Inrichten. Het vlak waarvan de vorm van de dag het best past, wint; het
+  midden van de hoogte geeft het vermogen. Het aantal panelen houdt dat tussen
+  250 en 550 Wp per paneel. Past niets goed, past minder dan 60% van de
+  bovenkant, of beslaat het minder dan vijf uur van de dag, dan is er geen
+  heldere dag geweest en geen meting.
+- **De omvormer uit zijn typenummer** in Home Assistant: "SE3000H" is
+  3.000 W. Ook Growatt, Huawei, SMA, Fronius en GoodWe. Wat er afgekapt is,
+  telt niet mee voor de richting.
+- **De bewoner bevestigt,** in Inrichten (Energie › Hoe ze liggen) en bij
+  Instellingen › Energie › Zonnepanelen: de ligging in woorden ("Oost en
+  west", "Rond 50°, een steil dak", "Samen zo'n 5 kWp"), met de lijn van de
+  helderste dag, gemeten naast wat bij die ligging hoort. Dan "Klopt" of
+  "Aanpassen": de voorkant op een kompas, de helling, de wattpiek per paneel
+  en de omvormer.
+- **De voorkant:** bij panelen op twee kanten met evenveel panelen ziet de
+  meting niet welke kant voor is. Dan één vraag: "wanneer schijnt de zon op de
+  voorkant?" (bij oost en west alleen ochtend of avond). Daaruit volgen de
+  gevels, voor de screens.
+- **Zonder heldere dag een schatting:** de kant van het dak, de voorkant, een
+  gewoon dak van 40° en 400 Wp per paneel. Zon, het weer en de verwachting
+  werken meteen. Komt er een meting, dan staat er een melding bij de bel tot
+  de bewoner kijkt.
+- **Wat geldt:** wat de bewoner bevestigde, dan de configuratie, dan de
+  meting, dan de schatting. Wat de bewoner bevestigt, gaat dus voor het
+  bestand, zoals de zekering (117); op de NAS verandert er niets tot dan. Een
+  bevestigd dak vervalt als de kant of het aantal panelen verandert, en een
+  latere meting verandert het niet ("opnieuw meten" kan).
+- **Zonder herstart:** de regeling leest de ligging niet (93), dus de dienst
+  legt hem over wat de app en de assistent lezen.
+- **Bewaard bij de antwoorden** (`aansluiting.json`): `voorkantZon` en `dak`,
+  zonder plaats. De ligging van het huis blijft alleen in het geheugen (90).
+- **Versie 0.33.0.**
+
+*Getoetst op dit huis, 17 oktober 2026 (twaalf dagen per vijf minuten):*
+
+| Dagen | Richting | Helling | Vermogen |
+| --- | --- | --- | --- |
+| Alle twaalf | 93° en 273° | 52° | 5,3 kWp |
+| 9 tot 13 oktober, één heldere dag | 93° en 273° | 53° | 5,1 kWp |
+| 14 en 15 oktober | 90° en 270° | 50° | 4,8 kWp |
+| 9, 11 en 13 oktober, bewolkt | geen meting | | |
+| Werkelijk (besluit 93) | 97° en 277° | 47° | 4,68 kWp |
+
+De richting zit binnen vijf graden, de helling binnen zes, het vermogen 3 tot
+13% te hoog: binnen "zo'n". Zonder het aantal panelen kwam er op één dag
+"noorden, 60°, 44 kWp" uit; daarom de grens per paneel. Met de op één na
+hoogste dag per tijdstip (zoals de geleerde lijn, 93) vond hij met één heldere
+dag in tien niets, want dan is de op één na hoogste bewolkt.
+
+*Wat het nog liet zien:* elke heldere dag zakt de opbrengst tussen 16:40 en
+16:50 van zo'n 1.200 naar 200 W, terwijl de zon nog op het westdak staat:
+schaduw, van een buurhuis of een boom. De meting laat die momenten weg; de
+geleerde lijn neemt de schaduw na vijftien dagen mee (93).
+
+*Wat afviel:* alleen vragen (de bewoner weet richting en helling zelden, 93);
+de ligging op een kaart (dan gaat de ligging naar een kaartdienst buiten het
+huis, 90); de instellingen van Forecast.Solar overnemen (die zijn alleen te
+lezen door een flow in Home Assistant te starten, en dat is schrijven);
+uurwaarden (te grof voor de vorm van de dag).
+
+*Nog niet:* wat een latere meting anders ziet dan een bevestigd dak, wordt
+volgens besluit 93 een vraag. Dat komt als er een tweede seizoen is om mee te
+vergelijken.
+
+---
+
+## 158. Inrichten: overal Terug en Volgende, en wat de bewoner tegenkwam
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 17 oktober 2026 richtte de bewoner zijn huis zelf in via de add-on, en
+schreef op wat hem tegenzat: het welkom had alleen "Later" en "Klopt", de
+stappen stonden al groen voordat hij er was geweest, de getallen op het
+startscherm deden niets, verplaatsen leek niet te kunnen, keuken en
+woonkamer waren twee kamers zonder zones, buiten kon per ruimte maar één ding
+zijn, "Waar staan 1 dit apparaat?", soms wel en soms geen Terug, het aantal
+panelen werd niet gevraagd, en de prijzen gingen uit van een dal- en
+normaaltarief. Een check van de code vond meer: Volgende bewaarde niets van
+wat er voorgesteld stond, comfort voor het hele huis overschreef elke kamer,
+een huis zonder panelen kon de stap niet afmaken, en "Buiten" telde als etage.
+
+*Besluit:*
+
+- **Onderaan overal hetzelfde:** links Terug, rechts Volgende. Volgende
+  bewaart wat er in beeld staat, ook als je niets aanraakte: het voorstel uit
+  Home Assistant voor de kamers, een kamer voor een los apparaat (ook het
+  voorstel uit zijn naam), wat er buiten is, de prijzen uit het
+  Energie-dashboard en licht en camera's. "Later" is weg: wie iets overslaat,
+  drukt op Volgende en houdt het voorstel.
+- **De balkjes in drie standen:** groen is nagelopen (de bewoner drukte hier
+  op Volgende, onthouden op het apparaat zoals de rondleiding), omlijnd staat
+  al klaar uit Home Assistant, grijs is nog open. Klaar noemt wat nog niet is
+  nagelopen.
+- **Het startscherm telt eerlijk en tikt open:** etages zonder Buiten, kamers
+  met het aantal buiten erbij. Een getal opent de lijst; een apparaat dat er
+  niet bij hoort, haal je daar met × weg (behalve wat verwarmt of koelt).
+- **Welkom bij de eerste inlog: "Klopt iets niet?"** zegt per regel waar je het
+  verandert: de hoofdgebruiker bij Bewoners, de persoon die aan je account hangt
+  in Home Assistant zelf, een andere sensor bij Bewoners.
+- **Klopt je huis?** Een kamer aantikken geeft velden met hun naam erboven
+  (Naam, Etage, Soort kamer), zones met hun soort, samenvoegen met een kamer
+  op dezelfde etage en weghalen (met een tweede tik). Samenvoegen maakt van de
+  tweede kamer een zone van de eerste, met zijn apparaten; twee kamers met elk
+  een eigen regeling voeg je samen bij Indeling. Buiten staat hier niet meer.
+- **Wat er rond het huis is,** elk deel apart aan of uit: oprit, auto, voortuin,
+  achtertuin, terras, balkon en tuinhuis. Dat staat in de indeling als `rond`
+  en gaat voor de ruimtes; een deel zonder ruimte wordt getekend zonder lampen.
+  Een ruimte buiten zegt nog bij welk deel zijn lampen en camera horen, en kan
+  nu ook het tuinhuis zijn: zijn lampen verlichten het tuinhuis.
+- **Een kamer uit de naam van het apparaat:** "Bewegingssensor entree" krijgt
+  de Entree voorgesteld, als heel woord en de langste kamernaam eerst.
+- **De panelen:** eerst "Ja" of "Geen panelen" (nieuw: `ligging: geen`), dan de
+  kant van het dak, dan het aantal, per kant bij beide kanten. De ligging zelf
+  (richting, helling, vermogen) is besluit 157.
+- **De verwarming staat bij Klimaat,** met Hybride erbij.
+- **De prijzen:** eerst het contract (één tarief, dag en nacht, dynamisch), dan
+  alleen de velden die erbij horen, met gas en wat je vanaf 2027 voor
+  teruglevering krijgt en betaalt. Een leeg vak zegt "invullen" en lijkt niet
+  meer op een getal.
+- **Comfort voor het hele huis** zet alleen de kamers die de waarde van de
+  meeste hebben; een kamer die de bewoner zelf anders zette, blijft, tenzij hij
+  "Ook gelijk zetten" kiest.
+- **De wand** zet je op de tablet zelf: de stap zegt hoe, met een code om te
+  scannen, en welke schermen er al zijn. De knop die dít apparaat inlogde, is
+  weg.
+- **Lijsten die langer zijn dan de kaart** vervagen aan de onderkant, zodat je
+  ziet dat er meer is.
+- **Teksten:** "Waar staat dit apparaat?", "Zonneschermen" in plaats van
+  "Screens", ongeveer tien minuten (zoals het welkom zegt), en de zekering
+  zegt wat het huis ermee doet zonder te beloven dat het al schakelt.
+
+---
+
+## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
   Een centrale kast met afzuiging in wc, badkamer, zolder en woonkamer, één

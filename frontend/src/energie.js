@@ -21,6 +21,8 @@ let e = null;
 let dubbel = false;
 /** Een eigen hoofdzekering invullen; zolang die niet compleet is, staat hij hier. */
 let zelf = null;
+/** Aanpassen van hoe de panelen liggen (besluit 157, panelen.js). */
+const ligStaat = { aanpassen: false, concept: null };
 
 const leeg = () => ({ versie: 1, bron: 'zelf', net: { afname: [], teruglevering: [] }, zon: [], gas: null, apparaten: [], prijzen: { stroom: null, teruglevering: null, gas: null, vastPerMaand: null } });
 /** Tarief 1 van een slimme meter is het daltarief (zelfde regel als de dienst, tarief.ts). */
@@ -51,6 +53,8 @@ async function laadAlles() {
       zekering: x?.zekering ?? null,
       tarief: x?.tarief ?? null,
       verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null },
+      voorkantZon: x?.voorkantZon ?? null,
+      dak: x?.dak ?? null,
       opZon: { ...(x?.opZon ?? {}) },
     };
   }
@@ -89,11 +93,11 @@ function delen() {
   const z = zekeringNu();
   const prijsMist = e && (p.stroom == null || (e.gas && p.gas == null));
   return [
-    { id: 'panelen', titel: 'Zonnepanelen', zin: a?.panelen.aantal ? `${a.panelen.aantal} panelen` : panelenOk ? `${aInfo.configuratie.panelen.length} vlakken` : 'nog kiezen', stand: !aInfo ? null : panelenOk ? 'goed' : 'mist' },
+    { id: 'panelen', titel: 'Zonnepanelen', zin: ligging.kort(aInfo?.ligging) ?? (a?.panelen.aantal ? `${a.panelen.aantal} panelen` : panelenOk ? `${aInfo.configuratie.panelen.length} vlakken` : 'nog kiezen'), stand: !aInfo ? null : panelenOk ? 'goed' : 'mist' },
     { id: 'aansluiting', titel: 'Aansluiting', zin: z ? `${z.fasen} × ${z.ampere} A` : 'hoofdzekering kiezen', stand: !aInfo ? null : z ? 'goed' : 'mist' },
     { id: 'meters', titel: 'Meters', zin: e ? [e.net.afname.length ? 'stroom' : null, e.gas ? 'gas' : null, e.apparaten.length ? `${e.apparaten.length} apparaten` : null].filter(Boolean).join(', ') || 'nog kiezen' : '…', stand: !e ? null : e.net.afname.length ? 'goed' : 'mist' },
     { id: 'prijzen', titel: 'Contract en prijzen', zin: !e ? '…' : p.stroom == null ? 'stroomprijs ontbreekt' : `stroom € ${nl(p.stroom, 2)} per kWh`, stand: !e ? null : prijsMist ? 'mist' : 'goed' },
-    { id: 'verwarming', titel: 'Verwarming', zin: a?.verwarming.soort ? { cv: 'cv-ketel', warmtepomp: 'warmtepomp', stadsverwarming: 'stadsverwarming', weetniet: 'weet ik niet' }[a.verwarming.soort] + (a.verwarming.aanvoerC ? `, aanvoer ${a.verwarming.aanvoerC}°` : '') : 'nog kiezen', stand: !aInfo ? null : a.verwarming.soort ? 'goed' : 'leeg' },
+    { id: 'verwarming', titel: 'Verwarming', zin: a?.verwarming.soort ? { cv: 'cv-ketel', warmtepomp: 'warmtepomp', hybride: 'hybride warmtepomp', stadsverwarming: 'stadsverwarming', weetniet: 'weet ik niet' }[a.verwarming.soort] + (a.verwarming.aanvoerC ? `, aanvoer ${a.verwarming.aanvoerC}°` : '') : 'nog kiezen', stand: !aInfo ? null : a.verwarming.soort ? 'goed' : 'leeg' },
   ];
 }
 
@@ -103,7 +107,7 @@ function zijaanzicht(kant) {
   const op = (s) => kant === 'beide' || kant === s;
   const dak = (s) => (op(s) ? 'var(--zon)' : 'rgba(255,255,255,0.10)');
   const plat = kant === 'plat';
-  return `<div class="zijaanzicht"><svg viewBox="0 0 220 124" role="img" aria-label="Het huis van opzij${kant && kant !== 'weetniet' ? `, met de panelen ${plat ? 'op het platte dak' : kant === 'beide' ? 'aan beide kanten' : `aan de ${kant}`}` : ''}">
+  return `<div class="zijaanzicht"><svg viewBox="0 0 220 124" role="img" aria-label="Het huis van opzij${kant && kant !== 'weetniet' && kant !== 'geen' ? `, met de panelen ${plat ? 'op het platte dak' : kant === 'beide' ? 'aan beide kanten' : `aan de ${kant}`}` : ''}">
     <rect x="40" y="62" width="140" height="44" rx="3" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.18)"/>
     ${plat
       ? '<rect x="36" y="56" width="148" height="7" rx="2" fill="rgba(255,255,255,0.18)"/><rect x="62" y="46" width="96" height="9" rx="2" fill="var(--zon)"/>'
@@ -127,8 +131,10 @@ function elke(s) {
 
 function panelenVorm() {
   const kant = a.panelen.ligging;
-  const aantallen = kant === 'beide' ? `<div class="twee">${aantal('Aantal aan de voorkant', 'voorkant')}${aantal('Aantal aan de achterkant', 'achterkant')}</div>` : kant && kant !== 'weetniet' ? aantal('Aantal panelen', 'aantal') : '';
-  const nu = aInfo.configuratie.panelen.length ? `<p class="mini">Nu ingesteld: ${esc(aInfo.configuratie.panelen.join(' en '))}.</p>` : '';
+  const aantallen = kant === 'beide' ? `<div class="twee">${aantal('Aantal aan de voorkant', 'voorkant')}${aantal('Aantal aan de achterkant', 'achterkant')}</div>` : kant && kant !== 'weetniet' && kant !== 'geen' ? aantal('Aantal panelen', 'aantal') : '';
+  // Hoe ze liggen (besluit 157): gemeten, bevestigd of aangepast, uit panelen.js.
+  const lig = ligging.kaart(aInfo.ligging, a, ligStaat);
+  const liggingBlok = kant === 'geen' ? '' : blok('', `<div class="kopregel"><h3 class="kop-3">${esc(lig.kop)}</h3></div><p class="uitleg">${esc(lig.uitleg)}</p>${lig.inhoud}${lig.knoppen ? `<div class="lig-knoppen">${lig.knoppen}</div>` : ''}`);
   const z = aInfo.zonnesensor;
   const chip = !z ? null : z.snelGenoeg == null ? ['', 'Wordt gemeten'] : z.snelGenoeg ? ['goed', 'Snel genoeg'] : ['traag', 'Traag'];
   const sensor = z
@@ -138,9 +144,9 @@ function panelenVorm() {
     : '';
   return `${kop('Zonnepanelen')}
     ${blok('Op welke kant van het dak liggen ze?', `${zijaanzicht(kant)}
-      ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet']], kant)}
-      ${aantallen}${aantallen ? '<p class="mini">Het aantal is niet verplicht.</p>' : ''}
-      <p class="uitleg">Richting en hellingshoek zijn een schatting. Wat je panelen werkelijk halen, leert de app uit de zonnige dagen, en daarmee rekent hij.</p>${nu}`)}
+      ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet'], ['geen', 'Geen panelen']], kant)}
+      ${aantallen}${aantallen ? '<p class="mini">Met het aantal weet Smart Climate wat een paneel levert.</p>' : ''}`)}
+    ${liggingBlok}
     ${sensor}`;
 }
 
@@ -284,7 +290,7 @@ function prijzenVorm() {
 function verwarmingVorm() {
   const v = a.verwarming;
   return `${kop('Verwarming')}
-    ${blok('Waar komt de warmte vandaan?', `${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
+    ${blok('Waar komt de warmte vandaan?', `${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['hybride', 'Hybride'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
       <label class="veldnaam">Aanvoertemperatuur op de ketel, °C<input class="invoer" type="number" inputmode="numeric" min="25" max="90" step="1" data-aanvoer value="${v.aanvoerC ?? ''}" placeholder="bijvoorbeeld 60"></label>
       <p class="mini">Staat op de ketel of in de app van je ketel. Weet je het niet, laat het dan leeg.</p>`)}`;
 }
@@ -292,7 +298,7 @@ function verwarmingVorm() {
 /* Ernaast */
 
 const NAAST = {
-  panelen: ['Waarvoor dit nodig is', ['De verwachting van de zon voor vandaag en morgen', 'Wanneer de airco’s op zon kunnen draaien'], 'Waar vind je het?', 'Kijk op het dak, of in de app van je omvormer: daar staat hoeveel panelen er zijn.'],
+  panelen: ['Waarvoor dit nodig is', ['De verwachting van de zon voor vandaag en morgen', 'Wanneer de airco’s op zon kunnen draaien'], 'Waar vind je het?', 'Kijk op het dak, of in de app van je omvormer: daar staat hoeveel panelen er zijn. Het vermogen per paneel staat op de factuur van de installateur, of op een sticker achter op een paneel.'],
   aansluiting: ['Waarvoor dit nodig is', ['Nooit zoveel tegelijk aan dat de zekering eruit gaat', 'Hoeveel airco’s en apparaten samen mogen draaien'], 'Waar vind je het?', 'Op de hoofdschakelaar in de meterkast: bijvoorbeeld "1 × 35 A" of "3 × 25 A".'],
   meters: ['Waarvoor dit nodig is', ['Opbrengst: wat je huis gebruikt en teruglevert', 'Wat elk apparaat met een eigen meter kost'], 'Waar vind je het?', 'In Home Assistant, bij Instellingen › Dashboards › Energie.'],
   prijzen: ['Waarvoor dit nodig is', ['Opbrengst: wat je betaalde en bespaarde', 'Wat een thuisbatterij jou zou opleveren', 'Met een dynamisch contract: koelen en wassen als stroom goedkoop is'], 'Waar vind je het?', 'Op je contract of jaarafrekening, bij de leveringskosten: per kWh en per m³, met btw.'],
@@ -301,7 +307,8 @@ const NAAST = {
 
 function naast(id) {
   const [kopje, lijst, waarKop, waar] = NAAST[id] ?? NAAST.panelen;
-  const later = aInfo?.volgendeStart && ['aansluiting', 'panelen'].includes(id) ? '<div class="glas"><h3>Wanneer het ingaat</h3><p style="margin: 0">De zekering en de panelen gaan in na de volgende start van Smart Climate.</p></div>' : '';
+  // De ligging van de panelen gaat meteen in (besluit 157); de zekering na een start.
+  const later = aInfo?.volgendeStart && id === 'aansluiting' ? '<div class="glas"><h3>Wanneer het ingaat</h3><p style="margin: 0">De zekering gaat in na de volgende start van Smart Climate.</p></div>' : '';
   return `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>
     <div class="glas"><h3>${esc(waarKop)}</h3><p style="margin: 0">${esc(waar)}</p></div>${later}`;
 }
@@ -313,7 +320,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!aInfo && !eInfo) return;
   // Niet onder de vinger opnieuw opbouwen.
-  if (document.activeElement?.matches('input:not([type="date"])')) return;
+  if (document.activeElement?.matches('input:not([type="date"]):not([type="range"])')) return;
   const nu = groep.tekenDelen(delen());
   const wacht = '<p class="klein">Even laden…</p>';
   const vorm = {
@@ -332,9 +339,11 @@ function tekenNu() {
 function bewaarAansluiting() {
   groep.bewaarStraks(async () => {
     const opZon = Object.fromEntries(Object.entries(a.opZon).filter(([, v]) => typeof v === 'boolean'));
-    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, opZon });
+    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, opZon });
     if (uit?.ok) {
       aInfo = uit.antwoord;
+      // Het dak zoals de dienst het bewaarde: "klopt" en "aanpassen" worden een gewoon dak.
+      a.dak = aInfo.antwoorden?.dak ?? null;
       teken();
     }
     return uit;
@@ -377,6 +386,13 @@ function netDalBij() {
 document.addEventListener('click', (ev) => {
   const knop = ev.target.closest('button');
   if (!knop || knop.disabled) return;
+  // Hoe de panelen liggen (besluit 157).
+  if (a && Object.keys(knop.dataset).some((k) => k.startsWith('lig'))) {
+    const wat = ligging.klik(knop, aInfo?.ligging, a, ligStaat);
+    if (wat) teken();
+    if (wat === 'bewaar') bewaarAansluiting();
+    return;
+  }
   if (knop.dataset.kies) {
     const w = JSON.parse(knop.dataset.waarde);
     const s = knop.dataset.kies;
@@ -435,6 +451,7 @@ document.addEventListener('click', (ev) => {
 
 document.addEventListener('change', (ev) => {
   const t = ev.target;
+  if (ligging.verander(t, ligStaat)) return teken();
   // De aansluiting.
   const z = t.closest('[data-zekering]');
   if (z && zelf && a) {

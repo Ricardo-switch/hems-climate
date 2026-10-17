@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten, de panelen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Hoe de panelen liggen (schets, 17 oktober 2026). Een vervolg op stap 5 van
+   * Inrichten: na "waar liggen ze?" en "hoeveel?" zoekt Smart Climate de
+   * richting, de helling en het vermogen op in wat de panelen de afgelopen
+   * tien dagen leverden (de statistiek van Home Assistant), en de omvormer in
+   * zijn typenummer. De bewoner bevestigt of past aan (besluit 93).
+   * Standen: zonder hash gemeten, #aanpassen, #wachten (nog geen heldere dag).
+   * De lijn is echt: 12 oktober 2026 in dit huis, gemeten naast de gevonden
+   * ligging (95° en 275°, 50°, 4,93 kWp, zonder schaduw).
+   */
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven b { font-family: var(--kop); font-size: 18px; }
+  .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .stap i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.08); }
+  .stap.klaar { color: var(--zacht); }
+  .stap.klaar i { background: rgba(110, 231, 183, 0.2); color: var(--mint); }
+  .stap.nu { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
+  .stap.nu i { background: var(--tekst); color: var(--inkt); }
+  .podium { position: absolute; left: 0; top: 80px; width: 760px; height: 700px; }
+  .kaart { position: absolute; right: 32px; top: 92px; bottom: 32px; width: 460px; padding: 26px 28px; display: flex; flex-direction: column; gap: 12px; }
+  .kaart .klein { font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .kaart h1 { margin: 0; }
+  .kaart .lead { margin: 0; font-size: 15px; }
+  .rij { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij:first-child { border-top: 0; }
+  .rij > b { font-size: 14px; padding-top: 7px; }
+  .rij .zin { padding-top: 6px; font-size: 14.5px; }
+  .rij .zin small { display: block; color: var(--gedempt); font-size: 12.5px; margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .chip.ok { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+  .chip.aan { background: var(--tekst); color: var(--inkt); }
+  .chip.veld { background: transparent; border: 1px solid rgba(255, 255, 255, 0.22); }
+  .onder { margin-top: auto; display: flex; align-items: center; gap: 10px; }
+  .onder .later { color: var(--zacht); font-weight: 600; font-size: 14px; margin-right: auto; }
+  .onder .knop-groot { height: 48px; padding: 0 22px; border-radius: 15px; display: inline-flex; align-items: center; font-weight: 700; font-size: 15px; background: var(--tekst); color: var(--inkt); }
+  .onder .knop-groot.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+  .tip { padding: 11px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 13px; color: var(--zacht); line-height: 1.5; }
+  .dag { padding: 10px 12px 6px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+  .dag .kop { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--zacht); font-weight: 600; }
+  .dag .kop span:last-child { color: var(--gedempt); font-weight: 500; }
+  .kompas { display: grid; grid-template-columns: 116px 1fr; gap: 14px; align-items: center; }
+  .wacht { display: flex; gap: 6px; }
+  .wacht i { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); }
+  [data-stand] { display: none !important; }
+  body[data-toon='gemeten'] [data-stand='gemeten'], body[data-toon='aanpassen'] [data-stand='aanpassen'], body[data-toon='wachten'] [data-stand='wachten'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="scherm lucht lucht-dag">
+  <div class="boven">
+    <span class="logo"></span><b>Smart Climate</b>
+    <div class="stappen" id="stappen"></div>
+  </div>
+  <div class="podium" id="podium"></div>
+
+  <!-- Gemeten: het voorstel uit de opbrengst van de afgelopen dagen. -->
+  <section class="glas kaart" data-stand="gemeten">
+    <span class="klein">Stap 5 · Zon en energie</span>
+    <h1 class="kop-2">Zo liggen je panelen</h1>
+    <p class="lead">Gevonden in wat ze de afgelopen tien dagen leverden. Klopt het?</p>
+    <div class="dag">
+      <div class="kop"><span>Een heldere dag, 12 oktober</span><span>10,7 kWh</span></div>
+      <svg id="lijn" viewBox="0 0 404 104" width="404" height="104" role="img" aria-label="De opbrengst op 12 oktober, met de lijn die bij deze ligging hoort"></svg>
+    </div>
+    <div>
+      <div class="rij"><b>Richting</b><div class="zin">Oost en west<small>6 panelen op elke kant</small></div></div>
+      <div class="rij"><b>Helling</b><div class="zin">Rond 50°, een steil dak</div></div>
+      <div class="rij"><b>Vermogen</b><div class="zin">Samen zo'n 4,9 kWp<small>ongeveer 410 Wp per paneel</small></div></div>
+      <div class="rij"><b>Omvormer</b><div class="chips"><span class="chip ok">✓ 3.000 W</span></div></div>
+      <div class="rij"><b>Voorkant</b><div class="chips"><span class="chip aan">ochtendzon</span><span class="chip">avondzon</span><span class="chip">weet ik niet</span></div></div>
+    </div>
+    <div class="onder"><span class="later">Later</span><span class="knop-groot zacht">Aanpassen</span><span class="knop-groot">Klopt</span></div>
+  </section>
+
+  <!-- Aanpassen: wat de bewoner zegt, wint van de meting. -->
+  <section class="glas kaart" data-stand="aanpassen">
+    <span class="klein">Stap 5 · Zon en energie</span>
+    <h1 class="kop-2">Pas aan wat niet klopt</h1>
+    <p class="lead">Wat je hier zet, gaat voor wat Smart Climate meet.</p>
+    <div class="kompas">
+      <svg id="roos" viewBox="0 0 116 116" width="116" height="116" role="img" aria-label="Het dak van boven: de voorkant kijkt naar het oosten"></svg>
+      <div class="chips">
+        <span class="mini" style="width: 100%; margin-bottom: 2px">De voorkant kijkt naar het</span>
+        <span class="chip">noorden</span><span class="chip aan">oosten</span><span class="chip">zuiden</span><span class="chip">westen</span>
+        <span class="mini" style="width: 100%; margin-top: 4px">Draai fijner aan de pijl. De achterkant volgt.</span>
+      </div>
+    </div>
+    <div>
+      <div class="rij"><b>Helling</b><div class="chips"><span class="chip">plat</span><span class="chip">flauw, 25°</span><span class="chip">gewoon, 40°</span><span class="chip aan">steil, 50°</span></div></div>
+      <div class="rij"><b>Per paneel</b><div class="chips"><span class="chip">350 Wp</span><span class="chip">400 Wp</span><span class="chip">450 Wp</span><span class="chip aan">390 Wp</span><span class="chip veld">anders…</span></div></div>
+      <div class="rij"><b>Samen</b><div class="zin">12 × 390 Wp = 4,68 kWp</div></div>
+      <div class="rij"><b>Omvormer</b><div class="chips"><span class="chip ok">✓ 3.000 W</span><span class="chip veld">anders…</span></div></div>
+    </div>
+    <div class="tip">Het vermogen per paneel staat op de factuur van de installateur, of op een sticker op de achterkant van een paneel.</div>
+    <div class="onder"><span class="later">Terug</span><span class="knop-groot">Bewaar</span></div>
+  </section>
+
+  <!-- Wachten: nog geen heldere dag in de statistiek. -->
+  <section class="glas kaart" data-stand="wachten">
+    <span class="klein">Stap 5 · Zon en energie</span>
+    <h1 class="kop-2">Nog één zonnige dag</h1>
+    <p class="lead">De afgelopen tien dagen waren te bewolkt om te zien hoe je panelen liggen. Na de eerste heldere dag staat het voorstel klaar, met een melding.</p>
+    <div class="wacht" aria-label="Nog geen heldere dag gezien"><i></i></div>
+    <div>
+      <div class="rij"><b>Voorkant</b><div class="chips"><span class="chip aan">ochtendzon</span><span class="chip">middagzon</span><span class="chip">avondzon</span><span class="chip">weet ik niet</span></div></div>
+      <div class="rij"><b>Omvormer</b><div class="chips"><span class="chip ok">✓ 3.000 W</span></div></div>
+    </div>
+    <div class="tip">Tot dan rekent het huis met een schatting: oost en west, een gewoon dak van 40°, 400 Wp per paneel. Zon, het weer en de verwachting werken al.</div>
+    <div class="onder"><span class="later">Later</span><span class="knop-groot">Volgende</span></div>
+  </section>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#aanpassen': 'aanpassen', '#wachten': 'wachten' }[location.hash] ?? 'gemeten';
+  document.body.dataset.toon = toon;
+  const STAPPEN = ['Je huis', 'Apparaten', 'Verwarmen en koelen', 'Comfort', 'Zon en energie'];
+  document.getElementById('stappen').innerHTML = STAPPEN.map((s, i) => `<span class="stap ${i < 4 ? 'klaar' : 'nu'}"><i>${i < 4 ? '✓' : i + 1}</i>${s}</span>`).join('');
+
+  // 12 oktober 2026, per kwartier (lokale tijd): gemeten en wat de gevonden ligging zegt.
+  const DAG = [[8,27,172],[8.25,186,250],[8.5,683,499],[8.75,884,710],[9,1022,883],[9.25,1122,1024],[9.5,1207,1137],[9.75,1255,1228],[10,1272,1298],[10.25,1326,1349],[10.5,1340,1383],[10.75,1341,1401],[11,1328,1405],[11.25,1308,1394],[11.5,1275,1371],[11.75,1248,1335],[12,1245,1308],[12.25,1256,1352],[12.5,1287,1387],[12.75,1326,1412],[13,1341,1427],[13.25,1410,1432],[13.5,1419,1427],[13.75,1395,1412],[14,1360,1387],[14.25,1314,1353],[14.5,1276,1309],[14.75,1247,1256],[15,1228,1194],[15.25,1205,1210],[15.5,1262,1231],[15.75,1265,1240],[16,1244,1234],[16.25,1237,1213],[16.5,1167,1176],[16.75,610,1121],[17,209,1047],[17.25,175,949],[17.5,158,824],[17.75,125,668],[18,92,474],[18.25,42,240],[18.5,6,165]];
+  const X = (h) => 8 + ((h - 7.5) / 11.5) * 388, Y = (w) => 82 - (w / 1500) * 74;
+  const pad = (k) => DAG.map((r, i) => `${i ? 'L' : 'M'} ${X(r[0] + 0.125).toFixed(1)} ${Y(r[k]).toFixed(1)}`).join(' ');
+  document.getElementById('lijn').innerHTML = `
+    <path d="${pad(1)} L ${X(18.625)} 82 L ${X(8.125)} 82 Z" fill="rgba(247,181,72,0.16)"/>
+    <path d="${pad(1)}" fill="none" stroke="var(--zon)" stroke-width="2"/>
+    <path d="${pad(2)}" fill="none" stroke="var(--tekst)" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.7"/>
+    <line x1="8" x2="396" y1="82" y2="82" stroke="rgba(255,255,255,0.12)"/>
+    ${[9, 12, 15, 18].map((h) => `<text x="${X(h)}" y="98" text-anchor="middle" fill="var(--gedempt)" font-size="11">${h}:00</text>`).join('')}
+    <text x="${X(16.9)}" y="${Y(1200)}" fill="var(--zacht)" font-size="11">schaduw</text>`;
+
+  // Het dak van boven, met de voorkant naar het oosten: de nok loopt noord-zuid.
+  const roos = document.getElementById('roos');
+  if (roos) roos.innerHTML = `
+    <circle cx="58" cy="58" r="54" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)"/>
+    ${[['N', 58, 15], ['O', 104, 62], ['Z', 58, 110], ['W', 12, 62]].map(([t, x, y]) => `<text x="${x}" y="${y}" text-anchor="middle" fill="${t === 'N' ? 'var(--tekst)' : 'var(--gedempt)'}" font-size="11" font-weight="700">${t}</text>`).join('')}
+    <rect x="34" y="34" width="24" height="48" fill="rgba(247,181,72,0.35)" stroke="rgba(247,181,72,0.7)"/>
+    <rect x="58" y="34" width="24" height="48" fill="rgba(247,181,72,0.55)" stroke="rgba(247,181,72,0.9)"/>
+    <line x1="58" y1="34" x2="58" y2="82" stroke="var(--tekst)" stroke-width="2"/>
+    <path d="M 84 58 L 98 58 M 92 52 L 98 58 L 92 64" stroke="var(--ijs)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <text x="70" y="96" text-anchor="middle" fill="var(--ijs)" font-size="10" font-weight="700">voor</text>`;
+
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Je huis met de panelen op beide kanten van het dak.',
+    tijd: 'dag',
+    zon: { stand: 0.35, hoogte: 0.7, aandeel: 0.6, panelen: 12, panelenLinks: 6 },
+    wolken: toon === 'wachten' ? 0.8 : 0.15,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Woonkamer', gewicht: 1.5, stil: true, apparaten: [{ soort: 'airco' }, { soort: 'radiator' }, { soort: 'bank' }] },
+        { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] },
+      ] },
+      { naam: '1e verdieping', kamers: [
+        { naam: 'Badkamer', stil: true, apparaten: [{ soort: 'vloer' }] },
+        { naam: 'Hobbykamer', stil: true, apparaten: [] },
+        { naam: 'Slaapkamer', stil: true, apparaten: [] },
+        { naam: 'Kinderkamer', stil: true, apparaten: [] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco' }, { soort: 'droger' }] }] },
+    ],
+    buitenunit: { aan: false },
+    net: true,
+    labels: toon === 'wachten'
+      ? [{ bij: 'panelen', titel: '12 panelen', toon: 'zon', regels: ['ligging volgt'], dx: -40, dy: -60 }]
+      : [{ bij: 'panelen', titel: 'Oost en west', toon: 'zon', regels: [toon === 'aanpassen' ? '50° · 4,68 kWp' : "50° · zo'n 4,9 kWp"], dx: -40, dy: -60 }],
+  }, { breedte: 760, hoogte: 700, marge: 0.08, schuifX: 10, schuifY: 10 });
+</script>
+</body>
+</html>

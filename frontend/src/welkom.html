@@ -42,6 +42,12 @@
   .bron span { font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
   .bron span.thuis { color: var(--mint); }
   .voet { margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  /* Klopt iets niet (besluit 158): dicht een regel, open wat je kunt doen. */
+  .nietgoed { border-radius: 14px; background: rgba(255, 255, 255, 0.05); padding: 10px 14px; }
+  .nietgoed summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--zacht); }
+  .nietgoed[open] { display: flex; flex-direction: column; gap: 8px; }
+  .nietgoed p { margin: 0; }
+  .nietgoed .knop { align-self: start; display: inline-flex; align-items: center; text-decoration: none; }
   .zacht { border: 0; background: none; color: var(--zacht); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 0; text-decoration: none; }
   .fout { min-height: 18px; font-size: 13px; color: var(--gloed); }
 </style>
