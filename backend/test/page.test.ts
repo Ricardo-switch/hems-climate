@@ -2352,6 +2352,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
     expect(await tikken()).toBe(1);
 
+    // Op een telefoon alleen de kioskstand: de statusbalk met de camera blijft, en de
+    // terugknop gaat gewoon een pagina terug.
+    const telefoon = (aan: boolean) => p.evaluate(`document.getElementById('app').style.width = '${aan ? 390 : 1280}px'`);
+    const telStand = () => frame.evaluate<boolean>('document.documentElement.classList.contains("tel-stand")');
+    await telefoon(true);
+    await expect.poll(telStand).toBe(true);
+    await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
+    expect(await tikken()).toBe(0);
+    await telefoon(false);
+    await expect.poll(telStand).toBe(false);
+
     // Terug naar Home Assistant: de kioskstand uit, en naar het dashboard.
     await app.locator('#balk [data-naar-ha]').click();
     await expect.poll(berichten).toContainEqual({ type: 'home-assistant/navigate', path: '/' });
@@ -2362,16 +2373,6 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await vorm.locator('[data-volledig][aria-checked="true"]').click();
     await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
 
-    // In Fully Kiosk Browser: wel de kioskstand, niet het hele scherm van de browser.
-    // Fully heeft een eigen volledig scherm, dat de inkeping van de camera vrij laat.
-    await p.evaluate('window.fully = {}');
-    const vraagVoor = await p.evaluate<number>('window.schermVraag');
-    const aantal = (await berichten()).length;
-    await vorm.locator('[data-volledig]').click();
-    await expect.poll(async () => (await berichten()).slice(aantal)).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    await frame.evaluate('document.body.click()');
-    expect(await p.evaluate<number>('window.schermVraag')).toBe(vraagVoor);
-    await vorm.locator('[data-volledig][aria-checked="true"]').click();
 
     // Buiten Home Assistant bestaat de keuze niet.
     const q = await context.newPage();

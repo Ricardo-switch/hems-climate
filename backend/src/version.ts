@@ -33,8 +33,7 @@ export const NIEUW: readonly Nieuw[] = [
     datum: '2026-10-17',
     opgelost: [
       '"Hé huis" en de microfoon werken nu ook in Home Assistant',
-      'Volledig scherm in Fully Kiosk laat de camera bovenin vrij',
-      'Na de terugknop van de tablet komt volledig scherm terug bij de volgende tik',
+      'Volledig scherm op de telefoon laat de statusbalk en de camera vrij, en de terugknop gaat een pagina terug',
       "Tussen twee pagina's in Home Assistant zie je de lucht, geen zwart scherm",
     ],
   },

@@ -60,17 +60,13 @@
   /** Een onzichtbaar vak om de inkeping van een telefoon te meten (safe-area). */
   let peil = null;
   function inzet() {
-    // In Home Assistant staat de app in een vak, en daar is de inkeping altijd 0:
-    // die meet alleen de pagina van Home Assistant zelf.
-    const doc = (inHA() && haDocument()) || document;
-    if (!peil || peil.ownerDocument !== doc) {
-      peil?.remove();
-      peil = doc.createElement('div');
+    if (!peil) {
+      peil = document.createElement('div');
       peil.setAttribute('aria-hidden', 'true');
       peil.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
-      doc.documentElement.append(peil);
+      document.documentElement.append(peil);
     }
-    const s = (doc.defaultView ?? global).getComputedStyle(peil);
+    const s = getComputedStyle(peil);
     // Boven en onder ook (besluit 129): op een liggende telefoon tekent de browser
     // tot onder de balk met de veegstreep, en daar viel de onderkant van de wand weg.
     return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0, t: parseFloat(s.paddingTop) || 0, b: parseFloat(s.paddingBottom) || 0 };
@@ -381,6 +377,8 @@
    * alleen na een tik, dus bij de eerste.
    *
    * De keuze staat in dit apparaat (localStorage): de wand wel, de telefoon niet.
+   * Op een telefoon is volledig scherm alleen de kioskstand, zonder het hele
+   * scherm van de browser.
    */
   const VOLLEDIG = 'sc-volledig-scherm';
   const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
@@ -403,21 +401,13 @@
     }
   }
   /**
-   * Fully Kiosk Browser heeft zijn eigen volledig scherm, dat de inkeping vrij
-   * laat. Het hele scherm van de browser vroeg daar over de camera heen, en de
-   * terugknop van Android zette het uit.
+   * Het hele scherm van de browser alleen op de wand. Op een telefoon blijft de
+   * statusbalk met de camera, en gaat de terugknop gewoon een pagina terug;
+   * daar vraagt de app alleen de kioskstand van Home Assistant.
    */
-  const inFully = () => !!(global.fully ?? haVenster()?.fully);
-  function haVenster() {
-    try {
-      return global.parent.document ? global.parent : null;
-    } catch {
-      return null;
-    }
-  }
   function heelScherm() {
     const doc = haDocument();
-    if (doc && !inFully() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+    if (doc && !telStand() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
   /** Bij de eerste tik het hele scherm, en na de terugknop van Android weer bij de volgende. */
   const opTik = () => addEventListener('click', heelScherm, { once: true, capture: true });
@@ -425,9 +415,10 @@
   function volledig() {
     if (!volledigNu()) return;
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    if (inFully()) return;
     opTik();
     const doc = haDocument();
+    // Een telefoon die het hele scherm nog had van versie 0.34.0: weer met statusbalk.
+    if (telStand() && doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     const weer = () => {
       if (!doc.fullscreenElement && volledigNu() && !naarHAGekozen) opTik();
     };
