@@ -157,6 +157,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin](#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin)
 - [149. Wanneer een batterij of filter een melding geeft, een scherm beheren, en een eigen comfort dat weer lukt](#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt)
 - [150. Praten met je stem: de microfoon, en "Hé huis" op de wand](#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand)
+- [154. De add-on opent de app, en een leeg huis begint met een welkom](#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom)
 
 **Veiligheid**
 
@@ -6605,6 +6606,41 @@ de add-on.
 - **Verschil met de NAS:** de basis van Home Assistant (Alpine 3.24) draait
   Node 24, de NAS en de tests Node 22. Gemeten op 17 oktober: het image start,
   verbindt met Home Assistant en beslist.
+
+---
+
+## 154. De add-on opent de app, en een leeg huis begint met een welkom
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 17 oktober 2026 installeerde de bewoner de add-on op de Pi. Twee dingen
+vielen op: hij opende in de cijferpagina, de oude schaduwweergave, en via de
+app kwam je in een lege app. De keuzes zijn van de bewoner, met de schetsen
+`Wand-Welkom` en `Welkom-Tel` in `design/app2/`.
+
+*Besluit:*
+
+- **In de add-on is de app de voordeur.** Het begin van de add-on opent Thuis;
+  de cijferpagina (`index.html`) blijft alleen voor wie hem direct opent. Op de
+  NAS blijft het begin de cijfers.
+- **Een leeg huis begint met een welkom** (`begin.html`), over het hele scherm
+  en zonder menu. Zolang er geen configuratie is, gaat elke pagina van de app
+  daarheen. Links "Welkom thuis." met wat Smart Climate doet en één knop,
+  "Richt je huis in"; rechts groeit het huis etage voor etage uit wat Home
+  Assistant kent, met een teller die telt zoals Inrichten (etages, ruimtes,
+  apparaten). De lucht en de zon volgen de klok; zonder beweging als het
+  apparaat daarom vraagt.
+- **Ontdekken gaat vanzelf.** Waar de ontdekking zelf iets koos, of een
+  antwoord leeg mag blijven, neemt het welkom dat over; alleen een verplichte
+  keuze zonder voorstel wordt een vraag, één tegelijk, met de namen uit Home
+  Assistant (besluit 45). Inrichten laat het later veranderen. Na het opslaan
+  start de dienst opnieuw (besluit 151) en gaat het verder in Inrichten.
+- **"Ik heb een back-up"** zet een back-up terug, bijvoorbeeld die van de NAS;
+  daarna opent Thuis.
+- **Achter Ingress altijd relatieve adressen,** want de app staat daar onder
+  een pad van Home Assistant. Wie voor het eerst via Home Assistant komt,
+  krijgt ook daar eerst "wie ben je?" (besluit 147).
+- **Versie 0.31.0.**
 
 ---
 

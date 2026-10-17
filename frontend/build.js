@@ -132,6 +132,8 @@ async function stempel() {
     // Bewoners en inloggen (besluit 147).
     'bewoners.html': ['bewoners.js', 'qrcode.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'welkom.html': ['welkom.js', 'basis.js', 'basis.css', 'kit/kit.css'],
+    // Welkom in een leeg huis (besluit 154).
+    'begin.html': ['begin.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js'],
     'inloggen.html': ['kit/kit.css', 'basis.css', 'kit/huis.js'],
   };
   for (const [pagina, namen] of Object.entries(paginas)) {

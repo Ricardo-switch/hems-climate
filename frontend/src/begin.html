@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Welkom · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<style>
+  /*
+   * Welkom in een leeg huis (besluit 154, schets Wand-Welkom en Welkom-Tel).
+   * Over het hele scherm, zonder menu. Links wat Smart Climate doet en één
+   * knop; rechts groeit het huis uit wat Home Assistant al weet. Twijfelt de
+   * ontdekking ergens over, dan komt hier één vraag tegelijk; daarna gaat
+   * Inrichten verder.
+   */
+  #wand { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); grid-template-rows: minmax(0, 1fr); gap: 24px; padding: 30px 40px 30px 52px; box-sizing: border-box; }
+  .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 20px; color: var(--tekst); }
+  .merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
+  .links { display: flex; flex-direction: column; min-height: 0; }
+  .midden { margin: auto 0; display: flex; flex-direction: column; gap: 22px; }
+  .groot { margin: 0; font-family: var(--kop); font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+  .groot em { font-style: normal; background: linear-gradient(90deg, #f7b548, #ff7a4d 55%, #8f86ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .vraagkop { margin: 0; font-family: var(--kop); font-size: 36px; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+  .lead { margin: 0; max-width: 40ch; font-size: 18px; line-height: 1.5; }
+  .kan { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 14px; }
+  .kan li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .kan .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .kan .ik svg { width: 22px; height: 22px; }
+  .kan b { display: block; font-size: 16px; }
+  .kan span { font-size: 14px; color: var(--zacht); }
+  .doen { display: flex; align-items: center; gap: 18px; margin-top: 6px; }
+  .doen .knop { height: 54px; padding: 0 26px; font-size: 17px; border-radius: 16px; }
+  .doen .knop:disabled { opacity: 0.5; cursor: default; }
+  .zacht { font-size: 15px; font-weight: 600; color: var(--zacht); background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+  .onderlijn { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .voet { font-size: 13px; color: var(--gedempt); }
+  .fout { min-height: 20px; font-size: 14px; font-weight: 600; color: var(--gloed); }
+  .opties { display: grid; gap: 8px; max-width: 46ch; }
+  .optie { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font: inherit; font-size: 16px; font-weight: 600; color: var(--tekst); text-align: left; cursor: pointer; }
+  .optie i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gedempt); flex: none; }
+  .optie[aria-pressed='true'] { background: rgba(110, 231, 183, 0.1); border-color: rgba(110, 231, 183, 0.45); }
+  .optie[aria-pressed='true'] i { border-color: var(--mint); background: radial-gradient(circle, var(--mint) 45%, transparent 50%); }
+  .stapje { font-size: 13px; font-weight: 700; color: var(--mint); letter-spacing: 0.02em; }
+  .draait { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.15); border-top-color: var(--mint); animation: draai 0.9s linear infinite; }
+  @keyframes draai { to { transform: rotate(360deg); } }
+  .rechts { position: relative; min-height: 0; display: flex; flex-direction: column; }
+  .podium { flex: 1; min-height: 0; }
+  .gevonden { display: flex; align-items: center; gap: 16px; padding: 12px 20px; white-space: nowrap; }
+  #wand .gevonden { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); }
+  .gevonden .tellers { display: flex; gap: 18px; font-size: 14px; color: var(--zacht); }
+  .gevonden .tellers b { font-family: var(--kop); font-size: 20px; color: var(--tekst); margin-right: 5px; }
+  .gevonden .bezig { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--mint); }
+  .gevonden .bezig i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
+  .gevonden.zoekt .bezig i { animation: puls 1.6s infinite; }
+  @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
+  @media (prefers-reduced-motion: reduce) { .gevonden .bezig i, .draait { animation: none; } }
+  /* De telefoon: onder elkaar, de knop onderaan binnen bereik van de duim. */
+  #tel .inhoud { min-height: 100vh; box-sizing: border-box; padding: 18px 22px 26px; display: flex; flex-direction: column; gap: 14px; }
+  #tel .merk { font-size: 17px; gap: 10px; }
+  #tel .merk i { width: 28px; height: 28px; border-radius: 9px; }
+  #tel .podium { flex: none; height: 300px; margin: 0 -14px; }
+  #tel .gevonden { align-self: center; margin-top: -10px; padding: 9px 14px; gap: 12px; }
+  #tel .gevonden .bezig span { display: none; }
+  #tel .gevonden .tellers { gap: 14px; font-size: 13px; }
+  #tel .gevonden .tellers b { font-size: 17px; }
+  #tel .links { flex: 1; }
+  #tel .midden { margin: 0; gap: 14px; flex: 1; }
+  #tel .groot { font-size: 44px; margin-top: 6px; }
+  #tel .vraagkop { font-size: 28px; }
+  #tel .lead { font-size: 16px; }
+  #tel .kan { gap: 10px; }
+  #tel .kan li { grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+  #tel .kan .ik { width: 34px; height: 34px; border-radius: 10px; }
+  #tel .kan .ik svg { width: 19px; height: 19px; }
+  #tel .kan b { font-size: 15px; }
+  #tel .kan span { font-size: 13.5px; }
+  #tel .doen { margin-top: auto; flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
+  #tel .voet { text-align: center; font-size: 12.5px; }
+</style>
+</head>
+<body class="lucht lucht-ochtend">
+  <div id="wand" class="wand">
+    <div class="links">
+      <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+      <div class="midden" data-links aria-live="polite"></div>
+      <span class="voet" data-voet></span>
+    </div>
+    <div class="rechts">
+      <div class="podium" data-podium aria-hidden="true"></div>
+      <div class="glas gevonden zoekt" data-gevonden></div>
+    </div>
+  </div>
+  <div id="tel" class="tel">
+    <div class="inhoud">
+      <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+      <div class="podium" data-podium aria-hidden="true"></div>
+      <div class="glas gevonden zoekt" data-gevonden></div>
+      <div class="links">
+        <div class="midden" data-links aria-live="polite"></div>
+      </div>
+      <span class="voet" data-voet></span>
+    </div>
+  </div>
+  <input type="file" accept=".json,application/json" data-backup-bestand hidden>
+  <script src="kit/huis.js"></script>
+  <script src="basis.js"></script>
+  <script src="huismodel.js"></script>
+  <script src="begin.js"></script>
+</body>
+</html>
