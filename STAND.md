@@ -214,6 +214,9 @@ verwijzing bestaat.
   vooruit, en naar `main` gaat het alleen met een pull request dat de bewoner
   samenvoegt. De repository is openbaar en opgeschoond: geen export van Home
   Assistant en geen configuratie van een echte woning in git ([152]).
+- **De add-on** komt kant-en-klaar van GitHub, voor de Pi en voor amd64; zijn
+  versie is die van de app, en Home Assistant werkt bij als die op `main`
+  omhooggaat ([153]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -457,4 +460,5 @@ verwijzing bestaat.
 [150]: DECISIONS.md#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand
 [151]: DECISIONS.md#151-een-gast-zonder-persoon-een-back-up-opnieuw-beginnen-en-een-export-voor-onderzoek
 [152]: DECISIONS.md#152-openbaar-en-het-werk-gaat-via-beta
+[153]: DECISIONS.md#153-de-add-on-komt-kant-en-klaar-van-github
 <!-- links:einde -->

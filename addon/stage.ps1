@@ -66,6 +66,7 @@ $mappen = @(
   @{ Van = 'backend/test';  Naar = 'backend/test' }
   @{ Van = 'backend/tools'; Naar = 'backend/tools' }
   @{ Van = 'frontend/src';  Naar = 'frontend/src' }
+  @{ Van = 'frontend/kit';  Naar = 'frontend/kit' }
 )
 
 if (Test-Path $Doel) { Remove-Item $Doel -Recurse -Force }
@@ -92,6 +93,13 @@ foreach ($m in $mappen) {
 $ruw = [System.IO.File]::ReadAllText((Join-Path $Doel 'run.sh'))
 $cr = [regex]::Matches($ruw, "`r").Count
 if ($cr -gt 0) { throw "run.sh heeft $cr keer CR. Op Linux start dat niet." }
+
+# Met `image:` haalt de Supervisor het kant-en-klare image van GitHub op in
+# plaats van te bouwen. Een lokale add-on hoort juist deze code te bouwen, dus
+# die regel gaat er in de kopie uit (besluit 153).
+$manifest = Join-Path $Doel 'config.yaml'
+$regels = [System.IO.File]::ReadAllLines($manifest) | Where-Object { $_ -notmatch '^image:' }
+[System.IO.File]::WriteAllText($manifest, (($regels -join "`n") + "`n"))
 
 $aantal = (Get-ChildItem $Doel -Recurse -File).Count
 $mb = [math]::Round(((Get-ChildItem $Doel -Recurse -File | Measure-Object Length -Sum).Sum / 1MB), 1)

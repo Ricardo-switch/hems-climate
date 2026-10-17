@@ -194,6 +194,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [118. Uitrollen via een eigen add-on-bibliotheek op GitHub](#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github)
 - [135. Tot 1 november vrijgeven op de eigen pc](#135-tot-1-november-vrijgeven-op-de-eigen-pc) — *vervangen door 152*
 - [152. Openbaar, en het werk gaat via beta](#152-openbaar-en-het-werk-gaat-via-beta)
+- [153. De add-on komt kant-en-klaar van GitHub](#153-de-add-on-komt-kant-en-klaar-van-github)
 
 **Kwaliteitsbewaking**
 
@@ -6567,6 +6568,43 @@ blijft de proeftuin.
 - **Wat niet weg is:** de pull requests 1 tot en met 8 houden de oude commits
   op GitHub bereikbaar via een directe link. Alleen GitHub Support kan die
   opruimen. Een oude kloon of oude werkmap mag nooit meer gepusht worden.
+
+---
+
+## 153. De add-on komt kant-en-klaar van GitHub
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Op 17 oktober 2026 koos de bewoner de eerste stap naar de app op de Pi: de
+add-on installeerbaar maken uit de openbare repository, zodat hij de app via
+Ingress op zijn tablet kan proberen voordat de app verder verandert. Daarbij
+bleek dat de add-on al maanden niet meer te bouwen was: de tekenmotor uit
+besluit 104 (`frontend/kit`) zat wel in het image van de NAS, niet in dat van
+de add-on.
+
+*Besluit:*
+
+- **GitHub bouwt de images,** voor aarch64 (de Pi) en amd64, elk op een eigen
+  machine van die soort (`.github/workflows/addon.yml`). De Pi bouwt niets;
+  `image:` in `addon/config.yaml` wijst naar
+  `ghcr.io/ricardo-switch/{arch}-hems-climate`. armv7 valt af.
+- **Op een pull request naar `main`** wordt alleen gebouwd, als proef. **Na het
+  samenvoegen** wordt gebouwd en verstuurd, en alleen een versie die er nog
+  niet is: een versienummer wijst altijd naar dezelfde code.
+- **De versie van de add-on is de versie van de app.** Een test houdt `version`
+  in `config.yaml` gelijk aan `VERSIE`. Home Assistant ziet een update zodra
+  dat nummer op `main` omhooggaat; automatisch bijwerken is een schakelaar op
+  de add-on-pagina.
+- **Twee Dockerfiles, dezelfde bronnen.** Een test eist dat `addon/Dockerfile`
+  dezelfde mappen kopieert als `backend/Dockerfile`, dat `stage.ps1` ze
+  allemaal klaarzet, en dat manifest, `build.yaml` en de workflow dezelfde
+  soorten noemen.
+- **Een lokale add-on blijft kunnen:** `stage.ps1` haalt de regel `image:` uit
+  de kopie, zodat de Supervisor zelf bouwt.
+- **De add-on heet Smart Climate,** niet meer "schaduwmodus".
+- **Verschil met de NAS:** de basis van Home Assistant (Alpine 3.24) draait
+  Node 24, de NAS en de tests Node 22. Gemeten op 17 oktober: het image start,
+  verbindt met Home Assistant en beslist.
 
 ---
 

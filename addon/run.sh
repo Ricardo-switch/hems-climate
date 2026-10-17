@@ -17,7 +17,7 @@ set -euo pipefail
 CONFIG_DIR=/config
 LOG_DIR=/share/hems/shadow
 
-bashio::log.info "Smart Climate OS — schaduwmodus"
+bashio::log.info "Smart Climate"
 
 # De configuratie hoort bij de installatie, niet bij de code (besluit 21).
 #

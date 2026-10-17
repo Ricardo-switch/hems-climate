@@ -1,63 +1,49 @@
-# Smart Climate OS — schaduwmodus (Home Assistant add-on)
+# Smart Climate (Home Assistant add-on)
 
-Laat de arbiter meedenken naast je bestaande regeling en legt elk besluit vast,
-zonder iets te schakelen.
+Klimaat en zon in één app. Smart Climate kijkt mee met je verwarming, airco's
+en zonnepanelen, legt elk besluit vast en laat zien wat het huis zou doen.
+Klimaat en screens schakelt hij nog niet; lampen, scènes en schermen bedien je
+wel vanuit de app (besluiten 97, 100 en 121).
 
 Dit is dezelfde dienst die op de NAS draait, in de vorm die Home Assistant
-verwacht. Zie besluit 34 in `DECISIONS.md` voor waarom die vorm er komt.
+verwacht. Zie besluit 34 in `DECISIONS.md` voor waarom die vorm er is.
 
 ## Wat de Supervisor gratis oplost
 
-Drie dingen die we anders zelf hadden moeten bouwen:
-
-- **Geen token meer.** `SUPERVISOR_TOKEN` staat in de omgeving en Home Assistant
-  is bereikbaar op `ws://supervisor/core/websocket`. Geen long-lived token dat je
-  moet plakken, dat verloopt, of dat in een `.env` belandt.
-- **Authenticatie voor de weergave.** Met Ingress zit de pagina achter de inlog
-  van Home Assistant zelf. Dat schrapt het openstaande punt uit besluit 23 — de
-  weergave had geen enkele beveiliging, wat thuis verdedigbaar was en bij iemand
-  anders niet.
+- **Geen token.** `SUPERVISOR_TOKEN` staat in de omgeving en Home Assistant is
+  bereikbaar op `ws://supervisor/core/websocket`.
+- **Inloggen.** Met Ingress zit de app achter de inlog van Home Assistant zelf;
+  de dienst weet wie er kijkt en vraagt geen eigen inlog (besluit 147).
 - **Meerdere architecturen, herstartbeleid en logboekbeheer.**
 
 ## Installeren
 
-Twee routes. Welke je kunt nemen hangt af van één ding: of deze repository
-openbaar is.
+1. **Instellingen → Add-ons → Add-on store**, rechtsboven de drie puntjes →
+   **Repositories**, en voeg toe:
+   `https://github.com/Ricardo-switch/hems-climate`
+2. Kies **Smart Climate** en **Installeren**. De Pi bouwt niets: GitHub heeft
+   het image al klaargezet voor aarch64 (Raspberry Pi) en amd64.
+3. **Starten**, en zet **In zijbalk tonen** aan.
 
-### Nu: als lokale add-on
+**Bijwerken** gaat zoals bij elke add-on: Home Assistant meldt een update zodra
+er een nieuwe versie op `main` staat. Zet op de add-on-pagina **Automatisch
+bijwerken** aan als dat vanzelf moet. Naar `main` gaat alleen wat via `beta` is
+getest (besluit 152).
 
-Zolang de repository privé is, kan Home Assistant hem niet als add-on-bron
-toevoegen — de Supervisor haalt add-on-bronnen met een gewone `git clone` op en
-heeft nergens een plek voor inloggegevens.
+### Zelf bouwen, als lokale add-on
 
-De Supervisor bouwt een add-on bovendien met de map van de add-on zélf als
-bouwcontext: hij koppelt alleen die map aan en draait daar `docker buildx build
-.`. Onze code staat een niveau hoger, in `backend/` en `frontend/`. Daarom
-wordt de boom eerst platgeslagen:
+Om een versie te proberen die nog niet op `main` staat. De Supervisor bouwt een
+lokale add-on met de map van de add-on zélf als bouwcontext, en onze code staat
+een niveau hoger. Daarom wordt de boom eerst platgeslagen:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File addon\stage.ps1 \
-  -Share \\homeassistant\addons\hems-climate
+powershell -ExecutionPolicy Bypass -File addon\stage.ps1 -Share \\homeassistant\addons\hems-climate
 ```
 
-Dat zet een map van een halve megabyte klaar met `config.yaml`, `Dockerfile`,
-`run.sh` en de bronbestanden ernaast, en kopieert hem naar de add-on-share.
-Zonder `-Share` blijft het resultaat in `dist-addon/` staan en kopieer je het
-zelf.
-
-Daarna in Home Assistant: **Instellingen → Add-ons → Add-on store**, rechtsboven
-de drie puntjes → **Vernieuwen**. Hij verschijnt onder *Local add-ons*.
-
-Bijwerken is hetzelfde commando nog een keer, gevolgd door **Herbouwen** op de
-add-on-pagina.
-
-### Later: als add-on-bron
-
-Zodra de repository openbaar is (of in een eigen, openbare add-on-repository
-staat), gaat het zoals gebruikelijk: **Repositories** → de URL van deze
-repository toevoegen. `repository.yaml` in de wortel staat daar al klaar voor.
-Dan vervalt `stage.ps1` niet — de Supervisor heeft dezelfde platte vorm nodig,
-dus de add-on krijgt dan een eigen repository waarin die vorm de vorm *is*.
+Dat zet `config.yaml`, `Dockerfile`, `run.sh` en de bronbestanden klaar, zonder
+de regel `image:`, zodat de Supervisor bouwt in plaats van ophaalt. Daarna:
+**Add-on store** → drie puntjes → **Vernieuwen**; hij staat onder *Local
+add-ons*. Bijwerken is hetzelfde commando, gevolgd door **Herbouwen**.
 
 ### De eerste start
 
@@ -102,20 +88,18 @@ ze op en vraagt hij welke.
 | `hartslag_seconden` | 30 | Hoe vaak er sowieso opnieuw wordt gerekend |
 | `min_interval_seconden` | 15 | Ondergrens tussen twee evaluaties (besluit 16) |
 | `bewaking_minuten` | 10 | Afsluiten na zoveel minuten zonder besluit, zodat de Supervisor herstart (besluit 18) |
+| `licht_bedienen` | aan | Lampen, scènes en schermen vanuit de app (besluit 97) |
 
 ## Wat hij níét doet
 
-Schakelen. `HaClient` wordt zonder schrijfrechten aangemaakt en `callService`
-werpt vóórdat er iets de socket op gaat (besluit 15). Een test draait een
-volledige sessie tegen een nagebootste Home Assistant en controleert dat er geen
-enkele `call_service` aankomt.
+Klimaat en screens schakelen. Schrijven naar Home Assistant kan alleen voor
+lampen, scènes en schermen voor de bewoner (besluiten 97, 100 en 121); al het
+andere weigert `HaClient` vóórdat er iets de socket op gaat (besluit 15).
 
-## De weergave
+## De app
 
-Via het zijpaneel, of Ingress vanuit de add-on-pagina. Twee tabbladen: de
-huidige stand en de terugblik over de logboeken. Daarboven een datasetmeter die
-laat zien hoe compleet de opname is — dagen per seizoen, en welke modi,
-strategieën en richtingen ooit zijn afgegaan (besluit 27).
+Via het zijpaneel, of **Webinterface openen** op de add-on-pagina. De app opent
+op Thuis; de cijfers en de datasetmeter staan op `index.html`.
 
 ## Prestaties
 

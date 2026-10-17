@@ -373,6 +373,9 @@ describe('welke versie er draait (besluit 54)', () => {
     expect(VERSIE).toMatch(/^\d+\.\d+\.\d+$/);
     expect(await pakket('../package.json')).toBe(VERSIE);
     expect(await pakket('../../frontend/package.json')).toBe(VERSIE);
+    // De add-on: Home Assistant ziet een update aan dit nummer (besluit 153).
+    const addon = await readFile(new URL('../../addon/config.yaml', import.meta.url), 'utf-8');
+    expect(/^version: (\S+)$/m.exec(addon)?.[1]).toBe(VERSIE);
     expect(NIEUW[0]?.versie).toBe(VERSIE);
     // Elke versie zegt iets, in nieuw, beter of opgelost (besluit 133).
     for (const n of NIEUW) expect([...(n.nieuw ?? []), ...(n.beter ?? []), ...(n.opgelost ?? [])].length).toBeGreaterThan(0);
