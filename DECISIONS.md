@@ -158,6 +158,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [149. Wanneer een batterij of filter een melding geeft, een scherm beheren, en een eigen comfort dat weer lukt](#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt)
 - [150. Praten met je stem: de microfoon, en "Hé huis" op de wand](#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand)
 - [154. De add-on opent de app, en een leeg huis begint met een welkom](#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom)
+- [155. Volledig scherm in Home Assistant, per apparaat](#155-volledig-scherm-in-home-assistant-per-apparaat)
 
 **Veiligheid**
 
@@ -6641,6 +6642,37 @@ app kwam je in een lege app. De keuzes zijn van de bewoner, met de schetsen
   een pad van Home Assistant. Wie voor het eerst via Home Assistant komt,
   krijgt ook daar eerst "wie ben je?" (besluit 147).
 - **Versie 0.31.0.**
+
+---
+
+## 155. Volledig scherm in Home Assistant, per apparaat
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 17 oktober 2026 vroeg de bewoner hoe de zijbalk van Home Assistant weg kan,
+zoals de kioskmodus van HACS dat doet, met een weg terug naar Home Assistant.
+Die kioskmodus werkt alleen op dashboards, niet op het paneel van een app.
+
+*Besluit:*
+
+- **Home Assistant doet het zelf.** Het paneel van een app luistert naar een
+  bericht uit de app: `home-assistant/subscribe-properties` met `kioskMode`.
+  Dan verbergt Home Assistant de zijbalk en de kopbalk, en zet ze weer terug
+  als je het paneel verlaat. Een andere pagina van de app laat de stand staan.
+  Nagelezen in `src/panels/app/ha-panel-app.ts` van de frontend.
+- **Ook de balken van de browser weg:** bij de eerste tik vraagt de app het
+  hele scherm, op het document van Home Assistant om de app heen. Dat blijft
+  staan als de app een andere pagina laadt.
+- **Per apparaat,** bij Bewoners en toegang › Dit scherm, alleen als de app in
+  Home Assistant draait. De keuze staat in de browser van dat apparaat: aan op
+  de wand, uit op de telefoon.
+- **Terug naar Home Assistant** met een knop boven de bel, en bij Dit scherm.
+  Het hele scherm gaat uit, de kioskstand ook, en Home Assistant opent zijn
+  dashboard (`home-assistant/navigate`).
+- **Getest met een nagemaakte Home Assistant** om de app heen, die de
+  berichten opschrijft. Op de Pi zelf nog na te lopen.
+- **Versie 0.32.0.** Daarbij: de begrenzer van de filmmuziek houdt de piek
+  onder 0,92.
 
 ---
 

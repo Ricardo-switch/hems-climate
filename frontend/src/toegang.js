@@ -43,16 +43,29 @@ function delen() {
   if (isGast()) {
     return [
       { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
+      ...scherm(),
       { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
     ];
   }
   return [
     { id: 'bewoners', titel: 'Bewoners', zin: namen, stand: bewoners ? 'goed' : null },
     { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
+    ...scherm(),
     ...(sleutel ? [{ id: 'assistent', titel: 'Sleutel voor de assistent', zin: 'voor Home Assistant', stand: 'goed' }] : []),
     { id: 'gegevens', titel: 'Je gegevens', zin: gegevens?.bestanden != null ? `${gegevens.bestanden} dagen bewaard` : '…', stand: gegevens ? 'goed' : null },
     { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
   ];
+}
+
+/** Dit scherm (besluit 155): alleen als de app in Home Assistant draait, en per apparaat. */
+const scherm = () => (app.inHA() ? [{ id: 'scherm', titel: 'Dit scherm', zin: app.volledigGekozen() ? 'volledig scherm' : 'in Home Assistant, met de zijbalk', stand: 'goed' }] : []);
+
+function schermVorm() {
+  const aan = app.volledigGekozen();
+  return `<h2 class="kop-2">Dit scherm</h2>
+    <div class="regelaan"><div><b>Volledig scherm</b><span class="klein">Zonder de zijbalk en de kopbalk van Home Assistant, en zonder de balken van de browser.</span></div><button type="button" class="schakel" role="switch" aria-checked="${aan}" aria-label="Volledig scherm" data-volledig></button></div>
+    <p class="mini" style="margin: 0">Alleen op dit apparaat: aan op de tablet aan de muur, uit op je telefoon. Het hele scherm komt bij de eerste tik. Terug naar Home Assistant gaat met de knop boven de bel, of hieronder.</p>
+    <button type="button" class="knop" data-naar-ha style="align-self: start">Naar Home Assistant</button>`;
 }
 
 function inloggenVorm() {
@@ -203,6 +216,7 @@ function versieVorm() {
 
 const NAAST = {
   bewoners: ['Waarom bewoners', ['Het comfort van wie thuis is, geldt', 'Het huis begroet je met je naam', 'Wat je tikt, telt voor jouw comfort']],
+  scherm: ['Waarom volledig scherm', ['Op de tablet aan de muur alleen je huis', 'Elk apparaat kiest het zelf', 'Met één tik terug in Home Assistant']],
   inloggen: ['Waarom inloggen', ['Je huis is van jou: de hele app vraagt een inlog', 'De tablet aan de muur logt één keer in', 'Zo weet het huis wie er kijkt']],
   assistent: ['Waarom een sleutel', ['De assistent vraagt zonder mens erachter', 'Alleen met de sleutel komt hij binnen', 'Alleen een beheerder ziet hem']],
   gegevens: ['Waarvoor je gegevens zijn', ['Terugkijken bij Vandaag en Opbrengst', 'Het bewijs dat het huis het goed zou doen, voordat het zelf regelt', 'Later: het thermisch model, dat leert hoe elke kamer opwarmt', 'Een back-up is klein: zet hem op een stick of in je mail']],
@@ -213,7 +227,7 @@ function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   const nu = groep.tekenDelen(delen());
-  const vorm = { bewoners: bewonersVorm, inloggen: inloggenVorm, assistent: assistentVorm, gegevens: gegevensVorm, versie: versieVorm }[nu]?.() ?? '';
+  const vorm = { bewoners: bewonersVorm, inloggen: inloggenVorm, scherm: schermVorm, assistent: assistentVorm, gegevens: gegevensVorm, versie: versieVorm }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   const [kopje, lijst] = NAAST[nu] ?? NAAST.bewoners;
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
@@ -229,6 +243,11 @@ document.addEventListener('click', async (e) => {
   const t = e.target.closest('button');
   if (!t) return;
   try {
+    if (t.hasAttribute('data-volledig')) {
+      app.zetVolledig(t.getAttribute('aria-checked') !== 'true');
+      teken();
+      return;
+    }
     if (t.hasAttribute('data-uitloggen')) {
       await fetch('auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
       sessie = await haal('api/sessie').catch(() => sessie);
