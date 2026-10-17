@@ -504,9 +504,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
-    // Het oude adres stuurt door naar het deel van Energie.
-    await p.goto(`${baseUrl}/aansluiting.html`);
-    await p.waitForURL(/energie\.html#panelen/);
+    // Rechtstreeks naar het deel van Energie; de oude doorverwijzing is weg sinds besluit 142.
+    await p.goto(`${baseUrl}/energie.html#panelen`);
     const wand = p.locator('#wand');
     await wand.locator('h3', { hasText: 'Op welke kant van het dak' }).waitFor();
     expect(await wand.textContent()).toContain('Snel genoeg');
@@ -556,8 +555,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
-    await p.goto(`${baseUrl}/meters.html`);
-    await p.waitForURL(/energie\.html#meters/);
+    await p.goto(`${baseUrl}/energie.html#meters`);
     const wand = p.locator('#wand');
     await wand.locator('.deelvraag', { hasText: 'In je Energie-dashboard staan' }).waitFor();
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
