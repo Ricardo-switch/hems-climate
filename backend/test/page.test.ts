@@ -2248,6 +2248,87 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await ctx.close();
   }, 60_000);
 
+  /*
+   * Volledig scherm in Home Assistant (besluit 155). Een nagemaakte Home
+   * Assistant op een eigen adres, met de app in een iframe onder
+   * /api/hassio_ingress/, zoals de Supervisor hem toont. Hij schrijft op welke
+   * berichten de app stuurt, en of het hele scherm gevraagd wordt.
+   */
+  it('vraagt in Home Assistant per apparaat volledig scherm, en gaat met één knop terug', async () => {
+    const HA = 'http://ha.test';
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route(
+      (url) => url.href.startsWith(HA),
+      async (route) => {
+        const pad = new URL(route.request().url()).pathname;
+        const ingress = /^\/api\/hassio_ingress\/abc(\/.*)$/.exec(pad);
+        if (!ingress) {
+          return route.fulfill({
+            contentType: 'text/html',
+            body: `<!doctype html><html><body style="margin:0"><iframe id="app" src="/api/hassio_ingress/abc/thuis.html" style="width:1280px;height:800px;border:0"></iframe>
+              <script>
+                window.berichten = [];
+                window.schermVraag = 0;
+                addEventListener('message', (e) => { if (e.source === document.getElementById('app').contentWindow) berichten.push(e.data); });
+                document.documentElement.requestFullscreen = () => { window.schermVraag += 1; return Promise.resolve(); };
+              </script></body></html>`,
+          });
+        }
+        // De live-stroom eindigt nooit, en die wacht een doorgegeven vraag af.
+        if (ingress[1]!.startsWith('/api/events')) return route.abort();
+        const antwoord = await route.fetch({ url: `${baseUrl}${ingress[1]}${new URL(route.request().url()).search}`, headers: { ...route.request().headers(), cookie: `hems_sessie=${sessionId}` } });
+        return route.fulfill({ response: antwoord });
+      },
+    );
+    await context.route((url) => !url.href.startsWith(baseUrl) && !url.href.startsWith(HA), (route) => route.abort());
+    const p = await context.newPage();
+    await p.goto(`${HA}/`);
+    const app = p.frameLocator('#app');
+    await app.locator('#wand svg.sc-huis').first().waitFor();
+    const berichten = () => p.evaluate<{ type: string; kioskMode?: boolean; path?: string }[]>('window.berichten');
+    // Uit, zoals op elk nieuw apparaat: geen kioskstand, geen knop.
+    expect(await berichten()).toEqual([]);
+    expect(await app.locator('#balk [data-naar-ha]').count()).toBe(0);
+
+    // Bij Bewoners en toegang › Dit scherm aanzetten: meteen de kioskstand, het hele scherm en de knop.
+    const frame = p.frames().find((f) => f.url().includes('/api/hassio_ingress/'))!;
+    await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
+    const vorm = app.locator('#wand [data-vorm]');
+    await vorm.locator('h2', { hasText: 'Dit scherm' }).waitFor();
+    await vorm.locator('[data-volledig]').click();
+    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
+    expect(await vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
+    await app.locator('#balk [data-naar-ha]').waitFor();
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-volledig-scherm.png') });
+
+    // Een andere pagina van de app: hij vraagt het opnieuw, en de knop staat er.
+    const voor = (await berichten()).length;
+    await frame.goto(`${HA}/api/hassio_ingress/abc/vandaag.html`);
+    await app.locator('#balk [data-naar-ha]').waitFor();
+    await expect.poll(async () => (await berichten()).length).toBeGreaterThan(voor);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-volledig-menu.png') });
+
+    // Terug naar Home Assistant: de kioskstand uit, en naar het dashboard.
+    await app.locator('#balk [data-naar-ha]').click();
+    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/navigate', path: '/' });
+    expect(await berichten()).toContainEqual({ type: 'home-assistant/unsubscribe-properties' });
+
+    // Weer uit op dit apparaat: de knop is weg.
+    await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
+    await vorm.locator('[data-volledig][aria-checked="true"]').click();
+    await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
+
+    // Buiten Home Assistant bestaat de keuze niet.
+    const q = await context.newPage();
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await q.goto(`${baseUrl}/toegang.html`);
+    await q.locator('#wand [data-vorm] h2').first().waitFor();
+    expect(await q.locator('#wand').textContent()).not.toContain('Dit scherm');
+    await context.close();
+  }, 40_000);
+
   /* Een versienummer, en wat er nieuw is (besluit 131). */
   it('toont de versie en wat er nieuw is', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });

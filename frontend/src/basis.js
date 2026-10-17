@@ -346,12 +346,95 @@
     if (ik?.soort === 'gast') location.replace('instellingen.html');
   }
 
+  /*
+   * Volledig scherm in Home Assistant (besluit 155), per apparaat.
+   *
+   * Achter Ingress staat de app in een paneel van Home Assistant, met de
+   * zijbalk en een kopbalk eromheen. Home Assistant kent zelf een kioskstand
+   * voor een app: die vraagt de app met een bericht (`subscribe-properties`
+   * met `kioskMode`), en het paneel zet hem zelf weer uit als je het verlaat.
+   * Een andere pagina van de app laat hem staan. Voor de balken van de
+   * browser zelf vraagt de app het hele scherm, op het document van Home
+   * Assistant: dat blijft staan als de app een andere pagina laadt. Dat mag
+   * alleen na een tik, dus bij de eerste.
+   *
+   * De keuze staat in dit apparaat (localStorage): de wand wel, de telefoon niet.
+   */
+  const VOLLEDIG = 'sc-volledig-scherm';
+  const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
+  function volledigGekozen() {
+    try {
+      return localStorage.getItem(VOLLEDIG) === '1';
+    } catch {
+      return false;
+    }
+  }
+  const volledigNu = () => inHA() && volledigGekozen();
+  /** Een bericht aan het paneel van Home Assistant om de app heen; alleen naar dezelfde herkomst. */
+  const aanHA = (bericht) => global.parent.postMessage(bericht, location.origin);
+  /** Het document van Home Assistant, als het mag; anders null. */
+  function haDocument() {
+    try {
+      return global.parent.document;
+    } catch {
+      return null;
+    }
+  }
+  function heelScherm() {
+    const doc = haDocument();
+    if (doc && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+  }
+  function volledig() {
+    if (!volledigNu()) return;
+    aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    addEventListener('click', heelScherm, { once: true, capture: true });
+  }
+  /** Aan of uit op dit apparaat, en meteen zo. */
+  function zetVolledig(aan) {
+    try {
+      if (aan) localStorage.setItem(VOLLEDIG, '1');
+      else localStorage.removeItem(VOLLEDIG);
+    } catch {
+      // Geen opslag (privévenster): dan alleen voor nu.
+    }
+    if (!inHA()) return;
+    menuNaarHA();
+    if (aan) {
+      aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+      heelScherm();
+    } else {
+      aanHA({ type: 'home-assistant/unsubscribe-properties' });
+      const doc = haDocument();
+      if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
+    }
+  }
+  /** Terug naar Home Assistant: het hele scherm uit, en naar het dashboard. */
+  function naarHA() {
+    const doc = haDocument();
+    if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
+    aanHA({ type: 'home-assistant/unsubscribe-properties' });
+    aanHA({ type: 'home-assistant/navigate', path: '/' });
+  }
+  /** De knop boven de bel: er alleen als de app volledig scherm draait. */
+  function menuNaarHA() {
+    const balk = document.getElementById('balk');
+    const knop = balk?.querySelector('[data-naar-ha]');
+    if (!volledigNu()) knop?.remove();
+    else if (balk && !knop) balk.querySelector('[data-meldbel]')?.insertAdjacentHTML('beforebegin', `<button type="button" class="meldbel naarha" data-naar-ha aria-label="Naar Home Assistant" title="Naar Home Assistant">${NAAR_HA}</button>`);
+  }
+  const NAAR_HA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h5"/><path d="M14 15.5h7M18 12.5l3 3-3 3"/></svg>';
+  document.addEventListener('click', (e) => {
+    if (e.target.closest?.('[data-naar-ha]')) naarHA();
+  });
+
   /** Zet de navigatie, de stand en de klok voor een tab. */
   function start(tab) {
     const balk = document.getElementById('balk');
     const tabs = document.getElementById('tabs');
     if (balk) nav.balk(balk, tab, LINKS);
     if (tabs) nav.tabs(tabs, tab, LINKS);
+    // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
+    menuNaarHA();
     $$('[data-tandwiel]').forEach((a) => {
       a.innerHTML = nav.svg('instellingen');
       a.setAttribute('href', LINKS.instellingen);
@@ -652,5 +735,8 @@
     setInterval(() => void kijkVersie(), 10 * 60_000);
   }
 
-  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online };
+  // Op elke pagina, ook die zonder menu (inrichten, het welkom).
+  volledig();
+
+  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA };
 })(window);

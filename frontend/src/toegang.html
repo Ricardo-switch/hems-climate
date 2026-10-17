@@ -20,6 +20,15 @@
   .rij-b span { color: var(--zacht); font-size: 13px; }
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
+  /* Dit scherm (besluit 155): volledig scherm, per apparaat. */
+  .regelaan { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); }
+  .regelaan b { display: block; font-size: 15px; }
+  .regelaan .klein { display: block; margin-top: 2px; }
+  .schakel { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); cursor: pointer; transition: background 0.15s; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; transition: left 0.15s; }
+  .schakel[aria-checked='true'] { background: var(--mint); }
+  .schakel[aria-checked='true']::after { left: 21px; background: #fff; }
+  .schakel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   /* Back-up, terugzetten en opnieuw beginnen (besluit 151). */
   .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
   .knoppenrij .knop { white-space: nowrap; }

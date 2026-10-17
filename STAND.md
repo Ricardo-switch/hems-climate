@@ -221,6 +221,9 @@ verwijzing bestaat.
   huis groeit uit Home Assistant, één knop naar Inrichten, of een back-up
   terugzetten. Alleen een verplichte keuze zonder voorstel wordt een vraag
   ([154]).
+- **Volledig scherm** kies je per apparaat bij Bewoners en toegang › Dit
+  scherm: Home Assistant verbergt dan zelf zijn zijbalk en kopbalk, en een
+  knop boven de bel brengt je terug ([155]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -466,4 +469,5 @@ verwijzing bestaat.
 [152]: DECISIONS.md#152-openbaar-en-het-werk-gaat-via-beta
 [153]: DECISIONS.md#153-de-add-on-komt-kant-en-klaar-van-github
 [154]: DECISIONS.md#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom
+[155]: DECISIONS.md#155-volledig-scherm-in-home-assistant-per-apparaat
 <!-- links:einde -->

@@ -234,3 +234,6 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .nieuwpop ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--zacht); }
 .nieuwpop .knoppen { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
 .nieuwpop .knop { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Naar Home Assistant (besluit 155): boven de bel, alleen als de app volledig scherm draait. */
+.balk .meldbel + .meldbel { margin-top: 0; }
