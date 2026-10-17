@@ -2141,15 +2141,27 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wandL.locator('[data-blad] h2', { hasText: 'Shira' }).waitFor();
     await wandL.locator('[data-blad] [data-comfort="eigen"]').click();
     await expect.poll(() => bewonersStore.current.bewoners['shira']?.comfort, kort).toBe('eigen');
-    // De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar hoofdgebruiker; en weer terug.
-    await wandL.locator('[data-greep="shira"]').focus();
-    await p.keyboard.press('ArrowUp');
-    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['shira', 'test']);
-    // Eerst de lijst opnieuw getekend, anders gaat de focus mee met de oude rij.
-    await wandL.locator('[data-lijst] [data-rij]').first().and(wandL.locator('[data-rij="shira"]')).waitFor(kort);
-    await wandL.locator('[data-greep="test"]').focus();
-    await p.keyboard.press('ArrowUp');
-    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['test', 'shira']);
+    /*
+     * De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar
+     * hoofdgebruiker; en weer terug. De lijst tekent zichzelf opnieuw na elk
+     * antwoord van de dienst, en een toets die net dan valt, gaat naar een rij
+     * die er niet meer is. Dus opnieuw drukken tot de dienst het heeft: de
+     * nieuwe volgorde komt uit wat er op het scherm staat, en bovenaan doet
+     * omhoog niets, dus nog eens drukken geeft hetzelfde.
+     */
+    const omhoog = async (id: string, verwacht: string[]) => {
+      await expect
+        .poll(async () => {
+          if (JSON.stringify(bewonersStore.current.volgorde) !== JSON.stringify(verwacht)) {
+            await wandL.locator(`[data-greep="${id}"]`).focus();
+            await p.keyboard.press('ArrowUp');
+          }
+          return bewonersStore.current.volgorde;
+        }, kort)
+        .toEqual(verwacht);
+    };
+    await omhoog('shira', ['shira', 'test']);
+    await omhoog('test', ['test', 'shira']);
     await shot(p, 'bewoners');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, niets zijwaarts buiten beeld.
