@@ -57,6 +57,14 @@
     const Ctx = global.AudioContext || global.webkitAudioContext;
     if (!Ctx && !ctxVast) return null;
     const ctx = ctxVast ?? new Ctx();
+    // Toeval met een vaste start (mulberry32): de galm en de ruis klinken elke keer hetzelfde, en de piek ook.
+    let zaad = 0x5c0ffee;
+    const toeval = () => {
+      zaad = (zaad + 0x6d2b79f5) | 0;
+      let t = Math.imul(zaad ^ (zaad >>> 15), 1 | zaad);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
     // Alles door een compressor, zodat het nooit kraakt.
     const pers = ctx.createDynamicsCompressor();
     pers.threshold.value = -16;
@@ -84,7 +92,7 @@
     const impuls = ctx.createBuffer(2, lengte, ctx.sampleRate);
     for (let k = 0; k < 2; k++) {
       const c = impuls.getChannelData(k);
-      for (let i = 0; i < lengte; i++) c[i] = (Math.random() * 2 - 1) * (1 - i / lengte) ** 2.6;
+      for (let i = 0; i < lengte; i++) c[i] = (toeval() * 2 - 1) * (1 - i / lengte) ** 2.6;
     }
     galm.buffer = impuls;
     const galmIn = ctx.createGain();
@@ -105,7 +113,7 @@
     // Ruis, één keer gemaakt.
     const ruis = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const rk = ruis.getChannelData(0);
-    for (let i = 0; i < rk.length; i++) rk[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < rk.length; i++) rk[i] = toeval() * 2 - 1;
 
     let aan = true;
     let plan = { intro: 4, drop: 10, slot: 16, eind: 21 };
@@ -178,7 +186,7 @@
     function ruisje(bus, t, duur, type, freq, sterk, naarGalm = 0) {
       const b = ctx.createBufferSource();
       b.buffer = ruis;
-      b.playbackRate.value = 0.7 + Math.random() * 0.6;
+      b.playbackRate.value = 0.7 + toeval() * 0.6;
       const f = ctx.createBiquadFilter();
       f.type = type;
       f.frequency.value = freq;
@@ -191,7 +199,7 @@
         s.gain.value = naarGalm;
         g.connect(s).connect(galmIn);
       }
-      b.start(t, Math.random() * 0.5);
+      b.start(t, toeval() * 0.5);
       b.stop(t + duur + 0.05);
     }
     function lead(bus, t, n, duur, sterk) {
