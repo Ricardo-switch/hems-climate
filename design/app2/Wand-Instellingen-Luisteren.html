@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Instellingen, luisteren</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Luisteren (schets, 17 oktober 2026; besluit 148, stap 2), onder Instellingen ›
+   * Functies › Praten met je huis. Links: het wekwoord, hoe gevoelig, en welke schermen
+   * luisteren. Rechts: wat Home Assistant ervoor gebruikt, en een proef.
+   * #http laat zien wat een scherm zonder https krijgt.
+   */
+  main { position: relative; padding: 22px 26px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .pad { font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .twee { flex: 1; display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; min-height: 0; }
+  .vak { padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+  .vak h2 { margin: 0; font-family: var(--kop); font-size: 21px; font-weight: 600; }
+  .vak h3 { margin: 4px 0 0; font-size: 13px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; }
+  .vak p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--zacht); }
+  .keuzes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .keuzes span { height: 40px; padding: 0 16px; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); font-weight: 600; font-size: 14.5px; color: var(--zacht); }
+  .keuzes span.aan { background: rgba(110, 231, 183, 0.14); border-color: rgba(110, 231, 183, 0.5); color: var(--tekst); }
+  .keuzes small { font-size: 11.5px; color: var(--mint); font-weight: 700; }
+  .scherm { display: grid; grid-template-columns: 40px 1fr auto; gap: 2px 14px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .scherm:first-of-type { border-top: 0; }
+  .scherm .ik { grid-row: 1 / span 2; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .scherm .ik svg { width: 21px; height: 21px; color: var(--zacht); }
+  .scherm b { font-size: 15.5px; }
+  .scherm .uitleg { grid-column: 2; font-size: 13px; color: var(--zacht); }
+  .scherm .rechts { grid-row: 1 / span 2; grid-column: 3; }
+  .schakel { width: 52px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); position: relative; display: block; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--tekst); }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 25px; background: var(--inkt); }
+  .pil { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .pil::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pil.werkt { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+  .pil.let { color: var(--zon); background: rgba(247, 181, 72, 0.12); }
+  .pil.tik { color: var(--zacht); background: rgba(255, 255, 255, 0.06); }
+  .rij { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; align-items: center; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij:first-of-type { border-top: 0; }
+  .rij b { font-size: 15px; }
+  .rij span.uitleg { font-size: 13px; color: var(--zacht); grid-column: 1; }
+  .rij .pil { grid-row: 1 / span 2; grid-column: 2; }
+  .proef { margin-top: auto; padding: 14px 16px; border-radius: 16px; background: rgba(110, 231, 183, 0.07); border: 1px solid rgba(110, 231, 183, 0.25); display: grid; gap: 8px; }
+  .proef .knop { justify-self: start; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+  .proef .knop svg { width: 17px; height: 17px; }
+  .proef .uit { font-size: 14px; color: var(--zacht); }
+  .proef .uit b { color: var(--tekst); }
+  .waarschuwing { padding: 12px 14px; border-radius: 14px; background: rgba(247, 181, 72, 0.1); border: 1px solid rgba(247, 181, 72, 0.35); font-size: 13.5px; line-height: 1.5; color: var(--zacht); }
+  .waarschuwing b { color: var(--zon); }
+  [data-stand] { display: none !important; }
+  body[data-toon='gewoon'] [data-stand~='gewoon'], body[data-toon='http'] [data-stand~='http'] { display: revert !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div>
+      <div class="pad">Instellingen › Functies › Praten met je huis</div>
+      <h1 class="kop-1" style="margin-top: 4px">Luisteren</h1>
+    </div>
+    <div class="twee">
+      <section class="glas vak">
+        <h2>Het wekwoord</h2>
+        <div class="keuzes"><span class="aan">Hé huis <small>eigen</small></span><span>Hey Jarvis</span><span>OK Nabu</span><span>Alexa</span><span>Hey Mycroft</span></div>
+        <p>Zeg het wekwoord, en daarna wat je wilt. Het huis stopt vanzelf met luisteren als je even stil bent.</p>
+        <h3>Hoe gevoelig</h3>
+        <div class="keuzes"><span>Rustig</span><span class="aan">Gewoon</span><span>Gevoelig</span></div>
+        <p>Gevoelig hoort je ook van verder weg en met de tv aan, maar wordt vaker wakker als niemand het zei.</p>
+        <h3>Welke schermen luisteren</h3>
+        <div>
+          <div class="scherm"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6"/></svg></span><b>Wand woonkamer</b><span class="uitleg" data-stand="gewoon">luistert altijd naar het wekwoord</span><span class="uitleg" data-stand="http">kan niet luisteren: geen https</span><span class="rechts" data-stand="gewoon"><span class="schakel aan"></span></span><span class="rechts" data-stand="http"><span class="pil let">Geen https</span></span></div>
+          <div class="scherm"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg></span><b>Telefoon Ricardo</b><span class="uitleg">tik op de microfoon om te praten</span><span class="rechts"><span class="pil tik">Tikken</span></span></div>
+        </div>
+        <div class="waarschuwing" data-stand="http"><b>De microfoon werkt alleen via https.</b> Deze tablet opent de app via het gewone adres. Zet Tailscale op de tablet en open het https-adres van het tailnet; dan kan hij luisteren.</div>
+      </section>
+
+      <section class="glas vak">
+        <h2>Wat Home Assistant ervoor gebruikt</h2>
+        <div>
+          <div class="rij"><b>Wekwoord herkennen</b><span class="uitleg">openWakeWord, in huis</span><span class="pil werkt">Werkt</span></div>
+          <div class="rij"><b>Spraak naar tekst</b><span class="uitleg">Whisper, in huis</span><span class="pil werkt">Werkt</span></div>
+          <div class="rij"><b>Hardop antwoorden</b><span class="uitleg">Piper, in huis</span><span class="pil werkt">Werkt</span></div>
+        </div>
+        <p>Je stem gaat naar Home Assistant in huis, niet naar buiten. Alleen de tekst gaat daarna verder, zoals een getypte zin. Er wordt niets opgenomen of bewaard.</p>
+        <div class="proef">
+          <span class="knop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Proberen: zeg "Hé huis"</span>
+          <span class="uit">Gehoord met 0,96 zekerheid. Daarna verstaan: <b>"doe het licht in de keuken aan"</b></span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'instellingen');
+  document.body.dataset.toon = location.hash === '#http' ? 'http' : 'gewoon';
+</script>
+</body>
+</html>

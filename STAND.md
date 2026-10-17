@@ -235,6 +235,9 @@ verwijzing bestaat.
   het vaste antwoord in eigen woorden; elk getal moet kloppen, anders het vaste
   antwoord. Lampen, scènes en schermen bedien je met een zin, via dezelfde
   deuren als de knoppen; een garagedeur is geen scherm meer ([148]).
+  Met je stem: de wand luistert naar "Hé huis" (een eigen getraind wekwoord),
+  de telefoon met een microfoonknop; Home Assistant hoort en schrijft uit, in
+  huis, en de tekst gaat daarna als een getypte zin verder ([150]).
 - **Een kamer doet mee** met de regeling van een andere kamer, zoals een
   slaapkamer met de airco in de wasruimte ([142]).
 - **Comfort per bewoner:** wie hier woont staat op volgorde; de eerste die
@@ -442,4 +445,5 @@ verwijzing bestaat.
 [147]: DECISIONS.md#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app
 [148]: DECISIONS.md#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin
 [149]: DECISIONS.md#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt
+[150]: DECISIONS.md#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand
 <!-- links:einde -->

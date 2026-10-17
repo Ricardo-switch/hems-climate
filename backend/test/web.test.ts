@@ -33,6 +33,8 @@ import { ConnectionStore, connectionView, type ConnectionView, type FoundApplian
 import { FunctiesStore, type FunctiesGevonden } from '../src/web/functies.js';
 import { comfortView, controleerComfort, type ComfortView } from '../src/web/comfort.js';
 import { onUsablePort } from './ports.js';
+import { WebSocket as WsClient } from 'ws';
+import type { LuisterDeur } from '../src/web/luisterpost.js';
 import { exampleSite } from './site.js';
 
 const cleanups: (() => Promise<void>)[] = [];
@@ -107,6 +109,7 @@ async function start(options: {
   schermenAan?: () => boolean;
   comfort?: { view: () => ComfortView; save: (body: unknown) => Promise<{ ok: true; view: ComfortView } | { ok: false; status: number; reden: string }> };
   sleutel?: string;
+  luisteren?: LuisterDeur;
   praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean };
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null>;
 }): Promise<{ base: string; server: WebServer }> {
@@ -142,6 +145,7 @@ async function start(options: {
         ...(options.comfort ? { comfort: options.comfort } : {}),
         ...(options.sleutel ? { sleutel: options.sleutel } : {}),
         ...(options.praten ? { praten: options.praten } : {}),
+        ...(options.luisteren ? { luisteren: options.luisteren } : {}),
         ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
@@ -313,7 +317,7 @@ describe('camera\u2019s en de deurbel als instelling (besluit 109)', () => {
     const bewaard = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(keuze) });
     expect(bewaard.status).toBe(200);
     // Weer en licht vult de dienst aan met het voorstel (besluit 111).
-    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true }, meldingen: { batterij: 10, filter: 10 } });
+    expect(JSON.parse(await readFile(join(logDir, 'functies.json'), 'utf-8'))).toEqual({ ...keuze, weer: { bron: null, uren: true }, licht: { bedienen: true }, schermen: { bedienen: true }, praten: { taalmodel: null, bedienen: true, spraak: null }, meldingen: { batterij: 10, filter: 10 } });
 
     const fout = await fetch(`${base}/api/functies`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ ...keuze, cameras: { aan: true, lijst: ['camera.van_de_buren'] } }) });
     expect(fout.status).toBe(400);
@@ -1732,5 +1736,66 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
       r.end();
     });
     expect(status).toBe(421);
+  });
+});
+
+describe('praten met je stem (besluit 150)', () => {
+  /** Een websocket zoals de pagina hem opent; het antwoord op de handdruk, of de open verbinding. */
+  function verbind(url: string, origin?: string): Promise<{ status: number; ws?: WsClient; berichten: unknown[] }> {
+    return new Promise((ok) => {
+      const ws = new WsClient(url, origin ? { origin } : {});
+      // Vanaf het begin opvangen: een bericht kan meteen na de handdruk komen.
+      const berichten: unknown[] = [];
+      ws.on('message', (d) => berichten.push(JSON.parse(String(d))));
+      ws.on('open', () => ok({ status: 101, ws, berichten }));
+      ws.on('unexpected-response', (_req, res) => ok({ status: res.statusCode ?? 0, berichten }));
+      ws.on('error', () => {});
+    });
+  }
+
+  it('geeft geluid door aan Home Assistant en vertaalt wat het zegt, alleen vanaf de eigen pagina', async () => {
+    let onEvent: ((e: { type: string; data: Record<string, unknown> }) => void) | null = null;
+    const geluid: number[][] = [];
+    let begin: string | null = null;
+    let klaar = false;
+    let gestopt = false;
+    const deur: LuisterDeur = {
+      start: async (o) => {
+        onEvent = o.onEvent;
+        begin = `${o.start}:${o.pipeline}`;
+        return { send: (b) => void geluid.push([...b]), end: () => void (klaar = true), stop: () => void (gestopt = true) };
+      },
+      pipeline: () => 'smart_climate',
+    };
+    const { base } = await start({ luisteren: deur });
+    const url = `${base.replace('http', 'ws')}/api/luister?start=spraak`;
+    // Een browser stuurt altijd een Origin; zonder, of van een andere site: dicht.
+    expect((await verbind(url)).status).toBe(403);
+    expect((await verbind(url, 'http://vreemde-site.example')).status).toBe(403);
+    expect((await verbind(`${base.replace('http', 'ws')}/api/iets-anders`, base)).status).toBe(404);
+
+    const { ws, berichten } = await verbind(url, base);
+    const dicht = new Promise((ok) => ws!.on('close', ok));
+    ws!.send(Buffer.from([1, 0, 2, 0]));
+    ws!.send('klaar');
+    await expect.poll(() => klaar).toBe(true);
+    expect(begin).toBe('stt:smart_climate');
+    expect(geluid).toEqual([[1, 0, 2, 0]]);
+    onEvent!({ type: 'run-start', data: {} });
+    onEvent!({ type: 'stt-vad-start', data: {} });
+    onEvent!({ type: 'stt-end', data: { stt_output: { text: '  doe het licht aan ' } } });
+    onEvent!({ type: 'run-end', data: {} });
+    await dicht;
+    expect(berichten).toEqual([{ soort: 'klaar' }, { soort: 'praat' }, { soort: 'tekst', tekst: 'doe het licht aan' }, { soort: 'einde' }]);
+    expect(gestopt).toBe(true);
+  });
+
+  it('zegt in gewone woorden waarom het niet lukt, en bestaat niet zonder luisteren', async () => {
+    const deur: LuisterDeur = { start: async () => { throw new Error('Pipeline not found: id=weg'); }, pipeline: () => 'weg' };
+    const { base } = await start({ luisteren: deur });
+    const { berichten } = await verbind(`${base.replace('http', 'ws')}/api/luister`, base);
+    await expect.poll(() => berichten).toEqual([{ soort: 'fout', reden: expect.stringContaining('bestaat niet meer') }]);
+    const zonder = await start({});
+    expect((await verbind(`${zonder.base.replace('http', 'ws')}/api/luister`, zonder.base)).status).toBe(404);
   });
 });

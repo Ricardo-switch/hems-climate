@@ -445,6 +445,60 @@ function zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd) {
   speechSynthesis.speak(u);
 }
 
+/* ------------------------------------------------------------ de microfoon */
+
+/*
+ * Tikken en praten (besluit 150): het geluid gaat via de dienst naar Home Assistant,
+ * dat het uitschrijft; daarna gaat het zoals een getypte zin. Nog een tik: klaar.
+ */
+let luistert = null;
+let niveauRaf = 0;
+
+function tekenNiveau() {
+  cancelAnimationFrame(niveauRaf);
+  const stap = () => {
+    const n = window.luisteren?.niveau() ?? 0;
+    $$('[data-niveau]').forEach((el) => {
+      if (!el.childElementCount) el.innerHTML = '<i></i>'.repeat(28);
+      el.querySelectorAll('i').forEach((i, k) => (i.style.height = `${4 + n * 26 * (0.45 + 0.55 * Math.abs(Math.sin(k * 0.8 + performance.now() / 160)))}px`));
+    });
+    if (luistert) niveauRaf = requestAnimationFrame(stap);
+  };
+  niveauRaf = requestAnimationFrame(stap);
+}
+
+function stopLuisteren() {
+  luistert = null;
+  cancelAnimationFrame(niveauRaf);
+  document.body.classList.remove('luistert');
+  $$('[data-niveau]').forEach((el) => (el.hidden = true));
+}
+
+async function microfoonTik() {
+  if (luistert) return void luistert.klaar?.();
+  stopPraten();
+  ontgrendeld = true;
+  document.body.classList.add('luistert');
+  $$('[data-niveau]').forEach((el) => (el.hidden = false));
+  luistert = {};
+  tekenNiveau();
+  try {
+    luistert = await window.luisteren.eenmaal((b) => {
+      if (b.soort === 'tekst') {
+        stopLuisteren();
+        if (b.tekst) void vraag({ label: b.tekst, soort: 'vrij', tekst: b.tekst });
+        else void zeg('Dat verstond ik niet. Tik nog eens op de microfoon.');
+      } else if (b.soort === 'fout') {
+        stopLuisteren();
+        void zeg(b.reden);
+      } else if (b.soort === 'dicht') stopLuisteren();
+    });
+  } catch {
+    stopLuisteren();
+    void zeg('De microfoon mag niet. Geef deze pagina toegang tot de microfoon.');
+  }
+}
+
 /* ------------------------------------------------------------ tekenen */
 
 /** Waar een feit vandaan komt, in gewone woorden; wat hier niet staat, toont de pagina niet. */
@@ -566,6 +620,10 @@ function tekenNu() {
     const naam = scherm?.naam ?? '';
     el.querySelector('span').textContent = `Stop ${/^(screen|zonnescherm|scherm)/i.test(naam) ? `het ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam}`;
   });
+  // De microfoon alleen waar hij kan: over https (besluit 150).
+  const micKan = !!window.luisteren?.kan();
+  $$('[data-mic]').forEach((el) => (el.hidden = !micKan));
+  $$('[data-vrij] input').forEach((el) => (el.placeholder = micKan ? 'Typ, of tik op de microfoon' : 'Typ wat je wilt'));
   $$('[data-voorlezen]').forEach((el) => {
     el.hidden = stand === 'praat';
     el.setAttribute('aria-pressed', String(voorlezen));
@@ -604,6 +662,7 @@ document.addEventListener('click', (e) => {
     });
     return;
   }
+  if (t.hasAttribute('data-mic')) return void microfoonTik();
   if (t.hasAttribute('data-stop')) return stopPraten();
   if (t.hasAttribute('data-stopscherm')) {
     const scherm = beweegtNog();

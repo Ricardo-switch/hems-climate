@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.28.0';
+export const VERSIE = '0.29.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,16 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.29.0',
+    datum: '2026-10-17',
+    nieuw: [
+      'Praten met je stem: de wand luistert naar "Hé huis", met een laag over de pagina, een zacht tikje, en het antwoord hardop',
+      'Na het antwoord luistert het huis nog vijf seconden, zodat je zonder "Hé huis" verder kunt praten',
+      'Bij de Assistent een microfoonknop: tikken, praten, en het huis stopt vanzelf als je stil bent',
+      'Bij Functies › Praten met je huis kies je de spraakassistent uit Home Assistant, en of dit scherm luistert',
+    ],
+  },
   {
     versie: '0.28.0',
     datum: '2026-10-17',

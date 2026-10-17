@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Assistent met de microfoon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De microfoon op de telefoon (schets, 17 oktober 2026; besluit 148, stap 2). De
+   * telefoon luistert niet altijd: je tikt op de microfoon, praat, en het huis stopt
+   * vanzelf met luisteren als je stil bent. Daarna gaat het zoals een getypte zin.
+   *
+   * Drie standen: #rust (zonder hash), #luistert, #verstaat.
+   */
+  .inhoud { padding: 18px 16px 220px; display: flex; flex-direction: column; gap: 16px; }
+  .boven { display: flex; align-items: center; gap: 14px; }
+  .kern { width: 112px; height: 112px; display: grid; place-items: center; position: relative; flex: none; }
+  .bol { width: 66px; height: 66px; border-radius: 50%; position: relative; z-index: 2; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 40px rgba(111, 170, 255, 0.5); }
+  body[data-toon='luistert'] .bol { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 50px rgba(110, 231, 183, 0.6); }
+  .ring { position: absolute; inset: 8px; border-radius: 50%; border: 2px solid rgba(110, 231, 183, 0.45); opacity: 0; }
+  body[data-toon='luistert'] .ring { opacity: 1; animation: golf 1.6s ease-out infinite; }
+  body[data-toon='luistert'] .ring.r2 { animation-delay: 0.8s; }
+  @keyframes golf { from { transform: scale(0.85); opacity: 0.8; } to { transform: scale(1.15); opacity: 0; } }
+  .wie { font-size: 14px; font-weight: 600; color: #B7B0FF; display: flex; align-items: center; gap: 8px; }
+  .wie i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: block; box-shadow: 0 0 10px currentColor; }
+  body[data-toon='luistert'] .wie { color: var(--mint); }
+  .zegt { font-family: var(--kop); font-weight: 600; font-size: 27px; line-height: 1.12; margin: 0; }
+  .zegt.loopt { color: rgba(238, 243, 247, 0.45); }
+  .klein { font-size: 15px; color: var(--zacht); margin: 0; line-height: 1.45; }
+  .sug { display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgba(12, 20, 34, 0.72); border: 1px solid var(--glas-rand); }
+  .sug .ik { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(143, 134, 255, 0.18); }
+  .sug .ik svg { width: 18px; height: 18px; }
+  .sug b { font-size: 15px; }
+
+  /* De balk: typen, of de microfoon. */
+  .balkje { position: absolute; left: 10px; right: 10px; bottom: 94px; height: 64px; border-radius: 22px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 18px; background: rgba(9, 15, 28, 0.82); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); }
+  .balkje .typ { flex: 1; font-size: 16px; color: var(--gedempt); }
+  .mic { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(110, 231, 183, 0.16); color: var(--mint); }
+  .mic svg { width: 23px; height: 23px; }
+  body[data-toon='luistert'] .mic { background: var(--mint); color: #0b1424; box-shadow: 0 0 0 6px rgba(110, 231, 183, 0.18); }
+  /* Terwijl je praat: je stem als balkjes, in plaats van het typveld. */
+  .niveau { flex: 1; display: flex; align-items: center; gap: 3px; height: 30px; }
+  .niveau i { flex: 1; border-radius: 2px; background: var(--mint); opacity: 0.8; }
+  .schetslabel { position: absolute; right: 12px; top: 10px; font-size: 11px; color: var(--gedempt); padding: 4px 10px; border-radius: 999px; border: 1px dashed rgba(255, 255, 255, 0.2); }
+  [data-stand] { display: none !important; }
+  body[data-toon='rust'] [data-stand~='rust'], body[data-toon='luistert'] [data-stand~='luistert'], body[data-toon='verstaat'] [data-stand~='verstaat'] { display: revert !important; }
+  body[data-toon='rust'] .wie[data-stand~='rust'], body[data-toon='luistert'] .wie[data-stand~='luistert'], body[data-toon='verstaat'] .wie[data-stand~='verstaat'],
+  body[data-toon='rust'] .balkje [data-stand~='rust'], body[data-toon='luistert'] .niveau[data-stand~='luistert'] { display: flex !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <span class="schetslabel" id="label"></span>
+  <div class="inhoud">
+    <div class="boven">
+      <div class="kern" aria-hidden="true"><div class="ring"></div><div class="ring r2"></div><div class="bol"></div></div>
+      <div>
+        <span class="wie" data-stand="rust"><i></i>Je huis</span>
+        <span class="wie" data-stand="luistert"><i></i>Ik luister</span>
+        <span class="wie" data-stand="verstaat"><i></i>Je huis denkt na</span>
+      </div>
+    </div>
+    <p class="zegt" data-stand="rust">Goedemiddag, Ricardo. Waarmee kan ik je helpen?</p>
+    <p class="zegt loopt" data-stand="luistert">Doe het licht beneden wat…</p>
+    <p class="klein" data-stand="luistert">Ik stop vanzelf als je even stil bent.</p>
+    <p class="zegt" data-stand="verstaat">Doe het licht beneden wat zachter</p>
+    <p class="klein" data-stand="verstaat">Even kijken…</p>
+    <div data-stand="rust" style="display: grid; gap: 10px">
+      <div class="sug"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg></span><b>Wat doe je nu?</b></div>
+      <div class="sug"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#B7B0FF" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><b>Wat deed je vandaag?</b></div>
+    </div>
+  </div>
+
+  <div class="balkje">
+    <span class="typ" data-stand="rust">Typ, of tik op de microfoon</span>
+    <div class="niveau" data-stand="luistert" id="niveau"></div>
+    <span class="typ" data-stand="verstaat">Verstuurd</span>
+    <span class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.tabs(document.getElementById('tabs'), 'assistent');
+  const toon = { '#luistert': 'luistert', '#verstaat': 'verstaat' }[location.hash] ?? 'rust';
+  document.body.dataset.toon = toon;
+  document.getElementById('label').textContent = { rust: 'Schets · tik op de microfoon', luistert: 'Schets · je praat', verstaat: 'Schets · verstuurd' }[toon];
+  document.getElementById('niveau').innerHTML = Array.from({ length: 34 }, (_, i) => `<i style="height:${6 + Math.abs(Math.sin(i * 0.8) * 18 + Math.sin(i * 0.31) * 8)}px"></i>`).join('');
+</script>
+</body>
+</html>

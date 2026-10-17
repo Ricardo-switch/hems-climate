@@ -28,6 +28,7 @@ async function laad() {
     concept.licht ??= info.voorstel.licht;
     concept.schermen ??= info.voorstel.schermen ?? { bedienen: true };
     concept.praten ??= info.voorstel.praten ?? { taalmodel: null, bedienen: true };
+    concept.praten.spraak ??= null;
     concept.meldingen ??= info.voorstel.meldingen ?? { batterij: 10, filter: 10 };
   }
   teken();
@@ -110,7 +111,42 @@ function praten() {
     <div class="buiten"><div><b class="wel">Gaat naar het taalmodel</b><span>Je vraag als tekst, het vaste antwoord met de getallen, en de namen van kamers, lampen en schermen</span></div><div><b class="niet">Blijft in huis</b><span>Je stem, camerabeelden, en wie er thuis is</span></div></div>
     ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">Bedienen met de assistent</h2>
     ${keuzes('Bedienen met de assistent', 'pratenBedienen', [[true, 'Aan'], [false, 'Uit']], p.bedienen)}
-    <p class="mini">Zeg wat je wilt, zoals "doe het licht beneden wat zachter" of "screen dicht". Het gebeurt meteen, en het huis zegt wat het deed. Lampen en scènes${info.schermMogelijk ? ', screens en het zonnescherm' : ''}, zoals bij Licht en screens. Een garagedeur, poort of deur nooit; airco's en cv pas als Smart Climate mag regelen.</p>` : ''}`;
+    <p class="mini">Zeg wat je wilt, zoals "doe het licht beneden wat zachter" of "screen dicht". Het gebeurt meteen, en het huis zegt wat het deed. Lampen en scènes${info.schermMogelijk ? ', screens en het zonnescherm' : ''}, zoals bij Licht en screens. Een garagedeur, poort of deur nooit; airco's en cv pas als Smart Climate mag regelen.</p>` : ''}
+    ${luisteren()}`;
+}
+
+/** Het wekwoord zoals je het zegt: "he_huis" is "Hé huis". */
+const wekwoordNaam = (w) => (w === 'he_huis' ? 'Hé huis' : w.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
+
+/** Luisteren (besluit 150, schets Wand-Instellingen-Luisteren): de spraakassistent, en of dit scherm luistert. */
+function luisteren() {
+  const lijst = info.gevonden.spraakassistenten ?? [];
+  const p = concept.praten;
+  const gekozen = lijst.find((x) => x.id === p.spraak) ?? lijst.find((x) => x.voorkeur) ?? null;
+  let hier = false;
+  try {
+    hier = localStorage.getItem('sc-luisteren') === 'aan';
+  } catch {
+    hier = false;
+  }
+  const https = window.isSecureContext;
+  const opties = [[null, gekozen && !p.spraak ? `Die van Home Assistant (${gekozen.naam})` : 'Die van Home Assistant'], ...lijst.map((x) => [x.id, x.wekwoord ? `${x.naam} · ${wekwoordNaam(x.wekwoord)}` : x.naam])];
+  const melding = !lijst.length
+    ? 'Geen spraakassistent gevonden in Home Assistant.'
+    : !gekozen?.spraakNaarTekst
+      ? 'Deze spraakassistent heeft geen spraak naar tekst. Kies er in Home Assistant Whisper bij (Instellingen › Spraakassistenten).'
+      : !gekozen.wekwoord
+        ? 'Deze spraakassistent heeft geen wekwoord; de microfoonknop werkt wel. Geef hem in Home Assistant een wekwoord, zoals Hé huis (Instellingen › Spraakassistenten).'
+        : '';
+  return `<h2 class="kop-2" style="margin-top: 8px">Luisteren</h2>
+    <span class="veldnaam">Spraakassistent uit Home Assistant</span>
+    ${lijst.length ? keuzes('Spraakassistent', 'spraak', opties, p.spraak) : ''}
+    ${gekozen?.wekwoord ? `<p class="mini">Wekwoord: <b>${esc(wekwoordNaam(gekozen.wekwoord))}</b>. Hoe gevoelig hij is, stel je in bij de openWakeWord-add-on.</p>` : ''}
+    ${melding ? `<p class="uitleg" style="color: var(--zon)">${esc(melding)}</p>` : ''}
+    <span class="veldnaam">Dit scherm luistert naar het wekwoord</span>
+    <div class="keuzes" role="group" aria-label="Dit scherm luistert"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>Aan</button><button type="button" data-hier="uit" aria-pressed="${!hier}">Uit</button></div>
+    ${https ? '<p class="mini">Voor de tablet aan de wand. Geldt alleen voor dit scherm. Op een telefoon tik je op de microfoon bij de Assistent.</p>' : '<p class="uitleg" style="color: var(--zon)">De microfoon werkt alleen via https. Dit scherm opent de app via http; open hem via een https-adres.</p>'}
+    <p class="mini">Je stem gaat naar Home Assistant in huis, niet naar buiten. Alleen de tekst gaat daarna verder, zoals een getypte zin. Er wordt niets opgenomen of bewaard.</p>`;
 }
 
 function weer() {
@@ -195,6 +231,22 @@ function bewaar() {
 document.addEventListener('click', (e) => {
   const knop = e.target.closest('button');
   if (!knop || knop.disabled || !concept) return;
+  // Dit scherm luistert (besluit 150): alleen in deze browser, niet bij de dienst.
+  if (knop.dataset.hier) {
+    try {
+      localStorage.setItem('sc-luisteren', knop.dataset.hier);
+    } catch {
+      // Dan niet.
+    }
+    // Aan: meteen beginnen, zonder de pagina te verversen.
+    if (knop.dataset.hier === 'aan' && !window.luisteren) {
+      const sc = document.createElement('script');
+      sc.src = 'luisteren.js';
+      document.head.appendChild(sc);
+    }
+    teken();
+    return groep.zegBewaard('ok', knop.dataset.hier === 'aan' ? 'Dit scherm luistert nu naar het wekwoord' : 'Dit scherm luistert niet meer; ververs de pagina');
+  }
   // Proberen (besluit 148): één vraag aan het gekozen taalmodel, er verandert niets.
   if (knop.hasAttribute('data-proef') && concept.praten.taalmodel) {
     proef = 'bezig';
@@ -226,6 +278,7 @@ document.addEventListener('click', (e) => {
       concept.praten.taalmodel = w;
       proef = null;
     } else if (s === 'pratenBedienen') concept.praten.bedienen = w;
+    else if (s === 'spraak') concept.praten.spraak = w;
     else if (s === 'seconden') concept.deurbel.seconden = w;
     else if (s === 'drempelBatterij') concept.meldingen.batterij = w;
     else if (s === 'drempelFilter') concept.meldingen.filter = w;

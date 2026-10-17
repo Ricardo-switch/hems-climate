@@ -156,6 +156,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [142. Een kwaliteitsronde: een kamer doet mee met een andere, en de assistent klinkt als een mens](#142-een-kwaliteitsronde-een-kamer-doet-mee-met-een-andere-en-de-assistent-klinkt-als-een-mens)
 - [148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin](#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin)
 - [149. Wanneer een batterij of filter een melding geeft, een scherm beheren, en een eigen comfort dat weer lukt](#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt)
+- [150. Praten met je stem: de microfoon, en "Hé huis" op de wand](#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand)
 
 **Veiligheid**
 
@@ -6413,6 +6414,54 @@ waren.
   nagespeeld en niet op de NAS gezien; het is de enige weg die we vonden
   waarop "Eigen" kon mislukken.
 - **Versie 0.28.0.**
+
+---
+
+## 150. Praten met je stem: de microfoon, en "Hé huis" op de wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 16 oktober 2026: een microfoonknop en een
+wekwoord, "Hé huis". Het wekwoord is op 17 oktober op zijn eigen pc getraind
+met openWakeWord en de Nederlandse Piper-stemmen (de generator van
+openWakeWord en alle mls-stemmen brabbelden; nathalie, rdh, alex, pim en
+ronnie zijn goed). Na de schetsen `Wand-Luisteren`, `Assistent-Tel-Microfoon`
+en `Wand-Instellingen-Luisteren` koos hij: alleen de wand luistert altijd, de
+telefoon met een tik; een laag over Thuis in plaats van naar de Assistent;
+een zacht tikje als het huis luistert; na het antwoord nog vijf seconden
+luisteren zonder wekwoord; de laag sluit acht seconden nadat het huis klaar is
+met praten; de tablet krijgt https via Tailscale.
+
+*Besluit:*
+
+- **Home Assistant luistert en schrijft uit, en doet verder niets.** De dienst
+  start in Home Assistant een spraakopdracht (`assist_pipeline/run`) die altijd
+  na het uitschrijven stopt (`end_stage: stt`): het wekwoord (openWakeWord) en
+  spraak naar tekst (Whisper) draaien in huis, de gespreksagent en het
+  schakelen van Home Assistant komen er nooit aan te pas. Dat is een **zevende
+  smalle deur** in de client (`allowListen`): alleen die opdracht, alleen tot
+  tekst, en het geluid erbij. De tekst gaat daarna dezelfde weg als een
+  getypte zin (besluit 148), met dezelfde deuren en regels.
+- **Het geluid loopt via de dienst.** De pagina neemt de microfoon op (16 kHz,
+  mono) en stuurt het over een websocket naar de dienst (`/api/luister`); de
+  dienst geeft het door aan Home Assistant. Zo heeft de tablet nooit de
+  sleutel van Home Assistant. De websocket is een kleine eigen server in Node,
+  zonder nieuwe afhankelijkheid, met de inlog van de app en alleen vanaf de
+  eigen pagina (Origin).
+- **Het wekwoord kiest de bewoner in Home Assistant.** Welk wekwoord en welke
+  spraak-naar-tekst er gelden, hoort bij een spraakassistent van Home
+  Assistant; die meegeven kan niet. Bij Functies › Praten met je huis kiest de
+  bewoner die assistent. Ook de gevoeligheid stelt hij in bij de
+  openWakeWord-add-on; de knoppen daarvoor uit de schets vervallen.
+- **Welk scherm luistert, staat op dat scherm zelf:** "Dit scherm luistert"
+  bij Functies, bewaard in die browser. Een telefoon luistert nooit vanzelf;
+  daar tik je op de microfoon. Zonder https zegt het scherm dat de microfoon
+  niet kan, en waarom.
+- **Je stem gaat niet naar buiten en wordt niet bewaard.** Alleen de tekst gaat
+  verder; die naar een taalmodel als de bewoner dat koos (besluit 148).
+- **Spraak gaat via Home Assistant, ook op de telefoon.** De spraakherkenning
+  van de browser zelf blijft uit (besluit 141): die stuurt je stem naar buiten.
+- **Versie 0.29.0.**
 
 ---
 

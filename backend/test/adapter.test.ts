@@ -96,6 +96,10 @@ interface FakeHa {
   readonly push: (state: HaEntityState) => void;
   /** Alles wat de client stuurde, voor controle op ongewenste schrijfacties. */
   readonly received: Record<string, unknown>[];
+  /** Het geluid dat de client stuurde (besluit 150), als losse binaire berichten. */
+  readonly binary: Buffer[];
+  /** Stuurt een gebeurtenis van een spraakopdracht naar de client. */
+  readonly event: (id: number, type: string, data: Record<string, unknown>) => void;
 }
 
 async function startFakeHa(options: {
@@ -105,6 +109,7 @@ async function startFakeHa(options: {
   aiTask?: unknown;
 }): Promise<FakeHa> {
   const received: Record<string, unknown>[] = [];
+  const binary: Buffer[] = [];
   const sockets = new Set<WsSocket>();
   const subscriptions = new Map<WsSocket, number>();
 
@@ -123,7 +128,11 @@ async function startFakeHa(options: {
     sockets.add(socket);
     socket.send(JSON.stringify({ type: 'auth_required', ha_version: '2026.9.0' }));
 
-    socket.on('message', (raw) => {
+    socket.on('message', (raw, isBinary) => {
+      if (isBinary) {
+        binary.push(Buffer.from(raw as Buffer));
+        return;
+      }
       const msg = JSON.parse(String(raw)) as Record<string, unknown>;
       received.push(msg);
 
@@ -153,6 +162,12 @@ async function startFakeHa(options: {
         );
         return;
       }
+      // Een spraakopdracht (besluit 150): bevestigen, en dan zegt Home Assistant welke handler het geluid krijgt.
+      if (msg['type'] === 'assist_pipeline/run') {
+        socket.send(JSON.stringify({ id: msg['id'], type: 'result', success: true, result: null }));
+        socket.send(JSON.stringify({ id: msg['id'], type: 'event', event: { type: 'run-start', data: { runner_data: { stt_binary_handler_id: 7, timeout: 300 } } } }));
+        return;
+      }
       if (msg['type'] === 'call_service' && msg['domain'] === 'ai_task' && msg['return_response'] === true) {
         socket.send(JSON.stringify({ id: msg['id'], type: 'result', success: true, result: { context: {}, response: { conversation_id: 'x', data: options.aiTask ?? null } } }));
         return;
@@ -174,6 +189,10 @@ async function startFakeHa(options: {
   return {
     port,
     received,
+    binary,
+    event(id, type, data) {
+      for (const socket of sockets) socket.send(JSON.stringify({ id, type: 'event', event: { type, data } }));
+    },
     push(state) {
       for (const [socket, id] of subscriptions) {
         socket.send(
@@ -393,6 +412,42 @@ describe('schrijfbeveiliging', () => {
       return_response: true,
       id: expect.any(Number),
     });
+  });
+
+  it('laat met allowListen alleen geluid uitschrijven, tot tekst en niet verder (besluit 150)', async () => {
+    const uit = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowAiTask: true, allowLights: true });
+    await expect(uit.listen({ start: 'wake_word', pipeline: null, onEvent: () => {} })).rejects.toThrow(/Luisteren staat uit/);
+    const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN, allowListen: true });
+    await expect(client.listen({ start: 'intent' as 'stt', pipeline: null, onEvent: () => {} })).rejects.toThrow(/geen begin/);
+    await expect(client.listen({ start: 'stt', pipeline: 'x"; drop', onEvent: () => {} })).rejects.toThrow(/geen spraakassistent/);
+    // Luisteren opent geen andere deur.
+    await expect(client.callService('conversation', 'process', {}, {})).rejects.toThrow(/Schrijven staat uit/);
+  });
+
+  it('stuurt het geluid naar de handler van Home Assistant, en de gebeurtenissen terug', async () => {
+    const ha = await startFakeHa({});
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN, allowListen: true });
+    cleanups.push(() => client.close());
+    const ready = new Promise((resolve) => client.on('ready', resolve));
+    client.connect();
+    await ready;
+    const events: string[] = [];
+    const gesprek = await client.listen({ start: 'wake_word', pipeline: 'smart_climate', onEvent: (e) => events.push(e.type) });
+    const run = ha.received.find((m) => m['type'] === 'assist_pipeline/run')!;
+    expect(run).toMatchObject({ start_stage: 'wake_word', end_stage: 'stt', pipeline: 'smart_climate', input: { sample_rate: 16000 } });
+    await expect.poll(() => events).toContain('run-start');
+    gesprek.send(new Uint8Array([1, 2, 3, 4]));
+    gesprek.end();
+    await expect.poll(() => ha.binary.length).toBe(2);
+    expect([...ha.binary[0]!]).toEqual([7, 1, 2, 3, 4]);
+    expect([...ha.binary[1]!]).toEqual([7]);
+    ha.event(run['id'] as number, 'stt-end', { stt_output: { text: 'doe het licht aan' } });
+    await expect.poll(() => events).toContain('stt-end');
+    // Na stoppen gaat er niets meer heen.
+    gesprek.stop();
+    gesprek.send(new Uint8Array([9, 9]));
+    expect(ha.binary.length).toBe(2);
   });
 
   it('stuurt een toegestane lichtopdracht echt naar Home Assistant', async () => {

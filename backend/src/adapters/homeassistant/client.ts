@@ -33,6 +33,8 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   // De stem van het huis (besluit 141): welke talen en stemmen Piper heeft.
   'tts/engine/list',
   'tts/engine/voices',
+  // Praten met je stem (besluit 150): welke spraakassistenten er zijn, met hun wekwoord.
+  'assist_pipeline/pipeline/list',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
@@ -93,6 +95,13 @@ export interface HaClientOptions {
    * laat ook dit niet door.
    */
   readonly allowAiTask?: boolean;
+  /**
+   * Of deze client geluid mag laten uitschrijven (besluit 150): precies
+   * `assist_pipeline/run`, via `listen`, vanaf het wekwoord of de spraak en
+   * altijd tot en met tekst (`end_stage: stt`). De gespreksagent en het
+   * schakelen van Home Assistant komen er nooit aan te pas.
+   */
+  readonly allowListen?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
   readonly reconnectMaxMs?: number;
@@ -182,12 +191,13 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen'>> & {
     allowWrites: boolean;
     allowLights: boolean;
     allowScenes: boolean;
     allowCovers: boolean;
     allowAiTask: boolean;
+    allowListen: boolean;
   };
   #socket: WebSocket | null = null;
   #nextId = 1;
@@ -206,6 +216,7 @@ export class HaClient extends EventEmitter {
       allowScenes: options.allowScenes ?? false,
       allowCovers: options.allowCovers ?? false,
       allowAiTask: options.allowAiTask ?? false,
+      allowListen: options.allowListen ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
@@ -250,6 +261,9 @@ export class HaClient extends EventEmitter {
 
     socket.addEventListener('close', () => {
       this.#failPending('verbinding gesloten');
+      // Een gesprek dat liep, is voorbij (besluit 150).
+      for (const luister of this.#luisteraars.values()) luister({ type: 'error', data: { code: 'verbinding', message: 'verbinding met Home Assistant verbroken' } });
+      this.#luisteraars.clear();
       this.#subscriptionId = null;
       if (this.#closing) return;
       this.emit('disconnected', 'socket gesloten');
@@ -321,6 +335,14 @@ export class HaClient extends EventEmitter {
       }
 
       case 'event': {
+        // Een spraakopdracht (besluit 150): de gebeurtenissen gaan naar wie luistert.
+        const luister = this.#luisteraars.get(msg['id'] as number);
+        if (luister) {
+          const ev = msg['event'] as { type?: string; data?: Record<string, unknown> } | undefined;
+          luister({ type: String(ev?.type ?? ''), data: ev?.data ?? {} });
+          if (ev?.type === 'run-end') this.#luisteraars.delete(msg['id'] as number);
+          return;
+        }
         // De verwachting van een weerentiteit (besluit 111): alleen lezen.
         if (this.#forecastSub != null && msg['id'] === this.#forecastSub) {
           const ev = msg['event'] as { forecast?: unknown } | undefined;
@@ -380,6 +402,78 @@ export class HaClient extends EventEmitter {
       this.#pending.set(id, { resolve, reject });
       this.#send({ ...payload, id });
     });
+  }
+
+  /** Wie naar een spraakopdracht luistert, per opdracht-id (besluit 150). */
+  readonly #luisteraars = new Map<number, (event: SpraakEvent) => void>();
+
+  /**
+   * Laat Home Assistant geluid uitschrijven (besluit 150). Begint bij het
+   * wekwoord of meteen bij de spraak, en stopt altijd na het uitschrijven: de
+   * gespreksagent en het schakelen van Home Assistant komen er niet aan te pas.
+   * Het geluid is ruwe PCM, 16 kHz, 16 bit, mono; `end` zegt dat het klaar is.
+   */
+  async listen(opts: {
+    readonly start: 'wake_word' | 'stt';
+    readonly pipeline: string | null;
+    readonly onEvent: (event: SpraakEvent) => void;
+  }): Promise<Gesprek> {
+    if (!this.#options.allowListen) throw new Error('Luisteren staat uit: assist_pipeline/run is niet verstuurd.');
+    if (opts.start !== 'wake_word' && opts.start !== 'stt') throw new Error(`geen begin: ${String(opts.start)}`);
+    if (opts.pipeline != null && !/^[A-Za-z0-9_-]{1,64}$/.test(opts.pipeline)) throw new Error(`geen spraakassistent: ${opts.pipeline}`);
+    const id = this.#nextId;
+    let handler: number | null = null;
+    let klaar = false;
+    const wachtrij: Uint8Array[] = [];
+    const stuur = (stuk: Uint8Array) => {
+      const socket = this.#socket;
+      if (handler == null || !socket || socket.readyState !== WebSocket.OPEN) return;
+      const bericht = new Uint8Array(stuk.length + 1);
+      bericht[0] = handler;
+      bericht.set(stuk, 1);
+      socket.send(bericht);
+    };
+    this.#luisteraars.set(id, (event) => {
+      if (event.type === 'run-start') {
+        const h = (event.data['runner_data'] as { stt_binary_handler_id?: unknown } | undefined)?.stt_binary_handler_id;
+        if (typeof h === 'number') {
+          handler = h;
+          for (const stuk of wachtrij.splice(0)) stuur(stuk);
+          if (klaar) stuur(new Uint8Array(0));
+        }
+      }
+      opts.onEvent(event);
+    });
+    try {
+      await this.#command({
+        type: 'assist_pipeline/run',
+        start_stage: opts.start,
+        end_stage: 'stt',
+        // Het wekwoord mag lang op zich laten wachten; daarna begint de pagina opnieuw.
+        input: opts.start === 'wake_word' ? { sample_rate: 16000, timeout: 280, noise_suppression_level: 1 } : { sample_rate: 16000, noise_suppression_level: 1 },
+        timeout: 300,
+        ...(opts.pipeline ? { pipeline: opts.pipeline } : {}),
+      });
+    } catch (error) {
+      this.#luisteraars.delete(id);
+      throw error;
+    }
+    return {
+      send: (stuk) => {
+        if (klaar || stuk.length === 0) return;
+        if (handler == null) wachtrij.push(stuk.slice());
+        else stuur(stuk);
+      },
+      end: () => {
+        if (klaar) return;
+        klaar = true;
+        stuur(new Uint8Array(0));
+      },
+      stop: () => {
+        klaar = true;
+        if (this.#luisteraars.delete(id)) void this.#command({ type: 'unsubscribe_events', subscription: id }).catch(() => {});
+      },
+    };
   }
 
   #send(payload: Record<string, unknown>): void {
@@ -492,6 +586,19 @@ export class HaClient extends EventEmitter {
     } | null;
     return result?.response?.data ?? null;
   }
+}
+
+/** Een gebeurtenis van een spraakopdracht, zoals Home Assistant hem stuurt (besluit 150). */
+export interface SpraakEvent {
+  readonly type: string;
+  readonly data: Record<string, unknown>;
+}
+
+/** Een lopende spraakopdracht: geluid erin, klaar, of stoppen. */
+export interface Gesprek {
+  readonly send: (pcm: Uint8Array) => void;
+  readonly end: () => void;
+  readonly stop: () => void;
 }
 
 /** Hoe lang een opdracht aan een AI-taak mag zijn (besluit 148). */

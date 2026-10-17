@@ -47,6 +47,7 @@ import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } fro
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze } from './web/taalmodel.js';
+import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
@@ -458,6 +459,8 @@ const client = new HaClient({
   // Een AI-taak om een tekst vragen (besluit 148): de assistent in eigen woorden.
   // Er verandert niets in het huis; welke taak, kiest de bewoner bij Functies.
   allowAiTask: true,
+  // Geluid laten uitschrijven, tot tekst en niet verder (besluit 150): de microfoon en "Hé huis".
+  allowListen: true,
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -557,6 +560,17 @@ const solarPace = new SensorPace();
  */
 const functiesStore = logDir !== '' ? new FunctiesStore(logDir) : null;
 await functiesStore?.load();
+/** De spraakassistenten in Home Assistant (besluit 150), bij het verbinden en elke vijf minuten. */
+let spraakLijst: SpraakKeuze[] = [];
+async function spraakBij(): Promise<void> {
+  try {
+    spraakLijst = spraakKeuzes(await client.query('assist_pipeline/pipeline/list'));
+  } catch {
+    // Geen spraakassistenten (of een oudere Home Assistant): dan kan de microfoon niet.
+  }
+}
+client.on('ready', () => void spraakBij());
+setInterval(() => void spraakBij(), 5 * 60_000).unref();
 let gevondenVoor: HouseRegisters | null = null;
 let gevondenNu: FunctiesGevonden | null = null;
 const functiesKeuzes = (): FunctiesGevonden | null => {
@@ -565,8 +579,10 @@ const functiesKeuzes = (): FunctiesGevonden | null => {
     gevondenNu = functiesGevonden(houseRegisters.entities, houseRegisters.devices, allStates);
     gevondenVoor = houseRegisters;
   }
-  return gevondenNu;
+  // De spraakassistenten (besluit 150) komen apart: die vraagt de dienst Home Assistant zelf.
+  return { ...gevondenNu, spraakassistenten: spraakLijst };
 };
+
 const functiesNu = (): Functies | null => {
   if (functiesStore?.current) return functiesStore.current;
   const g = functiesKeuzes();
@@ -1144,6 +1160,14 @@ if (webPort != null) {
     schermenAan: () => {
       const f = functiesNu();
       return f ? volledig(f, functiesKeuzes()).schermen.bedienen : true;
+    },
+    // Praten met je stem (besluit 150): geluid naar Home Assistant, tot tekst.
+    luisteren: {
+      start: (opts) => client.listen(opts),
+      pipeline: () => {
+        const f = functiesNu();
+        return f ? volledig(f, functiesKeuzes()).praten.spraak : null;
+      },
     },
     // Praten met je huis (besluit 148): de AI-taak die bij Functies gekozen is, standaard uit.
     praten: {

@@ -368,6 +368,24 @@
     setInterval(klok, 10_000);
     nieuweVersie();
     meldingenStart();
+    luisterStart();
+  }
+
+  /**
+   * "Hé huis" (besluit 150): op een scherm waar luisteren aan staat, laadt elke pagina het
+   * luisteren erbij. Op een telefoon nooit vanzelf; daar tik je op de microfoon.
+   */
+  function luisterStart() {
+    let aan = false;
+    try {
+      aan = localStorage.getItem('sc-luisteren') === 'aan';
+    } catch {
+      aan = false;
+    }
+    if (!aan || telStand() || global.luisteren || !global.isSecureContext) return;
+    const s = document.createElement('script');
+    s.src = 'luisteren.js';
+    document.head.appendChild(s);
   }
 
   /* ------------------------------------------------- meldingen (besluit 136) */

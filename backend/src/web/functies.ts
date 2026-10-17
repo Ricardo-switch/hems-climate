@@ -66,7 +66,15 @@ export interface Functies {
    * assistent licht, scènes en schermen mag bedienen met een zin, binnen wat
    * licht en schermen bedienen toestaan; weg is aan.
    */
-  readonly praten?: { readonly taalmodel: string | null; readonly bedienen: boolean };
+  readonly praten?: {
+    readonly taalmodel: string | null;
+    readonly bedienen: boolean;
+    /**
+     * De spraakassistent van Home Assistant voor de microfoon en het wekwoord
+     * (besluit 150), of null: die Home Assistant zelf voorop heeft. Weg: null.
+     */
+    readonly spraak?: string | null;
+  };
   /**
    * Wanneer een batterij of een airco-filter een melding geeft (besluit 149):
    * onder dit percentage, of null voor nooit. Weg is 10%, zoals het was.
@@ -97,6 +105,37 @@ export interface FunctiesGevonden {
   readonly weerbronnen?: readonly { readonly id: string; readonly naam: string }[];
   /** De AI-taken in Home Assistant (besluit 148), om een taalmodel te kiezen. */
   readonly taalmodellen?: readonly { readonly id: string; readonly naam: string }[];
+  /** De spraakassistenten in Home Assistant (besluit 150). */
+  readonly spraakassistenten?: readonly SpraakKeuze[];
+}
+
+/** Een spraakassistent uit Home Assistant (besluit 150): met welk wekwoord en welke spraak naar tekst. */
+export interface SpraakKeuze {
+  readonly id: string;
+  readonly naam: string;
+  /** Het wekwoord, zoals openWakeWord het noemt ("he_huis"), of null. */
+  readonly wekwoord: string | null;
+  /** Of hij spraak naar tekst heeft. */
+  readonly spraakNaarTekst: boolean;
+  readonly taal: string | null;
+  /** Of Home Assistant hem voorop heeft. */
+  readonly voorkeur: boolean;
+}
+
+/** De spraakassistenten uit `assist_pipeline/pipeline/list`, zoals Functies ze toont. */
+export function spraakKeuzes(lijst: unknown): SpraakKeuze[] {
+  const r = (typeof lijst === 'object' && lijst != null ? lijst : {}) as { pipelines?: unknown; preferred_pipeline?: unknown };
+  const voorkeur = typeof r.preferred_pipeline === 'string' ? r.preferred_pipeline : null;
+  return (Array.isArray(r.pipelines) ? r.pipelines : [])
+    .filter((p): p is Record<string, unknown> => typeof p === 'object' && p != null && typeof (p as Record<string, unknown>)['id'] === 'string')
+    .map((p) => ({
+      id: String(p['id']),
+      naam: typeof p['name'] === 'string' ? p['name'] : String(p['id']),
+      wekwoord: typeof p['wake_word_id'] === 'string' && p['wake_word_entity'] ? p['wake_word_id'] : null,
+      spraakNaarTekst: typeof p['stt_engine'] === 'string' && p['stt_engine'] !== '',
+      taal: typeof p['stt_language'] === 'string' ? p['stt_language'] : typeof p['language'] === 'string' ? p['language'] : null,
+      voorkeur: p['id'] === voorkeur,
+    }));
 }
 
 const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp', ext: 'breed', snapshots_sub: 'plaatjes vloeiend', snapshots_main: 'plaatjes scherp' };
@@ -190,7 +229,7 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
     licht: { bedienen: true },
     schermen: { bedienen: true },
     // Het taalmodel staat standaard uit (besluit 148): het vaste antwoord werkt altijd.
-    praten: { taalmodel: null, bedienen: true },
+    praten: { taalmodel: null, bedienen: true, spraak: null },
     meldingen: STANDAARD_DREMPELS,
   };
 }
@@ -199,14 +238,14 @@ export function functiesVoorstel(g: FunctiesGevonden): Functies {
 export function volledig(
   f: Functies,
   g: FunctiesGevonden | null,
-): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean }; meldingen: Drempels } {
+): Functies & { weer: { bron: string | null; uren: boolean }; licht: { bedienen: boolean }; schermen: { bedienen: boolean }; praten: { taalmodel: string | null; bedienen: boolean; spraak: string | null }; meldingen: Drempels } {
   const weer = f.weer ?? { bron: g?.weerbronnen?.[0]?.id ?? null };
   return {
     ...f,
     weer: { bron: weer.bron, uren: weer.uren ?? true },
     licht: f.licht ?? { bedienen: true },
     schermen: f.schermen ?? { bedienen: true },
-    praten: f.praten ?? { taalmodel: null, bedienen: true },
+    praten: { taalmodel: f.praten?.taalmodel ?? null, bedienen: f.praten?.bedienen ?? true, spraak: f.praten?.spraak ?? null },
     meldingen: f.meldingen ?? STANDAARD_DREMPELS,
   };
 }
@@ -265,13 +304,16 @@ export function controleer(body: unknown, g: FunctiesGevonden): FunctiesUitkomst
   }
   // Praten met je huis (besluit 148): alleen een AI-taak die Home Assistant kent.
   const pratenIn = b['praten'];
-  let praten = { taalmodel: null as string | null, bedienen: true };
+  let praten = { taalmodel: null as string | null, bedienen: true, spraak: null as string | null };
   if (pratenIn !== undefined) {
     const pr = (typeof pratenIn === 'object' && pratenIn != null ? pratenIn : {}) as Record<string, unknown>;
     const model = pr['taalmodel'] ?? null;
     if (model !== null && (typeof model !== 'string' || !(g.taalmodellen ?? []).some((x) => x.id === model))) return { ok: false, reden: 'die AI-taak kent Home Assistant niet' };
     if (typeof pr['bedienen'] !== 'boolean') return { ok: false, reden: 'praten.bedienen is ja of nee' };
-    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'] };
+    // De spraakassistent (besluit 150): alleen een die Home Assistant kent.
+    const spraak = pr['spraak'] ?? null;
+    if (spraak !== null && (typeof spraak !== 'string' || !(g.spraakassistenten ?? []).some((x) => x.id === spraak))) return { ok: false, reden: 'die spraakassistent kent Home Assistant niet' };
+    praten = { taalmodel: model as string | null, bedienen: pr['bedienen'], spraak: spraak as string | null };
   }
   // Wanneer een batterij of filter een melding geeft (besluit 149): een van de keuzes, of nooit.
   const meldingenIn = b['meldingen'];

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Luisteren naar "Hé huis"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Luisteren naar "Hé huis" op de wand (schets, 17 oktober 2026; besluit 148, stap 2).
+   * De wand blijft Thuis tonen. Hoort Home Assistant het wekwoord, dan schuift er een
+   * laag over Thuis: het huis luistert, schrijft mee wat je zegt, doet het en zegt het.
+   * Daarna gaat de laag vanzelf weg en staat Thuis er weer.
+   *
+   * Vijf standen:
+   *   #rust         (zonder hash) Thuis, met rechtsonder dat de wand luistert;
+   *   #wakker       net "Hé huis" gehoord: de bol luistert mee met je stem;
+   *   #verstaat     wat je zei komt in beeld, het huis denkt na;
+   *   #antwoord     het huis deed het en zegt het, met het kaartje; sluit vanzelf;
+   *   #nietverstaan het verstond je niet, en luistert nog even.
+   *
+   * Gekozen op 17 oktober 2026: een laag over Thuis (niet naar de Assistent); een zacht
+   * tikje als het huis "Hé huis" hoort; na het antwoord luistert het nog 5 seconden, zodat
+   * je zonder wekwoord verder kunt ("en de keuken ook", "stop"); de laag sluit 8 seconden
+   * nadat het huis klaar is met praten.
+   *
+   * Je stem gaat naar Home Assistant in huis (openWakeWord en Whisper), niet naar buiten.
+   * Alleen de tekst gaat daarna verder, zoals een getypte zin.
+   */
+  body { margin: 0; }
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .scherm iframe { position: absolute; inset: 0; width: 1280px; height: 800px; border: 0; }
+
+  /* In rust: de bol in de balk van Thuis ("Zeg „Hé huis"") krijgt een groene ring: hij luistert. */
+  .oor { position: absolute; left: 106px; top: 718px; width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--mint); box-shadow: 0 0 14px rgba(110, 231, 183, 0.55); z-index: 3; pointer-events: none; animation: adem 3s ease-in-out infinite; }
+  .oor i { position: absolute; right: -2px; top: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--mint); border: 2px solid #0b1424; }
+  @keyframes adem { 50% { box-shadow: 0 0 4px rgba(110, 231, 183, 0.2); } }
+
+  /* De laag over Thuis. */
+  .laag { position: absolute; inset: 0; z-index: 5; background: radial-gradient(ellipse at 30% 45%, rgba(16, 40, 48, 0.86), rgba(6, 10, 20, 0.9) 70%); backdrop-filter: blur(8px); display: none; }
+  body:not([data-toon='rust']) .laag { display: block; }
+  body:not([data-toon='rust']) .oor { display: none; }
+
+  .kern { position: absolute; left: 150px; top: 200px; width: 320px; height: 320px; display: grid; place-items: center; }
+  .bol { width: 160px; height: 160px; border-radius: 50%; position: relative; z-index: 2; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #c9fff0 16%, #6ee7b7 42%, #2f8f8a 75%, #103a40 100%); box-shadow: 0 0 70px rgba(110, 231, 183, 0.55), 0 0 160px rgba(110, 231, 183, 0.25), inset -18px -24px 40px rgba(5, 40, 40, 0.55); }
+  body[data-toon='verstaat'] .bol, body[data-toon='antwoord'] .bol { background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 60px rgba(111, 170, 255, 0.55), 0 0 140px rgba(143, 134, 255, 0.35), inset -18px -24px 40px rgba(20, 10, 70, 0.55); }
+  .ring { position: absolute; border-radius: 50%; border: 2px solid rgba(110, 231, 183, 0.5); }
+  .ring.r1 { inset: 60px; } .ring.r2 { inset: 34px; opacity: 0.6; } .ring.r3 { inset: 8px; opacity: 0.3; }
+  body[data-toon='wakker'] .ring, body[data-toon='nietverstaan'] .ring { animation: golf 1.8s ease-out infinite; }
+  body[data-toon='wakker'] .ring.r2 { animation-delay: 0.6s; } body[data-toon='wakker'] .ring.r3 { animation-delay: 1.2s; }
+  @keyframes golf { from { transform: scale(0.9); opacity: 0.8; } to { transform: scale(1.12); opacity: 0; } }
+  body[data-toon='verstaat'] .ring, body[data-toon='antwoord'] .ring { border-color: rgba(143, 196, 255, 0.35); }
+  .golfje { position: absolute; inset: 0; z-index: 1; }
+  @media (prefers-reduced-motion: reduce) { .ring, .oor i { animation: none !important; } }
+
+  .tekst { position: absolute; left: 520px; top: 214px; width: 640px; }
+  .wie { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 9px; color: var(--mint); }
+  .wie i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; display: block; box-shadow: 0 0 10px currentColor; }
+  body[data-toon='verstaat'] .wie, body[data-toon='antwoord'] .wie { color: #B7B0FF; }
+  .groot { font-family: var(--kop); font-weight: 600; font-size: 46px; line-height: 1.08; letter-spacing: -0.015em; margin: 12px 0 0; }
+  .groot .nog { color: rgba(238, 243, 247, 0.3); }
+  .groot .getal { color: var(--zon); }
+  .klein { font-size: 18px; color: var(--zacht); margin: 16px 0 0; line-height: 1.45; }
+  .jij { display: inline-flex; align-items: center; gap: 9px; padding: 9px 16px; border-radius: 18px 18px 18px 4px; background: rgba(255, 255, 255, 0.08); font-size: 17px; color: var(--tekst); margin-bottom: 22px; }
+  .jij svg { width: 16px; height: 16px; color: var(--mint); }
+  .ding { display: inline-grid; grid-template-columns: 42px auto; gap: 1px 12px; align-items: center; margin-top: 26px; padding: 10px 18px 10px 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); }
+  .ding .ik { grid-row: span 2; width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: rgba(255, 183, 101, 0.16); }
+  .ding .ik svg { width: 22px; height: 22px; }
+  .ding b { font-family: var(--kop); font-size: 21px; font-weight: 600; }
+  .ding span { font-size: 13px; color: var(--gedempt); }
+
+  /* Onderaan: stoppen, en hoe lang het nog duurt. */
+  .onder { position: absolute; left: 150px; right: 120px; bottom: 56px; display: flex; align-items: center; gap: 16px; }
+  .stopknop { height: 52px; padding: 0 24px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font-weight: 700; font-size: 16px; display: grid; place-items: center; }
+  .onder .hint { font-size: 14.5px; color: var(--gedempt); }
+  .tijdbalk { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; max-width: 220px; }
+  .tijdbalk i { display: block; height: 100%; width: 62%; background: rgba(143, 196, 255, 0.6); }
+  .privacy { position: absolute; right: 30px; top: 26px; font-size: 12.5px; color: var(--gedempt); display: flex; align-items: center; gap: 8px; }
+  .privacy svg { width: 15px; height: 15px; }
+  .schetslabel { position: absolute; left: 50%; transform: translateX(-50%); top: 12px; z-index: 9; font-size: 12px; color: var(--gedempt); padding: 6px 12px; border-radius: 999px; border: 1px dashed rgba(255, 255, 255, 0.2); background: rgba(9, 15, 28, 0.6); }
+
+  [data-stand] { display: none !important; }
+  body[data-toon='wakker'] .stopknop[data-stand~='wakker'], body[data-toon='verstaat'] .stopknop[data-stand~='verstaat'], body[data-toon='nietverstaan'] .stopknop[data-stand~='nietverstaan'], body[data-toon='antwoord'] .stopknop[data-stand~='antwoord'] { display: grid !important; }
+  body[data-toon='wakker'] [data-stand~='wakker'], body[data-toon='verstaat'] [data-stand~='verstaat'], body[data-toon='antwoord'] [data-stand~='antwoord'], body[data-toon='nietverstaan'] [data-stand~='nietverstaan'] { display: revert !important; }
+</style>
+</head>
+<body>
+<div class="scherm">
+  <iframe src="Wand-Thuis.html" title="Thuis op de wand" tabindex="-1" aria-hidden="true"></iframe>
+  <span class="schetslabel" id="label"></span>
+
+  <!-- In rust: de wand luistert, alleen naar het wekwoord. -->
+  <div class="oor" aria-label="De wand luistert naar Hé huis"><i></i></div>
+
+  <div class="laag">
+    <div class="privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 11l9-7 9 7M5 10v10h14V10"/></svg>Je stem blijft in huis</div>
+
+    <div class="kern" aria-hidden="true">
+      <svg class="golfje" viewBox="0 0 320 320" id="golfje"></svg>
+      <div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
+      <div class="bol"></div>
+    </div>
+
+    <div class="tekst" data-stand="wakker">
+      <span class="wie"><i></i>Ik luister</span>
+      <p class="groot">Zeg het maar.</p>
+      <p class="klein">Bijvoorbeeld "doe het licht beneden wat zachter" of "hoe warm is het boven?"</p>
+    </div>
+
+    <div class="tekst" data-stand="verstaat">
+      <span class="jij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Doe het licht beneden wat zachter</span>
+      <span class="wie"><i></i>Je huis denkt na</span>
+      <p class="groot nog" style="color: rgba(238,243,247,0.35)">Even kijken…</p>
+    </div>
+
+    <div class="tekst" data-stand="antwoord">
+      <span class="jij"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Doe het licht beneden wat zachter</span>
+      <span class="wie"><i></i>Je huis</span>
+      <p class="groot">Gedaan, de plafonnière staat op <span class="getal">40%</span>. Lekker rustig voor de avond.</p>
+      <div class="ding"><span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="#FFB765" stroke-width="1.9" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg></span><b>40%</b><span>Plafonnière, was 80%</span></div>
+    </div>
+
+    <div class="tekst" data-stand="nietverstaan">
+      <span class="wie"><i></i>Ik luister nog even</span>
+      <p class="groot">Dat verstond ik niet.</p>
+      <p class="klein">Zeg het nog eens, wat langzamer.</p>
+    </div>
+
+    <div class="onder">
+      <span class="stopknop" data-stand="wakker verstaat nietverstaan">Stop</span>
+      <span class="hint" data-stand="wakker">Ik luister tot je stopt met praten</span>
+      <span class="hint" data-stand="nietverstaan">Nog 6 seconden</span>
+      <span class="stopknop" data-stand="antwoord">Sluiten</span>
+      <span class="hint" data-stand="antwoord">Zeg gerust nog iets · sluit over 8 seconden</span>
+      <span class="tijdbalk" data-stand="antwoord"><i></i></span>
+    </div>
+  </div>
+</div>
+<script>
+  const toon = { '#wakker': 'wakker', '#verstaat': 'verstaat', '#antwoord': 'antwoord', '#nietverstaan': 'nietverstaan' }[location.hash] ?? 'rust';
+  document.body.dataset.toon = toon;
+  document.getElementById('label').textContent = { rust: 'Schets · de wand luistert, alleen naar "Hé huis"', wakker: 'Schets · net "Hé huis" gehoord', verstaat: 'Schets · wat je zei, het huis denkt na', antwoord: 'Schets · gedaan, de laag sluit vanzelf', nietverstaan: 'Schets · niet verstaan' }[toon];
+  // Je stem als golf rond de bol: in de app volgt hij de microfoon.
+  const g = document.getElementById('golfje');
+  const lijnen = [];
+  for (let i = 0; i < 80; i++) {
+    const a = (i / 80) * Math.PI * 2;
+    const l = toon === 'wakker' ? 10 + Math.abs(Math.sin(i * 0.7) * 30 + Math.sin(i * 0.23) * 16) : 4;
+    lijnen.push(`<line x1="${160 + Math.cos(a) * 98}" y1="${160 + Math.sin(a) * 98}" x2="${160 + Math.cos(a) * (98 + l)}" y2="${160 + Math.sin(a) * (98 + l)}" stroke="#6ee7b7" stroke-opacity="0.75" stroke-width="2.6" stroke-linecap="round"/>`);
+  }
+  g.innerHTML = toon === 'wakker' ? lijnen.join('') : '';
+</script>
+</body>
+</html>

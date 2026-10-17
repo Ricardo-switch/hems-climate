@@ -45,6 +45,9 @@ import { uitspraak } from './uitspraak.js';
 import { begrijp, MAX_TEKST } from './woordzoeker.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
+import { Luisterpost, type LuisterDeur } from './luisterpost.js';
+import { accepteer, isUpgrade, weiger } from './websocket.js';
+import type { Duplex } from 'node:stream';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport, type Location } from './sun.js';
 import { CAMERA_ID } from './camera.js';
@@ -233,6 +236,12 @@ export interface WebOptions {
     readonly pauze?: (entityId: string) => { readonly tot: number; readonly reden: string } | null;
     readonly bedienen: () => boolean;
   };
+  /**
+   * Praten met je stem (besluit 150): geluid van de pagina via `/api/luister`
+   * naar Home Assistant, dat het wekwoord hoort en uitschrijft. Weg: geen
+   * microfoon.
+   */
+  readonly luisteren?: LuisterDeur;
   /**
    * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
    *
@@ -478,6 +487,50 @@ export class WebServer {
         else res.end();
       });
     });
+    // De microfoon (besluit 150): een websocket, alleen voor `/api/luister`.
+    this.#server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+      void this.#luister(req, socket, head).catch(() => socket.destroy());
+    });
+  }
+
+  #luisterpost: Luisterpost | null = null;
+  readonly #luistersockets = new Set<Duplex>();
+
+  /**
+   * Een websocket voor de microfoon (besluit 150). Dezelfde poort als de rest:
+   * alleen bekende hostnamen, alleen vanaf de eigen pagina (een browser stuurt
+   * bij een websocket altijd een Origin), en met de inlog van de app.
+   */
+  async #luister(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
+    const url = new URL(req.url ?? '/', 'http://localhost');
+    const deur = this.#options.luisteren;
+    if (url.pathname !== '/api/luister' || deur == null || !isUpgrade(req)) return weiger(socket, 404, 'Not Found');
+    const access = this.#options.access;
+    if (access.kind !== 'ingress' && !hostAllowed(req.headers.host, access.kind === 'sessions' ? access.hosts : [])) return weiger(socket, 421, 'Misdirected Request');
+    if (!req.headers.origin || !sameOrigin(req)) return weiger(socket, 403, 'Forbidden');
+    if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) return weiger(socket, 401, 'Unauthorized');
+    if (access.kind === 'ingress' && ingressVisitor(req) == null) return weiger(socket, 401, 'Unauthorized');
+    const begin = url.searchParams.get('start') === 'spraak' ? 'stt' : 'wake_word';
+    if (head.length > 0) socket.unshift(head);
+    this.#luistersockets.add(socket);
+    socket.on('close', () => this.#luistersockets.delete(socket));
+    this.#luisterpost ??= new Luisterpost(deur);
+    const post = this.#luisterpost;
+    // Geluid dat binnenkomt voordat Home Assistant klaarstaat, wacht even (hooguit een paar seconden).
+    const wacht: Buffer[] = [];
+    let ronde: Awaited<ReturnType<Luisterpost['begin']>> | null = null;
+    let dicht = false;
+    const verbinding = accepteer(req, socket, {
+      binair: (d) => (ronde ? ronde.geluid(d) : wacht.length < 60 && wacht.push(d)),
+      tekst: (t) => ronde?.tekst(t),
+      dicht: () => {
+        dicht = true;
+        ronde?.dicht();
+      },
+    });
+    ronde = await post.begin(verbinding, begin);
+    for (const d of wacht.splice(0)) ronde.geluid(d);
+    if (dicht) ronde.dicht();
   }
 
   async #handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -1956,6 +2009,8 @@ export class WebServer {
       listener.res.end();
     }
     this.#listeners.clear();
+    // Open microfoons (besluit 150) houden de server anders open.
+    for (const socket of this.#luistersockets) socket.destroy();
     await new Promise<void>((ok) => this.#server.close(() => ok()));
   }
 
