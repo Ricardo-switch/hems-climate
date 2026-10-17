@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Vrijgeven op de eigen pc (besluit 135).
+# Vrijgeven op de eigen pc (besluit 135), voor als de CI het niet kan.
 #
-# De CI op GitHub kost minuten, en die waren op tot 1 november 2026. Dit script doet hier wat de CI
-# deed, in dezelfde volgorde, en zet daarna `stable` vooruit; de NAS volgt
-# `stable` (besluit 54). Faalt er iets, dan blijft `stable` waar hij was.
+# Gewoon gaat het via GitHub: een push naar `beta` draait de CI, en die zet
+# `stable` vooruit (besluit 152). Dit script doet hier wat de CI doet, in
+# dezelfde volgorde, en zet daarna `stable` vooruit; de NAS volgt `stable`
+# (besluit 54). Faalt er iets, dan blijft `stable` waar hij was.
 #
-#   1. main is gepusht, de werkmap is schoon, stable ligt erachter
+#   1. beta is gepusht, de werkmap is schoon, stable ligt erachter
 #   2. de dienst: typecheck, lint, tests, build (in UTC, zoals de NAS)
 #   3. de weergave: build
 #   4. de pagina in een browser
@@ -25,12 +26,12 @@ cd "$(git rev-parse --show-toplevel)"
 stap() { printf '\n== %s\n' "$*"; }
 stop() { printf '\nNIET VRIJGEGEVEN: %s\n' "$*" >&2; exit 1; }
 
-stap "1. main, schoon, gepusht"
-[ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || stop "niet op main"
+stap "1. beta, schoon, gepusht"
+[ "$(git rev-parse --abbrev-ref HEAD)" = "beta" ] || stop "niet op beta"
 [ -z "$(git status --porcelain --untracked-files=no)" ] || stop "er staan wijzigingen die niet gecommit zijn"
-git fetch -q origin main stable
+git fetch -q origin beta stable
 HEAD_SHA=$(git rev-parse HEAD)
-[ "$HEAD_SHA" = "$(git rev-parse origin/main)" ] || stop "main is niet gepusht, of loopt achter op GitHub"
+[ "$HEAD_SHA" = "$(git rev-parse origin/beta)" ] || stop "beta is niet gepusht, of loopt achter op GitHub"
 git merge-base --is-ancestor origin/stable HEAD || stop "stable is niet een voorganger van deze commit; dat beslist een mens"
 if [ "$(git rev-parse origin/stable)" = "$HEAD_SHA" ]; then echo "stable staat al op deze commit"; exit 0; fi
 echo "van $(git rev-parse --short origin/stable) naar $(git rev-parse --short HEAD)"

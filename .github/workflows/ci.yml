@@ -1,11 +1,14 @@
-# De poort vóór de NAS (besluit 54).
+# De poort vóór de NAS (besluit 54), en sinds besluit 152 ook vóór main.
 #
 # De NAS haalt elke vijf minuten de tak op die daar is uitgecheckt en rolt die
-# uit. Stond dat op `main`, dan stond elke push binnen vijf minuten in de
+# uit. Stond dat op de werktak, dan stond elke push binnen vijf minuten in de
 # schaduwdienst die de winterdataset opbouwt, zonder één automatische controle.
 #
-# Nu: elke push naar main draait typecheck, tests en build. Pas als alles groen
-# is, schuift de tak `stable` mee naar die commit. De NAS volgt `stable`.
+# Nu: het werk gaat naar `beta`. Elke push daarheen draait typecheck, tests en
+# build. Pas als alles groen is, schuift de tak `stable` mee naar die commit.
+# De NAS volgt `stable`. Naar `main`, waar de add-on van Home Assistant naar
+# kijkt, gaat het alleen met een pull request van beta die de bewoner
+# samenvoegt; ook die draait eerst dezelfde controles.
 #
 # `stable` schuift alleen vooruit. Een push die hem terug zou zetten of een
 # herschreven geschiedenis zou volgen, wordt door git geweigerd en laat deze run
@@ -13,11 +16,13 @@
 
 name: ci
 
-# Tot 1 november 2026 alleen met de hand (besluit 135): de minuten van GitHub
-# waren op. Vrijgeven gaat zolang met tools/vrijgeven.sh op de eigen pc, die
-# hetzelfde doet en daarna stable vooruitzet. Vanaf 1 november weer bij elke
-# push: zet dan `push: branches: [main]` hieronder terug.
+# De repository is openbaar, en dan kosten de runners van GitHub geen minuten.
+# Daarmee vervalt de reden voor vrijgeven op de eigen pc (besluit 135).
 on:
+  push:
+    branches: [beta]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -168,7 +173,7 @@ jobs:
   stable:
     name: stable bijwerken
     needs: [test, image, deploy, page]
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/beta'
     runs-on: ubuntu-latest
     permissions:
       contents: write

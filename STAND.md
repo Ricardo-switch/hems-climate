@@ -210,8 +210,10 @@ verwijzing bestaat.
   gebeurt, en per kamer of koelen van het net mag ([133]).
 - **Voorrang** geldt per richting, koelen en verwarmen; **Hoe voelt het** geeft
   een antwoord en een voorstel ([134]); sinds [147] vraagt ook dat een inlog.
-- **Vrijgeven** gaat tot 1 november op de eigen pc met `tools/vrijgeven.sh`;
-  daarna weer via GitHub ([135]).
+- **Vrijgeven:** het werk gaat naar `beta`; de CI zet `stable` voor de NAS
+  vooruit, en naar `main` gaat het alleen met een pull request dat de bewoner
+  samenvoegt. De repository is openbaar en opgeschoond: geen export van Home
+  Assistant en geen configuratie van een echte woning in git ([152]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -289,7 +291,8 @@ verwijzing bestaat.
 
 ## Kwaliteitsbewaking
 
-- **De CI staat vóór de NAS:** alleen groen schuift `stable` op ([54]). De
+- **De CI staat vóór de NAS:** alleen groen schuift `stable` op ([54]), na
+  een push naar `beta` ([152]). De
   pagina en `deploy.sh` worden ook getest ([69]); een mislukte paginatest laat
   een trace achter.
 - **Regels voor elke toestand** over duizenden gegenereerde standen ([56]), een
@@ -437,7 +440,6 @@ verwijzing bestaat.
 [132]: DECISIONS.md#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt
 [133]: DECISIONS.md#133-comfort-zegt-wanneer-en-waarmee-aan-en-uit-zon-en-net
 [134]: DECISIONS.md#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord
-[135]: DECISIONS.md#135-tot-1-november-vrijgeven-op-de-eigen-pc
 [136]: DECISIONS.md#136-meldingen-in-de-app
 [137]: DECISIONS.md#137-verwacht-naast-echt-of-de-zonverwachting-klopte
 [138]: DECISIONS.md#138-de-regeling-per-kamer-in-de-app
@@ -454,4 +456,5 @@ verwijzing bestaat.
 [149]: DECISIONS.md#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt
 [150]: DECISIONS.md#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand
 [151]: DECISIONS.md#151-een-gast-zonder-persoon-een-back-up-opnieuw-beginnen-en-een-export-voor-onderzoek
+[152]: DECISIONS.md#152-openbaar-en-het-werk-gaat-via-beta
 <!-- links:einde -->

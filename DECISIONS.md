@@ -192,11 +192,12 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [64. Echt schakelen pas met een complete winter en alle functies](#64-echt-schakelen-pas-met-een-complete-winter-en-alle-functies)
 - [67. Een mail als de opname stilvalt](#67-een-mail-als-de-opname-stilvalt)
 - [118. Uitrollen via een eigen add-on-bibliotheek op GitHub](#118-uitrollen-via-een-eigen-add-on-bibliotheek-op-github)
-- [135. Tot 1 november vrijgeven op de eigen pc](#135-tot-1-november-vrijgeven-op-de-eigen-pc)
+- [135. Tot 1 november vrijgeven op de eigen pc](#135-tot-1-november-vrijgeven-op-de-eigen-pc) — *vervangen door 152*
+- [152. Openbaar, en het werk gaat via beta](#152-openbaar-en-het-werk-gaat-via-beta)
 
 **Kwaliteitsbewaking**
 
-- [54. Een machine kijkt mee](#54-een-machine-kijkt-mee)
+- [54. Een machine kijkt mee](#54-een-machine-kijkt-mee) — *aangevuld door 152*
 - [55. De opstart is één zuivere functie](#55-de-opstart-is-één-zuivere-functie)
 - [56. Regels die voor elke toestand gelden](#56-regels-die-voor-elke-toestand-gelden)
 - [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
@@ -2169,7 +2170,7 @@ moment dat de add-on weer aangaat.
 
 ## 54. Een machine kijkt mee
 
-*Onderwerp: kwaliteitsbewaking · Status: geldig*
+*Onderwerp: kwaliteitsbewaking · Status: aangevuld door 152*
 
 Het kwaliteitsrapport van 30 september 2026 gaf "testen en bewaking" een 6. Het
 patroon: wat misging werd gevonden door iemand die ging kijken, niet door iets
@@ -5711,7 +5712,7 @@ naar het inloggen, met inlog verscheen er alleen "Genoteerd".
 
 ## 135. Tot 1 november vrijgeven op de eigen pc
 
-*Onderwerp: uitrol en beheer · Status: geldig*
+*Onderwerp: uitrol en beheer · Status: vervangen door 152*
 
 Op 15 oktober 2026 waren de minuten van GitHub Actions voor deze maand op;
 vanaf 1 november zijn ze er weer. Zonder CI schoof `stable` niet meer mee en
@@ -6535,10 +6536,41 @@ bewoner; er is geen schets.
 
 ---
 
-## Wat nog een besluit wacht
+## 152. Openbaar, en het werk gaat via beta
 
-- **1 november 2026: de CI weer bij elke push** (besluit 135). Zet in
-  `.github/workflows/ci.yml` `push: branches: [main]` terug onder `on:`.
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Op 17 oktober 2026 zette de bewoner de repository openbaar, voor de
+add-on-bibliotheek uit besluit 118. Daarmee kwamen ook de export van Home
+Assistant met de precieze ligging van het huis en de configuratie van deze
+woning op straat. De app gaat later als add-on naar de Pi, die `main` volgt;
+daar mag alleen komen wat de bewoner heeft goedgekeurd. De schaduw op de NAS
+blijft de proeftuin.
+
+*Besluit:*
+
+- **Opgeschoond, de hele geschiedenis.** `HA export/` en
+  `config/sites/huis-cornelissen.json` zijn uit elke commit gehaald, en de
+  privé-mailadressen in de commits zijn het noreply-adres van GitHub geworden.
+  Beide mappen staan in `.gitignore`. De tests rekenen met een naamloos
+  voorbeeldhuis, `backend/test/fixtures/voorbeeld-huis.json`. De configuratie
+  van een echte woning staat op de NAS en in de add-on, nooit in git ([21]).
+- **Het werk gaat naar `beta`.** Een push daarheen draait de CI, en als alles
+  groen is schuift `stable` mee. De NAS volgt `stable`, zoals in besluit 54;
+  daar verandert niets.
+- **Naar `main` alleen met toestemming:** een pull request van `beta` naar
+  `main`, dat de bewoner samenvoegt. De CI draait ook daarop. `main` is
+  beveiligd: geen push zonder pull request, en nooit geforceerd.
+- **De CI draait weer bij elke push** (in plaats van besluit 135): een
+  openbare repository kost geen minuten. `tools/vrijgeven.sh` blijft voor als
+  de CI het niet kan, en werkt nu vanaf `beta`.
+- **Wat niet weg is:** de pull requests 1 tot en met 8 houden de oude commits
+  op GitHub bereikbaar via een directe link. Alleen GitHub Support kan die
+  opruimen. Een oude kloon of oude werkmap mag nooit meer gepusht worden.
+
+---
+
+## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
   Een centrale kast met afzuiging in wc, badkamer, zolder en woonkamer, één
