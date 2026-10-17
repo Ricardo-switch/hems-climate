@@ -100,7 +100,7 @@ function messages(result: ConfigResult): string {
 
 describe('geleverde configuratie', () => {
   it('is geldig en drukt deze woning volledig uit', () => {
-    expect(exampleSite.id).toBe('huis-cornelissen');
+    expect(exampleSite.id).toBe('voorbeeld-huis');
     expect(exampleSite.zones).toHaveLength(3);
     expect(exampleSite.actuators).toHaveLength(4);
     expect(exampleSite.enabledStrategies).toContain('pv-surplus');

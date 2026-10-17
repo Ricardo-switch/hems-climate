@@ -10,13 +10,12 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { resolveConfigPathSync } from '../src/config/load.js';
 import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
 import { COMFORT_FILE, ComfortStore, comfortView, controleerComfort, withComfort, type Comfort } from '../src/web/comfort.js';
-import { exampleSite } from './site.js';
+import { exampleSite, exampleSitePath } from './site.js';
 
-const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+const raw = JSON.parse(readFileSync(exampleSitePath, 'utf-8')) as Record<string, unknown>;
 const zone = exampleSite.zones[0]!;
 
 describe('comfort uit de app (besluit 130)', () => {
@@ -100,7 +99,7 @@ describe('comfort uit de app (besluit 130)', () => {
 
 /* Zon en net, en wanneer het aan- en uitgaat (besluit 133). */
 describe('op zon, en wanneer het aan- en uitgaat', () => {
-  const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+  const raw = JSON.parse(readFileSync(exampleSitePath, 'utf-8')) as Record<string, unknown>;
   const opties = { knownStrategies: defaultStrategies().ids };
 
   it('neemt op zon als buffer van de zone, ook uit', () => {
@@ -127,7 +126,7 @@ describe('op zon, en wanneer het aan- en uitgaat', () => {
 
 /* Voorrang per richting (besluit 134). */
 describe('voorrang bij koelen en bij verwarmen', () => {
-  const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+  const raw = JSON.parse(readFileSync(exampleSitePath, 'utf-8')) as Record<string, unknown>;
   const opties = { knownStrategies: defaultStrategies().ids };
 
   it('geeft per richting alleen de kamers die het kunnen, op volgorde', () => {

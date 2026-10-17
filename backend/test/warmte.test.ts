@@ -7,11 +7,11 @@ import { describe, expect, it } from 'vitest';
 
 import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
-import { resolveConfigPathSync } from '../src/config/load.js';
 import { controleerBronnen, withHeatSources } from '../src/web/warmte.js';
 import { validateLayout } from '../src/web/layout.js';
+import { exampleSitePath } from './site.js';
 
-const raw = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+const raw = JSON.parse(readFileSync(exampleSitePath, 'utf-8')) as Record<string, unknown>;
 const opties = { knownStrategies: defaultStrategies().ids };
 
 describe('de bronnen van een kamer', () => {

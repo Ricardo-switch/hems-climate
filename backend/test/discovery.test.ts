@@ -12,7 +12,7 @@
  *     een woonkamerthermostaat.
  */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -280,18 +280,21 @@ describe('de ontdekking', () => {
   });
 });
 
-describe('tegen het echte register van deze woning', () => {
-  /*
-   * 2.507 entiteiten uit de HA-export. De export bevat geen apparaat- of
-   * gebiedsregister, dus er kan hier geen zone uitkomen — dat is precies wat
-   * er getoetst wordt: op rommelige echte data hoort de ontdekking niets te
-   * verzinnen en netjes te zeggen wat er ontbreekt.
-   */
-  const path = resolve(process.cwd(), '..', 'HA export', 'core.entity_registry');
-  const raw = JSON.parse(readFileSync(path, 'utf-8')) as {
-    data: { entities: HaRegistryEntity[] };
-  };
-  const entities = raw.data.entities;
+/*
+ * 2.507 entiteiten uit de HA-export. De export bevat geen apparaat- of
+ * gebiedsregister, dus er kan hier geen zone uitkomen — dat is precies wat
+ * er getoetst wordt: op rommelige echte data hoort de ontdekking niets te
+ * verzinnen en netjes te zeggen wat er ontbreekt.
+ *
+ * De export staat niet in de openbare repository (besluit 152), dus deze
+ * tests lopen alleen waar hij naast de code ligt, op de eigen pc.
+ */
+const registerPath = resolve(process.cwd(), '..', 'HA export', 'core.entity_registry');
+
+describe.skipIf(!existsSync(registerPath))('tegen het echte register van deze woning', () => {
+  const entities = existsSync(registerPath)
+    ? (JSON.parse(readFileSync(registerPath, 'utf-8')) as { data: { entities: HaRegistryEntity[] } }).data.entities
+    : [];
 
   it('leest een register van deze omvang zonder te struikelen', () => {
     expect(entities.length).toBeGreaterThan(2000);

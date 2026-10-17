@@ -1,16 +1,21 @@
 /**
  * De configuratie die de tests gebruiken.
  *
- * Bewust het echte bestand uit `config/sites` en geen kopie in code: zo toetst
- * elke test meteen dat de geleverde configuratie geldig is en het model kan
- * uitdrukken wat deze woning nodig heeft.
+ * Een bestand en geen kopie in code: zo toetst elke test meteen dat de
+ * configuratie geldig is en het model kan uitdrukken wat een woning nodig
+ * heeft. Het is een naamloos voorbeeld naar het eerste huis; de configuratie
+ * van een echte woning staat niet in de openbare repository (besluit 152).
  */
 
-import { loadSiteConfigFileSync, resolveConfigPathSync } from '../src/config/load.js';
+import { join } from 'node:path';
+import { loadSiteConfigFileSync } from '../src/config/load.js';
 import { defaultStrategies } from '../src/index.js';
 import type { SiteConfig } from '../src/core/model.js';
 
-const loaded = loadSiteConfigFileSync(resolveConfigPathSync(), {
+/** Waar het voorbeeldhuis staat, voor tests die het ruwe bestand willen. */
+export const exampleSitePath = join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json');
+
+const loaded = loadSiteConfigFileSync(exampleSitePath, {
   knownStrategies: defaultStrategies().ids,
 });
 
