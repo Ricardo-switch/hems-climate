@@ -15,21 +15,27 @@
 #     besluit 23 — de weergave had geen enkele beveiliging.
 #  3. Meerdere architecturen, herstartbeleid en logboekbeheer.
 
-name: Smart Climate OS — schaduwmodus
-version: 0.1.0
+name: Smart Climate
+# Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
+# Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
+# het image met dat nummer op (besluit 153).
+version: 0.30.0
 slug: hems_climate
 description: >-
-  Laat de arbiter meedenken naast je bestaande regeling en legt elk besluit vast,
-  zonder klimaat of screens te schakelen. Lampen kun je vanuit de app aan- en
-  uitzetten. De basis voor een latere overstap.
+  Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
+  zonnepanelen, legt elk besluit vast en laat zien wat het huis zou doen.
+  Lampen, scènes en schermen bedien je vanuit de app.
 url: https://github.com/Ricardo-switch/hems-climate
 
-# De Pi is arm64/aarch64. De rest staat erbij omdat de kern nergens van
-# afhangt dat platformspecifiek is; alleen aarch64 is werkelijk getest.
+# Kant-en-klaar gebouwd door GitHub (`.github/workflows/addon.yml`), zodat de
+# Pi bij een update niets zelf hoeft te bouwen. `{arch}` vult de Supervisor in.
+image: ghcr.io/ricardo-switch/{arch}-hems-climate
+
+# De Pi is aarch64; amd64 voor een gewone pc of NUC. Alleen voor deze twee
+# bouwt GitHub een image, op een eigen machine per soort.
 arch:
   - aarch64
   - amd64
-  - armv7
 
 # De weergave gaat via Ingress en dus door de inlog van Home Assistant. Geen
 # `ports:`, want daarmee zou hij daarbuiten óók bereikbaar zijn — precies wat

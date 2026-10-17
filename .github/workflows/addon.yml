@@ -1,0 +1,126 @@
+# De images van de add-on (besluit 153).
+#
+# Home Assistant ziet een update zodra `version` in addon/config.yaml op `main`
+# omhooggaat, en haalt dan ghcr.io/ricardo-switch/{arch}-hems-climate:<versie>
+# op. Dit bouwt die images, zodat de Pi zelf niets hoeft te bouwen.
+#
+# - Op een pull request naar main: bouwen, niet versturen. Zo blijkt vóór het
+#   samenvoegen dat het image er komt.
+# - Na het samenvoegen op main: bouwen en versturen, maar alleen een versie die
+#   er nog niet is. Een versienummer wijst altijd naar dezelfde code; wie code
+#   naar de bewoners wil, verhoogt het nummer (een test houdt het gelijk aan de
+#   app).
+#
+# Tussen het samenvoegen en een klaar image zitten een paar minuten. Ziet Home
+# Assistant de update eerder, dan mislukt het bijwerken even; later lukt het.
+
+name: add-on
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/ricardo-switch/{arch}-hems-climate
+
+jobs:
+  klaarzetten:
+    name: klaarzetten
+    runs-on: ubuntu-latest
+    outputs:
+      versie: ${{ steps.versie.outputs.versie }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: versie
+        id: versie
+        run: |
+          versie=$(sed -n 's/^version: //p' addon/config.yaml)
+          test -n "$versie"
+          echo "versie=$versie" >> "$GITHUB_OUTPUT"
+          echo "Versie $versie"
+
+      # Dezelfde platte vorm als een lokale add-on, met hetzelfde script. Dat
+      # staat alleen hier, omdat PowerShell op de arm-machine niet zeker is.
+      - name: platslaan met stage.ps1
+        shell: pwsh
+        run: ./addon/stage.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-addon
+          path: dist-addon/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  bouwen:
+    name: image ${{ matrix.arch }}
+    needs: klaarzetten
+    # Elke soort op een eigen machine van die soort: geen nabootsing, en
+    # voor een openbare repository kosten beide niets.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    env:
+      VERSIE: ${{ needs.klaarzetten.outputs.versie }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-addon
+          path: dist-addon
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: wat er moet gebeuren
+        id: plan
+        run: |
+          naam="${IMAGE/\{arch\}/${{ matrix.arch }}}:${VERSIE}"
+          echo "naam=$naam" >> "$GITHUB_OUTPUT"
+          versturen=false
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            if docker manifest inspect "$naam" > /dev/null 2>&1; then
+              echo "::notice::$naam bestaat al; alleen bouwen. Verhoog de versie om bewoners iets nieuws te geven."
+            else
+              versturen=true
+            fi
+          fi
+          echo "versturen=$versturen" >> "$GITHUB_OUTPUT"
+          echo "$naam, versturen: $versturen"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: bouwen
+        working-directory: dist-addon
+        run: |
+          basis=$(sed -n 's/^  ${{ matrix.arch }}: //p' build.yaml)
+          test -n "$basis"
+          if [ "${{ steps.plan.outputs.versturen }}" = "true" ]; then uit=--push; else uit=--load; fi
+          docker buildx build . \
+            --platform "${{ matrix.platform }}" \
+            --build-arg BUILD_FROM="$basis" \
+            --build-arg BUILD_ARCH="${{ matrix.arch }}" \
+            --build-arg BUILD_VERSION="$VERSIE" \
+            --build-arg HEMS_COMMIT="${GITHUB_SHA::7}" \
+            --build-arg HEMS_GEBOUWD="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --tag "${{ steps.plan.outputs.naam }}" \
+            "$uit"

@@ -27,6 +27,8 @@ COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/build.js ./
 COPY frontend/src ./src
+# De tekenmotor van ontwerp 2 (besluit 104), net als in backend/Dockerfile.
+COPY frontend/kit ./kit
 ENV HEMS_WEB_OUT=/web/dist
 RUN npm run build
 
@@ -46,6 +48,18 @@ RUN npm run typecheck && npm run build
 # ---------- draaien ----------
 FROM ${BUILD_FROM}
 
+# Wat de Supervisor op een add-on-image verwacht. De workflow op GitHub geeft
+# beide mee; bij een lokale bouw blijven ze leeg, en dat geeft niet.
+ARG BUILD_ARCH
+ARG BUILD_VERSION
+LABEL \
+  io.hass.type="addon" \
+  io.hass.name="Smart Climate" \
+  io.hass.arch="${BUILD_ARCH}" \
+  io.hass.version="${BUILD_VERSION}" \
+  org.opencontainers.image.version="${BUILD_VERSION}" \
+  org.opencontainers.image.source="https://github.com/Ricardo-switch/hems-climate"
+
 # Node zit niet in de HA-basis. Alleen de runtime; de toolchain bleef in de
 # bouwfasen hierboven.
 RUN apk add --no-cache nodejs tzdata
@@ -59,5 +73,11 @@ COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 
 ENV NODE_ENV=production
+
+# Welke code dit is, voor /api/health, net als op de NAS (besluit 54).
+# Helemaal achteraan, zodat alles erboven uit de cache kan komen.
+ARG HEMS_COMMIT=onbekend
+ARG HEMS_GEBOUWD=
+ENV HEMS_COMMIT=$HEMS_COMMIT HEMS_GEBOUWD=$HEMS_GEBOUWD
 
 CMD ["/run.sh"]

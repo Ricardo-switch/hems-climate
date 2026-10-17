@@ -21,12 +21,12 @@
   },
   "occupancy": [
     {
-      "id": "bewoner_een",
-      "ref": "person.bewoner_een"
+      "id": "ricardo",
+      "ref": "person.ricardo_cornelissen"
     },
     {
-      "id": "bewoner_twee",
-      "ref": "person.bewoner_twee"
+      "id": "shira",
+      "ref": "person.shira"
     },
     {
       "id": "saskia",

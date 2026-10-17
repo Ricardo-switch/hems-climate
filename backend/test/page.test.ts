@@ -105,9 +105,8 @@ const coverCalls: string[] = [];
 let extraBatterijen: HouseBattery[] = [];
 const metBatterijen = (h: HouseReport): HouseReport => (extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h);
 import { onUsablePort } from './ports.js';
-import { exampleSite } from './site.js';
+import { exampleSite, exampleSitePath } from './site.js';
 import { readFileSync } from 'node:fs';
-import { resolveConfigPathSync } from '../src/config/load.js';
 import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
 import { VERSIE } from '../src/version.js';
@@ -115,7 +114,7 @@ import { comfortView, controleerComfort, withComfort, type Comfort } from '../sr
 import type { SiteConfig } from '../src/core/model.js';
 
 /* Comfort (besluit 130): in het geheugen, met hetzelfde schema als de dienst. */
-const rauweConfig = JSON.parse(readFileSync(resolveConfigPathSync(), 'utf-8')) as Record<string, unknown>;
+const rauweConfig = JSON.parse(readFileSync(exampleSitePath, 'utf-8')) as Record<string, unknown>;
 let comfortNu: Comfort | null = null;
 let configNu: SiteConfig = exampleSite;
 const comfortDeur = {
@@ -2146,6 +2145,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wandL.locator('[data-greep="shira"]').focus();
     await p.keyboard.press('ArrowUp');
     await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['shira', 'test']);
+    // Eerst de lijst opnieuw getekend, anders gaat de focus mee met de oude rij.
+    await wandL.locator('[data-lijst] [data-rij]').first().and(wandL.locator('[data-rij="shira"]')).waitFor(kort);
     await wandL.locator('[data-greep="test"]').focus();
     await p.keyboard.press('ArrowUp');
     await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['test', 'shira']);
