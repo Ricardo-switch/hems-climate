@@ -593,12 +593,32 @@
         const k2 = vindKamer(wie);
         return k2 ? [k2.xm, D + 0.02, k2.z0 + 0.03] : [W * 0.5, D + 0.02, 0.03];
       };
+      /*
+       * Met een voordeur komt het net via de voortuin het huis in, in de
+       * meterkast in de hal, en gaat het van daar naar de woonkamer (de
+       * bewoner, 16 oktober). Niet meer om de voortuin heen naar de hoek.
+       */
+      const mk = voordeur ? plek.meterkast : null;
+      const voorlangs = D + 0.14;
       if (van === 'zon') pts.push(voetPaneel, [W + 0.12, D + 0.02, zt - 0.05], [W + 0.12, D + 0.02, 0.05], hub);
       else if (van === 'batterij') pts.push([W + 0.2, D - 0.45, 0.4], [W + 0.2, D - 0.45, 0.02], hub);
+      else if (van === 'net' && mk) pts.push([netStraat[0], netStraat[1], 0.02], [netStraat[0], voorlangs, 0.02], [mk[0], voorlangs, 0.02], [mk[0], mk[1], 0.02], [mk[0], mk[1], 0.2]);
       else if (van === 'net') pts.push([netStraat[0], netStraat[1], 0.02], [netStraat[0], D + 0.6, 0.02], [W + 0.25, D + 0.6, 0.02], hub);
       else if (van === 'auto') pts.push([-0.95, D + 0.1, 0.4], [-0.95, D + 0.35, 0.02], hub);
+      if (van === 'net' && mk && (naar === 'huis' || naar?.startsWith('kamer:'))) {
+        // Van de meterkast door de hal naar de woonkamer, of naar de gevraagde kamer.
+        const doel = naar === 'huis'
+          ? kamers.find((x) => x.z0 < 0.1 && (x.soort === 'woonkamer' || x.soort === 'woonkeuken'))
+          : vindKamer(naar.slice(6));
+        const x = doel?.xm ?? W * 0.55;
+        pts.push([mk[0] + 0.12, mk[1], 0.03], [x, mk[1], 0.03]);
+        if (doel && doel.z0 > 0.1) pts.push([x, D + 0.02, 0.03], [x, D + 0.02, doel.z0 + 0.03]);
+        return pts;
+      }
       if (naar === 'batterij') pts.push([W + 0.2, D - 0.45, 0.02], [W + 0.2, D - 0.45, 0.4]);
       else if (naar === 'auto') pts.push([W + 0.25, D + 0.35, 0.02], [-0.95, D + 0.35, 0.02], [-0.95, D + 0.1, 0.4]);
+      // Terug naar het net: dezelfde weg andersom, door het huis naar de meterkast en via de voortuin naar de straat.
+      else if (naar === 'net' && mk) pts.push([W - 0.05, mk[1], 0.03], [mk[0] + 0.12, mk[1], 0.03], [mk[0], mk[1], 0.02], [mk[0], voorlangs, 0.02], [netStraat[0], voorlangs, 0.02], [netStraat[0], netStraat[1], 0.02]);
       else if (naar === 'net') pts.push([W + 0.25, D + 0.6, 0.02], [netStraat[0], D + 0.6, 0.02], [netStraat[0], netStraat[1], 0.02]);
       else if (naar?.startsWith('kamer:')) {
         const kp = kamerPunt(naar.slice(6));
@@ -685,7 +705,7 @@
     }
     function tekenKamer(kamer, x0, x1, z0, z1) {
       const xm = (x0 + x1) / 2;
-      kamers.push({ id: kamer.id, naam: kamer.naam, xm, x0, x1, z0, z1 });
+      kamers.push({ id: kamer.id, naam: kamer.naam, soort: soortVanKamer(kamer), xm, x0, x1, z0, z1 });
       tik(kamer, [[x0, D, z0], [x1, D, z0], [x1, D, z1], [x0, D, z1]]);
       // Een lege plek voor een nieuwe kamer, in de bewerkstand: alleen een stippellijn.
       if (kamer.nieuw) {
