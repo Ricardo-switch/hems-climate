@@ -1864,7 +1864,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-blad] [data-terug]').click();
     await p.locator('#wand [data-blad] .bladkop').waitFor();
 
-    // De camera op de oprit: het beeld, want deze browser is ingelogd.
+    // De camera op de oprit: het beeld, want deze browser is ingelogd. Eerst
+    // tot een beeld van een eerdere test (de deurbel) dicht is: op een trage
+    // CI duurde dat langer dan vijf tellen (17 oktober 2026).
+    await expect.poll(() => liveOpen, { timeout: 15_000 }).toBe(0);
     const oprit = kamers.find((r) => r.apparaten.some((d) => d.soort === 'camera'))!;
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(oprit.id)}/camera.camera_oprit_vloeiend`);
     await p.locator('#wand .camerabeeld img').waitFor();
@@ -1874,7 +1877,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand .camerabeeld[data-gestart] img').waitFor();
     await p.waitForTimeout(2500);
     expect(await p.evaluate<number>("document.querySelector('#wand .camerabeeld img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
-    // Een beeld van een vorige test kan nog even open tellen tot de verbinding dicht is.
+    // Precies één: het beeld van deze kamer, en geen achtergebleven stroom van het blad ervoor.
     await expect.poll(() => liveOpen, { timeout: 5_000 }).toBe(1);
     // Een andere kamer: het beeld stopt.
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metKlimaat.id)}`);
@@ -1907,7 +1910,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(() => sceneCalls.length).toBeGreaterThan(scenesVoor);
     expect(fouten).toEqual([]);
     await context.close();
-  }, 20_000);
+  }, 40_000);
 
   /*
    * Kamers en indeling in ontwerp 2 (besluit 104; schets Wand-Indeling): een
