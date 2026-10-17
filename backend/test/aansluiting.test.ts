@@ -199,7 +199,7 @@ describe('wat de regeling overneemt', () => {
   };
 
   it('vult de zekering en de droger aan als de configuratie ze niet noemt, en dat past in het schema', async () => {
-    const real = JSON.parse(await readFile(join(import.meta.dirname, '..', '..', 'config', 'sites', 'huis-cornelissen.json'), 'utf-8')) as Record<string, unknown>;
+    const real = JSON.parse(await readFile(join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json'), 'utf-8')) as Record<string, unknown>;
     const bare = { ...real };
     delete bare['grid'];
     delete bare['deferrables'];
@@ -214,7 +214,7 @@ describe('wat de regeling overneemt', () => {
   });
 
   it('laat de zekering uit de app voorgaan, met de meters uit de configuratie (besluit 117)', async () => {
-    const real = JSON.parse(await readFile(join(import.meta.dirname, '..', '..', 'config', 'sites', 'huis-cornelissen.json'), 'utf-8')) as Record<string, unknown>;
+    const real = JSON.parse(await readFile(join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json'), 'utf-8')) as Record<string, unknown>;
     const applied = withConnection(real, answers({ zekering: { fasen: 1, ampere: 25 }, apparaten: [] }));
     expect(applied.toegevoegd).toEqual(['de hoofdzekering: 1 × 25 A']);
     const grid = applied.raw['grid'] as { phases: { current: unknown; maxA: number }[]; marginA: number };
@@ -241,7 +241,7 @@ describe('wat de regeling overneemt', () => {
 
 describe('wat de pagina krijgt', () => {
   it('toont wat de configuratie vastlegt, de zonnesensor, en of een nieuw antwoord op de volgende start wacht', async () => {
-    const real = JSON.parse(await readFile(join(import.meta.dirname, '..', '..', 'config', 'sites', 'huis-cornelissen.json'), 'utf-8')) as unknown;
+    const real = JSON.parse(await readFile(join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json'), 'utf-8')) as unknown;
     const parsed = parseSiteConfig(real, { knownStrategies: defaultStrategies().ids });
     if (!parsed.ok) throw new Error('configuratie');
     const checked = validateConnection({ zekering: { fasen: 3, ampere: 25 } }, found);

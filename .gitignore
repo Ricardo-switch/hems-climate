@@ -42,6 +42,9 @@ Thumbs.db
 # Wat addon/stage.ps1 klaarzet om naar Home Assistant te kopiëren.
 dist-addon/
 
-# De ruwe HA-export van de integraties bevat werkende tokens. Alleen de
-# gemaskeerde samenvatting hoort in versiebeheer.
-HA export/core.config_entries
+# ---- dit huis ----------------------------------------------------------
+# De repository is openbaar. De HA-export (ligging, apparaten, dashboards) en
+# de configuratie van een echte woning blijven op de eigen pc en de NAS; de
+# tests gebruiken backend/test/fixtures/voorbeeld-huis.json.
+HA export/
+config/sites/*.json

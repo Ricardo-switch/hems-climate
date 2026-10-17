@@ -12,7 +12,7 @@ Via File Station of SSH, onder de gedeelde map `docker`:
 ├── docker-compose.yml    ← uit deze map
 ├── config/
 │   └── sites/
-│       └── huis-cornelissen.json
+│       └── mijn-huis.json
 ├── logs/                 ← hier komt de dataset
 └── src/                  ← de projectmap (backend/ en config/)
 ```
@@ -35,9 +35,10 @@ volle kloon ruimt zichzelf op bij de eerstvolgende uitrol. Daar hoort de
 1. **`src/`** — kopieer de hele projectmap (in elk geval `backend/`). De
    `.dockerignore` zorgt dat `node_modules`, `dist`, `data` en `.env` niet
    meegaan in de build.
-2. **`config/sites/huis-cornelissen.json`** — kopieer de map `config/sites` uit
-   het project over, met dezelfde indeling. De container mount `config` op
-   `config`, dus wat je hier neerzet ziet er precies zo uit als in de repo.
+2. **`config/sites/mijn-huis.json`** — de configuratie van je woning. Die staat
+   niet in de repository, want die is openbaar; zet hem hier zelf neer, of laat
+   de app hem maken (besluit 42). De container mount `config` op `config`, met
+   `sites` eronder.
 3. **`docker-compose.yml`** — kopieer uit `deploy/`. **Ook bij een update**:
    dit bestand wordt niet automatisch overgezet, net zomin als `deploy.sh`
    (besluit 20). Het bepaalt onder meer de build-context, dus een verouderde
