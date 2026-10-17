@@ -2145,6 +2145,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wandL.locator('[data-greep="shira"]').focus();
     await p.keyboard.press('ArrowUp');
     await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['shira', 'test']);
+    // Eerst de lijst opnieuw getekend, anders gaat de focus mee met de oude rij.
+    await wandL.locator('[data-lijst] [data-rij]').first().and(wandL.locator('[data-rij="shira"]')).waitFor(kort);
     await wandL.locator('[data-greep="test"]').focus();
     await p.keyboard.press('ArrowUp');
     await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['test', 'shira']);
