@@ -111,7 +111,9 @@ async function start(options: {
   sleutel?: string;
   luisteren?: LuisterDeur;
   praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean };
-  herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null>;
+  herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
+  logDir?: string;
+  gegevens?: NonNullable<ConstructorParameters<typeof WebServer>[0]['gegevens']>;
 }): Promise<{ base: string; server: WebServer }> {
   const webDir = options.webDir ?? (await mkdtemp(join(tmpdir(), 'hems-web-')));
   if (!options.webDir) cleanups.push(() => rm(webDir, { recursive: true, force: true }));
@@ -146,6 +148,8 @@ async function start(options: {
         ...(options.sleutel ? { sleutel: options.sleutel } : {}),
         ...(options.praten ? { praten: options.praten } : {}),
         ...(options.luisteren ? { luisteren: options.luisteren } : {}),
+        ...(options.logDir ? { logDir: options.logDir } : {}),
+        ...(options.gegevens ? { gegevens: options.gegevens } : {}),
         ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
@@ -1446,7 +1450,7 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     };
   }
 
-  async function withLogin(isAdmin: boolean, extra: { sleutel?: string; herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | null> } = {}) {
+  async function withLogin(isAdmin: boolean, extra: { sleutel?: string; herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>; logDir?: string; gegevens?: NonNullable<ConstructorParameters<typeof WebServer>[0]['gegevens']> } = {}) {
     const dir = await mkdtemp(join(tmpdir(), 'hems-inlog-'));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     const login = fakeLogin({ userId: 'u1', naam: 'Ricardo', isAdmin });
@@ -1736,6 +1740,102 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
       r.end();
     });
     expect(status).toBe(421);
+  });
+
+  it('een back-up, opnieuw beginnen en het logboek downloaden: alleen de hoofdgebruiker (besluit 151)', async () => {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-log-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    await writeFile(join(logDir, 'decisions-2026-10-16.ndjson'), '{"t":1}\n', 'utf-8');
+    let hoofd = 'u2';
+    const g = gegevensStub(() => hoofd);
+    const { base } = await withLogin(true, { logDir, gegevens: g.gegevens });
+    const cookie = await logIn(base);
+    // Ricardo (u1) is beheerder in Home Assistant, maar niet de hoofdgebruiker.
+    expect(await (await fetch(`${base}/api/gegevens`, { headers: { cookie } })).json()).toMatchObject({ hoofd: false, backups: [] });
+    expect((await fetch(`${base}/api/back-up`, { headers: { cookie } })).status).toBe(403);
+    expect((await fetch(`${base}/api/export`, { headers: { cookie } })).status).toBe(403);
+    expect((await fetch(`${base}/api/opnieuw`, { method: 'POST', headers: { ...JSON_HEADERS, cookie }, body: '{"zeker":true}' })).status).toBe(403);
+    expect((await fetch(`${base}/api/opnieuw`, { method: 'POST', headers: JSON_HEADERS, body: '{"zeker":true}' })).status).toBe(401);
+    expect(g.opnieuw).toBe(0);
+    hoofd = 'u1';
+    expect((await fetch(`${base}/api/back-up`, { headers: { cookie } })).status).toBe(200);
+    const exp = await fetch(`${base}/api/export`, { headers: { cookie } });
+    expect(exp.status).toBe(200);
+    await exp.arrayBuffer();
+  });
+});
+
+/** Een stub voor back-up en herstel; `hoofd` zegt welk account de hoofdgebruiker is. */
+function gegevensStub(hoofd: () => string | null = () => null) {
+  const teller = { herstel: 0, opnieuw: 0, herstart: 0 };
+  const gegevens = {
+    hoofd: (wie: { userId: string | null; beheerder: boolean }) => wie.userId != null && wie.userId === hoofd(),
+    backup: async () => ({ soort: 'smart-climate-back-up' as const, versie: 1 as const, app: VERSIE, gemaakt: '2026-10-17T08:00:00.000Z', configuratie: null, bestanden: { 'comfort.json': { versie: 1 } } }),
+    herstel: async (body: unknown) => {
+      teller.herstel += 1;
+      return (body as { soort?: string }).soort === 'smart-climate-back-up' ? { ok: true as const, bestanden: ['comfort.json'], configuratie: 'bleef' } : { ok: false as const, status: 400, reden: 'dit is geen back-up van Smart Climate' };
+    },
+    opnieuw: async () => {
+      teller.opnieuw += 1;
+      return { ok: true as const, backup: 'smart-climate-back-up-x.json', weg: ['comfort.json'] };
+    },
+    configWeg: false,
+    bewaard: async () => ['smart-climate-back-up-x.json'],
+    analyse: async () => ({ bestanden: { 'LEESMIJ.md': 'leesmij' }, vervang: [] }),
+    herstart: () => {
+      teller.herstart += 1;
+    },
+  };
+  return Object.assign(teller, { gegevens });
+}
+
+describe('back-up, herstel en opnieuw beginnen (besluit 151)', () => {
+  async function metGegevens() {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-log-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const g = gegevensStub();
+    const { base } = await start({ logDir, gegevens: g.gegevens });
+    return { base, g };
+  }
+
+  it('geeft de back-up als download, met de omvang van het logboek ernaast', async () => {
+    const { base } = await metGegevens();
+    expect(await (await fetch(`${base}/api/gegevens`)).json()).toEqual({ hoofd: true, configWeg: false, logboek: { bestanden: 0, bytes: 0, eerste: null, laatste: null }, backups: ['smart-climate-back-up-x.json'] });
+    const res = await fetch(`${base}/api/back-up`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-disposition')).toMatch(/^attachment; filename="smart-climate-back-up-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.json"$/);
+    expect(await res.json()).toMatchObject({ soort: 'smart-climate-back-up', bestanden: { 'comfort.json': { versie: 1 } } });
+  });
+
+  it('zet een back-up terug en start daarna opnieuw; wat geen back-up is, verandert niets', async () => {
+    const { base, g } = await metGegevens();
+    const fout = await fetch(`${base}/api/back-up`, { method: 'POST', headers: JSON_HEADERS, body: '{"soort":"iets"}' });
+    expect(fout.status).toBe(400);
+    expect(g.herstart).toBe(0);
+    // Groter dan een gewoon verzoek mag het wel zijn.
+    const groot = { soort: 'smart-climate-back-up', versie: 1, bestanden: { 'indeling.json': { tekst: 'x'.repeat(200_000) } } };
+    const res = await fetch(`${base}/api/back-up`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(groot) });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, bestanden: ['comfort.json'], configuratie: 'bleef', herstart: true });
+    await new Promise((ok) => setTimeout(ok, 50));
+    expect(g.herstart).toBe(1);
+  });
+
+  it('begint pas opnieuw na een bevestiging', async () => {
+    const { base, g } = await metGegevens();
+    expect((await fetch(`${base}/api/opnieuw`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(400);
+    expect(g.opnieuw).toBe(0);
+    const res = await fetch(`${base}/api/opnieuw`, { method: 'POST', headers: JSON_HEADERS, body: '{"zeker":true}' });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, backup: 'smart-climate-back-up-x.json', herstart: true });
+    await new Promise((ok) => setTimeout(ok, 50));
+    expect(g.herstart).toBe(1);
+  });
+
+  it('bestaat niet zonder logmap: dan is er ook niets om te bewaren', async () => {
+    const { base } = await start({});
+    expect((await fetch(`${base}/api/gegevens`)).status).toBe(503);
+    expect((await fetch(`${base}/api/opnieuw`, { method: 'POST', headers: JSON_HEADERS, body: '{"zeker":true}' })).status).toBe(405);
   });
 });
 

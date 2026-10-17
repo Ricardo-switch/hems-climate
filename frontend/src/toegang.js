@@ -1,7 +1,9 @@
 /*
  * Bewoners en toegang (besluit 130 en 147): wie hier woont, wie er ingelogd
  * is, de sleutel voor de assistent van Home Assistant, je gegevens, en welke
- * versie er draait.
+ * versie er draait. Bij je gegevens een back-up, terugzetten, het logboek voor
+ * de analyse en opnieuw beginnen, alleen voor de hoofdgebruiker (besluit 151).
+ * Een gast ziet alleen inloggen en de versie.
  */
 'use strict';
 
@@ -13,9 +15,16 @@ let health = null;
 let zon = null;
 let bewoners = null;
 let sleutel = null;
+/** Wat /api/gegevens zegt (besluit 151): of je de hoofdgebruiker bent, het logboek, de back-ups. */
+let opslag = null;
+/** Wat er gevraagd wordt: null, 'opnieuw', of { backup, naam } om terug te zetten. */
+let bevestig = null;
+/** Een melding bij je gegevens, zoals "Smart Climate start opnieuw". */
+let melding = null;
 
 async function laadAlles() {
-  const [s, g, h, z, b, k] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/versie'), haal('api/zon'), haal('api/bewoners'), fetch('api/sleutel', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))]);
+  const [s, g, h, z, b, k, o] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/versie'), haal('api/zon'), haal('api/bewoners'), fetch('api/sleutel', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)), haal('api/gegevens')]);
+  if (o.status === 'fulfilled') opslag = o.value;
   if (s.status === 'fulfilled') sessie = s.value;
   if (b.status === 'fulfilled') bewoners = b.value;
   if (k.status === 'fulfilled') sleutel = k.value?.sleutel ?? null;
@@ -25,9 +34,18 @@ async function laadAlles() {
   teken();
 }
 
+const isGast = () => bewoners?.ik?.soort === 'gast';
+
 function delen() {
   const inlog = !sessie ? '…' : sessie.toegang !== 'sessions' ? 'geen inlog nodig' : sessie.ingelogd ? `${sessie.naam ?? 'ingelogd'}${sessie.rol ? `, ${sessie.rol}` : ''}` : 'niet ingelogd';
   const namen = bewoners ? bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
+  // Een gast (besluit 151): alleen inloggen en de versie; instellingen veranderen kan hij niet.
+  if (isGast()) {
+    return [
+      { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
+      { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
+    ];
+  }
   return [
     { id: 'bewoners', titel: 'Bewoners', zin: namen, stand: bewoners ? 'goed' : null },
     { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
@@ -69,13 +87,98 @@ function assistentVorm() {
     <p class="mini" style="margin: 0">De rest-opdracht van de assistent stuurt hem mee (zie ha-assist in de handleiding). Deel hem met niemand anders.</p>`;
 }
 
+const linkKnop = (href, tekst, extra = '') => `<a class="knop knop-licht" href="${href}" ${extra} style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">${tekst}</a>`;
+/** "smart-climate-back-up-2026-10-17-08-00-00.json" wordt een datum en tijd. */
+function wanneerBackup(naam) {
+  const m = /(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})/.exec(naam ?? '');
+  if (!m) return null;
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5])).toLocaleString('nl-NL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
 function gegevensVorm() {
   const g = gegevens;
   const mb = g?.bytes != null ? nl(g.bytes / 1_000_000, 0) : null;
-  return `<h2 class="kop-2">Je gegevens</h2>
-    <p class="klein" style="margin: 0">Wat het huis meet en besluit, blijft bij jou thuis, op de plek waar Smart Climate draait: één bestand per dag. ${g?.bestanden != null ? `Nu ${g.bestanden} dagen${mb ? `, samen ${mb} MB` : ''}.` : ''}</p>
-    ${g?.bestanden ? '<a class="knop knop-licht" href="api/export" download style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Alles downloaden</a>' : ''}
+  const logboek = `<h2 class="kop-2">Je gegevens</h2>
+    <p class="klein" style="margin: 0">Wat het huis meet en besluit, blijft bij jou thuis, op de plek waar Smart Climate draait: één bestand per dag. Alles wordt bewaard${g?.bestanden != null ? `, nu ${g.bestanden} dagen${mb ? ` en samen ${mb} MB` : ''}` : ''}. Per jaar komt er ongeveer 60 MB bij.</p>
     <p class="mini" style="margin: 0">Er gaat niets naar buiten. Alleen het weer vraagt de dienst op bij Open-Meteo, met je ligging op ongeveer tien kilometer.</p>`;
+  if (melding) return `${logboek}<p class="klein" style="margin: 0" data-melding>${esc(melding)}</p>`;
+  if (!opslag) return logboek;
+  if (!opslag.hoofd) return `${logboek}<p class="klein" style="margin: 0">Een back-up maken of terugzetten, het logboek downloaden en opnieuw beginnen kan alleen de hoofdgebruiker.</p>`;
+
+  if (bevestig === 'opnieuw') {
+    return `${logboek}
+      <h3 class="kop-3" style="margin: 6px 0 0">Opnieuw beginnen?</h3>
+      <p class="klein" style="margin: 0">Alles wat je instelde, wat het huis leerde en het logboek gaan weg. ${opslag.configWeg ? 'Daarna richt je het huis opnieuw in.' : 'De configuratie van het huis blijft staan.'} Eerst komt er een back-up, op dit apparaat en bij Smart Climate.</p>
+      <span class="fout" data-fout></span>
+      <div class="knoppenrij"><button type="button" class="knop" data-toch-niet>Toch niet</button><button type="button" class="knop gevaar" data-ja-opnieuw>Ja, begin opnieuw</button></div>`;
+  }
+  if (bevestig?.backup) {
+    const b = bevestig.backup;
+    const wanneer = b.gemaakt ? new Date(b.gemaakt).toLocaleString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null;
+    return `${logboek}
+      <h3 class="kop-3" style="margin: 6px 0 0">Deze back-up terugzetten?</h3>
+      <p class="klein" style="margin: 0">${esc(bevestig.naam)}${wanneer ? `, gemaakt op ${esc(wanneer)}` : ''}${b.app ? ` met versie ${esc(b.app)}` : ''}. Wat er nu staat, gaat eerst in een back-up bij Smart Climate. Daarna start Smart Climate opnieuw.</p>
+      <span class="fout" data-fout></span>
+      <div class="knoppenrij"><button type="button" class="knop" data-toch-niet>Toch niet</button><button type="button" class="knop knop-licht" data-ja-terug>Terugzetten</button></div>`;
+  }
+  const laatste = wanneerBackup(opslag.backups?.[0]);
+  return `${logboek}
+    <h3 class="kop-3" style="margin: 6px 0 0">Back-up</h3>
+    <p class="klein" style="margin: 0">Je instellingen en wat het huis leerde, in één klein bestand. Het logboek zit er niet in.${laatste ? ` De laatste back-up bij Smart Climate is van ${esc(laatste)}.` : ''}</p>
+    <div class="knoppenrij">${linkKnop('api/back-up', 'Back-up downloaden', 'download')}<button type="button" class="knop" data-kies-backup>Back-up terugzetten</button></div>
+    <input type="file" accept=".json,application/json" data-backup-bestand hidden>
+    <span class="fout" data-fout></span>
+    ${g?.bestanden ? `<h3 class="kop-3" style="margin: 6px 0 0">Logboek voor onderzoek</h3>
+    <p class="klein" style="margin: 0">Het logboek met je instellingen en apparaten, zonder namen van bewoners en zonder ligging. Om uit te zoeken hoe Smart Climate beter kan.</p>
+    ${linkKnop('api/export', 'Logboek downloaden', 'download')}` : ''}
+    <h3 class="kop-3" style="margin: 6px 0 0">Opnieuw beginnen</h3>
+    <p class="klein" style="margin: 0">Een leeg huis: alles wat je instelde, leerde en vastlegde gaat weg. Eerst komt er een back-up.</p>
+    <button type="button" class="knop gevaar" data-opnieuw style="align-self: start">Opnieuw beginnen</button>`;
+}
+
+/** Wacht tot Smart Climate weer antwoordt na opnieuw starten, en laadt dan de pagina. */
+async function wachtOpHerstart(naar) {
+  const begin = Date.now();
+  await new Promise((ok) => setTimeout(ok, 4000));
+  while (Date.now() - begin < 120_000) {
+    try {
+      const r = await fetch('api/health', { cache: 'no-store' });
+      if (r.ok) {
+        location.href = naar;
+        return;
+      }
+    } catch {
+      // Nog niet terug.
+    }
+    await new Promise((ok) => setTimeout(ok, 2000));
+  }
+  melding = 'Smart Climate antwoordt nog niet. Kijk over een paar minuten opnieuw.';
+  teken();
+}
+
+/** Een bestand op dit apparaat bewaren, zoals de downloadknop doet. */
+async function bewaarOpApparaat(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error('De back-up lukte niet');
+  const naam = /filename="([^"]+)"/.exec(r.headers.get('content-disposition') ?? '')?.[1] ?? 'smart-climate-back-up.json';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(await r.blob());
+  a.download = naam;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+}
+
+async function stuurGegevens(pad, body) {
+  const r = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const uit = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(uit.fout ? uit.fout.charAt(0).toUpperCase() + uit.fout.slice(1) : 'Dat lukte niet');
+  return uit;
+}
+
+function zegFout(tekst) {
+  $$('[data-fout]').forEach((el) => (el.textContent = tekst));
 }
 
 /** De versie en wat er nieuw is (besluit 131). */
@@ -102,7 +205,7 @@ const NAAST = {
   bewoners: ['Waarom bewoners', ['Het comfort van wie thuis is, geldt', 'Het huis begroet je met je naam', 'Wat je tikt, telt voor jouw comfort']],
   inloggen: ['Waarom inloggen', ['Je huis is van jou: de hele app vraagt een inlog', 'De tablet aan de muur logt één keer in', 'Zo weet het huis wie er kijkt']],
   assistent: ['Waarom een sleutel', ['De assistent vraagt zonder mens erachter', 'Alleen met de sleutel komt hij binnen', 'Alleen een beheerder ziet hem']],
-  gegevens: ['Waarvoor je gegevens zijn', ['Terugkijken bij Vandaag en Opbrengst', 'Het bewijs dat het huis het goed zou doen, voordat het zelf regelt', 'Later: het thermisch model, dat leert hoe elke kamer opwarmt']],
+  gegevens: ['Waarvoor je gegevens zijn', ['Terugkijken bij Vandaag en Opbrengst', 'Het bewijs dat het huis het goed zou doen, voordat het zelf regelt', 'Later: het thermisch model, dat leert hoe elke kamer opwarmt', 'Een back-up is klein: zet hem op een stick of in je mail']],
   versie: ['Hoe de nummers werken', ['Het derde getal gaat omhoog bij een reparatie', 'Het tweede bij iets nieuws', 'Versie 1.0 is de dag dat het huis zelf regelt', 'Elke versie wordt eerst getest']],
 };
 
@@ -123,9 +226,57 @@ addEventListener('hashchange', teken);
 
 app.start('instellingen');
 document.addEventListener('click', async (e) => {
-  if (!e.target.closest('[data-uitloggen]')) return;
-  await fetch('auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
-  sessie = await haal('api/sessie').catch(() => sessie);
-  teken();
+  const t = e.target.closest('button');
+  if (!t) return;
+  try {
+    if (t.hasAttribute('data-uitloggen')) {
+      await fetch('auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
+      sessie = await haal('api/sessie').catch(() => sessie);
+    } else if (t.hasAttribute('data-kies-backup')) {
+      document.querySelector('[data-backup-bestand]')?.click();
+      return;
+    } else if (t.hasAttribute('data-opnieuw')) {
+      bevestig = 'opnieuw';
+    } else if (t.hasAttribute('data-toch-niet')) {
+      bevestig = null;
+    } else if (t.hasAttribute('data-ja-opnieuw')) {
+      t.disabled = true;
+      // Eerst een back-up op dit apparaat (besluit 151); de dienst bewaart er zelf ook een.
+      await bewaarOpApparaat('api/back-up');
+      await stuurGegevens('api/opnieuw', { zeker: true });
+      bevestig = null;
+      melding = 'Alles is weg, en de back-up staat op dit apparaat. Smart Climate start opnieuw…';
+      teken();
+      void wachtOpHerstart('thuis.html');
+      return;
+    } else if (t.hasAttribute('data-ja-terug')) {
+      t.disabled = true;
+      await stuurGegevens('api/back-up', bevestig.backup);
+      bevestig = null;
+      melding = 'De back-up staat terug. Smart Climate start opnieuw…';
+      teken();
+      void wachtOpHerstart(location.pathname + location.hash);
+      return;
+    } else {
+      return;
+    }
+    teken();
+  } catch (err) {
+    t.disabled = false;
+    zegFout(err.message);
+  }
+});
+document.addEventListener('change', async (e) => {
+  const veld = e.target.closest('[data-backup-bestand]');
+  if (!veld?.files?.[0]) return;
+  const bestand = veld.files[0];
+  try {
+    const backup = JSON.parse(await bestand.text());
+    if (backup?.soort !== 'smart-climate-back-up') throw new Error('Dit is geen back-up van Smart Climate');
+    bevestig = { backup, naam: bestand.name };
+    teken();
+  } catch (err) {
+    zegFout(err instanceof SyntaxError ? 'Dit bestand is niet te lezen' : err.message);
+  }
 });
 void laadAlles();

@@ -333,6 +333,19 @@
   /** Welke stand er te zien is: '#wand' of '#tel'. Alleen die wordt getekend. */
   const zicht = () => (telStand() ? '#tel' : '#wand');
 
+  /**
+   * Een gast verandert geen instellingen (besluit 151). De dienst weigert het
+   * al; hier ziet hij het ook: een instellingenpagina gaat terug naar
+   * Instellingen, die hem alleen Bewoners en toegang laat zien (om uit te
+   * loggen) en Wat je huis kan.
+   */
+  async function gastGrens() {
+    const pagina = location.pathname.split('/').pop() || '';
+    if (['instellingen.html', 'toegang.html', 'huis-kan.html'].includes(pagina)) return;
+    const ik = await haal('api/bewoners').then((b) => b.ik, () => null);
+    if (ik?.soort === 'gast') location.replace('instellingen.html');
+  }
+
   /** Zet de navigatie, de stand en de klok voor een tab. */
   function start(tab) {
     const balk = document.getElementById('balk');
@@ -369,6 +382,7 @@
     nieuweVersie();
     meldingenStart();
     luisterStart();
+    if (tab === 'instellingen') void gastGrens();
   }
 
   /**

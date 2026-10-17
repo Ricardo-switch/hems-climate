@@ -115,8 +115,8 @@ function blad() {
     return `<div class="vak"><label for="bron-${esc(b.id)}">Welke sensor ziet of ${esc(wie)}?</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${magKiezen ? '' : 'disabled'}><option value="">Geen: het huis weet het niet</option>${opties}</select><span class="hint">${b.aanwezigheid ? thuisHint : zonder}</span></div>`;
   };
   const thuisHint = b.aanwezigheid ? (b.thuis == null ? 'Het huis weet nu niet of het zo is.' : b.thuis ? `Thuis${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.` : `Weg${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.`) : 'Zonder aanwezigheid telt deze bewoner niet mee bij wie er thuis is.';
-  // Bewoner of gast (besluit 147): alleen de hoofdgebruiker kiest, en de hoofdgebruiker zelf is geen gast.
-  const soort = data.ik.magBeheren && !b.hoofd
+  // Bewoner of gast (besluit 147): alleen de hoofdgebruiker zelf kiest (besluit 151), en de hoofdgebruiker is geen gast.
+  const soort = data.ik.hoofd && !b.hoofd
     ? `<div class="vak"><span>Woont hier, of te gast</span><div class="seg" role="group" aria-label="${esc(b.naam)} woont hier of is te gast">
         <button type="button" data-gast="nee" aria-pressed="${!b.gast}">Bewoner</button>
         <button type="button" data-gast="ja" aria-pressed="${b.gast}">Gast</button>
@@ -159,7 +159,7 @@ function erbij() {
   } catch {
     qr = '';
   }
-  return `<h3>Iemand erbij</h3><div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="klein">Laat diegene deze code scannen en één keer inloggen met Home Assistant. Dan staat ${data.bewoners.length ? `hij hier, met het comfort van ${esc(data.bewoners[0].naam)}` : 'hij hier'}. <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
+  return `<h3>Iemand erbij</h3><div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="klein">Laat diegene deze code scannen en één keer inloggen met Home Assistant. Met een persoon in Home Assistant staat diegene hier als bewoner${data.bewoners.length ? `, met het comfort van ${esc(data.bewoners[0].naam)}` : ''}. Zonder persoon als gast; dan maakt de hoofdgebruiker er een bewoner van. <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
 }
 
 /* Alleen wat in de app is ingelogd: schermen zoals de wand, en gasten (besluit 147). */
@@ -169,7 +169,7 @@ function schermen() {
     ...data.schermen.map((s) => `<div class="r gastrij${gekozenScherm()?.id === s.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(SCHERM + s.id)}"><span class="n">${esc(s.naam)}${s.ik ? ' (dit scherm)' : ''}</span><span>scherm, begroet wie thuis is</span></div>`),
     ...(data.gasten ?? []).map((g) => `<div class="r gastrij${g.id === nu?.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(g.id)}"><span class="n">${esc(g.naam)}${g.ik ? ' (jij)' : ''}</span><span>gast${g.thuis == null ? '' : g.thuis ? ', thuis' : ', weg'}</span></div>`),
   ];
-  return `<h3>Schermen en gasten</h3>${r.length ? r.join('') : '<p class="klein" style="margin: 0; color: var(--zacht)">Nog geen schermen of gasten. Een tablet aan de muur logt één keer in en kiest "Dit is een scherm"; een bewoner maak je hier gast.</p>'}`;
+  return `<h3>Schermen en gasten</h3>${r.length ? r.join('') : '<p class="klein" style="margin: 0; color: var(--zacht)">Nog geen schermen of gasten. Een tablet aan de muur logt één keer in en kiest "Dit is een scherm". Een account zonder persoon in Home Assistant komt hier als gast.</p>'}`;
 }
 
 function tekenNu() {

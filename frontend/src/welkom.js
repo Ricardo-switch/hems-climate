@@ -4,8 +4,11 @@
  *
  * - #welkom: je bent bewoner geworden. Je naam bevestigen, en zien hoe het huis
  *   weet of je thuis bent.
- * - #vraag: je account heeft geen persoon in Home Assistant. Woon je hier, of
- *   is dit een scherm zoals de wand? Wie hier woont, kiest daarna wat hem volgt.
+ * - #gast: je account heeft geen persoon in Home Assistant, en er woont al
+ *   iemand (besluit 151). Je kijkt mee als gast; de hoofdgebruiker kan je
+ *   bewoner maken. Is dit een tablet zoals de wand, dan kies je dat hier zelf.
+ * - #vraag: het allereerste account, zonder persoon in Home Assistant. Woon je
+ *   hier, of is dit een scherm? Wie hier woont, kiest daarna wat hem volgt.
  *
  * Daarna gaat het verder naar waar je heen wilde (`?terug=`).
  */
@@ -19,7 +22,7 @@ const terug = (() => {
 })();
 const kaart = document.querySelector('[data-kaart]');
 let bewoners = null;
-let stap = location.hash.slice(1) === 'vraag' ? 'vraag' : 'welkom';
+let stap = ['vraag', 'gast'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'welkom';
 let keuze = null;
 let bron = null;
 
@@ -60,6 +63,18 @@ function welkom() {
     <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
 }
 
+/** Een gast (besluit 151): kijkt mee, tot de hoofdgebruiker er een bewoner van maakt. */
+function gast() {
+  const hoofd = bewoners?.bewoners.find((b) => b.hoofd);
+  kaart.innerHTML = `${merk}
+    <h1>Je kijkt mee als gast</h1>
+    <p>Je ziet het huis, en bedient licht en screens als je thuis bent. Instellingen veranderen kan niet.</p>
+    <p class="hint" style="margin: 0">Woon je hier? Vraag ${esc(hoofd?.naam ?? 'de hoofdgebruiker')} om je bij Instellingen › Bewoners bewoner te maken.</p>
+    <span class="fout" data-fout></span>
+    <div class="voet"><span></span><a class="knop knop-licht" href="${esc(terug)}" style="display: inline-flex; align-items: center; text-decoration: none">Verder</a></div>
+    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
+}
+
 function vraag() {
   kaart.innerHTML = `${merk}
     <h1>Woon je hier, of is dit een scherm?</h1>
@@ -84,6 +99,7 @@ function waarThuis() {
 
 function teken() {
   if (stap === 'vraag') vraag();
+  else if (stap === 'gast') gast();
   else if (stap === 'thuis') waarThuis();
   else welkom();
 }
@@ -139,6 +155,7 @@ kaart.addEventListener('click', async (e) => {
     location.href = terug;
     return;
   }
-  if (bewoners.ik.soort === 'onbekend') stap = 'vraag';
+  if (bewoners.ik.soort === 'gast') stap = 'gast';
+  else if (bewoners.ik.soort === 'onbekend') stap = 'vraag';
   teken();
 })();

@@ -20,6 +20,12 @@
   .rij-b span { color: var(--zacht); font-size: 13px; }
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
+  /* Back-up, terugzetten en opnieuw beginnen (besluit 151). */
+  .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
+  .knoppenrij .knop { white-space: nowrap; }
+  .gevaar { color: #ffb090; border-color: rgba(255, 122, 77, 0.35); }
+  .vorm .fout { color: var(--gloed); font-size: 13px; }
+  .vorm .fout:empty { display: none; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   /* Wat is er nieuw, per versie (besluit 131); de nieuwste open, in soorten (besluit 133). */
   .nieuw { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); }

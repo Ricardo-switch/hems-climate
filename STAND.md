@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 16 oktober 2026.*
+*Stand: 17 oktober 2026.*
 
 ## Waar het project staat
 
@@ -116,7 +116,12 @@ verwijzing bestaat.
   de panelen is de instralingsmeter ([47]).
 - **Bewaren:** export als tar.gz ([48]); ouder dan een week gecomprimeerd
   ([58]); twee jaar ruw, daarna samengevat ([83]). Bij elk besluit is na te gaan
-  welke versie het nam ([66]).
+  welke versie het nam ([66]). De export is voor onderzoek: alleen de
+  hoofdgebruiker, zonder namen en ligging, met de instellingen en alle
+  entiteiten en waar Smart Climate ze gebruikt ([151]).
+- **Back-up en opnieuw beginnen:** een klein bestand met instellingen, wat het
+  huis leerde en de configuratie; terugzetten start de dienst opnieuw. Opnieuw
+  beginnen maakt eerst een back-up. Allebei alleen de hoofdgebruiker ([151]).
 - **De datasetmeter** telt tijd en dekking, en beide moeten 100% halen ([27b]).
   Het eerste getal was te vriendelijk ([27]).
 - **Ligging en panelen** meet de app zelf; de bewoner bevestigt. Dit huis: oost
@@ -244,7 +249,9 @@ verwijzing bestaat.
   thuis is, bepaalt het comfort, na tien minuten rust. Bewoners komen erbij
   door één keer in te loggen; de wand is een scherm. De hele app vraagt een
   inlog; de assistent van Home Assistant heeft een sleutel ([147]). Een scherm
-  krijgt bij Bewoners een andere naam, of gaat weg ([149]).
+  krijgt bij Bewoners een andere naam, of gaat weg ([149]). Een account zonder
+  persoon in Home Assistant is een gast; alleen de hoofdgebruiker maakt er een
+  bewoner van, en een gast verandert geen instellingen ([151]).
 - **Comfort uit de app gaat voor** de helpers van het oude systeem; het huis
   heeft een voordeur, de meterkast, de camera, de tuin en de buitenunits zoals
   ze zijn ([143]).
@@ -446,4 +453,5 @@ verwijzing bestaat.
 [148]: DECISIONS.md#148-de-assistent-zegt-het-in-eigen-woorden-en-bedient-licht-en-schermen-met-een-zin
 [149]: DECISIONS.md#149-wanneer-een-batterij-of-filter-een-melding-geeft-een-scherm-beheren-en-een-eigen-comfort-dat-weer-lukt
 [150]: DECISIONS.md#150-praten-met-je-stem-de-microfoon-en-hé-huis-op-de-wand
+[151]: DECISIONS.md#151-een-gast-zonder-persoon-een-back-up-opnieuw-beginnen-en-een-export-voor-onderzoek
 <!-- links:einde -->

@@ -136,8 +136,8 @@ const GROEPEN = [
 ];
 
 function groepen() {
-  const mis = stand.nogTeDoen(d);
-  return GROEPEN.map(([id, titel, onder]) => {
+  const mis = isGast() ? [] : stand.nogTeDoen(d);
+  return GROEPEN.filter(([id]) => !isGast() || id === 'toegang').map(([id, titel, onder]) => {
     const n = mis.filter((x) => x.groep === id).length;
     const feiten = feitenVan(id)
       .map(([naam, waarde, leeg]) => `<li>${esc(naam)}<b class="${waarde == null && leeg !== '…' ? 'leeg' : ''}">${esc(waarde ?? leeg ?? '')}</b></li>`)
@@ -163,10 +163,16 @@ function toonGevonden(veld) {
 
 /* ------------------------------------------------------------ tekenen */
 
+/** Een gast (besluit 151): kijkt mee, en verandert geen instellingen. */
+const isGast = () => d.bewoners?.ik?.soort === 'gast';
+const GAST = '<h2 class="kop-3">Je kijkt mee als gast</h2><p class="mini" style="margin: 2px 0 0">Instellingen veranderen kan niet. Woon je hier, vraag dan de hoofdgebruiker om je bij Bewoners bewoner te maken.</p>';
+
 function tekenNu() {
   app.schaal();
   app.luchtVan(d.zon, 0);
-  const m = mist();
+  const m = isGast() ? { klaar: true, html: GAST } : mist();
+  // Inrichten en zoeken leiden een gast alleen naar pagina's die hij niet kan gebruiken.
+  $$('a[href="inrichten.html"], [data-zoekvak]').forEach((el) => (el.style.display = isGast() ? 'none' : ''));
   $$('[data-mist]').forEach((el) => {
     el.innerHTML = m.html;
     el.classList.toggle('klaar', m.klaar);

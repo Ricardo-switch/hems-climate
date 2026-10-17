@@ -101,4 +101,21 @@ if [ "${HEEFT_CONFIG}" -eq 1 ] && ! node /app/dist/main.js --check-config; then
   bashio::exit.nok
 fi
 
-exec node /app/dist/main.js
+# Opnieuw starten na een teruggezette back-up of opnieuw beginnen (besluit 151):
+# de dienst stopt dan met code 75, en deze lus start hem weer. Elke andere code
+# stopt de add-on, zoals voorheen. Het signaal om te stoppen gaat door naar
+# node, zodat die netjes afsluit.
+trap 'kill -TERM "${pid:-0}" 2> /dev/null || true' TERM INT
+while true; do
+  node /app/dist/main.js &
+  pid=$!
+  code=0
+  wait "${pid}" || code=$?
+  # Na een signaal keert wait terug voordat node klaar is: wacht op het echte einde.
+  if kill -0 "${pid}" 2> /dev/null; then
+    code=0
+    wait "${pid}" || code=$?
+  fi
+  [ "${code}" -eq 75 ] || exit "${code}"
+  bashio::log.info "Smart Climate start opnieuw."
+done

@@ -7,8 +7,10 @@
  * Een bewoner komt erbij door één keer in te loggen, niet doordat de app
  * iedereen uit Home Assistant haalt. Heeft het account een persoon in Home
  * Assistant, dan weet het huis meteen wie het is en of die thuis is. Zonder
- * persoon vraagt de app één keer: woon je hier, of is dit een scherm zoals de
- * wand? Een scherm is geen bewoner en begroet wie er thuis is.
+ * persoon is het een gast (besluit 151): die kijkt mee, en alleen de
+ * hoofdgebruiker maakt er een bewoner van. Zelf kiezen kan alleen "dit is een
+ * scherm", zoals de wand; een scherm is geen bewoner en begroet wie er thuis
+ * is. Het allereerste account kiest zelf, want er is nog geen hoofdgebruiker.
  *
  * Er gaat niets naar Home Assistant: de naam in de app verandert niets daar.
  */
@@ -129,19 +131,22 @@ export interface Account {
 export type Herkenning =
   | { readonly soort: 'bewoner'; readonly bewoner: Bewoner; readonly nieuw: boolean; readonly bewoners: Bewoners }
   | { readonly soort: 'scherm' }
+  /** Geen persoon in Home Assistant, en er woont al iemand: een gast (besluit 151). */
+  | { readonly soort: 'gast'; readonly bewoners: Bewoners }
   | { readonly soort: 'vraag' };
 
 /**
- * Wie logt er in? Een bekende bewoner of een scherm blijft wat het was. Een
+ * Wie logt er in? Een bekende bewoner, gast of scherm blijft wat het was. Een
  * account met een persoon in Home Assistant wordt meteen bewoner, met die
- * persoon als aanwezigheid als de configuratie hem volgt. Anders: de vraag.
+ * persoon als aanwezigheid als de configuratie hem volgt. Zonder persoon een
+ * gast (besluit 151), behalve als er nog niemand woont: dan de vraag.
  */
 export function herken(b: Bewoners, account: Account, personen: readonly Persoon[], occupancy: readonly OccupancySource[], nowMs: number): Herkenning {
   const bekend = Object.values(b.bewoners).find((x) => x.haUser === account.userId);
   if (bekend) return { soort: 'bewoner', bewoner: bekend, nieuw: false, bewoners: b };
   if (b.schermen[account.userId] != null) return { soort: 'scherm' };
   const persoon = personen.find((p) => p.userId === account.userId);
-  if (persoon == null) return { soort: 'vraag' };
+  if (persoon == null) return b.volgorde.length === 0 ? { soort: 'vraag' } : { soort: 'gast', bewoners: alsGast(b, account, nowMs) };
   const bron = occupancy.find((o) => o.ref.id === persoon.entityId)?.id ?? null;
   const bewoners = voegToe(b, account, bron, nowMs);
   return { soort: 'bewoner', bewoner: bewoners.bewoners[bewoners.volgorde.at(-1)!]!, nieuw: true, bewoners };
@@ -155,6 +160,14 @@ export function voegToe(b: Bewoners, account: Account, aanwezigheid: string | nu
   const bewoner: Bewoner = { id, haUser: account.userId, haNaam: account.naam, naam, aanwezigheid: vrij, comfort: 'volgt', sindsMs: nowMs };
   const { [account.userId]: _scherm, ...schermen } = b.schermen;
   return { ...b, volgorde: [...b.volgorde, id], bewoners: { ...b.bewoners, [id]: bewoner }, schermen };
+}
+
+/** Een nieuwe gast (besluit 151): niet in de volgorde, zonder comfort en zonder aanwezigheid. */
+export function alsGast(b: Bewoners, account: Account, nowMs: number): Bewoners {
+  const naam = roepnaam(account.naam);
+  const id = nieuwId(b, naam);
+  const gast: Bewoner = { id, haUser: account.userId, haNaam: account.naam, naam, aanwezigheid: null, comfort: 'volgt', sindsMs: nowMs, gast: true };
+  return { ...b, bewoners: { ...b.bewoners, [id]: gast } };
 }
 
 export function alsScherm(b: Bewoners, account: Account, nowMs: number): Bewoners {
@@ -350,7 +363,14 @@ export interface Bron {
 }
 
 export interface BewonersView {
-  readonly ik: { readonly soort: 'bewoner' | 'gast' | 'scherm' | 'onbekend'; readonly id: string | null; readonly naam: string | null; readonly magBeheren: boolean };
+  readonly ik: {
+    readonly soort: 'bewoner' | 'gast' | 'scherm' | 'onbekend';
+    readonly id: string | null;
+    readonly naam: string | null;
+    readonly magBeheren: boolean;
+    /** De hoofdgebruiker zelf (besluit 151): alleen die maakt een gast bewoner, en begint opnieuw. */
+    readonly hoofd: boolean;
+  };
   readonly bewoners: readonly BewonerView[];
   /** Gasten: ingelogd in de app, maar zonder plek in de volgorde. */
   readonly gasten: readonly BewonerView[];
@@ -421,6 +441,7 @@ export function bewonersView(
       naam: ikB?.naam ?? null,
       // Een gast beheert nooit, ook niet als hij in Home Assistant beheerder is.
       magBeheren: !ikB?.gast && (wie.beheerder || (hoofd != null && ikB?.id === hoofd.id) || b.volgorde.length === 0),
+      hoofd: hoofd != null && ikB?.id === hoofd.id,
     },
     bewoners,
     gasten,
@@ -506,8 +527,9 @@ export function voerUit(
 ): Uitkomst {
   const vanEenAnder = (bronId: string | null, haUser: string | null) => { const acc = bronId == null ? null : accountVan(bronId); return acc != null && acc !== haUser; };
   const ik = Object.values(b.bewoners).find((x) => wie.userId != null && x.haUser === wie.userId) ?? null;
-  // Een gast kijkt alleen: van hem wordt niets bewaard, en hij verandert niets.
-  if (ik?.gast) return { ok: false, status: 403, reden: 'een gast kan alleen kijken' };
+  // Een gast kijkt alleen: van hem wordt niets bewaard, en hij verandert niets. Wel kan hij zeggen dat hij een scherm is (besluit 151).
+  const wordtScherm = a.actie === 'scherm' || (a.actie === 'ik' && a.soort === 'scherm');
+  if (ik?.gast && !wordtScherm) return { ok: false, status: 403, reden: 'een gast kan alleen kijken' };
   const hoofd = hoofdVan(b);
   const beheert = wie.beheerder || (hoofd != null && ik?.id === hoofd.id);
   const mag = (id: string) => beheert || ik?.id === id;
@@ -515,8 +537,10 @@ export function voerUit(
   switch (a.actie) {
     case 'ik': {
       if (wie.userId == null) return { ok: false, status: 403, reden: 'log eerst in' };
-      if (ik) return { ok: true, bewoners: b };
-      if (a.soort === 'scherm') return { ok: true, bewoners: alsScherm(b, { userId: wie.userId, naam: wie.naam }, nowMs) };
+      if (ik && !ik.gast) return { ok: true, bewoners: b };
+      if (a.soort === 'scherm') return { ok: true, bewoners: alsScherm(ik ? haalWeg(b, comfort, ik.id)!.bewoners : b, { userId: wie.userId, naam: wie.naam }, nowMs) };
+      // Zelf bewoner worden kan alleen het eerste account; daarna maakt de hoofdgebruiker een gast bewoner (besluit 151).
+      if (b.volgorde.length > 0) return { ok: false, status: 403, reden: 'de hoofdgebruiker maakt je bewoner' };
       if (a.aanwezigheid != null && !occupancy.some((o) => o.id === a.aanwezigheid)) return { ok: false, status: 400, reden: 'die aanwezigheid kent het huis niet' };
       if (vanEenAnder(a.aanwezigheid, wie.userId)) return { ok: false, status: 400, reden: 'die persoon hoort bij een ander account' };
       return { ok: true, bewoners: voegToe(b, { userId: wie.userId, naam: wie.naam }, a.aanwezigheid, nowMs) };
@@ -573,8 +597,9 @@ export function voerUit(
     case 'gast': {
       const x = bewoner(a.id);
       if (x == null) return { ok: false, status: 404, reden: 'die bewoner is er niet' };
-      if (!beheert) return { ok: false, status: 403, reden: 'dat kan alleen de hoofdgebruiker' };
-      if (a.gast && hoofd?.id === a.id) return { ok: false, status: 400, reden: 'de hoofdgebruiker kan geen gast zijn' };
+      // Alleen de hoofdgebruiker zelf, ook niet een beheerder in Home Assistant (besluit 151).
+      if (hoofd == null || ik?.id !== hoofd.id) return { ok: false, status: 403, reden: 'dat kan alleen de hoofdgebruiker' };
+      if (a.gast && hoofd.id === a.id) return { ok: false, status: 400, reden: 'de hoofdgebruiker kan geen gast zijn' };
       if (a.gast === (x.gast === true)) return { ok: true, bewoners: b };
       if (a.gast) {
         // Gast: uit de volgorde, en zonder eigen comfort; er blijft niets van hem bewaard.
@@ -618,4 +643,41 @@ export function voerUit(
       return { ok: true, bewoners: { ...b, vasthouden: { id: a.id, home: [...thuis], sindsMs: nowMs } } };
     }
   }
+}
+
+/* ------------------------------------------------------ de export (151) */
+
+/** Een naam zoals hij in een entiteit staat: "Shira" wordt "shira", "José" wordt "jose". */
+function alsId(naam: string): string {
+  return naam.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+/**
+ * Welke namen er uit de export moeten (besluit 151), en waarmee: bewoners en
+ * gasten op volgorde "Bewoner 1", "Bewoner 2", dan personen in Home Assistant
+ * die geen bewoner zijn. Een naam ook zoals hij in een entiteit of een id
+ * staat ("person.shira" wordt "person.bewoner_2"), zodat het logboek dezelfde
+ * persoon dezelfde naam houdt.
+ */
+export function namenVoorExport(b: Bewoners, personen: readonly Persoon[]): [string, string][] {
+  const paren = new Map<string, string>();
+  let n = 0;
+  const voeg = (namen: readonly string[], ids: readonly string[]) => {
+    n += 1;
+    for (const naam of namen) if (naam.trim() !== '' && !paren.has(naam.trim())) paren.set(naam.trim(), `Bewoner ${n}`);
+    for (const id of ids) if (id !== '' && !paren.has(id)) paren.set(id, `bewoner_${n}`);
+  };
+  const volgorde = [...b.volgorde.map((id) => b.bewoners[id]).filter((x): x is Bewoner => x != null), ...Object.values(b.bewoners).filter((x) => !b.volgorde.includes(x.id))];
+  const gehad = new Set<string>();
+  for (const x of volgorde) {
+    const p = personen.find((q) => q.userId != null && q.userId === x.haUser);
+    if (p) gehad.add(p.entityId);
+    const namen = [x.naam, x.haNaam, roepnaam(x.haNaam), ...(p ? [p.naam, roepnaam(p.naam)] : [])];
+    voeg(namen, [x.id, ...namen.map(alsId), ...(p ? [p.entityId.slice('person.'.length)] : [])]);
+  }
+  for (const p of personen) {
+    if (gehad.has(p.entityId)) continue;
+    voeg([p.naam, roepnaam(p.naam)], [p.entityId.slice('person.'.length), alsId(p.naam), alsId(roepnaam(p.naam))]);
+  }
+  return [...paren];
 }
