@@ -65,13 +65,15 @@
     pers.release.value = 0.2;
     const hoofd = ctx.createGain();
     hoofd.gain.value = 0;
-    // Als laatste een zachte begrenzer: tot 0,8 ongemoeid, daarboven afgerond, nooit boven 0,95.
+    // Als laatste een zachte begrenzer: tot 0,8 ongemoeid, daarboven afgerond, nooit boven 0,92.
+    // Met ruimte tot 0,95: de galm is ruis, en het overbemonsteren schiet een fractie door.
+    // De oude kromme ging tot 0,98, en op 17 oktober 2026 piekte de opname op 0,963.
     const grens = ctx.createWaveShaper();
     const kromme = new Float32Array(2048);
     for (let i = 0; i < kromme.length; i++) {
       const x = (i / (kromme.length - 1)) * 2 - 1;
       const a = Math.abs(x);
-      kromme[i] = a <= 0.8 ? x : Math.sign(x) * (0.8 + 0.18 * Math.tanh((a - 0.8) / 0.18));
+      kromme[i] = a <= 0.8 ? x : Math.sign(x) * (0.8 + 0.12 * Math.tanh((a - 0.8) / 0.12));
     }
     grens.curve = kromme;
     grens.oversample = '2x';

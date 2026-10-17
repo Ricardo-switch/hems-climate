@@ -1216,11 +1216,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand svg.sc-huis').first().waitFor();
     // Echt geen verbinding meer: anders haalt een vraag die nog onderweg was de balk weer weg.
     await context.route((url) => url.pathname.startsWith('/api/'), (route) => route.abort());
-    await expect.poll(async () => {
-      await p.evaluate('app.offline(Date.now())');
-      return p.locator('.geenverbinding', { hasText: 'De regeling loopt gewoon door' }).isVisible();
-    }, { timeout: 20_000 }).toBe(true);
-    expect(await p.evaluate("getComputedStyle(document.querySelector('#wand main')).pointerEvents")).toBe('none');
+    // Zetten en kijken in één keer: de live-stroom van vóór het afsluiten kan
+    // nog een bericht brengen dat de pagina weer online maakt (17 oktober 2026).
+    await expect.poll(() => p.evaluate<string>(`(() => {
+      app.offline(Date.now());
+      const balk = document.querySelector('.geenverbinding');
+      if (!balk || !balk.textContent.includes('De regeling loopt gewoon door') || !balk.getClientRects().length) return 'geen balk';
+      return getComputedStyle(document.querySelector('#wand main')).pointerEvents;
+    })()`), { timeout: 20_000 }).toBe('none');
     await p.evaluate('app.online()');
     expect(await p.locator('.geenverbinding').count()).toBe(0);
     await context.close();
@@ -1864,7 +1867,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand [data-blad] [data-terug]').click();
     await p.locator('#wand [data-blad] .bladkop').waitFor();
 
-    // De camera op de oprit: het beeld, want deze browser is ingelogd.
+    // De camera op de oprit: het beeld, want deze browser is ingelogd. Eerst
+    // tot een beeld van een eerdere test (de deurbel) dicht is: op een trage
+    // CI duurde dat langer dan vijf tellen (17 oktober 2026).
+    await expect.poll(() => liveOpen, { timeout: 15_000 }).toBe(0);
     const oprit = kamers.find((r) => r.apparaten.some((d) => d.soort === 'camera'))!;
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(oprit.id)}/camera.camera_oprit_vloeiend`);
     await p.locator('#wand .camerabeeld img').waitFor();
@@ -1874,7 +1880,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand .camerabeeld[data-gestart] img').waitFor();
     await p.waitForTimeout(2500);
     expect(await p.evaluate<number>("document.querySelector('#wand .camerabeeld img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
-    // Een beeld van een vorige test kan nog even open tellen tot de verbinding dicht is.
+    // Precies één: het beeld van deze kamer, en geen achtergebleven stroom van het blad ervoor.
     await expect.poll(() => liveOpen, { timeout: 5_000 }).toBe(1);
     // Een andere kamer: het beeld stopt.
     await p.goto(`${baseUrl}/kamer.html#${encodeURIComponent(metKlimaat.id)}`);
@@ -1907,7 +1913,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(() => sceneCalls.length).toBeGreaterThan(scenesVoor);
     expect(fouten).toEqual([]);
     await context.close();
-  }, 20_000);
+  }, 40_000);
 
   /*
    * Kamers en indeling in ontwerp 2 (besluit 104; schets Wand-Indeling): een
@@ -2141,15 +2147,27 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wandL.locator('[data-blad] h2', { hasText: 'Shira' }).waitFor();
     await wandL.locator('[data-blad] [data-comfort="eigen"]').click();
     await expect.poll(() => bewonersStore.current.bewoners['shira']?.comfort, kort).toBe('eigen');
-    // De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar hoofdgebruiker; en weer terug.
-    await wandL.locator('[data-greep="shira"]').focus();
-    await p.keyboard.press('ArrowUp');
-    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['shira', 'test']);
-    // Eerst de lijst opnieuw getekend, anders gaat de focus mee met de oude rij.
-    await wandL.locator('[data-lijst] [data-rij]').first().and(wandL.locator('[data-rij="shira"]')).waitFor(kort);
-    await wandL.locator('[data-greep="test"]').focus();
-    await p.keyboard.press('ArrowUp');
-    await expect.poll(() => bewonersStore.current.volgorde, kort).toEqual(['test', 'shira']);
+    /*
+     * De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar
+     * hoofdgebruiker; en weer terug. De lijst tekent zichzelf opnieuw na elk
+     * antwoord van de dienst, en een toets die net dan valt, gaat naar een rij
+     * die er niet meer is. Dus opnieuw drukken tot de dienst het heeft: de
+     * nieuwe volgorde komt uit wat er op het scherm staat, en bovenaan doet
+     * omhoog niets, dus nog eens drukken geeft hetzelfde.
+     */
+    const omhoog = async (id: string, verwacht: string[]) => {
+      await expect
+        .poll(async () => {
+          if (JSON.stringify(bewonersStore.current.volgorde) !== JSON.stringify(verwacht)) {
+            await wandL.locator(`[data-greep="${id}"]`).focus();
+            await p.keyboard.press('ArrowUp');
+          }
+          return bewonersStore.current.volgorde;
+        }, kort)
+        .toEqual(verwacht);
+    };
+    await omhoog('shira', ['shira', 'test']);
+    await omhoog('test', ['test', 'shira']);
     await shot(p, 'bewoners');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, niets zijwaarts buiten beeld.
