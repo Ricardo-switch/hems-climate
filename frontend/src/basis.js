@@ -60,13 +60,17 @@
   /** Een onzichtbaar vak om de inkeping van een telefoon te meten (safe-area). */
   let peil = null;
   function inzet() {
-    if (!peil) {
-      peil = document.createElement('div');
+    // In Home Assistant staat de app in een vak, en daar is de inkeping altijd 0:
+    // die meet alleen de pagina van Home Assistant zelf.
+    const doc = (inHA() && haDocument()) || document;
+    if (!peil || peil.ownerDocument !== doc) {
+      peil?.remove();
+      peil = doc.createElement('div');
       peil.setAttribute('aria-hidden', 'true');
       peil.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)';
-      document.documentElement.append(peil);
+      doc.documentElement.append(peil);
     }
-    const s = getComputedStyle(peil);
+    const s = (doc.defaultView ?? global).getComputedStyle(peil);
     // Boven en onder ook (besluit 129): op een liggende telefoon tekent de browser
     // tot onder de balk met de veegstreep, en daar viel de onderkant van de wand weg.
     return { l: parseFloat(s.paddingLeft) || 0, r: parseFloat(s.paddingRight) || 0, t: parseFloat(s.paddingTop) || 0, b: parseFloat(s.paddingBottom) || 0 };
@@ -190,6 +194,24 @@
     const b = document.body.classList;
     for (const c of [...b]) if (c.startsWith('lucht-')) b.remove(c);
     b.add(seizoen === 'winter' && tijd !== 'nacht' ? 'lucht-winter' : tijd === 'nacht' ? 'lucht-nacht' : tijd === 'avond' ? 'lucht-avond' : tijd === 'ochtend' ? 'lucht-ochtend' : wolken > 0.6 ? 'lucht-bewolkt' : 'lucht-dag');
+    luchtAchterVak();
+  }
+
+  /**
+   * In Home Assistant laadt een andere pagina in het vak van het paneel, en
+   * tot die er staat is het vak leeg: zwart op de tablet, langer dan op de
+   * NAS omdat alles via Home Assistant komt. Het vak krijgt de lucht van nu
+   * als achtergrond, zodat je die ziet in plaats van zwart.
+   */
+  function luchtAchterVak() {
+    try {
+      const vak = inHA() ? global.frameElement : null;
+      if (!vak) return;
+      vak.style.backgroundColor = getComputedStyle(document.body).backgroundColor;
+      vak.style.backgroundImage = getComputedStyle(document.body, '::before').backgroundImage;
+    } catch {
+      // Een vak van een andere herkomst: dan niets.
+    }
   }
 
   /** De lucht van nu, voor een tab zonder huis: uit de zon en wat de panelen leveren. */
@@ -380,14 +402,38 @@
       return null;
     }
   }
+  /**
+   * Fully Kiosk Browser heeft zijn eigen volledig scherm, dat de inkeping vrij
+   * laat. Het hele scherm van de browser vroeg daar over de camera heen, en de
+   * terugknop van Android zette het uit.
+   */
+  const inFully = () => !!(global.fully ?? haVenster()?.fully);
+  function haVenster() {
+    try {
+      return global.parent.document ? global.parent : null;
+    } catch {
+      return null;
+    }
+  }
   function heelScherm() {
     const doc = haDocument();
-    if (doc && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+    if (doc && !inFully() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
+  /** Bij de eerste tik het hele scherm, en na de terugknop van Android weer bij de volgende. */
+  const opTik = () => addEventListener('click', heelScherm, { once: true, capture: true });
+  let naarHAGekozen = false;
   function volledig() {
     if (!volledigNu()) return;
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    addEventListener('click', heelScherm, { once: true, capture: true });
+    if (inFully()) return;
+    opTik();
+    const doc = haDocument();
+    const weer = () => {
+      if (!doc.fullscreenElement && volledigNu() && !naarHAGekozen) opTik();
+    };
+    doc?.addEventListener('fullscreenchange', weer);
+    // Het document van Home Assistant blijft; de luisteraar gaat mee met deze pagina.
+    addEventListener('pagehide', () => doc?.removeEventListener('fullscreenchange', weer));
   }
   /** Aan of uit op dit apparaat, en meteen zo. */
   function zetVolledig(aan) {
@@ -410,6 +456,7 @@
   }
   /** Terug naar Home Assistant: het hele scherm uit, en naar het dashboard. */
   function naarHA() {
+    naarHAGekozen = true;
     const doc = haDocument();
     if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     aanHA({ type: 'home-assistant/unsubscribe-properties' });
@@ -435,6 +482,7 @@
     if (tabs) nav.tabs(tabs, tab, LINKS);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
     menuNaarHA();
+    luchtAchterVak();
     $$('[data-tandwiel]').forEach((a) => {
       a.innerHTML = nav.svg('instellingen');
       a.setAttribute('href', LINKS.instellingen);
