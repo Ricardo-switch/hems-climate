@@ -171,6 +171,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [100. Licht in kleur en wit, en de scènes van Hue (aanvulling op 97)](#100-licht-in-kleur-en-wit-en-de-scènes-van-hue-aanvulling-op-97)
 - [106. De camera's bekijken in de app, alleen lezen en alleen met inlog](#106-de-cameras-bekijken-in-de-app-alleen-lezen-en-alleen-met-inlog)
 - [121. Schermen bedien je in de app; alleen Somfy io mag later in de regeling](#121-schermen-bedien-je-in-de-app-alleen-somfy-io-mag-later-in-de-regeling)
+- [151. Een gast zonder persoon, een back-up, opnieuw beginnen, en een export voor onderzoek](#151-een-gast-zonder-persoon-een-back-up-opnieuw-beginnen-en-een-export-voor-onderzoek)
 
 **Uitrol en beheer**
 
@@ -6413,6 +6414,75 @@ waren.
   nagespeeld en niet op de NAS gezien; het is de enige weg die we vonden
   waarop "Eigen" kon mislukken.
 - **Versie 0.28.0.**
+
+---
+
+## 151. Een gast zonder persoon, een back-up, opnieuw beginnen, en een export voor onderzoek
+
+*Onderwerp: veiligheid · Status: geldig*
+
+Gevraagd door de bewoner op 17 oktober 2026. Er was geen back-up en geen
+manier om terug te zetten. Opnieuw beginnen met een leeg huis kon niet. Een
+account zonder persoon in Home Assistant kon zichzelf bewoner maken. De export
+moet blijven, maar dient ergens anders voor: Ricardo laat een proefhuis van
+iemand anders erin kijken om de app te verbeteren. Daar hoort genoeg in te
+staan, ook de apparaten en wat Smart Climate ermee doet. De keuzes zijn van de
+bewoner; er is geen schets.
+
+*Besluit:*
+
+- **Een account zonder persoon in Home Assistant wordt een gast** (aanvulling
+  op besluit 147). Na de eerste inlog staat hij bij Bewoners › Schermen en
+  gasten, zonder plek in de volgorde. Alleen de hoofdgebruiker maakt er een
+  bewoner van, of weer een gast, ook niet een beheerder in Home Assistant. Zelf
+  kiezen kan alleen "Dit is een scherm", zodat de wand zichzelf blijft
+  inrichten. Het allereerste account kiest wel zelf: er is dan nog geen
+  hoofdgebruiker. De dienst toetst het, niet alleen de pagina.
+- **Een gast verandert geen instellingen.** De dienst weigerde dat al (besluit
+  147). Nu laat de app het ook zien: Instellingen toont een gast alleen
+  Bewoners en toegang (inloggen en de versie) en Wat je huis kan. Een andere
+  instellingenpagina gaat terug naar Instellingen.
+- **De back-up is klein.** Bij Bewoners en toegang › Je gegevens downloadt de
+  hoofdgebruiker één JSON-bestand. Daarin staan wat in de app is ingesteld
+  (indeling, aansluiting, bewoners, comfort, energie, functies, meldingen), wat
+  het huis leerde (de zon per kwartier en de kleuren van scènes) en de
+  configuratie. Het logboek zit er niet in: als add-on gaat het al mee in de
+  back-up van Home Assistant, en op de NAS in Hyper Backup.
+- **Terugzetten** vervangt wat in de back-up staat en laat de rest staan. Een
+  configuratie zet het alleen neer als er nog geen is. Eerst bewaart de dienst
+  wat er nu staat, in `back-ups/` naast het logboek; daar blijven de laatste
+  tien. Daarna stopt de dienst met code 75 en start opnieuw. De add-on doet dat
+  met een lus in `run.sh`, de NAS met `restart: unless-stopped`. Zo leest de
+  dienst alles opnieuw in, in de vaste volgorde.
+- **Opnieuw beginnen** kan alleen de hoofdgebruiker, ingelogd en na een tweede
+  bevestiging. Eerst komt er een back-up, op het apparaat en in `back-ups/`.
+  Dan gaat weg wat de dienst maakte: instellingen, wat het huis leerde, en het
+  logboek. De back-ups, de sessies, de sleutel voor de assistent en de
+  scèneplaatjes blijven staan. De configuratie gaat alleen weg als de app hem
+  ook maakte, dus als de onboarding aanstaat, zoals in de add-on. Op de NAS is
+  het een bestand van de beheerder, en dat blijft staan. Zolang er niemand
+  woont, mag een beheerder in Home Assistant dit ook, anders kan niemand een
+  back-up op een nieuw huis zetten.
+- **De export is voor onderzoek, en alleen voor de hoofdgebruiker** (wijziging
+  op besluit 48 en 83: daar mocht de beheerder het). In `analyse/` komen erbij:
+  `instellingen.json` met de configuratie en alles uit de app, en
+  `entiteiten.json` met elke entiteit uit Home Assistant. Per entiteit staan
+  daar apparaat, merk, model, ruimte, etage, soort, eenheid en stand, en onder
+  `gebruikt` waar Smart Climate hem gebruikt, als pad, zoals
+  `configuratie.zones[0].sensors[1]`. Een `LEESMIJ.md` zegt wat erin zit.
+- **Zonder namen en zonder ligging.** In elk bestand van de export, ook in het
+  logboek, worden bewoners "Bewoner 1", "Bewoner 2" (in een entiteit of id
+  `bewoner_1`). Dat geldt ook voor personen in Home Assistant die geen bewoner
+  zijn. Een naam wordt alleen vervangen als heel woord, en pas vanaf drie
+  letters. `latitude` en `longitude` worden overal `null`. Daarvoor pakt de
+  export elke dag uit, en die staat daarna uitgepakt in het archief. Hij is
+  dus trager dan voorheen, maar het archief zelf blijft gecomprimeerd.
+- **Wat groeit.** Het logboek is ongeveer 5 MB per dag. Ingepakt na een week
+  (besluit 58) blijft daar zo'n 60 MB per jaar van over, en na twee jaar
+  vat besluit 83 het samen per uur. Bij Je gegevens staat hoe groot het nu is.
+  De map `bench` op de NAS (ongeveer 560 MB) was een eenmalige proef uit
+  besluit 34 en groeit niet. Niets leest hem: hij mag weg.
+- **Versie 0.30.0.**
 
 ---
 

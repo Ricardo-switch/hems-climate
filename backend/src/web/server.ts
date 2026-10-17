@@ -29,7 +29,8 @@ import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
-import { exportInfo, writeExport } from './export.js';
+import { exportInfo, writeExport, type AnalyseExtra } from './export.js';
+import { MAX_BACKUP, backupNaam, type Backup } from './gegevens.js';
 import { TodayCache } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
@@ -126,14 +127,35 @@ export interface WebOptions {
    * Bewoners (besluit 147): wie hier woont, op volgorde, en wat een bewoner
    * aan zichzelf of als hoofdgebruiker aan een ander verandert. `herken` kijkt
    * na het inloggen wie het is: een nieuwe bewoner krijgt het welkom, een
-   * account zonder persoon de vraag of het een bewoner of een scherm is.
+   * account zonder persoon wordt gast (besluit 151), en het eerste account de
+   * vraag of het een bewoner of een scherm is.
    */
   readonly bewoners?: {
     readonly view: (wie: Wie) => BewonersView;
     readonly actie: (body: unknown, wie: Wie & { readonly naam: string }) => Promise<{ readonly ok: true; readonly view: BewonersView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
-    readonly herken: (account: { readonly userId: string; readonly naam: string }) => Promise<'welkom' | 'vraag' | null>;
+    readonly herken: (account: { readonly userId: string; readonly naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
     /** Is dit account een gast, en is hij thuis? Een gast kijkt, en bedient alleen thuis. */
     readonly gast?: (userId: string | null) => { readonly gast: boolean; readonly thuis: boolean | null };
+  };
+  /**
+   * Back-up, herstel en opnieuw beginnen (besluit 151), en de export voor de
+   * analyse: alleen voor de hoofdgebruiker. Zonder dit bestaan de routes niet,
+   * en is de export zoals voorheen.
+   */
+  readonly gegevens?: {
+    /** Is wie er kijkt de hoofdgebruiker? Zolang er niemand woont: een beheerder in Home Assistant. */
+    readonly hoofd: (wie: Wie) => boolean;
+    readonly backup: () => Promise<Backup>;
+    readonly herstel: (body: unknown) => Promise<{ readonly ok: true; readonly bestanden: readonly string[]; readonly configuratie: string } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+    readonly opnieuw: () => Promise<{ readonly ok: true; readonly backup: string; readonly weg: readonly string[] } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+    /** Gaat de configuratie mee bij opnieuw beginnen? Alleen als de app hem maakte. */
+    readonly configWeg: boolean;
+    /** De back-ups die de dienst zelf bewaarde, de nieuwste eerst. */
+    readonly bewaard: () => Promise<readonly string[]>;
+    /** De instellingen en de apparaten voor de export, en welke namen eruit moeten. */
+    readonly analyse: () => Promise<AnalyseExtra>;
+    /** Stopt de dienst om opnieuw te starten, nadat het antwoord weg is. */
+    readonly herstart: () => void;
   };
   /** De sleutel waarmee de assistent van Home Assistant zonder inlog een vraag stelt (besluit 147). */
   readonly sleutel?: string;
@@ -353,12 +375,12 @@ const MAX_BODY = 64 * 1024;
  * het geheugen op is. Dat is hier extra onprettig: het is dezelfde dienst die
  * de opname doet, en die hoort niet om te vallen door een pagina.
  */
-async function readJson(req: IncomingMessage): Promise<unknown> {
+async function readJson(req: IncomingMessage, max: number = MAX_BODY): Promise<unknown> {
   const pieces: Buffer[] = [];
   let bytes = 0;
   for await (const piece of req) {
     bytes += (piece as Buffer).length;
-    if (bytes > MAX_BODY) throw new Error('verzoek te groot');
+    if (bytes > max) throw new Error('verzoek te groot');
     pieces.push(piece as Buffer);
   }
   const text = Buffer.concat(pieces).toString('utf-8');
@@ -565,6 +587,8 @@ export class WebServer {
       (this.#options.covers != null && path === '/api/scherm') ||
       // Scènes (besluit 100): een eigen smalle deur naast het licht.
       (this.#options.lights?.scenesEnabled === true && path === '/api/scene') ||
+      // Een back-up terugzetten en opnieuw beginnen (besluit 151): alleen de eigen bestanden.
+      (this.#options.gegevens != null && (path === '/api/back-up' || path === '/api/opnieuw')) ||
       // Uitloggen (besluit 99): alleen de eigen sessie weg, verder niets.
       (access.kind === 'sessions' && path === '/auth/logout');
     if (method !== 'GET' && method !== 'HEAD' && !(method === 'POST' && mayWrite)) {
@@ -612,7 +636,8 @@ export class WebServer {
       }
       // Een gast (besluit 147): bedienen alleen als hij thuis is, en verder niets bewaren.
       const gast = access.kind === 'sessions' && path !== '/auth/logout' ? await this.#gast(req) : null;
-      if (gast?.gast) {
+      // Behalve bij Bewoners: daar kan een gast zeggen dat hij een scherm is (besluit 151), en de deur laat verder niets toe.
+      if (gast?.gast && path !== '/api/bewoners') {
         const bedienen = path === '/api/licht' || path === '/api/scene' || path === '/api/scherm';
         if (!bedienen) {
           sendJson(res, 403, { fout: 'als gast kun je kijken; dit verandert iets aan het huis' });
@@ -1217,10 +1242,19 @@ export class WebServer {
       return;
     }
 
+    if (path === '/api/gegevens' || path === '/api/back-up' || path === '/api/opnieuw') {
+      await this.#gegevens(req, res, method, path);
+      return;
+    }
+
     if (path === '/api/export') {
-      // Je gegevens downloaden is meer dan kijken: niet voor een gast (besluit 147).
+      // Je gegevens downloaden is meer dan kijken: niet voor een gast (besluit 147), en sinds besluit 151 alleen de hoofdgebruiker.
       if ((await this.#gast(req))?.gast) {
         sendJson(res, 403, { fout: 'als gast kun je de gegevens niet downloaden' });
+        return;
+      }
+      if (this.#options.gegevens && !(await this.#hoofd(req))) {
+        sendJson(res, 403, { fout: 'alleen de hoofdgebruiker kan het logboek downloaden' });
         return;
       }
       if (logDir == null) {
@@ -1238,7 +1272,7 @@ export class WebServer {
         res.end();
         return;
       }
-      await writeExport(logDir, res);
+      await writeExport(logDir, res, new Date(), await this.#options.gegevens?.analyse());
       return;
     }
 
@@ -1515,6 +1549,65 @@ export class WebServer {
     const v: Visitor | null = access.kind === 'ingress' ? ingressVisitor(req) : await access.store.visitor(cookieValue(req, SESSION_COOKIE));
     const gast = this.#options.bewoners?.gast?.(v?.userId ?? null).gast === true;
     return { userId: v?.userId ?? null, beheerder: v?.rol === 'beheerder' && !gast, naam: v?.naam ?? '' };
+  }
+
+  /** Is wie er kijkt de hoofdgebruiker (besluit 151)? Zonder inlog (alleen in tests) mag alles. */
+  async #hoofd(req: IncomingMessage): Promise<boolean> {
+    if (this.#options.access.kind === 'open') return true;
+    return this.#options.gegevens?.hoofd(await this.#wie(req)) === true;
+  }
+
+  /**
+   * Back-up, herstel en opnieuw beginnen (besluit 151). Kijken mag iedereen
+   * die ingelogd is; downloaden, terugzetten en opnieuw beginnen alleen de
+   * hoofdgebruiker. Na terugzetten of opnieuw beginnen start de dienst
+   * opnieuw, pas als het antwoord weg is.
+   */
+  async #gegevens(req: IncomingMessage, res: ServerResponse, method: string, path: string): Promise<void> {
+    const g = this.#options.gegevens;
+    const logDir = this.#options.logDir;
+    if (g == null || logDir == null) {
+      sendJson(res, 503, { wachten: 'er wordt niets bewaard, dus er is geen back-up' });
+      return;
+    }
+    const hoofd = await this.#hoofd(req);
+    if (path === '/api/gegevens') {
+      sendJson(res, 200, { hoofd, configWeg: g.configWeg, logboek: await exportInfo(logDir), backups: hoofd ? await g.bewaard() : [] });
+      return;
+    }
+    if (!hoofd) {
+      sendJson(res, 403, { fout: 'dit kan alleen de hoofdgebruiker' });
+      return;
+    }
+    if (path === '/api/back-up' && method !== 'POST') {
+      const text = `${JSON.stringify(await g.backup(), null, 2)}\n`;
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'content-disposition': `attachment; filename="${backupNaam()}"`,
+        'content-length': Buffer.byteLength(text),
+        'cache-control': 'no-store',
+      });
+      res.end(method === 'HEAD' ? undefined : text);
+      return;
+    }
+    let body: unknown;
+    try {
+      body = await readJson(req, path === '/api/back-up' ? MAX_BACKUP : MAX_BODY);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return;
+    }
+    if (path === '/api/opnieuw' && (body as { zeker?: unknown } | null)?.zeker !== true) {
+      sendJson(res, 400, { fout: 'bevestig eerst dat je opnieuw wilt beginnen' });
+      return;
+    }
+    const uit = path === '/api/back-up' ? await g.herstel(body) : await g.opnieuw();
+    if (!uit.ok) {
+      sendJson(res, uit.status, { fout: uit.reden });
+      return;
+    }
+    res.once('finish', () => g.herstart());
+    sendJson(res, 200, { ...uit, herstart: true });
   }
 
   /** Of wie er kijkt een gast is, en thuis (besluit 147). */

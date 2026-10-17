@@ -50,6 +50,9 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   // Bewoners (besluit 147): iedereen die ingelogd is; wat je aan een ander mag, toetst de deur zelf.
   '/api/bewoners': 'bewoner',
   '/api/onboarding': 'beheerder',
+  // Een back-up terugzetten en opnieuw beginnen (besluit 151): ingelogd, en de deur toetst of het de hoofdgebruiker is.
+  '/api/back-up': 'bewoner',
+  '/api/opnieuw': 'bewoner',
 };
 
 export const SESSION_COOKIE = 'hems_sessie';

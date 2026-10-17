@@ -39,13 +39,43 @@ describe('de eerste inlog', () => {
     expect(herken(b, { userId: 'u-shira', naam: 'Shira' }, personen, occupancy, NU)).toMatchObject({ soort: 'bewoner', nieuw: false });
   });
 
-  it('vraagt het een account zonder persoon, en een scherm wordt geen bewoner', () => {
+  it('maakt van een account zonder persoon een gast, die zelf alleen een scherm kan worden (besluit 151)', () => {
     const b = tweeBewoners();
-    expect(herken(b, { userId: 'u-wand', naam: 'Wand' }, personen, occupancy, NU).soort).toBe('vraag');
-    const scherm = voerUit(b, comfort, { actie: 'ik', soort: 'scherm', aanwezigheid: null }, { userId: 'u-wand', naam: 'Wand', beheerder: false }, occupancy, [], NU);
+    const r = herken(b, { userId: 'u-wand', naam: 'Wand' }, personen, occupancy, NU);
+    if (r.soort !== 'gast') throw new Error('de wand hoort eerst gast te zijn');
+    expect(r.bewoners.volgorde).toEqual(['ricardo', 'shira']);
+    expect(r.bewoners.bewoners['wand']).toMatchObject({ gast: true, haUser: 'u-wand', aanwezigheid: null });
+    // Daarna is hij bekend: geen nieuwe gast bij elke pagina.
+    expect(herken(r.bewoners, { userId: 'u-wand', naam: 'Wand' }, personen, occupancy, NU)).toMatchObject({ soort: 'bewoner', nieuw: false });
+    const wand = { userId: 'u-wand', naam: 'Wand', beheerder: false };
+    const scherm = voerUit(r.bewoners, comfort, { actie: 'ik', soort: 'scherm', aanwezigheid: null }, wand, occupancy, [], NU);
     expect(scherm.ok && scherm.bewoners.volgorde).toEqual(['ricardo', 'shira']);
+    expect(scherm.ok && scherm.bewoners.bewoners['wand']).toBeUndefined();
     expect(scherm.ok && herken(scherm.bewoners, { userId: 'u-wand', naam: 'Wand' }, personen, occupancy, NU).soort).toBe('scherm');
-    const saskia = voerUit(b, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'saskia' }, { userId: 'u-saskia', naam: 'Saskia de Vries', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    // Zelf bewoner worden kan niet meer, ook niet als beheerder in Home Assistant.
+    const saskia = herken(b, { userId: 'u-saskia', naam: 'Saskia de Vries' }, personen, occupancy, NU) as { soort: 'gast'; bewoners: Bewoners };
+    expect(voerUit(saskia.bewoners, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'saskia' }, { userId: 'u-saskia', naam: 'Saskia de Vries', beheerder: true }, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    expect(voerUit(b, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'saskia' }, { userId: 'u-saskia', naam: 'Saskia de Vries', beheerder: false }, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+  });
+
+  it('alleen de hoofdgebruiker maakt een gast bewoner, ook niet een beheerder in Home Assistant (besluit 151)', () => {
+    const b = (herken(tweeBewoners(), { userId: 'u-saskia', naam: 'Saskia de Vries' }, personen, occupancy, NU) as { soort: 'gast'; bewoners: Bewoners }).bewoners;
+    const beheerder = { userId: 'u-shira', naam: 'Shira', beheerder: true };
+    expect(voerUit(b, comfort, { actie: 'gast', id: 'saskia', gast: false }, beheerder, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    const ricardo = { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false };
+    const bewoner = voerUit(b, comfort, { actie: 'gast', id: 'saskia', gast: false }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(bewoner.bewoners.volgorde).toEqual(['ricardo', 'shira', 'saskia']);
+    // En daarna kiest de hoofdgebruiker wat haar volgt.
+    const thuis = voerUit(bewoner.bewoners, comfort, { actie: 'aanwezigheid', id: 'saskia', bron: 'saskia' }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(thuis.bewoners.bewoners['saskia']?.aanwezigheid).toBe('saskia');
+    expect(bewonersView(b, { userId: 'u-ricardo', beheerder: false }, occupancy, () => undefined, null).ik).toMatchObject({ hoofd: true, magBeheren: true });
+    expect(bewonersView(b, { userId: 'u-shira', beheerder: true }, occupancy, () => undefined, null).ik).toMatchObject({ hoofd: false, magBeheren: true });
+  });
+
+  it('laat het eerste account zonder persoon zelf kiezen: er is nog geen hoofdgebruiker', () => {
+    expect(herken(GEEN_BEWONERS, { userId: 'u-saskia', naam: 'Saskia de Vries' }, personen, occupancy, NU).soort).toBe('vraag');
+    const saskia = voerUit(GEEN_BEWONERS, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'saskia' }, { userId: 'u-saskia', naam: 'Saskia de Vries', beheerder: false }, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(saskia.bewoners.volgorde).toEqual(['saskia']);
     expect(saskia.bewoners.bewoners['saskia']).toMatchObject({ naam: 'Saskia', aanwezigheid: 'saskia', comfort: 'volgt' });
   });
 
@@ -155,13 +185,13 @@ describe('een scherm beheren (besluit 149)', () => {
     expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: '   ' }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
   });
 
-  it('weghalen: bij de volgende inlog vraagt de app weer wat het is', () => {
+  it('weghalen: bij de volgende inlog is het weer een gast (besluit 151)', () => {
     const b = metWand();
     expect(voerUit(b, comfort, { actie: 'schermWeg', id: 'u-wand' }, shira, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
     const uit = voerUit(b, comfort, { actie: 'schermWeg', id: 'u-wand' }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
     expect(uit.bewoners.schermen).toEqual({});
     expect(uit.bewoners.volgorde).toEqual(['ricardo', 'shira']);
-    expect(herken(uit.bewoners, { userId: 'u-wand', naam: 'Tablet hal' }, personen, occupancy, NU).soort).toBe('vraag');
+    expect(herken(uit.bewoners, { userId: 'u-wand', naam: 'Tablet hal' }, personen, occupancy, NU).soort).toBe('gast');
     expect(voerUit(uit.bewoners, comfort, { actie: 'schermWeg', id: 'u-wand' }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 404 });
   });
 });
@@ -225,6 +255,6 @@ describe('thuis volgens (besluit 147)', () => {
     // En de dienst weigert het ook.
     const account = (id: string) => (id === 'shira' ? 'u-shira' : id === 'ricardo' ? 'u-ricardo' : null);
     expect(voerUit(r.bewoners, comfort, { actie: 'aanwezigheid', id: 'ricardo', bron: 'shira' }, { userId: 'u-ricardo', naam: 'Ricardo', beheerder: false }, occupancy, [], NU, account)).toMatchObject({ ok: false, status: 400 });
-    expect(voerUit(r.bewoners, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'shira' }, { userId: 'u-saskia', naam: 'Saskia', beheerder: false }, occupancy, [], NU, account)).toMatchObject({ ok: false, status: 400 });
+    expect(voerUit(GEEN_BEWONERS, comfort, { actie: 'ik', soort: 'bewoner', aanwezigheid: 'shira' }, { userId: 'u-saskia', naam: 'Saskia', beheerder: false }, occupancy, [], NU, account)).toMatchObject({ ok: false, status: 400 });
   });
 });

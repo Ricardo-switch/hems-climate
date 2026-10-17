@@ -26,7 +26,8 @@ import type { ServerResponse } from 'node:http';
 import { basename, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
-import { createGzip } from 'node:zlib';
+import { promisify } from 'node:util';
+import { createGzip, gunzip } from 'node:zlib';
 
 import { findHistoryFiles, findLogFiles } from '../divergence/read.js';
 import { RUNS_FILE } from '../adapters/runs.js';
@@ -36,6 +37,10 @@ import { CONNECTION_FILE } from './aansluiting.js';
 import { WEATHER_FILE } from './weather.js';
 import { UREN_FILE } from './open-meteo.js';
 import { SOLAR_FILE } from './solar-learn.js';
+import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
+import type { HaEntityState } from '../adapters/homeassistant/client.js';
+
+const gunzipAsync = promisify(gunzip);
 
 const BLOCK = 512;
 
@@ -135,20 +140,41 @@ export async function exportInfo(logDir: string): Promise<ExportInfo> {
 }
 
 /**
+ * Wat er voor de analyse bij komt (besluit 151): de instellingen en de
+ * apparaten met hun functie, als losse bestanden in `analyse/`, en welke
+ * namen er overal uit moeten.
+ */
+export interface AnalyseExtra {
+  /** Naam in `analyse/` en de inhoud. */
+  readonly bestanden: Readonly<Record<string, string>>;
+  /** Namen van bewoners en wat ervoor in de plaats komt, in elk bestand. */
+  readonly vervang: readonly (readonly [string, string])[];
+}
+
+/**
  * Schrijft alle dagbestanden als een gzipte tar naar het antwoord.
  *
  * De bestanden komen in een map te staan die de datum van de export draagt:
  * uitgepakt krijg je `hems-logboek-JJJJ-MM-DD/decisions-*.ndjson`, en dat is
  * precies wat je aan `--divergence` of `--benchmark` kunt voeren.
+ *
+ * **Voor de analyse, zonder namen (besluit 151).** Met `analyse` gaat elk
+ * bestand door de vervanger: namen van bewoners worden "Bewoner 1", en een
+ * ligging gaat eruit. Dat kan niet als stroom, want de kop van tar noemt de
+ * omvang vooraf. Daarom per bestand in het geheugen, uitgepakt: hooguit een
+ * dag, een paar megabyte. Een ingepakte dag komt er uitgepakt in; de tar zelf
+ * wordt toch gecomprimeerd.
  */
 export async function writeExport(
   logDir: string,
   res: ServerResponse,
   now: Date = new Date(),
+  analyse?: AnalyseExtra,
 ): Promise<void> {
   const { everything: paths } = await exportFiles(logDir);
   const stamp = now.toISOString().slice(0, 10);
   const map = `hems-logboek-${stamp}`;
+  const vervang = analyse ? vervanger(analyse.vervang) : null;
 
   res.writeHead(200, {
     'content-type': 'application/gzip',
@@ -173,10 +199,17 @@ export async function writeExport(
       if (opened == null) continue;
       const { handle, name } = opened;
       try {
-        yield* entry(`${map}/${name}`, handle);
+        if (vervang) yield* anoniemEntry(`${map}/${name.replace(/\.gz$/, '')}`, handle, name.endsWith('.gz'), vervang);
+        else yield* entry(`${map}/${name}`, handle);
       } finally {
         await handle.close();
       }
+    }
+    for (const [naam, inhoud] of Object.entries(analyse?.bestanden ?? {})) {
+      const buf = Buffer.from(vervang ? vervang(inhoud) : inhoud, 'utf-8');
+      yield heading(`${map}/analyse/${naam}`, buf.length, now.getTime());
+      yield buf;
+      yield padding(buf.length);
     }
     yield Buffer.alloc(BLOCK * 2);
   }
@@ -229,4 +262,127 @@ async function* entry(name: string, handle: FileHandle): AsyncGenerator<Buffer> 
   // houdt de rest van het archief leesbaar.
   if (sent < info.size) yield Buffer.alloc(info.size - sent);
   yield padding(info.size);
+}
+
+/** Eén bestand, uitgepakt en zonder namen; de omvang pas na het vervangen. */
+async function* anoniemEntry(name: string, handle: FileHandle, ingepakt: boolean, vervang: (tekst: string) => string): AsyncGenerator<Buffer> {
+  const info = await handle.stat();
+  const ruw = await handle.readFile();
+  const tekst = (ingepakt ? await gunzipAsync(ruw) : ruw).toString('utf-8');
+  const buf = Buffer.from(vervang(tekst), 'utf-8');
+  yield heading(name, buf.length, info.mtimeMs);
+  yield buf;
+  yield padding(buf.length);
+}
+
+/**
+ * De vervanger voor een export zonder namen (besluit 151).
+ *
+ * Een naam alleen als heel woord, zodat "Jan" niet uit "Januari" verdwijnt; de
+ * langste eerst, zodat "Shira Cornelissen" niet half wordt vervangen. Namen
+ * korter dan drie tekens blijven staan: dan raakt het te veel andere woorden.
+ * Een ligging (`latitude`, `longitude`) wordt overal null.
+ */
+export function vervanger(paren: readonly (readonly [string, string])[]): (tekst: string) => string {
+  const bruikbaar = paren.filter(([van]) => van.trim().length >= 3).sort((a, b) => b[0].length - a[0].length);
+  const naar = new Map(bruikbaar.map(([van, voor]) => [van, voor]));
+  const veilig = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patroon = bruikbaar.length ? new RegExp(`(?<![\\p{L}\\p{N}])(?:${bruikbaar.map(([van]) => veilig(van)).join('|')})(?![\\p{L}\\p{N}])`, 'gu') : null;
+  return (tekst) => {
+    const zonderLigging = tekst.replace(/"(latitude|longitude)"\s*:\s*-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g, '"$1":null');
+    return patroon ? zonderLigging.replace(patroon, (m) => naar.get(m) ?? m) : zonderLigging;
+  };
+}
+
+/** Een entiteit uit Home Assistant, zoals de analyse hem nodig heeft. */
+export interface EntiteitRij {
+  readonly id: string;
+  readonly naam: string | null;
+  readonly domein: string;
+  /** De integratie, zoals "hue" of "buienradar". */
+  readonly integratie: string | null;
+  readonly apparaat: { readonly naam: string | null; readonly merk: string | null; readonly model: string | null } | null;
+  readonly ruimte: string | null;
+  readonly etage: string | null;
+  readonly soort: string | null;
+  readonly eenheid: string | null;
+  readonly stand: string | null;
+  readonly uit: boolean;
+  readonly verborgen: boolean;
+  readonly categorie: string | null;
+  /**
+   * Waar Smart Climate hem gebruikt: het pad in de configuratie of een
+   * instelling, zoals `configuratie.zones[0].sensors[1]` of
+   * `functies.json.deurbel.camera`. Leeg: Smart Climate doet er niets mee.
+   */
+  readonly gebruikt: readonly string[];
+}
+
+const ENTITEIT = /^[a-z_]+\.[a-z0-9_]+$/;
+
+/** Elk pad in de bronnen waar een entiteit staat, als waarde of als sleutel. */
+function verwijzingen(bronnen: Readonly<Record<string, unknown>>): Map<string, string[]> {
+  const uit = new Map<string, string[]>();
+  const noteer = (id: string, pad: string) => {
+    const l = uit.get(id) ?? [];
+    if (!l.includes(pad)) l.push(pad);
+    uit.set(id, l);
+  };
+  const loop = (v: unknown, pad: string, diepte: number): void => {
+    if (diepte > 40) return;
+    if (typeof v === 'string') {
+      if (ENTITEIT.test(v)) noteer(v, pad);
+    } else if (Array.isArray(v)) {
+      v.forEach((x, i) => loop(x, `${pad}[${i}]`, diepte + 1));
+    } else if (v != null && typeof v === 'object') {
+      for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+        if (ENTITEIT.test(k)) noteer(k, `${pad}.${k}`);
+        loop(x, `${pad}.${k}`, diepte + 1);
+      }
+    }
+  };
+  for (const [naam, bron] of Object.entries(bronnen)) loop(bron, naam, 0);
+  return uit;
+}
+
+/**
+ * Alle entiteiten uit Home Assistant met hun apparaat, ruimte en etage, en
+ * waar Smart Climate ze gebruikt (besluit 151). Van de stand alleen de waarde,
+ * de eenheid en de soort: de andere attributen kunnen een ligging of een naam
+ * bevatten en zeggen weinig over hoe het huis werkt.
+ */
+export function entiteitenLijst(
+  r: { readonly floors: readonly HaFloor[]; readonly areas: readonly HaArea[]; readonly devices: readonly HaDevice[]; readonly entities: readonly HaRegistryEntity[] } | null,
+  states: ReadonlyMap<string, HaEntityState>,
+  bronnen: Readonly<Record<string, unknown>>,
+): EntiteitRij[] {
+  const gebruikt = verwijzingen(bronnen);
+  const apparaten = new Map((r?.devices ?? []).map((d) => [d.id, d]));
+  const ruimtes = new Map((r?.areas ?? []).map((a) => [a.area_id, a]));
+  const etages = new Map((r?.floors ?? []).map((f) => [f.floor_id, f]));
+  const registry = new Map((r?.entities ?? []).map((e) => [e.entity_id, e]));
+  const tekst = (v: unknown): string | null => (typeof v === 'string' && v !== '' ? v : null);
+  return [...new Set([...registry.keys(), ...states.keys()])].sort().map((id): EntiteitRij => {
+    const e = registry.get(id);
+    const s = states.get(id);
+    const d = e?.device_id ? apparaten.get(e.device_id) : undefined;
+    const ruimte = ruimtes.get(e?.area_id ?? d?.area_id ?? '');
+    const etage = ruimte?.floor_id ? etages.get(ruimte.floor_id) : undefined;
+    return {
+      id,
+      naam: tekst(s?.attributes['friendly_name']) ?? e?.name ?? e?.original_name ?? null,
+      domein: id.split('.')[0]!,
+      integratie: e?.platform ?? null,
+      apparaat: d ? { naam: d.name_by_user ?? d.name ?? null, merk: d.manufacturer ?? null, model: d.model ?? null } : null,
+      ruimte: ruimte?.name ?? null,
+      etage: etage?.name ?? null,
+      soort: tekst(s?.attributes['device_class']) ?? e?.device_class ?? e?.original_device_class ?? null,
+      eenheid: tekst(s?.attributes['unit_of_measurement']),
+      stand: s?.state ?? null,
+      uit: e?.disabled_by != null,
+      verborgen: e?.hidden_by != null,
+      categorie: e?.entity_category ?? null,
+      gebruikt: gebruikt.get(id) ?? [],
+    };
+  });
 }
