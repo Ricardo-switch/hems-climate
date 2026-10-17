@@ -1216,11 +1216,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand svg.sc-huis').first().waitFor();
     // Echt geen verbinding meer: anders haalt een vraag die nog onderweg was de balk weer weg.
     await context.route((url) => url.pathname.startsWith('/api/'), (route) => route.abort());
-    await expect.poll(async () => {
-      await p.evaluate('app.offline(Date.now())');
-      return p.locator('.geenverbinding', { hasText: 'De regeling loopt gewoon door' }).isVisible();
-    }, { timeout: 20_000 }).toBe(true);
-    expect(await p.evaluate("getComputedStyle(document.querySelector('#wand main')).pointerEvents")).toBe('none');
+    // Zetten en kijken in één keer: de live-stroom van vóór het afsluiten kan
+    // nog een bericht brengen dat de pagina weer online maakt (17 oktober 2026).
+    await expect.poll(() => p.evaluate<string>(`(() => {
+      app.offline(Date.now());
+      const balk = document.querySelector('.geenverbinding');
+      if (!balk || !balk.textContent.includes('De regeling loopt gewoon door') || !balk.getClientRects().length) return 'geen balk';
+      return getComputedStyle(document.querySelector('#wand main')).pointerEvents;
+    })()`), { timeout: 20_000 }).toBe('none');
     await p.evaluate('app.online()');
     expect(await p.locator('.geenverbinding').count()).toBe(0);
     await context.close();
