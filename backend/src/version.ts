@@ -48,6 +48,18 @@ export const NIEUW: readonly Nieuw[] = [
     opgelost: ['"Waar staan 1 dit apparaat?" is nu "Waar staat dit apparaat?"', 'Het startscherm telt Buiten niet meer als etage'],
   },
   {
+    versie: '0.33.0',
+    datum: '2026-10-17',
+    nieuw: [
+      'Smart Climate meet zelf hoe je panelen liggen: de richting, de helling en het vermogen, uit een heldere dag. Je bevestigt het bij Inrichten of Energie',
+      'Bij panelen op twee kanten één vraag: wanneer schijnt de zon op de voorkant?',
+    ],
+    beter: [
+      'Een nieuw huis heeft meteen de zon, het weer met opbrengst en de verwachting, eerst met een schatting',
+      'De omvormer haalt Smart Climate uit Home Assistant; die hoef je niet op te zoeken',
+    ],
+  },
+  {
     versie: '0.32.1',
     datum: '2026-10-17',
     beter: [

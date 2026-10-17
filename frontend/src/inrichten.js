@@ -36,7 +36,7 @@ const HOOFDSTUKKEN = [
   ['Je huis', [['huis', 'Kamers en etages'], ['buiten', 'Buiten'], ['bewoners', 'Wie woont hier']]],
   ['Apparaten', [['apparaten', 'Per kamer'], ['meten', 'Meten met']]],
   ['Klimaat', [['warmte', 'Wat elk apparaat doet'], ['comfort', 'Comfort']]],
-  ['Energie', [['zon', 'Panelen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
+  ['Energie', [['zon', 'Panelen'], ['ligging', 'Hoe ze liggen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
   ['Gemak', [['functies', "Licht en camera's"], ['wand', 'De wand']]],
 ];
 const STAPPEN = HOOFDSTUKKEN.flatMap(([, stappen]) => stappen);
@@ -66,6 +66,8 @@ function gedaan(id) {
   if (id === 'buiten') return d.huis?.rond != null;
   if (id === 'meten') return binnen().filter((r) => r.zoneId).every((r) => (r.meetMet ?? []).length > 0);
   if (id === 'zon') return d.aans?.antwoorden?.panelen?.ligging != null;
+  // Hoe ze liggen (besluit 157): bevestigd, met de hand ingesteld, of geen panelen.
+  if (id === 'ligging') return ['bevestigd', 'configuratie'].includes(d.aans?.ligging?.stand) || d.aans?.antwoorden?.panelen?.ligging === 'geen';
   if (id === 'zekering') return d.aans?.antwoorden?.zekering != null;
   if (id === 'prijzen') return d.energie?.instellingen?.prijzen?.stroom != null;
   if (id === 'functies') return d.functies?.instellingen != null;
@@ -191,7 +193,8 @@ function model(stap) {
     balkon,
     voortuin,
     stromen: [],
-    labels: [],
+    // Hoe ze liggen (besluit 157): op de panelen, zoals de schets.
+    labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
   };
 }
 
@@ -584,6 +587,24 @@ function zonStap() {
   };
 }
 
+/*
+ * Hoe de panelen liggen (besluit 157, schets Wand-Inrichten-Panelen): de kaart
+ * komt uit panelen.js. Onderaan zijn knoppen: Aanpassen en Klopt bij een
+ * voorstel, Terug en Bewaar bij aanpassen, en anders Aanpassen naast Volgende.
+ */
+const ligStaat = { aanpassen: false, concept: null };
+function liggingStap() {
+  const k = ligging.kaart(d.aans?.ligging, d.aans?.antwoorden, ligStaat);
+  const rechts = `<span class="rechts lig-knoppen">${k.knoppen}${k.volgende ? '<button type="button" class="knop knop-licht" data-volgende>Volgende</button>' : ''}</span>`;
+  return {
+    waar: waarVan('ligging'),
+    kop: k.kop,
+    uitleg: k.uitleg,
+    inhoud: `<div class="rijen">${k.inhoud}</div>`,
+    voet: [ligStaat.aanpassen ? '' : '<button type="button" class="zachtknop" data-terug>Terug</button>', rechts],
+  };
+}
+
 /* De zekering zoals de schets: eerst de fasen, dan de ampère in een vak (besluit 146). */
 const AMPERES = [16, 20, 25, 35, 40, 50, 63, 80];
 function zekeringStap() {
@@ -806,7 +827,7 @@ function tekenNu() {
       return `<a class="stap${hier ? ' nu' : ''}${klaar ? ' klaar' : ''}" href="#${stappen[0][0]}" ${hier ? 'aria-current="step"' : ''}><span class="n" aria-hidden="true">${klaar && !hier ? '✓' : i + 1}</span><span class="kort">${esc(titel)}</span><span class="naam">${i + 1}. ${esc(titel)}</span><span class="stipjes" aria-hidden="true">${stipjes}</span><span class="sub">${esc(sub)}</span></a>`;
     }).join('');
   });
-  const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
+  const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
   // Onderaan overal hetzelfde (besluit 158): Terug en Volgende, tenzij de stap iets anders zegt.
   const [links, rechts] = v.voet ?? [`<button type="button" class="zachtknop" data-terug>Terug</button>`, '<button type="button" class="knop knop-licht" data-volgende>Volgende</button>'];
   const actief = document.activeElement;
@@ -857,6 +878,19 @@ document.addEventListener('click', async (e) => {
     } finally {
       bezig = false;
       t.disabled = false;
+    }
+    return;
+  }
+  // Hoe de panelen liggen (besluit 157); Klopt telt als nagelopen en gaat door.
+  if (Object.keys(t.dataset).some((k) => k.startsWith('lig'))) {
+    const a = antwoorden();
+    const klopt = t.hasAttribute('data-lig-klopt');
+    const wat = ligging.klik(t, d.aans?.ligging, a, ligStaat);
+    if (wat === 'bewaar') await bewaarAansluiting(a);
+    else if (wat === 'teken') teken();
+    if (klopt && d.aans?.ligging?.stand === 'bevestigd') {
+      markeer('ligging');
+      naar(volgende('ligging'));
     }
     return;
   }
@@ -1059,6 +1093,7 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', async (e) => {
+  if (ligging.verander(e.target, ligStaat)) return teken();
   const t = e.target;
   const kamerNu = (next) => next?.kamers.find((x) => x.id === open);
   if (t.dataset.naam) {
@@ -1207,6 +1242,7 @@ addEventListener('standwissel', teken);
 addEventListener('hashchange', () => {
   open = null;
   weghalen = null;
+  ligStaat.aanpassen = false;
   toevoegenIn = null;
   if (stapNu() !== 'welkom') lijst = null;
   zeg('');

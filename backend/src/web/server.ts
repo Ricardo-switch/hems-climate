@@ -25,7 +25,7 @@ import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 
-import type { SiteConfig } from '../core/model.js';
+import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
 import type { Onboarding } from './onboarding.js';
@@ -508,7 +508,7 @@ export class WebServer {
   readonly #listeners = new Set<Listener>();
   #today: TodayCache | null = null;
   /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
-  #weather: { atMs: number; report: WeatherReport } | null = null;
+  #weather: { atMs: number; report: WeatherReport; geometry: Geometry } | null = null;
   #solar: SolarHistory | null = null;
 
   constructor(options: WebOptions) {
@@ -1974,7 +1974,8 @@ export class WebServer {
       return { wachten: 'het weer komt zodra de ligging van het huis en de panelen bekend zijn' };
     }
     const now = Date.now();
-    if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000) return this.#weather.report;
+    // Een andere ligging (besluit 157) rekent meteen opnieuw.
+    if (this.#weather != null && now - this.#weather.atMs < 10 * 60_000 && this.#weather.geometry === config.geometry) return this.#weather.report;
     const forecast = weather.forecast();
     if (forecast.length === 0) return { wachten: 'er is nog geen weerverwachting; kies een weerbron bij Functies' };
     this.#solar ??= new SolarHistory({ logDir });
@@ -2003,7 +2004,7 @@ export class WebServer {
       ...(weather.bron ? { bron: weather.bron() } : {}),
       ...(weather.uren ? { uren: weather.uren(), soortVanCode: kindOfCode } : {}),
     });
-    this.#weather = { atMs: now, report };
+    this.#weather = { atMs: now, report, geometry: config.geometry };
     const morgen = report.dagen[0];
     if (morgen?.zonkansPct != null && morgen.verwachtKwh != null && morgen.kwartieren) {
       await weather.log.note(morgen.datum, morgen.zonkansPct, { kwh: morgen.verwachtKwh, kwartieren: morgen.kwartieren.map((q) => q.verwachtW) }).catch(() => {

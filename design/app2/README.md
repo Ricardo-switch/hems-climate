@@ -44,6 +44,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Indeling` (kamers en indeling, de bewerkstand) | |
 | `Wand-Leren` (leren, meekijken, regelen per apparaat) | |
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
+| `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
 
 Voorbeeldgetallen. Schermafdrukken in `screens/`, opnieuw te maken met
 `node render.cjs Wand-Thuis.html:1280:800 Thuis.html:390:844:vol`.

@@ -121,12 +121,12 @@ async function stempel() {
     'vandaag.html': ['vandaag.js', 'rondleiding.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'kamer.html': ['kamer.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'apparaten.html': ['apparaten.js', 'rondleiding.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'inrichten.html': ['inrichten.js', 'film.js', 'qrcode.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'inrichten.html': ['inrichten.js', 'panelen.js', 'film.js', 'qrcode.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'functies.html': ['functies.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     // De groepen achter het tandwiel (besluit 130).
     'comfort.html': ['comfort.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'energie.html': ['energie.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
+    'energie.html': ['energie.js', 'panelen.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'regeling.html': ['regeling.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'toegang.html': ['toegang.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     // Bewoners en inloggen (besluit 147).

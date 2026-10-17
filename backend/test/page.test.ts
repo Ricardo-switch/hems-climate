@@ -1077,7 +1077,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('.cijfers').waitFor();
     await p.waitForTimeout(400);
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(6);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(13);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(14);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1137,6 +1137,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-aantal="voorkant"]').waitFor({ timeout: 5000 });
     await shot('zon');
     await kaart.locator('[data-volgende]').click();
+    // Hoe ze liggen (besluit 157): door met Volgende, of met Klopt bij een voorstel.
+    await kaart.locator('.waar', { hasText: '4. Energie · Hoe ze liggen' }).waitFor();
+    await kaart.locator('[data-volgende], [data-lig-klopt]').first().waitFor();
+    await shot('ligging');
+    await kaart.locator('[data-volgende], [data-lig-klopt]').first().click();
     await kaart.locator('h1', { hasText: 'Hoe zwaar is je aansluiting?' }).waitFor();
     // Eerst de fasen, dan de ampère in een vak.
     await kaart.locator('[data-fasen="3"]').click();

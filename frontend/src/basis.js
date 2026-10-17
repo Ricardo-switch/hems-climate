@@ -505,6 +505,8 @@
     mijlpaal: ['blauw', '<path d="M4 18c3-8 6-10 8-10s4 3 8 0"/>'],
     // Wiens comfort geldt (besluit 147): een persoon.
     comfort: ['geel', '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'],
+    // De panelen zijn gemeten (besluit 157): een zon.
+    panelen: ['geel', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
     goed: ['groen', '<path d="M5 12l5 5 9-10"/>'],
     onderhoud: ['grijs', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
   };

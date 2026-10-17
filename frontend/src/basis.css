@@ -237,3 +237,38 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 
 /* Naar Home Assistant (besluit 155): boven de bel, alleen als de app volledig scherm draait. */
 .balk .meldbel + .meldbel { margin-top: 0; }
+
+/* Hoe de panelen liggen (besluit 157, schets Wand-Inrichten-Panelen; panelen.js). */
+.lig-dag { padding: 8px 12px 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+.lig-dag svg { display: block; width: 100%; height: auto; }
+.lig-dagkop { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
+.lig-dagkop span:last-child { color: var(--gedempt); font-weight: 500; }
+.lig-regels { display: flex; flex-direction: column; }
+.lig-rij { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; align-items: start; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.lig-rij:first-child { border-top: 0; }
+.lig-rij > b { font-size: 14px; padding-top: 7px; }
+.lig-zin { display: block; padding-top: 6px; font-size: 14.5px; }
+.lig-zin small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--gedempt); }
+.lig-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.lig-chip { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.lig-chip.aan { background: var(--tekst); color: var(--inkt); }
+.lig-chip.gevonden { background: rgba(110, 231, 183, 0.12); color: var(--mint); }
+.lig-chip.gevonden.aan { background: var(--mint); color: var(--inkt); }
+.lig-chip:focus-visible, .lig-knop:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+.lig-chip.klein { min-height: 30px; padding: 0 10px; }
+.lig-onder { display: block; margin-top: 4px; font-size: 12.5px; color: var(--gedempt); }
+.lig-zelf { min-height: 30px; padding: 0 6px 0 12px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.22); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--zacht); }
+.lig-zelf input { width: 6ch; border: 0; background: none; color: var(--tekst); font: inherit; }
+.lig-zelf input:focus { outline: none; }
+.lig-zelf:focus-within { outline: 2px solid var(--ijs); }
+.lig-zelf.aan { background: var(--tekst); border-color: transparent; color: var(--inkt); }
+.lig-zelf.aan input { color: var(--inkt); }
+.lig-vol { width: 100%; }
+.lig-draai { display: block; width: 100%; margin-top: 4px; accent-color: var(--ijs); }
+.lig-kompas { display: grid; grid-template-columns: 100px 1fr; gap: 14px; align-items: center; padding-bottom: 6px; }
+.lig-roos { width: 100px; height: 100px; }
+.lig-tip { padding: 11px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 13px; line-height: 1.5; color: var(--zacht); }
+.lig-knoppen { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lig-knop { height: 44px; padding: 0 20px; display: inline-flex; align-items: center; line-height: 1; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
+.lig-knop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+.lig-link { align-self: start; border: 0; background: none; padding: 4px 0; color: var(--ijs); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
