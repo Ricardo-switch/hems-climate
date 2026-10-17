@@ -596,7 +596,8 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     const kop = residentView(config, v).kop;
     expect(kop.boven).toBe('Nu · Dag (gekozen)');
     expect(kop.titel).toBe('De zolder zou koelen');
-    expect(kop.zin).toBe('Zolder: zou koelen op zon.');
+    // De kop zegt de kamer al; eronder de getallen, niet nog eens hetzelfde (17 oktober 2026).
+    expect(kop.zin).toBe('Het is er 24,3°, het doel is 23°. Dat kan op eigen zon.');
     expect(residentView(config, v, 'nl', false).kop.titel).toBe('De zolder wordt gekoeld');
   });
 

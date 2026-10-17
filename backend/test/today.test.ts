@@ -13,7 +13,7 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { startOfLocalDay, todayReport } from '../src/web/today.js';
+import { startOfLocalDay, todayReport, withHistory, type TodayReport } from '../src/web/today.js';
 import { exampleSite } from './site.js';
 
 const cleanup: string[] = [];
@@ -164,5 +164,40 @@ describe('vandaag', () => {
     expect(r.zonWh).toBe(0);
     expect(r.besluiten).toEqual([]);
     expect(r.kwartieren.every((k) => k.zonW == null)).toBe(true);
+  });
+});
+
+describe('vandaag aangevuld uit Home Assistant (17 oktober 2026)', () => {
+  const Q = 15 * 60_000;
+  const van = Date.UTC(2026, 9, 17, 0, 0);
+  const rapport = (kwartieren: TodayReport['kwartieren']): TodayReport =>
+    ({ vanMs: van, totMs: van + kwartieren.length * Q, kwartieren, zonWh: 100, netAfWh: 50, netTerugWh: 10, apparaten: [], uitstelbaar: [], zones: [], besluiten: [] }) as unknown as TodayReport;
+
+  it('vult alleen de kwartieren zonder eigen meting, en telt hun energie mee', () => {
+    const r = rapport([
+      { tMs: van, zonW: null, netW: null },
+      { tMs: van + Q, zonW: 400, netW: -100 },
+    ]);
+    const vijf = (i: number) => van + i * 5 * 60_000;
+    const uit = withHistory(
+      r,
+      // Drie keer vijf minuten in het eerste kwartier, en één in het tweede die niet telt.
+      [{ startMs: vijf(0), meanW: 600 }, { startMs: vijf(1), meanW: 1200 }, { startMs: vijf(2), meanW: 1200 }, { startMs: vijf(3), meanW: 9999 }],
+      [{ startMs: vijf(0), meanW: -300 }, { startMs: vijf(1), meanW: 300 }, { startMs: vijf(2), meanW: 0 }],
+    );
+    expect(uit.kwartieren).toEqual([
+      { tMs: van, zonW: 1000, netW: 0 },
+      { tMs: van + Q, zonW: 400, netW: -100 },
+    ]);
+    // 600 + 1200 + 1200 W, elk vijf minuten: 250 Wh erbij.
+    expect(uit.zonWh).toBe(350);
+    // 300 W van het net vijf minuten (25 Wh), en 300 W terug (25 Wh).
+    expect(uit.netAfWh).toBe(75);
+    expect(uit.netTerugWh).toBe(35);
+  });
+
+  it('laat alles staan zonder statistiek', () => {
+    const r = rapport([{ tMs: van, zonW: null, netW: null }]);
+    expect(withHistory(r, [], [])).toEqual(r);
   });
 });
