@@ -33,7 +33,7 @@ const HOOFDSTUKKEN = [
   ['Je huis', [['huis', 'Kamers en etages'], ['buiten', 'Buiten'], ['bewoners', 'Wie woont hier']]],
   ['Apparaten', [['apparaten', 'Per kamer'], ['meten', 'Meten met']]],
   ['Klimaat', [['warmte', 'Wat elk apparaat doet'], ['comfort', 'Comfort']]],
-  ['Energie', [['zon', 'Panelen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
+  ['Energie', [['zon', 'Panelen'], ['ligging', 'Hoe ze liggen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
   ['Gemak', [['functies', "Licht en camera's"], ['wand', 'De wand']]],
 ];
 const STAPPEN = HOOFDSTUKKEN.flatMap(([, stappen]) => stappen);
@@ -59,6 +59,8 @@ function gedaan(id) {
   if (id === 'buiten') return buitenKamers().every((k) => k.buiten != null);
   if (id === 'meten') return binnen().filter((r) => r.zoneId).every((r) => (r.meetMet ?? []).length > 0);
   if (id === 'zon') return d.aans?.antwoorden?.panelen?.ligging != null;
+  // Hoe ze liggen (besluit 157): bevestigd, met de hand ingesteld, of geen panelen.
+  if (id === 'ligging') return ['bevestigd', 'configuratie'].includes(d.aans?.ligging?.stand) || d.aans?.antwoorden?.panelen?.ligging === 'geen';
   if (id === 'zekering') return d.aans?.antwoorden?.zekering != null;
   if (id === 'prijzen') return d.energie?.instellingen?.prijzen?.stroom != null;
   if (id === 'functies') return d.functies?.instellingen != null;
@@ -158,7 +160,8 @@ function model(stap) {
     balkon,
     voortuin,
     stromen: [],
-    labels: [],
+    // Hoe ze liggen (besluit 157): op de panelen, zoals de schets.
+    labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
   };
 }
 
@@ -417,6 +420,8 @@ function antwoorden() {
     zekering: x?.zekering ?? null,
     tarief: x?.tarief ?? null,
     verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null },
+    voorkantZon: x?.voorkantZon ?? null,
+    dak: x?.dak ?? null,
     opZon: { ...(x?.opZon ?? {}) },
   };
 }
@@ -434,7 +439,22 @@ function zonStap() {
         ${rij('Verwarming', VERWARMING.map(([w, t]) => knop(`data-verwarming="${w}"`, t, a.verwarming.soort === w)).join(''))}
       </div>`,
     links: '<button type="button" class="zachtknop" data-later>Later</button>',
-    rechts: '<a class="knop knop-licht" href="#zekering">Volgende</a>',
+    rechts: '<a class="knop knop-licht" href="#ligging">Volgende</a>',
+  };
+}
+
+/* Hoe de panelen liggen (besluit 157, schets Wand-Inrichten-Panelen): de kaart komt uit panelen.js. */
+const ligStaat = { aanpassen: false, concept: null };
+function liggingStap() {
+  const k = ligging.kaart(d.aans?.ligging, d.aans?.antwoorden, ligStaat);
+  return {
+    waar: waarVan('ligging'),
+    kop: k.kop,
+    uitleg: k.uitleg,
+    inhoud: `<div class="rijen">${k.inhoud}</div>`,
+    links: '<button type="button" class="zachtknop" data-later>Later</button>',
+    // Zoals de schets: Aanpassen en Klopt onderaan; Klopt gaat daarna door.
+    rechts: `<span class="lig-knoppen">${k.knoppen}${k.volgende ? '<a class="knop knop-licht" href="#zekering">Volgende</a>' : ''}</span>`,
   };
 }
 
@@ -541,7 +561,7 @@ function wandStap() {
 }
 async function bewaarAansluiting(a) {
   const opZon = Object.fromEntries(Object.entries(a.opZon).filter(([, v]) => typeof v === 'boolean'));
-  const uit = await stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, opZon });
+  const uit = await stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, opZon });
   if (uit) {
     d.aans = uit;
     teken();
@@ -591,7 +611,7 @@ function tekenNu() {
       return `<a class="stap${hier ? ' nu' : ''}${klaar ? ' klaar' : ''}" href="#${stappen[0][0]}" ${hier ? 'aria-current="step"' : ''}><span class="n" aria-hidden="true">${klaar && !hier ? '✓' : i + 1}</span><span class="kort">${esc(titel)}</span><span class="naam">${i + 1}. ${esc(titel)}</span><span class="stipjes" aria-hidden="true">${stipjes}</span><span class="sub">${esc(sub)}</span></a>`;
     }).join('');
   });
-  const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
+  const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
   const actief = document.activeElement;
   // Niet onder de vinger opnieuw opbouwen terwijl iemand typt.
   if (actief && actief.matches?.('[data-kaart] input[type="text"], [data-kaart] input:not([type])') && actief.closest('[data-kaart]')) return;
@@ -621,6 +641,16 @@ document.addEventListener('click', async (e) => {
   }
   if (t.hasAttribute('data-later')) {
     naar(volgende(stapNu()));
+    return;
+  }
+  // Hoe de panelen liggen (besluit 157).
+  if (Object.keys(t.dataset).some((k) => k.startsWith('lig'))) {
+    const a = antwoorden();
+    const klopt = t.hasAttribute('data-lig-klopt');
+    const wat = ligging.klik(t, d.aans?.ligging, a, ligStaat);
+    if (wat === 'bewaar') await bewaarAansluiting(a);
+    else if (wat === 'teken') teken();
+    if (klopt && d.aans?.ligging?.stand === 'bevestigd') naar('zekering');
     return;
   }
   if (t.hasAttribute('data-klopt')) {
@@ -739,6 +769,7 @@ document.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('change', async (e) => {
+  if (ligging.verander(e.target, ligStaat)) return teken();
   const t = e.target;
   if (t.dataset.naam) {
     const v = t.value.trim();
@@ -832,6 +863,7 @@ document.addEventListener('keydown', (e) => {
 addEventListener('standwissel', teken);
 addEventListener('hashchange', () => {
   open = null;
+  ligStaat.aanpassen = false;
   toevoegenIn = null;
   zeg('');
   teken();

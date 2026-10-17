@@ -10,6 +10,7 @@
  * - een batterij of een airco-filter onder de 10%, of wat de bewoner koos
  *   (besluit 149);
  * - een meter die niets meer levert: zonder meter kloppen de cijfers niet;
+ * - de panelen zijn gemeten: kijk of de ligging klopt (besluit 157);
  * - een nieuwe versie, en een mijlpaal zoals 10, 20 of 30 winterdagen.
  *
  * Wat vanzelf weer goed is, lost zichzelf op en schuift naar Eerder. Een
@@ -26,7 +27,7 @@ import { STANDAARD_DREMPELS, onderDrempel, type Drempels } from './house.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort';
+export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -60,6 +61,8 @@ export interface MeldingenBron {
   readonly drempels?: Drempels;
   readonly versie: { readonly nummer: string; readonly eerste?: string } | null;
   readonly winterdagen: number | null;
+  /** Hoe de panelen liggen (besluit 157): gemeten en nog niet bevestigd. Weg zonder panelen. */
+  readonly panelen?: { readonly voorstel: boolean } | null;
   /**
    * Wiens comfort er geldt (besluit 147), uit het laatste besluit; weg zonder
    * bewoners. Wisselt het, dan staat het één keer bij de bel.
@@ -134,6 +137,17 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
       titel: `${m.naam} levert niets meer`,
       tekst: `${m.laatsteMs != null ? `Sinds ${klok(m.laatsteMs)} geen meting.` : 'Geen meting.'} Zonder deze meter kloppen de cijfers en de zon niet.`,
       klaar: { titel: `${m.naam} levert weer`, tekst: 'De metingen komen weer binnen.' },
+    });
+  }
+  if (bron.panelen?.voorstel) {
+    uit.push({
+      id: 'panelen:voorstel',
+      soort: 'panelen',
+      aandacht: true,
+      titel: 'Je panelen zijn gemeten',
+      tekst: 'Uit een heldere dag volgt hoe ze liggen. Kijk of de richting, de helling en het vermogen kloppen.',
+      actie: { label: 'Bekijk', href: 'energie.html#panelen' },
+      klaar: { titel: 'Je panelen staan erin', tekst: 'Zon, het weer en de verwachting rekenen ermee.' },
     });
   }
   return uit;

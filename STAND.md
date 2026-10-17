@@ -127,6 +127,11 @@ verwijzing bestaat.
 - **Ligging en panelen** meet de app zelf; de bewoner bevestigt. Dit huis: oost
   en west, 6 + 6 panelen, 4.680 Wp op een omvormer van 3.000 W, de lichtsensor
   onder de dakgoot ([93]).
+- **Een nieuw huis** krijgt de ligging uit tien dagen opbrengst in de
+  statistiek van Home Assistant, de omvormer uit zijn typenummer, en de
+  voorkant uit "wanneer schijnt de zon erop?". Tot er een heldere dag is een
+  schatting, daarna een melding. Wat de bewoner bevestigt, gaat voor het
+  bestand ([157]).
 
 ## Weergave
 
@@ -474,4 +479,5 @@ verwijzing bestaat.
 [154]: DECISIONS.md#154-de-add-on-opent-de-app-en-een-leeg-huis-begint-met-een-welkom
 [155]: DECISIONS.md#155-volledig-scherm-in-home-assistant-per-apparaat
 [156]: DECISIONS.md#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie
+[157]: DECISIONS.md#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt
 <!-- links:einde -->
