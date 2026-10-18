@@ -387,7 +387,22 @@
       return false;
     }
   }
-  const volledigNu = () => inHA() && volledigGekozen();
+  /*
+   * Naar Home Assistant zet het volledige scherm even uit: je blijft in de app,
+   * met de zijbalk en de kopbalk van Home Assistant, en kiest daar zelf waar je
+   * heen gaat. Dat geldt voor dit paneel; de volgende keer dat je de app opent
+   * (een nieuw vak), of met dezelfde knop, is het er weer. Het onthouden staat
+   * bij Home Assistant, want het vak laadt bij elke pagina opnieuw.
+   */
+  const PAUZE = '__scVolledigPauze';
+  function gepauzeerd() {
+    try {
+      return !!global.frameElement && global.parent[PAUZE] === global.frameElement;
+    } catch {
+      return false;
+    }
+  }
+  const volledigNu = () => inHA() && volledigGekozen() && !gepauzeerd();
   /** Een bericht aan het paneel van Home Assistant om de app heen; alleen naar dezelfde herkomst. */
   const aanHA = (bericht) => global.parent.postMessage(bericht, location.origin);
   /** Het document van Home Assistant, als het mag; anders null. */
@@ -398,24 +413,37 @@
       return null;
     }
   }
-  function heelScherm() {
+  function heelScherm(e) {
+    // De eerste tik is Naar Home Assistant: dan juist niet.
+    if (e?.target?.closest?.('[data-naar-ha]')) return;
     const doc = haDocument();
-    if (doc && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+    if (doc && volledigNu() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
   /** Bij de eerste tik het hele scherm, en na de terugknop van Android weer bij de volgende. */
   const opTik = () => addEventListener('click', heelScherm, { once: true, capture: true });
-  let naarHAGekozen = false;
   function volledig() {
-    if (!volledigNu()) return;
-    aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    opTik();
+    if (!inHA() || !volledigGekozen()) return;
     const doc = haDocument();
     const weer = () => {
-      if (!doc.fullscreenElement && volledigNu() && !naarHAGekozen) opTik();
+      if (!doc.fullscreenElement && volledigNu()) opTik();
     };
     doc?.addEventListener('fullscreenchange', weer);
     // Het document van Home Assistant blijft; de luisteraar gaat mee met deze pagina.
     addEventListener('pagehide', () => doc?.removeEventListener('fullscreenchange', weer));
+    if (!volledigNu()) return;
+    aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    opTik();
+  }
+  /** Het hele scherm en de balken van Home Assistant uit, of weer aan. */
+  function balkenVanHA(terug) {
+    if (terug) {
+      aanHA({ type: 'home-assistant/unsubscribe-properties' });
+      const doc = haDocument();
+      if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
+    } else {
+      aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+      heelScherm();
+    }
   }
   /** Aan of uit op dit apparaat, en meteen zo. */
   function zetVolledig(aan) {
@@ -426,34 +454,52 @@
       // Geen opslag (privévenster): dan alleen voor nu.
     }
     if (!inHA()) return;
-    menuNaarHA();
-    if (aan) {
-      aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-      heelScherm();
-    } else {
-      aanHA({ type: 'home-assistant/unsubscribe-properties' });
-      const doc = haDocument();
-      if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
+    pauze(false);
+    knoppenNaarHA();
+    balkenVanHA(!aan);
+  }
+  function pauze(aan) {
+    try {
+      if (aan) global.parent[PAUZE] = global.frameElement;
+      else if (gepauzeerd()) delete global.parent[PAUZE];
+    } catch {
+      // Een vak van een andere herkomst.
     }
   }
-  /** Terug naar Home Assistant: het hele scherm uit, en naar het dashboard. */
+  /** Naar Home Assistant: het volledige scherm uit, en de balken van Home Assistant terug. */
   function naarHA() {
-    naarHAGekozen = true;
-    const doc = haDocument();
-    if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
-    aanHA({ type: 'home-assistant/unsubscribe-properties' });
-    aanHA({ type: 'home-assistant/navigate', path: '/' });
+    pauze(true);
+    balkenVanHA(true);
+    knoppenNaarHA();
   }
-  /** De knop boven de bel: er alleen als de app volledig scherm draait. */
-  function menuNaarHA() {
-    const balk = document.getElementById('balk');
-    const knop = balk?.querySelector('[data-naar-ha]');
-    if (!volledigNu()) knop?.remove();
-    else if (balk && !knop) balk.querySelector('[data-meldbel]')?.insertAdjacentHTML('beforebegin', `<button type="button" class="meldbel naarha" data-naar-ha aria-label="Naar Home Assistant" title="Naar Home Assistant">${NAAR_HA}</button>`);
+  /** Weer volledig scherm, met dezelfde knop. */
+  function weerVolledig() {
+    pauze(false);
+    balkenVanHA(false);
+    knoppenNaarHA();
+  }
+  /**
+   * De knop naar Home Assistant: op de wand boven de bel, op de telefoon naast
+   * het tandwiel. Staat het volledige scherm even uit, dan zet dezelfde knop
+   * het weer aan.
+   */
+  function knoppenNaarHA() {
+    $$('[data-naar-ha-knop]').forEach((k) => k.remove());
+    if (!inHA() || !volledigGekozen()) return;
+    const uit = gepauzeerd();
+    const wat = uit ? 'data-weer-volledig aria-label="Volledig scherm" title="Volledig scherm"' : 'data-naar-ha aria-label="Naar Home Assistant" title="Naar Home Assistant"';
+    const icoon = uit ? VOLLEDIG_ICOON : NAAR_HA;
+    document.getElementById('balk')?.querySelector('[data-meldbel]')?.insertAdjacentHTML('beforebegin', `<button type="button" class="meldbel naarha" data-naar-ha-knop ${wat}>${icoon}</button>`);
+    $$('#tel [data-tandwiel]').forEach((t) => {
+      const naast = t.parentElement.querySelector(':scope > [data-meldbel]') ?? t;
+      naast.insertAdjacentHTML('beforebegin', `<button type="button" class="pil naarha" data-naar-ha-knop ${wat}>${icoon}</button>`);
+    });
   }
   const NAAR_HA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h5"/><path d="M14 15.5h7M18 12.5l3 3-3 3"/></svg>';
+  const VOLLEDIG_ICOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
   document.addEventListener('click', (e) => {
     if (e.target.closest?.('[data-naar-ha]')) naarHA();
+    else if (e.target.closest?.('[data-weer-volledig]')) weerVolledig();
   });
 
   /** Zet de navigatie, de stand en de klok voor een tab. */
@@ -463,7 +509,7 @@
     if (balk) nav.balk(balk, tab, LINKS);
     if (tabs) nav.tabs(tabs, tab, LINKS);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
-    menuNaarHA();
+    knoppenNaarHA();
     luchtAchterVak();
     $$('[data-tandwiel]').forEach((a) => {
       a.innerHTML = nav.svg('instellingen');

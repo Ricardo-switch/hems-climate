@@ -6702,6 +6702,19 @@ volledig scherm aan, met een schaal van 75%. Zonder het hele scherm van de
 browser bleef er een grote grijze balk bovenin over. De telefoon vraagt dus
 weer het hele scherm, net als de wand en net als in versie 0.34.0.
 
+*Aanvulling (18 oktober 2026, versie 0.34.3).* **Naar Home Assistant** opende
+het standaarddashboard, en dat was niet het dashboard dat de bewoner gebruikt.
+Rechtop op de telefoon stond de knop er niet, want daar is geen balk. Nu:
+
+- **Je blijft in de app.** Het volledige scherm en de kioskstand gaan uit, de
+  zijbalk en de kopbalk van Home Assistant komen terug, en je kiest daar zelf
+  je dashboard.
+- **Dezelfde knop zet het weer aan.** Tot dan laat een andere pagina van de
+  app het zo. Dat onthoudt de app bij het vak van het paneel; open je de app
+  later opnieuw (een nieuw vak), dan is het volledige scherm er weer.
+- **Op de telefoon** staat de knop rechtsboven op Thuis en Apparaten, naast
+  het tandwiel. Op de wand blijft hij boven de bel.
+
 ---
 
 ## 156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie
