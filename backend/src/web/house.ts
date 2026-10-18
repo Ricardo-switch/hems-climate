@@ -59,9 +59,10 @@ export interface HouseReading {
   /**
    * Beweging (15 oktober 2026): van een bewegingsmelder bij hetzelfde
    * apparaat. `nu` als hij nu beweging ziet; `sindsMs` wanneer dat veranderde.
-   * Weg als het apparaat geen beweging meet.
+   * Weg als het apparaat geen beweging meet. `id` is de melder in Home
+   * Assistant: die kan de wand wekken (besluit 164).
    */
-  readonly beweging?: { readonly nu: boolean; readonly sindsMs: number | null };
+  readonly beweging?: { readonly nu: boolean; readonly sindsMs: number | null; readonly id: string };
 }
 
 /** Wat een klimaatapparaat kan en doet: de knoppen volgen wat het kan. */
@@ -943,7 +944,7 @@ function collect(
     return {
       temperatuurC: r?.temp ? num(states.get(r.temp)?.state) : null,
       vochtPct: r?.hum ? num(states.get(r.hum)?.state) : null,
-      ...(r?.motion ? { beweging: { nu: m?.state === 'on', sindsMs: Number.isFinite(sinds) ? sinds : null } } : {}),
+      ...(r?.motion ? { beweging: { nu: m?.state === 'on', sindsMs: Number.isFinite(sinds) ? sinds : null, id: r.motion } } : {}),
     };
   };
 

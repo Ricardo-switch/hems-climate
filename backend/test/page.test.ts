@@ -429,6 +429,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       if (!kop.has('cookie')) kop.set('cookie', `hems_sessie=${sessionId}`);
       return echteFetch(input, { ...init, headers: kop });
     }) as typeof fetch;
+    // De wand slaapt en rust niet midden in een test (besluit 164); de test van de nachtstand zet het zelf aan.
+    await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: { nacht: false, rustMin: 0 } }) });
     // UTC, net als de rest van de suite in de CI: de tijdlijn en de
     // versiemarkering rekenen dan in dezelfde dagen.
     const context = await browser.newContext({ timezoneId: 'UTC', locale: 'nl-NL' });
@@ -1656,6 +1658,202 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       const terug = (body: unknown) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify(body) });
       await terug({ plek: 'tel', kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] });
       await terug({ plek: 'wand', kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [] });
+      await context.close();
+    }
+  }, 60_000);
+
+  /*
+   * De wand als niemand kijkt (besluit 164, schets Wand-Nacht): na een minuut
+   * zonder iemand 's nachts de nachtstand, overdag na vijf minuten rust; een
+   * tik, de bewegingsmelder en aanbellen wekken hem; op een kijkpagina gaat hij
+   * terug naar Thuis; en de hoofdgebruiker stelt het in bij het potlood.
+   */
+  it('laat de wand slapen en rusten als niemand kijkt, en wekt hem (besluit 164)', async () => {
+    type Niemand = { nacht: boolean; van: string; tot: string; rustMin: number; melder: string | null };
+    const niemand = async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { wand: { niemand: Niemand } }).wand.niemand;
+    const zet = (body: Partial<Niemand>) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: body }) });
+    await zet({ nacht: true, van: '23:00', tot: '07:00', rustMin: 5, melder: null });
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const laag = p.locator('#wand [data-niemand]');
+    const stand = () => p.evaluate<string | null>("(() => { const el = document.querySelector('#wand [data-niemand]'); return !el || el.hidden ? null : el.dataset.stand ?? null; })()").catch(() => null);
+    const shot = (naam: string) => (process.env.HEMS_PAGE_SHOT ? p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) }) : null);
+    try {
+      // De nachtstand: om 23:48 op Thuis, en een minuut lang niemand.
+      await p.clock.setFixedTime(new Date('2026-10-18T23:48:00Z'));
+      await p.goto(`${baseUrl}/thuis.html`);
+      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      expect(await stand()).toBe(null);
+      await p.clock.setFixedTime(new Date('2026-10-18T23:49:30Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('nacht');
+      expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('23:49');
+      expect(await laag.textContent()).toContain('zondag 18 oktober');
+      expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|warmt))[.,]/);
+      expect(await laag.textContent()).toContain('Tik om de wand te wekken');
+      // Een gedimd huis, zonder getallen.
+      expect(await laag.locator('[data-nk-huis] svg').count()).toBe(1);
+      expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
+      await shot('nacht');
+      // Een tik wekt hem, en Thuis staat er weer.
+      await laag.click();
+      expect(await stand()).toBe(null);
+      expect(await p.locator('#wand [data-kop]').isVisible()).toBe(true);
+
+      // Rust overdag: om 14:05, en vijf minuten niemand.
+      await p.clock.setFixedTime(new Date('2026-10-19T14:05:00Z'));
+      await p.reload();
+      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await p.clock.setFixedTime(new Date('2026-10-19T14:08:00Z'));
+      await p.waitForTimeout(5_500);
+      expect(await stand()).toBe(null);
+      await p.clock.setFixedTime(new Date('2026-10-19T14:10:30Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('14:10');
+      expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
+      expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
+      await shot('rust');
+      // De bewegingsmelder ziet iemand: de dienst wekt de wand.
+      server.wek('beweging');
+      await expect.poll(stand).toBe(null);
+      // Aanbellen wekt hem ook.
+      await p.clock.setFixedTime(new Date('2026-10-19T14:20:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      server.ring('camera.voordeur', 'Deurbel', { seconden: 30, schermAan: true });
+      await expect.poll(stand).toBe(null);
+      await p.locator('.aanbel [data-bel-dicht]').click();
+      // En "Hé huis".
+      await p.clock.setFixedTime(new Date('2026-10-19T14:30:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await p.evaluate("dispatchEvent(new CustomEvent('sc-wek', { detail: 'stem' }))");
+      expect(await stand()).toBe(null);
+
+      // Op een kijkpagina gaat de wand terug naar Thuis, en rust daar meteen.
+      await p.goto(`${baseUrl}/vandaag.html`);
+      await p.waitForLoadState('domcontentloaded');
+      await p.waitForTimeout(500);
+      await p.clock.setFixedTime(new Date('2026-10-19T14:40:00Z'));
+      await p.waitForURL(/thuis\.html$/, { timeout: 15_000 });
+      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await laag.click();
+
+      // Instellen bij het potlood: alleen voor wie de wand mag aanpassen.
+      await p.locator('#wand [data-aanpassen]').click();
+      await p.locator('#wand [data-bewerkkop] [data-niemand-kies]').click();
+      const blad = p.locator('[data-kiesblad]');
+      await blad.waitFor();
+      expect(await blad.textContent()).toContain('Alleen de hoofdgebruiker kan dit veranderen');
+      await shot('kiezen');
+      await blad.locator('[data-nk-rust="15"]').click();
+      await expect.poll(async () => (await niemand()).rustMin).toBe(15);
+      expect(await blad.locator('[data-nk-rust="15"]').getAttribute('aria-checked')).toBe('true');
+      // De bewegingsmelder uit het huis: die in de hal.
+      await blad.locator('[data-nk-beweging]').click();
+      await expect.poll(async () => (await niemand()).melder).toBe('binary_sensor.bewegingssensor_hal_beweging');
+      expect(await blad.locator('[data-nk-melder]').inputValue()).toBe('binary_sensor.bewegingssensor_hal_beweging');
+      await blad.locator('[data-nk-tijd-van]').fill('22:30');
+      await expect.poll(async () => (await niemand()).van).toBe('22:30');
+      await blad.locator('[data-nk-nacht]').click();
+      await expect.poll(async () => (await niemand()).nacht).toBe(false);
+      expect(await blad.locator('[data-nk-tijd-van]').isDisabled()).toBe(true);
+      await blad.locator('[data-blad-dicht]').click();
+      await blad.waitFor({ state: 'hidden' });
+      await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
+      // De wand schuift nooit, ook niet met het paneel erbij.
+      expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+      expect(fouten).toEqual([]);
+    } finally {
+      // Terug zoals de andere tests hem verwachten: niet slapen, niet rusten.
+      await zet({ nacht: false, van: '23:00', tot: '07:00', rustMin: 0, melder: null });
+      await context.close();
+    }
+  }, 120_000);
+
+  /*
+   * Weergave per account (besluit 164, schets Thuis-Tel-Eigen #weergave en
+   * #eenvoudig): eenvoudig zonder getallen op het huis en Vandaag in één zin,
+   * grotere letters, minder beweging; bewaard bij de dienst, ook na opnieuw
+   * laden en op een andere pagina. Op de wand alleen minder beweging.
+   */
+  it('kiest eenvoudig, grotere letters en minder beweging (besluit 164)', async () => {
+    type Weergave = { eenvoudig: boolean; groteLetters: boolean; minderBeweging: boolean };
+    const weergave = async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { tel: { weergave: Weergave } }).tel.weergave;
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const klasse = (k: string) => p.evaluate<boolean>(`document.documentElement.classList.contains('${k}')`);
+    const stijl = (sel: string, eig: string) => p.evaluate<string>(`getComputedStyle(document.querySelector(${JSON.stringify(sel)})).${eig}`);
+    const shot = (naam: string, vol = false) => (process.env.HEMS_PAGE_SHOT ? p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`), fullPage: vol }) : null);
+    try {
+      await p.goto(`${baseUrl}/thuis.html`);
+      await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      // Uitgebreid: kW op het huis (als er zon is) en de grafiek van vandaag.
+      await p.locator('#podium-tel svg').waitFor();
+      const labelsVoor = await p.locator('#podium-tel .sc-label').count();
+      expect(await p.locator('#tel [data-kaart="vandaag"] [data-dag] svg').isVisible()).toBe(true);
+      const kopVoor = await stijl('#tel .titel .kop-1', 'fontSize');
+
+      // Weergave, onderaan Thuis naast Thuis aanpassen.
+      await p.locator('#tel [data-weergave]').click();
+      const blad = p.locator('[data-kiesblad]');
+      await blad.waitFor();
+      expect(await blad.locator('[data-wg-eenvoudig="false"]').getAttribute('aria-checked')).toBe('true');
+      await shot('weergave');
+      await blad.locator('[data-wg-eenvoudig="true"]').click();
+      await blad.locator('[data-wg-schakel="groteLetters"]').click();
+      await blad.locator('[data-wg-schakel="minderBeweging"]').click();
+      await expect.poll(weergave).toEqual({ eenvoudig: true, groteLetters: true, minderBeweging: true });
+      expect(await blad.locator('[data-wg-schakel="groteLetters"]').getAttribute('aria-checked')).toBe('true');
+      await blad.locator('[data-blad-dicht]').click();
+      await blad.waitFor({ state: 'hidden' });
+      expect([await klasse('sc-eenvoudig'), await klasse('sc-groot'), await klasse('sc-stil')]).toEqual([true, true, true]);
+
+      // Eenvoudig: geen getallen op het huis, Vandaag in een zin; Thuis aanpassen weg, Weergave blijft.
+      await expect.poll(() => p.locator('#podium-tel .sc-label').count()).toBe(0);
+      expect(await p.locator('#tel [data-kaart="vandaag"] [data-dag]').isVisible()).toBe(false);
+      expect(await p.locator('#tel [data-dag-eenvoudig]').textContent()).toMatch(/^Je panelen gaven/);
+      expect(await p.locator('#tel .aanpasrij [data-aanpassen]').isVisible()).toBe(false);
+      expect(await p.locator('#tel [data-weergave]').isVisible()).toBe(true);
+      // Grotere letters: de kop van 32 naar 36.
+      expect(kopVoor).toBe('32px');
+      expect(await stijl('#tel .titel .kop-1', 'fontSize')).toBe('36px');
+      // Minder beweging: de bol ademt niet.
+      expect(await stijl('#tel .vraagbalk .bol', 'animationName')).toBe('none');
+      await shot('eenvoudig');
+      await shot('eenvoudig-vol', true);
+
+      // Na opnieuw laden, zonder wat de browser onthield: de dienst weet het.
+      await p.evaluate(() => localStorage.removeItem('sc-weergave'));
+      await p.reload();
+      await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await expect.poll(() => klasse('sc-eenvoudig')).toBe(true);
+      // Op een andere pagina ook: Instellingen, met de weg naar Weergave.
+      await p.goto(`${baseUrl}/instellingen.html`);
+      await expect.poll(() => klasse('sc-groot')).toBe(true);
+      await p.locator('#tel [data-weergaveregel]').click();
+      await p.waitForURL(/thuis\.html/);
+      await blad.waitFor();
+      expect(await blad.getAttribute('aria-label')).toBe('Weergave');
+      await blad.locator('[data-wg-eenvoudig="false"]').click();
+      await expect.poll(async () => (await weergave()).eenvoudig).toBe(false);
+      await blad.locator('[data-blad-dicht]').click();
+      await expect.poll(() => p.locator('#podium-tel .sc-label').count()).toBe(labelsVoor);
+      expect(await p.locator('#tel [data-kaart="vandaag"] [data-dag] svg').isVisible()).toBe(true);
+
+      // De wand: de letters blijven zoals ze waren, want de wand schuift nooit.
+      await p.setViewportSize({ width: 1280, height: 800 });
+      await expect.poll(() => klasse('tel-stand')).toBe(false);
+      expect(await stijl('#wand .titel .kop-1', 'fontSize')).toBe('46px');
+      expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+      expect(fouten).toEqual([]);
+    } finally {
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } }) });
       await context.close();
     }
   }, 60_000);

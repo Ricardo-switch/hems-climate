@@ -333,3 +333,69 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .lig-knop { height: 44px; padding: 0 20px; display: inline-flex; align-items: center; line-height: 1; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
 .lig-knop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
 .lig-link { align-self: start; border: 0; background: none; padding: 4px 0; color: var(--ijs); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+
+/*
+ * De wand als niemand kijkt (besluit 164, schets Wand-Nacht): de nachtstand en
+ * rust overdag, over de hele wand. Een tik wekt hem.
+ */
+.niemand { position: absolute; inset: 0; z-index: 58; cursor: pointer; overflow: hidden; }
+.niemand[hidden] { display: none; }
+.niemand:focus-visible { outline: none; }
+.niemand .tijd { font-family: var(--kop); font-weight: 600; letter-spacing: -0.04em; line-height: 0.9; }
+.niemand .nk-klok { position: absolute; left: 90px; top: 120px; }
+.niemand .nk-klok .tijd { font-size: 210px; color: rgba(238, 243, 247, 0.5); }
+.niemand .nk-klok .datum { font-size: 24px; color: rgba(184, 196, 207, 0.45); margin-top: 18px; }
+.niemand .nk-regels { position: absolute; left: 92px; bottom: 120px; max-width: 620px; display: flex; flex-direction: column; gap: 12px; font-size: 19px; color: rgba(184, 196, 207, 0.55); z-index: 1; }
+.niemand .nk-regels b { color: rgba(238, 243, 247, 0.7); font-weight: 600; }
+.niemand .nk-regels span { display: flex; align-items: center; gap: 12px; }
+.niemand .nk-regels i { font-style: normal; }
+.niemand .nk-regels svg { width: 26px; height: 26px; opacity: 0.6; flex: none; }
+.niemand .nk-huis { position: absolute; right: 30px; bottom: 30px; width: 600px; height: 480px; opacity: 0.45; }
+.niemand .nk-wek { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 14px; color: rgba(127, 142, 156, 0.6); z-index: 1; }
+.niemand .nk-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); pointer-events: none; }
+.niemand .nr-klok { position: absolute; left: 70px; top: 70px; }
+.niemand .nr-klok .tijd { font-size: 150px; }
+.niemand .nr-klok .datum { font-size: 22px; color: var(--zacht); margin-top: 14px; }
+.niemand .nr-kop { position: absolute; left: 72px; top: 330px; width: 460px; z-index: 1; }
+.niemand .nr-kop .kop-1 { font-size: 46px; }
+.niemand .nr-kop .lead { font-size: 20px; margin-top: 14px; }
+.niemand .nr-weer { position: absolute; left: 72px; bottom: 70px; display: flex; gap: 12px; z-index: 1; }
+.niemand .nr-weer .glas-klein { padding: 14px 18px; display: flex; align-items: center; gap: 14px; }
+.niemand .nr-weer svg { width: 40px; height: 40px; }
+.niemand .nr-weer b { display: block; font-size: 22px; font-family: var(--kop); font-weight: 600; }
+.niemand .nr-weer span span { font-size: 14px; color: var(--zacht); }
+.niemand .nr-huis { position: absolute; right: 10px; top: 60px; width: 720px; height: 700px; }
+/* Het paneel bij het potlood: als in de schets. */
+.nk-rij { display: flex; align-items: center; gap: 14px; padding: 13px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.nk-rij > div:first-child { flex: 1; min-width: 0; }
+.nk-rij b { display: block; font-size: 16px; }
+.nk-rij .uitleg { font-size: 13px; color: var(--gedempt); }
+.nk-rij[data-nk-uit] { opacity: 0.45; }
+.nk-knopje { width: 52px; height: 30px; border-radius: 15px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); position: relative; flex: none; cursor: pointer; }
+.nk-knopje::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #dfe7ee; transition: left 0.15s; }
+.nk-knopje.aan { background: var(--mint); }
+.nk-knopje.aan::after { left: 25px; }
+.nk-knopje:focus-visible, .nk-keuze button:focus-visible, .nk-tijden input:focus-visible, .nk-melder:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+.nk-tijden { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--zacht); }
+.nk-tijden input { height: 36px; padding: 0 10px; border-radius: 12px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; font-weight: 700; font-size: 14px; color-scheme: dark; }
+.nk-keuze { display: grid; grid-auto-flow: column; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+.nk-keuze button { height: 32px; padding: 0 12px; border-radius: 9px; border: 0; background: none; font: inherit; font-weight: 700; font-size: 13px; color: var(--zacht); cursor: pointer; }
+.nk-keuze button.aan { background: var(--tekst); color: #0b1424; }
+.nk-melder { display: block; margin-top: 4px; max-width: 100%; height: 30px; border-radius: 10px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; font-size: 13px; color-scheme: dark; }
+
+/*
+ * Weergave (besluit 164, schets Thuis-Tel-Eigen #weergave): per account, op elk
+ * scherm. Grotere letters alleen in de telefoonstand: de wand schuift nooit.
+ */
+html.tel-stand.sc-groot .kop-1 { font-size: 36px; }
+html.tel-stand.sc-groot .kop-2 { font-size: 25px; }
+html.tel-stand.sc-groot .kop-3 { font-size: 17px; }
+html.tel-stand.sc-groot .lead { font-size: 18px; }
+html.tel-stand.sc-groot .klein { font-size: 15px; }
+html.tel-stand.sc-groot .mini { font-size: 13.5px; }
+html.tel-stand.sc-groot body { font-size: 17px; }
+/* Minder beweging: wat anders loopt, ademt of schuift, staat stil. */
+html.sc-stil .sc-stroom, html.sc-stil .sc-trommel, html.sc-stil .sc-fan, html.sc-stil .sc-damp, html.sc-stil .sc-puls, html.sc-stil .sc-vlam, html.sc-stil .sc-lucht, html.sc-stil .bol.adem, html.sc-stil .adem { animation: none !important; }
+html.sc-stil, html.sc-stil * { scroll-behavior: auto !important; }
+html.sc-stil #wand { transition: none; }
+html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), html.sc-stil::view-transition-new(*) { animation: none !important; }

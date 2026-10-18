@@ -217,9 +217,11 @@
   body.aanpassen #tel [data-straks][data-kaart] { display: block !important; }
   body.aanpassen #tel .boven, body.aanpassen #tel .podium { opacity: 0.35; pointer-events: none; }
   body.aanpassen #wand .kopregel, body.aanpassen #wand .titel, body.aanpassen #wand .podium, body.aanpassen #wand .dok { opacity: 0.3; pointer-events: none; }
+  .aanpasrij { align-self: center; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+  body.aanpassen .aanpasrij, #wand .aanpasrij { display: none; }
+  .aanpasknop[hidden] { display: none; }
   .aanpasknop { align-self: center; margin-top: 4px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px dashed rgba(255, 255, 255, 0.28); background: none; color: var(--zacht); font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   body.aanpassen .aanpasknop { display: none; }
-  #wand .aanpasknop { display: none; }
   .potlood { width: 34px; padding: 0; justify-content: center; color: var(--zacht); }
   #tel .bewerkbalk { position: fixed; left: 12px; right: 12px; bottom: 90px; height: 58px; border-radius: 22px; display: flex; align-items: center; gap: 10px; padding: 0 8px; background: rgba(9, 15, 28, 0.94); border: 1px solid rgba(169, 230, 255, 0.35); backdrop-filter: blur(14px); z-index: 5; }
   .bewerkbalk .knop, .bewerkkop .knop { height: 42px; padding: 0 14px; font-size: 14px; color: inherit; }
@@ -251,6 +253,52 @@
   .kiesblad .keus .rechts-ik { grid-column: 3; grid-row: 1 / 3; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: rgba(169, 230, 255, 0.16); color: #a9e6ff; }
   .kiesblad .keus[aria-checked='true'] .rechts-ik { background: var(--tekst); color: #0b1424; }
   .kiesblad .keus[aria-checked='false'] .rechts-ik { background: transparent; border: 2px solid rgba(255, 255, 255, 0.22); }
+
+  /*
+   * Weergave (besluit 164, schets Thuis-Tel-Eigen #weergave en #eenvoudig): op
+   * de telefoon eenvoudig, met minder getallen, en grotere letters.
+   */
+  .dag-eenvoudig { display: none; margin: 6px 0 0; font-size: 15.5px; line-height: 1.45; }
+  html.tel-stand.sc-eenvoudig #tel [data-kaart="vandaag"] [data-dag],
+  html.tel-stand.sc-eenvoudig #tel [data-kaart="vandaag"] [data-dag-zin],
+  html.tel-stand.sc-eenvoudig #tel [data-kaart="vandaag"] [data-opgewekt],
+  html.tel-stand.sc-eenvoudig #tel [data-fav-uitleg],
+  html.tel-stand.sc-eenvoudig #tel .aanpasrij [data-aanpassen] { display: none; }
+  html.tel-stand.sc-eenvoudig #tel .dag-eenvoudig { display: block; }
+  html.tel-stand.sc-eenvoudig #tel .titel .lead { color: var(--tekst); }
+  html.tel-stand.sc-groot #tel .titel .kop-1 { font-size: 36px; }
+  html.tel-stand.sc-groot #tel .titel .lead { font-size: 18px; }
+  html.tel-stand.sc-groot #tel .groet { font-size: 17px; }
+  html.tel-stand.sc-groot #tel .kamers b { font-size: 18px; }
+  html.tel-stand.sc-groot #tel .kamers small { font-size: 15px; }
+  html.tel-stand.sc-groot #tel .kamers .getal { font-size: 28px; }
+  html.tel-stand.sc-groot #tel .tegel b { font-size: 16.5px; }
+  html.tel-stand.sc-groot #tel .tegel span:last-child { font-size: 13.5px; }
+  html.tel-stand.sc-groot #tel .vraagbalk .typ { font-size: 17px; }
+  html.tel-stand.sc-groot #tel .straks .kop-2 { font-size: 22px; }
+  html.tel-stand.sc-groot #tel .apparaatkaart b { font-size: 18px; }
+  html.tel-stand.sc-groot #tel .dag-eenvoudig { font-size: 17px; }
+  html.tel-stand.sc-groot #tel .morgen b { font-size: 17.5px; }
+  /* Het blad Weergave: twee keuzes naast elkaar, en twee schakelaars. */
+  .kiesblad .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .kiesblad .twee button { padding: 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 2px solid transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .kiesblad .twee button[aria-checked='true'] { border-color: #a9e6ff; background: rgba(169, 230, 255, 0.08); }
+  .kiesblad .twee button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .kiesblad .twee b { display: block; font-size: 15px; margin-top: 10px; }
+  .kiesblad .twee p { font-size: 12.5px; color: var(--gedempt); line-height: 1.35; margin: 2px 0 0; }
+  .kiesblad .mini-tel { height: 64px; border-radius: 10px; background: rgba(9, 15, 28, 0.6); padding: 9px; display: flex; flex-direction: column; gap: 6px; }
+  .kiesblad .mini-tel i { display: block; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.18); }
+  .kiesblad .schakel { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .kiesblad .schakel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 8px; }
+  .kiesblad .schakel div { flex: 1; }
+  .kiesblad .schakel b { display: block; font-size: 15px; }
+  .kiesblad .schakel span { font-size: 12.5px; color: var(--gedempt); }
+  .kiesblad .knopje { width: 50px; height: 30px; border-radius: 15px; background: rgba(255, 255, 255, 0.14); position: relative; flex: none; }
+  .kiesblad .knopje::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #dfe7ee; }
+  .kiesblad .schakel[aria-checked='true'] .knopje { background: var(--mint); }
+  .kiesblad .schakel[aria-checked='true'] .knopje::after { left: 23px; }
+  /* Het paneel Als niemand kijkt is breder, zoals in de schets. */
+  html:not(.tel-stand) .kiesblad[data-blad='niemand'] { width: min(560px, 92vw); padding: 22px 26px; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -301,7 +349,7 @@
         <button type="button" class="vrijvak" data-vrijvak hidden>+ Kaart kiezen</button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
-      <div class="bewerkkop" data-bewerkkop hidden><span>Je past de wand aan <b>voor iedereen in huis</b></span><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>
+      <div class="bewerkkop" data-bewerkkop hidden><span>Je past de wand aan <b>voor iedereen in huis</b></span><button type="button" class="knop" data-niemand-kies>Als niemand kijkt</button><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>
       <div class="dok">
         <a class="bol adem" href="assistent.html#nu" aria-label="Vraag de assistent wat het huis nu doet" style="width: 46px; height: 46px; flex: none"></a>
         <a class="vraag" href="assistent.html#typ">Tik om iets te vragen over je huis</a>
@@ -347,9 +395,13 @@
         <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
         <div data-dag></div>
         <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+        <p class="dag-eenvoudig" data-dag-eenvoudig></p>
       </a>
       <section class="glas kaart morgen" data-kaart="morgen" data-naam="Het weer van morgen" data-leeg="Staat er zodra het weer van morgen bekend is" data-morgen hidden></section>
-      <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Thuis aanpassen</button>
+      <div class="aanpasrij">
+        <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Thuis aanpassen</button>
+        <button type="button" class="aanpasknop" data-weergave hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Weergave</button>
+      </div>
     </div>
     <div class="bewerkbalk" data-bewerkbalk hidden>
       <button type="button" class="knop" data-kaart-erbij>+ Kaart</button>
@@ -374,6 +426,7 @@
   <script src="film.js"></script>
   <script src="rondleiding.js"></script>
   <script src="eigen.js"></script>
+  <script src="niemand.js"></script>
   <script src="thuis.js"></script>
 </body>
 </html>

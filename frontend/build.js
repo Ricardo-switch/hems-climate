@@ -113,7 +113,7 @@ async function stempel() {
   // de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
   const paginas = {
     'index.html': ['app.css', 'app.js'],
-    'thuis.html': ['thuis.js', 'film.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
+    'thuis.html': ['thuis.js', 'eigen.js', 'niemand.js', 'film.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'instellingen.html': ['instellingen.js', 'rondleiding.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
     'huis-kan.html': ['huis-kan.js', 'rondleiding.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
     'assistent.html': ['assistent.js', 'rondleiding.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],

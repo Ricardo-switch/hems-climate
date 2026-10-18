@@ -297,6 +297,8 @@
       if (b.soort === 'klaar') pauze = 1000;
       if (b.soort === 'wakker') {
         gesprek = true;
+        // Een wand in de nachtstand of in rust wordt wakker (besluit 164).
+        dispatchEvent(new CustomEvent('sc-wek', { detail: 'stem' }));
         tikje();
         toon('luistert', { groot: 'Zeg het maar.', klein: 'Bijvoorbeeld "doe het licht beneden wat zachter" of "hoe warm is het boven?"', hint: 'Ik luister tot je stopt met praten' });
         leefMee();

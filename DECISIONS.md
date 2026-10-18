@@ -165,8 +165,9 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
 - [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
 - [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
-- [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand)
+- [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand) — *aangevuld door 164*
 - [163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm](#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm)
+- [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account)
 
 **Veiligheid**
 
@@ -7109,7 +7110,7 @@ laat de knoppen voor instellen nog gewoon zien; een bewoner krijgt bij bewaren
 
 ## 162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 164*
 
 Op 18 oktober 2026 vroeg de bewoner: "we zouden het misschien
 personaliseerbaar kunnen maken", voor telefoon en tablet. Uit twaalf ideeën
@@ -7191,6 +7192,62 @@ onderaan door. Schetsen: `design/app2/Instellingen-Tel-Groep.html` en
   de naam, en niet meer in de kolom ernaast. Daar komt ook wat het huis
   leerde, als dat er komt.
 - **Je huis** (de indeling) heeft zijn eigen opbouw en blijft zoals hij is.
+
+---
+
+## 164. De wand als niemand kijkt, en de weergave per account
+
+*Onderwerp: weergave · Status: geldig*
+
+De tweede stap van besluit 162, op 18 oktober 2026. De bewoner had de
+nachtstand, rust overdag en eenvoudig of uitgebreid al gezien in de schetsen
+(`design/app2/Wand-Nacht.html` met `#rust` en `#kiezen`, en
+`Thuis-Tel-Eigen.html#weergave` en `#eenvoudig`), en vroeg om een soort
+always-on display voor de wand. Hij koos: eigen tijden voor de nacht en ook als
+iemand het huis op Nacht zet; één bewegingsmelder kiezen; het scherm donker
+kleuren en in Fully Kiosk ook de echte helderheid omlaag; eenvoudig en grotere
+letters op de telefoon, op de wand alleen minder beweging; instellen bij het
+potlood op de wand; en Weergave achter het tandwiel en onderaan Thuis.
+
+*Besluit:*
+
+- **De nachtstand:** van bedtijd tot de ochtend (standaard 23:00 tot 07:00),
+  of als iemand het huis zelf op Nacht zet. De Nacht van de dagdelen telt niet:
+  die begint al om 22:00. Na een minuut zonder iemand aan het scherm staan er de
+  klok, gedimd, en een donker huis zonder getallen, zonder zon of stromen; met
+  *Alles rustig* (of welke kamer koelt of warmt) en de temperatuur van twee
+  kamers, de slaapkamer eerst, en het weer van morgen. Na wekken komt hij
+  terug na weer een minuut zonder iemand.
+- **Rust overdag:** na 2, 5 (standaard) of 15 minuten, of uit. Groot de klok,
+  de kop van Thuis en het weer van nu en morgen, met het huis zonder getallen.
+- **Wekken:** een tik (die doet verder niets), de muis, de bewegingsmelder die
+  de hoofdgebruiker koos, aanbellen en "Hé huis". De melder bewaakt de dienst:
+  gaat hij aan, dan stuurt de live-stroom `wekken`. Een open bewerkstand,
+  "Hé huis", de deurbel, de film en een veld waarin je typt houden de wand
+  wakker.
+- **Alleen op de wand.** De telefoon rust nooit. Op een pagina om naar te kijken
+  (Vandaag, Apparaten, Opbrengst, de Assistent, een kamer) gaat de wand na
+  dezelfde tijd terug naar Thuis en rust daar meteen; waar je iets instelt, laat
+  hij je met rust.
+- **De helderheid:** de app kan het scherm alleen donkerder kleuren. Draait de
+  wand in Fully Kiosk, dan gaat 's nachts ook de echte helderheid omlaag en bij
+  wekken terug naar wat hij was.
+- **Instellen:** bij het potlood op de wand, *Als niemand kijkt*, alleen voor
+  de hoofdgebruiker of een beheerder, voor de hele wand. Bewaard in
+  `voorkeuren.json` (`wand.niemand`), net als de kaarten.
+- **Weergave per account,** op elk scherm waar je inlogt (`weergave` bij je
+  account): *eenvoudig* (geen getallen op het huis, Vandaag in één zin, geen
+  *Thuis aanpassen*), *grotere letters* (de tekst een maat groter) en *minder
+  beweging* (geen lopende stromen, geen ademende bol, geen overgangen). Eenvoudig
+  en grotere letters gelden in de telefoonstand: de wand schuift nooit, dus daar
+  alleen minder beweging. Te kiezen onderaan Thuis (*Weergave*, ook in eenvoudig)
+  en achter het tandwiel. De pagina onthoudt het ook zelf, zodat hij meteen
+  goed staat; de dienst heeft het laatste woord.
+
+*Wat afviel:* de Nacht van de dagdelen als bedtijd (dan al om 22:00); elke
+melder in huis laten wekken (een gang 's nachts is geen kijker); grotere
+letters op de wand (past niet zonder schuiven); de hele pagina vergroten (dan
+past het huis niet meer).
 
 ---
 

@@ -598,7 +598,7 @@ describe('de duur van een programma (besluit 101)', () => {
   it('ziet beweging bij de meter van hetzelfde apparaat (15 oktober 2026)', () => {
     const house = buildHouse(config, registers, states, snapshot);
     const meter = house.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === 'sensor.bewegingssensor_hal_temperatuur')!;
-    expect(meter.meting?.beweging).toEqual({ nu: true, sindsMs: Date.parse('2026-10-15T13:40:00Z') });
+    expect(meter.meting?.beweging).toEqual({ nu: true, sindsMs: Date.parse('2026-10-15T13:40:00Z'), id: 'binary_sensor.bewegingssensor_hal_beweging' });
   });
 });
 

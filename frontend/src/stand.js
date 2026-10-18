@@ -70,6 +70,8 @@
     { titel: 'Deurbel', waar: 'Functies', href: 'functies.html#deurbel', woorden: 'deurbel bel aanbellen bezoeker scherm' },
     { titel: 'Licht en screens bedienen', waar: 'Functies', href: 'functies.html#licht', woorden: 'licht lamp scene screen zonnescherm bedienen' },
     { titel: 'Weer', waar: 'Functies', href: 'functies.html#weer', woorden: 'weer buienradar open-meteo verwachting uur' },
+    { titel: 'Weergave', waar: 'Thuis', href: 'thuis.html#weergave', woorden: 'weergave eenvoudig uitgebreid letters groter lettergrootte beweging rustig' },
+    { titel: 'Als niemand kijkt', waar: 'Thuis, bij het potlood op de wand', href: 'thuis.html', woorden: 'nacht nachtstand slapen rust klok scherm dimmen donker bewegingsmelder wand' },
     { titel: 'Wanneer een batterij of filter een melding geeft', waar: 'Functies', href: 'functies.html#meldingen', woorden: 'melding batterij filter leeg vol onderhoud procent bel' },
     { titel: 'Bewoners', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'bewoner bewoners gebruiker hoofdgebruiker naam volgorde aanwezig thuis weg wie' },
     { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
