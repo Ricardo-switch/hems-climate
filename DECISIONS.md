@@ -164,6 +164,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [158. Inrichten: overal Terug en Volgende, en wat de bewoner tegenkwam](#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam)
 - [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
 - [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
+- [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
 
 **Veiligheid**
 
@@ -7004,7 +7005,7 @@ Wat het uitzoeken liet zien (nagelezen in de bron van Home Assistant):
   Assistant.
 - **Het paneel staat alleen bij beheerders.** `panel_admin` staat standaard
   aan; bewoners zonder beheerdersrechten zien Smart Climate niet in de zijbalk.
-  Dat blijft hier zo, en wacht een eigen besluit.
+  Dat blijft hier zo, en wacht een eigen besluit (dat werd besluit 161).
 
 *Besluit:*
 
@@ -7043,6 +7044,64 @@ niets uit, met eigen regels wel. De naam `smartclimate` komt, net als in 108,
 in de openbare certificaatlogboeken. Op de Pi zelf nog na te lopen: of de
 Tailscale-add-on de poort op `127.0.0.1` bereikt, en of de telefoon de app
 installeert.
+
+---
+
+## 161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 bleek dat het paneel van de add-on alleen bij beheerders in
+de zijbalk van Home Assistant staat: `panel_admin` ontbrak in
+`addon/config.yaml`, en staat dan aan. Bewoners zonder beheerdersrechten en het
+account van de wand (besluit 147, 151) kwamen er niet in. Daarnaast gaf
+`ingressVisitor` iedereen achter Ingress de rol beheerder, zodat de controle per
+deur (besluit 99) en de regels voor een gast (besluit 147, 151) daar niet
+golden.
+
+Wat het uitzoeken liet zien (nagelezen in de bron van de Supervisor en Home
+Assistant):
+
+- **`panel_admin` verstopt niet alleen.** Met `panel_admin` aan weigert de
+  Supervisor Ingress voor wie geen beheerder is (`api/ingress.py`); zonder
+  kwamen Shira en de wand er dus helemaal niet in.
+- **Ingress zegt wie, niet wat.** De Supervisor geeft `X-Remote-User-Id`,
+  `-Name` en `-Display-Name` mee, en haalt die koppen eerst weg als de browser
+  ze zelf meestuurt. Of iemand beheerder is, geeft hij niet mee.
+- **De dienst kan het zelf vragen.** `config/auth/list` op de websocket geeft
+  per account de groepen (`system-admin`) en of het de eigenaar is. Die vraag
+  vraagt een beheerder, en de Supervisor is er een: de add-on mag hem stellen.
+
+De bewoner koos uit de voorgelegde opties steeds de aanbevolen.
+
+*Besluit:*
+
+- **`panel_admin: false`.** Iedereen met een account in Home Assistant ziet
+  Smart Climate in de zijbalk: bewoners, gasten met een account en de wand. Wat
+  iemand mag, bepaalt de app.
+- **Beheerder is wie dat in Home Assistant is,** ook achter Ingress, net als
+  bij inloggen op de NAS en op de eigen poort (besluit 99, 160). De dienst
+  vraagt de accounts op (`config/auth/list`, nu op de lijst van leesopdrachten
+  van `HaClient`) en onthoudt ze een minuut. Beheerder: in de groep
+  beheerders of eigenaar, en niet uitgeschakeld. De rol per deur
+  (`DOOR_ROLES`) geldt daarmee ook achter Ingress.
+- **Bij twijfel bewoner.** Antwoordt Home Assistant niet, dan is niemand
+  beheerder; na vijftien seconden vraagt de dienst het opnieuw. Licht,
+  scènes, screens en comfort werken dan gewoon; het huis, de energie en de
+  functies instellen even niet.
+- **Een gast is overal een gast.** Kijken, en licht, scènes en screens alleen
+  als hij thuis is (besluit 147, 151), nu ook achter Ingress; zijn gegevens
+  downloaden kan hij er ook niet meer.
+- **In de app** staat bij Inloggen achter Ingress "Ingelogd via Home Assistant
+  als …, bewoner" (of beheerder), in plaats van "geen inlog nodig".
+- **Versie 0.37.0.**
+
+*Kosten:* de wand en elke bewoner die in Home Assistant geen beheerder is,
+kunnen achter Ingress het huis, de energie, de functies en de onboarding niet
+meer instellen; dat kon tot nu toe wel. Wie dat wil, maakt het account in Home
+Assistant beheerder. Een nieuwe beheerder telt na hooguit een minuut. De app
+laat de knoppen voor instellen nog gewoon zien; een bewoner krijgt bij bewaren
+"dit mag alleen de beheerder", zoals op de NAS.
 
 ---
 

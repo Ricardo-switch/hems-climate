@@ -19,7 +19,7 @@ name: Smart Climate
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.36.0
+version: 0.37.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
@@ -42,6 +42,10 @@ ingress: true
 ingress_port: 8099
 panel_icon: mdi:home-thermometer
 panel_title: Smart Climate
+# Het paneel voor iedereen met een account, niet alleen voor beheerders
+# (besluit 161): bewoners, gasten en de wand. Wat iemand mag, bepaalt de app;
+# beheerder is wie dat in Home Assistant is.
+panel_admin: false
 
 # Een eigen poort, naast Ingress (besluit 160): daar installeer je de app los
 # op de telefoon, via Tailscale over https. Standaard dicht (`null`); je zet hem

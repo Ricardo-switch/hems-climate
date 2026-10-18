@@ -12,7 +12,8 @@
  * - `sessions`: de NAS en elke dienst met een eigen poort. Inloggen via Home
  *   Assistant, met een sessiecookie.
  * - `ingress`: de add-on achter Ingress. Home Assistant heeft de bezoeker al
- *   vastgesteld (besluit 42, 77); een tweede inlog is er niet.
+ *   vastgesteld (besluit 42, 77); een tweede inlog is er niet. Of hij
+ *   beheerder is, vraagt de dienst aan Home Assistant (besluit 161).
  * - `open`: alleen voor tests en voor wie het uitdrukkelijk vraagt. Elke deur
  *   is open, zoals vóór dit besluit.
  */
@@ -304,7 +305,7 @@ function currentUser(base: string, accessToken: string): Promise<{ id: string; n
 
 export type Access =
   | { readonly kind: 'sessions'; readonly store: SessionStore; readonly login: HaLogin; readonly hosts?: readonly string[] }
-  | { readonly kind: 'ingress' }
+  | { readonly kind: 'ingress'; readonly beheerders?: Beheerders }
   | { readonly kind: 'open' };
 
 /** Een terugweg na het inloggen: alleen een pad op deze dienst, nooit een andere site. */
@@ -313,13 +314,68 @@ export function safeReturn(raw: string | null): string {
   return raw;
 }
 
-/** Achter Ingress heeft Home Assistant de bezoeker al vastgesteld (besluit 42), met zijn account. */
-export function ingressVisitor(req: IncomingMessage): Visitor {
+/** Een account zoals `config/auth/list` van Home Assistant het geeft. */
+export interface HaAccount {
+  readonly id: string;
+  readonly is_owner?: boolean;
+  readonly is_active?: boolean;
+  readonly group_ids?: readonly string[];
+}
+
+/** Wie in Home Assistant beheerder is (besluit 161). */
+export interface Beheerders {
+  isBeheerder(userId: string): Promise<boolean>;
+}
+
+/**
+ * Achter Ingress zegt Home Assistant wie er kijkt, maar niet of dat een
+ * beheerder is (besluit 161). Dat vraagt de dienst zelf: de lijst met accounts,
+ * een minuut onthouden. Beheerder is wie in de groep beheerders zit of de
+ * eigenaar is. Antwoordt Home Assistant niet, dan is niemand beheerder tot de
+ * volgende poging: bij twijfel geen instellingen veranderen.
+ */
+export function haBeheerders(lijst: () => Promise<readonly HaAccount[]>, options: { readonly nowFn?: () => number; readonly geldigMs?: number; readonly opnieuwMs?: number } = {}): Beheerders {
+  const nowFn = options.nowFn ?? Date.now;
+  const geldigMs = options.geldigMs ?? 60_000;
+  const opnieuwMs = options.opnieuwMs ?? 15_000;
+  let admins: ReadonlySet<string> = new Set();
+  let totMs = 0;
+  let bezig: Promise<void> | null = null;
+  const haal = (): Promise<void> =>
+    (bezig ??= lijst()
+      .then(
+        (accounts) => {
+          admins = new Set(accounts.filter((a) => a.is_active !== false && (a.is_owner === true || a.group_ids?.includes('system-admin') === true)).map((a) => a.id));
+          totMs = nowFn() + geldigMs;
+        },
+        () => {
+          admins = new Set();
+          totMs = nowFn() + opnieuwMs;
+        },
+      )
+      .finally(() => {
+        bezig = null;
+      }));
+  return {
+    async isBeheerder(userId) {
+      if (nowFn() >= totMs) await haal();
+      return admins.has(userId);
+    },
+  };
+}
+
+/**
+ * Achter Ingress heeft Home Assistant de bezoeker al vastgesteld (besluit 42),
+ * met zijn account. Beheerder alleen als Home Assistant dat zegt (besluit 161).
+ */
+export async function ingressVisitor(req: IncomingMessage, beheerders?: Beheerders): Promise<Visitor> {
   const id = req.headers['x-remote-user-id'];
+  const userId = typeof id === 'string' && id !== '' ? id : null;
+  const beheerder = userId != null && beheerders != null && (await beheerders.isBeheerder(userId));
   return {
     naam: String(req.headers['x-remote-user-display-name'] ?? req.headers['x-remote-user-name'] ?? 'bewoner'),
-    rol: 'beheerder',
-    userId: typeof id === 'string' && id !== '' ? id : null,
+    rol: beheerder ? 'beheerder' : 'bewoner',
+    userId,
   };
 }
 

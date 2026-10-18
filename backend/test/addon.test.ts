@@ -41,4 +41,9 @@ describe('de add-on en de NAS', () => {
     expect(basis).toEqual(soorten);
     expect(workflow).toEqual(soorten);
   });
+
+  it('zet het paneel voor iedereen met een account in de zijbalk (besluit 161)', async () => {
+    const manifest = await lees('../../addon/config.yaml');
+    expect(manifest).toMatch(/^panel_admin: false$/m);
+  });
 });

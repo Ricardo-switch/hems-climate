@@ -111,7 +111,7 @@ function feitenVan(id) {
     }
     case 'toegang': {
       const s = d.sessie;
-      const ingelogd = !s ? '…' : s.toegang !== 'sessions' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'nog niet';
+      const ingelogd = !s ? '…' : s.toegang === 'open' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'nog niet';
       const dagen = d.export?.bestanden != null ? `${d.export.bestanden} dagen` : '…';
       // Bewoners (besluit 147): wie hier woont, de hoofdgebruiker eerst.
       const namen = d.bewoners ? d.bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
