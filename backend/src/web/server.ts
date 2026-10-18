@@ -2021,6 +2021,26 @@ export class WebServer {
     }
   }
 
+  /**
+   * De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand. Een
+   * wand in de nachtstand of in rust laat dan Thuis weer zien; de rest merkt
+   * er niets van.
+   */
+  wek(waarom: 'beweging'): void {
+    const data = JSON.stringify({ waarom, tMs: Date.now() });
+    for (const listener of this.#listeners) {
+      try {
+        listener.res.write(`event: wekken
+data: ${data}
+
+`);
+      } catch {
+        clearInterval(listener.ping);
+        this.#listeners.delete(listener);
+      }
+    }
+  }
+
   /** Duwt een besluit naar alle kijkers. Hier hangt de runner zich aan. */
   publish(snapshot: LiveSnapshot): void {
     for (const listener of this.#listeners) {

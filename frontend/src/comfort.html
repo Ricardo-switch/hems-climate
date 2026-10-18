@@ -17,6 +17,10 @@
   .bovenrij { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .nu-temp { font-family: var(--kop); font-size: 15px; color: var(--zacht); }
   .nu-temp b { font-size: 22px; color: var(--tekst); }
+  .nukort { flex: 1; min-width: 0; align-self: center; padding: 5px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); font-size: 13px; color: var(--zacht); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; justify-self: start; }
+  .bovenrij .nukort { flex: 0 1 auto; margin-right: auto; }
+  #tel .bovenrij { flex-wrap: wrap; }
+  #tel .bovenrij .nukort { order: 3; flex-basis: 100%; white-space: normal; border-radius: 12px; }
   .band { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 18px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
   .band:first-of-type { border-top: 0; }
   .band .naam b { display: block; font-size: 15px; font-weight: 600; }
@@ -108,28 +112,36 @@
   <div id="wand" class="wand">
     <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
     <main class="groep">
-      <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <div class="groepkop">
-        <div><h1 class="kop-1" data-titel>Comfort</h1><p class="lead" data-lead>Hoe warm of koel je het wilt, per kamer en per dagdeel.</p></div>
-        <div style="display: flex; align-items: center; gap: 14px"><span data-wiekies></span><span class="bewaard" data-bewaard></span></div>
+        <a class="terugje" href="instellingen.html">‹ Instellingen</a>
+        <h1 class="kop-1" data-titel>Comfort</h1>
+        <span class="samen" data-samen></span>
+        <span data-wiekies></span>
+        <span class="bewaard" data-bewaard></span>
       </div>
+      <p class="lead groeplead" data-lead>Hoe warm of koel je het wilt, per kamer en per dagdeel.</p>
       <div class="groepveld">
         <nav class="glas delen schuift" aria-label="Delen van Comfort" data-delen></nav>
-        <section class="glas vorm schuift" data-vorm></section>
-        <aside class="naast schuift" data-naast></aside>
+        <div class="glas vormvak" data-waarvoor-vak>
+          <section class="vorm schuift" data-vorm></section>
+          <div class="voet"><button type="button" class="waarvoor" data-waarvoor aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.8"/><path d="M12 17h.01"/></svg>Waarvoor is dit?</button><div class="verder" data-verder></div></div>
+          <aside class="naast" data-naast></aside>
+        </div>
       </div>
     </main>
   </div>
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <a class="terugje" href="instellingen.html">‹ Instellingen</a>
+      <a class="terugje" href="instellingen.html" data-terug>‹ Instellingen</a>
       <div class="groepkop"><h1 class="kop-1" style="font-size: 34px" data-titel>Comfort</h1><span class="bewaard" data-bewaard></span></div>
+      <span class="samen" data-samen></span>
       <p class="lead" data-lead style="margin: 0; font-size: 15px"></p>
       <span data-wiekies></span>
       <nav class="glas delen" aria-label="Delen van Comfort" data-delen></nav>
       <section class="glas vorm" data-vorm></section>
       <div class="naast" data-naast></div>
+      <div class="verder" data-verder></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
   </div>

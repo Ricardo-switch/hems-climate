@@ -246,7 +246,14 @@ verwijzing bestaat.
 - **Thuis naar eigen smaak:** op de telefoon kies en schuif je zelf de kaarten
   en vier favorieten met één tik, bewaard bij je account; de wand heeft vier
   vakken, die de hoofdgebruiker aanpast, en Straks schuift er vanzelf bij
-  ([162]).
+  ([162]). Als niemand kijkt, gaat de wand 's nachts in de nachtstand en rust
+  hij overdag; een tik, de bewegingsmelder, de deurbel of "Hé huis" wekt hem.
+  Per account kies je eenvoudig of uitgebreid, grotere letters en minder
+  beweging ([164]).
+- **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
+  mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
+  de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
+  scrollen en zit de uitleg achter *Waarvoor is dit?* ([163]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -502,4 +509,6 @@ verwijzing bestaat.
 [160]: DECISIONS.md#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale
 [161]: DECISIONS.md#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant
 [162]: DECISIONS.md#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand
+[163]: DECISIONS.md#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm
+[164]: DECISIONS.md#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account
 <!-- links:einde -->

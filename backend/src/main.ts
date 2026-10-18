@@ -600,6 +600,8 @@ client.on('stateChanged', (state: HaEntityState) => {
     const naam = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera))?.naam ?? 'Deurbel';
     web?.ring(camera, naam, { seconden: f.deurbel.seconden, schermAan: f.deurbel.schermAan });
   }
+  // De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand.
+  if (state.entity_id === voorkeuren?.melder() && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') web?.wek('beweging');
   if (inHouse(state)) houseStates.set(state.entity_id, state);
   allStates.set(state.entity_id, state);
   const solar = baseConfig?.solarProduction;

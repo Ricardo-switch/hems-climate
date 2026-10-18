@@ -38,6 +38,7 @@ async function laadAlles() {
   if (w.status === 'fulfilled') weer = w.value;
   if (a.status === 'fulfilled') aansluiting = a.value;
   teken();
+  if (eersteKeer) eigen.vanInstellingen();
   // Met #batterijen meteen de lijst, ook als niets bijna leeg is (besluit 131).
   if (eersteKeer && location.hash === '#batterijen') {
     history.replaceState(null, '', location.pathname);
@@ -155,7 +156,8 @@ function tekenNu() {
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
-  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: 14, tik: true });
+  // Eenvoudig (besluit 164): geen getallen op het huis.
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: 14, tik: true });
 
   tekenVandaag();
   tekenStraks();
@@ -166,6 +168,8 @@ function tekenNu() {
   // Thuis naar eigen smaak (besluit 162): favorieten, en de kaarten op hun plek.
   eigen.tekenFavorieten(huisData);
   eigen.na();
+  // De wand als niemand kijkt (besluit 164): de stand van het huis bij, en opnieuw tekenen als hij rust.
+  niemand.ververs();
   // De microfoon in de vraagbalk alleen waar hij kan: over https (besluit 150).
   $$('#tel [data-mic]').forEach((el) => (el.hidden = !(window.isSecureContext && navigator.mediaDevices?.getUserMedia)));
 }
@@ -243,6 +247,9 @@ function tekenVandaag() {
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
   const uitleg = `Gestippeld: de ${lijn2.naam}.`;
   zet('[data-dag-zin]', kwh > 0.05 ? `${nl(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0)}% zelf gebruikt. ${uitleg}` : uitleg);
+  // Eenvoudig (besluit 164, schets Thuis-Tel-Eigen #eenvoudig): de dag in één zin.
+  const zelf = kwh > 0.05 ? (kwh - terug) / kwh : 0;
+  $$('[data-dag-eenvoudig]').forEach((el) => (el.innerHTML = kwh > 0.05 ? `Je panelen gaven al <b>${nl(kwh)} kWh</b>. ${zelf >= 0.9 ? 'Bijna alles gebruikte het huis zelf.' : zelf >= 0.5 ? 'Het meeste gebruikte het huis zelf.' : 'Het meeste ging naar het net.'}` : 'Je panelen gaven vandaag nog niets.'));
 }
 
 /*
@@ -525,6 +532,10 @@ function sluitWeer() {
 /** Gebundeld: hooguit één keer per beeld (basis.js). */
 const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
+// Een andere weergave (besluit 164): opnieuw tekenen, met of zonder getallen op het huis.
+addEventListener('weergave', teken);
+// De wand als niemand kijkt (besluit 164): het huis, de stand en het weer van deze pagina.
+niemand.bij({ model: () => (state && huisData ? huisModel() : null), state: () => state, huis: () => huisData, weer: () => weer });
 // Na een keuze of een tik op een favoriet: opnieuw tekenen, en zo nodig het huis opnieuw lezen.
 eigen.bij(async (huisOok) => {
   if (huisOok) {

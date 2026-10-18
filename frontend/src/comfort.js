@@ -162,7 +162,9 @@ function kamerVorm(k) {
   const nu = pz?.temperatureC;
   // Overdag en 's nachts; afwezig en vakantie hebben hun eigen deel (besluit 133).
   const banden = ['dag', 'nacht'].map((m) => band(k, m)).join('');
-  return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${nu != null ? `<span class="nu-temp">nu <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
+  // Hoe het nu gaat, bovenin het kamervak (besluit 163): daar komt ook wat het huis leerde.
+  const kort = state?.bewoner?.kamers?.find((x) => x.zoneId === k.id)?.kort;
+  return `<div class="bovenrij"><h2 class="kop-2">${esc(k.naam)}</h2>${kort ? `<span class="nukort">${esc(kort)}</span>` : ''}${nu != null ? `<span class="nu-temp">nu <b>${graden(Math.round(nu * 10) / 10)}</b></span>` : ''}</div>
     ${banden}
     ${zonEnNet(k)}
 `;
@@ -236,10 +238,7 @@ function naast(id) {
     return `<div class="glas"><h3>Waarom twee lijsten</h3><p style="margin: 0">In de zomer wil je de bovenverdieping koel voor de nacht, in de winter de woonkamer warm. Zo gaat het op een koude ochtend en een warme middag allebei goed.</p></div>
       <div class="glas"><h3>Wanneer het telt</h3><p style="margin: 0">Alleen als er niet genoeg zon is voor alles. Is er genoeg, dan krijgt elke kamer wat hij nodig heeft.</p></div>`;
   }
-  const k = comfort.kamers.find((x) => x.id === id);
-  const kort = k ? state?.bewoner?.kamers?.find((x) => x.zoneId === k.id)?.kort : null;
-  return `${kort ? `<div class="glas"><h3>Nu</h3><p style="margin: 0">${esc(kort)}</p></div>` : ''}
-    <div class="glas"><h3>Zo gebruikt het huis dit</h3>
+  return `<div class="glas"><h3>Zo gebruikt het huis dit</h3>
       <p style="margin: 0 0 10px">Tussen de twee grepen is het goed: dan doet het huis niets. Het gele stuk is waar het op zon naartoe mag. Tik op een regel om te zien wanneer het aan- en uitgaat.</p>
       ${dagbalk()}
     </div>`;

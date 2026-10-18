@@ -79,6 +79,8 @@ function bedragVeld(label, pad, waarde, hint = '', min = '0', leegIsFout = false
 }
 const kop = (t, rechts = '') => `<div class="kopregel"><h2 class="kop-2">${esc(t)}</h2>${rechts}</div>`;
 const blok = (titel, inhoud) => `<div class="deelvraag">${titel ? `<h3 class="kop-3">${esc(titel)}</h3>` : ''}${inhoud}</div>`;
+/** Op de wand twee kolommen naast elkaar, zodat een deel zonder scrollen past (besluit 163); op de telefoon onder elkaar. */
+const kolommen = (links, rechts) => `<div class="kolommen"><div>${links}</div><div>${rechts}</div></div>`;
 const naamVan = (id) => eInfo?.meters?.find((m) => m.id === id)?.naam ?? id;
 
 /* ------------------------------------------------------------ de delen */
@@ -143,11 +145,9 @@ function panelenVorm() {
       ${z.snelGenoeg === false && z.weg ? `<p class="mini">Lokale koppeling: ${esc(z.weg)}</p>` : ''}`)
     : '';
   return `${kop('Zonnepanelen')}
-    ${blok('Op welke kant van het dak liggen ze?', `${zijaanzicht(kant)}
+    ${kolommen(blok('Op welke kant van het dak liggen ze?', `${zijaanzicht(kant)}
       ${keuzes('Kant van het dak', 'ligging', [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet'], ['geen', 'Geen panelen']], kant)}
-      ${aantallen}${aantallen ? '<p class="mini">Met het aantal weet Smart Climate wat een paneel levert.</p>' : ''}`)}
-    ${liggingBlok}
-    ${sensor}`;
+      ${aantallen}${aantallen ? '<p class="mini">Met het aantal weet Smart Climate wat een paneel levert.</p>' : ''}`), `${liggingBlok}${sensor}`)}`;
 }
 
 /* Aansluiting */
@@ -227,11 +227,10 @@ function metersVorm() {
     ? blok('Uit Home Assistant', `<p class="uitleg">In je Energie-dashboard staan ${esc(lijst ?? 'nog geen meters')}. Overnemen zet ze hieronder goed.</p><button type="button" class="knop" data-overnemen style="align-self: start">Meters overnemen</button>`)
     : blok('Uit Home Assistant', `<p class="uitleg">${esc(eInfo.fout ?? 'Het Energie-dashboard van Home Assistant is niet ingericht. Kies je meters hieronder zelf.')}</p>`);
   const rijen = e.apparaten.map((x, i) => `<div class="regelrij"><div class="l"><input class="invoer" data-apparaatnaam="${i}" value="${esc(x.naam)}" maxlength="40" aria-label="Naam van ${esc(naamVan(x.id))}"><span>${esc(naamVan(x.id))}</span></div><button type="button" class="knop" data-apparaat-weg="${i}" aria-label="${esc(x.naam)} weghalen">Weg</button></div>`).join('');
+  const apparatenBlok = blok('Apparaten met een eigen meter', `${rijen || '<p class="uitleg">Nog geen. Een apparaat met een eigen meter staat in Opbrengst apart.</p>'}${meterKeuze('Apparaat erbij', 'apparaat', 'apparaat', 'energy', 'Apparaat erbij…')}`);
   return `${kop('Meters')}
     ${e.net.afname.length ? '' : '<div class="melding"><span class="stip" style="background: var(--gloed)"></span>Zonder stroommeter weet Opbrengst niet wat je huis gebruikt.</div>'}
-    ${uitHa}
-    ${blok('Welke meter telt wat', `${rol('Stroom van het net', 'afname', e.net.afname, 'afname', 'energy')}${rol('Teruglevering', 'teruglevering', e.net.teruglevering, 'teruglevering', 'energy')}${rol('Zonnepanelen', 'zon', e.zon, 'zon', 'energy')}${rol('Gas', 'gas', e.gas ? [e.gas] : [], 'gas', 'volume', true)}${dubbel ? '<p class="mini">Tik op normaal of dal om te zeggen welk tarief een meter telt. Bij een slimme meter is tarief 1 het daltarief.</p>' : ''}`)}
-    ${blok('Apparaten met een eigen meter', `${rijen || '<p class="uitleg">Nog geen. Een apparaat met een eigen meter staat in Opbrengst apart.</p>'}${meterKeuze('Apparaat erbij', 'apparaat', 'apparaat', 'energy', 'Apparaat erbij…')}`)}`;
+    ${kolommen(`${uitHa}${apparatenBlok}`, blok('Welke meter telt wat', `${rol('Stroom van het net', 'afname', e.net.afname, 'afname', 'energy')}${rol('Teruglevering', 'teruglevering', e.net.teruglevering, 'teruglevering', 'energy')}${rol('Zonnepanelen', 'zon', e.zon, 'zon', 'energy')}${rol('Gas', 'gas', e.gas ? [e.gas] : [], 'gas', 'volume', true)}${dubbel ? '<p class="mini">Tik op normaal of dal om te zeggen welk tarief een meter telt. Bij een slimme meter is tarief 1 het daltarief.</p>' : ''}`))}`;
 }
 
 /* Contract en prijzen */
@@ -268,21 +267,17 @@ function prijzenVorm() {
   const mist = p.stroom == null ? 'Zonder stroomprijs rekent Opbrengst alleen in kWh. Vul hem in zoals hij op je contract staat, met btw.' : e.gas && p.gas == null ? 'Je hebt een gasmeter; zonder gasprijs telt het gas niet mee in je kosten.' : '';
   return `${kop('Contract en prijzen')}
     ${mist ? `<div class="melding"><span class="stip" style="background: var(--gloed)"></span>${esc(mist)}</div>` : ''}
-    ${blok('Soort contract', `${keuzes('Soort contract', 'contract', [['vast', 'Vaste prijs'], ['dynamisch', 'Per uur (dynamisch)'], ['weetniet', 'Weet ik niet']], a?.tarief ?? null, !a)}
+    ${kolommen(`${blok('Soort contract', `${keuzes('Soort contract', 'contract', [['vast', 'Vaste prijs'], ['dynamisch', 'Per uur (dynamisch)'], ['weetniet', 'Weet ik niet']], a?.tarief ?? null, !a)}
       <p class="mini">Bij een dynamisch contract verschilt de prijs per uur. Dan kan het huis koelen en wassen als stroom goedkoop is.</p>
       <label class="veldnaam">Startdatum contract<input class="invoer" type="date" data-contract value="${esc(p.contractStart ?? '')}" min="2000-01-01" max="2100-12-31"></label>
-      <p class="mini">Het jaar in Opbrengst loopt vanaf deze dag, zoals je jaarafrekening. Leeg is vanaf 1 januari.</p>`)}
-    ${blok('Stroom', `${keuzes('Tarief', 'stroomtarief', [['enkel', 'Eén tarief'], ['dubbel', 'Normaal en dal']], dubbel ? 'dubbel' : 'enkel')}
+      <p class="mini">Het jaar in Opbrengst loopt vanaf deze dag, zoals je jaarafrekening. Leeg is vanaf 1 januari.</p>`)}${blok('Stroom', `${keuzes('Tarief', 'stroomtarief', [['enkel', 'Eén tarief'], ['dubbel', 'Normaal en dal']], dubbel ? 'dubbel' : 'enkel')}
       <div class="${dubbel ? 'twee' : ''}">${bedragVeld(dubbel ? 'Normaal, € per kWh' : '€ per kWh', 'stroom', p.stroom, '0,27', '0', true)}${dubbel ? bedragVeld('Dal, € per kWh', 'stroomDal', p.stroomDal, '0,25', '0', true) : ''}</div>
-      <p class="mini">De totaalprijs, met energiebelasting en btw. Op je contract heet die vaak "Totaal elektriciteit".</p>${dalTijden}`)}
-    ${blok('Teruglevering', `<p class="uitleg">Tot 2027 wordt er gesaldeerd: wat je teruglevert, telt tegen je eigen stroomprijs.</p>
+      <p class="mini">De totaalprijs, met energiebelasting en btw. Op je contract heet die vaak "Totaal elektriciteit".</p>${dalTijden}`)}${e.gas ? blok('Gas', `${bedragVeld('€ per m³', 'gas', p.gas, '1,36', '0', true)}<p class="mini">Ook hier de totaalprijs, met belasting en btw.</p>`) : ''}`, `${blok('Teruglevering', `<p class="uitleg">Tot 2027 wordt er gesaldeerd: wat je teruglevert, telt tegen je eigen stroomprijs.</p>
       ${bedragVeld('Vergoeding boven je verbruik, € per kWh', 'teruglevering', p.teruglevering, '0,15')}
       <span class="veldnaam" style="margin-top: 4px">Vanaf 2027, als het salderen stopt</span>
-      <div class="twee">${bedragVeld('Je krijgt, € per kWh', 'vanaf2027.vergoeding', p.vanaf2027.vergoeding, '0,07')}${bedragVeld('Je betaalt, € per kWh', 'vanaf2027.kosten', p.vanaf2027.kosten, '0,06')}</div>`)}
-    ${e.gas ? blok('Gas', `${bedragVeld('€ per m³', 'gas', p.gas, '1,36', '0', true)}<p class="mini">Ook hier de totaalprijs, met belasting en btw.</p>`) : ''}
-    ${blok('Vaste kosten', `${posten || '<p class="uitleg">Nog geen vaste posten.</p>'}
+      <div class="twee">${bedragVeld('Je krijgt, € per kWh', 'vanaf2027.vergoeding', p.vanaf2027.vergoeding, '0,07')}${bedragVeld('Je betaalt, € per kWh', 'vanaf2027.kosten', p.vanaf2027.kosten, '0,06')}</div>`)}${blok('Vaste kosten', `${posten || '<p class="uitleg">Nog geen vaste posten.</p>'}
       <div class="meterchips">${erbij.map((x) => `<button type="button" data-vast-erbij="${esc(x.naam)}">+ ${esc(x.naam)}</button>`).join('')}<button type="button" data-vast-erbij="">+ Andere post</button></div>
-      <p class="mini">Zoals op je contract: per dag, maand of jaar, met btw. Een aftrek, zoals de vermindering energiebelasting, telt de app als min.</p>`)}`;
+      <p class="mini">Zoals op je contract: per dag, maand of jaar, met btw. Een aftrek, zoals de vermindering energiebelasting, telt de app als min.</p>`)}`)}`;
 }
 
 /* Verwarming */

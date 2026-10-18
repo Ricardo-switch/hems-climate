@@ -9,6 +9,13 @@
  * Vandaag vraagt er twee. Straks staat niet in de lijst van de wand: dat
  * schuift er vanzelf bovenin bij als het huis op zon wacht.
  *
+ * De tweede stap (besluit 164, schetsen Wand-Nacht en Thuis-Tel-Eigen
+ * #weergave): per account eenvoudig of uitgebreid, grotere letters en minder
+ * beweging; en voor de wand wat hij doet als niemand kijkt: de nachtstand van
+ * bedtijd tot de ochtend, rust overdag na een paar minuten, en welke
+ * bewegingsmelder hem wekt. Dat laatste verandert alleen wie de wand mag
+ * aanpassen.
+ *
  * Alles staat in één eigen bestand naast de dataset en gaat mee in de
  * back-up; er gaat niets naar Home Assistant. Favorieten schakelen via de
  * deuren die er al zijn (`/api/licht`, `/api/scene`); dit bestand onthoudt
@@ -34,6 +41,35 @@ export const STANDAARD_TEL: readonly KaartId[] = ['kamers', 'favorieten', 'strak
 /** Op de wand: wijkt er een voor Straks, dan liever het apparaat dan Hoe voelt het. */
 export const STANDAARD_WAND: readonly KaartId[] = ['vandaag', 'gevoel', 'apparaat'];
 
+/** Hoe Thuis eruitziet voor jou, op elk scherm waar je inlogt (besluit 164). */
+export interface Weergave {
+  /** De temperatuur en wat het huis doet in zinnen, minder getallen. */
+  readonly eenvoudig: boolean;
+  /** Alle tekst een maat groter; op de wand niet, want die schuift nooit. */
+  readonly groteLetters: boolean;
+  /** Geen lopende stromen en geen ademende bol. */
+  readonly minderBeweging: boolean;
+}
+export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: false, minderBeweging: false };
+
+/** Na hoeveel minuten zonder iemand aan het scherm de wand overdag rust; 0 is nooit. */
+export const RUST_MINUTEN = [0, 2, 5, 15] as const;
+export type RustMinuten = (typeof RUST_MINUTEN)[number];
+
+/** De wand als niemand kijkt (besluit 164, schets Wand-Nacht). */
+export interface Niemand {
+  /** De nachtstand: de klok en een gedimd huis, zonder getallen. */
+  readonly nacht: boolean;
+  /** Van bedtijd tot de ochtend, als uu:mm; ook als iemand het huis op Nacht zet. */
+  readonly van: string;
+  readonly tot: string;
+  /** Rust overdag: de klok, wat het huis doet en het weer. */
+  readonly rustMin: RustMinuten;
+  /** De bewegingsmelder die de wand wekt, of null. */
+  readonly melder: string | null;
+}
+export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, melder: null };
+
 export interface Favoriet {
   readonly soort: 'lamp' | 'scene';
   /** Een lamp zoals het huis hem noemt, of een `scene.` uit Home Assistant. */
@@ -43,20 +79,21 @@ export interface Favoriet {
 interface Eigen {
   readonly tel?: readonly KaartId[];
   readonly favorieten?: readonly Favoriet[];
+  readonly weergave?: Weergave;
 }
 
 interface Bestand {
   readonly versie: 1;
   /** Per account van Home Assistant; '' is zonder inlog (de NAS op het thuisnetwerk). */
   readonly accounts: Readonly<Record<string, Eigen>>;
-  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[] };
+  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[]; readonly niemand?: Niemand };
 }
 
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[] };
-  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave };
+  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand };
   readonly ruimte: number;
   readonly vakken: Readonly<Partial<Record<KaartId, number>>>;
   readonly maxFavorieten: number;
@@ -105,11 +142,48 @@ export function leesFavorieten(x: unknown): { ok: true; favorieten: Favoriet[] }
   return { ok: true, favorieten };
 }
 
+const isObject = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x != null && !Array.isArray(x);
+
+/** Een deel van de weergave, bovenop wat er al stond. */
+export function leesWeergave(x: unknown, nu: Weergave): { ok: true; weergave: Weergave } | { ok: false; reden: string } {
+  if (!isObject(x)) return { ok: false, reden: 'weergave is een object' };
+  const uit: Record<string, boolean> = { ...nu };
+  for (const [k, w] of Object.entries(x)) {
+    if (!(k in STANDAARD_WEERGAVE)) return { ok: false, reden: `die keuze bestaat niet: ${k}` };
+    if (typeof w !== 'boolean') return { ok: false, reden: `${k} is aan of uit` };
+    uit[k] = w;
+  }
+  return { ok: true, weergave: uit as unknown as Weergave };
+}
+
+const TIJD = /^([01]\d|2[0-3]):[0-5]\d$/;
+const MELDER = /^binary_sensor\.[a-z0-9_]+$/;
+
+/** Een deel van wat de wand doet als niemand kijkt, bovenop wat er al stond. */
+export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niemand } | { ok: false; reden: string } {
+  if (!isObject(x)) return { ok: false, reden: 'niemand is een object' };
+  const uit: Record<string, unknown> = { ...nu };
+  for (const [k, w] of Object.entries(x)) {
+    if (k === 'nacht') {
+      if (typeof w !== 'boolean') return { ok: false, reden: 'de nachtstand is aan of uit' };
+    } else if (k === 'van' || k === 'tot') {
+      if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };
+    } else if (k === 'rustMin') {
+      if (!(RUST_MINUTEN as readonly unknown[]).includes(w)) return { ok: false, reden: `rust overdag is ${RUST_MINUTEN.join(', ')} minuten` };
+    } else if (k === 'melder') {
+      if (w !== null && (typeof w !== 'string' || w.length > 160 || !MELDER.test(w))) return { ok: false, reden: 'de melder is een binary_sensor uit Home Assistant' };
+    } else return { ok: false, reden: `die keuze bestaat niet: ${k}` };
+    uit[k] = w;
+  }
+  if (uit['van'] === uit['tot']) return { ok: false, reden: 'de nacht begint en eindigt niet op dezelfde tijd' };
+  return { ok: true, niemand: uit as unknown as Niemand };
+}
+
 export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const eigen = b.accounts[wie.userId ?? ''] ?? {};
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [] },
-    wand: { kaarten: b.wand?.kaarten ?? STANDAARD_WAND, favorieten: b.wand?.favorieten ?? [], magAanpassen: wie.magWand },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave } },
+    wand: { kaarten: b.wand?.kaarten ?? STANDAARD_WAND, favorieten: b.wand?.favorieten ?? [], magAanpassen: wie.magWand, niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand } },
     ruimte: WAND_RUIMTE,
     vakken: WAND_VAKKEN,
     maxFavorieten: MAX_FAVORIETEN,
@@ -118,24 +192,43 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
 
 /**
  * Wat er verandert: `{ plek: 'tel' | 'wand', kaarten?, favorieten? }`. Op de
- * telefoon je eigen keuze; de wand alleen als je hem mag aanpassen.
+ * telefoon je eigen keuze; de wand alleen als je hem mag aanpassen. Bij de
+ * telefoon ook `weergave` (die geldt voor jou, op elk scherm), bij de wand
+ * `niemand`.
  */
 export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true; bestand: Bestand } | { ok: false; status: number; reden: string } {
-  const r = typeof body === 'object' && body != null && !Array.isArray(body) ? (body as Record<string, unknown>) : null;
+  const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (r!['kaarten'] === undefined && r!['favorieten'] === undefined) return { ok: false, status: 400, reden: 'geef kaarten of favorieten' };
+  if (!['kaarten', 'favorieten', 'weergave', 'niemand'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave of niemand' };
+  if (plek === 'wand' && r!['weergave'] !== undefined) return { ok: false, status: 400, reden: 'de weergave is per account: plek tel' };
+  if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
   if (plek === 'wand' && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
   const kaarten = r!['kaarten'] === undefined ? null : leesKaarten(r!['kaarten'], plek);
   if (kaarten && !kaarten.ok) return { ok: false, status: 400, reden: kaarten.reden };
   const favorieten = r!['favorieten'] === undefined ? null : leesFavorieten(r!['favorieten']);
   if (favorieten && !favorieten.ok) return { ok: false, status: 400, reden: favorieten.reden };
+  const nu = voorkeurenView(b, wie);
   if (plek === 'wand') {
-    const wand = { ...b.wand, ...(kaarten ? { kaarten: kaarten.kaarten } : {}), ...(favorieten ? { favorieten: favorieten.favorieten } : {}) };
+    const niemand = r!['niemand'] === undefined ? null : leesNiemand(r!['niemand'], nu.wand.niemand);
+    if (niemand && !niemand.ok) return { ok: false, status: 400, reden: niemand.reden };
+    const wand = {
+      ...b.wand,
+      ...(kaarten ? { kaarten: kaarten.kaarten } : {}),
+      ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+      ...(niemand ? { niemand: niemand.niemand } : {}),
+    };
     return { ok: true, bestand: { ...b, wand } };
   }
+  const weergave = r!['weergave'] === undefined ? null : leesWeergave(r!['weergave'], nu.tel.weergave);
+  if (weergave && !weergave.ok) return { ok: false, status: 400, reden: weergave.reden };
   const sleutel = wie.userId ?? '';
-  const eigen = { ...b.accounts[sleutel], ...(kaarten ? { tel: kaarten.kaarten } : {}), ...(favorieten ? { favorieten: favorieten.favorieten } : {}) };
+  const eigen = {
+    ...b.accounts[sleutel],
+    ...(kaarten ? { tel: kaarten.kaarten } : {}),
+    ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+    ...(weergave ? { weergave: weergave.weergave } : {}),
+  };
   return { ok: true, bestand: { ...b, accounts: { ...b.accounts, [sleutel]: eigen } } };
 }
 
@@ -159,6 +252,11 @@ export class VoorkeurenStore {
 
   view(wie: VoorkeurWie): VoorkeurenView {
     return voorkeurenView(this.#current, wie);
+  }
+
+  /** De bewegingsmelder die de wand wekt (besluit 164), of null. */
+  melder(): string | null {
+    return this.#current.wand?.niemand?.melder ?? null;
   }
 
   async save(body: unknown, wie: VoorkeurWie): Promise<VoorkeurenResult> {

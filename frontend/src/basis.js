@@ -251,6 +251,8 @@
         clearTimeout(wacht);
         online();
       });
+      // De gekozen bewegingsmelder ziet iemand (besluit 164): de wand wordt wakker.
+      bron.addEventListener('wekken', () => dispatchEvent(new CustomEvent('sc-wek', { detail: 'beweging' })));
       bron.addEventListener('aanbellen', (ev) => {
         try {
           aanbellen(JSON.parse(ev.data));
@@ -284,6 +286,8 @@
    */
   let belTimer = null;
   function aanbellen(m) {
+    // Een wand in de nachtstand of in rust wordt wakker (besluit 164).
+    dispatchEvent(new CustomEvent('sc-wek', { detail: 'bel' }));
     // Het scherm aan, als dat zo is ingesteld (besluit 109); kan alleen in Fully Kiosk.
     if (m.schermAan !== false) {
       try {
@@ -605,7 +609,55 @@
     nieuweVersie();
     meldingenStart();
     luisterStart();
+    void weergaveLaden();
+    niemandStart();
     if (tab === 'instellingen') void gastGrens();
+  }
+
+  /*
+   * Weergave (besluit 164): eenvoudig of uitgebreid, grotere letters en minder
+   * beweging, bewaard bij je account. Hier ook onthouden, zodat de pagina
+   * meteen goed staat; de dienst heeft het laatste woord.
+   */
+  const WEERGAVE = 'sc-weergave';
+  const GEEN_WEERGAVE = { eenvoudig: false, groteLetters: false, minderBeweging: false };
+  let weergaveNu = GEEN_WEERGAVE;
+  function zetWeergave(w, onthoud = true) {
+    weergaveNu = { ...GEEN_WEERGAVE, ...w };
+    const d = document.documentElement.classList;
+    d.toggle('sc-eenvoudig', weergaveNu.eenvoudig);
+    d.toggle('sc-groot', weergaveNu.groteLetters);
+    d.toggle('sc-stil', weergaveNu.minderBeweging);
+    if (onthoud) {
+      try {
+        localStorage.setItem(WEERGAVE, JSON.stringify(weergaveNu));
+      } catch {
+        // Dan alleen voor nu.
+      }
+    }
+    dispatchEvent(new Event('weergave'));
+  }
+  try {
+    const w = JSON.parse(localStorage.getItem(WEERGAVE) ?? 'null');
+    if (w) zetWeergave(w, false);
+  } catch {
+    // Niets onthouden.
+  }
+  async function weergaveLaden() {
+    try {
+      const v = await haal('api/voorkeuren');
+      if (v?.tel?.weergave) zetWeergave(v.tel.weergave);
+    } catch {
+      // Zonder logmap: zoals het was.
+    }
+  }
+
+  /** De wand als niemand kijkt (besluit 164): op Thuis en de pagina's om naar te kijken. */
+  function niemandStart() {
+    if (global.niemand || !/\/(thuis|vandaag|apparaten|opbrengst|assistent|kamer)\.html$/.test(location.pathname)) return;
+    const s = document.createElement('script');
+    s.src = 'niemand.js';
+    document.head.append(s);
   }
 
   /**
@@ -880,5 +932,5 @@
   // Op elke pagina, ook die zonder menu (inrichten, het welkom).
   volledig();
 
-  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA };
+  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu };
 })(window);

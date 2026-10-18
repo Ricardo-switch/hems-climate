@@ -20,7 +20,7 @@
 
   /** Zolang de dienst niets zegt: zoals Thuis altijd was. */
   const STANDAARD = {
-    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] },
+    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } },
     wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [], magAanpassen: false },
     ruimte: 4,
     vakken: { favorieten: 1, vandaag: 2, apparaat: 1, gevoel: 1, morgen: 1 },
@@ -70,6 +70,8 @@
     try {
       v = await haal('api/voorkeuren');
       kan = true;
+      // De weergave (besluit 164) bij je account: ook hier bijhouden.
+      if (v?.tel?.weergave) global.app.zetWeergave(v.tel.weergave);
     } catch {
       v = STANDAARD;
       kan = false;
@@ -84,6 +86,7 @@
       const res = await deur('api/voorkeuren', { plek, ...wat });
       if (res?.ok) v = await res.json();
       else if (res) await laad();
+      if (wat.weergave) global.app.zetWeergave(v.tel.weergave);
     } catch {
       // De volgende keer.
     }
@@ -97,7 +100,7 @@
     const b = box(plek);
     if (!b) return;
     const lijst = deel(plek).kaarten;
-    const eind = b.querySelector(':scope > .aanpasknop, :scope > [data-vrijvak]');
+    const eind = b.querySelector(':scope > .aanpasrij, :scope > [data-vrijvak]');
     for (const id of lijst) {
       const k = b.querySelector(`:scope > [data-kaart="${id}"]`);
       if (k) b.insertBefore(k, eind);
@@ -304,7 +307,7 @@
       const straks = voor ? andere.indexOf(voor) : andere.length;
       if (straks === nu) return;
       const was = r.top;
-      b.insertBefore(kaart, voor ?? b.querySelector(':scope > .aanpasknop, :scope > [data-vrijvak]'));
+      b.insertBefore(kaart, voor ?? b.querySelector(':scope > .aanpasrij, :scope > [data-vrijvak]'));
       kaart.style.transform = '';
       const basis = kaart.getBoundingClientRect().top;
       vanY = ev.clientY - (was - basis);
@@ -350,6 +353,7 @@
     const el = document.querySelector('[data-kiesblad]');
     if (!blad || !el) return;
     const { soort, plek } = blad;
+    if (soort === 'weergave') return tekenWeergave(el);
     if (soort === 'erbij') {
       // Welke kaarten er nog niet staan, met wat ze laten zien; op de wand: past hij nog?
       const vrij = v.ruimte - gebruikt(plek);
@@ -382,6 +386,24 @@
       ${la.length ? `<h3>Lampen</h3>${la.map((d) => rij('lamp', d, ICOON.lamp)).join('')}` : ''}`;
   }
 
+  /*
+   * Weergave (besluit 164, schets Thuis-Tel-Eigen #weergave): eenvoudig of
+   * uitgebreid, grotere letters en minder beweging. Voor jou, op elk scherm.
+   */
+  function tekenWeergave(el) {
+    const w = v.tel.weergave ?? STANDAARD.tel.weergave;
+    const keuze = (eenvoudig, naam, zin, tel) => `<button type="button" role="radio" aria-checked="${w.eenvoudig === eenvoudig}" data-wg-eenvoudig="${eenvoudig}"><span class="mini-tel" aria-hidden="true">${tel}</span><b>${naam}</b><p>${zin}</p></button>`;
+    const schakel = (id, naam, zin) => `<button type="button" class="schakel" role="switch" aria-checked="${!!w[id]}" data-wg-schakel="${id}"><div><b>${naam}</b><span>${zin}</span></div><span class="knopje" aria-hidden="true"></span></button>`;
+    el.setAttribute('aria-label', 'Weergave');
+    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Weergave</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
+      <p class="mini" style="margin: 0">Voor jou, op elk scherm waar je inlogt.${global.app.telStand() ? '' : ' Op de wand geldt alleen minder beweging.'}</p>
+      <div class="twee" role="radiogroup" aria-label="Eenvoudig of uitgebreid">
+        ${keuze(true, 'Eenvoudig', 'De temperatuur en wat het huis doet, in zinnen. Minder getallen.', '<i style="width: 70%; height: 10px; background: rgba(255,255,255,0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
+        ${keuze(false, 'Uitgebreid', 'Alles: kW op het huis, de grafiek van vandaag en de apparaten.', '<i style="width: 60%; height: 7px; background: rgba(255,255,255,0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
+      </div>
+      <div style="margin-top: 10px">${schakel('groteLetters', 'Grotere letters', 'Alle tekst een maat groter')}${schakel('minderBeweging', 'Minder beweging', 'Geen lopende stromen en geen ademende bol')}</div>`;
+  }
+
   /* --------------------------------------------------------------- tikken */
 
   document.addEventListener(
@@ -398,6 +420,20 @@
   document.addEventListener('click', (e) => {
     const t = e.target;
     if (t.closest('[data-aanpassen]')) return begin(plekNu());
+    if (t.closest('[data-weergave]')) return openBlad('weergave', 'tel');
+    const wg = t.closest('[data-wg-eenvoudig], [data-wg-schakel]');
+    if (wg && blad?.soort === 'weergave') {
+      const nu = v.tel.weergave ?? STANDAARD.tel.weergave;
+      const wat = wg.dataset.wgSchakel ? { [wg.dataset.wgSchakel]: !nu[wg.dataset.wgSchakel] } : { eenvoudig: wg.dataset.wgEenvoudig === 'true' };
+      const nieuw = { ...nu, ...wat };
+      // Meteen zo laten zien; de dienst bewaart het bij je account.
+      global.app.zetWeergave(nieuw);
+      void bewaar('tel', { weergave: nieuw });
+      tekenBlad();
+      const sel = wg.dataset.wgSchakel ? `[data-wg-schakel="${wg.dataset.wgSchakel}"]` : `[data-wg-eenvoudig="${wg.dataset.wgEenvoudig}"]`;
+      document.querySelector(`[data-kiesblad] ${sel}`)?.focus();
+      return;
+    }
     if (t.closest('[data-klaar]')) return klaar();
     if (t.closest('[data-kaart-erbij]')) return openBlad('erbij', bewerk ?? plekNu());
     if (t.closest('[data-vrijvak]')) return openBlad('erbij', 'wand');
@@ -464,11 +500,19 @@
     orden('wand');
     wandRuimte();
     $$('#wand [data-aanpassen]').forEach((el) => (el.hidden = !(kan && v.wand.magAanpassen)));
-    $$('#tel [data-aanpassen]').forEach((el) => (el.hidden = !kan));
+    $$('#tel [data-aanpassen], #tel [data-weergave]').forEach((el) => (el.hidden = !kan));
+  }
+
+  /** Uit Instellingen › Weergave: thuis.html#weergave opent het blad. */
+  function vanInstellingen() {
+    if (location.hash !== '#weergave' || !kan) return;
+    history.replaceState(null, '', location.pathname);
+    openBlad('weergave', 'tel');
   }
 
   global.eigen = {
     laad,
+    vanInstellingen,
     na,
     tekenFavorieten,
     /** Wat thuis.js doet als er iets veranderde; `huisOok` haalt ook het huis opnieuw. */
