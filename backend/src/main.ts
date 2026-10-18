@@ -1052,6 +1052,23 @@ if (startup.access.kind === 'sessions') {
 }
 
 /*
+ * De eigen poort van de add-on (besluit 160): de app los op de telefoon, via
+ * Tailscale, met een eigen inlog via Home Assistant zoals op de NAS. De
+ * browser gaat naar het adres dat de bewoner opgaf, de dienst zelf naar Home
+ * Assistant in het netwerk van de add-ons.
+ */
+const eigenPoort: { port: number; access: Access } | null = startup.eigenPoort
+  ? {
+      port: startup.eigenPoort.port,
+      access: {
+        kind: 'sessions',
+        store: new SessionStore({ logDir: logDir === '' ? null : logDir }),
+        login: homeAssistantLogin(startup.eigenPoort.haLoginUrl, fetch, startup.eigenPoort.haDienstUrl),
+      },
+    }
+  : null;
+
+/*
  * Het weer van de komende dagen (besluit 105). Elke tien minuten de zonkans
  * van morgen bewaren, ook als niemand kijkt: na die dag legt het huis hem naast
  * wat de panelen werkelijk haalden.
@@ -1250,6 +1267,7 @@ const gegevens =
 if (webPort != null) {
   web = new WebServer({
     access,
+    ...(eigenPoort ? { eigenPoort } : {}),
     ...(gegevens ? { gegevens } : {}),
     port: webPort,
     host: startup.web.host,
@@ -1519,6 +1537,7 @@ if (web) {
     const port = await web.start();
     console.log(`  weergave luistert op http://localhost:${port}/`);
     console.log(`  frontend uit     ${webDir}`);
+    if (web.eigenPoort != null) console.log(`  eigen poort      ${web.eigenPoort}, alleen via Tailscale (https://….ts.net)`);
     if (analyse) {
       // Meteen beginnen, zodat de tijdlijn er staat voordat iemand kijkt.
       analyse.start();

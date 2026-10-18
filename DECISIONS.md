@@ -137,7 +137,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
 - [105. Het weer van de komende dagen, met wat de panelen dan leveren](#105-het-weer-van-de-komende-dagen-met-wat-de-panelen-dan-leveren)
 - [107. Aanbellen: het beeld van de deurbel meteen op het scherm](#107-aanbellen-het-beeld-van-de-deurbel-meteen-op-het-scherm)
-- [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve)
+- [108. Https in het tailnet, met Tailscale serve](#108-https-in-het-tailnet-met-tailscale-serve) — *aangevuld door 160*
 - [113. Meer buitenruimtes in de tekening, en alleen weer van weerdiensten](#113-meer-buitenruimtes-in-de-tekening-en-alleen-weer-van-weerdiensten)
 - [115. De assistent leest een vraag in eigen woorden, met een woordzoeker](#115-de-assistent-leest-een-vraag-in-eigen-woorden-met-een-woordzoeker)
 - [116. Het jaar van Opbrengst begint op de startdatum van het contract](#116-het-jaar-van-opbrengst-begint-op-de-startdatum-van-het-contract)
@@ -163,6 +163,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie](#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie)
 - [158. Inrichten: overal Terug en Volgende, en wat de bewoner tegenkwam](#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam)
 - [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
+- [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
 
 **Veiligheid**
 
@@ -4808,7 +4809,7 @@ Gekozen op 8 oktober 2026.
 
 ## 108. Https in het tailnet, met Tailscale serve
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 160*
 
 Op 8 oktober 2026 stond de app geïnstalleerd op de telefoon, maar met de
 adresbalk erboven. Chrome laat een geïnstalleerde app alleen schermvullend
@@ -6970,6 +6971,78 @@ erbij en een microfoon die meteen luistert.
 - **De wand blijft zoals hij is.** Een paginatest loopt de telefoon na: de
   balk in beeld en boven de tabs, ook onderaan; de knoppen op één regel; de
   kamers in één kaart; de volgorde; en de microfoon die meteen luistert.
+
+---
+
+## 160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 zei de bewoner dat hij de app mist die hij vanaf de NAS in
+Chrome had geïnstalleerd: in Home Assistant voelt Smart Climate als een
+onderdeel dat je eerst in de zijbalk opzoekt. Uitgezocht en voorgelegd: (1)
+het paneel als startpagina van Home Assistant, (2) een snelkoppeling in de app
+van Home Assistant, en (3) een eigen poort, zodat de app weer los te
+installeren is. De bewoner koos de snelkoppeling nu en de eigen poort erbij;
+Home Assistant blijft openen zoals het opent, en de eigen poort antwoordt
+alleen via Tailscale.
+
+Wat het uitzoeken liet zien (nagelezen in de bron van Home Assistant):
+
+- **Het paneel staat niet in de keuzelijst** bij Profiel › Dashboard. Die toont
+  alleen dashboards en de vaste panelen van Home Assistant
+  (`ha-pick-dashboard-row.ts`). Het paneel van een add-on heet naar de
+  volledige naam van de add-on (`<code>_hems_climate`, `addon_panel.py`), en
+  Home Assistant opent elke paneelnaam die als standaard is opgeslagen: voor
+  een account (`frontend/set_user_data`) of, als oude terugval, per apparaat
+  (`defaultPanel` in de browser). Dat kan de app zelf zetten, maar de bewoner
+  wil het niet.
+- **Een snelkoppeling kan zonder code:** in de app van Home Assistant op
+  Android maak je een vastgezette snelkoppeling met het pad van het paneel
+  (`/<code>_hems_climate`), een eigen naam en een eigen icoon. Die opent Home
+  Assistant meteen op Smart Climate, met eerst het laadscherm van Home
+  Assistant.
+- **Het paneel staat alleen bij beheerders.** `panel_admin` staat standaard
+  aan; bewoners zonder beheerdersrechten zien Smart Climate niet in de zijbalk.
+  Dat blijft hier zo, en wacht een eigen besluit.
+
+*Besluit:*
+
+- **Een eigen poort naast Ingress,** `8100/tcp` in `addon/config.yaml`.
+  Standaard dicht: wie hem wil, vult in het tabblad Netwerk van de add-on een
+  poort in. Ingress verandert niet.
+- **Alleen via Tailscale.** De dienst antwoordt op die poort alleen op wat
+  Tailscale over https doorgeeft, op een naam op `.ts.net`
+  (`viaTailscale`); het adres van de Pi met het poortnummer krijgt "Open Smart
+  Climate via het adres in Tailscale". Een slot is dat niet, want iemand op
+  het thuisnetwerk kan die koppen zelf meesturen; het slot is het inloggen.
+- **Inloggen via Home Assistant,** zoals op de NAS (besluiten 99 en 147), met
+  een sessie per adres. De koppen van Ingress tellen op de eigen poort niet:
+  elk verzoek daar krijgt de toegang van de eigen poort, en een test bewijst
+  dat. De browser gaat naar het adres dat de bewoner bij `ha_adres` invult (waar
+  zijn telefoon Home Assistant opent); de dienst zelf vraagt Home Assistant op
+  `http://homeassistant:8123`, in het netwerk van de add-ons. Zonder `ha_adres`
+  blijft de poort dicht, met een regel in het logboek.
+- **Https met een dienst in Tailscale** (Tailscale Services), in de
+  Tailscale-add-on op de Pi: `svc:smartclimate` wijst naar
+  `http://127.0.0.1:8100`, over https op poort 443. Zo heet de app
+  `smartclimate.<tailnet>.ts.net`, met een echt certificaat. Dit vult besluit
+  108 aan: daar mocht serve alleen naar de dienst op de NAS; nu ook naar de
+  eigen poort van de add-on op de Pi. De rest van 108 blijft: alleen in het
+  tailnet, nooit Funnel, nooit een portforward.
+- **Dezelfde app.** Manifest en service worker staan er al; over https biedt
+  Chrome het installeren aan, met het eigen icoon en zonder Home Assistant
+  eromheen. De stand van volledig scherm en de kioskstand (besluit 155) gelden
+  alleen in Home Assistant en staan op de eigen poort uit.
+- **Versie 0.36.0.**
+
+*Kosten:* de Pi krijgt in Tailscale een tag, omdat een dienst in Tailscale dat
+vraagt. Een apparaat met een tag hoort daarna bij het tailnet en niet meer bij
+een persoon; met de standaardregels van Tailscale maakt dat voor de toegang
+niets uit, met eigen regels wel. De naam `smartclimate` komt, net als in 108,
+in de openbare certificaatlogboeken. Op de Pi zelf nog na te lopen: of de
+Tailscale-add-on de poort op `127.0.0.1` bereikt, en of de telefoon de app
+installeert.
 
 ---
 

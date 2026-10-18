@@ -79,6 +79,20 @@ export function hostAllowed(hostHeader: string | undefined, extra: readonly stri
   return extra.map((h) => h.trim().toLowerCase()).includes(host);
 }
 
+/**
+ * Kwam dit verzoek via Tailscale, over https (besluit 160)? De eigen poort van
+ * de add-on antwoordt alleen dan: Tailscale geeft de naam op `.ts.net` door en
+ * zegt `X-Forwarded-Proto: https`. Wie op het thuisnetwerk het adres van de Pi
+ * met de poort opent, komt er zo niet in. Een slot is het niet, want iemand op
+ * het thuisnetwerk kan die twee koppen zelf meesturen; het slot blijft het
+ * inloggen (besluit 147).
+ */
+export function viaTailscale(req: IncomingMessage): boolean {
+  const proto = String(req.headers['x-forwarded-proto'] ?? '').split(',')[0]!.trim().toLowerCase();
+  const host = String(req.headers.host ?? '').trim().toLowerCase().replace(/:\d+$/, '');
+  return proto === 'https' && host.endsWith('.ts.net');
+}
+
 /* ----------------------------------------------------------------- cookies */
 
 export function cookieValue(req: IncomingMessage, name: string): string | null {
@@ -203,15 +217,22 @@ export interface HaLogin {
  * De echte: de inlogstroom van Home Assistant. De app is daar een "client" met
  * zijn eigen adres als `client_id`; de terugkeer-URL ligt op hetzelfde adres,
  * dus Home Assistant vraagt verder niets na.
+ *
+ * `dienstUrl` is waar de dienst zelf Home Assistant bereikt, als dat een ander
+ * adres is dan dat van de browser. In de add-on (besluit 160) opent de telefoon
+ * Home Assistant via Tailscale, en de dienst via `http://homeassistant:8123`.
  */
-export function homeAssistantLogin(haUrl: string, fetchFn: typeof fetch = fetch): HaLogin {
+export function homeAssistantLogin(haUrl: string, fetchFn: typeof fetch = fetch, dienstUrl: string = haUrl): HaLogin {
   // Het adres van de dienst is vaak het websocket-adres ("ws://…/api/websocket");
   // een browser opent alleen http(s). Op de NAS stuurde de inlog zo naar ws://
   // en gebeurde er niets (7 oktober).
-  const base = haUrl
-    .replace(/\/+$/, '')
-    .replace(/\/api\/websocket$/, '')
-    .replace(/^ws(s?):\/\//i, 'http$1://');
+  const httpBase = (u: string) =>
+    u
+      .replace(/\/+$/, '')
+      .replace(/\/api\/websocket$/, '')
+      .replace(/^ws(s?):\/\//i, 'http$1://');
+  const browser = httpBase(haUrl);
+  const base = httpBase(dienstUrl);
   return {
     authorizeUrl(appOrigin, state) {
       const q = new URLSearchParams({
@@ -220,7 +241,7 @@ export function homeAssistantLogin(haUrl: string, fetchFn: typeof fetch = fetch)
         redirect_uri: `${appOrigin}/auth/callback`,
         state,
       });
-      return `${base}/auth/authorize?${q}`;
+      return `${browser}/auth/authorize?${q}`;
     },
     async identify(code, appOrigin) {
       const res = await fetchFn(`${base}/auth/token`, {

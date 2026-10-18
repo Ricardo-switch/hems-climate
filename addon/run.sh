@@ -72,6 +72,23 @@ fi
 export HEMS_WEB_PORT=8099
 export HEMS_WEB_HOST=0.0.0.0
 
+# De eigen poort (besluit 160): alleen als hij in het tabblad Netwerk open staat
+# én het adres van Home Assistant voor de telefoon is ingevuld. Zonder dat adres
+# kan niemand er inloggen; dan blijft hij dicht, met een regel in het logboek.
+if bashio::supervisor.ping 2> /dev/null; then
+  EIGEN_POORT="$(bashio::addon.port '8100/tcp' 2> /dev/null || true)"
+  if [ -n "${EIGEN_POORT:-}" ] && [ "${EIGEN_POORT}" != "null" ]; then
+    if bashio::config.has_value 'ha_adres'; then
+      HEMS_HA_LOGIN_URL="$(bashio::config 'ha_adres')"
+      export HEMS_HA_LOGIN_URL
+      export HEMS_EIGEN_POORT=8100
+      bashio::log.info "Eigen poort ${EIGEN_POORT} open, alleen via Tailscale."
+    else
+      bashio::log.warning "Poort ${EIGEN_POORT} staat open, maar ha_adres is leeg; de eigen poort blijft dicht."
+    fi
+  fi
+fi
+
 # De tijdzone van Home Assistant overnemen. De regeling leest de hare uit de
 # configuratie (besluit 6), maar tijdstempels in het logboek worden er
 # leesbaarder van.
