@@ -237,6 +237,9 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 
 /* Naar Home Assistant (besluit 155): boven de bel, alleen als de app volledig scherm draait. */
 .balk .meldbel + .meldbel { margin-top: 0; }
+/* Naar Home Assistant op de telefoon, naast het tandwiel (besluit 155). */
+#tel .pil.naarha { height: 32px; width: 32px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer; flex: none; }
+#tel .pil.naarha svg { width: 17px; height: 17px; }
 
 /* Hoe de panelen liggen (besluit 157, schets Wand-Inrichten-Panelen; panelen.js). */
 .lig-dag { padding: 8px 12px 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }

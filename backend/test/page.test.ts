@@ -2362,15 +2362,32 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await telefoon(false);
     await expect.poll(telStand).toBe(false);
 
-    // Terug naar Home Assistant: de kioskstand uit, en naar het dashboard.
+    // Naar Home Assistant: je blijft in de app, het volledige scherm en de kioskstand gaan uit,
+    // en je kiest in Home Assistant zelf waar je heen gaat. Op de telefoon naast het tandwiel.
+    await frame.goto(`${HA}/api/hassio_ingress/abc/thuis.html`);
+    await app.locator('#wand svg.sc-huis').first().waitFor();
+    expect(await app.locator('#tel [data-naar-ha]').count()).toBe(1);
+    const naVoor = (await berichten()).length;
     await app.locator('#balk [data-naar-ha]').click();
-    await expect.poll(berichten).toContainEqual({ type: 'home-assistant/navigate', path: '/' });
-    expect(await berichten()).toContainEqual({ type: 'home-assistant/unsubscribe-properties' });
+    await expect.poll(async () => (await berichten()).slice(naVoor)).toContainEqual({ type: 'home-assistant/unsubscribe-properties' });
+    expect((await berichten()).some((b) => b.type === 'home-assistant/navigate')).toBe(false);
+    await app.locator('#balk [data-weer-volledig]').waitFor();
+
+    // Een andere pagina laat het zo, tot je met dezelfde knop weer volledig scherm kiest.
+    const naPauze = (await berichten()).length;
+    await frame.goto(`${HA}/api/hassio_ingress/abc/vandaag.html`);
+    await app.locator('#balk [data-weer-volledig]').waitFor();
+    expect((await berichten()).slice(naPauze)).not.toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    const scherm = await p.evaluate<number>('window.schermVraag');
+    await app.locator('#balk [data-weer-volledig]').click();
+    await expect.poll(async () => (await berichten()).slice(naPauze)).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    expect(await p.evaluate<number>('window.schermVraag')).toBe(scherm + 1);
+    await app.locator('#balk [data-naar-ha]').waitFor();
 
     // Weer uit op dit apparaat: de knop is weg.
     await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
     await vorm.locator('[data-volledig][aria-checked="true"]').click();
-    await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
+    await expect.poll(() => app.locator('[data-naar-ha-knop]').count()).toBe(0);
 
 
     // Buiten Home Assistant bestaat de keuze niet.
