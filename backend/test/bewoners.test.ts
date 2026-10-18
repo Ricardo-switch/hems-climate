@@ -230,6 +230,8 @@ describe('een gast (besluit 147)', () => {
     expect(profielenVoor(gast.bewoners, gast.comfort, occupancy).map((x) => x.id)).toEqual(['ricardo']);
     // Een gast verandert niets, ook niet aan zichzelf.
     expect(voerUit(gast.bewoners, gast.comfort, { actie: 'naam', id: 'shira', naam: 'S' }, { userId: 'u-shira', naam: 'Shira', beheerder: true }, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    // Ook niet wiens comfort geldt (besluit 169).
+    expect(voerUit(gast.bewoners, gast.comfort, { actie: 'vasthouden', id: 'ricardo' }, { userId: 'u-shira', naam: 'Shira', beheerder: false }, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
     // De hoofdgebruiker kan geen gast zijn; Shira kan weer bewoner worden, achteraan.
     expect(voerUit(b, comfort, { actie: 'gast', id: 'ricardo', gast: true }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
     const terug = voerUit(gast.bewoners, gast.comfort, { actie: 'gast', id: 'shira', gast: false }, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };

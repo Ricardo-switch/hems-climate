@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis, wie er thuis is en wiens comfort geldt (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Wie er thuis is en wiens comfort geldt (schets, 18 oktober 2026). Eerst
+   * stond er een grote kaart "Comfort van Shira" met een gele rand en één
+   * knop terug naar de hoofdgebruiker. De bewoner koos: rondjes bovenin,
+   * voor de pillen (achter de begroeting stonden de namen dubbel), altijd en
+   * rustig, zonder tekst; wie thuis is licht op in zijn
+   * kleur, wie weg is blijft grijs, en wie gevolgd wordt heeft een witte ring
+   * met een klein thermometertje. Een tik opent een blad met iedereen, thuis
+   * of weg en zijn temperaturen; daar kies je. De begroeting noemt alleen wie
+   * thuis is.
+   *
+   *   (geen)   Shira thuis, Ricardo weg: haar comfort geldt
+   *   #gewoon  iedereen thuis: het comfort van Ricardo, alleen de rondjes
+   *   #blad    het blad open
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 104px; width: 400px; z-index: 2; }
+  .groetregel { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .groet { font-size: 17px; font-weight: 600; color: var(--zacht); }
+  .groet b { color: var(--tekst); }
+  .titel h1 { margin-top: 8px; }
+  .titel .lead { margin-top: 10px; }
+
+  /* De rondjes: een gezicht per bewoner, vol is thuis, grijs is weg; een ring om wiens comfort geldt. */
+  .wie { display: inline-flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px 0 6px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+  .wie.kaal { padding-right: 6px; }
+  .gezichten { display: flex; gap: 10px; }
+  .gezichten i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 800; color: #0b1424; box-shadow: 0 0 0 2px #17213a; }
+
+  /* Thuis licht op; weg is grijs en zonder gloed. */
+  .gezichten i { position: relative; background: var(--k); }
+  .gezichten i:not(.weg) { box-shadow: 0 0 0 2px #17213a, 0 0 14px 2px var(--k); }
+  .gezichten i.weg { background: #3a4757 !important; color: var(--gedempt); box-shadow: 0 0 0 2px #17213a; }
+  /* Wie gevolgd wordt: een witte ring en een klein thermometertje. */
+  .gezichten i.geldt { box-shadow: 0 0 0 2px #17213a, 0 0 0 4px var(--tekst), 0 0 16px 3px var(--k); z-index: 1; }
+  .gezichten i.geldt::after { content: ''; position: absolute; right: -7px; bottom: -6px; width: 15px; height: 15px; border-radius: 50%; background: var(--tekst) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1424' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/%3E%3C/svg%3E") center / 10px no-repeat; box-shadow: 0 0 0 2px #17213a; }
+  .wie .pijl { color: var(--gedempt); font-size: 12px; }
+
+  .podium { position: absolute; left: 40px; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: flex; flex-direction: column; gap: 14px; }
+  .kaart { padding: 18px 20px; }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel button { height: 40px; border-radius: 12px; border: 0; font-weight: 700; font-size: 14px; }
+
+  /* Het blad: iedereen, thuis of weg, met zijn temperaturen; tik om te kiezen. */
+  .achter { position: absolute; inset: 0; background: rgba(4, 8, 16, 0.62); z-index: 40; display: none; }
+  .blad { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 480px; padding: 20px 22px 18px; border-radius: 26px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); z-index: 41; display: none; }
+  body.blad-open .achter, body.blad-open .blad { display: block; }
+  .bladkop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .keuze { display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 12px 10px; border-radius: 16px; border: 1px solid transparent; background: none; color: inherit; font: inherit; text-align: left; margin-top: 6px; }
+  .keuze.aan { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.06); }
+  .keuze .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gedempt); }
+  .keuze.aan .rond { border: 6px solid var(--tekst); }
+  .keuze .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; }
+  .keuze .gezicht.weg { background: #3a4757 !important; color: var(--gedempt); }
+  .keuze .gezicht.vanzelf { background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .keuze b { display: block; font-size: 15.5px; }
+  .keuze small { display: block; font-size: 13px; color: var(--gedempt); margin-top: 1px; line-height: 1.35; }
+  .keuze .temp { text-align: right; font-size: 13px; color: var(--zacht); line-height: 1.35; }
+  .keuze .temp b { font-size: 15px; color: var(--tekst); display: inline; }
+  .keuze small.thuis-t { color: var(--mint); }
+  .bladkop .knop { display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">21:20</span><span class="datum">zondag 18 oktober</span></div>
+      <div class="chips">
+        <button class="wie kaal" data-wie aria-label="Wie er thuis is: Shira thuis, Ricardo weg. Het comfort van Shira geldt."><span class="gezichten"><i style="--k: #f7b548" class="geldt">S</i><i style="--k: #a9e6ff" class="weg">R</i></span><span class="pijl">▾</span></button>
+        <span class="pil"><span class="stip" style="background: var(--ijs)"></span>9,9° buiten</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+      </div>
+    </div>
+    <div class="titel">
+      <div class="groetregel">
+        <span class="groet" data-groet>Goedenavond, <b>Shira</b></span>
+      </div>
+      <h1 class="kop-1">Er draait niets</h1>
+      <p class="lead">Geen zon, en geen kamer heeft iets nodig.</p>
+    </div>
+
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <h2 class="kop-3">Vandaag</h2>
+        <p class="mini" style="margin: 6px 0 0">2,3 kWh, verwacht 2,1. 95% zelf gebruikt.</p>
+      </section>
+      <section class="glas kaart">
+        <h2 class="kop-3">Hoe voelt het in de woonkamer?</h2>
+        <div class="gevoel">
+          <button style="background: rgba(111,211,255,0.14); color: #a9e6ff">Te koud</button>
+          <button style="background: rgba(110,231,183,0.14); color: var(--mint)">Goed</button>
+          <button style="background: rgba(255,122,77,0.14); color: #ffb090">Te warm</button>
+        </div>
+        <p class="mini" style="margin: 8px 0 0" data-gevoel-voor>Telt voor het comfort van Shira, want dat geldt nu.</p>
+      </section>
+    </aside>
+
+    <div class="achter"></div>
+    <section class="blad" role="dialog" aria-label="Wiens comfort geldt?">
+      <div class="bladkop"><h2 class="kop-2">Wiens comfort geldt?</h2><span class="knop knop-licht">Klaar</span></div>
+      <button class="keuze aan"><span class="rond"></span><span class="gezicht vanzelf">⟳</span><span><b>Vanzelf: wie thuis is</b><small>Nu Shira. Ricardo is weg sinds 21:16, en Shira is de eerste op de lijst die thuis is.</small></span><span></span></button>
+      <button class="keuze"><span class="rond"></span><span class="gezicht weg" style="background: #a9e6ff">R</span><span><b>Ricardo</b><small>weg sinds 21:16</small></span><span class="temp"><b>20°</b> overdag<br><b>17°</b> 's nachts</span></button>
+      <button class="keuze"><span class="rond"></span><span class="gezicht" style="background: #f7b548">S</span><span><b>Shira</b><small class="thuis-t">thuis</small></span><span class="temp"><b>21°</b> overdag<br><b>18°</b> 's nachts</span></button>
+      <p class="mini" style="margin: 12px 0 0">Kies je iemand, dan geldt dat tot er iemand thuiskomt of weggaat. De volgorde en de temperaturen staan bij Instellingen › Bewoners.</p>
+    </section>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+  // De standen van de schets.
+  if (location.hash === '#blad') document.body.classList.add('blad-open');
+  if (location.hash === '#gewoon') {
+    document.querySelector('[data-groet]').innerHTML = 'Goedenavond, <b>Ricardo</b> en <b>Shira</b>';
+    const wie = document.querySelector('[data-wie]');
+    wie.classList.add('kaal');
+    wie.setAttribute('aria-label', 'Wie er thuis is: Ricardo en Shira. Het comfort van Ricardo geldt.');
+    wie.innerHTML = '<span class="gezichten"><i style="--k: #a9e6ff" class="geldt">R</i><i style="--k: #f7b548">S</i></span><span class="pijl">▾</span>';
+    document.querySelector('[data-gevoel-voor]').textContent = 'Telt voor het comfort van Ricardo, want dat geldt nu.';
+  }
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op een herfstavond. Alles rustig.',
+    tijd: 'nacht',
+    zon: { aandeel: 0, panelen: 12 },
+    wolken: 0.2,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Hal', gewicht: 0.6, temp: '20,2°', apparaten: [{ soort: 'lamp', aan: false, x: 0.5 }] },
+        { naam: 'Beneden', gewicht: 1.5, temp: '20,4°', zin: 'op temperatuur', apparaten: [{ soort: 'lamp', aan: true, x: 0.35 }, { soort: 'bank' }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '18,5°', apparaten: [] },
+        { naam: 'Slaapkamer Matts', gewicht: 1.2, temp: '19,1°', apparaten: [] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Wasruimte', temp: '21,3°', apparaten: [{ soort: 'airco', aan: false }, { soort: 'droger', aan: false }] }] },
+    ],
+    net: true,
+    labels: [],
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

@@ -172,6 +172,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [166. Negentien punten van de bewoner: assistent, huis, inrichten en de wand](#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand)
 - [167. Achttien punten van de bewoner: de wand, de droger, instellingen en inrichten](#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten)
 - [168. Favorieten per kamer, en de dagstand en avondstand van de wand](#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand)
+- [169. Wie er thuis is en wiens comfort geldt: rondjes en een blad](#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad)
 
 **Veiligheid**
 
@@ -7484,6 +7485,39 @@ lampen eerst, en vaste tijden met een schakelaar per stand.
 
 *Wat afviel:* alleen lampen als favoriet (een scène met één tik blijft handig);
 de tijden alleen als uitleg zonder schakelaars.
+
+## 169. Wie er thuis is en wiens comfort geldt: rondjes en een blad
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 stond op Thuis een grote kaart "Comfort van Shira" met een
+gele rand: "Ricardo is weg sinds 21:16. Shira staat daarna." en één knop
+"Toch die van Ricardo". De bewoner vond dat het een goede herziening nodig had:
+de kaart was te groot en klonk als een waarschuwing, de tekst was vaag, de wand
+begroette Ricardo terwijl hij weg was, en terugwisselen kon alleen naar de
+hoofdgebruiker. Hij koos uit schetsen (Wand-Thuis-Wie, Thuis-Tel-Wie): rondjes,
+altijd en rustig, zonder tekst; op de wand bovenin voor de pillen (achter de
+begroeting stonden de namen dubbel), op de telefoon rechts van de begroeting;
+en een blad om te kiezen.
+
+*Besluit:*
+
+- **Een rondje per bewoner**, met zijn eerste letter: wie thuis is, licht op in
+  zijn kleur; wie weg is, blijft grijs; wie gevolgd wordt, heeft een witte ring
+  met een klein thermometertje. Thuis is zoals de regeling het ziet, met de rust
+  van tien minuten (besluit 147); de begroeting op de wand noemt dezelfde
+  mensen. De telefoon begroet wie hem vasthoudt.
+- **Een tik opent het blad** "Wiens comfort geldt?": bovenaan "Vanzelf: wie
+  thuis is", met wie het nu is en wie er weg is; daaronder elke bewoner, thuis
+  of weg, met zijn temperatuur overdag en 's nachts in de eerste kamer die
+  verwarmt. Kies je iemand, dan geldt dat tot er iemand thuiskomt of weggaat,
+  zoals "toch die van" uit besluit 147. Iedere bewoner en de wand mogen kiezen;
+  een gast ziet het blad, maar kiest niet (de dienst weigert het ook).
+- **De kaart is weg.**
+
+*Wat afviel:* de rondjes achter de begroeting (de namen dubbel); in de zijbalk
+of boven de kaarten; een korte regel "Comfort van Shira" erbij; direct op een
+rondje tikken om te wisselen; alleen de hoofdgebruiker laten kiezen.
 
 ## Wat nog een besluit wacht
 

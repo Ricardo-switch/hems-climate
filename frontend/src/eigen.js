@@ -335,6 +335,8 @@
   function openBlad(soort, plek) {
     blad = { soort, plek, keuze: soort === 'favorieten' ? [...deel(plek).favorieten] : null, open: new Set() };
 
+    // Het blad van Thuis zelf (de stand, wie er thuis is) is dit niet meer.
+    delete document.querySelector('[data-kiesblad]').dataset.blad;
     tekenBlad();
     document.querySelector('[data-kies-achter]').hidden = false;
     const el = document.querySelector('[data-kiesblad]');

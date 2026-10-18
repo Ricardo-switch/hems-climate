@@ -52,13 +52,36 @@
   .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
   .groet b { color: var(--tekst); }
   /* Welk comfort geldt (besluit 147): een gezicht, de reden, en terugzetten. */
-  .geldt { margin-top: 14px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 6px 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: rgba(9, 15, 28, 0.55); border: 1px solid rgba(247, 181, 72, 0.35); backdrop-filter: blur(10px); }
-  .geldt[hidden] { display: none; }
-  .geldt .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; background: #f7b548; }
-  .geldt b { display: block; font-size: 14.5px; }
-  .geldt span span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 1px; }
-  .geldt .terug { grid-column: 2; justify-self: start; height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.1); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .geldt .terug:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  /*
+   * Wie er thuis is en wiens comfort geldt (besluit 169): een rondje per
+   * bewoner; thuis licht op, weg is grijs, wie gevolgd wordt heeft een ring en
+   * een thermometertje.
+   */
+  .wie { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 9px 0 6px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; cursor: pointer; flex: none; }
+  .wie[hidden] { display: none; }
+  .wie:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .wie .gezichten { display: flex; gap: 10px; }
+  .wie .gezichten i { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 800; color: #0b1424; background: var(--k); box-shadow: 0 0 0 2px #16203a, 0 0 12px 2px var(--k); }
+  .wie .gezichten i.afwezig { background: #3a4757; color: var(--gedempt); box-shadow: 0 0 0 2px #16203a; }
+  .wie .gezichten i.geldt { box-shadow: 0 0 0 2px #16203a, 0 0 0 4px var(--tekst), 0 0 14px 3px var(--k); z-index: 1; }
+  .wie .gezichten i.afwezig.geldt { box-shadow: 0 0 0 2px #16203a, 0 0 0 4px var(--tekst); }
+  .wie .gezichten i.geldt::after { content: ''; position: absolute; right: -7px; bottom: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--tekst) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1424' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/%3E%3C/svg%3E") center / 9px no-repeat; box-shadow: 0 0 0 2px #16203a; }
+  .wie .pijl { color: var(--gedempt); font-size: 11px; }
+  /* Het blad: wiens comfort geldt. */
+  .wiekeuze { display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 10px; margin-top: 6px; border-radius: 16px; border: 1px solid transparent; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .wiekeuze.aan { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.06); }
+  .wiekeuze:disabled { cursor: default; }
+  .wiekeuze:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .wiekeuze .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gedempt); box-sizing: border-box; }
+  .wiekeuze.aan .rond { border: 6px solid var(--tekst); }
+  .wiekeuze .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; background: var(--k); }
+  .wiekeuze .gezicht.afwezig { background: #3a4757; color: var(--gedempt); }
+  .wiekeuze .gezicht.vanzelf { background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .wiekeuze b { display: block; font-size: 15px; }
+  .wiekeuze small { display: block; font-size: 12.5px; color: var(--gedempt); margin-top: 1px; line-height: 1.35; }
+  .wiekeuze small .thuis-t { color: var(--mint); }
+  .wiekeuze .temp { text-align: right; font-size: 12.5px; color: var(--zacht); line-height: 1.35; white-space: nowrap; }
+  .wiekeuze .temp b { display: inline; font-size: 14.5px; color: var(--tekst); }
   /* Onderhoud (15 oktober 2026): een sleutel bovenin, alleen als er iets te doen is; een tik klapt hem open. */
   .onderhoud { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
   .onderhoud[hidden] { display: none; }
@@ -92,6 +115,11 @@
   #tel .groetregel { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
   #tel .groetregel .groet { margin-bottom: 0; min-width: 0; }
   #tel .groetregel .pil { height: 28px; font-size: 12.5px; padding: 0 11px; flex: none; }
+  #tel .groetrechts { display: flex; gap: 8px; align-items: center; flex: none; }
+  #tel .groetregel .groet { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tel .wie { height: 30px; padding: 0 5px; }
+  #tel .wie .gezichten { gap: 8px; }
+  #tel .wie .pijl { display: none; }
   #tel .titel .kop-1 { font-size: 32px; margin-top: 4px; }
   #tel .titel .lead { font-size: 15px; margin-top: 6px; max-width: none; }
   #tel .podium { position: static; width: 100%; height: 330px; margin-top: -10px; }
@@ -327,6 +355,7 @@
         <div class="chips">
           <span class="onderhoud" data-onderhoud hidden></span>
           <a class="pil" href="inrichten.html" data-inrichten hidden style="color: var(--ijs); text-decoration: none">Inrichten</a>
+          <button type="button" class="wie" data-wie aria-haspopup="dialog" hidden></button>
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <button type="button" class="pil" data-modus aria-haspopup="dialog" aria-label="De stand van het huis"></button>
           <span class="pil" style="color: var(--mint)" data-fase><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
@@ -338,7 +367,6 @@
         <span class="groet" data-groet></span>
         <h1 class="kop-1" data-kop>Even laden</h1>
         <p class="lead" data-zin></p>
-        <div class="geldt" data-geldt hidden></div>
       </div>
       <div class="podium" id="podium-wand"></div>
       <aside class="rechts schuift" data-kaarten="wand">
@@ -387,7 +415,7 @@
           <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>
-      <div class="titel"><div class="groetregel"><span class="groet" data-groet></span><button type="button" class="pil" data-modus aria-haspopup="dialog" aria-label="De stand van het huis" hidden></button></div><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p><div class="geldt" data-geldt hidden></div></div>
+      <div class="titel"><div class="groetregel"><span class="groet" data-groet></span><span class="groetrechts"><button type="button" class="pil" data-modus aria-haspopup="dialog" aria-label="De stand van het huis" hidden></button><button type="button" class="wie" data-wie aria-haspopup="dialog" hidden></button></span></div><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p></div>
       <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>
