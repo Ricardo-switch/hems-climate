@@ -6721,6 +6721,15 @@ Rechtop op de telefoon stond de knop er niet, want daar is geen balk. Nu:
   de NAS: de statusbalk erboven, de pagina eronder. Een telefoon is een scherm
   met een kortste kant onder 600. Het volledige scherm in de instellingen van
   de app van Home Assistant zelf hoort daarvoor uit te staan.
+- **De statusbalk in de kleur van de app,** niet grijs. De app van Home
+  Assistant kleurt de statusbalk en de balk onderin naar het thema
+  (`--app-header-background-color` en `--primary-background-color`), en leest
+  die opnieuw bij het bericht `theme-update`; nagelezen in `WebViewAction.kt`
+  van de Android-app en `themes-mixin.ts` van de frontend. Zolang Smart
+  Climate volledig scherm heeft, zet de app die twee op `#0b1424`, de kleur
+  van de app op de NAS. Bij Naar Home Assistant, en als je het paneel
+  verlaat, komt het thema terug; dat terugzetten leeft bij Home Assistant,
+  want de pagina van de app is dan al weg.
 
 ---
 

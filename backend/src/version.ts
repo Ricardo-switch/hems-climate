@@ -35,6 +35,7 @@ export const NIEUW: readonly Nieuw[] = [
       'Naar Home Assistant laat je in Smart Climate, met de zijbalk van Home Assistant erbij; dezelfde knop zet volledig scherm weer aan',
       'Op de telefoon staat die knop rechtsboven, naast het tandwiel',
       'Op de telefoon ziet Smart Climate in Home Assistant er altijd uit als de app: met de statusbalk erboven, op elke pagina',
+      'In de app van Home Assistant heeft de statusbalk de kleur van Smart Climate in plaats van grijs',
     ],
   },
   {

@@ -2300,6 +2300,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
                 window.schermVraag = 0;
                 addEventListener('message', (e) => { if (e.source === document.getElementById('app').contentWindow) berichten.push(e.data); });
                 document.documentElement.requestFullscreen = () => { window.schermVraag += 1; return Promise.resolve(); };
+                // De app van Home Assistant: die leest de kleur van de statusbalk bij theme-update.
+                window.extern = [];
+                const ha = document.createElement('home-assistant');
+                ha.hass = { auth: { external: { fireMessage: (m) => extern.push(m.type) } } };
+                document.body.append(ha);
               </script></body></html>`,
           });
         }
@@ -2328,6 +2333,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
     expect(await vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
+    // De statusbalk in de kleur van de app, en de app van Home Assistant hoort het.
+    const statusbalk = () => p.evaluate<string>("document.documentElement.style.getPropertyValue('--app-header-background-color')");
+    await expect.poll(statusbalk).toBe('#0b1424');
+    expect(await p.evaluate<string[]>('window.extern')).toContain('theme-update');
     await app.locator('#balk [data-naar-ha]').waitFor();
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-volledig-scherm.png') });
 
@@ -2371,6 +2380,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => (await berichten()).slice(naVoor)).toContainEqual({ type: 'home-assistant/unsubscribe-properties' });
     expect((await berichten()).some((b) => b.type === 'home-assistant/navigate')).toBe(false);
     await app.locator('#balk [data-weer-volledig]').waitFor();
+    expect(await statusbalk()).toBe('');
 
     // Een andere pagina laat het zo, tot je met dezelfde knop weer volledig scherm kiest.
     const naPauze = (await berichten()).length;
@@ -2382,6 +2392,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => (await berichten()).slice(naPauze)).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     expect(await p.evaluate<number>('window.schermVraag')).toBe(scherm + 1);
     await app.locator('#balk [data-naar-ha]').waitFor();
+    expect(await statusbalk()).toBe('#0b1424');
+
+    // Ga je in Home Assistant ergens anders heen, dan krijgt de statusbalk het thema terug.
+    await p.evaluate("history.pushState(null, '', '/lovelace/0'); dispatchEvent(new Event('location-changed'))");
+    expect(await statusbalk()).toBe('');
 
     // Weer uit op dit apparaat: de knop is weg.
     await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
