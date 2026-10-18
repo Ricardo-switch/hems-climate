@@ -12,7 +12,9 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { WebSocketServer } from 'ws';
 
-import { SESSION_IDLE_MS, SessionStore, homeAssistantLogin, hostAllowed, safeReturn } from '../src/web/auth.js';
+import type { IncomingMessage } from 'node:http';
+
+import { SESSION_IDLE_MS, SessionStore, homeAssistantLogin, hostAllowed, safeReturn, viaTailscale } from '../src/web/auth.js';
 
 const cleanups: (() => Promise<void> | void)[] = [];
 afterEach(async () => {
@@ -30,6 +32,22 @@ describe('alleen bekende hostnamen', () => {
     expect(hostAllowed('nas.vreemd.example')).toBe(false);
     expect(hostAllowed('klimaat.thuis.nl:8099', ['klimaat.thuis.nl'])).toBe(true);
     expect(hostAllowed(undefined)).toBe(false);
+  });
+});
+
+describe('alleen via Tailscale (besluit 160)', () => {
+  const verzoek = (headers: Record<string, string>) => ({ headers }) as unknown as IncomingMessage;
+
+  it('herkent een verzoek dat Tailscale over https doorgaf', () => {
+    expect(viaTailscale(verzoek({ host: 'smartclimate.tail1234.ts.net', 'x-forwarded-proto': 'https' }))).toBe(true);
+    expect(viaTailscale(verzoek({ host: 'SmartClimate.tail1234.ts.net:443', 'x-forwarded-proto': 'https, http' }))).toBe(true);
+  });
+
+  it('weigert het adres van de Pi op het thuisnetwerk, en gewone http', () => {
+    expect(viaTailscale(verzoek({ host: '192.168.67.60:8100' }))).toBe(false);
+    expect(viaTailscale(verzoek({ host: 'homeassistant.local:8100', 'x-forwarded-proto': 'https' }))).toBe(false);
+    expect(viaTailscale(verzoek({ host: 'smartclimate.tail1234.ts.net' }))).toBe(false);
+    expect(viaTailscale(verzoek({ host: 'smartclimate.tail1234.ts.net', 'x-forwarded-proto': 'http' }))).toBe(false);
   });
 });
 
@@ -127,6 +145,17 @@ describe('inloggen via Home Assistant', () => {
     expect(user).toEqual({ userId: 'abc', naam: 'Ricardo', isAdmin: true });
     expect(ha.seen.some((s) => s.startsWith('POST /auth/token') && s.includes('client_id=http%3A%2F%2F192.168.67.65%3A8099%2F'))).toBe(true);
     expect(ha.seen.some((s) => s.startsWith('POST /auth/revoke') && s.includes('token=ververs'))).toBe(true);
+  });
+
+  it('stuurt de browser naar het ene adres en vraagt het zelf op het andere (besluit 160)', async () => {
+    const ha = await fakeHa({ id: 'abc', name: 'Ricardo', is_admin: true });
+    const login = homeAssistantLogin('https://homeassistant.tail1234.ts.net/', fetch, ha.base);
+    const naar = new URL(login.authorizeUrl('https://smartclimate.tail1234.ts.net', 'st'));
+    expect(naar.origin + naar.pathname).toBe('https://homeassistant.tail1234.ts.net/auth/authorize');
+    expect(naar.searchParams.get('client_id')).toBe('https://smartclimate.tail1234.ts.net/');
+    const user = await login.identify('goede-code', 'https://smartclimate.tail1234.ts.net');
+    expect(user).toEqual({ userId: 'abc', naam: 'Ricardo', isAdmin: true });
+    expect(ha.seen.some((s) => s.startsWith('POST /auth/token') && s.includes('client_id=https%3A%2F%2Fsmartclimate.tail1234.ts.net%2F'))).toBe(true);
   });
 
   it('weigert een code die Home Assistant niet kent', async () => {

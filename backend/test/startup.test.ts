@@ -188,3 +188,31 @@ describe('wie mag bedienen (besluit 99)', () => {
     expect(readStartup({ ...NAS, HEMS_OPEN: 'ja' }).errors.join(' ')).toContain('HEMS_OPEN');
   });
 });
+
+describe('de eigen poort van de add-on (besluit 160)', () => {
+  const EIGEN = { ...ADDON, HEMS_EIGEN_POORT: '8100', HEMS_HA_LOGIN_URL: 'https://homeassistant.tail1234.ts.net' };
+
+  it('staat dicht tenzij gevraagd', () => {
+    expect(readStartup(ADDON).eigenPoort).toBeNull();
+    expect(readStartup(NAS).eigenPoort).toBeNull();
+  });
+
+  it('neemt de poort en het adres voor de browser; de dienst vraagt Home Assistant in het netwerk van de add-ons', () => {
+    const o = readStartup(EIGEN);
+    expect(o.errors).toEqual([]);
+    expect(o.access).toEqual({ kind: 'ingress' });
+    expect(o.eigenPoort).toEqual({ port: 8100, haLoginUrl: 'https://homeassistant.tail1234.ts.net', haDienstUrl: 'http://homeassistant:8123' });
+    expect(readStartup({ ...EIGEN, HEMS_HA_DIENST_URL: 'https://homeassistant:8123' }).eigenPoort?.haDienstUrl).toBe('https://homeassistant:8123');
+  });
+
+  it('valt op als iets niet klopt, in plaats van stil dicht te blijven', () => {
+    const fout = (env: Record<string, string>) => readStartup(env).errors.join(' ');
+    expect(fout({ ...EIGEN, HEMS_EIGEN_POORT: 'acht' })).toContain('geen geldige poort');
+    expect(fout({ ...EIGEN, HEMS_EIGEN_POORT: '8099' })).toContain('andere poort');
+    const { HEMS_HA_LOGIN_URL: _weg, ...zonderAdres } = EIGEN;
+    expect(fout(zonderAdres)).toContain('HEMS_HA_LOGIN_URL');
+    expect(fout({ ...NAS, HEMS_EIGEN_POORT: '8100' })).toContain('alleen voor de add-on');
+    const { HEMS_WEB_PORT: _geen, ...zonderWeergave } = EIGEN;
+    expect(fout(zonderWeergave)).toContain('HEMS_WEB_PORT');
+  });
+});

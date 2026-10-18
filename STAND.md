@@ -157,7 +157,9 @@ verwijzing bestaat.
   ([106]). Bij aanbellen toont elke open pagina het beeld van de deurbel
   ([107]).
 - **Als app op de telefoon** schermvullend via https in het eigen tailnet, met
-  Tailscale serve en nooit Funnel ([108]).
+  Tailscale serve en nooit Funnel ([108]). In de add-on via een eigen poort
+  naast Ingress, alleen via een dienst in Tailscale en met een eigen inlog via
+  Home Assistant ([160]).
 - **Wat per huis verschilt, is een instelling** die de app wegschrijft, met een
   voorstel uit Home Assistant. Camera's en de deurbel eerst; de rest staat in
   `docs/universeel.md` ([109]).
@@ -491,4 +493,5 @@ verwijzing bestaat.
 [157]: DECISIONS.md#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt
 [158]: DECISIONS.md#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam
 [159]: DECISIONS.md#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld
+[160]: DECISIONS.md#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale
 <!-- links:einde -->

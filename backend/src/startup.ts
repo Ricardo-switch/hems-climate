@@ -57,6 +57,13 @@ export interface Startup {
     | { readonly kind: 'ingress' }
     | { readonly kind: 'open' }
     | { readonly kind: 'sessions'; readonly haLoginUrl: string | null; readonly hosts: readonly string[] };
+  /**
+   * Een eigen poort voor de add-on (besluit 160), naast Ingress, of null. Daar
+   * installeer je de app los op de telefoon, via Tailscale, met een eigen inlog
+   * via Home Assistant: de browser gaat naar `haLoginUrl` (het adres waarop de
+   * telefoon Home Assistant bereikt), de dienst zelf naar `haDienstUrl`.
+   */
+  readonly eigenPoort: { readonly port: number; readonly haLoginUrl: string; readonly haDienstUrl: string } | null;
   readonly logDir: string;
   readonly tickSeconds: number;
   readonly minIntervalSeconds: number;
@@ -161,6 +168,24 @@ export function readStartup(env: Environment): Startup {
       ? { kind: 'open' }
       : { kind: 'sessions', haLoginUrl: readPoint(env, 'HEMS_HA_LOGIN_URL') ?? url, hosts };
 
+  /*
+   * De eigen poort (besluit 160). Alleen in de add-on: elders is er al een
+   * eigen inlog op de gewone poort. Zonder het adres van Home Assistant voor de
+   * browser kan niemand er inloggen, dus dat is een fout, geen stille poort.
+   */
+  let eigenPoort: Startup['eigenPoort'] = null;
+  const eigenRaw = readPoint(env, 'HEMS_EIGEN_POORT');
+  if (eigenRaw != null) {
+    const n = Number(eigenRaw);
+    const loginUrl = readPoint(env, 'HEMS_HA_LOGIN_URL');
+    if (!Number.isInteger(n) || n < 1 || n > 65535) errors.push(`HEMS_EIGEN_POORT is geen geldige poort: "${eigenRaw}".`);
+    else if (!asAddon) errors.push('HEMS_EIGEN_POORT is alleen voor de add-on; elders heeft de gewone poort al een eigen inlog.');
+    else if (port == null) errors.push('HEMS_EIGEN_POORT vraagt ook HEMS_WEB_PORT: zonder weergave is er niets te openen.');
+    else if (n === port) errors.push(`HEMS_EIGEN_POORT moet een andere poort zijn dan HEMS_WEB_PORT (${port}).`);
+    else if (loginUrl == null) errors.push('HEMS_EIGEN_POORT vraagt HEMS_HA_LOGIN_URL: het adres waarop de telefoon Home Assistant bereikt.');
+    else eigenPoort = { port: n, haLoginUrl: loginUrl, haDienstUrl: readPoint(env, 'HEMS_HA_DIENST_URL') ?? 'http://homeassistant:8123' };
+  }
+
   return {
     asAddon,
     ha: { url, token },
@@ -175,6 +200,7 @@ export function readStartup(env: Environment): Startup {
     lights: { enabled: lightsOn, withoutIngress: lightsOn && access.kind === 'open' },
     screens: { enabled: screensOn },
     access,
+    eigenPoort,
     // Een lege SHADOW_LOG_DIR betekent bewust: niet loggen. Dus niet `lees`.
     logDir: env['SHADOW_LOG_DIR'] ?? 'data/shadow',
     tickSeconds: numberAttr(env, 'SHADOW_TICK_SECONDS', 30, 1, errors),

@@ -1986,3 +1986,85 @@ describe('praten met je stem (besluit 150)', () => {
     expect((await verbind(`${zonder.base.replace('http', 'ws')}/api/luister`, zonder.base)).status).toBe(404);
   });
 });
+
+describe('de eigen poort van de add-on (besluit 160)', () => {
+  const TAILNET = { host: 'smartclimate.tail1234.ts.net', 'x-forwarded-proto': 'https' };
+  /** Wat Ingress van Home Assistant meegeeft: op de eigen poort telt dat niet. */
+  const INGRESS = { 'x-remote-user-id': 'u1', 'x-remote-user-name': 'ricardo', 'x-remote-user-display-name': 'Ricardo' };
+
+  /** Een verzoek met eigen koppen; via node:http, want fetch staat sommige poorten niet toe. */
+  function vraag(port: number, path: string, headers: Record<string, string> = {}): Promise<{ status: number; headers: Record<string, string | string[] | undefined>; tekst: string }> {
+    return new Promise((ok, fail) => {
+      const req = httpRequest({ host: '127.0.0.1', port, path, headers }, (res) => {
+        let tekst = '';
+        res.setEncoding('utf8');
+        res.on('data', (d: string) => (tekst += d));
+        res.on('end', () => ok({ status: res.statusCode ?? 0, headers: res.headers, tekst }));
+      });
+      req.on('error', fail);
+      req.end();
+    });
+  }
+
+  async function beide(): Promise<{ ingress: number; eigen: number }> {
+    const dir = await mkdtemp(join(tmpdir(), 'hems-eigen-'));
+    cleanups.push(() => rm(dir, { recursive: true, force: true }));
+    const login: HaLogin = {
+      authorizeUrl: (origin, state) => `https://homeassistant.tail1234.ts.net/auth/authorize?client_id=${encodeURIComponent(`${origin}/`)}&state=${state}`,
+      identify: async () => ({ userId: 'u1', naam: 'Ricardo', isAdmin: true }),
+    };
+    const server = new WebServer({
+      port: 0,
+      host: '127.0.0.1',
+      webDir: dir,
+      config: exampleSite,
+      latest: () => null,
+      access: { kind: 'ingress' },
+      eigenPoort: { port: 0, access: { kind: 'sessions', store: new SessionStore({ logDir: dir }), login } },
+      write: () => {},
+    });
+    const ingress = await server.start();
+    cleanups.push(() => server.stop());
+    return { ingress, eigen: server.eigenPoort! };
+  }
+
+  it('luistert naast Ingress, dat blijft zoals het was', async () => {
+    const { ingress, eigen } = await beide();
+    expect(eigen).not.toBe(ingress);
+    const sessie = JSON.parse((await vraag(ingress, '/api/sessie', INGRESS)).tekst) as { toegang: string; ingelogd: boolean };
+    expect(sessie).toMatchObject({ toegang: 'ingress', ingelogd: true });
+    expect((await vraag(ingress, '/auth/login')).status).toBe(404);
+  });
+
+  it('antwoordt alleen op wat via Tailscale over https komt', async () => {
+    const { eigen } = await beide();
+    expect((await vraag(eigen, '/thuis.html', { host: '192.168.67.60:8100' })).status).toBe(421);
+    expect((await vraag(eigen, '/api/health', { host: 'smartclimate.tail1234.ts.net' })).status).toBe(421);
+    // De microfoon ook niet.
+    const upgrade = await vraag(eigen, '/api/luister', { host: '192.168.67.60:8100', connection: 'Upgrade', upgrade: 'websocket', 'sec-websocket-version': '13', 'sec-websocket-key': 'dGhlIHNhbXBsZSBub25jZQ==' });
+    expect(upgrade.status).toBe(421);
+  });
+
+  it('vraagt een eigen inlog, en vertrouwt de koppen van Ingress daar niet', async () => {
+    const { eigen } = await beide();
+    const pagina = await vraag(eigen, '/thuis.html', { ...TAILNET, ...INGRESS });
+    expect(pagina.status).toBe(302);
+    expect(pagina.headers.location).toBe('/inloggen.html?terug=%2Fthuis.html');
+    const sessie = JSON.parse((await vraag(eigen, '/api/sessie', { ...TAILNET, ...INGRESS })).tekst) as { toegang: string; ingelogd: boolean };
+    expect(sessie).toMatchObject({ toegang: 'sessions', ingelogd: false });
+  });
+
+  it('logt in via Home Assistant op het https-adres van de app', async () => {
+    const { eigen } = await beide();
+    const go = await vraag(eigen, '/auth/login?terug=/thuis.html', TAILNET);
+    expect(go.status).toBe(302);
+    const naar = new URL(String(go.headers.location));
+    expect(naar.searchParams.get('client_id')).toBe('https://smartclimate.tail1234.ts.net/');
+    const terug = await vraag(eigen, `/auth/callback?code=abc&state=${naar.searchParams.get('state')}`, TAILNET);
+    expect(terug.status).toBe(200);
+    const cookie = String(terug.headers['set-cookie']);
+    expect(cookie).toMatch(/Secure/);
+    const sessie = JSON.parse((await vraag(eigen, '/api/sessie', { ...TAILNET, cookie: cookie.split(';')[0]! })).tekst) as { ingelogd: boolean; naam: string };
+    expect(sessie).toMatchObject({ ingelogd: true, naam: 'Ricardo' });
+  });
+});

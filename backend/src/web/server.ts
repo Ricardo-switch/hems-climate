@@ -60,7 +60,7 @@ import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, typ
 import type { CoverSwitch } from './covers.js';
 import type { LightSwitch } from './lights.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
-import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, type Access, type Visitor } from './auth.js';
+import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, viaTailscale, type Access, type Visitor } from './auth.js';
 import type { BewonersView, Wie } from './bewoners.js';
 import { startOfLocalDay } from './today.js';
 import type { MeldingenStore } from './meldingen.js';
@@ -322,6 +322,13 @@ export interface WebOptions {
    * opstelling er niet per ongeluk zonder komt te staan.
    */
   readonly access: Access;
+  /**
+   * Een tweede poort met een eigen inlog (besluit 160), naast Ingress: daar
+   * installeer je de app los op de telefoon, via Tailscale. Wat op die poort
+   * binnenkomt, krijgt deze toegang en nooit die van Ingress, en alleen als het
+   * via Tailscale over https kwam.
+   */
+  readonly eigenPoort?: { readonly port: number; readonly access: Access };
   /** Waar meldingen naartoe gaan. Standaard de console. */
   readonly write?: (line: string) => void;
 }
@@ -505,6 +512,11 @@ interface Listener {
 export class WebServer {
   readonly #options: WebOptions & { host: string; write: (line: string) => void };
   readonly #server: Server;
+  /** De eigen poort (besluit 160), of null. */
+  readonly #eigen: Server | null = null;
+  #eigenPort: number | null = null;
+  /** De toegang van een verzoek op de eigen poort; de rest volgt `access`. */
+  readonly #toegang = new WeakMap<IncomingMessage, Access>();
   readonly #listeners = new Set<Listener>();
   #today: TodayCache | null = null;
   /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
@@ -517,18 +529,47 @@ export class WebServer {
       host: options.host ?? '0.0.0.0',
       write: options.write ?? ((line) => console.log(line)),
     };
-    this.#server = createServer((req, res) => {
+    const verzoek = (req: IncomingMessage, res: ServerResponse) => {
       void this.#handle(req, res).catch((error: unknown) => {
         // Een verzoek dat onderuitgaat mag de dienst niet meenemen. De
         // schaduwopname is het product; dit is een venster erop.
         if (!res.headersSent) sendJson(res, 500, { error: String(error) });
         else res.end();
       });
-    });
+    };
     // De microfoon (besluit 150): een websocket, alleen voor `/api/luister`.
-    this.#server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    const upgrade = (req: IncomingMessage, socket: Duplex, head: Buffer) => {
       void this.#luister(req, socket, head).catch(() => socket.destroy());
-    });
+    };
+    this.#server = createServer(verzoek);
+    this.#server.on('upgrade', upgrade);
+    /*
+     * De eigen poort (besluit 160): dezelfde app met een eigen inlog, en alleen
+     * via Tailscale. Een kop van Ingress telt hier niet, want de toegang is die
+     * van de eigen poort.
+     */
+    const eigen = options.eigenPoort;
+    if (eigen != null) {
+      this.#eigen = createServer((req, res) => {
+        if (!viaTailscale(req)) {
+          res.writeHead(421, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end('Open Smart Climate via het adres in Tailscale (https://….ts.net).\n');
+          return;
+        }
+        this.#toegang.set(req, eigen.access);
+        verzoek(req, res);
+      });
+      this.#eigen.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+        if (!viaTailscale(req)) return weiger(socket, 421, 'Misdirected Request');
+        this.#toegang.set(req, eigen.access);
+        upgrade(req, socket, head);
+      });
+    }
+  }
+
+  /** De toegang voor dit verzoek: die van de eigen poort, of anders die van de dienst. */
+  #access(req: IncomingMessage): Access {
+    return this.#toegang.get(req) ?? this.#options.access;
   }
 
   #luisterpost: Luisterpost | null = null;
@@ -543,7 +584,7 @@ export class WebServer {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const deur = this.#options.luisteren;
     if (url.pathname !== '/api/luister' || deur == null || !isUpgrade(req)) return weiger(socket, 404, 'Not Found');
-    const access = this.#options.access;
+    const access = this.#access(req);
     if (access.kind !== 'ingress' && !hostAllowed(req.headers.host, access.kind === 'sessions' ? access.hosts : [])) return weiger(socket, 421, 'Misdirected Request');
     if (!req.headers.origin || !sameOrigin(req)) return weiger(socket, 403, 'Forbidden');
     if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) return weiger(socket, 401, 'Unauthorized');
@@ -576,7 +617,7 @@ export class WebServer {
 
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = url.pathname;
-    const access = this.#options.access;
+    const access = this.#access(req);
 
     /*
      * Alleen bekende hostnamen (besluit 99). Een vreemde website die zijn eigen
@@ -1648,7 +1689,7 @@ export class WebServer {
 
   /** Wie er kijkt (besluit 147): het account, of het een beheerder is, en de naam. Een gast is nooit beheerder. */
   async #wie(req: IncomingMessage): Promise<Wie & { readonly naam: string }> {
-    const access = this.#options.access;
+    const access = this.#access(req);
     if (access.kind === 'open') return { userId: null, beheerder: true, naam: '' };
     const v: Visitor | null = access.kind === 'ingress' ? ingressVisitor(req) : await access.store.visitor(cookieValue(req, SESSION_COOKIE));
     const gast = this.#options.bewoners?.gast?.(v?.userId ?? null).gast === true;
@@ -1657,7 +1698,7 @@ export class WebServer {
 
   /** Is wie er kijkt de hoofdgebruiker (besluit 151)? Zonder inlog (alleen in tests) mag alles. */
   async #hoofd(req: IncomingMessage): Promise<boolean> {
-    if (this.#options.access.kind === 'open') return true;
+    if (this.#access(req).kind === 'open') return true;
     return this.#options.gegevens?.hoofd(await this.#wie(req)) === true;
   }
 
@@ -1716,7 +1757,7 @@ export class WebServer {
 
   /** Of wie er kijkt een gast is, en thuis (besluit 147). */
   async #gast(req: IncomingMessage): Promise<{ readonly gast: boolean; readonly thuis: boolean | null } | null> {
-    const access = this.#options.access;
+    const access = this.#access(req);
     if (access.kind !== 'sessions' || this.#options.bewoners?.gast == null) return null;
     const v = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
     return this.#options.bewoners.gast(v?.userId ?? null);
@@ -1732,7 +1773,7 @@ export class WebServer {
   }
 
   async #auth(req: IncomingMessage, res: ServerResponse, method: string, path: string, url: URL): Promise<void> {
-    const access = this.#options.access;
+    const access = this.#access(req);
     if (path === '/api/sessie') {
       let visitor: Visitor | null = null;
       if (access.kind === 'sessions') visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
@@ -2087,7 +2128,7 @@ export class WebServer {
 
   async #camera(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
     const cam = this.#options.camera;
-    const access = this.#options.access;
+    const access = this.#access(req);
     if (cam == null) {
       sendJson(res, 503, { wachten: 'camera’s bekijken staat niet aan' });
       return;
@@ -2148,7 +2189,24 @@ export class WebServer {
       });
     });
     const address = this.#server.address();
+    const eigen = this.#eigen;
+    if (eigen != null) {
+      await new Promise<void>((ok, fail) => {
+        eigen.once('error', fail);
+        eigen.listen(this.#options.eigenPoort!.port, this.#options.host, () => {
+          eigen.removeListener('error', fail);
+          ok();
+        });
+      });
+      const a = eigen.address();
+      this.#eigenPort = typeof a === 'object' && a != null ? a.port : this.#options.eigenPoort!.port;
+    }
     return typeof address === 'object' && address != null ? address.port : this.#options.port;
+  }
+
+  /** Waar de eigen poort luistert (besluit 160), of null als er geen is. */
+  get eigenPoort(): number | null {
+    return this.#eigenPort;
   }
 
   async stop(): Promise<void> {
@@ -2160,6 +2218,7 @@ export class WebServer {
     // Open microfoons (besluit 150) houden de server anders open.
     for (const socket of this.#luistersockets) socket.destroy();
     await new Promise<void>((ok) => this.#server.close(() => ok()));
+    if (this.#eigen?.listening) await new Promise<void>((ok) => this.#eigen!.close(() => ok()));
   }
 
   get viewers(): number {

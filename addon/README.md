@@ -89,6 +89,7 @@ ze op en vraagt hij welke.
 | `min_interval_seconden` | 15 | Ondergrens tussen twee evaluaties (besluit 16) |
 | `bewaking_minuten` | 10 | Afsluiten na zoveel minuten zonder besluit, zodat de Supervisor herstart (besluit 18) |
 | `licht_bedienen` | aan | Lampen, scènes en schermen vanuit de app (besluit 97) |
+| `ha_adres` | leeg | Waar je telefoon Home Assistant opent, voor het inloggen op de eigen poort (besluit 160) |
 
 ## Wat hij níét doet
 
@@ -100,6 +101,57 @@ andere weigert `HaClient` vóórdat er iets de socket op gaat (besluit 15).
 
 Via het zijpaneel, of **Webinterface openen** op de add-on-pagina. De app opent
 op Thuis; de cijfers en de datasetmeter staan op `index.html`.
+
+### Met één tik vanaf het startscherm
+
+In de app van Home Assistant op Android kun je een snelkoppeling maken die
+meteen Smart Climate opent:
+
+1. Open Smart Climate in Home Assistant in een browser. Het adres eindigt op
+   iets als `/a1b2c3d4_hems_climate`; dat laatste stuk, met de `/`, is het pad.
+2. In de app van Home Assistant: **Instellingen › Companion-app ›
+   Snelkoppelingen beheren**, en maak een **vastgezette** snelkoppeling: naam
+   *Smart Climate*, soort *Dashboard*, het pad uit stap 1, en een icoon naar
+   keuze (bijvoorbeeld `mdi:home-thermometer`).
+3. Zet hem op je startscherm.
+
+### Als losse app, via Tailscale (besluit 160)
+
+Zoals de app vroeger vanaf de NAS: met een eigen icoon en zonder Home Assistant
+eromheen. Dit vraagt de Tailscale-add-on op dezelfde Home Assistant. De app
+komt alleen in je eigen tailnet; Funnel of een portforward is niet nodig en
+hoort er niet bij (besluit 108).
+
+1. **Smart Climate › Configuratie.** Vul bij *ha_adres* het adres in waarop je
+   telefoon Home Assistant opent, bijvoorbeeld
+   `https://homeassistant.<tailnet>.ts.net` of `http://100.x.y.z:8123`. Vul
+   onder *Netwerk* bij `8100/tcp` de poort `8100` in. Opslaan en herstarten. In
+   het logboek staat dan "Eigen poort 8100 open, alleen via Tailscale."
+2. **In de beheerpagina van Tailscale** (login.tailscale.com):
+   - bij *Access controls* een tag, bijvoorbeeld `tag:homeassistant`, met
+     jezelf als eigenaar (`tagOwners`);
+   - bij *Services* een dienst `smartclimate`, op poort `tcp:443`.
+3. **Tailscale-add-on › Configuratie:**
+
+   ```yaml
+   advertise_tags:
+     - tag:homeassistant
+   services:
+     - name: svc:smartclimate
+       target: http://127.0.0.1:8100
+       protocol: https
+       port: 443
+   ```
+
+   Opslaan en herstarten.
+4. **Terug bij Services** in de beheerpagina: keur de Pi goed als host voor
+   `smartclimate`.
+5. **Op je telefoon,** in Chrome: open `https://smartclimate.<tailnet>.ts.net`,
+   log in via Home Assistant, en kies in het menu **App installeren**.
+
+Opent het adres niet, werk dan Tailscale op je telefoon bij. Het adres van de
+Pi met `:8100` geeft bewust alleen "Open Smart Climate via het adres in
+Tailscale".
 
 ## Prestaties
 
