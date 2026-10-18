@@ -237,6 +237,10 @@ verwijzing bestaat.
   stond. Kamers samenvoegen tot één ruimte met zones, elk deel rond het huis
   apart, geen panelen of het aantal per kant, eerst het contract en dan de
   prijzen met teruglevering vanaf 2027 ([158]).
+- **Thuis op de telefoon** heeft de Assistent altijd in beeld, in een
+  vraagbalk boven de tabs; de microfoon ernaast luistert meteen. Bovenin één
+  regel knoppen, de kamers in één kaart, en daaronder Straks, het apparaat,
+  Hoe voelt het en Vandaag, net als op de wand ([159]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -486,4 +490,5 @@ verwijzing bestaat.
 [156]: DECISIONS.md#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie
 [157]: DECISIONS.md#157-hoe-de-panelen-liggen-gemeten-uit-tien-dagen-opbrengst-de-bewoner-bevestigt
 [158]: DECISIONS.md#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam
+[159]: DECISIONS.md#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld
 <!-- links:einde -->

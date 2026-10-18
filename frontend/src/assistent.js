@@ -493,9 +493,9 @@ async function microfoonTik() {
         void zeg(b.reden);
       } else if (b.soort === 'dicht') stopLuisteren();
     });
-  } catch {
+  } catch (e) {
     stopLuisteren();
-    void zeg('De microfoon mag niet. Geef deze pagina toegang tot de microfoon.');
+    void zeg(e?.message === 'tik' ? 'Tik op de microfoon om te praten.' : 'De microfoon mag niet. Geef deze pagina toegang tot de microfoon.');
   }
 }
 
@@ -709,6 +709,15 @@ document.addEventListener('submit', (e) => {
 });
 if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = () => {};
 if (location.hash === '#typ') document.querySelector(`${app.zicht()} [data-vrij] input`)?.focus();
+/*
+ * De microfoon in de vraagbalk op Thuis (besluit 159): hier meteen luisteren.
+ * Kan de microfoon hier niet, dan typen.
+ */
+if (location.hash === '#praat') {
+  history.replaceState(null, '', location.pathname);
+  if (window.luisteren?.kan()) void microfoonTik();
+  else document.querySelector(`${app.zicht()} [data-vrij] input`)?.focus();
+}
 /** Een vraag uit het adres: #nu, #zon, #straks, #vandaag, #warm, #morgen, #kosten, #waarom/zolder. */
 function vraagUitAdres() {
   const [soort, kamer] = decodeURIComponent(location.hash.slice(1)).split('/');

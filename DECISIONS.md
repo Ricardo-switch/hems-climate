@@ -162,6 +162,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [155. Volledig scherm in Home Assistant, per apparaat](#155-volledig-scherm-in-home-assistant-per-apparaat)
 - [156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie](#156-de-eerste-dag-uit-home-assistant-en-een-back-up-met-zijn-configuratie)
 - [158. Inrichten: overal Terug en Volgende, en wat de bewoner tegenkwam](#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam)
+- [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
 
 **Veiligheid**
 
@@ -6929,6 +6930,46 @@ een huis zonder panelen kon de stap niet afmaken, en "Buiten" telde als etage.
 - **Teksten:** "Waar staat dit apparaat?", "Zonneschermen" in plaats van
   "Screens", ongeveer tien minuten (zoals het welkom zegt), en de zekering
   zegt wat het huis ermee doet zonder te beloven dat het al schakelt.
+
+---
+
+## 159. Thuis op de telefoon: de Assistent altijd in beeld
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 zei de bewoner: "op het beginscherm portretmodus zit de
+assistant nu laag verborgen onder de kamers". Op een telefoon van 390 × 844
+zag je bij openen de kop, het huis en twee kamers; de vraag aan de Assistent
+stond pas na de Straks-kaart, ver onder de tabs. Bovenin liepen de knoppen
+over twee regels zodra de stand niet Automatisch was (zoals Afwezig). En wat
+de wand rechts heeft, Vandaag, het apparaat dat draait en Hoe voelt het, stond
+op de telefoon niet.
+
+Drie schetsen (`design/app2/Thuis-Tel.html`): A een vraagbalk die altijd boven
+de tabs staat, B de Assistent onder de kop met snelle vragen, C een ronde knop
+rechtsonder. De bewoner koos A, met de kamers in één kaart, alles van de wand
+erbij en een microfoon die meteen luistert.
+
+*Besluit:*
+
+- **De vraagbalk staat altijd boven de tabs,** ook als je schuift: de bol en
+  "Vraag iets over je huis" openen de Assistent met het typveld
+  (`assistent.html#typ`), de microfoon rechts opent hem en luistert meteen
+  (`assistent.html#praat`). De microfoon staat er alleen waar hij kan (over
+  https, besluit 150). Houdt de browser het geluid zonder tik tegen, dan zegt
+  de Assistent "Tik op de microfoon om te praten." De tab Assistent blijft.
+- **Bovenin één regel:** de klok, het weer, ?, de bel, (Naar Home Assistant)
+  en het tandwiel. De stand, als die afwijkt, staat rechts naast de
+  begroeting.
+- **De kamers in één kaart,** een regel per kamer met de kleur van wat hij
+  doet, de temperatuur en een pijl naar de kamer.
+- **Daaronder, in deze volgorde:** Straks, het apparaat dat draait of
+  klaarstaat, Hoe voelt het nu? en Vandaag (de zon van vandaag, met een tik
+  naar de tab). Het huis is iets lager (330 in plaats van 360), zodat de
+  kamers eerder in beeld komen.
+- **De wand blijft zoals hij is.** Een paginatest loopt de telefoon na: de
+  balk in beeld en boven de tabs, ook onderaan; de knoppen op één regel; de
+  kamers in één kaart; de volgorde; en de microfoon die meteen luistert.
 
 ---
 

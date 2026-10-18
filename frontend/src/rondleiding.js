@@ -45,7 +45,7 @@
       plek: 'Thuis',
       kop: 'Hoe voelt het?',
       tekst: 'Tik wat je voelt. Het huis leert ervan wat jij prettig vindt, en stelt voor wat het anders kan.',
-      doel: ['#wand [data-gevoel-kaart]', '#tel [data-gevoel]'],
+      doel: ['#wand [data-gevoel-kaart]', '#tel [data-gevoel-kaart]'],
     },
     {
       pagina: 'vandaag.html',

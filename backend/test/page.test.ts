@@ -1319,6 +1319,93 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }
 
   /*
+   * Thuis op de telefoon, opnieuw (besluit 159, schets Thuis-Tel): de Assistent
+   * in een vraagbalk die altijd boven de tabs staat, ook na schuiven; de knoppen
+   * bovenin op één regel, met de stand naast de begroeting; de kamers in één
+   * kaart; en daaronder Straks, het apparaat, Hoe voelt het en Vandaag. De
+   * microfoon in de balk opent de Assistent, die dan meteen luistert.
+   */
+  it('toont Thuis op de telefoon met de Assistent altijd in beeld', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    // Een microfoon zonder microfoon: alleen bijhouden dat erom gevraagd is.
+    await context.addInitScript({
+      content: "window.__micGevraagd = false; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__micGevraagd = true; return Promise.reject(new Error('geen microfoon in de test')); };",
+    });
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    await p.goto(`${baseUrl}/thuis.html`);
+    await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+    await p.locator('#tel svg.sc-huis').waitFor();
+
+    type Vak = { top: number; bottom: number; left: number; right: number };
+    // Waar iets in beeld staat; null als het er niet is of verborgen.
+    const vak = (sel: string) =>
+      p.evaluate<Vak | null>(`(() => {
+        const el = document.querySelector(${JSON.stringify(sel)});
+        if (!el || (!el.offsetParent && getComputedStyle(el).position !== 'fixed')) return null;
+        const r = el.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+      })()`);
+
+    // De vraagbalk bij openen in beeld, binnen het scherm en boven de tabs.
+    const balk = (await vak('#tel .vraagbalk'))!;
+    const tabs = (await vak('#tel .tabs'))!;
+    expect(balk.top).toBeGreaterThan(0);
+    expect(balk.bottom).toBeLessThanOrEqual(tabs.top);
+    expect(balk.left).toBeGreaterThanOrEqual(0);
+    expect(balk.right).toBeLessThanOrEqual(390);
+    expect(await p.locator('#tel .vraagbalk .typ').getAttribute('href')).toBe('assistent.html#typ');
+    expect(await p.locator('#tel .vraagbalk [data-mic]').getAttribute('href')).toBe('assistent.html#praat');
+
+    // Bovenin één regel: de klok en de knoppen; de stand staat bij de begroeting.
+    const regel = await p.locator('#tel .kopregel > span:last-child > :visible').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(regel.length).toBeGreaterThanOrEqual(3);
+    expect(new Set(regel).size).toBe(1);
+    expect(await p.locator('#tel .kopregel [data-modus]').count()).toBe(0);
+    expect(await p.locator('#tel .groetregel [data-modus]').count()).toBe(1);
+
+    // De kamers in één kaart, een regel per kamer met een temperatuur, elk naar zijn kamer.
+    const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; zoneId?: string; temperatuurC?: number | null }[] }[] };
+    const metTemperatuur = huis.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+    expect(metTemperatuur.length).toBeGreaterThan(0);
+    const kamers = p.locator('#tel [data-kamers] > a');
+    expect(await kamers.count()).toBe(metTemperatuur.length);
+    expect(await kamers.first().getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(metTemperatuur[0]!.id)}`);
+
+    // Onder de kamers, in deze volgorde: Straks, het apparaat, Hoe voelt het, Vandaag.
+    const volgorde = ['[data-kamers]', '[data-straks]', '[data-apparaatkaart]', '[data-gevoel-kaart]', 'a[href="vandaag.html"]'];
+    const tops: number[] = [];
+    for (const sel of volgorde) {
+      const v = await vak(`#tel .inhoud > ${sel}`);
+      if (v) tops.push(v.top);
+    }
+    expect(tops.length).toBeGreaterThanOrEqual(3);
+    expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+    await p.locator('#tel [data-gevoel] [data-gevoel-tik]').first().waitFor();
+    await p.locator('#tel [data-dag] svg').waitFor();
+
+    // Helemaal naar beneden: de balk blijft staan, en Vandaag komt er helemaal boven.
+    await p.evaluate('window.scrollTo(0, document.scrollingElement.scrollHeight)');
+    await expect.poll(() => p.evaluate<number>('scrollY')).toBeGreaterThan(0);
+    const balkOnder = (await vak('#tel .vraagbalk'))!;
+    expect(Math.round(balkOnder.top)).toBe(Math.round(balk.top));
+    const laatste = (await vak('#tel .inhoud > a[href="vandaag.html"]'))!;
+    expect(laatste.bottom).toBeLessThanOrEqual(balkOnder.top);
+    expect(await p.evaluate('document.scrollingElement.scrollWidth <= innerWidth')).toBe(true);
+
+    // De microfoon: de Assistent vraagt meteen om de microfoon, en het adres is weer schoon.
+    await p.locator('#tel .vraagbalk [data-mic]').click();
+    await p.waitForURL(/assistent\.html/);
+    await expect.poll(() => p.evaluate<boolean>('window.__micGevraagd')).toBe(true);
+    expect(await p.evaluate<string>('location.hash')).toBe('');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
    * Apparaten in ontwerp 2 (besluit 104; schets Wand-Apparaten): de droger die
    * klaarstaat met "klaar voor" (besluit 101), de vaatwasser die gevonden is
    * maar niet op zon staat, en waar de stroom nu heen gaat.
