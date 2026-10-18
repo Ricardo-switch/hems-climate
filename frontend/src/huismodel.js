@@ -127,7 +127,8 @@
     ['woonkamer', 'Woonkamer'], ['woonkeuken', 'Woonkamer met open keuken'], ['keuken', 'Keuken'], ['eetkamer', 'Eetkamer'],
     ['slaapkamer', 'Slaapkamer'], ['kinderkamer', 'Kinderkamer'], ['logeerkamer', 'Logeerkamer'],
     ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
-    ['wasruimte', 'Wasruimte'], ['berging', 'Berging of zolder'], ['leeg', 'Leeg'],
+    ['wasruimte', 'Wasruimte'], ['bijkeuken', 'Bijkeuken'], ['berging', 'Berging of zolder'], ['kelder', 'Kelder'],
+    ['garage', 'Garage, aan of in het huis'], ['leeg', 'Leeg'],
   ];
   /** Wat voor deel van een kamer (besluit 145): dezelfde soorten, met namen voor een deel. */
   const ZONE_SOORTEN = [
@@ -149,7 +150,7 @@
   function soortBuiten(r) {
     if (r.buiten) return r.buiten;
     const oprit = /oprit|carport/i.test(r.naam);
-    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : /tuinhuis|schuur/i.test(r.naam) ? 'tuinhuis' : 'tuin';
+    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : /tuinhuis|schuur/i.test(r.naam) ? 'tuinhuis' : /garage/i.test(r.naam) ? 'garage' : 'tuin';
     return { soort, auto: oprit, tuinhuis: soort === 'tuin' };
   }
 
@@ -170,6 +171,7 @@
     let terras = null;
     let balkon = null;
     let voortuin = null;
+    let garage = null;
     // De lampen van een ruimte die het tuinhuis is, horen bij het tuinhuis in de tuin.
     const huisjes = ruimtes.filter((r) => soortBuiten(r).soort === 'tuinhuis');
     const huisjeLampen = huisjes.flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'licht'));
@@ -186,6 +188,11 @@
       }
       if (b.soort === 'balkon') {
         balkon ??= { id: r.id, naam: r.naam, lampAan };
+        continue;
+      }
+      // Een losse garage achter de oprit (besluit 166).
+      if (b.soort === 'garage') {
+        garage ??= { id: r.id, naam: r.naam, lampAan };
         continue;
       }
       if (b.soort === 'voortuin' || (b.soort === 'tuin' && tuin && !voortuin)) {
@@ -206,6 +213,9 @@
           id: r.id,
           naam: r.naam,
           tuinhuis: b.tuinhuis || huisjes.length > 0,
+          // Is het tuinhuis een eigen ruimte, dan is het huisje zelf aan te tikken (besluit 166).
+          tuinhuisId: huisjes[0]?.id ?? null,
+          tuinhuisNaam: huisjes[0]?.naam ?? null,
           tuinhuisAan: !!binnenlamp?.aan,
           overstekAan: !!overstek?.aan,
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
@@ -215,7 +225,7 @@
       }
     }
     // Alleen een tuinhuis in Home Assistant: dan is er een tuin om hem in te zetten.
-    if (!tuin && huisjes.length) tuin = { id: null, naam: 'Tuin', tuinhuis: true, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
+    if (!tuin && huisjes.length) tuin = { id: null, naam: 'Tuin', tuinhuis: true, tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
     if (rond) {
       const leeg = (naam) => ({ id: null, naam, lampAan: false });
       oprit = rond.oprit ? (oprit ?? { id: null, naam: 'Oprit', auto: null, camera: null }) : null;
@@ -224,8 +234,10 @@
       terras = rond.terras ? (terras ?? leeg('Terras')) : null;
       balkon = rond.balkon ? (balkon ?? leeg('Balkon')) : null;
       voortuin = rond.voortuin ? (voortuin ?? leeg('Voortuin')) : null;
+      garage = rond.garage ? (garage ?? leeg('Garage')) : null;
+      if (oprit) oprit = { ...oprit, carport: !!rond.carport };
     }
-    return { oprit, tuin, terras, balkon, voortuin };
+    return { oprit, tuin, terras, balkon, voortuin, garage };
   }
 
   /**
@@ -236,7 +248,7 @@
     if (huis?.rond) return { ...huis.rond };
     const ruimtes = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).filter((r) => isBuiten(e, r)));
     const b = buiten(ruimtes);
-    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis };
+    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis, garage: !!b.garage, carport: false };
   }
 
   /**
@@ -286,6 +298,26 @@
   }
 
   /**
+   * Hoe de panelen over het dak liggen (besluit 111, 166), één keer voor Thuis en
+   * Inrichten: wat de bewoner opgaf, per kant bij "beide", anders geschat uit de
+   * wattpiek (een paneel van rond de 400 Wp). De voorkant ligt op het dichte
+   * dakvlak rechts, de achterkant op het open vlak links. Geen panelen: 0.
+   */
+  function panelenOpDak(p, piekW = 0) {
+    if (p?.ligging === 'geen') return { panelen: 0, panelenLinks: 0 };
+    const geschat = piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0;
+    if (p?.ligging === 'beide') {
+      const voor = p.voorkant ?? null;
+      const achter = p.achterkant ?? null;
+      if (voor == null && achter == null) return { panelen: Math.ceil(geschat / 2), panelenLinks: Math.floor(geschat / 2) };
+      return { panelen: voor ?? 0, panelenLinks: achter ?? 0 };
+    }
+    // Alleen aan de achterkant: dan op het andere vlak.
+    const aantal = p?.aantal ?? geschat;
+    return p?.ligging === 'achterkant' ? { panelen: 0, panelenLinks: aantal } : { panelen: aantal, panelenLinks: 0 };
+  }
+
+  /**
    * Wie de begroeting noemt (besluit 147): op je telefoon jij; op een scherm
    * zoals de wand wie er thuis is, op volgorde. Zonder bewoners niemand.
    */
@@ -297,5 +329,5 @@
     return iedereen.filter((b) => b.thuis).map((b) => b.naam);
   }
 
-  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, groetNamen };
+  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen };
 })(window);

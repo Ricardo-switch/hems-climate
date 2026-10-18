@@ -70,9 +70,10 @@ export interface LayoutZone {
 
 /**
  * Wat een buitenruimte is, voor de tekening van het huis (besluit 109). Een
- * tuinhuis geeft zijn lampen aan het tuinhuis in de tuin (besluit 157).
+ * tuinhuis geeft zijn lampen aan het tuinhuis in de tuin (besluit 157); een
+ * losse garage aan de garage achter de oprit (besluit 166).
  */
-export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon', 'tuinhuis'] as const;
+export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon', 'tuinhuis', 'garage'] as const;
 export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
 
 export interface LayoutOutside {
@@ -88,15 +89,20 @@ export interface LayoutOutside {
  * zo tekent het huis zijn buitenkant. Een ruimte buiten zegt alleen nog bij
  * welk deel zijn lampen en camera horen.
  */
-export const AROUND_PARTS = ['oprit', 'auto', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis'] as const;
+export const AROUND_PARTS = ['oprit', 'auto', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis', 'garage', 'carport'] as const;
 export type AroundPart = (typeof AROUND_PARTS)[number];
+/**
+ * Garage en carport kwamen er later bij (besluit 166): een indeling van
+ * daarvoor kent ze niet, en heeft ze dan niet.
+ */
+const AROUND_LATER: readonly AroundPart[] = ['garage', 'carport'];
 export type LayoutAround = Readonly<Record<AroundPart, boolean>>;
 
 /**
  * Wat voor kamer het is, voor de inrichting in de tekening (besluit 119).
  * Weg is: een voorstel uit de naam. "leeg" tekent niets.
  */
-export const ROOM_TYPES = ['woonkamer', 'woonkeuken', 'keuken', 'eetkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'badkamer', 'toilet', 'hal', 'werkkamer', 'wasruimte', 'berging', 'leeg'] as const;
+export const ROOM_TYPES = ['woonkamer', 'woonkeuken', 'keuken', 'eetkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'badkamer', 'toilet', 'hal', 'werkkamer', 'wasruimte', 'bijkeuken', 'berging', 'kelder', 'garage', 'leeg'] as const;
 export type RoomType = (typeof ROOM_TYPES)[number];
 
 export interface LayoutRoom {
@@ -424,8 +430,8 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
   let rond: LayoutAround | undefined;
   if (rondIn !== null) {
     const r = (typeof rondIn === 'object' && !Array.isArray(rondIn) ? rondIn : {}) as Record<string, unknown>;
-    if (AROUND_PARTS.some((x) => typeof r[x] !== 'boolean')) return { ok: false, reden: `rond zegt per deel ja of nee: ${AROUND_PARTS.join(', ')}` };
-    rond = Object.fromEntries(AROUND_PARTS.map((x) => [x, r[x] as boolean])) as LayoutAround;
+    if (AROUND_PARTS.some((x) => typeof r[x] !== 'boolean' && !(AROUND_LATER.includes(x) && r[x] === undefined))) return { ok: false, reden: `rond zegt per deel ja of nee: ${AROUND_PARTS.join(', ')}` };
+    rond = Object.fromEntries(AROUND_PARTS.map((x) => [x, r[x] === true])) as LayoutAround;
   }
   return {
     ok: true,

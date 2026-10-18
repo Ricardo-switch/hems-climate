@@ -57,12 +57,14 @@ function huisModel() {
   const zonKw = s.zonKw ?? 0;
   const netKw = s.netKw ?? 0;
   // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
-  const t = huismodel.tekening(huisData, { kamer: kamerModel, zon, aantalPanelen: aantalPanelen(0) || null });
-  const { etages, oprit, tuin, terras, balkon, voortuin } = t;
+  const t = huismodel.tekening(huisData, { kamer: kamerModel, zon });
+  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = t;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
   const piekW = t.piekW;
+  // Hoe de panelen liggen, zoals bij Inrichten (besluit 166): per kant bij beide kanten.
+  const opDak = huismodel.panelenOpDak(aansluiting?.antwoorden?.panelen, piekW);
   const maand = new Date().getMonth() + 1;
 
   const stromen = [];
@@ -80,7 +82,7 @@ function huisModel() {
     tijd,
     seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
     wolken,
-    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...panelenOpDak(piekW) } : { aandeel: 0, ...panelenOpDak(piekW) },
+    zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
     etages,
     buitenunit: t.buitenunit,
     voordeur: t.voordeur,
@@ -90,34 +92,10 @@ function huisModel() {
     terras,
     balkon,
     voortuin,
+    garage,
     stromen,
     labels,
   };
-}
-
-/**
- * Hoeveel panelen het dak toont: wat de bewoner bij Zon en aansluiting
- * invulde, anders geschat uit de wattpiek (een paneel van rond de 400 Wp).
- * Zonder panelen in de configuratie: geen panelen op het dak.
- */
-function aantalPanelen(piekW) {
-  const p = aansluiting?.antwoorden?.panelen;
-  const gezegd = p ? (p.ligging === 'beide' ? (p.voorkant ?? 0) + (p.achterkant ?? 0) : (p.aantal ?? 0)) : 0;
-  if (gezegd > 0) return gezegd;
-  return piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0;
-}
-
-/**
- * Hoe de panelen over het dak liggen (besluit 111): op beide kanten verdeeld,
- * zoals de bewoner opgaf of half om half; anders alles op het zichtbare vlak.
- */
-function panelenOpDak(piekW) {
-  const totaal = aantalPanelen(piekW);
-  const p = aansluiting?.antwoorden?.panelen;
-  if (p?.ligging !== 'beide' || totaal === 0) return { panelen: totaal, panelenLinks: 0 };
-  const voor = p.voorkant ?? Math.ceil(totaal / 2);
-  const achter = p.achterkant ?? totaal - voor;
-  return { panelen: voor || Math.ceil(totaal / 2), panelenLinks: achter };
 }
 
 /** Het klimaatapparaat bij een actuator, zoals het huis het noemt. */

@@ -90,6 +90,7 @@ function schermBlad(s) {
   return `<div class="kop"><span class="gezicht" style="background: #5b6b80">${esc(s.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(s.naam)}</h2><span class="mini">Scherm, ingelogd sinds ${esc(dag(s.sindsMs))}</span></div></div>
     <div class="vak"><label for="scherm-naam">Naam van dit scherm</label><input class="veld" id="scherm-naam" data-schermnaam value="${esc(s.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">In Home Assistant: ${esc(s.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
     <div class="vak"><span>Wat het doet</span><span class="hint">Een scherm is geen bewoner: het telt niet mee voor het comfort, en begroet wie er thuis is.</span></div>
+    <div class="vak"><span>Hoe het werkt</span><div class="seg" role="group" aria-label="Volledig scherm"><button type="button" data-sopt="volledig" data-waarde="ja" aria-pressed="${s.opties?.volledig === true}" ${kan ? '' : 'disabled'}>Volledig scherm</button><button type="button" data-sopt="volledig" data-waarde="nee" aria-pressed="${s.opties?.volledig !== true}" ${kan ? '' : 'disabled'}>Met balken</button></div><div class="seg" role="group" aria-label="Luisteren naar Hé huis"><button type="button" data-sopt="luisteren" data-waarde="ja" aria-pressed="${s.opties?.luisteren === true}" ${kan ? '' : 'disabled'}>Luistert naar "Hé huis"</button><button type="button" data-sopt="luisteren" data-waarde="nee" aria-pressed="${s.opties?.luisteren !== true}" ${kan ? '' : 'disabled'}>Luistert niet</button></div><span class="hint">Het scherm neemt het over, ook als je dit op een ander apparaat kiest.</span></div>
     <span class="fout" data-fout></span>
     ${kan ? `<div class="knoppenrij"><button type="button" class="knop gevaar" data-schermweg>Weghalen</button></div><span class="hint">Daarna vraagt ${s.ik ? 'dit scherm' : 'het scherm'} bij de volgende pagina opnieuw: woon je hier, of is dit een scherm?</span>` : '<span class="hint">Een scherm beheert de hoofdgebruiker.</span>'}`;
 }
@@ -196,6 +197,10 @@ document.addEventListener('click', async (e) => {
   if (t.closest('[data-greep]')) return;
   const b = gekozen();
   const sc = gekozenScherm();
+  if (t.dataset.sopt && sc) {
+    await stuur({ actie: 'schermOpties', id: sc.id, opties: { [t.dataset.sopt]: t.dataset.waarde === 'ja' } });
+    return;
+  }
   if (t.dataset.kies) {
     location.hash = encodeURIComponent(t.dataset.kies);
   } else if (t.hasAttribute('data-schermweg') && sc) {

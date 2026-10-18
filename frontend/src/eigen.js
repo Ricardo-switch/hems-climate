@@ -10,7 +10,9 @@
  * dan even.
  *
  * Aanpassen gebeurt op Thuis zelf: elke kaart krijgt een greep om te schuiven
- * en een oog om te verbergen. Favorieten schakelen via dezelfde deuren als de
+ * en een oog om te verbergen; op de wand ook ▲ en ▼, want tikken werkt op elke
+ * tablet, en bovenin "+ Kaart". Past een kaart niet, dan wijkt de onderste
+ * (besluit 166). Favorieten schakelen via dezelfde deuren als de
  * knoppen in een kamer (`api/licht`, `api/scene`).
  */
 (function (global) {
@@ -129,6 +131,18 @@
     if (vrij) vrij.hidden = !(bewerk === 'wand' && gebruikt('wand') < v.ruimte);
   }
   const gebruikt = (plek) => deel(plek).kaarten.reduce((n, id) => n + (v.vakken[id] ?? 1), 0);
+  /**
+   * De wand met `id` erbij: past hij niet, dan wijken de onderste kaarten tot er
+   * plek is (besluit 166). Geeft de nieuwe volgorde en wie er wijkt.
+   */
+  function metErbij(id) {
+    const rij = deel('wand').kaarten.filter((x) => x !== id);
+    const wijkt = [];
+    const vakken = (lijst) => lijst.reduce((n, x) => n + (v.vakken[x] ?? 1), 0);
+    while (rij.length && vakken(rij) + (v.vakken[id] ?? 1) > v.ruimte) wijkt.unshift(rij.pop());
+    return { kaarten: [...rij, id], wijkt };
+  }
+  const naamVan = (id) => box('wand')?.querySelector(`:scope > [data-kaart="${id}"]`)?.dataset.naam ?? id;
 
   /* --------------------------------------------------------- favorieten */
 
@@ -217,7 +231,7 @@
       const n = v.vakken[k.dataset.kaart] ?? 1;
       k.insertAdjacentHTML(
         'afterbegin',
-        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="Schuif ${esc(naam)}; of met de pijltjes">${ICOON.greep}Schuif</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="Verberg ${esc(naam)}">${ICOON.oog}</span>${k.closest('#wand') ? `<span class="kaartmaat">${n === 1 ? '1 vak' : `${n} vakken`}</span>` : ''}`,
+        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="Schuif ${esc(naam)}; of met de pijltjes">${ICOON.greep}Schuif</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="Verberg ${esc(naam)}">${ICOON.oog}</span>${k.closest('#wand') ? `<span class="kaartmaat">${n === 1 ? '1 vak' : `${n} vakken`}</span><span class="kaartpijlen"><span class="kaartpijl" data-pijl="-1" role="button" tabindex="0" aria-label="${esc(naam)} omhoog">▲</span><span class="kaartpijl" data-pijl="1" role="button" tabindex="0" aria-label="${esc(naam)} omlaag">▼</span></span>` : ''}`,
       );
     }
   }
@@ -256,7 +270,7 @@
   }
 
   /** Met de pijltjes op de greep: één plek omhoog of omlaag. */
-  function schuifMetToets(kaart, richting) {
+  function schuifMetToets(kaart, richting, focus = '[data-greep]') {
     const plek = kaart.closest('#wand') ? 'wand' : 'tel';
     const rij = kaartenIn(plek).filter((k) => !k.hasAttribute('data-uit'));
     const i = rij.indexOf(kaart);
@@ -264,7 +278,7 @@
     if (j < 0 || j >= rij.length) return;
     if (richting < 0) rij[j].before(kaart);
     else rij[j].after(kaart);
-    kaart.querySelector('[data-greep]')?.focus();
+    kaart.querySelector(focus)?.focus();
     void bewaar(plek, { kaarten: volgorde(plek) });
   }
 
@@ -361,12 +375,14 @@
       const rijen = weg.map((k) => {
         const id = k.dataset.kaart;
         const n = v.vakken[id] ?? 1;
-        const past = plek === 'tel' || n <= vrij;
-        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein: plek === 'wand' && !past ? `${KORT[id] ?? ''}. Past als er ${n} vakken vrij zijn` : KORT[id] ?? '', rechts: plek === 'wand' ? (n === 1 ? '1 vak' : `${n} vakken`) : '+', data: `data-erbij="${esc(id)}"`, uit: !past });
+        // Op de wand past alles: wat niet past, laat de onderste kaart wijken (besluit 166).
+        const wijkt = plek === 'wand' ? metErbij(id).wijkt : [];
+        const klein = wijkt.length ? `${KORT[id] ?? ''}. Daarvoor wijkt ${wijkt.map(naamVan).join(' en ')}` : KORT[id] ?? '';
+        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein, rechts: plek === 'wand' ? (n === 1 ? '1 vak' : `${n} vakken`) : '+', data: `data-erbij="${esc(id)}"` });
       });
       el.setAttribute('aria-label', 'Kaart toevoegen');
       el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${plek === 'wand' ? 'Wat komt erbij?' : 'Kaart toevoegen'}</h2><button type="button" class="knop" data-blad-dicht>Sluit</button></div>
-        ${plek === 'wand' ? `<p class="mini" style="margin: 0">${vrij === 1 ? 'Er is één vak vrij.' : `Er zijn ${vrij} vakken vrij.`}</p>` : ''}
+        ${plek === 'wand' ? `<p class="mini" style="margin: 0">${vrij <= 0 ? 'De vier vakken zijn vol: een nieuwe kaart komt onderaan, en de onderste wijkt.' : vrij === 1 ? 'Er is één vak vrij.' : `Er zijn ${vrij} vakken vrij.`}</p>` : ''}
         ${rijen.length ? rijen.join('') : '<p class="mini">Alle kaarten staan er al.</p>'}`;
       return;
     }
@@ -412,7 +428,7 @@
       // In de bewerkstand doen de kaarten zelf niets: geen links, geen lampen. De greep en het oog wel.
       if (!bewerk || !e.target.closest('[data-kaarten] > [data-kaart]')) return;
       e.preventDefault();
-      if (!e.target.closest('[data-greep], [data-oog], [data-fav-kies]')) e.stopPropagation();
+      if (!e.target.closest('[data-greep], [data-oog], [data-pijl], [data-fav-kies]')) e.stopPropagation();
     },
     true,
   );
@@ -440,6 +456,8 @@
     if (t.closest('[data-blad-dicht]') || t.closest('[data-kies-achter]')) return sluitBlad();
     const oog = t.closest('[data-oog]');
     if (oog && bewerk) return verberg(oog.closest('[data-kaart]'));
+    const pijl = t.closest('[data-pijl]');
+    if (pijl && bewerk) return schuifMetToets(pijl.closest('[data-kaart]'), Number(pijl.dataset.pijl), `[data-pijl="${pijl.dataset.pijl}"]`);
     const kies = t.closest('[data-fav-kies]');
     if (kies) return openBlad('favorieten', kies.closest('#wand') ? 'wand' : 'tel');
     const erbij = t.closest('[data-erbij]');
@@ -449,7 +467,9 @@
       const k = box(plek).querySelector(`:scope > [data-kaart="${id}"]`);
       k?.removeAttribute('data-uit');
       sluitBlad();
-      void bewaar(plek, { kaarten: [...volgorde(plek).filter((x) => x !== id), id] });
+      const kaarten = plek === 'wand' ? metErbij(id).kaarten : [...volgorde(plek).filter((x) => x !== id), id];
+      if (plek === 'wand') for (const x of kaartenIn('wand')) x.toggleAttribute('data-uit', !kaarten.includes(x.dataset.kaart));
+      void bewaar(plek, { kaarten });
       na();
       k?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       return;
@@ -468,7 +488,7 @@
       const { plek, keuze } = blad;
       sluitBlad();
       // Wie favorieten kiest, wil ze ook zien.
-      const kaarten = deel(plek).kaarten.includes('favorieten') || (plek === 'wand' && gebruikt('wand') + 1 > v.ruimte) ? deel(plek).kaarten : [...deel(plek).kaarten, 'favorieten'];
+      const kaarten = deel(plek).kaarten.includes('favorieten') ? deel(plek).kaarten : plek === 'wand' ? metErbij('favorieten').kaarten : [...deel(plek).kaarten, 'favorieten'];
       void bewaar(plek, { favorieten: keuze, kaarten });
       return;
     }
@@ -482,6 +502,10 @@
     if (greep && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       schuifMetToets(greep.closest('[data-kaart]'), e.key === 'ArrowUp' ? -1 : 1);
+    } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-pijl]')) {
+      e.preventDefault();
+      const p = e.target.closest('[data-pijl]');
+      schuifMetToets(p.closest('[data-kaart]'), Number(p.dataset.pijl), `[data-pijl="${p.dataset.pijl}"]`);
     } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-oog]')) {
       e.preventDefault();
       verberg(e.target.closest('[data-kaart]'));

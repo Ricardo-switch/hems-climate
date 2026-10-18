@@ -36,7 +36,7 @@ export interface DecisionView {
 export const LANGS = ['nl', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
 
-export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'morgen', 'kosten'] as const;
+export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'weer', 'morgen', 'kosten'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
 export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit';
@@ -50,6 +50,8 @@ export type Question =
   | { readonly kind: 'vandaag' }
   /** Hoe warm het overal is (besluit 141). */
   | { readonly kind: 'warm' }
+  /** Het weer en de zon van vandaag (besluit 166). */
+  | { readonly kind: 'weer' }
   /** Het weer en de zon van morgen (besluit 142). */
   | { readonly kind: 'morgen' }
   /** Wat de apparaten met een meter deze maand kostten (besluit 142). */
@@ -100,6 +102,16 @@ export interface AskContext {
     readonly opgewektKwh: number;
     readonly verwachtKwh: number | null;
     readonly voorafKwh: number | null;
+    /**
+     * Het weer van de rest van vandaag (besluit 166): wat Buienradar nu zegt,
+     * en uit de uren de warmste en koudste temperatuur en de grootste regenkans.
+     */
+    readonly vandaag?: {
+      readonly tekst: string | null;
+      readonly minC: number | null;
+      readonly maxC: number | null;
+      readonly regenkansPct: number | null;
+    } | null;
     /** Morgen (besluit 142): de verwachting van het weer en van je dak. */
     readonly morgen?: {
       readonly tekst: string | null;
@@ -207,6 +219,7 @@ export function parseQuestion(params: URLSearchParams): Parsed {
     case 'zon':
     case 'vandaag':
     case 'warm':
+    case 'weer':
     case 'morgen':
     case 'kosten':
       return { ok: true, lang, question: { kind: v } };
@@ -1004,6 +1017,32 @@ export function ask(question: Question, ctx: AskContext): Answer {
         out.push(nl ? `Buiten is het ${b}.` : `Outside it is ${b}.`);
       }
       return done(out.join(' '));
+    }
+
+    case 'weer': {
+      // Vandaag (besluit 166): het weer van de rest van de dag, en wat er van je dak komt.
+      const w = ctx.weer;
+      const v = w?.vandaag;
+      const geen = nl ? 'Voor vandaag heb ik geen weersverwachting.' : 'I have no forecast for today.';
+      if (w == null) return done(geen);
+      const out: string[] = [];
+      const wat = v?.tekst ? (nl ? v.tekst.charAt(0).toLowerCase() + v.tekst.slice(1) : v.tekst.toLowerCase()) : null;
+      const max = v?.maxC == null ? null : f.temp('weer.vandaag.maxC', v.maxC);
+      const min = v?.minC == null || max == null || v.minC === v.maxC ? null : f.temp('weer.vandaag.minC', v.minC);
+      const temp = max && min ? (nl ? `tussen ${min} en ${max}` : `between ${min} and ${max}`) : max ? (nl ? `rond ${max}` : `around ${max}`) : null;
+      if (wat || temp) out.push(nl ? `Vandaag is het ${[wat, temp].filter(Boolean).join(', ')}.` : `Today: ${[wat, temp].filter(Boolean).join(', ')}.`);
+      if (v?.regenkansPct != null) {
+        if (v.regenkansPct >= 30) {
+          const r = f.pct('weer.vandaag.regenkans', v.regenkansPct);
+          out.push(nl ? `De kans op regen is ${r}.` : `The chance of rain is ${r}.`);
+        } else out.push(nl ? 'Waarschijnlijk blijft het droog.' : 'It will probably stay dry.');
+      }
+      if (w.verwachtKwh != null) {
+        const k = f.energy('weer.vandaag.verwacht', w.verwachtKwh * 1000);
+        const al = w.opgewektKwh >= 0.1 ? f.energy('weer.vandaag.opgewekt', w.opgewektKwh * 1000) : null;
+        out.push(nl ? `Van je dak verwacht ik vandaag ${k}${al ? `, ${al} is er al` : ''}.` : `I expect ${k} from your roof today${al ? `, ${al} so far` : ''}.`);
+      }
+      return done(out.length ? out.join(' ') : geen);
     }
 
     case 'morgen': {

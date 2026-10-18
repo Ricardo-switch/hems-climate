@@ -66,7 +66,13 @@
     wasruimte: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M7 6.5h2"/>',
     berging: '<path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9"/>',
     kamer: '<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path d="M14.5 12h.01"/>',
+    // Besluit 166: bijkeuken, kelder en garage.
+    bijkeuken: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4"/><path d="M7 6.5h2"/>',
+    kelder: '<path d="M3 10l9-6 9 6"/><path d="M5 10v10h14V10"/><path d="M9 20v-4h6v4M9 13h6"/>',
+    garage: '<path d="M3 9l9-5 9 5v11H3z"/><path d="M6 20v-8h12v8M6 15h12M6 18h12"/>',
   };
+  /** Een soort zonder eigen meubels krijgt die van een soort die erop lijkt (besluit 166). */
+  const MEUBELS_ALS = { bijkeuken: 'wasruimte', kelder: 'berging', garage: 'berging' };
   /**
    * De soort van een hele kamer: zoals de dienst hem doorgeeft (`inrichting`,
    * gekozen of voorgesteld, besluit 119), of anders uit de naam en de zones.
@@ -84,7 +90,8 @@
   function soortVan(naam) {
     const n = String(naam ?? '').toLowerCase();
     if (/woonkeuken|open keuken|leefkeuken/.test(n)) return 'woonkeuken';
-    if (/bijkeuken|wasruimte|washok|laundry/.test(n)) return 'wasruimte';
+    if (/bijkeuken/.test(n)) return 'bijkeuken';
+    if (/wasruimte|washok|laundry/.test(n)) return 'wasruimte';
     if (/keuken|kitchen/.test(n)) return 'keuken';
     if (/logeer|gast|guest/.test(n)) return 'logeerkamer';
     if (/kinder|baby|speelkamer/.test(n)) return 'kinderkamer';
@@ -97,7 +104,9 @@
     if (/trapkast|meterkast/.test(n)) return 'berging';
     if (/^(hal|gang|overloop|entree|portaal|vide|trap|hall|landing)\b/.test(n)) return 'hal';
     if (/werk|kantoor|studeer|hobby|office|studio|bureau|game|atelier/.test(n)) return 'werkkamer';
-    if (/zolder|vliering|berg|attic|opslag|kelder|garage/.test(n)) return 'berging';
+    if (/garage/.test(n)) return 'garage';
+    if (/kelder/.test(n)) return 'kelder';
+    if (/zolder|vliering|berg|attic|opslag/.test(n)) return 'berging';
     return null;
   }
   // Afmetingen in eenheden van het huis.
@@ -168,6 +177,8 @@
     if (model.net) pts.push([-0.9, D + 1.4, 0]);
     if (model.oprit) pts.push([-2.9, D + 1.5, 0], [-2.8, D + 1.4, 1.5], [-2.7, D - 1.8, 0.9]);
     if (model.tuin) pts.push([g.W + 2.0, -1.9, 0], [g.W + 2.0, -1.9, 1.0]);
+    if (model.garage) pts.push([-2.95, -2.0, 0], [-2.95, -2.0, 1.2], [-1.05, -2.0, 1.2]);
+    if (model.oprit?.carport) pts.push([-2.95, D + 1.5, 1.1]);
     if (model.terras) pts.push([g.W + 2.0, D + 0.4, 0], [g.W + 2.0, 0.4, 0.8]);
     if (model.voortuin) pts.push([W + 0.1, D + 1.7, 0], [1.3, D + 1.7, 0]);
     if (model.zon) pts.push([W / 2, D / 2, Ht + R + 1.6]);
@@ -245,8 +256,11 @@
     };
     // Waar apparaten staan, voor de labels.
     const plek = {};
-    /** Onder het dak hangt de airco tegen de linkermuur; dan staat de droger er niet onder. */
-    let aircoLinks = false;
+    /**
+     * Onder het dak: waar de airco hangt (besluit 166), tegen de linkermuur of
+     * op de achtermuur bij de nok; de droger staat er niet onder.
+     */
+    let aircoDak = null;
     /** Heeft de inrichting de achterwand nodig, dan hangt de radiator aan de zijmuur. */
     let radiatorZij = false;
     /** Is er een etage boven de kamer die nu getekend wordt? Alleen dan een trap. */
@@ -366,7 +380,7 @@
     // Zonder dak strak om het huis, tenzij de oprit of de tuin erbij hoort (de begane grond).
     const gx0 = model.auto || model.oprit || spook(model, 'auto') || opts.ruimte ? -3.0 : model.zonderDak ? -0.45 : -1.4;
     const gx1 = model.tuin || model.terras ? W + 2.1 : model.zonderDak ? W + 0.75 : W + 1.3;
-    const gy0 = model.tuin ? -2.0 : model.zonderDak ? -0.35 : -0.6;
+    const gy0 = model.tuin || model.garage ? -2.1 : model.zonderDak ? -0.35 : -0.6;
     const gy1 = model.oprit || model.voortuin ? D + 1.9 : model.zonderDak ? D + 0.7 : D + 1.9;
     grond.push(poly([[gx0, gy0, 0], [gx1, gy0, 0], [gx1, gy1, 0], [gx0, gy1, 0]], `fill="url(#${id}-gras)"`));
     // De rand van het perceel, als een dikke plaat.
@@ -443,17 +457,19 @@
         huis.push(poly([[x0, 0, zt], [x1, 0, zt], [x1, D, zt], [x0, D, zt]], `fill="${donker ? '#0f151f' : '#1a2330'}"`));
         sfeer(kamer, x0, x1, zt, zt + R * 0.8);
         erBoven = false;
-        inrichten(kamer, x0, x1, zt, zt + R * 0.85, (x) => dakZ(x) - 0.06, donker);
         // Onder het dak volgt alles de schuine wand: het plafond is het dak zelf.
-        aircoLinks = (kamer.apparaten ?? []).some((a) => a.soort === 'airco');
+        const dakPlafond = (x) => dakZ(x) - 0.06;
+        aircoDak = (kamer.apparaten ?? []).some((a) => a.soort === 'airco') ? aircoOnderDak(x0, x1, zt, dakPlafond) : null;
+        inrichten(kamer, x0, x1, zt, zt + R * 0.85, dakPlafond, donker);
         blokKamer = kamer.id ?? kamer.naam;
-        for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, (x) => dakZ(x) - 0.06);
-        aircoLinks = false;
+        for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, dakPlafond);
+        aircoDak = null;
         if (x0 > 0) huis.push(line([[x0, D, zt], [x0, D, dakZ(x0)]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
         kamers.push({ id: kamer.id, naam: kamer.naam, xm, z0: zt, z1: zt + R });
         tik(kamer, stukGevel(x0, x1).map(([x, , z]) => [x, D, z]));
         // Staat er een droger, dan de naam ernaast in plaats van eroverheen.
         let xl = xm;
+        let laag = false;
         const toestel = (kamer.apparaten ?? []).find((a) => a.soort === 'droger' || a.soort === 'wasmachine' || a.soort === 'vaatwasser');
         const opDePlek = toestel ? plek[toestel.soort] : null;
         if (opDePlek) {
@@ -461,9 +477,12 @@
           const half = ((kamer.naam ?? '').length * 6.9 + (kamer.temp ?? '').length * 8.8 + 6) / 2 / k;
           const rechts = opDePlek[0] * AX + (D - opDePlek[1]) * BX + 0.3 * AX;
           if (xm * AX - half < rechts + 0.08) xl = Math.min(x1 - half / AX - 0.05, (rechts + 0.08 + half) / AX);
+          // Is de kamer daar te smal voor, dan de naam laag aan de voorkant, onder de droger (besluit 166).
+          const links = rechts - 0.6 * AX;
+          laag = xl * AX - half < rechts + 0.08 && xl * AX + half > links - 0.08;
         }
         const vrij = dakZ(xl) - zt;
-        kamerLabel(kamer, xl, vrij * k < 96 ? zt + vrij * 0.58 : zt + vrij * 0.5, true, (x1 - x0) * (onderDak.length > 1 ? 0.8 : 0.6), vrij);
+        kamerLabel(kamer, xl, laag ? zt + 0.22 : vrij * k < 96 ? zt + vrij * 0.58 : zt + vrij * 0.5, true, (x1 - x0) * (onderDak.length > 1 ? 0.8 : 0.6), laag ? 0 : vrij);
         x0 = x1;
       }
     }
@@ -505,37 +524,34 @@
     // Rechter dakvlak met panelen.
     huis.push(poly([[W / 2, -0.08, zt + R], [W + 0.14, -0.08, zt - 0.08], [W + 0.14, D + 0.08, zt - 0.08], [W / 2, D + 0.08, zt + R]], `fill="url(#${id}-dak)"`));
     // Panelen alleen als het huis ze heeft: `panelen: 0` is geen panelen.
-    if ((model.zon && model.zon.panelen !== 0) || spook(model, 'panelen')) {
-      const rijen = 2;
-      const kol = Math.max(3, Math.min(6, Math.round((model.zon?.panelen ?? 6) / rijen)));
-      for (let r = 0; r < rijen; r++) {
-        for (let c = 0; c < kol; c++) {
-          const u0 = 0.12 + r * 0.42;
-          const u1 = u0 + 0.38;
-          const v0 = 0.12 + c * ((D - 0.24) / kol);
-          const v1 = v0 + (D - 0.24) / kol - 0.06;
-          const q = (u, v) => [W - u * (W / 2) + 0.02, v, zt + u * R + 0.02];
-          const pts = [q(u0, v0), q(u0, v1), q(u1, v1), q(u1, v0)];
-          if (spook(model, 'panelen')) huis.push(poly(pts, `fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.5" stroke-dasharray="3 3"`));
-          else huis.push(poly(pts, `fill="url(#${id}-paneel)" stroke="#5b7aa0" stroke-opacity="0.6" stroke-width="0.8"`));
+    if ((model.zon && (model.zon.panelen !== 0 || (model.zon.panelenLinks ?? 0) > 0)) || spook(model, 'panelen')) {
+      // Precies zoveel panelen als er liggen (besluit 166), in rijen over het dakvlak;
+      // de onderste rij mag korter zijn. Eerst werd het afgerond op twee rijen van 3 tot 6.
+      const raster = (n, q, stijl) => {
+        const aantal = Math.max(0, Math.min(36, Math.round(n)));
+        if (!aantal) return;
+        const rijen = aantal <= 4 ? 1 : aantal <= 16 ? 2 : 3;
+        const kol = Math.ceil(aantal / rijen);
+        const hoog = (0.8 - (rijen - 1) * 0.04) / rijen;
+        const breed = (D - 0.24) / kol;
+        for (let i = 0; i < aantal; i++) {
+          const r = Math.floor(i / kol);
+          const c = i % kol;
+          const u0 = 0.12 + r * (hoog + 0.04);
+          const u1 = u0 + hoog;
+          const v0 = 0.12 + c * breed;
+          const v1 = v0 + breed - Math.min(0.06, breed * 0.15);
+          huis.push(poly([q(u0, v0), q(u0, v1), q(u1, v1), q(u1, v0)], stijl));
         }
-      }
+      };
+      raster(
+        model.zon?.panelen ?? 6,
+        (u, v) => [W - u * (W / 2) + 0.02, v, zt + u * R + 0.02],
+        spook(model, 'panelen') ? `fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.5" stroke-dasharray="3 3"` : `fill="url(#${id}-paneel)" stroke="#5b7aa0" stroke-opacity="0.6" stroke-width="0.8"`,
+      );
       // Panelen op het andere dakvlak (besluit 111): dat vlak is open om de zolder te
       // tonen, dus daar alleen de omtrek en een zweem, zodat de zolder zichtbaar blijft.
-      const links = model.zon?.panelenLinks ?? 0;
-      if (links > 0) {
-        const kolL = Math.max(2, Math.min(6, Math.round(links / rijen)));
-        for (let r = 0; r < rijen; r++) {
-          for (let c = 0; c < kolL; c++) {
-            const u0 = 0.12 + r * 0.42;
-            const u1 = u0 + 0.38;
-            const v0 = 0.12 + c * ((D - 0.24) / kolL);
-            const v1 = v0 + (D - 0.24) / kolL - 0.06;
-            const q = (u, v) => [u * (W / 2) - 0.02, v, zt + u * R + 0.02];
-            huis.push(poly([q(u0, v0), q(u0, v1), q(u1, v1), q(u1, v0)], `fill="#4d7eac" fill-opacity="0.18" stroke="#7fa6cf" stroke-opacity="0.55" stroke-width="0.8"`));
-          }
-        }
-      }
+      raster(model.zon?.panelenLinks ?? 0, (u, v) => [u * (W / 2) - 0.02, v, zt + u * R + 0.02], `fill="#4d7eac" fill-opacity="0.22" stroke="#9cc0e4" stroke-opacity="0.75" stroke-width="1"`);
       if (zonKracht > 0) {
         // Het licht dat de panelen vangen, als een glans over het dakvlak.
         const q = (u, v) => [W - u * (W / 2) + 0.03, v, zt + u * R + 0.03];
@@ -576,6 +592,9 @@
     if (model.auto || spook(model, 'auto')) bouwAuto(model.auto, spook(model, 'auto'), true);
     else if (model.oprit?.auto) bouwAuto({ stand: 'geparkeerd', kleur: model.oprit.auto.kleur }, false, false);
     if (model.oprit?.camera) bouwCamera(model.oprit.camera);
+    // Een losse garage achter de oprit, en een carport boven de auto (besluit 166).
+    if (model.garage && !model.zonderDak) bouwGarage(model.garage);
+    if (model.oprit?.carport && !model.zonderDak) bouwCarport();
     if (model.net) bouwNet();
 
     /* ---- stromen ---- */
@@ -696,9 +715,12 @@
       const r = k * (x1 - x0) * 0.55;
       if (kamer.stand === 'koelt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-koel)"/>`);
       if (kamer.stand === 'warmt') huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${r}" ry="${r * 0.6}" fill="url(#${id}-warm)"/>`);
-      // Beweging (15 oktober 2026): twee zachte ringen over de vloer, die uitdijen en vervagen.
+      // Beweging (15 oktober 2026): twee zachte ringen over de vloer, die uitdijen en
+      // vervagen. Midden op de vloer en niet groter dan de kamer (besluit 166): eerst
+      // stonden ze halverwege de achtermuur, en onder het dak zo boven de nok uit.
       if (kamer.beweging) {
-        const rb = Math.min(r * 0.7, k * 0.9);
+        const c = P(xm, D * 0.55, z0 + 0.02);
+        const rb = Math.min(k * (x1 - x0) * 0.42, k * D * 0.5, k * 0.9);
         const stil = stilGekozen();
         if (stil) huis.push(`<ellipse class="sc-beweging" cx="${c[0]}" cy="${c[1]}" rx="${rb * 0.6}" ry="${rb * 0.36}" fill="none" stroke="${KLEUR.mint}" stroke-width="2" stroke-opacity="0.7"/>`);
         else for (const vertraging of [0, 1.1]) {
@@ -863,6 +885,24 @@
       const top = vloerBoven ? z1 - (D - ay) * BY - 0.04 : z1 - 0.12;
       return { wand: 'links', ay, az: top - AIRCO.h };
     }
+    /**
+     * Waar de airco onder het dak hangt (besluit 166). Tegen de linkermuur als
+     * die hoog genoeg is, zoals bij een kamer die bij de nok begint; anders op de
+     * achtermuur, net links van de nok, want daar is de muur hoog en blijft hij
+     * in beeld. Eerst hing hij altijd links, en bij een kamer tegen de
+     * buitenmuur kwam hij zo buiten het dak terecht.
+     */
+    function aircoOnderDak(x0, x1, z0, plafond) {
+      const { b: AB, h: AH } = AIRCO;
+      if (plafond(x0 + 0.05) >= z0 + 0.95 + AH + 0.12) return { wand: 'links', ay: 0.4, az: Math.min(z0 + 0.95, plafond(x0) - AH - 0.12) };
+      // Rechts schuift de muur van de volgende kamer over de achterwand.
+      const lo = x0 + 0.1;
+      const hi = x1 - (x1 < W - 0.01 ? 0.7 : 0.12) - AB;
+      // Links van de nok: rechts ervan valt de achtermuur achter het rechter dakvlak.
+      const ax = hi < lo ? Math.max(x0 + 0.05, (x0 + x1 - AB) / 2) : Math.max(lo, Math.min(hi, W / 2 - 0.7 - AB));
+      const ruimte = Math.min(plafond(ax), plafond(ax + AB));
+      return { wand: 'achter', ax, az: Math.max(z0 + 0.3, Math.min(z0 + 0.95, ruimte - AH - 0.1)) };
+    }
     function apparaat(app, x0, x1, z0, z1, onderDak, plafond) {
       const xm = (x0 + x1) / 2;
       /** Met `opts.controle`: waar dit apparaat staat, als blok. */
@@ -873,12 +913,13 @@
       if (app.soort === 'airco') {
         const kleur = app.stand === 'warmt' ? KLEUR.gloed : KLEUR.ijs;
         const KAST = ['#eef3f7', '#dfe7ee', '#b4c0cb'];
-        if (plafond) {
+        const dakPlek = plafond ? aircoDak ?? aircoOnderDak(x0, x1, z0, plafond) : null;
+        if (dakPlek?.wand === 'links') {
           // Onder het dak tegen de linkermuur, hoog: daar is hij altijd te zien,
           // en de droger schuift naar rechts (zie hieronder).
           const { b: AB, h: AH, d: AD } = AIRCO;
-          const ay = 0.4;
-          const az = Math.min(z0 + 0.95, hoog(x0) - 0.34);
+          const ay = dakPlek.ay;
+          const az = dakPlek.az;
           plek[`airco:${app.naam ?? ''}`] = [x0 + 0.2, ay + AB / 2, az];
           blok(x0 + 0.01, x0 + 0.01 + AD, ay, ay + AB, az, az + AH);
           huis.push(doos(x0 + 0.01, ay, az, AD, AB, AH, KAST));
@@ -892,9 +933,10 @@
             }
           }
         } else {
-          // Op een gewone etage: hoog, naast het raam (besluit 131, zie aircoPlek).
+          // Op een gewone etage: hoog, naast het raam (besluit 131, zie aircoPlek);
+          // onder het dak op de achtermuur bij de nok (besluit 166).
           const { b: AB, h: AH, d: AD } = AIRCO;
-          const p = aircoPlek(dezeKamer, x0, x1, z1);
+          const p = dakPlek ?? aircoPlek(dezeKamer, x0, x1, z1);
           const az = p.az;
           if (p.wand === 'achter') {
             const ax = p.ax;
@@ -968,10 +1010,11 @@
           // Onder het dak: waar hij rechtop past, en zo ver mogelijk van het
           // midden van de kamer, waar de naam en de temperatuur staan.
           const past = (x) => Math.min(hoog(x), hoog(x + TOESTEL.b)) >= z0 + TOESTEL.h + 0.2;
-          // Hangt er een airco tegen de linkermuur, dan niet daaronder.
-          const vanaf = aircoLinks ? x0 + 0.55 : x0 + 0.1;
+          // Hangt er een airco tegen de linkermuur of op de achtermuur, dan niet daaronder.
+          const vanaf = aircoDak?.wand === 'links' ? x0 + 0.55 : x0 + 0.1;
+          const onderAirco = (x) => aircoDak?.wand === 'achter' && x < aircoDak.ax + AIRCO.b + 0.08 && x + TOESTEL.b > aircoDak.ax - 0.08;
           const plekken = [];
-          for (let x = vanaf; x <= x1 - TOESTEL.b - 0.1; x += 0.05) if (past(x)) plekken.push(x);
+          for (let x = vanaf; x <= x1 - TOESTEL.b - 0.1; x += 0.05) if (past(x) && !onderAirco(x)) plekken.push(x);
           plekken.sort((a, b) => Math.abs(b + TOESTEL.b / 2 - xm) - Math.abs(a + TOESTEL.b / 2 - xm));
           dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - TOESTEL.b - 0.1, W / 2 - TOESTEL.b / 2));
         }
@@ -1035,7 +1078,7 @@
         : gekozen
           ? [[gekozen, 0, 1]]
           : zones.map((zone, i) => [(zone && zoneSoort(zone)) ?? soortVan(kamer.naam), i / zones.length, (i + 1) / zones.length]);
-      const soorten = delen.map(([soort]) => (witgoed && soort !== 'leeg' ? 'wasruimte' : soort));
+      const soorten = delen.map(([soort]) => (witgoed && soort !== 'leeg' ? 'wasruimte' : MEUBELS_ALS[soort] ?? soort));
       // Heeft het grootste meubel de achterwand nodig, dan hangt de radiator aan de zijmuur.
       const ACHTERWAND = ['keuken', 'badkamer', 'toilet', 'woonkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'werkkamer'];
       radiatorZij = !plafond && ACHTERWAND.includes(soorten[0]) && apps.some((a) => a.soort === 'radiator');
@@ -1049,7 +1092,7 @@
         const p = aircoPlek(kamer, x0, x1, z1);
         if (p.wand === 'achter') bezet.push([p.ax - 0.05, p.ax + AIRCO.b + 0.05, p.az - 0.02 - z0]);
       }
-      if (plafond && apps.some((a) => a.soort === 'airco')) bezet.push([x0, x0 + 0.5, 0.6]);
+      if (plafond && aircoDak) bezet.push(aircoDak.wand === 'links' ? [x0, x0 + 0.5, 0.6] : [aircoDak.ax - 0.05, aircoDak.ax + AIRCO.b + 0.05, aircoDak.az - 0.02 - z0]);
       const hoogte = (x) => (plafond ? plafond(x) - z0 : z1 - z0);
       // De hanglampen, zoals apparaat() ze tekent: hun onderkant boven de vloer.
       const lampen = apps.filter((a) => a.soort === 'lamp').map((a) => {
@@ -1362,6 +1405,39 @@
       buiten.push(poly([[x + 0.301, y + 0.22, 0.15], [x + 0.301, y + 0.33, 0.15], [x + 0.301, y + 0.33, 0.95], [x + 0.301, y + 0.22, 0.95]], 'fill="#5c6977"'));
       buiten.push(poly([[x + 0.302, y + 0.22, 0.15], [x + 0.302, y + 0.33, 0.15], [x + 0.302, y + 0.33, 0.15 + 0.8 * pct], [x + 0.302, y + 0.22, 0.15 + 0.8 * pct]], `fill="${KLEUR.mint}" ${b.stand !== 'rust' ? 'class="sc-puls"' : ''}`));
     }
+    /** Een garage achter de oprit, met de deur naar voren; licht achter de deur als er een lamp aan is. */
+    function bouwGarage(gar) {
+      const x0 = -2.9;
+      const y0 = -2.0;
+      const b = 1.8;
+      const d = 1.5;
+      const h = 1.1;
+      buiten.push(doos(x0, y0, 0, b, d, h, ['#3a4656', '#2f3a48', '#46525f']));
+      // Een plat dak dat iets uitsteekt.
+      buiten.push(poly([[x0 - 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 - 0.05, y0 + d + 0.08, h]], 'fill="#55626f"'));
+      buiten.push(poly([[x0 - 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h + 0.06], [x0 - 0.05, y0 + d + 0.08, h + 0.06]], 'fill="#3d4957"'));
+      // De kanteldeur, met lamellen.
+      const yd = y0 + d + 0.001;
+      buiten.push(poly([[x0 + 0.22, yd, 0.02], [x0 + b - 0.22, yd, 0.02], [x0 + b - 0.22, yd, h - 0.18], [x0 + 0.22, yd, h - 0.18]], `fill="${gar.lampAan ? '#6b5a3c' : '#4f5c6a'}"`));
+      for (let z = 0.2; z < h - 0.2; z += 0.18) buiten.push(line([[x0 + 0.22, yd + 0.001, z], [x0 + b - 0.22, yd + 0.001, z]], 'stroke="#3b4652" stroke-width="1"'));
+      if (gar.lampAan) {
+        const c = P(x0 + b / 2, yd + 0.4, 0.02);
+        buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.28}" fill="#FFD39A" opacity="0.22" filter="url(#${id}-zacht)"/>`);
+      }
+    }
+    /** Een carport: vier palen en een plat dak boven de oprit. */
+    function bouwCarport() {
+      const x0 = -2.88;
+      const x1 = -1.08;
+      const y0 = -0.35;
+      const y1 = D + 1.4;
+      const h = 1.05;
+      // Eerst de palen achter, dan het dak, dan de palen voor: zo staat het in de diepte goed.
+      for (const [x, y] of [[x0, y0], [x1, y0]]) buiten.push(doos(x, y, 0, 0.06, 0.06, h, ['#9aa7b4', '#8592a0', '#6f7c8a']));
+      buiten.push(poly([[x0 - 0.04, y0 - 0.05, h], [x1 + 0.1, y0 - 0.05, h], [x1 + 0.1, y1 + 0.1, h], [x0 - 0.04, y1 + 0.1, h]], 'fill="#5b6a7a" fill-opacity="0.5" stroke="#9aa7b4" stroke-opacity="0.6" stroke-width="1"'));
+      buiten.push(poly([[x0 - 0.04, y1 + 0.1, h], [x1 + 0.1, y1 + 0.1, h], [x1 + 0.1, y1 + 0.1, h + 0.07], [x0 - 0.04, y1 + 0.1, h + 0.07]], 'fill="#4a5868"'));
+      for (const [x, y] of [[x0, y1], [x1, y1]]) buiten.push(doos(x, y, 0, 0.06, 0.06, h, ['#9aa7b4', '#8592a0', '#6f7c8a']));
+    }
     function bouwAuto(a, isSpook, metPaal) {
       // Een laadpaal en een auto op de oprit, links voor het huis.
       const px = -0.95;
@@ -1548,6 +1624,11 @@
     const vlakTerras = [[W + 0.3, 0.45, 0.01], [W + 2.05, 0.45, 0.01], [W + 2.05, D + 0.4, 0.01], [W + 0.3, D + 0.4, 0.01]];
     const vlakVoortuin = [[1.3, D + 0.3, 0.01], [W + 0.1, D + 0.3, 0.01], [W + 0.1, D + 1.7, 0.01], [1.3, D + 1.7, 0.01]];
     const vlakBalkon = [[W, 0.35, FH], [W + 0.55, 0.35, FH], [W + 0.55, 1.15, FH], [W, 1.15, FH]];
+    // Het tuinhuis zelf, als het een eigen ruimte in Home Assistant is (besluit 166): de omtrek van het huisje.
+    const th = [W + 0.85, -1.75];
+    const vlakTuinhuis = [[th[0], th[1] + 0.95, 0], [th[0] + 1.05, th[1] + 0.95, 0], [th[0] + 1.05, th[1], 0], [th[0] + 1.05, th[1], 0.88], [th[0], th[1], 0.88], [th[0], th[1] + 0.95, 0.88]];
+    const tuinhuis = model.tuin && model.tuin.tuinhuis !== false && model.tuin.tuinhuisId ? { id: model.tuin.tuinhuisId, naam: model.tuin.tuinhuisNaam ?? 'Tuinhuis', gekozen: model.tuin.tuinhuisGekozen } : null;
+    const vlakGarage = [[-2.9, -0.5, 0], [-1.1, -0.5, 0], [-1.1, -2.0, 0], [-1.1, -2.0, 1.1], [-2.9, -2.0, 1.1], [-2.9, -0.5, 1.1]];
     const metBalkon = model.balkon && g.etages.filter((e) => !e.dak).length >= 2 ? model.balkon : null;
     for (const [deel, vlak, midden] of [
       [model.oprit, vlakOprit, [-2.02, D + 0.65, 0]],
@@ -1555,6 +1636,10 @@
       [model.terras, vlakTerras, [W + 1.18, D / 2 + 0.4, 0]],
       [model.voortuin, vlakVoortuin, [(1.3 + W) / 2, D + 1.0, 0]],
       [metBalkon, vlakBalkon, [W + 0.28, 0.75, FH]],
+      // Na de tuin: het huisje ligt erbovenop.
+      [tuinhuis, vlakTuinhuis, [th[0] + 0.5, th[1] + 1.2, 0]],
+      // Na de oprit: de garage staat erachter, maar ligt in beeld deels over de oprit.
+      [model.zonderDak ? null : model.garage, vlakGarage, [-2.0, -0.2, 0]],
     ]) {
       if (!deel) continue;
       if (deel.gekozen) grond.push(poly(vlak, `fill="${KLEUR.ijs}" fill-opacity="0.06" stroke="${KLEUR.ijs}" stroke-width="2" stroke-dasharray="7 5"`));

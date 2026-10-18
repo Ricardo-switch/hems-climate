@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 17 oktober 2026.*
+*Stand: 18 oktober 2026.*
 
 ## Waar het project staat
 
@@ -251,7 +251,17 @@ verwijzing bestaat.
 - **Het scherm aan de wand** (bij Bewoners een scherm) is als niemand kijkt
   een always-on display: overdag de dagstand, na zonsondergang gedimd. 's Nachts
   en als niemand thuis is gaat het uit na een tijd zonder beweging; beweging
-  zet het weer aan, een tik of "Hé huis" opent de app ([164], [165]).
+  zet het weer aan, een tik of "Hé huis" opent de app ([164], [165]). Draait
+  de droger, dan staat hij erop, en zegt Thuis dat hij draait ([166]).
+- **Negentien punten van de bewoner** ([166]): de assistent zegt "niet
+  begrepen" één keer en stopt daarna stil bij ruis, noemt hardop voorbeelden,
+  zegt "ep" en kent het weer van vandaag. Het huis tekent golven op de vloer,
+  de airco onder het dak binnen het dak, precies zoveel panelen per kant, een
+  tuinhuis om op te tikken, een garage en een carport. Inrichten past op elk
+  scherm, scheidt apparaten en klimaat, verplaatst apparaten en kamers (ook
+  door te slepen in het huis), heeft buiten één lijst met delen en bewoners om
+  aan te tikken. Een scherm stel je in vanaf elk apparaat, en de wand heeft
+  pijltjes en "+ Kaart".
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -514,4 +524,5 @@ verwijzing bestaat.
 [163]: DECISIONS.md#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm
 [164]: DECISIONS.md#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account
 [165]: DECISIONS.md#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit
+[166]: DECISIONS.md#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand
 <!-- links:einde -->

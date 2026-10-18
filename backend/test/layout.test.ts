@@ -141,8 +141,11 @@ describe('de indeling toetsen', () => {
   });
 
   it('bewaart wat er rond het huis is, elk deel ja of nee (besluit 158)', () => {
-    const rond = { oprit: true, auto: true, voortuin: false, tuin: true, terras: true, balkon: false, tuinhuis: true };
+    const rond = { oprit: true, auto: true, voortuin: false, tuin: true, terras: true, balkon: false, tuinhuis: true, garage: true, carport: false };
     expect(validateLayout({ ...good, rond }, known)).toMatchObject({ ok: true, layout: { rond } });
+    // Een indeling van voor garage en carport (besluit 166): die heeft ze niet.
+    const { garage: _g, carport: _c, ...oud } = rond;
+    expect(validateLayout({ ...good, rond: oud }, known)).toMatchObject({ ok: true, layout: { rond: { ...oud, garage: false, carport: false } } });
     // Weg is: de buitenruimtes zeggen het.
     const zonder = validateLayout(good, known);
     expect(zonder.ok && 'rond' in zonder.layout).toBe(false);

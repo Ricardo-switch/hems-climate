@@ -120,6 +120,8 @@ const HEAD = {
     waitSunWhy: (rooms: string, many: boolean) => `${cap(rooms)} ${many ? 'willen' : 'wil'} koelen zodra er genoeg zon over is.`,
     waitOther: 'Er wacht iets',
     nothing: 'Er draait niets',
+    // Een droger of wasmachine draait, en het klimaat is rustig (besluit 166).
+    running: (names: string, many: boolean) => `${cap(names)} ${many ? 'draaien' : 'draait'}`,
     nothingSun: 'Geen kamer heeft iets nodig.',
     nothingDark: 'Geen zon, en geen kamer heeft iets nodig.',
     and: ' en de ',
@@ -156,6 +158,7 @@ const HEAD = {
     waitSunWhy: (rooms: string) => `${cap(rooms)} will cool as soon as there is enough solar to spare.`,
     waitOther: 'Something is waiting',
     nothing: 'Nothing is running',
+    running: (names: string, many: boolean) => `${cap(names)} ${many ? 'are' : 'is'} running`,
     nothingSun: 'No room needs anything.',
     nothingDark: 'No sun, and no room needs anything.',
     and: ' and the ',
@@ -217,7 +220,11 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
     return { boven, titel: w.waitSun, zin: w.waitSunWhy(joinRooms(waiting.map(({ name }) => mid(name)), lang), waiting.length > 1) };
   }
   const solar = e.solarProductionW;
-  return { boven, titel: w.nothing, zin: solar != null && solar > 30 ? w.nothingSun : w.nothingDark };
+  const zin = solar != null && solar > 30 ? w.nothingSun : w.nothingDark;
+  // Geen kamer heeft iets nodig, maar de droger draait: dan niet "Er draait niets" (besluit 166).
+  const draait = (e.deferrables ?? []).filter((d) => d.state === 'running').map((d) => config.deferrables?.find((x) => x.id === d.id)?.name ?? d.id);
+  if (draait.length > 0) return { boven, titel: w.running(joinRooms(draait.map((n) => mid(n)), lang), draait.length > 1), zin };
+  return { boven, titel: w.nothing, zin };
 }
 
 export function residentFlows(snap: DecisionView): ResidentFlows {

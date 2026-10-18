@@ -367,6 +367,14 @@ describe('morgen en kosten (besluit 142)', () => {
     expect(askNl({ kind: 'morgen' }).antwoord).toBe('Voor morgen heb ik nog geen weersverwachting.');
   });
 
+  it('zegt het weer en de zon van vandaag, niet die van morgen (besluit 166)', () => {
+    const weer = { opgewektKwh: 1.2, verwachtKwh: 2.1, voorafKwh: 2.5, vandaag: { tekst: 'Half bewolkt', minC: 9.4, maxC: 12.6, regenkansPct: 10 }, morgen: { tekst: 'Zonnig', minC: 8, maxC: 15, regenkansPct: 0, verwachtKwh: 7.9 } };
+    const a = askNl({ kind: 'weer' }, view(), { weer });
+    expect(a.antwoord).toBe('Vandaag is het half bewolkt, tussen 9,4° en 12,6°. Waarschijnlijk blijft het droog. Van je dak verwacht ik vandaag 2,1 kWh, 1,2 kWh is er al.');
+    expect(a.antwoord).not.toContain('7,9');
+    expect(askNl({ kind: 'weer' }).antwoord).toBe('Voor vandaag heb ik geen weersverwachting.');
+  });
+
   it('zegt wat de apparaten deze maand kostten, en dat alleen het net telt', () => {
     const kosten = {
       maand: 'oktober',
@@ -475,6 +483,7 @@ describe('elk getal heeft een bron, in elke toestand', () => {
         { kind: 'zon' },
         { kind: 'vandaag' },
         { kind: 'warm' },
+        { kind: 'weer' },
         { kind: 'morgen' },
         { kind: 'kosten' },
         ...config.zones.map((z) => ({ kind: 'waarom' as const, kamer: z.name })),
@@ -509,6 +518,7 @@ describe('elk getal heeft een bron, in elke toestand', () => {
             opgewektKwh: zonWh / 1000,
             verwachtKwh: num(0, 40),
             voorafKwh: num(0, 40),
+            vandaag: k.chance(0.2) ? null : { tekst: k.pick([null, 'Zonnig', 'Bewolkt met regen']), minC: num(-10, 20), maxC: num(-5, 35), regenkansPct: num(0, 100) },
             morgen: k.chance(0.2) ? null : { tekst: k.pick([null, 'Zonnig', 'Bewolkt met regen']), minC: num(-10, 20), maxC: num(-5, 35), regenkansPct: num(0, 100), verwachtKwh: num(0, 40) },
           };
       const kosten = k.chance(0.2)
@@ -604,6 +614,14 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
   it('zegt "er draait niets" als geen kamer iets wil', () => {
     const kop = residentView(config, view({ explanation: explanation({ perZone: explanation().perZone.map((z) => ({ ...z, demand: 'none', reason: 'zone_satisfied' })) }) })).kop;
     expect(kop.titel).toBe('Er draait niets');
+    expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
+  });
+
+  it('zegt dat de droger draait, niet "er draait niets" (besluit 166)', () => {
+    const met = { ...config, deferrables: [{ id: 'droger', name: 'Droger' }] } as unknown as typeof config;
+    const perZone = explanation().perZone.map((z) => ({ ...z, demand: 'none' as const, reason: 'zone_satisfied' as const }));
+    const kop = residentView(met, view({ explanation: explanation({ perZone, deferrables: [{ id: 'droger', state: 'running', reason: 'program_running' }] }) })).kop;
+    expect(kop.titel).toBe('De droger draait');
     expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
   });
 
