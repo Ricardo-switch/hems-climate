@@ -2352,15 +2352,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
     expect(await tikken()).toBe(1);
 
-    // Op een telefoon ook het hele scherm: de statusbalk mag weg (versie 0.34.2).
-    const telefoon = (aan: boolean) => p.evaluate(`document.getElementById('app').style.width = '${aan ? 390 : 1280}px'`);
-    const telStand = () => frame.evaluate<boolean>('document.documentElement.classList.contains("tel-stand")');
+    // Een telefoon nooit het hele scherm van de browser, ook liggend: alleen de kioskstand,
+    // zodat hij eruitziet als de app van de NAS, met de statusbalk erboven (versie 0.34.3).
+    const telefoon = (aan: boolean) =>
+      frame.evaluate(aan ? "Object.defineProperty(screen, 'width', { value: 390, configurable: true }); Object.defineProperty(screen, 'height', { value: 844, configurable: true })" : 'delete screen.width; delete screen.height');
     await telefoon(true);
-    await expect.poll(telStand).toBe(true);
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
-    expect(await tikken()).toBe(1);
+    expect(await tikken()).toBe(0);
     await telefoon(false);
-    await expect.poll(telStand).toBe(false);
 
     // Naar Home Assistant: je blijft in de app, het volledige scherm en de kioskstand gaan uit,
     // en je kiest in Home Assistant zelf waar je heen gaat. Op de telefoon naast het tandwiel.

@@ -6714,6 +6714,13 @@ Rechtop op de telefoon stond de knop er niet, want daar is geen balk. Nu:
   later opnieuw (een nieuw vak), dan is het volledige scherm er weer.
 - **Op de telefoon** staat de knop rechtsboven op Thuis en Apparaten, naast
   het tandwiel. Op de wand blijft hij boven de bel.
+- **Een telefoon krijgt nooit het hele scherm van de browser,** ook liggend
+  niet; alleen de kioskstand. Met het hele scherm schoof de statusbalk na de
+  terugknop over de pagina, en was hij er op de ene pagina wel en op de andere
+  niet. Nu ziet de app er in Home Assistant uit als de geïnstalleerde app van
+  de NAS: de statusbalk erboven, de pagina eronder. Een telefoon is een scherm
+  met een kortste kant onder 600. Het volledige scherm in de instellingen van
+  de app van Home Assistant zelf hoort daarvoor uit te staan.
 
 ---
 

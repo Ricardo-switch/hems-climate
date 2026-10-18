@@ -413,9 +413,17 @@
       return null;
     }
   }
+  /**
+   * Een telefoon krijgt nooit het hele scherm van de browser, alleen de
+   * kioskstand: dan ziet hij eruit als de app van de NAS, met de statusbalk
+   * erboven. Met het hele scherm schoof de statusbalk na de terugknop over de
+   * pagina, of was hij er op de ene pagina wel en op de andere niet. Een
+   * telefoon is een scherm met een kortste kant onder 600, ook liggend.
+   */
+  const isTelefoon = () => Math.min(global.screen?.width ?? 0, global.screen?.height ?? 0) < 600;
   function heelScherm(e) {
     // De eerste tik is Naar Home Assistant: dan juist niet.
-    if (e?.target?.closest?.('[data-naar-ha]')) return;
+    if (e?.target?.closest?.('[data-naar-ha]') || isTelefoon()) return;
     const doc = haDocument();
     if (doc && volledigNu() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
@@ -430,6 +438,8 @@
     doc?.addEventListener('fullscreenchange', weer);
     // Het document van Home Assistant blijft; de luisteraar gaat mee met deze pagina.
     addEventListener('pagehide', () => doc?.removeEventListener('fullscreenchange', weer));
+    // Een telefoon die het hele scherm nog had van een eerdere versie: weer met statusbalk.
+    if (isTelefoon() && doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     if (!volledigNu()) return;
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     opTik();
