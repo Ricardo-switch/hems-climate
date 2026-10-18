@@ -44,6 +44,7 @@ import { LayoutStore } from '../src/web/layout.js';
 import { FunctiesStore, functiesGevonden } from '../src/web/functies.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
+import { VoorkeurenStore } from '../src/web/voorkeuren.js';
 import { WeatherLog } from '../src/web/weather.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
@@ -316,6 +317,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
             m.bij({ nu: Date.now(), zonderRuimte: [], volgen: [{ id: 'switch.droger', naam: 'De droger', kamer: 'Zolder', kamerId: 'zolder', onbereikbaarSindsMs: Date.now() - 2 * 3_600_000 }], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null });
             return m;
           })(),
+          // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
+          voorkeuren: new VoorkeurenStore(dir),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
           layout: { store: layoutStore, proposal: () => proposeLayout(exampleSite, houseRegisters, houseStates) },
@@ -1376,7 +1379,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kamers.first().getAttribute('href')).toBe(`kamer.html#${encodeURIComponent(metTemperatuur[0]!.id)}`);
 
     // Onder de kamers, in deze volgorde: Straks, het apparaat, Hoe voelt het, Vandaag.
-    const volgorde = ['[data-kamers]', '[data-straks]', '[data-apparaatkaart]', '[data-gevoel-kaart]', 'a[href="vandaag.html"]'];
+    const volgorde = ['[data-kaart="kamers"]', '[data-straks]', '[data-apparaatkaart]', '[data-gevoel-kaart]', 'a[href="vandaag.html"]'];
     const tops: number[] = [];
     for (const sel of volgorde) {
       const v = await vak(`#tel .inhoud > ${sel}`);
@@ -1404,6 +1407,134 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
+
+  /*
+   * Thuis naar eigen smaak (besluit 162, schetsen Thuis-Tel-Eigen en
+   * Wand-Thuis-Eigen): op de telefoon een kaart schuiven aan de greep,
+   * verbergen met het oog en er een bij zetten; favorieten kiezen en met één
+   * tik schakelen; en de wand met vier vakken, die de hoofdgebruiker aanpast.
+   * Alles staat daarna bij de dienst, en komt terug na opnieuw laden.
+   */
+  it('past Thuis aan op de telefoon en de wand, met favorieten (besluit 162)', async () => {
+    type Voorkeuren = { tel: { kaarten: string[]; favorieten: { id: string }[] }; wand: { kaarten: string[]; magAanpassen: boolean } };
+    const voorkeuren = async () => (await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as Voorkeuren;
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const volgorde = () => p.locator('#tel [data-kaarten] > [data-kaart]:not([data-uit])').evaluateAll((els) => els.map((e) => e.getAttribute('data-kaart')));
+    try {
+      await p.goto(`${baseUrl}/thuis.html`);
+      await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      expect((await volgorde()).slice(0, 2)).toEqual(['kamers', 'favorieten']);
+
+      // Favorieten kiezen: nog leeg, dus een knop Kiezen; een lamp en een scène.
+      await p.locator('#tel [data-kaart="favorieten"] [data-fav-kies]').click();
+      const blad = p.locator('[data-kiesblad]');
+      await blad.waitFor();
+      await blad.locator('[data-fav-soort="lamp"]').first().click();
+      await blad.locator('[data-fav-soort="scene"]').first().click();
+      expect(await blad.locator('[data-fav-teller]').textContent()).toContain('2 van 4');
+      await blad.locator('[data-fav-klaar]').click();
+      await blad.waitFor({ state: 'hidden' });
+      await expect.poll(async () => (await voorkeuren()).tel.favorieten.length).toBe(2);
+      const tegels = p.locator('#tel [data-kaart="favorieten"] [data-tegel]');
+      await expect.poll(() => tegels.count()).toBe(2);
+      // Eén tik: de lamp schakelt, via dezelfde deur als in een kamer.
+      const lampId = (await voorkeuren()).tel.favorieten[0]!.id;
+      const voor = lightCalls.length;
+      const lamp = tegels.and(p.locator('[data-soort="lamp"]'));
+      const was = await lamp.getAttribute('aria-pressed');
+      await lamp.click();
+      await expect.poll(() => lightCalls.slice(voor).join('|')).toContain(was === 'true' ? 'turn_off' : 'turn_on');
+      expect(lightCalls.slice(voor).join('|')).toContain(lampId);
+      expect(await lamp.getAttribute('aria-pressed')).toBe(String(was !== 'true'));
+      const scenesVoor = sceneCalls.length;
+      await tegels.and(p.locator('[data-soort="scene"]')).click();
+      await expect.poll(() => sceneCalls.length).toBe(scenesVoor + 1);
+
+      // Aanpassen: een greep en een oog op elke kaart.
+      await p.locator('#tel [data-aanpassen]').click();
+      expect(await p.evaluate<boolean>("document.body.classList.contains('aanpassen')")).toBe(true);
+      await p.locator('#tel [data-bewerkbalk]').waitFor();
+      // Hoe voelt het naar boven slepen, boven de kamers.
+      // Zoals een duim: de greep pakken, naar boven, en aan de rand schuift de pagina mee.
+      const greep = p.locator('#tel [data-kaart="gevoel"] [data-greep]');
+      await greep.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      const g = (await greep.boundingBox())!;
+      const x = g.x + g.width / 2;
+      await p.mouse.move(x, g.y + g.height / 2);
+      await p.mouse.down();
+      for (let i = 1; i <= 10; i++) await p.mouse.move(x, g.y + g.height / 2 - ((g.y - 40) * i) / 10);
+      for (let i = 0; i < 30; i++) await p.mouse.move(x, 40 - (i % 2));
+      await p.mouse.up();
+      await expect.poll(async () => (await voorkeuren()).tel.kaarten[0]).toBe('gevoel');
+      expect((await volgorde())[0]).toBe('gevoel');
+      // Met de pijltjes kan het ook: Vandaag één omhoog.
+      const lijst = await volgorde();
+      await p.locator('#tel [data-kaart="vandaag"] [data-greep]').focus();
+      await p.keyboard.press('ArrowUp');
+      const verwacht = [...lijst];
+      const iv = verwacht.indexOf('vandaag');
+      [verwacht[iv - 1], verwacht[iv]] = [verwacht[iv]!, verwacht[iv - 1]!];
+      await expect.poll(async () => (await voorkeuren()).tel.kaarten).toEqual(verwacht);
+      // In de bewerkstand doet een kaart zelf niets.
+      await p.locator('#tel [data-kaart="vandaag"] .kaart-kop h2').click();
+      await p.locator('#tel [data-kaart="vandaag"] [data-oog]').click();
+      await p.waitForTimeout(300);
+      expect(new URL(p.url()).pathname).toBe('/thuis.html');
+      // Vandaag is verborgen met het oog; via + Kaart komt het weer van morgen erbij.
+      await expect.poll(async () => (await voorkeuren()).tel.kaarten.includes('vandaag')).toBe(false);
+      expect(await p.locator('#tel [data-kaart="vandaag"]').isVisible()).toBe(false);
+      await p.locator('#tel [data-kaart-erbij]').click();
+      await blad.waitFor();
+      expect(await blad.locator('[data-erbij]').evaluateAll((els) => els.map((e) => e.getAttribute('data-erbij')))).toEqual(expect.arrayContaining(['vandaag', 'morgen']));
+      await blad.locator('[data-erbij="morgen"]').click();
+      await expect.poll(async () => (await voorkeuren()).tel.kaarten.at(-1)).toBe('morgen');
+      await p.locator('#tel [data-bewerkbalk] [data-klaar]').click();
+      expect(await p.evaluate<boolean>("document.body.classList.contains('aanpassen')")).toBe(false);
+      await p.locator('#tel [data-kaart="morgen"]').waitFor();
+      // Na opnieuw laden staat alles nog zo.
+      await p.reload();
+      await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await expect.poll(async () => (await volgorde())[0]).toBe('gevoel');
+      expect(await p.locator('#tel [data-kaart="vandaag"]').isVisible()).toBe(false);
+      expect(await p.locator('#tel [data-kaart="morgen"]').isVisible()).toBe(true);
+
+      // De wand: vier vakken, en het potlood voor wie hem mag aanpassen.
+      await p.setViewportSize({ width: 1340, height: 800 });
+      await expect.poll(() => p.evaluate<boolean>("document.documentElement.classList.contains('tel-stand')")).toBe(false);
+      expect((await voorkeuren()).wand.magAanpassen).toBe(true);
+      await p.locator('#wand [data-aanpassen]').click();
+      await p.locator('#wand [data-bewerkkop]').waitFor();
+      // Vandaag (2), Hoe voelt het en het apparaat: de wand is vol, dus geen vrij vak.
+      expect(await p.locator('#wand [data-vrijvak]').isVisible()).toBe(false);
+      await p.locator('#wand [data-kaart="gevoel"] [data-oog]').click();
+      await p.locator('#wand [data-vrijvak]').click();
+      await blad.waitFor();
+      expect(await blad.textContent()).toContain('één vak vrij');
+      await blad.locator('[data-erbij="favorieten"]').click();
+      await expect.poll(async () => (await voorkeuren()).wand.kaarten).toEqual(['vandaag', 'apparaat', 'favorieten']);
+      await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
+      // De wand heeft zijn eigen favorieten: nog geen, dus een knop om te kiezen. Staat
+      // Straks bovenin, dan is de wand vol en wijkt de onderste kaart, Favorieten, even.
+      await p.locator('#wand [data-kaart="favorieten"] [data-fav-kies]').waitFor({ state: 'attached' });
+      const straksErbij = await p.locator('#wand [data-straks]').isVisible();
+      await expect.poll(() => p.locator('#wand [data-kaart="favorieten"]').isVisible()).toBe(!straksErbij);
+      if (straksErbij) expect(await p.locator('#wand [data-kaart="favorieten"]').getAttribute('data-wijkt')).toBe('');
+      // De wand schuift nooit.
+      expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
+      expect(fouten).toEqual([]);
+    } finally {
+      // Terug zoals het was, voor de tests hierna.
+      const terug = (body: unknown) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify(body) });
+      await terug({ plek: 'tel', kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] });
+      await terug({ plek: 'wand', kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [] });
+      await context.close();
+    }
+  }, 60_000);
 
   /*
    * Apparaten in ontwerp 2 (besluit 104; schets Wand-Apparaten): de droger die

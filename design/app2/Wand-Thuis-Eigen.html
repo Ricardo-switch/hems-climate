@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis naar eigen smaak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De wand naar eigen smaak (schets, 18 oktober 2026). De wand heeft een eigen
+   * account; alleen de hoofdgebruiker (en een beheerder) past hem aan, voor
+   * iedereen. De rechterkolom heeft vier vakken, want de wand schuift nooit; een
+   * kaart is één of twee vakken hoog.
+   *   (zonder)    zo staat hij erbij: Favorieten, Vandaag en Hoe voelt het
+   *   #aanpassen  de bewerkstand: schuiven aan de greep, verbergen met het oog
+   *   #kiezen     een vak is vrij: kies wat erin komt
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 360px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
+  .groet b { color: var(--tekst); }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  /* Vier vakken van 160 hoog; een kaart van twee vakken is 334. */
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: grid; grid-template-rows: repeat(4, 160px); gap: 14px; }
+  .kaart { padding: 16px 18px; position: relative; overflow: hidden; }
+  .twee-vak { grid-row: span 2; }
+  .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel span { height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .koud { background: rgba(111, 211, 255, 0.14); color: #a9e6ff; }
+  .goed { background: rgba(110, 231, 183, 0.14); color: var(--mint); }
+  .warm { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
+  .gevoelkamers { display: flex; gap: 6px; margin-top: 8px; }
+  .gevoelkamers span { height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; }
+  .gevoelkamers span.aan { background: var(--tekst); color: #0b1424; }
+  .dok { position: absolute; left: 22px; right: 414px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  .dok .vraag b { color: var(--tekst); }
+
+  /* Favorieten op de wand: vier tegels in één vak. */
+  .tegels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tegel { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.06); font-weight: 700; font-size: 14px; }
+  .tegel .ik { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); flex: none; }
+  .tegel .ik svg { width: 17px; height: 17px; }
+  .tegel.aan { background: linear-gradient(150deg, rgba(255, 196, 120, 0.2), rgba(255, 196, 120, 0.05)); border-color: rgba(255, 196, 120, 0.35); }
+  .tegel.aan .ik { background: #ffc478; color: #3a2408; box-shadow: 0 0 16px rgba(255, 196, 120, 0.5); }
+
+  /* De bewerkstand. */
+  .bewerkkop { display: none; position: absolute; left: 50%; top: 18px; transform: translateX(-50%); height: 52px; border-radius: 26px; align-items: center; gap: 14px; padding: 0 8px 0 20px; background: rgba(9, 15, 28, 0.94); border: 1px solid rgba(169, 230, 255, 0.4); z-index: 10; font-size: 15px; white-space: nowrap; }
+  .bewerkkop .knop { height: 38px; padding: 0 16px; font-size: 14px; display: inline-flex; align-items: center; }
+  body.bewerk .bewerkkop { display: flex; }
+  body.bewerk .kopregel, body.bewerk .titel, body.bewerk .podium, body.bewerk .dok { opacity: 0.3; }
+  body.bewerk [data-kaart] { outline: 2px dashed rgba(169, 230, 255, 0.5); outline-offset: 3px; overflow: visible; }
+  .greep, .oog, .maat { display: none; position: absolute; top: -13px; z-index: 3; height: 30px; border-radius: 999px; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; }
+  .greep { right: 56px; padding: 0 10px; background: #a9e6ff; color: #0b1424; gap: 5px; }
+  .oog { right: 12px; width: 36px; background: #1c2840; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--tekst); }
+  .maat { left: 14px; padding: 0 10px; background: #1c2840; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--zacht); }
+  .oog svg, .greep svg { width: 16px; height: 16px; }
+  body.bewerk .greep, body.bewerk .oog, body.bewerk .maat { display: inline-flex; }
+  .vrij { display: none; border-radius: 24px; border: 2px dashed rgba(169, 230, 255, 0.5); color: #a9e6ff; font-weight: 700; font-size: 15px; align-items: center; justify-content: center; gap: 8px; }
+  body.bewerk .vrij { display: flex; }
+  body.bewerk [data-weg] { display: none; }
+  .noot { display: none; position: absolute; left: 22px; top: 96px; width: 420px; z-index: 10; padding: 14px 16px; border-radius: 18px; background: rgba(9, 15, 28, 0.9); border: 1px solid var(--glas-rand); font-size: 14px; color: var(--zacht); line-height: 1.45; }
+  .noot b { color: var(--tekst); }
+  body.bewerk .noot { display: block; }
+  body[data-toon='kiezen'] .noot { display: none; }
+  body.bewerk .kaart-kop .mini { visibility: hidden; }
+
+  /* Kiezen wat er in een vak komt. */
+  .kiezer { display: none; position: absolute; right: 392px; top: 150px; width: 400px; z-index: 12; padding: 16px 18px; border-radius: 24px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); }
+  body[data-toon='kiezen'] .kiezer { display: block; }
+  .kiezer h2 { margin: 0 0 6px; }
+  .keus { display: grid; grid-template-columns: 36px 1fr auto; gap: 1px 12px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .keus .ik { grid-row: 1 / 3; width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .keus .ik svg { width: 19px; height: 19px; }
+  .keus b { font-size: 15px; }
+  .keus small { grid-column: 2; font-size: 12.5px; color: var(--gedempt); }
+  .keus .past { grid-column: 3; grid-row: 1 / 3; font-size: 12px; font-weight: 700; color: #a9e6ff; padding: 6px 10px; border-radius: 999px; background: rgba(169, 230, 255, 0.12); }
+  .keus .past.niet { color: var(--gedempt); background: rgba(255, 255, 255, 0.05); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">12:41</span><span class="datum">zondag 18 oktober</span></div>
+      <div class="chips">
+        <span class="pil"><span class="stip" style="background: var(--zon)"></span>17° buiten</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+        <span class="pil" style="width: 34px; padding: 0; justify-content: center; color: var(--zacht)" title="De wand aanpassen" id="potlood"></span>
+        <span class="pil" style="width: 34px; padding: 0; justify-content: center; font-weight: 800; color: var(--zacht)">?</span>
+      </div>
+    </div>
+
+    <div class="titel">
+      <span class="groet">Goedemiddag, <b>Ricardo</b> en <b>Shira</b></span>
+      <h1 class="kop-1">Het huis koelt op zon</h1>
+      <p class="lead">De woonkamer koelt, de droger draait en de auto laadt mee.</p>
+    </div>
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart" data-kaart>
+        <span class="maat">1 vak</span><span class="greep"></span><span class="oog"></span>
+        <div class="kaart-kop"><h2 class="kop-3">Favorieten</h2><span class="mini">Tik om te schakelen</span></div>
+        <div class="tegels">
+          <div class="tegel"><span class="ik" data-icoon="film"></span>Film</div>
+          <div class="tegel"><span class="ik" data-icoon="maan"></span>Slapen</div>
+          <div class="tegel aan"><span class="ik" data-icoon="lamp"></span>Eettafel</div>
+          <div class="tegel"><span class="ik" data-icoon="lamp"></span>Buitenlamp</div>
+        </div>
+      </section>
+
+      <section class="glas kaart twee-vak" data-kaart>
+        <span class="maat">2 vakken</span><span class="greep"></span><span class="oog"></span>
+        <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini">9,8 kWh, verwacht 14,2</span></div>
+        <svg viewBox="0 0 312 190" width="312" height="190" aria-label="De zon van vandaag">
+          <defs><linearGradient id="zonvlak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
+          <path d="M8 120 C 50 118, 70 40, 120 24 S 190 26, 226 70 S 280 120, 304 120" fill="none" stroke="#F7B548" stroke-opacity="0.35" stroke-dasharray="2 4"/>
+          <path d="M8 120 C 50 118, 70 40, 120 24 S 160 20, 168 22 L 168 120 Z" fill="url(#zonvlak)"/>
+          <path d="M8 120 C 50 118, 70 40, 120 24 S 160 20, 168 22" fill="none" stroke="#F7B548" stroke-width="2"/>
+          <line x1="168" y1="14" x2="168" y2="176" stroke="#EEF3F7" stroke-opacity="0.6"/>
+          <text x="168" y="10" fill="#B8C4CF" font-size="10" text-anchor="middle" font-family="Figtree">nu</text>
+          <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">
+            <text x="8" y="140">Woonkamer</text><rect x="96" y="133" width="72" height="7" rx="3.5" fill="#6FD3FF"/>
+            <text x="8" y="155">Droger</text><rect x="144" y="148" width="24" height="7" rx="3.5" fill="#F7B548"/>
+            <text x="8" y="170">Auto</text><rect x="132" y="163" width="36" height="7" rx="3.5" fill="#6EE7B7"/>
+          </g>
+          <g font-family="Figtree" font-size="10" fill="#7F8E9C"><text x="8" y="188">06</text><text x="112" y="188">12</text><text x="214" y="188">18</text><text x="292" y="188">22</text></g>
+        </svg>
+        <p class="mini" style="margin: 4px 0 0">81% zelf gebruikt. Gestippeld: de verwachting.</p>
+      </section>
+
+      <section class="glas kaart" data-kaart data-weg>
+        <span class="maat">1 vak</span><span class="greep"></span><span class="oog"></span>
+        <h2 class="kop-3">Hoe voelt het nu?</h2>
+        <div class="gevoelkamers"><span class="aan">Woonkamer 24,1°</span><span>Zolder 25,1°</span><span>Badkamer</span></div>
+        <div class="gevoel"><span class="koud">Te koud</span><span class="goed">Goed</span><span class="warm">Te warm</span></div>
+      </section>
+      <div class="vrij">+ Kaart kiezen</div>
+    </aside>
+
+    <div class="dok">
+      <span class="bol adem" style="width: 46px; height: 46px"></span>
+      <span class="vraag">Zeg <b>„Hé huis”</b> of tik om iets te vragen</span>
+      <span class="pil">Wat doe je nu?</span>
+      <span class="pil">Hoeveel zon vandaag?</span>
+    </div>
+
+    <div class="bewerkkop"><span>Je past de wand aan <b>voor iedereen in huis</b></span><span class="knop knop-licht">Klaar</span></div>
+    <div class="noot"><b>Straks</b> schuift er vanzelf bovenin bij als het huis op zon wacht; de onderste kaart wijkt dan even. Schuif aan de greep, het oog verbergt een kaart.</div>
+
+    <section class="kiezer" aria-label="Kaart kiezen">
+      <h2 class="kop-2">Wat komt in dit vak?</h2>
+      <p class="mini" style="margin: 0 0 6px">Er is één vak vrij.</p>
+      <div class="keus"><span class="ik" data-icoon="gevoel"></span><b>Hoe voelt het nu?</b><span class="past">1 vak</span><small>Verborgen; terugzetten</small></div>
+      <div class="keus"><span class="ik" data-icoon="droger"></span><b>Het apparaat dat draait</b><span class="past">1 vak</span><small>Nu de droger, klaar rond 13:15</small></div>
+      <div class="keus"><span class="ik" data-icoon="wolk"></span><b>Het weer van morgen</b><span class="past">1 vak</span><small>17°, half bewolkt, 11 kWh van je dak</small></div>
+      <div class="keus"><span class="ik" data-icoon="auto"></span><b>De auto</b><span class="past">1 vak</span><small>62%, laadt op zon, vol rond 16:30</small></div>
+      <div class="keus"><span class="ik" data-icoon="bel"></span><b>De deurbel</b><span class="past niet">2 vakken</span><small>Het laatste beeld; past als je Vandaag kleiner maakt</small></div>
+    </section>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = location.hash.slice(1) || 'gewoon';
+  document.body.dataset.toon = toon;
+  document.body.classList.toggle('bewerk', toon === 'aanpassen' || toon === 'kiezen');
+  const S = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+  const ICOON = {
+    film: S('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z"/>'),
+    maan: S('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+    lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+    droger: S('<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>'),
+    gevoel: S('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>'),
+    wolk: '<svg viewBox="0 0 36 36" aria-hidden="true"><path d="M10 25h15a6 6 0 0 0 .6-12A8 8 0 0 0 10.4 15 5 5 0 0 0 10 25z" fill="#B8C4CF"/></svg>',
+    auto: S('<path d="M5 16l1.5-5A2 2 0 0 1 8.4 9.5h7.2a2 2 0 0 1 1.9 1.5L19 16"/><rect x="3" y="16" width="18" height="3" rx="1"/>'),
+    bel: S('<rect x="7" y="3" width="10" height="18" rx="3"/><circle cx="12" cy="9" r="2.2"/><circle cx="12" cy="16" r="1.4"/>'),
+  };
+  document.querySelectorAll('[data-icoon]').forEach((el) => (el.innerHTML = ICOON[el.dataset.icoon]));
+  document.querySelectorAll('.greep').forEach((g) => (g.innerHTML = S('<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>', 'stroke-width="2.6"') + 'Schuif'));
+  document.querySelectorAll('.oog').forEach((o) => (o.innerHTML = S('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>')));
+  document.getElementById('potlood').innerHTML = S('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 'width="17" height="17"');
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis van opzij en van voren, opengewerkt. De woonkamer koelt op zon, de droger draait en de auto laadt.',
+    tijd: 'dag',
+    zon: { stand: 0.56, hoogte: 0.9, aandeel: 0.85, panelen: 12 },
+    wolken: 0.15,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Bijkeuken', gewicht: 0.85, temp: '22,8°', zin: 'droger, nog 34 min', stand: 'wacht', apparaten: [{ soort: 'droger', aan: true, x: 0.55 }] },
+        { naam: 'Woonkamer', gewicht: 1.35, temp: '24,1°', zin: 'koelt op zon', stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'bank' }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '23,5°', zin: 'op temperatuur', stand: 'goed', apparaten: [] },
+        { naam: 'Slaapkamer', gewicht: 1.3, temp: '23,0°', zin: 'wordt gemeten', apparaten: [{ soort: 'screen', dicht: 0.7 }] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '25,1°', zin: 'wacht op meer zon', stand: 'wacht', apparaten: [{ soort: 'airco', aan: false }] }] },
+    ],
+    buitenunit: { aan: true },
+    batterij: { procent: 78, stand: 'laadt' },
+    auto: { procent: 62, stand: 'laadt', bron: 'zon', kleur: '#7f97b0' },
+    net: true,
+    stromen: [
+      { van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 },
+      { van: 'zon', naar: 'batterij', sterkte: 0.4 },
+      { van: 'zon', naar: 'auto', sterkte: 0.55 },
+    ],
+    labels: [{ bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 }],
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

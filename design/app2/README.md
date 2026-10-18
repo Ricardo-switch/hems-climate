@@ -46,6 +46,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 | `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
 | `Wand-Thuis` blijft | `Thuis-Tel` (Thuis opnieuw: de Assistent altijd boven de tabs; besluit 159) |
+| `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (nachtstand, `#rust`, `#kiezen`) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
 
 Voorbeeldgetallen. Schermafdrukken in `screens/`, opnieuw te maken met
 `node render.cjs Wand-Thuis.html:1280:800 Thuis.html:390:844:vol`.

@@ -165,6 +165,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
 - [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
 - [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
+- [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand)
 
 **Veiligheid**
 
@@ -7102,6 +7103,52 @@ meer instellen; dat kon tot nu toe wel. Wie dat wil, maakt het account in Home
 Assistant beheerder. Een nieuwe beheerder telt na hooguit een minuut. De app
 laat de knoppen voor instellen nog gewoon zien; een bewoner krijgt bij bewaren
 "dit mag alleen de beheerder", zoals op de NAS.
+
+---
+
+## 162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 vroeg de bewoner: "we zouden het misschien
+personaliseerbaar kunnen maken", voor telefoon en tablet. Uit twaalf ideeën
+koos hij er vier om te schetsen: kaarten kiezen en schuiven, favorieten met
+één tik, een nachtstand en rust op de wand, en eenvoudig of uitgebreid
+(`design/app2/Thuis-Tel-Eigen.html`, `Wand-Thuis-Eigen.html`,
+`Wand-Nacht.html`). Hij koos: bewaard bij je account, aanpassen op Thuis zelf,
+de wand alleen door de hoofdgebruiker, hooguit vier favorieten, Straks dat op
+de wand vanzelf bovenin bijschuift, en eerst kaarten en favorieten bouwen.
+
+*Besluit:*
+
+- **Bewaard bij je account** (`voorkeuren.json` naast de dataset, mee in de
+  back-up): op de telefoon welke kaarten Thuis heeft en in welke volgorde, en
+  je favorieten. Zonder inlog (de NAS op het thuisnetwerk) is er één keuze voor
+  iedereen. Er gaat niets naar Home Assistant.
+- **Aanpassen op Thuis zelf:** onderaan *Thuis aanpassen*. Elke kaart krijgt
+  een greep (*Schuif*, ook met de pijltjes) en een oog om hem te verbergen;
+  een kaart doet dan zelf niets. *+ Kaart* zet een verborgen kaart terug, of
+  het weer van morgen erbij. Een gekozen kaart die nu niets te zeggen heeft
+  (Straks, het apparaat) staat in de bewerkstand als vak met wat er komt.
+  Schuif je aan de rand, dan schuift de pagina mee.
+- **Favorieten:** een kaart met hooguit vier tegels, scènes en lampen uit de
+  indeling. Een tik schakelt via dezelfde deuren als in een kamer
+  (`/api/licht`, `/api/scene`, besluiten 97 en 100); de lamp toont meteen wat
+  je koos, tot Home Assistant het bevestigt. Staat licht bedienen uit, dan
+  zijn de tegels grijs. Nieuw op Thuis staat Favorieten onder de kamers, eerst
+  met een knop Kiezen.
+- **De wand is van iedereen:** één indeling voor het hele huis, die de
+  hoofdgebruiker of een beheerder aanpast met het potlood bovenin. Vier vakken,
+  want de wand schuift nooit; Vandaag vraagt er twee. Wat niet past, kan pas
+  als er plek is. Straks staat niet in de lijst: dat schuift er bovenin bij als
+  het huis op zon wacht, en de onderste kaart wijkt dan even. Zonder keuze
+  staan er Vandaag, Hoe voelt het en het apparaat: wijkt er een, dan het
+  apparaat, zodat je altijd kunt zeggen hoe het voelt. De wand heeft zijn
+  eigen favorieten.
+- **Nog niet:** de nachtstand en rust op de wand, en eenvoudig of uitgebreid
+  met grotere letters en minder beweging. Die staan in de schetsen en volgen
+  in een volgende stap; net als de auto, de batterij, deze maand en de
+  deurbel als kaart.
 
 ---
 

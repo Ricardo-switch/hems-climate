@@ -243,6 +243,10 @@ verwijzing bestaat.
   vraagbalk boven de tabs; de microfoon ernaast luistert meteen. Bovenin één
   regel knoppen, de kamers in één kaart, en daaronder Straks, het apparaat,
   Hoe voelt het en Vandaag, net als op de wand ([159]).
+- **Thuis naar eigen smaak:** op de telefoon kies en schuif je zelf de kaarten
+  en vier favorieten met één tik, bewaard bij je account; de wand heeft vier
+  vakken, die de hoofdgebruiker aanpast, en Straks schuift er vanzelf bij
+  ([162]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -497,4 +501,5 @@ verwijzing bestaat.
 [159]: DECISIONS.md#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld
 [160]: DECISIONS.md#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale
 [161]: DECISIONS.md#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant
+[162]: DECISIONS.md#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand
 <!-- links:einde -->

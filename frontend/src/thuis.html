@@ -160,6 +160,97 @@
   .weer .accu i { grid-column: 1; position: relative; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-top: 4px; }
   .weer .accu i b { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--groen, #5ad19a); }
   .weer .accu.leeg i b { background: var(--gloed); }
+
+  /*
+   * Thuis naar eigen smaak (besluit 162, schetsen Thuis-Tel-Eigen en
+   * Wand-Thuis-Eigen). Een kaart die niet gekozen is, staat er niet; op de wand
+   * wijkt de onderste even als Straks erbij komt.
+   */
+  [data-uit], [data-wijkt] { display: none !important; }
+  .apparaatinhoud { display: contents; }
+  /* Favorieten: vier tegels, met één tik aan of uit. */
+  .fav .kaart-kop { margin-bottom: 10px; }
+  .tegels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tegel { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 1px 10px; align-items: center; text-align: left; padding: 9px 11px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.06); color: inherit; font: inherit; cursor: pointer; }
+  .tegel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .tegel:disabled { cursor: default; opacity: 0.6; }
+  .tegel .ik { grid-row: 1 / 3; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .tegel .ik svg { width: 19px; height: 19px; }
+  .tegel b { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tegel span:last-child { font-size: 12px; color: var(--gedempt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tegel[aria-pressed='true'] { background: linear-gradient(150deg, rgba(255, 196, 120, 0.2), rgba(255, 196, 120, 0.05)); border-color: rgba(255, 196, 120, 0.35); }
+  .tegel[aria-pressed='true'] .ik { background: #ffc478; color: #3a2408; box-shadow: 0 0 18px rgba(255, 196, 120, 0.55); }
+  .tegel[aria-pressed='true'] span:last-child { color: #ffd9a8; }
+  #wand .tegel { grid-template-columns: 30px minmax(0, 1fr); padding: 8px 10px; }
+  #wand .tegel .ik { width: 30px; height: 30px; }
+  #wand .tegel span:last-child { display: none; }
+  .favleeg { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .favleeg p { margin: 0; }
+  .favkies, .favleeg button { height: 36px; padding: 0 14px; border-radius: 12px; border: 1px dashed rgba(169, 230, 255, 0.5); background: none; color: #a9e6ff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex: none; }
+  .favkies { display: none; width: 100%; margin-top: 10px; }
+  body.aanpassen .favkies { display: block; }
+  /* Het weer van morgen. */
+  .morgen { display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; align-items: center; cursor: pointer; }
+  .morgen svg { grid-row: 1 / 3; width: 44px; height: 44px; }
+  .morgen b { font-size: 15.5px; }
+  .morgen .graden { grid-row: 1 / 3; grid-column: 3; font-family: var(--kop); font-weight: 600; font-size: 26px; }
+  .morgen .graden small { font-size: 15px; color: var(--gedempt); font-family: var(--romp); }
+
+  /* De bewerkstand: een greep en een oog op elke kaart; de rest staat even stil. */
+  [data-kaart] { position: relative; }
+  .kaartgreep, .kaartoog { display: none; position: absolute; top: -13px; z-index: 3; height: 30px; border-radius: 999px; align-items: center; justify-content: center; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .kaartgreep { right: 54px; padding: 0 10px; gap: 5px; background: #a9e6ff; color: #0b1424; border: 0; touch-action: none; cursor: grab; }
+  .kaartoog { right: 10px; width: 36px; background: #1c2840; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--tekst); }
+  .kaartgreep svg, .kaartoog svg { width: 16px; height: 16px; }
+  .kaartmaat { display: none; position: absolute; top: -13px; left: 14px; height: 30px; padding: 0 10px; border-radius: 999px; align-items: center; background: #1c2840; border: 1px solid rgba(255, 255, 255, 0.2); color: var(--zacht); font-size: 12.5px; font-weight: 700; z-index: 3; }
+  body.aanpassen .kaartgreep, body.aanpassen .kaartoog { display: inline-flex; }
+  body.aanpassen #wand .kaartmaat { display: inline-flex; }
+  body.aanpassen [data-kaarten] > [data-kaart] { outline: 2px dashed rgba(169, 230, 255, 0.45); outline-offset: 3px; overflow: visible; }
+  body.aanpassen [data-kaarten] > [data-kaart].sleept { outline-color: #a9e6ff; box-shadow: 0 20px 44px rgba(0, 0, 0, 0.5); z-index: 6; transition: none; }
+  body.aanpassen [data-kaarten] > [data-kaart] .kaart-kop .mini { visibility: hidden; }
+  /* Een gekozen kaart zonder inhoud: in de bewerkstand een vak met wat er komt. */
+  body.aanpassen [data-kaarten] > [data-kaart][hidden]:not([data-uit]) { display: block !important; min-height: 70px; }
+  body.aanpassen [data-kaarten] > [data-kaart][hidden]:not([data-uit])::after { content: attr(data-naam) ' · ' attr(data-leeg); display: block; padding: 8px 2px; font-size: 13.5px; color: var(--gedempt); }
+  body.aanpassen [data-kaarten] > [data-kaart][hidden]:not([data-uit]) > :not(.kaartgreep):not(.kaartoog):not(.kaartmaat) { display: none; }
+  body.aanpassen [data-wijkt] { display: block !important; }
+  body.aanpassen [data-straks] { display: none !important; }
+  body.aanpassen #tel [data-straks][data-kaart] { display: block !important; }
+  body.aanpassen #tel .boven, body.aanpassen #tel .podium { opacity: 0.35; pointer-events: none; }
+  body.aanpassen #wand .kopregel, body.aanpassen #wand .titel, body.aanpassen #wand .podium, body.aanpassen #wand .dok { opacity: 0.3; pointer-events: none; }
+  .aanpasknop { align-self: center; margin-top: 4px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px dashed rgba(255, 255, 255, 0.28); background: none; color: var(--zacht); font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  body.aanpassen .aanpasknop { display: none; }
+  #wand .aanpasknop { display: none; }
+  .potlood { width: 34px; padding: 0; justify-content: center; color: var(--zacht); }
+  #tel .bewerkbalk { position: fixed; left: 12px; right: 12px; bottom: 90px; height: 58px; border-radius: 22px; display: flex; align-items: center; gap: 10px; padding: 0 8px; background: rgba(9, 15, 28, 0.94); border: 1px solid rgba(169, 230, 255, 0.35); backdrop-filter: blur(14px); z-index: 5; }
+  .bewerkbalk .knop, .bewerkkop .knop { height: 42px; padding: 0 14px; font-size: 14px; color: inherit; }
+  .bewerkbalk [data-kaart-erbij] { background: rgba(169, 230, 255, 0.14); color: #a9e6ff; border-color: transparent; }
+  .bewerkbalk .knop-licht, .bewerkkop .knop-licht { color: #0b1424; }
+  .bewerkbalk .uitleg { flex: 1; font-size: 12.5px; color: var(--zacht); line-height: 1.3; }
+  body.aanpassen #tel .vraagbalk { display: none; }
+  .bewerkkop { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); height: 52px; border-radius: 26px; display: flex; align-items: center; gap: 14px; padding: 0 8px 0 20px; background: rgba(9, 15, 28, 0.94); border: 1px solid rgba(169, 230, 255, 0.4); z-index: 10; font-size: 15px; white-space: nowrap; }
+  .vrijvak { border-radius: 24px; border: 2px dashed rgba(169, 230, 255, 0.5); background: none; color: #a9e6ff; font: inherit; font-weight: 700; font-size: 15px; min-height: 120px; cursor: pointer; }
+
+  /* Een kaart erbij, of favorieten kiezen: een blad van onderen, op de wand in het midden. */
+  .kies-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.62); z-index: 40; }
+  .kiesblad { position: fixed; z-index: 41; display: flex; flex-direction: column; padding: 12px 18px 18px; border-radius: 26px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); overflow: auto; overscroll-behavior: contain; }
+  .kiesblad[hidden] { display: none; }
+  html.tel-stand .kiesblad { left: 8px; right: 8px; bottom: 8px; max-height: 84vh; }
+  html.tel-stand .kiesblad::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: 0 auto 10px; flex: none; }
+  html:not(.tel-stand) .kiesblad { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, 92vw); max-height: 86vh; padding: 18px 22px; }
+  .kiesblad .bladkop { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .kiesblad .bladkop .knop { height: 38px; padding: 0 14px; font-size: 14px; color: inherit; }
+  .kiesblad .bladkop .knop-licht { color: #0b1424; }
+  .kiesblad h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); margin: 14px 0 2px; }
+  .kiesblad .keus { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; width: 100%; padding: 9px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .kiesblad .keus:disabled { cursor: default; opacity: 0.45; }
+  .kiesblad .keus:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 8px; }
+  .kiesblad .keus .ik { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .kiesblad .keus .ik svg { width: 20px; height: 20px; }
+  .kiesblad .keus b { font-size: 15px; }
+  .kiesblad .keus small { grid-column: 2; font-size: 12.5px; color: var(--gedempt); }
+  .kiesblad .keus .rechts-ik { grid-column: 3; grid-row: 1 / 3; min-width: 32px; height: 32px; padding: 0 8px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: rgba(169, 230, 255, 0.16); color: #a9e6ff; }
+  .kiesblad .keus[aria-checked='true'] .rechts-ik { background: var(--tekst); color: #0b1424; }
+  .kiesblad .keus[aria-checked='false'] .rechts-ik { background: transparent; border: 2px solid rgba(255, 255, 255, 0.22); }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -174,6 +265,7 @@
           <button class="pil weerknop" type="button" data-buiten aria-haspopup="dialog" aria-controls="weer-wand"></button>
           <span class="pil" data-modus></span>
           <span class="pil" style="color: var(--mint)" data-fase><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+          <button class="pil potlood" type="button" data-aanpassen aria-label="De wand aanpassen" title="De wand aanpassen" hidden><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg></button>
           <button class="pil uitlegknop" type="button" data-uitleg aria-label="Zo werkt het huis" title="Zo werkt het huis">?</button>
         </div>
       </div>
@@ -184,25 +276,32 @@
         <div class="geldt" data-geldt hidden></div>
       </div>
       <div class="podium" id="podium-wand"></div>
-      <aside class="rechts schuift">
-        <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken">
-          <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
-          <div data-dag></div>
-          <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
-        </a>
+      <aside class="rechts schuift" data-kaarten="wand">
         <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks hidden>
           <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 24px; height: 24px"></span><span class="klein">Straks</span></div>
           <h2 class="kop-2" style="margin-top: 10px" data-straks-kop></h2>
           <p class="klein" style="margin: 8px 0 0" data-straks-zin></p>
         </a>
-        <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart hidden></a>
-        <section class="glas kaart" data-gevoel-kaart>
+        <section class="glas kaart fav" data-kaart="favorieten" data-naam="Favorieten" data-leeg="Kies scènes en lampen voor één tik">
+          <div class="kaart-kop"><h2 class="kop-3">Favorieten</h2><span class="mini" data-fav-uitleg></span></div>
+          <div data-favorieten></div>
+        </section>
+        <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken" data-kaart="vandaag" data-naam="Vandaag">
+          <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
+          <div data-dag></div>
+          <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+        </a>
+        <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart data-kaart="apparaat" data-naam="Het apparaat dat draait" data-leeg="Staat er als er een apparaat draait of klaarstaat" hidden><span class="apparaatinhoud" data-apparaat-inhoud></span></a>
+        <section class="glas kaart" data-gevoel-kaart data-kaart="gevoel" data-naam="Hoe voelt het nu?">
           <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
           <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg>Tik wat je nu voelt; daar leert het huis van wat jij prettig vindt.</p>
           <div class="gevoelblok" data-gevoel></div>
         </section>
+        <section class="glas kaart morgen" data-kaart="morgen" data-naam="Het weer van morgen" data-leeg="Staat er zodra het weer van morgen bekend is" data-morgen hidden></section>
+        <button type="button" class="vrijvak" data-vrijvak hidden>+ Kaart kiezen</button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
+      <div class="bewerkkop" data-bewerkkop hidden><span>Je past de wand aan <b>voor iedereen in huis</b></span><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>
       <div class="dok">
         <a class="bol adem" href="assistent.html#nu" aria-label="Vraag de assistent wat het huis nu doet" style="width: 46px; height: 46px; flex: none"></a>
         <a class="vraag" href="assistent.html#typ">Tik om iets te vragen over je huis</a>
@@ -227,24 +326,35 @@
       <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>
-    <div class="inhoud">
-      <section class="glas kamers" data-kamers aria-label="Kamers" hidden></section>
-      <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks hidden>
+    <div class="inhoud" data-kaarten="tel">
+      <section class="glas kamers" aria-label="Kamers" data-kaart="kamers" data-naam="De kamers" data-leeg="Staat er zodra een kamer een temperatuur heeft" hidden><div data-kamers></div></section>
+      <section class="glas kaart fav" data-kaart="favorieten" data-naam="Favorieten" data-leeg="Kies scènes en lampen voor één tik">
+        <div class="kaart-kop"><h2 class="kop-3">Favorieten</h2><span class="mini" data-fav-uitleg></span></div>
+        <div data-favorieten></div>
+      </section>
+      <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks data-kaart="straks" data-naam="Straks" data-leeg="Staat er als het huis op zon wacht" hidden>
         <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Straks</span></div>
         <h2 class="kop-2" style="margin-top: 8px" data-straks-kop></h2>
         <p class="klein" style="margin: 6px 0 0" data-straks-zin></p>
       </a>
-      <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart hidden></a>
-      <section class="glas kaart" data-gevoel-kaart>
+      <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart data-kaart="apparaat" data-naam="Het apparaat dat draait" data-leeg="Staat er als er een apparaat draait of klaarstaat" hidden><span class="apparaatinhoud" data-apparaat-inhoud></span></a>
+      <section class="glas kaart" data-gevoel-kaart data-kaart="gevoel" data-naam="Hoe voelt het nu?">
         <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
         <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg>Tik wat je nu voelt; daar leert het huis van wat jij prettig vindt.</p>
         <div class="gevoelblok" data-gevoel></div>
       </section>
-      <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken">
+      <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken" data-kaart="vandaag" data-naam="Vandaag">
         <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
         <div data-dag></div>
         <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
       </a>
+      <section class="glas kaart morgen" data-kaart="morgen" data-naam="Het weer van morgen" data-leeg="Staat er zodra het weer van morgen bekend is" data-morgen hidden></section>
+      <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Thuis aanpassen</button>
+    </div>
+    <div class="bewerkbalk" data-bewerkbalk hidden>
+      <button type="button" class="knop" data-kaart-erbij>+ Kaart</button>
+      <span class="uitleg">Schuif aan de greep. Het oog verbergt een kaart.</span>
+      <button type="button" class="knop knop-licht" data-klaar>Klaar</button>
     </div>
     <div class="vraagbalk">
       <a class="typ" href="assistent.html#typ"><span class="bol adem" style="width: 40px; height: 40px"></span>Vraag iets over je huis</a>
@@ -254,6 +364,8 @@
     <div class="weer-achter" hidden data-weer-achter></div>
     <section class="glas weer" id="weer-tel" role="dialog" aria-label="Het weer" hidden data-weer></section>
   </div>
+  <div class="kies-achter" data-kies-achter hidden></div>
+  <section class="kiesblad" data-kiesblad role="dialog" aria-modal="true" hidden></section>
   <script src="kit/nav.js"></script>
   <script src="kit/huis.js"></script>
   <script src="basis.js"></script>
@@ -261,6 +373,7 @@
   <script src="gevoel.js"></script>
   <script src="film.js"></script>
   <script src="rondleiding.js"></script>
+  <script src="eigen.js"></script>
   <script src="thuis.js"></script>
 </body>
 </html>
