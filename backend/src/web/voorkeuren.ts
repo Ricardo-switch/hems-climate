@@ -56,19 +56,31 @@ export const STANDAARD_WEERGAVE: Weergave = { eenvoudig: false, groteLetters: fa
 export const RUST_MINUTEN = [0, 2, 5, 15] as const;
 export type RustMinuten = (typeof RUST_MINUTEN)[number];
 
-/** De wand als niemand kijkt (besluit 164, schets Wand-Nacht). */
+/** Zo lang blijft het display aan zonder beweging, voor het 's nachts of zonder iemand thuis uitgaat (besluit 165). */
+export const AAN_MINUTEN = [1, 5, 15, 30] as const;
+export type AanMinuten = (typeof AAN_MINUTEN)[number];
+
+/**
+ * Het scherm aan de wand als niemand kijkt (besluiten 164 en 165, schets
+ * Wand-Nacht): een always-on display, overdag de dagstand en na
+ * zonsondergang de avondstand; 's nachts en als niemand thuis is uit.
+ */
 export interface Niemand {
-  /** De nachtstand: de klok en een gedimd huis, zonder getallen. */
+  /** De nachtstand: het scherm uit. */
   readonly nacht: boolean;
   /** Van bedtijd tot de ochtend, als uu:mm; ook als iemand het huis op Nacht zet. */
   readonly van: string;
   readonly tot: string;
-  /** Rust overdag: de klok, wat het huis doet en het weer. */
+  /** Na zoveel minuten zonder iemand aan het scherm het always-on display; 0 is nooit. */
   readonly rustMin: RustMinuten;
-  /** De bewegingsmelder die de wand wekt, of null. */
+  /** Zo lang blijft het display aan zonder beweging, 's nachts of zonder iemand thuis. */
+  readonly aanMin: AanMinuten;
+  /** Ook uit als niemand thuis is. */
+  readonly weg: boolean;
+  /** De bewegingsmelder die het display aanzet, of null. */
   readonly melder: string | null;
 }
-export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, melder: null };
+export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
 
 export interface Favoriet {
   readonly soort: 'lamp' | 'scene';
@@ -164,8 +176,10 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
   if (!isObject(x)) return { ok: false, reden: 'niemand is een object' };
   const uit: Record<string, unknown> = { ...nu };
   for (const [k, w] of Object.entries(x)) {
-    if (k === 'nacht') {
-      if (typeof w !== 'boolean') return { ok: false, reden: 'de nachtstand is aan of uit' };
+    if (k === 'nacht' || k === 'weg') {
+      if (typeof w !== 'boolean') return { ok: false, reden: `${k} is aan of uit` };
+    } else if (k === 'aanMin') {
+      if (!(AAN_MINUTEN as readonly unknown[]).includes(w)) return { ok: false, reden: `aan zonder beweging is ${AAN_MINUTEN.join(', ')} minuten` };
     } else if (k === 'van' || k === 'tot') {
       if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };
     } else if (k === 'rustMin') {

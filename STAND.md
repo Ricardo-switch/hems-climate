@@ -246,10 +246,12 @@ verwijzing bestaat.
 - **Thuis naar eigen smaak:** op de telefoon kies en schuif je zelf de kaarten
   en vier favorieten met één tik, bewaard bij je account; de wand heeft vier
   vakken, die de hoofdgebruiker aanpast, en Straks schuift er vanzelf bij
-  ([162]). Als niemand kijkt, gaat de wand 's nachts in de nachtstand en rust
-  hij overdag; een tik, de bewegingsmelder, de deurbel of "Hé huis" wekt hem.
-  Per account kies je eenvoudig of uitgebreid, grotere letters en minder
-  beweging ([164]).
+  ([162]). Per account kies je eenvoudig of uitgebreid, grotere letters en
+  minder beweging ([164]).
+- **Het scherm aan de wand** (bij Bewoners een scherm) is als niemand kijkt
+  een always-on display: overdag de dagstand, na zonsondergang gedimd. 's Nachts
+  en als niemand thuis is gaat het uit na een tijd zonder beweging; beweging
+  zet het weer aan, een tik of "Hé huis" opent de app ([164], [165]).
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -511,4 +513,5 @@ verwijzing bestaat.
 [162]: DECISIONS.md#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand
 [163]: DECISIONS.md#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm
 [164]: DECISIONS.md#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account
+[165]: DECISIONS.md#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit
 <!-- links:einde -->

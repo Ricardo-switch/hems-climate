@@ -8,12 +8,17 @@
 <link rel="stylesheet" href="../../frontend/kit/kit.css">
 <style>
   /*
-   * De wand als niemand kijkt (schets, 18 oktober 2026). Een tik, of beweging
-   * als de wand luistert of een sensor heeft, brengt Thuis terug.
-   *   (zonder)  de nachtstand: van bedtijd tot de ochtend; de klok, gedimd, en
-   *             een gedimd huis zonder getallen
-   *   #rust     overdag, na een paar minuten niemand aan het scherm: groot de
-   *             klok, wat het huis doet en het weer
+   * De wand als niemand kijkt (schets, 18 oktober 2026; bijgewerkt na de
+   * keuzes van de bewoner, besluit 165). Alleen op het scherm dat bij Bewoners
+   * een scherm is. Een always-on display: overdag de dagstand, na
+   * zonsondergang de avondstand. Beweging houdt het aan; een tik of "Hé huis"
+   * brengt Thuis terug.
+   *   (zonder)  de avondstand: na zonsondergang; de klok, gedimd, en een
+   *             gedimd huis zonder getallen
+   *   #rust     de dagstand: na een paar minuten niemand aan het scherm: groot
+   *             de klok, wat het huis doet en het weer
+   *   #uit      de nachtstand: het scherm uit, van bedtijd tot de ochtend of als
+   *             niemand thuis is, na een tijd zonder beweging
    *   #kiezen   waar je het instelt: bij de wand, alleen voor de hoofdgebruiker
    */
   .scherm { width: 1280px; height: 800px; position: relative; }
@@ -60,8 +65,10 @@
   .keuze span { height: 32px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; font-weight: 700; font-size: 13px; color: var(--zacht); }
   .keuze span.aan { background: var(--tekst); color: #0b1424; }
 
+  .uit { position: absolute; inset: 0; background: #000; }
+  .uit span { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 13px; color: rgba(127, 142, 156, 0.25); }
   [data-stand] { display: none; }
-  body[data-toon='nacht'] [data-stand~='nacht'], body[data-toon='rust'] [data-stand~='rust'], body[data-toon='kiezen'] [data-stand~='kiezen'] { display: block; }
+  body[data-toon='nacht'] [data-stand~='nacht'], body[data-toon='rust'] [data-stand~='rust'], body[data-toon='kiezen'] [data-stand~='kiezen'], body[data-toon='uit'] [data-stand~='uit'] { display: block; }
 </style>
 </head>
 <body>
@@ -89,21 +96,26 @@
     </div>
   </div>
 
+  <!-- De nachtstand: het scherm uit -->
+  <div data-stand="uit"><div class="uit"><span>Beweging zet het scherm aan, een tik opent de app</span></div></div>
+
   <!-- Instellen, bij de wand -->
   <div data-stand="kiezen">
     <section class="paneel" aria-label="Als niemand kijkt">
       <h2 class="kop-2">Als niemand kijkt</h2>
-      <p class="mini">Voor deze wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
-      <div class="rij"><div><b>Nachtstand</b><span class="uitleg">De klok en een gedimd huis, zonder getallen</span></div><span class="knopje aan"></span></div>
+      <p class="mini">Voor het scherm aan de wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
+      <div class="rij"><div><b>Always-on</b><span class="uitleg">De klok, wat het huis doet en het weer; na zonsondergang gedimd</span></div><div class="keuze"><span>Uit</span><span>2 min</span><span class="aan">5 min</span><span>15 min</span></div></div>
+      <div class="rij"><div><b>Nachtstand</b><span class="uitleg">Het scherm uit</span></div><span class="knopje aan"></span></div>
       <div class="rij"><div><b>Wanneer</b><span class="uitleg">Of: als het huis op Nacht staat</span></div><div class="tijden"><span>23:00</span><span>tot</span><span>07:00</span></div></div>
-      <div class="rij"><div><b>Rust overdag</b><span class="uitleg">De klok, wat het huis doet en het weer</span></div><div class="keuze"><span>Uit</span><span>2 min</span><span class="aan">5 min</span><span>15 min</span></div></div>
+      <div class="rij"><div><b>Uit als niemand thuis is</b><span class="uitleg">Volgens de bewoners</span></div><span class="knopje aan"></span></div>
+      <div class="rij"><div><b>Aan zonder beweging</b><span class="uitleg">Zo lang voor het scherm uitgaat</span></div><div class="keuze"><span>1 min</span><span class="aan">5 min</span><span>15 min</span><span>30 min</span></div></div>
       <div class="rij"><div><b>Wekken door beweging</b><span class="uitleg">Met de bewegingsmelder in de hal</span></div><span class="knopje aan"></span></div>
     </section>
   </div>
 </div>
 <script src="../../frontend/kit/huis.js"></script>
 <script>
-  const toon = { '#rust': 'rust', '#kiezen': 'kiezen' }[location.hash] ?? 'nacht';
+  const toon = { '#rust': 'rust', '#kiezen': 'kiezen', '#uit': 'uit' }[location.hash] ?? 'nacht';
   document.body.dataset.toon = toon;
   document.getElementById('scherm').classList.add(toon === 'rust' ? 'lucht-dag' : 'lucht-nacht');
   const etages = (stil) => [

@@ -430,7 +430,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       return echteFetch(input, { ...init, headers: kop });
     }) as typeof fetch;
     // De wand slaapt en rust niet midden in een test (besluit 164); de test van de nachtstand zet het zelf aan.
-    await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: { nacht: false, rustMin: 0 } }) });
+    await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: { nacht: false, rustMin: 0, weg: false } }) });
     // UTC, net als de rest van de suite in de CI: de tijdlijn en de
     // versiemarkering rekenen dan in dezelfde dagen.
     const context = await browser.newContext({ timezoneId: 'UTC', locale: 'nl-NL' });
@@ -1663,16 +1663,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 60_000);
 
   /*
-   * De wand als niemand kijkt (besluit 164, schets Wand-Nacht): na een minuut
-   * zonder iemand 's nachts de nachtstand, overdag na vijf minuten rust; een
-   * tik, de bewegingsmelder en aanbellen wekken hem; op een kijkpagina gaat hij
-   * terug naar Thuis; en de hoofdgebruiker stelt het in bij het potlood.
+   * Het scherm aan de wand als niemand kijkt (besluiten 164 en 165, schets
+   * Wand-Nacht): na vijf minuten zonder iemand het always-on display, de
+   * dagstand of na zonsondergang de avondstand; 's nachts uit na de tijd zonder
+   * beweging; beweging zet het display weer aan, een tik, aanbellen en
+   * "Hé huis" openen de app; op een kijkpagina terug naar Thuis; en de
+   * hoofdgebruiker stelt het in bij het potlood. Het testaccount is bij
+   * Bewoners een scherm.
    */
-  it('laat de wand slapen en rusten als niemand kijkt, en wekt hem (besluit 164)', async () => {
-    type Niemand = { nacht: boolean; van: string; tot: string; rustMin: number; melder: string | null };
+  it('laat de wand slapen en rusten als niemand kijkt, en wekt hem (besluiten 164 en 165)', async () => {
+    type Niemand = { nacht: boolean; van: string; tot: string; rustMin: number; aanMin: number; weg: boolean; melder: string | null };
     const niemand = async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { wand: { niemand: Niemand } }).wand.niemand;
     const zet = (body: Partial<Niemand>) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: body }) });
-    await zet({ nacht: true, van: '23:00', tot: '07:00', rustMin: 5, melder: null });
+    await zet({ nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 1, weg: false, melder: null });
+    // Dag of avond volgt de echte zon van de dienst.
+    const zonOp = ((await (await fetch(`${baseUrl}/api/zon`)).json()) as { zon?: { boven?: boolean } }).zon?.boven === true;
+    const aanStand = zonOp ? 'dag' : 'avond';
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
@@ -1682,62 +1688,70 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const laag = p.locator('#wand [data-niemand]');
     const stand = () => p.evaluate<string | null>("(() => { const el = document.querySelector('#wand [data-niemand]'); return !el || el.hidden ? null : el.dataset.stand ?? null; })()").catch(() => null);
     const shot = (naam: string) => (process.env.HEMS_PAGE_SHOT ? p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) }) : null);
+    const geladen = () => p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
     try {
-      // De nachtstand: om 23:48 op Thuis, en een minuut lang niemand.
-      await p.clock.setFixedTime(new Date('2026-10-18T23:48:00Z'));
-      await p.goto(`${baseUrl}/thuis.html`);
-      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
-      expect(await stand()).toBe(null);
-      await p.clock.setFixedTime(new Date('2026-10-18T23:49:30Z'));
-      await expect.poll(stand, { timeout: 10_000 }).toBe('nacht');
-      expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('23:49');
-      expect(await laag.textContent()).toContain('zondag 18 oktober');
-      expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|warmt))[.,]/);
-      expect(await laag.textContent()).toContain('Tik om de wand te wekken');
-      // Een gedimd huis, zonder getallen.
-      expect(await laag.locator('[data-nk-huis] svg').count()).toBe(1);
-      expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
-      await shot('nacht');
-      // Een tik wekt hem, en Thuis staat er weer.
-      await laag.click();
-      expect(await stand()).toBe(null);
-      expect(await p.locator('#wand [data-kop]').isVisible()).toBe(true);
-
-      // Rust overdag: om 14:05, en vijf minuten niemand.
+      // Overdag: na vijf minuten niemand het always-on display.
       await p.clock.setFixedTime(new Date('2026-10-19T14:05:00Z'));
-      await p.reload();
-      await p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+      await p.goto(`${baseUrl}/thuis.html`);
+      await geladen();
       await p.clock.setFixedTime(new Date('2026-10-19T14:08:00Z'));
       await p.waitForTimeout(5_500);
       expect(await stand()).toBe(null);
       await p.clock.setFixedTime(new Date('2026-10-19T14:10:30Z'));
-      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('14:10');
-      expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
+      expect(await laag.locator('[data-nk-huis] svg').count()).toBe(1);
+      // Zonder getallen op het huis.
       expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
-      await shot('rust');
-      // De bewegingsmelder ziet iemand: de dienst wekt de wand.
+      if (aanStand === 'dag') expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
+      else expect(await laag.locator('[data-nk-rustig]').textContent()).toMatch(/^(Alles rustig|.+ (koelt|warmt))[.,]/);
+      await shot(aanStand);
+      // Beweging houdt het display aan; het opent de app niet.
       server.wek('beweging');
-      await expect.poll(stand).toBe(null);
-      // Aanbellen wekt hem ook.
-      await p.clock.setFixedTime(new Date('2026-10-19T14:20:00Z'));
-      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await p.waitForTimeout(300);
+      expect(await stand()).toBe(aanStand);
+      // Een tik opent de app.
+      await laag.click();
+      expect(await stand()).toBe(null);
+      expect(await p.locator('#wand [data-kop]').isVisible()).toBe(true);
+
+      // 's Nachts: na een minuut zonder beweging gaat het scherm uit.
+      await p.clock.setFixedTime(new Date('2026-10-19T23:48:00Z'));
+      await p.reload();
+      await geladen();
+      expect(await stand()).toBe(null);
+      await p.clock.setFixedTime(new Date('2026-10-19T23:49:30Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
+      expect(await p.evaluate<string>("getComputedStyle(document.querySelector('#wand [data-niemand]')).backgroundColor")).toBe('rgb(0, 0, 0)');
+      await shot('uit');
+      // Beweging zet het display aan, en na een minuut zonder beweging weer uit.
+      server.wek('beweging');
+      await expect.poll(stand).toBe(aanStand);
+      await p.clock.setFixedTime(new Date('2026-10-19T23:51:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
+      // Een tik op het zwarte scherm opent de app.
+      await laag.click();
+      expect(await stand()).toBe(null);
+
+      // Aanbellen en "Hé huis" openen de app.
+      await p.clock.setFixedTime(new Date('2026-10-19T23:53:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
       server.ring('camera.voordeur', 'Deurbel', { seconden: 30, schermAan: true });
       await expect.poll(stand).toBe(null);
       await p.locator('.aanbel [data-bel-dicht]').click();
-      // En "Hé huis".
-      await p.clock.setFixedTime(new Date('2026-10-19T14:30:00Z'));
-      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await p.clock.setFixedTime(new Date('2026-10-19T23:55:00Z'));
+      await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
       await p.evaluate("dispatchEvent(new CustomEvent('sc-wek', { detail: 'stem' }))");
       expect(await stand()).toBe(null);
 
-      // Op een kijkpagina gaat de wand terug naar Thuis, en rust daar meteen.
+      // Op een kijkpagina gaat de wand terug naar Thuis.
+      await p.clock.setFixedTime(new Date('2026-10-20T14:00:00Z'));
       await p.goto(`${baseUrl}/vandaag.html`);
       await p.waitForLoadState('domcontentloaded');
       await p.waitForTimeout(500);
-      await p.clock.setFixedTime(new Date('2026-10-19T14:40:00Z'));
+      await p.clock.setFixedTime(new Date('2026-10-20T14:10:00Z'));
       await p.waitForURL(/thuis\.html$/, { timeout: 15_000 });
-      await expect.poll(stand, { timeout: 10_000 }).toBe('rust');
+      await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       await laag.click();
 
       // Instellen bij het potlood: alleen voor wie de wand mag aanpassen.
@@ -1746,10 +1760,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       const blad = p.locator('[data-kiesblad]');
       await blad.waitFor();
       expect(await blad.textContent()).toContain('Alleen de hoofdgebruiker kan dit veranderen');
+      await blad.locator('[data-nk-aan="5"]').click();
+      await expect.poll(async () => (await niemand()).aanMin).toBe(5);
       await shot('kiezen');
       await blad.locator('[data-nk-rust="15"]').click();
       await expect.poll(async () => (await niemand()).rustMin).toBe(15);
       expect(await blad.locator('[data-nk-rust="15"]').getAttribute('aria-checked')).toBe('true');
+      await blad.locator('[data-nk-weg]').click();
+      await expect.poll(async () => (await niemand()).weg).toBe(true);
+      await blad.locator('[data-nk-aan="30"]').click();
+      await expect.poll(async () => (await niemand()).aanMin).toBe(30);
       // De bewegingsmelder uit het huis: die in de hal.
       await blad.locator('[data-nk-beweging]').click();
       await expect.poll(async () => (await niemand()).melder).toBe('binary_sensor.bewegingssensor_hal_beweging');
@@ -1767,7 +1787,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(fouten).toEqual([]);
     } finally {
       // Terug zoals de andere tests hem verwachten: niet slapen, niet rusten.
-      await zet({ nacht: false, van: '23:00', tot: '07:00', rustMin: 0, melder: null });
+      await zet({ nacht: false, van: '23:00', tot: '07:00', rustMin: 0, aanMin: 5, weg: false, melder: null });
       await context.close();
     }
   }, 120_000);

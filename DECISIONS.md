@@ -167,7 +167,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
 - [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand) — *aangevuld door 164*
 - [163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm](#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm)
-- [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account)
+- [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account) — *aangevuld door 165*
+- [165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit](#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit)
 
 **Veiligheid**
 
@@ -7197,7 +7198,7 @@ onderaan door. Schetsen: `design/app2/Instellingen-Tel-Groep.html` en
 
 ## 164. De wand als niemand kijkt, en de weergave per account
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 165*
 
 De tweede stap van besluit 162, op 18 oktober 2026. De bewoner had de
 nachtstand, rust overdag en eenvoudig of uitgebreid al gezien in de schetsen
@@ -7248,6 +7249,46 @@ potlood op de wand; en Weergave achter het tandwiel en onderaan Thuis.
 melder in huis laten wekken (een gang 's nachts is geen kijker); grotere
 letters op de wand (past niet zonder schuiven); de hele pagina vergroten (dan
 past het huis niet meer).
+
+---
+
+## 165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit
+
+*Onderwerp: weergave · Status: geldig*
+
+Een aanvulling op besluit 164, dezelfde dag. De bewoner zag wat er in te
+stellen was en zei: "alleen voor het scherm aan de wand. telefoon of laptop
+hebben hier niks aan", en wilde een dagstand, een avondstand na zonsondergang
+en een nachtstand die uit is. Hij koos: het display als always-on, met
+instelbaar hoe lang het aan blijft zonder beweging (1, 5, 15 of 30 minuten);
+beweging zet het weer aan, een tik of "Hé huis" opent de app; ook uit als er
+niemand thuis is. De schets `design/app2/Wand-Nacht.html` kreeg `#uit` en een
+nieuw paneel.
+
+*Besluit:*
+
+- **Alleen het scherm aan de wand:** het account dat bij Bewoners een scherm is
+  (besluit 149). Een telefoon, een laptop of een bewoner op een breed scherm
+  doet nooit mee. Zonder inlog (de NAS op het thuisnetwerk) is er geen scherm,
+  dus ook geen always-on.
+- **Always-on** na 2, 5 (standaard) of 15 minuten zonder iemand aan het scherm,
+  of uit: zolang de zon op is de dagstand (de rust uit besluit 164), na
+  zonsondergang de avondstand (wat in besluit 164 de nachtstand was: de klok
+  gedimd, een donker huis, alles rustig en het weer van morgen). In Fully Kiosk
+  gaat de helderheid 's avonds omlaag.
+- **De nachtstand is uit:** van bedtijd tot de ochtend (standaard 23:00 tot
+  07:00), of als iemand het huis op Nacht zet, gaat het scherm uit na de tijd
+  zonder beweging (standaard 5 minuten). Zwart, en in Fully Kiosk echt uit.
+- **Uit als niemand thuis is** (standaard aan): volgens de aanwezigheid van de
+  bewoners, of als het huis op Afwezig of Vakantie staat. Komt er iemand
+  thuis, of wordt het ochtend, dan komt het display terug.
+- **Beweging** van de gekozen melder zet het display aan, niet de app; na de
+  tijd zonder beweging gaat het weer uit. Zonder melder telt alleen een tik.
+  **Een tik, "Hé huis" en aanbellen** openen de app.
+
+*Wat afviel:* een schakelaar "dit scherm is de wand" in de browser (het scherm
+bij Bewoners zegt het al); het scherm ook overdag uit na een tijd zonder
+beweging (dan is het geen always-on meer); een tweede wachttijd voor de nacht.
 
 ---
 
