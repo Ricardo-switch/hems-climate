@@ -33,6 +33,10 @@ describe('de uitspraak (besluit 142)', () => {
     expect(uitspraak('Gevel en achtergevel, maar een gevelde boom blijft.')).toBe('geevel en achter geevel, maar een gevelde boom blijft.');
   });
 
+  it('zegt app op zijn Engels (besluit 166)', () => {
+    expect(uitspraak('Dat stel je in de app in. Apps en een appel.')).toBe('Dat stel je in de ep in. eps en een appel.');
+  });
+
   it('laat gewone tekst met rust', () => {
     const zin = 'Het is rustig in huis. Wat wil je weten?';
     expect(uitspraak(zin)).toBe(zin);

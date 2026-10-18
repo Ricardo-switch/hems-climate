@@ -932,5 +932,42 @@
   // Op elke pagina, ook die zonder menu (inrichten, het welkom).
   volledig();
 
+  /*
+   * Een scherm zoals de wand neemt over wat er bij De wand voor hem gekozen is
+   * (besluit 166): het hele scherm en luisteren naar "Hé huis", ook als dat
+   * vanaf de pc of de telefoon werd gezet. Niets gekozen: zoals dit apparaat
+   * het zelf heeft. Uitzetten geldt vanaf de volgende pagina.
+   */
+  async function schermOpties() {
+    if (telStand()) return;
+    let b;
+    try {
+      const res = await fetch('api/bewoners', { cache: 'no-store' });
+      if (!res.ok) return;
+      b = await res.json();
+    } catch {
+      return;
+    }
+    const o = (b?.schermen ?? []).find((s) => s.ik)?.opties;
+    if (!o) return;
+    if (o.volledig != null && o.volledig !== volledigGekozen()) {
+      zetVolledig(o.volledig);
+      if (o.volledig) volledig();
+    }
+    if (o.luisteren == null) return;
+    try {
+      if ((localStorage.getItem('sc-luisteren') === 'aan') === o.luisteren) return;
+      localStorage.setItem('sc-luisteren', o.luisteren ? 'aan' : 'uit');
+    } catch {
+      return;
+    }
+    // Aan: luisteren.js erbij, die meteen begint; staat hij er al, dan zelf starten.
+    if (o.luisteren) {
+      if (global.luisteren) global.luisteren.start();
+      else luisterStart();
+    }
+  }
+  setTimeout(() => void schermOpties(), 1500);
+
   global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu };
 })(window);

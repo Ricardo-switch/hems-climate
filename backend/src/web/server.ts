@@ -1156,11 +1156,12 @@ export class WebServer {
           if (keuze.soort === 'vraag') b = { soort: 'huis', vraag: keuze.vraag };
         }
         if (b.soort === 'app') {
-          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link });
+          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord) });
           return;
         }
         if (b.soort === 'onbekend') {
-          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden });
+          // Hardop staan de voorbeelden er zelf in (besluit 166); op het scherm zijn het knoppen.
+          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden, gesproken: uitspraak(b.gesproken) });
           return;
         }
         parsed = { question: b.vraag, lang };
@@ -1192,12 +1193,24 @@ export class WebServer {
       // De weersverwachting bij de zon, straks en morgen (besluit 141, 142); uit dezelfde bron als Vandaag.
       let weer = null;
       const kind = parsed.question.kind;
-      if (kind === 'zon' || kind === 'straks' || kind === 'morgen') {
+      if (kind === 'zon' || kind === 'straks' || kind === 'weer' || kind === 'morgen') {
         const w = await this.weatherNow().catch(() => null);
         if (w && 'vandaag' in w) {
           const m = w.dagen[0];
           const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
-          weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, morgen };
+          // De rest van vandaag (besluit 166): uit de uren tot middernacht, anders het weer van nu.
+          const nu = Date.now();
+          const eind = startOfLocalDay(nu, config.timezone) + 24 * 3_600_000;
+          const uren = w.vandaag.uren.filter((u) => u.tMs < eind);
+          const temps = uren.map((u) => u.buitenC).filter((t): t is number => t != null);
+          const regen = uren.map((u) => u.regenkansPct).filter((r): r is number => r != null);
+          const vandaag = {
+            tekst: w.vandaag.tekst,
+            minC: temps.length ? Math.min(...temps) : w.vandaag.buitenC,
+            maxC: temps.length ? Math.max(...temps) : w.vandaag.buitenC,
+            regenkansPct: regen.length ? Math.max(...regen) : null,
+          };
+          weer = { opgewektKwh: w.vandaag.opgewektKwh, verwachtKwh: w.vandaag.verwachtKwh, voorafKwh: w.vandaag.verwachtVoorafKwh, vandaag, morgen };
         }
       }
       // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.

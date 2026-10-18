@@ -26,7 +26,7 @@ export interface Verwijzing {
 export type Begrepen =
   | { readonly soort: 'huis'; readonly vraag: Question }
   | { readonly soort: 'app'; readonly onderwerp: string; readonly antwoord: string; readonly link: Verwijzing }
-  | { readonly soort: 'onbekend'; readonly antwoord: string; readonly voorbeelden: readonly string[] };
+  | { readonly soort: 'onbekend'; readonly antwoord: string; readonly gesproken: string; readonly voorbeelden: readonly string[] };
 
 /** Kleine letters, zonder accenten en leestekens; woorden met één spatie ertussen. */
 export function gewoon(s: string): string {
@@ -366,7 +366,9 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   if (overal && kamer == null && telt(['warm', 'koud', 'temperatuur', 'graden', 'temperature'], tekst, los)) huis.push({ vraag: { kind: 'warm' }, score: 5 });
   // Het weer van morgen, en wat iets kost (besluit 142).
   const morgen = telt(MORGEN, tekst, los);
-  if (morgen && kamer == null) huis.push({ vraag: { kind: 'morgen' }, score: 3 * morgen });
+  // Het weer zonder morgen erbij gaat over vandaag (besluit 166): "wat voor weer wordt het vandaag?".
+  const overMorgen = telt(['morgen', 'overmorgen', 'tomorrow'], tekst, los) > 0;
+  if (morgen && kamer == null) huis.push({ vraag: { kind: overMorgen ? 'morgen' : 'weer' }, score: 3 * morgen });
   const kosten = telt(KOSTEN, tekst, los);
   if (kosten) huis.push({ vraag: { kind: 'kosten' }, score: 3 * kosten });
   const nu = telt(NU, tekst, los);
@@ -380,12 +382,16 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
     return { soort: 'app', onderwerp: app.o.id, antwoord: t.antwoord, link: { href: app.o.href, label: t.label } };
   }
   if (beste != null) return { soort: 'huis', vraag: beste.vraag };
+  const vb = voorbeelden(config, lang);
+  // Hardop zijn er geen knoppen: dan noemt de zin zelf twee voorbeelden (besluit 166).
+  const twee = vb.slice(0, 2).map((t) => `"${t.replace(/\?$/, '')}"`);
   return {
     soort: 'onbekend',
     antwoord:
       lang === 'nl'
         ? 'Dat begrijp ik nog niet. Vraag iets over je huis of over de app, bijvoorbeeld:'
         : 'I do not understand that yet. Ask something about your house or the app, for example:',
-    voorbeelden: voorbeelden(config, lang),
+    gesproken: lang === 'nl' ? `Dat begrijp ik nog niet. Vraag bijvoorbeeld ${twee.join(' of ')}.` : `I do not understand that yet. Ask for example ${twee.join(' or ')}.`,
+    voorbeelden: vb,
   };
 }

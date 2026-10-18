@@ -169,6 +169,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm](#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm)
 - [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account) — *aangevuld door 165*
 - [165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit](#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit)
+- [166. Negentien punten van de bewoner: assistent, huis, inrichten en de wand](#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand)
 
 **Veiligheid**
 
@@ -7289,6 +7290,74 @@ nieuw paneel.
 *Wat afviel:* een schakelaar "dit scherm is de wand" in de browser (het scherm
 bij Bewoners zegt het al); het scherm ook overdag uit na een tijd zonder
 beweging (dan is het geen always-on meer); een tweede wachttijd voor de nacht.
+
+---
+
+## 166. Negentien punten van de bewoner: assistent, huis, inrichten en de wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 liep de bewoner de app op de tablet, de pc en de telefoon
+na en kwam met negentien punten: tekst die buiten de vraagbalk viel, een
+assistent die bleef zeggen dat hij het niet begreep, "app" uitgesproken als
+"ap", het weer van morgen bij een vraag over vandaag, bewegingsgolven buiten
+het huis, een huis en knoppen die op 16:9 buiten beeld vielen, panelen en een
+airco op zolder die niet klopten, een inrichten dat op punten onduidelijk was,
+en Thuis op de wand dat niet aan te passen was. Tussendoor: de droger hoort ook
+op het always-on display (besluit 165), en "Er draait niets" terwijl de droger
+draait. Hij koos uit voorstellen: schermen per scherm instellen vanaf elk
+apparaat, kamers verplaatsen met slepen én pijltjes, buiten één lijst met
+delen, de stap Apparaten helemaal in de stap zelf, en op de wand pijltjes en
+"+ Kaart".
+
+*Besluit:*
+
+- **De assistent** zegt "niet begrepen" of "niet verstaan" één keer per
+  gesprek; hoort hij daarna weer alleen ruis, dan stopt hij stil. Hardop noemt
+  hij bij "niet begrepen" zelf twee voorbeelden (op het scherm zijn het
+  knoppen). "App" klinkt als "ep". Het weer zonder "morgen" erbij gaat over
+  vandaag: een eigen vraag `weer`, met het weer van de rest van de dag en wat er
+  vandaag van het dak komt, niet de verwachting van morgen.
+- **Het huis:** bewegingsgolven midden op de vloer van de kamer en niet groter
+  dan de kamer (ze stonden halverwege de achtermuur, onder het dak boven de
+  nok). De airco onder het dak hangt tegen de linkermuur als die hoog genoeg is,
+  anders op de achtermuur net links van de nok; de droger staat er niet onder,
+  en past de naam van de kamer er niet naast, dan staat die laag aan de
+  voorkant. Precies zoveel panelen als er liggen, in rijen; bij beide kanten de
+  voorkant rechts en de achterkant links, op Thuis en bij Inrichten hetzelfde
+  (`huismodel.panelenOpDak`). Een tuinhuis dat een eigen ruimte is, is apart
+  aan te tikken. Een losse garage achter de oprit en een carport boven de auto
+  horen erbij.
+- **Beeld:** de vraagbalk op de wand blijft één regel. In Inrichten vult het
+  huis zijn vak op elk schermformaat en blijft Volgende altijd in beeld; de
+  prijzen hebben plek voor vijf cijfers achter de komma.
+- **De droger:** draait er een programma en heeft geen kamer iets nodig, dan
+  zegt de kop op Thuis "De droger draait" in plaats van "Er draait niets". Op
+  het always-on display staat de droger met zijn ring en eindtijd, overdag als
+  tegel naast het weer en 's avonds als regel.
+- **Inrichten:** apparaten en wat verwarmt of koelt zijn gescheiden; het getal
+  apparaten telt het klimaat niet meer mee, en de lijst heeft overal een ×. De
+  stap Apparaten toont alles per kamer; een apparaat aantikken geeft
+  verplaatsen en weghalen, zonder uitstap. Een kamer verplaats je met ← en → in
+  het vak, of door hem in het huis te slepen naar een andere kamer, ook op een
+  andere etage. Buiten is één lijst met delen (met garage en carport); onder een
+  deel dat aan staat kies je welke ruimte uit Home Assistant erbij hoort. De
+  soorten binnen kregen bijkeuken, kelder en garage. Een bewoner aantikken geeft
+  de naam, thuis volgens, de plek in de volgorde en het comfort.
+- **Een scherm per scherm instellen:** het hele scherm en luisteren naar
+  "Hé huis" bewaart de dienst per scherm (`opties` bij Bewoners), in te
+  stellen bij Inrichten › De wand en bij Bewoners, vanaf elk apparaat. De
+  tablet neemt het over bij de volgende pagina; niets gekozen is zoals de tablet
+  het zelf had.
+- **Thuis op de wand:** per kaart ▲ en ▼, want tikken werkt op elke tablet en
+  slepen niet altijd, en bovenin "+ Kaart". Past een kaart niet, dan wijkt de
+  onderste, en het blad zegt welke; zo komt ook Favorieten op de wand.
+
+*Wat afviel:* een losse knop "Bekijk alle apparaten" die het inrichten verliet;
+de garage alleen als soort binnen (een losse garage staat buiten); het
+always-on display zijn eigen droger laten tekenen (het neemt de kaart van
+Thuis over, zodat er één plek is die weet wanneer hij klaar is); slepen als
+enige manier op de wand.
 
 ---
 

@@ -178,11 +178,22 @@ describe('een scherm beheren (besluit 149)', () => {
     const uit = voerUit(b, comfort, leesActie({ actie: 'schermNaam', id: 'u-wand', naam: '  De wand ' })!, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
     expect(uit.bewoners.schermen['u-wand']).toMatchObject({ naam: 'De wand', haNaam: 'Tablet hal' });
     const v = bewonersView(uit.bewoners, ricardo, occupancy, () => undefined, null);
-    expect(v.schermen).toEqual([{ id: 'u-wand', naam: 'De wand', haNaam: 'Tablet hal', sindsMs: NU, ik: false }]);
+    expect(v.schermen).toEqual([{ id: 'u-wand', naam: 'De wand', haNaam: 'Tablet hal', sindsMs: NU, ik: false, opties: { volledig: null, luisteren: null } }]);
     // Een andere bewoner niet; het scherm zelf wel.
     expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: 'Hal' }, shira, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
     expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: 'Hal' }, { userId: 'u-wand', naam: 'Tablet hal', beheerder: false }, occupancy, [], NU).ok).toBe(true);
     expect(voerUit(b, comfort, { actie: 'schermNaam', id: 'u-wand', naam: '   ' }, ricardo, occupancy, [], NU)).toMatchObject({ ok: false, status: 400 });
+  });
+
+  it('krijgt vanaf elk apparaat het hele scherm en luisteren (besluit 166)', () => {
+    const b = metWand();
+    const a = leesActie({ actie: 'schermOpties', id: 'u-wand', opties: { volledig: true } })!;
+    const uit = voerUit(b, comfort, a, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    const twee = voerUit(uit.bewoners, comfort, leesActie({ actie: 'schermOpties', id: 'u-wand', opties: { luisteren: false } })!, ricardo, occupancy, [], NU) as { ok: true; bewoners: Bewoners };
+    expect(bewonersView(twee.bewoners, ricardo, occupancy, () => undefined, null).schermen[0]!.opties).toEqual({ volledig: true, luisteren: false });
+    expect(voerUit(b, comfort, a, shira, occupancy, [], NU)).toMatchObject({ ok: false, status: 403 });
+    expect(leesActie({ actie: 'schermOpties', id: 'u-wand', opties: { volledig: 'ja' } })).toBeNull();
+    expect(leesActie({ actie: 'schermOpties', id: 'u-wand', opties: {} })).toBeNull();
   });
 
   it('weghalen: bij de volgende inlog is het weer een gast (besluit 151)', () => {

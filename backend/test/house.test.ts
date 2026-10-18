@@ -49,21 +49,21 @@ describe('het voorstel uit Home Assistant', () => {
     const soort = (naam: string, zones: string[] = [], etage = 'e1') => roomTypeFromNames({ naam, etage, zones: zones.map((z, i) => ({ id: `z${i}`, naam: z })) });
     const verwacht: [string, string | null][] = [
       ['Woonkamer', 'woonkamer'], ['Huiskamer', 'woonkamer'], ['Serre', 'woonkamer'], ['Living', 'woonkamer'],
-      ['Woonkeuken', 'woonkeuken'], ['Keuken', 'keuken'], ['Bijkeuken', 'wasruimte'], ['Eetkamer', 'eetkamer'],
+      ['Woonkeuken', 'woonkeuken'], ['Keuken', 'keuken'], ['Bijkeuken', 'bijkeuken'], ['Eetkamer', 'eetkamer'],
       ['Slaapkamer', 'slaapkamer'], ['Ouderslaapkamer', 'slaapkamer'], ['Master bedroom', 'slaapkamer'],
       ['Slaapkamer Matts', 'kinderkamer'], ['Kinderslaapkamer', 'kinderkamer'], ['Babykamer', 'kinderkamer'], ['Speelkamer', 'kinderkamer'],
       ['Logeerkamer', 'logeerkamer'], ['Gastenkamer', 'logeerkamer'],
       ['Badkamer', 'badkamer'], ['Douche', 'badkamer'], ['Toilet', 'toilet'], ['WC beneden', 'toilet'],
       ['Hal', 'hal'], ['Overloop', 'hal'], ['Gang', 'hal'], ['Entree', 'hal'],
       ['Werkkamer', 'werkkamer'], ['Kantoor', 'werkkamer'], ['Hobbykamer', 'werkkamer'], ['Studeerkamer', 'werkkamer'],
-      ['Wasruimte', 'wasruimte'], ['Washok', 'wasruimte'], ['Zolder', 'berging'], ['Berging', 'berging'], ['Kelder', 'berging'],
+      ['Wasruimte', 'wasruimte'], ['Washok', 'wasruimte'], ['Zolder', 'berging'], ['Berging', 'berging'], ['Kelder', 'kelder'], ['Garage', 'garage'],
       ['Kamer Lisa', null], ['Beneden', null],
     ];
     for (const [naam, soortVerwacht] of verwacht) expect(soort(naam), naam).toBe(soortVerwacht);
     // Een kamer met een keuken en een zithoek: een woonkamer met open keuken.
     expect(soort('Beneden', ['Keuken', 'Zithoek'])).toBe('woonkeuken');
     // Een kelder zonder naam die iets zegt: een berging.
-    expect(soort('Ruimte 1', [], 'kelder')).toBe('berging');
+    expect(soort('Ruimte 1', [], 'kelder')).toBe('kelder');
     // Een gekozen soort van een zone gaat voor zijn naam (besluit 145).
     const zones = [{ id: 'a', naam: 'Hoek', soort: 'keuken' as const }, { id: 'b', naam: 'Bij het raam', soort: 'woonkamer' as const }];
     expect(roomTypeFromNames({ naam: 'Beneden', etage: 'bg', zones })).toBe('woonkeuken');

@@ -363,6 +363,13 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .niemand .nr-kop .lead { font-size: 20px; margin-top: 14px; }
 .niemand .nr-weer { position: absolute; left: 72px; bottom: 70px; display: flex; gap: 12px; z-index: 1; }
 .niemand .nr-weer .glas-klein { padding: 14px 18px; display: flex; align-items: center; gap: 14px; }
+/* De droger op het always-on display (besluit 166): de ring en wanneer hij klaar is. */
+.niemand .nr-apparaat .ring { width: 44px; height: 44px; flex: none; }
+.niemand .nr-apparaat b { display: block; font-size: 17px; }
+.niemand .nk-apparaat .ring { width: 30px; height: 30px; flex: none; opacity: 0.7; }
+.niemand .nk-apparaat > span { display: block; }
+.niemand .nk-apparaat b { margin-right: 8px; }
+.niemand .nk-apparaat .klein { color: inherit; font-size: inherit; }
 .niemand .nr-weer svg { width: 40px; height: 40px; }
 .niemand .nr-weer b { display: block; font-size: 22px; font-family: var(--kop); font-weight: 600; }
 .niemand .nr-weer span span { font-size: 14px; color: var(--zacht); }

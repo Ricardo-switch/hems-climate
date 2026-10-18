@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.41.0';
+export const VERSIE = '0.42.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,28 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.42.0',
+    datum: '2026-10-18',
+    nieuw: [
+      'Een scherm aan de wand stel je in vanaf elk apparaat: volledig scherm en luisteren naar "Hé huis"',
+      'Kamers verplaats je in het inrichten met pijltjes, of door ze in het huis te slepen',
+      'Buiten een garage en een carport, en een tuinhuis dat je in het huis aantikt',
+      'Op de wand pijltjes per kaart en "+ Kaart", ook voor Favorieten',
+      'De droger op het always-on scherm, en "De droger draait" op Thuis',
+    ],
+    beter: [
+      'Inrichten: apparaten los van verwarmen en koelen, alles per kamer in de stap zelf, buiten één lijst, bewoners om aan te tikken',
+      'De assistent zegt één keer dat hij het niet begrijpt, met voorbeelden, en stopt daarna bij ruis; "app" klinkt als "ep"',
+      'Panelen precies zoals ze liggen, op beide kanten',
+    ],
+    opgelost: [
+      'Het weer van vandaag gaf de zon van morgen',
+      'Huis en knoppen vielen op een breed scherm buiten beeld; de vraagbalk op de wand liep over',
+      'Bewegingsgolven en de airco op zolder stonden buiten het huis',
+      'Prijzen vielen half buiten hun vak',
+    ],
+  },
   {
     versie: '0.41.0',
     datum: '2026-10-18',

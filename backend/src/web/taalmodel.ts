@@ -218,6 +218,7 @@ const VRAGEN: readonly [Question['kind'], string][] = [
   ['zon', 'hoeveel zon er is en nog komt'],
   ['vandaag', 'wat het huis vandaag deed'],
   ['warm', 'hoe warm het overal is'],
+  ['weer', 'het weer en de zon van vandaag'],
   ['morgen', 'het weer en de zon van morgen'],
   ['kosten', 'wat apparaten deze maand kostten'],
 ];

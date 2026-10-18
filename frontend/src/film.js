@@ -465,6 +465,7 @@
       terras: t.terras,
       balkon: t.balkon,
       voortuin: t.voortuin,
+      garage: t.garage,
       stromen: b.zonKamer && c.zonKamer ? [{ van: 'zon', naar: `kamer:${c.zonKamer.naam}`, sterkte: 0.85 }] : b.eind ? [{ van: 'zon', naar: 'huis', sterkte: 0.5 }] : [],
       labels: [],
     };

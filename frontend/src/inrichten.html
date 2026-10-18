@@ -55,7 +55,8 @@
   .invul { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 0 8px 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); font-size: 15px; font-weight: 600; }
   .invul + .invul { margin-top: 8px; }
   .invul .waarde { display: inline-flex; align-items: center; gap: 4px; font-family: var(--kop); font-size: 17px; font-weight: 700; }
-  .invul input { width: 5ch; border: 0; background: none; color: var(--tekst); font: inherit; text-align: right; }
+  /* Breed genoeg voor vijf cijfers achter de komma (besluit 166): 0,27451 viel er eerst half buiten. */
+  .invul input { width: 7.5ch; field-sizing: content; min-width: 3ch; max-width: 9ch; border: 0; background: none; color: var(--tekst); font: inherit; text-align: right; }
   /* Een leeg vak zegt dat het leeg is, en lijkt niet op een ingevuld getal. */
   .invul input::placeholder { font-family: var(--tekstletter, inherit); font-size: 13px; font-weight: 500; font-style: italic; color: var(--gedempt); }
   .invul input:placeholder-shown { width: 7ch; }
@@ -80,9 +81,27 @@
   .waarderij { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 15px; }
   .waarderij:first-child { border-top: 0; }
   .waarderij span { color: var(--zacht); text-align: right; }
+  /* Een bewoner om aan te tikken (besluit 166), en buiten: een deel met zijn ruimte. */
+  .bewonerrij { width: 100%; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); background: none; color: var(--tekst); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
+  .bewonerrij.open, .bewonerrij:hover { color: var(--ijs); }
+  .bewonerrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .rijen > .bewerk { margin: 2px 0 8px; }
+  .deel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .deel > .schakelrij { width: 100%; margin-top: 0; }
+  .koppel { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 14px; font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
+  .koppel .veld { height: 32px; min-width: 0; flex: 1; max-width: 150px; font-size: 13px; }
   .veldje { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 20px; min-height: 0; }
-  .podium { min-height: 0; display: grid; place-items: center; }
+  /* Het huis vult zijn vak, hoe breed het scherm ook is (besluit 166): eerst groeide de tekening op 16:9 onder de rand uit. */
+  .podium { min-height: 0; display: grid; place-items: center; position: relative; }
+  #wand .podium > svg { position: absolute; inset: 0; }
+  /* Slepen in het huis (besluit 166): de gepakte kamer en waar hij heen gaat. */
+  #wand .podium .sc-tik { cursor: grab; touch-action: none; }
+  #wand .podium .sc-tik.sc-gepakt { fill: rgba(111, 211, 255, 0.12); stroke: var(--ijs); stroke-width: 2; stroke-dasharray: 7 5; cursor: grabbing; }
+  #wand .podium .sc-tik.sc-doel { fill: rgba(110, 231, 183, 0.18); stroke: var(--mint); stroke-width: 2; }
   .kaart { padding: 26px 28px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; }
+  /* Volgende blijft altijd in beeld; is er te weinig plek, dan wijkt eerst de tip (besluit 166). */
+  .kaart > .voet { flex: none; }
+  .kaart > .noot { flex-shrink: 1; min-height: 0; overflow: hidden; }
   .kaart .waar { font-size: 13.5px; font-weight: 600; color: var(--gedempt); }
   .kaart h1 { margin: 0; }
   .kaart .uitleg { margin: 0; font-size: 16px; line-height: 1.5; color: var(--zacht); max-width: 46ch; }
@@ -127,10 +146,10 @@
   .schuif b { font-family: var(--kop); font-size: 18px; text-align: right; color: var(--tekst); }
   .cijfers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   /* De getallen van het startscherm tikken open tot een lijst (besluit 158). */
-  .cijfers .vak { position: relative; padding: 14px 16px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .cijfers .vak { position: relative; padding: 11px 16px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
   .cijfers .vak:hover { background: rgba(255, 255, 255, 0.09); }
   .cijfers .vak:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-  .cijfers b { display: block; font-family: var(--kop); font-size: 28px; font-weight: 700; }
+  .cijfers b { display: block; font-family: var(--kop); font-size: 26px; font-weight: 700; }
   .cijfers span { font-size: 13.5px; color: var(--zacht); }
   .cijfers .vak i { position: absolute; right: 14px; top: 12px; font-style: normal; font-size: 20px; color: var(--gedempt); }
   .noot { padding: 12px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 14px; line-height: 1.5; color: var(--zacht); }
@@ -177,7 +196,7 @@
     <div class="bovenbalk"><a class="merk" href="thuis.html"><i aria-hidden="true"></i>Smart Climate</a></div>
     <nav class="stappen" aria-label="Hoofdstukken" data-stappen></nav>
     <div class="veldje">
-      <div class="podium" data-podium="wand" aria-hidden="true"></div>
+      <div class="podium" data-podium="wand"></div>
       <section class="glas kaart" data-kaart aria-live="polite"></section>
     </div>
   </div>

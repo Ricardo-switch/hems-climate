@@ -28,6 +28,8 @@ const KLANK: readonly (readonly [RegExp, string])[] = [
   [/\bairco's\b/gi, "erko's"],
   [/\bairco\b/gi, 'erko'],
   [/\bcv\b/gi, 'cee vee'],
+  // App op zijn Engels, zoals je het zegt (besluit 166): Piper zei "ap".
+  [/\bapp(s?)\b/gi, 'ep$1'],
   // Gevel met een lange e, niet als het voorvoegsel ge-: voorgeevel, niet voorge-vel.
   // Bij achter en zij knipt Piper het lange woord toch verkeerd: dan twee woorden.
   [/\b(achter|zij)gevel(s?)\b/gi, '$1 geevel$2'],

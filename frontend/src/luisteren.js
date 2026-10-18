@@ -12,7 +12,8 @@
  *   Praten met je huis, bewaard in deze browser). Hoort hij "Hé huis", dan schuift er een
  *   laag over de pagina: een zacht tikje, het huis luistert, schrijft mee, doet het en
  *   zegt het. Daarna luistert het nog vijf seconden zonder wekwoord, en sluit de laag acht
- *   seconden nadat het huis klaar is met praten.
+ *   seconden nadat het huis klaar is met praten. "Niet begrepen" zegt het één keer per
+ *   gesprek; hoort het daarna weer alleen ruis, dan stopt het stil (besluit 166).
  * - De telefoon luistert nooit vanzelf: de Assistent heeft een microfoonknop
  *   (`luisteren.eenmaal`).
  *
@@ -157,7 +158,7 @@
     const q = new URLSearchParams({ v: 'vrij', tekst, ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
-    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.', gedaan: [] };
+    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.', gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
     if (res.ok && body.opdracht) {
       const r = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) }).catch(() => null);
       if (!r?.ok) {
@@ -266,6 +267,8 @@
   let sluitTimer = 0;
   let niveauRaf = 0;
   let pauze = 1000;
+  /** Hoe vaak het huis in dit gesprek al zei dat het je niet begreep (besluit 166). */
+  let nietBegrepen = 0;
 
   /** De bol leeft mee met je stem, zolang het huis luistert. */
   function leefMee() {
@@ -299,6 +302,7 @@
         gesprek = true;
         // Een wand in de nachtstand of in rust wordt wakker (besluit 164).
         dispatchEvent(new CustomEvent('sc-wek', { detail: 'stem' }));
+        nietBegrepen = 0;
         tikje();
         toon('luistert', { groot: 'Zeg het maar.', klein: 'Bijvoorbeeld "doe het licht beneden wat zachter" of "hoe warm is het boven?"', hint: 'Ik luister tot je stopt met praten' });
         leefMee();
@@ -321,7 +325,9 @@
   async function verwerk(tekst) {
     clearTimeout(sluitTimer);
     sluitTimer = 0;
+    // Niet verstaan of niet begrepen: één keer zeggen; de tweede keer is het ruis, dan stil stoppen.
     if (!tekst) {
+      if (nietBegrepen++ > 0) return sluit();
       toon('nietverstaan', { groot: 'Dat verstond ik niet.', klein: 'Zeg het nog eens, wat langzamer.' });
       return doorpraten();
     }
@@ -332,8 +338,11 @@
     } catch {
       uit = { antwoord: 'Ik kan Smart Climate nu niet bereiken.', gedaan: [] };
     }
-    toon('antwoord', { jij: tekst, groot: uit.antwoord, gedaan: uit.gedaan.slice(0, 2), hint: 'Zeg gerust nog iets' });
-    await zeg(uit.antwoord);
+    if (uit.onbekend && nietBegrepen++ > 0) return sluit();
+    if (!uit.onbekend) nietBegrepen = 0;
+    const vb = uit.onbekend ? uit.voorbeelden.slice(0, 2).map((t) => `"${t}"`).join(' of ') : '';
+    toon('antwoord', { jij: tekst, groot: uit.onbekend ? 'Dat begrijp ik nog niet.' : uit.antwoord, klein: vb ? `Vraag bijvoorbeeld ${vb}` : '', gedaan: uit.gedaan.slice(0, 2), hint: 'Zeg gerust nog iets' });
+    await zeg(uit.gesproken ?? uit.antwoord);
     if (!laag?.classList.contains('open')) return;
     sluitTimer = setTimeout(sluit, SLUITEN_MS);
     doorpraten();

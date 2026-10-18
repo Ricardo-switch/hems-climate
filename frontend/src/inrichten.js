@@ -163,10 +163,8 @@ function model(stap) {
   const i = ALLE.indexOf(stap);
   // De tekening uit huismodel, net als op Thuis (5S); elke stap laat meer zien.
   const a = antwoorden();
-  const aantal = a.panelen.ligging === 'geen' ? 0 : (a.panelen.aantal ?? null);
   const t = huismodel.tekening(d.huis, {
     zon: d.zon,
-    aantalPanelen: aantal,
     kamer: (r) => {
       const k = huismodel.kamerModel(r, null);
       // Pas vanaf de apparaten staan ze erin; bij comfort en verder de temperatuur.
@@ -176,13 +174,15 @@ function model(stap) {
       return k;
     },
   });
-  const { etages, oprit, tuin, terras, balkon, voortuin } = t;
+  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = t;
   const metZon = i >= ALLE.indexOf('zon');
+  // Zoals op Thuis (besluit 166): het aantal dat je opgaf, per kant bij beide kanten.
+  const opDak = metZon ? huismodel.panelenOpDak(a.panelen, t.piekW) : { panelen: 0, panelenLinks: 0 };
   return {
     beschrijving: 'Je huis, zoals Smart Climate het nu kent.',
     tijd: app.tijdVanDeDag(d.zon),
     wolken: 0.3,
-    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, panelen: metZon ? t.panelen : 0 },
+    zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, ...opDak },
     etages,
     voordeur: t.voordeur,
     buitenunit: i >= ALLE.indexOf('apparaten') && t.buitenunit ? { ...t.buitenunit, aan: false } : null,
@@ -192,6 +192,7 @@ function model(stap) {
     terras,
     balkon,
     voortuin,
+    garage,
     stromen: [],
     // Hoe ze liggen (besluit 157): op de panelen, zoals de schets.
     labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
@@ -211,7 +212,8 @@ const schakel = (attr, tekst, aan, uit = false) => `<button type="button" class=
 let lijst = null; // 'etages', 'kamers', 'apparaten', 'klimaat' of null
 function tellingen() {
   const etages = (d.huis?.etages ?? []).filter((e) => e.id !== 'buiten' && (e.ruimtes ?? []).some((r) => !huismodel.isBuiten(e, r))).length;
-  const apparaten = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).reduce((t, r) => t + (r.apparaten?.length ?? 0), 0) + (d.huis?.zonderRuimte?.length ?? 0);
+  // Apparaten en wat verwarmt of koelt apart (besluit 166): niets telt twee keer.
+  const apparaten = [...(d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []), ...(d.huis?.zonderRuimte ?? [])].filter((a) => a.soort !== 'klimaat').length;
   return { etages, kamers: binnen().length, buiten: buitenRuimtes().length, apparaten, klimaat: binnen().flatMap(klimaatIn).length };
 }
 function welkom() {
@@ -225,16 +227,18 @@ function welkom() {
     uitleg: 'Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Het duurt ongeveer tien minuten.',
     inhoud: d.huis
       ? `<div class="cijfers">${vak('etages', n.etages, `${n.etages === 1 ? 'etage' : 'etages'}${n.buiten ? ', en buiten' : ''}`)}${vak('kamers', n.kamers, `${n.kamers === 1 ? 'kamer' : 'kamers'}${n.buiten ? `, en ${n.buiten} buiten` : ''}`)}${vak('apparaten', n.apparaten, 'apparaten')}${vak('klimaat', n.klimaat, 'om te verwarmen of koelen')}</div>
-         <div class="noot">Tik op een getal voor de lijst. Er verandert niets in Home Assistant. Bovenaan: groen is nagelopen, omlijnd staat al klaar uit Home Assistant.</div>`
+         <div class="noot">Tik op een getal voor de lijst. Bovenaan is groen nagelopen; omlijnd komt al uit Home Assistant.</div>`
       : '<p class="zacht">Even het huis lezen uit Home Assistant…</p>',
     voet: ['', '<a class="knop knop-licht" href="#huis">Begin</a>'],
   };
 }
 /**
  * Een apparaat dat je weghaalt, staat daarna bij Indeling onder Verborgen. Wat
- * verwarmt of koelt, haal je hier niet weg: dat hoort bij de regeling.
+ * verwarmt of koelt, staat in een eigen lijst (besluit 166): dat hoort bij de
+ * regeling, en heeft geen ×.
  */
-const wegChip = (a) => a.soort === 'klimaat' ? `<span class="chip stil">${esc(a.naam)}</span>` : `<button type="button" class="chip weg" data-verberg="${esc(a.id)}" aria-label="${esc(a.naam)} weghalen">${esc(a.naam)}<span aria-hidden="true">×</span></button>`;
+const wegChip = (a) => `<button type="button" class="chip weg" data-verberg="${esc(a.id)}" aria-label="${esc(a.naam)} weghalen">${esc(a.naam)}<span aria-hidden="true">×</span></button>`;
+const geenKlimaat = (lijst) => (lijst ?? []).filter((a) => a.soort !== 'klimaat');
 function welkomLijst() {
   const n = tellingen();
   const perEtage = (d.huis?.etages ?? []).filter((e) => (e.ruimtes ?? []).length);
@@ -247,9 +251,9 @@ function welkomLijst() {
     rijen = perEtage.map((e) => rij(e.naam, (e.ruimtes ?? []).map((r) => `<span class="chip stil">${esc(r.naam)}</span>`).join('')));
   } else if (lijst === 'apparaten') {
     kop = meervoud(n.apparaten, 'apparaat', 'apparaten');
-    uitleg = 'Per kamer. Tik op × om iets weg te halen dat er niet bij hoort; in Home Assistant blijft het staan. Terughalen kan bij Instellingen › Indeling. Wat verwarmt of koelt, heeft geen ×: dat hoort bij de regeling.';
-    rijen = perEtage.flatMap((e) => (e.ruimtes ?? []).filter((r) => r.apparaten?.length).map((r) => rij(r.naam, r.apparaten.map(wegChip).join(''))));
-    if (d.huis?.zonderRuimte?.length) rijen.push(rij('Nog zonder kamer', d.huis.zonderRuimte.map(wegChip).join('')));
+    uitleg = 'Per kamer, zonder wat verwarmt of koelt: dat staat bij het getal ernaast. Tik op × om iets weg te halen; in Home Assistant blijft het staan.';
+    rijen = perEtage.flatMap((e) => (e.ruimtes ?? []).filter((r) => geenKlimaat(r.apparaten).length).map((r) => rij(r.naam, geenKlimaat(r.apparaten).map(wegChip).join(''))));
+    if (geenKlimaat(d.huis?.zonderRuimte).length) rijen.push(rij('Nog zonder kamer', geenKlimaat(d.huis.zonderRuimte).map(wegChip).join('')));
   } else {
     kop = `${n.klimaat} om te verwarmen of koelen`;
     uitleg = 'Wat de regeling met elk apparaat doet, kies je bij Klimaat.';
@@ -279,9 +283,14 @@ function bewerkKamer(k, etages, naamVan, c) {
   const zoneSoorten = [['', 'Soort'], ...huismodel.ZONE_SOORTEN];
   const zones = (k.zones ?? []).map((z) => `<div class="zonerij"><input class="veld" data-zonenaam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="Naam van zone ${esc(z.naam)}"><select class="veld" data-zonesoort="${esc(z.id)}" aria-label="Soort van zone ${esc(z.naam)}">${zoneSoorten.map(([v, t]) => `<option value="${v}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select><button type="button" class="chip" data-zoneweg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">×</button></div>`).join('');
   const buren = (c?.kamers ?? []).filter((x) => x.id !== k.id && x.etage === k.etage);
+  // Links of rechts op de etage (besluit 166); slepen in het huis kan ook.
+  const opEtage = (c?.kamers ?? []).filter((x) => x.etage === k.etage);
+  const plek = opEtage.findIndex((x) => x.id === k.id);
+  const schuif = opEtage.length > 1 ? `<div class="veldlabel breed"><span>Plek op de etage, of sleep de kamer in het huis</span><div class="chips"><button type="button" class="chip" data-schuifkamer="-1" ${plek <= 0 ? 'disabled' : ''}>← Naar links</button><button type="button" class="chip" data-schuifkamer="1" ${plek >= opEtage.length - 1 ? 'disabled' : ''}>Naar rechts →</button></div></div>` : '';
   return `<div class="bewerk">
     <label class="veldlabel"><span>Naam</span><input class="veld" data-naam="${esc(k.id)}" value="${esc(k.naam)}" maxlength="40"></label>
     <label class="veldlabel"><span>Etage</span><select class="veld" data-etage="${esc(k.id)}">${etages.map((x) => `<option value="${esc(x.id)}" ${x.id === k.etage ? 'selected' : ''}>${esc(naamVan(x))}</option>`).join('')}</select></label>
+    ${k.etage === 'buiten' ? '' : schuif}
     ${k.etage === 'buiten' ? '' : `<label class="veldlabel breed"><span>Soort kamer</span><select class="veld" data-soort="${esc(k.id)}">${soorten.map(([v, t]) => `<option value="${v}" ${v === (k.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`}
     ${k.etage === 'buiten' ? '' : `<div class="veldlabel breed"><span>Zones, voor één open ruimte met meer delen, zoals keuken en zithoek</span>${zones}<input class="veld" data-nieuwezone placeholder="+ Zone toevoegen" aria-label="Nieuwe zone" maxlength="40"></div>`}
     ${buren.length ? `<label class="veldlabel"><span>Eén ruimte met</span><select class="veld" data-samen="${esc(k.id)}"><option value="">Samenvoegen met…</option>${buren.map((x) => `<option value="${esc(x.id)}">${esc(x.naam)}</option>`).join('')}</select></label>` : ''}
@@ -306,7 +315,7 @@ function huisStap() {
   return {
     waar: waarVan('huis'),
     kop: 'Klopt je huis?',
-    uitleg: 'De kamers uit Home Assistant, per etage. Tik op een kamer om de naam, de etage of de zones te veranderen.',
+    uitleg: 'De kamers uit Home Assistant, per etage. Tik op een kamer om de naam, de etage of de zones te veranderen. In het huis sleep je een kamer naar een andere plek.',
     // De tip alleen zolang er geen kamer open staat: dan krijgt die de ruimte.
     inhoud: `<div class="rijen">${rijen.join('')}</div>${open ? '' : '<div class="noot">Een deur ertussen maakt twee kamers. Open, zoals keuken en zithoek, is één ruimte met zones: voeg de kamers samen.</div>'}`,
   };
@@ -315,6 +324,38 @@ function huisStap() {
  * Twee kamers worden één ruimte (besluit 158): de tweede wordt een zone van de
  * eerste, met zijn apparaten. Een eigen regeling kan maar één kamer hebben.
  */
+/**
+ * Een kamer naar een andere plek (besluit 166): op de plek van `doelId`, op
+ * diens etage; zonder doel één plek naar links (-1) of rechts (1). De volgorde
+ * van de kamers is de volgorde in het huis, van links naar rechts.
+ */
+function verplaatsKamer(next, id, { doelId = null, stap = 0 } = {}) {
+  const i = next.kamers.findIndex((x) => x.id === id);
+  if (i < 0) return false;
+  const k = next.kamers[i];
+  if (doelId) {
+    const doel = next.kamers.find((x) => x.id === doelId);
+    if (!doel || doel.id === id || doel.etage === 'buiten') return false;
+    const zelfde = doel.etage === k.etage;
+    const doelVoor = next.kamers.indexOf(doel);
+    next.kamers.splice(i, 1);
+    const j = next.kamers.indexOf(doel);
+    // Op dezelfde etage van links naar rechts: erachter; anders ervoor.
+    next.kamers.splice(zelfde && i <= doelVoor ? j + 1 : j, 0, k);
+    if (!zelfde) {
+      k.etage = doel.etage;
+      delete k.meedoenMet;
+    }
+    return true;
+  }
+  const buren = next.kamers.filter((x) => x.etage === k.etage);
+  const b = buren[buren.indexOf(k) + stap];
+  if (!b) return false;
+  const j = next.kamers.indexOf(b);
+  [next.kamers[i], next.kamers[j]] = [next.kamers[j], next.kamers[i]];
+  return true;
+}
+
 function samenvoegen(next, hoofdId, anderId) {
   const k = next.kamers.find((x) => x.id === hoofdId);
   const b = next.kamers.find((x) => x.id === anderId);
@@ -344,13 +385,18 @@ function samenvoegen(next, hoofdId, anderId) {
 }
 
 /*
- * Buiten (besluiten 109 en 158): eerst wat er rond het huis is, elk deel apart
- * aan of uit; zo tekent het huis zijn buitenkant. Daarna, voor de ruimtes uit
- * Home Assistant, bij welk deel hun lampen en camera horen.
+ * Buiten (besluiten 109, 158 en 166): één lijst met wat er rond het huis is,
+ * elk deel aan of uit; zo tekent het huis zijn buitenkant. Onder een deel dat
+ * aan staat, welke ruimte uit Home Assistant erbij hoort: daar komen zijn
+ * lampen en camera vandaan. Het losse blok met ruimtes is weg.
  */
 const buitenKamers = () => (concept()?.kamers ?? []).filter((k) => k.etage === 'buiten');
-const RONDOM = [['oprit', 'Oprit'], ['auto', 'Auto op de oprit'], ['voortuin', 'Voortuin'], ['tuin', 'Achtertuin'], ['terras', 'Terras'], ['balkon', 'Balkon'], ['tuinhuis', 'Tuinhuis of schuur']];
-const BUITEN_SOORTEN = [['oprit', 'Oprit'], ['tuin', 'Tuin'], ['voortuin', 'Voortuin'], ['terras', 'Terras'], ['balkon', 'Balkon'], ['tuinhuis', 'Tuinhuis']];
+/** [deel, naam, soort van een ruimte die erbij hoort]; auto en carport horen bij de oprit. */
+const RONDOM = [
+  ['oprit', 'Oprit', 'oprit'], ['auto', 'Auto op de oprit', null], ['carport', 'Carport', null], ['garage', 'Garage, los van het huis', 'garage'],
+  ['voortuin', 'Voortuin', 'voortuin'], ['tuin', 'Achtertuin', 'tuin'], ['terras', 'Terras', 'terras'], ['balkon', 'Balkon', 'balkon'], ['tuinhuis', 'Tuinhuis of schuur', 'tuinhuis'],
+];
+const OP_OPRIT = new Set(['auto', 'carport']);
 function buitenNu(k) {
   const r = buitenRuimtes().find((x) => x.id === k.id);
   return k.buiten ?? r?.buiten ?? huismodel.soortBuiten(k);
@@ -358,16 +404,21 @@ function buitenNu(k) {
 function buitenStap() {
   const rond = huismodel.rondNu(d.huis);
   const kamers = buitenKamers();
-  const delen = RONDOM.map(([w, t]) => schakel(`data-rond="${w}"`, t, !!rond[w] && (w !== 'auto' || rond.oprit), w === 'auto' && !rond.oprit)).join('');
-  const ruimtes = kamers.map((k) => {
-    const b = buitenNu(k);
-    return rij(k.naam, BUITEN_SOORTEN.map(([w, t]) => knop(`data-bsoort="${esc(k.id)}" data-waarde="${w}"`, t, b.soort === w)).join(''));
+  const delen = RONDOM.map(([w, t, soort]) => {
+    const aan = !!rond[w] && (!OP_OPRIT.has(w) || !!rond.oprit);
+    const gekoppeld = soort ? kamers.find((k) => buitenNu(k).soort === soort) : null;
+    const keuze = aan && soort && kamers.length
+      ? `<label class="koppel"><span>Ruimte</span><select class="veld" data-bkoppel="${soort}" aria-label="Ruimte uit Home Assistant bij ${esc(t)}">${gekoppeld ? '' : '<option value="">geen</option>'}${kamers.map((k) => `<option value="${esc(k.id)}" ${k.id === gekoppeld?.id ? 'selected' : ''}>${esc(k.naam)}</option>`).join('')}</select></label>`
+      : '';
+    return `<div class="deel">${schakel(`data-rond="${w}"`, t, aan, OP_OPRIT.has(w) && !rond.oprit)}${keuze}</div>`;
   });
+  // Ruimtes die bij geen deel horen dat aan staat: die tekent het huis nergens.
+  const los = kamers.filter((k) => !RONDOM.some(([w, , s]) => s && rond[w] && buitenNu(k).soort === s));
   return {
     waar: waarVan('buiten'),
     kop: 'Wat is er rond je huis?',
-    uitleg: 'Zet aan wat er is. Zo tekent het huis je buitenkant.',
-    inhoud: `<div class="rijen"><div class="rondom">${delen}</div>${ruimtes.length ? `<p class="vraagje" style="margin: 12px 0 2px">Ruimtes uit Home Assistant: bij welk deel horen hun lampen en camera?</p>${ruimtes.join('')}` : ''}</div>`,
+    uitleg: kamers.length ? 'Zet aan wat er is. Bij Ruimte kies je de ruimte uit Home Assistant met de lampen en camera van dat deel.' : 'Zet aan wat er is. Zo tekent het huis je buitenkant.',
+    inhoud: `<div class="rijen"><div class="rondom">${delen.join('')}</div></div>${los.length ? `<div class="noot">${esc(lijstje(los.map((k) => k.naam)))} ${los.length === 1 ? 'hoort' : 'horen'} nog bij geen deel. Kies ${los.length === 1 ? 'hem' : 'ze'} bij Ruimte.</div>` : ''}`,
   };
 }
 
@@ -387,33 +438,80 @@ function qrVan(adres) {
     return '';
   }
 }
+/*
+ * Een bewoner aantikken (besluit 166): de naam, waarmee het huis ziet of
+ * diegene thuis is, de plek in de volgorde en het comfort; dezelfde deur als
+ * Instellingen › Bewoners (`api/bewoners`).
+ */
+let openBewoner = null;
+function bewonerBewerk(x, i, lijst) {
+  const b = d.bewoners;
+  const kan = b?.ik?.magBeheren || x.ik;
+  const hoofd = lijst[0];
+  const thuis = x.gekoppeld
+    ? `<div class="veldlabel breed"><span>Thuis volgens</span><span class="zacht" style="padding: 0">${esc(x.aanwezigheidNaam ?? '')} in Home Assistant, gekoppeld aan het account</span></div>`
+    : `<label class="veldlabel breed"><span>Thuis volgens</span><select class="veld" data-bbron="${esc(x.id)}" ${kan ? '' : 'disabled'}><option value="">Geen: het huis weet het niet</option>${(x.kiesbaar ?? []).map((y) => `<option value="${esc(y.id)}" ${y.id === x.aanwezigheid ? 'selected' : ''}>${esc(y.naam)} · ${y.soort === 'persoon' ? 'persoon' : 'sensor'}</option>`).join('')}</select></label>`;
+  const volgorde = b?.ik?.magBeheren && lijst.length > 1
+    ? `<div class="veldlabel breed"><span>Plek in de volgorde: wie eerst thuis is, bepaalt het comfort</span><div class="chips"><button type="button" class="chip" data-bvolg="-1" ${i === 0 ? 'disabled' : ''}>↑ Hoger</button><button type="button" class="chip" data-bvolg="1" ${i === lijst.length - 1 ? 'disabled' : ''}>↓ Lager</button>${x.hoofd ? '' : '<button type="button" class="chip" data-bhoofd>Hoofdgebruiker maken</button>'}</div></div>`
+    : '';
+  const comfort = x.hoofd
+    ? `<div class="veldlabel breed"><span>Comfort</span><span class="zacht" style="padding: 0">Het comfort van het huis; dat stel je in bij Klimaat › Comfort.</span></div>`
+    : `<div class="veldlabel breed"><span>Comfort</span><div class="chips">${knop('data-bcomfort="eigen"', 'Eigen temperaturen', x.comfort === 'eigen')}${knop('data-bcomfort="volgt"', `Volgt ${hoofd?.naam ?? 'de hoofdgebruiker'}`, x.comfort !== 'eigen')}${x.comfort === 'eigen' ? `<a class="chip plus" href="comfort.html?bewoner=${encodeURIComponent(x.id)}">Temperaturen instellen ›</a>` : ''}</div></div>`;
+  return `<div class="bewerk" style="grid-column: 1 / -1">
+    <label class="veldlabel breed"><span>Zo noemt het huis ${x.ik ? 'je' : esc(x.naam)}</span><input class="veld" data-bnaam="${esc(x.id)}" value="${esc(x.naam)}" maxlength="40" ${kan ? '' : 'disabled'}></label>
+    ${thuis}${volgorde}${comfort}
+  </div>`;
+}
 function bewonersStap() {
   const b = d.bewoners;
-  const rijen = (b?.bewoners ?? []).map((x) => `<div class="waarderij">${esc(x.naam)}${x.ik ? ' (jij)' : ''}<span>${x.hoofd ? 'hoofdgebruiker' : 'volgt het comfort van de hoofdgebruiker'}</span></div>`).join('');
+  const lijst = b?.bewoners ?? [];
+  const rijen = lijst.map((x, i) => {
+    const open = x.id === openBewoner;
+    const wat = x.hoofd ? 'hoofdgebruiker' : x.comfort === 'eigen' ? 'eigen comfort' : `volgt ${lijst[0]?.naam ?? 'de hoofdgebruiker'}`;
+    return `<button type="button" class="waarderij bewonerrij${open ? ' open' : ''}" data-bewoner="${esc(x.id)}" aria-expanded="${open}"><span>${i + 1}. ${esc(x.naam)}${x.ik ? ' (jij)' : ''}</span><span>${esc(wat)} ›</span></button>${open ? bewonerBewerk(x, i, lijst) : ''}`;
+  }).join('');
   return {
     waar: waarVan('bewoners'),
     kop: 'Wie woont hier?',
-    uitleg: 'Wie één keer inlogt, staat erbij. De eerste die thuis is, bepaalt het comfort; de hoofdgebruiker staat bovenaan.',
-    inhoud: `${rijen ? `<div>${rijen}</div>` : '<p class="zacht" style="padding: 0">Nog niemand.</p>'}
-      <div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">Laat de anderen deze code scannen en één keer inloggen met Home Assistant.</span></div>
-      <div class="noot">De volgorde en wie wat volgt, zet je later bij Instellingen › Bewoners.</div>`,
+    uitleg: 'Wie één keer inlogt, staat erbij. De eerste die thuis is, bepaalt het comfort. Tik op iemand om het in te stellen.',
+    inhoud: `<div class="rijen">${rijen || '<p class="zacht" style="padding: 0">Nog niemand.</p>'}</div>
+      ${openBewoner ? '' : `<div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">Laat de anderen deze code scannen en één keer inloggen met Home Assistant.</span></div>`}`,
   };
 }
+async function stuurBewoner(body, tekst) {
+  if (!(await stuur('api/bewoners', body))) return;
+  d.bewoners = await haal('api/bewoners').catch(() => d.bewoners);
+  if (tekst) zeg(tekst);
+  teken();
+}
 
+/*
+ * Apparaten per kamer (besluit 166): alles in de stap zelf, zonder uitstap.
+ * Bovenaan wat nog los staat, met een kamer erbij; daaronder per kamer wat er
+ * staat. Een apparaat aantikken geeft verplaatsen en weghalen. Wat verwarmt of
+ * koelt, staat bij Klimaat.
+ */
+let openApparaat = null;
 function apparatenStap() {
   const los = d.huis?.zonderRuimte ?? [];
   const kamers = (d.huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).map((r) => ({ r, e })));
-  const opties = (voorstel) => `<option value="">Kies een kamer…</option>${kamers.map(({ r }) => `<option value="${esc(r.id)}" ${r.id === voorstel ? 'selected' : ''}>${esc(r.naam)}</option>`).join('')}<option value="-">Niet tonen</option>`;
-  const ingedeeld = kamers.reduce((t, { r }) => t + (r.apparaten?.length ?? 0), 0);
-  const inhoud = los.length
-    ? `<div class="rijen">${los.map((a) => `<div class="rij breed"><b>${esc(a.naam)}</b><select class="veld" data-plek="${esc(a.id)}" aria-label="Kamer voor ${esc(a.naam)}">${opties(a.voorstelKamer)}</select></div>`).join('')}</div>
-       ${los.some((a) => a.voorstelKamer) ? '<div class="noot">Een kamer die al gekozen staat, is een voorstel uit de naam. Volgende neemt hem over.</div>' : ''}`
-    : '<div class="noot">Alles heeft een plek. Komt er iets nieuws bij in Home Assistant, dan staat het bij de bel.</div>';
+  const opties = (voorstel, leeg = 'Kies een kamer…') => `<option value="">${leeg}</option>${kamers.map(({ r }) => `<option value="${esc(r.id)}" ${r.id === voorstel ? 'selected' : ''}>${esc(r.naam)}</option>`).join('')}<option value="-">Niet tonen</option>`;
+  const losRijen = los.map((a) => `<div class="rij breed"><b>${esc(a.naam)}</b><select class="veld" data-plek="${esc(a.id)}" aria-label="Kamer voor ${esc(a.naam)}">${opties(a.voorstelKamer)}</select></div>`).join('');
+  const perKamer = kamers.filter(({ r }) => geenKlimaat(r.apparaten).length).map(({ r }) => {
+    const apps = geenKlimaat(r.apparaten);
+    const open = apps.find((a) => a.id === openApparaat);
+    const chips = apps.map((a) => knop(`data-apparaat="${esc(a.id)}"`, a.naam, a.id === openApparaat)).join('');
+    const bewerk = open
+      ? `<div class="bewerk"><label class="veldlabel breed"><span>Naar een andere kamer</span><select class="veld" data-verplaats="${esc(sleutel(open))}" aria-label="Kamer voor ${esc(open.naam)}">${opties(null, `Blijft in ${r.naam}`).replace('<option value="-">Niet tonen</option>', '')}</select></label><div class="veldlabel breed"><button type="button" class="chip gevaar" data-verberg="${esc(open.id)}">Weghalen uit de app</button></div></div>`
+      : '';
+    return rij(r.naam, chips, bewerk);
+  }).join('');
+  const ingedeeld = kamers.reduce((t, { r }) => t + geenKlimaat(r.apparaten).length, 0);
   return {
     waar: waarVan('apparaten'),
-    kop: los.length === 0 ? 'Alles heeft een plek' : los.length === 1 ? 'Waar staat dit apparaat?' : `Waar staan deze ${los.length} apparaten?`,
-    uitleg: `${meervoud(ingedeeld, 'apparaat staat', 'apparaten staan')} al in een kamer, uit de ruimtes van Home Assistant.${los.length ? ' Wat nog los staat, zet je hier neer.' : ''}`,
-    inhoud: `${inhoud}<div><button type="button" class="chip" data-bekijk="apparaten">Bekijk alle apparaten</button></div>`,
+    kop: los.length === 0 ? 'Klopt waar alles staat?' : los.length === 1 ? 'Waar staat dit apparaat?' : `Waar staan deze ${los.length} apparaten?`,
+    uitleg: `${meervoud(ingedeeld, 'apparaat staat', 'apparaten staan')} al in een kamer, uit Home Assistant. Tik er een aan om hem te verplaatsen of weg te halen. Wat verwarmt of koelt, komt bij Klimaat.`,
+    inhoud: `<div class="rijen">${losRijen ? `${losRijen}${los.some((a) => a.voorstelKamer) ? '<p class="zacht" style="padding: 4px 0 8px">Een kamer die al gekozen staat, komt uit de naam. Volgende neemt hem over.</p>' : ''}` : ''}${perKamer}</div>`,
   };
 }
 
@@ -594,7 +692,8 @@ function zonStap() {
  */
 const ligStaat = { aanpassen: false, concept: null };
 function liggingStap() {
-  const k = ligging.kaart(d.aans?.ligging, d.aans?.antwoorden, ligStaat);
+  // De antwoorden zoals de stap ze kent, ook als er nog niets bewaard is (besluit 166).
+  const k = ligging.kaart(d.aans?.ligging, antwoorden(), ligStaat);
   const rechts = `<span class="rechts lig-knoppen">${k.knoppen}${k.volgende ? '<button type="button" class="knop knop-licht" data-volgende>Volgende</button>' : ''}</span>`;
   return {
     waar: waarVan('ligging'),
@@ -701,15 +800,28 @@ async function bewaarFuncties(c) {
  * De wand (besluit 158): dat doe je op de tablet zelf, niet hier. Wie hier
  * inricht, ziet hoe, met een code om te scannen, en welke schermen er al zijn.
  */
+/*
+ * Per scherm (besluit 166): het hele scherm en luisteren naar "Hé huis". De
+ * dienst bewaart het, de tablet neemt het over; zo zet je het ook vanaf de pc.
+ */
+function schermRij(s) {
+  const mag = d.bewoners?.ik?.magBeheren || s.ik;
+  const o = s.opties ?? {};
+  return `<div class="waarderij">${esc(s.naam)}<span>${s.ik ? 'dit scherm' : 'scherm'}</span></div>
+    <div class="rondom" style="margin-bottom: 8px">
+      ${schakel(`data-sopt="volledig" data-scherm="${esc(s.id)}"`, 'Volledig scherm', o.volledig === true, !mag)}
+      ${schakel(`data-sopt="luisteren" data-scherm="${esc(s.id)}"`, 'Luistert naar "Hé huis"', o.luisteren === true, !mag)}
+    </div>`;
+}
 function wandStap() {
   const schermen = d.bewoners?.schermen ?? [];
   const inlog = d.sessie?.toegang === 'sessions';
   return {
     waar: waarVan('wand'),
     kop: schermen.length ? 'De wand staat erin' : 'Zet de wand erbij',
-    uitleg: `Pak de tablet aan de muur en open Smart Climate${inlog ? ', of scan de code' : ' via Home Assistant'}. ${inlog ? 'Log één keer in met een account van Home Assistant en kies' : 'Kies bij de eerste keer'} "Dit is een scherm".`,
+    uitleg: schermen.length ? 'Kies per scherm hoe het werkt; de tablet neemt het over, ook als je dit op de pc doet.' : `Pak de tablet aan de muur en open Smart Climate${inlog ? ', of scan de code' : ' via Home Assistant'}. ${inlog ? 'Log één keer in met een account van Home Assistant en kies' : 'Kies bij de eerste keer'} "Dit is een scherm".`,
     inhoud: `${inlog ? `<div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">Een scherm telt niet als bewoner. Het begroet wie er thuis is.</span></div>` : ''}
-      ${schermen.length ? `<div>${schermen.map((s) => `<div class="waarderij">${esc(s.naam)}<span>${s.ik ? 'dit scherm' : 'scherm'}</span></div>`).join('')}</div>` : '<div class="noot">Nog geen scherm. Het kan ook later: de tablet vraagt het zelf bij de eerste keer.</div>'}`,
+      ${schermen.length ? `<div class="rijen">${schermen.map(schermRij).join('')}</div>` : '<div class="noot">Nog geen scherm. Het kan ook later: de tablet vraagt het zelf bij de eerste keer.</div>'}`,
   };
 }
 async function bewaarAansluiting(a) {
@@ -835,7 +947,7 @@ function tekenNu() {
   if (actief && actief.matches?.('[data-kaart] input[type="text"], [data-kaart] input:not([type])') && actief.closest('[data-kaart]')) return;
   $$('[data-kaart]').forEach((el) => {
     el.innerHTML = `<span class="waar">${esc(v.waar)}</span>
-      <h1 class="${v.groot ? 'kop-1' : 'kop-2'}" style="${v.groot ? 'font-size: 44px; line-height: 1.05' : ''}">${esc(v.kop)}</h1>
+      <h1 class="${v.groot ? 'kop-1' : 'kop-2'}" style="${v.groot ? 'font-size: 40px; line-height: 1.05' : ''}">${esc(v.kop)}</h1>
       <p class="uitleg">${esc(v.uitleg)}</p>
       ${v.inhoud}
       <span class="melding-inr${melding.fout ? ' fout' : ''}" data-melding>${esc(melding.tekst)}</span>
@@ -845,10 +957,65 @@ function tekenNu() {
   // Een kamer die open gaat, schuift in beeld.
   document.querySelector(`${app.zicht()} [data-kaart] .bewerk`)?.scrollIntoView({ block: 'nearest' });
   const m = model(nu);
-  if (!app.telStand()) huis.teken(document.querySelector('[data-podium="wand"]'), m, { breedte: 700, hoogte: 640, marge: 0.04, zoom: 1, schuifY: 10 });
+  // Zo groot als het vak echt is (besluit 166): op een breder scherm is het vak breder.
+  const vak = document.querySelector('[data-podium="wand"]');
+  // Bij Klopt je huis? zijn de kamers in het huis aan te tikken en te slepen (besluit 166).
+  if (!app.telStand()) huis.teken(vak, m, { breedte: vak.clientWidth || 700, hoogte: vak.clientHeight || 640, marge: 0.04, zoom: 1, schuifY: 10, tik: nu === 'huis' });
   else huis.teken(document.querySelector('[data-podium="tel"]'), m, { breedte: 360, hoogte: 220, marge: 0.04, zoom: 1 });
 }
 const teken = app.gebundeld(tekenNu);
+
+/*
+ * Slepen in het huis (besluit 166): bij Klopt je huis? pak je een kamer in de
+ * tekening en laat je hem los op een andere kamer; hij neemt die plek in, ook
+ * op een andere etage. Een tik zonder slepen opent de kamer in de lijst.
+ */
+{
+  const vak = document.querySelector('[data-podium="wand"]');
+  let sleep = null;
+  const kamerOnder = (x, y) => document.elementFromPoint(x, y)?.closest?.('[data-podium="wand"] [data-kamer]') ?? null;
+  const markeer = (el) => {
+    vak.querySelectorAll('.sc-doel').forEach((x) => x.classList.remove('sc-doel'));
+    el?.classList.add('sc-doel');
+  };
+  vak?.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('[data-kamer]');
+    if (stapNu() !== 'huis' || !el || !binnen().some((r) => r.id === el.dataset.kamer)) return;
+    e.preventDefault();
+    sleep = { id: el.dataset.kamer, x: e.clientX, y: e.clientY, bezig: false };
+    el.classList.add('sc-gepakt');
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!sleep) return;
+    if (!sleep.bezig && Math.hypot(e.clientX - sleep.x, e.clientY - sleep.y) > 10) sleep.bezig = true;
+    if (!sleep.bezig) return;
+    const doel = kamerOnder(e.clientX, e.clientY);
+    markeer(doel && doel.dataset.kamer !== sleep.id && binnen().some((r) => r.id === doel.dataset.kamer) ? doel : null);
+  });
+  const los = async (e) => {
+    if (!sleep) return;
+    const { id, bezig: gesleept } = sleep;
+    sleep = null;
+    vak.querySelectorAll('.sc-gepakt').forEach((x) => x.classList.remove('sc-gepakt'));
+    markeer(null);
+    if (!gesleept) {
+      open = open === id ? null : id;
+      weghalen = null;
+      teken();
+      return;
+    }
+    const doel = e.type === 'pointerup' ? kamerOnder(e.clientX, e.clientY)?.dataset.kamer : null;
+    const next = concept();
+    if (!doel || !next) return;
+    const naam = next.kamers.find((x) => x.id === id)?.naam;
+    if (verplaatsKamer(next, id, { doelId: doel })) {
+      open = id;
+      await bewaarIndeling(next, `${naam} staat op een nieuwe plek.`);
+    }
+  };
+  document.addEventListener('pointerup', los);
+  document.addEventListener('pointercancel', los);
+}
 
 /* ------------------------------------------------------------ doen */
 
@@ -899,9 +1066,38 @@ document.addEventListener('click', async (e) => {
     teken();
     return;
   }
-  if (t.dataset.bekijk) {
-    lijst = t.dataset.bekijk;
-    naar('welkom');
+  if (t.dataset.sopt) {
+    const s = (d.bewoners?.schermen ?? []).find((x) => x.id === t.dataset.scherm);
+    if (!s) return;
+    const aan = !(s.opties?.[t.dataset.sopt] === true);
+    await stuurBewoner({ actie: 'schermOpties', id: s.id, opties: { [t.dataset.sopt]: aan } }, aan ? `${s.naam}: aan. De tablet neemt het over.` : `${s.naam}: uit, vanaf de volgende pagina.`);
+    return;
+  }
+  if (t.dataset.bewoner) {
+    openBewoner = openBewoner === t.dataset.bewoner ? null : t.dataset.bewoner;
+    teken();
+    return;
+  }
+  if (t.dataset.bvolg && openBewoner) {
+    const v = (d.bewoners?.bewoners ?? []).map((x) => x.id);
+    const i = v.indexOf(openBewoner);
+    const j = i + Number(t.dataset.bvolg);
+    if (i < 0 || j < 0 || j >= v.length) return;
+    [v[i], v[j]] = [v[j], v[i]];
+    await stuurBewoner({ actie: 'volgorde', volgorde: v });
+    return;
+  }
+  if (t.hasAttribute('data-bhoofd') && openBewoner) {
+    await stuurBewoner({ actie: 'hoofd', id: openBewoner });
+    return;
+  }
+  if (t.dataset.bcomfort && openBewoner) {
+    await stuurBewoner({ actie: 'comfort', id: openBewoner, comfort: t.dataset.bcomfort });
+    return;
+  }
+  if (t.dataset.apparaat) {
+    openApparaat = openApparaat === t.dataset.apparaat ? null : t.dataset.apparaat;
+    teken();
     return;
   }
   if (t.dataset.verberg) {
@@ -910,6 +1106,7 @@ document.addEventListener('click', async (e) => {
     const id = t.dataset.verberg;
     const naam = [...(d.huis?.zonderRuimte ?? []), ...(d.huis?.etages ?? []).flatMap((x) => x.ruimtes ?? []).flatMap((r) => r.apparaten ?? [])].find((a) => a.id === id)?.naam ?? 'Het apparaat';
     next.verborgen = [...new Set([...(next.verborgen ?? []), id])];
+    openApparaat = null;
     await bewaarIndeling(next, `${naam} weggehaald.`);
     return;
   }
@@ -952,6 +1149,11 @@ document.addEventListener('click', async (e) => {
     open = null;
     weghalen = null;
     await bewaarIndeling(next, `${k.naam} weggehaald.`);
+    return;
+  }
+  if (t.dataset.schuifkamer) {
+    const next = concept();
+    if (next && verplaatsKamer(next, open, { stap: Number(t.dataset.schuifkamer) })) await bewaarIndeling(next);
     return;
   }
   if (t.dataset.zoneweg) {
@@ -1054,18 +1256,11 @@ document.addEventListener('click', async (e) => {
     const rond = { ...(next.rond ?? huismodel.rondNu(d.huis)) };
     const w = t.dataset.rond;
     rond[w] = !rond[w];
-    if (w === 'oprit' && !rond.oprit) rond.auto = false;
+    if (w === 'oprit' && !rond.oprit) {
+      rond.auto = false;
+      rond.carport = false;
+    }
     next.rond = rond;
-    await bewaarIndeling(next);
-    return;
-  }
-  if (t.dataset.bsoort) {
-    // Bij welk deel een buitenruimte hoort (besluit 109).
-    const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.bsoort);
-    if (!k) return;
-    const b = buitenNu(k);
-    k.buiten = { soort: t.dataset.waarde, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
     await bewaarIndeling(next);
     return;
   }
@@ -1158,6 +1353,28 @@ document.addEventListener('change', async (e) => {
       return;
     }
     await bewaarIndeling(next, `${doel} is nu een zone van ${next.kamers.find((x) => x.id === t.dataset.samen)?.naam}.`);
+  } else if (t.dataset.bnaam) {
+    const naam = t.value.trim();
+    const x = (d.bewoners?.bewoners ?? []).find((y) => y.id === t.dataset.bnaam);
+    if (naam && x && naam !== x.naam) await stuurBewoner({ actie: 'naam', id: x.id, naam });
+  } else if (t.dataset.bbron !== undefined) {
+    await stuurBewoner({ actie: 'aanwezigheid', id: t.dataset.bbron, bron: t.value || null });
+  } else if (t.dataset.verplaats) {
+    // Een apparaat naar een andere kamer (besluit 166).
+    const next = concept();
+    const doel = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).find((r) => r.id === t.value);
+    if (!next || !doel) return;
+    next.apparaten[t.dataset.verplaats] = { ...(next.apparaten[t.dataset.verplaats] ?? {}), kamer: doel.id, zone: null };
+    openApparaat = null;
+    await bewaarIndeling(next, `Staat nu in ${doel.naam}.`);
+  } else if (t.dataset.bkoppel) {
+    // Welke ruimte uit Home Assistant bij een deel buiten hoort (besluit 166).
+    const next = concept();
+    const k = next?.kamers.find((x) => x.id === t.value);
+    if (!k) return;
+    const b = buitenNu(k);
+    k.buiten = { soort: t.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
+    await bewaarIndeling(next, `${k.naam} hoort nu bij ${RONDOM.find(([, , s]) => s === t.dataset.bkoppel)?.[1].toLowerCase() ?? t.dataset.bkoppel}.`);
   } else if (t.dataset.plek) {
     const next = concept();
     if (!next || !t.value) return;
@@ -1235,7 +1452,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   if (e.target.matches?.('[data-nieuwnaam]')) document.querySelector(`${app.zicht()} [data-voegtoe]`)?.click();
-  else if (e.target.matches?.('[data-naam], [data-prijs], [data-aantal], [data-zonenaam], [data-nieuwezone]')) e.target.blur();
+  else if (e.target.matches?.('[data-naam], [data-bnaam], [data-prijs], [data-aantal], [data-zonenaam], [data-nieuwezone]')) e.target.blur();
 });
 
 addEventListener('standwissel', teken);

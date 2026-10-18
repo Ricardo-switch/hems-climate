@@ -1278,7 +1278,9 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
   const zone = (soort: RoomType, re: RegExp) => room.zones.some((z) => (z.soort ? z.soort === soort : re.test(z.naam.toLowerCase())));
   if (zone('keuken', /keuken|kitchen/) && zone('woonkamer', /woon|zit|lounge|living|bank|tv/)) return 'woonkeuken';
   if (zegt(/woonkeuken|open keuken|leefkeuken/)) return 'woonkeuken';
-  if (zegt(/bijkeuken|wasruimte|washok|wasplaats|laundry|stookhok|technische ruimte|cv-ruimte/)) return 'wasruimte';
+  // Bijkeuken, kelder en garage hebben een eigen soort (besluit 166).
+  if (zegt(/bijkeuken/)) return 'bijkeuken';
+  if (zegt(/wasruimte|washok|wasplaats|laundry|stookhok|technische ruimte|cv-ruimte/)) return 'wasruimte';
   if (zegt(/keuken|kitchen/)) return 'keuken';
   if (zegt(/logeer|gast|guest/)) return 'logeerkamer';
   if (zegt(/kinder|baby|speelkamer|jongenskamer|meisjeskamer|tienerkamer|nursery|kids/)) return 'kinderkamer';
@@ -1292,9 +1294,11 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
   if (zegt(/trapkast|meterkast|kast onder de trap/)) return 'berging';
   if (zegt(/^(hal|gang|overloop|entree|portaal|vide|trap|trappenhuis|hall|landing|hallway)\b/)) return 'hal';
   if (zegt(/werk|kantoor|studeer|hobby|office|studio|bureau|game|thuiswerk|atelier|knutsel/)) return 'werkkamer';
-  if (zegt(/zolder|vliering|berg|opslag|kelder|garage|schuur|attic|storage|basement/)) return 'berging';
-  // Een kelder zonder naam die iets zegt, is een berging.
-  if (room.etage === 'kelder') return 'berging';
+  if (zegt(/garage/)) return 'garage';
+  if (zegt(/kelder|basement/)) return 'kelder';
+  if (zegt(/zolder|vliering|berg|opslag|schuur|attic|storage/)) return 'berging';
+  // Een kelder zonder naam die iets zegt, is een kelder.
+  if (room.etage === 'kelder') return 'kelder';
   if (devices.some((d) => d.soort === 'apparaat' && /was|droog|droger/i.test(d.naam))) return 'wasruimte';
   return null;
 }
@@ -1306,7 +1310,7 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
  */
 export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devices: readonly Pick<HouseDevice, 'naam'>[]): LayoutOutside {
   const n = room.naam;
-  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : 'tuin';
+  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : /garage/i.test(n) ? 'garage' : 'tuin';
   const huisje = /tuinhuis|schuur|berging|huisje/i;
   return { soort, auto: soort === 'oprit', tuinhuis: soort === 'tuin' && (room.zones.some((z) => huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam))) };
 }

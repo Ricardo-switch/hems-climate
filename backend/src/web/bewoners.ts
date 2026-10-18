@@ -53,6 +53,17 @@ export interface Scherm {
   /** De naam van het account in Home Assistant, als de naam in de app anders werd. */
   readonly haNaam?: string;
   readonly sindsMs: number;
+  /**
+   * Hoe dit scherm werkt (besluit 166), in te stellen vanaf elk apparaat: het
+   * hele scherm, en luisteren naar "Hé huis". Weg is: zoals het scherm het zelf
+   * koos, in zijn browser.
+   */
+  readonly opties?: SchermOpties;
+}
+
+export interface SchermOpties {
+  readonly volledig?: boolean;
+  readonly luisteren?: boolean;
 }
 
 export interface Bewoners {
@@ -375,7 +386,7 @@ export interface BewonersView {
   /** Gasten: ingelogd in de app, maar zonder plek in de volgorde. */
   readonly gasten: readonly BewonerView[];
   /** Schermen zoals de wand (besluit 149): op account, met een naam die je kunt veranderen. */
-  readonly schermen: readonly { readonly id: string; readonly naam: string; readonly haNaam: string; readonly sindsMs: number; readonly ik: boolean }[];
+  readonly schermen: readonly { readonly id: string; readonly naam: string; readonly haNaam: string; readonly sindsMs: number; readonly ik: boolean; readonly opties: { readonly volledig: boolean | null; readonly luisteren: boolean | null } }[];
   /** Wat wie er kijkt als aanwezigheid kan kiezen, bij de eerste inlog. */
   readonly kiesbaarVoorMij: readonly Bron[];
   readonly geldt: { readonly id: string; readonly naam: string; readonly waarom: 'thuis' | 'niemand' | 'gekozen'; readonly thuis: readonly string[] } | null;
@@ -445,7 +456,7 @@ export function bewonersView(
     },
     bewoners,
     gasten,
-    schermen: Object.values(b.schermen).map((s) => ({ id: s.haUser, naam: s.naam, haNaam: s.haNaam ?? s.naam, sindsMs: s.sindsMs, ik: wie.userId === s.haUser })),
+    schermen: Object.values(b.schermen).map((s) => ({ id: s.haUser, naam: s.naam, haNaam: s.haNaam ?? s.naam, sindsMs: s.sindsMs, ik: wie.userId === s.haUser, opties: { volledig: s.opties?.volledig ?? null, luisteren: s.opties?.luisteren ?? null } })),
     kiesbaarVoorMij: kiesbaarVoor(wie.userId, ikB?.aanwezigheid ?? null),
     geldt: profile ? { id: profile.id, naam: profile.name, waarom: profile.reason, thuis: profile.home } : null,
   };
@@ -465,6 +476,8 @@ export type Actie =
   /** Een scherm een andere naam geven, of weghalen (besluit 149); het id is het account. */
   | { readonly actie: 'schermNaam'; readonly id: string; readonly naam: string }
   | { readonly actie: 'schermWeg'; readonly id: string }
+  /** Hoe een scherm werkt (besluit 166): het hele scherm, luisteren naar "Hé huis". */
+  | { readonly actie: 'schermOpties'; readonly id: string; readonly opties: SchermOpties }
   /** Dit account is een scherm, ook als het een persoon in Home Assistant heeft (zoals een tablet). */
   | { readonly actie: 'scherm' }
   /** Een gast of weer een bewoner (besluit 147). */
@@ -502,6 +515,17 @@ export function leesActie(body: unknown): Actie | null {
       return id && typeof x['naam'] === 'string' ? { actie: 'schermNaam', id, naam: x['naam'] } : null;
     case 'schermWeg':
       return id ? { actie: 'schermWeg', id } : null;
+    case 'schermOpties': {
+      const o = typeof x['opties'] === 'object' && x['opties'] != null ? (x['opties'] as Record<string, unknown>) : null;
+      if (!id || o == null) return null;
+      const opties: { volledig?: boolean; luisteren?: boolean } = {};
+      for (const k of ['volledig', 'luisteren'] as const) {
+        if (o[k] === undefined) continue;
+        if (typeof o[k] !== 'boolean') return null;
+        opties[k] = o[k];
+      }
+      return Object.keys(opties).length ? { actie: 'schermOpties', id, opties } : null;
+    }
     case 'gast':
       return id && typeof x['gast'] === 'boolean' ? { actie: 'gast', id, gast: x['gast'] } : null;
     default:
@@ -629,6 +653,12 @@ export function voerUit(
       const naam = a.naam.trim().replace(/\s+/g, ' ');
       if (naam === '' || naam.length > 40) return { ok: false, status: 400, reden: 'een naam van 1 tot 40 tekens' };
       return { ok: true, bewoners: { ...b, schermen: { ...b.schermen, [a.id]: { ...sc, naam, haNaam: sc.haNaam ?? sc.naam } } } };
+    }
+    case 'schermOpties': {
+      const sc = b.schermen[a.id];
+      if (sc == null) return { ok: false, status: 404, reden: 'dat scherm is er niet' };
+      if (!beheert && wie.userId !== a.id) return { ok: false, status: 403, reden: 'een scherm beheert de hoofdgebruiker' };
+      return { ok: true, bewoners: { ...b, schermen: { ...b.schermen, [a.id]: { ...sc, opties: { ...sc.opties, ...a.opties } } } } };
     }
     case 'schermWeg': {
       if (b.schermen[a.id] == null) return { ok: false, status: 404, reden: 'dat scherm is er niet' };

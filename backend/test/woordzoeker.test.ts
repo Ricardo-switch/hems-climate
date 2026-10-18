@@ -75,6 +75,8 @@ describe('woordzoeker', () => {
     expect(b.soort).toBe('onbekend');
     if (b.soort !== 'onbekend') return;
     expect(b.voorbeelden).toContain('Waar vul ik de prijzen in?');
+    // Hardop noemt de zin zelf twee voorbeelden (besluit 166).
+    expect(b.gesproken).toBe('Dat begrijp ik nog niet. Vraag bijvoorbeeld "Wat doe je nu" of "Hoe warm is het overal".');
     expect(begrijp('', config, 'nl').soort).toBe('onbekend');
   });
 
@@ -96,6 +98,9 @@ describe('woordzoeker', () => {
     // "Morgen" ging eerst naar wat het huis straks doet (opgelost 15 oktober).
     expect(huis('Gaat het morgen regenen?')).toEqual({ kind: 'morgen' });
     expect(huis('Hoe wordt het weer morgen')).toEqual({ kind: 'morgen' });
+    // Zonder morgen gaat het weer over vandaag (besluit 166).
+    expect(huis('Wat voor weer wordt het vandaag?')).toEqual({ kind: 'weer' });
+    expect(huis('Gaat het regenen?')).toEqual({ kind: 'weer' });
     expect(huis('Wat ga je straks doen')).toEqual({ kind: 'straks' });
     expect(huis('Wat kost de airco?')).toEqual({ kind: 'kosten' });
     expect(huis('Hoeveel geld kostte de airco deze maand')).toEqual({ kind: 'kosten' });

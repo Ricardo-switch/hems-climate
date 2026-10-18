@@ -1223,6 +1223,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-naam]').waitFor();
     expect(await kaart.locator('.veldlabel > span', { hasText: 'Etage' }).count()).toBe(1);
     await kaart.locator('[data-nieuwezone]').waitFor();
+    // Verplaatsen (besluit 166): links en rechts in het vak, en de kamers in het huis zijn aan te tikken.
+    await kaart.locator('[data-kamer] + [data-kamer]').first().click();
+    await kaart.locator('[data-schuifkamer]').first().waitFor({ timeout: 5000 });
+    expect(await kaart.locator('[data-schuifkamer]').count()).toBe(2);
+    expect(await p.locator('#wand [data-podium="wand"] .sc-tik').count()).toBeGreaterThan(0);
     await shot('huis');
     // Onderaan overal Terug en Volgende; Volgende bewaart het voorstel als eigen indeling.
     expect(await kaart.locator('[data-terug]').count()).toBe(1);
@@ -1230,8 +1235,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Zes hoofdstukken met kleine stappen (besluit 144).
     await p.waitForURL(/#buiten$/);
     await kaart.locator('h1', { hasText: 'Wat is er rond je huis?' }).waitFor();
-    // Elk deel rond het huis apart aan of uit (besluit 158).
-    expect(await kaart.locator('[data-rond]').count()).toBe(7);
+    // Elk deel rond het huis apart aan of uit (besluit 158), met garage en carport (besluit 166).
+    expect(await kaart.locator('[data-rond]').count()).toBe(9);
+    expect(await kaart.locator('[data-bsoort]').count()).toBe(0);
     await expect.poll(async () => p.evaluate<number>('document.querySelectorAll("#wand .stap .stipjes i.al").length')).toBe(1);
     await shot('buiten');
     await kaart.locator('[data-volgende]').click();
@@ -1242,6 +1248,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-volgende]').click();
     await p.waitForURL(/#apparaten$/);
     await kaart.locator('.waar', { hasText: '2. Apparaten' }).waitFor();
+    // Alles in de stap zelf (besluit 166): een apparaat aantikken geeft verplaatsen en weghalen.
+    expect(await kaart.locator('[data-bekijk]').count()).toBe(0);
+    await kaart.locator('[data-apparaat]').first().click();
+    await kaart.locator('[data-verplaats]').waitFor({ timeout: 5000 });
     await shot('apparaten');
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Welke thermometer telt per kamer?' }).waitFor();

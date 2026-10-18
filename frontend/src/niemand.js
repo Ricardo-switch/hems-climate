@@ -161,6 +161,15 @@
     return delen.length ? { soort: d.soort, html: `Morgen ${delen.join(', ')}` } : '';
   }
 
+  /**
+   * De droger of wasmachine die draait (besluit 166): de kaart zoals Thuis hem
+   * tekent, met de ring en wanneer hij klaar is. Leeg als er niets draait.
+   */
+  function apparaatNu() {
+    const k = document.querySelector('#wand [data-apparaatkaart]:not([hidden]) [data-apparaat-inhoud]');
+    return k ? k.innerHTML : '';
+  }
+
   function laag() {
     let el = document.querySelector('[data-niemand]');
     if (el) return el;
@@ -192,10 +201,12 @@
     }
     if (toont === 'avond') {
       const morgen = morgenZin();
+      const apparaat = apparaatNu();
       el.innerHTML = `<div class="nk-huis" data-nk-huis></div>
         <div class="nk-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
         <div class="nk-regels">
           <span>${ICOON_HUIS}<i data-nk-rustig>${nachtZin()}</i></span>
+          ${apparaat ? `<span class="nk-apparaat" data-nk-apparaat>${apparaat}</span>` : ''}
           ${morgen ? `<span>${weerIcoon(morgen.soort)}<i data-nk-morgen>${morgen.html}</i></span>` : ''}
         </div>
         <div class="nk-dim"></div>
@@ -207,6 +218,8 @@
       const tegels = [
         buitenC != null || w?.vandaag ? `<div class="glas-klein">${weerIcoon(w?.vandaag?.soort)}<span><b>${buitenC == null ? '–' : `${nl(buitenC, 0)}°`}</b><span>Nu${w?.vandaag?.soort ? `, ${WOORD[w.vandaag.soort] ?? ''}` : ''}</span></span></div>` : '',
         d ? `<div class="glas-klein">${weerIcoon(d.soort)}<span><b>${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}</b><span>Morgen${d.verwachtKwh == null ? '' : `, ${nl(d.verwachtKwh, 0)} kWh`}</span></span></div>` : '',
+        // De droger erbij, zolang hij draait (besluit 166).
+        apparaatNu() ? `<div class="glas-klein nr-apparaat" data-nk-apparaat>${apparaatNu()}</div>` : '',
       ].join('');
       el.innerHTML = `<div class="nr-huis" data-nk-huis></div>
         <div class="nr-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
