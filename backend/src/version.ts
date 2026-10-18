@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.34.3';
+export const VERSIE = '0.34.4';
 
 export interface Nieuw {
   readonly versie: string;
@@ -29,13 +29,21 @@ export const TERUGKIJKEN = 10;
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
   {
+    versie: '0.34.4',
+    datum: '2026-10-18',
+    beter: [
+      'Op de telefoon ziet Smart Climate in Home Assistant er altijd uit als de app: met de statusbalk erboven, op elke pagina',
+      'In de app van Home Assistant heeft de statusbalk de kleur van Smart Climate in plaats van grijs',
+      'Bij wat er gevonden is in Inrichten staat waarom verwarmen en koelen geen × hebben',
+    ],
+    opgelost: ['Op de telefoon schuift elke pagina mee, waar je je vinger ook neerzet; in Inrichten ging dat alleen naast de kaart', 'De lucht loopt op de telefoon door tot onderaan de pagina'],
+  },
+  {
     versie: '0.34.3',
     datum: '2026-10-18',
     beter: [
       'Naar Home Assistant laat je in Smart Climate, met de zijbalk van Home Assistant erbij; dezelfde knop zet volledig scherm weer aan',
       'Op de telefoon staat die knop rechtsboven, naast het tandwiel',
-      'Op de telefoon ziet Smart Climate in Home Assistant er altijd uit als de app: met de statusbalk erboven, op elke pagina',
-      'In de app van Home Assistant heeft de statusbalk de kleur van Smart Climate in plaats van grijs',
     ],
   },
   {

@@ -6714,6 +6714,12 @@ Rechtop op de telefoon stond de knop er niet, want daar is geen balk. Nu:
   later opnieuw (een nieuw vak), dan is het volledige scherm er weer.
 - **Op de telefoon** staat de knop rechtsboven op Thuis en Apparaten, naast
   het tandwiel. Op de wand blijft hij boven de bel.
+
+*Aanvulling (18 oktober 2026, versie 0.34.4).* De PR van 0.34.3 was al
+samengevoegd voor de twee punten hieronder erbij kwamen; ze staan in 0.34.4.
+Op de telefoon begon de app daardoor met een grijze statusbalk, en verdween
+die bij een andere pagina weer.
+
 - **Een telefoon krijgt nooit het hele scherm van de browser,** ook liggend
   niet; alleen de kioskstand. Met het hele scherm schoof de statusbalk na de
   terugknop over de pagina, en was hij er op de ene pagina wel en op de andere
@@ -6730,6 +6736,16 @@ Rechtop op de telefoon stond de knop er niet, want daar is geen balk. Nu:
   van de app op de NAS. Bij Naar Home Assistant, en als je het paneel
   verlaat, komt het thema terug; dat terugzetten leeft bij Home Assistant,
   want de pagina van de app is dan al weg.
+- **Op de telefoon schuift de pagina mee, waar je de vinger ook neerzet.** In
+  Inrichten was de lijst een eigen schuifvak dat het schuiven vasthield
+  (`overscroll-behavior: contain`). Op de wand heeft dat vak een vaste hoogte;
+  op de telefoon is het even hoog als de lijst, dus viel er niets te schuiven,
+  maar het hield de vinger wel vast. Alleen vegen naast de kaart werkte. Op de
+  telefoon is het nu geen schuifvak meer. De uren in het weerblad hielden een
+  veeg omhoog ook tegen (`touch-action: pan-x`). Een paginatest veegt op de
+  telefoon op elke pagina op drie hoogtes, met een echte vinger via Chrome.
+- **Wat verwarmt of koelt heeft geen ×** bij wat er gevonden is: dat hoort bij
+  de regeling. De uitleg zegt het nu.
 
 ---
 

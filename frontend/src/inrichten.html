@@ -163,6 +163,8 @@
   #tel .toestel { flex-wrap: wrap; }
   #tel .podium { height: 220px; }
   #tel .kaart { padding: 20px 18px; overflow: visible; }
+  /* Op de telefoon schuift de pagina, niet de lijst: een eigen schuifvak hield de vinger vast. */
+  #tel .rijen { overflow: visible; overscroll-behavior: auto; }
   #tel .rij { grid-template-columns: 1fr; gap: 6px; }
   #tel .rij > b { padding-top: 0; }
   #tel .bewerk { grid-column: 1; grid-template-columns: 1fr; }

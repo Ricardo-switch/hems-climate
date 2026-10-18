@@ -1778,6 +1778,75 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(vast).toEqual([]);
   }, 90_000);
 
+  /*
+   * Vegen op de telefoon (18 oktober 2026): waar je de vinger ook neerzet, de
+   * pagina schuift mee. In Inrichten hield een lijst met een eigen schuifvak de
+   * vinger vast, zodat alleen vegen naast de kaart werkte.
+   */
+  it('laat op de telefoon elke pagina schuiven, waar je de vinger ook neerzet', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const cdp = await context.newCDPSession(p);
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
+    const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
+    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
+    const vast: string[] = [];
+    let geveegd = 0;
+    for (const pagina of paginas) {
+      await p.goto(`${baseUrl}/${pagina}`);
+      await p.waitForTimeout(1500);
+      // In Inrichten de lijst met alle apparaten: die was het langst.
+      if (pagina === 'inrichten.html#welkom') {
+        await p.locator('#tel [data-lijst="apparaten"]').click();
+        await p.waitForTimeout(500);
+      }
+      if (!(await p.evaluate<boolean>('document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 120'))) continue;
+      for (const deel of [0.3, 0.5, 0.7]) {
+        // Een punt op de inhoud, niet op de tabs onderin en niet op iets dat je zelf trekt (een schuif, het kleurwiel).
+        const punt = await p.evaluate<{ x: number; y: number; wat: string } | null>(`(() => {
+          document.scrollingElement.scrollTop = 0;
+          document.querySelectorAll('[data-veegketen]').forEach((el) => el.removeAttribute('data-veegketen'));
+          const x = Math.round(innerWidth / 2), y = Math.round(innerHeight * ${deel});
+          const raak = document.elementFromPoint(x, y);
+          if (!raak || !raak.closest('#tel') || raak.closest('.tabs')) return null;
+          for (let el = raak; el; el = el.parentElement) if (getComputedStyle(el).touchAction === 'none') return null;
+          // Alles waarin de vinger landt: één daarvan moet schuiven.
+          for (let el = raak; el; el = el.parentElement) el.setAttribute('data-veegketen', '');
+          const wat = [];
+          for (let el = raak; el && el !== document.body; el = el.parentElement) wat.unshift(el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\\s+/).join('.') : ''));
+return { x, y, wat: wat.slice(-3).join(' > ') };
+        })()`);
+        if (!punt) continue;
+        // Een vorige veeg kan nog uitlopen: eerst stil bovenaan.
+        await expect
+          .poll(async () => {
+            const nu = await p.evaluate<number>('document.scrollingElement.scrollTop');
+            await p.evaluate('document.scrollingElement.scrollTop = 0');
+            await p.waitForTimeout(150);
+            return nu === 0 && (await p.evaluate<number>('document.scrollingElement.scrollTop')) === 0;
+          }, { timeout: 5000 })
+          .toBe(true);
+        const stand = () => p.evaluate<number>("Math.max(...[...document.querySelectorAll('[data-veegketen]')].map((el) => el.scrollTop))");
+        const voor = await stand();
+        // Staat de pagina al onderaan (een gesprek blijft bij het laatste), dan de andere kant op.
+        const omlaag = voor > 0 && (await p.evaluate<boolean>('document.scrollingElement.scrollTop >= document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight - 10'));
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: punt.x, y: punt.y }] });
+        for (let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: punt.x, y: punt.y + (omlaag ? i : -i) * 14 }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await p.waitForTimeout(250);
+        const na = await stand();
+        geveegd++;
+        if (na === voor) vast.push(`${pagina} op ${Math.round(deel * 100)}%: ${punt.wat}`);
+      }
+    }
+    await context.close();
+    expect(geveegd).toBeGreaterThan(5);
+    expect(vast).toEqual([]);
+  }, 120_000);
+
   it('toont Instellingen in zes groepen, en daarvandaan Wat je huis kan (besluit 130)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
