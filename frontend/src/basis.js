@@ -413,9 +413,17 @@
       return null;
     }
   }
+  /**
+   * Een telefoon krijgt nooit het hele scherm van de browser, alleen de
+   * kioskstand: dan ziet hij eruit als de app van de NAS, met de statusbalk
+   * erboven. Met het hele scherm schoof de statusbalk na de terugknop over de
+   * pagina, of was hij er op de ene pagina wel en op de andere niet. Een
+   * telefoon is een scherm met een kortste kant onder 600, ook liggend.
+   */
+  const isTelefoon = () => Math.min(global.screen?.width ?? 0, global.screen?.height ?? 0) < 600;
   function heelScherm(e) {
     // De eerste tik is Naar Home Assistant: dan juist niet.
-    if (e?.target?.closest?.('[data-naar-ha]')) return;
+    if (e?.target?.closest?.('[data-naar-ha]') || isTelefoon()) return;
     const doc = haDocument();
     if (doc && volledigNu() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
@@ -430,12 +438,68 @@
     doc?.addEventListener('fullscreenchange', weer);
     // Het document van Home Assistant blijft; de luisteraar gaat mee met deze pagina.
     addEventListener('pagehide', () => doc?.removeEventListener('fullscreenchange', weer));
+    // Een telefoon die het hele scherm nog had van een eerdere versie: weer met statusbalk.
+    if (isTelefoon() && doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     if (!volledigNu()) return;
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
+    statusbalk(true);
     opTik();
   }
   /** Het hele scherm en de balken van Home Assistant uit, of weer aan. */
+  /*
+   * De statusbalk in de kleur van de app (#0b1424), zoals de app van de NAS.
+   * De app van Home Assistant kleurt de statusbalk en de balk onderin naar het
+   * thema van Home Assistant (`--app-header-background-color` en
+   * `--primary-background-color`), en leest die opnieuw bij het bericht
+   * `theme-update`. Zolang Smart Climate volledig scherm heeft, zet de app die
+   * twee op het document van Home Assistant; daarna komt het thema terug. Dat
+   * terugzetten leeft bij Home Assistant zelf, want deze pagina is dan al weg
+   * als je het paneel verlaat. Alleen in de app van Home Assistant.
+   */
+  const STATUSBALK = '#0b1424';
+  const STATUSBALK_CODE = `
+    const html = document.documentElement;
+    const namen = ['--app-header-background-color', '--primary-background-color'];
+    const meld = () => {
+      try {
+        document.querySelector('home-assistant')?.hass?.auth?.external?.fireMessage({ type: 'theme-update' });
+      } catch {}
+    };
+    const balk = {
+      oud: null,
+      pad: '',
+      zet(kleur) {
+        if (!balk.oud) balk.oud = namen.map((n) => [n, html.style.getPropertyValue(n)]);
+        for (const n of namen) html.style.setProperty(n, kleur);
+        balk.pad = location.pathname;
+        addEventListener('location-changed', balk.weg);
+        meld();
+      },
+      terug() {
+        removeEventListener('location-changed', balk.weg);
+        if (!balk.oud) return;
+        for (const [n, v] of balk.oud) v ? html.style.setProperty(n, v) : html.style.removeProperty(n);
+        balk.oud = null;
+        meld();
+      },
+      weg() {
+        if (location.pathname !== balk.pad) balk.terug();
+      },
+    };
+    return balk;`;
+  function statusbalk(aan) {
+    try {
+      const w = global.parent;
+      if (!w.document.querySelector('home-assistant')?.hass?.auth?.external) return;
+      w.__scStatusbalk ??= new w.Function(STATUSBALK_CODE)();
+      if (aan) w.__scStatusbalk.zet(STATUSBALK);
+      else w.__scStatusbalk.terug();
+    } catch {
+      // Een vak van een andere herkomst, of Home Assistant laat het niet toe.
+    }
+  }
   function balkenVanHA(terug) {
+    statusbalk(!terug);
     if (terug) {
       aanHA({ type: 'home-assistant/unsubscribe-properties' });
       const doc = haDocument();

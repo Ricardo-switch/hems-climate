@@ -34,6 +34,8 @@ body { overflow: hidden; }
 ::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
 :hover::-webkit-scrollbar-thumb { background: rgba(184, 196, 207, 0.38); }
 html.tel-stand body { overflow: auto; }
+/* De lucht blijft staan als de telefoon schuift, ook onder het eerste scherm. */
+html.tel-stand body.lucht::before { position: fixed; }
 
 /*
  * De wand: 800 hoog en 1280 breed, als geheel geschaald naar het scherm. Is

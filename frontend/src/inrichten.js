@@ -247,7 +247,7 @@ function welkomLijst() {
     rijen = perEtage.map((e) => rij(e.naam, (e.ruimtes ?? []).map((r) => `<span class="chip stil">${esc(r.naam)}</span>`).join('')));
   } else if (lijst === 'apparaten') {
     kop = meervoud(n.apparaten, 'apparaat', 'apparaten');
-    uitleg = 'Per kamer. Tik op × om iets weg te halen dat er niet bij hoort; in Home Assistant blijft het staan. Terughalen kan bij Instellingen › Indeling.';
+    uitleg = 'Per kamer. Tik op × om iets weg te halen dat er niet bij hoort; in Home Assistant blijft het staan. Terughalen kan bij Instellingen › Indeling. Wat verwarmt of koelt, heeft geen ×: dat hoort bij de regeling.';
     rijen = perEtage.flatMap((e) => (e.ruimtes ?? []).filter((r) => r.apparaten?.length).map((r) => rij(r.naam, r.apparaten.map(wegChip).join(''))));
     if (d.huis?.zonderRuimte?.length) rijen.push(rij('Nog zonder kamer', d.huis.zonderRuimte.map(wegChip).join('')));
   } else {

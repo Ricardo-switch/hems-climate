@@ -1778,6 +1778,75 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(vast).toEqual([]);
   }, 90_000);
 
+  /*
+   * Vegen op de telefoon (18 oktober 2026): waar je de vinger ook neerzet, de
+   * pagina schuift mee. In Inrichten hield een lijst met een eigen schuifvak de
+   * vinger vast, zodat alleen vegen naast de kaart werkte.
+   */
+  it('laat op de telefoon elke pagina schuiven, waar je de vinger ook neerzet', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const cdp = await context.newCDPSession(p);
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
+    const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
+    const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
+    const vast: string[] = [];
+    let geveegd = 0;
+    for (const pagina of paginas) {
+      await p.goto(`${baseUrl}/${pagina}`);
+      await p.waitForTimeout(1500);
+      // In Inrichten de lijst met alle apparaten: die was het langst.
+      if (pagina === 'inrichten.html#welkom') {
+        await p.locator('#tel [data-lijst="apparaten"]').click();
+        await p.waitForTimeout(500);
+      }
+      if (!(await p.evaluate<boolean>('document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 120'))) continue;
+      for (const deel of [0.3, 0.5, 0.7]) {
+        // Een punt op de inhoud, niet op de tabs onderin en niet op iets dat je zelf trekt (een schuif, het kleurwiel).
+        const punt = await p.evaluate<{ x: number; y: number; wat: string } | null>(`(() => {
+          document.scrollingElement.scrollTop = 0;
+          document.querySelectorAll('[data-veegketen]').forEach((el) => el.removeAttribute('data-veegketen'));
+          const x = Math.round(innerWidth / 2), y = Math.round(innerHeight * ${deel});
+          const raak = document.elementFromPoint(x, y);
+          if (!raak || !raak.closest('#tel') || raak.closest('.tabs')) return null;
+          for (let el = raak; el; el = el.parentElement) if (getComputedStyle(el).touchAction === 'none') return null;
+          // Alles waarin de vinger landt: één daarvan moet schuiven.
+          for (let el = raak; el; el = el.parentElement) el.setAttribute('data-veegketen', '');
+          const wat = [];
+          for (let el = raak; el && el !== document.body; el = el.parentElement) wat.unshift(el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\\s+/).join('.') : ''));
+return { x, y, wat: wat.slice(-3).join(' > ') };
+        })()`);
+        if (!punt) continue;
+        // Een vorige veeg kan nog uitlopen: eerst stil bovenaan.
+        await expect
+          .poll(async () => {
+            const nu = await p.evaluate<number>('document.scrollingElement.scrollTop');
+            await p.evaluate('document.scrollingElement.scrollTop = 0');
+            await p.waitForTimeout(150);
+            return nu === 0 && (await p.evaluate<number>('document.scrollingElement.scrollTop')) === 0;
+          }, { timeout: 5000 })
+          .toBe(true);
+        const stand = () => p.evaluate<number>("Math.max(...[...document.querySelectorAll('[data-veegketen]')].map((el) => el.scrollTop))");
+        const voor = await stand();
+        // Staat de pagina al onderaan (een gesprek blijft bij het laatste), dan de andere kant op.
+        const omlaag = voor > 0 && (await p.evaluate<boolean>('document.scrollingElement.scrollTop >= document.scrollingElement.scrollHeight - document.scrollingElement.clientHeight - 10'));
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: punt.x, y: punt.y }] });
+        for (let i = 1; i <= 10; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: punt.x, y: punt.y + (omlaag ? i : -i) * 14 }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await p.waitForTimeout(250);
+        const na = await stand();
+        geveegd++;
+        if (na === voor) vast.push(`${pagina} op ${Math.round(deel * 100)}%: ${punt.wat}`);
+      }
+    }
+    await context.close();
+    expect(geveegd).toBeGreaterThan(5);
+    expect(vast).toEqual([]);
+  }, 120_000);
+
   it('toont Instellingen in zes groepen, en daarvandaan Wat je huis kan (besluit 130)', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2300,6 +2369,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
                 window.schermVraag = 0;
                 addEventListener('message', (e) => { if (e.source === document.getElementById('app').contentWindow) berichten.push(e.data); });
                 document.documentElement.requestFullscreen = () => { window.schermVraag += 1; return Promise.resolve(); };
+                // De app van Home Assistant: die leest de kleur van de statusbalk bij theme-update.
+                window.extern = [];
+                const ha = document.createElement('home-assistant');
+                ha.hass = { auth: { external: { fireMessage: (m) => extern.push(m.type) } } };
+                document.body.append(ha);
               </script></body></html>`,
           });
         }
@@ -2328,6 +2402,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(berichten).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     expect(await p.evaluate<number>('window.schermVraag')).toBeGreaterThan(0);
     expect(await vorm.locator('[data-volledig]').getAttribute('aria-checked')).toBe('true');
+    // De statusbalk in de kleur van de app, en de app van Home Assistant hoort het.
+    const statusbalk = () => p.evaluate<string>("document.documentElement.style.getPropertyValue('--app-header-background-color')");
+    await expect.poll(statusbalk).toBe('#0b1424');
+    expect(await p.evaluate<string[]>('window.extern')).toContain('theme-update');
     await app.locator('#balk [data-naar-ha]').waitFor();
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-volledig-scherm.png') });
 
@@ -2352,15 +2430,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
     expect(await tikken()).toBe(1);
 
-    // Op een telefoon ook het hele scherm: de statusbalk mag weg (versie 0.34.2).
-    const telefoon = (aan: boolean) => p.evaluate(`document.getElementById('app').style.width = '${aan ? 390 : 1280}px'`);
-    const telStand = () => frame.evaluate<boolean>('document.documentElement.classList.contains("tel-stand")');
+    // Een telefoon nooit het hele scherm van de browser, ook liggend: alleen de kioskstand,
+    // zodat hij eruitziet als de app van de NAS, met de statusbalk erboven (versie 0.34.3).
+    const telefoon = (aan: boolean) =>
+      frame.evaluate(aan ? "Object.defineProperty(screen, 'width', { value: 390, configurable: true }); Object.defineProperty(screen, 'height', { value: 844, configurable: true })" : 'delete screen.width; delete screen.height');
     await telefoon(true);
-    await expect.poll(telStand).toBe(true);
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
-    expect(await tikken()).toBe(1);
+    expect(await tikken()).toBe(0);
     await telefoon(false);
-    await expect.poll(telStand).toBe(false);
 
     // Naar Home Assistant: je blijft in de app, het volledige scherm en de kioskstand gaan uit,
     // en je kiest in Home Assistant zelf waar je heen gaat. Op de telefoon naast het tandwiel.
@@ -2372,6 +2449,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => (await berichten()).slice(naVoor)).toContainEqual({ type: 'home-assistant/unsubscribe-properties' });
     expect((await berichten()).some((b) => b.type === 'home-assistant/navigate')).toBe(false);
     await app.locator('#balk [data-weer-volledig]').waitFor();
+    expect(await statusbalk()).toBe('');
 
     // Een andere pagina laat het zo, tot je met dezelfde knop weer volledig scherm kiest.
     const naPauze = (await berichten()).length;
@@ -2383,6 +2461,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => (await berichten()).slice(naPauze)).toContainEqual({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     expect(await p.evaluate<number>('window.schermVraag')).toBe(scherm + 1);
     await app.locator('#balk [data-naar-ha]').waitFor();
+    expect(await statusbalk()).toBe('#0b1424');
+
+    // Ga je in Home Assistant ergens anders heen, dan krijgt de statusbalk het thema terug.
+    await p.evaluate("history.pushState(null, '', '/lovelace/0'); dispatchEvent(new Event('location-changed'))");
+    expect(await statusbalk()).toBe('');
 
     // Weer uit op dit apparaat: de knop is weg.
     await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);

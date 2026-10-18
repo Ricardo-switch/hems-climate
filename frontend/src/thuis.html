@@ -113,7 +113,8 @@
   .weer .opbrengst span { min-width: 74px; text-align: right; color: var(--tekst); font-weight: 600; }
   .weer .voet { margin: auto 0 0; padding-top: 10px; }
   /* Het weer per uur (besluit 128): een strook om opzij te vegen. */
-  .weer .uren { display: flex; gap: 4px; overflow-x: auto; overscroll-behavior: contain; touch-action: pan-x; padding: 2px 0 10px; margin-bottom: 2px; }
+  /* Zijwaarts de uren; omhoog vegen op de uren schuift het blad, niet niets. */
+  .weer .uren { display: flex; gap: 4px; overflow-x: auto; overscroll-behavior-x: contain; padding: 2px 0 10px; margin-bottom: 2px; }
   .weer .uur { flex: none; width: 46px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border-radius: 12px; background: rgba(255, 255, 255, 0.04); font-size: 12px; color: var(--zacht); }
   .weer .uur:first-child { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
   .weer .uur svg { width: 24px; height: 24px; }
