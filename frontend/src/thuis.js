@@ -6,7 +6,8 @@
  *
  * De wand is 800 hoog (1280 breed, of breder op een breed scherm) en wordt als geheel naar het scherm geschaald,
  * zodat er nooit gescrold hoeft te worden. Op een telefoon (staand, of heel smal)
- * staat dezelfde inhoud onder elkaar.
+ * staat dezelfde inhoud onder elkaar (besluit 159, schets Thuis-Tel), met de
+ * Assistent in een vraagbalk die altijd boven de tabs staat.
  */
 'use strict';
 
@@ -154,13 +155,15 @@ function tekenNu() {
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
-  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 360, marge: 0.03, schuifY: 14, tik: true });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: 14, tik: true });
 
   tekenVandaag();
   tekenStraks();
   tekenApparaat();
   tekenGevoel();
   tekenKamersTel();
+  // De microfoon in de vraagbalk alleen waar hij kan: over https (besluit 150).
+  $$('#tel [data-mic]').forEach((el) => (el.hidden = !(window.isSecureContext && navigator.mediaDevices?.getUserMedia)));
 }
 
 /*
@@ -187,10 +190,11 @@ function tekenOnderhoud() {
   });
 }
 
+/** Vandaag staat op de wand rechts, en op de telefoon onderaan (besluit 159). */
 function tekenVandaag() {
-  const box = document.querySelector('[data-dag]');
+  const boxen = $$('[data-dag]');
   if (!vandaag?.kwartieren?.length) {
-    box.innerHTML = '<p class="mini">Nog geen metingen van vandaag.</p>';
+    boxen.forEach((box) => (box.innerHTML = '<p class="mini">Nog geen metingen van vandaag.</p>'));
     return;
   }
   const B = 312;
@@ -218,14 +222,15 @@ function tekenVandaag() {
     .join('');
   const uren = [6, 12, 18, 22].map((u) => `<text x="${x(t0 + u * 3600_000).toFixed(1)}" y="${104 + banen.length * 15 + 12}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
   const hoog = 104 + banen.length * 15 + 16;
-  box.innerHTML = `<svg viewBox="0 0 ${B} ${hoog}" width="${B}" height="${hoog}" aria-label="De zon van vandaag, en wanneer de airco's draaiden">
-    <defs><linearGradient id="zonvlak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
+  // Elk een eigen verloop: een verloop in de verborgen weergave tekent niet.
+  boxen.forEach((box, i) => (box.innerHTML = `<svg viewBox="0 0 ${B} ${hoog}" width="${B}" height="${hoog}" aria-label="De zon van vandaag, en wanneer de airco's draaiden">
+    <defs><linearGradient id="zonvlak-${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
     ${helder ? `<path d="${helder}" fill="none" stroke="#F7B548" stroke-opacity="0.35" stroke-dasharray="2 4"/>` : ''}
-    <path d="${vlak}" fill="url(#zonvlak)"/><path d="${lijn}" fill="none" stroke="#F7B548" stroke-width="2"/>
+    <path d="${vlak}" fill="url(#zonvlak-${i})"/><path d="${lijn}" fill="none" stroke="#F7B548" stroke-width="2"/>
     <line x1="${nuX}" y1="14" x2="${nuX}" y2="${hoog - 14}" stroke="#EEF3F7" stroke-opacity="0.6"/>
     <text x="${nuX}" y="10" fill="#B8C4CF" font-size="10" text-anchor="middle" font-family="Figtree">nu</text>
     <g font-family="Figtree" font-size="10.5" fill="#7F8E9C">${banenSvg}${uren}</g>
-  </svg>`;
+  </svg>`));
   const kwh = (vandaag.zonWh ?? 0) / 1000;
   // Naast wat de dag ervoor werd verwacht (besluit 137); anders wat er nog komt.
   const vooraf = weer?.vandaag?.verwachtVoorafKwh;
@@ -242,10 +247,10 @@ function tekenVandaag() {
  */
 /** Een uitstelbaar apparaat dat draait of klaarstaat, als kaart: met de eindtijd (besluit 98). */
 function tekenApparaat() {
-  const kaart = document.querySelector('[data-apparaatkaart]');
+  const kaarten = $$('[data-apparaatkaart]');
   const d = (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'running') ?? (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'waiting' || x.stand === 'would_start');
   if (!d) {
-    kaart.hidden = true;
+    kaarten.forEach((k) => (k.hidden = true));
     return;
   }
   const s = (vandaag?.uitstelbaar ?? []).find((u) => u.id === d.id)?.draaide?.at(-1);
@@ -256,8 +261,10 @@ function tekenApparaat() {
   const R = 2 * Math.PI * 24;
   const ring = `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" ${d.stand === 'running' ? '' : 'stroke-dasharray="3 5"'}/>${deel > 0 ? `<circle cx="28" cy="28" r="24" fill="none" stroke="#F7B548" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * R).toFixed(1)} ${R.toFixed(1)}" transform="rotate(-90 28 28)"/>` : ''}${rest != null ? `<text x="28" y="33" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#EEF3F7">${rest >= 60 ? `${Math.floor(rest / 60)}u${String(rest % 60).padStart(2, '0')}` : `${rest}m`}</text>` : ''}</svg>`;
   const zin = klaar ? `Draait, klaar rond ${new Date(klaar).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : d.kop;
-  kaart.innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
-  kaart.hidden = false;
+  kaarten.forEach((k) => {
+    k.innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
+    k.hidden = false;
+  });
 }
 
 function tekenStraks() {
@@ -312,6 +319,8 @@ document.addEventListener('click', async (e) => {
  */
 function tekenGevoel() {
   const zones = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+  // Op de telefoon geen lege kaart zonder kamers.
+  $$('#tel [data-gevoel-kaart]').forEach((el) => (el.hidden = !zones.length));
   if (!zones.length) return;
   gekozenZone ??= ([...huisData.etages].reverse().flatMap((e) => e.ruimtes).find((r) => r.zoneId && r.temperatuurC != null) ?? zones[0]).zoneId;
   const kamer = zones.find((r) => r.zoneId === gekozenZone) ?? zones[0];
@@ -331,15 +340,17 @@ addEventListener('gevoelzone', (e) => {
   teken();
 });
 
+/** De kamers op de telefoon: één kaart, een regel per kamer (besluit 159). */
 function tekenKamersTel() {
   const box = document.querySelector('[data-kamers]');
   const kleur = { koelt: 'var(--ijs)', warmt: 'var(--gloed)', wacht: 'var(--zon)', goed: 'var(--mint)' };
   const kamers = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
+  box.hidden = !kamers.length;
   box.innerHTML = kamers
     .map((r) => {
       const stand = huismodel.standVan(r.zoneId, state);
       const kort = state.bewoner?.kamers?.find((x) => x.zoneId === r.zoneId)?.kort ?? '';
-      return `<a class="glas kamer" href="kamer.html#${encodeURIComponent(r.id)}"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span class="naam"><b>${esc(r.naam)}</b><span style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</span></span><span class="getal">${nl(r.temperatuurC)}°</span></a>`;
+      return `<a href="kamer.html#${encodeURIComponent(r.id)}"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span><b>${esc(r.naam)}</b><small style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</small></span><span class="getal">${nl(r.temperatuurC)}°</span><span class="pijl" aria-hidden="true">›</span></a>`;
     })
     .join('');
 }

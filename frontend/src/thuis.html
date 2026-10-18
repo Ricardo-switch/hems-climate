@@ -77,15 +77,38 @@
   #tel .batterijpil { max-width: 100%; }
   #tel .tijd { font-size: 40px; }
   #tel .titel { position: static; width: auto; margin-top: 14px; }
-  #tel .titel .kop-1 { font-size: 34px; }
-  #tel .titel .lead { font-size: 15.5px; margin-top: 8px; max-width: none; }
-  #tel .podium { position: static; width: 100%; height: 360px; margin-top: -6px; }
-  #tel .inhoud { padding: 0 16px 110px; display: flex; flex-direction: column; gap: 12px; }
-  .kamer { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-  .kamer .naam { flex: 1; min-width: 0; }
-  .kamer .naam b { display: block; font-size: 16px; }
-  .kamer .naam span { font-size: 13.5px; font-weight: 600; }
-  .kamer .getal { font-size: 30px; }
+  /*
+   * Thuis op de telefoon, opnieuw (besluit 159, schets Thuis-Tel): de stand
+   * naast de begroeting, zodat de knoppen bovenin op één regel passen.
+   */
+  #tel .groetregel { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  #tel .groetregel .groet { margin-bottom: 0; min-width: 0; }
+  #tel .groetregel .pil { height: 28px; font-size: 12.5px; padding: 0 11px; flex: none; }
+  #tel .titel .kop-1 { font-size: 32px; margin-top: 4px; }
+  #tel .titel .lead { font-size: 15px; margin-top: 6px; max-width: none; }
+  #tel .podium { position: static; width: 100%; height: 330px; margin-top: -10px; }
+  /* Ruimte onderin voor de vraagbalk en de tabs. */
+  #tel .inhoud { padding: 0 16px 172px; display: flex; flex-direction: column; gap: 12px; }
+  /* De kamers in één kaart: een regel per kamer. */
+  #tel .kamers { padding: 4px 16px; }
+  #tel .kamers a { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto 12px; gap: 12px; align-items: center; padding: 11px 0; color: inherit; text-decoration: none; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  #tel .kamers a:first-child { border-top: 0; }
+  #tel .kamers a:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 8px; }
+  #tel .kamers b { display: block; font-size: 15.5px; }
+  #tel .kamers small { display: block; font-size: 13px; font-weight: 600; }
+  #tel .kamers .getal { font-size: 24px; }
+  #tel .kamers .pijl { color: var(--gedempt); font-size: 18px; }
+  #tel .kaart { padding: 16px 18px; }
+  #tel .straks .kop-2 { font-size: 20px; }
+  #tel .apparaatkaart { padding: 12px 16px; }
+  #tel .apparaatkaart .ring { width: 50px; height: 50px; }
+  #tel [data-dag] svg { width: 100%; height: auto; display: block; }
+  /* De vraagbalk (besluit 159): altijd boven de tabs, met de microfoon die meteen luistert. */
+  #tel .vraagbalk { position: fixed; left: 12px; right: 12px; bottom: 90px; height: 58px; border-radius: 22px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 10px; background: rgba(9, 15, 28, 0.86); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); z-index: 4; }
+  #tel .vraagbalk .typ { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; gap: 12px; font-size: 15.5px; color: var(--zacht); text-decoration: none; }
+  #tel .vraagbalk a:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 16px; }
+  #tel .vraagbalk .mic { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(110, 231, 183, 0.16); color: var(--mint); flex: none; }
+  #tel .vraagbalk .mic svg { width: 21px; height: 21px; }
   .weg { display: none !important; }
 
   /* Het weer (besluit 105): een blad over de rechterkolom, op de telefoon onderin. */
@@ -195,24 +218,37 @@
         <span class="tijd" data-tijd>--:--</span>
         <span style="display: flex; gap: 8px; align-items: center">
           <button class="pil weerknop" type="button" style="height: 32px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
-          <span class="pil" style="height: 32px; font-size: 13px" data-modus></span>
           <button class="pil uitlegknop" type="button" data-uitleg aria-label="Zo werkt het huis" style="height: 32px; width: 32px">?</button>
           <button type="button" class="pil meldbel" aria-label="Meldingen" aria-haspopup="dialog" style="position: relative; height: 32px; width: 32px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer" data-meldbel data-meldicoon><b data-meldaantal hidden></b></button>
           <a class="pil" href="instellingen.html" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
         </span>
       </div>
-      <div class="titel"><span class="groet" data-groet></span><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p><div class="geldt" data-geldt hidden></div></div>
+      <div class="titel"><div class="groetregel"><span class="groet" data-groet></span><span class="pil" data-modus hidden></span></div><h1 class="kop-1" data-kop>Even laden</h1><p class="lead" data-zin></p><div class="geldt" data-geldt hidden></div></div>
       <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>
     <div class="inhoud">
-      <div data-kamers style="display: flex; flex-direction: column; gap: 12px"></div>
+      <section class="glas kamers" data-kamers aria-label="Kamers" hidden></section>
       <a class="glas kaart straks kaartlink" href="assistent.html#straks" data-straks hidden>
         <div style="display: flex; align-items: center; gap: 10px"><span class="bol" style="width: 22px; height: 22px"></span><span class="klein">Straks</span></div>
         <h2 class="kop-2" style="margin-top: 8px" data-straks-kop></h2>
         <p class="klein" style="margin: 6px 0 0" data-straks-zin></p>
       </a>
-      <a class="glas-klein" href="assistent.html#typ" style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 20px; color: var(--zacht)"><span class="bol" style="width: 34px; height: 34px"></span>Vraag iets over je huis</a>
+      <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart hidden></a>
+      <section class="glas kaart" data-gevoel-kaart>
+        <h2 class="kop-3" data-gevoel-kop>Hoe voelt het?</h2>
+        <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg>Tik wat je nu voelt; daar leert het huis van wat jij prettig vindt.</p>
+        <div class="gevoelblok" data-gevoel></div>
+      </section>
+      <a class="glas kaart kaartlink" href="vandaag.html" aria-label="Vandaag: de hele dag bekijken">
+        <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini" data-opgewekt></span></div>
+        <div data-dag></div>
+        <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+      </a>
+    </div>
+    <div class="vraagbalk">
+      <a class="typ" href="assistent.html#typ"><span class="bol adem" style="width: 40px; height: 40px"></span>Vraag iets over je huis</a>
+      <a class="mic" href="assistent.html#praat" aria-label="Praat met je huis" data-mic hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></a>
     </div>
     <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
     <div class="weer-achter" hidden data-weer-achter></div>

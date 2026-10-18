@@ -392,6 +392,8 @@
     // Meteen bij de tik: anders weigert de browser het geluid soms.
     await microfoon();
     if (!loopt()) await mic.ctx.resume().catch(() => {});
+    // Zonder tik (de microfoon op Thuis) houdt een browser het geluid soms tegen: dan zelf tikken.
+    if (!loopt()) throw new Error('tik');
     return ronde('spraak', op);
   }
 
