@@ -233,6 +233,25 @@ describe('wat de regeling overneemt', () => {
     expect(withConnection(real, answers({ zekering: { fasen: 1, ampere: 35 }, apparaten: [] })).raw).toEqual(real);
   });
 
+  it('haalt een apparaat uit de configuratie van zon als de bewoner het uitzet (besluit 167)', async () => {
+    const real = JSON.parse(await readFile(join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json'), 'utf-8')) as Record<string, unknown>;
+    const applied = withConnection(real, answers({ zekering: { fasen: 1, ampere: 35 }, apparaten: [], opZonUit: ['droger'] }));
+    expect(applied.toegevoegd).toEqual(['Droger niet meer op zon']);
+    expect(applied.raw['deferrables']).toBeUndefined();
+    expect(parseSiteConfig(applied.raw, { knownStrategies: defaultStrategies().ids }).ok).toBe(true);
+    // Weer aan: dan zoals de configuratie zegt.
+    expect(withConnection(real, answers({ zekering: { fasen: 1, ampere: 35 }, apparaten: [], opZonUit: [] })).raw).toEqual(real);
+  });
+
+  it('kent bij Home Connect Alt vanzelf de resterende tijd en de voortgang (besluit 167)', async () => {
+    const real = JSON.parse(await readFile(join(import.meta.dirname, 'fixtures', 'voorbeeld-huis.json'), 'utf-8')) as Record<string, unknown>;
+    const parsed = parseSiteConfig(real, { knownStrategies: defaultStrategies().ids });
+    if (!parsed.ok) throw new Error(JSON.stringify(parsed.problems));
+    const d = parsed.config.deferrables?.[0];
+    expect(d?.remainingTime?.id).toMatch(/_bsh_common_option_remainingprogramtime$/);
+    expect(d?.programProgress?.id).toMatch(/_bsh_common_option_programprogress$/);
+  });
+
   it('zegt het als er voor drie fasen te weinig meters zijn', () => {
     const applied = withConnection({}, answers({ zekering: { fasen: 3, ampere: 25 } }));
     expect(applied.raw['grid']).toBeUndefined();

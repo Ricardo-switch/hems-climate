@@ -27,6 +27,13 @@
   .buiten .wel { color: var(--zon); }
   .buiten .niet { color: var(--mint); }
   #tel .proef, #tel .buiten { grid-template-columns: 1fr; }
+  /* Licht en screens per kamer (besluit 167): knopjes per lamp en screen, op de wand in twee kolommen. */
+  .lichtkamers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+  #tel .lichtkamers { grid-template-columns: 1fr; }
+  .lichtkamer { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .lichtkamer b { font-size: 14px; }
+  .lichtkamer .keuzes button { height: 32px; padding: 0 11px; font-size: 13px; }
+  .lichtkamer .keuzes button small { font-weight: 600; opacity: 0.7; }
 </style>
 </head>
 <body class="lucht lucht-dag">

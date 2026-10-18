@@ -727,11 +727,36 @@
       ${onderhoudKnop()}`;
   }
 
-  /** De knop naar Onderhoud: geel met wat bijna op is, anders gewoon. */
+  /*
+   * Wat bij Onderhoud bijna op is (besluit 167): uit dezelfde batterijen en
+   * filters als de sleutel op Thuis, ook als de melding al weg is getikt. Eerst
+   * keek de knop alleen naar de meldingen, en zei hij "Alle batterijen en
+   * filters" terwijl Thuis een lege batterij liet zien.
+   */
+  let onderhoudOp = null;
+  async function onderhoudBij() {
+    try {
+      const huis = await haal('api/huis');
+      onderhoudOp = [
+        ...(huis?.batterijen ?? []).filter((b) => bijnaOp(b.pct, 'batterij', huis)).map((b) => ({ soort: 'batterij', naam: b.naam, pct: b.pct })),
+        ...(huis?.filters ?? []).map((f) => ({ soort: 'filter', naam: f.naam, pct: f.pct })),
+      ];
+    } catch {
+      // Dan wat de meldingen zeggen.
+    }
+    $$('[data-meldblad] [data-meld-onderhoud]').forEach((k) => (k.outerHTML = onderhoudKnop()));
+  }
+
+  /** De knop naar Onderhoud: een geel stipje en wat bijna op is, anders gewoon. */
   function onderhoudKnop() {
-    const op = meld.actief.filter((m) => m.soort === 'batterij' || m.soort === 'filter');
-    const zin = !op.length ? 'Alle batterijen en filters' : op.length === 1 ? (op[0].soort === 'batterij' ? 'Een batterij is bijna leeg' : 'Een filter is bijna vol') : `${op.length} batterijen of filters bijna op`;
-    return `<button type="button" class="onderhoud" data-meld-onderhoud>${meldIcoon(op.length ? op[0].soort : 'onderhoud')}<span><b>Onderhoud</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
+    const op = onderhoudOp ?? meld.actief.filter((m) => m.soort === 'batterij' || m.soort === 'filter').map((m) => ({ soort: m.soort, naam: null }));
+    const een = op[0];
+    const zin = !op.length
+      ? 'Alle batterijen en filters zijn in orde'
+      : op.length === 1
+        ? een.soort === 'batterij' ? `Batterij bijna leeg${een.naam ? `: ${een.naam}${een.pct != null ? `, ${een.pct}%` : ''}` : ''}` : `Filter schoonmaken${een.naam ? `: ${een.naam}` : ''}`
+        : `${op.length} batterijen of filters vragen aandacht`;
+    return `<button type="button" class="onderhoud${op.length ? ' aandacht' : ''}" data-meld-onderhoud>${meldIcoon(op.length ? een.soort : 'onderhoud')}<span><b>Onderhoud${op.length ? '<span class="stip" style="background: var(--zon); margin-left: 8px" aria-label="vraagt aandacht"></span>' : ''}</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
   }
 
   /** Wanneer er een melding komt, in een zin (besluit 149). */
@@ -816,6 +841,8 @@
     const blad = meldBlad();
     meldZicht = zicht;
     blad.innerHTML = zicht === 'lijst' ? meldLijst() : await meldOnderhoud();
+    if (zicht === 'lijst') void onderhoudBij();
+
     blad.hidden = false;
     if (zicht === 'lijst') markeerGelezen();
     document.querySelector('[data-meld-achter]').hidden = false;

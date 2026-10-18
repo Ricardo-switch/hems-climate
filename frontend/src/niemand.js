@@ -14,7 +14,8 @@
  *   `wekken`) zet het display weer aan. Een tik, "Hé huis" en aanbellen
  *   openen de app (`sc-wek`).
  *
- * Instellen doet de hoofdgebruiker bij het potlood: "Als niemand kijkt". De app
+ * Instellen doet de hoofdgebruiker bij Functies, onder Weergave: Always-on
+ * display en Scherm uit (besluit 167; eerst bij het potlood op Thuis). De app
  * kan het scherm alleen donkerder kleuren; draait de wand in Fully Kiosk, dan
  * gaat ook de echte helderheid mee, en 's nachts het scherm echt uit.
  *
@@ -25,7 +26,7 @@
   'use strict';
   if (global.niemand) return;
 
-  const { nl, esc, haal, deur, telStand } = global.app;
+  const { nl, esc, haal, telStand } = global.app;
 
   const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
@@ -157,7 +158,7 @@
   function morgenZin() {
     const d = bron?.weer()?.dagen?.[0];
     if (!d) return '';
-    const delen = [d.maxC == null ? null : `<b>${nl(d.maxC, 0)}°</b>`, WOORD[d.soort] ?? null, d.verwachtKwh == null ? null : `ongeveer <b>${nl(d.verwachtKwh, 0)}&nbsp;kWh</b> van je dak`].filter(Boolean);
+    const delen = [d.maxC == null ? null : `<b>${nl(d.maxC, 0)}°</b>`, WOORD[d.soort] ?? null, d.verwachtKwh == null ? null : `ongeveer <b>${nl(d.verwachtKwh, 0)}&nbsp;kWh</b> van je panelen`].filter(Boolean);
     return delen.length ? { soort: d.soort, html: `Morgen ${delen.join(', ')}` } : '';
   }
 
@@ -350,90 +351,6 @@
     }
   }
 
-  /* ------------------------------------------------- het paneel, bij de wand */
-
-  const knopje = (aan, data, label) => `<button type="button" class="nk-knopje${aan ? ' aan' : ''}" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data}></button>`;
-
-  /** De bewegingsmelders in het huis, met hun kamer. */
-  function melders() {
-    const h = bron?.huis();
-    const uit = [];
-    for (const e of h?.etages ?? []) for (const r of e.ruimtes ?? []) for (const d of r.apparaten ?? []) {
-      const id = d.meting?.beweging?.id;
-      if (id && !uit.some((m) => m.id === id)) uit.push({ id, naam: d.naam, kamer: r.naam });
-    }
-    return uit;
-  }
-
-  function tekenPaneel() {
-    const el = document.querySelector('[data-kiesblad]');
-    if (!el || el.dataset.blad !== 'niemand') return;
-    const n = instelling;
-    const lijst = melders();
-    const opties = lijst.map((m) => `<option value="${esc(m.id)}" ${m.id === n.melder ? 'selected' : ''}>${esc(`${m.kamer}: ${m.naam}`)}</option>`).join('');
-    const beweging = lijst.length
-      ? `<div class="nk-rij"><div><b>Wekken door beweging</b>${n.melder ? `<select class="nk-melder" data-nk-melder aria-label="Welke bewegingsmelder">${opties}</select>` : '<span class="uitleg">Met een bewegingsmelder uit het huis</span>'}</div>${knopje(!!n.melder, 'data-nk-beweging', 'Wekken door beweging')}</div>`
-      : '';
-    el.setAttribute('aria-label', 'Als niemand kijkt');
-    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Als niemand kijkt</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
-      <p class="mini" style="margin: 0 0 6px">Voor het scherm aan de wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
-      <div class="nk-rij"><div><b>Always-on</b><span class="uitleg">De klok, wat het huis doet en het weer; na zonsondergang gedimd</span></div><div class="nk-keuze" role="radiogroup" aria-label="Always-on na">${[0, 2, 5, 15].map((m) => `<button type="button" role="radio" aria-checked="${n.rustMin === m}" class="${n.rustMin === m ? 'aan' : ''}" data-nk-rust="${m}">${m ? `${m} min` : 'Uit'}</button>`).join('')}</div></div>
-      <div class="nk-rij"><div><b>Nachtstand</b><span class="uitleg">Het scherm uit</span></div>${knopje(n.nacht, 'data-nk-nacht', 'Nachtstand')}</div>
-      <div class="nk-rij" ${n.nacht ? '' : 'data-nk-uit'}><div><b>Wanneer</b><span class="uitleg">Of: als het huis op Nacht staat</span></div><div class="nk-tijden"><input type="time" step="900" value="${esc(n.van)}" data-nk-tijd-van aria-label="Nachtstand vanaf" ${n.nacht ? '' : 'disabled'}><span>tot</span><input type="time" step="900" value="${esc(n.tot)}" data-nk-tijd-tot aria-label="Nachtstand tot" ${n.nacht ? '' : 'disabled'}></div></div>
-      <div class="nk-rij"><div><b>Uit als niemand thuis is</b><span class="uitleg">Volgens de bewoners</span></div>${knopje(n.weg, 'data-nk-weg', 'Uit als niemand thuis is')}</div>
-      <div class="nk-rij"><div><b>Aan zonder beweging</b><span class="uitleg">Zo lang voor het scherm uitgaat</span></div><div class="nk-keuze" role="radiogroup" aria-label="Aan zonder beweging">${[1, 5, 15, 30].map((m) => `<button type="button" role="radio" aria-checked="${n.aanMin === m}" class="${n.aanMin === m ? 'aan' : ''}" data-nk-aan="${m}">${m} min</button>`).join('')}</div></div>
-      ${beweging}
-      <p class="mini" style="margin: 10px 0 0">De app maakt het scherm donkerder. Hoe fel het scherm zelf is, regelt de tablet${global.fully ? '; in Fully Kiosk gaat dat vanzelf mee' : ''}.</p>`;
-  }
-
-  async function bewaar(wat) {
-    instelling = { ...instelling, ...wat };
-    tekenPaneel();
-    try {
-      const res = await deur('api/voorkeuren', { plek: 'wand', niemand: wat });
-      if (res?.ok) instelling = { ...STANDAARD, ...(await res.json())?.wand?.niemand };
-      else await laad();
-    } catch {
-      await laad();
-    }
-    tekenPaneel();
-  }
-
-  function openPaneel() {
-    if (!magAanpassen) return;
-    const el = document.querySelector('[data-kiesblad]');
-    if (!el) return;
-    el.dataset.blad = 'niemand';
-    tekenPaneel();
-    document.querySelector('[data-kies-achter]').hidden = false;
-    el.hidden = false;
-    el.querySelector('button')?.focus();
-  }
-
-  document.addEventListener('click', (e) => {
-    const t = e.target;
-    if (t.closest('[data-niemand-kies]')) return openPaneel();
-    if (!t.closest('[data-kiesblad]') || document.querySelector('[data-kiesblad]')?.dataset.blad !== 'niemand') return;
-    if (t.closest('[data-nk-nacht]')) return void bewaar({ nacht: !instelling.nacht });
-    if (t.closest('[data-nk-weg]')) return void bewaar({ weg: !instelling.weg });
-    const aan = t.closest('[data-nk-aan]');
-    if (aan) return void bewaar({ aanMin: Number(aan.dataset.nkAan) });
-    const rust = t.closest('[data-nk-rust]');
-    if (rust) return void bewaar({ rustMin: Number(rust.dataset.nkRust) });
-    if (t.closest('[data-nk-beweging]')) return void bewaar({ melder: instelling.melder ? null : melders()[0]?.id ?? null });
-  });
-  document.addEventListener('change', (e) => {
-    const t = e.target;
-    if (!t.closest?.('[data-kiesblad]')) return;
-    if (t.matches('[data-nk-melder]')) void bewaar({ melder: t.value });
-    else if (t.matches('[data-nk-tijd-van], [data-nk-tijd-tot]') && /^\d\d:\d\d$/.test(t.value)) void bewaar({ [t.matches('[data-nk-tijd-van]') ? 'van' : 'tot']: t.value });
-  });
-  // Een ander blad (een kaart erbij, favorieten) is niet dit paneel.
-  new MutationObserver(() => {
-    const el = document.querySelector('[data-kiesblad]');
-    if (el && el.hidden) delete el.dataset.blad;
-  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
-
   /* ------------------------------------------------------------- starten */
 
   // Iemand aan het scherm: een tik, een toets, de muis.
@@ -482,7 +399,6 @@
     },
     toon,
     wek,
-    openPaneel,
     get toont() {
       return toont;
     },

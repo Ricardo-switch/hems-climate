@@ -404,14 +404,14 @@
     const warmNaam = naamIn(c.warmKamer);
     const lijst = [
       { soort: 'intro', maten: 4, tijd: 'ochtend', titel: 'Een dag in je huis', groot: 'Smart Climate', kleur: 'var(--tekst)', kop: 'Dit is je huis.', klein: 'Met de cijfers van je eigen huis.', zoom: 0.94 },
-      c.gisterenKwh != null && { maten: 2, tijd: 'ochtend', titel: 'Gisteren, van je dak', groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', kop: 'Zoveel zon gaf je dak gisteren.', klein: 'Smart Climate ziet wat je huis doet, elke minuut.', zoom: 0.96 },
+      c.gisterenKwh != null && { maten: 2, tijd: 'ochtend', titel: 'Gisteren, van je panelen', groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', kop: 'Zoveel stroom gaven je panelen gisteren.', klein: 'Smart Climate ziet wat je huis doet, elke minuut.', zoom: 0.96 },
       { maten: 2, tijd: 'ochtend', titel: 'Je hele huis', groot: String(c.kamers), kleur: 'var(--tekst)', kop: `${c.kamers === 1 ? 'kamer' : 'kamers'}, ${c.apparaten} apparaten. Eén huis.`, klein: 'Gevonden in Home Assistant. Jij kijkt of het klopt.', temp: true, zoom: 1 },
       c.warmKamer && { maten: 2, tijd: 'dag', titel: 'Elke kamer in beeld', groot: `${nl(c.warmKamer.temperatuurC)}°`, kleur: 'var(--gloed)', kop: `in ${warmNaam}, nu.`, klein: 'Het huis weet hoe warm elke kamer is, en zegt bij elk besluit waarom.', warmKamer: true, zoom: 1.06 },
-      c.piekKw != null && { maten: 2, drop: true, tijd: 'dag', titel: 'Je dak op zijn best', groot: `${nl(c.piekKw)} kW`, kleur: 'var(--zon)', kop: zonNaam ? `Met wat over is, ${zomer ? 'koelt' : 'warmt'} ${zonNaam} ${zomer ? 'af' : 'op'}.` : 'Met wat over is, draaien je apparaten.', klein: 'Op stroom van je eigen dak, niet van het net.', zonKamer: true, zoom: 1.08 },
+      c.piekKw != null && { maten: 2, drop: true, tijd: 'dag', titel: 'Je panelen op hun best', groot: `${nl(c.piekKw)} kW`, kleur: 'var(--zon)', kop: zonNaam ? `Met wat over is, ${zomer ? 'koelt' : 'warmt'} ${zonNaam} ${zomer ? 'af' : 'op'}.` : 'Met wat over is, draaien je apparaten.', klein: 'Op stroom van je eigen panelen, niet van het net.', zonKamer: true, zoom: 1.08 },
       { maten: 2, tijd: 'dag', titel: 'Vraag het je huis', groot: '“Waarom?”', kleur: 'var(--ijs)', kop: 'Het huis antwoordt, hardop.', klein: 'Lokaal, met je eigen gegevens. Niets gaat het huis uit.', zoom: 0.98 },
       c.morgenKwh != null && { maten: 2, tijd: 'avond', titel: 'Kijkt vooruit', groot: `${nl(c.morgenKwh)} kWh`, kleur: 'var(--violet)', kop: 'zon verwacht voor morgen. Het huis weet het al.', klein: 'Uit het weer en wat je panelen leerden.', zoom: 1 },
       c.eigenPct != null
-        ? { soort: 'slot', maten: 5, tijd: 'avond', titel: 'Klaar', groot: `${c.eigenPct}%`, kleur: 'var(--mint)', kop: 'van je stroom kwam deze maand van je eigen dak.', klein: 'Je huis kijkt vanaf nu mee.', eind: true, zoom: 1 }
+        ? { soort: 'slot', maten: 5, tijd: 'avond', titel: 'Klaar', groot: `${c.eigenPct}%`, kleur: 'var(--mint)', kop: 'van je stroom kwam deze maand van je eigen panelen.', klein: 'Je huis kijkt vanaf nu mee.', eind: true, zoom: 1 }
         : { soort: 'slot', maten: 5, tijd: 'avond', titel: 'Klaar', groot: 'Welkom thuis', kleur: 'var(--mint)', kop: 'Je huis staat erin.', klein: 'Je huis kijkt vanaf nu mee.', eind: true, zoom: 1 },
     ].filter(Boolean);
     // Geen beeld van je dak: de drop op het vierde beeld, of het laatste voor het slot.

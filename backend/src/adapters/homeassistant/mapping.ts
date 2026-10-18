@@ -337,6 +337,8 @@ export function buildSystemState(
               const remote = source.bool(d.remoteStart.id);
               const op = d.operationState ? source.state(d.operationState.id) : null;
               const minutes = d.programDuration ? programMinutes(source, d.programDuration.id) : null;
+              const rest = d.remainingTime ? remainingMinutes(source, d.remainingTime.id, nowMs) : null;
+              const pct = d.programProgress ? source.number(d.programProgress.id) : null;
               return [
                 d.id,
                 {
@@ -345,6 +347,12 @@ export function buildSystemState(
                   remoteStartSinceMs: remote == null ? null : source.changedAt(d.remoteStart.id),
                   operationSinceMs: op == null || !d.operationState ? null : source.changedAt(d.operationState.id),
                   durationMin: minutes == null ? unavailable<number>('missing') : value(minutes, nowMs),
+                  ...(d.remainingTime
+                    ? { remainingMin: rest == null ? unavailable<number>('missing') : value(rest, nowMs), remainingSinceMs: rest == null ? null : remainingSince(source, d.remainingTime.id) }
+                    : {}),
+                  ...(d.programProgress
+                    ? { progressPct: pct == null ? unavailable<number>('missing') : value(pct, nowMs), progressSinceMs: pct == null ? null : source.changedAt(d.programProgress.id) }
+                    : {}),
                 },
               ];
             }),
@@ -375,6 +383,32 @@ export function programMinutes(source: EntitySource, entityId: string): number |
   }
   return minutes > 0 ? Math.round(minutes) : null;
 }
+/**
+ * Hoe lang een programma nog duurt, in minuten (besluit 167): "0:42", een getal
+ * met een eenheid, of een eindtijd (Home Connect: "Programma eindtijd"). Een
+ * eindtijd die voorbij is, is 0.
+ */
+/** Sinds wanneer de resterende tijd zo is; bij een eindtijd die voorbij is: die eindtijd. */
+function remainingSince(source: EntitySource, entityId: string): number | null {
+  const raw = source.state(entityId)?.trim() ?? '';
+  const t = /^\d{4}-\d{2}-\d{2}T/.test(raw) ? Date.parse(raw) : NaN;
+  return Number.isFinite(t) ? t : source.changedAt(entityId);
+}
+export function remainingMinutes(source: EntitySource, entityId: string, nowMs: number): number | null {
+  const raw = source.state(entityId)?.trim();
+  if (raw == null || raw === '') return null;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+    const t = Date.parse(raw);
+    return Number.isFinite(t) ? Math.max(0, Math.round((t - nowMs) / 60_000)) : null;
+  }
+  const hm = /^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$/.exec(raw);
+  if (hm) return Number(hm[1]) * 60 + Number(hm[2]) + Math.round(Number(hm[3] ?? 0) / 60);
+  const n = source.number(entityId);
+  if (n == null || n < 0) return null;
+  const unit = String(source.attr(entityId, 'unit_of_measurement') ?? 'min').toLowerCase();
+  return Math.round(unit === 's' ? n / 60 : unit === 'h' ? n * 60 : n);
+}
+
 /**
  * Legt de setpoints van de configuratie gelijk aan wat de bewoner op dat moment
  * werkelijk had ingesteld. Zonder deze stap zou de arbiter tegen andere doelen
@@ -502,6 +536,13 @@ export function observedEntities(config: SiteConfig): ReadonlySet<string> {
   // Alleen voor de ruwe historie (besluit 65): gevolgd, vastgelegd, en geen
   // aanleiding om opnieuw te beslissen.
   for (const ref of config.recordOnly ?? []) ids.add(ref.id);
+  // De resterende tijd en de voortgang van een uitstelbaar apparaat (besluit 167):
+  // gelezen bij het volgende besluit, maar elke minuut een nieuwe waarde is geen
+  // reden om opnieuw te beslissen.
+  for (const d of config.deferrables ?? []) {
+    if (d.remainingTime) ids.add(d.remainingTime.id);
+    if (d.programProgress) ids.add(d.programProgress.id);
+  }
   return ids;
 }
 

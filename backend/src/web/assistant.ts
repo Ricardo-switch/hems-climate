@@ -162,7 +162,7 @@ function restSentence(f: Facts, weer: AskContext['weer'], lang: Lang): string | 
   const m = weer.morgen;
   if (m?.verwachtKwh != null) {
     const k = f.energy('weer.morgen.verwacht', m.verwachtKwh * 1000);
-    return lang === 'nl' ? `Vandaag komt er weinig zon meer bij; morgen verwacht ik ${k} van je dak.` : `Little more sun today; tomorrow I expect ${k} from your roof.`;
+    return lang === 'nl' ? `Vandaag komt er weinig zon meer bij; morgen verwacht ik ${k} van je panelen.` : `Little more sun today; tomorrow I expect ${k} from your panels.`;
   }
   if (weer.verwachtKwh == null) return null;
   return lang === 'nl' ? 'Vandaag komt er weinig zon meer bij.' : 'Little more sun is expected today.';
@@ -984,7 +984,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
       if (t.zonWh >= 50) {
         const zon = f.energy('vandaag.zonWh', t.zonWh);
         const zelf = f.pct('vandaag.zelfPct', Math.max(0, Math.min(100, ((t.zonWh - t.netTerugWh) / t.zonWh) * 100)));
-        out.push(nl ? `Je dak leverde ${zon}, en ${zelf} daarvan gebruikte je zelf.` : `Your roof produced ${zon}, and you used ${zelf} of it yourself.`);
+        out.push(nl ? `Je panelen leverden ${zon}, en ${zelf} daarvan gebruikte je zelf.` : `Your panels produced ${zon}, and you used ${zelf} of it yourself.`);
       }
       return done(out.join(' '));
     }
@@ -1040,7 +1040,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
       if (w.verwachtKwh != null) {
         const k = f.energy('weer.vandaag.verwacht', w.verwachtKwh * 1000);
         const al = w.opgewektKwh >= 0.1 ? f.energy('weer.vandaag.opgewekt', w.opgewektKwh * 1000) : null;
-        out.push(nl ? `Van je dak verwacht ik vandaag ${k}${al ? `, ${al} is er al` : ''}.` : `I expect ${k} from your roof today${al ? `, ${al} so far` : ''}.`);
+        out.push(nl ? `Van je panelen verwacht ik vandaag ${k}${al ? `, ${al} is er al` : ''}.` : `I expect ${k} from your panels today${al ? `, ${al} so far` : ''}.`);
       }
       return done(out.length ? out.join(' ') : geen);
     }
@@ -1063,7 +1063,7 @@ export function ask(question: Question, ctx: AskContext): Answer {
       }
       if (m.verwachtKwh != null) {
         const k = f.energy('weer.morgen.verwacht', m.verwachtKwh * 1000);
-        out.push(nl ? `Van je dak verwacht ik ${k}.` : `I expect ${k} from your roof.`);
+        out.push(nl ? `Van je panelen verwacht ik ${k}.` : `I expect ${k} from your panels.`);
       }
       return done(out.length ? out.join(' ') : geen);
     }

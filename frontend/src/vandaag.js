@@ -80,7 +80,7 @@ function getallen(r) {
     if (g.echt == null) return null;
     const zelf = r && r.zonWh > 0 ? Math.round(Math.max(0, Math.min(100, ((r.zonWh - r.netTerugWh) / r.zonWh) * 100))) : null;
     return {
-      rij: [[`${nl(g.echt)} kWh`, 'opgewekt'], ...(g.verwacht != null ? [[`${nl(g.verwacht)} kWh`, 'verwacht, de dag ervoor']] : [])],
+      rij: [[`${nl(g.echt)} kWh`, 'opgewekt'], ...(g.verwacht != null ? [[`${nl(g.verwacht)} kWh`, 'verwacht']] : [])],
       afwijking: verschil(g.echt, g.verwacht),
       noot: zelf != null ? `${zelf}% zelf gebruikt` : '',
     };
@@ -90,7 +90,8 @@ function getallen(r) {
     if (kwh == null) return null;
     const vooraf = weer?.vandaag?.verwachtVoorafKwh;
     const nu = weer?.vandaag?.verwachtKwh;
-    const v = vooraf != null ? [`${nl(vooraf)} kWh`, 'verwacht, de dag ervoor'] : nu != null ? [`${nl(nu)} kWh`, 'verwacht vandaag'] : null;
+    // Verwacht uit het weer en wat het huis leerde; hoe dat tot stand kwam, hoort niet in de app (besluit 167).
+    const v = vooraf != null ? [`${nl(vooraf)} kWh`, 'verwacht vandaag'] : nu != null ? [`${nl(nu)} kWh`, 'verwacht vandaag'] : null;
     return { rij: [[`${nl(kwh)} kWh`, 'tot nu toe'], ...(v ? [v] : [])], afwijking: null, noot: '' };
   }
   const m = weer?.dagen?.[0];
@@ -229,11 +230,12 @@ function verwachtingen() {
   }
   // Een uitstelbaar apparaat dat draait: wanneer het klaar is.
   for (const d of state?.bewoner?.uitstelbaar ?? []) {
-    if (d.stand !== 'running' || !d.duurMin) continue;
+    // Klaar met drogen, ook al draait de trommel nog tegen kreuken (besluit 167): niets meer te verwachten.
+    if (d.stand !== 'running' || d.klaarSindsMs != null || (!d.duurMin && d.restMin == null)) continue;
     const s = (dagen.vandaag?.uitstelbaar ?? []).find((u) => u.id === d.id)?.draaide?.at(-1);
     if (!s) continue;
-    const klaar = s.vanMs + d.duurMin * 60_000;
-    if (klaar > nu) uit.push({ actuatorId: d.id, vanMs: nu, totMs: klaar, kop: `${d.naam} is klaar rond ${klokVan(klaar)}`, zin: 'Uit de duur van het programma, zoals het apparaat die meldt.' });
+    const klaar = d.restMin != null ? nu + d.restMin * 60_000 : s.vanMs + d.duurMin * 60_000;
+    if (klaar > nu) uit.push({ actuatorId: d.id, vanMs: nu, totMs: klaar, kop: `${d.naam} is klaar rond ${klokVan(klaar)}`, zin: d.restMin != null ? 'Uit de resterende tijd, zoals het apparaat die meldt.' : 'Uit de duur van het programma, zoals het apparaat die meldt.' });
   }
   return uit;
 }
@@ -344,7 +346,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
 
   const uren = [6, 9, 12, 15, 18, 21, 24].map((u) => `<text x="${x(t0 + u * 3_600_000).toFixed(1)}" y="${hoog - 8}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
   const rasters = [6, 9, 12, 15, 18, 21].map((u) => `<line x1="${x(t0 + u * 3_600_000).toFixed(1)}" y1="26" x2="${x(t0 + u * 3_600_000).toFixed(1)}" y2="${hoog - 30}"/>`).join('');
-  const planVlak = dag === 'vandaag' ? `<rect x="${nuX.toFixed(1)}" y="0" width="${(X1 - nuX).toFixed(1)}" height="${hoog - 30}" fill="url(#plan)" rx="12"/><text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : dag === 'morgen' ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : weer?.gisteren ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Gestippeld: wat er de dag ervoor werd verwacht</text>` : '';
+  const planVlak = dag === 'vandaag' ? `<rect x="${nuX.toFixed(1)}" y="0" width="${(X1 - nuX).toFixed(1)}" height="${hoog - 30}" fill="url(#plan)" rx="12"/><text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : dag === 'morgen' ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Verwacht, uit het weer en wat het huis leerde</text>` : weer?.gisteren ? `<text x="${X1 - 8}" y="18" text-anchor="end" class="plan">Gestippeld: wat er verwacht werd</text>` : '';
   const g = getallen(r);
   const getallenSvg = g
     ? `<text x="${X0}" y="20">${g.rij.map(([w, l], i) => `<tspan class="getal"${i ? ' dx="22" fill="#B8C4CF"' : ''}>${esc(w)}</tspan><tspan class="sub" dx="6">${esc(l)}</tspan>`).join('')}${g.afwijking ? `<tspan class="af${g.afwijking.startsWith('+') ? '' : ' min'}" dx="16">${esc(g.afwijking)}</tspan>` : ''}${g.noot ? `<tspan class="sub" dx="16">${esc(g.noot)}</tspan>` : ''}</text>`
@@ -419,7 +421,7 @@ function tekenKaarten(r, verwacht, lijst) {
     const piek = Math.max(0, ...kw.map((q) => q.verwachtW));
     const goed = kw.filter((q) => piek > 0 && q.verwachtW >= piek * 0.6);
     rechts.innerHTML = goed.length && piek >= 200
-      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de meeste zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Tussen ${klokVan(goed[0].tMs)} en ${klokVan(goed.at(-1).tMs + 15 * 60_000)}</h2><p class="klein" style="margin: 8px 0 0">Tot ${nl(piek / 1000)} kW van je dak. Dan is er de meeste ruimte voor apparaten op zon.</p>`
+      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de meeste zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Tussen ${klokVan(goed[0].tMs)} en ${klokVan(goed.at(-1).tMs + 15 * 60_000)}</h2><p class="klein" style="margin: 8px 0 0">Tot ${nl(piek / 1000)} kW van je panelen. Dan is er de meeste ruimte voor apparaten op zon.</p>`
       : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Weinig zon verwacht</h2><p class="klein" style="margin: 8px 0 0">${esc(morgenZin || 'Er is nog geen verwachting voor morgen.')}</p>`;
   }
 }

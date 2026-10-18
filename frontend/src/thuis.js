@@ -244,15 +244,24 @@ function tekenApparaat() {
     return;
   }
   const s = (vandaag?.uitstelbaar ?? []).find((u) => u.id === d.id)?.draaide?.at(-1);
-  const loopt = d.stand === 'running' && s && Date.now() - s.totMs < 5 * 60_000;
-  const klaar = loopt && d.duurMin ? s.vanMs + d.duurMin * 60_000 : null;
-  const deel = klaar ? Math.min(1, (Date.now() - s.vanMs) / (d.duurMin * 60_000)) : d.stand === 'running' ? 1 : 0;
-  const rest = klaar ? Math.max(0, Math.round((klaar - Date.now()) / 60_000)) : null;
+  const nu = Date.now();
+  const klok = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  // Klaar met drogen, ook al draait de trommel nog tegen kreuken (besluit 167): dat zegt de dienst.
+  const klaar = d.stand === 'running' ? d.klaarSindsMs ?? null : null;
+  const loopt = d.stand === 'running' && !klaar && s && nu - s.totMs < 5 * 60_000;
+  // De eindtijd: wat het apparaat zegt dat er nog over is, anders de start plus de duur.
+  const eind = d.stand === 'running' && !klaar ? (d.restMin != null ? nu + d.restMin * 60_000 : loopt && d.duurMin ? s.vanMs + d.duurMin * 60_000 : null) : null;
+  const deel = klaar ? 1 : eind && s ? Math.max(0, Math.min(1, (nu - s.vanMs) / Math.max(60_000, eind - s.vanMs))) : d.stand === 'running' ? 1 : 0;
+  const rest = eind ? Math.max(0, Math.round((eind - nu) / 60_000)) : null;
   const R = 2 * Math.PI * 24;
-  const ring = `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" ${d.stand === 'running' ? '' : 'stroke-dasharray="3 5"'}/>${deel > 0 ? `<circle cx="28" cy="28" r="24" fill="none" stroke="#F7B548" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * R).toFixed(1)} ${R.toFixed(1)}" transform="rotate(-90 28 28)"/>` : ''}${rest != null ? `<text x="28" y="33" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#EEF3F7">${rest >= 60 ? `${Math.floor(rest / 60)}u${String(rest % 60).padStart(2, '0')}` : `${rest}m`}</text>` : ''}</svg>`;
-  const zin = klaar ? `Draait, klaar rond ${new Date(klaar).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : d.kop;
+  const kleur = klaar ? '#6EE7B7' : '#F7B548';
+  const binnen = klaar
+    ? '<path d="M19 28.5l6 6 12-13" fill="none" stroke="#6EE7B7" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    : rest != null ? `<text x="28" y="33" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#EEF3F7">${rest >= 60 ? `${Math.floor(rest / 60)}u${String(rest % 60).padStart(2, '0')}` : `${rest}m`}</text>` : '';
+  const ring = `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" ${d.stand === 'running' ? '' : 'stroke-dasharray="3 5"'}/>${deel > 0 ? `<circle cx="28" cy="28" r="24" fill="none" stroke="${kleur}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * R).toFixed(1)} ${R.toFixed(1)}" transform="rotate(-90 28 28)"/>` : ''}${binnen}</svg>`;
+  const zin = klaar ? `Klaar sinds ${klok(klaar)}, draait nog tegen kreuken` : eind ? `Draait, klaar rond ${klok(eind)}` : d.kop;
   kaarten.forEach((k) => {
-    inhoud(k).innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
+    inhoud(k).innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein ${klaar ? 'mint-t' : 'zon-t'}">${esc(zin)}</span></span>`;
     k.hidden = false;
   });
 }
@@ -353,7 +362,7 @@ function tekenMorgen() {
   $$('[data-morgen]').forEach((el) => {
     el.hidden = !d;
     if (!d) return;
-    const html = `${weerIcoon(d.soort)}<b>Morgen</b><span class="graden">${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}${d.minC == null ? '' : `<small> / ${nl(d.minC, 0)}°</small>`}</span><span class="mini">${[d.regenkansPct != null ? `${d.regenkansPct}% regen` : '', d.verwachtKwh != null ? `${nl(d.verwachtKwh)} kWh van je dak` : ''].filter(Boolean).join(', ')}</span>`;
+    const html = `${weerIcoon(d.soort)}<b>Morgen</b><span class="graden">${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}${d.minC == null ? '' : `<small> / ${nl(d.minC, 0)}°</small>`}</span><span class="mini">${[d.regenkansPct != null ? `${d.regenkansPct}% regen` : '', d.verwachtKwh != null ? `${nl(d.verwachtKwh)} kWh van je panelen` : ''].filter(Boolean).join(', ')}</span>`;
     if (el.dataset.html !== html) {
       el.innerHTML = html;
       el.dataset.html = html;
@@ -528,6 +537,51 @@ eigen.bij(async (huisOok) => {
 
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
+
+/*
+ * De stand van het huis (besluit 167): een tik op "Automatisch" zegt welke
+ * standen er zijn, wat ze doen, en wat er nu geldt. Kiezen komt in stap B: de
+ * stand stuurt nu via Home Assistant de verwarming, en daar schrijft Smart
+ * Climate niet aan.
+ */
+const STANDEN = [
+  ['automatisch', 'Automatisch', (d) => `Volgt de dagdelen bij Comfort${d ? `: voorverwarmen vanaf ${d.voorverwarmen}:00, overdag vanaf ${d.dag}:00, de nacht vanaf ${d.nacht}:00` : ''}. Is niemand thuis, dan Afwezig.`],
+  ['voorverwarmen', 'Voorverwarmen', () => 'Vroeg in de ochtend: op tijd warm voor de dag begint.'],
+  ['dag', 'Dag', () => 'De temperaturen voor overdag, zoals bij Comfort.'],
+  ['nacht', 'Nacht', () => 'De temperaturen voor de nacht. Brandt er nog licht, dan blijft het nog even Dag.'],
+  ['afwezig', 'Afwezig', () => 'Niemand thuis: een zuinigere temperatuur.'],
+  ['vakantie', 'Vakantie', () => 'Langer weg: zo zuinig mogelijk, tot je terug bent.'],
+  ['handmatig', 'Handmatig', () => 'Het huis regelt niets: je bedient alles zelf.'],
+];
+let dagdelen = null;
+async function openModus() {
+  const el = document.querySelector('[data-kiesblad]');
+  if (!el || !state) return;
+  if (!dagdelen) dagdelen = (await haal('api/comfort').catch(() => null))?.dagdelen ?? null;
+  const e = state.explanation ?? {};
+  const auto = e.modeSource === 'schedule';
+  const nu = auto ? 'automatisch' : e.mode;
+  const naam = (id) => STANDEN.find(([x]) => x === id)?.[1] ?? id;
+  // Wat er nu geldt, en wanneer de klok de stand verandert.
+  const uur = new Date().getHours();
+  const volgende = dagdelen && auto ? [['voorverwarmen', dagdelen.voorverwarmen], ['dag', dagdelen.dag], ['nacht', dagdelen.nacht]].sort((a, b) => ((a[1] - uur + 24) % 24 || 24) - ((b[1] - uur + 24) % 24 || 24))[0] : null;
+  const zin = auto
+    ? `Nu <b>${esc(naam(e.mode))}</b>, uit de dagdelen.${volgende && e.mode !== 'afwezig' ? ` Om ${volgende[1]}:00 ${esc(naam(volgende[0]).toLowerCase())}.` : ''}`
+    : `Nu <b>${esc(naam(e.mode))}</b>, gekozen in Home Assistant.`;
+  el.dataset.blad = 'modus';
+  el.setAttribute('aria-label', 'De stand van het huis');
+  el.innerHTML = `<div class="bladkop"><h2 class="kop-2">De stand van het huis</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
+    <p class="klein" style="margin: 0 0 4px">${zin}</p>
+    ${STANDEN.map(([id, t, uitleg]) => `<div class="modusrij${id === nu ? ' nu' : ''}" ${id === nu ? 'aria-current="true"' : ''}><b>${esc(t)}${id === nu ? '<span class="mini"> · nu</span>' : ''}</b><span>${esc(uitleg(dagdelen))}</span></div>`).join('')}
+    <p class="mini" style="margin: 10px 0 0">Kiezen kan hier nog niet. De stand stuurt nu je verwarming via Home Assistant, en Smart Climate kijkt alleen mee. Tot het huis zelf regelt, zet je hem in Home Assistant.</p>`;
+  document.querySelector('[data-kies-achter]').hidden = false;
+  el.hidden = false;
+  el.querySelector('button')?.focus();
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-modus]') && !eigen.bewerkt) void openModus();
+});
+
 // Onderhoud: openklappen, en bij meer dan één de lijst met batterijen en filters.
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-onderhoud-knop]')) {

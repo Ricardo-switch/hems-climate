@@ -35,6 +35,16 @@ export type Tariff = (typeof TARIFFS)[number];
 /** Waar de warmte vandaan komt (besluit 122). */
 export const HEATERS = ['cv', 'warmtepomp', 'hybride', 'stadsverwarming', 'weetniet'] as const;
 export type Heater = (typeof HEATERS)[number];
+/**
+ * De verwarming (besluit 122), met de thermostaat die de ketel stuurt (besluit
+ * 167), zoals een Nest: daar gaan de radiatoren mee aan. Weg of null: de app
+ * stelt er een voor uit Home Assistant; "geen" is: er is er geen.
+ */
+export interface Verwarming {
+  readonly soort: Heater | null;
+  readonly aanvoerC: number | null;
+  readonly thermostaat?: string | null;
+}
 /** De aanvoertemperatuur die op een ketel of warmtepomp kan staan, in °C. */
 export const SUPPLY_C = { min: 25, max: 90 } as const;
 /** De zekeringen uit de schets; een andere waarde mag ook, binnen het schema. */
@@ -64,6 +74,9 @@ export interface FoundAppliance {
   readonly remoteStart: string;
   readonly operationState?: string;
   readonly programDuration?: string;
+  /** Hoe lang het programma nog duurt (of de eindtijd), en de voortgang in procent (besluit 167). */
+  readonly remainingTime?: string;
+  readonly programProgress?: string;
   /** Wat hij ongeveer vraagt als hij opwarmt; een schatting per soort. */
   readonly estimatedW: number;
 }
@@ -87,7 +100,7 @@ export interface ConnectionAnswers {
    * ketel staat, als de bewoner die weet. Voor het thermisch model: een lagere
    * aanvoer warmt een kamer langzamer op.
    */
-  readonly verwarming?: { readonly soort: Heater | null; readonly aanvoerC: number | null };
+  readonly verwarming?: Verwarming;
   /**
    * Hoe de panelen liggen (besluit 157): wanneer de zon op de voorkant schijnt,
    * en wat de bewoner van de meting bevestigde of verbeterde. Weg of null: nog
@@ -98,6 +111,11 @@ export interface ConnectionAnswers {
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
   readonly fasen: readonly FoundPhase[];
   readonly apparaten: readonly (FoundAppliance & { readonly opZon: boolean })[];
+  /**
+   * Apparaten uit de configuratie die de bewoner uitzette (besluit 167): die
+   * starten niet meer op zon. Eerst stond daar alleen "Aan".
+   */
+  readonly opZonUit?: readonly string[];
 }
 
 /* ------------------------------------------------------------ herkennen */
@@ -147,6 +165,8 @@ export function findPhases(states: Iterable<HaEntityState>): FoundPhase[] {
 const REMOTE_START = /remote_?(?:control_?)?start_?allowed|remotecontrolstartallowed|remote_?start/i;
 const OPERATION = /operation_?state|operationstate|programma_?status|program_?state/i;
 const DURATION = /estimated_?total_?program_?time|estimatedtotalprogramtime|program_?duration/i;
+const REMAINING = /remaining_?program_?time|remainingprogramtime|program_?finish_?time|programma_?eindtijd/i;
+const PROGRESS = /program_?progress|programprogress|programma_?voortgang/i;
 
 /*
  * Soort, naam en wat hij ongeveer vraagt. Naast de woorden de modelcodes van
@@ -185,6 +205,8 @@ export function findAppliances(
     const mine = entities.filter((x) => x.device_id === e.device_id && !x.disabled_by && states.has(x.entity_id));
     const operation = mine.find((x) => x.entity_id.startsWith('sensor.') && OPERATION.test(x.entity_id));
     const duration = mine.find((x) => x.entity_id.startsWith('sensor.') && DURATION.test(x.entity_id));
+    const remaining = mine.find((x) => x.entity_id.startsWith('sensor.') && REMAINING.test(x.entity_id));
+    const progress = mine.find((x) => x.entity_id.startsWith('sensor.') && PROGRESS.test(x.entity_id));
     const device = devices.find((d) => d.id === e.device_id);
     const deviceName = device?.name_by_user ?? device?.name ?? '';
     const hint = `${deviceName} ${mine.map((x) => x.entity_id).join(' ')}`;
@@ -200,6 +222,8 @@ export function findAppliances(
       remoteStart: e.entity_id,
       ...(operation ? { operationState: operation.entity_id } : {}),
       ...(duration ? { programDuration: duration.entity_id } : {}),
+      ...(remaining ? { remainingTime: remaining.entity_id } : {}),
+      ...(progress ? { programProgress: progress.entity_id } : {}),
       estimatedW: watt,
     });
   }
@@ -288,8 +312,16 @@ export function withConnection(raw: Record<string, unknown>, answers: Connection
     }
   }
 
-  const existing = Array.isArray(raw['deferrables']) ? (raw['deferrables'] as Record<string, unknown>[]) : [];
-  const known = new Set(existing.flatMap((d) => [String(d['id']), String(d['remoteStart'])]));
+  const alles = Array.isArray(raw['deferrables']) ? (raw['deferrables'] as Record<string, unknown>[]) : [];
+  // Wat de bewoner uitzette, gaat eruit (besluit 167).
+  const uit = new Set(answers.opZonUit ?? []);
+  const existing = alles.filter((d) => !uit.has(String(d['id'])));
+  for (const d of alles) if (uit.has(String(d['id']))) toegevoegd.push(`${String(d['name'] ?? d['id'])} niet meer op zon`);
+  if (existing.length !== alles.length) {
+    if (existing.length) out['deferrables'] = existing;
+    else delete out['deferrables'];
+  }
+  const known = new Set(alles.flatMap((d) => [String(d['id']), String(d['remoteStart'])]));
   const added = answers.apparaten
     .filter((a) => a.opZon && !known.has(a.id) && !known.has(a.remoteStart))
     .map((a) => ({
@@ -298,6 +330,8 @@ export function withConnection(raw: Record<string, unknown>, answers: Connection
       remoteStart: a.remoteStart,
       ...(a.operationState ? { operationState: a.operationState } : {}),
       ...(a.programDuration ? { programDuration: a.programDuration } : {}),
+      ...(a.remainingTime ? { remainingTime: a.remainingTime } : {}),
+      ...(a.programProgress ? { programProgress: a.programProgress } : {}),
       estimatedW: a.estimatedW,
       latestStart: '15:00',
     }));
@@ -377,6 +411,13 @@ export function validateConnection(
     if (typeof v !== 'boolean') return { ok: false, reden: `"op zon" is ja of nee (${id})` };
     if (!found.apparaten.some((a) => a.id === id)) return { ok: false, reden: `onbekend apparaat: ${id}` };
   }
+  // Apparaten uit de configuratie die uit moeten (besluit 167): een lijst namen.
+  const uitRaw = b['opZonUit'] ?? [];
+  if (!Array.isArray(uitRaw) || uitRaw.length > 20 || uitRaw.some((x) => typeof x !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(x))) return { ok: false, reden: 'opZonUit is een lijst apparaten' };
+
+  // De thermostaat van de ketel (besluit 167): een klimaatapparaat uit de app, "geen", of leeg.
+  const thermostaat = vw['thermostaat'] ?? null;
+  if (thermostaat !== null && (typeof thermostaat !== 'string' || !/^[a-z0-9_.:-]{1,160}$/i.test(thermostaat))) return { ok: false, reden: 'de thermostaat is een apparaat uit Home Assistant' };
 
   return {
     ok: true,
@@ -385,11 +426,12 @@ export function validateConnection(
       panelen,
       zekering,
       tarief: tarief as Tariff | null,
-      verwarming: { soort: soort as Heater | null, aanvoerC: aanvoer as number | null },
+      verwarming: { soort: soort as Heater | null, aanvoerC: aanvoer as number | null, ...(thermostaat ? { thermostaat: thermostaat as string } : {}) },
       voorkantZon: voorkantZon as VoorkantZon | null,
       dak,
       fasen: [...found.fasen],
       apparaten: found.apparaten.map((a) => ({ ...a, opZon: opZonRaw[a.id] === true })),
+      ...(uitRaw.length ? { opZonUit: [...new Set(uitRaw as string[])] } : {}),
     },
   };
 }
@@ -456,7 +498,7 @@ function readAnswers(raw: unknown): ConnectionAnswers | null {
       )
     : [];
   const checked = validateConnection(
-    { ...r, opZon: Object.fromEntries(apparaten.map((a) => [a.id, a.opZon === true])) },
+    { ...r, opZon: Object.fromEntries(apparaten.map((a) => [a.id, a.opZon === true])), opZonUit: Array.isArray(r['opZonUit']) ? r['opZonUit'] : [] },
     { fasen, apparaten },
   );
   return checked.ok ? checked.answers : null;
@@ -508,10 +550,11 @@ export interface ConnectionView {
     readonly panelen: ConnectionAnswers['panelen'];
     readonly zekering: ConnectionAnswers['zekering'];
     readonly tarief: Tariff | null;
-    readonly verwarming: { readonly soort: Heater | null; readonly aanvoerC: number | null };
+    readonly verwarming: Verwarming;
     readonly voorkantZon: VoorkantZon | null;
     readonly dak: Dak | null;
     readonly opZon: Readonly<Record<string, boolean>>;
+    readonly opZonUit: readonly string[];
   } | null;
   /** Hoe de panelen liggen (besluit 157): wat geldt, het voorstel uit de meting, en de dag erbij. */
   readonly ligging: LiggingView;
@@ -554,7 +597,7 @@ export function connectionView(c: ConnectionContext): ConnectionView {
   const grid = c.base.grid;
   const planes = c.base.geometry?.solarPlanes ?? [];
   const brand = c.solar ? solarBrand(c.solar.platform) : null;
-  const relevant = (a: ConnectionAnswers | null) => JSON.stringify(a ? [a.zekering, a.fasen, a.apparaten.filter((x) => x.opZon).map((x) => x.id)] : null);
+  const relevant = (a: ConnectionAnswers | null) => JSON.stringify(a ? [a.zekering, a.fasen, a.apparaten.filter((x) => x.opZon).map((x) => x.id), [...(a.opZonUit ?? [])].sort()] : null);
   return {
     antwoorden: c.answers
       ? {
@@ -565,6 +608,7 @@ export function connectionView(c: ConnectionContext): ConnectionView {
           voorkantZon: c.answers.voorkantZon ?? null,
           dak: c.answers.dak ?? null,
           opZon: Object.fromEntries(c.answers.apparaten.map((a) => [a.id, a.opZon])),
+          opZonUit: c.answers.opZonUit ?? [],
         }
       : null,
     ligging: liggingView({

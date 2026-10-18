@@ -147,11 +147,21 @@
   }
 
   /** Wat voor buitenruimte: zoals de bewoner het koos, of uit de naam. */
+  /** Wat een buitenruimte uit zijn naam is, zoals de dienst het voorstelt (besluiten 109 en 167). */
+  function buitenUitNaam(naam) {
+    const n = naam ?? '';
+    return /carport/i.test(n) ? 'carport' : /oprit/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /zijtuin/i.test(n) ? 'zijtuin' : /dakterras/i.test(n) ? 'dakterras' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : /garage/i.test(n) ? 'garage' : /tuin/i.test(n) ? 'tuin' : null;
+  }
+  /** Een deel van een buitenruimte uit zijn naam (besluit 167). */
+  function buitenZoneUitNaam(naam) {
+    const n = naam ?? '';
+    return /tuinhuis|schuur|huisje|berging/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag/i.test(n) ? 'border' : /gazon|gras/i.test(n) ? 'gazon' : /terras|zithoek|lounge/i.test(n) ? 'terras' : /moestuin|groente|kas/i.test(n) ? 'moestuin' : /vijver|water/i.test(n) ? 'vijver' : /pad|tegel/i.test(n) ? 'pad' : /speel|schommel|trampoline/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit/i.test(n) ? 'oprit' : null;
+  }
+  const heeftHuisje = (r) => (r.zones ?? []).some((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis');
   function soortBuiten(r) {
-    if (r.buiten) return r.buiten;
-    const oprit = /oprit|carport/i.test(r.naam);
-    const soort = oprit ? 'oprit' : /voortuin/i.test(r.naam) ? 'voortuin' : /terras|veranda/i.test(r.naam) ? 'terras' : /balkon/i.test(r.naam) ? 'balkon' : /tuinhuis|schuur/i.test(r.naam) ? 'tuinhuis' : /garage/i.test(r.naam) ? 'garage' : 'tuin';
-    return { soort, auto: oprit, tuinhuis: soort === 'tuin' };
+    if (r.buiten) return { ...r.buiten, tuinhuis: r.buiten.tuinhuis || ((r.buiten.soort === 'tuin' || r.buiten.soort === 'zijtuin') && heeftHuisje(r)) };
+    const soort = buitenUitNaam(r.naam) ?? 'tuin';
+    return { soort, auto: soort === 'oprit' || soort === 'carport', tuinhuis: (soort === 'tuin' || soort === 'zijtuin') && heeftHuisje(r) };
   }
 
   /**
@@ -186,7 +196,7 @@
         terras ??= { id: r.id, naam: r.naam, lampAan };
         continue;
       }
-      if (b.soort === 'balkon') {
+      if (b.soort === 'balkon' || b.soort === 'dakterras') {
         balkon ??= { id: r.id, naam: r.naam, lampAan };
         continue;
       }
@@ -195,14 +205,15 @@
         garage ??= { id: r.id, naam: r.naam, lampAan };
         continue;
       }
-      if (b.soort === 'voortuin' || (b.soort === 'tuin' && tuin && !voortuin)) {
+      // Een zijtuin, of een tweede tuin, krijgt de plek van de voortuin als die vrij is.
+      if (b.soort === 'voortuin' || ((b.soort === 'tuin' || b.soort === 'zijtuin') && tuin && !voortuin)) {
         voortuin ??= { id: r.id, naam: r.naam, lampAan };
         continue;
       }
-      if (b.soort === 'oprit') {
+      if (b.soort === 'oprit' || b.soort === 'carport') {
         if (oprit) continue;
         const cam = lampen.find((a) => /camera|schijnwerper/i.test(a.id + a.naam));
-        oprit = { id: r.id, naam: r.naam, auto: b.auto ? {} : null, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null };
+        oprit = { id: r.id, naam: r.naam, auto: b.auto ? {} : null, camera: cam || (r.apparaten ?? []).some((a) => a.soort === 'camera') ? { aan: !!cam?.aan } : null, ...(b.soort === 'carport' ? { carport: true } : {}) };
       } else {
         if (tuin) continue;
         const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
@@ -329,5 +340,33 @@
     return iedereen.filter((b) => b.thuis).map((b) => b.naam);
   }
 
-  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, ACTIEF, BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen };
+  /*
+   * De thermostaat van de cv-ketel (besluit 167), zoals een Nest: die stuurt de
+   * ketel, en de radiatoren in alle kamers gaan mee aan. Gekozen bij Energie ›
+   * Verwarming; anders het voorstel: een thermostaat uit Home Assistant die
+   * verwarmt en niet koelt, en geen radiatorknop is. "geen": er is er geen.
+   */
+  function thermostaten(huis) {
+    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !a.radiatorknop && a.klimaat?.kanVerwarmen && !a.klimaat?.kanKoelen).map((a) => ({ sleutel: a.actuatorId ?? a.id, naam: a.naam, kamerId: r.id, kamer: r.naam }))));
+  }
+  function cvThermostaat(huis, verwarming) {
+    const keus = verwarming?.thermostaat ?? null;
+    if (keus === 'geen') return null;
+    const lijst = thermostaten(huis);
+    return (keus ? lijst.find((x) => x.sleutel === keus) : lijst[0]) ?? null;
+  }
+
+  /** Wat een buitenruimte is (besluit 167): een eigen lijst, zoals Soort kamer binnen. */
+  const BUITEN_SOORTEN = [
+    ['tuin', 'Achtertuin'], ['voortuin', 'Voortuin'], ['zijtuin', 'Zijtuin'], ['oprit', 'Oprit'], ['carport', 'Carport'],
+    ['terras', 'Terras'], ['balkon', 'Balkon'], ['dakterras', 'Dakterras'], ['tuinhuis', 'Tuinhuis of schuur'], ['garage', 'Garage, los van het huis'],
+  ];
+  /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
+  const BUITEN_ZONES = [
+    ['gazon', 'Gazon'], ['border', 'Border'], ['terras', 'Terras'], ['tuinhuis', 'Tuinhuis of schuur'], ['moestuin', 'Moestuin'],
+    ['vijver', 'Vijver'], ['pad', 'Pad'], ['speelplek', 'Speelplek'], ['oprit', 'Oprit'], ['carport', 'Carport'],
+  ];
+  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
+
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen };
 })(window);

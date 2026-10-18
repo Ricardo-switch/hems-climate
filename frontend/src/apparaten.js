@@ -64,7 +64,8 @@ function looptijd(d) {
   const laatste = spans?.draaide?.[spans.draaide.length - 1];
   const open = d.stand === 'running' && laatste && Date.now() - laatste.totMs < 5 * 60_000 && laatste.vanMs > (vandaag?.vanMs ?? 0);
   if (!open) return null;
-  return { start: laatste.vanMs, klaar: d.duurMin ? laatste.vanMs + d.duurMin * 60_000 : null };
+  // De resterende tijd van het apparaat gaat voor de duur van het programma (besluit 167).
+  return { start: laatste.vanMs, klaar: d.restMin != null ? Date.now() + d.restMin * 60_000 : d.duurMin ? laatste.vanMs + d.duurMin * 60_000 : null };
 }
 
 function kaart(d) {
@@ -77,13 +78,18 @@ function kaart(d) {
   let toon = '';
   let zin = d.zin;
   let rest = null;
-  if (d.stand === 'running') {
+  if (d.stand === 'running' && d.klaarSindsMs != null) {
+    // Klaar met drogen; de trommel draait nog tegen kreuken (besluit 167). Dat zegt de kop van de dienst.
+    toon = 'mint-t';
+    boven = ring({ deel: 1, kleur: '#6EE7B7', tekst: '✓', label: `${d.naam} is klaar` });
+  } else if (d.stand === 'running') {
     toon = 'zon-t';
-    if (start != null && d.duurMin) {
+    const klaarOm = looptijd(d)?.klaar ?? null;
+    if (start != null && klaarOm != null) {
       const gelopen = (nu - start) / 60_000;
-      const over = Math.max(0, d.duurMin - gelopen);
-      const klaar = start + d.duurMin * 60_000;
-      boven = ring({ deel: Math.min(1, gelopen / d.duurMin), tekst: duurTekst(over), label: `${d.naam}, nog ${Math.round(over)} minuten` });
+      const over = Math.max(0, (klaarOm - nu) / 60_000);
+      const klaar = klaarOm;
+      boven = ring({ deel: Math.min(1, gelopen / Math.max(1, gelopen + over)), tekst: duurTekst(over), label: `${d.naam}, nog ${Math.round(over)} minuten` });
       toon = 'zon-t';
       zin = `Begon ${klokVan(start)}.${zouOm != null && zouOm < start ? ` Smart Climate zou hem om ${klokVan(zouOm)} gestart hebben, met zon over.` : ''}`;
       rest = over > 0 ? { van: nu, tot: klaar } : null;

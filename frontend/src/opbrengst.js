@@ -51,7 +51,7 @@ async function laad() {
 /* ------------------------------------------------------------ de delen */
 
 function titel(r) {
-  if (r.heeft.zon && r.stroom.eigenZonPct != null) return `${r.stroom.eigenZonPct}% van je stroom kwam van je eigen dak`;
+  if (r.heeft.zon && r.stroom.eigenZonPct != null) return `${r.stroom.eigenZonPct}% van je stroom kwam van je eigen panelen`;
   return `Je gebruikte ${getal(r.stroom.verbruikKwh)} kWh stroom`;
 }
 
@@ -74,7 +74,7 @@ function periode(r) {
 function cijfers(r, klein = false) {
   const s = r.stroom;
   const k = r.kosten;
-  const stroom = `<div class="cijfer"><div class="mini">Stroom gebruikt</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${r.heeft.zon ? `${getal(s.vanNetKwh)} van het net, de rest van je dak` : 'van het net'}</div></div>`;
+  const stroom = `<div class="cijfer"><div class="mini">Stroom gebruikt</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${r.heeft.zon ? `${getal(s.vanNetKwh)} van het net, de rest van je panelen` : 'van het net'}</div></div>`;
   const vast = k.regels.find((x) => /vast/i.test(x.naam));
   const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">Kosten</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${r.dekking ? `over ${r.dekking.dagen} gemeten dagen` : k.vorige != null ? `${esc(r.periode.vorigeNaam)} ${euro(k.vorige)}` : ''}${vast?.euro == null ? `${k.vorige != null || r.dekking ? ', ' : ''}zonder vaste kosten` : ''}</div></div>`;
   const gas = r.gas ? `<div class="cijfer"><div class="mini">Gas</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';
@@ -92,7 +92,7 @@ function panelen(r) {
   return `<section class="glas kaart">
     <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Je panelen</h2><span class="getal zon-t" style="font-size: 22px">${getal(z.opgewektKwh)} kWh</span></div>
     <div class="verdeel" style="height: 10px; margin-top: 12px"><i style="width: ${zelf.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zelf).toFixed(1)}%; background: var(--mint)"></i></div>
-    <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>${getal(z.zelfKwh)} zelf gebruikt</span><span>${getal(z.terugKwh)} naar het net</span></div>
+    <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>${getal(z.zelfKwh)} zelf gebruikt${z.opgewektKwh > 0 ? `, <b>${Math.round(zelf)}%</b>` : ''}</span><span>${getal(z.terugKwh)} naar het net</span></div>
     ${z.besteDag ? `<p class="mini" style="margin: 8px 0 0">Beste dag: ${esc(z.besteDag.label)}, ${getal(z.besteDag.kwh)} kWh</p>` : ''}
     ${verwachtRegel(r.verwacht, r.periode.soort)}
   </section>`;
@@ -154,7 +154,7 @@ function staven(r) {
       titel: { dag: 'Per uur', week: 'Per dag', maand: 'Per dag', jaar: 'Per maand' }[r.periode.soort],
       as: b.map((x) => x.label),
       html: b.map((x, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(x.label)}: ${getal(x.zonKwh)} kWh zon, ${getal(x.netKwh)} kWh net"><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i></button>`),
-      detail: (i) => `${b[i].label}: ${getal(b[i].zonKwh)} kWh van je dak, ${getal(b[i].netKwh)} kWh van het net`,
+      detail: (i) => `${b[i].label}: ${getal(b[i].zonKwh)} kWh van je panelen, ${getal(b[i].netKwh)} kWh van het net`,
       legenda: `<span><span class="stip" style="background: var(--zon)"></span>zon</span><span><span class="stip" style="background: ${NET}"></span>net</span>`,
     };
   }

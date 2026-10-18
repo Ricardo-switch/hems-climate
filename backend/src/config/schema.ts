@@ -1364,6 +1364,11 @@ export function parseSiteConfig(
         const remoteStart = d['remoteStart'] === undefined ? (p.error(join(path, 'remoteStart'), 'ontbreekt'), null) : ref(p, d['remoteStart'], join(path, 'remoteStart'), defaultAdapter);
         const operationState = d['operationState'] === undefined ? null : ref(p, d['operationState'], join(path, 'operationState'), defaultAdapter);
         const programDuration = d['programDuration'] === undefined ? null : ref(p, d['programDuration'], join(path, 'programDuration'), defaultAdapter);
+        // De resterende tijd en de voortgang (besluit 167). Niet genoemd, maar wel de
+        // duur van Home Connect Alt: dan de broers van die sensor, met dezelfde naam ervoor.
+        const hca = programDuration && /_bsh_common_option_estimatedtotalprogramtime$/.test(programDuration.id) ? programDuration.id.replace(/estimatedtotalprogramtime$/, '') : null;
+        const remainingTime = d['remainingTime'] !== undefined ? ref(p, d['remainingTime'], join(path, 'remainingTime'), defaultAdapter) : hca ? { ...programDuration!, id: `${hca}remainingprogramtime` } : null;
+        const programProgress = d['programProgress'] !== undefined ? ref(p, d['programProgress'], join(path, 'programProgress'), defaultAdapter) : hca ? { ...programDuration!, id: `${hca}programprogress` } : null;
         const estimatedW = num(p, d, path, 'estimatedW', { min: 50, max: 10_000 });
         const latestStart = strOr(p, d, path, 'latestStart', '15:00');
         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(latestStart)) p.error(join(path, 'latestStart'), 'moet een tijd zijn als "15:00"');
@@ -1376,6 +1381,8 @@ export function parseSiteConfig(
             latestStart,
             ...(operationState ? { operationState } : {}),
             ...(programDuration ? { programDuration } : {}),
+            ...(remainingTime ? { remainingTime } : {}),
+            ...(programProgress ? { programProgress } : {}),
           });
         }
       });

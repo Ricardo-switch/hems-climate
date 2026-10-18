@@ -535,9 +535,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('[data-bewaard]', { hasText: 'Bewaard' }).waitFor();
     // Apparaten op zon staan bij Regeling.
     await p.goto(`${baseUrl}/regeling.html#opzon`);
-    await wand.locator('[aria-label="Vaatwasser op zon"] button', { hasText: 'Ja' }).click();
-    expect(await wand.textContent()).toContain('Start bij zonne-overschot. Ingesteld in de configuratie.');
+    // Elk apparaat een schakelaar, ook de droger uit de configuratie (besluit 167).
+    await wand.locator('[aria-label="Vaatwasser op zon"][role="switch"]').click();
     await expect.poll(() => connStore.current?.apparaten, { timeout: 5_000 }).toMatchObject([{ id: 'droger', opZon: false }, { id: 'vaatwasser', opZon: true }]);
+    await wand.locator('[data-bewaard]', { hasText: 'Bewaard' }).waitFor();
+    const droger = wand.locator('[aria-label="Droger op zon"][role="switch"]');
+    expect(await droger.getAttribute('aria-checked')).toBe('true');
+    await droger.click();
+    await expect.poll(() => connStore.current?.opZonUit, { timeout: 5_000 }).toEqual(['droger']);
+    expect(await droger.getAttribute('aria-checked')).toBe('false');
     // De verwarming bleef staan toen Regeling bewaarde.
     expect(connStore.current).toMatchObject({ verwarming: { soort: 'cv', aanvoerC: 60 } });
     // De eigen lettertypen zijn geladen, en er ging niets naar buiten.
@@ -750,7 +756,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const huis = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
     const kamer = huis.etages.flatMap((e) => e.ruimtes).find((r) => r.apparaten.some((d) => d.meting?.temperatuurC != null))!;
     const bron = kamer.apparaten.find((d) => d.meting?.temperatuurC != null)!;
-    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}`);
+    // Meten met staat bij Verwarmen en koelen (besluit 167).
+    await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
     const chip = p.locator(`#wand [data-meten="${bron.id}"]`);
     await chip.click({ timeout: 10_000 });
     await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.meten).toEqual([bron.id]);
@@ -779,32 +786,48 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
     const blad = p.locator('#wand [data-blad]');
     await blad.locator('[data-kamertab="warmte"][aria-selected="true"]').waitFor({ timeout: 10_000 });
-    // De thermostaat staat er al; wat hangt eraan?
-    await blad.locator(`[data-bron-nieuw="${thermo.actuatorId}"]`).click();
+    // Een thermostaat die alleen verwarmt, is de thermostaat van de cv-ketel (besluit 167): geen "Wat hangt eraan?".
+    const ketel = huis.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.soort === 'klimaat' && !d.radiatorknop && d.klimaat?.kanVerwarmen && !d.klimaat.kanKoelen)!;
+    expect(ketel.actuatorId).toBe(thermo.actuatorId);
+    await blad.locator('.bron', { hasText: 'Thermostaat van de cv-ketel' }).waitFor({ timeout: 10_000 });
+    expect(await blad.locator(`[data-bron-nieuw="${thermo.actuatorId}"]`).count()).toBe(0);
+    // Een radiator op de cv: aan met de thermostaat van de ketel, zonder een apparaat te kiezen.
+    await blad.locator('[data-bron-nieuw=""]').click();
+    await blad.locator('[data-bron-soort="radiator"]').click();
+    await blad.locator('[data-bron-aan="thermostaat"]').waitFor();
+    expect(await blad.locator('[data-bron-aan]').allTextContents()).toEqual([`Met de thermostaat van de cv (${thermo.naam})`, 'Met een slimme radiatorknop', 'Met de hand']);
+    await blad.locator('[data-bron-aan="thermostaat"]').click();
+    expect(await blad.locator('[data-bron-apparaat]').count()).toBe(0);
+    await blad.locator('[data-bron-bewaar]').click();
+    const bronnen = () => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.bronnen ?? null;
+    await expect.poll(bronnen).toEqual([expect.objectContaining({ soorten: ['radiator'], aan: 'thermostaat', apparaat: thermo.actuatorId })]);
+    // Elektrisch, met een thermostaat uit Home Assistant en een vermogen.
+    await blad.locator('[data-bron-nieuw=""]').click();
     await blad.locator('[data-bron-soort="vloer"]').click();
     await blad.locator('[data-bron-vloer="elektrisch"]').click();
     await blad.locator('[data-bron-soort="paneel"]').click();
+    await blad.locator('[data-bron-aan="thermostaat"]').click();
+    await blad.locator('[data-bron-apparaat]').selectOption(thermo.actuatorId!);
     await blad.locator('[data-bron-w]').fill('1150');
     await blad.locator('[data-bron-bewaar]').click();
-    const bronnen = () => layoutStore.current?.kamers.find((k) => k.id === kamer.id)?.bronnen ?? null;
-    await expect.poll(bronnen).toEqual([expect.objectContaining({ soorten: ['vloer-elektrisch', 'paneel'], aan: 'thermostaat', apparaat: thermo.actuatorId, vermogenW: 1150 })]);
+    await expect.poll(() => bronnen()?.[1]).toEqual(expect.objectContaining({ soorten: ['vloer-elektrisch', 'paneel'], aan: 'thermostaat', apparaat: thermo.actuatorId, vermogenW: 1150 }));
     // Op zon: meteen in de regeling.
-    await blad.locator('[data-bron-zon]').click();
-    await expect.poll(() => bronnen()?.[0]?.opZon).toBe(true);
-    // Een paneel met de hand: geen vermogen, wel een idee.
+    await blad.locator(`[data-bron-zon="${bronnen()?.[1]?.id}"]`).click();
+    await expect.poll(() => bronnen()?.[1]?.opZon).toBe(true);
+    // Een kachel met de hand: geen vermogen, wel een idee.
     await blad.locator('[data-bron-nieuw=""]').click();
     await blad.locator('[data-bron-soort="kachel"]').click();
     await blad.locator('[data-bron-aan="hand"]').click();
     expect(await blad.locator('[data-bron-w]').count()).toBe(0);
     await blad.locator('[data-bron-bewaar]').click();
-    await expect.poll(() => bronnen()?.length).toBe(2);
+    await expect.poll(() => bronnen()?.length).toBe(3);
     await blad.locator('.bron .idee').first().waitFor();
-    expect(bronnen()?.[1]).toEqual(expect.objectContaining({ soorten: ['kachel'], aan: 'hand' }));
-    expect(bronnen()?.[1]?.vermogenW).toBeUndefined();
+    expect(bronnen()?.[2]).toEqual(expect.objectContaining({ soorten: ['kachel'], aan: 'hand' }));
+    expect(bronnen()?.[2]?.vermogenW).toBeUndefined();
     // Weer weghalen.
-    await blad.locator(`[data-bron-open="${bronnen()?.[1]?.id}"]`).click();
+    await blad.locator(`[data-bron-open="${bronnen()?.[2]?.id}"]`).click();
     await blad.locator('[data-bron-weg]').click();
-    await expect.poll(() => bronnen()?.length).toBe(1);
+    await expect.poll(() => bronnen()?.length).toBe(2);
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     expect(fouten).toEqual([]);
     await context.close();
@@ -827,7 +850,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const airco = kamer.apparaten.find((d) => d.klimaat?.rol === 'zon')!;
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(kamer.id)}/warmte`);
     const blad = p.locator('#wand [data-blad]');
-    await blad.locator('.meetrij', { hasText: 'Meet met' }).waitFor({ timeout: 10_000 });
+    // Meten met en de regeling staan hier, bij Verwarmen en koelen (besluit 167).
+    await blad.locator('[data-actie="regeling"]').waitFor({ timeout: 10_000 });
+    expect(await blad.textContent()).toContain('Meten met');
     expect(kamer.meetMet.length).toBeGreaterThan(0);
     const keuze = blad.locator(`[data-rol="${airco.actuatorId}"]`);
     expect(await keuze.inputValue()).toBe('zon');
@@ -1548,7 +1573,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Thuis naar eigen smaak (besluit 162, schetsen Thuis-Tel-Eigen en
    * Wand-Thuis-Eigen): op de telefoon een kaart schuiven aan de greep,
    * verbergen met het oog en er een bij zetten; favorieten kiezen en met één
-   * tik schakelen; en de wand met vier vakken, die de hoofdgebruiker aanpast.
+   * tik schakelen; en de wand, waar de kolom zelf schuift, die de hoofdgebruiker aanpast.
    * Alles staat daarna bij de dienst, en komt terug na opnieuw laden.
    */
   it('past Thuis aan op de telefoon en de wand, met favorieten (besluit 162)', async () => {
@@ -1639,28 +1664,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.locator('#tel [data-kaart="vandaag"]').isVisible()).toBe(false);
       expect(await p.locator('#tel [data-kaart="morgen"]').isVisible()).toBe(true);
 
-      // De wand: vier vakken, en het potlood voor wie hem mag aanpassen.
+      // De wand, met het potlood voor wie hem mag aanpassen.
       await p.setViewportSize({ width: 1340, height: 800 });
       await expect.poll(() => p.evaluate<boolean>("document.documentElement.classList.contains('tel-stand')")).toBe(false);
       expect((await voorkeuren()).wand.magAanpassen).toBe(true);
       await p.locator('#wand [data-aanpassen]').click();
       await p.locator('#wand [data-bewerkkop]').waitFor();
-      // Vandaag (2), Hoe voelt het en het apparaat: de wand is vol, dus geen vrij vak.
-      expect(await p.locator('#wand [data-vrijvak]').isVisible()).toBe(false);
+      // De greep is alleen een icoon; geen vakken en geen pijltjes meer (besluit 167).
+      expect((await p.locator('#wand [data-kaart="vandaag"] [data-greep]').textContent())?.trim()).toBe('');
+      expect(await p.locator('#wand .kaartmaat, #wand .kaartpijl').count()).toBe(0);
+      // Favorieten en Morgen staan er nog niet: een vak om er een te kiezen.
+      expect(await p.locator('#wand [data-vrijvak]').isVisible()).toBe(true);
       await p.locator('#wand [data-kaart="gevoel"] [data-oog]').click();
       await p.locator('#wand [data-vrijvak]').click();
       await blad.waitFor();
-      expect(await blad.textContent()).toContain('één vak vrij');
+      expect(await blad.textContent()).toContain('Een nieuwe kaart komt onderaan');
       await blad.locator('[data-erbij="favorieten"]').click();
       await expect.poll(async () => (await voorkeuren()).wand.kaarten).toEqual(['vandaag', 'apparaat', 'favorieten']);
       await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
-      // De wand heeft zijn eigen favorieten: nog geen, dus een knop om te kiezen. Staat
-      // Straks bovenin, dan is de wand vol en wijkt de onderste kaart, Favorieten, even.
+      // De wand heeft zijn eigen favorieten: nog geen, dus een knop om te kiezen. Ook
+      // met Straks erbij staat hij er: de kolom schuift zelf.
       await p.locator('#wand [data-kaart="favorieten"] [data-fav-kies]').waitFor({ state: 'attached' });
-      const straksErbij = await p.locator('#wand [data-straks]').isVisible();
-      await expect.poll(() => p.locator('#wand [data-kaart="favorieten"]').isVisible()).toBe(!straksErbij);
-      if (straksErbij) expect(await p.locator('#wand [data-kaart="favorieten"]').getAttribute('data-wijkt')).toBe('');
-      // De wand schuift nooit.
+      await expect.poll(() => p.locator('#wand [data-kaart="favorieten"]').isVisible()).toBe(true);
+      expect(await p.evaluate("getComputedStyle(document.querySelector('#wand .rechts')).overflowY")).toBe('auto');
+      // De wand zelf schuift nooit.
       expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
       expect(fouten).toEqual([]);
     } finally {
@@ -1764,19 +1791,32 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       await laag.click();
 
-      // Instellen bij het potlood: alleen voor wie de wand mag aanpassen.
+      // Instellen bij Functies, onder Weergave (besluit 167): het potlood heeft het niet meer.
       await p.locator('#wand [data-aanpassen]').click();
-      await p.locator('#wand [data-bewerkkop] [data-niemand-kies]').click();
-      const blad = p.locator('[data-kiesblad]');
-      await blad.waitFor();
-      expect(await blad.textContent()).toContain('Alleen de hoofdgebruiker kan dit veranderen');
-      await blad.locator('[data-nk-aan="5"]').click();
-      await expect.poll(async () => (await niemand()).aanMin).toBe(5);
-      await shot('kiezen');
+      expect(await p.locator('#wand [data-bewerkkop] [data-niemand-kies]').count()).toBe(0);
+      await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
+      await p.clock.setFixedTime(new Date('2026-10-20T14:12:00Z'));
+      await p.goto(`${baseUrl}/functies.html#aod`);
+      const blad = p.locator('#wand [data-vorm]');
+      await blad.locator('h2', { hasText: 'Always-on display' }).waitFor();
+      expect(await p.locator('#wand [data-delen] h4').allTextContents()).toContain('Weergave');
+      // De schakelaar: uit, en de minuten worden grijs.
+      expect(await blad.locator('[data-nk-aod]').getAttribute('aria-checked')).toBe('true');
       await blad.locator('[data-nk-rust="15"]').click();
       await expect.poll(async () => (await niemand()).rustMin).toBe(15);
-      expect(await blad.locator('[data-nk-rust="15"]').getAttribute('aria-checked')).toBe('true');
-      await blad.locator('[data-nk-weg]').click();
+      expect(await blad.locator('[data-nk-zin]').textContent()).toContain('15 minuten');
+      await shot('kiezen');
+      await blad.locator('[data-nk-aod]').click();
+      await expect.poll(async () => (await niemand()).rustMin).toBe(0);
+      expect(await blad.locator('[data-nk-rust="5"]').isDisabled()).toBe(true);
+      await blad.locator('[data-nk-aod]').click();
+      await expect.poll(async () => (await niemand()).rustMin).toBe(5);
+      // Scherm uit: wanneer, en na hoeveel minuten zonder beweging.
+      await p.goto(`${baseUrl}/functies.html#uit`);
+      await blad.locator('h2', { hasText: 'Scherm uit' }).waitFor();
+      await blad.locator('[data-nk-aan="5"]').click();
+      await expect.poll(async () => (await niemand()).aanMin).toBe(5);
+      if (!(await niemand()).weg) await blad.locator('[data-nk-weg]').click();
       await expect.poll(async () => (await niemand()).weg).toBe(true);
       await blad.locator('[data-nk-aan="30"]').click();
       await expect.poll(async () => (await niemand()).aanMin).toBe(30);
@@ -1784,15 +1824,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await blad.locator('[data-nk-beweging]').click();
       await expect.poll(async () => (await niemand()).melder).toBe('binary_sensor.bewegingssensor_hal_beweging');
       expect(await blad.locator('[data-nk-melder]').inputValue()).toBe('binary_sensor.bewegingssensor_hal_beweging');
-      await blad.locator('[data-nk-tijd-van]').fill('22:30');
+      if (!(await niemand()).nacht) await blad.locator('[data-nk-nacht]').click();
+      await expect.poll(async () => (await niemand()).nacht).toBe(true);
+      await blad.locator('[data-nk-van]').fill('22:30');
       await expect.poll(async () => (await niemand()).van).toBe('22:30');
+      expect(await blad.locator('[data-nk-zin]').textContent()).toContain('Van 22:30 tot');
       await blad.locator('[data-nk-nacht]').click();
       await expect.poll(async () => (await niemand()).nacht).toBe(false);
-      expect(await blad.locator('[data-nk-tijd-van]').isDisabled()).toBe(true);
-      await blad.locator('[data-blad-dicht]').click();
-      await blad.waitFor({ state: 'hidden' });
-      await p.locator('#wand [data-bewerkkop] [data-klaar]').click();
-      // De wand schuift nooit, ook niet met het paneel erbij.
+      expect(await blad.locator('[data-nk-van]').isDisabled()).toBe(true);
+      // De wand schuift nooit.
       expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
       expect(fouten).toEqual([]);
     } finally {
@@ -1971,7 +2011,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForURL(/apparaten\.html$/);
     await volgende('Wat elk apparaat nu doet', 'rl-7');
     await p.waitForURL(/opbrengst\.html$/);
-    await volgende('Wat je dak opleverde', 'rl-8');
+    await volgende('Wat je panelen opleverden', 'rl-8');
     await p.waitForURL(/assistent\.html$/);
     await volgende('Vraag het je huis', 'rl-9');
     await p.waitForURL(/thuis\.html$/);
@@ -2691,21 +2731,34 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.locator('#wand [data-etage-weg]').click(kort);
     await expect.poll(() => layoutStore.current?.volgorde?.includes('kelder'), kort).toBe(false);
 
-    // Een buitenruimte: kiezen wat het is (besluit 109).
+    // Een buitenruimte: kiezen wat het is, uit een eigen lijst zoals binnen (besluiten 109 en 167).
     const tuin = (layoutStore.current?.kamers ?? kamers).find((k) => k.etage === 'buiten' && !/oprit/i.test(k.naam))!;
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(tuin.id)}`);
     // De pagina tekent opnieuw zodra alles binnen is; eerst rustig laten worden, en
-    // klikt het toch net tijdens het tekenen, dan nog eens (in de CI eens misgegaan).
+    // kiest het toch net tijdens het tekenen, dan nog eens (in de CI eens misgegaan).
     await p.waitForLoadState('networkidle');
     const soortNu = () => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort;
+    const lijst = p.locator('#wand [data-actie="buitensoort"]');
+    await lijst.waitFor(kort);
+    expect(await lijst.locator('option').allTextContents()).toEqual(expect.arrayContaining(['Achtertuin', 'Zijtuin', 'Carport', 'Dakterras', 'Tuinhuis of schuur']));
+    expect(await lijst.locator('option').allTextContents()).not.toContain('Slaapkamer');
     await expect
       .poll(async () => {
-        if (soortNu() !== 'terras') await p.locator('#wand [data-buiten="soort"]', { hasText: 'Terras' }).click({ timeout: 1500 }).catch(() => undefined);
+        if (soortNu() !== 'terras') await lijst.selectOption('terras', { timeout: 1500 }).catch(() => undefined);
         return soortNu();
       }, { timeout: 10_000 })
       .toBe('terras');
-    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.buiten?.soort, kort).toBe('terras');
-    await p.locator('#wand [data-buiten="soort"][aria-pressed="true"]', { hasText: 'Terras' }).waitFor(kort);
+    await expect.poll(() => lijst.inputValue(), kort).toBe('terras');
+    // De zones buiten hebben hun eigen lijst: een border, een tuinhuis.
+    await p.locator('#wand [data-nieuwe-zone]').fill('Border');
+    await p.locator('#wand [data-nieuwe-zone]').press('Tab');
+
+    const zoneLijst = p.locator('#wand [data-zone-soort="border"]');
+    await zoneLijst.waitFor(kort);
+    expect(await zoneLijst.locator('option').first().textContent()).toBe('Uit de naam: Border');
+    expect(await zoneLijst.locator('option').allTextContents()).not.toContain('Zithoek');
+    await zoneLijst.selectOption('tuinhuis');
+    await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.zones.find((z) => z.naam === 'Border')?.soort, kort).toBe('tuinhuis');
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
@@ -2963,9 +3016,9 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await berichten()).toEqual([]);
     expect(await app.locator('#balk [data-naar-ha]').count()).toBe(0);
 
-    // Bij Bewoners en toegang › Dit scherm aanzetten: meteen de kioskstand, het hele scherm en de knop.
+    // Bij Functies › Weergave › Dit scherm aanzetten (besluit 167): meteen de kioskstand, het hele scherm en de knop.
     const frame = p.frames().find((f) => f.url().includes('/api/hassio_ingress/'))!;
-    await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
+    await frame.goto(`${HA}/api/hassio_ingress/abc/functies.html#scherm`);
     const vorm = app.locator('#wand [data-vorm]');
     await vorm.locator('h2', { hasText: 'Dit scherm' }).waitFor();
     await vorm.locator('[data-volledig]').click();
@@ -3038,7 +3091,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await statusbalk()).toBe('');
 
     // Weer uit op dit apparaat: de knop is weg.
-    await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
+    await frame.goto(`${HA}/api/hassio_ingress/abc/functies.html#scherm`);
     await vorm.locator('[data-volledig][aria-checked="true"]').click();
     await expect.poll(() => app.locator('[data-naar-ha-knop]').count()).toBe(0);
 
@@ -3046,7 +3099,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     // Buiten Home Assistant bestaat de keuze niet.
     const q = await context.newPage();
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
-    await q.goto(`${baseUrl}/toegang.html`);
+    await q.goto(`${baseUrl}/functies.html`);
     await q.locator('#wand [data-vorm] h2').first().waitFor();
     expect(await q.locator('#wand').textContent()).not.toContain('Dit scherm');
     await context.close();

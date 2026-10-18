@@ -5,15 +5,15 @@
  * Op de telefoon kies je zelf welke kaarten Thuis heeft en in welke volgorde,
  * en welke scènes en lampen in Favorieten staan; dat bewaart de dienst bij je
  * account. De wand is van iedereen: de hoofdgebruiker of een beheerder past
- * hem aan, met het potlood bovenin. De wand heeft vier vakken, Vandaag vraagt
- * er twee; Straks schuift er vanzelf bovenin bij, en de onderste kaart wijkt
- * dan even.
+ * hem aan, met het potlood bovenin. Straks schuift er vanzelf bovenin bij.
+ * De kaarten op de wand staan in een kolom die zelf schuift: zoveel kaarten
+ * als je wilt (besluit 167; eerst waren het vier vakken).
  *
  * Aanpassen gebeurt op Thuis zelf: elke kaart krijgt een greep om te schuiven
- * en een oog om te verbergen; op de wand ook ▲ en ▼, want tikken werkt op elke
- * tablet, en bovenin "+ Kaart". Past een kaart niet, dan wijkt de onderste
- * (besluit 166). Favorieten schakelen via dezelfde deuren als de
- * knoppen in een kamer (`api/licht`, `api/scene`).
+ * en een oog om te verbergen, en op de wand bovenin "+ Kaart". Sleep je een
+ * kaart naar de rand van de kolom, dan schuift de kolom mee. Favorieten
+ * schakelen via dezelfde deuren als de knoppen in een kamer (`api/licht`,
+ * `api/scene`).
  */
 (function (global) {
   'use strict';
@@ -24,8 +24,6 @@
   const STANDAARD = {
     tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } },
     wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [], magAanpassen: false },
-    ruimte: 4,
-    vakken: { favorieten: 1, vandaag: 2, apparaat: 1, gevoel: 1, morgen: 1 },
     maxFavorieten: 4,
   };
   const KORT = {
@@ -111,38 +109,22 @@
   }
 
   /**
-   * De wand schuift nooit: vier vakken. Straks gaat voor, dan de kaarten op
-   * volgorde; past er een niet meer, dan wijkt hij tot er weer plek is.
+   * De kolom op de wand schuift zelf (besluit 167). Staat er meer onder de
+   * rand, dan loopt de onderste kaart zacht weg: zo zie je dat er meer is.
    */
   function wandRuimte() {
     const b = box('wand');
     if (!b) return;
-    let over = v.ruimte;
-    const straks = b.querySelector(':scope > [data-straks]');
-    if (straks && !straks.hidden) over -= 1;
-    for (const k of kaartenIn('wand')) {
-      k.removeAttribute('data-wijkt');
-      if (k.hasAttribute('data-uit') || k.hidden || bewerk === 'wand') continue;
-      const n = v.vakken[k.dataset.kaart] ?? 1;
-      if (n > over) k.setAttribute('data-wijkt', '');
-      else over -= n;
+    const meer = () => b.classList.toggle('meer', b.scrollHeight > b.clientHeight + 2 && b.scrollTop + b.clientHeight < b.scrollHeight - 2);
+    if (!b.dataset.meer) {
+      b.dataset.meer = '1';
+      b.addEventListener('scroll', meer, { passive: true });
+      addEventListener('resize', meer);
     }
+    meer();
     const vrij = b.querySelector('[data-vrijvak]');
-    if (vrij) vrij.hidden = !(bewerk === 'wand' && gebruikt('wand') < v.ruimte);
+    if (vrij) vrij.hidden = !(bewerk === 'wand' && kaartenIn('wand').some((k) => k.hasAttribute('data-uit')));
   }
-  const gebruikt = (plek) => deel(plek).kaarten.reduce((n, id) => n + (v.vakken[id] ?? 1), 0);
-  /**
-   * De wand met `id` erbij: past hij niet, dan wijken de onderste kaarten tot er
-   * plek is (besluit 166). Geeft de nieuwe volgorde en wie er wijkt.
-   */
-  function metErbij(id) {
-    const rij = deel('wand').kaarten.filter((x) => x !== id);
-    const wijkt = [];
-    const vakken = (lijst) => lijst.reduce((n, x) => n + (v.vakken[x] ?? 1), 0);
-    while (rij.length && vakken(rij) + (v.vakken[id] ?? 1) > v.ruimte) wijkt.unshift(rij.pop());
-    return { kaarten: [...rij, id], wijkt };
-  }
-  const naamVan = (id) => box('wand')?.querySelector(`:scope > [data-kaart="${id}"]`)?.dataset.naam ?? id;
 
   /* --------------------------------------------------------- favorieten */
 
@@ -223,15 +205,14 @@
 
   /* ------------------------------------------------------- de bewerkstand */
 
-  /** Een greep en een oog op elke kaart, en op de wand hoeveel vakken hij vraagt. */
+  /** Een greep en een oog op elke kaart; de greep is alleen een icoon (besluit 167). */
   function zetKnoppen() {
     for (const k of $$('[data-kaarten] > [data-kaart]')) {
       if (k.querySelector(':scope > .kaartgreep')) continue;
       const naam = k.dataset.naam ?? k.dataset.kaart;
-      const n = v.vakken[k.dataset.kaart] ?? 1;
       k.insertAdjacentHTML(
         'afterbegin',
-        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="Schuif ${esc(naam)}; of met de pijltjes">${ICOON.greep}Schuif</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="Verberg ${esc(naam)}">${ICOON.oog}</span>${k.closest('#wand') ? `<span class="kaartmaat">${n === 1 ? '1 vak' : `${n} vakken`}</span><span class="kaartpijlen"><span class="kaartpijl" data-pijl="-1" role="button" tabindex="0" aria-label="${esc(naam)} omhoog">▲</span><span class="kaartpijl" data-pijl="1" role="button" tabindex="0" aria-label="${esc(naam)} omlaag">▼</span></span>` : ''}`,
+        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="Schuif ${esc(naam)}; of met de pijltjes op het toetsenbord">${ICOON.greep}</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="Verberg ${esc(naam)}">${ICOON.oog}</span>`,
       );
     }
   }
@@ -269,7 +250,7 @@
     na();
   }
 
-  /** Met de pijltjes op de greep: één plek omhoog of omlaag. */
+  /** Met de pijltjes op het toetsenbord, op de greep: één plek omhoog of omlaag. */
   function schuifMetToets(kaart, richting, focus = '[data-greep]') {
     const plek = kaart.closest('#wand') ? 'wand' : 'tel';
     const rij = kaartenIn(plek).filter((k) => !k.hasAttribute('data-uit'));
@@ -306,6 +287,13 @@
         if (ev.clientY < 90) scrollBy(0, -14);
         else if (ev.clientY > innerHeight - 170) scrollBy(0, 14);
         vanY -= scrollY - was;
+      } else {
+        // Op de wand schuift de kolom mee bij zijn rand.
+        const rand = b.getBoundingClientRect();
+        const was = b.scrollTop;
+        if (ev.clientY < rand.top + 50 * schaal) b.scrollTop -= 12;
+        else if (ev.clientY > rand.bottom - 60 * schaal) b.scrollTop += 12;
+        vanY -= (b.scrollTop - was) * schaal;
       }
       const dy = ev.clientY - vanY;
       kaart.style.transform = `translateY(${dy / schaal}px)`;
@@ -369,20 +357,15 @@
     const { soort, plek } = blad;
     if (soort === 'weergave') return tekenWeergave(el);
     if (soort === 'erbij') {
-      // Welke kaarten er nog niet staan, met wat ze laten zien; op de wand: past hij nog?
-      const vrij = v.ruimte - gebruikt(plek);
+      // Welke kaarten er nog niet staan, met wat ze laten zien.
       const weg = kaartenIn(plek).filter((k) => k.hasAttribute('data-uit'));
       const rijen = weg.map((k) => {
         const id = k.dataset.kaart;
-        const n = v.vakken[id] ?? 1;
-        // Op de wand past alles: wat niet past, laat de onderste kaart wijken (besluit 166).
-        const wijkt = plek === 'wand' ? metErbij(id).wijkt : [];
-        const klein = wijkt.length ? `${KORT[id] ?? ''}. Daarvoor wijkt ${wijkt.map(naamVan).join(' en ')}` : KORT[id] ?? '';
-        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein, rechts: plek === 'wand' ? (n === 1 ? '1 vak' : `${n} vakken`) : '+', data: `data-erbij="${esc(id)}"` });
+        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein: KORT[id] ?? '', rechts: '+', data: `data-erbij="${esc(id)}"` });
       });
       el.setAttribute('aria-label', 'Kaart toevoegen');
       el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${plek === 'wand' ? 'Wat komt erbij?' : 'Kaart toevoegen'}</h2><button type="button" class="knop" data-blad-dicht>Sluit</button></div>
-        ${plek === 'wand' ? `<p class="mini" style="margin: 0">${vrij <= 0 ? 'De vier vakken zijn vol: een nieuwe kaart komt onderaan, en de onderste wijkt.' : vrij === 1 ? 'Er is één vak vrij.' : `Er zijn ${vrij} vakken vrij.`}</p>` : ''}
+        ${plek === 'wand' ? '<p class="mini" style="margin: 0">Een nieuwe kaart komt onderaan. Passen ze niet allemaal, dan schuif je de kolom met een vinger.</p>' : ''}
         ${rijen.length ? rijen.join('') : '<p class="mini">Alle kaarten staan er al.</p>'}`;
       return;
     }
@@ -428,7 +411,7 @@
       // In de bewerkstand doen de kaarten zelf niets: geen links, geen lampen. De greep en het oog wel.
       if (!bewerk || !e.target.closest('[data-kaarten] > [data-kaart]')) return;
       e.preventDefault();
-      if (!e.target.closest('[data-greep], [data-oog], [data-pijl], [data-fav-kies]')) e.stopPropagation();
+      if (!e.target.closest('[data-greep], [data-oog], [data-fav-kies]')) e.stopPropagation();
     },
     true,
   );
@@ -456,8 +439,6 @@
     if (t.closest('[data-blad-dicht]') || t.closest('[data-kies-achter]')) return sluitBlad();
     const oog = t.closest('[data-oog]');
     if (oog && bewerk) return verberg(oog.closest('[data-kaart]'));
-    const pijl = t.closest('[data-pijl]');
-    if (pijl && bewerk) return schuifMetToets(pijl.closest('[data-kaart]'), Number(pijl.dataset.pijl), `[data-pijl="${pijl.dataset.pijl}"]`);
     const kies = t.closest('[data-fav-kies]');
     if (kies) return openBlad('favorieten', kies.closest('#wand') ? 'wand' : 'tel');
     const erbij = t.closest('[data-erbij]');
@@ -467,8 +448,7 @@
       const k = box(plek).querySelector(`:scope > [data-kaart="${id}"]`);
       k?.removeAttribute('data-uit');
       sluitBlad();
-      const kaarten = plek === 'wand' ? metErbij(id).kaarten : [...volgorde(plek).filter((x) => x !== id), id];
-      if (plek === 'wand') for (const x of kaartenIn('wand')) x.toggleAttribute('data-uit', !kaarten.includes(x.dataset.kaart));
+      const kaarten = [...volgorde(plek).filter((x) => x !== id), id];
       void bewaar(plek, { kaarten });
       na();
       k?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -488,7 +468,7 @@
       const { plek, keuze } = blad;
       sluitBlad();
       // Wie favorieten kiest, wil ze ook zien.
-      const kaarten = deel(plek).kaarten.includes('favorieten') ? deel(plek).kaarten : plek === 'wand' ? metErbij('favorieten').kaarten : [...deel(plek).kaarten, 'favorieten'];
+      const kaarten = deel(plek).kaarten.includes('favorieten') ? deel(plek).kaarten : [...deel(plek).kaarten, 'favorieten'];
       void bewaar(plek, { favorieten: keuze, kaarten });
       return;
     }
@@ -502,10 +482,6 @@
     if (greep && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
       e.preventDefault();
       schuifMetToets(greep.closest('[data-kaart]'), e.key === 'ArrowUp' ? -1 : 1);
-    } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-pijl]')) {
-      e.preventDefault();
-      const p = e.target.closest('[data-pijl]');
-      schuifMetToets(p.closest('[data-kaart]'), Number(p.dataset.pijl), `[data-pijl="${p.dataset.pijl}"]`);
     } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-oog]')) {
       e.preventDefault();
       verberg(e.target.closest('[data-kaart]'));
@@ -516,7 +492,8 @@
   });
   addEventListener('standwissel', () => klaar());
 
-  /** Na elke keer tekenen: de volgorde, de wand binnen zijn vakken, en wie mag aanpassen. */
+  /** Na elke keer tekenen: de volgorde, of er meer onder de rand staat, en wie mag aanpassen. */
+
   function na() {
     // Niet terugzetten terwijl er geschoven wordt.
     if (document.querySelector('[data-kaart].sleept')) return;

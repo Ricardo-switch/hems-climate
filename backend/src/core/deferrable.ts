@@ -35,12 +35,21 @@ import { isHandsOff } from './model.js';
 const RUNNING = new Set(['run', 'running', 'delayedstart', 'pause', 'loopt', 'vertraagdestart', 'pauze', 'draait', 'bezig']);
 const FINISHED = new Set(['finished', 'afgerond', 'voltooid']);
 const READY = new Set(['ready', 'klaar']);
+/** Lopend, maar niet bezig: een pauze of een uitgestelde start is nooit "klaar". */
+const PAUSED = new Set(['delayedstart', 'pause', 'vertraagdestart', 'pauze']);
 
 /**
  * Hoe lang na het klaarzetten de status nog mag wisselen zonder dat het een
  * gedraaid programma is: aanzetten en klaarzetten gebeuren soms in dezelfde tel.
  */
 const SETTLE_MS = 60_000;
+
+/**
+ * Meldt een apparaat geen resterende tijd en geen voortgang, dan is het zoveel
+ * na de start plus de duur van het programma klaar, ook als het nog "loopt"
+ * zegt (besluit 167): een droger draait daarna tegen kreuken.
+ */
+const DONE_GRACE_MS = 10 * 60_000;
 
 /** Duurt het programma onbekend lang, dan rekent "klaar voor" met zoveel. */
 export const FALLBACK_PROGRAM_MIN = 180;
@@ -81,7 +90,30 @@ export function deferrableDecisions(ctx: DecisionContext, allocatedW: number, co
     const durationMin = s?.durationMin?.ok && s.durationMin.value > 0 ? s.durationMin.value : FALLBACK_PROGRAM_MIN;
     const known = s?.durationMin?.ok && s.durationMin.value > 0 ? { durationMin: s.durationMin.value } : {};
     const deadline = { ...known, ...(readyBy == null ? {} : { readyByMs: readyBy, latestStartMs: readyBy - durationMin * 60_000 }) };
-    if (op != null && RUNNING.has(op)) return { id: d.id, state: 'running', reason: 'program_running', ...deadline };
+    if (op != null && RUNNING.has(op)) {
+      // De echte eindtijd en "klaar" uit de resterende tijd en de voortgang (besluit 167).
+      const rest = s?.remainingMin?.ok ? Math.max(0, Math.round(s.remainingMin.value)) : null;
+      const pct = s?.progressPct?.ok ? s.progressPct.value : null;
+      const loopt = !PAUSED.has(op);
+      // Zonder die twee: de start plus de duur. Ruim voorbij en nog steeds "loopt", dan is hij klaar.
+      const geschat = rest == null && pct == null && known.durationMin != null && s?.operationSinceMs != null ? s.operationSinceMs + known.durationMin * 60_000 : null;
+      const klaarSinds = !loopt
+        ? null
+        : pct != null && pct >= 100
+          ? (s?.progressSinceMs ?? null)
+          : rest === 0
+            ? (s?.remainingSinceMs ?? null)
+            : geschat;
+      const klaar = loopt && ((pct != null && pct >= 100) || rest === 0 || (geschat != null && ctx.nowMs > geschat + DONE_GRACE_MS));
+      return {
+        id: d.id,
+        state: 'running',
+        reason: 'program_running',
+        ...deadline,
+        ...(rest != null ? { remainingMin: rest } : {}),
+        ...(klaar ? { doneSinceMs: klaarSinds ?? ctx.nowMs } : {}),
+      };
+    }
     if (op != null && FINISHED.has(op)) return { id: d.id, state: 'not_ready', reason: 'program_finished' };
     if (!s?.remoteStartAllowed.ok) return { id: d.id, state: 'unknown', reason: 'reading_unavailable' };
     if (!s.remoteStartAllowed.value) return { id: d.id, state: 'not_ready', reason: 'remote_start_not_allowed' };

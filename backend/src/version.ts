@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.42.0';
+export const VERSIE = '0.43.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,31 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.43.0',
+    datum: '2026-10-18',
+    nieuw: [
+      'Weergave bij Functies: dit scherm, het always-on display met een schakelaar, en wanneer het scherm uitgaat',
+      'Buiten eigen soorten en zones, zoals achtertuin, carport, border en tuinhuis',
+      'De Nest als thermostaat van de cv-ketel; een radiator gaat daarmee aan',
+      'Licht en screens per kamer bij Functies, met een schakelaar om er een uit de app te halen',
+      'Een tik op Automatisch legt de standen van het huis uit',
+    ],
+    beter: [
+      'Op de wand zoveel kaarten als je wilt: de kolom schuift, met alleen een greep',
+      'De droger staat tegen de muur, met de echte eindtijd',
+      'Meten met en de regeling staan bij Verwarmen en koelen',
+      'Inrichten blijft staan waar je was, en voegt ook een radiator toe',
+      'Wie je bent staat bij Bewoners; het deel Inloggen is weg',
+      '"Van je panelen" in plaats van "van je dak", en het percentage zelf gebruikt bij Opbrengst',
+    ],
+    opgelost: [
+      'De droger zei nog "draait" terwijl hij al klaar was',
+      'Apparaten op zon zijn weer uit te zetten',
+      'Onderhoud bij de meldingen ziet nu ook een lege batterij',
+      'De uitleg bij "Wat doet de regeling ermee?" liep over de volgende keuze',
+    ],
+  },
   {
     versie: '0.42.0',
     datum: '2026-10-18',

@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { programMinutes } from '../src/adapters/homeassistant/mapping.js';
+import { programMinutes, remainingMinutes } from '../src/adapters/homeassistant/mapping.js';
 import type { EntitySource } from '../src/adapters/homeassistant/source.js';
 
 import { buildHouse, gevelVan, houseBeforeSetup, knownForLayout, lampsFor, outsideFromNames, proposeLayout, roomForName, roomTypeFromNames } from '../src/web/house.js';
@@ -39,8 +39,10 @@ describe('het voorstel uit Home Assistant', () => {
     expect(buiten.find((r) => r.naam === 'Tuin')!.buiten!.soort).toBe('tuin');
     expect(house.etages.find((e) => e.id === 'bg')!.ruimtes.every((r) => r.buiten === null)).toBe(true);
     expect(outsideFromNames({ naam: 'Achtertuin', zones: [] }, [{ naam: 'Tuinhuis overstek' }])).toEqual({ soort: 'tuin', auto: false, tuinhuis: true });
-    expect(outsideFromNames({ naam: 'Dakterras', zones: [] }, [])).toEqual({ soort: 'terras', auto: false, tuinhuis: false });
-    expect(outsideFromNames({ naam: 'Carport', zones: [] }, []).soort).toBe('oprit');
+    // Een eigen soort voor een dakterras en een carport, en een tuinhuis uit een zone (besluit 167).
+    expect(outsideFromNames({ naam: 'Dakterras', zones: [] }, [])).toEqual({ soort: 'dakterras', auto: false, tuinhuis: false });
+    expect(outsideFromNames({ naam: 'Carport', zones: [] }, [])).toEqual({ soort: 'carport', auto: true, tuinhuis: false });
+    expect(outsideFromNames({ naam: 'Achtertuin', zones: [{ id: 'z', naam: 'Schuurtje achter', soort: 'tuinhuis' }] }, [])).toMatchObject({ soort: 'tuin', tuinhuis: true });
     // Een voortuin heeft zijn eigen plek in de tekening (besluit 113).
     expect(outsideFromNames({ naam: 'Voortuin', zones: [] }, []).soort).toBe('voortuin');
   });
@@ -594,6 +596,17 @@ describe('de duur van een programma (besluit 101)', () => {
     expect(programMinutes(source('5400', 's'), 'x')).toBe(90);
     expect(programMinutes(source('95', 'min'), 'x')).toBe(95);
     expect(programMinutes(source('1.5', 'h'), 'x')).toBe(90);
+  });
+
+  it('leest de resterende tijd als "0:42", als getal, en als eindtijd (besluit 167)', () => {
+    const nu = Date.parse('2026-10-18T13:00:00Z');
+    expect(remainingMinutes(source('0:42'), 'x', nu)).toBe(42);
+    expect(remainingMinutes(source('0:00'), 'x', nu)).toBe(0);
+    expect(remainingMinutes(source('2520', 's'), 'x', nu)).toBe(42);
+    expect(remainingMinutes(source('2026-10-18T13:30:00+00:00'), 'x', nu)).toBe(30);
+    // Een eindtijd die voorbij is: klaar.
+    expect(remainingMinutes(source('2026-10-18T12:00:00+00:00'), 'x', nu)).toBe(0);
+    expect(remainingMinutes(source(''), 'x', nu)).toBeNull();
   });
   it('ziet beweging bij de meter van hetzelfde apparaat (15 oktober 2026)', () => {
     const house = buildHouse(config, registers, states, snapshot);

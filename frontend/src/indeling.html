@@ -119,6 +119,9 @@
   .rolzin { margin: 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
   .keuzes { display: flex; flex-direction: column; gap: 6px; }
   .keuze { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  /* Zo hoog als de tekst (besluit 167): de knoppen van basis.css hebben een vaste hoogte, en dan liep de uitleg over de volgende keuze. */
+  .keuzes button.keuze { height: auto; font-weight: inherit; font-size: inherit; color: inherit; border-color: transparent; }
+  .keuzes button.keuze.aan { border-color: rgba(255, 255, 255, 0.35); }
   .keuze.aan { border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); }
   .keuze i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--gedempt); margin-top: 2px; box-sizing: border-box; }
   .keuze.aan i { border: 5px solid var(--tekst); }

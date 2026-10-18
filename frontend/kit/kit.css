@@ -142,6 +142,9 @@ button {
 .ijs-t {
   color: var(--ijs);
 }
+.mint-t {
+  color: var(--mint);
+}
 .gloed-t {
   color: var(--gloed);
 }
