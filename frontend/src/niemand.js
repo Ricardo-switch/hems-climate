@@ -1,21 +1,25 @@
 /*
- * De wand als niemand kijkt (besluit 164, schets Wand-Nacht).
+ * Het scherm aan de wand als niemand kijkt (besluiten 164 en 165, schets
+ * Wand-Nacht). Alleen op het scherm dat bij Bewoners een scherm is (besluit
+ * 149); een telefoon of laptop doet nooit mee.
  *
- * - De nachtstand: van bedtijd tot de ochtend, of als iemand het huis op
- *   Nacht zet. De klok, gedimd, en een gedimd huis zonder getallen; alles
- *   rustig en het weer van morgen. Na een minuut zonder iemand aan het scherm.
- * - Rust overdag: na 2, 5 of 15 minuten. Groot de klok, wat het huis doet en
- *   het weer.
- * - Wekken: een tik, de bewegingsmelder die de hoofdgebruiker koos (de dienst
- *   stuurt `wekken`), aanbellen en "Hé huis" (`sc-wek`).
+ * - Een always-on display, na 2, 5 of 15 minuten zonder iemand aan het scherm:
+ *   overdag de dagstand (groot de klok, wat het huis doet en het weer), na
+ *   zonsondergang de avondstand (de klok, gedimd, een donker huis zonder
+ *   getallen, alles rustig en het weer van morgen).
+ * - De nachtstand is uit: van bedtijd tot de ochtend, of als iemand het huis
+ *   op Nacht zet, en als niemand thuis is, gaat het scherm uit na 1, 5, 15 of
+ *   30 minuten zonder beweging.
+ * - Beweging (de bewegingsmelder die de hoofdgebruiker koos; de dienst stuurt
+ *   `wekken`) zet het display weer aan. Een tik, "Hé huis" en aanbellen
+ *   openen de app (`sc-wek`).
  *
- * Instellen doet de hoofdgebruiker bij het potlood op de wand: "Als niemand
- * kijkt". De app kan het scherm alleen donkerder kleuren; draait de wand in
- * Fully Kiosk, dan gaat ook de echte helderheid omlaag, en bij wekken terug.
+ * Instellen doet de hoofdgebruiker bij het potlood: "Als niemand kijkt". De app
+ * kan het scherm alleen donkerder kleuren; draait de wand in Fully Kiosk, dan
+ * gaat ook de echte helderheid mee, en 's nachts het scherm echt uit.
  *
- * Alleen op de wand, niet op de telefoon. Op een andere pagina dan Thuis
- * (Vandaag, Apparaten, Opbrengst, de Assistent, een kamer) gaat de wand na
- * dezelfde tijd terug naar Thuis, en rust daar meteen.
+ * Op een pagina om naar te kijken (Vandaag, Apparaten, Opbrengst, de
+ * Assistent, een kamer) gaat de wand na dezelfde tijd terug naar Thuis.
  */
 (function (global) {
   'use strict';
@@ -23,21 +27,25 @@
 
   const { nl, esc, haal, deur, telStand } = global.app;
 
-  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, melder: null };
-  /** 's Nachts, na wekken: zo lang tot de nachtstand terugkomt. */
-  const NACHT_NA_MS = 60_000;
+  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
   const KIJKPAGINAS = /\/(vandaag|apparaten|opbrengst|assistent|kamer)\.html$/;
   const DIRECT = 'sc-niemand-direct';
-  const FULLY_NACHT = 6;
+  /** De helderheid van de avondstand in Fully Kiosk, van 255. */
+  const FULLY_AVOND = 12;
 
   let instelling = STANDAARD;
   let magAanpassen = false;
   let modus = null;
   /** Wat Thuis geeft: het huis, de stand, het weer. Zonder: een andere pagina. */
   let bron = null;
+  /** De laatste tik op het scherm, en de laatste beweging van de melder. */
   let laatst = Date.now();
-  /** Wat er nu staat: 'nacht', 'rust' of null. */
+  let laatstBeweging = 0;
+  /** Is dit het scherm aan de wand (bij Bewoners een scherm)? */
+  let scherm = false;
+  let bewoners = null;
+  /** Wat er nu staat: 'dag', 'avond', 'uit' of null (Thuis). */
   let toont = null;
   let helderVoor = null;
 
@@ -56,11 +64,19 @@
   }
   /** Iemand zette het huis zelf op Nacht; de Nacht van de dagdelen telt niet (die begint al om 22:00). */
   const huisOpNacht = () => modus?.mode === 'nacht' && modus?.modeSource === 'override';
-  const isNacht = () => instelling.nacht && (inNacht() || huisOpNacht());
-  /** Na hoe lang zonder iemand, of null als het nu niet hoeft. */
-  function wachtMs() {
-    if (isNacht()) return NACHT_NA_MS;
-    return instelling.rustMin > 0 ? instelling.rustMin * 60_000 : null;
+  /** Niemand thuis, volgens de bewoners; of het huis staat op Afwezig of Vakantie. */
+  function niemandThuis() {
+    const bekend = (bewoners?.bewoners ?? []).filter((b) => b.thuis != null);
+    return (bekend.length > 0 && bekend.every((b) => !b.thuis)) || ['afwezig', 'vakantie'].includes(modus?.mode);
+  }
+  /** Moet het scherm uit, na de tijd zonder beweging? */
+  const uitNodig = () => (instelling.nacht && (inNacht() || huisOpNacht())) || (instelling.weg && niemandThuis());
+  /** De dagstand zolang de zon op is, daarna de avondstand. */
+  function stand() {
+    const z = bron?.zon?.();
+    if (z?.zon) return z.zon.boven ? 'dag' : 'avond';
+    const u = new Date().getHours();
+    return u >= 7 && u < 19 ? 'dag' : 'avond';
   }
 
   /** Er gebeurt iets op het scherm: dan is er iemand, ook zonder tik. */
@@ -80,18 +96,26 @@
       // Geen Fully Kiosk, of een oudere.
     }
   }
-  function dimScherm() {
-    fully((f) => {
-      if (helderVoor == null && typeof f.getScreenBrightness === 'function') helderVoor = Number(f.getScreenBrightness());
-      f.setScreenBrightness?.(FULLY_NACHT);
-    });
+  function onthoud(f) {
+    if (helderVoor == null && typeof f.getScreenBrightness === 'function') helderVoor = Number(f.getScreenBrightness());
   }
-  function helderScherm() {
+  /** Per stand: gedimd, uit, of zoals hij was. */
+  function helderheid(st) {
     fully((f) => {
+      if (st === 'uit') {
+        onthoud(f);
+        f.turnScreenOff?.(true);
+        return;
+      }
       f.turnScreenOn?.();
-      if (helderVoor != null) f.setScreenBrightness?.(helderVoor);
+      if (st === 'avond') {
+        onthoud(f);
+        f.setScreenBrightness?.(FULLY_AVOND);
+      } else if (helderVoor != null) {
+        f.setScreenBrightness?.(helderVoor);
+        helderVoor = null;
+      }
     });
-    helderVoor = null;
   }
 
   /* ------------------------------------------------------------ tekenen */
@@ -159,9 +183,14 @@
     const st = bron?.state();
     const datum = DAG.format(new Date());
     el.dataset.stand = toont;
-    el.classList.toggle('lucht-nacht', toont === 'nacht');
-    el.classList.toggle('lucht-dag', toont === 'rust');
-    if (toont === 'nacht') {
+    el.classList.toggle('lucht-nacht', toont === 'avond');
+    el.classList.toggle('lucht-dag', toont === 'dag');
+    if (toont === 'uit') {
+      // Zwart: in Fully Kiosk is het scherm echt uit.
+      el.innerHTML = '<div class="nk-uit">Beweging zet het scherm aan, een tik opent de app</div>';
+      return;
+    }
+    if (toont === 'avond') {
       const morgen = morgenZin();
       el.innerHTML = `<div class="nk-huis" data-nk-huis></div>
         <div class="nk-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
@@ -187,11 +216,11 @@
     tekenHuis(el.querySelector('[data-nk-huis]'));
   }
 
-  /** Het huis zonder getallen, de kamers stil; 's nachts ook zonder stromen. */
+  /** Het huis zonder getallen, de kamers stil; 's avonds ook zonder stromen. */
   function tekenHuis(vak) {
     const model = bron?.model?.();
     if (!vak || !model || !global.huis) return;
-    const nacht = toont === 'nacht';
+    const nacht = toont === 'avond';
     const stil = {
       ...model,
       labels: [],
@@ -219,14 +248,12 @@
       location.href = 'thuis.html';
       return;
     }
-    const was = toont;
     toont = stand;
     teken();
     const el = laag();
     el.hidden = false;
     document.documentElement.classList.add('sc-niemand');
-    if (stand === 'nacht') dimScherm();
-    else if (was === 'nacht') helderScherm();
+    helderheid(stand);
   }
 
   function wek(waarom) {
@@ -243,33 +270,41 @@
       el.innerHTML = '';
     }
     document.documentElement.classList.remove('sc-niemand');
-    helderScherm();
+    helderheid('app');
     dispatchEvent(new CustomEvent('niemandwakker', { detail: waarom }));
   }
 
-  /** Elke paar seconden: is het tijd om te rusten, of moet de stand wisselen? */
+  /** Beweging: het display weer aan als het scherm uit was; de app opent pas bij een tik. */
+  function beweging() {
+    laatstBeweging = Date.now();
+    if (toont === 'uit') toon(stand());
+    else if (!toont) fully((f) => f.turnScreenOn?.());
+  }
+
+  /** Elke paar seconden: wat hoort er nu te staan? */
   function kijk() {
-    if (telStand()) {
-      if (toont) wek('telefoon');
+    if (telStand() || !scherm) {
+      if (toont) wek('geen wand');
       return;
     }
+    const nu = Date.now();
     if (bezig()) {
-      if (!toont) laatst = Date.now();
+      if (!toont) laatst = nu;
       return;
     }
-    const wacht = wachtMs();
-    if (toont) {
-      // De nacht is om, of begint: dan de andere stand, of wakker als rust uit staat.
-      const moet = isNacht() ? 'nacht' : instelling.rustMin > 0 ? 'rust' : null;
-      if (moet == null) wek('ochtend');
-      else if (moet !== toont) toon(moet);
-      else {
-        const t = document.querySelector('[data-nk-tijd]');
-        if (t) t.textContent = klokNu();
-      }
-      return;
-    }
-    if (wacht != null && Date.now() - laatst >= wacht) toon(isNacht() ? 'nacht' : 'rust');
+    const uit = uitNodig();
+    const stil = nu - Math.max(laatst, laatstBeweging);
+    let wil = null;
+    if (uit && stil >= instelling.aanMin * 60_000) wil = 'uit';
+    // Uit tot er beweging is; in de ochtend, of als er iemand thuiskomt, het display weer aan.
+    else if (toont === 'uit') wil = uit ? 'uit' : instelling.rustMin > 0 ? stand() : null;
+    else if (toont) wil = stand();
+    else if (instelling.rustMin > 0 && nu - laatst >= instelling.rustMin * 60_000) wil = stand();
+    if (wil === toont) {
+      const t = document.querySelector('[data-nk-tijd]');
+      if (t) t.textContent = klokNu();
+    } else if (wil == null) wek('ochtend');
+    else toon(wil);
   }
 
   /* ------------------------------------------------------------ gegevens */
@@ -284,6 +319,13 @@
     }
   }
   async function laadModus() {
+    // Wie er kijkt (een scherm?) en wie er thuis is.
+    try {
+      bewoners = await haal('api/bewoners');
+      scherm = bewoners?.ik?.soort === 'scherm';
+    } catch {
+      scherm = false;
+    }
     if (bron) {
       modus = bron.state()?.explanation ?? null;
       return;
@@ -321,10 +363,12 @@
       : '';
     el.setAttribute('aria-label', 'Als niemand kijkt');
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Als niemand kijkt</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
-      <p class="mini" style="margin: 0 0 6px">Voor deze wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
-      <div class="nk-rij"><div><b>Nachtstand</b><span class="uitleg">De klok en een gedimd huis, zonder getallen</span></div>${knopje(n.nacht, 'data-nk-nacht', 'Nachtstand')}</div>
+      <p class="mini" style="margin: 0 0 6px">Voor het scherm aan de wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
+      <div class="nk-rij"><div><b>Always-on</b><span class="uitleg">De klok, wat het huis doet en het weer; na zonsondergang gedimd</span></div><div class="nk-keuze" role="radiogroup" aria-label="Always-on na">${[0, 2, 5, 15].map((m) => `<button type="button" role="radio" aria-checked="${n.rustMin === m}" class="${n.rustMin === m ? 'aan' : ''}" data-nk-rust="${m}">${m ? `${m} min` : 'Uit'}</button>`).join('')}</div></div>
+      <div class="nk-rij"><div><b>Nachtstand</b><span class="uitleg">Het scherm uit</span></div>${knopje(n.nacht, 'data-nk-nacht', 'Nachtstand')}</div>
       <div class="nk-rij" ${n.nacht ? '' : 'data-nk-uit'}><div><b>Wanneer</b><span class="uitleg">Of: als het huis op Nacht staat</span></div><div class="nk-tijden"><input type="time" step="900" value="${esc(n.van)}" data-nk-tijd-van aria-label="Nachtstand vanaf" ${n.nacht ? '' : 'disabled'}><span>tot</span><input type="time" step="900" value="${esc(n.tot)}" data-nk-tijd-tot aria-label="Nachtstand tot" ${n.nacht ? '' : 'disabled'}></div></div>
-      <div class="nk-rij"><div><b>Rust overdag</b><span class="uitleg">De klok, wat het huis doet en het weer</span></div><div class="nk-keuze" role="radiogroup" aria-label="Rust overdag na">${[0, 2, 5, 15].map((m) => `<button type="button" role="radio" aria-checked="${n.rustMin === m}" class="${n.rustMin === m ? 'aan' : ''}" data-nk-rust="${m}">${m ? `${m} min` : 'Uit'}</button>`).join('')}</div></div>
+      <div class="nk-rij"><div><b>Uit als niemand thuis is</b><span class="uitleg">Volgens de bewoners</span></div>${knopje(n.weg, 'data-nk-weg', 'Uit als niemand thuis is')}</div>
+      <div class="nk-rij"><div><b>Aan zonder beweging</b><span class="uitleg">Zo lang voor het scherm uitgaat</span></div><div class="nk-keuze" role="radiogroup" aria-label="Aan zonder beweging">${[1, 5, 15, 30].map((m) => `<button type="button" role="radio" aria-checked="${n.aanMin === m}" class="${n.aanMin === m ? 'aan' : ''}" data-nk-aan="${m}">${m} min</button>`).join('')}</div></div>
       ${beweging}
       <p class="mini" style="margin: 10px 0 0">De app maakt het scherm donkerder. Hoe fel het scherm zelf is, regelt de tablet${global.fully ? '; in Fully Kiosk gaat dat vanzelf mee' : ''}.</p>`;
   }
@@ -358,6 +402,9 @@
     if (t.closest('[data-niemand-kies]')) return openPaneel();
     if (!t.closest('[data-kiesblad]') || document.querySelector('[data-kiesblad]')?.dataset.blad !== 'niemand') return;
     if (t.closest('[data-nk-nacht]')) return void bewaar({ nacht: !instelling.nacht });
+    if (t.closest('[data-nk-weg]')) return void bewaar({ weg: !instelling.weg });
+    const aan = t.closest('[data-nk-aan]');
+    if (aan) return void bewaar({ aanMin: Number(aan.dataset.nkAan) });
     const rust = t.closest('[data-nk-rust]');
     if (rust) return void bewaar({ rustMin: Number(rust.dataset.nkRust) });
     if (t.closest('[data-nk-beweging]')) return void bewaar({ melder: instelling.melder ? null : melders()[0]?.id ?? null });
@@ -389,7 +436,7 @@
     }
   }, { passive: true });
   // Aanbellen, "Hé huis" en de bewegingsmelder (via de dienst).
-  addEventListener('sc-wek', (e) => wek(e.detail ?? 'iets'));
+  addEventListener('sc-wek', (e) => (e.detail === 'beweging' ? beweging() : wek(e.detail ?? 'iets')));
   addEventListener('standwissel', () => telStand() && wek('telefoon'));
 
   async function begin() {

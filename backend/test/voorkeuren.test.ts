@@ -57,6 +57,10 @@ describe('weergave en de wand als niemand kijkt (besluit 164)', () => {
     expect(leesNiemand({ rustMin: 3 }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ van: '07:00' }, STANDAARD_NIEMAND)).toEqual({ ok: false, reden: 'de nacht begint en eindigt niet op dezelfde tijd' });
     expect(leesNiemand({ helderheid: 3 }, STANDAARD_NIEMAND).ok).toBe(false);
+    // Besluit 165: zo lang aan zonder beweging, en uit als niemand thuis is.
+    expect(leesNiemand({ aanMin: 30, weg: false }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, aanMin: 30, weg: false } });
+    expect(leesNiemand({ aanMin: 2 }, STANDAARD_NIEMAND).ok).toBe(false);
+    expect(leesNiemand({ weg: 'ja' }, STANDAARD_NIEMAND).ok).toBe(false);
   });
 });
 

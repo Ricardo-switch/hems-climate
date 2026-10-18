@@ -46,7 +46,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 | `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
 | `Wand-Thuis` blijft | `Thuis-Tel` (Thuis opnieuw: de Assistent altijd boven de tabs; besluit 159) |
-| `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (nachtstand, `#rust`, `#kiezen`; besluit 164) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
+| `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (avondstand, dagstand `#rust`, uit `#uit`, `#kiezen`; besluiten 164 en 165) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
 | `Wand-Instellingen-Groep` (een groep op de wand: grote regels links, wat mist bovenaan, het deel zonder scrollen, uitleg achter "Waarvoor is dit?"; `#hulp`) | `Instellingen-Tel-Groep` (een groep instellingen: de delen onder elkaar in plaats van een rij om opzij te schuiven; `#deel`, `#comfort`, `#nu`) |
 
 Voorbeeldgetallen. Schermafdrukken in `screens/`, opnieuw te maken met

@@ -535,7 +535,7 @@ addEventListener('standwissel', teken);
 // Een andere weergave (besluit 164): opnieuw tekenen, met of zonder getallen op het huis.
 addEventListener('weergave', teken);
 // De wand als niemand kijkt (besluit 164): het huis, de stand en het weer van deze pagina.
-niemand.bij({ model: () => (state && huisData ? huisModel() : null), state: () => state, huis: () => huisData, weer: () => weer });
+niemand.bij({ model: () => (state && huisData ? huisModel() : null), state: () => state, huis: () => huisData, weer: () => weer, zon: () => zon });
 // Na een keuze of een tik op een favoriet: opnieuw tekenen, en zo nodig het huis opnieuw lezen.
 eigen.bij(async (huisOok) => {
   if (huisOok) {

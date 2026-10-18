@@ -352,6 +352,8 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .niemand .nk-regels svg { width: 26px; height: 26px; opacity: 0.6; flex: none; }
 .niemand .nk-huis { position: absolute; right: 30px; bottom: 30px; width: 600px; height: 480px; opacity: 0.45; }
 .niemand .nk-wek { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 14px; color: rgba(127, 142, 156, 0.6); z-index: 1; }
+.niemand[data-stand='uit'] { background: #000; }
+.niemand .nk-uit { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 13px; color: rgba(127, 142, 156, 0.25); white-space: nowrap; }
 .niemand .nk-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); pointer-events: none; }
 .niemand .nr-klok { position: absolute; left: 70px; top: 70px; }
 .niemand .nr-klok .tijd { font-size: 150px; }
