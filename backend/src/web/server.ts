@@ -588,7 +588,6 @@ export class WebServer {
     if (access.kind !== 'ingress' && !hostAllowed(req.headers.host, access.kind === 'sessions' ? access.hosts : [])) return weiger(socket, 421, 'Misdirected Request');
     if (!req.headers.origin || !sameOrigin(req)) return weiger(socket, 403, 'Forbidden');
     if (access.kind === 'sessions' && (await access.store.visitor(cookieValue(req, SESSION_COOKIE))) == null) return weiger(socket, 401, 'Unauthorized');
-    if (access.kind === 'ingress' && ingressVisitor(req) == null) return weiger(socket, 401, 'Unauthorized');
     const begin = url.searchParams.get('start') === 'spraak' ? 'stt' : 'wake_word';
     if (head.length > 0) socket.unshift(head);
     this.#luistersockets.add(socket);
@@ -680,7 +679,7 @@ export class WebServer {
       if (!leeg && pagina === 'begin.html') return naar('thuis.html');
       // Wie voor het eerst komt, krijgt eerst "wie ben je?" (besluit 147), ook achter Ingress.
       if (!leeg && access.kind === 'ingress' && pagina !== 'welkom.html' && pagina !== 'index.html' && this.#options.bewoners) {
-        const visitor = ingressVisitor(req);
+        const visitor = await ingressVisitor(req);
         if (visitor.userId != null) {
           const eerst = await this.#options.bewoners.herken({ userId: visitor.userId, naam: visitor.naam }).catch(() => null);
           if (eerst != null) return naar(`welkom.html?terug=${encodeURIComponent(pagina || 'thuis.html')}#${eerst}`);
@@ -758,10 +757,10 @@ export class WebServer {
         sendJson(res, 403, { fout: 'alleen vanaf de eigen pagina' });
         return;
       }
-      // Wie is het, en mag dat (besluit 99)?
+      // Wie is het, en mag dat (besluit 99)? Achter Ingress ook (besluit 161).
       const role = DOOR_ROLES[path];
-      if (role != null && access.kind === 'sessions') {
-        const visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+      if (role != null && access.kind !== 'open') {
+        const visitor = await this.#bezoeker(req);
         if (visitor == null) {
           sendJson(res, 401, { fout: 'log eerst in', inlog: '/auth/login' });
           return;
@@ -771,8 +770,8 @@ export class WebServer {
           return;
         }
       }
-      // Een gast (besluit 147): bedienen alleen als hij thuis is, en verder niets bewaren.
-      const gast = access.kind === 'sessions' && path !== '/auth/logout' ? await this.#gast(req) : null;
+      // Een gast (besluit 147): bedienen alleen als hij thuis is, en verder niets bewaren. Achter Ingress ook (besluit 161).
+      const gast = access.kind !== 'open' && path !== '/auth/logout' ? await this.#gast(req) : null;
       // Behalve bij Bewoners: daar kan een gast zeggen dat hij een scherm is (besluit 151), en de deur laat verder niets toe.
       if (gast?.gast && path !== '/api/bewoners') {
         const bedienen = path === '/api/licht' || path === '/api/scene' || path === '/api/scherm';
@@ -1691,7 +1690,7 @@ export class WebServer {
   async #wie(req: IncomingMessage): Promise<Wie & { readonly naam: string }> {
     const access = this.#access(req);
     if (access.kind === 'open') return { userId: null, beheerder: true, naam: '' };
-    const v: Visitor | null = access.kind === 'ingress' ? ingressVisitor(req) : await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+    const v = await this.#bezoeker(req);
     const gast = this.#options.bewoners?.gast?.(v?.userId ?? null).gast === true;
     return { userId: v?.userId ?? null, beheerder: v?.rol === 'beheerder' && !gast, naam: v?.naam ?? '' };
   }
@@ -1757,10 +1756,17 @@ export class WebServer {
 
   /** Of wie er kijkt een gast is, en thuis (besluit 147). */
   async #gast(req: IncomingMessage): Promise<{ readonly gast: boolean; readonly thuis: boolean | null } | null> {
-    const access = this.#access(req);
-    if (access.kind !== 'sessions' || this.#options.bewoners?.gast == null) return null;
-    const v = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
+    if (this.#access(req).kind === 'open' || this.#options.bewoners?.gast == null) return null;
+    const v = await this.#bezoeker(req);
     return this.#options.bewoners.gast(v?.userId ?? null);
+  }
+
+  /** Wie er kijkt: bij een eigen inlog de sessie, achter Ingress Home Assistant (besluit 161). Zonder inlog niemand. */
+  async #bezoeker(req: IncomingMessage): Promise<Visitor | null> {
+    const access = this.#access(req);
+    if (access.kind === 'sessions') return access.store.visitor(cookieValue(req, SESSION_COOKIE));
+    if (access.kind === 'ingress') return ingressVisitor(req, access.beheerders);
+    return null;
   }
 
   /** Een vraag van de assistent van Home Assistant met de juiste sleutel (besluit 147). */
@@ -1776,8 +1782,7 @@ export class WebServer {
     const access = this.#access(req);
     if (path === '/api/sessie') {
       let visitor: Visitor | null = null;
-      if (access.kind === 'sessions') visitor = await access.store.visitor(cookieValue(req, SESSION_COOKIE));
-      else if (access.kind === 'ingress') visitor = ingressVisitor(req);
+      if (access.kind !== 'open') visitor = await this.#bezoeker(req);
       else visitor = { naam: 'iedereen', rol: 'beheerder', userId: null };
       sendJson(res, 200, {
         toegang: access.kind,

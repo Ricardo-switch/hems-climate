@@ -57,7 +57,7 @@ import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
 import { LightSwitch } from './web/lights.js';
-import { SessionStore, homeAssistantLogin, leesOfMaakSleutel, type Access } from './web/auth.js';
+import { SessionStore, haBeheerders, homeAssistantLogin, leesOfMaakSleutel, type Access, type HaAccount } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
 import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
@@ -1045,7 +1045,8 @@ if (startup.access.kind === 'sessions') {
     hosts: startup.access.hosts,
   };
 } else {
-  access = startup.access.kind === 'ingress' ? { kind: 'ingress' } : { kind: 'open' };
+  // Achter Ingress vraagt de dienst Home Assistant wie er beheerder is (besluit 161).
+  access = startup.access.kind === 'ingress' ? { kind: 'ingress', beheerders: haBeheerders(() => client.query<HaAccount[]>('config/auth/list')) } : { kind: 'open' };
   if (startup.access.kind === 'open') {
     console.warn('LET OP: HEMS_OPEN=1. Iedereen die deze weergave kan openen, kan bedienen.');
   }

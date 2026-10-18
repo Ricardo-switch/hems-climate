@@ -7,7 +7,7 @@
  * van bestanden zit het venijn in dat tweede.
  */
 
-import { DOOR_ROLES, SessionStore, type Access, type HaLogin } from '../src/web/auth.js';
+import { DOOR_ROLES, SessionStore, haBeheerders, type Access, type HaAccount, type HaLogin } from '../src/web/auth.js';
 import { mkdtemp, readFile, readdir, rm, writeFile, mkdir } from 'node:fs/promises';
 import { createServer, request as httpRequest } from 'node:http';
 import { join } from 'node:path';
@@ -112,6 +112,7 @@ async function start(options: {
   luisteren?: LuisterDeur;
   praten?: { model: () => ((opdracht: string, velden?: unknown) => Promise<unknown>) | null; proef: (id: string) => (opdracht: string) => Promise<unknown>; bedienen: () => boolean };
   herken?: (account: { userId: string; naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
+  gast?: (userId: string | null) => { gast: boolean; thuis: boolean | null };
   logDir?: string;
   gegevens?: NonNullable<ConstructorParameters<typeof WebServer>[0]['gegevens']>;
   welkomHuis?: () => HouseReport | null;
@@ -154,7 +155,7 @@ async function start(options: {
         ...(options.luisteren ? { luisteren: options.luisteren } : {}),
         ...(options.logDir ? { logDir: options.logDir } : {}),
         ...(options.gegevens ? { gegevens: options.gegevens } : {}),
-        ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken } } : {}),
+        ...(options.herken ? { bewoners: { view: () => { throw new Error('niet in deze test'); }, actie: async () => ({ ok: false as const, status: 400, reden: 'niet in deze test' }), herken: options.herken, ...(options.gast ? { gast: options.gast } : {}) } } : {}),
         // Open, zoals vóór besluit 99, tenzij een test de inlog zelf toetst.
         access: options.access ?? { kind: 'open' },
         write: () => {},
@@ -2066,5 +2067,94 @@ describe('de eigen poort van de add-on (besluit 160)', () => {
     expect(cookie).toMatch(/Secure/);
     const sessie = JSON.parse((await vraag(eigen, '/api/sessie', { ...TAILNET, cookie: cookie.split(';')[0]! })).tekst) as { ingelogd: boolean; naam: string };
     expect(sessie).toMatchObject({ ingelogd: true, naam: 'Ricardo' });
+  });
+});
+
+describe('achter Ingress de rol uit Home Assistant (besluit 161)', () => {
+  const ACCOUNTS: HaAccount[] = [
+    { id: 'u1', is_owner: true, is_active: true, group_ids: ['system-admin'] },
+    { id: 'u2', is_owner: false, is_active: true, group_ids: ['system-users'] },
+    { id: 'u3', is_owner: false, is_active: true, group_ids: ['system-users'] },
+    { id: 'u4', is_owner: false, is_active: false, group_ids: ['system-admin'] },
+  ];
+  const als = (id: string, naam = id) => ({ 'x-remote-user-id': id, 'x-remote-user-name': naam });
+
+  async function achterIngress(lijst: () => Promise<readonly HaAccount[]>) {
+    const logDir = await mkdtemp(join(tmpdir(), 'hems-ingress-rol-'));
+    cleanups.push(() => rm(logDir, { recursive: true, force: true }));
+    const comfort = { view: () => comfortView(exampleSite, null), save: async () => ({ ok: true as const, view: comfortView(exampleSite, null) }) };
+    return start({
+      access: { kind: 'ingress', beheerders: haBeheerders(lijst) },
+      functies: { store: new FunctiesStore(logDir), gevonden: () => ({ cameras: [], melders: [] }) },
+      comfort,
+      herken: async () => null,
+      // u3 is een gast, en niet thuis.
+      gast: (userId) => ({ gast: userId === 'u3', thuis: false }),
+    });
+  }
+
+  const functies = JSON.stringify({ versie: 1, cameras: { aan: false, lijst: [] }, deurbel: { aan: false, melder: null, camera: null, schermAan: false, seconden: 60 } });
+
+  it('geeft een beheerder in Home Assistant de beheerdersdeuren, en een bewoner niet', async () => {
+    let vragen = 0;
+    const { base } = await achterIngress(async () => {
+      vragen++;
+      return ACCOUNTS;
+    });
+    const sessie = async (id: string) => (await (await fetch(`${base}/api/sessie`, { headers: als(id) })).json()) as { toegang: string; ingelogd: boolean; rol: string };
+    expect(await sessie('u1')).toMatchObject({ toegang: 'ingress', ingelogd: true, rol: 'beheerder' });
+    expect(await sessie('u2')).toMatchObject({ rol: 'bewoner' });
+    // Uitgeschakeld telt niet, ook niet in de groep beheerders.
+    expect(await sessie('u4')).toMatchObject({ rol: 'bewoner' });
+    // Eén keer gevraagd; de lijst blijft even bewaard.
+    expect(vragen).toBe(1);
+
+    const post = (id: string, path: string, body: string) => fetch(`${base}${path}`, { method: 'POST', headers: { ...JSON_HEADERS, ...als(id) }, body });
+    expect((await post('u2', '/api/functies', functies)).status).toBe(403);
+    expect((await post('u1', '/api/functies', functies)).status).toBe(200);
+    // Comfort is voor elke bewoner.
+    expect((await post('u2', '/api/comfort', '{}')).status).toBe(200);
+  });
+
+  it('houdt een gast ook achter Ingress bij kijken', async () => {
+    const { base } = await achterIngress(async () => ACCOUNTS);
+    const res = await fetch(`${base}/api/comfort`, { method: 'POST', headers: { ...JSON_HEADERS, ...als('u3') }, body: '{}' });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toMatchObject({ fout: expect.stringContaining('gast') });
+  });
+
+  it('maakt niemand beheerder als Home Assistant niet antwoordt', async () => {
+    const { base } = await achterIngress(async () => {
+      throw new Error('geen verbinding met Home Assistant');
+    });
+    const sessie = (await (await fetch(`${base}/api/sessie`, { headers: als('u1') })).json()) as { rol: string };
+    expect(sessie.rol).toBe('bewoner');
+    expect((await fetch(`${base}/api/functies`, { method: 'POST', headers: { ...JSON_HEADERS, ...als('u1') }, body: functies })).status).toBe(403);
+  });
+
+  it('vraagt het na een minuut opnieuw, en na een fout eerder', async () => {
+    let nu = 0;
+    let fout = true;
+    let vragen = 0;
+    const b = haBeheerders(
+      async () => {
+        vragen++;
+        if (fout) throw new Error('weg');
+        return ACCOUNTS;
+      },
+      { nowFn: () => nu },
+    );
+    expect(await b.isBeheerder('u1')).toBe(false);
+    fout = false;
+    nu = 10_000;
+    expect(await b.isBeheerder('u1')).toBe(false);
+    nu = 15_000;
+    expect(await b.isBeheerder('u1')).toBe(true);
+    nu = 74_000;
+    expect(await b.isBeheerder('u1')).toBe(true);
+    expect(vragen).toBe(2);
+    nu = 75_000;
+    expect(await b.isBeheerder('u2')).toBe(false);
+    expect(vragen).toBe(3);
   });
 });

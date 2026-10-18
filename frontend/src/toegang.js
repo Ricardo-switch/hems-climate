@@ -37,7 +37,7 @@ async function laadAlles() {
 const isGast = () => bewoners?.ik?.soort === 'gast';
 
 function delen() {
-  const inlog = !sessie ? '…' : sessie.toegang !== 'sessions' ? 'geen inlog nodig' : sessie.ingelogd ? `${sessie.naam ?? 'ingelogd'}${sessie.rol ? `, ${sessie.rol}` : ''}` : 'niet ingelogd';
+  const inlog = !sessie ? '…' : sessie.toegang === 'open' ? 'geen inlog nodig' : sessie.ingelogd ? `${sessie.naam ?? 'ingelogd'}${sessie.rol ? `, ${sessie.rol}` : ''}` : 'niet ingelogd';
   const namen = bewoners ? bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
   // Een gast (besluit 151): alleen inloggen en de versie; instellingen veranderen kan hij niet.
   if (isGast()) {
@@ -71,7 +71,14 @@ function schermVorm() {
 function inloggenVorm() {
   const s = sessie;
   if (!s) return '<p class="klein">Even laden…</p>';
-  if (s.toegang !== 'sessions') return '<h2 class="kop-2">Inloggen</h2><p class="klein" style="margin: 0">Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.</p>';
+  if (s.toegang === 'open') return '<h2 class="kop-2">Inloggen</h2><p class="klein" style="margin: 0">Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.</p>';
+  const uitleg = '<p class="mini" style="margin: 0">Een bewoner bedient licht, screens en zijn comfort. Een beheerder in Home Assistant stelt ook je huis, je energie en de functies in.</p>';
+  // Achter Ingress (besluit 161): ingelogd via Home Assistant zelf, met de rol die Home Assistant geeft.
+  if (s.toegang === 'ingress') {
+    return `<h2 class="kop-2">Inloggen</h2>
+    <p class="klein" style="margin: 0">Ingelogd via Home Assistant als <b>${esc(s.naam ?? '')}</b>${s.rol ? `, ${esc(s.rol)}` : ''}.</p>
+    ${uitleg}`;
+  }
   const terug = encodeURIComponent(location.pathname);
   return `<h2 class="kop-2">Inloggen</h2>
     ${s.ingelogd

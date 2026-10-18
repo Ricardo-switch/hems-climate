@@ -35,6 +35,8 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'tts/engine/voices',
   // Praten met je stem (besluit 150): welke spraakassistenten er zijn, met hun wekwoord.
   'assist_pipeline/pipeline/list',
+  // Wie er beheerder is (besluit 161): de accounts, om achter Ingress de rol te weten.
+  'config/auth/list',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */

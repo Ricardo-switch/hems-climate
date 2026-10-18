@@ -303,7 +303,9 @@ verwijzing bestaat.
   eigen ruimtes krijgen een eigen smalle deur** ([100]).
 - **De ruwe export van Home Assistant** hoort niet in git ([38]).
 - **In de add-on** opent de app via Ingress; een eigen link pas met een eigen
-  inlog ([77]). Iedereen in huis bedient, één beheert ([80]).
+  inlog ([77]). Iedereen in huis bedient, één beheert ([80]). Het paneel staat
+  bij iedereen met een account in de zijbalk; beheerder is ook achter Ingress
+  wie dat in Home Assistant is, en een gast blijft een gast ([161]).
 
 ## Uitrol en beheer
 
@@ -494,4 +496,5 @@ verwijzing bestaat.
 [158]: DECISIONS.md#158-inrichten-overal-terug-en-volgende-en-wat-de-bewoner-tegenkwam
 [159]: DECISIONS.md#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld
 [160]: DECISIONS.md#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale
+[161]: DECISIONS.md#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant
 <!-- links:einde -->
