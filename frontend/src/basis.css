@@ -110,28 +110,68 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 
 
 /*
- * Een groep achter het tandwiel (besluit 130): links de delen, in het midden het
- * gekozen deel, rechts waarvoor het nodig is. Op de telefoon onder elkaar, met
- * de delen als een rij om opzij te vegen.
+ * Een groep achter het tandwiel (besluit 130, 163; schetsen Wand-Instellingen-Groep
+ * en Instellingen-Tel-Groep): links de delen als regels met een icoon, wat mist
+ * bovenaan; rechts het gekozen deel, met onderaan "Waarvoor is dit?" en door naar
+ * het vorige of volgende deel. Op de telefoon eerst de lijst; een deel opent als
+ * eigen scherm (html.deel-open).
  */
-#wand main.groep { display: flex; flex-direction: column; gap: 14px; height: 100%; min-height: 0; }
-.groep .terugje, #tel .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
-.groep .groepkop { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
-.groep .groepkop .lead { margin-top: 6px; max-width: 60ch; }
+#wand main.groep { display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; }
+#tel .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+.groep .groepkop { display: flex; align-items: center; gap: 14px; }
+.groep .groepkop .kop-1 { font-size: 40px; margin-left: 4px; white-space: nowrap; }
+.groep .terugje { display: inline-flex; align-items: center; height: 44px; padding: 0 16px 0 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glas-rand); font-size: 14.5px; font-weight: 600; color: var(--zacht); text-decoration: none; white-space: nowrap; }
+.groep .groepkop .bewaard { margin-left: auto; }
+.groep .groeplead { margin: -8px 0 0; font-size: 14px; max-width: none; }
 .bewaard { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--mint); white-space: nowrap; }
-.groepveld { flex: 1; display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 16px; min-height: 0; }
-.delen { padding: 10px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
-.delen h4 { margin: 10px 12px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
-.delen h4:first-child { margin-top: 4px; }
-.deel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: center; padding: 10px 12px; border-radius: 14px; color: var(--tekst); text-decoration: none; }
-.deel b { font-size: 15px; font-weight: 600; }
-.deel span:not(.stip) { grid-column: 1; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.deel .stip { grid-row: 1 / 3; grid-column: 2; }
-.deel.nu { background: rgba(255, 255, 255, 0.09); }
+.samen { display: flex; gap: 8px; }
+.samen:empty { display: none; }
+.samen span { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.samen span::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.samen .mis { color: var(--gloed); background: rgba(255, 122, 77, 0.12); }
+.samen .goed { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+.groepveld { flex: 1; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; min-height: 0; }
+
+/* De delen: grote regels om op te tikken, met een icoon. */
+.delen { align-self: start; max-height: 100%; padding: 6px; border-radius: 22px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+.delen h4 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+.delen h4:first-child { margin-top: 8px; }
+.deel { position: relative; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; min-height: 68px; padding: 8px 12px; border-radius: 16px; color: var(--tekst); text-decoration: none; flex-shrink: 0; }
+.deel .ik { grid-row: 1 / 3; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+.deel .ik svg { width: 21px; height: 21px; }
+.deel b { font-size: 16px; font-weight: 600; align-self: end; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deel .zin { grid-column: 2; align-self: start; font-size: 13px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deel .eind { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; }
+.deel .pijl { display: none; color: var(--gedempt); font-size: 22px; line-height: 1; }
+.deel.mist .zin { color: var(--gloed); }
+.deel.mist .ik { background: rgba(255, 122, 77, 0.14); }
+.deel.nu { background: rgba(255, 255, 255, 0.1); }
+.deel.nu::before { content: ''; position: absolute; left: -2px; top: 18px; bottom: 18px; width: 4px; border-radius: 2px; background: var(--tekst); }
 .deel:focus-visible { outline: 2px solid var(--tekst); outline-offset: -2px; }
+
+/* Het gekozen deel. */
+.vormvak { position: relative; display: flex; flex-direction: column; min-height: 0; }
 .vorm { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.vormvak .vorm { flex: 1; padding-bottom: 12px; }
 .vorm > * { flex-shrink: 0; }
 .vorm h2 { margin: 0; }
+.voet { display: flex; align-items: center; gap: 12px; margin: 0 24px; padding: 10px 0 12px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.waarvoor { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px 0 10px; border: 0; border-radius: 12px; background: rgba(111, 211, 255, 0.1); color: #a9e6ff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.waarvoor svg { width: 19px; height: 19px; }
+.waarvoor[aria-expanded='true'] { background: #a9e6ff; color: var(--inkt); }
+.waarvoor:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+.verder { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.verder:empty { display: none; }
+.verder .waar { margin-right: auto; padding-left: 4px; font-size: 12.5px; color: var(--gedempt); }
+.verder a { display: flex; flex-direction: column; gap: 1px; min-width: 170px; padding: 8px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--glas-rand); color: var(--tekst); text-decoration: none; }
+.verder a small { font-size: 12px; color: var(--gedempt); font-weight: 600; }
+.verder a b { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.verder a.volgende { text-align: right; }
+.verder a.volgende b { justify-content: flex-end; }
+.verder span.vorige, .verder span.volgende { display: none; }
+.verder a:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+
+/* Waarvoor dit nodig is en waar je het vindt: op de wand achter de knop, op de telefoon onder het deel. */
 .naast { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .naast > * { flex-shrink: 0; }
 .naast .glas { padding: 16px 18px; }
@@ -140,13 +180,29 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 .naast ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .naast li { display: flex; gap: 8px; }
 .naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
+.vormvak .naast { display: none; position: absolute; z-index: 20; left: 20px; bottom: 74px; width: 380px; max-height: calc(100% - 100px); overflow-y: auto; gap: 0; padding: 4px 0; border-radius: 18px; background: #0e1626; border: 1px solid var(--glas-rand); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5); }
+.vormvak.open .naast { display: flex; }
+.vormvak .naast .glas { background: none; border: 0; border-radius: 0; backdrop-filter: none; }
+.vormvak .naast .glas + .glas { border-top: 1px solid rgba(255, 255, 255, 0.07); }
 .melding { display: flex; gap: 10px; align-items: start; padding: 12px 14px; border-radius: 14px; background: rgba(255, 122, 77, 0.08); border: 1px solid rgba(255, 122, 77, 0.3); font-size: 13.5px; color: var(--zacht); }
 .melding .stip { margin-top: 6px; flex: none; }
 .invoer.leeg { border-color: var(--gloed); background: rgba(255, 122, 77, 0.07); }
 #tel .groepkop { display: flex; flex-direction: column; gap: 6px; }
-#tel .delen { flex-direction: row; overflow-x: auto; padding: 6px; gap: 6px; scroll-snap-type: x proximity; }
-#tel .delen h4 { display: none; }
-#tel .deel { flex: none; min-width: 150px; scroll-snap-align: start; }
+#tel .delen { align-self: stretch; max-height: none; padding: 4px; }
+#tel .deel { min-height: 64px; border-radius: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+#tel .delen > .deel:first-child, #tel .delen h4 + .deel { border-top: 0; }
+#tel .deel.nu { background: none; }
+#tel .deel.nu::before { display: none; }
+#tel .deel .pijl { display: block; }
+#tel .verder { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#tel .verder .waar { display: none; }
+#tel .verder a { min-width: 0; padding: 12px 14px; border-radius: 16px; background: var(--glas); }
+#tel .verder a b { overflow: hidden; text-overflow: ellipsis; }
+#tel .verder span.vorige, #tel .verder span.volgende { display: block; }
+/* Eerst de lijst; een gekozen deel als eigen scherm, met terug naar de groep. */
+html:not(.deel-open) #tel [data-vorm], html:not(.deel-open) #tel [data-naast], html:not(.deel-open) #tel [data-verder] { display: none; }
+html.deel-open #tel [data-delen], html.deel-open #tel [data-samen], html.deel-open #tel h1, html.deel-open #tel [data-lead], html.deel-open #tel [data-wiekies] { display: none; }
+#tel [data-lead]:empty, #tel [data-wiekies]:empty { display: none; }
 
 /* Hoe voelt het? (besluit 134, schets Wand-Gevoel): op Thuis en bij een kamer. */
 .gevoelblok { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }

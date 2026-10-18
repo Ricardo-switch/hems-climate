@@ -547,6 +547,130 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 30_000);
 
   /*
+   * Een groep instellingen op de telefoon (besluit 163, schets
+   * Instellingen-Tel-Groep): de delen onder elkaar, geen rij om opzij te
+   * schuiven, wat mist bovenaan; een deel opent als eigen scherm, met terug
+   * naar de groep en onderaan Vorige en Volgende.
+   */
+  it('toont een groep instellingen op de telefoon als lijst, en een deel als eigen scherm', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    await p.goto(`${baseUrl}/energie.html`);
+    const tel = p.locator('#tel');
+    const delen = tel.locator('[data-delen] .deel');
+    await delen.first().waitFor();
+    // Onder elkaar en binnen de breedte: niets om opzij te schuiven.
+    expect(await tel.locator('[data-delen]').evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    const links = await delen.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().left)));
+    expect(new Set(links).size).toBe(1);
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+    expect(await tel.locator('[data-vorm]').isVisible()).toBe(false);
+    // Wat mist staat bovenaan.
+    const mist = await delen.evaluateAll((els) => els.map((e) => e.classList.contains('mist')));
+    expect(mist).toEqual([...mist].sort((a, b) => Number(b) - Number(a)));
+    await shot('lijst');
+    // Een deel als eigen scherm, met terug naar de groep.
+    await delen.filter({ hasText: 'Aansluiting' }).click();
+    await tel.locator('[data-vorm] h2', { hasText: 'Aansluiting' }).waitFor();
+    expect(await tel.locator('[data-delen]').isVisible()).toBe(false);
+    expect(await tel.locator('[data-terug]').textContent()).toBe('‹ Energie');
+    await shot('deel');
+    // Volgende vervangt het adres; terug gaat in één stap naar de lijst.
+    await tel.locator('[data-verder] a.volgende').click();
+    await expect.poll(() => new URL(p.url()).hash).toBe('#meters');
+    await tel.locator('[data-terug]').click();
+    await tel.locator('[data-terug]', { hasText: '‹ Instellingen' }).waitFor();
+    expect(new URL(p.url()).hash).toBe('');
+    expect(await delen.first().isVisible()).toBe(true);
+    // Rechtstreeks op een deel: terug gaat ook naar de lijst, met de kopjes.
+    await p.goto(`${baseUrl}/comfort.html#dagdelen`);
+    await tel.locator('[data-vorm] h2', { hasText: 'Dagdelen' }).waitFor();
+    await tel.locator('[data-terug]').click();
+    await tel.locator('[data-delen] h4', { hasText: 'Kamers' }).waitFor();
+    await shot('comfort');
+    // De kolommen van de wand staan op de telefoon onder elkaar.
+    await p.goto(`${baseUrl}/energie.html#prijzen`);
+    await tel.locator('[data-vorm] h2', { hasText: 'Contract en prijzen' }).waitFor();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth')).toBe(true);
+    await shot('prijzen');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Een groep op de wand (besluit 163, schets Wand-Instellingen-Groep): geen
+   * kolom met uitleg meer; die zit achter "Waarvoor is dit?". Onderaan door
+   * naar het volgende deel, en de wand scrolt niet.
+   */
+  it('toont op de wand de uitleg achter Waarvoor is dit, en door naar het volgende deel', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const shot = async (naam: string) => {
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) });
+    };
+    await p.goto(`${baseUrl}/energie.html#aansluiting`);
+    const wand = p.locator('#wand');
+    await wand.locator('[data-vorm] h2', { hasText: 'Aansluiting' }).waitFor();
+    const naast = wand.locator('[data-naast]');
+    expect(await naast.isVisible()).toBe(false);
+    await shot('wand');
+    await wand.locator('[data-waarvoor]').click();
+    await naast.locator('h3', { hasText: 'Waarvoor dit nodig is' }).waitFor();
+    await shot('wand-hulp');
+    await p.keyboard.press('Escape');
+    expect(await naast.isVisible()).toBe(false);
+    await wand.locator('[data-verder] a.volgende').click();
+    await expect.poll(() => new URL(p.url()).hash).toBe('#meters');
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    await p.goto(`${baseUrl}/energie.html#prijzen`);
+    await wand.locator('[data-vorm] h2', { hasText: 'Contract en prijzen' }).waitFor();
+    await shot('wand-prijzen');
+    await p.goto(`${baseUrl}/comfort.html`);
+    await wand.locator('[data-vorm] .bovenrij').waitFor();
+    await shot('wand-comfort');
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Op de wand past elk deel van elke groep in zijn vak, zonder te scrollen
+   * (besluit 163). Alleen de lijst met versies mag schuiven.
+   */
+  it('laat elk deel van elke groep op de wand passen zonder te scrollen', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const teVol: string[] = [];
+    for (const pagina of ['comfort', 'energie', 'regeling', 'functies', 'toegang']) {
+      await p.goto(`${baseUrl}/${pagina}.html`);
+      await p.locator('#wand [data-delen] .deel').first().waitFor();
+      await p.waitForTimeout(300);
+      const ids = await p.locator('#wand [data-delen] .deel').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
+      for (const id of ids.filter((x) => x !== '#versie')) {
+        await p.goto(`${baseUrl}/${pagina}.html${id}`);
+        await p.locator('#wand [data-vorm] h2').first().waitFor();
+        await p.waitForTimeout(200);
+        const over = await p.locator('#wand [data-vorm]').evaluate((v) => v.scrollHeight - v.clientHeight);
+        if (over > 2) teVol.push(`${pagina}${id}: ${over}px`);
+      }
+    }
+    expect(teVol).toEqual([]);
+    await context.close();
+  }, 60_000);
+
+  /*
    * Meters en prijzen in ontwerp 2 (besluiten 102 en 104): overnemen uit het
    * Energie-dashboard, de meters die bij een rol passen eerst, en bewaren.
    */

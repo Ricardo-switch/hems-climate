@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Een groep instellingen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Een groep instellingen op de telefoon (schets, 18 oktober 2026). Geen rij
+   * meer om opzij te schuiven: de delen staan onder elkaar, zoals in de
+   * instellingen van je telefoon. Een deel opent als eigen scherm, met terug
+   * naar de groep en onderaan door naar het vorige of volgende deel.
+   *   (zonder)   Energie: de delen onder elkaar, wat mist bovenaan en in oranje
+   *   #deel      Aansluiting geopend, met Vorige en Volgende onderaan
+   *   #comfort   Comfort: kamers en het hele huis, elk met een kopje
+   *   #nu        zoals het nu is: de rij om opzij te schuiven
+   */
+  body { margin: 0; width: 390px; min-height: 844px; }
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .scherm { display: none; padding: 18px 16px 110px; flex-direction: column; gap: 14px; }
+  body[data-toon='lijst'] #s-lijst, body[data-toon='deel'] #s-deel, body[data-toon='comfort'] #s-comfort, body[data-toon='nu'] #s-nu { display: flex; }
+
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .groepkop { display: flex; flex-direction: column; gap: 6px; }
+  .groepkop .kop-1 { font-size: 34px; }
+  .bewaard { font-size: 13.5px; font-weight: 600; color: var(--gedempt); }
+  .samen { display: flex; gap: 8px; flex-wrap: wrap; }
+  .samen span { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .samen span::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .samen .mis { color: var(--gloed); background: rgba(255, 122, 77, 0.12); }
+  .samen .goed { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+
+  /* De delen onder elkaar: hele regel om op te tikken. */
+  .lijst { padding: 4px; border-radius: 22px; }
+  .lijst h4 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; min-height: 64px; padding: 8px 12px; border-top: 1px solid rgba(255, 255, 255, 0.07); color: var(--tekst); text-decoration: none; }
+  .lijst > .rij:first-child, .lijst h4 + .rij { border-top: 0; }
+  .rij .ik { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .rij .ik svg { width: 20px; height: 20px; }
+  .rij b { font-size: 16px; font-weight: 600; align-self: end; }
+  .rij small { grid-column: 2; font-size: 13px; color: var(--gedempt); align-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rij .pijl { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; color: var(--gedempt); font-size: 22px; }
+  .rij.mist small { color: var(--gloed); }
+  .rij.mist .ik { background: rgba(255, 122, 77, 0.14); }
+  .rij.leeg small { color: var(--zacht); }
+
+  /* Een deel geopend. */
+  .vorm { padding: 18px; display: flex; flex-direction: column; gap: 12px; border-radius: 22px; }
+  .vorm h3 { margin: 0; }
+  .uitleg { font-size: 13.5px; color: var(--zacht); margin: 0; line-height: 1.45; }
+  .keuzes { display: flex; flex-wrap: wrap; gap: 6px; }
+  .keuzes span { display: inline-flex; align-items: center; height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.05); font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .keuzes span.aan { background: var(--tekst); color: #0b1424; border-color: transparent; }
+  .naast { padding: 16px 18px; border-radius: 22px; }
+  .naast h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+  .naast h3 + p { margin: 0; }
+  .naast ul { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .naast li, .naast p { font-size: 13.5px; color: var(--zacht); line-height: 1.45; }
+  .naast li { display: flex; gap: 8px; }
+  .naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
+  .verder { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .verder a { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; background: var(--glas); border: 1px solid var(--glas-rand); color: var(--tekst); text-decoration: none; }
+  .verder a small { font-size: 12px; color: var(--gedempt); font-weight: 600; }
+  .verder a b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .verder a.volgende { text-align: right; }
+  .verder a.mist b::after { content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 7px; border-radius: 50%; background: var(--gloed); vertical-align: 2px; }
+
+  /* Zoals het nu is (basis.css, #tel .delen). */
+  .delen { flex-direction: row; display: flex; overflow: hidden; padding: 6px; gap: 6px; border-radius: 22px; }
+  .deel { flex: none; min-width: 150px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 10px; align-items: center; padding: 10px 12px; border-radius: 14px; }
+  .deel b { font-size: 15px; font-weight: 600; }
+  .deel span:not(.stip) { grid-column: 1; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; }
+  .deel .stip { grid-row: 1 / 3; grid-column: 2; }
+  .deel.nu { background: rgba(255, 255, 255, 0.09); }
+</style>
+</head>
+<body class="lucht lucht-dag">
+<div class="tel">
+
+  <!-- Energie: de delen onder elkaar -->
+  <section class="scherm" id="s-lijst">
+    <a class="terugje" href="#">‹ Instellingen</a>
+    <div class="groepkop">
+      <h1 class="kop-1">Energie</h1>
+      <span class="bewaard">Alles wordt meteen bewaard</span>
+    </div>
+    <div class="samen"><span class="mis">1 mist</span><span class="goed">4 klaar</span></div>
+    <nav class="glas lijst" aria-label="Delen van Energie">
+      <a class="rij mist" href="#deel"><span class="ik" data-icoon="euro" style="color: var(--gloed)"></span><b>Contract en prijzen</b><small>stroomprijs ontbreekt</small><span class="pijl"><span class="stip" style="background: var(--gloed)"></span>›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="zon" style="color: var(--zon)"></span><b>Zonnepanelen</b><small>12 panelen, voorkant</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="stekker" style="color: var(--ijs)"></span><b>Aansluiting</b><small>1 × 35 A</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="meter" style="color: var(--mint)"></span><b>Meters</b><small>stroom, gas, 4 apparaten</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="vlam" style="color: var(--violet)"></span><b>Verwarming</b><small>cv-ketel, aanvoer 55°</small><span class="pijl">›</span></a>
+    </nav>
+  </section>
+
+  <!-- Een deel geopend: Aansluiting -->
+  <section class="scherm" id="s-deel">
+    <a class="terugje" href="#">‹ Energie</a>
+    <span class="bewaard" style="color: var(--mint)">Bewaard</span>
+    <section class="glas vorm">
+      <h2 class="kop-2" style="font-size: 26px">Aansluiting</h2>
+      <h3 class="kop-3">Hoofdzekering</h3>
+      <p class="uitleg">De regeling zet nooit zoveel tegelijk aan dat de hoofdzekering eruit gaat.</p>
+      <div class="keuzes"><span>1 × 25 A</span><span class="aan">1 × 35 A</span><span>1 × 40 A</span><span>3 × 25 A</span><span>3 × 35 A</span><span>3 × 40 A</span><span>3 × 50 A</span><span>Anders…</span><span>Weet ik niet</span></div>
+      <p class="mini" style="margin: 0">Staat op de hoofdschakelaar in de meterkast, of in de app van je netbeheerder.</p>
+    </section>
+    <div class="glas naast">
+      <h3>Waarvoor dit nodig is</h3>
+      <ul><li>Nooit zoveel tegelijk aan dat de zekering eruit gaat</li><li>Hoeveel airco’s en apparaten samen mogen draaien</li></ul>
+      <h3>Waar vind je het?</h3>
+      <p>Op de hoofdschakelaar in de meterkast: bijvoorbeeld "1 × 35 A" of "3 × 25 A".</p>
+    </div>
+    <div class="verder">
+      <a href="#"><small>‹ Vorige</small><b>Zonnepanelen</b></a>
+      <a class="volgende" href="#"><small>Volgende ›</small><b>Meters</b></a>
+    </div>
+  </section>
+
+  <!-- Comfort: met kopjes -->
+  <section class="scherm" id="s-comfort">
+    <a class="terugje" href="#">‹ Instellingen</a>
+    <div class="groepkop">
+      <h1 class="kop-1">Comfort</h1>
+      <span class="bewaard">Alles wordt meteen bewaard</span>
+    </div>
+    <nav class="glas lijst" aria-label="Delen van Comfort">
+      <h4>Kamers</h4>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="bank" style="color: var(--mint)"></span><b>Woonkamer</b><small>overdag 20 tot 22°, 's nachts 17°</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="bed" style="color: var(--mint)"></span><b>Slaapkamer</b><small>overdag tot 23°</small><span class="pijl">›</span></a>
+      <a class="rij leeg" href="#deel"><span class="ik" data-icoon="dak" style="color: var(--gedempt)"></span><b>Zolder</b><small>nog geen temperatuur gekozen</small><span class="pijl">›</span></a>
+      <h4>Het hele huis</h4>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="klok" style="color: var(--ijs)"></span><b>Dagdelen</b><small>dag 8:00, nacht 22:00</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="voorrang" style="color: var(--violet)"></span><b>Voorrang</b><small>eerst de woonkamer koelen</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="koffer" style="color: var(--zon)"></span><b>Afwezig en vakantie</b><small>per kamer, vanzelf of zelf</small><span class="pijl">›</span></a>
+    </nav>
+  </section>
+
+  <!-- Zoals het nu is -->
+  <section class="scherm" id="s-nu">
+    <a class="terugje" href="#">‹ Instellingen</a>
+    <div class="groepkop">
+      <h1 class="kop-1">Energie</h1>
+      <span class="bewaard">Alles wordt meteen bewaard</span>
+    </div>
+    <nav class="glas delen" aria-label="Delen van Energie">
+      <span class="deel"><b>Zonnepanelen</b><span>12 panelen, voorkant</span></span>
+      <span class="deel nu"><b>Aansluiting</b><span>1 × 35 A</span></span>
+      <span class="deel"><b>Meters</b><span>stroom, gas, 4 apparaten</span></span>
+      <span class="deel"><b>Contract en prijzen</b><span>stroomprijs ontbreekt</span><span class="stip" style="background: var(--gloed)"></span></span>
+    </nav>
+    <section class="glas vorm">
+      <h3 class="kop-3">Hoofdzekering</h3>
+      <p class="uitleg">De regeling zet nooit zoveel tegelijk aan dat de hoofdzekering eruit gaat.</p>
+      <div class="keuzes"><span>1 × 25 A</span><span class="aan">1 × 35 A</span><span>1 × 40 A</span><span>3 × 25 A</span><span>3 × 35 A</span><span>3 × 40 A</span><span>3 × 50 A</span><span>Anders…</span><span>Weet ik niet</span></div>
+    </section>
+  </section>
+
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  const toon = location.hash.slice(1) || 'lijst';
+  document.body.dataset.toon = toon;
+  const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICOON = {
+    zon: S('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>'),
+    stekker: S('<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>'),
+    meter: S('<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/><path d="M3 21h18"/>'),
+    euro: S('<path d="M17 6.5A7 7 0 1 0 17 17.5"/><path d="M4 10h9M4 14h9"/>'),
+    vlam: S('<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5 1 1 1.5 2 1.5 3 1.5-1.5 1.5-5 1.5-8z"/>'),
+    bank: S('<path d="M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M3 12h18v5H3zM5 17v2M19 17v2"/>'),
+    bed: S('<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-8v5"/><circle cx="6.5" cy="11" r="1.5"/>'),
+    dak: S('<path d="M3 13l9-8 9 8"/><path d="M6 11v9h12v-9"/><path d="M10 15h4"/>'),
+    klok: S('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'),
+    voorrang: S('<path d="M4 7h11M4 12h8M4 17h5"/><path d="M18 20V8M15 11l3-3 3 3"/>'),
+    koffer: S('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>'),
+  };
+  document.querySelectorAll('[data-icoon]').forEach((el) => (el.innerHTML = ICOON[el.dataset.icoon]));
+  nav.tabs(document.getElementById('tabs'), null);
+</script>
+</body>
+</html>

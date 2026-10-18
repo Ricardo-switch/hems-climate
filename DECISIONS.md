@@ -166,6 +166,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
 - [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
 - [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand)
+- [163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm](#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm)
 
 **Veiligheid**
 
@@ -7149,6 +7150,47 @@ de wand vanzelf bovenin bijschuift, en eerst kaarten en favorieten bouwen.
   met grotere letters en minder beweging. Die staan in de schetsen en volgen
   in een volgende stap; net als de auto, de batterij, deze maand en de
   deurbel als kaart.
+
+---
+
+## 163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 zei de bewoner: "de schuifbalken bovenin bij instellingen
+op de telefoon zijn niet handig". Een aanvulling op besluit 130. In elke groep
+achter het tandwiel (Comfort, Energie, Regeling, Functies, Bewoners en toegang) stonden de delen op de
+telefoon in een rij die je opzij moest vegen, met de rechterkant half uit
+beeld. Hij vroeg ook te kijken of het op de tablet makkelijker kon. Op de
+wand waren de regels links klein om op te tikken, nam een kolom met uitleg
+rechts veel plek, en liepen Zonnepanelen, Meters en Contract en prijzen
+onderaan door. Schetsen: `design/app2/Instellingen-Tel-Groep.html` en
+`Wand-Instellingen-Groep.html`.
+
+*Besluit:*
+
+- **De delen als lijst**, zoals de instellingen van een telefoon: per deel een
+  regel met een icoon, de naam en hoe het ervoor staat. Wat mist staat
+  bovenaan (binnen zijn kopje) en in oranje. Bovenin staat in één oogopslag
+  hoeveel er mist en hoeveel klaar is.
+- **Op de telefoon eerst alleen de lijst.** Een deel opent als eigen scherm
+  (`energie.html#aansluiting`), met *‹ Energie* terug naar de lijst. Kwam je
+  uit de lijst, dan is dat gewoon een stap terug; kwam je rechtstreeks op een
+  deel, dan vervangt de lijst het adres.
+- **Onderaan Vorige en Volgende**, op de telefoon en op de wand, in de
+  volgorde van de lijst. Ze vervangen het adres: terug gaat naar de lijst en
+  niet langs elk deel.
+- **Op de wand geen kolom met uitleg meer.** *Waarvoor dit nodig is* en *Waar
+  vind je het?* zitten achter de knop *Waarvoor is dit?* onderaan, naast Vorige
+  en Volgende; bovenin botste een knop met wat een deel daar zelf toont (de
+  temperatuur bij Comfort). Het gekozen deel krijgt de hele breedte; Energie
+  zet Zonnepanelen, Meters en Contract en prijzen in twee kolommen. Zo past elk
+  deel zonder scrollen; alleen de lijst met versies mag in zijn vak schuiven.
+  Een paginatest houdt dat zo.
+- **Comfort:** hoe het nu gaat in een kamer staat bovenin het kamervak, naast
+  de naam, en niet meer in de kolom ernaast. Daar komt ook wat het huis
+  leerde, als dat er komt.
+- **Je huis** (de indeling) heeft zijn eigen opbouw en blijft zoals hij is.
 
 ---
 
