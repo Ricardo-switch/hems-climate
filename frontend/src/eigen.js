@@ -333,7 +333,8 @@
   let blad = null;
 
   function openBlad(soort, plek) {
-    blad = { soort, plek, keuze: soort === 'favorieten' ? [...deel(plek).favorieten] : null };
+    blad = { soort, plek, keuze: soort === 'favorieten' ? [...deel(plek).favorieten] : null, open: new Set() };
+
     tekenBlad();
     document.querySelector('[data-kies-achter]').hidden = false;
     const el = document.querySelector('[data-kiesblad]');
@@ -369,20 +370,47 @@
         ${rijen.length ? rijen.join('') : '<p class="mini">Alle kaarten staan er al.</p>'}`;
       return;
     }
-    // Favorieten kiezen: scènes en lampen, hooguit vier.
+    /*
+     * Favorieten kiezen (besluit 168): per kamer, de lampen eerst; de scènes
+     * van die kamer ingeklapt eronder, elke naam één keer. Hooguit vier.
+     * Eerst stonden alle scènes bovenaan, en dat was een lange lijst.
+     */
     const gekozen = blad.keuze;
     const vol = gekozen.length >= v.maxFavorieten;
-    const rij = (soortF, x, ik) => {
+    const rij = (soortF, x, ik, klein = '') => {
       const aan = gekozen.some((f) => f.id === x.id);
-      return keus({ ik, naam: x.naam, klein: x.kamer, rechts: aan ? '✓' : '', data: `data-fav="${esc(x.id)}" data-fav-soort="${soortF}"`, aan, uit: vol && !aan });
+      return keus({ ik, naam: x.naam, klein, rechts: aan ? '✓' : '', data: `data-fav="${esc(x.id)}" data-fav-soort="${soortF}"`, aan, uit: vol && !aan });
     };
-    const sc = scenes().sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0));
-    const la = lampen();
     el.setAttribute('aria-label', 'Favorieten kiezen');
+    const kamers = perKamer();
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Favorieten</h2><button type="button" class="knop knop-licht" data-fav-klaar>Klaar</button></div>
       <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}</p>
-      ${sc.length ? `<h3>Scènes</h3>${sc.map((s) => rij('scene', s, ICOON.scene)).join('')}` : ''}
-      ${la.length ? `<h3>Lampen</h3>${la.map((d) => rij('lamp', d, ICOON.lamp)).join('')}` : ''}`;
+      ${kamers.map((k) => {
+        // Open als je er al een koos, of als je hem net openklapte.
+        const open = blad.open.has(k.id) || k.scenes.some((s) => gekozen.some((f) => f.id === s.id));
+        const sc = k.scenes.length
+          ? `<details class="favscenes" data-fav-kamer="${esc(k.id)}" ${open ? 'open' : ''}><summary>Scènes (${k.scenes.length})</summary>${k.scenes.map((s) => rij('scene', s, ICOON.scene)).join('')}</details>`
+          : '';
+        return `<h3>${esc(k.naam)}</h3>${k.lampen.map((d) => rij('lamp', d, ICOON.lamp)).join('')}${sc}`;
+      }).join('')}`;
+  }
+
+  /** De lampen en scènes per kamer, in de volgorde van het huis; dezelfde scènenaam in een kamer één keer. */
+  function perKamer() {
+    const gezien = new Set();
+    const uit = [];
+    for (const e of huis?.etages ?? []) {
+      for (const r of e.ruimtes ?? []) {
+        const lampenHier = (r.apparaten ?? []).filter((d) => d.soort === 'licht');
+        const namen = new Set();
+        const scenesHier = (r.scenes ?? [])
+          .filter((s) => !gezien.has(s.id) && gezien.add(s.id))
+          .filter((s) => !namen.has(s.naam.toLowerCase()) && namen.add(s.naam.toLowerCase()))
+          .sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0));
+        if (lampenHier.length || scenesHier.length) uit.push({ id: r.id, naam: r.naam, lampen: lampenHier, scenes: scenesHier });
+      }
+    }
+    return uit;
   }
 
   /*
@@ -476,7 +504,18 @@
     if (tegelKnop && !bewerk) void schakel(tegelKnop);
   });
 
-  document.addEventListener('pointerdown', sleep);
+  // Een kamer met scènes die je openklapt, blijft open als het blad opnieuw tekent (besluit 168).
+  document.addEventListener(
+    'toggle',
+    (e) => {
+      const d = e.target.closest?.('[data-fav-kamer]');
+      if (!d || blad?.soort !== 'favorieten') return;
+      if (d.open) blad.open.add(d.dataset.favKamer);
+      else blad.open.delete(d.dataset.favKamer);
+    },
+    true,
+  );
+    document.addEventListener('pointerdown', sleep);
   document.addEventListener('keydown', (e) => {
     const greep = e.target.closest?.('[data-greep]');
     if (greep && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {

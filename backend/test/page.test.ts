@@ -1595,8 +1595,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#tel [data-kaart="favorieten"] [data-fav-kies]').click();
       const blad = p.locator('[data-kiesblad]');
       await blad.waitFor();
+      // Per kamer, de lampen eerst; de scènes ingeklapt eronder (besluit 168).
+      expect(await blad.locator('[data-fav-soort="scene"]').first().isVisible()).toBe(false);
       await blad.locator('[data-fav-soort="lamp"]').first().click();
-      await blad.locator('[data-fav-soort="scene"]').first().click();
+      const kamerMetScenes = blad.locator('[data-fav-kamer]').first();
+      await kamerMetScenes.locator('summary').click();
+      await kamerMetScenes.locator('[data-fav-soort="scene"]').first().click();
+      // Na het tekenen blijft hij open.
+      expect(await kamerMetScenes.getAttribute('open')).not.toBeNull();
       expect(await blad.locator('[data-fav-teller]').textContent()).toContain('2 van 4');
       await blad.locator('[data-fav-klaar]').click();
       await blad.waitFor({ state: 'hidden' });
@@ -1709,13 +1715,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Bewoners een scherm.
    */
   it('laat de wand slapen en rusten als niemand kijkt, en wekt hem (besluiten 164 en 165)', async () => {
-    type Niemand = { nacht: boolean; van: string; tot: string; rustMin: number; aanMin: number; weg: boolean; melder: string | null };
+    type Niemand = { nacht: boolean; van: string; tot: string; rustMin: number; aanMin: number; weg: boolean; dag: boolean; avond: boolean; melder: string | null };
     const niemand = async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { wand: { niemand: Niemand } }).wand.niemand;
     const zet = (body: Partial<Niemand>) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'wand', niemand: body }) });
     await zet({ nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 1, weg: false, melder: null });
-    // Dag of avond volgt de echte zon van de dienst.
-    const zonOp = ((await (await fetch(`${baseUrl}/api/zon`)).json()) as { zon?: { boven?: boolean } }).zon?.boven === true;
-    const aanStand = zonOp ? 'dag' : 'avond';
+    // De dagstand vanaf het einde van de nacht (07:00) tot de zonsondergang van de dienst, daarna de avondstand (besluit 168). Om 14:10, in UTC.
+    const onderMs = ((await (await fetch(`${baseUrl}/api/zon`)).json()) as { dag?: { onderMs?: number | null } }).dag?.onderMs ?? null;
+    const onder = onderMs == null ? 19 * 60 : new Date(onderMs).getUTCHours() * 60 + new Date(onderMs).getUTCMinutes();
+    const aanStand = 14 * 60 + 10 < onder ? 'dag' : 'avond';
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
     await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
@@ -1762,8 +1769,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.evaluate<string>("getComputedStyle(document.querySelector('#wand [data-niemand]')).backgroundColor")).toBe('rgb(0, 0, 0)');
       await shot('uit');
       // Beweging zet het display aan, en na een minuut zonder beweging weer uit.
+      // Om tien voor twaalf is dat de avondstand.
       server.wek('beweging');
-      await expect.poll(stand).toBe(aanStand);
+      await expect.poll(stand).toBe('avond');
       await p.clock.setFixedTime(new Date('2026-10-19T23:51:00Z'));
       await expect.poll(stand, { timeout: 10_000 }).toBe('uit');
       // Een tik op het zwarte scherm opent de app.
@@ -1811,6 +1819,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await blad.locator('[data-nk-rust="5"]').isDisabled()).toBe(true);
       await blad.locator('[data-nk-aod]').click();
       await expect.poll(async () => (await niemand()).rustMin).toBe(5);
+      // Dagstand en avondstand (besluit 168): zet je er een uit, dan neemt de andere het over; de laatste blijft aan.
+      expect(await blad.locator('[data-nk-dagzin]').textContent()).toMatch(/^\d\d:\d\d tot zonsondergang/);
+      await blad.locator('[data-nk-avond]').click();
+      await expect.poll(async () => (await niemand()).avond).toBe(false);
+      expect(await blad.locator('[data-nk-dag]').isDisabled()).toBe(true);
+      expect(await blad.locator('[data-nk-dagzin]').textContent()).toContain('De hele tijd');
+      await blad.locator('[data-nk-avond]').click();
+      await expect.poll(async () => (await niemand()).avond).toBe(true);
       // Scherm uit: wanneer, en na hoeveel minuten zonder beweging.
       await p.goto(`${baseUrl}/functies.html#uit`);
       await blad.locator('h2', { hasText: 'Scherm uit' }).waitFor();

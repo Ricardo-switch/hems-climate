@@ -141,7 +141,7 @@ function licht() {
 
 /* ------------------------------------------------------------ weergave */
 
-const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
+const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
 const niemandNu = () => ({ ...NIEMAND, ...voorkeur?.wand?.niemand });
 const magWand = () => !!voorkeur?.wand?.magAanpassen;
 const schakel = (aan, data, label, uit = false) => `<button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data} ${uit ? 'disabled' : ''}></button>`;
@@ -164,12 +164,24 @@ function aod() {
   const mag = magWand();
   const aan = n.rustMin > 0;
   const zin = aan
-    ? `Raakt er ${n.rustMin} minuten niemand het scherm aan, dan toont het de klok, wat het huis doet en het weer. Na zonsondergang gedimd. Een tik opent de app weer.`
+    ? `Raakt er ${n.rustMin} minuten niemand het scherm aan, dan toont het de klok, wat het huis doet en het weer. Een tik opent de app weer.`
     : 'Het scherm blijft Thuis tonen, ook als niemand kijkt.';
+  // De dagstand en de avondstand (besluit 168): wanneer elk geldt, met de zonsondergang van vandaag.
+  const klok = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const onder = zon?.dag?.onderMs != null ? `zonsondergang (${klok(zon.dag.onderMs)})` : 'zonsondergang';
+  const dagVan = n.nacht ? n.tot : zon?.dag?.opMs != null ? `zonsopkomst (${klok(zon.dag.opMs)})` : 'zonsopkomst';
+  const avondTot = n.nacht ? n.van : dagVan;
+  const dagZin = !n.avond ? 'De hele tijd, ook in de avond' : !n.dag ? 'Uit: de avondstand neemt het over' : `${dagVan} tot ${onder}`;
+  const avondZin = !n.dag ? 'De hele tijd, ook overdag' : !n.avond ? 'Uit: de dagstand neemt het over' : `${onder} tot ${avondTot}`;
   return `<h2 class="kop-2">Always-on display</h2>
     <p class="klein" style="margin: 0" data-nk-zin>${esc(zin)}</p>
     <div class="regelrij"><div class="l"><b>Always-on display</b><span>De klok en het huis als niemand kijkt</span></div>${schakel(aan, 'data-nk-aod', 'Always-on display', !mag)}</div>
     <div class="${aan ? '' : 'uitgezet'}" data-nk-onder><span class="veldnaam">Verschijnt na zoveel minuten zonder aanraken</span>${nkKeuzes('Verschijnt na', 'nk-rust', [[2, '2 min'], [5, '5 min'], [15, '15 min']], n.rustMin, !mag || !aan)}</div>
+    <div class="${aan ? '' : 'uitgezet'}">
+      <div class="regelrij"><div class="l"><b>Dagstand</b><span data-nk-dagzin>${esc(dagZin)}. De klok, wat het huis doet en het weer.</span></div>${schakel(n.dag, 'data-nk-dag', 'Dagstand', !mag || !aan || (n.dag && !n.avond))}</div>
+      <div class="regelrij"><div class="l"><b>Avondstand</b><span data-nk-avondzin>${esc(avondZin)}. Gedimd, met een donker huis.</span></div>${schakel(n.avond, 'data-nk-avond', 'Avondstand', !mag || !aan || (n.avond && !n.dag))}</div>
+    </div>
+    ${n.nacht ? `<p class="mini">Daarna Scherm uit, van ${esc(n.van)} tot ${esc(n.tot)}.</p>` : ''}
     ${alleenHoofd()}${voorDeWand}
     <p class="mini">Op Vandaag, Apparaten, Opbrengst, de Assistent en een kamer gaat de wand na dezelfde tijd terug naar Thuis.</p>`;
 }
@@ -397,6 +409,10 @@ document.addEventListener('click', (e) => {
   const n = niemandNu();
   if (knop.hasAttribute('data-nk-aod')) return bewaarNiemand({ rustMin: n.rustMin > 0 ? 0 : 5 });
   if (knop.dataset.nkRust) return bewaarNiemand({ rustMin: Number(knop.dataset.nkRust) });
+  // Dagstand of avondstand uit: de andere neemt het over; de laatste blijft aan (besluit 168).
+  if (knop.hasAttribute('data-nk-dag')) return bewaarNiemand({ dag: !n.dag });
+  if (knop.hasAttribute('data-nk-avond')) return bewaarNiemand({ avond: !n.avond });
+
   if (knop.hasAttribute('data-nk-nacht')) return bewaarNiemand({ nacht: !n.nacht });
   if (knop.hasAttribute('data-nk-weg')) return bewaarNiemand({ weg: !n.weg });
   if (knop.dataset.nkAan) return bewaarNiemand({ aanMin: Number(knop.dataset.nkAan) });

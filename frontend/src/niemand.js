@@ -4,9 +4,10 @@
  * 149); een telefoon of laptop doet nooit mee.
  *
  * - Een always-on display, na 2, 5 of 15 minuten zonder iemand aan het scherm:
- *   overdag de dagstand (groot de klok, wat het huis doet en het weer), na
- *   zonsondergang de avondstand (de klok, gedimd, een donker huis zonder
- *   getallen, alles rustig en het weer van morgen).
+ *   de dagstand (groot de klok, wat het huis doet en het weer) vanaf het einde
+ *   van de nacht tot zonsondergang, daarna de avondstand (de klok, gedimd, een
+ *   donker huis zonder getallen, alles rustig en het weer van morgen) tot de
+ *   nacht (besluit 168). Elk is uit te zetten; dan neemt de andere het over.
  * - De nachtstand is uit: van bedtijd tot de ochtend, of als iemand het huis
  *   op Nacht zet, en als niemand thuis is, gaat het scherm uit na 1, 5, 15 of
  *   30 minuten zonder beweging.
@@ -28,7 +29,7 @@
 
   const { nl, esc, haal, telStand } = global.app;
 
-  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
+  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
   const KIJKPAGINAS = /\/(vandaag|apparaten|opbrengst|assistent|kamer)\.html$/;
   const DIRECT = 'sc-niemand-direct';
@@ -72,12 +73,24 @@
   }
   /** Moet het scherm uit, na de tijd zonder beweging? */
   const uitNodig = () => (instelling.nacht && (inNacht() || huisOpNacht())) || (instelling.weg && niemandThuis());
-  /** De dagstand zolang de zon op is, daarna de avondstand. */
-  function stand() {
+  /**
+   * De dagstand vanaf het einde van de nacht (Scherm uit) tot zonsondergang,
+   * daarna de avondstand tot de nacht (besluit 168). Zonder nacht begint de dag
+   * bij zonsopkomst. Staat er één uit, dan neemt de andere zijn tijd over.
+   */
+  function stand(nu = new Date()) {
+    if (instelling.avond === false) return 'dag';
+    if (instelling.dag === false) return 'avond';
     const z = bron?.zon?.();
-    if (z?.zon) return z.zon.boven ? 'dag' : 'avond';
-    const u = new Date().getHours();
-    return u >= 7 && u < 19 ? 'dag' : 'avond';
+    const klok = (ms) => {
+      const d = new Date(ms);
+      return d.getHours() * 60 + d.getMinutes();
+    };
+    const m = nu.getHours() * 60 + nu.getMinutes();
+    const onder = z?.dag?.onderMs != null ? klok(z.dag.onderMs) : 19 * 60;
+    const op = z?.dag?.opMs != null ? klok(z.dag.opMs) : 7 * 60;
+    const vanaf = instelling.nacht ? minuten(instelling.tot) : op;
+    return m >= vanaf && m < onder ? 'dag' : 'avond';
   }
 
   /** Er gebeurt iets op het scherm: dan is er iemand, ook zonder tik. */

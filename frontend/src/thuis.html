@@ -255,6 +255,13 @@
   .kiesblad .bladkop .knop { height: 38px; padding: 0 14px; font-size: 14px; color: inherit; }
   .kiesblad .bladkop .knop-licht { color: #0b1424; }
   .kiesblad h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); margin: 14px 0 2px; }
+  /* De scènes van een kamer, ingeklapt onder zijn lampen (besluit 168). */
+  .favscenes { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .favscenes summary { padding: 10px 0; font-size: 14px; font-weight: 600; color: var(--zacht); cursor: pointer; list-style: none; }
+  .favscenes summary::-webkit-details-marker { display: none; }
+  .favscenes summary::before { content: '›'; display: inline-block; width: 18px; color: var(--gedempt); transition: transform 0.15s; }
+  .favscenes[open] summary::before { transform: rotate(90deg); }
+  .favscenes summary:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 6px; }
   .kiesblad .keus { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; width: 100%; padding: 9px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .kiesblad .keus:disabled { cursor: default; opacity: 0.45; }
   .kiesblad .keus:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 8px; }

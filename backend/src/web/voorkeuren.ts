@@ -77,10 +77,17 @@ export interface Niemand {
   readonly aanMin: AanMinuten;
   /** Ook uit als niemand thuis is. */
   readonly weg: boolean;
+  /**
+   * De dagstand en de avondstand (besluit 168): overdag vanaf het einde van de
+   * nacht tot zonsondergang, 's avonds van zonsondergang tot de nacht. Staat er
+   * één uit, dan neemt de andere zijn tijd over.
+   */
+  readonly dag: boolean;
+  readonly avond: boolean;
   /** De bewegingsmelder die het display aanzet, of null. */
   readonly melder: string | null;
 }
-export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, melder: null };
+export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
 
 export interface Favoriet {
   readonly soort: 'lamp' | 'scene';
@@ -172,7 +179,7 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
   if (!isObject(x)) return { ok: false, reden: 'niemand is een object' };
   const uit: Record<string, unknown> = { ...nu };
   for (const [k, w] of Object.entries(x)) {
-    if (k === 'nacht' || k === 'weg') {
+    if (k === 'nacht' || k === 'weg' || k === 'dag' || k === 'avond') {
       if (typeof w !== 'boolean') return { ok: false, reden: `${k} is aan of uit` };
     } else if (k === 'aanMin') {
       if (!(AAN_MINUTEN as readonly unknown[]).includes(w)) return { ok: false, reden: `aan zonder beweging is ${AAN_MINUTEN.join(', ')} minuten` };

@@ -171,6 +171,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit](#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit)
 - [166. Negentien punten van de bewoner: assistent, huis, inrichten en de wand](#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand)
 - [167. Achttien punten van de bewoner: de wand, de droger, instellingen en inrichten](#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten)
+- [168. Favorieten per kamer, en de dagstand en avondstand van de wand](#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand)
 
 **Veiligheid**
 
@@ -7453,6 +7454,36 @@ tot de deur opengaat.
 het klimaat, pas in stap B); een vierde deel Leesbaarheid bij Weergave (die
 staat onderaan Thuis); de kaarten op de wand in vakken houden met een maximum;
 de droger meteen van Thuis halen als het drogen klaar is.
+
+## 168. Favorieten per kamer, en de dagstand en avondstand van de wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026, op de tablet aan de wand: het blad om favorieten te kiezen
+begon met een lange lijst scènes (sommige dubbel), en de lampen kwamen pas
+daaronder. Bij het always-on display miste hij de keuze tussen de dagstand en
+de avondstand, en wanneer elk ingaat. En bij Inrichten viel de tekst van de
+thermostaat weg in de smalle kolom. Hij koos uit voorstellen: per kamer met de
+lampen eerst, en vaste tijden met een schakelaar per stand.
+
+*Besluit:*
+
+- **Favorieten kiezen** gaat per kamer, in de volgorde van het huis: eerst de
+  lampen, daaronder ingeklapt "Scènes (n)" met de scènes van die kamer, elke
+  naam één keer. Een kamer waar je een scène koos, staat open. Hooguit vier,
+  zoals besluit 162.
+- **Dagstand en avondstand:** de dagstand geldt vanaf het einde van Scherm uit
+  (zonder nacht: vanaf zonsopkomst) tot zonsondergang, de avondstand van
+  zonsondergang tot het begin van Scherm uit. Eerst volgde de dagstand de zon,
+  zodat het in de winter na 07:00 nog avond was. Elk heeft een schakelaar bij
+  Functies › Always-on display, met de tijden en de zonsondergang van vandaag;
+  zet je er een uit, dan neemt de andere zijn tijd over, en de laatste blijft
+  aan (`dag` en `avond` in de voorkeuren van de wand).
+- **Inrichten:** de thermostaat van de ketel staat onder de knoppen van
+  Verwarming, over de hele breedte.
+
+*Wat afviel:* alleen lampen als favoriet (een scène met één tik blijft handig);
+de tijden alleen als uitleg zonder schakelaars.
 
 ## Wat nog een besluit wacht
 
