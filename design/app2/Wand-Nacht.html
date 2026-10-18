@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Nachtstand en rust</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De wand als niemand kijkt (schets, 18 oktober 2026). Een tik, of beweging
+   * als de wand luistert of een sensor heeft, brengt Thuis terug.
+   *   (zonder)  de nachtstand: van bedtijd tot de ochtend; de klok, gedimd, en
+   *             een gedimd huis zonder getallen
+   *   #rust     overdag, na een paar minuten niemand aan het scherm: groot de
+   *             klok, wat het huis doet en het weer
+   *   #kiezen   waar je het instelt: bij de wand, alleen voor de hoofdgebruiker
+   */
+  .scherm { width: 1280px; height: 800px; position: relative; }
+  .nacht-klok { position: absolute; left: 90px; top: 120px; }
+  .nacht-klok .tijd { font-family: var(--kop); font-weight: 600; font-size: 210px; letter-spacing: -0.04em; line-height: 0.9; color: rgba(238, 243, 247, 0.5); }
+  .nacht-klok .datum { font-size: 24px; color: rgba(184, 196, 207, 0.45); margin-top: 18px; }
+  .nacht-regels { position: absolute; left: 92px; bottom: 120px; display: flex; flex-direction: column; gap: 12px; font-size: 19px; color: rgba(184, 196, 207, 0.55); }
+  .nacht-regels b { color: rgba(238, 243, 247, 0.7); font-weight: 600; }
+  .nacht-regels span { display: flex; align-items: center; gap: 12px; }
+  .nacht-regels i { font-style: normal; }
+  .nacht-regels svg { width: 26px; height: 26px; opacity: 0.6; }
+  .nacht-huis { position: absolute; right: 30px; bottom: 30px; width: 600px; height: 480px; opacity: 0.45; }
+  .wek { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 14px; color: rgba(127, 142, 156, 0.6); }
+  .dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); pointer-events: none; }
+
+  .rust-klok { position: absolute; left: 70px; top: 70px; }
+  .rust-klok .tijd { font-family: var(--kop); font-weight: 600; font-size: 150px; letter-spacing: -0.04em; line-height: 0.9; }
+  .rust-klok .datum { font-size: 22px; color: var(--zacht); margin-top: 14px; }
+  .rust-kop { position: absolute; left: 72px; top: 330px; width: 460px; }
+  .rust-kop .kop-1 { font-size: 46px; }
+  .rust-kop .lead { font-size: 20px; margin-top: 14px; }
+  .rust-weer { position: absolute; left: 72px; bottom: 70px; display: flex; gap: 12px; }
+  .rust-weer .glas-klein { padding: 14px 18px; display: flex; align-items: center; gap: 14px; }
+  .rust-weer svg { width: 40px; height: 40px; }
+  .rust-weer b { display: block; font-size: 22px; font-family: var(--kop); font-weight: 600; }
+  .rust-weer span span { font-size: 14px; color: var(--zacht); }
+  .rust-huis { position: absolute; right: 10px; top: 60px; width: 720px; height: 700px; }
+
+  /* De instelling bij de wand. */
+  .paneel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; padding: 22px 26px; border-radius: 28px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55); }
+  .paneel h2 { margin: 0; }
+  .paneel .mini { margin: 4px 0 6px; }
+  .rij { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .rij > div:first-child { flex: 1; }
+  .rij b { display: block; font-size: 16px; }
+  .rij span.uitleg { font-size: 13px; color: var(--gedempt); }
+  .knopje { width: 52px; height: 30px; border-radius: 15px; background: rgba(255, 255, 255, 0.14); position: relative; flex: none; }
+  .knopje::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #dfe7ee; }
+  .knopje.aan { background: var(--mint); }
+  .knopje.aan::after { left: 25px; }
+  .tijden { display: flex; gap: 8px; }
+  .tijden span { height: 36px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; font-weight: 700; font-size: 14px; }
+  .keuze { display: grid; grid-auto-flow: column; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .keuze span { height: 32px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; font-weight: 700; font-size: 13px; color: var(--zacht); }
+  .keuze span.aan { background: var(--tekst); color: #0b1424; }
+
+  [data-stand] { display: none; }
+  body[data-toon='nacht'] [data-stand~='nacht'], body[data-toon='rust'] [data-stand~='rust'], body[data-toon='kiezen'] [data-stand~='kiezen'] { display: block; }
+</style>
+</head>
+<body>
+<div class="scherm lucht" id="scherm">
+  <!-- De nachtstand -->
+  <div data-stand="nacht">
+    <div class="nacht-huis" id="huis-nacht"></div>
+    <div class="nacht-klok"><div class="tijd">23:48</div><div class="datum">zondag 18 oktober</div></div>
+    <div class="nacht-regels">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg><i>Alles rustig. Slaapkamer <b>19,5°</b>, woonkamer <b>20,8°</b></i></span>
+      <span><svg viewBox="0 0 36 36"><circle cx="13" cy="13" r="6" fill="#F7B548"/><path d="M12 29h14a5.5 5.5 0 0 0 .5-11A7.5 7.5 0 0 0 12.4 20 4.5 4.5 0 0 0 12 29z" fill="#B8C4CF"/></svg><i>Morgen <b>17°</b>, half bewolkt, ongeveer <b>11&nbsp;kWh</b> van je dak</i></span>
+    </div>
+    <div class="dim"></div>
+    <div class="wek">Tik om de wand te wekken</div>
+  </div>
+
+  <!-- Rust overdag -->
+  <div data-stand="rust">
+    <div class="rust-huis" id="huis-rust"></div>
+    <div class="rust-klok"><div class="tijd">14:05</div><div class="datum">zondag 18 oktober</div></div>
+    <div class="rust-kop"><h1 class="kop-1">Het huis koelt op zon</h1><p class="lead">De woonkamer is 23,6°. Je panelen geven 3,8&nbsp;kW.</p></div>
+    <div class="rust-weer">
+      <div class="glas-klein"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="7" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2.2" stroke-linecap="round"><path d="M18 4v3M18 29v3M4 18h3M29 18h3M8 8l2 2M26 26l2 2M8 28l2-2M26 10l2-2"/></g></svg><span><b>19°</b><span>Nu, zonnig</span></span></div>
+      <div class="glas-klein"><svg viewBox="0 0 36 36"><circle cx="13" cy="13" r="6" fill="#F7B548"/><path d="M12 29h14a5.5 5.5 0 0 0 .5-11A7.5 7.5 0 0 0 12.4 20 4.5 4.5 0 0 0 12 29z" fill="#B8C4CF"/></svg><span><b>17°</b><span>Morgen, 11 kWh</span></span></div>
+    </div>
+  </div>
+
+  <!-- Instellen, bij de wand -->
+  <div data-stand="kiezen">
+    <section class="paneel" aria-label="Als niemand kijkt">
+      <h2 class="kop-2">Als niemand kijkt</h2>
+      <p class="mini">Voor deze wand. Alleen de hoofdgebruiker kan dit veranderen.</p>
+      <div class="rij"><div><b>Nachtstand</b><span class="uitleg">De klok en een gedimd huis, zonder getallen</span></div><span class="knopje aan"></span></div>
+      <div class="rij"><div><b>Wanneer</b><span class="uitleg">Of: als het huis op Nacht staat</span></div><div class="tijden"><span>23:00</span><span>tot</span><span>07:00</span></div></div>
+      <div class="rij"><div><b>Rust overdag</b><span class="uitleg">De klok, wat het huis doet en het weer</span></div><div class="keuze"><span>Uit</span><span>2 min</span><span class="aan">5 min</span><span>15 min</span></div></div>
+      <div class="rij"><div><b>Wekken door beweging</b><span class="uitleg">Met de bewegingsmelder in de hal</span></div><span class="knopje aan"></span></div>
+    </section>
+  </div>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#rust': 'rust', '#kiezen': 'kiezen' }[location.hash] ?? 'nacht';
+  document.body.dataset.toon = toon;
+  document.getElementById('scherm').classList.add(toon === 'rust' ? 'lucht-dag' : 'lucht-nacht');
+  const etages = (stil) => [
+    { kamers: [{ naam: 'Bijkeuken', gewicht: 0.85, stil }, { naam: 'Woonkamer', gewicht: 1.35, stil, stand: toon === 'rust' ? 'koelt' : undefined, apparaten: [{ soort: 'airco', aan: toon === 'rust' }, { soort: 'bank' }] }] },
+    { kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil }, { naam: 'Slaapkamer', gewicht: 1.3, stil, apparaten: [{ soort: 'screen', dicht: toon === 'rust' ? 0.7 : 1 }] }] },
+    { dak: true, kamers: [{ naam: 'Zolder', stil }] },
+  ];
+  if (toon === 'nacht' || toon === 'kiezen') {
+    huis.teken(document.getElementById(toon === 'nacht' ? 'huis-nacht' : 'huis-nacht'), {
+      beschrijving: 'Het huis bij nacht, gedimd. Alles is rustig.',
+      tijd: 'nacht', zon: { aandeel: 0, panelen: 12 }, wolken: 0, etages: etages(true),
+      buitenunit: { aan: false }, auto: { procent: 80, stand: 'staat', kleur: '#7f97b0' }, net: true, stromen: [], labels: [],
+    }, { breedte: 600, hoogte: 480, marge: 0.04 });
+  }
+  if (toon === 'rust') {
+    huis.teken(document.getElementById('huis-rust'), {
+      beschrijving: 'Het huis overdag. De woonkamer koelt op zon.',
+      tijd: 'dag', zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.8, panelen: 12 }, wolken: 0.1, etages: etages(true),
+      buitenunit: { aan: true }, auto: { procent: 70, stand: 'laadt', bron: 'zon', kleur: '#7f97b0' }, net: true,
+      stromen: [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.6 }, { van: 'zon', naar: 'auto', sterkte: 0.4 }], labels: [],
+    }, { breedte: 720, hoogte: 700, marge: 0.04 });
+  }
+  if (toon === 'kiezen') document.querySelector('[data-stand="nacht"]').style.display = 'block';
+</script>
+</body>
+</html>

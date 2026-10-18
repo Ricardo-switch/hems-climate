@@ -41,6 +41,7 @@ import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStan
 import { BACKUP_DIR, OPNIEUW_STARTEN, beginOpnieuw, bewaarBackup, bewaardeBackups, leesBackup, maakBackup, zetTerug } from './web/gegevens.js';
 import { entiteitenLijst, type AnalyseExtra } from './web/export.js';
 import { UitstelStore } from './web/uitstel.js';
+import { VoorkeurenStore } from './web/voorkeuren.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
@@ -877,6 +878,9 @@ const webConfig = () => (siteConfig ? metLigging(withLayoutNames(siteConfig, lay
  * een eigen bestand naast de dataset. Niets naar Home Assistant.
  */
 const meldingen = logDir !== '' ? new MeldingenStore({ logDir }) : null;
+// Thuis naar eigen smaak (besluit 162): kaarten en favorieten, naast de dataset.
+const voorkeuren = logDir !== '' ? new VoorkeurenStore(logDir) : null;
+await voorkeuren?.load();
 await meldingen?.load();
 function meldingenRonde(): void {
   const cfg = siteConfig;
@@ -1306,6 +1310,7 @@ if (webPort != null) {
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     ...(meldingen ? { meldingen } : {}),
+    ...(voorkeuren ? { voorkeuren } : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),

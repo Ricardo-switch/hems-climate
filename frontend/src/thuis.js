@@ -29,7 +29,7 @@ let bewoners = null;
 let eersteKeer = true;
 
 async function laadAlles() {
-  const [s, h, z, v, w, a, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer'), haal('api/aansluiting'), haal('api/bewoners')]);
+  const [s, h, z, v, w, a, b] = await Promise.allSettled([haal('api/state'), haal('api/huis'), haal('api/zon'), haal('api/vandaag'), haal('api/weer'), haal('api/aansluiting'), haal('api/bewoners'), eigen.laad()]);
   if (b.status === 'fulfilled') bewoners = b.value;
   if (s.status === 'fulfilled') state = s.value;
   if (h.status === 'fulfilled') huisData = h.value;
@@ -162,6 +162,10 @@ function tekenNu() {
   tekenApparaat();
   tekenGevoel();
   tekenKamersTel();
+  tekenMorgen();
+  // Thuis naar eigen smaak (besluit 162): favorieten, en de kaarten op hun plek.
+  eigen.tekenFavorieten(huisData);
+  eigen.na();
   // De microfoon in de vraagbalk alleen waar hij kan: over https (besluit 150).
   $$('#tel [data-mic]').forEach((el) => (el.hidden = !(window.isSecureContext && navigator.mediaDevices?.getUserMedia)));
 }
@@ -248,6 +252,7 @@ function tekenVandaag() {
 /** Een uitstelbaar apparaat dat draait of klaarstaat, als kaart: met de eindtijd (besluit 98). */
 function tekenApparaat() {
   const kaarten = $$('[data-apparaatkaart]');
+  const inhoud = (k) => k.querySelector('[data-apparaat-inhoud]');
   const d = (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'running') ?? (state?.bewoner?.uitstelbaar ?? []).find((x) => x.stand === 'waiting' || x.stand === 'would_start');
   if (!d) {
     kaarten.forEach((k) => (k.hidden = true));
@@ -262,7 +267,7 @@ function tekenApparaat() {
   const ring = `<svg class="ring" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="5" ${d.stand === 'running' ? '' : 'stroke-dasharray="3 5"'}/>${deel > 0 ? `<circle cx="28" cy="28" r="24" fill="none" stroke="#F7B548" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * R).toFixed(1)} ${R.toFixed(1)}" transform="rotate(-90 28 28)"/>` : ''}${rest != null ? `<text x="28" y="33" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#EEF3F7">${rest >= 60 ? `${Math.floor(rest / 60)}u${String(rest % 60).padStart(2, '0')}` : `${rest}m`}</text>` : ''}</svg>`;
   const zin = klaar ? `Draait, klaar rond ${new Date(klaar).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : d.kop;
   kaarten.forEach((k) => {
-    k.innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
+    inhoud(k).innerHTML = `${ring}<span><b>${esc(d.naam)}</b><span class="klein zon-t">${esc(zin)}</span></span>`;
     k.hidden = false;
   });
 }
@@ -345,7 +350,7 @@ function tekenKamersTel() {
   const box = document.querySelector('[data-kamers]');
   const kleur = { koelt: 'var(--ijs)', warmt: 'var(--gloed)', wacht: 'var(--zon)', goed: 'var(--mint)' };
   const kamers = huisData.etages.flatMap((e) => e.ruimtes).filter((r) => r.zoneId && r.temperatuurC != null);
-  box.hidden = !kamers.length;
+  box.closest('[data-kaart]').hidden = !kamers.length;
   box.innerHTML = kamers
     .map((r) => {
       const stand = huismodel.standVan(r.zoneId, state);
@@ -356,6 +361,20 @@ function tekenKamersTel() {
 }
 
 /* ------------------------------------------------------------- het weer */
+
+/** Het weer van morgen (besluit 162): een kaart om te kiezen; een tik opent het weer. */
+function tekenMorgen() {
+  const d = weer?.dagen?.[0];
+  $$('[data-morgen]').forEach((el) => {
+    el.hidden = !d;
+    if (!d) return;
+    const html = `${weerIcoon(d.soort)}<b>Morgen</b><span class="graden">${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}${d.minC == null ? '' : `<small> / ${nl(d.minC, 0)}°</small>`}</span><span class="mini">${[d.regenkansPct != null ? `${d.regenkansPct}% regen` : '', d.verwachtKwh != null ? `${nl(d.verwachtKwh)} kWh van je dak` : ''].filter(Boolean).join(', ')}</span>`;
+    if (el.dataset.html !== html) {
+      el.innerHTML = html;
+      el.dataset.html = html;
+    }
+  });
+}
 
 /*
  * Het weer (besluit 105): de knop met de temperatuur opent vandaag en de vijf
@@ -506,6 +525,17 @@ function sluitWeer() {
 /** Gebundeld: hooguit één keer per beeld (basis.js). */
 const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
+// Na een keuze of een tik op een favoriet: opnieuw tekenen, en zo nodig het huis opnieuw lezen.
+eigen.bij(async (huisOok) => {
+  if (huisOok) {
+    try {
+      huisData = await haal('api/huis');
+    } catch {
+      // De volgende keer.
+    }
+  }
+  teken();
+});
 
 app.start('thuis');
 $$('[data-buiten]').forEach((k) => k.addEventListener('click', () => openWeer(k)));
@@ -519,6 +549,11 @@ document.addEventListener('click', (e) => {
   }
 });
 document.querySelector('[data-weer-achter]').addEventListener('click', sluitWeer);
+// Het weer van morgen opent het weer, behalve tijdens het aanpassen.
+document.addEventListener('click', (e) => {
+  const kaart = e.target.closest('[data-morgen]');
+  if (kaart && !eigen.bewerkt) openWeer(document.querySelector(`${app.zicht()} [data-buiten]`));
+});
 // Tikken naast het blad sluit het ook, net als Escape.
 document.addEventListener('pointerdown', (e) => {
   const open = $$('[data-weer]').some((b) => !b.hidden);

@@ -46,6 +46,7 @@ import { CHECKPOINT_FILE } from './review-checkpoint.js';
 import { SCENE_COLORS_FILE } from './scene-colors.js';
 import { SOLAR_FILE } from './solar-learn.js';
 import { UITSTEL_FILE } from './uitstel.js';
+import { VOORKEUREN_FILE } from './voorkeuren.js';
 import { WEATHER_FILE } from './weather.js';
 
 export const BACKUP_SOORT = 'smart-climate-back-up';
@@ -59,7 +60,7 @@ export const OPNIEUW_STARTEN = 75;
 export const MAX_BACKUP = 8 * 1024 * 1024;
 
 /** Wat de bewoner in de app instelde. */
-export const INSTELLINGEN: readonly string[] = [LAYOUT_FILE, CONNECTION_FILE, BEWONERS_FILE, COMFORT_FILE, ENERGY_FILE, FUNCTIES_FILE, MELDINGEN_FILE];
+export const INSTELLINGEN: readonly string[] = [LAYOUT_FILE, CONNECTION_FILE, BEWONERS_FILE, COMFORT_FILE, ENERGY_FILE, FUNCTIES_FILE, MELDINGEN_FILE, VOORKEUREN_FILE];
 /** Wat het huis leerde en niet zomaar terugkomt. */
 export const GELEERD: readonly string[] = [SOLAR_FILE, SCENE_COLORS_FILE];
 const IN_BACKUP = new Set([...INSTELLINGEN, ...GELEERD]);

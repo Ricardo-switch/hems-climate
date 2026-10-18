@@ -35,6 +35,7 @@ import { TodayCache, withHistory, type PowerRow } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
+import type { VoorkeurenStore } from './voorkeuren.js';
 import { validateConnection, type ConnectionStore, type ConnectionView, type FoundAppliance, type FoundPhase } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
 import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
@@ -213,6 +214,8 @@ export interface WebOptions {
   readonly uitstel?: UitstelStore;
   /** Meldingen in de app (besluit 136): wat aandacht vraagt, en Eerder. */
   readonly meldingen?: MeldingenStore;
+  /** Thuis naar eigen smaak (besluit 162): kaarten en favorieten per account, en de wand. */
+  readonly voorkeuren?: VoorkeurenStore;
   /**
    * Opbrengst (besluit 102): de meters en prijzen van de app, en de statistiek
    * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.
@@ -708,6 +711,8 @@ export class WebServer {
       (this.#options.uitstel != null && path === '/api/uitstel') ||
       // Een melding niet meer laten zien (besluit 136): alleen in het eigen bestand.
       (this.#options.meldingen != null && path === '/api/meldingen') ||
+      // Thuis naar eigen smaak (besluit 162): alleen wat er gekozen is, in het eigen bestand.
+      (this.#options.voorkeuren != null && path === '/api/voorkeuren') ||
       (this.#options.energy != null && path === '/api/energie') ||
       // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
       (this.#options.connection != null && path === '/api/aansluiting') ||
@@ -881,6 +886,36 @@ export class WebServer {
         return;
       }
       const result = await bewoners.actie(body, wie);
+      if (result.ok) sendJson(res, 200, result.view);
+      else sendJson(res, result.status, { fout: result.reden });
+      return;
+    }
+
+    /*
+     * Thuis naar eigen smaak (besluit 162): je eigen kaarten en favorieten op de
+     * telefoon, en de wand voor iedereen, die de hoofdgebruiker of een beheerder
+     * aanpast.
+     */
+    if (path === '/api/voorkeuren') {
+      const voorkeuren = this.#options.voorkeuren;
+      if (voorkeuren == null) {
+        sendJson(res, 503, { wachten: 'kiezen kan pas met een logmap' });
+        return;
+      }
+      const wie = await this.#wie(req);
+      const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)) };
+      if (method !== 'POST') {
+        sendJson(res, 200, voorkeuren.view(kijker));
+        return;
+      }
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return;
+      }
+      const result = await voorkeuren.save(body, kijker);
       if (result.ok) sendJson(res, 200, result.view);
       else sendJson(res, result.status, { fout: result.reden });
       return;
