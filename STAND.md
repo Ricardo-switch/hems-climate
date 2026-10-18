@@ -272,6 +272,9 @@ verwijzing bestaat.
   op zon gaan uit met een schakelaar, Licht en screens staat per kamer bij
   Functies, "Automatisch" legt de standen uit, en Onderhoud zegt wat bijna op
   is. "Van je dak" heet nu "van je panelen".
+- **Favorieten** kies je per kamer, de lampen eerst en de scènes ingeklapt
+  eronder; het always-on display heeft een dagstand (vanaf het einde van de
+  nacht tot zonsondergang) en een avondstand, elk met een schakelaar ([168]).
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -536,4 +539,5 @@ verwijzing bestaat.
 [165]: DECISIONS.md#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit
 [166]: DECISIONS.md#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand
 [167]: DECISIONS.md#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten
+[168]: DECISIONS.md#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand
 <!-- links:einde -->

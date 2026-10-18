@@ -599,8 +599,9 @@ function warmteStap() {
   // De thermostaat die de ketel aanzet (besluit 167), zoals een Nest: niets gekozen is het voorstel uit Home Assistant.
   const lijst = huismodel.thermostaten(d.huis);
   const thermoOpties = [['', lijst[0] ? `Thermostaat: ${lijst[0].naam}` : 'Geen thermostaat gevonden'], ...lijst.map((x) => [x.sleutel, `Thermostaat: ${x.naam} (${x.kamer})`]), ['geen', 'Geen thermostaat']];
-  const thermo = a.verwarming.soort === 'stadsverwarming' || !lijst.length ? '' : `<select class="veld" data-inr-thermostaat aria-label="Thermostaat die de ketel aanzet" style="margin-top: 6px">${thermoOpties.map(([w, t]) => `<option value="${esc(w)}" ${w === (a.verwarming.thermostaat ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
-  const verwarming = rij('Verwarming', VERWARMING.map(([w, t]) => knop(`data-verwarming="${w}"`, t, a.verwarming.soort === w)).join(''), thermo);
+  const thermo = a.verwarming.soort === 'stadsverwarming' || !lijst.length ? '' : `<select class="veld" data-inr-thermostaat aria-label="Thermostaat die de ketel aanzet" style="width: 100%">${thermoOpties.map(([w, t]) => `<option value="${esc(w)}" ${w === (a.verwarming.thermostaat ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  // De thermostaat onder de knoppen, over de hele breedte: in de smalle kolom ernaast viel de tekst weg.
+  const verwarming = `<div class="rij"><b>Verwarming</b><div class="kolom" style="width: 100%"><div class="chips">${VERWARMING.map(([w, t]) => knop(`data-verwarming="${w}"`, t, a.verwarming.soort === w)).join('')}</div>${thermo}</div></div>`;
   return {
     waar: waarVan('warmte'),
     kop: 'Wat verwarmt en koelt er?',
