@@ -281,35 +281,119 @@ function tekenStraks() {
 }
 
 /*
- * Welk comfort geldt (besluit 147, schets Wand-Thuis-Bewoners): alleen als het
- * niet dat van de hoofdgebruiker is, of als iemand er een koos. Eén tik zet
- * het terug: "toch die van" de hoofdgebruiker, tot er iemand thuiskomt of
- * weggaat.
+ * Wie er thuis is en wiens comfort geldt (besluit 169, schetsen Wand-Thuis-Wie
+ * en Thuis-Tel-Wie): een rondje per bewoner, op de wand bovenin voor de pillen
+ * en op de telefoon rechts van de begroeting. Wie thuis is, licht op in zijn
+ * kleur; wie weg is, blijft grijs; wie gevolgd wordt, heeft een witte ring met
+ * een klein thermometertje. Een tik opent een blad met iedereen, thuis of weg
+ * en zijn temperaturen; daar kies je wiens comfort geldt, tot er iemand
+ * thuiskomt of weggaat. Een gast kijkt alleen. Eerst stond er een grote kaart
+ * "Comfort van Shira" met één knop terug naar de hoofdgebruiker.
  */
-function tekenGeldt() {
+const WIE_KLEUR = ['#a9e6ff', '#f7b548', '#6ee7b7', '#b7b0ff', '#ffb090', '#f5a6c8'];
+const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+/** Wie er thuis is: zoals de regeling het ziet (met de rust van tien minuten), anders Home Assistant. */
+function wieThuis() {
   const g = bewoners?.geldt;
-  const hoofd = bewoners?.bewoners?.[0];
-  const toon = g && hoofd && (g.id !== hoofd.id || g.waarom === 'gekozen');
-  $$('[data-geldt]').forEach((el) => {
-    el.hidden = !toon;
-    if (!toon) return;
-    const wie = bewoners.bewoners.find((b) => b.id === g.id);
-    const zin = g.waarom === 'gekozen'
-      ? 'Gekozen tot er iemand thuiskomt of weggaat.'
-      : `${hoofd.naam} is weg${hoofd.thuisSindsMs ? ` sinds ${new Date(hoofd.thuisSindsMs).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}` : ''}. ${wie?.naam ?? g.naam} staat daarna.`;
-    const knop = g.waarom === 'gekozen' ? '<button type="button" class="terug" data-vasthouden="">Weer vanzelf</button>' : `<button type="button" class="terug" data-vasthouden="${esc(hoofd.id)}">Toch die van ${esc(hoofd.naam)}</button>`;
-    el.innerHTML = `<span class="gezicht" aria-hidden="true">${esc((wie?.naam ?? g.naam).charAt(0).toUpperCase())}</span><span><b>Comfort van ${esc(wie?.naam ?? g.naam)}</b><span>${esc(zin)}</span></span>${knop}`;
-  });
+  if (g?.thuis) return new Set(g.thuis);
+  return new Set((bewoners?.bewoners ?? []).filter((b) => b.thuis).map((b) => b.id));
 }
+function gezicht(b, i) {
+  const thuis = wieThuis().has(b.id);
+  const geldt = bewoners?.geldt?.id === b.id;
+  return `<i style="--k: ${WIE_KLEUR[i % WIE_KLEUR.length]}" class="${thuis ? '' : 'afwezig'}${geldt ? ' geldt' : ''}">${esc(b.naam.charAt(0).toUpperCase())}</i>`;
+}
+function tekenGeldt() {
+  const lijst = bewoners?.bewoners ?? [];
+  const g = bewoners?.geldt;
+  const thuis = wieThuis();
+  const label = lijst.length
+    ? `${lijst.map((b) => `${b.naam} ${thuis.has(b.id) ? 'thuis' : 'weg'}`).join(', ')}.${g ? ` Het comfort van ${g.naam} geldt.` : ''} Tik om te kiezen.`
+    : '';
+  $$('[data-wie]').forEach((el) => {
+    el.hidden = lijst.length === 0;
+    if (!lijst.length) return;
+    el.setAttribute('aria-label', label);
+    el.innerHTML = `<span class="gezichten" aria-hidden="true">${lijst.map(gezicht).join('')}</span><span class="pijl" aria-hidden="true">▾</span>`;
+  });
+  const blad = document.querySelector('[data-kiesblad]');
+  if (blad && !blad.hidden && blad.dataset.blad === 'wie') void tekenWieBlad();
+}
+
+/** De temperaturen per bewoner: overdag en 's nachts, in de eerste kamer die verwarmt. */
+const wieTemps = new Map();
+async function haalTemps() {
+  await Promise.all((bewoners?.bewoners ?? []).map(async (b) => {
+    if (wieTemps.has(b.id)) return;
+    try {
+      const c = await haal(`api/comfort?bewoner=${encodeURIComponent(b.id)}`);
+      const k = (c?.kamers ?? []).find((x) => x.kanVerwarmen) ?? c?.kamers?.[0];
+      wieTemps.set(b.id, k ? { kamer: k.naam, dag: k.modi?.dag?.heat ?? null, nacht: k.modi?.nacht?.heat ?? null } : null);
+    } catch {
+      wieTemps.set(b.id, null);
+    }
+  }));
+}
+
+async function tekenWieBlad() {
+  const el = document.querySelector('[data-kiesblad]');
+  if (!el || !bewoners) return;
+  const lijst = bewoners.bewoners ?? [];
+  const g = bewoners.geldt;
+  const thuis = wieThuis();
+  const gast = bewoners.ik?.soort === 'gast';
+  const gekozen = g?.waarom === 'gekozen' ? g.id : null;
+  const graad = (c) => (c == null ? '–' : `${String(c).replace('.', ',')}°`);
+  // Waarom het nu deze is, in één zin.
+  const hoofd = lijst[0];
+  const weg = lijst.filter((b) => !thuis.has(b.id));
+  const nu = g?.waarom === 'niemand'
+    ? `Niemand is thuis; dan geldt het comfort van ${g.naam}.`
+    : `Nu ${g?.naam ?? hoofd?.naam ?? ''}.${weg.length && g && g.id !== hoofd?.id ? ` ${weg.map((b) => `${b.naam} is weg${b.thuisSindsMs ? ` sinds ${klokVan(b.thuisSindsMs)}` : ''}`).join(', ')}.` : ''}`;
+  const rij = (id, gezichtHtml, naam, onder, rechts, aan) => `<button type="button" class="wiekeuze${aan ? ' aan' : ''}" role="radio" aria-checked="${aan}" data-wie-kies="${esc(id)}" ${gast ? 'disabled' : ''}><span class="rond" aria-hidden="true"></span>${gezichtHtml}<span><b>${esc(naam)}</b><small>${onder}</small></span><span class="temp">${rechts}</span></button>`;
+  const rijen = lijst.map((b, i) => {
+    const t = wieTemps.get(b.id);
+    const isThuis = thuis.has(b.id);
+    const onder = isThuis ? '<span class="thuis-t">thuis</span>' : esc(`weg${b.thuisSindsMs ? ` sinds ${klokVan(b.thuisSindsMs)}` : ''}`);
+    const rechts = t ? [t.dag != null ? `<b>${graad(t.dag)}</b> overdag` : '', t.nacht != null ? `<b>${graad(t.nacht)}</b> 's nachts` : ''].filter(Boolean).join('<br>') : '';
+    return rij(b.id, `<span class="gezicht${isThuis ? '' : ' afwezig'}" style="--k: ${WIE_KLEUR[i % WIE_KLEUR.length]}" aria-hidden="true">${esc(b.naam.charAt(0).toUpperCase())}</span>`, b.naam, onder, rechts, gekozen === b.id);
+  }).join('');
+  el.dataset.blad = 'wie';
+  el.setAttribute('aria-label', 'Wiens comfort geldt?');
+  el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Wiens comfort geldt?</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
+    <div role="radiogroup" aria-label="Wiens comfort geldt">
+      ${rij('', '<span class="gezicht vanzelf" aria-hidden="true">⟳</span>', 'Vanzelf: wie thuis is', esc(nu), '', gekozen == null)}
+      ${rijen}
+    </div>
+    <p class="mini" style="margin: 12px 0 0">${gast ? 'Als gast kijk je mee; kiezen doet een bewoner.' : 'Kies je iemand, dan geldt dat tot er iemand thuiskomt of weggaat.'}${wieTemps.size ? ` De temperaturen zijn van ${esc([...wieTemps.values()].find(Boolean)?.kamer ?? 'de eerste kamer')}.` : ''}</p>`;
+}
+
+async function openWie() {
+  const el = document.querySelector('[data-kiesblad]');
+  if (!el || !bewoners?.bewoners?.length) return;
+  await tekenWieBlad();
+  document.querySelector('[data-kies-achter]').hidden = false;
+  el.hidden = false;
+  el.querySelector('button')?.focus();
+  // De temperaturen erbij zodra ze er zijn.
+  await haalTemps();
+  if (el.dataset.blad === 'wie' && !el.hidden) await tekenWieBlad();
+}
+
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-vasthouden]');
-  if (!t) return;
-  const res = await fetch('api/bewoners', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actie: 'vasthouden', id: t.dataset.vasthouden || null }) });
-  if (res.ok) {
+  if (e.target.closest('[data-wie]') && !eigen.bewerkt) return void openWie();
+  const t = e.target.closest('[data-wie-kies]');
+  if (!t || t.disabled) return;
+  const id = t.dataset.wieKies || null;
+  const res = await deur('api/bewoners', { actie: 'vasthouden', id });
+  if (res?.ok) {
     bewoners = await res.json();
     tekenGeldt();
+    // De regeling neemt het meteen over; Thuis tekent opnieuw met wat er nu geldt.
+    void tekenWieBlad();
   }
 });
+
 
 /*
  * Hoe voelt het? (besluit 134): de kaart komt uit gevoel.js. Kiezen welke

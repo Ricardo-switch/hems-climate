@@ -2913,16 +2913,35 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await shot(p, 'bewoners-tel');
     await p.setViewportSize({ width: 1280, height: 800 });
 
-    // Thuis: Ricardo is weg, Shira is thuis. De begroeting noemt wie er ingelogd is, en het strookje wiens comfort geldt.
+    // Thuis: Ricardo is weg, Shira is thuis. De begroeting noemt wie er ingelogd is; bovenin de rondjes (besluit 169):
+    // Shira licht op en wordt gevolgd, Ricardo is grijs. Geen kaart meer.
     const voor = live;
     live = { ...live, explanation: { ...live.explanation, profile: { id: 'shira', name: 'Shira', reason: 'thuis', home: ['shira'] } } };
     await p.goto(`${baseUrl}/thuis.html`);
     await wandL.locator('[data-groet]', { hasText: 'Ricardo' }).waitFor();
-    const strook = wandL.locator('[data-geldt]');
-    await strook.locator('b', { hasText: 'Comfort van Shira' }).waitFor();
+    const wie = wandL.locator('[data-wie]');
+    await wie.locator('i.geldt', { hasText: 'S' }).waitFor(kort);
+    expect(await wie.locator('i.afwezig').count()).toBe(1);
+    expect(await wandL.locator('[data-geldt]').count()).toBe(0);
+    // Een tik: het blad met iedereen; vanzelf staat aan, en Ricardo kiezen houdt zijn comfort vast.
+    await wie.click();
+    const wieBlad = p.locator('[data-kiesblad]');
+    await wieBlad.locator('h2', { hasText: 'Wiens comfort geldt?' }).waitFor(kort);
+    await wieBlad.locator('[data-wie-kies=""][aria-checked="true"]').waitFor(kort);
+    expect(await wieBlad.locator('[data-wie-kies="test"]').textContent()).toContain('weg');
     await shot(p, 'thuis-geldt');
-    await strook.locator('[data-vasthouden]', { hasText: 'Toch die van Ricardo' }).click();
+    await wieBlad.locator('[data-wie-kies="test"]').click();
     await expect.poll(() => bewonersStore.current.vasthouden, kort).toMatchObject({ id: 'test', home: ['shira'] });
+    await wieBlad.locator('[data-blad-dicht]').click();
+    // Op de telefoon rechts van de begroeting, op één regel, zonder kaart eronder.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.locator('#tel [data-wie] i').first().waitFor(kort);
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    // De begroeting blijft op één regel, ook met de stand ernaast.
+    const groetHoog = await p.locator('#tel [data-groet]').evaluate((el) => el.getBoundingClientRect().height);
+    expect(groetHoog).toBeLessThan(26);
+    await shot(p, 'thuis-tel-wie');
+    await p.setViewportSize({ width: 1280, height: 800 });
 
     // Comfort van Shira, bekeken door de hoofdgebruiker: met de keuze wiens comfort.
     await p.goto(`${baseUrl}/comfort.html?bewoner=shira`);

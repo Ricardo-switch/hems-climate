@@ -668,6 +668,8 @@ export function voerUit(
     }
     case 'vasthouden': {
       if (wie.userId == null) return { ok: false, status: 403, reden: 'log eerst in' };
+      // Iedere bewoner en de wand kiezen wiens comfort geldt; een gast kijkt alleen (besluit 169).
+      if (ik?.gast) return { ok: false, status: 403, reden: 'een gast kiest niet wiens comfort geldt' };
       if (a.id == null) return { ok: true, bewoners: zonderVasthouden(b) };
       if (bewoner(a.id) == null) return { ok: false, status: 404, reden: 'die bewoner is er niet' };
       return { ok: true, bewoners: { ...b, vasthouden: { id: a.id, home: [...thuis], sindsMs: nowMs } } };

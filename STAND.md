@@ -275,6 +275,9 @@ verwijzing bestaat.
 - **Favorieten** kies je per kamer, de lampen eerst en de scènes ingeklapt
   eronder; het always-on display heeft een dagstand (vanaf het einde van de
   nacht tot zonsondergang) en een avondstand, elk met een schakelaar ([168]).
+- **Wie er thuis is:** op Thuis een rondje per bewoner (op de wand bovenin, op
+  de telefoon naast de begroeting); thuis licht op, en wie gevolgd wordt heeft
+  een ring. Een tik opent het blad om te kiezen wiens comfort geldt ([169]).
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -540,4 +543,5 @@ verwijzing bestaat.
 [166]: DECISIONS.md#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand
 [167]: DECISIONS.md#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten
 [168]: DECISIONS.md#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand
+[169]: DECISIONS.md#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad
 <!-- links:einde -->

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Thuis, wie er thuis is en wiens comfort geldt (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Wie er thuis is en wiens comfort geldt, op de telefoon (schets, 18 oktober
+   * 2026). Zoals op de wand (Wand-Thuis-Wie), maar de telefoon begroet wie hem
+   * vasthoudt: Ricardo, ook als hij weg is. De rondjes staan rechts van de
+   * begroeting, zonder tekst, en de grote kaart is weg: het huis
+   * staat weer direct onder de kop. Een tik opent het blad van onderen.
+   *
+   *   (geen)   Ricardo kijkt van buiten; Shira is thuis, haar comfort geldt
+   *   #blad    het blad open
+   */
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .boven { padding: 16px 18px 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 40px; letter-spacing: -0.03em; line-height: 1; }
+  .knoppen { display: flex; gap: 8px; align-items: center; }
+  .knoppen .pil { height: 32px; font-size: 13px; }
+  .knoppen .rond { width: 32px; padding: 0; justify-content: center; position: relative; }
+  .knoppen svg { width: 17px; height: 17px; }
+  .groetregel { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 10px; }
+  .groet { font-size: 15px; font-weight: 600; color: var(--zacht); }
+  .groet b { color: var(--tekst); }
+  .titel .kop-1 { font-size: 32px; margin-top: 4px; }
+  .titel .lead { font-size: 15px; margin-top: 6px; max-width: none; }
+  .podium { height: 330px; margin-top: -10px; }
+  .inhoud { padding: 0 16px 190px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* De rondjes, zoals op de wand. */
+  .wie { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px 0 5px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; flex: none; }
+  .gezichten { display: flex; gap: 9px; }
+  .gezichten i { width: 25px; height: 25px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 800; color: #0b1424; box-shadow: 0 0 0 2px #121b30; }
+
+  /* Thuis licht op; weg is grijs en zonder gloed. */
+  .gezichten i { position: relative; background: var(--k); }
+  .gezichten i:not(.weg) { box-shadow: 0 0 0 2px #121b30, 0 0 14px 2px var(--k); }
+  .gezichten i.weg { background: #3a4757 !important; color: var(--gedempt); box-shadow: 0 0 0 2px #121b30; }
+  /* Wie gevolgd wordt: een witte ring en een klein thermometertje. */
+  .gezichten i.geldt { box-shadow: 0 0 0 2px #121b30, 0 0 0 4px var(--tekst), 0 0 16px 3px var(--k); z-index: 1; }
+  .gezichten i.geldt::after { content: ''; position: absolute; right: -7px; bottom: -6px; width: 15px; height: 15px; border-radius: 50%; background: var(--tekst) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1424' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/%3E%3C/svg%3E") center / 10px no-repeat; box-shadow: 0 0 0 2px #121b30; }
+  .wie .pijl { color: var(--gedempt); font-size: 11px; }
+
+  .kaart { padding: 16px 18px; }
+  .vraagbalk { color: inherit; text-decoration: none; position: fixed; left: 12px; right: 12px; bottom: 90px; height: 58px; border-radius: 22px; display: flex; align-items: center; gap: 12px; padding: 0 8px 0 10px; background: rgba(9, 15, 28, 0.86); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); z-index: 4; }
+  .vraagbalk .typ { flex: 1; font-size: 15.5px; color: var(--zacht); }
+
+  /* Het blad van onderen. */
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.62); z-index: 40; display: none; }
+  .blad { position: fixed; left: 8px; right: 8px; bottom: 8px; padding: 14px 18px 22px; border-radius: 26px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); z-index: 41; display: none; }
+  body.blad-open .achter, body.blad-open .blad { display: block; }
+  .greepje { width: 42px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); margin: 0 auto 12px; }
+  .bladkop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .keuze { display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 11px 8px; border-radius: 16px; border: 1px solid transparent; background: none; color: inherit; font: inherit; text-align: left; margin-top: 6px; }
+  .keuze.aan { border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.06); }
+  .keuze .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gedempt); }
+  .keuze.aan .rond { border: 6px solid var(--tekst); }
+  .keuze .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; }
+  .keuze .gezicht.weg { background: #3a4757 !important; color: var(--gedempt); }
+  .keuze .gezicht.vanzelf { background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .keuze b { display: block; font-size: 15px; }
+  .keuze small { display: block; font-size: 12.5px; color: var(--gedempt); margin-top: 1px; line-height: 1.35; }
+  .keuze .temp { text-align: right; font-size: 12.5px; color: var(--zacht); line-height: 1.35; }
+  .keuze .temp b { font-size: 14.5px; color: var(--tekst); display: inline; }
+  .keuze small.thuis-t { color: var(--mint); }
+  .bladkop .knop { display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-nacht">
+  <div class="boven">
+    <div class="kopregel">
+      <span class="tijd">21:19</span>
+      <span class="knoppen">
+        <span class="pil rond" style="font-weight: 800; color: var(--zacht)">?</span>
+        <span class="pil rond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></span>
+        <span class="pil rond" id="tandwiel"></span>
+      </span>
+    </div>
+    <div class="titel">
+      <div class="groetregel">
+        <span class="groet">Goedenavond, <b>Ricardo</b></span>
+        <button class="wie kaal" aria-label="Shira thuis, Ricardo weg. Het comfort van Shira geldt."><span class="gezichten"><i style="--k: #f7b548" class="geldt">S</i><i style="--k: #a9e6ff" class="weg">R</i></span><span class="pijl">▾</span></button>
+      </div>
+            <h1 class="kop-1">Er draait niets</h1>
+      <p class="lead">Geen zon, en geen kamer heeft iets nodig.</p>
+    </div>
+  </div>
+  <div class="podium" id="podium"></div>
+  <div class="inhoud">
+    <section class="glas kaart">
+      <h2 class="kop-3">Favorieten</h2>
+      <p class="mini" style="margin: 6px 0 0">Zet hier scènes en lampen die je vaak gebruikt.</p>
+    </section>
+  </div>
+
+  <a class="vraagbalk" href="#"><span class="bol adem" style="width: 40px; height: 40px"></span><span class="typ">Vraag iets over je huis</span></a>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+
+  <div class="achter"></div>
+  <section class="blad" role="dialog" aria-label="Wiens comfort geldt?">
+    <div class="greepje"></div>
+    <div class="bladkop"><h2 class="kop-2" style="font-size: 22px">Wiens comfort geldt?</h2><span class="knop knop-licht">Klaar</span></div>
+    <button class="keuze aan"><span class="rond"></span><span class="gezicht vanzelf">⟳</span><span><b>Vanzelf: wie thuis is</b><small>Nu Shira. Ricardo is weg sinds 21:16.</small></span><span></span></button>
+    <button class="keuze"><span class="rond"></span><span class="gezicht weg" style="background: #a9e6ff">R</span><span><b>Ricardo</b><small>weg sinds 21:16</small></span><span class="temp"><b>20°</b> overdag<br><b>17°</b> 's nachts</span></button>
+    <button class="keuze"><span class="rond"></span><span class="gezicht" style="background: #f7b548">S</span><span><b>Shira</b><small class="thuis-t">thuis</small></span><span class="temp"><b>21°</b> overdag<br><b>18°</b> 's nachts</span></button>
+    <p class="mini" style="margin: 12px 0 0">Kies je iemand, dan geldt dat tot er iemand thuiskomt of weggaat.</p>
+  </section>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  document.getElementById('tandwiel').innerHTML = nav.svg('instellingen');
+  nav.tabs(document.getElementById('tabs'), 'thuis');
+  if (location.hash === '#blad') document.body.classList.add('blad-open');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis op een herfstavond. Alles rustig.',
+    tijd: 'nacht',
+    zon: { aandeel: 0, panelen: 12 },
+    wolken: 0.2,
+    etages: [
+      { kamers: [{ naam: 'Hal', gewicht: 0.7, stil: true }, { naam: 'Beneden', gewicht: 1.4, stil: true, apparaten: [{ soort: 'lamp', aan: true, x: 0.4 }, { soort: 'bank' }] }] },
+      { kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil: true }, { naam: 'Slaapkamer', gewicht: 1.3, stil: true }] },
+      { dak: true, kamers: [{ naam: 'Wasruimte', stil: true, apparaten: [{ soort: 'airco', aan: false }] }] },
+    ],
+    net: true,
+    labels: [],
+  }, { breedte: 390, hoogte: 330, marge: 0.03, zoom: 1.0, schuifY: 14 });
+</script>
+</body>
+</html>

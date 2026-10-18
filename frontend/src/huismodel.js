@@ -336,8 +336,11 @@
     const iedereen = [...(bewoners?.bewoners ?? []), ...(bewoners?.gasten ?? [])];
     if (!iedereen.length) return [];
     if (bewoners.ik?.soort === 'bewoner' || bewoners.ik?.soort === 'gast') return bewoners.ik.naam ? [bewoners.ik.naam] : [];
-    // Op een scherm: wie er thuis is, bewoners op volgorde en dan gasten.
-    return iedereen.filter((b) => b.thuis).map((b) => b.naam);
+    // Op een scherm: wie er thuis is, bewoners op volgorde en dan gasten. Thuis zoals de
+    // regeling het ziet, met de rust van tien minuten, zodat de begroeting en de rondjes
+    // hetzelfde zeggen (besluit 169).
+    const thuis = bewoners.geldt?.thuis ? new Set(bewoners.geldt.thuis) : null;
+    return iedereen.filter((b) => (thuis && !b.gast ? thuis.has(b.id) : b.thuis)).map((b) => b.naam);
   }
 
   /*
