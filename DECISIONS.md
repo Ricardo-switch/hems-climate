@@ -6696,6 +6696,12 @@ met een / vooraan. Achter Ingress is dat Home Assistant zelf, dat de
 verbinding meteen sloot. Nu staat hij naast de pagina, zoals alle andere
 vragen aan de dienst, en een test houdt de weergave vrij van zulke paden.
 
+*Aanvulling (18 oktober 2026, versie 0.34.2).* De camera bovenin op de
+telefoon kwam niet door de app: in de app van Home Assistant stond zelf
+volledig scherm aan, met een schaal van 75%. Zonder het hele scherm van de
+browser bleef er een grote grijze balk bovenin over. De telefoon vraagt dus
+weer het hele scherm, net als de wand en net als in versie 0.34.0.
+
 ---
 
 ## 156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie

@@ -2352,14 +2352,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
     expect(await tikken()).toBe(1);
 
-    // Op een telefoon alleen de kioskstand: de statusbalk met de camera blijft, en de
-    // terugknop gaat gewoon een pagina terug.
+    // Op een telefoon ook het hele scherm: de statusbalk mag weg (versie 0.34.2).
     const telefoon = (aan: boolean) => p.evaluate(`document.getElementById('app').style.width = '${aan ? 390 : 1280}px'`);
     const telStand = () => frame.evaluate<boolean>('document.documentElement.classList.contains("tel-stand")');
     await telefoon(true);
     await expect.poll(telStand).toBe(true);
     await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
-    expect(await tikken()).toBe(0);
+    expect(await tikken()).toBe(1);
     await telefoon(false);
     await expect.poll(telStand).toBe(false);
 
