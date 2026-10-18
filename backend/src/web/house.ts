@@ -39,6 +39,7 @@ import {
   type LayoutKnown,
   type LayoutOutside,
   type LayoutRoom,
+  type OutsideZoneType,
   type RoomType,
 } from './layout.js';
 
@@ -185,7 +186,7 @@ export interface HouseRoom {
   /** Het regelgebied uit de configuratie dat deze kamer is, of null. */
   readonly zoneId: string | null;
   /** De delen van de kamer (95), leeg als hij er geen heeft. */
-  readonly zones: readonly { readonly id: string; readonly naam: string; readonly soort?: RoomType }[];
+  readonly zones: readonly { readonly id: string; readonly naam: string; readonly soort?: RoomType | OutsideZoneType }[];
   /** Van het regelgebied, of anders van een meter in de kamer. */
   readonly temperatuurC: number | null;
   readonly vochtPct: number | null;
@@ -1310,9 +1311,29 @@ export function roomTypeFromNames(room: Pick<LayoutRoom, 'naam' | 'zones' | 'eta
  */
 export function outsideFromNames(room: Pick<LayoutRoom, 'naam' | 'zones'>, devices: readonly Pick<HouseDevice, 'naam'>[]): LayoutOutside {
   const n = room.naam;
-  const soort = /oprit|carport/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : /garage/i.test(n) ? 'garage' : 'tuin';
+  const soort: LayoutOutside['soort'] = /carport/i.test(n)
+    ? 'carport'
+    : /oprit/i.test(n)
+      ? 'oprit'
+      : /voortuin/i.test(n)
+        ? 'voortuin'
+        : /zijtuin/i.test(n)
+          ? 'zijtuin'
+          : /dakterras/i.test(n)
+            ? 'dakterras'
+            : /terras|veranda/i.test(n)
+              ? 'terras'
+              : /balkon/i.test(n)
+                ? 'balkon'
+                : /tuinhuis|schuur/i.test(n)
+                  ? 'tuinhuis'
+                  : /garage/i.test(n)
+                    ? 'garage'
+                    : 'tuin';
   const huisje = /tuinhuis|schuur|berging|huisje/i;
-  return { soort, auto: soort === 'oprit', tuinhuis: soort === 'tuin' && (room.zones.some((z) => huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam))) };
+  // Een deel dat een tuinhuis is (besluit 167), of zo heet, of een apparaat dat zo heet.
+  const metHuisje = room.zones.some((z) => z.soort === 'tuinhuis' || huisje.test(z.naam)) || devices.some((d) => huisje.test(d.naam));
+  return { soort, auto: soort === 'oprit' || soort === 'carport', tuinhuis: (soort === 'tuin' || soort === 'zijtuin') && metHuisje };
 }
 
 /**

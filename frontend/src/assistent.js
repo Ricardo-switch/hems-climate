@@ -502,7 +502,7 @@ async function microfoonTik() {
 /* ------------------------------------------------------------ tekenen */
 
 /** Waar een feit vandaan komt, in gewone woorden; wat hier niet staat, toont de pagina niet. */
-const FEIT = { temperatuur: 'temperatuur', doel: 'doel', zonWh: 'opgewekt', piekW: 'het meeste', piekTijd: 'om', netAfWh: 'van het net', netTerugWh: 'terug', vermogen: 'zon nu', zelfPct: 'zelf gebruikt', rest: 'komt nog', vooraf: 'verwacht', verwacht: 'van je dak', maxC: 'warmst', regenkans: 'kans op regen', euro: 'kosten' };
+const FEIT = { temperatuur: 'temperatuur', doel: 'doel', zonWh: 'opgewekt', piekW: 'het meeste', piekTijd: 'om', netAfWh: 'van het net', netTerugWh: 'terug', vermogen: 'zon nu', zelfPct: 'zelf gebruikt', rest: 'komt nog', vooraf: 'verwacht', verwacht: 'van je panelen', maxC: 'warmst', regenkans: 'kans op regen', euro: 'kosten' };
 function feiten(item) {
   return (item?.feiten ?? [])
     .map((f) => {

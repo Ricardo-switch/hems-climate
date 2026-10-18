@@ -22,9 +22,9 @@ describe('kaarten en favorieten (besluit 162)', () => {
     expect(leesKaarten('kamers', 'tel').ok).toBe(false);
   });
 
-  it('houdt de wand binnen vier vakken, zonder de kamers en Straks', () => {
+  it('laat op de wand zoveel kaarten toe als je wilt, zonder de kamers en Straks (besluit 167)', () => {
     expect(leesKaarten(['vandaag', 'apparaat', 'gevoel'], 'wand').ok).toBe(true);
-    expect(leesKaarten(['vandaag', 'apparaat', 'gevoel', 'morgen'], 'wand')).toEqual({ ok: false, reden: 'de wand heeft 4 vakken; dit zijn er 5' });
+    expect(leesKaarten(['vandaag', 'apparaat', 'gevoel', 'morgen', 'favorieten'], 'wand').ok).toBe(true);
     expect(leesKaarten(['kamers'], 'wand').ok).toBe(false);
     expect(leesKaarten(['straks'], 'wand').ok).toBe(false);
   });
@@ -79,7 +79,6 @@ describe('VoorkeurenStore', () => {
     const v = store.view(shira);
     expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE });
     expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND });
-    expect(v.ruimte).toBe(4);
   });
 
   it('bewaart de telefoon per account, en leest het terug na een herstart', async () => {

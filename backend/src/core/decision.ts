@@ -94,6 +94,14 @@ export interface DeferrableExplanation {
   readonly latestStartMs?: number;
   /** Hoe lang het gekozen programma duurt, als het apparaat dat meldt. */
   readonly durationMin?: number;
+  /** Hoe lang het programma nog duurt, in minuten, als het apparaat dat meldt (besluit 167). */
+  readonly remainingMin?: number;
+  /**
+   * Het programma meldt zich nog als lopend, maar is klaar: de resterende tijd
+   * is 0 of de voortgang 100%. Een droger draait dan nog af en toe tegen
+   * kreuken, tot iemand de deur opent. Sinds wanneer, in epoch-ms (besluit 167).
+   */
+  readonly doneSinceMs?: number;
 }
 
 export type Command =

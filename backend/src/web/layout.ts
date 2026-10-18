@@ -64,8 +64,8 @@ export function floorOrder(layout: Pick<Layout, 'volgorde' | 'kamers'>): string[
 export interface LayoutZone {
   readonly id: string;
   readonly naam: string;
-  /** Wat voor deel het is, zoals keuken of zithoek (besluit 145). Weg is: de naam zegt het. */
-  readonly soort?: RoomType;
+  /** Wat voor deel het is, zoals keuken of zithoek (besluit 145), of buiten een gazon of tuinhuis (167). Weg is: de naam zegt het. */
+  readonly soort?: RoomType | OutsideZoneType;
 }
 
 /**
@@ -73,8 +73,15 @@ export interface LayoutZone {
  * tuinhuis geeft zijn lampen aan het tuinhuis in de tuin (besluit 157); een
  * losse garage aan de garage achter de oprit (besluit 166).
  */
-export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon', 'tuinhuis', 'garage'] as const;
+export const OUTSIDE_KINDS = ['oprit', 'tuin', 'voortuin', 'terras', 'balkon', 'tuinhuis', 'garage', 'zijtuin', 'dakterras', 'carport'] as const;
 export type OutsideKind = (typeof OUTSIDE_KINDS)[number];
+/**
+ * Wat een deel van een buitenruimte is (besluit 167): een eigen lijst, zoals
+ * binnen een keuken of zithoek. Een tuinhuis als deel van de tuin tekent het
+ * huisje in de tuin.
+ */
+export const OUTSIDE_ZONE_TYPES = ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport'] as const;
+export type OutsideZoneType = (typeof OUTSIDE_ZONE_TYPES)[number];
 
 export interface LayoutOutside {
   readonly soort: OutsideKind;
@@ -312,8 +319,10 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
       if (typeof zid !== 'string' || !ID.test(zid) || zoneIds.has(zid) || zn == null) return { ok: false, reden: `kamer ${id} heeft een ongeldige zone` };
       zoneIds.add(zid);
       const zs = zz['soort'];
-      if (zs !== undefined && zs !== null && !(ROOM_TYPES as readonly unknown[]).includes(zs)) return { ok: false, reden: `zone ${zid}: soort is ${ROOM_TYPES.join(', ')}` };
-      zones.push({ id: zid, naam: zn, ...(zs != null && etage !== OUTSIDE_FLOOR ? { soort: zs as RoomType } : {}) });
+      // Binnen de soorten van een kamer, buiten die van een buitenruimte (besluit 167).
+      const soorten: readonly string[] = etage === OUTSIDE_FLOOR ? OUTSIDE_ZONE_TYPES : ROOM_TYPES;
+      if (zs !== undefined && zs !== null && !soorten.includes(zs as string)) return { ok: false, reden: `zone ${zid}: soort is ${soorten.join(', ')}` };
+      zones.push({ id: zid, naam: zn, ...(zs != null ? { soort: zs as RoomType | OutsideZoneType } : {}) });
     }
     // De regeling per kamer (besluit 138); buiten valt het weg.
     let rollen: Record<string, Rol> | undefined;

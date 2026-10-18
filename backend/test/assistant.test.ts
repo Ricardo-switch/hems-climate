@@ -318,7 +318,7 @@ describe('zon', () => {
     expect(straks.antwoord).toContain('Er komt vandaag nog ongeveer 1,1 kWh zon bij.');
     const morgen = { tekst: null, minC: null, maxC: null, regenkansPct: null, verwachtKwh: 3.7 };
     const avond = ask({ kind: 'straks' }, { config, snapshot: view(), today: null, nowMs: AT, shadow: true, lang: 'nl', weer: { opgewektKwh: 5.3, verwachtKwh: 5.3, voorafKwh: null, morgen } });
-    expect(avond.antwoord).toContain('Vandaag komt er weinig zon meer bij; morgen verwacht ik 3,7 kWh van je dak.');
+    expect(avond.antwoord).toContain('Vandaag komt er weinig zon meer bij; morgen verwacht ik 3,7 kWh van je panelen.');
     expect(avond.antwoord).not.toContain('nog geen weersverwachting');
   });
 });
@@ -344,7 +344,7 @@ describe('vandaag en hoe warm (besluit 141)', () => {
   it('vat samen wat het huis vandaag deed', () => {
     const a = askNl({ kind: 'vandaag' }, view(), { today });
     expect(a.antwoord).toBe(
-      'Ik had de airco zolder 1,5 uur laten draaien. Echt aan stond de airco zolder 25 minuten. Je dak leverde 7,8 kWh, en 52% daarvan gebruikte je zelf.',
+      'Ik had de airco zolder 1,5 uur laten draaien. Echt aan stond de airco zolder 25 minuten. Je panelen leverden 7,8 kWh, en 52% daarvan gebruikte je zelf.',
     );
     const rustig = askNl({ kind: 'vandaag' }, view(), { today: { ...today, apparaten: [], zonWh: 0 } });
     expect(rustig.antwoord).toBe('Een rustige dag: ik had niets aan hoeven zetten, en er stond ook niets aan.');
@@ -361,7 +361,7 @@ describe('morgen en kosten (besluit 142)', () => {
   it('zegt het weer en de zon van morgen', () => {
     const weer = { opgewektKwh: 4, verwachtKwh: 4, voorafKwh: 5, morgen: { tekst: 'Bewolkt, af en toe een bui', minC: 10.6, maxC: 13.8, regenkansPct: 47, verwachtKwh: 3.7 } };
     const a = askNl({ kind: 'morgen' }, view(), { weer });
-    expect(a.antwoord).toBe('Morgen wordt het bewolkt, af en toe een bui, tussen 10,6° en 13,8°. De kans op regen is 47%. Van je dak verwacht ik 3,7 kWh.');
+    expect(a.antwoord).toBe('Morgen wordt het bewolkt, af en toe een bui, tussen 10,6° en 13,8°. De kans op regen is 47%. Van je panelen verwacht ik 3,7 kWh.');
     const droog = askNl({ kind: 'morgen' }, view(), { weer: { ...weer, morgen: { ...weer.morgen, tekst: 'Zonnig', regenkansPct: 5 } } });
     expect(droog.antwoord).toContain('Waarschijnlijk blijft het droog.');
     expect(askNl({ kind: 'morgen' }).antwoord).toBe('Voor morgen heb ik nog geen weersverwachting.');
@@ -370,7 +370,7 @@ describe('morgen en kosten (besluit 142)', () => {
   it('zegt het weer en de zon van vandaag, niet die van morgen (besluit 166)', () => {
     const weer = { opgewektKwh: 1.2, verwachtKwh: 2.1, voorafKwh: 2.5, vandaag: { tekst: 'Half bewolkt', minC: 9.4, maxC: 12.6, regenkansPct: 10 }, morgen: { tekst: 'Zonnig', minC: 8, maxC: 15, regenkansPct: 0, verwachtKwh: 7.9 } };
     const a = askNl({ kind: 'weer' }, view(), { weer });
-    expect(a.antwoord).toBe('Vandaag is het half bewolkt, tussen 9,4° en 12,6°. Waarschijnlijk blijft het droog. Van je dak verwacht ik vandaag 2,1 kWh, 1,2 kWh is er al.');
+    expect(a.antwoord).toBe('Vandaag is het half bewolkt, tussen 9,4° en 12,6°. Waarschijnlijk blijft het droog. Van je panelen verwacht ik vandaag 2,1 kWh, 1,2 kWh is er al.');
     expect(a.antwoord).not.toContain('7,9');
     expect(askNl({ kind: 'weer' }).antwoord).toBe('Voor vandaag heb ik geen weersverwachting.');
   });
@@ -623,6 +623,13 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     const kop = residentView(met, view({ explanation: explanation({ perZone, deferrables: [{ id: 'droger', state: 'running', reason: 'program_running' }] }) })).kop;
     expect(kop.titel).toBe('De droger draait');
     expect(kop.zin).toBe('Geen kamer heeft iets nodig.');
+  });
+
+  it('zegt dat de droger klaar is als hij nog tegen kreuken draait (besluit 167)', () => {
+    const met = { ...config, deferrables: [{ id: 'droger', name: 'Droger' }] } as unknown as typeof config;
+    const perZone = explanation().perZone.map((z) => ({ ...z, demand: 'none' as const, reason: 'zone_satisfied' as const }));
+    const kop = residentView(met, view({ explanation: explanation({ perZone, deferrables: [{ id: 'droger', state: 'running', reason: 'program_running', remainingMin: 0, doneSinceMs: 1 }] }) })).kop;
+    expect(kop.titel).toBe('De droger is klaar');
   });
 
   it('rondt de stromen zo af dat ze optellen', () => {

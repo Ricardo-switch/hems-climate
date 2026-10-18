@@ -43,6 +43,10 @@ function state(o: {
   operationSinceMs?: number;
   durationMin?: number;
   readyByMs?: number;
+  remainingMin?: number | null;
+  remainingSinceMs?: number;
+  progressPct?: number;
+  progressSinceMs?: number;
 } = {}): SystemState {
   const now = o.nowMs ?? NOW;
   return {
@@ -74,6 +78,8 @@ function state(o: {
         ...(o.operationSinceMs != null ? { operationSinceMs: o.operationSinceMs } : {}),
         ...(o.durationMin != null ? { durationMin: value(o.durationMin, now) } : {}),
         ...(o.readyByMs != null ? { readyByMs: o.readyByMs } : {}),
+        ...(o.remainingMin !== undefined ? { remainingMin: o.remainingMin === null ? unavailable<number>('missing') : value(o.remainingMin, now), remainingSinceMs: o.remainingSinceMs ?? null } : {}),
+        ...(o.progressPct != null ? { progressPct: value(o.progressPct, now), progressSinceMs: o.progressSinceMs ?? null } : {}),
       },
     },
   };
@@ -199,5 +205,30 @@ describe('de droger zoals hij op 7 oktober echt draaide (besluit 101)', () => {
     expect(dryer(state({ gridPowerW: 0, readyByMs: readyBy }))).toMatchObject({ state: 'would_start', reason: 'ready_by_reached', latestStartMs: NOW });
     // 31 A op een grens van 33 A, zoals hierboven: ook als de tijd dringt.
     expect(dryer(state({ gridPowerW: 7100, currentA: 31, readyByMs: readyBy }))).toMatchObject({ state: 'waiting', reason: 'insufficient_current_budget' });
+  });
+});
+
+describe('de echte eindtijd, en klaar terwijl hij nog tegen kreuken draait (besluit 167)', () => {
+  const MIN = 60_000;
+
+  it('geeft de resterende tijd door zolang het programma loopt', () => {
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0, durationMin: 120, remainingMin: 42 }))).toMatchObject({ state: 'running', remainingMin: 42 });
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0, remainingMin: 42 }))?.doneSinceMs).toBeUndefined();
+  });
+
+  it('is klaar bij 0 minuten of 100%, ook al zegt de status nog "Loopt"', () => {
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0, remainingMin: 0, remainingSinceMs: NOW - 25 * MIN }))).toMatchObject({ state: 'running', remainingMin: 0, doneSinceMs: NOW - 25 * MIN });
+    expect(dryer(state({ operation: 'Run', gridPowerW: 0, progressPct: 100, progressSinceMs: NOW - 5 * MIN }))).toMatchObject({ doneSinceMs: NOW - 5 * MIN });
+  });
+
+  it('is in een pauze of een uitgestelde start nooit klaar', () => {
+    expect(dryer(state({ operation: 'Pauze', gridPowerW: 0, remainingMin: 0 }))?.doneSinceMs).toBeUndefined();
+    expect(dryer(state({ operation: 'Vertraagde start', gridPowerW: 0, progressPct: 100 }))?.doneSinceMs).toBeUndefined();
+  });
+
+  it('rekent zonder die sensoren met de start plus de duur, met tien minuten speling', () => {
+    const begon = NOW - 150 * MIN;
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0, durationMin: 135, operationSinceMs: begon }))?.doneSinceMs).toBe(begon + 135 * MIN);
+    expect(dryer(state({ operation: 'Loopt', gridPowerW: 0, durationMin: 145, operationSinceMs: begon }))?.doneSinceMs).toBeUndefined();
   });
 });

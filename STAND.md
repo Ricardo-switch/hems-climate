@@ -262,6 +262,16 @@ verwijzing bestaat.
   door te slepen in het huis), heeft buiten één lijst met delen en bewoners om
   aan te tikken. Een scherm stel je in vanaf elk apparaat, en de wand heeft
   pijltjes en "+ Kaart".
+- **Achttien punten van de bewoner** ([167]): de droger zegt "klaar" als het
+  drogen klaar is, ook als de trommel nog tegen kreuken draait, met de echte
+  eindtijd uit de resterende tijd; hij staat tegen de achtermuur. De kaarten op
+  de wand schuiven, zoveel als je wilt, met alleen een greep. Weergave (dit
+  scherm, always-on, scherm uit) staat bij Functies, wie je bent bij Bewoners.
+  Buiten heeft eigen soorten en zones, Meten met en de regeling staan bij
+  Verwarmen en koelen, en de Nest is de thermostaat van de cv-ketel. Apparaten
+  op zon gaan uit met een schakelaar, Licht en screens staat per kamer bij
+  Functies, "Automatisch" legt de standen uit, en Onderhoud zegt wat bijna op
+  is. "Van je dak" heet nu "van je panelen".
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -525,4 +535,5 @@ verwijzing bestaat.
 [164]: DECISIONS.md#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account
 [165]: DECISIONS.md#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit
 [166]: DECISIONS.md#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand
+[167]: DECISIONS.md#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten
 <!-- links:einde -->

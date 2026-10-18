@@ -4,7 +4,8 @@
  * apparaten op zon van Zon en aansluiting.
  *
  * Eerlijk over de stand: klimaat kijkt mee tot het bewijs er is (besluit 64);
- * dan staat er "Kijkt mee", met hoe ver het is. Lampen en scènes bedien je zelf.
+ * dan staat er "Kijkt mee", met hoe ver het is. Licht en screens regelt het huis
+ * niet: die staan bij Functies (besluit 167).
  */
 'use strict';
 
@@ -15,6 +16,8 @@ let terugblik = null;
 let huisData = null;
 let aInfo = null;
 let opZon = {};
+/** Apparaten uit de configuratie die de bewoner van zon haalde (besluit 167). */
+let opZonUit = [];
 let zon = null;
 
 async function laadAlles() {
@@ -25,6 +28,7 @@ async function laadAlles() {
   if (a.status === 'fulfilled') {
     aInfo = a.value;
     opZon = { ...(aInfo.antwoorden?.opZon ?? {}) };
+    opZonUit = [...(aInfo.antwoorden?.opZonUit ?? [])];
   }
   if (z.status === 'fulfilled') zon = z.value;
   teken();
@@ -36,11 +40,10 @@ const klimaat = () => site?.actuators ?? [];
 const uitstelbaar = () => (huisData?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).filter((x) => x.soort === 'apparaat');
 
 function delen() {
-  const opZonAan = Object.values(opZon).filter(Boolean).length + (aInfo?.configuratie?.apparaten?.length ?? 0);
+  const opZonAan = Object.values(opZon).filter(Boolean).length + (aInfo?.configuratie?.apparaten ?? []).filter((x) => !opZonUit.includes(x.id)).length;
   return [
     { id: 'klimaat', titel: 'Klimaat', zin: huisData ? `${kamersMee().length} ${kamersMee().length === 1 ? 'kamer' : 'kamers'}, kijkt mee` : klimaat().length ? `${klimaat().length} apparaten, kijkt mee` : '…', stand: site ? 'goed' : null },
     { id: 'opzon', titel: 'Apparaten op zon', zin: aInfo ? (opZonAan ? `${opZonAan} op zon` : 'geen') : '…', stand: aInfo ? 'goed' : null },
-    { id: 'licht', titel: 'Licht en screens', zin: 'bedien je zelf', stand: 'goed' },
   ];
 }
 
@@ -86,21 +89,18 @@ function klimaatVorm() {
     ${bewijs}`;
 }
 
-const keuzes = (label, sleutel, opties, huidig) => `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, t]) => `<button type="button" data-kies="${esc(sleutel)}" data-waarde='${esc(JSON.stringify(w))}' aria-pressed="${JSON.stringify(w) === JSON.stringify(huidig)}">${esc(t)}</button>`).join('')}</div>`;
+
+/** Een schakelaar per apparaat (besluit 167): aan start hij op zon, uit niet. Ook voor wat de configuratie noemt. */
+function opZonRij(naam, aan, data) {
+  return `<div class="regelrij"><div class="l"><b>${esc(naam)}</b><span>${aan ? 'Start als er zon over is' : 'Start niet vanzelf'}</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(naam)} op zon" ${data}></button></div>`;
+}
 
 function opZonVorm() {
   if (!aInfo) return '<p class="klein">Even laden…</p>';
   const vast = new Set(aInfo.configuratie.apparaten.map((x) => x.id));
-  const ingesteld = (naam) => `<div class="regelrij"><div class="l"><b>${esc(naam)}</b><span>Start bij zonne-overschot. Ingesteld in de configuratie.</span></div><span class="label-chip goed">Aan</span></div>`;
   const rijen = [];
-  for (const x of aInfo.gevonden.apparaten) {
-    if (vast.has(x.id)) {
-      rijen.push(ingesteld(x.naam));
-      continue;
-    }
-    rijen.push(`<div class="regelrij" style="flex-direction: column; align-items: stretch"><div class="l"><b>${esc(x.naam)}</b><span>Kan op afstand starten. Automatisch starten bij zonne-overschot?</span></div>${keuzes(`${x.naam} op zon`, `opZon:${x.id}`, [[true, 'Ja'], [false, 'Nee']], opZon[x.id] ?? null)}</div>`);
-  }
-  for (const x of aInfo.configuratie.apparaten) if (!aInfo.gevonden.apparaten.some((y) => y.id === x.id)) rijen.push(ingesteld(x.naam));
+  for (const x of aInfo.configuratie.apparaten) rijen.push(opZonRij(x.naam, !opZonUit.includes(x.id), `data-opzon-vast="${esc(x.id)}"`));
+  for (const x of aInfo.gevonden.apparaten) if (!vast.has(x.id)) rijen.push(opZonRij(x.naam, opZon[x.id] === true, `data-opzon="${esc(x.id)}"`));
   const nu = uitstelbaar().map((x) => `<div class="regelrij"><div class="l"><b>${esc(x.naam)}</b><span>${esc(x.stand)}</span></div></div>`).join('');
   return `<h2 class="kop-2">Apparaten op zon</h2>
     <p class="klein" style="margin: 0">Een wasmachine, droger of vaatwasser die op afstand kan starten, wacht op zon. Hoe laat hij klaar moet zijn, kies je per keer bij het apparaat.</p>
@@ -109,16 +109,9 @@ function opZonVorm() {
     <p class="mini" style="margin: 0">Werkt alleen als "op afstand starten" op het apparaat aanstaat. Zolang Smart Climate meekijkt, start er nog niets echt.</p>`;
 }
 
-function lichtVorm() {
-  return `<h2 class="kop-2">Licht en screens</h2>
-    <p class="klein" style="margin: 0">Lampen, scènes en screens bedien je zelf, in het huis: tik op een kamer en dan op de lamp of het screen. Smart Climate regelt ze niet.</p>
-    <p class="klein" style="margin: 0">Of je ze in de app kunt bedienen, zet je bij <a href="functies.html#licht" style="color: var(--ijs); font-weight: 700">Functies</a>.</p>`;
-}
-
 const NAAST = {
   klimaat: ['Zo werkt het', ['Kijkt mee: het huis zegt wat het zou doen, en jij ziet of dat klopt', 'Regelt: het huis zet je airco’s en de cv zelf', 'Terug naar meekijken kan altijd']],
   opzon: ['Waarvoor dit nodig is', ['De droger draait op je eigen zon in plaats van op stroom van het net', 'Hij is toch klaar op de tijd die jij kiest']],
-  licht: ['Zo werkt het', ['Bedienen doe je in het huis, bij de kamer', 'De regeling raakt je lampen en screens niet aan']],
 };
 
 function naast(id) {
@@ -133,7 +126,7 @@ function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   const nu = groep.tekenDelen(delen());
-  const vorm = { klimaat: klimaatVorm, opzon: opZonVorm, licht: lichtVorm }[nu]?.() ?? '';
+  const vorm = { klimaat: klimaatVorm, opzon: opZonVorm }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
 }
@@ -141,18 +134,26 @@ function tekenNu() {
 /* ------------------------------------------------------------ bewaren */
 
 document.addEventListener('click', (e) => {
-  const knop = e.target.closest('[data-kies]');
-  if (!knop || !aInfo || !knop.dataset.kies.startsWith('opZon:')) return;
-  opZon[knop.dataset.kies.slice(6)] = JSON.parse(knop.dataset.waarde);
+  const knop = e.target.closest('[data-opzon], [data-opzon-vast]');
+  if (!knop || !aInfo) return;
+  const aan = knop.getAttribute('aria-checked') !== 'true';
+  if (knop.dataset.opzon) opZon[knop.dataset.opzon] = aan;
+  else {
+    const id = knop.dataset.opzonVast;
+    opZonUit = aan ? opZonUit.filter((x) => x !== id) : [...new Set([...opZonUit, id])];
+  }
   teken();
-  // De aansluiting bewaart alles samen: de rest zoals het was.
+  // De aansluiting bewaart alles samen: de rest zoals het was, ook hoe de panelen liggen.
   const x = aInfo.antwoorden ?? {};
   const body = {
     panelen: x.panelen ?? { ligging: null, aantal: null, voorkant: null, achterkant: null },
     zekering: x.zekering ?? null,
     tarief: x.tarief ?? null,
     verwarming: x.verwarming ?? { soort: null, aanvoerC: null },
+    voorkantZon: x.voorkantZon ?? null,
+    dak: x.dak ?? null,
     opZon: Object.fromEntries(Object.entries(opZon).filter(([, v]) => typeof v === 'boolean')),
+    opZonUit,
   };
   groep.bewaarStraks(async () => {
     const uit = await groep.stuur('api/aansluiting', body);

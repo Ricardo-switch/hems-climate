@@ -97,6 +97,8 @@ describe('de droger op het scherm Apparaten', () => {
       klaarVoor: '18:00',
       uiterlijk: '15:12',
       duurMin: 168,
+      restMin: null,
+      klaarSindsMs: null,
       kanKiezen: true,
       // Om 14:00 met 2 u 48 kan 15:00 niet meer.
       keuzes: [
@@ -118,5 +120,12 @@ describe('de droger op het scherm Apparaten', () => {
     expect(late?.zin).toBe('Ik zou hem nu starten, anders is hij niet op tijd klaar voor 18:00.');
     const [en] = residentDeferrables(exampleSite, [{ id: 'droger', state: 'running', reason: 'program_running', readyByMs: at }], now, 'en');
     expect(en?.zin).toBe('The programme is running; it will be done by 18:00.');
+  });
+
+  it('klaar met drogen terwijl de trommel nog tegen kreuken draait (besluit 167)', () => {
+    const sinds = now - 20 * 60_000;
+    const [d] = residentDeferrables(exampleSite, [{ id: 'droger', state: 'running', reason: 'program_running', remainingMin: 0, doneSinceMs: sinds }], now);
+    expect(d).toMatchObject({ stand: 'running', kop: 'Klaar · draait nog tegen kreuken', restMin: 0, klaarSindsMs: sinds });
+    expect(d?.zin).toMatch(/^Het drogen is klaar sinds \d\d:\d\d\. De trommel draait nog af en toe tegen kreuken, tot je de deur opent\.$/);
   });
 });

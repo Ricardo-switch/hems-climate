@@ -11,6 +11,8 @@
 const { $$, esc, haal, nl } = app;
 
 let zon = null;
+/** Het huis (besluit 167): de thermostaten, voor wie de ketel aanzet. */
+let huisData = null;
 /** De aansluiting: wat de dienst zegt (`api/aansluiting`), en de antwoorden zoals ze nu zijn. */
 let aInfo = null;
 let a = null;
@@ -43,8 +45,10 @@ function aanvullen(c) {
 }
 
 async function laadAlles() {
-  const [ai, ei, z] = await Promise.allSettled([haal('api/aansluiting'), haal('api/energie'), haal('api/zon')]);
+  const [ai, ei, z, h] = await Promise.allSettled([haal('api/aansluiting'), haal('api/energie'), haal('api/zon'), haal('api/huis')]);
   if (z.status === 'fulfilled') zon = z.value;
+  // De thermostaten uit het huis (besluit 167): welke de ketel stuurt.
+  if (h.status === 'fulfilled') huisData = h.value;
   if (ai.status === 'fulfilled') {
     aInfo = ai.value;
     const x = aInfo.antwoorden;
@@ -52,10 +56,12 @@ async function laadAlles() {
       panelen: { ligging: x?.panelen.ligging ?? null, aantal: x?.panelen.aantal ?? null, voorkant: x?.panelen.voorkant ?? null, achterkant: x?.panelen.achterkant ?? null },
       zekering: x?.zekering ?? null,
       tarief: x?.tarief ?? null,
-      verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null },
+      verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null, thermostaat: x?.verwarming?.thermostaat ?? null },
       voorkantZon: x?.voorkantZon ?? null,
       dak: x?.dak ?? null,
       opZon: { ...(x?.opZon ?? {}) },
+      // Apparaten uit de configuratie die van zon zijn gehaald (besluit 167): gaan mee.
+      opZonUit: [...(x?.opZonUit ?? [])],
     };
   }
   if (ei.status === 'fulfilled') {
@@ -282,12 +288,26 @@ function prijzenVorm() {
 
 /* Verwarming */
 
+/**
+ * De thermostaat die de ketel stuurt (besluit 167), zoals een Nest. Niets
+ * gekozen: het voorstel uit Home Assistant. De radiatoren gaan daarmee aan.
+ */
+function thermostaatKeuze(v) {
+  const lijst = huismodel.thermostaten(huisData);
+  const voorstel = lijst[0];
+  const nu = v.thermostaat ?? '';
+  const opties = [['', voorstel ? `Uit Home Assistant: ${voorstel.naam} (${voorstel.kamer})` : 'Geen gevonden in Home Assistant'], ...lijst.map((x) => [x.sleutel, `${x.naam} (${x.kamer})`]), ['geen', 'Geen thermostaat']];
+  return `<label class="veldnaam">Thermostaat die de ketel aanzet<select class="invoer" data-thermostaat>${opties.map(([w, t]) => `<option value="${esc(w)}" ${w === nu ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+      <p class="mini">Zoals een Nest of Honeywell: die zet de ketel aan, en de radiatoren in de kamers gaan mee. Een radiator voeg je per kamer toe bij Kamers en indeling.</p>`;
+}
+
 function verwarmingVorm() {
   const v = a.verwarming;
   return `${kop('Verwarming')}
     ${blok('Waar komt de warmte vandaan?', `${keuzes('Verwarming', 'verwarming', [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['hybride', 'Hybride'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']], v.soort)}
       <label class="veldnaam">Aanvoertemperatuur op de ketel, °C<input class="invoer" type="number" inputmode="numeric" min="25" max="90" step="1" data-aanvoer value="${v.aanvoerC ?? ''}" placeholder="bijvoorbeeld 60"></label>
-      <p class="mini">Staat op de ketel of in de app van je ketel. Weet je het niet, laat het dan leeg.</p>`)}`;
+      <p class="mini">Staat op de ketel of in de app van je ketel. Weet je het niet, laat het dan leeg.</p>
+      ${v.soort === 'stadsverwarming' ? '' : thermostaatKeuze(v)}`)}`;
 }
 
 /* Ernaast */
@@ -334,7 +354,7 @@ function tekenNu() {
 function bewaarAansluiting() {
   groep.bewaarStraks(async () => {
     const opZon = Object.fromEntries(Object.entries(a.opZon).filter(([, v]) => typeof v === 'boolean'));
-    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, opZon });
+    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, opZon, opZonUit: a.opZonUit });
     if (uit?.ok) {
       aInfo = uit.antwoord;
       // Het dak zoals de dienst het bewaarde: "klopt" en "aanpassen" worden een gewoon dak.
@@ -456,6 +476,11 @@ document.addEventListener('change', (ev) => {
       bewaarAansluiting();
     }
     return;
+  }
+  if (t.matches('[data-thermostaat]') && a) {
+    a.verwarming.thermostaat = t.value || null;
+    teken();
+    return bewaarAansluiting();
   }
   if (t.matches('[data-aanvoer]') && a) {
     const n = Math.round(Number(t.value));

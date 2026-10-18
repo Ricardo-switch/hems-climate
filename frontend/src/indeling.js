@@ -13,6 +13,9 @@
 const { $$, esc, haal, deur, nl } = app;
 
 let info = null;
+/** De verwarming uit Energie (besluit 167): soort, aanvoer en de thermostaat van de ketel. */
+let verwarming = null;
+const cvThermo = () => huismodel.cvThermostaat(huisData, verwarming);
 let huisData = null;
 let zon = null;
 let state = null;
@@ -26,8 +29,10 @@ let meldingFout = false;
 let sleepDoel = null;
 
 async function laadAlles() {
-  const [i, h, z, s] = await Promise.allSettled([haal('api/indeling'), haal('api/huis'), haal('api/zon'), haal('api/state')]);
+  const [i, h, z, s, a] = await Promise.allSettled([haal('api/indeling'), haal('api/huis'), haal('api/zon'), haal('api/state'), haal('api/aansluiting')]);
   if (i.status === 'fulfilled') info = i.value;
+  // De verwarming (besluit 167): welke thermostaat de ketel aanzet.
+  if (a.status === 'fulfilled') verwarming = a.value?.antwoorden?.verwarming ?? null;
   if (h.status === 'fulfilled') huisData = h.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (s.status === 'fulfilled') state = s.value;
@@ -293,12 +298,21 @@ function etageSchuiven(d, id, kamers) {
   </div>`;
 }
 
-function kamerBlad(d, k) {
-  // De eigen regeling, een zone die nog geen kamer heeft, of meedoen met een kamer die er een heeft (besluit 142).
+/**
+ * De regeling van een kamer (besluit 142): de eigen regeling, een zone die nog
+ * geen kamer heeft, of meedoen met een kamer die er een heeft. Staat bij
+ * Verwarmen en koelen (besluit 167), samen met Meten met.
+ */
+function regelingKeuze(d, k) {
+  if (k.etage === 'buiten') return '';
   const vrij = info.regelzones.filter((z) => !d.kamers.some((x) => x.id !== k.id && x.regelzone === z.id));
   const andere = d.kamers.filter((x) => x.id !== k.id && x.etage !== 'buiten' && !x.meedoenMet && (x.regelzone || Object.values(x.rollen ?? {}).some((r) => r !== 'kijken')));
   const regel = [['', 'Niet geregeld'], ...vrij.map((z) => [`zone:${z.id}`, z.id === k.regelzone ? 'Eigen regeling' : `Geregeld als ${z.naam}`]), ...andere.map((x) => [`kamer:${x.id}`, `Doet mee met ${x.naam}`])];
   const regelNu = k.meedoenMet ? `kamer:${k.meedoenMet}` : k.regelzone ? `zone:${k.regelzone}` : '';
+  return `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${regel.map(([v, t]) => `<option value="${esc(v)}" ${v === regelNu ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`;
+}
+
+function kamerBlad(d, k) {
   const etages = info.etages.map((e) => [e.id, etageNaam(d, e.id)]);
   const zoneNaam = (z) => k.zones.find((x) => x.id === z)?.naam;
   const apps = apparatenIn(k.id);
@@ -311,8 +325,6 @@ function kamerBlad(d, k) {
     <div><label class="label" for="kamernaam-${esc(k.id)}">Naam</label><input class="veld" id="kamernaam-${esc(k.id)}" data-actie="kamernaam" value="${esc(k.naam)}" maxlength="40"></div>
     ${buitenKeuze(k)}
     ${soortKeuze(k)}
-    ${metenKeuze(k)}
-    ${k.etage === 'buiten' ? '' : `<div><label class="label" for="regel-${esc(k.id)}">Regeling</label><select class="veld" id="regel-${esc(k.id)}" data-actie="regeling">${opties(regel, regelNu)}</select></div>`}
     ${zonesKeuze(k)}
     <div>
       <span class="label">${apps.length ? 'Apparaten, sleep om te verplaatsen' : 'Apparaten'}</span>
@@ -402,8 +414,9 @@ function warmteBlad(d, k) {
     ${kamerTabs(k)}`;
   if (bronVorm) return kop + bronFormulier(k);
   const r = ruimteVan(k.id);
-  const meet = r?.meetMet ?? [];
-  const meetRij = `<button type="button" class="meetrij" data-kamertab="kamer"><span class="ikoon">${ICOON_THERMO}</span><span><span class="mini">Meet met</span><b>${esc(meet.length ? meet.join(' en ') : 'Nog niets')}</b></span><span class="wissel">Wijzig</span></button>`;
+  // Meten met en de regeling staan hier, bij verwarmen en koelen (besluit 167); eerst bij Kamer.
+  const meetRij = `${metenKeuze(k)}${regelingKeuze(d, k)}`;
+
   const bronnen = k.bronnen ?? [];
   const vast = new Set(bronnen.map((b) => b.apparaat).filter(Boolean));
   const gevonden = (r?.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !vast.has(a.actuatorId ?? a.id));
@@ -415,6 +428,8 @@ function warmteBlad(d, k) {
     const rol = rolRegel(k, sleutel);
     if (a.klimaat?.kanKoelen) kaarten.push(bronKaart('Airco', [a.klimaat.kanVerwarmen ? 'koelt, verwarmt' : 'koelt', a.klimaat.kanDrogen ? 'droogt' : null].filter(Boolean).join(', ').replace(/, ([^,]*)$/, ' en $1'), ICOON_KOEL, true, slim, via + rol));
     else if (a.radiatorknop) kaarten.push(bronKaart('Radiator met een slimme knop', 'op de cv', ICOON_RADIATOR, false, slim, via + rol));
+    // De thermostaat van de ketel (besluit 167): de radiatoren gaan mee; wat eraan hangt, vraagt hij niet.
+    else if (cvThermo()?.sleutel === sleutel) kaarten.push(bronKaart('Thermostaat van de cv-ketel', 'zet de ketel aan; de radiatoren gaan mee', ICOON_THERMO, false, slim, via + rol));
     else kaarten.push(bronKaart('Thermostaat', 'gevonden in Home Assistant', ICOON_THERMO, false, slim, `${via}${rol}<button type="button" class="vraagknop" data-bron-nieuw="${esc(sleutel)}">Wat hangt eraan?</button>`));
   }
   for (const b of bronnen) {
@@ -448,12 +463,21 @@ function bronFormulier(k) {
   const chip = (attr, waarde, tekst, aan) => `<button type="button" class="chip${aan ? ' aan' : ''}" data-${attr}="${esc(waarde)}" aria-pressed="${aan}">${esc(tekst)}</button>`;
   const vloer = v.soorten.has('vloer');
   const elektrisch = v.soorten.has('paneel') || v.soorten.has('kachel') || (vloer && v.vloer === 'elektrisch');
-  const aanOpties = AAN_KEUZE.filter(([w]) => w !== 'knop' || v.soorten.has('radiator'));
+  // Op de cv (besluit 167): een radiator of vloerverwarming op water gaat aan met de
+  // thermostaat van de ketel, een slimme radiatorknop of met de hand.
+  const cv = !elektrisch && !v.soorten.has('airco') && (v.soorten.has('radiator') || vloer);
+  const ketel = cvThermo();
+  const aanOpties = cv
+    ? [['thermostaat', ketel ? `Met de thermostaat van de cv (${ketel.naam})` : 'Met de thermostaat van de cv'], ...(v.soorten.has('radiator') ? [['knop', 'Met een slimme radiatorknop']] : []), ['hand', 'Met de hand']]
+    : AAN_KEUZE.filter(([w]) => w !== 'knop');
   const toestellen = klimaatToestellen();
-  const welke = v.aan && v.aan !== 'hand'
-    ? `<div class="vraag"><label class="label" for="bron-apparaat">Welk apparaat? Uit Home Assistant.</label><select class="veld" id="bron-apparaat" data-bron-apparaat><option value="">Kies…</option>${toestellen.map((x) => `<option value="${esc(x.sleutel)}" ${x.sleutel === v.apparaat ? 'selected' : ''}>${esc(x.a.naam)} (${esc(x.kamer.naam)})</option>`).join('')}</select></div>`
+  // Een radiatorknop kies je uit de knoppen; met de thermostaat van de ketel hoeft er niets gekozen.
+  const kiesbaar = v.aan === 'knop' ? toestellen.filter((x) => x.a.radiatorknop) : toestellen;
+  const welke = v.aan && v.aan !== 'hand' && !(cv && v.aan === 'thermostaat')
+    ? `<div class="vraag"><label class="label" for="bron-apparaat">${v.aan === 'knop' ? 'Welke radiatorknop?' : 'Welk apparaat?'} Uit Home Assistant.</label><select class="veld" id="bron-apparaat" data-bron-apparaat><option value="">Kies…</option>${kiesbaar.map((x) => `<option value="${esc(x.sleutel)}" ${x.sleutel === v.apparaat ? 'selected' : ''}>${esc(x.a.naam)} (${esc(x.kamer.naam)})</option>`).join('')}</select></div>`
     : '';
-  const rol = v.apparaat && v.aan && v.aan !== 'hand' && toestellen.some((x) => x.sleutel === v.apparaat)
+  // Wat de regeling ermee doet, alleen voor een apparaat dat in deze kamer komt; de thermostaat van de ketel blijft waar hij hangt.
+  const rol = v.apparaat && v.aan && v.aan !== 'hand' && v.apparaat !== ketel?.sleutel && toestellen.some((x) => x.sleutel === v.apparaat)
     ? `<div class="vraag"><span class="label">Wat doet de regeling ermee?</span>${rolKeuzes(v.rol ?? rolVoorstel(k, v.apparaat))}</div>`
     : '';
   const vermogen = elektrisch && v.aan && v.aan !== 'hand'
@@ -475,7 +499,12 @@ function bronUitVorm(k) {
   const soorten = [...v.soorten].map((x) => (x === 'vloer' && v.vloer === 'elektrisch' ? 'vloer-elektrisch' : x));
   const w = Number(String(document.querySelector(`${app.zicht()} [data-bron-w]`)?.value ?? v.vermogenW ?? '').replace(/\D/g, ''));
   const b = { id: v.id ?? idVan(soorten.join('-'), new Set((k.bronnen ?? []).map((x) => x.id))), soorten, aan: v.aan };
-  if (v.aan !== 'hand' && v.apparaat) b.apparaat = v.apparaat;
+  // Op de cv met de thermostaat van de ketel (besluit 167): die is het apparaat.
+  const cv = !soorten.some((x) => huismodel.ELEKTRISCH.has(x)) && !soorten.includes('airco') && (soorten.includes('radiator') || soorten.includes('vloer'));
+  const ketel = cvThermo();
+  if (cv && v.aan === 'thermostaat') {
+    if (ketel) b.apparaat = ketel.sleutel;
+  } else if (v.aan !== 'hand' && v.apparaat) b.apparaat = v.apparaat;
   if (huismodel.isElektrischSlim(b) && w >= 50) b.vermogenW = Math.round(w);
   if (v.opZon && b.vermogenW) b.opZon = true;
   return b;
@@ -521,7 +550,9 @@ async function bronKlik(t) {
     const b = bronUitVorm(k);
     k.bronnen = [...(k.bronnen ?? []).filter((x) => x.id !== b.id), b];
     // Een klimaatapparaat (besluit 138): het komt in deze kamer, met wat de regeling ermee doet.
-    if (b.apparaat && klimaatToestellen().some((x) => x.sleutel === b.apparaat)) {
+    // De thermostaat van de ketel blijft waar hij hangt (besluit 167): hij zet alleen de ketel aan.
+    if (b.apparaat && b.apparaat !== cvThermo()?.sleutel && klimaatToestellen().some((x) => x.sleutel === b.apparaat)) {
+
       const rol = bronVorm.rol ?? rolVoorstel(k, b.apparaat);
       for (const x of next.kamers) if (x.id !== k.id && x.rollen && b.apparaat in x.rollen) delete x.rollen[b.apparaat];
       k.rollen = { ...rollenNu(k), [b.apparaat]: rol };
@@ -547,11 +578,13 @@ async function bronKlik(t) {
 }
 
 /*
- * Een buitenruimte (besluit 109): wat het is, en wat erbij hoort in de
- * tekening. Alleen op de etage Buiten; staat hij nog op een etage binnen, dan
- * zegt het blad hoe hij daar komt.
+ * Een buitenruimte (besluiten 109 en 167): wat het is, uit een eigen lijst
+ * zoals Soort kamer binnen, met een voorstel uit de naam. Een tuinhuis in de
+ * tuin komt uit de zones: een zone Tuinhuis tekent het huisje. Alleen bij een
+ * oprit of carport nog "Auto op de oprit". Alleen op de etage Buiten; staat hij
+ * nog op een etage binnen, dan zegt het blad hoe hij daar komt.
  */
-const BUITEN_SOORTEN = [['oprit', 'Oprit'], ['tuin', 'Tuin'], ['voortuin', 'Voortuin'], ['terras', 'Terras'], ['balkon', 'Balkon']];
+const { BUITEN_SOORTEN, BUITEN_ZONES } = huismodel;
 function buitenNu(k) {
   return k.buiten ?? ruimteVan(k.id)?.buiten ?? huismodel.soortBuiten(k);
 }
@@ -560,9 +593,14 @@ function buitenKeuze(k) {
     return huismodel.isBuiten({ id: k.etage }, k) ? '<p class="mini" style="margin: 0">Dit klinkt als buiten. Zet hem onderaan op de etage Buiten; dan kies je wat het is.</p>' : '';
   }
   const b = buitenNu(k);
-  const knop = (sleutel, w, t, aan) => `<button type="button" class="chip${aan ? '' : ' uitchip'}" data-buiten="${sleutel}" data-waarde="${esc(String(w))}" aria-pressed="${aan}">${esc(t)}</button>`;
-  return `<div><span class="label">Wat is het?</span><div class="chips" role="group" aria-label="Soort buitenruimte">${BUITEN_SOORTEN.map(([w, t]) => knop('soort', w, t, b.soort === w)).join('')}</div></div>
-    <div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort">${b.soort === 'oprit' ? knop('auto', !b.auto, 'Auto op de oprit', b.auto) : b.soort === 'tuin' ? knop('tuinhuis', !b.tuinhuis, 'Tuinhuis of schuur', b.tuinhuis) : '<span class="mini">Niets om te kiezen.</span>'}</div></div>`;
+  const naam = (w) => BUITEN_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
+  const voorstel = huismodel.buitenUitNaam(k.naam);
+  const nu = k.buiten?.soort ?? '';
+  const opties = [['', voorstel ? `Uit de naam: ${naam(voorstel)}` : 'Uit de naam: niets herkend'], ...BUITEN_SOORTEN];
+  const auto = b.soort === 'oprit' || b.soort === 'carport'
+    ? `<div><span class="label">In de tekening</span><div class="chips" role="group" aria-label="Wat erbij hoort"><button type="button" class="chip${b.auto ? '' : ' uitchip'}" data-buiten="auto" data-waarde="${!b.auto}" aria-pressed="${!!b.auto}">Auto op de oprit</button></div></div>`
+    : '';
+  return `<div><label class="label" for="buiten-${esc(k.id)}">Wat is het?</label><select class="veld" id="buiten-${esc(k.id)}" data-actie="buitensoort">${opties.map(([v, t]) => `<option value="${esc(v)}" ${v === nu ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>${auto}`;
 }
 
 /*
@@ -612,11 +650,14 @@ function soortKeuze(k) {
  * de inrichting van dat deel. Zonder keuze een voorstel uit de naam.
  */
 function zonesKeuze(k) {
-  const naam = (w) => ZONE_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
+  // Buiten een eigen lijst: gazon, border, tuinhuis (besluit 167).
+  const buiten = k.etage === 'buiten';
+  const LIJST = buiten ? BUITEN_ZONES : ZONE_SOORTEN;
+  const naam = (w) => LIJST.find(([x]) => x === w)?.[1] ?? '';
   const pijl = (z, i, stap, teken, wat) => `<button type="button" class="knop klein-knop" data-zone-schuif="${stap}" data-zone="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} ${wat}" ${i + stap < 0 || i + stap >= k.zones.length ? 'disabled' : ''}>${teken}</button>`;
   const rijen = k.zones.map((z, i) => {
-    const voorstel = huis.soortVan?.(z.naam);
-    const opties = [['', voorstel && naam(voorstel) ? `Uit de naam: ${naam(voorstel)}` : 'Uit de naam: niets herkend'], ...ZONE_SOORTEN];
+    const voorstel = buiten ? huismodel.buitenZoneUitNaam(z.naam) : huis.soortVan?.(z.naam);
+    const opties = [['', voorstel && naam(voorstel) ? `Uit de naam: ${naam(voorstel)}` : 'Uit de naam: niets herkend'], ...LIJST];
     return `<div class="zonerij${k.zones.length > 1 ? '' : ' enkel'}">
       <input class="veld" data-zone-naam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="Naam van zone ${esc(z.naam)}">
       <select class="veld" data-zone-soort="${esc(z.id)}" aria-label="Soort van zone ${esc(z.naam)}">${opties.map(([v, t]) => `<option value="${esc(v)}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
@@ -869,13 +910,10 @@ document.addEventListener('click', async (e) => {
     const next = concept();
     const k = next.kamers.find((x) => x.id === keuze.kamer);
     if (!k) return;
-    const b = { ...buitenNu(k) };
-    if (t.dataset.buiten === 'soort') {
-      b.soort = t.dataset.waarde;
-      if (b.soort === 'oprit') b.tuinhuis = false;
-      else b.auto = false;
-    } else b[t.dataset.buiten] = t.dataset.waarde === 'true';
-    k.buiten = b;
+    const b = { soort: 'tuin', auto: false, tuinhuis: false, ...buitenNu(k) };
+    b[t.dataset.buiten] = t.dataset.waarde === 'true';
+    k.buiten = { soort: b.soort, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
+
     await bewaar(next, `${k.naam} bewaard.`);
   } else if (t.hasAttribute('data-voorstellen')) {
     const next = concept();
@@ -944,6 +982,11 @@ document.addEventListener('change', async (e) => {
     // Een sensor uit een andere kamer erbij (besluit 123).
     k.meten = [...new Set([...(k.meten ?? []), v])].slice(0, 6);
     await bewaar(next, 'Meten met bewaard.');
+  } else if (t.dataset.actie === 'buitensoort' && k) {
+    // Wat een buitenruimte is (besluit 167); leeg is weer het voorstel uit de naam.
+    if (v) k.buiten = { soort: v, auto: v === 'oprit' || v === 'carport' ? (k.buiten?.auto ?? true) : false, tuinhuis: false };
+    else delete k.buiten;
+    await bewaar(next, `${k.naam} bewaard.`);
   } else if (t.dataset.actie === 'soort' && k) {
     // Wat voor kamer (besluit 119); leeg is weer het voorstel uit de naam.
     if (v) k.soort = v;

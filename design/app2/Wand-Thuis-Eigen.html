@@ -10,8 +10,8 @@
   /*
    * De wand naar eigen smaak (schets, 18 oktober 2026). De wand heeft een eigen
    * account; alleen de hoofdgebruiker (en een beheerder) past hem aan, voor
-   * iedereen. De rechterkolom heeft vier vakken, want de wand schuift nooit; een
-   * kaart is één of twee vakken hoog.
+   * iedereen. De rechterkolom schuift zelf, zoveel kaarten als je wilt
+   * (besluit 167; eerst waren het vier vakken). De greep is alleen een icoon.
    *   (zonder)    zo staat hij erbij: Favorieten, Vandaag en Hoe voelt het
    *   #aanpassen  de bewerkstand: schuiven aan de greep, verbergen met het oog
    *   #kiezen     een vak is vrij: kies wat erin komt
@@ -109,7 +109,7 @@
 
     <aside class="rechts">
       <section class="glas kaart" data-kaart>
-        <span class="maat">1 vak</span><span class="greep"></span><span class="oog"></span>
+        <span class="greep"></span><span class="oog"></span>
         <div class="kaart-kop"><h2 class="kop-3">Favorieten</h2><span class="mini">Tik om te schakelen</span></div>
         <div class="tegels">
           <div class="tegel"><span class="ik" data-icoon="film"></span>Film</div>
@@ -120,7 +120,7 @@
       </section>
 
       <section class="glas kaart twee-vak" data-kaart>
-        <span class="maat">2 vakken</span><span class="greep"></span><span class="oog"></span>
+        <span class="greep"></span><span class="oog"></span>
         <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini">9,8 kWh, verwacht 14,2</span></div>
         <svg viewBox="0 0 312 190" width="312" height="190" aria-label="De zon van vandaag">
           <defs><linearGradient id="zonvlak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>
@@ -140,7 +140,7 @@
       </section>
 
       <section class="glas kaart" data-kaart data-weg>
-        <span class="maat">1 vak</span><span class="greep"></span><span class="oog"></span>
+        <span class="greep"></span><span class="oog"></span>
         <h2 class="kop-3">Hoe voelt het nu?</h2>
         <div class="gevoelkamers"><span class="aan">Woonkamer 24,1°</span><span>Zolder 25,1°</span><span>Badkamer</span></div>
         <div class="gevoel"><span class="koud">Te koud</span><span class="goed">Goed</span><span class="warm">Te warm</span></div>
@@ -156,16 +156,16 @@
     </div>
 
     <div class="bewerkkop"><span>Je past de wand aan <b>voor iedereen in huis</b></span><span class="knop knop-licht">Klaar</span></div>
-    <div class="noot"><b>Straks</b> schuift er vanzelf bovenin bij als het huis op zon wacht; de onderste kaart wijkt dan even. Schuif aan de greep, het oog verbergt een kaart.</div>
+    <div class="noot"><b>Straks</b> schuift er vanzelf bovenin bij als het huis op zon wacht; passen ze niet allemaal, dan schuift de kolom. Sleep aan de greep, het oog verbergt een kaart.</div>
 
     <section class="kiezer" aria-label="Kaart kiezen">
-      <h2 class="kop-2">Wat komt in dit vak?</h2>
-      <p class="mini" style="margin: 0 0 6px">Er is één vak vrij.</p>
-      <div class="keus"><span class="ik" data-icoon="gevoel"></span><b>Hoe voelt het nu?</b><span class="past">1 vak</span><small>Verborgen; terugzetten</small></div>
-      <div class="keus"><span class="ik" data-icoon="droger"></span><b>Het apparaat dat draait</b><span class="past">1 vak</span><small>Nu de droger, klaar rond 13:15</small></div>
-      <div class="keus"><span class="ik" data-icoon="wolk"></span><b>Het weer van morgen</b><span class="past">1 vak</span><small>17°, half bewolkt, 11 kWh van je dak</small></div>
-      <div class="keus"><span class="ik" data-icoon="auto"></span><b>De auto</b><span class="past">1 vak</span><small>62%, laadt op zon, vol rond 16:30</small></div>
-      <div class="keus"><span class="ik" data-icoon="bel"></span><b>De deurbel</b><span class="past niet">2 vakken</span><small>Het laatste beeld; past als je Vandaag kleiner maakt</small></div>
+      <h2 class="kop-2">Wat komt erbij?</h2>
+      <p class="mini" style="margin: 0 0 6px">Een nieuwe kaart komt onderaan.</p>
+      <div class="keus"><span class="ik" data-icoon="gevoel"></span><b>Hoe voelt het nu?</b><span class="past">+</span><small>Verborgen; terugzetten</small></div>
+      <div class="keus"><span class="ik" data-icoon="droger"></span><b>Het apparaat dat draait</b><span class="past">+</span><small>Nu de droger, klaar rond 13:15</small></div>
+      <div class="keus"><span class="ik" data-icoon="wolk"></span><b>Het weer van morgen</b><span class="past">+</span><small>17°, half bewolkt, 11 kWh van je panelen</small></div>
+      <div class="keus"><span class="ik" data-icoon="auto"></span><b>De auto</b><span class="past">+</span><small>62%, laadt op zon, vol rond 16:30</small></div>
+      <div class="keus"><span class="ik" data-icoon="bel"></span><b>De deurbel</b><span class="past">+</span><small>Het laatste beeld</small></div>
     </section>
   </main>
 </div>
@@ -187,7 +187,7 @@
     bel: S('<rect x="7" y="3" width="10" height="18" rx="3"/><circle cx="12" cy="9" r="2.2"/><circle cx="12" cy="16" r="1.4"/>'),
   };
   document.querySelectorAll('[data-icoon]').forEach((el) => (el.innerHTML = ICOON[el.dataset.icoon]));
-  document.querySelectorAll('.greep').forEach((g) => (g.innerHTML = S('<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>', 'stroke-width="2.6"') + 'Schuif'));
+  document.querySelectorAll('.greep').forEach((g) => (g.innerHTML = S('<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>', 'stroke-width="2.6"')));
   document.querySelectorAll('.oog').forEach((o) => (o.innerHTML = S('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>')));
   document.getElementById('potlood').innerHTML = S('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>', 'width="17" height="17"');
   nav.balk(document.getElementById('balk'), 'thuis');

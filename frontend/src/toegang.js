@@ -1,9 +1,13 @@
 /*
- * Bewoners en toegang (besluit 130 en 147): wie hier woont, wie er ingelogd
- * is, de sleutel voor de assistent van Home Assistant, je gegevens, en welke
+ * Bewoners en toegang (besluit 130 en 147): wie hier woont en wie jij bent,
+ * de sleutel voor de assistent van Home Assistant, je gegevens, en welke
  * versie er draait. Bij je gegevens een back-up, terugzetten, het logboek voor
  * de analyse en opnieuw beginnen, alleen voor de hoofdgebruiker (besluit 151).
- * Een gast ziet alleen inloggen en de versie.
+ * Een gast ziet alleen wie hij is en de versie.
+ *
+ * Inloggen is geen eigen deel meer (besluit 167): wie je bent staat bovenaan
+ * Bewoners, met Uitloggen als de app niet via Home Assistant draait. Dit
+ * scherm (volledig scherm) staat bij Functies, onder Weergave.
  */
 'use strict';
 
@@ -39,60 +43,47 @@ const isGast = () => bewoners?.ik?.soort === 'gast';
 function delen() {
   const inlog = !sessie ? '…' : sessie.toegang === 'open' ? 'geen inlog nodig' : sessie.ingelogd ? `${sessie.naam ?? 'ingelogd'}${sessie.rol ? `, ${sessie.rol}` : ''}` : 'niet ingelogd';
   const namen = bewoners ? bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
-  // Een gast (besluit 151): alleen inloggen en de versie; instellingen veranderen kan hij niet.
+  // Een gast (besluit 151): alleen wie hij is en de versie; instellingen veranderen kan hij niet.
   if (isGast()) {
     return [
-      { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
-      ...scherm(),
+      { id: 'bewoners', titel: 'Jij', zin: inlog, stand: sessie ? 'goed' : null },
       { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
     ];
   }
   return [
     { id: 'bewoners', titel: 'Bewoners', zin: namen, stand: bewoners ? 'goed' : null },
-    { id: 'inloggen', titel: 'Inloggen', zin: inlog, stand: sessie ? 'goed' : null },
-    ...scherm(),
     ...(sleutel ? [{ id: 'assistent', titel: 'Sleutel voor de assistent', zin: 'voor Home Assistant', stand: 'goed' }] : []),
     { id: 'gegevens', titel: 'Je gegevens', zin: gegevens?.bestanden != null ? `${gegevens.bestanden} dagen bewaard` : '…', stand: gegevens ? 'goed' : null },
     { id: 'versie', titel: 'Versie', zin: health?.nummer ? `${health.nummer}, wat is er nieuw` : '…', stand: health ? 'goed' : null },
   ];
 }
 
-/** Dit scherm (besluit 155): alleen als de app in Home Assistant draait, en per apparaat. */
-const scherm = () => (app.inHA() ? [{ id: 'scherm', titel: 'Dit scherm', zin: app.volledigGekozen() ? 'volledig scherm' : 'in Home Assistant, met de zijbalk', stand: 'goed' }] : []);
-
-function schermVorm() {
-  const aan = app.volledigGekozen();
-  return `<h2 class="kop-2">Dit scherm</h2>
-    <div class="regelaan"><div><b>Volledig scherm</b><span class="klein">Zonder de zijbalk en de kopbalk van Home Assistant, en zonder de balken van de browser.</span></div><button type="button" class="schakel" role="switch" aria-checked="${aan}" aria-label="Volledig scherm" data-volledig></button></div>
-    <p class="mini" style="margin: 0">Alleen op dit apparaat: aan op de tablet aan de muur, uit op je telefoon. Het hele scherm komt bij de eerste tik. Terug naar Home Assistant gaat met de knop boven de bel, of hieronder.</p>
-    <button type="button" class="knop" data-naar-ha style="align-self: start">Naar Home Assistant</button>`;
-}
-
-function inloggenVorm() {
+/**
+ * Wie je bent (besluit 167, eerst het deel Inloggen): je naam en wat je mag.
+ * Uitloggen alleen als de app zelf om de inlog vraagt; via Home Assistant log
+ * je daar uit.
+ */
+function wieVorm() {
   const s = sessie;
-  if (!s) return '<p class="klein">Even laden…</p>';
-  if (s.toegang === 'open') return '<h2 class="kop-2">Inloggen</h2><p class="klein" style="margin: 0">Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.</p>';
-  const uitleg = '<p class="mini" style="margin: 0">Een bewoner bedient licht, screens en zijn comfort. Een beheerder in Home Assistant stelt ook je huis, je energie en de functies in.</p>';
-  // Achter Ingress (besluit 161): ingelogd via Home Assistant zelf, met de rol die Home Assistant geeft.
-  if (s.toegang === 'ingress') {
-    return `<h2 class="kop-2">Inloggen</h2>
-    <p class="klein" style="margin: 0">Ingelogd via Home Assistant als <b>${esc(s.naam ?? '')}</b>${s.rol ? `, ${esc(s.rol)}` : ''}.</p>
-    ${uitleg}`;
-  }
+  if (!s) return '';
+  if (s.toegang === 'open') return '<p class="klein" style="margin: 0">Deze weergave vraagt geen inlog: wie hem kan openen, kan ook bedienen.</p>';
+  const rol = s.rol ? `, ${esc(s.rol)}` : '';
+  if (s.toegang === 'ingress') return `<p class="klein" style="margin: 0">Je bent <b>${esc(s.naam ?? '')}</b>${rol}, ingelogd via Home Assistant.</p>`;
   const terug = encodeURIComponent(location.pathname);
-  return `<h2 class="kop-2">Inloggen</h2>
-    ${s.ingelogd
-      ? `<p class="klein" style="margin: 0">Ingelogd als <b>${esc(s.naam ?? '')}</b>${s.rol ? `, ${esc(s.rol)}` : ''}.</p><button type="button" class="knop" data-uitloggen style="align-self: start">Uitloggen</button>`
-      : `<p class="klein" style="margin: 0">Niet ingelogd.</p><a class="knop knop-licht" href="auth/login?terug=${terug}" style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Inloggen</a>`}
-    <p class="mini" style="margin: 0">De hele app vraagt een inlog met je account van Home Assistant. Een bewoner bedient licht, screens en zijn comfort. Een beheerder in Home Assistant stelt ook je huis, je energie en de functies in.</p>`;
+  return s.ingelogd
+    ? `<div class="knoppenrij" style="align-items: center"><p class="klein" style="margin: 0; flex: 1">Je bent <b>${esc(s.naam ?? '')}</b>${rol}.</p><button type="button" class="knop" data-uitloggen>Uitloggen</button></div>`
+    : `<div class="knoppenrij" style="align-items: center"><p class="klein" style="margin: 0; flex: 1">Niet ingelogd.</p><a class="knop knop-licht" href="auth/login?terug=${terug}" style="display: inline-flex; align-items: center; text-decoration: none">Inloggen</a></div>`;
 }
 
-/** Bewoners (besluit 147): kort wie hier woont, en de weg naar de pagina. */
+/** Bewoners (besluit 147): wie jij bent, kort wie hier woont, en de weg naar de pagina. */
 function bewonersVorm() {
   const b = bewoners;
+  if (isGast()) return `<h2 class="kop-2">Jij</h2>${wieVorm()}<p class="mini" style="margin: 0">Als gast bedien je licht en screens. Instellingen veranderen kan een bewoner.</p>`;
   if (!b) return '<h2 class="kop-2">Bewoners</h2><p class="klein" style="margin: 0">Even laden…</p>';
   const rijen = b.bewoners.map((x) => `<div class="rij-b">${esc(x.naam)}${x.ik ? ' (jij)' : ''}<span>${x.hoofd ? 'hoofdgebruiker' : x.comfort === 'eigen' ? 'eigen comfort' : 'volgt de hoofdgebruiker'}${x.thuis == null ? '' : x.thuis ? ', thuis' : ', weg'}</span></div>`).join('');
   return `<h2 class="kop-2">Bewoners</h2>
+    ${wieVorm()}
+    <p class="mini" style="margin: 0">Een bewoner bedient licht, screens en zijn comfort. Een beheerder in Home Assistant stelt ook je huis, je energie en de functies in.</p>
     <p class="klein" style="margin: 0">Wie hier woont, op volgorde. De eerste die thuis is, bepaalt het comfort. Iemand erbij: laat diegene één keer inloggen.</p>
     <div>${rijen || '<p class="klein" style="margin: 0">Nog niemand.</p>'}</div>
     <a class="knop knop-licht" href="bewoners.html" style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Naar Bewoners</a>`;
@@ -227,9 +218,7 @@ function versieVorm() {
 }
 
 const NAAST = {
-  bewoners: ['Waarom bewoners', ['Het comfort van wie thuis is, geldt', 'Het huis begroet je met je naam', 'Wat je tikt, telt voor jouw comfort']],
-  scherm: ['Waarom volledig scherm', ['Op de tablet aan de muur alleen je huis', 'Elk apparaat kiest het zelf', 'Met één tik terug in Home Assistant']],
-  inloggen: ['Waarom inloggen', ['Je huis is van jou: de hele app vraagt een inlog', 'De tablet aan de muur logt één keer in', 'Zo weet het huis wie er kijkt']],
+  bewoners: ['Waarom bewoners', ['Het comfort van wie thuis is, geldt', 'Het huis begroet je met je naam', 'Wat je tikt, telt voor jouw comfort', 'De hele app vraagt een inlog: zo weet het huis wie er kijkt']],
   assistent: ['Waarom een sleutel', ['De assistent vraagt zonder mens erachter', 'Alleen met de sleutel komt hij binnen', 'Alleen een beheerder ziet hem']],
   gegevens: ['Waarvoor je gegevens zijn', ['Terugkijken bij Vandaag en Opbrengst', 'Het bewijs dat het huis het goed zou doen, voordat het zelf regelt', 'Later: het thermisch model, dat leert hoe elke kamer opwarmt', 'Een back-up is klein: zet hem op een stick of in je mail']],
   versie: ['Hoe de nummers werken', ['Het derde getal gaat omhoog bij een reparatie', 'Het tweede bij iets nieuws', 'Versie 1.0 is de dag dat het huis zelf regelt', 'Elke versie wordt eerst getest']],
@@ -239,7 +228,7 @@ function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
   const nu = groep.tekenDelen(delen());
-  const vorm = { bewoners: bewonersVorm, inloggen: inloggenVorm, scherm: schermVorm, assistent: assistentVorm, gegevens: gegevensVorm, versie: versieVorm }[nu]?.() ?? '';
+  const vorm = { bewoners: bewonersVorm, assistent: assistentVorm, gegevens: gegevensVorm, versie: versieVorm }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   const [kopje, lijst] = NAAST[nu] ?? NAAST.bewoners;
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
@@ -255,12 +244,8 @@ document.addEventListener('click', async (e) => {
   const t = e.target.closest('button');
   if (!t) return;
   try {
-    if (t.hasAttribute('data-volledig')) {
-      app.zetVolledig(t.getAttribute('aria-checked') !== 'true');
-      teken();
-      return;
-    }
     if (t.hasAttribute('data-uitloggen')) {
+
       await fetch('auth/logout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).catch(() => {});
       sessie = await haal('api/sessie').catch(() => sessie);
     } else if (t.hasAttribute('data-kies-backup')) {

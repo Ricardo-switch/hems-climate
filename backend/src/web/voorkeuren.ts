@@ -5,9 +5,10 @@
  * Op de telefoon kiest ieder account zelf welke kaarten Thuis heeft, in welke
  * volgorde, en welke scènes en lampen in Favorieten staan. De wand is van
  * iedereen: één indeling voor het hele huis, die alleen de hoofdgebruiker of
- * een beheerder verandert. De wand heeft vier vakken, want hij schuift nooit;
- * Vandaag vraagt er twee. Straks staat niet in de lijst van de wand: dat
- * schuift er vanzelf bovenin bij als het huis op zon wacht.
+ * een beheerder verandert. Op de wand staan de kaarten in een kolom die zelf
+ * schuift, zoveel als je wilt (besluit 167; eerst waren het vier vakken).
+ * Straks staat niet in de lijst van de wand: dat schuift er vanzelf bovenin
+ * bij als het huis op zon wacht.
  *
  * De tweede stap (besluit 164, schetsen Wand-Nacht en Thuis-Tel-Eigen
  * #weergave): per account eenvoudig of uitgebreid, grotere letters en minder
@@ -31,9 +32,8 @@ export const VOORKEUREN_FILE = 'voorkeuren.json';
 export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen'] as const;
 export type KaartId = (typeof KAARTEN)[number];
 
-/** Hoeveel vakken een kaart op de wand vraagt. De kamers staan daar in het huis, Straks komt vanzelf. */
-export const WAND_VAKKEN: Readonly<Partial<Record<KaartId, number>>> = { favorieten: 1, vandaag: 2, apparaat: 1, gevoel: 1, morgen: 1 };
-export const WAND_RUIMTE = 4;
+/** De kaarten die op de wand kunnen. De kamers staan daar in het huis, Straks komt vanzelf. */
+export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen'];
 export const MAX_FAVORIETEN = 4;
 
 /** Zo staat Thuis erbij zolang niemand iets koos: zoals het was, met Favorieten onder de kamers. */
@@ -106,8 +106,6 @@ const LEEG: Bestand = { versie: 1, accounts: {} };
 export interface VoorkeurenView {
   readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave };
   readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand };
-  readonly ruimte: number;
-  readonly vakken: Readonly<Partial<Record<KaartId, number>>>;
   readonly maxFavorieten: number;
 }
 
@@ -119,7 +117,7 @@ export interface VoorkeurWie {
   readonly magWand: boolean;
 }
 
-/** Een lijst kaarten, of de reden waarom niet. Op de wand: zonder kamers en Straks, en binnen de vier vakken. */
+/** Een lijst kaarten, of de reden waarom niet. Op de wand: zonder kamers en Straks. */
 export function leesKaarten(x: unknown, plek: 'tel' | 'wand'): { ok: true; kaarten: KaartId[] } | { ok: false; reden: string } {
   if (!Array.isArray(x) || x.length > KAARTEN.length) return { ok: false, reden: 'kaarten is een lijst' };
   const kaarten: KaartId[] = [];
@@ -129,9 +127,7 @@ export function leesKaarten(x: unknown, plek: 'tel' | 'wand'): { ok: true; kaart
     kaarten.push(k as KaartId);
   }
   if (plek === 'wand') {
-    if (kaarten.some((k) => WAND_VAKKEN[k] == null)) return { ok: false, reden: 'de kamers en Straks staan op de wand al vanzelf' };
-    const vakken = kaarten.reduce((n, k) => n + (WAND_VAKKEN[k] ?? 0), 0);
-    if (vakken > WAND_RUIMTE) return { ok: false, reden: `de wand heeft ${WAND_RUIMTE} vakken; dit zijn er ${vakken}` };
+    if (kaarten.some((k) => !WAND_KAARTEN.includes(k))) return { ok: false, reden: 'de kamers en Straks staan op de wand al vanzelf' };
   }
   return { ok: true, kaarten };
 }
@@ -198,8 +194,6 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   return {
     tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave } },
     wand: { kaarten: b.wand?.kaarten ?? STANDAARD_WAND, favorieten: b.wand?.favorieten ?? [], magAanpassen: wie.magWand, niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand } },
-    ruimte: WAND_RUIMTE,
-    vakken: WAND_VAKKEN,
     maxFavorieten: MAX_FAVORIETEN,
   };
 }

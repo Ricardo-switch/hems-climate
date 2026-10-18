@@ -333,6 +333,14 @@ export interface Deferrable {
    * uiterlijke start (besluit 101).
    */
   readonly programDuration?: DeviceRef;
+  /**
+   * Hoe lang het programma nog duurt ("0:42", een getal met een eenheid, of de
+   * eindtijd), en hoe ver het is in procent (besluit 167). Daarmee ziet het huis
+   * de echte eindtijd, en dat het drogen klaar is terwijl de trommel nog tegen
+   * kreuken draait.
+   */
+  readonly remainingTime?: DeviceRef;
+  readonly programProgress?: DeviceRef;
 }
 
 export interface OccupancySource {

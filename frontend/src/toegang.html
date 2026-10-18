@@ -13,22 +13,13 @@
 <link rel="apple-touch-icon" href="icoon-192.png">
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
 <style>
-  /* Bewoners en toegang (besluit 130 en 147): wie hier woont, inloggen, de sleutel voor de assistent, je gegevens, de versie. */
+  /* Bewoners en toegang (besluit 130, 147 en 167): wie hier woont en wie jij bent, de sleutel voor de assistent, je gegevens, de versie. */
   .sleutel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); word-break: break-all; user-select: all; }
   .rij-b { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14.5px; }
   .rij-b:first-of-type { border-top: 0; }
   .rij-b span { color: var(--zacht); font-size: 13px; }
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
   .vorm .mini { margin: 0; }
-  /* Dit scherm (besluit 155): volledig scherm, per apparaat. */
-  .regelaan { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); }
-  .regelaan b { display: block; font-size: 15px; }
-  .regelaan .klein { display: block; margin-top: 2px; }
-  .schakel { position: relative; flex: none; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; background: rgba(255, 255, 255, 0.14); cursor: pointer; transition: background 0.15s; }
-  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; transition: left 0.15s; }
-  .schakel[aria-checked='true'] { background: var(--mint); }
-  .schakel[aria-checked='true']::after { left: 21px; background: #fff; }
-  .schakel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   /* Back-up, terugzetten en opnieuw beginnen (besluit 151). */
   .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
   .knoppenrij .knop { white-space: nowrap; }

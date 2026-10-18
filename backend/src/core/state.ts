@@ -183,6 +183,14 @@ export interface DeferrableState {
   readonly operationSinceMs?: number | null;
   /** Hoe lang het gekozen programma duurt, in minuten (besluit 101). */
   readonly durationMin?: Reading<number>;
+  /**
+   * Hoe lang het programma nog duurt, in minuten, en hoe ver het is in procent;
+   * met sinds wanneer elk zijn waarde heeft (besluit 167).
+   */
+  readonly remainingMin?: Reading<number>;
+  readonly remainingSinceMs?: number | null;
+  readonly progressPct?: Reading<number>;
+  readonly progressSinceMs?: number | null;
   /** "Klaar voor" van de bewoner, in epoch-ms; null of weg als er geen is (besluit 101). */
   readonly readyByMs?: number | null;
 }

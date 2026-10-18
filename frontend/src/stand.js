@@ -71,11 +71,13 @@
     { titel: 'Licht en screens bedienen', waar: 'Functies', href: 'functies.html#licht', woorden: 'licht lamp scene screen zonnescherm bedienen' },
     { titel: 'Weer', waar: 'Functies', href: 'functies.html#weer', woorden: 'weer buienradar open-meteo verwachting uur' },
     { titel: 'Weergave', waar: 'Thuis', href: 'thuis.html#weergave', woorden: 'weergave eenvoudig uitgebreid letters groter lettergrootte beweging rustig' },
-    { titel: 'Als niemand kijkt', waar: 'Thuis, bij het potlood op de wand', href: 'thuis.html', woorden: 'nacht nachtstand avond always-on slapen rust klok scherm uit dimmen donker bewegingsmelder wand' },
+    { titel: 'Always-on display', waar: 'Functies, bij Weergave', href: 'functies.html#aod', woorden: 'always-on aod rust klok avond dimmen wand als niemand kijkt' },
+    { titel: 'Scherm uit', waar: 'Functies, bij Weergave', href: 'functies.html#uit', woorden: 'nacht nachtstand slapen scherm uit donker bewegingsmelder wekken wand' },
+    { titel: 'Dit scherm, volledig scherm', waar: 'Functies, bij Weergave', href: 'functies.html#scherm', woorden: 'volledig scherm kiosk zijbalk tablet' },
     { titel: 'Wanneer een batterij of filter een melding geeft', waar: 'Functies', href: 'functies.html#meldingen', woorden: 'melding batterij filter leeg vol onderhoud procent bel' },
     { titel: 'Bewoners', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'bewoner bewoners gebruiker hoofdgebruiker naam volgorde aanwezig thuis weg wie' },
     { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
-    { titel: 'Inloggen', waar: 'Bewoners en toegang', href: 'toegang.html#inloggen', woorden: 'inloggen uitloggen account wachtwoord toegang' },
+    { titel: 'Inloggen en uitloggen', waar: 'Bewoners en toegang', href: 'toegang.html#bewoners', woorden: 'inloggen uitloggen account wachtwoord toegang beheerder' },
     { titel: 'Sleutel voor de assistent', waar: 'Bewoners en toegang', href: 'toegang.html#assistent', woorden: 'sleutel assistent home assistant spraak voice token' },
     { titel: 'Je gegevens exporteren', waar: 'Bewoners en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
   ];
@@ -262,7 +264,7 @@
         nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? 'wacht op zon over') : 'airco op je eigen stroom', href: 'vandaag.html',
         waar: opZonKamers.map((r) => ({ naam: r.naam, wat: [...aircoIn(r).map((a) => (a.klimaat?.kanVerwarmen ? 'airco, koelt en verwarmt' : 'airco, koelt')), ...opZonIn(r).map((b) => `${huismodel.bronNaam(b).toLowerCase()}, warmt op zon`)].join(' · ') })),
         idee: idee.find((x) => x.soort === 'aan') ?? null,
-        wat: "De airco's draaien op de stroom van je eigen dak, als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.",
+        wat: "De airco's draaien op de stroom van je eigen panelen, als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.",
         zo: ['Elke paar minuten kijkt het huis hoeveel zon er over is', 'Is het genoeg, dan gaat de kamer die het meest nodig heeft voor', 'Wordt het bewolkt, dan stopt de airco rustig, niet meteen'],
         wanneer: ['Er is genoeg zon over voor een airco', 'Een kamer is warmer of kouder dan je comfort'],
       }] : []),
@@ -321,7 +323,7 @@
       // Overzicht
       {
         id: 'opbrengst', groep: 'overzicht', titel: 'Opbrengst en kosten', stand: zonderMeter || zonderPrijs ? 'mis' : 'werkt', label: zonderMeter ? 'Meters' : zonderPrijs ? 'Stroomprijs' : null,
-        nu: zonderMeter ? 'kies je meters' : zonderPrijs ? "kWh klopt, euro's nog niet" : d.opbrengst?.stroom ? `${d.opbrengst.stroom.eigenZonPct}% van je eigen dak` : 'wat je gebruikt en wat het kost',
+        nu: zonderMeter ? 'kies je meters' : zonderPrijs ? "kWh klopt, euro's nog niet" : d.opbrengst?.stroom ? `${d.opbrengst.stroom.eigenZonPct}% van je eigen panelen` : 'wat je gebruikt en wat het kost',
         href: zonderMeter ? 'energie.html#meters' : zonderPrijs ? 'energie.html#prijzen' : 'opbrengst.html',
         wat: 'Wat je huis gebruikt, wat je panelen leveren en wat het kost, per dag, week, maand en contractjaar.',
         zo: ['Uit je meters in Home Assistant', 'Met de prijzen van je contract'],

@@ -71,7 +71,7 @@
     {
       pagina: 'opbrengst.html',
       plek: 'Opbrengst',
-      kop: 'Wat je dak opleverde',
+      kop: 'Wat je panelen opleverden',
       tekst: 'In kWh en in euro, per dag, week, maand en jaar. En waar je stroom heen ging.',
       doel: ['#wand .midden', '#tel [data-sankey]'],
     },

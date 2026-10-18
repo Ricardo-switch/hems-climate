@@ -863,6 +863,11 @@
       if (!(x1 - x0 > 1.15) || kamer?.geenRaam) return null;
       return [x0 + 0.28, Math.min(x0 + 0.95, x1 - 1.05 > x0 + 0.95 ? x0 + 0.95 : x1 - 0.25)];
     }
+    /** Waar witgoed staat buiten het dak (besluit 167): tegen de achtermuur, rechts van het raam. */
+    function toestelPlek(kamer, x0, x1) {
+      const raam = raamVan(kamer, x0, x1);
+      return Math.max(raam ? raam[1] + 0.06 : x0 + 0.1, x1 - 0.7 - TOESTEL.b);
+    }
     /**
      * Waar de binnenunit van een gewone kamer hangt (besluit 131): hoog, en
      * nooit voor het raam. Op de achterwand rechts van het raam, waar hij in
@@ -1002,10 +1007,12 @@
           if (tinten) huis.push(`<circle cx="${b[0]}" cy="${b[1]}" r="${(k * 0.22).toFixed(1)}" fill="${kleur}" opacity="0.5" filter="url(#${id}-zacht)"/>`);
         }
       } else if (app.soort === 'droger' || app.soort === 'wasmachine' || app.soort === 'vaatwasser') {
-        // In het midden en wat naar voren: rechts hangt de airco aan de
-        // achterwand, en linksboven staat de naam van de kamer.
-        let dx = app.x != null ? x0 + (x1 - x0) * app.x : x1 - x0 > 1.6 ? xm - 0.1 : x0 + 0.3;
-        const dy = app.x != null || plafond ? 0.15 : Math.max(0.15, D * 0.42);
+        // Tegen de achtermuur, rechts van het raam: linksboven staat de naam
+        // van de kamer, en het midden blijft vrij. Helemaal rechts valt de
+        // achterwand achter de muur ernaast, daarom niet in de hoek. Eerst
+        // stond hij midden in de kamer, wat in het echt nooit zo is (besluit 167).
+        let dx = app.x != null ? x0 + (x1 - x0) * app.x : toestelPlek(dezeKamer, x0, x1);
+        const dy = 0.15;
         if (plafond) {
           // Onder het dak: waar hij rechtop past, en zo ver mogelijk van het
           // midden van de kamer, waar de naam en de temperatuur staan.
@@ -1091,6 +1098,11 @@
       if (!plafond && apps.some((a) => a.soort === 'airco')) {
         const p = aircoPlek(kamer, x0, x1, z1);
         if (p.wand === 'achter') bezet.push([p.ax - 0.05, p.ax + AIRCO.b + 0.05, p.az - 0.02 - z0]);
+      }
+      // Het witgoed tegen de achtermuur (besluit 167): daar komt geen meubel.
+      if (!plafond) for (const a of apps.filter((x) => WITGOED.test(x.soort))) {
+        const tx = a.x != null ? x0 + (x1 - x0) * a.x : toestelPlek(kamer, x0, x1);
+        bezet.push([tx - 0.05, tx + TOESTEL.b + 0.05, 0]);
       }
       if (plafond && aircoDak) bezet.push(aircoDak.wand === 'links' ? [x0, x0 + 0.5, 0.6] : [aircoDak.ax - 0.05, aircoDak.ax + AIRCO.b + 0.05, aircoDak.az - 0.02 - z0]);
       const hoogte = (x) => (plafond ? plafond(x) - z0 : z1 - z0);

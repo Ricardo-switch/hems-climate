@@ -170,6 +170,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account) — *aangevuld door 165*
 - [165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit](#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit)
 - [166. Negentien punten van de bewoner: assistent, huis, inrichten en de wand](#166-negentien-punten-van-de-bewoner-assistent-huis-inrichten-en-de-wand)
+- [167. Achttien punten van de bewoner: de wand, de droger, instellingen en inrichten](#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten)
 
 **Veiligheid**
 
@@ -7360,6 +7361,98 @@ Thuis over, zodat er één plek is die weet wanneer hij klaar is); slepen als
 enige manier op de wand.
 
 ---
+
+## 167. Achttien punten van de bewoner: de wand, de droger, instellingen en inrichten
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 18 oktober 2026 kwam de bewoner met zeventien punten en screenshots, en
+daarna een achttiende: de droger zei "Draait, klaar rond 15:55" met 0 minuten
+op de ring, terwijl hij allang klaar was. De rest: de droger stond midden in de
+kamer; de kaarten op de wand konden niet schuiven, zodat er nooit meer dan vier
+vakken pasten; "Als niemand kijkt" stond bij het potlood, Dit scherm bij
+Bewoners en toegang, en de tijden waren onduidelijk; Inloggen zei alleen wie je
+was; buiten had dezelfde soorten als binnen; Meten met en de regeling stonden
+bij Kamer en niet bij Verwarmen en koelen; "van je dak" en "verwacht, de dag
+ervoor"; Inrichten sprong naar boven bij elke keuze en kon geen radiator
+toevoegen; de Nest werd behandeld als iets waar iets aan hangt; Apparaten op
+zon waren niet uit te zetten; Licht en screens was leeg; "Automatisch" deed
+niets; en Onderhoud zei "Alle batterijen en filters" terwijl Thuis een lege
+batterij liet zien. Hij koos uit voorstellen: Weergave in drie delen, wie je
+bent bovenaan Bewoners, het percentage zelf gebruikt erbij in Je panelen, buiten
+een lijst zoals binnen, de Nest als thermostaat van de ketel, alles over licht
+en screens bij Functies, bij Automatisch alleen uitleg, en de droger "klaar"
+tot de deur opengaat.
+
+*Besluit:*
+
+- **De droger:** de dienst leest ook de resterende tijd (of de eindtijd) en de
+  voortgang van het programma (`remainingTime`, `programProgress`). Bij Home
+  Connect Alt volgen die vanzelf uit de duursensor, met dezelfde naam ervoor;
+  voor een nieuw apparaat vindt de app ze bij hetzelfde apparaat in Home
+  Assistant. Is de resterende tijd 0 of de voortgang 100%, terwijl de status
+  nog "Loopt" zegt, dan is het drogen klaar en draait de trommel tegen kreuken:
+  de uitleg krijgt `doneSinceMs`, Thuis zegt "De droger is klaar", de kaart
+  "Klaar sinds 15:40, draait nog tegen kreuken" met een groene ring, tot de
+  status verandert (de deur open, of de kreukbescherming klaar). Zonder die
+  sensoren telt de start plus de duur, met tien minuten speling. In een pauze
+  of een uitgestelde start is hij nooit klaar. De regeling verandert niet: het
+  programma loopt, dus de droger start niet opnieuw.
+- **De droger in de tekening** staat tegen de achtermuur, rechts van het raam,
+  en niet midden in de kamer; helemaal rechts valt de achterwand achter de muur
+  ernaast.
+- **De wand:** de kaartenkolom schuift zelf, zoveel kaarten als je wilt; de
+  dienst houdt de wand niet meer binnen vier vakken. Staat er meer onder de
+  rand, dan loopt de onderste kaart zacht weg. Bij het aanpassen alleen de greep
+  als icoon en het oog; de woorden "Schuif" en "1 vak" en de pijltjes ▲ ▼ van
+  besluit 166 zijn weg. Sleep je naar de rand, dan schuift de kolom mee.
+- **Weergave bij Functies,** onder een eigen kopje, in drie delen: Dit scherm
+  (volledig scherm, alleen in Home Assistant), Always-on display (een
+  schakelaar; uit is de rest grijs; verschijnt na 2, 5 of 15 minuten zonder
+  aanraken) en Scherm uit ('s nachts van–tot, als niemand thuis is, na 1, 5, 15
+  of 30 minuten zonder beweging, en wekken door beweging). Elk deel zegt in één
+  zin wat de tijden doen. Het paneel bij het potlood en Dit scherm bij Bewoners
+  en toegang zijn weg.
+- **Inloggen** is geen eigen deel meer: bovenaan Bewoners staat "Je bent
+  Ricardo, beheerder", met Uitloggen alleen als de app zelf om de inlog vraagt.
+- **Buiten** heeft een eigen lijst zoals Soort kamer, met een voorstel uit de
+  naam: achtertuin, voortuin, zijtuin, oprit, carport, terras, balkon,
+  dakterras, tuinhuis of schuur, en een losse garage. De zones buiten hebben ook
+  een eigen lijst: gazon, border, terras, tuinhuis of schuur, moestuin, vijver,
+  pad, speelplek, oprit en carport. Een zone Tuinhuis tekent het huisje in de
+  tuin; "In de tekening" heeft alleen nog "Auto op de oprit".
+- **Verwarmen en koelen** heeft Meten met en de regeling van de kamer; het
+  tabblad Kamer niet meer.
+- **De thermostaat van de cv-ketel:** bij Energie › Verwarming (en bij
+  Inrichten) kies je welke thermostaat de ketel aanzet; niets gekozen is het
+  voorstel uit Home Assistant, een thermostaat die verwarmt, niet koelt en geen
+  radiatorknop is (de Nest). In zijn kamer heet hij "Thermostaat van de
+  cv-ketel", zonder "Wat hangt eraan?". Een radiator of vloerverwarming op water
+  gaat aan "met de thermostaat van de cv", een slimme radiatorknop of met de
+  hand; dan hoeft er geen apparaat gekozen te worden, en de thermostaat blijft
+  in zijn eigen kamer. Inrichten heeft hetzelfde formulier om iets toe te
+  voegen, en blijft staan waar je was in de lijst.
+- **Apparaten op zon** hebben elk een schakelaar, ook de droger uit de
+  configuratie (`opZonUit` in de antwoorden haalt hem eruit bij de volgende
+  start).
+- **Licht en screens** staat alleen nog bij Functies: bedienen of alleen kijken,
+  per kamer de lampen, scènes en screens met een schakelaar om er een uit de
+  app te halen (dat is verbergen in de indeling), en bij een screen of hij zijn
+  stand terugmeldt. Het deel bij Regeling is weg.
+- **De stand van het huis:** een tik op "Automatisch" opent een blad met de
+  standen, wat ze doen, wat er nu geldt en wanneer de klok verandert. Kiezen
+  kan nog niet: de stand stuurt via Home Assistant de verwarming, en dat is
+  klimaat (besluit 15).
+- **Onderhoud** bij de meldingen kijkt naar dezelfde batterijen en filters als
+  de sleutel op Thuis, met een geel stipje en wat er bijna op is.
+- **Teksten:** "van je dak" is overal "van je panelen"; "verwacht, de dag
+  ervoor" is "verwacht vandaag". Je panelen bij Opbrengst noemt ook het
+  percentage dat je zelf gebruikte.
+
+*Wat afviel:* de stand van het huis nu al kiezen (dat is een schrijfdeur naar
+het klimaat, pas in stap B); een vierde deel Leesbaarheid bij Weergave (die
+staat onderaan Thuis); de kaarten op de wand in vakken houden met een maximum;
+de droger meteen van Thuis halen als het drogen klaar is.
 
 ## Wat nog een besluit wacht
 

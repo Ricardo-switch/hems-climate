@@ -72,6 +72,13 @@ export interface ResidentDeferrable {
   readonly uiterlijk: string | null;
   /** Hoe lang het gekozen programma duurt, als het apparaat dat meldt. */
   readonly duurMin: number | null;
+  /** Hoe lang het nog duurt, in minuten, als het apparaat dat meldt (besluit 167). */
+  readonly restMin: number | null;
+  /**
+   * Het drogen is klaar, maar de trommel draait nog af en toe tegen kreuken:
+   * sinds wanneer, in epoch-ms; anders null (besluit 167).
+   */
+  readonly klaarSindsMs: number | null;
   /** Kan de bewoner nu "klaar voor" kiezen? Alleen als hij klaarstaat. */
   readonly kanKiezen: boolean;
   /** Tijden om uit te kiezen die nog te halen zijn: "18:00", "morgen 07:00". */
@@ -122,6 +129,7 @@ const HEAD = {
     nothing: 'Er draait niets',
     // Een droger of wasmachine draait, en het klimaat is rustig (besluit 166).
     running: (names: string, many: boolean) => `${cap(names)} ${many ? 'draaien' : 'draait'}`,
+    done: (names: string, many: boolean) => `${cap(names)} ${many ? 'zijn' : 'is'} klaar`,
     nothingSun: 'Geen kamer heeft iets nodig.',
     nothingDark: 'Geen zon, en geen kamer heeft iets nodig.',
     and: ' en de ',
@@ -159,6 +167,7 @@ const HEAD = {
     waitOther: 'Something is waiting',
     nothing: 'Nothing is running',
     running: (names: string, many: boolean) => `${cap(names)} ${many ? 'are' : 'is'} running`,
+    done: (names: string, many: boolean) => `${cap(names)} ${many ? 'are' : 'is'} done`,
     nothingSun: 'No room needs anything.',
     nothingDark: 'No sun, and no room needs anything.',
     and: ' and the ',
@@ -222,8 +231,12 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   const solar = e.solarProductionW;
   const zin = solar != null && solar > 30 ? w.nothingSun : w.nothingDark;
   // Geen kamer heeft iets nodig, maar de droger draait: dan niet "Er draait niets" (besluit 166).
-  const draait = (e.deferrables ?? []).filter((d) => d.state === 'running').map((d) => config.deferrables?.find((x) => x.id === d.id)?.name ?? d.id);
+  const naam = (id: string) => config.deferrables?.find((x) => x.id === id)?.name ?? id;
+  const draait = (e.deferrables ?? []).filter((d) => d.state === 'running' && d.doneSinceMs == null).map((d) => naam(d.id));
   if (draait.length > 0) return { boven, titel: w.running(joinRooms(draait.map((n) => mid(n)), lang), draait.length > 1), zin };
+  // Klaar met drogen, maar nog tegen kreuken: dan "De droger is klaar" (besluit 167).
+  const klaar = (e.deferrables ?? []).filter((d) => d.state === 'running' && d.doneSinceMs != null).map((d) => naam(d.id));
+  if (klaar.length > 0) return { boven, titel: w.done(joinRooms(klaar.map((n) => mid(n)), lang), klaar.length > 1), zin };
   return { boven, titel: w.nothing, zin };
 }
 
@@ -332,6 +345,7 @@ const DEFERRABLE_WORDS = {
       finished: 'Klaar · het programma is afgelopen',
       unknown: 'Niet te lezen',
       running: 'Draait',
+      done: 'Klaar · draait nog tegen kreuken',
       waiting: 'Klaargezet · wacht op zon',
       waitingOther: 'Klaargezet · wacht',
       would_start: 'Klaargezet · zou nu starten',
@@ -340,6 +354,7 @@ const DEFERRABLE_WORDS = {
     finished: 'Het programma is afgelopen. Zet een nieuw programma klaar om hem weer op zon te laten draaien.',
     unknown: 'Home Connect geeft nu geen stand door.',
     running: (by: string | null) => (by ? `Het programma loopt; hij is op tijd voor ${by}.` : 'Het programma loopt.'),
+    done: (sinds: string) => `Het drogen is klaar sinds ${sinds}. De trommel draait nog af en toe tegen kreuken, tot je de deur opent.`,
     waitSun: (latest: string, by: string | null) =>
       by
         ? `Ik begin zodra er zon over is. Komt er niet genoeg, dan begin ik om ${latest}, op tijd voor ${by}.`
@@ -355,6 +370,7 @@ const DEFERRABLE_WORDS = {
       finished: 'Done · the programme has finished',
       unknown: 'Cannot be read',
       running: 'Running',
+      done: 'Done · still turning against creases',
       waiting: 'Set up · waiting for sun',
       waitingOther: 'Set up · waiting',
       would_start: 'Set up · would start now',
@@ -363,6 +379,7 @@ const DEFERRABLE_WORDS = {
     finished: 'The programme has finished. Set up a new one to run it on solar again.',
     unknown: 'Home Connect is not reporting a state right now.',
     running: (by: string | null) => (by ? `The programme is running; it will be done by ${by}.` : 'The programme is running.'),
+    done: (since: string) => `Drying has been done since ${since}. The drum still turns now and then against creases, until you open the door.`,
     waitSun: (latest: string, by: string | null) =>
       by
         ? `I start as soon as there is solar to spare. If there is not enough, I start at ${latest}, in time for ${by}.`
@@ -388,6 +405,7 @@ export function residentDeferrables(config: SiteConfig, list: readonly Deferrabl
     if (dx.state === 'not_ready' && dx.reason === 'program_finished') [kop, zin] = [w.kop.finished, w.finished];
     else if (dx.state === 'not_ready') [kop, zin] = [w.kop.not_ready, w.notReady(d.name.toLowerCase())];
     else if (dx.state === 'unknown') [kop, zin] = [w.kop.unknown, w.unknown];
+    else if (dx.state === 'running' && dx.doneSinceMs != null) [kop, zin] = [w.kop.done, w.done(clockIn(dx.doneSinceMs, config.timezone))];
     else if (dx.state === 'running') [kop, zin] = [by ? `${w.kop.running} · ${by}` : w.kop.running, w.running(by)];
     else if (dx.state === 'would_start') {
       kop = w.kop.would_start;
@@ -404,6 +422,8 @@ export function residentDeferrables(config: SiteConfig, list: readonly Deferrabl
         klaarVoor: by,
         uiterlijk: dx.state === 'waiting' || dx.state === 'would_start' ? latest : null,
         duurMin: dx.durationMin ?? null,
+        restMin: dx.remainingMin ?? null,
+        klaarSindsMs: dx.doneSinceMs ?? null,
         kanKiezen: dx.state === 'waiting' || dx.state === 'would_start',
         keuzes: dx.state === 'waiting' || dx.state === 'would_start' ? readyChoices(config, nowMs, dx.durationMin ?? FALLBACK_PROGRAM_MIN, lang) : [],
       },
