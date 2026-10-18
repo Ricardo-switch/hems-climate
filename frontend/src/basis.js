@@ -377,8 +377,6 @@
    * alleen na een tik, dus bij de eerste.
    *
    * De keuze staat in dit apparaat (localStorage): de wand wel, de telefoon niet.
-   * Op een telefoon is volledig scherm alleen de kioskstand, zonder het hele
-   * scherm van de browser.
    */
   const VOLLEDIG = 'sc-volledig-scherm';
   const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
@@ -400,14 +398,9 @@
       return null;
     }
   }
-  /**
-   * Het hele scherm van de browser alleen op de wand. Op een telefoon blijft de
-   * statusbalk met de camera, en gaat de terugknop gewoon een pagina terug;
-   * daar vraagt de app alleen de kioskstand van Home Assistant.
-   */
   function heelScherm() {
     const doc = haDocument();
-    if (doc && !telStand() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+    if (doc && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
   /** Bij de eerste tik het hele scherm, en na de terugknop van Android weer bij de volgende. */
   const opTik = () => addEventListener('click', heelScherm, { once: true, capture: true });
@@ -417,8 +410,6 @@
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
     opTik();
     const doc = haDocument();
-    // Een telefoon die het hele scherm nog had van versie 0.34.0: weer met statusbalk.
-    if (telStand() && doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     const weer = () => {
       if (!doc.fullscreenElement && volledigNu() && !naarHAGekozen) opTik();
     };
