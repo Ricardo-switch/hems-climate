@@ -95,7 +95,11 @@
 
   /** Eén ronde via de dienst: 'wekwoord' of 'spraak'. */
   function ronde(start, op) {
-    const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/luister?start=${start}`);
+    // Naast deze pagina, net als `api/…` elders: in Home Assistant staat de app onder
+    // /api/hassio_ingress/…, en /api/luister ging naar Home Assistant zelf, dat hem meteen sloot.
+    const adres = new URL(`api/luister?start=${start}`, location.href);
+    adres.protocol = adres.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(adres);
     ws.binaryType = 'arraybuffer';
     let dicht = false;
     const stuur = (buf) => ws.readyState === 1 && ws.send(buf);

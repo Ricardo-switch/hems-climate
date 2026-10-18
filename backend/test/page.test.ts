@@ -2338,6 +2338,31 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => (await berichten()).length).toBeGreaterThan(voor);
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-volledig-menu.png') });
 
+    // Achter het vak de lucht: tot een andere pagina er staat zie je die, geen zwart.
+    expect(await p.evaluate<string>('document.getElementById("app").style.backgroundImage')).toContain('gradient');
+
+    // De terugknop van Android zet het hele scherm uit: bij de volgende tik vraagt de app het weer.
+    const tikken = async () => {
+      const al = await p.evaluate<number>('window.schermVraag');
+      await frame.evaluate('document.body.click()');
+      return (await p.evaluate<number>('window.schermVraag')) - al;
+    };
+    expect(await tikken()).toBe(1);
+    expect(await tikken()).toBe(0);
+    await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
+    expect(await tikken()).toBe(1);
+
+    // Op een telefoon alleen de kioskstand: de statusbalk met de camera blijft, en de
+    // terugknop gaat gewoon een pagina terug.
+    const telefoon = (aan: boolean) => p.evaluate(`document.getElementById('app').style.width = '${aan ? 390 : 1280}px'`);
+    const telStand = () => frame.evaluate<boolean>('document.documentElement.classList.contains("tel-stand")');
+    await telefoon(true);
+    await expect.poll(telStand).toBe(true);
+    await p.evaluate('document.dispatchEvent(new Event("fullscreenchange"))');
+    expect(await tikken()).toBe(0);
+    await telefoon(false);
+    await expect.poll(telStand).toBe(false);
+
     // Terug naar Home Assistant: de kioskstand uit, en naar het dashboard.
     await app.locator('#balk [data-naar-ha]').click();
     await expect.poll(berichten).toContainEqual({ type: 'home-assistant/navigate', path: '/' });
@@ -2347,6 +2372,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await frame.goto(`${HA}/api/hassio_ingress/abc/toegang.html#scherm`);
     await vorm.locator('[data-volledig][aria-checked="true"]').click();
     await expect.poll(() => app.locator('#balk [data-naar-ha]').count()).toBe(0);
+
 
     // Buiten Home Assistant bestaat de keuze niet.
     const q = await context.newPage();

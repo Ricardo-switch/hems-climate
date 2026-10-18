@@ -190,6 +190,24 @@
     const b = document.body.classList;
     for (const c of [...b]) if (c.startsWith('lucht-')) b.remove(c);
     b.add(seizoen === 'winter' && tijd !== 'nacht' ? 'lucht-winter' : tijd === 'nacht' ? 'lucht-nacht' : tijd === 'avond' ? 'lucht-avond' : tijd === 'ochtend' ? 'lucht-ochtend' : wolken > 0.6 ? 'lucht-bewolkt' : 'lucht-dag');
+    luchtAchterVak();
+  }
+
+  /**
+   * In Home Assistant laadt een andere pagina in het vak van het paneel, en
+   * tot die er staat is het vak leeg: zwart op de tablet, langer dan op de
+   * NAS omdat alles via Home Assistant komt. Het vak krijgt de lucht van nu
+   * als achtergrond, zodat je die ziet in plaats van zwart.
+   */
+  function luchtAchterVak() {
+    try {
+      const vak = inHA() ? global.frameElement : null;
+      if (!vak) return;
+      vak.style.backgroundColor = getComputedStyle(document.body).backgroundColor;
+      vak.style.backgroundImage = getComputedStyle(document.body, '::before').backgroundImage;
+    } catch {
+      // Een vak van een andere herkomst: dan niets.
+    }
   }
 
   /** De lucht van nu, voor een tab zonder huis: uit de zon en wat de panelen leveren. */
@@ -359,6 +377,8 @@
    * alleen na een tik, dus bij de eerste.
    *
    * De keuze staat in dit apparaat (localStorage): de wand wel, de telefoon niet.
+   * Op een telefoon is volledig scherm alleen de kioskstand, zonder het hele
+   * scherm van de browser.
    */
   const VOLLEDIG = 'sc-volledig-scherm';
   const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
@@ -380,14 +400,31 @@
       return null;
     }
   }
+  /**
+   * Het hele scherm van de browser alleen op de wand. Op een telefoon blijft de
+   * statusbalk met de camera, en gaat de terugknop gewoon een pagina terug;
+   * daar vraagt de app alleen de kioskstand van Home Assistant.
+   */
   function heelScherm() {
     const doc = haDocument();
-    if (doc && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
+    if (doc && !telStand() && !doc.fullscreenElement) doc.documentElement.requestFullscreen?.().catch(() => {});
   }
+  /** Bij de eerste tik het hele scherm, en na de terugknop van Android weer bij de volgende. */
+  const opTik = () => addEventListener('click', heelScherm, { once: true, capture: true });
+  let naarHAGekozen = false;
   function volledig() {
     if (!volledigNu()) return;
     aanHA({ type: 'home-assistant/subscribe-properties', kioskMode: true });
-    addEventListener('click', heelScherm, { once: true, capture: true });
+    opTik();
+    const doc = haDocument();
+    // Een telefoon die het hele scherm nog had van versie 0.34.0: weer met statusbalk.
+    if (telStand() && doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
+    const weer = () => {
+      if (!doc.fullscreenElement && volledigNu() && !naarHAGekozen) opTik();
+    };
+    doc?.addEventListener('fullscreenchange', weer);
+    // Het document van Home Assistant blijft; de luisteraar gaat mee met deze pagina.
+    addEventListener('pagehide', () => doc?.removeEventListener('fullscreenchange', weer));
   }
   /** Aan of uit op dit apparaat, en meteen zo. */
   function zetVolledig(aan) {
@@ -410,6 +447,7 @@
   }
   /** Terug naar Home Assistant: het hele scherm uit, en naar het dashboard. */
   function naarHA() {
+    naarHAGekozen = true;
     const doc = haDocument();
     if (doc?.fullscreenElement) doc.exitFullscreen().catch(() => {});
     aanHA({ type: 'home-assistant/unsubscribe-properties' });
@@ -435,6 +473,7 @@
     if (tabs) nav.tabs(tabs, tab, LINKS);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
     menuNaarHA();
+    luchtAchterVak();
     $$('[data-tandwiel]').forEach((a) => {
       a.innerHTML = nav.svg('instellingen');
       a.setAttribute('href', LINKS.instellingen);

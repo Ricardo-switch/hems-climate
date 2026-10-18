@@ -6677,6 +6677,25 @@ Die kioskmodus werkt alleen op dashboards, niet op het paneel van een app.
 - **Versie 0.32.0.** Daarbij: de begrenzer van de filmmuziek houdt de piek
   onder 0,92.
 
+*Aanvulling (17 oktober 2026, versie 0.34.1).* In Home Assistant vielen
+twee dingen op:
+
+- **Op de telefoon liep het hele scherm over de camera bovenin,** en de
+  terugknop van Android zette het weer uit (de app van Home Assistant). Op een
+  telefoon vraagt de app daarom alleen nog de kioskstand van Home Assistant,
+  zonder de zijbalk en de kopbalk. De statusbalk met de camera blijft, en de
+  terugknop gaat gewoon een pagina terug. De wand houdt het hele scherm; zet
+  Android het daar uit, dan vraagt de app het weer bij de volgende tik.
+- **Op de tablet gaf een andere pagina even zwart.** Tot die er staat is het
+  vak van het paneel leeg, en via Home Assistant duurt dat langer dan op de
+  NAS. Het vak krijgt nu de lucht van dat moment als achtergrond.
+
+Daarbij, ook alleen in Home Assistant: **"Hé huis" hoorde niets, en de
+microfoon brak na een tel af.** De microfoon zocht de dienst op `/api/luister`,
+met een / vooraan. Achter Ingress is dat Home Assistant zelf, dat de
+verbinding meteen sloot. Nu staat hij naast de pagina, zoals alle andere
+vragen aan de dienst, en een test houdt de weergave vrij van zulke paden.
+
 ---
 
 ## 156. De eerste dag uit Home Assistant, en een back-up met zijn configuratie

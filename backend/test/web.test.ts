@@ -956,6 +956,21 @@ describe('de onboarding', () => {
     expect((await fetch(`${base}/welkom.html`, { redirect: 'manual', headers: { 'x-remote-user-id': 'u-1' } })).status).toBe(200);
   });
 
+  it('vraagt de dienst altijd naast de pagina, ook de microfoon, zodat het achter Ingress werkt', async () => {
+    // Achter Ingress staat de app onder /api/hassio_ingress/…; een pad met een / vooraan gaat
+    // naar Home Assistant zelf. Zo sloot Home Assistant de microfoon meteen (versie 0.34.1).
+    const map = new URL('../../frontend/src/', import.meta.url);
+    const fout: string[] = [];
+    for (const naam of (await readdir(map)).filter((n) => n.endsWith('.js'))) {
+      const tekst = await readFile(new URL(naam, map), 'utf-8');
+      for (const [i, regel] of tekst.split('\n').entries()) {
+        if (/^\s*(\*|\/\/)/.test(regel)) continue;
+        if (/['"`]\/(api|auth)\/|location\.host\}?\//.test(regel)) fout.push(`${naam}:${i + 1}`);
+      }
+    }
+    expect(fout).toEqual([]);
+  });
+
   it('geeft bij het voorstel het huis uit Home Assistant, en start na het opslaan opnieuw', async () => {
     const { onboarding, dir } = await createOnboarding();
     const huis = { etages: [] } as unknown as HouseReport;
