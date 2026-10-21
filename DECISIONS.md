@@ -230,6 +230,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
 - [59. Namen in het Engels, de rest in het Nederlands](#59-namen-in-het-engels-de-rest-in-het-nederlands)
 - [69. Ook de pagina en deploy.sh worden getest](#69-ook-de-pagina-en-deploysh-worden-getest)
+- [180. De twee grootste bestanden opgeknipt, zonder dat er iets verandert](#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert)
 
 Wat nog open staat: [Wat nog een besluit wacht](#wat-nog-een-besluit-wacht).
 
@@ -7993,6 +7994,53 @@ die dag. Nu zegt de app het zelf.
   al vond; een zin noemt nooit een entiteit. Het omvormerpunt zegt het ook als
   de sensor trager is dan eens per twee minuten (besluit 89).
 - **Versie 0.54.0.**
+
+---
+
+## 180. De twee grootste bestanden opgeknipt, zonder dat er iets verandert
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+Stap 7 uit het stappenplan van besluit 172, op 21 oktober 2026.
+`backend/src/web/server.ts` was 2.578 regels en `backend/src/main.ts` 1.733.
+Elke wijziging aan de app liep door die twee, en wie er iets in zocht,
+scrolde door alles heen; een fout in het ene deel kon een ander deel raken
+omdat ze dezelfde toestand deelden.
+
+*Besluit:* knippen langs de naden waar geen gedeelde toestand overheen loopt,
+en verder niets veranderen.
+
+- **`web/http.ts`:** wat de webserver over HTTP zelf weet: de soort van een
+  bestand, of een verzoek van de eigen pagina komt, een JSON-verzoek lezen met
+  een dak, inpakken (besluit 173), een antwoord in JSON, en een bestand uit de
+  weergave met zijn versiestempel.
+- **`web/live.ts`:** de live-verbinding als eigen klasse (`LiveStroom`): de
+  besluiten, aanbellen, het rookalarm, de wand wekken, en dat het huis, de
+  bewoners of de meldingen veranderden (besluiten 174 en 177). De webserver
+  geeft elke vraag één op één door, en levert het besluit en het huis aan.
+- **`web/server-opties.ts`:** wat de dienst aan de webserver meegeeft, en de
+  versie. `server.ts` geeft ze ongewijzigd door, dus wie ze daar importeert,
+  merkt niets.
+- **`env.ts` en `web/inhuis.ts`:** uit `main.ts` het lezen van `.env`, wat er
+  mis is aan een token, en welke veranderingen in Home Assistant het huis
+  raken en meteen of rustig live gaan. Die twee laatste waren niet te toetsen
+  zolang ze in `main.ts` stonden; nu wel (`test/inhuis.test.ts`).
+- **Hoe nagegaan dat er niets veranderde:** typecheck, lint, alle tests en de
+  54 paginatests in de browser groen; en elke regel die uit de twee bestanden
+  verdween, staat letterlijk in een van de nieuwe, op de imports en drie
+  bedoelde verschillen na (`#subscribe` heet `abonneer`, en de live-verbinding
+  vraagt het besluit en het huis aan de webserver in plaats van er zelf bij te
+  kunnen).
+- **Wat het oplevert:** `server.ts` is 1.943 regels, `main.ts` 1.663. Een
+  volgende wijziging aan de live-verbinding of aan het inpakken raakt alleen
+  dat bestand, en is apart te toetsen. Geen nieuwe versie: voor de bewoner
+  verandert er niets.
+
+*Wat afviel:* de duizend regels van de routes in `server.ts` per onderwerp in
+eigen bestanden zetten. Die delen de toestand van de webserver (de toegang,
+de opties, de caches); daarvoor moet eerst een gedeelde context komen, en dat
+is meer verbouwen dan opknippen. En `main.ts` verder uit elkaar: het is één
+script dat alles aan elkaar knoopt, met veel gedeelde stand.
 
 ## Wat nog een besluit wacht
 

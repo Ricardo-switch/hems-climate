@@ -400,6 +400,9 @@ verwijzing bestaat.
   linter met een handvol regels ([57]), en de opstart als één zuivere functie
   ([55]).
 - **Namen in het Engels,** de rest in het Nederlands ([59]).
+- **Kleinere bestanden:** HTTP, de live-verbinding en de opties van de
+  webserver staan apart van `server.ts`, en losse stukken van `main.ts` in eigen
+  bestanden ([180]).
 
 <!-- links:begin -->
 [1]: DECISIONS.md#1-weg-van-yaml-niet-omdat-het-niet-werkte
@@ -585,4 +588,5 @@ verwijzing bestaat.
 [177]: DECISIONS.md#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live
 [178]: DECISIONS.md#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje
 [179]: DECISIONS.md#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan
+[180]: DECISIONS.md#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert
 <!-- links:einde -->
