@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.55.0';
+export const VERSIE = '0.55.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -29,6 +29,16 @@ export const TERUGKIJKEN = 10;
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
   {
+    versie: '0.55.1',
+    datum: '2026-10-21',
+    beter: [
+      'De wand toont dezelfde kaarten en favorieten als je telefoon: één keer instellen',
+      'Zes kleuren die beter uit elkaar liggen: lucht, framboos, zeegroen, violet, koper en grafiet',
+      'In het licht een lichter huis, witte kaartjes op het huis en een lichte ring om de bewoners',
+    ],
+    opgelost: ['De knop Inrichten heeft zijn tekst weer in het midden'],
+  },
+  {
     versie: '0.55.0',
     datum: '2026-10-21',
     nieuw: [
@@ -36,7 +46,7 @@ export const NIEUW: readonly Nieuw[] = [
       'Op de telefoon een licht thema, of zoals je telefoon het wil',
       'Een eigen kleur voor het menu, de keuzes en je naam; de wand toont de kleur, kaarten en favorieten van wie het comfort heeft',
     ],
-    beter: ['Het getal bij de bel is beter te lezen', 'De knop Inrichten heeft zijn tekst weer in het midden'],
+    beter: ['Het getal bij de bel is beter te lezen'],
   },
   {
     versie: '0.54.0',

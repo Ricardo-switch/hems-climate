@@ -8109,7 +8109,8 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   genoeg voor de witte namen op de muren. De labels op het huis zijn witte
   kaartjes met donkere tekst; de ring tussen de bollen van wie er thuis is, is
   licht.
-- **Versie 0.55.0.**
+- **Versie 0.55.0;** na het nalopen door de bewoner (één indeling, andere
+  kleuren, een lichter huis) versie 0.55.1.
 
 *Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). De wand licht:
 die hangt aan de muur en wordt 's avonds bekeken (87). En een eigen indeling

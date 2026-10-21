@@ -1,5 +1,19 @@
 # Wat is er nieuw
 
+## 0.55.1
+
+*21 oktober 2026*
+
+**Beter**
+
+- De wand toont dezelfde kaarten en favorieten als je telefoon: één keer instellen
+- Zes kleuren die beter uit elkaar liggen: lucht, framboos, zeegroen, violet, koper en grafiet
+- In het licht een lichter huis, witte kaartjes op het huis en een lichte ring om de bewoners
+
+**Opgelost**
+
+- De knop Inrichten heeft zijn tekst weer in het midden
+
 ## 0.55.0
 
 *21 oktober 2026*
@@ -13,7 +27,6 @@
 **Beter**
 
 - Het getal bij de bel is beter te lezen
-- De knop Inrichten heeft zijn tekst weer in het midden
 
 ## 0.54.0
 
