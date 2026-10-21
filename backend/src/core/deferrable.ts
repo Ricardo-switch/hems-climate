@@ -24,7 +24,7 @@
 
 import type { DecisionContext } from './context.js';
 import type { Command, DeferrableExplanation } from './decision.js';
-import { isHandsOff } from './model.js';
+import { isHandsOff, type Deferrable } from './model.js';
 
 /**
  * De bedrijfsstatus in woorden. Home Connect geeft "...OperationState.Run" of een
@@ -72,7 +72,101 @@ function minutesOf(hhmm: string): number {
 
 const isOn = (a: string | undefined) => a === 'heat' || a === 'cool';
 
-export function deferrableDecisions(ctx: DecisionContext, allocatedW: number, commands: readonly Command[]): DeferrableExplanation[] {
+type Deadline = Pick<DeferrableExplanation, 'durationMin' | 'readyByMs' | 'latestStartMs'>;
+
+/**
+ * Wat er van een apparaat al vaststaat voordat het overschot telt: het draait,
+ * is niet klaar, wacht op de zekering, of moet nu starten om op tijd klaar te
+ * zijn. Of `zon`: het wacht op genoeg zon, en vraagt daarvoor zijn deel.
+ */
+function vooraf(ctx: DecisionContext, d: Deferrable): { readonly klaar: DeferrableExplanation } | { readonly zon: Deadline } {
+  const klaar = (e: DeferrableExplanation) => ({ klaar: e });
+  const s = ctx.state.deferrables?.[d.id];
+  const op = s?.operation.ok ? lastWord(s.operation.value) : null;
+  // "Klaar voor" en de start die daarvoor nodig is (besluit 101).
+  const readyBy = s?.readyByMs ?? null;
+  const durationMin = s?.durationMin?.ok && s.durationMin.value > 0 ? s.durationMin.value : FALLBACK_PROGRAM_MIN;
+  const known = s?.durationMin?.ok && s.durationMin.value > 0 ? { durationMin: s.durationMin.value } : {};
+  const deadline: Deadline = { ...known, ...(readyBy == null ? {} : { readyByMs: readyBy, latestStartMs: readyBy - durationMin * 60_000 }) };
+  if (op != null && RUNNING.has(op)) {
+    // De echte eindtijd en "klaar" uit de resterende tijd en de voortgang (besluit 167).
+    const rest = s?.remainingMin?.ok ? Math.max(0, Math.round(s.remainingMin.value)) : null;
+    const pct = s?.progressPct?.ok ? s.progressPct.value : null;
+    const loopt = !PAUSED.has(op);
+    // Zonder die twee: de start plus de duur. Ruim voorbij en nog steeds "loopt", dan is hij klaar.
+    const geschat = rest == null && pct == null && known.durationMin != null && s?.operationSinceMs != null ? s.operationSinceMs + known.durationMin * 60_000 : null;
+    const klaarSinds = !loopt
+      ? null
+      : pct != null && pct >= 100
+        ? (s?.progressSinceMs ?? null)
+        : rest === 0
+          ? (s?.remainingSinceMs ?? null)
+          : geschat;
+    const isKlaar = loopt && ((pct != null && pct >= 100) || rest === 0 || (geschat != null && ctx.nowMs > geschat + DONE_GRACE_MS));
+    return klaar({
+      id: d.id,
+      state: 'running',
+      reason: 'program_running',
+      ...deadline,
+      ...(rest != null ? { remainingMin: rest } : {}),
+      ...(isKlaar ? { doneSinceMs: klaarSinds ?? ctx.nowMs } : {}),
+    });
+  }
+  if (op != null && FINISHED.has(op)) return klaar({ id: d.id, state: 'not_ready', reason: 'program_finished' });
+  if (!s?.remoteStartAllowed.ok) return klaar({ id: d.id, state: 'unknown', reason: 'reading_unavailable' });
+  if (!s.remoteStartAllowed.value) return klaar({ id: d.id, state: 'not_ready', reason: 'remote_start_not_allowed' });
+  // Werd de status ná het klaarzetten weer "klaar", dan draaide er sindsdien
+  // een programma en is de machine leeg; "start op afstand" blijft daarna
+  // soms gewoon aan. Nooit nog eens starten (besluit 101). Een haperende
+  // koppeling valt zo ook aan de veilige kant: dan wacht hij op opnieuw klaarzetten.
+  const since = s.remoteStartSinceMs ?? null;
+  const opSince = s.operationSinceMs ?? null;
+  if (op != null && READY.has(op) && since != null && opSince != null && opSince > since + SETTLE_MS) {
+    return klaar({ id: d.id, state: 'not_ready', reason: 'program_finished' });
+  }
+  if (ctx.failsafeActive) return klaar({ id: d.id, state: 'waiting', reason: 'failsafe_unreliable_input' });
+  if (isHandsOff(ctx.mode)) return klaar({ id: d.id, state: 'waiting', reason: 'mode_excludes_action' });
+
+  // De hoofdzekering gaat voor alles, ook voor de eindtijd (besluit 78).
+  for (const phase of ctx.phases) {
+    if (phase.signedA == null) return klaar({ id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline });
+    if (Math.abs(phase.signedA + d.estimatedW / phase.voltageV) > phase.limitA) {
+      return klaar({ id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline });
+    }
+  }
+  // Met "klaar voor" telt die tijd, anders de vaste uiterlijke start.
+  if (deadline.latestStartMs != null) {
+    if (ctx.nowMs >= deadline.latestStartMs) return klaar({ id: d.id, state: 'would_start', reason: 'ready_by_reached', ...deadline });
+  } else if (localMinutes(ctx.config.timezone, ctx.nowMs) >= minutesOf(d.latestStart)) {
+    return klaar({ id: d.id, state: 'would_start', reason: 'latest_start_reached' });
+  }
+  return { zon: deadline };
+}
+
+/** Een apparaat dat op zon wacht, met wat het vraagt (besluit 176). */
+export interface SunClaim {
+  readonly id: string;
+  readonly estimatedW: number;
+}
+
+/** Hoe het de arbiter verging op zijn plek in de volgorde op zon. */
+export interface ClaimOutcome {
+  /** Het kreeg zijn deel: het zou nu starten. */
+  readonly accepted: boolean;
+  /** Er was deze ronde al iets gestart vóór zijn plek (besluit 68). */
+  readonly startedBefore: boolean;
+}
+
+/**
+ * De apparaten die op zon wachten. Met een volgorde op zon (besluit 176) vragen
+ * ze hun deel op hun plek in die volgorde, bij de arbiter, tussen de zones
+ * die op zon opwarmen of koelen.
+ */
+export function deferrableClaims(ctx: DecisionContext): SunClaim[] {
+  return (ctx.config.deferrables ?? []).filter((d) => 'zon' in vooraf(ctx, d)).map((d) => ({ id: d.id, estimatedW: d.estimatedW }));
+}
+
+export function deferrableDecisions(ctx: DecisionContext, allocatedW: number, commands: readonly Command[], claims?: ReadonlyMap<string, ClaimOutcome>): DeferrableExplanation[] {
   const list = ctx.config.deferrables ?? [];
   if (list.length === 0) return [];
   // Startte deze beslissing al een airco (besluit 68)?
@@ -83,64 +177,15 @@ export function deferrableDecisions(ctx: DecisionContext, allocatedW: number, co
   });
 
   return list.map((d): DeferrableExplanation => {
-    const s = ctx.state.deferrables?.[d.id];
-    const op = s?.operation.ok ? lastWord(s.operation.value) : null;
-    // "Klaar voor" en de start die daarvoor nodig is (besluit 101).
-    const readyBy = s?.readyByMs ?? null;
-    const durationMin = s?.durationMin?.ok && s.durationMin.value > 0 ? s.durationMin.value : FALLBACK_PROGRAM_MIN;
-    const known = s?.durationMin?.ok && s.durationMin.value > 0 ? { durationMin: s.durationMin.value } : {};
-    const deadline = { ...known, ...(readyBy == null ? {} : { readyByMs: readyBy, latestStartMs: readyBy - durationMin * 60_000 }) };
-    if (op != null && RUNNING.has(op)) {
-      // De echte eindtijd en "klaar" uit de resterende tijd en de voortgang (besluit 167).
-      const rest = s?.remainingMin?.ok ? Math.max(0, Math.round(s.remainingMin.value)) : null;
-      const pct = s?.progressPct?.ok ? s.progressPct.value : null;
-      const loopt = !PAUSED.has(op);
-      // Zonder die twee: de start plus de duur. Ruim voorbij en nog steeds "loopt", dan is hij klaar.
-      const geschat = rest == null && pct == null && known.durationMin != null && s?.operationSinceMs != null ? s.operationSinceMs + known.durationMin * 60_000 : null;
-      const klaarSinds = !loopt
-        ? null
-        : pct != null && pct >= 100
-          ? (s?.progressSinceMs ?? null)
-          : rest === 0
-            ? (s?.remainingSinceMs ?? null)
-            : geschat;
-      const klaar = loopt && ((pct != null && pct >= 100) || rest === 0 || (geschat != null && ctx.nowMs > geschat + DONE_GRACE_MS));
-      return {
-        id: d.id,
-        state: 'running',
-        reason: 'program_running',
-        ...deadline,
-        ...(rest != null ? { remainingMin: rest } : {}),
-        ...(klaar ? { doneSinceMs: klaarSinds ?? ctx.nowMs } : {}),
-      };
-    }
-    if (op != null && FINISHED.has(op)) return { id: d.id, state: 'not_ready', reason: 'program_finished' };
-    if (!s?.remoteStartAllowed.ok) return { id: d.id, state: 'unknown', reason: 'reading_unavailable' };
-    if (!s.remoteStartAllowed.value) return { id: d.id, state: 'not_ready', reason: 'remote_start_not_allowed' };
-    // Werd de status ná het klaarzetten weer "klaar", dan draaide er sindsdien
-    // een programma en is de machine leeg; "start op afstand" blijft daarna
-    // soms gewoon aan. Nooit nog eens starten (besluit 101). Een haperende
-    // koppeling valt zo ook aan de veilige kant: dan wacht hij op opnieuw klaarzetten.
-    const since = s.remoteStartSinceMs ?? null;
-    const opSince = s.operationSinceMs ?? null;
-    if (op != null && READY.has(op) && since != null && opSince != null && opSince > since + SETTLE_MS) {
-      return { id: d.id, state: 'not_ready', reason: 'program_finished' };
-    }
-    if (ctx.failsafeActive) return { id: d.id, state: 'waiting', reason: 'failsafe_unreliable_input' };
-    if (isHandsOff(ctx.mode)) return { id: d.id, state: 'waiting', reason: 'mode_excludes_action' };
-
-    // De hoofdzekering gaat voor alles, ook voor de eindtijd (besluit 78).
-    for (const phase of ctx.phases) {
-      if (phase.signedA == null) return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline };
-      if (Math.abs(phase.signedA + d.estimatedW / phase.voltageV) > phase.limitA) {
-        return { id: d.id, state: 'waiting', reason: 'insufficient_current_budget', ...deadline };
-      }
-    }
-    // Met "klaar voor" telt die tijd, anders de vaste uiterlijke start.
-    if (deadline.latestStartMs != null) {
-      if (ctx.nowMs >= deadline.latestStartMs) return { id: d.id, state: 'would_start', reason: 'ready_by_reached', ...deadline };
-    } else if (localMinutes(ctx.config.timezone, ctx.nowMs) >= minutesOf(d.latestStart)) {
-      return { id: d.id, state: 'would_start', reason: 'latest_start_reached' };
+    const v = vooraf(ctx, d);
+    if ('klaar' in v) return v.klaar;
+    const deadline = v.zon;
+    // Op zijn plek in de volgorde op zon (besluit 176): de arbiter besliste.
+    const claim = claims?.get(d.id);
+    if (claim) {
+      if (claim.accepted) return { id: d.id, state: 'would_start', reason: 'surplus_available', ...deadline };
+      if (claim.startedBefore || ctx.stabilisationActive) return { id: d.id, state: 'waiting', reason: 'stabilisation_active', ...deadline };
+      return { id: d.id, state: 'waiting', reason: 'surplus_insufficient', ...deadline };
     }
     if (started || ctx.stabilisationActive) return { id: d.id, state: 'waiting', reason: 'stabilisation_active', ...deadline };
     // Wat de airco's overlaten, gerekend zoals de arbiter een start rekent (besluit 51).

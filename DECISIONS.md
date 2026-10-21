@@ -72,6 +72,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [132. Verwarmen en koelen per kamer, op zon, en waar het werkt](#132-verwarmen-en-koelen-per-kamer-op-zon-en-waar-het-werkt)
 - [134. Voorrang per richting, en Hoe voelt het met een antwoord](#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord)
 - [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
+- [176. Apparaten op zon in de voorrang: een lijst Op zon](#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon)
 
 **Configuratie en onboarding**
 
@@ -7675,8 +7676,7 @@ stappenplan; dit zijn de keuzes die hij erbij maakte.
   Smart Climate kan vragen zonder dat je YAML plakt (91).
 - **Apparaten op zon in de voorrang:** een derde lijst *Op zon* bij Comfort ›
   Voorrang, met de kamers die op zon opwarmen of koelen en de apparaten op zon
-  in één volgorde. Comfort gaat altijd voor (85). Dat krijgt bij het bouwen een
-  eigen besluit.
+  in één volgorde. Comfort gaat altijd voor (85). Gebouwd in besluit 176.
 - **Opruimen, zonder dat de bewoner iets merkt:**
   - de gewone kamerwoorden en hun lidwoord staan op één plek
     (`kamerwoorden.ts`, en dezelfde lijst in `basis.js`, met een test die ze
@@ -7832,6 +7832,51 @@ QR-code kwam pas na even. Op de telefoon viel bij Volgende het begin van een
 lange titel weg ("leutel voor de assistent"): de titel mocht niet afbreken en
 stond rechts uitgelijnd. Nu breekt hij af, en de paginatest meet waar de tekst
 begint. Versie 0.50.1.
+
+---
+
+## 176. Apparaten op zon in de voorrang: een lijst Op zon
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Stap 4 uit het stappenplan van besluit 172, op 21 oktober 2026. De bewoner
+koos een derde lijst bij Comfort › Voorrang, en niet een schakelaar per
+apparaat. Tot nu toe kreeg een apparaat op zon, zoals de droger, alleen wat de
+kamers overlieten (besluiten 85 en 98).
+
+*Besluit:*
+
+- **Comfort gaat altijd voor.** Comfort en bijspringen besluiten eerst, zoals
+  altijd. De lijst Op zon ordent alleen wat er daarna over is: de kamers die op
+  zon opwarmen of koelen, en de apparaten op zon, in één volgorde.
+- **In de configuratie** heet dat `sunOrder`: een lijst van
+  `{ kind: "zone" | "deferrable", id }`. Wat er niet in staat, komt achteraan:
+  eerst de zones op hun voorrang per richting, dan de apparaten. Zonder
+  `sunOrder` rekent de regeling precies zoals eerst.
+- **In de arbiter** vraagt een apparaat dat op zon wacht zijn deel op zijn plek
+  in die volgorde, net als een start: het past als het vrije overschot (min
+  `stopImportW`) zijn geschatte vermogen draagt, en er deze ronde nog niets
+  startte (besluit 68) en de stabilisatie niet loopt. Krijgt het zijn deel, dan
+  telt dat als de start van deze ronde: een airco daarna wacht een ronde. In de
+  schaduw start het apparaat niets en begint er geen stabilisatie; de droger
+  zegt alleen "zou nu starten". Wat er vóór het overschot al vaststaat (draait,
+  niet klaar, de hoofdzekering, klaar voor), blijft zoals in besluit 98 en 101.
+- **In de app** staat Op zon als derde lijst bij Voorrang, alleen als er een
+  apparaat op zon is, met omhoog en omlaag. Hij gaat pas naar de regeling als
+  de bewoner hem verandert; zolang staat er de gewone volgorde. Bewaard in
+  `comfort.json` als `voorrang.zon`, met `soort` kamer of apparaat.
+- **Eerlijk erbij:** een apparaat dat draait, gaat niet terug. Staat de droger
+  boven de zolder, dan krijgt de zolder die middag minder zon om voor te koelen.
+  Dat staat onder de lijst.
+- **Bewaakt** met een test van de volgorde (de droger vóór en na de zolder, te
+  weinig zon, comfort dat voorgaat), een regel over 3.000 gegenereerde
+  toestanden dat comfort met of zonder volgorde precies hetzelfde besluit en de
+  droger nooit een opdracht krijgt (de droger kreeg zijn deel in 141 ervan), de
+  configuratie, het comfortbestand en de pagina.
+- **Versie 0.51.0.**
+
+*Wat afviel:* een schakelaar per apparaat ("gaat voor de kamers op zon"),
+eenvoudiger maar met minder keus; de droger ook vóór comfort laten gaan.
 
 ## Wat nog een besluit wacht
 

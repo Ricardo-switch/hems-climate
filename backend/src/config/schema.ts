@@ -30,6 +30,7 @@ import {
   type GridLimits,
   type GridPhase,
   type Deferrable,
+  type SunSlot,
   type SolarPlane,
   type ActuatorRole,
   type DeviceRef,
@@ -1389,6 +1390,33 @@ export function parseSiteConfig(
     }
   }
 
+  // De volgorde op zon (besluit 176): zones en uitstelbare apparaten door elkaar. Optioneel.
+  const sunOrder: SunSlot[] = [];
+  const sunOrderRaw = input['sunOrder'];
+  if (sunOrderRaw !== undefined) {
+    if (!Array.isArray(sunOrderRaw)) {
+      p.error('sunOrder', 'moet een lijst zijn');
+    } else {
+      const gezien = new Set<string>();
+      sunOrderRaw.forEach((s, i) => {
+        const path = join('sunOrder', i);
+        if (!isRecord(s) || (s['kind'] !== 'zone' && s['kind'] !== 'deferrable') || typeof s['id'] !== 'string') {
+          p.error(path, 'moet { kind: "zone" of "deferrable", id } zijn');
+          return;
+        }
+        const kind = s['kind'];
+        const id = s['id'];
+        const bestaat = kind === 'zone' ? zones.some((z) => z.id === id) : deferrables.some((d) => d.id === id);
+        if (!bestaat) p.error(path, `${kind === 'zone' ? 'zone' : 'apparaat'} "${id}" bestaat niet`);
+        else if (gezien.has(`${kind}:${id}`)) p.error(path, `"${id}" staat er twee keer`);
+        else {
+          gezien.add(`${kind}:${id}`);
+          sunOrder.push({ kind, id });
+        }
+      });
+    }
+  }
+
   // De aansluiting: stroom per fase tegen de hoofdzekering (besluit 78).
   // Optioneel; zonder blijft het alleen een vermogensbudget.
   let grid: GridLimits | null = null;
@@ -1660,6 +1688,7 @@ export function parseSiteConfig(
       ...(geometry ? { geometry } : {}),
       ...(grid ? { grid } : {}),
       ...(deferrables.length > 0 ? { deferrables } : {}),
+      ...(sunOrder.length > 0 ? { sunOrder } : {}),
       ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),
     },

@@ -1224,6 +1224,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await expect.poll(() => comfortNu?.voorrang?.koelen[0], { timeout: 5_000 }).toBe(tweede);
       expect(configNu.zones.find((z) => z.id === tweede)?.priorityByAction?.cool).toBe(1);
     }
+    // Op zon (besluit 176): de droger staat achteraan; omhoog, en de regeling krijgt de volgorde.
+    const zonRijen = wand.locator('[data-vorm] .rang', { hasText: 'Op zon' }).locator('.r');
+    const zonLijst = comfortView(configNu, comfortNu).voorrang.zon;
+    expect(await zonRijen.count()).toBe(zonLijst.length);
+    expect(await zonRijen.last().textContent()).toContain('Droger');
+    // Nog niets gekozen: de regeling heeft geen volgorde op zon.
+    expect(configNu.sunOrder).toBeUndefined();
+    await wand.locator(`[data-schuif="zon:${zonLijst.length - 1}:-1"]`).click();
+    await expect.poll(() => configNu.sunOrder?.at(-2), { timeout: 5_000 }).toEqual({ kind: 'deferrable', id: 'droger' });
+    expect(await zonRijen.nth(zonLijst.length - 2).textContent()).toContain('Droger');
+    expect(await wand.locator('[data-delen] .deel', { hasText: 'Voorrang' }).textContent()).not.toContain('droger eerst');
+    // Past op de wand zonder te scrollen.
+    expect(await p.evaluate<boolean>('document.scrollingElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-voorrang.png') });
     // De dagdelen: overdag een uur later.
     await wand.locator('[data-delen] .deel', { hasText: 'Dagdelen' }).click();
     await wand.locator('[data-uur="dag:1"]').click();

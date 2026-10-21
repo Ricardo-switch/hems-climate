@@ -51,10 +51,18 @@ export interface ComfortRoom {
   readonly opZonC?: number;
 }
 
+/** Een plek in de lijst Op zon (besluit 176): een kamer die op zon opwarmt of koelt, of een apparaat op zon. */
+export interface ZonPlek {
+  readonly soort: 'kamer' | 'apparaat';
+  readonly id: string;
+}
+
 /** Voorrang per richting (besluit 134): de zones op volgorde, de eerste gaat voor. */
 export interface ComfortVoorrang {
   readonly koelen: readonly string[];
   readonly verwarmen: readonly string[];
+  /** Op zon (besluit 176): kamers en apparaten door elkaar; weg is eerst de kamers, dan de apparaten. */
+  readonly zon?: readonly ZonPlek[];
 }
 
 export interface Comfort {
@@ -110,7 +118,9 @@ export interface ComfortView {
   readonly van?: ComfortVan;
   readonly kamers: readonly ComfortRoomView[];
   /** Wie voorgaat bij weinig zon, per richting (besluit 134): alleen kamers die het kunnen. */
-  readonly voorrang: ComfortVoorrang;
+  readonly voorrang: ComfortVoorrang & { readonly zon: readonly ZonPlek[] };
+  /** De apparaten op zon (besluit 176), met hun naam, voor de lijst Op zon. */
+  readonly apparatenOpZon: readonly { readonly id: string; readonly naam: string }[];
   readonly dagdelen: { readonly voorverwarmen: number; readonly dag: number; readonly nacht: number };
   readonly bereik: typeof COMFORT_RANGE;
 }
@@ -145,8 +155,23 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
       .map((z, i) => ({ id: z.id, p: zonePriorityFor(z, actie), i }))
       .sort((a, b) => a.p - b.p || a.i - b.i)
       .map((x) => x.id);
-  const voorrang = { koelen: opVolgorde('cool', (k) => k.kanKoelen), verwarmen: opVolgorde('heat', (k) => k.kanVerwarmen) };
-  return { kamers, voorrang, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
+  /*
+   * Op zon (besluit 176): de kamers die op zon iets doen en de apparaten op zon.
+   * Zoals de configuratie het zegt; wat er niet in staat achteraan, eerst de
+   * kamers en dan de apparaten, zoals de regeling het dan ook doet.
+   */
+  const apparatenOpZon = (config.deferrables ?? []).map((d) => ({ id: d.id, naam: d.name }));
+  const alleOpZon: ZonPlek[] = [
+    ...kamers.filter((k) => k.opZon.verwarmen || k.opZon.koelen).map((k) => ({ soort: 'kamer' as const, id: k.id })),
+    ...apparatenOpZon.map((a) => ({ soort: 'apparaat' as const, id: a.id })),
+  ];
+  const plekVan = (z: ZonPlek) => (config.sunOrder ?? []).findIndex((s) => s.id === z.id && s.kind === (z.soort === 'kamer' ? 'zone' : 'deferrable'));
+  const zon = alleOpZon
+    .map((z, i) => ({ z, p: plekVan(z), i }))
+    .sort((a, b) => (a.p < 0 ? Infinity : a.p) - (b.p < 0 ? Infinity : b.p) || a.i - b.i)
+    .map((x) => x.z);
+  const voorrang = { koelen: opVolgorde('cool', (k) => k.kanKoelen), verwarmen: opVolgorde('heat', (k) => k.kanVerwarmen), zon };
+  return { kamers, voorrang, apparatenOpZon, dagdelen: { voorverwarmen: s.preheatFromHour, dag: s.dayFromHour, nacht: s.nightFromHour }, bereik: COMFORT_RANGE };
 }
 
 /**
@@ -216,6 +241,11 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
     : nieuweZones;
   if (comfort.voorrang) toegevoegd.push('de voorrang bij koelen en verwarmen');
   const out: Record<string, unknown> = { ...raw, zones: metVoorrang };
+  // Op zon (besluit 176): kamers en apparaten in één volgorde voor de regeling.
+  if (comfort.voorrang?.zon) {
+    out['sunOrder'] = comfort.voorrang.zon.map((z) => ({ kind: z.soort === 'kamer' ? 'zone' : 'deferrable', id: z.id }));
+    toegevoegd.push('de volgorde op zon');
+  }
   /*
    * De app wint (besluit 143). Tijdens het meekijken las de regeling de doelen
    * live uit de helpers van het oude systeem (`migration.setpoints`); die
@@ -300,6 +330,19 @@ export function controleerComfort(body: unknown, config: SiteConfig): ComfortChe
     const lijst = (x: unknown) => Array.isArray(x) && x.every((id) => typeof id === 'string' && config.zones.some((z) => z.id === id)) && new Set(x).size === x.length;
     if (!lijst(v['koelen']) || !lijst(v['verwarmen'])) return { ok: false, reden: 'voorrang is per richting een lijst van kamers, elk één keer' };
     voorrang = { koelen: v['koelen'] as string[], verwarmen: v['verwarmen'] as string[] };
+    // Op zon (besluit 176): bekende kamers en apparaten, elk één keer.
+    if (v['zon'] !== undefined && v['zon'] !== null) {
+      const zon = v['zon'];
+      const bekend = (x: unknown): x is ZonPlek => {
+        if (typeof x !== 'object' || x == null) return false;
+        const { soort, id } = x as Record<string, unknown>;
+        return (soort === 'kamer' && config.zones.some((z) => z.id === id)) || (soort === 'apparaat' && (config.deferrables ?? []).some((d) => d.id === id));
+      };
+      if (!Array.isArray(zon) || !zon.every(bekend) || new Set(zon.map((z) => `${z.soort}:${z.id}`)).size !== zon.length) {
+        return { ok: false, reden: 'op zon is een lijst van kamers en apparaten, elk één keer' };
+      }
+      voorrang = { ...voorrang, zon: zon.map((z) => ({ soort: z.soort, id: z.id })) };
+    }
   }
   let dagdelen: Comfort['dagdelen'];
   if (b['dagdelen'] !== undefined && b['dagdelen'] !== null) {

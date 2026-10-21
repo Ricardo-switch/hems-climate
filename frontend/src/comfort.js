@@ -60,7 +60,7 @@ function delen() {
     ...comfort.kamers.map((k) => ({ id: k.id, titel: k.naam, zin: samenvatting(k), stand: leeg(k) ? 'leeg' : 'goed' })),
     { kop: 'Het hele huis' },
     ...(vanHetHuis() ? [{ id: 'dagdelen', titel: 'Dagdelen', zin: `dag ${d.dag}:00, nacht ${d.nacht}:00`, stand: 'goed' }] : []),
-    ...(vanHetHuis() && (comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1) ? [{ id: 'voorrang', titel: 'Voorrang', zin: voorrangZin(), stand: 'goed' }] : []),
+    ...(vanHetHuis() && (comfort.voorrang?.koelen?.length > 1 || comfort.voorrang?.verwarmen?.length > 1 || zonLijst()) ? [{ id: 'voorrang', titel: 'Voorrang', zin: voorrangZin(), stand: 'goed' }] : []),
     { id: 'afwezig', titel: 'Afwezig en vakantie', zin: 'per kamer, vanzelf of zelf', stand: 'goed' },
   ];
 }
@@ -201,10 +201,30 @@ function afwezigVorm() {
 /* ------------------------------------------------- voorrang (besluit 134) */
 
 const naamVan = (id) => comfort.kamers.find((k) => k.id === id)?.naam ?? id;
+/*
+ * Op zon (besluit 176): de kamers die op zon opwarmen of koelen en de
+ * apparaten op zon, in één volgorde. Alleen als er een apparaat op zon is;
+ * anders zeggen de twee lijsten erboven al alles.
+ */
+const zonNaam = (z) => (z.soort === 'apparaat' ? comfort.apparatenOpZon?.find((a) => a.id === z.id)?.naam ?? z.id : naamVan(z.id));
+const zonLijst = () => (comfort.apparatenOpZon?.length && comfort.voorrang?.zon?.length > 1 ? comfort.voorrang.zon : null);
+/** Zoals de regeling het doet zonder keuze: eerst de kamers, dan de apparaten. */
+const zonGewoon = () => {
+  const zon = comfort.voorrang?.zon ?? [];
+  const plek = (z) => comfort.kamers.findIndex((k) => k.id === z.id);
+  return [...zon.filter((z) => z.soort === 'kamer').sort((a, b) => plek(a) - plek(b)), ...zon.filter((z) => z.soort === 'apparaat')];
+};
+/** Of de bewoner de lijst Op zon aanraakte: pas dan gaat hij mee naar de regeling. */
+let zonGekozen = false;
 function voorrangZin() {
   const k = comfort.voorrang?.koelen?.[0];
   const w = comfort.voorrang?.verwarmen?.[0];
-  return [k ? `koelen: ${naamVan(k).toLowerCase()} eerst` : null, w && !k ? `verwarmen: ${naamVan(w).toLowerCase()} eerst` : null].filter(Boolean).join(', ');
+  const z = zonLijst()?.[0];
+  return [
+    k ? `koelen: ${naamVan(k).toLowerCase()} eerst` : null,
+    w && !k ? `verwarmen: ${naamVan(w).toLowerCase()} eerst` : null,
+    z?.soort === 'apparaat' ? `op zon: ${zonNaam(z).toLowerCase()} eerst` : null,
+  ].filter(Boolean).join(', ');
 }
 /** Een voorstel om mee te beginnen: koelen hoog in huis eerst, verwarmen laag in huis eerst. */
 function voorrangVoorstel() {
@@ -225,17 +245,24 @@ function voorrangVorm() {
       ${ids.map((id, i) => `<div class="r"><i>${i + 1}</i><b>${esc(naamVan(id))}</b><span class="schuif"><button type="button" data-schuif="${richting}:${esc(id)}:-1" aria-label="${esc(naamVan(id))} hoger" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-schuif="${richting}:${esc(id)}:1" aria-label="${esc(naamVan(id))} lager" ${i === ids.length - 1 ? 'disabled' : ''}>↓</button></span></div>`).join('')}
       ${niet.length ? `<p class="niet">${esc(niet.join(' en '))} ${niet.length === 1 ? 'kan' : 'kunnen'} niet ${wie}.</p>` : ''}</div>`;
   };
+  const zon = zonLijst();
+  const zonRang = zon
+    ? `<div class="rang"><h3><span class="stip" style="background: var(--zon)"></span>Op zon</h3>
+      ${zon.map((z, i) => `<div class="r"><i>${i + 1}</i><b>${esc(zonNaam(z))}<small>${z.soort === 'apparaat' ? 'apparaat' : 'kamer'}</small></b><span class="schuif"><button type="button" data-schuif="zon:${i}:-1" aria-label="${esc(zonNaam(z))} hoger" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-schuif="zon:${i}:1" aria-label="${esc(zonNaam(z))} lager" ${i === zon.length - 1 ? 'disabled' : ''}>↓</button></span></div>`).join('')}
+      <p class="niet">Comfort gaat altijd voor. Een apparaat dat draait, gaat niet terug: boven een kamer krijgt die kamer die middag minder zon.</p></div>`
+    : '';
   const voorstel = voorrangVoorstel();
   const anders = JSON.stringify(voorstel) !== JSON.stringify({ koelen: v.koelen, verwarmen: v.verwarmen });
   return `<h2 class="kop-2">Voorrang</h2>
-    <p class="klein" style="margin: 0">Is er zon voor maar één kamer, wie gaat dan voor? Het huis kiest zelf de lijst die past bij wat er nodig is: koelen of verwarmen.</p>
-    <div class="lijsten">${v.koelen.length ? lijst('koelen', 'Als het huis koelt', 'var(--ijs)', 'koelen') : ''}${v.verwarmen.length ? lijst('verwarmen', 'Als het huis verwarmt', 'var(--gloed)', 'verwarmen') : ''}</div>
+    <p class="klein" style="margin: 0">Is er zon voor maar één kamer, wie gaat dan voor? Het huis kiest zelf de lijst die past bij wat er nodig is: koelen of verwarmen.${zon ? ' Op zon zegt wie daarna de zon krijgt die over is.' : ''}</p>
+    <div class="lijsten${zon ? ' drie' : ''}">${v.koelen.length ? lijst('koelen', 'Als het huis koelt', 'var(--ijs)', 'koelen') : ''}${v.verwarmen.length ? lijst('verwarmen', 'Als het huis verwarmt', 'var(--gloed)', 'verwarmen') : ''}${zonRang}</div>
     ${anders ? '<div class="voorstelrij"><span class="mini">Een voorstel: koelen hoog in huis eerst, verwarmen laag in huis eerst.</span><button type="button" class="knop" data-voorrang-voorstel>Neem over</button></div>' : ''}`;
 }
 
 function naast(id) {
   if (id === 'voorrang') {
-    return `<div class="glas"><h3>Waarom twee lijsten</h3><p style="margin: 0">In de zomer wil je de bovenverdieping koel voor de nacht, in de winter de woonkamer warm. Zo gaat het op een koude ochtend en een warme middag allebei goed.</p></div>
+    const opZon = zonLijst() ? '<div class="glas"><h3>Op zon</h3><p style="margin: 0">Eerst krijgt elke kamer wat hij voor comfort nodig heeft. Wat er dan over is, gaat in deze volgorde: een kamer die op zon voorkoelt of opwarmt, of een apparaat zoals de droger.</p></div>' : '';
+    return `${opZon}<div class="glas"><h3>Waarom twee lijsten</h3><p style="margin: 0">In de zomer wil je de bovenverdieping koel voor de nacht, in de winter de woonkamer warm. Zo gaat het op een koude ochtend en een warme middag allebei goed.</p></div>
       <div class="glas"><h3>Wanneer het telt</h3><p style="margin: 0">Alleen als er niet genoeg zon is voor alles. Is er genoeg, dan krijgt elke kamer wat hij nodig heeft.</p></div>`;
   }
   return `<div class="glas"><h3>Zo gebruikt het huis dit</h3>
@@ -294,7 +321,16 @@ function bewaar() {
   const body = {
     kamers: Object.fromEntries(comfort.kamers.map((k) => [k.id, { modi: k.modi, nooitWarmerC: k.nooitWarmerC, voorrang: k.voorrang, opZonC: k.opZonC }])),
     dagdelen: comfort.dagdelen,
-    ...(comfort.voorrang ? { voorrang: { koelen: comfort.voorrang.koelen, verwarmen: comfort.voorrang.verwarmen } } : {}),
+    ...(comfort.voorrang
+      ? {
+          voorrang: {
+            koelen: comfort.voorrang.koelen,
+            verwarmen: comfort.voorrang.verwarmen,
+            // Op zon alleen als de bewoner hem koos (besluit 176); anders blijft het zoals het was.
+            ...(zonLijst() && (zonGekozen || JSON.stringify(comfort.voorrang.zon) !== JSON.stringify(zonGewoon())) ? { zon: comfort.voorrang.zon } : {}),
+          },
+        }
+      : {}),
   };
   groep.bewaarStraks(async () => {
     const uit = await groep.stuur(deur, body);
@@ -451,7 +487,9 @@ document.addEventListener('click', (e) => {
     // Een kamer hoger of lager in de lijst (besluit 134).
     const [richting, id, stap] = t.dataset.schuif.split(':');
     const l = [...comfort.voorrang[richting]];
-    const i = l.indexOf(id);
+    // Op zon (besluit 176) op zijn plek in de lijst: een kamer en een apparaat kunnen dezelfde id hebben.
+    if (richting === 'zon') zonGekozen = true;
+    const i = richting === 'zon' ? Number(id) : l.indexOf(id);
     const j = i + Number(stap);
     if (i < 0 || j < 0 || j >= l.length) return;
     [l[i], l[j]] = [l[j], l[i]];

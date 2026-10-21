@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.51.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Bij Comfort › Voorrang een lijst Op zon: zet de droger voor of na de kamers die op zon voorkoelen of opwarmen. Comfort gaat altijd voor
+
 ## 0.50.1
 
 *21 oktober 2026*

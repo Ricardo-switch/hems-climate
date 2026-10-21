@@ -86,7 +86,9 @@ verwijzing bestaat.
   met meer kamers koelt op de warmste en verwarmt op de koudste ([81]); bij twee
   meters in één kamer kiest de bewoner ([95]).
 - **Bij zon over:** eerst comfort, dan de batterij, dan de auto. Laadpaal en
-  batterij stuurt Smart Climate niet zelf ([85]).
+  batterij stuurt Smart Climate niet zelf ([85]). Wat er na comfort over is,
+  gaat in de volgorde van de lijst Op zon: kamers die op zon voorkoelen of
+  opwarmen en apparaten zoals de droger door elkaar ([176]).
 - **De zonnesensor:** elk merk omvormer werkt; de app meet hoe snel de sensor is
   ([89]).
 - **Sturen:** alleen wat afwijkt. Slimmere timing moet eerst in de replay winnen
@@ -574,4 +576,5 @@ verwijzing bestaat.
 [173]: DECISIONS.md#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen
 [174]: DECISIONS.md#174-het-huis-en-wie-er-thuis-is-live
 [175]: DECISIONS.md#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart
+[176]: DECISIONS.md#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon
 <!-- links:einde -->

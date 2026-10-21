@@ -196,6 +196,23 @@ describe('regels die altijd gelden', () => {
     expect(validate(without)).toBeNull();
   });
 
+  it('houden ook met de droger vooraan op zon, en comfort blijft precies hetzelfde (besluit 176)', () => {
+    const drogerEerst: SiteConfig = { ...exampleSite, sunOrder: [{ kind: 'deferrable', id: 'droger' }, ...exampleSite.zones.map((z) => ({ kind: 'zone' as const, id: z.id }))] };
+    expect(validate(drogerEerst)).toBeNull();
+    // Wat comfort en bijspringen besluiten, hangt nooit af van de volgorde op zon.
+    const k = dice(generator(SEED));
+    const strategies = defaultStrategies();
+    const comfort = (d: Decision) => JSON.stringify(d.accepted.filter((i) => i.strategyId !== 'pv-surplus' && !i.strategyId.startsWith('arbiter:')));
+    for (let caseIndex = 0; caseIndex < CASES; caseIndex += 1) {
+      const state = entityState(k, exampleSite);
+      const zonder = decide({ config: exampleSite, state, strategies });
+      const met = decide({ config: drogerEerst, state, strategies });
+      expect(comfort(met), `geval ${caseIndex} (startgetal ${SEED})`).toBe(comfort(zonder));
+      // De droger krijgt nooit een opdracht, ook niet vooraan.
+      expect(met.commands.filter((c) => 'actuatorId' in c && c.actuatorId === 'droger')).toEqual([]);
+    }
+  });
+
   it('dekken de interessante gevallen', () => {
     // Een generator die alleen saaie toestanden maakt, bewijst niets. Tel wat
     // er langskwam.
