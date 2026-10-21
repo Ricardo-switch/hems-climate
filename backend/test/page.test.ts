@@ -1017,7 +1017,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     p.on('pageerror', (e) => fouten.push(e.message));
     const bron = { nu: Date.now(), zonderRuimte: [], volgen: [], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null };
     updateNu.klaar = true;
-    meldingenStore.bij({ ...bron, update: { nieuw: '9.9.9', nu: VERSIE } });
+    meldingenStore.bij({ ...bron });
     try {
       await p.goto(`${baseUrl}/vandaag.html`);
       // Wat is er nieuw na een eigen update hoort hier niet: die is al gezien.
@@ -1025,6 +1025,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.reload();
       await p.locator('#wand [data-meldbel]').click({ timeout: 5_000 });
       const blad = p.locator('[data-meldblad]');
+      await blad.waitFor();
+      expect(await blad.locator('.melding', { hasText: 'Versie 9.9.9 staat klaar' }).count()).toBe(0);
+      // Live (21 oktober 2026): de dienst zegt dat er een melding bij kwam, en de open lijst toont hem zonder te herladen.
+      meldingenStore.bij({ ...bron, update: { nieuw: '9.9.9', nu: VERSIE } });
+      server.meldingenVeranderd();
       await blad.locator('.melding', { hasText: 'Versie 9.9.9 staat klaar' }).click({ timeout: 5_000 });
       const pop = p.locator('[data-nieuwpop]');
       await pop.locator('h2', { hasText: 'Versie 9.9.9 staat klaar' }).waitFor({ timeout: 5_000 });

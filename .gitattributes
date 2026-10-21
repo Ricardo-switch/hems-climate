@@ -26,3 +26,4 @@ Dockerfile  text eol=lf
 *.gz        binary
 *.tar       binary
 *.ndjson    binary
+*.tflite    binary

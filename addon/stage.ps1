@@ -67,6 +67,8 @@ $mappen = @(
   @{ Van = 'backend/tools'; Naar = 'backend/tools' }
   @{ Van = 'frontend/src';  Naar = 'frontend/src' }
   @{ Van = 'frontend/kit';  Naar = 'frontend/kit' }
+  # Het wekwoord "Hé huis" (besluit 177): run.sh zet het klaar voor openWakeWord.
+  @{ Van = 'addon/wekwoord'; Naar = 'wekwoord' }
 )
 
 if (Test-Path $Doel) { Remove-Item $Doel -Recurse -Force }

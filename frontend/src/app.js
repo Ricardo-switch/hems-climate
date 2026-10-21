@@ -554,7 +554,16 @@ function renderEpisodes(r) {
   $('episodes-blok').hidden = r.episodesTotaal === 0;
 }
 
+/*
+ * Met wie de terugblik vergelijkt (besluit 73, 21 oktober 2026): in een huis met
+ * een regeling in YAML het oude systeem; anders wat de thermostaten en airco's
+ * uit zichzelf deden (besluit 28). Dezelfde machinerie, andere woorden.
+ */
+const vergelijk = () => (site?.migrating ? { kort: 'oud systeem', lang: 'het oude systeem' } : { kort: 'de apparaten zelf', lang: 'de apparaten zelf' });
+
 function renderReview(r) {
+  $('stat-eens-kop').textContent = `arbiter en ${vergelijk().kort} het eens`;
+  $('stat-stroom-sub').textContent = `door ${vergelijk().lang} besteed`;
   const agreed = r.tallies.reduce((n, t) => n + t.agree, 0);
   const total = r.tallies.reduce((n, t) => n + t.agree + t.stricter + t.looser, 0);
   const days = (r.totMs - r.vanMs) / 86400000;
@@ -564,7 +573,7 @@ function renderReview(r) {
 
   $('stat-stroom').textContent = kwh(r.legacyGridWh);
   $('stat-vermeden').textContent = kwh(r.avoidableGridWh);
-  $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat het oude systeem besteedde`;
+  $('stat-vermeden-sub').textContent = `${pct(r.avoidableGridWh, r.legacyGridWh)} van wat ${vergelijk().lang} besteedde`;
 
   renderTimeline(r.dagen, r.versies);
   renderPatterns(r.patronen ?? []);

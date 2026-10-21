@@ -364,7 +364,7 @@ function luisteren() {
     : !gekozen?.spraakNaarTekst
       ? 'Deze spraakassistent heeft geen spraak naar tekst. Kies er in Home Assistant Whisper bij (Instellingen › Spraakassistenten).'
       : !gekozen.wekwoord
-        ? 'Deze spraakassistent heeft geen wekwoord; de microfoonknop werkt wel. Geef hem in Home Assistant een wekwoord, zoals Hé huis (Instellingen › Spraakassistenten).'
+        ? `Deze spraakassistent heeft geen wekwoord; de microfoonknop werkt wel. Geef hem in Home Assistant een wekwoord, zoals Hé huis (Instellingen › Spraakassistenten).${app.inHA() ? ' Hé huis zet Smart Climate klaar voor de openWakeWord-add-on: herstart die add-on één keer, dan staat het erbij als he_huis.' : ''}`
         : '';
   return `<h2 class="kop-2" style="margin-top: 8px">Luisteren</h2>
     <span class="veldnaam">Spraakassistent uit Home Assistant</span>

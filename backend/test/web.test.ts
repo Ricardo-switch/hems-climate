@@ -1821,6 +1821,15 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     expect((await fetch(`${base}/api/comfort`, { headers: { cookie } })).status).toBe(200);
   });
 
+  it('geeft de beheerder de sleutel met het adres waar Home Assistant zijn vraag stelt (besluit 177)', async () => {
+    const { base } = await withLogin(true, { sleutel: 'een-lange-sleutel-voor-de-assistent' });
+    const cookie = await logIn(base);
+    const antwoord = (await (await fetch(`${base}/api/sleutel`, { headers: { cookie } })).json()) as { sleutel: string; adres: string };
+    expect(antwoord.sleutel).toBe('een-lange-sleutel-voor-de-assistent');
+    // Zonder eigen adres: zoals de beheerder de app nu opent.
+    expect(antwoord.adres).toBe(`${base}/api/vraag`);
+  });
+
   it('stuurt een nieuwe bewoner na het inloggen naar het welkom, en een account zonder persoon naar de vraag (besluit 147)', async () => {
     let antwoord: 'welkom' | 'vraag' | null = 'welkom';
     const { base } = await withLogin(false, { herken: async () => antwoord });

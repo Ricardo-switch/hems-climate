@@ -175,6 +175,12 @@ export interface WebOptions {
   };
   /** De sleutel waarmee de assistent van Home Assistant zonder inlog een vraag stelt (besluit 147). */
   readonly sleutel?: string;
+  /**
+   * Waar Home Assistant die vraag stelt (besluit 177). In de add-on de naam van
+   * de add-on in het netwerk van Home Assistant; zonder: het adres waarop de
+   * beheerder de app nu opent.
+   */
+  readonly sleutelAdres?: string;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -1045,7 +1051,10 @@ export class WebServer {
       const wie = await this.#wie(req);
       if (!wie.beheerder) sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
       else if (this.#options.sleutel == null) sendJson(res, 404, { fout: 'er is geen sleutel' });
-      else sendJson(res, 200, { sleutel: this.#options.sleutel });
+      else {
+        const proto = String(req.headers['x-forwarded-proto'] ?? 'http').split(',')[0]!.trim();
+        sendJson(res, 200, { sleutel: this.#options.sleutel, adres: this.#options.sleutelAdres ?? `${proto}://${req.headers.host}/api/vraag` });
+      }
       return;
     }
 
@@ -1071,6 +1080,8 @@ export class WebServer {
           return;
         }
         await store.bewaar().catch(() => undefined);
+        // Weggehaald op de telefoon: ook weg op de wand.
+        this.meldingenVeranderd();
       }
       sendJson(res, 200, store.lijst(Date.now()));
       return;
@@ -2245,6 +2256,11 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
       this.#zend('huis', { v: vinger, snel: zeg });
     }, snel ? HUIS_SNEL_MS : HUIS_RUSTIG_MS);
     this.#huisWacht.unref?.();
+  }
+
+  /** De meldingen veranderden (21 oktober 2026): een nieuwe versie, een lege batterij, of iemand haalde er een weg. */
+  meldingenVeranderd(): void {
+    this.#zend('meldingen', { tMs: Date.now() });
   }
 
   /** Iemand komt thuis of gaat weg: de rondjes op Thuis. */

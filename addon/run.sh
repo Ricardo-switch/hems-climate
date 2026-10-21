@@ -38,6 +38,24 @@ fi
 
 mkdir -p "${LOG_DIR}"
 
+# Het wekwoord "Hé huis" (besluit 177). De openWakeWord-add-on zoekt eigen
+# wekwoorden in /share/openwakeword; deze add-on mag in /share schrijven. Alleen
+# als het er nog niet staat: een eigen getraind wekwoord met dezelfde naam blijft.
+# Na de eerste keer één keer de openWakeWord-add-on herstarten, dan staat hij
+# erbij in Instellingen › Spraakassistenten.
+WEKWOORD_DIR=/share/openwakeword
+if [ -d /app/wekwoord ]; then
+  mkdir -p "${WEKWOORD_DIR}"
+  for model in /app/wekwoord/*.tflite; do
+    [ -e "${model}" ] || continue
+    naam="$(basename "${model}")"
+    if [ ! -e "${WEKWOORD_DIR}/${naam}" ]; then
+      cp "${model}" "${WEKWOORD_DIR}/${naam}"
+      bashio::log.info "Wekwoord ${naam} klaargezet in ${WEKWOORD_DIR}; herstart de openWakeWord-add-on om het te kiezen."
+    fi
+  done
+fi
+
 export SHADOW_LOG_DIR="${LOG_DIR}"
 
 # De opties uit de add-on-instellingen, met terugval.

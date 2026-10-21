@@ -218,6 +218,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [135. Tot 1 november vrijgeven op de eigen pc](#135-tot-1-november-vrijgeven-op-de-eigen-pc) — *vervangen door 152*
 - [152. Openbaar, en het werk gaat via beta](#152-openbaar-en-het-werk-gaat-via-beta)
 - [153. De add-on komt kant-en-klaar van GitHub](#153-de-add-on-komt-kant-en-klaar-van-github)
+- [177. Universeel, deel 1: het wekwoord mee, Assist zonder NAS, en meldingen live](#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live)
 
 **Kwaliteitsbewaking**
 
@@ -7878,6 +7879,45 @@ kamers overlieten (besluiten 85 en 98).
 *Wat afviel:* een schakelaar per apparaat ("gaat voor de kamers op zon"),
 eenvoudiger maar met minder keus; de droger ook vóór comfort laten gaan.
 
+---
+
+## 177. Universeel, deel 1: het wekwoord mee, Assist zonder NAS, en meldingen live
+
+*Onderwerp: uitrol en beheer · Status: geldig*
+
+Stap 5 uit het stappenplan van besluit 172, op 21 oktober 2026, met een punt
+van de bewoner erbij: een melding zoals een nieuwe versie kwam pas als je van
+tab wisselde.
+
+*Besluit:*
+
+- **Het wekwoord "Hé huis" gaat mee in de add-on** (`addon/wekwoord/`,
+  207 kB, getraind op Piper-stemmen, zonder opname van een bewoner). Bij het
+  starten zet `run.sh` het in `/share/openwakeword`, waar de
+  openWakeWord-add-on eigen wekwoorden zoekt, alleen als het daar nog niet
+  staat: een eigen getraind wekwoord met dezelfde naam blijft. Daarna één keer
+  de openWakeWord-add-on herstarten; dat zegt het logboek en Functies › Praten.
+- **Assist zonder het adres van de NAS:** bij Sleutel voor de assistent staat
+  nu ook het adres waar Home Assistant zijn vraag stelt. In de add-on is dat de
+  naam van de add-on in het netwerk van Home Assistant (`http://<naam>:8099`);
+  anders het adres waarop de beheerder de app opent. `ha-assist/` noemt geen
+  NAS meer. De eigen koppeling zonder YAML (besluit 91) blijft een volgende
+  stap.
+- **Meldingen live:** verandert de lijst (een nieuwe versie, een lege batterij,
+  of iemand haalt er een weg), dan zegt de dienst het over de live-verbinding
+  (`event: meldingen`), en de bel en de open lijst werken meteen bij. Een
+  nieuwe versie in Home Assistant zet meteen een ronde in gang, niet pas na
+  een minuut.
+- **De terugblik zegt met wie hij vergelijkt** (besluit 73): met een regeling in
+  YAML "het oude systeem", anders "de apparaten zelf".
+- **Geen namen uit dit huis:** "wat is nieuw" noemt de hoofdgebruiker en een
+  kamer ernaast in plaats van een naam en de wasruimte van dit huis; zonder
+  configuratie valt het weer terug op de tijdzone van de dienst (in de add-on
+  die van Home Assistant) in plaats van Amsterdam.
+- **Nog niet in dit deel:** regels per land (salderen, daluren), meer merken voor
+  apparaten op zon, en het vermogen van het typeplaatje (de badkamer).
+- **Versie 0.52.0.**
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -7939,16 +7979,6 @@ eenvoudiger maar met minder keus; de droger ook vóór comfort laten gaan.
   hele woning, in het oude systeem alleen voor de koelregeling.
   Besluit 74 maakt ingrijpen per apparaat mogelijk; de stand voor het hele huis
   blijft daarnaast bestaan.
-- **Het wekwoord "Hé huis" bestaat alleen op de pc van de bewoner**
-  (`D:\wekwoord-training`, besluit 150). Een ander huis heeft het niet. Het
-  bestand (207 kB, getraind op Piper-stemmen) kan mee in de add-on, die het bij
-  de start in `/share/openwakeword` zet als het er nog niet staat; daar zoekt
-  de openWakeWord-add-on naar eigen wekwoorden.
-- **De terugblik spreekt over "het oude systeem".** Voor een woning zonder
-  YAML-voorganger vergelijkt de schaduwmodus de arbiter met wat de thermostaten
-  uit zichzelf deden (besluit 28). Dezelfde machinerie, andere vraag, verkeerde
-  woorden. Uit te zoeken bij 6c. De richting staat sinds besluit 73: de fase
-  bepaalt de woorden.
 - **De dagdoelen van de datasetmeter zijn op dit huis geijkt** — dertig
   winterdagen, en de seizoenen van Nederland. Zie besluit 27.
 - **De start-vlaggen worden alleen aan het einde opgeruimd.**

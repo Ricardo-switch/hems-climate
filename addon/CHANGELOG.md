@@ -1,5 +1,18 @@
 # Wat is er nieuw
 
+## 0.52.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Het wekwoord Hé huis zit in de add-on: herstart de openWakeWord-add-on één keer, en kies het bij de spraakassistent
+- Bij Sleutel voor de assistent staat ook het adres waar Home Assistant zijn vraag stelt
+
+**Beter**
+
+- Een nieuwe melding, zoals een nieuwe versie, staat meteen bij de bel, op elk scherm
+
 ## 0.51.0
 
 *21 oktober 2026*
@@ -490,7 +503,7 @@
 
 **Beter**
 
-- Toch die van Ricardo: het comfort terugzetten met één tik, tot er iemand thuiskomt of weggaat
+- Toch die van de hoofdgebruiker: het comfort terugzetten met één tik, tot er iemand thuiskomt of weggaat
 
 ## 0.24.2
 
@@ -584,7 +597,7 @@
 
 **Nieuw**
 
-- Een kamer kan meedoen met de regeling van een andere kamer, zoals een slaapkamer met de airco in de wasruimte
+- Een kamer kan meedoen met de regeling van een andere kamer, zoals een slaapkamer met de airco in de kamer ernaast
 - Vraag de assistent naar het weer van morgen, en wat je apparaten deze maand kostten
 
 **Beter**
@@ -595,7 +608,7 @@
 **Opgelost**
 
 - Na een tik op Thuis praat de assistent meteen hardop
-- De wasruimte heeft zijn eigen regeling en comfort terug
+- Een kamer met een eigen regeling heeft zijn comfort weer terug
 - Opbrengst: zelf gebruikt en teruggeleverd tellen precies op tot wat je panelen opwekten
 - Een afgeknipte zin, een dubbel doel, en de maan die op de telefoon over de tekst viel
 

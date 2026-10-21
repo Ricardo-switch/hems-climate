@@ -84,20 +84,20 @@ hier een voorstel voor.
 9. ~~**De wizard.**~~ Gedaan op 9 oktober (besluit 114): Inrichten zet de
    stappen op een rij en loopt langs de schermen die er al zijn. De stap Klimaat
    groeit mee met punt 5.
-10. **Het wekwoord "Hé huis"** bestaat alleen op de pc van de bewoner. Meeleveren
-    in de add-on, die het in de map van openWakeWord zet (besluit 172).
-11. **Assist van Home Assistant** vraagt Smart Climate via YAML met het adres
-    van de NAS erin (`ha-assist/`). Wordt een eigen koppeling (besluiten 91 en
-    172).
+10. ~~**Het wekwoord "Hé huis"**~~ Gedaan op 21 oktober (besluit 177): het gaat
+    mee in de add-on, die het in de map van openWakeWord zet.
+11. **Assist van Home Assistant** vraagt Smart Climate via YAML. Het adres staat
+    sinds besluit 177 in de app, zonder NAS; een eigen koppeling zonder YAML
+    volgt (besluit 91).
 12. **Apparaten op zon** worden in de praktijk alleen via Home Connect herkend
     (de standen en de typecodes van Bosch en Siemens). Miele, LG, Samsung en
     andere noemen het anders.
-13. **De terugblik** spreekt over "het oude systeem", ook in een huis zonder
-    YAML-voorganger. De fase moet de woorden bepalen (besluit 73).
-14. **Wat er nieuw is** (`version.ts`) noemt de bewoner en kamers van dit huis;
-    een ander huis leest dat bij elke update.
-15. **De tijdzone** valt terug op `Europe/Amsterdam` als hij nergens staat; die
-    van Home Assistant is beter.
+13. ~~**De terugblik**~~ Gedaan op 21 oktober (besluit 177): zonder
+    YAML-voorganger vergelijkt hij met "de apparaten zelf".
+14. ~~**Wat er nieuw is**~~ Gedaan op 21 oktober (besluit 177): zonder namen
+    en kamers van dit huis.
+15. ~~**De tijdzone**~~ Gedaan op 21 oktober (besluit 177): zonder configuratie
+    die van de dienst, in de add-on die van Home Assistant.
 16. ~~**De kamerwoorden.**~~ Gedaan op 21 oktober (besluit 172): één lijst met
     het goede lidwoord, in de dienst en de app.
 
