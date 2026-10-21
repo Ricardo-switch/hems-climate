@@ -71,7 +71,7 @@
   #tel .boven, #tel .groepen { grid-template-columns: 1fr; display: flex; flex-direction: column; }
   /* Jij (besluit 181): je profiel, bovenaan; eerst stond hier alleen Weergave (besluit 164). */
   .jijregel { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: inherit; text-decoration: none; }
-  .jijregel > span:nth-child(2) { flex: 1; }
+  .jijregel > span:not(.jijrondje):not(.pijl) { flex: 1; }
   .jijregel b { display: block; font-size: 16px; }
   .jijregel span span { font-size: 13px; color: var(--gedempt); }
   .jijregel .pijl { color: var(--gedempt); font-size: 18px; }

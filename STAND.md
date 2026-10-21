@@ -267,7 +267,7 @@ verwijzing bestaat.
   letters en minder beweging ([164]).
 - **Een profiel per bewoner** (Jij, bovenaan Instellingen): je thema op de
   telefoon (donker, licht of zoals je telefoon), een van zes eigen kleuren, je
-  kaarten en favorieten voor telefoon en wand, en je comfort. De wand toont de
+  kaarten en favorieten (één indeling, ook voor de wand), en je comfort. De wand toont de
   kleur, kaarten en favorieten van wiens comfort geldt, bij niemand thuis die
   van de hoofdgebruiker; de nachtstand en de weergave blijven van de wand
   ([181]).

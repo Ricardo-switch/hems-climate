@@ -10,7 +10,7 @@
 const { $$, esc, haal, deur } = app;
 
 /** De zes kleuren, in de volgorde waarin bewoners er een krijgen (voorkeuren.ts). */
-const KLEUREN = [['lucht', 'Lucht'], ['roze', 'Roze'], ['violet', 'Violet'], ['paars', 'Paars'], ['indigo', 'Indigo'], ['zilver', 'Zilver']];
+const KLEUREN = [['lucht', 'Lucht'], ['framboos', 'Framboos'], ['zeegroen', 'Zeegroen'], ['violet', 'Violet'], ['koper', 'Koper'], ['grafiet', 'Grafiet']];
 const THEMAS = [['donker', 'Donker'], ['licht', 'Licht'], ['systeem', 'Zoals je telefoon']];
 const IK = {
   kleur: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>',
@@ -93,9 +93,8 @@ function teken() {
     ${uiterlijk}
     <section class="glas lijst" aria-labelledby="kop-thuis">
       <h2 id="kop-thuis">Thuis</h2>
-      ${link('thuis.html', 'tel', 'Op je telefoon', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} · ${telling(v.tel.favorieten.length, 'favoriet', 'favorieten')}`)}
-      <div class="rij">${ik('wand')}<b>Op de wand</b><small>${esc(`${telling(v.wand.kaarten.length, 'kaart', 'kaarten')} · ${telling(v.wand.favorieten.length, 'favoriet', 'favorieten')}`)}</small></div>
-      <p class="uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt. Aanpassen doe je op de wand terwijl jouw comfort geldt, of op Thuis op een tablet of computer.</p>
+      ${link('thuis.html', 'tel', 'Kaarten en favorieten', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} · ${telling(v.tel.favorieten.length, 'favoriet', 'favorieten')}`)}
+      <p class="uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt. Wat je hier verandert, staat dan ook op de wand.</p>
     </section>
     <section class="glas lijst" aria-labelledby="kop-comfort">
       <h2 id="kop-comfort">Comfort</h2>

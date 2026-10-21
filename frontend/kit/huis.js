@@ -30,6 +30,19 @@
     gedempt: '#7F8E9C',
   };
 
+  /** Dezelfde kleuren als tekst op wit, in het lichte thema (besluit 181): anders halen ze het contrast niet. */
+  const TEKST_LICHT = {
+    [KLEUR.zon]: '#8a5a00',
+    [KLEUR.ijs]: '#0a6f9e',
+    [KLEUR.gloed]: '#b83a10',
+    [KLEUR.mint]: '#0b7a52',
+    [KLEUR.net]: '#46566a',
+    [KLEUR.violet]: '#5a4bd1',
+    [KLEUR.tekst]: '#0f1b2d',
+    [KLEUR.zacht]: '#46566a',
+    [KLEUR.gedempt]: '#5a6a7e',
+  };
+
   /* De kleuren en soorten van de inrichting (zie inrichten). */
   const MEUBEL = {
     hout: ['#8a7660', '#76634f', '#634f3f'],
@@ -230,6 +243,29 @@
     const zonKracht = model.zon?.aandeel ?? 0;
     /** Het lichte thema (besluit 181): het huis houdt zijn kleuren, de grond wordt lichter. */
     const licht = typeof document !== 'undefined' && document.documentElement.classList.contains('sc-licht');
+    /**
+     * In het licht is het donkere huis een zwarte vlek in een lichte lucht. Elke
+     * donkere kleur van het huis, de verlopen en wat buiten staat gaat een tint
+     * omhoog, tot leisteen: licht genoeg om niet zwart te zijn, donker genoeg
+     * voor de witte namen en temperaturen op de muren. Lichte kleuren, zoals een
+     * lamp die brandt, blijven zoals ze zijn.
+     */
+    const lichter = (tekst) => (!licht ? tekst : tekst.replace(/#([0-9a-f]{6})\b/gi, (m, h) => {
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const l = (max + min) / 2;
+      if (l >= 0.45) return m;
+      const d = max - min;
+      const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+      const tint = d === 0 ? 0 : max === r ? ((g - b) / d + 6) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      const l2 = 0.24 + 0.78 * l;
+      const c = (1 - Math.abs(2 * l2 - 1)) * sat;
+      const x = c * (1 - Math.abs((tint % 2) - 1));
+      const [r1, g1, b1] = tint < 1 ? [c, x, 0] : tint < 2 ? [x, c, 0] : tint < 3 ? [0, c, x] : tint < 4 ? [0, x, c] : tint < 5 ? [x, 0, c] : [c, 0, x];
+      const hex = (v) => Math.round((v + l2 - c / 2) * 255).toString(16).padStart(2, '0');
+      return `#${hex(r1)}${hex(g1)}${hex(b1)}`;
+    }));
 
     const defs = [];
     const lucht = [];
@@ -687,15 +723,17 @@
       const bx = l.dx < 0 ? lx - breedte : lx;
       const by = ly - hoogte / 2;
       const kleur = KLEUR[l.toon] ?? KLEUR.zacht;
+      // In het licht een wit kaartje met donkere tekst, zoals de rest van de app (besluit 181).
+      const tl = licht ? (k) => TEKST_LICHT[k] ?? k : (k) => k;
       labels.push(`<g class="sc-label">
         <polyline points="${a[0]},${a[1]} ${lx},${ly}" fill="none" stroke="${kleur}" stroke-opacity="0.55" stroke-width="1"/>
         <circle cx="${a[0]}" cy="${a[1]}" r="3" fill="${kleur}"/>
-        <rect x="${bx}" y="${by}" width="${breedte}" height="${hoogte}" rx="12" fill="#0E1828" fill-opacity="0.78" stroke="${kleur}" stroke-opacity="0.35"/>
+        <rect x="${bx}" y="${by}" width="${breedte}" height="${hoogte}" rx="12" fill="${licht ? '#ffffff' : '#0E1828'}" fill-opacity="${licht ? 0.88 : 0.78}" stroke="${kleur}" stroke-opacity="${licht ? 0.6 : 0.35}"/>
         ${regels
           .map((r, i) =>
             i === 0
-              ? `<text x="${bx + 12}" y="${by + (l.groot ? 30 : 19)}" fill="${l.groot ? kleur : KLEUR.tekst}" font-family="Bricolage Grotesque, Figtree, sans-serif" font-weight="600" font-size="${l.groot ? fs : 14}">${esc(r)}</text>`
-              : `<text x="${bx + 12}" y="${by + (l.groot ? 30 : 19) + i * 17}" fill="${i === 1 ? kleur : KLEUR.zacht}" font-family="Figtree, sans-serif" font-size="12.5" font-weight="${i === 1 ? 600 : 500}">${esc(r)}</text>`,
+              ? `<text x="${bx + 12}" y="${by + (l.groot ? 30 : 19)}" fill="${tl(l.groot ? kleur : KLEUR.tekst)}" font-family="Bricolage Grotesque, Figtree, sans-serif" font-weight="600" font-size="${l.groot ? fs : 14}">${esc(r)}</text>`
+              : `<text x="${bx + 12}" y="${by + (l.groot ? 30 : 19) + i * 17}" fill="${tl(i === 1 ? kleur : KLEUR.zacht)}" font-family="Figtree, sans-serif" font-size="12.5" font-weight="${i === 1 ? 600 : 500}">${esc(r)}</text>`,
           )
           .join('')}
       </g>`);
@@ -1699,12 +1737,12 @@
     }
 
     return `<svg class="sc-huis${opts.meubels ? ' sc-ingericht' : ''}" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="img" aria-label="${esc(model.beschrijving ?? 'Het huis')}">
-      <defs>${defs.join('')}</defs>
+      <defs>${lichter(defs.join(''))}</defs>
       <g>${lucht.join('')}</g>
       <g>${grond.join('')}</g>
-      <g>${huis.join('')}</g>
+      <g>${lichter(huis.join(''))}</g>
       <g>${stromen.join('')}</g>
-      <g>${buiten.join('')}</g>
+      <g>${lichter(buiten.join(''))}</g>
       <g>${labels.join('')}</g>
       ${tikken.length ? `<g>${tikken.join('')}</g>` : ''}
       ${opts.controle ? `<desc class="sc-controle">${esc(JSON.stringify(controle))}</desc>` : ''}

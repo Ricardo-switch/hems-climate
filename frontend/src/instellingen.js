@@ -172,7 +172,8 @@ function tekenNu() {
   app.luchtVan(d.zon, 0);
   const m = isGast() ? { klaar: true, html: GAST } : mist();
   // Inrichten en zoeken leiden een gast alleen naar pagina's die hij niet kan gebruiken.
-  $$('a[href="inrichten.html"], [data-zoekvak]').forEach((el) => (el.style.display = isGast() ? 'none' : ''));
+  // Met hidden en niet met style.display: dat wiste het centreren van de knop Inrichten.
+  $$('a[href="inrichten.html"], [data-zoekvak]').forEach((el) => (el.hidden = isGast()));
   $$('[data-mist]').forEach((el) => {
     el.innerHTML = m.html;
     el.classList.toggle('klaar', m.klaar);

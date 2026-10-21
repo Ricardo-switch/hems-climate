@@ -51,6 +51,8 @@
   /* De begroeting (15 oktober 2026): klein boven de kop. */
   .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
   .groet b { color: var(--tekst); }
+  /* Ieder in zijn eigen kleur (besluit 181). */
+  .groet b[data-kleur] { color: var(--accent); }
   /* Welk comfort geldt (besluit 147): een gezicht, de reden, en terugzetten. */
   /*
    * Wie er thuis is en wiens comfort geldt (besluit 169): een rondje per
@@ -60,22 +62,27 @@
   .wie { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 9px 0 6px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.07); color: var(--tekst); font: inherit; cursor: pointer; flex: none; }
   .wie[hidden] { display: none; }
   .wie:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-  .wie .gezichten { display: flex; gap: 10px; }
-  .wie .gezichten i { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 800; color: var(--op-accent); background: var(--accent); box-shadow: 0 0 0 2px #16203a, 0 0 12px 2px var(--accent); }
-  .wie .gezichten i.afwezig { background: #3a4757; color: var(--gedempt); box-shadow: 0 0 0 2px #16203a; }
-  .wie .gezichten i.geldt { box-shadow: 0 0 0 2px #16203a, 0 0 0 4px var(--tekst), 0 0 14px 3px var(--accent); z-index: 1; }
-  .wie .gezichten i.afwezig.geldt { box-shadow: 0 0 0 2px #16203a, 0 0 0 4px var(--tekst); }
-  .wie .gezichten i.geldt::after { content: ''; position: absolute; right: -7px; bottom: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--tekst) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1424' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/%3E%3C/svg%3E") center / 9px no-repeat; box-shadow: 0 0 0 2px #16203a; }
+  /* De ring tussen de bollen heeft de kleur van de pil; in het licht dus licht (besluit 181). */
+  .wie .gezichten { display: flex; gap: 10px; --ring: #16203a; --weg: #3a4757; }
+  .sc-licht .wie .gezichten, .sc-licht .wiekeuze { --ring: #e4eaf2; --weg: #c9d2dd; }
+  .wie .gezichten i { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11.5px; font-weight: 800; color: var(--op-accent); background: var(--accent); box-shadow: 0 0 0 2px var(--ring), 0 0 12px 2px var(--accent); }
+  .wie .gezichten i.afwezig { background: var(--weg); color: var(--gedempt); box-shadow: 0 0 0 2px var(--ring); }
+  .wie .gezichten i.geldt { box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px var(--tekst), 0 0 14px 3px var(--accent); z-index: 1; }
+  .wie .gezichten i.afwezig.geldt { box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px var(--tekst); }
+  .wie .gezichten i.geldt::after { content: ''; position: absolute; right: -7px; bottom: -6px; width: 14px; height: 14px; border-radius: 50%; background: var(--tekst) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b1424' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/%3E%3C/svg%3E") center / 9px no-repeat; box-shadow: 0 0 0 2px var(--ring); }
+  .sc-licht .wie .gezichten i.geldt::after { background-color: #ffffff; }
+  .sc-licht .wie .gezichten i.geldt { box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px var(--gedempt), 0 0 14px 3px var(--accent); }
+  .sc-licht .wie .gezichten i.afwezig.geldt { box-shadow: 0 0 0 2px var(--ring), 0 0 0 4px var(--gedempt); }
   .wie .pijl { color: var(--gedempt); font-size: 11px; }
   /* Het blad: wiens comfort geldt. */
-  .wiekeuze { display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 10px; margin-top: 6px; border-radius: 16px; border: 1px solid transparent; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .wiekeuze { --weg: #3a4757; display: grid; grid-template-columns: 22px 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; padding: 11px 10px; margin-top: 6px; border-radius: 16px; border: 1px solid transparent; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .wiekeuze.aan { border-color: rgb(var(--wit) / 0.3); background: rgb(var(--wit) / 0.06); }
   .wiekeuze:disabled { cursor: default; }
   .wiekeuze:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .wiekeuze .rond { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--gedempt); box-sizing: border-box; }
   .wiekeuze.aan .rond { border: 6px solid var(--tekst); }
   .wiekeuze .gezicht { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: var(--op-accent); background: var(--accent); }
-  .wiekeuze .gezicht.afwezig { background: #3a4757; color: var(--gedempt); }
+  .wiekeuze .gezicht.afwezig { background: var(--weg); color: var(--gedempt); }
   .wiekeuze .gezicht.vanzelf { background: rgb(var(--wit) / 0.08); color: var(--zacht); }
   .wiekeuze b { display: block; font-size: 15px; }
   .wiekeuze small { display: block; font-size: 12.5px; color: var(--gedempt); margin-top: 1px; line-height: 1.35; }
@@ -422,7 +429,7 @@
         <button type="button" class="vrijvak" data-vrijvak hidden>+ Kaart kiezen</button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
-      <div class="bewerkkop" data-bewerkkop hidden><span>Je past de wand aan <b>voor iedereen in huis</b></span><button type="button" class="knop" data-kaart-erbij>+ Kaart</button><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>
+      <div class="bewerkkop" data-bewerkkop hidden><span data-bewerkwie>Je past de wand aan <b>voor iedereen in huis</b></span><button type="button" class="knop" data-kaart-erbij>+ Kaart</button><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>
       <div class="dok">
         <a class="bol adem" href="assistent.html#nu" aria-label="Vraag de assistent wat het huis nu doet" style="width: 46px; height: 46px; flex: none"></a>
         <a class="vraag" href="assistent.html#typ">Tik om iets te vragen over je huis</a>

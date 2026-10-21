@@ -101,6 +101,16 @@ export function zonderVasthoudenVan(b: Bewoners): Bewoners {
 }
 
 /** De hoofdgebruiker, of null zonder bewoners. */
+/**
+ * De bewoners voor het profiel (besluit 181): op volgorde met hun account,
+ * het account van wiens comfort geldt (het profiel uit het laatste besluit),
+ * en of wie kijkt een scherm is.
+ */
+export function profielenVan(b: Bewoners, geldt: string | null, userId: string | null): { profielen: { volgorde: { id: string; account: string; naam: string }[]; geldt: string | null }; scherm: boolean } {
+  const volgorde = b.volgorde.flatMap((id) => (b.bewoners[id] ? [{ id, account: b.bewoners[id]!.haUser, naam: b.bewoners[id]!.naam }] : []));
+  return { profielen: { volgorde, geldt: geldt == null ? null : (b.bewoners[geldt]?.haUser ?? null) }, scherm: userId != null && b.schermen[userId] != null };
+}
+
 export const hoofdVan = (b: Bewoners): Bewoner | null => (b.volgorde[0] != null ? (b.bewoners[b.volgorde[0]] ?? null) : null);
 
 /** Een persoon in Home Assistant, met het account dat erbij hoort. */
