@@ -191,7 +191,7 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 .verder a small { font-size: 12px; color: var(--gedempt); font-weight: 600; }
 .verder a b { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; white-space: nowrap; }
 .verder a.volgende { text-align: right; }
-.verder a.volgende b { justify-content: flex-end; }
+.verder a.volgende b { justify-content: safe flex-end; }
 .verder span.vorige, .verder span.volgende { display: none; }
 .verder a:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
 
@@ -221,7 +221,8 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 #tel .verder { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 #tel .verder .waar { display: none; }
 #tel .verder a { min-width: 0; padding: 12px 14px; border-radius: 16px; background: var(--glas); }
-#tel .verder a b { overflow: hidden; text-overflow: ellipsis; }
+/* Een lange titel breekt af; rechts uitgelijnd viel eerst het begin eraf ("leutel voor de assistent", 21 oktober 2026). */
+#tel .verder a b { white-space: normal; text-wrap: balance; }
 #tel .verder span.vorige, #tel .verder span.volgende { display: block; }
 /* Eerst de lijst; een gekozen deel als eigen scherm, met terug naar de groep. */
 html:not(.deel-open) #tel [data-vorm], html:not(.deel-open) #tel [data-naast], html:not(.deel-open) #tel [data-verder] { display: none; }

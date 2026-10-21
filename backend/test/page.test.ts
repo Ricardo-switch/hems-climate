@@ -2633,6 +2633,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
     const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
     const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, `indeling.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'inrichten.html#warmte', 'inrichten.html#welkom'];
+    // Een lange titel bij Volgende breekt af, en valt er niet links af (21 oktober 2026: "leutel voor de assistent").
+    await p.goto(`${baseUrl}/toegang.html#bewoners`);
+    const volgendeTitel = p.locator('#tel .verder a.volgende b');
+    await volgendeTitel.waitFor();
+    expect(await volgendeTitel.textContent()).toContain('Sleutel voor de assistent');
+    expect(
+      await volgendeTitel.evaluate((el) => {
+        const r = el.ownerDocument.createRange();
+        r.selectNodeContents(el);
+        const knop = el.closest('a')!.getBoundingClientRect();
+        const tekst = r.getBoundingClientRect();
+        return tekst.left >= knop.left - 1 && tekst.right <= knop.right + 1;
+      }),
+    ).toBe(true);
     const vast: string[] = [];
     let geveegd = 0;
     for (const pagina of paginas) {
