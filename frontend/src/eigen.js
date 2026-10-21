@@ -141,9 +141,16 @@
   const PER_PAGINA = 4;
   const ZON_IK = '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.5"/>';
 
-  /** Elk apparaat van een soort, met zijn kamer: de naam, de id en het icoon. */
+  /**
+   * Elk apparaat van een soort, met zijn kamer: de naam, de id en het icoon. Staat
+   * het in een zone van een open ruimte, dan die zone (21 oktober 2026): anders
+   * stond bij elke plafonnière van een samengevoegde begane grond "Beneden".
+   */
   function vanSoort(soort) {
-    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((d) => d.soort === soort).map((d) => ({ ...d, kamer: r.naam, kamerId: r.id, kamerIk: r.buiten ? 'buiten' : r.soort ?? 'kamer' }))));
+    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((d) => d.soort === soort).map((d) => {
+      const zone = d.zone ? (r.zones ?? []).find((z) => z.id === d.zone) : null;
+      return { ...d, kamer: zone?.naam ?? r.naam, kamerId: r.id, kamerIk: r.buiten ? 'buiten' : zone?.soort ?? r.soort ?? 'kamer' };
+    })));
   }
   const lampen = () => vanSoort('licht');
   const schermen = () => vanSoort('screen');
@@ -487,10 +494,16 @@
       const d = k && [...k.lampen, ...k.schermen, ...k.scenes].find((x) => x.id === f.id);
       return d ? { naam: d.naam, kamer: f.soort === 'scene' ? '' : k.naam } : null;
     };
+    /*
+     * De gekozen favorieten zoals op de kaart (21 oktober 2026): dezelfde
+     * tegels, met hun plek en een greep om te schuiven. Een tik op een tegel
+     * schakelt hier niets; het blad is om te kiezen en te ordenen.
+     */
     const chips = gekozen
       .map((f, i) => {
         const n = naamVan(f);
-        return n ? `<span class="favchip" data-favchip="${esc(f.id)}" role="button" tabindex="0" aria-label="${esc(`${i + 1}: ${n.naam}${n.kamer ? ` in ${n.kamer}` : ''}; sleep om te verplaatsen`)}"><i>${i + 1}</i>${esc(n.naam)}${n.kamer ? ` <em>${esc(n.kamer)}</em>` : ''}</span>` : '';
+        const t = n ? tegel(f) : '';
+        return t ? `<div class="favvoorbeeld" data-favchip="${esc(f.id)}" tabindex="0" aria-label="${esc(`${i + 1}: ${n.naam}${n.kamer ? ` in ${n.kamer}` : ''}; schuif met de greep, of met de pijltjes`)}"><i class="favnr" aria-hidden="true">${i + 1}</i><div class="favtegel" inert>${t}</div><span class="favgreep" data-favgreep aria-hidden="true">${ICOON.greep}</span></div>` : '';
       })
       .join('');
     const knop = (id, label, n) => `<button type="button" data-fav-filter="${id}" aria-pressed="${filter === id}">${label}${n == null ? '' : `<i>${n}</i>`}</button>`;
@@ -510,8 +523,8 @@
       })
       .join('');
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Favorieten</h2><button type="button" class="knop knop-licht" data-fav-klaar>Klaar</button></div>
-      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Sleep om de volgorde te veranderen.' : ''}</p>
-      ${chips ? `<div class="favchips" data-favchips>${chips}</div>` : ''}
+      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Schuif met de greep om de volgorde te veranderen.' : ''}</p>
+      ${chips ? `<div class="favchips tegels" data-favchips>${chips}</div>` : ''}
       ${filters}
       ${ruimtes}`;
   }
@@ -536,11 +549,13 @@
   }
 
   /*
-   * De volgorde van de gekozen favorieten: een chip slepen. Tijdens het slepen
-   * schuiven alleen de chips; bij loslaten neemt het blad de nieuwe volgorde over.
+   * De volgorde van de gekozen favorieten: een tegel aan zijn greep slepen
+   * (21 oktober 2026; eerst een chip, overal vast te pakken, zodat het blad niet
+   * meer scrolde onder de vinger). Tijdens het slepen schuiven alleen de tegels;
+   * bij loslaten neemt het blad de nieuwe volgorde over.
    */
   document.addEventListener('pointerdown', (e) => {
-    const chip = e.target.closest?.('[data-favchip]');
+    const chip = e.target.closest?.('[data-favgreep]')?.closest('[data-favchip]');
     if (!chip || blad?.soort !== 'favorieten') return;
     const rij = chip.parentElement;
     e.preventDefault();
@@ -548,8 +563,9 @@
     const beweeg = (m) => {
       const onder = document.elementFromPoint(m.clientX, m.clientY)?.closest?.('[data-favchip]');
       if (!onder || onder === chip || onder.parentElement !== rij) return;
-      const r = onder.getBoundingClientRect();
-      rij.insertBefore(chip, m.clientX < r.left + r.width / 2 ? onder : onder.nextSibling);
+      const alle = [...rij.children];
+      // In een raster: naar voren geschoven komt hij ervoor, naar achteren erna.
+      rij.insertBefore(chip, alle.indexOf(chip) > alle.indexOf(onder) ? onder : onder.nextSibling);
     };
     const los = () => {
       removeEventListener('pointermove', beweeg);
@@ -562,13 +578,14 @@
     addEventListener('pointerup', los, { once: true });
     addEventListener('pointercancel', los, { once: true });
   });
-  // Met het toetsenbord: de pijltjes verplaatsen een chip.
+  // Met het toetsenbord: de pijltjes verplaatsen een tegel, links en rechts één plek, op en neer een rij.
+  const STAP = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -2, ArrowDown: 2 };
   document.addEventListener('keydown', (e) => {
     const chip = e.target.closest?.('[data-favchip]');
-    if (!chip || blad?.soort !== 'favorieten' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    if (!chip || blad?.soort !== 'favorieten' || !(e.key in STAP)) return;
     e.preventDefault();
     const i = blad.keuze.findIndex((f) => f.id === chip.dataset.favchip);
-    const j = i + (e.key === 'ArrowLeft' ? -1 : 1);
+    const j = i + STAP[e.key];
     if (i < 0 || j < 0 || j >= blad.keuze.length) return;
     [blad.keuze[i], blad.keuze[j]] = [blad.keuze[j], blad.keuze[i]];
     tekenBlad();

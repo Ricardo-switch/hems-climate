@@ -28,9 +28,12 @@ let voorkeur = null;
 /** Het huis en de indeling: de lampen, scènes en screens per kamer, en de bewegingsmelders. */
 let huisData = null;
 let indeling = null;
+/** Op je startscherm: of de eigen poort in Tailscale openstaat, en op welk adres. */
+let startscherm = null;
 
 async function laad() {
-  const [f, z, v, h, i] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling')]);
+  const [f, z, v, h, i, st] = await Promise.allSettled([haal('api/functies'), haal('api/zon'), haal('api/voorkeuren'), haal('api/huis'), haal('api/indeling'), haal('api/startscherm')]);
+  if (st.status === 'fulfilled') startscherm = st.value;
   if (z.status === 'fulfilled') zon = z.value;
   if (v.status === 'fulfilled') voorkeur = v.value;
   if (h.status === 'fulfilled') huisData = h.value;
@@ -156,6 +159,67 @@ function scherm() {
     <div class="regelrij"><div class="l"><b>Volledig scherm</b><span>Zonder de zijbalk en de kopbalk van Home Assistant, en zonder de balken van de browser.</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="Volledig scherm" data-volledig></button></div>
     <p class="mini">Alleen op dit apparaat: aan op de tablet aan de muur, uit op je telefoon. Het hele scherm komt bij de eerste tik. Terug naar Home Assistant gaat met de knop boven de bel, of hieronder.</p>
     <div><button type="button" class="knop" data-naar-ha>Naar Home Assistant</button></div>`;
+}
+
+/*
+ * Op je startscherm (21 oktober 2026). Met het eigen icoon kan alleen als
+ * Chrome de app installeert: over https en buiten Home Assistant, dus via de
+ * eigen poort in Tailscale (besluit 160). In de app van Home Assistant wijst
+ * dit de weg daarheen; staat de eigen poort nog dicht, dan de stappen, met de
+ * adressen van dit huis erin.
+ */
+const android = /android/i.test(navigator.userAgent);
+const apple = /iphone|ipad/i.test(navigator.userAgent);
+/** Het adres van Home Assistant zoals deze telefoon het opent, als de app erin draait. */
+function haAdres() {
+  try {
+    return window.top.location.origin;
+  } catch {
+    return null;
+  }
+}
+/** Waar Smart Climate in Tailscale staat: het adres dat al gebruikt is, of een voorstel uit dat van Home Assistant. */
+function tailscaleAdres() {
+  if (startscherm?.adres) return startscherm.adres;
+  const tailnet = /\.([a-z0-9-]+\.ts\.net)(?::\d+)?$/i.exec(haAdres() ?? '')?.[1];
+  return tailnet ? `https://smartclimate.${tailnet}` : null;
+}
+function startschermZin() {
+  if (app.geinstalleerd()) return 'staat erop';
+  if (app.kanInstalleren()) return 'kan nu';
+  return app.inHA() ? (startscherm?.eigenPoort ? 'via Chrome' : 'eerst instellen') : 'via de browser';
+}
+function startschermVorm() {
+  const kop = '<h2 class="kop-2">Op je startscherm</h2>';
+  if (app.geinstalleerd()) return `${kop}<p class="uitleg">Smart Climate staat op het startscherm van dit apparaat, met zijn eigen icoon. Je opent hem zonder Home Assistant eromheen.</p>`;
+  if (app.kanInstalleren()) {
+    return `${kop}<p class="uitleg">Zet Smart Climate als app op je startscherm, met zijn eigen icoon. Hij opent dan schermvullend, zonder de balken van de browser.</p>
+      <div><button type="button" class="knop knop-licht" data-installeer>Zet op je startscherm</button></div>`;
+  }
+  const adres = tailscaleAdres();
+  if (app.inHA()) {
+    if (startscherm?.eigenPoort && adres) {
+      const host = adres.replace(/^https:\/\//, '');
+      const open = android ? `intent://${host}/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(adres)};end` : adres;
+      return `${kop}<p class="uitleg">In de app van Home Assistant kan dat niet met het eigen icoon. Open Smart Climate in Chrome, log in, en tik daar bij Functies › Weergave op <b>Zet op je startscherm</b>.</p>
+        <p class="mini">Adres: <b>${esc(adres)}</b></p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="knop knop-licht" href="${esc(open)}" target="_blank" rel="noopener">Open in Chrome</a><button type="button" class="knop" data-kopieer-adres="${esc(adres)}">Kopieer het adres</button></div>`;
+    }
+    const ha = haAdres() ?? 'http://homeassistant.local:8123';
+    const naam = adres ?? 'https://smartclimate.<jouw tailnet>.ts.net';
+    return `${kop}<p class="uitleg">In de app van Home Assistant kan dat niet met het eigen icoon: Chrome installeert alleen een app via https, en buiten Home Assistant. Dat gaat via Tailscale, met de eigen poort van Smart Climate. Eén keer instellen:</p>
+      <ol style="margin: 0; padding-left: 20px; display: grid; gap: 8px">
+        <li>In Home Assistant: <b>Instellingen › Add-ons › Smart Climate › Configuratie</b>. Vul bij <i>ha_adres</i> <b>${esc(ha)}</b> in, en onder <i>Netwerk</i> bij 8100/tcp de poort <b>8100</b>. Opslaan en herstarten.</li>
+        <li>Op <b>login.tailscale.com</b>: bij <i>Access controls</i> een tag <b>tag:homeassistant</b> met jezelf als eigenaar, en bij <i>Services</i> een dienst <b>smartclimate</b> op <b>tcp:443</b>.</li>
+        <li>In de <b>Tailscale-add-on › Configuratie</b>: <code>advertise_tags: [tag:homeassistant]</code>, en een dienst <code>svc:smartclimate</code> naar <code>http://127.0.0.1:8100</code>, https op poort 443. Opslaan en herstarten.</li>
+        <li>Terug bij <i>Services</i> op login.tailscale.com: keur Home Assistant goed voor smartclimate.</li>
+        <li>Open op je telefoon in Chrome <b>${esc(naam)}</b>, log in, en tik hier op <b>Zet op je startscherm</b>.</li>
+      </ol>
+      <p class="mini">Liever zonder? In de app van Home Assistant: Instellingen › Companion-app › Snelkoppelingen beheren, soort Dashboard, met het pad van Smart Climate. Dan wel met een icoon van Home Assistant.</p>`;
+  }
+  if (apple) return `${kop}<p class="uitleg">In Safari: tik op <b>Deel</b>, en dan op <b>Zet op beginscherm</b>.</p>`;
+  if (!window.isSecureContext) return `${kop}<p class="uitleg">Installeren kan alleen via https. Open Smart Climate via ${adres ? `<b>${esc(adres)}</b>` : 'het adres in Tailscale'}, en kom hier terug.</p>`;
+  return `${kop}<p class="uitleg">In Chrome: het menu <b>⋮</b> › <b>App installeren</b>${android ? '' : ', of het icoon rechts in de adresbalk'}.</p>`;
 }
 
 /** Het always-on display (besluiten 164 en 165): na hoeveel minuten zonder aanraken, en of hij er is. */
@@ -346,6 +410,7 @@ const NAAST = {
   cameras: ['Zo werkt het', ['De camera staat in de kamer waar hij hangt, bij Thuis', 'Smart Climate kijkt alleen: er gaat niets naar de camera']],
   deurbel: ['Zo werkt de deurbel', ['Wordt er aangebeld, dan toont elke open pagina meteen het beeld', 'Tot je het sluit, of de tijd om is', 'Het scherm aanzetten kan alleen in Fully Kiosk Browser']],
   licht: ['Zo werkt het', ['Bedienen doe je in het huis: tik op een kamer, dan op de lamp of het screen', 'De regeling raakt je lampen en screens niet aan', 'Wat je uitzet, staat niet meer in de app; in Home Assistant blijft het gewoon']],
+  startscherm: ['Zo werkt het', ['Een eigen icoon op je startscherm, en Smart Climate opent zonder Home Assistant eromheen', 'Alleen in je eigen tailnet, met je inlog van Home Assistant', 'Funnel of een portforward hoort er niet bij']],
   scherm: ['Waarom volledig scherm', ['Op de tablet aan de muur alleen je huis', 'Elk apparaat kiest het zelf', 'Met één tik terug in Home Assistant']],
   aod: ['Zo werkt het', ['Overdag de klok, wat het huis doet en het weer', 'Na zonsondergang gedimd, met een donker huis', 'Een tik, "Hé huis" of aanbellen opent de app']],
   uit: ['Zo werkt het', ['In de nacht en als niemand thuis is, gaat het scherm uit als er niemand beweegt', 'Een bewegingsmelder zet het display weer aan', 'In Fully Kiosk gaat het scherm echt uit']],
@@ -369,6 +434,7 @@ function delen() {
     // Weergave (besluit 167): dit scherm, het always-on display en wanneer het scherm uitgaat.
     { kop: 'Weergave' },
     ...(app.inHA() ? [{ id: 'scherm', titel: 'Dit scherm', zin: app.volledigGekozen() ? 'volledig scherm' : 'met de zijbalk', stand: 'goed' }] : []),
+    { id: 'startscherm', titel: 'Op je startscherm', zin: startschermZin(), stand: app.geinstalleerd() ? 'goed' : 'leeg' },
     { id: 'aod', titel: 'Always-on display', zin: niemandNu().rustMin > 0 ? `aan, na ${niemandNu().rustMin} min` : 'uit', stand: 'goed' },
     { id: 'uit', titel: 'Scherm uit', zin: niemandNu().nacht ? `${niemandNu().van}–${niemandNu().tot}` : niemandNu().weg ? 'als niemand thuis is' : 'nooit', stand: 'goed' },
   ];
@@ -384,7 +450,7 @@ function tekenNu() {
   app.luchtVan(zon, 0);
   if (!info || !concept) return;
   const nu = groep.tekenDelen(delen());
-  const vorm = { cameras, deurbel, licht, weer, praten, meldingen, scherm, aod, uit: schermUit }[nu]?.() ?? '';
+  const vorm = { cameras, deurbel, licht, weer, praten, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   const [kopje, lijst] = NAAST[nu] ?? NAAST.cameras;
   $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
@@ -403,6 +469,21 @@ function bewaar() {
 document.addEventListener('click', (e) => {
   const knop = e.target.closest('button');
   if (!knop || knop.disabled || !concept) return;
+  // Op je startscherm (21 oktober 2026): Chrome vraagt het zelf.
+  if (knop.hasAttribute('data-installeer')) {
+    void app.installeer().then((ja) => {
+      teken();
+      if (ja) groep.zegBewaard('ok', 'Smart Climate staat op je startscherm');
+    });
+    return;
+  }
+  if (knop.dataset.kopieerAdres) {
+    void navigator.clipboard?.writeText(knop.dataset.kopieerAdres).then(
+      () => groep.zegBewaard('ok', 'Het adres staat op het klembord'),
+      () => groep.zegBewaard('fout', 'Kopiëren lukte niet; neem het adres over'),
+    );
+    return;
+  }
   // Weergave (besluit 167): dit scherm, het always-on display, scherm uit.
   if (knop.hasAttribute('data-volledig')) {
     app.zetVolledig(knop.getAttribute('aria-checked') !== 'true');
@@ -515,3 +596,6 @@ addEventListener('hashchange', teken);
 
 app.start('instellingen');
 void laad();
+
+// Chrome biedt het installeren aan, of het is gebeurd: Op je startscherm opnieuw tekenen.
+addEventListener('sc-installeer', () => teken());

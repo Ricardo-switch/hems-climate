@@ -178,6 +178,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [171. Bijwerken vanuit de app: een melding, wat er nieuw is en een knop](#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop)
 - [173. Sneller: bewaren, inpakken, en het huis één keer uitrekenen](#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen)
 - [174. Het huis en wie er thuis is, live](#174-het-huis-en-wie-er-thuis-is-live)
+- [175. Op je startscherm, en de favorieten zoals de kaart](#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart)
 
 **Veiligheid**
 
@@ -7781,6 +7782,50 @@ Assistant aanzette, zag je pas na een paar tellen.
 niet ingepakt, bij elke meting); alleen wat veranderde sturen en de pagina het
 laten samenvoegen (elke soort apparaat een eigen regel in de app, voor weinig
 winst na het inpakken).
+
+---
+
+## 175. Op je startscherm, en de favorieten zoals de kaart
+
+*Onderwerp: weergave · Status: geldig*
+
+Gevraagd door de bewoner op 21 oktober 2026, tussen de stappen van besluit 172
+door: een snelkoppeling op het startscherm van Android met het icoon van de
+app; bij de favorieten de zone in plaats van de etage, vasthouden naar de lamp
+zelf, en de gekozen favorieten als tegels met een greep; en twee dingen op
+Bewoners.
+
+*Besluit:*
+
+- **Op je startscherm** staat bij Functies › Weergave. Met het eigen icoon kan
+  alleen als Chrome de app installeert: over https en buiten Home Assistant.
+  Kan dat (`beforeinstallprompt`), dan een knop die het vraagt. In de app van
+  Home Assistant kan het niet; staat de eigen poort open (besluit 160), dan een
+  knop die Smart Climate in Chrome opent, met het adres om te kopiëren;
+  anders de vijf stappen om de eigen poort via Tailscale te openen, met het
+  adres van dit huis erin (uit dat van Home Assistant: een adres op `ts.net`
+  geeft `smartclimate.<tailnet>.ts.net`). Daaronder de snelkoppeling van Home
+  Assistant zelf, met een icoon van Home Assistant. De dienst zegt bij
+  `/api/startscherm` of de eigen poort er is en op welk adres hij gebruikt is.
+  Tailscale mag daarom in de teksten van de app; de tekstcontrole van besluit
+  131 verbiedt het niet meer.
+- **Een favoriet noemt zijn zone:** staat een lamp of scherm in een zone van een
+  open ruimte, dan die zone en zijn icoon; anders stond bij elke plafonnière
+  van een samengevoegde begane grond de naam van die ruimte.
+- **Vasthouden opent het apparaat:** dat deed het adres al, maar op de telefoon
+  staat het blad onder de tekening; nu gaat de pagina er één keer naartoe.
+- **De gekozen favorieten** staan bovenin het kiesblad als dezelfde tegels als
+  op de kaart, met hun plek en een greep. Slepen kan alleen aan de greep, zodat
+  het blad onder de vinger blijft scrollen; met de pijltjes één plek opzij of
+  een rij op en neer.
+- **Bewoners op de telefoon:** thuis of weg en "geldt nu" onder de naam; ernaast
+  bleef er voor de naam één woord per regel over.
+- **Iemand erbij in de add-on:** de QR-code wijst naar Smart Climate in Home
+  Assistant, niet naar het adres binnen Home Assistant dat alleen werkt voor
+  wie er al is. Elk vak op Bewoners tekent apart; lukt er een niet, dan zegt
+  dat vak wat er misging. Waarom de vakken op de Pi leeg bleven, is nog niet
+  gevonden: op de NAS en in de test staan ze er.
+- **Versie 0.50.0.**
 
 ## Wat nog een besluit wacht
 

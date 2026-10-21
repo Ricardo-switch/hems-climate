@@ -15,7 +15,8 @@ const NIET = ['index.html', 'app.js'];
 const WOORDEN: readonly [RegExp, string][] = [
   [/\bNAS\b/, 'de NAS: niet elk huis draait op een NAS'],
   [/HEMS_[A-Z]/, 'een omgevingsvariabele: dat is iets voor wie installeert'],
-  [/\bTailscale\b|\bdeploy\b|\bDocker\b/i, 'hoe het bij één huis uitgerold wordt'],
+  // Tailscale mag sinds besluit 160: de eigen poort van de add-on gaat in elk huis via Tailscale.
+  [/\bdeploy\b|\bDocker\b/i, 'hoe het bij één huis uitgerold wordt'],
   [/\bSynology\b/, 'een merk alsof iedereen het heeft'],
   [/Cornelissen|Matts|Daan/, 'een naam uit één huis'],
   // "Warmen" klinkt niet gewoon (15 oktober 2026): verwarmen, en opwarmen mag.
