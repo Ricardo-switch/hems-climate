@@ -18,7 +18,7 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
-import { timingSafeEqual } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { Readable, pipeline } from 'node:stream';
 import { createReadStream } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
@@ -592,6 +592,10 @@ interface Listener {
   readonly res: ServerResponse;
   readonly ping: NodeJS.Timeout;
 }
+
+/** Hoe lang de dienst wacht voor hij een verandering in het huis doorgeeft: een lamp meteen, een meting rustig. */
+const HUIS_SNEL_MS = 300;
+const HUIS_RUSTIG_MS = 2_000;
 
 export class WebServer {
   readonly #options: WebOptions & { host: string; write: (line: string) => void };
@@ -2104,6 +2108,10 @@ export class WebServer {
       res.end();
       return;
     }
+    // Meteen open, ook zonder besluit om mee te sturen: anders hoort de pagina
+    // pas bij de eerste ping (25 tellen) dat hij verbonden is, en toont hij
+    // na 15 tellen "geen verbinding" (21 oktober 2026).
+    res.flushHeaders();
 
     // Een kwartier stilte is normaal 's nachts. Zonder teken van leven sluit
     // een proxy of een telefoon in slaapstand de verbinding.
@@ -2149,15 +2157,7 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
    * deurbel. De melding zegt alleen welke camera; het beeld vraagt de inlog.
    */
   ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean; readonly reserve?: readonly string[] } = { seconden: 120, schermAan: true }): void {
-    const data = JSON.stringify({ camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan, reserve: hoe.reserve ?? [] });
-    for (const listener of this.#listeners) {
-      try {
-        listener.res.write(`event: aanbellen\ndata: ${data}\n\n`);
-      } catch {
-        clearInterval(listener.ping);
-        this.#listeners.delete(listener);
-      }
-    }
+    this.#zend('aanbellen', { camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan, reserve: hoe.reserve ?? [] });
   }
 
   /** Wat de rookmelders nu zien (21 oktober 2026). */
@@ -2170,18 +2170,7 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
    */
   alarm(melders: readonly AlarmMelder[]): void {
     this.#alarm = melders;
-    const data = JSON.stringify({ melders, tMs: Date.now() });
-    for (const listener of this.#listeners) {
-      try {
-        listener.res.write(`event: alarm
-data: ${data}
-
-`);
-      } catch {
-        clearInterval(listener.ping);
-        this.#listeners.delete(listener);
-      }
-    }
+    this.#zend('alarm', { melders, tMs: Date.now() });
   }
 
   /**
@@ -2190,18 +2179,66 @@ data: ${data}
    * er niets van.
    */
   wek(waarom: 'beweging'): void {
-    const data = JSON.stringify({ waarom, tMs: Date.now() });
+    this.#zend('wekken', { waarom, tMs: Date.now() });
+  }
+
+  /** Een gebeurtenis naar elke open pagina. Een kijker die wegviel, ruimt hij op. */
+  #zend(soort: string, data: unknown): void {
+    const tekst = `event: ${soort}\ndata: ${JSON.stringify(data)}\n\n`;
     for (const listener of this.#listeners) {
       try {
-        listener.res.write(`event: wekken
-data: ${data}
-
-`);
+        listener.res.write(tekst);
       } catch {
         clearInterval(listener.ping);
         this.#listeners.delete(listener);
       }
     }
+  }
+
+  /*
+   * Het huis en wie er thuis is, live (21 oktober 2026). Eerst vroeg Thuis het
+   * huis elke 15 tellen op en Kamer elke 5, per open scherm, ook 's nachts als
+   * er niets veranderde. Nu zegt de dienst het als er iets veranderde, en
+   * haalt de pagina het dan op. Wat je bedient of ziet bewegen (een lamp, een
+   * scherm, beweging, wie er thuis is) gaat meteen; een temperatuur of verbruik
+   * dat verschuift rustig, en de pagina bepaalt hoe vaak dat telt. Alleen een
+   * vingerafdruk gaat mee: het huis zelf is ruim 100 kB, en een live-stroom
+   * wordt niet ingepakt.
+   */
+  #huisVinger: string | null = null;
+  #huisWacht: NodeJS.Timeout | null = null;
+  #huisSnel = false;
+  #bewonersWacht: NodeJS.Timeout | null = null;
+
+  /** Er veranderde iets in het huis; `snel` voor wat je bedient of ziet bewegen. */
+  huisVeranderd(snel: boolean): void {
+    if (this.#listeners.size === 0) return;
+    this.#huisSnel ||= snel;
+    // Een snelle verandering wacht niet op een rustige die al gepland stond.
+    if (this.#huisWacht && !snel) return;
+    if (this.#huisWacht) clearTimeout(this.#huisWacht);
+    this.#huisWacht = setTimeout(() => {
+      this.#huisWacht = null;
+      const huis = this.#options.house?.() ?? null;
+      if (huis == null) return;
+      const vinger = createHash('sha1').update(JSON.stringify(huis)).digest('hex').slice(0, 12);
+      const zeg = this.#huisSnel;
+      this.#huisSnel = false;
+      if (vinger === this.#huisVinger) return;
+      this.#huisVinger = vinger;
+      this.#zend('huis', { v: vinger, snel: zeg });
+    }, snel ? HUIS_SNEL_MS : HUIS_RUSTIG_MS);
+    this.#huisWacht.unref?.();
+  }
+
+  /** Iemand komt thuis of gaat weg: de rondjes op Thuis. */
+  bewonersVeranderd(): void {
+    if (this.#listeners.size === 0 || this.#bewonersWacht) return;
+    this.#bewonersWacht = setTimeout(() => {
+      this.#bewonersWacht = null;
+      this.#zend('bewoners', { tMs: Date.now() });
+    }, HUIS_SNEL_MS);
+    this.#bewonersWacht.unref?.();
   }
 
   /** Duwt een besluit naar alle kijkers. Hier hangt de runner zich aan. */

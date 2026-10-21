@@ -3151,6 +3151,13 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await wie.locator('i.geldt', { hasText: 'N' }).waitFor(kort);
     expect(await wie.locator('i.afwezig').count()).toBe(1);
     expect(await wandL.locator('[data-geldt]').count()).toBe(0);
+    // Live (21 oktober 2026): Ricardo komt thuis, de dienst zegt het, en Thuis ziet het zonder te herladen.
+    houseStates.set('person.ricardo_cornelissen', persoon('person.ricardo_cornelissen', 'home'));
+    server.bewonersVeranderd();
+    await expect.poll(() => wie.locator('i.afwezig').count(), kort).toBe(0);
+    houseStates.set('person.ricardo_cornelissen', persoon('person.ricardo_cornelissen', 'not_home'));
+    server.bewonersVeranderd();
+    await expect.poll(() => wie.locator('i.afwezig').count(), kort).toBe(1);
     // Een tik: het blad met iedereen; vanzelf staat aan, en Ricardo kiezen houdt zijn comfort vast.
     await wie.click();
     const wieBlad = p.locator('[data-kiesblad]');

@@ -1,6 +1,6 @@
 {
   "name": "@hems/frontend",
-  "version": "0.48.1",
+  "version": "0.49.0",
   "private": true,
   "description": "Read-only webweergave op het Explanation-contract",
   "type": "module",

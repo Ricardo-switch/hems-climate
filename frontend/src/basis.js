@@ -250,8 +250,10 @@
       if (opLive) bron.onmessage = opLive;
       // Valt de stroom weg en komt hij niet snel terug, dan zonder verbinding.
       let wacht = null;
+      let wasWeg = false;
       const deze = bron;
       deze.addEventListener('error', () => {
+        wasWeg = true;
         const toen = Date.now();
         clearTimeout(wacht);
         wacht = setTimeout(() => deze.readyState !== EventSource.OPEN && offline(toen), 15_000);
@@ -265,7 +267,22 @@
       deze.addEventListener('open', () => {
         clearTimeout(wacht);
         online();
+        // Terug na een onderbreking: wat er intussen veranderde, haalt de pagina nu op.
+        if (wasWeg) for (const soort of ['huis', 'bewoners']) signaal(soort, true);
+        wasWeg = false;
       });
+      // Het huis of wie er thuis is veranderde (21 oktober 2026): de pagina haalt het op.
+      for (const soort of ['huis', 'bewoners']) {
+        deze.addEventListener(soort, (ev) => {
+          let snel = true;
+          try {
+            snel = JSON.parse(ev.data).snel !== false;
+          } catch {
+            // Een half bericht: dan maar meteen.
+          }
+          signaal(soort, snel);
+        });
+      }
       // De gekozen bewegingsmelder ziet iemand (besluit 164): de wand wordt wakker.
       deze.addEventListener('wekken', () => dispatchEvent(new CustomEvent('sc-wek', { detail: 'beweging' })));
       // Een rookmelder ziet iets, of niet meer (21 oktober 2026).
@@ -287,6 +304,54 @@
       // Geen EventSource: het verversen per minuut doet het werk.
     }
     return bron;
+  }
+
+  /*
+   * Het huis en wie er thuis is, live (21 oktober 2026). De dienst zegt het als
+   * er iets veranderde; de pagina haalt het dan op, alleen als ze in beeld is.
+   * Wat je bedient of ziet bewegen meteen; een temperatuur of verbruik dat
+   * verschuift hooguit eens per `rustig`, zoals de pagina het eerst zelf vroeg.
+   */
+  const bijSoort = new Map();
+  function signaal(soort, snel) {
+    for (const a of bijSoort.get(soort) ?? []) a(snel);
+  }
+  function bijVerandering(soort, opnieuw, { rustig = 15_000 } = {}) {
+    let laatst = Date.now();
+    let bezig = false;
+    let nogEens = false;
+    let later = null;
+    let verborgen = false;
+    const haalOp = async () => {
+      clearTimeout(later);
+      later = null;
+      if (bezig) return void (nogEens = true);
+      bezig = true;
+      laatst = Date.now();
+      try {
+        await opnieuw();
+      } catch {
+        // Dan de volgende keer.
+      } finally {
+        bezig = false;
+        if (nogEens) {
+          nogEens = false;
+          void haalOp();
+        }
+      }
+    };
+    const prik = (snel) => {
+      if (document.visibilityState !== 'visible') return void (verborgen = true);
+      if (snel || Date.now() - laatst >= rustig) return void haalOp();
+      later ??= setTimeout(() => void haalOp(), laatst + rustig - Date.now());
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && verborgen) {
+        verborgen = false;
+        void haalOp();
+      }
+    });
+    bijSoort.set(soort, [...(bijSoort.get(soort) ?? []), prik]);
   }
 
   /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
@@ -1310,5 +1375,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster };
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering };
 })(window);

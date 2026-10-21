@@ -177,6 +177,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen](#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen)
 - [171. Bijwerken vanuit de app: een melding, wat er nieuw is en een knop](#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop)
 - [173. Sneller: bewaren, inpakken, en het huis één keer uitrekenen](#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen)
+- [174. Het huis en wie er thuis is, live](#174-het-huis-en-wie-er-thuis-is-live)
 
 **Veiligheid**
 
@@ -7737,6 +7738,49 @@ bezoek opnieuw na.
 
 *Wat afviel:* de bestandsnamen zelf een hash geven (`thuis.3f2a.js`): het
 stempel achter het adres doet hetzelfde zonder dat elke verwijzing verandert.
+
+---
+
+## 174. Het huis en wie er thuis is, live
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 3 uit het stappenplan van besluit 172, op 21 oktober 2026. Thuis vroeg
+het huis en wie er thuis is elke 15 tellen op, Kamer het huis elke 5, per open
+scherm en ook 's nachts als er niets veranderde. Een lamp die je in Home
+Assistant aanzette, zag je pas na een paar tellen.
+
+*Besluit:*
+
+- **De dienst zegt het als er iets veranderde,** over de live-verbinding die
+  er al was voor de besluiten, de deurbel en het rookalarm (`event: huis` en
+  `event: bewoners`). De pagina haalt het daarna zelf op, ingepakt waar dat
+  kan (besluit 173); de live-verbinding zelf wordt niet ingepakt, dus daar gaat
+  alleen een vingerafdruk over.
+- **Meteen wat je bedient of ziet bewegen:** lampen, schermen, scènes,
+  klimaat, camera's, beweging, rookmelders, en wie er thuis komt of weggaat,
+  binnen een derde tel. **Rustig wat verschuift:** een temperatuur, verbruik of
+  batterij na twee tellen, en de pagina telt dat hooguit eens per 15 tellen
+  (Thuis) of 5 (Kamer), zoals ze het eerst zelf vroeg. Na elk besluit ook
+  rustig, want de stand van de kamers hangt eraan.
+- **Alleen als het huis echt anders is:** de dienst rekent het huis uit
+  (besluit 173 bewaart het) en vergelijkt een vingerafdruk; gelijk is geen
+  bericht. Zonder open pagina doet hij niets.
+- **Alleen in beeld:** een pagina op de achtergrond haalt niets op, en haalt
+  het in zodra ze weer in beeld is. Valt de verbinding weg en komt ze terug,
+  dan haalt de pagina het huis en de bewoners meteen opnieuw.
+- **De terugval blijft:** Thuis en Kamer laden elke minuut alles opnieuw,
+  zoals ze al deden, voor als de live-verbinding er niet is.
+- **Gevonden onderweg:** zonder besluit om mee te sturen (een verse
+  installatie) ging de live-verbinding pas bij de eerste ping open, na 25
+  tellen; de pagina toonde dan na 15 tellen "geen verbinding". Nu gaat ze
+  meteen open.
+- **Versie 0.49.0.**
+
+*Wat afviel:* het hele huis over de live-verbinding sturen (ruim 100 kB,
+niet ingepakt, bij elke meting); alleen wat veranderde sturen en de pagina het
+laten samenvoegen (elke soort apparaat een eigen regel in de app, voor weinig
+winst na het inpakken).
 
 ## Wat nog een besluit wacht
 
