@@ -30,6 +30,9 @@
   .schaal .goed { position: absolute; top: 13px; height: 12px; border-radius: 6px; background: rgba(110, 231, 183, 0.55); }
   .schaal .greep { position: absolute; top: 7px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; border: 0; padding: 0; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); display: grid; place-items: center; cursor: ew-resize; touch-action: none; }
   .schaal .greep i { width: 9px; height: 9px; border-radius: 50%; }
+  /* Een ruimer vak om het bolletje te pakken met een vinger, en zichtbaar vast tijdens het slepen (21 oktober 2026). */
+  .schaal .greep::before { content: ''; position: absolute; inset: -12px; border-radius: 50%; }
+  .schaal .greep.pakt { transform: scale(1.18); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.18), 0 2px 10px rgba(0, 0, 0, 0.5); cursor: grabbing; }
   .schaal .greep:focus-visible { outline: 3px solid var(--tekst); outline-offset: 2px; }
   .schaal .maat { position: absolute; top: 32px; font-size: 10.5px; color: var(--gedempt); transform: translateX(-50%); pointer-events: none; }
   /* Per dagdeel twee regels, met de uitleg na een tik (besluit 133, schets Wand-Comfort-Regels). */

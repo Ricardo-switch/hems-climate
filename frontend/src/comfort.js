@@ -326,43 +326,85 @@ function zet(k, m, soort, c) {
   k.modi = { ...k.modi, [m]: p };
 }
 
-/** Werkt de balk bij zonder alles opnieuw te tekenen, tijdens het slepen. */
+/**
+ * Werkt de balk bij tijdens het slepen, zonder de grepen te vervangen (21
+ * oktober 2026). Eerst kwam er een nieuwe greep onder de vinger; op een
+ * aanraakscherm kwamen bewegen en loslaten dan niet meer aan, bleef het slepen
+ * aan staan, en sprong de greep naar elke volgende tik op de pagina.
+ */
 function balkBij(rij, k, m) {
   const tmp = document.createElement('div');
   tmp.innerHTML = schaal(k, m) + regels(k, m);
-  rij.querySelector('.schaal').replaceWith(tmp.querySelector('.schaal'));
+  const oud = rij.querySelector('.schaal');
+  const nieuw = tmp.querySelector('.schaal');
+  const grepen = [...oud.querySelectorAll(':scope > .greep')];
+  for (const g of grepen) {
+    const n = nieuw.querySelector(`:scope > .greep[data-greep="${g.dataset.greep}"]`);
+    if (!n) continue;
+    g.style.left = n.style.left;
+    for (const a of ['aria-valuenow', 'aria-valuetext']) g.setAttribute(a, n.getAttribute(a));
+  }
+  // De rest (de groene strook, de zon, de getallen) opnieuw, voor de grepen.
+  for (const n of [...oud.childNodes]) if (!grepen.includes(n)) n.remove();
+  for (const n of [...nieuw.childNodes]) if (!n.classList?.contains('greep')) oud.insertBefore(n, grepen[0] ?? null);
   rij.querySelector('.regels').replaceWith(tmp.querySelector('.regels'));
 }
 
 let sleept = false;
 
+/*
+ * Alleen het bolletje slepen verandert de temperatuur (21 oktober 2026): het
+ * houdt de vinger vast tot je loslaat, en schuift mee vanaf waar je het pakte,
+ * zonder naar het midden van je vinger te springen. Een tik op de balk of
+ * ergens anders doet niets.
+ */
 document.addEventListener('pointerdown', (e) => {
   const greep = e.target.closest('[data-greep]');
   const k = huidig();
-  if (!greep || !k) return;
+  if (!greep || !k || sleept || (e.pointerType === 'mouse' && e.button !== 0)) return;
   e.preventDefault();
   const rij = greep.closest('[data-modus]');
   const m = rij.dataset.modus;
   const soort = greep.dataset.greep;
+  const id = e.pointerId;
+  const vanX = e.clientX;
+  const vanC = k.modi[m][soort];
+  const breed = rij.querySelector('.schaal').getBoundingClientRect().width || 1;
   sleept = true;
-  const waarde = (ev) => {
-    // Elke keer opnieuw zoeken: tijdens het slepen wordt de balk vervangen.
-    const r = rij.querySelector('.schaal').getBoundingClientRect();
-    return MIN + ((ev.clientX - r.left) / r.width) * (MAX - MIN);
-  };
+  greep.classList.add('pakt');
+  try {
+    greep.setPointerCapture(id);
+  } catch {
+    // Zonder vastpakken luistert het venster mee.
+  }
+  let laatst = vanC;
   const beweeg = (ev) => {
-    zet(k, m, soort, waarde(ev));
+    if (ev.pointerId !== id) return;
+    const c = vanC + ((ev.clientX - vanX) / breed) * (MAX - MIN);
+    zet(k, m, soort, c);
+    if (k.modi[m][soort] === laatst) return;
+    laatst = k.modi[m][soort];
     balkBij(rij, k, m);
   };
-  const los = () => {
-    removeEventListener('pointermove', beweeg);
+  const los = (ev) => {
+    if (ev.pointerId !== id || !sleept) return;
+    for (const doel of [greep, window]) {
+      doel.removeEventListener('pointermove', beweeg);
+      doel.removeEventListener('pointerup', los);
+      doel.removeEventListener('pointercancel', los);
+    }
+    greep.removeEventListener('lostpointercapture', los);
+    greep.classList.remove('pakt');
     sleept = false;
-    bewaar();
+    if (laatst !== vanC) bewaar();
     teken();
   };
-  addEventListener('pointermove', beweeg);
-  addEventListener('pointerup', los, { once: true });
-  addEventListener('pointercancel', los, { once: true });
+  for (const doel of [greep, window]) {
+    doel.addEventListener('pointermove', beweeg);
+    doel.addEventListener('pointerup', los);
+    doel.addEventListener('pointercancel', los);
+  }
+  greep.addEventListener('lostpointercapture', los);
 });
 
 document.addEventListener('keydown', (e) => {
