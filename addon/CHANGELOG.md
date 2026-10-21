@@ -1,5 +1,26 @@
 # Wat is er nieuw
 
+## 0.49.0
+
+*21 oktober 2026*
+
+**Beter**
+
+- Een lamp, scherm of beweging zie je meteen op Thuis en in de kamer, ook als je het in Home Assistant bedient
+- Wie er thuis komt of weggaat, staat meteen bij de rondjes op Thuis
+
+**Opgelost**
+
+- Een verse installatie zei soms even "geen verbinding" terwijl die er wel was
+
+## 0.48.1
+
+*21 oktober 2026*
+
+**Opgelost**
+
+- Een nieuwe versie staat nu ook op de wand als niemand kijkt; een tik geeft wat er nieuw is en Bijwerken
+
 ## 0.48.0
 
 *21 oktober 2026*

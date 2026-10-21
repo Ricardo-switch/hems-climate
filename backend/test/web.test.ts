@@ -557,6 +557,57 @@ describe('de besluitenstroom', () => {
     }
     expect(server.viewers).toBe(0);
   });
+
+  it('zegt het als het huis of wie er thuis is veranderde, en niet als er niets veranderde (21 oktober 2026)', async () => {
+    let huis = { etages: [{ id: 'bg', ruimtes: [{ id: 'woonkamer', apparaten: [{ id: 'light.plafond', aan: false }] }] }] } as unknown as HouseReport;
+    const { base, server } = await start({ latest: () => null, house: () => huis });
+    // Zonder kijker doet hij niets.
+    server.huisVeranderd(true);
+
+    const controller = new AbortController();
+    const reader = (await fetch(`${base}/api/events`, { signal: controller.signal })).body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const volgende = async (): Promise<{ soort: string; data: { v?: string; snel?: boolean } }> => {
+      for (;;) {
+        const index = buffer.indexOf('\n\n');
+        if (index !== -1) {
+          const frame = buffer.slice(0, index);
+          buffer = buffer.slice(index + 2);
+          const soort = /^event: (.+)$/m.exec(frame)?.[1];
+          const data = /^data: (.+)$/m.exec(frame)?.[1];
+          if (soort && data) return { soort, data: JSON.parse(data) as { v?: string; snel?: boolean } };
+          continue;
+        }
+        const { value, done } = await reader.read();
+        if (done) throw new Error('de stroom sloot');
+        buffer += decoder.decode(value, { stream: true });
+      }
+    };
+    try {
+      while (server.viewers === 0) await new Promise((r) => setTimeout(r, 5));
+      // Een lamp gaat aan: meteen.
+      server.huisVeranderd(true);
+      const eerst = await volgende();
+      expect(eerst.soort).toBe('huis');
+      expect(eerst.data.snel).toBe(true);
+
+      // Hetzelfde huis nog eens: geen bericht. Een ander huis, rustig: wel, met een andere vingerafdruk.
+      server.huisVeranderd(true);
+      await new Promise((r) => setTimeout(r, 500));
+      huis = { etages: [{ id: 'bg', ruimtes: [{ id: 'woonkamer', apparaten: [{ id: 'light.plafond', aan: true }] }] }] } as unknown as HouseReport;
+      server.huisVeranderd(false);
+      const daarna = await volgende();
+      expect(daarna.soort).toBe('huis');
+      expect(daarna.data.snel).toBe(false);
+      expect(daarna.data.v).not.toBe(eerst.data.v);
+
+      server.bewonersVeranderd();
+      expect((await volgende()).soort).toBe('bewoners');
+    } finally {
+      controller.abort();
+    }
+  });
 });
 
 describe('de terugblik op de logboeken', () => {

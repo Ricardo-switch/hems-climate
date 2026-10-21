@@ -29,7 +29,8 @@ verwijzing bestaat.
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist. Talen
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
-  verandering uitgerekend ([173]).
+  verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
+  dienst zegt het als er iets veranderde ([174]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -296,7 +297,8 @@ verwijzing bestaat.
   plaatje, en de wand houdt zijn toegang via Home Assistant zelf vast.
 - **Bijwerken vanuit de app:** in de add-on zegt Meldingen dat er een nieuwe
   versie klaarstaat; een tik geeft wat er nieuw is (uit `addon/CHANGELOG.md`,
-  via Home Assistant) en voor de beheerder een knop Bijwerken ([171]).
+  via Home Assistant) en voor de beheerder een knop Bijwerken ([171]). Ook op
+  het always-on display van de wand, met een tik naar Bijwerken.
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -569,4 +571,5 @@ verwijzing bestaat.
 [171]: DECISIONS.md#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop
 [172]: DECISIONS.md#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later
 [173]: DECISIONS.md#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen
+[174]: DECISIONS.md#174-het-huis-en-wie-er-thuis-is-live
 <!-- links:einde -->

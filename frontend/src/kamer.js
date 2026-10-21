@@ -868,8 +868,8 @@ addEventListener('hashchange', () => {
 });
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
-// Beweging zie je zodra het gebeurt (15 oktober 2026): het huis elke vijf seconden, als de pagina in beeld is.
-setInterval(() => document.visibilityState === 'visible' && void laadHuis(), 5_000);
+// Lampen, screens en beweging live (21 oktober 2026); een meting hooguit om de vijf tellen, zoals eerst.
+app.bijVerandering('huis', laadHuis, { rustig: 5_000 });
 app.live((nieuw) => {
   state = nieuw;
   teken();

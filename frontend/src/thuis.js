@@ -722,15 +722,16 @@ for (const podium of [document.getElementById('podium-wand'), document.getElemen
 }
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
-// Beweging in het huis (15 oktober 2026) en wie er thuis is (21 oktober 2026): elke
-// vijftien seconden, als de pagina in beeld is.
-setInterval(async () => {
-  if (document.visibilityState !== 'visible') return;
-  const [h, b] = await Promise.allSettled([haal('api/huis'), haal('api/bewoners')]);
-  if (h.status === 'fulfilled') huisData = h.value;
-  if (b.status === 'fulfilled') bewoners = b.value;
-  if (h.status === 'fulfilled' || b.status === 'fulfilled') teken();
-}, 15_000);
+// Beweging en lampen in het huis (15 oktober 2026) en wie er thuis is: live, zodra
+// de dienst zegt dat er iets veranderde (21 oktober 2026).
+app.bijVerandering('huis', async () => {
+  huisData = await haal('api/huis');
+  teken();
+});
+app.bijVerandering('bewoners', async () => {
+  bewoners = await haal('api/bewoners');
+  teken();
+});
 app.live((nieuw) => {
   state = nieuw;
   teken();

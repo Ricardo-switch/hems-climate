@@ -561,6 +561,10 @@ const inHouse = (st: HaEntityState) =>
       st.attributes['device_class'] === 'energy' ||
       // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
       /valve|klep|filter/i.test(st.entity_id)));
+/** Wat je bedient of ziet bewegen; een temperatuur, verbruik of batterij verschuift rustig. */
+const snelInHuis = (st: HaEntityState) =>
+  /^(light|cover|scene|climate|camera)\./.test(st.entity_id) ||
+  (st.entity_id.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence', 'smoke', 'carbon_monoxide', 'heat'].includes(String(st.attributes['device_class'])));
 let houseRegisters: HouseRegisters | null = null;
 /** De stroommeter bij hetzelfde apparaat in Home Assistant, zoals bij een airco (besluit 138). */
 function vermogenSensor(entityId: string): string | null {
@@ -650,7 +654,11 @@ client.on('stateChanged', (state: HaEntityState) => {
   if (inHouse(state)) {
     houseStates.set(state.entity_id, state);
     huisVersie++;
+    // Live naar de open pagina's (21 oktober 2026): wat je bedient of ziet bewegen meteen.
+    web?.huisVeranderd(snelInHuis(state));
   }
+  // Wie er thuis is (besluit 169): de rondjes op Thuis.
+  if (state.entity_id.startsWith('person.') || siteConfig?.occupancy.some((o) => o.ref.id === state.entity_id)) web?.bewonersVeranderd();
   allStates.set(state.entity_id, state);
   const solar = baseConfig?.solarProduction;
   if (solar && state.entity_id === solar.id) {
@@ -727,6 +735,8 @@ const runner: ShadowRunner | null =
                 // Een eindtijd vervalt als het programma klaar is of de deur openging.
                 void uitstelStore?.prune(snapshot.explanation.deferrables);
                 web?.publish(snapshot);
+                // De stand van de kamers in het huis hangt aan het besluit.
+                web?.huisVeranderd(false);
               },
             }),
       });
