@@ -402,6 +402,10 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .niemand .nr-weer svg { width: 40px; height: 40px; }
 .niemand .nr-weer b { display: block; font-size: 22px; font-family: var(--kop); font-weight: 600; }
 .niemand .nr-weer span span { font-size: 14px; color: var(--zacht); }
+/* Een nieuwe versie op het display (21 oktober 2026): blauw, zoals bij Meldingen. */
+.niemand .nr-update svg { width: 32px; height: 32px; color: var(--ijs); }
+.niemand .nr-update b { font-size: 17px; }
+.niemand .nk-update svg { color: var(--ijs); opacity: 0.8; }
 .niemand .nr-huis { position: absolute; right: 10px; top: 60px; width: 720px; height: 700px; }
 /*
  * Weergave (besluit 164, schets Thuis-Tel-Eigen #weergave): per account, op elk

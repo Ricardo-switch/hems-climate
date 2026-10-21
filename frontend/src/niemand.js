@@ -133,6 +133,8 @@
   const DAG = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
   const klokNu = () => new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
   const ICOON_HUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>';
+  /** Een nieuwe versie: een pijl omlaag, zoals bij Meldingen. */
+  const ICOON_UPDATE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
   const WOLK = '<path d="M12 29h14a5.5 5.5 0 0 0 .5-11A7.5 7.5 0 0 0 12.4 20 4.5 4.5 0 0 0 12 29z" fill="#B8C4CF"/>';
   const WEER = {
     zon: '<circle cx="18" cy="18" r="7" fill="#F7B548"/><g stroke="#F7B548" stroke-width="2.2" stroke-linecap="round"><path d="M18 4v3M18 29v3M4 18h3M29 18h3M8 8l2 2M26 26l2 2M8 28l2-2M26 10l2-2"/></g>',
@@ -190,7 +192,12 @@
     el.setAttribute('aria-label', 'Tik om de wand te wekken');
     el.tabIndex = 0;
     el.hidden = true;
-    el.addEventListener('click', () => wek('tik'));
+    el.addEventListener('click', (e) => {
+      // Een nieuwe versie: wekken, en meteen wat er nieuw is met de knop Bijwerken.
+      const update = e.target.closest?.('[data-nk-update]');
+      wek('tik');
+      if (update) void global.app.bijwerkVenster();
+    });
     el.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), wek('tik')));
     (document.getElementById('wand') ?? document.body).append(el);
     return el;
@@ -209,6 +216,8 @@
       el.innerHTML = '<div class="nk-uit">Beweging zet het scherm aan, een tik opent de app</div>';
       return;
     }
+    // Een nieuwe versie die klaarstaat (21 oktober 2026): ook als niemand kijkt.
+    const update = global.app.updateKlaar?.() ?? null;
     if (toont === 'avond') {
       const morgen = morgenZin();
       const apparaat = apparaatNu();
@@ -218,6 +227,7 @@
           <span>${ICOON_HUIS}<i data-nk-rustig>${nachtZin()}</i></span>
           ${apparaat ? `<span class="nk-apparaat" data-nk-apparaat>${apparaat}</span>` : ''}
           ${morgen ? `<span>${weerIcoon(morgen.soort)}<i data-nk-morgen>${morgen.html}</i></span>` : ''}
+          ${update ? `<span class="nk-update" data-nk-update>${ICOON_UPDATE}<i><b>${esc(update.titel)}</b> Tik om bij te werken</i></span>` : ''}
         </div>
         <div class="nk-dim" style="opacity: ${dimVan()}"></div>
         <div class="nk-wek">Tik om de wand te wekken</div>`;
@@ -230,6 +240,7 @@
         d ? `<div class="glas-klein">${weerIcoon(d.soort)}<span><b>${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}</b><span>Morgen${d.verwachtKwh == null ? '' : `, ${nl(d.verwachtKwh, 0)} kWh`}</span></span></div>` : '',
         // De droger erbij, zolang hij draait (besluit 166).
         apparaatNu() ? `<div class="glas-klein nr-apparaat" data-nk-apparaat>${apparaatNu()}</div>` : '',
+        update ? `<div class="glas-klein nr-update" data-nk-update>${ICOON_UPDATE}<span><b>${esc(update.titel)}</b><span>Tik om bij te werken</span></span></div>` : '',
       ].join('');
       el.innerHTML = `<div class="nr-huis" data-nk-huis></div>
         <div class="nr-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
@@ -378,6 +389,8 @@
     }
   }, { passive: true });
   // Aanbellen, "Hé huis" en de bewegingsmelder (via de dienst).
+  // Een nieuwe versie, of weer weg: opnieuw tekenen als het display er staat.
+  addEventListener('sc-meldingen', () => toont && toont !== 'uit' && teken());
   addEventListener('sc-wek', (e) => (e.detail === 'beweging' ? beweging() : wek(e.detail ?? 'iets')));
   addEventListener('standwissel', () => telStand() && wek('telefoon'));
 

@@ -296,7 +296,8 @@ verwijzing bestaat.
   plaatje, en de wand houdt zijn toegang via Home Assistant zelf vast.
 - **Bijwerken vanuit de app:** in de add-on zegt Meldingen dat er een nieuwe
   versie klaarstaat; een tik geeft wat er nieuw is (uit `addon/CHANGELOG.md`,
-  via Home Assistant) en voor de beheerder een knop Bijwerken ([171]).
+  via Home Assistant) en voor de beheerder een knop Bijwerken ([171]). Ook op
+  het always-on display van de wand, met een tik naar Bijwerken.
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder

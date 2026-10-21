@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.48.1
+
+*21 oktober 2026*
+
+**Opgelost**
+
+- Een nieuwe versie staat nu ook op de wand als niemand kijkt; een tik geeft wat er nieuw is en Bijwerken
+
 ## 0.48.0
 
 *21 oktober 2026*

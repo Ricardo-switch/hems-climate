@@ -1039,7 +1039,11 @@
     meldGetal();
     const blad = document.querySelector('[data-meldblad]');
     if (blad && !blad.hidden && meldZicht === 'lijst') blad.innerHTML = meldLijst();
+    // Het display aan de wand toont een nieuwe versie ook (21 oktober 2026, niemand.js).
+    dispatchEvent(new Event('sc-meldingen'));
   }
+  /** De melding van een nieuwe versie die klaarstaat, of null. */
+  const updateKlaar = () => meld.actief.find((m) => m.soort === 'update') ?? null;
 
   function meldBlad() {
     let blad = document.querySelector('[data-meldblad]');
@@ -1306,5 +1310,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang };
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster };
 })(window);

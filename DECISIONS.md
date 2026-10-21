@@ -7639,6 +7639,15 @@ bij Instellingen › Updates, en kwam "Wat is er nieuw" pas na het bijwerken
 werkt het niet in de losse app op de telefoon); wat er nieuw is van GitHub
 halen (een vreemde site voor elke kijker); de melding ook op de NAS.
 
+*Aangevuld 21 oktober 2026: ook op de wand als niemand kijkt.* De bewoner zag
+de melding op de telefoon, maar niet op de wand. De melding is voor iedereen
+dezelfde, en de knop Bijwerken krijgt elk account dat in Home Assistant
+beheerder is, ook dat van de tablet. Maar de wand staat meestal in het
+always-on display (besluit 165), en daar is de bel niet te zien. Nu staat een
+nieuwe versie ook op het display, overdag als tegel naast het weer en
+'s avonds als regel; een tik erop wekt de wand en opent meteen wat er nieuw is,
+met Bijwerken. Versie 0.48.1.
+
 ---
 
 ## 172. De app is af: opruimen, wat er nog komt, en talen later

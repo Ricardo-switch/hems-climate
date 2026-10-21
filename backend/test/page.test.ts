@@ -1907,6 +1907,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const stand = () => p.evaluate<string | null>("(() => { const el = document.querySelector('#wand [data-niemand]'); return !el || el.hidden ? null : el.dataset.stand ?? null; })()").catch(() => null);
     const shot = (naam: string) => (process.env.HEMS_PAGE_SHOT ? p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-${naam}.png`) }) : null);
     const geladen = () => p.locator('#wand [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
+    // Een nieuwe versie staat klaar (21 oktober 2026): die staat ook op het display.
+    const meldBron = { nu: Date.now(), zonderRuimte: [], volgen: [], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null };
+    updateNu.klaar = true;
+    meldingenStore.bij({ ...meldBron, update: { nieuw: '9.9.9', nu: VERSIE } });
     try {
       // Overdag: na vijf minuten niemand het always-on display.
       await p.clock.setFixedTime(new Date('2026-10-19T14:05:00Z'));
@@ -1928,10 +1932,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       server.wek('beweging');
       await p.waitForTimeout(300);
       expect(await stand()).toBe(aanStand);
-      // Een tik opent de app.
-      await laag.click();
+      // De nieuwe versie staat erop; een tik daarop opent de app met wat er nieuw is en Bijwerken.
+      const update = laag.locator('[data-nk-update]');
+      expect(await update.textContent()).toContain('Versie 9.9.9 staat klaar');
+      await update.click();
       expect(await stand()).toBe(null);
       expect(await p.locator('#wand [data-kop]').isVisible()).toBe(true);
+      await p.locator('[data-nieuwpop] h2', { hasText: 'Versie 9.9.9 staat klaar' }).waitFor({ timeout: 5_000 });
+      await p.locator('[data-nieuw-dicht]').click();
+      updateNu.klaar = false;
+      meldingenStore.bij({ ...meldBron, nu: Date.now() });
 
       // 's Nachts: na een minuut zonder beweging gaat het scherm uit.
       await p.clock.setFixedTime(new Date('2026-10-19T23:48:00Z'));
@@ -2026,8 +2036,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
       expect(fouten).toEqual([]);
     } finally {
-      // Terug zoals de andere tests hem verwachten: niet slapen, niet rusten.
+      // Terug zoals de andere tests hem verwachten: niet slapen, niet rusten, geen nieuwe versie.
       await zet({ nacht: false, van: '23:00', tot: '07:00', rustMin: 0, aanMin: 5, weg: false, melder: null });
+      updateNu.klaar = false;
+      meldingenStore.bij({ ...meldBron, nu: Date.now() });
       await context.close();
     }
   }, 120_000);
