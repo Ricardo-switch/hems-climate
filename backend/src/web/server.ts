@@ -21,9 +21,10 @@
 import { timingSafeEqual } from 'node:crypto';
 import { Readable, pipeline } from 'node:stream';
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
+import { brotliCompressSync, constants as zlib, gzipSync } from 'node:zlib';
 
 import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
@@ -444,16 +445,55 @@ async function readJson(req: IncomingMessage, max: number = MAX_BODY): Promise<u
   }
 }
 
+/*
+ * Inpakken (21 oktober 2026): scripts, opmaak en antwoorden gaan ingepakt over
+ * de lijn, als de browser dat kan. Een antwoord van het huis is ruim 100 kB en
+ * komt om de paar tellen; ingepakt is dat een tiende. Niet achter Ingress: daar
+ * pakt de Supervisor het eerst weer uit, en pakt Home Assistant zelf in.
+ */
+type Inpakking = 'br' | 'gzip';
+const INPAKKEN = new WeakMap<ServerResponse, Inpakking>();
+/** Kleiner dan dit loont inpakken niet. */
+const INPAKKEN_VANAF = 1024;
+
+function inpakkingVoor(req: IncomingMessage): Inpakking | null {
+  const accept = String(req.headers['accept-encoding'] ?? '');
+  return /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
+}
+
+function inpak(data: Buffer | string, soort: Inpakking, snel: boolean): Buffer {
+  return soort === 'br'
+    ? brotliCompressSync(data, { params: { [zlib.BROTLI_PARAM_QUALITY]: snel ? 5 : 11 } })
+    : gzipSync(data, { level: snel ? 6 : 9 });
+}
+
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const text = JSON.stringify(body);
+  const soort = INPAKKEN.get(res);
+  const data = soort && Buffer.byteLength(text) >= INPAKKEN_VANAF ? inpak(text, soort, true) : null;
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
-    'content-length': Buffer.byteLength(text),
+    'content-length': data ? data.length : Buffer.byteLength(text),
     // De stand van nú. Een tussenliggende cache die dit vasthoudt laat een
     // dashboard zien dat er goed uitziet en niet klopt.
     'cache-control': 'no-store',
+    ...(soort ? { vary: 'accept-encoding' } : {}),
+    ...(data && soort ? { 'content-encoding': soort } : {}),
   });
-  res.end(text);
+  res.end(data ?? text);
+}
+
+/** Wat ingepakt mag: tekst. Een plaatje of lettertype is dat al. */
+const TEKST = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.svg']);
+/** Wat met een versiestempel (`?v=…`, frontend/build.js) altijd hetzelfde blijft. */
+const BLIJVEND = new Set(['.css', '.js']);
+/** Ingepakte bestanden, per pad en soort; opnieuw als het bestand verandert. */
+const ingepakt = new Map<string, { mtimeMs: number; data: Buffer }>();
+
+interface FileOpties {
+  /** Er staat een versiestempel in het adres: de browser mag hem bewaren. */
+  readonly gestempeld?: boolean;
+  readonly inpakken?: Inpakking | null;
 }
 
 /**
@@ -469,6 +509,7 @@ async function sendFile(
   pathname: string,
   headOnly: boolean,
   since: string | undefined,
+  opties: FileOpties = {},
 ): Promise<boolean> {
   const relative = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
   const full = resolve(webDir, relative);
@@ -495,25 +536,47 @@ async function sendFile(
    * `no-cache` betekent niet "niet bewaren" maar "altijd navragen". Samen met
    * `last-modified` kost een ongewijzigd bestand een leeg 304-antwoord in
    * plaats van tien kilobyte, en klopt de pagina altijd.
+   *
+   * Met een versiestempel in het adres (21 oktober 2026) is dat navragen niet
+   * nodig: verandert het bestand, dan verandert het adres. Dan mag de browser
+   * het bewaren zonder te vragen. Dat scheelt per pagina tien tot twaalf
+   * rondjes, en achter Ingress gaat elk rondje door Home Assistant.
    */
+  const ext = extname(full).toLowerCase();
+  const cache = opties.gestempeld && BLIJVEND.has(ext) ? 'public, max-age=31536000, immutable' : 'no-cache';
   const changed = info.mtime.toUTCString();
+  const soort = opties.inpakken && TEKST.has(ext) && info.size >= INPAKKEN_VANAF ? opties.inpakken : null;
+  const vary = opties.inpakken !== undefined && TEKST.has(ext) ? { vary: 'accept-encoding' } : {};
   if (since != null && since === changed) {
-    res.writeHead(304, { 'cache-control': 'no-cache', 'last-modified': changed });
+    res.writeHead(304, { 'cache-control': cache, 'last-modified': changed, ...vary });
     res.end();
     return true;
   }
 
+  let data: Buffer | null = null;
+  if (soort) {
+    const sleutel = `${full}|${soort}`;
+    const bewaard = ingepakt.get(sleutel);
+    if (bewaard && bewaard.mtimeMs === info.mtimeMs) data = bewaard.data;
+    else {
+      data = inpak(await readFile(full), soort, false);
+      ingepakt.set(sleutel, { mtimeMs: info.mtimeMs, data });
+    }
+  }
   res.writeHead(200, {
-    'content-type': MIME[extname(full).toLowerCase()] ?? 'application/octet-stream',
-    'content-length': info.size,
-    'cache-control': 'no-cache',
+    'content-type': MIME[ext] ?? 'application/octet-stream',
+    'content-length': data ? data.length : info.size,
+    'cache-control': cache,
     'last-modified': changed,
+    ...vary,
+    ...(data && soort ? { 'content-encoding': soort } : {}),
   });
   if (headOnly) {
     res.end();
     return true;
   }
-  createReadStream(full).pipe(res);
+  if (data) res.end(data);
+  else createReadStream(full).pipe(res);
   return true;
 }
 
@@ -638,6 +701,8 @@ export class WebServer {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const path = url.pathname;
     const access = this.#access(req);
+    const inpakken = access.kind === 'ingress' ? null : inpakkingVoor(req);
+    if (inpakken) INPAKKEN.set(res, inpakken);
 
     /*
      * Alleen bekende hostnamen (besluit 99). Een vreemde website die zijn eigen
@@ -1563,6 +1628,7 @@ export class WebServer {
         target,
         headOnly,
         typeof since === 'string' ? since : undefined,
+        { gestempeld: url.searchParams.has('v'), inpakken },
       )
     ) {
       return;

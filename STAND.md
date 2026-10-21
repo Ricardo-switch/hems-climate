@@ -27,7 +27,9 @@ verwijzing bestaat.
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist. Talen
-  later: Engels, dan Duits ([172]).
+  later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
+  browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
+  verandering uitgerekend ([173]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -566,4 +568,5 @@ verwijzing bestaat.
 [170]: DECISIONS.md#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen
 [171]: DECISIONS.md#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop
 [172]: DECISIONS.md#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later
+[173]: DECISIONS.md#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen
 <!-- links:einde -->

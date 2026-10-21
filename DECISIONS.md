@@ -176,6 +176,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [169. Wie er thuis is en wiens comfort geldt: rondjes en een blad](#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad)
 - [170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen](#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen)
 - [171. Bijwerken vanuit de app: een melding, wat er nieuw is en een knop](#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop)
+- [173. Sneller: bewaren, inpakken, en het huis één keer uitrekenen](#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen)
 
 **Veiligheid**
 
@@ -7686,6 +7687,47 @@ stappenplan; dit zijn de keuzes die hij erbij maakte.
 *Wat afviel:* de schermafbeeldingen van ontwerp 2 (110 MB) uit de repository
 halen; die blijven, als maatstaf naast de schetsen (104). Talen meteen
 bouwen.
+
+---
+
+## 173. Sneller: bewaren, inpakken, en het huis één keer uitrekenen
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 2 uit het stappenplan van besluit 172, op 21 oktober 2026. Gemeten op
+de pc met een nagebootst huis van 3.000 entiteiten: het huis uitrekenen kost
+7 ms per keer (op de Pi ruwweg drie keer zoveel), het antwoord is 118 kB, en
+Thuis vraagt het elke 15 tellen, Kamer elke 5, per open scherm. Een pagina
+laadt 8 tot 12 scripts en opmaak (Thuis 393 kB), en vroeg elk daarvan bij elk
+bezoek opnieuw na.
+
+*Besluit:*
+
+- **Wat een versiestempel heeft, mag de browser bewaren.** Een script of
+  opmaak met `?v=` in het adres (frontend/build.js, besluit 172) krijgt
+  `immutable` en een jaar; verandert het bestand, dan verandert het adres. Een
+  pagina zelf blijft altijd navragen. Zo kost een tab openen één vraag voor de
+  pagina in plaats van tien tot twaalf, en achter Ingress gaat elke vraag door
+  Home Assistant.
+- **Inpakken buiten Ingress.** Scripts, opmaak, pagina's en antwoorden vanaf
+  1 kB gaan ingepakt (brotli, anders gzip) als de browser dat kan. Thuis wordt
+  ongeveer een kwart, het huis ongeveer een tiende. Achter Ingress niet: daar
+  pakt de Supervisor het weer uit en pakt Home Assistant zelf in. De ingepakte
+  bestanden bewaart de dienst tot ze veranderen.
+- **Het huis één keer uitrekenen per verandering.** Elke verandering in Home
+  Assistant die het huis raakt telt een versie op; zolang die versie, de
+  registers, de configuratie, het laatste besluit, de indeling, de functies en
+  de aansluiting gelijk zijn, geeft de dienst het bewaarde huis, hooguit tien
+  tellen lang (de kleuren van scènes en de meting van de ligging veranderen
+  zonder dat de dienst het ziet).
+- **Niet gedaan, en waarom:** het opzoeken van de rookmelders bij elke
+  verandering kost 0,2 ms en blijft zoals het is. De film en de rondleiding pas
+  laden als je ze opent scheelt na het bewaren alleen nog het inlezen, een paar
+  milliseconden.
+- **Versie 0.48.0.**
+
+*Wat afviel:* de bestandsnamen zelf een hash geven (`thuis.3f2a.js`): het
+stempel achter het adres doet hetzelfde zonder dat elke verwijzing verandert.
 
 ## Wat nog een besluit wacht
 
