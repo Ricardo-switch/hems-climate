@@ -55,6 +55,7 @@ import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeC
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { kiesLigging, meetLigging, omvormerUitType, type Meting } from './web/ligging.js';
 import { alarmSensoren, vindRookmelders } from './web/rookmelders.js';
+import { eigenUpdate, updateView, type UpdateView } from './web/bijwerken.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
@@ -466,6 +467,8 @@ const client = new HaClient({
   allowAiTask: true,
   // Geluid laten uitschrijven, tot tekst en niet verder (besluit 150): de microfoon en "Hé huis".
   allowListen: true,
+  // De eigen add-on bijwerken (21 oktober 2026): update.install op zijn eigen update-entiteit, alleen in de add-on.
+  allowUpdate: () => (version.installatie === 'add-on' ? (eigenUpdate(allStates.values())?.entity_id ?? null) : null),
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -483,6 +486,21 @@ let web: WebServer | null = null;
  */
 /** Welke code er draait (besluit 54); gaat naar /api/health en runs.ndjson. */
 const version = versionFromEnv(process.env);
+
+/*
+ * Bijwerken vanuit de app (21 oktober 2026): alleen in de add-on. Wat er nieuw
+ * is, vraagt de dienst één keer per nieuwe versie aan Home Assistant.
+ */
+let releaseNotes: { versie: string; tekst: string | null } | null = null;
+async function updateNu(magBijwerken: boolean): Promise<UpdateView> {
+  const s = version.installatie === 'add-on' ? eigenUpdate(allStates.values()) : null;
+  const nieuwste = typeof s?.attributes['latest_version'] === 'string' ? (s.attributes['latest_version'] as string) : null;
+  if (s && s.state === 'on' && nieuwste && releaseNotes?.versie !== nieuwste) {
+    const tekst = await client.query<string | null>('update/release_notes', { entity_id: s.entity_id }).catch(() => null);
+    releaseNotes = { versie: nieuwste, tekst: typeof tekst === 'string' ? tekst : null };
+  }
+  return updateView(VERSIE, s, releaseNotes?.versie === nieuwste ? releaseNotes.tekst : null, magBijwerken);
+}
 
 let lastStates: readonly HaEntityState[] = [];
 
@@ -936,6 +954,12 @@ function meldingenRonde(): void {
     volgen,
     batterijen: h.batterijen,
     filters: h.filters,
+    // Een nieuwe versie van de add-on (21 oktober 2026).
+    update: (() => {
+      const s = version.installatie === 'add-on' ? eigenUpdate(allStates.values()) : null;
+      const n = s?.state === 'on' && typeof s.attributes['latest_version'] === 'string' ? (s.attributes['latest_version'] as string).replace(/^v/, '') : null;
+      return n ? { nieuw: n, nu: VERSIE } : null;
+    })(),
     // De rookmelders (21 oktober 2026): rook, een lege batterij, vervangen.
     rookmelders: h.etages.flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder' && d.rookmelder).map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, gevaar: d.rookmelder!.gevaar, sindsMs: d.rookmelder!.sindsMs, batterijProbleem: d.rookmelder!.batterijProbleem, vervangenVoor: d.rookmelder!.vervangenVoor })))),
     drempels: h.drempels,
@@ -1436,6 +1460,22 @@ if (webPort != null) {
       },
       stemmenVoor: async (stem, taal) => (await client.query<{ voices?: { voice_id: string; name: string }[] | null }>('tts/engine/voices', { engine_id: stem, language: taal })).voices ?? [],
     }),
+    // Bijwerken vanuit de app (21 oktober 2026): alleen in de add-on.
+    ...(version.installatie === 'add-on'
+      ? {
+          bijwerken: {
+            view: updateNu,
+            installeer: async () => {
+              const s = eigenUpdate(allStates.values());
+              if (!s || s.state !== 'on') return { ok: false, reden: 'er staat geen nieuwe versie klaar' };
+              if (s.attributes['in_progress'] === true) return { ok: true };
+              // Niet wachten: de Supervisor start de add-on opnieuw, en dan valt de verbinding weg.
+              void client.callService('update', 'install', {}, { entity_id: s.entity_id }).catch((e: unknown) => console.warn(`Bijwerken: ${(e as Error).message}`));
+              return { ok: true };
+            },
+          },
+        }
+      : {}),
     // De camera's bekijken (besluit 106): alleen lezen, alleen met inlog.
     camera: {
       base: httpBase(url!),

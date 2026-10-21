@@ -174,6 +174,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [168. Favorieten per kamer, en de dagstand en avondstand van de wand](#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand)
 - [169. Wie er thuis is en wiens comfort geldt: rondjes en een blad](#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad)
 - [170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen](#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen)
+- [171. Bijwerken vanuit de app: een melding, wat er nieuw is en een knop](#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop)
 
 **Veiligheid**
 
@@ -7601,6 +7602,40 @@ schetsen Wand-Favorieten en Wand-Rook.
 opent; een pushbericht via Home Assistant bij rook (een nieuwe schrijfdeur);
 alleen een regel bij Meldingen; de kompasmeting invullen; de ligging uit de
 opbrengst bijstellen met de ochtendzon weggelaten (het verschil was 1°).
+
+## 171. Bijwerken vanuit de app: een melding, wat er nieuw is en een knop
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 21 oktober 2026 vroeg de bewoner of de app zelf kan zeggen dat er een
+update is: een melding, en bij een tik een venster met de vernieuwingen en een
+knop om bij te werken. Tot nu toe stond een update alleen in Home Assistant,
+bij Instellingen › Updates, en kwam "Wat is er nieuw" pas na het bijwerken
+(besluit 136).
+
+*Besluit:*
+
+- **Waar de app het ziet:** in de add-on heeft Home Assistant voor Smart
+  Climate een `update.`-entiteit (titel "Smart Climate"), met de versie die er
+  is en de nieuwste. Staat die aan, dan komt er bij Meldingen "Versie 0.47.0
+  staat klaar"; na het bijwerken staat hij onder Eerder. Alleen in de add-on:
+  de NAS rolt zichzelf uit (besluit 152) en ziet de update van de Pi niet.
+- **Wat er nieuw is** komt uit `addon/CHANGELOG.md`, dat `npm run changelog`
+  maakt uit `NIEUW` in version.ts; een test houdt ze gelijk. De Supervisor
+  leest het bestand van GitHub en Home Assistant geeft het als releasenotes
+  van de nieuwste versie (`update/release_notes`, alleen lezen). Zo kent de app
+  wat er in een versie staat die hij zelf nog niet heeft. Het venster toont
+  elke versie na die van nu; Home Assistant laat dezelfde tekst zien.
+- **Bijwerken** is een nieuwe smalle schrijfdeur: `update.install` op precies
+  de eigen update-entiteit, zonder velden; de client laat verder niets door.
+  Alleen de beheerder ziet de knop, en de dienst toetst het ook. Daarna start
+  de add-on opnieuw; de pagina kijkt elke vijf tellen en laadt vanzelf als de
+  nieuwe versie draait. Met automatisch bijwerken aan in Home Assistant (zoals
+  op de Pi) komt een update meestal vanzelf, en verdwijnt de melding weer.
+
+*Wat afviel:* bijwerken vanuit de pagina met de inlog van Home Assistant (dan
+werkt het niet in de losse app op de telefoon); wat er nieuw is van GitHub
+halen (een vreemde site voor elke kijker); de melding ook op de NAS.
 
 ## Wat nog een besluit wacht
 

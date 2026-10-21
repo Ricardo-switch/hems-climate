@@ -27,7 +27,7 @@ import { STANDAARD_DREMPELS, onderDrempel, type Drempels } from './house.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook';
+export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook' | 'update';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -60,6 +60,8 @@ export interface MeldingenBron {
    * batterij op is en wanneer ze vervangen moeten (`JJJJ-MM-DD`).
    */
   readonly rookmelders?: readonly { readonly id: string; readonly naam: string; readonly kamer: string; readonly kamerId: string; readonly gevaar: 'rook' | 'co' | 'hitte' | null; readonly sindsMs: number | null; readonly batterijProbleem: boolean; readonly vervangenVoor: string | null }[];
+  /** Een nieuwe versie van de add-on die klaarstaat (21 oktober 2026); weg buiten de add-on. */
+  readonly update?: { readonly nieuw: string; readonly nu: string } | null;
   /** Meters die altijd moeten leveren, met hun laatste meting. */
   readonly meters: readonly { readonly id: string; readonly naam: string; readonly laatsteMs: number | null }[];
   /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); weg is 10%. */
@@ -159,6 +161,11 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
       const datum = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }).format(voor);
       uit.push({ id: `rook-vervangen:${r.id}`, soort: 'rook', aandacht: true, titel: `${r.naam} vervangen`, tekst: `Een rookmelder gaat tien jaar mee. Deze moet vervangen worden voor ${datum}.`, actie: { label: 'Bekijk', href: kamerHref(r.kamerId, r.id) }, klaar: { titel: `${r.naam} vervangen`, tekst: 'Er hangt een nieuwe melder.' } });
     }
+  }
+  // Een nieuwe versie (21 oktober 2026): een tik geeft wat er nieuw is en de knop Bijwerken.
+  if (bron.update) {
+    const u = bron.update;
+    uit.push({ id: `update:${u.nieuw}`, soort: 'update', aandacht: true, titel: `Versie ${u.nieuw} staat klaar`, tekst: `Je hebt ${u.nu}. Tik om te zien wat er nieuw is, en om bij te werken.`, klaar: { titel: `Bijgewerkt naar ${u.nieuw}`, tekst: 'De nieuwe versie draait.' } });
   }
   for (const m of bron.meters) {
     if (m.laatsteMs != null && bron.nu - m.laatsteMs < METER_STIL_NA_MS) continue;

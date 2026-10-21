@@ -46,6 +46,7 @@ import type { AskContext, Lang, Question } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
 import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
 import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
+import type { UpdateView } from './bijwerken.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
 import { Luisterpost, type LuisterDeur } from './luisterpost.js';
@@ -308,6 +309,11 @@ export interface WebOptions {
   readonly location?: () => Location | null;
   /** De omtrek van het huis op de kaart (21 oktober 2026); anders OpenStreetMap. Voor de tests. */
   readonly omtrek?: (latDeg: number, lonDeg: number) => Promise<readonly Punt[] | null>;
+  /**
+   * Bijwerken vanuit de app (21 oktober 2026): wat er klaarstaat en wat er nieuw
+   * is, en de add-on bijwerken. Alleen in de add-on.
+   */
+  readonly bijwerken?: { readonly view: (magBijwerken: boolean) => Promise<UpdateView>; readonly installeer: () => Promise<{ readonly ok: boolean; readonly reden?: string }> };
   /**
    * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
    * of null zolang de registers van Home Assistant nog niet gelezen zijn.
@@ -730,6 +736,8 @@ export class WebServer {
       (this.#options.connection != null && path === '/api/aansluiting') ||
       // De gevels op de kaart (21 oktober 2026): niets bewaren, alleen een vraag aan OpenStreetMap.
       (this.#options.location != null && path === '/api/gevel-kaart') ||
+      // De add-on bijwerken (21 oktober 2026): update.install op de eigen add-on, en niets anders.
+      (this.#options.bijwerken != null && path === '/api/update') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       // Camera's en de deurbel (besluit 109): alleen de keuzes, naar een eigen bestand.
       (this.#options.functies != null && path === '/api/functies') ||
@@ -843,6 +851,24 @@ export class WebServer {
 
     if (path === '/api/aansluiting') {
       await this.#connection(req, res, method);
+      return;
+    }
+
+    if (path === '/api/update') {
+      const b = this.#options.bijwerken;
+      if (b == null) {
+        sendJson(res, 200, { beschikbaar: false, nu: VERSIE, nieuwste: null, bezig: false, notities: [], magBijwerken: false });
+        return;
+      }
+      const wie = await this.#wie(req);
+      if (method === 'POST') {
+        const uit = await b.installeer();
+        if (!uit.ok) {
+          sendJson(res, 409, { fout: uit.reden ?? 'bijwerken lukte niet' });
+          return;
+        }
+      }
+      sendJson(res, 200, await b.view(wie.beheerder));
       return;
     }
 
