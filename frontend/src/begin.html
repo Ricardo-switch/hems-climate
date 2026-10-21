@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
    * Welkom in een leeg huis (besluit 154, schets Wand-Welkom en Welkom-Tel).
@@ -30,7 +30,7 @@
   .lead { margin: 0; max-width: 40ch; font-size: 18px; line-height: 1.5; }
   .kan { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 14px; }
   .kan li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; }
-  .kan .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .kan .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); }
   .kan .ik svg { width: 22px; height: 22px; }
   .kan b { display: block; font-size: 16px; }
   .kan span { font-size: 14px; color: var(--zacht); }
@@ -38,16 +38,16 @@
   .doen .knop { height: 54px; padding: 0 26px; font-size: 17px; border-radius: 16px; }
   .doen .knop:disabled { opacity: 0.5; cursor: default; }
   .zacht { font-size: 15px; font-weight: 600; color: var(--zacht); background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; }
-  .onderlijn { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .onderlijn { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgb(var(--wit) / 0.25); }
   .voet { font-size: 13px; color: var(--gedempt); }
-  .fout { min-height: 20px; font-size: 14px; font-weight: 600; color: var(--gloed); }
+  .fout { min-height: 20px; font-size: 14px; font-weight: 600; color: var(--gloed-t); }
   .opties { display: grid; gap: 8px; max-width: 46ch; }
-  .optie { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); font: inherit; font-size: 16px; font-weight: 600; color: var(--tekst); text-align: left; cursor: pointer; }
+  .optie { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 16px; border-radius: 14px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.1); font: inherit; font-size: 16px; font-weight: 600; color: var(--tekst); text-align: left; cursor: pointer; }
   .optie i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--gedempt); flex: none; }
   .optie[aria-pressed='true'] { background: rgba(110, 231, 183, 0.1); border-color: rgba(110, 231, 183, 0.45); }
   .optie[aria-pressed='true'] i { border-color: var(--mint); background: radial-gradient(circle, var(--mint) 45%, transparent 50%); }
-  .stapje { font-size: 13px; font-weight: 700; color: var(--mint); letter-spacing: 0.02em; }
-  .draait { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.15); border-top-color: var(--mint); animation: draai 0.9s linear infinite; }
+  .stapje { font-size: 13px; font-weight: 700; color: var(--mint-t); letter-spacing: 0.02em; }
+  .draait { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgb(var(--wit) / 0.15); border-top-color: var(--mint); animation: draai 0.9s linear infinite; }
   @keyframes draai { to { transform: rotate(360deg); } }
   .rechts { position: relative; min-height: 0; display: flex; flex-direction: column; }
   .podium { flex: 1; min-height: 0; }
@@ -55,7 +55,7 @@
   #wand .gevonden { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); }
   .gevonden .tellers { display: flex; gap: 18px; font-size: 14px; color: var(--zacht); }
   .gevonden .tellers b { font-family: var(--kop); font-size: 20px; color: var(--tekst); margin-right: 5px; }
-  .gevonden .bezig { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--mint); }
+  .gevonden .bezig { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--mint-t); }
   .gevonden .bezig i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
   .gevonden.zoekt .bezig i { animation: puls 1.6s infinite; }
   @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }

@@ -55,7 +55,7 @@
     const naam = (d.titel ?? '').toLowerCase();
     const sleutel = ICOON[d.id] ? d.id : /slaap|logeer/.test(naam) ? 'bed' : /woon|zit/.test(naam) ? 'bank' : /zolder|boven/.test(naam) ? 'dak' : 'kamer';
     const [kleur, pad] = ICOON[sleutel];
-    return `<span class="ik" style="color: ${d.stand === 'mist' ? 'var(--gloed)' : kleur}">${S(pad)}</span>`;
+    return `<span class="ik" style="color: ${global.app.tekstKleur(d.stand === 'mist' ? 'var(--gloed)' : kleur)}">${S(pad)}</span>`;
   }
 
   /** Wat mist bovenaan, binnen elk kopje; verder de volgorde van de pagina. */

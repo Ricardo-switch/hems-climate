@@ -71,7 +71,7 @@ function welkom() {
     <span class="fout" data-fout></span>
     <div class="voet"><a class="zacht" href="${esc(terug)}">Later</a><button type="button" class="knop knop-licht" data-klopt>Klopt</button></div>
     <details class="nietgoed"><summary>Klopt iets niet?</summary>${nietGoed.map((z) => `<p class="hint">${z}</p>`).join('')}<a class="knop" href="bewoners.html">Naar Bewoners</a></details>
-    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
+    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">Dit is een scherm</button></p>`;
 }
 
 /** Een gast (besluit 151): kijkt mee, tot de hoofdgebruiker er een bewoner van maakt. */
@@ -83,7 +83,7 @@ function gast() {
     <p class="hint" style="margin: 0">Woon je hier? Vraag ${esc(hoofd?.naam ?? 'de hoofdgebruiker')} om je bij Instellingen › Bewoners bewoner te maken.</p>
     <span class="fout" data-fout></span>
     <div class="voet"><span></span><a class="knop knop-licht" href="${esc(terug)}" style="display: inline-flex; align-items: center; text-decoration: none">Verder</a></div>
-    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs); padding: 0">Dit is een scherm</button></p>`;
+    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">Dit is een scherm</button></p>`;
 }
 
 function vraag() {

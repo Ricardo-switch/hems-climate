@@ -14,7 +14,7 @@ import type { Backup } from './gegevens.js';
 import type { PowerRow } from './today.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
-import type { VoorkeurenStore } from './voorkeuren.js';
+import type { Profielen, VoorkeurenStore } from './voorkeuren.js';
 import type { ConnectionStore, ConnectionView, FoundAppliance, FoundPhase } from './aansluiting.js';
 import type { EnergySource, EnergyStore } from './energy.js';
 import type { Punt } from './kaart.js';
@@ -191,6 +191,11 @@ export interface WebOptions {
   readonly meldingen?: MeldingenStore;
   /** Thuis naar eigen smaak (besluit 162): kaarten en favorieten per account, en de wand. */
   readonly voorkeuren?: VoorkeurenStore;
+  /**
+   * Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt,
+   * en of een account een scherm is. Zonder dit is de wand van het huis.
+   */
+  readonly profielen?: (userId: string | null) => { readonly profielen: Profielen; readonly scherm: boolean };
   /**
    * Opbrengst (besluit 102): de meters en prijzen van de app, en de statistiek
    * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.

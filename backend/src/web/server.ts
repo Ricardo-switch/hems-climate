@@ -510,8 +510,8 @@ export class WebServer {
 
     /*
      * Thuis naar eigen smaak (besluit 162): je eigen kaarten en favorieten op de
-     * telefoon, en de wand voor iedereen, die de hoofdgebruiker of een beheerder
-     * aanpast.
+     * telefoon, je thema en je kleur, en de wand in het profiel van wiens
+     * comfort geldt (besluit 181).
      */
     if (path === '/api/voorkeuren') {
       const voorkeuren = this.#options.voorkeuren;
@@ -520,7 +520,8 @@ export class WebServer {
         return;
       }
       const wie = await this.#wie(req);
-      const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)) };
+      const profiel = this.#options.profielen?.(wie.userId);
+      const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)), ...(profiel ? { profielen: profiel.profielen, scherm: profiel.scherm } : {}) };
       if (method !== 'POST') {
         sendJson(res, 200, voorkeuren.view(kijker));
         return;

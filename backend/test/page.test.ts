@@ -2156,10 +2156,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.reload();
       await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
       await expect.poll(() => klasse('sc-eenvoudig')).toBe(true);
-      // Op een andere pagina ook: Instellingen, met de weg naar Weergave.
+      // Op een andere pagina ook: Instellingen, met de weg naar Weergave via Jij (besluit 181).
       await p.goto(`${baseUrl}/instellingen.html`);
       await expect.poll(() => klasse('sc-groot')).toBe(true);
-      await p.locator('#tel [data-weergaveregel]').click();
+      await p.locator('#tel [data-jijregel]').click();
+      await p.waitForURL(/jij\.html/);
+      await p.locator('#tel a[href="thuis.html#weergave"]').click();
       await p.waitForURL(/thuis\.html/);
       await blad.waitFor();
       expect(await blad.getAttribute('aria-label')).toBe('Weergave');
@@ -2180,6 +2182,81 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await context.close();
     }
   }, 60_000);
+
+  /*
+   * Het lichte thema en je eigen kleur (besluit 181, schetsen Thuis-Tel-Licht
+   * en Instellingen-Tel-Jij): op de telefoon elke pagina licht, met tekst die
+   * leesbaar blijft; de wand blijft donker. Gekozen bij Jij, bewaard bij de
+   * dienst en meteen goed bij het laden.
+   */
+  it('zet de telefoon licht, met je eigen kleur, en laat de wand donker (besluit 181)', async () => {
+    const zet = (wat: object) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', ...wat }) });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    /** Tekst die tegen zijn achtergrond wegvalt: minder dan 3:1, met de achtergrond als effen kleur over de pagina. */
+    const slecht = () => p.evaluate<string[]>(`(() => {
+      const kleur = (c) => { const m = c.match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const d = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return { r: d[0], g: d[1], b: d[2], a: d.length > 3 ? d[3] : 1 }; };
+      const over = (v, a) => ({ r: v.r * v.a + a.r * (1 - v.a), g: v.g * v.a + a.g * (1 - v.a), b: v.b * v.a + a.b * (1 - v.a), a: 1 });
+      const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
+      const grond = (el) => { const lagen = []; for (let e = el; e; e = e.parentElement) { const st = getComputedStyle(e); const c = kleur(st.backgroundColor); if (c && c.a > 0) { lagen.push(c); if (c.a >= 1) break; } } let b = { r: 233, g: 239, b: 246, a: 1 }; for (const l of lagen.reverse()) b = over(l, b); return b; };
+      const uit = [];
+      document.querySelectorAll('#tel *').forEach((el) => {
+        if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) return;
+        const r = el.getBoundingClientRect(); const st = getComputedStyle(el);
+        if (!r.width || !r.height || st.visibility === 'hidden' || Number(st.opacity) < 0.5 || el.closest('svg, [hidden], [aria-hidden="true"]')) return;
+        const b = grond(el); const t = kleur(st.color); if (!b || !t) return;
+        const v = over(t, b); const L1 = lum(v), L2 = lum(b);
+        const k = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+        if (k < 3) uit.push(el.tagName.toLowerCase() + '.' + [...el.classList].join('.') + ' "' + el.textContent.trim().slice(0, 30) + '" ' + k.toFixed(1));
+      });
+      return uit;
+    })()`);
+    try {
+      expect((await zet({ thema: 'licht', kleur: 'violet' })).ok).toBe(true);
+      // Instellingen › Jij: het profiel, met het thema en de kleur die je koos.
+      await p.goto(`${baseUrl}/jij.html`);
+      await p.locator('#tel [data-thema-open]').waitFor();
+      expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(true);
+      expect(await p.evaluate('document.documentElement.dataset.kleur')).toBe('violet');
+      await p.locator('#tel [data-thema-open]').click();
+      await p.locator('[data-blad] [data-thema="donker"]').click();
+      await expect.poll(() => p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(false);
+      await p.locator('[data-blad] [data-thema="licht"]').click();
+      await p.locator('[data-blad] [data-kies-kleur="roze"]').click();
+      await expect.poll(() => p.evaluate('document.documentElement.dataset.kleur')).toBe('roze');
+      await p.locator('[data-blad] [data-blad-dicht]').click();
+      await zet({ kleur: 'violet' });
+
+      // De controle zelf: lichtgele tekst op wit valt weg.
+      await p.evaluate(`document.querySelector('#tel').insertAdjacentHTML('beforeend', '<p id="proef" style="color: #f7b548; background: #fff">proef</p>')`);
+      expect((await slecht()).some((x) => x.includes('"proef"'))).toBe(true);
+      const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', 'instellingen.html', 'jij.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'indeling.html', 'inrichten.html'];
+      const weg: string[] = [];
+      for (const pagina of paginas) {
+        await p.goto(`${baseUrl}/${pagina}`);
+        await p.waitForTimeout(1200);
+        // Meteen licht, uit wat de pagina onthield: de dienst bevestigt het.
+        expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")'), pagina).toBe(true);
+        weg.push(...(await slecht()).map((x) => `${pagina}: ${x}`));
+        if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-licht-${pagina.replace('.html', '')}.png`), fullPage: true });
+      }
+      expect(weg).toEqual([]);
+
+      // De wand blijft donker, ook met licht gekozen.
+      await p.setViewportSize({ width: 1280, height: 800 });
+      await p.goto(`${baseUrl}/thuis.html`);
+      await expect.poll(() => p.evaluate('document.documentElement.classList.contains("tel-stand")')).toBe(false);
+      expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(false);
+      expect(fouten).toEqual([]);
+    } finally {
+      await zet({ thema: 'donker', kleur: 'lucht' });
+      await context.close();
+    }
+  }, 120_000);
 
   /*
    * Apparaten in ontwerp 2 (besluit 104; schets Wand-Apparaten): de droger die

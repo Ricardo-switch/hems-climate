@@ -87,8 +87,8 @@ describe('VoorkeurenStore', () => {
     const store = new VoorkeurenStore(dir);
     await store.load();
     const v = store.view(noor);
-    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE });
-    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND });
+    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht' });
+    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, eigen: false });
   });
 
   it('bewaart de telefoon per account, en leest het terug na een herstart', async () => {
@@ -98,10 +98,10 @@ describe('VoorkeurenStore', () => {
     expect(uit.ok).toBe(true);
     expect(store.view(ricardo).tel.kaarten).toEqual(['gevoel', 'kamers']);
     // Noor houdt haar eigen Thuis.
-    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE });
+    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht' });
     // Alleen de favorieten veranderen laat de kaarten staan.
     await store.save({ plek: 'tel', favorieten: [] }, ricardo);
-    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], weergave: STANDAARD_WEERGAVE });
+    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht' });
 
     const opnieuw = new VoorkeurenStore(dir);
     await opnieuw.load();
@@ -146,6 +146,48 @@ describe('VoorkeurenStore', () => {
     expect((await store.save({ plek: 'tel' }, ricardo)).ok).toBe(false);
     expect((await store.save({ plek: 'tel', kaarten: ['kamers'], favorieten: 'alles' }, ricardo)).ok).toBe(false);
     expect(store.view(ricardo).tel.kaarten).toEqual(STANDAARD_TEL);
+  });
+
+  describe('het profiel (besluit 181)', () => {
+    const volgorde = [{ id: 'b-ricardo', account: 'u-ricardo' }, { id: 'b-noor', account: 'u-noor' }, { id: 'b-matts', account: 'u-matts' }];
+    const metProfiel = (wie: { userId: string; magWand: boolean }, geldt: string | null, scherm = false) => ({ ...wie, scherm, profielen: { volgorde, geldt } });
+    const wand = { userId: 'u-wand', magWand: false };
+
+    it('geeft wie nog niets koos een kleur op volgorde, en bewaart thema en kleur per account', async () => {
+      const store = new VoorkeurenStore(dir);
+      await store.load();
+      const v = store.view(metProfiel(noor, null));
+      expect(v.tel.kleur).toBe('roze');
+      expect(v.kleuren).toEqual({ 'b-ricardo': 'lucht', 'b-noor': 'roze', 'b-matts': 'violet' });
+      expect((await store.save({ plek: 'tel', thema: 'systeem', kleur: 'paars' }, metProfiel(noor, null))).ok).toBe(true);
+      expect(store.view(metProfiel(noor, null)).tel).toMatchObject({ thema: 'systeem', kleur: 'paars' });
+      expect(store.view(metProfiel(ricardo, null)).tel).toMatchObject({ thema: 'donker', kleur: 'lucht' });
+      expect(store.view(metProfiel(ricardo, null)).kleuren['b-noor']).toBe('paars');
+      // Alleen wat in de lijst staat, en niet op de wand.
+      expect((await store.save({ plek: 'tel', kleur: 'oranje' }, noor)).ok).toBe(false);
+      expect((await store.save({ plek: 'tel', thema: 'roze' }, noor)).ok).toBe(false);
+      expect((await store.save({ plek: 'wand', kleur: 'roze' }, ricardo)).ok).toBe(false);
+    });
+
+    it('toont op de wand de indeling en kleur van wiens comfort geldt, anders die van de hoofdgebruiker', async () => {
+      const store = new VoorkeurenStore(dir);
+      await store.load();
+      // Een oude wand van het huis blijft de terugval.
+      await store.save({ plek: 'wand', kaarten: ['gevoel'] }, ricardo);
+      expect(store.view(metProfiel(wand, 'u-noor', true)).wand).toMatchObject({ kaarten: ['gevoel'], van: 'u-noor', kleur: 'roze', eigen: false });
+      // De hoofdgebruiker kiest zijn eigen wand op zijn eigen tablet; Noor volgt die zolang ze niets koos.
+      expect((await store.save({ plek: 'wand', kaarten: ['vandaag', 'favorieten'] }, metProfiel(ricardo, 'u-noor'))).ok).toBe(true);
+      expect(store.view(metProfiel(ricardo, 'u-noor')).wand).toMatchObject({ kaarten: ['vandaag', 'favorieten'], van: 'u-ricardo', eigen: true });
+      expect(store.view(metProfiel(wand, 'u-noor', true)).wand.kaarten).toEqual(['vandaag', 'favorieten']);
+      // Op de wand zelf past wie er staat de indeling aan van wiens comfort geldt.
+      expect((await store.save({ plek: 'wand', kaarten: ['morgen'], favorieten: [{ soort: 'scene', id: 'scene.film' }] }, metProfiel(wand, 'u-noor', true))).ok).toBe(true);
+      expect(store.view(metProfiel(wand, 'u-noor', true)).wand).toMatchObject({ kaarten: ['morgen'], favorieten: [{ soort: 'scene', id: 'scene.film' }], kleur: 'roze' });
+      expect(store.view(metProfiel(wand, 'u-ricardo', true)).wand).toMatchObject({ kaarten: ['vandaag', 'favorieten'], kleur: 'lucht' });
+      // Niemand thuis: de hoofdgebruiker.
+      expect(store.view(metProfiel(wand, null, true)).wand.van).toBe('u-ricardo');
+      // Wat de wand doet als niemand kijkt, blijft van de hoofdgebruiker of een beheerder.
+      expect((await store.save({ plek: 'wand', niemand: { rustMin: 2 } }, metProfiel(wand, 'u-noor', true))).ok).toBe(false);
+    });
   });
 
   it('begint opnieuw bij een kapot bestand', async () => {

@@ -444,7 +444,7 @@ function filterRegel(d) {
   if (!f) return '';
   const leeg = bijnaOp(f.pct, 'filter', huisData);
   const wat = f.pct != null ? `${nl(f.pct, 0)}% over` : `nog ${nl(f.uren, 0)} uur`;
-  return `<div class="feit"><span>Filter</span><b style="${leeg ? 'color: var(--gloed)' : ''}">${leeg ? `schoonmaken, ${wat}` : wat}</b></div>`;
+  return `<div class="feit"><span>Filter</span><b style="${leeg ? 'color: var(--gloed-t)' : ''}">${leeg ? `schoonmaken, ${wat}` : wat}</b></div>`;
 }
 
 /*
@@ -587,7 +587,7 @@ function screenBlad(k, d) {
     <div class="beeld">${svg}</div>
     ${bedienen ? knoppen : ''}
     <div class="regel"><span class="bol" style="width: 18px; height: 18px; margin-top: 1px; flex: none"></span><span>${bedienen ? uitleg : 'Schermen bedienen staat uit. Zet het aan bij Functies.'}</span></div>
-    <p class="mini" data-fout style="margin: 0; color: var(--gloed)"></p>`;
+    <p class="mini" data-fout style="margin: 0; color: var(--gloed-t)"></p>`;
 }
 
 /*

@@ -149,7 +149,7 @@ const niemandNu = () => ({ ...NIEMAND, ...voorkeur?.wand?.niemand });
 const magWand = () => !!voorkeur?.wand?.magAanpassen;
 const schakel = (aan, data, label, uit = false) => `<button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data} ${uit ? 'disabled' : ''}></button>`;
 const nkKeuzes = (label, attr, opties, huidig, uit = false) => `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, t]) => `<button type="button" data-${attr}="${w}" aria-pressed="${w === huidig}" ${uit ? 'disabled' : ''}>${esc(t)}</button>`).join('')}</div>`;
-const alleenHoofd = () => (magWand() ? '' : '<p class="uitleg" style="color: var(--zon)">Alleen de hoofdgebruiker kan dit veranderen.</p>');
+const alleenHoofd = () => (magWand() ? '' : '<p class="uitleg" style="color: var(--zon-t)">Alleen de hoofdgebruiker kan dit veranderen.</p>');
 const voorDeWand = '<p class="mini">Voor het scherm aan de wand: het account dat bij Bewoners een scherm is. Een telefoon of laptop doet nooit mee.</p>';
 
 /** Dit scherm (besluit 155): volledig scherm, per apparaat; alleen als de app in Home Assistant draait. */
@@ -329,7 +329,7 @@ function praten() {
       : proef
         ? `<div class="proef"><div><span>Vast antwoord</span>${esc(proef.vast)}</div><div class="eigen"><span>In eigen woorden</span>${proef.eigen ? esc(proef.eigen) : 'Lukte niet; dan hoor je het vaste antwoord.'}</div></div>
           ${proef.snel && proef.ms != null ? `<p class="mini">Antwoord na ${esc((proef.ms / 1000).toFixed(1).replace('.', ','))} seconden.</p>` : ''}
-          ${proef.reden ? `<p class="uitleg" style="color: var(--zon)">${esc(proef.reden)}</p>` : ''}`
+          ${proef.reden ? `<p class="uitleg" style="color: var(--zon-t)">${esc(proef.reden)}</p>` : ''}`
         : '';
   return `<h2 class="kop-2">Antwoorden in eigen woorden</h2>
     ${modellen.length ? keuzes('Taalmodel', 'taalmodel', [[null, 'Uit'], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : '<p class="uitleg">Geen AI-taak gevonden in Home Assistant. Voeg er een toe, zoals Google Gemini bij Apparaten en diensten; dan staat hij hier.</p>'}
@@ -370,10 +370,10 @@ function luisteren() {
     <span class="veldnaam">Spraakassistent uit Home Assistant</span>
     ${lijst.length ? keuzes('Spraakassistent', 'spraak', opties, p.spraak) : ''}
     ${gekozen?.wekwoord ? `<p class="mini">Wekwoord: <b>${esc(wekwoordNaam(gekozen.wekwoord))}</b>. Hoe gevoelig hij is, stel je in bij de openWakeWord-add-on.</p>` : ''}
-    ${melding ? `<p class="uitleg" style="color: var(--zon)">${esc(melding)}</p>` : ''}
+    ${melding ? `<p class="uitleg" style="color: var(--zon-t)">${esc(melding)}</p>` : ''}
     <span class="veldnaam">Dit scherm luistert naar het wekwoord</span>
     <div class="keuzes" role="group" aria-label="Dit scherm luistert"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>Aan</button><button type="button" data-hier="uit" aria-pressed="${!hier}">Uit</button></div>
-    ${https ? '<p class="mini">Voor de tablet aan de wand. Geldt alleen voor dit scherm. Op een telefoon tik je op de microfoon bij de Assistent.</p>' : '<p class="uitleg" style="color: var(--zon)">De microfoon werkt alleen via https. Dit scherm opent de app via http; open hem via een https-adres.</p>'}
+    ${https ? '<p class="mini">Voor de tablet aan de wand. Geldt alleen voor dit scherm. Op een telefoon tik je op de microfoon bij de Assistent.</p>' : '<p class="uitleg" style="color: var(--zon-t)">De microfoon werkt alleen via https. Dit scherm opent de app via http; open hem via een https-adres.</p>'}
     <p class="mini">Je stem gaat naar Home Assistant in huis, niet naar buiten. Alleen de tekst gaat daarna verder, zoals een getypte zin. Er wordt niets opgenomen of bewaard.</p>`;
 }
 

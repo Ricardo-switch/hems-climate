@@ -79,6 +79,7 @@
     { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
     { titel: 'Inloggen en uitloggen', waar: 'Bewoners en toegang', href: 'toegang.html#bewoners', woorden: 'inloggen uitloggen account wachtwoord toegang beheerder' },
     { titel: 'Sleutel voor de assistent', waar: 'Bewoners en toegang', href: 'toegang.html#assistent', woorden: 'sleutel assistent home assistant spraak voice token' },
+    { titel: 'Thema en kleur', waar: 'Jij', href: 'jij.html', woorden: 'thema licht donker kleur accent profiel jij uiterlijk' },
     { titel: 'Je gegevens exporteren', waar: 'Bewoners en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
   ];
 

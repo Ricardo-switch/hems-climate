@@ -179,6 +179,19 @@ function tekenNu() {
   });
   $$('[data-kan]').forEach((el) => (el.innerHTML = kan()));
   $$('[data-groepen]').forEach((el) => (el.innerHTML = groepen()));
+  // Jij (besluit 181): je profiel; een gast heeft er geen, een scherm alleen hoe de app eruitziet.
+  const ik = d.bewoners?.ik ?? null;
+  const naam = ik?.soort === 'bewoner' && ik.naam ? ik.naam : ik?.soort === 'scherm' ? 'Dit scherm' : 'Jij';
+  const letter = ik?.soort === 'bewoner' && ik.naam ? `<span class="jijrondje" aria-hidden="true">${esc(ik.naam.charAt(0).toUpperCase())}</span>` : '';
+  const onder = ik?.soort === 'bewoner' ? 'Thema en kleur, weergave, je Thuis en je comfort' : 'Thema, kleur en weergave';
+  $$('[data-jijregel]').forEach((el) => {
+    el.hidden = isGast();
+    el.innerHTML = `${letter}<span><b>${esc(naam)}</b><span>${onder}</span></span><span class="pijl" aria-hidden="true">›</span>`;
+  });
+  $$('[data-jijpil]').forEach((el) => {
+    el.hidden = isGast() || ik?.soort !== 'bewoner';
+    el.innerHTML = `${letter}${esc(naam)}`;
+  });
   // Het zoekveld één keer neerzetten: anders verdwijnt wat je typt.
   $$('[data-zoekvak]').forEach((el) => {
     if (!el.querySelector('[data-zoek]')) el.innerHTML = ZOEKVELD;

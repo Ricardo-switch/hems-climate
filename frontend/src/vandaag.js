@@ -358,7 +358,7 @@ function tekenTijdlijn(r, verwacht, lijst) {
       <linearGradient id="zv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.5"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient>
       <linearGradient id="plan" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8F86FF" stop-opacity="0.13"/><stop offset="1" stop-color="#8F86FF" stop-opacity="0.03"/></linearGradient>
       <pattern id="streep" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="currentColor"/></pattern>
-      <style>.rij{font:600 13px Figtree,sans-serif;fill:#EEF3F7}.sub{font:11.5px Figtree,sans-serif;fill:#7F8E9C}.plan{font:600 12px Figtree,sans-serif;fill:#B7B0FF}.nu{font:700 12px Figtree,sans-serif;fill:#0b1424}.getal{font:600 18px 'Bricolage Grotesque',Figtree,sans-serif;fill:#EEF3F7}.af{font:700 12.5px Figtree,sans-serif;fill:#6EE7B7}.af.min{fill:#B8C4CF}</style>
+      <style>.rij{font:600 13px Figtree,sans-serif;fill:var(--tekst)}.sub{font:11.5px Figtree,sans-serif;fill:var(--gedempt)}.plan{font:600 12px Figtree,sans-serif;fill:var(--violet-t)}.nu{font:700 12px Figtree,sans-serif;fill:#0b1424}.getal{font:600 18px 'Bricolage Grotesque',Figtree,sans-serif;fill:var(--tekst)}.af{font:700 12.5px Figtree,sans-serif;fill:#6EE7B7}.af.min{fill:var(--zacht)}</style>
     </defs>
     ${planVlak}
     ${getallenSvg}
@@ -393,7 +393,7 @@ function tekenKaarten(r, verwacht, lijst) {
     links.innerHTML = `<span class="wanneer">${dag === 'gisteren' ? 'Gisteren' : 'Vandaag'}</span><h2 class="kop-2" style="margin-top: 8px">Er gebeurde nog niets</h2><p class="klein" style="margin: 8px 0 0">Geen enkel apparaat kreeg een andere stand.</p>`;
   } else {
     const m = lijst[i];
-    links.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: ${m.kleur}">${klokVan(m.tMs)}, wat er gebeurde</span><span class="mini">${i + 1} van ${lijst.length}</span></div>
+    links.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: ${app.tekstKleur(m.kleur)}">${klokVan(m.tMs)}, wat er gebeurde</span><span class="mini">${i + 1} van ${lijst.length}</span></div>
       <h2 class="kop-2" style="margin-top: 8px">${esc(m.kop)}</h2>
       <p class="klein" style="margin: 8px 0 0">${esc(m.zin)}</p>
       <div class="bladeren"><button type="button" data-blader="-1" ${i === 0 ? 'disabled' : ''}>‹ Eerder</button><button type="button" data-blader="1" ${i === lijst.length - 1 ? 'disabled' : ''}>Later ›</button></div>`;
@@ -408,11 +408,11 @@ function tekenKaarten(r, verwacht, lijst) {
     const rest = weer?.vandaag?.verwachtKwh != null && weer?.vandaag?.opgewektKwh != null ? Math.max(0, weer.vandaag.verwachtKwh - weer.vandaag.opgewektKwh) : null;
     const onder = zon?.zon?.boven === false;
     rechts.innerHTML = v
-      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">${v.vanMs ? `${klokVan(v.vanMs)}, verwacht` : 'Straks'}</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(v.kop)}</h2><p class="klein" style="margin: 8px 0 0">${esc(v.zin)}</p>`
-      : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">De rest van vandaag</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${!onder && rest != null && rest > 0.05 ? `Nog ${nl(rest)} kWh zon verwacht` : onder ? 'De zon is onder' : 'Er komt vandaag weinig zon meer'}</h2><p class="klein" style="margin: 8px 0 0">${!onder && rest != null && rest > 0.05 ? 'Niets wacht nu op zon.' : esc(morgenZin || 'Niets wacht nu op zon.')}</p>`;
+      ? `<div class="bovenrij"><span class="wanneer" style="color: var(--violet-t)">${v.vanMs ? `${klokVan(v.vanMs)}, verwacht` : 'Straks'}</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${esc(v.kop)}</h2><p class="klein" style="margin: 8px 0 0">${esc(v.zin)}</p>`
+      : `<div class="bovenrij"><span class="wanneer" style="color: var(--violet-t)">De rest van vandaag</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">${!onder && rest != null && rest > 0.05 ? `Nog ${nl(rest)} kWh zon verwacht` : onder ? 'De zon is onder' : 'Er komt vandaag weinig zon meer'}</h2><p class="klein" style="margin: 8px 0 0">${!onder && rest != null && rest > 0.05 ? 'Niets wacht nu op zon.' : esc(morgenZin || 'Niets wacht nu op zon.')}</p>`;
   } else if (dag === 'gisteren') {
     const k = klopteHtml();
-    rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Zo klopte de verwachting</span><span class="mini">${k.dagen ? `${k.dagen} ${k.dagen === 1 ? 'dag' : 'dagen'}` : ''}</span></div>
+    rechts.innerHTML = `<div class="bovenrij"><span class="wanneer" style="color: var(--violet-t)">Zo klopte de verwachting</span><span class="mini">${k.dagen ? `${k.dagen} ${k.dagen === 1 ? 'dag' : 'dagen'}` : ''}</span></div>
       ${k.balken}
       <div class="bovenrij" style="margin-top: 8px"><p class="mini" style="margin: 0">${esc(k.zin)}</p>${k.dagen ? LEGENDA : ''}</div>`;
   } else {
@@ -421,8 +421,8 @@ function tekenKaarten(r, verwacht, lijst) {
     const piek = Math.max(0, ...kw.map((q) => q.verwachtW));
     const goed = kw.filter((q) => piek > 0 && q.verwachtW >= piek * 0.6);
     rechts.innerHTML = goed.length && piek >= 200
-      ? `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de meeste zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Tussen ${klokVan(goed[0].tMs)} en ${klokVan(goed.at(-1).tMs + 15 * 60_000)}</h2><p class="klein" style="margin: 8px 0 0">Tot ${nl(piek / 1000)} kW van je panelen. Dan is er de meeste ruimte voor apparaten op zon.</p>`
-      : `<div class="bovenrij"><span class="wanneer" style="color: #B7B0FF">Morgen, de zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Weinig zon verwacht</h2><p class="klein" style="margin: 8px 0 0">${esc(morgenZin || 'Er is nog geen verwachting voor morgen.')}</p>`;
+      ? `<div class="bovenrij"><span class="wanneer" style="color: var(--violet-t)">Morgen, de meeste zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Tussen ${klokVan(goed[0].tMs)} en ${klokVan(goed.at(-1).tMs + 15 * 60_000)}</h2><p class="klein" style="margin: 8px 0 0">Tot ${nl(piek / 1000)} kW van je panelen. Dan is er de meeste ruimte voor apparaten op zon.</p>`
+      : `<div class="bovenrij"><span class="wanneer" style="color: var(--violet-t)">Morgen, de zon</span><span class="mini">uit het weer</span></div><h2 class="kop-2" style="margin-top: 8px">Weinig zon verwacht</h2><p class="klein" style="margin: 8px 0 0">${esc(morgenZin || 'Er is nog geen verwachting voor morgen.')}</p>`;
   }
 }
 

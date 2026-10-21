@@ -243,7 +243,7 @@
   const getal = (s) =>
     String(s)
       .split(/(\d+(?:[.,]\d+)?\s?(?:%|°|kWh|kW|W)?)/)
-      .map((deel, i) => (i % 2 ? `<span style="color: var(--zon)">${esc(deel)}</span>` : esc(deel)))
+      .map((deel, i) => (i % 2 ? `<span style="color: var(--zon-t)">${esc(deel)}</span>` : esc(deel)))
       .join('');
 
   function toon(stand, inhoud) {

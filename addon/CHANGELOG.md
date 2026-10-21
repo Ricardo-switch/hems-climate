@@ -1,5 +1,19 @@
 # Wat is er nieuw
 
+## 0.55.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Jij, bovenaan Instellingen: je kleur, licht of donker, je Thuis en je comfort op één plek
+- Op de telefoon een licht thema, of zoals je telefoon het wil
+- Een eigen kleur voor het menu, de keuzes en je naam; op de wand die van wie het comfort heeft, met zijn kaarten en favorieten
+
+**Beter**
+
+- Het getal bij de bel is beter te lezen
+
 ## 0.54.0
 
 *21 oktober 2026*

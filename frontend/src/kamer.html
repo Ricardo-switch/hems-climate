@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* De wand (schets Wand-Kamer): het huis links, het blad rechts. */
   .pad { display: flex; gap: 8px; align-items: center; color: var(--gedempt); font-size: 14px; font-weight: 600; }
@@ -22,8 +22,8 @@
   .temp { font-family: var(--kop); font-size: 76px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
   .kop .lead { margin-top: 8px; max-width: 54ch; }
   .etages { display: flex; gap: 8px; margin-top: 14px; }
-  .etages button { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-  .etages button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .etages button { height: 32px; padding: 0 14px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.07); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .etages button[aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
   /* Een bredere wand (besluit 128): het blad een derde van wat erbij komt, de rest het huis. */
   #wand .podium { position: absolute; left: 0; top: 230px; right: calc(480px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 560px; }
   #wand .blad { position: absolute; right: 26px; top: 22px; bottom: 20px; width: calc(400px + (var(--wandbreedte, 1280px) - 1280px) / 3); padding: 22px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
@@ -35,17 +35,17 @@
   .bladkop { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
   .bladkop h2 { margin: 0; }
   .groepkop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-  .rij { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .rij { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgb(var(--wit) / 0.06); width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .rij:first-of-type { border-top: 0; }
   .rij .naam { flex: 1; min-width: 0; }
   .rij .naam b { display: block; font-size: 15px; font-weight: 600; }
   .rij .naam span { font-size: 13px; color: var(--zacht); }
   .rij .chev { color: var(--gedempt); font-size: 18px; }
   .rij svg.ic { width: 22px; height: 22px; flex: none; color: var(--zacht); }
-  .rij.aan svg.ic { color: var(--zon); }
+  .rij.aan svg.ic { color: var(--zon-t); }
   /* Een rookmelder die iets ziet (21 oktober 2026). */
   .rij.alarm svg.ic, .alarm-t { color: #ff7a6b; }
-  .rij.batt.leeg svg.ic, .rij.batt.leeg .naam span { color: var(--gloed); }
+  .rij.batt.leeg svg.ic, .rij.batt.leeg .naam span { color: var(--gloed-t); }
   /* Beweging nu (15 oktober 2026): een stip met een zachte golf. */
   .beweegt { position: relative; width: 22px; height: 22px; flex: none; display: grid; place-items: center; }
   .beweegt i { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 10px var(--mint); }
@@ -53,19 +53,19 @@
   .beweegt::after { animation-delay: 1.1s; }
   @keyframes golfje { 0% { transform: scale(0.4); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .beweegt::before, .beweegt::after { animation: none; } }
-  .meterrij em.nu { font-style: normal; color: var(--mint); font-weight: 700; }
+  .meterrij em.nu { font-style: normal; color: var(--mint-t); font-weight: 700; }
   .rij.oplicht { border-radius: 12px; box-shadow: 0 0 0 2px rgba(255, 122, 77, 0.7); padding-left: 8px; padding-right: 8px; }
   .gloei { width: 12px; height: 12px; border-radius: 50%; flex: none; }
 
   /* Een schakelaar: een echte knop met role switch. */
-  .schakel { width: 50px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); position: relative; flex: none; border: 0; cursor: pointer; }
+  .schakel { width: 50px; height: 30px; border-radius: 999px; background: rgb(var(--wit) / 0.12); position: relative; flex: none; border: 0; cursor: pointer; }
   .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #c9d3dc; transition: left 0.15s; }
   .schakel[aria-checked='true'] { background: #f2c27a; }
   .schakel[aria-checked='true']::after { left: 23px; background: #fff; }
   .schakel:focus-visible, .rij:focus-visible, .scene:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
 
   .scenes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .scene { border: 0; border-radius: 16px; overflow: hidden; position: relative; height: 74px; display: flex; align-items: end; padding: 8px 10px; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); background-size: cover; background-position: center; }
+  .scene { border: 0; border-radius: 16px; overflow: hidden; position: relative; height: 74px; display: flex; align-items: end; padding: 8px 10px; font: inherit; font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: inset 0 0 0 1px rgb(var(--wit) / 0.12); background-size: cover; background-position: center; }
   .scene[aria-pressed='true'] { box-shadow: inset 0 0 0 2px #fff; }
   .scene span { position: relative; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); text-align: left; }
   .scene small { display: block; font-size: 10.5px; font-weight: 600; opacity: 0.85; }
@@ -74,12 +74,12 @@
   .beeld { display: grid; place-items: center; }
   .beeld svg { width: 100%; max-width: 300px; height: auto; }
   .doelrij { display: flex; align-items: center; justify-content: center; gap: 22px; }
-  .rond { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.06); color: var(--tekst); font: inherit; font-size: 26px; font-weight: 600; cursor: pointer; }
+  .rond { width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-size: 26px; font-weight: 600; cursor: pointer; }
   .regel { display: flex; gap: 10px; align-items: start; font-size: 13.5px; line-height: 1.45; color: var(--zacht); padding: 10px 12px; border-radius: 12px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.25); }
   .regel:empty { display: none; }
   .feit { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--zacht); }
   .feit b { color: var(--tekst); }
-  .strook { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+  .strook { position: relative; height: 12px; border-radius: 6px; background: rgb(var(--wit) / 0.06); }
   .strook i { position: absolute; top: 0; height: 12px; border-radius: 6px; }
   .strook .nu { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--tekst); }
   .uren { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
@@ -90,7 +90,7 @@
   .schuif::-moz-range-thumb { width: 36px; height: 36px; border-radius: 11px; background: #fff; border: 0; cursor: pointer; }
   .schuif.wit { background: linear-gradient(90deg, #ffb46b, #fff1dc 55%, #cfe4ff); }
   .schuif:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-  .wiel { width: 220px; height: 220px; border-radius: 50%; margin: 0 auto; position: relative; touch-action: none; cursor: crosshair; background: radial-gradient(circle closest-side, #fff 0, rgba(255, 255, 255, 0) 100%), conic-gradient(from 90deg, hsl(0 100% 55%), hsl(60 100% 55%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 60%), hsl(300 100% 55%), hsl(360 100% 55%)); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
+  .wiel { width: 220px; height: 220px; border-radius: 50%; margin: 0 auto; position: relative; touch-action: none; cursor: crosshair; background: radial-gradient(circle closest-side, #fff 0, rgb(var(--wit) / 0) 100%), conic-gradient(from 90deg, hsl(0 100% 55%), hsl(60 100% 55%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 60%), hsl(300 100% 55%), hsl(360 100% 55%)); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45); }
   .wiel i { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); pointer-events: none; }
 
   /* De camera (besluit 106): het beeld op de breedte van het blad. */
@@ -109,7 +109,7 @@
   #tel .temp { font-size: 52px; }
   #tel .kop .lead { font-size: 15px; }
   #tel .podium { width: 100%; height: 280px; }
-  #tel .blad { padding: 16px 18px 120px; margin-top: -10px; border-radius: 28px 28px 0 0; background: rgba(12, 20, 34, 0.92); border-top: 1px solid var(--glas-rand); }
+  #tel .blad { padding: 16px 18px 120px; margin-top: -10px; border-radius: 28px 28px 0 0; background: rgb(var(--nacht) / 0.92); border-top: 1px solid var(--glas-rand); }
 </style>
 </head>
 <body class="lucht lucht-dag">

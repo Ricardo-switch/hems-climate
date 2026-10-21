@@ -11,10 +11,10 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* Energie (besluit 130, schets Wand-Instellingen-Energie): vijf delen, één pagina. */
-  .deelvraag { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .deelvraag { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid rgb(var(--wit) / 0.07); }
   .vorm > .kopregel + .deelvraag, .vorm > .melding + .deelvraag { border-top: 0; padding-top: 0; }
   .deelvraag h3 { margin: 0; }
   .deelvraag .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
@@ -32,7 +32,7 @@
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   #tel .twee { grid-template-columns: 1fr; }
   #tel .kolommen { display: flex; flex-direction: column; gap: 14px; }
-  #tel .kolommen > div > .deelvraag:first-child { border-top: 1px solid rgba(255, 255, 255, 0.07); padding-top: 14px; }
+  #tel .kolommen > div > .deelvraag:first-child { border-top: 1px solid rgb(var(--wit) / 0.07); padding-top: 14px; }
   #tel .kolommen > div:first-child > .deelvraag:first-child { border-top: 0; padding-top: 0; }
 </style>
 </head>

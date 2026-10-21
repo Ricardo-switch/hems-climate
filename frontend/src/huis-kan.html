@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
    * Wat je huis kan (besluit 130, schets Wand-Huis-kan): alles wat Smart
@@ -23,21 +23,21 @@
   .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
   .kopregel .lead { max-width: 52ch; margin-top: 6px; }
   .legenda { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
-  .legenda button { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.06); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .legenda button { height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid transparent; background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .legenda button b { font-family: var(--kop); font-size: 15px; }
-  .legenda button[aria-pressed='true'] { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.12); }
+  .legenda button[aria-pressed='true'] { border-color: rgb(var(--wit) / 0.5); background: rgb(var(--wit) / 0.12); }
 
   .veld { position: relative; flex: 1; display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 16px; min-height: 0; }
   .links { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
   .podium { flex: 1; min-height: 0; margin: -6px -10px 0 -18px; }
   /* Haal er meer uit (besluit 132): de drie beste ideeën, de grootste winst eerst. */
-  .meer { padding: 14px 16px 8px; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgba(255, 255, 255, 0.03)); }
-  .meer .wanneer { display: block; color: var(--zon); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
-  .idee { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); color: inherit; text-decoration: none; }
+  .meer { padding: 14px 16px 8px; border-color: rgba(247, 181, 72, 0.35); background: linear-gradient(160deg, rgba(247, 181, 72, 0.1), rgb(var(--wit) / 0.03)); }
+  .meer .wanneer { display: block; color: var(--zon-t); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .idee { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 7px 0; border-top: 1px solid rgb(var(--wit) / 0.06); color: inherit; text-decoration: none; }
   .idee:first-of-type { border-top: 0; }
   .idee b { display: block; font-size: 14px; font-weight: 600; }
   .idee span { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .idee .wint { text-align: right; font-family: var(--kop); font-size: 17px; font-weight: 600; color: var(--zon); line-height: 1.1; }
+  .idee .wint { text-align: right; font-family: var(--kop); font-size: 17px; font-weight: 600; color: var(--zon-t); line-height: 1.1; }
   .idee .wint small { display: block; font-family: var(--tekst, inherit); font-size: 11.5px; font-weight: 500; color: var(--gedempt); }
   .idee .wint.zacht { font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
   .idee:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 10px; }
@@ -45,58 +45,58 @@
   .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; min-height: 0; }
   .vak { padding: 12px 16px 6px; display: flex; flex-direction: column; min-height: 0; }
   .vak h3 { margin: 0 0 2px; font-family: var(--kop); font-size: 16px; font-weight: 600; }
-  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: 100%; }
   .regel:first-of-type { border-top: 0; }
   .regel b { display: block; font-size: 14px; font-weight: 600; }
   .regel span.nu { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* Iets om even na te kijken, zoals een bijna lege batterij: wel in orde, niet rood. */
-  .regel span.nu.let { color: #ffb090; }
+  .regel span.nu.let { color: var(--gloed-zacht); }
   .regel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 10px; }
-  .regel.gekozen { background: rgba(255, 255, 255, 0.07); border-radius: 12px; margin: 0 -8px; padding: 6px 8px; width: calc(100% + 16px); border-top-color: transparent; }
+  .regel.gekozen { background: rgb(var(--wit) / 0.07); border-radius: 12px; margin: 0 -8px; padding: 6px 8px; width: calc(100% + 16px); border-top-color: transparent; }
   .regel.weg { opacity: 0.3; }
 
   .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
   .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .stand.werkt { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
-  .stand.kijkt, .stand.leert { color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
-  .stand.uit { color: var(--gedempt); background: rgba(255, 255, 255, 0.06); }
-  .stand.mis { color: var(--gloed); background: rgba(255, 122, 77, 0.12); }
-  .stand.nodig { color: var(--zon); background: transparent; box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
+  .stand.werkt { color: var(--mint-t); background: rgba(110, 231, 183, 0.1); }
+  .stand.kijkt, .stand.leert { color: var(--ijs-t); background: rgba(111, 211, 255, 0.1); }
+  .stand.uit { color: var(--gedempt); background: rgb(var(--wit) / 0.06); }
+  .stand.mis { color: var(--gloed-t); background: rgba(255, 122, 77, 0.12); }
+  .stand.nodig { color: var(--zon-t); background: transparent; box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
   .stand.nodig::before { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
 
   /* Het blad: over de vakken heen, zoals het weer op Thuis. */
-  .blad { position: absolute; left: 436px; right: 0; top: 0; bottom: 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; background: rgba(12, 20, 34, 0.96); z-index: 5; overflow: auto; }
+  .blad { position: absolute; left: 436px; right: 0; top: 0; bottom: 0; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; background: rgb(var(--nacht) / 0.96); z-index: 5; overflow: auto; }
   .blad[hidden] { display: none; }
   .blad .bovenaan { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
-  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; flex: none; }
+  .blad .sluit { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font-size: 18px; cursor: pointer; flex: none; }
   .blad .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; }
   .blad h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--gedempt); }
   .blad .lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--zacht); }
   .blad .lijst li { display: flex; gap: 8px; }
   .blad .lijst li::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--mint); margin-top: 7px; }
-  .blad .nu { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 14px; color: var(--zacht); }
+  .blad .nu { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 14px; background: rgb(var(--wit) / 0.05); font-size: 14px; color: var(--zacht); }
   .blad .som { padding: 14px 16px; border-radius: 18px; background: rgba(247, 181, 72, 0.07); border: 1px solid rgba(247, 181, 72, 0.25); }
-  .blad .som .getal { font-family: var(--kop); font-size: 34px; font-weight: 600; line-height: 1.05; color: var(--zon); }
+  .blad .som .getal { font-family: var(--kop); font-size: 34px; font-weight: 600; line-height: 1.05; color: var(--zon-t); }
   .blad .som .getal small { font-size: 16px; color: var(--zacht); font-weight: 500; }
   .blad .waar { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
   .kamerkaart { padding: 12px 14px; border-radius: 16px; background: rgba(110, 231, 183, 0.06); border: 1px solid rgba(110, 231, 183, 0.22); }
   .kamerkaart b { display: block; font-size: 15px; }
   .kamerkaart span { display: block; font-size: 12.5px; color: var(--zacht); margin-top: 2px; }
   .kanook { padding: 14px 16px; border-radius: 18px; border: 1px solid rgba(247, 181, 72, 0.3); background: rgba(247, 181, 72, 0.06); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; color: inherit; text-decoration: none; }
-  .kanook .wanneer { color: var(--zon); font-size: 13px; font-weight: 700; }
+  .kanook .wanneer { color: var(--zon-t); font-size: 13px; font-weight: 700; }
   .kanook b { font-size: 16px; }
   .kanook p { margin: 0; font-size: 14px; color: var(--zacht); }
-  .kanook .knop { grid-row: 1 / 4; grid-column: 2; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; }
+  .kanook .knop { grid-row: 1 / 4; grid-column: 2; height: 40px; padding: 0 16px; border-radius: 12px; background: var(--accent); color: var(--op-accent); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; }
   .blad .onder { margin-top: auto; display: flex; gap: 10px; align-items: center; }
-  .blad .onder a { height: 42px; padding: 0 18px; border-radius: 14px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
+  .blad .onder a { height: 42px; padding: 0 18px; border-radius: 14px; background: var(--accent); color: var(--op-accent); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
   .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
   /* Klaarzetten in Home Assistant (besluit 179). */
   .kopknoppen { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-  .klaarknop { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .klaarknop { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.08); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .klaarknop b { font-family: var(--kop); font-size: 14px; }
   .klaargroep { display: flex; flex-direction: column; gap: 6px; }
   .klaargroep h4 { margin: 4px 0 0; }
-  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.04); }
   .klaarregel.mist { background: rgba(255, 122, 77, 0.07); }
   .klaarregel b { display: block; font-size: 14.5px; }
   .klaarregel span:not(.stip), .klaarregel small { display: block; font-size: 13px; color: var(--zacht); margin-top: 1px; }

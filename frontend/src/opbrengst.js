@@ -167,7 +167,7 @@ function staven(r) {
     as: reeks.map((p) => p.label),
     html: reeks.map((p, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(p.label)}: ${waarde(p.nu, eenheid)}${p.jaarEerder != null ? `, een jaar eerder ${waarde(p.jaarEerder, eenheid)}` : ''}">${p.jaarEerder != null ? `<i class="eerder" style="height: ${((p.jaarEerder / max) * 100).toFixed(1)}%"></i>` : ''}<i style="height: ${(((p.nu ?? 0) / max) * 100).toFixed(1)}%; background: ${kleur}"></i></button>`),
     detail: (i) => `${reeks[i].label}: ${waarde(reeks[i].nu, eenheid)}${reeks[i].jaarEerder != null ? `, een jaar eerder ${waarde(reeks[i].jaarEerder, eenheid)}` : ''}`,
-    legenda: `<span><span class="stip" style="background: ${kleur}"></span>${r.periode.soort === 'jaar' ? 'per jaar' : 'deze periodes'}</span>${reeks.some((p) => p.jaarEerder != null) ? '<span><span class="stip" style="background: rgba(255,255,255,0.25)"></span>een jaar eerder</span>' : ''}`,
+    legenda: `<span><span class="stip" style="background: ${kleur}"></span>${r.periode.soort === 'jaar' ? 'per jaar' : 'deze periodes'}</span>${reeks.some((p) => p.jaarEerder != null) ? '<span><span class="stip" style="background: rgb(var(--wit) / 0.25)"></span>een jaar eerder</span>' : ''}`,
   };
 }
 

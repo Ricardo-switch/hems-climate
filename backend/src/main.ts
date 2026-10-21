@@ -1347,6 +1347,18 @@ if (webPort != null) {
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
+    // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
+    ...(voorkeuren && bewonersStore
+      ? {
+          profielen: (userId: string | null) => {
+            const b = bewonersStore.current;
+            const volgorde = b.volgorde.flatMap((id) => (b.bewoners[id] ? [{ id, account: b.bewoners[id]!.haUser }] : []));
+            const p = runner?.latest?.explanation.profile;
+            const geldt = p ? (b.bewoners[p.id]?.haUser ?? null) : null;
+            return { profielen: { volgorde, geldt }, scherm: userId != null && b.schermen[userId] != null };
+          },
+        }
+      : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),

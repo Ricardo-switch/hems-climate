@@ -11,11 +11,11 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* Bewoners en toegang (besluit 130, 147 en 167): wie hier woont en wie jij bent, de sleutel voor de assistent, je gegevens, de versie. */
-  .sleutel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); word-break: break-all; user-select: all; }
-  .rij-b { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14.5px; }
+  .sleutel { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: rgb(var(--wit) / 0.06); word-break: break-all; user-select: all; }
+  .rij-b { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 14.5px; }
   .rij-b:first-of-type { border-top: 0; }
   .rij-b span { color: var(--zacht); font-size: 13px; }
   .vorm .uitleg { font-size: 13px; color: var(--zacht); margin: 0; line-height: 1.45; }
@@ -23,12 +23,12 @@
   /* Back-up, terugzetten en opnieuw beginnen (besluit 151). */
   .knoppenrij { display: flex; gap: 8px; flex-wrap: wrap; }
   .knoppenrij .knop { white-space: nowrap; }
-  .gevaar { color: #ffb090; border-color: rgba(255, 122, 77, 0.35); }
-  .vorm .fout { color: var(--gloed); font-size: 13px; }
+  .gevaar { color: var(--gloed-zacht); border-color: rgba(255, 122, 77, 0.35); }
+  .vorm .fout { color: var(--gloed-t); font-size: 13px; }
   .vorm .fout:empty { display: none; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   /* Wat is er nieuw, per versie (besluit 131); de nieuwste open, in soorten (besluit 133). */
-  .nieuw { padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); }
+  .nieuw { padding: 12px 14px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
   .nieuw summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; cursor: pointer; list-style: none; }
   .nieuw summary::-webkit-details-marker { display: none; }
   .nieuw summary::after { content: '›'; grid-column: 2; grid-row: 1 / 3; color: var(--gedempt); font-size: 18px; transform: rotate(90deg); transition: transform 0.15s; }
@@ -38,9 +38,9 @@
   .nieuw summary:focus-visible { outline: 2px solid var(--tekst); outline-offset: 4px; border-radius: 8px; }
   .nieuw .soort { margin-top: 10px; }
   .nieuw .soort .label { display: inline-flex; height: 22px; padding: 0 9px; border-radius: 999px; align-items: center; font-size: 12px; font-weight: 700; }
-  .nieuw .nieuw .label, .nieuw .soort.nieuw .label { color: var(--mint); background: rgba(110, 231, 183, 0.12); }
-  .nieuw .soort.beter .label { color: var(--ijs); background: rgba(111, 211, 255, 0.12); }
-  .nieuw .soort.opgelost .label { color: var(--zon); background: rgba(247, 181, 72, 0.12); }
+  .nieuw .nieuw .label, .nieuw .soort.nieuw .label { color: var(--mint-t); background: rgba(110, 231, 183, 0.12); }
+  .nieuw .soort.beter .label { color: var(--ijs-t); background: rgba(111, 211, 255, 0.12); }
+  .nieuw .soort.opgelost .label { color: var(--zon-t); background: rgba(247, 181, 72, 0.12); }
   .nieuw ul { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; color: var(--zacht); }
 </style>
 </head>

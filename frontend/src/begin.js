@@ -47,9 +47,9 @@ function welkom() {
   return `<h1 class="groot">Welkom <em>thuis.</em></h1>
     <p class="lead">Smart Climate laat je huis meedenken met de zon. Het kijkt naar je verwarming, airco's en panelen, en zegt bij elk besluit waarom.</p>
     <ul class="kan">
-      <li><span class="ik" style="color: var(--gloed)">${ICOON.comfort}</span><div><b>Comfort in elke kamer</b><span>Warm waar je bent, koel als het nodig is.</span></div></li>
-      <li><span class="ik" style="color: var(--zon)">${ICOON.zon}</span><div><b>Op je eigen zon</b><span>Zon over gaat eerst naar je huis, dan naar het net.</span></div></li>
-      <li><span class="ik" style="color: var(--ijs)">${ICOON.licht}</span><div><b>Bedienen</b><span>Licht, scènes en schermen, met een tik of je stem.</span></div></li>
+      <li><span class="ik" style="color: var(--gloed-t)">${ICOON.comfort}</span><div><b>Comfort in elke kamer</b><span>Warm waar je bent, koel als het nodig is.</span></div></li>
+      <li><span class="ik" style="color: var(--zon-t)">${ICOON.zon}</span><div><b>Op je eigen zon</b><span>Zon over gaat eerst naar je huis, dan naar het net.</span></div></li>
+      <li><span class="ik" style="color: var(--ijs-t)">${ICOON.licht}</span><div><b>Bedienen</b><span>Licht, scènes en schermen, met een tik of je stem.</span></div></li>
     </ul>
     <span class="fout" role="alert">${esc(fout)}</span>
     <div class="doen">

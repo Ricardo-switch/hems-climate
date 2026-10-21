@@ -11,14 +11,14 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* De wand (schets Wand-Opbrengst): de cijfers, de sankey, per apparaat. */
   #wand main { display: grid; grid-template-columns: 270px minmax(0, 1fr) 316px; grid-template-rows: auto minmax(0, 1fr); gap: 18px; height: 100%; min-width: 0; }
   .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
-  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
   .wissel button { height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
-  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .wissel button[aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
   .wissel button:focus-visible, .periode button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .periode { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
   .periode button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--glas-rand); background: transparent; color: var(--tekst); font-size: 18px; cursor: pointer; }
@@ -31,27 +31,27 @@
   .midden [data-sankey] { flex: 1; min-height: 0; display: grid; place-items: center; }
   .midden svg { max-width: 100%; height: auto; }
   .rechts { display: flex; flex-direction: column; gap: 16px; min-height: 0; }
-  .rij { padding: 9px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .rij { padding: 9px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
   .rij:first-of-type { border-top: 0; }
   .rij .boven { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
   .rij .boven b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .verdeel { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgba(255, 255, 255, 0.07); margin-top: 7px; }
+  .verdeel { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: rgb(var(--wit) / 0.07); margin-top: 7px; }
   .verdeel i { display: block; height: 100%; }
   .legenda { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 0; }
   .legenda span { display: inline-flex; align-items: center; gap: 6px; }
   .grafiekkop { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .blik, .maten { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); }
+  .blik, .maten { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; background: rgb(var(--wit) / 0.06); }
   .maten { margin-top: 10px; }
   .blik button, .maten button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: var(--zacht); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
-  .blik button[aria-pressed='true'], .maten button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .blik button[aria-pressed='true'], .maten button[aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
   .staven { display: flex; align-items: end; gap: 2px; height: 120px; margin-top: 12px; }
   .staaf { flex: 1; height: 100%; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; border: 0; padding: 0; background: transparent; cursor: pointer; border-radius: 3px; }
-  .staaf:hover, .staaf[aria-pressed='true'] { background: rgba(255, 255, 255, 0.07); }
+  .staaf:hover, .staaf[aria-pressed='true'] { background: rgb(var(--wit) / 0.07); }
   .staaf:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
   .staaf i { display: block; width: 100%; }
   .staaf i.zon { background: var(--zon); border-radius: 2px 2px 0 0; order: 1; }
   .staaf i.net { background: #9AAABB; opacity: 0.7; order: 2; }
-  .staaf i.eerder { position: absolute; left: 15%; right: 15%; bottom: 0; background: rgba(255, 255, 255, 0.18); border-radius: 2px 2px 0 0; }
+  .staaf i.eerder { position: absolute; left: 15%; right: 15%; bottom: 0; background: rgb(var(--wit) / 0.18); border-radius: 2px 2px 0 0; }
   .staaf i:not(.eerder) { position: relative; border-radius: 2px 2px 0 0; }
   .detail { margin: 8px 0 0; min-height: 1.4em; color: var(--tekst); }
   .asje { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
