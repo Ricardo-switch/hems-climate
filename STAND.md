@@ -287,6 +287,9 @@ verwijzing bestaat.
   aan de omtrek van het huis in OpenStreetMap, na een tik. De assistent sluit
   af op "oké, bedankt" en negeert ruis; het beeld bij aanbellen begint met een
   plaatje, en de wand houdt zijn toegang via Home Assistant zelf vast.
+- **Bijwerken vanuit de app:** in de add-on zegt Meldingen dat er een nieuwe
+  versie klaarstaat; een tik geeft wat er nieuw is (uit `addon/CHANGELOG.md`,
+  via Home Assistant) en voor de beheerder een knop Bijwerken ([171]).
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -343,7 +346,9 @@ verwijzing bestaat.
   code ([15]). Er zijn zes smalle deuren, elk getest: de onboarding achter
   Ingress ([42]), gevoel ([84]), indeling ([96]) en "klaar voor" bij de droger
   ([101]) naar eigen bestanden, lampen aan en uit ([97]) en de scènes van de
-  eigen ruimtes ([100]). Klimaat en screens blijven dicht tot B.
+  eigen ruimtes ([100]). De eigen add-on bijwerken mag alleen met
+  `update.install` op zijn eigen update ([171]). Klimaat en screens blijven
+  dicht tot B.
 - **De weergave luistert,** maar alleen om te lezen ([23]). De hele app vraagt
   een inlog met je Home Assistant-account, ook kijken ([147]); de dienst
   antwoordt alleen op bekende hostnamen ([99]).
@@ -554,4 +559,5 @@ verwijzing bestaat.
 [168]: DECISIONS.md#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand
 [169]: DECISIONS.md#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad
 [170]: DECISIONS.md#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen
+[171]: DECISIONS.md#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop
 <!-- links:einde -->

@@ -37,10 +37,12 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'assist_pipeline/pipeline/list',
   // Wie er beheerder is (besluit 161): de accounts, om achter Ingress de rol te weten.
   'config/auth/list',
+  // Wat er nieuw is in de nieuwste versie van de add-on (21 oktober 2026).
+  'update/release_notes',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
-const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices']);
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes']);
 
 export interface HaEntityState {
   readonly entity_id: string;
@@ -89,6 +91,11 @@ export interface HaClientOptions {
    * hier niets doorheen; klimaat en elke andere dienst blijven werpen.
    */
   readonly allowCovers?: boolean;
+  /**
+   * Bijwerken vanuit de app (21 oktober 2026): `update.install` op precies deze
+   * entiteit, de update van de eigen add-on, zonder velden. Null of weg: dicht.
+   */
+  readonly allowUpdate?: () => string | null;
   /**
    * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
    * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
@@ -152,6 +159,13 @@ function isCoverCall(domain: string, service: string, data: Record<string, unkno
   return keys.length === 1 && keys[0] === 'position' && typeof pos === 'number' && Number.isInteger(pos) && pos >= 0 && pos <= 100;
 }
 
+/** De eigen add-on bijwerken (21 oktober 2026): `update.install` op die ene entiteit, zonder velden. */
+function isUpdateCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>, eigen: string | null): boolean {
+  if (eigen == null || domain !== 'update' || service !== 'install') return false;
+  if (Object.keys(data).length > 0 || Object.keys(target).some((k) => k !== 'entity_id')) return false;
+  return target['entity_id'] === eigen && /^update\.[a-z0-9_]+$/.test(eigen);
+}
+
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'scene' || service !== 'turn_on') return false;
@@ -193,7 +207,8 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate'>> & {
+    allowUpdate: () => string | null;
     allowWrites: boolean;
     allowLights: boolean;
     allowScenes: boolean;
@@ -217,6 +232,7 @@ export class HaClient extends EventEmitter {
       allowLights: options.allowLights ?? false,
       allowScenes: options.allowScenes ?? false,
       allowCovers: options.allowCovers ?? false,
+      allowUpdate: options.allowUpdate ?? (() => null),
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
@@ -546,7 +562,8 @@ export class HaClient extends EventEmitter {
       this.#options.allowWrites ||
       (this.#options.allowLights && isLightCall(domain, service, data, target)) ||
       (this.#options.allowScenes && isSceneCall(domain, service, data, target)) ||
-      (this.#options.allowCovers && isCoverCall(domain, service, data, target));
+      (this.#options.allowCovers && isCoverCall(domain, service, data, target)) ||
+      isUpdateCall(domain, service, data, target, this.#options.allowUpdate());
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

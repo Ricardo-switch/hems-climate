@@ -37,6 +37,7 @@ import { decide } from '../src/core/decide.js';
 import { Cursor, configAt, loadHistory, snapshot } from '../src/replay/reconstruct.js';
 import { DivergenceCache } from '../src/web/divergence.js';
 import { MeldingenStore } from '../src/web/meldingen.js';
+import { changelog, updateView } from '../src/web/bijwerken.js';
 import { FeedbackLog } from '../src/web/feedback.js';
 import { WebServer } from '../src/web/server.js';
 import { buildHouse, knownForLayout, proposeLayout } from '../src/web/house.js';
@@ -102,6 +103,9 @@ import type { HouseBattery, HouseReport } from '../src/web/house.js';
 
 /** Schermopdrachten die de nagemaakte Home Assistant kreeg (besluit 121). */
 const coverCalls: string[] = [];
+/** Bijwerken vanuit de app (21 oktober 2026): of er een versie klaarstaat, en hoe vaak er op Bijwerken getikt is. */
+const updateNu = { klaar: false, installeer: 0 };
+let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
 const metBatterijen = (h: HouseReport): HouseReport => (extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h);
@@ -323,11 +327,21 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           logDir: dir,
           feedback: new FeedbackLog({ logDir: dir, zoneIds: exampleSite.zones.map((z) => z.id) }),
           // Meldingen (besluit 136): één apparaat dat al twee uur niet reageert.
-          meldingen: (() => {
+          meldingen: (meldingenStore = (() => {
             const m = new MeldingenStore({ logDir: dir });
             m.bij({ nu: Date.now(), zonderRuimte: [], volgen: [{ id: 'switch.droger', naam: 'De droger', kamer: 'Zolder', kamerId: 'zolder', onbereikbaarSindsMs: Date.now() - 2 * 3_600_000 }], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null });
             return m;
-          })(),
+          })()),
+          // Bijwerken (21 oktober 2026): een Home Assistant die een nieuwere versie klaar heeft.
+          bijwerken: {
+            view: async (mag: boolean) =>
+              updateView(VERSIE, updateNu.klaar ? { entity_id: 'update.smart_climate_update', state: 'on', attributes: { title: 'Smart Climate', latest_version: '9.9.9', in_progress: updateNu.installeer > 0 }, last_changed: '', last_updated: '' } : null, changelog([{ versie: '9.9.9', datum: '2026-10-22', nieuw: ['Iets nieuws voor de wand'], opgelost: ['Een fout weg'] }]), mag),
+            installeer: async () => {
+              if (!updateNu.klaar) return { ok: false, reden: 'er staat geen nieuwe versie klaar' };
+              updateNu.installeer += 1;
+              return { ok: true };
+            },
+          },
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
@@ -985,6 +999,52 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await pop.count()).toBe(0);
     expect(fouten).toEqual([]);
     await context.close();
+  }, 30_000);
+
+  /*
+   * Bijwerken vanuit de app (21 oktober 2026): een melding als er een nieuwe
+   * versie klaarstaat; een tik geeft wat er nieuw is en de knop Bijwerken.
+   */
+  it('meldt een nieuwe versie, met wat er nieuw is en een knop Bijwerken', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => {
+      localStorage.setItem('sc-rondleiding-gezien', '1');
+    });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const bron = { nu: Date.now(), zonderRuimte: [], volgen: [], batterijen: [], filters: [], meters: [], versie: null, winterdagen: null };
+    updateNu.klaar = true;
+    meldingenStore.bij({ ...bron, update: { nieuw: '9.9.9', nu: VERSIE } });
+    try {
+      await p.goto(`${baseUrl}/vandaag.html`);
+      // Wat is er nieuw na een eigen update hoort hier niet: die is al gezien.
+      await p.evaluate((v) => localStorage.setItem('sc-versie-gezien', v), VERSIE);
+      await p.reload();
+      await p.locator('#wand [data-meldbel]').click({ timeout: 5_000 });
+      const blad = p.locator('[data-meldblad]');
+      await blad.locator('.melding', { hasText: 'Versie 9.9.9 staat klaar' }).click({ timeout: 5_000 });
+      const pop = p.locator('[data-nieuwpop]');
+      await pop.locator('h2', { hasText: 'Versie 9.9.9 staat klaar' }).waitFor({ timeout: 5_000 });
+      expect(await pop.textContent()).toContain('Iets nieuws voor de wand');
+      expect(await pop.textContent()).toContain('Een fout weg');
+      expect(await pop.textContent()).toContain(`Je hebt ${VERSIE}`);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
+      await pop.locator('[data-bijwerken]').click({ timeout: 5_000 });
+      await expect.poll(() => updateNu.installeer).toBe(1);
+      await pop.locator('[data-bijwerk-zin]', { hasText: 'wordt bijgewerkt' }).waitFor({ timeout: 5_000 });
+      expect(await pop.locator('.knop-licht').isDisabled()).toBe(true);
+      await pop.locator('[data-nieuw-dicht]').click({ timeout: 5_000 });
+      expect(await pop.count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      updateNu.klaar = false;
+      updateNu.installeer = 0;
+      meldingenStore.bij({ ...bron, nu: Date.now() });
+      await context.close();
+    }
   }, 30_000);
 
   /* Schermen (besluit 121) en batterijen (besluit 122). */

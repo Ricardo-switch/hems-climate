@@ -898,6 +898,8 @@
     // Wiens comfort geldt (besluit 147): een persoon.
     comfort: ['geel', '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'],
     // De panelen zijn gemeten (besluit 157): een zon.
+    // Een nieuwe versie die klaarstaat (21 oktober 2026): een pijl omlaag.
+    update: ['blauw', '<path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/>'],
     panelen: ['geel', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
     // Een rookmelder (21 oktober 2026): rook, koolmonoxide of hitte, of vervangen.
     rook: ['rood', '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2"/>'],
@@ -915,7 +917,7 @@
    * versie opent weer wat er nieuw was, de rest gaat naar het apparaat.
    */
   const weg = (m) => `<button type="button" class="meldweg" data-meld-weg="${esc(m.id)}" aria-label="${esc(`Verwijder: ${m.titel}`)}">×</button>`;
-  const doel = (m) => (m.soort === 'versie' ? `data-meld-versie="${esc(m.id.replace(/^versie:/, ''))}"` : m.actie ? `data-meld-href="${esc(m.actie.href)}"` : '');
+  const doel = (m) => (m.soort === 'versie' ? `data-meld-versie="${esc(m.id.replace(/^versie:/, ''))}"` : m.soort === 'update' ? 'data-meld-update' : m.actie ? `data-meld-href="${esc(m.actie.href)}"` : '');
   function meldLijst() {
     const kaart = (m) => `<div class="melding" ${doel(m)}>${meldIcoon(m.soort)}<b>${esc(m.titel)}</b>${weg(m)}<p>${esc(m.tekst)}</p>
       <div class="acties">${m.actie ? `<a class="licht" href="${esc(m.actie.href)}">${esc(m.actie.label)}</a>` : ''}<span class="tijd">${esc(wanneerMeld(m.sindsMs))}</span></div></div>`;
@@ -1068,6 +1070,75 @@
 
   /** Na een update één keer: wat is er nieuw (besluit 136). De eerste keer ooit niet: dan is alles nieuw. */
   const VERSIE_GEZIEN = 'sc-versie-gezien';
+/*
+   * Een nieuwe versie (21 oktober 2026): wat er nieuw is, uit de releasenotes
+   * van Home Assistant, en een knop Bijwerken voor de beheerder. De dienst
+   * vraagt Home Assistant de add-on bij te werken; de app start daarna opnieuw,
+   * en deze pagina laadt vanzelf als de nieuwe versie draait.
+   */
+  const UPDATE_SOORT = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
+  async function bijwerkVenster() {
+    let u;
+    try {
+      u = await haal('api/update');
+    } catch {
+      return;
+    }
+    $$('[data-nieuwpop], [data-nieuw-achter]').forEach((el) => el.remove());
+    if (!u?.beschikbaar) {
+      document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop><h2 class="kop-2" id="nieuwkop" style="margin: 0">Je hebt de nieuwste versie</h2><p class="klein" style="margin: 0">Smart Climate ${esc(u?.nu ?? '')} is bij.</p><div class="knoppen"><button type="button" class="knop knop-licht" data-nieuw-dicht>Oké</button></div></div>`);
+      document.querySelector('[data-nieuw-dicht]').focus();
+      return;
+    }
+    const meer = u.notities.length > 1;
+    const notities = u.notities.length
+      ? u.notities.map((n) => `${meer ? `<h3 class="kop-3" style="margin: 6px 0 0">${esc(n.versie)}</h3>` : ''}${UPDATE_SOORT.filter(([k]) => n[k].length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}`).join('')
+      : '<p class="klein" style="margin: 0">Wat er nieuw is, staat ook in Home Assistant, bij Instellingen › Updates.</p>';
+    const knop = u.bezig
+      ? '<button type="button" class="knop knop-licht" disabled>Bijwerken…</button>'
+      : u.magBijwerken
+        ? '<button type="button" class="knop knop-licht" data-bijwerken>Bijwerken</button>'
+        : '';
+    document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop>
+      <span class="mini">Je hebt ${esc(u.nu)}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Versie ${esc(u.nieuwste)} staat klaar</h2>${notities}
+      <p class="mini" data-bijwerk-zin style="margin: 0">${u.bezig ? 'Smart Climate wordt bijgewerkt. Daarna start de app opnieuw.' : u.magBijwerken ? 'Bijwerken duurt een paar minuten. De regeling loopt daarna verder waar hij was.' : 'Alleen de beheerder kan bijwerken.'}</p>
+      <div class="knoppen"><button type="button" class="knop" data-nieuw-dicht>Later</button>${knop}</div></div>`);
+    (document.querySelector('[data-bijwerken]') ?? document.querySelector('[data-nieuw-dicht]')).focus();
+    if (u.bezig) void wachtOpNieuweVersie(u.nu);
+  }
+  async function bijwerken(knop) {
+    knop.disabled = true;
+    knop.textContent = 'Bijwerken…';
+    const zin = document.querySelector('[data-bijwerk-zin]');
+    const res = await deur('api/update', {}).catch(() => null);
+    if (!res?.ok) {
+      const f = res ? await res.json().catch(() => ({})) : {};
+      knop.disabled = false;
+      knop.textContent = 'Bijwerken';
+      if (zin) zin.textContent = `Dat lukte niet: ${String(f.fout ?? 'geen verbinding met Smart Climate').replace(/\.$/, '')}.`;
+      return;
+    }
+    const u = await res.json().catch(() => null);
+    if (zin) zin.textContent = 'Smart Climate wordt bijgewerkt. Daarna start de app opnieuw; deze pagina laadt dan vanzelf.';
+    void wachtOpNieuweVersie(u?.nu ?? null);
+  }
+  /** Tot de nieuwe versie draait: elke vijf tellen kijken, ook als de dienst even weg is. */
+  async function wachtOpNieuweVersie(was) {
+    for (let i = 0; i < 180; i++) {
+      await new Promise((ok) => setTimeout(ok, 5000));
+      try {
+        const h = await (await fetch('api/health', { cache: 'no-store' })).json();
+        if (h?.versie?.nummer && h.versie.nummer !== was) {
+          await houToegang();
+          location.reload();
+          return;
+        }
+      } catch {
+        // De dienst start opnieuw.
+      }
+    }
+  }
+
   async function watIsErNieuw(welke = null) {
     let v;
     try {
@@ -1109,7 +1180,7 @@
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void meldLaad());
     setTimeout(() => void watIsErNieuw(), 1200);
     document.addEventListener('click', async (e) => {
-      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-weg], [data-nieuw-dicht], [data-nieuw-achter], a, [data-meld-versie], [data-meld-href]');
+      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-weg], [data-nieuw-dicht], [data-nieuw-achter], a, [data-meld-versie], [data-meld-update], [data-meld-href], [data-bijwerken]');
       if (!t || (t.matches('a') && !t.closest('[data-meldblad]'))) return;
       if (t.matches('a')) return meldDicht();
       if (t.matches('[data-nieuw-dicht], [data-nieuw-achter]')) {
@@ -1126,6 +1197,11 @@
         if (res?.ok) meld = await res.json();
         meldGetal();
         await meldOpen('lijst');
+      } else if (t.matches('[data-meld-update]')) {
+        meldDicht();
+        await bijwerkVenster();
+      } else if (t.matches('[data-bijwerken]')) {
+        await bijwerken(t);
       } else if (t.dataset.meldVersie) {
         meldDicht();
         await watIsErNieuw(t.dataset.meldVersie);
