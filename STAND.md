@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 18 oktober 2026.*
+*Stand: 21 oktober 2026.*
 
 ## Waar het project staat
 
@@ -276,8 +276,17 @@ verwijzing bestaat.
   eronder; het always-on display heeft een dagstand (vanaf het einde van de
   nacht tot zonsondergang) en een avondstand, elk met een schakelaar ([168]).
 - **Wie er thuis is:** op Thuis een rondje per bewoner (op de wand bovenin, op
-  de telefoon naast de begroeting); thuis licht op, en wie gevolgd wordt heeft
-  een ring. Een tik opent het blad om te kiezen wiens comfort geldt ([169]).
+  de telefoon naast de begroeting); thuis licht op, meteen zoals Home Assistant
+  het ziet, en wie gevolgd wordt heeft een ring. Een tik opent het blad om te
+  kiezen wiens comfort geldt ([169], [170]).
+- **Favorieten, rookmelders en de gevel** ([170]): twaalf favorieten, vier per
+  pagina, ook screens, elk met het icoon van zijn kamer; vasthouden opent de
+  kamer. Een rookmelder (zoals de Nest Protect) staat in zijn kamer; ziet hij
+  rook, koolmonoxide of hitte, dan toont elk scherm een alarm, en staat het bij
+  Meldingen. De wand heeft een vaste helderheid per stand. De gevel meet je op
+  aan de omtrek van het huis in OpenStreetMap, na een tik. De assistent sluit
+  af op "oké, bedankt" en negeert ruis; het beeld bij aanbellen begint met een
+  plaatje, en de wand houdt zijn toegang via Home Assistant zelf vast.
 - **Een groep instellingen** toont zijn delen als lijst met een icoon, wat
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
@@ -544,4 +553,5 @@ verwijzing bestaat.
 [167]: DECISIONS.md#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten
 [168]: DECISIONS.md#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand
 [169]: DECISIONS.md#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad
+[170]: DECISIONS.md#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen
 <!-- links:einde -->

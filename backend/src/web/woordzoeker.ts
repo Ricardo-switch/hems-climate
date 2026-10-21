@@ -321,6 +321,53 @@ function kamerIn(config: SiteConfig, tekst: string): string | null {
   return beste?.id ?? null;
 }
 
+/* ---------------------------------------------------------------- ruis en klaar */
+
+/** Wat de spraakherkenning van een geluid maakt, geen zin: "(noise)", "[Muziek]", "...". */
+const RUIS_WOORDEN = new Set(['noise', 'ruis', 'muziek', 'music', 'geluid', 'stilte', 'silence', 'blank audio', 'applaus', 'applause', 'gelach', 'laughter', 'hoest', 'cough', 'inaudible', 'onverstaanbaar', 'achtergrondgeluid', 'background noise']);
+/** Wat Whisper verzint bij stilte, van de ondertitels waarmee hij leerde. */
+const RUIS_ZINNEN = ['ondertiteld door', 'ondertiteling', 'amara org', 'bedankt voor het kijken', 'bedankt voor het luisteren', 'abonneer', 'thanks for watching', 'subtitles by'];
+
+/**
+ * Ruis (21 oktober 2026): alleen geluid, geen woorden. Eerst ging dat door als
+ * een vraag; dan stond er "noise" bovenin en zei het huis dat het je niet kon
+ * helpen. Nu telt het als niets gezegd.
+ */
+export function isRuis(ruw: string): boolean {
+  const t = ruw.trim();
+  // Alles tussen haakjes is een geluid, geen zin.
+  if (/^[[(*][^\])*]*[\])*]?\.?$/.test(t)) return true;
+  const g = gewoon(t);
+  if (g === '') return true;
+  return RUIS_WOORDEN.has(g) || RUIS_ZINNEN.some((z) => ` ${g} `.includes(` ${z} `));
+}
+
+/** Woorden die er bij het afsluiten omheen staan: "oké", "top", "hé huis". */
+const VULWOORDEN = new Set(['oke', 'ok', 'okay', 'oké', 'okee', 'prima', 'top', 'super', 'mooi', 'fijn', 'goed', 'hoor', 'huis', 'he', 'hey', 'hee', 'nou', 'heel', 'erg', 'alright', 'great', 'fine', 'perfect']);
+/** Wat het gesprek afsluit, na de vulwoorden. Leeg ("oké") ook. */
+const AFSLUITERS = new Set([
+  '', 'bedankt', 'dank je', 'dank je wel', 'dankjewel', 'dank u', 'dank u wel', 'dankuwel', 'thanks', 'thank you', 'merci',
+  'nee', 'nee dank je', 'nee dank je wel', 'nee dankjewel', 'nee bedankt', 'nee hoor', 'no', 'no thanks', 'no thank you',
+  'dat was het', 'dat was alles', 'dat is alles', 'dat is het', 'dat was t', 'verder niks', 'verder niets', 'niks', 'niets', 'niks meer', 'niets meer', 'laat maar',
+  'klaar', 'tot ziens', 'tot zo', 'doei', 'dag', 'later', 'welterusten', 'slaap lekker', 'thats all', 'thats it', 'nothing', 'goodbye', 'bye', 'good night',
+]);
+
+/**
+ * "Oké bedankt" of "dat was het" (21 oktober 2026): het gesprek is klaar. Het
+ * huis zegt iets terug en luistert niet verder. Null als het geen afsluiter is.
+ */
+export function afsluiter(ruw: string, lang: Lang): string | null {
+  const woorden = gewoon(ruw).split(' ').filter((w) => w !== '');
+  if (woorden.length === 0 || woorden.length > 6) return null;
+  const rest = woorden.filter((w) => !VULWOORDEN.has(w)).join(' ');
+  if (!AFSLUITERS.has(rest)) return null;
+  const nl = lang === 'nl';
+  if (/welterusten|slaap lekker|good night/.test(rest)) return nl ? 'Welterusten.' : 'Good night.';
+  if (/tot ziens|tot zo|doei|^dag$|later|goodbye|bye/.test(rest)) return nl ? 'Tot ziens.' : 'Goodbye.';
+  if (/dank|bedankt|thank|merci/.test(rest)) return nl ? 'Graag gedaan.' : 'You are welcome.';
+  return nl ? 'Prima. Ik ben er als je me nodig hebt.' : 'All right. I am here when you need me.';
+}
+
 /* ---------------------------------------------------------------- kiezen */
 
 export function voorbeelden(config: SiteConfig, lang: Lang): string[] {

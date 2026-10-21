@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Favorieten met pagina's</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Favorieten met pagina's (schets, 21 oktober 2026). De kaart houdt vier
+   * tegels per pagina; met de vinger schuif je naar de volgende vier, de
+   * stipjes zeggen hoeveel er zijn. Lampen, scènes én screens en het
+   * zonnescherm. Twee lampen met dezelfde naam ("Plafonnière") herken je aan
+   * het icoon van hun kamer en de naam van de kamer eronder.
+   *   (zonder)   de kaart, pagina 1 van 3
+   *   #kiezen    het blad om te kiezen: wat je koos bovenaan, op volgorde;
+   *              daaronder per kamer, met een filter op soort
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; }
+  .kopregel { display: flex; justify-content: space-between; align-items: baseline; }
+  .tijd { font-family: var(--kop); font-weight: 600; font-size: 60px; letter-spacing: -0.03em; line-height: 1; }
+  .datum { color: var(--zacht); font-size: 17px; margin-left: 14px; }
+  .chips { display: flex; gap: 10px; align-items: center; }
+  .titel { position: absolute; left: 22px; top: 108px; width: 360px; z-index: 2; }
+  .titel .lead { margin-top: 12px; }
+  .groet { display: block; font-size: 15px; font-weight: 600; color: var(--zacht); margin-bottom: 6px; }
+  .groet b { color: var(--tekst); }
+  .podium { position: absolute; left: 0; top: 96px; width: 860px; height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; width: 352px; display: grid; grid-template-rows: 172px 334px 160px; gap: 14px; }
+  .kaart { padding: 14px 16px; position: relative; overflow: hidden; }
+  .kaart-kop { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .dok { position: absolute; left: 22px; right: 414px; bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgba(9, 15, 28, 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok .vraag { flex: 1; color: var(--zacht); font-size: 16px; }
+  .dok .vraag b { color: var(--tekst); }
+  .gevoel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .gevoel span { height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+  .koud { background: rgba(111, 211, 255, 0.14); color: #a9e6ff; }
+  .goed { background: rgba(110, 231, 183, 0.14); color: var(--mint); }
+  .warm { background: rgba(255, 122, 77, 0.14); color: #ffb090; }
+
+  /* De pagina's: vier tegels per pagina, de volgende schuift er rechts naast. */
+  .paginas { overflow: hidden; margin: 0 -16px; padding: 0 16px; }
+  .strook { display: flex; gap: 32px; }
+  .pagina { flex: none; width: 320px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .strook .pagina + .pagina { opacity: 0.35; }
+  .stipjes { display: flex; gap: 6px; justify-content: center; margin-top: 9px; }
+  .stipjes i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.22); }
+  .stipjes i.aan { width: 18px; background: var(--tekst); }
+
+  .tegel { display: flex; align-items: center; gap: 9px; height: 52px; padding: 0 9px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.06); min-width: 0; }
+  .tegel .ik { position: relative; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); flex: none; }
+  .tegel .ik svg { width: 17px; height: 17px; }
+  .tegel .kamer-ik { position: absolute; right: -5px; bottom: -5px; width: 17px; height: 17px; border-radius: 6px; display: grid; place-items: center; background: #24324a; border: 1.5px solid #101a2c; color: #cfe0ee; }
+  .tegel .kamer-ik svg { width: 11px; height: 11px; }
+  .tegel .tekst { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+  .tegel b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tegel small { font-size: 11.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .tegel.aan { background: linear-gradient(150deg, rgba(255, 196, 120, 0.2), rgba(255, 196, 120, 0.05)); border-color: rgba(255, 196, 120, 0.35); }
+  .tegel.aan .ik { background: #ffc478; color: #3a2408; box-shadow: 0 0 16px rgba(255, 196, 120, 0.5); }
+  .tegel.aan small { color: #ffd9a8; }
+  .tegel.scherm .ik { color: #a9e6ff; }
+  .tegel.scherm.dicht .ik { background: rgba(169, 230, 255, 0.16); }
+
+  /* Het blad om te kiezen. */
+  .waas { display: none; position: absolute; inset: 0; background: rgba(5, 9, 18, 0.55); z-index: 11; }
+  .kiezer { display: none; position: absolute; left: 230px; right: 230px; top: 40px; bottom: 40px; z-index: 12; padding: 20px 22px; border-radius: 26px; background: rgba(14, 22, 38, 0.98); border: 1px solid var(--glas-rand); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); grid-template-rows: auto auto auto 1fr; gap: 12px; }
+  body[data-toon='kiezen'] .kiezer { display: grid; }
+  body[data-toon='kiezen'] .waas { display: block; }
+  .kiezer .bladkop { display: flex; justify-content: space-between; align-items: center; }
+  .kiezer h2 { margin: 0; }
+  .kiezer .knop { height: 40px; padding: 0 20px; display: inline-flex; align-items: center; }
+  .gekozen { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gekozen span { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 13px; font-weight: 600; }
+  .gekozen span svg { width: 14px; height: 14px; color: var(--gedempt); }
+  .gekozen span em { font-style: normal; color: var(--gedempt); font-weight: 500; }
+  .gekozen .nr { width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; background: var(--tekst); color: #0b1424; font-size: 11px; font-weight: 800; }
+  .filter { display: flex; gap: 6px; }
+  .filter span { height: 34px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 700; background: rgba(255, 255, 255, 0.06); color: var(--zacht); }
+  .filter span.aan { background: var(--tekst); color: #0b1424; }
+  .filter span i { font-style: normal; font-weight: 500; opacity: 0.7; margin-left: 5px; }
+  .lijst { overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; align-content: start; }
+  .kamerkop { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gedempt); }
+  .kamerkop svg { width: 16px; height: 16px; }
+  .keus { display: grid; grid-template-columns: 34px 1fr 30px; gap: 0 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .keus .ik { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); color: var(--zacht); }
+  .keus .ik svg { width: 18px; height: 18px; }
+  .keus b { font-size: 14.5px; display: block; }
+  .keus small { font-size: 12px; color: var(--gedempt); }
+  .vink { width: 28px; height: 28px; border-radius: 14px; border: 2px solid rgba(255, 255, 255, 0.25); display: grid; place-items: center; font-size: 14px; font-weight: 800; }
+  .vink.aan { background: var(--tekst); border-color: var(--tekst); color: #0b1424; }
+  .scenes { grid-column: 1 / -1; font-size: 13px; color: #a9e6ff; font-weight: 700; padding: 6px 0 2px 44px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><span class="tijd">12:41</span><span class="datum">woensdag 21 oktober</span></div>
+      <div class="chips">
+        <span class="pil"><span class="stip" style="background: var(--zon)"></span>14° buiten</span>
+        <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
+        <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
+      </div>
+    </div>
+    <div class="titel">
+      <span class="groet">Goedemiddag, <b>Ricardo</b></span>
+      <h1 class="kop-1">Het huis is rustig</h1>
+      <p class="lead">Alles op temperatuur. De zon levert 1,8 kW.</p>
+    </div>
+    <div class="podium" id="podium"></div>
+
+    <aside class="rechts">
+      <section class="glas kaart">
+        <div class="kaart-kop"><h2 class="kop-3">Favorieten</h2><span class="mini">Schuif voor meer</span></div>
+        <div class="paginas">
+          <div class="strook">
+            <div class="pagina">
+              <div class="tegel aan"><span class="ik" data-icoon="lamp"><span class="kamer-ik" data-kamer="keuken"></span></span><span class="tekst"><b>Plafonnière</b><small>Keuken · aan, 80%</small></span></div>
+              <div class="tegel"><span class="ik" data-icoon="lamp"><span class="kamer-ik" data-kamer="woonkamer"></span></span><span class="tekst"><b>Plafonnière</b><small>Woonkamer · uit</small></span></div>
+              <div class="tegel scherm dicht"><span class="ik" data-icoon="screen"><span class="kamer-ik" data-kamer="slaapkamer"></span></span><span class="tekst"><b>Screen</b><small>Slaapkamer · dicht</small></span></div>
+              <div class="tegel scherm"><span class="ik" data-icoon="zonnescherm"></span><span class="tekst"><b>Zonnescherm</b><small>Terras · laatst in</small></span></div>
+            </div>
+            <div class="pagina">
+              <div class="tegel"><span class="ik" data-icoon="film"></span><span class="tekst"><b>Film</b><small>Woonkamer</small></span></div>
+              <div class="tegel"><span class="ik" data-icoon="maan"></span><span class="tekst"><b>Slapen</b><small>Hele huis</small></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="stipjes" aria-label="Pagina 1 van 3"><i class="aan"></i><i></i><i></i></div>
+      </section>
+
+      <section class="glas kaart">
+        <div class="kaart-kop"><h2 class="kop-3">Vandaag</h2><span class="mini">6,1 kWh, verwacht 7,4</span></div>
+        <svg viewBox="0 0 312 190" width="312" height="190" aria-hidden="true">
+          <path d="M8 130 C 50 128, 70 60, 120 44 S 190 46, 226 90 S 280 130, 304 130" fill="none" stroke="#F7B548" stroke-opacity="0.35" stroke-dasharray="2 4"/>
+          <path d="M8 130 C 50 128, 70 60, 120 44 S 160 40, 168 42" fill="none" stroke="#F7B548" stroke-width="2"/>
+          <line x1="168" y1="24" x2="168" y2="176" stroke="#EEF3F7" stroke-opacity="0.6"/>
+        </svg>
+      </section>
+
+      <section class="glas kaart">
+        <h2 class="kop-3">Hoe voelt het nu?</h2>
+        <div class="gevoel"><span class="koud">Te koud</span><span class="goed">Goed</span><span class="warm">Te warm</span></div>
+      </section>
+    </aside>
+
+    <div class="dok">
+      <span class="bol adem" style="width: 46px; height: 46px"></span>
+      <span class="vraag">Zeg <b>„Hé huis”</b> of tik om iets te vragen</span>
+      <span class="pil">Wat doe je nu?</span>
+    </div>
+
+    <div class="waas"></div>
+    <section class="kiezer" aria-label="Favorieten kiezen">
+      <div class="bladkop"><div><h2 class="kop-2">Favorieten</h2><p class="mini" style="margin: 4px 0 0">10 van 12 gekozen, vier per pagina. Sleep een gekozen favoriet om de volgorde te veranderen.</p></div><span class="knop knop-licht">Klaar</span></div>
+      <div class="gekozen">
+        <span><i class="nr">1</i>Plafonnière <em>Keuken</em></span>
+        <span><i class="nr">2</i>Plafonnière <em>Woonkamer</em></span>
+        <span><i class="nr">3</i>Screen <em>Slaapkamer</em></span>
+        <span><i class="nr">4</i>Zonnescherm</span>
+        <span><i class="nr">5</i>Film</span>
+        <span><i class="nr">6</i>Slapen</span>
+        <span><i class="nr">7</i>Eettafel</span>
+        <span><i class="nr">8</i>Buitenlamp</span>
+        <span><i class="nr">9</i>Leeslamp</span>
+        <span><i class="nr">10</i>Screen <em>Zolder</em></span>
+      </div>
+      <div class="filter"><span class="aan">Alles</span><span>Lampen<i>14</i></span><span>Scènes<i>23</i></span><span>Screens<i>4</i></span></div>
+      <div class="lijst">
+        <div>
+          <div class="kamerkop" data-kamer="woonkamer">Woonkamer</div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Plafonnière</b><small>Lamp, dimbaar</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Leeslamp</b><small>Lamp</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Eettafel</b><small>Lamp, kleur</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="film"></span><span><b>Film</b><small>Scène</small></span><span class="vink aan">✓</span></div>
+          <div class="scenes">+ 6 andere scènes</div>
+          <div class="kamerkop" data-kamer="keuken">Keuken</div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Plafonnière</b><small>Lamp, dimbaar</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Spotjes</b><small>Lamp</small></span><span class="vink"></span></div>
+        </div>
+        <div>
+          <div class="kamerkop" data-kamer="slaapkamer">Slaapkamer</div>
+          <div class="keus"><span class="ik" data-icoon="screen"></span><span><b>Screen</b><small>Screen, met stand</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Plafonnière</b><small>Lamp</small></span><span class="vink"></span></div>
+          <div class="kamerkop" data-kamer="berging">Zolder</div>
+          <div class="keus"><span class="ik" data-icoon="screen"></span><span><b>Screen</b><small>Screen, met stand</small></span><span class="vink aan">✓</span></div>
+          <div class="kamerkop" data-buiten>Terras</div>
+          <div class="keus"><span class="ik" data-icoon="zonnescherm"></span><span><b>Zonnescherm</b><small>In, uit en stop</small></span><span class="vink aan">✓</span></div>
+          <div class="keus"><span class="ik" data-icoon="lamp"></span><span><b>Buitenlamp</b><small>Lamp</small></span><span class="vink aan">✓</span></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = location.hash.slice(1) || 'gewoon';
+  document.body.dataset.toon = toon;
+  const S = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${d}</svg>`;
+  const ICOON = {
+    film: S('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z"/>'),
+    maan: S('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>'),
+    lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
+    screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),
+    zonnescherm: S('<path d="M3 6h18"/><path d="M4 6l2 7h12l2-7"/><path d="M6 13l-1 3M18 13l1 3"/>'),
+  };
+  const BUITEN = '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.5"/>';
+  document.querySelectorAll('[data-icoon]').forEach((el) => el.insertAdjacentHTML('afterbegin', ICOON[el.dataset.icoon]));
+  document.querySelectorAll('.kamer-ik').forEach((el) => (el.innerHTML = S(huis.KAMER_ICOON[el.dataset.kamer], 'stroke-width="2.2"')));
+  document.querySelectorAll('.kamerkop').forEach((el) => el.insertAdjacentHTML('afterbegin', S(el.hasAttribute('data-buiten') ? BUITEN : huis.KAMER_ICOON[el.dataset.kamer])));
+  nav.balk(document.getElementById('balk'), 'thuis');
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Het huis, opengewerkt. Alles is rustig.',
+    tijd: 'dag',
+    zon: { stand: 0.5, hoogte: 0.6, aandeel: 0.5, panelen: 12 },
+    wolken: 0.4,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Keuken', gewicht: 0.85, temp: '20,4°', stand: 'goed', apparaten: [{ soort: 'lamp', aan: true }] },
+        { naam: 'Woonkamer', gewicht: 1.35, temp: '20,8°', stand: 'goed', apparaten: [{ soort: 'radiator' }] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '21,5°', stand: 'goed', apparaten: [] },
+        { naam: 'Slaapkamer', gewicht: 1.3, temp: '18,0°', apparaten: [{ soort: 'screen', dicht: 1 }] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '19,1°', apparaten: [{ soort: 'radiator' }] }] },
+    ],
+    net: true,
+  }, { breedte: 860, hoogte: 612, schuifX: 18, schuifY: 20 });
+</script>
+</body>
+</html>

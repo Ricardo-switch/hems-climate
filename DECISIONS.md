@@ -173,6 +173,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [167. Achttien punten van de bewoner: de wand, de droger, instellingen en inrichten](#167-achttien-punten-van-de-bewoner-de-wand-de-droger-instellingen-en-inrichten)
 - [168. Favorieten per kamer, en de dagstand en avondstand van de wand](#168-favorieten-per-kamer-en-de-dagstand-en-avondstand-van-de-wand)
 - [169. Wie er thuis is en wiens comfort geldt: rondjes en een blad](#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad)
+- [170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen](#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen)
 
 **Veiligheid**
 
@@ -7518,6 +7519,83 @@ en een blad om te kiezen.
 *Wat afviel:* de rondjes achter de begroeting (de namen dubbel); in de zijbalk
 of boven de kaarten; een korte regel "Comfort van Shira" erbij; direct op een
 rondje tikken om te wisselen; alleen de hoofdgebruiker laten kiezen.
+
+## 170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 21 oktober 2026, met de app op de Pi en de wand in Home Assistant, een
+ronde van de bewoner. Vier vakken favorieten waren te weinig, screens konden
+er niet in, en drie plafonnières waren niet uit elkaar te houden. De
+avondstand was te donker en bleef soms 's ochtends hangen. De app rekende de
+voorgevel op 97°, een kompas binnen tegen de gevel zei 77°. Hij heeft drie
+Nest Protects. De assistent ging door op "noise" en kende geen "oké,
+bedankt". En drie fouten: de rondjes op Thuis liepen achter op Bewoners, het
+beeld bij aanbellen bleef zwart terwijl dezelfde camera in Kamer meteen beeld
+gaf, en de wand stond na een tijd op "401: Unauthorized". Hij koos uit de
+schetsen Wand-Favorieten en Wand-Rook.
+
+*Besluit:*
+
+- **Favorieten:** twaalf, vier per pagina, met de vinger opzij en stipjes
+  eronder. Lampen, scènes en ook screens en het zonnescherm. Elke lamp en elk
+  scherm heeft het icoon van zijn kamer klein op zijn eigen icoon, en de naam
+  van de kamer in de regel eronder. Een tik schakelt (een scherm gaat open of
+  dicht, zonder terugmelding van de laatste opdracht uit, en weet niemand hoe
+  hij staat, dan dicht); vasthouden opent het blad in de kamer. Het kiesblad
+  heeft bovenaan wat je koos, op volgorde, om te verslepen; daaronder per kamer
+  met zijn icoon, en een filter Alles, Lampen, Scènes, Screens.
+- **Rookmelders** zijn een eigen soort apparaat: elk apparaat in Home
+  Assistant met een sensor voor rook of koolmonoxide (klasse `smoke`,
+  `carbon_monoxide`, en `heat` erbij). Ze staan in hun kamer uit Home
+  Assistant en schuiven bij Indeling, met een blad met de batterij, de laatste
+  test en de datum om te vervangen. Ziet er een rook, koolmonoxide of hitte,
+  dan toont elke open pagina een rood alarm, zoals aanbellen (besluit 107):
+  waar, sinds wanneer, wat de andere melders zien, en "bel 112". Sluiten houdt
+  het weg tot een melder iets nieuws ziet; ziet niemand meer iets, dan gaat het
+  vanzelf weg. Bij Meldingen staat waar en wanneer, en daarna onder Eerder;
+  ook een batterij die op is en een melder die binnen drie maanden vervangen
+  moet. Smart Climate leest alleen: afzetten doe je op de melder.
+- **De helderheid van de wand** is vast per stand: overdag (ook in de app) 50,
+  75 of 100%, in de avondstand 10, 20, 30 of 50%; standaard 100 en 20.
+  Eerst zette de avondstand Fully Kiosk op 12 van 255 en onthield de pagina de
+  oude helderheid; laadde de wand 's nachts een andere pagina, dan bleef het
+  scherm de ochtend erna gedimd. Met Fully Kiosk dimt de app niet meer extra.
+- **De gevel op de kaart:** bij Aanpassen meet een knop de gevels op aan de
+  omtrek van het huis in OpenStreetMap (in Nederland uit de BAG). Alleen na een
+  tik van de beheerder; de ligging van het huis gaat dan eenmalig naar
+  OpenStreetMap, en de omtrek blijft een dag bewaard. Van de vier richtingen
+  van het huis wint die het dichtst bij wat er nu staat. Hier: de muren staan
+  op 2°, 92°, 182° en 272°, de meting uit de opbrengst gaf 89 tot 93°, ook
+  zonder de lage ochtendzon. Het kompas binnen zat er 15° naast, door het staal
+  in de muur.
+- **De assistent:** "oké, bedankt", "dat was het", "nee, dank je" of
+  "welterusten" sluit het gesprek met een kort antwoord, zonder verder te
+  luisteren. Wat alleen geluid is ("(noise)", "[Muziek]", of wat Whisper bij
+  stilte verzint, zoals "Ondertiteld door de Amara.org-gemeenschap"), telt als
+  niets gezegd.
+- **De rondjes op Thuis** volgen Home Assistant meteen, en Thuis haalt de
+  bewoners elke vijftien tellen. Het comfort wisselt nog steeds pas na tien
+  minuten rust (besluit 147); dat laat de ring zien. Dit verandert besluit 169,
+  waar de rondjes de rust van de regeling volgden.
+- **Het beeld bij aanbellen** komt zoals in Kamer: eerst een plaatje, dan live
+  eroverheen. Geeft het gekozen beeld geen plaatje (hier het scherpe beeld van
+  de deurbel: fout 500 en een lege stroom), dan het volgende beeld van dezelfde
+  camera; komt live niet binnen vijf tellen, dan elke seconde een nieuw plaatje.
+- **De 401 op de wand:** in Home Assistant loopt de app via ingress, met een
+  sessie die verloopt als de tablet slaapt. Dan gaf Home Assistant zelf 401,
+  ging de app naar de inlogpagina, en weigerde Home Assistant ook die. Nu houdt
+  de app de sessie elke minuut zelf vast (zoals Home Assistant), vernieuwt hij
+  hem bij zo'n 401 en vraagt hij het opnieuw, ook voor de live-stroom. Een 401
+  van de dienst zelf gaat nog naar het inloggen.
+- **De zolder:** een radiator onder het schuine dak zoekt op de achtermuur een
+  plek waar hij rechtop past, en is anders kleiner; eerst stak hij bij een
+  kamer tegen de buitenmuur door het dak.
+
+*Wat afviel:* acht of zestien favorieten; een tik die altijd eerst het blad
+opent; een pushbericht via Home Assistant bij rook (een nieuwe schrijfdeur);
+alleen een regel bij Meldingen; de kompasmeting invullen; de ligging uit de
+opbrengst bijstellen met de ochtendzon weggelaten (het verschil was 1°).
 
 ## Wat nog een besluit wacht
 

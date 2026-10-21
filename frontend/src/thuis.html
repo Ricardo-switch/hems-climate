@@ -218,7 +218,31 @@
   .tegel[aria-pressed='true'] span:last-child { color: #ffd9a8; }
   #wand .tegel { grid-template-columns: 30px minmax(0, 1fr); padding: 8px 10px; }
   #wand .tegel .ik { width: 30px; height: 30px; }
-  #wand .tegel span:last-child { display: none; }
+  /* Pagina's van vier, met de vinger opzij; de stipjes zeggen waar je bent (21 oktober 2026). */
+  .favpaginas { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 16px; overscroll-behavior-x: contain; }
+  .favpaginas::-webkit-scrollbar { display: none; }
+  .favpagina { flex: 0 0 100%; scroll-snap-align: start; align-content: start; }
+  .stipjes { display: flex; gap: 6px; justify-content: center; margin-top: 10px; }
+  .stipjes i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.22); transition: width 0.2s; }
+  .stipjes i.aan { width: 18px; background: var(--tekst); }
+  /* Het icoon van de kamer, klein op dat van de lamp of het scherm: twee plafonnières uit elkaar. */
+  .tegel .ik { position: relative; }
+  .tegel .kamer-ik { position: absolute; right: -5px; bottom: -5px; width: 17px; height: 17px; border-radius: 6px; display: grid; place-items: center; background: #24324a; border: 1.5px solid #101a2c; color: #cfe0ee; }
+  .tegel .kamer-ik svg { width: 11px; height: 11px; }
+  .tegel.scherm .ik { color: #a9e6ff; }
+  .favchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+  .favchip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 13px; font-weight: 600; cursor: grab; touch-action: none; user-select: none; }
+  .favchip i { width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; background: var(--tekst); color: #0b1424; font-size: 11px; font-weight: 800; font-style: normal; }
+  .favchip em { font-style: normal; font-weight: 500; color: var(--gedempt); }
+  .favchip.sleept { background: #a9e6ff; color: #0b1424; cursor: grabbing; }
+  .favchip.sleept em { color: #24324a; }
+  .favchip:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .favfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
+  .favfilter button { height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.06); color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+  .favfilter button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .favfilter button i { font-style: normal; font-weight: 500; opacity: 0.7; margin-left: 5px; }
+  .kiesblad h3.favkamer { display: flex; align-items: center; gap: 8px; }
+  .kiesblad h3.favkamer svg { width: 15px; height: 15px; }
   .favleeg { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .favleeg p { margin: 0; }
   .favkies, .favleeg button { height: 36px; padding: 0 14px; border-radius: 12px; border: 1px dashed rgba(169, 230, 255, 0.5); background: none; color: #a9e6ff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; flex: none; }

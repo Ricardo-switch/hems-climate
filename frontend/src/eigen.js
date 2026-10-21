@@ -24,11 +24,11 @@
   const STANDAARD = {
     tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } },
     wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [], magAanpassen: false },
-    maxFavorieten: 4,
+    maxFavorieten: 12,
   };
   const KORT = {
     kamers: 'De temperatuur en wat elke kamer doet',
-    favorieten: 'Scènes en lampen met één tik',
+    favorieten: 'Lampen, scènes en screens met één tik',
     straks: 'Wat het huis gaat doen als er zon is',
     apparaat: 'Een apparaat dat draait of op zon wacht',
     gevoel: 'Te koud, goed of te warm; daar leert het huis van',
@@ -46,6 +46,8 @@
     morgen: S('<path d="M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 7.3 11.2 3.5 3.5 0 0 0 7 18z"/>'),
     lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
     scene: S('<path d="M5 19l4-11 4 6 3-4 3 9z"/><circle cx="17" cy="6" r="1.6"/>'),
+    screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),
+    zonnescherm: S('<path d="M3 6h18"/><path d="M4 6l2 7h12l2-7"/><path d="M6 13l-1 3M18 13l1 3"/>'),
     greep: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="6" r="1.7"/><circle cx="9" cy="12" r="1.7"/><circle cx="15" cy="12" r="1.7"/><circle cx="9" cy="18" r="1.7"/><circle cx="15" cy="18" r="1.7"/></svg>',
     oog: S('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
   };
@@ -128,55 +130,105 @@
 
   /* --------------------------------------------------------- favorieten */
 
-  function lampen() {
-    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((d) => d.soort === 'licht').map((d) => ({ ...d, kamer: r.naam }))));
+  /*
+   * Favorieten (21 oktober 2026, schets Wand-Favorieten): twaalf in plaats van
+   * vier, vier per pagina; met de vinger schuif je naar de volgende vier, de
+   * stipjes zeggen waar je bent. Ook screens en het zonnescherm. Elke lamp en
+   * elk scherm heeft het icoon van zijn kamer en de naam van de kamer eronder:
+   * twee plafonnières waren anders niet uit elkaar te houden. Een tik schakelt,
+   * vasthouden opent het blad in de kamer.
+   */
+  const PER_PAGINA = 4;
+  const ZON_IK = '<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="3.5"/>';
+
+  /** Elk apparaat van een soort, met zijn kamer: de naam, de id en het icoon. */
+  function vanSoort(soort) {
+    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((d) => d.soort === soort).map((d) => ({ ...d, kamer: r.naam, kamerId: r.id, kamerIk: r.buiten ? 'buiten' : r.soort ?? 'kamer' }))));
   }
+  const lampen = () => vanSoort('licht');
+  const schermen = () => vanSoort('screen');
   function scenes() {
     const gezien = new Set();
-    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.scenes ?? []).map((s) => ({ ...s, kamer: r.naam })))).filter((s) => !gezien.has(s.id) && gezien.add(s.id));
+    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.scenes ?? []).map((s) => ({ ...s, kamer: r.naam, kamerId: r.id })))).filter((s) => !gezien.has(s.id) && gezien.add(s.id));
+  }
+  /** Het icoon van de kamer, klein op het icoon van de lamp of het scherm. */
+  function kamerIcoon(soort) {
+    const d = soort === 'buiten' ? ZON_IK : global.huis?.KAMER_ICOON?.[soort] ?? global.huis?.KAMER_ICOON?.kamer;
+    return d ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>` : '';
+  }
+
+  /** Staat een scherm nu open (een screen omhoog, een zonnescherm uitgevouwen)? Null als niemand het weet. */
+  function schermOpen(d) {
+    const zon = d.scherm?.zonnescherm === true;
+    if (d.scherm?.terugmelding !== false) return zon ? !!d.aan : !d.aan;
+    const laatste = d.scherm?.laatste;
+    return laatste == null ? null : laatste === 'open';
   }
 
   function tegel(f) {
-    const mag = huis?.lichtBedienen !== false;
+    const licht = huis?.lichtBedienen !== false;
     if (f.soort === 'scene') {
       const s = scenes().find((x) => x.id === f.id);
       if (!s) return '';
       const zin = gewenst.get(s.id) === 'gezet' ? 'Gezet' : s.kamer;
-      return `<button type="button" class="tegel" data-tegel="${esc(s.id)}" data-soort="scene" ${mag ? '' : 'disabled'}><span class="ik">${ICOON.scene}</span><b>${esc(s.naam)}</b><span>${esc(zin)}</span></button>`;
+      return `<button type="button" class="tegel" data-tegel="${esc(s.id)}" data-soort="scene" ${licht ? '' : 'disabled'}><span class="ik">${ICOON.scene}</span><b>${esc(s.naam)}</b><span>${esc(zin)}</span></button>`;
+    }
+    if (f.soort === 'scherm') {
+      const d = schermen().find((x) => x.id === f.id);
+      if (!d) return '';
+      const mag = huis?.schermenBedienen === true;
+      const zin = gewenst.has(d.id) ? (gewenst.get(d.id) === 'open' ? (d.scherm?.zonnescherm ? 'vouwt uit' : 'gaat open') : d.scherm?.zonnescherm ? 'klapt in' : 'gaat dicht') : d.stand;
+      return `<button type="button" class="tegel scherm" data-tegel="${esc(d.id)}" data-soort="scherm" data-kamer="${esc(d.kamerId)}" ${mag ? '' : 'disabled'}><span class="ik">${d.scherm?.zonnescherm ? ICOON.zonnescherm : ICOON.screen}<i class="kamer-ik">${kamerIcoon(d.kamerIk)}</i></span><b>${esc(d.naam)}</b><span>${esc(`${d.kamer} · ${zin}`)}</span></button>`;
     }
     const d = lampen().find((x) => x.id === f.id);
     if (!d) return '';
     const aan = gewenst.has(d.id) ? gewenst.get(d.id) : d.aan;
-    const zin = aan ? (d.dimbaar && d.helderheidPct != null && !gewenst.has(d.id) ? `Aan, ${d.helderheidPct}%` : 'Aan') : 'Uit';
-    return `<button type="button" class="tegel" data-tegel="${esc(d.id)}" data-soort="lamp" aria-pressed="${aan}" ${mag ? '' : 'disabled'}><span class="ik">${ICOON.lamp}</span><b>${esc(d.naam)}</b><span>${esc(zin)}</span></button>`;
+    const zin = aan ? (d.dimbaar && d.helderheidPct != null && !gewenst.has(d.id) ? `aan, ${d.helderheidPct}%` : 'aan') : 'uit';
+    return `<button type="button" class="tegel" data-tegel="${esc(d.id)}" data-soort="lamp" data-kamer="${esc(d.kamerId)}" aria-pressed="${aan}" ${licht ? '' : 'disabled'}><span class="ik">${ICOON.lamp}<i class="kamer-ik">${kamerIcoon(d.kamerIk)}</i></span><b>${esc(d.naam)}</b><span>${esc(`${d.kamer} · ${zin}`)}</span></button>`;
   }
 
   /** De kaart Favorieten, op de telefoon en op de wand, elk met zijn eigen lijst. */
   function tekenFavorieten(nieuwHuis) {
     huis = nieuwHuis;
-    const iets = lampen().length + scenes().length > 0;
+    const iets = lampen().length + scenes().length + schermen().length > 0;
     for (const plek of ['tel', 'wand']) {
       const kaart = box(plek)?.querySelector(':scope > [data-kaart="favorieten"]');
       if (!kaart) continue;
       const lijst = deel(plek).favorieten;
       const mag = plek === 'tel' ? kan : kan && v.wand.magAanpassen;
-      const tegels = lijst.map(tegel).join('');
-      const kies = mag && iets ? '<button type="button" class="favkies" data-fav-kies>Kies scènes en lampen</button>' : '';
-      const html = tegels
-        ? `<div class="tegels">${tegels}</div>${kies}`
+      const alle = lijst.map(tegel).filter(Boolean);
+      const paginas = [];
+      for (let i = 0; i < alle.length; i += PER_PAGINA) paginas.push(alle.slice(i, i + PER_PAGINA).join(''));
+      const kies = mag && iets ? '<button type="button" class="favkies" data-fav-kies>Kies favorieten</button>' : '';
+      const stipjes = paginas.length > 1 ? `<div class="stipjes" data-stipjes aria-hidden="true">${paginas.map((_, i) => `<i class="${i === 0 ? 'aan' : ''}"></i>`).join('')}</div>` : '';
+      const html = alle.length
+        ? `<div class="favpaginas" data-favpaginas>${paginas.map((p) => `<div class="tegels favpagina">${p}</div>`).join('')}</div>${stipjes}${kies}`
         : mag && iets
-          ? '<div class="favleeg"><p class="mini">Zet hier scènes en lampen die je vaak gebruikt.</p><button type="button" data-fav-kies>Kiezen</button></div>'
+          ? '<div class="favleeg"><p class="mini">Zet hier lampen, scènes en screens die je vaak gebruikt.</p><button type="button" data-fav-kies>Kiezen</button></div>'
           : '';
-      // Zonder lampen of scènes, of op de wand zonder keuze en zonder recht: niets te tonen.
+      // Zonder lampen, scènes of screens, of op de wand zonder keuze en zonder recht: niets te tonen.
       kaart.hidden = !html;
       const plekje = kaart.querySelector('[data-favorieten]');
       if (plekje.dataset.html !== html) {
+        // Op dezelfde pagina blijven als er iets verandert.
+        const was = plekje.querySelector('[data-favpaginas]')?.scrollLeft ?? 0;
         plekje.innerHTML = html;
         plekje.dataset.html = html;
+        const strook = plekje.querySelector('[data-favpaginas]');
+        if (strook) {
+          strook.scrollLeft = was;
+          strook.addEventListener('scroll', () => stipjesBij(strook), { passive: true });
+          stipjesBij(strook);
+        }
       }
       const uitleg = kaart.querySelector('[data-fav-uitleg]');
-      if (uitleg) uitleg.textContent = !tegels ? '' : huis?.lichtBedienen === false ? 'Licht bedienen staat uit' : 'Tik om te schakelen';
+      if (uitleg) uitleg.textContent = !alle.length ? '' : paginas.length > 1 ? 'Schuif voor meer' : 'Tik om te schakelen';
     }
+  }
+  /** Welke pagina in beeld is. */
+  function stipjesBij(strook) {
+    const i = Math.round(strook.scrollLeft / Math.max(1, strook.clientWidth));
+    strook.parentElement.querySelectorAll('[data-stipjes] i').forEach((s, j) => s.classList.toggle('aan', j === i));
   }
 
   async function schakel(knop) {
@@ -191,6 +243,20 @@
       }, 2500);
       return;
     }
+    if (knop.dataset.soort === 'scherm') {
+      // Open wordt dicht en andersom; weet niemand hoe hij staat, dan dicht (besluit 121).
+      const d = schermen().find((x) => x.id === id);
+      const actie = d && schermOpen(d) === false ? 'open' : 'dicht';
+      gewenst.set(id, actie);
+      tekenFavorieten(huis);
+      await deur('api/scherm', { id, actie }).catch(() => null);
+      for (const t of [1500, 5000]) setTimeout(() => opnieuw(true), t);
+      setTimeout(() => {
+        gewenst.delete(id);
+        opnieuw(true);
+      }, 20000);
+      return;
+    }
     const aan = knop.getAttribute('aria-pressed') !== 'true';
     gewenst.set(id, aan);
     tekenFavorieten(huis);
@@ -202,6 +268,33 @@
       opnieuw(true);
     }, 6000);
   }
+
+  /** Vasthouden opent het blad van de lamp of het scherm in zijn kamer. */
+  let vast = null;
+  document.addEventListener('pointerdown', (e) => {
+    const t = e.target.closest?.('[data-tegel][data-kamer]');
+    if (!t || bewerk || t.disabled) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    const stop = () => {
+      clearTimeout(vast?.timer);
+      removeEventListener('pointermove', beweegt);
+    };
+    const beweegt = (m) => Math.hypot(m.clientX - x, m.clientY - y) > 10 && stop();
+    addEventListener('pointermove', beweegt, { passive: true });
+    addEventListener('pointerup', stop, { once: true });
+    addEventListener('pointercancel', stop, { once: true });
+    vast = {
+      tegel: t,
+      timer: setTimeout(() => {
+        vast.gedaan = true;
+        removeEventListener('pointermove', beweegt);
+        location.href = `kamer.html#${encodeURIComponent(t.dataset.kamer)}/${encodeURIComponent(t.dataset.tegel)}`;
+      }, 550),
+      gedaan: false,
+    };
+  });
+  addEventListener('contextmenu', (e) => e.target.closest?.('[data-tegel]') && e.preventDefault());
 
   /* ------------------------------------------------------- de bewerkstand */
 
@@ -373,47 +466,114 @@
       return;
     }
     /*
-     * Favorieten kiezen (besluit 168): per kamer, de lampen eerst; de scènes
-     * van die kamer ingeklapt eronder, elke naam één keer. Hooguit vier.
-     * Eerst stonden alle scènes bovenaan, en dat was een lange lijst.
+     * Favorieten kiezen (besluit 168, 21 oktober 2026): bovenaan wat je koos,
+     * op volgorde, om te verslepen; daaronder per kamer, met het icoon van de
+     * kamer, de lampen en screens eerst en de scènes ingeklapt. Een filter
+     * toont alleen lampen, scènes of screens. Hooguit twaalf.
      */
     const gekozen = blad.keuze;
     const vol = gekozen.length >= v.maxFavorieten;
+    const filter = blad.filter ?? 'alles';
     const rij = (soortF, x, ik, klein = '') => {
       const aan = gekozen.some((f) => f.id === x.id);
       return keus({ ik, naam: x.naam, klein, rechts: aan ? '✓' : '', data: `data-fav="${esc(x.id)}" data-fav-soort="${soortF}"`, aan, uit: vol && !aan });
     };
+    const klein = (d) => (d.soort === 'screen' ? (d.scherm?.zonnescherm ? 'Zonnescherm' : 'Screen') + (d.scherm?.standKiezen ? ', met stand' : d.scherm?.terugmelding === false ? ', open, dicht en stop' : '') : `Lamp${d.kleur ? ', kleur' : d.dimbaar ? ', dimbaar' : ''}`);
     el.setAttribute('aria-label', 'Favorieten kiezen');
     const kamers = perKamer();
+    const tel = (wat) => kamers.reduce((n, k) => n + k[wat].length, 0);
+    const naamVan = (f) => {
+      const k = kamers.find((x) => [...x.lampen, ...x.schermen, ...x.scenes].some((d) => d.id === f.id));
+      const d = k && [...k.lampen, ...k.schermen, ...k.scenes].find((x) => x.id === f.id);
+      return d ? { naam: d.naam, kamer: f.soort === 'scene' ? '' : k.naam } : null;
+    };
+    const chips = gekozen
+      .map((f, i) => {
+        const n = naamVan(f);
+        return n ? `<span class="favchip" data-favchip="${esc(f.id)}" role="button" tabindex="0" aria-label="${esc(`${i + 1}: ${n.naam}${n.kamer ? ` in ${n.kamer}` : ''}; sleep om te verplaatsen`)}"><i>${i + 1}</i>${esc(n.naam)}${n.kamer ? ` <em>${esc(n.kamer)}</em>` : ''}</span>` : '';
+      })
+      .join('');
+    const knop = (id, label, n) => `<button type="button" data-fav-filter="${id}" aria-pressed="${filter === id}">${label}${n == null ? '' : `<i>${n}</i>`}</button>`;
+    const filters = `<div class="favfilter" role="group" aria-label="Wat je ziet">${knop('alles', 'Alles')}${tel('lampen') ? knop('lamp', 'Lampen', tel('lampen')) : ''}${tel('scenes') ? knop('scene', 'Scènes', tel('scenes')) : ''}${tel('schermen') ? knop('scherm', 'Screens', tel('schermen')) : ''}</div>`;
+    const ruimtes = kamers
+      .map((k) => {
+        const lamp = filter === 'alles' || filter === 'lamp' ? k.lampen.map((d) => rij('lamp', d, ICOON.lamp, klein(d))).join('') : '';
+        const scherm = filter === 'alles' || filter === 'scherm' ? k.schermen.map((d) => rij('scherm', d, d.scherm?.zonnescherm ? ICOON.zonnescherm : ICOON.screen, klein(d))).join('') : '';
+        let sc = '';
+        if (k.scenes.length && filter === 'scene') sc = k.scenes.map((s) => rij('scene', s, ICOON.scene, 'Scène')).join('');
+        else if (k.scenes.length && filter === 'alles') {
+          // Open als je er al een koos, of als je hem net openklapte.
+          const open = blad.open.has(k.id) || k.scenes.some((s) => gekozen.some((f) => f.id === s.id));
+          sc = `<details class="favscenes" data-fav-kamer="${esc(k.id)}" ${open ? 'open' : ''}><summary>Scènes (${k.scenes.length})</summary>${k.scenes.map((s) => rij('scene', s, ICOON.scene, 'Scène')).join('')}</details>`;
+        }
+        return lamp || scherm || sc ? `<h3 class="favkamer"><span aria-hidden="true">${kamerIcoon(k.ik)}</span>${esc(k.naam)}</h3>${lamp}${scherm}${sc}` : '';
+      })
+      .join('');
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Favorieten</h2><button type="button" class="knop knop-licht" data-fav-klaar>Klaar</button></div>
-      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}</p>
-      ${kamers.map((k) => {
-        // Open als je er al een koos, of als je hem net openklapte.
-        const open = blad.open.has(k.id) || k.scenes.some((s) => gekozen.some((f) => f.id === s.id));
-        const sc = k.scenes.length
-          ? `<details class="favscenes" data-fav-kamer="${esc(k.id)}" ${open ? 'open' : ''}><summary>Scènes (${k.scenes.length})</summary>${k.scenes.map((s) => rij('scene', s, ICOON.scene)).join('')}</details>`
-          : '';
-        return `<h3>${esc(k.naam)}</h3>${k.lampen.map((d) => rij('lamp', d, ICOON.lamp)).join('')}${sc}`;
-      }).join('')}`;
+      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Sleep om de volgorde te veranderen.' : ''}</p>
+      ${chips ? `<div class="favchips" data-favchips>${chips}</div>` : ''}
+      ${filters}
+      ${ruimtes}`;
   }
 
-  /** De lampen en scènes per kamer, in de volgorde van het huis; dezelfde scènenaam in een kamer één keer. */
+  /** De lampen, screens en scènes per kamer, in de volgorde van het huis; dezelfde scènenaam in een kamer één keer. */
   function perKamer() {
     const gezien = new Set();
     const uit = [];
     for (const e of huis?.etages ?? []) {
       for (const r of e.ruimtes ?? []) {
         const lampenHier = (r.apparaten ?? []).filter((d) => d.soort === 'licht');
+        const schermenHier = (r.apparaten ?? []).filter((d) => d.soort === 'screen');
         const namen = new Set();
         const scenesHier = (r.scenes ?? [])
           .filter((s) => !gezien.has(s.id) && gezien.add(s.id))
           .filter((s) => !namen.has(s.naam.toLowerCase()) && namen.add(s.naam.toLowerCase()))
           .sort((a, b) => (b.gebruiktMs ?? 0) - (a.gebruiktMs ?? 0));
-        if (lampenHier.length || scenesHier.length) uit.push({ id: r.id, naam: r.naam, lampen: lampenHier, scenes: scenesHier });
+        if (lampenHier.length || schermenHier.length || scenesHier.length) uit.push({ id: r.id, naam: r.naam, ik: r.buiten ? 'buiten' : r.soort ?? 'kamer', lampen: lampenHier, schermen: schermenHier, scenes: scenesHier });
       }
     }
     return uit;
   }
+
+  /*
+   * De volgorde van de gekozen favorieten: een chip slepen. Tijdens het slepen
+   * schuiven alleen de chips; bij loslaten neemt het blad de nieuwe volgorde over.
+   */
+  document.addEventListener('pointerdown', (e) => {
+    const chip = e.target.closest?.('[data-favchip]');
+    if (!chip || blad?.soort !== 'favorieten') return;
+    const rij = chip.parentElement;
+    e.preventDefault();
+    chip.classList.add('sleept');
+    const beweeg = (m) => {
+      const onder = document.elementFromPoint(m.clientX, m.clientY)?.closest?.('[data-favchip]');
+      if (!onder || onder === chip || onder.parentElement !== rij) return;
+      const r = onder.getBoundingClientRect();
+      rij.insertBefore(chip, m.clientX < r.left + r.width / 2 ? onder : onder.nextSibling);
+    };
+    const los = () => {
+      removeEventListener('pointermove', beweeg);
+      chip.classList.remove('sleept');
+      const ids = [...rij.querySelectorAll('[data-favchip]')].map((c) => c.dataset.favchip);
+      blad.keuze.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+      tekenBlad();
+    };
+    addEventListener('pointermove', beweeg);
+    addEventListener('pointerup', los, { once: true });
+    addEventListener('pointercancel', los, { once: true });
+  });
+  // Met het toetsenbord: de pijltjes verplaatsen een chip.
+  document.addEventListener('keydown', (e) => {
+    const chip = e.target.closest?.('[data-favchip]');
+    if (!chip || blad?.soort !== 'favorieten' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    const i = blad.keuze.findIndex((f) => f.id === chip.dataset.favchip);
+    const j = i + (e.key === 'ArrowLeft' ? -1 : 1);
+    if (i < 0 || j < 0 || j >= blad.keuze.length) return;
+    [blad.keuze[i], blad.keuze[j]] = [blad.keuze[j], blad.keuze[i]];
+    tekenBlad();
+    document.querySelector(`[data-favchip="${CSS.escape(chip.dataset.favchip)}"]`)?.focus();
+  });
 
   /*
    * Weergave (besluit 164, schets Thuis-Tel-Eigen #weergave): eenvoudig of
@@ -484,6 +644,13 @@
       k?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       return;
     }
+    const filterKnop = t.closest('[data-fav-filter]');
+    if (filterKnop && blad?.soort === 'favorieten') {
+      blad.filter = filterKnop.dataset.favFilter;
+      tekenBlad();
+      document.querySelector(`[data-kiesblad] [data-fav-filter="${blad.filter}"]`)?.focus();
+      return;
+    }
     const fav = t.closest('[data-fav]');
     if (fav && blad?.soort === 'favorieten') {
       const id = fav.dataset.fav;
@@ -503,6 +670,8 @@
       return;
     }
     const tegelKnop = t.closest('[data-tegel]');
+    // Net vastgehouden: dan opent de kamer, en schakelt er niets.
+    if (tegelKnop && vast?.gedaan && vast.tegel === tegelKnop) return void (vast = null);
     if (tegelKnop && !bewerk) void schakel(tegelKnop);
   });
 

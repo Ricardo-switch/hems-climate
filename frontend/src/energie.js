@@ -24,7 +24,7 @@ let dubbel = false;
 /** Een eigen hoofdzekering invullen; zolang die niet compleet is, staat hij hier. */
 let zelf = null;
 /** Aanpassen van hoe de panelen liggen (besluit 157, panelen.js). */
-const ligStaat = { aanpassen: false, concept: null };
+const ligStaat = { aanpassen: false, concept: null, na: () => teken() };
 
 const leeg = () => ({ versie: 1, bron: 'zelf', net: { afname: [], teruglevering: [] }, zon: [], gas: null, apparaten: [], prijzen: { stroom: null, teruglevering: null, gas: null, vastPerMaand: null } });
 /** Tarief 1 van een slimme meter is het daltarief (zelfde regel als de dienst, tarief.ts). */

@@ -17,6 +17,7 @@
 
 import type { Gesprek, SpraakEvent } from '../adapters/homeassistant/client.js';
 import type { Verbinding } from './websocket.js';
+import { isRuis } from './woordzoeker.js';
 
 export type Begin = 'wake_word' | 'stt';
 
@@ -54,7 +55,9 @@ export function vertaal(e: SpraakEvent): Record<string, unknown> | null {
       return { soort: 'stil' };
     case 'stt-end': {
       const uit = e.data['stt_output'] as { text?: unknown } | undefined;
-      return { soort: 'tekst', tekst: typeof uit?.text === 'string' ? uit.text.trim().slice(0, 200) : '' };
+      const tekst = typeof uit?.text === 'string' ? uit.text.trim().slice(0, 200) : '';
+      // Alleen geluid ("(noise)") is niets gezegd (21 oktober 2026).
+      return { soort: 'tekst', tekst: isRuis(tekst) ? '' : tekst };
     }
     case 'run-end':
       return { soort: 'einde' };

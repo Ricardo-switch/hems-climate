@@ -22,6 +22,7 @@
 
 import type { Warmtebron } from './warmte.js';
 import { findCameras } from './camera.js';
+import { GEVAAR_WOORD, melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
@@ -50,8 +51,11 @@ export interface HouseRegisters {
   readonly entities: readonly HaRegistryEntity[];
 }
 
-/** `apparaat`: een uitstelbaar apparaat (besluit 98), zoals de droger; `camera`: om te bekijken (besluit 106). */
-export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat' | 'camera';
+/**
+ * `apparaat`: een uitstelbaar apparaat (besluit 98), zoals de droger; `camera`: om te bekijken (besluit 106);
+ * `rookmelder`: een rookmelder zoals de Nest Protect (21 oktober 2026), alleen lezen.
+ */
+export type DeviceKind = 'klimaat' | 'screen' | 'licht' | 'meter' | 'apparaat' | 'camera' | 'rookmelder';
 
 /** Wat een klimaatapparaat of meter meet, uit Home Assistant. */
 export interface HouseReading {
@@ -159,6 +163,12 @@ export interface HouseDevice {
   };
   /** De batterij van het apparaat in procenten, als het er een heeft (besluit 122). */
   readonly batterijPct?: number;
+  /**
+   * Alleen bij een rookmelder (21 oktober 2026): wat hij ziet (rook, koolmonoxide
+   * of hitte) en sinds wanneer, of zijn batterij een probleem meldt, wanneer hij
+   * vervangen moet en wanneer hij getest is (`JJJJ-MM-DD`).
+   */
+  readonly rookmelder?: { readonly gevaar: Gevaar | null; readonly sindsMs: number | null; readonly batterijProbleem: boolean; readonly vervangenVoor: string | null; readonly getestOp: string | null };
   /**
    * Een radiatorknop (besluit 126), zoals de Sonoff TRVZB: hoe hij gekoppeld is
    * (ZHA of Zigbee2MQTT), en hoe ver de klep open staat als hij dat meldt.
@@ -390,7 +400,7 @@ function batteriesPerDevice(registers: HouseRegisters, states: ReadonlyMap<strin
   return out;
 }
 
-const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, camera: 4, meter: 5 };
+const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, licht: 2, apparaat: 3, camera: 4, meter: 5, rookmelder: 6 };
 
 /** Wat geen kamer meet: het weer, telefoons, schijven, de buitenkant van een apparaat. */
 const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoelstemperatuur|battery|batterij|body|basal|cpu|processor|schijf|schijftemperatuur|disk|drive|nas|track)\b/i;
@@ -784,6 +794,30 @@ function cameraOf(id: string, name: string, bereikbaar: boolean): HouseDevice {
   };
 }
 
+/** Een rookmelder (21 oktober 2026): wat hij ziet, in woorden; alleen lezen. */
+function rookmelderOf(id: string, name: string, nu: ReturnType<typeof rookmelderNu>): HouseDevice {
+  const stand = !nu.bereikbaar ? 'geen verbinding' : nu.gevaar ? `${GEVAAR_WOORD[nu.gevaar].toLowerCase()} gezien` : nu.batterijProbleem ? 'batterij vervangen' : 'alles goed';
+  return {
+    id,
+    naam: name,
+    haNaam: name,
+    soort: 'rookmelder',
+    stand,
+    aan: nu.gevaar != null,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting: null,
+    klimaat: null,
+    meetKamer: false,
+    rookmelder: { gevaar: nu.gevaar, sindsMs: nu.sindsMs, batterijProbleem: nu.batterijProbleem, vervangenVoor: nu.vervangenVoor, getestOp: nu.getestOp },
+  };
+}
+
 /** Een meter: een sensor in een kamer die temperatuur en luchtvochtigheid geeft. */
 function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean): HouseDevice {
   return {
@@ -1108,6 +1142,12 @@ function collect(
     const bereikbaar = st != null && st !== 'unavailable' && st !== 'unknown';
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = cameraOf(cam.entityId, cam.naam, bereikbaar);
     found.push({ device, haNaam: cam.naam, haArea: areaOf(cam.entityId), groepen: [] });
+  }
+
+  // Rookmelders (21 oktober 2026): één per melder, in de kamer van het apparaat.
+  for (const m of vindRookmelders(registers.entities, registers.devices, states)) {
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = rookmelderOf(m.id, m.naam, rookmelderNu(m, (id) => states.get(id)));
+    found.push({ device, haNaam: m.naam, haArea: areaOf(m.id), groepen: [] });
   }
 
   // Zonwering: één per apparaat (Somfy levert er per screen twee, ook een langzame).
@@ -1608,7 +1648,8 @@ export function buildHouse(
     const dev = deviceOf(d.id);
     if (dev) kamerVanApparaat.set(dev, { id: room.id, naam: room.naam });
   }
-  const apparaatNaam = new Map(registers.devices.map((d) => [d.id, d.name_by_user ?? d.name ?? null]));
+  // De naam van het apparaat; een rookmelder zonder "Nest Protect (...)" eromheen.
+  const apparaatNaam = new Map(registers.devices.map((d) => [d.id, d.name_by_user ?? (d.name != null ? melderNaam(d.name) : null)]));
   const batterijen: HouseBattery[] = [...accu].map(([id, pct]) => {
     const area = deviceArea.get(id);
     const kamer = kamerVanApparaat.get(id) ?? (area ? (roomByArea.get(area) ?? null) : null);

@@ -195,6 +195,24 @@ async function vraag(v) {
     nu.vervolg = body.vervolg ?? [];
     // Een opdracht (besluit 148): meteen naar dezelfde deur als de knoppen.
     if (res.ok && body.opdracht) await voerUit(body);
+    // Alleen geluid: niets gezegd, niets te antwoorden (21 oktober 2026).
+    if (res.ok && body.vraag === 'ruis') {
+      nu = eerder.shift() ?? null;
+      stand = nu ? 'verder' : 'begin';
+      teken();
+      return;
+    }
+    // "Oké bedankt": het gesprek is klaar, zoals Nee, dank je.
+    if (res.ok && body.vraag === 'klaar') {
+      nu = null;
+      stand = 'begin';
+      teken();
+      void zeg(body.antwoord, body.gesproken ?? body.antwoord).then(() => {
+        stand = 'begin';
+        teken();
+      });
+      return;
+    }
   } catch {
     nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
   }

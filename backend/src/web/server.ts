@@ -44,7 +44,8 @@ import { PICTURE_FILE } from './scene-pictures.js';
 import { ask, LANGS, parseQuestion } from './assistant.js';
 import type { AskContext, Lang, Question } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
-import { begrijp, MAX_TEKST } from './woordzoeker.js';
+import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
+import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
 import { Luisterpost, type LuisterDeur } from './luisterpost.js';
@@ -69,6 +70,15 @@ import { MAX_ZEG, type Stem } from './stem.js';
 import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
 
 /** De versie die het image meekreeg bij het bouwen. */
+/** Een rookmelder in het alarm: wat hij ziet (null: niets), en in welke kamer. */
+export interface AlarmMelder {
+  readonly id: string;
+  readonly naam: string;
+  readonly kamer: string;
+  readonly gevaar: 'rook' | 'co' | 'hitte' | null;
+  readonly sindsMs: number | null;
+}
+
 export interface Version {
   /** Het versienummer (besluit 131), uit de code zelf. */
   readonly nummer: string;
@@ -296,6 +306,8 @@ export interface WebOptions {
    * niet gaf. Alleen voor de stand van de zon (besluit 93).
    */
   readonly location?: () => Location | null;
+  /** De omtrek van het huis op de kaart (21 oktober 2026); anders OpenStreetMap. Voor de tests. */
+  readonly omtrek?: (latDeg: number, lonDeg: number) => Promise<readonly Punt[] | null>;
   /**
    * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
    * of null zolang de registers van Home Assistant nog niet gelezen zijn.
@@ -716,6 +728,8 @@ export class WebServer {
       (this.#options.energy != null && path === '/api/energie') ||
       // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
       (this.#options.connection != null && path === '/api/aansluiting') ||
+      // De gevels op de kaart (21 oktober 2026): niets bewaren, alleen een vraag aan OpenStreetMap.
+      (this.#options.location != null && path === '/api/gevel-kaart') ||
       (this.#options.layout != null && path === '/api/indeling') ||
       // Camera's en de deurbel (besluit 109): alleen de keuzes, naar een eigen bestand.
       (this.#options.functies != null && path === '/api/functies') ||
@@ -829,6 +843,11 @@ export class WebServer {
 
     if (path === '/api/aansluiting') {
       await this.#connection(req, res, method);
+      return;
+    }
+
+    if (path === '/api/gevel-kaart' && method === 'POST') {
+      await this.#gevelKaart(req, res);
       return;
     }
 
@@ -1137,6 +1156,16 @@ export class WebServer {
           return;
         }
         vrijeTekst = tekst;
+        // Alleen geluid, of het gesprek is klaar (21 oktober 2026): geen vraag.
+        if (isRuis(tekst)) {
+          sendJson(res, 200, { vraag: 'ruis', taal: lang, kamer: null, antwoord: '', feiten: [], gesproken: '' });
+          return;
+        }
+        const klaar = afsluiter(tekst, lang);
+        if (klaar != null) {
+          sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar) });
+          return;
+        }
         // Bedienen met een zin (besluit 148): eerst de woordzoeker, en wat die
         // niet begrijpt het taalmodel. De pagina stuurt de opdracht naar de deur.
         const lijst = viaSleutel || this.#options.praten?.bedienen() === false ? null : this.#bedienbaar();
@@ -1990,6 +2019,11 @@ export class WebServer {
     ping.unref?.();
     const listener: Listener = { res, ping };
     this.#listeners.add(listener);
+    // Gaat er nu een rookmelder af, dan ziet een scherm dat net opent het meteen.
+    if (this.#alarm.some((a) => a.gevaar != null)) res.write(`event: alarm
+data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
+
+`);
 
     res.on('close', () => {
       clearInterval(ping);
@@ -2022,11 +2056,35 @@ export class WebServer {
    * Er wordt aangebeld (besluit 107): elke open pagina toont het beeld van de
    * deurbel. De melding zegt alleen welke camera; het beeld vraagt de inlog.
    */
-  ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean } = { seconden: 120, schermAan: true }): void {
-    const data = JSON.stringify({ camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan });
+  ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean; readonly reserve?: readonly string[] } = { seconden: 120, schermAan: true }): void {
+    const data = JSON.stringify({ camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan, reserve: hoe.reserve ?? [] });
     for (const listener of this.#listeners) {
       try {
         listener.res.write(`event: aanbellen\ndata: ${data}\n\n`);
+      } catch {
+        clearInterval(listener.ping);
+        this.#listeners.delete(listener);
+      }
+    }
+  }
+
+  /** Wat de rookmelders nu zien (21 oktober 2026). */
+  #alarm: readonly AlarmMelder[] = [];
+
+  /**
+   * Een rookmelder ziet rook, koolmonoxide of hitte, of niet meer (21 oktober
+   * 2026, schets Wand-Rook): elke open pagina toont het alarm met de kamer, of
+   * haalt het weg. Alleen lezen; afzetten doe je op de melder.
+   */
+  alarm(melders: readonly AlarmMelder[]): void {
+    this.#alarm = melders;
+    const data = JSON.stringify({ melders, tMs: Date.now() });
+    for (const listener of this.#listeners) {
+      try {
+        listener.res.write(`event: alarm
+data: ${data}
+
+`);
       } catch {
         clearInterval(listener.ping);
         this.#listeners.delete(listener);
@@ -2194,6 +2252,51 @@ data: ${data}
   /** Licht bedienen: de installatie staat het toe, en de bewoner heeft het aan (besluit 111). */
   #lichtMag(): boolean {
     return this.#options.lights != null && (this.#options.lichtAan?.() ?? true);
+  }
+
+  /** Wat de kaart zei, per ligging, een dag lang: OpenStreetMap is van iedereen. */
+  #kaart = new Map<string, { at: number; omtrek: readonly Punt[] | null }>();
+
+  /**
+   * De gevels opmeten op de kaart (21 oktober 2026): de omtrek van het huis in
+   * OpenStreetMap, en daaruit de voorkant die het dichtst bij `nuDeg` ligt.
+   * Alleen na een tik van de beheerder; niets bewaard behalve een dag de omtrek.
+   */
+  async #gevelKaart(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const loc = this.#options.location?.() ?? null;
+    if (loc == null) {
+      sendJson(res, 503, { wachten: 'de ligging van het huis komt van Home Assistant zodra die verbonden is' });
+      return;
+    }
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return;
+    }
+    const nu = Number((body as { nuDeg?: unknown } | null)?.nuDeg);
+    if (!Number.isFinite(nu) || nu < 0 || nu >= 360) {
+      sendJson(res, 400, { fout: 'nuDeg is een richting van 0 tot 360' });
+      return;
+    }
+    const sleutel = `${loc.latDeg.toFixed(5)},${loc.lonDeg.toFixed(5)}`;
+    let bewaard = this.#kaart.get(sleutel);
+    if (bewaard == null || Date.now() - bewaard.at > 86_400_000) {
+      try {
+        bewaard = { at: Date.now(), omtrek: await (this.#options.omtrek ?? haalOmtrek)(loc.latDeg, loc.lonDeg) };
+      } catch {
+        sendJson(res, 502, { fout: 'De kaart gaf geen antwoord. Probeer het straks nog eens.' });
+        return;
+      }
+      this.#kaart.set(sleutel, bewaard);
+    }
+    const gevels = bewaard.omtrek ? gevelsUitOmtrek(bewaard.omtrek) : null;
+    if (gevels == null) {
+      sendJson(res, 404, { fout: 'Op de kaart staat op deze plek geen huis.' });
+      return;
+    }
+    sendJson(res, 200, { voorkantDeg: voorkantUitKaart(gevels, nu), as: gevels.as, bron: 'OpenStreetMap' });
   }
 
   /** Hoeveel live-beelden er nu lopen; meer dan dit belast Home Assistant en de NAS te veel. */

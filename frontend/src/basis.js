@@ -117,7 +117,7 @@
     d.style.setProperty('--wandmiddenY', `${(t - b) / 2}px`);
   }
 
-  async function haal(pad) {
+  async function haal(pad, opnieuw = false) {
     let res;
     try {
       res = await fetch(pad, { cache: 'no-store' });
@@ -127,6 +127,11 @@
       throw fout;
     }
     online();
+    // De toegang van Home Assistant verliep (21 oktober 2026): vernieuwen en nog eens.
+    if (ingressDicht(res)) {
+      if (!opnieuw && (await verseToegang())) return haal(pad, true);
+      throw new Error(`${pad}: Home Assistant laat even niet door`);
+    }
     // Niet (meer) ingelogd (besluit 147): naar het inloggen, met de weg terug naar deze pagina.
     if (res.status === 401) {
       location.href = `inloggen.html?terug=${encodeURIComponent(location.pathname + location.hash)}`;
@@ -163,8 +168,9 @@
    * Een deur van de dienst (POST). Zonder inlog stuurt de dienst 401; dan naar
    * de inlog van Home Assistant, en daarna terug naar deze plek (besluit 99).
    */
-  async function deur(pad, body) {
+  async function deur(pad, body, opnieuw = false) {
     const res = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    if (ingressDicht(res)) return !opnieuw && (await verseToegang()) ? deur(pad, body, true) : res;
     if (res.status === 401) {
       location.href = `auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}`;
       return null;
@@ -236,24 +242,41 @@
 
   /** Eén live-stroom per pagina: de besluiten, en de deurbel (besluit 107). */
   let bron = null;
+  let opLive = null;
   function stroom() {
     if (bron) return bron;
     try {
       bron = new EventSource('api/events');
+      if (opLive) bron.onmessage = opLive;
       // Valt de stroom weg en komt hij niet snel terug, dan zonder verbinding.
       let wacht = null;
-      bron.addEventListener('error', () => {
+      const deze = bron;
+      deze.addEventListener('error', () => {
         const toen = Date.now();
         clearTimeout(wacht);
-        wacht = setTimeout(() => bron.readyState !== EventSource.OPEN && offline(toen), 15_000);
+        wacht = setTimeout(() => deze.readyState !== EventSource.OPEN && offline(toen), 15_000);
+        // Dicht en niet vanzelf terug (een 401 van Home Assistant, 21 oktober 2026):
+        // de toegang vernieuwen en zelf opnieuw verbinden.
+        if (deze.readyState === EventSource.CLOSED && bron === deze) {
+          bron = null;
+          setTimeout(() => void verseToegang().finally(() => stroom()), 5_000);
+        }
       });
-      bron.addEventListener('open', () => {
+      deze.addEventListener('open', () => {
         clearTimeout(wacht);
         online();
       });
       // De gekozen bewegingsmelder ziet iemand (besluit 164): de wand wordt wakker.
-      bron.addEventListener('wekken', () => dispatchEvent(new CustomEvent('sc-wek', { detail: 'beweging' })));
-      bron.addEventListener('aanbellen', (ev) => {
+      deze.addEventListener('wekken', () => dispatchEvent(new CustomEvent('sc-wek', { detail: 'beweging' })));
+      // Een rookmelder ziet iets, of niet meer (21 oktober 2026).
+      deze.addEventListener('alarm', (ev) => {
+        try {
+          alarm(JSON.parse(ev.data));
+        } catch {
+          // Een half bericht.
+        }
+      });
+      deze.addEventListener('aanbellen', (ev) => {
         try {
           aanbellen(JSON.parse(ev.data));
         } catch {
@@ -268,15 +291,72 @@
 
   /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
   function live(opState) {
-    const b = stroom();
-    if (!b) return;
-    b.onmessage = (ev) => {
+    opLive = (ev) => {
       try {
         opState(JSON.parse(ev.data));
       } catch {
         // Een half bericht: de volgende komt zo.
       }
     };
+    const b = stroom();
+    if (b) b.onmessage = opLive;
+  }
+
+  /*
+   * Rook, koolmonoxide of hitte (21 oktober 2026, schets Wand-Rook): op elke
+   * pagina, zoals aanbellen, rood en schermvullend, met de kamer en wat de
+   * andere melders zien. Sluiten haalt het weg tot een melder iets nieuws ziet;
+   * ziet niemand meer iets, dan gaat het vanzelf weg. Smart Climate zet het
+   * alarm zelf niet uit: dat doe je op de melder.
+   */
+  const LIDWOORD = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|gang|entree|overloop|trap|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|berging|garage|kelder|meterkast|schuur)\b/i;
+  const inDe = (kamer) => (LIDWOORD.test(kamer) ? `de ${kamer.charAt(0).toLowerCase()}${kamer.slice(1)}` : kamer);
+  const GEVAAR = { rook: 'Rook', co: 'Koolmonoxide', hitte: 'Hitte' };
+  const WAT = { rook: 'rook', co: 'koolmonoxide', hitte: 'hitte' };
+  let alarmGesloten = '';
+  function alarm(m) {
+    const aan = (m.melders ?? []).filter((x) => x.gevaar);
+    const sleutel = aan.map((x) => `${x.id}:${x.gevaar}`).join('|');
+    let laag = document.querySelector('.alarmlaag');
+    if (!aan.length || sleutel === alarmGesloten) {
+      if (!aan.length) alarmGesloten = '';
+      laag?.remove();
+      return;
+    }
+    dispatchEvent(new CustomEvent('sc-wek', { detail: 'alarm' }));
+    try {
+      global.fully?.turnScreenOn?.();
+      global.fully?.bringToForeground?.();
+    } catch {
+      // Geen Fully Kiosk.
+    }
+    if (!laag) {
+      laag = document.createElement('div');
+      laag.className = 'alarmlaag';
+      laag.setAttribute('role', 'alertdialog');
+      laag.addEventListener('click', (e) => {
+        if (!e.target.closest('[data-alarm-dicht]')) return;
+        alarmGesloten = laag.dataset.sleutel;
+        laag.remove();
+      });
+      document.body.append(laag);
+    }
+    laag.dataset.sleutel = sleutel;
+    const eerste = aan[0];
+    const kamers = [...new Set(aan.filter((x) => x.gevaar === eerste.gevaar).map((x) => inDe(x.kamer)))];
+    const titel = `${GEVAAR[eerste.gevaar]} in ${kamers.length > 1 ? `${kamers.slice(0, -1).join(', ')} en ${kamers.at(-1)}` : kamers[0]}`;
+    const sinds = eerste.sindsMs ? `, sinds ${klokVan(eerste.sindsMs)}` : '';
+    const raad = eerste.gevaar === 'co' ? 'Zet ramen en deuren open, ga naar buiten en bel 112.' : 'Ga bij brand naar buiten en bel 112.';
+    laag.setAttribute('aria-label', titel);
+    laag.innerHTML = `<div class="alarm-in">
+      <span class="alarm-puls" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20c-2.5 0-4-1.8-4-3.8 0-2.6 2.4-3.4 2.4-6.2 2 1 3 2.8 3 4.4.6-.8 1-2 1-3.4 2.4 1.4 4.6 3.6 4.6 6.6 0 1.7-1.3 2.4-2 2.4"/><path d="M14 6c1-1 1-2.5 0-3.5M18 8c1-1 1-2.5 0-3.5"/></svg></span>
+      <h1>${esc(titel)}</h1>
+      <p class="alarm-zin">${esc(`De rookmelder in ${inDe(eerste.kamer)} ziet ${WAT[eerste.gevaar]}${sinds}. ${raad}`)}</p>
+      <div class="alarm-lijst">${(m.melders ?? []).map((x) => `<div><b>${esc(x.kamer)}</b><span class="${x.gevaar ? '' : 'ok'}">${esc(x.gevaar ? WAT[x.gevaar] : 'niets')}</span></div>`).join('')}</div>
+      <button type="button" class="knop knop-licht" data-alarm-dicht>Sluiten</button>
+      <p class="alarm-klein">Het alarm zelf zet je uit op de melder of in de app van de melder.</p>
+    </div>`;
+    laag.querySelector('[data-alarm-dicht]').focus();
   }
 
   /*
@@ -308,30 +388,86 @@
       });
       document.body.append(laag);
     }
-    const id = encodeURIComponent(m.camera);
     // Belt er opnieuw iemand terwijl het beeld er staat: eerst het oude beeld stoppen.
     stopBeelden(laag);
     laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>Er wordt aangebeld</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
-      <div class="aanbel-beeld"><img alt="Live beeld van ${esc(m.naam ?? 'de deurbel')}" src="api/camera?id=${id}&live=1"></div>`;
-    laag.querySelector('img').addEventListener('error', async () => {
-      const res = await fetch(`api/camera?id=${id}`).catch(() => null);
-      const vak = laag.querySelector('.aanbel-beeld');
-      vak.innerHTML = res?.status === 401
-        ? `<p>Het beeld is alleen te zien als je bent ingelogd met je Home Assistant-account. <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">Inloggen</a></p>`
-        : '<p>De deurbel geeft nu geen beeld.</p>';
-    });
+      <div class="aanbel-beeld"><p class="zacht">Het beeld komt eraan…</p></div>`;
+    void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? 'de deurbel');
     laag.querySelector('[data-bel-dicht]').focus();
     clearTimeout(belTimer);
     belTimer = setTimeout(sluitBel, Math.max(30, Math.min(600, Number(m.seconden) || 120)) * 1000);
   }
+  /*
+   * Het beeld van de deurbel, zoals in Kamer (21 oktober 2026): eerst een
+   * plaatje, dan het live beeld eroverheen zodra dat er is. Eerst wachtte de
+   * laag alleen op het live beeld, en bleef hij zwart als dat niet kwam,
+   * terwijl dezelfde camera in Kamer meteen beeld gaf. Geeft een beeld geen
+   * plaatje, dan het volgende beeld van dezelfde camera; komt live niet, dan
+   * elke seconde een nieuw plaatje.
+   */
+  let belVers = null;
+  /** Het live beeld dat nog laadt; buiten de pagina, dus apart stoppen. */
+  let belStroom = null;
+  async function belBeeld(laag, ids, naam) {
+    const vak = laag.querySelector('.aanbel-beeld');
+    let res = null;
+    let id = null;
+    for (const kandidaat of ids) {
+      id = encodeURIComponent(kandidaat);
+      res = await fetch(`api/camera?id=${id}`, { cache: 'no-store' }).catch(() => null);
+      if (!laag.isConnected) return;
+      if (res?.ok || res?.status === 401) break;
+    }
+    if (!res?.ok) {
+      vak.innerHTML = res?.status === 401
+        ? `<p>Het beeld is alleen te zien als je bent ingelogd met je Home Assistant-account. <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">Inloggen</a></p>`
+        : '<p>De deurbel geeft nu geen beeld.</p>';
+      return;
+    }
+    const url = URL.createObjectURL(await res.blob());
+    if (!laag.isConnected) return URL.revokeObjectURL(url);
+    vak.innerHTML = `<img alt="Beeld van ${esc(naam)}" src="${url}">`;
+    const img = vak.querySelector('img');
+    let live = false;
+    const stroom = new Image();
+    belStroom = stroom;
+    stroom.alt = `Live beeld van ${naam}`;
+    stroom.onload = () => {
+      if (!laag.isConnected) return void stroom.removeAttribute('src');
+      live = true;
+      clearInterval(belVers);
+      vak.querySelector('img')?.replaceWith(stroom);
+    };
+    stroom.src = `api/camera?id=${id}&live=1`;
+    // Komt het live beeld niet binnen vijf tellen: elke seconde een vers plaatje.
+    clearInterval(belVers);
+    let bezig = false;
+    setTimeout(() => {
+      if (live || !laag.isConnected) return;
+      belVers = setInterval(async () => {
+        if (live || bezig || !laag.isConnected) return;
+        bezig = true;
+        const r = await fetch(`api/camera?id=${id}`, { cache: 'no-store' }).catch(() => null);
+        bezig = false;
+        if (!r?.ok || live || !laag.isConnected || !img.isConnected) return;
+        const oud = img.src;
+        img.src = URL.createObjectURL(await r.blob());
+        URL.revokeObjectURL(oud);
+      }, 1000);
+    }, 5000);
+  }
   function sluitBel() {
     clearTimeout(belTimer);
+    clearInterval(belVers);
     const laag = document.querySelector('.aanbel');
     if (laag) stopBeelden(laag);
     laag?.remove();
   }
   /** Zonder bron stopt de stroom; alleen weghalen laat hem soms doorlopen. */
   function stopBeelden(laag) {
+    clearInterval(belVers);
+    belStroom?.removeAttribute('src');
+    belStroom = null;
     laag.querySelectorAll('img').forEach((img) => img.removeAttribute('src'));
   }
 
@@ -384,6 +520,70 @@
    */
   const VOLLEDIG = 'sc-volledig-scherm';
   const inHA = () => global.parent !== global && /^\/api\/hassio_ingress\//.test(location.pathname);
+
+  /*
+   * De toegang via Home Assistant (21 oktober 2026). In Home Assistant opent
+   * de app via ingress, met een sessie die na een tijd verloopt; Home
+   * Assistant houdt hem elke minuut vast. Sliep de tablet aan de wand, dan
+   * verliep hij toch, en gaf de eerstvolgende vraag 401 van Home Assistant
+   * zelf. De app dacht dat je moest inloggen en ging naar de inlogpagina, en
+   * ook die weigerde Home Assistant: "401: Unauthorized" tot iemand ververste.
+   * Nu houdt de app de sessie zelf ook vast, vernieuwt hij hem bij zo'n 401
+   * en vraagt hij het opnieuw. Een 401 van de dienst zelf is JSON, en gaat
+   * nog steeds naar het inloggen.
+   */
+  const SESSIE = 'ingress_session';
+  function haHass() {
+    try {
+      return global.parent.document.querySelector('home-assistant')?.hass ?? null;
+    } catch {
+      return null;
+    }
+  }
+  const sessieNu = () => document.cookie.split('; ').find((c) => c.startsWith(`${SESSIE}=`))?.slice(SESSIE.length + 1) ?? null;
+  /** Een 401 van Home Assistant zelf, niet van de dienst: dan is de sessie verlopen. */
+  const ingressDicht = (res) => res.status === 401 && inHA() && !(res.headers.get('content-type') ?? '').includes('json');
+  let verversen = null;
+  /** Een nieuwe sessie bij Home Assistant, zoals het paneel van Home Assistant dat doet. */
+  function verseToegang() {
+    if (!inHA()) return Promise.resolve(false);
+    verversen ??= (async () => {
+      const hass = haHass();
+      if (!hass?.callWS) return false;
+      try {
+        const r = await hass.callWS({ type: 'supervisor/api', endpoint: '/ingress/session', method: 'post' });
+        if (!r?.session) return false;
+        document.cookie = `${SESSIE}=${r.session};path=/api/hassio_ingress/;SameSite=Strict${location.protocol === 'https:' ? ';Secure' : ''}`;
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setTimeout(() => (verversen = null), 0);
+      }
+    })();
+    return verversen;
+  }
+  /** De sessie vasthouden: nog geldig, dan langer; anders een nieuwe. Elke minuut, en voor een nieuwe pagina. */
+  async function houToegang() {
+    if (!inHA()) return true;
+    const hass = haHass();
+    const s = sessieNu();
+    if (!hass?.callWS) return false;
+    if (s) {
+      try {
+        await hass.callWS({ type: 'supervisor/api', endpoint: '/ingress/validate_session', method: 'post', data: { session: s } });
+        return true;
+      } catch {
+        // Verlopen: een nieuwe.
+      }
+    }
+    return verseToegang();
+  }
+  if (inHA()) {
+    setInterval(() => document.visibilityState === 'visible' && void houToegang(), 60_000);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void houToegang());
+    addEventListener('online', () => void houToegang());
+  }
   function volledigGekozen() {
     try {
       return localStorage.getItem(VOLLEDIG) === '1';
@@ -699,6 +899,8 @@
     comfort: ['geel', '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>'],
     // De panelen zijn gemeten (besluit 157): een zon.
     panelen: ['geel', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'],
+    // Een rookmelder (21 oktober 2026): rook, koolmonoxide of hitte, of vervangen.
+    rook: ['rood', '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2"/>'],
     goed: ['groen', '<path d="M5 12l5 5 9-10"/>'],
     onderhoud: ['grijs', '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
   };
@@ -778,9 +980,19 @@
     }
     const balk = (pct, soort) => `<div class="meter"><i style="width: ${Math.max(2, pct)}%; background: ${bijnaOp(pct, soort, huis) ? 'var(--gloed)' : pct < 40 ? 'var(--zon)' : 'var(--mint)'}"></i></div>`;
     const regel = (naam, onder, pct, soort) => `<div class="regel"><div><b>${esc(naam)}</b><span>${esc(onder ?? '')}</span></div>${balk(pct, soort)}<span class="pct">${pct}%</span></div>`;
-    const batt = huis?.batterijen ?? [];
+    // De rookmelders apart (21 oktober 2026): de batterij, de laatste test en wanneer vervangen.
+    const melders = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'rookmelder').map((a) => ({ ...a, kamer: r.naam }))));
+    const datum = (d, opties) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('nl-NL', opties) : null);
+    const melderRegel = (m) => {
+      const r = m.rookmelder ?? {};
+      const onder = [m.kamer, r.getestOp ? `getest ${datum(r.getestOp, { day: 'numeric', month: 'long' })}` : null, r.vervangenVoor ? `vervangen voor ${datum(r.vervangenVoor, { month: 'short', year: 'numeric' })}` : null, r.batterijProbleem ? 'batterij op' : null].filter(Boolean).join(' · ');
+      return m.batterijPct != null ? regel(m.naam, onder, m.batterijPct, 'batterij') : `<div class="regel"><div><b>${esc(m.naam)}</b><span>${esc(onder)}</span></div></div>`;
+    };
+    const melderNamen = new Set(melders.map((m) => m.naam));
+    const batt = (huis?.batterijen ?? []).filter((b) => !melderNamen.has(b.naam));
     const filters = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.klimaat?.filter?.pct != null).map((a) => ({ naam: a.naam, kamer: r.naam, pct: a.klimaat.filter.pct }))));
     return `<div class="kop"><div><button type="button" class="terugmeld" data-meld-terug>‹ Meldingen</button><h2 class="kop-2" style="margin: 2px 0 0">Onderhoud</h2></div><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
+      ${melders.length ? `<h3>Rookmelders</h3>${melders.map(melderRegel).join('')}` : ''}
       <h3>Batterijen, de leegste eerst</h3>
       ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct, 'batterij')).join('') : '<p class="mini" style="margin: 0">Geen apparaten met een batterij gevonden.</p>'}
       ${filters.length ? `<h3>Filters van de airco's</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct, 'filter')).join('')}` : ''}
@@ -948,7 +1160,10 @@
     const v = await versieNu();
     if (!v) return;
     if (draaitNu == null) draaitNu = v;
-    else if (v !== draaitNu && !typt() && !document.querySelector('dialog[open]')) location.reload();
+    else if (v !== draaitNu && !typt() && !document.querySelector('dialog[open]')) {
+      await houToegang();
+      location.reload();
+    }
   }
   function nieuweVersie() {
     void kijkVersie();
@@ -996,5 +1211,5 @@
   }
   setTimeout(() => void schermOpties(), 1500);
 
-  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu };
+  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang };
 })(window);
