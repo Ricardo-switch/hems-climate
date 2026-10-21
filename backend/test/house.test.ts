@@ -435,15 +435,15 @@ describe('het voorstel uit Home Assistant', () => {
     };
     expect(at('Hal alles')).toBe('hal');
     expect(at('Slaapkamer')).toBe('slaapkamer');
-    expect(at('Slaapkamer Mylan')).toBeNull();
+    expect(at('Slaapkamer Daan')).toBeNull();
     expect(at('Halfopen')).toBeNull();
   });
 
   it('stelt een kamer voor uit de naam van het apparaat, als heel woord en de langste eerst (besluit 158)', () => {
     const kamer = (id: string, naam: string) => ({ id, naam, etage: 'bg' as const, zones: [], regelzone: null, haGebied: null });
-    const rooms = [kamer('entree', 'Entree'), kamer('slaapkamer', 'Slaapkamer'), kamer('mylan', 'Slaapkamer Mylan'), kamer('hal', 'Hal')];
+    const rooms = [kamer('entree', 'Entree'), kamer('slaapkamer', 'Slaapkamer'), kamer('daan', 'Slaapkamer Daan'), kamer('hal', 'Hal')];
     expect(roomForName('Bewegingssensor entree', rooms)).toBe('entree');
-    expect(roomForName('Lamp slaapkamer Mylan', rooms)).toBe('mylan');
+    expect(roomForName('Lamp slaapkamer Daan', rooms)).toBe('daan');
     expect(roomForName('Slaapkamer-lamp', rooms)).toBe('slaapkamer');
     expect(roomForName('Halogeen spot', rooms)).toBeNull();
     expect(roomForName('Droger', rooms)).toBeNull();

@@ -3,8 +3,8 @@
 Smart Climate is gebouwd in één huis. Voor de add-on (besluiten 53, 77, 91)
 moet alles wat per huis verschilt een instelling zijn die de app wegschrijft,
 met een voorstel uit Home Assistant (besluit 109). Dit is de stand na een
-grondige controle van de code op 8 oktober 2026: wat al instelbaar is, wat in
-deze ronde is rechtgezet, en wat er nog ligt, op volgorde.
+grondige controle van de code op 8 oktober 2026, bijgewerkt op 21 oktober
+(besluit 172): wat al instelbaar is, wat is rechtgezet, en wat er nog ligt.
 
 ## Al instelbaar
 
@@ -75,8 +75,8 @@ hier een voorstel voor.
    salderen tot 2027, vaste posten); de daltijden en het salderen zijn
    Nederlandse regels en worden een instelling per land.
 7. **Taal.** Alles is Nederlands, ook de woordenlijst waarmee de assistent
-   kamers en apparaten herkent. Tweetalig staat in besluit 86, en is nog niet
-   gebouwd.
+   kamers en apparaten herkent. Tweetalig staat in besluit 86; het komt later,
+   eerst Engels en dan Duits (besluit 172).
 8. ~~**Onderzoeksgereedschap apart.**~~ Gedaan op 9 oktober: de lijst met
    entiteiten en personen van dit huis staat in `tools/export-history.ts`, en
    de replay-scripts die dit huis bij naam noemen in `backend/tools/onderzoek/`.
@@ -84,6 +84,22 @@ hier een voorstel voor.
 9. ~~**De wizard.**~~ Gedaan op 9 oktober (besluit 114): Inrichten zet de
    stappen op een rij en loopt langs de schermen die er al zijn. De stap Klimaat
    groeit mee met punt 5.
+10. **Het wekwoord "Hé huis"** bestaat alleen op de pc van de bewoner. Meeleveren
+    in de add-on, die het in de map van openWakeWord zet (besluit 172).
+11. **Assist van Home Assistant** vraagt Smart Climate via YAML met het adres
+    van de NAS erin (`ha-assist/`). Wordt een eigen koppeling (besluiten 91 en
+    172).
+12. **Apparaten op zon** worden in de praktijk alleen via Home Connect herkend
+    (de standen en de typecodes van Bosch en Siemens). Miele, LG, Samsung en
+    andere noemen het anders.
+13. **De terugblik** spreekt over "het oude systeem", ook in een huis zonder
+    YAML-voorganger. De fase moet de woorden bepalen (besluit 73).
+14. **Wat er nieuw is** (`version.ts`) noemt de bewoner en kamers van dit huis;
+    een ander huis leest dat bij elke update.
+15. **De tijdzone** valt terug op `Europe/Amsterdam` als hij nergens staat; die
+    van Home Assistant is beter.
+16. ~~**De kamerwoorden.**~~ Gedaan op 21 oktober (besluit 172): één lijst met
+    het goede lidwoord, in de dienst en de app.
 
 ## Bewust zo, en geen probleem
 

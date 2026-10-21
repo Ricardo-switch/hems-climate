@@ -288,7 +288,7 @@ function tekenStraks() {
  * een klein thermometertje. Een tik opent een blad met iedereen, thuis of weg
  * en zijn temperaturen; daar kies je wiens comfort geldt, tot er iemand
  * thuiskomt of weggaat. Een gast kijkt alleen. Eerst stond er een grote kaart
- * "Comfort van Shira" met één knop terug naar de hoofdgebruiker.
+ * "Comfort van Noor" met één knop terug naar de hoofdgebruiker.
  */
 const WIE_KLEUR = ['#a9e6ff', '#f7b548', '#6ee7b7', '#b7b0ff', '#ffb090', '#f5a6c8'];
 const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });

@@ -262,8 +262,9 @@ backend/        Node.js: kern, adapters, replay, divergentie, webserver
   test/           de tests, met fixtures/ voor de vaste replay
   tools/          gereedschap: recorder-export, historie samenvoegen, index
 frontend/       De weergave; bouwt naar backend/web
-design/app/     De schetsen en het ontwerp van de bewonersapp, de maatstaf voor F en G (71)
-addon/          De Home Assistant-add-on (staat stil sinds besluit 53)
+design/app2/    De schetsen van de app, ontwerp 2: de maatstaf, en de schets is de code (104)
+design/app/     Ontwerp 1: alleen ONTWERP.md, met hoe het samenhangt (71)
+addon/          De Home Assistant-add-on, kant-en-klaar van GitHub (153)
 config/sites/   Configuratie per installatie
 deploy/         Compose, uitrolscript, handleiding voor de NAS
 ha-fixes/       Reparaties aan het YAML-systeem, klaar om over te nemen

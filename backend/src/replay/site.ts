@@ -14,7 +14,6 @@ const loaded = loadSiteConfigFileSync(resolveConfigPathSync(), {
 });
 
 export const exampleSite = loaded.config;
-export const configSource = loaded.source;
 
 /**
  * De woning zoals ze tot besluit 60 werd gemeten: de stabilisatietimer kwam van

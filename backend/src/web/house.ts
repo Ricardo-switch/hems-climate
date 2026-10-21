@@ -1245,7 +1245,7 @@ function groupCore(name: string): string {
 
 /**
  * De kamer die bij een van de groepen hoort: dezelfde naam, of de groepsnaam in
- * de kamernaam ("Hal" bij "Hal en trap"). Niet andersom: "Slaapkamer Mylan" is
+ * de kamernaam ("Hal" bij "Hal en trap"). Niet andersom: "Slaapkamer Daan" is
  * een andere kamer dan "Slaapkamer".
  */
 function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[]): string | null {
@@ -1264,7 +1264,7 @@ function roomForGroups(groepen: readonly string[], rooms: readonly LayoutRoom[])
 /**
  * Een kamer uit de naam van het apparaat (besluit 157): "Bewegingssensor entree"
  * hoort in de Entree. Hele woorden, en bij twee kamers de langste naam: dan wint
- * "Slaapkamer Mylan" van "Slaapkamer".
+ * "Slaapkamer Daan" van "Slaapkamer".
  */
 export function roomForName(naam: string, rooms: readonly LayoutRoom[]): string | null {
   const woorden = ` ${naam.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ')} `;

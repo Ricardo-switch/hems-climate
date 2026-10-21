@@ -97,7 +97,7 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
 });
 
 /**
- * Zet een versiestempel achter de verwijzingen naar app.js en app.css.
+ * Zet een versiestempel achter de verwijzingen naar de scripts en de opmaak.
  *
  * De bestandsnamen blijven gelijk, dus een browser die er ooit een met een
  * `max-age` heeft opgehaald houdt die vast tot die vervalt — ook als de server
@@ -109,43 +109,24 @@ const tailwind = spawn(process.execPath, [cli, ...args], {
  * Wijzigt het niet, dan blijft de URL gelijk en werkt de cache gewoon.
  */
 async function stempel() {
-  // Per pagina de bestanden die ze laadt. thuis.html en de pagina's ernaast zijn
-  // de app van ontwerp 2 (besluit 104), met de tekenmotor uit kit/.
-  const paginas = {
-    'index.html': ['app.css', 'app.js'],
-    'thuis.html': ['thuis.js', 'eigen.js', 'niemand.js', 'film.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'instellingen.html': ['instellingen.js', 'rondleiding.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'huis-kan.html': ['huis-kan.js', 'rondleiding.js', 'stand.js', 'huismodel.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'assistent.html': ['assistent.js', 'rondleiding.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'opbrengst.html': ['opbrengst.js', 'rondleiding.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js', 'kit/sankey.js'],
-    'vandaag.html': ['vandaag.js', 'rondleiding.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'kamer.html': ['kamer.js', 'rondleiding.js', 'gevoel.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'apparaten.html': ['apparaten.js', 'rondleiding.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'inrichten.html': ['inrichten.js', 'panelen.js', 'film.js', 'qrcode.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    'functies.html': ['functies.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'indeling.html': ['indeling.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js', 'kit/nav.js'],
-    // De groepen achter het tandwiel (besluit 130).
-    'comfort.html': ['comfort.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'energie.html': ['energie.js', 'panelen.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'regeling.html': ['regeling.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'toegang.html': ['toegang.js', 'groep.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    // Bewoners en inloggen (besluit 147).
-    'bewoners.html': ['bewoners.js', 'qrcode.js', 'basis.js', 'basis.css', 'kit/kit.css', 'kit/nav.js'],
-    'welkom.html': ['welkom.js', 'basis.js', 'basis.css', 'kit/kit.css'],
-    // Welkom in een leeg huis (besluit 154).
-    'begin.html': ['begin.js', 'basis.js', 'huismodel.js', 'basis.css', 'kit/kit.css', 'kit/huis.js'],
-    'inloggen.html': ['kit/kit.css', 'basis.css', 'kit/huis.js'],
+  /*
+   * Elke pagina, en elk script en elke opmaak die ze zelf laadt (`src="…"` of
+   * `href="…"`, een bestand hiernaast). Eerst stond dit als lijst met de hand
+   * hier; die vergat de microfoon op Assistent en het huismodel bij Energie.
+   */
+  const paginas = (await readdir(out)).filter((n) => n.endsWith('.html'));
+  const hashes = new Map();
+  const hashVan = async (naam) => {
+    if (!hashes.has(naam)) hashes.set(naam, createHash('sha256').update(await readFile(join(out, naam))).digest('hex').slice(0, 8));
+    return hashes.get(naam);
   };
-  for (const [pagina, namen] of Object.entries(paginas)) {
+  for (const pagina of paginas) {
     const html = join(out, pagina);
-    if (!existsSync(html)) continue;
     let inhoud = await readFile(html, 'utf-8');
+    const namen = new Set([...inhoud.matchAll(/(?:src|href)="([^":#?]+\.(?:js|css))"/g)].map((m) => m[1]));
     for (const naam of namen) {
-      const hash = createHash('sha256')
-        .update(await readFile(join(out, naam)))
-        .digest('hex')
-        .slice(0, 8);
-      inhoud = inhoud.replaceAll(`"${naam}"`, `"${naam}?v=${hash}"`);
+      if (!existsSync(join(out, naam))) continue;
+      inhoud = inhoud.replaceAll(`"${naam}"`, `"${naam}?v=${await hashVan(naam)}"`);
     }
     await writeFile(html, inhoud, 'utf-8');
   }

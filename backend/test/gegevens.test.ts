@@ -129,15 +129,15 @@ describe('opnieuw beginnen (besluit 151)', () => {
 
 describe('de export voor de analyse (besluit 151)', () => {
   const persoon = (entity_id: string, userId: string | null, naam: string) => ({ entity_id, state: 'home', attributes: { ...(userId ? { user_id: userId } : {}), friendly_name: naam }, last_changed: '', last_updated: '' });
-  const personen = personenUit([persoon('person.ricardo_cornelissen', 'u-ricardo', 'Ricardo Cornelissen'), persoon('person.shira', 'u-shira', 'Shira Cornelissen'), persoon('person.oma', null, 'Oma Truus')]);
+  const personen = personenUit([persoon('person.ricardo_cornelissen', 'u-ricardo', 'Ricardo Cornelissen'), persoon('person.noor', 'u-noor', 'Noor Cornelissen'), persoon('person.oma', null, 'Oma Truus')]);
 
   it('noemt bewoners op volgorde, dan personen zonder account, ook zoals ze in een id staan', () => {
-    const r = herken(GEEN_BEWONERS, { userId: 'u-shira', naam: 'Shira Cornelissen' }, personen, [], 0);
-    if (r.soort !== 'bewoner') throw new Error('Shira hoort bewoner te worden');
+    const r = herken(GEEN_BEWONERS, { userId: 'u-noor', naam: 'Noor Cornelissen' }, personen, [], 0);
+    if (r.soort !== 'bewoner') throw new Error('Noor hoort bewoner te worden');
     const paren = new Map(namenVoorExport(r.bewoners, personen));
-    expect(paren.get('Shira Cornelissen')).toBe('Bewoner 1');
-    expect(paren.get('Shira')).toBe('Bewoner 1');
-    expect(paren.get('shira')).toBe('bewoner_1');
+    expect(paren.get('Noor Cornelissen')).toBe('Bewoner 1');
+    expect(paren.get('Noor')).toBe('Bewoner 1');
+    expect(paren.get('noor')).toBe('bewoner_1');
     expect(paren.get('Ricardo Cornelissen')).toBe('Bewoner 2');
     expect(paren.get('ricardo_cornelissen')).toBe('bewoner_2');
     expect(paren.get('Truus')).toBeUndefined();
@@ -186,12 +186,12 @@ describe('de export voor de analyse (besluit 151)', () => {
 
   it('levert een archief zonder namen, met de instellingen en de entiteiten erbij', async () => {
     const log = await map();
-    await writeFile(join(log, 'decisions-2026-10-16.ndjson'), '{"profile":{"id":"shira","name":"Shira"}}\n', 'utf-8');
-    await writeFile(join(log, 'history-2026-10-01.ndjson.gz'), gzipSync('{"e":"person.shira","s":"home"}\n'));
+    await writeFile(join(log, 'decisions-2026-10-16.ndjson'), '{"profile":{"id":"noor","name":"Noor"}}\n', 'utf-8');
+    await writeFile(join(log, 'history-2026-10-01.ndjson.gz'), gzipSync('{"e":"person.noor","s":"home"}\n'));
     const tgz = join(log, 'uit.tar.gz');
     const stream = createWriteStream(tgz);
     const res = Object.assign(stream, { writeHead: () => res }) as never;
-    await writeExport(log, res, new Date('2026-10-17T12:00:00Z'), { bestanden: { 'entiteiten.json': '[{"id":"person.shira","naam":"Shira Cornelissen"}]' }, vervang: [['Shira Cornelissen', 'Bewoner 1'], ['Shira', 'Bewoner 1'], ['shira', 'bewoner_1']] });
+    await writeExport(log, res, new Date('2026-10-17T12:00:00Z'), { bestanden: { 'entiteiten.json': '[{"id":"person.noor","naam":"Noor Cornelissen"}]' }, vervang: [['Noor Cornelissen', 'Bewoner 1'], ['Noor', 'Bewoner 1'], ['noor', 'bewoner_1']] });
     await mkdir(join(log, 'uit'));
     await execute('tar', ['-xzf', 'uit.tar.gz', '-C', 'uit'], { cwd: log });
     const m = join(log, 'uit', 'hems-logboek-2026-10-17');

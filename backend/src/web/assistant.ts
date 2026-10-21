@@ -21,6 +21,7 @@ import { actuatorsOf, isHandsOff } from '../core/model.js';
 import type { Actuator, Mode, SiteConfig, Zone } from '../core/model.js';
 import type { TodayReport } from './today.js';
 import { startOfLocalDay } from './today.js';
+import { KAMERWOORDEN, lidwoordVan, metLidwoord } from './kamerwoorden.js';
 
 /** Wat de assistent van een besluit nodig heeft; `LiveSnapshot` voldoet. */
 export interface DecisionView {
@@ -445,11 +446,14 @@ const WORDS = {
 
 /**
  * Een naam midden in een zin. Alleen de eerste letter gaat klein, en alleen als
- * het eerste woord een gewoon woord is: "Slaapkamer Mylan" wordt "slaapkamer
- * Mylan" en "Nest (beneden)" blijft "Nest (beneden)". Een merk of een naam
+ * het eerste woord een gewoon woord is: "Slaapkamer Daan" wordt "slaapkamer
+ * Daan" en "Nest (beneden)" blijft "Nest (beneden)". Een merk of een naam
  * houdt zijn hoofdletter.
  */
-const COMMON = /^(airco|thermostaat|zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone|lamp|screen|zonnescherm|droger|wasmachine|vaatwasser|verwarming|vloerverwarming|radiator|ventilatie|warmtepomp|boiler|voorgevel|achtergevel|zijgevel|gevel)\b/i;
+const COMMON = new RegExp(
+  `^(${[...Object.keys(KAMERWOORDEN), 'airco', 'thermostaat', 'lamp', 'screen', 'zonnescherm', 'droger', 'wasmachine', 'vaatwasser', 'verwarming', 'vloerverwarming', 'radiator', 'ventilatie', 'warmtepomp', 'boiler', 'voorgevel', 'achtergevel', 'zijgevel', 'gevel'].join('|')})\\b`,
+  'i',
+);
 
 export function inSentence(name: string): string {
   return COMMON.test(name) ? name.charAt(0).toLowerCase() + name.slice(1) : name;
@@ -462,7 +466,9 @@ export function inSentence(name: string): string {
  */
 export function withArticle(name: string, lang: Lang): string {
   if (!COMMON.test(name)) return name;
-  return lang === 'nl' ? `de ${inSentence(name)}` : `the ${name}`;
+  if (lang !== 'nl') return `the ${name}`;
+  // Een kamer met zijn eigen lidwoord ("het kantoor"); een apparaat of gevel met "de".
+  return lidwoordVan(name) ? metLidwoord(name) : `de ${inSentence(name)}`;
 }
 
 function zoneName(zone: Zone, lang: Lang): string {

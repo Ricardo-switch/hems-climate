@@ -41,6 +41,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet) — *aangevuld door 97*
 - [96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving](#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving)
 - [104. Ontwerp 2 is de maatstaf, en de schets is de code](#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code)
+- [172. De app is af: opruimen, wat er nog komt, en talen later](#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later)
 
 **Kern en regeling**
 
@@ -6282,12 +6283,12 @@ bewoners pas na een eerste inlog, niet alles uit Home Assistant.
   neemt de oude zijn comfort mee en brengt de nieuwe het zijne in. Aan jezelf
   mag je alles; de hoofdgebruiker en een beheerder ook aan een ander.
 - **Vanzelf, met een melding:** wisselt het comfort, dan staat het één keer bij
-  de bel, en op Thuis staat "Comfort van Shira" met de reden. "Toch die van
+  de bel, en op Thuis staat "Comfort van Noor" met de reden. "Toch die van
   Ricardo" houdt dat comfort vast tot er iemand thuiskomt of weggaat
   (`profileHold`); daarna ruimt de dienst het op, zodat het later niet vanzelf
   terugkomt.
 - **Begroeten:** op je telefoon met je eigen naam, op een scherm met wie er
-  thuis is ("Goedenavond, Shira en Matts"); de assistent net zo. Bij "Wat doe
+  thuis is ("Goedenavond, Noor en Matts"); de assistent net zo. Bij "Wat doe
   je nu?" zegt hij wiens comfort geldt, als het niet dat van de hoofdgebruiker
   is.
 - **Inloggen voor de hele app:** elke pagina en elke vraag aan de dienst vraagt
@@ -6404,7 +6405,7 @@ kaartjes met wat er veranderde blijven.
 
 Gemeld door de bewoner op 16 oktober 2026, na een dag met twee bewoners: er
 was geen instelling voor wanneer filters en batterijen een melding geven; een
-scherm dat eenmaal was ingesteld, kon je niet meer beheren; en Shira, de
+scherm dat eenmaal was ingesteld, kon je niet meer beheren; en Noor, de
 tweede bewoner, kreeg een foutmelding als ze een eigen comfort koos. Er is geen
 schets voor; het volgt de opbouw van Functies en Bewoners zoals ze er al
 waren.
@@ -6431,7 +6432,7 @@ waren.
   ooit in stond. Ging een kamer sindsdien uit de regeling (besluit 138), dan
   weigerde de controle het hele profiel: "die zone bestaat niet". Nu krijgt
   de regeling alleen de kamers die ze nu heeft; de rest blijft bewaard, voor
-  als de kamer terugkomt. Dat de fout bij Shira precies deze was, is
+  als de kamer terugkomt. Dat de fout bij Noor precies deze was, is
   nagespeeld en niet op de NAS gezien; het is de enige weg die we vonden
   waarop "Eigen" kon mislukken.
 - **Versie 0.28.0.**
@@ -7074,7 +7075,7 @@ Assistant):
 
 - **`panel_admin` verstopt niet alleen.** Met `panel_admin` aan weigert de
   Supervisor Ingress voor wie geen beheerder is (`api/ingress.py`); zonder
-  kwamen Shira en de wand er dus helemaal niet in.
+  kwamen Noor en de wand er dus helemaal niet in.
 - **Ingress zegt wie, niet wat.** De Supervisor geeft `X-Remote-User-Id`,
   `-Name` en `-Display-Name` mee, en haalt die koppen eerst weg als de browser
   ze zelf meestuurt. Of iemand beheerder is, geeft hij niet mee.
@@ -7492,8 +7493,8 @@ de tijden alleen als uitleg zonder schakelaars.
 
 *Onderwerp: weergave · Status: geldig*
 
-Op 18 oktober 2026 stond op Thuis een grote kaart "Comfort van Shira" met een
-gele rand: "Ricardo is weg sinds 21:16. Shira staat daarna." en één knop
+Op 18 oktober 2026 stond op Thuis een grote kaart "Comfort van Noor" met een
+gele rand: "Ricardo is weg sinds 21:16. Noor staat daarna." en één knop
 "Toch die van Ricardo". De bewoner vond dat het een goede herziening nodig had:
 de kaart was te groot en klonk als een waarschuwing, de tekst was vaag, de wand
 begroette Ricardo terwijl hij weg was, en terugwisselen kon alleen naar de
@@ -7518,7 +7519,7 @@ en een blad om te kiezen.
 - **De kaart is weg.**
 
 *Wat afviel:* de rondjes achter de begroeting (de namen dubbel); in de zijbalk
-of boven de kaarten; een korte regel "Comfort van Shira" erbij; direct op een
+of boven de kaarten; een korte regel "Comfort van Noor" erbij; direct op een
 rondje tikken om te wisselen; alleen de hoofdgebruiker laten kiezen.
 
 ## 170. Favorieten met pagina's, rookmelders, de gevel op de kaart en wat de wand liet liggen
@@ -7637,6 +7638,55 @@ bij Instellingen › Updates, en kwam "Wat is er nieuw" pas na het bijwerken
 werkt het niet in de losse app op de telefoon); wat er nieuw is van GitHub
 halen (een vreemde site voor elke kijker); de melding ook op de NAS.
 
+---
+
+## 172. De app is af: opruimen, wat er nog komt, en talen later
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Op 21 oktober 2026 zei de bewoner dat de app functioneel af is, en vroeg om een
+rapport: wat in de besluiten nog open staat, wat nog op dit huis leunt, hoe de
+app sneller en stabieler kan, wat een nieuwe gebruiker in Home Assistant moet
+klaarzetten, en of apparaten op zon in de voorrang kunnen. Daaruit volgde een
+stappenplan; dit zijn de keuzes die hij erbij maakte.
+
+*Besluit:*
+
+- **Talen komen later, in deze volgorde: Engels, dan Duits.** Besluit 86 blijft
+  staan, maar wordt nu nog niet gebouwd. Wat nu verandert, maakt het straks
+  goedkoper: teksten en woordenlijsten op één plek.
+- **Wat uit de besluiten nog komt:** een lichte versie en een eigen accentkleur
+  (87), en die kleur **per bewoner**: de app toont de kleur van wie er thuis is
+  en wiens comfort geldt; de vier kaarten voor Thuis, de auto, de batterij,
+  deze maand en de deurbel (162); een melding op de telefoon via de app van
+  Home Assistant (79); en een eigen koppeling, zodat Assist van Home Assistant
+  Smart Climate kan vragen zonder dat je YAML plakt (91).
+- **Apparaten op zon in de voorrang:** een derde lijst *Op zon* bij Comfort ›
+  Voorrang, met de kamers die op zon opwarmen of koelen en de apparaten op zon
+  in één volgorde. Comfort gaat altijd voor (85). Dat krijgt bij het bouwen een
+  eigen besluit.
+- **Opruimen, zonder dat de bewoner iets merkt:**
+  - de gewone kamerwoorden en hun lidwoord staan op één plek
+    (`kamerwoorden.ts`, en dezelfde lijst in `basis.js`, met een test die ze
+    gelijk houdt). Eerst stonden ze vijf keer in de code, net anders, en zei de
+    app "de kantoor" en "in de tuinhuis";
+  - de versiestempels achter de scripts komen uit de pagina's zelf, niet uit
+    een lijst met de hand; die vergat de microfoon op Assistent en het
+    huismodel bij Energie. Nu merk je dat nog niet, want de app vraagt elk
+    bestand opnieuw na; zodra de browser ze mag bewaren wel;
+  - de schetsen van ontwerp 1 (29 MB) zijn uit de repository; `ONTWERP.md`
+    blijft. Home Assistant haalt de repository op bij het toevoegen van de
+    add-on;
+  - de naam van een huisgenoot en een kind in de tests en het commentaar is
+    vervangen door een verzonnen naam. De echte namen van entiteiten in het
+    gereedschap voor dit huis en in het oude systeem blijven: die moeten
+    kloppen met Home Assistant.
+- **Versie 0.47.1.**
+
+*Wat afviel:* de schermafbeeldingen van ontwerp 2 (110 MB) uit de repository
+halen; die blijven, als maatstaf naast de schetsen (104). Talen meteen
+bouwen.
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -7698,10 +7748,11 @@ halen (een vreemde site voor elke kijker); de melding ook op de NAS.
   hele woning, in het oude systeem alleen voor de koelregeling.
   Besluit 74 maakt ingrijpen per apparaat mogelijk; de stand voor het hele huis
   blijft daarnaast bestaan.
-- **De weergave kent geen authenticatie.** Zie besluit 23. Verdedigbaar op een
-  thuisnetwerk, onhoudbaar zodra dit bij iemand anders draait. Fase 6c. Voor dit
-  huis bewust zo gelaten (1 oktober 2026): de NAS is alleen bereikbaar op het
-  thuisnetwerk en via Tailscale, en daarmee ook onderweg te openen.
+- **Het wekwoord "Hé huis" bestaat alleen op de pc van de bewoner**
+  (`D:\wekwoord-training`, besluit 150). Een ander huis heeft het niet. Het
+  bestand (207 kB, getraind op Piper-stemmen) kan mee in de add-on, die het bij
+  de start in `/share/openwakeword` zet als het er nog niet staat; daar zoekt
+  de openWakeWord-add-on naar eigen wekwoorden.
 - **De terugblik spreekt over "het oude systeem".** Voor een woning zonder
   YAML-voorganger vergelijkt de schaduwmodus de arbiter met wat de thermostaten
   uit zichzelf deden (besluit 28). Dezelfde machinerie, andere vraag, verkeerde

@@ -21,7 +21,7 @@ const config: SiteConfig = {
   ...exampleSite,
   profiles: [
     { id: 'ricardo', name: 'Ricardo', occupancyIds: ['ricardo'], zones: {} },
-    { id: 'shira', name: 'Shira', occupancyIds: ['shira'], zones: { woonkamer: { setpoints: { dag: { heat: 22.5, cool: 26 } } } } },
+    { id: 'noor', name: 'Noor', occupancyIds: ['noor'], zones: { woonkamer: { setpoints: { dag: { heat: 22.5, cool: 26 } } } } },
     { id: 'matts', name: 'Matts', occupancyIds: [], zones: {} },
   ],
 };
@@ -48,26 +48,26 @@ function state(thuis: Record<string, { thuis: boolean; sinds: number }>): System
 
 describe('welk comfort geldt (besluit 147)', () => {
   it('de eerste op de lijst die thuis is', () => {
-    expect(chooseProfile(config, state({ ricardo: { thuis: true, sinds: LANG }, shira: { thuis: true, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'thuis', home: ['ricardo', 'shira'] });
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, shira: { thuis: true, sinds: LANG } }))).toMatchObject({ id: 'shira', name: 'Shira', reason: 'thuis' });
+    expect(chooseProfile(config, state({ ricardo: { thuis: true, sinds: LANG }, noor: { thuis: true, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'thuis', home: ['ricardo', 'noor'] });
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: LANG } }))).toMatchObject({ id: 'noor', name: 'Noor', reason: 'thuis' });
   });
 
   it('niemand thuis: de hoofdgebruiker', () => {
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, shira: { thuis: false, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'niemand', home: [] });
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: false, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'niemand', home: [] });
   });
 
   it('wacht tien minuten: wie net weg is, telt nog als thuis, en wie net thuis is nog als weg', () => {
     const net = NOW - PROFILE_SETTLE_MS / 2;
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: net }, shira: { thuis: true, sinds: LANG } }))?.id).toBe('ricardo');
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, shira: { thuis: true, sinds: net } }))).toMatchObject({ id: 'ricardo', reason: 'niemand' });
-    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: NOW - PROFILE_SETTLE_MS - 1 }, shira: { thuis: true, sinds: LANG } }))?.id).toBe('shira');
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: net }, noor: { thuis: true, sinds: LANG } }))?.id).toBe('ricardo');
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: net } }))).toMatchObject({ id: 'ricardo', reason: 'niemand' });
+    expect(chooseProfile(config, state({ ricardo: { thuis: false, sinds: NOW - PROFILE_SETTLE_MS - 1 }, noor: { thuis: true, sinds: LANG } }))?.id).toBe('noor');
   });
 
   it('"toch die van Ricardo" geldt tot er iemand thuiskomt of weggaat', () => {
-    const held = { ...config, profileHold: { id: 'ricardo', home: ['shira'] } };
-    const zo = { ricardo: { thuis: false, sinds: LANG }, shira: { thuis: true, sinds: LANG } };
+    const held = { ...config, profileHold: { id: 'ricardo', home: ['noor'] } };
+    const zo = { ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: LANG } };
     expect(chooseProfile(held, state(zo))).toMatchObject({ id: 'ricardo', reason: 'gekozen' });
-    expect(chooseProfile(held, state({ ...zo, shira: { thuis: false, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'niemand' });
+    expect(chooseProfile(held, state({ ...zo, noor: { thuis: false, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'niemand' });
     expect(chooseProfile(held, state({ ...zo, ricardo: { thuis: true, sinds: LANG } }))).toMatchObject({ id: 'ricardo', reason: 'thuis' });
   });
 
@@ -78,14 +78,14 @@ describe('welk comfort geldt (besluit 147)', () => {
   });
 
   it('de eigen doelen werken door, en de uitleg zegt welk comfort gold', () => {
-    const shiraThuis = state({ ricardo: { thuis: false, sinds: LANG }, shira: { thuis: true, sinds: LANG } });
-    const ricardoThuis = state({ ricardo: { thuis: true, sinds: LANG }, shira: { thuis: true, sinds: LANG } });
+    const noorThuis = state({ ricardo: { thuis: false, sinds: LANG }, noor: { thuis: true, sinds: LANG } });
+    const ricardoThuis = state({ ricardo: { thuis: true, sinds: LANG }, noor: { thuis: true, sinds: LANG } });
     const woon = (s: SystemState) => buildContext(config, s).zones.find((z) => z.zone.id === 'woonkamer')!;
-    expect(woon(shiraThuis).heatTargetC).toBe(22.5);
+    expect(woon(noorThuis).heatTargetC).toBe(22.5);
     expect(woon(ricardoThuis).heatTargetC).toBe(exampleSite.zones.find((z) => z.id === 'woonkamer')!.setpoints.dag.heat ?? null);
     // Een zone die het profiel niet noemt, volgt de zone zelf.
-    const bad = buildContext(config, shiraThuis).zones.find((z) => z.zone.id === 'badkamer')!;
+    const bad = buildContext(config, noorThuis).zones.find((z) => z.zone.id === 'badkamer')!;
     expect(bad.heatTargetC).toBe(exampleSite.zones.find((z) => z.id === 'badkamer')!.setpoints.dag.heat ?? null);
-    expect(decide({ config, state: shiraThuis, strategies: defaultStrategies() }).explanation.profile).toMatchObject({ id: 'shira', reason: 'thuis' });
+    expect(decide({ config, state: noorThuis, strategies: defaultStrategies() }).explanation.profile).toMatchObject({ id: 'noor', reason: 'thuis' });
   });
 });

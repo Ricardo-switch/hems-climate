@@ -23,6 +23,11 @@ verwijzing bestaat.
   100% functiedekking ([64]), met een bewijsrapport; E tarieven en prognoses;
   D het thermisch model ([46]); de app af ([71]); G de assistent ([44]); H een
   product voor meer huizen ([34]).
+- **De app is af** (21 oktober 2026): nu opruimen, sneller maken, apparaten
+  op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
+  te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
+  Thuis, meldingen op de telefoon en een eigen koppeling voor Assist. Talen
+  later: Engels, dan Duits ([172]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -560,4 +565,5 @@ verwijzing bestaat.
 [169]: DECISIONS.md#169-wie-er-thuis-is-en-wiens-comfort-geldt-rondjes-en-een-blad
 [170]: DECISIONS.md#170-favorieten-met-paginas-rookmelders-de-gevel-op-de-kaart-en-wat-de-wand-liet-liggen
 [171]: DECISIONS.md#171-bijwerken-vanuit-de-app-een-melding-wat-er-nieuw-is-en-een-knop
+[172]: DECISIONS.md#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later
 <!-- links:einde -->

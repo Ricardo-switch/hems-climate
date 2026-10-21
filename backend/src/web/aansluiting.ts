@@ -47,12 +47,6 @@ export interface Verwarming {
 }
 /** De aanvoertemperatuur die op een ketel of warmtepomp kan staan, in °C. */
 export const SUPPLY_C = { min: 25, max: 90 } as const;
-/** De zekeringen uit de schets; een andere waarde mag ook, binnen het schema. */
-export const FUSES = [
-  { fasen: 1, ampere: 25 },
-  { fasen: 1, ampere: 35 },
-  { fasen: 3, ampere: 25 },
-] as const;
 
 export interface Fuse {
   readonly fasen: 1 | 3;

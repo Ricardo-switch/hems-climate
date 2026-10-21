@@ -18,7 +18,7 @@ import { join } from 'node:path';
 
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
-import { CAMERA_ID, findCameras } from './camera.js';
+import { CAMERA_ID, GEEN_BEELD, findCameras } from './camera.js';
 import { DREMPEL_KEUZES, STANDAARD_DREMPELS, type Drempels } from './house.js';
 import { OPEN_METEO, OPEN_METEO_NAAM } from './open-meteo.js';
 import { weatherSources } from './weather.js';
@@ -139,7 +139,6 @@ export function spraakKeuzes(lijst: unknown): SpraakKeuze[] {
 }
 
 const BEELD: Readonly<Record<string, string>> = { sub: 'vloeiend', main: 'scherp', ext: 'breed', snapshots_sub: 'plaatjes vloeiend', snapshots_main: 'plaatjes scherp' };
-const GEEN_BEELD = new Set(['buienradar']);
 /** Een melder die naar een deurbel klinkt. */
 const BEL_NAAM = /deurbel|doorbell|aanbel|bezoeker|visitor|(?<![a-z])(?:ding|bel|ring)(?![a-z])/i;
 /**

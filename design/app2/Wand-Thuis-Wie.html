@@ -9,7 +9,7 @@
 <style>
   /*
    * Wie er thuis is en wiens comfort geldt (schets, 18 oktober 2026). Eerst
-   * stond er een grote kaart "Comfort van Shira" met een gele rand en één
+   * stond er een grote kaart "Comfort van Noor" met een gele rand en één
    * knop terug naar de hoofdgebruiker. De bewoner koos: rondjes bovenin,
    * voor de pillen (achter de begroeting stonden de namen dubbel), altijd en
    * rustig, zonder tekst; wie thuis is licht op in zijn
@@ -18,7 +18,7 @@
    * of weg en zijn temperaturen; daar kies je. De begroeting noemt alleen wie
    * thuis is.
    *
-   *   (geen)   Shira thuis, Ricardo weg: haar comfort geldt
+   *   (geen)   Noor thuis, Ricardo weg: haar comfort geldt
    *   #gewoon  iedereen thuis: het comfort van Ricardo, alleen de rondjes
    *   #blad    het blad open
    */
@@ -82,7 +82,7 @@
     <div class="kopregel">
       <div><span class="tijd">21:20</span><span class="datum">zondag 18 oktober</span></div>
       <div class="chips">
-        <button class="wie kaal" data-wie aria-label="Wie er thuis is: Shira thuis, Ricardo weg. Het comfort van Shira geldt."><span class="gezichten"><i style="--k: #f7b548" class="geldt">S</i><i style="--k: #a9e6ff" class="weg">R</i></span><span class="pijl">▾</span></button>
+        <button class="wie kaal" data-wie aria-label="Wie er thuis is: Noor thuis, Ricardo weg. Het comfort van Noor geldt."><span class="gezichten"><i style="--k: #f7b548" class="geldt">S</i><i style="--k: #a9e6ff" class="weg">R</i></span><span class="pijl">▾</span></button>
         <span class="pil"><span class="stip" style="background: var(--ijs)"></span>9,9° buiten</span>
         <span class="pil">Automatisch <span aria-hidden="true" style="color: var(--gedempt)">▾</span></span>
         <span class="pil" style="color: var(--mint)"><span class="stip" style="background: var(--mint)"></span>Kijkt mee</span>
@@ -90,7 +90,7 @@
     </div>
     <div class="titel">
       <div class="groetregel">
-        <span class="groet" data-groet>Goedenavond, <b>Shira</b></span>
+        <span class="groet" data-groet>Goedenavond, <b>Noor</b></span>
       </div>
       <h1 class="kop-1">Er draait niets</h1>
       <p class="lead">Geen zon, en geen kamer heeft iets nodig.</p>
@@ -110,16 +110,16 @@
           <button style="background: rgba(110,231,183,0.14); color: var(--mint)">Goed</button>
           <button style="background: rgba(255,122,77,0.14); color: #ffb090">Te warm</button>
         </div>
-        <p class="mini" style="margin: 8px 0 0" data-gevoel-voor>Telt voor het comfort van Shira, want dat geldt nu.</p>
+        <p class="mini" style="margin: 8px 0 0" data-gevoel-voor>Telt voor het comfort van Noor, want dat geldt nu.</p>
       </section>
     </aside>
 
     <div class="achter"></div>
     <section class="blad" role="dialog" aria-label="Wiens comfort geldt?">
       <div class="bladkop"><h2 class="kop-2">Wiens comfort geldt?</h2><span class="knop knop-licht">Klaar</span></div>
-      <button class="keuze aan"><span class="rond"></span><span class="gezicht vanzelf">⟳</span><span><b>Vanzelf: wie thuis is</b><small>Nu Shira. Ricardo is weg sinds 21:16, en Shira is de eerste op de lijst die thuis is.</small></span><span></span></button>
+      <button class="keuze aan"><span class="rond"></span><span class="gezicht vanzelf">⟳</span><span><b>Vanzelf: wie thuis is</b><small>Nu Noor. Ricardo is weg sinds 21:16, en Noor is de eerste op de lijst die thuis is.</small></span><span></span></button>
       <button class="keuze"><span class="rond"></span><span class="gezicht weg" style="background: #a9e6ff">R</span><span><b>Ricardo</b><small>weg sinds 21:16</small></span><span class="temp"><b>20°</b> overdag<br><b>17°</b> 's nachts</span></button>
-      <button class="keuze"><span class="rond"></span><span class="gezicht" style="background: #f7b548">S</span><span><b>Shira</b><small class="thuis-t">thuis</small></span><span class="temp"><b>21°</b> overdag<br><b>18°</b> 's nachts</span></button>
+      <button class="keuze"><span class="rond"></span><span class="gezicht" style="background: #f7b548">S</span><span><b>Noor</b><small class="thuis-t">thuis</small></span><span class="temp"><b>21°</b> overdag<br><b>18°</b> 's nachts</span></button>
       <p class="mini" style="margin: 12px 0 0">Kies je iemand, dan geldt dat tot er iemand thuiskomt of weggaat. De volgorde en de temperaturen staan bij Instellingen › Bewoners.</p>
     </section>
   </main>
@@ -131,10 +131,10 @@
   // De standen van de schets.
   if (location.hash === '#blad') document.body.classList.add('blad-open');
   if (location.hash === '#gewoon') {
-    document.querySelector('[data-groet]').innerHTML = 'Goedenavond, <b>Ricardo</b> en <b>Shira</b>';
+    document.querySelector('[data-groet]').innerHTML = 'Goedenavond, <b>Ricardo</b> en <b>Noor</b>';
     const wie = document.querySelector('[data-wie]');
     wie.classList.add('kaal');
-    wie.setAttribute('aria-label', 'Wie er thuis is: Ricardo en Shira. Het comfort van Ricardo geldt.');
+    wie.setAttribute('aria-label', 'Wie er thuis is: Ricardo en Noor. Het comfort van Ricardo geldt.');
     wie.innerHTML = '<span class="gezichten"><i style="--k: #a9e6ff" class="geldt">R</i><i style="--k: #f7b548">S</i></span><span class="pijl">▾</span>';
     document.querySelector('[data-gevoel-voor]').textContent = 'Telt voor het comfort van Ricardo, want dat geldt nu.';
   }

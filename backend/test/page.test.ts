@@ -3084,18 +3084,18 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await expect.poll(() => bewonersStore.current.bewoners['test']?.naam, kort).toBe('Ricardo');
     expect(bewonersStore.current.bewoners['test']).toMatchObject({ aanwezigheid: 'ricardo', comfort: 'volgt' });
 
-    // Shira logt later in; zij volgt eerst Ricardo.
-    await bewonersStore.save(voegToe(bewonersStore.current, { userId: 'u-shira', naam: 'Shira Cornelissen' }, 'shira', Date.now()));
+    // Noor logt later in; zij volgt eerst Ricardo.
+    await bewonersStore.save(voegToe(bewonersStore.current, { userId: 'u-noor', naam: 'Noor Cornelissen' }, 'noor', Date.now()));
     await p.reload();
     const wandL = p.locator('#wand');
     await wandL.locator('[data-lijst] [data-rij]').nth(1).waitFor();
-    expect(await wandL.locator('[data-lijst] [data-rij] b').allTextContents()).toEqual(['Ricardo (jij)', 'Shira']);
-    await wandL.locator('[data-kies="shira"]').click();
-    await wandL.locator('[data-blad] h2', { hasText: 'Shira' }).waitFor();
+    expect(await wandL.locator('[data-lijst] [data-rij] b').allTextContents()).toEqual(['Ricardo (jij)', 'Noor']);
+    await wandL.locator('[data-kies="noor"]').click();
+    await wandL.locator('[data-blad] h2', { hasText: 'Noor' }).waitFor();
     await wandL.locator('[data-blad] [data-comfort="eigen"]').click();
-    await expect.poll(() => bewonersStore.current.bewoners['shira']?.comfort, kort).toBe('eigen');
+    await expect.poll(() => bewonersStore.current.bewoners['noor']?.comfort, kort).toBe('eigen');
     /*
-     * De volgorde met het greepje en de pijltjes: Shira omhoog maakt haar
+     * De volgorde met het greepje en de pijltjes: Noor omhoog maakt haar
      * hoofdgebruiker; en weer terug. De lijst tekent zichzelf opnieuw na elk
      * antwoord van de dienst, en een toets die net dan valt, gaat naar een rij
      * die er niet meer is. Dus opnieuw drukken tot de dienst het heeft: de
@@ -3113,8 +3113,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
         }, kort)
         .toEqual(verwacht);
     };
-    await omhoog('shira', ['shira', 'test']);
-    await omhoog('test', ['test', 'shira']);
+    await omhoog('noor', ['noor', 'test']);
+    await omhoog('test', ['test', 'noor']);
     await shot(p, 'bewoners');
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
     // Op de telefoon: alles onder elkaar, niets zijwaarts buiten beeld.
@@ -3124,19 +3124,19 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await shot(p, 'bewoners-tel');
     await p.setViewportSize({ width: 1280, height: 800 });
 
-    // Thuis: Ricardo is weg, Shira is thuis. De begroeting noemt wie er ingelogd is; bovenin de rondjes (besluit 169):
-    // Shira licht op en wordt gevolgd, Ricardo is grijs. Geen kaart meer.
+    // Thuis: Ricardo is weg, Noor is thuis. De begroeting noemt wie er ingelogd is; bovenin de rondjes (besluit 169):
+    // Noor licht op en wordt gevolgd, Ricardo is grijs. Geen kaart meer.
     const voor = live;
-    live = { ...live, explanation: { ...live.explanation, profile: { id: 'shira', name: 'Shira', reason: 'thuis', home: ['shira'] } } };
-    // De rondjes volgen Home Assistant meteen (besluit 170): daar is Shira thuis en Ricardo weg.
+    live = { ...live, explanation: { ...live.explanation, profile: { id: 'noor', name: 'Noor', reason: 'thuis', home: ['noor'] } } };
+    // De rondjes volgen Home Assistant meteen (besluit 170): daar is Noor thuis en Ricardo weg.
     const persoon = (entity_id: string, state: string) => ({ entity_id, state, attributes: { friendly_name: entity_id }, last_changed: new Date().toISOString(), last_updated: new Date().toISOString() });
     const ricardoWas = houseStates.get('person.ricardo_cornelissen');
-    houseStates.set('person.shira', persoon('person.shira', 'home'));
+    houseStates.set('person.noor', persoon('person.noor', 'home'));
     houseStates.set('person.ricardo_cornelissen', persoon('person.ricardo_cornelissen', 'not_home'));
     await p.goto(`${baseUrl}/thuis.html`);
     await wandL.locator('[data-groet]', { hasText: 'Ricardo' }).waitFor();
     const wie = wandL.locator('[data-wie]');
-    await wie.locator('i.geldt', { hasText: 'S' }).waitFor(kort);
+    await wie.locator('i.geldt', { hasText: 'N' }).waitFor(kort);
     expect(await wie.locator('i.afwezig').count()).toBe(1);
     expect(await wandL.locator('[data-geldt]').count()).toBe(0);
     // Een tik: het blad met iedereen; vanzelf staat aan, en Ricardo kiezen houdt zijn comfort vast.
@@ -3147,7 +3147,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await wieBlad.locator('[data-wie-kies="test"]').textContent()).toContain('weg');
     await shot(p, 'thuis-geldt');
     await wieBlad.locator('[data-wie-kies="test"]').click();
-    await expect.poll(() => bewonersStore.current.vasthouden, kort).toMatchObject({ id: 'test', home: ['shira'] });
+    await expect.poll(() => bewonersStore.current.vasthouden, kort).toMatchObject({ id: 'test', home: ['noor'] });
     await wieBlad.locator('[data-blad-dicht]').click();
     // Op de telefoon rechts van de begroeting, op één regel, zonder kaart eronder.
     await p.setViewportSize({ width: 390, height: 844 });
@@ -3159,37 +3159,37 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await shot(p, 'thuis-tel-wie');
     await p.setViewportSize({ width: 1280, height: 800 });
 
-    // Comfort van Shira, bekeken door de hoofdgebruiker: met de keuze wiens comfort.
-    await p.goto(`${baseUrl}/comfort.html?bewoner=shira`);
-    await wandL.locator('[data-titel]', { hasText: 'Comfort van Shira' }).waitFor();
+    // Comfort van Noor, bekeken door de hoofdgebruiker: met de keuze wiens comfort.
+    await p.goto(`${baseUrl}/comfort.html?bewoner=noor`);
+    await wandL.locator('[data-titel]', { hasText: 'Comfort van Noor' }).waitFor();
     expect(await wandL.locator('[data-wie] option').count()).toBe(2);
-    await shot(p, 'comfort-shira');
+    await shot(p, 'comfort-noor');
 
-    // Een gast (besluit 147): Shira wordt gast. Ze staat dan bij Schermen en gasten, niet in de volgorde.
-    await p.goto(`${baseUrl}/bewoners.html#shira`);
+    // Een gast (besluit 147): Noor wordt gast. Ze staat dan bij Schermen en gasten, niet in de volgorde.
+    await p.goto(`${baseUrl}/bewoners.html#noor`);
     await wandL.locator('[data-blad] [data-gast="ja"]').click();
-    await expect.poll(() => bewonersStore.current.bewoners['shira']?.gast, kort).toBe(true);
+    await expect.poll(() => bewonersStore.current.bewoners['noor']?.gast, kort).toBe(true);
     expect(bewonersStore.current.volgorde).toEqual(['test']);
-    await wandL.locator('[data-schermen] .gastrij', { hasText: 'Shira' }).waitFor();
+    await wandL.locator('[data-schermen] .gastrij', { hasText: 'Noor' }).waitFor();
     await shot(p, 'bewoners-gast');
-    // Home Assistant weer zoals het was: Shira is er niet.
-    houseStates.delete('person.shira');
+    // Home Assistant weer zoals het was: Noor is er niet.
+    houseStates.delete('person.noor');
     if (ricardoWas) houseStates.set('person.ricardo_cornelissen', ricardoWas);
     else houseStates.delete('person.ricardo_cornelissen');
     // Als gast: bedienen alleen thuis, en verder niets.
-    const gastSessie = await sessions.create({ userId: 'u-shira', naam: 'Shira Cornelissen', rol: 'beheerder' });
+    const gastSessie = await sessions.create({ userId: 'u-noor', naam: 'Noor Cornelissen', rol: 'beheerder' });
     const alsGast = (pad: string, body: unknown) => fetch(`${baseUrl}${pad}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl, cookie: `hems_sessie=${gastSessie}` }, body: JSON.stringify(body) });
     const lamp = { doel: 'huis', id: null, aan: false };
     const weg = await alsGast('/api/licht', lamp);
     expect(weg.status).toBe(403);
     expect(((await weg.json()) as { fout: string }).fout).toMatch(/thuis/);
     expect((await alsGast('/api/comfort', { kamers: {} })).status).toBe(403);
-    expect((await alsGast('/api/bewoners', { actie: 'naam', id: 'shira', naam: 'S' })).status).toBe(403);
-    houseStates.set('person.shira', { entity_id: 'person.shira', state: 'home', attributes: { friendly_name: 'Shira' }, last_changed: new Date().toISOString(), last_updated: new Date().toISOString() });
+    expect((await alsGast('/api/bewoners', { actie: 'naam', id: 'noor', naam: 'N' })).status).toBe(403);
+    houseStates.set('person.noor', { entity_id: 'person.noor', state: 'home', attributes: { friendly_name: 'Noor' }, last_changed: new Date().toISOString(), last_updated: new Date().toISOString() });
     try {
       expect((await alsGast('/api/licht', lamp)).status).not.toBe(403);
     } finally {
-      houseStates.delete('person.shira');
+      houseStates.delete('person.noor');
     }
     expect((await fetch(`${baseUrl}/api/export`, { headers: { cookie: `hems_sessie=${gastSessie}` } })).status).toBe(403);
 
@@ -3213,7 +3213,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const b = await buiten.newPage();
     await b.goto(`${baseUrl}/thuis.html`);
     await b.locator('a', { hasText: 'Inloggen met Home Assistant' }).waitFor();
-    expect(await b.locator('body').textContent()).not.toMatch(/Ricardo|Shira|kWh/);
+    expect(await b.locator('body').textContent()).not.toMatch(/Ricardo|Noor|kWh/);
     await shot(b, 'inloggen');
     await buiten.close();
 

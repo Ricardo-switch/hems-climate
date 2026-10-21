@@ -279,7 +279,7 @@ async function* anoniemEntry(name: string, handle: FileHandle, ingepakt: boolean
  * De vervanger voor een export zonder namen (besluit 151).
  *
  * Een naam alleen als heel woord, zodat "Jan" niet uit "Januari" verdwijnt; de
- * langste eerst, zodat "Shira Cornelissen" niet half wordt vervangen. Namen
+ * langste eerst, zodat "Noor Cornelissen" niet half wordt vervangen. Namen
  * korter dan drie tekens blijven staan: dan raakt het te veel andere woorden.
  * Een ligging (`latitude`, `longitude`) wordt overal null.
  */
