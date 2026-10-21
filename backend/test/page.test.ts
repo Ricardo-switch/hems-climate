@@ -1764,6 +1764,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Opzij schuiven: de tweede pagina, en het tweede stipje.
       await kaart.locator('[data-favpaginas]').evaluate((el) => el.scrollTo({ left: el.clientWidth }));
       await expect.poll(() => kaart.locator('[data-stipjes] i').nth(1).getAttribute('class')).toBe('aan');
+      // Thuis tekent opnieuw (elke minuut, of als er iets verandert): de tweede pagina blijft staan (21 oktober 2026).
+      await p.evaluate('dispatchEvent(new Event("weergave"))');
+      await p.waitForTimeout(400);
+      expect(await kaart.locator('[data-favpaginas]').evaluate((el) => el.scrollLeft)).toBeGreaterThan(0);
+      expect(await kaart.locator('[data-stipjes] i').nth(1).getAttribute('class')).toBe('aan');
       // Vasthouden opent de lamp in zijn kamer, en schakelt hem niet.
       const lichtVoor = lightCalls.length;
       const laatste = kaart.locator(`[data-tegel="${lampen[3]!.id}"]`);
@@ -2199,13 +2204,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
     /** Tekst die tegen zijn achtergrond wegvalt: minder dan 3:1, met de achtergrond als effen kleur over de pagina. */
-    const slecht = () => p.evaluate<string[]>(`(() => {
+    const slecht = (stand = '#tel') => p.evaluate<string[]>(`(() => {
       const kleur = (c) => { const m = c.match(/rgba?\\(([^)]+)\\)/); if (!m) return null; const d = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return { r: d[0], g: d[1], b: d[2], a: d.length > 3 ? d[3] : 1 }; };
       const over = (v, a) => ({ r: v.r * v.a + a.r * (1 - v.a), g: v.g * v.a + a.g * (1 - v.a), b: v.b * v.a + a.b * (1 - v.a), a: 1 });
       const lum = (c) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
       const grond = (el) => { const lagen = []; for (let e = el; e; e = e.parentElement) { const st = getComputedStyle(e); const c = kleur(st.backgroundColor); if (c && c.a > 0) { lagen.push(c); if (c.a >= 1) break; } } let b = { r: 233, g: 239, b: 246, a: 1 }; for (const l of lagen.reverse()) b = over(l, b); return b; };
       const uit = [];
-      document.querySelectorAll('#tel *').forEach((el) => {
+      document.querySelectorAll('${stand} *').forEach((el) => {
         if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) return;
         const r = el.getBoundingClientRect(); const st = getComputedStyle(el);
         if (!r.width || !r.height || st.visibility === 'hidden' || Number(st.opacity) < 0.5 || el.closest('svg, [hidden], [aria-hidden="true"]')) return;
@@ -2216,6 +2221,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       });
       return uit;
     })()`);
+    // Een bewoner op zijn eigen apparaat, geen scherm: een eerdere test kan het account als scherm hebben gezet.
+    const bewonersWas = bewonersStore.current;
+    await bewonersStore.save(voegToe(GEEN_BEWONERS, { userId: 'u', naam: 'Test' }, null, Date.now()));
     try {
       expect((await zet({ thema: 'licht', kleur: 'violet' })).ok).toBe(true);
       // Instellingen › Jij: het profiel, met het thema en de kleur die je koos.
@@ -2249,14 +2257,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       }
       expect(weg).toEqual([]);
 
-      // De wand blijft donker, ook met licht gekozen.
+      // Breed, op je eigen apparaat (een telefoon liggend, een tablet): ook licht. Alleen een scherm, zoals de wand, blijft donker.
       await p.setViewportSize({ width: 1280, height: 800 });
-      await p.goto(`${baseUrl}/thuis.html`);
-      await expect.poll(() => p.evaluate('document.documentElement.classList.contains("tel-stand")')).toBe(false);
-      expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(false);
+      const wandWeg: string[] = [];
+      for (const pagina of paginas) {
+        await p.goto(`${baseUrl}/${pagina}`);
+        await p.waitForTimeout(1200);
+        expect(await p.evaluate('document.documentElement.classList.contains("tel-stand")'), pagina).toBe(false);
+        expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")'), pagina).toBe(true);
+        wandWeg.push(...(await slecht('#wand')).map((x) => `${pagina}: ${x}`));
+        if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-licht-breed-${pagina.replace(/\.html.*/, '')}.png`) });
+      }
+      expect(wandWeg).toEqual([]);
       expect(fouten).toEqual([]);
     } finally {
       await zet({ thema: 'donker', kleur: 'lucht' });
+      await bewonersStore.save(bewonersWas);
       await context.close();
     }
   }, 120_000);
@@ -3235,6 +3251,12 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await w.waitForURL(/\/thuis\.html$/);
     expect(bewonersStore.current.schermen['u-wand']?.naam).toBe('Wand');
     expect(bewonersStore.current.volgorde).toEqual([]);
+    // Een scherm blijft donker, ook als zijn account licht kiest (besluit 181).
+    expect(await w.evaluate(`fetch('api/voorkeuren', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', thema: 'licht' }) }).then((r) => r.ok)`)).toBe(true);
+    await w.reload();
+    await w.waitForTimeout(800);
+    await w.reload();
+    expect(await w.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(false);
 
     // De beheerder ("Test") woont hier: hij kiest wat hem volgt, en wordt de eerste, dus hoofdgebruiker.
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
