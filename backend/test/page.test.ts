@@ -3318,7 +3318,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
     // De labels onder de naam, niet ernaast over de tekst heen (21 oktober 2026).
     const rij = p.locator('#tel [data-lijst] [data-rij]').first();
-    const naamVak = (await rij.locator('b').first().boundingBox())!;
+    // De lijst kan net opnieuw getekend worden (live, 21 oktober 2026): wachten tot de naam er staat.
+    let naamVak: { y: number; height: number } | null = null;
+    await expect.poll(async () => (naamVak = await rij.locator('b').first().boundingBox()), kort).not.toBeNull();
+    naamVak = naamVak!;
     const labelVak = await rij.locator('.labels').boundingBox();
     if (labelVak) expect(labelVak.y).toBeGreaterThanOrEqual(naamVak.y + naamVak.height - 1);
     expect(naamVak.height).toBeLessThan(40);
