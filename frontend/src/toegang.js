@@ -19,6 +19,8 @@ let health = null;
 let zon = null;
 let bewoners = null;
 let sleutel = null;
+/** Waar de assistent van Home Assistant zijn vraag stelt (besluit 177). */
+let vraagAdres = null;
 /** Wat /api/gegevens zegt (besluit 151): of je de hoofdgebruiker bent, het logboek, de back-ups. */
 let opslag = null;
 /** Wat er gevraagd wordt: null, 'opnieuw', of { backup, naam } om terug te zetten. */
@@ -31,7 +33,10 @@ async function laadAlles() {
   if (o.status === 'fulfilled') opslag = o.value;
   if (s.status === 'fulfilled') sessie = s.value;
   if (b.status === 'fulfilled') bewoners = b.value;
-  if (k.status === 'fulfilled') sleutel = k.value?.sleutel ?? null;
+  if (k.status === 'fulfilled') {
+    sleutel = k.value?.sleutel ?? null;
+    vraagAdres = k.value?.adres ?? null;
+  }
   if (g.status === 'fulfilled') gegevens = g.value;
   if (h.status === 'fulfilled') health = h.value;
   if (z.status === 'fulfilled') zon = z.value;
@@ -95,7 +100,9 @@ function assistentVorm() {
     <p class="klein" style="margin: 0">De assistent in Home Assistant stelt zijn vragen zonder dat er iemand inlogt. Daarvoor heeft hij deze sleutel nodig.</p>
     <p class="klein" style="margin: 0">Zet deze regel in Home Assistant in secrets.yaml:</p>
     <div class="sleutel" data-sleutel>smart_climate_sleutel: "Bearer ${esc(sleutel ?? '')}"</div>
-    <p class="mini" style="margin: 0">De rest-opdracht van de assistent stuurt hem mee (zie ha-assist in de handleiding). Deel hem met niemand anders.</p>`;
+    ${vraagAdres ? `<p class="klein" style="margin: 0">En bij <code>rest_command</code> in configuration.yaml dit adres, met de rest zoals in ha-assist in de handleiding:</p>
+    <div class="sleutel" data-vraagadres>url: "${esc(vraagAdres)}?taal=nl&amp;v={{ v }}&amp;kamer={{ kamer | default('') | urlencode }}&amp;wens={{ wens | default('') }}&amp;temperatuur={{ temperatuur | default('') }}"</div>` : ''}
+    <p class="mini" style="margin: 0">Deel de sleutel met niemand anders.</p>`;
 }
 
 const linkKnop = (href, tekst, extra = '') => `<a class="knop knop-licht" href="${href}" ${extra} style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">${tekst}</a>`;

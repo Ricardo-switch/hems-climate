@@ -1,7 +1,7 @@
 # Assist vraagt Smart Climate
 
 Fase 1 van de assistent (ONTWERP §7): je stelt een vraag aan Assist van Home
-Assistant, getypt of hardop. Assist geeft hem door aan de dienst op de NAS en
+Assistant, getypt of hardop. Assist geeft hem door aan Smart Climate en
 spreekt het antwoord uit. **Alles leest alleen.** Home Assistant schakelt
 hier niets, en de dienst ook niet. Een opdracht als "koel de zolder naar 21"
 krijgt als antwoord wat Smart Climate zou doen, en dat hij nog niet mag
@@ -18,8 +18,9 @@ schakelen.
 | "Koel de zolder naar 21", "Verwarm de woonkamer naar 21", "Mag de zolder uit?" | `v=doe&kamer=…&wens=…` |
 
 Je kunt het ook zonder Assist proberen, in de browser:
-`http://192.168.67.65:8099/api/vraag?v=waarom&kamer=zolder`, of met `&taal=en`
-voor Engels.
+`<adres van Smart Climate>/api/vraag?v=waarom&kamer=zolder`, of met `&taal=en`
+voor Engels. Het adres staat in de app bij Instellingen › Bewoners en toegang ›
+Sleutel voor de assistent.
 
 ## Installeren
 
@@ -53,7 +54,8 @@ Dit is nog niet op jouw Home Assistant getest. Let bij de eerste keer op deze
 drie dingen:
 
 - **Komt er een antwoord?** Antwoordt Assist met "Smart Climate geeft nu geen
-  antwoord", dan bereikt de Pi de NAS niet, of gaf de dienst een fout. Open de
+  antwoord", dan bereikt Home Assistant Smart Climate niet (klopt het adres?),
+  of gaf de dienst een fout. Open de
   link hierboven in de browser om te kijken wat de dienst zegt.
 - **Herkent Assist de zin als vraag aan Smart Climate?** Een zin die Home
   Assistant zelf ook kent, wordt soms als eigen opdracht uitgevoerd. Dan

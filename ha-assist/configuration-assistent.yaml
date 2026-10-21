@@ -1,14 +1,19 @@
 # Smart Climate: de assistent die uitlegt (ONTWERP §7, fase 1).
 #
 # Plak dit onderaan configuration.yaml. Assist herkent de zin (zie
-# custom_sentences/nl/smart_climate.yaml), stelt de vraag aan de dienst op de
-# NAS, en spreekt het antwoord uit. Dit leest alleen: Home Assistant schakelt
-# hier niets, en de dienst ook niet.
+# custom_sentences/nl/smart_climate.yaml), stelt de vraag aan Smart Climate, en
+# spreekt het antwoord uit. Dit leest alleen: Home Assistant schakelt hier
+# niets, en de dienst ook niet.
+#
+# Het adres hieronder is een voorbeeld. Het goede staat in de app, bij
+# Instellingen › Bewoners en toegang › Sleutel voor de assistent: in de add-on
+# is dat de naam van de add-on in Home Assistant, zoals
+# http://abcd1234-hems-climate:8099/api/vraag (besluit 177).
 
 rest_command:
   smart_climate_vraag:
     url: >-
-      http://192.168.67.65:8099/api/vraag?taal=nl&v={{ v }}&kamer={{ kamer | default('') | urlencode }}&wens={{ wens | default('') }}&temperatuur={{ temperatuur | default('') }}
+      http://abcd1234-hems-climate:8099/api/vraag?taal=nl&v={{ v }}&kamer={{ kamer | default('') | urlencode }}&wens={{ wens | default('') }}&temperatuur={{ temperatuur | default('') }}
     method: GET
     # De hele app vraagt een inlog (besluit 147); de assistent komt binnen met
     # de sleutel uit Instellingen › Bewoners en toegang › Sleutel voor de

@@ -31,7 +31,9 @@ verwijzing bestaat.
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
   dienst zegt het als er iets veranderde ([174]). Op je startscherm met het
-  eigen icoon, en de favorieten met hun zone en een greep ([175]).
+  eigen icoon, en de favorieten met hun zone en een greep ([175]). Het wekwoord
+  gaat mee in de add-on, Assist vindt de add-on zonder NAS-adres, en meldingen
+  komen live ([177]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -577,4 +579,5 @@ verwijzing bestaat.
 [174]: DECISIONS.md#174-het-huis-en-wie-er-thuis-is-live
 [175]: DECISIONS.md#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart
 [176]: DECISIONS.md#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon
+[177]: DECISIONS.md#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live
 <!-- links:einde -->

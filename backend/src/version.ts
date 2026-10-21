@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.51.0';
+export const VERSIE = '0.52.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,15 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.52.0',
+    datum: '2026-10-21',
+    nieuw: [
+      'Het wekwoord Hé huis zit in de add-on: herstart de openWakeWord-add-on één keer, en kies het bij de spraakassistent',
+      'Bij Sleutel voor de assistent staat ook het adres waar Home Assistant zijn vraag stelt',
+    ],
+    beter: ['Een nieuwe melding, zoals een nieuwe versie, staat meteen bij de bel, op elk scherm'],
+  },
   {
     versie: '0.51.0',
     datum: '2026-10-21',
@@ -401,7 +410,7 @@ export const NIEUW: readonly Nieuw[] = [
       'Bij Instellingen › Bewoners en toegang: de volgorde, je naam, wat je volgt en je eigen comfort',
       'De hele app vraagt een inlog; wie voor het eerst inlogt, kiest of hij hier woont of een scherm is',
     ],
-    beter: ['Toch die van Ricardo: het comfort terugzetten met één tik, tot er iemand thuiskomt of weggaat'],
+    beter: ['Toch die van de hoofdgebruiker: het comfort terugzetten met één tik, tot er iemand thuiskomt of weggaat'],
   },
   {
     versie: '0.24.2',
@@ -466,7 +475,7 @@ export const NIEUW: readonly Nieuw[] = [
     versie: '0.21.0',
     datum: '2026-10-15',
     nieuw: [
-      'Een kamer kan meedoen met de regeling van een andere kamer, zoals een slaapkamer met de airco in de wasruimte',
+      'Een kamer kan meedoen met de regeling van een andere kamer, zoals een slaapkamer met de airco in de kamer ernaast',
       'Vraag de assistent naar het weer van morgen, en wat je apparaten deze maand kostten',
     ],
     beter: [
@@ -475,7 +484,7 @@ export const NIEUW: readonly Nieuw[] = [
     ],
     opgelost: [
       'Na een tik op Thuis praat de assistent meteen hardop',
-      'De wasruimte heeft zijn eigen regeling en comfort terug',
+      'Een kamer met een eigen regeling heeft zijn comfort weer terug',
       'Opbrengst: zelf gebruikt en teruggeleverd tellen precies op tot wat je panelen opwekten',
       'Een afgeknipte zin, een dubbel doel, en de maan die op de telefoon over de tekst viel',
     ],

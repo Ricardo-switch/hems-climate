@@ -268,7 +268,10 @@
         clearTimeout(wacht);
         online();
         // Terug na een onderbreking: wat er intussen veranderde, haalt de pagina nu op.
-        if (wasWeg) for (const soort of ['huis', 'bewoners']) signaal(soort, true);
+        if (wasWeg) {
+          for (const soort of ['huis', 'bewoners']) signaal(soort, true);
+          void meldLaad();
+        }
         wasWeg = false;
       });
       // Het huis of wie er thuis is veranderde (21 oktober 2026): de pagina haalt het op.
@@ -283,6 +286,8 @@
           signaal(soort, snel);
         });
       }
+      // Een nieuwe melding, of een die weg is (21 oktober 2026): meteen bij de bel.
+      deze.addEventListener('meldingen', () => void meldLaad());
       // De gekozen bewegingsmelder ziet iemand (besluit 164): de wand wordt wakker.
       deze.addEventListener('wekken', () => dispatchEvent(new CustomEvent('sc-wek', { detail: 'beweging' })));
       // Een rookmelder ziet iets, of niet meer (21 oktober 2026).

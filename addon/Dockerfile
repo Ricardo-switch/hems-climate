@@ -69,6 +69,9 @@ COPY --from=build /build/dist ./dist
 COPY --from=web /web/dist ./web
 COPY backend/package.json ./
 
+# Het wekwoord "Hé huis" (besluit 177): run.sh zet het in /share/openwakeword.
+COPY wekwoord /app/wekwoord
+
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 

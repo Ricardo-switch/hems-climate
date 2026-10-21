@@ -49,14 +49,21 @@ add-ons*. Bijwerken is hetzelfde commando, gevolgd door **Herbouwen**.
 
 Gewoon starten. Er hoeft nog niets klaar te staan.
 
-De add-on leest Home Assistant uit — gebieden, apparaten, sensoren — en toont
-in het paneel **Smart Climate** onder het tabblad *Installatie* wat hij heeft
-gevonden. Wat hij zeker weet staat er als bevinding; waar hij twijfelt staat
-een vraag met een keuzelijst. Eén klik op *Zo instellen* schrijft de
-configuratie weg, en na een herstart begint de opname.
+Open **Smart Climate** in de zijbalk. Een leeg huis begint met een welkom: de
+add-on leest Home Assistant uit (etages, ruimtes, apparaten, sensoren) en zet
+het huis neer. Eén knop gaat naar **Inrichten**, waar je per stap nakijkt wat
+hij vond; je kunt ook een back-up terugzetten (besluit 154). Tot de
+configuratie er staat, regelt hij niets en schrijft hij geen logboek (besluit
+42).
 
-Tot dat moment regelt hij niets en schrijft hij geen logboek. Dat is geen fout
-maar de normale toestand van een verse installatie (besluit 42).
+Bij de eerste start zet de add-on ook het wekwoord **Hé huis** klaar in
+`/share/openwakeword` (besluit 177). Herstart daarna één keer de
+openWakeWord-add-on; dan staat `he_huis` bij Instellingen › Spraakassistenten.
+
+Wil je Assist van Home Assistant zelf vragen aan Smart Climate laten stellen,
+dan staan de sleutel en het adres in de app bij Instellingen › Bewoners en
+toegang › Sleutel voor de assistent; de zinnen en de rest staan in
+`ha-assist/`.
 
 Wil je het bestand liever zelf schrijven, dan kan dat ook: de add-on heeft een
 eigen map onder `/addon_configs/`, bereikbaar met de bestandseditor of de

@@ -32,6 +32,16 @@ describe('de add-on en de NAS', () => {
     for (const b of bronnen(await lees('../../addon/Dockerfile'))) expect(stage).toContain(`Van = '${b}'`);
   });
 
+  it('zet het wekwoord "Hé huis" klaar voor openWakeWord, zonder een eigen te overschrijven (besluit 177)', async () => {
+    const { stat } = await import('node:fs/promises');
+    expect((await stat(new URL('../../addon/wekwoord/he_huis.tflite', import.meta.url))).size).toBeGreaterThan(100_000);
+    expect(await lees('../../addon/stage.ps1')).toContain("Van = 'addon/wekwoord'");
+    expect(await lees('../../addon/Dockerfile')).toMatch(/^COPY wekwoord \/app\/wekwoord$/m);
+    const run = await lees('../../addon/run.sh');
+    expect(run).toContain('WEKWOORD_DIR=/share/openwakeword');
+    expect(run).toContain('if [ ! -e "${WEKWOORD_DIR}/${naam}" ]; then');
+  });
+
   it('bouwen op GitHub voor dezelfde soorten als het manifest noemt', async () => {
     const manifest = await lees('../../addon/config.yaml');
     const soorten = [...manifest.slice(manifest.indexOf('\narch:')).matchAll(/^ {2}- (\w+)$/gm)].map((m) => m[1]).sort();

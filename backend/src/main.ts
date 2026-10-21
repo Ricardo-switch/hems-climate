@@ -11,6 +11,7 @@
  * op stuklopen.
  */
 
+import { hostname } from 'node:os';
 import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
@@ -649,6 +650,8 @@ client.on('stateChanged', (state: HaEntityState) => {
       meldingenRonde();
     }, 0);
   }
+  // Een nieuwe versie van de add-on (besluit 171): meteen bij Meldingen, niet pas na een minuut.
+  if (state.entity_id.startsWith('update.') && state.state !== allStates.get(state.entity_id)?.state) setTimeout(() => meldingenRonde(), 0);
   // De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand.
   if (state.entity_id === voorkeuren?.melder() && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') web?.wek('beweging');
   if (inHouse(state)) {
@@ -992,7 +995,15 @@ function meldingenRonde(): void {
     })(),
   });
   void meldingen.bewaar().catch(() => undefined);
+  // Live naar de open pagina's (21 oktober 2026): eerst zag je een nieuwe melding pas bij een andere tab.
+  const vinger = JSON.stringify(meldingen.lijst(Date.now()).actief.map((m) => [m.id, m.titel, m.tekst]));
+  if (vinger !== meldingenVinger) {
+    meldingenVinger = vinger;
+    web?.meldingenVeranderd();
+  }
 }
+/** Wat de open pagina's als laatste aan meldingen hoorden; verandert het, dan zegt de dienst het. */
+let meldingenVinger: string | null = null;
 if (meldingen) {
   setTimeout(meldingenRonde, 30_000).unref();
   setInterval(meldingenRonde, 60_000).unref();
@@ -1181,7 +1192,8 @@ let entityForecast: { entity: string | null; days: EntityForecast[] } = { entity
 client.on('forecast', (entity, days) => {
   entityForecast = { entity, days: days as EntityForecast[] };
 });
-const weerZone: string = baseConfig?.timezone ?? 'Europe/Amsterdam';
+// Zonder configuratie de tijdzone van de dienst; in de add-on is dat die van Home Assistant (run.sh).
+const weerZone: string = baseConfig?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 const weerBron = (): string | null => {
   const f = functiesNu();
   return f ? volledig(f, functiesKeuzes()).weer.bron : null;
@@ -1481,6 +1493,8 @@ if (webPort != null) {
         }
       : {}),
     ...(sleutel ? { sleutel } : {}),
+    // In de add-on stelt Home Assistant de vraag rechtstreeks aan de add-on, op zijn naam in het netwerk (besluit 177).
+    ...(sleutel && version.installatie === 'add-on' && webPort != null ? { sleutelAdres: `http://${hostname()}:${webPort}/api/vraag` } : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),
     // De stem van het huis (besluit 141): Piper in Home Assistant; er wordt niets geschakeld.
     stem: new Stem({
