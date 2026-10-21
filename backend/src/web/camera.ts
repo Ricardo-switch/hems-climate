@@ -25,7 +25,7 @@ export interface FoundCamera {
 /** Hoe goed een stream past op de tablet: vloeiend eerst, dan het gewone beeld. */
 const VOORKEUR: Readonly<Record<string, number>> = { sub: 0, main: 1 };
 /** Wat geen camera is om naar te kijken: het buienradarplaatje. */
-const GEEN_BEELD = new Set(['buienradar']);
+export const GEEN_BEELD: ReadonlySet<string> = new Set(['buienradar']);
 
 export function findCameras(entities: readonly HaRegistryEntity[], devices: readonly HaDevice[], states: ReadonlyMap<string, HaEntityState>): FoundCamera[] {
   const deviceName = new Map(devices.map((d) => [d.id, (d.name_by_user ?? d.name ?? '').trim()]));

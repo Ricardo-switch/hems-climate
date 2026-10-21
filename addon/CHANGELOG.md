@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.47.1
+
+*21 oktober 2026*
+
+**Opgelost**
+
+- Een kantoor, toilet of tuinhuis heet in een zin "het kantoor", niet "de kantoor"
+
 ## 0.47.0
 
 *21 oktober 2026*

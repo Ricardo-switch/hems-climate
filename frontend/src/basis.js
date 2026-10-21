@@ -309,8 +309,6 @@
    * ziet niemand meer iets, dan gaat het vanzelf weg. Smart Climate zet het
    * alarm zelf niet uit: dat doe je op de melder.
    */
-  const LIDWOORD = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|gang|entree|overloop|trap|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|berging|garage|kelder|meterkast|schuur)\b/i;
-  const inDe = (kamer) => (LIDWOORD.test(kamer) ? `de ${kamer.charAt(0).toLowerCase()}${kamer.slice(1)}` : kamer);
   const GEVAAR = { rook: 'Rook', co: 'Koolmonoxide', hitte: 'Hitte' };
   const WAT = { rook: 'rook', co: 'koolmonoxide', hitte: 'hitte' };
   let alarmGesloten = '';
@@ -343,7 +341,7 @@
     }
     laag.dataset.sleutel = sleutel;
     const eerste = aan[0];
-    const kamers = [...new Set(aan.filter((x) => x.gevaar === eerste.gevaar).map((x) => inDe(x.kamer)))];
+    const kamers = [...new Set(aan.filter((x) => x.gevaar === eerste.gevaar).map((x) => metLidwoord(x.kamer)))];
     const titel = `${GEVAAR[eerste.gevaar]} in ${kamers.length > 1 ? `${kamers.slice(0, -1).join(', ')} en ${kamers.at(-1)}` : kamers[0]}`;
     const sinds = eerste.sindsMs ? `, sinds ${klokVan(eerste.sindsMs)}` : '';
     const raad = eerste.gevaar === 'co' ? 'Zet ramen en deuren open, ga naar buiten en bel 112.' : 'Ga bij brand naar buiten en bel 112.';
@@ -351,7 +349,7 @@
     laag.innerHTML = `<div class="alarm-in">
       <span class="alarm-puls" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20c-2.5 0-4-1.8-4-3.8 0-2.6 2.4-3.4 2.4-6.2 2 1 3 2.8 3 4.4.6-.8 1-2 1-3.4 2.4 1.4 4.6 3.6 4.6 6.6 0 1.7-1.3 2.4-2 2.4"/><path d="M14 6c1-1 1-2.5 0-3.5M18 8c1-1 1-2.5 0-3.5"/></svg></span>
       <h1>${esc(titel)}</h1>
-      <p class="alarm-zin">${esc(`De rookmelder in ${inDe(eerste.kamer)} ziet ${WAT[eerste.gevaar]}${sinds}. ${raad}`)}</p>
+      <p class="alarm-zin">${esc(`De rookmelder in ${metLidwoord(eerste.kamer)} ziet ${WAT[eerste.gevaar]}${sinds}. ${raad}`)}</p>
       <div class="alarm-lijst">${(m.melders ?? []).map((x) => `<div><b>${esc(x.kamer)}</b><span class="${x.gevaar ? '' : 'ok'}">${esc(x.gevaar ? WAT[x.gevaar] : 'niets')}</span></div>`).join('')}</div>
       <button type="button" class="knop knop-licht" data-alarm-dicht>Sluiten</button>
       <p class="alarm-klein">Het alarm zelf zet je uit op de melder of in de app van de melder.</p>
@@ -1287,5 +1285,26 @@
   }
   setTimeout(() => void schermOpties(), 1500);
 
-  global.app = { $$, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang };
+  /*
+   * Gewone kamerwoorden en hun lidwoord (besluit 131): "de zolder", "het
+   * kantoor", en een eigen naam zoals "Beneden" zoals hij is. Dezelfde lijst als
+   * `backend/src/web/kamerwoorden.ts`; een test houdt ze gelijk.
+   */
+  const KAMERWOORDEN = {
+    zolder: 'de', vliering: 'de', woonkamer: 'de', huiskamer: 'de', woonkeuken: 'de', keuken: 'de', bijkeuken: 'de',
+    eetkamer: 'de', zithoek: 'de', serre: 'de', slaapkamer: 'de', kinderkamer: 'de', logeerkamer: 'de', speelkamer: 'de',
+    studeerkamer: 'de', werkkamer: 'de', hobbykamer: 'de', kamer: 'de', badkamer: 'de', wasruimte: 'de', hal: 'de',
+    gang: 'de', entree: 'de', overloop: 'de', trap: 'de', berging: 'de', garage: 'de', kelder: 'de', meterkast: 'de',
+    schuur: 'de', zone: 'de', tuin: 'de', achtertuin: 'de', voortuin: 'de', oprit: 'de', carport: 'de',
+    kantoor: 'het', toilet: 'het', washok: 'het', portaal: 'het', atelier: 'het', tuinhuis: 'het', terras: 'het', balkon: 'het',
+  };
+  const EERSTE_WOORD = new RegExp(`^(${Object.keys(KAMERWOORDEN).join('|')})\\b`, 'i');
+  /** "Zolder" wordt "de zolder", "Kantoor" "het kantoor", "Beneden" blijft "Beneden". */
+  function metLidwoord(naam) {
+    const m = EERSTE_WOORD.exec(String(naam ?? '').trim());
+    const lw = m ? KAMERWOORDEN[m[1].toLowerCase()] : null;
+    return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
+  }
+
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang };
 })(window);

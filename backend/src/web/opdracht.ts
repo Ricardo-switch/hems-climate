@@ -22,6 +22,7 @@ import type { Fact, Lang } from './assistant.js';
 import { cap } from './assistant.js';
 import type { HouseReport } from './house.js';
 import { gewoon } from './woordzoeker.js';
+import { metLidwoord } from './kamerwoorden.js';
 
 /* ------------------------------------------------------------ de lijst */
 
@@ -153,7 +154,7 @@ function naamFeit(naam: string): Fact[] {
 }
 
 function kamerZin(kamer: string): string {
-  return /^(beneden|boven|buiten|binnen)$/i.test(kamer) ? kamer.toLowerCase() : `in ${DING.test(kamer) ? dingNaam(kamer) : /^(woonkamer|keuken|hal|badkamer|slaapkamer|zolder|overloop|kantoor|wasruimte|bijkeuken|eetkamer|tuin|tuinhuis|garage|berging|achtertuin|voortuin)/i.test(kamer) ? `de ${kamer.toLowerCase()}` : kamer}`;
+  return /^(beneden|boven|buiten|binnen)$/i.test(kamer) ? kamer.toLowerCase() : `in ${DING.test(kamer) ? dingNaam(kamer) : metLidwoord(kamer)}`;
 }
 
 export type LichtDoel =

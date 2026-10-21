@@ -24,6 +24,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { STANDAARD_DREMPELS, onderDrempel, type Drempels } from './house.js';
+import { metLidwoord } from './kamerwoorden.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
@@ -136,7 +137,6 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
   }
   // Rook, koolmonoxide of hitte (21 oktober 2026): waar en wanneer; ook als het weer weg is, onder Eerder.
   const WAT = { rook: 'rook', co: 'koolmonoxide', hitte: 'hitte' } as const;
-  const inDe = (k: string) => (/^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|gang|entree|overloop|trap|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|berging|garage|kelder|meterkast)\b/i.test(k) ? `de ${k.charAt(0).toLowerCase()}${k.slice(1)}` : k);
   for (const r of bron.rookmelders ?? []) {
     if (r.gevaar) {
       const w = WAT[r.gevaar];
@@ -146,10 +146,10 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
         soort: 'rook',
         aandacht: true,
         sindsMs: sinds,
-        titel: `${w.charAt(0).toUpperCase()}${w.slice(1)} in ${inDe(r.kamer)}`,
+        titel: `${w.charAt(0).toUpperCase()}${w.slice(1)} in ${metLidwoord(r.kamer)}`,
         tekst: `De rookmelder ziet ${w} sinds ${klok(sinds)}. Ga bij brand naar buiten en bel 112.`,
         actie: { label: 'Bekijk', href: kamerHref(r.kamerId, r.id) },
-        klaar: { titel: `Geen ${w} meer in ${inDe(r.kamer)}`, tekst: `Om ${klok(sinds)} zag de rookmelder ${w}.` },
+        klaar: { titel: `Geen ${w} meer in ${metLidwoord(r.kamer)}`, tekst: `Om ${klok(sinds)} zag de rookmelder ${w}.` },
       });
     }
     if (r.batterijProbleem) {

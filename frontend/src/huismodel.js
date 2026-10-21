@@ -19,8 +19,6 @@
     return '#FFD9A0';
   }
 
-  /** Gewone kamerwoorden krijgen "de"; een eigen naam als "Beneden" niet (besluit 131). */
-  const GEWOON = /^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|overloop|kantoor|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|zithoek|studeerkamer|berging|garage|kelder|zone)\b/i;
   /**
    * De naam van een zone in een zin, zoals de kamer in de indeling heet (besluit
    * 131): "de woonkamer", of "Beneden". Zonder huis de id, zoals de regeling hem noemt.
@@ -30,9 +28,9 @@
     const naam = kamer?.naam ?? String(zoneId).replace(/[-_]+/g, ' ');
     return metLidwoord(naam);
   }
-  /** "de badkamer" bij een gewone kamer, en een eigen naam zoals hij is. */
+  /** "de badkamer" bij een gewone kamer, en een eigen naam zoals hij is: de lijst staat in basis.js. */
   function metLidwoord(naam) {
-    return GEWOON.test(naam) ? `de ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
+    return global.app.metLidwoord(naam);
   }
   /**
    * De etages naast elkaar, zoals je ze telt (besluit 131): de begane grond

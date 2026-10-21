@@ -750,9 +750,9 @@ describe('eventfilter', () => {
   it('negeert entiteiten die niets met klimaat te maken hebben', () => {
     const store = new EntityStore(relevantEntities(exampleSite));
     expect(store.apply(entity('sensor.p1_meter_power', '-1000'))).toBe(true);
-    expect(store.apply(entity('sensor.telefoon_shira_batterij', '61'))).toBe(false);
+    expect(store.apply(entity('sensor.telefoon_noor_batterij', '61'))).toBe(false);
     expect(store.apply(entity('light.slaapkamer', 'on'))).toBe(false);
-    expect(store.has('sensor.telefoon_shira_batterij')).toBe(false);
+    expect(store.has('sensor.telefoon_noor_batterij')).toBe(false);
     expect(store.size).toBe(1);
   });
 

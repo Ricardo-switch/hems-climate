@@ -60,12 +60,10 @@ export const pvSurplus: Strategy = {
     if (PASSIVE_MODES.has(ctx.mode)) return [];
     if (ctx.sunDown) return [];
 
+    // De volgorde maakt hier niet uit: de arbiter ordent op de voorrang per
+    // richting (besluit 134).
     const intents: Intent[] = [];
-    // Zones met de laagste prioriteit eerst, zodat de arbiter bij krapte de
-    // belangrijkste zone overhoudt.
-    const zones = [...ctx.zones].sort((a, b) => a.zone.priority - b.zone.priority);
-
-    for (const derived of zones) {
+    for (const derived of ctx.zones) {
       const target = bufferTarget(derived);
 
       for (const actuatorId of derived.zone.actuatorIds) {

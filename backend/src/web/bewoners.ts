@@ -121,7 +121,7 @@ export function personenUit(states: Iterable<HaEntityState>): Persoon[] {
   return uit;
 }
 
-/** Zo noemt het huis je: de voornaam uit de naam in Home Assistant ("Shira Cornelissen" wordt "Shira"). */
+/** Zo noemt het huis je: de voornaam uit de naam in Home Assistant ("Noor Cornelissen" wordt "Noor"). */
 export function roepnaam(haNaam: string): string {
   const eerste = haNaam.trim().split(/\s+/)[0] ?? '';
   return (eerste || haNaam.trim() || 'Bewoner').slice(0, 40);
@@ -679,7 +679,7 @@ export function voerUit(
 
 /* ------------------------------------------------------ de export (151) */
 
-/** Een naam zoals hij in een entiteit staat: "Shira" wordt "shira", "José" wordt "jose". */
+/** Een naam zoals hij in een entiteit staat: "Noor" wordt "noor", "José" wordt "jose". */
 function alsId(naam: string): string {
   return naam.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
@@ -688,7 +688,7 @@ function alsId(naam: string): string {
  * Welke namen er uit de export moeten (besluit 151), en waarmee: bewoners en
  * gasten op volgorde "Bewoner 1", "Bewoner 2", dan personen in Home Assistant
  * die geen bewoner zijn. Een naam ook zoals hij in een entiteit of een id
- * staat ("person.shira" wordt "person.bewoner_2"), zodat het logboek dezelfde
+ * staat ("person.noor" wordt "person.bewoner_2"), zodat het logboek dezelfde
  * persoon dezelfde naam houdt.
  */
 export function namenVoorExport(b: Bewoners, personen: readonly Persoon[]): [string, string][] {
