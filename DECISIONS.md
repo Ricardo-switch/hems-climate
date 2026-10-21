@@ -7827,6 +7827,12 @@ Bewoners.
   gevonden: op de NAS en in de test staan ze er.
 - **Versie 0.50.0.**
 
+*Aangevuld 21 oktober 2026.* Op de Pi staan de vakken er met 0.50.0 wel; de
+QR-code kwam pas na even. Op de telefoon viel bij Volgende het begin van een
+lange titel weg ("leutel voor de assistent"): de titel mocht niet afbreken en
+stond rechts uitgelijnd. Nu breekt hij af, en de paginatest meet waar de tekst
+begint. Versie 0.50.1.
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**

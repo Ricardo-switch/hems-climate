@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.50.1
+
+*21 oktober 2026*
+
+**Opgelost**
+
+- Een lange titel bij Volgende, zoals "Sleutel voor de assistent", breekt op de telefoon af in plaats van dat het begin wegvalt
+
 ## 0.50.0
 
 *21 oktober 2026*
