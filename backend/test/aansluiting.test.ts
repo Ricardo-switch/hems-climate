@@ -105,6 +105,25 @@ describe('herkennen in Home Assistant', () => {
       },
     ]);
   });
+
+  it('vindt ook LG ThinQ, SmartThings en Miele, met hun eigen namen (besluit 178)', () => {
+    const merk = (dev: string, naam: string, ids: [string, string][]) => ({
+      entities: ids.map(([id]) => ({ entity_id: id, device_id: dev })),
+      states: ids.map(([id, s]) => st(id, s)),
+      device: { id: dev, area_id: null, name: naam } as HaDevice,
+    });
+    const lg = merk('dev-lg', 'LG Washer', [['binary_sensor.wasmachine_remote_control_enabled', 'on'], ['sensor.wasmachine_current_status', 'initial'], ['sensor.wasmachine_remaining_time', '0'], ['sensor.wasmachine_total_time', '0']]);
+    const sam = merk('dev-sam', 'Samsung Dryer', [['binary_sensor.droger_remote_control', 'on'], ['sensor.droger_dryer_machine_state', 'stop'], ['sensor.droger_completion_time', '2026-10-21T18:00:00Z']]);
+    const miele = merk('dev-miele', 'Miele vaatwasser', [['binary_sensor.vaatwasser_mobile_start', 'on'], ['sensor.vaatwasser_door_status', 'closed'], ['sensor.vaatwasser_status', 'programmed'], ['sensor.vaatwasser_remaining_time', '120']]);
+    const alle = [lg, sam, miele];
+    const gevonden = findAppliances(new Map(alle.flatMap((m) => m.states).map((s) => [s.entity_id, s])), alle.flatMap((m) => m.entities), alle.map((m) => m.device));
+    expect(gevonden.map((a) => [a.soort, a.remoteStart, a.operationState, a.remainingTime])).toEqual([
+      ['wasmachine', 'binary_sensor.wasmachine_remote_control_enabled', 'sensor.wasmachine_current_status', 'sensor.wasmachine_remaining_time'],
+      ['droger', 'binary_sensor.droger_remote_control', 'sensor.droger_dryer_machine_state', 'sensor.droger_completion_time'],
+      // De deur telt niet als status.
+      ['vaatwasser', 'binary_sensor.vaatwasser_mobile_start', 'sensor.vaatwasser_status', 'sensor.vaatwasser_remaining_time'],
+    ]);
+  });
 });
 
 describe('hoe snel de zonnesensor is (besluit 89)', () => {

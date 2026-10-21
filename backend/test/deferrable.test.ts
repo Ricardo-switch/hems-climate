@@ -119,6 +119,15 @@ describe('de droger op zon (besluit 98)', () => {
     expect(dryer(state({ operation: 'BSH.Common.EnumType.OperationState.Ready' }))).toMatchObject({ state: 'would_start' });
   });
 
+  it('kent ook de woorden van Miele, LG ThinQ en SmartThings (besluit 178)', () => {
+    expect(dryer(state({ operation: 'in_use' }))).toMatchObject({ state: 'running' });
+    expect(dryer(state({ operation: 'running' }))).toMatchObject({ state: 'running' });
+    expect(dryer(state({ operation: 'waiting_to_start' }))).toMatchObject({ state: 'running' });
+    expect(dryer(state({ operation: 'program_ended' }))).toMatchObject({ state: 'not_ready', reason: 'program_finished' });
+    expect(dryer(state({ operation: 'end' }))).toMatchObject({ state: 'not_ready', reason: 'program_finished' });
+    expect(dryer(state({ operation: 'programmed' }))).toMatchObject({ state: 'would_start' });
+  });
+
   it('laat een airco voorgaan, en start niet in dezelfde ronde (besluiten 68 en 85)', () => {
     // De zolder wil koelen en krijgt het overschot; de droger wacht een ronde.
     const s = state({ gridPowerW: -2500, atticC: 26 });

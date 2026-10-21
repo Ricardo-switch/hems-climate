@@ -13,7 +13,7 @@ import { describe, expect, it } from 'vitest';
 import { HaClient } from '../src/adapters/homeassistant/client.js';
 import { EnergyStore, importFromPrefs, meterRole, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
 import { partsIn, zonedMidnight } from '../src/web/today.js';
-import { periodRange, yearStartOf, yieldReport } from '../src/web/yield.js';
+import { periodRange, verdeel, yearStartOf, yieldReport } from '../src/web/yield.js';
 
 const TZ = 'Europe/Amsterdam';
 
@@ -333,5 +333,24 @@ describe('meters en prijzen in de app', () => {
     await expect(client.query('call_service', { domain: 'light' })).rejects.toThrow(/niet op de lijst/);
     await expect(client.query('get_config', { extra: 1 })).rejects.toThrow(/geen velden/);
     await expect(client.query('energy/get_prefs', { extra: 1 })).rejects.toThrow(/geen velden/);
+  });
+});
+
+describe('zonder salderen (besluit 178)', () => {
+  it('telt teruglevering dan meteen zonder salderen, ook voor 2027', () => {
+    const van = Date.UTC(2026, 5, 1);
+    const tot = Date.UTC(2026, 5, 2);
+    const met = verdeel(SETTINGS, 10, null, 4, null, van, tot, 'Europe/Amsterdam');
+    expect(met.terugNa).toBe(0);
+    const zonder = verdeel({ ...SETTINGS, prijzen: { ...SETTINGS.prijzen, salderen: false } }, 10, null, 4, null, van, tot, 'Europe/Amsterdam');
+    expect(zonder).toMatchObject({ terugNormaal: 0, terugDal: 0, terugNa: 4 });
+  });
+
+  it('bewaart eigen daltijden en geen salderen, en weigert wat niet klopt', () => {
+    const p = SETTINGS.prijzen;
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...p, dalUren: 'eigen', dalEigen: { van: 22, tot: 6, weekend: false }, salderen: false } })).toMatchObject({ ok: true, settings: { prijzen: { dalUren: 'eigen', dalEigen: { van: 22, tot: 6, weekend: false }, salderen: false } } });
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...p, dalUren: 'eigen', dalEigen: { van: 6, tot: 6, weekend: false } } })).toMatchObject({ ok: false });
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...p, dalUren: 'eigen' } })).toMatchObject({ ok: false });
+    expect(validateEnergy({ ...SETTINGS, prijzen: { ...p, salderen: 'ja' } })).toMatchObject({ ok: false });
   });
 });

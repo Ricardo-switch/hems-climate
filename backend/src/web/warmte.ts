@@ -102,11 +102,14 @@ export function withHeatSources(
   const actuators = Array.isArray(raw['actuators']) ? (raw['actuators'] as Record<string, unknown>[]) : [];
   const zones = Array.isArray(raw['zones']) ? (raw['zones'] as Record<string, unknown>[]) : [];
   const opZon = new Map<string, { zone: string; vermogenW: number }>();
+  // Het typeplaatje (besluit 178): het vermogen van elke slimme elektrische bron, ook niet op zon.
+  const typeplaatje = new Map<string, number>();
   for (const k of kamers) {
     if (!k.regelzone) continue;
     const zone = zones.find((z) => z['id'] === k.regelzone);
     const inZone = Array.isArray(zone?.['actuatorIds']) ? (zone['actuatorIds'] as unknown[]) : [];
     for (const b of k.bronnen ?? []) {
+      if (b.vermogenW != null && b.apparaat && inZone.includes(b.apparaat)) typeplaatje.set(b.apparaat, (typeplaatje.get(b.apparaat) ?? 0) + b.vermogenW);
       if (!b.opZon || b.vermogenW == null || !b.apparaat || !inZone.includes(b.apparaat)) continue;
       const a = actuators.find((x) => x['id'] === b.apparaat);
       const caps = a?.['capabilities'] as Record<string, unknown> | undefined;
@@ -114,13 +117,20 @@ export function withHeatSources(
       opZon.set(b.apparaat, { zone: k.regelzone, vermogenW: b.vermogenW });
     }
   }
-  if (opZon.size === 0) return { raw, toegevoegd: [] };
+  if (opZon.size === 0 && typeplaatje.size === 0) return { raw, toegevoegd: [] };
   const nieuweActuators = actuators.map((a) => {
-    const z = opZon.get(String(a['id']));
-    if (!z) return a;
-    toegevoegd.push(`${String(a['name'] ?? a['id'])} op zon, ${z.vermogenW} W`);
-    const power = { ...((a['power'] as Record<string, unknown> | undefined) ?? {}), estimatedW: z.vermogenW };
-    return { ...a, onSurplus: true, power };
+    const id = String(a['id']);
+    const z = opZon.get(id);
+    const plaatje = typeplaatje.get(id);
+    if (!z && plaatje == null) return a;
+    const power: Record<string, unknown> = { ...((a['power'] as Record<string, unknown> | undefined) ?? {}) };
+    if (plaatje != null) {
+      power['ratedW'] = plaatje;
+      toegevoegd.push(`${String(a['name'] ?? id)}: ${plaatje} W voor de hoofdzekering`);
+    }
+    if (!z) return { ...a, power };
+    toegevoegd.push(`${String(a['name'] ?? id)} op zon, ${z.vermogenW} W`);
+    return { ...a, onSurplus: true, power: { ...power, estimatedW: z.vermogenW } };
   });
   const bufferZones = new Set([...opZon.values()].map((z) => z.zone));
   const nieuweZones = zones.map((z) => {

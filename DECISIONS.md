@@ -100,6 +100,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [145. Een zone heeft een soort, en kamers en zones schuiven](#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven)
 - [146. Inrichten zoals de schets, en de film als een dag in je huis](#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis)
 - [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
+- [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
+- [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
 
 **Meten, data en analyse**
 
@@ -7918,6 +7920,80 @@ tab wisselde.
   apparaten op zon, en het vermogen van het typeplaatje (de badkamer).
 - **Versie 0.52.0.**
 
+---
+
+## 178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+De rest van stap 5 uit het stappenplan van besluit 172, op 21 oktober 2026.
+
+*Besluit:*
+
+- **Regels per land, bij Meters en prijzen:**
+  - **Daluren:** naast "23 tot 7" en "21 tot 7 (Brabant, Limburg)" ook *eigen
+    tijden*: van welk hele uur tot welk, over middernacht of binnen een dag, en
+    of het weekend helemaal dal is. Met eigen tijden tellen de Nederlandse
+    feestdagen niet als dal (`dalUren: 'eigen'`, `dalEigen`).
+  - **Salderen:** "tot 2027", zoals in Nederland, of "geen salderen"
+    (`salderen: false`): dan telt alles wat teruggaat meteen tegen de
+    vergoeding min de kosten, en vraagt het scherm geen vergoeding boven je
+    verbruik. Zonder keuze blijft het Nederlands.
+- **Meer merken voor apparaten op zon** dan Home Connect, met de namen van hun
+  koppeling in Home Assistant: LG ThinQ (`remote_control_enabled`,
+  `current_status`, `remaining_time`), SmartThings van Samsung
+  (`remote_control`, `..._machine_state`, `completion_time`) en Miele
+  (`mobile_start`, `status`, `remaining_time`). De regeling kent hun woorden:
+  `in_use`, `running`, `waiting_to_start`, `paused` en de fasen van een
+  programma als bezig; `end` en `program_ended` als klaar; `programmed`,
+  `initial`, `standby`, `stop` en `idle` als klaarstaan. Een sensor die alleen
+  `status` heet, telt alleen als niets anders past, en nooit die van de deur of
+  de batterij.
+- **Het typeplaatje** (het open punt over de badkamer): een apparaat kan
+  `power.ratedW` hebben, wat het werkelijk trekt. De hoofdzekering (besluit 78)
+  rekent daarmee bij een start; het budget blijft `estimatedW`. De app vult het
+  in uit het vermogen van een slimme elektrische bron bij Indeling, ook als die
+  niet op zon mag: de badkamer houdt 0 W voor het budget en krijgt 1.150 W voor
+  de zekering.
+- **Terugwinbaar** telt alleen wat de regeling zelf terugschakelt: een
+  bijspringer, of een apparaat dat op zon mag. Wat comfort aanhoudt, zoals de
+  badkamer, is geen ruimte voor een ander. In dit huis verandert er niets: daar
+  zijn dat al alleen de airco's; de replay blijft gelijk.
+- **Versie 0.53.0.**
+
+---
+
+## 179. Klaarzetten in Home Assistant, bij Wat je huis kan
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Stap 6 uit het stappenplan van besluit 172, op 21 oktober 2026. Wat een nieuwe
+gebruiker in Home Assistant moet klaarzetten, stond alleen in het rapport van
+die dag. Nu zegt de app het zelf.
+
+*Besluit:*
+
+- **Een knop bij Wat je huis kan:** "In Home Assistant", met hoeveel er mist.
+  Een tik opent het blad met de lijst, in zeven groepen: de basis (locatie en
+  tijdzone, etages en ruimtes), klimaat (thermostaten en airco's, temperatuur
+  per kamer), zon en energie (slimme meter, omvormer, Energie-dashboard,
+  apparaten op zon), bewoners (een persoon per bewoner met een account, de app
+  van Home Assistant voor thuis of weg), gemak (lampen, schermen, camera's en
+  deurbel, rookmelders, weer), praten (spraakassistent, wekwoord, taalmodel) en
+  de wand en je telefoon (bewegingsmelder, en in de add-on de eigen poort).
+- **Drie standen:** klaar (groen), mist voor de regeling (oranje), of maakt een
+  functie mogelijk (grijs). Alleen wat de regeling nodig heeft, telt als mist.
+- **Waar het staat:** in Home Assistant opent een knop dat scherm van Home
+  Assistant (het paneel verandert het adres van Home Assistant zelf en zegt het
+  met `location-changed`; het volledige scherm gaat eerst uit). Buiten Home
+  Assistant staat erbij waar je het vindt, zoals Instellingen › Personen.
+- **Alleen tellen** (besluit 45): de dienst (`/api/klaarzetten`,
+  `klaarzetten.ts`) telt etages, ruimtes, apparaten zonder ruimte, personen
+  met een account en een telefoon, thermometers in een ruimte, en wat de app
+  al vond; een zin noemt nooit een entiteit. Het omvormerpunt zegt het ook als
+  de sensor trager is dan eens per twee minuten (besluit 89).
+- **Versie 0.54.0.**
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -7949,11 +8025,9 @@ tab wisselde.
   verbruik van de badkamer bij de basislast, en daar staat het nu ook.
 
   Waar de 1.150 W wel voor nodig is: de beveiliging tegen overbelasting (78)
-  en het thermisch model (D). Daarvoor komt er een eigen veld voor het
-  vermogen van het typeplaatje, los van `estimatedW` als claim op het budget.
-  En `reclaimableW` hoort alleen apparaten te tellen die de regeling werkelijk
-  terugschakelt; bij dit huis zijn dat alleen de airco's, dus die wijziging
-  verandert hier niets. Wanneer de badkamer echt stookt, leert het model uit de
+  en het thermisch model (D). Sinds besluit 178 is dat `power.ratedW`, los van
+  `estimatedW`, en telt `reclaimableW` alleen wat de regeling terugschakelt.
+  Voor het thermisch model blijft het hieronder gelden. Wanneer de badkamer echt stookt, leert het model uit de
   sprongen van ongeveer 1,15 kW in de P1-meter. Verder voor het model: een
   infraroodpaneel verwarmt vooral mensen en oppervlakken, niet de lucht, dus
   de thermostaat ziet die warmte later en minder dan de bewoner hem voelt. En

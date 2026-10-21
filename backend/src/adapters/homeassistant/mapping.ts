@@ -10,6 +10,7 @@
  */
 
 import type { DeviceRef, MeasurementPoint, Mode, SiteConfig, Zone } from '../../core/model.js';
+import { terugschakelbaar } from '../../core/vermogen.js';
 import type { ActuatorState, SystemState, TimerId, TimerState } from '../../core/state.js';
 import { unavailable, value } from '../../core/state.js';
 import { isUsable } from '../../replay/dataset.js';
@@ -183,9 +184,10 @@ export function buildSystemState(
     // met zijn meting, en zonder meting met zijn schatting.
     const actuallyRunning =
       actualAction.ok && (actualAction.value === 'heat' || actualAction.value === 'cool');
-    if (actuallyRunning) {
-      actualDrawW +=
-        powerW ?? config.actuators.find((a) => a.id === b.actuatorId)!.power.estimatedW;
+    // Alleen wat de regeling zelf terugschakelt (besluit 178), zoals de kern het telt.
+    const actuator = config.actuators.find((a) => a.id === b.actuatorId)!;
+    if (actuallyRunning && terugschakelbaar(actuator)) {
+      actualDrawW += powerW ?? actuator.power.estimatedW;
     }
 
     /*

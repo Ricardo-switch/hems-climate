@@ -32,11 +32,15 @@ import { isHandsOff, type Deferrable } from './model.js';
  * "Klaar" bij aanzetten, "Loopt" tijdens het programma, een tel "Afgerond" en
  * dan weer "Klaar". "Klaar" is dus gereed om te beginnen, niet afgelopen.
  */
-const RUNNING = new Set(['run', 'running', 'delayedstart', 'pause', 'loopt', 'vertraagdestart', 'pauze', 'draait', 'bezig']);
-const FINISHED = new Set(['finished', 'afgerond', 'voltooid']);
-const READY = new Set(['ready', 'klaar']);
+const RUNNING = new Set([
+  'run', 'running', 'delayedstart', 'pause', 'loopt', 'vertraagdestart', 'pauze', 'draait', 'bezig',
+  // Andere merken (besluit 178): Miele, LG ThinQ en SmartThings.
+  'in_use', 'inuse', 'waiting_to_start', 'paused', 'reservation', 'drying', 'washing', 'rinsing', 'spinning', 'detecting',
+]);
+const FINISHED = new Set(['finished', 'afgerond', 'voltooid', 'end', 'program_ended', 'programended']);
+const READY = new Set(['ready', 'klaar', 'programmed', 'initial', 'standby', 'stop', 'idle']);
 /** Lopend, maar niet bezig: een pauze of een uitgestelde start is nooit "klaar". */
-const PAUSED = new Set(['delayedstart', 'pause', 'vertraagdestart', 'pauze']);
+const PAUSED = new Set(['delayedstart', 'pause', 'vertraagdestart', 'pauze', 'waiting_to_start', 'paused', 'reservation']);
 
 /**
  * Hoe lang na het klaarzetten de status nog mag wisselen zonder dat het een

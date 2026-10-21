@@ -11,9 +11,19 @@
  * slimme meter). Anders de tijden van het daltarief: op werkdagen van 23 tot 7
  * uur (in Noord-Brabant en Limburg van 21 tot 7), en het hele weekend en de
  * feestdagen.
+ *
+ * Buiten Nederland (besluit 178): eigen daltijden, met of zonder het weekend en
+ * zonder de Nederlandse feestdagen, en geen salderen.
  */
 
-export type DalRegio = 'nl' | 'zuid';
+export type DalRegio = 'nl' | 'zuid' | 'eigen';
+
+/** Eigen daltijden (besluit 178): van welk uur tot welk uur, en of het weekend helemaal dal is. */
+export interface DalEigen {
+  readonly van: number;
+  readonly tot: number;
+  readonly weekend: boolean;
+}
 export type VastPer = 'dag' | 'maand' | 'jaar';
 export type VastSoort = 'stroom' | 'gas';
 
@@ -32,6 +42,10 @@ export interface Tarieven {
   readonly stroomDal?: number | null;
   /** Waar het huis staat, voor de tijden van het daltarief. */
   readonly dalUren?: DalRegio;
+  /** De tijden bij `dalUren: 'eigen'` (besluit 178). */
+  readonly dalEigen?: DalEigen | null;
+  /** Of er gesaldeerd wordt (tot 2027, zoals in Nederland); false is nooit (besluit 178). Weg is wel. */
+  readonly salderen?: boolean;
   /** Wat je krijgt voor wat je over een jaar meer teruglevert dan je verbruikt (zolang er gesaldeerd wordt). */
   readonly teruglevering: number | null;
   /** Vanaf 2027, als het salderen stopt. */
@@ -103,20 +117,25 @@ export function isFeestdag(y: number, m: number, d: number): boolean {
 }
 
 /** Geldt op dit moment het daltarief? */
-export function isDal(ms: number, tz: string, regio: DalRegio = 'nl'): boolean {
+export function isDal(ms: number, tz: string, regio: DalRegio = 'nl', eigen: DalEigen | null = null): boolean {
   const p = delen(ms, tz);
+  if (regio === 'eigen' && eigen) {
+    if (eigen.weekend && (p.wd === 0 || p.wd === 6)) return true;
+    // Over middernacht (23 tot 7) of binnen een dag (1 tot 6).
+    return eigen.van > eigen.tot ? p.h >= eigen.van || p.h < eigen.tot : p.h >= eigen.van && p.h < eigen.tot;
+  }
   if (p.wd === 0 || p.wd === 6 || isFeestdag(p.y, p.m, p.d)) return true;
   return p.h < 7 || p.h >= (regio === 'zuid' ? 21 : 23);
 }
 
 /** Welk deel van [van, tot) in het daltarief valt, per uur geteld. */
-export function dalAandeel(van: number, tot: number, tz: string, regio: DalRegio = 'nl'): number {
+export function dalAandeel(van: number, tot: number, tz: string, regio: DalRegio = 'nl', eigen: DalEigen | null = null): number {
   if (tot <= van) return 0;
   let dal = 0;
   let alle = 0;
   for (let t = van; t < tot; t += 3_600_000) {
     alle += 1;
-    if (isDal(t, tz, regio)) dal += 1;
+    if (isDal(t, tz, regio, eigen)) dal += 1;
   }
   return alle ? dal / alle : 0;
 }
@@ -221,7 +240,7 @@ export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolea
       const k = p.vanaf2027?.kosten ?? 0;
       regels.push({
         naam: 'Teruggeleverd, zonder salderen',
-        uitleg: v == null ? `${kwh(u.terugNa)}, vergoeding vanaf 2027 nog niet ingesteld` : `${kwh(u.terugNa)} × ${eur(v)} vergoeding${k ? `, min ${eur(k)} kosten` : ''}`,
+        uitleg: v == null ? `${kwh(u.terugNa)}, vergoeding${p.salderen === false ? '' : ' vanaf 2027'} nog niet ingesteld` : `${kwh(u.terugNa)} × ${eur(v)} vergoeding${k ? `, min ${eur(k)} kosten` : ''}`,
         euro: tel(v == null ? null : u.terugNa * (k - v)),
       });
     }

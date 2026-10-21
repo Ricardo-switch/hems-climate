@@ -542,7 +542,9 @@ function actuator(
       const sensorRaw = powerRaw['sensor'];
       const sensor =
         sensorRaw === undefined ? null : ref(p, sensorRaw, join(pPath, 'sensor'), defaultAdapter);
-      power = { estimatedW, ...(sensor ? { sensor } : {}) };
+      // Het typeplaatje (besluit 178): voor de hoofdzekering, los van het budget.
+      const ratedW = powerRaw['ratedW'] === undefined ? null : num(p, powerRaw, pPath, 'ratedW', { min: 1, max: 50_000 });
+      power = { estimatedW, ...(sensor ? { sensor } : {}), ...(ratedW != null ? { ratedW } : {}) };
     }
   }
 

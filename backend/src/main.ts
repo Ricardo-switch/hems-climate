@@ -12,6 +12,7 @@
  */
 
 import { hostname } from 'node:os';
+import { klaarzetten } from './web/klaarzetten.js';
 import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
@@ -1493,6 +1494,28 @@ if (webPort != null) {
         }
       : {}),
     ...(sleutel ? { sleutel } : {}),
+    // Klaarzetten in Home Assistant (besluit 179): tellen wat er staat, nooit een entiteit noemen.
+    klaarzetten: async () => {
+      const prefs = (await client.query<{ energy_sources?: { type?: string }[] }>('energy/get_prefs').catch(() => null)) ?? null;
+      const grid = baseConfig?.power.gridPower;
+      const netWaarde = grid ? Number(allStates.get(grid.id)?.state) : Number.NaN;
+      const gevonden = functiesKeuzes();
+      return klaarzetten({
+        locatie: location != null,
+        registers: houseRegisters,
+        states: allStates,
+        netMeter: Number.isFinite(netWaarde),
+        zon: { heeft: baseConfig?.solarProduction != null && Number.isFinite(Number(allStates.get(baseConfig.solarProduction.id)?.state)), intervalS: solarPace.intervalS },
+        energieDashboard: (prefs?.energy_sources ?? []).some((b) => b.type === 'grid'),
+        apparatenOpZon: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices).length : 0,
+        cameras: new Set((gevonden?.cameras ?? []).map((c) => c.naam)).size,
+        deurbel: (gevonden?.melders ?? []).length > 0,
+        rookmelders: houseRegisters ? vindRookmelders(houseRegisters.entities, houseRegisters.devices, allStates).length : 0,
+        spraak: spraakLijst,
+        addOn: version.installatie === 'add-on',
+        eigenPoort: eigenPoort != null,
+      });
+    },
     // In de add-on stelt Home Assistant de vraag rechtstreeks aan de add-on, op zijn naam in het netwerk (besluit 177).
     ...(sleutel && version.installatie === 'add-on' && webPort != null ? { sleutelAdres: `http://${hostname()}:${webPort}/api/vraag` } : {}),
     ...(weatherLog ? { weather: { forecast: forecastNow, log: weatherLog, bron: weerNaam, uren: () => openMeteo.latest?.uren ?? null } } : {}),

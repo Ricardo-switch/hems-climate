@@ -72,7 +72,13 @@ describe('op zon in de regeling', () => {
 
   it('doet niets voor een apparaat buiten de zone, of zonder op zon', () => {
     expect(withHeatSources(raw, [{ regelzone: 'zolder', bronnen: kamers[0]!.bronnen }]).raw).toBe(raw);
-    expect(withHeatSources(raw, [{ regelzone: 'badkamer', bronnen: [{ ...kamers[0]!.bronnen[0]!, opZon: false }] }]).raw).toBe(raw);
+    // Zonder op zon geen budget en geen buffer, wel het typeplaatje voor de hoofdzekering (besluit 178).
+    const zonder = withHeatSources(raw, [{ regelzone: 'badkamer', bronnen: [{ ...kamers[0]!.bronnen[0]!, opZon: false }] }]);
+    const bad = (zonder.raw['actuators'] as Record<string, unknown>[]).find((a) => a['id'] === 'badkamer')!;
+    expect(bad['onSurplus']).toBeUndefined();
+    expect(bad['power']).toMatchObject({ estimatedW: 0, ratedW: kamers[0]!.bronnen[0]!.vermogenW });
+    expect(zonder.raw['zones']).toEqual(raw['zones']);
+    expect(parseSiteConfig(zonder.raw, opties).ok).toBe(true);
     expect(withHeatSources(raw, null).raw).toBe(raw);
   });
 

@@ -93,6 +93,14 @@ function buildState(o: Overrides = {}): SystemState {
 const run = (state: SystemState) =>
   decide({ config: exampleSite, state, strategies: defaultStrategies() });
 
+describe('wat terug te winnen is (besluit 178)', () => {
+  it('telt alleen wat de regeling terugschakelt, niet de badkamer die voor comfort aan blijft', () => {
+    // De badkamer stookt 1.150 W, de airco in de woonkamer draait 900 W op zon.
+    const state = buildState({ actuators: { badkamer: actuator('heat', { powerW: 1150 }), 'ac-woonkamer': actuator('cool', { powerW: 900 }) } });
+    expect(run(state).explanation.budget.reclaimableW).toBe(900);
+  });
+});
+
 describe('vermogensbudget', () => {
   it('start niet twee airco\'s op een overschot dat er maar een dekt', () => {
     // Beide zones warm genoeg om te willen koelen; 900 + 750 W gevraagd,
@@ -860,6 +868,16 @@ describe('het stroombudget per fase (besluit 78)', () => {
     expect(starts(d)).toBe(false);
     expect(blocked(d)?.detail).toBe('fase L1: 3.9 A gevraagd, 2.0 A over (gemeten)');
     expect(d.explanation.phases).toEqual([{ id: 'L1', currentA: 31, limitA: 33, bron: 'gemeten' }]);
+  });
+
+  it('rekent met het typeplaatje als dat er is, niet met wat het apparaat van het budget vraagt (besluit 178)', () => {
+    // 28 A gemeten, grens 33 A: 900 W (3,9 A) past, 1.400 W op het typeplaatje (6,1 A) niet.
+    const metPlaatje: SiteConfig = { ...exampleSite, actuators: exampleSite.actuators.map((a) => (a.id === 'ac-woonkamer' ? { ...a, power: { ...a.power, ratedW: 1400 } } : a)) };
+    const toestand = withPhases(hot(6000), { L1: { a: 28, v: 230 } });
+    expect(starts(run(toestand))).toBe(true);
+    const d = decide({ config: metPlaatje, state: toestand, strategies: defaultStrategies() });
+    expect(starts(d)).toBe(false);
+    expect(blocked(d)?.detail).toBe('fase L1: 6.1 A gevraagd, 5.0 A over (gemeten)');
   });
 
   it('start wel als er genoeg stroom over is', () => {

@@ -17,6 +17,7 @@ import type {
 } from './decision.js';
 import type { DecisionContext } from './context.js';
 import { actuatorById } from './model.js';
+import { trekW } from './vermogen.js';
 import { zonePriorityFor } from './voorrang.js';
 import type { Action, Actuator } from './model.js';
 import { isOverridden } from './override.js';
@@ -313,7 +314,7 @@ export function arbitrate(
           reject(intent, 'insufficient_current_budget', `fase ${phase.id}: geen stroommeting en geen netvermogen, dus niet starten`);
           return;
         }
-        const extraA = actuator.power.estimatedW / phase.voltageV;
+        const extraA = trekW(actuator) / phase.voltageV;
         const before = phase.signedA + (allocatedA.get(phase.id) ?? 0);
         if (Math.abs(before + extraA) > phase.limitA) {
           reject(
@@ -398,7 +399,7 @@ export function arbitrate(
     if (!wasRunning && willRun) startedSomething = true;
     if (starts) {
       for (const phase of ctx.phases) {
-        allocatedA.set(phase.id, (allocatedA.get(phase.id) ?? 0) + actuator.power.estimatedW / phase.voltageV);
+        allocatedA.set(phase.id, (allocatedA.get(phase.id) ?? 0) + trekW(actuator) / phase.voltageV);
       }
     }
     if (wasRunning && intent.action === 'standby') parkedSomething = true;

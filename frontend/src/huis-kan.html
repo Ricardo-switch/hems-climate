@@ -90,6 +90,19 @@
   .blad .onder { margin-top: auto; display: flex; gap: 10px; align-items: center; }
   .blad .onder a { height: 42px; padding: 0 18px; border-radius: 14px; background: var(--tekst); color: var(--inkt); font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; text-decoration: none; }
   .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
+  /* Klaarzetten in Home Assistant (besluit 179). */
+  .kopknoppen { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .klaarknop { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .klaarknop b { font-family: var(--kop); font-size: 14px; }
+  .klaargroep { display: flex; flex-direction: column; gap: 6px; }
+  .klaargroep h4 { margin: 4px 0 0; }
+  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 9px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.04); }
+  .klaarregel.mist { background: rgba(255, 122, 77, 0.07); }
+  .klaarregel b { display: block; font-size: 14.5px; }
+  .klaarregel span:not(.stip), .klaarregel small { display: block; font-size: 13px; color: var(--zacht); margin-top: 1px; }
+  .klaarregel small { color: var(--gedempt); }
+  .klaarregel .knop { height: 34px; padding: 0 14px; font-size: 13px; }
+  #tel .kopknoppen, #tel [data-klaarknop] { align-items: flex-start; }
 
   /* De telefoon. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
@@ -107,7 +120,7 @@
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <div class="kopregel">
         <div><h1 class="kop-1">Wat je huis kan</h1><p class="lead">Alles wat Smart Climate voor je doet, en hoe het ervoor staat. Tik op iets voor de uitleg.</p></div>
-        <div class="legenda" role="group" aria-label="Laat alleen zien" data-legenda></div>
+        <div class="kopknoppen"><div data-klaarknop></div><div class="legenda" role="group" aria-label="Laat alleen zien" data-legenda></div></div>
       </div>
       <div class="veld">
         <section class="links"><div class="podium" id="podium-wand"></div><div data-meer></div></section>
@@ -121,6 +134,7 @@
     <div class="inhoud">
       <a class="terugje" href="instellingen.html">‹ Instellingen</a>
       <h1 class="kop-1" style="font-size: 32px">Wat je huis kan</h1>
+      <div data-klaarknop></div>
       <div class="legenda" role="group" aria-label="Laat alleen zien" data-legenda></div>
       <div class="podium" id="podium-tel"></div>
       <div data-meer></div>

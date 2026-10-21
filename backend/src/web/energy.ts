@@ -14,7 +14,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { raadDal, type DalRegio, type Tarieven, type VastePost } from './tarief.js';
+import { raadDal, type DalEigen, type DalRegio, type Tarieven, type VastePost } from './tarief.js';
 
 export const ENERGY_FILE = 'energie.json';
 
@@ -289,7 +289,19 @@ export function validateEnergy(body: unknown): EnergyCheck {
     enkel[k] = v;
   }
   const dalUren = p['dalUren'] ?? 'nl';
-  if (dalUren !== 'nl' && dalUren !== 'zuid') return { ok: false, reden: 'prijzen.dalUren is nl of zuid' };
+  if (dalUren !== 'nl' && dalUren !== 'zuid' && dalUren !== 'eigen') return { ok: false, reden: 'prijzen.dalUren is nl, zuid of eigen' };
+  // Eigen daltijden (besluit 178): hele uren, van en tot verschillend.
+  let dalEigen: DalEigen | null = null;
+  if (dalUren === 'eigen') {
+    const d = isRecord(p['dalEigen']) ? p['dalEigen'] : {};
+    const uur = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23;
+    if (!uur(d['van']) || !uur(d['tot']) || d['van'] === d['tot'] || typeof d['weekend'] !== 'boolean') {
+      return { ok: false, reden: 'prijzen.dalEigen is { van, tot, weekend }: twee verschillende hele uren van 0 tot 23, en of het weekend dal is' };
+    }
+    dalEigen = { van: d['van'] as number, tot: d['tot'] as number, weekend: d['weekend'] as boolean };
+  }
+  const salderen = p['salderen'] ?? true;
+  if (typeof salderen !== 'boolean') return { ok: false, reden: 'prijzen.salderen is waar of onwaar' };
   const na = isRecord(p['vanaf2027']) ? p['vanaf2027'] : {};
   const vergoeding = bedrag('vanaf2027.vergoeding', na['vergoeding'], 10);
   const terugKosten = bedrag('vanaf2027.kosten', na['kosten'], 10);
@@ -322,6 +334,8 @@ export function validateEnergy(body: unknown): EnergyCheck {
   const prijzen: EnergyPrices = {
     ...enkel,
     dalUren: dalUren as DalRegio,
+    ...(dalEigen ? { dalEigen } : {}),
+    salderen,
     vanaf2027: { vergoeding, kosten: terugKosten },
     vast,
     contractStart,

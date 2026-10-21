@@ -109,3 +109,20 @@ describe('de kosten met een echt contract (besluit 110)', () => {
     expect(oud.vast).toBe(30);
   });
 });
+
+describe('regels per land (besluit 178)', () => {
+  it('kent eigen daltijden, met of zonder het weekend, en zonder Nederlandse feestdagen', () => {
+    const eigen = { van: 22, tot: 6, weekend: false };
+    // Donderdag 8 oktober 2026: 22:30 is dal, 6:30 niet meer.
+    expect(isDal(zomer(2026, 10, 8, 22, 30), TZ, 'eigen', eigen)).toBe(true);
+    expect(isDal(zomer(2026, 10, 8, 6, 30), TZ, 'eigen', eigen)).toBe(false);
+    // Zaterdag midden op de dag: alleen met het weekend erbij.
+    expect(isDal(zomer(2026, 10, 10, 12), TZ, 'eigen', eigen)).toBe(false);
+    expect(isDal(zomer(2026, 10, 10, 12), TZ, 'eigen', { ...eigen, weekend: true })).toBe(true);
+    // Hemelvaart (donderdag 14 mei 2026) is geen dal met eigen tijden.
+    expect(isDal(zomer(2026, 5, 14, 12), TZ, 'eigen', eigen)).toBe(false);
+    // Binnen een dag: van 1 tot 6.
+    expect(isDal(zomer(2026, 10, 8, 3), TZ, 'eigen', { van: 1, tot: 6, weekend: false })).toBe(true);
+    expect(isDal(zomer(2026, 10, 8, 23), TZ, 'eigen', { van: 1, tot: 6, weekend: false })).toBe(false);
+  });
+});

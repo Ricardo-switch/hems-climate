@@ -9,6 +9,7 @@
 
 import type { ComfortProfile, Mode, SiteConfig, Zone } from './model.js';
 import { actuatorById, PROFILE_SETTLE_MS } from './model.js';
+import { terugschakelbaar } from './vermogen.js';
 import { isOverridden } from './override.js';
 import type { SystemState } from './state.js';
 import { readOr, timerActive } from './state.js';
@@ -308,6 +309,8 @@ export function buildContext(
       // terug; zijn verbruik is dus geen ruimte voor een ander (besluit 74). Het
       // zit wel in het netvermogen, en drukt zo vanzelf het budget.
       if (isOverridden(state, actuator.id)) continue;
+      // Alleen wat de regeling zelf terugschakelt (besluit 178): comfort blijft aan.
+      if (!terugschakelbaar(actuator)) continue;
       const running = s.action.ok && (s.action.value === 'heat' || s.action.value === 'cool');
       if (running) {
         reclaimableW += s.powerW.ok ? s.powerW.value : actuator.power.estimatedW;
