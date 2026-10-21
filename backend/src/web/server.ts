@@ -48,6 +48,7 @@ import { uitspraak } from './uitspraak.js';
 import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
 import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
 import type { UpdateView } from './bijwerken.js';
+import type { KlaarPunt } from './klaarzetten.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
 import { Luisterpost, type LuisterDeur } from './luisterpost.js';
@@ -181,6 +182,8 @@ export interface WebOptions {
    * beheerder de app nu opent.
    */
   readonly sleutelAdres?: string;
+  /** Wat er in Home Assistant klaarstaat voor de functies van Smart Climate (besluit 179). */
+  readonly klaarzetten?: () => Promise<readonly KlaarPunt[]>;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -1614,6 +1617,12 @@ export class WebServer {
      * Tailscale (besluit 160). Of die openstaat, en op welk adres hij al eens
      * gebruikt is; anders raadt de app het adres uit dat van Home Assistant.
      */
+    // Klaarzetten in Home Assistant (besluit 179): per functie wat er staat en wat er mist.
+    if (path === '/api/klaarzetten') {
+      sendJson(res, 200, { punten: this.#options.klaarzetten ? await this.#options.klaarzetten() : [] });
+      return;
+    }
+
     if (path === '/api/startscherm') {
       sendJson(res, 200, { eigenPoort: this.#options.eigenPoort != null, adres: this.#eigenAdres });
       return;

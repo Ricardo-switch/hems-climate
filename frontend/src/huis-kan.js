@@ -10,12 +10,12 @@
 
 const { $$, esc, haal } = app;
 
-const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, zon: null };
+const d = { site: null, huis: null, functies: null, energie: null, aansluiting: null, state: null, divergence: null, opbrengst: null, zon: null, klaar: null };
 /** Laat alleen deze stand zien, of alles. */
 let filter = null;
 
 async function laadAlles() {
-  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon' };
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon', klaar: 'api/klaarzetten' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -75,6 +75,35 @@ function blad(x) {
     ${ga ? `<div class="onder"><a href="${x.href}">${ga}</a></div>` : ''}`;
 }
 
+/*
+ * Klaarzetten in Home Assistant (besluit 179): wat Smart Climate er gebruikt,
+ * per groep, en of het er staat. Groen staat klaar, oranje mist voor de
+ * regeling, grijs maakt een functie mogelijk. Een tik opent dat scherm van
+ * Home Assistant; buiten Home Assistant staat erbij waar het is.
+ */
+const KLAAR_GROEPEN = [['basis', 'De basis'], ['klimaat', 'Klimaat'], ['energie', 'Zon en energie'], ['bewoners', 'Bewoners'], ['gemak', 'Gemak'], ['praten', 'Praten met je huis'], ['wand', 'De wand en je telefoon']];
+const KLAAR_STIP = { klaar: 'var(--mint)', mist: 'var(--gloed)', optioneel: 'var(--gedempt)' };
+const klaarPunten = () => d.klaar?.punten ?? [];
+
+function klaarKnop() {
+  const punten = klaarPunten();
+  if (!punten.length) return '';
+  const mist = punten.filter((p) => p.stand === 'mist').length;
+  return `<button type="button" class="klaarknop" data-open="klaarzetten"><span class="stip" style="background: ${mist ? 'var(--gloed)' : 'var(--mint)'}"></span>In Home Assistant <b>${mist ? `${mist} mist` : 'klaar'}</b></button>`;
+}
+
+function klaarBlad() {
+  const punten = klaarPunten();
+  const inHA = app.inHA();
+  const regel = (p) => `<div class="klaarregel ${p.stand}"><span class="stip" style="background: ${KLAAR_STIP[p.stand]}"></span><div><b>${esc(p.titel)}</b><span>${esc(p.zin)}</span>${!inHA && p.waar && p.stand !== 'klaar' ? `<small>${esc(p.waar)}</small>` : ''}</div>${inHA && p.pad ? `<button type="button" class="knop" data-ha-pad="${esc(p.pad)}" aria-label="${esc(`${p.titel}: open in Home Assistant`)}">Open</button>` : ''}</div>`;
+  const groepen = KLAAR_GROEPEN.map(([g, titel]) => {
+    const hier = punten.filter((p) => p.groep === g);
+    return hier.length ? `<div class="klaargroep"><h4>${esc(titel)}</h4>${hier.map(regel).join('')}</div>` : '';
+  }).join('');
+  return `<div class="bovenaan"><div><h2 class="kop-2">Klaarzetten in Home Assistant</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">Wat Smart Climate in Home Assistant gebruikt, en of het er staat. Oranje mist voor de regeling; grijs maakt een functie mogelijk.</p></div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
+    ${groepen}`;
+}
+
 /** Het huis, met aanwijzers naar wat het doet en wat erbij kan. */
 function huisModel(lijst) {
   const per = (id) => lijst.find((x) => x.id === id);
@@ -114,12 +143,15 @@ function tekenNu() {
   $$('[data-legenda]').forEach((el) => (el.innerHTML = legenda(lijst)));
   $$('[data-vakken]').forEach((el) => (el.innerHTML = vakken(lijst)));
   $$('[data-meer]').forEach((el) => (el.innerHTML = meer()));
-  const x = lijst.find((y) => y.id === gekozen());
+  $$('[data-klaarknop]').forEach((el) => (el.innerHTML = klaarKnop()));
+  const klaarOpen = gekozen() === 'klaarzetten' && klaarPunten().length > 0;
+  const x = klaarOpen ? null : lijst.find((y) => y.id === gekozen());
   $$('[data-blad]').forEach((el) => {
-    el.hidden = !x;
-    if (x) el.innerHTML = blad(x);
+    el.hidden = !x && !klaarOpen;
+    if (klaarOpen) el.innerHTML = klaarBlad();
+    else if (x) el.innerHTML = blad(x);
   });
-  $$('[data-achter]').forEach((el) => (el.hidden = !x));
+  $$('[data-achter]').forEach((el) => (el.hidden = !x && !klaarOpen));
   if (!d.huis) return;
   const tel = app.telStand();
   const podium = document.getElementById(tel ? 'podium-tel' : 'podium-wand');
@@ -140,7 +172,9 @@ app.start('instellingen');
 document.addEventListener('click', (e) => {
   const open = e.target.closest('[data-open]');
   const f = e.target.closest('[data-filter]');
-  if (open) location.hash = open.dataset.open;
+  const ha = e.target.closest('[data-ha-pad]');
+  if (ha) app.naarHAScherm(ha.dataset.haPad);
+  else if (open) location.hash = open.dataset.open;
   else if (e.target.closest('[data-sluit], [data-achter]')) history.replaceState(null, '', location.pathname), teken();
   else if (f) {
     filter = filter === f.dataset.filter ? null : f.dataset.filter;

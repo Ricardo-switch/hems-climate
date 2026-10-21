@@ -101,6 +101,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [146. Inrichten zoals de schets, en de film als een dag in je huis](#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis)
 - [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
 - [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
+- [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
 
 **Meten, data en analyse**
 
@@ -7959,6 +7960,39 @@ De rest van stap 5 uit het stappenplan van besluit 172, op 21 oktober 2026.
   badkamer, is geen ruimte voor een ander. In dit huis verandert er niets: daar
   zijn dat al alleen de airco's; de replay blijft gelijk.
 - **Versie 0.53.0.**
+
+---
+
+## 179. Klaarzetten in Home Assistant, bij Wat je huis kan
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Stap 6 uit het stappenplan van besluit 172, op 21 oktober 2026. Wat een nieuwe
+gebruiker in Home Assistant moet klaarzetten, stond alleen in het rapport van
+die dag. Nu zegt de app het zelf.
+
+*Besluit:*
+
+- **Een knop bij Wat je huis kan:** "In Home Assistant", met hoeveel er mist.
+  Een tik opent het blad met de lijst, in zeven groepen: de basis (locatie en
+  tijdzone, etages en ruimtes), klimaat (thermostaten en airco's, temperatuur
+  per kamer), zon en energie (slimme meter, omvormer, Energie-dashboard,
+  apparaten op zon), bewoners (een persoon per bewoner met een account, de app
+  van Home Assistant voor thuis of weg), gemak (lampen, schermen, camera's en
+  deurbel, rookmelders, weer), praten (spraakassistent, wekwoord, taalmodel) en
+  de wand en je telefoon (bewegingsmelder, en in de add-on de eigen poort).
+- **Drie standen:** klaar (groen), mist voor de regeling (oranje), of maakt een
+  functie mogelijk (grijs). Alleen wat de regeling nodig heeft, telt als mist.
+- **Waar het staat:** in Home Assistant opent een knop dat scherm van Home
+  Assistant (het paneel verandert het adres van Home Assistant zelf en zegt het
+  met `location-changed`; het volledige scherm gaat eerst uit). Buiten Home
+  Assistant staat erbij waar je het vindt, zoals Instellingen › Personen.
+- **Alleen tellen** (besluit 45): de dienst (`/api/klaarzetten`,
+  `klaarzetten.ts`) telt etages, ruimtes, apparaten zonder ruimte, personen
+  met een account en een telefoon, thermometers in een ruimte, en wat de app
+  al vond; een zin noemt nooit een entiteit. Het omvormerpunt zegt het ook als
+  de sensor trager is dan eens per twee minuten (besluit 89).
+- **Versie 0.54.0.**
 
 ## Wat nog een besluit wacht
 

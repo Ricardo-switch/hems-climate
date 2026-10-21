@@ -835,6 +835,23 @@
     balkenVanHA(true);
     knoppenNaarHA();
   }
+  /*
+   * Een scherm van Home Assistant openen (besluit 179), zoals Instellingen ›
+   * Personen. De app draait in een paneel van dezelfde herkomst; Home Assistant
+   * navigeert zelf als zijn adres verandert en het "location-changed" hoort.
+   * Het volledige scherm gaat eerst uit, zoals bij de knop naar Home Assistant.
+   */
+  function naarHAScherm(pad) {
+    if (!inHA()) return false;
+    try {
+      naarHA();
+      global.parent.history.pushState(null, '', pad);
+      global.parent.dispatchEvent(new CustomEvent('location-changed', { detail: { replace: false } }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
   /** Weer volledig scherm, met dezelfde knop. */
   function weerVolledig() {
     pauze(false);
@@ -1407,5 +1424,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer };
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
 })(window);

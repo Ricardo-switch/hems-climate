@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.54.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Bij Wat je huis kan: wat er in Home Assistant klaar moet staan, wat er mist, en een tik naar dat scherm
+
 ## 0.53.0
 
 *21 oktober 2026*

@@ -98,6 +98,7 @@ const ENERGY_SOURCE: EnergySource = {
 import { SessionStore } from '../src/web/auth.js';
 import { BewonersStore, GEEN_BEWONERS, alsScherm, bewonersView, comfortVanBewoner, gastStand, herken, leesActie, personenUit, voegToe, voerUit, type Bewoners } from '../src/web/bewoners.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
+import { klaarzetten } from '../src/web/klaarzetten.js';
 import { CoverSwitch } from '../src/web/covers.js';
 import type { HouseBattery, HouseReport } from '../src/web/house.js';
 
@@ -378,6 +379,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           },
           uitstel,
           energy: { store: energyStore, source: ENERGY_SOURCE },
+          // Klaarzetten in Home Assistant (besluit 179): het kleine huis, zonder locatie.
+          klaarzetten: async () => klaarzetten({ locatie: false, registers: houseRegisters, states: houseStates, netMeter: true, zon: { heeft: true, intervalS: 30 }, energieDashboard: true, apparatenOpZon: 0, cameras: 1, deurbel: false, rookmelders: 0, spraak: [], addOn: true, eigenPoort: false }),
           connection: {
             store: connStore,
             found: () => connFound,
@@ -2759,6 +2762,22 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.locator('#wand [data-blad]', { hasText: 'Wanneer het werkt' }).waitFor();
     await p.locator('#wand [data-blad] [data-sluit]').click();
     await expect.poll(() => p.locator('#wand [data-blad]').isHidden()).toBe(true);
+    // Klaarzetten in Home Assistant (besluit 179): de knop zegt wat er mist, en opent de lijst per groep.
+    const lijstMist = async () => ((await (await fetch(`${baseUrl}/api/klaarzetten`, { headers: { cookie: `hems_sessie=${sessionId}` } })).json()) as { punten: { stand: string }[] }).punten.filter((x) => x.stand === 'mist').length;
+    const knop = p.locator('#wand [data-klaarknop] button');
+    const mist = await lijstMist();
+    expect(await knop.textContent()).toContain(`${mist} mist`);
+    await knop.click();
+    const lijst = p.locator('#wand [data-blad]');
+    await lijst.locator('h2', { hasText: 'Klaarzetten in Home Assistant' }).waitFor();
+    expect(await lijst.locator('.klaargroep h4').allTextContents()).toEqual(['De basis', 'Klimaat', 'Zon en energie', 'Bewoners', 'Gemak', 'Praten met je huis', 'De wand en je telefoon']);
+    expect(await lijst.locator('.klaarregel.mist').count()).toBe(mist);
+    expect(await lijst.locator('.klaarregel.mist').first().textContent()).toContain('Locatie en tijdzone');
+    // Buiten Home Assistant staat erbij waar het is, zonder knop.
+    expect(await lijst.locator('.klaarregel.mist small').first().textContent()).toBe('Instellingen › Systeem › Algemeen');
+    expect(await lijst.locator('[data-ha-pad]').count()).toBe(0);
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-klaarzetten.png') });
+    await lijst.locator('[data-sluit]').click();
     expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
     expect(fouten).toEqual([]);
     await context.close();
