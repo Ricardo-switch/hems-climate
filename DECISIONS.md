@@ -7588,6 +7588,11 @@ schetsen Wand-Favorieten en Wand-Rook.
   de app de sessie elke minuut zelf vast (zoals Home Assistant), vernieuwt hij
   hem bij zo'n 401 en vraagt hij het opnieuw, ook voor de live-stroom. Een 401
   van de dienst zelf gaat nog naar het inloggen.
+- **De schuiven bij Comfort** (versie 0.46.1): alleen het bolletje slepen
+  verandert de temperatuur, vanaf waar je het pakte. Eerst kwam er tijdens het
+  slepen een nieuw bolletje onder de vinger; op de tablet kwamen bewegen en
+  loslaten dan niet meer aan, bleef het slepen aan staan, en sprong het
+  bolletje naar elke volgende tik op de balk of de pagina.
 - **De zolder:** een radiator onder het schuine dak zoekt op de achtermuur een
   plek waar hij rechtop past, en is anders kleiner; eerst stak hij bij een
   kamer tegen de buitenmuur door het dak.

@@ -1060,6 +1060,55 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * Comfort (besluit 130): per kamer een balk per dagdeel. Een greep slepen
    * bewaart meteen, en de dienst rekent ermee.
    */
+  /*
+   * Met een vinger (21 oktober 2026): alleen het bolletje slepen verandert de
+   * temperatuur, en het gaat mee tot je loslaat. Daarna doet een tik op de
+   * balk of ergens anders niets. Eerst werd het bolletje onder de vinger
+   * vervangen; dan bleef het slepen aan en sprong het naar elke volgende tik.
+   */
+  it('sleept comfort met een vinger, en een tik ergens anders verandert niets', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const zone = exampleSite.zones[0]!;
+    await p.goto(`${baseUrl}/comfort.html#${zone.id}`);
+    const wand = p.locator('#wand');
+    const greep = wand.locator('[data-modus="dag"] [data-greep="heat"]');
+    await greep.waitFor({ timeout: 10_000 });
+    const cdp = await context.newCDPSession(p);
+    const raak = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) =>
+      cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+    const waarde = () => greep.getAttribute('aria-valuenow').then(Number);
+    const voor = await waarde();
+    const vak = (await wand.locator('[data-modus="dag"] .schaal').boundingBox())!;
+    const g = (await greep.boundingBox())!;
+    // Net naast het midden pakken, en twee graden naar links schuiven (de balk is 20 graden breed).
+    const x0 = g.x + g.width / 2 + 4;
+    const y = g.y + g.height / 2;
+    // Het bolletje onder de vinger blijft hetzelfde: op Android gaan bewegen en loslaten naar dat ene bolletje.
+    await greep.evaluate((el) => ((globalThis as unknown as { __greep: unknown }).__greep = el));
+    await raak('touchStart', x0, y);
+    for (let i = 1; i <= 8; i++) await raak('touchMove', x0 - (vak.width * 0.1 * i) / 8, y);
+    // Tijdens het slepen gaat het bolletje mee, zonder te springen.
+    await expect.poll(waarde).toBe(voor - 2);
+    expect(await p.evaluate(() => (globalThis as unknown as { __greep: { isConnected: boolean } }).__greep.isConnected)).toBe(true);
+    await raak('touchEnd', 0, 0);
+    await expect.poll(() => comfortNu?.kamers[zone.id]?.modi.dag?.heat, { timeout: 5_000 }).toBe(voor - 2);
+    // Een tik op de balk, en een tik ergens anders: niets verandert.
+    for (const [x, yy] of [[vak.x + vak.width * 0.9, vak.y + vak.height / 2], [vak.x + 40, vak.y - 120]] as const) {
+      await raak('touchStart', x, yy);
+      await raak('touchEnd', 0, 0);
+    }
+    await p.waitForTimeout(900);
+    expect(await waarde()).toBe(voor - 2);
+    expect(comfortNu?.kamers[zone.id]?.modi.dag?.heat).toBe(voor - 2);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 20_000);
+
   it('zet comfort per kamer met een greep, en bewaart meteen', async () => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
