@@ -56,7 +56,8 @@
 }
 
 /*
- * De zes eigen kleuren. Lucht is de standaard, zoals de app altijd was. Op de
+ * De zes eigen kleuren, elk een andere tint (21 oktober 2026; eerst te veel
+ * paars en roze). Lucht is de standaard, zoals de app altijd was. Op de
  * pagina zelf (`<html data-kleur>`) en op een stukje ervan, zoals de naam van
  * een bewoner in de begroeting: `<b data-kleur="roze">` kleurt met var(--accent).
  */
@@ -78,19 +79,19 @@
   --accent-d: #bdb7ff;
   --accent-l: #5a4bd1;
 }
-[data-kleur='paars'] {
-  --accent-d: #e0b3ff;
-  --accent-l: #8a3fc2;
+[data-kleur='framboos'] {
+  --accent-d: #ff9ec0;
+  --accent-l: #c2185b;
 }
-[data-kleur='roze'] {
-  --accent-d: #ffb3d9;
-  --accent-l: #b8327a;
+[data-kleur='zeegroen'] {
+  --accent-d: #7fe0d4;
+  --accent-l: #0f766e;
 }
-[data-kleur='indigo'] {
-  --accent-d: #a5b4fc;
-  --accent-l: #3f51c8;
+[data-kleur='koper'] {
+  --accent-d: #e8bfa0;
+  --accent-l: #8a5536;
 }
-[data-kleur='zilver'] {
+[data-kleur='grafiet'] {
   --accent-d: #dfe6ee;
   --accent-l: #3c4a5c;
 }

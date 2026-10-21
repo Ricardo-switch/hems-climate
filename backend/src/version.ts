@@ -34,9 +34,9 @@ export const NIEUW: readonly Nieuw[] = [
     nieuw: [
       'Jij, bovenaan Instellingen: je kleur, licht of donker, je Thuis en je comfort op één plek',
       'Op de telefoon een licht thema, of zoals je telefoon het wil',
-      'Een eigen kleur voor het menu, de keuzes en je naam; op de wand die van wie het comfort heeft, met zijn kaarten en favorieten',
+      'Een eigen kleur voor het menu, de keuzes en je naam; de wand toont de kleur, kaarten en favorieten van wie het comfort heeft',
     ],
-    beter: ['Het getal bij de bel is beter te lezen'],
+    beter: ['Het getal bij de bel is beter te lezen', 'De knop Inrichten heeft zijn tekst weer in het midden'],
   },
   {
     versie: '0.54.0',

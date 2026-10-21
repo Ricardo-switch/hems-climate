@@ -319,12 +319,21 @@
     }
   }
 
+  function wandVanWie() {
+    const esc = global.app.esc;
+    if (v.wand.van == null) return 'Je past de wand aan <b>voor iedereen in huis</b>';
+    if (v.wand.eigen) return 'Je past <b>jouw Thuis</b> aan, ook op je telefoon';
+    return `Je past Thuis aan <b>van ${esc(v.wand.naam ?? 'wie er geldt')}</b>, ook op diens telefoon`;
+  }
+
   function begin(plek) {
     if (!kan || (plek === 'wand' && !v.wand.magAanpassen)) return;
     bewerk = plek;
     zetKnoppen();
     document.body.classList.add('aanpassen');
     $$('[data-bewerkbalk], [data-bewerkkop]').forEach((el) => (el.hidden = false));
+    // Van wie de wand is (besluit 181): één indeling per bewoner, dus wat je hier verandert, staat ook op diens telefoon.
+    $$('[data-bewerkwie]').forEach((el) => (el.innerHTML = wandVanWie()));
     na();
     // Naar de kaarten, met ruimte erboven om een kaart helemaal naar boven te schuiven.
     const eerste = plek === 'tel' ? box('tel').querySelector(':scope > [data-kaart]:not([data-uit])') : null;
@@ -525,7 +534,7 @@
       })
       .join('');
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Favorieten</h2><button type="button" class="knop knop-licht" data-fav-klaar>Klaar</button></div>
-      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? ' Voor de wand, voor iedereen.' : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Schuif met de greep om de volgorde te veranderen.' : ''}</p>
+      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? (v.wand.van == null ? ' Voor de wand, voor iedereen.' : v.wand.eigen ? ' Ook op je telefoon.' : ` Van ${global.app.esc(v.wand.naam ?? 'wie er geldt')}, ook op diens telefoon.`) : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Schuif met de greep om de volgorde te veranderen.' : ''}</p>
       ${chips ? `<div class="favchips tegels" data-favchips>${chips}</div>` : ''}
       ${filters}
       ${ruimtes}`;

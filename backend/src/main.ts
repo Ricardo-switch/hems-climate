@@ -40,7 +40,7 @@ import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web
 import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
 import { ComfortStore, controleerComfort, withComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
-import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, persoonsAccount, herken as herkenBewoner, hoofdVan, leesActie, namenVoorExport, personenUit, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, persoonsAccount, herken as herkenBewoner, hoofdVan, leesActie, namenVoorExport, personenUit, profielenVan, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
 import { BACKUP_DIR, OPNIEUW_STARTEN, beginOpnieuw, bewaarBackup, bewaardeBackups, leesBackup, maakBackup, zetTerug } from './web/gegevens.js';
 import { entiteitenLijst, type AnalyseExtra } from './web/export.js';
 import { UitstelStore } from './web/uitstel.js';
@@ -1350,13 +1350,7 @@ if (webPort != null) {
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {
-          profielen: (userId: string | null) => {
-            const b = bewonersStore.current;
-            const volgorde = b.volgorde.flatMap((id) => (b.bewoners[id] ? [{ id, account: b.bewoners[id]!.haUser }] : []));
-            const p = runner?.latest?.explanation.profile;
-            const geldt = p ? (b.bewoners[p.id]?.haUser ?? null) : null;
-            return { profielen: { volgorde, geldt }, scherm: userId != null && b.schermen[userId] != null };
-          },
+          profielen: (userId: string | null) => profielenVan(bewonersStore.current, runner?.latest?.explanation.profile?.id ?? null, userId),
         }
       : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),

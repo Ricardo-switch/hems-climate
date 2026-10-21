@@ -96,7 +96,7 @@ const ENERGY_SOURCE: EnergySource = {
   },
 };
 import { SessionStore } from '../src/web/auth.js';
-import { BewonersStore, GEEN_BEWONERS, alsScherm, bewonersView, comfortVanBewoner, gastStand, herken, leesActie, personenUit, voegToe, voerUit, type Bewoners } from '../src/web/bewoners.js';
+import { BewonersStore, GEEN_BEWONERS, alsScherm, bewonersView, comfortVanBewoner, gastStand, herken, leesActie, personenUit, profielenVan, voegToe, voerUit, type Bewoners } from '../src/web/bewoners.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { klaarzetten } from '../src/web/klaarzetten.js';
 import { CoverSwitch } from '../src/web/covers.js';
@@ -345,6 +345,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           },
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
+          profielen: (userId) => profielenVan(bewonersStore.current, live.explanation.profile?.id ?? null, userId),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
           layout: { store: layoutStore, proposal: () => proposeLayout(exampleSite, houseRegisters, houseStates) },
@@ -2226,15 +2227,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('[data-blad] [data-thema="donker"]').click();
       await expect.poll(() => p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(false);
       await p.locator('[data-blad] [data-thema="licht"]').click();
-      await p.locator('[data-blad] [data-kies-kleur="roze"]').click();
-      await expect.poll(() => p.evaluate('document.documentElement.dataset.kleur')).toBe('roze');
+      await p.locator('[data-blad] [data-kies-kleur="framboos"]').click();
+      await expect.poll(() => p.evaluate('document.documentElement.dataset.kleur')).toBe('framboos');
       await p.locator('[data-blad] [data-blad-dicht]').click();
       await zet({ kleur: 'violet' });
 
       // De controle zelf: lichtgele tekst op wit valt weg.
       await p.evaluate(`document.querySelector('#tel').insertAdjacentHTML('beforeend', '<p id="proef" style="color: #f7b548; background: #fff">proef</p>')`);
       expect((await slecht()).some((x) => x.includes('"proef"'))).toBe(true);
-      const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', 'instellingen.html', 'jij.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'indeling.html', 'inrichten.html'];
+      const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as { etages: { ruimtes: { id: string; apparaten: unknown[] }[] }[] };
+      const vol = huisNu.etages.flatMap((e) => e.ruimtes).sort((x, y) => y.apparaten.length - x.apparaten.length)[0]!;
+      const paginas = ['thuis.html', 'vandaag.html', 'apparaten.html', 'opbrengst.html', 'assistent.html', `kamer.html#${encodeURIComponent(vol.id)}`, 'instellingen.html', 'jij.html', 'comfort.html', 'energie.html', 'functies.html', 'regeling.html', 'huis-kan.html', 'toegang.html', 'bewoners.html', 'indeling.html', 'inrichten.html'];
       const weg: string[] = [];
       for (const pagina of paginas) {
         await p.goto(`${baseUrl}/${pagina}`);
@@ -2242,7 +2245,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         // Meteen licht, uit wat de pagina onthield: de dienst bevestigt het.
         expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")'), pagina).toBe(true);
         weg.push(...(await slecht()).map((x) => `${pagina}: ${x}`));
-        if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-licht-${pagina.replace('.html', '')}.png`), fullPage: true });
+        if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-licht-${pagina.replace(/\.html.*/, '')}.png`), fullPage: true });
       }
       expect(weg).toEqual([]);
 
@@ -3340,6 +3343,19 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const groetHoog = await p.locator('#tel [data-groet]').evaluate((el) => el.getBoundingClientRect().height);
     expect(groetHoog).toBeLessThan(26);
     await shot(p, 'thuis-tel-wie');
+    // Ieder zijn eigen kleur op volgorde (besluit 181): Noor is de tweede, dus framboos.
+    expect(await p.locator('#tel [data-wie] i', { hasText: 'N' }).getAttribute('data-kleur')).toBe('framboos');
+    // In het licht een lichte ring tussen de bollen, geen donkere.
+    const thema = (t: string) => p.evaluate(`fetch('api/voorkeuren', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', thema: '${t}' }) }).then((r) => r.ok)`);
+    expect(await thema('licht')).toBe(true);
+    await p.reload();
+    await p.locator('#tel [data-wie] i').first().waitFor(kort);
+    expect(await p.evaluate('document.documentElement.classList.contains("sc-licht")')).toBe(true);
+    expect(await p.evaluate('getComputedStyle(document.querySelector("#tel [data-wie] i")).boxShadow')).toContain('rgb(228, 234, 242)');
+    // Je naam in je eigen kleur: lucht, in het licht de donkere tint.
+    expect(await p.evaluate('getComputedStyle(document.querySelector("#tel [data-groet] b")).color')).toBe('rgb(11, 111, 164)');
+    await shot(p, 'thuis-tel-wie-licht');
+    expect(await thema('donker')).toBe(true);
     await p.setViewportSize({ width: 1280, height: 800 });
 
     // Comfort van Noor, bekeken door de hoofdgebruiker: met de keuze wiens comfort.

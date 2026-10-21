@@ -8064,24 +8064,27 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   alles: een lichte lucht van hetzelfde moment, lichte kaarten en tabs,
   donkere tekst. Het huis houdt zijn eigen kleuren; de grond, de wolken en de
   maan worden lichter.
-- **Zes eigen kleuren:** lucht (de standaard, zoals de app altijd was), roze,
-  violet, paars, indigo en zilver. Elk met een tint voor donker en een voor
-  licht die het contrast van WCAG AA haalt (besluit 86). Nooit blauw, oranje,
-  amber of groen: die zeggen wat het huis doet (87). Wie nog niets koos, krijgt
-  er een op zijn plek in de volgorde: de hoofdgebruiker lucht, de tweede roze,
-  de derde violet. De kleur staat op het menu, op wat gekozen is, op de
+- **Zes eigen kleuren, elk een andere tint:** lucht (de standaard, zoals de
+  app altijd was), framboos, zeegroen, violet, koper en grafiet. Elk met een
+  tint voor donker en een voor licht die het contrast van WCAG AA haalt
+  (besluit 86). Nooit het blauw, oranje, amber of groen van de betekenis: die
+  zeggen wat het huis doet (87). Wie nog niets koos, krijgt er een op zijn plek
+  in de volgorde: de hoofdgebruiker lucht, de tweede framboos, de derde
+  zeegroen. Eerst waren het lucht, roze, violet, paars, indigo en zilver; de
+  bewoner vond dat te veel paars en roze. De kleur staat op het menu, op wat gekozen is, op de
   hoofdknoppen en op je naam in de begroeting; op de wand ieder die thuis is in
   zijn eigen kleur, ook in de rondjes van wie er thuis is. Die rondjes hadden
   een vaste rij met amber en groen; nu de kleur van de bewoner.
 - **De wand volgt het profiel dat geldt:** de kleur, de kaarten en de
   favorieten van wiens comfort geldt (147), en bij niemand thuis die van de
-  hoofdgebruiker. Ieder heeft zo een eigen indeling voor de wand, naast die van
-  zijn telefoon; wie nog niets koos, krijgt die van de hoofdgebruiker, en daarna
-  de wand van vóór dit besluit. Aanpassen doe je op de wand terwijl jouw
-  comfort geldt, of op Thuis op een eigen tablet of computer, waar Thuis jouw
-  wand is. Van de wand zelf blijven: de nachtstand en de rust (164, 165),
-  eenvoudig of uitgebreid, en minder beweging. Dat verandert besluit 162, waar
-  de wand van iedereen was.
+  hoofdgebruiker. Eén indeling per bewoner: de wand toont de kaarten en
+  favorieten van zijn telefoon, zonder de kamers en Straks, die de wand zelf
+  al laat zien. Pas je ze op de wand aan, dan verandert de telefoon mee; de
+  bewerkbalk zegt van wie je aanpast. Eerst kreeg ieder een eigen indeling
+  voor de wand naast die van zijn telefoon; de bewoner vond dat twee keer zo
+  veel instelwerk. Van de wand zelf blijven: de nachtstand en de rust (164,
+  165), eenvoudig of uitgebreid, en minder beweging. Zonder bewoners blijft de
+  wand van het huis. Dat verandert besluit 162, waar de wand van iedereen was.
 - **Jij, bovenaan Instellingen** (`jij.html`): alles van één bewoner op één
   plek. Het thema en de kleur kies je daar, in een blad; grotere letters en
   minder beweging zet je er aan; de rest wijst naar waar het al stond (de
@@ -8090,7 +8093,7 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   gast heeft geen profiel. De losse regel Weergave op Instellingen is daarin
   opgegaan.
 - **Waar het staat:** bij de voorkeuren per account (`voorkeuren.json`,
-  `thema`, `kleur` en `wand`); de dienst weet uit de bewoners wie op welke plek
+  `thema` en `kleur`); de dienst weet uit de bewoners wie op welke plek
   staat en wiens comfort geldt. Een klein script in de `<head>` van elke pagina
   zet het thema en de kleur vóór de eerste weergave, uit wat de pagina de
   vorige keer onthield; de dienst heeft het laatste woord.
@@ -8101,13 +8104,16 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   er niets. Een paginatest zet elke pagina licht en meet het contrast van alle
   tekst; het bolletje met een getal bij de bel haalde maar 2,6:1 (wit op
   oranje) en heeft nu donkere tekst, ook in het donker.
+- **Het huis in het licht:** elke donkere kleur van het huis gaat een tint
+  omhoog, tot leisteen, licht genoeg om geen zwarte vlek te zijn en donker
+  genoeg voor de witte namen op de muren. De labels op het huis zijn witte
+  kaartjes met donkere tekst; de ring tussen de bollen van wie er thuis is, is
+  licht.
 - **Versie 0.55.0.**
 
-*Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). Ook de wand
-licht: die hangt aan de muur en wordt 's avonds bekeken (87). En de wand van
-je telefoon uit aanpassen: dat kan op de wand zelf of op een tablet, en een
-tweede bewerkstand op de telefoon voor een scherm dat je daar niet ziet, maakt
-het moeilijker in plaats van makkelijker.
+*Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). De wand licht:
+die hangt aan de muur en wordt 's avonds bekeken (87). En een eigen indeling
+voor de wand naast die van de telefoon (zie hierboven).
 
 ## Wat nog een besluit wacht
 

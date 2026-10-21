@@ -18,10 +18,10 @@
  * aanpassen.
  *
  * Het profiel (besluit 181): per bewoner ook het thema op de telefoon
- * (donker, licht of zoals de telefoon) en een eigen kleur, en een eigen
- * indeling voor de wand. De wand toont de indeling en de kleur van wiens
- * comfort geldt; is er niemand thuis, die van de hoofdgebruiker. Wie nog
- * niets koos voor de wand, krijgt die van de hoofdgebruiker, en wie nog geen
+ * (donker, licht of zoals de telefoon) en een eigen kleur. Er is één
+ * indeling per bewoner: de wand toont de kaarten, de favorieten en de kleur
+ * van wiens comfort geldt, zoals die op zijn telefoon staan, zonder de kamers
+ * en Straks; is er niemand thuis, die van de hoofdgebruiker. Wie nog geen
  * kleur koos, krijgt er een op volgorde. Wat de wand doet als niemand kijkt,
  * blijft van de wand.
  *
@@ -111,7 +111,7 @@ export type HelderAvond = (typeof HELDER_AVOND)[number];
 export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
 
 /** De eigen kleuren (besluit 181), in de volgorde waarin bewoners er een krijgen. Nooit een kleur die iets betekent. */
-export const KLEUREN = ['lucht', 'roze', 'violet', 'paars', 'indigo', 'zilver'] as const;
+export const KLEUREN = ['lucht', 'framboos', 'zeegroen', 'violet', 'koper', 'grafiet'] as const;
 export type Kleur = (typeof KLEUREN)[number];
 /** Het thema op de telefoon; de wand blijft donker. */
 export const THEMAS = ['donker', 'licht', 'systeem'] as const;
@@ -130,15 +130,13 @@ interface Eigen {
   readonly weergave?: Weergave;
   readonly thema?: Thema;
   readonly kleur?: Kleur;
-  /** Je eigen indeling van de wand, voor als jouw comfort geldt (besluit 181). */
-  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[] };
 }
 
 interface Bestand {
   readonly versie: 1;
   /** Per account van Home Assistant; '' is zonder inlog (de NAS op het thuisnetwerk). */
   readonly accounts: Readonly<Record<string, Eigen>>;
-  /** De wand. Kaarten en favorieten hier zijn van vóór besluit 181: nog de terugval als de hoofdgebruiker niets koos. */
+  /** De wand. Kaarten en favorieten hier gelden alleen zonder bewoners (besluit 181). */
   readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[]; readonly niemand?: Niemand };
 }
 
@@ -147,11 +145,11 @@ const LEEG: Bestand = { versie: 1, accounts: {} };
 export interface VoorkeurenView {
   readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur };
   /**
-   * De wand: de indeling en de kleur van wiens profiel geldt (`van`, een
-   * account), of zonder bewoners die van het huis. `eigen`: wie kijkt is zelf
-   * die bewoner, en niet een scherm.
+   * De wand: de kaarten, favorieten en kleur van wiens profiel geldt (`van`,
+   * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
+   * `eigen`: wie kijkt is zelf die bewoner, en niet een scherm.
    */
-  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly eigen: boolean };
+  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean };
   /** De kleur van elke bewoner, op zijn id: voor de begroeting en de rondjes. */
   readonly kleuren: Readonly<Record<string, Kleur>>;
   readonly maxFavorieten: number;
@@ -165,7 +163,7 @@ export type VoorkeurenResult = { readonly ok: true; readonly view: VoorkeurenVie
  * geldt.
  */
 export interface Profielen {
-  readonly volgorde: readonly { readonly id: string; readonly account: string }[];
+  readonly volgorde: readonly { readonly id: string; readonly account: string; readonly naam?: string }[];
   readonly geldt: string | null;
 }
 const accounts = (p: Profielen | undefined): string[] => (p?.volgorde ?? []).map((x) => x.account);
@@ -279,25 +277,41 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
 export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const eigen = b.accounts[wie.userId ?? ''] ?? {};
   const { van, eigen: zelf } = wandVan(wie);
-  // Wie voor de wand nog niets koos, krijgt die van de hoofdgebruiker, en dan die van het huis.
-  const hoofd = wie.profielen?.volgorde[0]?.account;
-  const indeling = [van, hoofd].map((a) => (a == null ? undefined : b.accounts[a]?.wand));
+  // Eén indeling per bewoner: op de wand die van zijn telefoon, zonder wat de wand zelf al toont.
+  const profiel = van == null ? null : (b.accounts[van] ?? {});
   const thema = eigen.thema && (THEMAS as readonly string[]).includes(eigen.thema) ? eigen.thema : STANDAARD_THEMA;
   return {
     tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen) },
     wand: {
-      kaarten: indeling.find((w) => w?.kaarten)?.kaarten ?? b.wand?.kaarten ?? STANDAARD_WAND,
-      favorieten: indeling.find((w) => w?.favorieten)?.favorieten ?? b.wand?.favorieten ?? [],
+      kaarten: profiel ? (profiel.tel ?? STANDAARD_TEL).filter((k) => WAND_KAARTEN.includes(k)) : (b.wand?.kaarten ?? STANDAARD_WAND),
+      favorieten: profiel ? (profiel.favorieten ?? []) : (b.wand?.favorieten ?? []),
       // Zonder bewoners past de hoofdgebruiker of een beheerder de wand aan; met bewoners je eigen indeling, of op een scherm die van wie er geldt.
       magAanpassen: van == null ? wie.magWand : true,
       niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand },
       kleur: van == null ? 'lucht' : kleurVan(b, van, wie.profielen),
       van,
+      naam: wie.profielen?.volgorde.find((x) => x.account === van)?.naam ?? null,
       eigen: zelf,
     },
     kleuren: Object.fromEntries((wie.profielen?.volgorde ?? []).map((x) => [x.id, kleurVan(b, x.account, wie.profielen)])),
     maxFavorieten: MAX_FAVORIETEN,
   };
+}
+
+/**
+ * De kaarten van de telefoon, met de volgorde die op de wand gekozen is
+ * (besluit 181): de kamers en Straks blijven op hun plek, de kaarten die de
+ * wand kent komen in de nieuwe volgorde op de plekken van de wand, wat de wand
+ * wegliet gaat weg en wat erbij kwam komt achteraan.
+ */
+export function metWandVolgorde(tel: readonly KaartId[], wand: readonly KaartId[]): KaartId[] {
+  const rest = [...wand];
+  const uit: KaartId[] = [];
+  for (const k of tel) {
+    if (!WAND_KAARTEN.includes(k)) uit.push(k);
+    else if (rest.length) uit.push(rest.shift()!);
+  }
+  return [...uit, ...rest];
 }
 
 /** Het thema en de kleur (besluit 181), elk uit de vaste lijst. */
@@ -311,8 +325,9 @@ export function leesKleur(x: unknown): { ok: true; kleur: Kleur } | { ok: false;
 /**
  * Wat er verandert: `{ plek: 'tel' | 'wand', kaarten?, favorieten? }`. Op de
  * telefoon je eigen keuze. Op de wand de indeling van wie hij nu is (besluit
- * 181): je eigen, of op een scherm die van wiens comfort geldt; zonder
- * bewoners alleen als je de wand mag aanpassen. Bij de telefoon ook
+ * 181): je eigen, of op een scherm die van wiens comfort geldt; dat is
+ * dezelfde als op de telefoon. Zonder bewoners alleen als je de wand mag
+ * aanpassen. Bij de telefoon ook
  * `weergave`, `thema` en `kleur` (die gelden voor jou, op elk scherm), bij de
  * wand `niemand`, dat alleen de hoofdgebruiker of een beheerder verandert.
  */
@@ -338,7 +353,17 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
       ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
     };
     const wand = { ...b.wand, ...(van == null ? indeling : {}), ...(niemand ? { niemand: niemand.niemand } : {}) };
-    const accounts = van == null || (!kaarten && !favorieten) ? b.accounts : { ...b.accounts, [van]: { ...b.accounts[van], wand: { ...b.accounts[van]?.wand, ...indeling } } };
+    const profiel = van == null ? null : (b.accounts[van] ?? {});
+    const accounts = profiel == null || (!kaarten && !favorieten)
+      ? b.accounts
+      : {
+          ...b.accounts,
+          [van!]: {
+            ...profiel,
+            ...(kaarten ? { tel: metWandVolgorde(profiel.tel ?? STANDAARD_TEL, kaarten.kaarten) } : {}),
+            ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+          },
+        };
     return { ok: true, bestand: { ...b, accounts, wand } };
   }
   const weergave = r!['weergave'] === undefined ? null : leesWeergave(r!['weergave'], nu.tel.weergave);
