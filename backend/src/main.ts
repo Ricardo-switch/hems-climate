@@ -524,6 +524,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  * mee. Alleen lezen.
  */
 const houseStates = new Map<string, HaEntityState>();
+/** Telt elke verandering in `houseStates`, zodat het huis weet wanneer het opnieuw moet (zie houseReport). */
+let huisVersie = 0;
 // Alle standen, voor de namen van meters en een prijs uit een entiteit (besluit 102).
 const allStates = new Map<string, HaEntityState>();
 
@@ -645,7 +647,10 @@ client.on('stateChanged', (state: HaEntityState) => {
   }
   // De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand.
   if (state.entity_id === voorkeuren?.melder() && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') web?.wek('beweging');
-  if (inHouse(state)) houseStates.set(state.entity_id, state);
+  if (inHouse(state)) {
+    houseStates.set(state.entity_id, state);
+    huisVersie++;
+  }
   allStates.set(state.entity_id, state);
   const solar = baseConfig?.solarProduction;
   if (solar && state.entity_id === solar.id) {
@@ -658,6 +663,7 @@ client.on('ready', (states: HaEntityState[]) => {
   lastStates = states;
   for (const s of states) {
     if (inHouse(s)) houseStates.set(s.entity_id, s);
+    huisVersie++;
     allStates.set(s.entity_id, s);
   }
   void readHouseRegisters()
@@ -1027,8 +1033,21 @@ function alarmNu(): AlarmMelder[] {
   return (h?.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder').map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, gevaar: d.rookmelder?.gevaar ?? null, sindsMs: d.rookmelder?.sindsMs ?? null }))));
 }
 
-const houseReport = () => {
-  const h = siteConfig && houseRegisters
+/*
+ * Het huis één keer uitrekenen per verandering (21 oktober 2026). Bij een paar
+ * duizend entiteiten kost het tientallen milliseconden op de Pi, en elk open
+ * scherm vraagt het om de paar tellen, net als de lampen, de schermen en het
+ * rookalarm. Opnieuw zodra Home Assistant iets in het huis meldt of een van de
+ * bronnen verandert, en anders hooguit om de tien tellen: de kleuren van de
+ * scènes en de meting van de ligging veranderen zonder dat iets hier het ziet.
+ */
+const HUIS_HOOGUIT_MS = 10_000;
+let huisBewaard: { sleutel: readonly unknown[]; atMs: number; huis: ReturnType<typeof buildHouse> | null } | null = null;
+const huisNu = () => {
+  const sleutel = [huisVersie, houseRegisters, siteConfig, runner?.latest, layoutStore?.current, functiesStore?.current, connectionStore?.current];
+  const b = huisBewaard;
+  if (b && Date.now() - b.atMs < HUIS_HOOGUIT_MS && b.sleutel.every((x, i) => x === sleutel[i])) return b.huis;
+  const huis = siteConfig && houseRegisters
     ? buildHouse(
         webConfig()!,
         houseRegisters,
@@ -1043,6 +1062,11 @@ const houseReport = () => {
         functiesStore?.current?.meldingen,
       )
     : null;
+  huisBewaard = { sleutel, atMs: Date.now(), huis };
+  return huis;
+};
+const houseReport = () => {
+  const h = huisNu();
   // Met de laatste opdracht bij een scherm zonder terugmelding (besluit 128).
   return coverSwitch ? coverSwitch.withLast(h) : h;
 };

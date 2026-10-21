@@ -730,6 +730,33 @@ describe('de pagina veroudert niet stilletjes', () => {
     expect(second.status).toBe(200);
     expect(await second.text()).toContain('versie = 2');
   });
+
+  it('laat een script met een versiestempel bewaren, en een pagina niet (21 oktober 2026)', async () => {
+    const { base } = await start({ webDir: await webDirFixture('const versie = 1;') });
+
+    // Het stempel verandert als het bestand verandert, dus navragen is niet nodig.
+    expect((await fetch(`${base}/app.js?v=1a2b3c4d`)).headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+    // Een pagina blijft navragen, ook met iets achter het adres.
+    expect((await fetch(`${base}/index.html?v=1a2b3c4d`)).headers.get('cache-control')).toBe('no-cache');
+  });
+
+  it('pakt een groot script in, maar niet achter Ingress (21 oktober 2026)', async () => {
+    const script = `const lijst = ${JSON.stringify(Array.from({ length: 400 }, (_, i) => `kamer ${i}`))};`;
+    const dir = await webDirFixture(script);
+    const buiten = await start({ webDir: dir });
+    const res = await fetch(`${buiten.base}/app.js`, { headers: { 'accept-encoding': 'br' } });
+    expect(res.headers.get('content-encoding')).toBe('br');
+    expect(Number(res.headers.get('content-length'))).toBeLessThan(script.length / 3);
+    expect(await res.text()).toBe(script);
+    // Zonder br: gzip.
+    expect((await fetch(`${buiten.base}/app.js`, { headers: { 'accept-encoding': 'gzip' } })).headers.get('content-encoding')).toBe('gzip');
+
+    // Achter Ingress pakt Home Assistant zelf in.
+    const binnen = await start({ webDir: dir, access: { kind: 'ingress' } });
+    const viaHa = await fetch(`${binnen.base}/app.js`, { headers: { 'accept-encoding': 'br' } });
+    expect(viaHa.headers.get('content-encoding')).toBeNull();
+    expect(await viaHa.text()).toBe(script);
+  });
 });
 
 describe('de onboarding', () => {

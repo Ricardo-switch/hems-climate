@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.48.0
+
+*21 oktober 2026*
+
+**Beter**
+
+- Tabbladen openen sneller: wat niet veranderde, haalt de browser niet opnieuw op
+- Op de telefoon via Tailscale gaat alles ingepakt, en het huis wordt maar één keer per verandering uitgerekend
+
 ## 0.47.1
 
 *21 oktober 2026*
