@@ -105,9 +105,14 @@
     if (!b) return;
     const lijst = deel(plek).kaarten;
     const eind = b.querySelector(':scope > .aanpasrij, :scope > [data-vrijvak]');
-    for (const id of lijst) {
-      const k = b.querySelector(`:scope > [data-kaart="${id}"]`);
-      if (k) b.insertBefore(k, eind);
+    // Alleen verplaatsen als de volgorde echt anders is: een kaart verplaatsen zet
+    // zijn schuifpositie terug, en dan sprongen de favorieten elke minuut naar pagina 1.
+    const nu = kaartenIn(plek).map((k) => k.dataset.kaart).filter((id) => lijst.includes(id));
+    if (nu.join() !== lijst.filter((id) => nu.includes(id)).join()) {
+      for (const id of lijst) {
+        const k = b.querySelector(`:scope > [data-kaart="${id}"]`);
+        if (k) b.insertBefore(k, eind);
+      }
     }
     for (const k of kaartenIn(plek)) k.toggleAttribute('data-uit', !lijst.includes(k.dataset.kaart));
   }
@@ -742,11 +747,18 @@
     $$('#tel [data-aanpassen], #tel [data-weergave]').forEach((el) => (el.hidden = !kan));
   }
 
-  /** Uit Instellingen › Weergave: thuis.html#weergave opent het blad. */
+  /**
+   * Uit Instellingen › Jij (besluit 181): thuis.html#weergave opent het blad
+   * Weergave, #favorieten het kiezen van de favorieten, #aanpassen de
+   * bewerkstand van de kaarten.
+   */
   function vanInstellingen() {
-    if (location.hash !== '#weergave' || !kan) return;
+    const doel = location.hash.slice(1);
+    if (!kan || !['weergave', 'favorieten', 'aanpassen'].includes(doel)) return;
     history.replaceState(null, '', location.pathname);
-    openBlad('weergave', 'tel');
+    const plek = plekNu();
+    if (doel === 'aanpassen') begin(plek);
+    else openBlad(doel, doel === 'weergave' ? 'tel' : plek);
   }
 
   global.eigen = {

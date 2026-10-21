@@ -152,6 +152,8 @@ export interface VoorkeurenView {
   readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean };
   /** De kleur van elke bewoner, op zijn id: voor de begroeting en de rondjes. */
   readonly kleuren: Readonly<Record<string, Kleur>>;
+  /** Wie kijkt is een scherm, zoals de wand: dat blijft donker, ook met een breed scherm. */
+  readonly scherm: boolean;
   readonly maxFavorieten: number;
 }
 
@@ -294,6 +296,7 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
       eigen: zelf,
     },
     kleuren: Object.fromEntries((wie.profielen?.volgorde ?? []).map((x) => [x.id, kleurVan(b, x.account, wie.profielen)])),
+    scherm: wie.scherm === true,
     maxFavorieten: MAX_FAVORIETEN,
   };
 }

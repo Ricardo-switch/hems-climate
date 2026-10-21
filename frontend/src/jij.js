@@ -17,7 +17,8 @@ const IK = {
   weergave: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/>',
   letters: '<path d="M4 19 9 5l5 14M5.8 14h6.4M15 19l3-8 3 8M15.8 17h4.4"/>',
   beweging: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
-  tel: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
+  kaarten: '<rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/>',
+  favorieten: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
   wand: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6"/>',
   comfort: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',
   thuis: '<path d="M4 11 12 4l8 7v9H4z"/><circle cx="12" cy="14" r="2"/>',
@@ -93,7 +94,8 @@ function teken() {
     ${uiterlijk}
     <section class="glas lijst" aria-labelledby="kop-thuis">
       <h2 id="kop-thuis">Thuis</h2>
-      ${link('thuis.html', 'tel', 'Kaarten en favorieten', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} · ${telling(v.tel.favorieten.length, 'favoriet', 'favorieten')}`)}
+      ${link('thuis.html#aanpassen', 'kaarten', 'Kaarten', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} op Thuis, in jouw volgorde`)}
+      ${link('thuis.html#favorieten', 'favorieten', 'Favorieten', `${telling(v.tel.favorieten.length, 'lamp, scène of scherm', 'lampen, scènes en schermen')} met één tik`)}
       <p class="uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt. Wat je hier verandert, staat dan ook op de wand.</p>
     </section>
     <section class="glas lijst" aria-labelledby="kop-comfort">

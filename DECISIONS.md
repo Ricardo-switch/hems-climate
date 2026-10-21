@@ -8059,8 +8059,11 @@ thuis zijn, ziet op de wand zijn eigen profiel.
 
 *Besluit:*
 
-- **Het thema, alleen op de telefoon:** donker (zoals het was en de
-  standaard), licht, of zoals je telefoon. De wand blijft donker. Licht is
+- **Het thema, op je eigen apparaten:** donker (zoals het was en de
+  standaard), licht, of zoals je telefoon. Ook als je telefoon of tablet ligt
+  en de brede indeling toont; eerst bleef die donker, en dan stonden de lichte
+  balken van Home Assistant om een donkere pagina. Een scherm, zoals de wand,
+  blijft altijd donker. Licht is
   alles: een lichte lucht van hetzelfde moment, lichte kaarten en tabs,
   donkere tekst. Het huis houdt zijn eigen kleuren; de grond, de wolken en de
   maan worden lichter.
@@ -8089,7 +8092,8 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   plek. Het thema en de kleur kies je daar, in een blad; grotere letters en
   minder beweging zet je er aan; de rest wijst naar waar het al stond (de
   weergave op Thuis, je comfort, je naam en hoe het huis weet dat je thuis bent
-  bij Bewoners, je gegevens). Een scherm ziet alleen hoe de app eruitziet, een
+  bij Bewoners, je gegevens). Kaarten en Favorieten openen elk meteen het
+  aanpassen op Thuis. Een scherm ziet alleen hoe de app eruitziet, een
   gast heeft geen profiel. De losse regel Weergave op Instellingen is daarin
   opgegaan.
 - **Waar het staat:** bij de voorkeuren per account (`voorkeuren.json`,
@@ -8110,7 +8114,9 @@ thuis zijn, ziet op de wand zijn eigen profiel.
   kaartjes met donkere tekst; de ring tussen de bollen van wie er thuis is, is
   licht.
 - **Versie 0.55.0;** na het nalopen door de bewoner (één indeling, andere
-  kleuren, een lichter huis) versie 0.55.1.
+  kleuren, een lichter huis) versie 0.55.1; liggend ook licht, Kaarten en
+  Favorieten apart bij Jij, en favorieten die niet meer terugsprongen naar de
+  eerste pagina in 0.55.2.
 
 *Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). De wand licht:
 die hangt aan de muur en wordt 's avonds bekeken (87). En een eigen indeling

@@ -265,8 +265,9 @@ verwijzing bestaat.
   en vier favorieten met één tik, bewaard bij je account; Straks schuift er
   vanzelf bij ([162]). Per account kies je eenvoudig of uitgebreid, grotere
   letters en minder beweging ([164]).
-- **Een profiel per bewoner** (Jij, bovenaan Instellingen): je thema op de
-  telefoon (donker, licht of zoals je telefoon), een van zes eigen kleuren, je
+- **Een profiel per bewoner** (Jij, bovenaan Instellingen): je thema op je
+  eigen apparaten (donker, licht of zoals je telefoon; een scherm blijft
+  donker), een van zes eigen kleuren, je
   kaarten en favorieten (één indeling, ook voor de wand), en je comfort. De wand toont de
   kleur, kaarten en favorieten van wiens comfort geldt, bij niemand thuis die
   van de hoofdgebruiker; de nachtstand en de weergave blijven van de wand

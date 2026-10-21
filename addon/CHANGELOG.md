@@ -1,5 +1,18 @@
 # Wat is er nieuw
 
+## 0.55.2
+
+*21 oktober 2026*
+
+**Beter**
+
+- Het lichte thema ook als je telefoon of tablet ligt; alleen het scherm aan de wand blijft donker
+- Bij Jij gaan Kaarten en Favorieten elk meteen naar het aanpassen
+
+**Opgelost**
+
+- Favorieten sprongen na een paar tellen terug naar de eerste pagina
+
 ## 0.55.1
 
 *21 oktober 2026*

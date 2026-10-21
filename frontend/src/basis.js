@@ -797,6 +797,18 @@
       // Een vak van een andere herkomst, of Home Assistant laat het niet toe.
     }
   }
+  /*
+   * Wisselt het thema (de telefoon draait, of hij wordt 's avonds donker), dan
+   * de balken van Home Assistant mee, anders bleven ze licht om een donkere
+   * pagina staan, of andersom.
+   */
+  let lichtWas = document.documentElement.classList.contains('sc-licht');
+  new MutationObserver(() => {
+    const licht = document.documentElement.classList.contains('sc-licht');
+    if (licht === lichtWas) return;
+    lichtWas = licht;
+    if (inHA() && volledigNu() && !gepauzeerd()) statusbalk(true);
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
   function balkenVanHA(terug) {
     statusbalk(!terug);
     if (terug) {
@@ -974,7 +986,7 @@
   let kleurenNu = {};
   function zetThema(v) {
     if (!v?.tel) return;
-    global.scThema?.({ thema: v.tel.thema, kleur: v.tel.kleur, wandKleur: v.wand?.kleur });
+    global.scThema?.({ thema: v.tel.thema, kleur: v.tel.kleur, wandKleur: v.wand?.kleur, scherm: v.scherm === true });
     const nieuw = v.kleuren ?? {};
     if (JSON.stringify(nieuw) === JSON.stringify(kleurenNu)) return;
     kleurenNu = nieuw;
