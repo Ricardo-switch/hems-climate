@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.45.0';
+export const VERSIE = '0.46.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.46.0',
+    datum: '2026-10-21',
+    nieuw: [
+      'Twaalf favorieten, vier per pagina: schuif met de vinger. Screens en het zonnescherm kunnen er ook bij, en elke lamp heeft het icoon en de naam van zijn kamer',
+      'Rookmelders, zoals de Nest Protect: ziet er een rook, koolmonoxide of hitte, dan staat het op elk scherm, en bij Meldingen waar en wanneer. Bij Onderhoud de batterij, de laatste test en wanneer vervangen',
+      'De helderheid van het always-on display kies je zelf, overdag en in de avondstand',
+      'De gevel opmeten op de kaart, bij Zon en aansluiting › Aanpassen',
+    ],
+    beter: [
+      'Zeg "oké, bedankt" of "dat was het" en de assistent sluit af; alleen ruis telt niet meer als vraag',
+      'De rondjes op Thuis volgen meteen wie er thuis is',
+    ],
+    opgelost: [
+      'Het beeld bij aanbellen bleef soms zwart',
+      'De wand toonde na een tijd "401: Unauthorized"',
+      'Het scherm bleef ’s ochtends soms gedimd',
+      'De radiator van een zolderkamer stak door het dak',
+    ],
+  },
   {
     versie: '0.45.0',
     datum: '2026-10-18',

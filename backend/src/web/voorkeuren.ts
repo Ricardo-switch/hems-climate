@@ -34,7 +34,8 @@ export type KaartId = (typeof KAARTEN)[number];
 
 /** De kaarten die op de wand kunnen. De kamers staan daar in het huis, Straks komt vanzelf. */
 export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen'];
-export const MAX_FAVORIETEN = 4;
+/** Twaalf favorieten, vier per pagina (21 oktober 2026; eerst vier, besluit 162). */
+export const MAX_FAVORIETEN = 12;
 
 /** Zo staat Thuis erbij zolang niemand iets koos: zoals het was, met Favorieten onder de kamers. */
 export const STANDAARD_TEL: readonly KaartId[] = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'];
@@ -84,14 +85,26 @@ export interface Niemand {
    */
   readonly dag: boolean;
   readonly avond: boolean;
+  /**
+   * Hoe fel het scherm is, in procenten (21 oktober 2026): overdag (ook als
+   * iemand de app gebruikt) en in de avondstand. Eerst zette de avondstand
+   * de helderheid laag en onthield de pagina wat er was; laadde de wand
+   * intussen een andere pagina, dan bleef hij ook de ochtend erna zo laag.
+   */
+  readonly helderDag: HelderDag;
+  readonly helderAvond: HelderAvond;
   /** De bewegingsmelder die het display aanzet, of null. */
   readonly melder: string | null;
 }
-export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
+export const HELDER_DAG = [50, 75, 100] as const;
+export type HelderDag = (typeof HELDER_DAG)[number];
+export const HELDER_AVOND = [10, 20, 30, 50] as const;
+export type HelderAvond = (typeof HELDER_AVOND)[number];
+export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
 
 export interface Favoriet {
-  readonly soort: 'lamp' | 'scene';
-  /** Een lamp zoals het huis hem noemt, of een `scene.` uit Home Assistant. */
+  readonly soort: 'lamp' | 'scene' | 'scherm';
+  /** Een lamp zoals het huis hem noemt, een `scene.` of een screen of zonnescherm (`cover.`) uit Home Assistant. */
   readonly id: string;
 }
 
@@ -139,7 +152,7 @@ export function leesKaarten(x: unknown, plek: 'tel' | 'wand'): { ok: true; kaart
   return { ok: true, kaarten };
 }
 
-/** Hooguit vier favorieten, elk een lamp of een scène, en geen dubbele. */
+/** Hooguit twaalf favorieten, elk een lamp, een scène of een scherm, en geen dubbele. */
 export function leesFavorieten(x: unknown): { ok: true; favorieten: Favoriet[] } | { ok: false; reden: string } {
   if (!Array.isArray(x)) return { ok: false, reden: 'favorieten is een lijst' };
   if (x.length > MAX_FAVORIETEN) return { ok: false, reden: `hooguit ${MAX_FAVORIETEN} favorieten` };
@@ -148,9 +161,10 @@ export function leesFavorieten(x: unknown): { ok: true; favorieten: Favoriet[] }
     const r = typeof f === 'object' && f != null && !Array.isArray(f) ? (f as Record<string, unknown>) : {};
     const soort = r['soort'];
     const id = r['id'];
-    if (soort !== 'lamp' && soort !== 'scene') return { ok: false, reden: 'een favoriet is een lamp of een scène' };
+    if (soort !== 'lamp' && soort !== 'scene' && soort !== 'scherm') return { ok: false, reden: 'een favoriet is een lamp, een scène of een scherm' };
     if (typeof id !== 'string' || id.length > 160 || !/^[a-z_]+\.[a-z0-9_]+$/.test(id)) return { ok: false, reden: 'een favoriet heeft een id uit Home Assistant' };
     if (soort === 'scene' && !id.startsWith('scene.')) return { ok: false, reden: 'een scène begint met scene.' };
+    if (soort === 'scherm' && !id.startsWith('cover.')) return { ok: false, reden: 'een scherm begint met cover.' };
     if (favorieten.some((g) => g.id === id)) return { ok: false, reden: `${id} staat er twee keer in` };
     favorieten.push({ soort, id });
   }
@@ -187,6 +201,10 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
       if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };
     } else if (k === 'rustMin') {
       if (!(RUST_MINUTEN as readonly unknown[]).includes(w)) return { ok: false, reden: `rust overdag is ${RUST_MINUTEN.join(', ')} minuten` };
+    } else if (k === 'helderDag') {
+      if (!(HELDER_DAG as readonly unknown[]).includes(w)) return { ok: false, reden: `helderheid overdag is ${HELDER_DAG.join(', ')} procent` };
+    } else if (k === 'helderAvond') {
+      if (!(HELDER_AVOND as readonly unknown[]).includes(w)) return { ok: false, reden: `helderheid in de avondstand is ${HELDER_AVOND.join(', ')} procent` };
     } else if (k === 'melder') {
       if (w !== null && (typeof w !== 'string' || w.length > 160 || !MELDER.test(w))) return { ok: false, reden: 'de melder is een binary_sensor uit Home Assistant' };
     } else return { ok: false, reden: `die keuze bestaat niet: ${k}` };

@@ -27,7 +27,7 @@ import { STANDAARD_DREMPELS, onderDrempel, type Drempels } from './house.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen';
+export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -55,6 +55,11 @@ export interface MeldingenBron {
   readonly volgen: readonly { readonly id: string; readonly naam: string; readonly kamer: string; readonly kamerId: string; readonly onbereikbaarSindsMs: number | null }[];
   readonly batterijen: readonly { readonly id: string; readonly naam: string; readonly pct: number; readonly kamerId: string | null }[];
   readonly filters: readonly { readonly id: string; readonly naam: string; readonly pct: number; readonly kamerId: string | null }[];
+  /**
+   * De rookmelders (21 oktober 2026): wat ze zien en sinds wanneer, of hun
+   * batterij op is en wanneer ze vervangen moeten (`JJJJ-MM-DD`).
+   */
+  readonly rookmelders?: readonly { readonly id: string; readonly naam: string; readonly kamer: string; readonly kamerId: string; readonly gevaar: 'rook' | 'co' | 'hitte' | null; readonly sindsMs: number | null; readonly batterijProbleem: boolean; readonly vervangenVoor: string | null }[];
   /** Meters die altijd moeten leveren, met hun laatste meting. */
   readonly meters: readonly { readonly id: string; readonly naam: string; readonly laatsteMs: number | null }[];
   /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); weg is 10%. */
@@ -126,6 +131,34 @@ export function wat(bron: MeldingenBron): (Omit<Melding, 'sindsMs' | 'opgelostMs
   for (const f of bron.filters) {
     if (!onderDrempel(f.pct, drempels.filter)) continue;
     uit.push({ id: `filter:${f.id}`, soort: 'filter', aandacht: true, titel: `Filter bijna vol: ${f.naam}`, tekst: `Nog ${f.pct}%. Een schoon filter koelt en verwarmt zuiniger.`, actie: { label: 'Bekijk', href: kamerHref(f.kamerId) }, klaar: { titel: `Filter schoon: ${f.naam}`, tekst: 'Het filter is weer goed.' } });
+  }
+  // Rook, koolmonoxide of hitte (21 oktober 2026): waar en wanneer; ook als het weer weg is, onder Eerder.
+  const WAT = { rook: 'rook', co: 'koolmonoxide', hitte: 'hitte' } as const;
+  const inDe = (k: string) => (/^(zolder|woonkamer|badkamer|keuken|slaapkamer|kamer|hal|gang|entree|overloop|trap|werkkamer|hobbykamer|wasruimte|bijkeuken|eetkamer|kinderkamer|logeerkamer|berging|garage|kelder|meterkast)\b/i.test(k) ? `de ${k.charAt(0).toLowerCase()}${k.slice(1)}` : k);
+  for (const r of bron.rookmelders ?? []) {
+    if (r.gevaar) {
+      const w = WAT[r.gevaar];
+      const sinds = r.sindsMs ?? bron.nu;
+      uit.push({
+        id: `rook:${r.id}:${r.gevaar}`,
+        soort: 'rook',
+        aandacht: true,
+        sindsMs: sinds,
+        titel: `${w.charAt(0).toUpperCase()}${w.slice(1)} in ${inDe(r.kamer)}`,
+        tekst: `De rookmelder ziet ${w} sinds ${klok(sinds)}. Ga bij brand naar buiten en bel 112.`,
+        actie: { label: 'Bekijk', href: kamerHref(r.kamerId, r.id) },
+        klaar: { titel: `Geen ${w} meer in ${inDe(r.kamer)}`, tekst: `Om ${klok(sinds)} zag de rookmelder ${w}.` },
+      });
+    }
+    if (r.batterijProbleem) {
+      uit.push({ id: `rook-batterij:${r.id}`, soort: 'batterij', aandacht: true, titel: `Batterij op: ${r.naam}`, tekst: 'De rookmelder zegt dat zijn batterij vervangen moet. Zonder batterij waarschuwt hij niet.', actie: { label: 'Bekijk', href: kamerHref(r.kamerId, r.id) }, klaar: { titel: `Nieuwe batterij in ${r.naam}`, tekst: 'De rookmelder is weer goed.' } });
+    }
+    // Vervangen: drie maanden van tevoren.
+    const voor = r.vervangenVoor ? Date.parse(`${r.vervangenVoor}T12:00:00Z`) : NaN;
+    if (Number.isFinite(voor) && voor - bron.nu < 90 * 86_400_000) {
+      const datum = new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }).format(voor);
+      uit.push({ id: `rook-vervangen:${r.id}`, soort: 'rook', aandacht: true, titel: `${r.naam} vervangen`, tekst: `Een rookmelder gaat tien jaar mee. Deze moet vervangen worden voor ${datum}.`, actie: { label: 'Bekijk', href: kamerHref(r.kamerId, r.id) }, klaar: { titel: `${r.naam} vervangen`, tekst: 'Er hangt een nieuwe melder.' } });
+    }
   }
   for (const m of bron.meters) {
     if (m.laatsteMs != null && bron.nu - m.laatsteMs < METER_STIL_NA_MS) continue;

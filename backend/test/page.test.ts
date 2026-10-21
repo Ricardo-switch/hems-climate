@@ -273,6 +273,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // en live een stroom van plaatjes zoals `camera_proxy_stream` die geeft.
     const frame = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhCY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAAkAEADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDCooorQAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKAP//Z', 'base64');
     const haCamera = createServer((req, res) => {
+      // Een deurbel zoals hier (21 oktober 2026): het scherpe beeld geeft niets, het
+      // vloeiende wel een plaatje, maar zijn live stroom blijft leeg.
+      if (req.url?.includes('deurbel_duidelijk') && !req.url.includes('camera_proxy_stream')) {
+        res.writeHead(500, { 'content-type': 'text/plain' });
+        res.end('500: Internal Server Error');
+        return;
+      }
+      if (req.url?.includes('deurbel_') && req.url.includes('camera_proxy_stream')) {
+        res.writeHead(200, { 'content-type': 'multipart/x-mixed-replace; boundary=frame' });
+        return;
+      }
       if (req.url?.includes('camera_proxy_stream')) {
         liveOpen += 1;
         res.writeHead(200, { 'content-type': 'multipart/x-mixed-replace; boundary=frame' });
@@ -339,7 +350,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           }),
           version: { nummer: VERSIE, installatie: 'server', commit: 'bbbbbbb', gebouwd: '2026-09-30T12:00:00Z' },
           // De camera (besluit 106): een nagemaakte Home Assistant die een plaatje geeft.
-          camera: { base: `http://127.0.0.1:${haCameraPort}`, token: 'test', ids: () => new Set(['camera.camera_oprit_vloeiend']) },
+          camera: { base: `http://127.0.0.1:${haCameraPort}`, token: 'test', ids: () => new Set(['camera.camera_oprit_vloeiend', 'camera.deurbel_duidelijk', 'camera.deurbel_vloeiend']) },
           // Camera's en de deurbel als instelling (besluit 109).
           functies: { store: functiesStore, gevonden: () => functiesGevonden(houseRegisters.entities, houseRegisters.devices, houseStates) },
           // Het weer (besluit 105): twee dagen van een nagemaakte Buienradar.
@@ -1576,6 +1587,60 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * tik schakelen; en de wand, waar de kolom zelf schuift, die de hoofdgebruiker aanpast.
    * Alles staat daarna bij de dienst, en komt terug na opnieuw laden.
    */
+  /*
+   * Favorieten met pagina's (21 oktober 2026, schets Wand-Favorieten): meer dan
+   * vier, vier per pagina met stipjes; een screen schakelt met één tik, en een
+   * lamp heeft de naam van zijn kamer eronder. Vasthouden opent de kamer.
+   */
+  it('toont favorieten op pagina’s van vier, met een screen en de kamer erbij', async () => {
+    type Huis = { etages: { ruimtes: { id: string; naam: string; apparaten: { id: string; soort: string }[] }[] }[] };
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as Huis;
+    const ruimtes = huisNu.etages.flatMap((e) => e.ruimtes);
+    const lampen = ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'licht').map((d) => ({ ...d, kamer: r })));
+    expect(lampen.length).toBeGreaterThanOrEqual(4);
+    const favorieten = [{ soort: 'scherm', id: 'cover.screen' }, ...lampen.slice(0, 4).map((d) => ({ soort: 'lamp', id: d.id }))];
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    try {
+      await p.goto(`${baseUrl}/thuis.html`);
+      const bewaard = await p.evaluate(async (f) => (await fetch('api/voorkeuren', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', favorieten: f }) })).status, favorieten);
+      expect(bewaard).toBe(200);
+      await p.reload();
+      const kaart = p.locator('#tel [data-kaart="favorieten"]');
+      await expect.poll(() => kaart.locator('.favpagina').count()).toBe(2);
+      expect(await kaart.locator('[data-stipjes] i').count()).toBe(2);
+      // Een lamp zegt in welke kamer hij hangt.
+      const lamp = kaart.locator(`[data-tegel="${lampen[0]!.id}"]`);
+      expect(await lamp.textContent()).toContain(lampen[0]!.kamer.naam);
+      // Het screen: één tik, en het gaat open of dicht.
+      const voor = coverCalls.length;
+      await kaart.locator('[data-tegel="cover.screen"]').click();
+      await expect.poll(() => coverCalls.length).toBe(voor + 1);
+      expect(coverCalls.at(-1)).toMatch(/^(open_cover|close_cover) cover\.screen$/);
+      // Opzij schuiven: de tweede pagina, en het tweede stipje.
+      await kaart.locator('[data-favpaginas]').evaluate((el) => el.scrollTo({ left: el.clientWidth }));
+      await expect.poll(() => kaart.locator('[data-stipjes] i').nth(1).getAttribute('class')).toBe('aan');
+      // Vasthouden opent de lamp in zijn kamer, en schakelt hem niet.
+      const lichtVoor = lightCalls.length;
+      const laatste = kaart.locator(`[data-tegel="${lampen[3]!.id}"]`);
+      const b = (await laatste.boundingBox())!;
+      await p.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+      await p.mouse.down();
+      await p.waitForURL(/kamer\.html#/, { timeout: 3_000 });
+      await p.mouse.up();
+      expect(decodeURIComponent(new URL(p.url()).hash)).toBe(`#${lampen[3]!.kamer.id}/${lampen[3]!.id}`);
+      expect(lightCalls.length).toBe(lichtVoor);
+      expect(fouten).toEqual([]);
+    } finally {
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', favorieten: [] }) }).catch(() => null);
+      await context.close();
+    }
+  }, 30_000);
+
   it('past Thuis aan op de telefoon en de wand, met favorieten (besluit 162)', async () => {
     type Voorkeuren = { tel: { kaarten: string[]; favorieten: { id: string }[] }; wand: { kaarten: string[]; magAanpassen: boolean } };
     const voorkeuren = async () => (await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as Voorkeuren;
@@ -1603,7 +1668,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await kamerMetScenes.locator('[data-fav-soort="scene"]').first().click();
       // Na het tekenen blijft hij open.
       expect(await kamerMetScenes.getAttribute('open')).not.toBeNull();
-      expect(await blad.locator('[data-fav-teller]').textContent()).toContain('2 van 4');
+      expect(await blad.locator('[data-fav-teller]').textContent()).toContain('2 van 12');
       await blad.locator('[data-fav-klaar]').click();
       await blad.waitFor({ state: 'hidden' });
       await expect.poll(async () => (await voorkeuren()).tel.favorieten.length).toBe(2);
@@ -2210,7 +2275,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           etages: [
             { naam: 'bg', kamers: [kamer(soort, 0, 0.55, apparaten[0]!), kamer(soort, 1, 1.0, apparaten[1]!), kamer(soort, 2, 1.4, apparaten[2]!)] },
             { naam: 'e1', kamers: [kamer(soort, 3, 1.4, apparaten[3]!), kamer(soort, 4, 0.8, [{ soort: 'droger', aan: true }])] },
-            { naam: 'dak', dak: true, kamers: [kamer(soort, 5, 1, apparaten[2]!), kamer(soort, 6, 1, apparaten[1]!)] },
+            // Ook een zolderkamer tegen de buitenmuur met een radiator (21 oktober 2026).
+            { naam: 'dak', dak: true, kamers: [kamer(soort, 7, 0.8, apparaten[1]!), kamer(soort, 5, 1, apparaten[2]!), kamer(soort, 6, 1, apparaten[1]!)] },
           ],
         };
         const svg = w.huis.svg(model, { breedte: 700, hoogte: 520, meubels: true, controle: true });
@@ -2246,6 +2312,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           if (overlap(m, a)) problemen.push(`${naam}: door ${a.soort}`);
         }
         for (const n of meubels) if (n !== m && n.kamer === m.kamer && overlap(m, n) && m.x0 <= n.x0) problemen.push(`${naam}: door een ander meubel`);
+      }
+    }
+    // Een radiator onder het dak steekt er niet doorheen (21 oktober 2026).
+    for (const [soort, lijst] of Object.entries(uitkomst.per) as [string, Blok[]][]) {
+      for (const a of lijst.filter((b) => b.wat === 'apparaat' && b.soort === 'radiator' && b.plafond != null)) {
+        if (a.z1 > a.plafond! + 1e-6) problemen.push(`${soort}: de radiator in ${a.kamer} steekt door het dak`);
       }
     }
     // Een airco hangt nooit voor het raam (besluit 131).
@@ -2547,9 +2619,39 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(past).toBe(true);
     await p.locator('.aanbel [data-bel-dicht]').click();
     await p.locator('.aanbel').waitFor({ state: 'detached' });
+    // Geeft het gekozen beeld niets en blijft live leeg, dan toch beeld: een plaatje
+    // van het volgende beeld van dezelfde camera, en daarna elke seconde een nieuw.
+    server.ring('camera.deurbel_duidelijk', 'Deurbel', { seconden: 30, schermAan: true, reserve: ['camera.deurbel_vloeiend'] });
+    await expect.poll(() => p.evaluate<number>("document.querySelector('.aanbel img')?.naturalWidth ?? 0")).toBeGreaterThan(0);
+    const eerste = await p.evaluate<string>("document.querySelector('.aanbel img').src");
+    await expect.poll(() => p.evaluate<string>("document.querySelector('.aanbel img')?.src ?? ''"), { timeout: 9_000 }).not.toBe(eerste);
+    await p.locator('.aanbel [data-bel-dicht]').click();
+    await p.locator('.aanbel').waitFor({ state: 'detached' });
+    // Rook (21 oktober 2026, schets Wand-Rook): op elke pagina, met de kamer en
+    // wat de andere melders zien. Sluiten houdt hem weg tot er iets nieuws is;
+    // ziet niemand meer iets, dan gaat hij vanzelf weg.
+    const melders = [
+      { id: 'binary_sensor.rook_keuken', naam: 'Rookmelder keuken', kamer: 'Keuken', gevaar: 'rook' as const, sindsMs: Date.UTC(2026, 9, 21, 10, 41) },
+      { id: 'binary_sensor.rook_entree', naam: 'Rookmelder entree', kamer: 'Entree', gevaar: null, sindsMs: null },
+    ];
+    server.alarm(melders);
+    const alarm = p.locator('.alarmlaag');
+    await alarm.locator('h1', { hasText: 'Rook in de keuken' }).waitFor();
+    expect(await alarm.textContent()).toContain('Entree');
+    expect(await alarm.textContent()).toContain('bel 112');
+    await alarm.locator('[data-alarm-dicht]').click();
+    await alarm.waitFor({ state: 'detached' });
+    server.alarm(melders);
+    await p.waitForTimeout(300);
+    expect(await alarm.count()).toBe(0);
+    // Nu ook koolmonoxide in de entree: dan weer.
+    server.alarm([melders[0]!, { ...melders[1]!, gevaar: 'co', sindsMs: Date.UTC(2026, 9, 21, 10, 43) }]);
+    await alarm.waitFor();
+    server.alarm(melders.map((m) => ({ ...m, gevaar: null, sindsMs: null })));
+    await alarm.waitFor({ state: 'detached' });
     expect(fouten).toEqual([]);
     await context.close();
-  }, 20_000);
+  }, 30_000);
 
   /*
    * Kamer in ontwerp 2 (besluit 104; schetsen Wand-Kamer en Wand-Bedienen): de
@@ -2917,6 +3019,11 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     // Shira licht op en wordt gevolgd, Ricardo is grijs. Geen kaart meer.
     const voor = live;
     live = { ...live, explanation: { ...live.explanation, profile: { id: 'shira', name: 'Shira', reason: 'thuis', home: ['shira'] } } };
+    // De rondjes volgen Home Assistant meteen (besluit 170): daar is Shira thuis en Ricardo weg.
+    const persoon = (entity_id: string, state: string) => ({ entity_id, state, attributes: { friendly_name: entity_id }, last_changed: new Date().toISOString(), last_updated: new Date().toISOString() });
+    const ricardoWas = houseStates.get('person.ricardo_cornelissen');
+    houseStates.set('person.shira', persoon('person.shira', 'home'));
+    houseStates.set('person.ricardo_cornelissen', persoon('person.ricardo_cornelissen', 'not_home'));
     await p.goto(`${baseUrl}/thuis.html`);
     await wandL.locator('[data-groet]', { hasText: 'Ricardo' }).waitFor();
     const wie = wandL.locator('[data-wie]');
@@ -2956,6 +3063,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     expect(bewonersStore.current.volgorde).toEqual(['test']);
     await wandL.locator('[data-schermen] .gastrij', { hasText: 'Shira' }).waitFor();
     await shot(p, 'bewoners-gast');
+    // Home Assistant weer zoals het was: Shira is er niet.
+    houseStates.delete('person.shira');
+    if (ricardoWas) houseStates.set('person.ricardo_cornelissen', ricardoWas);
+    else houseStates.delete('person.ricardo_cornelissen');
     // Als gast: bedienen alleen thuis, en verder niets.
     const gastSessie = await sessions.create({ userId: 'u-shira', naam: 'Shira Cornelissen', rol: 'beheerder' });
     const alsGast = (pad: string, body: unknown) => fetch(`${baseUrl}${pad}`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl, cookie: `hems_sessie=${gastSessie}` }, body: JSON.stringify(body) });

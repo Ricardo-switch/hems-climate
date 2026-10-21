@@ -7,7 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { exampleSite } from './site.js';
-import { begrijp, gewoon, MAX_TEKST } from '../src/web/woordzoeker.js';
+import { afsluiter, begrijp, gewoon, isRuis, MAX_TEKST } from '../src/web/woordzoeker.js';
 
 const config = exampleSite;
 
@@ -22,6 +22,23 @@ function huis(tekst: string) {
 }
 
 describe('woordzoeker', () => {
+  it('ziet ruis als niets gezegd (21 oktober 2026)', () => {
+    for (const t of ['(noise)', '[Muziek]', 'noise', ' ... ', '*hoest*', 'Ondertiteld door de Amara.org gemeenschap', 'Bedankt voor het kijken!', '[BLANK_AUDIO]']) expect(isRuis(t), t).toBe(true);
+    for (const t of ['Hoe warm is het boven?', 'bedankt', 'zet het licht aan']) expect(isRuis(t), t).toBe(false);
+  });
+
+  it('sluit het gesprek af met oké bedankt of dat was het (21 oktober 2026)', () => {
+    expect(afsluiter('Oké, bedankt!', 'nl')).toBe('Graag gedaan.');
+    expect(afsluiter('dank je wel huis', 'nl')).toBe('Graag gedaan.');
+    expect(afsluiter('Dat was het.', 'nl')).toBe('Prima. Ik ben er als je me nodig hebt.');
+    expect(afsluiter('Nee, dank je', 'nl')).toBe('Graag gedaan.');
+    expect(afsluiter('oké', 'nl')).toBe('Prima. Ik ben er als je me nodig hebt.');
+    expect(afsluiter('Welterusten', 'nl')).toBe('Welterusten.');
+    expect(afsluiter('Oké, doe het licht uit', 'nl')).toBeNull();
+    expect(afsluiter('stop', 'nl')).toBeNull();
+    expect(afsluiter('Hoe warm is het boven?', 'nl')).toBeNull();
+  });
+
   it('maakt de tekst gewoon: kleine letters, zonder accenten en leestekens', () => {
     expect(gewoon('  Wáár vul ik de PRIJZEN in?! ')).toBe('waar vul ik de prijzen in');
     expect(gewoon('Koel naar 21,5 graden, graag')).toBe('koel naar 21,5 graden graag');

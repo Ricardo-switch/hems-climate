@@ -727,7 +727,7 @@ function zonStap() {
  * komt uit panelen.js. Onderaan zijn knoppen: Aanpassen en Klopt bij een
  * voorstel, Terug en Bewaar bij aanpassen, en anders Aanpassen naast Volgende.
  */
-const ligStaat = { aanpassen: false, concept: null };
+const ligStaat = { aanpassen: false, concept: null, na: () => teken() };
 function liggingStap() {
   // De antwoorden zoals de stap ze kent, ook als er nog niets bewaard is (besluit 166).
   const k = ligging.kaart(d.aans?.ligging, antwoorden(), ligStaat);

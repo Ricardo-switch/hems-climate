@@ -292,10 +292,14 @@ function tekenStraks() {
  */
 const WIE_KLEUR = ['#a9e6ff', '#f7b548', '#6ee7b7', '#b7b0ff', '#ffb090', '#f5a6c8'];
 const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-/** Wie er thuis is: zoals de regeling het ziet (met de rust van tien minuten), anders Home Assistant. */
+/**
+ * Wie er thuis is: meteen zoals Home Assistant het ziet, net als bij Bewoners
+ * (21 oktober 2026). Eerst volgden de rondjes de regeling, die pas na tien
+ * minuten rust wisselt; dan stond iemand bij Bewoners al thuis en hier nog
+ * weg. Het comfort wisselt nog steeds pas na die tien minuten (besluit 147);
+ * dat laat de ring zien.
+ */
 function wieThuis() {
-  const g = bewoners?.geldt;
-  if (g?.thuis) return new Set(g.thuis);
   return new Set((bewoners?.bewoners ?? []).filter((b) => b.thuis).map((b) => b.id));
 }
 function gezicht(b, i) {
@@ -718,15 +722,14 @@ for (const podium of [document.getElementById('podium-wand'), document.getElemen
 }
 void laadAlles();
 setInterval(() => void laadAlles(), 60_000);
-// Beweging in het huis (15 oktober 2026): elke vijftien seconden, als de pagina in beeld is.
+// Beweging in het huis (15 oktober 2026) en wie er thuis is (21 oktober 2026): elke
+// vijftien seconden, als de pagina in beeld is.
 setInterval(async () => {
   if (document.visibilityState !== 'visible') return;
-  try {
-    huisData = await haal('api/huis');
-    teken();
-  } catch {
-    // De volgende keer.
-  }
+  const [h, b] = await Promise.allSettled([haal('api/huis'), haal('api/bewoners')]);
+  if (h.status === 'fulfilled') huisData = h.value;
+  if (b.status === 'fulfilled') bewoners = b.value;
+  if (h.status === 'fulfilled' || b.status === 'fulfilled') teken();
 }, 15_000);
 app.live((nieuw) => {
   state = nieuw;

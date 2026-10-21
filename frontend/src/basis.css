@@ -58,6 +58,21 @@ html:not(.tel-stand) #tel { display: none; }
 .keuze button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
 
 /* Er wordt aangebeld (besluit 107): het beeld van de deurbel over de hele pagina. */
+/* Rook, koolmonoxide of hitte (21 oktober 2026, schets Wand-Rook): boven alles, ook boven de deurbel. */
+.alarmlaag { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px; color: #fff; background: radial-gradient(ellipse at 35% 40%, rgba(130, 22, 20, 0.97), rgba(30, 6, 8, 0.98) 72%); overflow: auto; }
+.alarm-in { width: min(560px, 100%); display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+.alarm-puls { width: 74px; height: 74px; border-radius: 50%; background: #ff5a4a; display: grid; place-items: center; margin-bottom: 26px; animation: alarm-puls 1.2s ease-in-out infinite; }
+.alarm-puls svg { width: 38px; height: 38px; }
+@keyframes alarm-puls { 0%, 100% { box-shadow: 0 0 0 10px rgba(255, 90, 74, 0.25), 0 0 50px rgba(255, 90, 74, 0.6); } 50% { box-shadow: 0 0 0 26px rgba(255, 90, 74, 0.1), 0 0 80px rgba(255, 90, 74, 0.8); } }
+.alarmlaag h1 { font-family: var(--kop); font-size: clamp(36px, 7vw, 58px); line-height: 1.04; margin: 0 0 14px; letter-spacing: -0.02em; }
+.alarm-zin { font-size: clamp(17px, 2.6vw, 21px); color: #ffd6d0; line-height: 1.4; margin: 0 0 22px; }
+.alarm-lijst { width: 100%; margin-bottom: 24px; }
+.alarm-lijst > div { display: flex; justify-content: space-between; padding: 11px 0; border-top: 1px solid rgba(255, 255, 255, 0.14); font-size: 16px; }
+.alarm-lijst span { color: #ffd6d0; }
+.alarm-lijst span.ok { color: #9ff0c9; }
+.alarmlaag .knop { height: 50px; padding: 0 26px; font-size: 16px; }
+.alarm-klein { font-size: 13.5px; color: #e9b3ab; margin: 14px 0 0; }
+@media (prefers-reduced-motion: reduce) { .alarm-puls { animation: none; } }
 .aanbel { position: fixed; inset: 0; z-index: 1000; background: rgba(2, 5, 10, 0.94); display: flex; flex-direction: column; gap: 16px; padding: 20px; }
 .aanbel-kop { display: flex; align-items: center; gap: 14px; color: var(--tekst); }
 .aanbel-kop > div { flex: 1; display: flex; flex-direction: column; }
@@ -344,6 +359,8 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .lig-knoppen { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
 .lig-knop { height: 44px; padding: 0 20px; display: inline-flex; align-items: center; line-height: 1; border-radius: 14px; border: 0; background: var(--tekst); color: var(--inkt); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; }
 .lig-knop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--tekst); }
+.lig-kaart { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.lig-kaart .mini { margin: 0; }
 .lig-link { align-self: start; border: 0; background: none; padding: 4px 0; color: var(--ijs); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 
 /*
@@ -366,7 +383,7 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 .niemand .nk-wek { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 14px; color: rgba(127, 142, 156, 0.6); z-index: 1; }
 .niemand[data-stand='uit'] { background: #000; }
 .niemand .nk-uit { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 13px; color: rgba(127, 142, 156, 0.25); white-space: nowrap; }
-.niemand .nk-dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); pointer-events: none; }
+.niemand .nk-dim { position: absolute; inset: 0; background: #000; opacity: 0.35; pointer-events: none; }
 .niemand .nr-klok { position: absolute; left: 70px; top: 70px; }
 .niemand .nr-klok .tijd { font-size: 150px; }
 .niemand .nr-klok .datum { font-size: 22px; color: var(--zacht); margin-top: 14px; }

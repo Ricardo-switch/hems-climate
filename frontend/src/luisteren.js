@@ -158,7 +158,7 @@
     const q = new URLSearchParams({ v: 'vrij', tekst, ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
-    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.', gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
+    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.', gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
     if (res.ok && body.opdracht) {
       const r = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) }).catch(() => null);
       if (!r?.ok) {
@@ -337,6 +337,14 @@
       uit = await vraag(tekst);
     } catch {
       uit = { antwoord: 'Ik kan Smart Climate nu niet bereiken.', gedaan: [] };
+    }
+    // Alleen geluid: zoals niets gezegd (21 oktober 2026).
+    if (uit.ruis) return verwerk('');
+    // "Oké bedankt" of "dat was het": iets terug zeggen en niet verder luisteren.
+    if (uit.klaar) {
+      toon('antwoord', { jij: tekst, groot: uit.antwoord, hint: '' });
+      await zeg(uit.gesproken ?? uit.antwoord);
+      return sluit();
     }
     if (uit.onbekend && nietBegrepen++ > 0) return sluit();
     if (!uit.onbekend) nietBegrepen = 0;

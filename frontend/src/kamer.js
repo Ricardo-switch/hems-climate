@@ -120,6 +120,7 @@ const ICOON = {
   meter: '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z"/><path d="M12 9.5V17"/>',
   apparaat: '<rect x="4.5" y="3" width="15" height="18" rx="2.5"/><circle cx="12" cy="13" r="4.5"/><path d="M8 6.5h2"/>',
   camera: '<rect x="2.5" y="6.5" width="14" height="11" rx="2.5"/><path d="M16.5 10.5l5-3v9l-5-3z"/>',
+  rookmelder: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2M12 18.5v2"/>',
   beweging: '<circle cx="13" cy="4.5" r="1.8"/><path d="M9.5 21l2-6 3 3v3M8 12.5l2.5-4.5 3 1 2.5 3.5 2.5.5M11 9.5l-1.5 5"/>',
 };
 // Een bewegingsmelder is een melder, ook als hij de temperatuur meet; die staat ernaast als tekst.
@@ -242,6 +243,8 @@ function kamerBlad(k) {
   const klimaat = apps.filter((d) => d.soort === 'klimaat' || d.soort === 'screen' || d.soort === 'apparaat');
   const lampen = apps.filter((d) => d.soort === 'licht');
   const cameras = apps.filter((d) => d.soort === 'camera');
+  // Rookmelders (21 oktober 2026): wat ze zien, met de batterij.
+  const melders = apps.filter((d) => d.soort === 'rookmelder');
   // Sensoren (15 oktober 2026): wat ze meten, of ze beweging zien, en hun batterij.
   const meters = apps.filter((d) => d.soort === 'meter');
   const bedienen = huisData.lichtBedienen === true;
@@ -282,6 +285,7 @@ function kamerBlad(k) {
       ? `<div><div class="groepkop"><h3 class="kop-3">Licht</h3>${bedienen && lampen.some((d) => d.aan) ? '<button type="button" class="pil" data-alles-uit style="height: 30px; font-size: 13px; border: 0; color: inherit; cursor: pointer">Alles uit</button>' : ''}</div>${lampen.map(lamp).join('')}${schakelaars.map(battRij).join('')}${bedienen || !lampen.length ? '' : '<p class="mini" style="margin: 6px 0 0">Licht bedienen staat uit voor deze weergave; het kan via Home Assistant.</p>'}</div>`
       : '',
     meters.length || sensoren.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Sensoren</h3>${meters.map(meterRij).join('')}${sensoren.map(battRij).join('')}</div>` : '',
+    melders.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">Veiligheid</h3>${melders.map((d) => `<button type="button" class="rij${d.aan ? ' alarm' : ''}" data-open="${esc(d.id)}">${icoon(d)}<span class="naam"><b>${esc(d.naam)}</b><span>${esc(standTekst(d))}</span></span><span class="chev" aria-hidden="true">›</span></button>`).join('')}</div>` : '',
     cameras.length ? `<div><h3 class="kop-3" style="margin-bottom: 8px">${cameras.length === 1 ? 'Camera' : 'Camera’s'}</h3>${cameras.map((c) => `<div style="margin-bottom: 10px">${cameraBox(c)}</div>`).join('')}</div>` : '',
     // Hoe voelt het hier (besluit 134): dezelfde knoppen als op Thuis.
     // Ook in een kamer die meedoet (besluit 142): het gevoel telt voor die regeling.
@@ -348,9 +352,24 @@ function apparaatBlad(k, d) {
   else if (soort === 'screen') inhoud = screenBlad(k, d);
   else if (soort === 'licht') inhoud = lampBlad(k, d);
   else if (soort === 'camera') inhoud = cameraBlad(d);
+  else if (soort === 'rookmelder') inhoud = rookmelderBlad(d);
   else if (soort === 'apparaat') inhoud = `${kopVan(d, 'zon-t')}<p class="klein" style="margin: 0">Op zon: Smart Climate kiest het moment, starten doe je op het apparaat zelf.</p><a class="pil" href="apparaten.html" style="align-self: start">Naar Apparaten</a>`;
   else inhoud = `${kopVan(d, '')}<p class="klein" style="margin: 0">${d.meetKamer ? 'Deze meter geeft de temperatuur waarop Smart Climate deze kamer regelt.' : 'Alleen informatie; aan een meter valt niets te bedienen.'}</p>`;
   return `${terug}${inhoud}`;
+}
+
+/** Een rookmelder (21 oktober 2026): alleen lezen; afzetten op de melder of in de app van het merk. */
+function rookmelderBlad(d) {
+  const r = d.rookmelder ?? {};
+  const datum = (s) => (s ? new Date(`${s}T12:00:00`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' }) : null);
+  const feiten = [
+    ['Batterij', d.batterijPct != null ? `${d.batterijPct}%${r.batterijProbleem ? ', vervangen' : ''}` : r.batterijProbleem ? 'vervangen' : null],
+    ['Laatste test', datum(r.getestOp)],
+    ['Vervangen voor', datum(r.vervangenVoor)],
+  ].filter(([, w]) => w != null);
+  return `${kopVan(d, r.gevaar ? 'alarm-t' : '')}
+    ${feiten.map(([k, w]) => `<div class="feit"><b>${esc(k)}</b><span>${esc(w)}</span></div>`).join('')}
+    <p class="mini" style="margin: 0">Smart Climate kijkt alleen mee. Ziet de melder rook, koolmonoxide of hitte, dan staat het op elk scherm. Het alarm zelf zet je uit op de melder of in de app van het merk.</p>`;
 }
 
 const kopVan = (d, toon, rechts = '') => `<div class="bladkop"><div><h2 class="kop-2">${esc(d.naam)}</h2><p class="klein ${toon}" style="margin: 4px 0 0">${esc(standTekst(d))}</p></div>${rechts}</div>`;

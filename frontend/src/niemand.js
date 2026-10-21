@@ -29,12 +29,10 @@
 
   const { nl, esc, haal, telStand } = global.app;
 
-  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
+  const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
   const KIJKPAGINAS = /\/(vandaag|apparaten|opbrengst|assistent|kamer)\.html$/;
   const DIRECT = 'sc-niemand-direct';
-  /** De helderheid van de avondstand in Fully Kiosk, van 255. */
-  const FULLY_AVOND = 12;
 
   let instelling = STANDAARD;
   let magAanpassen = false;
@@ -49,7 +47,6 @@
   let bewoners = null;
   /** Wat er nu staat: 'dag', 'avond', 'uit' of null (Thuis). */
   let toont = null;
-  let helderVoor = null;
 
   /* ------------------------------------------------------------ de tijd */
 
@@ -110,27 +107,26 @@
       // Geen Fully Kiosk, of een oudere.
     }
   }
-  function onthoud(f) {
-    if (helderVoor == null && typeof f.getScreenBrightness === 'function') helderVoor = Number(f.getScreenBrightness());
-  }
-  /** Per stand: gedimd, uit, of zoals hij was. */
+  /**
+   * Per stand een vaste helderheid, in procenten (21 oktober 2026): de
+   * avondstand zijn eigen, overdag en in de app die van de dag. Eerst onthield
+   * de pagina wat er was en zette ze dat terug; laadde de wand intussen een
+   * andere pagina, dan bleef het scherm de ochtend erna gedimd.
+   */
+  const fel = (pct) => Math.max(1, Math.min(255, Math.round((Number(pct) || 100) * 2.55)));
   function helderheid(st) {
+    if (!scherm) return;
     fully((f) => {
       if (st === 'uit') {
-        onthoud(f);
         f.turnScreenOff?.(true);
         return;
       }
       f.turnScreenOn?.();
-      if (st === 'avond') {
-        onthoud(f);
-        f.setScreenBrightness?.(FULLY_AVOND);
-      } else if (helderVoor != null) {
-        f.setScreenBrightness?.(helderVoor);
-        helderVoor = null;
-      }
+      f.setScreenBrightness?.(fel(st === 'avond' ? instelling.helderAvond : instelling.helderDag));
     });
   }
+  /** Zonder Fully Kiosk kan de app het scherm alleen donkerder kleuren: hoe lager, hoe donkerder. */
+  const dimVan = () => (global.fully ? 0 : Math.min(0.6, 0.65 * (1 - (Number(instelling.helderAvond) || 20) / 100)));
 
   /* ------------------------------------------------------------ tekenen */
 
@@ -223,7 +219,7 @@
           ${apparaat ? `<span class="nk-apparaat" data-nk-apparaat>${apparaat}</span>` : ''}
           ${morgen ? `<span>${weerIcoon(morgen.soort)}<i data-nk-morgen>${morgen.html}</i></span>` : ''}
         </div>
-        <div class="nk-dim"></div>
+        <div class="nk-dim" style="opacity: ${dimVan()}"></div>
         <div class="nk-wek">Tik om de wand te wekken</div>`;
     } else {
       const w = bron?.weer();
@@ -272,7 +268,8 @@
       } catch {
         // Dan rust Thuis na de gewone tijd.
       }
-      location.href = 'thuis.html';
+      // Eerst de toegang van Home Assistant vasthouden, anders een 401 (21 oktober 2026).
+      void global.app.houToegang().finally(() => (location.href = 'thuis.html'));
       return;
     }
     toont = stand;
@@ -341,6 +338,8 @@
       const v = await haal('api/voorkeuren');
       instelling = { ...STANDAARD, ...v?.wand?.niemand };
       magAanpassen = !!v?.wand?.magAanpassen;
+      // Een andere helderheid gekozen: meteen zo.
+      if (toont !== 'uit') helderheid(toont ?? 'app');
     } catch {
       // Zonder logmap: zoals het standaard staat.
     }
@@ -393,6 +392,8 @@
     } catch {
       // Geen sessionStorage.
     }
+    // Na een nieuwe pagina de helderheid van nu, ook als er niets wisselt (21 oktober 2026).
+    if (!toont) helderheid('app');
     kijk();
   }
   setInterval(kijk, 5_000);

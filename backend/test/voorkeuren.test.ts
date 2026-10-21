@@ -29,9 +29,12 @@ describe('kaarten en favorieten (besluit 162)', () => {
     expect(leesKaarten(['straks'], 'wand').ok).toBe(false);
   });
 
-  it('neemt hooguit vier favorieten, een lamp of een scène', () => {
-    expect(leesFavorieten([{ soort: 'lamp', id: 'light.eettafel' }, { soort: 'scene', id: 'scene.film' }]).ok).toBe(true);
-    expect(leesFavorieten(['a', 'b', 'c', 'd', 'e'].map((x) => ({ soort: 'lamp', id: `light.${x}` }))).ok).toBe(false);
+  it('neemt hooguit twaalf favorieten, een lamp, een scène of een scherm (21 oktober 2026)', () => {
+    expect(leesFavorieten([{ soort: 'lamp', id: 'light.eettafel' }, { soort: 'scene', id: 'scene.film' }, { soort: 'scherm', id: 'cover.screen_slaapkamer' }]).ok).toBe(true);
+    const lampen = (n: number) => Array.from({ length: n }, (_, i) => ({ soort: 'lamp', id: `light.l${i}` }));
+    expect(leesFavorieten(lampen(12)).ok).toBe(true);
+    expect(leesFavorieten(lampen(13)).ok).toBe(false);
+    expect(leesFavorieten([{ soort: 'scherm', id: 'light.eettafel' }]).ok).toBe(false);
     expect(leesFavorieten([{ soort: 'scene', id: 'light.eettafel' }]).ok).toBe(false);
     expect(leesFavorieten([{ soort: 'schakelaar', id: 'switch.droger' }]).ok).toBe(false);
     expect(leesFavorieten([{ soort: 'lamp', id: 'light.a' }, { soort: 'lamp', id: 'light.a' }]).ok).toBe(false);
@@ -55,6 +58,10 @@ describe('weergave en de wand als niemand kijkt (besluit 164)', () => {
     // De dagstand en de avondstand, elk aan of uit (besluit 168).
     expect(leesNiemand({ avond: false }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, avond: false } });
     expect(leesNiemand({ dag: 'ja' }, STANDAARD_NIEMAND).ok).toBe(false);
+    // Een vaste helderheid per stand (21 oktober 2026).
+    expect(leesNiemand({ helderAvond: 30, helderDag: 75 }, STANDAARD_NIEMAND)).toEqual({ ok: true, niemand: { ...STANDAARD_NIEMAND, helderAvond: 30, helderDag: 75 } });
+    expect(leesNiemand({ helderAvond: 5 }, STANDAARD_NIEMAND).ok).toBe(false);
+    expect(leesNiemand({ helderDag: '100' }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ van: '25:00' }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ van: '7:00' }, STANDAARD_NIEMAND).ok).toBe(false);
     expect(leesNiemand({ rustMin: 3 }, STANDAARD_NIEMAND).ok).toBe(false);

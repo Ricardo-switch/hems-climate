@@ -114,6 +114,8 @@
   const D = 1.5; // diepte van het huis
   /** Een binnenunit op ware grootte: zo'n 90 bij 30 centimeter, bij een etage van 2,6 meter (besluit 131). */
   const AIRCO = { b: 0.56, h: 0.19, d: 0.15 };
+  /** De radiator op de achtermuur: breedte, hoogte boven de vloer en zelf. */
+  const RADIATOR = { b: 0.8, onder: 0.12, h: 0.36 };
   // Hoogte van het dak; hoger als er kamers onder liggen, zoals een zolderverdieping.
   let R = 1.15;
   const KAMER = 1.7; // breedte per gewicht van een kamer
@@ -462,6 +464,7 @@
         aircoDak = (kamer.apparaten ?? []).some((a) => a.soort === 'airco') ? aircoOnderDak(x0, x1, zt, dakPlafond) : null;
         inrichten(kamer, x0, x1, zt, zt + R * 0.85, dakPlafond, donker);
         blokKamer = kamer.id ?? kamer.naam;
+        dezeKamer = kamer;
         for (const app of kamer.apparaten ?? []) apparaat(app, x0, x1, zt, zt + R * 0.85, true, dakPlafond);
         aircoDak = null;
         if (x0 > 0) huis.push(line([[x0, D, zt], [x0, D, dakZ(x0)]], `stroke="#C9D6E2" stroke-opacity="0.35" stroke-width="1.6"`));
@@ -908,6 +911,30 @@
       const ruimte = Math.min(plafond(ax), plafond(ax + AB));
       return { wand: 'achter', ax, az: Math.max(z0 + 0.3, Math.min(z0 + 0.95, ruimte - AH - 0.1)) };
     }
+    /**
+     * Waar de radiator onder het dak staat (21 oktober 2026): op de achtermuur,
+     * zo ver naar links als hij rechtop past, en niet onder een airco op de
+     * achtermuur. Eerst stond hij altijd links, en bij een kamer tegen de
+     * buitenmuur stak hij zo door het dak. Past hij nergens, dan een kleinere,
+     * lage radiator, zoals tegen een knieschot. Zonder dak links, onder het raam.
+     */
+    function radiatorPlek(x0, x1, z0, plafond) {
+      const { b: B, onder, h: H } = RADIATOR;
+      if (!plafond) return { x: x0 + 0.25, b: B, h: H };
+      const maten = [[B, H], [0.55, 0.3], [0.4, 0.24]];
+      const past = (x, b, h) => Math.min(plafond(x), plafond(x + b)) >= z0 + onder + h + 0.06;
+      const onderAirco = (x, b, h) => aircoDak?.wand === 'achter' && x < aircoDak.ax + AIRCO.b + 0.05 && x + b > aircoDak.ax - 0.05 && aircoDak.az < z0 + onder + h + 0.05;
+      // Rechts schuift de muur van de volgende kamer over de achterwand; als het niet anders kan, toch daar.
+      for (const strook of [0.7, 0.1]) {
+        for (const [b, h] of maten) {
+          const tot = Math.min(x1 - b - 0.1, x1 < W - 0.01 ? x1 - strook - b : x1);
+          for (let x = x0 + 0.25; x <= tot + 1e-9; x += 0.05) if (past(x, b, h) && !onderAirco(x, b, h)) return { x, b, h };
+        }
+      }
+      // Nergens rechtop: klein, zo dicht mogelijk bij de nok, waar het dak het hoogst is.
+      const [b, h] = maten[maten.length - 1];
+      return { x: Math.max(x0 + 0.1, Math.min(x1 - b - 0.1, W / 2 - b - 0.1)), b, h };
+    }
     function apparaat(app, x0, x1, z0, z1, onderDak, plafond) {
       const xm = (x0 + x1) / 2;
       /** Met `opts.controle`: waar dit apparaat staat, als blok. */
@@ -974,13 +1001,14 @@
       } else if (app.soort === 'radiator') {
         const kl = ['#4b5664', app.aan ? '#c4704f' : '#5a6574', '#3d4754'];
         // Tegen de zijmuur als de achterwand een keuken heeft; anders onder het raam.
-        const rx = x0 + 0.25;
+        const { x: rx, b: rb, h: rh } = radiatorPlek(x0, x1, z0, plafond);
         if (radiatorZij) huis.push(doos(x0 + 0.02, 0.5, z0 + 0.12, 0.08, 0.8, 0.36, [kl[0], kl[2], kl[1]]));
-        else huis.push(doos(rx, 0.02, z0 + 0.12, 0.8, 0.08, 0.36, kl));
+        else huis.push(doos(rx, 0.02, z0 + 0.12, rb, 0.08, rh, kl));
         if (radiatorZij) blok(x0 + 0.02, x0 + 0.1, 0.5, 1.3, z0 + 0.12, z0 + 0.48);
-        else blok(rx, rx + 0.8, 0.02, 0.1, z0 + 0.12, z0 + 0.48);
+        else blok(rx, rx + rb, 0.02, 0.1, z0 + 0.12, z0 + 0.12 + rh);
+        if (opts.controle && plafond && !radiatorZij) controle[controle.length - 1].plafond = Math.min(plafond(rx), plafond(rx + rb));
         if (app.aan) {
-          const c = radiatorZij ? P(x0 + 0.4, 0.9, z0 + 0.4) : P(rx + 0.4, 0.3, z0 + 0.45);
+          const c = radiatorZij ? P(x0 + 0.4, 0.9, z0 + 0.4) : P(rx + rb / 2, 0.3, z0 + 0.09 + rh);
           huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.35}" fill="url(#${id}-warm)"/>`);
         }
       } else if (app.soort === 'vloer') {
@@ -1020,8 +1048,11 @@
           // Hangt er een airco tegen de linkermuur of op de achtermuur, dan niet daaronder.
           const vanaf = aircoDak?.wand === 'links' ? x0 + 0.55 : x0 + 0.1;
           const onderAirco = (x) => aircoDak?.wand === 'achter' && x < aircoDak.ax + AIRCO.b + 0.08 && x + TOESTEL.b > aircoDak.ax - 0.08;
+          // En niet voor de radiator.
+          const rx = (dezeKamer?.apparaten ?? []).some((a) => a.soort === 'radiator') ? radiatorPlek(x0, x1, z0, plafond) : null;
+          const voorRadiator = (x) => rx != null && x < rx.x + rx.b + 0.05 && x + TOESTEL.b > rx.x - 0.05;
           const plekken = [];
-          for (let x = vanaf; x <= x1 - TOESTEL.b - 0.1; x += 0.05) if (past(x) && !onderAirco(x)) plekken.push(x);
+          for (let x = vanaf; x <= x1 - TOESTEL.b - 0.1; x += 0.05) if (past(x) && !onderAirco(x) && !voorRadiator(x)) plekken.push(x);
           plekken.sort((a, b) => Math.abs(b + TOESTEL.b / 2 - xm) - Math.abs(a + TOESTEL.b / 2 - xm));
           dx = plekken[0] ?? Math.max(x0 + 0.1, Math.min(x1 - TOESTEL.b - 0.1, W / 2 - TOESTEL.b / 2));
         }
@@ -1093,7 +1124,10 @@
       const bezet = [];
       const raam = plafond ? null : raamVan(kamer, x0, x1);
       if (raam) bezet.push([raam[0] - 0.06, raam[1] + 0.06, 0.38, 'raam']);
-      if (apps.some((a) => a.soort === 'radiator') && !radiatorZij) bezet.push([x0 + 0.2, x0 + 1.1, 0]);
+      if (apps.some((a) => a.soort === 'radiator') && !radiatorZij) {
+        const r = radiatorPlek(x0, x1, z0, plafond);
+        bezet.push([r.x - 0.05, r.x + r.b + 0.05, 0]);
+      }
       if (apps.some((a) => a.soort === 'cv')) bezet.push([x0 + 0.15, x0 + 0.67, 0.45]);
       if (!plafond && apps.some((a) => a.soort === 'airco')) {
         const p = aircoPlek(kamer, x0, x1, z1);

@@ -678,7 +678,7 @@ function plekKeuze(d, k) {
   </div></div>`;
 }
 
-const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera' };
+const SOORT = { licht: 'lamp', klimaat: 'klimaat', screen: 'screen', meter: 'meter', apparaat: 'apparaat', camera: 'camera', rookmelder: 'rookmelder' };
 const soortTekst = (a) => (a.soort === 'meter' && a.meting?.beweging ? 'bewegingsmelder' : SOORT[a.soort] ?? a.soort);
 
 function apparaatBlad(d, t) {

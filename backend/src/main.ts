@@ -54,6 +54,7 @@ import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { kiesLigging, meetLigging, omvormerUitType, type Meting } from './web/ligging.js';
+import { alarmSensoren, vindRookmelders } from './web/rookmelders.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
@@ -61,7 +62,7 @@ import { LightSwitch } from './web/lights.js';
 import { SessionStore, haBeheerders, homeAssistantLogin, leesOfMaakSleutel, type Access, type HaAccount } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
 import { defaultStrategies } from './index.js';
-import { WebServer, defaultWebDir, versionFromEnv } from './web/server.js';
+import { WebServer, defaultWebDir, versionFromEnv, type AlarmMelder } from './web/server.js';
 import { readStartup } from './startup.js';
 import { DivergenceCache } from './web/divergence.js';
 import { configFingerprint, recordRun } from './adapters/runs.js';
@@ -526,6 +527,10 @@ const inHouse = (st: HaEntityState) =>
   st.entity_id.startsWith('camera.') ||
   // Beweging, voor de kamer en het huis (15 oktober 2026).
   (st.entity_id.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence'].includes(String(st.attributes['device_class']))) ||
+  // Rookmelders (21 oktober 2026): rook, koolmonoxide, hitte en een batterij die op is.
+  (st.entity_id.startsWith('binary_sensor.') && ['smoke', 'carbon_monoxide', 'heat', 'battery'].includes(String(st.attributes['device_class']))) ||
+  // En wanneer een melder getest is en vervangen moet.
+  (st.entity_id.startsWith('sensor.') && ['date', 'timestamp'].includes(String(st.attributes['device_class'])) && /replace|test/.test(st.entity_id)) ||
   (st.entity_id.startsWith('sensor.') &&
     (st.attributes['device_class'] === 'temperature' ||
       st.attributes['device_class'] === 'humidity' ||
@@ -554,6 +559,8 @@ async function readHouseRegisters(): Promise<void> {
     client.query<HaRegistryEntity[]>('config/entity_registry/list'),
   ]);
   houseRegisters = { floors, areas, devices, entities };
+  // Ging er al een rookmelder af voor de dienst startte: dan ook (21 oktober 2026).
+  setTimeout(() => web?.alarm(alarmNu()), 2_000).unref?.();
 }
 // Hoe vaak de zonnesensor een nieuwe waarde geeft (besluit 89), overdag gemeten.
 const solarPace = new SensorPace();
@@ -587,6 +594,15 @@ const functiesKeuzes = (): FunctiesGevonden | null => {
   return { ...gevondenNu, spraakassistenten: spraakLijst };
 };
 
+/**
+ * De andere beelden van dezelfde camera, het lichtste eerst (21 oktober 2026):
+ * gaf het gekozen beeld van de deurbel niets, dan bleef het scherm zwart.
+ */
+const reserveBeelden = (camera: string): string[] => {
+  const groep = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera));
+  return (groep?.beelden ?? []).filter((b) => b.id !== camera).sort((a, b) => Number(b.voorkeur) - Number(a.voorkeur)).map((b) => b.id);
+};
+
 const functiesNu = (): Functies | null => {
   if (functiesStore?.current) return functiesStore.current;
   const g = functiesKeuzes();
@@ -598,7 +614,16 @@ client.on('stateChanged', (state: HaEntityState) => {
   if (f && aangebeld(f, state, allStates.get(state.entity_id))) {
     const camera = f.deurbel.camera!;
     const naam = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera))?.naam ?? 'Deurbel';
-    web?.ring(camera, naam, { seconden: f.deurbel.seconden, schermAan: f.deurbel.schermAan });
+    web?.ring(camera, naam, { seconden: f.deurbel.seconden, schermAan: f.deurbel.schermAan, reserve: reserveBeelden(camera) });
+  }
+  // Een rookmelder ziet rook, koolmonoxide of hitte, of niet meer (21 oktober 2026): elk open scherm.
+  if (houseRegisters && state.entity_id.startsWith('binary_sensor.') && state.state !== allStates.get(state.entity_id)?.state && alarmSensoren(vindRookmelders(houseRegisters.entities, houseRegisters.devices, allStates)).has(state.entity_id)) {
+    // Na deze ronde: dan kent het huis de nieuwe stand al.
+    setTimeout(() => {
+      web?.alarm(alarmNu());
+      // Meteen bij Meldingen, niet pas over een minuut.
+      meldingenRonde();
+    }, 0);
   }
   // De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand.
   if (state.entity_id === voorkeuren?.melder() && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on') web?.wek('beweging');
@@ -911,6 +936,8 @@ function meldingenRonde(): void {
     volgen,
     batterijen: h.batterijen,
     filters: h.filters,
+    // De rookmelders (21 oktober 2026): rook, een lege batterij, vervangen.
+    rookmelders: h.etages.flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder' && d.rookmelder).map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, gevaar: d.rookmelder!.gevaar, sindsMs: d.rookmelder!.sindsMs, batterijProbleem: d.rookmelder!.batterijProbleem, vervangenVoor: d.rookmelder!.vervangenVoor })))),
     drempels: h.drempels,
     meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
     versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
@@ -968,6 +995,12 @@ async function historieVan(vanMs: number, totMs: number): Promise<{ zon: PowerRo
   // Alleen vandaag en gisteren zijn nodig.
   for (const k of historieBewaard.keys()) if (k < vanMs - 2 * 86_400_000) historieBewaard.delete(k);
   return uit;
+}
+
+/** Welke rookmelders nu iets zien, met hun kamer (21 oktober 2026). */
+function alarmNu(): AlarmMelder[] {
+  const h = houseReport();
+  return (h?.etages ?? []).flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder').map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, gevaar: d.rookmelder?.gevaar ?? null, sindsMs: d.rookmelder?.sindsMs ?? null }))));
 }
 
 const houseReport = () => {
@@ -1410,7 +1443,7 @@ if (webPort != null) {
       // De camera's die de app toont, en die van de deurbel (besluit 109).
       ids: () => {
         const f = functiesNu();
-        return new Set(f ? [...getoondeCameras(f), ...(f.deurbel.aan && f.deurbel.camera ? [f.deurbel.camera] : [])] : []);
+        return new Set(f ? [...getoondeCameras(f), ...(f.deurbel.aan && f.deurbel.camera ? [f.deurbel.camera, ...reserveBeelden(f.deurbel.camera)] : [])] : []);
       },
     },
     ...(functiesStore ? { functies: { store: functiesStore, gevonden: functiesKeuzes } } : {}),

@@ -8,7 +8,7 @@
 'use strict';
 
 const ligging = (() => {
-  const { esc, nl } = app;
+  const { esc, nl, deur } = app;
   const ZON = { ochtend: 'ochtendzon', middag: 'middagzon', avond: 'avondzon', weetniet: 'weet ik niet' };
   const KANTEN = [['noorden', 0], ['oosten', 90], ['zuiden', 180], ['westen', 270]];
   const HELLING = [['plat', 10], ['flauw', 25], ['gewoon', 40], ['steil', 50]];
@@ -95,6 +95,7 @@ const ligging = (() => {
         <div class="lig-chips"><span class="mini lig-vol">De voorkant kijkt naar het</span>
           ${KANTEN.map(([t, d]) => chip(`data-lig-voorgevel="${d}"`, t, hoek(d, c.voorgevelDeg) <= 22, 'klein')).join('')}
           <label class="mini lig-vol">Fijner: ${esc(String(Math.round(c.voorgevelDeg)))}°<input class="lig-draai" type="range" min="0" max="355" step="1" value="${Math.round(c.voorgevelDeg) % 360}" data-lig-draai aria-label="De richting van de voorkant in graden"></label>
+          ${kaartKnop(c)}
         </div></div>
       ${rij('Helling', `<div class="lig-chips">${HELLING.map(([t, d]) => {
         const hier = helling[1] === d;
@@ -104,6 +105,41 @@ const ligging = (() => {
       ${rij('Per paneel', `<div class="lig-chips">${WP.map((w) => chip(`data-lig-wp="${w}"`, `${w} Wp`, w === c.wpPerPaneel, 'klein')).join('')}${zelf('data-lig-wpzelf aria-label="Wattpiek per paneel"', 'anders', eigenWp ? c.wpPerPaneel : null, 50, 1000, 5, 'Wp')}</div>
         ${v.aantal ? `<small class="lig-onder">Samen ${v.aantal} × ${c.wpPerPaneel} Wp = ${esc(kWp(v.aantal * c.wpPerPaneel))} kWp</small>` : ''}`)}
       ${rij('Omvormer', `<div class="lig-chips">${gevonden ? chip(`data-lig-omvormer="${gevonden}"`, `✓ ${gevonden.toLocaleString('nl-NL')} W`, c.omvormerW === gevonden, 'gevonden klein') : ''}${zelf('data-lig-omvormerzelf aria-label="Vermogen van de omvormer in watt"', 'anders', eigenOmvormer ? c.omvormerW : null, 100, 100000, 100, 'W')}${chip('data-lig-omvormer="geen"', 'weet ik niet', c.omvormerW == null, 'klein')}</div>`)}`;
+  }
+
+  /*
+   * Opmeten op de kaart (21 oktober 2026): de omtrek van het huis in
+   * OpenStreetMap geeft de richting van de gevels op een graad. Een kompas
+   * binnen tegen de muur zat hier 15° naast. Alleen na een tik: de ligging
+   * van het huis gaat dan eenmalig naar OpenStreetMap.
+   */
+  function kaartKnop(c) {
+    const k = c.kaart;
+    const zin = !k
+      ? 'Stuurt de ligging van je huis eenmalig naar OpenStreetMap.'
+      : k === 'bezig'
+        ? 'Even kijken op de kaart…'
+        : k.fout
+          ? k.fout
+          : `Volgens de kaart kijkt de voorkant naar ${k.voorkantDeg}°. Staat hij verkeerd om, kies dan een andere kant.`;
+    return `<div class="lig-vol lig-kaart"><button type="button" class="lig-link" data-lig-kaart ${k === 'bezig' ? 'disabled' : ''}>Opmeten op de kaart</button><small class="mini">${esc(zin)}</small></div>`;
+  }
+  async function opDeKaart(staat) {
+    const c = staat.concept;
+    if (!c) return;
+    c.kaart = 'bezig';
+    let uit;
+    try {
+      const res = await deur('api/gevel-kaart', { nuDeg: Math.round(c.voorgevelDeg) });
+      const body = res ? await res.json().catch(() => ({})) : {};
+      uit = res?.ok ? body : { fout: body.fout ?? body.wachten ?? 'De kaart gaf geen antwoord.' };
+    } catch {
+      uit = { fout: 'Geen verbinding met de kaart.' };
+    }
+    if (staat.concept !== c) return;
+    c.kaart = uit;
+    if (uit.voorkantDeg != null) c.voorgevelDeg = uit.voorkantDeg;
+    staat.na?.();
   }
 
   /**
@@ -192,6 +228,10 @@ const ligging = (() => {
     }
     const c = staat.concept;
     if (!c) return null;
+    if (t.hasAttribute('data-lig-kaart')) {
+      void opDeKaart(staat);
+      return 'teken';
+    }
     if (ds.ligVoorgevel) c.voorgevelDeg = Number(ds.ligVoorgevel);
     else if (ds.ligHelling) c.hellingDeg = Number(ds.ligHelling);
     else if (ds.ligWp) c.wpPerPaneel = Number(ds.ligWp);

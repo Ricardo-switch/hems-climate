@@ -141,7 +141,7 @@ function licht() {
 
 /* ------------------------------------------------------------ weergave */
 
-const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, melder: null };
+const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
 const niemandNu = () => ({ ...NIEMAND, ...voorkeur?.wand?.niemand });
 const magWand = () => !!voorkeur?.wand?.magAanpassen;
 const schakel = (aan, data, label, uit = false) => `<button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data} ${uit ? 'disabled' : ''}></button>`;
@@ -179,7 +179,9 @@ function aod() {
     <div class="${aan ? '' : 'uitgezet'}" data-nk-onder><span class="veldnaam">Verschijnt na zoveel minuten zonder aanraken</span>${nkKeuzes('Verschijnt na', 'nk-rust', [[2, '2 min'], [5, '5 min'], [15, '15 min']], n.rustMin, !mag || !aan)}</div>
     <div class="${aan ? '' : 'uitgezet'}">
       <div class="regelrij"><div class="l"><b>Dagstand</b><span data-nk-dagzin>${esc(dagZin)}. De klok, wat het huis doet en het weer.</span></div>${schakel(n.dag, 'data-nk-dag', 'Dagstand', !mag || !aan || (n.dag && !n.avond))}</div>
+      <div><span class="veldnaam">Helderheid overdag, ook in de app</span>${nkKeuzes('Helderheid overdag', 'nk-helder-dag', [[50, '50%'], [75, '75%'], [100, '100%']], n.helderDag, !mag)}</div>
       <div class="regelrij"><div class="l"><b>Avondstand</b><span data-nk-avondzin>${esc(avondZin)}. Gedimd, met een donker huis.</span></div>${schakel(n.avond, 'data-nk-avond', 'Avondstand', !mag || !aan || (n.avond && !n.dag))}</div>
+      <div class="${n.avond ? '' : 'uitgezet'}"><span class="veldnaam">Helderheid in de avondstand</span>${nkKeuzes('Helderheid in de avondstand', 'nk-helder-avond', [[10, '10%'], [20, '20%'], [30, '30%'], [50, '50%']], n.helderAvond, !mag || !aan || !n.avond)}</div>
     </div>
     ${n.nacht ? `<p class="mini">Daarna Scherm uit, van ${esc(n.van)} tot ${esc(n.tot)}.</p>` : ''}
     ${alleenHoofd()}${voorDeWand}
@@ -206,7 +208,7 @@ function schermUit() {
     ${melders.length ? `<div class="regelrij"><div class="l"><b>Wekken door beweging</b><span>Met een bewegingsmelder uit het huis</span></div>${schakel(!!n.melder, 'data-nk-beweging', 'Wekken door beweging', !mag)}</div>
     ${n.melder ? `<label class="veldnaam">Welke melder<select class="invoer" data-nk-melder ${mag ? '' : 'disabled'}>${opties}</select></label>` : ''}` : ''}
     ${alleenHoofd()}${voorDeWand}
-    <p class="mini">De app maakt het scherm donkerder. Hoe fel het scherm zelf is, regelt de tablet; in Fully Kiosk gaat dat vanzelf mee, en gaat het scherm ${esc('\u2019s')} nachts echt uit.</p>`;
+    <p class="mini">In Fully Kiosk volgt het scherm de helderheid bij Always-on display, en gaat het ${esc('\u2019s')} nachts echt uit. In een gewone browser maakt de app het scherm alleen donkerder.</p>`;
 }
 
 /** De bewegingsmelders in het huis, met hun kamer. */
@@ -412,6 +414,8 @@ document.addEventListener('click', (e) => {
   // Dagstand of avondstand uit: de andere neemt het over; de laatste blijft aan (besluit 168).
   if (knop.hasAttribute('data-nk-dag')) return bewaarNiemand({ dag: !n.dag });
   if (knop.hasAttribute('data-nk-avond')) return bewaarNiemand({ avond: !n.avond });
+  if (knop.dataset.nkHelderDag) return bewaarNiemand({ helderDag: Number(knop.dataset.nkHelderDag) });
+  if (knop.dataset.nkHelderAvond) return bewaarNiemand({ helderAvond: Number(knop.dataset.nkHelderAvond) });
 
   if (knop.hasAttribute('data-nk-nacht')) return bewaarNiemand({ nacht: !n.nacht });
   if (knop.hasAttribute('data-nk-weg')) return bewaarNiemand({ weg: !n.weg });

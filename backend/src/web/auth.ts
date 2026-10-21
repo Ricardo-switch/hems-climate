@@ -45,6 +45,8 @@ export const DOOR_ROLES: Readonly<Record<string, Role>> = {
   '/api/indeling': 'beheerder',
   '/api/energie': 'beheerder',
   '/api/aansluiting': 'beheerder',
+  // De gevels opmeten op de kaart (21 oktober 2026): stuurt de ligging naar OpenStreetMap.
+  '/api/gevel-kaart': 'beheerder',
   '/api/functies': 'beheerder',
   // Comfort zet de bewoner zelf (besluit 130).
   '/api/comfort': 'bewoner',
