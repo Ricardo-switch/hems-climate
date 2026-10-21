@@ -26,7 +26,8 @@ verwijzing bestaat.
 - **De app is af** (21 oktober 2026): nu opruimen, sneller maken, apparaten
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
-  Thuis, meldingen op de telefoon en een eigen koppeling voor Assist. Talen
+  Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (het
+  eerste staat er, [181]). Talen
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
@@ -36,7 +37,8 @@ verwijzing bestaat.
   komen live ([177]). Eigen daluren en geen salderen voor een huis buiten
   Nederland, LG, Samsung en Miele op zon, en het typeplaatje voor de
   hoofdzekering ([178]). Wat je huis kan zegt wat er in Home Assistant klaar
-  moet staan, met een tik naar dat scherm ([179]).
+  moet staan, met een tik naar dat scherm ([179]). Een profiel per bewoner,
+  met een licht thema op de telefoon en een eigen kleur ([181]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -164,8 +166,8 @@ verwijzing bestaat.
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
-  gemeten is ([88]); toegankelijk en tweetalig ([86]); donker, later ook licht
-  en met een eigen accentkleur ([87]).
+  gemeten is ([88]); toegankelijk en tweetalig ([86]); donker, op de telefoon
+  ook licht, en met een eigen kleur per bewoner ([87], [181]).
 - **Het weer** van vandaag en vijf dagen komt van Buienradar uit Home Assistant,
   met wat de panelen dan leveren: de geleerde heldere lucht maal de zonkans,
   bijgesteld met de eigen opbrengst. Alleen om te tonen ([105]).
@@ -260,10 +262,15 @@ verwijzing bestaat.
   regel knoppen, de kamers in één kaart, en daaronder Straks, het apparaat,
   Hoe voelt het en Vandaag, net als op de wand ([159]).
 - **Thuis naar eigen smaak:** op de telefoon kies en schuif je zelf de kaarten
-  en vier favorieten met één tik, bewaard bij je account; de wand heeft vier
-  vakken, die de hoofdgebruiker aanpast, en Straks schuift er vanzelf bij
-  ([162]). Per account kies je eenvoudig of uitgebreid, grotere letters en
-  minder beweging ([164]).
+  en vier favorieten met één tik, bewaard bij je account; Straks schuift er
+  vanzelf bij ([162]). Per account kies je eenvoudig of uitgebreid, grotere
+  letters en minder beweging ([164]).
+- **Een profiel per bewoner** (Jij, bovenaan Instellingen): je thema op de
+  telefoon (donker, licht of zoals je telefoon), een van zes eigen kleuren, je
+  kaarten en favorieten voor telefoon en wand, en je comfort. De wand toont de
+  kleur, kaarten en favorieten van wiens comfort geldt, bij niemand thuis die
+  van de hoofdgebruiker; de nachtstand en de weergave blijven van de wand
+  ([181]).
 - **Het scherm aan de wand** (bij Bewoners een scherm) is als niemand kijkt
   een always-on display: overdag de dagstand, na zonsondergang gedimd. 's Nachts
   en als niemand thuis is gaat het uit na een tijd zonder beweging; beweging
@@ -400,6 +407,9 @@ verwijzing bestaat.
   linter met een handvol regels ([57]), en de opstart als één zuivere functie
   ([55]).
 - **Namen in het Engels,** de rest in het Nederlands ([59]).
+- **Kleinere bestanden:** HTTP, de live-verbinding en de opties van de
+  webserver staan apart van `server.ts`, en losse stukken van `main.ts` in eigen
+  bestanden ([180]).
 
 <!-- links:begin -->
 [1]: DECISIONS.md#1-weg-van-yaml-niet-omdat-het-niet-werkte
@@ -585,4 +595,6 @@ verwijzing bestaat.
 [177]: DECISIONS.md#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live
 [178]: DECISIONS.md#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje
 [179]: DECISIONS.md#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan
+[180]: DECISIONS.md#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert
+[181]: DECISIONS.md#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt
 <!-- links:einde -->

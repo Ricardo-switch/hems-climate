@@ -18,27 +18,19 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
 import { Readable, pipeline } from 'node:stream';
-import { createReadStream } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { extname, join, normalize, resolve, sep } from 'node:path';
-import { brotliCompressSync, constants as zlib, gzipSync } from 'node:zlib';
+import { join } from 'node:path';
 
 import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
-import type { DivergenceReport } from './divergence.js';
-import type { Onboarding } from './onboarding.js';
-import { exportInfo, writeExport, type AnalyseExtra } from './export.js';
-import { MAX_BACKUP, backupNaam, type Backup } from './gegevens.js';
-import { TodayCache, withHistory, type PowerRow } from './today.js';
+import { exportInfo, writeExport } from './export.js';
+import { MAX_BACKUP, backupNaam } from './gegevens.js';
+import { TodayCache, withHistory } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
-import type { FeedbackLog } from './feedback.js';
-import type { UitstelStore } from './uitstel.js';
-import type { VoorkeurenStore } from './voorkeuren.js';
-import { validateConnection, type ConnectionStore, type ConnectionView, type FoundAppliance, type FoundPhase } from './aansluiting.js';
-import { importFromPrefs, pricesInPrefs, type DashboardPrice, type EnergySource, type EnergyStore, type MeterOption } from './energy.js';
+import { validateConnection } from './aansluiting.js';
+import { importFromPrefs, pricesInPrefs, type DashboardPrice, type MeterOption } from './energy.js';
 import { PERIODS, periodRange, yearStartOf, yieldReport, type PeriodKind, type YieldReport } from './yield.js';
 import { partsIn, zonedMidnight } from './today.js';
 import { PICTURE_FILE } from './scene-pictures.js';
@@ -47,338 +39,31 @@ import type { AskContext, Lang, Question } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
 import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
 import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
-import type { UpdateView } from './bijwerken.js';
-import type { KlaarPunt } from './klaarzetten.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
-import { Luisterpost, type LuisterDeur } from './luisterpost.js';
+import { Luisterpost } from './luisterpost.js';
 import { accepteer, isUpgrade, weiger } from './websocket.js';
 import type { Duplex } from 'node:stream';
 import { residentView, type ResidentView } from './resident.js';
-import { sunReport, type Location } from './sun.js';
+import { sunReport } from './sun.js';
 import { CAMERA_ID } from './camera.js';
-import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type ForecastDay, type HourColumns, type WeatherLog, type WeatherReport } from './weather.js';
+import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
-import type { ComfortView } from './comfort.js';
-import type { HouseReport } from './house.js';
-import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder, type Layout, type LayoutStore } from './layout.js';
-import type { CoverSwitch } from './covers.js';
-import type { LightSwitch } from './lights.js';
-import { controleer as controleerFuncties, functiesVoorstel, volledig, type FunctiesGevonden, type FunctiesStore } from './functies.js';
+import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder } from './layout.js';
+import { controleer as controleerFuncties, functiesVoorstel, volledig } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, viaTailscale, type Access, type Visitor } from './auth.js';
-import type { BewonersView, Wie } from './bewoners.js';
+import type { Wie } from './bewoners.js';
 import { startOfLocalDay } from './today.js';
-import type { MeldingenStore } from './meldingen.js';
-import { MAX_ZEG, type Stem } from './stem.js';
+import { MAX_ZEG } from './stem.js';
 import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
+import { LiveStroom, type AlarmMelder } from './live.js';
 
-/** De versie die het image meekreeg bij het bouwen. */
-/** Een rookmelder in het alarm: wat hij ziet (null: niets), en in welke kamer. */
-export interface AlarmMelder {
-  readonly id: string;
-  readonly naam: string;
-  readonly kamer: string;
-  readonly gevaar: 'rook' | 'co' | 'hitte' | null;
-  readonly sindsMs: number | null;
-}
+export type { AlarmMelder } from './live.js';
+import { UNKNOWN_VERSION, type WebOptions } from './server-opties.js';
 
-export interface Version {
-  /** Het versienummer (besluit 131), uit de code zelf. */
-  readonly nummer: string;
-  /** Hoe Smart Climate draait: als add-on in Home Assistant, of op een eigen server. */
-  readonly installatie: 'add-on' | 'server';
-  /** Korte commit-hash, of `onbekend`. */
-  readonly commit: string;
-  /** Bouwtijd in ISO 8601, of null. */
-  readonly gebouwd: string | null;
-}
+export { UNKNOWN_VERSION, versionFromEnv, type Version, type WebOptions } from './server-opties.js';
+import { INPAKKEN, MAX_BODY, inpakkingVoor, readJson, sameOrigin, sendFile, sendJson, verderNa } from './http.js';
 
-export const UNKNOWN_VERSION: Version = { nummer: VERSIE, installatie: 'server', commit: 'onbekend', gebouwd: null };
-
-/**
- * Leest de versie uit de omgeving. Het image zet `HEMS_COMMIT` en `HEMS_GEBOUWD`
- * uit bouwargumenten die `deploy.sh` meegeeft; een lege of ontbrekende waarde
- * betekent dat niemand ze meegaf.
- */
-export function versionFromEnv(env: NodeJS.ProcessEnv): Version {
-  const commit = env['HEMS_COMMIT']?.trim();
-  const built = env['HEMS_GEBOUWD']?.trim();
-  return {
-    nummer: VERSIE,
-    // Een add-on krijgt van de Supervisor een token mee; een eigen server niet.
-    installatie: env['SUPERVISOR_TOKEN'] ? 'add-on' : 'server',
-    commit: commit && commit !== '' ? commit : UNKNOWN_VERSION.commit,
-    gebouwd: built && built !== '' ? built : null,
-  };
-}
-
-export interface WebOptions {
-  /** Poort om op te luisteren. */
-  readonly port: number;
-  /**
-   * Adres om aan te binden. Standaard alle adressen, want in een container is
-   * `127.0.0.1` alleen vanuit de container zelf bereikbaar en dan zie je niets.
-   */
-  readonly host?: string;
-  /** Map met de gebouwde frontend. Ontbreekt hij, dan draait de API gewoon. */
-  readonly webDir: string;
-  /**
-   * De configuratie, voor de namen en de eenheden in de weergave.
-   *
-   * Mag null zijn: bij een verse installatie is er nog niets, en dan is de
-   * onboarding het enige wat deze server te bieden heeft.
-   */
-  readonly config: SiteConfig | null;
-  /** De configuratie zoals hij nu is, als comfort uit de app hem verving (besluit 130). */
-  readonly configNow?: () => SiteConfig | null;
-  /**
-   * Comfort uit de app (besluit 130): de temperaturen per kamer en de dagdelen.
-   * Zonder dit bestaat de route niet.
-   */
-  readonly comfort?: {
-    /** Het comfort van een bewoner (besluit 147); null is van wie er kijkt, of de hoofdgebruiker. */
-    readonly view: (wie: Wie, bewoner: string | null) => ComfortView;
-    readonly save: (body: unknown, wie: Wie, bewoner: string | null) => Promise<{ readonly ok: true; readonly view: ComfortView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
-  };
-  /**
-   * Bewoners (besluit 147): wie hier woont, op volgorde, en wat een bewoner
-   * aan zichzelf of als hoofdgebruiker aan een ander verandert. `herken` kijkt
-   * na het inloggen wie het is: een nieuwe bewoner krijgt het welkom, een
-   * account zonder persoon wordt gast (besluit 151), en het eerste account de
-   * vraag of het een bewoner of een scherm is.
-   */
-  readonly bewoners?: {
-    readonly view: (wie: Wie) => BewonersView;
-    readonly actie: (body: unknown, wie: Wie & { readonly naam: string }) => Promise<{ readonly ok: true; readonly view: BewonersView } | { readonly ok: false; readonly status: number; readonly reden: string }>;
-    readonly herken: (account: { readonly userId: string; readonly naam: string }) => Promise<'welkom' | 'vraag' | 'gast' | null>;
-    /** Is dit account een gast, en is hij thuis? Een gast kijkt, en bedient alleen thuis. */
-    readonly gast?: (userId: string | null) => { readonly gast: boolean; readonly thuis: boolean | null };
-  };
-  /**
-   * Back-up, herstel en opnieuw beginnen (besluit 151), en de export voor de
-   * analyse: alleen voor de hoofdgebruiker. Zonder dit bestaan de routes niet,
-   * en is de export zoals voorheen.
-   */
-  readonly gegevens?: {
-    /** Is wie er kijkt de hoofdgebruiker? Zolang er niemand woont: een beheerder in Home Assistant. */
-    readonly hoofd: (wie: Wie) => boolean;
-    readonly backup: () => Promise<Backup>;
-    readonly herstel: (body: unknown) => Promise<{ readonly ok: true; readonly bestanden: readonly string[]; readonly configuratie: string } | { readonly ok: false; readonly status: number; readonly reden: string }>;
-    readonly opnieuw: () => Promise<{ readonly ok: true; readonly backup: string; readonly weg: readonly string[] } | { readonly ok: false; readonly status: number; readonly reden: string }>;
-    /** Gaat de configuratie mee bij opnieuw beginnen? Alleen als de app hem maakte. */
-    readonly configWeg: boolean;
-    /** De back-ups die de dienst zelf bewaarde, de nieuwste eerst. */
-    readonly bewaard: () => Promise<readonly string[]>;
-    /** De instellingen en de apparaten voor de export, en welke namen eruit moeten. */
-    readonly analyse: () => Promise<AnalyseExtra>;
-    /** Stopt de dienst om opnieuw te starten, nadat het antwoord weg is. */
-    readonly herstart: () => void;
-  };
-  /** De sleutel waarmee de assistent van Home Assistant zonder inlog een vraag stelt (besluit 147). */
-  readonly sleutel?: string;
-  /**
-   * Waar Home Assistant die vraag stelt (besluit 177). In de add-on de naam van
-   * de add-on in het netwerk van Home Assistant; zonder: het adres waarop de
-   * beheerder de app nu opent.
-   */
-  readonly sleutelAdres?: string;
-  /** Wat er in Home Assistant klaarstaat voor de functies van Smart Climate (besluit 179). */
-  readonly klaarzetten?: () => Promise<readonly KlaarPunt[]>;
-  /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
-  readonly latest: () => LiveSnapshot | null;
-  /**
-   * Levert de divergentieanalyse over de logboeken, of null.
-   *
-   * Los van `latest`, want het is een andere waarheid: `latest` is het besluit
-   * van dit moment, dit is wat er sinds het begin van de opname is gebeurd.
-   * Weglaten mag — dan is er geen analyse en zegt het eindpunt dat ook.
-   */
-  readonly divergence?: () => DivergenceReport | null;
-  /**
-   * Waar de dagbestanden staan, voor de export.
-   *
-   * Weglaten betekent: geen exportknop. Dat is de stand wanneer er niet
-   * gelogd wordt — dan valt er ook niets te downloaden.
-   */
-  readonly logDir?: string;
-  /**
-   * De onboarding, of weg wanneer die niet mag.
-   *
-   * Aanwezigheid is de schakelaar. Deze server accepteert alleen een POST
-   * wanneer dit is meegegeven, en `main.ts` geeft het alleen mee wanneer we
-   * achter Ingress draaien. Zie besluit 42.
-   */
-  readonly onboarding?: Onboarding;
-  /**
-   * Het huis uit Home Assistant zolang er geen configuratie is, voor het welkom
-   * (besluit 154). Gaat mee in het antwoord van `api/onboarding`.
-   */
-  readonly welkomHuis?: () => HouseReport | null;
-  /**
-   * Het vermogen van de panelen en het net per vijf minuten uit de statistiek
-   * van Home Assistant, voor de kwartieren van Vandaag die het eigen logboek
-   * nog niet heeft (17 oktober 2026). Null als die statistiek er niet is.
-   */
-  readonly historie?: (vanMs: number, totMs: number) => Promise<{ zon: readonly PowerRow[]; net: readonly PowerRow[] } | null>;
-  /**
-   * Na het opslaan van de configuratie: opnieuw starten, zodat de regeling
-   * hem leest (besluit 154). De add-on start dan vanzelf weer (besluit 151).
-   */
-  readonly naOnboarding?: () => void;
-  /**
-   * Gevoel en toelichting van de bewoner (besluit 84), of weg wanneer die niet
-   * mogen. Zelfde schakelaar als de onboarding: zonder dit object bestaat de
-   * route niet, en staat de muur er ook voor `/api/gevoel`.
-   */
-  readonly feedback?: FeedbackLog;
-  /** "Klaar voor" bij de droger (besluit 101); zonder dit bestaat de route niet. */
-  readonly uitstel?: UitstelStore;
-  /** Meldingen in de app (besluit 136): wat aandacht vraagt, en Eerder. */
-  readonly meldingen?: MeldingenStore;
-  /** Thuis naar eigen smaak (besluit 162): kaarten en favorieten per account, en de wand. */
-  readonly voorkeuren?: VoorkeurenStore;
-  /**
-   * Opbrengst (besluit 102): de meters en prijzen van de app, en de statistiek
-   * van Home Assistant om ze mee te lezen. Zonder dit geen terugblik.
-   */
-  readonly energy?: { readonly store: EnergyStore; readonly source: EnergySource };
-  /** De map met scèneplaatjes van de bewoner (scene-pictures.ts); zonder dit geen route. */
-  readonly scenePicturesDir?: string;
-  /**
-   * De zon en je aansluiting (besluit 103): antwoorden naar een eigen bestand
-   * naast de dataset. Zonder dit bestaat de route niet.
-   */
-  readonly connection?: {
-    readonly store: ConnectionStore;
-    readonly view: () => ConnectionView;
-    readonly found: () => { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
-  };
-  /**
-   * Het weer van de komende dagen (besluit 105): de verwachting van Buienradar
-   * uit Home Assistant, en de zonkans per dag zoals die de dag ervoor werd
-   * verwacht. Zonder dit bestaat de route niet.
-   */
-  readonly weather?: {
-    readonly forecast: () => readonly ForecastDay[];
-    readonly log: WeatherLog;
-    readonly bron?: () => string;
-    /** Het weer per uur van Open-Meteo (besluit 128), of null. */
-    readonly uren?: () => HourColumns | null;
-  };
-  /**
-   * De camera's bekijken (besluit 106): alleen lezen, via de proxy van Home
-   * Assistant, en alleen met inlog. `ids` zijn de camera's die het huis toont.
-   */
-  readonly camera?: { readonly base: string; readonly token: string; readonly ids: () => ReadonlySet<string> };
-  /** De stem van het huis (besluit 141): Piper in Home Assistant. Zonder dit zegt de assistent niets hardop. */
-  readonly stem?: Stem;
-  /**
-   * Camera's en de deurbel als instelling (besluit 109): wat er gevonden is, en
-   * wat de bewoner vastlegde. Zonder dit bestaat `/api/functies` niet.
-   */
-  readonly functies?: { readonly store: FunctiesStore; readonly gevonden: () => FunctiesGevonden | null };
-  /**
-   * Of de bewoner licht bedienen in de app aan heeft staan (besluit 111). Kan
-   * alleen iets uitzetten: zonder `lights` (HEMS_LIGHTS) is er niets aan te zetten.
-   */
-  readonly lichtAan?: () => boolean;
-  /** Schermen bedienen staat aan bij Functies (besluit 121); weg is aan. */
-  readonly schermenAan?: () => boolean;
-  /**
-   * Praten met je huis (besluit 148): de AI-taak die de bewoner bij Functies
-   * koos, als functie die om een tekst vraagt, of null (uit). `proef` vraagt een
-   * bepaalde AI-taak, voor "Nog een keer proberen". `bedienen`: of de assistent
-   * licht en schermen mag bedienen met een zin. Weg: geen taalmodel, wel
-   * bedienen met de woordzoeker.
-   */
-  readonly praten?: {
-    readonly model: () => Vraag | null;
-    readonly proef: (entityId: string) => Vraag;
-    /** De pauze na een fout van deze AI-taak, zoals een op gebruik: tot wanneer, en waarom. */
-    readonly pauze?: (entityId: string) => { readonly tot: number; readonly reden: string } | null;
-    readonly bedienen: () => boolean;
-  };
-  /**
-   * Praten met je stem (besluit 150): geluid van de pagina via `/api/luister`
-   * naar Home Assistant, dat het wekwoord hoort en uitschrijft. Weg: geen
-   * microfoon.
-   */
-  readonly luisteren?: LuisterDeur;
-  /**
-   * Welke code er draait (besluit 54). Komt uit het image; zie `versionFromEnv`.
-   *
-   * Zonder dit moest "draait de nieuwe versie al?" worden afgeleid uit
-   * herstarts in het logboek. Weglaten geeft `onbekend`, en dat is ook een
-   * antwoord: dan is het image gebouwd zonder dat iemand het zei.
-   */
-  readonly version?: Version;
-  /**
-   * De ligging van het huis op één decimaal, of null zolang Home Assistant hem
-   * niet gaf. Alleen voor de stand van de zon (besluit 93).
-   */
-  readonly location?: () => Location | null;
-  /** De omtrek van het huis op de kaart (21 oktober 2026); anders OpenStreetMap. Voor de tests. */
-  readonly omtrek?: (latDeg: number, lonDeg: number) => Promise<readonly Punt[] | null>;
-  /**
-   * Bijwerken vanuit de app (21 oktober 2026): wat er klaarstaat en wat er nieuw
-   * is, en de add-on bijwerken. Alleen in de add-on.
-   */
-  readonly bijwerken?: { readonly view: (magBijwerken: boolean) => Promise<UpdateView>; readonly installeer: () => Promise<{ readonly ok: boolean; readonly reden?: string }> };
-  /**
-   * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
-   * of null zolang de registers van Home Assistant nog niet gelezen zijn.
-   */
-  readonly house?: () => HouseReport | null;
-  /**
-   * De indeling van het huis (besluit 96), of weg wanneer die niet mag. Zelfde
-   * schakelaar als het gevoel: zonder dit object bestaat de route niet, en staat
-   * de muur er ook voor `/api/indeling`.
-   */
-  readonly layout?: {
-    readonly store: LayoutStore;
-    /** Het voorstel uit Home Assistant, of null zolang de registers niet gelezen zijn. */
-    readonly proposal: () => Layout | null;
-  };
-  /**
-   * Licht bedienen (besluit 97), of weg wanneer dat niet mag. Zelfde schakelaar
-   * als de indeling: zonder dit object bestaat de route niet, en staat de muur er
-   * ook voor `/api/licht`.
-   */
-  readonly lights?: LightSwitch;
-  /** Schermen bedienen voor de bewoner (besluit 121); weg als de installatie het niet toestaat. */
-  readonly covers?: CoverSwitch;
-  /**
-   * Wie mag bedienen (besluit 99): een eigen inlog via Home Assistant, Ingress
-   * van de add-on, of open (alleen voor tests). Verplicht, zodat een nieuwe
-   * opstelling er niet per ongeluk zonder komt te staan.
-   */
-  readonly access: Access;
-  /**
-   * Een tweede poort met een eigen inlog (besluit 160), naast Ingress: daar
-   * installeer je de app los op de telefoon, via Tailscale. Wat op die poort
-   * binnenkomt, krijgt deze toegang en nooit die van Ingress, en alleen als het
-   * via Tailscale over https kwam.
-   */
-  readonly eigenPoort?: { readonly port: number; readonly access: Access };
-  /** Waar meldingen naartoe gaan. Standaard de console. */
-  readonly write?: (line: string) => void;
-}
-
-const MIME: Readonly<Record<string, string>> = {
-  '.html': 'text/html; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  // Om de app te installeren.
-  '.webmanifest': 'application/manifest+json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-};
 
 /**
  * Wat de weergave over de installatie moet weten om namen te tonen.
@@ -405,207 +90,6 @@ function siteInfo(config: SiteConfig): unknown {
   };
 }
 
-/**
- * Komt het verzoek van deze dienst zelf? Zonder Origin (curl, een script op de
- * NAS) is het geen browser van een ander, en mag het. Met een Origin moet de
- * host gelijk zijn aan die van dit verzoek, of aan die waarvoor een proxy het
- * doorgaf (Ingress van Home Assistant zet `x-forwarded-host`).
- */
-function sameOrigin(req: IncomingMessage): boolean {
-  const origin = req.headers.origin;
-  if (origin == null || origin === '') return true;
-  let host: string;
-  try {
-    host = new URL(origin).host.toLowerCase();
-  } catch {
-    return false;
-  }
-  const own = [req.headers.host, req.headers['x-forwarded-host']]
-    .flat()
-    .filter((h): h is string => typeof h === 'string')
-    .flatMap((h) => h.split(','))
-    .map((h) => h.trim().toLowerCase());
-  return own.includes(host);
-}
-
-/** Zoveel mag een verzoek zijn. Antwoorden op keuzes zijn kilobytes, geen megabytes. */
-const MAX_BODY = 64 * 1024;
-
-/**
- * Leest een JSON-verzoek, met een dak erop.
- *
- * Zonder grens houdt een verzoek dat blijft doorsturen deze dienst bezig tot
- * het geheugen op is. Dat is hier extra onprettig: het is dezelfde dienst die
- * de opname doet, en die hoort niet om te vallen door een pagina.
- */
-async function readJson(req: IncomingMessage, max: number = MAX_BODY): Promise<unknown> {
-  const pieces: Buffer[] = [];
-  let bytes = 0;
-  for await (const piece of req) {
-    bytes += (piece as Buffer).length;
-    if (bytes > max) throw new Error('verzoek te groot');
-    pieces.push(piece as Buffer);
-  }
-  const text = Buffer.concat(pieces).toString('utf-8');
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error('geen geldige JSON');
-  }
-}
-
-/*
- * Inpakken (21 oktober 2026): scripts, opmaak en antwoorden gaan ingepakt over
- * de lijn, als de browser dat kan. Een antwoord van het huis is ruim 100 kB en
- * komt om de paar tellen; ingepakt is dat een tiende. Niet achter Ingress: daar
- * pakt de Supervisor het eerst weer uit, en pakt Home Assistant zelf in.
- */
-type Inpakking = 'br' | 'gzip';
-const INPAKKEN = new WeakMap<ServerResponse, Inpakking>();
-/** Kleiner dan dit loont inpakken niet. */
-const INPAKKEN_VANAF = 1024;
-
-function inpakkingVoor(req: IncomingMessage): Inpakking | null {
-  const accept = String(req.headers['accept-encoding'] ?? '');
-  return /\bbr\b/.test(accept) ? 'br' : /\bgzip\b/.test(accept) ? 'gzip' : null;
-}
-
-function inpak(data: Buffer | string, soort: Inpakking, snel: boolean): Buffer {
-  return soort === 'br'
-    ? brotliCompressSync(data, { params: { [zlib.BROTLI_PARAM_QUALITY]: snel ? 5 : 11 } })
-    : gzipSync(data, { level: snel ? 6 : 9 });
-}
-
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  const text = JSON.stringify(body);
-  const soort = INPAKKEN.get(res);
-  const data = soort && Buffer.byteLength(text) >= INPAKKEN_VANAF ? inpak(text, soort, true) : null;
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'content-length': data ? data.length : Buffer.byteLength(text),
-    // De stand van nú. Een tussenliggende cache die dit vasthoudt laat een
-    // dashboard zien dat er goed uitziet en niet klopt.
-    'cache-control': 'no-store',
-    ...(soort ? { vary: 'accept-encoding' } : {}),
-    ...(data && soort ? { 'content-encoding': soort } : {}),
-  });
-  res.end(data ?? text);
-}
-
-/** Wat ingepakt mag: tekst. Een plaatje of lettertype is dat al. */
-const TEKST = new Set(['.html', '.css', '.js', '.json', '.webmanifest', '.svg']);
-/** Wat met een versiestempel (`?v=…`, frontend/build.js) altijd hetzelfde blijft. */
-const BLIJVEND = new Set(['.css', '.js']);
-/** Ingepakte bestanden, per pad en soort; opnieuw als het bestand verandert. */
-const ingepakt = new Map<string, { mtimeMs: number; data: Buffer }>();
-
-interface FileOpties {
-  /** Er staat een versiestempel in het adres: de browser mag hem bewaren. */
-  readonly gestempeld?: boolean;
-  readonly inpakken?: Inpakking | null;
-}
-
-/**
- * Serveert een bestand uit `webDir`, en niets erbuiten.
- *
- * Het pad wordt genormaliseerd en daarna gecontroleerd tegen de wortel. Zonder
- * die controle haalt `GET /../../.env` het token op — die map ligt precies één
- * niveau boven de gebouwde frontend.
- */
-async function sendFile(
-  res: ServerResponse,
-  webDir: string,
-  pathname: string,
-  headOnly: boolean,
-  since: string | undefined,
-  opties: FileOpties = {},
-): Promise<boolean> {
-  const relative = normalize(decodeURIComponent(pathname)).replace(/^([/\\])+/, '');
-  const full = resolve(webDir, relative);
-  const root = resolve(webDir);
-  if (full !== root && !full.startsWith(root + sep)) return false;
-
-  let info;
-  try {
-    info = await stat(full);
-  } catch {
-    return false;
-  }
-  if (info.isDirectory()) return false;
-
-  /*
-   * `no-cache` en niet `max-age`.
-   *
-   * De bestandsnamen dragen geen hash: het blijven `app.js` en `app.css`. Met
-   * een `max-age` van een uur krijgt een bezoeker na een uitrol dus de nieuwe
-   * HTML met de oude JS, en dat mislukt op precies de manier die het lastigst
-   * te vinden is — een pagina die half werkt zonder één foutmelding. Dat is
-   * hier één keer gebeurd tijdens het bouwen van de tabs.
-   *
-   * `no-cache` betekent niet "niet bewaren" maar "altijd navragen". Samen met
-   * `last-modified` kost een ongewijzigd bestand een leeg 304-antwoord in
-   * plaats van tien kilobyte, en klopt de pagina altijd.
-   *
-   * Met een versiestempel in het adres (21 oktober 2026) is dat navragen niet
-   * nodig: verandert het bestand, dan verandert het adres. Dan mag de browser
-   * het bewaren zonder te vragen. Dat scheelt per pagina tien tot twaalf
-   * rondjes, en achter Ingress gaat elk rondje door Home Assistant.
-   */
-  const ext = extname(full).toLowerCase();
-  const cache = opties.gestempeld && BLIJVEND.has(ext) ? 'public, max-age=31536000, immutable' : 'no-cache';
-  const changed = info.mtime.toUTCString();
-  const soort = opties.inpakken && TEKST.has(ext) && info.size >= INPAKKEN_VANAF ? opties.inpakken : null;
-  const vary = opties.inpakken !== undefined && TEKST.has(ext) ? { vary: 'accept-encoding' } : {};
-  if (since != null && since === changed) {
-    res.writeHead(304, { 'cache-control': cache, 'last-modified': changed, ...vary });
-    res.end();
-    return true;
-  }
-
-  let data: Buffer | null = null;
-  if (soort) {
-    const sleutel = `${full}|${soort}`;
-    const bewaard = ingepakt.get(sleutel);
-    if (bewaard && bewaard.mtimeMs === info.mtimeMs) data = bewaard.data;
-    else {
-      data = inpak(await readFile(full), soort, false);
-      ingepakt.set(sleutel, { mtimeMs: info.mtimeMs, data });
-    }
-  }
-  res.writeHead(200, {
-    'content-type': MIME[ext] ?? 'application/octet-stream',
-    'content-length': data ? data.length : info.size,
-    'cache-control': cache,
-    'last-modified': changed,
-    ...vary,
-    ...(data && soort ? { 'content-encoding': soort } : {}),
-  });
-  if (headOnly) {
-    res.end();
-    return true;
-  }
-  if (data) res.end(data);
-  else createReadStream(full).pipe(res);
-  return true;
-}
-
-/** Een pagina die na het inloggen zelf verder gaat, vanaf deze site (zie de terugkeer van het inloggen). */
-function verderNa(naar: string): string {
-  const html = naar.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-  const js = JSON.stringify(naar).replace(/</g, '\\u003c');
-  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${html}"><title>Ingelogd · Smart Climate</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b1424;color:#eef3f7;font-family:system-ui,sans-serif}</style></head><body><p>Ingelogd. <a href="${html}" style="color:#6fd3ff">Verder</a></p><script>location.replace(${js});</script></body></html>`;
-}
-
-/** Eén open SSE-verbinding. */
-interface Listener {
-  readonly res: ServerResponse;
-  readonly ping: NodeJS.Timeout;
-}
-
-/** Hoe lang de dienst wacht voor hij een verandering in het huis doorgeeft: een lamp meteen, een meting rustig. */
-const HUIS_SNEL_MS = 300;
-const HUIS_RUSTIG_MS = 2_000;
-
 export class WebServer {
   readonly #options: WebOptions & { host: string; write: (line: string) => void };
   readonly #server: Server;
@@ -614,7 +98,7 @@ export class WebServer {
   #eigenPort: number | null = null;
   /** De toegang van een verzoek op de eigen poort; de rest volgt `access`. */
   readonly #toegang = new WeakMap<IncomingMessage, Access>();
-  readonly #listeners = new Set<Listener>();
+  readonly #live: LiveStroom;
   #today: TodayCache | null = null;
   /** Het weerrapport, tien minuten vastgehouden: vijf dagen zon uitrekenen kost wat. */
   #weather: { atMs: number; report: WeatherReport; geometry: Geometry } | null = null;
@@ -626,6 +110,11 @@ export class WebServer {
       host: options.host ?? '0.0.0.0',
       write: options.write ?? ((line) => console.log(line)),
     };
+    this.#live = new LiveStroom({
+      laatste: () => this.#options.latest(),
+      metBewoner: (snapshot) => this.#withResident(snapshot),
+      huis: () => this.#options.house?.() ?? null,
+    });
     const verzoek = (req: IncomingMessage, res: ServerResponse) => {
       void this.#handle(req, res).catch((error: unknown) => {
         // Een verzoek dat onderuitgaat mag de dienst niet meenemen. De
@@ -1021,8 +510,8 @@ export class WebServer {
 
     /*
      * Thuis naar eigen smaak (besluit 162): je eigen kaarten en favorieten op de
-     * telefoon, en de wand voor iedereen, die de hoofdgebruiker of een beheerder
-     * aanpast.
+     * telefoon, je thema en je kleur, en de wand in het profiel van wiens
+     * comfort geldt (besluit 181).
      */
     if (path === '/api/voorkeuren') {
       const voorkeuren = this.#options.voorkeuren;
@@ -1031,7 +520,8 @@ export class WebServer {
         return;
       }
       const wie = await this.#wie(req);
-      const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)) };
+      const profiel = this.#options.profielen?.(wie.userId);
+      const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)), ...(profiel ? { profielen: profiel.profielen, scherm: profiel.scherm } : {}) };
       if (method !== 'POST') {
         sendJson(res, 200, voorkeuren.view(kijker));
         return;
@@ -1155,7 +645,7 @@ export class WebServer {
     }
 
     if (path === '/api/events') {
-      this.#subscribe(res, method === 'HEAD');
+      this.#live.abonneer(res, method === 'HEAD');
       return;
     }
 
@@ -1641,7 +1131,7 @@ export class WebServer {
         versie: this.#options.version ?? UNKNOWN_VERSION,
         laatsteBesluitMs: snapshot?.atMs ?? null,
         analyseBerekendOpMs: this.#options.divergence?.()?.berekendOpMs ?? null,
-        kijkers: this.#listeners.size,
+        kijkers: this.#live.kijkers,
       });
       return;
     }
@@ -2126,58 +1616,6 @@ export class WebServer {
   }
 
   /**
-   * Abonneert een kijker op de besluitenstroom.
-   *
-   * SSE en geen websocket: het verkeer gaat maar één kant op, browsers
-   * herverbinden vanzelf, en het kost geen enkele afhankelijkheid.
-   */
-  #subscribe(res: ServerResponse, headOnly: boolean): void {
-    res.writeHead(200, {
-      'content-type': 'text/event-stream; charset=utf-8',
-      'cache-control': 'no-store',
-      connection: 'keep-alive',
-      // Achter een reverse proxy die buffert komt er anders niets door tot de
-      // stroom sluit — en die sluit nooit.
-      'x-accel-buffering': 'no',
-    });
-    if (headOnly) {
-      res.end();
-      return;
-    }
-    // Meteen open, ook zonder besluit om mee te sturen: anders hoort de pagina
-    // pas bij de eerste ping (25 tellen) dat hij verbonden is, en toont hij
-    // na 15 tellen "geen verbinding" (21 oktober 2026).
-    res.flushHeaders();
-
-    // Een kwartier stilte is normaal 's nachts. Zonder teken van leven sluit
-    // een proxy of een telefoon in slaapstand de verbinding.
-    const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
-    ping.unref?.();
-    const listener: Listener = { res, ping };
-    this.#listeners.add(listener);
-    // Gaat er nu een rookmelder af, dan ziet een scherm dat net opent het meteen.
-    if (this.#alarm.some((a) => a.gevaar != null)) res.write(`event: alarm
-data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
-
-`);
-
-    res.on('close', () => {
-      clearInterval(ping);
-      this.#listeners.delete(listener);
-    });
-
-    // Meteen de huidige stand, zodat de pagina niet leeg blijft tot het
-    // volgende besluit. Bij dertig seconden hartslag is dat lang genoeg om
-    // voor kapot door te gaan.
-    const snapshot = this.#options.latest();
-    if (snapshot != null) this.#send(listener, snapshot);
-  }
-
-  #send(listener: Listener, snapshot: LiveSnapshot): void {
-    listener.res.write(`data: ${JSON.stringify(this.#withResident(snapshot))}\n\n`);
-  }
-
-  /**
    * Het besluit onbewerkt, met het bewonerscontract ernaast (76, 94): per kamer
    * de stand in woorden, uitgerekend in de dienst. De kern blijft wat hij was;
    * de proefomgeving leest `bewoner`, de schaduwweergave de rest.
@@ -2188,112 +1626,44 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
     return { ...snapshot, bewoner: residentView(config, snapshot) };
   }
 
-  /**
-   * Er wordt aangebeld (besluit 107): elke open pagina toont het beeld van de
-   * deurbel. De melding zegt alleen welke camera; het beeld vraagt de inlog.
-   */
-  ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean; readonly reserve?: readonly string[] } = { seconden: 120, schermAan: true }): void {
-    this.#zend('aanbellen', { camera, naam, tMs: Date.now(), seconden: hoe.seconden, schermAan: hoe.schermAan, reserve: hoe.reserve ?? [] });
-  }
-
-  /** Wat de rookmelders nu zien (21 oktober 2026). */
-  #alarm: readonly AlarmMelder[] = [];
-
-  /**
-   * Een rookmelder ziet rook, koolmonoxide of hitte, of niet meer (21 oktober
-   * 2026, schets Wand-Rook): elke open pagina toont het alarm met de kamer, of
-   * haalt het weg. Alleen lezen; afzetten doe je op de melder.
-   */
-  alarm(melders: readonly AlarmMelder[]): void {
-    this.#alarm = melders;
-    this.#zend('alarm', { melders, tMs: Date.now() });
-  }
-
-  /**
-   * De wand wekken (besluit 164): de gekozen bewegingsmelder ziet iemand. Een
-   * wand in de nachtstand of in rust laat dan Thuis weer zien; de rest merkt
-   * er niets van.
-   */
-  wek(waarom: 'beweging'): void {
-    this.#zend('wekken', { waarom, tMs: Date.now() });
-  }
-
-  /** Een gebeurtenis naar elke open pagina. Een kijker die wegviel, ruimt hij op. */
-  #zend(soort: string, data: unknown): void {
-    const tekst = `event: ${soort}\ndata: ${JSON.stringify(data)}\n\n`;
-    for (const listener of this.#listeners) {
-      try {
-        listener.res.write(tekst);
-      } catch {
-        clearInterval(listener.ping);
-        this.#listeners.delete(listener);
-      }
-    }
-  }
-
   /*
-   * Het huis en wie er thuis is, live (21 oktober 2026). Eerst vroeg Thuis het
-   * huis elke 15 tellen op en Kamer elke 5, per open scherm, ook 's nachts als
-   * er niets veranderde. Nu zegt de dienst het als er iets veranderde, en
-   * haalt de pagina het dan op. Wat je bedient of ziet bewegen (een lamp, een
-   * scherm, beweging, wie er thuis is) gaat meteen; een temperatuur of verbruik
-   * dat verschuift rustig, en de pagina bepaalt hoe vaak dat telt. Alleen een
-   * vingerafdruk gaat mee: het huis zelf is ruim 100 kB, en een live-stroom
-   * wordt niet ingepakt.
+   * De live-verbinding (live.ts, besluit 180): de besluiten, aanbellen, het
+   * rookalarm, de wand wekken, en dat het huis, de meldingen of de bewoners
+   * veranderden. Hier alleen doorgegeven, zodat de dienst niets merkt.
    */
-  #huisVinger: string | null = null;
-  #huisWacht: NodeJS.Timeout | null = null;
-  #huisSnel = false;
-  #bewonersWacht: NodeJS.Timeout | null = null;
+  /** Er wordt aangebeld (besluit 107). */
+  ring(camera: string, naam: string, hoe: { readonly seconden: number; readonly schermAan: boolean; readonly reserve?: readonly string[] } = { seconden: 120, schermAan: true }): void {
+    this.#live.ring(camera, naam, hoe);
+  }
 
-  /** Er veranderde iets in het huis; `snel` voor wat je bedient of ziet bewegen. */
+  /** Een rookmelder ziet rook, koolmonoxide of hitte, of niet meer. */
+  alarm(melders: readonly AlarmMelder[]): void {
+    this.#live.alarm(melders);
+  }
+
+  /** De wand wekken (besluit 164). */
+  wek(waarom: 'beweging'): void {
+    this.#live.wek(waarom);
+  }
+
+  /** Er veranderde iets in het huis (besluit 174). */
   huisVeranderd(snel: boolean): void {
-    if (this.#listeners.size === 0) return;
-    this.#huisSnel ||= snel;
-    // Een snelle verandering wacht niet op een rustige die al gepland stond.
-    if (this.#huisWacht && !snel) return;
-    if (this.#huisWacht) clearTimeout(this.#huisWacht);
-    this.#huisWacht = setTimeout(() => {
-      this.#huisWacht = null;
-      const huis = this.#options.house?.() ?? null;
-      if (huis == null) return;
-      const vinger = createHash('sha1').update(JSON.stringify(huis)).digest('hex').slice(0, 12);
-      const zeg = this.#huisSnel;
-      this.#huisSnel = false;
-      if (vinger === this.#huisVinger) return;
-      this.#huisVinger = vinger;
-      this.#zend('huis', { v: vinger, snel: zeg });
-    }, snel ? HUIS_SNEL_MS : HUIS_RUSTIG_MS);
-    this.#huisWacht.unref?.();
+    this.#live.huisVeranderd(snel);
   }
 
-  /** De meldingen veranderden (21 oktober 2026): een nieuwe versie, een lege batterij, of iemand haalde er een weg. */
+  /** De meldingen veranderden (besluit 177). */
   meldingenVeranderd(): void {
-    this.#zend('meldingen', { tMs: Date.now() });
+    this.#live.meldingenVeranderd();
   }
 
-  /** Iemand komt thuis of gaat weg: de rondjes op Thuis. */
+  /** Iemand komt thuis of gaat weg (besluit 174). */
   bewonersVeranderd(): void {
-    if (this.#listeners.size === 0 || this.#bewonersWacht) return;
-    this.#bewonersWacht = setTimeout(() => {
-      this.#bewonersWacht = null;
-      this.#zend('bewoners', { tMs: Date.now() });
-    }, HUIS_SNEL_MS);
-    this.#bewonersWacht.unref?.();
+    this.#live.bewonersVeranderd();
   }
 
   /** Duwt een besluit naar alle kijkers. Hier hangt de runner zich aan. */
   publish(snapshot: LiveSnapshot): void {
-    for (const listener of this.#listeners) {
-      try {
-        this.#send(listener, snapshot);
-      } catch {
-        // Een kijker die wegviel voordat 'close' afging. Opruimen en door;
-        // dit mag de opname niet raken.
-        clearInterval(listener.ping);
-        this.#listeners.delete(listener);
-      }
-    }
+    this.#live.publish(snapshot);
   }
 
   /**
@@ -2556,11 +1926,7 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
   }
 
   async stop(): Promise<void> {
-    for (const listener of this.#listeners) {
-      clearInterval(listener.ping);
-      listener.res.end();
-    }
-    this.#listeners.clear();
+    this.#live.sluit();
     // Open microfoons (besluit 150) houden de server anders open.
     for (const socket of this.#luistersockets) socket.destroy();
     await new Promise<void>((ok) => this.#server.close(() => ok()));
@@ -2568,7 +1934,7 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
   }
 
   get viewers(): number {
-    return this.#listeners.size;
+    return this.#live.kijkers;
   }
 }
 

@@ -746,7 +746,7 @@
   }
   /** Het hele scherm en de balken van Home Assistant uit, of weer aan. */
   /*
-   * De statusbalk in de kleur van de app (#0b1424), zoals de app van de NAS.
+   * De statusbalk in de kleur van de app (#0b1424, licht #e9eff6), zoals de app van de NAS.
    * De app van Home Assistant kleurt de statusbalk en de balk onderin naar het
    * thema van Home Assistant (`--app-header-background-color` en
    * `--primary-background-color`), en leest die opnieuw bij het bericht
@@ -755,7 +755,7 @@
    * terugzetten leeft bij Home Assistant zelf, want deze pagina is dan al weg
    * als je het paneel verlaat. Alleen in de app van Home Assistant.
    */
-  const STATUSBALK = '#0b1424';
+  const statusbalkKleur = () => (document.documentElement.classList.contains('sc-licht') ? '#e9eff6' : '#0b1424');
   const STATUSBALK_CODE = `
     const html = document.documentElement;
     const namen = ['--app-header-background-color', '--primary-background-color'];
@@ -791,7 +791,7 @@
       const w = global.parent;
       if (!w.document.querySelector('home-assistant')?.hass?.auth?.external) return;
       w.__scStatusbalk ??= new w.Function(STATUSBALK_CODE)();
-      if (aan) w.__scStatusbalk.zet(STATUSBALK);
+      if (aan) w.__scStatusbalk.zet(statusbalkKleur());
       else w.__scStatusbalk.terug();
     } catch {
       // Een vak van een andere herkomst, of Home Assistant laat het niet toe.
@@ -959,10 +959,31 @@
     try {
       const v = await haal('api/voorkeuren');
       if (v?.tel?.weergave) zetWeergave(v.tel.weergave);
+      zetThema(v);
     } catch {
       // Zonder logmap: zoals het was.
     }
   }
+
+  /*
+   * Het thema en de kleur (besluit 181): op de telefoon jouw thema en kleur,
+   * op de wand de kleur van wiens comfort geldt. Het script in de <head> zet
+   * ze vóór de eerste weergave uit wat het onthield; hier houden we dat bij.
+   * De kleuren van alle bewoners zijn voor de begroeting en de rondjes.
+   */
+  let kleurenNu = {};
+  function zetThema(v) {
+    if (!v?.tel) return;
+    global.scThema?.({ thema: v.tel.thema, kleur: v.tel.kleur, wandKleur: v.wand?.kleur });
+    const nieuw = v.kleuren ?? {};
+    if (JSON.stringify(nieuw) === JSON.stringify(kleurenNu)) return;
+    kleurenNu = nieuw;
+    dispatchEvent(new Event('sc-kleuren'));
+  }
+  /** Een betekeniskleur als tekst: in het lichte thema de donkere tint, anders haalt hij het contrast niet. */
+  const tekstKleur = (k) => String(k).replace(/var\(--(zon|ijs|mint|gloed)\)/, 'var(--$1-t)').replace('var(--violet)', 'var(--violet-t)');
+  /** De kleur van een bewoner (zijn id): `data-kleur="${app.kleurVan(id)}"` kleurt met var(--accent). */
+  const kleurVan = (bewonerId) => kleurenNu[bewonerId] ?? 'lucht';
 
   /** De wand als niemand kijkt (besluit 164): op Thuis en de pagina's om naar te kijken. */
   function niemandStart() {
@@ -1424,5 +1445,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
 })(window);

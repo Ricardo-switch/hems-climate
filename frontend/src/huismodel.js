@@ -330,14 +330,16 @@
    * Wie de begroeting noemt (besluit 147): op je telefoon jij; op een scherm
    * zoals de wand wie er thuis is, op volgorde. Zonder bewoners niemand.
    */
-  function groetNamen(bewoners) {
+  function groetWie(bewoners) {
     const iedereen = [...(bewoners?.bewoners ?? []), ...(bewoners?.gasten ?? [])];
     if (!iedereen.length) return [];
-    if (bewoners.ik?.soort === 'bewoner' || bewoners.ik?.soort === 'gast') return bewoners.ik.naam ? [bewoners.ik.naam] : [];
+    if (bewoners.ik?.soort === 'bewoner' || bewoners.ik?.soort === 'gast') return bewoners.ik.naam ? [{ id: bewoners.ik.id, naam: bewoners.ik.naam }] : [];
     // Op een scherm: wie er thuis is, bewoners op volgorde en dan gasten. Thuis zoals
     // Home Assistant het ziet, net als de rondjes (besluit 169, 21 oktober 2026).
-    return iedereen.filter((b) => b.thuis).map((b) => b.naam);
+    return iedereen.filter((b) => b.thuis).map((b) => ({ id: b.id, naam: b.naam }));
   }
+  /** Alleen de namen, voor wat ze uitspreekt. */
+  const groetNamen = (bewoners) => groetWie(bewoners).map((w) => w.naam);
 
   /*
    * De thermostaat van de cv-ketel (besluit 167), zoals een Nest: die stuurt de
@@ -367,5 +369,5 @@
   ];
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen, groetWie };
 })(window);

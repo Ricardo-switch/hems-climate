@@ -203,7 +203,7 @@ function tekenNu() {
     try {
       html = maak();
     } catch (fout) {
-      html = `<p class="klein" style="margin: 0; color: var(--gloed)">Dit deel lukte niet: ${esc(String(fout?.message ?? fout))}</p>`;
+      html = `<p class="klein" style="margin: 0; color: var(--gloed-t)">Dit deel lukte niet: ${esc(String(fout?.message ?? fout))}</p>`;
     }
     $$(sel).forEach((el) => (el.innerHTML = html));
   };

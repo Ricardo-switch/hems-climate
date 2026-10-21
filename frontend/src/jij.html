@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Jij · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
+<style>
+  /*
+   * Jij (besluit 181, schets Instellingen-Tel-Jij): alles wat van één bewoner
+   * is op één plek. Je thema en je kleur, hoe Thuis eruitziet op je telefoon
+   * en op de wand, je comfort en hoe het huis weet dat je thuis bent. Op de
+   * wand geldt het profiel van wiens comfort geldt.
+   */
+  .jij, [data-jij] { display: flex; flex-direction: column; gap: 14px; }
+  #wand main { overflow-y: auto; }
+  #wand .jij { width: 560px; margin: 0 auto; padding-bottom: 20px; }
+  #tel .inhoud { padding: 18px 16px 110px; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .wie { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .rondje { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--op-accent); font-family: var(--kop); font-weight: 700; font-size: 26px; flex: none; box-shadow: 0 0 0 4px var(--accent-vlak); }
+  .wie .kop-1 { font-size: 34px; }
+  .wie small { display: block; font-size: 13.5px; font-weight: 600; color: var(--gedempt); margin-top: 2px; }
+  .lijst { padding: 4px; border-radius: 22px; }
+  .lijst h2 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; width: 100%; min-height: 62px; padding: 8px 12px; border: 0; border-top: 1px solid rgb(var(--wit) / 0.07); background: none; color: var(--tekst); font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+  .lijst h2 + .rij { border-top: 0; }
+  div.rij { cursor: default; }
+  .rij:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+  .rij .ik { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  .rij .ik svg { width: 20px; height: 20px; }
+  .rij b { font-size: 16px; font-weight: 600; align-self: end; }
+  .rij small { grid-column: 2; font-size: 13px; color: var(--gedempt); align-self: start; }
+  .rij .pijl { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; color: var(--gedempt); font-size: 22px; }
+  .staal { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-vlak); }
+  .schakel { width: 46px; height: 28px; border-radius: 14px; border: 0; padding: 0; background: rgb(var(--wit) / 0.14); position: relative; flex: none; cursor: pointer; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--tekst); transition: left 0.15s; }
+  .schakel[aria-checked='true'] { background: var(--accent); }
+  .schakel[aria-checked='true']::after { left: 21px; background: var(--op-accent); }
+  .schakel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .uitleg { margin: 2px 14px 10px; font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .gast { padding: 16px 18px; }
+
+  /* Het blad: thema en kleur. */
+  .achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.5); z-index: 20; }
+  .blad { position: fixed; left: 8px; right: 8px; bottom: 8px; max-width: 520px; margin: 0 auto; padding: 12px 18px 20px; border-radius: 26px; background: var(--diep); border: 1px solid var(--glas-rand); z-index: 21; display: flex; flex-direction: column; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18); }
+  #wand .blad { bottom: 40px; }
+  .blad::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.2); margin: 0 auto 10px; }
+  .bladkop { display: flex; justify-content: space-between; align-items: center; }
+  .bladkop .knop { height: 36px; padding: 0 16px; font-size: 14px; }
+  .blad h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); margin: 16px 0 8px; }
+  .drie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .drie button { padding: 8px 8px 10px; border-radius: 16px; border: 2px solid rgb(var(--wit) / 0.08); background: none; color: var(--tekst); font: inherit; text-align: center; cursor: pointer; }
+  .drie button[aria-checked='true'] { border-color: var(--accent); background: var(--accent-vlak); }
+  .drie button:focus-visible, .kleuren button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .drie b { display: block; font-size: 13.5px; margin-top: 8px; }
+  .mini-tel { height: 60px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; padding: 8px; }
+  .mini-tel i { display: block; height: 5px; border-radius: 3px; }
+  .mini-donker { background: linear-gradient(180deg, #1a3557, #0d1828); }
+  .mini-donker i { background: rgb(var(--wit) / 0.35); }
+  .mini-licht { background: linear-gradient(180deg, #c9e0f4, #e9eff6); }
+  .mini-licht i { background: rgba(15, 27, 45, 0.35); }
+  .mini-systeem { background: linear-gradient(90deg, #1a3557 50%, #c9e0f4 50%); }
+  .mini-systeem i { background: linear-gradient(90deg, rgb(var(--wit) / 0.4) 50%, rgba(15, 27, 45, 0.35) 50%); }
+  .mini-tel i:nth-child(2) { width: 70%; }
+  .mini-tel i:nth-child(3) { width: 45%; background: var(--accent); }
+  .kleuren { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .kleuren button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 600; color: var(--zacht); cursor: pointer; }
+  .kleuren span { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); }
+  .kleuren button[aria-checked='true'] span { box-shadow: 0 0 0 3px var(--diep), 0 0 0 5px var(--tekst); }
+  .kleuren button[aria-checked='true'] { color: var(--tekst); }
+  .betekenis { margin: 14px 0 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.45; }
+  .betekenis i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 4px 0 2px; }
+  .wand-alleen { display: none; }
+  #wand .wand-alleen { display: block; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <main>
+      <div class="jij"><a class="terugje" href="instellingen.html">‹ Instellingen</a><div data-jij></div></div>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="inhoud jij">
+      <a class="terugje" href="instellingen.html">‹ Instellingen</a>
+      <div data-jij></div>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+  </div>
+  <div class="achter" data-achter hidden></div>
+  <section class="blad" role="dialog" aria-modal="true" aria-labelledby="bladkop" data-blad hidden></section>
+  <script src="kit/nav.js"></script>
+  <script src="basis.js"></script>
+  <script src="jij.js"></script>
+</body>
+</html>

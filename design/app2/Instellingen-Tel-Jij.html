@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="nl" class="sc-licht" data-kleur="violet">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Jij</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Jij (schets, 21 oktober 2026; besluit 181). Alles wat van één bewoner is
+   * op één plek, bovenaan Instellingen: je kleur en het thema, hoe Thuis eruitziet
+   * op je telefoon en op de wand, je comfort en hoe het huis weet dat je thuis
+   * bent. Op de wand geldt het profiel van wiens comfort geldt.
+   *   (zonder)   Jij, in het lichte thema, met violet
+   *   #thema     het blad Thema en kleur
+   *   #donker    Jij in het donker, met dezelfde kleur
+   */
+  body { margin: 0; width: 390px; min-height: 844px; }
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .scherm { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .wie { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .rondje { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--op-accent); font-family: var(--kop); font-weight: 700; font-size: 26px; flex: none; box-shadow: 0 0 0 4px var(--accent-vlak); }
+  .wie .kop-1 { font-size: 34px; }
+  .wie small { display: block; font-size: 13.5px; font-weight: 600; color: var(--gedempt); margin-top: 2px; }
+
+  .lijst { padding: 4px; border-radius: 22px; }
+  .lijst h4 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; min-height: 62px; padding: 8px 12px; border-top: 1px solid rgb(var(--wit) / 0.07); color: var(--tekst); text-decoration: none; }
+  .lijst h4 + .rij { border-top: 0; }
+  .rij .ik { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  .rij .ik svg { width: 20px; height: 20px; }
+  .rij b { font-size: 16px; font-weight: 600; align-self: end; }
+  .rij small { grid-column: 2; font-size: 13px; color: var(--gedempt); align-self: start; }
+  .rij .pijl { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; color: var(--gedempt); font-size: 22px; }
+  .staal { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-vlak); }
+  .schakel { width: 46px; height: 28px; border-radius: 14px; background: rgb(var(--wit) / 0.14); position: relative; flex: none; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--diep); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+  .schakel.aan { background: var(--accent); }
+  .schakel.aan::after { left: 21px; background: var(--op-accent); }
+  .wand-uitleg { margin: 2px 14px 10px; font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+
+  /* Het blad: thema en kleur. */
+  .achter { display: none; position: fixed; inset: 0; background: rgba(4, 8, 16, 0.5); z-index: 20; }
+  .blad { display: none; position: fixed; left: 8px; right: 8px; bottom: 8px; padding: 12px 18px 20px; border-radius: 26px; background: var(--diep); border: 1px solid var(--glas-rand); z-index: 21; flex-direction: column; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18); }
+  .blad::before { content: ''; display: block; width: 44px; height: 5px; border-radius: 3px; background: rgb(var(--wit) / 0.2); margin: 0 auto 10px; }
+  .bladkop { display: flex; justify-content: space-between; align-items: center; }
+  .bladkop .knop { height: 36px; padding: 0 16px; font-size: 14px; }
+  .blad h3 { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gedempt); margin: 16px 0 8px; }
+  .drie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .drie > div { padding: 8px 8px 10px; border-radius: 16px; border: 2px solid rgb(var(--wit) / 0.08); text-align: center; }
+  .drie > div.gekozen { border-color: var(--accent); background: var(--accent-vlak); }
+  .drie b { display: block; font-size: 13.5px; margin-top: 8px; }
+  .mini-tel { height: 64px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 5px; padding: 8px; }
+  .mini-tel i { display: block; height: 5px; border-radius: 3px; }
+  .mini-donker { background: linear-gradient(180deg, #1a3557, #0d1828); }
+  .mini-donker i { background: rgba(255, 255, 255, 0.35); }
+  .mini-licht { background: linear-gradient(180deg, #c9e0f4, #e9eff6); }
+  .mini-licht i { background: rgba(15, 27, 45, 0.35); }
+  .mini-beide { background: linear-gradient(90deg, #1a3557 50%, #c9e0f4 50%); }
+  .mini-beide i { background: linear-gradient(90deg, rgba(255, 255, 255, 0.4) 50%, rgba(15, 27, 45, 0.35) 50%); }
+  .mini-tel i:nth-child(2) { width: 70%; }
+  .mini-tel i:nth-child(3) { width: 45%; background: var(--accent); }
+  .kleuren { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .kleuren > div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--zacht); }
+  .kleuren span { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+  .kleuren .gekozen span { box-shadow: 0 0 0 3px var(--diep), 0 0 0 5px var(--tekst); }
+  .kleuren .gekozen { color: var(--tekst); }
+  .betekenis { margin: 14px 0 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.45; }
+  .betekenis i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 4px 0 2px; vertical-align: 0; }
+  body[data-toon='thema'] .achter, body[data-toon='thema'] .blad { display: flex; }
+</style>
+</head>
+<body data-toon="lijst">
+<div class="tel lucht lucht-dag">
+  <div class="scherm">
+    <a class="terugje" href="#">‹ Instellingen</a>
+    <div class="wie">
+      <span class="rondje" aria-hidden="true">R</span>
+      <div><h1 class="kop-1">Ricardo</h1><small>Hoofdgebruiker · thuis</small></div>
+    </div>
+
+    <section class="glas lijst">
+      <h4>Hoe de app eruitziet</h4>
+      <a class="rij" href="#thema"><span class="ik" data-ik="kleur"></span><b>Thema en kleur</b><small>Zoals je telefoon · violet</small><span class="pijl"><span class="staal"></span>›</span></a>
+      <a class="rij" href="#"><span class="ik" data-ik="weergave"></span><b>Weergave</b><small>Uitgebreid</small><span class="pijl">›</span></a>
+      <div class="rij"><span class="ik" data-ik="letters"></span><b>Grotere letters</b><small>Alle tekst een maat groter</small><span class="pijl"><span class="schakel"></span></span></div>
+      <div class="rij"><span class="ik" data-ik="beweging"></span><b>Minder beweging</b><small>Geen lopende stromen</small><span class="pijl"><span class="schakel aan"></span></span></div>
+    </section>
+
+    <section class="glas lijst">
+      <h4>Thuis</h4>
+      <a class="rij" href="#"><span class="ik" data-ik="tel"></span><b>Op je telefoon</b><small>6 kaarten · 5 favorieten</small><span class="pijl">›</span></a>
+      <a class="rij" href="#"><span class="ik" data-ik="wand"></span><b>Op de wand</b><small>3 kaarten · 8 favorieten</small><span class="pijl">›</span></a>
+      <p class="wand-uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt.</p>
+    </section>
+
+    <section class="glas lijst">
+      <h4>Comfort</h4>
+      <a class="rij" href="#"><span class="ik" data-ik="comfort"></span><b>Jouw comfort</b><small>Geldt nu · 21° tot 24°</small><span class="pijl">›</span></a>
+      <a class="rij" href="#"><span class="ik" data-ik="thuis"></span><b>Thuis volgens</b><small>Ricardo in Home Assistant</small><span class="pijl">›</span></a>
+    </section>
+
+    <section class="glas lijst">
+      <h4>Over jou</h4>
+      <a class="rij" href="#"><span class="ik" data-ik="naam"></span><b>Je naam</b><small>Ricardo</small><span class="pijl">›</span></a>
+      <a class="rij" href="#"><span class="ik" data-ik="downloaden"></span><b>Je gegevens</b><small>Alles wat het huis van jou weet, downloaden</small><span class="pijl">›</span></a>
+    </section>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+
+<div class="achter"></div>
+<section class="blad" aria-label="Thema en kleur">
+  <div class="bladkop"><h2 class="kop-2">Thema en kleur</h2><button class="knop knop-licht">Klaar</button></div>
+  <h3>Thema</h3>
+  <div class="drie">
+    <div><div class="mini-tel mini-donker"><i></i><i></i><i></i></div><b>Donker</b></div>
+    <div><div class="mini-tel mini-licht"><i></i><i></i><i></i></div><b>Licht</b></div>
+    <div class="gekozen"><div class="mini-tel mini-beide"><i></i><i></i><i></i></div><b>Zoals je telefoon</b></div>
+  </div>
+  <h3>Jouw kleur</h3>
+  <div class="kleuren" id="kleuren"></div>
+  <p class="betekenis">Ook op de wand, als jouw comfort geldt. <i style="background: var(--ijs)"></i>Blauw, <i style="background: var(--gloed)"></i>oranje, <i style="background: var(--zon)"></i>amber en <i style="background: var(--mint)"></i>groen blijven van het huis: die zeggen wat het huis doet.</p>
+</section>
+
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  const IK = {
+    kleur: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>',
+    weergave: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/>',
+    letters: '<path d="M4 19 9 5l5 14M5.8 14h6.4M15 19l3-8 3 8M15.8 17h4.4"/>',
+    beweging: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+    tel: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/>',
+    wand: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6"/>',
+    comfort: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',
+    thuis: '<path d="M4 11 12 4l8 7v9H4z"/><circle cx="12" cy="14" r="2"/>',
+    naam: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    downloaden: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  };
+  for (const el of document.querySelectorAll('[data-ik]')) el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IK[el.dataset.ik]}</svg>`;
+  // De zes kleuren, elk in de tint van het thema dat nu geldt.
+  const KLEUREN = [['lucht', 'Lucht'], ['violet', 'Violet'], ['paars', 'Paars'], ['roze', 'Roze'], ['indigo', 'Indigo'], ['zilver', 'Zilver']];
+  const html = document.documentElement;
+  const tint = (k) => {
+    const oud = html.dataset.kleur;
+    html.dataset.kleur = k;
+    const v = getComputedStyle(html).getPropertyValue('--accent').trim();
+    html.dataset.kleur = oud;
+    return v;
+  };
+  const toon = location.hash.slice(1);
+  if (toon === 'donker') html.classList.remove('sc-licht');
+  document.body.dataset.toon = toon === 'thema' ? 'thema' : 'lijst';
+  document.getElementById('kleuren').innerHTML = KLEUREN.map(([k, n]) => `<div class="${k === html.dataset.kleur ? 'gekozen' : ''}"><span style="background: ${tint(k)}"></span>${n}</div>`).join('');
+  nav.tabs(document.getElementById('tabs'), null);
+</script>
+</body>
+</html>

@@ -17,6 +17,14 @@
  * bewegingsmelder hem wekt. Dat laatste verandert alleen wie de wand mag
  * aanpassen.
  *
+ * Het profiel (besluit 181): per bewoner ook het thema op de telefoon
+ * (donker, licht of zoals de telefoon) en een eigen kleur, en een eigen
+ * indeling voor de wand. De wand toont de indeling en de kleur van wiens
+ * comfort geldt; is er niemand thuis, die van de hoofdgebruiker. Wie nog
+ * niets koos voor de wand, krijgt die van de hoofdgebruiker, en wie nog geen
+ * kleur koos, krijgt er een op volgorde. Wat de wand doet als niemand kijkt,
+ * blijft van de wand.
+ *
  * Alles staat in één eigen bestand naast de dataset en gaat mee in de
  * back-up; er gaat niets naar Home Assistant. Favorieten schakelen via de
  * deuren die er al zijn (`/api/licht`, `/api/scene`); dit bestand onthoudt
@@ -102,6 +110,14 @@ export const HELDER_AVOND = [10, 20, 30, 50] as const;
 export type HelderAvond = (typeof HELDER_AVOND)[number];
 export const STANDAARD_NIEMAND: Niemand = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
 
+/** De eigen kleuren (besluit 181), in de volgorde waarin bewoners er een krijgen. Nooit een kleur die iets betekent. */
+export const KLEUREN = ['lucht', 'roze', 'violet', 'paars', 'indigo', 'zilver'] as const;
+export type Kleur = (typeof KLEUREN)[number];
+/** Het thema op de telefoon; de wand blijft donker. */
+export const THEMAS = ['donker', 'licht', 'systeem'] as const;
+export type Thema = (typeof THEMAS)[number];
+export const STANDAARD_THEMA: Thema = 'donker';
+
 export interface Favoriet {
   readonly soort: 'lamp' | 'scene' | 'scherm';
   /** Een lamp zoals het huis hem noemt, een `scene.` of een screen of zonnescherm (`cover.`) uit Home Assistant. */
@@ -112,29 +128,75 @@ interface Eigen {
   readonly tel?: readonly KaartId[];
   readonly favorieten?: readonly Favoriet[];
   readonly weergave?: Weergave;
+  readonly thema?: Thema;
+  readonly kleur?: Kleur;
+  /** Je eigen indeling van de wand, voor als jouw comfort geldt (besluit 181). */
+  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[] };
 }
 
 interface Bestand {
   readonly versie: 1;
   /** Per account van Home Assistant; '' is zonder inlog (de NAS op het thuisnetwerk). */
   readonly accounts: Readonly<Record<string, Eigen>>;
+  /** De wand. Kaarten en favorieten hier zijn van vóór besluit 181: nog de terugval als de hoofdgebruiker niets koos. */
   readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[]; readonly niemand?: Niemand };
 }
 
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave };
-  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur };
+  /**
+   * De wand: de indeling en de kleur van wiens profiel geldt (`van`, een
+   * account), of zonder bewoners die van het huis. `eigen`: wie kijkt is zelf
+   * die bewoner, en niet een scherm.
+   */
+  readonly wand: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly eigen: boolean };
+  /** De kleur van elke bewoner, op zijn id: voor de begroeting en de rondjes. */
+  readonly kleuren: Readonly<Record<string, Kleur>>;
   readonly maxFavorieten: number;
 }
 
 export type VoorkeurenResult = { readonly ok: true; readonly view: VoorkeurenView } | { readonly ok: false; readonly status: number; readonly reden: string };
 
-/** Wie er kijkt: zijn account, en of hij de wand mag aanpassen. */
+/**
+ * De bewoners voor het profiel (besluit 181): op volgorde, de hoofdgebruiker
+ * eerst, elk met zijn id en zijn account; en het account van wiens comfort nu
+ * geldt.
+ */
+export interface Profielen {
+  readonly volgorde: readonly { readonly id: string; readonly account: string }[];
+  readonly geldt: string | null;
+}
+const accounts = (p: Profielen | undefined): string[] => (p?.volgorde ?? []).map((x) => x.account);
+
+/** Wie er kijkt: zijn account, of hij de wand mag aanpassen, en of het een scherm is. */
 export interface VoorkeurWie {
   readonly userId: string | null;
   readonly magWand: boolean;
+  readonly scherm?: boolean;
+  readonly profielen?: Profielen;
+}
+
+/** De kleur van een account: zelf gekozen, of op zijn plek in de volgorde. */
+export function kleurVan(b: Bestand, userId: string | null, p: Profielen | undefined): Kleur {
+  const gekozen = userId == null ? undefined : b.accounts[userId]?.kleur;
+  if (gekozen && (KLEUREN as readonly string[]).includes(gekozen)) return gekozen;
+  const plek = userId == null ? -1 : accounts(p).indexOf(userId);
+  return plek < 0 ? 'lucht' : KLEUREN[plek % KLEUREN.length]!;
+}
+
+/**
+ * Van wie de wand is: op een scherm wiens comfort geldt, anders de
+ * hoofdgebruiker; op je eigen tablet of computer jijzelf, als je bewoner bent.
+ * Null zonder bewoners: dan is de wand van het huis, zoals vóór besluit 181.
+ */
+function wandVan(wie: VoorkeurWie): { van: string | null; eigen: boolean } {
+  const p = wie.profielen;
+  if (p == null || p.volgorde.length === 0) return { van: null, eigen: false };
+  const a = accounts(p);
+  if (!wie.scherm && wie.userId != null && a.includes(wie.userId)) return { van: wie.userId, eigen: true };
+  return { van: p.geldt != null && a.includes(p.geldt) ? p.geldt : a[0]!, eigen: false };
 }
 
 /** Een lijst kaarten, of de reden waarom niet. Op de wand: zonder kamers en Straks. */
@@ -216,27 +278,53 @@ export function leesNiemand(x: unknown, nu: Niemand): { ok: true; niemand: Niema
 
 export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const eigen = b.accounts[wie.userId ?? ''] ?? {};
+  const { van, eigen: zelf } = wandVan(wie);
+  // Wie voor de wand nog niets koos, krijgt die van de hoofdgebruiker, en dan die van het huis.
+  const hoofd = wie.profielen?.volgorde[0]?.account;
+  const indeling = [van, hoofd].map((a) => (a == null ? undefined : b.accounts[a]?.wand));
+  const thema = eigen.thema && (THEMAS as readonly string[]).includes(eigen.thema) ? eigen.thema : STANDAARD_THEMA;
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave } },
-    wand: { kaarten: b.wand?.kaarten ?? STANDAARD_WAND, favorieten: b.wand?.favorieten ?? [], magAanpassen: wie.magWand, niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand } },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen) },
+    wand: {
+      kaarten: indeling.find((w) => w?.kaarten)?.kaarten ?? b.wand?.kaarten ?? STANDAARD_WAND,
+      favorieten: indeling.find((w) => w?.favorieten)?.favorieten ?? b.wand?.favorieten ?? [],
+      // Zonder bewoners past de hoofdgebruiker of een beheerder de wand aan; met bewoners je eigen indeling, of op een scherm die van wie er geldt.
+      magAanpassen: van == null ? wie.magWand : true,
+      niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand },
+      kleur: van == null ? 'lucht' : kleurVan(b, van, wie.profielen),
+      van,
+      eigen: zelf,
+    },
+    kleuren: Object.fromEntries((wie.profielen?.volgorde ?? []).map((x) => [x.id, kleurVan(b, x.account, wie.profielen)])),
     maxFavorieten: MAX_FAVORIETEN,
   };
 }
 
+/** Het thema en de kleur (besluit 181), elk uit de vaste lijst. */
+export function leesThema(x: unknown): { ok: true; thema: Thema } | { ok: false; reden: string } {
+  return typeof x === 'string' && (THEMAS as readonly string[]).includes(x) ? { ok: true, thema: x as Thema } : { ok: false, reden: `het thema is ${THEMAS.join(', ')}` };
+}
+export function leesKleur(x: unknown): { ok: true; kleur: Kleur } | { ok: false; reden: string } {
+  return typeof x === 'string' && (KLEUREN as readonly string[]).includes(x) ? { ok: true, kleur: x as Kleur } : { ok: false, reden: `de kleur is ${KLEUREN.join(', ')}` };
+}
+
 /**
  * Wat er verandert: `{ plek: 'tel' | 'wand', kaarten?, favorieten? }`. Op de
- * telefoon je eigen keuze; de wand alleen als je hem mag aanpassen. Bij de
- * telefoon ook `weergave` (die geldt voor jou, op elk scherm), bij de wand
- * `niemand`.
+ * telefoon je eigen keuze. Op de wand de indeling van wie hij nu is (besluit
+ * 181): je eigen, of op een scherm die van wiens comfort geldt; zonder
+ * bewoners alleen als je de wand mag aanpassen. Bij de telefoon ook
+ * `weergave`, `thema` en `kleur` (die gelden voor jou, op elk scherm), bij de
+ * wand `niemand`, dat alleen de hoofdgebruiker of een beheerder verandert.
  */
 export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true; bestand: Bestand } | { ok: false; status: number; reden: string } {
   const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (!['kaarten', 'favorieten', 'weergave', 'niemand'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave of niemand' };
-  if (plek === 'wand' && r!['weergave'] !== undefined) return { ok: false, status: 400, reden: 'de weergave is per account: plek tel' };
+  if (!['kaarten', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave, thema, kleur of niemand' };
+  if (plek === 'wand' && (r!['weergave'] !== undefined || r!['thema'] !== undefined || r!['kleur'] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema en de kleur zijn per account: plek tel' };
   if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
-  if (plek === 'wand' && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
+  const { van } = wandVan(wie);
+  if (plek === 'wand' && (van == null || r!['niemand'] !== undefined) && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
   const kaarten = r!['kaarten'] === undefined ? null : leesKaarten(r!['kaarten'], plek);
   if (kaarten && !kaarten.ok) return { ok: false, status: 400, reden: kaarten.reden };
   const favorieten = r!['favorieten'] === undefined ? null : leesFavorieten(r!['favorieten']);
@@ -245,22 +333,28 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   if (plek === 'wand') {
     const niemand = r!['niemand'] === undefined ? null : leesNiemand(r!['niemand'], nu.wand.niemand);
     if (niemand && !niemand.ok) return { ok: false, status: 400, reden: niemand.reden };
-    const wand = {
-      ...b.wand,
+    const indeling = {
       ...(kaarten ? { kaarten: kaarten.kaarten } : {}),
       ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
-      ...(niemand ? { niemand: niemand.niemand } : {}),
     };
-    return { ok: true, bestand: { ...b, wand } };
+    const wand = { ...b.wand, ...(van == null ? indeling : {}), ...(niemand ? { niemand: niemand.niemand } : {}) };
+    const accounts = van == null || (!kaarten && !favorieten) ? b.accounts : { ...b.accounts, [van]: { ...b.accounts[van], wand: { ...b.accounts[van]?.wand, ...indeling } } };
+    return { ok: true, bestand: { ...b, accounts, wand } };
   }
   const weergave = r!['weergave'] === undefined ? null : leesWeergave(r!['weergave'], nu.tel.weergave);
   if (weergave && !weergave.ok) return { ok: false, status: 400, reden: weergave.reden };
+  const thema = r!['thema'] === undefined ? null : leesThema(r!['thema']);
+  if (thema && !thema.ok) return { ok: false, status: 400, reden: thema.reden };
+  const kleur = r!['kleur'] === undefined ? null : leesKleur(r!['kleur']);
+  if (kleur && !kleur.ok) return { ok: false, status: 400, reden: kleur.reden };
   const sleutel = wie.userId ?? '';
   const eigen = {
     ...b.accounts[sleutel],
     ...(kaarten ? { tel: kaarten.kaarten } : {}),
     ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
     ...(weergave ? { weergave: weergave.weergave } : {}),
+    ...(thema ? { thema: thema.thema } : {}),
+    ...(kleur ? { kleur: kleur.kleur } : {}),
   };
   return { ok: true, bestand: { ...b, accounts: { ...b.accounts, [sleutel]: eigen } } };
 }

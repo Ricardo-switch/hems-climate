@@ -127,8 +127,9 @@ function tekenNu() {
   // De begroeting (15 oktober 2026), naar de tijd van de dag, met wie je bent (besluit 147).
   const uur = new Date().getHours();
   const groet = uur < 6 ? 'Goedenacht' : uur < 12 ? 'Goedemorgen' : uur < 18 ? 'Goedemiddag' : 'Goedenavond';
-  const namen = huismodel.groetNamen(bewoners);
-  $$('[data-groet]').forEach((el) => (el.innerHTML = namen.length ? `${esc(groet)}, ${namen.map((n) => `<b>${esc(n)}</b>`).reduce((t, n, i, a) => (i === 0 ? n : `${t}${i === a.length - 1 ? ' en ' : ', '}${n}`), '')}` : esc(groet)));
+  // Ieder in zijn eigen kleur (besluit 181).
+  const namen = huismodel.groetWie(bewoners);
+  $$('[data-groet]').forEach((el) => (el.innerHTML = namen.length ? `${esc(groet)}, ${namen.map((n) => `<b data-kleur="${esc(app.kleurVan(n.id))}">${esc(n.naam)}</b>`).reduce((t, n, i, a) => (i === 0 ? n : `${t}${i === a.length - 1 ? ' en ' : ', '}${n}`), '')}` : esc(groet)));
   tekenGeldt();
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
@@ -288,9 +289,10 @@ function tekenStraks() {
  * een klein thermometertje. Een tik opent een blad met iedereen, thuis of weg
  * en zijn temperaturen; daar kies je wiens comfort geldt, tot er iemand
  * thuiskomt of weggaat. Een gast kijkt alleen. Eerst stond er een grote kaart
- * "Comfort van Noor" met één knop terug naar de hoofdgebruiker.
+ * "Comfort van Noor" met één knop terug naar de hoofdgebruiker. De kleur is
+ * die van de bewoner zelf (besluit 181); eerst een vaste rij, met amber en
+ * groen erin, die iets anders betekenen.
  */
-const WIE_KLEUR = ['#a9e6ff', '#f7b548', '#6ee7b7', '#b7b0ff', '#ffb090', '#f5a6c8'];
 const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
 /**
  * Wie er thuis is: meteen zoals Home Assistant het ziet, net als bij Bewoners
@@ -302,10 +304,10 @@ const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digi
 function wieThuis() {
   return new Set((bewoners?.bewoners ?? []).filter((b) => b.thuis).map((b) => b.id));
 }
-function gezicht(b, i) {
+function gezicht(b) {
   const thuis = wieThuis().has(b.id);
   const geldt = bewoners?.geldt?.id === b.id;
-  return `<i style="--k: ${WIE_KLEUR[i % WIE_KLEUR.length]}" class="${thuis ? '' : 'afwezig'}${geldt ? ' geldt' : ''}">${esc(b.naam.charAt(0).toUpperCase())}</i>`;
+  return `<i data-kleur="${esc(app.kleurVan(b.id))}" class="${thuis ? '' : 'afwezig'}${geldt ? ' geldt' : ''}">${esc(b.naam.charAt(0).toUpperCase())}</i>`;
 }
 function tekenGeldt() {
   const lijst = bewoners?.bewoners ?? [];
@@ -355,12 +357,12 @@ async function tekenWieBlad() {
     ? `Niemand is thuis; dan geldt het comfort van ${g.naam}.`
     : `Nu ${g?.naam ?? hoofd?.naam ?? ''}.${weg.length && g && g.id !== hoofd?.id ? ` ${weg.map((b) => `${b.naam} is weg${b.thuisSindsMs ? ` sinds ${klokVan(b.thuisSindsMs)}` : ''}`).join(', ')}.` : ''}`;
   const rij = (id, gezichtHtml, naam, onder, rechts, aan) => `<button type="button" class="wiekeuze${aan ? ' aan' : ''}" role="radio" aria-checked="${aan}" data-wie-kies="${esc(id)}" ${gast ? 'disabled' : ''}><span class="rond" aria-hidden="true"></span>${gezichtHtml}<span><b>${esc(naam)}</b><small>${onder}</small></span><span class="temp">${rechts}</span></button>`;
-  const rijen = lijst.map((b, i) => {
+  const rijen = lijst.map((b) => {
     const t = wieTemps.get(b.id);
     const isThuis = thuis.has(b.id);
     const onder = isThuis ? '<span class="thuis-t">thuis</span>' : esc(`weg${b.thuisSindsMs ? ` sinds ${klokVan(b.thuisSindsMs)}` : ''}`);
     const rechts = t ? [t.dag != null ? `<b>${graad(t.dag)}</b> overdag` : '', t.nacht != null ? `<b>${graad(t.nacht)}</b> 's nachts` : ''].filter(Boolean).join('<br>') : '';
-    return rij(b.id, `<span class="gezicht${isThuis ? '' : ' afwezig'}" style="--k: ${WIE_KLEUR[i % WIE_KLEUR.length]}" aria-hidden="true">${esc(b.naam.charAt(0).toUpperCase())}</span>`, b.naam, onder, rechts, gekozen === b.id);
+    return rij(b.id, `<span class="gezicht${isThuis ? '' : ' afwezig'}" data-kleur="${esc(app.kleurVan(b.id))}" aria-hidden="true">${esc(b.naam.charAt(0).toUpperCase())}</span>`, b.naam, onder, rechts, gekozen === b.id);
   }).join('');
   el.dataset.blad = 'wie';
   el.setAttribute('aria-label', 'Wiens comfort geldt?');
@@ -437,7 +439,7 @@ function tekenKamersTel() {
     .map((r) => {
       const stand = huismodel.standVan(r.zoneId, state);
       const kort = state.bewoner?.kamers?.find((x) => x.zoneId === r.zoneId)?.kort ?? '';
-      return `<a href="kamer.html#${encodeURIComponent(r.id)}"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span><b>${esc(r.naam)}</b><small style="color: ${kleur[stand] ?? 'var(--zacht)'}">${esc(kort)}</small></span><span class="getal">${nl(r.temperatuurC)}°</span><span class="pijl" aria-hidden="true">›</span></a>`;
+      return `<a href="kamer.html#${encodeURIComponent(r.id)}"><span class="stip" style="width: 10px; height: 10px; background: ${kleur[stand] ?? 'var(--gedempt)'}"></span><span><b>${esc(r.naam)}</b><small style="color: ${app.tekstKleur(kleur[stand] ?? 'var(--zacht)')}">${esc(kort)}</small></span><span class="getal">${nl(r.temperatuurC)}°</span><span class="pijl" aria-hidden="true">›</span></a>`;
     })
     .join('');
 }
@@ -609,6 +611,7 @@ const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);
 // Een andere weergave (besluit 164): opnieuw tekenen, met of zonder getallen op het huis.
 addEventListener('weergave', teken);
+addEventListener('sc-kleuren', teken);
 // De wand als niemand kijkt (besluit 164): het huis, de stand en het weer van deze pagina.
 niemand.bij({ model: () => (state && huisData ? huisModel() : null), state: () => state, huis: () => huisData, weer: () => weer, zon: () => zon });
 // Na een keuze of een tik op een favoriet: opnieuw tekenen, en zo nodig het huis opnieuw lezen.

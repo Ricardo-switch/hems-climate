@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
    * Bewoners (besluit 147, schets Wand-Bewoners): wie hier woont, op volgorde.
@@ -25,12 +25,12 @@
   .links { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
   .lijst { padding: 14px 18px; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: auto; }
   .bewoner { display: grid; grid-template-columns: 26px 28px 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px; margin: 0 -10px; border-radius: 16px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: calc(100% + 20px); }
-  .bewoner + .bewoner { border-top: 1px solid rgba(255, 255, 255, 0.06); }
-  .bewoner.gekozen { background: rgba(255, 255, 255, 0.08); }
+  .bewoner + .bewoner { border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .bewoner.gekozen { background: rgb(var(--wit) / 0.08); }
   .bewoner.sleept { opacity: 0.6; }
   .bewoner:focus-visible { outline: 2px solid var(--tekst); outline-offset: -2px; }
   .greep { color: var(--gedempt); font-size: 16px; letter-spacing: -2px; cursor: grab; touch-action: none; user-select: none; padding: 8px 0; text-align: center; }
-  .plek { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
+  .plek { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12.5px; font-weight: 800; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
   .plek.een { background: var(--zon); color: #0b1424; }
   .gezicht { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; font-size: 18px; color: #0b1424; }
   .bewoner b { display: block; font-size: 16px; }
@@ -38,46 +38,46 @@
   .labels { display: flex; gap: 6px; justify-content: end; flex-wrap: wrap; }
   .label { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
   .label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .label.thuis { color: var(--mint); background: rgba(110, 231, 183, 0.12); }
-  .label.weg { color: var(--gedempt); background: rgba(255, 255, 255, 0.06); }
-  .label.geldt { color: var(--zon); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.5); }
+  .label.thuis { color: var(--mint-t); background: rgba(110, 231, 183, 0.12); }
+  .label.weg { color: var(--gedempt); background: rgb(var(--wit) / 0.06); }
+  .label.geldt { color: var(--zon-t); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.5); }
   .label.geldt::before { display: none; }
-  .uitleg { margin: auto 0 0; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 13.5px; color: var(--zacht); line-height: 1.5; }
+  .uitleg { margin: auto 0 0; padding-top: 12px; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 13.5px; color: var(--zacht); line-height: 1.5; }
   .uitleg b { color: var(--tekst); }
   .rij2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .klein-kaart { padding: 14px 18px; }
   .klein-kaart h3 { margin: 0 0 8px; font-family: var(--kop); font-size: 17px; font-weight: 600; }
-  .klein-kaart .r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .klein-kaart .r { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 14px; }
   .klein-kaart .gastrij { cursor: pointer; border-radius: 10px; margin: 0 -8px; padding: 7px 8px; }
-  .klein-kaart .gastrij.gekozen { background: rgba(255, 255, 255, 0.08); }
+  .klein-kaart .gastrij.gekozen { background: rgb(var(--wit) / 0.08); }
   .klein-kaart .gastrij:focus-visible { outline: 2px solid var(--tekst); }
   .klein-kaart .r .n { color: var(--tekst); font-size: 14px; text-align: left; overflow-wrap: anywhere; }
   .klein-kaart .r:first-of-type { border-top: 0; }
   .klein-kaart .r span { color: var(--zacht); font-size: 13px; text-align: right; }
   .erbij { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: center; }
-  .qr { width: 92px; height: 92px; border-radius: 12px; background: #EEF3F7; padding: 7px; box-sizing: border-box; display: grid; place-items: center; }
+  .qr { width: 92px; height: 92px; border-radius: 12px; background: #eef3f7; padding: 7px; box-sizing: border-box; display: grid; place-items: center; }
   .qr svg { width: 100%; height: 100%; }
   .erbij .klein { color: var(--zacht); }
-  .erbij a { color: var(--ijs); font-weight: 600; word-break: break-all; }
+  .erbij a { color: var(--ijs-t); font-weight: 600; word-break: break-all; }
   .blad { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: auto; }
   .blad .kop { display: flex; align-items: center; gap: 14px; }
   .blad .kop .gezicht { width: 56px; height: 56px; font-size: 24px; }
   .vak { display: flex; flex-direction: column; gap: 6px; }
   .vak > label, .vak > span:first-child { font-size: 13px; font-weight: 600; color: var(--gedempt); }
-  .veld { height: 46px; padding: 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14); color: var(--tekst); font: inherit; font-size: 16px; font-weight: 600; color-scheme: dark; width: 100%; box-sizing: border-box; }
+  .veld { height: 46px; padding: 0 14px; border-radius: 12px; background: rgb(var(--wit) / 0.06); border: 1px solid rgb(var(--wit) / 0.14); color: var(--tekst); font: inherit; font-size: 16px; font-weight: 600; color-scheme: dark; width: 100%; box-sizing: border-box; }
   .veld option { background: #14203a; }
   .veld:disabled { opacity: 0.6; }
-  .veld.vast { display: flex; align-items: center; background: rgba(255, 255, 255, 0.03); }
+  .veld.vast { display: flex; align-items: center; background: rgb(var(--wit) / 0.03); }
   .hint { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
-  .hint a { color: var(--ijs); font-weight: 700; text-decoration: none; }
-  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); }
+  .hint a { color: var(--ijs-t); font-weight: 700; text-decoration: none; }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: rgb(var(--wit) / 0.05); }
   .seg button { flex: 1; height: 38px; border: 0; border-radius: 9px; background: none; color: var(--gedempt); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.15); color: var(--tekst); }
+  .seg button[aria-pressed="true"] { background: rgb(var(--wit) / 0.15); color: var(--tekst); }
   .seg button:disabled { cursor: default; }
   .knoppenrij { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
   .knoppenrij .knop { flex: 1; white-space: nowrap; }
-  .gevaar { color: #ffb090; }
-  .fout { min-height: 18px; font-size: 13px; color: var(--gloed); }
+  .gevaar { color: var(--gloed-zacht); }
+  .fout { min-height: 18px; font-size: 13px; color: var(--gloed-t); }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   #tel .rij2 { grid-template-columns: 1fr; }
   #tel .lijst { overflow: visible; }

@@ -506,7 +506,7 @@
     .film-eind { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
     .film-eind .merkje { display: inline-flex; align-items: center; gap: 10px; font-family: var(--kop); font-size: 22px; font-weight: 700; margin-right: 8px; }
     .film-eind .merkje i { width: 30px; height: 30px; border-radius: 9px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
-    .film-eind button { height: 52px; padding: 0 26px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
+    .film-eind button { height: 52px; padding: 0 26px; border-radius: 999px; border: 0; background: var(--accent); color: var(--op-accent); font: inherit; font-size: 17px; font-weight: 700; cursor: pointer; }
     .film-balk { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 48px 22px; }
     .film-balk button { height: 44px; min-width: 44px; padding: 0 16px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; display: inline-grid; place-items: center; }
     .film button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }

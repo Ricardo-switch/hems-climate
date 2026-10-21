@@ -74,6 +74,8 @@
       kan = true;
       // De weergave (besluit 164) bij je account: ook hier bijhouden.
       if (v?.tel?.weergave) global.app.zetWeergave(v.tel.weergave);
+      // Het thema en de kleur (besluit 181): op de wand wisselt de kleur mee met wiens comfort geldt.
+      global.app.zetThema(v);
     } catch {
       v = STANDAARD;
       kan = false;
@@ -604,8 +606,8 @@
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Weergave</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
       <p class="mini" style="margin: 0">Voor jou, op elk scherm waar je inlogt.${global.app.telStand() ? '' : ' Op de wand geldt alleen minder beweging.'}</p>
       <div class="twee" role="radiogroup" aria-label="Eenvoudig of uitgebreid">
-        ${keuze(true, 'Eenvoudig', 'De temperatuur en wat het huis doet, in zinnen. Minder getallen.', '<i style="width: 70%; height: 10px; background: rgba(255,255,255,0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
-        ${keuze(false, 'Uitgebreid', 'Alles: kW op het huis, de grafiek van vandaag en de apparaten.', '<i style="width: 60%; height: 7px; background: rgba(255,255,255,0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
+        ${keuze(true, 'Eenvoudig', 'De temperatuur en wat het huis doet, in zinnen. Minder getallen.', '<i style="width: 70%; height: 10px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
+        ${keuze(false, 'Uitgebreid', 'Alles: kW op het huis, de grafiek van vandaag en de apparaten.', '<i style="width: 60%; height: 7px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
       </div>
       <div style="margin-top: 10px">${schakel('groteLetters', 'Grotere letters', 'Alle tekst een maat groter')}${schakel('minderBeweging', 'Minder beweging', 'Geen lopende stromen en geen ademende bol')}</div>`;
   }

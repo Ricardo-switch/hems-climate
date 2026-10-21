@@ -228,6 +228,8 @@
     const schemer = tijd === 'avond' || tijd === 'ochtend';
     const winter = model.seizoen === 'winter';
     const zonKracht = model.zon?.aandeel ?? 0;
+    /** Het lichte thema (besluit 181): het huis houdt zijn kleuren, de grond wordt lichter. */
+    const licht = typeof document !== 'undefined' && document.documentElement.classList.contains('sc-licht');
 
     const defs = [];
     const lucht = [];
@@ -299,7 +301,7 @@
         .map(([st, c, o]) => `<linearGradient id="${id}-w-${st}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="${(o * 0.5).toFixed(2)}"/><stop offset="1" stop-color="${c}" stop-opacity="${o}"/></linearGradient>`)
         .join('')}
       <linearGradient id="${id}-hoek" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity="0.38"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
-      <linearGradient id="${id}-gras" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${winter ? '#2b3a4a' : nacht ? '#0f1a1a' : '#1b2c27'}"/><stop offset="1" stop-color="${winter ? '#1f2b38' : nacht ? '#0b1414' : '#14211e'}"/></linearGradient>
+      <linearGradient id="${id}-gras" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${licht ? (winter ? '#c4cfda' : nacht ? '#8fa79a' : '#a3c2ad') : winter ? '#2b3a4a' : nacht ? '#0f1a1a' : '#1b2c27'}"/><stop offset="1" stop-color="${licht ? (winter ? '#b3c0cd' : nacht ? '#7f988b' : '#8fb39b') : winter ? '#1f2b38' : nacht ? '#0b1414' : '#14211e'}"/></linearGradient>
       <radialGradient id="${id}-zon"><stop offset="0" stop-color="#FFE7A8"/><stop offset="0.35" stop-color="${KLEUR.zon}"/><stop offset="1" stop-color="${KLEUR.zon}" stop-opacity="0"/></radialGradient>
       <radialGradient id="${id}-licht"><stop offset="0" stop-color="#FFD9A0" stop-opacity="0.55"/><stop offset="1" stop-color="#FFD9A0" stop-opacity="0"/></radialGradient>
       <radialGradient id="${id}-koel"><stop offset="0" stop-color="${KLEUR.ijs}" stop-opacity="0.45"/><stop offset="1" stop-color="${KLEUR.ijs}" stop-opacity="0"/></radialGradient>
@@ -335,7 +337,7 @@
       }
       const mx = mid[0] + boog * 0.5;
       const my = Math.max(k * 0.5, mid[1] - boog * 0.55);
-      lucht.push(`<circle cx="${mx}" cy="${my}" r="${k * 0.42}" fill="#E8EEF8" opacity="0.08"/><circle cx="${mx}" cy="${my}" r="${k * 0.2}" fill="#E9EEF6"/><circle cx="${mx + k * 0.08}" cy="${my - k * 0.05}" r="${k * 0.18}" fill="#101a2b"/>`);
+      lucht.push(`<circle cx="${mx}" cy="${my}" r="${k * 0.42}" fill="${licht ? '#ffffff' : '#E8EEF8'}" opacity="${licht ? 0.5 : 0.08}"/><circle cx="${mx}" cy="${my}" r="${k * 0.2}" fill="${licht ? '#ffffff' : '#E9EEF6'}"/><circle cx="${mx + k * 0.08}" cy="${my - k * 0.05}" r="${k * 0.18}" fill="${licht ? '#d6dcea' : '#101a2b'}"/>`);
     }
     if (model.wolken) {
       const n = Math.round(2 + model.wolken * 3);
@@ -343,7 +345,7 @@
         const cx = mid[0] + (i / Math.max(1, n - 1) - 0.5) * boog * 1.7;
         const cy = mid[1] - boog * (0.35 + 0.18 * ((i * 37) % 3) / 2);
         const s = k * (0.7 + ((i * 53) % 5) * 0.12);
-        lucht.push(`<g opacity="${(0.25 + 0.35 * model.wolken).toFixed(2)}" filter="url(#${id}-zacht)"><ellipse cx="${cx}" cy="${cy}" rx="${s * 1.5}" ry="${s * 0.42}" fill="${winter ? '#9fb0c2' : '#8a9bb0'}"/><ellipse cx="${cx + s * 0.4}" cy="${cy - s * 0.25}" rx="${s * 0.8}" ry="${s * 0.45}" fill="${winter ? '#aebdcc' : '#94a5b9'}"/></g>`);
+        lucht.push(`<g opacity="${((licht ? 0.6 : 0.25) + 0.35 * model.wolken).toFixed(2)}" filter="url(#${id}-zacht)"><ellipse cx="${cx}" cy="${cy}" rx="${s * 1.5}" ry="${s * 0.42}" fill="${licht ? '#ffffff' : winter ? '#9fb0c2' : '#8a9bb0'}"/><ellipse cx="${cx + s * 0.4}" cy="${cy - s * 0.25}" rx="${s * 0.8}" ry="${s * 0.45}" fill="${licht ? '#f4f7fb' : winter ? '#aebdcc' : '#94a5b9'}"/></g>`);
       }
     }
 
@@ -386,8 +388,8 @@
     const gy1 = model.oprit || model.voortuin ? D + 1.9 : model.zonderDak ? D + 0.7 : D + 1.9;
     grond.push(poly([[gx0, gy0, 0], [gx1, gy0, 0], [gx1, gy1, 0], [gx0, gy1, 0]], `fill="url(#${id}-gras)"`));
     // De rand van het perceel, als een dikke plaat.
-    grond.push(poly([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx0, gy1, -0.18]], `fill="#0b1219"`));
-    grond.push(poly([[gx1, gy0, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx1, gy0, -0.18]], `fill="#080e14"`));
+    grond.push(poly([[gx0, gy1, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx0, gy1, -0.18]], `fill="${licht ? '#6f8a79' : '#0b1219'}"`));
+    grond.push(poly([[gx1, gy0, 0], [gx1, gy1, 0], [gx1, gy1, -0.18], [gx1, gy0, -0.18]], `fill="${licht ? '#5e7768' : '#080e14'}"`));
     // Een pad van tegels naar de voordeur.
     const padX = voordeur ? [voordeur.x0, voordeur.x1] : [0.5, 1.0];
     for (let i = 0; i < (model.zonderDak ? 0 : 4); i++) {
@@ -396,20 +398,20 @@
     }
     // Een tuin is gras, en lichter dan de rest van het perceel; met een terras onder het zonnescherm.
     if (model.tuin && !model.zonderDak) {
-      grond.push(poly([[W + 0.3, -1.95, 0.003], [W + 2.05, -1.95, 0.003], [W + 2.05, 0.25, 0.003], [W + 0.3, 0.25, 0.003]], `fill="${winter ? '#33465a' : nacht ? '#173326' : '#26503a'}"`));
+      grond.push(poly([[W + 0.3, -1.95, 0.003], [W + 2.05, -1.95, 0.003], [W + 2.05, 0.25, 0.003], [W + 0.3, 0.25, 0.003]], `fill="${licht ? (winter ? '#d3dce5' : '#86b294') : winter ? '#33465a' : nacht ? '#173326' : '#26503a'}"`));
       if (model.tuin.zonnescherm) {
         const tx0 = W + 0.06;
         const tx1 = W + 1.05;
-        grond.push(poly([[tx0, 0.06, 0.005], [tx1, 0.06, 0.005], [tx1, 1.0, 0.005], [tx0, 1.0, 0.005]], 'fill="#3b4652"'));
+        grond.push(poly([[tx0, 0.06, 0.005], [tx1, 0.06, 0.005], [tx1, 1.0, 0.005], [tx0, 1.0, 0.005]], `fill="${licht ? '#c3cad2' : '#3b4652'}"`));
         for (let x = tx0 + 0.25; x < tx1 - 0.05; x += 0.25) grond.push(line([[x, 0.06, 0.007], [x, 1.0, 0.007]], 'stroke="#2c353f" stroke-width="1"'));
         for (let y = 0.31; y < 0.97; y += 0.25) grond.push(line([[tx0, y, 0.007], [tx1, y, 0.007]], 'stroke="#2c353f" stroke-width="1"'));
       }
     }
     if (model.auto || model.oprit || spook(model, 'auto')) {
-      grond.push(poly([[-2.75, -0.4, 0.005], [-1.2, -0.4, 0.005], [-1.2, D + 1.7, 0.005], [-2.75, D + 1.7, 0.005]], `fill="#1d2933"`));
+      grond.push(poly([[-2.75, -0.4, 0.005], [-1.2, -0.4, 0.005], [-1.2, D + 1.7, 0.005], [-2.75, D + 1.7, 0.005]], `fill="${licht ? '#b9c2cb' : '#1d2933'}"`));
     }
     // Schaduw onder het huis.
-    grond.push(`<g filter="url(#${id}-zacht)" opacity="0.6">${poly([[0.1, 0.1, 0], [W + 0.25, 0.1, 0], [W + 0.25, D + 0.25, 0], [0.1, D + 0.25, 0]], 'fill="#05090d"')}</g>`);
+    grond.push(`<g filter="url(#${id}-zacht)" opacity="0.6">${poly([[0.1, 0.1, 0], [W + 0.25, 0.1, 0], [W + 0.25, D + 0.25, 0], [0.1, D + 0.25, 0]], `fill="${licht ? '#3a4a58' : '#05090d'}"`)}</g>`);
 
     /* ---- het huis, etage voor etage, van onder naar boven ---- */
     let z0 = 0;

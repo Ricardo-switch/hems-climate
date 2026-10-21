@@ -135,7 +135,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
 - [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
 - [86. De app is vanaf het begin toegankelijk en tweetalig](#86-de-app-is-vanaf-het-begin-toegankelijk-en-tweetalig)
-- [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur)
+- [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur) — *aangevuld door 181*
 - [88. De app noemt alleen een oorzaak die gemeten is](#88-de-app-noemt-alleen-een-oorzaak-die-gemeten-is)
 - [94. De schaduwweergave is voor de cijfers, de proefomgeving voor de app](#94-de-schaduwweergave-is-voor-de-cijfers-de-proefomgeving-voor-de-app)
 - [102. Opbrengst: meters en prijzen in de app, de cijfers uit Home Assistant](#102-opbrengst-meters-en-prijzen-in-de-app-de-cijfers-uit-home-assistant)
@@ -169,7 +169,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [159. Thuis op de telefoon: de Assistent altijd in beeld](#159-thuis-op-de-telefoon-de-assistent-altijd-in-beeld)
 - [160. Smart Climate los op de telefoon: een eigen poort in de add-on, via Tailscale](#160-smart-climate-los-op-de-telefoon-een-eigen-poort-in-de-add-on-via-tailscale)
 - [161. Het paneel voor iedereen, en achter Ingress de rol uit Home Assistant](#161-het-paneel-voor-iedereen-en-achter-ingress-de-rol-uit-home-assistant)
-- [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand) — *aangevuld door 164*
+- [162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand](#162-thuis-naar-eigen-smaak-kaarten-en-favorieten-per-account-en-voor-de-wand) — *deels vervangen door 181*
 - [163. Een groep instellingen: de delen onder elkaar, een deel als eigen scherm](#163-een-groep-instellingen-de-delen-onder-elkaar-een-deel-als-eigen-scherm)
 - [164. De wand als niemand kijkt, en de weergave per account](#164-de-wand-als-niemand-kijkt-en-de-weergave-per-account) — *aangevuld door 165*
 - [165. Het scherm aan de wand: always-on overdag en 's avonds, 's nachts uit](#165-het-scherm-aan-de-wand-always-on-overdag-en-s-avonds-s-nachts-uit)
@@ -182,6 +182,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [173. Sneller: bewaren, inpakken, en het huis één keer uitrekenen](#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen)
 - [174. Het huis en wie er thuis is, live](#174-het-huis-en-wie-er-thuis-is-live)
 - [175. Op je startscherm, en de favorieten zoals de kaart](#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart)
+- [181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt](#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt)
 
 **Veiligheid**
 
@@ -230,6 +231,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [57. Een linter met een handvol regels](#57-een-linter-met-een-handvol-regels)
 - [59. Namen in het Engels, de rest in het Nederlands](#59-namen-in-het-engels-de-rest-in-het-nederlands)
 - [69. Ook de pagina en deploy.sh worden getest](#69-ook-de-pagina-en-deploysh-worden-getest)
+- [180. De twee grootste bestanden opgeknipt, zonder dat er iets verandert](#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert)
 
 Wat nog open staat: [Wat nog een besluit wacht](#wat-nog-een-besluit-wacht).
 
@@ -3490,7 +3492,7 @@ zodra stap F gebouwd wordt.
 
 ## 87. Donker, met later een lichte versie en een eigen accentkleur
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 181*
 
 Gekozen op 2 oktober 2026, als aanvulling op besluit 71.
 
@@ -7125,7 +7127,7 @@ laat de knoppen voor instellen nog gewoon zien; een bewoner krijgt bij bewaren
 
 ## 162. Thuis naar eigen smaak: kaarten en favorieten, per account en voor de wand
 
-*Onderwerp: weergave · Status: aangevuld door 164*
+*Onderwerp: weergave · Status: deels vervangen door 181*
 
 Op 18 oktober 2026 vroeg de bewoner: "we zouden het misschien
 personaliseerbaar kunnen maken", voor telefoon en tablet. Uit twaalf ideeën
@@ -7993,6 +7995,119 @@ die dag. Nu zegt de app het zelf.
   al vond; een zin noemt nooit een entiteit. Het omvormerpunt zegt het ook als
   de sensor trager is dan eens per twee minuten (besluit 89).
 - **Versie 0.54.0.**
+
+---
+
+## 180. De twee grootste bestanden opgeknipt, zonder dat er iets verandert
+
+*Onderwerp: kwaliteitsbewaking · Status: geldig*
+
+Stap 7 uit het stappenplan van besluit 172, op 21 oktober 2026.
+`backend/src/web/server.ts` was 2.578 regels en `backend/src/main.ts` 1.733.
+Elke wijziging aan de app liep door die twee, en wie er iets in zocht,
+scrolde door alles heen; een fout in het ene deel kon een ander deel raken
+omdat ze dezelfde toestand deelden.
+
+*Besluit:* knippen langs de naden waar geen gedeelde toestand overheen loopt,
+en verder niets veranderen.
+
+- **`web/http.ts`:** wat de webserver over HTTP zelf weet: de soort van een
+  bestand, of een verzoek van de eigen pagina komt, een JSON-verzoek lezen met
+  een dak, inpakken (besluit 173), een antwoord in JSON, en een bestand uit de
+  weergave met zijn versiestempel.
+- **`web/live.ts`:** de live-verbinding als eigen klasse (`LiveStroom`): de
+  besluiten, aanbellen, het rookalarm, de wand wekken, en dat het huis, de
+  bewoners of de meldingen veranderden (besluiten 174 en 177). De webserver
+  geeft elke vraag één op één door, en levert het besluit en het huis aan.
+- **`web/server-opties.ts`:** wat de dienst aan de webserver meegeeft, en de
+  versie. `server.ts` geeft ze ongewijzigd door, dus wie ze daar importeert,
+  merkt niets.
+- **`env.ts` en `web/inhuis.ts`:** uit `main.ts` het lezen van `.env`, wat er
+  mis is aan een token, en welke veranderingen in Home Assistant het huis
+  raken en meteen of rustig live gaan. Die twee laatste waren niet te toetsen
+  zolang ze in `main.ts` stonden; nu wel (`test/inhuis.test.ts`).
+- **Hoe nagegaan dat er niets veranderde:** typecheck, lint, alle tests en de
+  54 paginatests in de browser groen; en elke regel die uit de twee bestanden
+  verdween, staat letterlijk in een van de nieuwe, op de imports en drie
+  bedoelde verschillen na (`#subscribe` heet `abonneer`, en de live-verbinding
+  vraagt het besluit en het huis aan de webserver in plaats van er zelf bij te
+  kunnen).
+- **Wat het oplevert:** `server.ts` is 1.943 regels, `main.ts` 1.663. Een
+  volgende wijziging aan de live-verbinding of aan het inpakken raakt alleen
+  dat bestand, en is apart te toetsen. Geen nieuwe versie: voor de bewoner
+  verandert er niets.
+
+*Wat afviel:* de duizend regels van de routes in `server.ts` per onderwerp in
+eigen bestanden zetten. Die delen de toestand van de webserver (de toegang,
+de opties, de caches); daarvoor moet eerst een gedeelde context komen, en dat
+is meer verbouwen dan opknippen. En `main.ts` verder uit elkaar: het is één
+script dat alles aan elkaar knoopt, met veel gedeelde stand.
+
+## 181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 10 uit het stappenplan van besluit 172, het eerste punt: de lichte versie
+en de eigen kleur van besluit 87, per bewoner. Op 21 oktober 2026 koos de
+bewoner na de schetsen `Thuis-Tel-Licht`, `Instellingen-Tel-Jij` en
+`Wand-Thuis-Profiel`: alles licht, ook de lucht; drie keuzes voor het thema; op
+de telefoon je eigen kleur en op de wand die van wiens comfort geldt; de kleur
+op het menu, de keuzes, de hoofdknoppen en je naam, maar niet op het logo. Hij
+zei erbij: een bewoner heeft zo een eigen profiel (comfort, thema en kleur, de
+kaarten en favorieten), en wie thuis is, of de hoofdgebruiker als er meer
+thuis zijn, ziet op de wand zijn eigen profiel.
+
+*Besluit:*
+
+- **Het thema, alleen op de telefoon:** donker (zoals het was en de
+  standaard), licht, of zoals je telefoon. De wand blijft donker. Licht is
+  alles: een lichte lucht van hetzelfde moment, lichte kaarten en tabs,
+  donkere tekst. Het huis houdt zijn eigen kleuren; de grond, de wolken en de
+  maan worden lichter.
+- **Zes eigen kleuren:** lucht (de standaard, zoals de app altijd was), roze,
+  violet, paars, indigo en zilver. Elk met een tint voor donker en een voor
+  licht die het contrast van WCAG AA haalt (besluit 86). Nooit blauw, oranje,
+  amber of groen: die zeggen wat het huis doet (87). Wie nog niets koos, krijgt
+  er een op zijn plek in de volgorde: de hoofdgebruiker lucht, de tweede roze,
+  de derde violet. De kleur staat op het menu, op wat gekozen is, op de
+  hoofdknoppen en op je naam in de begroeting; op de wand ieder die thuis is in
+  zijn eigen kleur, ook in de rondjes van wie er thuis is. Die rondjes hadden
+  een vaste rij met amber en groen; nu de kleur van de bewoner.
+- **De wand volgt het profiel dat geldt:** de kleur, de kaarten en de
+  favorieten van wiens comfort geldt (147), en bij niemand thuis die van de
+  hoofdgebruiker. Ieder heeft zo een eigen indeling voor de wand, naast die van
+  zijn telefoon; wie nog niets koos, krijgt die van de hoofdgebruiker, en daarna
+  de wand van vóór dit besluit. Aanpassen doe je op de wand terwijl jouw
+  comfort geldt, of op Thuis op een eigen tablet of computer, waar Thuis jouw
+  wand is. Van de wand zelf blijven: de nachtstand en de rust (164, 165),
+  eenvoudig of uitgebreid, en minder beweging. Dat verandert besluit 162, waar
+  de wand van iedereen was.
+- **Jij, bovenaan Instellingen** (`jij.html`): alles van één bewoner op één
+  plek. Het thema en de kleur kies je daar, in een blad; grotere letters en
+  minder beweging zet je er aan; de rest wijst naar waar het al stond (de
+  weergave op Thuis, je comfort, je naam en hoe het huis weet dat je thuis bent
+  bij Bewoners, je gegevens). Een scherm ziet alleen hoe de app eruitziet, een
+  gast heeft geen profiel. De losse regel Weergave op Instellingen is daarin
+  opgegaan.
+- **Waar het staat:** bij de voorkeuren per account (`voorkeuren.json`,
+  `thema`, `kleur` en `wand`); de dienst weet uit de bewoners wie op welke plek
+  staat en wiens comfort geldt. Een klein script in de `<head>` van elke pagina
+  zet het thema en de kleur vóór de eerste weergave, uit wat de pagina de
+  vorige keer onthield; de dienst heeft het laatste woord.
+- **De kleurlaag:** `kit/kit.css` heeft nu tokens die het lichte thema
+  omdraait (`--wit` voor glas en lijnen, `--nacht` voor wat zweeft, `--tegen`
+  voor tekst op een vlak in de tekstkleur, en de betekeniskleuren als tekst).
+  De vaste kleuren in de pagina's zijn daarnaar omgezet; op de wand verandert
+  er niets. Een paginatest zet elke pagina licht en meet het contrast van alle
+  tekst; het bolletje met een getal bij de bel haalde maar 2,6:1 (wit op
+  oranje) en heeft nu donkere tekst, ook in het donker.
+- **Versie 0.55.0.**
+
+*Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). Ook de wand
+licht: die hangt aan de muur en wordt 's avonds bekeken (87). En de wand van
+je telefoon uit aanpassen: dat kan op de wand zelf of op een tablet, en een
+tweede bewerkstand op de telefoon voor een scherm dat je daar niet ziet, maakt
+het moeilijker in plaats van makkelijker.
 
 ## Wat nog een besluit wacht
 

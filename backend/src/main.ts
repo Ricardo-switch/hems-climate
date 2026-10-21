@@ -12,12 +12,13 @@
  */
 
 import { hostname } from 'node:os';
+import { loadDotEnv, tokenComplaint } from './env.js';
+import { inHouse, snelInHuis } from './web/inhuis.js';
 import { klaarzetten } from './web/klaarzetten.js';
 import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { NIEUW, VERSIE } from './version.js';
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
@@ -72,23 +73,6 @@ import { configFingerprint, recordRun } from './adapters/runs.js';
 import { Onboarding } from './web/onboarding.js';
 import { FeedbackLog } from './web/feedback.js';
 
-/**
- * Laadt een .env-bestand, maar laat variabelen die al gezet zijn met rust.
- * Wie `HA_TOKEN=... npm run shadow` typt verwacht dat dát wint van het bestand.
- */
-function loadDotEnv(file: string): boolean {
-  if (!existsSync(file)) return false;
-  const fromShell = { ...process.env };
-  try {
-    process.loadEnvFile(file);
-  } catch {
-    return false;
-  }
-  for (const [key, v] of Object.entries(fromShell)) {
-    if (v !== undefined) process.env[key] = v;
-  }
-  return true;
-}
 
 const packageRoot = resolve(dirname(new URL(import.meta.url).pathname), '..');
 const candidates = [resolve(process.cwd(), '.env'), join(packageRoot, '.env')];
@@ -219,31 +203,6 @@ if (startup.errors.length > 0) {
   process.exit(1);
 }
 
-/**
- * Kijkt of het token er überhaupt uitziet als een JWT, voordat we Home
- * Assistant ermee lastigvallen. Een token raakt bij het plakken makkelijk
- * beschadigd — er verdwijnt een stuk, of er sluipt een teken in — en dan zegt
- * HA alleen "geweigerd". Dan weet je nog niet of je het verkeerde token hebt,
- * of het juiste half. Dit is met opzet een waarschuwing en geen weigering:
- * het formaat is niet iets waar wij over gaan.
- */
-function tokenComplaint(token: string): string | null {
-  const segments = token.split('.');
-  if (segments.length !== 3) {
-    return `het bestaat uit ${segments.length} delen in plaats van 3 — er is een stuk kwijt of er staat een punt te veel`;
-  }
-  try {
-    const [header] = segments as [string, string, string];
-    const json = Buffer.from(header, 'base64url').toString('utf-8');
-    const parsed = JSON.parse(json) as { typ?: string };
-    if (parsed.typ !== 'JWT') {
-      return `de kop leest "${String(parsed.typ)}" in plaats van "JWT" — het token is beschadigd geraakt`;
-    }
-  } catch {
-    return 'de kop is niet te lezen — het token is beschadigd geraakt bij het kopiëren';
-  }
-  return null;
-}
 
 const complaint = asAddon ? null : tokenComplaint(token!);
 if (complaint) {
@@ -538,35 +497,6 @@ function pauzeVan(id: string): Pauze {
   if (!p) pauzes.set(id, (p = new Pauze()));
   return p;
 }
-// Lampen en screens, klimaat, en sensoren die temperatuur of luchtvochtigheid meten.
-const inHouse = (st: HaEntityState) =>
-  st.entity_id.startsWith('light.') ||
-  st.entity_id.startsWith('cover.') ||
-  st.entity_id.startsWith('climate.') ||
-  // De scènes van Hue, voor de ruimtes (besluit 100).
-  st.entity_id.startsWith('scene.') ||
-  // De camera's (besluit 106): anders zei het huis "niet bereikbaar" terwijl er beeld was.
-  st.entity_id.startsWith('camera.') ||
-  // Beweging, voor de kamer en het huis (15 oktober 2026).
-  (st.entity_id.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence'].includes(String(st.attributes['device_class']))) ||
-  // Rookmelders (21 oktober 2026): rook, koolmonoxide, hitte en een batterij die op is.
-  (st.entity_id.startsWith('binary_sensor.') && ['smoke', 'carbon_monoxide', 'heat', 'battery'].includes(String(st.attributes['device_class']))) ||
-  // En wanneer een melder getest is en vervangen moet.
-  (st.entity_id.startsWith('sensor.') && ['date', 'timestamp'].includes(String(st.attributes['device_class'])) && /replace|test/.test(st.entity_id)) ||
-  (st.entity_id.startsWith('sensor.') &&
-    (st.attributes['device_class'] === 'temperature' ||
-      st.attributes['device_class'] === 'humidity' ||
-      // Batterijen (besluit 122): bij het apparaat, en een melding onder de 10%.
-      st.attributes['device_class'] === 'battery' ||
-      // Wat een apparaat nu vraagt, voor Apparaten (15 oktober 2026).
-      st.attributes['device_class'] === 'power' ||
-      st.attributes['device_class'] === 'energy' ||
-      // De klep van een radiatorknop (besluit 126), en het filter van een airco (129).
-      /valve|klep|filter/i.test(st.entity_id)));
-/** Wat je bedient of ziet bewegen; een temperatuur, verbruik of batterij verschuift rustig. */
-const snelInHuis = (st: HaEntityState) =>
-  /^(light|cover|scene|climate|camera)\./.test(st.entity_id) ||
-  (st.entity_id.startsWith('binary_sensor.') && ['motion', 'occupancy', 'presence', 'smoke', 'carbon_monoxide', 'heat'].includes(String(st.attributes['device_class'])));
 let houseRegisters: HouseRegisters | null = null;
 /** De stroommeter bij hetzelfde apparaat in Home Assistant, zoals bij een airco (besluit 138). */
 function vermogenSensor(entityId: string): string | null {
@@ -1417,6 +1347,18 @@ if (webPort != null) {
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
+    // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
+    ...(voorkeuren && bewonersStore
+      ? {
+          profielen: (userId: string | null) => {
+            const b = bewonersStore.current;
+            const volgorde = b.volgorde.flatMap((id) => (b.bewoners[id] ? [{ id, account: b.bewoners[id]!.haUser }] : []));
+            const p = runner?.latest?.explanation.profile;
+            const geldt = p ? (b.bewoners[p.id]?.haUser ?? null) : null;
+            return { profielen: { volgorde, geldt }, scherm: userId != null && b.schermen[userId] != null };
+          },
+        }
+      : {}),
     ...(scenePictures ? { scenePicturesDir: scenePictures.dir } : {}),
     // De zon en je aansluiting (besluit 103): alleen met een logmap en een configuratie.
     ...(connectionStore && baseConfig ? { connection: connectionDoor(connectionStore, baseConfig) } : {}),

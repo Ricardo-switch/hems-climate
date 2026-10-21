@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
    * Inrichten in één keer (besluit 139, schets Wand-Inrichten): over het hele
@@ -19,7 +19,7 @@
    * rechts één vraag tegelijk.
    */
   #wand { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); padding: 18px 26px 22px; gap: 12px; }
-  .veld { height: 38px; padding: 0 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; color-scheme: dark; }
+  .veld { height: 38px; padding: 0 10px; border-radius: 12px; border: 1px solid rgb(var(--wit) / 0.14); background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; color-scheme: dark; }
   .veld option { background: #14203a; color: var(--tekst); }
   .bovenbalk { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
   .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 20px; color: var(--tekst); text-decoration: none; }
@@ -30,29 +30,29 @@
    * wat erin zit.
    */
   .stappen { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-  .stap { display: flex; flex-direction: column; gap: 7px; padding: 11px 13px 12px; border-radius: 16px; border: 1px solid var(--glas-rand, rgba(255, 255, 255, 0.12)); background: rgba(255, 255, 255, 0.04); color: var(--tekst); font: inherit; cursor: pointer; text-decoration: none; min-width: 0; }
+  .stap { display: flex; flex-direction: column; gap: 7px; padding: 11px 13px 12px; border-radius: 16px; border: 1px solid var(--glas-rand, rgb(var(--wit) / 0.12)); background: rgb(var(--wit) / 0.04); color: var(--tekst); font: inherit; cursor: pointer; text-decoration: none; min-width: 0; }
   .stap .naam { font-size: 14px; font-weight: 700; }
   .stap .n, .stap .kort { display: none; }
   .stap .sub { font-size: 12px; line-height: 1.3; color: var(--gedempt); }
-  .stap.nu { border-color: rgba(255, 255, 255, 0.42); background: rgba(255, 255, 255, 0.09); }
+  .stap.nu { border-color: rgb(var(--wit) / 0.42); background: rgb(var(--wit) / 0.09); }
   .stap:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .stap .stipjes { display: flex; gap: 4px; }
-  .stap .stipjes i { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+  .stap .stipjes i { flex: 1; height: 4px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
   .stap .stipjes i.al { background: var(--mint); }
   .stap .stipjes i.nu { background: var(--tekst); }
   /* Al ingevuld uit Home Assistant, nog niet nagelopen (besluit 158): omlijnd. */
   .stap .stipjes i.half { background: none; box-shadow: inset 0 0 0 1px var(--mint); }
   /* Wat elk apparaat doet: drie knoppen naast elkaar, zon in zijn kleur. */
-  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgba(255, 255, 255, 0.05); }
+  .seg { display: flex; gap: 3px; padding: 3px; border-radius: 11px; background: rgb(var(--wit) / 0.05); }
   /* Het apparaat boven, de drie knoppen eronder over de volle breedte: zo past "Op temperatuur". */
   .toestel:has(.seg) { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; }
   .toestel:has(.seg) > .seg { width: 100%; box-sizing: border-box; }
   .seg button { flex: 1 1 auto; white-space: nowrap; height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--gedempt); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-  .seg button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.15); color: var(--tekst); }
-  .seg button.zon[aria-pressed="true"] { background: rgba(247, 181, 72, 0.22); color: var(--zon); }
+  .seg button[aria-pressed="true"] { background: rgb(var(--wit) / 0.15); color: var(--tekst); }
+  .seg button.zon[aria-pressed="true"] { background: rgba(247, 181, 72, 0.22); color: var(--zon-t); }
   .seg button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
   /* Een vak met een waarde rechts: de prijs, de zekering. */
-  .invul { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 0 8px 0 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); font-size: 15px; font-weight: 600; }
+  .invul { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 0 8px 0 14px; border-radius: 12px; background: rgb(var(--wit) / 0.05); font-size: 15px; font-weight: 600; }
   .invul + .invul { margin-top: 8px; }
   .invul .waarde { display: inline-flex; align-items: center; gap: 4px; font-family: var(--kop); font-size: 17px; font-weight: 700; }
   /* Breed genoeg voor vijf cijfers achter de komma (besluit 166): 0,27451 viel er eerst half buiten. */
@@ -68,22 +68,22 @@
   .invul .klein { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--gedempt); }
   /* Buiten: een vraagje boven de keuzes, en wat erbij hoort als schakelaar. */
   .vraagje { font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
-  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding: 8px 10px 8px 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
-  .schakelrij i { position: relative; width: 44px; height: 26px; border-radius: 13px; background: rgba(255, 255, 255, 0.16); flex-shrink: 0; transition: background 0.15s; }
+  .schakelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; padding: 8px 10px 8px 14px; border: 0; border-radius: 12px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
+  .schakelrij i { position: relative; width: 44px; height: 26px; border-radius: 13px; background: rgb(var(--wit) / 0.16); flex-shrink: 0; transition: background 0.15s; }
   .schakelrij i::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
   .schakelrij[aria-checked="true"] i { background: var(--mint); }
   .schakelrij[aria-checked="true"] i::after { transform: translateX(18px); }
   .schakelrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   /* Wie woont hier (besluit 147): de code om in te loggen. */
   .erbij { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; align-items: center; }
-  .qr { width: 96px; height: 96px; border-radius: 12px; background: #EEF3F7; padding: 7px; box-sizing: border-box; display: grid; place-items: center; }
+  .qr { width: 96px; height: 96px; border-radius: 12px; background: #eef3f7; padding: 7px; box-sizing: border-box; display: grid; place-items: center; }
   .qr svg { width: 100%; height: 100%; }
-  .waarderij { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.07); font-size: 15px; }
+  .waarderij { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid rgb(var(--wit) / 0.07); font-size: 15px; }
   .waarderij:first-child { border-top: 0; }
   .waarderij span { color: var(--zacht); text-align: right; }
   /* Een bewoner om aan te tikken (besluit 166), en buiten: een deel met zijn ruimte. */
-  .bewonerrij { width: 100%; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); background: none; color: var(--tekst); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
-  .bewonerrij.open, .bewonerrij:hover { color: var(--ijs); }
+  .bewonerrij { width: 100%; border: 0; border-top: 1px solid rgb(var(--wit) / 0.07); background: none; color: var(--tekst); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; }
+  .bewonerrij.open, .bewonerrij:hover { color: var(--ijs-t); }
   .bewonerrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .rijen > .bewerk { margin: 2px 0 8px; }
   .deel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -108,25 +108,25 @@
   .rijen { display: flex; flex-direction: column; min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0 -6px; padding: 0 6px; }
   /* Loopt de lijst verder dan de kaart, dan vervaagt de onderkant (besluit 158). */
   .rijen.meer { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent); }
-  .rij { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .rij { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
   /* Een apparaat en zijn kamer: de naam krijgt de ruimte, de keuze een vaste breedte. */
   .rij.breed { grid-template-columns: minmax(0, 1fr) 210px; align-items: center; }
   .rij.breed > b { padding-top: 0; }
   .rij:first-child { border-top: 0; }
   .rij > b { font-size: 15px; padding-top: 7px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { min-height: 34px; padding: 0 11px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.08); color: var(--tekst); font: inherit; font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-  .chip.aan { background: var(--tekst); color: #0b1424; }
-  .chip.gevonden { background: rgba(110, 231, 183, 0.12); color: var(--mint); cursor: default; }
-  .chip.plus { background: none; border: 1px dashed rgba(111, 211, 255, 0.55); color: var(--ijs); }
-  .chip.stil { cursor: default; background: rgba(255, 255, 255, 0.05); }
+  .chip { min-height: 34px; padding: 0 11px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font: inherit; font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .chip.aan { background: var(--accent); color: var(--op-accent); }
+  .chip.gevonden { background: rgba(110, 231, 183, 0.12); color: var(--mint-t); cursor: default; }
+  .chip.plus { background: none; border: 1px dashed rgba(111, 211, 255, 0.55); color: var(--ijs-t); }
+  .chip.stil { cursor: default; background: rgb(var(--wit) / 0.05); }
   .chip.weg span { color: var(--gedempt); font-size: 15px; }
-  .chip.weg:hover span { color: var(--gloed); }
-  .chip.gevaar { background: rgba(255, 122, 77, 0.12); color: var(--gloed); white-space: nowrap; justify-self: start; }
+  .chip.weg:hover span { color: var(--gloed-t); }
+  .chip.gevaar { background: rgba(255, 122, 77, 0.12); color: var(--gloed-t); white-space: nowrap; justify-self: start; }
   .chip:disabled, .schakelrij:disabled { opacity: 0.4; cursor: default; }
   .chip:focus-visible, .veld:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .zacht { font-size: 13.5px; color: var(--gedempt); padding-top: 7px; }
-  .bewerk { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; padding: 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); }
+  .bewerk { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; padding: 10px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
   .bewerk > .veld { width: auto; min-width: 0; height: 36px; }
   .bewerk .veld { height: 36px; }
   /* Elk veld met zijn naam erboven (besluit 158): zo zie je dat de keuzelijst de etage is. */
@@ -137,7 +137,7 @@
   .zonerij { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 6px; }
   .rondom { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .rondom .schakelrij { margin-top: 0; }
-  .toestel { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 4px 4px 4px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); font-size: 13.5px; font-weight: 600; }
+  .toestel { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding: 4px 4px 4px 12px; border-radius: 12px; background: rgb(var(--wit) / 0.05); font-size: 13.5px; font-weight: 600; }
   .toestel .veld { width: auto; height: 32px; padding: 0 8px; font-size: 12.5px; font-weight: 700; }
   .kolom { display: flex; flex-direction: column; gap: 6px; }
   .schuif { display: grid; grid-template-columns: minmax(0, 1fr) 54px; gap: 10px; align-items: center; font-size: 13.5px; color: var(--zacht); }
@@ -146,20 +146,20 @@
   .schuif b { font-family: var(--kop); font-size: 18px; text-align: right; color: var(--tekst); }
   .cijfers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   /* De getallen van het startscherm tikken open tot een lijst (besluit 158). */
-  .cijfers .vak { position: relative; padding: 11px 16px; border: 0; border-radius: 16px; background: rgba(255, 255, 255, 0.05); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
-  .cijfers .vak:hover { background: rgba(255, 255, 255, 0.09); }
+  .cijfers .vak { position: relative; padding: 11px 16px; border: 0; border-radius: 16px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .cijfers .vak:hover { background: rgb(var(--wit) / 0.09); }
   .cijfers .vak:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .cijfers b { display: block; font-family: var(--kop); font-size: 26px; font-weight: 700; }
   .cijfers span { font-size: 13.5px; color: var(--zacht); }
   .cijfers .vak i { position: absolute; right: 14px; top: 12px; font-style: normal; font-size: 20px; color: var(--gedempt); }
-  .noot { padding: 12px 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); font-size: 14px; line-height: 1.5; color: var(--zacht); }
+  .noot { padding: 12px 16px; border-radius: 14px; background: rgb(var(--wit) / 0.05); font-size: 14px; line-height: 1.5; color: var(--zacht); }
   .noot.later { border: 1px solid rgba(247, 181, 72, 0.35); background: rgba(247, 181, 72, 0.06); }
-  .noot a { color: var(--ijs); font-weight: 600; text-decoration: none; }
+  .noot a { color: var(--ijs-t); font-weight: 600; text-decoration: none; }
   .voet { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 6px; }
   .voet .zachtknop { border: 0; background: none; color: var(--zacht); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; padding: 8px 0; text-decoration: none; }
   .voet .knop { text-decoration: none; display: inline-flex; align-items: center; }
   .voet .rechts { display: flex; align-items: center; gap: 18px; }
-  .prijs { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 13.5px; font-weight: 600; }
+  .prijs { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 999px; background: rgb(var(--wit) / 0.08); font-size: 13.5px; font-weight: 600; }
   .prijs input { width: 64px; border: 0; background: none; color: var(--tekst); font: inherit; font-weight: 700; }
   .prijs input:focus { outline: none; }
   .prijs:focus-within { outline: 2px solid var(--ijs); }
@@ -167,17 +167,17 @@
   .filmkaart .speel { position: absolute; left: 50%; top: 44%; width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 50%; background: var(--tekst); }
   .filmkaart .speel::after { content: ''; position: absolute; left: 29px; top: 22px; border-left: 22px solid #0b1424; border-top: 14px solid transparent; border-bottom: 14px solid transparent; }
   .filmkaart:focus-visible { outline: 2px solid var(--tekst); outline-offset: 3px; }
-  .melding-inr { min-height: 18px; font-size: 13px; color: var(--mint); }
-  .melding-inr.fout { color: var(--gloed); }
+  .melding-inr { min-height: 18px; font-size: 13px; color: var(--mint-t); }
+  .melding-inr.fout { color: var(--gloed-t); }
   /* De telefoon: de stappen klein bovenaan, het huis klein, de vraag eronder. */
   #tel .inhoud { padding: 16px 14px 28px; display: flex; flex-direction: column; gap: 12px; }
   #tel .stappen { display: flex; gap: 4px; overflow-x: auto; }
   #tel .stap { flex-direction: row; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 6px; border: 0; border-radius: 999px; background: none; flex-shrink: 0; }
   #tel .stap .naam, #tel .stap .sub, #tel .stap .stipjes { display: none; }
-  #tel .stap .n { display: grid; width: 24px; height: 24px; border-radius: 50%; place-items: center; font-size: 12px; font-weight: 800; background: rgba(255, 255, 255, 0.08); color: var(--zacht); }
-  #tel .stap.klaar .n { background: rgba(110, 231, 183, 0.2); color: var(--mint); }
-  #tel .stap.nu { background: rgba(255, 255, 255, 0.1); }
-  #tel .stap.nu .n { background: var(--tekst); color: #0b1424; }
+  #tel .stap .n { display: grid; width: 24px; height: 24px; border-radius: 50%; place-items: center; font-size: 12px; font-weight: 800; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
+  #tel .stap.klaar .n { background: rgba(110, 231, 183, 0.2); color: var(--mint-t); }
+  #tel .stap.nu { background: rgb(var(--wit) / 0.1); }
+  #tel .stap.nu .n { background: var(--accent); color: var(--op-accent); }
   #tel .stap.nu .kort { display: inline; font-size: 14px; font-weight: 600; }
   #tel .toestel { flex-wrap: wrap; }
   #tel .podium { height: 220px; }

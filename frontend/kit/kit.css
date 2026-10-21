@@ -22,6 +22,104 @@
   --violet: #8f86ff;
   --kop: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
   --romp: 'Figtree', system-ui, sans-serif;
+  /*
+   * Het lichte thema (besluit 181) draait deze om. `--wit` is de inkt van glas,
+   * lijnen en vlakjes: wit op donker, donker op licht (`rgb(var(--wit) / 0.07)`).
+   * `--nacht` is de grond van wat zweeft, zoals de tabs. `--tegen` is tekst op
+   * een vlak in de tekstkleur.
+   */
+  --wit: 255 255 255;
+  --nacht: 9 15 28;
+  --tegen: #0b1424;
+  /*
+   * De betekeniskleuren als tekst. Op donker dezelfde als de vlakken; op licht
+   * donkerder, anders halen ze het contrast niet (besluit 86). De zachte
+   * varianten zijn de lichte tinten voor tekst op een gekleurd vlakje.
+   */
+  --zon-t: var(--zon);
+  --ijs-t: var(--ijs);
+  --mint-t: var(--mint);
+  --gloed-t: var(--gloed);
+  --violet-t: #b7b0ff;
+  --ijs-zacht: #a9e6ff;
+  --gloed-zacht: #ffb090;
+  /*
+   * De eigen kleur (besluiten 87 en 181): het menu, wat gekozen is, de
+   * hoofdknoppen en je naam. Het logo niet. Een tint voor donker en een voor licht,
+   * beide met het contrast van WCAG AA. Nooit een kleur die iets betekent.
+   */
+  --accent-d: #a9e6ff;
+  --accent-l: #0b6fa4;
+  --accent: var(--accent-d);
+  --op-accent: #0b1424;
+  --accent-vlak: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/*
+ * De zes eigen kleuren. Lucht is de standaard, zoals de app altijd was. Op de
+ * pagina zelf (`<html data-kleur>`) en op een stukje ervan, zoals de naam van
+ * een bewoner in de begroeting: `<b data-kleur="roze">` kleurt met var(--accent).
+ */
+[data-kleur] {
+  --accent: var(--accent-d);
+  --op-accent: #0b1424;
+  --accent-vlak: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.sc-licht[data-kleur],
+.sc-licht [data-kleur] {
+  --accent: var(--accent-l);
+  --op-accent: #ffffff;
+}
+[data-kleur='lucht'] {
+  --accent-d: #a9e6ff;
+  --accent-l: #0b6fa4;
+}
+[data-kleur='violet'] {
+  --accent-d: #bdb7ff;
+  --accent-l: #5a4bd1;
+}
+[data-kleur='paars'] {
+  --accent-d: #e0b3ff;
+  --accent-l: #8a3fc2;
+}
+[data-kleur='roze'] {
+  --accent-d: #ffb3d9;
+  --accent-l: #b8327a;
+}
+[data-kleur='indigo'] {
+  --accent-d: #a5b4fc;
+  --accent-l: #3f51c8;
+}
+[data-kleur='zilver'] {
+  --accent-d: #dfe6ee;
+  --accent-l: #3c4a5c;
+}
+
+/*
+ * Licht (besluit 181): alleen op de telefoon; de wand blijft donker. De
+ * pagina zet de klasse, de schetsen zetten hem zelf.
+ */
+:root.sc-licht {
+  color-scheme: light;
+  --inkt: #e9eff6;
+  --diep: #ffffff;
+  --glas: rgba(255, 255, 255, 0.7);
+  --glas-rand: rgba(15, 27, 45, 0.1);
+  --tekst: #0f1b2d;
+  --zacht: #46566a;
+  --gedempt: #5a6a7e;
+  --wit: 15 27 45;
+  --nacht: 255 255 255;
+  --tegen: #f4f7fa;
+  --zon-t: #8a5a00;
+  --ijs-t: #0a6f9e;
+  --mint-t: #0b7a52;
+  --gloed-t: #b83a10;
+  --violet-t: #5a4bd1;
+  --ijs-zacht: #0a6f9e;
+  --gloed-zacht: #b83a10;
+  --accent: var(--accent-l);
+  --op-accent: #ffffff;
 }
 
 * {
@@ -91,6 +189,56 @@ button {
     linear-gradient(180deg, #253247 0%, #19243a 50%, #0e1828 100%);
 }
 
+/*
+ * Tekeningen met vaste kleuren in hun attributen (fill="#EEF3F7") volgen in
+ * het lichte thema ook: CSS gaat boven een attribuut. Het huis zelf niet; dat
+ * houdt zijn eigen kleuren.
+ */
+.sc-licht [fill='#eef3f7' i]:not(.sc-huis *) { fill: var(--tekst); }
+.sc-licht [stroke='#eef3f7' i]:not(.sc-huis *) { stroke: var(--tekst); }
+.sc-licht [fill='#b8c4cf' i]:not(.sc-huis *) { fill: var(--zacht); }
+.sc-licht [stroke='#b8c4cf' i]:not(.sc-huis *) { stroke: var(--zacht); }
+.sc-licht [fill='#7f8e9c' i]:not(.sc-huis *) { fill: var(--gedempt); }
+.sc-licht [stroke='#7f8e9c' i]:not(.sc-huis *) { stroke: var(--gedempt); }
+.sc-licht [stroke='#a9e6ff' i]:not(.sc-huis *) { stroke: var(--ijs-zacht); }
+.sc-licht [stroke^='rgba(255,255,255' i]:not(.sc-huis *),
+.sc-licht [stroke^='rgba(255, 255, 255' i]:not(.sc-huis *) { stroke: rgb(var(--wit) / 0.14); }
+.sc-licht [fill^='rgba(255,255,255' i]:not(.sc-huis *),
+.sc-licht [fill^='rgba(255, 255, 255' i]:not(.sc-huis *) { fill: rgb(var(--wit) / 0.08); }
+
+/* De lucht in het lichte thema: dezelfde momenten, als een lichte dag. */
+.sc-licht .lucht-dag::before {
+  background:
+    radial-gradient(60% 55% at 46% 8%, rgba(247, 181, 72, 0.22), transparent 70%),
+    linear-gradient(180deg, #c9e0f4 0%, #dde9f5 45%, #e9eff6 100%);
+}
+.sc-licht .lucht-ochtend::before {
+  background:
+    radial-gradient(55% 45% at 18% 62%, rgba(255, 168, 110, 0.24), transparent 70%),
+    linear-gradient(180deg, #dcdff0 0%, #f1e2da 52%, #e9eff6 100%);
+}
+.sc-licht .lucht-avond::before {
+  background:
+    radial-gradient(55% 45% at 86% 64%, rgba(255, 130, 90, 0.2), transparent 70%),
+    radial-gradient(60% 50% at 40% 0%, rgba(143, 134, 255, 0.2), transparent 70%),
+    linear-gradient(180deg, #ddd8f1 0%, #eedfe4 50%, #e9eff6 100%);
+}
+.sc-licht .lucht-nacht::before {
+  background:
+    radial-gradient(60% 50% at 30% 10%, rgba(143, 134, 255, 0.14), transparent 70%),
+    linear-gradient(180deg, #d3d9e8 0%, #e0e6f0 55%, #e9eff6 100%);
+}
+.sc-licht .lucht-winter::before {
+  background:
+    radial-gradient(60% 50% at 40% 10%, rgba(255, 255, 255, 0.6), transparent 70%),
+    linear-gradient(180deg, #dde5ee 0%, #e6ecf2 50%, #eef2f6 100%);
+}
+.sc-licht .lucht-bewolkt::before {
+  background:
+    radial-gradient(60% 50% at 46% 8%, rgba(255, 255, 255, 0.5), transparent 70%),
+    linear-gradient(180deg, #d6dee8 0%, #e2e8ef 50%, #e9eff6 100%);
+}
+
 /* ------------------------------------------------------------- typografie */
 
 .kop-1 {
@@ -137,16 +285,16 @@ button {
   letter-spacing: -0.02em;
 }
 .zon-t {
-  color: var(--zon);
+  color: var(--zon-t);
 }
 .ijs-t {
-  color: var(--ijs);
+  color: var(--ijs-t);
 }
 .mint-t {
-  color: var(--mint);
+  color: var(--mint-t);
 }
 .gloed-t {
-  color: var(--gloed);
+  color: var(--gloed-t);
 }
 
 /* ----------------------------------------------------------------- vlakken */
@@ -169,7 +317,7 @@ button {
   height: 34px;
   padding: 0 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--wit) / 0.07);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
@@ -186,14 +334,15 @@ button {
   padding: 0 20px;
   border-radius: 14px;
   border: 1px solid var(--glas-rand);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgb(var(--wit) / 0.06);
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
 }
+/* De hoofdknop, in je eigen kleur (besluit 181). */
 .knop-licht {
-  background: var(--tekst);
-  color: #0b1424;
+  background: var(--accent);
+  color: var(--op-accent);
   border-color: transparent;
 }
 
@@ -216,7 +365,7 @@ button {
 .balk {
   margin: 20px 0 20px 20px;
   border-radius: 26px;
-  background: rgba(8, 14, 26, 0.45);
+  background: rgb(var(--nacht) / 0.45);
   border: 1px solid var(--glas-rand);
   display: flex;
   flex-direction: column;
@@ -281,18 +430,19 @@ button {
   padding: 0 5px;
   border-radius: 9px;
   background: var(--gloed);
-  color: #fff;
+  /* Donker op oranje: wit haalde maar 2,6:1 (besluit 86). */
+  color: #2a1206;
   font-size: 11.5px;
   line-height: 18px;
   text-align: center;
 }
 .meldbel[aria-expanded='true'] {
-  color: #a9e6ff;
-  background: rgba(111, 211, 255, 0.13);
+  color: var(--accent);
+  background: var(--accent-vlak);
 }
 .balk a[aria-current='page'] {
-  color: #a9e6ff;
-  background: rgba(111, 211, 255, 0.13);
+  color: var(--accent);
+  background: var(--accent-vlak);
 }
 
 /* --------------------------------------------------- de telefoon: raamwerk */
@@ -309,7 +459,7 @@ button {
   bottom: 14px;
   height: 66px;
   border-radius: 24px;
-  background: rgba(10, 17, 30, 0.82);
+  background: rgb(var(--nacht) / 0.82);
   border: 1px solid var(--glas-rand);
   backdrop-filter: blur(16px);
   display: grid;
@@ -330,7 +480,7 @@ button {
   height: 22px;
 }
 .tabs a[aria-current='page'] {
-  color: #a9e6ff;
+  color: var(--accent);
 }
 
 /* De uitleg van het huis: de eerste keer als rondleiding, daarna achter dit knopje. */
@@ -342,7 +492,7 @@ button {
   padding: 0 14px 0 6px;
   border-radius: 999px;
   border: 1px solid var(--glas-rand);
-  background: rgba(9, 15, 28, 0.55);
+  background: rgb(var(--nacht) / 0.55);
   color: var(--zacht);
   font-size: 13px;
   font-weight: 600;
@@ -358,7 +508,7 @@ button {
   font-family: var(--kop);
   font-weight: 700;
   font-size: 13px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgb(var(--wit) / 0.12);
   color: var(--tekst);
 }
 
@@ -374,8 +524,8 @@ button {
 }
 .sc-tik:hover,
 .sc-tik:focus-visible {
-  fill: rgba(238, 243, 247, 0.05);
-  stroke: rgba(238, 243, 247, 0.55);
+  fill: rgb(var(--wit) / 0.05);
+  stroke: rgb(var(--wit) / 0.55);
   stroke-width: 2;
 }
 

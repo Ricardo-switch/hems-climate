@@ -11,22 +11,22 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* Regeling (besluit 130): wie wat regelt, en apparaten op zon. */
-  .fase { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255, 255, 255, 0.06); flex: none; }
+  .fase { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgb(var(--wit) / 0.06); flex: none; }
   .fase i { font-style: normal; font-size: 11.5px; font-weight: 700; padding: 5px 8px; border-radius: 8px; color: var(--gedempt); }
   .fase i.leren { background: rgba(143, 134, 255, 0.25); color: #c9c3ff; }
-  .fase i.kijken { background: rgba(111, 211, 255, 0.2); color: #a9e6ff; }
-  .fase i.regelen { background: rgba(110, 231, 183, 0.2); color: var(--mint); }
+  .fase i.kijken { background: rgba(111, 211, 255, 0.2); color: var(--ijs-zacht); }
+  .fase i.regelen { background: rgba(110, 231, 183, 0.2); color: var(--mint-t); }
   .bewijs { display: flex; align-items: center; gap: 10px; }
-  .bewijs .balkje { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+  .bewijs .balkje { flex: 1; height: 6px; border-radius: 3px; background: rgb(var(--wit) / 0.08); overflow: hidden; }
   .bewijs .balkje i { display: block; height: 100%; background: var(--ijs); }
   .regelrij .l b { font-size: 15px; }
   /* Per kamer wat er regelt (besluit 138): een tik gaat naar de kamer. */
   a.kamerrij { color: inherit; text-decoration: none; }
   a.kamerrij .pijl { color: var(--gedempt); font-size: 18px; }
-  .vorm p a { color: var(--ijs); text-decoration: none; font-weight: 600; }
+  .vorm p a { color: var(--ijs-t); text-decoration: none; font-weight: 600; }
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
 </style>
 </head>

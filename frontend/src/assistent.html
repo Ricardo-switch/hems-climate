@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
    * De assistent als gesprek (besluit 141, schets Wand-Assistent-Gesprek). Het
@@ -43,28 +43,28 @@
   @media (prefers-reduced-motion: reduce) { .boog, .bol { animation: none !important; } }
 
   /* Wat het zegt. */
-  .wie { font-size: 14px; font-weight: 600; color: #B7B0FF; display: flex; align-items: center; gap: 8px; }
-  .wie i { width: 8px; height: 8px; border-radius: 50%; background: #B7B0FF; display: block; box-shadow: 0 0 10px #B7B0FF; }
+  .wie { font-size: 14px; font-weight: 600; color: var(--violet-t); display: flex; align-items: center; gap: 8px; }
+  .wie i { width: 8px; height: 8px; border-radius: 50%; background: var(--violet-t); display: block; box-shadow: 0 0 10px var(--violet-t); }
   .jij { font-size: 15px; color: var(--zacht); margin: 0 0 6px; }
   .jij b { color: var(--tekst); }
   .zegt { font-family: var(--kop); font-weight: 600; font-size: 34px; line-height: 1.13; letter-spacing: -0.01em; margin: 10px 0 0; }
   .zegt.lang { font-size: 27px; }
   .zegt .w { transition: color 0.18s; }
-  .zegt.loopt .w { color: rgba(238, 243, 247, 0.26); }
+  .zegt.loopt .w { color: rgb(var(--wit) / 0.26); }
   .zegt.loopt .w.al { color: var(--tekst); }
   .zegt.loopt .w.nu { color: #fff; text-shadow: 0 0 18px rgba(143, 196, 255, 0.7); }
-  .zegt .w.getal, .zegt.loopt .w.getal.al { color: var(--zon); }
+  .zegt .w.getal, .zegt.loopt .w.getal.al { color: var(--zon-t); }
   .zegt.loopt .w.getal:not(.al) { color: rgba(247, 181, 72, 0.3); }
   .klein-zegt { margin: 14px 0 0; font-size: 16px; line-height: 1.5; color: var(--zacht); max-width: 46ch; }
   .klein-zegt.nogiets { color: var(--tekst); font-weight: 600; }
   .feiten { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
-  .feit { display: flex; flex-direction: column; padding: 9px 13px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); min-width: 96px; }
+  .feit { display: flex; flex-direction: column; padding: 9px 13px; border-radius: 14px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); min-width: 96px; }
   .feit b { font-family: var(--kop); font-size: 19px; font-weight: 600; }
   .feit span { font-size: 12px; color: var(--gedempt); }
   .verder a.knop { margin-top: 16px; text-decoration: none; display: inline-flex; align-items: center; }
   /* Wat er veranderde (besluit 148): het apparaat met zijn nieuwe stand. */
   .gedaan { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
-  .ding { display: grid; grid-template-columns: 38px auto; gap: 1px 12px; align-items: center; padding: 9px 15px 9px 9px; border-radius: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); }
+  .ding { display: grid; grid-template-columns: 38px auto; gap: 1px 12px; align-items: center; padding: 9px 15px 9px 9px; border-radius: 16px; background: rgb(var(--wit) / 0.05); border: 1px solid rgb(var(--wit) / 0.08); }
   .ding.beweegt { border-color: rgba(111, 211, 255, 0.4); }
   .ding .ik { grid-row: span 2; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(111, 211, 255, 0.12); }
   .ding .ik.lamp { background: rgba(255, 183, 101, 0.16); }
@@ -75,7 +75,7 @@
 
   /* Vragen die nu ergens over gaan. */
   .suggesties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .sug { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgba(12, 20, 34, 0.72); border: 1px solid var(--glas-rand); backdrop-filter: blur(10px); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .sug { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 18px; background: rgb(var(--nacht) / 0.72); border: 1px solid var(--glas-rand); backdrop-filter: blur(10px); color: inherit; font: inherit; text-align: left; cursor: pointer; }
   .sug:hover { border-color: rgba(143, 196, 255, 0.45); }
   .sug:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .sug .ik { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgba(111, 211, 255, 0.14); }
@@ -89,23 +89,23 @@
   .sug.nee { grid-template-columns: 1fr; background: transparent; border-style: dashed; color: var(--zacht); text-align: center; font-weight: 600; }
 
   /* De balk onderaan. */
-  .balkje { display: flex; align-items: center; gap: 12px; padding: 0 12px 0 10px; height: 74px; border-radius: 24px; background: rgba(9, 15, 28, 0.7); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); }
+  .balkje { display: flex; align-items: center; gap: 12px; padding: 0 12px 0 10px; height: 74px; border-radius: 24px; background: rgb(var(--nacht) / 0.7); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); }
   .balkje form { flex: 1; display: flex; min-width: 0; }
   .balkje input { flex: 1; min-width: 0; height: 50px; border: 0; background: none; color: var(--tekst); font: inherit; font-size: 17px; padding: 0 12px; }
   .balkje input::placeholder { color: var(--gedempt); }
   .balkje input:focus { outline: none; }
   .balkje:focus-within { border-color: rgba(143, 196, 255, 0.5); }
-  .stemknop { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.06); color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .stemknop[aria-pressed='true'] svg { color: var(--mint); }
+  .stemknop { display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.06); color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .stemknop[aria-pressed='true'] svg { color: var(--mint-t); }
   .stemknop[aria-pressed='false'] svg { opacity: 0.5; }
-  .stop { height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
+  .stop { height: 44px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--tekst); color: var(--tegen); font: inherit; font-weight: 700; font-size: 14.5px; cursor: pointer; }
   /* Terwijl een scherm beweegt: "Stil" voor het praten, en een grote knop voor het scherm. */
-  .stop.zacht { background: rgba(255, 255, 255, 0.08); color: var(--zacht); font-weight: 600; }
-  .stopscherm { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 16px; border-radius: 999px; border: 0; background: var(--tekst); color: #0b1424; font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; white-space: nowrap; }
+  .stop.zacht { background: rgb(var(--wit) / 0.08); color: var(--zacht); font-weight: 600; }
+  .stopscherm { display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 20px 0 16px; border-radius: 999px; border: 0; background: var(--tekst); color: var(--tegen); font: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer; white-space: nowrap; }
   .stopscherm i { width: 13px; height: 13px; border-radius: 3px; background: #0b1424; display: block; }
   #tel .stopscherm { height: 44px; padding: 0 14px 0 12px; font-size: 14px; }
   /* De microfoon (besluit 150): tikken, praten; het huis stopt vanzelf als je stil bent. */
-  .mic { width: 50px; height: 50px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(110, 231, 183, 0.16); color: var(--mint); cursor: pointer; }
+  .mic { width: 50px; height: 50px; flex: none; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(110, 231, 183, 0.16); color: var(--mint-t); cursor: pointer; }
   .mic:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   body.luistert .mic { background: var(--mint); color: #0b1424; box-shadow: 0 0 0 6px rgba(110, 231, 183, 0.18); }
   .niveau { flex: 1; display: flex; align-items: center; gap: 3px; height: 30px; padding: 0 12px; }

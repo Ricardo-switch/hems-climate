@@ -11,14 +11,14 @@
 <meta name="theme-color" content="#0b1424">
 <link rel="icon" href="icoon-192.png">
 <link rel="apple-touch-icon" href="icoon-192.png">
-<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); } s(); addEventListener('resize', s); })();</script>
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var tel = d.classList.contains('tel-stand'), c = tel ? t.kleur : t.wandKleur; var licht = tel && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /* De wand (schets Wand-Vandaag): de dag als tijdlijn, en wat er gebeurde en komt. */
   #wand main { display: flex; flex-direction: column; gap: 16px; height: 100%; }
   .kopregel { display: flex; justify-content: space-between; align-items: end; gap: 24px; }
-  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(255, 255, 255, 0.06); }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
   .wissel button { height: 34px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
-  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .wissel button[aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
   .wissel button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .tijdlijn { padding: 16px 20px 10px; }
   .tijdlijn svg { display: block; width: 100%; height: auto; }
@@ -29,7 +29,7 @@
   .kaart .wanneer { font-family: var(--kop); font-size: 15px; font-weight: 600; }
   .kaart .bovenrij { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .kaart .bladeren { display: flex; gap: 6px; margin-top: auto; padding-top: 12px; }
-  .kaart .bladeren button { height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--glas-rand); background: rgba(255, 255, 255, 0.05); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .kaart .bladeren button { height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.05); color: var(--zacht); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
   .kaart .bladeren button:disabled { opacity: 0.35; cursor: default; }
   .plan { border-color: rgba(143, 134, 255, 0.3); }
   /* Zo klopte de verwachting (besluit 137): per dag gestippeld verwacht, vol opgewekt. */
@@ -53,7 +53,7 @@
   #tel .wissel button { height: 36px; }
   .zonkaart { padding: 14px 16px 8px; }
   .lijn { position: relative; padding-left: 72px; display: flex; flex-direction: column; gap: 12px; }
-  .lijn::before { content: ''; position: absolute; left: 58px; top: 6px; bottom: 6px; width: 2px; background: rgba(255, 255, 255, 0.1); }
+  .lijn::before { content: ''; position: absolute; left: 58px; top: 6px; bottom: 6px; width: 2px; background: rgb(var(--wit) / 0.1); }
   .moment { position: relative; padding: 12px 14px; }
   .moment .tijd { position: absolute; left: -74px; top: 12px; width: 44px; text-align: right; font-family: var(--kop); font-weight: 600; font-size: 14px; color: var(--zacht); }
   .moment::before { content: ''; position: absolute; left: -19px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--kleur, var(--zacht)); box-shadow: 0 0 0 4px #0f1b2e; }
@@ -68,7 +68,7 @@
   .moment.lid { margin-left: 14px; padding: 8px 12px; opacity: 0.85; }
   .moment.lid b { font-size: 14px; }
   .nu { position: relative; display: flex; align-items: center; gap: 10px; margin: 2px 0; }
-  .nu span { background: var(--tekst); color: #0b1424; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; position: absolute; left: -74px; }
+  .nu span { background: var(--tekst); color: var(--tegen); font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px; position: absolute; left: -74px; }
   .nu i { flex: 1; height: 2px; background: var(--tekst); margin-left: -14px; }
 </style>
 </head>
