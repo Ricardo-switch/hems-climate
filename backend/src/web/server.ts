@@ -645,6 +645,8 @@ export class WebServer {
           return;
         }
         this.#toegang.set(req, eigen.access);
+        // Het adres waarop Smart Climate in Tailscale staat, voor de knop Op je startscherm.
+        this.#eigenAdres = `https://${String(req.headers.host).replace(/:443$/, '')}`;
         verzoek(req, res);
       });
       this.#eigen.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
@@ -654,6 +656,9 @@ export class WebServer {
       });
     }
   }
+
+  /** Het adres van de eigen poort in Tailscale, zodra iemand het gebruikte; null tot dan. */
+  #eigenAdres: string | null = null;
 
   /** De toegang voor dit verzoek: die van de eigen poort, of anders die van de dienst. */
   #access(req: IncomingMessage): Access {
@@ -1592,6 +1597,17 @@ export class WebServer {
     }
 
     // De versie en wat er nieuw is (besluit 131), voor App en toegang.
+    /*
+     * Op je startscherm (21 oktober 2026): installeren met het eigen icoon kan
+     * alleen over https en buiten Home Assistant, dus via de eigen poort in
+     * Tailscale (besluit 160). Of die openstaat, en op welk adres hij al eens
+     * gebruikt is; anders raadt de app het adres uit dat van Home Assistant.
+     */
+    if (path === '/api/startscherm') {
+      sendJson(res, 200, { eigenPoort: this.#options.eigenPoort != null, adres: this.#eigenAdres });
+      return;
+    }
+
     if (path === '/api/versie') {
       // Hooguit tien versies terug (besluit 133).
       sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW.slice(0, TERUGKIJKEN) });

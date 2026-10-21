@@ -201,7 +201,15 @@ function tekenNu() {
     // Een beeld dat weg is, stoppen: een losgelaten plaatje blijft anders doorladen.
     for (const oud of lopend.values()) stopBeeld(oud);
   }
+  // Vanaf een favoriet of een melding naar een apparaat (21 oktober 2026): op de telefoon
+  // staat het blad onder de tekening, dus daar meteen naartoe, één keer.
+  if (apparaat && naarApparaat === apparaat.id && app.telStand()) {
+    naarApparaat = null;
+    document.querySelector('#tel [data-blad]')?.scrollIntoView({ block: 'start' });
+  }
 }
+/** Het apparaat uit het adres waarmee de pagina opende; daar gaat de telefoon één keer naartoe. */
+let naarApparaat = adres().apparaat || null;
 
 function tekenPodium(etage, kamer) {
   // De laagste etage met kamers binnen is de begane grond. Is de gekozen ruimte buiten, dan

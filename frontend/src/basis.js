@@ -354,6 +354,33 @@
     bijSoort.set(soort, [...(bijSoort.get(soort) ?? []), prik]);
   }
 
+  /*
+   * Op je startscherm (21 oktober 2026). Chrome biedt het installeren aan met
+   * `beforeinstallprompt`, alleen over https en buiten Home Assistant; dat
+   * bewaren we, zodat de knop bij Functies › Weergave het kan vragen.
+   */
+  let installeerVraag = null;
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installeerVraag = e;
+    dispatchEvent(new Event('sc-installeer'));
+  });
+  addEventListener('appinstalled', () => {
+    installeerVraag = null;
+    dispatchEvent(new Event('sc-installeer'));
+  });
+  const kanInstalleren = () => installeerVraag != null;
+  const geinstalleerd = () => global.matchMedia?.('(display-mode: standalone)').matches === true || global.navigator.standalone === true;
+  async function installeer() {
+    const vraag = installeerVraag;
+    if (!vraag) return false;
+    installeerVraag = null;
+    await vraag.prompt();
+    const keuze = await vraag.userChoice.catch(() => null);
+    dispatchEvent(new Event('sc-installeer'));
+    return keuze?.outcome === 'accepted';
+  }
+
   /** De live-stroom van besluiten; zonder valt de tab terug op verversen per minuut. */
   function live(opState) {
     opLive = (ev) => {
@@ -1375,5 +1402,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering };
+  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer };
 })(window);

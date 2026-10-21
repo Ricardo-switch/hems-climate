@@ -30,7 +30,8 @@ verwijzing bestaat.
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
-  dienst zegt het als er iets veranderde ([174]).
+  dienst zegt het als er iets veranderde ([174]). Op je startscherm met het
+  eigen icoon, en de favorieten met hun zone en een greep ([175]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -572,4 +573,5 @@ verwijzing bestaat.
 [172]: DECISIONS.md#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later
 [173]: DECISIONS.md#173-sneller-bewaren-inpakken-en-het-huis-één-keer-uitrekenen
 [174]: DECISIONS.md#174-het-huis-en-wie-er-thuis-is-live
+[175]: DECISIONS.md#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart
 <!-- links:einde -->

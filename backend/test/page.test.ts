@@ -1743,6 +1743,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.mouse.up();
       expect(decodeURIComponent(new URL(p.url()).hash)).toBe(`#${lampen[3]!.kamer.id}/${lampen[3]!.id}`);
       expect(lightCalls.length).toBe(lichtVoor);
+      // Op de telefoon staat het blad van de lamp onder de tekening: de pagina gaat er meteen naartoe (21 oktober 2026).
+      const lampBlad = p.locator('#tel [data-blad]');
+      await lampBlad.locator('[data-terug]').waitFor();
+      await expect.poll(() => lampBlad.evaluate((el) => el.getBoundingClientRect().top < el.ownerDocument.documentElement.clientHeight / 2), { timeout: 3_000 }).toBe(true);
       expect(fouten).toEqual([]);
     } finally {
       await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plek: 'tel', favorieten: [] }) }).catch(() => null);
@@ -1778,6 +1782,23 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Na het tekenen blijft hij open.
       expect(await kamerMetScenes.getAttribute('open')).not.toBeNull();
       expect(await blad.locator('[data-fav-teller]').textContent()).toContain('2 van 12');
+      // Bovenin de gekozen favorieten als tegels zoals op de kaart, met een greep (21 oktober 2026).
+      const voorbeeld = blad.locator('[data-favchip]');
+      expect(await voorbeeld.count()).toBe(2);
+      expect(await voorbeeld.first().locator('.tegel').count()).toBe(1);
+      const eerste = await voorbeeld.first().getAttribute('data-favchip');
+      // De tweede aan zijn greep naar de plek van de eerste.
+      const van = (await voorbeeld.nth(1).locator('[data-favgreep]').boundingBox())!;
+      const naar = (await voorbeeld.first().boundingBox())!;
+      await p.mouse.move(van.x + van.width / 2, van.y + van.height / 2);
+      await p.mouse.down();
+      for (let i = 1; i <= 8; i++) await p.mouse.move(van.x + ((naar.x + 20 - van.x) * i) / 8, van.y + ((naar.y + naar.height / 2 - van.y) * i) / 8);
+      await p.mouse.up();
+      await expect.poll(() => voorbeeld.nth(1).getAttribute('data-favchip')).toBe(eerste);
+      // En terug met de pijltjes.
+      await voorbeeld.nth(1).focus();
+      await p.keyboard.press('ArrowLeft');
+      await expect.poll(() => voorbeeld.first().getAttribute('data-favchip')).toBe(eerste);
       await blad.locator('[data-fav-klaar]').click();
       await blad.waitFor({ state: 'hidden' });
       await expect.poll(async () => (await voorkeuren()).tel.favorieten.length).toBe(2);
@@ -3133,6 +3154,12 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.setViewportSize({ width: 390, height: 844 });
     await p.locator('#tel [data-lijst] [data-rij]').nth(1).waitFor();
     expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    // De labels onder de naam, niet ernaast over de tekst heen (21 oktober 2026).
+    const rij = p.locator('#tel [data-lijst] [data-rij]').first();
+    const naamVak = (await rij.locator('b').first().boundingBox())!;
+    const labelVak = await rij.locator('.labels').boundingBox();
+    if (labelVak) expect(labelVak.y).toBeGreaterThanOrEqual(naamVak.y + naamVak.height - 1);
+    expect(naamVak.height).toBeLessThan(40);
     await shot(p, 'bewoners-tel');
     await p.setViewportSize({ width: 1280, height: 800 });
 

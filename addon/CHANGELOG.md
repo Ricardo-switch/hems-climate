@@ -1,5 +1,24 @@
 # Wat is er nieuw
 
+## 0.50.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Op je startscherm, bij Functies › Weergave: Smart Climate als app met zijn eigen icoon, of de stappen om dat te kunnen
+
+**Beter**
+
+- Bij het kiezen van favorieten staan de gekozen bovenin als tegels, zoals op Thuis, en schuif je ze met een greep
+- Een lamp vasthouden bij de favorieten opent op de telefoon meteen die lamp
+
+**Opgelost**
+
+- Een favoriet in een open ruimte noemt zijn zone in plaats van de hele ruimte
+- Bij Bewoners op de telefoon staan thuis of weg en geldt nu onder de naam, niet eroverheen
+- Iemand erbij: in Home Assistant wijst de QR-code naar Smart Climate in Home Assistant
+
 ## 0.49.0
 
 *21 oktober 2026*

@@ -149,8 +149,25 @@ function blad() {
     ${knoppen ? `<div class="knoppenrij">${knoppen}</div>` : ''}`;
 }
 
+/*
+ * Waar iemand die erbij komt Smart Climate opent. In Home Assistant (de add-on)
+ * is dat het paneel in Home Assistant zelf, met de inlog van Home Assistant: het
+ * adres van de app binnen Home Assistant werkt alleen voor wie daar al is
+ * (21 oktober 2026). Anders de inlogpagina van de app.
+ */
+function adresVoorErbij() {
+  if (app.inHA()) {
+    try {
+      return `${window.top.location.origin}${window.top.location.pathname}`;
+    } catch {
+      // Een andere herkomst: dan de pagina zelf.
+    }
+  }
+  return `${location.origin}${location.pathname.replace(/[^/]*$/, '')}inloggen.html`;
+}
+
 function erbij() {
-  const adres = `${location.origin}${location.pathname.replace(/[^/]*$/, '')}inloggen.html`;
+  const adres = adresVoorErbij();
   let qr = '';
   try {
     const q = window.qrcode(0, 'M');
@@ -160,7 +177,7 @@ function erbij() {
   } catch {
     qr = '';
   }
-  return `<h3>Iemand erbij</h3><div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="klein">Laat diegene deze code scannen en één keer inloggen met Home Assistant. Met een persoon in Home Assistant staat diegene hier als bewoner${data.bewoners.length ? `, met het comfort van ${esc(data.bewoners[0].naam)}` : ''}. Zonder persoon als gast; dan maakt de hoofdgebruiker er een bewoner van. <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
+  return `<h3>Iemand erbij</h3><div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="klein">${app.inHA() ? 'Laat diegene deze code scannen, of Smart Climate openen in de zijbalk van Home Assistant, en inloggen met een eigen account.' : 'Laat diegene deze code scannen en één keer inloggen met Home Assistant.'} Met een persoon in Home Assistant staat diegene hier als bewoner${data.bewoners.length ? `, met het comfort van ${esc(data.bewoners[0].naam)}` : ''}. Zonder persoon als gast; dan maakt de hoofdgebruiker er een bewoner van. <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
 }
 
 /* Alleen wat in de app is ingelogd: schermen zoals de wand, en gasten (besluit 147). */
@@ -180,10 +197,20 @@ function tekenNu() {
   // Niet onder de vinger opnieuw opbouwen terwijl iemand een naam typt.
   const actief = document.activeElement;
   if (actief?.matches?.('[data-naam], [data-schermnaam]')) return;
-  $$('[data-lijst]').forEach((el) => (el.innerHTML = lijst()));
-  $$('[data-blad]').forEach((el) => (el.innerHTML = blad()));
-  $$('[data-erbij]').forEach((el) => (el.innerHTML = erbij()));
-  $$('[data-schermen]').forEach((el) => (el.innerHTML = schermen()));
+  // Elk deel apart (21 oktober 2026): lukt er een niet, dan staan de andere er wel, en zegt dat deel wat er misging.
+  const deel = (sel, maak) => {
+    let html;
+    try {
+      html = maak();
+    } catch (fout) {
+      html = `<p class="klein" style="margin: 0; color: var(--gloed)">Dit deel lukte niet: ${esc(String(fout?.message ?? fout))}</p>`;
+    }
+    $$(sel).forEach((el) => (el.innerHTML = html));
+  };
+  deel('[data-lijst]', lijst);
+  deel('[data-blad]', blad);
+  deel('[data-erbij]', erbij);
+  deel('[data-schermen]', schermen);
 }
 const teken = app.gebundeld(tekenNu);
 addEventListener('standwissel', teken);

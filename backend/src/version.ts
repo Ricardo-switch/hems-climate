@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.49.0';
+export const VERSIE = '0.50.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,20 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.50.0',
+    datum: '2026-10-21',
+    nieuw: ['Op je startscherm, bij Functies › Weergave: Smart Climate als app met zijn eigen icoon, of de stappen om dat te kunnen'],
+    beter: [
+      'Bij het kiezen van favorieten staan de gekozen bovenin als tegels, zoals op Thuis, en schuif je ze met een greep',
+      'Een lamp vasthouden bij de favorieten opent op de telefoon meteen die lamp',
+    ],
+    opgelost: [
+      'Een favoriet in een open ruimte noemt zijn zone in plaats van de hele ruimte',
+      'Bij Bewoners op de telefoon staan thuis of weg en geldt nu onder de naam, niet eroverheen',
+      'Iemand erbij: in Home Assistant wijst de QR-code naar Smart Climate in Home Assistant',
+    ],
+  },
   {
     versie: '0.49.0',
     datum: '2026-10-21',

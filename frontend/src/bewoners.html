@@ -81,6 +81,10 @@
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
   #tel .rij2 { grid-template-columns: 1fr; }
   #tel .lijst { overflow: visible; }
+  /* Op de telefoon de labels onder de naam (21 oktober 2026): ernaast bleef er voor de naam één woord per regel over. */
+  #tel .bewoner { grid-template-columns: 20px 26px 40px minmax(0, 1fr); gap: 6px 10px; }
+  #tel .bewoner .labels { grid-column: 4; justify-content: start; }
+  #tel .bewoner .labels:empty { display: none; }
   #tel .blad { overflow: visible; }
 </style>
 </head>

@@ -230,13 +230,17 @@
   .tegel .kamer-ik { position: absolute; right: -5px; bottom: -5px; width: 17px; height: 17px; border-radius: 6px; display: grid; place-items: center; background: #24324a; border: 1.5px solid #101a2c; color: #cfe0ee; }
   .tegel .kamer-ik svg { width: 11px; height: 11px; }
   .tegel.scherm .ik { color: #a9e6ff; }
-  .favchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
-  .favchip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); font-size: 13px; font-weight: 600; cursor: grab; touch-action: none; user-select: none; }
-  .favchip i { width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; background: var(--tekst); color: #0b1424; font-size: 11px; font-weight: 800; font-style: normal; }
-  .favchip em { font-style: normal; font-weight: 500; color: var(--gedempt); }
-  .favchip.sleept { background: #a9e6ff; color: #0b1424; cursor: grabbing; }
-  .favchip.sleept em { color: #24324a; }
-  .favchip:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .favchips { margin: 10px 0 2px; }
+  /* De gekozen favorieten zoals op de kaart, met hun plek en een greep (21 oktober 2026). */
+  .favvoorbeeld { position: relative; border-radius: 16px; }
+  .favvoorbeeld .favtegel { display: block; }
+  .favvoorbeeld .favtegel .tegel { width: 100%; padding-right: 38px; }
+  .favvoorbeeld .favnr { position: absolute; left: -5px; top: -6px; z-index: 2; width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; background: var(--tekst); color: #0b1424; font-size: 11px; font-weight: 800; font-style: normal; }
+  .favgreep { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 30px; height: 40px; border-radius: 10px; display: grid; place-items: center; color: var(--zacht); touch-action: none; cursor: grab; }
+  .favgreep svg { width: 16px; height: 16px; }
+  .favvoorbeeld.sleept { z-index: 3; box-shadow: 0 0 0 2px #a9e6ff; }
+  .favvoorbeeld.sleept .favgreep { background: #a9e6ff; color: #0b1424; cursor: grabbing; }
+  .favvoorbeeld:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .favfilter { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
   .favfilter button { height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.06); color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
   .favfilter button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
