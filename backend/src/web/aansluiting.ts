@@ -156,10 +156,19 @@ export function findPhases(states: Iterable<HaEntityState>): FoundPhase[] {
   return out;
 }
 
-const REMOTE_START = /remote_?(?:control_?)?start_?allowed|remotecontrolstartallowed|remote_?start/i;
-const OPERATION = /operation_?state|operationstate|programma_?status|program_?state/i;
-const DURATION = /estimated_?total_?program_?time|estimatedtotalprogramtime|program_?duration/i;
-const REMAINING = /remaining_?program_?time|remainingprogramtime|program_?finish_?time|programma_?eindtijd/i;
+/*
+ * Meer merken dan Home Connect (besluit 178), met de namen van hun koppeling in
+ * Home Assistant: LG ThinQ (`remote_control_enabled`, `current_status`,
+ * `remaining_time`), SmartThings van Samsung (`remote_control`,
+ * `..._machine_state`, `completion_time`) en Miele (`mobile_start`, `status`,
+ * `remaining_time`).
+ */
+const REMOTE_START = /remote_?(?:control_?)?start_?allowed|remotecontrolstartallowed|remote_?start|remote_?control_?enabled|mobile_?start|_remote_?control$/i;
+const OPERATION = /operation_?state|operationstate|programma_?status|program_?state|machine_?state|current_?status/i;
+/** Miele noemt hem gewoon `status`; alleen als niets anders past, en nooit de deur of de batterij. */
+const OPERATION_KAAL = /^sensor\.[a-z0-9_]*(?<!door|deur|battery|batterij|wifi|connection)_status$/i;
+const DURATION = /estimated_?total_?program_?time|estimatedtotalprogramtime|program_?duration|total_?time/i;
+const REMAINING = /remaining_?program_?time|remainingprogramtime|program_?finish_?time|programma_?eindtijd|remain(?:ing)?_?time|completion_?time/i;
 const PROGRESS = /program_?progress|programprogress|programma_?voortgang/i;
 
 /*
@@ -197,7 +206,7 @@ export function findAppliances(
     if (!e.entity_id.startsWith('binary_sensor.') || !REMOTE_START.test(e.entity_id) || e.disabled_by || !e.device_id) continue;
     if (!states.has(e.entity_id)) continue;
     const mine = entities.filter((x) => x.device_id === e.device_id && !x.disabled_by && states.has(x.entity_id));
-    const operation = mine.find((x) => x.entity_id.startsWith('sensor.') && OPERATION.test(x.entity_id));
+    const operation = mine.find((x) => x.entity_id.startsWith('sensor.') && OPERATION.test(x.entity_id)) ?? mine.find((x) => OPERATION_KAAL.test(x.entity_id));
     const duration = mine.find((x) => x.entity_id.startsWith('sensor.') && DURATION.test(x.entity_id));
     const remaining = mine.find((x) => x.entity_id.startsWith('sensor.') && REMAINING.test(x.entity_id));
     const progress = mine.find((x) => x.entity_id.startsWith('sensor.') && PROGRESS.test(x.entity_id));

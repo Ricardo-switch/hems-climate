@@ -99,6 +99,12 @@ export interface ActuatorPower {
   readonly sensor?: DeviceRef;
   /** Terugval wanneer er geen meting is, of het apparaat uit staat, in W. */
   readonly estimatedW: number;
+  /**
+   * Wat het apparaat op het typeplaatje trekt, in W (besluit 178): voor de
+   * hoofdzekering, los van wat het van het budget vraagt. De badkamer vraagt
+   * geen budget (`estimatedW` 0), maar trekt wel 1.150 W als hij stookt.
+   */
+  readonly ratedW?: number;
 }
 
 export interface ActuatorTiming {

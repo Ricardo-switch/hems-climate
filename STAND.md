@@ -33,7 +33,9 @@ verwijzing bestaat.
   dienst zegt het als er iets veranderde ([174]). Op je startscherm met het
   eigen icoon, en de favorieten met hun zone en een greep ([175]). Het wekwoord
   gaat mee in de add-on, Assist vindt de add-on zonder NAS-adres, en meldingen
-  komen live ([177]).
+  komen live ([177]). Eigen daluren en geen salderen voor een huis buiten
+  Nederland, LG, Samsung en Miele op zon, en het typeplaatje voor de
+  hoofdzekering ([178]).
 - **Wat het huis verandert:** eind 2026 drie fasen van 25 A in plaats van één
   van 35 A ([78]); deze winter de ventilatie, een breukpunt voor het thermisch
   model. Open vragen staan in
@@ -580,4 +582,5 @@ verwijzing bestaat.
 [175]: DECISIONS.md#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart
 [176]: DECISIONS.md#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon
 [177]: DECISIONS.md#177-universeel-deel-1-het-wekwoord-mee-assist-zonder-nas-en-meldingen-live
+[178]: DECISIONS.md#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje
 <!-- links:einde -->

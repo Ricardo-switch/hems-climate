@@ -35,6 +35,8 @@ function aanvullen(c) {
   const p = c.prijzen;
   p.stroomDal ??= null;
   p.dalUren ??= 'nl';
+  p.dalEigen ??= { van: 23, tot: 7, weekend: true };
+  p.salderen ??= true;
   p.vanaf2027 ??= { vergoeding: null, kosten: null };
   p.vast ??= [];
   p.contractStart ??= null;
@@ -241,6 +243,14 @@ function metersVorm() {
 
 /* Contract en prijzen */
 
+/** Eigen daltijden (besluit 178): van welk uur tot welk uur, en het weekend. */
+function eigenDal(d) {
+  const uren = (sleutel, huidig) => `<select class="invoer" data-daleigen="${sleutel}" aria-label="${sleutel === 'van' ? 'Dal vanaf' : 'Dal tot'}">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${h === huidig ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select>`;
+  return `<div class="twee"><label class="veldnaam">Vanaf${uren('van', d.van)}</label><label class="veldnaam">Tot${uren('tot', d.tot)}</label></div>
+    ${keuzes('Weekend', 'dalWeekend', [[true, 'Weekend helemaal dal'], [false, 'Weekend als doordeweeks']], d.weekend)}
+    <p class="mini">Met eigen tijden tellen de Nederlandse feestdagen niet als dal.</p>`;
+}
+
 const VOORSTELLEN = [
   { naam: 'Vaste leveringskosten stroom', per: 'dag', soort: 'stroom' },
   { naam: 'Netbeheer stroom', per: 'dag', soort: 'stroom' },
@@ -258,7 +268,7 @@ function prijzenVorm() {
   };
   const dalTijden = !dubbel ? '' : perMeter()
     ? '<p class="mini">Je meter telt normaal en dal apart; dat gebruikt de app.</p>'
-    : `<span class="veldnaam">Wanneer geldt het daltarief?</span>${keuzes('Daltarief', 'dalUren', [['nl', '23 tot 7 uur en weekend'], ['zuid', '21 tot 7 uur en weekend (Brabant, Limburg)']], p.dalUren)}`;
+    : `<span class="veldnaam">Wanneer geldt het daltarief?</span>${keuzes('Daltarief', 'dalUren', [['nl', '23 tot 7 uur en weekend'], ['zuid', '21 tot 7 uur en weekend (Brabant, Limburg)'], ['eigen', 'Eigen tijden']], p.dalUren)}${p.dalUren === 'eigen' ? eigenDal(p.dalEigen) : ''}`;
   const opt = (lijst, huidig) => lijst.map(([w, t]) => `<option value="${w}" ${w === huidig ? 'selected' : ''}>${t}</option>`).join('');
   const posten = p.vast.map((v, i) => `<div class="vastrij">
       <input class="invoer" data-vast="naam" data-i="${i}" value="${esc(v.naam)}" maxlength="40" aria-label="Naam van de post">
@@ -278,9 +288,10 @@ function prijzenVorm() {
       <label class="veldnaam">Startdatum contract<input class="invoer" type="date" data-contract value="${esc(p.contractStart ?? '')}" min="2000-01-01" max="2100-12-31"></label>
       <p class="mini">Het jaar in Opbrengst loopt vanaf deze dag, zoals je jaarafrekening. Leeg is vanaf 1 januari.</p>`)}${blok('Stroom', `${keuzes('Tarief', 'stroomtarief', [['enkel', 'Eén tarief'], ['dubbel', 'Normaal en dal']], dubbel ? 'dubbel' : 'enkel')}
       <div class="${dubbel ? 'twee' : ''}">${bedragVeld(dubbel ? 'Normaal, € per kWh' : '€ per kWh', 'stroom', p.stroom, '0,27', '0', true)}${dubbel ? bedragVeld('Dal, € per kWh', 'stroomDal', p.stroomDal, '0,25', '0', true) : ''}</div>
-      <p class="mini">De totaalprijs, met energiebelasting en btw. Op je contract heet die vaak "Totaal elektriciteit".</p>${dalTijden}`)}${e.gas ? blok('Gas', `${bedragVeld('€ per m³', 'gas', p.gas, '1,36', '0', true)}<p class="mini">Ook hier de totaalprijs, met belasting en btw.</p>`) : ''}`, `${blok('Teruglevering', `<p class="uitleg">Tot 2027 wordt er gesaldeerd: wat je teruglevert, telt tegen je eigen stroomprijs.</p>
-      ${bedragVeld('Vergoeding boven je verbruik, € per kWh', 'teruglevering', p.teruglevering, '0,15')}
-      <span class="veldnaam" style="margin-top: 4px">Vanaf 2027, als het salderen stopt</span>
+      <p class="mini">De totaalprijs, met energiebelasting en btw. Op je contract heet die vaak "Totaal elektriciteit".</p>${dalTijden}`)}${e.gas ? blok('Gas', `${bedragVeld('€ per m³', 'gas', p.gas, '1,36', '0', true)}<p class="mini">Ook hier de totaalprijs, met belasting en btw.</p>`) : ''}`, `${blok('Teruglevering', `${keuzes('Salderen', 'salderen', [[true, 'Salderen tot 2027'], [false, 'Geen salderen']], p.salderen)}
+      ${p.salderen ? `<p class="uitleg">Tot 2027 wordt er in Nederland gesaldeerd: wat je teruglevert, telt tegen je eigen stroomprijs.</p>
+      ${bedragVeld('Vergoeding boven je verbruik, € per kWh', 'teruglevering', p.teruglevering, '0,15')}` : '<p class="uitleg">Wat je teruglevert, telt tegen de vergoeding hieronder, min de kosten.</p>'}
+      <span class="veldnaam" style="margin-top: 4px">${p.salderen ? 'Vanaf 2027, als het salderen stopt' : 'Wat je krijgt en betaalt voor teruglevering'}</span>
       <div class="twee">${bedragVeld('Je krijgt, € per kWh', 'vanaf2027.vergoeding', p.vanaf2027.vergoeding, '0,07')}${bedragVeld('Je betaalt, € per kWh', 'vanaf2027.kosten', p.vanaf2027.kosten, '0,06')}</div>`)}${blok('Vaste kosten', `${posten || '<p class="uitleg">Nog geen vaste posten.</p>'}
       <div class="meterchips">${erbij.map((x) => `<button type="button" data-vast-erbij="${esc(x.naam)}">+ ${esc(x.naam)}</button>`).join('')}<button type="button" data-vast-erbij="">+ Andere post</button></div>
       <p class="mini">Zoals op je contract: per dag, maand of jaar, met btw. Een aftrek, zoals de vermindering energiebelasting, telt de app als min.</p>`)}`)}`;
@@ -431,6 +442,8 @@ document.addEventListener('click', (ev) => {
       dubbel = w === 'dubbel';
       if (!dubbel) e.prijzen.stroomDal = null;
     } else if (e && s === 'dalUren') e.prijzen.dalUren = w;
+    else if (e && s === 'salderen') e.prijzen.salderen = w;
+    else if (e && s === 'dalWeekend') e.prijzen.dalEigen = { ...e.prijzen.dalEigen, weekend: w };
     else return;
     teken();
     return bewaarEnergie();
@@ -509,6 +522,14 @@ document.addEventListener('change', (ev) => {
     if (y) p[x][y] = v;
     else p[x] = v;
     t.classList.toggle('leeg', v == null && t.classList.contains('leeg'));
+  } else if (t.dataset.daleigen) {
+    // Eigen daltijden (besluit 178): van en tot verschillend, anders blijft het zoals het was.
+    const d = { ...p.dalEigen, [t.dataset.daleigen]: Number(t.value) };
+    if (d.van === d.tot) {
+      t.value = String(p.dalEigen[t.dataset.daleigen]);
+      return;
+    }
+    p.dalEigen = d;
   } else if (t.hasAttribute('data-contract')) {
     p.contractStart = /^\d{4}-\d{2}-\d{2}$/.test(t.value) ? t.value : null;
   } else if (t.dataset.vast) {

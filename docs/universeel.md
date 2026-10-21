@@ -69,7 +69,8 @@ hier een voorstel voor.
    Assistant geeft andere standen, grenzen en wel of geen vermogensmeting. De
    ontdekking (41) doet een voorstel; een wizard moet het per apparaat laten
    nakijken, en eerlijk zeggen wat niet wordt ondersteund.
-6. **Regels per land.** (De hoofdzekering kent sinds 9 oktober de gangbare
+6. ~~**Regels per land.**~~ Gedaan op 21 oktober (besluit 178): eigen daluren en
+   geen salderen. (De hoofdzekering kent sinds 9 oktober de gangbare
    maten, 1 × 25 tot 3 × 50 A, en een eigen waarde.)
    De prijzen volgen sinds besluit 110 een Nederlands contract (normaal en dal,
    salderen tot 2027, vaste posten); de daltijden en het salderen zijn
@@ -89,9 +90,8 @@ hier een voorstel voor.
 11. **Assist van Home Assistant** vraagt Smart Climate via YAML. Het adres staat
     sinds besluit 177 in de app, zonder NAS; een eigen koppeling zonder YAML
     volgt (besluit 91).
-12. **Apparaten op zon** worden in de praktijk alleen via Home Connect herkend
-    (de standen en de typecodes van Bosch en Siemens). Miele, LG, Samsung en
-    andere noemen het anders.
+12. ~~**Apparaten op zon**~~ Gedaan op 21 oktober (besluit 178): ook LG ThinQ,
+    SmartThings van Samsung en Miele, met hun eigen woorden.
 13. ~~**De terugblik**~~ Gedaan op 21 oktober (besluit 177): zonder
     YAML-voorganger vergelijkt hij met "de apparaten zelf".
 14. ~~**Wat er nieuw is**~~ Gedaan op 21 oktober (besluit 177): zonder namen

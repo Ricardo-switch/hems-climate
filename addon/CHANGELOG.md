@@ -1,5 +1,18 @@
 # Wat is er nieuw
 
+## 0.53.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Bij Meters en prijzen eigen daluren, en geen salderen voor een huis buiten Nederland
+- Wasmachines, drogers en vaatwassers van LG, Samsung en Miele kunnen op zon, naast die van Bosch en Siemens
+
+**Beter**
+
+- Het vermogen van een elektrische bron bij Indeling telt mee voor de hoofdzekering, ook als hij niet op zon mag
+
 ## 0.52.0
 
 *21 oktober 2026*

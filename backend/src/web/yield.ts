@@ -275,7 +275,7 @@ function tariefMeters(s: EnergySettings): { dal: Set<string>; perMeter: boolean 
 }
 
 /** Het gebruik in [van, tot) verdeeld over normaal, dal en na het salderen. */
-function verdeel(
+export function verdeel(
   s: EnergySettings,
   af: number,
   afDal: number | null,
@@ -290,11 +290,12 @@ function verdeel(
   let td = 0;
   if (p.stroomDal != null) {
     // De meter zegt het; anders de tijden van het daltarief.
-    const deel = afDal == null ? dalAandeel(van, tot, tz, p.dalUren ?? 'nl') : 0;
+    const deel = afDal == null ? dalAandeel(van, tot, tz, p.dalUren ?? 'nl', p.dalEigen ?? null) : 0;
     ad = afDal ?? af * deel;
     td = terugDal ?? terug * deel;
   }
-  const na = van >= SALDEREN_TOT_MS;
+  // Zonder salderen (besluit 178) telt alles wat teruggaat zoals na 2027.
+  const na = p.salderen === false || van >= SALDEREN_TOT_MS;
   return { afNormaal: af - ad, afDal: ad, terugNormaal: na ? 0 : terug - td, terugDal: na ? 0 : td, terugNa: na ? terug : 0 };
 }
 

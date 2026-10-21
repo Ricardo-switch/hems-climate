@@ -741,6 +741,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.locator('[data-vast="bedrag"]').last().press('Tab');
     await wand.locator('[data-vast="per"]').last().selectOption('jaar');
     await expect.poll(() => energyStore.current?.prijzen, { timeout: 5_000 }).toMatchObject({ stroom: 0.27142, stroomDal: 0.269, vast: [{ naam: 'Vermindering energiebelasting', bedrag: -628.96, per: 'jaar', soort: 'stroom' }] });
+    // Regels per land (besluit 178): eigen daltijden en geen salderen.
+    await wand.locator('[data-kies="dalUren"]', { hasText: 'Eigen tijden' }).click();
+    await wand.locator('[data-daleigen="van"]').selectOption('22');
+    await wand.locator('[data-kies="dalWeekend"]', { hasText: 'Weekend als doordeweeks' }).click();
+    await wand.locator('[data-kies="salderen"]', { hasText: 'Geen salderen' }).click();
+    await expect.poll(() => energyStore.current?.prijzen, { timeout: 5_000 }).toMatchObject({ dalUren: 'eigen', dalEigen: { van: 22, tot: 7, weekend: false }, salderen: false });
+    // Zonder salderen geen vergoeding boven je verbruik.
+    expect(await wand.locator('[data-prijs="teruglevering"]').count()).toBe(0);
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);

@@ -100,6 +100,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [145. Een zone heeft een soort, en kamers en zones schuiven](#145-een-zone-heeft-een-soort-en-kamers-en-zones-schuiven)
 - [146. Inrichten zoals de schets, en de film als een dag in je huis](#146-inrichten-zoals-de-schets-en-de-film-als-een-dag-in-je-huis)
 - [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
+- [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
 
 **Meten, data en analyse**
 
@@ -7918,6 +7919,47 @@ tab wisselde.
   apparaten op zon, en het vermogen van het typeplaatje (de badkamer).
 - **Versie 0.52.0.**
 
+---
+
+## 178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+De rest van stap 5 uit het stappenplan van besluit 172, op 21 oktober 2026.
+
+*Besluit:*
+
+- **Regels per land, bij Meters en prijzen:**
+  - **Daluren:** naast "23 tot 7" en "21 tot 7 (Brabant, Limburg)" ook *eigen
+    tijden*: van welk hele uur tot welk, over middernacht of binnen een dag, en
+    of het weekend helemaal dal is. Met eigen tijden tellen de Nederlandse
+    feestdagen niet als dal (`dalUren: 'eigen'`, `dalEigen`).
+  - **Salderen:** "tot 2027", zoals in Nederland, of "geen salderen"
+    (`salderen: false`): dan telt alles wat teruggaat meteen tegen de
+    vergoeding min de kosten, en vraagt het scherm geen vergoeding boven je
+    verbruik. Zonder keuze blijft het Nederlands.
+- **Meer merken voor apparaten op zon** dan Home Connect, met de namen van hun
+  koppeling in Home Assistant: LG ThinQ (`remote_control_enabled`,
+  `current_status`, `remaining_time`), SmartThings van Samsung
+  (`remote_control`, `..._machine_state`, `completion_time`) en Miele
+  (`mobile_start`, `status`, `remaining_time`). De regeling kent hun woorden:
+  `in_use`, `running`, `waiting_to_start`, `paused` en de fasen van een
+  programma als bezig; `end` en `program_ended` als klaar; `programmed`,
+  `initial`, `standby`, `stop` en `idle` als klaarstaan. Een sensor die alleen
+  `status` heet, telt alleen als niets anders past, en nooit die van de deur of
+  de batterij.
+- **Het typeplaatje** (het open punt over de badkamer): een apparaat kan
+  `power.ratedW` hebben, wat het werkelijk trekt. De hoofdzekering (besluit 78)
+  rekent daarmee bij een start; het budget blijft `estimatedW`. De app vult het
+  in uit het vermogen van een slimme elektrische bron bij Indeling, ook als die
+  niet op zon mag: de badkamer houdt 0 W voor het budget en krijgt 1.150 W voor
+  de zekering.
+- **Terugwinbaar** telt alleen wat de regeling zelf terugschakelt: een
+  bijspringer, of een apparaat dat op zon mag. Wat comfort aanhoudt, zoals de
+  badkamer, is geen ruimte voor een ander. In dit huis verandert er niets: daar
+  zijn dat al alleen de airco's; de replay blijft gelijk.
+- **Versie 0.53.0.**
+
 ## Wat nog een besluit wacht
 
 - **De ventilatie wordt deze winter geïnstalleerd, en dat verandert het huis.**
@@ -7949,11 +7991,9 @@ tab wisselde.
   verbruik van de badkamer bij de basislast, en daar staat het nu ook.
 
   Waar de 1.150 W wel voor nodig is: de beveiliging tegen overbelasting (78)
-  en het thermisch model (D). Daarvoor komt er een eigen veld voor het
-  vermogen van het typeplaatje, los van `estimatedW` als claim op het budget.
-  En `reclaimableW` hoort alleen apparaten te tellen die de regeling werkelijk
-  terugschakelt; bij dit huis zijn dat alleen de airco's, dus die wijziging
-  verandert hier niets. Wanneer de badkamer echt stookt, leert het model uit de
+  en het thermisch model (D). Sinds besluit 178 is dat `power.ratedW`, los van
+  `estimatedW`, en telt `reclaimableW` alleen wat de regeling terugschakelt.
+  Voor het thermisch model blijft het hieronder gelden. Wanneer de badkamer echt stookt, leert het model uit de
   sprongen van ongeveer 1,15 kW in de P1-meter. Verder voor het model: een
   infraroodpaneel verwarmt vooral mensen en oppervlakken, niet de lucht, dus
   de thermostaat ziet die warmte later en minder dan de bewoner hem voelt. En
