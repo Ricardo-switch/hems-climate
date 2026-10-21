@@ -343,6 +343,12 @@ export interface Deferrable {
   readonly programProgress?: DeviceRef;
 }
 
+/** Een plek in de volgorde op zon (besluit 176): een zone of een uitstelbaar apparaat. */
+export interface SunSlot {
+  readonly kind: 'zone' | 'deferrable';
+  readonly id: string;
+}
+
 export interface OccupancySource {
   readonly id: string;
   readonly ref: DeviceRef;
@@ -524,6 +530,14 @@ export interface SiteConfig {
    * alles zoals het was.
    */
   readonly deferrables?: readonly Deferrable[];
+  /**
+   * De volgorde op zon (besluit 176): de zones die op zon opwarmen of koelen en
+   * de uitstelbare apparaten, in één lijst. Wie eerder staat, krijgt het
+   * overschot eerst. Comfort gaat altijd voor; dit ordent alleen wat er dan nog
+   * over is. Zonder: eerst de zones (op hun voorrang per richting), dan de
+   * apparaten, zoals het was.
+   */
+  readonly sunOrder?: readonly SunSlot[];
   /**
    * Hoe het huis en de panelen liggen (besluit 93).
    *

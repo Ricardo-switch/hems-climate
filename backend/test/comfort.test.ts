@@ -151,3 +151,38 @@ describe('voorrang bij koelen en bij verwarmen', () => {
     expect(controleerComfort({ kamers: {}, voorrang: { koelen: ['zolder', 'zolder'], verwarmen: [] } }, exampleSite).ok).toBe(false);
   });
 });
+
+describe('op zon: kamers en apparaten in één volgorde (besluit 176)', () => {
+  const opties = { knownStrategies: defaultStrategies().ids };
+
+  it('zet eerst de kamers die op zon iets doen, dan de apparaten, zolang er niets gekozen is', () => {
+    const v = comfortView(exampleSite, null);
+    expect(v.voorrang.zon).toEqual([
+      { soort: 'kamer', id: 'woonkamer' },
+      { soort: 'kamer', id: 'zolder' },
+      { soort: 'apparaat', id: 'droger' },
+    ]);
+    expect(v.apparatenOpZon).toEqual([{ id: 'droger', naam: 'Droger' }]);
+  });
+
+  it('bewaart de gekozen volgorde, en de regeling krijgt hem als sunOrder', () => {
+    const zon = [{ soort: 'apparaat', id: 'droger' }, { soort: 'kamer', id: 'zolder' }, { soort: 'kamer', id: 'woonkamer' }];
+    const c = controleerComfort({ kamers: {}, voorrang: { koelen: ['zolder', 'woonkamer'], verwarmen: ['woonkamer', 'zolder'], zon } }, exampleSite);
+    expect(c.ok).toBe(true);
+    if (!c.ok) return;
+    const { raw: nieuw, toegevoegd } = withComfort(raw, c.comfort);
+    expect(toegevoegd).toContain('de volgorde op zon');
+    const parsed = parseSiteConfig(nieuw, opties);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.config.sunOrder).toEqual([{ kind: 'deferrable', id: 'droger' }, { kind: 'zone', id: 'zolder' }, { kind: 'zone', id: 'woonkamer' }]);
+    expect(comfortView(parsed.config, c.comfort).voorrang.zon).toEqual(zon);
+  });
+
+  it('weigert een onbekend of dubbel apparaat', () => {
+    const met = (zon: unknown) => controleerComfort({ kamers: {}, voorrang: { koelen: [], verwarmen: [], zon } }, exampleSite).ok;
+    expect(met([{ soort: 'apparaat', id: 'wasmachine' }])).toBe(false);
+    expect(met([{ soort: 'apparaat', id: 'droger' }, { soort: 'apparaat', id: 'droger' }])).toBe(false);
+    expect(met([{ soort: 'lamp', id: 'droger' }])).toBe(false);
+  });
+});

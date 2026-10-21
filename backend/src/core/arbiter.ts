@@ -22,6 +22,10 @@ import type { Action, Actuator } from './model.js';
 import { isOverridden } from './override.js';
 import { minutesSinceChange } from './state.js';
 import type { ActuatorState } from './state.js';
+import type { ClaimOutcome, SunClaim } from './deferrable.js';
+
+/** De strategie die op zon opwarmt of koelt (strategies/pvSurplus.ts); die voorstellen ordent de volgorde op zon. */
+const PV_SURPLUS = 'pv-surplus';
 
 /** Verschil waarboven een nieuw setpoint de moeite van sturen waard is. */
 const SETPOINT_TOLERANCE_C = 0.3;
@@ -31,6 +35,8 @@ export interface ArbitrationResult {
   readonly rejected: readonly RejectedIntent[];
   readonly commands: readonly Command[];
   readonly budget: PowerBudget;
+  /** Hoe het de apparaten op zon verging op hun plek in de volgorde op zon (besluit 176). */
+  readonly claims: ReadonlyMap<string, ClaimOutcome>;
 }
 
 function isRunning(action: string | undefined): boolean {
@@ -193,9 +199,33 @@ function windDownIntent(
   return null;
 }
 
+/*
+ * De volgorde op zon (besluit 176). Comfort en bijspringen gaan altijd voor;
+ * daarna komen de voorstellen om op zon op te warmen of te koelen, en de
+ * apparaten die op zon wachten, door elkaar in de volgorde die de bewoner
+ * koos. Een zone of apparaat dat er niet in staat, komt achteraan: zones in hun
+ * gewone volgorde, dan de apparaten.
+ */
+type ZonStap = { readonly intent: Intent } | { readonly claim: SunClaim };
+
+function zonVolgorde(sun: readonly Intent[], claims: readonly SunClaim[], ctx: DecisionContext): ZonStap[] {
+  const order = ctx.config.sunOrder ?? [];
+  const plek = (kind: 'zone' | 'deferrable', id: string, achteraan: number) => {
+    const i = order.findIndex((s) => s.kind === kind && s.id === id);
+    return i >= 0 ? i : order.length + achteraan;
+  };
+  const stappen = [
+    ...sun.map((intent, seq) => ({ stap: { intent } as ZonStap, plek: plek('zone', intent.zoneId, 0), seq })),
+    ...claims.map((claim, seq) => ({ stap: { claim } as ZonStap, plek: plek('deferrable', claim.id, 1), seq: sun.length + seq })),
+  ];
+  return stappen.sort((a, b) => a.plek - b.plek || a.seq - b.seq).map((x) => x.stap);
+}
+
 export function arbitrate(
   intents: readonly Intent[],
   ctx: DecisionContext,
+  /** Apparaten die op zon wachten; alleen met een volgorde op zon (besluit 176). */
+  sunClaims: readonly SunClaim[] = [],
 ): ArbitrationResult {
   const accepted: Intent[] = [];
   const rejected: RejectedIntent[] = [];
@@ -206,6 +236,10 @@ export function arbitrate(
   const allocatedA = new Map<string, number>();
   let startedSomething = false;
   let parkedSomething = false;
+  // Een apparaat op zon dat zijn deel kreeg (besluit 176): het telt als de start
+  // van deze ronde (besluit 68), maar start in de schaduw geen stabilisatie.
+  let claimStarted = false;
+  const claims = new Map<string, ClaimOutcome>();
 
   const reject = (intent: Intent, blockedBy: BlockCode, detail?: string): void => {
     rejected.push(detail == null ? { intent, blockedBy } : { intent, blockedBy, detail });
@@ -328,7 +362,7 @@ export function arbitrate(
          * beslissing slaat die meting over. Het oude systeem verbiedt het ook,
          * met `zolder_started_now`.
          */
-        if (startedSomething) {
+        if (startedSomething || claimStarted) {
           reject(intent, 'stabilisation_active', 'er is deze ronde al iets gestart');
           return;
         }
@@ -372,7 +406,28 @@ export function arbitrate(
     commands.push(...cmds);
   };
 
-  for (const intent of ordered(intents, ctx)) consider(intent);
+  /** Een apparaat op zon op zijn plek: het krijgt zijn deel als het past, zoals een start (besluiten 51 en 68). */
+  const claim = (c: SunClaim): void => {
+    const startedBefore = startedSomething || claimStarted;
+    const free = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
+    const accepted = !startedBefore && !ctx.stabilisationActive && free >= c.estimatedW;
+    if (accepted) {
+      allocatedW += c.estimatedW;
+      claimStarted = true;
+    }
+    claims.set(c.id, { accepted, startedBefore });
+  };
+
+  if (ctx.config.sunOrder && ctx.config.sunOrder.length > 0) {
+    const alle = ordered(intents, ctx);
+    for (const intent of alle.filter((i) => i.strategyId !== PV_SURPLUS)) consider(intent);
+    for (const stap of zonVolgorde(alle.filter((i) => i.strategyId === PV_SURPLUS), sunClaims, ctx)) {
+      if ('intent' in stap) consider(stap.intent);
+      else claim(stap.claim);
+    }
+  } else {
+    for (const intent of ordered(intents, ctx)) consider(intent);
+  }
 
   // Afbouwronde. Een apparaat waar geen enkele strategie nog iets mee wil —
   // omdat het budget op was, of omdat de vraag verdwenen is — moet terug naar
@@ -427,5 +482,6 @@ export function arbitrate(
       reclaimableW: ctx.reclaimableW,
       gridPowerW: ctx.gridPowerW,
     },
+    claims,
   };
 }

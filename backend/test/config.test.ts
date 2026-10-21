@@ -606,3 +606,21 @@ describe('vindbaarheid van de configuratie', () => {
     expect(text).toContain('een niveau te diep');
   });
 });
+
+describe('de volgorde op zon (besluit 176)', () => {
+  const droger = { id: 'droger', name: 'Droger', remoteStart: 'binary_sensor.droger_start', estimatedW: 600 };
+
+  it('kent zones en uitstelbare apparaten door elkaar, en is optioneel', () => {
+    const r = parse({ ...baseConfig(), deferrables: [droger], sunOrder: [{ kind: 'deferrable', id: 'droger' }, { kind: 'zone', id: 'woonkamer' }] });
+    expect(messages(r)).toBe('');
+    expect(r.ok && r.config.sunOrder).toEqual([{ kind: 'deferrable', id: 'droger' }, { kind: 'zone', id: 'woonkamer' }]);
+    const zonder = parse(baseConfig());
+    expect(zonder.ok && zonder.config.sunOrder).toBeUndefined();
+  });
+
+  it('weigert wat niet bestaat of er twee keer staat', () => {
+    expect(messages(parse({ ...baseConfig(), sunOrder: [{ kind: 'deferrable', id: 'droger' }] }))).toContain('apparaat "droger" bestaat niet');
+    expect(messages(parse({ ...baseConfig(), sunOrder: [{ kind: 'zone', id: 'woonkamer' }, { kind: 'zone', id: 'woonkamer' }] }))).toContain('staat er twee keer');
+    expect(messages(parse({ ...baseConfig(), sunOrder: [{ kind: 'lamp', id: 'x' }] }))).toContain('kind');
+  });
+});

@@ -9,7 +9,7 @@
  */
 
 import { arbitrate } from './arbiter.js';
-import { deferrableDecisions } from './deferrable.js';
+import { deferrableClaims, deferrableDecisions } from './deferrable.js';
 import { buildContext } from './context.js';
 import type { DecisionContext } from './context.js';
 import type {
@@ -154,7 +154,9 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
         .resolve(config.enabledStrategies)
         .flatMap((s) => s.propose(ctx));
 
-  const { accepted, rejected, commands, budget } = arbitrate(proposed, ctx);
+  // Met een volgorde op zon vragen de apparaten hun deel op hun plek (besluit 176); zonder alles zoals het was.
+  const sunClaims = config.sunOrder && config.sunOrder.length > 0 && !ctx.failsafeActive ? deferrableClaims(ctx) : [];
+  const { accepted, rejected, commands, budget, claims } = arbitrate(proposed, ctx, sunClaims);
 
   return {
     atMs: ctx.nowMs,
@@ -163,7 +165,7 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
     accepted,
     rejected,
     // De droger krijgt wat de airco's overlaten (besluiten 85 en 98).
-    explanation: withDeferrables(explain(ctx, budget, state), deferrableDecisions(ctx, budget.allocatedW, commands)),
+    explanation: withDeferrables(explain(ctx, budget, state), deferrableDecisions(ctx, budget.allocatedW, commands, sunClaims.length > 0 ? claims : undefined)),
   };
 }
 

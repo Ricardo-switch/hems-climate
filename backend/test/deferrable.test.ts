@@ -144,6 +144,33 @@ describe('de droger op zon (besluit 98)', () => {
     expect(d.commands.filter((c) => 'actuatorId' in c && c.actuatorId === 'droger')).toEqual([]);
   });
 
+  it('kan in de volgorde op zon voor een zone gaan, maar nooit voor comfort (besluit 176)', () => {
+    // 22° op zolder: geen comfort (koelen boven 22,5°), wel koelen op zon tot 21,5°.
+    const opZon = state({ gridPowerW: -1500, atticC: 22 });
+    const koeltOpZon = (config: SiteConfig) => decide({ config, state: opZon, strategies: defaultStrategies() }).commands.some((c) => c.kind === 'setAction' && c.action === 'cool');
+    // Zonder volgorde: de zolder eerst, de droger wacht een ronde (besluit 68).
+    expect(koeltOpZon(exampleSite)).toBe(true);
+    expect(dryer(opZon)).toMatchObject({ state: 'waiting', reason: 'stabilisation_active' });
+    // De droger vóór de zolder: hij krijgt het overschot, en de zolder wacht.
+    const drogerEerst: SiteConfig = { ...exampleSite, sunOrder: [{ kind: 'deferrable', id: 'droger' }, { kind: 'zone', id: 'zolder' }] };
+    expect(dryer(opZon, drogerEerst)).toMatchObject({ state: 'would_start', reason: 'surplus_available' });
+    expect(koeltOpZon(drogerEerst)).toBe(false);
+    const d = decide({ config: drogerEerst, state: opZon, strategies: defaultStrategies() });
+    expect(d.rejected.find((r) => r.intent.actuatorId === 'ac-zolder')?.blockedBy).toBe('stabilisation_active');
+    // In de schaduw start de droger niets: geen opdracht en geen stabilisatie.
+    expect(d.commands.some((c) => c.kind === 'startTimer')).toBe(false);
+    // De zolder vóór de droger: zoals zonder volgorde.
+    const zolderEerst: SiteConfig = { ...exampleSite, sunOrder: [{ kind: 'zone', id: 'zolder' }, { kind: 'deferrable', id: 'droger' }] };
+    expect(koeltOpZon(zolderEerst)).toBe(true);
+    expect(dryer(opZon, zolderEerst)).toMatchObject({ state: 'waiting', reason: 'stabilisation_active' });
+    // Te weinig zon voor de droger: hij wacht op zon.
+    expect(dryer(state({ gridPowerW: -500, atticC: 22 }), drogerEerst)).toMatchObject({ state: 'waiting', reason: 'surplus_insufficient' });
+    // Comfort gaat altijd voor: 26° op zolder koelt, ook met de droger vooraan.
+    const warm = state({ gridPowerW: -2500, atticC: 26 });
+    expect(decide({ config: drogerEerst, state: warm, strategies: defaultStrategies() }).commands.some((c) => c.kind === 'setAction' && c.action === 'cool')).toBe(true);
+    expect(dryer(warm, drogerEerst)).toMatchObject({ state: 'waiting', reason: 'stabilisation_active' });
+  });
+
   it('verandert niets zonder uitstelbare apparaten in de configuratie', () => {
     const { deferrables: _gone, ...without } = exampleSite;
     const d = decide({ config: without, state: state(), strategies: defaultStrategies() });
