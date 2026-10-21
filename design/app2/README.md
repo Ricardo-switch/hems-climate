@@ -49,6 +49,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (avondstand, dagstand `#rust`, uit `#uit`, `#kiezen`; besluiten 164 en 165) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
 | `Wand-Favorieten` (twaalf favorieten, vier per pagina, met het icoon van de kamer; `#kiezen` het kiesblad met de volgorde en een filter), `Wand-Rook` (het alarm bij rook; `#onderhoud` de rookmelders bij Onderhoud; besluit 170) | |
 | `Wand-Instellingen-Groep` (een groep op de wand: grote regels links, wat mist bovenaan, het deel zonder scrollen, uitleg achter "Waarvoor is dit?"; `#hulp`) | `Instellingen-Tel-Groep` (een groep instellingen: de delen onder elkaar in plaats van een rij om opzij te schuiven; `#deel`, `#comfort`, `#nu`) |
+| | `Thuis-Tel-Kaarten` (de auto, de batterij, deze maand en de deurbel als kaart; `#licht`, `#anders` andere standen; besluit 182) |
 | `Wand-Thuis-Profiel` (de wand in de kleur, met de kaarten en favorieten, van wiens comfort geldt; ieder die thuis is in zijn eigen kleur; besluit 181) | `Thuis-Tel-Licht` (Thuis in het lichte thema, met violet), `Instellingen-Tel-Jij` (Jij: alles van één bewoner; `#thema` het blad Thema en kleur, `#donker` hetzelfde in het donker) |
 
 Voorbeeldgetallen. Schermafdrukken in `screens/`, opnieuw te maken met

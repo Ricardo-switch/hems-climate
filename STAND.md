@@ -27,7 +27,7 @@ verwijzing bestaat.
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (het
-  eerste staat er, [181]). Talen
+  eerste en tweede staan er, [181], [182]). Talen
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
@@ -264,7 +264,8 @@ verwijzing bestaat.
 - **Thuis naar eigen smaak:** op de telefoon kies en schuif je zelf de kaarten
   en vier favorieten met één tik, bewaard bij je account; Straks schuift er
   vanzelf bij ([162]). Per account kies je eenvoudig of uitgebreid, grotere
-  letters en minder beweging ([164]).
+  letters en minder beweging ([164]). Om te kiezen ook de auto, de
+  thuisbatterij, deze maand en de deurbel, als het huis ze heeft ([182]).
 - **Een profiel per bewoner** (Jij, bovenaan Instellingen): je thema op je
   eigen apparaten (donker, licht of zoals je telefoon; een scherm blijft
   donker), een van zes eigen kleuren, je
@@ -598,4 +599,5 @@ verwijzing bestaat.
 [179]: DECISIONS.md#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan
 [180]: DECISIONS.md#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert
 [181]: DECISIONS.md#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt
+[182]: DECISIONS.md#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel
 <!-- links:einde -->

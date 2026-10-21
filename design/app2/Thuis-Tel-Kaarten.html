@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="nl" data-kleur="lucht">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Vier kaarten voor Thuis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Vier kaarten voor Thuis (schets, 21 oktober 2026; besluit 162, stap 10 van
+   * besluit 172). Elk om te kiezen bij Thuis aanpassen, en alleen als het huis
+   * het heeft: de auto, de thuisbatterij, deze maand en de deurbel.
+   *   (zonder)   de vier kaarten onder elkaar, donker
+   *   #licht     hetzelfde in het lichte thema
+   *   #anders    andere standen: de auto niet thuis, de batterij levert,
+   *              nog geen meters, vandaag niet aangebeld
+   */
+  body { margin: 0; width: 390px; }
+  .tel { min-height: 844px; padding: 18px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+  .kaart { padding: 16px 18px; color: inherit; text-decoration: none; display: block; }
+  .kop { display: flex; align-items: center; gap: 10px; }
+  .kop .ik { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); flex: none; }
+  .kop .ik svg { width: 19px; height: 19px; }
+  .kop h2 { flex: 1; }
+  .kop .pijl { color: var(--gedempt); font-size: 18px; }
+
+  /* De auto en de batterij: een groot percentage, een balk, en wat hij doet. */
+  .lading { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; margin-top: 12px; }
+  .lading .getal { font-size: 34px; line-height: 1; grid-row: 1 / 3; }
+  .laadbalk { height: 10px; border-radius: 5px; background: rgb(var(--wit) / 0.08); overflow: hidden; }
+  .laadbalk i { display: block; height: 100%; border-radius: 5px; }
+  .lading small { font-size: 13.5px; font-weight: 600; }
+
+  /* Deze maand: drie getallen naast elkaar. */
+  .drie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .drie div { padding: 10px 10px 9px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
+  .drie b { display: block; font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .drie span { font-size: 12px; color: var(--zacht); }
+
+  /* De deurbel: het laatste beeld, en wanneer. */
+  .beeld { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; position: relative; background: linear-gradient(160deg, #3b4a5c, #1b2533); }
+  .beeld svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .beeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.7); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
+  .klein.onder { margin: 8px 0 0; }
+
+  .anders { display: none; }
+  body.toon-anders .anders { display: block; }
+  body.toon-anders .lading.anders, body.toon-anders .drie.anders { display: grid; }
+  body.toon-anders .gewoon { display: none; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <!-- De auto -->
+  <a class="glas kaart" href="#">
+    <div class="kop"><span class="ik" data-ik="auto"></span><h2 class="kop-3">Tesla Model 3</h2><span class="pijl">›</span></div>
+    <div class="lading gewoon"><span class="getal">62%</span><div class="laadbalk"><i style="width: 62%; background: var(--mint)"></i></div><small class="mint-t">Laadt op zon, 3,2 kW</small></div>
+    <div class="lading anders"><span class="getal">48%</span><div class="laadbalk"><i style="width: 48%; background: var(--net)"></i></div><small style="color: var(--zacht)">Niet aangesloten</small></div>
+  </a>
+
+  <!-- De thuisbatterij -->
+  <a class="glas kaart" href="#">
+    <div class="kop"><span class="ik" data-ik="batterij"></span><h2 class="kop-3">De batterij</h2><span class="pijl">›</span></div>
+    <div class="lading gewoon"><span class="getal">78%</span><div class="laadbalk"><i style="width: 78%; background: var(--zon)"></i></div><small class="zon-t">Laadt met 1,8 kW zon</small></div>
+    <div class="lading anders"><span class="getal">54%</span><div class="laadbalk"><i style="width: 54%; background: var(--violet)"></i></div><small style="color: var(--violet-t)">Levert 0,9 kW aan het huis</small></div>
+  </a>
+
+  <!-- Deze maand -->
+  <a class="glas kaart" href="#">
+    <div class="kop"><span class="ik" data-ik="maand"></span><h2 class="kop-3">Oktober, tot nu</h2><span class="pijl">›</span></div>
+    <div class="drie gewoon">
+      <div><b class="zon-t">212</b><span>kWh opgewekt</span></div>
+      <div><b>71%</b><span>zelf gebruikt</span></div>
+      <div><b>€ 48</b><span>gekost, vorig jaar € 61</span></div>
+    </div>
+    <p class="klein onder anders">Kies eerst je meters, dan staat hier wat je opwekte, zelf gebruikte en wat het kostte.</p>
+  </a>
+
+  <!-- De deurbel -->
+  <a class="glas kaart" href="#">
+    <div class="kop"><span class="ik" data-ik="bel"></span><h2 class="kop-3">De deurbel</h2><span class="pijl">›</span></div>
+    <div class="beeld">
+      <svg viewBox="0 0 320 180" aria-hidden="true"><rect x="0" y="120" width="320" height="60" fill="#2a3442"/><rect x="40" y="30" width="80" height="100" rx="4" fill="#4a5a6e"/><rect x="190" y="50" width="90" height="70" rx="4" fill="#33414f"/><circle cx="160" cy="95" r="22" fill="#56667a"/><rect x="138" y="117" width="44" height="40" rx="12" fill="#56667a"/></svg>
+      <span class="wanneer gewoon">Aangebeld om 14:02</span>
+      <span class="wanneer anders">Vandaag niet aangebeld</span>
+    </div>
+  </a>
+</div>
+<script>
+  const IK = {
+    auto: '<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/>',
+    batterij: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M9 14h6M9 10h6"/>',
+    maand: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  };
+  for (const el of document.querySelectorAll('[data-ik]')) el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IK[el.dataset.ik]}</svg>`;
+  const h = location.hash.slice(1);
+  if (h === 'licht') document.documentElement.classList.add('sc-licht');
+  if (h === 'anders') document.body.classList.add('toon-anders');
+</script>
+</body>
+</html>

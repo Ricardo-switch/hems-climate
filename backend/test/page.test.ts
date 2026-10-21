@@ -45,7 +45,8 @@ import { LayoutStore } from '../src/web/layout.js';
 import { FunctiesStore, functiesGevonden } from '../src/web/functies.js';
 import { LightSwitch } from '../src/web/lights.js';
 import { UitstelStore } from '../src/web/uitstel.js';
-import { VoorkeurenStore } from '../src/web/voorkeuren.js';
+import { STANDAARD_TEL, VoorkeurenStore } from '../src/web/voorkeuren.js';
+import type { Opslag } from '../src/web/opslag.js';
 import { WeatherLog } from '../src/web/weather.js';
 import { EnergyStore, type EnergySource } from '../src/web/energy.js';
 import { ConnectionStore, connectionView, type FoundAppliance, type FoundPhase } from '../src/web/aansluiting.js';
@@ -109,7 +110,11 @@ const updateNu = { klaar: false, installeer: 0 };
 let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
-const metBatterijen = (h: HouseReport): HouseReport => (extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h);
+/** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
+let extraOpslag: Opslag | null = null;
+/** De deurbel als kaart (besluit 182); null is: geen deurbel. */
+let extraDeurbel: { camera: string; naam: string; laatsteMs: number | null; reserve?: string[] } | null = null;
+const metBatterijen = (h: HouseReport): HouseReport => ({ ...(extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h), ...(extraOpslag ? { opslag: extraOpslag } : {}) });
 import { onUsablePort } from './ports.js';
 import { exampleSite, exampleSitePath } from './site.js';
 import { readFileSync } from 'node:fs';
@@ -345,6 +350,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           },
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
+          deurbel: () => extraDeurbel,
           profielen: (userId) => profielenVan(bewonersStore.current, live.explanation.profile?.id ?? null, userId),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
@@ -2276,6 +2282,83 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await context.close();
     }
   }, 120_000);
+
+  /*
+   * Vier kaarten om te kiezen (besluit 182, schets Thuis-Tel-Kaarten): de
+   * auto, de thuisbatterij, deze maand en de deurbel. Wat het huis niet heeft,
+   * staat er niet en wordt niet aangeboden.
+   */
+  it('toont de auto, de batterij, deze maand en de deurbel als kaart (besluit 182)', async () => {
+    const zet = (kaarten: readonly string[]) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', kaarten }) });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    extraOpslag = {
+      batterij: { id: 'sessy', naam: 'De batterij', pct: 54, vermogenW: -900, stand: 'levert' },
+      auto: { id: 'tesla', naam: 'Tesla Model 3', pct: 62, aangesloten: true, laadt: true, vermogenW: 3200, bereikKm: 280 },
+    };
+    extraDeurbel = { camera: 'camera.deurbel_duidelijk', naam: 'Deurbel', laatsteMs: Date.now() - 30 * 60_000, reserve: ['camera.deurbel_vloeiend'] };
+    try {
+      expect((await zet([...STANDAARD_TEL, 'auto', 'batterij', 'maand', 'deurbel'])).ok).toBe(true);
+      await p.goto(`${baseUrl}/thuis.html`);
+      const kaart = (id: string) => p.locator(`#tel [data-kaart="${id}"]`);
+      await expect.poll(() => kaart('auto').textContent()).toContain('62%');
+      expect(await kaart('auto').textContent()).toContain('Laadt, 3,2 kW · 280 km');
+      expect(await kaart('auto').getAttribute('href')).toBe('apparaten.html#auto');
+      expect(await kaart('batterij').textContent()).toContain('Levert 0,9 kW aan het huis');
+      // Deze maand: met meters wat er opgewekt en zelf gebruikt is (na de test van Opbrengst), zonder wat er nodig is.
+      await expect.poll(() => kaart('maand').textContent()).toMatch(/kWh opgewekt.*zelf gebruikt|Kies eerst je meters/);
+      // De deurbel: het laatste beeld, en wanneer er werd aangebeld.
+      await expect.poll(() => kaart('deurbel').locator('img').count()).toBe(1);
+      expect(await kaart('deurbel').textContent()).toContain('Aangebeld om');
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten.png'), fullPage: true });
+      // In het licht: de tekst in de tint van het lichte thema (besluit 181).
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', thema: 'licht' }) });
+      await p.reload();
+      await expect.poll(() => kaart('batterij').textContent()).toContain('54%');
+      expect(await p.evaluate('getComputedStyle(document.querySelector("#tel [data-kaart=batterij] small")).color')).toBe('rgb(90, 75, 209)');
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten-licht.png'), fullPage: true });
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', thema: 'donker' }) });
+      await p.reload();
+      await expect.poll(() => kaart('deurbel').locator('img').count()).toBe(1);
+      // Een tik op de deurbel: het live beeld groot.
+      await kaart('deurbel').click();
+      await p.locator('.aanbel', { hasText: 'De deurbel' }).waitFor();
+      await p.locator('.aanbel [data-bel-dicht]').click();
+      // Een tik op de auto: bij Apparaten, op de kaart van de auto, met de batterij ernaast.
+      await kaart('auto').click();
+      await p.waitForURL(/apparaten\.html#auto$/);
+      const autoKaart = p.locator('#tel [data-lading="auto"]');
+      await expect.poll(() => autoKaart.textContent()).toContain('Tesla Model 3');
+      expect(await autoKaart.textContent()).toContain('Nog 280 km rijden.');
+      expect(await p.locator('#tel [data-lading="batterij"]').textContent()).toContain('Levert aan het huis');
+      await expect.poll(() => autoKaart.evaluate((el) => el.getBoundingClientRect().top < el.ownerDocument.documentElement.clientHeight && el.getBoundingClientRect().bottom > 0)).toBe(true);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-apparaten-auto.png') });
+      await p.goto(`${baseUrl}/thuis.html`);
+
+      // Zonder auto en deurbel: die kaarten staan er niet, en worden niet aangeboden.
+      extraOpslag = { batterij: extraOpslag.batterij, auto: null };
+      extraDeurbel = null;
+      expect((await zet(STANDAARD_TEL)).ok).toBe(true);
+      await p.reload();
+      await p.locator('#tel [data-aanpassen]').click();
+      await p.locator('#tel [data-kaart-erbij]').click();
+      const blad = p.locator('[data-kiesblad]');
+      await blad.locator('[data-erbij="batterij"]').waitFor();
+      expect(await blad.locator('[data-erbij="maand"]').count()).toBe(1);
+      expect(await blad.locator('[data-erbij="auto"]').count()).toBe(0);
+      expect(await blad.locator('[data-erbij="deurbel"]').count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      extraOpslag = null;
+      extraDeurbel = null;
+      await zet(STANDAARD_TEL);
+      await context.close();
+    }
+  }, 60_000);
 
   /*
    * Apparaten in ontwerp 2 (besluit 104; schets Wand-Apparaten): de droger die

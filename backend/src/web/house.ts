@@ -20,6 +20,7 @@
  * verborgen zijn: die is zelf de lamp (een armatuur, zie `collect`).
  */
 
+import { vindOpslag, type Opslag } from './opslag.js';
 import type { Warmtebron } from './warmte.js';
 import { findCameras } from './camera.js';
 import { GEVAAR_WOORD, melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
@@ -323,6 +324,8 @@ export interface HouseReport {
   readonly filters: readonly HouseBattery[];
   /** Onder welk percentage een batterij of filter een melding geeft (besluit 149); null is nooit. */
   readonly drempels: Drempels;
+  /** De thuisbatterij en de auto, als het huis ze heeft (besluit 182). */
+  readonly opslag: Opslag;
 }
 
 /** Wanneer een batterij of filter een melding geeft (besluit 149): onder dit percentage; null is nooit. */
@@ -1675,6 +1678,7 @@ export function buildHouse(
     batterijen,
     filters,
     drempels,
+    opslag: vindOpslag(registers, states),
   };
 }
 

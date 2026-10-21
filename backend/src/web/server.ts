@@ -454,6 +454,13 @@ export class WebServer {
       return;
     }
 
+    // De deurbel als kaart op Thuis (besluit 182): welk beeld, en wanneer er het laatst werd aangebeld.
+    if (path === '/api/deurbel') {
+      const d = this.#options.deurbel?.() ?? null;
+      sendJson(res, 200, d ? { aan: true, ...d } : { aan: false });
+      return;
+    }
+
     if (path === '/api/comfort') {
       const comfort = this.#options.comfort;
       if (comfort == null) {
