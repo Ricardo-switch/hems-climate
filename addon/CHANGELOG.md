@@ -1,5 +1,19 @@
 # Wat is er nieuw
 
+## 0.59.5
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook wat de dienst zelf zegt: de stand van je apparaten, het weer, de meldingen, Opbrengst, de besluiten bij Vandaag, de ligging van je panelen, Klaarzetten en de vragen bij het begin
+- Een melding op je telefoon komt in de taal die je bij Jij koos
+- Wat er nieuw is staat er ook in het Engels
+
+**Opgelost**
+
+- Bij Bewoners en toegang staat je rol in de taal van de app
+
 ## 0.59.4
 
 *22 oktober 2026*

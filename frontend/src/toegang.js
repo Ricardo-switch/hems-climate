@@ -50,7 +50,7 @@ async function laadAlles() {
 const isGast = () => bewoners?.ik?.soort === 'gast';
 
 function delen() {
-  const inlog = !sessie ? '…' : sessie.toegang === 'open' ? t('instellingen.geenInlog') : sessie.ingelogd ? `${sessie.naam ?? t('toegang.ingelogd')}${sessie.rol ? `, ${sessie.rol}` : ''}` : t('toegang.nietIngelogd');
+  const inlog = !sessie ? '…' : sessie.toegang === 'open' ? t('instellingen.geenInlog') : sessie.ingelogd ? `${sessie.naam ?? t('toegang.ingelogd')}${sessie.rol ? `, ${t(`toegang.rol.${sessie.rol}`)}` : ''}` : t('toegang.nietIngelogd');
   const namen = bewoners ? bewoners.bewoners.map((b) => b.naam).join(', ') || t('instellingen.nogNiemand') : '…';
   const versie = { id: 'versie', titel: t('toegang.versie'), zin: health?.nummer ? t('toegang.versieNieuw', { nummer: health.nummer }) : '…', stand: health ? 'goed' : null };
   // Een gast (besluit 151): alleen wie hij is en de versie; instellingen veranderen kan hij niet.
