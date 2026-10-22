@@ -45,8 +45,7 @@ describe('de zinnen voor Assist (besluit 184)', () => {
   it('houdt het voorbeeld voor de test in Home Assistant bij (HEMS_ZINNEN_SCHRIJF=1 schrijft het)', async () => {
     const tekst = `${JSON.stringify(zinnenNl(KAMERS.slice(0, 2)), null, 2)}\n`;
     if (process.env['HEMS_ZINNEN_SCHRIJF'] === '1') await writeFile(VOORBEELD, tekst, 'utf-8');
-    expect((await readFile(VOORBEELD, 'utf-8')).replace(/
-/g, '
-')).toBe(tekst);
+    // Op Windows kan git CRLF neerzetten; de inhoud telt.
+    expect((await readFile(VOORBEELD, 'utf-8')).replace(/\r\n/g, '\n')).toBe(tekst);
   });
 });
