@@ -65,4 +65,17 @@ describe('klaarzetten in Home Assistant (besluit 179)', () => {
   it('noemt nooit een entiteit', () => {
     for (const punt of klaarzetten(basis)) expect(punt.zin).not.toMatch(/\b(?:sensor|light|climate|person|binary_sensor)\.[a-z]/);
   });
+
+  it('zegt het in de taal van de app, met de plekken zoals de Engelse Home Assistant ze noemt (besluit 185)', () => {
+    const nl = klaarzetten(basis);
+    const en = klaarzetten(basis, 'en');
+    // Dezelfde punten, met dezelfde stand en hetzelfde pad.
+    expect(en.map((p) => [p.id, p.stand, p.pad])).toEqual(nl.map((p) => [p.id, p.stand, p.pad]));
+    expect(van(en, 'locatie')).toMatchObject({ titel: 'Location and time zone', waar: 'Settings › System › General' });
+    expect(van(en, 'klimaat').waar).toBe('Settings › Devices & services');
+    const zonder = klaarzetten({ ...basis, registers: { ...registers, floors: [], areas: [] } }, 'en');
+    expect(van(zonder, 'ruimtes').zin).toBe('Create floors and areas, and put every device in its area. The app takes them over as a proposal.');
+    // Geen Nederlands in de Engelse punten, behalve het wekwoord zelf.
+    for (const punt of en) expect(`${punt.titel} ${punt.zin} ${punt.waar}`.replace('Hé huis', '')).not.toMatch(/(?:je|het|een|de|van|met|wordt|staat|nog)/);
+  });
 });

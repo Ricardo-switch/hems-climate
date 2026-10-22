@@ -1583,7 +1583,7 @@ if (webPort != null) {
       : {}),
     ...(sleutel ? { sleutel } : {}),
     // Klaarzetten in Home Assistant (besluit 179): tellen wat er staat, nooit een entiteit noemen.
-    klaarzetten: async () => {
+    klaarzetten: async (lang?: Lang) => {
       const prefs = (await client.query<{ energy_sources?: { type?: string }[] }>('energy/get_prefs').catch(() => null)) ?? null;
       const grid = baseConfig?.power.gridPower;
       const netWaarde = grid ? Number(allStates.get(grid.id)?.state) : Number.NaN;
@@ -1602,7 +1602,7 @@ if (webPort != null) {
         spraak: spraakLijst,
         addOn: version.installatie === 'add-on',
         eigenPoort: eigenPoort != null,
-      });
+      }, lang);
     },
     // In de add-on stelt Home Assistant de vraag rechtstreeks aan de add-on, op zijn naam in het netwerk (besluit 177).
     ...(sleutel && version.installatie === 'add-on' && webPort != null ? { sleutelAdres: `http://${hostname()}:${webPort}/api/vraag` } : {}),

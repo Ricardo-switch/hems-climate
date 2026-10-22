@@ -1184,7 +1184,7 @@ export class WebServer {
      */
     // Klaarzetten in Home Assistant (besluit 179): per functie wat er staat en wat er mist.
     if (path === '/api/klaarzetten') {
-      sendJson(res, 200, { punten: this.#options.klaarzetten ? await this.#options.klaarzetten() : [] });
+      sendJson(res, 200, { punten: this.#options.klaarzetten ? await this.#options.klaarzetten(taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) : [] });
       return;
     }
 

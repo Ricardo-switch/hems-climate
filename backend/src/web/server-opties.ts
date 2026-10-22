@@ -139,7 +139,8 @@ export interface WebOptions {
    */
   readonly sleutelAdres?: string;
   /** Wat er in Home Assistant klaarstaat voor de functies van Smart Climate (besluit 179). */
-  readonly klaarzetten?: () => Promise<readonly KlaarPunt[]>;
+  /** In de taal van de app (besluit 185). */
+  readonly klaarzetten?: (lang?: Lang) => Promise<readonly KlaarPunt[]>;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
