@@ -21,6 +21,7 @@ import { basename } from 'node:path';
 import type { Command } from '../core/decision.js';
 import type { SiteConfig } from '../core/model.js';
 import { arbiterRunning, findLogFiles, observedRunning, readMoments } from '../divergence/read.js';
+import type { Lang } from './assistant.js';
 import { decisionWords } from './resident.js';
 
 const QUARTER_MS = 15 * 60_000;
@@ -45,6 +46,16 @@ export interface TodayDecision {
   /** In woorden, voor de tijdlijn van Waarom (besluit 94). */
   readonly wat: readonly string[];
   readonly waarom: readonly string[];
+}
+
+/**
+ * De dag met de woorden van de besluiten in de taal van de app (besluit 185).
+ * Het rapport wordt bewaard; de opdrachten en redenen staan erin, dus de
+ * woorden zijn per verzoek opnieuw te maken.
+ */
+export function todayInLang<T extends TodayReport>(r: T, config: SiteConfig, lang: Lang): T {
+  if (lang === 'nl') return r;
+  return { ...r, besluiten: r.besluiten.map((b) => ({ ...b, ...decisionWords(config, b.opdrachten as unknown as Command[], b.redenen, lang) })) };
 }
 
 export interface TodayReport {

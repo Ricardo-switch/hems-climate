@@ -130,14 +130,19 @@ const LEGENDA = () => `<span class="legenda"><span><i class="v"></i>${esc(t('van
 
 /* ------------------------------------------------------- de momenten */
 
-/** Wat een apparaat ging doen, op de actie uit het besluit van de dienst (die zijn woorden zijn nog Nederlands). */
+/** Wat een apparaat ging doen, op de actie in de opdracht van de dienst (besluit 185: niet op de woorden, die per taal verschillen). */
 const DOET = new Set(['koelen', 'verwarmen', 'uit', 'geparkeerd', 'drogen', 'ventileren']);
+const ACTIE = { cool: 'koelen', heat: 'verwarmen', off: 'uit', standby: 'geparkeerd' };
 const KLEUR = { koelen: 'var(--ijs)', verwarmen: 'var(--gloed)', uit: 'var(--mint)', geparkeerd: 'var(--zon)' };
 
 /** Een besluit van de dienst als moment: een kop, een zin, een kleur. */
 function momentVan(b) {
-  const [naam = '', actie = ''] = (b.wat[0] ?? '').split(': ');
-  const doel = b.wat.map((w) => /doel (\d+(,\d)?°)/.exec(w)?.[1]).find(Boolean);
+  // De naam van het apparaat staat voor de dubbele punt, in elke taal.
+  const [naam = '', woord = ''] = (b.wat[0] ?? '').split(': ');
+  const eerste = b.opdrachten?.[0];
+  const actie = eerste?.kind === 'setAction' ? (ACTIE[eerste.action] ?? woord) : eerste ? '' : woord;
+  const sp = (b.opdrachten ?? []).find((o) => o.kind === 'setSetpoint')?.setpointC;
+  const doel = sp != null ? `${nl(sp, Number.isInteger(sp) ? 0 : 1)}°` : null;
   const reden = (b.waarom[0] ?? '').split(': ').slice(1).join(': ');
   const kop = actie ? `${naam} ${DOET.has(actie) ? t(`vandaag.doet.${actie}`) : actie}` : hoofd(b.wat[0] ?? t('vandaag.besluit'));
   const zin = [reden ? `${hoofd(reden)}.` : '', doel && actie !== 'uit' ? t('vandaag.doel', { doel }) : ''].filter(Boolean).join(' ');

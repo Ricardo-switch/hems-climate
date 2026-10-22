@@ -28,7 +28,7 @@ import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import { exportInfo, writeExport } from './export.js';
 import { MAX_BACKUP, backupNaam } from './gegevens.js';
-import { TodayCache, withHistory } from './today.js';
+import { TodayCache, todayInLang, withHistory } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import { validateConnection } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type MeterOption } from './energy.js';
@@ -756,7 +756,7 @@ export class WebServer {
           const h = await historie(rapport.vanMs, rapport.totMs).catch(() => null);
           if (h) rapport = withHistory(rapport, h.zon, h.net);
         }
-        sendJson(res, 200, rapport);
+        sendJson(res, 200, todayInLang(rapport, config, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       } catch (error) {
         sendJson(res, 500, { fout: (error as Error).message });
       }
