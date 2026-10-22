@@ -22,10 +22,16 @@ export interface Nieuw {
   /** Wat niet goed ging en nu wel. */
   readonly opgelost?: readonly string[];
   /**
-   * Hetzelfde in het Engels (besluit 185), met evenveel regels per soort. Weg
-   * bij een versie van voor 0.59.5: dan toont de app het Nederlands.
+   * Hetzelfde in het Engels (besluit 185), met evenveel regels per soort. Een
+   * test eist het bij elke versie die de app laat zien; een oudere heeft het
+   * niet, en daar toont de app het Nederlands.
    */
   readonly en?: Pick<Nieuw, 'nieuw' | 'beter' | 'opgelost'>;
+}
+
+/** Wat er nieuw is, in de taal van de app: de Engelse regels als die er zijn. */
+export function nieuwInTaal(lijst: readonly Nieuw[], lang: 'nl' | 'en'): Omit<Nieuw, 'en'>[] {
+  return lijst.map(({ en, ...n }) => (lang === 'en' && en ? { versie: n.versie, datum: n.datum, ...en } : n));
 }
 
 /** De eerste regel van een versie: wat nieuw is, anders wat beter is, anders wat opgelost is. */
@@ -45,6 +51,12 @@ export const NIEUW: readonly Nieuw[] = [
       'In het Engels nu ook Wat je huis kan, Kamers en indeling, Inrichten, het welkom en de film',
       'Een buitenruimte wordt ook aan een Engelse naam herkend, zoals garden of driveway',
     ],
+    en: {
+      beter: [
+        'In English now too: What your house can do, Rooms and layout, Set up, the welcome and the film',
+        'An outdoor space is also recognised by an English name, such as garden or driveway',
+      ],
+    },
   },
   {
     versie: '0.59.3',
@@ -56,6 +68,15 @@ export const NIEUW: readonly Nieuw[] = [
     opgelost: [
       'Een schermlezer noemt de QR-code bij Bewoners nu een afbeelding',
     ],
+    en: {
+      beter: [
+        'In English now too: Settings, with You, Comfort, Control, Energy, Functions, and Residents and access',
+        'Searching in Settings also finds a setting by English words',
+      ],
+      opgelost: [
+        'A screen reader now calls the QR code in Residents an image',
+      ],
+    },
   },
   {
     versie: '0.59.2',
@@ -66,6 +87,14 @@ export const NIEUW: readonly Nieuw[] = [
     opgelost: [
       'Een test van de integratie in Home Assistant faalde soms, als Home Assistant de integratie nog aan het herladen was',
     ],
+    en: {
+      beter: [
+        'In English now too: Room, Today, Devices, Energy and the Assistant; the assistant answers in your language',
+      ],
+      opgelost: [
+        'A test of the integration in Home Assistant sometimes failed while Home Assistant was still reloading the integration',
+      ],
+    },
   },
   {
     versie: '0.59.1',
@@ -74,6 +103,12 @@ export const NIEUW: readonly Nieuw[] = [
       'In het Engels nu ook de meldingen, Onderhoud, het rookalarm, aanbellen en wat er nieuw is',
       'Thuis helemaal in het Engels: ook Aanpassen, de favorieten, de rondleiding en de wand als niemand kijkt',
     ],
+    en: {
+      beter: [
+        'In English now too: the notifications, Maintenance, the smoke alarm, the doorbell and what is new',
+        'Home entirely in English: also Customise, the favourites, the tour and the wall screen when nobody is looking',
+      ],
+    },
   },
   {
     versie: '0.59.0',
@@ -84,6 +119,14 @@ export const NIEUW: readonly Nieuw[] = [
     beter: [
       'Een schermlezer bereikt de kamers in de tekening van het huis',
     ],
+    en: {
+      nieuw: [
+        'In You you choose the language: automatically that of your Home Assistant account, Dutch or English. English is a trial: Home is already in it, the rest follows',
+      ],
+      beter: [
+        'A screen reader can reach the rooms in the drawing of the house',
+      ],
+    },
   },
   {
     versie: '0.58.3',
@@ -94,6 +137,14 @@ export const NIEUW: readonly Nieuw[] = [
       'Bij Sleutel voor de assistent zie je of de integratie ook is toegevoegd, en zo niet, waar je op Toevoegen en Verzenden klikt',
       'Assist kent ook de zones in een kamer, zoals de zithoek en de keuken: "hoe staat het met de zithoek" komt bij de goede regeling uit',
     ],
+    en: {
+      opgelost: [
+        'A room without control and without its own meter, such as the bathroom, shows its temperature again: that of the thermostat in the room',
+        'With an open-plan kitchen with zones, the drawing puts the kitchen under the Kitchen zone and the sofa under the other, instead of always the kitchen on the left',
+        'Key for the assistant shows whether the integration has also been added, and if not, where to click Add and Submit',
+        'Assist also knows the zones in a room, such as the seating area and the kitchen: "how is the seating area doing" reaches the right control',
+      ],
+    },
   },
   {
     versie: '0.58.2',
@@ -103,12 +154,28 @@ export const NIEUW: readonly Nieuw[] = [
       'In het lichte thema zie je weer welk woord de assistent nu uitspreekt',
       'De app ziet of Home Assistant de integratie geladen heeft, en vraagt niet voor niets om een herstart',
     ],
+    en: {
+      opgelost: [
+        'After a restart of Home Assistant the app got stuck: the house kept loading, Settings stayed empty, the assistant kept spinning',
+        'In the light theme you can see again which word the assistant is saying',
+        'The app sees whether Home Assistant has loaded the integration, and does not ask for a restart for nothing',
+      ],
+    },
   },
   {
     versie: '0.58.1',
     datum: '2026-10-22',
     beter: ['De integratie voor Assist heeft een eigen versie: een update van Smart Climate vraagt geen herstart van Home Assistant meer', 'In de app staat hoe je de integratie in HACS vindt'],
     opgelost: ['Een tik op een melding op je telefoon opent Smart Climate, in plaats van een 404'],
+    en: {
+      beter: [
+        'The integration for Assist has its own version: an update of Smart Climate no longer needs a restart of Home Assistant',
+        'The app explains how to find the integration in HACS',
+      ],
+      opgelost: [
+        'Tapping a notification on your phone opens Smart Climate, instead of a 404',
+      ],
+    },
   },
   {
     versie: '0.58.0',
@@ -117,6 +184,12 @@ export const NIEUW: readonly Nieuw[] = [
       'Assist van Home Assistant vraagt Smart Climate zonder YAML: de integratie Smart Climate, via HACS of met een knop in de app',
       'De add-on meldt zich vanzelf aan bij Home Assistant; de zinnen en de kamers van je huis houdt hij zelf bij',
     ],
+    en: {
+      nieuw: [
+        'Assist in Home Assistant asks Smart Climate without YAML: the Smart Climate integration, via HACS or with a button in the app',
+        'The add-on registers itself with Home Assistant; it keeps the sentences and the rooms of your house up to date itself',
+      ],
+    },
   },
   {
     versie: '0.57.0',
@@ -125,6 +198,12 @@ export const NIEUW: readonly Nieuw[] = [
       'Meldingen op je telefoon via de app van Home Assistant: rook en een haperende regeling meteen, batterij en een nieuwe versie overdag',
       'Bij Jij kies je wat je wilt horen, naar welke telefoon, en je nachtrust; met een proefmelding',
     ],
+    en: {
+      nieuw: [
+        'Notifications on your phone through the Home Assistant app: smoke and a faltering control straight away, battery and a new version during the day',
+        'In You you choose what you want to hear, on which phone, and your quiet hours; with a test notification',
+      ],
+    },
   },
   {
     versie: '0.56.0',

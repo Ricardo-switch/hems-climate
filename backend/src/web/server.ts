@@ -56,7 +56,7 @@ import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, n
 import type { Wie } from './bewoners.js';
 import { startOfLocalDay } from './today.js';
 import { MAX_ZEG } from './stem.js';
-import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
+import { NIEUW, TERUGKIJKEN, VERSIE, nieuwInTaal } from '../version.js';
 import { LiveStroom, type AlarmMelder } from './live.js';
 
 export type { AlarmMelder } from './live.js';
@@ -1195,7 +1195,7 @@ export class WebServer {
 
     if (path === '/api/versie') {
       // Hooguit tien versies terug (besluit 133).
-      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW.slice(0, TERUGKIJKEN) });
+      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: nieuwInTaal(NIEUW.slice(0, TERUGKIJKEN), taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) });
       return;
     }
 

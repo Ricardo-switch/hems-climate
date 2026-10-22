@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { WebServer, versionFromEnv, type Version } from '../src/web/server.js';
-import { NIEUW, VERSIE } from '../src/version.js';
+import { NIEUW, TERUGKIJKEN, VERSIE } from '../src/version.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
 import { FeedbackLog } from '../src/web/feedback.js';
@@ -392,6 +392,14 @@ describe('welke versie er draait (besluit 54)', () => {
     expect(v).toMatchObject({ nummer: VERSIE, commit: 'abc1234' });
     expect(v.nieuw[0]?.versie).toBe(VERSIE);
     expect(v.nieuw.length).toBeLessThanOrEqual(10);
+    // Wat de app laat zien, staat er ook in het Engels, met evenveel regels (besluit 185).
+    for (const n of NIEUW.slice(0, TERUGKIJKEN)) {
+      expect(n.en, n.versie).toBeDefined();
+      for (const soort of ['nieuw', 'beter', 'opgelost'] as const) expect([n.versie, soort, n.en?.[soort]?.length ?? 0]).toEqual([n.versie, soort, n[soort]?.length ?? 0]);
+    }
+    const en = (await (await fetch(`${base}/api/versie`, { headers: { 'x-taal': 'en' } })).json()) as Version & { nieuw: typeof NIEUW };
+    expect(en.nieuw[0]).toEqual({ versie: VERSIE, datum: NIEUW[0]!.datum, ...NIEUW[0]!.en });
+    expect(v.nieuw.some((n) => 'en' in n)).toBe(false);
   });
 });
 
