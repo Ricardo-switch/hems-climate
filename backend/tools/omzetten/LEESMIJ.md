@@ -24,8 +24,8 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 
 ## Waar deel 5 begint
 
-1. Na het samenvoegen van PR 52: markeer `v0.59.4` op de merge-commit op main
-   en zet beta erop vooruit (`git merge --ff-only origin/main`).
+1. PR 52 is samengevoegd, `v0.59.4` staat op de merge-commit en beta is bij
+   (22 oktober 2026). Begin met `git fetch` op beta.
 2. De dienst kent de taal al: `taalVan()` in `backend/src/web/server.ts`
    (`?taal=` of de kop `x-taal`), en `residentView` krijgt hem mee. Geef de
    taal door aan wat tekst maakt, en kies per taal een tekst, net als de
