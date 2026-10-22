@@ -33,12 +33,12 @@ async function laad() {
 
 /** Zes hoofdstukken, elk met kleine stappen (besluit 144). */
 const HOOFDSTUKKEN = [
-  ['Je huis', [['huis', 'Kamers en etages'], ['buiten', 'Buiten'], ['bewoners', 'Wie woont hier']]],
-  ['Apparaten', [['apparaten', 'Per kamer'], ['meten', 'Meten met']]],
-  ['Klimaat', [['warmte', 'Wat elk apparaat doet'], ['comfort', 'Comfort']]],
-  ['Energie', [['zon', 'Panelen'], ['ligging', 'Hoe ze liggen'], ['zekering', 'Zekering'], ['prijzen', 'Prijzen en meters']]],
-  ['Gemak', [['functies', "Licht en camera's"], ['wand', 'De wand']]],
-];
+  ['huis', ['huis', 'buiten', 'bewoners']],
+  ['apparaten', ['apparaten', 'meten']],
+  ['klimaat', ['warmte', 'comfort']],
+  ['energie', ['zon', 'ligging', 'zekering', 'prijzen']],
+  ['gemak', ['functies', 'wand']],
+].map(([h, stappen]) => [t(`inr.h.${h}`), stappen.map((s) => [s, t(`inr.stap.${s}`)])]);
 const STAPPEN = HOOFDSTUKKEN.flatMap(([, stappen]) => stappen);
 const ALLE = ['welkom', ...STAPPEN.map(([id]) => id), 'klaar'];
 /** "Hoofdstuk 2 · Meten met". */
@@ -119,21 +119,21 @@ function zeg(tekst, fout = false) {
 
 /** Een deur van de dienst: het antwoord, of null als het niet lukte (de reden staat dan in beeld). */
 async function stuur(pad, body) {
-  zeg('Bewaren…');
+  zeg(t('groep.bewaren'));
   let res;
   try {
     res = await deur(pad, body);
   } catch {
-    zeg('Niet bewaard: geen verbinding met Smart Climate', true);
+    zeg(t('groep.geenVerbinding'), true);
     return null;
   }
   if (res === null) return null;
   const uit = await res.json().catch(() => ({}));
   if (!res.ok) {
-    zeg(res.status === 403 ? 'Alleen de beheerder kan dit bewaren' : (uit.fout ?? 'Niet bewaard'), true);
+    zeg(res.status === 403 ? t('groep.beheerder') : (uit.fout ?? t('groep.nietBewaard')), true);
     return null;
   }
-  zeg('Bewaard');
+  zeg(t('groep.bewaard'));
   return uit;
 }
 
@@ -163,7 +163,7 @@ function model(stap) {
   const i = ALLE.indexOf(stap);
   // De tekening uit huismodel, net als op Thuis (5S); elke stap laat meer zien.
   const a = antwoorden();
-  const t = huismodel.tekening(d.huis, {
+  const tek = huismodel.tekening(d.huis, {
     zon: d.zon,
     kamer: (r) => {
       const k = huismodel.kamerModel(r, null);
@@ -174,18 +174,18 @@ function model(stap) {
       return k;
     },
   });
-  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = t;
+  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = tek;
   const metZon = i >= ALLE.indexOf('zon');
   // Zoals op Thuis (besluit 166): het aantal dat je opgaf, per kant bij beide kanten.
-  const opDak = metZon ? huismodel.panelenOpDak(a.panelen, t.piekW) : { panelen: 0, panelenLinks: 0 };
+  const opDak = metZon ? huismodel.panelenOpDak(a.panelen, tek.piekW) : { panelen: 0, panelenLinks: 0 };
   return {
-    beschrijving: 'Je huis, zoals Smart Climate het nu kent.',
+    beschrijving: t('inr.beschrijving'),
     tijd: app.tijdVanDeDag(d.zon),
     wolken: 0.3,
     zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, ...opDak },
     etages,
-    voordeur: t.voordeur,
-    buitenunit: i >= ALLE.indexOf('apparaten') && t.buitenunit ? { ...t.buitenunit, aan: false } : null,
+    voordeur: tek.voordeur,
+    buitenunit: i >= ALLE.indexOf('apparaten') && tek.buitenunit ? { ...tek.buitenunit, aan: false } : null,
     net: true,
     oprit,
     tuin,
@@ -195,7 +195,7 @@ function model(stap) {
     garage,
     stromen: [],
     // Hoe ze liggen (besluit 157): op de panelen, zoals de schets.
-    labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
+    labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString(taal.locale, { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
   };
 }
 
@@ -203,9 +203,8 @@ function model(stap) {
 
 const knop = (attrs, tekst, aan = false, klasse = '') => `<button type="button" class="chip${aan ? ' aan' : ''}${klasse ? ` ${klasse}` : ''}" ${attrs} aria-pressed="${aan}">${esc(tekst)}</button>`;
 const rij = (kop, inhoud, extra = '') => `<div class="rij"><b>${esc(kop)}</b><div class="chips">${inhoud}</div>${extra}</div>`;
-const meervoud = (n, een, veel) => `${n} ${n === 1 ? een : veel}`;
 /** "a, b en c". */
-const lijstje = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} en ${xs.at(-1)}` : xs.join(''));
+const lijstje = (xs) => huismodel.opsomming(xs);
 const schakel = (attr, tekst, aan, uit = false) => `<button type="button" class="schakelrij" role="switch" aria-checked="${aan}" ${attr} ${uit ? 'disabled' : ''}><span>${esc(tekst)}</span><i aria-hidden="true"></i></button>`;
 
 /* Het startscherm (besluit 158): de getallen tikken open tot een lijst. */
@@ -221,15 +220,15 @@ function welkom() {
   const n = tellingen();
   const vak = (soort, getal, tekst) => `<button type="button" class="vak" data-lijst="${soort}"><b>${getal}</b><span>${esc(tekst)}</span><i aria-hidden="true">›</i></button>`;
   return {
-    waar: 'Welkom',
-    kop: 'Laten we je huis neerzetten',
+    waar: t('inr.welkom'),
+    kop: t('inr.welkomKop'),
     groot: true,
-    uitleg: 'Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Het duurt ongeveer tien minuten.',
+    uitleg: t('inr.welkomZin'),
     inhoud: d.huis
-      ? `<div class="cijfers">${vak('etages', n.etages, `${n.etages === 1 ? 'etage' : 'etages'}${n.buiten ? ', en buiten' : ''}`)}${vak('kamers', n.kamers, `${n.kamers === 1 ? 'kamer' : 'kamers'}${n.buiten ? `, en ${n.buiten} buiten` : ''}`)}${vak('apparaten', n.apparaten, 'apparaten')}${vak('klimaat', n.klimaat, 'om te verwarmen of koelen')}</div>
-         <div class="noot">Tik op een getal voor de lijst. Bovenaan is groen nagelopen; omlijnd komt al uit Home Assistant.</div>`
-      : '<p class="zacht">Even het huis lezen uit Home Assistant…</p>',
-    voet: ['', '<a class="knop knop-licht" href="#huis">Begin</a>'],
+      ? `<div class="cijfers">${vak('etages', n.etages, t(n.buiten ? 'inr.tel.etagesBuiten' : 'inr.tel.etages', { n: n.etages }))}${vak('kamers', n.kamers, n.buiten ? t('inr.tel.kamersBuiten', { n: n.kamers, buiten: n.buiten }) : t('inr.tel.kamers', { n: n.kamers }))}${vak('apparaten', n.apparaten, t('inr.tel.apparaten', { n: n.apparaten }))}${vak('klimaat', n.klimaat, t('inr.tel.klimaat'))}</div>
+         <div class="noot">${esc(t('inr.welkomNoot'))}</div>`
+      : `<p class="zacht">${esc(t('inr.huisLezen'))}</p>`,
+    voet: ['', `<a class="knop knop-licht" href="#huis">${esc(t('inr.begin'))}</a>`],
   };
 }
 /**
@@ -237,7 +236,7 @@ function welkom() {
  * verwarmt of koelt, staat in een eigen lijst (besluit 166): dat hoort bij de
  * regeling, en heeft geen ×.
  */
-const wegChip = (a) => `<button type="button" class="chip weg" data-verberg="${esc(a.id)}" aria-label="${esc(a.naam)} weghalen">${esc(a.naam)}<span aria-hidden="true">×</span></button>`;
+const wegChip = (a) => `<button type="button" class="chip weg" data-verberg="${esc(a.id)}" aria-label="${esc(t('energie.weghalen', { naam: a.naam }))}">${esc(a.naam)}<span aria-hidden="true">×</span></button>`;
 const geenKlimaat = (lijst) => (lijst ?? []).filter((a) => a.soort !== 'klimaat');
 function welkomLijst() {
   const n = tellingen();
@@ -246,25 +245,25 @@ function welkomLijst() {
   let uitleg = '';
   let rijen = [];
   if (lijst === 'etages' || lijst === 'kamers') {
-    kop = lijst === 'etages' ? meervoud(n.etages, 'etage', 'etages') : meervoud(n.kamers, 'kamer', 'kamers');
-    uitleg = 'Zoals Home Assistant ze kent. Namen, etages en zones verander je in de volgende stap.';
+    kop = lijst === 'etages' ? t('instellingen.etages', { n: n.etages }) : t('instellingen.kamers', { n: n.kamers });
+    uitleg = t('inr.lijst.kamers');
     rijen = perEtage.map((e) => rij(e.naam, (e.ruimtes ?? []).map((r) => `<span class="chip stil">${esc(r.naam)}</span>`).join('')));
   } else if (lijst === 'apparaten') {
-    kop = meervoud(n.apparaten, 'apparaat', 'apparaten');
-    uitleg = 'Per kamer, zonder wat verwarmt of koelt: dat staat bij het getal ernaast. Tik op × om iets weg te halen; in Home Assistant blijft het staan.';
+    kop = t('instellingen.apparaten', { n: n.apparaten });
+    uitleg = t('inr.lijst.apparaten');
     rijen = perEtage.flatMap((e) => (e.ruimtes ?? []).filter((r) => geenKlimaat(r.apparaten).length).map((r) => rij(r.naam, geenKlimaat(r.apparaten).map(wegChip).join(''))));
-    if (geenKlimaat(d.huis?.zonderRuimte).length) rijen.push(rij('Nog zonder kamer', geenKlimaat(d.huis.zonderRuimte).map(wegChip).join('')));
+    if (geenKlimaat(d.huis?.zonderRuimte).length) rijen.push(rij(t('inr.zonderKamer'), geenKlimaat(d.huis.zonderRuimte).map(wegChip).join('')));
   } else {
-    kop = `${n.klimaat} om te verwarmen of koelen`;
-    uitleg = 'Wat de regeling met elk apparaat doet, kies je bij Klimaat.';
+    kop = t('inr.lijst.klimaatKop', { n: n.klimaat });
+    uitleg = t('inr.lijst.klimaat');
     rijen = binnen().filter((r) => klimaatIn(r).length).map((r) => rij(r.naam, klimaatIn(r).map((a) => `<span class="chip stil">${esc(a.naam)}</span>`).join('')));
   }
   return {
-    waar: 'Welkom · wat er gevonden is',
+    waar: t('inr.gevonden'),
     kop,
     uitleg,
-    inhoud: `<div class="rijen">${rijen.join('') || '<p class="zacht">Niets gevonden.</p>'}</div>`,
-    voet: ['<button type="button" class="zachtknop" data-lijst="">Terug</button>', '<a class="knop knop-licht" href="#huis">Begin</a>'],
+    inhoud: `<div class="rijen">${rijen.join('') || `<p class="zacht">${esc(t('inr.nietsGevonden'))}</p>`}</div>`,
+    voet: [`<button type="button" class="zachtknop" data-lijst="">${esc(t('panelen.terug'))}</button>`, `<a class="knop knop-licht" href="#huis">${esc(t('inr.begin'))}</a>`],
   };
 }
 
@@ -279,22 +278,22 @@ function bewerkKamer(k, etages, naamVan, c) {
   const r = binnen().find((x) => x.id === k.id);
   const voorstel = r && !r.soortGekozen ? r.soort : null;
   const soortNaam = (w) => huismodel.KAMER_SOORTEN.find(([x]) => x === w)?.[1] ?? '';
-  const soorten = [['', voorstel && soortNaam(voorstel) ? `Uit de naam: ${soortNaam(voorstel)}` : 'Uit de naam'], ...huismodel.KAMER_SOORTEN];
-  const zoneSoorten = [['', 'Soort'], ...huismodel.ZONE_SOORTEN];
-  const zones = (k.zones ?? []).map((z) => `<div class="zonerij"><input class="veld" data-zonenaam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="Naam van zone ${esc(z.naam)}"><select class="veld" data-zonesoort="${esc(z.id)}" aria-label="Soort van zone ${esc(z.naam)}">${zoneSoorten.map(([v, t]) => `<option value="${v}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select><button type="button" class="chip" data-zoneweg="${esc(z.id)}" aria-label="Zone ${esc(z.naam)} weghalen">×</button></div>`).join('');
+  const soorten = [['', voorstel && soortNaam(voorstel) ? t('indeling.uitNaam', { naam: soortNaam(voorstel) }) : t('inr.uitNaam')], ...huismodel.KAMER_SOORTEN];
+  const zoneSoorten = [['', t('inr.soort')], ...huismodel.ZONE_SOORTEN];
+  const zones = (k.zones ?? []).map((z) => `<div class="zonerij"><input class="veld" data-zonenaam="${esc(z.id)}" value="${esc(z.naam)}" maxlength="40" aria-label="${esc(t('indeling.zone.naam', { naam: z.naam }))}"><select class="veld" data-zonesoort="${esc(z.id)}" aria-label="${esc(t('indeling.zone.soort', { naam: z.naam }))}">${zoneSoorten.map(([v, x]) => `<option value="${v}" ${v === (z.soort ?? '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><button type="button" class="chip" data-zoneweg="${esc(z.id)}" aria-label="${esc(t('indeling.zone.weg', { naam: z.naam }))}">×</button></div>`).join('');
   const buren = (c?.kamers ?? []).filter((x) => x.id !== k.id && x.etage === k.etage);
   // Links of rechts op de etage (besluit 166); slepen in het huis kan ook.
   const opEtage = (c?.kamers ?? []).filter((x) => x.etage === k.etage);
   const plek = opEtage.findIndex((x) => x.id === k.id);
-  const schuif = opEtage.length > 1 ? `<div class="veldlabel breed"><span>Plek op de etage, of sleep de kamer in het huis</span><div class="chips"><button type="button" class="chip" data-schuifkamer="-1" ${plek <= 0 ? 'disabled' : ''}>← Naar links</button><button type="button" class="chip" data-schuifkamer="1" ${plek >= opEtage.length - 1 ? 'disabled' : ''}>Naar rechts →</button></div></div>` : '';
+  const schuif = opEtage.length > 1 ? `<div class="veldlabel breed"><span>${esc(t('inr.plek'))}</span><div class="chips"><button type="button" class="chip" data-schuifkamer="-1" ${plek <= 0 ? 'disabled' : ''}>${esc(t('inr.links'))}</button><button type="button" class="chip" data-schuifkamer="1" ${plek >= opEtage.length - 1 ? 'disabled' : ''}>${esc(t('inr.rechts'))}</button></div></div>` : '';
   return `<div class="bewerk">
-    <label class="veldlabel"><span>Naam</span><input class="veld" data-naam="${esc(k.id)}" value="${esc(k.naam)}" maxlength="40"></label>
-    <label class="veldlabel"><span>Etage</span><select class="veld" data-etage="${esc(k.id)}">${etages.map((x) => `<option value="${esc(x.id)}" ${x.id === k.etage ? 'selected' : ''}>${esc(naamVan(x))}</option>`).join('')}</select></label>
+    <label class="veldlabel"><span>${esc(t('indeling.naam'))}</span><input class="veld" data-naam="${esc(k.id)}" value="${esc(k.naam)}" maxlength="40"></label>
+    <label class="veldlabel"><span>${esc(t('indeling.etageLabel'))}</span><select class="veld" data-etage="${esc(k.id)}">${etages.map((x) => `<option value="${esc(x.id)}" ${x.id === k.etage ? 'selected' : ''}>${esc(naamVan(x))}</option>`).join('')}</select></label>
     ${k.etage === 'buiten' ? '' : schuif}
-    ${k.etage === 'buiten' ? '' : `<label class="veldlabel breed"><span>Soort kamer</span><select class="veld" data-soort="${esc(k.id)}">${soorten.map(([v, t]) => `<option value="${v}" ${v === (k.soort ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`}
-    ${k.etage === 'buiten' ? '' : `<div class="veldlabel breed"><span>Zones, voor één open ruimte met meer delen, zoals keuken en zithoek</span>${zones}<input class="veld" data-nieuwezone placeholder="+ Zone toevoegen" aria-label="Nieuwe zone" maxlength="40"></div>`}
-    ${buren.length ? `<label class="veldlabel"><span>Eén ruimte met</span><select class="veld" data-samen="${esc(k.id)}"><option value="">Samenvoegen met…</option>${buren.map((x) => `<option value="${esc(x.id)}">${esc(x.naam)}</option>`).join('')}</select></label>` : ''}
-    <div class="veldlabel"><span>&nbsp;</span><button type="button" class="chip gevaar" data-kamerweg="${esc(k.id)}">${weghalen === k.id ? 'Tik nog eens om weg te halen' : 'Kamer weghalen'}</button></div>
+    ${k.etage === 'buiten' ? '' : `<label class="veldlabel breed"><span>${esc(t('indeling.soortKamer'))}</span><select class="veld" data-soort="${esc(k.id)}">${soorten.map(([v, x]) => `<option value="${v}" ${v === (k.soort ?? '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>`}
+    ${k.etage === 'buiten' ? '' : `<div class="veldlabel breed"><span>${esc(t('inr.zones'))}</span>${zones}<input class="veld" data-nieuwezone placeholder="${esc(t('inr.zoneErbij'))}" aria-label="${esc(t('indeling.nieuweZone'))}" maxlength="40"></div>`}
+    ${buren.length ? `<label class="veldlabel"><span>${esc(t('inr.eenRuimte'))}</span><select class="veld" data-samen="${esc(k.id)}"><option value="">${esc(t('inr.samenvoegen'))}</option>${buren.map((x) => `<option value="${esc(x.id)}">${esc(x.naam)}</option>`).join('')}</select></label>` : ''}
+    <div class="veldlabel"><span>&nbsp;</span><button type="button" class="chip gevaar" data-kamerweg="${esc(k.id)}">${esc(t(weghalen === k.id ? 'inr.nogEens' : 'indeling.kamerWeg'))}</button></div>
   </div>`;
 }
 function huisStap() {
@@ -303,21 +302,21 @@ function huisStap() {
   const naamVan = (e) => c?.etages?.[e.id] ?? e.standaardNaam;
   const rijen = etages.filter((e) => e.id !== 'buiten').map((e) => {
     const kamers = (c?.kamers ?? []).filter((k) => k.etage === e.id);
-    const chips = kamers.map((k) => knop(`data-kamer="${esc(k.id)}"`, k.naam, open === k.id)).join('') + knop(`data-nieuw="${esc(e.id)}"`, '+ Kamer', open === `nieuw:${e.id}`, 'plus');
+    const chips = kamers.map((k) => knop(`data-kamer="${esc(k.id)}"`, k.naam, open === k.id)).join('') + knop(`data-nieuw="${esc(e.id)}"`, t('inr.plusKamer'), open === `nieuw:${e.id}`, 'plus');
     let bewerk = '';
     const k = kamers.find((x) => x.id === open);
     if (k) bewerk = bewerkKamer(k, etages, naamVan, c);
     else if (open === `nieuw:${e.id}`) {
-      bewerk = `<div class="bewerk"><input class="veld" data-nieuwnaam="${esc(e.id)}" placeholder="Naam, bijvoorbeeld Kantoor" aria-label="Naam van de nieuwe kamer" maxlength="40"><button type="button" class="chip aan" data-voegtoe="${esc(e.id)}">Toevoegen</button></div>`;
+      bewerk = `<div class="bewerk"><input class="veld" data-nieuwnaam="${esc(e.id)}" placeholder="${esc(t('inr.kantoor'))}" aria-label="${esc(t('inr.nieuweNaam'))}" maxlength="40"><button type="button" class="chip aan" data-voegtoe="${esc(e.id)}">${esc(t('indeling.toevoegen'))}</button></div>`;
     }
     return rij(naamVan(e), chips, bewerk);
   });
   return {
     waar: waarVan('huis'),
-    kop: 'Klopt je huis?',
-    uitleg: 'De kamers uit Home Assistant, per etage. Tik op een kamer om de naam, de etage of de zones te veranderen. In het huis sleep je een kamer naar een andere plek.',
+    kop: t('inr.huisKop'),
+    uitleg: t('inr.huisZin'),
     // De tip alleen zolang er geen kamer open staat: dan krijgt die de ruimte.
-    inhoud: `<div class="rijen">${rijen.join('')}</div>${open ? '' : '<div class="noot">Een deur ertussen maakt twee kamers. Open, zoals keuken en zithoek, is één ruimte met zones: voeg de kamers samen.</div>'}`,
+    inhoud: `<div class="rijen">${rijen.join('')}</div>${open ? '' : `<div class="noot">${esc(t('inr.huisNoot'))}</div>`}`,
   };
 }
 /*
@@ -359,8 +358,8 @@ function verplaatsKamer(next, id, { doelId = null, stap = 0 } = {}) {
 function samenvoegen(next, hoofdId, anderId) {
   const k = next.kamers.find((x) => x.id === hoofdId);
   const b = next.kamers.find((x) => x.id === anderId);
-  if (!k || !b) return 'Die kamer is er niet meer.';
-  if (k.regelzone && b.regelzone) return `${k.naam} en ${b.naam} hebben elk een eigen regeling. Voeg ze samen bij Instellingen › Indeling.`;
+  if (!k || !b) return t('inr.nietMeer');
+  if (k.regelzone && b.regelzone) return t('inr.tweeRegelingen', { a: k.naam, b: b.naam });
   const bezet = new Set(k.zones.map((z) => z.id));
   if (!k.zones.length) {
     const eigen = { id: idVan(k.naam, bezet), naam: k.naam, ...(k.soort ? { soort: k.soort } : {}) };
@@ -393,8 +392,8 @@ function samenvoegen(next, hoofdId, anderId) {
 const buitenKamers = () => (concept()?.kamers ?? []).filter((k) => k.etage === 'buiten');
 /** [deel, naam, soort van een ruimte die erbij hoort]; auto en carport horen bij de oprit. */
 const RONDOM = [
-  ['oprit', 'Oprit', 'oprit'], ['auto', 'Auto op de oprit', null], ['carport', 'Carport', null], ['garage', 'Garage, los van het huis', 'garage'],
-  ['voortuin', 'Voortuin', 'voortuin'], ['tuin', 'Achtertuin', 'tuin'], ['terras', 'Terras', 'terras'], ['balkon', 'Balkon', 'balkon'], ['tuinhuis', 'Tuinhuis of schuur', 'tuinhuis'],
+  ['oprit', t('soort.buiten.oprit'), 'oprit'], ['auto', t('indeling.autoOprit'), null], ['carport', t('soort.buiten.carport'), null], ['garage', t('soort.buiten.garage'), 'garage'],
+  ['voortuin', t('soort.buiten.voortuin'), 'voortuin'], ['tuin', t('soort.buiten.tuin'), 'tuin'], ['terras', t('soort.buiten.terras'), 'terras'], ['balkon', t('soort.buiten.balkon'), 'balkon'], ['tuinhuis', t('soort.buiten.tuinhuis'), 'tuinhuis'],
 ];
 const OP_OPRIT = new Set(['auto', 'carport']);
 function buitenNu(k) {
@@ -404,21 +403,21 @@ function buitenNu(k) {
 function buitenStap() {
   const rond = huismodel.rondNu(d.huis);
   const kamers = buitenKamers();
-  const delen = RONDOM.map(([w, t, soort]) => {
+  const delen = RONDOM.map(([w, naam, soort]) => {
     const aan = !!rond[w] && (!OP_OPRIT.has(w) || !!rond.oprit);
     const gekoppeld = soort ? kamers.find((k) => buitenNu(k).soort === soort) : null;
     const keuze = aan && soort && kamers.length
-      ? `<label class="koppel"><span>Ruimte</span><select class="veld" data-bkoppel="${soort}" aria-label="Ruimte uit Home Assistant bij ${esc(t)}">${gekoppeld ? '' : '<option value="">geen</option>'}${kamers.map((k) => `<option value="${esc(k.id)}" ${k.id === gekoppeld?.id ? 'selected' : ''}>${esc(k.naam)}</option>`).join('')}</select></label>`
+      ? `<label class="koppel"><span>${esc(t('inr.ruimte'))}</span><select class="veld" data-bkoppel="${soort}" aria-label="${esc(t('inr.ruimteBij', { naam }))}">${gekoppeld ? '' : `<option value="">${esc(t('energie.geen'))}</option>`}${kamers.map((k) => `<option value="${esc(k.id)}" ${k.id === gekoppeld?.id ? 'selected' : ''}>${esc(k.naam)}</option>`).join('')}</select></label>`
       : '';
-    return `<div class="deel">${schakel(`data-rond="${w}"`, t, aan, OP_OPRIT.has(w) && !rond.oprit)}${keuze}</div>`;
+    return `<div class="deel">${schakel(`data-rond="${w}"`, naam, aan, OP_OPRIT.has(w) && !rond.oprit)}${keuze}</div>`;
   });
   // Ruimtes die bij geen deel horen dat aan staat: die tekent het huis nergens.
   const los = kamers.filter((k) => !RONDOM.some(([w, , s]) => s && rond[w] && buitenNu(k).soort === s));
   return {
     waar: waarVan('buiten'),
-    kop: 'Wat is er rond je huis?',
-    uitleg: kamers.length ? 'Zet aan wat er is. Bij Ruimte kies je de ruimte uit Home Assistant met de lampen en camera van dat deel.' : 'Zet aan wat er is. Zo tekent het huis je buitenkant.',
-    inhoud: `<div class="rijen"><div class="rondom">${delen.join('')}</div></div>${los.length ? `<div class="noot">${esc(lijstje(los.map((k) => k.naam)))} ${los.length === 1 ? 'hoort' : 'horen'} nog bij geen deel. Kies ${los.length === 1 ? 'hem' : 'ze'} bij Ruimte.</div>` : ''}`,
+    kop: t('inr.buitenKop'),
+    uitleg: t(kamers.length ? 'inr.buitenRuimte' : 'inr.buitenZin'),
+    inhoud: `<div class="rijen"><div class="rondom">${delen.join('')}</div></div>${los.length ? `<div class="noot">${esc(t('inr.losBuiten', { n: los.length, namen: lijstje(los.map((k) => k.naam)) }))}</div>` : ''}`,
   };
 }
 
@@ -449,16 +448,16 @@ function bewonerBewerk(x, i, lijst) {
   const kan = b?.ik?.magBeheren || x.ik;
   const hoofd = lijst[0];
   const thuis = x.gekoppeld
-    ? `<div class="veldlabel breed"><span>Thuis volgens</span><span class="zacht" style="padding: 0">${esc(x.aanwezigheidNaam ?? '')} in Home Assistant, gekoppeld aan het account</span></div>`
-    : `<label class="veldlabel breed"><span>Thuis volgens</span><select class="veld" data-bbron="${esc(x.id)}" ${kan ? '' : 'disabled'}><option value="">Geen: het huis weet het niet</option>${(x.kiesbaar ?? []).map((y) => `<option value="${esc(y.id)}" ${y.id === x.aanwezigheid ? 'selected' : ''}>${esc(y.naam)} · ${y.soort === 'persoon' ? 'persoon' : 'sensor'}</option>`).join('')}</select></label>`;
+    ? `<div class="veldlabel breed"><span>${esc(t('bewoners.thuisVolgens'))}</span><span class="zacht" style="padding: 0">${esc(t('inr.gekoppeld', { naam: x.aanwezigheidNaam ?? '' }))}</span></div>`
+    : `<label class="veldlabel breed"><span>${esc(t('bewoners.thuisVolgens'))}</span><select class="veld" data-bbron="${esc(x.id)}" ${kan ? '' : 'disabled'}><option value="">${esc(t('bewoners.geenSensor'))}</option>${(x.kiesbaar ?? []).map((y) => `<option value="${esc(y.id)}" ${y.id === x.aanwezigheid ? 'selected' : ''}>${esc(y.naam)} · ${esc(t(y.soort === 'persoon' ? 'inr.persoon' : 'bewoners.sensor'))}</option>`).join('')}</select></label>`;
   const volgorde = b?.ik?.magBeheren && lijst.length > 1
-    ? `<div class="veldlabel breed"><span>Plek in de volgorde: wie eerst thuis is, bepaalt het comfort</span><div class="chips"><button type="button" class="chip" data-bvolg="-1" ${i === 0 ? 'disabled' : ''}>↑ Hoger</button><button type="button" class="chip" data-bvolg="1" ${i === lijst.length - 1 ? 'disabled' : ''}>↓ Lager</button>${x.hoofd ? '' : '<button type="button" class="chip" data-bhoofd>Hoofdgebruiker maken</button>'}</div></div>`
+    ? `<div class="veldlabel breed"><span>${esc(t('inr.volgorde'))}</span><div class="chips"><button type="button" class="chip" data-bvolg="-1" ${i === 0 ? 'disabled' : ''}>${esc(t('inr.hoger'))}</button><button type="button" class="chip" data-bvolg="1" ${i === lijst.length - 1 ? 'disabled' : ''}>${esc(t('inr.lager'))}</button>${x.hoofd ? '' : `<button type="button" class="chip" data-bhoofd>${esc(t('bewoners.maakHoofd'))}</button>`}</div></div>`
     : '';
   const comfort = x.hoofd
-    ? `<div class="veldlabel breed"><span>Comfort</span><span class="zacht" style="padding: 0">Het comfort van het huis; dat stel je in bij Klimaat › Comfort.</span></div>`
-    : `<div class="veldlabel breed"><span>Comfort</span><div class="chips">${knop('data-bcomfort="eigen"', 'Eigen temperaturen', x.comfort === 'eigen')}${knop('data-bcomfort="volgt"', `Volgt ${hoofd?.naam ?? 'de hoofdgebruiker'}`, x.comfort !== 'eigen')}${x.comfort === 'eigen' ? `<a class="chip plus" href="comfort.html?bewoner=${encodeURIComponent(x.id)}">Temperaturen instellen ›</a>` : ''}</div></div>`;
+    ? `<div class="veldlabel breed"><span>${esc(t('bewoners.comfort'))}</span><span class="zacht" style="padding: 0">${esc(t('inr.comfortHuis'))}</span></div>`
+    : `<div class="veldlabel breed"><span>${esc(t('bewoners.comfort'))}</span><div class="chips">${knop('data-bcomfort="eigen"', t('inr.eigenTemp'), x.comfort === 'eigen')}${knop('data-bcomfort="volgt"', t('bewoners.volgtKnop', { naam: hoofd?.naam ?? t('jij.deHoofdgebruiker') }), x.comfort !== 'eigen')}${x.comfort === 'eigen' ? `<a class="chip plus" href="comfort.html?bewoner=${encodeURIComponent(x.id)}">${esc(t('inr.tempInstellen'))}</a>` : ''}</div></div>`;
   return `<div class="bewerk" style="grid-column: 1 / -1">
-    <label class="veldlabel breed"><span>Zo noemt het huis ${x.ik ? 'je' : esc(x.naam)}</span><input class="veld" data-bnaam="${esc(x.id)}" value="${esc(x.naam)}" maxlength="40" ${kan ? '' : 'disabled'}></label>
+    <label class="veldlabel breed"><span>${esc(t(x.ik ? 'bewoners.noemt.ik' : 'bewoners.noemt.ander', { naam: x.naam }))}</span><input class="veld" data-bnaam="${esc(x.id)}" value="${esc(x.naam)}" maxlength="40" ${kan ? '' : 'disabled'}></label>
     ${thuis}${volgorde}${comfort}
   </div>`;
 }
@@ -467,15 +466,15 @@ function bewonersStap() {
   const lijst = b?.bewoners ?? [];
   const rijen = lijst.map((x, i) => {
     const open = x.id === openBewoner;
-    const wat = x.hoofd ? 'hoofdgebruiker' : x.comfort === 'eigen' ? 'eigen comfort' : `volgt ${lijst[0]?.naam ?? 'de hoofdgebruiker'}`;
-    return `<button type="button" class="waarderij bewonerrij${open ? ' open' : ''}" data-bewoner="${esc(x.id)}" aria-expanded="${open}"><span>${i + 1}. ${esc(x.naam)}${x.ik ? ' (jij)' : ''}</span><span>${esc(wat)} ›</span></button>${open ? bewonerBewerk(x, i, lijst) : ''}`;
+    const wat = x.hoofd ? t('toegang.hoofdgebruiker') : x.comfort === 'eigen' ? t('toegang.eigenComfort') : t('jij.volgt', { naam: lijst[0]?.naam ?? t('jij.deHoofdgebruiker') });
+    return `<button type="button" class="waarderij bewonerrij${open ? ' open' : ''}" data-bewoner="${esc(x.id)}" aria-expanded="${open}"><span>${i + 1}. ${esc(x.naam)}${x.ik ? esc(t('toegang.jij')) : ''}</span><span>${esc(wat)} ›</span></button>${open ? bewonerBewerk(x, i, lijst) : ''}`;
   }).join('');
   return {
     waar: waarVan('bewoners'),
-    kop: 'Wie woont hier?',
-    uitleg: 'Wie één keer inlogt, staat erbij. De eerste die thuis is, bepaalt het comfort. Tik op iemand om het in te stellen.',
-    inhoud: `<div class="rijen">${rijen || '<p class="zacht" style="padding: 0">Nog niemand.</p>'}</div>
-      ${openBewoner ? '' : `<div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">Laat de anderen deze code scannen en één keer inloggen met Home Assistant.</span></div>`}`,
+    kop: t('inr.bewonersKop'),
+    uitleg: t('inr.bewonersZin'),
+    inhoud: `<div class="rijen">${rijen || `<p class="zacht" style="padding: 0">${esc(t('toegang.nogNiemand'))}</p>`}</div>
+      ${openBewoner ? '' : `<div class="erbij"><div class="qr" role="img" aria-label="${esc(t('bewoners.qr'))}">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">${esc(t('inr.scannen'))}</span></div>`}`,
   };
 }
 async function stuurBewoner(body, tekst) {
@@ -495,23 +494,24 @@ let openApparaat = null;
 function apparatenStap() {
   const los = d.huis?.zonderRuimte ?? [];
   const kamers = (d.huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).map((r) => ({ r, e })));
-  const opties = (voorstel, leeg = 'Kies een kamer…') => `<option value="">${leeg}</option>${kamers.map(({ r }) => `<option value="${esc(r.id)}" ${r.id === voorstel ? 'selected' : ''}>${esc(r.naam)}</option>`).join('')}<option value="-">Niet tonen</option>`;
-  const losRijen = los.map((a) => `<div class="rij breed"><b>${esc(a.naam)}</b><select class="veld" data-plek="${esc(a.id)}" aria-label="Kamer voor ${esc(a.naam)}">${opties(a.voorstelKamer)}</select></div>`).join('');
+  const nietTonen = `<option value="-">${esc(t('functies.nietTonen'))}</option>`;
+  const opties = (voorstel, leeg = t('indeling.kiesKamer')) => `<option value="">${esc(leeg)}</option>${kamers.map(({ r }) => `<option value="${esc(r.id)}" ${r.id === voorstel ? 'selected' : ''}>${esc(r.naam)}</option>`).join('')}${nietTonen}`;
+  const losRijen = los.map((a) => `<div class="rij breed"><b>${esc(a.naam)}</b><select class="veld" data-plek="${esc(a.id)}" aria-label="${esc(t('inr.kamerVoor', { naam: a.naam }))}">${opties(a.voorstelKamer)}</select></div>`).join('');
   const perKamer = kamers.filter(({ r }) => geenKlimaat(r.apparaten).length).map(({ r }) => {
     const apps = geenKlimaat(r.apparaten);
     const open = apps.find((a) => a.id === openApparaat);
     const chips = apps.map((a) => knop(`data-apparaat="${esc(a.id)}"`, a.naam, a.id === openApparaat)).join('');
     const bewerk = open
-      ? `<div class="bewerk"><label class="veldlabel breed"><span>Naar een andere kamer</span><select class="veld" data-verplaats="${esc(sleutel(open))}" aria-label="Kamer voor ${esc(open.naam)}">${opties(null, `Blijft in ${r.naam}`).replace('<option value="-">Niet tonen</option>', '')}</select></label><div class="veldlabel breed"><button type="button" class="chip gevaar" data-verberg="${esc(open.id)}">Weghalen uit de app</button></div></div>`
+      ? `<div class="bewerk"><label class="veldlabel breed"><span>${esc(t('inr.andereKamer'))}</span><select class="veld" data-verplaats="${esc(sleutel(open))}" aria-label="${esc(t('inr.kamerVoor', { naam: open.naam }))}">${opties(null, t('inr.blijftIn', { naam: r.naam })).replace(nietTonen, '')}</select></label><div class="veldlabel breed"><button type="button" class="chip gevaar" data-verberg="${esc(open.id)}">${esc(t('inr.uitApp'))}</button></div></div>`
       : '';
     return rij(r.naam, chips, bewerk);
   }).join('');
-  const ingedeeld = kamers.reduce((t, { r }) => t + geenKlimaat(r.apparaten).length, 0);
+  const ingedeeld = kamers.reduce((som, { r }) => som + geenKlimaat(r.apparaten).length, 0);
   return {
     waar: waarVan('apparaten'),
-    kop: los.length === 0 ? 'Klopt waar alles staat?' : los.length === 1 ? 'Waar staat dit apparaat?' : `Waar staan deze ${los.length} apparaten?`,
-    uitleg: `${meervoud(ingedeeld, 'apparaat staat', 'apparaten staan')} al in een kamer, uit Home Assistant. Tik er een aan om hem te verplaatsen of weg te halen. Wat verwarmt of koelt, komt bij Klimaat.`,
-    inhoud: `<div class="rijen">${losRijen ? `${losRijen}${los.some((a) => a.voorstelKamer) ? '<p class="zacht" style="padding: 4px 0 8px">Een kamer die al gekozen staat, komt uit de naam. Volgende neemt hem over.</p>' : ''}` : ''}${perKamer}</div>`,
+    kop: los.length === 0 ? t('inr.app.klopt') : t('inr.app.waar', { n: los.length }),
+    uitleg: t('inr.app.zin', { n: ingedeeld }),
+    inhoud: `<div class="rijen">${losRijen ? `${losRijen}${los.some((a) => a.voorstelKamer) ? `<p class="zacht" style="padding: 4px 0 8px">${esc(t('inr.app.uitNaam'))}</p>` : ''}` : ''}${perKamer}</div>`,
   };
 }
 
@@ -526,22 +526,22 @@ function metenStap() {
     const hier = bronnen.filter((b) => b.kamerId === r.id);
     const chips = hier.map((b) => knop(`data-meet="${esc(b.id)}" data-meetkamer="${esc(r.id)}"`, `${b.naam} · ${nl(b.c)}°`, gekozen.has(b.id))).join('');
     // Zonder eigen thermometer in de kamer: alleen waarmee hij nu meet.
-    const nu = r.meetMet?.length ? `<span class="zacht">${chips ? 'nu: ' : 'meet met '}${esc(r.meetMet.join(' en '))}</span>` : '';
-    return rij(r.naam, chips + (nu || (chips ? '' : '<span class="zacht">geen thermometer in deze kamer</span>')));
+    const nu = r.meetMet?.length ? `<span class="zacht">${esc(t(chips ? 'inr.meet.nu' : 'inr.meet.met', { namen: lijstje(r.meetMet) }))}</span>` : '';
+    return rij(r.naam, chips + (nu || (chips ? '' : `<span class="zacht">${esc(t('inr.meet.geen'))}</span>`)));
   });
   return {
     waar: waarVan('meten'),
-    kop: 'Welke thermometer telt per kamer?',
-    uitleg: 'Kies er één of meer; een kamer met twee rekent met het gemiddelde. Niets gekozen is ook goed: dan meet de kamer zoals hij nu doet.',
-    inhoud: `<div class="rijen">${rijen.join('') || '<p class="zacht">Nog geen kamer om te meten.</p>'}</div>`,
+    kop: t('inr.meet.kop'),
+    uitleg: t('inr.meet.zin'),
+    inhoud: `<div class="rijen">${rijen.join('') || `<p class="zacht">${esc(t('inr.meet.nogGeen'))}</p>`}</div>`,
   };
 }
 
 /* De regeling per kamer (besluit 138): dezelfde drie keuzes als bij Indeling. */
-const ROLLEN = [['houdt', 'Houdt de kamer op temperatuur', 'Op temperatuur'], ['zon', 'Helpt als er zon over is', 'Op zon'], ['kijken', 'Kijkt alleen mee', 'Kijkt mee']];
+const ROLLEN = ['houdt', 'zon', 'kijken'].map((r) => [r, t(`inr.rol.${r}`), t(`inr.rol.${r}Kort`)]);
 const rolVan = (k, r, key) => (k?.rollen ? (k.rollen[key] ?? 'kijken') : (klimaatIn(r).find((a) => sleutel(a) === key)?.klimaat?.rol ?? 'kijken'));
 /* Waar de warmte vandaan komt (besluit 122); hoort bij Klimaat (besluit 158). */
-const VERWARMING = [['cv', 'Cv-ketel'], ['warmtepomp', 'Warmtepomp'], ['hybride', 'Hybride'], ['stadsverwarming', 'Stadsverwarming'], ['weetniet', 'Weet ik niet']];
+const VERWARMING = [...['cv', 'warmtepomp', 'hybride', 'stadsverwarming'].map((x) => [x, t(`energie.bron.${x}`)]), ['weetniet', t('energie.weetNiet')]];
 let toevoegenIn = null;
 /*
  * Iets toevoegen (besluit 167): hetzelfde als bij Kamers en indeling. Eerst wat
@@ -550,28 +550,28 @@ let toevoegenIn = null;
  * de hand. Een airco of thermostaat uit Home Assistant kies je uit de lijst.
  */
 let toevoeg = null;
-const TOEVOEG_SOORT = [['radiator', 'Radiator'], ['vloer', 'Vloerverwarming'], ['paneel', 'Infraroodpaneel'], ['kachel', 'Elektrische kachel'], ['ha', 'Airco of thermostaat']];
+const TOEVOEG_SOORT = [...['radiator', 'vloer', 'paneel', 'kachel'].map((b) => [b, huismodel.metHoofdletter(t(`bron.${b}`))]), ['ha', t('inr.aircoThermo')]];
 function toevoegVorm(r, los, elders) {
   const v = toevoeg ?? { soort: null, aan: null, apparaat: null };
   const cv = v.soort === 'radiator' || v.soort === 'vloer';
   const ketel = huismodel.cvThermostaat(d.huis, antwoorden().verwarming);
   const toestellen = binnen().flatMap((x) => klimaatIn(x).map((a) => ({ a, r: x })));
-  const uitHA = `<select class="veld" data-toevoegen="${esc(r.id)}" aria-label="Apparaat uit Home Assistant"><option value="">Kies uit Home Assistant…</option>${[...los.map((x) => ({ key: x.id, naam: x.naam, waar: 'nog los' })), ...elders.filter((x) => x.r.id !== r.id).map((x) => ({ key: sleutel(x.a), naam: x.a.naam, waar: x.r.naam }))].map((x) => `<option value="${esc(x.key)}">${esc(x.naam)} (${esc(x.waar)})</option>`).join('')}</select>`;
+  const uitHA = `<select class="veld" data-toevoegen="${esc(r.id)}" aria-label="${esc(t('inr.uitHA'))}"><option value="">${esc(t('inr.kiesUitHA'))}</option>${[...los.map((x) => ({ key: x.id, naam: x.naam, waar: t('inr.nogLos') })), ...elders.filter((x) => x.r.id !== r.id).map((x) => ({ key: sleutel(x.a), naam: x.a.naam, waar: x.r.naam }))].map((x) => `<option value="${esc(x.key)}">${esc(t('energie.naamKamer', { naam: x.naam, kamer: x.waar }))}</option>`).join('')}</select>`;
   const aanOpties = cv
-    ? [['thermostaat', ketel ? `Met de thermostaat van de cv (${ketel.naam})` : 'Met de thermostaat van de cv'], ...(v.soort === 'radiator' ? [['knop', 'Met een slimme radiatorknop']] : []), ['hand', 'Met de hand']]
-    : [['thermostaat', 'Met een thermostaat'], ['stekker', 'Met een slimme stekker of module'], ['hand', 'Met de hand']];
+    ? [['thermostaat', ketel ? t('indeling.cvThermoNaam', { naam: ketel.naam }) : t('indeling.cvThermo')], ...(v.soort === 'radiator' ? [['knop', t('indeling.aan.knop')]] : []), ['hand', t('indeling.aan.hand')]]
+    : ['thermostaat', 'stekker', 'hand'].map((w) => [w, t(`indeling.aan.${w}`)]);
   const kiesbaar = v.aan === 'knop' ? toestellen.filter((x) => x.a.radiatorknop) : toestellen;
   const welke = v.soort && v.soort !== 'ha' && v.aan && v.aan !== 'hand' && !(cv && v.aan === 'thermostaat')
-    ? `<select class="veld" data-toevoeg-apparaat aria-label="Welk apparaat"><option value="">${v.aan === 'knop' ? 'Welke radiatorknop?' : 'Welk apparaat?'}</option>${kiesbaar.map((x) => `<option value="${esc(sleutel(x.a))}" ${sleutel(x.a) === v.apparaat ? 'selected' : ''}>${esc(x.a.naam)} (${esc(x.r.naam)})</option>`).join('')}</select>`
+    ? `<select class="veld" data-toevoeg-apparaat aria-label="${esc(t('inr.welkApparaat'))}"><option value="">${esc(t(v.aan === 'knop' ? 'inr.welkeKnop' : 'inr.welkApparaatVraag'))}</option>${kiesbaar.map((x) => `<option value="${esc(sleutel(x.a))}" ${sleutel(x.a) === v.apparaat ? 'selected' : ''}>${esc(t('energie.naamKamer', { naam: x.a.naam, kamer: x.r.naam }))}</option>`).join('')}</select>`
     : '';
   const klaar = v.soort && v.soort !== 'ha' && v.aan && (v.aan === 'hand' || (cv && v.aan === 'thermostaat') || v.apparaat);
   return `<div class="kolom toevoeg" style="width: 100%">
-    <span class="zacht">Wat hangt er?</span>
-    <div class="chips">${TOEVOEG_SOORT.map(([w, t]) => knop(`data-toevoeg-soort="${w}"`, t, v.soort === w)).join('')}</div>
+    <span class="zacht">${esc(t('inr.watHangt'))}</span>
+    <div class="chips">${TOEVOEG_SOORT.map(([w, x]) => knop(`data-toevoeg-soort="${w}"`, x, v.soort === w)).join('')}</div>
     ${v.soort === 'ha' ? uitHA : ''}
-    ${v.soort && v.soort !== 'ha' ? `<span class="zacht">Hoe gaat het aan?</span><div class="chips">${aanOpties.map(([w, t]) => knop(`data-toevoeg-aan="${w}"`, t, v.aan === w)).join('')}</div>${welke}` : ''}
-    <div class="chips">${knop('data-toevoeg-annuleer', 'Annuleren')}${v.soort !== 'ha' ? `<button type="button" class="chip aan" data-toevoeg-bewaar ${klaar ? '' : 'disabled'}>Toevoegen</button>` : ''}</div>
-    ${v.soort === 'paneel' || v.soort === 'kachel' ? '<span class="zacht">Het vermogen en of hij op zon mag, kies je later bij Kamers en indeling.</span>' : ''}
+    ${v.soort && v.soort !== 'ha' ? `<span class="zacht">${esc(t('indeling.hoeAan'))}</span><div class="chips">${aanOpties.map(([w, x]) => knop(`data-toevoeg-aan="${w}"`, x, v.aan === w)).join('')}</div>${welke}` : ''}
+    <div class="chips">${knop('data-toevoeg-annuleer', t('indeling.annuleren'))}${v.soort !== 'ha' ? `<button type="button" class="chip aan" data-toevoeg-bewaar ${klaar ? '' : 'disabled'}>${esc(t('indeling.toevoegen'))}</button>` : ''}</div>
+    ${v.soort === 'paneel' || v.soort === 'kachel' ? `<span class="zacht">${esc(t('inr.vermogenLater'))}</span>` : ''}
   </div>`;
 }
 function warmteStap() {
@@ -584,29 +584,29 @@ function warmteStap() {
     // Drie knoppen naast elkaar, zoals de schets: op temperatuur, op zon, kijkt mee (besluit 146).
     const toestellen = klimaatIn(r).map((x) => {
       const nuRol = rolVan(k, r, sleutel(x));
-      const knoppen = ROLLEN.map(([w, t, kort]) => `<button type="button" class="${w === 'zon' ? 'zon' : ''}" data-rolwaarde="${w}" aria-pressed="${w === nuRol}" title="${t}">${kort}</button>`).join('');
+      const knoppen = ROLLEN.map(([w, lang, kort]) => `<button type="button" class="${w === 'zon' ? 'zon' : ''}" data-rolwaarde="${w}" aria-pressed="${w === nuRol}" title="${esc(lang)}">${esc(kort)}</button>`).join('');
       const ketel = huismodel.cvThermostaat(d.huis, a.verwarming)?.sleutel === sleutel(x);
-      return `<div class="toestel">${esc(x.naam)}${ketel ? '<span class="zacht"> · zet de ketel aan</span>' : ''}<div class="seg" role="group" aria-label="Wat de regeling met ${esc(x.naam)} doet" data-rol="${esc(sleutel(x))}" data-rolkamer="${esc(r.id)}">${knoppen}</div></div>`;
+      return `<div class="toestel">${esc(x.naam)}${ketel ? `<span class="zacht"> · ${esc(t('inr.zetKetel'))}</span>` : ''}<div class="seg" role="group" aria-label="${esc(t('inr.watMet', { naam: x.naam }))}" data-rol="${esc(sleutel(x))}" data-rolkamer="${esc(r.id)}">${knoppen}</div></div>`;
     }).join('');
     const bronnen = (r.bronnen ?? []).filter((b) => !b.apparaat).map((b) => `<span class="chip gevonden">${esc(huismodel.bronNaam(b))}</span>`).join('');
-    const keuze = toevoegenIn === r.id ? toevoegVorm(r, los, elders) : knop(`data-erbij="${esc(r.id)}"`, '+ Iets toevoegen', false, 'plus');
+    const keuze = toevoegenIn === r.id ? toevoegVorm(r, los, elders) : knop(`data-erbij="${esc(r.id)}"`, t('indeling.plusIets'), false, 'plus');
     // Zonder eigen apparaat: meedoen met een kamer die wel regelt (besluit 142).
     const regelaars = binnen().filter((x) => x.id !== r.id && x.zoneId);
-    const mee = !toestellen && regelaars.length ? `<select class="veld" data-meedoen="${esc(r.id)}" aria-label="Doet ${esc(r.naam)} mee met een andere kamer?"><option value="">Doet niet mee</option>${regelaars.map((x) => `<option value="${esc(x.id)}" ${k?.meedoenMet === x.id ? 'selected' : ''}>Doet mee met ${esc(x.naam)}</option>`).join('')}</select>` : '';
-    const inhoud = `<div class="kolom" style="width: 100%">${toestellen}${bronnen ? `<div class="chips">${bronnen}</div>` : ''}${mee}${!toestellen && !bronnen && !mee ? '<span class="zacht">niets, dat is goed</span>' : ''}<div class="chips">${keuze}</div></div>`;
+    const mee = !toestellen && regelaars.length ? `<select class="veld" data-meedoen="${esc(r.id)}" aria-label="${esc(t('inr.meedoenVraag', { naam: r.naam }))}"><option value="">${esc(t('inr.nietMee'))}</option>${regelaars.map((x) => `<option value="${esc(x.id)}" ${k?.meedoenMet === x.id ? 'selected' : ''}>${esc(t('indeling.doetMee', { naam: x.naam }))}</option>`).join('')}</select>` : '';
+    const inhoud = `<div class="kolom" style="width: 100%">${toestellen}${bronnen ? `<div class="chips">${bronnen}</div>` : ''}${mee}${!toestellen && !bronnen && !mee ? `<span class="zacht">${esc(t('inr.nietsGoed'))}</span>` : ''}<div class="chips">${keuze}</div></div>`;
     return `<div class="rij"><b>${esc(r.naam)}</b>${inhoud}</div>`;
   });
   // De thermostaat die de ketel aanzet (besluit 167), zoals een Nest: niets gekozen is het voorstel uit Home Assistant.
   const lijst = huismodel.thermostaten(d.huis);
-  const thermoOpties = [['', lijst[0] ? `Thermostaat: ${lijst[0].naam}` : 'Geen thermostaat gevonden'], ...lijst.map((x) => [x.sleutel, `Thermostaat: ${x.naam} (${x.kamer})`]), ['geen', 'Geen thermostaat']];
-  const thermo = a.verwarming.soort === 'stadsverwarming' || !lijst.length ? '' : `<select class="veld" data-inr-thermostaat aria-label="Thermostaat die de ketel aanzet" style="width: 100%">${thermoOpties.map(([w, t]) => `<option value="${esc(w)}" ${w === (a.verwarming.thermostaat ?? '') ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`;
+  const thermoOpties = [['', lijst[0] ? t('inr.thermo', { naam: lijst[0].naam }) : t('inr.geenThermo')], ...lijst.map((x) => [x.sleutel, t('inr.thermoKamer', { naam: x.naam, kamer: x.kamer })]), ['geen', t('energie.geenThermostaat')]];
+  const thermo = a.verwarming.soort === 'stadsverwarming' || !lijst.length ? '' : `<select class="veld" data-inr-thermostaat aria-label="${esc(t('energie.thermostaatKetel'))}" style="width: 100%">${thermoOpties.map(([w, x]) => `<option value="${esc(w)}" ${w === (a.verwarming.thermostaat ?? '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
   // De thermostaat onder de knoppen, over de hele breedte: in de smalle kolom ernaast viel de tekst weg.
-  const verwarming = `<div class="rij"><b>Verwarming</b><div class="kolom" style="width: 100%"><div class="chips">${VERWARMING.map(([w, t]) => knop(`data-verwarming="${w}"`, t, a.verwarming.soort === w)).join('')}</div>${thermo}</div></div>`;
+  const verwarming = `<div class="rij"><b>${esc(t('energie.verwarming'))}</b><div class="kolom" style="width: 100%"><div class="chips">${VERWARMING.map(([w, x]) => knop(`data-verwarming="${w}"`, x, a.verwarming.soort === w)).join('')}</div>${thermo}</div></div>`;
   return {
     waar: waarVan('warmte'),
-    kop: 'Wat verwarmt en koelt er?',
-    uitleg: 'Je verwarming, en per kamer wat er hangt en wat de regeling ermee doet. Een kamer zonder eigen apparaat kan meedoen met een kamer ernaast.',
-    inhoud: `<div class="rijen">${verwarming}${rijen.join('') || '<p class="zacht">Nog geen kamers.</p>'}</div>`,
+    kop: t('inr.warmteKop'),
+    uitleg: t('inr.warmteZin'),
+    inhoud: `<div class="rijen">${verwarming}${rijen.join('') || `<p class="zacht">${esc(t('inr.geenKamers'))}</p>`}</div>`,
   };
 }
 
@@ -639,7 +639,7 @@ function eigenKamers() {
 }
 function comfortStap() {
   if (!d.comfort?.kamers?.length) {
-    return { waar: waarVan('comfort'), kop: 'Hoe warm wil je het?', uitleg: 'Comfort komt zodra er een kamer meedoet in de regeling, bij Wat elk apparaat doet.', inhoud: '' };
+    return { waar: waarVan('comfort'), kop: t('inr.comfortKop'), uitleg: t('inr.comfortLater'), inhoud: '' };
   }
   const c = comfortNu();
   const uur = (u) => `${String(u).padStart(2, '0')}:00`;
@@ -647,17 +647,17 @@ function comfortStap() {
   const eigen = eigenKamers();
   return {
     waar: waarVan('comfort'),
-    kop: 'Hoe warm wil je het?',
-    uitleg: 'Eén keer voor het hele huis. Per kamer en per dagdeel kan later bij Comfort.',
+    kop: t('inr.comfortKop'),
+    uitleg: t('inr.comfortZin'),
     inhoud: `<div class="kolom">
-        <label class="schuif warm">Verwarmen onder<b>${nl(c.warm)}°</b><input type="range" min="14" max="24" step="0.5" value="${c.warm}" data-comfort="warm" aria-label="Verwarmen onder"></label>
-        ${kanKoelen ? `<label class="schuif">Koelen boven<b>${nl(c.koel)}°</b><input type="range" min="18" max="28" step="0.5" value="${c.koel}" data-comfort="koel" aria-label="Koelen boven"></label>` : ''}
+        <label class="schuif warm">${esc(t('inr.verwarmenOnder'))}<b>${nl(c.warm)}°</b><input type="range" min="14" max="24" step="0.5" value="${c.warm}" data-comfort="warm" aria-label="${esc(t('inr.verwarmenOnder'))}"></label>
+        ${kanKoelen ? `<label class="schuif">${esc(t('inr.koelenBoven'))}<b>${nl(c.koel)}°</b><input type="range" min="18" max="28" step="0.5" value="${c.koel}" data-comfort="koel" aria-label="${esc(t('inr.koelenBoven'))}"></label>` : ''}
       </div>
       <div class="rijen">
-        ${rij("'s Nachts", [['koeler', '2° koeler'], ['zelfde', 'Hetzelfde'], ['uit', 'Uit']].map(([w, t]) => knop(`data-nacht="${w}"`, t, c.nacht === w)).join(''))}
-        ${rij('De dag', `<select class="veld" data-dagvan aria-label="De dag begint om" style="width: auto">${[5, 6, 7, 8, 9].map((u) => `<option value="${u}" ${u === c.dag ? 'selected' : ''}>van ${uur(u)}</option>`).join('')}</select><select class="veld" data-dagtot aria-label="De nacht begint om" style="width: auto">${[20, 21, 22, 23].map((u) => `<option value="${u}" ${u === c.avond ? 'selected' : ''}>tot ${uur(u)}</option>`).join('')}</select>`)}
+        ${rij(t('comfort.naam.nacht'), ['koeler', 'zelfde', 'uit'].map((w) => knop(`data-nacht="${w}"`, t(`inr.nacht.${w}`), c.nacht === w)).join(''))}
+        ${rij(t('inr.deDag'), `<select class="veld" data-dagvan aria-label="${esc(t('inr.dagBegint'))}" style="width: auto">${[5, 6, 7, 8, 9].map((u) => `<option value="${u}" ${u === c.dag ? 'selected' : ''}>${esc(t('inr.van', { uur: uur(u) }))}</option>`).join('')}</select><select class="veld" data-dagtot aria-label="${esc(t('inr.nachtBegint'))}" style="width: auto">${[20, 21, 22, 23].map((u) => `<option value="${u}" ${u === c.avond ? 'selected' : ''}>${esc(t('inr.tot', { uur: uur(u) }))}</option>`).join('')}</select>`)}
       </div>
-      ${eigen.length ? `<div class="noot">${esc(lijstje(eigen.map((k) => k.naam)))} ${eigen.length === 1 ? 'heeft' : 'hebben'} een eigen waarde en ${eigen.length === 1 ? 'blijft' : 'blijven'} zo.<div class="chips" style="margin-top: 8px">${knop('data-ookeigen', 'Ook gelijk zetten', ookEigen)}</div></div>` : ''}`,
+      ${eigen.length ? `<div class="noot">${esc(t('inr.eigenWaarde', { n: eigen.length, namen: lijstje(eigen.map((k) => k.naam)) }))}<div class="chips" style="margin-top: 8px">${knop('data-ookeigen', t('inr.ookGelijk'), ookEigen)}</div></div>` : ''}`,
   };
 }
 async function bewaarComfort() {
@@ -680,7 +680,7 @@ async function bewaarComfort() {
 }
 
 /* De panelen (besluit 158): eerst of ze er zijn, dan de kant van het dak, dan hoeveel. */
-const DAKKANT = [['voorkant', 'Voorkant'], ['achterkant', 'Achterkant'], ['beide', 'Beide kanten'], ['plat', 'Plat dak'], ['weetniet', 'Weet ik niet']];
+const DAKKANT = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet'].map((k) => [k, t(`energie.kant.${k}`)]);
 function antwoorden() {
   const x = d.aans?.antwoorden;
   return {
@@ -699,26 +699,26 @@ function antwoorden() {
 let panelenJa = false;
 function zonStap() {
   const a = antwoorden();
-  const piekW = (d.zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+  const piekW = (d.zon?.panelen ?? []).reduce((som, p) => som + (p.wattpiek ?? 0), 0);
   const meter = (energieNu()?.zon ?? []).length > 0;
   const geen = a.panelen.ligging === 'geen';
   const ja = !geen && (a.panelen.ligging != null || panelenJa);
-  const gevonden = piekW > 0 ? `<span class="chip gevonden">✓ ${nl(piekW / 1000)} kWp gevonden</span>` : meter ? '<span class="chip gevonden">✓ Opbrengstmeter gevonden</span>' : '';
-  const veld = (sleutel, label, waarde) => `<label class="invul"><span>${esc(label)}</span><span class="waarde"><input inputmode="numeric" data-aantal="${sleutel}" value="${waarde ?? ''}" placeholder="invullen" aria-label="${esc(label)}"></span></label>`;
+  const gevonden = piekW > 0 ? `<span class="chip gevonden">${esc(t('inr.kwpGevonden', { kwp: nl(piekW / 1000) }))}</span>` : meter ? `<span class="chip gevonden">${esc(t('inr.meterGevonden'))}</span>` : '';
+  const veld = (sleutel, label, waarde) => `<label class="invul"><span>${esc(label)}</span><span class="waarde"><input inputmode="numeric" data-aantal="${sleutel}" value="${waarde ?? ''}" placeholder="${esc(t('inr.invullen'))}" aria-label="${esc(label)}"></span></label>`;
   const aantallen = !ja || !a.panelen.ligging
     ? ''
     : a.panelen.ligging === 'beide'
-      ? `<span class="vraagje">Aantal panelen</span><div class="paar">${veld('voorkant', 'Voorkant', a.panelen.voorkant)}${veld('achterkant', 'Achterkant', a.panelen.achterkant)}</div>`
-      : veld('aantal', 'Aantal panelen', a.panelen.aantal);
+      ? `<span class="vraagje">${esc(t('energie.aantal'))}</span><div class="paar">${veld('voorkant', t('energie.kant.voorkant'), a.panelen.voorkant)}${veld('achterkant', t('energie.kant.achterkant'), a.panelen.achterkant)}</div>`
+      : veld('aantal', t('energie.aantal'), a.panelen.aantal);
   return {
     waar: waarVan('zon'),
-    kop: 'Je zonnepanelen',
-    uitleg: 'Wat Smart Climate al vond, staat er. Weet je iets niet, ga dan gewoon door; het huis werkt toch.',
+    kop: t('inr.zonKop'),
+    uitleg: t('inr.zonZin'),
     inhoud: `<div class="rijen">
-        ${rij('Panelen', `${knop('data-panelen="ja"', 'Ja', ja)}${knop('data-panelen="geen"', 'Geen panelen', geen)}${gevonden}`)}
-        ${ja ? rij('Kant van het dak', DAKKANT.map(([w, t]) => knop(`data-dakkant="${w}"`, t, a.panelen.ligging === w)).join('')) : ''}
+        ${rij(t('instellingen.panelen'), `${knop('data-panelen="ja"', t('functies.ja'), ja)}${knop('data-panelen="geen"', t('energie.kant.geen'), geen)}${gevonden}`)}
+        ${ja ? rij(t('energie.kantDak'), DAKKANT.map(([w, x]) => knop(`data-dakkant="${w}"`, x, a.panelen.ligging === w)).join('')) : ''}
       </div>
-      ${aantallen}${aantallen ? '<p class="zacht" style="padding: 0; margin: 0">Het aantal is niet verplicht.</p>' : ''}`,
+      ${aantallen}${aantallen ? `<p class="zacht" style="padding: 0; margin: 0">${esc(t('inr.nietVerplicht'))}</p>` : ''}`,
   };
 }
 
@@ -731,13 +731,13 @@ const ligStaat = { aanpassen: false, concept: null, na: () => teken() };
 function liggingStap() {
   // De antwoorden zoals de stap ze kent, ook als er nog niets bewaard is (besluit 166).
   const k = ligging.kaart(d.aans?.ligging, antwoorden(), ligStaat);
-  const rechts = `<span class="rechts lig-knoppen">${k.knoppen}${k.volgende ? '<button type="button" class="knop knop-licht" data-volgende>Volgende</button>' : ''}</span>`;
+  const rechts = `<span class="rechts lig-knoppen">${k.knoppen}${k.volgende ? `<button type="button" class="knop knop-licht" data-volgende>${esc(t('inr.volgende'))}</button>` : ''}</span>`;
   return {
     waar: waarVan('ligging'),
     kop: k.kop,
     uitleg: k.uitleg,
     inhoud: `<div class="rijen">${k.inhoud}</div>`,
-    voet: [ligStaat.aanpassen ? '' : '<button type="button" class="zachtknop" data-terug>Terug</button>', rechts],
+    voet: [ligStaat.aanpassen ? '' : `<button type="button" class="zachtknop" data-terug>${esc(t('panelen.terug'))}</button>`, rechts],
   };
 }
 
@@ -748,13 +748,13 @@ function zekeringStap() {
   const zek = a.zekering && a.zekering !== 'weetniet' ? a.zekering : null;
   const ampere = zek?.ampere ?? null;
   const lijst = ampere != null && !AMPERES.includes(ampere) ? [...AMPERES, ampere].sort((x, y) => x - y) : AMPERES;
-  const keuze = `<select class="veld" data-ampere aria-label="Hoofdzekering in ampère" ${zek ? '' : 'disabled'}>${zek ? '' : '<option value="">kies eerst de fasen</option>'}${lijst.map((x) => `<option value="${x}" ${x === ampere ? 'selected' : ''}>${x} A</option>`).join('')}</select>`;
+  const keuze = `<select class="veld" data-ampere aria-label="${esc(t('inr.zekAmpere'))}" ${zek ? '' : 'disabled'}>${zek ? '' : `<option value="">${esc(t('inr.eerstFasen'))}</option>`}${lijst.map((x) => `<option value="${x}" ${x === ampere ? 'selected' : ''}>${x} A</option>`).join('')}</select>`;
   return {
     waar: waarVan('zekering'),
-    kop: 'Hoe zwaar is je aansluiting?',
-    uitleg: 'Het staat op de hoofdschakelaar in de meterkast. Zo weet het huis hoeveel er tegelijk aan kan zonder dat de zekering eruit gaat.',
-    inhoud: `<div class="chips">${knop('data-fasen="1"', '1 fase', zek?.fasen === 1)}${knop('data-fasen="3"', '3 fasen', zek?.fasen === 3)}${knop('data-zekering="weetniet"', 'Weet ik niet', a.zekering === 'weetniet')}</div>
-      <label class="invul"><span>Hoofdzekering</span>${keuze}</label>`,
+    kop: t('inr.zekKop'),
+    uitleg: t('inr.zekZin'),
+    inhoud: `<div class="chips">${knop('data-fasen="1"', t('energie.eenFase'), zek?.fasen === 1)}${knop('data-fasen="3"', t('energie.drieFasen'), zek?.fasen === 3)}${knop('data-zekering="weetniet"', t('energie.weetNiet'), a.zekering === 'weetniet')}</div>
+      <label class="invul"><span>${esc(t('instellingen.zekering'))}</span>${keuze}</label>`,
   };
 }
 
@@ -763,7 +763,7 @@ function zekeringStap() {
  * daarbij horen, met gas en wat je vanaf 2027 voor teruglevering krijgt en
  * betaalt. Het salderen stopt op 1 januari 2027.
  */
-const CONTRACT = [['enkel', 'Eén tarief'], ['dagnacht', 'Dag en nacht'], ['dynamisch', 'Dynamisch']];
+const CONTRACT = ['enkel', 'dagnacht', 'dynamisch'].map((c) => [c, t(`inr.contract.${c}`)]);
 let contractKeuze = null;
 function contractNu() {
   if (contractKeuze) return contractKeuze;
@@ -776,26 +776,26 @@ function contractNu() {
 }
 function prijzenStap() {
   const e = energieNu();
-  const meters = [e?.net?.afname?.length ? 'het net' : null, e?.zon?.length ? 'de panelen' : null, e?.gas ? 'gas' : null].filter(Boolean);
+  const meters = [e?.net?.afname?.length ? t('inr.meter.net') : null, e?.zon?.length ? t('inr.meter.panelen') : null, e?.gas ? t('energie.gas') : null].filter(Boolean);
   const p = e?.prijzen ?? {};
   const contract = contractNu();
-  const veld = (sleutel, label, waarde, eenheid = 'kWh') => `<label class="invul"><span>${esc(label)}</span><span class="waarde">€<input inputmode="decimal" data-prijs="${sleutel}" data-eenheid="${eenheid}" value="${waarde != null ? String(waarde).replace('.', ',') : ''}" placeholder="invullen" aria-label="${esc(label)} per ${eenheid}"></span></label>`;
+  const veld = (sleutel, label, waarde, eenheid = 'kWh') => `<label class="invul"><span>${esc(label)}</span><span class="waarde">€<input inputmode="decimal" data-prijs="${sleutel}" data-eenheid="${eenheid}" value="${waarde != null ? nl(waarde, String(waarde).split('.')[1]?.length ?? 0) : ''}" placeholder="${esc(t('inr.invullen'))}" aria-label="${esc(t('inr.perEenheid', { label, eenheid }))}"></span></label>`;
   // Twee vakken naast elkaar, zodat alles op de kaart past: stroom (en dal), dan gas.
-  const gas = e?.gas ? veld('gas', 'Gas per m³', p.gas, 'm³') : '';
+  const gas = e?.gas ? veld('gas', t('inr.gasM3'), p.gas, 'm³') : '';
   const stroom = contract === 'dagnacht'
-    ? `<div class="paar">${veld('stroom', 'Stroom normaal', p.stroom)}${veld('stroomDal', 'Stroom dal', p.stroomDal)}</div>${gas}`
-    : `<div class="paar">${veld('stroom', contract === 'dynamisch' ? 'Stroom gemiddeld' : 'Stroom', p.stroom)}${gas}</div>`;
+    ? `<div class="paar">${veld('stroom', t('inr.stroomNormaal'), p.stroom)}${veld('stroomDal', t('inr.stroomDal'), p.stroomDal)}</div>${gas}`
+    : `<div class="paar">${veld('stroom', t(contract === 'dynamisch' ? 'inr.stroomGemiddeld' : 'energie.stroomKop'), p.stroom)}${gas}</div>`;
   const velden = contract
     ? `${stroom}
-       <span class="vraagje">Terugleveren vanaf 2027, per kWh</span><div class="paar">${veld('vanaf2027.vergoeding', 'Je krijgt', p.vanaf2027?.vergoeding)}${veld('vanaf2027.kosten', 'Je betaalt', p.vanaf2027?.kosten)}</div>`
+       <span class="vraagje">${esc(t('inr.terug2027'))}</span><div class="paar">${veld('vanaf2027.vergoeding', t('inr.jeKrijgt'), p.vanaf2027?.vergoeding)}${veld('vanaf2027.kosten', t('inr.jeBetaalt'), p.vanaf2027?.kosten)}</div>`
     : '';
   return {
     waar: waarVan('prijzen'),
-    kop: 'Wat betaal je?',
-    uitleg: `Van je contract of je jaarafrekening.${meters.length ? ` De meters van ${lijstje(meters)} staan al klaar.` : ''}`,
-    inhoud: `<div class="chips">${CONTRACT.map(([w, t]) => knop(`data-contract="${w}"`, t, contract === w)).join('')}</div>
+    kop: t('inr.prijsKop'),
+    uitleg: meters.length ? t('inr.prijsMeters', { meters: lijstje(meters) }) : t('inr.prijsZin'),
+    inhoud: `<div class="chips">${CONTRACT.map(([w, x]) => knop(`data-contract="${w}"`, x, contract === w)).join('')}</div>
       ${velden ? `<div class="rijen kolom">${velden}</div>` : ''}
-      <div class="noot">Tot 2027 telt teruglevering tegen je verbruik weg. Vaste kosten zet je bij Instellingen › Energie.</div>`,
+      <div class="noot">${esc(t('inr.prijsNoot'))}</div>`,
   };
 }
 
@@ -815,15 +815,15 @@ function functiesStap() {
   const cams = f?.gevonden?.cameras ?? [];
   return {
     waar: waarVan('functies'),
-    kop: "Licht en camera's",
-    uitleg: 'Wat je in de app mag bedienen, en of de camera\'s in het huis staan. Smart Climate raakt je lampen alleen aan als jij erop tikt.',
+    kop: t('inr.stap.functies'),
+    uitleg: t('inr.functiesZin'),
     inhoud: c
       ? `<div class="rijen">
-          ${f.lichtMogelijk ? rij('Licht', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']].map(([w, t]) => knop(`data-flicht="${w}"`, t, c.licht?.bedienen === w)).join('')) : ''}
-          ${f.schermMogelijk ? rij('Zonneschermen', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']].map(([w, t]) => knop(`data-fscherm="${w}"`, t, c.schermen?.bedienen === w)).join('')) : ''}
-          ${cams.length ? rij("Camera's", [[true, 'In de app'], [false, 'Niet tonen']].map(([w, t]) => knop(`data-fcam="${w}"`, t, c.cameras?.aan === w)).join('') + `<span class="zacht">${esc(cams.map((x) => x.naam).join(', '))}</span>`) : ''}
+          ${f.lichtMogelijk ? rij(t('inr.licht'), [[true, t('functies.bedienen')], [false, t('functies.kijken')]].map(([w, x]) => knop(`data-flicht="${w}"`, x, c.licht?.bedienen === w)).join('')) : ''}
+          ${f.schermMogelijk ? rij(t('inr.zonneschermen'), [[true, t('functies.bedienen')], [false, t('functies.kijken')]].map(([w, x]) => knop(`data-fscherm="${w}"`, x, c.schermen?.bedienen === w)).join('')) : ''}
+          ${cams.length ? rij(t('functies.cameras'), [[true, t('functies.inDeApp')], [false, t('functies.nietTonen')]].map(([w, x]) => knop(`data-fcam="${w}"`, x, c.cameras?.aan === w)).join('') + `<span class="zacht">${esc(cams.map((x) => x.naam).join(', '))}</span>`) : ''}
         </div>`
-      : '<p class="zacht">Even lezen uit Home Assistant…</p>',
+      : `<p class="zacht">${esc(t('inr.lezen'))}</p>`,
   };
 }
 async function bewaarFuncties(c) {
@@ -844,10 +844,10 @@ async function bewaarFuncties(c) {
 function schermRij(s) {
   const mag = d.bewoners?.ik?.magBeheren || s.ik;
   const o = s.opties ?? {};
-  return `<div class="waarderij">${esc(s.naam)}<span>${s.ik ? 'dit scherm' : 'scherm'}</span></div>
+  return `<div class="waarderij">${esc(s.naam)}<span>${esc(t(s.ik ? 'inr.ditScherm' : 'inr.scherm'))}</span></div>
     <div class="rondom" style="margin-bottom: 8px">
-      ${schakel(`data-sopt="volledig" data-scherm="${esc(s.id)}"`, 'Volledig scherm', o.volledig === true, !mag)}
-      ${schakel(`data-sopt="luisteren" data-scherm="${esc(s.id)}"`, 'Luistert naar "Hé huis"', o.luisteren === true, !mag)}
+      ${schakel(`data-sopt="volledig" data-scherm="${esc(s.id)}"`, t('bewoners.volledig'), o.volledig === true, !mag)}
+      ${schakel(`data-sopt="luisteren" data-scherm="${esc(s.id)}"`, t('bewoners.luistert'), o.luisteren === true, !mag)}
     </div>`;
 }
 function wandStap() {
@@ -855,10 +855,10 @@ function wandStap() {
   const inlog = d.sessie?.toegang === 'sessions';
   return {
     waar: waarVan('wand'),
-    kop: schermen.length ? 'De wand staat erin' : 'Zet de wand erbij',
-    uitleg: schermen.length ? 'Kies per scherm hoe het werkt; de tablet neemt het over, ook als je dit op de pc doet.' : `Pak de tablet aan de muur en open Smart Climate${inlog ? ', of scan de code' : ' via Home Assistant'}. ${inlog ? 'Log één keer in met een account van Home Assistant en kies' : 'Kies bij de eerste keer'} "Dit is een scherm".`,
-    inhoud: `${inlog ? `<div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">Een scherm telt niet als bewoner. Het begroet wie er thuis is.</span></div>` : ''}
-      ${schermen.length ? `<div class="rijen">${schermen.map(schermRij).join('')}</div>` : '<div class="noot">Nog geen scherm. Het kan ook later: de tablet vraagt het zelf bij de eerste keer.</div>'}`,
+    kop: t(schermen.length ? 'inr.wandStaat' : 'inr.wandErbij'),
+    uitleg: t(schermen.length ? 'inr.wandPerScherm' : inlog ? 'inr.wandInlog' : 'inr.wandHA'),
+    inhoud: `${inlog ? `<div class="erbij"><div class="qr" role="img" aria-label="${esc(t('bewoners.qr'))}">${qrVan(appAdres())}</div><span class="zacht" style="padding: 0">${esc(t('inr.geenBewoner'))}</span></div>` : ''}
+      ${schermen.length ? `<div class="rijen">${schermen.map(schermRij).join('')}</div>` : `<div class="noot">${esc(t('inr.nogGeenScherm'))}</div>`}`,
   };
 }
 async function bewaarAansluiting(a) {
@@ -890,16 +890,16 @@ async function bewaarPrijzen(wijzig) {
 function klaarStap() {
   const open = STAPPEN.filter(([id]) => !nagelopen.has(id));
   const later = open.length
-    ? `<div class="noot later">Nog niet nagelopen: ${open.map(([id, t]) => `<a href="#${id}">${esc(t.toLowerCase())}</a>`).join(', ')}. Ook later te openen bij Instellingen, onder Inrichten.</div>`
+    ? `<div class="noot later">${t('inr.nietNagelopen', { stappen: open.map(([id, naam]) => `<a href="#${id}">${esc(naam.toLowerCase())}</a>`).join(', ') })}</div>`
     : '';
   return {
-    waar: 'Klaar',
-    kop: 'Je huis staat erin',
+    waar: t('inr.klaar'),
+    kop: t('inr.klaarKop'),
     groot: true,
-    uitleg: 'Smart Climate kijkt vanaf nu mee. Dit is wat het kan:',
-    inhoud: `<button type="button" class="filmkaart" data-film aria-label="Speel de film af: een dag in je huis, 45 seconden"><span class="speel" aria-hidden="true"></span><span>Een dag in je huis · 45 seconden</span></button>
-      <div class="noot">Daarna laten we je de app zien, in twaalf stops van een paar tellen. Overslaan kan altijd; terugkijken bij het vraagteken op Thuis.</div>${later}`,
-    voet: [`<a class="zachtknop" href="#${vorige('klaar')}">Terug</a>`, '<span class="rechts"><a class="zachtknop" href="thuis.html#rondleiding">Overslaan</a><button type="button" class="knop knop-licht" data-film>Speel af</button></span>'],
+    uitleg: t('inr.klaarZin'),
+    inhoud: `<button type="button" class="filmkaart" data-film aria-label="${esc(t('inr.filmLabel'))}"><span class="speel" aria-hidden="true"></span><span>${esc(t('inr.film'))}</span></button>
+      <div class="noot">${esc(t('inr.daarna'))}</div>${later}`,
+    voet: [`<a class="zachtknop" href="#${vorige('klaar')}">${esc(t('panelen.terug'))}</a>`, `<span class="rechts"><a class="zachtknop" href="thuis.html#rondleiding">${esc(t('rond.overslaan'))}</a><button type="button" class="knop knop-licht" data-film>${esc(t('inr.speelAf'))}</button></span>`],
   };
 }
 
@@ -968,19 +968,19 @@ function tekenNu() {
   const nu = stapNu();
   $$('[data-stappen]').forEach((el) => {
     // Zes kaarten: vijf hoofdstukken en Klaar, met een balkje per stap en wat erin zit (besluit 146).
-    const alle = [...HOOFDSTUKKEN, ['Klaar', [['klaar', 'De film · de rondleiding']]]];
+    const alle = [...HOOFDSTUKKEN, [t('inr.klaar'), [['klaar', t('inr.filmRondleiding')]]]];
     el.innerHTML = alle.map(([titel, stappen], i) => {
       const hier = stappen.some(([id]) => id === nu);
-      const klaar = titel !== 'Klaar' && stappen.every(([id]) => nagelopen.has(id));
+      const klaar = stappen[0][0] !== 'klaar' && stappen.every(([id]) => nagelopen.has(id));
       // Drie standen (besluit 158): nagelopen is groen, al ingevuld uit Home Assistant omlijnd.
       const stipjes = stappen.map(([id]) => `<i class="${id === nu ? 'nu' : nagelopen.has(id) ? 'al' : gedaan(id) ? 'half' : ''}"></i>`).join('');
-      const sub = stappen.map(([, t], j) => (j ? t.toLowerCase() : t)).join(' · ');
+      const sub = stappen.map(([, naam], j) => (j ? naam.toLowerCase() : naam)).join(' · ');
       return `<a class="stap${hier ? ' nu' : ''}${klaar ? ' klaar' : ''}" href="#${stappen[0][0]}" ${hier ? 'aria-current="step"' : ''}><span class="n" aria-hidden="true">${klaar && !hier ? '✓' : i + 1}</span><span class="kort">${esc(titel)}</span><span class="naam">${i + 1}. ${esc(titel)}</span><span class="stipjes" aria-hidden="true">${stipjes}</span><span class="sub">${esc(sub)}</span></a>`;
     }).join('');
   });
   const v = { welkom, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, klaar: klaarStap }[nu]();
   // Onderaan overal hetzelfde (besluit 158): Terug en Volgende, tenzij de stap iets anders zegt.
-  const [links, rechts] = v.voet ?? [`<button type="button" class="zachtknop" data-terug>Terug</button>`, '<button type="button" class="knop knop-licht" data-volgende>Volgende</button>'];
+  const [links, rechts] = v.voet ?? [`<button type="button" class="zachtknop" data-terug>${esc(t('panelen.terug'))}</button>`, `<button type="button" class="knop knop-licht" data-volgende>${esc(t('inr.volgende'))}</button>`];
   const actief = document.activeElement;
   // Niet onder de vinger opnieuw opbouwen terwijl iemand typt.
   if (actief && actief.matches?.('[data-kaart] input[type="text"], [data-kaart] input:not([type])') && actief.closest('[data-kaart]')) return;
@@ -1055,7 +1055,7 @@ const teken = app.gebundeld(tekenNu);
     const naam = next.kamers.find((x) => x.id === id)?.naam;
     if (verplaatsKamer(next, id, { doelId: doel })) {
       open = id;
-      await bewaarIndeling(next, `${naam} staat op een nieuwe plek.`);
+      await bewaarIndeling(next, t('inr.nieuwePlek', { naam }));
     }
   };
   document.addEventListener('pointerup', los);
@@ -1066,38 +1066,38 @@ const teken = app.gebundeld(tekenNu);
 
 let bezig = false;
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('button, a');
-  if (!t) return;
-  if (t.hasAttribute('data-film')) {
+  const el = e.target.closest('button, a');
+  if (!el) return;
+  if (el.hasAttribute('data-film')) {
     // Het filmpje (besluit 139), en daarna de rondleiding op Thuis.
     void film.speel({ opEinde: () => (location.href = 'thuis.html#rondleiding') });
     return;
   }
-  if (t.hasAttribute('data-terug')) {
+  if (el.hasAttribute('data-terug')) {
     naar(vorige(stapNu()));
     return;
   }
-  if (t.hasAttribute('data-volgende')) {
+  if (el.hasAttribute('data-volgende')) {
     // Volgende bewaart wat er staat (besluit 158); twee keer tikken bewaart één keer.
     if (bezig) return;
     const nu = stapNu();
     bezig = true;
-    t.disabled = true;
+    el.disabled = true;
     try {
       if (BEVESTIG[nu] && !(await BEVESTIG[nu]())) return;
       markeer(nu);
       naar(volgende(nu));
     } finally {
       bezig = false;
-      t.disabled = false;
+      el.disabled = false;
     }
     return;
   }
   // Hoe de panelen liggen (besluit 157); Klopt telt als nagelopen en gaat door.
-  if (Object.keys(t.dataset).some((k) => k.startsWith('lig'))) {
+  if (Object.keys(el.dataset).some((k) => k.startsWith('lig'))) {
     const a = antwoorden();
-    const klopt = t.hasAttribute('data-lig-klopt');
-    const wat = ligging.klik(t, d.aans?.ligging, a, ligStaat);
+    const klopt = el.hasAttribute('data-lig-klopt');
+    const wat = ligging.klik(el, d.aans?.ligging, a, ligStaat);
     if (wat === 'bewaar') await bewaarAansluiting(a);
     else if (wat === 'teken') teken();
     if (klopt && d.aans?.ligging?.stand === 'bevestigd') {
@@ -1106,81 +1106,81 @@ document.addEventListener('click', async (e) => {
     }
     return;
   }
-  if (t.dataset.lijst !== undefined) {
-    lijst = t.dataset.lijst || null;
+  if (el.dataset.lijst !== undefined) {
+    lijst = el.dataset.lijst || null;
     teken();
     return;
   }
-  if (t.dataset.sopt) {
-    const s = (d.bewoners?.schermen ?? []).find((x) => x.id === t.dataset.scherm);
+  if (el.dataset.sopt) {
+    const s = (d.bewoners?.schermen ?? []).find((x) => x.id === el.dataset.scherm);
     if (!s) return;
-    const aan = !(s.opties?.[t.dataset.sopt] === true);
-    await stuurBewoner({ actie: 'schermOpties', id: s.id, opties: { [t.dataset.sopt]: aan } }, aan ? `${s.naam}: aan. De tablet neemt het over.` : `${s.naam}: uit, vanaf de volgende pagina.`);
+    const aan = !(s.opties?.[el.dataset.sopt] === true);
+    await stuurBewoner({ actie: 'schermOpties', id: s.id, opties: { [el.dataset.sopt]: aan } }, t(aan ? 'inr.schermAan' : 'inr.schermUit', { naam: s.naam }));
     return;
   }
-  if (t.dataset.bewoner) {
-    openBewoner = openBewoner === t.dataset.bewoner ? null : t.dataset.bewoner;
+  if (el.dataset.bewoner) {
+    openBewoner = openBewoner === el.dataset.bewoner ? null : el.dataset.bewoner;
     teken();
     return;
   }
-  if (t.dataset.bvolg && openBewoner) {
+  if (el.dataset.bvolg && openBewoner) {
     const v = (d.bewoners?.bewoners ?? []).map((x) => x.id);
     const i = v.indexOf(openBewoner);
-    const j = i + Number(t.dataset.bvolg);
+    const j = i + Number(el.dataset.bvolg);
     if (i < 0 || j < 0 || j >= v.length) return;
     [v[i], v[j]] = [v[j], v[i]];
     await stuurBewoner({ actie: 'volgorde', volgorde: v });
     return;
   }
-  if (t.hasAttribute('data-bhoofd') && openBewoner) {
+  if (el.hasAttribute('data-bhoofd') && openBewoner) {
     await stuurBewoner({ actie: 'hoofd', id: openBewoner });
     return;
   }
-  if (t.dataset.bcomfort && openBewoner) {
-    await stuurBewoner({ actie: 'comfort', id: openBewoner, comfort: t.dataset.bcomfort });
+  if (el.dataset.bcomfort && openBewoner) {
+    await stuurBewoner({ actie: 'comfort', id: openBewoner, comfort: el.dataset.bcomfort });
     return;
   }
-  if (t.dataset.apparaat) {
-    openApparaat = openApparaat === t.dataset.apparaat ? null : t.dataset.apparaat;
+  if (el.dataset.apparaat) {
+    openApparaat = openApparaat === el.dataset.apparaat ? null : el.dataset.apparaat;
     teken();
     return;
   }
-  if (t.dataset.verberg) {
+  if (el.dataset.verberg) {
     const next = concept();
     if (!next) return;
-    const id = t.dataset.verberg;
-    const naam = [...(d.huis?.zonderRuimte ?? []), ...(d.huis?.etages ?? []).flatMap((x) => x.ruimtes ?? []).flatMap((r) => r.apparaten ?? [])].find((a) => a.id === id)?.naam ?? 'Het apparaat';
+    const id = el.dataset.verberg;
+    const naam = [...(d.huis?.zonderRuimte ?? []), ...(d.huis?.etages ?? []).flatMap((x) => x.ruimtes ?? []).flatMap((r) => r.apparaten ?? [])].find((a) => a.id === id)?.naam ?? t('indeling.hetApparaat');
     next.verborgen = [...new Set([...(next.verborgen ?? []), id])];
     openApparaat = null;
-    await bewaarIndeling(next, `${naam} weggehaald.`);
+    await bewaarIndeling(next, t('indeling.naamWeg', { naam }));
     return;
   }
-  if (t.dataset.kamer) {
-    open = open === t.dataset.kamer ? null : t.dataset.kamer;
+  if (el.dataset.kamer) {
+    open = open === el.dataset.kamer ? null : el.dataset.kamer;
     weghalen = null;
     teken();
     return;
   }
-  if (t.dataset.nieuw) {
-    open = `nieuw:${t.dataset.nieuw}`;
+  if (el.dataset.nieuw) {
+    open = `nieuw:${el.dataset.nieuw}`;
     teken();
     setTimeout(() => document.querySelector(`${app.zicht()} [data-nieuwnaam]`)?.focus(), 50);
     return;
   }
-  if (t.dataset.voegtoe) {
+  if (el.dataset.voegtoe) {
     const naam = document.querySelector(`${app.zicht()} [data-nieuwnaam]`)?.value.trim();
     if (!naam) return;
     const next = concept();
     const id = idVan(naam, new Set(next.kamers.map((k) => k.id)));
-    next.kamers.push({ id, naam, etage: t.dataset.voegtoe, zones: [], regelzone: null, haGebied: null });
+    next.kamers.push({ id, naam, etage: el.dataset.voegtoe, zones: [], regelzone: null, haGebied: null });
     open = null;
-    await bewaarIndeling(next, `${naam} toegevoegd.`);
+    await bewaarIndeling(next, t('indeling.toegevoegd', { naam }));
     return;
   }
-  if (t.dataset.kamerweg) {
+  if (el.dataset.kamerweg) {
     // Twee tikken: de eerste vraagt het nog eens.
-    if (weghalen !== t.dataset.kamerweg) {
-      weghalen = t.dataset.kamerweg;
+    if (weghalen !== el.dataset.kamerweg) {
+      weghalen = el.dataset.kamerweg;
       teken();
       return;
     }
@@ -1193,48 +1193,48 @@ document.addEventListener('click', async (e) => {
     for (const x of next.kamers) if (x.meedoenMet === k.id) delete x.meedoenMet;
     open = null;
     weghalen = null;
-    await bewaarIndeling(next, `${k.naam} weggehaald.`);
+    await bewaarIndeling(next, t('indeling.naamWeg', { naam: k.naam }));
     return;
   }
-  if (t.dataset.schuifkamer) {
+  if (el.dataset.schuifkamer) {
     const next = concept();
-    if (next && verplaatsKamer(next, open, { stap: Number(t.dataset.schuifkamer) })) await bewaarIndeling(next);
+    if (next && verplaatsKamer(next, open, { stap: Number(el.dataset.schuifkamer) })) await bewaarIndeling(next);
     return;
   }
-  if (t.dataset.zoneweg) {
+  if (el.dataset.zoneweg) {
     const next = concept();
     const k = next.kamers.find((x) => x.id === open);
-    const z = k?.zones.find((x) => x.id === t.dataset.zoneweg);
+    const z = k?.zones.find((x) => x.id === el.dataset.zoneweg);
     if (!z) return;
     k.zones = k.zones.filter((x) => x.id !== z.id);
     for (const a of Object.values(next.apparaten)) if (a.kamer === k.id && a.zone === z.id) a.zone = null;
-    await bewaarIndeling(next, `Zone ${z.naam} weggehaald.`);
+    await bewaarIndeling(next, t('indeling.zoneWeg', { naam: z.naam }));
     return;
   }
-  if (t.dataset.erbij) {
-    toevoegenIn = t.dataset.erbij;
+  if (el.dataset.erbij) {
+    toevoegenIn = el.dataset.erbij;
     toevoeg = null;
     teken();
     return;
   }
   // Iets toevoegen (besluit 167): wat er hangt, hoe het aangaat, en bewaren.
-  if (t.dataset.toevoegSoort) {
-    toevoeg = { soort: t.dataset.toevoegSoort, aan: null, apparaat: null };
+  if (el.dataset.toevoegSoort) {
+    toevoeg = { soort: el.dataset.toevoegSoort, aan: null, apparaat: null };
     teken();
     return;
   }
-  if (t.dataset.toevoegAan && toevoeg) {
-    toevoeg = { ...toevoeg, aan: t.dataset.toevoegAan, apparaat: null };
+  if (el.dataset.toevoegAan && toevoeg) {
+    toevoeg = { ...toevoeg, aan: el.dataset.toevoegAan, apparaat: null };
     teken();
     return;
   }
-  if (t.hasAttribute('data-toevoeg-annuleer')) {
+  if (el.hasAttribute('data-toevoeg-annuleer')) {
     toevoegenIn = null;
     toevoeg = null;
     teken();
     return;
   }
-  if (t.hasAttribute('data-toevoeg-bewaar') && toevoeg && toevoegenIn) {
+  if (el.hasAttribute('data-toevoeg-bewaar') && toevoeg && toevoegenIn) {
     const next = concept();
     const k = next?.kamers.find((x) => x.id === toevoegenIn);
     if (!k) return;
@@ -1252,55 +1252,55 @@ document.addEventListener('click', async (e) => {
     k.bronnen = [...(k.bronnen ?? []), b];
     toevoegenIn = null;
     toevoeg = null;
-    await bewaarIndeling(next, `${huismodel.bronNaam(b)} toegevoegd bij ${k.naam}.`);
+    await bewaarIndeling(next, t('inr.toegevoegdBij', { naam: huismodel.bronNaam(b), kamer: k.naam }));
     return;
   }
-  if (t.dataset.nacht) {
-    comfortKeuze = { ...comfortNu(), nacht: t.dataset.nacht };
+  if (el.dataset.nacht) {
+    comfortKeuze = { ...comfortNu(), nacht: el.dataset.nacht };
     await bewaarComfort();
     return;
   }
-  if (t.hasAttribute('data-ookeigen')) {
+  if (el.hasAttribute('data-ookeigen')) {
     ookEigen = !ookEigen;
     if (ookEigen) await bewaarComfort();
     else teken();
     return;
   }
-  if (t.dataset.rolwaarde) {
+  if (el.dataset.rolwaarde) {
     // Wat de regeling met een apparaat doet (besluit 138), met de knoppen van de schets.
-    const seg = t.closest('[data-rol]');
+    const seg = el.closest('[data-rol]');
     const next = concept();
     const k = next?.kamers.find((x) => x.id === seg.dataset.rolkamer);
     const r = binnen().find((x) => x.id === seg.dataset.rolkamer);
     if (!k || !r) return;
     const rollen = Object.fromEntries(klimaatIn(r).map((a) => [sleutel(a), rolVan(k, r, sleutel(a))]));
-    k.rollen = { ...(k.rollen ?? {}), ...rollen, [seg.dataset.rol]: t.dataset.rolwaarde };
+    k.rollen = { ...(k.rollen ?? {}), ...rollen, [seg.dataset.rol]: el.dataset.rolwaarde };
     await bewaarIndeling(next);
     return;
   }
-  if (t.dataset.fasen) {
+  if (el.dataset.fasen) {
     const a = antwoorden();
-    const fasen = Number(t.dataset.fasen);
+    const fasen = Number(el.dataset.fasen);
     const oud = a.zekering && a.zekering !== 'weetniet' ? a.zekering.ampere : null;
     a.zekering = { fasen, ampere: oud ?? (fasen === 1 ? 35 : 25) };
     await bewaarAansluiting(a);
     return;
   }
-  if (t.dataset.zekering) {
+  if (el.dataset.zekering) {
     const a = antwoorden();
     a.zekering = 'weetniet';
     await bewaarAansluiting(a);
     return;
   }
-  if (t.dataset.verwarming) {
+  if (el.dataset.verwarming) {
     const a = antwoorden();
-    a.verwarming = { ...a.verwarming, soort: t.dataset.verwarming };
+    a.verwarming = { ...a.verwarming, soort: el.dataset.verwarming };
     await bewaarAansluiting(a);
     return;
   }
-  if (t.dataset.panelen) {
+  if (el.dataset.panelen) {
     const a = antwoorden();
-    if (t.dataset.panelen === 'geen') {
+    if (el.dataset.panelen === 'geen') {
       panelenJa = false;
       a.panelen = { ligging: 'geen', aantal: null, voorkant: null, achterkant: null };
       await bewaarAansluiting(a);
@@ -1314,15 +1314,15 @@ document.addEventListener('click', async (e) => {
     }
     return;
   }
-  if (t.dataset.dakkant) {
+  if (el.dataset.dakkant) {
     const a = antwoorden();
-    a.panelen = { ...a.panelen, ligging: t.dataset.dakkant };
+    a.panelen = { ...a.panelen, ligging: el.dataset.dakkant };
     await bewaarAansluiting(a);
     return;
   }
-  if (t.dataset.contract) {
+  if (el.dataset.contract) {
     // Het soort contract (besluit 158): één tarief laat het daltarief vallen.
-    contractKeuze = t.dataset.contract;
+    contractKeuze = el.dataset.contract;
     const a = antwoorden();
     const tarief = contractKeuze === 'dynamisch' ? 'dynamisch' : 'vast';
     if (a.tarief !== tarief) {
@@ -1333,12 +1333,12 @@ document.addEventListener('click', async (e) => {
     else teken();
     return;
   }
-  if (t.dataset.rond) {
+  if (el.dataset.rond) {
     // Wat er rond het huis is (besluit 158): elk deel apart aan of uit.
     const next = concept();
     if (!next) return;
     const rond = { ...(next.rond ?? huismodel.rondNu(d.huis)) };
-    const w = t.dataset.rond;
+    const w = el.dataset.rond;
     rond[w] = !rond[w];
     if (w === 'oprit' && !rond.oprit) {
       rond.auto = false;
@@ -1348,74 +1348,74 @@ document.addEventListener('click', async (e) => {
     await bewaarIndeling(next);
     return;
   }
-  if (t.dataset.meet) {
+  if (el.dataset.meet) {
     // Meten met (besluit 123): een thermometer aan of uit voor deze kamer.
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.meetkamer);
+    const k = next?.kamers.find((x) => x.id === el.dataset.meetkamer);
     if (!k) return;
     const lijst = new Set(k.meten ?? []);
-    if (lijst.has(t.dataset.meet)) lijst.delete(t.dataset.meet);
-    else lijst.add(t.dataset.meet);
+    if (lijst.has(el.dataset.meet)) lijst.delete(el.dataset.meet);
+    else lijst.add(el.dataset.meet);
     if (lijst.size) k.meten = [...lijst].slice(0, 6);
     else delete k.meten;
     await bewaarIndeling(next);
     return;
   }
-  if (t.dataset.flicht || t.dataset.fscherm || t.dataset.fcam) {
+  if (el.dataset.flicht || el.dataset.fscherm || el.dataset.fcam) {
     const c = functiesNu();
     if (!c) return;
-    if (t.dataset.flicht) c.licht = { ...c.licht, bedienen: t.dataset.flicht === 'true' };
-    if (t.dataset.fscherm) c.schermen = { ...c.schermen, bedienen: t.dataset.fscherm === 'true' };
-    if (t.dataset.fcam) c.cameras = { ...c.cameras, aan: t.dataset.fcam === 'true' };
+    if (el.dataset.flicht) c.licht = { ...c.licht, bedienen: el.dataset.flicht === 'true' };
+    if (el.dataset.fscherm) c.schermen = { ...c.schermen, bedienen: el.dataset.fscherm === 'true' };
+    if (el.dataset.fcam) c.cameras = { ...c.cameras, aan: el.dataset.fcam === 'true' };
     await bewaarFuncties(c);
   }
 });
 
 document.addEventListener('change', async (e) => {
   if (ligging.verander(e.target, ligStaat)) return teken();
-  const t = e.target;
+  const el = e.target;
   const kamerNu = (next) => next?.kamers.find((x) => x.id === open);
-  if (t.dataset.naam) {
-    const v = t.value.trim();
+  if (el.dataset.naam) {
+    const v = el.value.trim();
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.naam);
+    const k = next?.kamers.find((x) => x.id === el.dataset.naam);
     if (!k || !v || v === k.naam) return;
     k.naam = v;
-    t.blur();
-    await bewaarIndeling(next, 'Naam bewaard.');
-  } else if (t.dataset.etage) {
+    el.blur();
+    await bewaarIndeling(next, t('indeling.naamBewaard'));
+  } else if (el.dataset.etage) {
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.etage);
+    const k = next?.kamers.find((x) => x.id === el.dataset.etage);
     if (!k) return;
-    k.etage = t.value;
-    if (t.value === 'buiten') open = null;
-    await bewaarIndeling(next, `${k.naam} staat nu op ${t.selectedOptions[0]?.textContent ?? 'een andere etage'}.`);
-  } else if (t.dataset.soort) {
+    k.etage = el.value;
+    if (el.value === 'buiten') open = null;
+    await bewaarIndeling(next, t('indeling.staatOp', { naam: k.naam, etage: el.selectedOptions[0]?.textContent ?? t('inr.andereEtage') }));
+  } else if (el.dataset.soort) {
     // Wat voor kamer (besluit 119); leeg is weer het voorstel uit de naam.
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.soort);
+    const k = next?.kamers.find((x) => x.id === el.dataset.soort);
     if (!k) return;
-    if (t.value) k.soort = t.value;
+    if (el.value) k.soort = el.value;
     else delete k.soort;
-    await bewaarIndeling(next, 'Soort bewaard.');
-  } else if (t.dataset.zonenaam) {
+    await bewaarIndeling(next, t('indeling.soortBewaard'));
+  } else if (el.dataset.zonenaam) {
     const next = concept();
-    const z = kamerNu(next)?.zones.find((x) => x.id === t.dataset.zonenaam);
-    const v = t.value.trim();
+    const z = kamerNu(next)?.zones.find((x) => x.id === el.dataset.zonenaam);
+    const v = el.value.trim();
     if (!z || !v || z.naam === v) return;
     z.naam = v;
-    await bewaarIndeling(next, `Zone heet nu ${v}.`);
-  } else if (t.dataset.zonesoort) {
+    await bewaarIndeling(next, t('indeling.zoneHeet', { naam: v }));
+  } else if (el.dataset.zonesoort) {
     const next = concept();
-    const z = kamerNu(next)?.zones.find((x) => x.id === t.dataset.zonesoort);
+    const z = kamerNu(next)?.zones.find((x) => x.id === el.dataset.zonesoort);
     if (!z) return;
-    if (t.value) z.soort = t.value;
+    if (el.value) z.soort = el.value;
     else delete z.soort;
-    await bewaarIndeling(next, `Zone ${z.naam} bewaard.`);
-  } else if (t.hasAttribute('data-nieuwezone')) {
+    await bewaarIndeling(next, t('indeling.zoneBewaard', { naam: z.naam }));
+  } else if (el.hasAttribute('data-nieuwezone')) {
     const next = concept();
     const k = kamerNu(next);
-    const v = t.value.trim();
+    const v = el.value.trim();
     if (!k || !v) return;
     const bezet = new Set(next.kamers.flatMap((x) => x.zones.map((z) => z.id)));
     // De eerste zone: de kamer zelf wordt het eerste deel, zodat er twee zijn.
@@ -1425,65 +1425,65 @@ document.addEventListener('change', async (e) => {
       k.zones.push(eigen);
     }
     k.zones.push({ id: idVan(v, bezet), naam: v });
-    await bewaarIndeling(next, `Zone ${v} toegevoegd.`);
-  } else if (t.dataset.samen) {
-    if (!t.value) return;
+    await bewaarIndeling(next, t('indeling.zoneErbij', { naam: v }));
+  } else if (el.dataset.samen) {
+    if (!el.value) return;
     const next = concept();
-    const doel = next.kamers.find((x) => x.id === t.value)?.naam;
-    const fout = samenvoegen(next, t.dataset.samen, t.value);
+    const doel = next.kamers.find((x) => x.id === el.value)?.naam;
+    const fout = samenvoegen(next, el.dataset.samen, el.value);
     if (fout) {
-      t.value = '';
+      el.value = '';
       zeg(fout, true);
       return;
     }
-    await bewaarIndeling(next, `${doel} is nu een zone van ${next.kamers.find((x) => x.id === t.dataset.samen)?.naam}.`);
-  } else if (t.dataset.bnaam) {
-    const naam = t.value.trim();
-    const x = (d.bewoners?.bewoners ?? []).find((y) => y.id === t.dataset.bnaam);
+    await bewaarIndeling(next, t('inr.zoneVan', { naam: doel, kamer: next.kamers.find((x) => x.id === el.dataset.samen)?.naam ?? '' }));
+  } else if (el.dataset.bnaam) {
+    const naam = el.value.trim();
+    const x = (d.bewoners?.bewoners ?? []).find((y) => y.id === el.dataset.bnaam);
     if (naam && x && naam !== x.naam) await stuurBewoner({ actie: 'naam', id: x.id, naam });
-  } else if (t.dataset.bbron !== undefined) {
-    await stuurBewoner({ actie: 'aanwezigheid', id: t.dataset.bbron, bron: t.value || null });
-  } else if (t.dataset.verplaats) {
+  } else if (el.dataset.bbron !== undefined) {
+    await stuurBewoner({ actie: 'aanwezigheid', id: el.dataset.bbron, bron: el.value || null });
+  } else if (el.dataset.verplaats) {
     // Een apparaat naar een andere kamer (besluit 166).
     const next = concept();
-    const doel = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).find((r) => r.id === t.value);
+    const doel = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).find((r) => r.id === el.value);
     if (!next || !doel) return;
-    next.apparaten[t.dataset.verplaats] = { ...(next.apparaten[t.dataset.verplaats] ?? {}), kamer: doel.id, zone: null };
+    next.apparaten[el.dataset.verplaats] = { ...(next.apparaten[el.dataset.verplaats] ?? {}), kamer: doel.id, zone: null };
     openApparaat = null;
-    await bewaarIndeling(next, `Staat nu in ${doel.naam}.`);
-  } else if (t.dataset.bkoppel) {
+    await bewaarIndeling(next, t('inr.staatIn', { naam: doel.naam }));
+  } else if (el.dataset.bkoppel) {
     // Welke ruimte uit Home Assistant bij een deel buiten hoort (besluit 166).
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.value);
+    const k = next?.kamers.find((x) => x.id === el.value);
     if (!k) return;
     const b = buitenNu(k);
-    k.buiten = { soort: t.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
-    await bewaarIndeling(next, `${k.naam} hoort nu bij ${RONDOM.find(([, , s]) => s === t.dataset.bkoppel)?.[1].toLowerCase() ?? t.dataset.bkoppel}.`);
-  } else if (t.dataset.plek) {
+    k.buiten = { soort: el.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
+    await bewaarIndeling(next, t('inr.hoortBij', { naam: k.naam, deel: RONDOM.find(([, , s]) => s === el.dataset.bkoppel)?.[1].toLowerCase() ?? el.dataset.bkoppel }));
+  } else if (el.dataset.plek) {
     const next = concept();
-    if (!next || !t.value) return;
-    if (t.value === '-') next.verborgen = [...new Set([...(next.verborgen ?? []), t.dataset.plek])];
-    else next.apparaten[t.dataset.plek] = { ...(next.apparaten[t.dataset.plek] ?? {}), kamer: t.value, zone: null };
+    if (!next || !el.value) return;
+    if (el.value === '-') next.verborgen = [...new Set([...(next.verborgen ?? []), el.dataset.plek])];
+    else next.apparaten[el.dataset.plek] = { ...(next.apparaten[el.dataset.plek] ?? {}), kamer: el.value, zone: null };
     await bewaarIndeling(next);
-  } else if (t.hasAttribute('data-ampere') && t.value) {
+  } else if (el.hasAttribute('data-ampere') && el.value) {
     const a = antwoorden();
     if (!a.zekering || a.zekering === 'weetniet') return;
-    a.zekering = { ...a.zekering, ampere: Number(t.value) };
+    a.zekering = { ...a.zekering, ampere: Number(el.value) };
     await bewaarAansluiting(a);
-  } else if (t.hasAttribute('data-inr-thermostaat')) {
+  } else if (el.hasAttribute('data-inr-thermostaat')) {
     const a = antwoorden();
-    a.verwarming = { ...a.verwarming, thermostaat: t.value || null };
+    a.verwarming = { ...a.verwarming, thermostaat: el.value || null };
     await bewaarAansluiting(a);
-  } else if (t.hasAttribute('data-toevoeg-apparaat') && toevoeg) {
-    toevoeg = { ...toevoeg, apparaat: t.value || null };
+  } else if (el.hasAttribute('data-toevoeg-apparaat') && toevoeg) {
+    toevoeg = { ...toevoeg, apparaat: el.value || null };
     teken();
-  } else if (t.dataset.toevoegen) {
+  } else if (el.dataset.toevoegen) {
 
-    const key = t.value;
+    const key = el.value;
     if (!key) return;
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.toevoegen);
-    const r = binnen().find((x) => x.id === t.dataset.toevoegen);
+    const k = next?.kamers.find((x) => x.id === el.dataset.toevoegen);
+    const r = binnen().find((x) => x.id === el.dataset.toevoegen);
     if (!k || !r) return;
     // Een airco helpt op zon; de eerste verwarming houdt de kamer op temperatuur, een tweede kijkt mee.
     const toestel = binnen().flatMap(klimaatIn).find((a) => sleutel(a) === key);
@@ -1494,40 +1494,40 @@ document.addEventListener('change', async (e) => {
     next.apparaten[key] = { ...(next.apparaten[key] ?? {}), kamer: k.id, zone: null };
     toevoegenIn = null;
     await bewaarIndeling(next);
-  } else if (t.dataset.comfort) {
+  } else if (el.dataset.comfort) {
     const c = { ...comfortNu() };
-    c[t.dataset.comfort] = Number(t.value);
+    c[el.dataset.comfort] = Number(el.value);
     // Tussen verwarmen en koelen minstens een graad.
-    if (t.dataset.comfort === 'warm' && c.koel < c.warm + 1) c.koel = c.warm + 1;
-    if (t.dataset.comfort === 'koel' && c.warm > c.koel - 1) c.warm = c.koel - 1;
+    if (el.dataset.comfort === 'warm' && c.koel < c.warm + 1) c.koel = c.warm + 1;
+    if (el.dataset.comfort === 'koel' && c.warm > c.koel - 1) c.warm = c.koel - 1;
     comfortKeuze = c;
     await bewaarComfort();
-  } else if (t.hasAttribute('data-dagvan') || t.hasAttribute('data-dagtot')) {
-    comfortKeuze = { ...comfortNu(), [t.hasAttribute('data-dagvan') ? 'dag' : 'avond']: Number(t.value) };
+  } else if (el.hasAttribute('data-dagvan') || el.hasAttribute('data-dagtot')) {
+    comfortKeuze = { ...comfortNu(), [el.hasAttribute('data-dagvan') ? 'dag' : 'avond']: Number(el.value) };
     await bewaarComfort();
-  } else if (t.dataset.aantal) {
-    const v = t.value.trim();
+  } else if (el.dataset.aantal) {
+    const v = el.value.trim();
     const n = v === '' ? null : Number(v);
-    if (n != null && !(Number.isInteger(n) && n >= 1 && n <= 200)) return zeg('Een aantal van 1 tot 200', true);
-    t.blur();
+    if (n != null && !(Number.isInteger(n) && n >= 1 && n <= 200)) return zeg(t('inr.aantal200'), true);
+    el.blur();
     const a = antwoorden();
-    a.panelen = { ...a.panelen, [t.dataset.aantal]: n };
+    a.panelen = { ...a.panelen, [el.dataset.aantal]: n };
     await bewaarAansluiting(a);
-  } else if (t.dataset.prijs) {
-    const v = t.value.trim().replace(',', '.');
+  } else if (el.dataset.prijs) {
+    const v = el.value.trim().replace(',', '.');
     const n = v === '' ? null : Number(v);
-    const max = t.dataset.eenheid === 'm³' ? 5 : 2;
-    if (n != null && !(n >= 0 && n < max)) return zeg(t.dataset.eenheid === 'm³' ? 'Een prijs per m³, zoals 1,35' : 'Een prijs per kWh, zoals 0,25', true);
-    t.blur();
-    await bewaarPrijzen({ [t.dataset.prijs]: n });
-  } else if (t.dataset.meedoen) {
+    const max = el.dataset.eenheid === 'm³' ? 5 : 2;
+    if (n != null && !(n >= 0 && n < max)) return zeg(el.dataset.eenheid === 'm³' ? t('inr.prijsM3', { voorbeeld: nl(1.35, 2) }) : t('inr.prijsKwh', { voorbeeld: nl(0.25, 2) }), true);
+    el.blur();
+    await bewaarPrijzen({ [el.dataset.prijs]: n });
+  } else if (el.dataset.meedoen) {
     // Meedoen met een andere kamer (besluit 142).
     const next = concept();
-    const k = next?.kamers.find((x) => x.id === t.dataset.meedoen);
+    const k = next?.kamers.find((x) => x.id === el.dataset.meedoen);
     if (!k) return;
     delete k.meedoenMet;
-    if (t.value) {
-      k.meedoenMet = t.value;
+    if (el.value) {
+      k.meedoenMet = el.value;
       k.regelzone = null;
     }
     await bewaarIndeling(next);
@@ -1536,10 +1536,10 @@ document.addEventListener('change', async (e) => {
 
 // De schuif laat het getal meteen zien; bewaren gebeurt bij loslaten.
 document.addEventListener('input', (e) => {
-  const t = e.target;
-  if (!t.dataset?.comfort) return;
-  const b = t.closest('.schuif')?.querySelector('b');
-  if (b) b.textContent = `${nl(Number(t.value))}°`;
+  const el = e.target;
+  if (!el.dataset?.comfort) return;
+  const b = el.closest('.schuif')?.querySelector('b');
+  if (b) b.textContent = `${nl(Number(el.value))}°`;
 });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;

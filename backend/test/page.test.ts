@@ -1069,6 +1069,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         // Deel 4: Wat je huis kan, Indeling, Inrichten en het begin.
         ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*Sun and costs/],
         ['indeling.html', /Rooms and layout[\s\S]*(Add a floor|Name of the floor)/],
+        ['inrichten.html', /Your house[\s\S]*Let’s set up your house/],
+        ['inrichten.html#warmte', /What heats and cools\?/],
+        ['inrichten.html#klaar', /Your house is set up/],
       ];
       for (const [pagina, tekst] of paginas) {
         await p.goto(`${baseUrl}/${pagina}`);
@@ -1081,7 +1084,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         });
         expect(opPagina, pagina).toEqual([]);
         // Om te zien of de Engelse zinnen passen: HEMS_PAGE_SHOTS=<map> maakt per pagina een afdruk.
-        if (process.env.HEMS_PAGE_SHOTS) await p.screenshot({ path: `${process.env.HEMS_PAGE_SHOTS}/${pagina.replace('.html', '')}-en.png` });
+        if (process.env.HEMS_PAGE_SHOTS) await p.screenshot({ path: `${process.env.HEMS_PAGE_SHOTS}/${pagina.replace('.html', '').replace('#', '-')}-en.png` });
       }
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
       expect(fouten).toEqual([]);
