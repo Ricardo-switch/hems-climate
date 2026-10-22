@@ -6,14 +6,14 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 ## Waar het staat
 
 - **Klaar:** Thuis en wat op elke pagina staat (0.59.1), de vijf tabbladen en
-  de assistent (0.59.2), Instellingen en de pagina's erachter (0.59.3).
-- **Deel 4, bezig:** af zijn Wat je huis kan (`huis-kan.*`, heel `stand.js`),
-  `huismodel.js`, Indeling (`indeling.*`) en Inrichten (`inrichten.*`). Nog
-  te doen: het begin (`begin.*`, `welkom.*`, `film.js`). Wat af is, staat in `OMGEZET` in
-  `backend/test/taal.test.ts`; er komt pas een versie als deel 4 af is.
+  de assistent (0.59.2), Instellingen en de pagina's erachter (0.59.3), Wat je
+  huis kan, Indeling, Inrichten, het begin, het welkom en de film (0.59.4).
+  Alles wat af is, staat in `OMGEZET` in `backend/test/taal.test.ts`.
 - **Deel 5:** wat de dienst in woorden geeft: de stand van apparaten in
   `house.ts`, het weer, de meldingen, de namen van periodes, de ligging van de
-  panelen, de namen van camerabeelden, en wat er nieuw is (`NIEUW` in
+  panelen, de namen van camerabeelden, de standaardnamen van de etages, de
+  vragen bij het begin (`api/onboarding`), Klaarzetten in Home Assistant
+  (`api/klaarzetten`), de rol bij inloggen, en wat er nieuw is (`NIEUW` in
   `version.ts`). Daarna `huismodel.ACTIEF` en de vaste patronen in `kamer.js`
   (`BEWEEGT`) naar codes.
 - **Deel 6:** de assistent: Engels verstaan, Engelse zinnen voor Assist

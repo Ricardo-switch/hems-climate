@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.59.4
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook Wat je huis kan, Kamers en indeling, Inrichten, het welkom en de film
+- Een buitenruimte wordt ook aan een Engelse naam herkend, zoals garden of driveway
+
 ## 0.59.3
 
 *22 oktober 2026*

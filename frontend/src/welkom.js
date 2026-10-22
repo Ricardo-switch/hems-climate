@@ -18,8 +18,8 @@ const { esc, haal } = app;
 
 // Een pad op deze dienst, of achter Ingress een pagina naast deze (besluit 154): nooit een andere site.
 const terug = (() => {
-  const t = new URLSearchParams(location.search).get('terug') || 'thuis.html';
-  return (t.startsWith('/') && !t.startsWith('//')) || /^[a-z-]+\.html([?#][^/\\]*)?$/.test(t) ? t : 'thuis.html';
+  const pad = new URLSearchParams(location.search).get('terug') || 'thuis.html';
+  return (pad.startsWith('/') && !pad.startsWith('//')) || /^[a-z-]+\.html([?#][^/\\]*)?$/.test(pad) ? pad : 'thuis.html';
 })();
 const kaart = document.querySelector('[data-kaart]');
 let bewoners = null;
@@ -34,7 +34,7 @@ const ICOON_SCHERM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 async function stuur(body) {
   const res = await fetch('api/bewoners', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.fout ?? 'dat lukte niet');
+  if (!res.ok) throw new Error(data.fout ?? t('toegang.lukteNiet'));
   bewoners = data;
   return data;
 }
@@ -48,51 +48,45 @@ function welkom() {
   const ik = bewoners?.bewoners.find((b) => b.ik);
   if (!ik) return vraag();
   const hoofd = bewoners.bewoners.find((b) => b.hoofd);
-  const comfort = ik.hoofd
-    ? 'Je bent de hoofdgebruiker: jouw comfort geldt als je thuis bent, en als er niemand thuis is.'
-    : `Je woont hier. Je comfort is eerst hetzelfde als dat van ${esc(hoofd?.naam ?? 'de hoofdgebruiker')}, tot je zelf iets verandert.`;
+  const comfort = ik.hoofd ? t('welkom.hoofd') : t('welkom.woont', { naam: hoofd?.naam ?? t('jij.deHoofdgebruiker') });
   const thuis = ik.aanwezigheidNaam
-    ? `<div class="bron" aria-pressed="true" style="cursor: default">${esc(ik.aanwezigheidNaam)}${ik.gekoppeld ? ' in Home Assistant' : ''}<span class="${ik.thuis ? 'thuis' : ''}">${ik.thuis == null ? '' : ik.thuis ? 'thuis' : 'weg'}</span></div>${ik.gekoppeld ? '<span class="hint">Gekoppeld aan je account.</span>' : ''}`
-    : '<p class="hint">Nog niet bekend. Kies het later bij Instellingen › Bewoners.</p>';
+    ? `<div class="bron" aria-pressed="true" style="cursor: default">${esc(ik.gekoppeld ? t('bewoners.inHANaam', { naam: ik.aanwezigheidNaam }) : ik.aanwezigheidNaam)}<span class="${ik.thuis ? 'thuis' : ''}">${ik.thuis == null ? '' : esc(t(ik.thuis ? 'bewoners.thuis' : 'bewoners.weg'))}</span></div>${ik.gekoppeld ? `<span class="hint">${esc(t('bewoners.gekoppeld.ik'))}</span>` : ''}`
+    : `<p class="hint">${esc(t('welkom.nogNiet'))}</p>`;
   // Klopt iets niet (besluit 158): per regel waar je het verandert.
   const nietGoed = [
-    ik.hoofd
-      ? 'Ben jij niet de hoofdgebruiker? De eerste die inlogt, wordt het. Wie bovenaan staat, verander je bij Instellingen › Bewoners.'
-      : `Wie de hoofdgebruiker is, verander je bij Instellingen › Bewoners.`,
-    ik.gekoppeld
-      ? `Volgt het huis de verkeerde persoon? ${esc(ik.aanwezigheidNaam ?? '')} is in Home Assistant aan je account gekoppeld. Een andere koppel je in Home Assistant, bij Instellingen › Personen.`
-      : 'Volgt het huis de verkeerde sensor? Kies een andere bij Instellingen › Bewoners.',
+    t(ik.hoofd ? 'welkom.nietHoofd' : 'welkom.wieHoofd'),
+    ik.gekoppeld ? t('welkom.verkeerdPersoon', { naam: ik.aanwezigheidNaam ?? '' }) : t('welkom.verkeerdSensor'),
   ];
   kaart.innerHTML = `${merk}
-    <h1>Welkom, ${esc(ik.naam)}</h1>
-    <p>${comfort}</p>
-    <div class="vak"><label for="naam">Zo noemt het huis je</label><input class="veld" id="naam" data-naam value="${esc(ik.naam)}" maxlength="40" autocomplete="nickname"><span class="hint">Uit Home Assistant: ${esc(ik.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
-    <div class="vak"><span>Thuis volgens</span>${thuis}</div>
+    <h1>${esc(t('welkom.kop', { naam: ik.naam }))}</h1>
+    <p>${esc(comfort)}</p>
+    <div class="vak"><label for="naam">${esc(t('bewoners.noemt.ik'))}</label><input class="veld" id="naam" data-naam value="${esc(ik.naam)}" maxlength="40" autocomplete="nickname"><span class="hint">${esc(t('welkom.uitHA', { naam: ik.haNaam }))}</span></div>
+    <div class="vak"><span>${esc(t('bewoners.thuisVolgens'))}</span>${thuis}</div>
     <span class="fout" data-fout></span>
-    <div class="voet"><a class="zacht" href="${esc(terug)}">Later</a><button type="button" class="knop knop-licht" data-klopt>Klopt</button></div>
-    <details class="nietgoed"><summary>Klopt iets niet?</summary>${nietGoed.map((z) => `<p class="hint">${z}</p>`).join('')}<a class="knop" href="bewoners.html">Naar Bewoners</a></details>
-    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">Dit is een scherm</button></p>`;
+    <div class="voet"><a class="zacht" href="${esc(terug)}">${esc(t('basis.versie.later'))}</a><button type="button" class="knop knop-licht" data-klopt>${esc(t('welkom.klopt'))}</button></div>
+    <details class="nietgoed"><summary>${esc(t('welkom.kloptNiet'))}</summary>${nietGoed.map((z) => `<p class="hint">${esc(z)}</p>`).join('')}<a class="knop" href="bewoners.html">${esc(t('toegang.naarBewoners'))}</a></details>
+    <p class="hint" style="margin: 0">${esc(t('welkom.tablet'))} <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">${esc(t('welkom.scherm'))}</button></p>`;
 }
 
 /** Een gast (besluit 151): kijkt mee, tot de hoofdgebruiker er een bewoner van maakt. */
 function gast() {
   const hoofd = bewoners?.bewoners.find((b) => b.hoofd);
   kaart.innerHTML = `${merk}
-    <h1>Je kijkt mee als gast</h1>
-    <p>Je ziet het huis, en bedient licht en screens als je thuis bent. Instellingen veranderen kan niet.</p>
-    <p class="hint" style="margin: 0">Woon je hier? Vraag ${esc(hoofd?.naam ?? 'de hoofdgebruiker')} om je bij Instellingen › Bewoners bewoner te maken.</p>
+    <h1>${esc(t('instellingen.gast'))}</h1>
+    <p>${esc(t('welkom.gastZin'))}</p>
+    <p class="hint" style="margin: 0">${esc(t('welkom.vraagHoofd', { naam: hoofd?.naam ?? t('jij.deHoofdgebruiker') }))}</p>
     <span class="fout" data-fout></span>
-    <div class="voet"><span></span><a class="knop knop-licht" href="${esc(terug)}" style="display: inline-flex; align-items: center; text-decoration: none">Verder</a></div>
-    <p class="hint" style="margin: 0">Is dit geen persoon maar een tablet, zoals de wand? <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">Dit is een scherm</button></p>`;
+    <div class="voet"><span></span><a class="knop knop-licht" href="${esc(terug)}" style="display: inline-flex; align-items: center; text-decoration: none">${esc(t('begin.verder'))}</a></div>
+    <p class="hint" style="margin: 0">${esc(t('welkom.tablet'))} <button type="button" class="zacht" data-wordt-scherm style="font-size: 12.5px; color: var(--ijs-t); padding: 0">${esc(t('welkom.scherm'))}</button></p>`;
 }
 
 function vraag() {
   kaart.innerHTML = `${merk}
-    <h1>Woon je hier, of is dit een scherm?</h1>
-    <button type="button" class="keus" data-keus="bewoner" aria-pressed="${keuze === 'bewoner'}"><span class="ik">${ICOON_IK}</span><span><b>Ik woon hier</b><span>Met je eigen naam, en je eigen comfort als je dat wilt.</span></span></button>
-    <button type="button" class="keus" data-keus="scherm" aria-pressed="${keuze === 'scherm'}"><span class="ik">${ICOON_SCHERM}</span><span><b>Dit is een scherm</b><span>Zoals de wand of een tablet in de keuken. Begroet wie er thuis is, en telt niet als bewoner.</span></span></button>
+    <h1>${esc(t('welkom.vraag'))}</h1>
+    <button type="button" class="keus" data-keus="bewoner" aria-pressed="${keuze === 'bewoner'}"><span class="ik">${ICOON_IK}</span><span><b>${esc(t('welkom.ikWoon'))}</b><span>${esc(t('welkom.ikWoonZin'))}</span></span></button>
+    <button type="button" class="keus" data-keus="scherm" aria-pressed="${keuze === 'scherm'}"><span class="ik">${ICOON_SCHERM}</span><span><b>${esc(t('welkom.scherm'))}</b><span>${esc(t('welkom.schermZin'))}</span></span></button>
     <span class="fout" data-fout></span>
-    <div class="voet"><span></span><button type="button" class="knop knop-licht" data-verder ${keuze ? '' : 'disabled'}>Verder</button></div>`;
+    <div class="voet"><span></span><button type="button" class="knop knop-licht" data-verder ${keuze ? '' : 'disabled'}>${esc(t('begin.verder'))}</button></div>`;
 }
 
 function waarThuis() {
@@ -100,12 +94,12 @@ function waarThuis() {
   const vrij = bewoners?.kiesbaarVoorMij ?? [];
   const knop = (id, naam, rechts, klasse = '') => `<button type="button" class="bron" data-bron="${esc(id)}" aria-pressed="${bron === id}">${esc(naam)}<span class="${klasse}">${esc(rechts)}</span></button>`;
   kaart.innerHTML = `${merk}
-    <h1>Welke sensor ziet of je thuis bent?</h1>
-    <p>Zo weet het huis wiens comfort er geldt. Wat al bij een ander hoort, staat er niet bij.</p>
-    ${vrij.map((b) => knop(b.id, b.naam, `${b.soort === 'persoon' ? 'persoon' : 'sensor'}${b.thuis == null ? '' : b.thuis ? ', thuis' : ', weg'}`, b.thuis ? 'thuis' : '')).join('')}
-    ${knop('', 'Nog niet', 'dan telt alleen je naam')}
+    <h1>${esc(t('bewoners.welkeSensor.ik'))}</h1>
+    <p>${esc(t('welkom.sensorZin'))}</p>
+    ${vrij.map((b) => knop(b.id, b.naam, `${t(b.soort === 'persoon' ? 'inr.persoon' : 'bewoners.sensor')}${b.thuis == null ? '' : t(b.thuis ? 'toegang.thuis' : 'toegang.weg')}`, b.thuis ? 'thuis' : '')).join('')}
+    ${knop('', t('welkom.nogNietKnop'), t('welkom.alleenNaam'))}
     <span class="fout" data-fout></span>
-    <div class="voet"><button type="button" class="zacht" data-terug-vraag>Terug</button><button type="button" class="knop knop-licht" data-klaar>Klaar</button></div>`;
+    <div class="voet"><button type="button" class="zacht" data-terug-vraag>${esc(t('panelen.terug'))}</button><button type="button" class="knop knop-licht" data-klaar>${esc(t('algemeen.klaar'))}</button></div>`;
 }
 
 function teken() {
@@ -116,13 +110,13 @@ function teken() {
 }
 
 kaart.addEventListener('click', async (e) => {
-  const t = e.target.closest('button');
-  if (!t) return;
+  const el = e.target.closest('button');
+  if (!el) return;
   try {
-    if (t.dataset.keus) {
-      keuze = t.dataset.keus;
+    if (el.dataset.keus) {
+      keuze = el.dataset.keus;
       vraag();
-    } else if (t.hasAttribute('data-verder')) {
+    } else if (el.hasAttribute('data-verder')) {
       if (keuze === 'scherm') {
         await stuur({ actie: 'ik', soort: 'scherm' });
         location.href = terug;
@@ -130,20 +124,20 @@ kaart.addEventListener('click', async (e) => {
         stap = 'thuis';
         teken();
       }
-    } else if (t.hasAttribute('data-terug-vraag')) {
+    } else if (el.hasAttribute('data-terug-vraag')) {
       stap = 'vraag';
       teken();
-    } else if (t.dataset.bron !== undefined) {
-      bron = t.dataset.bron;
+    } else if (el.dataset.bron !== undefined) {
+      bron = el.dataset.bron;
       waarThuis();
-    } else if (t.hasAttribute('data-klaar')) {
+    } else if (el.hasAttribute('data-klaar')) {
       await stuur({ actie: 'ik', soort: 'bewoner', ...(bron ? { aanwezigheid: bron } : {}) });
       stap = 'welkom';
       teken();
-    } else if (t.hasAttribute('data-wordt-scherm')) {
+    } else if (el.hasAttribute('data-wordt-scherm')) {
       await stuur({ actie: 'scherm' });
       location.href = terug;
-    } else if (t.hasAttribute('data-klopt')) {
+    } else if (el.hasAttribute('data-klopt')) {
       const ik = bewoners?.bewoners.find((b) => b.ik);
       const naam = kaart.querySelector('[data-naam]')?.value.trim();
       if (ik && naam && naam !== ik.naam) await stuur({ actie: 'naam', id: ik.id, naam });

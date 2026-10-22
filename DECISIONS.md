@@ -8372,6 +8372,15 @@ gehouden met meervouden: ja, met de regels per taal.
   de QR-code bij Bewoners een label had zonder rol (nu een afbeelding). Met
   `HEMS_PAGE_SHOTS=<map>` maakt hij per pagina een afdruk, om te zien of de
   Engelse zinnen passen.
+- **Stap 9, vierde deel (0.59.4):** Wat je huis kan (heel `stand.js` en
+  `huis-kan.*`), `huismodel.js` (de soorten kamers, delen en buitenruimtes,
+  en de bronnen van warmte), Kamers en indeling, Inrichten, het begin bij een
+  leeg huis, het welkom bij de eerste inlog en de film. Een buitenruimte wordt
+  ook aan een Engelse naam herkend. Wat de dienst als stand van een airco geeft
+  (`huismodel.ACTIEF`), staat als vast patroon tot de dienst meertalig is. De
+  hulpscripts om om te zetten staan in `backend/tools/omzetten`, met een
+  LEESMIJ over waar het staat, zodat een andere sessie verder kan. De
+  paginatest zet ook deze pagina's en de film in het Engels.
 
 *Wat er nog Nederlands is op Thuis (stap 9):* de teksten uit `api/huis`,
 `api/weer` en de meldingen (de stand van een apparaat, het weer in woorden), en

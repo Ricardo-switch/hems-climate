@@ -44,25 +44,25 @@ function naamVan(id) {
 }
 
 function welkom() {
-  return `<h1 class="groot">Welkom <em>thuis.</em></h1>
-    <p class="lead">Smart Climate laat je huis meedenken met de zon. Het kijkt naar je verwarming, airco's en panelen, en zegt bij elk besluit waarom.</p>
+  return `<h1 class="groot">${esc(t('begin.welkom'))} <em>${esc(t('begin.thuis'))}</em></h1>
+    <p class="lead">${esc(t('begin.lead'))}</p>
     <ul class="kan">
-      <li><span class="ik" style="color: var(--gloed-t)">${ICOON.comfort}</span><div><b>Comfort in elke kamer</b><span>Warm waar je bent, koel als het nodig is.</span></div></li>
-      <li><span class="ik" style="color: var(--zon-t)">${ICOON.zon}</span><div><b>Op je eigen zon</b><span>Zon over gaat eerst naar je huis, dan naar het net.</span></div></li>
-      <li><span class="ik" style="color: var(--ijs-t)">${ICOON.licht}</span><div><b>Bedienen</b><span>Licht, scènes en schermen, met een tik of je stem.</span></div></li>
+      <li><span class="ik" style="color: var(--gloed-t)">${ICOON.comfort}</span><div><b>${esc(t('begin.comfort'))}</b><span>${esc(t('begin.comfortZin'))}</span></div></li>
+      <li><span class="ik" style="color: var(--zon-t)">${ICOON.zon}</span><div><b>${esc(t('begin.zon'))}</b><span>${esc(t('begin.zonZin'))}</span></div></li>
+      <li><span class="ik" style="color: var(--ijs-t)">${ICOON.licht}</span><div><b>${esc(t('begin.bedienen'))}</b><span>${esc(t('begin.bedienenZin'))}</span></div></li>
     </ul>
     <span class="fout" role="alert">${esc(fout)}</span>
     <div class="doen">
-      <button type="button" class="knop knop-licht" data-inrichten${voorstel ? '' : ' disabled'}>Richt je huis in</button>
-      <button type="button" class="zacht onderlijn" data-backup>Ik heb een back-up</button>
+      <button type="button" class="knop knop-licht" data-inrichten${voorstel ? '' : ' disabled'}>${esc(t('begin.inrichten'))}</button>
+      <button type="button" class="zacht onderlijn" data-backup>${esc(t('begin.backup'))}</button>
     </div>`;
 }
 
 function vraag(i) {
   const v = vragen()[i];
   const gekozen = antwoorden[v.id];
-  const opties = [...v.opties.map((o) => [o, naamVan(o)]), ...(v.magLeeg ? [[null, 'Geen van deze']] : [])];
-  return `<span class="stapje">Nog ${vragen().length - i === 1 ? 'één vraag' : `${vragen().length - i} vragen`}</span>
+  const opties = [...v.opties.map((o) => [o, naamVan(o)]), ...(v.magLeeg ? [[null, t('begin.geenVanDeze')]] : [])];
+  return `<span class="stapje">${esc(t('begin.nogVragen', { n: vragen().length - i }))}</span>
     <h1 class="vraagkop">${esc(v.vraag)}</h1>
     ${v.toelichting ? `<p class="lead">${esc(v.toelichting)}</p>` : ''}
     <div class="opties" role="group" aria-label="${esc(v.vraag)}">
@@ -70,22 +70,22 @@ function vraag(i) {
     </div>
     <span class="fout" role="alert">${esc(fout)}</span>
     <div class="doen">
-      <button type="button" class="knop knop-licht" data-verder>${i === vragen().length - 1 ? 'Klaar' : 'Verder'}</button>
-      <button type="button" class="zacht" data-terug>Terug</button>
+      <button type="button" class="knop knop-licht" data-verder>${esc(t(i === vragen().length - 1 ? 'algemeen.klaar' : 'begin.verder'))}</button>
+      <button type="button" class="zacht" data-terug>${esc(t('panelen.terug'))}</button>
     </div>`;
 }
 
 function bezig() {
   return `<div class="draait" aria-hidden="true"></div>
     <h1 class="vraagkop">${esc(bezigTekst)}</h1>
-    <p class="lead">Dit duurt een paar tellen.</p>
+    <p class="lead">${esc(t('begin.tellen'))}</p>
     <span class="fout" role="alert">${esc(fout)}</span>`;
 }
 
 function tekenLinks() {
   const html = stap === 'welkom' ? welkom() : stap === 'bezig' ? bezig() : vraag(stap);
   document.querySelectorAll('[data-links]').forEach((el) => (el.innerHTML = html));
-  const voet = stap === 'welkom' ? 'Inrichten duurt ongeveer tien minuten. Alles blijft in je eigen huis.' : '';
+  const voet = stap === 'welkom' ? t('begin.voet') : '';
   document.querySelectorAll('[data-voet]').forEach((el) => (el.textContent = voet));
 }
 
@@ -110,8 +110,8 @@ function tellers(deel) {
   const ruimtes = (huisNu.etages ?? []).reduce((n, e) => n + (e.ruimtes?.length ?? 0), 0);
   const apparaten = (huisNu.etages ?? []).flatMap((e) => e.ruimtes ?? []).reduce((n, r) => n + (r.apparaten?.length ?? 0), 0) + (huisNu.zonderRuimte?.length ?? 0);
   const tel = (n) => Math.round(n * deel);
-  return `<span class="bezig"><i aria-hidden="true"></i><span>In Home Assistant gevonden</span></span>
-    <span class="tellers"><span><b>${tel(etages)}</b>${etages === 1 ? 'etage' : 'etages'}</span><span><b>${tel(ruimtes)}</b>ruimtes</span><span><b>${tel(apparaten)}</b>apparaten</span></span>`;
+  return `<span class="bezig"><i aria-hidden="true"></i><span>${esc(t('begin.gevonden'))}</span></span>
+    <span class="tellers"><span><b>${tel(etages)}</b>${esc(t('inr.tel.etages', { n: etages }))}</span><span><b>${tel(ruimtes)}</b>${esc(t('begin.ruimtes', { n: ruimtes }))}</span><span><b>${tel(apparaten)}</b>${esc(t('inr.tel.apparaten', { n: apparaten }))}</span></span>`;
 }
 
 function tekenHuis() {
@@ -120,7 +120,7 @@ function tekenHuis() {
   const maand = new Date().getMonth() + 1;
   app.lucht(tijd, maand >= 11 || maand <= 2 ? 'winter' : 'zomer', 0.2);
   if (!voorstel?.huis || !tekening) {
-    document.querySelectorAll('[data-gevonden]').forEach((el) => (el.innerHTML = '<span class="bezig"><i aria-hidden="true"></i><span>Home Assistant wordt doorzocht</span></span>'));
+    document.querySelectorAll('[data-gevonden]').forEach((el) => (el.innerHTML = `<span class="bezig"><i aria-hidden="true"></i><span>${esc(t('begin.zoekt'))}</span></span>`));
     return;
   }
   const alle = tekening.etages;
@@ -167,7 +167,7 @@ async function laad(poging = 0) {
   }
   // Er staat al een configuratie: de dienst start daar zo mee, dan door.
   if (voorstel?.bestaande?.length) {
-    bezigTekst = 'Je huis wordt klaargezet.';
+    bezigTekst = t('begin.klaarzetten');
     stap = 'bezig';
     tekenLinks();
     void wachtOpHerstart('inrichten.html');
@@ -203,19 +203,19 @@ async function wachtOpHerstart(naar) {
     }
     await new Promise((ok) => setTimeout(ok, 2000));
   }
-  fout = 'Smart Climate antwoordt nog niet. Kijk over een paar minuten opnieuw.';
+  fout = t('toegang.nogNiet');
   tekenLinks();
 }
 
 async function stuur(pad, body) {
   const r = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const uit = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(uit.reden || uit.fout || 'Dat lukte niet');
+  if (!r.ok) throw new Error(uit.reden || uit.fout || t('toegang.lukteNiet'));
   return uit;
 }
 
 async function bewaar() {
-  bezigTekst = 'Je huis wordt klaargezet.';
+  bezigTekst = t('begin.klaarzetten');
   stap = 'bezig';
   fout = '';
   tekenLinks();
@@ -232,26 +232,26 @@ async function bewaar() {
 /* ------------------------------------------------------------- bediening */
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('button');
-  if (!t || t.disabled) return;
+  const knop = e.target.closest('button');
+  if (!knop || knop.disabled) return;
   fout = '';
-  if (t.hasAttribute('data-inrichten')) {
+  if (knop.hasAttribute('data-inrichten')) {
     if (vragen().length) {
       stap = 0;
       tekenLinks();
     } else void bewaar();
-  } else if (t.hasAttribute('data-backup')) {
+  } else if (knop.hasAttribute('data-backup')) {
     document.querySelector('[data-backup-bestand]').click();
-  } else if (t.hasAttribute('data-optie')) {
+  } else if (knop.hasAttribute('data-optie')) {
     const v = vragen()[stap];
-    antwoorden[v.id] = t.dataset.optie === '' ? null : t.dataset.optie;
+    antwoorden[v.id] = knop.dataset.optie === '' ? null : knop.dataset.optie;
     tekenLinks();
-  } else if (t.hasAttribute('data-verder')) {
+  } else if (knop.hasAttribute('data-verder')) {
     if (stap < vragen().length - 1) {
       stap += 1;
       tekenLinks();
     } else void bewaar();
-  } else if (t.hasAttribute('data-terug')) {
+  } else if (knop.hasAttribute('data-terug')) {
     stap = stap === 0 ? 'welkom' : stap - 1;
     tekenLinks();
   }
@@ -264,15 +264,15 @@ document.addEventListener('change', async (e) => {
   veld.value = '';
   try {
     const backup = JSON.parse(await bestand.text());
-    if (backup?.soort !== 'smart-climate-back-up') throw new Error('Dit is geen back-up van Smart Climate');
-    bezigTekst = 'Je back-up wordt teruggezet.';
+    if (backup?.soort !== 'smart-climate-back-up') throw new Error(t('toegang.geenBackup'));
+    bezigTekst = t('begin.terugzetten');
     stap = 'bezig';
     tekenLinks();
     await stuur('api/back-up', backup);
     void wachtOpHerstart('thuis.html');
   } catch (err) {
     stap = 'welkom';
-    fout = err instanceof SyntaxError ? 'Dit bestand is niet te lezen' : err.message;
+    fout = err instanceof SyntaxError ? t('toegang.nietTeLezen') : err.message;
     tekenLinks();
   }
 });

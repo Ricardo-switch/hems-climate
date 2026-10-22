@@ -1086,6 +1086,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         // Om te zien of de Engelse zinnen passen: HEMS_PAGE_SHOTS=<map> maakt per pagina een afdruk.
         if (process.env.HEMS_PAGE_SHOTS) await p.screenshot({ path: `${process.env.HEMS_PAGE_SHOTS}/${pagina.replace('.html', '').replace('#', '-')}-en.png` });
       }
+      // De film in het Engels: het eerste beeld, pauzeren en overslaan.
+      await p.locator('#wand [data-kaart] button', { hasText: 'Play' }).click();
+      const film = p.locator('.film');
+      await film.locator('.titel', { hasText: 'A day in your house' }).waitFor({ timeout: 10_000 });
+      expect(await film.getAttribute('aria-label')).toBe('A day in your house, a 45-second film');
+      await film.locator('[data-film-pauze]').click();
+      expect(await film.locator('[data-film-pauze]').getAttribute('aria-label')).toBe('Continue playing');
+      expect(await film.locator('[data-film-klaar]').innerText()).toBe('Skip');
+      await film.locator('[data-film-klaar]').click();
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
       expect(fouten).toEqual([]);
     } finally {

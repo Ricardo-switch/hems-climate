@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.3';
+export const VERSIE = '0.59.4';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,14 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.4',
+    datum: '2026-10-22',
+    beter: [
+      'In het Engels nu ook Wat je huis kan, Kamers en indeling, Inrichten, het welkom en de film',
+      'Een buitenruimte wordt ook aan een Engelse naam herkend, zoals garden of driveway',
+    ],
+  },
   {
     versie: '0.59.3',
     datum: '2026-10-22',
