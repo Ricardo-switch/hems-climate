@@ -15,6 +15,7 @@ import type { PowerRow } from './today.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
 import type { Profielen, VoorkeurenStore } from './voorkeuren.js';
+import type { IntegratieStand } from './integratie.js';
 import type { ConnectionStore, ConnectionView, FoundAppliance, FoundPhase } from './aansluiting.js';
 import type { EnergySource, EnergyStore } from './energy.js';
 import type { Punt } from './kaart.js';
@@ -200,6 +201,14 @@ export interface WebOptions {
   readonly telefoons?: (userId: string | null) => readonly { readonly id: string; readonly naam: string; readonly eigen: boolean }[];
   /** Een proefmelding naar je eigen telefoon (besluit 183). */
   readonly proefmelding?: (userId: string | null) => Promise<{ readonly ok: true; readonly naam: string } | { readonly ok: false; readonly status: number; readonly reden: string }>;
+  /**
+   * De integratie neerzetten vanuit de add-on (besluit 184): hoe hij erbij
+   * staat, met de versie die Home Assistant nu geladen heeft, en neerzetten.
+   */
+  readonly integratie?: {
+    readonly stand: () => Promise<IntegratieStand & { readonly geladen: string | null }>;
+    readonly zetNeer: () => Promise<{ readonly ok: true; readonly stand: IntegratieStand } | { readonly ok: false; readonly reden: string }>;
+  };
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
   /**
    * Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt,

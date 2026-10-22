@@ -37,11 +37,12 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [73. Elk huis doorloopt drie fasen, en de bewoner doet vanaf dag één mee](#73-elk-huis-doorloopt-drie-fasen-en-de-bewoner-doet-vanaf-dag-één-mee)
 - [75. Een opdracht aan de assistent wordt een ingreep met een eindtijd](#75-een-opdracht-aan-de-assistent-wordt-een-ingreep-met-een-eindtijd)
 - [78. Geavanceerde functies volgen uit wat het huis heeft; ingrijpende vragen een bewuste keuze](#78-geavanceerde-functies-volgen-uit-wat-het-huis-heeft-ingrijpende-vragen-een-bewuste-keuze)
-- [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml)
+- [91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML](#91-de-add-on-krijgt-een-eigen-integratie-de-bewoner-plakt-geen-yaml) — *aangevuld door 184*
 - [92. Zonwering hoort bij het klimaat; verlichting regelt Smart Climate niet](#92-zonwering-hoort-bij-het-klimaat-verlichting-regelt-smart-climate-niet) — *aangevuld door 97*
 - [96. Stap C loopt naast de schaduw en B; indelen kan al in de proefomgeving](#96-stap-c-loopt-naast-de-schaduw-en-b-indelen-kan-al-in-de-proefomgeving)
 - [104. Ontwerp 2 is de maatstaf, en de schets is de code](#104-ontwerp-2-is-de-maatstaf-en-de-schets-is-de-code)
 - [172. De app is af: opruimen, wat er nog komt, en talen later](#172-de-app-is-af-opruimen-wat-er-nog-komt-en-talen-later)
+- [184. De integratie Smart Climate: Assist zonder YAML](#184-de-integratie-smart-climate-assist-zonder-yaml)
 
 **Kern en regeling**
 
@@ -3748,7 +3749,7 @@ De zolder en het septembervenster laten hetzelfde beeld zien.
 
 ## 91. De add-on krijgt een eigen integratie; de bewoner plakt geen YAML
 
-*Onderwerp: visie en principes · Status: geldig*
+*Onderwerp: visie en principes · Status: aangevuld door 184*
 
 Fase 1 van de assistent (ONTWERP §7) werkt in dit huis met twee bestanden die
 de bewoner zelf in Home Assistant zet: zinnen in `custom_sentences/nl/` en een
@@ -8211,6 +8212,60 @@ goed, dan verdwijnt de melding stil; en het dringende staat meteen aan.
 afloopt, uit besluit 79): die ingreep bestaat nog niet, en een knop die iets
 doet is weer een deur. Het sluipverbruik van de nacht ervoor als melding: de
 bel kent het nog niet. Beide kunnen later in hetzelfde scherm.
+
+## 184. De integratie Smart Climate: Assist zonder YAML
+
+*Onderwerp: visie en principes · Status: geldig*
+
+Stap 10 uit het stappenplan van besluit 172, het laatste punt: de eigen
+integratie van besluit 91. Op 22 oktober 2026 koos de bewoner, na uitleg over
+waarom (geen YAML voor een ander huis, zinnen die verouderen, de weg voor stap
+B) en over HACS: alleen Assist, nog geen sensoren; de zinnen uit de add-on, zodat
+een verbetering met een gewone update komt; en zowel HACS als een knop in de
+app, zodat niemand HACS nodig heeft. Hij vatte het samen: dit is zodat mensen
+niets met de hand in de YAML hoeven te doen, zoals hij moest.
+
+*Besluit:*
+
+- **Een integratie in `custom_components/smart_climate`,** in deze
+  repository. Hij registreert de vraag voor Assist in code
+  (`SmartClimateVraag`, met de soort vraag als vaste waarde: nu, waarom,
+  straks, zon, doe) in plaats van `intent_script` en `rest_command`, en stelt
+  hem aan Smart Climate met de sleutel. Alles leest alleen; een opdracht
+  krijgt als antwoord wat Smart Climate zou doen.
+- **De zinnen komen uit de add-on** (`/api/assist`, `zinnen.ts`): de zinnen
+  en de kamers van dit huis, met de namen van de kamers in de indeling die bij
+  een zone horen ("keuken" bij de woonkamer). De integratie schrijft ze in één
+  eigen bestand in `custom_sentences/<taal>/`, werkt het elk half uur bij als
+  het verandert, en haalt het weg bij verwijderen. Een nieuwe zin komt zo met
+  een update van de add-on; de integratie zelf verandert zelden.
+- **Toevoegen met één klik:** de add-on meldt zich bij de Supervisor aan met
+  zijn adres en de sleutel (`discovery`), en Home Assistant toont "Nieuw
+  apparaat gevonden: Smart Climate". Zonder add-on vul je het adres en de
+  sleutel uit de app in.
+- **Installeren via HACS, of met een knop in de app** (Sleutel voor de
+  assistent): de add-on kopieert dan alleen `custom_components/smart_climate`
+  naar de configuratie van Home Assistant, met een merkje, en werkt hem bij
+  met elke update van de add-on. Staat hij er via HACS (zonder merkje), dan
+  blijft de add-on eraf. Daarvoor mag de add-on in de configuratie van Home
+  Assistant schrijven (`homeassistant_config:rw`), en dat doet hij alleen na
+  die tik. Na neerzetten of een nieuwe versie herstart de bewoner Home
+  Assistant zelf; de app zegt het, en ziet aan de geladen versie of het
+  gebeurd is.
+- **`ha-assist/` is weg.** Wie Assist met de YAML had ingericht, haalt na het
+  installeren `rest_command`, `intent_script` en de sleutel in `secrets.yaml`
+  weg; het zinnenbestand wordt vanzelf overschreven.
+- **Getoetst in een echte Home Assistant** (2026.10, met
+  `pytest-homeassistant-custom-component`, ook in de CI): toevoegen met de hand
+  en ontdekt via de add-on, het zinnenbestand, een vraag, verwijderen, en
+  gesproken zinnen ("waarom draait de zolder?", "koel de keuken naar 21
+  graden") die met de goede kamer bij Smart Climate uitkomen.
+- **Versie 0.58.0.**
+
+*Wat afviel:* sensoren per kamer voor eigen dashboards (later, als iemand ze
+wil). Een eigen gespreksagent: dan gaat ook "doe het licht aan" eerst langs
+Smart Climate (91). En de add-on die de integratie ongevraagd neerzet: dat
+schrijft zonder dat de bewoner erom vroeg.
 
 ## Wat nog een besluit wacht
 

@@ -110,6 +110,8 @@ const updateNu = { klaar: false, installeer: 0 };
 let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
+/** De integratie in Home Assistant (besluit 184), zoals de nagebootste add-on hem ziet. */
+let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; geladen: string | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
 /** De proefmeldingen die de app vroeg (besluit 183), per account. */
 const proefmeldingen: (string | null)[] = [];
 /** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
@@ -353,6 +355,14 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
           deurbel: () => extraDeurbel,
+          // De integratie neerzetten (besluit 184): nagebootst, zonder map.
+          integratie: {
+            stand: async () => integratieNu,
+            zetNeer: async () => {
+              integratieNu = { ...integratieNu, staat: 'add-on', versie: integratieNu.nieuw };
+              return { ok: true as const, stand: integratieNu };
+            },
+          },
           // Meldingen op de telefoon (besluit 183): een nagebootste telefoon, en onthouden wat er gestuurd werd.
           telefoons: () => [{ id: 'd-pixel', naam: 'Pixel 8', eigen: true }, { id: 'd-ipad', naam: 'iPad keuken', eigen: false }],
           proefmelding: async (userId) => {
@@ -2410,6 +2420,38 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     } finally {
       await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', meldingen: { onderhoud: false, telefoon: null, van: '23:00' } }) });
       await bewonersStore.save(bewonersWas);
+      await context.close();
+    }
+  }, 60_000);
+
+  /*
+   * De integratie neerzetten voor wie geen HACS heeft (besluit 184): een knop
+   * bij Sleutel voor de assistent, en daarna "herstart Home Assistant".
+   */
+  it('zet de integratie in Home Assistant met een knop, voor wie geen HACS heeft (besluit 184)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
+    try {
+      await p.goto(`${baseUrl}/toegang.html#assistent`);
+      const knop = p.locator('#wand [data-integratie]');
+      await knop.waitFor();
+      // Geen YAML meer in de uitleg.
+      expect(await p.locator('#wand [data-vorm]').textContent()).not.toMatch(/secrets\.yaml|rest_command|configuration\.yaml/);
+      await knop.click();
+      await p.locator('#wand [data-vorm]', { hasText: 'neergezet door de add-on' }).waitFor();
+      expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Herstart Home Assistant');
+      // Via HACS: de add-on blijft eraf.
+      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, geladen: VERSIE };
+      await p.reload();
+      await p.locator('#wand [data-vorm]', { hasText: 'via HACS' }).waitFor();
+      expect(await p.locator('#wand [data-integratie]').count()).toBe(0);
+      expect(fouten).toEqual([]);
+    } finally {
+      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
       await context.close();
     }
   }, 60_000);

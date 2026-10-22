@@ -18,6 +18,7 @@
  *     ooit een kwetsbaarheid kunnen krijgen.
  */
 
+import { assistKamers } from './assist.js';
 import { timingSafeEqual } from 'node:crypto';
 import { Readable, pipeline } from 'node:stream';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
@@ -303,6 +304,8 @@ export class WebServer {
       (this.#options.meldingen != null && path === '/api/meldingen') ||
       // Thuis naar eigen smaak (besluit 162): alleen wat er gekozen is, in het eigen bestand.
       (this.#options.voorkeuren != null && path === '/api/voorkeuren') ||
+      // De integratie neerzetten (besluit 184): alleen custom_components/smart_climate, na een tik van de beheerder.
+      (this.#options.integratie != null && path === '/api/integratie') ||
       // Een proefmelding naar je eigen telefoon (besluit 183): alleen notify.mobile_app_…
       (this.#options.proefmelding != null && path === '/api/proefmelding') ||
       (this.#options.energy != null && path === '/api/energie') ||
@@ -453,6 +456,28 @@ export class WebServer {
 
     if (path === '/api/functies') {
       await this.#functies(req, res, method);
+      return;
+    }
+
+    // De integratie in Home Assistant (besluit 184): hoe hij erbij staat, en neerzetten; alleen de beheerder.
+    if (path === '/api/integratie') {
+      const integratie = this.#options.integratie;
+      const wie = await this.#wie(req);
+      if (integratie == null) {
+        sendJson(res, 200, { kan: false, staat: 'nee', versie: null, nieuw: null, geladen: null });
+        return;
+      }
+      if (!wie.beheerder) {
+        sendJson(res, 403, { fout: 'dit mag alleen de beheerder' });
+        return;
+      }
+      if (method !== 'POST') {
+        sendJson(res, 200, await integratie.stand());
+        return;
+      }
+      const uit = await integratie.zetNeer();
+      if (uit.ok) sendJson(res, 200, await integratie.stand());
+      else sendJson(res, 409, { fout: uit.reden });
       return;
     }
 
@@ -758,6 +783,21 @@ export class WebServer {
       } catch (error) {
         sendJson(res, 502, { fout: (error as Error).message });
       }
+      return;
+    }
+
+    /*
+     * Voor de integratie in Home Assistant (besluit 184): de kamers en de
+     * woorden waarmee je ze noemt, zodat Assist ze in elk huis herkent. Met
+     * dezelfde sleutel als de vragen; er staat geen entiteit in.
+     */
+    if (path === '/api/assist') {
+      const config = this.#config();
+      if (config == null) {
+        sendJson(res, 503, { wachten: 'nog geen installatie ingesteld' });
+        return;
+      }
+      sendJson(res, 200, assistKamers(config, this.#options.house?.() ?? null, this.#options.version?.nummer ?? null));
       return;
     }
 
@@ -1495,7 +1535,8 @@ export class WebServer {
   /** Een vraag van de assistent van Home Assistant met de juiste sleutel (besluit 147). */
   #metSleutel(req: IncomingMessage, url: URL, path: string): boolean {
     const sleutel = this.#options.sleutel;
-    if (sleutel == null || path !== '/api/vraag') return false;
+    // De vragen, en de kamers voor de zinnen van de integratie (besluit 184).
+    if (sleutel == null || (path !== '/api/vraag' && path !== '/api/assist')) return false;
     const kop = String(req.headers.authorization ?? '');
     const gegeven = kop.startsWith('Bearer ') ? kop.slice(7).trim() : (url.searchParams.get('sleutel') ?? '');
     return gegeven.length === sleutel.length && timingSafeEqual(Buffer.from(gegeven), Buffer.from(sleutel));

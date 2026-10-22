@@ -61,9 +61,11 @@ Bij de eerste start zet de add-on ook het wekwoord **Hé huis** klaar in
 openWakeWord-add-on; dan staat `he_huis` bij Instellingen › Spraakassistenten.
 
 Wil je Assist van Home Assistant zelf vragen aan Smart Climate laten stellen,
-dan staan de sleutel en het adres in de app bij Instellingen › Bewoners en
-toegang › Sleutel voor de assistent; de zinnen en de rest staan in
-`ha-assist/`.
+installeer dan de integratie Smart Climate: via HACS, of met de knop in de app
+bij Instellingen › Bewoners en toegang › Sleutel voor de assistent (besluit
+184). De add-on meldt zich daarna vanzelf aan; geen YAML. Daarvoor mag de
+add-on in de configuratie van Home Assistant schrijven, en dat doet hij alleen
+na die tik, in `custom_components/smart_climate`.
 
 Wil je het bestand liever zelf schrijven, dan kan dat ook: de add-on heeft een
 eigen map onder `/addon_configs/`, bereikbaar met de bestandseditor of de

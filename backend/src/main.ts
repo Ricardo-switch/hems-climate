@@ -11,6 +11,7 @@
  * op stuklopen.
  */
 
+import { Integratie } from './web/integratie.js';
 import { PushStore, alsMelding, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
@@ -1289,6 +1290,44 @@ function comfortVoor(wie: Wie, gevraagd: string | null): { id: string | null; vi
  * Eén keer gemaakt, in de logmap; bij Instellingen › App en toegang te zien.
  */
 const sleutel = logDir !== '' ? await leesOfMaakSleutel(join(logDir, 'sleutel-assistent.txt')) : null;
+/*
+ * De integratie neerzetten voor wie geen HACS heeft (besluit 184): de map zit
+ * in het image, en gaat na een tik naar custom_components in de configuratie
+ * van Home Assistant (`/homeassistant` in de add-on). Bij het starten de nieuwe
+ * versie, als de add-on hem eerder neerzette.
+ */
+const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/smart_climate', '/homeassistant') : null;
+void integratie?.bijwerken().catch(() => false);
+/** Hoe de integratie erbij staat, met de versie die Home Assistant nu geladen heeft (dan pas werkt hij). */
+async function integratieStand() {
+  const stand = await integratie!.stand();
+  let geladen: string | null = null;
+  try {
+    const m = await client.query<{ version?: string }>('manifest/get', { integration: 'smart_climate' });
+    geladen = typeof m?.version === 'string' ? m.version : null;
+  } catch {
+    // Niet geladen: nog niet herstart, of hij staat er niet.
+  }
+  return { ...stand, geladen };
+}
+
+/*
+ * De integratie in Home Assistant (besluit 184): de add-on meldt zich aan bij
+ * de Supervisor, met zijn adres in het netwerk van Home Assistant en de
+ * sleutel. Home Assistant toont dan "Nieuw apparaat gevonden: Smart Climate",
+ * als de integratie er staat. Alleen in de add-on.
+ */
+if (sleutel && version.installatie === 'add-on' && webPort != null && process.env['SUPERVISOR_TOKEN']) {
+  void fetch('http://supervisor/discovery', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ service: 'smart_climate', config: { host: hostname(), port: webPort, sleutel } }),
+  })
+    .then((r) => {
+      if (!r.ok) console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet (${r.status}).`);
+    })
+    .catch((error: unknown) => console.warn(`Aanmelden bij Home Assistant voor de integratie lukte niet: ${(error as Error).message}`));
+}
 
 // "Toch die van" voorbij (besluit 147): opruimen, zodat hij later niet vanzelf terugkomt.
 if (bewonersStore) {
@@ -1440,6 +1479,7 @@ if (webPort != null) {
     // Meldingen op de telefoon (besluit 183): welke telefoons er zijn, en een proefmelding.
     telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
     proefmelding,
+    ...(integratie ? { integratie: { stand: integratieStand, zetNeer: () => integratie.zetNeer() } } : {}),
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {

@@ -479,9 +479,9 @@ komt geen deur bij die schrijft, en Home Assistant krijgt geen opdracht.
 *Stand op 5 oktober 2026:* stap 1 tot en met 4 staan in de dienst. De zinnen
 komen uit `backend/src/web/assistant.ts`, de vragen gaan via `GET /api/vraag`,
 en een test eist voor duizend gegenereerde toestanden dat er geen getal zonder
-bron in een antwoord staat. De zinnen en de koppeling voor Assist staan in
-`ha-assist/`, en moeten nog op de echte Home Assistant worden getest. In het
-product doet een eigen integratie dat, zonder YAML voor de bewoner (91). De wand
+bron in een antwoord staat. De zinnen en de koppeling voor Assist zitten sinds
+besluit 184 in de integratie Smart Climate (`custom_components/smart_climate`),
+zonder YAML voor de bewoner; de zinnen maakt de add-on (91, 184). De wand
 en de testpagina gebruiken de uitleg per kamer nog niet; dat is werk voor F.
 
 **Fase 2: schakelen, in B via de arbiter.**

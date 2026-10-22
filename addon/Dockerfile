@@ -72,6 +72,9 @@ COPY backend/package.json ./
 # Het wekwoord "Hé huis" (besluit 177): run.sh zet het in /share/openwakeword.
 COPY wekwoord /app/wekwoord
 
+# De integratie voor Home Assistant (besluit 184): de app zet hem neer voor wie geen HACS heeft.
+COPY integratie /app/integratie
+
 COPY run.sh /run.sh
 RUN chmod a+x /run.sh
 

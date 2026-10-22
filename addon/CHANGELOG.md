@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.58.0
+
+*22 oktober 2026*
+
+**Nieuw**
+
+- Assist van Home Assistant vraagt Smart Climate zonder YAML: de integratie Smart Climate, via HACS of met een knop in de app
+- De add-on meldt zich vanzelf aan bij Home Assistant; de zinnen en de kamers van je huis houdt hij zelf bij
+
 ## 0.57.0
 
 *22 oktober 2026*

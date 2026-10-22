@@ -39,3 +39,5 @@ backend/scripts
 # backend/tools hoort er wél in: de tests importeren eruit en de typecheck in
 # de bouwfase neemt het mee. Het image zelf krijgt alleen dist/, en daar zit
 # tools/ niet in (tsconfig.build.json neemt alleen src/ mee).
+
+__pycache__/
