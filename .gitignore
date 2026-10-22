@@ -48,3 +48,6 @@ dist-addon/
 # tests gebruiken backend/test/fixtures/voorbeeld-huis.json.
 HA export/
 config/sites/*.json
+
+# Python van de integratie (besluit 184)
+__pycache__/

@@ -44,7 +44,9 @@ describe('de add-on en de NAS', () => {
 
   it('bouwen op GitHub voor dezelfde soorten als het manifest noemt', async () => {
     const manifest = await lees('../../addon/config.yaml');
-    const soorten = [...manifest.slice(manifest.indexOf('\narch:')).matchAll(/^ {2}- (\w+)$/gm)].map((m) => m[1]).sort();
+    // Alleen het blok van arch, tot de eerste lege regel: daarna komen andere lijsten, zoals discovery.
+    const blok = manifest.slice(manifest.indexOf('\narch:')).split('\n\n')[0]!;
+    const soorten = [...blok.matchAll(/^ {2}- (\w+)$/gm)].map((m) => m[1]).sort();
     const basis = [...(await lees('../../addon/build.yaml')).matchAll(/^ {2}(\w+): /gm)].map((m) => m[1]).sort();
     const workflow = [...(await lees('../../.github/workflows/addon.yml')).matchAll(/- arch: (\w+)$/gm)].map((m) => m[1]).sort();
     expect(soorten).toEqual(['aarch64', 'amd64']);

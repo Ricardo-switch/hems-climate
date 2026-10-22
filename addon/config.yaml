@@ -19,7 +19,7 @@ name: Smart Climate
 # Gelijk aan VERSIE in backend/src/version.ts; een test houdt ze gelijk. De
 # Supervisor ziet een update zodra dit nummer op `main` omhooggaat, en haalt dan
 # het image met dat nummer op (besluit 153).
-version: 0.57.0
+version: 0.58.0
 slug: hems_climate
 description: >-
   Klimaat en zon in één app: kijkt mee met je verwarming, airco's en
@@ -36,6 +36,12 @@ image: ghcr.io/ricardo-switch/{arch}-hems-climate
 arch:
   - aarch64
   - amd64
+
+# De integratie Smart Climate in Home Assistant (besluit 184): de add-on meldt
+# zich aan, met zijn adres en de sleutel voor de vragen van Assist. Home
+# Assistant toont dan "Nieuw apparaat gevonden".
+discovery:
+  - smart_climate
 
 # De weergave gaat via Ingress en dus door de inlog van Home Assistant.
 ingress: true
@@ -82,6 +88,10 @@ map:
   # De configuratie van de installatie. Hoort bij de installatie en niet bij de
   # code (besluit 21); hier kun je hem met de bestandseditor bewerken.
   - addon_config:rw
+  # De configuratie van Home Assistant (besluit 184), alleen om de integratie
+  # Smart Climate neer te zetten voor wie geen HACS heeft: na een tik van de
+  # beheerder, en alleen in custom_components/smart_climate.
+  - homeassistant_config:rw
 
 options:
   hartslag_seconden: 30

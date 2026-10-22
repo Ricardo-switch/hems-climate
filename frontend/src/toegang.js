@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const { $$, nl, esc, haal } = app;
+const { $$, nl, esc, haal, deur } = app;
 
 let sessie = null;
 let gegevens = null;
@@ -21,6 +21,9 @@ let bewoners = null;
 let sleutel = null;
 /** Waar de assistent van Home Assistant zijn vraag stelt (besluit 177). */
 let vraagAdres = null;
+/** De integratie in Home Assistant (besluit 184): of hij er staat, via de add-on of HACS, en welke versie geladen is. */
+let integratie = null;
+let integratieZin = '';
 /** Wat /api/gegevens zegt (besluit 151): of je de hoofdgebruiker bent, het logboek, de back-ups. */
 let opslag = null;
 /** Wat er gevraagd wordt: null, 'opnieuw', of { backup, naam } om terug te zetten. */
@@ -29,8 +32,9 @@ let bevestig = null;
 let melding = null;
 
 async function laadAlles() {
-  const [s, g, h, z, b, k, o] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/versie'), haal('api/zon'), haal('api/bewoners'), fetch('api/sleutel', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)), haal('api/gegevens')]);
+  const [s, g, h, z, b, k, o, i] = await Promise.allSettled([haal('api/sessie'), haal('api/export/info'), haal('api/versie'), haal('api/zon'), haal('api/bewoners'), fetch('api/sleutel', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)), haal('api/gegevens'), fetch('api/integratie', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))]);
   if (o.status === 'fulfilled') opslag = o.value;
+  if (i.status === 'fulfilled') integratie = i.value;
   if (s.status === 'fulfilled') sessie = s.value;
   if (b.status === 'fulfilled') bewoners = b.value;
   if (k.status === 'fulfilled') {
@@ -94,15 +98,39 @@ function bewonersVorm() {
     <a class="knop knop-licht" href="bewoners.html" style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">Naar Bewoners</a>`;
 }
 
-/** De sleutel voor de assistent van Home Assistant (besluit 147), alleen voor een beheerder. */
+/**
+ * De sleutel voor de assistent van Home Assistant (besluit 147), alleen voor
+ * een beheerder. Sinds besluit 184 gaat het via de integratie Smart Climate:
+ * met de add-on meldt die zich vanzelf; anders vul je hier het adres en de
+ * sleutel in. Geen YAML meer.
+ */
 function assistentVorm() {
   return `<h2 class="kop-2">Sleutel voor de assistent</h2>
-    <p class="klein" style="margin: 0">De assistent in Home Assistant stelt zijn vragen zonder dat er iemand inlogt. Daarvoor heeft hij deze sleutel nodig.</p>
-    <p class="klein" style="margin: 0">Zet deze regel in Home Assistant in secrets.yaml:</p>
-    <div class="sleutel" data-sleutel>smart_climate_sleutel: "Bearer ${esc(sleutel ?? '')}"</div>
-    ${vraagAdres ? `<p class="klein" style="margin: 0">En bij <code>rest_command</code> in configuration.yaml dit adres, met de rest zoals in ha-assist in de handleiding:</p>
-    <div class="sleutel" data-vraagadres>url: "${esc(vraagAdres)}?taal=nl&amp;v={{ v }}&amp;kamer={{ kamer | default('') | urlencode }}&amp;wens={{ wens | default('') }}&amp;temperatuur={{ temperatuur | default('') }}"</div>` : ''}
+    <p class="klein" style="margin: 0">Assist van Home Assistant vraagt Smart Climate wat je huis doet, via de integratie Smart Climate. Daarna meldt Smart Climate zich vanzelf: Home Assistant toont "Nieuw apparaat gevonden", en je klikt op Toevoegen. Geen YAML.</p>
+    ${integratieVorm()}
+    <p class="klein" style="margin: 0">Zonder de add-on vul je bij het toevoegen dit adres en deze sleutel in:</p>
+    ${vraagAdres ? `<div class="sleutel" data-vraagadres>${esc(vraagAdres.replace(/\/api\/vraag$/, ''))}</div>` : ''}
+    <div class="sleutel" data-sleutel>${esc(sleutel ?? '')}</div>
     <p class="mini" style="margin: 0">Deel de sleutel met niemand anders.</p>`;
+}
+
+/**
+ * De integratie neerzetten (besluit 184): via HACS, of voor wie dat niet heeft
+ * met een knop; de add-on kopieert dan alleen custom_components/smart_climate.
+ * Home Assistant laadt hem na een herstart, en dat doe je zelf.
+ */
+function integratieVorm() {
+  const i = integratie;
+  if (!i?.kan) return '<p class="klein" style="margin: 0">Installeer de integratie via HACS: voeg deze repository toe als eigen repository, kies Smart Climate en herstart Home Assistant.</p>';
+  const zin = integratieZin ? `<p class="mini" style="margin: 0" aria-live="polite">${esc(integratieZin)}</p>` : '';
+  if (i.staat === 'anders') return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, via HACS${i.versie ? ` (versie ${esc(i.versie)})` : ''}. Updates komen via HACS.</p>${zin}`;
+  if (i.staat === 'nee') {
+    return `<p class="klein" style="margin: 0">Heb je HACS, installeer hem daar. Zonder HACS zet de add-on hem voor je neer; daarna herstart je Home Assistant.</p>
+      <button type="button" class="knop knop-licht" data-integratie style="align-self: start">Zet de integratie in Home Assistant</button>${zin}`;
+  }
+  const herstart = i.geladen !== i.versie;
+  return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, neergezet door de add-on (versie ${esc(i.versie ?? '?')}). Hij gaat mee met de updates van de add-on.</p>
+    ${herstart ? '<p class="klein" style="margin: 0; color: var(--zon-t)">Herstart Home Assistant om hem te laden: Instellingen › Systeem › Herstarten.</p>' : ''}${zin}`;
 }
 
 const linkKnop = (href, tekst, extra = '') => `<a class="knop knop-licht" href="${href}" ${extra} style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">${tekst}</a>`;
@@ -250,6 +278,20 @@ app.start('instellingen');
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('button');
   if (!t) return;
+  // De integratie neerzetten (besluit 184).
+  if (t.hasAttribute('data-integratie')) {
+    t.disabled = true;
+    integratieZin = 'Even neerzetten…';
+    teken();
+    const res = await deur('api/integratie', {}).catch(() => null);
+    const body = await res?.json().catch(() => null);
+    if (res?.ok) {
+      integratie = body;
+      integratieZin = 'Neergezet. Herstart nu Home Assistant; daarna verschijnt "Nieuw apparaat gevonden: Smart Climate".';
+    } else integratieZin = `Lukte niet: ${body?.fout ?? 'geen antwoord'}.`;
+    teken();
+    return;
+  }
   try {
     if (t.hasAttribute('data-uitloggen')) {
 

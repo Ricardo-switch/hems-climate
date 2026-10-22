@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.57.0';
+export const VERSIE = '0.58.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,14 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.58.0',
+    datum: '2026-10-22',
+    nieuw: [
+      'Assist van Home Assistant vraagt Smart Climate zonder YAML: de integratie Smart Climate, via HACS of met een knop in de app',
+      'De add-on meldt zich vanzelf aan bij Home Assistant; de zinnen en de kamers van je huis houdt hij zelf bij',
+    ],
+  },
   {
     versie: '0.57.0',
     datum: '2026-10-22',

@@ -27,7 +27,7 @@ verwijzing bestaat.
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (het
-  eerste drie staan er, [181], [182], [183]). Talen
+  alle vier staan er, [181] tot en met [184]). Talen
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
@@ -62,8 +62,10 @@ verwijzing bestaat.
   moet doen ([46]). Dat vervangt het eerdere nee tegen een model per huis
   ([14]).
 - **De assistent** is een vierde voorsteller, geen baas ([44]). Een opdracht
-  wordt een ingreep met een eindtijd ([75]). In de add-on komt hij via een eigen
-  integratie, zonder YAML ([91]).
+  wordt een ingreep met een eindtijd ([75]). Assist van Home Assistant vraagt
+  hem via de integratie Smart Climate, zonder YAML: via HACS of met een knop
+  in de app, en de add-on meldt zich vanzelf aan; de zinnen en de kamers komen
+  uit de add-on ([91], [184]).
 - **Zonwering is klimaat;** licht regelt Smart Climate niet, maar de app heeft
   een knop voor lampen ([92], [97]).
 - **Op termijn:** een kastje met een verborgen Home Assistant en een dunne agent
@@ -604,4 +606,5 @@ verwijzing bestaat.
 [181]: DECISIONS.md#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt
 [182]: DECISIONS.md#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel
 [183]: DECISIONS.md#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant
+[184]: DECISIONS.md#184-de-integratie-smart-climate-assist-zonder-yaml
 <!-- links:einde -->

@@ -86,6 +86,15 @@ Je hebt Home Assistant met add-ons nodig (Home Assistant OS of Supervised), op e
 
 Updates komen via Home Assistant. Zet op de add-on-pagina **Automatisch bijwerken** aan als dat vanzelf moet.
 
+### Assist vraagt Smart Climate
+
+Wil je Smart Climate ook vragen via Assist van Home Assistant ("waarom draait de zolder?", "wat doe je nu?"), dan heb je de integratie **Smart Climate** nodig. Geen YAML: de add-on meldt zich vanzelf aan.
+
+- **Met HACS:** kies in HACS de drie puntjes → **Eigen repositories**, voeg `https://github.com/Ricardo-switch/hems-climate` toe als **Integratie**, installeer **Smart Climate** en herstart Home Assistant.
+- **Zonder HACS:** open Smart Climate → **Instellingen → Bewoners en toegang → Sleutel voor de assistent** en tik op **Zet de integratie in Home Assistant**. Herstart daarna Home Assistant.
+
+Home Assistant toont dan **Nieuw apparaat gevonden: Smart Climate**; klik op **Toevoegen**. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat Smart Climate zou doen.
+
 Werkt het met jouw apparaten? Smart Climate werkt met wat je huis heeft. Een airco, een thermostaat, een slimme meter, panelen van elk merk: het doet wat jouw opstelling toelaat, en zegt bij **Wat je huis kan** wat het daardoor (nog) niet kan.
 
 ## Hoe het werkt

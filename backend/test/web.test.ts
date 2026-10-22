@@ -381,6 +381,8 @@ describe('welke versie er draait (besluit 54)', () => {
     // De add-on: Home Assistant ziet een update aan dit nummer (besluit 153).
     const addon = await readFile(new URL('../../addon/config.yaml', import.meta.url), 'utf-8');
     expect(/^version: (\S+)$/m.exec(addon)?.[1]).toBe(VERSIE);
+    // De integratie in Home Assistant (besluit 184) gaat mee met hetzelfde nummer.
+    expect(await pakket('../../custom_components/smart_climate/manifest.json')).toBe(VERSIE);
     expect(NIEUW[0]?.versie).toBe(VERSIE);
     // Elke versie zegt iets, in nieuw, beter of opgelost (besluit 133).
     for (const n of NIEUW) expect([...(n.nieuw ?? []), ...(n.beter ?? []), ...(n.opgelost ?? [])].length).toBeGreaterThan(0);
@@ -1818,6 +1820,12 @@ describe('bedienen vraagt een inlog via Home Assistant (besluit 99)', () => {
     expect((await fetch(`${base}/api/vraag?v=nu`)).status).toBe(401);
     expect((await fetch(`${base}/api/vraag?v=nu`, { headers: { authorization: 'Bearer fout-fout-fout-fout-fout-fout-fout-12' } })).status).toBe(401);
     expect((await fetch(`${base}/api/vraag?v=nu`, { headers: { authorization: 'Bearer een-lange-sleutel-voor-de-assistent' } })).status).not.toBe(401);
+    // De kamers voor de zinnen van de integratie (besluit 184): ook met de sleutel, en niets anders.
+    expect((await fetch(`${base}/api/assist`)).status).toBe(401);
+    const assist = await fetch(`${base}/api/assist`, { headers: { authorization: 'Bearer een-lange-sleutel-voor-de-assistent' } });
+    expect(assist.status).toBe(200);
+    expect(((await assist.json()) as { kamers: unknown[] }).kamers.length).toBeGreaterThan(0);
+    expect((await fetch(`${base}/api/huis`, { headers: { authorization: 'Bearer een-lange-sleutel-voor-de-assistent' } })).status).toBe(401);
     // Ingelogd mag alles weer.
     const cookie = await logIn(base);
     expect((await fetch(`${base}/api/comfort`, { headers: { cookie } })).status).toBe(200);

@@ -170,9 +170,31 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  # De integratie voor Home Assistant (besluit 184), in een echte Home Assistant:
+  # toevoegen met de hand en ontdekt via de add-on, het zinnenbestand, en een
+  # gesproken zin die bij Smart Climate uitkomt.
+  integratie:
+    name: de integratie in Home Assistant
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # De versie die Home Assistant zelf vraagt.
+          python-version: '3.14'
+
+      - name: Home Assistant en zijn gesprekdeel
+        run: |
+          pip install pytest-homeassistant-custom-component
+          pip install $(python -c "import json, homeassistant, os; print(' '.join(json.load(open(os.path.join(os.path.dirname(homeassistant.__file__), 'components/conversation/manifest.json')))['requirements']))")
+
+      - name: de integratie
+        run: python -m pytest tests/integratie -o asyncio_mode=auto -p no:cacheprovider
+
   stable:
     name: stable bijwerken
-    needs: [test, image, deploy, page]
+    needs: [test, image, deploy, page, integratie]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/beta'
     runs-on: ubuntu-latest
     permissions:
