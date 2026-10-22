@@ -97,6 +97,14 @@ export interface HaClientOptions {
    */
   readonly allowUpdate?: () => string | null;
   /**
+   * Of deze client een melding naar een telefoon mag sturen (besluit 183):
+   * precies `notify.mobile_app_…`, de app van Home Assistant op een telefoon,
+   * met alleen een titel, een tekst en de vaste velden van zo'n melding (een
+   * label om hem later te vervangen, waar een tik naartoe gaat, hoe dringend).
+   * Geen doel, geen andere notify-dienst; er verandert niets in het huis.
+   */
+  readonly allowNotify?: boolean;
+  /**
    * Of deze client een AI-taak van Home Assistant om een tekst mag vragen
    * (besluit 148): precies `ai_task.generate_data`, via `generateData`, met
    * alleen een taaknaam, een opdracht, één `ai_task.`-entiteit en eventueel
@@ -166,6 +174,31 @@ function isUpdateCall(domain: string, service: string, data: Record<string, unkn
   return target['entity_id'] === eigen && /^update\.[a-z0-9_]+$/.test(eigen);
 }
 
+/** Wat er in een melding naar de app van Home Assistant mag, naast de titel en de tekst (besluit 183). */
+const MELDING_VELDEN = new Set(['tag', 'group', 'clickAction', 'url', 'push', 'channel', 'importance', 'priority', 'ttl', 'alert_once']);
+
+/**
+ * Een melding naar een telefoon (besluit 183): `notify.mobile_app_…`, zonder
+ * doel, met een tekst, een titel en alleen de vaste velden van de app.
+ */
+export function isNotifyCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
+  if (domain !== 'notify' || !/^mobile_app_[a-z0-9_]+$/.test(service)) return false;
+  if (Object.keys(target).length > 0) return false;
+  if (Object.keys(data).some((k) => k !== 'title' && k !== 'message' && k !== 'data')) return false;
+  if (typeof data['message'] !== 'string' || data['message'].length > 500) return false;
+  if (data['title'] !== undefined && (typeof data['title'] !== 'string' || data['title'].length > 120)) return false;
+  const extra = data['data'];
+  if (extra === undefined) return true;
+  if (typeof extra !== 'object' || extra == null || Array.isArray(extra)) return false;
+  for (const [k, v] of Object.entries(extra)) {
+    if (!MELDING_VELDEN.has(k)) return false;
+    if (k === 'push') {
+      if (typeof v !== 'object' || v == null || Array.isArray(v) || Object.keys(v).some((x) => x !== 'interruption-level')) return false;
+    } else if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') return false;
+  }
+  return true;
+}
+
 /** Een scène aanzetten (besluit 100): één `scene.`-entiteit, verder niets. */
 function isSceneCall(domain: string, service: string, data: Record<string, unknown>, target: Record<string, unknown>): boolean {
   if (domain !== 'scene' || service !== 'turn_on') return false;
@@ -207,8 +240,9 @@ export declare interface HaClient {
 }
 
 export class HaClient extends EventEmitter {
-  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate'>> & {
+  readonly #options: Required<Omit<HaClientOptions, 'allowWrites' | 'allowLights' | 'allowScenes' | 'allowCovers' | 'allowAiTask' | 'allowListen' | 'allowUpdate' | 'allowNotify'>> & {
     allowUpdate: () => string | null;
+    allowNotify: boolean;
     allowWrites: boolean;
     allowLights: boolean;
     allowScenes: boolean;
@@ -233,6 +267,7 @@ export class HaClient extends EventEmitter {
       allowScenes: options.allowScenes ?? false,
       allowCovers: options.allowCovers ?? false,
       allowUpdate: options.allowUpdate ?? (() => null),
+      allowNotify: options.allowNotify ?? false,
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
@@ -563,7 +598,8 @@ export class HaClient extends EventEmitter {
       (this.#options.allowLights && isLightCall(domain, service, data, target)) ||
       (this.#options.allowScenes && isSceneCall(domain, service, data, target)) ||
       (this.#options.allowCovers && isCoverCall(domain, service, data, target)) ||
-      isUpdateCall(domain, service, data, target, this.#options.allowUpdate());
+      isUpdateCall(domain, service, data, target, this.#options.allowUpdate()) ||
+      (this.#options.allowNotify && isNotifyCall(domain, service, data, target));
     if (!allowed) {
       throw new Error(
         `Schrijven staat uit: ${domain}.${service} is niet verstuurd. ` +

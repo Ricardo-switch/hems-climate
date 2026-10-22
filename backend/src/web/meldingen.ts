@@ -15,9 +15,8 @@
  *
  * Wat vanzelf weer goed is, lost zichzelf op en schuift naar Eerder. Een
  * wachttijd houdt kort haperen buiten de lijst. Alles staat in één eigen
- * bestand naast de dataset; er gaat niets naar Home Assistant. Een melding
- * op de telefoon, via de app van Home Assistant, is schrijven en komt later
- * met een eigen besluit (79).
+ * bestand naast de dataset; er gaat niets naar Home Assistant. Een deel gaat
+ * ook naar de telefoon, via de app van Home Assistant (besluit 183, push.ts).
  */
 
 import { readFile, rename, writeFile } from 'node:fs/promises';

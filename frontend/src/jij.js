@@ -24,6 +24,7 @@ const IK = {
   thuis: '<path d="M4 11 12 4l8 7v9H4z"/><circle cx="12" cy="14" r="2"/>',
   naam: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   downloaden: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
 };
 const ik = (id) => `<span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IK[id]}</svg></span>`;
 
@@ -59,7 +60,21 @@ const link = (href, icoon, titel, onder, rechts = '') => `<a class="rij" href="$
 const knop = (data, icoon, titel, onder, rechts = '') => `<button type="button" class="rij" ${data}>${ik(icoon)}<b>${esc(titel)}</b><small>${esc(onder)}</small><span class="pijl">${rechts}›</span></button>`;
 const schakel = (sleutel, icoon, titel, onder, aan) => `<div class="rij">${ik(icoon)}<b>${esc(titel)}</b><small>${esc(onder)}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${aan}" aria-label="${esc(titel)}" data-weergave="${sleutel}"></button></span></div>`;
 
+/** De telefoon waar je meldingen heen gaan: gekozen, of die aan je persoon hangt. */
+function mijnTelefoon() {
+  const lijst = v?.telefoons ?? [];
+  const keus = v?.tel?.meldingen?.telefoon;
+  return keus ? (lijst.find((t) => t.id === keus) ?? null) : (lijst.find((t) => t.eigen) ?? null);
+}
+
 function teken() {
+  // Meldingen op je telefoon (besluit 183): een eigen scherm, jij.html#meldingen.
+  const meldingen = location.hash === '#meldingen';
+  $$('.jij > .terugje').forEach((a) => {
+    a.href = meldingen ? 'jij.html' : 'instellingen.html';
+    a.textContent = meldingen ? '‹ Jij' : '‹ Instellingen';
+  });
+  if (meldingen && v && b?.ik?.soort === 'bewoner') return tekenMeldingen();
   const mij = b?.ik;
   const wie = mij?.soort === 'bewoner' ? (b.bewoners ?? []).find((x) => x.id === mij.id) : null;
   // Een gast heeft niets dat bewaard wordt; een scherm of een account zonder bewoner alleen hoe de app eruitziet.
@@ -98,6 +113,10 @@ function teken() {
       ${link('thuis.html#favorieten', 'favorieten', 'Favorieten', `${telling(v.tel.favorieten.length, 'lamp, scène of scherm', 'lampen, scènes en schermen')} met één tik`)}
       <p class="uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt. Wat je hier verandert, staat dan ook op de wand.</p>
     </section>
+    <section class="glas lijst" aria-labelledby="kop-meldingen">
+      <h2 id="kop-meldingen">Meldingen</h2>
+      ${link('jij.html#meldingen', 'bel', 'Meldingen op je telefoon', mijnTelefoon() ? `Naar ${mijnTelefoon().naam}` : 'Geen telefoon met de app van Home Assistant')}
+    </section>
     <section class="glas lijst" aria-labelledby="kop-comfort">
       <h2 id="kop-comfort">Comfort</h2>
       ${link('comfort.html', 'comfort', 'Jouw comfort', comfort.charAt(0).toUpperCase() + comfort.slice(1))}
@@ -113,6 +132,75 @@ function teken() {
   for (const el of $$('[data-blad] [data-thema]')) el.setAttribute('aria-checked', String(el.dataset.thema === v.tel.thema));
   for (const el of $$('[data-blad] [data-kies-kleur]')) el.setAttribute('aria-checked', String(el.dataset.kiesKleur === v.tel.kleur));
 }
+
+/* -------------------------------------------------- meldingen op je telefoon */
+
+/*
+ * Meldingen op je telefoon (besluit 183, schets Instellingen-Tel-Meldingen):
+ * welke meldingen, welke telefoon, en de nachtrust. Rook en wat de regeling
+ * raakt komen altijd, ook 's nachts; batterij of filter en een nieuwe versie
+ * overdag. Komt iets vanzelf goed, dan wordt de melding stil vervangen.
+ */
+let proef = '';
+function tekenMeldingen() {
+  const m = v.tel.meldingen;
+  const lijst = v.telefoons ?? [];
+  const tel = mijnTelefoon();
+  const keus = (sleutel, titel, onder, dringend) =>
+    `<div class="rij rij-zonder"><b>${esc(titel)}${dringend ? '<span class="dringend">dringend</span>' : ''}</b><small>${esc(onder)}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${m[sleutel]}" aria-label="${esc(titel)}" data-melding="${sleutel}"></button></span></div>`;
+  const eigen = lijst.find((t) => t.eigen);
+  const opties = [`<option value="" ${m.telefoon ? '' : 'selected'}>${esc(eigen ? `${eigen.naam} (van jou)` : 'Kies een telefoon')}</option>`, ...lijst.filter((t) => !t.eigen).map((t) => `<option value="${esc(t.id)}" ${m.telefoon === t.id ? 'selected' : ''}>${esc(t.naam)}</option>`)].join('');
+  const html = `
+    <div class="wie"><div><h1 class="kop-1">Meldingen op je telefoon</h1><small>Via de app van Home Assistant. Wat hier niet aan staat, zie je bij de bel in de app.</small></div></div>
+    <section class="glas lijst" aria-labelledby="kop-altijd">
+      <h2 id="kop-altijd">Altijd, ook 's nachts</h2>
+      ${keus('rook', 'Rook en koolmonoxide', 'Een rookmelder ziet rook, koolmonoxide of hitte', true)}
+      ${keus('regeling', 'Als de regeling hapert', 'Een apparaat reageert al een uur niet, of een meter levert niets', false)}
+      <h2>Overdag</h2>
+      ${keus('onderhoud', 'Batterij of filter bijna op', `Wat 's nachts opkomt, wacht tot ${m.tot}`, false)}
+      ${keus('versie', 'Nieuwe versie klaar', 'Een update van Smart Climate staat klaar', false)}
+      <p class="uitleg">Komt iets vanzelf weer goed, dan verandert de melding op je telefoon stil in "weer goed".</p>
+    </section>
+    ${lijst.length
+      ? `<section class="glas lijst" aria-labelledby="kop-waar">
+      <h2 id="kop-waar">Waar en wanneer</h2>
+      <label class="rij rij-zonder"><b>Telefoon</b><small>Uit de app van Home Assistant</small><span class="pijl"><select class="kiezer" data-melding-telefoon aria-label="Telefoon">${opties}</select></span></label>
+      <div class="rij rij-zonder stapel"><b>Nachtrust</b><small>Dan alleen wat dringend is</small><span class="pijl tijden"><input type="time" value="${esc(m.van)}" data-melding-tijd="van" aria-label="Nachtrust vanaf"> tot <input type="time" value="${esc(m.tot)}" data-melding-tijd="tot" aria-label="Nachtrust tot"></span></div>
+    </section>
+    <div class="proefrij"><button type="button" class="knop" data-proef ${tel ? '' : 'disabled'}>Stuur een proefmelding</button><span class="mini" data-proef-zin aria-live="polite">${esc(proef)}</span></div>`
+      : `<section class="glas gast"><h2 class="kop-3">Geen telefoon gevonden</h2><p class="klein" style="margin: 6px 0 0">Installeer de app van Home Assistant op je telefoon en log in met je eigen account. Dan staat hij hier, en kun je kiezen wat je wilt horen.</p></section>`}`;
+  $$('[data-jij]').forEach((el) => {
+    // Een keuzelijst of tijd met de focus niet onder de vinger weghalen.
+    if (el.contains(document.activeElement) && document.activeElement.matches('select, input')) return;
+    el.innerHTML = html;
+  });
+}
+
+async function proefmelding(knop) {
+  knop.disabled = true;
+  proef = 'Even versturen…';
+  $$('[data-proef-zin]').forEach((el) => (el.textContent = proef));
+  try {
+    const res = await deur('api/proefmelding', {});
+    const body = await res?.json().catch(() => ({}));
+    proef = res?.ok ? `Verstuurd naar ${body.naam}.` : `Lukte niet: ${body?.fout ?? 'geen antwoord'}.`;
+  } catch {
+    proef = 'Lukte niet: geen verbinding.';
+  }
+  teken();
+}
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (!v) return;
+  if (t.matches('[data-melding-telefoon]')) void bewaar({ meldingen: { telefoon: t.value || null } });
+  else if (t.matches('[data-melding-tijd]') && /^\d{2}:\d{2}$/.test(t.value)) void bewaar({ meldingen: { [t.dataset.meldingTijd]: t.value } });
+});
+addEventListener('hashchange', () => {
+  proef = '';
+  teken();
+  scrollTo(0, 0);
+});
 
 /* ------------------------------------------------------------ het blad */
 
@@ -144,8 +232,10 @@ function sluitBlad() {
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-thema-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-weergave]');
+  const t = e.target.closest('[data-thema-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-weergave], [data-melding], [data-proef]');
   if (!t || !v) return;
+  if (t.matches('[data-melding]')) return void bewaar({ meldingen: { [t.dataset.melding]: t.getAttribute('aria-checked') !== 'true' } });
+  if (t.matches('[data-proef]')) return void proefmelding(t);
   if (t.matches('[data-thema-open]')) openBlad();
   else if (t.matches('[data-blad-dicht], [data-achter]')) sluitBlad();
   else if (t.matches('[data-thema]')) void bewaar({ thema: t.dataset.thema });

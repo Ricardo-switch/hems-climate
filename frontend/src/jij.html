@@ -78,6 +78,20 @@
   .kleuren button[aria-checked='true'] { color: var(--tekst); }
   .betekenis { margin: 14px 0 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.45; }
   .betekenis i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 4px 0 2px; }
+  /* Meldingen op je telefoon (besluit 183): regels zonder icoon. */
+  .rij.rij-zonder { grid-template-columns: minmax(0, 1fr) auto; cursor: default; }
+  .rij.rij-zonder small { grid-column: 1; }
+  .rij.rij-zonder .pijl { grid-column: 2; }
+  .dringend { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin-left: 6px; vertical-align: 2px; background: rgba(255, 122, 77, 0.14); color: var(--gloed-t); }
+  .kiezer { height: 36px; padding: 0 10px; border-radius: 12px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.07); color: var(--tekst); font: inherit; font-weight: 700; font-size: 14px; max-width: 170px; }
+  /* Niet de 22px van het pijltje in de regel erven: even groot als de rest. */
+  .rij .pijl.tijden { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 14px; color: var(--zacht); }
+  .tijden input { height: 34px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.07); color: var(--tekst); font-family: var(--romp); font-size: 14.5px; font-weight: 600; }
+  .rij .pijl .kiezer { font-size: 14px; }
+  /* De nachtrust: de tijden onder het label, zodat er op een smalle telefoon niets klemt. */
+  .rij.stapel { grid-template-columns: minmax(0, 1fr); }
+  .rij.stapel .pijl { grid-column: 1; grid-row: auto; margin-top: 8px; }
+  .proefrij { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .wand-alleen { display: none; }
   #wand .wand-alleen { display: block; }
 </style>

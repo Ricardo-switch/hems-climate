@@ -303,6 +303,8 @@ export class WebServer {
       (this.#options.meldingen != null && path === '/api/meldingen') ||
       // Thuis naar eigen smaak (besluit 162): alleen wat er gekozen is, in het eigen bestand.
       (this.#options.voorkeuren != null && path === '/api/voorkeuren') ||
+      // Een proefmelding naar je eigen telefoon (besluit 183): alleen notify.mobile_app_…
+      (this.#options.proefmelding != null && path === '/api/proefmelding') ||
       (this.#options.energy != null && path === '/api/energie') ||
       // De zon en je aansluiting (besluit 103): alleen antwoorden, naar een eigen bestand.
       (this.#options.connection != null && path === '/api/aansluiting') ||
@@ -454,6 +456,19 @@ export class WebServer {
       return;
     }
 
+    // Een proefmelding naar je eigen telefoon (besluit 183).
+    if (path === '/api/proefmelding') {
+      if (method !== 'POST' || this.#options.proefmelding == null) {
+        sendJson(res, method !== 'POST' ? 405 : 503, { fout: 'een proefmelding is een POST, in de add-on' });
+        return;
+      }
+      const wie = await this.#wie(req);
+      const uit = await this.#options.proefmelding(wie.userId);
+      if (uit.ok) sendJson(res, 200, uit);
+      else sendJson(res, uit.status, { fout: uit.reden });
+      return;
+    }
+
     // De deurbel als kaart op Thuis (besluit 182): welk beeld, en wanneer er het laatst werd aangebeld.
     if (path === '/api/deurbel') {
       const d = this.#options.deurbel?.() ?? null;
@@ -529,8 +544,10 @@ export class WebServer {
       const wie = await this.#wie(req);
       const profiel = this.#options.profielen?.(wie.userId);
       const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)), ...(profiel ? { profielen: profiel.profielen, scherm: profiel.scherm } : {}) };
+      // De telefoons voor de meldingen (besluit 183) staan erbij: die komen uit Home Assistant, niet uit het bestand.
+      const telefoons = this.#options.telefoons?.(wie.userId) ?? [];
       if (method !== 'POST') {
-        sendJson(res, 200, voorkeuren.view(kijker));
+        sendJson(res, 200, { ...voorkeuren.view(kijker), telefoons });
         return;
       }
       let body: unknown;
@@ -541,7 +558,7 @@ export class WebServer {
         return;
       }
       const result = await voorkeuren.save(body, kijker);
-      if (result.ok) sendJson(res, 200, result.view);
+      if (result.ok) sendJson(res, 200, { ...result.view, telefoons });
       else sendJson(res, result.status, { fout: result.reden });
       return;
     }
