@@ -24,6 +24,19 @@ describe('de kamers voor Assist (besluit 184)', () => {
     expect(assistKamers(exampleSite, null, null).kamers.length).toBe(exampleSite.zones.length);
   });
 
+  it('kent ook de zones in een kamer, zoals de zithoek en de keuken (22 oktober 2026)', () => {
+    const huis = buildHouse(exampleSite, registers, states, null);
+    const metZones = {
+      ...huis,
+      etages: huis.etages.map((e) => ({
+        ...e,
+        ruimtes: e.ruimtes.map((r) => (r.zoneId === 'woonkamer' ? { ...r, zones: [{ id: 'z1', naam: 'Zithoek' }, { id: 'z2', naam: 'Keuken' }] } : r)),
+      })),
+    };
+    const wk = assistKamers(exampleSite, metZones, null).kamers.find((k) => k.id === 'woonkamer')!;
+    expect(wk.woorden).toEqual(expect.arrayContaining(['zithoek', 'keuken']));
+  });
+
   it('maakt van een naam een woord voor een zin', () => {
     expect(alsWoord('Slaapkamer (Matts) | boven')).toBe('slaapkamer matts boven');
   });

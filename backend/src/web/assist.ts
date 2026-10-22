@@ -42,7 +42,9 @@ export function assistKamers(config: SiteConfig, huis: HouseReport | null, versi
   const kamers = config.zones.map((z) => {
     const naam = alsWoord(z.name);
     const woorden = new Set<string>();
-    for (const w of [z.id.replace(/[_-]+/g, ' '), ...ruimtes.filter((r) => r.zoneId === z.id || r.meedoenMet?.zoneId === z.id).map((r) => r.naam)]) {
+    // De kamers bij de zone, en de zones in die kamers, zoals de zithoek en de keuken van Beneden (22 oktober 2026).
+    const bij = ruimtes.filter((r) => r.zoneId === z.id || r.meedoenMet?.zoneId === z.id);
+    for (const w of [z.id.replace(/[_-]+/g, ' '), ...bij.map((r) => r.naam), ...bij.flatMap((r) => r.zones.map((x) => x.naam))]) {
       const woord = alsWoord(w);
       if (woord && woord !== naam) woorden.add(woord);
     }
