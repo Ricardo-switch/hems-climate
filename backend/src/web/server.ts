@@ -42,6 +42,7 @@ import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
 import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
+import { keuzesInTaal } from './onboarding.js';
 import { Luisterpost } from './luisterpost.js';
 import { accepteer, isUpgrade, weiger } from './websocket.js';
 import type { Duplex } from 'node:stream';
@@ -1652,7 +1653,9 @@ export class WebServer {
         // `bestaande` erbij, zodat de pagina kan zeggen dat er al iets staat
         // vóórdat iemand op een knop drukt die toch zou weigeren. En het huis
         // zoals Home Assistant het kent, voor het welkom (besluit 154).
-        sendJson(res, 200, { ...proposal, bestaande: existing, namen: onboarding.namen(), huis: this.#options.welkomHuis?.() ?? null });
+        // De vragen in de taal van de app (besluit 185).
+        const lang = taalVan(new URL(req.url ?? '/', 'http://localhost').searchParams.get('taal') ?? req.headers['x-taal']);
+        sendJson(res, 200, { ...proposal, keuzes: keuzesInTaal(proposal.keuzes, lang), bestaande: existing, namen: onboarding.namen(), huis: this.#options.welkomHuis?.() ?? null });
       } catch (error) {
         // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
         // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen

@@ -25,10 +25,50 @@ import { join } from 'node:path';
 import {
   discover,
   applyChoices,
+  type Choice,
   type Registers,
   type Proposal,
 } from '../adapters/homeassistant/discovery.js';
 import { parseSiteConfig } from '../config/schema.js';
+import type { Lang } from './assistant.js';
+
+/**
+ * De vragen bij het begin in het Engels (besluit 185). De ontdekking stelt ze
+ * in het Nederlands; hier krijgen ze per vaste id hun Engelse woorden. Een
+ * vraag die hier niet staat, blijft zoals hij is.
+ */
+const VRAGEN_EN: Readonly<Record<string, { readonly vraag: (c: Choice) => string; readonly toelichting: string }>> = {
+  outdoorTemperature: {
+    vraag: () => 'Which sensor measures the outdoor temperature?',
+    toelichting: 'The control does not use it; it goes into the log so the dataset is complete. You may skip this.',
+  },
+  zoneTemperatuur: {
+    vraag: (c) => `Which thermometer applies to ${c.naam ?? c.zoneId ?? 'this room'}?`,
+    toelichting: 'The control works on this, so it must be the room and not a device.',
+  },
+  dubbelApparaat: {
+    vraag: () => 'Which of these two controls this device?',
+    toelichting: 'They look like the same device through two integrations. Keeping both means commanding the same device twice; the other is left out.',
+  },
+  gridPower: {
+    vraag: () => 'Which sensor measures what comes from the grid?',
+    toelichting: 'It should go negative when you export. If it does not, the whole surplus is wrong. Without a meter, pv-surplus does not take part.',
+  },
+  solarProduction: {
+    vraag: () => 'Which sensor measures what your panels deliver?',
+    toelichting: 'The control does not use it. It goes into the log as a measure of sunlight, so that later it can be worked out how much the sun warms a room. You may skip this.',
+  },
+};
+
+/** De keuzes in de taal van de app: dezelfde opties, de vraag en de uitleg in die taal. */
+export function keuzesInTaal(keuzes: readonly Choice[], lang: Lang): Choice[] {
+  if (lang === 'nl') return [...keuzes];
+  return keuzes.map((c) => {
+    const en = VRAGEN_EN[c.soort === 'veld' ? c.id : c.soort];
+    if (!en) return c;
+    return { ...c, vraag: en.vraag(c), ...(c.toelichting != null ? { toelichting: en.toelichting } : {}) };
+  });
+}
 
 export interface OnboardingOptions {
   /** Waar de registers vandaan komen. Async, want dit gaat over de socket. */
