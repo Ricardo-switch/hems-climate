@@ -153,7 +153,7 @@
     const kwh = Math.min(s.terugKwh ?? 0, s.vanNetKwh ?? 0) * 0.85;
     const na2027 = p.stroom - (p.vanaf2027?.vergoeding ?? 0) + (p.vanaf2027?.kosten ?? 0);
     if (kwh < 1 || na2027 <= 0) return null;
-    return { kwh: Math.round(kwh), euro: Math.round(kwh * na2027), maand: d.opbrengst.periode?.label?.split(' ')[0]?.toLowerCase() ?? 'deze maand', terugKwh: Math.round(s.terugKwh) };
+    return { kwh: Math.round(kwh), euro: Math.round(kwh * na2027), maand: d.opbrengst.periode?.label?.split(' ')[0]?.toLowerCase() ?? global.taal.t('kan.dezeMaand'), terugKwh: Math.round(s.terugKwh) };
   }
 
   /*
@@ -166,7 +166,7 @@
   const warmtPerKamer = (r) => klimaatIn(r).some((a) => a.radiatorknop || (a.klimaat?.kanVerwarmen && !a.klimaat?.kanKoelen)) || (r.bronnen ?? []).some((b) => b.aan !== 'hand' && b.soorten.some((x) => x !== 'airco'));
   const aircoIn = (r) => klimaatIn(r).filter((a) => a.klimaat?.kanKoelen);
   const opZonIn = (r) => (r.bronnen ?? []).filter((b) => b.opZon);
-  const warmteVan = (r) => [...(r.bronnen ?? []).filter((b) => b.soorten.some((x) => x !== 'airco')).map((b) => huismodel.bronNaam(b).toLowerCase()), ...klimaatIn(r).filter((a) => a.radiatorknop).map(() => 'radiatorknop')];
+  const warmteVan = (r) => [...(r.bronnen ?? []).filter((b) => b.soorten.some((x) => x !== 'airco')).map((b) => huismodel.bronNaam(b).toLowerCase()), ...klimaatIn(r).filter((a) => a.radiatorknop).map(() => global.taal.t('kan.radiatorknop'))];
 
   /**
    * Wat je huis nog slimmer maakt (besluit 132), de grootste winst eerst: wat
@@ -174,22 +174,33 @@
    * te koop is. Een bedrag alleen als de meters het kunnen uitrekenen.
    */
   function ideeen(d) {
+    const t = global.taal.t;
     const uit = [];
     for (const r of binnen(d)) {
       for (const b of r.bronnen ?? []) {
-        if (huismodel.isElektrischSlim(b) && b.vermogenW && b.apparaat && !b.opZon) uit.push({ id: `zon-${r.id}`, soort: 'aan', titel: `${huismodel.metHoofdletter(huismodel.zoneNaam(r.zoneId ?? r.id, d.huis))} warm op zon`, zin: `de ${huismodel.bronNaam(b).toLowerCase()} kan het al`, wint: 'zonder iets te kopen', href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
+        if (huismodel.isElektrischSlim(b) && b.vermogenW && b.apparaat && !b.opZon) uit.push({ id: `zon-${r.id}`, soort: 'aan', titel: t('kan.idee.zon', { kamer: huismodel.metHoofdletter(huismodel.zoneNaam(r.zoneId ?? r.id, d.huis)) }), zin: t('kan.idee.zonZin', { bron: huismodel.bronNaam(b).toLowerCase() }), wint: t('kan.idee.zonWint'), href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
       }
     }
     const accu = batterijSom(d);
-    if (accu) uit.push({ id: 'batterij', soort: 'som', titel: 'Een thuisbatterij', zin: 'zon van de middag voor de avond', euro: accu.euro, wint: 'per maand, vanaf 2027', href: 'opbrengst.html' });
+    if (accu) uit.push({ id: 'batterij', soort: 'som', titel: t('kan.idee.batterij'), zin: t('kan.idee.batterijZin'), euro: accu.euro, wint: t('kan.idee.batterijWint'), href: 'opbrengst.html' });
     for (const r of binnen(d)) {
       for (const b of r.bronnen ?? []) {
-        if (b.aan === 'hand' && b.soorten.some((x) => huismodel.ELEKTRISCH.has(x))) uit.push({ id: `slim-${r.id}-${b.id}`, soort: 'koop', titel: `De ${huismodel.bronNaam(b).toLowerCase()} in ${r.naam} slim`, zin: 'met een slimme stekker of module', wint: 'ook op zon', href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
+        if (b.aan === 'hand' && b.soorten.some((x) => huismodel.ELEKTRISCH.has(x))) uit.push({ id: `slim-${r.id}-${b.id}`, soort: 'koop', titel: t('kan.idee.slim', { bron: huismodel.bronNaam(b).toLowerCase(), kamer: r.naam }), zin: t('kan.idee.slimZin'), wint: t('kan.idee.slimWint'), href: `indeling.html#${encodeURIComponent(r.id)}/warmte` });
       }
     }
     const zonderMeting = binnen(d).filter((r) => r.temperatuurC == null && !huismodel.GANG.test(r.naam));
-    if (zonderMeting.length) uit.push({ id: 'meten', soort: 'koop', titel: zonderMeting.length === 1 ? `Meten in ${zonderMeting[0].naam}` : `Meten in ${zonderMeting.length} kamers`, zin: 'met een temperatuursensor per kamer', wint: 'zie waar het te warm wordt', href: 'indeling.html' });
+    if (zonderMeting.length) uit.push({ id: 'meten', soort: 'koop', titel: zonderMeting.length === 1 ? t('kan.idee.meten', { kamer: zonderMeting[0].naam }) : t('kan.idee.metenN', { n: zonderMeting.length }), zin: t('kan.idee.metenZin'), wint: t('kan.idee.metenWint'), href: 'indeling.html' });
     return uit;
+  }
+
+  /** Hoeveel regels "Zo werkt het" en "Wanneer het werkt" elk onderwerp heeft (kan.<id>.zo.<n>). */
+  const REGELS = { temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
+  /** De vaste teksten van een onderwerp: de titel, wat het is, hoe en wanneer. */
+  function teksten(id) {
+    const t = global.taal.t;
+    const [zo, wanneer] = REGELS[id];
+    const reeks = (soort, n) => Array.from({ length: n }, (_, i) => t(`kan.${id}.${soort}.${i + 1}`));
+    return { id, titel: t(`kan.${id}`), wat: t(`kan.${id}.wat`), zo: reeks('zo', zo), wanneer: reeks('wanneer', wanneer) };
   }
 
   /**
@@ -199,6 +210,7 @@
    * "nu" zegt wat het op dit moment doet. Alleen wat bij dit huis kan bestaan.
    */
   function kan(d) {
+    const t = global.taal.t;
     const alles = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
     const acts = d.site?.actuators ?? [];
     const airco = acts.some((x) => x.capabilities?.canCool);
@@ -210,7 +222,7 @@
     const e = d.energie?.instellingen;
     const p = e?.prijzen;
     const winter = d.divergence?.dataset?.seizoenen?.find((x) => x.seizoen === 'winter');
-    const bewijs = winter ? `${winter.dagen} van ${winter.doel} winterdagen` : null;
+    const bewijs = winter ? t('kan.winterdagen', { n: winter.dagen, doel: winter.doel }) : null;
     const lampenAan = alles.filter((x) => x.soort === 'licht' && x.aan).length;
     const screens = alles.filter((x) => x.soort === 'screen');
     const leegB = (d.huis?.batterijen ?? []).filter((b) => app.bijnaOp(b.pct, 'batterij', d.huis)).length;
@@ -233,135 +245,53 @@
     const lijst = [
       // Comfort
       {
-        id: 'temperatuur', groep: 'comfort', titel: 'Op temperatuur', stand: acts.length ? meekijk : 'nodig', label: acts.length ? null : 'Airco of thermostaat nodig',
-        nu: geregeld.length ? huismodel.inKamers(geregeld.map((r) => r.naam)) : 'wat je wilt per kamer', href: 'comfort.html',
-        waar: geregeld.map((r) => ({ naam: r.naam, wat: kamers.find((k) => k.zoneId === r.zoneId)?.kort ?? (r.temperatuurC != null ? `${String(r.temperatuurC).replace('.', ',')}°` : '') })),
-        extra: bewijs ? `Meegekeken: ${bewijs}.` : null,
-        wat: 'Elke kamer warm of koel genoeg, zoals jij het per dagdeel instelt.',
-        zo: ['Per kamer verwarmen onder en koelen boven een temperatuur', 'De goedkoopste manier eerst: de zon, dan het net', 'Bij elk besluit staat waarom'],
-        wanneer: ['Een kamer is kouder of warmer dan je comfort', 'Kijkt mee: het huis zegt wat het zou doen, tot het na 30 winterdagen zelf regelt'],
+        ...teksten('temperatuur'), groep: 'comfort', stand: acts.length ? meekijk : 'nodig', label: acts.length ? null : t('kan.temperatuur.nodig'),
+        nu: geregeld.length ? huismodel.inKamers(geregeld.map((r) => r.naam)) : t('kan.temperatuur.nu'), href: 'comfort.html',
+        waar: geregeld.map((r) => ({ naam: r.naam, wat: kamers.find((k) => k.zoneId === r.zoneId)?.kort ?? (r.temperatuurC != null ? `${global.taal.getal(r.temperatuurC, Number.isInteger(r.temperatuurC) ? 0 : 1)}°` : '') })),
+        extra: bewijs ? t('kan.temperatuur.extra', { bewijs }) : null,
       },
+      { ...teksten('optijd'), groep: 'comfort', stand: 'leert', nu: dagen ? t('kan.optijd.dagen', { n: dagen }) : t('kan.optijd.nu'), href: 'vandaag.html' },
       {
-        id: 'optijd', groep: 'comfort', titel: 'Op tijd warm of koel', stand: 'leert', nu: dagen ? `${dagen} dagen gemeten` : 'meet hoe elke kamer opwarmt', href: 'vandaag.html',
-        wat: 'Het huis leert hoe snel elke kamer opwarmt en afkoelt, en begint dan precies op tijd.',
-        zo: ['Het meet elke kamer, het weer per uur en wat de apparaten doen', 'Daaruit rekent het vooruit: wanneer moet de cv aan voor 20° om zeven uur', 'Met zon in de verwachting koelt het eerder, op eigen stroom'],
-        wanneer: ['Na genoeg dagen met verschillend weer', 'Per kamer: een kamer die het al kent, doet al mee'],
-      },
-      {
-        id: 'perkamer', groep: 'comfort', titel: 'Verwarmen per kamer', stand: perKamer.length ? meekijk : 'nodig', label: perKamer.length ? null : 'Radiatorknoppen nodig',
-        nu: perKamer.length ? huismodel.inKamers(perKamer.map((r) => r.naam)) : 'een eigen temperatuur per kamer', href: 'indeling.html',
-        waar: perKamer.map((r) => ({ naam: r.naam, wat: warmteVan(r).join(', ') || 'thermostaat' })),
+        ...teksten('perkamer'), groep: 'comfort', stand: perKamer.length ? meekijk : 'nodig', label: perKamer.length ? null : t('kan.perkamer.nodig'),
+        nu: perKamer.length ? huismodel.inKamers(perKamer.map((r) => r.naam)) : t('kan.perkamer.nu'), href: 'indeling.html',
+        waar: perKamer.map((r) => ({ naam: r.naam, wat: warmteVan(r).join(', ') || t('kan.thermostaat') })),
         idee: idee.find((x) => x.soort === 'koop' && x.id.startsWith('slim-')) ?? null,
-        wat: 'Met een eigen thermostaat, slimme radiatorknoppen of een slimme elektrische bron krijgt elke kamer zijn eigen temperatuur, ook met één cv-ketel.',
-        zo: ['De knop houdt de radiator dicht in een kamer die warm genoeg is', 'De cv brandt alleen als een kamer warmte vraagt', 'Zigbee-knoppen zoals de Sonoff TRVZB werken via Home Assistant'],
-        wanneer: ['Het apparaat is gekoppeld in Home Assistant', 'Bij Indeling, onder Verwarmen en koelen, staat per kamer wat er hangt'],
       },
-      {
-        id: 'gevoel', groep: 'comfort', titel: 'Leert wat jij prettig vindt', stand: 'werkt', nu: 'tik op Thuis hoe het voelt', href: 'thuis.html',
-        wat: 'Tik op Thuis of het te koud, goed of te warm is. Het huis legt het naast de temperatuur van dat moment.',
-        zo: ['Elke tik wordt bewaard, met de temperatuur en het dagdeel', 'Tik je vaak "te koud" bij dezelfde temperatuur, dan stelt het huis een warmere voor'],
-        wanneer: ['Altijd: tik wanneer je iets voelt'],
-      },
+      { ...teksten('gevoel'), groep: 'comfort', stand: 'werkt', nu: t('kan.gevoel.nu'), href: 'thuis.html' },
       // Zon en kosten
       ...(airco ? [{
-        id: 'opzon', groep: 'zon', titel: 'Koelen en verwarmen op zon', stand: panelen ? meekijk : 'nodig', label: panelen ? null : 'Zonnepanelen nodig',
-        nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? 'wacht op zon over') : 'airco op je eigen stroom', href: 'vandaag.html',
-        waar: opZonKamers.map((r) => ({ naam: r.naam, wat: [...aircoIn(r).map((a) => (a.klimaat?.kanVerwarmen ? 'airco, koelt en verwarmt' : 'airco, koelt')), ...opZonIn(r).map((b) => `${huismodel.bronNaam(b).toLowerCase()}, warmt op zon`)].join(' · ') })),
+        ...teksten('opzon'), groep: 'zon', stand: panelen ? meekijk : 'nodig', label: panelen ? null : t('kan.opzon.nodig'),
+        nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? t('kan.opzon.wacht')) : t('kan.opzon.nu'), href: 'vandaag.html',
+        waar: opZonKamers.map((r) => ({ naam: r.naam, wat: [...aircoIn(r).map((a) => t(a.klimaat?.kanVerwarmen ? 'kan.opzon.koeltWarmt' : 'kan.opzon.koelt')), ...opZonIn(r).map((b) => t('kan.opzon.warmtOpZon', { bron: huismodel.bronNaam(b).toLowerCase() }))].join(' · ') })),
         idee: idee.find((x) => x.soort === 'aan') ?? null,
-        wat: "De airco's draaien op de stroom van je eigen panelen, als een kamer het nodig heeft. Wat er over is, gaat niet voor weinig naar het net.",
-        zo: ['Elke paar minuten kijkt het huis hoeveel zon er over is', 'Is het genoeg, dan gaat de kamer die het meest nodig heeft voor', 'Wordt het bewolkt, dan stopt de airco rustig, niet meteen'],
-        wanneer: ['Er is genoeg zon over voor een airco', 'Een kamer is warmer of kouder dan je comfort'],
       }] : []),
       {
-        id: 'apparaten', groep: 'zon', titel: 'Apparaten op zon', stand: opZon ? meekijk : kanOpZon ? 'uit' : 'nodig', label: opZon || kanOpZon ? null : 'Slim apparaat nodig',
-        nu: opZon ? 'start als er zon over is' : kanOpZon ? 'zet het aan bij Regeling' : 'een droger die op afstand start', href: 'regeling.html#opzon',
-        wat: 'Een droger, wasmachine of vaatwasser wacht op zon, en is toch klaar op de tijd die jij kiest.',
-        zo: ['Jij zegt hoe laat hij klaar moet zijn', 'Het huis start hem als er genoeg zon over is', 'Komt er geen zon, dan start hij op tijd van het net'],
-        wanneer: ['"Op afstand starten" staat aan op het apparaat', 'Het apparaat staat bij Regeling op zon'],
+        ...teksten('apparaten'), groep: 'zon', stand: opZon ? meekijk : kanOpZon ? 'uit' : 'nodig', label: opZon || kanOpZon ? null : t('kan.apparaten.nodig'),
+        nu: t(opZon ? 'kan.apparaten.start' : kanOpZon ? 'kan.apparaten.zetAan' : 'kan.apparaten.nu'), href: 'regeling.html#opzon',
       },
-      {
-        id: 'batterij', groep: 'zon', titel: 'Thuisbatterij', stand: 'nodig', label: 'Batterij nodig', nu: accu ? `vanaf 2027 ± € ${accu.euro} per maand voor jou` : 'zon van de middag voor de avond', href: 'opbrengst.html',
-        wat: 'Zon van de middag bewaren voor de avond, in plaats van hem voor weinig aan het net te geven.',
-        zo: ['Laden met wat de airco’s overlaten', "'s Avonds leeg naar je eigen huis, niet naar het net", 'Nooit meer tegelijk dan je zekering aankan'],
-        wanneer: ['Er is een batterij die Home Assistant kan sturen'], som: accu,
-      },
-      ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{
-        id: 'goedkoop', groep: 'zon', titel: 'Goedkope uren', stand: 'nodig', label: 'Ander contract', nu: 'koelen en wassen als stroom goedkoop is', href: 'energie.html#prijzen',
-        wat: 'Met een contract met een prijs per uur kan het huis koelen, verwarmen en wassen als stroom goedkoop is.',
-        zo: ['Het huis kent de prijzen van morgen al vandaag', 'Het schuift wat kan schuiven naar de goedkoopste uren'],
-        wanneer: ['Je hebt een dynamisch contract, en zet dat bij Energie'],
-      }] : []),
-      {
-        id: 'auto', groep: 'zon', titel: 'De auto op zon', stand: 'nodig', label: 'Laadpaal nodig', nu: 'laden met wat er over is', href: 'opbrengst.html',
-        wat: 'De auto laadt met de zon die er over is, en is toch vol op de tijd die jij kiest.',
-        zo: ['Laden als er zon over is, samen met de airco’s', 'Vol op tijd, desnoods van het net'],
-        wanneer: ['Er is een laadpaal die via evcc in Home Assistant hangt'],
-      },
+      { ...teksten('batterij'), groep: 'zon', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
+      ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'zon', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
+      { ...teksten('auto'), groep: 'zon', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
       // Gemak
-      {
-        id: 'licht', groep: 'gemak', titel: 'Licht en scènes', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit',
-        nu: lampenAan ? `${lampenAan} ${lampenAan === 1 ? 'lamp' : 'lampen'} aan` : 'alles uit', href: 'functies.html#licht',
-        wat: 'Lampen en scènes aan en uit in de app, per kamer, met de kleuren van je Hue-scènes.',
-        zo: ['Tik op een kamer en dan op een lamp of scène', 'De regeling raakt je lampen niet aan'],
-        wanneer: ['Bedienen staat aan bij Functies', 'Je bent ingelogd met je Home Assistant-account'],
-      },
-      ...(screens.length ? [{
-        id: 'screens', groep: 'gemak', titel: 'Screens en zonnescherm', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit',
-        nu: `${screens.length} ${screens.length === 1 ? 'scherm' : 'schermen'}`, href: 'functies.html#licht',
-        wat: 'Je screens en zonnescherm open en dicht in de app. Een screen met terugmelding sleep je naar elke stand.',
-        zo: ['Tik op een kamer en dan op het screen', 'Een scherm zonder terugmelding toont de laatste opdracht'],
-        wanneer: ['Bedienen staat aan bij Functies'],
-      }] : []),
-      {
-        id: 'afwezig', groep: 'gemak', titel: 'Afwezig en vakantie', stand: meekijk, nu: 'vanzelf als niemand thuis is', href: 'comfort.html#afwezig',
-        wat: 'Is niemand thuis, dan houdt het huis een zuinigere temperatuur aan. Vakantie zet je zelf.',
-        zo: ['Het huis ziet in Home Assistant wie er thuis is', 'Per kamer staat wat het dan aanhoudt'],
-        wanneer: ['Niemand is thuis, of jij zet vakantie aan op Thuis'],
-      },
-      {
-        id: 'vraag', groep: 'gemak', titel: 'Vraag het je huis', stand: 'werkt', nu: '"waarom koelt de zolder?"', href: 'assistent.html',
-        wat: 'Vraag wat het huis doet en waarom, en hoeveel zon er vandaag komt.',
-        zo: ['De antwoorden komen uit wat het huis meet en besluit', 'Typ een vraag, of tik er een aan'],
-        wanneer: ['Altijd'],
-      },
+      { ...teksten('licht'), groep: 'gemak', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit', nu: lampenAan ? t('kan.licht.aan', { n: lampenAan }) : t('kan.licht.uit'), href: 'functies.html#licht' },
+      ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),
+      { ...teksten('afwezig'), groep: 'gemak', stand: meekijk, nu: t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
+      { ...teksten('vraag'), groep: 'gemak', stand: 'werkt', nu: t('kan.vraag.nu'), href: 'assistent.html' },
       // Overzicht
       {
-        id: 'opbrengst', groep: 'overzicht', titel: 'Opbrengst en kosten', stand: zonderMeter || zonderPrijs ? 'mis' : 'werkt', label: zonderMeter ? 'Meters' : zonderPrijs ? 'Stroomprijs' : null,
-        nu: zonderMeter ? 'kies je meters' : zonderPrijs ? "kWh klopt, euro's nog niet" : d.opbrengst?.stroom ? `${d.opbrengst.stroom.eigenZonPct}% van je eigen panelen` : 'wat je gebruikt en wat het kost',
+        ...teksten('opbrengst'), groep: 'overzicht', stand: zonderMeter || zonderPrijs ? 'mis' : 'werkt', label: zonderMeter ? t('kan.opbrengst.meters') : zonderPrijs ? t('kan.opbrengst.prijs') : null,
+        nu: zonderMeter ? t('kan.opbrengst.kiesMeters') : zonderPrijs ? t('kan.opbrengst.geenEuro') : d.opbrengst?.stroom ? t('kan.opbrengst.eigen', { pct: d.opbrengst.stroom.eigenZonPct }) : t('kan.opbrengst.nu'),
         href: zonderMeter ? 'energie.html#meters' : zonderPrijs ? 'energie.html#prijzen' : 'opbrengst.html',
-        wat: 'Wat je huis gebruikt, wat je panelen leveren en wat het kost, per dag, week, maand en contractjaar.',
-        zo: ['Uit je meters in Home Assistant', 'Met de prijzen van je contract'],
-        wanneer: ['Je meters en prijzen staan bij Energie'],
       },
+      { ...teksten('zekering'), groep: 'overzicht', stand: z ? meekijk : 'mis', label: z ? null : t('kan.zekering.label'), nu: z ? `${z.fasen} × ${z.ampere} A` : t('kan.zekering.nu'), href: 'energie.html#aansluiting' },
+      ...((d.functies?.gevonden?.cameras ?? []).length ? [{ ...teksten('camera'), groep: 'overzicht', stand: f?.cameras?.aan || f?.deurbel?.aan ? 'werkt' : 'uit', nu: t(f?.deurbel?.aan ? 'kan.camera.bel' : 'kan.camera.nu'), href: 'functies.html#cameras' }] : []),
       {
-        id: 'zekering', groep: 'overzicht', titel: 'Nooit meer dan je zekering', stand: z ? meekijk : 'mis', label: z ? null : 'Zekering',
-        nu: z ? `${z.fasen} × ${z.ampere} A` : 'kies je hoofdzekering', href: 'energie.html#aansluiting',
-        wat: 'Het huis zet nooit zoveel tegelijk aan dat de hoofdzekering eruit gaat.',
-        zo: ['Het telt wat er al draait, per fase', 'Een airco wacht als het te krap wordt'],
-        wanneer: ['Je hoofdzekering staat bij Energie'],
+        ...teksten('batterijen'), groep: 'overzicht', stand: 'werkt', let: leegB > 0 || volF > 0, href: 'thuis.html#batterijen',
+        nu: leegB || volF ? [leegB ? t('kan.batterijen.leeg', { n: leegB }) : null, volF ? t('kan.batterijen.vol', { n: volF }) : null].filter(Boolean).join(', ') : t('kan.batterijen.orde'),
       },
-      ...((d.functies?.gevonden?.cameras ?? []).length ? [{
-        id: 'camera', groep: 'overzicht', titel: "Camera's en deurbel", stand: f?.cameras?.aan || f?.deurbel?.aan ? 'werkt' : 'uit',
-        nu: f?.deurbel?.aan ? 'beeld op elk scherm als er wordt aangebeld' : 'beeld in de kamer', href: 'functies.html#cameras',
-        wat: 'Je camera’s in de kamer waar ze hangen, en bij de deurbel meteen het beeld op elk scherm.',
-        zo: ['Wordt er aangebeld, dan toont elke open pagina het beeld', 'Smart Climate kijkt alleen: er gaat niets naar de camera'],
-        wanneer: ["Camera's en deurbel staan aan bij Functies"],
-      }] : []),
-      {
-        id: 'batterijen', groep: 'overzicht', titel: 'Batterijen en filters', stand: 'werkt', let: leegB > 0 || volF > 0, nu: leegB || volF ? [leegB ? `${leegB} ${leegB === 1 ? 'batterij' : 'batterijen'} bijna leeg` : null, volF ? `${volF} ${volF === 1 ? 'filter' : 'filters'} vol` : null].filter(Boolean).join(', ') : 'alles in orde', href: 'thuis.html#batterijen',
-        wat: 'Een bijna lege batterij of een vol airco-filter staat op Thuis, met een tik naar het apparaat. Wanneer, kies je bij Functies.',
-        zo: ['Alle kleine apparaten met een batterij, ook knoppen die de app verder niet gebruikt', 'Telefoons, een thuisbatterij en een auto tellen niet mee'],
-        wanneer: ['Altijd'],
-      },
-      {
-        id: 'weer', groep: 'overzicht', titel: 'Weer en zon', stand: f?.weer?.bron ? 'werkt' : 'uit', nu: weerNaam ? `van ${weerNaam}` : 'kies een weerbron', href: 'functies.html#weer',
-        wat: 'Het weer per uur en per dag, en wat je panelen dan naar verwachting leveren.',
-        zo: ['De verwachting leert van je eigen panelen', 'Elk uur wordt de verwachting bewaard, voor het thermisch model'],
-        wanneer: ['Er is een weerbron gekozen bij Functies'],
-      },
+      { ...teksten('weer'), groep: 'overzicht', stand: f?.weer?.bron ? 'werkt' : 'uit', nu: weerNaam ? t('kan.weer.van', { bron: weerNaam }) : t('kan.weer.nu'), href: 'functies.html#weer' },
     ];
     return lijst.map((x) => ({ ...x, label: x.label ?? LABEL(x.stand) ?? x.stand }));
   }
-
   global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom, ideeen };
 })(window);

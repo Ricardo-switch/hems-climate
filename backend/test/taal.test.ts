@@ -29,9 +29,9 @@ function laadTalen(): Record<string, Record<string, Tekst>> {
 }
 
 /** De bestanden die al helemaal uit de tekstbestanden lezen (stap 8: Thuis). */
-const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'src/basis.js', 'src/eigen.js', 'src/niemand.js', 'src/rondleiding.js', 'src/kamer.js', 'src/kamer.html', 'src/vandaag.js', 'src/vandaag.html', 'src/apparaten.js', 'src/apparaten.html', 'src/opbrengst.js', 'src/opbrengst.html', 'src/assistent.js', 'src/assistent.html', 'src/luisteren.js', 'src/jij.js', 'src/jij.html', 'src/instellingen.js', 'src/instellingen.html', 'src/groep.js', 'src/comfort.js', 'src/comfort.html', 'src/regeling.js', 'src/regeling.html', 'src/energie.js', 'src/energie.html', 'src/panelen.js', 'src/functies.js', 'src/functies.html', 'src/toegang.js', 'src/toegang.html', 'src/bewoners.js', 'src/bewoners.html', 'kit/nav.js', 'kit/sankey.js', 'kit/taal.js'];
-/** Waar de code sleutels vraagt; huismodel en stand deels, maar hun sleutels moeten er wel zijn. */
-const VRAGEN = [...OMGEZET, 'src/huismodel.js', 'src/stand.js', 'kit/huis.js'];
+const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'src/basis.js', 'src/eigen.js', 'src/niemand.js', 'src/rondleiding.js', 'src/kamer.js', 'src/kamer.html', 'src/vandaag.js', 'src/vandaag.html', 'src/apparaten.js', 'src/apparaten.html', 'src/opbrengst.js', 'src/opbrengst.html', 'src/assistent.js', 'src/assistent.html', 'src/luisteren.js', 'src/jij.js', 'src/jij.html', 'src/instellingen.js', 'src/instellingen.html', 'src/groep.js', 'src/comfort.js', 'src/comfort.html', 'src/regeling.js', 'src/regeling.html', 'src/energie.js', 'src/energie.html', 'src/panelen.js', 'src/functies.js', 'src/functies.html', 'src/toegang.js', 'src/toegang.html', 'src/bewoners.js', 'src/bewoners.html', 'src/huismodel.js', 'src/stand.js', 'src/huis-kan.js', 'src/huis-kan.html', 'kit/nav.js', 'kit/sankey.js', 'kit/taal.js'];
+/** Waar de code sleutels vraagt: wat omgezet is, en de tekening van het huis. */
+const VRAGEN = [...OMGEZET, 'kit/huis.js'];
 
 /** Een script zonder commentaar, zodat een voorbeeld in de uitleg niet als sleutel telt. */
 function zonderCommentaar(pad: string, code: string): string {

@@ -1066,6 +1066,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['functies.html', /Features[\s\S]*Cameras[\s\S]*Doorbell[\s\S]*Lights and screens/],
         ['toegang.html', /Residents and access[\s\S]*Version/],
         ['bewoners.html', /Who lives here, in order/],
+        // Deel 4: Wat je huis kan, Indeling, Inrichten en het begin.
+        ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*Sun and costs/],
       ];
       for (const [pagina, tekst] of paginas) {
         await p.goto(`${baseUrl}/${pagina}`);
