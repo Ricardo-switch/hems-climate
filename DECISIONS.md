@@ -8344,7 +8344,7 @@ gehouden met meervouden: ja, met de regels per taal.
   nieuw is en bijwerken), en de rest van Thuis: Aanpassen en de favorieten, de
   rondleiding en de wand als niemand kijkt. `npm run teksten` toont per bestand
   wat er nog om te zetten is; de taaltest gebruikt dezelfde herkenning. De
-  proefomgeving op de NAS (`index.html`, `app.js`, `stand.js`) blijft
+  proefomgeving op de NAS (`index.html`, `app.js`) blijft
   Nederlands: die is voor de ontwikkelaar.
 - **Stap 9, tweede deel (0.59.2):** Kamer, Vandaag, Apparaten, Opbrengst en
   de Assistent, met de microfoon en "Hé huis" (het wekwoord zelf blijft
@@ -8355,6 +8355,23 @@ gehouden met meervouden: ja, met de regels per taal.
   toegankelijkheidscontrole op elk. Woorden die de dienst nog in het
   Nederlands geeft en die de app herkent (een scherm dat beweegt, "Er draait
   niets"), staan als vaste patronen in de code tot de dienst meertalig is.
+- **Stap 9, derde deel (0.59.3):** Instellingen en de pagina's erachter: Jij
+  (ook de meldingen op je telefoon), Comfort, Regeling, Energie met hoe de
+  panelen liggen (`panelen.js`), Functies, Bewoners en toegang, en Bewoners;
+  ook de opbouw die ze delen (`groep.js`: vorige en volgende, "Bewaard"). Van
+  `stand.js` staan wat er nog mist en het zoeken in beide talen; het zoeken
+  vindt een instelling op de woorden van de taal van de app. Wat je huis kan
+  (`stand.kan`) volgt in deel 4, met Inrichten en Indeling. Een paar uitleggen
+  met vet of code (de stappen voor het startscherm en voor HACS) hebben hun
+  HTML in de tekst; wat erin komt, wordt ontsnapt. Namen die bewaard worden,
+  zoals de vaste posten bij Contract en prijzen, krijgen de taal van wie ze
+  aanmaakt. De herkenning van losse Nederlandse tekst kent nu meer woorden
+  (ook "hoofdmenu", "instellingen", "terug"), en de taaltest vindt een
+  sleutel in elke ternary, niet alleen voor Thuis. De paginatest zet ook deze
+  acht pagina's in het Engels met de toegankelijkheidscontrole; die vond dat
+  de QR-code bij Bewoners een label had zonder rol (nu een afbeelding). Met
+  `HEMS_PAGE_SHOTS=<map>` maakt hij per pagina een afdruk, om te zien of de
+  Engelse zinnen passen.
 
 *Wat er nog Nederlands is op Thuis (stap 9):* de teksten uit `api/huis`,
 `api/weer` en de meldingen (de stand van een apparaat, het weer in woorden), en

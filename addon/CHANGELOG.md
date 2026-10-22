@@ -1,5 +1,18 @@
 # Wat is er nieuw
 
+## 0.59.3
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook Instellingen: Jij, Comfort, Regeling, Energie, Functies, en Bewoners en toegang
+- Zoeken bij Instellingen vindt een instelling ook op Engelse woorden
+
+**Opgelost**
+
+- Een schermlezer noemt de QR-code bij Bewoners nu een afbeelding
+
 ## 0.59.2
 
 *22 oktober 2026*

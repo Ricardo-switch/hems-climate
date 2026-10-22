@@ -54,8 +54,11 @@ async function laad() {
 /* ------------------------------------------------------------ tekenen */
 
 function keuzes(label, sleutel, opties, huidig, uit = false) {
-  return `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, t]) => `<button type="button" data-kies="${esc(sleutel)}" data-waarde='${esc(JSON.stringify(w))}' aria-pressed="${JSON.stringify(w) === JSON.stringify(huidig)}" ${uit ? 'disabled' : ''}>${esc(t)}</button>`).join('')}</div>`;
+  return `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, x]) => `<button type="button" data-kies="${esc(sleutel)}" data-waarde='${esc(JSON.stringify(w))}' aria-pressed="${JSON.stringify(w) === JSON.stringify(huidig)}" ${uit ? 'disabled' : ''}>${esc(x)}</button>`).join('')}</div>`;
 }
+const aanUit = () => [[true, t('functies.aan')], [false, t('functies.uit')]];
+/** Een uitleg met eigen HTML uit de teksten (<b>, <i>, <code>): wat erin komt, wordt ontsnapt. */
+const metHtml = (sleutel, p = {}) => t(sleutel, Object.fromEntries(Object.entries(p).map(([k, v]) => [k, esc(v)])));
 
 /** Het beeld dat van deze camera in de lijst staat, of null als hij niet getoond wordt. */
 const gekozenBeeld = (c) => c.beelden.find((b) => concept.cameras.lijst.includes(b.id))?.id ?? null;
@@ -66,14 +69,14 @@ function cameras() {
   const rijen = lijst
     .map((c, i) => {
       const beeld = gekozenBeeld(c);
-      const opties = [[null, 'Niet tonen'], ...c.beelden.map((b) => [b.id, b.naam.charAt(0).toUpperCase() + b.naam.slice(1)])];
-      return `<div class="regelrij" style="flex-direction: column; align-items: stretch"><div class="l"><b>${esc(c.naam)}</b><span>${beeld ? 'In de app, in de kamer waar hij staat' : 'Niet in de app'}</span></div>${keuzes(`Beeld van ${c.naam}`, `camera:${i}`, opties, beeld, !aan)}</div>`;
+      const opties = [[null, t('functies.nietTonen')], ...c.beelden.map((b) => [b.id, b.naam.charAt(0).toUpperCase() + b.naam.slice(1)])];
+      return `<div class="regelrij" style="flex-direction: column; align-items: stretch"><div class="l"><b>${esc(c.naam)}</b><span>${esc(t(beeld ? 'functies.inKamer' : 'functies.nietInApp'))}</span></div>${keuzes(t('functies.beeldVan', { naam: c.naam }), `camera:${i}`, opties, beeld, !aan)}</div>`;
     })
     .join('');
-  return `<h2 class="kop-2">Camera's</h2>
-    ${keuzes("Camera's in de app", 'camerasAan', [[true, 'Aan'], [false, 'Uit']], aan)}
-    <div>${lijst.length ? rijen : '<p class="uitleg">Geen camera’s gevonden in Home Assistant.</p>'}</div>
-    <p class="mini">Vloeiend is lichter voor de tablet; scherp heeft meer detail. Kijken vraagt de inlog met je Home Assistant-account.</p>`;
+  return `<h2 class="kop-2">${esc(t('functies.cameras'))}</h2>
+    ${keuzes(t('functies.camerasInApp'), 'camerasAan', aanUit(), aan)}
+    <div>${lijst.length ? rijen : `<p class="uitleg">${esc(t('functies.geenCameras'))}</p>`}</div>
+    <p class="mini">${esc(t('functies.vloeiend'))}</p>`;
 }
 
 function deurbel() {
@@ -83,17 +86,17 @@ function deurbel() {
   const opt = (lijst, huidig, leeg) => `<option value="">${esc(leeg)}</option>${lijst.map((x) => `<option value="${esc(x.id)}" ${x.id === huidig ? 'selected' : ''}>${esc(x.naam)}</option>`).join('')}`;
   const zeker = melders.filter((m) => m.zeker);
   const misschien = melders.filter((m) => !m.zeker);
-  const melderOpties = `<option value="">Kies de melder…</option>${zeker.length ? `<optgroup label="Een deurbel">${zeker.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}${misschien.length ? `<optgroup label="Heet als een deurbel">${misschien.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}`;
+  const melderOpties = `<option value="">${esc(t('functies.kiesMelder'))}</option>${zeker.length ? `<optgroup label="${esc(t('functies.eenDeurbel'))}">${zeker.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}${misschien.length ? `<optgroup label="${esc(t('functies.heetDeurbel'))}">${misschien.map((m) => `<option value="${esc(m.id)}" ${m.id === d.melder ? 'selected' : ''}>${esc(m.naam)}</option>`).join('')}</optgroup>` : ''}`;
   const uit = !d.aan;
-  return `<h2 class="kop-2">Deurbel</h2>
-    ${keuzes('Deurbel', 'belAan', [[true, 'Aan'], [false, 'Uit']], d.aan, !melders.length)}
-    ${melders.length ? '' : '<p class="uitleg">Geen deurbel gevonden in Home Assistant. Een deurbel met een melder (Reolink, Ring, Nest, UniFi en andere) verschijnt hier vanzelf.</p>'}
-    <label class="veldnaam">Melder die afgaat als er wordt aangebeld<select class="invoer" data-veld="melder" ${uit ? 'disabled' : ''}>${melderOpties}</select></label>
-    <label class="veldnaam">Beeld dat dan verschijnt<select class="invoer" data-veld="camera" ${uit ? 'disabled' : ''}>${opt(beelden, d.camera, 'Kies een camera…')}</select></label>
-    <span class="veldnaam">Het scherm van de tablet aanzetten</span>
-    ${keuzes('Scherm aanzetten', 'schermAan', [[true, 'Ja'], [false, 'Nee']], d.schermAan, uit)}
-    <span class="veldnaam">Hoe lang het beeld blijft staan</span>
-    ${keuzes('Hoe lang', 'seconden', [[60, '1 minuut'], [120, '2 minuten'], [300, '5 minuten']], d.seconden, uit)}`;
+  return `<h2 class="kop-2">${esc(t('functies.deurbel'))}</h2>
+    ${keuzes(t('functies.deurbel'), 'belAan', aanUit(), d.aan, !melders.length)}
+    ${melders.length ? '' : `<p class="uitleg">${esc(t('functies.geenDeurbel'))}</p>`}
+    <label class="veldnaam">${esc(t('functies.melder'))}<select class="invoer" data-veld="melder" ${uit ? 'disabled' : ''}>${melderOpties}</select></label>
+    <label class="veldnaam">${esc(t('functies.beeld'))}<select class="invoer" data-veld="camera" ${uit ? 'disabled' : ''}>${opt(beelden, d.camera, t('functies.kiesCamera'))}</select></label>
+    <span class="veldnaam">${esc(t('functies.schermAan'))}</span>
+    ${keuzes(t('functies.schermAanLabel'), 'schermAan', [[true, t('functies.ja')], [false, t('functies.nee')]], d.schermAan, uit)}
+    <span class="veldnaam">${esc(t('functies.hoeLang'))}</span>
+    ${keuzes(t('functies.hoeLangLabel'), 'seconden', [60, 120, 300].map((s) => [s, t('functies.minuut', { n: s / 60 })]), d.seconden, uit)}`;
 }
 
 /*
@@ -126,20 +129,21 @@ function licht() {
   const mag = info.lichtMogelijk === true;
   const schermMag = info.schermMogelijk === true;
   const kamers = lichtPerKamer();
+  const bedienen = () => [[true, t('functies.bedienen')], [false, t('functies.kijken')]];
   // Per kamer een knopje per lamp en screen: aan staat hij in de app. Compact, zodat het op de wand past.
   const knopje = (d) => {
-    const terug = d.soort === 'screen' ? (d.scherm?.terugmelding ? 'meldt terug' : d.scherm?.terugmelding === false ? 'geen terugmelding' : 'screen') : '';
-    return `<button type="button" data-in-app="${esc(d.id)}" aria-pressed="${!d.verborgen}" aria-label="${esc(d.naam)} in de app">${esc(d.naam)}${terug ? `<small> · ${esc(terug)}</small>` : ''}</button>`;
+    const terug = d.soort === 'screen' ? t(d.scherm?.terugmelding ? 'functies.meldtTerug' : d.scherm?.terugmelding === false ? 'functies.geenTerug' : 'functies.screen') : '';
+    return `<button type="button" data-in-app="${esc(d.id)}" aria-pressed="${!d.verborgen}" aria-label="${esc(t('functies.inApp', { naam: d.naam }))}">${esc(d.naam)}${terug ? `<small> · ${esc(terug)}</small>` : ''}</button>`;
   };
   const lijst = kamers
-    .map((k) => `<div class="lichtkamer"><b>${esc(k.naam)}</b>${k.dingen.length ? `<div class="keuzes">${k.dingen.map(knopje).join('')}</div>` : ''}${k.scenes.length ? `<span class="mini">Scènes: ${esc(k.scenes.map((x) => x.naam).join(', '))}</span>` : ''}</div>`)
+    .map((k) => `<div class="lichtkamer"><b>${esc(k.naam)}</b>${k.dingen.length ? `<div class="keuzes">${k.dingen.map(knopje).join('')}</div>` : ''}${k.scenes.length ? `<span class="mini">${esc(t('functies.scenes', { namen: k.scenes.map((x) => x.naam).join(', ') }))}</span>` : ''}</div>`)
     .join('');
   // Alleen wat deze installatie toestaat (besluit 130): een knop die niets kan, staat er niet.
-  return `<h2 class="kop-2">Licht en screens</h2>
-    ${mag ? `<span class="veldnaam">Licht en scènes</span>${keuzes('Licht bedienen', 'lichtAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.licht.bedienen)}` : ''}
-    ${schermMag ? `<span class="veldnaam">Screens en zonnescherm</span>${keuzes('Schermen bedienen', 'schermenAan', [[true, 'Bedienen in de app'], [false, 'Alleen kijken']], concept.schermen.bedienen)}` : ''}
-    <p class="mini">${mag || schermMag ? 'Bedienen doe je in het huis, bij de kamer. Smart Climate regelt ze niet.' : 'Deze installatie staat bedienen in de app niet toe; je ziet wel wat er aan staat. Wie Smart Climate installeerde, kan het aanzetten.'}</p>
-    ${lijst ? `<h3 class="kop-3" style="margin: 8px 0 0">In de app</h3><p class="mini">Tik er een uit om hem niet meer in de app te tonen; in Home Assistant blijft hij gewoon.${kamers.some((k) => k.dingen.some((d) => d.soort === 'screen')) ? ' Alleen een screen dat zijn stand terugmeldt, zoals Somfy io, kan later meedoen tegen de zon.' : ''}</p><div class="lichtkamers">${lijst}</div>` : ''}`;
+  return `<h2 class="kop-2">${esc(t('functies.licht'))}</h2>
+    ${mag ? `<span class="veldnaam">${esc(t('functies.lichtScenes'))}</span>${keuzes(t('functies.lichtBedienen'), 'lichtAan', bedienen(), concept.licht.bedienen)}` : ''}
+    ${schermMag ? `<span class="veldnaam">${esc(t('functies.screens'))}</span>${keuzes(t('functies.schermenBedienen'), 'schermenAan', bedienen(), concept.schermen.bedienen)}` : ''}
+    <p class="mini">${esc(t(mag || schermMag ? 'functies.bedienenHuis' : 'functies.nietToegestaan'))}</p>
+    ${lijst ? `<h3 class="kop-3" style="margin: 8px 0 0">${esc(t('functies.inDeApp'))}</h3><p class="mini">${esc(t('functies.tikUit'))}${kamers.some((k) => k.dingen.some((d) => d.soort === 'screen')) ? ` ${esc(t('functies.somfy'))}` : ''}</p><div class="lichtkamers">${lijst}</div>` : ''}`;
 }
 
 /* ------------------------------------------------------------ weergave */
@@ -148,17 +152,18 @@ const NIEMAND = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5
 const niemandNu = () => ({ ...NIEMAND, ...voorkeur?.wand?.niemand });
 const magWand = () => !!voorkeur?.wand?.magAanpassen;
 const schakel = (aan, data, label, uit = false) => `<button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(label)}" ${data} ${uit ? 'disabled' : ''}></button>`;
-const nkKeuzes = (label, attr, opties, huidig, uit = false) => `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, t]) => `<button type="button" data-${attr}="${w}" aria-pressed="${w === huidig}" ${uit ? 'disabled' : ''}>${esc(t)}</button>`).join('')}</div>`;
-const alleenHoofd = () => (magWand() ? '' : '<p class="uitleg" style="color: var(--zon-t)">Alleen de hoofdgebruiker kan dit veranderen.</p>');
-const voorDeWand = '<p class="mini">Voor het scherm aan de wand: het account dat bij Bewoners een scherm is. Een telefoon of laptop doet nooit mee.</p>';
+const nkKeuzes = (label, attr, opties, huidig, uit = false) => `<div class="keuzes" role="group" aria-label="${esc(label)}">${opties.map(([w, x]) => `<button type="button" data-${attr}="${w}" aria-pressed="${w === huidig}" ${uit ? 'disabled' : ''}>${esc(x)}</button>`).join('')}</div>`;
+const minuten = (lijst) => lijst.map((n) => [n, t('algemeen.minuten', { n })]);
+const alleenHoofd = () => (magWand() ? '' : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.alleenHoofd'))}</p>`);
+const voorDeWand = () => `<p class="mini">${esc(t('functies.voorDeWand'))}</p>`;
 
 /** Dit scherm (besluit 155): volledig scherm, per apparaat; alleen als de app in Home Assistant draait. */
 function scherm() {
   const aan = app.volledigGekozen();
-  return `<h2 class="kop-2">Dit scherm</h2>
-    <div class="regelrij"><div class="l"><b>Volledig scherm</b><span>Zonder de zijbalk en de kopbalk van Home Assistant, en zonder de balken van de browser.</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="Volledig scherm" data-volledig></button></div>
-    <p class="mini">Alleen op dit apparaat: aan op de tablet aan de muur, uit op je telefoon. Het hele scherm komt bij de eerste tik. Terug naar Home Assistant gaat met de knop boven de bel, of hieronder.</p>
-    <div><button type="button" class="knop" data-naar-ha>Naar Home Assistant</button></div>`;
+  return `<h2 class="kop-2">${esc(t('functies.ditScherm'))}</h2>
+    <div class="regelrij"><div class="l"><b>${esc(t('functies.volledig'))}</b><span>${esc(t('functies.volledigZin'))}</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(t('functies.volledig'))}" data-volledig></button></div>
+    <p class="mini">${esc(t('functies.volledigUitleg'))}</p>
+    <div><button type="button" class="knop" data-naar-ha>${esc(t('basis.naarHA'))}</button></div>`;
 }
 
 /*
@@ -185,41 +190,41 @@ function tailscaleAdres() {
   return tailnet ? `https://smartclimate.${tailnet}` : null;
 }
 function startschermZin() {
-  if (app.geinstalleerd()) return 'staat erop';
-  if (app.kanInstalleren()) return 'kan nu';
-  return app.inHA() ? (startscherm?.eigenPoort ? 'via Chrome' : 'eerst instellen') : 'via de browser';
+  if (app.geinstalleerd()) return t('functies.st.staatErop');
+  if (app.kanInstalleren()) return t('functies.st.kanNu');
+  return t(app.inHA() ? (startscherm?.eigenPoort ? 'functies.st.viaChrome' : 'functies.st.eerstInstellen') : 'functies.st.viaBrowser');
 }
 function startschermVorm() {
-  const kop = '<h2 class="kop-2">Op je startscherm</h2>';
-  if (app.geinstalleerd()) return `${kop}<p class="uitleg">Smart Climate staat op het startscherm van dit apparaat, met zijn eigen icoon. Je opent hem zonder Home Assistant eromheen.</p>`;
+  const kop = `<h2 class="kop-2">${esc(t('functies.st.kop'))}</h2>`;
+  if (app.geinstalleerd()) return `${kop}<p class="uitleg">${esc(t('functies.st.geinstalleerd'))}</p>`;
   if (app.kanInstalleren()) {
-    return `${kop}<p class="uitleg">Zet Smart Climate als app op je startscherm, met zijn eigen icoon. Hij opent dan schermvullend, zonder de balken van de browser.</p>
-      <div><button type="button" class="knop knop-licht" data-installeer>Zet op je startscherm</button></div>`;
+    return `${kop}<p class="uitleg">${esc(t('functies.st.kan'))}</p>
+      <div><button type="button" class="knop knop-licht" data-installeer>${esc(t('functies.st.zet'))}</button></div>`;
   }
   const adres = tailscaleAdres();
   if (app.inHA()) {
     if (startscherm?.eigenPoort && adres) {
       const host = adres.replace(/^https:\/\//, '');
       const open = android ? `intent://${host}/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(adres)};end` : adres;
-      return `${kop}<p class="uitleg">In de app van Home Assistant kan dat niet met het eigen icoon. Open Smart Climate in Chrome, log in, en tik daar bij Functies › Weergave op <b>Zet op je startscherm</b>.</p>
-        <p class="mini">Adres: <b>${esc(adres)}</b></p>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="knop knop-licht" href="${esc(open)}" target="_blank" rel="noopener">Open in Chrome</a><button type="button" class="knop" data-kopieer-adres="${esc(adres)}">Kopieer het adres</button></div>`;
+      return `${kop}<p class="uitleg">${metHtml('functies.st.inHA')}</p>
+        <p class="mini">${metHtml('functies.st.adres', { adres })}</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap"><a class="knop knop-licht" href="${esc(open)}" target="_blank" rel="noopener">${esc(t('functies.st.openChrome'))}</a><button type="button" class="knop" data-kopieer-adres="${esc(adres)}">${esc(t('functies.st.kopieer'))}</button></div>`;
     }
     const ha = haAdres() ?? 'http://homeassistant.local:8123';
-    const naam = adres ?? 'https://smartclimate.<jouw tailnet>.ts.net';
-    return `${kop}<p class="uitleg">In de app van Home Assistant kan dat niet met het eigen icoon: Chrome installeert alleen een app via https, en buiten Home Assistant. Dat gaat via Tailscale, met de eigen poort van Smart Climate. Eén keer instellen:</p>
+    const naam = adres ?? `https://smartclimate.${t('functies.st.tailnet')}.ts.net`;
+    return `${kop}<p class="uitleg">${esc(t('functies.st.waarom'))}</p>
       <ol style="margin: 0; padding-left: 20px; display: grid; gap: 8px">
-        <li>In Home Assistant: <b>Instellingen › Add-ons › Smart Climate › Configuratie</b>. Vul bij <i>ha_adres</i> <b>${esc(ha)}</b> in, en onder <i>Netwerk</i> bij 8100/tcp de poort <b>8100</b>. Opslaan en herstarten.</li>
-        <li>Op <b>login.tailscale.com</b>: bij <i>Access controls</i> een tag <b>tag:homeassistant</b> met jezelf als eigenaar, en bij <i>Services</i> een dienst <b>smartclimate</b> op <b>tcp:443</b>.</li>
-        <li>In de <b>Tailscale-add-on › Configuratie</b>: <code>advertise_tags: [tag:homeassistant]</code>, en een dienst <code>svc:smartclimate</code> naar <code>http://127.0.0.1:8100</code>, https op poort 443. Opslaan en herstarten.</li>
-        <li>Terug bij <i>Services</i> op login.tailscale.com: keur Home Assistant goed voor smartclimate.</li>
-        <li>Open op je telefoon in Chrome <b>${esc(naam)}</b>, log in, en tik hier op <b>Zet op je startscherm</b>.</li>
+        <li>${metHtml('functies.st.stap1', { ha })}</li>
+        <li>${metHtml('functies.st.stap2')}</li>
+        <li>${metHtml('functies.st.stap3')}</li>
+        <li>${metHtml('functies.st.stap4')}</li>
+        <li>${metHtml('functies.st.stap5', { naam })}</li>
       </ol>
-      <p class="mini">Liever zonder? In de app van Home Assistant: Instellingen › Companion-app › Snelkoppelingen beheren, soort Dashboard, met het pad van Smart Climate. Dan wel met een icoon van Home Assistant.</p>`;
+      <p class="mini">${esc(t('functies.st.zonder'))}</p>`;
   }
-  if (apple) return `${kop}<p class="uitleg">In Safari: tik op <b>Deel</b>, en dan op <b>Zet op beginscherm</b>.</p>`;
-  if (!window.isSecureContext) return `${kop}<p class="uitleg">Installeren kan alleen via https. Open Smart Climate via ${adres ? `<b>${esc(adres)}</b>` : 'het adres in Tailscale'}, en kom hier terug.</p>`;
-  return `${kop}<p class="uitleg">In Chrome: het menu <b>⋮</b> › <b>App installeren</b>${android ? '' : ', of het icoon rechts in de adresbalk'}.</p>`;
+  if (apple) return `${kop}<p class="uitleg">${metHtml('functies.st.safari')}</p>`;
+  if (!window.isSecureContext) return `${kop}<p class="uitleg">${t('functies.st.https', { adres: adres ? `<b>${esc(adres)}</b>` : esc(t('functies.st.hetAdres')) })}</p>`;
+  return `${kop}<p class="uitleg">${metHtml(android ? 'functies.st.chrome' : 'functies.st.chromeBalk')}</p>`;
 }
 
 /** Het always-on display (besluiten 164 en 165): na hoeveel minuten zonder aanraken, en of hij er is. */
@@ -227,29 +232,26 @@ function aod() {
   const n = niemandNu();
   const mag = magWand();
   const aan = n.rustMin > 0;
-  const zin = aan
-    ? `Raakt er ${n.rustMin} minuten niemand het scherm aan, dan toont het de klok, wat het huis doet en het weer. Een tik opent de app weer.`
-    : 'Het scherm blijft Thuis tonen, ook als niemand kijkt.';
+  const zin = aan ? t('functies.aod.zin', { n: n.rustMin }) : t('functies.aod.blijft');
   // De dagstand en de avondstand (besluit 168): wanneer elk geldt, met de zonsondergang van vandaag.
-  const klok = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-  const onder = zon?.dag?.onderMs != null ? `zonsondergang (${klok(zon.dag.onderMs)})` : 'zonsondergang';
-  const dagVan = n.nacht ? n.tot : zon?.dag?.opMs != null ? `zonsopkomst (${klok(zon.dag.opMs)})` : 'zonsopkomst';
+  const onder = zon?.dag?.onderMs != null ? t('functies.aod.onderOm', { klok: taal.klok(zon.dag.onderMs) }) : t('functies.aod.onder');
+  const dagVan = n.nacht ? n.tot : zon?.dag?.opMs != null ? t('functies.aod.opOm', { klok: taal.klok(zon.dag.opMs) }) : t('functies.aod.op');
   const avondTot = n.nacht ? n.van : dagVan;
-  const dagZin = !n.avond ? 'De hele tijd, ook in de avond' : !n.dag ? 'Uit: de avondstand neemt het over' : `${dagVan} tot ${onder}`;
-  const avondZin = !n.dag ? 'De hele tijd, ook overdag' : !n.avond ? 'Uit: de dagstand neemt het over' : `${onder} tot ${avondTot}`;
-  return `<h2 class="kop-2">Always-on display</h2>
+  const dagZin = !n.avond ? t('functies.aod.dagAltijd') : !n.dag ? t('functies.aod.dagUit') : t('functies.aod.vanTot', { van: dagVan, tot: onder });
+  const avondZin = !n.dag ? t('functies.aod.avondAltijd') : !n.avond ? t('functies.aod.avondUit') : t('functies.aod.vanTot', { van: onder, tot: avondTot });
+  return `<h2 class="kop-2">${esc(t('functies.aod.kop'))}</h2>
     <p class="klein" style="margin: 0" data-nk-zin>${esc(zin)}</p>
-    <div class="regelrij"><div class="l"><b>Always-on display</b><span>De klok en het huis als niemand kijkt</span></div>${schakel(aan, 'data-nk-aod', 'Always-on display', !mag)}</div>
-    <div class="${aan ? '' : 'uitgezet'}" data-nk-onder><span class="veldnaam">Verschijnt na zoveel minuten zonder aanraken</span>${nkKeuzes('Verschijnt na', 'nk-rust', [[2, '2 min'], [5, '5 min'], [15, '15 min']], n.rustMin, !mag || !aan)}</div>
+    <div class="regelrij"><div class="l"><b>${esc(t('functies.aod.kop'))}</b><span>${esc(t('functies.aod.regel'))}</span></div>${schakel(aan, 'data-nk-aod', t('functies.aod.kop'), !mag)}</div>
+    <div class="${aan ? '' : 'uitgezet'}" data-nk-onder><span class="veldnaam">${esc(t('functies.aod.na'))}</span>${nkKeuzes(t('functies.aod.naLabel'), 'nk-rust', minuten([2, 5, 15]), n.rustMin, !mag || !aan)}</div>
     <div class="${aan ? '' : 'uitgezet'}">
-      <div class="regelrij"><div class="l"><b>Dagstand</b><span data-nk-dagzin>${esc(dagZin)}. De klok, wat het huis doet en het weer.</span></div>${schakel(n.dag, 'data-nk-dag', 'Dagstand', !mag || !aan || (n.dag && !n.avond))}</div>
-      <div><span class="veldnaam">Helderheid overdag, ook in de app</span>${nkKeuzes('Helderheid overdag', 'nk-helder-dag', [[50, '50%'], [75, '75%'], [100, '100%']], n.helderDag, !mag)}</div>
-      <div class="regelrij"><div class="l"><b>Avondstand</b><span data-nk-avondzin>${esc(avondZin)}. Gedimd, met een donker huis.</span></div>${schakel(n.avond, 'data-nk-avond', 'Avondstand', !mag || !aan || (n.avond && !n.dag))}</div>
-      <div class="${n.avond ? '' : 'uitgezet'}"><span class="veldnaam">Helderheid in de avondstand</span>${nkKeuzes('Helderheid in de avondstand', 'nk-helder-avond', [[10, '10%'], [20, '20%'], [30, '30%'], [50, '50%']], n.helderAvond, !mag || !aan || !n.avond)}</div>
+      <div class="regelrij"><div class="l"><b>${esc(t('functies.aod.dagstand'))}</b><span data-nk-dagzin>${esc(t('functies.aod.dagZin', { wanneer: dagZin }))}</span></div>${schakel(n.dag, 'data-nk-dag', t('functies.aod.dagstand'), !mag || !aan || (n.dag && !n.avond))}</div>
+      <div><span class="veldnaam">${esc(t('functies.aod.helderDag'))}</span>${nkKeuzes(t('functies.aod.helderDagLabel'), 'nk-helder-dag', [[50, '50%'], [75, '75%'], [100, '100%']], n.helderDag, !mag)}</div>
+      <div class="regelrij"><div class="l"><b>${esc(t('functies.aod.avondstand'))}</b><span data-nk-avondzin>${esc(t('functies.aod.avondZin', { wanneer: avondZin }))}</span></div>${schakel(n.avond, 'data-nk-avond', t('functies.aod.avondstand'), !mag || !aan || (n.avond && !n.dag))}</div>
+      <div class="${n.avond ? '' : 'uitgezet'}"><span class="veldnaam">${esc(t('functies.aod.helderAvond'))}</span>${nkKeuzes(t('functies.aod.helderAvond'), 'nk-helder-avond', [[10, '10%'], [20, '20%'], [30, '30%'], [50, '50%']], n.helderAvond, !mag || !aan || !n.avond)}</div>
     </div>
-    ${n.nacht ? `<p class="mini">Daarna Scherm uit, van ${esc(n.van)} tot ${esc(n.tot)}.</p>` : ''}
-    ${alleenHoofd()}${voorDeWand}
-    <p class="mini">Op Vandaag, Apparaten, Opbrengst, de Assistent en een kamer gaat de wand na dezelfde tijd terug naar Thuis.</p>`;
+    ${n.nacht ? `<p class="mini">${esc(t('functies.aod.daarna', { van: n.van, tot: n.tot }))}</p>` : ''}
+    ${alleenHoofd()}${voorDeWand()}
+    <p class="mini">${esc(t('functies.aod.terug'))}</p>`;
 }
 
 /** Wanneer het scherm uitgaat (besluit 165): 's nachts, als niemand thuis is, na zoveel minuten zonder beweging. */
@@ -258,21 +260,21 @@ function schermUit() {
   const mag = magWand();
   const ergens = n.nacht || n.weg;
   const melders = bewegingsmelders();
-  const wanneer = n.nacht && n.weg ? `Van ${n.van} tot ${n.tot}, en als niemand thuis is,` : n.nacht ? `Van ${n.van} tot ${n.tot}` : n.weg ? 'Als niemand thuis is,' : null;
+  const wanneer = n.nacht && n.weg ? t('functies.uit.beide', { van: n.van, tot: n.tot }) : n.nacht ? t('functies.uit.nacht', { van: n.van, tot: n.tot }) : n.weg ? t('functies.uit.weg') : null;
   const zin = wanneer
-    ? `${wanneer} gaat het scherm uit als er ${n.aanMin} ${n.aanMin === 1 ? 'minuut' : 'minuten'} niemand beweegt.${n.melder ? ' Beweging zet het weer aan.' : ''} Een tik opent de app.`
-    : 'Het scherm gaat nooit vanzelf uit.';
-  const opties = melders.map((m) => `<option value="${esc(m.id)}" ${m.id === n.melder ? 'selected' : ''}>${esc(`${m.kamer}: ${m.naam}`)}</option>`).join('');
-  return `<h2 class="kop-2">Scherm uit</h2>
+    ? [t('functies.uit.zin', { wanneer, n: n.aanMin }), n.melder ? t('functies.uit.beweging') : null, t('functies.uit.tik')].filter(Boolean).join(' ')
+    : t('functies.uit.nooit');
+  const opties = melders.map((m) => `<option value="${esc(m.id)}" ${m.id === n.melder ? 'selected' : ''}>${esc(t('functies.uit.melder', { kamer: m.kamer, naam: m.naam }))}</option>`).join('');
+  return `<h2 class="kop-2">${esc(t('functies.uit.kop'))}</h2>
     <p class="klein" style="margin: 0" data-nk-zin>${esc(zin)}</p>
-    <div class="regelrij"><div class="l"><b>${esc('\u2019s Nachts')}</b><span>Of als iemand het huis op Nacht zet</span></div>${schakel(n.nacht, 'data-nk-nacht', 'Nachts uit', !mag)}</div>
-    <div class="twee ${n.nacht ? '' : 'uitgezet'}"><label class="veldnaam">Vanaf<input class="invoer" type="time" step="900" value="${esc(n.van)}" data-nk-van ${mag && n.nacht ? '' : 'disabled'}></label><label class="veldnaam">Tot<input class="invoer" type="time" step="900" value="${esc(n.tot)}" data-nk-tot ${mag && n.nacht ? '' : 'disabled'}></label></div>
-    <div class="regelrij"><div class="l"><b>Als niemand thuis is</b><span>Volgens de bewoners, of als het huis op Afwezig of Vakantie staat</span></div>${schakel(n.weg, 'data-nk-weg', 'Als niemand thuis is', !mag)}</div>
-    <div class="${ergens ? '' : 'uitgezet'}"><span class="veldnaam">Uit na zoveel minuten zonder beweging</span>${nkKeuzes('Uit na', 'nk-aan', [[1, '1 min'], [5, '5 min'], [15, '15 min'], [30, '30 min']], n.aanMin, !mag || !ergens)}</div>
-    ${melders.length ? `<div class="regelrij"><div class="l"><b>Wekken door beweging</b><span>Met een bewegingsmelder uit het huis</span></div>${schakel(!!n.melder, 'data-nk-beweging', 'Wekken door beweging', !mag)}</div>
-    ${n.melder ? `<label class="veldnaam">Welke melder<select class="invoer" data-nk-melder ${mag ? '' : 'disabled'}>${opties}</select></label>` : ''}` : ''}
-    ${alleenHoofd()}${voorDeWand}
-    <p class="mini">In Fully Kiosk volgt het scherm de helderheid bij Always-on display, en gaat het ${esc('\u2019s')} nachts echt uit. In een gewone browser maakt de app het scherm alleen donkerder.</p>`;
+    <div class="regelrij"><div class="l"><b>${esc(t('functies.uit.snachts'))}</b><span>${esc(t('functies.uit.snachtsZin'))}</span></div>${schakel(n.nacht, 'data-nk-nacht', t('functies.uit.snachtsLabel'), !mag)}</div>
+    <div class="twee ${n.nacht ? '' : 'uitgezet'}"><label class="veldnaam">${esc(t('functies.uit.vanaf'))}<input class="invoer" type="time" step="900" value="${esc(n.van)}" data-nk-van ${mag && n.nacht ? '' : 'disabled'}></label><label class="veldnaam">${esc(t('functies.uit.tot'))}<input class="invoer" type="time" step="900" value="${esc(n.tot)}" data-nk-tot ${mag && n.nacht ? '' : 'disabled'}></label></div>
+    <div class="regelrij"><div class="l"><b>${esc(t('functies.uit.niemand'))}</b><span>${esc(t('functies.uit.niemandZin'))}</span></div>${schakel(n.weg, 'data-nk-weg', t('functies.uit.niemand'), !mag)}</div>
+    <div class="${ergens ? '' : 'uitgezet'}"><span class="veldnaam">${esc(t('functies.uit.na'))}</span>${nkKeuzes(t('functies.uit.naLabel'), 'nk-aan', minuten([1, 5, 15, 30]), n.aanMin, !mag || !ergens)}</div>
+    ${melders.length ? `<div class="regelrij"><div class="l"><b>${esc(t('functies.uit.wekken'))}</b><span>${esc(t('functies.uit.wekkenZin'))}</span></div>${schakel(!!n.melder, 'data-nk-beweging', t('functies.uit.wekken'), !mag)}</div>
+    ${n.melder ? `<label class="veldnaam">${esc(t('functies.uit.welke'))}<select class="invoer" data-nk-melder ${mag ? '' : 'disabled'}>${opties}</select></label>` : ''}` : ''}
+    ${alleenHoofd()}${voorDeWand()}
+    <p class="mini">${esc(t('functies.uit.fully'))}</p>`;
 }
 
 /** De bewegingsmelders in het huis, met hun kamer. */
@@ -325,26 +327,26 @@ function praten() {
   const proefHtml = !p.taalmodel
     ? ''
     : proef === 'bezig'
-      ? '<p class="mini">Even proberen…</p>'
+      ? `<p class="mini">${esc(t('functies.praten.proberen'))}</p>`
       : proef
-        ? `<div class="proef"><div><span>Vast antwoord</span>${esc(proef.vast)}</div><div class="eigen"><span>In eigen woorden</span>${proef.eigen ? esc(proef.eigen) : 'Lukte niet; dan hoor je het vaste antwoord.'}</div></div>
-          ${proef.snel && proef.ms != null ? `<p class="mini">Antwoord na ${esc((proef.ms / 1000).toFixed(1).replace('.', ','))} seconden.</p>` : ''}
+        ? `<div class="proef"><div><span>${esc(t('functies.praten.vast'))}</span>${esc(proef.vast)}</div><div class="eigen"><span>${esc(t('functies.praten.eigen'))}</span>${esc(proef.eigen ?? t('functies.praten.lukteNiet'))}</div></div>
+          ${proef.snel && proef.ms != null ? `<p class="mini">${esc(t('functies.praten.na', { s: taal.getal(proef.ms / 1000, 1) }))}</p>` : ''}
           ${proef.reden ? `<p class="uitleg" style="color: var(--zon-t)">${esc(proef.reden)}</p>` : ''}`
         : '';
-  return `<h2 class="kop-2">Antwoorden in eigen woorden</h2>
-    ${modellen.length ? keuzes('Taalmodel', 'taalmodel', [[null, 'Uit'], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : '<p class="uitleg">Geen AI-taak gevonden in Home Assistant. Voeg er een toe, zoals Google Gemini bij Apparaten en diensten; dan staat hij hier.</p>'}
-    <p class="mini">De assistent zegt het vaste antwoord op zijn eigen manier, met een taalmodel uit Home Assistant. Klopt een getal niet, of duurt het langer dan 5 seconden, dan hoor je het vaste antwoord.</p>
-    ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${proef && proef !== 'bezig' ? 'Nog een keer proberen' : 'Proberen'}</button></div>` : ''}
+  return `<h2 class="kop-2">${esc(t('functies.praten.kop'))}</h2>
+    ${modellen.length ? keuzes(t('functies.praten.taalmodel'), 'taalmodel', [[null, t('functies.uit')], ...modellen.map((m) => [m.id, m.naam])], p.taalmodel) : `<p class="uitleg">${esc(t('functies.praten.geenAI'))}</p>`}
+    <p class="mini">${esc(t('functies.praten.uitleg'))}</p>
+    ${p.taalmodel ? `<div><button type="button" class="knop knop-licht" data-proef>${esc(t(proef && proef !== 'bezig' ? 'functies.praten.nogEens' : 'functies.praten.probeer'))}</button></div>` : ''}
     ${proefHtml}
-    <div class="buiten"><div><b class="wel">Gaat naar het taalmodel</b><span>Je vraag als tekst, het vaste antwoord met de getallen, en de namen van kamers, lampen en schermen</span></div><div><b class="niet">Blijft in huis</b><span>Je stem, camerabeelden, en wie er thuis is</span></div></div>
-    ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">Bedienen met de assistent</h2>
-    ${keuzes('Bedienen met de assistent', 'pratenBedienen', [[true, 'Aan'], [false, 'Uit']], p.bedienen)}
-    <p class="mini">Zeg wat je wilt, zoals "doe het licht beneden wat zachter" of "screen dicht". Het gebeurt meteen, en het huis zegt wat het deed. Lampen en scènes${info.schermMogelijk ? ', screens en het zonnescherm' : ''}, zoals bij Licht en screens. Een garagedeur, poort of deur nooit; airco's en cv pas als Smart Climate mag regelen.</p>` : ''}
+    <div class="buiten"><div><b class="wel">${esc(t('functies.praten.gaatNaar'))}</b><span>${esc(t('functies.praten.gaatNaarZin'))}</span></div><div><b class="niet">${esc(t('functies.praten.blijft'))}</b><span>${esc(t('functies.praten.blijftZin'))}</span></div></div>
+    ${bedienKan ? `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.praten.bedienen'))}</h2>
+    ${keuzes(t('functies.praten.bedienen'), 'pratenBedienen', aanUit(), p.bedienen)}
+    <p class="mini">${esc(t('functies.praten.zeg', { wat: t(info.schermMogelijk ? 'functies.praten.lampenSchermen' : 'functies.praten.lampen') }))}</p>` : ''}
     ${luisteren()}`;
 }
 
 /** Het wekwoord zoals je het zegt: "he_huis" is "Hé huis". */
-const wekwoordNaam = (w) => (w === 'he_huis' ? 'Hé huis' : w.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
+const wekwoordNaam = (w) => (w === 'he_huis' ? t('functies.heHuis') : w.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()));
 
 /** Luisteren (besluit 150, schets Wand-Instellingen-Luisteren): de spraakassistent, en of dit scherm luistert. */
 function luisteren() {
@@ -358,23 +360,23 @@ function luisteren() {
     hier = false;
   }
   const https = window.isSecureContext;
-  const opties = [[null, gekozen && !p.spraak ? `Die van Home Assistant (${gekozen.naam})` : 'Die van Home Assistant'], ...lijst.map((x) => [x.id, x.wekwoord ? `${x.naam} · ${wekwoordNaam(x.wekwoord)}` : x.naam])];
+  const opties = [[null, gekozen && !p.spraak ? t('functies.luister.vanHANaam', { naam: gekozen.naam }) : t('functies.luister.vanHA')], ...lijst.map((x) => [x.id, x.wekwoord ? `${x.naam} · ${wekwoordNaam(x.wekwoord)}` : x.naam])];
   const melding = !lijst.length
-    ? 'Geen spraakassistent gevonden in Home Assistant.'
+    ? t('functies.luister.geen')
     : !gekozen?.spraakNaarTekst
-      ? 'Deze spraakassistent heeft geen spraak naar tekst. Kies er in Home Assistant Whisper bij (Instellingen › Spraakassistenten).'
+      ? t('functies.luister.geenSpraak')
       : !gekozen.wekwoord
-        ? `Deze spraakassistent heeft geen wekwoord; de microfoonknop werkt wel. Geef hem in Home Assistant een wekwoord, zoals Hé huis (Instellingen › Spraakassistenten).${app.inHA() ? ' Hé huis zet Smart Climate klaar voor de openWakeWord-add-on: herstart die add-on één keer, dan staat het erbij als he_huis.' : ''}`
+        ? `${t('functies.luister.geenWekwoord')}${app.inHA() ? ` ${t('functies.luister.openWakeWord')}` : ''}`
         : '';
-  return `<h2 class="kop-2" style="margin-top: 8px">Luisteren</h2>
-    <span class="veldnaam">Spraakassistent uit Home Assistant</span>
-    ${lijst.length ? keuzes('Spraakassistent', 'spraak', opties, p.spraak) : ''}
-    ${gekozen?.wekwoord ? `<p class="mini">Wekwoord: <b>${esc(wekwoordNaam(gekozen.wekwoord))}</b>. Hoe gevoelig hij is, stel je in bij de openWakeWord-add-on.</p>` : ''}
+  return `<h2 class="kop-2" style="margin-top: 8px">${esc(t('functies.luister.kop'))}</h2>
+    <span class="veldnaam">${esc(t('functies.luister.assistent'))}</span>
+    ${lijst.length ? keuzes(t('functies.luister.assistentLabel'), 'spraak', opties, p.spraak) : ''}
+    ${gekozen?.wekwoord ? `<p class="mini">${metHtml('functies.luister.wekwoord', { woord: wekwoordNaam(gekozen.wekwoord) })}</p>` : ''}
     ${melding ? `<p class="uitleg" style="color: var(--zon-t)">${esc(melding)}</p>` : ''}
-    <span class="veldnaam">Dit scherm luistert naar het wekwoord</span>
-    <div class="keuzes" role="group" aria-label="Dit scherm luistert"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>Aan</button><button type="button" data-hier="uit" aria-pressed="${!hier}">Uit</button></div>
-    ${https ? '<p class="mini">Voor de tablet aan de wand. Geldt alleen voor dit scherm. Op een telefoon tik je op de microfoon bij de Assistent.</p>' : '<p class="uitleg" style="color: var(--zon-t)">De microfoon werkt alleen via https. Dit scherm opent de app via http; open hem via een https-adres.</p>'}
-    <p class="mini">Je stem gaat naar Home Assistant in huis, niet naar buiten. Alleen de tekst gaat daarna verder, zoals een getypte zin. Er wordt niets opgenomen of bewaard.</p>`;
+    <span class="veldnaam">${esc(t('functies.luister.hier'))}</span>
+    <div class="keuzes" role="group" aria-label="${esc(t('functies.luister.hierLabel'))}"><button type="button" data-hier="aan" aria-pressed="${hier}" ${https ? '' : 'disabled'}>${esc(t('functies.aan'))}</button><button type="button" data-hier="uit" aria-pressed="${!hier}">${esc(t('functies.uit'))}</button></div>
+    ${https ? `<p class="mini">${esc(t('functies.luister.tablet'))}</p>` : `<p class="uitleg" style="color: var(--zon-t)">${esc(t('functies.luister.https'))}</p>`}
+    <p class="mini">${esc(t('functies.luister.privacy'))}</p>`;
 }
 
 function weer() {
@@ -383,66 +385,69 @@ function weer() {
   const meteo = bronnen.find((b) => b.id === 'open-meteo');
   const andere = bronnen.filter((b) => b.id !== 'open-meteo');
   const anderGekozen = concept.weer.bron !== 'open-meteo';
-  return `<h2 class="kop-2">Weer</h2>
-    ${meteo ? keuzes('Weerbron', 'weerBron', [['open-meteo', 'Open-Meteo, via internet']], concept.weer.bron) : ''}
-    <p class="mini">Voor het weer van vandaag en de komende dagen, en wat je panelen dan leveren.</p>
-    <details ${anderGekozen ? 'open' : ''}><summary class="mini" style="cursor: pointer; font-weight: 700; color: var(--zacht)">Andere bron</summary>
-      <div style="margin-top: 8px">${keuzes('Andere weerbron', 'weerBron', [...andere.map((b) => [b.id, b.naam]), [null, 'Geen']], concept.weer.bron)}</div>
+  return `<h2 class="kop-2">${esc(t('functies.weer.kop'))}</h2>
+    ${meteo ? keuzes(t('functies.weer.bron'), 'weerBron', [['open-meteo', t('functies.weer.meteo')]], concept.weer.bron) : ''}
+    <p class="mini">${esc(t('functies.weer.waarvoor'))}</p>
+    <details ${anderGekozen ? 'open' : ''}><summary class="mini" style="cursor: pointer; font-weight: 700; color: var(--zacht)">${esc(t('functies.weer.andere'))}</summary>
+      <div style="margin-top: 8px">${keuzes(t('functies.weer.andereLabel'), 'weerBron', [...andere.map((b) => [b.id, b.naam]), [null, t('functies.weer.geen')]], concept.weer.bron)}</div>
     </details>
-    <span class="veldnaam">De verwachting per uur bewaren</span>
-    ${keuzes('Verwachting per uur', 'weerUren', [[true, 'Bewaren'], [false, 'Niet bewaren']], concept.weer.uren !== false)}
-    <p class="mini">Elk uur de verwachting voor twee dagen: buitentemperatuur, zon en wind. Daarmee leert het huis later de temperatuur in je kamers vooruit te rekenen. Alleen de ligging op ongeveer tien kilometer gaat naar Open-Meteo.</p>`;
+    <span class="veldnaam">${esc(t('functies.weer.perUur'))}</span>
+    ${keuzes(t('functies.weer.perUurLabel'), 'weerUren', [[true, t('functies.weer.bewaren')], [false, t('functies.weer.nietBewaren')]], concept.weer.uren !== false)}
+    <p class="mini">${esc(t('functies.weer.uitleg'))}</p>`;
 }
 
 /** Meldingen (besluit 149): onder welk percentage een batterij of filter een melding geeft. */
-const DREMPELS = [[null, 'Nooit'], [5, '5%'], [10, '10%'], [20, '20%'], [30, '30%']];
+const DREMPELS = () => [[null, t('functies.nooit')], [5, '5%'], [10, '10%'], [20, '20%'], [30, '30%']];
 function meldingen() {
   const m = concept.meldingen;
-  return `<h2 class="kop-2">Meldingen</h2>
-    <span class="veldnaam">Een batterij is bijna leeg onder</span>
-    ${keuzes('Batterij bijna leeg onder', 'drempelBatterij', DREMPELS, m.batterij)}
-    <span class="veldnaam">Een filter van een airco is bijna vol onder</span>
-    ${keuzes('Filter bijna vol onder', 'drempelFilter', DREMPELS, m.filter)}
-    <p class="mini">Dan staat het bij de bel en op Thuis. Bij Onderhoud zie je altijd alle batterijen en filters.</p>`;
+  return `<h2 class="kop-2">${esc(t('functies.meld.kop'))}</h2>
+    <span class="veldnaam">${esc(t('functies.meld.batterij'))}</span>
+    ${keuzes(t('functies.meld.batterijLabel'), 'drempelBatterij', DREMPELS(), m.batterij)}
+    <span class="veldnaam">${esc(t('functies.meld.filter'))}</span>
+    ${keuzes(t('functies.meld.filterLabel'), 'drempelFilter', DREMPELS(), m.filter)}
+    <p class="mini">${esc(t('functies.meld.uitleg'))}</p>`;
 }
 
+/** Per deel het kopje ernaast en hoeveel punten (functies.naast.<deel>.<n>). */
 const NAAST = {
-  cameras: ['Zo werkt het', ['De camera staat in de kamer waar hij hangt, bij Thuis', 'Smart Climate kijkt alleen: er gaat niets naar de camera']],
-  deurbel: ['Zo werkt de deurbel', ['Wordt er aangebeld, dan toont elke open pagina meteen het beeld', 'Tot je het sluit, of de tijd om is', 'Het scherm aanzetten kan alleen in Fully Kiosk Browser']],
-  licht: ['Zo werkt het', ['Bedienen doe je in het huis: tik op een kamer, dan op de lamp of het screen', 'De regeling raakt je lampen en screens niet aan', 'Wat je uitzet, staat niet meer in de app; in Home Assistant blijft het gewoon']],
-  startscherm: ['Zo werkt het', ['Een eigen icoon op je startscherm, en Smart Climate opent zonder Home Assistant eromheen', 'Alleen in je eigen tailnet, met je inlog van Home Assistant', 'Funnel of een portforward hoort er niet bij']],
-  scherm: ['Waarom volledig scherm', ['Op de tablet aan de muur alleen je huis', 'Elk apparaat kiest het zelf', 'Met één tik terug in Home Assistant']],
-  aod: ['Zo werkt het', ['Overdag de klok, wat het huis doet en het weer', 'Na zonsondergang gedimd, met een donker huis', 'Een tik, "Hé huis" of aanbellen opent de app']],
-  uit: ['Zo werkt het', ['In de nacht en als niemand thuis is, gaat het scherm uit als er niemand beweegt', 'Een bewegingsmelder zet het display weer aan', 'In Fully Kiosk gaat het scherm echt uit']],
-  praten: ['Zo werkt het', ['Het vaste antwoord blijft de basis: het taalmodel zegt het alleen anders', 'Elk getal moet kloppen met wat het huis meet, anders hoor je het vaste antwoord', '"Stop" stopt een scherm dat beweegt', 'Is het gratis gebruik op, dan werkt bedienen gewoon door']],
-  meldingen: ['Zo werkt het', ['Een melding komt bij de bel en op Thuis, met een tik naar het apparaat', 'Is het weer goed, dan schuift de melding naar Eerder', 'Een sensor op 20% doet het vaak nog maanden']],
-  weer: ['Waarvoor dit nodig is', ['Het weer van vandaag en de komende dagen', 'Wat je panelen dan naar verwachting leveren', 'Later: de temperatuur per kamer vooruit rekenen']],
+  cameras: ['functies.zoWerkt', 2],
+  deurbel: ['functies.naast.deurbel', 3],
+  licht: ['functies.zoWerkt', 3],
+  startscherm: ['functies.zoWerkt', 3],
+  scherm: ['functies.naast.scherm', 3],
+  aod: ['functies.zoWerkt', 3],
+  uit: ['functies.zoWerkt', 3],
+  praten: ['functies.zoWerkt', 4],
+  meldingen: ['functies.zoWerkt', 3],
+  weer: ['functies.naast.weer', 3],
 };
 
 function delen() {
   if (!info || !concept) return [];
   const f = concept;
   const beelden = f.cameras.aan ? f.cameras.lijst.length : 0;
-  const weerNaam = (info.gevonden.weerbronnen ?? []).find((b) => b.id === f.weer.bron)?.naam?.replace(' (via internet)', '') ?? 'geen';
+  const weerNaam = (info.gevonden.weerbronnen ?? []).find((b) => b.id === f.weer.bron)?.naam?.replace(' (via internet)', '') ?? t('instellingen.geen');
+  const n = niemandNu();
+  const s = f.deurbel.seconden;
   return [
-    { id: 'cameras', titel: "Camera's", zin: f.cameras.aan ? `${beelden} in de app` : 'uit', stand: 'goed' },
-    { id: 'deurbel', titel: 'Deurbel', zin: f.deurbel.aan ? `beeld ${f.deurbel.seconden / 60 >= 1 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit', stand: f.deurbel.aan && (!f.deurbel.melder || !f.deurbel.camera) ? 'mist' : 'goed' },
-    { id: 'licht', titel: 'Licht en screens', zin: info.lichtMogelijk || info.schermMogelijk ? (f.licht.bedienen ? 'bedienen in de app' : 'alleen kijken') : 'alleen kijken', stand: 'goed' },
-    { id: 'weer', titel: 'Weer', zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
-    { id: 'meldingen', titel: 'Meldingen', zin: drempelZin(f.meldingen), stand: 'goed' },
-    { id: 'praten', titel: 'Praten met je huis', zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? 'eigen woorden' : 'vaste zinnen', stand: 'goed' },
+    { id: 'cameras', titel: t('functies.cameras'), zin: f.cameras.aan ? t('functies.deel.inApp', { n: beelden }) : t('functies.deel.uit'), stand: 'goed' },
+    { id: 'deurbel', titel: t('functies.deurbel'), zin: f.deurbel.aan ? t('instellingen.beeld', { duur: s >= 60 ? t('algemeen.minuten', { n: s / 60 }) : t('instellingen.seconden', { n: s }) }) : t('functies.deel.uit'), stand: f.deurbel.aan && (!f.deurbel.melder || !f.deurbel.camera) ? 'mist' : 'goed' },
+    { id: 'licht', titel: t('functies.licht'), zin: t((info.lichtMogelijk || info.schermMogelijk) && f.licht.bedienen ? 'instellingen.bedienen' : 'instellingen.alleenKijken'), stand: 'goed' },
+    { id: 'weer', titel: t('functies.weer.kop'), zin: weerNaam, stand: f.weer.bron ? 'goed' : 'leeg' },
+    { id: 'meldingen', titel: t('functies.meld.kop'), zin: drempelZin(f.meldingen), stand: 'goed' },
+    { id: 'praten', titel: t('functies.deel.praten'), zin: f.praten.taalmodel ? (info.gevonden.taalmodellen ?? []).find((m) => m.id === f.praten.taalmodel)?.naam ?? t('functies.deel.eigen') : t('functies.deel.vast'), stand: 'goed' },
     // Weergave (besluit 167): dit scherm, het always-on display en wanneer het scherm uitgaat.
-    { kop: 'Weergave' },
-    ...(app.inHA() ? [{ id: 'scherm', titel: 'Dit scherm', zin: app.volledigGekozen() ? 'volledig scherm' : 'met de zijbalk', stand: 'goed' }] : []),
-    { id: 'startscherm', titel: 'Op je startscherm', zin: startschermZin(), stand: app.geinstalleerd() ? 'goed' : 'leeg' },
-    { id: 'aod', titel: 'Always-on display', zin: niemandNu().rustMin > 0 ? `aan, na ${niemandNu().rustMin} min` : 'uit', stand: 'goed' },
-    { id: 'uit', titel: 'Scherm uit', zin: niemandNu().nacht ? `${niemandNu().van}–${niemandNu().tot}` : niemandNu().weg ? 'als niemand thuis is' : 'nooit', stand: 'goed' },
+    { kop: t('functies.deel.weergave') },
+    ...(app.inHA() ? [{ id: 'scherm', titel: t('functies.ditScherm'), zin: t(app.volledigGekozen() ? 'functies.deel.volledig' : 'functies.deel.zijbalk'), stand: 'goed' }] : []),
+    { id: 'startscherm', titel: t('functies.st.kop'), zin: startschermZin(), stand: app.geinstalleerd() ? 'goed' : 'leeg' },
+    { id: 'aod', titel: t('functies.aod.kop'), zin: n.rustMin > 0 ? t('functies.deel.aodAan', { n: n.rustMin }) : t('functies.deel.uit'), stand: 'goed' },
+    { id: 'uit', titel: t('functies.uit.kop'), zin: n.nacht ? `${n.van}–${n.tot}` : t(n.weg ? 'functies.deel.niemand' : 'functies.deel.nooit'), stand: 'goed' },
   ];
 }
 
 function drempelZin(m) {
-  const t = (v) => (v == null ? 'nooit' : `onder ${v}%`);
-  return m.batterij === m.filter ? t(m.batterij) : `batterij ${t(m.batterij)}, filter ${t(m.filter)}`;
+  const z = (v) => (v == null ? t('functies.drempel.nooit') : t('functies.drempel.onder', { pct: v }));
+  return m.batterij === m.filter ? z(m.batterij) : t('functies.drempel.apart', { batterij: z(m.batterij), filter: z(m.filter) });
 }
 
 function tekenNu() {
@@ -452,10 +457,11 @@ function tekenNu() {
   const nu = groep.tekenDelen(delen());
   const vorm = { cameras, deurbel, licht, weer, praten, meldingen, scherm, startscherm: startschermVorm, aod, uit: schermUit }[nu]?.() ?? '';
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
-  const [kopje, lijst] = NAAST[nu] ?? NAAST.cameras;
-  $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>`));
+  const deel = NAAST[nu] ? nu : 'cameras';
+  const [kopje, aantal] = NAAST[deel];
+  const lijst = Array.from({ length: aantal }, (_, i) => t(`functies.naast.${deel}.${i + 1}`));
+  $$('[data-naast]').forEach((el) => (el.innerHTML = `<div class="glas"><h3>${esc(t(kopje))}</h3><ul>${lijst.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`));
 }
-
 function bewaar() {
   groep.bewaarStraks(async () => {
     const uit = await groep.stuur('api/functies', concept);
@@ -473,14 +479,14 @@ document.addEventListener('click', (e) => {
   if (knop.hasAttribute('data-installeer')) {
     void app.installeer().then((ja) => {
       teken();
-      if (ja) groep.zegBewaard('ok', 'Smart Climate staat op je startscherm');
+      if (ja) groep.zegBewaard('ok', t('functies.gezet'));
     });
     return;
   }
   if (knop.dataset.kopieerAdres) {
     void navigator.clipboard?.writeText(knop.dataset.kopieerAdres).then(
-      () => groep.zegBewaard('ok', 'Het adres staat op het klembord'),
-      () => groep.zegBewaard('fout', 'Kopiëren lukte niet; neem het adres over'),
+      () => groep.zegBewaard('ok', t('functies.klembord')),
+      () => groep.zegBewaard('fout', t('functies.kopieerMis')),
     );
     return;
   }
@@ -517,7 +523,7 @@ document.addEventListener('click', (e) => {
       document.head.appendChild(sc);
     }
     teken();
-    return groep.zegBewaard('ok', knop.dataset.hier === 'aan' ? 'Dit scherm luistert nu naar het wekwoord' : 'Dit scherm luistert niet meer; ververs de pagina');
+    return groep.zegBewaard('ok', t(knop.dataset.hier === 'aan' ? 'functies.luistertNu' : 'functies.luistertNiet'));
   }
   // Proberen (besluit 148): één vraag aan het gekozen taalmodel, er verandert niets.
   if (knop.hasAttribute('data-proef') && concept.praten.taalmodel) {
@@ -525,7 +531,7 @@ document.addEventListener('click', (e) => {
     teken();
     void haal(`api/praten/proef?model=${encodeURIComponent(concept.praten.taalmodel)}`).then(
       (r) => ((proef = r), teken()),
-      () => ((proef = { vast: 'Het taalmodel gaf geen antwoord.', eigen: null }), teken()),
+      () => ((proef = { vast: t('functies.praten.geenAntwoord'), eigen: null }), teken()),
     );
     return;
   }
@@ -563,15 +569,15 @@ document.addEventListener('click', (e) => {
     }
     teken();
     // Een deurbel aan zonder melder of beeld kan de dienst niet bewaren: eerst kiezen.
-    if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', 'Kies de melder en het beeld van de deurbel');
+    if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', t('functies.kiesDeurbel'));
     bewaar();
   }
 });
 
 document.addEventListener('change', (e) => {
-  const t = e.target;
-  if (t.matches?.('[data-nk-melder]')) return bewaarNiemand({ melder: t.value });
-  if (t.matches?.('[data-nk-van], [data-nk-tot]') && /^\d\d:\d\d$/.test(t.value)) return bewaarNiemand({ [t.matches('[data-nk-van]') ? 'van' : 'tot']: t.value });
+  const el = e.target;
+  if (el.matches?.('[data-nk-melder]')) return bewaarNiemand({ melder: el.value });
+  if (el.matches?.('[data-nk-van], [data-nk-tot]') && /^\d\d:\d\d$/.test(el.value)) return bewaarNiemand({ [el.matches('[data-nk-van]') ? 'van' : 'tot']: el.value });
   const veld = e.target.closest('[data-veld]');
 
   if (!veld || !concept) return;
@@ -583,7 +589,7 @@ document.addEventListener('change', (e) => {
     if (m?.camera && !concept.deurbel.camera) concept.deurbel.camera = m.camera;
   } else if (veld.dataset.veld === 'camera') concept.deurbel.camera = v;
   teken();
-  if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', 'Kies de melder en het beeld van de deurbel');
+  if (concept.deurbel.aan && (!concept.deurbel.melder || !concept.deurbel.camera)) return groep.zegBewaard('fout', t('functies.kiesDeurbel'));
   bewaar();
 });
 

@@ -10,8 +10,8 @@
 const { $$, esc, haal, deur } = app;
 
 /** De zes kleuren, in de volgorde waarin bewoners er een krijgen (voorkeuren.ts). */
-const KLEUREN = [['lucht', 'Lucht'], ['framboos', 'Framboos'], ['zeegroen', 'Zeegroen'], ['violet', 'Violet'], ['koper', 'Koper'], ['grafiet', 'Grafiet']];
-const THEMAS = [['donker', 'Donker'], ['licht', 'Licht'], ['systeem', 'Zoals je telefoon']];
+const KLEUREN = ['lucht', 'framboos', 'zeegroen', 'violet', 'koper', 'grafiet'].map((k) => [k, t(`jij.kleur.${k}`)]);
+const THEMAS = ['donker', 'licht', 'systeem'].map((x) => [x, t(`jij.thema.${x}`)]);
 const IK = {
   kleur: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>',
   weergave: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h5"/>',
@@ -58,7 +58,6 @@ async function bewaar(wat) {
   teken();
 }
 
-const telling = (n, een, meer) => `${n} ${n === 1 ? een : meer}`;
 const link = (href, icoon, titel, onder, rechts = '') => `<a class="rij" href="${href}">${ik(icoon)}<b>${esc(titel)}</b><small>${esc(onder)}</small><span class="pijl">${rechts}›</span></a>`;
 const knop = (data, icoon, titel, onder, rechts = '') => `<button type="button" class="rij" ${data}>${ik(icoon)}<b>${esc(titel)}</b><small>${esc(onder)}</small><span class="pijl">${rechts}›</span></button>`;
 const schakel = (sleutel, icoon, titel, onder, aan) => `<div class="rij">${ik(icoon)}<b>${esc(titel)}</b><small>${esc(onder)}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${aan}" aria-label="${esc(titel)}" data-weergave="${sleutel}"></button></span></div>`;
@@ -75,60 +74,59 @@ function teken() {
   const meldingen = location.hash === '#meldingen';
   $$('.jij > .terugje').forEach((a) => {
     a.href = meldingen ? 'jij.html' : 'instellingen.html';
-    a.textContent = meldingen ? '‹ Jij' : '‹ Instellingen';
+    a.textContent = t(meldingen ? 'jij.terugJij' : 'jij.terugInstellingen');
   });
   if (meldingen && v && b?.ik?.soort === 'bewoner') return tekenMeldingen();
   const mij = b?.ik;
   const wie = mij?.soort === 'bewoner' ? (b.bewoners ?? []).find((x) => x.id === mij.id) : null;
   // Een gast heeft niets dat bewaard wordt; een scherm of een account zonder bewoner alleen hoe de app eruitziet.
   if (!v || mij?.soort === 'gast') {
-    const zin = mij?.soort === 'gast' ? 'Je kijkt mee als gast. Van een gast wordt niets bewaard, dus er is geen profiel.' : 'Even laden';
-    $$('[data-jij]').forEach((el) => (el.innerHTML = `<section class="glas gast"><h1 class="kop-2">Jij</h1><p class="klein" style="margin: 6px 0 0">${esc(zin)}</p></section>`));
+    const zin = t(mij?.soort === 'gast' ? 'jij.gast' : 'algemeen.laden');
+    $$('[data-jij]').forEach((el) => (el.innerHTML = `<section class="glas gast"><h1 class="kop-2">${esc(t('jij.kop'))}</h1><p class="klein" style="margin: 6px 0 0">${esc(zin)}</p></section>`));
     return;
   }
-  const kleurNaam = KLEUREN.find(([k]) => k === v.tel.kleur)?.[1] ?? 'Lucht';
-  const themaNaam = THEMAS.find(([t]) => t === v.tel.thema)?.[1] ?? 'Donker';
+  const kleurNaam = KLEUREN.find(([k]) => k === v.tel.kleur)?.[1] ?? KLEUREN[0][1];
+  const themaNaam = THEMAS.find(([x]) => x === v.tel.thema)?.[1] ?? THEMAS[0][1];
   const w = v.tel.weergave;
   const uiterlijk = `
     <section class="glas lijst" aria-labelledby="kop-uiterlijk">
-      <h2 id="kop-uiterlijk">Hoe de app eruitziet</h2>
-      ${knop('data-thema-open', 'kleur', 'Thema en kleur', `${themaNaam} · ${kleurNaam.toLowerCase()}`, '<span class="staal" aria-hidden="true"></span>')}
-      ${link('thuis.html#weergave', 'weergave', 'Weergave', w.eenvoudig ? 'Eenvoudig' : 'Uitgebreid')}
-      ${schakel('groteLetters', 'letters', 'Grotere letters', 'Alle tekst een maat groter', w.groteLetters)}
-      ${schakel('minderBeweging', 'beweging', 'Minder beweging', 'Geen lopende stromen en geen ademende bol', w.minderBeweging)}
+      <h2 id="kop-uiterlijk">${esc(t('jij.uiterlijk'))}</h2>
+      ${knop('data-thema-open', 'kleur', t('jij.themaKleur'), `${themaNaam} · ${kleurNaam.toLowerCase()}`, '<span class="staal" aria-hidden="true"></span>')}
+      ${link('thuis.html#weergave', 'weergave', t('jij.weergave'), t(w.eenvoudig ? 'jij.eenvoudig' : 'jij.uitgebreid'))}
+      ${schakel('groteLetters', 'letters', t('jij.letters'), t('jij.lettersZin'), w.groteLetters)}
+      ${schakel('minderBeweging', 'beweging', t('jij.beweging'), t('jij.bewegingZin'), w.minderBeweging)}
     </section>`;
   if (!wie) {
-    const zin = mij?.soort === 'scherm'
-      ? 'Dit is een scherm, zoals de wand. Het toont de kleur, de kaarten en de favorieten van wiens comfort geldt.'
-      : 'Een eigen profiel, met je kleur op de wand en je comfort, heeft wie hier woont en één keer inlogde.';
-    $$('[data-jij]').forEach((el) => (el.innerHTML = `<div class="wie"><div><h1 class="kop-1">${mij?.soort === 'scherm' ? 'Dit scherm' : 'Jij'}</h1><small>${esc(zin)}</small></div></div>${uiterlijk}`));
+    const zin = t(mij?.soort === 'scherm' ? 'jij.scherm' : 'jij.geenProfiel');
+    $$('[data-jij]').forEach((el) => (el.innerHTML = `<div class="wie"><div><h1 class="kop-1">${esc(t(mij?.soort === 'scherm' ? 'jij.ditScherm' : 'jij.kop'))}</h1><small>${esc(zin)}</small></div></div>${uiterlijk}`));
     return;
   }
   const hoofd = (b.bewoners ?? []).find((x) => x.hoofd);
-  const thuis = wie.thuis == null ? '' : wie.thuis ? ' · thuis' : ' · weg';
-  const comfort = `${wie.geldt ? 'Geldt nu · ' : ''}${wie.comfort === 'eigen' ? 'je eigen temperaturen' : `volgt ${hoofd?.naam ?? 'de hoofdgebruiker'}`}`;
+  const thuis = wie.thuis == null ? '' : t(wie.thuis ? 'jij.thuisNu' : 'jij.wegNu');
+  const soort = wie.comfort === 'eigen' ? t('jij.eigenTemperaturen') : t('jij.volgt', { naam: hoofd?.naam ?? t('jij.deHoofdgebruiker') });
+  const comfort = wie.geldt ? t('jij.geldtNu', { comfort: soort }) : soort;
   const html = `
-    <div class="wie"><span class="rondje" aria-hidden="true">${esc(wie.naam.charAt(0).toUpperCase())}</span><div><h1 class="kop-1">${esc(wie.naam)}</h1><small>${wie.hoofd ? 'Hoofdgebruiker' : `Bewoner, ${wie.plek}e op de lijst`}${thuis}</small></div></div>
+    <div class="wie"><span class="rondje" aria-hidden="true">${esc(wie.naam.charAt(0).toUpperCase())}</span><div><h1 class="kop-1">${esc(wie.naam)}</h1><small>${esc(wie.hoofd ? t('jij.hoofdgebruiker') : t('jij.plek', { plek: wie.plek }))}${thuis}</small></div></div>
     ${uiterlijk.replace('</section>', `${knop('data-taal-open', 'taal', t('jij.taal.kop'), t(`jij.taal.${v.tel.taal}`))}</section>`)}
     <section class="glas lijst" aria-labelledby="kop-thuis">
-      <h2 id="kop-thuis">Thuis</h2>
-      ${link('thuis.html#aanpassen', 'kaarten', 'Kaarten', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} op Thuis, in jouw volgorde`)}
-      ${link('thuis.html#favorieten', 'favorieten', 'Favorieten', `${telling(v.tel.favorieten.length, 'lamp, scène of scherm', 'lampen, scènes en schermen')} met één tik`)}
-      <p class="uitleg">De wand toont jouw kaarten, favorieten en kleur zolang jouw comfort geldt. Wat je hier verandert, staat dan ook op de wand.</p>
+      <h2 id="kop-thuis">${esc(t('jij.thuis'))}</h2>
+      ${link('thuis.html#aanpassen', 'kaarten', t('jij.kaarten'), t('jij.kaartenZin', { n: v.tel.kaarten.length }))}
+      ${link('thuis.html#favorieten', 'favorieten', t('jij.favorieten'), t('jij.favorietenZin', { n: v.tel.favorieten.length }))}
+      <p class="uitleg">${esc(t('jij.wandUitleg'))}</p>
     </section>
     <section class="glas lijst" aria-labelledby="kop-meldingen">
-      <h2 id="kop-meldingen">Meldingen</h2>
-      ${link('jij.html#meldingen', 'bel', 'Meldingen op je telefoon', mijnTelefoon() ? `Naar ${mijnTelefoon().naam}` : 'Geen telefoon met de app van Home Assistant')}
+      <h2 id="kop-meldingen">${esc(t('jij.meldingen'))}</h2>
+      ${link('jij.html#meldingen', 'bel', t('jij.meldingenTel'), mijnTelefoon() ? t('jij.naarTel', { naam: mijnTelefoon().naam }) : t('jij.geenTel'))}
     </section>
     <section class="glas lijst" aria-labelledby="kop-comfort">
-      <h2 id="kop-comfort">Comfort</h2>
-      ${link('comfort.html', 'comfort', 'Jouw comfort', comfort.charAt(0).toUpperCase() + comfort.slice(1))}
-      ${link('bewoners.html', 'thuis', 'Thuis volgens', wie.aanwezigheidNaam ?? 'Nog niet gekozen')}
+      <h2 id="kop-comfort">${esc(t('jij.comfort'))}</h2>
+      ${link('comfort.html', 'comfort', t('jij.jouwComfort'), comfort.charAt(0).toUpperCase() + comfort.slice(1))}
+      ${link('bewoners.html', 'thuis', t('jij.thuisVolgens'), wie.aanwezigheidNaam ?? t('jij.nogNietGekozen'))}
     </section>
     <section class="glas lijst" aria-labelledby="kop-over">
-      <h2 id="kop-over">Over jou</h2>
-      ${link('bewoners.html', 'naam', 'Je naam', wie.naam)}
-      ${link('toegang.html#gegevens', 'downloaden', 'Je gegevens', 'Wat het huis van jou bewaart')}
+      <h2 id="kop-over">${esc(t('jij.overJou'))}</h2>
+      ${link('bewoners.html', 'naam', t('jij.jeNaam'), wie.naam)}
+      ${link('toegang.html#gegevens', 'downloaden', t('jij.gegevens'), t('jij.gegevensZin'))}
     </section>`;
   $$('[data-jij]').forEach((el) => (el.innerHTML = html));
   // Staat het blad open, dan alleen de keuze bijwerken: zo blijft de focus waar hij was.
@@ -151,28 +149,28 @@ function tekenMeldingen() {
   const lijst = v.telefoons ?? [];
   const tel = mijnTelefoon();
   const keus = (sleutel, titel, onder, dringend) =>
-    `<div class="rij rij-zonder"><b>${esc(titel)}${dringend ? '<span class="dringend">dringend</span>' : ''}</b><small>${esc(onder)}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${m[sleutel]}" aria-label="${esc(titel)}" data-melding="${sleutel}"></button></span></div>`;
+    `<div class="rij rij-zonder"><b>${esc(titel)}${dringend ? `<span class="dringend">${esc(t('jij.meld.dringend'))}</span>` : ''}</b><small>${esc(onder)}</small><span class="pijl"><button type="button" class="schakel" role="switch" aria-checked="${m[sleutel]}" aria-label="${esc(titel)}" data-melding="${sleutel}"></button></span></div>`;
   const eigen = lijst.find((t) => t.eigen);
-  const opties = [`<option value="" ${m.telefoon ? '' : 'selected'}>${esc(eigen ? `${eigen.naam} (van jou)` : 'Kies een telefoon')}</option>`, ...lijst.filter((t) => !t.eigen).map((t) => `<option value="${esc(t.id)}" ${m.telefoon === t.id ? 'selected' : ''}>${esc(t.naam)}</option>`)].join('');
+  const opties = [`<option value="" ${m.telefoon ? '' : 'selected'}>${esc(eigen ? t('jij.meld.vanJou', { naam: eigen.naam }) : t('jij.meld.kiesTel'))}</option>`, ...lijst.filter((t) => !t.eigen).map((t) => `<option value="${esc(t.id)}" ${m.telefoon === t.id ? 'selected' : ''}>${esc(t.naam)}</option>`)].join('');
   const html = `
-    <div class="wie"><div><h1 class="kop-1">Meldingen op je telefoon</h1><small>Via de app van Home Assistant. Wat hier niet aan staat, zie je bij de bel in de app.</small></div></div>
+    <div class="wie"><div><h1 class="kop-1">${esc(t('jij.meldingenTel'))}</h1><small>${esc(t('jij.meld.via'))}</small></div></div>
     <section class="glas lijst" aria-labelledby="kop-altijd">
-      <h2 id="kop-altijd">Altijd, ook 's nachts</h2>
-      ${keus('rook', 'Rook en koolmonoxide', 'Een rookmelder ziet rook, koolmonoxide of hitte', true)}
-      ${keus('regeling', 'Als de regeling hapert', 'Een apparaat reageert al een uur niet, of een meter levert niets', false)}
-      <h2>Overdag</h2>
-      ${keus('onderhoud', 'Batterij of filter bijna op', `Wat 's nachts opkomt, wacht tot ${m.tot}`, false)}
-      ${keus('versie', 'Nieuwe versie klaar', 'Een update van Smart Climate staat klaar', false)}
-      <p class="uitleg">Komt iets vanzelf weer goed, dan verandert de melding op je telefoon stil in "weer goed".</p>
+      <h2 id="kop-altijd">${esc(t('jij.meld.altijd'))}</h2>
+      ${keus('rook', t('jij.meld.rook'), t('jij.meld.rookZin'), true)}
+      ${keus('regeling', t('jij.meld.regeling'), t('jij.meld.regelingZin'), false)}
+      <h2>${esc(t('jij.meld.overdag'))}</h2>
+      ${keus('onderhoud', t('jij.meld.onderhoud'), t('jij.meld.onderhoudZin', { tot: m.tot }), false)}
+      ${keus('versie', t('jij.meld.versie'), t('jij.meld.versieZin'), false)}
+      <p class="uitleg">${esc(t('jij.meld.weerGoed'))}</p>
     </section>
     ${lijst.length
       ? `<section class="glas lijst" aria-labelledby="kop-waar">
-      <h2 id="kop-waar">Waar en wanneer</h2>
-      <label class="rij rij-zonder"><b>Telefoon</b><small>Uit de app van Home Assistant</small><span class="pijl"><select class="kiezer" data-melding-telefoon aria-label="Telefoon">${opties}</select></span></label>
-      <div class="rij rij-zonder stapel"><b>Nachtrust</b><small>Dan alleen wat dringend is</small><span class="pijl tijden"><input type="time" value="${esc(m.van)}" data-melding-tijd="van" aria-label="Nachtrust vanaf"> tot <input type="time" value="${esc(m.tot)}" data-melding-tijd="tot" aria-label="Nachtrust tot"></span></div>
+      <h2 id="kop-waar">${esc(t('jij.meld.waar'))}</h2>
+      <label class="rij rij-zonder"><b>${esc(t('jij.meld.telefoon'))}</b><small>${esc(t('jij.meld.uitApp'))}</small><span class="pijl"><select class="kiezer" data-melding-telefoon aria-label="${esc(t('jij.meld.telefoon'))}">${opties}</select></span></label>
+      <div class="rij rij-zonder stapel"><b>${esc(t('jij.meld.nachtrust'))}</b><small>${esc(t('jij.meld.nachtrustZin'))}</small><span class="pijl tijden"><input type="time" value="${esc(m.van)}" data-melding-tijd="van" aria-label="${esc(t('jij.meld.vanaf'))}"> ${esc(t('jij.meld.tot'))} <input type="time" value="${esc(m.tot)}" data-melding-tijd="tot" aria-label="${esc(t('jij.meld.totLabel'))}"></span></div>
     </section>
-    <div class="proefrij"><button type="button" class="knop" data-proef ${tel ? '' : 'disabled'}>Stuur een proefmelding</button><span class="mini" data-proef-zin aria-live="polite">${esc(proef)}</span></div>`
-      : `<section class="glas gast"><h2 class="kop-3">Geen telefoon gevonden</h2><p class="klein" style="margin: 6px 0 0">Installeer de app van Home Assistant op je telefoon en log in met je eigen account. Dan staat hij hier, en kun je kiezen wat je wilt horen.</p></section>`}`;
+    <div class="proefrij"><button type="button" class="knop" data-proef ${tel ? '' : 'disabled'}>${esc(t('jij.meld.proef'))}</button><span class="mini" data-proef-zin aria-live="polite">${esc(proef)}</span></div>`
+      : `<section class="glas gast"><h2 class="kop-3">${esc(t('jij.meld.geenTel'))}</h2><p class="klein" style="margin: 6px 0 0">${esc(t('jij.meld.geenTelZin'))}</p></section>`}`;
   $$('[data-jij]').forEach((el) => {
     // Een keuzelijst of tijd met de focus niet onder de vinger weghalen.
     if (el.contains(document.activeElement) && document.activeElement.matches('select, input')) return;
@@ -182,23 +180,23 @@ function tekenMeldingen() {
 
 async function proefmelding(knop) {
   knop.disabled = true;
-  proef = 'Even versturen…';
+  proef = t('jij.meld.versturen');
   $$('[data-proef-zin]').forEach((el) => (el.textContent = proef));
   try {
     const res = await deur('api/proefmelding', {});
     const body = await res?.json().catch(() => ({}));
-    proef = res?.ok ? `Verstuurd naar ${body.naam}.` : `Lukte niet: ${body?.fout ?? 'geen antwoord'}.`;
+    proef = res?.ok ? t('jij.meld.verstuurd', { naam: body.naam }) : t('jij.meld.lukteNiet', { fout: String(body?.fout ?? t('jij.meld.geenAntwoord')).replace(/\.$/, '') });
   } catch {
-    proef = 'Lukte niet: geen verbinding.';
+    proef = t('jij.meld.lukteNiet', { fout: t('jij.meld.geenVerbinding') });
   }
   teken();
 }
 
 document.addEventListener('change', (e) => {
-  const t = e.target;
+  const el = e.target;
   if (!v) return;
-  if (t.matches('[data-melding-telefoon]')) void bewaar({ meldingen: { telefoon: t.value || null } });
-  else if (t.matches('[data-melding-tijd]') && /^\d{2}:\d{2}$/.test(t.value)) void bewaar({ meldingen: { [t.dataset.meldingTijd]: t.value } });
+  if (el.matches('[data-melding-telefoon]')) void bewaar({ meldingen: { telefoon: el.value || null } });
+  else if (el.matches('[data-melding-tijd]') && /^\d{2}:\d{2}$/.test(el.value)) void bewaar({ meldingen: { [el.dataset.meldingTijd]: el.value } });
 });
 addEventListener('hashchange', () => {
   proef = '';
@@ -218,13 +216,13 @@ function tekenBlad() {
     return;
   }
   blad.innerHTML = `
-    <div class="bladkop"><h2 class="kop-2" id="bladkop">Thema en kleur</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
-    <h3 id="kop-thema">Thema</h3>
-    <div class="drie" role="radiogroup" aria-labelledby="kop-thema">${THEMAS.map(([t, naam]) => `<button type="button" role="radio" aria-checked="${v.tel.thema === t}" data-thema="${t}"><div class="mini-tel mini-${t}" aria-hidden="true"><i></i><i></i><i></i></div><b>${esc(naam)}</b></button>`).join('')}</div>
-    <p class="klein wand-alleen" style="margin: 8px 0 0">Het thema geldt op je telefoon; de wand blijft donker.</p>
-    <h3 id="kop-kleur">Jouw kleur</h3>
+    <div class="bladkop"><h2 class="kop-2" id="bladkop">${esc(t('jij.themaKleur'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
+    <h3 id="kop-thema">${esc(t('jij.thema'))}</h3>
+    <div class="drie" role="radiogroup" aria-labelledby="kop-thema">${THEMAS.map(([x, naam]) => `<button type="button" role="radio" aria-checked="${v.tel.thema === x}" data-thema="${x}"><div class="mini-tel mini-${x}" aria-hidden="true"><i></i><i></i><i></i></div><b>${esc(naam)}</b></button>`).join('')}</div>
+    <p class="klein wand-alleen" style="margin: 8px 0 0">${esc(t('jij.themaWand'))}</p>
+    <h3 id="kop-kleur">${esc(t('jij.jouwKleur'))}</h3>
     <div class="kleuren" role="radiogroup" aria-labelledby="kop-kleur">${KLEUREN.map(([k, naam]) => `<button type="button" role="radio" aria-checked="${v.tel.kleur === k}" data-kies-kleur="${k}"><span data-kleur="${k}" aria-hidden="true"></span>${esc(naam)}</button>`).join('')}</div>
-    <p class="betekenis">Ook op de wand, als jouw comfort geldt. <i style="background: var(--ijs)"></i>Blauw, <i style="background: var(--gloed)"></i>oranje, <i style="background: var(--zon)"></i>amber en <i style="background: var(--mint)"></i>groen blijven van het huis: die zeggen wat het huis doet.</p>`;
+    <p class="betekenis">${esc(t('jij.kleurUitleg')).replace(/\{(blauw|oranje|amber|groen)\}/g, (m, k) => `<i style="background: var(--${{ blauw: 'ijs', oranje: 'gloed', amber: 'zon', groen: 'mint' }[k]})"></i>`)}</p>`;
 }
 
 let terugFocus = null;

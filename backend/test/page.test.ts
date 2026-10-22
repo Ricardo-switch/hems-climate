@@ -1057,6 +1057,15 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['apparaten.html', /Devices[\s\S]*(Add a device|No sun|to spare)/],
         ['opbrengst.html', /Day[\s\S]*Week[\s\S]*Month[\s\S]*Year/],
         ['assistent.html', /How can I help you/],
+        // Deel 3: Instellingen en de pagina's erachter.
+        ['instellingen.html', /Settings[\s\S]*What your house can do/],
+        ['jij.html', /How the app looks[\s\S]*Theme and colour/],
+        ['comfort.html', /Comfort[\s\S]*What is this for\?/],
+        ['regeling.html', /Control[\s\S]*Climate[\s\S]*Appliances on sun/],
+        ['energie.html', /Energy setup[\s\S]*Solar panels[\s\S]*Connection[\s\S]*Meters/],
+        ['functies.html', /Features[\s\S]*Cameras[\s\S]*Doorbell[\s\S]*Lights and screens/],
+        ['toegang.html', /Residents and access[\s\S]*Version/],
+        ['bewoners.html', /Who lives here, in order/],
       ];
       for (const [pagina, tekst] of paginas) {
         await p.goto(`${baseUrl}/${pagina}`);
@@ -1068,6 +1077,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           return r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
         });
         expect(opPagina, pagina).toEqual([]);
+        // Om te zien of de Engelse zinnen passen: HEMS_PAGE_SHOTS=<map> maakt per pagina een afdruk.
+        if (process.env.HEMS_PAGE_SHOTS) await p.screenshot({ path: `${process.env.HEMS_PAGE_SHOTS}/${pagina.replace('.html', '')}-en.png` });
       }
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
       expect(fouten).toEqual([]);
@@ -1076,7 +1087,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await bewonersStore.save(bewonersWas);
       await context.close();
     }
-  }, 40_000);
+  }, 80_000);
 
   /* Meldingen (besluit 136): de bel met een getal, het blad, Onderhoud, en na een update wat er nieuw is. */
   it('toont meldingen achter de bel, Onderhoud, en na een update wat er nieuw is', async () => {

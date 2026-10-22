@@ -25,21 +25,21 @@ async function laadAlles() {
 function mist() {
   const lijst = stand.nogTeDoen(d);
   if (!lijst.length) {
-    return { klaar: true, html: '<h2 class="kop-3">Alles staat goed</h2><p class="mini" style="margin: 2px 0 0">Er mist niets wat Smart Climate nodig heeft. Wat er nog bij kan, staat bij Wat je huis kan.</p>' };
+    return { klaar: true, html: `<h2 class="kop-3">${esc(t('instellingen.allesGoed'))}</h2><p class="mini" style="margin: 2px 0 0">${esc(t('instellingen.allesGoedZin'))}</p>` };
   }
   const rijen = lijst.slice(0, 3).map((x) => `<div class="regel"><div><b>${esc(x.wat)}</b><span>${esc(x.waarom)}</span></div><a class="doe" href="${x.href}">${esc(x.knop)}</a></div>`).join('');
-  return { klaar: false, html: `<h2 class="kop-3"><span class="stip" style="background: var(--gloed)"></span>Nog te doen</h2>${rijen}${lijst.length > 3 ? `<p class="mini" style="margin: 6px 0 0">En nog ${lijst.length - 3}.</p>` : ''}` };
+  return { klaar: false, html: `<h2 class="kop-3"><span class="stip" style="background: var(--gloed)"></span>${esc(t('instellingen.nogTeDoen'))}</h2>${rijen}${lijst.length > 3 ? `<p class="mini" style="margin: 6px 0 0">${esc(t('instellingen.enNog', { n: lijst.length - 3 }))}</p>` : ''}` };
 }
 
 function kan() {
   const k = window.stand.kan ? stand.kan(d) : null;
   const tel = (s) => (k ? k.filter((x) => x.stand === s).length : 0);
   const standen = k
-    ? [['werkt', 'werken', 'werkt'], ['kijkt', 'kijken mee', 'kijkt mee'], ['leert', 'leren nog', 'leert nog'], ['mis', 'vul in', 'vul in'], ['uit', 'staan uit', 'staat uit'], ['nodig', 'met iets erbij', 'met iets erbij']]
-        .map(([s, veel, een]) => (tel(s) ? `<span class="stand ${s}">${tel(s)} ${tel(s) === 1 ? een : veel}</span>` : ''))
+    ? ['werkt', 'kijkt', 'leert', 'mis', 'uit', 'nodig']
+        .map((s) => (tel(s) ? `<span class="stand ${s}">${esc(t(`instellingen.telt.${s}`, { n: tel(s) }))}</span>` : ''))
         .join('')
     : '';
-  return `<h2 class="kop-3">Wat je huis kan</h2><p class="mini" style="margin: 4px 0 0">Alles wat Smart Climate voor je doet, en hoe het ervoor staat.</p><div class="standen">${standen}</div>`;
+  return `<h2 class="kop-3">${esc(t('instellingen.kan'))}</h2><p class="mini" style="margin: 4px 0 0">${esc(t('instellingen.kanZin'))}</p><div class="standen">${standen}</div>`;
 }
 
 /* --------------------------------------------------------- de groepen */
@@ -54,39 +54,41 @@ const ICOON = {
 };
 
 const euro = (v) => (v == null ? null : `€ ${nl(v, 2)}`);
-const graden = (c) => `${nl(c, Number.isInteger(c) ? 0 : 1)}°`;
+const getal = (c) => nl(c, Number.isInteger(c) ? 0 : 1);
+const graden = (c) => `${getal(c)}°`;
 
 function feitenVan(id) {
   const kamers = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []);
   switch (id) {
     case 'huis': {
       const etages = (d.huis?.etages ?? []).filter((e) => e.id !== 'buiten' && e.ruimtes?.length).length;
-      const apps = kamers.reduce((t, r) => t + r.apparaten.length, 0);
+      const apps = kamers.reduce((n, r) => n + r.apparaten.length, 0);
       const zonder = d.huis?.zonderRuimte?.length ?? 0;
       return [
-        ['Etages en kamers', d.huis ? `${etages} etages, ${kamers.length} kamers` : '…'],
-        ['Apparaten in een kamer', d.huis ? `${apps} van ${apps + zonder}` : '…'],
-        ['Verborgen', d.huis ? `${d.huis.verborgen?.length ?? 0} apparaten` : '…'],
+        [t('instellingen.etagesKamers'), d.huis ? `${t('instellingen.etages', { n: etages })}, ${t('instellingen.kamers', { n: kamers.length })}` : '…'],
+        [t('instellingen.inKamer'), d.huis ? t('instellingen.vanTotaal', { a: apps, b: apps + zonder }) : '…'],
+        [t('instellingen.verborgen'), d.huis ? t('instellingen.apparaten', { n: d.huis.verborgen?.length ?? 0 }) : '…'],
       ];
     }
     case 'comfort': {
       const k = d.comfort?.kamers ?? [];
       const zin = (x) => {
         const p = x.modi.dag;
-        return p.heat != null && p.cool != null ? `${nl(p.heat, Number.isInteger(p.heat) ? 0 : 1)} tot ${graden(p.cool)}` : p.heat != null ? graden(p.heat) : p.cool != null ? `tot ${graden(p.cool)}` : 'niets';
+        return p.heat != null && p.cool != null ? t('instellingen.van', { van: getal(p.heat), tot: graden(p.cool) }) : p.heat != null ? graden(p.heat) : p.cool != null ? t('instellingen.tot', { tot: graden(p.cool) }) : t('instellingen.niets');
       };
       const dd = d.comfort?.dagdelen;
-      return [...k.slice(0, 2).map((x) => [`${x.naam} overdag`, zin(x)]), ['Dagdelen', dd ? `${dd.dag}:00 tot ${dd.nacht}:00` : '…']];
+      return [...k.slice(0, 2).map((x) => [t('instellingen.overdag', { naam: x.naam }), zin(x)]), [t('instellingen.dagdelen'), dd ? t('instellingen.van', { van: `${dd.dag}:00`, tot: `${dd.nacht}:00` }) : '…']];
     }
     case 'energie': {
       const a = d.aansluiting;
       const p = d.energie?.instellingen?.prijzen;
-      const panelen = a?.antwoorden?.panelen?.aantal ? `${a.antwoorden.panelen.aantal}${a.antwoorden.panelen.ligging === 'beide' ? ', twee kanten' : ''}` : (a?.configuratie?.panelen ?? []).length ? `${a.configuratie.panelen.length} vlakken` : null;
+      const aantal = a?.antwoorden?.panelen?.aantal;
+      const panelen = aantal ? (a.antwoorden.panelen.ligging === 'beide' ? t('instellingen.tweeKanten', { n: aantal }) : `${aantal}`) : (a?.configuratie?.panelen ?? []).length ? t('instellingen.vlakken', { n: a.configuratie.panelen.length }) : null;
       const z = a?.antwoorden?.zekering ?? a?.configuratie?.zekering;
       return [
-        ['Panelen', panelen, !a ? '…' : 'nog kiezen'],
-        ['Hoofdzekering', z ? `${z.fasen} × ${z.ampere} A` : null, !a ? '…' : 'nog kiezen'],
-        ['Stroomprijs', euro(p?.stroom), d.energie ? 'nog invullen' : '…'],
+        [t('instellingen.panelen'), panelen, !a ? '…' : t('instellingen.nogKiezen')],
+        [t('instellingen.zekering'), z ? `${z.fasen} × ${z.ampere} A` : null, !a ? '…' : t('instellingen.nogKiezen')],
+        [t('instellingen.stroomprijs'), euro(p?.stroom), d.energie ? t('instellingen.nogInvullen') : '…'],
       ];
     }
     case 'regeling': {
@@ -95,30 +97,30 @@ function feitenVan(id) {
       const warm = acts.filter((x) => !x.capabilities?.canCool).length;
       const opZon = Object.values(d.aansluiting?.antwoorden?.opZon ?? {}).filter(Boolean).length + (d.aansluiting?.configuratie?.apparaten?.length ?? 0);
       return [
-        ["Airco's", airco ? `${airco}, kijkt mee` : 'geen'],
-        ['Cv en thermostaten', warm ? `${warm}, kijkt mee` : 'geen'],
-        ['Apparaten op zon', opZon ? `${opZon}` : 'geen'],
+        [t('instellingen.aircos'), airco ? t('instellingen.kijktMee', { n: airco }) : t('instellingen.geen')],
+        [t('instellingen.cv'), warm ? t('instellingen.kijktMee', { n: warm }) : t('instellingen.geen')],
+        [t('instellingen.opZon'), opZon ? `${opZon}` : t('instellingen.geen')],
       ];
     }
     case 'functies': {
       const f = d.functies?.instellingen ?? d.functies?.voorstel;
-      const weer = (d.functies?.gevonden?.weerbronnen ?? []).find((b) => b.id === f?.weer?.bron)?.naam ?? (f?.weer?.bron ? f.weer.bron : 'geen');
+      const weer = (d.functies?.gevonden?.weerbronnen ?? []).find((b) => b.id === f?.weer?.bron)?.naam ?? (f?.weer?.bron ? f.weer.bron : t('instellingen.geen'));
+      const duur = (s) => (s >= 60 ? t('algemeen.minuten', { n: s / 60 }) : t('instellingen.seconden', { n: s }));
       return [
-        ['Licht en screens', f ? (f.licht?.bedienen === false ? 'alleen kijken' : 'bedienen in de app') : '…'],
-        ['Deurbel', f ? (f.deurbel?.aan ? `beeld ${f.deurbel.seconden >= 60 ? `${f.deurbel.seconden / 60} min` : `${f.deurbel.seconden} s`}` : 'uit') : '…'],
-        ['Weer', f ? weer.replace(' (via internet)', '') : '…'],
+        [t('instellingen.licht'), f ? t(f.licht?.bedienen === false ? 'instellingen.alleenKijken' : 'instellingen.bedienen') : '…'],
+        [t('instellingen.deurbel'), f ? (f.deurbel?.aan ? t('instellingen.beeld', { duur: duur(f.deurbel.seconden) }) : t('instellingen.uit')) : '…'],
+        [t('instellingen.weer'), f ? weer.replace(' (via internet)', '') : '…'],
       ];
     }
     case 'toegang': {
       const s = d.sessie;
-      const ingelogd = !s ? '…' : s.toegang === 'open' ? 'geen inlog nodig' : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : 'nog niet';
-      const dagen = d.export?.bestanden != null ? `${d.export.bestanden} dagen` : '…';
+      const ingelogd = !s ? '…' : s.toegang === 'open' ? t('instellingen.geenInlog') : s.ingelogd ? `${s.naam ?? ''}${s.rol ? `, ${s.rol}` : ''}` : t('instellingen.nogNiet');
       // Bewoners (besluit 147): wie hier woont, de hoofdgebruiker eerst.
-      const namen = d.bewoners ? d.bewoners.bewoners.map((b) => b.naam).join(', ') || 'nog niemand' : '…';
+      const namen = d.bewoners ? d.bewoners.bewoners.map((b) => b.naam).join(', ') || t('instellingen.nogNiemand') : '…';
       return [
-        ['Bewoners', namen],
-        ['Inloggen', ingelogd],
-        ['Versie', d.health?.versie?.nummer ?? '…'],
+        [t('instellingen.bewoners'), namen],
+        [t('instellingen.inloggen'), ingelogd],
+        [t('instellingen.versie'), d.health?.versie?.nummer ?? '…'],
       ];
     }
     default:
@@ -126,14 +128,7 @@ function feitenVan(id) {
   }
 }
 
-const GROEPEN = [
-  ['huis', 'Je huis', 'Kamers, etages, sensoren'],
-  ['comfort', 'Comfort', 'Temperaturen, dagdelen, vakantie'],
-  ['energie', 'Energie', 'Panelen, zekering, meters, prijzen'],
-  ['regeling', 'Regeling', 'Wie wat regelt, apparaten op zon'],
-  ['functies', 'Functies', "Licht, screens, camera's, weer, meldingen"],
-  ['toegang', 'Bewoners en toegang', 'Wie hier woont, inloggen, gegevens'],
-];
+const GROEPEN = ['huis', 'comfort', 'energie', 'regeling', 'functies', 'toegang'].map((id) => [id, t(`groep.${id}`), t(`groep.${id}Zin`)]);
 
 function groepen() {
   const mis = isGast() ? [] : stand.nogTeDoen(d);
@@ -145,27 +140,27 @@ function groepen() {
     return `<a class="glas tegel${n ? ' aandacht' : ''}" href="${stand.GROEPEN[id]}">
       <div class="titel"><span class="icoon">${ICOON[id]}</span><h3>${esc(titel)}</h3><span class="pijl" aria-hidden="true">›</span></div>
       <ul>${feiten}</ul>
-      <div class="onder"><span>${esc(onder)}</span>${n ? `<span class="stand mis">${n} mist</span>` : '<span class="stand werkt">Klaar</span>'}</div>
+      <div class="onder"><span>${esc(onder)}</span>${n ? `<span class="stand mis">${esc(t('instellingen.mist', { n }))}</span>` : `<span class="stand werkt">${esc(t('instellingen.klaar'))}</span>`}</div>
     </a>`;
   }).join('');
 }
 
 /* -------------------------------------------------------------- zoeken */
 
-const ZOEKVELD = '<label class="zoek"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" data-zoek placeholder="Zoek een instelling, zoals &quot;zekering&quot;" aria-label="Zoek een instelling" autocomplete="off"></label><div class="gevonden" data-gevonden hidden></div>';
+const ZOEKVELD = `<label class="zoek"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" data-zoek placeholder="${esc(t('instellingen.zoek'))}" aria-label="${esc(t('instellingen.zoekLabel'))}" autocomplete="off"></label><div class="gevonden" data-gevonden hidden></div>`;
 
 function toonGevonden(veld) {
   const vak = veld.closest('[data-zoekvak]').querySelector('[data-gevonden]');
   const lijst = stand.zoek(veld.value, d);
   vak.hidden = veld.value.trim().length < 2;
-  vak.innerHTML = lijst.length ? lijst.map((z) => `<a href="${z.href}">${esc(z.titel)}<span>${esc(z.waar)}</span></a>`).join('') : '<p>Niets gevonden. Probeer een ander woord, zoals "prijs" of "deurbel".</p>';
+  vak.innerHTML = lijst.length ? lijst.map((z) => `<a href="${z.href}">${esc(z.titel)}<span>${esc(z.waar)}</span></a>`).join('') : `<p>${esc(t('instellingen.nietsGevonden'))}</p>`;
 }
 
 /* ------------------------------------------------------------ tekenen */
 
 /** Een gast (besluit 151): kijkt mee, en verandert geen instellingen. */
 const isGast = () => d.bewoners?.ik?.soort === 'gast';
-const GAST = '<h2 class="kop-3">Je kijkt mee als gast</h2><p class="mini" style="margin: 2px 0 0">Instellingen veranderen kan niet. Woon je hier, vraag dan de hoofdgebruiker om je bij Bewoners bewoner te maken.</p>';
+const GAST = `<h2 class="kop-3">${esc(t('instellingen.gast'))}</h2><p class="mini" style="margin: 2px 0 0">${esc(t('instellingen.gastZin'))}</p>`;
 
 function tekenNu() {
   app.schaal();
@@ -182,12 +177,12 @@ function tekenNu() {
   $$('[data-groepen]').forEach((el) => (el.innerHTML = groepen()));
   // Jij (besluit 181): je profiel; een gast heeft er geen, een scherm alleen hoe de app eruitziet.
   const ik = d.bewoners?.ik ?? null;
-  const naam = ik?.soort === 'bewoner' && ik.naam ? ik.naam : ik?.soort === 'scherm' ? 'Dit scherm' : 'Jij';
+  const naam = ik?.soort === 'bewoner' && ik.naam ? ik.naam : t(ik?.soort === 'scherm' ? 'jij.ditScherm' : 'jij.kop');
   const letter = ik?.soort === 'bewoner' && ik.naam ? `<span class="jijrondje" aria-hidden="true">${esc(ik.naam.charAt(0).toUpperCase())}</span>` : '';
-  const onder = ik?.soort === 'bewoner' ? 'Thema en kleur, weergave, je Thuis en je comfort' : 'Thema, kleur en weergave';
+  const onder = t(ik?.soort === 'bewoner' ? 'instellingen.jijBewoner' : 'instellingen.jijScherm');
   $$('[data-jijregel]').forEach((el) => {
     el.hidden = isGast();
-    el.innerHTML = `${letter}<span><b>${esc(naam)}</b><span>${onder}</span></span><span class="pijl" aria-hidden="true">›</span>`;
+    el.innerHTML = `${letter}<span><b>${esc(naam)}</b><span>${esc(onder)}</span></span><span class="pijl" aria-hidden="true">›</span>`;
   });
   $$('[data-jijpil]').forEach((el) => {
     el.hidden = isGast() || ik?.soort !== 'bewoner';

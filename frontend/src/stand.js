@@ -21,75 +21,78 @@
    * Smart Climate echt nodig heeft; wat erbij kan, staat bij Wat je huis kan.
    */
   function nogTeDoen(d) {
+    const t = global.taal.t;
     const uit = [];
     const e = d.energie?.instellingen;
     const p = e?.prijzen;
     if (d.energie && (e == null || (e.net?.afname ?? []).length === 0)) {
-      uit.push({ id: 'meters', groep: 'energie', wat: 'Je meters zijn nog niet gekozen', waarom: 'Zonder stroommeter weet Opbrengst niet wat je huis gebruikt.', knop: 'Kiezen', href: 'energie.html#meters' });
+      uit.push({ id: 'meters', groep: 'energie', wat: t('stand.meters'), waarom: t('stand.metersZin'), knop: t('stand.kiezen'), href: 'energie.html#meters' });
     }
     if (e && p?.stroom == null) {
-      uit.push({ id: 'stroomprijs', groep: 'energie', wat: 'De stroomprijs ontbreekt', waarom: "Zonder prijs rekent Opbrengst in kWh, niet in euro's.", knop: 'Invullen', href: 'energie.html#prijzen' });
+      uit.push({ id: 'stroomprijs', groep: 'energie', wat: t('stand.stroomprijs'), waarom: t('stand.stroomprijsZin'), knop: t('stand.invullen'), href: 'energie.html#prijzen' });
     }
     if (e && e.gas && p?.gas == null) {
-      uit.push({ id: 'gasprijs', groep: 'energie', wat: 'De gasprijs ontbreekt', waarom: 'Je hebt een gasmeter; zonder prijs telt het gas niet mee in je kosten.', knop: 'Invullen', href: 'energie.html#prijzen' });
+      uit.push({ id: 'gasprijs', groep: 'energie', wat: t('stand.gasprijs'), waarom: t('stand.gasprijsZin'), knop: t('stand.invullen'), href: 'energie.html#prijzen' });
     }
     const a = d.aansluiting;
     if (a && a.antwoorden?.zekering == null && a.configuratie?.zekering == null) {
-      uit.push({ id: 'zekering', groep: 'energie', wat: 'De hoofdzekering ontbreekt', waarom: 'Dan let het huis er niet op dat alles samen nooit meer vraagt dan je aansluiting aankan.', knop: 'Kiezen', href: 'energie.html#aansluiting' });
+      uit.push({ id: 'zekering', groep: 'energie', wat: t('stand.zekering'), waarom: t('stand.zekeringZin'), knop: t('stand.kiezen'), href: 'energie.html#aansluiting' });
     }
     if (a && a.antwoorden?.panelen?.ligging == null && !(a.configuratie?.panelen ?? []).length) {
-      uit.push({ id: 'panelen', groep: 'energie', wat: 'Waar je panelen liggen', waarom: 'Daarmee rekent het huis uit wanneer er zon op je dak valt.', knop: 'Kiezen', href: 'energie.html#panelen' });
+      uit.push({ id: 'panelen', groep: 'energie', wat: t('stand.panelen'), waarom: t('stand.panelenZin'), knop: t('stand.kiezen'), href: 'energie.html#panelen' });
     }
     const zonder = d.huis?.zonderRuimte?.length ?? 0;
     if (zonder > 0) {
-      const namen = d.huis.zonderRuimte.slice(0, 2).map((x) => x.naam).join(' en ');
-      uit.push({ id: 'indelen', groep: 'huis', wat: `${zonder === 1 ? '1 apparaat staat' : `${zonder} apparaten staan`} nog in geen kamer`, waarom: `${namen}${zonder > 2 ? ', en meer' : ''}, uit Home Assistant.`, knop: 'Indelen', href: 'indeling.html' });
+      const namen = d.huis.zonderRuimte.slice(0, 2).map((x) => x.naam).join(` ${t('algemeen.en')} `);
+      uit.push({ id: 'indelen', groep: 'huis', wat: t('stand.indelen.wat', { n: zonder }), waarom: t(zonder > 2 ? 'stand.indelen.zinMeer' : 'stand.indelen.zin', { namen }), knop: t('stand.indelen'), href: 'indeling.html' });
     }
     return uit;
   }
 
   /**
-   * Om te zoeken: elke instelling, met de woorden waarop je hem vindt. Het
-   * adres wijst naar het deel van de groep.
+   * Om te zoeken: elke instelling, met de woorden waarop je hem vindt, in de
+   * taal van de app (kit/teksten.*.js, zoek.<id>). Het adres wijst naar het
+   * deel van de groep; waar is een groep of een eigen plek (zoek.waar.*).
    */
   const ZOEK = [
-    { titel: 'Temperatuur per kamer', waar: 'Comfort', href: 'comfort.html', woorden: 'temperatuur warm koel koud graden kamer comfort verwarmen koelen' },
-    { titel: 'Nooit warmer dan', waar: 'Comfort', href: 'comfort.html', woorden: 'plafond maximum heet warm airco net' },
-    { titel: 'Dagdelen: voorverwarmen, dag en nacht', waar: 'Comfort', href: 'comfort.html#dagdelen', woorden: 'dag nacht ochtend avond uur tijd schema voorverwarmen' },
-    { titel: 'Afwezig en vakantie', waar: 'Comfort', href: 'comfort.html#afwezig', woorden: 'afwezig vakantie weg thuis' },
-    { titel: 'Zonnepanelen', waar: 'Energie', href: 'energie.html#panelen', woorden: 'panelen zon dak ligging oost west zonnesensor omvormer' },
-    { titel: 'Hoofdzekering', waar: 'Energie', href: 'energie.html#aansluiting', woorden: 'zekering ampere fase aansluiting meterkast' },
-    { titel: 'Meters', waar: 'Energie', href: 'energie.html#meters', woorden: 'meter p1 stroom gas teruglevering kwh energie dashboard' },
-    { titel: 'Contract en prijzen', waar: 'Energie', href: 'energie.html#prijzen', woorden: 'prijs tarief contract stroomprijs gasprijs vast dynamisch vaste kosten leverancier saldering kwh euro' },
-    { titel: 'Verwarming en aanvoertemperatuur', waar: 'Energie', href: 'energie.html#verwarming', woorden: 'cv ketel warmtepomp aanvoer stadsverwarming' },
-    { titel: 'Wie wat regelt', waar: 'Regeling', href: 'regeling.html', woorden: 'regelen meekijken schakelen airco cv thermostaat' },
-    { titel: 'Apparaten op zon', waar: 'Regeling', href: 'regeling.html#opzon', woorden: 'droger wasmachine vaatwasser zon uitstellen' },
-    { titel: 'Kamers en etages', waar: 'Je huis', href: 'indeling.html', woorden: 'kamer etage indeling verdieping zolder' },
-    { titel: 'Meten met', waar: 'Je huis', href: 'indeling.html', woorden: 'sensor thermometer meten temperatuur gemiddelde' },
-    { titel: "Camera's", waar: 'Functies', href: 'functies.html#cameras', woorden: 'camera beeld oprit' },
-    { titel: 'Deurbel', waar: 'Functies', href: 'functies.html#deurbel', woorden: 'deurbel bel aanbellen bezoeker scherm' },
-    { titel: 'Licht en screens bedienen', waar: 'Functies', href: 'functies.html#licht', woorden: 'licht lamp scene screen zonnescherm bedienen' },
-    { titel: 'Weer', waar: 'Functies', href: 'functies.html#weer', woorden: 'weer buienradar open-meteo verwachting uur' },
-    { titel: 'Weergave', waar: 'Thuis', href: 'thuis.html#weergave', woorden: 'weergave eenvoudig uitgebreid letters groter lettergrootte beweging rustig' },
-    { titel: 'Always-on display', waar: 'Functies, bij Weergave', href: 'functies.html#aod', woorden: 'always-on aod rust klok avond dimmen wand als niemand kijkt' },
-    { titel: 'Scherm uit', waar: 'Functies, bij Weergave', href: 'functies.html#uit', woorden: 'nacht nachtstand slapen scherm uit donker bewegingsmelder wekken wand' },
-    { titel: 'Dit scherm, volledig scherm', waar: 'Functies, bij Weergave', href: 'functies.html#scherm', woorden: 'volledig scherm kiosk zijbalk tablet' },
-    { titel: 'Wanneer een batterij of filter een melding geeft', waar: 'Functies', href: 'functies.html#meldingen', woorden: 'melding batterij filter leeg vol onderhoud procent bel' },
-    { titel: 'Bewoners', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'bewoner bewoners gebruiker hoofdgebruiker naam volgorde aanwezig thuis weg wie' },
-    { titel: 'Je eigen comfort', waar: 'Bewoners en toegang', href: 'bewoners.html', woorden: 'eigen comfort per persoon volgt' },
-    { titel: 'Inloggen en uitloggen', waar: 'Bewoners en toegang', href: 'toegang.html#bewoners', woorden: 'inloggen uitloggen account wachtwoord toegang beheerder' },
-    { titel: 'Sleutel voor de assistent', waar: 'Bewoners en toegang', href: 'toegang.html#assistent', woorden: 'sleutel assistent home assistant spraak voice token' },
-    { titel: 'Thema en kleur', waar: 'Jij', href: 'jij.html', woorden: 'thema licht donker kleur accent profiel jij uiterlijk' },
-    { titel: 'Je gegevens exporteren', waar: 'Bewoners en toegang', href: 'toegang.html#gegevens', woorden: 'export gegevens dataset download' },
+    ['temperatuur', 'comfort', 'comfort.html'],
+    ['plafond', 'comfort', 'comfort.html'],
+    ['dagdelen', 'comfort', 'comfort.html#dagdelen'],
+    ['afwezig', 'comfort', 'comfort.html#afwezig'],
+    ['panelen', 'energie', 'energie.html#panelen'],
+    ['zekering', 'energie', 'energie.html#aansluiting'],
+    ['meters', 'energie', 'energie.html#meters'],
+    ['prijzen', 'energie', 'energie.html#prijzen'],
+    ['verwarming', 'energie', 'energie.html#verwarming'],
+    ['regelt', 'regeling', 'regeling.html'],
+    ['opzon', 'regeling', 'regeling.html#opzon'],
+    ['kamers', 'huis', 'indeling.html'],
+    ['meten', 'huis', 'indeling.html'],
+    ['cameras', 'functies', 'functies.html#cameras'],
+    ['deurbel', 'functies', 'functies.html#deurbel'],
+    ['licht', 'functies', 'functies.html#licht'],
+    ['weer', 'functies', 'functies.html#weer'],
+    ['weergave', 'zoek.waar.thuis', 'thuis.html#weergave'],
+    ['aod', 'zoek.waar.weergave', 'functies.html#aod'],
+    ['uit', 'zoek.waar.weergave', 'functies.html#uit'],
+    ['scherm', 'zoek.waar.weergave', 'functies.html#scherm'],
+    ['meldingen', 'functies', 'functies.html#meldingen'],
+    ['bewoners', 'toegang', 'bewoners.html'],
+    ['eigen', 'toegang', 'bewoners.html'],
+    ['inloggen', 'toegang', 'toegang.html#bewoners'],
+    ['sleutel', 'toegang', 'toegang.html#assistent'],
+    ['thema', 'zoek.waar.jij', 'jij.html'],
+    ['export', 'toegang', 'toegang.html#gegevens'],
+    ['batterijen', 'zoek.waar.thuis', 'thuis.html#batterijen'],
+    ['warmte', 'huis', 'indeling.html'],
+    ['naam', 'huis', 'indeling.html'],
+    ['kan', 'zoek.waar.instellingen', 'huis-kan.html'],
+    ['versie', 'toegang', 'toegang.html#versie'],
   ];
-
-  ZOEK.push(
-    { titel: 'Batterijen en filters', waar: 'Thuis', href: 'thuis.html#batterijen', woorden: 'batterij batterijen accu leeg bijna vervangen filter filters airco onderhoud knop schakelaar sensor' },
-    { titel: 'Verwarmen en koelen per kamer', waar: 'Je huis', href: 'indeling.html', woorden: 'radiator vloerverwarming vloer infrarood paneel kachel elektrisch airco thermostaat knop stekker module vermogen watt op zon bron' },
-    { titel: 'Een apparaat een eigen naam geven', waar: 'Je huis', href: 'indeling.html', woorden: 'naam hernoemen apparaat verbergen verplaatsen' },
-    { titel: 'Wat je huis kan', waar: 'Instellingen', href: 'huis-kan.html', woorden: 'functies kan werkt meekijken leert ideeen idee meer uit besparen' },
-    { titel: 'Versie en wat is er nieuw', waar: 'Bewoners en toegang', href: 'toegang.html#versie', woorden: 'versie update nieuw bijwerken' },
-  );
+  const zoekLijst = () => {
+    const t = global.taal.t;
+    return ZOEK.map(([id, waar, href]) => ({ titel: t(`zoek.${id}`), waar: t(waar.includes('.') ? waar : `groep.${waar}`), href, woorden: t(`zoek.${id}.woorden`) }));
+  };
 
   /*
    * Zoeken (besluit 132): op losse woorden, het begin van een woord, zonder
@@ -100,12 +103,12 @@
   const stam = (w) => (w.length > 5 ? w.replace(/(tjes|jes|en|s)$/, '') : w);
   const woordenVan = (t) => plat(t).split(/\s+/).filter(Boolean).map(stam);
   function lijstVoor(d) {
-    const uit = [...ZOEK];
+    const uit = zoekLijst();
     if (!d) return uit;
-    for (const x of kan(d)) uit.push({ titel: x.titel, waar: 'Wat je huis kan', href: `huis-kan.html#${x.id}`, woorden: `${x.wat ?? ''} ${x.nu ?? ''}` });
+    for (const x of kan(d)) uit.push({ titel: x.titel, waar: global.taal.t('zoek.kan'), href: `huis-kan.html#${x.id}`, woorden: `${x.wat ?? ''} ${x.nu ?? ''}` });
     for (const e of d.huis?.etages ?? []) {
       for (const r of e.ruimtes ?? []) {
-        uit.push({ titel: r.naam, waar: `Kamer, ${e.naam}`, href: `indeling.html#${encodeURIComponent(r.id)}`, woorden: 'kamer' });
+        uit.push({ titel: r.naam, waar: global.taal.t('stand.kamerIn', { etage: e.naam }), href: `indeling.html#${encodeURIComponent(r.id)}`, woorden: global.taal.t('stand.kamerWoord') });
         for (const a of r.apparaten ?? []) uit.push({ titel: a.naam, waar: r.naam, href: `kamer.html#${encodeURIComponent(r.id)}/${encodeURIComponent(a.id)}`, woorden: `${a.haNaam ?? ''} ${a.soort}` });
       }
     }
@@ -135,7 +138,7 @@
 
   /* ------------------------------------------------- wat je huis kan */
 
-  const LABEL = { werkt: 'Werkt', leert: 'Leert nog', kijkt: 'Kijkt mee', uit: 'Staat uit' };
+  const LABEL = (s) => (['werkt', 'leert', 'kijkt', 'uit'].includes(s) ? global.taal.t(`stand.label.${s}`) : null);
 
   /**
    * Wat een thuisbatterij zou opleveren, uit de maand in Opbrengst: wat er
@@ -357,7 +360,7 @@
         wanneer: ['Er is een weerbron gekozen bij Functies'],
       },
     ];
-    return lijst.map((x) => ({ ...x, label: x.label ?? LABEL[x.stand] ?? x.stand }));
+    return lijst.map((x) => ({ ...x, label: x.label ?? LABEL(x.stand) ?? x.stand }));
   }
 
   global.stand = { GROEPEN, nogTeDoen, zoek, kan, batterijSom, ideeen };
