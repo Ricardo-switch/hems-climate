@@ -26,9 +26,9 @@ verwijzing bestaat.
 - **De app is af** (21 oktober 2026): nu opruimen, sneller maken, apparaten
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
-  Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (het
-  alle vier staan er, [181] tot en met [184]). Talen
-  later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
+  Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (alle
+  vier staan er, [181] tot en met [184]). Talen: het fundament staat, met Thuis
+  in het Engels als proef ([185]); de rest van de app volgt, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
   dienst zegt het als er iets veranderde ([174]). Op je startscherm met het
@@ -607,4 +607,5 @@ verwijzing bestaat.
 [182]: DECISIONS.md#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel
 [183]: DECISIONS.md#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant
 [184]: DECISIONS.md#184-de-integratie-smart-climate-assist-zonder-yaml
+[185]: DECISIONS.md#185-meertalig-het-fundament-met-thuis-als-proef
 <!-- links:einde -->

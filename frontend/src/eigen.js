@@ -226,7 +226,7 @@
       const html = alle.length
         ? `<div class="favpaginas" data-favpaginas>${paginas.map((p) => `<div class="tegels favpagina">${p}</div>`).join('')}</div>${stipjes}${kies}`
         : mag && iets
-          ? '<div class="favleeg"><p class="mini">Zet hier lampen, scènes en screens die je vaak gebruikt.</p><button type="button" data-fav-kies>Kiezen</button></div>'
+          ? `<div class="favleeg"><p class="mini">${esc(global.t('thuis.fav.leeg'))}</p><button type="button" data-fav-kies>${esc(global.t('thuis.fav.kiezen'))}</button></div>`
           : '';
       // Zonder lampen, scènes of screens, of op de wand zonder keuze en zonder recht: niets te tonen.
       kaart.hidden = !html;
@@ -244,7 +244,7 @@
         }
       }
       const uitleg = kaart.querySelector('[data-fav-uitleg]');
-      if (uitleg) uitleg.textContent = !alle.length ? '' : paginas.length > 1 ? 'Schuif voor meer' : 'Tik om te schakelen';
+      if (uitleg) uitleg.textContent = !alle.length ? '' : global.t(paginas.length > 1 ? 'thuis.fav.schuif' : 'thuis.fav.tik');
     }
   }
   /** Welke pagina in beeld is. */

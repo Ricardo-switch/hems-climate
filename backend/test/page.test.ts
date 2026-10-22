@@ -25,6 +25,7 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createServer } from 'node:http';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
@@ -985,6 +986,62 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
+
+  /*
+   * Meertalig (besluit 185, stap 8): Engels gekozen bij Jij zet Thuis in het
+   * Engels, met de uitleg van de dienst, getallen met een punt en <html
+   * lang="en">. En de toegankelijkheidscontrole van besluit 86 op Thuis: axe,
+   * WCAG 2 A en AA.
+   */
+  it('toont Thuis in het Engels als je dat bij Jij kiest, en haalt de toegankelijkheidscontrole', async () => {
+    const zet = (taal: string) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', taal }) });
+    // Een bewoner op zijn eigen telefoon: een scherm, zoals de wand, volgt zijn eigen account.
+    const bewonersWas = bewonersStore.current;
+    await bewonersStore.save(voegToe(GEEN_BEWONERS, { userId: 'u', naam: 'Test' }, null, Date.now()));
+    expect((await zet('en')).status).toBe(200);
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    try {
+      // De eerste keer kent de pagina de keuze nog niet: hij haalt hem op en laadt zich opnieuw in het Engels.
+      await p.goto(`${baseUrl}/thuis.html`);
+      await expect.poll(() => p.evaluate(() => (globalThis as unknown as { document: { documentElement: { lang: string } } }).document.documentElement.lang), { timeout: 10_000 }).toBe('en');
+      const wand = p.locator('#wand');
+      await wand.locator('[data-gevoel-tik="te_koud"]').waitFor({ timeout: 10_000 });
+      await expect.poll(() => wand.locator('[data-kop]').textContent(), { timeout: 10_000 }).not.toMatch(/^(Loading|Even laden)$/);
+      const tekst = (await wand.innerText()).replace(/\s+/g, ' ');
+      for (const engels of ['Favourites', 'How does it feel now?', 'Too cold', 'Watching', 'What are you doing now?', 'Put the lights']) expect(tekst).toContain(engels);
+      for (const nl of ['Favorieten', 'Hoe voelt het', 'Te koud', 'Kijkt mee', 'Goedemorgen', 'Goedemiddag', 'Goedenavond', 'Wat doe je nu', 'Zet hier lampen']) expect(tekst).not.toContain(nl);
+      // De datum bovenin in het Engels, welke dag het ook is.
+      expect(tekst).not.toMatch(/maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag/);
+      // Het menu, de uitleg van de dienst, en getallen en tijden in het Engels.
+      expect(await p.locator('#balk').innerText()).toMatch(/Home[\s\S]*Today[\s\S]*Devices/);
+      expect(await wand.locator('[data-kop]').textContent()).not.toBe('Het huis');
+      expect(await p.evaluate(() => (globalThis as unknown as { taal: { getal: (n: number) => string } }).taal.getal(20.5))).toBe('20.5');
+      expect(await p.evaluate(() => (globalThis as unknown as { taal: { klok: (ms: number) => string } }).taal.klok(Date.UTC(2026, 9, 22, 22, 5)))).toBe('22:05');
+      // Een tik: het antwoord in het Engels.
+      await wand.locator('[data-gevoel-tik="te_koud"]').click();
+      await wand.locator('.gevoelantwoord', { hasText: 'Noted: too cold' }).waitFor();
+
+      // De toegankelijkheidscontrole (besluit 86): de wand van Thuis, WCAG 2 A en AA.
+      await p.addScriptTag({ path: createRequire(import.meta.url).resolve('axe-core/axe.min.js') });
+      const fout = await p.evaluate(async () => {
+        const axe = (globalThis as unknown as { axe: { run: (ctx: unknown, o: unknown) => Promise<{ violations: { id: string; nodes: { target: string[] }[] }[] }> } }).axe;
+        const r = await axe.run('#wand', { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
+        return r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
+      });
+      expect(fout).toEqual([]);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
+      expect(fouten).toEqual([]);
+    } finally {
+      await zet('auto');
+      await bewonersStore.save(bewonersWas);
+      await context.close();
+    }
+  }, 40_000);
 
   /* Meldingen (besluit 136): de bel met een getal, het blad, Onderhoud, en na een update wat er nieuw is. */
   it('toont meldingen achter de bel, Onderhoud, en na een update wat er nieuw is', async () => {

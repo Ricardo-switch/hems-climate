@@ -89,7 +89,7 @@ describe('VoorkeurenStore', () => {
     const store = new VoorkeurenStore(dir);
     await store.load();
     const v = store.view(noor);
-    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', meldingen: STANDAARD_MELDINGEN });
+    expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
     expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false });
   });
 
@@ -100,10 +100,10 @@ describe('VoorkeurenStore', () => {
     expect(uit.ok).toBe(true);
     expect(store.view(ricardo).tel.kaarten).toEqual(['gevoel', 'kamers']);
     // Noor houdt haar eigen Thuis.
-    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', meldingen: STANDAARD_MELDINGEN });
+    expect(store.view(noor).tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
     // Alleen de favorieten veranderen laat de kaarten staan.
     await store.save({ plek: 'tel', favorieten: [] }, ricardo);
-    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', meldingen: STANDAARD_MELDINGEN });
+    expect(store.view(ricardo).tel).toEqual({ kaarten: ['gevoel', 'kamers'], favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
 
     const opnieuw = new VoorkeurenStore(dir);
     await opnieuw.load();
@@ -169,6 +169,18 @@ describe('VoorkeurenStore', () => {
       expect((await store.save({ plek: 'tel', kleur: 'oranje' }, noor)).ok).toBe(false);
       expect((await store.save({ plek: 'tel', thema: 'roze' }, noor)).ok).toBe(false);
       expect((await store.save({ plek: 'wand', kleur: 'framboos' }, ricardo)).ok).toBe(false);
+    });
+
+    it('bewaart de taal per account: automatisch, of zelf gekozen (besluit 185)', async () => {
+      const store = new VoorkeurenStore(dir);
+      await store.load();
+      expect(store.view(noor).tel.taal).toBe('auto');
+      expect((await store.save({ plek: 'tel', taal: 'en' }, noor)).ok).toBe(true);
+      expect(store.view(noor).tel.taal).toBe('en');
+      expect(store.view(ricardo).tel.taal).toBe('auto');
+      // Alleen een taal die de app kent, en niet op de wand: die volgt zijn eigen account.
+      expect((await store.save({ plek: 'tel', taal: 'fr' }, noor)).ok).toBe(false);
+      expect((await store.save({ plek: 'wand', taal: 'en' }, ricardo)).ok).toBe(false);
     });
 
     it('zet de wandvolgorde terug in de telefoon, met de kamers en Straks op hun plek', () => {

@@ -1,5 +1,17 @@
 # Wat is er nieuw
 
+## 0.59.0
+
+*22 oktober 2026*
+
+**Nieuw**
+
+- Bij Jij kies je de taal: automatisch die van je account in Home Assistant, Nederlands of English. Engels is een proef: Thuis staat er al in, de rest volgt
+
+**Beter**
+
+- Een schermlezer bereikt de kamers in de tekening van het huis
+
 ## 0.58.3
 
 *22 oktober 2026*

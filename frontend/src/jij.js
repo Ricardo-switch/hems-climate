@@ -25,7 +25,10 @@ const IK = {
   naam: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   downloaden: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
   bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  taal: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
 };
+/** De taal (besluit 185): vanzelf die van je account in Home Assistant, of zelf gekozen. De teksten in kit/teksten.*.js. */
+const TALEN = ['auto', 'nl', 'en'];
 const ik = (id) => `<span class="ik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IK[id]}</svg></span>`;
 
 let v = null;
@@ -106,7 +109,7 @@ function teken() {
   const comfort = `${wie.geldt ? 'Geldt nu · ' : ''}${wie.comfort === 'eigen' ? 'je eigen temperaturen' : `volgt ${hoofd?.naam ?? 'de hoofdgebruiker'}`}`;
   const html = `
     <div class="wie"><span class="rondje" aria-hidden="true">${esc(wie.naam.charAt(0).toUpperCase())}</span><div><h1 class="kop-1">${esc(wie.naam)}</h1><small>${wie.hoofd ? 'Hoofdgebruiker' : `Bewoner, ${wie.plek}e op de lijst`}${thuis}</small></div></div>
-    ${uiterlijk}
+    ${uiterlijk.replace('</section>', `${knop('data-taal-open', 'taal', t('jij.taal.kop'), t(`jij.taal.${v.tel.taal}`))}</section>`)}
     <section class="glas lijst" aria-labelledby="kop-thuis">
       <h2 id="kop-thuis">Thuis</h2>
       ${link('thuis.html#aanpassen', 'kaarten', 'Kaarten', `${telling(v.tel.kaarten.length, 'kaart', 'kaarten')} op Thuis, in jouw volgorde`)}
@@ -131,6 +134,7 @@ function teken() {
   // Staat het blad open, dan alleen de keuze bijwerken: zo blijft de focus waar hij was.
   for (const el of $$('[data-blad] [data-thema]')) el.setAttribute('aria-checked', String(el.dataset.thema === v.tel.thema));
   for (const el of $$('[data-blad] [data-kies-kleur]')) el.setAttribute('aria-checked', String(el.dataset.kiesKleur === v.tel.kleur));
+  for (const el of $$('[data-blad] [data-kies-taal]')) el.setAttribute('aria-checked', String(el.dataset.kiesTaal === v.tel.taal));
 }
 
 /* -------------------------------------------------- meldingen op je telefoon */
@@ -206,6 +210,13 @@ addEventListener('hashchange', () => {
 
 function tekenBlad() {
   const blad = document.querySelector('[data-blad]');
+  if (blad.dataset.soort === 'taal') {
+    blad.innerHTML = `
+    <div class="bladkop"><h2 class="kop-2" id="bladkop">${esc(t('jij.taal.kop'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
+    <div class="drie talen" role="radiogroup" aria-labelledby="bladkop">${TALEN.map((x) => `<button type="button" role="radio" aria-checked="${v.tel.taal === x}" data-kies-taal="${x}"><b>${esc(t(`jij.taal.${x}`))}</b><small>${esc(t(`jij.taal.${x}Uitleg`))}</small></button>`).join('')}</div>
+    <p class="betekenis">${esc(t('jij.taal.uitleg'))}</p>`;
+    return;
+  }
   blad.innerHTML = `
     <div class="bladkop"><h2 class="kop-2" id="bladkop">Thema en kleur</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
     <h3 id="kop-thema">Thema</h3>
@@ -217,8 +228,9 @@ function tekenBlad() {
 }
 
 let terugFocus = null;
-function openBlad() {
+function openBlad(soort = 'thema') {
   terugFocus = document.activeElement;
+  document.querySelector('[data-blad]').dataset.soort = soort;
   tekenBlad();
   document.querySelector('[data-achter]').hidden = false;
   const blad = document.querySelector('[data-blad]');
@@ -232,15 +244,18 @@ function sluitBlad() {
 }
 
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-thema-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-weergave], [data-melding], [data-proef]');
-  if (!t || !v) return;
-  if (t.matches('[data-melding]')) return void bewaar({ meldingen: { [t.dataset.melding]: t.getAttribute('aria-checked') !== 'true' } });
-  if (t.matches('[data-proef]')) return void proefmelding(t);
-  if (t.matches('[data-thema-open]')) openBlad();
-  else if (t.matches('[data-blad-dicht], [data-achter]')) sluitBlad();
-  else if (t.matches('[data-thema]')) void bewaar({ thema: t.dataset.thema });
-  else if (t.matches('[data-kies-kleur]')) void bewaar({ kleur: t.dataset.kiesKleur });
-  else if (t.matches('[data-weergave]')) void bewaar({ weergave: { [t.dataset.weergave]: t.getAttribute('aria-checked') !== 'true' } });
+  const el = e.target.closest('[data-thema-open], [data-taal-open], [data-blad-dicht], [data-achter], [data-thema], [data-kies-kleur], [data-kies-taal], [data-weergave], [data-melding], [data-proef]');
+  if (!el || !v) return;
+  if (el.matches('[data-melding]')) return void bewaar({ meldingen: { [el.dataset.melding]: el.getAttribute('aria-checked') !== 'true' } });
+  if (el.matches('[data-proef]')) return void proefmelding(el);
+  if (el.matches('[data-thema-open]')) openBlad();
+  else if (el.matches('[data-taal-open]')) openBlad('taal');
+  else if (el.matches('[data-blad-dicht], [data-achter]')) sluitBlad();
+  else if (el.matches('[data-thema]')) void bewaar({ thema: el.dataset.thema });
+  else if (el.matches('[data-kies-kleur]')) void bewaar({ kleur: el.dataset.kiesKleur });
+  // Een andere taal laadt de pagina opnieuw (taal.js); het blad gaat dan vanzelf dicht.
+  else if (el.matches('[data-kies-taal]')) void bewaar({ taal: el.dataset.kiesTaal });
+  else if (el.matches('[data-weergave]')) void bewaar({ weergave: { [el.dataset.weergave]: el.getAttribute('aria-checked') !== 'true' } });
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !document.querySelector('[data-blad]').hidden) sluitBlad();

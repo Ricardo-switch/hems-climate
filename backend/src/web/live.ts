@@ -24,6 +24,8 @@ export interface AlarmMelder {
 interface Listener {
   readonly res: ServerResponse;
   readonly ping: NodeJS.Timeout;
+  /** De taal van de pagina (besluit 185): de uitleg komt in die taal. */
+  readonly taal: string;
 }
 
 /** Hoe lang de dienst wacht voor hij een verandering in het huis doorgeeft: een lamp meteen, een meting rustig. */
@@ -34,8 +36,8 @@ const HUIS_RUSTIG_MS = 2_000;
 export interface LiveBron {
   /** Het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly laatste: () => LiveSnapshot | null;
-  /** Het besluit zoals de pagina het krijgt: met het bewonerscontract erbij. */
-  readonly metBewoner: (snapshot: LiveSnapshot) => unknown;
+  /** Het besluit zoals de pagina het krijgt: met het bewonerscontract erbij, in de taal van de pagina. */
+  readonly metBewoner: (snapshot: LiveSnapshot, taal: string) => unknown;
   /** Het huis, voor de vingerafdruk; null zonder huis. */
   readonly huis: () => unknown;
 }
@@ -54,7 +56,7 @@ export class LiveStroom {
    * SSE en geen websocket: het verkeer gaat maar één kant op, browsers
    * herverbinden vanzelf, en het kost geen enkele afhankelijkheid.
    */
-  abonneer(res: ServerResponse, headOnly: boolean): void {
+  abonneer(res: ServerResponse, headOnly: boolean, taal = 'nl'): void {
     res.writeHead(200, {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-store',
@@ -76,7 +78,7 @@ export class LiveStroom {
     // een proxy of een telefoon in slaapstand de verbinding.
     const ping = setInterval(() => res.write(': ping\n\n'), 25_000);
     ping.unref?.();
-    const listener: Listener = { res, ping };
+    const listener: Listener = { res, ping, taal };
     this.#listeners.add(listener);
     // Gaat er nu een rookmelder af, dan ziet een scherm dat net opent het meteen.
     if (this.#alarm.some((a) => a.gevaar != null)) res.write(`event: alarm
@@ -97,7 +99,7 @@ data: ${JSON.stringify({ melders: this.#alarm, tMs: Date.now() })}
   }
 
   #send(listener: Listener, snapshot: LiveSnapshot): void {
-    listener.res.write(`data: ${JSON.stringify(this.#bron.metBewoner(snapshot))}\n\n`);
+    listener.res.write(`data: ${JSON.stringify(this.#bron.metBewoner(snapshot, listener.taal))}\n\n`);
   }
 
   /**
