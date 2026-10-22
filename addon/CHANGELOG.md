@@ -1,5 +1,18 @@
 # Wat is er nieuw
 
+## 0.58.1
+
+*22 oktober 2026*
+
+**Beter**
+
+- De integratie voor Assist heeft een eigen versie: een update van Smart Climate vraagt geen herstart van Home Assistant meer
+- In de app staat hoe je de integratie in HACS vindt
+
+**Opgelost**
+
+- Een tik op een melding op je telefoon opent Smart Climate, in plaats van een 404
+
 ## 0.58.0
 
 *22 oktober 2026*
