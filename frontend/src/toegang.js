@@ -106,7 +106,7 @@ function bewonersVorm() {
  */
 function assistentVorm() {
   return `<h2 class="kop-2">Sleutel voor de assistent</h2>
-    <p class="klein" style="margin: 0">Assist van Home Assistant vraagt Smart Climate wat je huis doet, via de integratie Smart Climate. Daarna meldt Smart Climate zich vanzelf: Home Assistant toont "Nieuw apparaat gevonden", en je klikt op Toevoegen. Geen YAML.</p>
+    <p class="klein" style="margin: 0">Assist van Home Assistant vraagt Smart Climate wat je huis doet, via de integratie Smart Climate. Daarna meldt Smart Climate zich vanzelf: Home Assistant toont "Nieuw apparaat gevonden", en je klikt op Toevoegen en dan op Verzenden. Geen YAML.</p>
     ${integratieVorm()}
     <p class="klein" style="margin: 0">Zonder de add-on vul je bij het toevoegen dit adres en deze sleutel in:</p>
     ${vraagAdres ? `<div class="sleutel" data-vraagadres>${esc(vraagAdres.replace(/\/api\/vraag$/, ''))}</div>` : ''}
@@ -128,11 +128,21 @@ const HACS_STAPPEN = `<ol class="klein stappen">
   </ol>`;
 const EENMALIG = '<p class="mini" style="margin: 0">Dit doe je één keer. Een update van Smart Climate vraagt daarna geen herstart: de zinnen en de antwoorden komen uit de add-on. Alleen als de integratie zelf verandert, en dat is zelden, vraagt HACS of de app om een herstart.</p>';
 
+/**
+ * Of de integratie ook is toegevoegd (22 oktober 2026): met alleen de bestanden
+ * kan Assist Smart Climate nog niet vragen.
+ */
+function toegevoegdZin(i) {
+  if (i.toegevoegd === true) return '<p class="klein" style="margin: 0"><b>Toegevoegd.</b> Assist kan Smart Climate vragen.</p>';
+  if (i.toegevoegd !== false || !i.geladen) return '';
+  return '<p class="klein" style="margin: 0; color: var(--zon-t)">Nog niet toegevoegd. In Home Assistant: Instellingen › Apparaten en diensten. Bij Ontdekt staat Smart Climate: klik op Toevoegen en dan op Verzenden.</p>';
+}
+
 function integratieVorm() {
   const i = integratie;
   const zin = integratieZin ? `<p class="mini" style="margin: 0" aria-live="polite">${esc(integratieZin)}</p>` : '';
   if (!i?.kan) return `<p class="klein" style="margin: 0">Installeer de integratie via HACS:</p>${HACS_STAPPEN}${EENMALIG}`;
-  if (i.staat === 'anders') return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, via HACS${i.versie ? ` (versie ${esc(i.versie)})` : ''}. Updates komen via HACS.</p>${zin}`;
+  if (i.staat === 'anders') return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, via HACS${i.versie ? ` (versie ${esc(i.versie)})` : ''}. Updates komen via HACS.</p>${toegevoegdZin(i)}${zin}`;
   if (i.staat === 'nee') {
     return `<p class="klein" style="margin: 0"><b>Zonder HACS</b> zet de add-on hem voor je neer; daarna herstart je Home Assistant.</p>
       <button type="button" class="knop knop-licht" data-integratie style="align-self: start">Zet de integratie in Home Assistant</button>${zin}
@@ -140,7 +150,7 @@ function integratieVorm() {
   }
   const herstart = i.geladen !== i.versie;
   return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, neergezet door de add-on (versie ${esc(i.versie ?? '?')}).</p>
-    ${herstart ? '<p class="klein" style="margin: 0; color: var(--zon-t)">Herstart Home Assistant om hem te laden: Instellingen › Systeem › Herstarten.</p>' : ''}${zin}${EENMALIG}`;
+    ${herstart ? '<p class="klein" style="margin: 0; color: var(--zon-t)">Herstart Home Assistant om hem te laden: Instellingen › Systeem › Herstarten.</p>' : toegevoegdZin(i)}${zin}${EENMALIG}`;
 }
 
 const linkKnop = (href, tekst, extra = '') => `<a class="knop knop-licht" href="${href}" ${extra} style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">${tekst}</a>`;

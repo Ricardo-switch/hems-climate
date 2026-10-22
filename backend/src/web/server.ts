@@ -464,7 +464,7 @@ export class WebServer {
       const integratie = this.#options.integratie;
       const wie = await this.#wie(req);
       if (integratie == null) {
-        sendJson(res, 200, { kan: false, staat: 'nee', versie: null, nieuw: null, geladen: null });
+        sendJson(res, 200, { kan: false, staat: 'nee', versie: null, nieuw: null, geladen: null, toegevoegd: null });
         return;
       }
       if (!wie.beheerder) {

@@ -1298,7 +1298,12 @@ const sleutel = logDir !== '' ? await leesOfMaakSleutel(join(logDir, 'sleutel-as
  */
 const integratie = version.installatie === 'add-on' ? new Integratie('/app/integratie/smart_climate', '/homeassistant') : null;
 void integratie?.bijwerken().catch(() => false);
-/** Hoe de integratie erbij staat, met de versie die Home Assistant nu geladen heeft (dan pas werkt hij). */
+/**
+ * Hoe de integratie erbij staat, met de versie die Home Assistant nu geladen
+ * heeft, en of hij is toegevoegd (dan pas werkt hij). Na "Nieuw apparaat
+ * gevonden" en Toevoegen vraagt Home Assistant nog om Verzenden; wie dat mist,
+ * heeft de integratie wel, maar Assist nog niet (22 oktober 2026).
+ */
 async function integratieStand() {
   const stand = await integratie!.stand();
   let geladen: string | null = null;
@@ -1308,7 +1313,14 @@ async function integratieStand() {
   } catch {
     // Niet geladen: nog niet herstart, of hij staat er niet.
   }
-  return { ...stand, geladen };
+  let toegevoegd: boolean | null = null;
+  try {
+    const lijst = await client.query<unknown[]>('config_entries/get', { domain: 'smart_climate' });
+    toegevoegd = Array.isArray(lijst) && lijst.length > 0;
+  } catch {
+    // Onbekend: dan zegt de app er niets over.
+  }
+  return { ...stand, geladen, toegevoegd };
 }
 
 /*
