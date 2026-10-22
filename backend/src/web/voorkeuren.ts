@@ -37,11 +37,12 @@ import { join } from 'node:path';
 export const VOORKEUREN_FILE = 'voorkeuren.json';
 
 /** De kaarten van Thuis, onder het huis (telefoon) of rechts ervan (wand). */
-export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen'] as const;
+/** De auto, de batterij, deze maand en de deurbel kwamen erbij in besluit 182: om te kiezen, niet standaard. */
+export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel'] as const;
 export type KaartId = (typeof KAARTEN)[number];
 
 /** De kaarten die op de wand kunnen. De kamers staan daar in het huis, Straks komt vanzelf. */
-export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen'];
+export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel'];
 /** Twaalf favorieten, vier per pagina (21 oktober 2026; eerst vier, besluit 162). */
 export const MAX_FAVORIETEN = 12;
 

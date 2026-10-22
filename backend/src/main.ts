@@ -564,10 +564,24 @@ const functiesNu = (): Functies | null => {
   const g = functiesKeuzes();
   return g ? functiesVoorstel(g) : null;
 };
+/** Wanneer er het laatst werd aangebeld, voor de kaart op Thuis (besluit 182); null tot het gebeurt. */
+let aangebeldMs: number | null = null;
+/** De deurbel als kaart: het beeld, de naam, en wanneer; anders wanneer de melder het laatst iets deed. */
+const deurbelNu = () => {
+  const f = functiesNu();
+  if (!f?.deurbel.aan || !f.deurbel.camera) return null;
+  const camera = f.deurbel.camera;
+  const naam = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera))?.naam ?? 'Deurbel';
+  const melder = f.deurbel.melder ? allStates.get(f.deurbel.melder) : undefined;
+  // Een gebeurtenis (event.…) heeft het moment als stand; een melder zijn laatste wissel.
+  const uitMelder = melder ? Date.parse(melder.entity_id.startsWith('event.') ? melder.state : melder.last_changed) : NaN;
+  return { camera, naam, laatsteMs: aangebeldMs ?? (Number.isFinite(uitMelder) ? uitMelder : null), reserve: reserveBeelden(camera) };
+};
 client.on('stateChanged', (state: HaEntityState) => {
   // Aanbellen: de melder van de deurbel gaat af. Dan toont elke open pagina het beeld.
   const f = functiesNu();
   if (f && aangebeld(f, state, allStates.get(state.entity_id))) {
+    aangebeldMs = Date.now();
     const camera = f.deurbel.camera!;
     const naam = functiesKeuzes()?.cameras.find((c) => c.beelden.some((b) => b.id === camera))?.naam ?? 'Deurbel';
     web?.ring(camera, naam, { seconden: f.deurbel.seconden, schermAan: f.deurbel.schermAan, reserve: reserveBeelden(camera) });
@@ -1347,6 +1361,7 @@ if (webPort != null) {
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
+    deurbel: deurbelNu,
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {

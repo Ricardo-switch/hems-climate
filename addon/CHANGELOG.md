@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.56.0
+
+*21 oktober 2026*
+
+**Nieuw**
+
+- Vier nieuwe kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel
+- De auto en de thuisbatterij bij Apparaten: hoe vol, en of ze laden of het huis voeden
+
 ## 0.55.2
 
 *21 oktober 2026*

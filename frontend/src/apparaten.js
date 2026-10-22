@@ -206,6 +206,39 @@ function klimaatKaart({ a, r }) {
   return el;
 }
 
+/*
+ * De auto en de thuisbatterij (besluit 182): hoe vol, wat ze doen en met
+ * hoeveel. Alleen lezen; een tik op de kaart op Thuis komt hier uit
+ * (apparaten.html#auto, #batterij).
+ */
+const LADING_IK = {
+  auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/></svg>',
+  batterij: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M9 14h6M9 10h6"/></svg>',
+};
+function ladingKaart(soort, o) {
+  const w = o.vermogenW;
+  const kw = w != null && Math.abs(w) >= 50 ? `${nl(Math.abs(w) / 1000)}<span>kW ${soort === 'batterij' && w < 0 ? 'naar het huis' : 'laden'}</span>` : '–<span>kW</span>';
+  const [tekst, kleur] =
+    soort === 'auto'
+      ? o.laadt ? ['Laadt', 'var(--mint)'] : o.aangesloten === true ? ['Aangesloten, laadt niet', 'var(--net)'] : o.aangesloten === false ? ['Niet aangesloten', 'var(--net)'] : ['Onbekend', 'var(--net)']
+      : o.stand === 'laadt' ? ['Laadt', 'var(--zon)'] : o.stand === 'levert' ? ['Levert aan het huis', 'var(--violet)'] : o.stand === 'rust' ? ['Rust', 'var(--net)'] : ['Onbekend', 'var(--net)'];
+  const pct = o.pct == null ? null : Math.max(0, Math.min(100, o.pct));
+  const zin = soort === 'auto'
+    ? [o.bereikKm != null ? `Nog ${nl(o.bereikKm, 0)} km rijden.` : '', o.pct == null ? 'De laadpaal zegt niet hoe vol de auto is.' : ''].filter(Boolean).join(' ')
+    : 'Smart Climate kijkt mee en stuurt de batterij niet.';
+  const el = document.createElement('div');
+  el.className = 'glas app';
+  el.dataset.lading = soort;
+  el.dataset.actief = String(soort === 'auto' ? !!o.laadt : o.stand === 'laadt' || o.stand === 'levert');
+  el.innerHTML = `
+    <div class="kopje"><span class="ik">${LADING_IK[soort]}</span><div><b>${esc(o.naam)}</b><span class="mini">${soort === 'auto' ? 'De auto' : 'Thuisbatterij'}</span></div><div class="kw">${kw}</div></div>
+    <div class="stand"><i style="background: ${kleur}"></i>${esc(tekst)}</div>
+    <div class="vandaag"><span>Lading</span><b>${pct == null ? 'onbekend' : `${nl(pct, 0)}%`}</b></div>
+    <div class="verdeel"><i style="width: ${pct ?? 0}%; background: ${kleur}"></i></div>
+    ${zin ? `<p class="mini zin">${esc(zin)}</p>` : ''}`;
+  return el;
+}
+
 /** Een apparaat dat de dienst vond maar dat (nog) niet op zon staat. */
 function nietOpZon(a) {
   const el = document.createElement('a');
@@ -286,12 +319,23 @@ function tekenNu() {
     // Een knop met focus niet onder de vinger weghalen.
     if (box.contains(document.activeElement) && document.activeElement !== document.body) continue;
     // Wat nu iets doet eerst (besluit 140); verder de volgorde van het huis.
-    const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart)];
+    const opslag = huisData?.opslag ?? {};
+    const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart), ...(opslag.auto ? [ladingKaart('auto', opslag.auto)] : []), ...(opslag.batterij ? [ladingKaart('batterij', opslag.batterij)] : [])];
     const voor = kaarten.filter((k) => k.dataset.actief === 'true');
     const na = kaarten.filter((k) => k.dataset.actief !== 'true');
     box.replaceChildren(...voor, ...na, ...gevonden.map(nietOpZon), toevoegen());
   }
+  // Van Thuis met #auto of #batterij: naar die kaart (besluit 182), één keer.
+  const doel = location.hash.slice(1);
+  if ((doel === 'auto' || doel === 'batterij') && !naarKaart) {
+    const k = document.querySelector(`${app.telStand() ? '#tel' : '#wand'} [data-lading="${doel}"]`);
+    if (k) {
+      naarKaart = true;
+      k.scrollIntoView({ block: 'center' });
+    }
+  }
 }
+let naarKaart = false;
 
 /* -------------------------------------------------------------- starten */
 

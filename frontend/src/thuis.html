@@ -260,6 +260,29 @@
   .favkies { display: none; width: 100%; margin-top: 10px; }
   body.aanpassen .favkies { display: block; }
   /* Het weer van morgen. */
+  /*
+   * De auto, de batterij, deze maand en de deurbel (besluit 182, schets
+   * Thuis-Tel-Kaarten): om te kiezen, en alleen als het huis ze heeft.
+   */
+  .kaartkop { display: flex; align-items: center; gap: 10px; }
+  .kaartkop .ik { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); flex: none; }
+  .kaartkop .ik svg { width: 19px; height: 19px; }
+  .kaartkop .kop-3 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kaartkop .pijl { color: var(--gedempt); font-size: 18px; }
+  .ladingkaart, .maandkaart { color: inherit; text-decoration: none; }
+  .lading { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; margin-top: 12px; }
+  .lading .getal { font-size: 34px; line-height: 1; grid-row: 1 / 3; }
+  .laadbalk { height: 10px; border-radius: 5px; background: rgb(var(--wit) / 0.08); overflow: hidden; }
+  .laadbalk i { display: block; height: 100%; border-radius: 5px; }
+  .lading small { font-size: 13.5px; font-weight: 600; min-height: 1em; }
+  .maanddrie { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .maanddrie div { padding: 10px 10px 9px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
+  .maanddrie b { display: block; font-family: var(--kop); font-size: 20px; font-weight: 600; }
+  .maanddrie span { font-size: 12px; color: var(--zacht); }
+  .deurbelkaart { display: block; width: 100%; border: 1px solid var(--glas-rand); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .deurbelbeeld { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; position: relative; background: linear-gradient(160deg, #3b4a5c, #1b2533); }
+  .deurbelbeeld img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .deurbelbeeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
   .morgen { display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; align-items: center; cursor: pointer; }
   .morgen svg { grid-row: 1 / 3; width: 44px; height: 44px; }
   .morgen b { font-size: 15.5px; }
@@ -426,6 +449,10 @@
           <div class="gevoelblok" data-gevoel></div>
         </section>
         <section class="glas kaart morgen" data-kaart="morgen" data-naam="Het weer van morgen" data-leeg="Staat er zodra het weer van morgen bekend is" data-morgen hidden></section>
+        <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-naam="De auto" data-leeg="Staat er als Home Assistant een auto of laadpaal heeft" data-auto hidden></a>
+        <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-naam="De batterij" data-leeg="Staat er als Home Assistant een thuisbatterij heeft" data-batterij hidden></a>
+        <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-naam="Deze maand" data-leeg="Staat er zodra de meters bekend zijn" data-maand hidden></a>
+        <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-naam="De deurbel" data-leeg="Staat er als er een deurbel met beeld is" data-deurbelkaart hidden></button>
         <button type="button" class="vrijvak" data-vrijvak hidden>+ Kaart kiezen</button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" aria-label="Het weer" hidden data-weer></section>
@@ -478,6 +505,10 @@
         <p class="dag-eenvoudig" data-dag-eenvoudig></p>
       </a>
       <section class="glas kaart morgen" data-kaart="morgen" data-naam="Het weer van morgen" data-leeg="Staat er zodra het weer van morgen bekend is" data-morgen hidden></section>
+      <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-naam="De auto" data-leeg="Staat er als Home Assistant een auto of laadpaal heeft" data-auto hidden></a>
+      <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-naam="De batterij" data-leeg="Staat er als Home Assistant een thuisbatterij heeft" data-batterij hidden></a>
+      <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-naam="Deze maand" data-leeg="Staat er zodra de meters bekend zijn" data-maand hidden></a>
+      <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-naam="De deurbel" data-leeg="Staat er als er een deurbel met beeld is" data-deurbelkaart hidden></button>
       <div class="aanpasrij">
         <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>Thuis aanpassen</button>
         <button type="button" class="aanpasknop" data-weergave hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Weergave</button>

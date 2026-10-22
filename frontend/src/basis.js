@@ -477,7 +477,7 @@
       laag = document.createElement('div');
       laag.className = 'aanbel';
       laag.setAttribute('role', 'dialog');
-      laag.setAttribute('aria-label', 'Er wordt aangebeld');
+      laag.setAttribute('aria-label', m.titel ?? 'Er wordt aangebeld');
       laag.addEventListener('click', (e) => {
         if (e.target.closest('[data-bel-dicht]')) sluitBel();
       });
@@ -485,7 +485,7 @@
     }
     // Belt er opnieuw iemand terwijl het beeld er staat: eerst het oude beeld stoppen.
     stopBeelden(laag);
-    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>Er wordt aangebeld</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
+    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>${esc(m.titel ?? 'Er wordt aangebeld')}</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
       <div class="aanbel-beeld"><p class="zacht">Het beeld komt eraan…</p></div>`;
     void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? 'de deurbel');
     laag.querySelector('[data-bel-dicht]').focus();

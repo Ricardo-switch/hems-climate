@@ -37,6 +37,8 @@ async function laadAlles() {
   if (v.status === 'fulfilled') vandaag = v.value;
   if (w.status === 'fulfilled') weer = w.value;
   if (a.status === 'fulfilled') aansluiting = a.value;
+  // De kaarten van besluit 182: alleen ophalen wat er gekozen is.
+  await kaartGegevens();
   teken();
   if (eersteKeer) eigen.vanInstellingen();
   // Met #batterijen meteen de lijst, ook als niets bijna leeg is (besluit 131).
@@ -144,6 +146,9 @@ function tekenNu() {
   tekenGevoel();
   tekenKamersTel();
   tekenMorgen();
+  tekenLading();
+  tekenMaand();
+  tekenDeurbel();
   // Thuis naar eigen smaak (besluit 162): favorieten, en de kaarten op hun plek.
   eigen.tekenFavorieten(huisData);
   eigen.na();
@@ -444,6 +449,119 @@ function tekenKamersTel() {
     .join('');
 }
 
+/* ---------------------------- de auto, de batterij, de maand, de deurbel */
+
+/*
+ * Vier kaarten om te kiezen (besluit 182, schets Thuis-Tel-Kaarten): de auto
+ * en de thuisbatterij uit het huis, deze maand uit Opbrengst, en de deurbel
+ * met zijn laatste beeld. Wat het huis niet heeft, staat er niet, en wordt
+ * ook niet aangeboden bij Kaart toevoegen.
+ */
+let maand = null;
+let maandOp = 0;
+let deurbel = null;
+let deurbelBeeld = null;
+let deurbelOp = 0;
+const staatErin = (id) => $$(`[data-kaart="${id}"]`).some((el) => !el.hasAttribute('data-uit'));
+const kw = (w) => `${nl(Math.abs(w) / 1000, 1)} kW`;
+const kaartKop = (id, titel, pijl = true) => `<div class="kaartkop"><span class="ik">${eigen.icoon(id)}</span><h2 class="kop-3">${esc(titel)}</h2>${pijl ? '<span class="pijl" aria-hidden="true">›</span>' : ''}</div>`;
+const lading = (pct, kleur, zin, zinKleur) =>
+  `<div class="lading"><span class="getal">${pct == null ? '–' : `${nl(pct, 0)}%`}</span><div class="laadbalk"><i style="width: ${Math.max(0, Math.min(100, pct ?? 0))}%; background: ${kleur}"></i></div><small style="color: ${zinKleur}">${esc(zin)}</small></div>`;
+
+async function kaartGegevens() {
+  const nu = Date.now();
+  // Deze maand: hooguit elke tien minuten; het is een rekensom over de hele maand.
+  if (staatErin('maand') && nu - maandOp > 10 * 60_000) {
+    maandOp = nu;
+    try {
+      const res = await fetch('api/opbrengst?soort=maand', { cache: 'no-store' });
+      maand = res.status === 409 ? { meters: false } : res.ok ? await res.json() : null;
+    } catch {
+      // De volgende keer.
+    }
+  }
+  try {
+    deurbel = await haal('api/deurbel');
+  } catch {
+    deurbel = null;
+  }
+  // Het beeld van de deurbel: hooguit elke minuut een nieuw plaatje.
+  if (deurbel?.aan && staatErin('deurbel') && nu - deurbelOp > 60_000) {
+    deurbelOp = nu;
+    // Geeft het gekozen beeld niets, dan een ander beeld van dezelfde camera, zoals bij aanbellen.
+    let res = null;
+    for (const id of [deurbel.camera, ...(deurbel.reserve ?? [])]) {
+      res = await fetch(`api/camera?id=${encodeURIComponent(id)}`, { cache: 'no-store' }).catch(() => null);
+      if (res?.ok) break;
+    }
+    if (res?.ok) {
+      if (deurbelBeeld) URL.revokeObjectURL(deurbelBeeld);
+      deurbelBeeld = URL.createObjectURL(await res.blob());
+    }
+  }
+}
+
+function zetKaart(sel, id, html, hier) {
+  $$(sel).forEach((el) => {
+    // Wat dit huis niet heeft, bieden we ook niet aan bij Kaart toevoegen.
+    el.toggleAttribute('data-niet-hier', !hier);
+    el.hidden = !html;
+    if (html && el.dataset.html !== html) {
+      el.innerHTML = html;
+      el.dataset.html = html;
+    }
+  });
+}
+
+function tekenLading() {
+  const a = huisData?.opslag?.auto ?? null;
+  const autoZin = !a ? '' : a.laadt ? `Laadt${a.vermogenW ? `, ${kw(a.vermogenW)}` : ''}` : a.aangesloten === true ? 'Aangesloten, laadt niet' : a.aangesloten === false ? 'Niet aangesloten' : '';
+  const bereik = a?.bereikKm != null ? `${autoZin ? ' · ' : ''}${nl(a.bereikKm, 0)} km` : '';
+  zetKaart('[data-auto]', 'auto', a ? `${kaartKop('auto', a.naam)}${lading(a.pct, a.laadt ? 'var(--mint)' : 'var(--net)', autoZin + bereik, a.laadt ? 'var(--mint-t)' : 'var(--zacht)')}` : '', !!a);
+  const b = huisData?.opslag?.batterij ?? null;
+  const st = b?.stand;
+  const bZin = st === 'laadt' ? `Laadt, ${kw(b.vermogenW)}` : st === 'levert' ? `Levert ${kw(b.vermogenW)} aan het huis` : st === 'rust' ? 'Rust' : '';
+  const bKleur = st === 'laadt' ? 'var(--zon)' : st === 'levert' ? 'var(--violet)' : 'var(--net)';
+  zetKaart('[data-batterij]', 'batterij', b ? `${kaartKop('batterij', b.naam)}${lading(b.pct, bKleur, bZin, app.tekstKleur(st === 'rust' || !st ? 'var(--zacht)' : bKleur))}` : '', !!b);
+}
+
+function tekenMaand() {
+  const m = maand;
+  const naam = new Date().toLocaleDateString('nl-NL', { month: 'long' });
+  const titel = `${naam.charAt(0).toUpperCase()}${naam.slice(1)}, tot nu`;
+  let html = '';
+  if (m?.meters === false) html = `${kaartKop('maand', titel)}<p class="klein" style="margin: 8px 0 0">Kies eerst je meters, dan staat hier wat je opwekte, zelf gebruikte en wat het kostte.</p>`;
+  else if (m?.stroom) {
+    const eerste = m.zon ? `<div><b class="zon-t">${nl(m.zon.opgewektKwh, 0)}</b><span>kWh opgewekt</span></div>` : `<div><b>${nl(m.stroom.verbruikKwh, 0)}</b><span>kWh gebruikt</span></div>`;
+    const tweede = m.zon?.zelfPct != null ? `<div><b>${nl(m.zon.zelfPct, 0)}%</b><span>zelf gebruikt</span></div>` : `<div><b>${nl(m.stroom.vanNetKwh, 0)}</b><span>kWh van het net</span></div>`;
+    const kosten = m.kosten?.totaal;
+    const derde = kosten != null
+      ? `<div><b>€ ${nl(kosten, 0)}</b><span>gekost${m.kosten.vorige != null ? `, ${esc(m.periode?.vorigeNaam ?? 'ervoor')} € ${nl(m.kosten.vorige, 0)}` : ''}</span></div>`
+      : '<div><b>–</b><span>kosten: vul je prijzen in</span></div>';
+    html = `${kaartKop('maand', titel)}<div class="maanddrie">${eerste}${tweede}${derde}</div>`;
+  }
+  zetKaart('[data-maand]', 'maand', html, true);
+}
+
+function tekenDeurbel() {
+  const d = deurbel?.aan ? deurbel : null;
+  let wanneer = 'Nog niet aangebeld';
+  if (d?.laatsteMs) {
+    const t = new Date(d.laatsteMs);
+    const vandaag = new Date().toDateString() === t.toDateString();
+    wanneer = vandaag ? `Aangebeld om ${klokVan(d.laatsteMs)}` : `Laatst aangebeld ${t.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+  }
+  const beeld = deurbelBeeld ? `<img alt="Het laatste beeld van ${esc(d?.naam ?? 'de deurbel')}" src="${deurbelBeeld}">` : '';
+  zetKaart('[data-deurbelkaart]', 'deurbel', d ? `${kaartKop('deurbel', 'De deurbel')}<div class="deurbelbeeld">${beeld}<span class="wanneer">${esc(wanneer)}</span></div>` : '', !!d);
+}
+
+// Een tik op de deurbel: het live beeld groot, zoals bij aanbellen.
+document.addEventListener('click', (e) => {
+  const k = e.target.closest('[data-deurbelkaart]');
+  if (!k || document.body.classList.contains('aanpassen') || !deurbel?.aan) return;
+  app.aanbellen({ camera: deurbel.camera, reserve: deurbel.reserve, naam: deurbel.naam, titel: 'De deurbel', schermAan: false, seconden: 120 });
+});
+
 /* ------------------------------------------------------------- het weer */
 
 /** Het weer van morgen (besluit 162): een kaart om te kiezen; een tik opent het weer. */
@@ -623,6 +741,8 @@ eigen.bij(async (huisOok) => {
       // De volgende keer.
     }
   }
+  // Net een kaart erbij gezet: meteen zijn gegevens, niet pas over een minuut.
+  await kaartGegevens();
   teken();
 });
 

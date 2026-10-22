@@ -1248,6 +1248,7 @@ describe('het huis als navigatie (ONTWERP §4)', () => {
       batterijen: [],
       filters: [],
       drempels: { batterij: 10, filter: 10 },
+      opslag: { batterij: null, auto: null },
     };
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     const res = await fetch(`${base}/api/huis`);
@@ -1313,6 +1314,7 @@ describe('licht bedienen (besluit 97)', () => {
     batterijen: [],
     filters: [],
     drempels: { batterij: 10, filter: 10 },
+    opslag: { batterij: null, auto: null },
   };
 
   async function withLights() {

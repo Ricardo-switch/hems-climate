@@ -192,6 +192,12 @@ export interface WebOptions {
   /** Thuis naar eigen smaak (besluit 162): kaarten en favorieten per account, en de wand. */
   readonly voorkeuren?: VoorkeurenStore;
   /**
+   * De deurbel als kaart op Thuis (besluit 182): het beeld, de naam, wanneer
+   * er het laatst werd aangebeld, en de andere beelden van dezelfde camera voor
+   * als het gekozen beeld niets geeft; null zonder deurbel.
+   */
+  readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
+  /**
    * Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt,
    * en of een account een scherm is. Zonder dit is de wand van het huis.
    */

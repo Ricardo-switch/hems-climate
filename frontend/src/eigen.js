@@ -34,6 +34,10 @@
     gevoel: 'Te koud, goed of te warm; daar leert het huis van',
     vandaag: 'De zon van vandaag en wat er draaide',
     morgen: 'Het weer en de zon van morgen',
+    auto: 'Hoe vol, of hij laadt en met hoeveel',
+    batterij: 'Hoe vol, en of hij laadt of het huis voedt',
+    maand: 'Opgewekt, zelf gebruikt en wat het kostte',
+    deurbel: 'Het laatste beeld, en wanneer er werd aangebeld',
   };
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICOON = {
@@ -44,6 +48,10 @@
     gevoel: S('<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/>'),
     vandaag: S('<path d="M3 17c3-6 6-9 9-9s6 3 9 9"/><path d="M12 3v2M5.6 5.6l1.4 1.4M18.4 5.6 17 7"/><path d="M3 21h18"/>'),
     morgen: S('<path d="M7 18h10a4 4 0 0 0 .4-8A5.5 5.5 0 0 0 7.3 11.2 3.5 3.5 0 0 0 7 18z"/>'),
+    auto: S('<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/>'),
+    batterij: S('<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M9 14h6M9 10h6"/>'),
+    maand: S('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
+    deurbel: S('<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
     lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
     scene: S('<path d="M5 19l4-11 4 6 3-4 3 9z"/><circle cx="17" cy="6" r="1.6"/>'),
     screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),
@@ -477,7 +485,7 @@
     if (soort === 'weergave') return tekenWeergave(el);
     if (soort === 'erbij') {
       // Welke kaarten er nog niet staan, met wat ze laten zien.
-      const weg = kaartenIn(plek).filter((k) => k.hasAttribute('data-uit'));
+      const weg = kaartenIn(plek).filter((k) => k.hasAttribute('data-uit') && !k.hasAttribute('data-niet-hier'));
       const rijen = weg.map((k) => {
         const id = k.dataset.kaart;
         return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein: KORT[id] ?? '', rechts: '+', data: `data-erbij="${esc(id)}"` });
@@ -763,6 +771,7 @@
 
   global.eigen = {
     laad,
+    icoon: (id) => ICOON[id] ?? '',
     vanInstellingen,
     na,
     tekenFavorieten,

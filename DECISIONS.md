@@ -183,6 +183,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [174. Het huis en wie er thuis is, live](#174-het-huis-en-wie-er-thuis-is-live)
 - [175. Op je startscherm, en de favorieten zoals de kaart](#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart)
 - [181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt](#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt)
+- [182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel](#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel)
 
 **Veiligheid**
 
@@ -8121,6 +8122,51 @@ thuis zijn, ziet op de wand zijn eigen profiel.
 *Wat afviel:* het logo in je kleur (de bewoner wilde dat niet). De wand licht:
 die hangt aan de muur en wordt 's avonds bekeken (87). En een eigen indeling
 voor de wand naast die van de telefoon (zie hierboven).
+
+## 182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 10 uit het stappenplan van besluit 172, het tweede punt: de vier kaarten
+die besluit 162 voor later liet. Op 21 oktober 2026 koos de bewoner na de
+schets `Thuis-Tel-Kaarten`: alle vier nu, ook de auto en de batterij, die dit
+huis niet heeft; deze maand met opgewekt, zelf gebruikt en wat het kostte; en
+een tik op de auto of de batterij naar Apparaten.
+
+*Besluit:*
+
+- **Vier kaarten om te kiezen,** bij Thuis aanpassen, op de telefoon en op de
+  wand; niet standaard. Wat het huis niet heeft, staat er niet en wordt ook
+  niet aangeboden bij Kaart toevoegen.
+- **De auto:** hoe vol (een balk en een percentage), of hij laadt en met
+  hoeveel kW, of hij aangesloten is, en het bereik. Een tik opent Apparaten,
+  bij de kaart van de auto.
+- **De batterij:** hoe vol, en of hij laadt, het huis voedt of rust, met het
+  vermogen. Ook bij Apparaten een eigen kaart. Smart Climate kijkt alleen; hij
+  stuurt de batterij niet.
+- **Deze maand:** opgewekt (of zonder panelen: gebruikt), welk deel zelf
+  gebruikt, en wat het kostte naast de maand ervoor, uit Opbrengst; een tik
+  opent Opbrengst. Zonder meters een zin met wat er nodig is.
+- **De deurbel:** het laatste beeld, hooguit elke minuut ververst, en wanneer
+  er het laatst werd aangebeld. Een tik opent het live beeld groot, zoals bij
+  aanbellen; geeft het gekozen beeld niets, dan een ander beeld van dezelfde
+  camera (`/api/deurbel`).
+- **Herkennen in Home Assistant** (`web/opslag.ts`): Home Assistant kent geen
+  vaste soort voor een thuisbatterij of een auto, dus per apparaat, op wat het
+  meet en wie het levert. Een auto heeft een actieradius of komt van een
+  koppeling voor auto's (Tesla, Volkswagen, Kia, ...); een laadpaal komt van
+  een koppeling voor laadpalen (Easee, Zaptec, Wallbox, ...) en is de auto als
+  die zelf niet in Home Assistant staat; een thuisbatterij heeft een lading in
+  procenten en slaat energie op, of komt van een koppeling of een type voor
+  thuisbatterijen (Powerwall, Sessy, Marstek, Huawei LUNA, ...). Laden of
+  leveren volgt uit het vermogen; een paar merken tellen omgekeerd. Weet de
+  app het niet zeker, dan zegt hij alleen het percentage. Getoetst met
+  nagebootste apparaten; dit huis heeft ze niet, dus nog nergens echt gezien.
+- **Versie 0.56.0.**
+
+*Wat afviel:* "vol rond 16:30" bij de auto: dat vraagt de capaciteit van de
+accu, en die zegt lang niet elke koppeling. En de batterij of de auto sturen:
+dat is schrijven, en hoort bij stap B.
 
 ## Wat nog een besluit wacht
 
