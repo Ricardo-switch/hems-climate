@@ -477,7 +477,7 @@ async function kaartGegevens() {
   if (staatErin('maand') && nu - maandOp > 10 * 60_000) {
     maandOp = nu;
     try {
-      const res = await fetch('api/opbrengst?soort=maand', { cache: 'no-store' });
+      const res = await fetch('api/opbrengst?soort=maand', { cache: 'no-store', headers: { 'x-taal': taal.code } });
       maand = res.status === 409 ? { meters: false } : res.ok ? await res.json() : null;
     } catch {
       // De volgende keer.

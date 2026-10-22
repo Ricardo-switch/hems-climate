@@ -31,7 +31,7 @@ const KLEUREN = ['#6FD3FF', '#8FD9FF', '#FFB088', '#C4BCFF', '#9EE6FF', '#FFD08A
 async function laad() {
   const q = new URLSearchParams({ soort: keuze.soort, ...(keuze.datum ? { datum: keuze.datum } : {}) });
   try {
-    const res = await fetch(`api/opbrengst?${q}`, { cache: 'no-store' });
+    const res = await fetch(`api/opbrengst?${q}`, { cache: 'no-store', headers: { 'x-taal': taal.code } });
     const body = await res.json();
     if (res.status === 409) {
       data = null;
@@ -73,8 +73,7 @@ function cijfers(r, klein = false) {
   const s = r.stroom;
   const k = r.kosten;
   const stroom = `<div class="cijfer"><div class="mini">${esc(t('opbrengst.stroomGebruikt'))}</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${esc(r.heeft.zon ? t('opbrengst.vanNetRest', { kwh: getal(s.vanNetKwh) }) : t('opbrengst.vanNet'))}</div></div>`;
-  // De naam van een kostenregel komt van de dienst, nog in het Nederlands.
-  const vast = k.regels.find((x) => /vast/i.test(x.naam));
+  const vast = k.regels.find((x) => x.soort === 'vast');
   const kostenOnder = [r.dekking ? t('opbrengst.gemetenDagen', { n: r.dekking.dagen }) : k.vorige != null ? `${r.periode.vorigeNaam} ${euro(k.vorige)}` : '', vast?.euro == null ? t('opbrengst.zonderVast') : ''].filter(Boolean).join(', ');
   const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">${esc(t('opbrengst.kosten'))}</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${esc(kostenOnder)}</div></div>`;
   const gas = r.gas ? `<div class="cijfer"><div class="mini">${esc(t('opbrengst.gas'))}</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';

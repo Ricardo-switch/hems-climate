@@ -537,7 +537,7 @@ export class WebServer {
     }
 
     if (path === '/api/opbrengst') {
-      await this.#yield(res, url.searchParams);
+      await this.#yield(res, url.searchParams, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']));
       return;
     }
 
@@ -1328,7 +1328,7 @@ export class WebServer {
     sendJson(res, 200, connection.view());
   }
 
-  async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {
+  async #yield(res: ServerResponse, params: URLSearchParams, lang: Lang): Promise<void> {
     const energy = this.#options.energy;
     const config = this.#config();
     if (energy == null || config == null) {
@@ -1354,7 +1354,8 @@ export class WebServer {
       sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
       return;
     }
-    const key = `${soort}:${range.startMs}`;
+    // Per taal (besluit 185): de namen van de periode en de kostenregels staan erin.
+    const key = `${soort}:${range.startMs}:${lang}`;
     const hit = this.#yieldCache.get(key);
     // Klaar is klaar: uitgerekend na het einde van de periode.
     const fresh = (h: { atMs: number; report: YieldReport }) => h.atMs >= h.report.periode.totMs || now - h.atMs < 120_000;
@@ -1362,18 +1363,18 @@ export class WebServer {
     const verwacht = await this.#expectedIn(range.startMs, range.endMs, config.timezone).catch(() => null);
     if (hit) {
       sendJson(res, 200, { ...hit.report, verwacht });
-      if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now).catch(() => null);
-      this.#yieldWarm(vandaag);
+      if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now, lang).catch(() => null);
+      this.#yieldWarm(vandaag, lang);
       return;
     }
     try {
-      const report = await this.#yieldCompute(key, soort, datum, now);
+      const report = await this.#yieldCompute(key, soort, datum, now, lang);
       if (report == null) {
         sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
         return;
       }
       sendJson(res, 200, { ...report, verwacht });
-      this.#yieldWarm(vandaag);
+      this.#yieldWarm(vandaag, lang);
     } catch (error) {
       sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
     }
@@ -1403,13 +1404,13 @@ export class WebServer {
   }
 
   /** Rekent één periode uit, één keer tegelijk per periode, en bewaart hem. */
-  #yieldCompute(key: string, soort: PeriodKind, datum: string, now: number): Promise<YieldReport | null> {
+  #yieldCompute(key: string, soort: PeriodKind, datum: string, now: number, lang: Lang = 'nl'): Promise<YieldReport | null> {
     const busy = this.#yieldBusy.get(key);
     if (busy) return busy;
     const energy = this.#options.energy!;
     const config = this.#config()!;
     const settings = energy.store.current!;
-    const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now)
+    const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now, lang)
       .then((report) => {
         if (report != null) {
           // Hooguit honderd periodes; de oudste eruit.
@@ -1433,7 +1434,8 @@ export class WebServer {
     const datum = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
     const range = periodRange('maand', datum, config.timezone, yearStartOf(settings.prijzen.contractStart));
     if (range == null) return null;
-    const key = `maand:${range.startMs}`;
+    // De assistent spreekt hier Nederlands: de naam van de maand komt uit het rapport.
+    const key = `maand:${range.startMs}:nl`;
     const hit = this.#yieldCache.get(key);
     const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now);
     if (report == null) return null;
@@ -1445,7 +1447,7 @@ export class WebServer {
   }
 
   /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */
-  #yieldWarm(vandaag: string): void {
+  #yieldWarm(vandaag: string, lang: Lang): void {
     const config = this.#config();
     const settings = this.#options.energy?.store.current;
     if (config == null || settings == null) return;
@@ -1453,10 +1455,10 @@ export class WebServer {
     for (const soort of PERIODS) {
       const range = periodRange(soort, vandaag, config.timezone, yearStartOf(settings.prijzen.contractStart));
       if (range == null) continue;
-      const key = `${soort}:${range.startMs}`;
+      const key = `${soort}:${range.startMs}:${lang}`;
       const hit = this.#yieldCache.get(key);
       if (hit && (hit.atMs >= hit.report.periode.totMs || now - hit.atMs < 120_000)) continue;
-      void this.#yieldCompute(key, soort, vandaag, now).catch(() => null);
+      void this.#yieldCompute(key, soort, vandaag, now, lang).catch(() => null);
     }
   }
 
