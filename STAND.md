@@ -27,7 +27,7 @@ verwijzing bestaat.
   op zon in de voorrang, en wat nog op dit huis leunt een instelling maken. Nog
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (het
-  eerste en tweede staan er, [181], [182]). Talen
+  eerste drie staan er, [181], [182], [183]). Talen
   later: Engels, dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
@@ -363,7 +363,10 @@ verwijzing bestaat.
 - **Comfort uit de app gaat voor** de helpers van het oude systeem; het huis
   heeft een voordeur, de meterkast, de camera, de tuin en de buitenunits zoals
   ze zijn ([143]).
-- **Meldingen** alleen voor wat de regeling raakt ([79]). Zonder verbinding toont
+- **Meldingen op de telefoon,** via de app van Home Assistant en alleen vanuit
+  de add-on: rook en een haperende regeling meteen, ook 's nachts; batterij,
+  filter en een nieuwe versie overdag, per bewoner te kiezen bij Jij ([79],
+  [183]). Zonder verbinding toont
   de tablet de laatste stand, gemarkeerd ([82]).
 
 ## Veiligheid
@@ -600,4 +603,5 @@ verwijzing bestaat.
 [180]: DECISIONS.md#180-de-twee-grootste-bestanden-opgeknipt-zonder-dat-er-iets-verandert
 [181]: DECISIONS.md#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt
 [182]: DECISIONS.md#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel
+[183]: DECISIONS.md#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant
 <!-- links:einde -->

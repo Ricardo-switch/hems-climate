@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.57.0
+
+*22 oktober 2026*
+
+**Nieuw**
+
+- Meldingen op je telefoon via de app van Home Assistant: rook en een haperende regeling meteen, batterij en een nieuwe versie overdag
+- Bij Jij kies je wat je wilt horen, naar welke telefoon, en je nachtrust; met een proefmelding
+
 ## 0.56.0
 
 *21 oktober 2026*

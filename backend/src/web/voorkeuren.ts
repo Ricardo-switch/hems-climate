@@ -31,6 +31,7 @@
  * alleen wat er gekozen is.
  */
 
+import { STANDAARD_MELDINGEN, type MeldingKeus } from './push.js';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -131,6 +132,8 @@ interface Eigen {
   readonly weergave?: Weergave;
   readonly thema?: Thema;
   readonly kleur?: Kleur;
+  /** Wat je op je telefoon wilt horen (besluit 183); weg is de standaard. */
+  readonly meldingen?: Partial<MeldingKeus>;
 }
 
 interface Bestand {
@@ -144,7 +147,7 @@ interface Bestand {
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly meldingen: MeldingKeus };
   /**
    * De wand: de kaarten, favorieten en kleur van wiens profiel geldt (`van`,
    * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
@@ -284,7 +287,7 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const profiel = van == null ? null : (b.accounts[van] ?? {});
   const thema = eigen.thema && (THEMAS as readonly string[]).includes(eigen.thema) ? eigen.thema : STANDAARD_THEMA;
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen) },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
     wand: {
       kaarten: profiel ? (profiel.tel ?? STANDAARD_TEL).filter((k) => WAND_KAARTEN.includes(k)) : (b.wand?.kaarten ?? STANDAARD_WAND),
       favorieten: profiel ? (profiel.favorieten ?? []) : (b.wand?.favorieten ?? []),
@@ -318,6 +321,28 @@ export function metWandVolgorde(tel: readonly KaartId[], wand: readonly KaartId[
   return [...uit, ...rest];
 }
 
+/** Een deel van wat je op je telefoon wilt horen (besluit 183), bovenop wat er al stond. */
+export function leesMeldingen(x: unknown, nu: MeldingKeus): { ok: true; meldingen: MeldingKeus } | { ok: false; reden: string } {
+  if (!isObject(x)) return { ok: false, reden: 'meldingen is een object' };
+  const uit: Record<string, unknown> = { ...nu };
+  for (const [k, w] of Object.entries(x)) {
+    if (k === 'rook' || k === 'regeling' || k === 'onderhoud' || k === 'versie') {
+      if (typeof w !== 'boolean') return { ok: false, reden: `${k} is aan of uit` };
+    } else if (k === 'van' || k === 'tot') {
+      if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };
+    } else if (k === 'telefoon') {
+      if (w !== null && (typeof w !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(w))) return { ok: false, reden: 'de telefoon is een apparaat uit Home Assistant' };
+    } else return { ok: false, reden: `die keuze bestaat niet: ${k}` };
+    uit[k] = w;
+  }
+  return { ok: true, meldingen: uit as unknown as MeldingKeus };
+}
+
+/** Wat een account op zijn telefoon wil horen; voor de dienst die meldt. */
+export function meldingenVan(b: Bestand, account: string): MeldingKeus {
+  return { ...STANDAARD_MELDINGEN, ...b.accounts[account]?.meldingen };
+}
+
 /** Het thema en de kleur (besluit 181), elk uit de vaste lijst. */
 export function leesThema(x: unknown): { ok: true; thema: Thema } | { ok: false; reden: string } {
   return typeof x === 'string' && (THEMAS as readonly string[]).includes(x) ? { ok: true, thema: x as Thema } : { ok: false, reden: `het thema is ${THEMAS.join(', ')}` };
@@ -339,8 +364,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (!['kaarten', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave, thema, kleur of niemand' };
-  if (plek === 'wand' && (r!['weergave'] !== undefined || r!['thema'] !== undefined || r!['kleur'] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema en de kleur zijn per account: plek tel' };
+  if (!['kaarten', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave, thema, kleur, meldingen of niemand' };
+  if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur en de meldingen zijn per account: plek tel' };
   if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
   const { van } = wandVan(wie);
   if (plek === 'wand' && (van == null || r!['niemand'] !== undefined) && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
@@ -376,6 +401,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   if (thema && !thema.ok) return { ok: false, status: 400, reden: thema.reden };
   const kleur = r!['kleur'] === undefined ? null : leesKleur(r!['kleur']);
   if (kleur && !kleur.ok) return { ok: false, status: 400, reden: kleur.reden };
+  const meldingen = r!['meldingen'] === undefined ? null : leesMeldingen(r!['meldingen'], nu.tel.meldingen);
+  if (meldingen && !meldingen.ok) return { ok: false, status: 400, reden: meldingen.reden };
   const sleutel = wie.userId ?? '';
   const eigen = {
     ...b.accounts[sleutel],
@@ -384,6 +411,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
     ...(weergave ? { weergave: weergave.weergave } : {}),
     ...(thema ? { thema: thema.thema } : {}),
     ...(kleur ? { kleur: kleur.kleur } : {}),
+    ...(meldingen ? { meldingen: meldingen.meldingen } : {}),
   };
   return { ok: true, bestand: { ...b, accounts: { ...b.accounts, [sleutel]: eigen } } };
 }
@@ -408,6 +436,11 @@ export class VoorkeurenStore {
 
   view(wie: VoorkeurWie): VoorkeurenView {
     return voorkeurenView(this.#current, wie);
+  }
+
+  /** Wat een account op zijn telefoon wil horen (besluit 183). */
+  meldingen(account: string): MeldingKeus {
+    return meldingenVan(this.#current, account);
   }
 
   /** De bewegingsmelder die de wand wekt (besluit 164), of null. */

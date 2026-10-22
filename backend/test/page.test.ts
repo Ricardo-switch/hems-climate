@@ -110,6 +110,8 @@ const updateNu = { klaar: false, installeer: 0 };
 let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
+/** De proefmeldingen die de app vroeg (besluit 183), per account. */
+const proefmeldingen: (string | null)[] = [];
 /** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
 let extraOpslag: Opslag | null = null;
 /** De deurbel als kaart (besluit 182); null is: geen deurbel. */
@@ -351,6 +353,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
           deurbel: () => extraDeurbel,
+          // Meldingen op de telefoon (besluit 183): een nagebootste telefoon, en onthouden wat er gestuurd werd.
+          telefoons: () => [{ id: 'd-pixel', naam: 'Pixel 8', eigen: true }, { id: 'd-ipad', naam: 'iPad keuken', eigen: false }],
+          proefmelding: async (userId) => {
+            proefmeldingen.push(userId);
+            return { ok: true as const, naam: 'Pixel 8' };
+          },
           profielen: (userId) => profielenVan(bewonersStore.current, live.explanation.profile?.id ?? null, userId),
           // Het kleine huis uit house-fixture, met de deur voor de indeling (besluit 96).
           house: () => metBatterijen(buildHouse(exampleSite, houseRegisters, houseStates, live, layoutStore.current)),
@@ -2356,6 +2364,52 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       extraOpslag = null;
       extraDeurbel = null;
       await zet(STANDAARD_TEL);
+      await context.close();
+    }
+  }, 60_000);
+
+  /*
+   * Meldingen op je telefoon (besluit 183, schets Instellingen-Tel-Meldingen):
+   * bij Jij, met de vier soorten, de telefoon, de nachtrust en een proefmelding.
+   */
+  it('kiest bij Jij welke meldingen naar je telefoon gaan (besluit 183)', async () => {
+    const meldingen = async () => ((await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as { tel: { meldingen: Record<string, unknown> } }).tel.meldingen;
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const bewonersWas = bewonersStore.current;
+    await bewonersStore.save(voegToe(GEEN_BEWONERS, { userId: 'u', naam: 'Test' }, null, Date.now()));
+    try {
+      await p.goto(`${baseUrl}/jij.html`);
+      const regel = p.locator('#tel a[href="jij.html#meldingen"]');
+      await expect.poll(() => regel.textContent()).toContain('Naar Pixel 8');
+      await regel.click();
+      await p.locator('#tel h1', { hasText: 'Meldingen op je telefoon' }).waitFor();
+      expect(await p.locator('#tel .terugje').textContent()).toBe('‹ Jij');
+      // Standaard: rook en de regeling aan, de rest uit.
+      const schakel = (k: string) => p.locator(`#tel [data-melding="${k}"]`);
+      expect(await schakel('rook').getAttribute('aria-checked')).toBe('true');
+      expect(await schakel('regeling').getAttribute('aria-checked')).toBe('true');
+      expect(await schakel('onderhoud').getAttribute('aria-checked')).toBe('false');
+      await schakel('onderhoud').click();
+      await expect.poll(async () => (await meldingen())['onderhoud']).toBe(true);
+      // Een andere telefoon, en een andere nachtrust.
+      await p.locator('#tel [data-melding-telefoon]').selectOption('d-ipad');
+      await expect.poll(async () => (await meldingen())['telefoon']).toBe('d-ipad');
+      await p.locator('#tel [data-melding-tijd="van"]').fill('22:30');
+      await expect.poll(async () => (await meldingen())['van']).toBe('22:30');
+      // Een proefmelding.
+      const voor = proefmeldingen.length;
+      await p.locator('#tel [data-proef]').click();
+      await expect.poll(() => p.locator('#tel [data-proef-zin]').textContent()).toBe('Verstuurd naar Pixel 8.');
+      expect(proefmeldingen.length).toBe(voor + 1);
+      if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-meldingen.png'), fullPage: true });
+      expect(fouten).toEqual([]);
+    } finally {
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', meldingen: { onderhoud: false, telefoon: null, van: '23:00' } }) });
+      await bewonersStore.save(bewonersWas);
       await context.close();
     }
   }, 60_000);

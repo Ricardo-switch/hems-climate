@@ -132,7 +132,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [45. Een bewoner ziet nooit een entity-ID](#45-een-bewoner-ziet-nooit-een-entity-id)
 - [63. De terugblik gaat verder waar hij was](#63-de-terugblik-gaat-verder-waar-hij-was)
 - [76. De testpagina is een prototype; de echte app krijgt een bewonerscontract](#76-de-testpagina-is-een-prototype-de-echte-app-krijgt-een-bewonerscontract) — *aangevuld door 94*
-- [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft)
+- [79. Wat een pushmelding krijgt, en wat in de app blijft](#79-wat-een-pushmelding-krijgt-en-wat-in-de-app-blijft) — *aangevuld door 183*
 - [82. Zonder verbinding toont de tablet de laatste stand, gemarkeerd](#82-zonder-verbinding-toont-de-tablet-de-laatste-stand-gemarkeerd)
 - [86. De app is vanaf het begin toegankelijk en tweetalig](#86-de-app-is-vanaf-het-begin-toegankelijk-en-tweetalig)
 - [87. Donker, met later een lichte versie en een eigen accentkleur](#87-donker-met-later-een-lichte-versie-en-een-eigen-accentkleur) — *aangevuld door 181*
@@ -184,6 +184,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [175. Op je startscherm, en de favorieten zoals de kaart](#175-op-je-startscherm-en-de-favorieten-zoals-de-kaart)
 - [181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt](#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt)
 - [182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel](#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel)
+- [183. Meldingen op de telefoon, via de app van Home Assistant](#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant)
 
 **Veiligheid**
 
@@ -3286,7 +3287,7 @@ fase hier ook in de praktijk getest; tot dan alleen met tests.
 
 ## 79. Wat een pushmelding krijgt, en wat in de app blijft
 
-*Onderwerp: weergave · Status: geldig*
+*Onderwerp: weergave · Status: aangevuld door 183*
 
 Een app die te vaak meldt, wordt uitgezet; een app die het belangrijke niet
 meldt, wordt niet vertrouwd. Op 2 oktober 2026 koos de bewoner per soort.
@@ -8167,6 +8168,49 @@ een tik op de auto of de batterij naar Apparaten.
 *Wat afviel:* "vol rond 16:30" bij de auto: dat vraagt de capaciteit van de
 accu, en die zegt lang niet elke koppeling. En de batterij of de auto sturen:
 dat is schrijven, en hoort bij stap B.
+
+## 183. Meldingen op de telefoon, via de app van Home Assistant
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 10 uit het stappenplan van besluit 172, het derde punt: de pushmelding
+van besluit 79. Op 22 oktober 2026 koos de bewoner na de schets
+`Instellingen-Tel-Meldingen`: vier soorten naar de telefoon; komt iets vanzelf
+goed, dan verdwijnt de melding stil; en het dringende staat meteen aan.
+
+*Besluit:*
+
+- **Wat naar de telefoon gaat,** per bewoner te kiezen bij Jij › Meldingen op
+  je telefoon:
+  - **rook en koolmonoxide** en **als de regeling hapert** (een apparaat in
+    een kamer dat al een uur niet reageert, een meter die niets levert):
+    dringend, altijd, ook 's nachts; standaard aan;
+  - **een batterij of filter bijna op** en **een nieuwe versie**: overdag;
+    wat in de nachtrust opkomt, komt na de nachtrust als het dan nog speelt;
+    standaard uit.
+  De rest blijft bij de bel in de app (136), zoals besluit 79 al zei.
+- **Weer goed:** de melding op de telefoon wordt stil vervangen door "weer
+  goed", met hetzelfde label en zonder geluid. Wat langer dan een dag speelt,
+  gaat niet meer op de telefoon als je het aanzet: geen stapel oude meldingen.
+- **De nachtrust** is per bewoner in te stellen, standaard 23:00 tot 07:00.
+- **De telefoon:** de app van Home Assistant op een telefoon (`mobile_app`).
+  Hangt die aan de persoon van je account, dan is het de jouwe; anders kies je
+  er een. Een proefmelding laat zien of het aankomt. Een tik op een melding
+  opent Smart Climate in de app van Home Assistant.
+- **Een zevende smalle deur** in de client (`allowNotify`, `isNotifyCall`):
+  precies `notify.mobile_app_…`, zonder doel, met alleen een titel, een tekst
+  en de vaste velden van zo'n melding (een label, waar een tik heen gaat, hoe
+  dringend). Een andere notify-dienst, een doel, of knoppen in de melding
+  blijven werpen, net als klimaat (besluit 15); een test bewijst het.
+- **Alleen vanuit de add-on.** De schaduw op de NAS kijkt mee en blijft stil;
+  anders kwam elke melding dubbel. Wat er verstuurd is, staat in een eigen
+  bestand (`push.json`) naast de dataset.
+- **Versie 0.57.0.**
+
+*Wat afviel:* knoppen in de melding (zoals "Nog een uur" bij een ingreep die
+afloopt, uit besluit 79): die ingreep bestaat nog niet, en een knop die iets
+doet is weer een deur. Het sluipverbruik van de nacht ervoor als melding: de
+bel kent het nog niet. Beide kunnen later in hetzelfde scherm.
 
 ## Wat nog een besluit wacht
 

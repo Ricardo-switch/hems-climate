@@ -11,6 +11,7 @@
  * op stuklopen.
  */
 
+import { PushStore, alsMelding, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
@@ -430,6 +431,9 @@ const client = new HaClient({
   allowListen: true,
   // De eigen add-on bijwerken (21 oktober 2026): update.install op zijn eigen update-entiteit, alleen in de add-on.
   allowUpdate: () => (version.installatie === 'add-on' ? (eigenUpdate(allStates.values())?.entity_id ?? null) : null),
+  // Een melding naar de telefoon van een bewoner (besluit 183): alleen notify.mobile_app_…, en alleen
+  // in de add-on; de NAS kijkt mee en blijft stil, anders kwam elke melding dubbel.
+  allowNotify: Boolean(process.env['SUPERVISOR_TOKEN']),
 });
 
 // De twee verwijzen naar elkaar: de runner duwt besluiten naar de weergave, de
@@ -940,6 +944,7 @@ function meldingenRonde(): void {
     })(),
   });
   void meldingen.bewaar().catch(() => undefined);
+  void pushRonde().catch(() => undefined);
   // Live naar de open pagina's (21 oktober 2026): eerst zag je een nieuwe melding pas bij een andere tab.
   const vinger = JSON.stringify(meldingen.lijst(Date.now()).actief.map((m) => [m.id, m.titel, m.tekst]));
   if (vinger !== meldingenVinger) {
@@ -949,6 +954,76 @@ function meldingenRonde(): void {
 }
 /** Wat de open pagina's als laatste aan meldingen hoorden; verandert het, dan zegt de dienst het. */
 let meldingenVinger: string | null = null;
+
+/*
+ * Meldingen op de telefoon (besluit 183): na elke ronde van de bel kijken wat
+ * er naar welke telefoon moet. Alleen in de add-on (zie allowNotify).
+ */
+const pushStore = logDir !== '' && version.installatie === 'add-on' ? new PushStore(logDir) : null;
+await pushStore?.load();
+let telefoonsVoor: HouseRegisters | null = null;
+let telefoonsNu: Telefoon[] = [];
+/** De telefoons met de app van Home Assistant; opnieuw als de registers veranderen. */
+const telefoons = (): Telefoon[] => {
+  if (!houseRegisters) return [];
+  if (telefoonsVoor !== houseRegisters) {
+    telefoonsNu = vindTelefoons(houseRegisters, allStates);
+    telefoonsVoor = houseRegisters;
+  }
+  return telefoonsNu;
+};
+/** Waar een tik op de melding naartoe gaat: Smart Climate in de app van Home Assistant. */
+let paneelPad: string | null = null;
+if (version.installatie === 'add-on' && process.env['SUPERVISOR_TOKEN']) {
+  void fetch('http://supervisor/addons/self/info', { headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}` } })
+    .then((r) => (r.ok ? (r.json() as Promise<{ data?: { slug?: string } }>) : null))
+    .then((info) => {
+      if (info?.data?.slug) paneelPad = `/hassio/ingress/${info.data.slug}`;
+    })
+    .catch(() => undefined);
+}
+let pushBezig = false;
+async function pushRonde(): Promise<void> {
+  if (!pushStore || !voorkeuren || !bewonersStore || !meldingen || pushBezig) return;
+  pushBezig = true;
+  try {
+    const b = bewonersStore.current;
+    const tel = telefoons();
+    const ontvangers = b.volgorde.flatMap((id) => {
+      const x = b.bewoners[id];
+      if (!x || x.gast) return [];
+      const keus = voorkeuren.meldingen(x.haUser);
+      return [{ account: x.haUser, keus, telefoon: telefoonVan(x.haUser, keus, tel) }];
+    });
+    const nu = Date.now();
+    const l = meldingen.lijst(nu);
+    const { berichten, verstuurd } = teSturen([...l.actief, ...l.eerder], ontvangers, pushStore.verstuurd, nu, siteConfig?.timezone ?? 'Europe/Amsterdam');
+    for (const m of berichten) {
+      try {
+        const v = alsMelding(m, paneelPad);
+        await client.callService('notify', m.dienst, v, {});
+      } catch (error) {
+        console.warn(`Melding naar ${m.dienst} lukte niet: ${(error as Error).message}`);
+      }
+    }
+    await pushStore.save(verstuurd);
+  } finally {
+    pushBezig = false;
+  }
+}
+/** Een proefmelding naar je eigen telefoon (besluit 183), vanaf Jij. */
+async function proefmelding(userId: string | null): Promise<{ ok: true; naam: string } | { ok: false; status: number; reden: string }> {
+  if (version.installatie !== 'add-on') return { ok: false, status: 409, reden: 'meldingen op de telefoon gaan alleen vanuit de add-on' };
+  if (!userId || !voorkeuren) return { ok: false, status: 403, reden: 'log in met je eigen account' };
+  const t = telefoonVan(userId, voorkeuren.meldingen(userId), telefoons());
+  if (!t) return { ok: false, status: 404, reden: 'geen telefoon met de app van Home Assistant gevonden' };
+  try {
+    await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.', tag: 'smart-climate-proef', dringend: false, stil: false }, paneelPad), {});
+    return { ok: true, naam: t.naam };
+  } catch (error) {
+    return { ok: false, status: 502, reden: (error as Error).message };
+  }
+}
 if (meldingen) {
   setTimeout(meldingenRonde, 30_000).unref();
   setInterval(meldingenRonde, 60_000).unref();
@@ -1362,6 +1437,9 @@ if (webPort != null) {
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
     deurbel: deurbelNu,
+    // Meldingen op de telefoon (besluit 183): welke telefoons er zijn, en een proefmelding.
+    telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
+    proefmelding,
     // Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt, voor de wand en de kleuren.
     ...(voorkeuren && bewonersStore
       ? {

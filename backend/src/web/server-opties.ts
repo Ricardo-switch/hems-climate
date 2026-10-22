@@ -196,6 +196,10 @@ export interface WebOptions {
    * er het laatst werd aangebeld, en de andere beelden van dezelfde camera voor
    * als het gekozen beeld niets geeft; null zonder deurbel.
    */
+  /** De telefoons met de app van Home Assistant (besluit 183); `eigen`: aan de persoon van wie kijkt. */
+  readonly telefoons?: (userId: string | null) => readonly { readonly id: string; readonly naam: string; readonly eigen: boolean }[];
+  /** Een proefmelding naar je eigen telefoon (besluit 183). */
+  readonly proefmelding?: (userId: string | null) => Promise<{ readonly ok: true; readonly naam: string } | { readonly ok: false; readonly status: number; readonly reden: string }>;
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
   /**
    * Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt,

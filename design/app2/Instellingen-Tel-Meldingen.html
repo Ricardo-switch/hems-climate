@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="nl" data-kleur="lucht">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Meldingen op je telefoon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Meldingen op je telefoon (schets, 22 oktober 2026; besluit 79, stap 10 van
+   * besluit 172). Bij Jij, per bewoner: welke meldingen naar je telefoon gaan,
+   * via de app van Home Assistant, welke telefoon, en de nachtrust.
+   *   (zonder)   Jij › Meldingen op je telefoon
+   *   #melding   zo ziet een melding eruit op het slotscherm
+   *   #geen      zonder de app van Home Assistant op een telefoon
+   */
+  body { margin: 0; width: 390px; }
+  .tel { min-height: 844px; padding: 18px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .lijst { padding: 4px; border-radius: 22px; }
+  .lijst h2 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; min-height: 58px; padding: 8px 14px; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  .lijst h2 + .rij { border-top: 0; }
+  .rij b { font-size: 15.5px; font-weight: 600; }
+  .rij small { grid-column: 1; font-size: 12.5px; color: var(--gedempt); }
+  .rij .rechts { grid-row: 1 / 3; grid-column: 2; }
+  .schakel { width: 46px; height: 28px; border-radius: 14px; background: rgb(var(--wit) / 0.14); position: relative; display: block; }
+  .schakel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--tekst); }
+  .schakel.aan { background: var(--accent); }
+  .schakel.aan::after { left: 21px; background: var(--op-accent); }
+  .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; margin-left: 6px; vertical-align: 2px; background: rgba(255, 122, 77, 0.14); color: var(--gloed-t); }
+  .kiezer { height: 36px; padding: 0 12px; border-radius: 12px; background: rgb(var(--wit) / 0.07); display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; }
+  .tijden { display: flex; gap: 6px; align-items: center; font-weight: 700; }
+  .tijden span { padding: 6px 10px; border-radius: 10px; background: rgb(var(--wit) / 0.07); }
+  .uitleg { margin: 2px 14px 12px; font-size: 12.5px; color: var(--gedempt); line-height: 1.4; }
+  .knop { align-self: flex-start; }
+
+  /* Het slotscherm, met de melding. */
+  .slot { display: none; min-height: 844px; padding: 90px 14px 0; background: linear-gradient(180deg, #2b3550, #11182a); color: #fff; }
+  .slot .klok { text-align: center; font-family: var(--kop); font-size: 76px; font-weight: 600; letter-spacing: -0.03em; }
+  .slot .dag { text-align: center; font-size: 17px; opacity: 0.8; margin-bottom: 40px; }
+  .push { display: grid; grid-template-columns: 38px 1fr auto; gap: 2px 10px; padding: 12px 14px; border-radius: 20px; background: rgba(255, 255, 255, 0.18); backdrop-filter: blur(20px); margin-bottom: 10px; }
+  .push .app { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 9px; background: #18bcf2; display: grid; place-items: center; }
+  .push b { font-size: 15px; }
+  .push .wanneer { font-size: 12.5px; opacity: 0.7; }
+  .push p { grid-column: 2 / 4; margin: 0; font-size: 14.5px; line-height: 1.35; }
+  .push.stil { opacity: 0.75; }
+  body.toon-melding .tel { display: none; }
+  body.toon-melding .slot { display: block; }
+  .geen { display: none; }
+  body.toon-geen .geen { display: block; }
+  body.toon-geen .wel { display: none; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag">
+  <a class="terugje" href="#">‹ Jij</a>
+  <h1 class="kop-1" style="font-size: 34px">Meldingen op je telefoon</h1>
+  <p class="klein" style="margin: -6px 0 0">Via de app van Home Assistant. Wat hier niet aan staat, zie je bij de bel in de app.</p>
+
+  <section class="glas lijst wel">
+    <h2>Altijd, ook 's nachts</h2>
+    <div class="rij"><b>Rook en koolmonoxide<span class="tag">dringend</span></b><small>Een rookmelder ziet rook, koolmonoxide of hitte</small><span class="rechts schakel aan"></span></div>
+    <div class="rij"><b>Als de regeling hapert</b><small>Een apparaat reageert al een uur niet, of een meter levert niets</small><span class="rechts schakel aan"></span></div>
+    <h2>Overdag</h2>
+    <div class="rij"><b>Batterij of filter bijna op</b><small>Onder de 10%; 's nachts gemeld wacht tot 07:00</small><span class="rechts schakel"></span></div>
+    <div class="rij"><b>Nieuwe versie klaar</b><small>Een update van Smart Climate staat klaar</small><span class="rechts schakel"></span></div>
+    <p class="uitleg">Komt iets vanzelf weer goed, dan verandert de melding op je telefoon stil in "weer goed".</p>
+  </section>
+
+  <section class="glas lijst wel">
+    <h2>Waar en wanneer</h2>
+    <div class="rij"><b>Telefoon</b><small>Uit de app van Home Assistant op je telefoon</small><span class="rechts kiezer">Pixel 8 ▾</span></div>
+    <div class="rij"><b>Nachtrust</b><small>Dan alleen wat dringend is</small><span class="rechts tijden"><span>23:00</span>tot<span>07:00</span></span></div>
+  </section>
+  <button class="knop wel">Stuur een proefmelding</button>
+
+  <section class="glas lijst geen" style="padding: 14px 16px">
+    <h2 style="margin: 0 0 6px">Geen telefoon gevonden</h2>
+    <p class="klein" style="margin: 0">Installeer de app van Home Assistant op je telefoon en log in met je eigen account. Dan staat hij hier, en kun je kiezen wat je wilt horen.</p>
+  </section>
+</div>
+
+<div class="slot">
+  <div class="klok">03:12</div>
+  <div class="dag">woensdag 22 oktober</div>
+  <div class="push"><span class="app"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg></span><b>Rook in de keuken</b><span class="wanneer">nu</span><p>De rookmelder in de keuken ziet rook. Kijk of alles goed is.</p></div>
+  <div class="push stil"><span class="app"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg></span><b>Airco zolder weer goed</b><span class="wanneer">01:40</span><p>Hij reageerde een uur niet; nu weer wel.</p></div>
+</div>
+<script>
+  const h = location.hash.slice(1);
+  if (h === 'melding') document.body.classList.add('toon-melding');
+  if (h === 'geen') document.body.classList.add('toon-geen');
+</script>
+</body>
+</html>
