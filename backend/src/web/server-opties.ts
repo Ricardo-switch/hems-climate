@@ -229,7 +229,8 @@ export interface WebOptions {
    */
   readonly connection?: {
     readonly store: ConnectionStore;
-    readonly view: () => ConnectionView;
+    /** In de taal van de app (besluit 185): de ligging van de panelen staat erin in woorden. */
+    readonly view: (lang?: Lang) => ConnectionView;
     readonly found: () => { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
   };
   /**

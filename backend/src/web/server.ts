@@ -1325,7 +1325,7 @@ export class WebServer {
       }
       await connection.store.save(checked.answers);
     }
-    sendJson(res, 200, connection.view());
+    sendJson(res, 200, connection.view(taalVan(new URL(req.url ?? '/', 'http://localhost').searchParams.get('taal') ?? req.headers['x-taal'])));
   }
 
   async #yield(res: ServerResponse, params: URLSearchParams, lang: Lang): Promise<void> {

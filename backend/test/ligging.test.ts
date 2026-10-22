@@ -259,6 +259,17 @@ describe('welke ligging geldt', () => {
     expect(liggingView({ ...basis, voorkantZon: null, panelen: { ligging: 'voorkant', aantal: 10, voorkant: null, achterkant: null } }).nu?.richting).toBe('Op het zuiden');
   });
 
+  it('zegt de ligging in de taal van de app (besluit 185)', () => {
+    const v = liggingView({ ...basis, meting }, 'en');
+    expect(v.voorstel).toMatchObject({ richting: 'East and west', helling: 'Around 50°, a steep roof', vermogen: 'about 5 kWp in total', vermogenKort: 'about 5 kWp', perPaneel: 'about 415 Wp per panel' });
+    expect([v.lijn?.datumTekst, v.kanten]).toEqual(['12 October', '6 panels on each side']);
+    const bevestigd = liggingView({ ...basis, meting, dak: dakUitAanpassing({ voorgevelDeg: 97, hellingDeg: 47, wpPerPaneel: 390, omvormerW: 3000 }, beide(), meting) as never }, 'en');
+    expect(bevestigd.nu).toMatchObject({ vermogen: '4.68 kWp in total', vermogenKort: '4.68 kWp', perPaneel: '390 Wp per panel' });
+    expect(liggingView({ ...basis, voorkantZon: null, panelen: { ligging: 'voorkant', aantal: 10, voorkant: null, achterkant: null } }, 'en').nu?.richting).toBe('Facing south');
+    // Het Nederlands heeft ook een korte vorm, zonder "samen".
+    expect(liggingView({ ...basis, meting }).voorstel?.vermogenKort).toBe("zo'n 5 kWp");
+  });
+
   it('bewaren: klopt, aangepast, terug van de pagina, en vervallen bij een andere kant', () => {
     const found = { fasen: [], apparaten: [], meting, omvormerGevonden: 3000 };
     const panelen = { ligging: 'beide', voorkant: 6, achterkant: 6 };

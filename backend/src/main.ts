@@ -1707,7 +1707,7 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
   return {
     store,
     found,
-    view: () =>
+    view: (lang?: Lang) =>
       connectionView({
         base,
         found: found(),
@@ -1723,7 +1723,7 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
               platform: houseRegisters?.entities.find((e) => e.entity_id === solarId)?.platform ?? null,
             }
           : null,
-      }),
+      }, lang),
   };
 }
 
