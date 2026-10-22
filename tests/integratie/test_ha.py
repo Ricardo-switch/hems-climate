@@ -32,6 +32,15 @@ INFO = {"naam": "Smart Climate", "versie": "0.58.0", "talen": ["nl", "en"], "kam
 
 
 @pytest.fixture(autouse=True)
+async def opruimen(hass: HomeAssistant):
+    """Na elke test de integratie afsluiten, met zijn timer: anders blijft die hangen."""
+    yield
+    for entry in hass.config_entries.async_entries(DOMAIN):
+        await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+@pytest.fixture(autouse=True)
 async def basis(hass: HomeAssistant) -> None:
     """Het gesprekdeel van Home Assistant heeft de basis nodig, zoals in een echte installatie, met een configuration.yaml."""
     configuratie = Path(hass.config.path("configuration.yaml"))
