@@ -124,4 +124,37 @@ describe('meldingen (besluit 136)', () => {
     await weer.load();
     expect(weer.lijst(T0).actief.length).toBe(1);
   });
+
+  it('maakt elke melding in beide talen, en geeft de bel die van de app (besluit 185)', async () => {
+    const { s } = await store();
+    const bron = (nu: number, sinds: number | null) => leeg({
+      nu,
+      volgen: [droger(sinds)],
+      rookmelders: [{ id: 'melder.keuken', naam: 'Melder keuken', kamer: 'Keuken', kamerId: 'keuken', gevaar: 'rook', sindsMs: nu - 60_000, batterijProbleem: false, vervangenVoor: null }],
+      meters: [{ id: 'sensor.p1', naam: 'De slimme meter', naamEn: 'The smart meter', laatsteMs: null }],
+    });
+    s.bij(bron(T0 + 2 * UUR, T0));
+    const en = s.lijst(T0 + 2 * UUR, 'en').actief;
+    expect(en.map((m) => m.titel).sort()).toEqual(['De droger no longer responds', 'Smoke in Keuken', 'The smart meter has stopped reporting']);
+    expect(en.find((m) => m.id.startsWith('stil:'))?.tekst).toBe('No message for 2 hours, in Zolder. Is it plugged in, or has the connection gone?');
+    expect(en.every((m) => m.actie == null || m.actie.label === 'View')).toBe(true);
+    // Wat de pagina krijgt, heeft geen tweede taal erin.
+    expect(en.some((m) => 'en' in m)).toBe(false);
+    expect(s.lijst(T0 + 2 * UUR).actief.map((m) => m.titel).sort()).toEqual(['De droger reageert niet meer', 'De slimme meter levert niets meer', 'Rook in de keuken']);
+    // Weer goed: onder Eerder, met de tijd in het Engels.
+    s.bij(leeg({ nu: T0 + 3 * UUR, volgen: [droger(null)] }));
+    const eerder = s.lijst(T0 + 3 * UUR, 'en').eerder.find((m) => m.id.startsWith('stil:'))!;
+    expect([eerder.titel, eerder.tekst]).toEqual(['De droger working again', 'After 2 hours without a connection. At 13:00.']);
+  });
+
+  it('noemt een nieuwe versie in het Engels als die woorden er zijn, en anders in algemene woorden', async () => {
+    const { s } = await store();
+    s.bij(leeg({ versie: { nummer: '0.59.4' } }));
+    s.bij(leeg({ versie: { nummer: '0.59.5', eerste: 'Meldingen in het Engels', eersteEn: 'Notifications in English' } }));
+    s.bij(leeg({ versie: { nummer: '0.59.6', eerste: 'Iets nieuws', eersteEn: '' } }));
+    expect(s.lijst(T0, 'en').eerder.map((m) => [m.titel, m.tekst])).toEqual([
+      ['Version 0.59.5: what is new', 'Notifications in English'],
+      ['Version 0.59.6: what is new', 'See what is better.'],
+    ]);
+  });
 });

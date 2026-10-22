@@ -21,6 +21,16 @@ export interface Nieuw {
   readonly beter?: readonly string[];
   /** Wat niet goed ging en nu wel. */
   readonly opgelost?: readonly string[];
+  /**
+   * Hetzelfde in het Engels (besluit 185), met evenveel regels per soort. Weg
+   * bij een versie van voor 0.59.5: dan toont de app het Nederlands.
+   */
+  readonly en?: Pick<Nieuw, 'nieuw' | 'beter' | 'opgelost'>;
+}
+
+/** De eerste regel van een versie: wat nieuw is, anders wat beter is, anders wat opgelost is. */
+export function eersteVan(n: Pick<Nieuw, 'nieuw' | 'beter' | 'opgelost'>): string {
+  return n.nieuw?.[0] ?? n.beter?.[0] ?? n.opgelost?.[0] ?? '';
 }
 
 /** Zoveel versies terug laat de app zien (besluit 133). */

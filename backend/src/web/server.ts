@@ -635,7 +635,7 @@ export class WebServer {
         // Weggehaald op de telefoon: ook weg op de wand.
         this.meldingenVeranderd();
       }
-      sendJson(res, 200, store.lijst(Date.now()));
+      sendJson(res, 200, store.lijst(Date.now(), taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 

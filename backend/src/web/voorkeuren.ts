@@ -31,6 +31,7 @@
  * alleen wat er gekozen is.
  */
 
+import type { Lang } from './assistant.js';
 import { STANDAARD_MELDINGEN, type MeldingKeus } from './push.js';
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -456,6 +457,15 @@ export class VoorkeurenStore {
   /** Wat een account op zijn telefoon wil horen (besluit 183). */
   meldingen(account: string): MeldingKeus {
     return meldingenVan(this.#current, account);
+  }
+
+  /**
+   * De taal van een account voor wat de dienst zelf stuurt, zoals een melding
+   * op de telefoon (besluit 185): wat hij bij Jij koos. Automatisch is
+   * Nederlands, zolang Engels een proef is.
+   */
+  taal(account: string): Lang {
+    return this.#current.accounts[account]?.taal === 'en' ? 'en' : 'nl';
   }
 
   /** De bewegingsmelder die de wand wekt (besluit 164), of null. */
