@@ -24,6 +24,7 @@ import type { Geometry } from '../core/model.js';
 import type { QuarterDays, SolarLearned } from './solar-learn.js';
 import { clearSkyW, type Location } from './sun.js';
 import { partsIn, zonedMidnight } from './today.js';
+import type { Lang } from './assistant.js';
 
 /** Het bestand met de zonkans per dag, naast het logboek. */
 export const WEATHER_FILE = 'weer-verwachting.json';
@@ -211,26 +212,63 @@ export function weatherSources(entities: readonly HaRegistryEntity[], states: Re
   return out;
 }
 
+/** Het weer in woorden, per taal (besluit 185); `nat` is met een kans op regen van de helft of meer. */
+const WEER_WOORDEN = {
+  nl: {
+    zon: 'Zonnig',
+    half: ['Zon en wolken', 'Zon en wolken, kans op een bui'],
+    bewolkt: ['Bewolkt', 'Bewolkt, kans op regen'],
+    regen: ['Bewolkt, af en toe een bui', 'Bewolkt met regen'],
+    onweer: 'Kans op onweer',
+    sneeuw: 'Sneeuw',
+    mist: 'Mist',
+  },
+  en: {
+    zon: 'Sunny',
+    half: ['Sun and clouds', 'Sun and clouds, chance of a shower'],
+    bewolkt: ['Cloudy', 'Cloudy, chance of rain'],
+    regen: ['Cloudy, the odd shower', 'Cloudy with rain'],
+    onweer: 'Chance of thunder',
+    sneeuw: 'Snow',
+    mist: 'Fog',
+  },
+} as const satisfies Record<Lang, unknown>;
+
 /** De soort weer in gewone woorden, met de kans op regen erbij als die telt. */
-export function wordsFor(kind: WeatherKind | null, rainPct: number | null): string | null {
+export function wordsFor(kind: WeatherKind | null, rainPct: number | null, lang: Lang = 'nl'): string | null {
+  const w = WEER_WOORDEN[lang];
   switch (kind) {
     case 'zon':
-      return 'Zonnig';
+      return w.zon;
     case 'half':
-      return rainPct != null && rainPct >= 50 ? 'Zon en wolken, kans op een bui' : 'Zon en wolken';
+      return w.half[rainPct != null && rainPct >= 50 ? 1 : 0];
     case 'bewolkt':
-      return rainPct != null && rainPct >= 50 ? 'Bewolkt, kans op regen' : 'Bewolkt';
+      return w.bewolkt[rainPct != null && rainPct >= 50 ? 1 : 0];
     case 'regen':
-      return rainPct != null && rainPct < 50 ? 'Bewolkt, af en toe een bui' : 'Bewolkt met regen';
+      return w.regen[rainPct != null && rainPct < 50 ? 0 : 1];
     case 'onweer':
-      return 'Kans op onweer';
+      return w.onweer;
     case 'sneeuw':
-      return 'Sneeuw';
+      return w.sneeuw;
     case 'mist':
-      return 'Mist';
+      return w.mist;
     default:
       return null;
   }
+}
+
+/**
+ * Het rapport met het weer in woorden in de taal van de app (besluit 185). Het
+ * rapport zelf wordt een tijd bewaard; de woorden volgen uit de soort en de
+ * kans op regen, dus die zet de dienst per verzoek.
+ */
+export function weatherInLang(report: WeatherReport, lang: Lang): WeatherReport {
+  if (lang === 'nl') return report;
+  return {
+    ...report,
+    vandaag: { ...report.vandaag, tekst: wordsFor(report.vandaag.soort, report.vandaag.regenkansPct, lang) },
+    dagen: report.dagen.map((d) => ({ ...d, tekst: wordsFor(d.soort, d.regenkansPct, lang) })),
+  };
 }
 
 /**
@@ -349,6 +387,8 @@ export interface WeatherReport {
     /** Het weer van nu, zoals Buienradar het zegt. */
     readonly soort: WeatherKind | null;
     readonly tekst: string | null;
+    /** De kans op regen vandaag, als de bron die geeft: daar hangen de woorden van af. */
+    readonly regenkansPct: number | null;
     /** De buitentemperatuur van de weerbron, als die hem geeft (besluit 128). */
     readonly buitenC: number | null;
     /** Het weer per uur, de komende 24 uur, als de bron dat geeft (Open-Meteo). */
@@ -537,6 +577,7 @@ export function weatherReport(input: {
       verwachtVoorafKwh: input.expected?.[todayKey]?.kwh ?? null,
       soort: now?.soort ?? null,
       tekst: now?.tekst ?? null,
+      regenkansPct: now?.regenkansPct ?? null,
       buitenC: now?.nuC ?? null,
       uren: hoursFrom(input.uren ?? null, nowMs, input.soortVanCode),
       kwartieren: restShare == null ? [] : today.quarters.map((q) => ({ tMs: q.tMs, verwachtW: Math.round(q.w * Math.min(1, restShare)) })),

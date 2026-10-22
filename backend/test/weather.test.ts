@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
-import { expectedAndActual, expectedTotal, forecastFromEntity, kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherReport } from '../src/web/weather.js';
+import { expectedAndActual, expectedTotal, forecastFromEntity, kindOf, learnShare, priorShare, readForecast, shareFor, WEATHER_FILE, WeatherLog, weatherInLang, weatherReport, wordsFor } from '../src/web/weather.js';
 import { exampleSite } from './site.js';
 
 const cleanup: string[] = [];
@@ -166,6 +166,16 @@ describe('het rapport', () => {
     { offset: 1, maxC: 17, minC: 10, regenkansPct: 90, zonkansPct: 10, soort: 'regen' as const, tekst: 'Zwaar bewolkt en regen' },
     { offset: 2, maxC: 18, minC: 7, regenkansPct: 30, zonkansPct: 80, soort: 'half' as const, tekst: null },
   ];
+
+  it('zegt het weer in de taal van de app, met de kans op regen erbij (besluit 185)', () => {
+    const r = weatherReport({ ...base, forecast: [{ ...forecast[0]!, regenkansPct: 60 }, ...forecast.slice(1)], predicted: {}, todayWh: 0, nowMs: Date.parse('2026-10-08T21:30:00Z') });
+    expect(r.vandaag.regenkansPct).toBe(60);
+    // Nederlands blijft wat de bron gaf.
+    expect(weatherInLang(r, 'nl')).toBe(r);
+    const en = weatherInLang(r, 'en');
+    expect([en.vandaag.tekst, ...en.dagen.map((d) => d.tekst)]).toEqual(['Cloudy, chance of rain', 'Cloudy with rain', 'Sun and clouds']);
+    expect([wordsFor('regen', 30), wordsFor('regen', 30, 'en'), wordsFor('mist', null, 'en'), wordsFor(null, null, 'en')]).toEqual(['Bewolkt, af en toe een bui', 'Cloudy, the odd shower', 'Fog', null]);
+  });
 
   it('geeft per dag de datum en meer opbrengst bij meer zonkans', () => {
     const r = weatherReport({ ...base, forecast, predicted: {}, todayWh: 0, nowMs: Date.parse('2026-10-08T21:30:00Z') });

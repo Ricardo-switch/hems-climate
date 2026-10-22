@@ -48,7 +48,7 @@ import type { Duplex } from 'node:stream';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport } from './sun.js';
 import { CAMERA_ID } from './camera.js';
-import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
+import { expectedAndActual, expectedTotal, weatherInLang, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
 import { OUTSIDE_FLOOR, floorName, floorOrder, standardFloors } from './layout.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig } from './functies.js';
@@ -1014,7 +1014,7 @@ export class WebServer {
     if (path === '/api/weer') {
       const uit = await this.weatherNow();
       if ('wachten' in uit) sendJson(res, 503, uit);
-      else sendJson(res, 200, uit);
+      else sendJson(res, 200, weatherInLang(uit, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 
