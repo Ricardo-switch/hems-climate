@@ -146,10 +146,10 @@
 </head>
 <body class="lucht lucht-dag" data-stand="begin">
   <div id="wand" class="wand">
-    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main>
       <div class="eerder" data-eerder hidden></div>
-      <button type="button" class="kern" data-kern aria-label="Laat het huis praten">
+      <button type="button" class="kern" data-kern data-t-aria-label="assistent.laatPraten">
         <svg class="golf" viewBox="0 0 300 300" data-golf aria-hidden="true"></svg>
         <span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span>
         <span class="boog"></span><span class="boog b2"></span>
@@ -158,14 +158,14 @@
       </button>
       <div class="spraak" data-spraak aria-live="polite"></div>
       <div class="podium" id="podium-wand" aria-hidden="true"></div>
-      <div class="suggesties" data-suggesties role="group" aria-label="Vragen"></div>
+      <div class="suggesties" data-suggesties role="group" data-t-aria-label="assistent.vragen"></div>
       <div class="balkje">
-        <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ wat je wilt"></form>
-        <button type="button" class="stemknop" data-voorlezen aria-pressed="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Voorlezen aan</span></button>
+        <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" data-t-aria-label="assistent.jeVraag" data-t-placeholder="assistent.typ"></form>
+        <button type="button" class="stemknop" data-voorlezen aria-pressed="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span><span data-t="assistent.voorlezenAan"></span></span></button>
         <div class="niveau" data-niveau hidden aria-hidden="true"></div>
-        <button type="button" class="stop" data-stop hidden>Stop</button>
-        <button type="button" class="mic" data-mic hidden aria-label="Praat met je huis"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-        <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span>Stop het screen</span></button>
+        <button type="button" class="stop" data-stop hidden><span data-t="kamer.scherm.stop"></span></button>
+        <button type="button" class="mic" data-mic hidden data-t-aria-label="thuis.praat"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span><span data-t="assistent.stopHetScreen"></span></span></button>
       </div>
     </main>
   </div>
@@ -173,29 +173,29 @@
   <div id="tel" class="tel">
     <div class="inhoud">
       <div class="boven">
-        <button type="button" class="kern" data-kern aria-label="Laat het huis praten">
+        <button type="button" class="kern" data-kern data-t-aria-label="assistent.laatPraten">
           <svg class="golf" viewBox="0 0 300 300" data-golf aria-hidden="true"></svg>
           <span class="ring"></span><span class="ring r2"></span><span class="ring r3"></span>
           <span class="boog"></span><span class="boog b2"></span>
           <span class="bol"></span>
           <span class="tik" data-tik></span>
         </button>
-        <span class="wie"><i></i>Je huis</span>
+        <span class="wie"><i></i><span data-t="assistent.jeHuis"></span></span>
       </div>
       <div class="spraak" data-spraak aria-live="polite"></div>
-      <div class="suggesties" data-suggesties role="group" aria-label="Vragen"></div>
+      <div class="suggesties" data-suggesties role="group" data-t-aria-label="assistent.vragen"></div>
       <div class="eerder" data-eerder hidden></div>
       <div class="podium" id="podium-tel" aria-hidden="true"></div>
     </div>
     <div class="balkje">
-      <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" aria-label="Je vraag" placeholder="Typ wat je wilt"></form>
-      <button type="button" class="stemknop" data-voorlezen aria-pressed="true" aria-label="Voorlezen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span>Voorlezen aan</span></button>
+      <form data-vrij><input type="text" name="tekst" maxlength="200" autocomplete="off" enterkeyhint="send" data-t-aria-label="assistent.jeVraag" data-t-placeholder="assistent.typ"></form>
+      <button type="button" class="stemknop" data-voorlezen aria-pressed="true" data-t-aria-label="assistent.voorlezen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg><span><span data-t="assistent.voorlezenAan"></span></span></button>
       <div class="niveau" data-niveau hidden aria-hidden="true"></div>
-      <button type="button" class="stop" data-stop hidden>Stop</button>
-      <button type="button" class="mic" data-mic hidden aria-label="Praat met je huis"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-      <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span>Stop het screen</span></button>
+      <button type="button" class="stop" data-stop hidden><span data-t="kamer.scherm.stop"></span></button>
+      <button type="button" class="mic" data-mic hidden data-t-aria-label="thuis.praat"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button type="button" class="stopscherm" data-stopscherm hidden><i></i><span><span data-t="assistent.stopHetScreen"></span></span></button>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>

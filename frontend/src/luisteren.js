@@ -22,6 +22,8 @@
 (function (global) {
   'use strict';
   if (global.luisteren) return;
+  // De teksten staan in kit/teksten.*.js (besluit 185). Het wekwoord blijft "Hé huis".
+  const tk = (k, p) => global.taal.t(k, p);
 
   const HIER = 'sc-luisteren';
   const DOORPRATEN_MS = 5000;
@@ -108,7 +110,7 @@
       microfoon().then(
         (m) => m.naar.add(stuur),
         () => {
-          op({ soort: 'fout', reden: 'De microfoon mag niet; geef deze pagina toegang tot de microfoon.' });
+          op({ soort: 'fout', reden: tk('assistent.geenMicrofoon') });
           ws.close();
         },
       );
@@ -155,15 +157,15 @@
 
   /** Wat je zei, als vraag aan het huis; een opdracht gaat meteen naar zijn deur (besluit 148). */
   async function vraag(tekst) {
-    const q = new URLSearchParams({ v: 'vrij', tekst, ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
+    const q = new URLSearchParams({ v: 'vrij', tekst, taal: global.taal.code, ...(scherm && Date.now() - scherm.sinds < 60_000 ? { scherm: scherm.id } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json().catch(() => ({}));
-    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.', gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
+    const uit = { antwoord: res.ok ? body.antwoord : body.fout ?? body.wachten ?? tk('assistent.geenAntwoord'), gesproken: res.ok ? body.gesproken ?? null : null, onbekend: res.ok && body.vraag === 'onbekend', klaar: res.ok && body.vraag === 'klaar', ruis: res.ok && body.vraag === 'ruis', voorbeelden: body.voorbeelden ?? [], gedaan: [] };
     if (res.ok && body.opdracht) {
       const r = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) }).catch(() => null);
       if (!r?.ok) {
         const f = r ? await r.json().catch(() => ({})) : {};
-        uit.antwoord = `Dat lukte niet: ${String(f.fout ?? f.wachten ?? 'Home Assistant gaf geen antwoord').replace(/\.$/, '')}.`;
+        uit.antwoord = tk('basis.versie.mislukt', { fout: String(f.fout ?? f.wachten ?? tk('assistent.haGeenAntwoord')).replace(/\.$/, '') });
       } else {
         uit.gedaan = body.gedaan ?? [];
         scherm = body.beweegt ? { ...body.beweegt, sinds: Date.now() } : body.opdracht.body?.actie === 'stop' ? null : scherm;
@@ -177,7 +179,8 @@
   async function zeg(tekst) {
     if (stemNaam === undefined) {
       const s = await fetch('api/stem').then((r) => r.json()).catch(() => null);
-      stemNaam = s?.stem && s?.taal ? s.stem : null;
+      // Piper spreekt hier alleen Nederlands (besluit 185): in een andere taal alleen tekst.
+      stemNaam = s?.stem && s?.taal && global.taal.code === 'nl' ? s.stem : null;
     }
     if (!stemNaam) return new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
     return new Promise((ok) => {
@@ -232,7 +235,7 @@
     laag.className = 'sc-laag';
     laag.setAttribute('role', 'dialog');
     laag.setAttribute('aria-live', 'polite');
-    laag.innerHTML = `<div class="privacy">Je stem blijft in huis</div><div class="kern" aria-hidden="true"><div class="ring"></div><div class="ring r2"></div><div class="bol" data-bol></div></div><div class="tekst" data-tekst></div><div class="onder"><button type="button" class="knopje" data-sluit>Stop</button><span class="hint" data-hint></span></div>`;
+    laag.innerHTML = `<div class="privacy">${esc(tk('luisteren.privacy'))}</div><div class="kern" aria-hidden="true"><div class="ring"></div><div class="ring r2"></div><div class="bol" data-bol></div></div><div class="tekst" data-tekst></div><div class="onder"><button type="button" class="knopje" data-sluit>${esc(tk('kamer.scherm.stop'))}</button><span class="hint" data-hint></span></div>`;
     laag.querySelector('[data-sluit]').addEventListener('click', () => sluit());
     wand.appendChild(laag);
     return laag;
@@ -252,10 +255,10 @@
     l.classList.add('open');
     l.dataset.stand = stand;
     const jij = inhoud.jij ? `<span class="jij">${esc(inhoud.jij)}</span><br>` : '';
-    const wie = { luistert: 'Ik luister', denkt: 'Je huis denkt na', antwoord: 'Je huis', nietverstaan: 'Ik luister nog even' }[stand] ?? 'Je huis';
+    const wie = esc(tk({ luistert: 'luisteren.luistert', denkt: 'assistent.denkt', nietverstaan: 'luisteren.nogEven' }[stand] ?? 'assistent.jeHuis'));
     const groot = inhoud.groot ?? '';
     l.querySelector('[data-tekst]').innerHTML = `${jij}<span class="wie"><i></i>${wie}</span><p class="groot${groot.length > 90 ? ' lang' : ''}${stand === 'denkt' ? ' nog' : ''}">${getal(groot)}</p>${inhoud.klein ? `<p class="klein">${esc(inhoud.klein)}</p>` : ''}${(inhoud.gedaan ?? []).map((k) => `<div class="ding"><b>${esc(k.waarde)}</b><span>${esc(k.uitleg)}</span></div>`).join('')}`;
-    l.querySelector('[data-sluit]').textContent = stand === 'antwoord' ? 'Sluiten' : 'Stop';
+    l.querySelector('[data-sluit]').textContent = tk(stand === 'antwoord' ? 'algemeen.sluiten' : 'kamer.scherm.stop');
     l.querySelector('[data-hint]').textContent = inhoud.hint ?? '';
   }
 
@@ -304,7 +307,7 @@
         dispatchEvent(new CustomEvent('sc-wek', { detail: 'stem' }));
         nietBegrepen = 0;
         tikje();
-        toon('luistert', { groot: 'Zeg het maar.', klein: 'Bijvoorbeeld "doe het licht beneden wat zachter" of "hoe warm is het boven?"', hint: 'Ik luister tot je stopt met praten' });
+        toon('luistert', { groot: tk('luisteren.zegHet'), klein: tk('luisteren.bijvoorbeeld'), hint: tk('luisteren.totStop') });
         leefMee();
       } else if (b.soort === 'tekst') {
         huidig = null;
@@ -328,15 +331,15 @@
     // Niet verstaan of niet begrepen: één keer zeggen; de tweede keer is het ruis, dan stil stoppen.
     if (!tekst) {
       if (nietBegrepen++ > 0) return sluit();
-      toon('nietverstaan', { groot: 'Dat verstond ik niet.', klein: 'Zeg het nog eens, wat langzamer.' });
+      toon('nietverstaan', { groot: tk('luisteren.nietVerstaan'), klein: tk('luisteren.nogEens') });
       return doorpraten();
     }
-    toon('denkt', { jij: tekst, groot: 'Even kijken…' });
+    toon('denkt', { jij: tekst, groot: tk('kamer.kijken') });
     let uit;
     try {
       uit = await vraag(tekst);
     } catch {
-      uit = { antwoord: 'Ik kan Smart Climate nu niet bereiken.', gedaan: [] };
+      uit = { antwoord: tk('assistent.nietBereikbaar'), gedaan: [] };
     }
     // Alleen geluid: zoals niets gezegd (21 oktober 2026).
     if (uit.ruis) return verwerk('');
@@ -348,8 +351,8 @@
     }
     if (uit.onbekend && nietBegrepen++ > 0) return sluit();
     if (!uit.onbekend) nietBegrepen = 0;
-    const vb = uit.onbekend ? uit.voorbeelden.slice(0, 2).map((t) => `"${t}"`).join(' of ') : '';
-    toon('antwoord', { jij: tekst, groot: uit.onbekend ? 'Dat begrijp ik nog niet.' : uit.antwoord, klein: vb ? `Vraag bijvoorbeeld ${vb}` : '', gedaan: uit.gedaan.slice(0, 2), hint: 'Zeg gerust nog iets' });
+    const vb = uit.onbekend ? uit.voorbeelden.slice(0, 2).map((x) => `"${x}"`).join(` ${tk('luisteren.of')} `) : '';
+    toon('antwoord', { jij: tekst, groot: uit.onbekend ? tk('luisteren.begrijpNiet') : uit.antwoord, klein: vb ? tk('luisteren.vraagBijvoorbeeld', { voorbeelden: vb }) : '', gedaan: uit.gedaan.slice(0, 2), hint: tk('luisteren.nogIets') });
     await zeg(uit.gesproken ?? uit.antwoord);
     if (!laag?.classList.contains('open')) return;
     sluitTimer = setTimeout(sluit, SLUITEN_MS);
@@ -398,7 +401,7 @@
       },
     );
     const dok = document.querySelector('.dok .vraag');
-    if (dok) dok.innerHTML = 'Zeg <b>"Hé huis"</b> of tik om iets te vragen';
+    if (dok) dok.innerHTML = global.taal.html('luisteren.dok');
   }
 
   /* ------------------------------------------------------- de telefoon: één keer */

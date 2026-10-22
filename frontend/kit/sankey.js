@@ -63,7 +63,7 @@
       })
       .join('');
     // Met `vul` vult hij de breedte van zijn vak en schaalt hij mee.
-    return `<svg viewBox="0 0 ${B} ${H}" ${o.vul ? 'width="100%" style="height: auto; display: block"' : `width="${B}" height="${H}"`} role="img" aria-label="${o.beschrijving ?? 'Waar de energie heen ging'}">${banden}${lbL}${lbR}</svg>`;
+    return `<svg viewBox="0 0 ${B} ${H}" ${o.vul ? 'width="100%" style="height: auto; display: block"' : `width="${B}" height="${H}"`} role="img" aria-label="${o.beschrijving ?? ''}">${banden}${lbL}${lbR}</svg>`;
   }
   global.sankey = { svg };
 })(window);

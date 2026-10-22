@@ -68,10 +68,10 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main>
       <div class="kop">
-        <div><h1 class="kop-1">Apparaten</h1><p class="lead" style="max-width: 64ch; margin-top: 8px">Wat elk apparaat nu doet, en wat het vandaag op eigen zon deed.</p></div>
+        <div><h1 class="kop-1"><span data-t="nav.apparaten"></span></h1><p class="lead" style="max-width: 64ch; margin-top: 8px"><span data-t="apparaten.lead"></span></p></div>
         <div class="glas zonchip" data-zonchip></div>
       </div>
       <div class="raster" data-apparaten></div>
@@ -82,14 +82,14 @@
   <div id="tel" class="tel">
     <div class="inhoud">
       <div style="display: flex; justify-content: space-between; align-items: center">
-        <h1 class="kop-1" style="font-size: 34px">Apparaten</h1>
-        <a class="pil" aria-label="Instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
+        <h1 class="kop-1" style="font-size: 34px"><span data-t="nav.apparaten"></span></h1>
+        <a class="pil" data-t-aria-label="nav.instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
       </div>
       <div class="glas zonchip" data-zonchip></div>
       <div data-apparaten style="display: flex; flex-direction: column; gap: 12px"></div>
       <section class="glas verdeling" data-verdeling></section>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>

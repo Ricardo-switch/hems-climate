@@ -40,6 +40,9 @@ export function stringsIn(code: string): { tekst: string; regel: number }[] {
     // Een melding voor de ontwikkelaar, in de console of in een fout, is geen tekst voor de bewoner.
     if (ts.isCallExpression(n) && /^console\./.test(n.expression.getText(bron))) return;
     if (ts.isNewExpression(n) && /^(Error|TypeError)$/.test(n.expression.getText(bron))) return;
+    // Een klassenaam is geen tekst: el.className = 'glas app niet', classList.add('...').
+    if (ts.isBinaryExpression(n) && n.operatorToken.kind === ts.SyntaxKind.EqualsToken && /\.className$/.test(n.left.getText(bron))) return;
+    if (ts.isCallExpression(n) && /\.classList\.\w+$/.test(n.expression.getText(bron))) return;
     const regel = () => bron.getLineAndCharacterOfPosition(n.getStart(bron)).line + 1;
     if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) uit.push({ tekst: n.text, regel: regel() });
     else if (ts.isTemplateExpression(n)) for (const t of [n.head.text, ...n.templateSpans.map((s) => s.literal.text)]) uit.push({ tekst: t, regel: regel() });
@@ -62,10 +65,27 @@ export function losInBestand(pad: string, code: string): { tekst: string; regel:
   return uit;
 }
 
+/**
+ * Ruimer, om om te zetten (`--alles`): elke string met een woord erin dat geen
+ * code is, ook een los woord als "Rook". Niet voor de test: te veel ruis.
+ */
+export function alleTekst(pad: string, code: string): { tekst: string; regel: number }[] {
+  if (pad.endsWith('.html')) return losInBestand(pad, code);
+  return stringsIn(code).filter(({ tekst }) => {
+    const zonderTags = tekst.replace(/<[^>]*>?/g, ' ').replace(/^[^<]*>/, ' ');
+    const woorden = zonderTags.split(/\s+/).filter((w) => /^[A-Za-zÀ-ÿ'’]{2,}[.,!?:;…]*$/.test(w));
+    if (!woorden.length) return /(?<![\w-])(?:aria-label|title|alt|placeholder)="[^"$]*[A-Za-z]{3}/.test(tekst);
+    // Eén los woord in kleine letters is meestal een sleutel, een klasse of een soort.
+    return woorden.length > 1 || /^[A-ZÀ-Ý]/.test(woorden[0]!) || /(?<![\w-])(?:aria-label|title|alt|placeholder)="/.test(tekst);
+  });
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const toon = process.argv.includes('--toon');
-  for (const pad of process.argv.slice(2).filter((a) => a !== '--toon')) {
-    const los = losInBestand(pad, readFileSync(pad, 'utf-8'));
+  const toon = process.argv.includes('--toon') || process.argv.includes('--alles');
+  const alles = process.argv.includes('--alles');
+  for (const pad of process.argv.slice(2).filter((a) => !a.startsWith('--'))) {
+    const code = readFileSync(pad, 'utf-8');
+    const los = alles ? alleTekst(pad, code) : losInBestand(pad, code);
     console.log(`${los.length}\t${pad}`);
     if (toon) for (const l of los) console.log(`  ${l.regel}: ${l.tekst.slice(0, 120).replace(/\s+/g, ' ')}`);
   }

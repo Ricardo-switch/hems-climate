@@ -8346,6 +8346,15 @@ gehouden met meervouden: ja, met de regels per taal.
   wat er nog om te zetten is; de taaltest gebruikt dezelfde herkenning. De
   proefomgeving op de NAS (`index.html`, `app.js`, `stand.js`) blijft
   Nederlands: die is voor de ontwikkelaar.
+- **Stap 9, tweede deel (0.59.2):** Kamer, Vandaag, Apparaten, Opbrengst en
+  de Assistent, met de microfoon en "Hé huis" (het wekwoord zelf blijft
+  Nederlands). Wat de app aan de assistent vraagt, gaat in de taal van de app
+  (`?taal=`), zodat het antwoord in die taal komt. Piper spreekt hier alleen
+  Nederlands; in een andere taal leest de assistent voor met de stem van het
+  apparaat. De paginatest zet al deze pagina's in het Engels, met de
+  toegankelijkheidscontrole op elk. Woorden die de dienst nog in het
+  Nederlands geeft en die de app herkent (een scherm dat beweegt, "Er draait
+  niets"), staan als vaste patronen in de code tot de dienst meertalig is.
 
 *Wat er nog Nederlands is op Thuis (stap 9):* de teksten uit `api/huis`,
 `api/weer` en de meldingen (de stand van een apparaat, het weer in woorden), en
