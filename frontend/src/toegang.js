@@ -119,18 +119,28 @@ function assistentVorm() {
  * met een knop; de add-on kopieert dan alleen custom_components/smart_climate.
  * Home Assistant laadt hem na een herstart, en dat doe je zelf.
  */
+/** De stappen in HACS, met het adres om te kopiëren. */
+const HACS_STAPPEN = `<ol class="klein stappen">
+    <li>Open <b>HACS</b> in Home Assistant.</li>
+    <li>Kies rechtsboven de drie puntjes en dan <b>Eigen repositories</b>.</li>
+    <li>Plak dit adres, kies als type <b>Integratie</b> en klik op <b>Toevoegen</b>:<div class="sleutel">https://github.com/Ricardo-switch/hems-climate</div></li>
+    <li>Zoek <b>Smart Climate</b>, kies <b>Downloaden</b> en herstart Home Assistant.</li>
+  </ol>`;
+const EENMALIG = '<p class="mini" style="margin: 0">Dit doe je één keer. Een update van Smart Climate vraagt daarna geen herstart: de zinnen en de antwoorden komen uit de add-on. Alleen als de integratie zelf verandert, en dat is zelden, vraagt HACS of de app om een herstart.</p>';
+
 function integratieVorm() {
   const i = integratie;
-  if (!i?.kan) return '<p class="klein" style="margin: 0">Installeer de integratie via HACS: voeg deze repository toe als eigen repository, kies Smart Climate en herstart Home Assistant.</p>';
   const zin = integratieZin ? `<p class="mini" style="margin: 0" aria-live="polite">${esc(integratieZin)}</p>` : '';
+  if (!i?.kan) return `<p class="klein" style="margin: 0">Installeer de integratie via HACS:</p>${HACS_STAPPEN}${EENMALIG}`;
   if (i.staat === 'anders') return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, via HACS${i.versie ? ` (versie ${esc(i.versie)})` : ''}. Updates komen via HACS.</p>${zin}`;
   if (i.staat === 'nee') {
-    return `<p class="klein" style="margin: 0">Heb je HACS, installeer hem daar. Zonder HACS zet de add-on hem voor je neer; daarna herstart je Home Assistant.</p>
-      <button type="button" class="knop knop-licht" data-integratie style="align-self: start">Zet de integratie in Home Assistant</button>${zin}`;
+    return `<p class="klein" style="margin: 0"><b>Zonder HACS</b> zet de add-on hem voor je neer; daarna herstart je Home Assistant.</p>
+      <button type="button" class="knop knop-licht" data-integratie style="align-self: start">Zet de integratie in Home Assistant</button>${zin}
+      <details class="hacs"><summary class="klein">Heb je HACS? Zo installeer je hem daar</summary>${HACS_STAPPEN}</details>${EENMALIG}`;
   }
   const herstart = i.geladen !== i.versie;
-  return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, neergezet door de add-on (versie ${esc(i.versie ?? '?')}). Hij gaat mee met de updates van de add-on.</p>
-    ${herstart ? '<p class="klein" style="margin: 0; color: var(--zon-t)">Herstart Home Assistant om hem te laden: Instellingen › Systeem › Herstarten.</p>' : ''}${zin}`;
+  return `<p class="klein" style="margin: 0"><b>De integratie staat er</b>, neergezet door de add-on (versie ${esc(i.versie ?? '?')}).</p>
+    ${herstart ? '<p class="klein" style="margin: 0; color: var(--zon-t)">Herstart Home Assistant om hem te laden: Instellingen › Systeem › Herstarten.</p>' : ''}${zin}${EENMALIG}`;
 }
 
 const linkKnop = (href, tekst, extra = '') => `<a class="knop knop-licht" href="${href}" ${extra} style="align-self: start; display: inline-flex; align-items: center; text-decoration: none">${tekst}</a>`;

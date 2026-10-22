@@ -12,7 +12,7 @@
  */
 
 import { Integratie } from './web/integratie.js';
-import { PushStore, alsMelding, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
+import { PushStore, alsMelding, paneelVan, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
@@ -979,7 +979,7 @@ if (version.installatie === 'add-on' && process.env['SUPERVISOR_TOKEN']) {
   void fetch('http://supervisor/addons/self/info', { headers: { authorization: `Bearer ${process.env['SUPERVISOR_TOKEN']}` } })
     .then((r) => (r.ok ? (r.json() as Promise<{ data?: { slug?: string } }>) : null))
     .then((info) => {
-      if (info?.data?.slug) paneelPad = `/hassio/ingress/${info.data.slug}`;
+      paneelPad = paneelVan(info?.data?.slug);
     })
     .catch(() => undefined);
 }

@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { HaClient, type HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
 import type { Melding } from '../src/web/meldingen.js';
-import { STANDAARD_MELDINGEN, alsDienst, alsMelding, inNachtrust, teSturen, telefoonVan, vindTelefoons, type Ontvanger, type Telefoon } from '../src/web/push.js';
+import { STANDAARD_MELDINGEN, alsDienst, alsMelding, paneelVan, inNachtrust, teSturen, telefoonVan, vindTelefoons, type Ontvanger, type Telefoon } from '../src/web/push.js';
 import { leesMeldingen } from '../src/web/voorkeuren.js';
 
 const TZ = 'Europe/Amsterdam';
@@ -34,9 +34,15 @@ describe('de deur naar de telefoon (besluit 183)', () => {
     await expect(dicht.callService('notify', 'mobile_app_pixel_8', { message: 'hoi' }, {})).rejects.toThrow(/Schrijven staat uit/);
   });
 
+  it('opent met een tik het paneel van de add-on in de zijbalk, geen 404', () => {
+    expect(paneelVan('a0d7b954_hems_climate')).toBe('/a0d7b954_hems_climate');
+    expect(paneelVan(null)).toBeNull();
+    expect(paneelVan('../config')).toBeNull();
+  });
+
   it('maakt een melding met een label, stil voor weer goed en dringend voor rook', () => {
-    const stil = alsMelding({ dienst: 'mobile_app_x', titel: 'Airco zolder weer goed', tekst: 'Nu weer wel.', tag: 'smart-climate-stil', dringend: false, stil: true }, '/hassio/ingress/abc_smart_climate');
-    expect(stil).toEqual({ title: 'Airco zolder weer goed', message: 'Nu weer wel.', data: { tag: 'smart-climate-stil', group: 'smart-climate', clickAction: '/hassio/ingress/abc_smart_climate', url: '/hassio/ingress/abc_smart_climate', alert_once: true, push: { 'interruption-level': 'passive' } } });
+    const stil = alsMelding({ dienst: 'mobile_app_x', titel: 'Airco zolder weer goed', tekst: 'Nu weer wel.', tag: 'smart-climate-stil', dringend: false, stil: true }, '/abc_smart_climate');
+    expect(stil).toEqual({ title: 'Airco zolder weer goed', message: 'Nu weer wel.', data: { tag: 'smart-climate-stil', group: 'smart-climate', clickAction: '/abc_smart_climate', url: '/abc_smart_climate', alert_once: true, push: { 'interruption-level': 'passive' } } });
     const rook = alsMelding({ dienst: 'mobile_app_x', titel: 'Rook in de keuken', tekst: '…', tag: 't', dringend: true, stil: false }, null);
     expect(rook.data).toEqual({ tag: 't', group: 'smart-climate', priority: 'high', ttl: 0, push: { 'interruption-level': 'time-sensitive' } });
   });

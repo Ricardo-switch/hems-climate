@@ -171,6 +171,16 @@ export function teSturen(meldingen: readonly Melding[], ontvangers: readonly Ont
   return { berichten, verstuurd: uit };
 }
 
+/**
+ * Waar een tik op de melding naartoe gaat: het paneel van de add-on in de
+ * zijbalk van Home Assistant, op `/<slug>` (zo registreert Home Assistant een
+ * add-on met Ingress, ook voor wie geen beheerder is). Eerst stond hier
+ * `/hassio/ingress/<slug>`, en dat gaf in de app een 404.
+ */
+export function paneelVan(slug: string | null | undefined): string | null {
+  return slug && /^[a-z0-9_]+$/.test(slug) ? `/${slug}` : null;
+}
+
 /** Een bericht als de velden van `notify.mobile_app_…`; `pad` opent Smart Climate in de app. */
 export function alsMelding(b: Bericht, pad: string | null): { title: string; message: string; data: Record<string, unknown> } {
   return {

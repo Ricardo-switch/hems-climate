@@ -8197,7 +8197,9 @@ goed, dan verdwijnt de melding stil; en het dringende staat meteen aan.
 - **De telefoon:** de app van Home Assistant op een telefoon (`mobile_app`).
   Hangt die aan de persoon van je account, dan is het de jouwe; anders kies je
   er een. Een proefmelding laat zien of het aankomt. Een tik op een melding
-  opent Smart Climate in de app van Home Assistant.
+  opent Smart Climate in de app van Home Assistant: het paneel op `/<slug>`
+  van de add-on. Eerst was dat `/hassio/ingress/<slug>`, en dat gaf een 404
+  (0.58.1).
 - **Een zevende smalle deur** in de client (`allowNotify`, `isNotifyCall`):
   precies `notify.mobile_app_…`, zonder doel, met alleen een titel, een tekst
   en de vaste velden van zo'n melding (een label, waar een tik heen gaat, hoe
@@ -8252,6 +8254,13 @@ niets met de hand in de YAML hoeven te doen, zoals hij moest.
   die tik. Na neerzetten of een nieuwe versie herstart de bewoner Home
   Assistant zelf; de app zegt het, en ziet aan de geladen versie of het
   gebeurd is.
+- **Een eigen versie, los van de app** (0.58.1): de integratie begint op 1.0.0
+  en gaat alleen omhoog als zijn code verandert; een test bewaakt dat met een
+  vingerafdruk. Voor HACS komt er bij zo'n versie een GitHub-release. Zo vraagt
+  een update van de app geen herstart van Home Assistant; eerst had de
+  integratie het nummer van de app, en zagen HACS en de knop bij elke update
+  een nieuwe versie. De app legt de stappen in HACS uit, en dat het eenmalig
+  is.
 - **`ha-assist/` is weg.** Wie Assist met de YAML had ingericht, haalt na het
   installeren `rest_command`, `intent_script` en de sleutel in `secrets.yaml`
   weg; het zinnenbestand wordt vanzelf overschreven.

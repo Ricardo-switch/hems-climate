@@ -93,7 +93,7 @@ Wil je Smart Climate ook vragen via Assist van Home Assistant ("waarom draait de
 - **Met HACS:** kies in HACS de drie puntjes → **Eigen repositories**, voeg `https://github.com/Ricardo-switch/hems-climate` toe als **Integratie**, installeer **Smart Climate** en herstart Home Assistant.
 - **Zonder HACS:** open Smart Climate → **Instellingen → Bewoners en toegang → Sleutel voor de assistent** en tik op **Zet de integratie in Home Assistant**. Herstart daarna Home Assistant.
 
-Home Assistant toont dan **Nieuw apparaat gevonden: Smart Climate**; klik op **Toevoegen**. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat Smart Climate zou doen.
+Home Assistant toont dan **Nieuw apparaat gevonden: Smart Climate**; klik op **Toevoegen**. Dat doe je één keer: een update van Smart Climate vraagt daarna geen herstart, want de zinnen en de antwoorden komen uit de add-on. De integratie heeft een eigen versie, die alleen omhoog gaat als hij zelf verandert. De integratie houdt de zinnen en de kamers van je huis zelf bij. Alles leest alleen: een opdracht als "koel de zolder naar 21" krijgt als antwoord wat Smart Climate zou doen.
 
 Werkt het met jouw apparaten? Smart Climate werkt met wat je huis heeft. Een airco, een thermostaat, een slimme meter, panelen van elk merk: het doet wat jouw opstelling toelaat, en zegt bij **Wat je huis kan** wat het daardoor (nog) niet kan.
 
