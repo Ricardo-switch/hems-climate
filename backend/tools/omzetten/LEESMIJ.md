@@ -22,6 +22,21 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
   Engels kiest. De uitleg bij Jij (`jij.taal.uitleg`, `jij.taal.enUitleg`)
   dan bijwerken. Duits later ([172]).
 
+## Waar deel 5 begint
+
+1. Na het samenvoegen van PR 52: markeer `v0.59.4` op de merge-commit op main
+   en zet beta erop vooruit (`git merge --ff-only origin/main`).
+2. De dienst kent de taal al: `taalVan()` in `backend/src/web/server.ts`
+   (`?taal=` of de kop `x-taal`), en `residentView` krijgt hem mee. Geef de
+   taal door aan wat tekst maakt, en kies per taal een tekst, net als de
+   uitleg die al tweetalig was.
+3. Begin bij wat de bewoner het meest ziet: de stand van een apparaat in
+   `backend/src/web/house.ts` (`api/huis`), dan het weer (`api/weer`), dan de
+   meldingen. Geef daarbij een vaste code mee (zoals `koelt`), en laat
+   `huismodel.ACTIEF` en `BEWEEGT` in `frontend/src/kamer.js` op die code
+   letten in plaats van op het woord.
+4. Een test per tekst in beide talen, zoals de bestaande tests van de uitleg.
+
 ## Een pagina omzetten
 
 1. Kijk wat er staat: `npm run teksten -- --alles --toon ../frontend/src/<pagina>.js`
