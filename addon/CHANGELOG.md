@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.58.3
+
+*22 oktober 2026*
+
+**Opgelost**
+
+- Een kamer zonder regeling en zonder losse meter, zoals de badkamer, toont weer zijn temperatuur: die van de thermostaat in de kamer
+- Bij een open keuken met zones staat de keuken in de tekening onder de zone Keuken en de bank onder de andere, in plaats van altijd links de keuken
+
 ## 0.58.2
 
 *22 oktober 2026*

@@ -172,6 +172,12 @@ describe('het voorstel uit Home Assistant', () => {
     expect(knop.radiatorknop).toEqual({ koppeling: 'zha', klepPct: 35 });
     expect(knop.meting?.temperatuurC).toBe(19.5);
     expect(knop.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true, doelC: 20 });
+    // Zonder regeling en zonder meter is de knop de temperatuur van de kamer, ook als hij uit staat.
+    const zone = config.zones.find((z) => z.id === 'badkamer')!;
+    const zonder = { ...config, zones: config.zones.filter((z) => z !== zone), actuators: config.actuators.filter((a) => !zone.actuatorIds.includes(a.id)) };
+    metStand.set('climate.radiator_badkamer', { ...metStand.get('climate.radiator_badkamer')!, state: 'off' });
+    const bad = buildHouse(zonder, metKnop, metStand, snapshot).etages.flatMap((e) => e.ruimtes).find((r) => r.naam === 'Badkamer')!;
+    expect([bad.zoneId, bad.temperatuurC, bad.gemetenDoor]).toEqual([null, 19.5, 'Radiator badkamer']);
   });
 
   it('toont een airco via een tweede koppeling niet nog eens (besluit 127)', () => {

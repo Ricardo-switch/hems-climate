@@ -2785,6 +2785,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await context.close();
   }, 30_000);
 
+  /* Een open keuken met zones (22 oktober 2026): de keuken staat onder de zone die Keuken heet, ook rechts. */
+  it('zet bij een open keuken de keuken onder de zone Keuken en de zithoek onder de andere', async () => {
+    const p = await browser.newPage();
+    await p.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await p.goto(`${baseUrl}/manifest.webmanifest`);
+    await p.setContent(`<!doctype html><body><script src="${baseUrl}/kit/huis.js"></script></body>`);
+    await p.waitForFunction('window.huis != null');
+    const midden = await p.evaluate(() => {
+      const w = globalThis as unknown as { huis: { svg: (m: unknown, o: unknown) => string } };
+      return [['Zithoek', 'Keuken'], ['Keuken', 'Zithoek']].map((zones) => {
+        const svg = w.huis.svg({ tijd: 'dag', etages: [{ naam: 'bg', kamers: [{ id: 'beneden', naam: 'Beneden', gewicht: 1.4, inrichting: 'woonkeuken', zones, apparaten: [] }] }] }, { breedte: 700, hoogte: 520, meubels: true, controle: true });
+        const blokken = JSON.parse((/<desc class="sc-controle">(.*?)<\/desc>/s.exec(svg)?.[1] ?? '[]').replace(/&quot;/g, '"')) as { wat: string; deel?: string; x0: number; x1: number }[];
+        const van = (deel: string) => {
+          const m = blokken.filter((b) => b.wat === 'meubel' && b.deel === deel);
+          return m.reduce((s, b) => s + (b.x0 + b.x1) / 2, 0) / m.length;
+        };
+        return { keuken: van('keuken'), zithoek: van('woonkamer') };
+      });
+    });
+    expect(midden[0]!.keuken).toBeGreaterThan(midden[0]!.zithoek);
+    expect(midden[1]!.keuken).toBeLessThan(midden[1]!.zithoek);
+    await p.close();
+  });
+
   it('beantwoordt een getypte vraag, met een knop naar de pagina', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
