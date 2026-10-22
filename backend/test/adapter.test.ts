@@ -107,6 +107,8 @@ async function startFakeHa(options: {
   rejectAuth?: boolean;
   /** Wat een AI-taak antwoordt (besluit 148). */
   aiTask?: unknown;
+  /** Op deze vragen zegt hij niets, zoals tijdens een herstart (22 oktober 2026). */
+  zwijgOp?: string;
 }): Promise<FakeHa> {
   const received: Record<string, unknown>[] = [];
   const binary: Buffer[] = [];
@@ -144,6 +146,7 @@ async function startFakeHa(options: {
         }
         return;
       }
+      if (options.zwijgOp != null && msg['type'] === options.zwijgOp) return;
       if (msg['type'] === 'get_states') {
         socket.send(
           JSON.stringify({
@@ -292,6 +295,23 @@ describe('HaClient', () => {
 });
 
 describe('schrijfbeveiliging', () => {
+  it('laat een vraag nooit eeuwig wachten: zonder verbinding meteen nee, zonder antwoord na een grens (22 oktober 2026)', async () => {
+    // Zonder verbinding: meteen een fout, niet een belofte die nooit afloopt.
+    const los = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN });
+    await expect(los.query('get_config')).rejects.toThrow(/geen verbinding/);
+    // Verbonden, maar Home Assistant zegt niets (hij herstart): na de grens een fout.
+    const ha = await startFakeHa({ zwijgOp: 'get_config' });
+    cleanups.push(() => ha.close());
+    const client = new HaClient({ url: `http://127.0.0.1:${ha.port}`, token: TOKEN, antwoordMs: 200 });
+    cleanups.push(() => client.close());
+    const ready = new Promise((resolve) => client.on('ready', resolve));
+    client.connect();
+    await ready;
+    await expect(client.query('get_config')).rejects.toThrow(/niet op tijd/);
+    // Een volgende vraag gaat gewoon.
+    expect(await client.query('tts/engine/list')).toBeNull();
+  });
+
   it('weigert callService zolang schrijven uit staat', async () => {
     const client = new HaClient({ url: 'http://127.0.0.1:1', token: TOKEN });
     expect(client.writesAllowed).toBe(false);
