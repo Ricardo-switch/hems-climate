@@ -13,6 +13,8 @@
   'use strict';
 
   const { esc, haal, nl } = global.app;
+  // De teksten in kit/teksten.*.js (besluit 185); `t` is hier de tijd van de film.
+  const tk = (k, p) => global.taal.t(k, p);
   const GELUID = 'sc-film-geluid';
 
   /* ------------------------------------------------------------ de maat */
@@ -403,16 +405,16 @@
     const zonNaam = naamIn(c.zonKamer);
     const warmNaam = naamIn(c.warmKamer);
     const lijst = [
-      { soort: 'intro', maten: 4, tijd: 'ochtend', titel: 'Een dag in je huis', groot: 'Smart Climate', kleur: 'var(--tekst)', kop: 'Dit is je huis.', klein: 'Met de cijfers van je eigen huis.', zoom: 0.94 },
-      c.gisterenKwh != null && { maten: 2, tijd: 'ochtend', titel: 'Gisteren, van je panelen', groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', kop: 'Zoveel stroom gaven je panelen gisteren.', klein: 'Smart Climate ziet wat je huis doet, elke minuut.', zoom: 0.96 },
-      { maten: 2, tijd: 'ochtend', titel: 'Je hele huis', groot: String(c.kamers), kleur: 'var(--tekst)', kop: `${c.kamers === 1 ? 'kamer' : 'kamers'}, ${c.apparaten} apparaten. Eén huis.`, klein: 'Gevonden in Home Assistant. Jij kijkt of het klopt.', temp: true, zoom: 1 },
-      c.warmKamer && { maten: 2, tijd: 'dag', titel: 'Elke kamer in beeld', groot: `${nl(c.warmKamer.temperatuurC)}°`, kleur: 'var(--gloed)', kop: `in ${warmNaam}, nu.`, klein: 'Het huis weet hoe warm elke kamer is, en zegt bij elk besluit waarom.', warmKamer: true, zoom: 1.06 },
-      c.piekKw != null && { maten: 2, drop: true, tijd: 'dag', titel: 'Je panelen op hun best', groot: `${nl(c.piekKw)} kW`, kleur: 'var(--zon)', kop: zonNaam ? `Met wat over is, ${zomer ? 'koelt' : 'warmt'} ${zonNaam} ${zomer ? 'af' : 'op'}.` : 'Met wat over is, draaien je apparaten.', klein: 'Op stroom van je eigen panelen, niet van het net.', zonKamer: true, zoom: 1.08 },
-      { maten: 2, tijd: 'dag', titel: 'Vraag het je huis', groot: '“Waarom?”', kleur: 'var(--ijs)', kop: 'Het huis antwoordt, hardop.', klein: 'Lokaal, met je eigen gegevens. Niets gaat het huis uit.', zoom: 0.98 },
-      c.morgenKwh != null && { maten: 2, tijd: 'avond', titel: 'Kijkt vooruit', groot: `${nl(c.morgenKwh)} kWh`, kleur: 'var(--violet)', kop: 'zon verwacht voor morgen. Het huis weet het al.', klein: 'Uit het weer en wat je panelen leerden.', zoom: 1 },
+      { soort: 'intro', maten: 4, tijd: 'ochtend', titel: tk('film.intro.titel'), groot: 'Smart Climate', kleur: 'var(--tekst)', kop: tk('film.intro.kop'), klein: tk('film.intro.klein'), zoom: 0.94 },
+      c.gisterenKwh != null && { maten: 2, tijd: 'ochtend', titel: tk('film.gisteren.titel'), groot: `${nl(c.gisterenKwh)} kWh`, kleur: 'var(--zon)', kop: tk('film.gisteren.kop'), klein: tk('film.gisteren.klein'), zoom: 0.96 },
+      { maten: 2, tijd: 'ochtend', titel: tk('film.huis.titel'), groot: String(c.kamers), kleur: 'var(--tekst)', kop: tk('film.huis.kop', { n: c.kamers, apparaten: c.apparaten }), klein: tk('film.huis.klein'), temp: true, zoom: 1 },
+      c.warmKamer && { maten: 2, tijd: 'dag', titel: tk('film.kamer.titel'), groot: `${nl(c.warmKamer.temperatuurC)}°`, kleur: 'var(--gloed)', kop: tk('film.kamer.kop', { kamer: warmNaam }), klein: tk('film.kamer.klein'), warmKamer: true, zoom: 1.06 },
+      c.piekKw != null && { maten: 2, drop: true, tijd: 'dag', titel: tk('film.zon.titel'), groot: `${nl(c.piekKw)} kW`, kleur: 'var(--zon)', kop: zonNaam ? tk(zomer ? 'film.zon.koelt' : 'film.zon.warmt', { kamer: zonNaam }) : tk('film.zon.apparaten'), klein: tk('film.zon.klein'), zonKamer: true, zoom: 1.08 },
+      { maten: 2, tijd: 'dag', titel: tk('film.vraag.titel'), groot: tk('film.vraag.groot'), kleur: 'var(--ijs)', kop: tk('film.vraag.kop'), klein: tk('film.vraag.klein'), zoom: 0.98 },
+      c.morgenKwh != null && { maten: 2, tijd: 'avond', titel: tk('film.morgen.titel'), groot: `${nl(c.morgenKwh)} kWh`, kleur: 'var(--violet)', kop: tk('film.morgen.kop'), klein: tk('film.morgen.klein'), zoom: 1 },
       c.eigenPct != null
-        ? { soort: 'slot', maten: 5, tijd: 'avond', titel: 'Klaar', groot: `${c.eigenPct}%`, kleur: 'var(--mint)', kop: 'van je stroom kwam deze maand van je eigen panelen.', klein: 'Je huis kijkt vanaf nu mee.', eind: true, zoom: 1 }
-        : { soort: 'slot', maten: 5, tijd: 'avond', titel: 'Klaar', groot: 'Welkom thuis', kleur: 'var(--mint)', kop: 'Je huis staat erin.', klein: 'Je huis kijkt vanaf nu mee.', eind: true, zoom: 1 },
+        ? { soort: 'slot', maten: 5, tijd: 'avond', titel: tk('inr.klaar'), groot: `${c.eigenPct}%`, kleur: 'var(--mint)', kop: tk('film.slot.eigen'), klein: tk('film.slot.klein'), eind: true, zoom: 1 }
+        : { soort: 'slot', maten: 5, tijd: 'avond', titel: tk('inr.klaar'), groot: tk('film.slot.welkom'), kleur: 'var(--mint)', kop: tk('film.slot.staat'), klein: tk('film.slot.klein'), eind: true, zoom: 1 },
     ].filter(Boolean);
     // Geen beeld van je dak: de drop op het vierde beeld, of het laatste voor het slot.
     if (!lijst.some((b) => b.drop)) lijst[Math.min(4, lijst.length - 2)].drop = true;
@@ -452,7 +454,7 @@
         : b.tijd === 'ochtend' ? { stand: 0.2, hoogte: 0.35, aandeel: 0.25, panelen: t.panelen }
           : { stand: 0.94, hoogte: 0.08, aandeel: 0, panelen: t.panelen };
     return {
-      beschrijving: `Je huis in de film: ${b.titel}.`,
+      beschrijving: tk('film.beschrijving', { titel: b.titel }),
       tijd: b.tijd,
       wolken: 0.1,
       zon,
@@ -553,11 +555,11 @@
     el.className = 'film';
     el.setAttribute('role', 'dialog');
     el.setAttribute('aria-modal', 'true');
-    el.setAttribute('aria-label', 'Een dag in je huis, een film van 45 seconden');
+    el.setAttribute('aria-label', tk('film.label'));
     el.style.setProperty('--tel', `${TEL}s`);
     el.innerHTML = `${['nacht', 'ochtend', 'dag', 'avond'].map((x) => `<div class="film-lucht ${x}${x === 'nacht' ? ' aan' : ''}" data-lucht="${x}"></div>`).join('')}
       <div class="film-beeld"><div class="film-woord" aria-live="polite" data-film-tekst></div><div class="film-huis" data-film-huis><div class="film-zoom" data-film-zoom></div></div><div class="film-flits" data-film-flits></div></div>
-      <div class="film-balk"><button type="button" data-film-pauze aria-label="Pauzeren">❚❚</button><div class="film-tellen" role="progressbar" aria-label="Voortgang" aria-valuemin="0" aria-valuemax="100" data-film-tellen><b></b></div><button type="button" data-film-geluid aria-pressed="${geluidAan}">${geluidAan ? 'Geluid aan' : 'Geluid uit'}</button><button type="button" data-film-klaar>Overslaan</button></div>`;
+      <div class="film-balk"><button type="button" data-film-pauze aria-label="${esc(tk('film.pauze'))}">❚❚</button><div class="film-tellen" role="progressbar" aria-label="${esc(tk('film.voortgang'))}" aria-valuemin="0" aria-valuemax="100" data-film-tellen><b></b></div><button type="button" data-film-geluid aria-pressed="${geluidAan}">${esc(tk(geluidAan ? 'film.geluidAan' : 'film.geluidUit'))}</button><button type="button" data-film-klaar>${esc(tk('rond.overslaan'))}</button></div>`;
     document.body.append(el);
     el.querySelector('[data-film-klaar]').focus();
 
@@ -587,7 +589,7 @@
     function woorden(b) {
       const groot = b.soort === 'intro' ? `<div class="groot merkwoord in" style="color: ${b.kleur}; animation-delay: ${stil ? 0 : MAAT}s"><i aria-hidden="true"></i>${esc(b.groot)}</div>` : `<div class="groot in${b.drop || (beeldNu > lijst.findIndex((x) => x.drop) && !b.eind) ? (stil ? '' : ' puls') : ''}" style="color: ${b.kleur}">${esc(b.groot)}</div>`;
       const vertraag = (n) => (stil ? 0 : b.soort === 'intro' ? MAAT * n : 0.15 * n);
-      return `<div class="titel in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 1 : 0)}s">${esc(b.titel)}</div>${groot}<h2 class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2 : 1)}s">${esc(b.kop)}</h2><p class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2.5 : 2)}s">${esc(b.klein)}</p>${b.eind ? `<div class="film-eind in" style="animation-delay: ${stil ? 0 : MAAT * 2}s"><span class="merkje"><i aria-hidden="true"></i>Smart Climate</span><button type="button" data-film-begin>Begin</button></div>` : ''}`;
+      return `<div class="titel in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 1 : 0)}s">${esc(b.titel)}</div>${groot}<h2 class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2 : 1)}s">${esc(b.kop)}</h2><p class="in" style="animation-delay: ${vertraag(b.soort === 'intro' ? 2.5 : 2)}s">${esc(b.klein)}</p>${b.eind ? `<div class="film-eind in" style="animation-delay: ${stil ? 0 : MAAT * 2}s"><span class="merkje"><i aria-hidden="true"></i>Smart Climate</span><button type="button" data-film-begin>${esc(tk('inr.begin'))}</button></div>` : ''}`;
     }
 
     function naarBeeld(i) {
@@ -647,7 +649,7 @@
         // Het laatste beeld blijft staan tot je tikt, en sluit na een poos vanzelf.
         uitgespeeld = true;
         t = totaal;
-        el.querySelector('[data-film-klaar]').textContent = 'Begin';
+        el.querySelector('[data-film-klaar]').textContent = tk('inr.begin');
         setTimeout(stop, 8000);
       }
       const m = Math.min(totaalMaten - 0.001, t / MAAT_MS);
@@ -666,7 +668,7 @@
       el.querySelectorAll('.in, .puls, .opkomst').forEach((x) => (x.style.animationPlayState = p ? 'paused' : ''));
       const k = el.querySelector('[data-film-pauze]');
       k.textContent = p ? '▶' : '❚❚';
-      k.setAttribute('aria-label', p ? 'Verder afspelen' : 'Pauzeren');
+      k.setAttribute('aria-label', tk(p ? 'film.verder' : 'film.pauze'));
     }
     function toets(e) {
       if (e.key === 'Escape') stop();
@@ -687,7 +689,7 @@
       else if (b.hasAttribute('data-film-geluid')) {
         geluidAan = !geluidAan;
         klank?.zet(geluidAan);
-        b.textContent = geluidAan ? 'Geluid aan' : 'Geluid uit';
+        b.textContent = tk(geluidAan ? 'film.geluidAan' : 'film.geluidUit');
         b.setAttribute('aria-pressed', String(geluidAan));
         try {
           localStorage.setItem(GELUID, geluidAan ? 'aan' : 'uit');

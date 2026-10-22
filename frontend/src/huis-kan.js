@@ -23,17 +23,17 @@ async function laadAlles() {
   teken();
 }
 
-const GROEPEN = [['comfort', 'Comfort'], ['zon', 'Zon en kosten'], ['gemak', 'Gemak'], ['overzicht', 'Overzicht']];
-const STANDEN = [['werkt', 'Werkt'], ['kijkt', 'Kijkt mee'], ['leert', 'Leert nog'], ['mis', 'Vul in'], ['uit', 'Staat uit'], ['nodig', 'Iets nodig']];
+const GROEPEN = ['comfort', 'zon', 'gemak', 'overzicht'].map((g) => [g, t(`kan.groep.${g}`)]);
+const STANDEN = ['werkt', 'kijkt', 'leert', 'mis', 'uit', 'nodig'].map((s) => [s, t(`kan.stand.${s}`)]);
 const STIP = { werkt: 'var(--mint)', kijkt: 'var(--ijs)', leert: 'var(--ijs)', mis: 'var(--gloed)', uit: 'var(--gedempt)', nodig: 'transparent; box-shadow: inset 0 0 0 1.5px var(--zon)' };
 const gekozen = () => decodeURIComponent(location.hash.slice(1));
 
 /* ------------------------------------------------------------ tekenen */
 
 function legenda(lijst) {
-  return STANDEN.map(([s, t]) => {
+  return STANDEN.map(([s, naam]) => {
     const n = lijst.filter((x) => x.stand === s).length;
-    return n ? `<button type="button" data-filter="${s}" aria-pressed="${filter === s}"><span class="stip" style="background: ${STIP[s]}"></span>${esc(t)} <b>${n}</b></button>` : '';
+    return n ? `<button type="button" data-filter="${s}" aria-pressed="${filter === s}"><span class="stip" style="background: ${STIP[s]}"></span>${esc(naam)} <b>${n}</b></button>` : '';
   }).join('');
 }
 
@@ -52,27 +52,27 @@ function meer() {
   const lijst = stand.ideeen(d).slice(0, 3);
   if (!lijst.length) return '';
   const regel = (x) => `<a class="idee" href="${x.id === 'batterij' ? '#batterij' : x.href}"${x.id === 'batterij' ? ' data-open="batterij"' : ''}><div><b>${esc(x.titel)}</b><span>${esc(x.zin)}</span></div><div class="wint${x.euro != null ? '' : ' zacht'}">${x.euro != null ? `± € ${x.euro}<small>${esc(x.wint)}</small>` : esc(x.wint)}</div></a>`;
-  return `<div class="glas meer"><span class="wanneer">Haal er meer uit</span>${lijst.map(regel).join('')}</div>`;
+  return `<div class="glas meer"><span class="wanneer">${esc(t('kan.meer'))}</span>${lijst.map(regel).join('')}</div>`;
 }
 
 function blad(x) {
   const som = x.som
-    ? `<div class="som"><h4>Wat het jou zou opleveren</h4><div class="getal">± € ${x.som.euro} <small>per maand, vanaf 2027</small></div>
-        <p class="mini" style="margin: 8px 0 0">In ${esc(x.som.maand)} ging er ${x.som.terugKwh} kWh naar het net. Een batterij had daarvan zo'n ${x.som.kwh} kWh 's avonds zelf gebruikt. Zolang er gesaldeerd wordt, levert dat nog weinig op. Een schatting uit je eigen cijfers, geen belofte.</p></div>`
+    ? `<div class="som"><h4>${esc(t('kan.opleveren'))}</h4><div class="getal">± € ${x.som.euro} <small>${esc(t('kan.perMaand'))}</small></div>
+        <p class="mini" style="margin: 8px 0 0">${esc(t('kan.somZin', { maand: x.som.maand, terug: x.som.terugKwh, kwh: x.som.kwh }))}</p></div>`
     : '';
   // Wat er nodig is, koop je zelf; dan is er geen knop, behalve naar wat het nu oplevert.
-  const ga = x.stand === 'mis' ? 'Invullen' : x.stand === 'uit' ? 'Aanzetten' : x.stand === 'nodig' ? (x.som ? 'Naar Opbrengst' : null) : 'Bekijken';
+  const ga = x.stand === 'mis' ? t('kan.ga.mis') : x.stand === 'uit' ? t('kan.ga.uit') : x.stand === 'nodig' ? (x.som ? t('kan.ga.opbrengst') : null) : t('kan.ga.bekijken');
   // Waar het werkt (besluit 132): per kamer, en wat er nog kan als idee, niet als tekort.
   const waar = x.waar?.length
-    ? `<div><h4>Waar het werkt</h4><div class="waar">${x.waar.map((k) => `<div class="kamerkaart"><b>${esc(k.naam)}</b><span>${esc(k.wat)}</span></div>`).join('')}</div></div>`
-    : `<div class="nu"><span class="stand ${x.stand}">Nu</span>${esc(x.nu)}</div>`;
-  const idee = x.idee ? `<a class="kanook" href="${x.idee.href}"><span class="wanneer">Idee</span><b>${esc(x.idee.titel)}</b><p>${esc(x.idee.zin)}, ${esc(x.idee.wint)}.</p><span class="knop">${x.idee.soort === 'aan' ? 'Zet aan' : 'Bekijk'}</span></a>` : '';
-  return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p>${x.extra ? `<p class="mini" style="margin: 6px 0 0">${esc(x.extra)}</p>` : ''}</div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
+    ? `<div><h4>${esc(t('kan.waar'))}</h4><div class="waar">${x.waar.map((k) => `<div class="kamerkaart"><b>${esc(k.naam)}</b><span>${esc(k.wat)}</span></div>`).join('')}</div></div>`
+    : `<div class="nu"><span class="stand ${x.stand}">${esc(t('kan.nu'))}</span>${esc(x.nu)}</div>`;
+  const idee = x.idee ? `<a class="kanook" href="${x.idee.href}"><span class="wanneer">${esc(t('kan.idee'))}</span><b>${esc(x.idee.titel)}</b><p>${esc(x.idee.zin)}, ${esc(x.idee.wint)}.</p><span class="knop">${esc(t(x.idee.soort === 'aan' ? 'kan.zetAan' : 'kan.bekijk'))}</span></a>` : '';
+  return `<div class="bovenaan"><div><span class="stand ${x.stand}">${esc(x.label)}</span><h2 class="kop-2" style="margin-top: 10px">${esc(x.titel)}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(x.wat)}</p>${x.extra ? `<p class="mini" style="margin: 6px 0 0">${esc(x.extra)}</p>` : ''}</div><button type="button" class="sluit" data-sluit aria-label="${esc(t('algemeen.sluiten'))}">×</button></div>
     ${waar}
     ${idee}
     ${som}
-    <div class="twee"><div><h4>Zo werkt het</h4><ul class="lijst">${x.zo.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div><div><h4>Wanneer het werkt</h4><ul class="lijst">${x.wanneer.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div></div>
-    ${ga ? `<div class="onder"><a href="${x.href}">${ga}</a></div>` : ''}`;
+    <div class="twee"><div><h4>${esc(t('kan.zoWerkt'))}</h4><ul class="lijst">${x.zo.map((z) => `<li>${esc(z)}</li>`).join('')}</ul></div><div><h4>${esc(t('kan.wanneerWerkt'))}</h4><ul class="lijst">${x.wanneer.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div></div>
+    ${ga ? `<div class="onder"><a href="${x.href}">${esc(ga)}</a></div>` : ''}`;
 }
 
 /*
@@ -81,7 +81,7 @@ function blad(x) {
  * regeling, grijs maakt een functie mogelijk. Een tik opent dat scherm van
  * Home Assistant; buiten Home Assistant staat erbij waar het is.
  */
-const KLAAR_GROEPEN = [['basis', 'De basis'], ['klimaat', 'Klimaat'], ['energie', 'Zon en energie'], ['bewoners', 'Bewoners'], ['gemak', 'Gemak'], ['praten', 'Praten met je huis'], ['wand', 'De wand en je telefoon']];
+const KLAAR_GROEPEN = ['basis', 'klimaat', 'energie', 'bewoners', 'gemak', 'praten', 'wand'].map((g) => [g, t(`kan.klaar.${g}`)]);
 const KLAAR_STIP = { klaar: 'var(--mint)', mist: 'var(--gloed)', optioneel: 'var(--gedempt)' };
 const klaarPunten = () => d.klaar?.punten ?? [];
 
@@ -89,18 +89,18 @@ function klaarKnop() {
   const punten = klaarPunten();
   if (!punten.length) return '';
   const mist = punten.filter((p) => p.stand === 'mist').length;
-  return `<button type="button" class="klaarknop" data-open="klaarzetten"><span class="stip" style="background: ${mist ? 'var(--gloed)' : 'var(--mint)'}"></span>In Home Assistant <b>${mist ? `${mist} mist` : 'klaar'}</b></button>`;
+  return `<button type="button" class="klaarknop" data-open="klaarzetten"><span class="stip" style="background: ${mist ? 'var(--gloed)' : 'var(--mint)'}"></span>${esc(t('kan.klaar.inHA'))} <b>${esc(mist ? t('instellingen.mist', { n: mist }) : t('kan.klaar.klaar'))}</b></button>`;
 }
 
 function klaarBlad() {
   const punten = klaarPunten();
   const inHA = app.inHA();
-  const regel = (p) => `<div class="klaarregel ${p.stand}"><span class="stip" style="background: ${KLAAR_STIP[p.stand]}"></span><div><b>${esc(p.titel)}</b><span>${esc(p.zin)}</span>${!inHA && p.waar && p.stand !== 'klaar' ? `<small>${esc(p.waar)}</small>` : ''}</div>${inHA && p.pad ? `<button type="button" class="knop" data-ha-pad="${esc(p.pad)}" aria-label="${esc(`${p.titel}: open in Home Assistant`)}">Open</button>` : ''}</div>`;
+  const regel = (p) => `<div class="klaarregel ${p.stand}"><span class="stip" style="background: ${KLAAR_STIP[p.stand]}"></span><div><b>${esc(p.titel)}</b><span>${esc(p.zin)}</span>${!inHA && p.waar && p.stand !== 'klaar' ? `<small>${esc(p.waar)}</small>` : ''}</div>${inHA && p.pad ? `<button type="button" class="knop" data-ha-pad="${esc(p.pad)}" aria-label="${esc(t('kan.klaar.openIn', { titel: p.titel }))}">${esc(t('kan.klaar.open'))}</button>` : ''}</div>`;
   const groepen = KLAAR_GROEPEN.map(([g, titel]) => {
     const hier = punten.filter((p) => p.groep === g);
     return hier.length ? `<div class="klaargroep"><h4>${esc(titel)}</h4>${hier.map(regel).join('')}</div>` : '';
   }).join('');
-  return `<div class="bovenaan"><div><h2 class="kop-2">Klaarzetten in Home Assistant</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">Wat Smart Climate in Home Assistant gebruikt, en of het er staat. Oranje mist voor de regeling; grijs maakt een functie mogelijk.</p></div><button type="button" class="sluit" data-sluit aria-label="Sluiten">×</button></div>
+  return `<div class="bovenaan"><div><h2 class="kop-2">${esc(t('kan.klaar.kop'))}</h2><p class="lead" style="margin-top: 4px; max-width: 52ch">${esc(t('kan.klaar.lead'))}</p></div><button type="button" class="sluit" data-sluit aria-label="${esc(t('algemeen.sluiten'))}">×</button></div>
     ${groepen}`;
 }
 
@@ -108,20 +108,19 @@ function klaarBlad() {
 function huisModel(lijst) {
   const per = (id) => lijst.find((x) => x.id === id);
   // De tekening uit huismodel, net als op Thuis (5S).
-  const t = huismodel.tekening(d.huis, { zon: d.zon, kamer: (r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null }) });
-  const { etages } = t;
-  const piekW = t.piekW;
-  const KORT = { opzon: 'Op zon', temperatuur: 'Comfort', batterij: 'Batterij', auto: 'Auto op zon' };
+  const tek = huismodel.tekening(d.huis, { zon: d.zon, kamer: (r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null }) });
+  const { etages } = tek;
+  const piekW = tek.piekW;
   const label = (bij, id, dx, dy) => {
     const x = per(id);
-    return x ? { bij, titel: KORT[id] ?? x.titel, toon: { werkt: 'mint', kijkt: 'ijs', leert: 'ijs', mis: 'gloed', uit: 'zacht', nodig: 'zon' }[x.stand], regels: [x.label.toLowerCase()], dx, dy } : null;
+    return x ? { bij, titel: t(`kan.kort.${id}`), toon: { werkt: 'mint', kijkt: 'ijs', leert: 'ijs', mis: 'gloed', uit: 'zacht', nodig: 'zon' }[x.stand], regels: [x.label.toLowerCase()], dx, dy } : null;
   };
   const kamer = etages[0]?.kamers?.[0]?.naam;
   return {
-    beschrijving: 'Het huis, met wat Smart Climate erin doet.',
+    beschrijving: t('kan.beschrijving'),
     tijd: 'dag',
-    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: t.panelen },
-    voordeur: t.voordeur,
+    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: tek.panelen },
+    voordeur: tek.voordeur,
     wolken: 0.2,
     etages,
     buitenunit: per('opzon') ? { aan: false } : null,

@@ -29,9 +29,9 @@ function laadTalen(): Record<string, Record<string, Tekst>> {
 }
 
 /** De bestanden die al helemaal uit de tekstbestanden lezen (stap 8: Thuis). */
-const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'src/basis.js', 'src/eigen.js', 'src/niemand.js', 'src/rondleiding.js', 'src/kamer.js', 'src/kamer.html', 'src/vandaag.js', 'src/vandaag.html', 'src/apparaten.js', 'src/apparaten.html', 'src/opbrengst.js', 'src/opbrengst.html', 'src/assistent.js', 'src/assistent.html', 'src/luisteren.js', 'kit/nav.js', 'kit/sankey.js', 'kit/taal.js'];
-/** Waar de code sleutels vraagt; huismodel en jij deels, maar hun sleutels moeten er wel zijn. */
-const VRAGEN = [...OMGEZET, 'src/huismodel.js', 'src/jij.js', 'src/basis.js', 'kit/huis.js'];
+const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'src/basis.js', 'src/eigen.js', 'src/niemand.js', 'src/rondleiding.js', 'src/kamer.js', 'src/kamer.html', 'src/vandaag.js', 'src/vandaag.html', 'src/apparaten.js', 'src/apparaten.html', 'src/opbrengst.js', 'src/opbrengst.html', 'src/assistent.js', 'src/assistent.html', 'src/luisteren.js', 'src/jij.js', 'src/jij.html', 'src/instellingen.js', 'src/instellingen.html', 'src/groep.js', 'src/comfort.js', 'src/comfort.html', 'src/regeling.js', 'src/regeling.html', 'src/energie.js', 'src/energie.html', 'src/panelen.js', 'src/functies.js', 'src/functies.html', 'src/toegang.js', 'src/toegang.html', 'src/bewoners.js', 'src/bewoners.html', 'src/huismodel.js', 'src/stand.js', 'src/huis-kan.js', 'src/huis-kan.html', 'src/indeling.js', 'src/indeling.html', 'src/inrichten.js', 'src/inrichten.html', 'src/begin.js', 'src/begin.html', 'src/welkom.js', 'src/welkom.html', 'src/film.js', 'kit/nav.js', 'kit/sankey.js', 'kit/taal.js'];
+/** Waar de code sleutels vraagt: wat omgezet is, en de tekening van het huis. */
+const VRAGEN = [...OMGEZET, 'kit/huis.js'];
 
 /** Een script zonder commentaar, zodat een voorbeeld in de uitleg niet als sleutel telt. */
 function zonderCommentaar(pad: string, code: string): string {
@@ -59,6 +59,7 @@ describe('de talen van de app (besluit 185)', () => {
 
   it('heeft een tekst voor elke sleutel die de app vraagt', () => {
     const nl = talen['nl']!;
+    const soorten = new Set(Object.keys(nl).map((k) => k.split('.')[0]!));
     const ontbreekt: string[] = [];
     for (const pad of VRAGEN) {
       const code = zonderCommentaar(pad, lees(pad));
@@ -66,7 +67,7 @@ describe('de talen van de app (besluit 185)', () => {
       for (const m of code.matchAll(/(?:\bt|\bvet|\.html|global\.t\??\.?)\(\s*'([a-zA-Z_]+\.[a-zA-Z_.]+)'/g)) if (!(m[1]! in nl)) ontbreekt.push(`${pad}: ${m[1]}`);
       for (const m of code.matchAll(/'([a-z]+\.[a-zA-Z_]+(?:\.[a-zA-Z_]+)*)'/g)) {
         // Een sleutel in een ternary, zoals t(x ? 'a.b' : 'a.c'): ook die moet er zijn.
-        if (/^(thuis|gevoel|nav|algemeen|huis|jij)\./.test(m[1]!) && !/\.(html|js)$/.test(m[1]!) && !(m[1]! in nl)) ontbreekt.push(`${pad}: ${m[1]}`);
+        if (soorten.has(m[1]!.split('.')[0]!) && !/\.(html|js)$/.test(m[1]!) && !(m[1]! in nl)) ontbreekt.push(`${pad}: ${m[1]}`);
       }
       // Een sleutel met een stuk erin, zoals t(`thuis.stand.${id}`): er moet er minstens één met dat begin zijn.
       for (const m of code.matchAll(/t\(`([a-zA-Z_.]+)\$\{/g)) if (!Object.keys(nl).some((k) => k.startsWith(m[1]!))) ontbreekt.push(`${pad}: ${m[1]}…`);

@@ -9,8 +9,9 @@
   /** Een getal in de taal van de app (besluit 185). */
   const nl = (n, d = 1) => global.taal.getal(n, d);
 
-  const ACTIEF = ['koelt', 'verwarmt', 'verwarmt voor', 'droogt', 'ventileert'];
-  const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
+  /** Wat een airco doet, zoals api/huis het nu nog in het Nederlands zegt; een vast patroon tot de dienst meertalig is (besluit 185). */
+  const ACTIEF = /^(koelt|verwarmt|verwarmt voor|droogt|ventileert)$/;
+  const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport|garden|driveway|patio|terrace|balcony|outside/i;
   const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc|trapkast|meterkast)\b/i;
 
   function kleurVanLicht(a) {
@@ -43,19 +44,21 @@
     return [...binnen.reverse(), ...(etages ?? []).filter((e) => e.id === 'buiten')];
   }
   /** Wat er in een kamer warmt of koelt (besluit 132), in woorden. */
-  const BRON_NAAM = { radiator: 'radiator', vloer: 'vloerverwarming', 'vloer-elektrisch': 'elektrische vloerverwarming', paneel: 'infraroodpaneel', kachel: 'elektrische kachel', airco: 'airco' };
+  const BRON_NAAM = Object.fromEntries(['radiator', 'vloer', 'vloer-elektrisch', 'paneel', 'kachel', 'airco'].map((s) => [s, global.taal.t(`bron.${s}`)]));
   const ELEKTRISCH = new Set(['vloer-elektrisch', 'paneel', 'kachel']);
   /** "Vloerverwarming en infraroodpaneel". */
   function bronNaam(b) {
     const w = b.soorten.map((s) => BRON_NAAM[s] ?? s);
-    const t = w.length > 1 ? `${w.slice(0, -1).join(', ')} en ${w.at(-1)}` : w[0] ?? '';
-    return t.charAt(0).toUpperCase() + t.slice(1);
+    const zin = opsomming(w);
+    return zin.charAt(0).toUpperCase() + zin.slice(1);
   }
+  /** "a, b en c" in de taal van de app. */
+  const opsomming = (w) => (w.length > 1 ? `${w.slice(0, -1).join(', ')} ${global.taal.t('algemeen.en')} ${w.at(-1)}` : w[0] ?? '');
   const isElektrischSlim = (b) => b.aan !== 'hand' && b.soorten.some((s) => ELEKTRISCH.has(s));
   /** "in Beneden en Zolder", of "in 5 kamers" als het er meer dan drie zijn. */
   function inKamers(namen) {
-    if (namen.length > 3) return `in ${namen.length} kamers`;
-    return `in ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} en ${namen.at(-1)}` : namen[0] ?? ''}`;
+    if (namen.length > 3) return global.taal.t('huis.inNKamers', { n: namen.length });
+    return global.taal.t('huis.inKamers', { namen: opsomming(namen) });
   }
   /** Met een hoofdletter, aan het begin van een zin. */
   const metHoofdletter = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -87,7 +90,7 @@
     const bronVan = (a) => bronnen.find((b) => b.apparaat && (b.apparaat === a.actuatorId || b.apparaat === a.id));
     const vloer = (b) => b.soorten.some((x) => x === 'vloer' || x === 'vloer-elektrisch');
     for (const a of klimaat) {
-      const aan = a.aan || ACTIEF.includes(a.klimaat?.actie);
+      const aan = a.aan || ACTIEF.test(a.klimaat?.actie ?? '');
       const warm = /verwarmt/.test(a.klimaat?.actie ?? '');
       const b = bronVan(a);
       if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
@@ -121,20 +124,12 @@
     };
   }
 
+  /** Een lijst [code, naam] met de namen uit de teksten (besluit 185). */
+  const soorten = (soort, codes) => codes.map((c) => [c, global.taal.t(`soort.${soort}.${c}`)]);
   /** Wat voor kamer (besluit 119), voor Indeling en Inrichten. */
-  const KAMER_SOORTEN = [
-    ['woonkamer', 'Woonkamer'], ['woonkeuken', 'Woonkamer met open keuken'], ['keuken', 'Keuken'], ['eetkamer', 'Eetkamer'],
-    ['slaapkamer', 'Slaapkamer'], ['kinderkamer', 'Kinderkamer'], ['logeerkamer', 'Logeerkamer'],
-    ['badkamer', 'Badkamer'], ['toilet', 'Toilet'], ['hal', 'Hal of overloop'], ['werkkamer', 'Werkkamer'],
-    ['wasruimte', 'Wasruimte'], ['bijkeuken', 'Bijkeuken'], ['berging', 'Berging of zolder'], ['kelder', 'Kelder'],
-    ['garage', 'Garage, aan of in het huis'], ['leeg', 'Leeg'],
-  ];
+  const KAMER_SOORTEN = soorten('kamer', ['woonkamer', 'woonkeuken', 'keuken', 'eetkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'badkamer', 'toilet', 'hal', 'werkkamer', 'wasruimte', 'bijkeuken', 'berging', 'kelder', 'garage', 'leeg']);
   /** Wat voor deel van een kamer (besluit 145): dezelfde soorten, met namen voor een deel. */
-  const ZONE_SOORTEN = [
-    ['woonkamer', 'Zithoek'], ['keuken', 'Keuken'], ['eetkamer', 'Eethoek'], ['werkkamer', 'Werkplek'],
-    ['slaapkamer', 'Slaaphoek'], ['kinderkamer', 'Kinderhoek'], ['badkamer', 'Badkamer'], ['toilet', 'Toilet'],
-    ['wasruimte', 'Washoek'], ['hal', 'Doorloop'], ['berging', 'Berging'], ['leeg', 'Leeg'],
-  ];
+  const ZONE_SOORTEN = soorten('zone', ['woonkamer', 'keuken', 'eetkamer', 'werkkamer', 'slaapkamer', 'kinderkamer', 'badkamer', 'toilet', 'wasruimte', 'hal', 'berging', 'leeg']);
 
   /**
    * Ligt deze ruimte buiten (de tuin, de oprit)? Dan hoort hij niet als kamer in
@@ -149,12 +144,12 @@
   /** Wat een buitenruimte uit zijn naam is, zoals de dienst het voorstelt (besluiten 109 en 167). */
   function buitenUitNaam(naam) {
     const n = naam ?? '';
-    return /carport/i.test(n) ? 'carport' : /oprit/i.test(n) ? 'oprit' : /voortuin/i.test(n) ? 'voortuin' : /zijtuin/i.test(n) ? 'zijtuin' : /dakterras/i.test(n) ? 'dakterras' : /terras|veranda/i.test(n) ? 'terras' : /balkon/i.test(n) ? 'balkon' : /tuinhuis|schuur/i.test(n) ? 'tuinhuis' : /garage/i.test(n) ? 'garage' : /tuin/i.test(n) ? 'tuin' : null;
+    return /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : /voortuin|front garden|front yard/i.test(n) ? 'voortuin' : /zijtuin|side garden/i.test(n) ? 'zijtuin' : /dakterras|roof terrace/i.test(n) ? 'dakterras' : /terras|veranda|patio|terrace/i.test(n) ? 'terras' : /balkon|balcony/i.test(n) ? 'balkon' : /tuinhuis|schuur|shed/i.test(n) ? 'tuinhuis' : /garage/i.test(n) ? 'garage' : /tuin|garden|yard/i.test(n) ? 'tuin' : null;
   }
   /** Een deel van een buitenruimte uit zijn naam (besluit 167). */
   function buitenZoneUitNaam(naam) {
     const n = naam ?? '';
-    return /tuinhuis|schuur|huisje|berging/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag/i.test(n) ? 'border' : /gazon|gras/i.test(n) ? 'gazon' : /terras|zithoek|lounge/i.test(n) ? 'terras' : /moestuin|groente|kas/i.test(n) ? 'moestuin' : /vijver|water/i.test(n) ? 'vijver' : /pad|tegel/i.test(n) ? 'pad' : /speel|schommel|trampoline/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit/i.test(n) ? 'oprit' : null;
+    return /tuinhuis|schuur|huisje|berging|shed/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag|flower|bed|hedge/i.test(n) ? 'border' : /gazon|gras|lawn/i.test(n) ? 'gazon' : /terras|zithoek|lounge|patio|terrace/i.test(n) ? 'terras' : /moestuin|groente|kas|vegetable|greenhouse/i.test(n) ? 'moestuin' : /vijver|water|pond/i.test(n) ? 'vijver' : /pad|tegel|path/i.test(n) ? 'pad' : /speel|schommel|trampoline|play|swing/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : null;
   }
   const heeftHuisje = (r) => (r.zones ?? []).some((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis');
   function soortBuiten(r) {
@@ -302,7 +297,7 @@
       buitenRuimtes,
       ...delen,
       voordeur: { deurbel: bel || belZiet ? { beweging: !!belZiet?.meting.beweging.nu } : null },
-      buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.includes(a.klimaat?.actie)), aantal: aircos.length } : null,
+      buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.test(a.klimaat?.actie ?? '')), aantal: aircos.length } : null,
       piekW,
       panelen: aantalPanelen ?? (piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0),
     };
@@ -360,16 +355,10 @@
   }
 
   /** Wat een buitenruimte is (besluit 167): een eigen lijst, zoals Soort kamer binnen. */
-  const BUITEN_SOORTEN = [
-    ['tuin', 'Achtertuin'], ['voortuin', 'Voortuin'], ['zijtuin', 'Zijtuin'], ['oprit', 'Oprit'], ['carport', 'Carport'],
-    ['terras', 'Terras'], ['balkon', 'Balkon'], ['dakterras', 'Dakterras'], ['tuinhuis', 'Tuinhuis of schuur'], ['garage', 'Garage, los van het huis'],
-  ];
+  const BUITEN_SOORTEN = soorten('buiten', ['tuin', 'voortuin', 'zijtuin', 'oprit', 'carport', 'terras', 'balkon', 'dakterras', 'tuinhuis', 'garage']);
   /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
-  const BUITEN_ZONES = [
-    ['gazon', 'Gazon'], ['border', 'Border'], ['terras', 'Terras'], ['tuinhuis', 'Tuinhuis of schuur'], ['moestuin', 'Moestuin'],
-    ['vijver', 'Vijver'], ['pad', 'Pad'], ['speelplek', 'Speelplek'], ['oprit', 'Oprit'], ['carport', 'Carport'],
-  ];
+  const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen, groetWie };
 })(window);

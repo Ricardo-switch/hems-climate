@@ -16,8 +16,8 @@ let sleepVolgorde = null;
 
 const KLEUREN = ['#6fd3ff', '#f7b548', '#6ee7b7', '#8f86ff', '#ff7a4d', '#e7a6ff'];
 const kleur = (i) => KLEUREN[i % KLEUREN.length];
-const tijd = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-const dag = (ms) => new Date(ms).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+const tijd = (ms) => taal.klok(ms);
+const dag = (ms) => taal.datum(ms, { day: 'numeric', month: 'long' });
 
 /** Bewoners en gasten samen, om er een te kiezen. */
 const iedereen = () => [...(data?.bewoners ?? []), ...(data?.gasten ?? [])];
@@ -37,7 +37,7 @@ async function stuur(body) {
   const res = await fetch('api/bewoners', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const uit = await res.json().catch(() => ({}));
   if (!res.ok) {
-    zeg(uit.fout ?? 'Dat lukte niet.');
+    zeg(uit.fout ?? t('bewoners.lukteNiet'));
     return false;
   }
   data = uit;
@@ -56,14 +56,14 @@ function lijst() {
   const nu = gekozenScherm() ? null : gekozen();
   const rijen = volgorde.map((id, i) => {
     const b = data.bewoners.find((x) => x.id === id);
-    const onder = [b.hoofd ? 'Hoofdgebruiker' : null, b.hoofd ? 'eigen comfort' : b.comfort === 'eigen' ? 'eigen comfort' : `volgt ${esc(data.bewoners[0]?.naam ?? '')}`].filter(Boolean).join(' · ');
-    const thuis = b.thuis == null ? '' : b.thuis ? '<span class="label thuis">thuis</span>' : `<span class="label weg">weg${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}</span>`;
+    const onder = [b.hoofd ? t('bewoners.hoofdgebruiker') : null, b.hoofd || b.comfort === 'eigen' ? t('bewoners.eigenComfort') : t('bewoners.volgt', { naam: data.bewoners[0]?.naam ?? '' })].filter(Boolean).join(' · ');
+    const thuis = b.thuis == null ? '' : b.thuis ? `<span class="label thuis">${esc(t('bewoners.thuis'))}</span>` : `<span class="label weg">${esc(b.thuisSindsMs ? t('bewoners.wegSinds', { klok: tijd(b.thuisSindsMs) }) : t('bewoners.weg'))}</span>`;
     return `<div class="bewoner${b.id === nu?.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(b.id)}" data-rij="${esc(b.id)}">
-      <span class="greep" ${data.ik.magBeheren ? `data-greep="${esc(b.id)}" aria-label="${esc(b.naam)} verplaatsen" tabindex="0"` : 'aria-hidden="true" style="visibility: hidden"'}>⋮⋮</span>
+      <span class="greep" ${data.ik.magBeheren ? `data-greep="${esc(b.id)}" aria-label="${esc(t('bewoners.verplaatsen', { naam: b.naam }))}" tabindex="0"` : 'aria-hidden="true" style="visibility: hidden"'}>⋮⋮</span>
       <span class="plek${i === 0 ? ' een' : ''}">${i + 1}</span>
       <span class="gezicht" style="background: ${kleur(data.bewoners.indexOf(b))}">${esc(b.naam.charAt(0).toUpperCase())}</span>
-      <span><b>${esc(b.naam)}${b.ik ? ' <span class="mini" style="font-weight: 600">(jij)</span>' : ''}</b><span class="onder">${onder}</span></span>
-      <span class="labels">${thuis}${b.geldt ? '<span class="label geldt">geldt nu</span>' : ''}</span>
+      <span><b>${esc(b.naam)}${b.ik ? ` <span class="mini" style="font-weight: 600">${esc(t('bewoners.jij'))}</span>` : ''}</b><span class="onder">${esc(onder)}</span></span>
+      <span class="labels">${thuis}${b.geldt ? `<span class="label geldt">${esc(t('bewoners.geldtNu'))}</span>` : ''}</span>
     </div>`;
   });
   const g = data.geldt;
@@ -71,37 +71,39 @@ function lijst() {
   let uitleg = '';
   if (g) {
     const waarom = g.waarom === 'gekozen'
-      ? 'Gekozen op een scherm, tot er iemand thuiskomt of weggaat.'
+      ? t('bewoners.waarom.gekozen')
       : g.waarom === 'niemand'
-        ? 'Er is niemand thuis: dan geldt het comfort van de hoofdgebruiker.'
+        ? t('bewoners.waarom.niemand')
         : g.id === hoofd?.id
-          ? `${esc(g.naam)} is thuis.`
-          : `${esc(hoofd?.naam ?? 'De hoofdgebruiker')} is weg; ${esc(g.naam)} staat daarna en is thuis.`;
-    uitleg = `<p class="uitleg"><b>Nu geldt het comfort van ${esc(g.naam)}.</b> ${waarom} Wisselen gebeurt na tien minuten thuis of weg.</p>`;
+          ? t('bewoners.waarom.thuis', { naam: g.naam })
+          : t('bewoners.waarom.daarna', { hoofd: hoofd?.naam ?? t('bewoners.deHoofdgebruiker'), naam: g.naam });
+    uitleg = `<p class="uitleg"><b>${esc(t('bewoners.nuGeldt', { naam: g.naam }))}</b> ${esc(waarom)} ${esc(t('bewoners.wisselen'))}</p>`;
   } else if (data.bewoners.length) {
-    uitleg = '<p class="uitleg">Het comfort wisselt zodra de regeling het volgende besluit neemt.</p>';
+    uitleg = `<p class="uitleg">${esc(t('bewoners.wisselt'))}</p>`;
   }
-  return rijen.length ? rijen.join('') + uitleg : '<p class="klein" style="margin: 0">Nog niemand. Wie met zijn account van Home Assistant inlogt, komt hier te staan; de eerste wordt hoofdgebruiker.</p>';
+  return rijen.length ? rijen.join('') + uitleg : `<p class="klein" style="margin: 0">${esc(t('bewoners.nogNiemand'))}</p>`;
 }
 
 /** Een scherm zoals de wand (besluit 149): een andere naam, of weghalen. */
 function schermBlad(s) {
   const kan = data.ik.magBeheren || s.ik;
-  return `<div class="kop"><span class="gezicht" style="background: #5b6b80">${esc(s.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(s.naam)}</h2><span class="mini">Scherm, ingelogd sinds ${esc(dag(s.sindsMs))}</span></div></div>
-    <div class="vak"><label for="scherm-naam">Naam van dit scherm</label><input class="veld" id="scherm-naam" data-schermnaam value="${esc(s.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">In Home Assistant: ${esc(s.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
-    <div class="vak"><span>Wat het doet</span><span class="hint">Een scherm is geen bewoner: het telt niet mee voor het comfort, en begroet wie er thuis is.</span></div>
-    <div class="vak"><span>Hoe het werkt</span><div class="seg" role="group" aria-label="Volledig scherm"><button type="button" data-sopt="volledig" data-waarde="ja" aria-pressed="${s.opties?.volledig === true}" ${kan ? '' : 'disabled'}>Volledig scherm</button><button type="button" data-sopt="volledig" data-waarde="nee" aria-pressed="${s.opties?.volledig !== true}" ${kan ? '' : 'disabled'}>Met balken</button></div><div class="seg" role="group" aria-label="Luisteren naar Hé huis"><button type="button" data-sopt="luisteren" data-waarde="ja" aria-pressed="${s.opties?.luisteren === true}" ${kan ? '' : 'disabled'}>Luistert naar "Hé huis"</button><button type="button" data-sopt="luisteren" data-waarde="nee" aria-pressed="${s.opties?.luisteren !== true}" ${kan ? '' : 'disabled'}>Luistert niet</button></div><span class="hint">Het scherm neemt het over, ook als je dit op een ander apparaat kiest.</span></div>
+  const uit = kan ? '' : 'disabled';
+  return `<div class="kop"><span class="gezicht" style="background: #5b6b80">${esc(s.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(s.naam)}</h2><span class="mini">${esc(t('bewoners.schermSinds', { datum: dag(s.sindsMs) }))}</span></div></div>
+    <div class="vak"><label for="scherm-naam">${esc(t('bewoners.schermNaam'))}</label><input class="veld" id="scherm-naam" data-schermnaam value="${esc(s.naam)}" maxlength="40" ${uit}><span class="hint">${esc(t('bewoners.inHA', { naam: s.haNaam }))}</span></div>
+    <div class="vak"><span>${esc(t('bewoners.watHetDoet'))}</span><span class="hint">${esc(t('bewoners.geenBewoner'))}</span></div>
+    <div class="vak"><span>${esc(t('bewoners.hoeWerkt'))}</span><div class="seg" role="group" aria-label="${esc(t('bewoners.volledig'))}"><button type="button" data-sopt="volledig" data-waarde="ja" aria-pressed="${s.opties?.volledig === true}" ${uit}>${esc(t('bewoners.volledig'))}</button><button type="button" data-sopt="volledig" data-waarde="nee" aria-pressed="${s.opties?.volledig !== true}" ${uit}>${esc(t('bewoners.metBalken'))}</button></div><div class="seg" role="group" aria-label="${esc(t('bewoners.luisterenLabel'))}"><button type="button" data-sopt="luisteren" data-waarde="ja" aria-pressed="${s.opties?.luisteren === true}" ${uit}>${esc(t('bewoners.luistert'))}</button><button type="button" data-sopt="luisteren" data-waarde="nee" aria-pressed="${s.opties?.luisteren !== true}" ${uit}>${esc(t('bewoners.luistertNiet'))}</button></div><span class="hint">${esc(t('bewoners.neemtOver'))}</span></div>
     <span class="fout" data-fout></span>
-    ${kan ? `<div class="knoppenrij"><button type="button" class="knop gevaar" data-schermweg>Weghalen</button></div><span class="hint">Daarna vraagt ${s.ik ? 'dit scherm' : 'het scherm'} bij de volgende pagina opnieuw: woon je hier, of is dit een scherm?</span>` : '<span class="hint">Een scherm beheert de hoofdgebruiker.</span>'}`;
+    ${kan ? `<div class="knoppenrij"><button type="button" class="knop gevaar" data-schermweg>${esc(t('bewoners.weghalen'))}</button></div><span class="hint">${esc(t(s.ik ? 'bewoners.vraagtOpnieuw.dit' : 'bewoners.vraagtOpnieuw.het'))}</span>` : `<span class="hint">${esc(t('bewoners.schermBeheer'))}</span>`}`;
 }
 
 function blad() {
   const sc = gekozenScherm();
   if (sc) return schermBlad(sc);
   const b = gekozen();
-  if (!b) return '<p class="klein" style="margin: 0">Kies een bewoner.</p>';
+  if (!b) return `<p class="klein" style="margin: 0">${esc(t('bewoners.kies'))}</p>`;
   const kan = mag(b);
   const hoofd = data.bewoners[0];
+  const wie = b.ik ? 'ik' : 'ander';
   /*
    * Thuis volgens: hangt de persoon in Home Assistant aan dit account, dan valt
    * er niets te kiezen. Anders een lijst, met bij elke bron wat het is; een
@@ -109,41 +111,43 @@ function blad() {
    */
   const thuisVak = (magKiezen, zonder) => {
     if (b.gekoppeld) {
-      return `<div class="vak"><span>Thuis volgens</span><div class="veld vast">${esc(b.aanwezigheidNaam ?? '')} in Home Assistant</div><span class="hint">Gekoppeld aan ${b.ik ? 'je' : 'het'} account. ${thuisHint}</span></div>`;
+      return `<div class="vak"><span>${esc(t('bewoners.thuisVolgens'))}</span><div class="veld vast">${esc(t('bewoners.inHANaam', { naam: b.aanwezigheidNaam ?? '' }))}</div><span class="hint">${esc(t(`bewoners.gekoppeld.${wie}`))} ${esc(thuisHint)}</span></div>`;
     }
-    const wie = b.ik ? 'je thuis bent' : `${b.naam} thuis is`;
-    const opties = b.kiesbaar.map((x) => `<option value="${esc(x.id)}" ${x.id === b.aanwezigheid ? 'selected' : ''}>${esc(x.naam)} · ${x.soort === 'persoon' ? 'persoon in Home Assistant' : 'sensor'}</option>`).join('');
-    return `<div class="vak"><label for="bron-${esc(b.id)}">Welke sensor ziet of ${esc(wie)}?</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${magKiezen ? '' : 'disabled'}><option value="">Geen: het huis weet het niet</option>${opties}</select><span class="hint">${b.aanwezigheid ? thuisHint : zonder}</span></div>`;
+    const opties = b.kiesbaar.map((x) => `<option value="${esc(x.id)}" ${x.id === b.aanwezigheid ? 'selected' : ''}>${esc(x.naam)} · ${esc(t(x.soort === 'persoon' ? 'bewoners.persoon' : 'bewoners.sensor'))}</option>`).join('');
+    return `<div class="vak"><label for="bron-${esc(b.id)}">${esc(t(`bewoners.welkeSensor.${wie}`, { naam: b.naam }))}</label><select class="veld" id="bron-${esc(b.id)}" data-bron ${magKiezen ? '' : 'disabled'}><option value="">${esc(t('bewoners.geenSensor'))}</option>${opties}</select><span class="hint">${esc(b.aanwezigheid ? thuisHint : zonder)}</span></div>`;
   };
-  const thuisHint = b.aanwezigheid ? (b.thuis == null ? 'Het huis weet nu niet of het zo is.' : b.thuis ? `Thuis${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.` : `Weg${b.thuisSindsMs ? ` sinds ${tijd(b.thuisSindsMs)}` : ''}.`) : 'Zonder aanwezigheid telt deze bewoner niet mee bij wie er thuis is.';
+  const sinds = b.thuisSindsMs ? tijd(b.thuisSindsMs) : null;
+  const thuisHint = b.aanwezigheid
+    ? b.thuis == null ? t('bewoners.weetNiet') : b.thuis ? (sinds ? t('bewoners.thuisSinds', { klok: sinds }) : t('bewoners.thuisZin')) : sinds ? t('bewoners.wegSindsZin', { klok: sinds }) : t('bewoners.wegZin')
+    : t('bewoners.zonder');
   // Bewoner of gast (besluit 147): alleen de hoofdgebruiker zelf kiest (besluit 151), en de hoofdgebruiker is geen gast.
   const soort = data.ik.hoofd && !b.hoofd
-    ? `<div class="vak"><span>Woont hier, of te gast</span><div class="seg" role="group" aria-label="${esc(b.naam)} woont hier of is te gast">
-        <button type="button" data-gast="nee" aria-pressed="${!b.gast}">Bewoner</button>
-        <button type="button" data-gast="ja" aria-pressed="${b.gast}">Gast</button>
-      </div><span class="hint">${b.gast ? 'Een gast kijkt mee, en bedient licht en screens alleen als hij thuis is. Van een gast wordt niets bewaard, en hij telt niet mee voor het comfort.' : 'Een bewoner staat in de volgorde en heeft zijn eigen comfort, of volgt de hoofdgebruiker.'}</span></div>`
+    ? `<div class="vak"><span>${esc(t('bewoners.woontOfGast'))}</span><div class="seg" role="group" aria-label="${esc(t('bewoners.woontLabel', { naam: b.naam }))}">
+        <button type="button" data-gast="nee" aria-pressed="${!b.gast}">${esc(t('bewoners.bewoner'))}</button>
+        <button type="button" data-gast="ja" aria-pressed="${b.gast}">${esc(t('bewoners.gast'))}</button>
+      </div><span class="hint">${esc(t(b.gast ? 'bewoners.gastZin' : 'bewoners.bewonerZin'))}</span></div>`
     : '';
   if (b.gast) {
-    return `<div class="kop"><span class="gezicht" style="background: #9aa8b6">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">Gast, ingelogd sinds ${esc(dag(b.sindsMs))}</span></div></div>
-      ${thuisVak(data.ik.magBeheren, 'Zonder aanwezigheid bedient een gast niets: het huis weet niet of hij thuis is.')}
+    return `<div class="kop"><span class="gezicht" style="background: #9aa8b6">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">${esc(t('bewoners.gastSinds', { datum: dag(b.sindsMs) }))}</span></div></div>
+      ${thuisVak(data.ik.magBeheren, t('bewoners.gastZonder'))}
       ${soort}
       <span class="fout" data-fout></span>
-      ${data.ik.magBeheren ? '<div class="knoppenrij"><button type="button" class="knop gevaar" data-weg>Weghalen</button></div>' : ''}`;
+      ${data.ik.magBeheren ? `<div class="knoppenrij"><button type="button" class="knop gevaar" data-weg>${esc(t('bewoners.weghalen'))}</button></div>` : ''}`;
   }
   const comfort = b.hoofd
-    ? '<div class="seg"><button type="button" aria-pressed="true" disabled>Eigen</button></div><span class="hint">De hoofdgebruiker heeft het comfort van het huis. <a href="comfort.html">Bekijk het ›</a></span>'
-    : `<div class="seg" role="group" aria-label="Comfort van ${esc(b.naam)}">
-        <button type="button" data-comfort="eigen" aria-pressed="${b.comfort === 'eigen'}" ${kan ? '' : 'disabled'}>Eigen</button>
-        <button type="button" data-comfort="volgt" aria-pressed="${b.comfort === 'volgt'}" ${kan ? '' : 'disabled'}>Volgt ${esc(hoofd?.naam ?? 'hoofdgebruiker')}</button>
-      </div><span class="hint">${b.comfort === 'eigen' ? 'Een eigen comfort.' : `Hetzelfde als ${esc(hoofd?.naam ?? 'de hoofdgebruiker')}, tot er iets verandert.`} <a href="comfort.html?bewoner=${encodeURIComponent(b.id)}">Bekijk ${b.ik ? 'je' : 'het'} comfort ›</a></span>`;
+    ? `<div class="seg"><button type="button" aria-pressed="true" disabled>${esc(t('bewoners.eigen'))}</button></div><span class="hint">${esc(t('bewoners.hoofdComfort'))} <a href="comfort.html">${esc(t('bewoners.bekijk'))}</a></span>`
+    : `<div class="seg" role="group" aria-label="${esc(t('bewoners.comfortVan', { naam: b.naam }))}">
+        <button type="button" data-comfort="eigen" aria-pressed="${b.comfort === 'eigen'}" ${kan ? '' : 'disabled'}>${esc(t('bewoners.eigen'))}</button>
+        <button type="button" data-comfort="volgt" aria-pressed="${b.comfort === 'volgt'}" ${kan ? '' : 'disabled'}>${esc(t('bewoners.volgtKnop', { naam: hoofd?.naam ?? t('bewoners.hoofdgebruikerKort') }))}</button>
+      </div><span class="hint">${esc(b.comfort === 'eigen' ? t('bewoners.eenEigen') : t('bewoners.hetzelfde', { naam: hoofd?.naam ?? t('bewoners.deHoofdgebruiker').toLowerCase() }))} <a href="comfort.html?bewoner=${encodeURIComponent(b.id)}">${esc(t(`bewoners.bekijkComfort.${wie}`))}</a></span>`;
   const knoppen = [
-    data.ik.magBeheren && !b.hoofd ? '<button type="button" class="knop" data-hoofd>Hoofdgebruiker maken</button>' : '',
-    kan && (!b.hoofd || data.bewoners.length === 1) ? '<button type="button" class="knop gevaar" data-weg>Weghalen</button>' : '',
+    data.ik.magBeheren && !b.hoofd ? `<button type="button" class="knop" data-hoofd>${esc(t('bewoners.maakHoofd'))}</button>` : '',
+    kan && (!b.hoofd || data.bewoners.length === 1) ? `<button type="button" class="knop gevaar" data-weg>${esc(t('bewoners.weghalen'))}</button>` : '',
   ].join('');
-  return `<div class="kop"><span class="gezicht" style="background: ${kleur(data.bewoners.indexOf(b))}">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">Ingelogd sinds ${esc(dag(b.sindsMs))}</span></div></div>
-    <div class="vak"><label for="naam-${esc(b.id)}">Zo noemt het huis ${b.ik ? 'je' : esc(b.naam)}</label><input class="veld" id="naam-${esc(b.id)}" data-naam value="${esc(b.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">In Home Assistant: ${esc(b.haNaam)}. Hier veranderen verandert niets in Home Assistant.</span></div>
+  return `<div class="kop"><span class="gezicht" style="background: ${kleur(data.bewoners.indexOf(b))}">${esc(b.naam.charAt(0).toUpperCase())}</span><div><h2 class="kop-2" style="margin: 0">${esc(b.naam)}</h2><span class="mini">${esc(t('bewoners.ingelogdSinds', { datum: dag(b.sindsMs) }))}</span></div></div>
+    <div class="vak"><label for="naam-${esc(b.id)}">${esc(t(`bewoners.noemt.${wie}`, { naam: b.naam }))}</label><input class="veld" id="naam-${esc(b.id)}" data-naam value="${esc(b.naam)}" maxlength="40" ${kan ? '' : 'disabled'}><span class="hint">${esc(t('bewoners.inHA', { naam: b.haNaam }))}</span></div>
     ${thuisVak(kan, thuisHint)}
-    <div class="vak"><span>Comfort</span>${comfort}</div>
+    <div class="vak"><span>${esc(t('bewoners.comfort'))}</span>${comfort}</div>
     ${soort}
     <span class="fout" data-fout></span>
     ${knoppen ? `<div class="knoppenrij">${knoppen}</div>` : ''}`;
@@ -177,17 +181,18 @@ function erbij() {
   } catch {
     qr = '';
   }
-  return `<h3>Iemand erbij</h3><div class="erbij"><div class="qr" aria-label="QR-code naar de app">${qr}</div><span class="klein">${app.inHA() ? 'Laat diegene deze code scannen, of Smart Climate openen in de zijbalk van Home Assistant, en inloggen met een eigen account.' : 'Laat diegene deze code scannen en één keer inloggen met Home Assistant.'} Met een persoon in Home Assistant staat diegene hier als bewoner${data.bewoners.length ? `, met het comfort van ${esc(data.bewoners[0].naam)}` : ''}. Zonder persoon als gast; dan maakt de hoofdgebruiker er een bewoner van. <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
+  const zinnen = [t(app.inHA() ? 'bewoners.erbijHA' : 'bewoners.erbijApp'), data.bewoners.length ? t('bewoners.alsBewonerVan', { naam: data.bewoners[0].naam }) : t('bewoners.alsBewoner'), t('bewoners.alsGast')].join(' ');
+  return `<h3>${esc(t('bewoners.erbij'))}</h3><div class="erbij"><div class="qr" role="img" aria-label="${esc(t('bewoners.qr'))}">${qr}</div><span class="klein">${esc(zinnen)} <a href="${esc(adres)}">${esc(adres.replace(/^https?:\/\//, ''))}</a></span></div>`;
 }
 
 /* Alleen wat in de app is ingelogd: schermen zoals de wand, en gasten (besluit 147). */
 function schermen() {
   const nu = gekozenScherm() ? null : gekozen();
   const r = [
-    ...data.schermen.map((s) => `<div class="r gastrij${gekozenScherm()?.id === s.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(SCHERM + s.id)}"><span class="n">${esc(s.naam)}${s.ik ? ' (dit scherm)' : ''}</span><span>scherm, begroet wie thuis is</span></div>`),
-    ...(data.gasten ?? []).map((g) => `<div class="r gastrij${g.id === nu?.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(g.id)}"><span class="n">${esc(g.naam)}${g.ik ? ' (jij)' : ''}</span><span>gast${g.thuis == null ? '' : g.thuis ? ', thuis' : ', weg'}</span></div>`),
+    ...data.schermen.map((s) => `<div class="r gastrij${gekozenScherm()?.id === s.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(SCHERM + s.id)}"><span class="n">${esc(s.naam)}${s.ik ? esc(t('bewoners.ditScherm')) : ''}</span><span>${esc(t('bewoners.schermBegroet'))}</span></div>`),
+    ...(data.gasten ?? []).map((g) => `<div class="r gastrij${g.id === nu?.id ? ' gekozen' : ''}" role="button" tabindex="0" data-kies="${esc(g.id)}"><span class="n">${esc(g.naam)}${g.ik ? ` ${esc(t('bewoners.jij'))}` : ''}</span><span>${esc(t('bewoners.gastKort'))}${g.thuis == null ? '' : esc(t(g.thuis ? 'toegang.thuis' : 'toegang.weg'))}</span></div>`),
   ];
-  return `<h3>Schermen en gasten</h3>${r.length ? r.join('') : '<p class="klein" style="margin: 0; color: var(--zacht)">Nog geen schermen of gasten. Een tablet aan de muur logt één keer in en kiest "Dit is een scherm". Een account zonder persoon in Home Assistant komt hier als gast.</p>'}`;
+  return `<h3>${esc(t('bewoners.schermenGasten'))}</h3>${r.length ? r.join('') : `<p class="klein" style="margin: 0; color: var(--zacht)">${esc(t('bewoners.geenSchermen'))}</p>`}`;
 }
 
 function tekenNu() {
@@ -203,7 +208,7 @@ function tekenNu() {
     try {
       html = maak();
     } catch (fout) {
-      html = `<p class="klein" style="margin: 0; color: var(--gloed-t)">Dit deel lukte niet: ${esc(String(fout?.message ?? fout))}</p>`;
+      html = `<p class="klein" style="margin: 0; color: var(--gloed-t)">${esc(t('bewoners.deelMis', { fout: String(fout?.message ?? fout) }))}</p>`;
     }
     $$(sel).forEach((el) => (el.innerHTML = html));
   };
@@ -219,28 +224,28 @@ addEventListener('hashchange', teken);
 /* ------------------------------------------------------------ wat je doet */
 
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('button, [data-kies]');
-  if (!t || !data) return;
-  if (t.closest('[data-greep]')) return;
+  const el = e.target.closest('button, [data-kies]');
+  if (!el || !data) return;
+  if (el.closest('[data-greep]')) return;
   const b = gekozen();
   const sc = gekozenScherm();
-  if (t.dataset.sopt && sc) {
-    await stuur({ actie: 'schermOpties', id: sc.id, opties: { [t.dataset.sopt]: t.dataset.waarde === 'ja' } });
+  if (el.dataset.sopt && sc) {
+    await stuur({ actie: 'schermOpties', id: sc.id, opties: { [el.dataset.sopt]: el.dataset.waarde === 'ja' } });
     return;
   }
-  if (t.dataset.kies) {
-    location.hash = encodeURIComponent(t.dataset.kies);
-  } else if (t.hasAttribute('data-schermweg') && sc) {
-    if (!confirm(`${sc.naam} weghalen? Bij de volgende pagina vraagt het opnieuw: woon je hier, of is dit een scherm?`)) return;
+  if (el.dataset.kies) {
+    location.hash = encodeURIComponent(el.dataset.kies);
+  } else if (el.hasAttribute('data-schermweg') && sc) {
+    if (!confirm(t('bewoners.schermWeg', { naam: sc.naam }))) return;
     if (await stuur({ actie: 'schermWeg', id: sc.id })) location.hash = '';
-  } else if (t.dataset.gast && b) {
-    await stuur({ actie: 'gast', id: b.id, gast: t.dataset.gast === 'ja' });
-  } else if (t.dataset.comfort && b) {
-    await stuur({ actie: 'comfort', id: b.id, comfort: t.dataset.comfort });
-  } else if (t.hasAttribute('data-hoofd') && b) {
+  } else if (el.dataset.gast && b) {
+    await stuur({ actie: 'gast', id: b.id, gast: el.dataset.gast === 'ja' });
+  } else if (el.dataset.comfort && b) {
+    await stuur({ actie: 'comfort', id: b.id, comfort: el.dataset.comfort });
+  } else if (el.hasAttribute('data-hoofd') && b) {
     await stuur({ actie: 'hoofd', id: b.id });
-  } else if (t.hasAttribute('data-weg') && b) {
-    if (!confirm(`${b.naam} weghalen? Logt ${b.ik ? 'je' : 'hij'} later weer in, dan begint ${b.ik ? 'je' : 'hij'} opnieuw.`)) return;
+  } else if (el.hasAttribute('data-weg') && b) {
+    if (!confirm(t(b.ik ? 'bewoners.weg.ik' : 'bewoners.weg.ander', { naam: b.naam }))) return;
     if (await stuur({ actie: 'weg', id: b.id })) location.hash = '';
   }
 });
@@ -263,22 +268,22 @@ document.addEventListener('keydown', (e) => {
   }
 });
 document.addEventListener('change', async (e) => {
-  const t = e.target;
+  const el = e.target;
   const sc = gekozenScherm();
-  if (sc && t.matches('[data-schermnaam]')) {
-    const naam = t.value.trim();
-    t.blur();
+  if (sc && el.matches('[data-schermnaam]')) {
+    const naam = el.value.trim();
+    el.blur();
     if (naam && naam !== sc.naam) await stuur({ actie: 'schermNaam', id: sc.id, naam });
     return;
   }
   const b = gekozen();
   if (!b) return;
-  if (t.matches('[data-naam]')) {
-    const naam = t.value.trim();
-    t.blur();
+  if (el.matches('[data-naam]')) {
+    const naam = el.value.trim();
+    el.blur();
     if (naam && naam !== b.naam) await stuur({ actie: 'naam', id: b.id, naam });
-  } else if (t.matches('[data-bron]')) {
-    await stuur({ actie: 'aanwezigheid', id: b.id, bron: t.value || null });
+  } else if (el.matches('[data-bron]')) {
+    await stuur({ actie: 'aanwezigheid', id: b.id, bron: el.value || null });
   }
 });
 
@@ -323,6 +328,6 @@ app.start('instellingen');
   const [b, z] = await Promise.allSettled([haal('api/bewoners'), haal('api/zon')]);
   if (b.status === 'fulfilled') data = b.value;
   if (z.status === 'fulfilled') zon = z.value;
-  if (!data) $$('[data-lijst]').forEach((el) => (el.innerHTML = '<p class="klein" style="margin: 0">Bewoners kan pas als de dienst een logmap heeft.</p>'));
+  if (!data) $$('[data-lijst]').forEach((el) => (el.innerHTML = `<p class="klein" style="margin: 0">${esc(t('bewoners.geenLogmap'))}</p>`));
   teken();
 })();

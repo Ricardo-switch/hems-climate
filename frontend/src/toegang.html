@@ -51,19 +51,19 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main class="groep">
       <div class="groepkop">
-        <a class="terugje" href="instellingen.html">‹ Instellingen</a>
-        <h1 class="kop-1">Bewoners en toegang</h1>
+        <a class="terugje" href="instellingen.html" data-t="jij.terugInstellingen"></a>
+        <h1 class="kop-1" data-t="groep.toegang"></h1>
         <span class="samen" data-samen></span>
         <span class="bewaard" data-bewaard></span>
       </div>
       <div class="groepveld">
-        <nav class="glas delen schuift" aria-label="Delen van Bewoners en toegang" data-delen></nav>
+        <nav class="glas delen schuift" data-t-aria-label="toegang.delen" data-delen></nav>
         <div class="glas vormvak" data-waarvoor-vak>
           <section class="vorm schuift" data-vorm></section>
-          <div class="voet"><button type="button" class="waarvoor" data-waarvoor aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.8"/><path d="M12 17h.01"/></svg>Waarvoor is dit?</button><div class="verder" data-verder></div></div>
+          <div class="voet"><button type="button" class="waarvoor" data-waarvoor aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.8"/><path d="M12 17h.01"/></svg><span data-t="groep.waarvoor"></span></button><div class="verder" data-verder></div></div>
           <aside class="naast" data-naast></aside>
         </div>
       </div>
@@ -72,15 +72,15 @@
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <a class="terugje" href="instellingen.html" data-terug>‹ Instellingen</a>
-      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px">Bewoners en toegang</h1><span class="bewaard" data-bewaard></span></div>
+      <a class="terugje" href="instellingen.html" data-terug data-t="jij.terugInstellingen"></a>
+      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px" data-t="groep.toegang"></h1><span class="bewaard" data-bewaard></span></div>
       <span class="samen" data-samen></span>
-      <nav class="glas delen" aria-label="Delen van Bewoners en toegang" data-delen></nav>
+      <nav class="glas delen" data-t-aria-label="toegang.delen" data-delen></nav>
       <section class="glas vorm" data-vorm></section>
       <div class="naast" data-naast></div>
       <div class="verder" data-verder></div>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>

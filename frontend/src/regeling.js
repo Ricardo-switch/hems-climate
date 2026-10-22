@@ -42,19 +42,19 @@ const uitstelbaar = () => (huisData?.etages ?? []).flatMap((e) => e.ruimtes).fla
 function delen() {
   const opZonAan = Object.values(opZon).filter(Boolean).length + (aInfo?.configuratie?.apparaten ?? []).filter((x) => !opZonUit.includes(x.id)).length;
   return [
-    { id: 'klimaat', titel: 'Klimaat', zin: huisData ? `${kamersMee().length} ${kamersMee().length === 1 ? 'kamer' : 'kamers'}, kijkt mee` : klimaat().length ? `${klimaat().length} apparaten, kijkt mee` : '…', stand: site ? 'goed' : null },
-    { id: 'opzon', titel: 'Apparaten op zon', zin: aInfo ? (opZonAan ? `${opZonAan} op zon` : 'geen') : '…', stand: aInfo ? 'goed' : null },
+    { id: 'klimaat', titel: t('regeling.klimaat'), zin: huisData ? t('regeling.kamersMee', { n: kamersMee().length }) : klimaat().length ? t('regeling.apparatenMee', { n: klimaat().length }) : '…', stand: site ? 'goed' : null },
+    { id: 'opzon', titel: t('instellingen.opZon'), zin: aInfo ? (opZonAan ? t('regeling.nOpZon', { n: opZonAan }) : t('instellingen.geen')) : '…', stand: aInfo ? 'goed' : null },
   ];
 }
 
-const FASEN = [['leren', 'Leren'], ['kijken', 'Kijkt mee'], ['regelen', 'Regelt']];
+const FASEN = ['leren', 'kijken', 'regelen'].map((k) => [k, t(`regeling.fase.${k}`)]);
 const fase = (nu) => `<span class="fase" role="img" aria-label="${FASEN.find(([k]) => k === nu)[1]}">${FASEN.map(([k, l]) => `<i class="${k === nu ? k : ''}">${l}</i>`).join('')}</span>`;
 
 /*
  * Per kamer wat er regelt (besluit 138). Vastleggen gebeurt bij de kamer, in
  * Indeling bij Verwarmen en koelen; hier het overzicht, met een tik erheen.
  */
-const ROL_ZIN = { houdt: 'houdt op temperatuur', zon: 'helpt op zon' };
+const ROL_ZIN = { houdt: 'regeling.rol.houdt', zon: 'regeling.rol.zon' };
 const binnenKamers = () => (huisData?.etages ?? []).filter((e) => e.id !== 'buiten').flatMap((e) => e.ruimtes ?? []);
 const actiefIn = (r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat' && a.klimaat?.rol && a.klimaat.rol !== 'kijken').sort((a, b) => (a.klimaat.rol === b.klimaat.rol ? 0 : a.klimaat.rol === 'houdt' ? -1 : 1));
 const kamersMee = () => binnenKamers().filter((r) => actiefIn(r).length);
@@ -63,28 +63,28 @@ const naarKamer = (r) => `indeling.html#${encodeURIComponent(r.id)}/warmte`;
 function klimaatVorm() {
   const winter = terugblik?.dataset?.seizoenen?.find((x) => x.seizoen === 'winter');
   const van = terugblik?.dataset?.vanMs ?? terugblik?.vanMs;
-  const sinds = van ? new Date(van).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) : null;
+  const sinds = van ? taal.datum(van, { day: 'numeric', month: 'long' }) : null;
   const rijen = huisData
     ? kamersMee().map((r) => {
         // Kamers die meedoen met deze (besluit 142), erbij genoemd.
         const mee = binnenKamers().filter((x) => x.meedoenMet?.kamerId === r.id).map((x) => x.naam);
-        const wat = actiefIn(r).map((a) => `${a.naam} ${ROL_ZIN[a.klimaat.rol]}`).join(', ');
-        return `<a class="regelrij kamerrij" href="${naarKamer(r)}"><div class="l"><b>${esc([r.naam, ...mee].join(' en '))}</b><span>${esc(wat)}</span></div><span class="pijl" aria-hidden="true">›</span></a>`;
+        const wat = actiefIn(r).map((a) => t(ROL_ZIN[a.klimaat.rol], { naam: a.naam })).join(', ');
+        return `<a class="regelrij kamerrij" href="${naarKamer(r)}"><div class="l"><b>${esc([r.naam, ...mee].join(` ${t('algemeen.en')} `))}</b><span>${esc(wat)}</span></div><span class="pijl" aria-hidden="true">›</span></a>`;
       }).join('')
     : '';
   const nietMee = binnenKamers().filter((r) => !actiefIn(r).length && !r.meedoenMet);
   const rest = nietMee.length
-    ? `<p class="klein" style="margin: 0">Doen nog niet mee: ${nietMee.map((r) => `<a href="${naarKamer(r)}">${esc(r.naam)}</a>`).join(', ')}. Kies bij de kamer wat er regelt.</p>`
+    ? `<p class="klein" style="margin: 0">${esc(t('regeling.nietMee'))} ${nietMee.map((r) => `<a href="${naarKamer(r)}">${esc(r.naam)}</a>`).join(', ')}. ${esc(t('regeling.kiesBijKamer'))}</p>`
     : '';
-  const stand = `<div class="regelrij"><div class="l"><b>Kijkt mee${sinds ? ` sinds ${esc(sinds)}` : ''}</b><span>Zegt wat het zou doen, en schakelt nog niets</span></div>${fase('kijken')}</div>`;
+  const stand = `<div class="regelrij"><div class="l"><b>${esc(sinds ? t('regeling.kijktSinds', { datum: sinds }) : t('regeling.fase.kijken'))}</b><span>${esc(t('regeling.zegtWat'))}</span></div>${fase('kijken')}</div>`;
   const bewijs = winter
-    ? `<div class="bewijs"><span class="mini">Winterdagen: ${nl(winter.dagen, 0)} van ${winter.doel}</span><span class="balkje"><i style="width: ${Math.min(100, (winter.dagen / winter.doel) * 100).toFixed(0)}%"></i></span></div>
-       <p class="mini" style="margin: 0">Klimaat gaat pas zelf regelen na ${winter.doel} winterdagen meekijken waarin het minstens zo goed zou doen als nu. Jij beslist, en terug kan altijd.</p>`
+    ? `<div class="bewijs"><span class="mini">${esc(t('regeling.winterdagen', { n: nl(winter.dagen, 0), doel: winter.doel }))}</span><span class="balkje"><i style="width: ${Math.min(100, (winter.dagen / winter.doel) * 100).toFixed(0)}%"></i></span></div>
+       <p class="mini" style="margin: 0">${esc(t('regeling.pasZelf', { doel: winter.doel }))}</p>`
     : '';
-  return `<h2 class="kop-2">Klimaat</h2>
-    <p class="klein" style="margin: 0">Per kamer wat er regelt. Tik op een kamer om het te veranderen.</p>
+  return `<h2 class="kop-2">${esc(t('regeling.klimaat'))}</h2>
+    <p class="klein" style="margin: 0">${esc(t('regeling.perKamer'))}</p>
     ${stand}
-    <div>${rijen || '<p class="klein">Nog geen kamer doet mee.</p>'}</div>
+    <div>${rijen || `<p class="klein">${esc(t('regeling.geenKamer'))}</p>`}</div>
     ${rest}
     ${bewijs}`;
 }
@@ -92,32 +92,31 @@ function klimaatVorm() {
 
 /** Een schakelaar per apparaat (besluit 167): aan start hij op zon, uit niet. Ook voor wat de configuratie noemt. */
 function opZonRij(naam, aan, data) {
-  return `<div class="regelrij"><div class="l"><b>${esc(naam)}</b><span>${aan ? 'Start als er zon over is' : 'Start niet vanzelf'}</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(naam)} op zon" ${data}></button></div>`;
+  return `<div class="regelrij"><div class="l"><b>${esc(naam)}</b><span>${esc(t(aan ? 'regeling.startZon' : 'regeling.startNiet'))}</span></div><button type="button" class="schakelaar" role="switch" aria-checked="${aan}" aria-label="${esc(t('regeling.naamOpZon', { naam }))}" ${data}></button></div>`;
 }
 
 function opZonVorm() {
-  if (!aInfo) return '<p class="klein">Even laden…</p>';
+  if (!aInfo) return `<p class="klein">${esc(t('algemeen.laden'))}…</p>`;
   const vast = new Set(aInfo.configuratie.apparaten.map((x) => x.id));
   const rijen = [];
   for (const x of aInfo.configuratie.apparaten) rijen.push(opZonRij(x.naam, !opZonUit.includes(x.id), `data-opzon-vast="${esc(x.id)}"`));
   for (const x of aInfo.gevonden.apparaten) if (!vast.has(x.id)) rijen.push(opZonRij(x.naam, opZon[x.id] === true, `data-opzon="${esc(x.id)}"`));
   const nu = uitstelbaar().map((x) => `<div class="regelrij"><div class="l"><b>${esc(x.naam)}</b><span>${esc(x.stand)}</span></div></div>`).join('');
-  return `<h2 class="kop-2">Apparaten op zon</h2>
-    <p class="klein" style="margin: 0">Een wasmachine, droger of vaatwasser die op afstand kan starten, wacht op zon. Hoe laat hij klaar moet zijn, kies je per keer bij het apparaat.</p>
-    <div>${rijen.length ? rijen.join('') : '<p class="klein">Geen apparaten gevonden die op afstand kunnen starten.</p>'}</div>
-    ${nu ? `<h3 class="kop-3" style="margin: 6px 0 0">Nu</h3><div>${nu}</div>` : ''}
-    <p class="mini" style="margin: 0">Werkt alleen als "op afstand starten" op het apparaat aanstaat. Zolang Smart Climate meekijkt, start er nog niets echt.</p>`;
+  return `<h2 class="kop-2">${esc(t('instellingen.opZon'))}</h2>
+    <p class="klein" style="margin: 0">${esc(t('regeling.opZonUitleg'))}</p>
+    <div>${rijen.length ? rijen.join('') : `<p class="klein">${esc(t('regeling.geenApparaten'))}</p>`}</div>
+    ${nu ? `<h3 class="kop-3" style="margin: 6px 0 0">${esc(t('regeling.nu'))}</h3><div>${nu}</div>` : ''}
+    <p class="mini" style="margin: 0">${esc(t('regeling.opAfstand'))}</p>`;
 }
 
-const NAAST = {
-  klimaat: ['Zo werkt het', ['Kijkt mee: het huis zegt wat het zou doen, en jij ziet of dat klopt', 'Regelt: het huis zet je airco’s en de cv zelf', 'Terug naar meekijken kan altijd']],
-  opzon: ['Waarvoor dit nodig is', ['De droger draait op je eigen zon in plaats van op stroom van het net', 'Hij is toch klaar op de tijd die jij kiest']],
-};
+/** Per deel een kopje en drie of twee punten (regeling.naast.*). */
+const NAAST = { klimaat: 3, opzon: 2 };
 
 function naast(id) {
-  const [kopje, lijst] = NAAST[id] ?? NAAST.klimaat;
-  const later = aInfo?.volgendeStart && id === 'opzon' ? '<div class="glas"><h3>Wanneer het ingaat</h3><p style="margin: 0">Na de volgende start van Smart Climate.</p></div>' : '';
-  return `<div class="glas"><h3>${esc(kopje)}</h3><ul>${lijst.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div>${later}`;
+  const deel = NAAST[id] ? id : 'klimaat';
+  const lijst = Array.from({ length: NAAST[deel] }, (_, i) => t(`regeling.naast.${deel}.${i + 1}`));
+  const later = aInfo?.volgendeStart && id === 'opzon' ? `<div class="glas"><h3>${esc(t('regeling.ingaat'))}</h3><p style="margin: 0">${esc(t('regeling.ingaatZin'))}</p></div>` : '';
+  return `<div class="glas"><h3>${esc(t(`regeling.naast.${deel}`))}</h3><ul>${lijst.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>${later}`;
 }
 
 /* ------------------------------------------------------------ tekenen */

@@ -17,6 +17,7 @@
 
 (function (global) {
   const { $$, esc } = global.app;
+  const t = (k, p) => global.taal.t(k, p);
 
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   /** Per deel een icoon en zijn kleur; een kamer krijgt er een naar zijn naam. */
@@ -99,7 +100,7 @@
     const nu = actief(delen);
     const open = gekozen(delen) != null;
     // Alleen wat ontbreekt krijgt een bolletje; wat goed staat, zegt niets extra (15 oktober).
-    const stip = (d) => (d.stand === 'mist' ? '<span class="stip" style="background: var(--gloed)" aria-label="er mist iets"></span>' : '');
+    const stip = (d) => (d.stand === 'mist' ? `<span class="stip" style="background: var(--gloed)" aria-label="${esc(t('groep.ermist'))}"></span>` : '');
     const html = rij
       .map((d) => (d.kop
         ? `<h4>${esc(d.kop)}</h4>`
@@ -111,22 +112,22 @@
     const echt = rij.filter((d) => !d.kop);
     const mist = echt.filter((d) => d.stand === 'mist').length;
     const klaar = echt.filter((d) => d.stand === 'goed').length;
-    const samen = echt.every((d) => d.stand == null) ? '' : `${mist ? `<span class="mis">${mist} mist</span>` : ''}${klaar ? `<span class="goed">${klaar} klaar</span>` : ''}`;
+    const samen = echt.every((d) => d.stand == null) ? '' : `${mist ? `<span class="mis">${esc(t('instellingen.mist', { n: mist }))}</span>` : ''}${klaar ? `<span class="goed">${esc(t('groep.klaar', { n: klaar }))}</span>` : ''}`;
     $$('[data-samen]').forEach((el) => (el.innerHTML = samen));
 
     // Onderaan door naar het vorige of volgende deel, in de volgorde van de lijst.
     const i = echt.findIndex((d) => d.id === nu);
     const stap = (d, soort) => (d
-      ? `<a class="${soort}" href="#${encodeURIComponent(d.id)}" data-stap><small>${soort === 'vorige' ? '‹ Vorige' : 'Volgende ›'}</small><b>${esc(d.titel)}${stip(d)}</b></a>`
+      ? `<a class="${soort}" href="#${encodeURIComponent(d.id)}" data-stap><small>${esc(t(`groep.${soort}`))}</small><b>${esc(d.titel)}${stip(d)}</b></a>`
       : `<span class="${soort}"></span>`);
-    const verder = echt.length > 1 ? `<span class="waar">${i + 1} van ${echt.length}</span>${stap(echt[i - 1], 'vorige')}${stap(echt[i + 1], 'volgende')}` : '';
+    const verder = echt.length > 1 ? `<span class="waar">${esc(t('instellingen.vanTotaal', { a: i + 1, b: echt.length }))}</span>${stap(echt[i - 1], 'vorige')}${stap(echt[i + 1], 'volgende')}` : '';
     $$('[data-verder]').forEach((el) => (el.innerHTML = verder));
 
     // De telefoon: eerst de lijst, een deel als eigen scherm met terug naar de groep.
     document.documentElement.classList.toggle('deel-open', open);
     const naam = document.querySelector('#tel h1')?.textContent?.trim() ?? '';
     $$('#tel [data-terug]').forEach((el) => {
-      el.textContent = open ? `‹ ${naam}` : '‹ Instellingen';
+      el.textContent = open ? `‹ ${naam}` : t('jij.terugInstellingen');
       el.setAttribute('href', open ? location.pathname + location.search : 'instellingen.html');
     });
     if (nu !== vorigNu) {
@@ -199,16 +200,16 @@
    */
   function bewaarStraks(doe, ms = 600) {
     clearTimeout(wacht);
-    zegBewaard('bezig', 'Bewaren…');
+    zegBewaard('bezig', t('groep.bewaren'));
     wacht = setTimeout(() => {
       bezig = bezig.then(async () => {
         try {
           const uit = await doe();
           if (uit == null) return;
-          if (uit.ok) zegBewaard('ok', 'Bewaard');
-          else zegBewaard('fout', uit.fout ?? 'Niet bewaard');
+          if (uit.ok) zegBewaard('ok', t('groep.bewaard'));
+          else zegBewaard('fout', uit.fout ?? t('groep.nietBewaard'));
         } catch {
-          zegBewaard('fout', 'Niet bewaard: geen verbinding met Smart Climate');
+          zegBewaard('fout', t('groep.geenVerbinding'));
         }
       });
     }, ms);
@@ -219,12 +220,12 @@
     const res = await global.app.deur(pad, body);
     if (res === null) return null;
     const uit = await res.json().catch(() => ({}));
-    if (res.status === 403) return { ok: false, fout: 'Alleen de beheerder kan dit bewaren' };
-    if (!res.ok) return { ok: false, fout: uit.fout ?? 'Niet bewaard' };
+    if (res.status === 403) return { ok: false, fout: t('groep.beheerder') };
+    if (!res.ok) return { ok: false, fout: uit.fout ?? t('groep.nietBewaard') };
     return { ok: true, antwoord: uit };
   }
 
   global.groep = { actief, tekenDelen, bewaarStraks, stuur, zegBewaard };
   // Bij het openen staat er wat er geldt.
-  addEventListener('DOMContentLoaded', () => zegBewaard('rust', 'Alles wordt meteen bewaard'));
+  addEventListener('DOMContentLoaded', () => zegBewaard('rust', t('groep.meteen')));
 })(window);

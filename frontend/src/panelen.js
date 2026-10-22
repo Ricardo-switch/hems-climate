@@ -9,11 +9,14 @@
 
 const ligging = (() => {
   const { esc, nl, deur } = app;
-  const ZON = { ochtend: 'ochtendzon', middag: 'middagzon', avond: 'avondzon', weetniet: 'weet ik niet' };
+  // De teksten in kit/teksten.*.js (besluit 185); de ligging in woorden komt nog van de dienst.
+  const t = (k, p) => window.taal.t(k, p);
+  const ZON = (z) => t(`panelen.zon.${z}`);
   const KANTEN = [['noorden', 0], ['oosten', 90], ['zuiden', 180], ['westen', 270]];
   const HELLING = [['plat', 10], ['flauw', 25], ['gewoon', 40], ['steil', 50]];
   const WP = [350, 400, 450];
-  const kWp = (w) => (w / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 2 });
+  const kWp = (w) => (w / 1000).toLocaleString(window.taal.locale, { maximumFractionDigits: 2 });
+  const watt = (w) => w.toLocaleString(window.taal.locale);
   const hoek = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
 
   const chip = (attrs, tekst, aan = false, klasse = '') => `<button type="button" class="lig-chip${aan ? ' aan' : ''}${klasse ? ` ${klasse}` : ''}" ${attrs} aria-pressed="${aan}">${esc(tekst)}</button>`;
@@ -33,8 +36,8 @@ const ligging = (() => {
     const pad = (k) => l.punten.map((p, i) => `${i ? 'L' : 'M'} ${X(p[0]).toFixed(1)} ${Y(p[k]).toFixed(1)}`).join(' ');
     const uren = [];
     for (let h = Math.ceil(van); h <= tot; h++) if (h % 3 === 0) uren.push(h);
-    return `<div class="lig-dag"><div class="lig-dagkop"><span>Een heldere dag, ${esc(l.datumTekst)}</span><span>${esc(nl(l.kWh))} kWh</span></div>
-      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="De opbrengst op ${esc(l.datumTekst)}, met de lijn die bij deze ligging hoort">
+    return `<div class="lig-dag"><div class="lig-dagkop"><span>${esc(t('panelen.heldereDag', { datum: l.datumTekst }))}</span><span>${esc(nl(l.kWh))} kWh</span></div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('panelen.lijnLabel', { datum: l.datumTekst }))}">
         <path d="${pad(1)} L ${X(l.punten.at(-1)[0])} 62 L ${X(l.punten[0][0])} 62 Z" fill="rgba(247,181,72,0.16)"/>
         <path d="${pad(1)}" fill="none" stroke="var(--zon)" stroke-width="2"/>
         <path d="${pad(2)}" fill="none" stroke="var(--tekst)" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.7"/>
@@ -46,9 +49,9 @@ const ligging = (() => {
   /** Het dak van boven, met de voorkant als pijl. */
   function roos(deg) {
     const r = (deg ?? 0) - 90;
-    return `<svg class="lig-roos" viewBox="0 0 116 116" role="img" aria-label="Het dak van boven: de voorkant kijkt naar ${esc(woordVan(deg))}">
+    return `<svg class="lig-roos" viewBox="0 0 116 116" role="img" aria-label="${esc(t('panelen.roos', { richting: woordVan(deg) }))}">
       <circle cx="58" cy="58" r="54" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)"/>
-      ${[['N', 58, 15], ['O', 104, 62], ['Z', 58, 110], ['W', 12, 62]].map(([t, x, y]) => `<text x="${x}" y="${y}" text-anchor="middle" fill="${t === 'N' ? 'var(--tekst)' : 'var(--gedempt)'}" font-size="11" font-weight="700">${t}</text>`).join('')}
+      ${[['n', 58, 15], ['o', 104, 62], ['z', 58, 110], ['w', 12, 62]].map(([k, x, y]) => `<text x="${x}" y="${y}" text-anchor="middle" fill="${k === 'n' ? 'var(--tekst)' : 'var(--gedempt)'}" font-size="11" font-weight="700">${esc(t(`panelen.windroos.${k}`))}</text>`).join('')}
       <g transform="rotate(${r} 58 58)">
         <rect x="34" y="34" width="24" height="48" fill="rgba(247,181,72,0.35)" stroke="rgba(247,181,72,0.7)"/>
         <rect x="58" y="34" width="24" height="48" fill="rgba(247,181,72,0.55)" stroke="rgba(247,181,72,0.9)"/>
@@ -56,19 +59,20 @@ const ligging = (() => {
         <path d="M 84 58 L 98 58 M 92 52 L 98 58 L 92 64" stroke="var(--ijs)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
       </g></svg>`;
   }
-  const woordVan = (deg) => (deg == null ? 'onbekend' : `het ${['noorden', 'noordoosten', 'oosten', 'zuidoosten', 'zuiden', 'zuidwesten', 'westen', 'noordwesten'][Math.round((((deg % 360) + 360) % 360) / 45) % 8]}`);
+  const RICHTINGEN = ['n', 'no', 'o', 'zo', 'z', 'zw', 'w', 'nw'];
+  const woordVan = (deg) => t(deg == null ? 'panelen.onbekend' : `panelen.richting.${RICHTINGEN[Math.round((((deg % 360) + 360) % 360) / 45) % 8]}`);
 
   /** De regels van een ligging in woorden, zoals de dienst ze geeft. */
   function regels(w, v, a, metOmvormer = true) {
-    return `${rij('Richting', zin(w.richting, v.kanten))}
-      ${rij('Helling', zin(w.helling))}
-      ${rij('Vermogen', zin(w.vermogen, w.perPaneel))}
-      ${metOmvormer && w.omvormerW ? rij('Omvormer', `<span class="lig-chip gevonden">✓ ${esc(w.omvormerW.toLocaleString('nl-NL'))} W</span>`) : ''}`;
+    return `${rij(t('panelen.richting'), zin(w.richting, v.kanten))}
+      ${rij(t('panelen.helling'), zin(w.helling))}
+      ${rij(t('panelen.vermogen'), zin(w.vermogen, w.perPaneel))}
+      ${metOmvormer && w.omvormerW ? rij(t('panelen.omvormer'), `<span class="lig-chip gevonden">✓ ${esc(watt(w.omvormerW))} W</span>`) : ''}`;
   }
 
   function voorkantVraag(v, a) {
     if (!v.vraagVoorkant) return '';
-    return rij('Voorkant', `<div class="lig-chips" role="group" aria-label="Wanneer schijnt de zon op de voorkant?">${v.vraagVoorkant.map((z) => chip(`data-lig-zon="${z}"`, ZON[z], a.voorkantZon === z)).join('')}</div>`);
+    return rij(t('energie.kant.voorkant'), `<div class="lig-chips" role="group" aria-label="${esc(t('panelen.wanneerZon'))}">${v.vraagVoorkant.map((z) => chip(`data-lig-zon="${z}"`, ZON(z), a.voorkantZon === z)).join('')}</div>`);
   }
 
   /** Wat er op Aanpassen staat: uit wat nu geldt of het voorstel. */
@@ -92,19 +96,20 @@ const ligging = (() => {
     const zelf = (attr, label, waarde, min, max, stap, eenheid) =>
       `<label class="lig-zelf${waarde != null ? ' aan' : ''}">${label}<input type="number" inputmode="numeric" min="${min}" max="${max}" step="${stap}" ${attr} value="${waarde ?? ''}" placeholder="${eenheid}"></label>`;
     return `<div class="lig-kompas">${roos(c.voorgevelDeg)}
-        <div class="lig-chips"><span class="mini lig-vol">De voorkant kijkt naar het</span>
-          ${KANTEN.map(([t, d]) => chip(`data-lig-voorgevel="${d}"`, t, hoek(d, c.voorgevelDeg) <= 22, 'klein')).join('')}
-          <label class="mini lig-vol">Fijner: ${esc(String(Math.round(c.voorgevelDeg)))}°<input class="lig-draai" type="range" min="0" max="355" step="1" value="${Math.round(c.voorgevelDeg) % 360}" data-lig-draai aria-label="De richting van de voorkant in graden"></label>
+        <div class="lig-chips"><span class="mini lig-vol">${esc(t('panelen.kijktNaar'))}</span>
+          ${KANTEN.map(([k, d]) => chip(`data-lig-voorgevel="${d}"`, t(`panelen.kant.${k}`), hoek(d, c.voorgevelDeg) <= 22, 'klein')).join('')}
+          <label class="mini lig-vol">${esc(t('panelen.fijner', { graden: Math.round(c.voorgevelDeg) }))}<input class="lig-draai" type="range" min="0" max="355" step="1" value="${Math.round(c.voorgevelDeg) % 360}" data-lig-draai aria-label="${esc(t('panelen.draaiLabel'))}"></label>
           ${kaartKnop(c)}
         </div></div>
-      ${rij('Helling', `<div class="lig-chips">${HELLING.map(([t, d]) => {
+      ${rij(t('panelen.helling'), `<div class="lig-chips">${HELLING.map(([k, d]) => {
         const hier = helling[1] === d;
         const graden = hier ? c.hellingDeg : d;
-        return chip(`data-lig-helling="${graden}"`, t === 'plat' && !hier ? 'plat' : `${t} ${graden}°`, hier, 'klein');
+        const naam = t(`panelen.dak.${k}`);
+        return chip(`data-lig-helling="${graden}"`, k === 'plat' && !hier ? naam : `${naam} ${graden}°`, hier, 'klein');
       }).join('')}</div>`)}
-      ${rij('Per paneel', `<div class="lig-chips">${WP.map((w) => chip(`data-lig-wp="${w}"`, `${w} Wp`, w === c.wpPerPaneel, 'klein')).join('')}${zelf('data-lig-wpzelf aria-label="Wattpiek per paneel"', 'anders', eigenWp ? c.wpPerPaneel : null, 50, 1000, 5, 'Wp')}</div>
-        ${v.aantal ? `<small class="lig-onder">Samen ${v.aantal} × ${c.wpPerPaneel} Wp = ${esc(kWp(v.aantal * c.wpPerPaneel))} kWp</small>` : ''}`)}
-      ${rij('Omvormer', `<div class="lig-chips">${gevonden ? chip(`data-lig-omvormer="${gevonden}"`, `✓ ${gevonden.toLocaleString('nl-NL')} W`, c.omvormerW === gevonden, 'gevonden klein') : ''}${zelf('data-lig-omvormerzelf aria-label="Vermogen van de omvormer in watt"', 'anders', eigenOmvormer ? c.omvormerW : null, 100, 100000, 100, 'W')}${chip('data-lig-omvormer="geen"', 'weet ik niet', c.omvormerW == null, 'klein')}</div>`)}`;
+      ${rij(t('panelen.perPaneel'), `<div class="lig-chips">${WP.map((w) => chip(`data-lig-wp="${w}"`, `${w} Wp`, w === c.wpPerPaneel, 'klein')).join('')}${zelf(`data-lig-wpzelf aria-label="${esc(t('panelen.wattpiek'))}"`, esc(t('panelen.anders')), eigenWp ? c.wpPerPaneel : null, 50, 1000, 5, 'Wp')}</div>
+        ${v.aantal ? `<small class="lig-onder">${esc(t('panelen.samen', { n: v.aantal, wp: c.wpPerPaneel, kwp: kWp(v.aantal * c.wpPerPaneel) }))}</small>` : ''}`)}
+      ${rij(t('panelen.omvormer'), `<div class="lig-chips">${gevonden ? chip(`data-lig-omvormer="${gevonden}"`, `✓ ${watt(gevonden)} W`, c.omvormerW === gevonden, 'gevonden klein') : ''}${zelf(`data-lig-omvormerzelf aria-label="${esc(t('panelen.omvormerLabel'))}"`, esc(t('panelen.anders')), eigenOmvormer ? c.omvormerW : null, 100, 100000, 100, 'W')}${chip('data-lig-omvormer="geen"', t('panelen.weetNiet'), c.omvormerW == null, 'klein')}</div>`)}`;
   }
 
   /*
@@ -116,13 +121,13 @@ const ligging = (() => {
   function kaartKnop(c) {
     const k = c.kaart;
     const zin = !k
-      ? 'Stuurt de ligging van je huis eenmalig naar OpenStreetMap.'
+      ? t('panelen.kaart.stuurt')
       : k === 'bezig'
-        ? 'Even kijken op de kaart…'
+        ? t('panelen.kaart.bezig')
         : k.fout
           ? k.fout
-          : `Volgens de kaart kijkt de voorkant naar ${k.voorkantDeg}°. Staat hij verkeerd om, kies dan een andere kant.`;
-    return `<div class="lig-vol lig-kaart"><button type="button" class="lig-link" data-lig-kaart ${k === 'bezig' ? 'disabled' : ''}>Opmeten op de kaart</button><small class="mini">${esc(zin)}</small></div>`;
+          : t('panelen.kaart.volgens', { graden: k.voorkantDeg });
+    return `<div class="lig-vol lig-kaart"><button type="button" class="lig-link" data-lig-kaart ${k === 'bezig' ? 'disabled' : ''}>${esc(t('panelen.kaart.knop'))}</button><small class="mini">${esc(zin)}</small></div>`;
   }
   async function opDeKaart(staat) {
     const c = staat.concept;
@@ -132,9 +137,9 @@ const ligging = (() => {
     try {
       const res = await deur('api/gevel-kaart', { nuDeg: Math.round(c.voorgevelDeg) });
       const body = res ? await res.json().catch(() => ({})) : {};
-      uit = res?.ok ? body : { fout: body.fout ?? body.wachten ?? 'De kaart gaf geen antwoord.' };
+      uit = res?.ok ? body : { fout: body.fout ?? body.wachten ?? t('panelen.kaart.geenAntwoord') };
     } catch {
-      uit = { fout: 'Geen verbinding met de kaart.' };
+      uit = { fout: t('panelen.kaart.geenVerbinding') };
     }
     if (staat.concept !== c) return;
     c.kaart = uit;
@@ -148,33 +153,33 @@ const ligging = (() => {
    * de bewoner wacht). `staat` houdt bij of de bewoner aan het aanpassen is.
    */
   function kaart(v, a, staat) {
-    if (!v) return { kop: 'Hoe je panelen liggen', uitleg: 'Even kijken…', inhoud: '', knoppen: '', volgende: true };
-    if (a?.panelen?.ligging === 'geen') return { kop: 'Geen panelen', uitleg: 'Dan is er niets te meten. Komen er panelen bij, kies dan de kant van het dak.', inhoud: '', knoppen: '', volgende: true };
+    if (!v) return { kop: t('panelen.hoe'), uitleg: t('kamer.kijken'), inhoud: '', knoppen: '', volgende: true };
+    if (a?.panelen?.ligging === 'geen') return { kop: t('energie.kant.geen'), uitleg: t('panelen.geenUitleg'), inhoud: '', knoppen: '', volgende: true };
     if (staat.aanpassen) {
       staat.concept ??= beginConcept(v);
       return {
-        kop: 'Pas aan wat niet klopt',
-        uitleg: 'Wat je hier zet, gaat voor wat Smart Climate meet.',
+        kop: t('panelen.pasAan'),
+        uitleg: t('panelen.pasAanUitleg'),
         inhoud: aanpassen(v, staat.concept),
-        knoppen: `<button type="button" class="lig-knop zacht" data-lig-terug>Terug</button><button type="button" class="lig-knop" data-lig-bewaar>Bewaar</button>`,
+        knoppen: `<button type="button" class="lig-knop zacht" data-lig-terug>${esc(t('panelen.terug'))}</button><button type="button" class="lig-knop" data-lig-bewaar>${esc(t('panelen.bewaar'))}</button>`,
         volgende: false,
       };
     }
-    const knopAanpassen = `<button type="button" class="lig-knop zacht" data-lig-aanpassen>Aanpassen</button>`;
+    const knopAanpassen = `<button type="button" class="lig-knop zacht" data-lig-aanpassen>${esc(t('panelen.aanpassen'))}</button>`;
     if (v.stand === 'voorstel') {
       return {
-        kop: 'Zo liggen je panelen',
-        uitleg: 'Gevonden in wat ze de afgelopen tien dagen leverden. Klopt het?',
+        kop: t('panelen.zoLiggen'),
+        uitleg: t('panelen.gevonden'),
         inhoud: `${lijn(v.lijn)}<div class="lig-regels">${regels(v.voorstel, v, a)}${voorkantVraag(v, a)}</div>`,
-        knoppen: `${knopAanpassen}<button type="button" class="lig-knop" data-lig-klopt>Klopt</button>`,
+        knoppen: `${knopAanpassen}<button type="button" class="lig-knop" data-lig-klopt>${esc(t('panelen.klopt'))}</button>`,
         volgende: false,
       };
     }
     if (v.stand === 'bevestigd' || v.stand === 'configuratie') {
       return {
-        kop: 'Zo liggen je panelen',
-        uitleg: v.stand === 'bevestigd' ? 'Zon, het weer en de verwachting rekenen hiermee.' : 'Zoals ingesteld. Na een heldere dag staat hier wat Smart Climate meet.',
-        inhoud: `${v.nu ? `<div class="lig-regels">${regels(v.nu, v, a)}</div>` : ''}${v.stand === 'bevestigd' && v.voorstel ? '<button type="button" class="lig-link" data-lig-meten>Laat Smart Climate het opnieuw meten</button>' : ''}`,
+        kop: t('panelen.zoLiggen'),
+        uitleg: t(v.stand === 'bevestigd' ? 'panelen.bevestigd' : 'panelen.ingesteld'),
+        inhoud: `${v.nu ? `<div class="lig-regels">${regels(v.nu, v, a)}</div>` : ''}${v.stand === 'bevestigd' && v.voorstel ? `<button type="button" class="lig-link" data-lig-meten>${esc(t('panelen.opnieuw'))}</button>` : ''}`,
         knoppen: knopAanpassen,
         volgende: true,
       };
@@ -182,10 +187,10 @@ const ligging = (() => {
     // Nog geen heldere dag: een schatting tot er een is.
     const n = v.nu;
     return {
-      kop: 'Nog één zonnige dag',
-      uitleg: 'De afgelopen tien dagen waren te bewolkt om te zien hoe je panelen liggen. Na de eerste heldere dag staat het voorstel klaar, met een melding.',
-      inhoud: `<div class="lig-regels">${voorkantVraag(v, a)}${v.omvormerGevonden ? rij('Omvormer', `<span class="lig-chip gevonden">✓ ${esc(v.omvormerGevonden.toLocaleString('nl-NL'))} W</span>`) : ''}</div>
-        ${n ? `<div class="lig-tip">Tot dan rekent het huis met een schatting: ${esc(n.richting.toLowerCase())}, ${esc(n.helling.toLowerCase())}, ${esc(String(n.wpPerPaneel ?? 400))} Wp per paneel. Zon, het weer en de verwachting werken al.</div>` : '<div class="lig-tip">Kies de kant van het dak en het aantal panelen, dan rekent het huis tot die dag met een schatting.</div>'}`,
+      kop: t('panelen.nogEen'),
+      uitleg: t('panelen.bewolkt'),
+      inhoud: `<div class="lig-regels">${voorkantVraag(v, a)}${v.omvormerGevonden ? rij(t('panelen.omvormer'), `<span class="lig-chip gevonden">✓ ${esc(watt(v.omvormerGevonden))} W</span>`) : ''}</div>
+        ${n ? `<div class="lig-tip">${esc(t('panelen.schatting', { richting: n.richting.toLowerCase(), helling: n.helling.toLowerCase(), wp: n.wpPerPaneel ?? 400 }))}</div>` : `<div class="lig-tip">${esc(t('panelen.kiesKant'))}</div>`}`,
       knoppen: knopAanpassen,
       volgende: true,
     };
@@ -195,32 +200,32 @@ const ligging = (() => {
    * Een klik op de kaart. Zet de keuze in `a` (de antwoorden) of `staat`, en
    * zegt wat de pagina moet doen: 'bewaar', 'teken' of null (niet van ons).
    */
-  function klik(t, v, a, staat) {
-    const ds = t.dataset;
+  function klik(knop, v, a, staat) {
+    const ds = knop.dataset;
     if (ds.ligZon) {
       a.voorkantZon = ds.ligZon;
       return 'bewaar';
     }
-    if (t.hasAttribute('data-lig-klopt')) {
+    if (knop.hasAttribute('data-lig-klopt')) {
       a.dak = 'voorstel';
       staat.aanpassen = false;
       return 'bewaar';
     }
-    if (t.hasAttribute('data-lig-meten')) {
+    if (knop.hasAttribute('data-lig-meten')) {
       a.dak = null;
       return 'bewaar';
     }
-    if (t.hasAttribute('data-lig-aanpassen')) {
+    if (knop.hasAttribute('data-lig-aanpassen')) {
       staat.aanpassen = true;
       staat.concept = beginConcept(v);
       return 'teken';
     }
-    if (t.hasAttribute('data-lig-terug')) {
+    if (knop.hasAttribute('data-lig-terug')) {
       staat.aanpassen = false;
       staat.concept = null;
       return 'teken';
     }
-    if (t.hasAttribute('data-lig-bewaar')) {
+    if (knop.hasAttribute('data-lig-bewaar')) {
       a.dak = { aanpassen: { ...staat.concept } };
       staat.aanpassen = false;
       staat.concept = null;
@@ -228,7 +233,7 @@ const ligging = (() => {
     }
     const c = staat.concept;
     if (!c) return null;
-    if (t.hasAttribute('data-lig-kaart')) {
+    if (knop.hasAttribute('data-lig-kaart')) {
       void opDeKaart(staat);
       return 'teken';
     }
@@ -241,13 +246,13 @@ const ligging = (() => {
   }
 
   /** Een veld op Aanpassen: de fijne richting, een eigen wattpiek of omvormer. */
-  function verander(t, staat) {
+  function verander(veld, staat) {
     const c = staat.concept;
     if (!c) return null;
-    const n = Math.round(Number(t.value));
-    if (t.hasAttribute('data-lig-draai')) c.voorgevelDeg = n;
-    else if (t.hasAttribute('data-lig-wpzelf') && n >= 50 && n <= 1000) c.wpPerPaneel = n;
-    else if (t.hasAttribute('data-lig-omvormerzelf') && n >= 100 && n <= 100000) c.omvormerW = n;
+    const n = Math.round(Number(veld.value));
+    if (veld.hasAttribute('data-lig-draai')) c.voorgevelDeg = n;
+    else if (veld.hasAttribute('data-lig-wpzelf') && n >= 50 && n <= 1000) c.wpPerPaneel = n;
+    else if (veld.hasAttribute('data-lig-omvormerzelf') && n >= 100 && n <= 100000) c.omvormerW = n;
     else return null;
     return 'teken';
   }

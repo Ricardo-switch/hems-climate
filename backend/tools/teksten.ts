@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 /** Woorden die in een Engelse of neutrale tekst niet voorkomen, maar in bijna elke Nederlandse zin. */
-export const NEDERLANDS = /\b(de|het|een|en|van|je|jij|jouw|is|niet|nog|geen|wat|naar|met|voor|bij|uit|dan|er|om|te|nu|zon|huis|kamers?|tik|klaar|sluiten|bekijk|vandaag|morgen|weer|straks|favorieten|batterijen?|laadt|rust|thuis|weg|overdag|nachts|goed|koud|warm)\b/i;
+export const NEDERLANDS = /\b(de|het|een|en|van|je|jij|jouw|is|niet|nog|geen|wat|naar|met|voor|bij|uit|dan|er|om|te|nu|zon|huis|kamers?|tik|klaar|sluiten|bekijk|vandaag|morgen|weer|straks|favorieten|batterijen?|laadt|rust|thuis|weg|overdag|nachts|goed|koud|warm|ook|als|maar|wordt|kan|mag|dit|dat|deze|alles|hier|daar|wie|waar|hoe|welke|tot|zonder|eerst|nooit|altijd|instellingen|hoofdmenu|terug|kies|bewaren|bewaard|graden)\b/i;
 
 /** Ziet een stukje tekst eruit als Nederlands voor de bewoner, en niet als code? */
 export function nederlands(tekst: string): string[] {
