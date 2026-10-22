@@ -1034,6 +1034,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         return r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
       });
       expect(fout).toEqual([]);
+
+      // Stap 9 (besluit 185): de meldingen, Aanpassen en de rondleiding op Thuis ook in het Engels.
+      await p.locator('#balk [data-meldbel]').click();
+      await p.locator('[data-meldblad] h2', { hasText: 'Notifications' }).waitFor();
+      expect(await p.locator('[data-meldblad]').innerText()).toMatch(/Maintenance/);
+      await p.keyboard.press('Escape');
+      if (await p.locator('[data-meldblad]').isVisible()) await p.locator('[data-meldblad] [data-meld-sluit]').click();
+      await wand.locator('[data-aanpassen]').click();
+      await p.locator('[data-bewerkkop]', { hasText: 'You are customising' }).waitFor();
+      expect(await p.locator('[data-bewerkkop]').innerText()).toMatch(/\+ Card[\s\S]*Done/);
+      await p.locator('[data-bewerkkop] [data-klaar]').click();
+      await wand.locator('[data-uitleg]').click();
+      await p.locator('.rl-kaart', { hasText: 'This is your house' }).waitFor();
+      expect(await p.locator('.rl-kaart').innerText()).toMatch(/Skip[\s\S]*Next/);
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
       expect(fouten).toEqual([]);
     } finally {

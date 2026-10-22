@@ -26,19 +26,8 @@
     wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [], magAanpassen: false },
     maxFavorieten: 12,
   };
-  const KORT = {
-    kamers: 'De temperatuur en wat elke kamer doet',
-    favorieten: 'Lampen, scènes en screens met één tik',
-    straks: 'Wat het huis gaat doen als er zon is',
-    apparaat: 'Een apparaat dat draait of op zon wacht',
-    gevoel: 'Te koud, goed of te warm; daar leert het huis van',
-    vandaag: 'De zon van vandaag en wat er draaide',
-    morgen: 'Het weer en de zon van morgen',
-    auto: 'Hoe vol, of hij laadt en met hoeveel',
-    batterij: 'Hoe vol, en of hij laadt of het huis voedt',
-    maand: 'Opgewekt, zelf gebruikt en wat het kostte',
-    deurbel: 'Het laatste beeld, en wanneer er werd aangebeld',
-  };
+  /** De kaarten met een korte uitleg bij Kaart toevoegen; de zinnen in teksten.*.js (eigen.kort.<kaart>, besluit 185). */
+  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel']);
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICOON = {
     kamers: S('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>'),
@@ -192,20 +181,20 @@
     if (f.soort === 'scene') {
       const s = scenes().find((x) => x.id === f.id);
       if (!s) return '';
-      const zin = gewenst.get(s.id) === 'gezet' ? 'Gezet' : s.kamer;
+      const zin = gewenst.get(s.id) === 'gezet' ? global.t('eigen.gezet') : s.kamer;
       return `<button type="button" class="tegel" data-tegel="${esc(s.id)}" data-soort="scene" ${licht ? '' : 'disabled'}><span class="ik">${ICOON.scene}</span><b>${esc(s.naam)}</b><span>${esc(zin)}</span></button>`;
     }
     if (f.soort === 'scherm') {
       const d = schermen().find((x) => x.id === f.id);
       if (!d) return '';
       const mag = huis?.schermenBedienen === true;
-      const zin = gewenst.has(d.id) ? (gewenst.get(d.id) === 'open' ? (d.scherm?.zonnescherm ? 'vouwt uit' : 'gaat open') : d.scherm?.zonnescherm ? 'klapt in' : 'gaat dicht') : d.stand;
+      const zin = gewenst.has(d.id) ? global.t(gewenst.get(d.id) === 'open' ? (d.scherm?.zonnescherm ? 'eigen.scherm.uitvouwen' : 'eigen.scherm.open') : d.scherm?.zonnescherm ? 'eigen.scherm.inklappen' : 'eigen.scherm.dicht') : d.stand;
       return `<button type="button" class="tegel scherm" data-tegel="${esc(d.id)}" data-soort="scherm" data-kamer="${esc(d.kamerId)}" ${mag ? '' : 'disabled'}><span class="ik">${d.scherm?.zonnescherm ? ICOON.zonnescherm : ICOON.screen}<i class="kamer-ik">${kamerIcoon(d.kamerIk)}</i></span><b>${esc(d.naam)}</b><span>${esc(`${d.kamer} · ${zin}`)}</span></button>`;
     }
     const d = lampen().find((x) => x.id === f.id);
     if (!d) return '';
     const aan = gewenst.has(d.id) ? gewenst.get(d.id) : d.aan;
-    const zin = aan ? (d.dimbaar && d.helderheidPct != null && !gewenst.has(d.id) ? `aan, ${d.helderheidPct}%` : 'aan') : 'uit';
+    const zin = aan ? (d.dimbaar && d.helderheidPct != null && !gewenst.has(d.id) ? global.t('eigen.lamp.aanPct', { pct: d.helderheidPct }) : global.t('eigen.lamp.aan')) : global.t('eigen.lamp.uit');
     return `<button type="button" class="tegel" data-tegel="${esc(d.id)}" data-soort="lamp" data-kamer="${esc(d.kamerId)}" aria-pressed="${aan}" ${licht ? '' : 'disabled'}><span class="ik">${ICOON.lamp}<i class="kamer-ik">${kamerIcoon(d.kamerIk)}</i></span><b>${esc(d.naam)}</b><span>${esc(`${d.kamer} · ${zin}`)}</span></button>`;
   }
 
@@ -221,7 +210,7 @@
       const alle = lijst.map(tegel).filter(Boolean);
       const paginas = [];
       for (let i = 0; i < alle.length; i += PER_PAGINA) paginas.push(alle.slice(i, i + PER_PAGINA).join(''));
-      const kies = mag && iets ? '<button type="button" class="favkies" data-fav-kies>Kies favorieten</button>' : '';
+      const kies = mag && iets ? `<button type="button" class="favkies" data-fav-kies>${esc(global.t('eigen.kies'))}</button>` : '';
       const stipjes = paginas.length > 1 ? `<div class="stipjes" data-stipjes aria-hidden="true">${paginas.map((_, i) => `<i class="${i === 0 ? 'aan' : ''}"></i>`).join('')}</div>` : '';
       const html = alle.length
         ? `<div class="favpaginas" data-favpaginas>${paginas.map((p) => `<div class="tegels favpagina">${p}</div>`).join('')}</div>${stipjes}${kies}`
@@ -327,16 +316,16 @@
       const naam = k.dataset.naam ?? k.dataset.kaart;
       k.insertAdjacentHTML(
         'afterbegin',
-        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="Schuif ${esc(naam)}; of met de pijltjes op het toetsenbord">${ICOON.greep}</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="Verberg ${esc(naam)}">${ICOON.oog}</span>`,
+        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="${esc(global.t('eigen.schuif', { naam }))}">${ICOON.greep}</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="${esc(global.t('eigen.verberg', { naam }))}">${ICOON.oog}</span>`,
       );
     }
   }
 
   function wandVanWie() {
     const esc = global.app.esc;
-    if (v.wand.van == null) return 'Je past de wand aan <b>voor iedereen in huis</b>';
-    if (v.wand.eigen) return 'Je past <b>jouw Thuis</b> aan, ook op je telefoon';
-    return `Je past Thuis aan <b>van ${esc(v.wand.naam ?? 'wie er geldt')}</b>, ook op diens telefoon`;
+    if (v.wand.van == null) return global.taal.html('thuis.bewerkIedereen');
+    if (v.wand.eigen) return global.taal.html('eigen.bewerkJij');
+    return global.taal.html('eigen.bewerkVan', { naam: v.wand.naam ?? global.t('eigen.wieGeldt') });
   }
 
   function begin(plek) {
@@ -488,12 +477,12 @@
       const weg = kaartenIn(plek).filter((k) => k.hasAttribute('data-uit') && !k.hasAttribute('data-niet-hier'));
       const rijen = weg.map((k) => {
         const id = k.dataset.kaart;
-        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein: KORT[id] ?? '', rechts: '+', data: `data-erbij="${esc(id)}"` });
+        return keus({ ik: ICOON[id] ?? '', naam: k.dataset.naam ?? id, klein: KORT.has(id) ? global.t(`eigen.kort.${id}`) : '', rechts: '+', data: `data-erbij="${esc(id)}"` });
       });
-      el.setAttribute('aria-label', 'Kaart toevoegen');
-      el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${plek === 'wand' ? 'Wat komt erbij?' : 'Kaart toevoegen'}</h2><button type="button" class="knop" data-blad-dicht>Sluit</button></div>
-        ${plek === 'wand' ? '<p class="mini" style="margin: 0">Een nieuwe kaart komt onderaan. Passen ze niet allemaal, dan schuif je de kolom met een vinger.</p>' : ''}
-        ${rijen.length ? rijen.join('') : '<p class="mini">Alle kaarten staan er al.</p>'}`;
+      el.setAttribute('aria-label', global.t('eigen.toevoegen'));
+      el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(global.t(plek === 'wand' ? 'eigen.erbij' : 'eigen.toevoegen'))}</h2><button type="button" class="knop" data-blad-dicht>${esc(global.t('algemeen.sluiten'))}</button></div>
+        ${plek === 'wand' ? `<p class="mini" style="margin: 0">${esc(global.t('eigen.onderaan'))}</p>` : ''}
+        ${rijen.length ? rijen.join('') : `<p class="mini">${esc(global.t('eigen.alleKaarten'))}</p>`}`;
       return;
     }
     /*
@@ -509,8 +498,10 @@
       const aan = gekozen.some((f) => f.id === x.id);
       return keus({ ik, naam: x.naam, klein, rechts: aan ? '✓' : '', data: `data-fav="${esc(x.id)}" data-fav-soort="${soortF}"`, aan, uit: vol && !aan });
     };
-    const klein = (d) => (d.soort === 'screen' ? (d.scherm?.zonnescherm ? 'Zonnescherm' : 'Screen') + (d.scherm?.standKiezen ? ', met stand' : d.scherm?.terugmelding === false ? ', open, dicht en stop' : '') : `Lamp${d.kleur ? ', kleur' : d.dimbaar ? ', dimbaar' : ''}`);
-    el.setAttribute('aria-label', 'Favorieten kiezen');
+    const klein = (d) => (d.soort === 'screen'
+      ? global.t(d.scherm?.zonnescherm ? 'eigen.soort.zonnescherm' : 'eigen.soort.screen') + (d.scherm?.standKiezen ? global.t('eigen.soort.metStand') : d.scherm?.terugmelding === false ? global.t('eigen.soort.openDicht') : '')
+      : global.t('eigen.soort.lamp') + (d.kleur ? global.t('eigen.soort.kleur') : d.dimbaar ? global.t('eigen.soort.dimbaar') : ''));
+    el.setAttribute('aria-label', global.t('eigen.favKiezen'));
     const kamers = perKamer();
     const tel = (wat) => kamers.reduce((n, k) => n + k[wat].length, 0);
     const naamVan = (f) => {
@@ -527,27 +518,32 @@
       .map((f, i) => {
         const n = naamVan(f);
         const t = n ? tegel(f) : '';
-        return t ? `<div class="favvoorbeeld" data-favchip="${esc(f.id)}" tabindex="0" aria-label="${esc(`${i + 1}: ${n.naam}${n.kamer ? ` in ${n.kamer}` : ''}; schuif met de greep, of met de pijltjes`)}"><i class="favnr" aria-hidden="true">${i + 1}</i><div class="favtegel" inert>${t}</div><span class="favgreep" data-favgreep aria-hidden="true">${ICOON.greep}</span></div>` : '';
+        return t ? `<div class="favvoorbeeld" data-favchip="${esc(f.id)}" tabindex="0" aria-label="${esc(global.t(n.kamer ? 'eigen.chipIn' : 'eigen.chip', { nr: i + 1, naam: n.naam, kamer: n.kamer }))}"><i class="favnr" aria-hidden="true">${i + 1}</i><div class="favtegel" inert>${t}</div><span class="favgreep" data-favgreep aria-hidden="true">${ICOON.greep}</span></div>` : '';
       })
       .join('');
     const knop = (id, label, n) => `<button type="button" data-fav-filter="${id}" aria-pressed="${filter === id}">${label}${n == null ? '' : `<i>${n}</i>`}</button>`;
-    const filters = `<div class="favfilter" role="group" aria-label="Wat je ziet">${knop('alles', 'Alles')}${tel('lampen') ? knop('lamp', 'Lampen', tel('lampen')) : ''}${tel('scenes') ? knop('scene', 'Scènes', tel('scenes')) : ''}${tel('schermen') ? knop('scherm', 'Screens', tel('schermen')) : ''}</div>`;
+    const filters = `<div class="favfilter" role="group" aria-label="${esc(global.t('eigen.filter.label'))}">${knop('alles', esc(global.t('eigen.filter.alles')))}${tel('lampen') ? knop('lamp', esc(global.t('eigen.filter.lampen')), tel('lampen')) : ''}${tel('scenes') ? knop('scene', esc(global.t('eigen.filter.scenes')), tel('scenes')) : ''}${tel('schermen') ? knop('scherm', esc(global.t('eigen.filter.screens')), tel('schermen')) : ''}</div>`;
     const ruimtes = kamers
       .map((k) => {
         const lamp = filter === 'alles' || filter === 'lamp' ? k.lampen.map((d) => rij('lamp', d, ICOON.lamp, klein(d))).join('') : '';
         const scherm = filter === 'alles' || filter === 'scherm' ? k.schermen.map((d) => rij('scherm', d, d.scherm?.zonnescherm ? ICOON.zonnescherm : ICOON.screen, klein(d))).join('') : '';
         let sc = '';
-        if (k.scenes.length && filter === 'scene') sc = k.scenes.map((s) => rij('scene', s, ICOON.scene, 'Scène')).join('');
+        if (k.scenes.length && filter === 'scene') sc = k.scenes.map((s) => rij('scene', s, ICOON.scene, global.t('eigen.soort.scene'))).join('');
         else if (k.scenes.length && filter === 'alles') {
           // Open als je er al een koos, of als je hem net openklapte.
           const open = blad.open.has(k.id) || k.scenes.some((s) => gekozen.some((f) => f.id === s.id));
-          sc = `<details class="favscenes" data-fav-kamer="${esc(k.id)}" ${open ? 'open' : ''}><summary>Scènes (${k.scenes.length})</summary>${k.scenes.map((s) => rij('scene', s, ICOON.scene, 'Scène')).join('')}</details>`;
+          sc = `<details class="favscenes" data-fav-kamer="${esc(k.id)}" ${open ? 'open' : ''}><summary>${esc(global.t('eigen.filter.scenes'))} (${k.scenes.length})</summary>${k.scenes.map((s) => rij('scene', s, ICOON.scene, global.t('eigen.soort.scene'))).join('')}</details>`;
         }
         return lamp || scherm || sc ? `<h3 class="favkamer"><span aria-hidden="true">${kamerIcoon(k.ik)}</span>${esc(k.naam)}</h3>${lamp}${scherm}${sc}` : '';
       })
       .join('');
-    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Favorieten</h2><button type="button" class="knop knop-licht" data-fav-klaar>Klaar</button></div>
-      <p class="mini" style="margin: 0" data-fav-teller>${gekozen.length} van ${v.maxFavorieten} gekozen, vier per pagina.${plek === 'wand' ? (v.wand.van == null ? ' Voor de wand, voor iedereen.' : v.wand.eigen ? ' Ook op je telefoon.' : ` Van ${global.app.esc(v.wand.naam ?? 'wie er geldt')}, ook op diens telefoon.`) : ' Ze staan met één tik op Thuis.'}${gekozen.length > 1 ? ' Schuif met de greep om de volgorde te veranderen.' : ''}</p>
+    const teller = [
+      global.t('eigen.teller', { n: gekozen.length, max: v.maxFavorieten }),
+      plek === 'wand' ? (v.wand.van == null ? global.t('eigen.voorWand') : v.wand.eigen ? global.t('eigen.ookTelefoon') : global.t('eigen.vanWie', { naam: v.wand.naam ?? global.t('eigen.wieGeldt') })) : global.t('eigen.opThuis'),
+      gekozen.length > 1 ? global.t('eigen.volgorde') : '',
+    ].filter(Boolean).join(' ');
+    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(global.t('thuis.kaart.favorieten'))}</h2><button type="button" class="knop knop-licht" data-fav-klaar>${esc(global.t('algemeen.klaar'))}</button></div>
+      <p class="mini" style="margin: 0" data-fav-teller>${esc(teller)}</p>
       ${chips ? `<div class="favchips tegels" data-favchips>${chips}</div>` : ''}
       ${filters}
       ${ruimtes}`;
@@ -624,14 +620,15 @@
     const w = v.tel.weergave ?? STANDAARD.tel.weergave;
     const keuze = (eenvoudig, naam, zin, tel) => `<button type="button" role="radio" aria-checked="${w.eenvoudig === eenvoudig}" data-wg-eenvoudig="${eenvoudig}"><span class="mini-tel" aria-hidden="true">${tel}</span><b>${naam}</b><p>${zin}</p></button>`;
     const schakel = (id, naam, zin) => `<button type="button" class="schakel" role="switch" aria-checked="${!!w[id]}" data-wg-schakel="${id}"><div><b>${naam}</b><span>${zin}</span></div><span class="knopje" aria-hidden="true"></span></button>`;
-    el.setAttribute('aria-label', 'Weergave');
-    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">Weergave</h2><button type="button" class="knop knop-licht" data-blad-dicht>Klaar</button></div>
-      <p class="mini" style="margin: 0">Voor jou, op elk scherm waar je inlogt.${global.app.telStand() ? '' : ' Op de wand geldt alleen minder beweging.'}</p>
-      <div class="twee" role="radiogroup" aria-label="Eenvoudig of uitgebreid">
-        ${keuze(true, 'Eenvoudig', 'De temperatuur en wat het huis doet, in zinnen. Minder getallen.', '<i style="width: 70%; height: 10px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
-        ${keuze(false, 'Uitgebreid', 'Alles: kW op het huis, de grafiek van vandaag en de apparaten.', '<i style="width: 60%; height: 7px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
+    const t = global.t;
+    el.setAttribute('aria-label', t('thuis.weergave'));
+    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(t('thuis.weergave'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
+      <p class="mini" style="margin: 0">${esc(t('eigen.wg.voorJou'))}${global.app.telStand() ? '' : ` ${esc(t('eigen.wg.wand'))}`}</p>
+      <div class="twee" role="radiogroup" aria-label="${esc(t('eigen.wg.keuze'))}">
+        ${keuze(true, esc(t('eigen.wg.eenvoudig')), esc(t('eigen.wg.eenvoudigZin')), '<i style="width: 70%; height: 10px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
+        ${keuze(false, esc(t('eigen.wg.uitgebreid')), esc(t('eigen.wg.uitgebreidZin')), '<i style="width: 60%; height: 7px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
       </div>
-      <div style="margin-top: 10px">${schakel('groteLetters', 'Grotere letters', 'Alle tekst een maat groter')}${schakel('minderBeweging', 'Minder beweging', 'Geen lopende stromen en geen ademende bol')}</div>`;
+      <div style="margin-top: 10px">${schakel('groteLetters', esc(t('eigen.wg.letters')), esc(t('eigen.wg.lettersZin')))}${schakel('minderBeweging', esc(t('eigen.wg.beweging')), esc(t('eigen.wg.bewegingZin')))}</div>`;
   }
 
   /* --------------------------------------------------------------- tikken */

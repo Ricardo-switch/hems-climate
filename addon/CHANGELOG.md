@@ -1,5 +1,14 @@
 # Wat is er nieuw
 
+## 0.59.1
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook de meldingen, Onderhoud, het rookalarm, aanbellen en wat er nieuw is
+- Thuis helemaal in het Engels: ook Aanpassen, de favorieten, de rondleiding en de wand als niemand kijkt
+
 ## 0.59.0
 
 *22 oktober 2026*

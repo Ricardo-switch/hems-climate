@@ -8339,10 +8339,17 @@ gehouden met meervouden: ja, met de regels per taal.
   plaatje, met aantikbare kamers erin die zo niet te bereiken waren; nu is het
   een groep.
 - **Versie 0.59.0.**
+- **Stap 9, eerste deel (0.59.1):** wat op elke pagina staat (`basis.js`: geen
+  verbinding, het rookalarm, aanbellen, de meldingen en Onderhoud, wat er
+  nieuw is en bijwerken), en de rest van Thuis: Aanpassen en de favorieten, de
+  rondleiding en de wand als niemand kijkt. `npm run teksten` toont per bestand
+  wat er nog om te zetten is; de taaltest gebruikt dezelfde herkenning. De
+  proefomgeving op de NAS (`index.html`, `app.js`, `stand.js`) blijft
+  Nederlands: die is voor de ontwikkelaar.
 
-*Wat er nog Nederlands is op Thuis (stap 9):* Aanpassen, de rondleiding, de
-nachtstand van de wand, en de teksten uit `api/huis` en `api/weer` (de stand
-van een apparaat, het weer in woorden). `huismodel.ACTIEF` herkent een stand
+*Wat er nog Nederlands is op Thuis (stap 9):* de teksten uit `api/huis`,
+`api/weer` en de meldingen (de stand van een apparaat, het weer in woorden), en
+wat er nieuw is in een versie. `huismodel.ACTIEF` herkent een stand
 nog aan het Nederlandse woord uit `api/huis`; als die meertalig wordt, wordt dat
 een vaste code.
 
