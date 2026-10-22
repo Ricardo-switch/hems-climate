@@ -11,6 +11,8 @@
 'use strict';
 
 const { $$, nl, esc, haal } = app;
+// De teksten staan in kit/teksten.*.js (besluit 185). De namen van de periodes komen nog van de dienst.
+const { t } = taal;
 
 const keuze = { soort: 'maand', datum: null };
 let data = null;
@@ -19,7 +21,7 @@ let zon = null;
 
 const getal = (n) => nl(n, Math.abs(n) >= 100 ? 0 : 1);
 /** Een meternaam zoals de bewoner hem zegt: "Airco woonkamer", niet "Airconditioning woonkamer". */
-const kort = (naam) => String(naam).replace(/^airconditioning\b/i, 'Airco').replace(/\s+(energie|energy|verbruik|kwh)$/i, '');
+const kort = (naam) => String(naam).replace(/^airconditioning\b/i, t('vandaag.airco')).replace(/\s+(energie|energy|verbruik|kwh)$/i, '');
 const euro = (n) => `€ ${nl(n, 2)}`;
 const ZON = '#F7B548';
 const NET = '#9AAABB';
@@ -36,14 +38,14 @@ async function laad() {
       melding = 'meters';
     } else if (!res.ok) {
       data = null;
-      melding = body.fout ?? body.wachten ?? 'De opbrengst is nu niet beschikbaar.';
+      melding = body.fout ?? body.wachten ?? t('opbrengst.nietBeschikbaar');
     } else {
       data = body;
       melding = null;
     }
   } catch {
     data = null;
-    melding = 'Geen verbinding met Smart Climate.';
+    melding = t('kamer.geenVerbinding');
   }
   teken();
 }
@@ -51,36 +53,34 @@ async function laad() {
 /* ------------------------------------------------------------ de delen */
 
 function titel(r) {
-  if (r.heeft.zon && r.stroom.eigenZonPct != null) return `${r.stroom.eigenZonPct}% van je stroom kwam van je eigen panelen`;
-  return `Je gebruikte ${getal(r.stroom.verbruikKwh)} kWh stroom`;
+  if (r.heeft.zon && r.stroom.eigenZonPct != null) return t('opbrengst.eigenPanelen', { pct: r.stroom.eigenZonPct });
+  return t('opbrengst.gebruikte', { kwh: getal(r.stroom.verbruikKwh) });
 }
 
-const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-/** "2025-02-05" wordt "5 februari 2025". */
-const datumNl = (iso) => {
-  const [j, m, d] = iso.split('-').map(Number);
-  return `${d} ${MAANDEN[m - 1]} ${j}`;
-};
+/** "2025-02-05" wordt "5 februari 2025", in de taal van de app. */
+const datumNl = (iso) => taal.datum(new Date(`${iso}T12:00:00Z`), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
 function periode(r) {
   const p = r.periode;
   // Begint de meting later dan de periode, dan zegt de regel dat eerst.
   const vorige = r.dekking
-    ? `<span class="mini" style="margin-left: 6px" data-dekking>Gemeten vanaf ${esc(datumNl(r.dekking.vanaf))}: ${r.dekking.dagen} van de ${r.dekking.vanDagen} dagen</span>`
-    : r.stroom.vorigeKwh != null ? `<span class="mini" style="margin-left: 6px">${esc(p.vorigeNaam)}: ${getal(r.stroom.vorigeKwh)} kWh gebruikt</span>` : '';
-  return `<button type="button" aria-label="Eerder" data-naar="${esc(p.vorige)}">‹</button><span class="kop-3" style="font-size: 17px">${esc(p.label)}</span><button type="button" aria-label="Later" ${p.volgende ? `data-naar="${esc(p.volgende)}"` : 'disabled'}>›</button>${vorige}`;
+    ? `<span class="mini" style="margin-left: 6px" data-dekking>${esc(t('opbrengst.gemetenVanaf', { datum: datumNl(r.dekking.vanaf), dagen: r.dekking.dagen, van: r.dekking.vanDagen }))}</span>`
+    : r.stroom.vorigeKwh != null ? `<span class="mini" style="margin-left: 6px">${esc(t('opbrengst.vorigeGebruikt', { naam: p.vorigeNaam, kwh: getal(r.stroom.vorigeKwh) }))}</span>` : '';
+  return `<button type="button" aria-label="${esc(t('vandaag.eerder'))}" data-naar="${esc(p.vorige)}">‹</button><span class="kop-3" style="font-size: 17px">${esc(p.label)}</span><button type="button" aria-label="${esc(t('vandaag.later'))}" ${p.volgende ? `data-naar="${esc(p.volgende)}"` : 'disabled'}>›</button>${vorige}`;
 }
 
 function cijfers(r, klein = false) {
   const s = r.stroom;
   const k = r.kosten;
-  const stroom = `<div class="cijfer"><div class="mini">Stroom gebruikt</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${r.heeft.zon ? `${getal(s.vanNetKwh)} van het net, de rest van je panelen` : 'van het net'}</div></div>`;
+  const stroom = `<div class="cijfer"><div class="mini">${esc(t('opbrengst.stroomGebruikt'))}</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${esc(r.heeft.zon ? t('opbrengst.vanNetRest', { kwh: getal(s.vanNetKwh) }) : t('opbrengst.vanNet'))}</div></div>`;
+  // De naam van een kostenregel komt van de dienst, nog in het Nederlands.
   const vast = k.regels.find((x) => /vast/i.test(x.naam));
-  const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">Kosten</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${r.dekking ? `over ${r.dekking.dagen} gemeten dagen` : k.vorige != null ? `${esc(r.periode.vorigeNaam)} ${euro(k.vorige)}` : ''}${vast?.euro == null ? `${k.vorige != null || r.dekking ? ', ' : ''}zonder vaste kosten` : ''}</div></div>`;
-  const gas = r.gas ? `<div class="cijfer"><div class="mini">Gas</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';
+  const kostenOnder = [r.dekking ? t('opbrengst.gemetenDagen', { n: r.dekking.dagen }) : k.vorige != null ? `${r.periode.vorigeNaam} ${euro(k.vorige)}` : '', vast?.euro == null ? t('opbrengst.zonderVast') : ''].filter(Boolean).join(', ');
+  const kosten = k.totaal == null ? '' : `<div class="cijfer"><div class="mini">${esc(t('opbrengst.kosten'))}</div><div class="getal">${euro(k.totaal)}</div><div class="klein">${esc(kostenOnder)}</div></div>`;
+  const gas = r.gas ? `<div class="cijfer"><div class="mini">${esc(t('opbrengst.gas'))}</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div><div class="klein">${r.gas.vorigeM3 != null ? `${esc(r.periode.vorigeNaam)} ${getal(r.gas.vorigeM3)} m³` : ''}</div></div>` : '';
   if (klein) {
     const blok = (naam, waarde, onder) => `<div class="glas-klein"><span class="mini">${naam}</span><span class="getal">${waarde}</span><span class="mini">${onder}</span></div>`;
-    return `<div class="drie">${blok('Stroom', getal(s.verbruikKwh), 'kWh')}${k.totaal == null ? '' : blok('Kosten', `€ ${nl(k.totaal, 0)}`, k.vorige != null ? `${esc(/^\d/.test(r.periode.vorigeNaam) ? r.periode.vorigeNaam : `${r.periode.vorigeNaam.slice(0, 4)}.`)} € ${nl(k.vorige, 0)}` : '')}${r.gas ? blok('Gas', getal(r.gas.m3), 'm³') : ''}</div>`;
+    return `<div class="drie">${blok(esc(t('opbrengst.stroom')), getal(s.verbruikKwh), 'kWh')}${k.totaal == null ? '' : blok(esc(t('opbrengst.kosten')), `€ ${nl(k.totaal, 0)}`, k.vorige != null ? `${esc(/^\d/.test(r.periode.vorigeNaam) ? r.periode.vorigeNaam : `${r.periode.vorigeNaam.slice(0, 4)}.`)} € ${nl(k.vorige, 0)}` : '')}${r.gas ? blok(esc(t('opbrengst.gas')), getal(r.gas.m3), 'm³') : ''}</div>`;
   }
   return `${stroom}${kosten}${gas}`;
 }
@@ -90,10 +90,10 @@ function panelen(r) {
   const z = r.zon;
   const zelf = z.opgewektKwh > 0 ? (z.zelfKwh / z.opgewektKwh) * 100 : 0;
   return `<section class="glas kaart">
-    <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">Je panelen</h2><span class="getal zon-t" style="font-size: 22px">${getal(z.opgewektKwh)} kWh</span></div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-3">${esc(t('opbrengst.panelen'))}</h2><span class="getal zon-t" style="font-size: 22px">${getal(z.opgewektKwh)} kWh</span></div>
     <div class="verdeel" style="height: 10px; margin-top: 12px"><i style="width: ${zelf.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zelf).toFixed(1)}%; background: var(--mint)"></i></div>
-    <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>${getal(z.zelfKwh)} zelf gebruikt${z.opgewektKwh > 0 ? `, <b>${Math.round(zelf)}%</b>` : ''}</span><span>${getal(z.terugKwh)} naar het net</span></div>
-    ${z.besteDag ? `<p class="mini" style="margin: 8px 0 0">Beste dag: ${esc(z.besteDag.label)}, ${getal(z.besteDag.kwh)} kWh</p>` : ''}
+    <div class="klein" style="margin-top: 8px; display: flex; justify-content: space-between"><span>${z.opgewektKwh > 0 ? taal.html('opbrengst.zelfPct', { kwh: getal(z.zelfKwh), pct: Math.round(zelf) }) : esc(t('opbrengst.zelf', { kwh: getal(z.zelfKwh) }))}</span><span>${esc(t('opbrengst.naarNet', { kwh: getal(z.terugKwh) }))}</span></div>
+    ${z.besteDag ? `<p class="mini" style="margin: 8px 0 0">${esc(t('opbrengst.besteDag', { dag: z.besteDag.label, kwh: getal(z.besteDag.kwh) }))}</p>` : ''}
     ${verwachtRegel(r.verwacht, r.periode.soort)}
   </section>`;
 }
@@ -105,36 +105,36 @@ function panelen(r) {
 function verwachtRegel(v, soort) {
   if (!v || !(v.verwachtKwh > 0)) return '';
   const p = Math.round(((v.werkelijkKwh - v.verwachtKwh) / v.verwachtKwh) * 100);
-  const af = p > 0 ? `+${p}%` : p < 0 ? `−${-p}%` : 'precies';
-  const over = soort === 'dag' ? '' : `, over ${v.dagen} ${v.dagen === 1 ? 'dag' : 'dagen'} met een verwachting`;
-  return `<p class="mini" style="margin: 6px 0 0">Verwacht ${getal(v.verwachtKwh)} kWh, opgewekt ${getal(v.werkelijkKwh)} (${af})${over}</p>`;
+  const af = p > 0 ? `+${p}%` : p < 0 ? `−${-p}%` : t('opbrengst.precies');
+  const zin = t(soort === 'dag' ? 'opbrengst.verwachtDag' : 'opbrengst.verwachtDagen', { verwacht: getal(v.verwachtKwh), echt: getal(v.werkelijkKwh), af, n: v.dagen });
+  return `<p class="mini" style="margin: 6px 0 0">${esc(zin)}</p>`;
 }
 
 function sankeyVan(r, breedte, hoogte, links, rechts, vul = false) {
   const stroom = r.stromen.filter((s) => s.van !== 'gas' && s.kwh > 0.05);
-  if (!stroom.length) return '<p class="klein">In deze periode is er nog niets gemeten.</p>';
-  const namen = new Map(r.apparaten.map((a) => [a.id, a.rest ? 'Rest van het huis' : kort(a.naam)]));
+  if (!stroom.length) return `<p class="klein">${esc(t('opbrengst.nietsGemeten'))}</p>`;
+  const namen = new Map(r.apparaten.map((a) => [a.id, a.rest ? t('opbrengst.rest') : kort(a.naam)]));
   const doelen = [...new Set(stroom.map((s) => s.naar))].map((id, i) => ({
     id,
-    naam: id === 'terug' ? 'Naar het net' : namen.get(id) ?? id,
+    naam: id === 'terug' ? t('opbrengst.naarHetNet') : namen.get(id) ?? id,
     kleur: id === 'terug' ? TERUG : id === 'rest' ? NET : KLEUREN[i % KLEUREN.length],
   }));
   const bronnen = [
-    ...(stroom.some((s) => s.van === 'zon') ? [{ id: 'zon', naam: 'Zon', kleur: ZON }] : []),
-    ...(stroom.some((s) => s.van === 'net') ? [{ id: 'net', naam: 'Net', kleur: NET }] : []),
+    ...(stroom.some((s) => s.van === 'zon') ? [{ id: 'zon', naam: t('vandaag.zon'), kleur: ZON }] : []),
+    ...(stroom.some((s) => s.van === 'net') ? [{ id: 'net', naam: t('opbrengst.net'), kleur: NET }] : []),
   ];
-  return sankey.svg({ breedte, hoogte, links, rechts, vul, bronnen, doelen, stromen: stroom, beschrijving: 'Waar je stroom heen ging: van de zon en het net naar de apparaten, de rest van het huis en terug naar het net.' });
+  return sankey.svg({ breedte, hoogte, links, rechts, vul, bronnen, doelen, stromen: stroom, beschrijving: t('opbrengst.sankey') });
 }
 
 function perApparaat(r) {
   const lijst = r.apparaten.filter((a) => a.kwh >= 0.05 || a.rest);
-  if (!lijst.length) return '<h2 class="kop-3">Per apparaat</h2><p class="mini" style="margin: 6px 0 0">Geen apparaten met een eigen meter.</p>';
+  if (!lijst.length) return `<h2 class="kop-3">${esc(t('opbrengst.perApparaat'))}</h2><p class="mini" style="margin: 6px 0 0">${esc(t('opbrengst.geenMeters'))}</p>`;
   const rij = (a) => {
     const zonPct = a.kwh > 0 ? (a.zonKwh / a.kwh) * 100 : 0;
-    return `<div class="rij"><div class="boven"><b>${esc(a.rest ? 'Rest van het huis' : kort(a.naam))}</b><span>${getal(a.kwh)} kWh${a.kosten != null ? `, ${euro(a.kosten)}` : ''}</span></div><div class="verdeel"><i style="width: ${zonPct.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zonPct).toFixed(1)}%; background: ${NET}"></i></div></div>`;
+    return `<div class="rij"><div class="boven"><b>${esc(a.rest ? t('opbrengst.rest') : kort(a.naam))}</b><span>${getal(a.kwh)} kWh${a.kosten != null ? `, ${euro(a.kosten)}` : ''}</span></div><div class="verdeel"><i style="width: ${zonPct.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zonPct).toFixed(1)}%; background: ${NET}"></i></div></div>`;
   };
-  return `<h2 class="kop-3" style="margin-bottom: 4px">Per apparaat</h2>${lijst.map(rij).join('')}
-    <p class="mini legenda"><span><span class="stip" style="background: var(--zon)"></span>zon</span><span><span class="stip" style="background: ${NET}"></span>net</span></p>`;
+  return `<h2 class="kop-3" style="margin-bottom: 4px">${esc(t('opbrengst.perApparaat'))}</h2>${lijst.map(rij).join('')}
+    <p class="mini legenda">${legendaZonNet()}</p>`;
 }
 
 /*
@@ -143,7 +143,9 @@ function perApparaat(r) {
  * wat erin zit.
  */
 const grafiek = { blik: 'periode', maat: 'stroom', gekozen: null };
-const MATEN = { stroom: ['Stroom', 'kWh'], zon: ['Zon', 'kWh'], gas: ['Gas', 'm³'], kosten: ['Kosten', '€'] };
+/** Wat je vergelijkt, met zijn eenheid; de naam in teksten.*.js (opbrengst.maat.*). */
+const MATEN = { stroom: 'kWh', zon: 'kWh', gas: 'm³', kosten: '€' };
+const legendaZonNet = () => `<span><span class="stip" style="background: var(--zon)"></span>${esc(t('opbrengst.zonKlein'))}</span><span><span class="stip" style="background: ${NET}"></span>${esc(t('opbrengst.netKlein'))}</span>`;
 const waarde = (n, eenheid) => (n == null ? '–' : eenheid === '€' ? euro(n) : `${getal(n)} ${eenheid}`);
 
 function staven(r) {
@@ -151,23 +153,25 @@ function staven(r) {
     const b = r.perBucket;
     const max = Math.max(0.1, ...b.map((x) => x.zonKwh + x.netKwh));
     return {
-      titel: { dag: 'Per uur', week: 'Per dag', maand: 'Per dag', jaar: 'Per maand' }[r.periode.soort],
+      titel: t(`opbrengst.per.${r.periode.soort}`),
       as: b.map((x) => x.label),
-      html: b.map((x, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(x.label)}: ${getal(x.zonKwh)} kWh zon, ${getal(x.netKwh)} kWh net"><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i></button>`),
-      detail: (i) => `${b[i].label}: ${getal(b[i].zonKwh)} kWh van je panelen, ${getal(b[i].netKwh)} kWh van het net`,
-      legenda: `<span><span class="stip" style="background: var(--zon)"></span>zon</span><span><span class="stip" style="background: ${NET}"></span>net</span>`,
+      html: b.map((x, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(t('opbrengst.staaf', { label: x.label, zon: getal(x.zonKwh), net: getal(x.netKwh) }))}"><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i></button>`),
+      detail: (i) => t('opbrengst.staafDetail', { label: b[i].label, zon: getal(b[i].zonKwh), net: getal(b[i].netKwh) }),
+      legenda: legendaZonNet(),
     };
   }
   const reeks = r.vergelijk[grafiek.maat] ?? [];
-  const [naam, eenheid] = MATEN[grafiek.maat];
+  const naam = t(`opbrengst.maat.${grafiek.maat}`);
+  const eenheid = MATEN[grafiek.maat];
+  const metEerder = (p) => (p.jaarEerder != null ? t('opbrengst.metEerder', { label: p.label, nu: waarde(p.nu, eenheid), eerder: waarde(p.jaarEerder, eenheid) }) : `${p.label}: ${waarde(p.nu, eenheid)}`);
   const max = Math.max(0.1, ...reeks.map((p) => Math.max(p.nu ?? 0, p.jaarEerder ?? 0)));
   const kleur = { stroom: '#6FD3FF', zon: ZON, gas: '#FF8A4C', kosten: '#C4BCFF' }[grafiek.maat];
   return {
-    titel: `${naam}, vergeleken`,
+    titel: t('opbrengst.vergeleken', { naam }),
     as: reeks.map((p) => p.label),
-    html: reeks.map((p, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(p.label)}: ${waarde(p.nu, eenheid)}${p.jaarEerder != null ? `, een jaar eerder ${waarde(p.jaarEerder, eenheid)}` : ''}">${p.jaarEerder != null ? `<i class="eerder" style="height: ${((p.jaarEerder / max) * 100).toFixed(1)}%"></i>` : ''}<i style="height: ${(((p.nu ?? 0) / max) * 100).toFixed(1)}%; background: ${kleur}"></i></button>`),
-    detail: (i) => `${reeks[i].label}: ${waarde(reeks[i].nu, eenheid)}${reeks[i].jaarEerder != null ? `, een jaar eerder ${waarde(reeks[i].jaarEerder, eenheid)}` : ''}`,
-    legenda: `<span><span class="stip" style="background: ${kleur}"></span>${r.periode.soort === 'jaar' ? 'per jaar' : 'deze periodes'}</span>${reeks.some((p) => p.jaarEerder != null) ? '<span><span class="stip" style="background: rgb(var(--wit) / 0.25)"></span>een jaar eerder</span>' : ''}`,
+    html: reeks.map((p, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(metEerder(p))}">${p.jaarEerder != null ? `<i class="eerder" style="height: ${((p.jaarEerder / max) * 100).toFixed(1)}%"></i>` : ''}<i style="height: ${(((p.nu ?? 0) / max) * 100).toFixed(1)}%; background: ${kleur}"></i></button>`),
+    detail: (i) => metEerder(reeks[i]),
+    legenda: `<span><span class="stip" style="background: ${kleur}"></span>${esc(t(r.periode.soort === 'jaar' ? 'opbrengst.perJaar' : 'opbrengst.dezePeriodes'))}</span>${reeks.some((p) => p.jaarEerder != null) ? `<span><span class="stip" style="background: rgb(var(--wit) / 0.25)"></span>${esc(t('opbrengst.jaarEerder'))}</span>` : ''}`,
   };
 }
 
@@ -177,16 +181,16 @@ function perDag(r) {
   const as = [g.as[0], g.as[Math.floor(g.as.length / 2)], g.as[g.as.length - 1]];
   const gekozen = grafiek.gekozen != null && grafiek.gekozen < g.as.length ? grafiek.gekozen : null;
   const maten = grafiek.blik === 'vergelijk'
-    ? `<div class="maten" role="group" aria-label="Wat vergelijken">${Object.entries(MATEN)
-        .filter(([k]) => (k !== 'gas' || r.heeft.gas) && (k !== 'zon' || r.heeft.zon) && (k !== 'kosten' || r.heeft.prijzen))
-        .map(([k, [l]]) => `<button type="button" data-maat="${k}" aria-pressed="${k === grafiek.maat}">${l}</button>`)
+    ? `<div class="maten" role="group" aria-label="${esc(t('opbrengst.watVergelijken'))}">${Object.keys(MATEN)
+        .filter((k) => (k !== 'gas' || r.heeft.gas) && (k !== 'zon' || r.heeft.zon) && (k !== 'kosten' || r.heeft.prijzen))
+        .map((k) => `<button type="button" data-maat="${k}" aria-pressed="${k === grafiek.maat}">${esc(t(`opbrengst.maat.${k}`))}</button>`)
         .join('')}</div>`
     : '';
-  return `<div class="grafiekkop"><h2 class="kop-3">${esc(g.titel)}</h2><div class="blik" role="group" aria-label="Grafiek"><button type="button" data-blik="periode" aria-pressed="${grafiek.blik === 'periode'}">Deze periode</button><button type="button" data-blik="vergelijk" aria-pressed="${grafiek.blik === 'vergelijk'}">Vergelijken</button></div></div>
+  return `<div class="grafiekkop"><h2 class="kop-3">${esc(g.titel)}</h2><div class="blik" role="group" aria-label="${esc(t('opbrengst.grafiek'))}"><button type="button" data-blik="periode" aria-pressed="${grafiek.blik === 'periode'}">${esc(t('opbrengst.dezePeriode'))}</button><button type="button" data-blik="vergelijk" aria-pressed="${grafiek.blik === 'vergelijk'}">${esc(t('opbrengst.vergelijken'))}</button></div></div>
     ${maten}
     <div class="staven">${g.html.join('')}</div>
     <div class="asje"><span>${esc(as[0])}</span><span>${esc(as[1])}</span><span>${esc(as[2])}</span></div>
-    <p class="mini detail" aria-live="polite">${gekozen != null ? esc(g.detail(gekozen)) : 'Tik op een staaf om te zien wat erin zit.'}</p>
+    <p class="mini detail" aria-live="polite">${esc(gekozen != null ? g.detail(gekozen) : t('opbrengst.tikStaaf'))}</p>
     <p class="mini legenda">${g.legenda}</p>`;
 }
 
@@ -195,14 +199,14 @@ function perDag(r) {
 function tekenNu() {
   app.schaal();
   app.luchtVan(zon, 0);
-  const soorten = [['dag', 'Dag'], ['week', 'Week'], ['maand', 'Maand'], ['jaar', 'Jaar']];
-  $$('[data-wissel]').forEach((el) => (el.innerHTML = soorten.map(([k, l]) => `<button type="button" data-soort="${k}" aria-pressed="${k === keuze.soort}">${l}</button>`).join('')));
+  const soorten = ['dag', 'week', 'maand', 'jaar'];
+  $$('[data-wissel]').forEach((el) => (el.innerHTML = soorten.map((k) => `<button type="button" data-soort="${k}" aria-pressed="${k === keuze.soort}">${esc(t(`opbrengst.soort.${k}`))}</button>`).join('')));
 
   if (!data) {
     const tekst = melding === 'meters'
-      ? `<section class="glas kaart"><h2 class="kop-3">Eerst je meters</h2><p class="klein" style="margin: 8px 0 12px">Om terug te kijken moet Smart Climate weten welke meters je huis heeft en wat stroom en gas kosten.</p><a class="pil" href="energie.html#meters">Meters en prijzen instellen</a></section>`
-      : `<p class="klein">${esc(melding ?? 'Even laden…')}</p>`;
-    $$('[data-titel]').forEach((el) => (el.textContent = melding === 'meters' ? 'Opbrengst' : melding ? 'Opbrengst' : 'Even laden'));
+      ? `<section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.eerstMeters'))}</h2><p class="klein" style="margin: 8px 0 12px">${esc(t('opbrengst.metersUitleg'))}</p><a class="pil" href="energie.html#meters">${esc(t('opbrengst.metersInstellen'))}</a></section>`
+      : `<p class="klein">${esc(melding ?? t('kamer.camera.laden'))}</p>`;
+    $$('[data-titel]').forEach((el) => (el.textContent = melding ? t('nav.opbrengst') : t('algemeen.laden')));
     document.querySelector('[data-links]').innerHTML = tekst;
     document.querySelector('[data-telinhoud]').innerHTML = tekst;
     ['[data-sankey]', '[data-apparaten]', '[data-perdag]'].forEach((s) => (document.querySelector(s).innerHTML = ''));
@@ -217,7 +221,7 @@ function tekenNu() {
   document.querySelector('[data-apparaten]').innerHTML = perApparaat(r);
   document.querySelector('[data-perdag]').innerHTML = perDag(r);
   document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}
-    <section class="glas kaart"><h2 class="kop-3">Waar je stroom heen ging</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
+    <section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.waarHeen'))}</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
     <section class="glas kaart">${perApparaat(r)}</section>
     <section class="glas kaart">${perDag(r)}</section>`;
 }

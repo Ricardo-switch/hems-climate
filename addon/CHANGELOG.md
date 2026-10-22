@@ -1,5 +1,26 @@
 # Wat is er nieuw
 
+## 0.59.2
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook Kamer, Vandaag, Apparaten, Opbrengst en de Assistent; de assistent antwoordt in je taal
+
+**Opgelost**
+
+- Een test van de integratie in Home Assistant faalde soms, als Home Assistant de integratie nog aan het herladen was
+
+## 0.59.1
+
+*22 oktober 2026*
+
+**Beter**
+
+- In het Engels nu ook de meldingen, Onderhoud, het rookalarm, aanbellen en wat er nieuw is
+- Thuis helemaal in het Engels: ook Aanpassen, de favorieten, de rondleiding en de wand als niemand kijkt
+
 ## 0.59.0
 
 *22 oktober 2026*

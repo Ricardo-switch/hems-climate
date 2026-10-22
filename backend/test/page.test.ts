@@ -1034,6 +1034,41 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         return r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
       });
       expect(fout).toEqual([]);
+
+      // Stap 9 (besluit 185): de meldingen, Aanpassen en de rondleiding op Thuis ook in het Engels.
+      await p.locator('#balk [data-meldbel]').click();
+      await p.locator('[data-meldblad] h2', { hasText: 'Notifications' }).waitFor();
+      expect(await p.locator('[data-meldblad]').innerText()).toMatch(/Maintenance/);
+      await p.keyboard.press('Escape');
+      if (await p.locator('[data-meldblad]').isVisible()) await p.locator('[data-meldblad] [data-meld-sluit]').click();
+      await wand.locator('[data-aanpassen]').click();
+      await p.locator('[data-bewerkkop]', { hasText: 'You are customising' }).waitFor();
+      expect(await p.locator('[data-bewerkkop]').innerText()).toMatch(/\+ Card[\s\S]*Done/);
+      await p.locator('[data-bewerkkop] [data-klaar]').click();
+      await wand.locator('[data-uitleg]').click();
+      await p.locator('.rl-kaart', { hasText: 'This is your house' }).waitFor();
+      expect(await p.locator('.rl-kaart').innerText()).toMatch(/Skip[\s\S]*Next/);
+
+      // Stap 9, deel 2: Kamer, Vandaag, Apparaten, Opbrengst en Assistent in het Engels, met de controle van besluit 86.
+      await p.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+      const paginas: [string, RegExp][] = [
+        ['kamer.html', /House[\s\S]*(Climate|Lights|Sensors)/],
+        ['vandaag.html', /Yesterday[\s\S]*Today[\s\S]*Tomorrow/],
+        ['apparaten.html', /Devices[\s\S]*(Add a device|No sun|to spare)/],
+        ['opbrengst.html', /Day[\s\S]*Week[\s\S]*Month[\s\S]*Year/],
+        ['assistent.html', /How can I help you/],
+      ];
+      for (const [pagina, tekst] of paginas) {
+        await p.goto(`${baseUrl}/${pagina}`);
+        await expect.poll(() => wand.innerText(), { timeout: 10_000 }).toMatch(tekst);
+        await p.addScriptTag({ path: createRequire(import.meta.url).resolve('axe-core/axe.min.js') });
+        const opPagina = await p.evaluate(async () => {
+          const axe = (globalThis as unknown as { axe: { run: (ctx: unknown, o: unknown) => Promise<{ violations: { id: string; nodes: { target: string[] }[] }[] }> } }).axe;
+          const r = await axe.run('#wand', { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
+          return r.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(', ')}`);
+        });
+        expect(opPagina, pagina).toEqual([]);
+      }
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT });
       expect(fouten).toEqual([]);
     } finally {

@@ -28,6 +28,7 @@
   if (global.niemand) return;
 
   const { nl, esc, haal, telStand } = global.app;
+  const t = (k, p) => global.t(k, p);
 
   const STANDAARD = { nacht: true, van: '23:00', tot: '07:00', rustMin: 5, aanMin: 5, weg: true, dag: true, avond: true, helderDag: 100, helderAvond: 20, melder: null };
   /** Pagina's om naar te kijken: daar gaat de wand terug naar Thuis. Wie iets invult, laat hij met rust. */
@@ -130,8 +131,8 @@
 
   /* ------------------------------------------------------------ tekenen */
 
-  const DAG = new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
-  const klokNu = () => new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const DAG = global.taal.opmaak({ weekday: 'long', day: 'numeric', month: 'long' });
+  const klokNu = () => global.taal.klok(Date.now());
   const ICOON_HUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9H4z"/></svg>';
   /** Een nieuwe versie: een pijl omlaag, zoals bij Meldingen. */
   const ICOON_UPDATE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>';
@@ -145,7 +146,8 @@
     sneeuw: `${WOLK}<g fill="#EEF3F7"><circle cx="14" cy="32" r="1.4"/><circle cx="19" cy="33" r="1.4"/><circle cx="24" cy="32" r="1.4"/></g>`,
     mist: '<g stroke="#B8C4CF" stroke-width="2.2" stroke-linecap="round"><path d="M6 13h24M9 19h22M6 25h20"/></g>',
   };
-  const WOORD = { zon: 'zonnig', half: 'half bewolkt', bewolkt: 'bewolkt', regen: 'regen', onweer: 'onweer', sneeuw: 'sneeuw', mist: 'mist' };
+  /** Het weer in een woord: zonnig, half bewolkt, regen (teksten.*.js). */
+  const WOORD = (soort) => (soort ? t(`niemand.weer.${soort}`) : null);
   const weerIcoon = (soort) => `<svg viewBox="0 0 36 36" aria-hidden="true">${WEER[soort] ?? WOLK}</svg>`;
 
   /** De kamers met een temperatuur: eerst waar je slaapt, dan waar je woont. */
@@ -161,7 +163,7 @@
     const st = bron?.state();
     const lijst = kamers();
     const bezigNu = lijst.map((r) => ({ r, stand: global.huismodel?.standVan?.(r.zoneId, st) })).filter((x) => x.stand === 'koelt' || x.stand === 'warmt');
-    const kop = bezigNu.length ? `${bezigNu.map((x, i) => `${i ? x.r.naam.toLowerCase() : x.r.naam} ${x.stand}`).join(', ')}.` : 'Alles rustig.';
+    const kop = bezigNu.length ? `${bezigNu.map((x, i) => t(`niemand.${x.stand}`, { kamer: i ? x.r.naam.toLowerCase() : x.r.naam })).join(', ')}.` : t('niemand.rustig');
     const temps = lijst.slice(0, 2).map((r, i) => `${esc(i ? r.naam.toLowerCase() : r.naam)} <b>${nl(r.temperatuurC)}°</b>`).join(', ');
     return `${esc(kop)}${temps ? ` ${temps}` : ''}`;
   }
@@ -169,8 +171,8 @@
   function morgenZin() {
     const d = bron?.weer()?.dagen?.[0];
     if (!d) return '';
-    const delen = [d.maxC == null ? null : `<b>${nl(d.maxC, 0)}°</b>`, WOORD[d.soort] ?? null, d.verwachtKwh == null ? null : `ongeveer <b>${nl(d.verwachtKwh, 0)}&nbsp;kWh</b> van je panelen`].filter(Boolean);
-    return delen.length ? { soort: d.soort, html: `Morgen ${delen.join(', ')}` } : '';
+    const delen = [d.maxC == null ? null : `<b>${nl(d.maxC, 0)}°</b>`, WOORD(d.soort) ? esc(WOORD(d.soort)) : null, d.verwachtKwh == null ? null : global.taal.html('niemand.panelen', { kwh: nl(d.verwachtKwh, 0) })].filter(Boolean);
+    return delen.length ? { soort: d.soort, html: `${esc(t('thuis.weer.morgen'))} ${delen.join(', ')}` } : '';
   }
 
   /**
@@ -189,7 +191,7 @@
     el.className = 'niemand lucht';
     el.setAttribute('data-niemand', '');
     el.setAttribute('role', 'button');
-    el.setAttribute('aria-label', 'Tik om de wand te wekken');
+    el.setAttribute('aria-label', t('niemand.wek'));
     el.tabIndex = 0;
     el.hidden = true;
     el.addEventListener('click', (e) => {
@@ -213,7 +215,7 @@
     el.classList.toggle('lucht-dag', toont === 'dag');
     if (toont === 'uit') {
       // Zwart: in Fully Kiosk is het scherm echt uit.
-      el.innerHTML = '<div class="nk-uit">Beweging zet het scherm aan, een tik opent de app</div>';
+      el.innerHTML = `<div class="nk-uit">${esc(t('niemand.uit'))}</div>`;
       return;
     }
     // Een nieuwe versie die klaarstaat (21 oktober 2026): ook als niemand kijkt.
@@ -227,24 +229,24 @@
           <span>${ICOON_HUIS}<i data-nk-rustig>${nachtZin()}</i></span>
           ${apparaat ? `<span class="nk-apparaat" data-nk-apparaat>${apparaat}</span>` : ''}
           ${morgen ? `<span>${weerIcoon(morgen.soort)}<i data-nk-morgen>${morgen.html}</i></span>` : ''}
-          ${update ? `<span class="nk-update" data-nk-update>${ICOON_UPDATE}<i><b>${esc(update.titel)}</b> Tik om bij te werken</i></span>` : ''}
+          ${update ? `<span class="nk-update" data-nk-update>${ICOON_UPDATE}<i><b>${esc(update.titel)}</b> ${esc(t('niemand.bijwerken'))}</i></span>` : ''}
         </div>
         <div class="nk-dim" style="opacity: ${dimVan()}"></div>
-        <div class="nk-wek">Tik om de wand te wekken</div>`;
+        <div class="nk-wek">${esc(t('niemand.wek'))}</div>`;
     } else {
       const w = bron?.weer();
       const buitenC = st?.explanation?.outdoorTemperatureC ?? w?.vandaag?.buitenC ?? null;
       const d = w?.dagen?.[0];
       const tegels = [
-        buitenC != null || w?.vandaag ? `<div class="glas-klein">${weerIcoon(w?.vandaag?.soort)}<span><b>${buitenC == null ? '–' : `${nl(buitenC, 0)}°`}</b><span>Nu${w?.vandaag?.soort ? `, ${WOORD[w.vandaag.soort] ?? ''}` : ''}</span></span></div>` : '',
-        d ? `<div class="glas-klein">${weerIcoon(d.soort)}<span><b>${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}</b><span>Morgen${d.verwachtKwh == null ? '' : `, ${nl(d.verwachtKwh, 0)} kWh`}</span></span></div>` : '',
+        buitenC != null || w?.vandaag ? `<div class="glas-klein">${weerIcoon(w?.vandaag?.soort)}<span><b>${buitenC == null ? '–' : `${nl(buitenC, 0)}°`}</b><span>${esc(t('thuis.weer.nuKop'))}${WOORD(w?.vandaag?.soort) ? `, ${esc(WOORD(w.vandaag.soort))}` : ''}</span></span></div>` : '',
+        d ? `<div class="glas-klein">${weerIcoon(d.soort)}<span><b>${d.maxC == null ? '–' : `${nl(d.maxC, 0)}°`}</b><span>${esc(t('thuis.weer.morgen'))}${d.verwachtKwh == null ? '' : `, ${nl(d.verwachtKwh, 0)} kWh`}</span></span></div>` : '',
         // De droger erbij, zolang hij draait (besluit 166).
         apparaatNu() ? `<div class="glas-klein nr-apparaat" data-nk-apparaat>${apparaatNu()}</div>` : '',
-        update ? `<div class="glas-klein nr-update" data-nk-update>${ICOON_UPDATE}<span><b>${esc(update.titel)}</b><span>Tik om bij te werken</span></span></div>` : '',
+        update ? `<div class="glas-klein nr-update" data-nk-update>${ICOON_UPDATE}<span><b>${esc(update.titel)}</b><span>${esc(t('niemand.bijwerken'))}</span></span></div>` : '',
       ].join('');
       el.innerHTML = `<div class="nr-huis" data-nk-huis></div>
         <div class="nr-klok"><div class="tijd" data-nk-tijd>${klokNu()}</div><div class="datum">${esc(datum)}</div></div>
-        <div class="nr-kop"><h1 class="kop-1" data-nk-kop>${esc(st?.bewoner?.kop?.titel ?? 'Het huis')}</h1><p class="lead">${esc(st?.bewoner?.kop?.zin ?? '')}</p></div>
+        <div class="nr-kop"><h1 class="kop-1" data-nk-kop>${esc(st?.bewoner?.kop?.titel ?? t('thuis.hetHuis'))}</h1><p class="lead">${esc(st?.bewoner?.kop?.zin ?? '')}</p></div>
         <div class="nr-weer">${tegels}</div>`;
     }
     tekenHuis(el.querySelector('[data-nk-huis]'));
@@ -260,7 +262,7 @@
       labels: [],
       etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true, ...(nacht ? { stand: undefined } : {}) })) })),
       // 's Nachts zoals de schets: donker, zonder zon, wolken of stromen.
-      ...(nacht ? { beschrijving: 'Het huis bij nacht, gedimd. Alles is rustig.', tijd: 'nacht', wolken: 0, zon: { ...model.zon, aandeel: 0, stand: undefined, hoogte: undefined }, stromen: [] } : {}),
+      ...(nacht ? { beschrijving: t('niemand.beschrijving'), tijd: 'nacht', wolken: 0, zon: { ...model.zon, aandeel: 0, stand: undefined, hoogte: undefined }, stromen: [] } : {}),
     };
     const breed = nacht ? 600 : 720;
     const hoog = nacht ? 480 : 700;
@@ -319,7 +321,7 @@
   /** Elke paar seconden: wat hoort er nu te staan? */
   function kijk() {
     if (telStand() || !scherm) {
-      if (toont) wek('geen wand');
+      if (toont) wek('geenWand');
       return;
     }
     const nu = Date.now();
@@ -336,8 +338,8 @@
     else if (toont) wil = stand();
     else if (instelling.rustMin > 0 && nu - laatst >= instelling.rustMin * 60_000) wil = stand();
     if (wil === toont) {
-      const t = document.querySelector('[data-nk-tijd]');
-      if (t) t.textContent = klokNu();
+      const tijd = document.querySelector('[data-nk-tijd]');
+      if (tijd) tijd.textContent = klokNu();
     } else if (wil == null) wek('ochtend');
     else toon(wil);
   }

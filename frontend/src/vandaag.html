@@ -74,11 +74,11 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main>
       <div class="kopregel">
-        <div><h1 class="kop-1">Vandaag</h1><p class="lead" style="max-width: 62ch; margin-top: 8px" data-lead></p></div>
-        <div class="wissel" role="group" aria-label="Dag" data-wissel></div>
+        <div><h1 class="kop-1"><span data-t="vandaag.vandaag"></span></h1><p class="lead" style="max-width: 62ch; margin-top: 8px" data-lead></p></div>
+        <div class="wissel" role="group" data-t-aria-label="vandaag.dag" data-wissel></div>
       </div>
       <section class="glas tijdlijn" data-tijdlijn></section>
       <div class="kaarten">
@@ -90,14 +90,14 @@
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <h1 class="kop-1" style="font-size: 34px">Vandaag</h1>
-      <div class="wissel" role="group" aria-label="Dag" data-wissel></div>
+      <h1 class="kop-1" style="font-size: 34px"><span data-t="vandaag.vandaag"></span></h1>
+      <div class="wissel" role="group" data-t-aria-label="vandaag.dag" data-wissel></div>
       <section class="glas zonkaart" data-zonkaart></section>
       <section class="glas klopte-tel" data-klopte hidden></section>
       <div class="lijn" data-lijn></div>
       <p class="mini" style="margin: 0 2px" data-voet></p>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>

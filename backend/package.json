@@ -1,6 +1,6 @@
 {
   "name": "@hems/backend",
-  "version": "0.59.0",
+  "version": "0.59.2",
   "private": true,
   "description": "Smart Climate OS - pure decision core plus adapters",
   "type": "module",
@@ -19,6 +19,7 @@
     "replay:record": "tsx tools/replay-record.ts",
     "decisions:index": "tsx tools/decision-index.ts",
     "changelog": "tsx tools/changelog.ts",
+    "teksten": "tsx tools/teksten.ts",
     "shadow": "tsx src/main.ts",
     "config:check": "tsx tools/check-config.ts",
     "shadow:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/shadow.ps1 start",

@@ -16,98 +16,85 @@
   const GEZIEN = 'sc-rondleiding-gezien';
   const WAAR = 'sc-rondleiding';
 
-  /** Per stop: de pagina, wat er staat, en waar het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144). */
+  /** Per stop: de pagina, waar en welke tekst (teksten.*.js: rond.<id>), en waar het licht op valt (wand, telefoon). Twaalf stops en Klaar (besluit 144). */
   const STOPS = [
     {
       pagina: 'thuis.html',
-      plek: 'Thuis',
-      kop: 'Dit is je huis',
-      tekst: 'Alles wat er nu gebeurt. De kleur van een kamer zegt wat hij doet: blauw koelt, oranje verwarmt, groen is goed.',
+      plek: 'thuis',
+      id: 'huis',
       doel: ['#podium-wand', '#podium-tel'],
     },
     {
       pagina: 'thuis.html',
-      plek: 'Thuis',
-      kop: 'Tik op een kamer',
-      tekst: 'Dan zie je hem van dichtbij. Dat doen we nu even voor je.',
+      plek: 'thuis',
+      id: 'kamerTik',
       doel: ['#podium-wand .sc-tik', '#tel [data-kamers] > *'],
       eerste: true,
     },
     {
       pagina: 'kamer.html',
-      plek: 'Een kamer',
-      kop: 'De kamer van dichtbij',
-      tekst: 'De temperatuur, wat er draait, en de lampen, scènes en screens om meteen te bedienen.',
+      plek: 'kamer',
+      id: 'kamer',
       doel: ['#wand [data-blad]', '#tel [data-blad]'],
     },
     {
       pagina: 'thuis.html',
-      plek: 'Thuis',
-      kop: 'Hoe voelt het?',
-      tekst: 'Tik wat je voelt. Het huis leert ervan wat jij prettig vindt, en stelt voor wat het anders kan.',
+      plek: 'thuis',
+      id: 'gevoel',
       doel: ['#wand [data-gevoel-kaart]', '#tel [data-gevoel-kaart]'],
     },
     {
       pagina: 'vandaag.html',
-      plek: 'Vandaag',
-      kop: 'Wat er vandaag gebeurt',
-      tekst: 'Uur voor uur: de zon, de kamers en wat het huis deed, en waarom.',
+      plek: 'vandaag',
+      id: 'vandaag',
       doel: ['#wand [data-tijdlijn]', '#tel [data-zonkaart]'],
     },
     {
       pagina: 'vandaag.html',
-      plek: 'Vandaag',
-      kop: 'Gisteren en morgen',
-      tekst: 'Bij Gisteren zie je of de verwachting klopte; bij Morgen wanneer de zon komt.',
+      plek: 'vandaag',
+      id: 'gisteren',
       doel: ['#wand [data-wissel]', '#tel [data-wissel]'],
     },
     {
       pagina: 'apparaten.html',
-      plek: 'Apparaten',
-      kop: 'Wat elk apparaat nu doet',
-      tekst: 'Per apparaat wat het doet en vraagt, en wat het vandaag op eigen zon deed.',
+      plek: 'apparaten',
+      id: 'apparaten',
       doel: ['#wand [data-apparaten]', '#tel [data-apparaten]'],
     },
     {
       pagina: 'opbrengst.html',
-      plek: 'Opbrengst',
-      kop: 'Wat je panelen opleverden',
-      tekst: 'In kWh en in euro, per dag, week, maand en jaar. En waar je stroom heen ging.',
+      plek: 'opbrengst',
+      id: 'opbrengst',
       doel: ['#wand .midden', '#tel [data-sankey]'],
     },
     {
       pagina: 'assistent.html',
-      plek: 'Assistent',
-      kop: 'Vraag het je huis',
-      tekst: 'Tik op de bol en het huis praat. Vraag wat het doet, waarom, of wat morgen brengt.',
+      plek: 'assistent',
+      id: 'assistent',
       doel: ['#wand [data-kern]', '#tel [data-kern]'],
     },
     {
       pagina: 'thuis.html',
-      plek: 'Thuis',
-      kop: 'De bel',
-      tekst: 'Hier staat wat nieuw is, en wat aandacht vraagt, zoals een batterij die bijna leeg is.',
+      plek: 'thuis',
+      id: 'bel',
       doel: ['#balk [data-meldbel]', '#tel [data-meldbel]'],
     },
     {
       pagina: 'instellingen.html',
-      plek: 'Instellingen',
-      kop: 'Het tandwiel',
-      tekst: 'Comfort, de regeling, energie en je huis. Alles wat je bij Inrichten koos, staat hier.',
+      plek: 'instellingen',
+      id: 'tandwiel',
       doel: ['#wand [data-groepen]', '#tel [data-groepen]'],
     },
     {
       pagina: 'huis-kan.html',
-      plek: 'Wat je huis kan',
-      kop: 'Hoe ver het huis is',
-      tekst: 'Per functie of hij werkt, meekijkt of nog leert, en wat er nog bij kan.',
+      plek: 'huisKan',
+      id: 'huisKan',
       doel: ['#wand [data-vakken]', '#tel [data-vakken]'],
     },
     {
       pagina: 'thuis.html',
-      plek: 'Klaar',
-      kop: 'Klaar',
-      tekst: 'Het huis kijkt mee. Na 30 winterdagen weet het genoeg om zelf te regelen; je ziet het groeien bij Wat je huis kan. Terugkijken kan bij het vraagteken op Thuis.',
+      plek: 'klaar',
+      id: 'klaar',
       doel: null,
       klaar: true,
     },
@@ -268,11 +255,12 @@
     }
     const genummerd = STOPS.length - 1;
     const stippen = STOPS.slice(0, genummerd).map((_, n) => `<i class="${n === i ? 'aan' : ''}"></i>`).join('');
-    kaart.setAttribute('aria-label', s.klaar ? 'Rondleiding klaar' : `Rondleiding, stop ${i + 1} van ${genummerd}`);
-    kaart.innerHTML = `<span class="plek">${s.klaar ? '' : `<b>${i + 1}</b>`}${esc(s.plek)}</span><h2>${esc(s.kop)}</h2><p>${esc(s.tekst)}</p>
+    const t = global.t;
+    kaart.setAttribute('aria-label', s.klaar ? t('rond.klaarLabel') : t('rond.stopLabel', { nr: i + 1, van: genummerd }));
+    kaart.innerHTML = `<span class="plek">${s.klaar ? '' : `<b>${i + 1}</b>`}${esc(t(`rond.plek.${s.plek}`))}</span><h2>${esc(t(`rond.${s.id}.kop`))}</h2><p>${esc(t(`rond.${s.id}.tekst`))}</p>
       <div class="onder">${s.klaar
-        ? `${global.film ? '<button type="button" class="licht" data-rl-film>Het filmpje nog eens</button>' : '<span></span>'}<button type="button" data-rl-klaar>Klaar</button>`
-        : `<span class="stippen" aria-hidden="true">${stippen}</span><span><button type="button" class="licht" data-rl-overslaan>Overslaan</button><button type="button" data-rl-volgende>Volgende</button></span>`}</div>`;
+        ? `${global.film ? `<button type="button" class="licht" data-rl-film>${esc(t('rond.film'))}</button>` : '<span></span>'}<button type="button" data-rl-klaar>${esc(t('algemeen.klaar'))}</button>`
+        : `<span class="stippen" aria-hidden="true">${stippen}</span><span><button type="button" class="licht" data-rl-overslaan>${esc(t('rond.overslaan'))}</button><button type="button" data-rl-volgende>${esc(t('rond.volgende'))}</button></span>`}</div>`;
     // Wat buiten beeld staat, eerst in beeld: in een kolom die scrolt, of op de telefoon.
     if (s.doel) {
       const tel = document.documentElement.classList.contains('tel-stand');

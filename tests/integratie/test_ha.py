@@ -33,10 +33,17 @@ INFO = {"naam": "Smart Climate", "versie": "0.58.0", "talen": ["nl", "en"], "kam
 
 @pytest.fixture(autouse=True)
 async def opruimen(hass: HomeAssistant):
-    """Na elke test de integratie afsluiten, met zijn timer: anders blijft die hangen."""
+    """Na elke test de integratie afsluiten, met zijn timer: anders blijft die hangen.
+
+    Eerst wachten tot wat nog loopt klaar is, zoals het herladen na een nieuwe
+    sleutel; anders weigert Home Assistant het afsluiten (22 oktober 2026, één
+    keer in de CI).
+    """
     yield
+    await hass.async_block_till_done()
     for entry in hass.config_entries.async_entries(DOMAIN):
-        await hass.config_entries.async_unload(entry.entry_id)
+        if entry.state.recoverable:
+            await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 
 
@@ -85,6 +92,8 @@ async def test_ontdekt_via_de_add_on_met_een_klik(hass: HomeAssistant, aioclient
     nieuw = HassioServiceInfo(config={"host": "abcd1234-hems-climate", "port": 8099, "sleutel": "nieuwe-sleutel"}, name="Smart Climate", slug="abcd1234_hems_climate", uuid="1234")
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_HASSIO}, data=nieuw)
     assert result["type"] is FlowResultType.ABORT
+    # Home Assistant laadt de integratie dan opnieuw: wachten tot dat klaar is.
+    await hass.async_block_till_done()
     assert hass.config_entries.async_entries(DOMAIN)[0].data["sleutel"] == "nieuwe-sleutel"
 
 

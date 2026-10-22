@@ -48,7 +48,8 @@ async function laadAlles() {
   if (w.status === 'fulfilled' && w.value?.vandaag) weer = w.value;
   if (v.status === 'fulfilled') vandaag = v.value;
   // Piper alleen als die Nederlands kan; anders klinkt het Engels (opgelost 15 oktober).
-  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal ? st.value.stem : null;
+  // In een andere taal (besluit 185) de stem van het apparaat: Piper spreekt hier alleen Nederlands.
+  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal && taal.code === 'nl' ? st.value.stem : null;
   teken();
 }
 
@@ -74,9 +75,9 @@ let voorlezen = (() => {
 /** De begroeting naar de tijd van de dag, met je naam, of op een scherm met wie er thuis is (besluit 147). */
 function groet() {
   const u = new Date().getHours();
-  const tijd = u < 6 ? 'Goedenacht' : u < 12 ? 'Goedemorgen' : u < 18 ? 'Goedemiddag' : 'Goedenavond';
+  const tijd = taal.t(`thuis.groet.${u < 6 ? 'nacht' : u < 12 ? 'morgen' : u < 18 ? 'middag' : 'avond'}`);
   const namen = huismodel.groetNamen(bewoners);
-  return namen.length ? `${tijd}, ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} en ${namen.at(-1)}` : namen[0]}` : tijd;
+  return namen.length ? `${tijd}, ${namen.length > 1 ? `${namen.slice(0, -1).join(', ')} ${taal.t('algemeen.en')} ${namen.at(-1)}` : namen[0]}` : tijd;
 }
 
 const zoneNaam = (id) => huismodel.zoneNaam(id, huisData);
@@ -115,26 +116,26 @@ function wachtenden() {
 function suggesties() {
   const uit = [];
   for (const w of wachtenden()) {
-    uit.push({ label: `Waarom wacht ${zoneNaam(w.zoneId)}?`, hint: `${nl(w.over)} van de ${nl(w.nodig)} kW zon`, ik: 'zon', v: { soort: 'waarom', kamer: w.zoneId } });
+    uit.push({ label: taal.t('assistent.waaromWacht', { kamer: zoneNaam(w.zoneId) }), hint: taal.t('assistent.vanDeZon', { over: nl(w.over), nodig: nl(w.nodig) }), ik: 'zon', v: { soort: 'waarom', kamer: w.zoneId } });
   }
   for (const k of state?.bewoner?.kamers ?? []) {
     if (k.soort !== 'cool' && k.soort !== 'heat') continue;
-    uit.push({ label: `Waarom ${k.soort === 'cool' ? 'koelt' : 'verwarmt'} ${zoneNaam(k.zoneId)}?`, hint: k.kort ?? '', ik: k.soort === 'cool' ? 'koel' : 'warm', v: { soort: 'waarom', kamer: k.zoneId } });
+    uit.push({ label: taal.t(k.soort === 'cool' ? 'assistent.waaromKoelt' : 'assistent.waaromWarmt', { kamer: zoneNaam(k.zoneId) }), hint: k.kort ?? '', ik: k.soort === 'cool' ? 'koel' : 'warm', v: { soort: 'waarom', kamer: k.zoneId } });
   }
   const z = weer?.vandaag;
   const zonOp = zon?.zon?.boven;
   // Naast de verwachting van vanochtend, net als op Thuis en Vandaag (opgelost 15 oktober).
   const vooraf = z?.verwachtVoorafKwh ?? null;
-  if (z) uit.push({ label: zonOp ? 'Hoeveel zon komt er nog?' : 'Hoeveel zon was er vandaag?', hint: vooraf != null ? `${nl(z.opgewektKwh)} kWh, verwacht ${nl(vooraf)}` : `${nl(z.opgewektKwh)} kWh`, ik: 'grafiek', v: { soort: 'zon' } });
-  else uit.push({ label: 'Hoeveel zon vandaag?', hint: '', ik: 'grafiek', v: { soort: 'zon' } });
-  uit.push({ label: 'Wat deed je vandaag?', hint: 'de dag tot nu toe', ik: 'klok', v: { soort: 'vandaag' } });
+  if (z) uit.push({ label: taal.t(zonOp ? 'assistent.zonNog' : 'assistent.zonWas'), hint: vooraf != null ? taal.t('thuis.vandaag.verwacht', { kwh: nl(z.opgewektKwh), verwacht: nl(vooraf) }) : `${nl(z.opgewektKwh)} kWh`, ik: 'grafiek', v: { soort: 'zon' } });
+  else uit.push({ label: taal.t('assistent.vraag.zon'), hint: '', ik: 'grafiek', v: { soort: 'zon' } });
+  uit.push({ label: taal.t('assistent.vraag.vandaag'), hint: taal.t('assistent.dagTotNu'), ik: 'klok', v: { soort: 'vandaag' } });
   // 's Avonds is morgen interessanter dan straks (besluit 142).
   const m = weer?.dagen?.[0];
-  if (m && !zonOp) uit.push({ label: 'Wat wordt het weer morgen?', hint: [m.tekst, m.maxC != null ? `${nl(m.maxC, 0)}°` : null].filter(Boolean).join(', '), ik: 'weer', v: { soort: 'morgen' } });
+  if (m && !zonOp) uit.push({ label: taal.t('assistent.vraag.morgen'), hint: [m.tekst, m.maxC != null ? `${nl(m.maxC, 0)}°` : null].filter(Boolean).join(', '), ik: 'weer', v: { soort: 'morgen' } });
   const temps = (huisData?.etages ?? []).flatMap((e) => e.ruimtes ?? []).filter((r) => r.zoneId && r.temperatuurC != null).map((r) => r.temperatuurC);
-  uit.push({ label: 'Hoe warm is het overal?', hint: temps.length ? `${nl(Math.min(...temps))} tot ${nl(Math.max(...temps))}°` : '', ik: 'temp', v: { soort: 'warm' } });
-  uit.push({ label: 'Wat doe je nu?', hint: state?.bewoner?.kop?.titel ?? '', ik: 'nu', v: { soort: 'nu' } });
-  uit.push({ label: 'Wat ga je straks doen?', hint: 'het schema en de zon', ik: 'klok', v: { soort: 'straks' } });
+  uit.push({ label: taal.t('assistent.vraag.warm'), hint: temps.length ? taal.t('assistent.totGraden', { van: nl(Math.min(...temps)), tot: nl(Math.max(...temps)) }) : '', ik: 'temp', v: { soort: 'warm' } });
+  uit.push({ label: taal.t('assistent.vraag.nu'), hint: state?.bewoner?.kop?.titel ?? '', ik: 'nu', v: { soort: 'nu' } });
+  uit.push({ label: taal.t('assistent.vraag.straks'), hint: taal.t('assistent.schema'), ik: 'klok', v: { soort: 'straks' } });
   return uit.slice(0, 4);
 }
 
@@ -143,7 +144,7 @@ function vervolg(item) {
   // Na bedienen: wat er nu kan, uit de dienst (besluit 148).
   if (item?.vervolg?.length) {
     const ik = item.gedaan?.[0]?.soort === 'scherm' ? 'scherm' : 'licht';
-    return item.vervolg.slice(0, 3).map((x) => ({ label: x.label, hint: '', ik: /^Scène/.test(x.label) ? 'scene' : ik, v: { soort: 'vrij', tekst: x.tekst } }));
+    return item.vervolg.slice(0, 3).map((x) => ({ label: x.label, hint: '', ik: /^(Scène|Scene)/.test(x.label) ? 'scene' : ik, v: { soort: 'vrij', tekst: x.tekst } }));
   }
   const alle = suggesties();
   const al = (v) => item && v.soort === item.soort && (v.kamer ?? null) === (item.kamer ?? null);
@@ -158,8 +159,8 @@ function vervolg(item) {
     kosten: ['vandaag', 'zon', 'nu'],
   }[item?.soort] ?? ['nu', 'zon', 'warm'];
   const vast = {
-    straks: { label: 'Wat ga je straks doen?', hint: 'het schema en de zon', ik: 'klok', v: { soort: 'straks' } },
-    nu: { label: 'Wat doe je nu?', hint: '', ik: 'nu', v: { soort: 'nu' } },
+    straks: { label: taal.t('assistent.vraag.straks'), hint: taal.t('assistent.schema'), ik: 'klok', v: { soort: 'straks' } },
+    nu: { label: taal.t('assistent.vraag.nu'), hint: '', ik: 'nu', v: { soort: 'nu' } },
   };
   const lijst = [];
   for (const s of voorkeur) {
@@ -180,10 +181,11 @@ async function vraag(v) {
   teken();
   try {
     const scherm = beweegtNog()?.id;
-    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, ...(scherm ? { scherm } : {}) } : { v: v.soort, ...(v.kamer ? { kamer: v.kamer } : {}) });
+    // In de taal van de app (besluit 185): de assistent antwoordt in die taal.
+    const q = new URLSearchParams(v.soort === 'vrij' ? { v: 'vrij', tekst: v.tekst, taal: taal.code, ...(scherm ? { scherm } : {}) } : { v: v.soort, taal: taal.code, ...(v.kamer ? { kamer: v.kamer } : {}) });
     const res = await fetch(`api/vraag?${q}`);
     const body = await res.json();
-    nu.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? 'Daar heb ik geen antwoord op.';
+    nu.antwoord = res.ok ? body.antwoord : body.fout ?? body.wachten ?? taal.t('assistent.geenAntwoord');
     nu.kamerId = body.kamer ?? nu.kamerId;
     nu.feiten = body.feiten ?? [];
     if (v.soort === 'vrij' && res.ok) nu.soort = body.vraag;
@@ -214,7 +216,7 @@ async function vraag(v) {
       return;
     }
   } catch {
-    nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
+    nu.antwoord = taal.t('assistent.nietBereikbaar');
   }
   void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
 }
@@ -225,14 +227,14 @@ async function voerUit(body) {
     const res = await fetch(body.opdracht.pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body.opdracht.body) });
     if (!res.ok) {
       const fout = await res.json().catch(() => ({}));
-      nu.antwoord = `Dat lukte niet: ${String(fout.fout ?? fout.wachten ?? 'Home Assistant gaf geen antwoord').replace(/\.$/, '')}.`;
+      nu.antwoord = taal.t('basis.versie.mislukt', { fout: String(fout.fout ?? fout.wachten ?? taal.t('assistent.haGeenAntwoord')).replace(/\.$/, '') });
       nu.gesproken = null;
       nu.feiten = [];
       nu.vervolg = [];
       return;
     }
   } catch {
-    nu.antwoord = 'Ik kan Smart Climate nu niet bereiken.';
+    nu.antwoord = taal.t('assistent.nietBereikbaar');
     nu.gesproken = null;
     return;
   }
@@ -332,10 +334,10 @@ function leefMee(bijWoord) {
   rafId = requestAnimationFrame(stap);
 }
 
-/** Een Nederlandse stem van het apparaat zelf, nooit een die online praat. */
+/** Een stem van het apparaat zelf in de taal van de app, nooit een die online praat. */
 function apparaatStem() {
   if (!('speechSynthesis' in window)) return null;
-  return speechSynthesis.getVoices().find((v) => v.localService && /^nl/i.test(v.lang)) ?? null;
+  return speechSynthesis.getVoices().find((v) => v.localService && v.lang.toLowerCase().startsWith(taal.code)) ?? null;
 }
 
 /** Of de browser het geluid weigerde: dan zegt de bol "Tik om te horen". */
@@ -505,7 +507,7 @@ async function microfoonTik() {
       if (b.soort === 'tekst') {
         stopLuisteren();
         if (b.tekst) void vraag({ label: b.tekst, soort: 'vrij', tekst: b.tekst });
-        else void zeg('Dat verstond ik niet. Tik nog eens op de microfoon.');
+        else void zeg(taal.t('assistent.nietVerstaan'));
       } else if (b.soort === 'fout') {
         stopLuisteren();
         void zeg(b.reden);
@@ -513,21 +515,21 @@ async function microfoonTik() {
     });
   } catch (e) {
     stopLuisteren();
-    void zeg(e?.message === 'tik' ? 'Tik op de microfoon om te praten.' : 'De microfoon mag niet. Geef deze pagina toegang tot de microfoon.');
+    void zeg(taal.t(e?.message === 'tik' ? 'assistent.tikMicrofoon' : 'assistent.geenMicrofoon'));
   }
 }
 
 /* ------------------------------------------------------------ tekenen */
 
 /** Waar een feit vandaan komt, in gewone woorden; wat hier niet staat, toont de pagina niet. */
-const FEIT = { temperatuur: 'temperatuur', doel: 'doel', zonWh: 'opgewekt', piekW: 'het meeste', piekTijd: 'om', netAfWh: 'van het net', netTerugWh: 'terug', vermogen: 'zon nu', zelfPct: 'zelf gebruikt', rest: 'komt nog', vooraf: 'verwacht', verwacht: 'van je panelen', maxC: 'warmst', regenkans: 'kans op regen', euro: 'kosten' };
+const FEIT = new Set(['temperatuur', 'doel', 'zonWh', 'piekW', 'piekTijd', 'netAfWh', 'netTerugWh', 'vermogen', 'zelfPct', 'rest', 'vooraf', 'verwacht', 'maxC', 'regenkans', 'euro']);
 function feiten(item) {
   return (item?.feiten ?? [])
     .map((f) => {
       const d = String(f.bron).split('.');
-      let naam = FEIT[d.at(-1)];
+      let naam = FEIT.has(d.at(-1)) ? taal.t(`assistent.feit.${d.at(-1)}`) : null;
       if (d[0] === 'zone' && d.length === 3 && naam) naam = `${zoneNaam(d[1])}${d[2] === 'temperatuur' ? '' : `, ${naam}`}`;
-      if (d[1] === 'morgen' && naam) naam = `morgen, ${naam}`;
+      if (d[1] === 'morgen' && naam) naam = `${taal.t('vandaag.morgen').toLowerCase()}, ${naam}`;
       return naam ? `<div class="feit"><b>${esc(f.tekst)}</b><span>${esc(naam)}</span></div>` : '';
     })
     .filter(Boolean)
@@ -550,21 +552,21 @@ const woordHtml = (tekst) => splitsWoorden(tekst).map((w) => `<span class="w${/\
 function spraakHtml() {
   const wie = (t) => (app.telStand() ? '' : `<span class="wie"><i></i>${esc(t)}</span>`);
   // De begroeting of het afscheid, terwijl het huis die zegt.
-  if (stand === 'praat' && zegtNu != null && zegtNu !== nu?.antwoord) return `${wie('Je huis, aan het praten')}<p class="zegt loopt" data-zegt>${woordHtml(zegtNu)}</p>`;
+  if (stand === 'praat' && zegtNu != null && zegtNu !== nu?.antwoord) return `${wie(taal.t('assistent.praat'))}<p class="zegt loopt" data-zegt>${woordHtml(zegtNu)}</p>`;
   if (stand === 'begin' || !nu) {
     const kop = state?.bewoner?.kop;
-    const tekst = `${groet()}. Waarmee kan ik je helpen?`;
-    return `${wie('Je huis')}<p class="zegt" data-zegt>${woordHtml(tekst)}</p>${kop ? `<p class="klein-zegt">${esc([kop.titel, kop.zin].filter(Boolean).join('. ').replace(/\.\./g, '.'))}</p>` : ''}`;
+    const tekst = taal.t('assistent.welkom', { groet: groet() });
+    return `${wie(taal.t('assistent.jeHuis'))}<p class="zegt" data-zegt>${woordHtml(tekst)}</p>${kop ? `<p class="klein-zegt">${esc([kop.titel, kop.zin].filter(Boolean).join('. ').replace(/\.\./g, '.'))}</p>` : ''}`;
   }
-  const jij = `<p class="jij">Jij: <b>${esc(nu.label)}</b></p>`;
-  if (stand === 'denkt') return `${wie('Je huis denkt na')}${jij}<p class="zegt" style="color: var(--gedempt)">Even kijken…</p>`;
+  const jij = `<p class="jij">${esc(taal.t('assistent.jij'))}: <b>${esc(nu.label)}</b></p>`;
+  if (stand === 'denkt') return `${wie(taal.t('assistent.denkt'))}${jij}<p class="zegt" style="color: var(--gedempt)">${esc(taal.t('kamer.kijken'))}</p>`;
   const lang = (nu.antwoord ?? '').length > 150;
   const verder = stand === 'verder';
-  return `${wie(stand === 'praat' ? 'Je huis, aan het praten' : 'Je huis')}${jij}
+  return `${wie(taal.t(stand === 'praat' ? 'assistent.praat' : 'assistent.jeHuis'))}${jij}
     <p class="zegt${lang ? ' lang' : ''}${verder ? '' : ' loopt'}" data-zegt>${woordHtml(nu.antwoord ?? '')}</p>
     ${verder ? (nu.gedaan?.length ? `<div class="gedaan">${gedaanHtml(nu)}</div>` : `<div class="feiten">${feiten(nu)}</div>`) : ''}
     ${verder && nu.link ? `<div class="verder"><a class="knop knop-licht" href="${esc(nu.link.href)}">${esc(nu.link.label)}</a></div>` : ''}
-    ${verder ? '<p class="klein-zegt nogiets">Kan ik je nog ergens mee helpen?</p>' : ''}`;
+    ${verder ? `<p class="klein-zegt nogiets">${esc(taal.t('assistent.nogIets'))}</p>` : ''}`;
 }
 
 function sugHtml(s, i) {
@@ -592,7 +594,7 @@ function tekenHuis() {
   const overZon = stand !== 'begin' && (nu?.soort === 'zon' || nu?.soort === 'straks');
   const zonKw = state?.bewoner?.stromen?.zonKw ?? 0;
   const model = {
-    beschrijving: kamer ? `Het huis, met ${zoneNaam(kamer)} uitgelicht.` : 'Het huis.',
+    beschrijving: kamer ? taal.t('assistent.uitgelicht', { kamer: zoneNaam(kamer) }) : `${taal.t('thuis.hetHuis')}.`,
     tijd: app.tijdVanDeDag(zon),
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: overZon ? 0.9 : 0.4, panelen: t.panelen } : { aandeel: 0, panelen: t.panelen },
     etages,
@@ -600,7 +602,7 @@ function tekenHuis() {
     buitenunit: t.buitenunit,
     net: true,
     stromen: kamer && zonKw > 0.05 ? [{ van: 'zon', naar: `kamer:${etages.flatMap((e) => e.kamers).find((k) => k.doel)?.naam ?? ''}`, sterkte: 0.5 }] : [],
-    labels: overZon && zonKw > 0.05 ? [{ bij: 'panelen', titel: `${nl(zonKw)} kW`, groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 40, dy: -60 }] : [],
+    labels: overZon && zonKw > 0.05 ? [{ bij: 'panelen', titel: `${nl(zonKw)} kW`, groot: true, toon: 'zon', regels: [taal.t('thuis.label.panelen')], dx: 40, dy: -60 }] : [],
   };
   if (!app.telStand()) huis.teken(document.getElementById('podium-wand'), model, { breedte: 420, hoogte: 480, marge: 0.03 });
   else huis.teken(document.getElementById('podium-tel'), { ...model, etages: etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: k.stil || !k.doel })) })) }, { breedte: 360, hoogte: 240, marge: 0.04 });
@@ -616,37 +618,37 @@ function tekenNu() {
   // Niet begrepen: voorbeelden om op te tikken; anders wat er logisch op volgt.
   const voorbeelden = (nu?.voorbeelden ?? []).map((t) => ({ label: t, hint: '', ik: 'nu', v: { soort: 'vrij', tekst: t } }));
   getoond = stand === 'verder' ? (voorbeelden.length ? voorbeelden : vervolg(nu)) : stand === 'begin' ? suggesties() : [];
-  const nee = stand === 'verder' ? '<button type="button" class="sug nee" data-nee>Nee, dank je</button>' : '';
+  const nee = stand === 'verder' ? `<button type="button" class="sug nee" data-nee>${esc(taal.t('assistent.nee'))}</button>` : '';
   $$('[data-suggesties]').forEach((el) => {
     el.innerHTML = getoond.map(sugHtml).join('') + nee;
     el.hidden = !getoond.length;
   });
   $$('[data-eerder]').forEach((el) => {
     el.hidden = !eerder.length || stand === 'begin';
-    el.innerHTML = `Eerder: ${eerder.map((e, i) => `<button type="button" data-eerder-vraag="${i}">${esc(e.label)}</button>`).join('')}`;
+    el.innerHTML = `${esc(taal.t('vandaag.eerder'))}: ${eerder.map((e, i) => `<button type="button" data-eerder-vraag="${i}">${esc(e.label)}</button>`).join('')}`;
   });
-  $$('[data-tik]').forEach((el) => (el.textContent = tikOmTeHoren && stand === 'verder' ? 'Tik om te horen' : !ontgrendeld && voorlezen && stand === 'begin' ? 'Tik om te praten' : ''));
+  $$('[data-tik]').forEach((el) => (el.textContent = tikOmTeHoren && stand === 'verder' ? taal.t('assistent.tikHoren') : !ontgrendeld && voorlezen && stand === 'begin' ? taal.t('assistent.tikPraten') : ''));
   // Twee soorten stoppen (besluit 148): het praten, en het scherm. Nooit dezelfde knop.
   const scherm = beweegtNog();
   $$('[data-stop]').forEach((el) => {
     el.hidden = stand !== 'praat';
-    el.textContent = scherm ? 'Stil' : 'Stop';
+    el.textContent = taal.t(scherm ? 'assistent.stil' : 'kamer.scherm.stop');
     el.classList.toggle('zacht', !!scherm);
   });
   $$('[data-stopscherm]').forEach((el) => {
     el.hidden = !scherm;
     const naam = scherm?.naam ?? '';
-    el.querySelector('span').textContent = `Stop ${/^(screen|zonnescherm|scherm)/i.test(naam) ? `het ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam}`;
+    el.querySelector('span').textContent = taal.t('assistent.stopScherm', { naam: /^(screen|zonnescherm|scherm)/i.test(naam) ? taal.t('assistent.hetScherm', { naam: `${naam.charAt(0).toLowerCase()}${naam.slice(1)}` }) : naam });
   });
   // De microfoon alleen waar hij kan: over https (besluit 150).
   const micKan = !!window.luisteren?.kan();
   $$('[data-mic]').forEach((el) => (el.hidden = !micKan));
-  $$('[data-vrij] input').forEach((el) => (el.placeholder = micKan ? 'Typ, of tik op de microfoon' : 'Typ wat je wilt'));
+  $$('[data-vrij] input').forEach((el) => (el.placeholder = taal.t(micKan ? 'assistent.typOfMic' : 'assistent.typ')));
   $$('[data-voorlezen]').forEach((el) => {
     el.hidden = stand === 'praat';
     el.setAttribute('aria-pressed', String(voorlezen));
-    el.querySelector('span').textContent = voorlezen ? 'Voorlezen aan' : 'Voorlezen uit';
-    el.title = voorlezen ? (stemNaam ? 'Met Piper, in je eigen huis' : 'Met de stem van dit apparaat') : 'Alleen tekst';
+    el.querySelector('span').textContent = taal.t(voorlezen ? 'assistent.voorlezenAan' : 'assistent.voorlezenUit');
+    el.title = taal.t(voorlezen ? (stemNaam ? 'assistent.piper' : 'assistent.apparaatStem') : 'assistent.alleenTekst');
   });
   if (stand !== 'praat') tekenGolf([]);
   tekenHuis();
@@ -674,7 +676,7 @@ document.addEventListener('click', (e) => {
     nu = null;
     stand = 'begin';
     teken();
-    void zeg('Prima. Ik ben er als je me nodig hebt.').then(() => {
+    void zeg(taal.t('assistent.prima')).then(() => {
       stand = 'begin';
       teken();
     });
@@ -684,7 +686,7 @@ document.addEventListener('click', (e) => {
   if (t.hasAttribute('data-stop')) return stopPraten();
   if (t.hasAttribute('data-stopscherm')) {
     const scherm = beweegtNog();
-    if (scherm) void vraag({ label: 'Stop', soort: 'vrij', tekst: `stop ${scherm.naam}` });
+    if (scherm) void vraag({ label: taal.t('kamer.scherm.stop'), soort: 'vrij', tekst: taal.t('assistent.stopTekst', { naam: scherm.naam }) });
     return;
   }
   if (t.hasAttribute('data-voorlezen')) {
@@ -707,7 +709,7 @@ document.addEventListener('click', (e) => {
     // De bol: het huis begroet je, of herhaalt het laatste antwoord.
     if (nu?.antwoord && stand === 'verder') return void zeg(nu.antwoord, nu.gesproken ?? nu.antwoord);
     stand = 'begin';
-    void zeg(`${groet()}. Waarmee kan ik je helpen?`).then(() => {
+    void zeg(taal.t('assistent.welkom', { groet: groet() })).then(() => {
       stand = 'begin';
       teken();
     });
@@ -739,11 +741,11 @@ if (location.hash === '#praat') {
 /** Een vraag uit het adres: #nu, #zon, #straks, #vandaag, #warm, #morgen, #kosten, #waarom/zolder. */
 function vraagUitAdres() {
   const [soort, kamer] = decodeURIComponent(location.hash.slice(1)).split('/');
-  const labels = { nu: 'Wat doe je nu?', zon: 'Hoeveel zon vandaag?', straks: 'Wat ga je straks doen?', vandaag: 'Wat deed je vandaag?', warm: 'Hoe warm is het overal?', morgen: 'Wat wordt het weer morgen?', kosten: 'Wat kosten de apparaten?' };
+  const labels = new Set(['nu', 'zon', 'straks', 'vandaag', 'warm', 'morgen', 'kosten']);
   // Een tik op Thuis bracht je hier: dan meteen hardop (opgelost 15 oktober).
-  if (labels[soort] || (soort === 'waarom' && kamer)) vanAdres = true;
-  if (labels[soort]) void vraag({ soort, label: labels[soort] });
-  else if (soort === 'waarom' && kamer) void vraag({ soort, kamer, label: `Waarom ${zoneNaam(kamer)}?` });
+  if (labels.has(soort) || (soort === 'waarom' && kamer)) vanAdres = true;
+  if (labels.has(soort)) void vraag({ soort, label: taal.t(`assistent.vraag.${soort}`) });
+  else if (soort === 'waarom' && kamer) void vraag({ soort, kamer, label: taal.t('assistent.waarom', { kamer: zoneNaam(kamer) }) });
 }
 addEventListener('hashchange', vraagUitAdres);
 void laadAlles().then(vraagUitAdres);

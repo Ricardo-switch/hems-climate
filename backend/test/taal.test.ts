@@ -16,6 +16,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { taalVan } from '../src/web/server.js';
+import { losInBestand, nederlands } from '../tools/teksten.js';
 
 const FRONTEND = fileURLToPath(new URL('../../frontend/', import.meta.url));
 const lees = (pad: string) => readFileSync(FRONTEND + pad, 'utf-8');
@@ -28,43 +29,9 @@ function laadTalen(): Record<string, Record<string, Tekst>> {
 }
 
 /** De bestanden die al helemaal uit de tekstbestanden lezen (stap 8: Thuis). */
-const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'kit/nav.js', 'kit/taal.js'];
+const OMGEZET = ['src/thuis.js', 'src/thuis.html', 'src/gevoel.js', 'src/basis.js', 'src/eigen.js', 'src/niemand.js', 'src/rondleiding.js', 'src/kamer.js', 'src/kamer.html', 'src/vandaag.js', 'src/vandaag.html', 'src/apparaten.js', 'src/apparaten.html', 'src/opbrengst.js', 'src/opbrengst.html', 'src/assistent.js', 'src/assistent.html', 'src/luisteren.js', 'kit/nav.js', 'kit/sankey.js', 'kit/taal.js'];
 /** Waar de code sleutels vraagt; huismodel en jij deels, maar hun sleutels moeten er wel zijn. */
 const VRAGEN = [...OMGEZET, 'src/huismodel.js', 'src/jij.js', 'src/basis.js', 'kit/huis.js'];
-
-/** Woorden die in een Engelse of neutrale tekst niet voorkomen, maar in bijna elke Nederlandse zin. */
-const NEDERLANDS = /\b(de|het|een|en|van|je|jij|jouw|is|niet|nog|geen|wat|naar|met|voor|bij|uit|dan|er|om|te|nu|zon|huis|kamers?|tik|klaar|sluiten|bekijk|vandaag|morgen|weer|straks|favorieten|batterijen?|laadt|rust|thuis|weg|overdag|nachts|goed|koud|warm)\b/i;
-
-/** Ziet een stukje tekst eruit als Nederlands voor de bewoner, en niet als code? */
-function nederlands(tekst: string): string[] {
-  const vondsten: string[] = [];
-  // Wat een schermlezer of de muis toont, staat in een tag.
-  // Niet data-t-aria-label: dat is al een sleutel.
-  for (const m of tekst.matchAll(/(?<![\w-])(?:aria-label|title|alt|placeholder|data-naam|data-leeg)="([^"$]*)"/g)) if (NEDERLANDS.test(m[1]!)) vondsten.push(m[1]!);
-  const zichtbaar = tekst.replace(/^[^<]*>/, ' ').replace(/<[^>]*>?/g, ' ').trim();
-  // Een pad, een selector, een sleutel of een klassenaam is geen tekst.
-  if (!zichtbaar || (!/\s/.test(zichtbaar) && !/^[A-ZÀ-Ý]/.test(zichtbaar))) return vondsten;
-  if (/^[[#.]|^[a-z0-9-]+(\.[a-zA-Z0-9_-]+)+$|^(api|kamer|thuis|assistent|vandaag|apparaten|functies|opbrengst)[./#]/.test(zichtbaar)) return vondsten;
-  // Woorden met code erin (data-gevoel-tik, class=", ${…}) tellen niet mee.
-  const woorden = zichtbaar.split(/\s+/).filter((w) => !/[=<>"{}()/\_$-]/.test(w.replace(/[.,!?:;]+$/, '')));
-  if (NEDERLANDS.test(woorden.join(' '))) vondsten.push(zichtbaar);
-  return vondsten;
-}
-
-/** De teksten in een script: elke string en elk stuk van een template, zonder commentaar. */
-function stringsIn(code: string): string[] {
-  const bron = ts.createSourceFile('x.js', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-  const uit: string[] = [];
-  const loop = (n: ts.Node) => {
-    // Een melding voor de ontwikkelaar in de console is geen tekst voor de bewoner.
-    if (ts.isCallExpression(n) && /^console\./.test(n.expression.getText(bron))) return;
-    if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) uit.push(n.text);
-    else if (ts.isTemplateExpression(n)) uit.push(n.head.text, ...n.templateSpans.map((s) => s.literal.text));
-    ts.forEachChild(n, loop);
-  };
-  loop(bron);
-  return uit;
-}
 
 /** Een script zonder commentaar, zodat een voorbeeld in de uitleg niet als sleutel telt. */
 function zonderCommentaar(pad: string, code: string): string {
@@ -109,18 +76,7 @@ describe('de talen van de app (besluit 185)', () => {
   });
 
   it('heeft geen losse Nederlandse tekst meer in wat al omgezet is', () => {
-    const los: string[] = [];
-    for (const pad of OMGEZET) {
-      const code = lees(pad);
-      if (pad.endsWith('.html')) {
-        // Alleen wat de bewoner ziet: de body, zonder scripts, opmaak en commentaar.
-        const lijf = code.slice(code.indexOf('<body')).replace(/<script\b[\s\S]*?<\/script>|<style\b[\s\S]*?<\/style>|<!--[\s\S]*?-->/g, '');
-        for (const m of lijf.matchAll(/>([^<]+)</g)) for (const v of nederlands(`>${m[1]}<`)) los.push(`${pad}: ${v}`);
-        for (const v of nederlands(lijf.replace(/>[^<]*</g, '><'))) los.push(`${pad}: ${v}`);
-      } else {
-        for (const s of stringsIn(code)) for (const v of nederlands(s)) los.push(`${pad}: ${v}`);
-      }
-    }
+    const los = OMGEZET.flatMap((pad) => losInBestand(pad, lees(pad)).map((l) => `${pad}:${l.regel}: ${l.tekst}`));
     expect(los).toEqual([]);
   });
 

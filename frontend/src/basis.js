@@ -29,13 +29,14 @@
    */
   function wanneer(ms, { kort = false } = {}) {
     const min = Math.round((Date.now() - ms) / 60_000);
-    if (kort && min < 60) return `${Math.max(1, min)} min`;
+    const t = global.t;
+    if (kort && min < 60) return t('algemeen.minuten', { n: Math.max(1, min) });
     const d = new Date(ms);
     const vandaag = new Date();
     if (d.toDateString() === vandaag.toDateString()) return klokVan(ms);
     const gisteren = new Date(vandaag.getTime() - 86_400_000);
-    if (d.toDateString() === gisteren.toDateString()) return kort ? 'gisteren' : `gisteren ${klokVan(ms)}`;
-    return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+    if (d.toDateString() === gisteren.toDateString()) return kort ? t('algemeen.gisteren') : t('algemeen.gisterenOm', { klok: klokVan(ms) });
+    return global.taal.datum(d, { day: 'numeric', month: 'long' });
   }
 
   /* Waar de tabs staan: tot ze in ontwerp 2 zijn, in de proefomgeving. */
@@ -156,7 +157,7 @@
     const balk = document.createElement('div');
     balk.className = 'geenverbinding';
     balk.setAttribute('role', 'status');
-    balk.textContent = `Geen verbinding met Smart Climate sinds ${klokVan(sinds)}. De regeling loopt gewoon door; dit is de laatste stand.`;
+    balk.textContent = global.t('basis.offline', { klok: klokVan(sinds) });
     document.body.append(balk);
   }
   function online() {
@@ -408,8 +409,9 @@
    * ziet niemand meer iets, dan gaat het vanzelf weg. Smart Climate zet het
    * alarm zelf niet uit: dat doe je op de melder.
    */
-  const GEVAAR = { rook: 'Rook', co: 'Koolmonoxide', hitte: 'Hitte' };
-  const WAT = { rook: 'rook', co: 'koolmonoxide', hitte: 'hitte' };
+  /** Wat een melder ziet: rook, co of hitte; als kop en in een zin (teksten.*.js). */
+  const GEVAAR = (g) => global.t(`basis.alarm.gevaar.${g}`);
+  const WAT = (g) => global.t(`basis.alarm.wat.${g}`);
   let alarmGesloten = '';
   function alarm(m) {
     const aan = (m.melders ?? []).filter((x) => x.gevaar);
@@ -441,17 +443,18 @@
     laag.dataset.sleutel = sleutel;
     const eerste = aan[0];
     const kamers = [...new Set(aan.filter((x) => x.gevaar === eerste.gevaar).map((x) => metLidwoord(x.kamer)))];
-    const titel = `${GEVAAR[eerste.gevaar]} in ${kamers.length > 1 ? `${kamers.slice(0, -1).join(', ')} en ${kamers.at(-1)}` : kamers[0]}`;
-    const sinds = eerste.sindsMs ? `, sinds ${klokVan(eerste.sindsMs)}` : '';
-    const raad = eerste.gevaar === 'co' ? 'Zet ramen en deuren open, ga naar buiten en bel 112.' : 'Ga bij brand naar buiten en bel 112.';
+    const waar = kamers.length > 1 ? `${kamers.slice(0, -1).join(', ')} ${global.t('algemeen.en')} ${kamers.at(-1)}` : kamers[0];
+    const titel = global.t('basis.alarm.titel', { gevaar: GEVAAR(eerste.gevaar), waar });
+    const raad = global.t(eerste.gevaar === 'co' ? 'basis.alarm.raadCo' : 'basis.alarm.raad');
+    const ziet = eerste.sindsMs ? global.t('basis.alarm.zietSinds', { kamer: metLidwoord(eerste.kamer), wat: WAT(eerste.gevaar), klok: klokVan(eerste.sindsMs) }) : global.t('basis.alarm.ziet', { kamer: metLidwoord(eerste.kamer), wat: WAT(eerste.gevaar) });
     laag.setAttribute('aria-label', titel);
     laag.innerHTML = `<div class="alarm-in">
       <span class="alarm-puls" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20c-2.5 0-4-1.8-4-3.8 0-2.6 2.4-3.4 2.4-6.2 2 1 3 2.8 3 4.4.6-.8 1-2 1-3.4 2.4 1.4 4.6 3.6 4.6 6.6 0 1.7-1.3 2.4-2 2.4"/><path d="M14 6c1-1 1-2.5 0-3.5M18 8c1-1 1-2.5 0-3.5"/></svg></span>
       <h1>${esc(titel)}</h1>
-      <p class="alarm-zin">${esc(`De rookmelder in ${metLidwoord(eerste.kamer)} ziet ${WAT[eerste.gevaar]}${sinds}. ${raad}`)}</p>
-      <div class="alarm-lijst">${(m.melders ?? []).map((x) => `<div><b>${esc(x.kamer)}</b><span class="${x.gevaar ? '' : 'ok'}">${esc(x.gevaar ? WAT[x.gevaar] : 'niets')}</span></div>`).join('')}</div>
-      <button type="button" class="knop knop-licht" data-alarm-dicht>Sluiten</button>
-      <p class="alarm-klein">Het alarm zelf zet je uit op de melder of in de app van de melder.</p>
+      <p class="alarm-zin">${esc(`${ziet} ${raad}`)}</p>
+      <div class="alarm-lijst">${(m.melders ?? []).map((x) => `<div><b>${esc(x.kamer)}</b><span class="${x.gevaar ? '' : 'ok'}">${esc(x.gevaar ? WAT(x.gevaar) : global.t('basis.alarm.niets'))}</span></div>`).join('')}</div>
+      <button type="button" class="knop knop-licht" data-alarm-dicht>${esc(global.t('algemeen.sluiten'))}</button>
+      <p class="alarm-klein">${esc(global.t('basis.alarm.uitzetten'))}</p>
     </div>`;
     laag.querySelector('[data-alarm-dicht]').focus();
   }
@@ -479,7 +482,7 @@
       laag = document.createElement('div');
       laag.className = 'aanbel';
       laag.setAttribute('role', 'dialog');
-      laag.setAttribute('aria-label', m.titel ?? 'Er wordt aangebeld');
+      laag.setAttribute('aria-label', m.titel ?? global.t('basis.bel.titel'));
       laag.addEventListener('click', (e) => {
         if (e.target.closest('[data-bel-dicht]')) sluitBel();
       });
@@ -487,9 +490,9 @@
     }
     // Belt er opnieuw iemand terwijl het beeld er staat: eerst het oude beeld stoppen.
     stopBeelden(laag);
-    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>${esc(m.titel ?? 'Er wordt aangebeld')}</b><span>${esc(m.naam ?? 'Deurbel')}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>Sluiten</button></div>
-      <div class="aanbel-beeld"><p class="zacht">Het beeld komt eraan…</p></div>`;
-    void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? 'de deurbel');
+    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>${esc(m.titel ?? global.t('basis.bel.titel'))}</b><span>${esc(m.naam ?? global.t('basis.bel.deurbel'))}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>${esc(global.t('algemeen.sluiten'))}</button></div>
+      <div class="aanbel-beeld"><p class="zacht">${esc(global.t('basis.bel.komt'))}</p></div>`;
+    void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? global.t('thuis.deurbel.deDeurbel'));
     laag.querySelector('[data-bel-dicht]').focus();
     clearTimeout(belTimer);
     belTimer = setTimeout(sluitBel, Math.max(30, Math.min(600, Number(m.seconden) || 120)) * 1000);
@@ -517,18 +520,18 @@
     }
     if (!res?.ok) {
       vak.innerHTML = res?.status === 401
-        ? `<p>Het beeld is alleen te zien als je bent ingelogd met je Home Assistant-account. <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">Inloggen</a></p>`
-        : '<p>De deurbel geeft nu geen beeld.</p>';
+        ? `<p>${esc(global.t('basis.bel.inloggen'))} <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">${esc(global.t('basis.bel.inlogKnop'))}</a></p>`
+        : `<p>${esc(global.t('basis.bel.geenBeeld'))}</p>`;
       return;
     }
     const url = URL.createObjectURL(await res.blob());
     if (!laag.isConnected) return URL.revokeObjectURL(url);
-    vak.innerHTML = `<img alt="Beeld van ${esc(naam)}" src="${url}">`;
+    vak.innerHTML = `<img alt="${esc(global.t('basis.bel.beeldVan', { naam }))}" src="${url}">`;
     const img = vak.querySelector('img');
     let live = false;
     const stroom = new Image();
     belStroom = stroom;
-    stroom.alt = `Live beeld van ${naam}`;
+    stroom.alt = global.t('basis.bel.liveVan', { naam });
     stroom.onload = () => {
       if (!laag.isConnected) return void stroom.removeAttribute('src');
       live = true;
@@ -881,7 +884,8 @@
     $$('[data-naar-ha-knop]').forEach((k) => k.remove());
     if (!inHA() || !volledigGekozen()) return;
     const uit = gepauzeerd();
-    const wat = uit ? 'data-weer-volledig aria-label="Volledig scherm" title="Volledig scherm"' : 'data-naar-ha aria-label="Naar Home Assistant" title="Naar Home Assistant"';
+    const label = esc(global.t(uit ? 'basis.volledig' : 'basis.naarHA'));
+    const wat = uit ? `data-weer-volledig aria-label="${label}" title="${label}"` : `data-naar-ha aria-label="${label}" title="${label}"`;
     const icoon = uit ? VOLLEDIG_ICOON : NAAR_HA;
     document.getElementById('balk')?.querySelector('[data-meldbel]')?.insertAdjacentHTML('beforebegin', `<button type="button" class="meldbel naarha" data-naar-ha-knop ${wat}>${icoon}</button>`);
     $$('#tel [data-tandwiel]').forEach((t) => {
@@ -1065,17 +1069,17 @@
    * Elke melding is aan te tikken en weg te halen (aangevuld 15 oktober): een
    * versie opent weer wat er nieuw was, de rest gaat naar het apparaat.
    */
-  const weg = (m) => `<button type="button" class="meldweg" data-meld-weg="${esc(m.id)}" aria-label="${esc(`Verwijder: ${m.titel}`)}">×</button>`;
+  const weg = (m) => `<button type="button" class="meldweg" data-meld-weg="${esc(m.id)}" aria-label="${esc(global.t('basis.meld.verwijder', { titel: m.titel }))}">×</button>`;
   const doel = (m) => (m.soort === 'versie' ? `data-meld-versie="${esc(m.id.replace(/^versie:/, ''))}"` : m.soort === 'update' ? 'data-meld-update' : m.actie ? `data-meld-href="${esc(m.actie.href)}"` : '');
   function meldLijst() {
     const kaart = (m) => `<div class="melding" ${doel(m)}>${meldIcoon(m.soort)}<b>${esc(m.titel)}</b>${weg(m)}<p>${esc(m.tekst)}</p>
       <div class="acties">${m.actie ? `<a class="licht" href="${esc(m.actie.href)}">${esc(m.actie.label)}</a>` : ''}<span class="tijd">${esc(wanneerMeld(m.sindsMs))}</span></div></div>`;
     const oud = (m) => `<div class="melding oud" ${doel(m)}>${meldIcoon(m.soort === 'versie' || m.soort === 'mijlpaal' ? m.soort : 'goed')}<b>${esc(m.titel)}</b>${weg(m)}<p>${esc(m.tekst)}</p></div>`;
     const aandacht = meld.actief.length
-      ? `<h3>Vraagt aandacht</h3>${meld.actief.map(kaart).join('')}`
-      : '<div class="stil"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><b>Alles werkt</b>Komt er iets nieuws bij, of reageert iets niet meer, dan staat het hier.</div>';
-    const eerder = meld.eerder.length ? `<h3>Eerder</h3>${meld.eerder.slice(0, 5).map(oud).join('')}` : '';
-    return `<div class="kop"><h2 class="kop-2">Meldingen</h2><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
+      ? `<h3>${esc(global.t('basis.meld.aandacht'))}</h3>${meld.actief.map(kaart).join('')}`
+      : `<div class="stil"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><b>${esc(global.t('basis.meld.allesWerkt'))}</b>${esc(global.t('basis.meld.allesWerktZin'))}</div>`;
+    const eerder = meld.eerder.length ? `<h3>${esc(global.t('basis.meld.eerder'))}</h3>${meld.eerder.slice(0, 5).map(oud).join('')}` : '';
+    return `<div class="kop"><h2 class="kop-2">${esc(global.t('nav.meldingen'))}</h2><button type="button" class="sluit" data-meld-sluit aria-label="${esc(global.t('algemeen.sluiten'))}">×</button></div>
       ${aandacht}${eerder}
       ${onderhoudKnop()}`;
   }
@@ -1104,22 +1108,26 @@
   function onderhoudKnop() {
     const op = onderhoudOp ?? meld.actief.filter((m) => m.soort === 'batterij' || m.soort === 'filter').map((m) => ({ soort: m.soort, naam: null }));
     const een = op[0];
+    const t = global.t;
     const zin = !op.length
-      ? 'Alle batterijen en filters zijn in orde'
+      ? t('basis.onderhoud.inOrde')
       : op.length === 1
-        ? een.soort === 'batterij' ? `Batterij bijna leeg${een.naam ? `: ${een.naam}${een.pct != null ? `, ${een.pct}%` : ''}` : ''}` : `Filter schoonmaken${een.naam ? `: ${een.naam}` : ''}`
-        : `${op.length} batterijen of filters vragen aandacht`;
-    return `<button type="button" class="onderhoud${op.length ? ' aandacht' : ''}" data-meld-onderhoud>${meldIcoon(op.length ? een.soort : 'onderhoud')}<span><b>Onderhoud${op.length ? '<span class="stip" style="background: var(--zon); margin-left: 8px" aria-label="vraagt aandacht"></span>' : ''}</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
+        ? een.soort === 'batterij'
+          ? (een.naam ? (een.pct != null ? t('thuis.onderhoud.batterijLang', { naam: een.naam, pct: een.pct }) : t('basis.onderhoud.batterijNaam', { naam: een.naam })) : t('basis.onderhoud.batterij'))
+          : (een.naam ? t('basis.onderhoud.filterNaam', { naam: een.naam }) : t('basis.onderhoud.filter'))
+        : t('basis.onderhoud.meer', { n: op.length });
+    return `<button type="button" class="onderhoud${op.length ? ' aandacht' : ''}" data-meld-onderhoud>${meldIcoon(op.length ? een.soort : 'onderhoud')}<span><b>${esc(t('basis.onderhoud.kop'))}${op.length ? `<span class="stip" style="background: var(--zon); margin-left: 8px" aria-label="${esc(t('basis.onderhoud.aandacht'))}"></span>` : ''}</b><span>${esc(zin)}</span></span><span class="pijl" aria-hidden="true">›</span></button>`;
   }
 
   /** Wanneer er een melding komt, in een zin (besluit 149). */
   function drempelZin(d) {
     const b = d ? d.batterij : 10;
     const f = d ? d.filter : 10;
-    if (b == null && f == null) return 'Batterijen en filters geven geen melding.';
-    if (b === f) return `Onder de ${b}% komt er een melding.`;
-    const deel = (pct, wat) => (pct == null ? `${wat} nooit` : `${wat} onder de ${pct}%`);
-    return `Een melding: ${deel(b, 'een batterij')}, ${deel(f, 'een filter')}.`;
+    const t = global.t;
+    if (b == null && f == null) return t('basis.drempel.nooit');
+    if (b === f) return t('basis.drempel.onder', { pct: b });
+    const deel = (pct, wat) => (pct == null ? t('basis.drempel.deelNooit', { wat: t(wat) }) : t('basis.drempel.deelOnder', { wat: t(wat), pct }));
+    return t('basis.drempel.apart', { batterij: deel(b, 'basis.drempel.batterij'), filter: deel(f, 'basis.drempel.filter') });
   }
 
   async function meldOnderhoud() {
@@ -1133,21 +1141,22 @@
     const regel = (naam, onder, pct, soort) => `<div class="regel"><div><b>${esc(naam)}</b><span>${esc(onder ?? '')}</span></div>${balk(pct, soort)}<span class="pct">${pct}%</span></div>`;
     // De rookmelders apart (21 oktober 2026): de batterij, de laatste test en wanneer vervangen.
     const melders = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'rookmelder').map((a) => ({ ...a, kamer: r.naam }))));
-    const datum = (d, opties) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('nl-NL', opties) : null);
+    const datum = (d, opties) => (d ? global.taal.datum(new Date(`${d}T12:00:00`), opties) : null);
+    const t = global.t;
     const melderRegel = (m) => {
       const r = m.rookmelder ?? {};
-      const onder = [m.kamer, r.getestOp ? `getest ${datum(r.getestOp, { day: 'numeric', month: 'long' })}` : null, r.vervangenVoor ? `vervangen voor ${datum(r.vervangenVoor, { month: 'short', year: 'numeric' })}` : null, r.batterijProbleem ? 'batterij op' : null].filter(Boolean).join(' · ');
+      const onder = [m.kamer, r.getestOp ? t('basis.melder.getest', { datum: datum(r.getestOp, { day: 'numeric', month: 'long' }) }) : null, r.vervangenVoor ? t('basis.melder.vervangen', { datum: datum(r.vervangenVoor, { month: 'short', year: 'numeric' }) }) : null, r.batterijProbleem ? t('basis.melder.batterijOp') : null].filter(Boolean).join(' · ');
       return m.batterijPct != null ? regel(m.naam, onder, m.batterijPct, 'batterij') : `<div class="regel"><div><b>${esc(m.naam)}</b><span>${esc(onder)}</span></div></div>`;
     };
     const melderNamen = new Set(melders.map((m) => m.naam));
     const batt = (huis?.batterijen ?? []).filter((b) => !melderNamen.has(b.naam));
     const filters = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.klimaat?.filter?.pct != null).map((a) => ({ naam: a.naam, kamer: r.naam, pct: a.klimaat.filter.pct }))));
-    return `<div class="kop"><div><button type="button" class="terugmeld" data-meld-terug>‹ Meldingen</button><h2 class="kop-2" style="margin: 2px 0 0">Onderhoud</h2></div><button type="button" class="sluit" data-meld-sluit aria-label="Sluiten">×</button></div>
-      ${melders.length ? `<h3>Rookmelders</h3>${melders.map(melderRegel).join('')}` : ''}
-      <h3>Batterijen, de leegste eerst</h3>
-      ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct, 'batterij')).join('') : '<p class="mini" style="margin: 0">Geen apparaten met een batterij gevonden.</p>'}
-      ${filters.length ? `<h3>Filters van de airco's</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct, 'filter')).join('')}` : ''}
-      <p class="mini" style="margin: auto 0 0">${esc(drempelZin(huis?.drempels))} <a href="functies.html#meldingen">Wanneer een melding ›</a> Telefoons, een thuisbatterij en een auto staan hier niet bij.</p>`;
+    return `<div class="kop"><div><button type="button" class="terugmeld" data-meld-terug>‹ ${esc(t('nav.meldingen'))}</button><h2 class="kop-2" style="margin: 2px 0 0">${esc(t('basis.onderhoud.kop'))}</h2></div><button type="button" class="sluit" data-meld-sluit aria-label="${esc(t('algemeen.sluiten'))}">×</button></div>
+      ${melders.length ? `<h3>${esc(t('basis.melder.kop'))}</h3>${melders.map(melderRegel).join('')}` : ''}
+      <h3>${esc(t('basis.onderhoud.batterijen'))}</h3>
+      ${batt.length ? batt.map((b) => regel(b.naam, b.kamer, b.pct, 'batterij')).join('') : `<p class="mini" style="margin: 0">${esc(t('thuis.batterijen.geen'))}</p>`}
+      ${filters.length ? `<h3>${esc(t('basis.onderhoud.filters'))}</h3>${filters.map((f) => regel(f.naam, f.kamer, f.pct, 'filter')).join('')}` : ''}
+      <p class="mini" style="margin: auto 0 0">${esc(drempelZin(huis?.drempels))} <a href="functies.html#meldingen">${esc(t('basis.onderhoud.wanneer'))}</a> ${esc(t('thuis.batterijen.nietBij'))}</p>`;
   }
 
   /*
@@ -1178,7 +1187,7 @@
       b.hidden = n === 0;
       b.textContent = n > 9 ? '9+' : String(n);
     });
-    $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-label', n ? `Meldingen, ${n} ${n === 1 ? 'vraagt' : 'vragen'} aandacht` : 'Meldingen'));
+    $$('[data-meldbel]').forEach((b) => b.setAttribute('aria-label', n ? global.t('basis.meld.bel', { n }) : global.t('nav.meldingen')));
   }
 
   async function meldLaad() {
@@ -1199,7 +1208,7 @@
   function meldBlad() {
     let blad = document.querySelector('[data-meldblad]');
     if (!blad) {
-      document.body.insertAdjacentHTML('beforeend', '<div class="meldachter" data-meld-achter hidden></div><aside class="glas meldblad" role="dialog" aria-label="Meldingen" data-meldblad hidden></aside>');
+      document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-meld-achter hidden></div><aside class="glas meldblad" role="dialog" aria-label="${esc(global.t('nav.meldingen'))}" data-meldblad hidden></aside>`);
       blad = document.querySelector('[data-meldblad]');
     }
     return blad;
@@ -1229,7 +1238,8 @@
    * vraagt Home Assistant de add-on bij te werken; de app start daarna opnieuw,
    * en deze pagina laadt vanzelf als de nieuwe versie draait.
    */
-  const UPDATE_SOORT = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
+  const UPDATE_SOORT = ['nieuw', 'beter', 'opgelost'];
+  const soortNaam = (k) => global.t(`basis.versie.${k}`);
   async function bijwerkVenster() {
     let u;
     try {
@@ -1239,40 +1249,40 @@
     }
     $$('[data-nieuwpop], [data-nieuw-achter]').forEach((el) => el.remove());
     if (!u?.beschikbaar) {
-      document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop><h2 class="kop-2" id="nieuwkop" style="margin: 0">Je hebt de nieuwste versie</h2><p class="klein" style="margin: 0">Smart Climate ${esc(u?.nu ?? '')} is bij.</p><div class="knoppen"><button type="button" class="knop knop-licht" data-nieuw-dicht>Oké</button></div></div>`);
+      document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop><h2 class="kop-2" id="nieuwkop" style="margin: 0">${esc(global.t('basis.versie.nieuwste'))}</h2><p class="klein" style="margin: 0">${esc(global.t('basis.versie.isBij', { versie: u?.nu ?? '' }))}</p><div class="knoppen"><button type="button" class="knop knop-licht" data-nieuw-dicht>${esc(global.t('algemeen.oke'))}</button></div></div>`);
       document.querySelector('[data-nieuw-dicht]').focus();
       return;
     }
     const meer = u.notities.length > 1;
     const notities = u.notities.length
-      ? u.notities.map((n) => `${meer ? `<h3 class="kop-3" style="margin: 6px 0 0">${esc(n.versie)}</h3>` : ''}${UPDATE_SOORT.filter(([k]) => n[k].length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}`).join('')
-      : '<p class="klein" style="margin: 0">Wat er nieuw is, staat ook in Home Assistant, bij Instellingen › Updates.</p>';
+      ? u.notities.map((n) => `${meer ? `<h3 class="kop-3" style="margin: 6px 0 0">${esc(n.versie)}</h3>` : ''}${UPDATE_SOORT.filter((k) => n[k].length).map((k) => `<div class="soort ${k}"><span class="label">${esc(soortNaam(k))}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}`).join('')
+      : `<p class="klein" style="margin: 0">${esc(global.t('basis.versie.inHA'))}</p>`;
     const knop = u.bezig
-      ? '<button type="button" class="knop knop-licht" disabled>Bijwerken…</button>'
+      ? `<button type="button" class="knop knop-licht" disabled>${esc(global.t('basis.versie.bezig'))}</button>`
       : u.magBijwerken
-        ? '<button type="button" class="knop knop-licht" data-bijwerken>Bijwerken</button>'
+        ? `<button type="button" class="knop knop-licht" data-bijwerken>${esc(global.t('basis.versie.bijwerken'))}</button>`
         : '';
     document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop>
-      <span class="mini">Je hebt ${esc(u.nu)}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Versie ${esc(u.nieuwste)} staat klaar</h2>${notities}
-      <p class="mini" data-bijwerk-zin style="margin: 0">${u.bezig ? 'Smart Climate wordt bijgewerkt. Daarna start de app opnieuw.' : u.magBijwerken ? 'Bijwerken duurt een paar minuten. De regeling loopt daarna verder waar hij was.' : 'Alleen de beheerder kan bijwerken.'}</p>
-      <div class="knoppen"><button type="button" class="knop" data-nieuw-dicht>Later</button>${knop}</div></div>`);
+      <span class="mini">${esc(global.t('basis.versie.jeHebt', { versie: u.nu }))}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">${esc(global.t('basis.versie.klaar', { versie: u.nieuwste }))}</h2>${notities}
+      <p class="mini" data-bijwerk-zin style="margin: 0">${esc(global.t(u.bezig ? 'basis.versie.wordtBijgewerkt' : u.magBijwerken ? 'basis.versie.duurt' : 'basis.versie.beheerder'))}</p>
+      <div class="knoppen"><button type="button" class="knop" data-nieuw-dicht>${esc(global.t('basis.versie.later'))}</button>${knop}</div></div>`);
     (document.querySelector('[data-bijwerken]') ?? document.querySelector('[data-nieuw-dicht]')).focus();
     if (u.bezig) void wachtOpNieuweVersie(u.nu);
   }
   async function bijwerken(knop) {
     knop.disabled = true;
-    knop.textContent = 'Bijwerken…';
+    knop.textContent = global.t('basis.versie.bezig');
     const zin = document.querySelector('[data-bijwerk-zin]');
     const res = await deur('api/update', {}).catch(() => null);
     if (!res?.ok) {
       const f = res ? await res.json().catch(() => ({})) : {};
       knop.disabled = false;
-      knop.textContent = 'Bijwerken';
-      if (zin) zin.textContent = `Dat lukte niet: ${String(f.fout ?? 'geen verbinding met Smart Climate').replace(/\.$/, '')}.`;
+      knop.textContent = global.t('basis.versie.bijwerken');
+      if (zin) zin.textContent = global.t('basis.versie.mislukt', { fout: String(f.fout ?? global.t('basis.versie.geenVerbinding')).replace(/\.$/, '') });
       return;
     }
     const u = await res.json().catch(() => null);
-    if (zin) zin.textContent = 'Smart Climate wordt bijgewerkt. Daarna start de app opnieuw; deze pagina laadt dan vanzelf.';
+    if (zin) zin.textContent = global.t('basis.versie.wordtBijgewerktLaadt');
     void wachtOpNieuweVersie(u?.nu ?? null);
   }
   /** Tot de nieuwe versie draait: elke vijf tellen kijken, ook als de dienst even weg is. */
@@ -1318,11 +1328,10 @@
       n = v.nieuw?.[0];
       if (gezien == null || gezien === v.nummer || !n || n.versie !== v.nummer) return;
     }
-    const SOORT = [['nieuw', 'Nieuw'], ['beter', 'Beter'], ['opgelost', 'Opgelost']];
-    const delen = SOORT.filter(([k]) => (n[k] ?? []).length).map(([k, t]) => `<div class="soort ${k}"><span class="label">${t}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
+    const delen = UPDATE_SOORT.filter((k) => (n[k] ?? []).length).map((k) => `<div class="soort ${k}"><span class="label">${esc(soortNaam(k))}</span><ul>${n[k].map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('');
     document.body.insertAdjacentHTML('beforeend', `<div class="meldachter" data-nieuw-achter></div><div class="glas nieuwpop" role="dialog" aria-modal="true" aria-labelledby="nieuwkop" data-nieuwpop>
-      <span class="mini">${welke ? esc(new Date(`${n.datum}T12:00:00Z`).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })) : 'Bijgewerkt'}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">Wat is er nieuw in ${esc(n.versie)}</h2>${delen}
-      <div class="knoppen"><a class="knop" href="toegang.html#versie">Alle versies</a><button type="button" class="knop knop-licht" data-nieuw-dicht>Oké</button></div></div>`);
+      <span class="mini">${esc(welke ? global.taal.datum(new Date(`${n.datum}T12:00:00Z`), { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : global.t('basis.versie.bijgewerkt'))}</span><h2 class="kop-2" id="nieuwkop" style="margin: 2px 0 0">${esc(global.t('basis.versie.watNieuw', { versie: n.versie }))}</h2>${delen}
+      <div class="knoppen"><a class="knop" href="toegang.html#versie">${esc(global.t('basis.versie.alle'))}</a><button type="button" class="knop knop-licht" data-nieuw-dicht>${esc(global.t('algemeen.oke'))}</button></div></div>`);
     document.querySelector('[data-nieuw-dicht]').focus();
   }
 

@@ -68,29 +68,29 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
     <main data-wandinhoud>
       <div class="kop">
         <div>
-          <h1 class="kop-1" style="font-size: 40px" data-titel>Even laden</h1>
+          <h1 class="kop-1" style="font-size: 40px" data-titel><span data-t="algemeen.laden"></span></h1>
           <div class="periode" data-periode></div>
         </div>
-        <div class="wissel" role="group" aria-label="Periode" data-wissel></div>
+        <div class="wissel" role="group" data-t-aria-label="opbrengst.periode" data-wissel></div>
       </div>
       <div class="links schuift" data-links></div>
-      <section class="glas kaart midden"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2">Waar je stroom heen ging</h2><span class="mini">de breedte is de hoeveelheid</span></div><div data-sankey style="margin-top: 14px"></div></section>
+      <section class="glas kaart midden"><div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2"><span data-t="opbrengst.waarHeen"></span></h2><span class="mini"><span data-t="opbrengst.breedte"></span></span></div><div data-sankey style="margin-top: 14px"></div></section>
       <div class="rechts schuift"><section class="glas kaart" data-apparaten></section><section class="glas kaart" data-perdag></section></div>
     </main>
   </div>
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <div class="wissel" role="group" aria-label="Periode" data-wissel></div>
+      <div class="wissel" role="group" data-t-aria-label="opbrengst.periode" data-wissel></div>
       <div class="periode" data-periode></div>
-      <h1 class="kop-1" style="font-size: 32px" data-titel>Even laden</h1>
+      <h1 class="kop-1" style="font-size: 32px" data-titel><span data-t="algemeen.laden"></span></h1>
       <div data-telinhoud style="display: flex; flex-direction: column; gap: 14px"></div>
     </div>
-    <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
   <script src="kit/teksten.nl.js"></script>
   <script src="kit/teksten.en.js"></script>
