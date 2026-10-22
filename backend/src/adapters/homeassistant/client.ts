@@ -39,10 +39,21 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'config/auth/list',
   // Wat er nieuw is in de nieuwste versie van de add-on (21 oktober 2026).
   'update/release_notes',
+  // Welke versie van de integratie Smart Climate Home Assistant geladen heeft (besluit 184).
+  'manifest/get',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
-const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes']);
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes', 'manifest/get']);
+
+/**
+ * Zo lang wacht een vraag aan Home Assistant op antwoord, en een nieuwe
+ * verbinding op de handdruk (22 oktober 2026). Zonder grens bleef een vraag die
+ * tijdens een herstart van Home Assistant wegviel voor altijd hangen, en een
+ * verbinding die halverwege bleef steken kwam nooit terug.
+ */
+const ANTWOORD_MS = 20_000;
+const HANDDRUK_MS = 20_000;
 
 export interface HaEntityState {
   readonly entity_id: string;
@@ -121,6 +132,8 @@ export interface HaClientOptions {
   readonly allowListen?: boolean;
   /** Wachttijd voordat een verbroken verbinding opnieuw wordt opgezet. */
   readonly reconnectBaseMs?: number;
+  /** Zo lang wacht een vraag op antwoord; weg is 20 seconden (22 oktober 2026). Kleiner in de tests. */
+  readonly antwoordMs?: number;
   readonly reconnectMaxMs?: number;
 }
 
@@ -271,6 +284,7 @@ export class HaClient extends EventEmitter {
       allowAiTask: options.allowAiTask ?? false,
       allowListen: options.allowListen ?? false,
       reconnectBaseMs: options.reconnectBaseMs ?? 1_000,
+      antwoordMs: options.antwoordMs ?? ANTWOORD_MS,
       reconnectMaxMs: options.reconnectMaxMs ?? 60_000,
     };
   }
@@ -301,6 +315,12 @@ export class HaClient extends EventEmitter {
   #open(): void {
     const socket = new WebSocket(websocketUrl(this.#options.url));
     this.#socket = socket;
+    // Blijft de handdruk hangen (Home Assistant start nog), dan opnieuw: sluiten geeft 'close', en die verbindt opnieuw.
+    const handdruk = setTimeout(() => {
+      if (socket.readyState === WebSocket.CONNECTING) socket.close();
+    }, HANDDRUK_MS);
+    handdruk.unref?.();
+    socket.addEventListener('open', () => clearTimeout(handdruk));
 
     socket.addEventListener('message', (event) => {
       let msg: Record<string, unknown>;
@@ -313,6 +333,7 @@ export class HaClient extends EventEmitter {
     });
 
     socket.addEventListener('close', () => {
+      clearTimeout(handdruk);
       this.#failPending('verbinding gesloten');
       // Een gesprek dat liep, is voorbij (besluit 150).
       for (const luister of this.#luisteraars.values()) luister({ type: 'error', data: { code: 'verbinding', message: 'verbinding met Home Assistant verbroken' } });
@@ -452,7 +473,25 @@ export class HaClient extends EventEmitter {
   #command(payload: Record<string, unknown>): Promise<unknown> {
     const id = this.#nextId++;
     return new Promise((resolve, reject) => {
-      this.#pending.set(id, { resolve, reject });
+      // Zonder verbinding meteen nee: eerst ging de vraag stil verloren en kwam er nooit antwoord.
+      if (this.#socket?.readyState !== WebSocket.OPEN) {
+        reject(new Error('geen verbinding met Home Assistant'));
+        return;
+      }
+      const grens = setTimeout(() => {
+        if (this.#pending.delete(id)) reject(new Error('Home Assistant antwoordde niet op tijd'));
+      }, this.#options.antwoordMs);
+      grens.unref?.();
+      this.#pending.set(id, {
+        resolve: (v) => {
+          clearTimeout(grens);
+          resolve(v);
+        },
+        reject: (e) => {
+          clearTimeout(grens);
+          reject(e);
+        },
+      });
       this.#send({ ...payload, id });
     });
   }

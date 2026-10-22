@@ -343,6 +343,8 @@ export function haBeheerders(lijst: () => Promise<readonly HaAccount[]>, options
   const geldigMs = options.geldigMs ?? 60_000;
   const opnieuwMs = options.opnieuwMs ?? 15_000;
   let admins: ReadonlySet<string> = new Set();
+  /** Of er ooit een lijst kwam: daarna wacht geen pagina meer op een nieuwe (22 oktober 2026). */
+  let ooit = false;
   let totMs = 0;
   let bezig: Promise<void> | null = null;
   const haal = (): Promise<void> =>
@@ -350,10 +352,11 @@ export function haBeheerders(lijst: () => Promise<readonly HaAccount[]>, options
       .then(
         (accounts) => {
           admins = new Set(accounts.filter((a) => a.is_active !== false && (a.is_owner === true || a.group_ids?.includes('system-admin') === true)).map((a) => a.id));
+          ooit = true;
           totMs = nowFn() + geldigMs;
         },
         () => {
-          admins = new Set();
+          // De vorige lijst blijft gelden; even later opnieuw proberen. Eerst werd iedereen dan even geen beheerder.
           totMs = nowFn() + opnieuwMs;
         },
       )
@@ -362,7 +365,11 @@ export function haBeheerders(lijst: () => Promise<readonly HaAccount[]>, options
       }));
   return {
     async isBeheerder(userId) {
-      if (nowFn() >= totMs) await haal();
+      if (nowFn() >= totMs) {
+        // Verversen op de achtergrond als er al een lijst is; alleen de eerste keer wachten.
+        const nieuw = haal();
+        if (!ooit) await nieuw;
+      }
       return admins.has(userId);
     },
   };

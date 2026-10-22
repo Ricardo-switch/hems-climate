@@ -1,5 +1,15 @@
 # Wat is er nieuw
 
+## 0.58.2
+
+*22 oktober 2026*
+
+**Opgelost**
+
+- Na een herstart van Home Assistant bleef de app hangen: het huis bleef laden, Instellingen leeg, de assistent bleef draaien
+- In het lichte thema zie je weer welk woord de assistent nu uitspreekt
+- De app ziet of Home Assistant de integratie geladen heeft, en vraagt niet voor niets om een herstart
+
 ## 0.58.1
 
 *22 oktober 2026*

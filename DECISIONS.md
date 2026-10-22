@@ -8261,6 +8261,15 @@ niets met de hand in de YAML hoeven te doen, zoals hij moest.
   integratie het nummer van de app, en zagen HACS en de knop bij elke update
   een nieuwe versie. De app legt de stappen in HACS uit, en dat het eenmalig
   is.
+- **Reparatie (0.58.2):** bij het installeren herstartte Home Assistant een paar
+  keer, en daarna bleef de app hangen. Een vraag aan Home Assistant zonder
+  verbinding ging stil verloren en kreeg nooit antwoord; de lijst van
+  beheerders achter Ingress (besluit 161) wachtte daarop, en daarmee elke
+  pagina, ook nadat de verbinding terug was. Nu faalt zo'n vraag meteen, krijgt
+  elke vraag een grens van 20 seconden, wordt een verbinding die niet binnen
+  20 seconden staat opnieuw geprobeerd, en geldt de vorige lijst van beheerders
+  zolang er geen nieuwe is. En `manifest/get` mag (lezen), zodat de app ziet
+  welke versie van de integratie geladen is.
 - **`ha-assist/` is weg.** Wie Assist met de YAML had ingericht, haalt na het
   installeren `rest_command`, `intent_script` en de sleutel in `secrets.yaml`
   weg; het zinnenbestand wordt vanzelf overschreven.

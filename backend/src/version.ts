@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.58.1';
+export const VERSIE = '0.58.2';
 
 export interface Nieuw {
   readonly versie: string;
@@ -28,6 +28,15 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.58.2',
+    datum: '2026-10-22',
+    opgelost: [
+      'Na een herstart van Home Assistant bleef de app hangen: het huis bleef laden, Instellingen leeg, de assistent bleef draaien',
+      'In het lichte thema zie je weer welk woord de assistent nu uitspreekt',
+      'De app ziet of Home Assistant de integratie geladen heeft, en vraagt niet voor niets om een herstart',
+    ],
+  },
   {
     versie: '0.58.1',
     datum: '2026-10-22',

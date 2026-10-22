@@ -2229,6 +2229,18 @@ describe('achter Ingress de rol uit Home Assistant (besluit 161)', () => {
     expect((await fetch(`${base}/api/functies`, { method: 'POST', headers: { ...JSON_HEADERS, ...als('u1') }, body: functies })).status).toBe(403);
   });
 
+  it('laat geen pagina wachten op een nieuwe lijst als er al een is, ook als Home Assistant niet antwoordt (22 oktober 2026)', async () => {
+    let nu = 0;
+    let hangt = false;
+    const b = haBeheerders(async () => (hangt ? new Promise<readonly HaAccount[]>(() => {}) : ACCOUNTS), { nowFn: () => nu });
+    expect(await b.isBeheerder('u1')).toBe(true);
+    // Na een minuut blijft het verversen hangen: de vorige lijst geldt, en het antwoord komt meteen.
+    hangt = true;
+    nu = 61_000;
+    const snel = await Promise.race([b.isBeheerder('u1'), new Promise((r) => setTimeout(() => r('hangt'), 100))]);
+    expect(snel).toBe(true);
+  });
+
   it('vraagt het na een minuut opnieuw, en na een fout eerder', async () => {
     let nu = 0;
     let fout = true;
