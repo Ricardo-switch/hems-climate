@@ -206,7 +206,7 @@ export interface WebOptions {
    * staat, met de versie die Home Assistant nu geladen heeft, en neerzetten.
    */
   readonly integratie?: {
-    readonly stand: () => Promise<IntegratieStand & { readonly geladen: string | null }>;
+    readonly stand: () => Promise<IntegratieStand & { readonly geladen: string | null; readonly toegevoegd: boolean | null }>;
     readonly zetNeer: () => Promise<{ readonly ok: true; readonly stand: IntegratieStand } | { readonly ok: false; readonly reden: string }>;
   };
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;

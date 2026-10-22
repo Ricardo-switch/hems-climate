@@ -1148,14 +1148,19 @@
       const witgoed = apps.some((a) => WITGOED.test(a.soort));
       // Welke delen: een gekozen soort geldt voor de hele kamer, een woonkamer met
       // open keuken is links keuken en rechts zithoek, en anders per zone of de naam.
-      // Witgoed houdt het midden vrij.
+      // Heeft die open keuken een zone die keuken heet, dan staat de keuken onder
+      // die naam en de zithoek onder de andere. Witgoed houdt het midden vrij.
       const zones = (kamer.zones ?? []).length > 1 ? kamer.zones : [null];
       const gekozen = kamer.inrichting ?? (zones.length > 1 ? null : soortVanKamer(kamer));
+      const perZone = (soort) => zones.map((zone, i) => [soort(zone), i / zones.length, (i + 1) / zones.length]);
+      const woonkeuken = zones.some((zone) => zone && zoneSoort(zone) === 'keuken')
+        ? perZone((zone) => (zoneSoort(zone) === 'keuken' ? 'keuken' : 'woonkamer'))
+        : [['keuken', 0, zones.length === 2 ? 0.5 : 0.45], ['woonkamer', zones.length === 2 ? 0.5 : 0.45, 1]];
       const delen = gekozen === 'woonkeuken'
-        ? [['keuken', 0, zones.length === 2 ? 0.5 : 0.45], ['woonkamer', zones.length === 2 ? 0.5 : 0.45, 1]]
+        ? woonkeuken
         : gekozen
           ? [[gekozen, 0, 1]]
-          : zones.map((zone, i) => [(zone && zoneSoort(zone)) ?? soortVan(kamer.naam), i / zones.length, (i + 1) / zones.length]);
+          : perZone((zone) => (zone && zoneSoort(zone)) ?? soortVan(kamer.naam));
       const soorten = delen.map(([soort]) => (witgoed && soort !== 'leeg' ? 'wasruimte' : MEUBELS_ALS[soort] ?? soort));
       // Heeft het grootste meubel de achterwand nodig, dan hangt de radiator aan de zijmuur.
       const ACHTERWAND = ['keuken', 'badkamer', 'toilet', 'woonkamer', 'slaapkamer', 'kinderkamer', 'logeerkamer', 'werkkamer'];
@@ -1214,12 +1219,14 @@
         return kandidaten.sort((p, q) => Math.abs(p - doel) - Math.abs(q - doel))[0];
       };
       const stukken = [];
+      /** Welk deel van de kamer nu ingericht wordt, voor de controle. */
+      let deel = null;
       /** Een meubel op (x, y); `maat` is [breed, diep, hoog], voor de controle. */
       const zet = (y, x, svgTekst, maat) => {
         stukken.push({ y, x, svgTekst });
         if (opts.controle && maat) {
           const [w, d, h, vanaf = 0] = maat;
-          controle.push({ kamer: kamer.id ?? kamer.naam, wat: 'meubel', x0: x, x1: x + w, y0: y, y1: y + d, z0: z0 + vanaf, z1: z0 + vanaf + h, ruimte: [x0, x1], plafond: z0 + Math.min(hoogte(x), hoogte(x + w)) });
+          controle.push({ kamer: kamer.id ?? kamer.naam, wat: 'meubel', deel, x0: x, x1: x + w, y0: y, y1: y + d, z0: z0 + vanaf, z1: z0 + vanaf + h, ruimte: [x0, x1], plafond: z0 + Math.min(hoogte(x), hoogte(x + w)) });
         }
       };
 
@@ -1410,7 +1417,10 @@
       }
 
       // Langs een radiator aan de zijmuur blijft een strook vrij.
-      soorten.forEach((soort, i) => meubels(soort, x0 + (x1 - x0) * delen[i][1] + (radiatorZij && i === 0 ? 0.12 : 0), x0 + (x1 - x0) * delen[i][2]));
+      soorten.forEach((soort, i) => {
+        deel = soort;
+        meubels(soort, x0 + (x1 - x0) * delen[i][1] + (radiatorZij && i === 0 ? 0.12 : 0), x0 + (x1 - x0) * delen[i][2]);
+      });
       if (!stukken.length) return;
       // Van achter naar voor, en van links naar rechts: wat dichterbij staat, komt erover.
       stukken.sort((p, q) => p.y - q.y || p.x - q.x);

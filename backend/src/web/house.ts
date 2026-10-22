@@ -1571,7 +1571,9 @@ export function buildHouse(
     const zone = zoneId ? config.zones.find((z) => z.id === zoneId) : undefined;
     const pz = zone ? snapshot?.explanation.perZone.find((z) => z.zoneId === zone.id) : undefined;
     // Zonder regelgebied meet een meter in de kamer, zoals in de hal of op zolder.
-    const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null);
+    // Zonder meter meet het klimaatapparaat, zoals de thermostaat in de badkamer.
+    const meterTemp = devices.find((d) => d.soort === 'meter' && d.meting?.temperatuurC != null)
+      ?? devices.find((d) => d.soort === 'klimaat' && d.meting?.temperatuurC != null);
     // Meten met (besluit 123): het gemiddelde van de gekozen sensoren. Met een
     // regeling rekent de regeling er na de volgende start zelf mee.
     // Een apparaat van de regeling staat er onder zijn eigen id; de stand hoort bij de entiteit erachter.

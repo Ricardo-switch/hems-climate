@@ -111,7 +111,7 @@ let meldingenStore: MeldingenStore;
 /** Batterijen die een test erbij zet (besluit 122); leeg is: wat het huis zegt. */
 let extraBatterijen: HouseBattery[] = [];
 /** De integratie in Home Assistant (besluit 184), zoals de nagebootste add-on hem ziet. */
-let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; geladen: string | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
+let integratieNu: { kan: boolean; staat: 'nee' | 'add-on' | 'anders'; versie: string | null; nieuw: string | null; geladen: string | null; toegevoegd: boolean | null } = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
 /** De proefmeldingen die de app vroeg (besluit 183), per account. */
 const proefmeldingen: (string | null)[] = [];
 /** Een thuisbatterij en een auto die een test erbij zet (besluit 182); null is: wat het huis zegt. */
@@ -2434,7 +2434,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const p = await context.newPage();
     const fouten: string[] = [];
     p.on('pageerror', (e) => fouten.push(e.message));
-    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
+    integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
     try {
       await p.goto(`${baseUrl}/toegang.html#assistent`);
       const knop = p.locator('#wand [data-integratie]');
@@ -2445,13 +2445,18 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-vorm]', { hasText: 'neergezet door de add-on' }).waitFor();
       expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Herstart Home Assistant');
       // Via HACS: de add-on blijft eraf.
-      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, geladen: VERSIE };
+      integratieNu = { kan: true, staat: 'anders', versie: VERSIE, nieuw: VERSIE, geladen: VERSIE, toegevoegd: false };
       await p.reload();
       await p.locator('#wand [data-vorm]', { hasText: 'via HACS' }).waitFor();
       expect(await p.locator('#wand [data-integratie]').count()).toBe(0);
+      // Geladen maar nog niet toegevoegd (22 oktober 2026): zeg wat er nog moet.
+      expect(await p.locator('#wand [data-vorm]').textContent()).toContain('Nog niet toegevoegd');
+      integratieNu = { ...integratieNu, toegevoegd: true };
+      await p.reload();
+      await p.locator('#wand [data-vorm]', { hasText: 'Toegevoegd.' }).waitFor();
       expect(fouten).toEqual([]);
     } finally {
-      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null };
+      integratieNu = { kan: true, staat: 'nee', versie: null, nieuw: VERSIE, geladen: null, toegevoegd: null };
       await context.close();
     }
   }, 60_000);
@@ -2784,6 +2789,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(fouten).toEqual([]);
     await context.close();
   }, 30_000);
+
+  /* Een open keuken met zones (22 oktober 2026): de keuken staat onder de zone die Keuken heet, ook rechts. */
+  it('zet bij een open keuken de keuken onder de zone Keuken en de zithoek onder de andere', async () => {
+    const p = await browser.newPage();
+    await p.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    await p.goto(`${baseUrl}/manifest.webmanifest`);
+    await p.setContent(`<!doctype html><body><script src="${baseUrl}/kit/huis.js"></script></body>`);
+    await p.waitForFunction('window.huis != null');
+    const midden = await p.evaluate(() => {
+      const w = globalThis as unknown as { huis: { svg: (m: unknown, o: unknown) => string } };
+      return [['Zithoek', 'Keuken'], ['Keuken', 'Zithoek']].map((zones) => {
+        const svg = w.huis.svg({ tijd: 'dag', etages: [{ naam: 'bg', kamers: [{ id: 'beneden', naam: 'Beneden', gewicht: 1.4, inrichting: 'woonkeuken', zones, apparaten: [] }] }] }, { breedte: 700, hoogte: 520, meubels: true, controle: true });
+        const blokken = JSON.parse((/<desc class="sc-controle">(.*?)<\/desc>/s.exec(svg)?.[1] ?? '[]').replace(/&quot;/g, '"')) as { wat: string; deel?: string; x0: number; x1: number }[];
+        const van = (deel: string) => {
+          const m = blokken.filter((b) => b.wat === 'meubel' && b.deel === deel);
+          return m.reduce((s, b) => s + (b.x0 + b.x1) / 2, 0) / m.length;
+        };
+        return { keuken: van('keuken'), zithoek: van('woonkamer') };
+      });
+    });
+    expect(midden[0]!.keuken).toBeGreaterThan(midden[0]!.zithoek);
+    expect(midden[1]!.keuken).toBeLessThan(midden[1]!.zithoek);
+    await p.close();
+  });
 
   it('beantwoordt een getypte vraag, met een knop naar de pagina', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
