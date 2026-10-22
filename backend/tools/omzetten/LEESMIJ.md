@@ -7,9 +7,10 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 
 - **Klaar:** Thuis en wat op elke pagina staat (0.59.1), de vijf tabbladen en
   de assistent (0.59.2), Instellingen en de pagina's erachter (0.59.3).
-- **Deel 4, bezig:** af zijn Wat je huis kan (`huis-kan.*`, heel `stand.js`)
-  en `huismodel.js`. Nog te doen: Indeling, Inrichten, het begin (`begin.*`,
-  `welkom.*`, `film.js`). Wat af is, staat in `OMGEZET` in
+- **Deel 4, bezig:** af zijn Wat je huis kan (`huis-kan.*`, heel `stand.js`),
+  `huismodel.js` en Indeling (`indeling.*`). Nog te doen: Inrichten
+  (`inrichten.*`, ruim 1500 regels), het begin (`begin.*`, `welkom.*`,
+  `film.js`). Wat af is, staat in `OMGEZET` in
   `backend/test/taal.test.ts`; er komt pas een versie als deel 4 af is.
 - **Deel 5:** wat de dienst in woorden geeft: de stand van apparaten in
   `house.ts`, het weer, de meldingen, de namen van periodes, de ligging van de
