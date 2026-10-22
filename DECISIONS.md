@@ -186,6 +186,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt](#181-een-profiel-per-bewoner-licht-of-donker-een-eigen-kleur-en-de-wand-volgt-wie-er-geldt)
 - [182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel](#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel)
 - [183. Meldingen op de telefoon, via de app van Home Assistant](#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant)
+- [185. Meertalig: het fundament, met Thuis als proef](#185-meertalig-het-fundament-met-thuis-als-proef)
 
 **Veiligheid**
 
@@ -8284,6 +8285,66 @@ niets met de hand in de YAML hoeven te doen, zoals hij moest.
 wil). Een eigen gespreksagent: dan gaat ook "doe het licht aan" eerst langs
 Smart Climate (91). En de add-on die de integratie ongevraagd neerzet: dat
 schrijft zonder dat de bewoner erom vroeg.
+
+## 185. Meertalig: het fundament, met Thuis als proef
+
+*Onderwerp: weergave · Status: geldig*
+
+Stap 8 uit het stappenplan van besluit 172, de uitwerking van "Engels naast
+Nederlands" uit besluit 86. Op 22 oktober 2026 koos de bewoner uit opties: de
+taal uit je account van Home Assistant, bij Jij te wijzigen; de wand volgt het
+account waarmee hij in Home Assistant zit; een sleutel en een bestand per taal;
+en Engels in Britse stijl. Tussendoor vroeg hij of er meteen rekening werd
+gehouden met meervouden: ja, met de regels per taal.
+
+*Besluit:*
+
+- **Alle teksten op één plek, per taal:** `frontend/kit/teksten.nl.js` en
+  `teksten.en.js`, een sleutel per tekst (`thuis.weer.kop`). De code vraagt ze
+  met `t('…')`, de HTML met `data-t="…"` (de tekst), `data-t-html` (met
+  `**vet**`) of `data-t-aria-label="…"` (een attribuut). `{naam}` vult zich
+  met wat de code meegeeft. In `kit/`, naast de tekenmotor: zo nemen de
+  schetsen van ontwerp 2 ze ook mee.
+- **Meervoud met de regels van de taal:** een tekst als
+  `{ one: '1 lamp aan', other: '{n} lampen aan' }` kiest zijn vorm met
+  `Intl.PluralRules`, met `zero` voor een eigen zin bij nul. Een taal met meer
+  vormen, zoals later Duits of een andere, past erin zonder dat de code
+  verandert.
+- **Welke taal:** wat de bewoner bij Jij koos (Automatisch, Nederlands,
+  English; per account bewaard in de voorkeuren en op de telefoon onthouden),
+  anders de taal van zijn account in Home Assistant (binnen Home Assistant
+  leest de app die van het paneel eromheen), anders die van de browser. De
+  wand en elk ander scherm hebben geen profiel en volgen hun eigen account.
+  Een andere keuze laadt de pagina opnieuw.
+- **Engels is nog een proef:** Automatisch kiest alleen een taal die de hele
+  app spreekt. Tot stap 9 klaar is, is dat Nederlands; Engels kies je zelf bij
+  Jij. Anders zag iemand met een Engels account op de andere pagina's een
+  mengtaal.
+- **Getallen, tijden en datums in die taal:** `taal.getal`, `taal.klok`,
+  `taal.datum`. Engels in Britse stijl: 22:00, 20.5° en Thursday 22 October;
+  temperaturen blijven in °C.
+- **De dienst praat mee:** de app stuurt de taal mee (`x-taal`, en `?taal=`
+  bij de live-stroom), en de uitleg die al tweetalig was (de kop van Thuis, de
+  kamers, het apparaat) komt in die taal. Niet Accept-Language: die zet de
+  browser, en dan zou de uitleg wisselen met de taal van de telefoon.
+- **Thuis als proef:** de pagina, de kaarten, het weer, de bladen, Hoe voelt
+  het, het menu en de tekst in de tekening. Kamernamen blijven zoals de
+  bewoner ze noemde; in het Engels zonder Nederlands lidwoord.
+- **Bewaakt:** een test houdt de twee bestanden gelijk (sleutels, `{plekken}`,
+  meervoudsvormen), kijkt of elke gevraagde sleutel bestaat, en vindt losse
+  Nederlandse tekst in de bestanden die al omgezet zijn; die lijst groeit met
+  stap 9. Een paginatest zet Thuis in het Engels, met de
+  toegankelijkheidscontrole van besluit 86 (axe, WCAG 2 A en AA). Die vond
+  meteen iets: de tekening van het huis heette voor een schermlezer een
+  plaatje, met aantikbare kamers erin die zo niet te bereiken waren; nu is het
+  een groep.
+- **Versie 0.59.0.**
+
+*Wat er nog Nederlands is op Thuis (stap 9):* Aanpassen, de rondleiding, de
+nachtstand van de wand, en de teksten uit `api/huis` en `api/weer` (de stand
+van een apparaat, het weer in woorden). `huismodel.ACTIEF` herkent een stand
+nog aan het Nederlandse woord uit `api/huis`; als die meertalig wordt, wordt dat
+een vaste code.
 
 ## Wat nog een besluit wacht
 

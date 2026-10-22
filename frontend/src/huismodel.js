@@ -6,7 +6,8 @@
 'use strict';
 
 (function (global) {
-  const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  /** Een getal in de taal van de app (besluit 185). */
+  const nl = (n, d = 1) => global.taal.getal(n, d);
 
   const ACTIEF = ['koelt', 'verwarmt', 'verwarmt voor', 'droogt', 'ventileert'];
   const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport/i;
@@ -109,7 +110,7 @@
       temp: r.temperatuurC == null ? null : `${nl(r.temperatuurC)}°`,
       // Een kamer die meedoet met een andere (besluit 142), kleurt mee met die regeling.
       stand: zid ? standVan(zid, state) : null,
-      zin: zid ? kortVan(zid, state) : r.lampenAan ? `${r.lampenAan === 1 ? '1 lamp' : `${r.lampenAan} lampen`} aan` : null,
+      zin: zid ? kortVan(zid, state) : r.lampenAan ? global.t('huis.lampenAan', { n: r.lampenAan }) : null,
       zones: (r.zones ?? []).length > 1 ? r.zones.map((z) => (z.soort ? { naam: z.naam, soort: z.soort } : z.naam)) : undefined,
       // Wat voor kamer, voor de inrichting ingezoomd (besluit 119). Hebben de zones
       // een gekozen soort en de kamer niet, dan per zone (besluit 145).
@@ -234,16 +235,17 @@
       }
     }
     // Alleen een tuinhuis in Home Assistant: dan is er een tuin om hem in te zetten.
-    if (!tuin && huisjes.length) tuin = { id: null, naam: 'Tuin', tuinhuis: true, tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
+    if (!tuin && huisjes.length) tuin = { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: true, tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
     if (rond) {
       const leeg = (naam) => ({ id: null, naam, lampAan: false });
-      oprit = rond.oprit ? (oprit ?? { id: null, naam: 'Oprit', auto: null, camera: null }) : null;
+      oprit = rond.oprit ? (oprit ?? { id: null, naam: global.t('huis.buiten.oprit'), auto: null, camera: null }) : null;
       if (oprit) oprit = { ...oprit, auto: rond.auto ? (oprit.auto ?? {}) : null };
-      tuin = rond.tuin || rond.tuinhuis ? { ...(tuin ?? { id: null, naam: 'Tuin', tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
-      terras = rond.terras ? (terras ?? leeg('Terras')) : null;
-      balkon = rond.balkon ? (balkon ?? leeg('Balkon')) : null;
-      voortuin = rond.voortuin ? (voortuin ?? leeg('Voortuin')) : null;
-      garage = rond.garage ? (garage ?? leeg('Garage')) : null;
+      tuin = rond.tuin || rond.tuinhuis ? { ...(tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      // Een plek buiten zonder eigen naam heet zoals de plek (besluit 185: in de taal van de app).
+      terras = rond.terras ? (terras ?? leeg(global.t('huis.buiten.terras'))) : null;
+      balkon = rond.balkon ? (balkon ?? leeg(global.t('huis.buiten.balkon'))) : null;
+      voortuin = rond.voortuin ? (voortuin ?? leeg(global.t('huis.buiten.voortuin'))) : null;
+      garage = rond.garage ? (garage ?? leeg(global.t('huis.buiten.garage'))) : null;
       if (oprit) oprit = { ...oprit, carport: !!rond.carport };
     }
     return { oprit, tuin, terras, balkon, voortuin, garage };

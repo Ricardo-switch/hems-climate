@@ -10,7 +10,8 @@
 
 (function (global) {
   const $$ = (sel) => [...document.querySelectorAll(sel)];
-  const nl = (n, d = 1) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+  /** Een getal in de taal van de app (besluit 185); de naam is van voor er talen waren. */
+  const nl = (n, d = 1) => global.taal.getal(n, d);
   const zet = (sel, text) => $$(sel).forEach((e) => (e.textContent = text));
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   /**
@@ -21,7 +22,7 @@
     const d = huis?.drempels?.[soort];
     return pct != null && (d === undefined ? pct < 10 : d != null && pct < d);
   };
-  const klokVan = (ms) => new Date(ms).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const klokVan = (ms) => global.taal.klok(ms);
   /**
    * Wanneer iets was: de klok vandaag, "gisteren" met de klok, of de datum.
    * Kort (voor een melding): binnen het uur in minuten, en gisteren zonder klok.
@@ -120,7 +121,8 @@
   async function haal(pad, opnieuw = false) {
     let res;
     try {
-      res = await fetch(pad, { cache: 'no-store' });
+      // De taal van de app (besluit 185): de dienst zet zijn uitleg in die taal.
+      res = await fetch(pad, { cache: 'no-store', headers: { 'x-taal': global.taal.code } });
     } catch (fout) {
       // Geen antwoord van de NAS: de laatste stand blijft, grijs (besluit 82).
       offline();
@@ -169,7 +171,7 @@
    * de inlog van Home Assistant, en daarna terug naar deze plek (besluit 99).
    */
   async function deur(pad, body, opnieuw = false) {
-    const res = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const res = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json', 'x-taal': global.taal.code }, body: JSON.stringify(body) });
     if (ingressDicht(res)) return !opnieuw && (await verseToegang()) ? deur(pad, body, true) : res;
     if (res.status === 401) {
       location.href = `auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}`;
@@ -227,7 +229,7 @@
   function klok() {
     const nu = new Date();
     zet('[data-tijd]', klokVan(nu));
-    zet('[data-datum]', nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }));
+    zet('[data-datum]', global.taal.datum(nu, { weekday: 'long', day: 'numeric', month: 'long' }));
   }
 
   /**
@@ -236,8 +238,8 @@
    */
   function verwachting(zon, weer) {
     const kw = weer?.vandaag?.kwartieren ?? [];
-    if (kw.length) return { punten: kw.map((q) => ({ tMs: q.tMs, w: q.verwachtW })), naam: 'verwachting' };
-    return { punten: (zon?.kwartieren ?? []).map((q) => ({ tMs: q.tMs, w: q.heldereLuchtW ?? 0 })), naam: 'zon bij heldere lucht' };
+    if (kw.length) return { punten: kw.map((q) => ({ tMs: q.tMs, w: q.verwachtW })), naam: global.t('algemeen.verwachting') };
+    return { punten: (zon?.kwartieren ?? []).map((q) => ({ tMs: q.tMs, w: q.heldereLuchtW ?? 0 })), naam: global.t('algemeen.heldereLucht') };
   }
 
   /** Eén live-stroom per pagina: de besluiten, en de deurbel (besluit 107). */
@@ -246,7 +248,7 @@
   function stroom() {
     if (bron) return bron;
     try {
-      bron = new EventSource('api/events');
+      bron = new EventSource(`api/events?taal=${global.taal.code}`);
       if (opLive) bron.onmessage = opLive;
       // Valt de stroom weg en komt hij niet snel terug, dan zonder verbinding.
       let wacht = null;
@@ -987,6 +989,8 @@
   function zetThema(v) {
     if (!v?.tel) return;
     global.scThema?.({ thema: v.tel.thema, kleur: v.tel.kleur, wandKleur: v.wand?.kleur, scherm: v.scherm === true });
+    // De taal bij Jij (besluit 185); een scherm volgt zijn account.
+    global.taal.zetKeuze(v.tel.taal, { scherm: v.scherm === true });
     const nieuw = v.kleuren ?? {};
     if (JSON.stringify(nieuw) === JSON.stringify(kleurenNu)) return;
     kleurenNu = nieuw;
@@ -1452,6 +1456,8 @@
   const EERSTE_WOORD = new RegExp(`^(${Object.keys(KAMERWOORDEN).join('|')})\\b`, 'i');
   /** "Zolder" wordt "de zolder", "Kantoor" "het kantoor", "Beneden" blijft "Beneden". */
   function metLidwoord(naam) {
+    // Het lidwoord is Nederlands; in een andere taal blijft de naam zoals hij is (besluit 185).
+    if (global.taal.code !== 'nl') return naam;
     const m = EERSTE_WOORD.exec(String(naam ?? '').trim());
     const lw = m ? KAMERWOORDEN[m[1].toLowerCase()] : null;
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;

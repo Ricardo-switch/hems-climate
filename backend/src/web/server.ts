@@ -91,6 +91,16 @@ function siteInfo(config: SiteConfig): unknown {
   };
 }
 
+/**
+ * De taal van de pagina (besluit 185): `?taal=` of de kop `x-taal`, die de app
+ * meestuurt. Niet Accept-Language: die zet de browser zelf, en dan zou de
+ * uitleg wisselen met de taal van de telefoon in plaats van die van de app.
+ */
+export function taalVan(x: unknown): Lang {
+  const t = Array.isArray(x) ? x[0] : x;
+  return typeof t === 'string' && (LANGS as readonly string[]).includes(t) ? (t as Lang) : 'nl';
+}
+
 export class WebServer {
   readonly #options: WebOptions & { host: string; write: (line: string) => void };
   readonly #server: Server;
@@ -113,7 +123,7 @@ export class WebServer {
     };
     this.#live = new LiveStroom({
       laatste: () => this.#options.latest(),
-      metBewoner: (snapshot) => this.#withResident(snapshot),
+      metBewoner: (snapshot, taal) => this.#withResident(snapshot, taalVan(taal)),
       huis: () => this.#options.house?.() ?? null,
     });
     const verzoek = (req: IncomingMessage, res: ServerResponse) => {
@@ -689,12 +699,12 @@ export class WebServer {
         sendJson(res, 503, { wachten: 'nog geen besluit genomen' });
         return;
       }
-      sendJson(res, 200, this.#withResident(snapshot));
+      sendJson(res, 200, this.#withResident(snapshot, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 
     if (path === '/api/events') {
-      this.#live.abonneer(res, method === 'HEAD');
+      this.#live.abonneer(res, method === 'HEAD', taalVan(url.searchParams.get('taal')));
       return;
     }
 
@@ -1685,10 +1695,10 @@ export class WebServer {
    * de stand in woorden, uitgerekend in de dienst. De kern blijft wat hij was;
    * de proefomgeving leest `bewoner`, de schaduwweergave de rest.
    */
-  #withResident(snapshot: LiveSnapshot): LiveSnapshot & { bewoner?: ResidentView } {
+  #withResident(snapshot: LiveSnapshot, taal: Lang = 'nl'): LiveSnapshot & { bewoner?: ResidentView } {
     const config = this.#config();
     if (config == null) return snapshot;
-    return { ...snapshot, bewoner: residentView(config, snapshot) };
+    return { ...snapshot, bewoner: residentView(config, snapshot, taal) };
   }
 
   /*

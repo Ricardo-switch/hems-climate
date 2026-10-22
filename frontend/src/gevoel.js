@@ -15,15 +15,17 @@
 (function (global) {
   'use strict';
 
-  const { esc, nl, haal, deur } = global.app;
+  const { esc, haal, deur } = global.app;
+  const { t, getal } = global.taal;
 
+  /** Het gevoel, de tekst op de knop en de kleur; de teksten in teksten.*.js (besluit 185). */
   const GEVOEL = [
-    ['te_koud', 'Te koud', 'koud'],
-    ['goed', 'Goed', 'goed'],
-    ['te_warm', 'Te warm', 'warm'],
+    ['te_koud', 'koud'],
+    ['goed', 'goed'],
+    ['te_warm', 'warm'],
   ];
-  const WOORD = { te_koud: 'te koud', goed: 'goed', te_warm: 'te warm' };
-  const DAGDEEL = { dag: 'overdag', voorverwarmen: 'overdag', nacht: "'s nachts" };
+  const DAGDEEL = { dag: 'dag', voorverwarmen: 'dag', nacht: 'nacht' };
+  const dagdeel = (m) => t(`gevoel.dagdeel.${DAGDEEL[m]}`);
   /** Zoveel keer hetzelfde in twee weken, in hetzelfde dagdeel, en het huis stelt iets voor. */
   const VAKER = 3;
   /** Zoveel tikken met een temperatuur, en het huis laat zien wat het leerde. */
@@ -38,7 +40,7 @@
   /** Het laden dat nu loopt: hooguit één tegelijk, anders vraagt elke tekenbeurt opnieuw. */
   let bezig = null;
 
-  const graden = (c) => `${nl(c, Number.isInteger(c) ? 0 : 1)}°`;
+  const graden = (c) => `${getal(c, Number.isInteger(c) ? 0 : 1)}°`;
   const halve = (c) => Math.round(c * 2) / 2;
 
   function laad() {
@@ -67,14 +69,14 @@
     const p = k.modi?.[m] ?? {};
     if (gevoel === 'te_koud' && p.heat != null) {
       const v = Math.min(p.heat + 0.5, p.cool != null ? p.cool - 1 : Infinity);
-      return v > p.heat ? { m, soort: 'heat', v, vaak, zin: `Je vond het ${vaak} keer te koud ${DAGDEEL[m]}. Voortaan pas tevreden boven ${graden(v)}?` } : null;
+      return v > p.heat ? { m, soort: 'heat', v, vaak, zin: t('gevoel.voorstel.warmer', { vaak, dagdeel: dagdeel(m), graden: graden(v) }) } : null;
     }
     if (gevoel === 'te_warm' && p.cool != null) {
       const v = Math.max(p.cool - 0.5, p.heat != null ? p.heat + 1 : -Infinity);
-      return v < p.cool ? { m, soort: 'cool', v, vaak, zin: `Je vond het ${vaak} keer te warm ${DAGDEEL[m]}. Voortaan al koelen boven ${graden(v)}?` } : null;
+      return v < p.cool ? { m, soort: 'cool', v, vaak, zin: t('gevoel.voorstel.koeler', { vaak, dagdeel: dagdeel(m), graden: graden(v) }) } : null;
     }
     if (gevoel === 'te_warm' && p.heat != null) {
-      return { m, soort: 'heat', v: p.heat - 0.5, vaak, zin: `Je vond het ${vaak} keer te warm ${DAGDEEL[m]}. Voortaan minder verwarmen, tot ${graden(p.heat - 0.5)}?` };
+      return { m, soort: 'heat', v: p.heat - 0.5, vaak, zin: t('gevoel.voorstel.minder', { vaak, dagdeel: dagdeel(m), graden: graden(p.heat - 0.5) }) };
     }
     return null;
   }
@@ -98,7 +100,7 @@
     const stippen = l.mijn.map((t, i) => `<i style="left: ${x(t.c).toFixed(1)}%; top: ${18 + ((i * 7) % 15)}px; background: ${kleur[t.gevoel]}"></i>`).join('');
     return `<div class="gevoelstrook" aria-hidden="true"><div class="baan"></div><div class="prettig" style="left: ${x(l.lo).toFixed(1)}%; width: ${Math.max(2, x(l.hi) - x(l.lo)).toFixed(1)}%"></div>${stippen}
       <span class="maat" style="left: 0%">${graden(l.van)}</span><span class="maat" style="left: ${x(l.lo).toFixed(1)}%">${graden(l.lo)}</span><span class="maat" style="left: ${x(l.hi).toFixed(1)}%">${graden(l.hi)}</span><span class="maat" style="left: 100%">${graden(l.tot)}</span></div>
-      <div class="gevoellegenda"><span><i style="background: var(--ijs)"></i>te koud</span><span><i style="background: var(--mint)"></i>goed</span><span><i style="background: var(--gloed)"></i>te warm</span></div>`;
+      <div class="gevoellegenda"><span><i style="background: var(--ijs)"></i>${esc(t('gevoel.woord.te_koud'))}</span><span><i style="background: var(--mint)"></i>${esc(t('gevoel.woord.goed'))}</span><span><i style="background: var(--gloed)"></i>${esc(t('gevoel.woord.te_warm'))}</span></div>`;
   }
 
   /**
@@ -109,21 +111,22 @@
     if (!zoneId) return '';
     if (!geladen) void laad().catch(() => {});
     const a = antwoord.get(zoneId);
-    const kies = kamers.length > 1 ? `<div class="gevoelkamers" role="group" aria-label="Kamer">${kamers.map((k) => `<button type="button" data-gevoel-zone="${esc(k.zoneId)}" aria-pressed="${k.zoneId === zoneId}">${esc(k.naam)}${k.c != null ? ` <small>${graden(k.c)}</small>` : ''}</button>`).join('')}</div>` : '';
-    const knoppen = `<div class="gevoel">${GEVOEL.map(([g, t, kl]) => `<button type="button" class="${kl}" data-gevoel-tik="${g}" data-zone="${esc(zoneId)}" aria-pressed="${a?.gevoel === g}">${t}</button>`).join('')}</div>`;
+    const kies = kamers.length > 1 ? `<div class="gevoelkamers" role="group" aria-label="${esc(t('gevoel.kamer'))}">${kamers.map((k) => `<button type="button" data-gevoel-zone="${esc(k.zoneId)}" aria-pressed="${k.zoneId === zoneId}">${esc(k.naam)}${k.c != null ? ` <small>${graden(k.c)}</small>` : ''}</button>`).join('')}</div>` : '';
+    const knoppen = `<div class="gevoel">${GEVOEL.map(([g, kl]) => `<button type="button" class="${kl}" data-gevoel-tik="${g}" data-zone="${esc(zoneId)}" aria-pressed="${a?.gevoel === g}">${esc(t(`gevoel.knop.${g}`))}</button>`).join('')}</div>`;
     let onder = '';
     if (a) {
       const nu = state?.bewoner?.kamers?.find((x) => x.zoneId === zoneId)?.kort;
-      onder += `<p class="gevoelantwoord"><b>Genoteerd: ${WOORD[a.gevoel]}${a.c != null ? ` bij ${graden(a.c)}` : ''}.</b>${nu ? ` Het huis: ${esc(nu.charAt(0).toLowerCase() + nu.slice(1))}.` : ''}</p>`;
+      const woord = t(`gevoel.woord.${a.gevoel}`);
+      onder += `<p class="gevoelantwoord"><b>${esc(a.c != null ? t('gevoel.genoteerdBij', { woord, graden: graden(a.c) }) : t('gevoel.genoteerd', { woord }))}</b>${nu ? ` ${esc(t('gevoel.hetHuis', { zin: nu.charAt(0).toLowerCase() + nu.slice(1) }))}` : ''}</p>`;
       if (a.voorstel && !a.klaar) {
-        onder += `<div class="gevoelvoorstel"><span class="wie">Voortaan anders?</span><span>${esc(a.voorstel.zin)}</span><div class="knoppen"><button type="button" class="licht" data-gevoel-ja="${esc(zoneId)}">Ja, ${graden(a.voorstel.v)}</button><button type="button" data-gevoel-nee="${esc(zoneId)}">Nee, alleen nu</button></div></div>`;
+        onder += `<div class="gevoelvoorstel"><span class="wie">${esc(t('gevoel.anders'))}</span><span>${esc(a.voorstel.zin)}</span><div class="knoppen"><button type="button" class="licht" data-gevoel-ja="${esc(zoneId)}">${esc(t('gevoel.ja', { graden: graden(a.voorstel.v) }))}</button><button type="button" data-gevoel-nee="${esc(zoneId)}">${esc(t('gevoel.nee'))}</button></div></div>`;
       } else if (a.klaar) onder += `<p class="mini" style="margin: 6px 0 0">${esc(a.klaar)}</p>`;
     } else if (!kort) {
-      onder += '<p class="mini" style="margin: 6px 0 0">Tik wat je voelt. Daar leert het huis van wat jij prettig vindt.</p>';
+      onder += `<p class="mini" style="margin: 6px 0 0">${esc(t('gevoel.uitleg'))}</p>`;
     }
     const l = !kort && !a?.voorstel ? leerde(zoneId) : null;
     if (l) {
-      onder += `<div class="gevoelvoorstel"><span class="wie">Wat het huis leerde</span><span>Je vindt het hier prettig tussen <b>${graden(l.lo)}</b> en <b>${graden(l.hi)}</b>, uit ${l.mijn.length} tikken in ${l.weken} ${l.weken === 1 ? 'week' : 'weken'}.</span>${strook(l)}</div>`;
+      onder += `<div class="gevoelvoorstel"><span class="wie">${esc(t('gevoel.leerdeKop'))}</span><span>${global.taal.html('gevoel.leerde', { lo: graden(l.lo), hi: graden(l.hi), tikken: l.mijn.length, n: l.weken })}</span>${strook(l)}</div>`;
     }
     return `${kies}${knoppen}${onder}`;
   }
@@ -141,36 +144,36 @@
   }
 
   document.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-gevoel-tik], [data-gevoel-ja], [data-gevoel-nee], [data-gevoel-zone]');
-    if (!t) return;
-    if (t.dataset.gevoelZone) {
-      dispatchEvent(new CustomEvent('gevoelzone', { detail: t.dataset.gevoelZone }));
+    const knop = e.target.closest('[data-gevoel-tik], [data-gevoel-ja], [data-gevoel-nee], [data-gevoel-zone]');
+    if (!knop) return;
+    if (knop.dataset.gevoelZone) {
+      dispatchEvent(new CustomEvent('gevoelzone', { detail: knop.dataset.gevoelZone }));
       return;
     }
-    if (t.dataset.gevoelTik) {
-      const zoneId = t.dataset.zone;
-      const g = t.dataset.gevoelTik;
+    if (knop.dataset.gevoelTik) {
+      const zoneId = knop.dataset.zone;
+      const g = knop.dataset.gevoelTik;
       antwoord.set(zoneId, { gevoel: g, c: null, voorstel: null });
       opnieuw();
       const res = await deur('api/gevoel', { zoneId, gevoel: g }).catch(() => null);
       const record = res?.ok ? await res.json().catch(() => null) : null;
       if (!record) {
-        antwoord.set(zoneId, { gevoel: g, c: null, voorstel: null, klaar: 'Niet gelukt; probeer het zo nog eens.' });
+        antwoord.set(zoneId, { gevoel: g, c: null, voorstel: null, klaar: t('gevoel.mislukt') });
         return opnieuw();
       }
       tikken = [record, ...tikken];
       antwoord.set(zoneId, { gevoel: g, c: record.c ?? null, voorstel: voorstel(zoneId, g, record.dagdeel) });
       return opnieuw();
     }
-    const zoneId = t.dataset.gevoelJa ?? t.dataset.gevoelNee;
+    const zoneId = knop.dataset.gevoelJa ?? knop.dataset.gevoelNee;
     const a = antwoord.get(zoneId);
     if (!a?.voorstel) return;
-    if (t.dataset.gevoelNee) {
-      antwoord.set(zoneId, { ...a, klaar: 'Goed, het blijft zoals het is.' });
+    if (knop.dataset.gevoelNee) {
+      antwoord.set(zoneId, { ...a, klaar: t('gevoel.blijft') });
       return opnieuw();
     }
     const res = await zetComfort(zoneId, a.voorstel.m, a.voorstel.soort, a.voorstel.v).catch(() => null);
-    antwoord.set(zoneId, { ...a, klaar: res?.ok ? `Bewaard bij Comfort: ${a.voorstel.soort === 'heat' ? 'verwarmen onder' : 'koelen boven'} ${graden(a.voorstel.v)} ${DAGDEEL[a.voorstel.m]}.` : 'Niet bewaard; probeer het zo nog eens.' });
+    antwoord.set(zoneId, { ...a, klaar: res?.ok ? t(a.voorstel.soort === 'heat' ? 'gevoel.bewaardWarm' : 'gevoel.bewaardKoel', { graden: graden(a.voorstel.v), dagdeel: dagdeel(a.voorstel.m) }) : t('gevoel.nietBewaard') });
     opnieuw();
   });
 

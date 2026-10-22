@@ -119,6 +119,13 @@ export type Kleur = (typeof KLEUREN)[number];
 export const THEMAS = ['donker', 'licht', 'systeem'] as const;
 export type Thema = (typeof THEMAS)[number];
 export const STANDAARD_THEMA: Thema = 'donker';
+/**
+ * De taal van de app (besluit 185): `auto` is de taal van je account in Home
+ * Assistant; of zelf gekozen. De wand volgt altijd zijn eigen account.
+ */
+export const TAALKEUZES = ['auto', 'nl', 'en'] as const;
+export type TaalKeus = (typeof TAALKEUZES)[number];
+export const STANDAARD_TAAL: TaalKeus = 'auto';
 
 export interface Favoriet {
   readonly soort: 'lamp' | 'scene' | 'scherm';
@@ -132,6 +139,7 @@ interface Eigen {
   readonly weergave?: Weergave;
   readonly thema?: Thema;
   readonly kleur?: Kleur;
+  readonly taal?: TaalKeus;
   /** Wat je op je telefoon wilt horen (besluit 183); weg is de standaard. */
   readonly meldingen?: Partial<MeldingKeus>;
 }
@@ -147,7 +155,7 @@ interface Bestand {
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly meldingen: MeldingKeus };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly taal: TaalKeus; readonly meldingen: MeldingKeus };
   /**
    * De wand: de kaarten, favorieten en kleur van wiens profiel geldt (`van`,
    * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
@@ -286,8 +294,9 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   // Eén indeling per bewoner: op de wand die van zijn telefoon, zonder wat de wand zelf al toont.
   const profiel = van == null ? null : (b.accounts[van] ?? {});
   const thema = eigen.thema && (THEMAS as readonly string[]).includes(eigen.thema) ? eigen.thema : STANDAARD_THEMA;
+  const taal = eigen.taal && (TAALKEUZES as readonly string[]).includes(eigen.taal) ? eigen.taal : STANDAARD_TAAL;
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
     wand: {
       kaarten: profiel ? (profiel.tel ?? STANDAARD_TEL).filter((k) => WAND_KAARTEN.includes(k)) : (b.wand?.kaarten ?? STANDAARD_WAND),
       favorieten: profiel ? (profiel.favorieten ?? []) : (b.wand?.favorieten ?? []),
@@ -347,6 +356,9 @@ export function meldingenVan(b: Bestand, account: string): MeldingKeus {
 export function leesThema(x: unknown): { ok: true; thema: Thema } | { ok: false; reden: string } {
   return typeof x === 'string' && (THEMAS as readonly string[]).includes(x) ? { ok: true, thema: x as Thema } : { ok: false, reden: `het thema is ${THEMAS.join(', ')}` };
 }
+export function leesTaal(x: unknown): { ok: true; taal: TaalKeus } | { ok: false; reden: string } {
+  return typeof x === 'string' && (TAALKEUZES as readonly string[]).includes(x) ? { ok: true, taal: x as TaalKeus } : { ok: false, reden: `de taal is ${TAALKEUZES.join(', ')}` };
+}
 export function leesKleur(x: unknown): { ok: true; kleur: Kleur } | { ok: false; reden: string } {
   return typeof x === 'string' && (KLEUREN as readonly string[]).includes(x) ? { ok: true, kleur: x as Kleur } : { ok: false, reden: `de kleur is ${KLEUREN.join(', ')}` };
 }
@@ -357,15 +369,15 @@ export function leesKleur(x: unknown): { ok: true; kleur: Kleur } | { ok: false;
  * 181): je eigen, of op een scherm die van wiens comfort geldt; dat is
  * dezelfde als op de telefoon. Zonder bewoners alleen als je de wand mag
  * aanpassen. Bij de telefoon ook
- * `weergave`, `thema` en `kleur` (die gelden voor jou, op elk scherm), bij de
+ * `weergave`, `thema`, `kleur` en `taal` (die gelden voor jou, op elk scherm), bij de
  * wand `niemand`, dat alleen de hoofdgebruiker of een beheerder verandert.
  */
 export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true; bestand: Bestand } | { ok: false; status: number; reden: string } {
   const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (!['kaarten', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave, thema, kleur, meldingen of niemand' };
-  if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur en de meldingen zijn per account: plek tel' };
+  if (!['kaarten', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, favorieten, weergave, thema, kleur, taal, meldingen of niemand' };
+  if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur, de taal en de meldingen zijn per account: plek tel' };
   if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
   const { van } = wandVan(wie);
   if (plek === 'wand' && (van == null || r!['niemand'] !== undefined) && !wie.magWand) return { ok: false, status: 403, reden: 'de wand past alleen de hoofdgebruiker aan' };
@@ -401,6 +413,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   if (thema && !thema.ok) return { ok: false, status: 400, reden: thema.reden };
   const kleur = r!['kleur'] === undefined ? null : leesKleur(r!['kleur']);
   if (kleur && !kleur.ok) return { ok: false, status: 400, reden: kleur.reden };
+  const taal = r!['taal'] === undefined ? null : leesTaal(r!['taal']);
+  if (taal && !taal.ok) return { ok: false, status: 400, reden: taal.reden };
   const meldingen = r!['meldingen'] === undefined ? null : leesMeldingen(r!['meldingen'], nu.tel.meldingen);
   if (meldingen && !meldingen.ok) return { ok: false, status: 400, reden: meldingen.reden };
   const sleutel = wie.userId ?? '';
@@ -411,6 +425,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
     ...(weergave ? { weergave: weergave.weergave } : {}),
     ...(thema ? { thema: thema.thema } : {}),
     ...(kleur ? { kleur: kleur.kleur } : {}),
+    ...(taal ? { taal: taal.taal } : {}),
     ...(meldingen ? { meldingen: meldingen.meldingen } : {}),
   };
   return { ok: true, bestand: { ...b, accounts: { ...b.accounts, [sleutel]: eigen } } };
