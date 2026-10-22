@@ -9,7 +9,7 @@ import { CoverSwitch, parseCoverRequest } from '../src/web/covers.js';
 import type { HouseDevice, HouseReport } from '../src/web/house.js';
 
 function scherm(id: string, terugmelding: boolean): HouseDevice {
-  return { id, naam: id, haNaam: id, soort: 'screen', stand: 'open', aan: false, helderheidPct: null, positiePct: terugmelding ? 100 : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm: { terugmelding, standKiezen: terugmelding } };
+  return { id, naam: id, haNaam: id, soort: 'screen', stand: 'open', standCode: 'open', aan: false, helderheidPct: null, positiePct: terugmelding ? 100 : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm: { terugmelding, standKiezen: terugmelding } };
 }
 
 const house = {

@@ -50,7 +50,7 @@ import { sunReport } from './sun.js';
 import { CAMERA_ID } from './camera.js';
 import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
-import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder } from './layout.js';
+import { OUTSIDE_FLOOR, floorName, floorOrder, standardFloors } from './layout.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, viaTailscale, type Access, type Visitor } from './auth.js';
 import type { Wie } from './bewoners.js';
@@ -1020,6 +1020,7 @@ export class WebServer {
 
     if (path === '/api/indeling') {
       const door = this.#options.layout;
+      const taal = taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']);
       const config = this.#config();
       if (door == null || config == null) {
         sendJson(res, 503, { wachten: 'indelen staat niet aan' });
@@ -1044,15 +1045,15 @@ export class WebServer {
         voorstel: door.proposal(),
         // De etages van deze indeling, van boven naar beneden, en buiten (besluit 112);
         // de vaste etages als voorstel om toe te voegen.
-        etages: [...floorOrder(door.store.current ?? door.proposal() ?? { kamers: [] }), OUTSIDE_FLOOR].map((id) => ({ id, standaardNaam: floorName(id) })),
-        standaard: STANDARD_FLOORS,
+        etages: [...floorOrder(door.store.current ?? door.proposal() ?? { kamers: [] }), OUTSIDE_FLOOR].map((id) => ({ id, standaardNaam: floorName(id, taal) })),
+        standaard: standardFloors(taal),
         regelzones: config.zones.map((z) => ({ id: z.id, naam: z.name })),
       });
       return;
     }
 
     if (path === '/api/huis') {
-      const house = this.#options.house?.() ?? null;
+      const house = this.#options.house?.(taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) ?? null;
       if (house == null) {
         sendJson(res, 503, { wachten: 'de etages en ruimtes komen van Home Assistant zodra die verbonden is' });
         return;

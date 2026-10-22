@@ -94,7 +94,7 @@ async function start(options: {
   withoutConfig?: boolean;
   version?: Version;
   location?: { latDeg: number; lonDeg: number } | null;
-  house?: () => HouseReport | null;
+  house?: (lang?: 'nl' | 'en') => HouseReport | null;
   layout?: { store: LayoutStore; proposal: () => Layout | null };
   lights?: LightSwitch;
   covers?: CoverSwitch;
@@ -1267,6 +1267,7 @@ describe('licht bedienen (besluit 97)', () => {
     haNaam: id,
     soort: 'licht' as const,
     stand: aan ? 'aan' : 'uit',
+    standCode: aan ? ('aan' as const) : ('uit' as const),
     aan,
     helderheidPct: null,
     positiePct: null,
@@ -1332,6 +1333,16 @@ describe('licht bedienen (besluit 97)', () => {
     return { ...started, calls, post };
   }
 
+  it('vraagt het huis in de taal van de app (besluit 185)', async () => {
+    const talen: (string | undefined)[] = [];
+    const { base } = await start({ house: (lang) => (talen.push(lang), house) });
+    await fetch(`${base}/api/huis`, { headers: { 'x-taal': 'en' } });
+    await fetch(`${base}/api/huis`);
+    // Een taal die de app niet kent, wordt Nederlands.
+    await fetch(`${base}/api/huis?taal=fr`);
+    expect(talen).toEqual(['en', 'nl', 'nl']);
+  });
+
   it('bestaat niet wanneer het niet is meegegeven', async () => {
     const { base } = await start({ latest: () => snapshot(), house: () => house });
     expect((await fetch(`${base}/api/licht`, { method: 'POST', headers: JSON_HEADERS, body: '{}' })).status).toBe(405);
@@ -1366,7 +1377,7 @@ describe('licht bedienen (besluit 97)', () => {
   });
 
   it('bedient een scherm alleen als het mag, en geeft een RTS-scherm geen stand (besluit 121)', async () => {
-    const scherm = (id: string, terugmelding: boolean) => ({ id, naam: id, haNaam: id, soort: 'screen' as const, stand: 'open', aan: false, helderheidPct: null, positiePct: terugmelding ? 100 : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm: { terugmelding, standKiezen: terugmelding } });
+    const scherm = (id: string, terugmelding: boolean) => ({ id, naam: id, haNaam: id, soort: 'screen' as const, stand: 'open', standCode: 'open' as const, aan: false, helderheidPct: null, positiePct: terugmelding ? 100 : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm: { terugmelding, standKiezen: terugmelding } });
     const metSchermen = { ...house, etages: house.etages.map((e, i) => (i === 0 ? { ...e, ruimtes: e.ruimtes.map((r, j) => (j === 0 ? { ...r, apparaten: [...r.apparaten, scherm('cover.screen', true), scherm('cover.zonnescherm', false)] } : r)) } : e)) };
     let aan = false;
     const calls: [string, string, Record<string, unknown>][] = [];

@@ -180,13 +180,13 @@ function klimaatKaart({ a, r }) {
   const id = a.actuatorId ?? a.id;
   const bew = state?.bewoner?.apparaten?.find((x) => x.actuatorId === id);
   const wacht = (state?.rejected ?? []).find((x) => x.blockedBy === 'insufficient_power_budget' && x.intent?.actuatorId === id && x.intent?.budgetW > 0);
-  const actie = a.klimaat?.actie ?? '';
-  const doet = /koelt|verwarmt|droogt|ventileert/.test(actie);
-  const stand = bew?.soort === 'wait' ? [t('apparaten.wachtZon'), 'var(--zon)'] : doet ? [huismodel.metHoofdletter(actie), /koelt/.test(actie) ? 'var(--ijs)' : 'var(--gloed)'] : [huismodel.metHoofdletter(a.stand ?? t('apparaten.onbekend')), 'var(--mint)'];
-  // "doel" in de stand komt van de dienst, nog in het Nederlands (api/huis).
+  const code = a.klimaat?.actieCode ?? '';
+  const doet = /^(koelt|verwarmt|verwarmt-voor|droogt|ventileert)$/.test(code);
+  const stand = bew?.soort === 'wait' ? [t('apparaten.wachtZon'), 'var(--zon)'] : doet ? [huismodel.metHoofdletter(a.klimaat.actie), code === 'koelt' ? 'var(--ijs)' : 'var(--gloed)'] : [huismodel.metHoofdletter(a.stand ?? t('apparaten.onbekend')), 'var(--mint)'];
+  // Een radiatorknop noemt zijn doel al in de stand ("verwarmt, doel 20°").
   const zin = bew?.tekst
     ? `${huismodel.metHoofdletter(bew.tekst)}.${wacht ? ` ${t('apparaten.begintBij', { kw: nl(wacht.intent.budgetW / 1000) })}` : ''}`
-    : a.klimaat?.doelC != null && !/doel/i.test(a.stand ?? '') ? t('vandaag.doel', { doel: `${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°` }) : '';
+    : a.klimaat?.doelC != null && !(a.radiatorknop && a.standCode !== 'uit' && a.standCode !== 'geen-verbinding') ? t('vandaag.doel', { doel: `${nl(a.klimaat.doelC, Number.isInteger(a.klimaat.doelC) ? 0 : 1)}°` }) : '';
   const kw = a.klimaat?.vermogenW != null ? `${nl(a.klimaat.vermogenW / 1000)}<span>${esc(t('apparaten.kwNu'))}</span>` : `–<span>${esc(t('apparaten.geenMeter'))}</span>`;
   // Vandaag: uit de kWh-meter van het apparaat (Opbrengst), anders hoe lang het aan stond.
   const meter = (opbrengst?.apparaten ?? []).find((m) => m.id === a.klimaat?.energieMeter);

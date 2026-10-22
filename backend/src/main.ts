@@ -64,6 +64,7 @@ import { eigenUpdate, updateView, type UpdateView } from './web/bijwerken.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
+import type { Lang } from './web/assistant.js';
 import { LightSwitch } from './web/lights.js';
 import { SessionStore, haBeheerders, homeAssistantLogin, leesOfMaakSleutel, type Access, type HaAccount } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
@@ -1084,10 +1085,11 @@ function alarmNu(): AlarmMelder[] {
  * scènes en de meting van de ligging veranderen zonder dat iets hier het ziet.
  */
 const HUIS_HOOGUIT_MS = 10_000;
-let huisBewaard: { sleutel: readonly unknown[]; atMs: number; huis: ReturnType<typeof buildHouse> | null } | null = null;
-const huisNu = () => {
+/** Per taal (besluit 185): de stand en de samenvatting staan erin in woorden. */
+const huisBewaard = new Map<Lang, { sleutel: readonly unknown[]; atMs: number; huis: ReturnType<typeof buildHouse> | null }>();
+const huisNu = (lang: Lang) => {
   const sleutel = [huisVersie, houseRegisters, siteConfig, runner?.latest, layoutStore?.current, functiesStore?.current, connectionStore?.current];
-  const b = huisBewaard;
+  const b = huisBewaard.get(lang);
   if (b && Date.now() - b.atMs < HUIS_HOOGUIT_MS && b.sleutel.every((x, i) => x === sleutel[i])) return b.huis;
   const huis = siteConfig && houseRegisters
     ? buildHouse(
@@ -1102,15 +1104,17 @@ const huisNu = () => {
         functiesStore?.current ? getoondeCameras(functiesStore.current) : null,
         // Wanneer een batterij of filter een melding geeft (besluit 149).
         functiesStore?.current?.meldingen,
+        lang,
       )
     : null;
-  huisBewaard = { sleutel, atMs: Date.now(), huis };
+  huisBewaard.set(lang, { sleutel, atMs: Date.now(), huis });
   return huis;
 };
-const houseReport = () => {
-  const h = huisNu();
+/** Het huis, met de stand in woorden in de taal van de app; zonder taal Nederlands. */
+const houseReport = (lang: Lang = 'nl') => {
+  const h = huisNu(lang);
   // Met de laatste opdracht bij een scherm zonder terugmelding (besluit 128).
-  return coverSwitch ? coverSwitch.withLast(h) : h;
+  return coverSwitch ? coverSwitch.withLast(h, lang) : h;
 };
 
 /*

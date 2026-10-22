@@ -15,11 +15,8 @@
 const { $$, nl, esc, klokVan, wanneer, haal, deur, bijnaOp } = app;
 // De teksten staan in kit/teksten.*.js (besluit 185).
 const { t } = taal;
-/**
- * Een scherm dat al beweegt, in de woorden van de dienst. Die zijn nog
- * Nederlands (api/huis); als de dienst meertalig wordt, een vaste code.
- */
-const BEWEEGT = /^(gaat open|gaat dicht|vouwt uit|klapt in)$/;
+/** Een scherm dat al beweegt, als vaste code uit api/huis (besluit 185). */
+const BEWEEGT = /^(gaat-open|gaat-dicht)$/;
 
 let state = null;
 let huisData = null;
@@ -68,7 +65,7 @@ function metWens(h) {
       d.aan = z ? w.positiePct > 0 : w.positiePct < 100;
       const was = d.positiePct;
       d.positiePct = w.positiePct;
-      if (BEWEEGT.test(d.stand)) continue;
+      if (BEWEEGT.test(d.standCode ?? '')) continue;
       d.stand = z
         ? t(w.positiePct >= (was ?? 0) ? 'eigen.scherm.uitvouwen' : 'eigen.scherm.inklappen')
         : w.positiePct >= 100 ? t('eigen.scherm.open') : w.positiePct <= 0 ? t('eigen.scherm.dicht') : t('kamer.gaatNaar', { pct: 100 - w.positiePct });
@@ -292,8 +289,8 @@ function kamerBlad(k) {
   // De samenvatting kent alleen klimaat; een draaiende droger hoort er ook bij.
   const draait = apps.filter((d) => d.soort === 'apparaat' && d.aan).map((d) => t('kamer.draait', { naam: d.naam }));
   const klimaatZin = k.samenvatting?.klimaat ?? '';
-  // "Er draait niets" komt van de dienst, nog in het Nederlands (api/huis).
-  const onder = draait.length ? [/^Er draait niets$/.test(klimaatZin) ? '' : klimaatZin, ...draait].filter(Boolean).join('. ') : klimaatZin;
+  // Draait er geen klimaat, dan zegt de samenvatting "Er draait niets": niet naast de droger.
+  const onder = draait.length ? [k.samenvatting?.draait === 0 ? '' : klimaatZin, ...draait].filter(Boolean).join('. ') : klimaatZin;
   const delen = [
     `<div class="bladkop"><div><h2 class="kop-2">${esc(k.naam)}</h2><p class="klein" style="margin: 4px 0 0">${esc(onder)}</p></div></div>`,
     klimaat.length ? `<div><h3 class="kop-3" style="margin-bottom: 4px">${esc(t(klimaat.some((d) => d.soort === 'klimaat') ? 'kamer.klimaat' : 'nav.apparaten'))}</h3>${klimaat.map(rij).join('')}</div>` : '',
@@ -473,7 +470,7 @@ function knopRegel(d) {
 function nestBlad(k, d) {
   const doel = doelen.get(d.id) ?? d.klimaat?.doelC ?? 20;
   const nu = d.meting?.temperatuurC ?? k.temperatuurC;
-  const brandt = /verwarmt/.test(d.klimaat?.actie ?? d.stand);
+  const brandt = /verwarmt/.test(d.klimaat?.actieCode ?? d.standCode ?? '');
   const tikken = [];
   for (let i = 0; i < 60; i++) {
     const a = ((-225 + (i / 59) * 270) * Math.PI) / 180;

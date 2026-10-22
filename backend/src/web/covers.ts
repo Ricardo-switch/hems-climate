@@ -17,6 +17,7 @@
  */
 
 import { standNaOpdracht, type HouseDevice, type HouseReport } from './house.js';
+import type { Lang } from './assistant.js';
 
 export type CoverAction = 'open' | 'dicht' | 'stop' | 'stand';
 
@@ -106,12 +107,12 @@ export class CoverSwitch {
    * Het huis met de laatste opdracht uit de app bij elk scherm zonder
    * terugmelding (Somfy RTS, besluit 128), zodat er niet "onbekend" staat.
    */
-  withLast(house: HouseReport | null): HouseReport | null {
+  withLast(house: HouseReport | null, lang: Lang = 'nl'): HouseReport | null {
     if (house == null || this.#laatste.size === 0) return house;
     const patch = (d: HouseDevice): HouseDevice => {
       const laatste = this.#laatste.get(d.id);
       if (d.soort !== 'screen' || !d.scherm || d.scherm.terugmelding || laatste == null) return d;
-      return { ...d, stand: standNaOpdracht(laatste, d.scherm.zonnescherm === true), scherm: { ...d.scherm, laatste } };
+      return { ...d, stand: standNaOpdracht(laatste, d.scherm.zonnescherm === true, lang), standCode: 'na-opdracht', scherm: { ...d.scherm, laatste } };
     };
     return {
       ...house,

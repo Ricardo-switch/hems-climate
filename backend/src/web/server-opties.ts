@@ -27,6 +27,7 @@ import type { Location } from './sun.js';
 import type { ForecastDay, HourColumns, WeatherLog } from './weather.js';
 import type { ComfortView } from './comfort.js';
 import type { HouseReport } from './house.js';
+import type { Lang } from './assistant.js';
 import type { Layout, LayoutStore } from './layout.js';
 import type { CoverSwitch } from './covers.js';
 import type { LightSwitch } from './lights.js';
@@ -306,7 +307,8 @@ export interface WebOptions {
    * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
    * of null zolang de registers van Home Assistant nog niet gelezen zijn.
    */
-  readonly house?: () => HouseReport | null;
+  /** Het huis, met de stand in woorden in de gevraagde taal (besluit 185); zonder taal Nederlands. */
+  readonly house?: (lang?: Lang) => HouseReport | null;
   /**
    * De indeling van het huis (besluit 96), of weg wanneer die niet mag. Zelfde
    * schakelaar als het gevoel: zonder dit object bestaat de route niet, en staat

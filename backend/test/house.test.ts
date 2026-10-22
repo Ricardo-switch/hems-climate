@@ -351,7 +351,7 @@ describe('het voorstel uit Home Assistant', () => {
     expect(nest.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true });
     const ac = wk.apparaten.find((d) => d.id === 'ac-woonkamer')!;
     expect(ac.meting).toEqual({ temperatuurC: 22.4, vochtPct: null });
-    expect(ac.klimaat).toEqual({ kanKoelen: true, kanVerwarmen: true, doelC: 22, actie: 'koelt', rol: 'zon', vermogenW: null });
+    expect(ac.klimaat).toEqual({ kanKoelen: true, kanVerwarmen: true, doelC: 22, actie: 'koelt', actieCode: 'koelt', rol: 'zon', vermogenW: null });
     // Wat de regeling ermee doet (besluit 138): de Nest houdt de kamer op temperatuur.
     expect(nest.klimaat?.rol).toBe('houdt');
     // Met een regelgebied komt de temperatuur van de kamer daarvandaan, niet van een meter.
@@ -648,5 +648,71 @@ describe('het huis vóór het inrichten (besluit 154)', () => {
     expect(apparaten).toEqual(expect.arrayContaining(['climate.air_conditioning_woonkamer', 'climate.air_conditioning_zolder']));
     // Niets in de regeling: geen kamer met een zone.
     expect(huis.etages.flatMap((e) => e.ruimtes).every((r) => r.zoneId == null)).toBe(true);
+  });
+});
+
+describe('het huis in het Engels (besluit 185)', () => {
+  const en = buildHouse(config, registers, states, snapshot, null, undefined, undefined, null, undefined, 'en');
+  const apparaat = (h: typeof en, id: string) => h.etages.flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten).find((d) => d.id === id)!;
+
+  it('geeft de stand in woorden in de taal van de app, met dezelfde vaste code', () => {
+    const wk = en.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    expect(wk.apparaten.map((d) => [d.naam, d.stand, d.standCode])).toEqual([
+      ['Airco woonkamer', 'cooling to 22°', 'koelen'],
+      ['Nest (beneden)', 'off', 'uit'],
+      ['Screen', '60% closed', 'deels'],
+      ['Keuken', 'on · 50%', 'aan'],
+      ['Plafonnière', 'on · 70%', 'aan'],
+      ['Sfeerverlichting', 'on', 'aan'],
+    ]);
+    // De code is in elke taal dezelfde: daar let de app op.
+    const nl = buildHouse(config, registers, states, snapshot).etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    expect(nl.apparaten.map((d) => d.standCode)).toEqual(wk.apparaten.map((d) => d.standCode));
+    expect(apparaat(en, 'ac-woonkamer').klimaat).toMatchObject({ actie: 'cooling', actieCode: 'koelt' });
+    expect(apparaat(buildHouse(config, registers, states, snapshot), 'ac-woonkamer').klimaat).toMatchObject({ actie: 'koelt', actieCode: 'koelt' });
+  });
+
+  it('zegt een meting met een punt, en wat er draait in het Engels', () => {
+    const hal = en.etages.find((e) => e.id === 'bg')!.ruimtes.find((r) => r.naam === 'Hal')!;
+    expect(hal.apparaten.map((d) => [d.stand, d.standCode])).toEqual([['19.5° · 61%', 'meting']]);
+    expect(hal.samenvatting.klimaat).toBe('Nothing running');
+    expect(en.etages.at(-1)!.naam).toBe('Outside');
+    // De status van een kamer met een regeling, zonder Nederlands.
+    const wk = en.etages.find((e) => e.id === 'bg')!.ruimtes[0]!;
+    expect(wk.status?.zin).toContain('21.9°');
+    expect(wk.status?.zin).not.toMatch(/precies|graden|het is/i);
+  });
+
+  it('noemt een scherm dat beweegt met een code, en een zonnescherm in zijn eigen woorden', () => {
+    const s = (state: string, attributes: Record<string, unknown>) => {
+      const m = new Map(states);
+      m.set('cover.screen', { ...states.get('cover.screen')!, state, attributes: { friendly_name: 'Zonnescherm', ...attributes } });
+      return (lang: 'nl' | 'en') => {
+        const d = apparaat(buildHouse(config, registers, m, snapshot, null, undefined, undefined, null, undefined, lang), 'cover.screen');
+        return [d.stand, d.standCode];
+      };
+    };
+    expect(s('opening', { current_position: 40 })('en')).toEqual(['opening', 'gaat-open']);
+    expect(s('closing', { current_position: 40, device_class: 'awning' })('nl')).toEqual(['klapt in', 'gaat-dicht']);
+    expect(s('closing', { current_position: 40, device_class: 'awning' })('en')).toEqual(['retracting', 'gaat-dicht']);
+    expect(s('open', { current_position: 60, device_class: 'awning' })('en')).toEqual(['60% extended', 'deels']);
+    expect(s('closed', { assumed_state: true })('en')).toEqual(['closed, going by the last command', 'na-opdracht']);
+    expect(s('unknown', { assumed_state: true })('en')).toEqual(['position not reported', 'zonder-terugmelding']);
+    expect(s('unavailable', {})('en')).toEqual(['no connection', 'geen-verbinding']);
+  });
+
+  it('zegt wat een radiatorknop doet, met zijn doel', () => {
+    const basis = states.get('cover.screen')!;
+    const area = registers.areas.find((x) => x.name === 'Badkamer')!.area_id;
+    const metKnop = {
+      ...registers,
+      devices: [...registers.devices, { id: 'd-trv', area_id: area, name: 'Radiator badkamer', name_by_user: null, manufacturer: 'SONOFF', model: 'TRVZB' }],
+      entities: [...registers.entities, { entity_id: 'climate.radiator_badkamer', device_id: 'd-trv', platform: 'zha' }],
+    };
+    const metStand = new Map(states);
+    metStand.set('climate.radiator_badkamer', { ...basis, entity_id: 'climate.radiator_badkamer', state: 'heat', attributes: { friendly_name: 'Radiator badkamer', hvac_modes: ['off', 'heat'], temperature: 20.5, hvac_action: 'heating' } });
+    const knop = (lang: 'nl' | 'en') => apparaat(buildHouse(config, metKnop, metStand, snapshot, null, undefined, undefined, null, undefined, lang), 'climate.radiator_badkamer');
+    expect([knop('nl').stand, knop('nl').standCode, knop('nl').klimaat?.actieCode]).toEqual(['verwarmt, doel 20,5°', 'verwarmt', 'verwarmt']);
+    expect([knop('en').stand, knop('en').standCode, knop('en').klimaat?.actie]).toEqual(['heating, target 20.5°', 'verwarmt', 'heating']);
   });
 });
