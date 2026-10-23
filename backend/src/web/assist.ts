@@ -7,7 +7,7 @@
  * erin. Geen entiteiten: alleen woorden.
  */
 
-import { zinnenNl } from './zinnen.js';
+import { zinnenVoor } from './zinnen.js';
 import type { SiteConfig } from '../core/model.js';
 import type { HouseReport } from './house.js';
 
@@ -50,5 +50,6 @@ export function assistKamers(config: SiteConfig, huis: HouseReport | null, versi
     }
     return { id: z.id, naam: z.name, woorden: [...woorden].sort() };
   });
-  return { naam: 'Smart Climate', versie, talen: ['nl', 'en'], kamers, zinnen: { nl: zinnenNl(kamers) } };
+  // Een bestand per taal (besluit 185): Assist in het Engels herkent dan ook Engelse zinnen.
+  return { naam: 'Smart Climate', versie, talen: ['nl', 'en'], kamers, zinnen: { nl: zinnenVoor('nl', kamers), en: zinnenVoor('en', kamers) } };
 }
