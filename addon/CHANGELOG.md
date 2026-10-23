@@ -1,5 +1,15 @@
 # Wat is er nieuw
 
+## 0.59.6
+
+*23 oktober 2026*
+
+**Beter**
+
+- De assistent verstaat Engels: vragen over je huis en de app, en het licht, de schermen en scènes bedienen
+- Assist in Home Assistant kent de vragen aan Smart Climate nu ook in het Engels
+- Piper leest voor in het Engels als Home Assistant een Engelse stem heeft, met eenheden zoals je ze zegt
+
 ## 0.59.5
 
 *22 oktober 2026*

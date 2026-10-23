@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.5';
+export const VERSIE = '0.59.6';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,22 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.6',
+    datum: '2026-10-23',
+    beter: [
+      'De assistent verstaat Engels: vragen over je huis en de app, en het licht, de schermen en scènes bedienen',
+      'Assist in Home Assistant kent de vragen aan Smart Climate nu ook in het Engels',
+      'Piper leest voor in het Engels als Home Assistant een Engelse stem heeft, met eenheden zoals je ze zegt',
+    ],
+    en: {
+      beter: [
+        'The assistant understands English: questions about your house and the app, and controlling lights, screens and scenes',
+        'Assist in Home Assistant now knows the questions for Smart Climate in English too',
+        'Piper reads aloud in English if Home Assistant has an English voice, with units as you say them',
+      ],
+    },
+  },
   {
     versie: '0.59.5',
     datum: '2026-10-22',

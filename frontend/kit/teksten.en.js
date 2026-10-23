@@ -106,8 +106,8 @@
   'jij.taal.nl': 'Nederlands',
   'jij.taal.nlUitleg': 'Always Dutch',
   'jij.taal.en': 'English',
-  'jij.taal.enUitleg': 'Trial: not the assistant yet',
-  'jij.taal.uitleg': 'Applies to you, on your phone. The wall screen follows the language of its own account. English is a trial: the whole app is translated, except the assistant.',
+  'jij.taal.enUitleg': 'Trial',
+  'jij.taal.uitleg': 'Applies to you, on your phone. The wall screen follows the language of its own account. English is a trial: the whole app and the assistant speak it, but Automatic does not choose it yet; you choose it here.',
 
   // Home: the top
   'thuis.hetHuis': 'The house',

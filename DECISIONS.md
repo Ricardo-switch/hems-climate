@@ -8402,9 +8402,20 @@ gehouden met meervouden: ja, met de regels per taal.
   is (een kamer, een vaste post, een apparaat) blijft zoals de bewoner hem
   noemde.
 
-*Wat er nog Nederlands is (stap 9):* de assistent (deel 6), een foutmelding bij
-het begin, en de notities bij een update in Home Assistant (`addon/CHANGELOG.md`,
-uit `NIEUW`).
+- **Stap 9, zesde deel (0.59.6):** de assistent. De woordzoeker en bedienen met
+  een zin verstaan Engels, met Engelse kaartjes en een Engels vervolg dat de
+  woordzoeker zelf weer verstaat. De dienst maakt de zinnen voor Assist ook in
+  het Engels (`custom_sentences/en`); de integratie hoefde daarvoor niet te
+  veranderen, en de test in een echte Home Assistant vraagt het nu ook in het
+  Engels. Piper zoekt per taal een stem (Engels: Brits eerst) en zegt een
+  Engelse zin met Engelse eenheden (`uitspraak(tekst, 'en')`); zonder Engelse
+  stem leest de app voor met de stem van het apparaat. Het wekwoord blijft
+  "Hé huis".
+
+*Wat er nog Nederlands is (stap 9):* een foutmelding bij het begin, en de
+notities bij een update in Home Assistant (`addon/CHANGELOG.md`, uit `NIEUW`).
+Automatisch kiest nog geen Engels: `'en'` staat nog niet in `HEEL`
+(`frontend/kit/taal.js`).
 
 ## Wat nog een besluit wacht
 

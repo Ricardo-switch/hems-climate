@@ -111,8 +111,8 @@
   'jij.taal.nl': 'Nederlands',
   'jij.taal.nlUitleg': 'Altijd Nederlands',
   'jij.taal.en': 'English',
-  'jij.taal.enUitleg': 'Proef: de assistent nog niet',
-  'jij.taal.uitleg': 'Geldt voor jou, op je telefoon. De wand volgt de taal van zijn eigen account. Engels is een proef: de hele app staat erin, behalve de assistent.',
+  'jij.taal.enUitleg': 'Proef',
+  'jij.taal.uitleg': 'Geldt voor jou, op je telefoon. De wand volgt de taal van zijn eigen account. Engels is een proef: de hele app en de assistent spreken het, maar Automatisch kiest het nog niet; dat doe je hier zelf.',
 
   // Thuis: bovenin
   'thuis.hetHuis': 'Het huis',

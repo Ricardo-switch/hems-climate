@@ -18,8 +18,9 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 - **Nog Nederlands, klein:** een foutmelding bij het begin (`onboarding.save`),
   `addon/CHANGELOG.md` (de notities bij een update in Home Assistant), en een
   paar namen die de dienst als terugval geeft ("je zonnesensor").
-- **Deel 6:** de assistent: Engels verstaan, Engelse zinnen voor Assist
-  (`zinnen.ts`), een Engelse Piper-stem.
+- **Deel 6, de assistent (0.59.6):** Engels verstaan (`woordzoeker.ts`,
+  `opdracht.ts`), Engelse zinnen voor Assist (`zinnenVoor('en', …)`), en Piper
+  per taal (`Stem.taalVoor`, `uitspraak(tekst, lang)`).
 - **Daarna:** `'en'` in `HEEL` in `frontend/kit/taal.js`, zodat Automatisch
   Engels kiest. De uitleg bij Jij (`jij.taal.uitleg`, `jij.taal.enUitleg`)
   dan bijwerken. Duits later ([172]).
@@ -41,17 +42,20 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 - Elke versie in `NIEUW` krijgt `en` met evenveel regels; de test in
   `web.test.ts` eist het voor de versies die de app laat zien.
 
-## Waar deel 6 begint
+## Wat er nog kan
 
-1. Begin met `git fetch` op beta.
-2. Verstaan: `woordzoeker.ts` en `kamerwoorden.ts` (de woorden voor kamers,
-   lampen en wensen), met een Engelse lijst naast de Nederlandse.
-3. Assist: `zinnen.ts` (`zinnenNl`) maakt de zinnen voor de integratie in
-   Home Assistant; daar komt een Engelse set naast.
-4. De stem: `stem.ts` zoekt nu alleen een Nederlandse Piper-stem
-   (`nederlands()`); zoek er per taal een.
-5. Daarna `'en'` in `HEEL` in `frontend/kit/taal.js`, en de uitleg bij Jij
-   (`jij.taal.uitleg`, `jij.taal.enUitleg`) bijwerken.
+1. `'en'` in `HEEL` in `frontend/kit/taal.js`: dan kiest Automatisch Engels
+   bij een Engels account of een Engelse browser. Dan ook de uitleg bij Jij
+   (`jij.taal.uitleg`, `jij.taal.enUitleg`) bijwerken, en bedenken wat
+   Automatisch voor een melding op de telefoon betekent
+   (`VoorkeurenStore.taal`: de dienst kent de taal van het account niet).
+2. Een nieuwe zin voor de assistent: zet hem in beide talen in de woordzoeker
+   of `opdracht.ts`, met een test per taal (`woordzoeker.test.ts`,
+   `praten.test.ts`); een nieuwe zin voor Assist in beide lijsten in
+   `zinnen.ts`, en `HEMS_ZINNEN_SCHRIJF=1` schrijft de voorbeelden voor de test
+   in Home Assistant.
+3. Duits later ([172]): een derde kolom in elke `WOORDEN`-tabel en een
+   `teksten.de.js`.
 
 ## Een pagina omzetten
 
