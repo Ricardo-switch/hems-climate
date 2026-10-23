@@ -1577,7 +1577,7 @@
   'functies.st.tailnet': '<jouw tailnet>',
   'functies.st.waarom': 'In de app van Home Assistant kan dat niet met het eigen icoon: Chrome installeert alleen een app via https, en buiten Home Assistant. Dat gaat via Tailscale, met de eigen poort van Smart Climate. Eén keer instellen:',
   'functies.st.stap1': 'In Home Assistant: <b>Instellingen › Add-ons › Smart Climate › Configuratie</b>. Vul bij <i>ha_adres</i> <b>{ha}</b> in, en onder <i>Netwerk</i> bij 8100/tcp de poort <b>8100</b>. Opslaan en herstarten.',
-  'functies.st.stap2': 'Op <b>login.tailscale.com</b>: bij <i>Access controls</i> een tag <b>tag:homeassistant</b> met jezelf als eigenaar, en bij <i>Services</i> een dienst <b>smartclimate</b> op <b>tcp:443</b>.',
+  'functies.st.stap2': 'Op <b>login.tailscale.com</b>: bij <i>Access controls</i> een tag <b>tag:homeassistant</b> met jezelf als eigenaar, bij <i>Services</i> een dienst <b>smartclimate</b> op <b>tcp:443</b>, en bij <i>Policies</i> een regel van <b>autogroup:member</b> naar <b>svc:smartclimate</b> op <b>tcp:443</b>.',
   'functies.st.stap3': 'In de <b>Tailscale-add-on › Configuratie</b>: <code>advertise_tags: [tag:homeassistant]</code>, en een dienst <code>svc:smartclimate</code> naar <code>http://127.0.0.1:8100</code>, https op poort 443. Opslaan en herstarten.',
   'functies.st.stap4': 'Terug bij <i>Services</i> op login.tailscale.com: keur Home Assistant goed voor smartclimate.',
   'functies.st.stap5': 'Open op je telefoon in Chrome <b>{naam}</b>, log in, en tik hier op <b>Zet op je startscherm</b>.',

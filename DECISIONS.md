@@ -7842,6 +7842,17 @@ lange titel weg ("leutel voor de assistent"): de titel mocht niet afbreken en
 stond rechts uitgelijnd. Nu breekt hij af, en de paginatest meet waar de tekst
 begint. Versie 0.50.1.
 
+*Aangevuld 23 oktober 2026.* Op de Pi nagelopen: de eigen poort via de dienst
+`svc:smartclimate` in de Tailscale-add-on werkt, en de app staat met het eigen
+icoon op de telefoon. In Tailscale hoorde er naast de tag en de dienst ook een
+toegangsregel bij (`autogroup:member` naar `svc:smartclimate` op `tcp:443`);
+die staat nu in de README van de add-on. De knop Open in Chrome had zijn tekst
+niet in het midden: een link met de knopstijl centreert nu altijd, zoals een
+echte knop. En met de app van de NAS en die van de Pi naast elkaar stonden er
+twee gelijke iconen: een eigen server (de NAS, die beta volgt) geeft nu een
+eigen manifest, "Smart Climate beta", met een label BETA op het icoon
+(`frontend/tools/beta-icoon.py`). Versie 0.59.8.
+
 ---
 
 ## 176. Apparaten op zon in de voorrang: een lijst Op zon

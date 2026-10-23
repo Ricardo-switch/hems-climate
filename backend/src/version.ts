@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.7';
+export const VERSIE = '0.59.8';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,24 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.8',
+    datum: '2026-10-23',
+    beter: [
+      'De beta op de NAS heeft een eigen icoon met BETA erop, zodat hij op je startscherm niet lijkt op de app van de Pi',
+    ],
+    opgelost: [
+      'De knop Open in Chrome bij Op je startscherm heeft zijn tekst weer netjes in het midden',
+    ],
+    en: {
+      beter: [
+        'The beta on the NAS has its own icon with BETA on it, so on your home screen it no longer looks like the app on the Pi',
+      ],
+      opgelost: [
+        'The Open in Chrome button under On your home screen has its text neatly centred again',
+      ],
+    },
+  },
   {
     versie: '0.59.7',
     datum: '2026-10-23',

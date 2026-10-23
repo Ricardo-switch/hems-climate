@@ -93,6 +93,19 @@ function siteInfo(config: SiteConfig): unknown {
 }
 
 /**
+ * De beta op de NAS (23 oktober 2026): het manifest en de iconen met een label
+ * BETA in plaats van de gewone. De pagina's verwijzen naar de gewone namen;
+ * een eigen server geeft hier de beta. Zo staan de NAS en de Pi niet als twee
+ * gelijke apps op een startscherm.
+ */
+export const BETA_ICOON: Readonly<Record<string, string>> = {
+  '/manifest.webmanifest': 'manifest-beta.webmanifest',
+  '/icoon-192.png': 'icoon-beta-192.png',
+  '/icoon-512.png': 'icoon-beta-512.png',
+  '/icoon-512-maskable.png': 'icoon-beta-512-maskable.png',
+};
+
+/**
  * De taal van de pagina (besluit 185): `?taal=` of de kop `x-taal`, die de app
  * meestuurt. Niet Accept-Language: die zet de browser zelf, en dan zou de
  * uitleg wisselen met de taal van de telefoon in plaats van die van de app.
@@ -1231,7 +1244,9 @@ export class WebServer {
 
     const headOnly = method === 'HEAD';
     // De voordeur: op de NAS de cijfers, in de add-on de app of het welkom (besluit 154).
-    const target = path !== '/' ? path : this.#options.onboarding == null ? 'index.html' : this.#options.config == null ? 'begin.html' : 'thuis.html';
+    const voordeur = path !== '/' ? path : this.#options.onboarding == null ? 'index.html' : this.#options.config == null ? 'begin.html' : 'thuis.html';
+    // Een eigen server (de NAS, die beta volgt) geeft een eigen naam en icoon, zodat hij op een startscherm niet lijkt op de add-on.
+    const target = this.#options.version?.installatie === 'server' ? (BETA_ICOON[voordeur] ?? voordeur) : voordeur;
     const since = req.headers['if-modified-since'];
     if (
       await sendFile(
