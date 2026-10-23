@@ -159,6 +159,30 @@ export async function bewonersRoutes(d: Diensten, v: Verzoek): Promise<boolean> 
     return true;
   }
 
+  // Klaar om bij de boiler en de jacuzzi (besluit 186).
+  if (path === '/api/klaarom') {
+    const buffers = d.options.buffers;
+    if (buffers == null) {
+      sendJson(res, 503, { wachten: '"klaar om" staat niet aan' });
+      return true;
+    }
+    if (method !== 'POST') {
+      sendJson(res, 405, { fout: '"klaar om" zet je met een POST' });
+      return true;
+    }
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return true;
+    }
+    const result = await buffers.set(body);
+    if (result.ok) sendJson(res, 200, { id: result.id, klaarOm: result.klaarOm });
+    else sendJson(res, result.status, { fout: result.reden });
+    return true;
+  }
+
   if (path === '/api/gevoel') {
     const feedback = d.options.feedback;
     if (feedback == null) {

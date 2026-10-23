@@ -207,13 +207,14 @@ const naamVan = (id) => comfort.kamers.find((k) => k.id === id)?.naam ?? id;
  * apparaten op zon, in één volgorde. Alleen als er een apparaat op zon is;
  * anders zeggen de twee lijsten erboven al alles.
  */
-const zonNaam = (z) => (z.soort === 'apparaat' ? comfort.apparatenOpZon?.find((a) => a.id === z.id)?.naam ?? z.id : naamVan(z.id));
+// Een boiler of jacuzzi (besluit 186) staat erin als een apparaat.
+const zonNaam = (z) => (z.soort !== 'kamer' ? comfort.apparatenOpZon?.find((a) => a.id === z.id)?.naam ?? z.id : naamVan(z.id));
 const zonLijst = () => (comfort.apparatenOpZon?.length && comfort.voorrang?.zon?.length > 1 ? comfort.voorrang.zon : null);
-/** Zoals de regeling het doet zonder keuze: eerst de kamers, dan de apparaten. */
+/** Zoals de regeling het doet zonder keuze: eerst de kamers, dan de apparaten, dan boiler en jacuzzi. */
 const zonGewoon = () => {
   const zon = comfort.voorrang?.zon ?? [];
   const plek = (z) => comfort.kamers.findIndex((k) => k.id === z.id);
-  return [...zon.filter((z) => z.soort === 'kamer').sort((a, b) => plek(a) - plek(b)), ...zon.filter((z) => z.soort === 'apparaat')];
+  return [...zon.filter((z) => z.soort === 'kamer').sort((a, b) => plek(a) - plek(b)), ...zon.filter((z) => z.soort === 'apparaat'), ...zon.filter((z) => z.soort === 'buffer')];
 };
 /** Of de bewoner de lijst Op zon aanraakte: pas dan gaat hij mee naar de regeling. */
 let zonGekozen = false;
@@ -224,7 +225,7 @@ function voorrangZin() {
   return [
     k ? t('comfort.vr.koelen', { naam: naamVan(k).toLowerCase() }) : null,
     w && !k ? t('comfort.vr.verwarmen', { naam: naamVan(w).toLowerCase() }) : null,
-    z?.soort === 'apparaat' ? t('comfort.vr.zon', { naam: zonNaam(z).toLowerCase() }) : null,
+    z != null && z.soort !== 'kamer' ? t('comfort.vr.zon', { naam: zonNaam(z).toLowerCase() }) : null,
   ].filter(Boolean).join(', ');
 }
 /** Een voorstel om mee te beginnen: koelen hoog in huis eerst, verwarmen laag in huis eerst. */
@@ -250,7 +251,7 @@ function voorrangVorm() {
   const zon = zonLijst();
   const zonRang = zon
     ? `<div class="rang"><h3><span class="stip" style="background: var(--zon)"></span>${esc(t('comfort.opZonKop'))}</h3>
-      ${zon.map((z, i) => `<div class="r"><i>${i + 1}</i><b>${esc(zonNaam(z))}<small>${esc(t(`comfort.soort.${z.soort === 'apparaat' ? 'apparaat' : 'kamer'}`))}</small></b>${schuif(`zon:${i}`, zonNaam(z), i, zon.length)}</div>`).join('')}
+      ${zon.map((z, i) => `<div class="r"><i>${i + 1}</i><b>${esc(zonNaam(z))}<small>${esc(t(`comfort.soort.${z.soort === 'kamer' ? 'kamer' : 'apparaat'}`))}</small></b>${schuif(`zon:${i}`, zonNaam(z), i, zon.length)}</div>`).join('')}
       <p class="niet">${esc(t('comfort.zonNiet'))}</p></div>`
     : '';
   const voorstel = voorrangVoorstel();

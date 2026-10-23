@@ -334,6 +334,20 @@ function leefMee(bijWoord) {
   rafId = requestAnimationFrame(stap);
 }
 
+/*
+ * Meelopen zonder hulp van de browser (23 oktober 2026). Chrome op een
+ * Android-telefoon meldt bij de eigen stem geen woordgrenzen, en weet bij een
+ * geluid van Home Assistant soms pas aan het eind hoe lang het duurt; dan bleef
+ * de tekst grijs tot de stem klaar was. Dan loopt hij mee in het tempo van
+ * gewoon praten, en het laatste woord wordt pas wit als de stem echt stopt.
+ */
+const PRAAT_MS_PER_LETTER = 62;
+function geschatWoord(t0, letters, tekst, totLetter) {
+  const p = (performance.now() - t0) / Math.max(1200, letters * PRAAT_MS_PER_LETTER);
+  const i = totLetter(Math.min(1, p) * tekst.length);
+  return Math.min(i < 0 ? woorden.length : i, Math.max(0, woorden.length - 1));
+}
+
 /** Een stem van het apparaat zelf in de taal van de app, nooit een die online praat. */
 function apparaatStem() {
   if (!('speechSynthesis' in window)) return null;
@@ -434,8 +448,10 @@ async function zegMetPiper(tekst, totLetter, apparaat, geweigerd) {
     () => {
       ontgrendeld = true;
       analyser = golfVan;
+      const t0 = performance.now();
       leefMee(() => {
-        if (!el.duration || !isFinite(el.duration)) return;
+        // Weet de browser de duur nog niet, dan het tempo van gewoon praten.
+        if (!el.duration || !isFinite(el.duration)) return zetGezegd(geschatWoord(t0, tekst.length, tekst, totLetter));
         const i = totLetter((el.currentTime / el.duration) * tekst.length);
         zetGezegd(i < 0 ? woorden.length : i);
       });
@@ -453,15 +469,22 @@ function zegMetApparaat(tekst, gesproken, totLetter, lezen, geweigerd) {
   u.lang = v.lang;
   u.rate = 1;
   // Wat klinkt is langer dan wat er staat; de plek gaat naar rato.
+  let grenzen = false;
   u.onboundary = (e) => {
+    grenzen = true;
     const i = totLetter((e.charIndex / Math.max(1, gesproken.length)) * tekst.length);
     zetGezegd(i < 0 ? woorden.length : i);
   };
+  // Zonder woordgrenzen (Chrome op Android): vanaf het begin van de stem in het tempo van praten.
+  let t0 = null;
+  u.onstart = () => (t0 = performance.now());
   u.onend = () => klaar?.();
   // Geweigerd: tik om te horen. Gestopt: klaar. Iets anders mis: dan de woorden in leestempo.
   u.onerror = (e) => (e?.error === 'not-allowed' ? geweigerd() : e?.error === 'interrupted' || e?.error === 'canceled' ? klaar?.() : lezen());
   analyser = null;
-  leefMee();
+  leefMee(() => {
+    if (!grenzen && t0 != null) zetGezegd(Math.max(gezegd, geschatWoord(t0, gesproken.length, tekst, totLetter)));
+  });
   speechSynthesis.speak(u);
 }
 

@@ -20,6 +20,7 @@ import { FALLBACK_PROGRAM_MIN } from '../core/deferrable.js';
 import type { Deferrable, SiteConfig } from '../core/model.js';
 import { SHORT, cap, residentRooms, withArticle, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
 import { clockIn, nextLocalTime } from './today.js';
+import { residentBuffers, type ResidentBuffer } from './buffers-bewoner.js';
 
 export interface ResidentHeadline {
   /** "Nu · Dag", met "(gekozen)" als de bewoner de modus koos. */
@@ -103,6 +104,8 @@ export interface ResidentView {
   readonly besluit: ResidentDecisionWords | null;
   /** De uitstelbare apparaten, voor het scherm Apparaten (besluit 101). */
   readonly uitstelbaar: readonly ResidentDeferrable[];
+  /** De boiler en de jacuzzi, voor het scherm Apparaten (besluit 186). */
+  readonly warmtebuffers: readonly ResidentBuffer[];
 }
 
 const MODE = {
@@ -330,6 +333,7 @@ export function residentView(config: SiteConfig, snap: DecisionView, lang: Lang 
     rust,
     besluit: snap.commands.length > 0 ? decisionWords(config, snap.commands, redenen, lang) : null,
     uitstelbaar: residentDeferrables(config, snap.explanation.deferrables ?? [], snap.atMs, lang),
+    warmtebuffers: residentBuffers(config, snap.explanation.heatStores ?? [], snap.atMs, lang),
   };
 }
 

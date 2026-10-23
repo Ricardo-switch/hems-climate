@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.11';
+export const VERSIE = '0.60.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.60.0',
+    datum: '2026-10-23',
+    nieuw: [
+      'Een boiler of jacuzzi kan op zon: hij warmt op met wat er over is, houdt een ondergrens vast en is zonder zon op tijd warm in de daluren',
+      'Bij de jacuzzi kies je klaar om: vanavond, morgen of later, en hij is dan op badtemperatuur',
+    ],
+    opgelost: [
+      'Op de telefoon loopt de tekst van de assistent weer mee terwijl hij praat, ook als de browser niet zegt bij welk woord hij is',
+    ],
+    en: {
+      nieuw: [
+        'A water heater or hot tub can run on sun: it heats up with what is spare, keeps a minimum and is warm in time during off-peak hours without sun',
+        'For the hot tub you choose a ready time: tonight, tomorrow or later, and it will be at bath temperature by then',
+      ],
+      opgelost: [
+        'On the phone the text of the assistant follows along again while it speaks, even when the browser does not say which word it is at',
+      ],
+    },
+  },
   {
     versie: '0.59.11',
     datum: '2026-10-23',

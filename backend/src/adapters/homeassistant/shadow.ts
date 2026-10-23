@@ -23,7 +23,7 @@ import type {
 } from '../../core/decision.js';
 import { decide } from '../../core/decide.js';
 import type { Mode, SiteConfig } from '../../core/model.js';
-import type { SystemState } from '../../core/state.js';
+import type { HeatStoreExtra, SystemState } from '../../core/state.js';
 import { OwnState } from '../own-state.js';
 import { ShadowActuators } from '../shadow-actuators.js';
 import { StateFile } from '../state-file.js';
@@ -87,6 +87,11 @@ export interface ShadowOptions {
   readonly minIntervalSeconds?: number;
   /** "Klaar voor" per uitstelbaar apparaat, in epoch-ms (besluit 101). */
   readonly readyBy?: () => Readonly<Record<string, number>>;
+  /**
+   * Wat de dienst bij de warmtebuffers weet (besluit 186): klaar om, legionella
+   * en vol per buffer, en de goedkoopste uren van de komende dag.
+   */
+  readonly warmte?: (nowMs: number) => { readonly extra: Readonly<Record<string, HeatStoreExtra>>; readonly cheapWindows: SystemState['cheapWindows'] };
   /**
    * Na hoeveel minuten zonder geslaagde evaluatie het proces zichzelf beëindigt.
    *
@@ -164,7 +169,8 @@ function describe(command: Command): string {
 const ACTUATOR_STATE_MAX_AGE_MS = 30 * 60_000;
 
 export class ShadowRunner {
-  readonly #options: Required<Omit<ShadowOptions, 'logDir' | 'readyBy'>> & {
+  readonly #options: Required<Omit<ShadowOptions, 'logDir' | 'readyBy' | 'warmte'>> & {
+    warmte: ShadowOptions['warmte'];
     logDir: string | null;
     readyBy: () => Readonly<Record<string, number>>;
   };
@@ -252,6 +258,7 @@ export class ShadowRunner {
         }),
       logDir: options.logDir ?? null,
       readyBy: options.readyBy ?? (() => ({})),
+      warmte: options.warmte,
       write: options.write ?? ((line: string) => console.log(line)),
       now: options.now ?? (() => Date.now()),
     };
@@ -475,9 +482,9 @@ export class ShadowRunner {
     const nowMs = this.#options.now();
     this.#lastEvalMs = nowMs;
     const config = configFrom(this.#config, this.#store);
-    const state = withReadyBy(
-      buildSystemState(config, this.#store, nowMs, this.#own, this.#shadowActuators),
-      this.#options.readyBy(),
+    const state = withWarmte(
+      withReadyBy(buildSystemState(config, this.#store, nowMs, this.#own, this.#shadowActuators), this.#options.readyBy()),
+      this.#options.warmte?.(nowMs),
     );
     const decision = decide({
       config,
@@ -622,10 +629,13 @@ export class ShadowRunner {
     // De uitstelbare apparaten (besluit 98): per apparaat de stand en de reden.
     // Met "klaar voor" de eindtijd erachter (besluit 101).
     const uitstel = e.deferrables?.map((d) => (d.readyByMs == null ? [d.id, d.state, d.reason] : [d.id, d.state, d.reason, d.readyByMs]));
+    // De warmtebuffers (besluit 186): stand, reden, temperatuur en of hij stookt.
+    const warmte = e.heatStores?.map((h) => [h.id, h.state, h.reason, h.temperatureC ?? null, h.heating]);
     const phaseFields = {
       ...(fasen ? { fasen } : {}),
       ...(stroomGeweigerd.length > 0 ? { stroomGeweigerd } : {}),
       ...(uitstel ? { uitstel } : {}),
+      ...(warmte ? { warmte } : {}),
     };
 
     const record = changed
@@ -710,6 +720,17 @@ export class ShadowRunner {
   #log(line: string): void {
     this.#options.write(line);
   }
+}
+
+/** Zet wat de dienst bij de warmtebuffers weet erbij (besluit 186). */
+function withWarmte(state: SystemState, warmte: ReturnType<NonNullable<ShadowOptions['warmte']>> | undefined): SystemState {
+  const list = state.heatStores;
+  if (list == null || warmte == null) return state;
+  return {
+    ...state,
+    heatStores: Object.fromEntries(Object.entries(list).map(([id, h]) => [id, { ...h, ...warmte.extra[id] }])),
+    ...(warmte.cheapWindows && warmte.cheapWindows.length > 0 ? { cheapWindows: warmte.cheapWindows } : {}),
+  };
 }
 
 /** Zet "klaar voor" van de bewoner bij de uitstelbare apparaten (besluit 101). */

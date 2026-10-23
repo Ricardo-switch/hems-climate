@@ -624,3 +624,27 @@ describe('de volgorde op zon (besluit 176)', () => {
     expect(messages(parse({ ...baseConfig(), sunOrder: [{ kind: 'lamp', id: 'x' }] }))).toContain('kind');
   });
 });
+
+describe('warmtebuffers: de boiler en de jacuzzi (besluit 186)', () => {
+  const jacuzzi = { id: 'jacuzzi', name: 'Jacuzzi', kind: 'jacuzzi', control: 'setpoint', actuator: 'climate.spa', temperature: { id: 'climate.spa', attribute: 'current_temperature' } };
+
+  it('vult per soort aan wat er niet staat, en mag in de volgorde op zon', () => {
+    const r = parse({ ...baseConfig(), heatStores: [jacuzzi], sunOrder: [{ kind: 'heatStore', id: 'jacuzzi' }] });
+    expect(messages(r)).toBe('');
+    expect(r.ok && r.config.heatStores?.[0]).toMatchObject({ estimatedW: 2200, minC: 30, sunC: 38, heatRateCPerHour: 1.5 });
+    expect(r.ok && r.config.sunOrder).toEqual([{ kind: 'heatStore', id: 'jacuzzi' }]);
+    const boiler = parse({ ...baseConfig(), heatStores: [{ id: 'boiler', name: 'Boiler', kind: 'boiler', control: 'switch', actuator: 'switch.boiler', legionellaC: 60 }] });
+    expect(boiler.ok && boiler.config.heatStores?.[0]).toMatchObject({ minC: 50, sunC: 65, legionellaC: 60 });
+    expect(parse(baseConfig()).ok && (parse(baseConfig()) as Extract<ConfigResult, { ok: true }>).config.heatStores).toBeUndefined();
+  });
+
+  it('weigert wat niet kan', () => {
+    expect(messages(parse({ ...baseConfig(), heatStores: [{ ...jacuzzi, sunC: 42 }] }))).toContain('niet boven 40°');
+    expect(messages(parse({ ...baseConfig(), heatStores: [{ ...jacuzzi, minC: 36, sunC: 34 }] }))).toContain('ondergrens');
+    expect(messages(parse({ ...baseConfig(), heatStores: [{ ...jacuzzi, legionellaC: 60 }] }))).toContain('alleen bij een boiler');
+    const { temperature: _t, ...zonder } = jacuzzi;
+    expect(messages(parse({ ...baseConfig(), heatStores: [zonder] }))).toContain('zonder meting');
+    expect(messages(parse({ ...baseConfig(), heatStores: [{ ...jacuzzi, kind: 'zwembad' }] }))).toContain('kind');
+    expect(messages(parse({ ...baseConfig(), sunOrder: [{ kind: 'heatStore', id: 'jacuzzi' }] }))).toContain('buffer "jacuzzi" bestaat niet');
+  });
+});

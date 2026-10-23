@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 21 oktober 2026.*
+*Stand: 23 oktober 2026.*
 
 ## Waar het project staat
 
@@ -108,6 +108,9 @@ verwijzing bestaat.
 - **Uitstelbare apparaten:** de droger staat in de schaduw. Elke beslissing zegt
   of hij nu op zon zou starten, met de airco's voor; echt starten hoort bij B
   ([98]). Voor hoe laat hij klaar moet zijn, kies je per keer ([101]).
+- **Warmte bewaren:** een boiler of jacuzzi warmt op zon op tot een doel, houdt
+  een ondergrens vast en haalt "klaar om" op tijd, zonder zon in de daluren;
+  achteraan in de lijst Op zon, en eerst in de schaduw ([186]).
 - **Terugkijken:** Opbrengst rekent per dag, week, maand of jaar met de meters
   en prijzen die de app bewaart, overgenomen uit het Energie-dashboard of zelf
   ingesteld; de cijfers komen uit de statistiek van Home Assistant ([102]).
@@ -611,4 +614,5 @@ verwijzing bestaat.
 [183]: DECISIONS.md#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant
 [184]: DECISIONS.md#184-de-integratie-smart-climate-assist-zonder-yaml
 [185]: DECISIONS.md#185-meertalig-het-fundament-met-thuis-als-proef
+[186]: DECISIONS.md#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon
 <!-- links:einde -->

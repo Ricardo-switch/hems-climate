@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.60.0
+
+*23 oktober 2026*
+
+**Nieuw**
+
+- Een boiler of jacuzzi kan op zon: hij warmt op met wat er over is, houdt een ondergrens vast en is zonder zon op tijd warm in de daluren
+- Bij de jacuzzi kies je klaar om: vanavond, morgen of later, en hij is dan op badtemperatuur
+
+**Opgelost**
+
+- Op de telefoon loopt de tekst van de assistent weer mee terwijl hij praat, ook als de browser niet zegt bij welk woord hij is
+
+*English*
+
+**New**
+
+- A water heater or hot tub can run on sun: it heats up with what is spare, keeps a minimum and is warm in time during off-peak hours without sun
+- For the hot tub you choose a ready time: tonight, tomorrow or later, and it will be at bath temperature by then
+
+**Fixed**
+
+- On the phone the text of the assistant follows along again while it speaks, even when the browser does not say which word it is at
+
 ## 0.59.11
 
 *23 oktober 2026*

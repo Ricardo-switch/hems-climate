@@ -24,6 +24,7 @@ import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
 import type { Lang } from './assistant.js';
+import { heatStoreConfig, type FoundHeatStore } from './buffers-vinden.js';
 import { VOORKANT_ZON, aantalVan, dakUitAanpassing, dakUitMeting, liggingView, type Dak, type LiggingView, type Meting, type VoorkantZon } from './ligging.js';
 
 export const CONNECTION_FILE = 'aansluiting.json';
@@ -106,6 +107,8 @@ export interface ConnectionAnswers {
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
   readonly fasen: readonly FoundPhase[];
   readonly apparaten: readonly (FoundAppliance & { readonly opZon: boolean })[];
+  /** De boiler en de jacuzzi (besluit 186): gevonden, en of ze op zon mogen. */
+  readonly buffers?: readonly (FoundHeatStore & { readonly opZon: boolean })[];
   /**
    * Apparaten uit de configuratie die de bewoner uitzette (besluit 167): die
    * starten niet meer op zon. Eerst stond daar alleen "Aan".
@@ -353,6 +356,21 @@ export function withConnection(raw: Record<string, unknown>, answers: Connection
     out['deferrables'] = [...existing, ...added];
     for (const a of added) toegevoegd.push(`${a.name} op zon`);
   }
+
+  // De boiler en de jacuzzi (besluit 186), op dezelfde manier: uit wat de bewoner uitzette, erbij wat aan staat.
+  const buffers = Array.isArray(raw['heatStores']) ? (raw['heatStores'] as Record<string, unknown>[]) : [];
+  const blijven = buffers.filter((h) => !uit.has(String(h['id'])));
+  for (const h of buffers) if (uit.has(String(h['id']))) toegevoegd.push(`${String(h['name'] ?? h['id'])} niet meer op zon`);
+  if (blijven.length !== buffers.length) {
+    if (blijven.length) out['heatStores'] = blijven;
+    else delete out['heatStores'];
+  }
+  const bekend = new Set(buffers.flatMap((h) => [String(h['id']), typeof h['actuator'] === 'string' ? h['actuator'] : String((h['actuator'] as { id?: unknown } | undefined)?.id)]));
+  const nieuw = (answers.buffers ?? []).filter((b) => b.opZon && !bekend.has(b.id) && !bekend.has(b.actuator)).map(heatStoreConfig);
+  if (nieuw.length > 0) {
+    out['heatStores'] = [...blijven, ...nieuw];
+    for (const b of nieuw) toegevoegd.push(`${String(b['name'])} op zon`);
+  }
   return { raw: out, toegevoegd, overgeslagen };
 }
 
@@ -367,7 +385,7 @@ export type ConnectionCheck = { ok: true; answers: ConnectionAnswers } | { ok: f
  */
 export function validateConnection(
   body: unknown,
-  found: { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[]; meting?: Meting | null; omvormerGevonden?: number | null },
+  found: { fasen: readonly FoundPhase[]; apparaten: readonly FoundAppliance[]; buffers?: readonly FoundHeatStore[]; meting?: Meting | null; omvormerGevonden?: number | null },
 ): ConnectionCheck {
   if (typeof body !== 'object' || body == null || Array.isArray(body)) return { ok: false, reden: 'verwacht een object' };
   const b = body as Record<string, unknown>;
@@ -423,7 +441,7 @@ export function validateConnection(
   const opZonRaw = (typeof b['opZon'] === 'object' && b['opZon'] != null ? b['opZon'] : {}) as Record<string, unknown>;
   for (const [id, v] of Object.entries(opZonRaw)) {
     if (typeof v !== 'boolean') return { ok: false, reden: `"op zon" is ja of nee (${id})` };
-    if (!found.apparaten.some((a) => a.id === id)) return { ok: false, reden: `onbekend apparaat: ${id}` };
+    if (!found.apparaten.some((a) => a.id === id) && !(found.buffers ?? []).some((b) => b.id === id)) return { ok: false, reden: `onbekend apparaat: ${id}` };
   }
   // Apparaten uit de configuratie die uit moeten (besluit 167): een lijst namen.
   const uitRaw = b['opZonUit'] ?? [];
@@ -445,6 +463,7 @@ export function validateConnection(
       dak,
       fasen: [...found.fasen],
       apparaten: found.apparaten.map((a) => ({ ...a, opZon: opZonRaw[a.id] === true })),
+      ...((found.buffers ?? []).length ? { buffers: found.buffers!.map((b) => ({ ...b, opZon: opZonRaw[b.id] === true })) } : {}),
       ...(uitRaw.length ? { opZonUit: [...new Set(uitRaw as string[])] } : {}),
     },
   };
@@ -511,9 +530,15 @@ function readAnswers(raw: unknown): ConnectionAnswers | null {
         (a) => typeof a?.id === 'string' && typeof a.naam === 'string' && typeof a.remoteStart === 'string' && typeof a.estimatedW === 'number',
       )
     : [];
+  // De boiler en de jacuzzi (besluit 186): alleen wat compleet is.
+  const buffers = Array.isArray(r['buffers'])
+    ? (r['buffers'] as (FoundHeatStore & { opZon: boolean })[]).filter(
+        (b) => typeof b?.id === 'string' && typeof b.naam === 'string' && typeof b.actuator === 'string' && (b.soort === 'boiler' || b.soort === 'jacuzzi') && ['switch', 'setpoint', 'diverter'].includes(b.control) && typeof b.estimatedW === 'number',
+      )
+    : [];
   const checked = validateConnection(
-    { ...r, opZon: Object.fromEntries(apparaten.map((a) => [a.id, a.opZon === true])), opZonUit: Array.isArray(r['opZonUit']) ? r['opZonUit'] : [] },
-    { fasen, apparaten },
+    { ...r, opZon: Object.fromEntries([...apparaten, ...buffers].map((a) => [a.id, a.opZon === true])), opZonUit: Array.isArray(r['opZonUit']) ? r['opZonUit'] : [] },
+    { fasen, apparaten, buffers },
   );
   return checked.ok ? checked.answers : null;
 }
@@ -575,7 +600,7 @@ export interface ConnectionView {
   } | null;
   /** Hoe de panelen liggen (besluit 157): wat geldt, het voorstel uit de meting, en de dag erbij. */
   readonly ligging: LiggingView;
-  readonly gevonden: { readonly fasen: readonly FoundPhase['id'][]; readonly apparaten: readonly { id: string; naam: string; soort: ApplianceKind }[] };
+  readonly gevonden: { readonly fasen: readonly FoundPhase['id'][]; readonly apparaten: readonly { id: string; naam: string; soort: ApplianceKind | FoundHeatStore['soort'] }[] };
   /** Wat de configuratie van het huis al vastlegt; dat gaat voor. */
   readonly configuratie: {
     readonly zekering: Fuse | null;
@@ -598,7 +623,7 @@ export interface ConnectionView {
 export interface ConnectionContext {
   /** De configuratie zoals in het bestand, zonder de antwoorden. */
   readonly base: SiteConfig;
-  readonly found: { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
+  readonly found: { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[]; readonly buffers?: readonly FoundHeatStore[] };
   readonly applied: Pick<Applied, 'toegevoegd' | 'overgeslagen'>;
   /** De antwoorden bij de start, om te zien of er iets veranderde. */
   readonly answersAtStart: ConnectionAnswers | null;
@@ -614,7 +639,8 @@ export function connectionView(c: ConnectionContext, lang: Lang = 'nl'): Connect
   const grid = c.base.grid;
   const planes = c.base.geometry?.solarPlanes ?? [];
   const brand = c.solar ? solarBrand(c.solar.platform, lang) : null;
-  const relevant = (a: ConnectionAnswers | null) => JSON.stringify(a ? [a.zekering, a.fasen, a.apparaten.filter((x) => x.opZon).map((x) => x.id), [...(a.opZonUit ?? [])].sort()] : null);
+  const relevant = (a: ConnectionAnswers | null) =>
+    JSON.stringify(a ? [a.zekering, a.fasen, a.apparaten.filter((x) => x.opZon).map((x) => x.id), (a.buffers ?? []).filter((x) => x.opZon).map((x) => x.id), [...(a.opZonUit ?? [])].sort()] : null);
   return {
     antwoorden: c.answers
       ? {
@@ -624,7 +650,7 @@ export function connectionView(c: ConnectionContext, lang: Lang = 'nl'): Connect
           verwarming: c.answers.verwarming ?? { soort: null, aanvoerC: null },
           voorkantZon: c.answers.voorkantZon ?? null,
           dak: c.answers.dak ?? null,
-          opZon: Object.fromEntries(c.answers.apparaten.map((a) => [a.id, a.opZon])),
+          opZon: Object.fromEntries([...c.answers.apparaten, ...(c.answers.buffers ?? [])].map((a) => [a.id, a.opZon])),
           opZonUit: c.answers.opZonUit ?? [],
         }
       : null,
@@ -636,10 +662,13 @@ export function connectionView(c: ConnectionContext, lang: Lang = 'nl'): Connect
       voorkantZon: c.answers?.voorkantZon ?? null,
       omvormerGevonden: c.omvormerGevonden ?? null,
     }, lang),
-    gevonden: { fasen: c.found.fasen.map((f) => f.id), apparaten: c.found.apparaten.map(({ id, naam, soort }) => ({ id, naam, soort })) },
+    gevonden: {
+      fasen: c.found.fasen.map((f) => f.id),
+      apparaten: [...c.found.apparaten.map(({ id, naam, soort }) => ({ id, naam, soort })), ...(c.found.buffers ?? []).map(({ id, naam, soort }) => ({ id, naam, soort }))],
+    },
     configuratie: {
       zekering: grid && grid.phases.length > 0 ? { fasen: grid.phases.length === 3 ? 3 : 1, ampere: grid.phases[0]!.maxA } : null,
-      apparaten: (c.base.deferrables ?? []).map((d) => ({ id: d.id, naam: d.name })),
+      apparaten: [...(c.base.deferrables ?? []), ...(c.base.heatStores ?? [])].map((d) => ({ id: d.id, naam: d.name })),
       panelen: planes.map((pl) => `${(pl.peakW / 1000).toLocaleString(lang === 'nl' ? 'nl-NL' : 'en-GB', { maximumFractionDigits: 1 })} kWp ${compass(pl.azimuthDeg, lang)}, ${Math.round(pl.tiltDeg)}°`),
     },
     zonnesensor: c.solar

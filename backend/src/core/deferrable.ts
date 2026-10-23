@@ -150,7 +150,14 @@ function vooraf(ctx: DecisionContext, d: Deferrable): { readonly klaar: Deferrab
 /** Een apparaat dat op zon wacht, met wat het vraagt (besluit 176). */
 export interface SunClaim {
   readonly id: string;
+  /** Een warmtebuffer (besluit 186); weg is een uitstelbaar apparaat. */
+  readonly kind?: 'heatStore';
   readonly estimatedW: number;
+  /**
+   * Een buffer die al stookt, met wat hij trekt: hij mag door met de tolerantie
+   * van een draaiend apparaat (besluit 51), en dat is geen start (besluit 68).
+   */
+  readonly runningW?: number;
 }
 
 /** Hoe het de arbiter verging op zijn plek in de volgorde op zon. */

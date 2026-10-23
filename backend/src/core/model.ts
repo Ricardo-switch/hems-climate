@@ -349,9 +349,50 @@ export interface Deferrable {
   readonly programProgress?: DeviceRef;
 }
 
-/** Een plek in de volgorde op zon (besluit 176): een zone of een uitstelbaar apparaat. */
+/**
+ * Een apparaat dat warmte bewaart (besluit 186): een boiler of een jacuzzi.
+ *
+ * Anders dan de droger draait het geen programma dat één keer start en dan
+ * stopt: het mag aan zolang er zon is en uit als die wegvalt. Het houdt een
+ * ondergrens vast, warmt op zon op naar een hoger doel, en haalt een doel op
+ * tijd ("klaar om"), zonder zon in de goedkoopste uren.
+ */
+export const HEAT_STORE_KINDS = ['boiler', 'jacuzzi'] as const;
+export const HEAT_STORE_CONTROLS = ['switch', 'setpoint', 'diverter'] as const;
+
+export interface HeatStore {
+  readonly id: string;
+  readonly name: string;
+  /** Voor de woorden en het beeld; de regeling is voor beide hetzelfde. */
+  readonly kind: (typeof HEAT_STORE_KINDS)[number];
+  /**
+   * Hoe hij stuurt. `switch`: aan en uit, zoals een slimme stekker of de
+   * verwarming van de jacuzzi. `setpoint`: een doeltemperatuur, zoals een
+   * warmtepompboiler of de thermostaat van de jacuzzi. `diverter`: een
+   * regelaar die het overschot krijgt, zoals een AC·THOR.
+   */
+  readonly control: (typeof HEAT_STORE_CONTROLS)[number];
+  /** Wat de regeling later bedient: de schakelaar, de boiler of de thermostaat. */
+  readonly actuator: DeviceRef;
+  /** De watertemperatuur, eventueel uit een attribuut. Weg bij een boiler aan een stekker. */
+  readonly temperature?: MeasurementPoint;
+  /** Wat hij nu trekt, in W, als er een meter is. */
+  readonly power?: DeviceRef;
+  /** Wat hij ongeveer trekt als hij stookt, in W. */
+  readonly estimatedW: number;
+  /** De ondergrens: daaronder stookt hij altijd, ook zonder zon. */
+  readonly minC: number;
+  /** Op zon warmt hij op tot hier. */
+  readonly sunC: number;
+  /** Hoeveel graden per uur hij opwarmt, tot het huis het zelf weet. */
+  readonly heatRateCPerHour: number;
+  /** Eens per week tot deze temperatuur, tegen legionella. Weg: niet. */
+  readonly legionellaC?: number;
+}
+
+/** Een plek in de volgorde op zon (besluit 176): een zone, een uitstelbaar apparaat of een warmtebuffer (besluit 186). */
 export interface SunSlot {
-  readonly kind: 'zone' | 'deferrable';
+  readonly kind: 'zone' | 'deferrable' | 'heatStore';
   readonly id: string;
 }
 
@@ -536,6 +577,11 @@ export interface SiteConfig {
    * alles zoals het was.
    */
   readonly deferrables?: readonly Deferrable[];
+  /**
+   * Apparaten die warmte bewaren, zoals een boiler of een jacuzzi (besluit
+   * 186). Optioneel; zonder blijft alles zoals het was.
+   */
+  readonly heatStores?: readonly HeatStore[];
   /**
    * De volgorde op zon (besluit 176): de zones die op zon opwarmen of koelen en
    * de uitstelbare apparaten, in één lijst. Wie eerder staat, krijgt het

@@ -361,7 +361,48 @@ export function buildSystemState(
           ),
         }
       : {}),
+    // De warmtebuffers (besluit 186), alleen als de configuratie er een kent.
+    ...(config.heatStores && config.heatStores.length > 0
+      ? {
+          heatStores: Object.fromEntries(
+            config.heatStores.map((h) => {
+              const t = h.temperature ? readPoint(source, h.temperature) : null;
+              const w = h.power ? wattOf(source, h.power.id) : null;
+              const on = isOnState(source, h.actuator.id);
+              return [
+                h.id,
+                {
+                  temperatureC: t == null ? unavailable<number>(h.temperature ? 'unavailable' : 'missing') : value(t, nowMs),
+                  ...(h.power ? { powerW: w == null ? unavailable<number>() : value(w, nowMs) } : {}),
+                  on: on == null ? unavailable<boolean>() : value(on, nowMs),
+                },
+              ];
+            }),
+          ),
+        }
+      : {}),
   };
+}
+
+/** Een vermogen in W, ook als de meter kW zegt. */
+function wattOf(source: EntitySource, entityId: string): number | null {
+  const n = source.number(entityId);
+  if (n == null) return null;
+  return String(source.attr(entityId, 'unit_of_measurement') ?? 'W').toLowerCase() === 'kw' ? n * 1000 : n;
+}
+
+/**
+ * Staat een buffer aan (besluit 186): een schakelaar aan, een boiler of
+ * thermostaat in een andere stand dan uit, een regelaar boven nul.
+ */
+function isOnState(source: EntitySource, entityId: string): boolean | null {
+  const raw = source.state(entityId);
+  if (raw == null || !isUsable(raw)) return null;
+  if (/^(number|input_number)\./.test(entityId)) {
+    const n = source.number(entityId);
+    return n == null ? null : n > 0;
+  }
+  return raw !== 'off';
 }
 
 
@@ -496,6 +537,10 @@ export function relevantEntities(config: SiteConfig): ReadonlySet<string> {
     ids.add(phase.current.id);
     if (phase.voltage) ids.add(phase.voltage.id);
   }
+  for (const h of config.heatStores ?? []) {
+    ids.add(h.actuator.id);
+    if (h.temperature) ids.add(h.temperature.id);
+  }
   for (const d of config.deferrables ?? []) {
     ids.add(d.remoteStart.id);
     if (d.operationState) ids.add(d.operationState.id);
@@ -541,6 +586,8 @@ export function observedEntities(config: SiteConfig): ReadonlySet<string> {
   // De resterende tijd en de voortgang van een uitstelbaar apparaat (besluit 167):
   // gelezen bij het volgende besluit, maar elke minuut een nieuwe waarde is geen
   // reden om opnieuw te beslissen.
+  // Het vermogen van een warmtebuffer (besluit 186): elke paar tellen een nieuwe waarde.
+  for (const h of config.heatStores ?? []) if (h.power) ids.add(h.power.id);
   for (const d of config.deferrables ?? []) {
     if (d.remainingTime) ids.add(d.remainingTime.id);
     if (d.programProgress) ids.add(d.programProgress.id);

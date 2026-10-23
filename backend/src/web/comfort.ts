@@ -51,11 +51,14 @@ export interface ComfortRoom {
   readonly opZonC?: number;
 }
 
-/** Een plek in de lijst Op zon (besluit 176): een kamer die op zon opwarmt of koelt, of een apparaat op zon. */
+/** Een plek in de lijst Op zon (besluit 176): een kamer die op zon opwarmt of koelt, een apparaat op zon, of een boiler of jacuzzi (besluit 186). */
 export interface ZonPlek {
-  readonly soort: 'kamer' | 'apparaat';
+  readonly soort: 'kamer' | 'apparaat' | 'buffer';
   readonly id: string;
 }
+
+/** Hoe een plek in de lijst Op zon in de configuratie heet. */
+const ZON_KIND = { kamer: 'zone', apparaat: 'deferrable', buffer: 'heatStore' } as const;
 
 /** Voorrang per richting (besluit 134): de zones op volgorde, de eerste gaat voor. */
 export interface ComfortVoorrang {
@@ -160,12 +163,13 @@ export function comfortView(config: SiteConfig, comfort: Comfort | null): Comfor
    * Zoals de configuratie het zegt; wat er niet in staat achteraan, eerst de
    * kamers en dan de apparaten, zoals de regeling het dan ook doet.
    */
-  const apparatenOpZon = (config.deferrables ?? []).map((d) => ({ id: d.id, naam: d.name }));
+  const apparatenOpZon = [...(config.deferrables ?? []), ...(config.heatStores ?? [])].map((d) => ({ id: d.id, naam: d.name }));
   const alleOpZon: ZonPlek[] = [
     ...kamers.filter((k) => k.opZon.verwarmen || k.opZon.koelen).map((k) => ({ soort: 'kamer' as const, id: k.id })),
-    ...apparatenOpZon.map((a) => ({ soort: 'apparaat' as const, id: a.id })),
+    ...(config.deferrables ?? []).map((a) => ({ soort: 'apparaat' as const, id: a.id })),
+    ...(config.heatStores ?? []).map((a) => ({ soort: 'buffer' as const, id: a.id })),
   ];
-  const plekVan = (z: ZonPlek) => (config.sunOrder ?? []).findIndex((s) => s.id === z.id && s.kind === (z.soort === 'kamer' ? 'zone' : 'deferrable'));
+  const plekVan = (z: ZonPlek) => (config.sunOrder ?? []).findIndex((s) => s.id === z.id && s.kind === ZON_KIND[z.soort]);
   const zon = alleOpZon
     .map((z, i) => ({ z, p: plekVan(z), i }))
     .sort((a, b) => (a.p < 0 ? Infinity : a.p) - (b.p < 0 ? Infinity : b.p) || a.i - b.i)
@@ -243,7 +247,7 @@ export function withComfort(raw: Record<string, unknown>, comfort: Comfort | nul
   const out: Record<string, unknown> = { ...raw, zones: metVoorrang };
   // Op zon (besluit 176): kamers en apparaten in één volgorde voor de regeling.
   if (comfort.voorrang?.zon) {
-    out['sunOrder'] = comfort.voorrang.zon.map((z) => ({ kind: z.soort === 'kamer' ? 'zone' : 'deferrable', id: z.id }));
+    out['sunOrder'] = comfort.voorrang.zon.map((z) => ({ kind: ZON_KIND[z.soort], id: z.id }));
     toegevoegd.push('de volgorde op zon');
   }
   /*
@@ -336,7 +340,11 @@ export function controleerComfort(body: unknown, config: SiteConfig): ComfortChe
       const bekend = (x: unknown): x is ZonPlek => {
         if (typeof x !== 'object' || x == null) return false;
         const { soort, id } = x as Record<string, unknown>;
-        return (soort === 'kamer' && config.zones.some((z) => z.id === id)) || (soort === 'apparaat' && (config.deferrables ?? []).some((d) => d.id === id));
+        return (
+          (soort === 'kamer' && config.zones.some((z) => z.id === id)) ||
+          (soort === 'apparaat' && (config.deferrables ?? []).some((d) => d.id === id)) ||
+          (soort === 'buffer' && (config.heatStores ?? []).some((h) => h.id === id))
+        );
       };
       if (!Array.isArray(zon) || !zon.every(bekend) || new Set(zon.map((z) => `${z.soort}:${z.id}`)).size !== zon.length) {
         return { ok: false, reden: 'op zon is een lijst van kamers en apparaten, elk één keer' };

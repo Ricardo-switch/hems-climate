@@ -3,7 +3,8 @@
  * Het nu, naast Vandaag dat de tijd is: per apparaat een kaart met wat het
  * doet, wat het nu vraagt, wat het vandaag gebruikte en welk deel op eigen
  * zon, of hoe lang het aan stond als er geen meter is. Wat iets doet, staat
- * bovenaan. Een uitstelbaar apparaat kiest hier "klaar voor" (besluit 101). De zinnen en de keuzes komen kant-en-klaar van de dienst
+ * bovenaan. Een uitstelbaar apparaat kiest hier "klaar voor" (besluit 101), een
+ * jacuzzi "klaar om" (besluit 186). De zinnen en de keuzes komen kant-en-klaar van de dienst
  * (besluit 94); de pagina zet ze neer en rekent alleen de resterende tijd uit.
  *
  * Eerlijk over wat er is (besluit 104): een batterij of een auto staat hier pas
@@ -150,6 +151,70 @@ async function kies(d, optie, groep, knop, antwoord) {
         : t(d.uiterlijk ? 'apparaten.geenHaastUiterlijk' : 'apparaten.geenHaastZin', { klok: d.uiterlijk });
     if (res.ok) [...groep.children].forEach((b) => b.setAttribute('aria-pressed', String(b === knop)));
     gezegd.set(d.id, tekst);
+    antwoord.textContent = tekst;
+  } catch {
+    antwoord.textContent = t('kamer.geenVerbinding');
+  }
+}
+
+/* ------------------------------------------- de boiler en de jacuzzi */
+
+let tankNr = 0;
+/** De tank van de boiler, gevuld tot de temperatuur, met een streep bij het doel op zon (besluit 186). */
+function tank(b) {
+  const deel = b.temperatuurC == null ? 0.5 : Math.max(0.08, Math.min(1, (b.temperatuurC - 20) / Math.max(1, b.zonC - 20)));
+  const hoog = Math.round(52 * deel);
+  // Een eigen naam per tekening: wand en telefoon staan allebei in de pagina, en een verborgen verloop tekent niet.
+  const id = `tank-${b.id}-${++tankNr}`;
+  const tekst = b.temperatuurC == null ? '' : `<text x="32" y="44" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#fff">${esc(nl(b.temperatuurC, 0))}°</text>`;
+  const label = b.temperatuurC == null ? b.naam : t('apparaten.tank', { naam: b.naam, temp: nl(b.temperatuurC, 0) });
+  return `<svg class="ring" viewBox="0 0 64 64" role="img" aria-label="${esc(label)}"><defs><linearGradient id="${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4d86c9"/><stop offset="0.55" stop-color="#ff9a6b"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient><clipPath id="${id}-v"><rect x="18" y="6" width="28" height="52" rx="12"/></clipPath></defs><rect x="18" y="6" width="28" height="52" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.16)" stroke-width="1.5"/><g clip-path="url(#${id}-v)"><rect x="18" y="${58 - hoog}" width="28" height="${hoog}" fill="url(#${id})"/></g>${b.bron === 'zon' ? '<path d="M14 13h36" stroke="#F7B548" stroke-width="1.5" stroke-dasharray="3 3"/>' : ''}${tekst}</svg>`;
+}
+
+function bufferKaart(b) {
+  const kleur = b.bron === 'zon' ? '#F7B548' : b.bron === 'net' ? '#ff9a6b' : '#6EE7B7';
+  const toon = b.bron === 'zon' ? 'zon-t' : b.bron === 'net' ? 'gloed-t' : b.stand === 'full' ? 'mint-t' : '';
+  const deel = b.temperatuurC == null ? 0 : Math.max(0, Math.min(1, (b.temperatuurC - 20) / Math.max(1, b.zonC - 20)));
+  const boven = b.soort === 'boiler' ? tank(b) : ring({ deel, kleur, tekst: b.temperatuurC == null ? '' : `${nl(b.temperatuurC, 0)}°`, label: b.temperatuurC == null ? b.naam : t('apparaten.tank', { naam: b.naam, temp: nl(b.temperatuurC, 0) }) });
+  const el = document.createElement('section');
+  el.className = 'glas app';
+  el.dataset.actief = String(b.stand === 'would_heat' || b.stookt);
+  el.innerHTML = `
+    <div class="boven">${boven}<div><b>${esc(b.naam)}</b><span class="klein ${toon}">${esc(b.kop)}</span></div></div>
+    <p class="mini zin">${esc(b.zin)}</p>
+    <div class="labels"><span class="label zon">${esc(t('apparaten.warmteOpZon'))}</span></div>`;
+  if (b.keuzes.length > 0) {
+    const opties = [{ tekst: t('apparaten.geenHaast'), waarde: null }, ...b.keuzes];
+    const blok = document.createElement('div');
+    blok.innerHTML = `<div class="mini" style="margin-bottom: 6px">${esc(t('apparaten.klaarOm'))}</div><div class="keuze" role="group" aria-label="${esc(t('apparaten.klaarOmVan', { naam: b.naam }))}"></div><p class="mini gezegd" aria-live="polite" style="margin: 8px 0 0">${esc(gezegd.get(b.id) ?? '')}</p>`;
+    const groep = blok.querySelector('.keuze');
+    const antwoord = blok.querySelector('.gezegd');
+    for (const o of opties) {
+      const knop = document.createElement('button');
+      knop.type = 'button';
+      knop.textContent = o.tekst;
+      knop.setAttribute('aria-pressed', String(o.waarde == null ? b.klaarOm == null : b.klaarOm?.atMs === o.waarde));
+      knop.addEventListener('click', () => void kiesKlaarOm(b, o, groep, knop, antwoord));
+      groep.append(knop);
+    }
+    el.append(blok);
+  }
+  return el;
+}
+
+async function kiesKlaarOm(b, optie, groep, knop, antwoord) {
+  antwoord.textContent = t('apparaten.even');
+  try {
+    const res = await deur('api/klaarom', { id: b.id, klaarOm: optie.waarde });
+    if (res === null) return;
+    const uit = await res.json().catch(() => ({}));
+    const tekst = !res.ok
+      ? uit.fout ?? t('kamer.mislukt')
+      : optie.waarde
+        ? t('apparaten.klaarOmGenoteerd', { tekst: optie.tekst, doel: uit.klaarOm?.targetC ?? b.zonC })
+        : t('apparaten.klaarOmWeg', { min: b.ondergrensC });
+    if (res.ok) [...groep.children].forEach((x) => x.setAttribute('aria-pressed', String(x === knop)));
+    gezegd.set(b.id, tekst);
     antwoord.textContent = tekst;
   } catch {
     antwoord.textContent = t('kamer.geenVerbinding');
@@ -319,14 +384,15 @@ function tekenNu() {
   tekenVerdeling();
 
   const lijst = state.bewoner?.uitstelbaar ?? [];
-  const opZon = new Set(lijst.map((d) => d.id));
+  const buffers = state.bewoner?.warmtebuffers ?? [];
+  const opZon = new Set([...lijst, ...buffers].map((d) => d.id));
   const gevonden = (aansluiting?.gevonden?.apparaten ?? []).filter((a) => !opZon.has(a.id));
   for (const box of $$('[data-apparaten]')) {
     // Een knop met focus niet onder de vinger weghalen.
     if (box.contains(document.activeElement) && document.activeElement !== document.body) continue;
     // Wat nu iets doet eerst (besluit 140); verder de volgorde van het huis.
     const opslag = huisData?.opslag ?? {};
-    const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart), ...(opslag.auto ? [ladingKaart('auto', opslag.auto)] : []), ...(opslag.batterij ? [ladingKaart('batterij', opslag.batterij)] : [])];
+    const kaarten = [...klimaat().map(klimaatKaart), ...lijst.map(kaart), ...buffers.map(bufferKaart), ...(opslag.auto ? [ladingKaart('auto', opslag.auto)] : []), ...(opslag.batterij ? [ladingKaart('batterij', opslag.batterij)] : [])];
     const voor = kaarten.filter((k) => k.dataset.actief === 'true');
     const na = kaarten.filter((k) => k.dataset.actief !== 'true');
     box.replaceChildren(...voor, ...na, ...gevonden.map(nietOpZon), toevoegen());

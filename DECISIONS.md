@@ -74,6 +74,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [134. Voorrang per richting, en Hoe voelt het met een antwoord](#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord)
 - [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
 - [176. Apparaten op zon in de voorrang: een lijst Op zon](#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon)
+- [186. Warmte bewaren: de boiler en de jacuzzi op zon](#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon)
 
 **Configuratie en onboarding**
 
@@ -8474,6 +8475,69 @@ gehouden met meervouden: ja, met de regels per taal.
   de app leest het deel in de taal van wie kijkt, en het Nederlands bij een
   versie zonder Engels. Ook wat het begin zegt als bewaren niet lukt, staat nu
   in beide talen.
+
+## 186. Warmte bewaren: de boiler en de jacuzzi op zon
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Het eerste deel van de makeover voor het grote publiek, op 23 oktober 2026.
+Het volgende proefhuis heeft een Intex-jacuzzi op wifi. De bewoner koos uit
+opties en een schets (`design/app2/Wand-Apparaten-Warmte.html`): warm houden
+plus "klaar om" bij de jacuzzi, vier soorten boiler herkennen maar alleen de
+eigen soort laten zien, zonder zon van het net in de goedkoopste uren, en in de
+lijst Op zon standaard helemaal achteraan.
+
+*Besluit:*
+
+- **Een nieuwe soort naast de droger:** een warmtebuffer (`heatStores` in de
+  configuratie, `core/warmtebuffer.ts`). Een droger draait één programma en
+  stopt; een buffer mag aan zolang er zon is en uit als die wegvalt. Hij heeft
+  een ondergrens (`minC`), een doel op zon (`sunC`), een snelheid in graden per
+  uur, en bij een boiler eens per week een temperatuur tegen legionella.
+- **Wat hij zou doen,** in deze volgorde: onder de ondergrens altijd bijwarmen;
+  "klaar om" uiterlijk zo laat dat hij het met zijn snelheid haalt (met een
+  half uur speling), en eerder in de goedkoopste uren, maar hooguit vier uur
+  vóór die uiterlijke start, anders koelt het water weer af; tegen legionella
+  een dag over de week in de goedkoopste uren; een boiler zonder temperatuur
+  (aan een stekker) elke dag een keer vol; verder op zon tot het doel.
+- **Op zon zoals de droger:** hooguit één start per beslissing (besluit 68),
+  de hoofdzekering gaat voor (78), comfort gaat voor (85). Een buffer die al
+  stookt mag door met de tolerantie van een draaiend apparaat (51), zonder de
+  afkapping op nul van het budget, want zijn eigen verbruik komt er weer bij;
+  doorgaan is geen start. In de volgorde op zon (176) heet hij `heatStore` en
+  staat hij zonder keuze achter de kamers en de apparaten met een eindtijd.
+- **De goedkoopste uren** zijn voorlopig de daluren van het contract, als het
+  een daltarief heeft (`cheapWindows`, uit de dienst). Dynamische prijzen komen
+  met stap E. Zonder goedkopere uren gebeurt wat van het net moet zo laat als
+  het kan.
+- **Herkennen** (`web/buffers-vinden.ts`): een jacuzzi aan zijn naam of de
+  koppeling Intex Spa, als thermostaat of, via Tuya Local, als boiler; een
+  `water_heater` als boiler met temperatuur (een warmtepompboiler trekt 0,5 kW
+  en warmt 6° per uur, een elektrische 2 kW en 10°); een schakelaar die boiler
+  heet, met de meter van hetzelfde apparaat; een regelaar als AC·THOR. Ze komen
+  in de lijst van de zon en je aansluiting, naast de droger.
+- **Wat de dienst onthoudt** staat in `warmtebuffers.json` naast de dataset:
+  klaar om, wanneer de boiler warm genoeg was tegen legionella, en wanneer een
+  boiler aan een stekker vol was. Een zesde smalle deur (`/api/klaarom`); er
+  gaat niets naar Home Assistant.
+- **In de app:** een kaart op Apparaten (de boiler als tank, de jacuzzi als
+  ring met de temperatuur) met een kop en een zin uit de dienst, bij de
+  jacuzzi de keuzes voor klaar om; een rij op Vandaag; een plek in het huis en
+  de indeling; en een plek in de lijst Op zon.
+- **Eerst in de schaduw:** elke beslissing zegt wat hij zou doen, en het
+  logboek legt het vast (`warmte`). Echt schakelen hoort bij stap B, net als bij
+  de droger.
+- **Wat de Intex niet zegt:** of hij echt stookt. De koppeling meldt
+  "verwarmen" zodra hij aan staat. Met een slimme stekker met meting ziet het
+  huis het wel, en die neemt de app mee als hij bij hetzelfde apparaat hoort.
+- **Versie 0.60.0.**
+
+*Wat afviel:* de boiler en de jacuzzi als uitstelbaar apparaat met een
+programma (ze hebben er geen); alleen op zon, nooit van het net (dan raakt de
+boiler leeg); alle vier de soorten boiler in het instelblad tonen (verwarrend:
+alleen die van de bewoner).
+
+---
 
 ## Wat nog een besluit wacht
 

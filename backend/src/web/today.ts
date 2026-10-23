@@ -82,6 +82,15 @@ export interface TodayReport {
     readonly zouStarten: readonly TodaySpan[];
   }[];
   /**
+   * De boiler en de jacuzzi (besluit 186): wanneer ze vandaag stookten, en
+   * wanneer Smart Climate ze zou laten stoken.
+   */
+  readonly warmtebuffers: readonly {
+    readonly id: string;
+    readonly stookte: readonly TodaySpan[];
+    readonly zouStoken: readonly TodaySpan[];
+  }[];
+  /**
    * Per zone de temperatuur per kwartier, gemiddeld, of null zonder meting; en
    * wat er goed is: tussen het doel voor verwarmen en voor koelen in de dagstand.
    */
@@ -184,6 +193,8 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
   const zoneSums = new Map(config.zones.map((z) => [z.id, Array.from({ length: Math.max(0, quarters) }, () => ({ som: 0, n: 0 }))]));
   const deferrableIds = (config.deferrables ?? []).map((d) => d.id);
   const deferrableSpans = new Map(deferrableIds.map((id) => [id, { ran: [] as TodaySpan[], would: [] as TodaySpan[], openRan: null as Open, openWould: null as Open }]));
+  const bufferIds = (config.heatStores ?? []).map((h) => h.id);
+  const bufferSpans = new Map(bufferIds.map((id) => [id, { ran: [] as TodaySpan[], would: [] as TodaySpan[], openRan: null as Open, openWould: null as Open }]));
 
   /** Verlengt of sluit een draaiperiode met dit moment. */
   const step = (list: TodaySpan[], open: Open, tMs: number, actie: string | null): Open => {
@@ -244,6 +255,13 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
       s.openWould = step(s.would, s.openWould, m.tMs, state === 'would_start' ? 'run' : null);
     }
 
+    for (const id of bufferIds) {
+      const s = bufferSpans.get(id)!;
+      const h = m.heatStores?.[id];
+      s.openRan = step(s.ran, s.openRan, m.tMs, h?.heating ? 'heat' : null);
+      s.openWould = step(s.would, s.openWould, m.tMs, h?.state === 'would_heat' ? 'heat' : null);
+    }
+
     if (m.full && m.commands.length > 0) {
       const touched = new Set(m.commands.map((c) => c.actuatorId).filter((x): x is string => x != null));
       const redenen = m.accepted
@@ -274,6 +292,13 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     return { id, draaide: s.ran, zouStarten: s.would };
   });
 
+  const warmtebuffers = bufferIds.map((id) => {
+    const s = bufferSpans.get(id)!;
+    if (s.openRan) s.ran.push({ vanMs: s.openRan.vanMs, totMs: lastMs, actie: s.openRan.actie });
+    if (s.openWould) s.would.push({ vanMs: s.openWould.vanMs, totMs: lastMs, actie: s.openWould.actie });
+    return { id, stookte: s.ran, zouStoken: s.would };
+  });
+
   const zones = config.zones.map((z) => ({
     zoneId: z.id,
     naam: z.name,
@@ -294,6 +319,7 @@ export async function todayReport(logDir: string, config: SiteConfig, nowMs: num
     netTerugWh: Math.round(netTerugWh),
     apparaten,
     uitstelbaar,
+    warmtebuffers,
     zones,
     besluiten: decisions.reverse().slice(0, MAX_DECISIONS),
   };

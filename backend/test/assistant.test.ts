@@ -275,7 +275,7 @@ describe('zon', () => {
     netAfWh: 1210,
     netTerugWh: 2860,
     apparaten: [],
-    uitstelbaar: [],
+    uitstelbaar: [], warmtebuffers: [],
     zones: [],
     besluiten: [],
   };
@@ -336,7 +336,7 @@ describe('vandaag en hoe warm (besluit 141)', () => {
       { actuatorId: 'ac-zolder', smartClimate: [span('2026-10-05T10:00:00Z', '2026-10-05T11:30:00Z')], huidig: [span('2026-10-05T10:00:00Z', '2026-10-05T10:25:00Z')] },
       { actuatorId: 'nest', smartClimate: [], huidig: [] },
     ],
-    uitstelbaar: [],
+    uitstelbaar: [], warmtebuffers: [],
     zones: [],
     besluiten: Array.from({ length: 13 }, () => ({}) as TodayReport['besluiten'][number]),
   };
@@ -507,7 +507,7 @@ describe('elk getal heeft een bron, in elke toestand', () => {
             netAfWh: k.int(0, 20_000),
             netTerugWh: k.chance(0.3) ? 0 : k.int(0, zonWh),
             apparaten: config.actuators.map((a) => ({ actuatorId: a.id, smartClimate: k.chance(0.5) ? [span(k.int(0, 300))] : [], huidig: k.chance(0.5) ? [span(k.int(0, 300))] : [] })),
-            uitstelbaar: [],
+            uitstelbaar: [], warmtebuffers: [],
             zones: [],
             besluiten: [],
           };

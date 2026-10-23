@@ -84,6 +84,11 @@ export interface Moment {
    * vóór de uitstelbare apparaten.
    */
   readonly deferrables: Readonly<Record<string, string>>;
+  /**
+   * De boiler en de jacuzzi (besluit 186), op id: de stand en of hij stookte.
+   * Leeg in logboeken van daarvoor.
+   */
+  readonly heatStores?: Readonly<Record<string, { readonly state: string; readonly heating: boolean }>>;
 }
 
 /** Modi waarin de regeling zich terugtrekt. Spiegelt `HANDS_OFF_MODES`. */
@@ -138,6 +143,8 @@ interface RawRecord {
   zonW?: number | null;
   /** Per uitstelbaar apparaat: id, stand, reden en soms "klaar voor". */
   uitstel?: [string, string, string, number?][];
+  /** Per warmtebuffer: id, stand, reden, temperatuur en of hij stookt (besluit 186). */
+  warmte?: [string, string, string, number | null, boolean][];
 }
 
 const EMPTY_BUDGET = {
@@ -291,6 +298,7 @@ export async function* readMoments(
         full: raw.changed === true,
         handsOff: handsOffAt(mode, carry.lastLegacy),
         deferrables: Object.fromEntries((raw.uitstel ?? []).map(([id, state]) => [id, state])),
+        heatStores: Object.fromEntries((raw.warmte ?? []).map(([id, state, , , heating]) => [id, { state, heating: heating === true }])),
       };
     }
   }
