@@ -21,6 +21,45 @@ function huis(tekst: string) {
   return b.soort === 'huis' ? b.vraag : b.soort;
 }
 
+describe('woordzoeker in het Engels (besluit 185, stap 9 deel 6)', () => {
+  const en = (tekst: string) => {
+    const b = begrijp(tekst, config, 'en');
+    return b.soort === 'huis' ? b.vraag : b.soort === 'app' ? b.link.href : b.soort;
+  };
+
+  it('verstaat vragen over het huis', () => {
+    expect(en('What are you doing right now?')).toEqual({ kind: 'nu' });
+    expect(en('Why is it so hot in the zolder?')).toEqual({ kind: 'waarom', kamer: 'zolder' });
+    expect(en('Cool the zolder to 22 degrees')).toEqual({ kind: 'doe', kamer: 'zolder', wens: 'koelen', temperatuurC: 22 });
+    expect(en('Please warm up the badkamer')).toEqual({ kind: 'doe', kamer: 'badkamer', wens: 'verwarmen', temperatuurC: null });
+    expect(en('Switch off the woonkamer')).toEqual({ kind: 'doe', kamer: 'woonkamer', wens: 'uit', temperatuurC: null });
+    expect(en('How warm is it everywhere?')).toEqual({ kind: 'warm' });
+    expect(en('What is the weather tomorrow?')).toEqual({ kind: 'morgen' });
+    expect(en('Will it rain today?')).toEqual({ kind: 'weer' });
+    expect(en('How much do the air conditioners cost?')).toEqual({ kind: 'kosten' });
+    expect(en('How much solar did we generate today?')).toEqual({ kind: 'zon' });
+    expect(en('What did you do today?')).toEqual({ kind: 'vandaag' });
+    expect(en('What are you going to do tonight?')).toEqual({ kind: 'straks' });
+  });
+
+  it('verstaat vragen over de app, met de namen zoals de Engelse app ze toont', () => {
+    expect(en('Where do I enter the prices?')).toBe('energie.html#prijzen');
+    expect(en('How do I add a floor?')).toBe('indeling.html');
+    expect(en('Where can I set my main fuse?')).toBe('energie.html#aansluiting');
+    expect(en('How do I sign out?')).toBe('toegang.html');
+    expect(en('Where are the cameras?')).toBe('functies.html');
+    const b = begrijp('Where do I change the layout?', config, 'en');
+    expect(b.soort === 'app' && b.link.label).toBe('Go to Rooms and layout');
+  });
+
+  it('geeft Engelse voorbeelden die het zelf verstaat', () => {
+    const b = begrijp('blah blah', config, 'en');
+    expect(b.soort).toBe('onbekend');
+    if (b.soort !== 'onbekend') return;
+    for (const v of b.voorbeelden) expect(en(v), v).not.toBe('onbekend');
+  });
+});
+
 describe('woordzoeker', () => {
   it('ziet ruis als niets gezegd (21 oktober 2026)', () => {
     for (const t of ['(noise)', '[Muziek]', 'noise', ' ... ', '*hoest*', 'Ondertiteld door de Amara.org gemeenschap', 'Bedankt voor het kijken!', '[BLANK_AUDIO]']) expect(isRuis(t), t).toBe(true);

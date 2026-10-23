@@ -74,8 +74,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   {
     id: 'indeling',
     href: 'indeling.html',
-    sterk: ['indeling', 'plattegrond', 'etage*', 'verdieping*', 'buitenruimte*', 'layout', 'floor', 'floors'],
-    zwak: ['kamer toevoegen', 'kamers', 'ruimte*', 'tuin', 'oprit', 'terras', 'balkon', 'voortuin', 'zolder toevoegen', 'kelder', 'rooms'],
+    sterk: ['indeling', 'plattegrond', 'etage*', 'verdieping*', 'buitenruimte*', 'layout', 'floor', 'floors', 'floor plan', 'outdoor space*'],
+    zwak: ['kamer toevoegen', 'kamers', 'ruimte*', 'tuin', 'oprit', 'terras', 'balkon', 'voortuin', 'zolder toevoegen', 'kelder', 'rooms', 'add a room', 'garden', 'driveway', 'patio', 'balcony', 'basement'],
     nl: {
       antwoord:
         'De indeling pas je aan bij Instellingen, onder Indeling. Daar sleep je een apparaat naar een andere kamer, voeg je een etage toe of haal je er een weg, en kies je wat er buiten is, zoals een tuin of een oprit.',
@@ -83,15 +83,15 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     },
     en: {
       antwoord:
-        'You change the layout under Settings, Layout. Drag a device to another room, add or remove a floor, and choose what is outside, such as a garden or a driveway.',
-      label: 'Go to Layout',
+        'You change the layout under Settings, Rooms and layout. Drag a device to another room, add or remove a floor, and choose what is outside, such as a garden or a driveway.',
+      label: 'Go to Rooms and layout',
     },
   },
   {
     id: 'prijzen',
     href: 'energie.html#prijzen',
-    sterk: ['prijs*', 'prijzen', 'tarief*', 'daltarief', 'dal', 'normaal tarief', 'netbeheer*', 'vastrecht', 'vaste kosten', 'contract', 'energieprijs*', 'stroomprijs*', 'gasprijs*', 'salder*', 'teruglever*', 'energiebelasting', 'price*', 'tariff*'],
-    zwak: ['kosten', 'meter', 'meters', 'kwh', 'gas', 'stroom', 'energie', 'leverancier', 'rekening'],
+    sterk: ['prijs*', 'prijzen', 'tarief*', 'daltarief', 'dal', 'normaal tarief', 'netbeheer*', 'vastrecht', 'vaste kosten', 'contract', 'energieprijs*', 'stroomprijs*', 'gasprijs*', 'salder*', 'teruglever*', 'energiebelasting', 'price*', 'tariff*', 'off peak', 'peak rate', 'standing charge*', 'fixed costs', 'net metering', 'feed in', 'energy tax'],
+    zwak: ['kosten', 'meter', 'meters', 'kwh', 'gas', 'stroom', 'energie', 'leverancier', 'rekening', 'electricity', 'supplier', 'bill', 'energy'],
     nl: {
       antwoord:
         'De prijzen vul je in bij Instellingen, onder Energie: Contract en prijzen. Neem ze over van je contract: stroom normaal en dal, teruglevering, gas, en eventueel de vaste kosten per dag, maand of jaar.',
@@ -99,15 +99,15 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     },
     en: {
       antwoord:
-        'You enter prices under Settings, Energy: Contract and prices. Copy them from your contract: electricity normal and off-peak, feed-in, gas, and if you like the fixed costs per day, month or year.',
+        'You enter prices under Settings, Energy setup: Contract and prices. Copy them from your contract: electricity normal and off-peak, export, gas, and if you like the fixed costs per day, month or year.',
       label: 'Go to Contract and prices',
     },
   },
   {
     id: 'aansluiting',
     href: 'energie.html#aansluiting',
-    sterk: ['zekering*', 'hoofdzekering*', 'aansluiting', 'fase*', 'ampere', 'omvormer', 'ligging', 'fuse*', 'connection'],
-    zwak: ['panelen', 'zonnepanelen', 'dak', 'dakvlak*', 'netaansluiting'],
+    sterk: ['zekering*', 'hoofdzekering*', 'aansluiting', 'fase*', 'ampere', 'omvormer', 'ligging', 'fuse*', 'connection', 'main fuse', 'phase*', 'amp*', 'inverter'],
+    zwak: ['panelen', 'zonnepanelen', 'dak', 'dakvlak*', 'netaansluiting', 'panels', 'solar panels', 'roof'],
     nl: {
       antwoord:
         'Je aansluiting stel je in bij Instellingen, onder Energie: waar je panelen liggen, je hoofdzekering en je verwarming. Welke apparaten op zon mogen starten, staat bij Regeling.',
@@ -115,8 +115,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     },
     en: {
       antwoord:
-        'You set up your connection under Settings, Energy: where your panels are, your main fuse and your heating. Which devices may start on sun is under Control.',
-      label: 'Go to Energy',
+        'You set up your connection under Settings, Energy setup: where your panels are, your main fuse and your heating. Which devices may start on sun is under Control.',
+      label: 'Go to Energy setup',
     },
   },
   {
@@ -124,7 +124,7 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     id: 'batterijen',
     href: 'thuis.html#batterijen',
     sterk: ['batterij', 'batterijen', 'batterijtje', 'filter', 'filters', 'battery', 'batteries'],
-    zwak: ['leeg', 'vervangen', 'vol'],
+    zwak: ['leeg', 'vervangen', 'vol', 'empty', 'replace', 'flat', 'full'],
     nl: {
       antwoord: 'Alle apparaten met een batterij, de leegste eerst, en de filters van de airco staan op Thuis. Onder de 10% komt er vanzelf een melding bij.',
       label: 'Naar de batterijen',
@@ -138,8 +138,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     id: 'comfort',
     href: 'comfort.html',
     // Smal: "hoe warm is het op zolder" is een vraag over het huis, geen instelling.
-    sterk: ['comfort', 'dagdeel', 'dagdelen', 'nachttemperatuur', 'vakantie', 'temperature'],
-    zwak: ['temperatuur', 'instellen'],
+    sterk: ['comfort', 'dagdeel', 'dagdelen', 'nachttemperatuur', 'vakantie', 'part of the day', 'night temperature', 'holiday'],
+    zwak: ['temperatuur', 'instellen', 'temperature'],
     nl: {
       antwoord: 'Hoe warm of koel je het wilt, zet je bij Instellingen, onder Comfort: per kamer en per dagdeel, en wanneer de dag en de nacht beginnen. De regeling rekent er meteen mee.',
       label: 'Naar Comfort',
@@ -153,8 +153,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     id: 'functies',
     href: 'functies.html',
     // Het weer zelf is een vraag over morgen (besluit 142); hier alleen waar het vandaan komt.
-    sterk: ['camera*', 'deurbel*', 'bel', 'aanbellen', 'buienradar', 'weerdienst', 'weerbron', 'functie*', 'doorbell', 'weather source'],
-    zwak: ['beeld', 'videodeurbel', 'lampen bedienen', 'licht bedienen', 'weer', 'weather'],
+    sterk: ['camera*', 'deurbel*', 'bel', 'aanbellen', 'buienradar', 'weerdienst', 'weerbron', 'functie*', 'doorbell', 'weather source', 'feature*'],
+    zwak: ['beeld', 'videodeurbel', 'lampen bedienen', 'licht bedienen', 'weer', 'weather', 'video', 'light control'],
     nl: {
       antwoord:
         'Camera’s, de deurbel, licht bedienen en het weer stel je in bij Instellingen, onder Functies. Daar kies je welke camera’s de app toont, wat er gebeurt als er wordt aangebeld, en waar het weer vandaan komt.',
@@ -169,8 +169,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   {
     id: 'inrichten',
     href: 'inrichten.html',
-    sterk: ['inrichten', 'wizard', 'installeren', 'installatie', 'opzetten', 'beginnen', 'eerste keer', 'setup', 'set up'],
-    zwak: ['stappen', 'begin'],
+    sterk: ['inrichten', 'wizard', 'installeren', 'installatie', 'opzetten', 'beginnen', 'eerste keer', 'setup', 'set up', 'install*', 'getting started', 'first time'],
+    zwak: ['stappen', 'begin', 'steps', 'start'],
     nl: {
       antwoord:
         'Bij Inrichten loop je stap voor stap langs alles wat per huis anders is: je huis, klimaat, zon en aansluiting, meters en prijzen, en functies. Je vindt het bovenaan bij Instellingen.',
@@ -178,44 +178,44 @@ const ONDERWERPEN: readonly Onderwerp[] = [
     },
     en: {
       antwoord:
-        'Setup walks you through everything that differs per house: your house, climate, sun and connection, meters and prices, and features. It is at the top of Settings.',
-      label: 'Go to Setup',
+        'Set up walks you through everything that differs per house: your house, climate, sun and connection, meters and prices, and features. It is at the top of Settings.',
+      label: 'Go to Set up',
     },
   },
   {
     id: 'inloggen',
     href: 'toegang.html',
-    sterk: ['inloggen', 'inlog*', 'aanmelden', 'uitloggen', 'wachtwoord', 'login', 'log in', 'sign in'],
-    zwak: ['account', 'toegang'],
+    sterk: ['inloggen', 'inlog*', 'aanmelden', 'uitloggen', 'wachtwoord', 'login', 'log in', 'sign in', 'log out', 'sign out', 'password'],
+    zwak: ['account', 'toegang', 'access'],
     nl: {
       antwoord:
         'Je logt in met je account van Home Assistant; de hele app vraagt dat. Uitloggen kan bij Instellingen, onder Bewoners en toegang.',
       label: 'Naar Bewoners en toegang',
     },
     en: {
-      antwoord: 'You log in with your Home Assistant account; the whole app asks for it. Logging out is under Settings, Residents and access.',
+      antwoord: 'You sign in with your Home Assistant account; the whole app asks for it. Signing out is under Settings, Residents and access.',
       label: 'Go to Residents and access',
     },
   },
   {
     id: 'opbrengst',
     href: 'opbrengst.html',
-    sterk: ['opbrengst', 'bespaard', 'besparing', 'bespaar*', 'verdiend', 'verdien*', 'terugverdien*', 'savings', 'saved'],
-    zwak: ['oplevert', 'oplevering', 'geld', 'euro'],
+    sterk: ['opbrengst', 'bespaard', 'besparing', 'bespaar*', 'verdiend', 'verdien*', 'terugverdien*', 'savings', 'saved', 'saving', 'earned', 'pay back', 'payback'],
+    zwak: ['oplevert', 'oplevering', 'geld', 'euro', 'money', 'yield'],
     nl: {
       antwoord:
         'Wat de zon en het slimme schakelen opleveren, staat bij Opbrengst: per dag, week, maand en jaar, in kWh en in euro’s.',
       label: 'Naar Opbrengst',
     },
     en: {
-      antwoord: 'What the sun and smart switching bring in is under Yield: per day, week, month and year, in kWh and in euros.',
-      label: 'Go to Yield',
+      antwoord: 'What the sun and smart switching bring in is under Energy: per day, week, month and year, in kWh and in euros.',
+      label: 'Go to Energy',
     },
   },
   {
     id: 'vandaag',
     href: 'vandaag.html',
-    sterk: ['verbruik*', 'grafiek', 'tijdlijn', 'usage', 'consumption'],
+    sterk: ['verbruik*', 'grafiek', 'tijdlijn', 'usage', 'consumption', 'graph', 'chart', 'timeline'],
     zwak: ['vandaag', 'today'],
     nl: {
       antwoord: 'Het verbruik en de zon van vandaag staan bij Vandaag, kwartier voor kwartier, met wat elk apparaat deed.',
@@ -229,8 +229,8 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   {
     id: 'apparaten',
     href: 'apparaten.html',
-    sterk: ['apparaten', 'alle apparaten', 'devices'],
-    zwak: ['lijst', 'overzicht'],
+    sterk: ['apparaten', 'alle apparaten', 'devices', 'all devices'],
+    zwak: ['lijst', 'overzicht', 'list', 'overview'],
     nl: {
       antwoord: 'Alle apparaten staan bij Apparaten, per kamer, met wat ze nu doen.',
       label: 'Naar Apparaten',
@@ -243,23 +243,23 @@ const ONDERWERPEN: readonly Onderwerp[] = [
   {
     id: 'bedienen',
     href: 'thuis.html',
-    sterk: ['bedien*', 'lamp aan', 'lamp uit', 'licht aan', 'licht uit', 'aanzetten', 'uitzetten', 'scene*', 'operate', 'control'],
-    zwak: ['lamp', 'lampen', 'licht', 'screen', 'screens', 'thermostaat', 'lights'],
+    sterk: ['bedien*', 'lamp aan', 'lamp uit', 'licht aan', 'licht uit', 'aanzetten', 'uitzetten', 'scene*', 'operate', 'switch on', 'switch off'],
+    zwak: ['lamp', 'lampen', 'licht', 'screen', 'screens', 'thermostaat', 'lights', 'light', 'blinds', 'thermostat'],
     nl: {
       antwoord:
         'Bedienen doe je in het huis op Thuis: tik op een kamer of een apparaat. Daarvoor moet je ingelogd zijn.',
       label: 'Naar Thuis',
     },
     en: {
-      antwoord: 'You operate things in the house on Home: tap a room or a device. You need to be logged in.',
+      antwoord: 'You operate things in the house on Home: tap a room or a device. You need to be signed in.',
       label: 'Go to Home',
     },
   },
   {
     id: 'schakelen',
     href: 'huis-kan.html',
-    sterk: ['schaduw*', 'meekijken', 'echt schakelen', 'echt regelen', 'zelf regelen', 'bewijs', 'leert', 'leren', 'shadow'],
-    zwak: ['slim', 'slimme'],
+    sterk: ['schaduw*', 'meekijken', 'echt schakelen', 'echt regelen', 'zelf regelen', 'bewijs', 'leert', 'leren', 'shadow', 'watching', 'really switch', 'take over', 'learn*'],
+    zwak: ['slim', 'slimme', 'smart'],
     nl: {
       antwoord:
         'Smart Climate kijkt nu mee: het zegt wat het zou doen en leert van je huis, maar schakelt het klimaat nog niet zelf. Bij Wat je huis kan zie je per functie hoe het ervoor staat.',
@@ -277,24 +277,24 @@ const ONDERWERPEN: readonly Onderwerp[] = [
  * Woorden die zeggen dat het om de app gaat: waar of hoe iets moet. "Hoe" alleen
  * telt niet: "hoe warm is het" en "hoe wordt het weer" gaan over het huis.
  */
-const HULP = ['waar', 'hoe stel', 'hoe pas', 'hoe voeg', 'hoe zet', 'hoe kan', 'hoe moet', 'hoe werkt', 'hoe doe', 'hoe vul', 'instel*', 'invul*', 'aanpas*', 'wijzig*', 'verander*', 'toevoeg*', 'voeg', 'verwijder*', 'vind', 'vinden', 'kan ik', 'moet ik', 'where', 'how do', 'how can', 'how to', 'change', 'set', 'add'];
+const HULP = ['waar', 'hoe stel', 'hoe pas', 'hoe voeg', 'hoe zet', 'hoe kan', 'hoe moet', 'hoe werkt', 'hoe doe', 'hoe vul', 'instel*', 'invul*', 'aanpas*', 'wijzig*', 'verander*', 'toevoeg*', 'voeg', 'verwijder*', 'vind', 'vinden', 'kan ik', 'moet ik', 'where', 'how do', 'how can', 'how to', 'change', 'set', 'add', 'enter', 'edit', 'remove', 'find', 'configure', 'can i', 'do i'];
 
 /* -------------------------------------------------------- over het huis */
 
-const NU = ['nu', 'momenteel', 'op dit moment', 'wat doe je', 'wat doe', 'wat gebeurt', 'gebeurt er', 'bezig', 'now', 'doing'];
-const STRAKS = ['straks', 'later', 'wanneer', 'vanavond', 'vannacht', 'morgen', 'zo meteen', 'gaat doen', 'ga je', 'gaan', 'plan*', 'tonight', 'tomorrow'];
-const ZON = ['zon', 'zonnig', 'zonne*', 'zonnestroom', 'opgewekt', 'opwek*', 'zonuren', 'sun', 'sunny', 'solar'];
+const NU = ['nu', 'momenteel', 'op dit moment', 'wat doe je', 'wat doe', 'wat gebeurt', 'gebeurt er', 'bezig', 'now', 'doing', 'right now', 'currently', 'happening', 'status'];
+const STRAKS = ['straks', 'later', 'wanneer', 'vanavond', 'vannacht', 'morgen', 'zo meteen', 'gaat doen', 'ga je', 'gaan', 'plan*', 'tonight', 'tomorrow', 'next', 'going to', 'will you', 'when'];
+const ZON = ['zon', 'zonnig', 'zonne*', 'zonnestroom', 'opgewekt', 'opwek*', 'zonuren', 'sun', 'sunny', 'solar', 'generated', 'produced', 'panels'];
 /** Het weer en de zon van morgen (besluit 142). */
-const MORGEN = ['morgen', 'overmorgen', 'regen', 'regent', 'regenen', 'bui', 'buien', 'weer', 'weersverwachting', 'weerbericht', 'tomorrow', 'rain', 'weather', 'forecast'];
+const MORGEN = ['morgen', 'overmorgen', 'regen', 'regent', 'regenen', 'bui', 'buien', 'weer', 'weersverwachting', 'weerbericht', 'tomorrow', 'rain', 'raining', 'shower*', 'weather', 'forecast'];
 /** Wat iets kost (besluit 142). */
-const KOSTEN = ['kost', 'kosten', 'kostte', 'kostten', 'geld', 'euro', 'cost', 'costs'];
-const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why'];
+const KOSTEN = ['kost', 'kosten', 'kostte', 'kostten', 'geld', 'euro', 'cost', 'costs', 'costing', 'money', 'euros', 'how much do', 'how much does', 'how much did'];
+const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why', 'how come', 'hot', 'cold', 'colder', 'temperature', 'degrees', 'waiting'];
 
 /** Koel, verwarm of zet uit; null als er geen wens in staat. */
 function wensIn(los: readonly string[], tekst: string): Wish | null {
-  if (los.some((t) => t.startsWith('koel') || t === 'cool')) return 'koelen';
-  if (los.some((t) => t.startsWith('verwarm') || t === 'heat') || ` ${tekst} `.includes(' warm op ')) return 'verwarmen';
-  if ((los.includes('zet') || los.includes('turn')) && (los.includes('uit') || los.includes('off'))) return 'uit';
+  if (los.some((t) => t.startsWith('koel') || t === 'cool' || t === 'cooling')) return 'koelen';
+  if (los.some((t) => t.startsWith('verwarm') || t === 'heat' || t === 'heating') || ` ${tekst} `.includes(' warm op ') || ` ${tekst} `.includes(' warm up ')) return 'verwarmen';
+  if ((los.includes('zet') || los.includes('turn') || los.includes('switch')) && (los.includes('uit') || los.includes('off'))) return 'uit';
   return null;
 }
 
@@ -374,7 +374,7 @@ export function voorbeelden(config: SiteConfig, lang: Lang): string[] {
   const kamer = config.zones[0]?.name.toLowerCase();
   return lang === 'nl'
     ? ['Wat doe je nu?', 'Hoe warm is het overal?', 'Wat wordt het weer morgen?', 'Wat kosten de airco’s?', 'Waar vul ik de prijzen in?']
-    : ['What are you doing now?', ...(kamer ? [`Why the ${kamer}?`] : []), 'Where do I enter prices?', 'How do I change the layout?'];
+    : ['What are you doing now?', 'How warm is it everywhere?', 'What is the weather tomorrow?', 'What do the air conditioners cost?', 'Where do I enter the prices?'];
 }
 
 /** Leest een vraag in eigen woorden. */
@@ -407,10 +407,10 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   const zon = telt(ZON, tekst, los);
   if (zon) huis.push({ vraag: { kind: 'zon' }, score: 2 * zon });
   // Wat het huis vandaag deed, en hoe warm het overal is (besluit 141).
-  const vandaag = telt(['vandaag gedaan', 'wat deed je', 'heb je gedaan', 'vandaag besloten', 'besloten', 'today did', 'what did you do'], tekst, los);
+  const vandaag = telt(['vandaag gedaan', 'wat deed je', 'heb je gedaan', 'vandaag besloten', 'besloten', 'today did', 'what did you do', 'what have you done', 'did you do', 'decided'], tekst, los);
   if (vandaag) huis.push({ vraag: { kind: 'vandaag' }, score: 3 * vandaag });
-  const overal = telt(['overal', 'alle kamers', 'elke kamer', 'in huis', 'everywhere', 'every room'], tekst, los);
-  if (overal && kamer == null && telt(['warm', 'koud', 'temperatuur', 'graden', 'temperature'], tekst, los)) huis.push({ vraag: { kind: 'warm' }, score: 5 });
+  const overal = telt(['overal', 'alle kamers', 'elke kamer', 'in huis', 'everywhere', 'every room', 'all rooms', 'in the house', 'whole house'], tekst, los);
+  if (overal && kamer == null && telt(['warm', 'koud', 'temperatuur', 'graden', 'temperature', 'hot', 'cold', 'degrees'], tekst, los)) huis.push({ vraag: { kind: 'warm' }, score: 5 });
   // Het weer van morgen, en wat iets kost (besluit 142).
   const morgen = telt(MORGEN, tekst, los);
   // Het weer zonder morgen erbij gaat over vandaag (besluit 166): "wat voor weer wordt het vandaag?".

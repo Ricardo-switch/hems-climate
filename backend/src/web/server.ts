@@ -842,7 +842,7 @@ export class WebServer {
         }
         const klaar = afsluiter(tekst, lang);
         if (klaar != null) {
-          sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar) });
+          sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar, lang) });
           return;
         }
         // Bedienen met een zin (besluit 148): eerst de woordzoeker, en wat die
@@ -864,12 +864,12 @@ export class WebServer {
           if (keuze.soort === 'vraag') b = { soort: 'huis', vraag: keuze.vraag };
         }
         if (b.soort === 'app') {
-          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord) });
+          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord, lang) });
           return;
         }
         if (b.soort === 'onbekend') {
           // Hardop staan de voorbeelden er zelf in (besluit 166); op het scherm zijn het knoppen.
-          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden, gesproken: uitspraak(b.gesproken) });
+          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden, gesproken: uitspraak(b.gesproken, lang) });
           return;
         }
         parsed = { question: b.vraag, lang };
@@ -902,8 +902,10 @@ export class WebServer {
       let weer = null;
       const kind = parsed.question.kind;
       if (kind === 'zon' || kind === 'straks' || kind === 'weer' || kind === 'morgen') {
-        const w = await this.weatherNow().catch(() => null);
-        if (w && 'vandaag' in w) {
+        const ruw = await this.weatherNow().catch(() => null);
+        // Het weer in woorden in de taal van de vraag (besluit 185).
+        const w = ruw && 'vandaag' in ruw ? weatherInLang(ruw, parsed.lang) : null;
+        if (w) {
           const m = w.dagen[0];
           const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
           // De rest van vandaag (besluit 166): uit de uren tot middernacht, anders het weer van nu.
@@ -922,7 +924,7 @@ export class WebServer {
         }
       }
       // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.
-      const kosten = kind === 'kosten' ? await this.#kostenDezeMaand(config).catch(() => null) : null;
+      const kosten = kind === 'kosten' ? await this.#kostenDezeMaand(config, parsed.lang).catch(() => null) : null;
       const antwoord = ask(parsed.question, {
         weer,
         kosten,
@@ -938,7 +940,7 @@ export class WebServer {
       // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
       const eigen = model ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
       // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
-      sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord) });
+      sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord, parsed.lang) });
       return;
     }
 
@@ -1427,7 +1429,7 @@ export class WebServer {
   }
 
   /** Wat de apparaten met een eigen meter deze maand kostten, voor de assistent (besluit 142). */
-  async #kostenDezeMaand(config: SiteConfig): Promise<NonNullable<AskContext['kosten']> | null> {
+  async #kostenDezeMaand(config: SiteConfig, lang: Lang = 'nl'): Promise<NonNullable<AskContext['kosten']> | null> {
     const settings = this.#options.energy?.store.current;
     if (settings == null) return null;
     const now = Date.now();
@@ -1435,12 +1437,14 @@ export class WebServer {
     const datum = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
     const range = periodRange('maand', datum, config.timezone, yearStartOf(settings.prijzen.contractStart));
     if (range == null) return null;
-    // De assistent spreekt hier Nederlands: de naam van de maand komt uit het rapport.
-    const key = `maand:${range.startMs}:nl`;
+    // De naam van de maand komt uit het rapport, in de taal van de vraag.
+    const key = `maand:${range.startMs}:${lang}`;
     const hit = this.#yieldCache.get(key);
-    const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now);
+    const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now, lang);
     if (report == null) return null;
-    const maand = report.periode.label.split(' ')[0]!.toLowerCase();
+    const eerste = report.periode.label.split(' ')[0]!;
+    // Een maand midden in een zin: in het Nederlands klein, in het Engels met een hoofdletter.
+    const maand = lang === 'nl' ? eerste.toLowerCase() : eerste;
     // Een apparaat heet zoals in de app, niet zoals zijn meter (het klimaatapparaat bij die meter).
     const apparaten = (this.#options.house?.()?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
     const naamVan = (meter: string, terug: string) => apparaten.find((d) => d.klimaat?.energieMeter === meter)?.naam ?? terug;
@@ -1846,7 +1850,7 @@ export class WebServer {
 
   /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
   async #opdrachtAntwoord(h: Herkend, tekst: string, lang: Lang, model: Vraag | null): Promise<Record<string, unknown>> {
-    if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord) };
+    if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang) };
     const o = h.opdracht;
     const eigen = model ? await inEigenWoorden(model, tekst, o, lang) : { antwoord: o.antwoord, eigen: false };
     return {
@@ -1857,7 +1861,7 @@ export class WebServer {
       antwoord: eigen.antwoord,
       eigen: eigen.eigen,
       feiten: o.feiten,
-      gesproken: uitspraak(eigen.antwoord),
+      gesproken: uitspraak(eigen.antwoord, lang),
       opdracht: { pad: o.pad, body: o.body },
       gedaan: o.gedaan,
       beweegt: o.beweegt,

@@ -76,6 +76,6 @@ describe('klaarzetten in Home Assistant (besluit 179)', () => {
     const zonder = klaarzetten({ ...basis, registers: { ...registers, floors: [], areas: [] } }, 'en');
     expect(van(zonder, 'ruimtes').zin).toBe('Create floors and areas, and put every device in its area. The app takes them over as a proposal.');
     // Geen Nederlands in de Engelse punten, behalve het wekwoord zelf.
-    for (const punt of en) expect(`${punt.titel} ${punt.zin} ${punt.waar}`.replace('Hé huis', '')).not.toMatch(/(?:je|het|een|de|van|met|wordt|staat|nog)/);
+    for (const punt of en) expect(`${punt.titel} ${punt.zin} ${punt.waar}`.replace('Hé huis', '')).not.toMatch(/\b(?:je|het|een|de|van|met|wordt|staat|nog)\b/);
   });
 });

@@ -175,9 +175,10 @@ function helderheidNu(lampen: readonly BedienLamp[]): number | null {
   return h.length ? Math.max(...h) : 100;
 }
 
-function wasVan(lampen: readonly BedienLamp[]): string {
+function wasVan(lampen: readonly BedienLamp[], lang: Lang): string {
   const h = helderheidNu(lampen);
-  return h == null ? 'was uit' : lampen.some((l) => l.dimbaar) && h < 100 ? `was ${pct(h)}` : 'was aan';
+  const nl = lang === 'nl';
+  return h == null ? (nl ? 'was uit' : 'was off') : lampen.some((l) => l.dimbaar) && h < 100 ? `was ${pct(h)}` : nl ? 'was aan' : 'was on';
 }
 
 /** Een lichtopdracht, of waarom het niet kan. */
@@ -189,17 +190,21 @@ export function lichtOpdracht(doel: LichtDoel, actie: LichtActie, waarde: number
   const wieEn = doel.soort === 'lamp' ? doel.lamp.naam : doel.soort === 'kamer' ? `The lights in ${doel.kamer.naam}` : doel.soort === 'etage' ? `The lights on ${doel.naam}` : 'All lights';
   const id = doel.soort === 'lamp' ? doel.lamp.id : doel.soort === 'kamer' ? doel.kamer.id : doel.soort === 'etage' ? doel.id : null;
   const ruimte = doel.soort === 'lamp' ? doel.lamp.kamerId : doel.soort === 'kamer' ? doel.kamer.id : null;
-  const naamKaart = doel.soort === 'lamp' ? doel.lamp.naam : doel.soort === 'kamer' ? `Licht ${doel.kamer.naam.toLowerCase()}` : doel.soort === 'etage' ? doel.naam : 'Het hele huis';
+  const naamKaart =
+    doel.soort === 'lamp' ? doel.lamp.naam
+    : doel.soort === 'kamer' ? (nl ? `Licht ${doel.kamer.naam.toLowerCase()}` : `Lights ${doel.kamer.naam}`)
+    : doel.soort === 'etage' ? doel.naam
+    : nl ? 'Het hele huis' : 'The whole house';
   const meervoud = doel.soort !== 'lamp';
   const feitenNaam = doel.soort === 'lamp' ? naamFeit(doel.lamp.naam) : doel.soort === 'kamer' ? naamFeit(doel.kamer.naam) : doel.soort === 'etage' ? naamFeit(doel.naam) : [];
-  const was = wasVan(lampen);
+  const was = wasVan(lampen, lang);
 
   if (actie === 'uit') {
     return klaar(
       { doel: doel.soort, id, aan: false },
       nl ? `${wie} ${meervoud ? (doel.soort === 'huis' ? 'zijn' : 'is') : 'is'} uit.` : `${wieEn} ${meervoud ? 'are' : 'is'} off.`,
       feitenNaam,
-      [{ soort: 'licht', waarde: 'Uit', uitleg: `${naamKaart}, ${was}` }],
+      [{ soort: 'licht', waarde: nl ? 'Uit' : 'Off', uitleg: `${naamKaart}, ${was}` }],
     );
   }
   if (doel.soort === 'etage' || doel.soort === 'huis') {
@@ -214,7 +219,7 @@ export function lichtOpdracht(doel: LichtDoel, actie: LichtActie, waarde: number
     ]);
   }
   if (actie === 'aan' && waarde == null) {
-    return klaar({ doel: doel.soort, id, aan: true }, nl ? `${wie} is aan.` : `${wieEn} ${meervoud ? 'are' : 'is'} on.`, feitenNaam, [{ soort: 'licht', waarde: 'Aan', uitleg: `${naamKaart}, ${was}` }]);
+    return klaar({ doel: doel.soort, id, aan: true }, nl ? `${wie} is aan.` : `${wieEn} ${meervoud ? 'are' : 'is'} on.`, feitenNaam, [{ soort: 'licht', waarde: nl ? 'Aan' : 'On', uitleg: `${naamKaart}, ${was}` }]);
   }
   if (!dimbaar) return { ok: false, antwoord: nl ? `${wie} kan alleen aan en uit.` : `${wieEn} can only go on and off.` };
   const nu = helderheidNu(lampen);
@@ -237,16 +242,19 @@ export function lichtOpdracht(doel: LichtDoel, actie: LichtActie, waarde: number
 
 /** Na het licht: de andere lampen in dezelfde kamer, en alles uit. */
 function lichtVervolg(doel: LichtDoel, actie: LichtActie, b: Bedienbaar, lang: Lang): { label: string; tekst: string }[] {
-  if (lang !== 'nl') return [];
   const kamer = doel.soort === 'lamp' ? b.kamers.find((k) => k.id === doel.lamp.kamerId) : doel.soort === 'kamer' ? doel.kamer : null;
   if (!kamer) return [];
+  const nl = lang === 'nl';
   const uit: { label: string; tekst: string }[] = [];
   const ander = doel.soort === 'lamp' ? kamer.lampen.find((l) => l.id !== doel.lamp.id && l.aan && l.dimbaar) : null;
-  if (ander && (actie === 'zachter' || actie === 'feller')) uit.push({ label: `${ander.naam} ook ${actie}`, tekst: `${ander.naam} ${actie}` });
+  if (ander && (actie === 'zachter' || actie === 'feller')) {
+    const woord = nl ? actie : actie === 'zachter' ? 'dimmer' : 'brighter';
+    uit.push({ label: nl ? `${ander.naam} ook ${woord}` : `${ander.naam} ${woord} too`, tekst: `${ander.naam} ${woord}` });
+  }
   const scene = b.scenes.find((s) => s.kamer === kamer.naam);
-  if (scene && actie !== 'uit') uit.push({ label: `Scène ${scene.naam}`, tekst: `scène ${scene.naam}` });
-  if (actie !== 'uit' && kamer.lampen.length > 1) uit.push({ label: `Alles ${kamerZin(kamer.naam)} uit`, tekst: `licht ${kamer.naam} uit` });
-  if (actie === 'uit') uit.push({ label: `Licht ${kamerZin(kamer.naam)} weer aan`, tekst: `licht ${kamer.naam} aan` });
+  if (scene && actie !== 'uit') uit.push(nl ? { label: `Scène ${scene.naam}`, tekst: `scène ${scene.naam}` } : { label: `Scene ${scene.naam}`, tekst: `scene ${scene.naam}` });
+  if (actie !== 'uit' && kamer.lampen.length > 1) uit.push(nl ? { label: `Alles ${kamerZin(kamer.naam)} uit`, tekst: `licht ${kamer.naam} uit` } : { label: `All off in ${kamer.naam}`, tekst: `lights ${kamer.naam} off` });
+  if (actie === 'uit') uit.push(nl ? { label: `Licht ${kamerZin(kamer.naam)} weer aan`, tekst: `licht ${kamer.naam} aan` } : { label: `Lights in ${kamer.naam} on again`, tekst: `lights ${kamer.naam} on` });
   return uit.slice(0, 3);
 }
 
@@ -260,19 +268,20 @@ export function sceneOpdracht(scene: BedienScene, b: Bedienbaar, lang: Lang): He
       body: { id: scene.id },
       antwoord: lang === 'nl' ? `Scène ${scene.naam} staat aan.` : `Scene ${scene.naam} is on.`,
       feiten: naamFeit(scene.naam),
-      gedaan: [{ soort: 'scene', waarde: scene.naam, uitleg: `Scène, ${scene.kamer.toLowerCase()}` }],
+      gedaan: [{ soort: 'scene', waarde: scene.naam, uitleg: lang === 'nl' ? `Scène, ${scene.kamer.toLowerCase()}` : `Scene, ${scene.kamer}` }],
       beweegt: null,
       ruimte: kamer?.id ?? null,
-      vervolg: lang === 'nl' && kamer ? [{ label: `Licht ${kamerZin(kamer.naam)} uit`, tekst: `licht ${kamer.naam} uit` }] : [],
+      vervolg: !kamer ? [] : lang === 'nl' ? [{ label: `Licht ${kamerZin(kamer.naam)} uit`, tekst: `licht ${kamer.naam} uit` }] : [{ label: `Lights in ${kamer.naam} off`, tekst: `lights ${kamer.naam} off` }],
     },
   };
 }
 
 /** De stand in woorden zoals de app hem toont: "60% dicht", of uitgevouwen bij een zonnescherm. */
-function standWoord(s: BedienScherm): string | null {
+function standWoord(s: BedienScherm, lang: Lang): string | null {
   if (s.positiePct == null) return null;
-  if (s.zonnescherm) return s.positiePct <= 0 ? 'ingeklapt' : s.positiePct >= 100 ? 'uitgevouwen' : `${pct(s.positiePct)} uit`;
-  return s.positiePct >= 100 ? 'open' : s.positiePct <= 0 ? 'dicht' : `${pct(100 - s.positiePct)} dicht`;
+  const nl = lang === 'nl';
+  if (s.zonnescherm) return s.positiePct <= 0 ? (nl ? 'ingeklapt' : 'retracted') : s.positiePct >= 100 ? (nl ? 'uitgevouwen' : 'extended') : `${pct(s.positiePct)} ${nl ? 'uit' : 'out'}`;
+  return s.positiePct >= 100 ? 'open' : s.positiePct <= 0 ? (nl ? 'dicht' : 'closed') : `${pct(100 - s.positiePct)} ${nl ? 'dicht' : 'closed'}`;
 }
 
 /**
@@ -285,17 +294,21 @@ export function schermOpdracht(s: BedienScherm, actie: SchermActie, waarde: numb
   const wie = cap(dingNaam(s.naam));
   const feitenNaam = naamFeit(s.naam);
   const ruimte = b.kamers.find((k) => k.naam === s.kamer)?.id ?? null;
-  const was = standWoord(s);
+  const was = standWoord(s, lang);
   const uitleg = was ? `${s.naam}, was ${was}` : s.naam;
-  const vervolg = (lijst: [string, string][]) => (nl ? lijst.map(([label, tekst]) => ({ label, tekst })) : []);
+  const vervolg = (lijst: [string, string][]) => lijst.map(([label, tekst]) => ({ label, tekst }));
+  // Wat erna kan, als zin die de woordzoeker zelf weer verstaat.
+  const heel: [string, string][] = s.zonnescherm
+    ? nl ? [['Helemaal uit', `${s.naam} uit`], ['Weer in', `${s.naam} in`]] : [['All the way out', `${s.naam} out`], ['Back in', `${s.naam} in`]]
+    : nl ? [['Helemaal dicht', `${s.naam} dicht`], ['Weer open', `${s.naam} open`]] : [['Fully closed', `${s.naam} close`], ['Open again', `${s.naam} open`]];
   const op = (body: Record<string, unknown>, antwoord: string, feiten: Fact[], kaart: Kaartje, beweegt: boolean, verder: [string, string][]): Herkend => ({
     ok: true,
     opdracht: { soort: 'scherm', pad: 'api/scherm', body, antwoord, feiten, gedaan: [kaart], beweegt: beweegt ? { id: s.id, naam: s.naam } : null, ruimte, vervolg: vervolg(verder) },
   });
   const zegStop = nl ? ' Zeg stop als het genoeg is.' : ' Say stop when it is enough.';
   if (actie === 'stop') {
-    const zin = nl ? (s.terugmelding ? 'Gestopt.' : `Gestopt. ${wie} meldt niet terug waar hij staat, dus kijk even of het goed is.`) : 'Stopped.';
-    return op({ id: s.id, actie: 'stop', standPct: null }, zin, feitenNaam, { soort: 'scherm', waarde: nl ? 'Gestopt' : 'Stopped', uitleg: s.naam }, false, s.zonnescherm ? [['Helemaal uit', `${s.naam} uit`], ['Weer in', `${s.naam} in`]] : [['Helemaal dicht', `${s.naam} dicht`], ['Weer open', `${s.naam} open`]]);
+    const zin = s.terugmelding ? (nl ? 'Gestopt.' : 'Stopped.') : nl ? `Gestopt. ${wie} meldt niet terug waar hij staat, dus kijk even of het goed is.` : `Stopped. ${s.naam} does not report where it is, so check that it is right.`;
+    return op({ id: s.id, actie: 'stop', standPct: null }, zin, feitenNaam, { soort: 'scherm', waarde: nl ? 'Gestopt' : 'Stopped', uitleg: s.naam }, false, heel);
   }
   if (actie === 'stand') {
     if (!s.standKiezen) return { ok: false, antwoord: nl ? `${wie} meldt zijn stand niet terug; die kan alleen open, dicht en stop.` : `${s.naam} can only open, close and stop.` };
@@ -306,21 +319,26 @@ export function schermOpdracht(s: BedienScherm, actie: SchermActie, waarde: numb
       { id: s.id, actie: 'stand', standPct: positie },
       nl ? `${wie} gaat naar ${tekst} ${s.zonnescherm ? 'uit' : 'dicht'}.` : `${s.naam} goes to ${tekst} ${s.zonnescherm ? 'out' : 'closed'}.`,
       [...feitenNaam, { bron: 'scherm.stand', tekst }],
-      { soort: 'scherm', waarde: `${tekst} ${s.zonnescherm ? 'uit' : 'dicht'}`, uitleg },
+      { soort: 'scherm', waarde: `${tekst} ${s.zonnescherm ? (nl ? 'uit' : 'out') : nl ? 'dicht' : 'closed'}`, uitleg },
       true,
-      s.zonnescherm ? [['Helemaal uit', `${s.naam} uit`], ['Weer in', `${s.naam} in`]] : [['Helemaal dicht', `${s.naam} dicht`], ['Weer open', `${s.naam} open`]],
+      heel,
     );
   }
   // Open is bij een zonnescherm uitvouwen, dicht is inklappen (besluit 128).
   const woord = s.zonnescherm ? (actie === 'open' ? 'vouwt uit' : 'klapt in') : actie === 'open' ? 'gaat open' : 'gaat dicht';
   const kaart = s.zonnescherm ? (actie === 'open' ? 'Vouwt uit' : 'Klapt in') : actie === 'open' ? 'Gaat open' : 'Gaat dicht';
+  const doetEn = s.zonnescherm ? (actie === 'open' ? 'extending' : 'retracting') : actie === 'open' ? 'opening' : 'closing';
+  const terug: [string, string] =
+    actie === 'dicht'
+      ? s.standKiezen ? [nl ? 'Half open' : 'Half open', `${s.naam} half`] : [nl ? 'Toch weer open' : 'Open again', `${s.naam} ${s.zonnescherm && !nl ? 'out' : 'open'}`]
+      : s.zonnescherm ? [nl ? 'Weer in' : 'Back in', `${s.naam} in`] : [nl ? 'Toch weer dicht' : 'Close again', `${s.naam} ${nl ? 'dicht' : 'close'}`];
   return op(
     { id: s.id, actie, standPct: null },
-    nl ? `${wie} ${woord}.${zegStop}` : `${s.naam} is ${actie === 'open' ? 'opening' : 'closing'}.${zegStop}`,
+    nl ? `${wie} ${woord}.${zegStop}` : `${s.naam} is ${doetEn}.${zegStop}`,
     feitenNaam,
-    { soort: 'scherm', waarde: nl ? kaart : actie === 'open' ? 'Opening' : 'Closing', uitleg },
+    { soort: 'scherm', waarde: nl ? kaart : cap(doetEn), uitleg },
     true,
-    actie === 'dicht' ? [[s.standKiezen ? 'Half open' : 'Toch weer open', s.standKiezen ? `${s.naam} half` : `${s.naam} open`]] : [[s.zonnescherm ? 'Weer in' : 'Toch weer dicht', `${s.naam} ${s.zonnescherm ? 'in' : 'dicht'}`]],
+    [terug],
   );
 }
 
@@ -346,8 +364,8 @@ function beste<T extends { readonly naam: string }>(tekst: string, lijst: readon
 }
 
 const LICHT_WOORD = /\b(lamp|lampen|lampje|lampjes|licht|lichten|verlichting|spot|spots|spotjes|plafonniere|light|lights)\b/;
-const SCHERM_WOORD = /\b(screen|screens|scherm|schermen|zonnescherm|zonwering|rolluik|rolluiken|markies|luifel|blind|blinds|awning)\b/;
-const STOP = /^(stop|stoppen|stop maar|ho|halt|stop het scherm|stop het screen|stop screen|stop scherm|stop zonnescherm|stop het zonnescherm)$/;
+const SCHERM_WOORD = /\b(screen|screens|scherm|schermen|zonnescherm|zonwering|rolluik|rolluiken|markies|luifel|blind|blinds|awning|awnings|shutter|shutters|shade|shades)\b/;
+const STOP = /^(stop|stoppen|stop maar|ho|halt|stop het scherm|stop het screen|stop screen|stop scherm|stop zonnescherm|stop het zonnescherm|stop it|stop the screen|stop the blinds|stop the awning|stop the shutter)$/;
 
 /**
  * Een percentage of een los getal: "40", "op 40", "40 procent". Zonder de
@@ -388,14 +406,14 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
   }
 
   // "naar beneden" en "naar boven" zijn een richting, geen kamer.
-  const omlaag = /\bnaar beneden\b|\bomlaag\b|\bneer\b|\bzakken\b|\bdown\b/.test(tekst);
-  const omhoog = /\bnaar boven\b|\bomhoog\b|\bup\b/.test(tekst);
+  const omlaag = /\bnaar beneden\b|\bomlaag\b|\bneer\b|\bzakken\b|\bdown\b|\blower\b/.test(tekst);
+  const omhoog = /\bnaar boven\b|\bomhoog\b|\bup\b|\braise\b/.test(tekst);
   tekst = tekst.replace(/\bnaar (beneden|boven)\b/g, ' ').replace(/\s+/g, ' ').trim();
 
   // Een scherm: genoemd, of een woord voor scherm.
   const scherm = beste(tekst, b.schermen);
   if (!scherm && SCHERM_WOORD.test(tekst) && !b.schermen.length) {
-    return { ok: false, antwoord: nl ? 'Schermen bedienen staat niet aan. Dat zet je aan bij Instellingen, onder Functies.' : 'Operating screens is off. Turn it on under Settings, Functions.' };
+    return { ok: false, antwoord: nl ? 'Schermen bedienen staat niet aan. Dat zet je aan bij Instellingen, onder Functies.' : 'Operating screens is off. Turn it on under Settings, Features.' };
   }
   if (scherm || (SCHERM_WOORD.test(tekst) && b.schermen.length)) {
     const zonnescherm = /\b(zonnescherm|zonwering|markies|luifel|awning)\b/.test(tekst);
@@ -411,31 +429,31 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
     if (n != null && n > 0 && n < 100) return schermOpdracht(s, 'stand', n, b, lang);
     if (s.zonnescherm) {
       // Een zonnescherm vouw je uit en klap je in.
-      if (/\b(uit|uitvouwen|uitrollen|open|openen|out)\b/.test(tekst) || omlaag) return schermOpdracht(s, 'open', null, b, lang);
-      if (/\b(in|inklappen|inrollen|dicht|sluit|sluiten|weg|in)\b/.test(tekst) || omhoog) return schermOpdracht(s, 'dicht', null, b, lang);
+      if (/\b(uit|uitvouwen|uitrollen|open|openen|out|extend|roll out)\b/.test(tekst) || omlaag) return schermOpdracht(s, 'open', null, b, lang);
+      if (/\b(in|inklappen|inrollen|dicht|sluit|sluiten|weg|retract|close|roll in)\b/.test(tekst) || omhoog) return schermOpdracht(s, 'dicht', null, b, lang);
       return null;
     }
-    if (/\b(dicht|sluit|sluiten|close|closed)\b/.test(tekst) || omlaag || n === 100) return schermOpdracht(s, 'dicht', null, b, lang);
+    if (/\b(dicht|sluit|sluiten|close|closed|shut)\b/.test(tekst) || omlaag || n === 100) return schermOpdracht(s, 'dicht', null, b, lang);
     if (/\b(open|openen|weg|opendoen|open doen)\b/.test(tekst) || omhoog || n === 0) return schermOpdracht(s, 'open', null, b, lang);
     return null;
   }
 
   // Een scène, bij naam: "scène film", of de naam alleen als die lang genoeg is.
   const scene = beste(tekst.replace(/\bscene\b/g, ' ').replace(/\s+/g, ' ').trim(), b.scenes.filter((s) => /\bscene\b/.test(tekst) || gewoon(s.naam).length >= 4));
-  if (scene && (/\bscene\b/.test(tekst) || /\b(aan|zet|start|kies)\b/.test(tekst))) return sceneOpdracht(scene, b, lang);
+  if (scene && (/\bscene\b/.test(tekst) || /\b(aan|zet|start|kies|activate|turn on|switch on)\b/.test(tekst))) return sceneOpdracht(scene, b, lang);
 
   // Licht: een lamp bij naam, of een kamer met een woord voor licht.
   const lamp = beste(tekst, b.lampen);
   const kamer = lamp ? null : beste(tekst, b.kamers);
-  const overal = /\b(alle lampen|alles|overal|hele huis|heel het huis|in huis|all lights|everything)\b/.test(tekst);
+  const overal = /\b(alle lampen|alles|overal|hele huis|heel het huis|in huis|all lights|all the lights|everything|whole house|every light)\b/.test(tekst);
   const etage = lamp || kamer ? null : beste(tekst, b.etages);
   if (!lamp && !(LICHT_WOORD.test(tekst) || (kamer && /\b(dimmen|dim|zachter|feller)\b/.test(tekst)))) return null;
   const actie: LichtActie | null =
     /\b(uit|uitzetten|uitdoen|off)\b/.test(tekst) ? 'uit'
-    : /\b(zachter|dimmen|dim|donkerder|lager|minder fel|minder|softer|dimmer)\b/.test(tekst) ? 'zachter'
-    : /\b(feller|harder|helderder|lichter|hoger|meer licht|brighter)\b/.test(tekst) ? 'feller'
-    : /\b(warm|warmer|warmwit|gezellig)\b/.test(tekst) ? 'warm'
-    : /\b(koel|koeler|koud|daglicht|cool)\b/.test(tekst) ? 'koel'
+    : /\b(zachter|dimmen|dim|donkerder|lager|minder fel|minder|softer|dimmer|darker|turn down|lower)\b/.test(tekst) ? 'zachter'
+    : /\b(feller|harder|helderder|lichter|hoger|meer licht|brighter|brighten|turn up|more light)\b/.test(tekst) ? 'feller'
+    : /\b(warm|warmer|warmwit|gezellig|cosy|cozy)\b/.test(tekst) ? 'warm'
+    : /\b(koel|koeler|koud|daglicht|cool|cooler|daylight)\b/.test(tekst) ? 'koel'
     : /\b(neutraal|neutral)\b/.test(tekst) ? 'neutraal'
     : getal(tekst, [lamp?.naam ?? '', kamer?.naam ?? '']) != null ? 'helderheid'
     : /\b(aan|aanzetten|aandoen|on)\b/.test(tekst) ? 'aan'
@@ -447,8 +465,8 @@ export function herkenOpdracht(ruw: string, b: Bedienbaar, lang: Lang, laatsteSc
   else if (etage) doel = { soort: 'etage', id: etage.id, naam: etage.naam, lampen: b.kamers.filter((k) => k.etageId === etage.id).flatMap((k) => k.lampen) };
   else if (overal) doel = { soort: 'huis', lampen: b.lampen };
   if (doel == null) {
-    if (!b.lampen.length) return { ok: false, antwoord: nl ? 'Licht bedienen staat niet aan. Dat zet je aan bij Instellingen, onder Functies.' : 'Operating lights is off. Turn it on under Settings, Functions.' };
-    return { ok: false, antwoord: nl ? 'Welk licht bedoel je? Noem een kamer of een lamp, zoals "licht keuken uit".' : 'Which light? Name a room or a lamp.' };
+    if (!b.lampen.length) return { ok: false, antwoord: nl ? 'Licht bedienen staat niet aan. Dat zet je aan bij Instellingen, onder Functies.' : 'Operating lights is off. Turn it on under Settings, Features.' };
+    return { ok: false, antwoord: nl ? 'Welk licht bedoel je? Noem een kamer of een lamp, zoals "licht keuken uit".' : 'Which light do you mean? Name a room or a light, such as "kitchen lights off".' };
   }
   const n = getal(tekst, [lamp?.naam ?? '', kamer?.naam ?? '', etage?.naam ?? '']);
   return lichtOpdracht(doel, actie, actie === 'helderheid' ? n : null, b, lang);
