@@ -937,6 +937,9 @@ describe('de onboarding', () => {
     });
     expect(res.status).toBe(422);
     expect(await res.text()).toContain('nog geen voorstel');
+    // In de taal van de app (besluit 185).
+    const en = await fetch(`${base}/api/onboarding`, { method: 'POST', headers: { ...JSON_HEADERS, 'x-taal': 'en' }, body: JSON.stringify({ antwoorden: {} }) });
+    expect(((await en.json()) as { reden: string }).reden).toBe('No proposal has been fetched yet to save.');
   });
 
   it('schrijft het bestand weg en laat het door de eigen controle komen', async () => {

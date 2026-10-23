@@ -28,7 +28,9 @@ describe('bijwerken (21 oktober 2026)', () => {
     // En de app leest hem weer terug, versie voor versie.
     const terug = leesChangelog(bestand);
     expect(terug.map((n) => n.versie)).toEqual(NIEUW.map((n) => n.versie));
-    expect(terug[0]).toEqual({ versie: NIEUW[0]!.versie, nieuw: [...(NIEUW[0]!.nieuw ?? [])], beter: [...(NIEUW[0]!.beter ?? [])], opgelost: [...(NIEUW[0]!.opgelost ?? [])] });
+    const n0 = NIEUW[0]!;
+    const regels = (x: { nieuw?: readonly string[]; beter?: readonly string[]; opgelost?: readonly string[] }) => ({ nieuw: [...(x.nieuw ?? [])], beter: [...(x.beter ?? [])], opgelost: [...(x.opgelost ?? [])] });
+    expect(terug[0]).toEqual({ versie: n0.versie, ...regels(n0), ...(n0.en ? { en: regels(n0.en) } : {}) });
   });
 
   it('vergelijkt versies, en vindt de update van de eigen add-on', () => {
@@ -53,6 +55,22 @@ describe('bijwerken (21 oktober 2026)', () => {
     expect(updateView('0.46.1', update('off', '0.46.1'), md, true)).toMatchObject({ beschikbaar: false, notities: [] });
     expect(updateView('0.46.1', update('on', '0.47.0', { in_progress: true }), null, false)).toMatchObject({ beschikbaar: true, bezig: true, notities: [], magBijwerken: false });
     expect(updateView('0.46.1', null, null, true).beschikbaar).toBe(false);
+  });
+
+  it('geeft wat er klaarstaat in de taal van de app, en Nederlands als een versie geen Engels heeft (besluit 185)', () => {
+    const md = changelog([
+      { versie: '0.48.0', datum: '2026-10-25', nieuw: ['Iets moois'], opgelost: ['Een fout'], en: { nieuw: ['Something nice'], opgelost: ['A bug'] } },
+      { versie: '0.47.0', datum: '2026-10-22', beter: ['Sneller'] },
+    ]);
+    expect(md).toContain('*English*');
+    expect(md).toContain('**Fixed**');
+    const en = updateView('0.46.1', update('on', '0.48.0'), md, true, 'en');
+    expect(en.notities).toEqual([
+      { versie: '0.48.0', nieuw: ['Something nice'], beter: [], opgelost: ['A bug'] },
+      { versie: '0.47.0', nieuw: [], beter: ['Sneller'], opgelost: [] },
+    ]);
+    const nl = updateView('0.46.1', update('on', '0.48.0'), md, true);
+    expect(nl.notities[0]).toEqual({ versie: '0.48.0', nieuw: ['Iets moois'], beter: [], opgelost: ['Een fout'] });
   });
 
   it('zet een melding klaar, die na het bijwerken onder Eerder komt', () => {

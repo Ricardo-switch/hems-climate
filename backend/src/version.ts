@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.10';
+export const VERSIE = '0.59.11';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,20 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.11',
+    datum: '2026-10-23',
+    beter: [
+      'Wat er nieuw is bij een update staat in Home Assistant nu in het Nederlands en het Engels; de app toont het in jouw taal',
+      'Lukt het bewaren bij het begin niet, dan zegt de app waarom in jouw taal',
+    ],
+    en: {
+      beter: [
+        'What is new in an update is now in Dutch and English in Home Assistant; the app shows it in your language',
+        'If saving at the start does not work, the app says why in your language',
+      ],
+    },
+  },
   {
     versie: '0.59.10',
     datum: '2026-10-23',

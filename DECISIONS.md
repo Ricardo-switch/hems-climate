@@ -8443,8 +8443,13 @@ gehouden met meervouden: ja, met de regels per taal.
   herstart is het Nederlands tot de app weer opent. De paginatest opent zijn
   vensters in het Nederlands, tenzij een test anders vraagt.
 
-*Wat er nog Nederlands is (stap 9):* een foutmelding bij het begin, en de
-notities bij een update in Home Assistant (`addon/CHANGELOG.md`, uit `NIEUW`).
+- **De laatste restjes (0.59.11):** op 23 oktober 2026 koos de bewoner beide
+  talen in één bestand voor de notities bij een update: `addon/CHANGELOG.md`
+  zet per versie eerst het Nederlands en dan onder *English* het Engels
+  (**New**, **Improved**, **Fixed**). Home Assistant toont het hele bestand;
+  de app leest het deel in de taal van wie kijkt, en het Nederlands bij een
+  versie zonder Engels. Ook wat het begin zegt als bewaren niet lukt, staat nu
+  in beide talen.
 
 ## Wat nog een besluit wacht
 

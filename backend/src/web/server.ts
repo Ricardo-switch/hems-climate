@@ -469,7 +469,7 @@ export class WebServer {
           return;
         }
       }
-      sendJson(res, 200, await b.view(wie.beheerder));
+      sendJson(res, 200, await b.view(wie.beheerder, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 
@@ -1713,7 +1713,7 @@ export class WebServer {
       // keuzelijst stond, dus dit is de tweede zeef en niet de enige.
     }
 
-    const result = await onboarding.save(clean);
+    const result = await onboarding.save(clean, taalVan(new URL(req.url ?? '/', 'http://localhost').searchParams.get('taal') ?? req.headers['x-taal']));
     sendJson(res, result.ok ? 200 : 422, result);
     // Eerst het antwoord, dan opnieuw starten: de pagina wacht tot de dienst terug is.
     if (result.ok) this.#options.naOnboarding?.();

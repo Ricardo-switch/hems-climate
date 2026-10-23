@@ -459,14 +459,14 @@ const version = versionFromEnv(process.env);
  * is, vraagt de dienst één keer per nieuwe versie aan Home Assistant.
  */
 let releaseNotes: { versie: string; tekst: string | null } | null = null;
-async function updateNu(magBijwerken: boolean): Promise<UpdateView> {
+async function updateNu(magBijwerken: boolean, lang: Lang = 'nl'): Promise<UpdateView> {
   const s = version.installatie === 'add-on' ? eigenUpdate(allStates.values()) : null;
   const nieuwste = typeof s?.attributes['latest_version'] === 'string' ? (s.attributes['latest_version'] as string) : null;
   if (s && s.state === 'on' && nieuwste && releaseNotes?.versie !== nieuwste) {
     const tekst = await client.query<string | null>('update/release_notes', { entity_id: s.entity_id }).catch(() => null);
     releaseNotes = { versie: nieuwste, tekst: typeof tekst === 'string' ? tekst : null };
   }
-  return updateView(VERSIE, s, releaseNotes?.versie === nieuwste ? releaseNotes.tekst : null, magBijwerken);
+  return updateView(VERSIE, s, releaseNotes?.versie === nieuwste ? releaseNotes.tekst : null, magBijwerken, lang);
 }
 
 let lastStates: readonly HaEntityState[] = [];
