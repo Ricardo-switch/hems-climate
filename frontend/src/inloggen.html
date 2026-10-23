@@ -16,11 +16,13 @@
    * Inloggen (besluit 147, schets Wand-Inloggen). De hele app vraagt een
    * inlog. Wie niet ingelogd is, ziet alleen dit: een huis als silhouet in de
    * lucht van nu, zonder namen of getallen, en één knop naar Home Assistant.
-   * Deze pagina haalt niets bij de dienst op.
+   * Deze pagina vraagt de dienst alleen of je al ingelogd bent.
    */
   html, body { margin: 0; height: 100%; }
   body { position: relative; overflow: hidden; color: var(--tekst); font-family: var(--tekstfont, Figtree, system-ui, sans-serif); min-height: 100vh; }
   .silhouet { position: fixed; right: 4vw; bottom: 3vh; width: min(560px, 48vw); height: min(500px, 70vh); opacity: 0.6; filter: saturate(0.4) brightness(0.7); }
+  /* Even niet tonen zolang de pagina kijkt of je al ingelogd bent. */
+  .kaartje.wacht { visibility: hidden; }
   .kaartje { position: fixed; left: max(24px, 6vw); top: 50%; transform: translateY(-50%); width: min(420px, calc(100vw - 48px)); padding: 30px 30px 26px; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
   .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 700; font-size: 20px; }
   .merk i { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
@@ -40,7 +42,7 @@
 </head>
 <body class="lucht lucht-avond">
   <div class="silhouet" id="silhouet" aria-hidden="true"></div>
-  <main class="glas kaartje">
+  <main class="glas kaartje wacht">
     <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
     <h1>Log in om je huis te zien</h1>
     <p>Met je account van Home Assistant. Daarna weet het huis wie je bent, en begroet het je met je naam.</p>
@@ -54,6 +56,28 @@
       var terug = new URLSearchParams(location.search).get('terug') || '/thuis.html';
       if (terug.charAt(0) !== '/' || terug.charAt(1) === '/') terug = '/thuis.html';
       document.querySelector('[data-inloggen]').setAttribute('href', 'auth/login?terug=' + encodeURIComponent(terug));
+      /*
+       * Al ingelogd? (23 oktober 2026) Opent Android de app vanaf het
+       * startscherm, dan telt die eerste opening als komend van buiten, en gaat
+       * het cookie met SameSite=Strict niet mee: de dienst stuurde je dan
+       * hierheen, en je moest elke keer opnieuw inloggen bij Home Assistant. Een
+       * vraag vanaf deze pagina neemt het cookie wel mee; ben je ingelogd, dan
+       * meteen door.
+       */
+      var kaart = document.querySelector('.kaartje');
+      var toon = function () { kaart.classList.remove('wacht'); };
+      setTimeout(toon, 2500);
+      fetch('api/sessie', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (s) {
+          // Hooguit één keer per tien tellen: komt de pagina meteen weer hier, dan gewoon de knop.
+          var net = 0;
+          try { net = Number(sessionStorage.getItem('sc-inlog-door')) || 0; } catch (e) { /* zonder geheugen */ }
+          if (!s || !s.ingelogd || Date.now() - net < 10000) return toon();
+          try { sessionStorage.setItem('sc-inlog-door', String(Date.now())); } catch (e) { /* zonder geheugen */ }
+          location.replace(terug);
+        })
+        .catch(toon);
       // De lucht van nu, uit de klok: zonder inlog weet de pagina verder niets.
       var u = new Date().getHours();
       var tijd = u < 6 || u >= 22 ? 'nacht' : u < 9 ? 'ochtend' : u < 18 ? 'dag' : 'avond';

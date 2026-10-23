@@ -1,12 +1,20 @@
 # Wat is er nieuw
 
+## 0.59.9
+
+*23 oktober 2026*
+
+**Opgelost**
+
+- De app op je startscherm vraagt niet meer na elk sluiten opnieuw om in te loggen bij Home Assistant
+
 ## 0.59.8
 
 *23 oktober 2026*
 
 **Beter**
 
-- De beta op de NAS heeft een eigen icoon met BETA erop, zodat hij op je startscherm niet lijkt op de app van de Pi
+- Smart Climate op een eigen server, zoals een beta, heeft een eigen naam en een icoon met BETA erop, zodat hij op je startscherm niet lijkt op de add-on
 
 **Opgelost**
 

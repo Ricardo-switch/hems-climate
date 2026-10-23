@@ -6342,6 +6342,17 @@ bewoners pas na een eerste inlog, niet alles uit Home Assistant.
   sensor of persoon. Personen van een ander account, en bronnen die al bij een
   andere bewoner horen, staan er niet in; de dienst weigert ze ook.
 
+*Aangevuld 23 oktober 2026: niet elke keer opnieuw inloggen.* Met de app los
+op de telefoon (besluit 160) moest de bewoner na elk sluiten opnieuw inloggen
+bij Home Assistant. De sessie zelf bleef geldig; maar Android opent een app
+vanaf het startscherm alsof je van buiten komt, en dan gaat het cookie met
+`SameSite=Strict` niet mee. De dienst stuurde je dan naar het inloggen. Nu
+vraagt de inlogpagina eerst zelf of je al ingelogd bent: een vraag vanaf de
+eigen pagina neemt het cookie wel mee, en dan gaat hij meteen door naar waar je
+heen wilde (hooguit één keer per tien tellen, zodat hij nooit blijft springen).
+Het cookie blijft strikt. Een browsertest bootst het na: ingelogd, en de app
+geopend vanaf een andere site. Versie 0.59.9.
+
 ---
 
 ## 148. De assistent zegt het in eigen woorden, en bedient licht en schermen met een zin
