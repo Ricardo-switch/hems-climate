@@ -10,8 +10,8 @@
  * zachter", "screen dicht") komt terug als opdracht: deze pagina stuurt die
  * naar dezelfde deur als de knoppen, en het huis zegt wat het deed. Terwijl een
  * scherm beweegt, stopt "Stop het screen" het scherm en "Stil" het praten.
- * De stem is Piper in Home Assistant (`api/stem`); is
- * die er niet, dan een Nederlandse stem van het apparaat zelf, en anders
+ * De stem is Piper in Home Assistant (`api/stem`), in de taal van de app; is
+ * die er niet, dan een stem van het apparaat zelf in die taal, en anders
  * alleen tekst. Geluid kan pas na een tik: dat bepaalt de browser; een tik
  * op Thuis telt mee.
  *
@@ -47,9 +47,9 @@ async function laadAlles() {
   if (z.status === 'fulfilled') zon = z.value;
   if (w.status === 'fulfilled' && w.value?.vandaag) weer = w.value;
   if (v.status === 'fulfilled') vandaag = v.value;
-  // Piper alleen als die Nederlands kan; anders klinkt het Engels (opgelost 15 oktober).
-  // In een andere taal (besluit 185) de stem van het apparaat: Piper spreekt hier alleen Nederlands.
-  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal && taal.code === 'nl' ? st.value.stem : null;
+  // Piper alleen als die de taal van de app kan (opgelost 15 oktober; per taal sinds besluit 185);
+  // anders de stem van het apparaat. De dienst zoekt de stem bij de taal die de app meestuurt.
+  if (st.status === 'fulfilled') stemNaam = st.value?.stem && st.value?.taal ? st.value.stem : null;
   teken();
 }
 
@@ -423,7 +423,7 @@ async function zegMetPiper(tekst, totLetter, apparaat, geweigerd) {
     el = kaal;
   }
   const golfVan = golf ? analyser : null;
-  el.src = `api/stem?tekst=${encodeURIComponent(tekst)}`;
+  el.src = `api/stem?tekst=${encodeURIComponent(tekst)}&taal=${taal.code}`;
   el.onended = () => klaar?.();
   el.onerror = () => {
     if (!klaar) return;

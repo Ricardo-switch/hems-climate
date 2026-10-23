@@ -773,10 +773,12 @@ export class WebServer {
     if (path === '/api/stem') {
       const stem = this.#options.stem;
       const tekst = url.searchParams.get('tekst');
+      // In de taal van de app (besluit 185).
+      const lang = taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']);
       if (tekst == null) {
-        // Welke stem, en of die Nederlands kan; zonder Nederlands gebruikt de pagina de stem van het apparaat.
-        const nl = stem ? await stem.nederlands().catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
-        sendJson(res, 200, { stem: stem?.naam ?? null, taal: nl.taal, voice: nl.voice });
+        // Welke stem, en of die de taal van de app kan; zonder gebruikt de pagina de stem van het apparaat.
+        const t = stem ? await stem.taalVoor(lang).catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
+        sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice });
         return;
       }
       if (stem == null || stem.naam == null) {
@@ -788,7 +790,7 @@ export class WebServer {
         return;
       }
       try {
-        const g = await stem.zeg(tekst);
+        const g = await stem.zeg(tekst, lang);
         res.writeHead(200, { 'content-type': g.type, 'content-length': g.data.length, 'cache-control': 'private, max-age=3600' });
         res.end(g.data);
       } catch (error) {

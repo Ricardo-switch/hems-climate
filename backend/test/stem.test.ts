@@ -64,4 +64,28 @@ describe('de stem (besluit 141)', () => {
     const engels = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper'], talen: async () => ['en_US'], fetch: f });
     await expect(engels.zeg('Hallo')).rejects.toThrow('geen Nederlands');
   });
+
+  it('spreekt Engels met een Engelse stem, Brits eerst, en Engelse eenheden (besluit 185)', async () => {
+    expect(kiesTaal(['en_US', 'en_GB', 'nl_NL'], 'en')).toBe('en_GB');
+    expect(kiesTaal(['nl_NL', 'en-US'], 'en')).toBe('en-US');
+    expect(kiesTaal(['nl_NL'], 'en')).toBeNull();
+    const { vragen, f } = nep();
+    const stem = new Stem({
+      base: 'http://ha.local:8123',
+      token: 't',
+      stemmen: () => ['tts.piper'],
+      talen: async () => ['en_GB', 'nl_NL'],
+      stemmenVoor: async (_s, taal) => (taal === 'en_GB' ? [{ voice_id: 'en_GB-alba-medium', name: 'alba' }] : [{ voice_id: 'nl_NL-mls-medium', name: 'mls' }]),
+      fetch: f,
+    });
+    await stem.zeg('The panels gave 4 kWh.', 'en');
+    expect(vragen[0]!.body).toEqual({ engine_id: 'tts.piper', message: 'The panels gave 4 kilowatt hours.', cache: true, language: 'en_GB', options: { voice: 'en_GB-alba-medium' } });
+    // Dezelfde zin in een andere taal is een ander geluid; Nederlands blijft Nederlands.
+    await stem.zeg('Hallo', 'nl');
+    expect(vragen.at(-2)!.body).toMatchObject({ language: 'nl_NL', options: { voice: 'nl_NL-mls-medium' } });
+    expect(await stem.taalVoor('en')).toEqual({ stem: 'tts.piper', taal: 'en_GB', voice: 'en_GB-alba-medium' });
+    // Zonder Engelse stem een fout, zodat de pagina de stem van het apparaat kiest.
+    const alleenNl = new Stem({ base: 'http://ha.local:8123', token: 't', stemmen: () => ['tts.piper'], talen: async () => ['nl_NL'], fetch: f });
+    await expect(alleenNl.zeg('Hello', 'en')).rejects.toThrow('geen Engels');
+  });
 });
