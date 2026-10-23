@@ -436,6 +436,8 @@ export class VoorkeurenStore {
   readonly #path: string;
   #current: Bestand = LEEG;
   #writing: Promise<void> = Promise.resolve();
+  /** Per account de taal waarin de app het laatst opende (voor Automatisch). */
+  readonly #gezien = new Map<string, Lang>();
 
   constructor(logDir: string) {
     this.#path = join(logDir, VOORKEUREN_FILE);
@@ -461,11 +463,20 @@ export class VoorkeurenStore {
 
   /**
    * De taal van een account voor wat de dienst zelf stuurt, zoals een melding
-   * op de telefoon (besluit 185): wat hij bij Jij koos. Automatisch is
-   * Nederlands, zolang Engels een proef is.
+   * op de telefoon (besluit 185): wat hij bij Jij koos. Bij Automatisch de
+   * taal waarin de app van dat account het laatst opende: de dienst kent de
+   * taal van het account in Home Assistant niet, de app wel. Nog niet gezien
+   * (na een herstart, voor de app weer opent): Nederlands.
    */
   taal(account: string): Lang {
-    return this.#current.accounts[account]?.taal === 'en' ? 'en' : 'nl';
+    const keus = this.#current.accounts[account]?.taal;
+    if (keus === 'en' || keus === 'nl') return keus;
+    return this.#gezien.get(account) ?? 'nl';
+  }
+
+  /** De app van dit account opende in deze taal; alleen voor Automatisch, en niet bewaard. */
+  zagTaal(account: string | null, lang: Lang): void {
+    if (account) this.#gezien.set(account, lang);
   }
 
   /** De bewegingsmelder die de wand wekt (besluit 164), of null. */

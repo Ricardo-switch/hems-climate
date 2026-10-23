@@ -1,5 +1,17 @@
 # Wat is er nieuw
 
+## 0.59.7
+
+*23 oktober 2026*
+
+**Nieuw**
+
+- Automatisch kiest Engels bij een Engels account of een Engelse browser; Engels is geen proef meer
+
+**Beter**
+
+- Bij Automatisch komt een melding op je telefoon in de taal waarin je de app het laatst opende
+
 ## 0.59.6
 
 *23 oktober 2026*

@@ -44,11 +44,11 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
 
 ## Wat er nog kan
 
-1. `'en'` in `HEEL` in `frontend/kit/taal.js`: dan kiest Automatisch Engels
-   bij een Engels account of een Engelse browser. Dan ook de uitleg bij Jij
-   (`jij.taal.uitleg`, `jij.taal.enUitleg`) bijwerken, en bedenken wat
-   Automatisch voor een melding op de telefoon betekent
-   (`VoorkeurenStore.taal`: de dienst kent de taal van het account niet).
+1. Klaar sinds 0.59.7: `'en'` staat in `HEEL`, dus Automatisch kiest Engels
+   bij een Engels account of een Engelse browser; een melding op de telefoon
+   volgt bij Automatisch de taal waarin de app het laatst opende
+   (`VoorkeurenStore.zagTaal`). Een nieuwe taal komt pas in `HEEL` als de hele
+   app, de dienst en de assistent hem spreken.
 2. Een nieuwe zin voor de assistent: zet hem in beide talen in de woordzoeker
    of `opdracht.ts`, met een test per taal (`woordzoeker.test.ts`,
    `praten.test.ts`); een nieuwe zin voor Assist in beide lijsten in

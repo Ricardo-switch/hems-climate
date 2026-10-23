@@ -8412,10 +8412,17 @@ gehouden met meervouden: ja, met de regels per taal.
   stem leest de app voor met de stem van het apparaat. Het wekwoord blijft
   "Hé huis".
 
+- **Engels is geen proef meer (0.59.7):** op 23 oktober 2026 koos de bewoner
+  ervoor dat Automatisch ook Engels kiest, nu de app, de dienst en de assistent
+  het spreken (`'en'` in `HEEL`, `frontend/kit/taal.js`). Een melding op de
+  telefoon volgt bij Automatisch de taal waarin de app van dat account het
+  laatst opende (`VoorkeurenStore.zagTaal`): de dienst kent de taal van het
+  account in Home Assistant niet, de app wel. Dat wordt niet bewaard; na een
+  herstart is het Nederlands tot de app weer opent. De paginatest opent zijn
+  vensters in het Nederlands, tenzij een test anders vraagt.
+
 *Wat er nog Nederlands is (stap 9):* een foutmelding bij het begin, en de
 notities bij een update in Home Assistant (`addon/CHANGELOG.md`, uit `NIEUW`).
-Automatisch kiest nog geen Engels: `'en'` staat nog niet in `HEEL`
-(`frontend/kit/taal.js`).
 
 ## Wat nog een besluit wacht
 

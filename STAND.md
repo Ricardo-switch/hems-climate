@@ -28,9 +28,9 @@ verwijzing bestaat.
   te bouwen: een lichte versie met een kleur per bewoner, vier kaarten voor
   Thuis, meldingen op de telefoon en een eigen koppeling voor Assist (alle
   vier staan er, [181] tot en met [184]). Talen: de app, wat de dienst zelf
-  zegt en de assistent staan ook in het Engels ([185]; stand in
-  `backend/tools/omzetten/LEESMIJ.md`); Automatisch kiest het nog niet. Dan
-  Duits ([172]). Sneller: scripts met een stempel bewaart de
+  zegt en de assistent staan ook in het Engels, en Automatisch kiest het bij
+  een Engels account ([185]; stand in `backend/tools/omzetten/LEESMIJ.md`).
+  Dan Duits ([172]). Sneller: scripts met een stempel bewaart de
   browser, buiten Ingress gaat alles ingepakt, en het huis wordt één keer per
   verandering uitgerekend ([173]). Het huis en wie er thuis is komen live: de
   dienst zegt het als er iets veranderde ([174]). Op je startscherm met het

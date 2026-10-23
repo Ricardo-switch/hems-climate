@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.6';
+export const VERSIE = '0.59.7';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,24 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.7',
+    datum: '2026-10-23',
+    nieuw: [
+      'Automatisch kiest Engels bij een Engels account of een Engelse browser; Engels is geen proef meer',
+    ],
+    beter: [
+      'Bij Automatisch komt een melding op je telefoon in de taal waarin je de app het laatst opende',
+    ],
+    en: {
+      nieuw: [
+        'Automatic chooses English for an English account or browser; English is no longer a trial',
+      ],
+      beter: [
+        'With Automatic, a notification on your phone comes in the language you last opened the app in',
+      ],
+    },
+  },
   {
     versie: '0.59.6',
     datum: '2026-10-23',

@@ -582,6 +582,8 @@ export class WebServer {
       const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)), ...(profiel ? { profielen: profiel.profielen, scherm: profiel.scherm } : {}) };
       // De telefoons voor de meldingen (besluit 183) staan erbij: die komen uit Home Assistant, niet uit het bestand.
       const telefoons = this.#options.telefoons?.(wie.userId) ?? [];
+      // Elke pagina vraagt dit op, met de taal waarin de app opende: die geldt bij Automatisch voor de telefoon (besluit 185).
+      if (req.headers['x-taal'] != null) voorkeuren.zagTaal(wie.userId, taalVan(req.headers['x-taal']));
       if (method !== 'POST') {
         sendJson(res, 200, { ...voorkeuren.view(kijker), telefoons });
         return;
