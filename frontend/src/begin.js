@@ -208,7 +208,7 @@ async function wachtOpHerstart(naar) {
 }
 
 async function stuur(pad, body) {
-  const r = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetch(pad, { method: 'POST', headers: { 'content-type': 'application/json', 'x-taal': taal.code }, body: JSON.stringify(body) });
   const uit = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(uit.reden || uit.fout || t('toegang.lukteNiet'));
   return uit;

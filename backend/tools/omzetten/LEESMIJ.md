@@ -15,9 +15,10 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
   Klaarzetten, de vragen bij het begin, de standaardnamen van de etages, de
   rol bij Bewoners en toegang, en wat er nieuw is (`en` in `NIEUW`). De app
   let nergens meer op een Nederlands woord van de dienst.
-- **Nog Nederlands, klein:** een foutmelding bij het begin (`onboarding.save`),
-  `addon/CHANGELOG.md` (de notities bij een update in Home Assistant), en een
-  paar namen die de dienst als terugval geeft ("je zonnesensor").
+- **De restjes (0.59.11):** `addon/CHANGELOG.md` staat in beide talen
+  (`changelog()` en `leesChangelog()` in `bijwerken.ts`), en de foutmelding
+  bij het begin ook (`onboarding.save`). Nog Nederlands: een terugvalnaam als
+  "je zonnesensor", alleen als Home Assistant geen naam geeft.
 - **Deel 6, de assistent (0.59.6):** Engels verstaan (`woordzoeker.ts`,
   `opdracht.ts`), Engelse zinnen voor Assist (`zinnenVoor('en', …)`), en Piper
   per taal (`Stem.taalVoor`, `uitspraak(tekst, lang)`).

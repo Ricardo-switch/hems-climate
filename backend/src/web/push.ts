@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { Lang } from './assistant.js';
+import type { Bewoners } from './bewoners.js';
 import { inTaal, type Melding, type MeldingSoort } from './meldingen.js';
 
 export const PUSH_FILE = 'push.json';
@@ -122,6 +123,30 @@ export interface Ontvanger {
   readonly telefoon: Telefoon | null;
   /** De taal die hij bij Jij koos (besluit 185); weg is Nederlands. */
   readonly taal?: Lang;
+}
+
+/**
+ * Wie een melding op de telefoon krijgt (besluit 183): elke bewoner, geen
+ * gast, met zijn keuzes, zijn telefoon en zijn taal. Stond in main.ts.
+ */
+export function ontvangersVan(
+  b: Bewoners,
+  voorkeuren: { meldingen(account: string): MeldingKeus; taal(account: string): Lang },
+  telefoons: readonly Telefoon[],
+): Ontvanger[] {
+  return b.volgorde.flatMap((id) => {
+    const x = b.bewoners[id];
+    if (!x || x.gast) return [];
+    const keus = voorkeuren.meldingen(x.haUser);
+    return [{ account: x.haUser, keus, telefoon: telefoonVan(x.haUser, keus, telefoons), taal: voorkeuren.taal(x.haUser) }];
+  });
+}
+
+/** De proefmelding (besluit 183), in de taal die de bewoner koos. */
+export function proefTekst(taal: Lang): { titel: string; tekst: string } {
+  return taal === 'en'
+    ? { titel: 'Test notification from Smart Climate', tekst: 'This is what a notification on your phone looks like.' }
+    : { titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.' };
 }
 
 /** Wat er staat als een melding geen eigen woorden heeft voor weer goed. */
