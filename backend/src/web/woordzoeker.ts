@@ -370,8 +370,8 @@ export function afsluiter(ruw: string, lang: Lang): string | null {
 
 /* ---------------------------------------------------------------- kiezen */
 
-export function voorbeelden(config: SiteConfig, lang: Lang): string[] {
-  const kamer = config.zones[0]?.name.toLowerCase();
+/** Wat je kunt vragen; elk voorbeeld verstaat de woordzoeker zelf (een test houdt dat zo). */
+export function voorbeelden(_config: SiteConfig, lang: Lang): string[] {
   return lang === 'nl'
     ? ['Wat doe je nu?', 'Hoe warm is het overal?', 'Wat wordt het weer morgen?', 'Wat kosten de airco’s?', 'Waar vul ik de prijzen in?']
     : ['What are you doing now?', 'How warm is it everywhere?', 'What is the weather tomorrow?', 'What do the air conditioners cost?', 'Where do I enter the prices?'];
