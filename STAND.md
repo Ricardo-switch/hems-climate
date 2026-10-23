@@ -417,8 +417,9 @@ verwijzing bestaat.
   ([55]).
 - **Namen in het Engels,** de rest in het Nederlands ([59]).
 - **Kleinere bestanden:** HTTP, de live-verbinding en de opties van de
-  webserver staan apart van `server.ts`, en losse stukken van `main.ts` in eigen
-  bestanden ([180]).
+  webserver staan apart van `server.ts`; de routes per onderwerp in
+  `web/routes/`, met een gedeelde context (`web/diensten.ts`); en wat in
+  `main.ts` op zichzelf staat in eigen, getoetste bestanden ([180]).
 
 <!-- links:begin -->
 [1]: DECISIONS.md#1-weg-van-yaml-niet-omdat-het-niet-werkte

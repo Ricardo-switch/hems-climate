@@ -8069,6 +8069,30 @@ de opties, de caches); daarvoor moet eerst een gedeelde context komen, en dat
 is meer verbouwen dan opknippen. En `main.ts` verder uit elkaar: het is één
 script dat alles aan elkaar knoopt, met veel gedeelde stand.
 
+*Aangevuld 23 oktober 2026: de routes toch per onderwerp.* Op verzoek van de
+bewoner. Eerst de gedeelde context die hierboven ontbrak: `web/diensten.ts`
+(de opties, de toegang, wie er kijkt, de live-verbinding en de caches). De
+routes staan nu in negen bestanden onder `web/routes/`: camera, inloggen,
+beheer, energie, bewoners, opbrengst, stand, assistent en huis. Elk krijgt de
+context mee als `d` en zegt of het een verzoek afhandelde; `server.ts` houdt
+de toegangsregels (hostnamen, inloggen, de 405-muur, de eigen pagina, een gast)
+en vraagt de onderwerpen op volgorde. Hun paden overlappen niet. Nagegaan zoals
+hierboven: typecheck, lint, alle tests en de 62 paginatests groen, en elke
+regel die uit `server.ts` verdween staat letterlijk terug, op de bedoelde
+omzettingen na (`this.#` wordt `d`, een private methode een functie met `d`
+vooraan, en de deurbel heet `bel` omdat `d` de context is). `server.ts` is
+473 regels.
+
+Uit `main.ts` alleen wat op zichzelf staat, als functie met zijn invoer
+expliciet, en daardoor nu getoetst: wat de bel elke minuut opbouwt
+(`web/meldingen-bron.ts`), wie een melding op de telefoon krijgt en de
+proefmelding (`push.ts`), de weerbron (`web/weerbron.ts`), de historie uit
+de statistiek (`web/historie.ts`) en de configuratie met alles wat de app
+erover legt (`web/config-uit-app.ts`). Het aan elkaar knopen blijft in
+`main.ts` (1.728 regels): geen test laat dat script starten, dus daar alleen
+wat zonder gedeelde stand kan. `--check-config` loopt erna nog zoals ervoor.
+Geen nieuwe versie: voor de bewoner verandert er niets.
+
 ## 181. Een profiel per bewoner: licht of donker, een eigen kleur, en de wand volgt wie er geldt
 
 *Onderwerp: weergave · Status: geldig*

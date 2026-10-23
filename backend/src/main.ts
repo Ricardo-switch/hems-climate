@@ -18,7 +18,7 @@ import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
 import { klaarzetten } from './web/klaarzetten.js';
 import { Stem } from './web/stem.js';
-import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
+import { rollenUitConfig } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
 import { meldingenBron } from './web/meldingen-bron.js';
 import { VERSIE } from './version.js';
@@ -40,10 +40,10 @@ import {
 } from './adapters/homeassistant/discovery.js';
 import { buildHouse, houseBeforeSetup, knownForLayout, proposeLayout, type HouseRegisters } from './web/house.js';
 import { LayoutStore, herstelMeedoen, withLayoutNames, type Layout } from './web/layout.js';
-import { withHeatSources } from './web/warmte.js';
 import { noteSensors, readLayoutFile, withMeasurement } from './web/meten.js';
-import { ComfortStore, controleerComfort, withComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
-import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, persoonsAccount, herken as herkenBewoner, hoofdVan, leesActie, namenVoorExport, personenUit, profielenVan, profielenVoor, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
+import { configUitDeApp } from './web/config-uit-app.js';
+import { ComfortStore, controleerComfort, type Comfort, type ComfortRoom, type ComfortView } from './web/comfort.js';
+import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStand, persoonsAccount, herken as herkenBewoner, hoofdVan, leesActie, namenVoorExport, personenUit, profielenVan, vasthoudenVoorbij, voerUit, zonderVasthoudenVan, type Bewoners, type Wie } from './web/bewoners.js';
 import { BACKUP_DIR, OPNIEUW_STARTEN, beginOpnieuw, bewaarBackup, bewaardeBackups, leesBackup, maakBackup, zetTerug } from './web/gegevens.js';
 import { entiteitenLijst, type AnalyseExtra } from './web/export.js';
 import { UitstelStore } from './web/uitstel.js';
@@ -373,32 +373,20 @@ await bewonersStore?.load();
 async function configWithComfort(comfort: Comfort | null, bewoners: Bewoners = bewonersStore?.current ?? GEEN_BEWONERS): Promise<{ ok: true; config: SiteConfig; toegevoegd: string[] } | { ok: false; reden: string }> {
   if (!site) return { ok: false, reden: 'er is geen configuratie' };
   const base = JSON.parse(await readFile(site.source, 'utf-8')) as Record<string, unknown>;
-  const metAansluiting = answersAtStart && connectionApplied.toegevoegd.length ? withConnection(base, answersAtStart).raw : base;
-  // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
-  const layout = layoutNu?.() ?? layoutAtStart;
-  // De regeling per kamer uit de app (besluit 138): welke apparaten een kamer regelen, en hoe.
-  const metRegeling = withRegeling(metAansluiting, layout?.kamers ?? null, {
+  // De stapel zelf staat in config-uit-app.ts; hier de stand van nu.
+  return configUitDeApp(base, {
+    aansluiting: answersAtStart,
+    aansluitingToegevoegd: connectionApplied,
+    // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
+    layout: layoutNu?.() ?? layoutAtStart,
     state: (id) => allStates.get(id),
     vermogenSensor,
-    kamerVan: (id) => layout?.apparaten[id]?.kamer ?? null,
+    comfort,
+    bewoners,
+    occupancy: site.config.occupancy,
+    strategieen: strategies.ids,
+    waarschuw: (t) => console.warn(t),
   });
-  for (const t of metRegeling.overgeslagen) console.warn(`Regeling uit de app: ${t}`);
-  // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
-  const metMeten = withMeasurement(metRegeling.raw, layout).raw;
-  // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
-  const metBronnen = withHeatSources(metMeten, (layoutNu?.() ?? layoutAtStart)?.kamers ?? null);
-  const metComfort = withComfort(metBronnen.raw, comfort);
-  // Comfort per bewoner (besluit 147): de profielen op volgorde, en "toch die van" als iemand dat koos.
-  const zoneIds = new Set((Array.isArray(metComfort.raw['zones']) ? (metComfort.raw['zones'] as Record<string, unknown>[]) : []).map((z) => String(z['id'])));
-  const profiles = profielenVoor(bewoners, comfort, site.config.occupancy, zoneIds);
-  if (profiles.length > 0) {
-    metComfort.raw = { ...metComfort.raw, profiles, ...(bewoners.vasthouden ? { profileHold: { id: bewoners.vasthouden.id, home: bewoners.vasthouden.home } } : {}) };
-    metComfort.toegevoegd.push(`comfort per bewoner: ${profiles.map((x) => x.name).join(', ')}`);
-  }
-  // Een kamer die een apparaat kwijtraakte (besluit 138): doelen binnen wat de apparaten kunnen.
-  const checked = parseSiteConfig(metRegeling.toegevoegd.length || (layout?.kamers ?? []).some((k) => k.rollen) ? doelenBinnenBereik(metComfort.raw) : metComfort.raw, { knownStrategies: strategies.ids });
-  if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
-  return { ok: true, config: checked.config, toegevoegd: [...metRegeling.toegevoegd, ...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
 }
 /** De indeling van nu, zodra de opslag er is; daarvoor die van het starten. */
 let layoutNu: (() => Layout | null) | null = null;
