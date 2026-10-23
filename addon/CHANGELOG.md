@@ -1,5 +1,13 @@
 # Wat is er nieuw
 
+## 0.59.10
+
+*23 oktober 2026*
+
+**Opgelost**
+
+- Bij Kamers en indeling gaat een wijziging niet meer verloren als je snel achter elkaar iets verandert
+
 ## 0.59.9
 
 *23 oktober 2026*

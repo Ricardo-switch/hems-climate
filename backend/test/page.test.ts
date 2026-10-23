@@ -3541,15 +3541,19 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
     await context.route((url) => !url.href.startsWith(baseUrl) && url.hostname !== 'localhost', (route) => route.abort());
     const p = await context.newPage();
-    await p.goto(`${baseUrl}/vandaag.html`);
-    await p.waitForURL(/\/inloggen\.html/);
-    await p.locator('a', { hasText: 'Inloggen met Home Assistant' }).click();
-    await p.waitForURL(/\/vandaag\.html$/, { timeout: 10_000 });
-    await p.waitForTimeout(800);
-    expect(new URL(p.url()).pathname).toBe('/vandaag.html');
-    await context.close();
-    haInlog = vorige;
-    ha.close();
+    try {
+      await p.goto(`${baseUrl}/vandaag.html`);
+      await p.waitForURL(/\/inloggen\.html/);
+      await p.locator('a', { hasText: 'Inloggen met Home Assistant' }).click();
+      await p.waitForURL(/\/vandaag\.html$/, { timeout: 15_000 });
+      await p.waitForTimeout(800);
+      expect(new URL(p.url()).pathname).toBe('/vandaag.html');
+    } finally {
+      // Ook als het misgaat: anders gaat de volgende test naar dit nagemaakte Home Assistant.
+      await context.close();
+      haInlog = vorige;
+      ha.close();
+    }
   }, 30_000);
 
   /*

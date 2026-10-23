@@ -392,6 +392,11 @@ describe('welke versie er draait (besluit 54)', () => {
     expect(v).toMatchObject({ nummer: VERSIE, commit: 'abc1234' });
     expect(v.nieuw[0]?.versie).toBe(VERSIE);
     expect(v.nieuw.length).toBeLessThanOrEqual(10);
+    // Woorden die voor elk huis kloppen: geen NAS (dezelfde regel als de paginatest, maar meteen).
+    for (const n of NIEUW.slice(0, TERUGKIJKEN)) {
+      const tekst = [n.nieuw, n.beter, n.opgelost, n.en?.nieuw, n.en?.beter, n.en?.opgelost].flatMap((x) => x ?? []).join(' ');
+      expect(tekst, n.versie).not.toMatch(/NAS/);
+    }
     // Wat de app laat zien, staat er ook in het Engels, met evenveel regels (besluit 185).
     for (const n of NIEUW.slice(0, TERUGKIJKEN)) {
       expect(n.en, n.versie).toBeDefined();
