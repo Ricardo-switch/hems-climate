@@ -8,7 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { HaClient, type HaEntityState } from '../src/adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../src/adapters/homeassistant/discovery.js';
 import type { Melding } from '../src/web/meldingen.js';
-import { STANDAARD_MELDINGEN, alsDienst, alsMelding, paneelVan, inNachtrust, teSturen, telefoonVan, vindTelefoons, type Ontvanger, type Telefoon } from '../src/web/push.js';
+import { STANDAARD_MELDINGEN, alsDienst, alsMelding, ontvangersVan, paneelVan, proefTekst, inNachtrust, teSturen, telefoonVan, vindTelefoons, type Ontvanger, type Telefoon } from '../src/web/push.js';
+import { GEEN_BEWONERS, voegToe } from '../src/web/bewoners.js';
 import { leesMeldingen } from '../src/web/voorkeuren.js';
 
 const TZ = 'Europe/Amsterdam';
@@ -140,5 +141,17 @@ describe('wat er wanneer naar de telefoon gaat', () => {
     expect(leesMeldingen({ rook: 'ja' }, STANDAARD_MELDINGEN).ok).toBe(false);
     expect(leesMeldingen({ van: '25:00' }, STANDAARD_MELDINGEN).ok).toBe(false);
     expect(leesMeldingen({ alles: true }, STANDAARD_MELDINGEN).ok).toBe(false);
+  });
+
+  it('stuurt naar elke bewoner met zijn keuzes, telefoon en taal, en niet naar een gast (los uit main.ts)', () => {
+    let b = voegToe(GEEN_BEWONERS, { userId: 'u', naam: 'Ricardo' }, null, 0);
+    b = voegToe(b, { userId: 'g', naam: 'Logé' }, null, 0);
+    const gastId = b.volgorde[1]!;
+    b = { ...b, bewoners: { ...b.bewoners, [gastId]: { ...b.bewoners[gastId]!, gast: true } } };
+    const tel: Telefoon = { id: 'd', naam: 'Pixel 8', dienst: 'mobile_app_pixel_8', account: 'u' };
+    const uit = ontvangersVan(b, { meldingen: () => STANDAARD_MELDINGEN, taal: () => 'en' }, [tel]);
+    expect(uit).toEqual([{ account: 'u', keus: STANDAARD_MELDINGEN, telefoon: tel, taal: 'en' }]);
+    expect(proefTekst('nl').titel).toBe('Proefmelding van Smart Climate');
+    expect(proefTekst('en').titel).toBe('Test notification from Smart Climate');
   });
 });

@@ -12,7 +12,7 @@
  */
 
 import { Integratie } from './web/integratie.js';
-import { PushStore, alsMelding, paneelVan, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
+import { PushStore, alsMelding, ontvangersVan, paneelVan, proefTekst, teSturen, telefoonVan, vindTelefoons, type Telefoon } from './web/push.js';
 import { hostname } from 'node:os';
 import { loadDotEnv, tokenComplaint } from './env.js';
 import { inHouse, snelInHuis } from './web/inhuis.js';
@@ -20,14 +20,15 @@ import { klaarzetten } from './web/klaarzetten.js';
 import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
-import { NIEUW, VERSIE, eersteVan } from './version.js';
+import { meldingenBron } from './web/meldingen-bron.js';
+import { VERSIE } from './version.js';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
 
 import { ConfigError, loadSiteConfig } from './config/load.js';
 import { parseSiteConfig } from './config/schema.js';
-import type { DeviceRef, MeasurementPoint, SiteConfig } from './core/model.js';
+import type { SiteConfig } from './core/model.js';
 import { HaClient, type HaEntityState } from './adapters/homeassistant/client.js';
 import {
   fetchRegistries,
@@ -51,7 +52,9 @@ import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
 import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight, type PowerRow } from './web/today.js';
-import { forecastFromEntity, readForecast, WeatherLog, type EntityForecast } from './web/weather.js';
+import { WeatherLog, type EntityForecast } from './web/weather.js';
+import { Historie } from './web/historie.js';
+import { verwachtingVan, weerNaamVan } from './web/weerbron.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze } from './web/taalmodel.js';
@@ -901,50 +904,20 @@ function meldingenRonde(): void {
   const cfg = siteConfig;
   const h = cfg ? houseReport() : null;
   if (!meldingen || !cfg || !h || allStates.size === 0) return;
-  const entiteit = (d: { id: string; actuatorId: string | null }) =>
-    d.actuatorId ? (cfg.actuators.find((a) => a.id === d.actuatorId)?.ref.id ?? null) : d.id.includes('.') ? d.id : null;
-  const volgen = h.etages.flatMap((e) =>
-    e.ruimtes.flatMap((r) =>
-      r.apparaten.map((d) => {
-        const id = entiteit(d);
-        const st = id ? allStates.get(id) : undefined;
-        return { id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, onbereikbaarSindsMs: st && st.state === 'unavailable' ? Date.parse(st.last_changed) : null };
-      }),
-    ),
-  );
-  // Is bijna alles tegelijk weg, dan is Home Assistant zelf weg; dat is geen melding per apparaat.
-  const weg = volgen.filter((v) => v.onbereikbaarSindsMs != null).length;
-  if (volgen.length > 4 && weg > volgen.length / 2) return;
-  const grid = cfg.power.gridPower;
-  const gst = grid ? allStates.get(grid.id) : undefined;
-  const nieuwste = NIEUW[0];
-  meldingen.bij({
+  // Wat de bel weet (meldingen-bron.ts); null als Home Assistant zelf weg is.
+  const bron = meldingenBron({
     nu: Date.now(),
-    zonderRuimte: h.zonderRuimte.map((d) => ({ id: d.id, naam: d.naam })),
-    volgen,
-    batterijen: h.batterijen,
-    filters: h.filters,
-    // Een nieuwe versie van de add-on (21 oktober 2026).
-    update: (() => {
-      const s = version.installatie === 'add-on' ? eigenUpdate(allStates.values()) : null;
-      const n = s?.state === 'on' && typeof s.attributes['latest_version'] === 'string' ? (s.attributes['latest_version'] as string).replace(/^v/, '') : null;
-      return n ? { nieuw: n, nu: VERSIE } : null;
-    })(),
-    // De rookmelders (21 oktober 2026): rook, een lege batterij, vervangen.
-    rookmelders: h.etages.flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder' && d.rookmelder).map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, gevaar: d.rookmelder!.gevaar, sindsMs: d.rookmelder!.sindsMs, batterijProbleem: d.rookmelder!.batterijProbleem, vervangenVoor: d.rookmelder!.vervangenVoor })))),
-    drempels: h.drempels,
-    meters: grid ? [{ id: grid.id, naam: 'De slimme meter', naamEn: 'The smart meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
-    versie: { nummer: VERSIE, ...(nieuwste ? { eerste: eersteVan(nieuwste), eersteEn: nieuwste.en ? eersteVan(nieuwste.en) : '' } : {}) },
-    // Hoe de panelen liggen (besluit 157): gemeten, en nog niet bevestigd.
-    panelen: { voorstel: connectionStore?.current?.dak == null && metingNu() != null },
+    config: cfg,
+    huis: h,
+    states: allStates,
+    addOn: version.installatie === 'add-on',
+    panelenVoorstel: connectionStore?.current?.dak == null && metingNu() != null,
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
-    // Wiens comfort er geldt (besluit 147), voor één melding bij een wissel.
-    comfort: (() => {
-      const p = runner?.latest?.explanation.profile;
-      const hoofd = bewonersStore ? hoofdVan(bewonersStore.current) : null;
-      return p && hoofd ? { id: p.id, naam: p.name, waarom: p.reason, hoofdNaam: hoofd.naam, hoofd: p.id === hoofd.id } : null;
-    })(),
+    profiel: runner?.latest?.explanation.profile ?? null,
+    hoofd: bewonersStore ? hoofdVan(bewonersStore.current) : null,
   });
+  if (bron == null) return;
+  meldingen.bij(bron);
   void meldingen.bewaar().catch(() => undefined);
   void pushRonde().catch(() => undefined);
   // Live naar de open pagina's (21 oktober 2026): eerst zag je een nieuwe melding pas bij een andere tab.
@@ -989,14 +962,7 @@ async function pushRonde(): Promise<void> {
   if (!pushStore || !voorkeuren || !bewonersStore || !meldingen || pushBezig) return;
   pushBezig = true;
   try {
-    const b = bewonersStore.current;
-    const tel = telefoons();
-    const ontvangers = b.volgorde.flatMap((id) => {
-      const x = b.bewoners[id];
-      if (!x || x.gast) return [];
-      const keus = voorkeuren.meldingen(x.haUser);
-      return [{ account: x.haUser, keus, telefoon: telefoonVan(x.haUser, keus, tel), taal: voorkeuren.taal(x.haUser) }];
-    });
+    const ontvangers = ontvangersVan(bewonersStore.current, voorkeuren, telefoons());
     const nu = Date.now();
     const l = meldingen.lijst(nu);
     const { berichten, verstuurd } = teSturen([...l.actief, ...l.eerder], ontvangers, pushStore.verstuurd, nu, siteConfig?.timezone ?? 'Europe/Amsterdam');
@@ -1020,10 +986,7 @@ async function proefmelding(userId: string | null): Promise<{ ok: true; naam: st
   const t = telefoonVan(userId, voorkeuren.meldingen(userId), telefoons());
   if (!t) return { ok: false, status: 404, reden: 'geen telefoon met de app van Home Assistant gevonden' };
   try {
-    const proef = voorkeuren.taal(userId) === 'en'
-      ? { titel: 'Test notification from Smart Climate', tekst: 'This is what a notification on your phone looks like.' }
-      : { titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.' };
-    await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, ...proef, tag: 'smart-climate-proef', dringend: false, stil: false }, paneelPad), {});
+    await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, ...proefTekst(voorkeuren.taal(userId)), tag: 'smart-climate-proef', dringend: false, stil: false }, paneelPad), {});
     return { ok: true, naam: t.naam };
   } catch (error) {
     return { ok: false, status: 502, reden: (error as Error).message };
@@ -1034,44 +997,12 @@ if (meldingen) {
   setInterval(meldingenRonde, 60_000).unref();
 }
 
-/*
- * Vandaag uit de statistiek van Home Assistant (17 oktober 2026): het vermogen
- * van de panelen en het net per vijf minuten, voor de kwartieren die het eigen
- * logboek nog niet heeft, zoals op de eerste dag van een nieuwe installatie.
- * Alleen lezen, met dezelfde vraag als Opbrengst. Vijf minuten bewaard; een
- * afgesloten dag (gisteren) verandert niet meer.
- */
-const historieBewaard = new Map<number, { at: number; rijen: { zon: PowerRow[]; net: PowerRow[] } }>();
-async function historieVan(vanMs: number, totMs: number): Promise<{ zon: PowerRow[]; net: PowerRow[] } | null> {
-  const config = siteConfig;
-  if (!config) return null;
-  const punt = (p: MeasurementPoint | DeviceRef | undefined) => (p && !('attribute' in p && p.attribute) ? p.id : null);
-  const zonId = punt(config.solarProduction);
-  const netId = punt(config.power.gridPower);
-  const ids = [zonId, netId].filter((x): x is string => x != null);
-  if (ids.length === 0) return null;
-  const bewaard = historieBewaard.get(vanMs);
-  if (bewaard && (totMs < Date.now() - 3_600_000 || Date.now() - bewaard.at < 5 * 60_000)) return bewaard.rijen;
-  const raw = await client.query<Record<string, { start: number | string; mean?: number | null }[]>>('recorder/statistics_during_period', {
-    start_time: new Date(vanMs).toISOString(),
-    end_time: new Date(Math.min(totMs, Date.now())).toISOString(),
-    statistic_ids: ids,
-    period: '5minute',
-    types: ['mean'],
-    units: { power: 'W' },
-  });
-  const rijen = (id: string | null): PowerRow[] =>
-    id == null
-      ? []
-      : (raw?.[id] ?? [])
-          .filter((r) => typeof r.mean === 'number' && Number.isFinite(r.mean))
-          .map((r) => ({ startMs: typeof r.start === 'number' ? r.start : Date.parse(r.start), meanW: r.mean as number }));
-  const uit = { zon: rijen(zonId), net: rijen(netId) };
-  historieBewaard.set(vanMs, { at: Date.now(), rijen: uit });
-  // Alleen vandaag en gisteren zijn nodig.
-  for (const k of historieBewaard.keys()) if (k < vanMs - 2 * 86_400_000) historieBewaard.delete(k);
-  return uit;
-}
+// Vandaag uit de statistiek van Home Assistant (17 oktober 2026, historie.ts).
+const historie = new Historie({
+  config: () => siteConfig,
+  vraag: (type, velden) => client.query<Record<string, { start: number | string; mean?: number | null }[]>>(type, velden),
+});
+const historieVan = (vanMs: number, totMs: number) => historie.van(vanMs, totMs);
 
 /** Welke rookmelders nu iets zien, met hun kamer (21 oktober 2026). */
 function alarmNu(): AlarmMelder[] {
@@ -1247,22 +1178,10 @@ const haalWeer = () => {
 };
 setInterval(haalWeer, 5 * 60_000).unref();
 setTimeout(haalWeer, 20_000).unref();
-const weerNaam = (): string => {
-  const bron = weerBron();
-  if (bron === OPEN_METEO) return 'Open-Meteo';
-  if (bron?.startsWith('weather.')) return String(allStates.get(bron)?.attributes['friendly_name'] ?? 'je weerdienst');
-  return 'Buienradar';
-};
-const forecastNow = () => {
-  const bron = weerBron();
-  if (bron === OPEN_METEO) return [...(openMeteo.latest?.dagen ?? [])];
-  if (!houseRegisters) return [];
-  if (bron === 'buienradar') return readForecast(houseRegisters.entities, allStates);
-  if (bron?.startsWith('weather.')) {
-    return forecastFromEntity(allStates.get(bron), entityForecast.entity === bron ? entityForecast.days : [], Date.now(), weerZone);
-  }
-  return [];
-};
+// De naam en de dagverwachting van de gekozen bron (weerbron.ts).
+const weerNaam = (): string => weerNaamVan(weerBron(), allStates);
+const forecastNow = () =>
+  verwachtingVan(weerBron(), { openMeteo: openMeteo.latest?.dagen ?? null, entities: houseRegisters?.entities ?? null, states: allStates, entiteit: entityForecast, nu: Date.now(), zone: weerZone });
 if (weatherLog && site) {
   const timeZone = site.config.timezone;
   const noteTomorrow = () => {
