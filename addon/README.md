@@ -139,7 +139,9 @@ hoort er niet bij (besluit 108).
 2. **In de beheerpagina van Tailscale** (login.tailscale.com):
    - bij *Access controls* een tag, bijvoorbeeld `tag:homeassistant`, met
      jezelf als eigenaar (`tagOwners`);
-   - bij *Services* een dienst `smartclimate`, op poort `tcp:443`.
+   - bij *Services* een dienst `smartclimate`, op poort `tcp:443`;
+   - bij *Access controls › Policies* een regel van `autogroup:member` naar
+     `svc:smartclimate`, op `tcp:443`, zodat je telefoon de dienst mag openen.
 3. **Tailscale-add-on › Configuratie:**
 
    ```yaml

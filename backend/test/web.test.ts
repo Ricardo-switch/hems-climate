@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { WebServer, versionFromEnv, type Version } from '../src/web/server.js';
+import { BETA_ICOON, WebServer, versionFromEnv, type Version } from '../src/web/server.js';
 import { NIEUW, TERUGKIJKEN, VERSIE } from '../src/version.js';
 import { DivergenceCache, type DivergenceReport } from '../src/web/divergence.js';
 import { Onboarding } from '../src/web/onboarding.js';
@@ -392,6 +392,11 @@ describe('welke versie er draait (besluit 54)', () => {
     expect(v).toMatchObject({ nummer: VERSIE, commit: 'abc1234' });
     expect(v.nieuw[0]?.versie).toBe(VERSIE);
     expect(v.nieuw.length).toBeLessThanOrEqual(10);
+    // Woorden die voor elk huis kloppen: geen NAS (dezelfde regel als de paginatest, maar meteen).
+    for (const n of NIEUW.slice(0, TERUGKIJKEN)) {
+      const tekst = [n.nieuw, n.beter, n.opgelost, n.en?.nieuw, n.en?.beter, n.en?.opgelost].flatMap((x) => x ?? []).join(' ');
+      expect(tekst, n.versie).not.toMatch(/NAS/);
+    }
     // Wat de app laat zien, staat er ook in het Engels, met evenveel regels (besluit 185).
     for (const n of NIEUW.slice(0, TERUGKIJKEN)) {
       expect(n.en, n.versie).toBeDefined();
@@ -415,6 +420,27 @@ describe('de weergave leest alleen', () => {
         expect(res.headers.get('allow')).toBe('GET, HEAD');
       }
     }
+  });
+
+  it('geeft op een eigen server (de beta op de NAS) het beta-icoon, en in de add-on het gewone (23 oktober 2026)', async () => {
+    const webDir = await mkdtemp(join(tmpdir(), 'hems-web-'));
+    cleanups.push(() => rm(webDir, { recursive: true, force: true }));
+    for (const [gewoon, beta] of Object.entries(BETA_ICOON)) {
+      await writeFile(join(webDir, gewoon.slice(1)), `gewoon ${gewoon}`, 'utf-8');
+      await writeFile(join(webDir, beta), `beta ${gewoon}`, 'utf-8');
+    }
+    const nas = await start({ webDir, version: { ...versionFromEnv({}), installatie: 'server' } });
+    const pi = await start({ webDir, version: { ...versionFromEnv({}), installatie: 'add-on' } });
+    for (const pad of Object.keys(BETA_ICOON)) {
+      expect(await (await fetch(`${nas.base}${pad}`)).text()).toBe(`beta ${pad}`);
+      expect(await (await fetch(`${pi.base}${pad}`)).text()).toBe(`gewoon ${pad}`);
+    }
+    // De echte bestanden staan er, en het beta-manifest wijst naar de beta-iconen.
+    const src = new URL('../../frontend/src/', import.meta.url);
+    const manifest = JSON.parse(await readFile(new URL('manifest-beta.webmanifest', src), 'utf-8')) as { name: string; icons: { src: string }[] };
+    expect(manifest.name).toBe('Smart Climate beta');
+    for (const i of manifest.icons) expect(Object.values(BETA_ICOON)).toContain(i.src);
+    for (const beta of Object.values(BETA_ICOON)) await expect(readFile(new URL(beta, src))).resolves.toBeTruthy();
   });
 
   it('serveert niets buiten de webmap', async () => {

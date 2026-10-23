@@ -67,22 +67,46 @@ function concept() {
   return basis ? JSON.parse(JSON.stringify(basis)) : null;
 }
 
-/** Bewaren, met wat er gebeurde als melding; de vorige indeling gaat op de stapel voor "Ongedaan maken". */
-async function bewaar(next, gedaan) {
-  const nu = info?.indeling ?? info?.voorstel;
-  const uit = await stuur(next);
-  if (uit && nu) vorige.push(JSON.parse(JSON.stringify(nu)));
-  if (uit) zeg(gedaan);
-  teken();
-  return uit;
+/**
+ * De bewaarronde die nog loopt (23 oktober 2026). Een wijziging bouwt op de
+ * indeling die de pagina kent; kwam een tweede tik voordat de vorige ronde
+ * terug was, dan bouwde die op een oude indeling en ging de eerste wijziging
+ * verloren. Elke tik en elke keuze wacht daarom eerst op `naBewaren()`.
+ */
+let lopend = Promise.resolve();
+async function naBewaren() {
+  let l;
+  do {
+    l = lopend;
+    await l;
+  } while (l !== lopend);
+}
+function inDeRij(werk) {
+  const klaar = werk();
+  lopend = klaar.then(() => undefined, () => undefined);
+  return klaar;
 }
 
-async function ongedaan() {
-  const terug = vorige.pop();
-  if (!terug) return;
-  if (await stuur(terug)) zeg(t('indeling.teruggezet'));
-  else vorige.push(terug);
-  teken();
+/** Bewaren, met wat er gebeurde als melding; de vorige indeling gaat op de stapel voor "Ongedaan maken". */
+function bewaar(next, gedaan) {
+  return inDeRij(async () => {
+    const nu = info?.indeling ?? info?.voorstel;
+    const uit = await stuur(next);
+    if (uit && nu) vorige.push(JSON.parse(JSON.stringify(nu)));
+    if (uit) zeg(gedaan);
+    teken();
+    return uit;
+  });
+}
+
+function ongedaan() {
+  return inDeRij(async () => {
+    const terug = vorige.pop();
+    if (!terug) return;
+    if (await stuur(terug)) zeg(t('indeling.teruggezet'));
+    else vorige.push(terug);
+    teken();
+  });
 }
 
 async function stuur(next) {
@@ -782,6 +806,7 @@ document.addEventListener('click', async (e) => {
   }
   const el = e.target.closest('button, [data-kamer], [data-bron-open]');
   if (!el || el.disabled) return;
+  await naBewaren();
   const d = concept();
   if (!d) return;
   // Een knop in een bronkaart gaat voor de kaart zelf.
@@ -930,6 +955,7 @@ async function kamerErbij(naam) {
 
 document.addEventListener('change', async (e) => {
   const el = e.target;
+  await naBewaren();
   // Het apparaat van een bron: pas bewaard bij Toevoegen (besluit 132).
   if (el.hasAttribute('data-bron-apparaat') && bronVorm) {
     bronVorm.apparaat = el.value || null;
@@ -1099,6 +1125,7 @@ document.addEventListener('pointerup', async () => {
   setTimeout(() => (netGesleept = false), 0);
   teken();
   if (!uit.doel) return;
+  await naBewaren();
   const k = concept()?.kamers.find((x) => x.id === uit.doel);
   // Na het neerzetten de kamer tonen, met het apparaat erin.
   if ((await plaats(uit.id, uit.doel, null)) && k) kies({ etage: alleBuitenEtage(k) && keuze.etage === 'buiten' ? 'buiten' : k.etage, kamer: k.id, blad: 'kamer', apparaat: null });

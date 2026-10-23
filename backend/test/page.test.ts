@@ -3541,15 +3541,52 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, zonderInlog: true } as BrowserContextOptions);
     await context.route((url) => !url.href.startsWith(baseUrl) && url.hostname !== 'localhost', (route) => route.abort());
     const p = await context.newPage();
-    await p.goto(`${baseUrl}/vandaag.html`);
-    await p.waitForURL(/\/inloggen\.html/);
-    await p.locator('a', { hasText: 'Inloggen met Home Assistant' }).click();
-    await p.waitForURL(/\/vandaag\.html$/, { timeout: 10_000 });
-    await p.waitForTimeout(800);
-    expect(new URL(p.url()).pathname).toBe('/vandaag.html');
-    await context.close();
-    haInlog = vorige;
-    ha.close();
+    try {
+      await p.goto(`${baseUrl}/vandaag.html`);
+      await p.waitForURL(/\/inloggen\.html/);
+      await p.locator('a', { hasText: 'Inloggen met Home Assistant' }).click();
+      await p.waitForURL(/\/vandaag\.html$/, { timeout: 15_000 });
+      await p.waitForTimeout(800);
+      expect(new URL(p.url()).pathname).toBe('/vandaag.html');
+    } finally {
+      // Ook als het misgaat: anders gaat de volgende test naar dit nagemaakte Home Assistant.
+      await context.close();
+      haInlog = vorige;
+      ha.close();
+    }
+  }, 30_000);
+
+  /*
+   * De app vanaf het startscherm (23 oktober 2026): Android opent hem als
+   * kwam je van buiten, en dan gaat het strikte cookie niet mee. Je bent wel
+   * ingelogd; de inlogpagina ziet dat en gaat meteen door, zonder Home
+   * Assistant.
+   */
+  it('laat wie al ingelogd is meteen door als de app van buiten opent, zonder opnieuw in te loggen', async () => {
+    const buiten = createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'text/html' });
+      res.end(`<a id="open" href="${baseUrl}/vandaag.html">open</a>`);
+    });
+    await new Promise<void>((r) => buiten.listen(0, 'localhost', () => r()));
+    const sessie = await sessions.create({ userId: 'u', naam: 'Test', rol: 'beheerder' });
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, zonderInlog: true } as BrowserContextOptions);
+    await context.addCookies([{ name: 'hems_sessie', value: sessie, url: baseUrl, sameSite: 'Strict', httpOnly: true }]);
+    await context.route((url) => !url.href.startsWith(baseUrl) && url.hostname !== 'localhost', (route) => route.abort());
+    const p = await context.newPage();
+    const naarHa: string[] = [];
+    p.on('request', (r) => { if (new URL(r.url()).pathname === '/auth/login') naarHa.push(r.url()); });
+    try {
+      // Een andere site opent de app: de dienst ziet het cookie niet en stuurt naar het inloggen.
+      await p.goto(`http://localhost:${(buiten.address() as { port: number }).port}/`);
+      await p.click('#open');
+      await p.waitForURL(/\/vandaag\.html$/, { timeout: 10_000 });
+      await p.waitForTimeout(500);
+      expect(new URL(p.url()).pathname).toBe('/vandaag.html');
+      expect(naarHa).toEqual([]);
+    } finally {
+      await context.close();
+      buiten.close();
+    }
   }, 30_000);
 
   it('stuurt wie niet is ingelogd naar het inloggen, en van daar naar Home Assistant (besluit 99 en 147)', async () => {

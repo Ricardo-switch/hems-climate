@@ -340,6 +340,17 @@ button {
   font-size: 15px;
   cursor: pointer;
 }
+/* Een link als knop: de tekst in het midden en zonder streep, zoals bij een echte knop. */
+a.knop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+a.knop:not(.knop-licht) {
+  color: inherit;
+}
 /* De hoofdknop, in je eigen kleur (besluit 181). */
 .knop-licht {
   background: var(--accent);

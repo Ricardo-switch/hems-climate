@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.7';
+export const VERSIE = '0.59.10';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,48 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.59.10',
+    datum: '2026-10-23',
+    opgelost: [
+      'Bij Kamers en indeling gaat een wijziging niet meer verloren als je snel achter elkaar iets verandert',
+    ],
+    en: {
+      opgelost: [
+        'In Rooms and layout a change is no longer lost when you change things quickly one after another',
+      ],
+    },
+  },
+  {
+    versie: '0.59.9',
+    datum: '2026-10-23',
+    opgelost: [
+      'De app op je startscherm vraagt niet meer na elk sluiten opnieuw om in te loggen bij Home Assistant',
+    ],
+    en: {
+      opgelost: [
+        'The app on your home screen no longer asks you to sign in to Home Assistant again every time you close it',
+      ],
+    },
+  },
+  {
+    versie: '0.59.8',
+    datum: '2026-10-23',
+    beter: [
+      'Smart Climate op een eigen server, zoals een beta, heeft een eigen naam en een icoon met BETA erop, zodat hij op je startscherm niet lijkt op de add-on',
+    ],
+    opgelost: [
+      'De knop Open in Chrome bij Op je startscherm heeft zijn tekst weer netjes in het midden',
+    ],
+    en: {
+      beter: [
+        'Smart Climate on its own server, such as a beta, has its own name and an icon with BETA on it, so on your home screen it no longer looks like the add-on',
+      ],
+      opgelost: [
+        'The Open in Chrome button under On your home screen has its text neatly centred again',
+      ],
+    },
+  },
   {
     versie: '0.59.7',
     datum: '2026-10-23',

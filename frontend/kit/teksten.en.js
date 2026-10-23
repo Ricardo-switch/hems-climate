@@ -1572,7 +1572,7 @@
   'functies.st.tailnet': '<your tailnet>',
   'functies.st.waarom': 'In the Home Assistant app this is not possible with its own icon: Chrome only installs an app over https, and outside Home Assistant. That works through Tailscale, with Smart Climate’s own port. Set it up once:',
   'functies.st.stap1': 'In Home Assistant: <b>Settings › Add-ons › Smart Climate › Configuration</b>. Fill in <b>{ha}</b> at <i>ha_adres</i>, and under <i>Network</i> the port <b>8100</b> at 8100/tcp. Save and restart.',
-  'functies.st.stap2': 'On <b>login.tailscale.com</b>: under <i>Access controls</i> a tag <b>tag:homeassistant</b> with yourself as owner, and under <i>Services</i> a service <b>smartclimate</b> on <b>tcp:443</b>.',
+  'functies.st.stap2': 'On <b>login.tailscale.com</b>: under <i>Access controls</i> a tag <b>tag:homeassistant</b> with yourself as owner, under <i>Services</i> a service <b>smartclimate</b> on <b>tcp:443</b>, and under <i>Policies</i> a rule from <b>autogroup:member</b> to <b>svc:smartclimate</b> on <b>tcp:443</b>.',
   'functies.st.stap3': 'In the <b>Tailscale add-on › Configuration</b>: <code>advertise_tags: [tag:homeassistant]</code>, and a service <code>svc:smartclimate</code> to <code>http://127.0.0.1:8100</code>, https on port 443. Save and restart.',
   'functies.st.stap4': 'Back under <i>Services</i> on login.tailscale.com: approve Home Assistant for smartclimate.',
   'functies.st.stap5': 'On your phone, open <b>{naam}</b> in Chrome, sign in, and tap <b>Add to your home screen</b> here.',

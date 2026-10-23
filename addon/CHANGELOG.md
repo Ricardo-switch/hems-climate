@@ -1,5 +1,33 @@
 # Wat is er nieuw
 
+## 0.59.10
+
+*23 oktober 2026*
+
+**Opgelost**
+
+- Bij Kamers en indeling gaat een wijziging niet meer verloren als je snel achter elkaar iets verandert
+
+## 0.59.9
+
+*23 oktober 2026*
+
+**Opgelost**
+
+- De app op je startscherm vraagt niet meer na elk sluiten opnieuw om in te loggen bij Home Assistant
+
+## 0.59.8
+
+*23 oktober 2026*
+
+**Beter**
+
+- Smart Climate op een eigen server, zoals een beta, heeft een eigen naam en een icoon met BETA erop, zodat hij op je startscherm niet lijkt op de add-on
+
+**Opgelost**
+
+- De knop Open in Chrome bij Op je startscherm heeft zijn tekst weer netjes in het midden
+
 ## 0.59.7
 
 *23 oktober 2026*
