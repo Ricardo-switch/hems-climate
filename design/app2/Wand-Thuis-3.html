@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Thuis 3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Thuis 3.0 (schets, 23 oktober 2026): het eindbeeld, tweede ronde.
+   *
+   * Het perceel zweeft als een dun eiland in de lucht van het moment. De
+   * voorkant is één doorsnede door huis en grond: de kamers, de kelder in een
+   * nis, de lagen aarde en de kabel van het net onder de grond. Eromheen: de
+   * tuin met een vaste plek voor alles, bomen in het seizoen, de schaduw met
+   * de zon, een lantaarn, regen of sneeuw.
+   *
+   * Tweede ronde, na de bewoner: de kaarten terug, rechts zoals eerst (zelf te
+   * kiezen, nu kleiner en met een beeld), het huis weer in het midden, minder
+   * tekst (een kop en één zin), en niets dubbel: wat in de kop staat, komt niet
+   * nog eens als label op het huis of als kaart.
+   *
+   * Derde ronde: de vraagbalk weer smal, alleen onder het huis, zoals op de
+   * wand naar eigen smaak; de kolom rechts loopt door tot onderaan. Elke kaart
+   * is smal (een halve kolom) of breed (de hele kolom); breed laat meer zien.
+   *
+   * Standen: #dag (zomermiddag, standaard), #avond (herfst), #nacht, #winter (sneeuw), #regen,
+   * #aanpassen (de kaarten kiezen, smal of breed, verschuiven, toevoegen).
+   */
+  .wand { position: relative; }
+  .wand::before { display: none; }
+  .scene { position: absolute; inset: 0; }
+  .over { position: absolute; left: 96px; top: 0; right: 0; bottom: 0; pointer-events: none; padding: 26px 28px 22px 24px; display: grid; grid-template-columns: 330px 1fr 300px; grid-template-rows: auto 1fr auto; gap: 14px; }
+  .over > * { pointer-events: auto; }
+  .kop { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 10px; }
+  .tijd { font-family: var(--kop); font-size: 68px; font-weight: 600; letter-spacing: -0.035em; line-height: 0.9; text-shadow: 0 2px 24px rgb(0 0 0 / 0.25); }
+  .tijd small { display: block; font: 500 16px var(--romp); color: var(--zacht); letter-spacing: 0; margin-top: 10px; }
+  .kop h1 { font-family: var(--kop); font-weight: 600; font-size: 40px; line-height: 1.03; letter-spacing: -0.025em; margin: 16px 0 0; text-shadow: 0 2px 30px rgb(0 0 0 / 0.35); }
+  .kop p { margin: 0; font-size: 16.5px; line-height: 1.4; color: var(--zacht); text-shadow: 0 1px 14px rgb(0 0 0 / 0.4); }
+  .pillen { grid-column: 2 / 4; grid-row: 1; justify-self: end; align-self: start; display: flex; gap: 8px; }
+  .pillen .pil { height: 40px; padding: 0 16px; background: rgb(var(--nacht) / 0.45); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); font-size: 14.5px; }
+  .links { grid-column: 3; grid-row: 2 / 4; align-self: end; display: flex; flex-direction: column; gap: 10px; }
+
+  /* Het voorstel: alleen als het huis er een heeft, boven de kaarten. */
+  .voorstel { padding: 14px 16px; border-radius: 20px; background: linear-gradient(150deg, rgb(143 134 255 / 0.28), rgb(111 211 255 / 0.1)), rgb(var(--nacht) / 0.55); border: 1px solid rgb(143 134 255 / 0.4); backdrop-filter: blur(16px); }
+  .voorstel b { display: block; font-family: var(--kop); font-size: 19px; font-weight: 600; line-height: 1.2; }
+  .voorstel small { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--violet-t); margin-bottom: 4px; }
+  .voorstel .knoppen { display: flex; gap: 8px; margin-top: 10px; }
+  .voorstel button { flex: 1; height: 36px; border-radius: 11px; border: 1px solid var(--glas-rand); background: rgb(var(--wit) / 0.07); color: var(--tekst); font: 700 13.5px var(--romp); }
+  .voorstel button.licht { background: var(--tekst); color: var(--tegen); border-color: transparent; }
+
+  /* De kaarten: vier, zelf te kiezen, elk met een klein beeld. */
+  .kaartkop { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: var(--zacht); padding: 0 4px; }
+  .kaartkop a { color: var(--accent); text-decoration: none; }
+  .kaarten { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .k { position: relative; height: 104px; padding: 11px 12px; border-radius: 18px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+  .k .naam { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--zacht); }
+  .k .naam svg { width: 14px; height: 14px; }
+  .k .waarde { font-family: var(--kop); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+  .k .zin { font-size: 11.5px; font-weight: 600; line-height: 1.25; }
+  .k .beeld { position: absolute; right: 10px; top: 30px; }
+  /* Breed: de hele kolom, met meer te zien. */
+  .k.breed { grid-column: span 2; }
+  .k.breed.foto { height: 132px; }
+  .k .lijn { height: 6px; border-radius: 3px; background: rgb(var(--wit) / 0.1); overflow: hidden; margin: 2px 0 4px; }
+  .k .lijn i { display: block; height: 100%; border-radius: 3px; }
+  .k .grafiek { position: absolute; left: 12px; right: 12px; top: 32px; height: 44px; }
+  /* Aanpassen: per kaart smal of breed, verschuiven en weghalen, en een kaart erbij. */
+  .bewerk .k { outline: 1.5px dashed rgb(var(--wit) / 0.35); outline-offset: -1px; }
+  .bewerk .k > :not(.greep):not(.maat):not(.weg) { opacity: 0.45; }
+  .greep { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); color: var(--zacht); font-size: 13px; letter-spacing: 1px; z-index: 2; }
+  .maat { position: absolute; right: 8px; bottom: 8px; display: flex; padding: 3px; border-radius: 10px; background: rgb(var(--nacht) / 0.85); border: 1px solid var(--glas-rand); z-index: 2; }
+  .maat span { height: 24px; padding: 0 9px; border-radius: 7px; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; color: var(--zacht); }
+  .maat span.aan { background: var(--tekst); color: var(--tegen); }
+  .weg { position: absolute; right: 8px; top: 8px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--nacht) / 0.85); color: var(--zacht); font-size: 12px; z-index: 2; }
+  .erbij { grid-column: span 2; height: 56px; border-radius: 18px; border: 1.5px dashed rgb(111 211 255 / 0.5); display: grid; place-items: center; color: var(--ijs-t); font-weight: 700; font-size: 14px; background: rgb(var(--nacht) / 0.35); }
+  .k.foto { padding: 0; }
+  .k.foto .plaat { position: absolute; inset: 0; background: linear-gradient(180deg, #3b4b60, #22303f); }
+  .k.foto .plaat i { position: absolute; display: block; border-radius: 4px; background: #4d5f76; }
+  .k.foto .onder { position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 12px 10px; background: linear-gradient(180deg, transparent, rgb(9 15 28 / 0.85)); }
+  .k.foto .naam { position: absolute; left: 12px; top: 10px; color: #fff; }
+
+  .vraag { grid-column: 1 / 3; grid-row: 3; height: 64px; border-radius: 24px; display: flex; align-items: center; gap: 14px; padding: 0 10px 0 12px; background: rgb(var(--nacht) / 0.55); border: 1px solid var(--glas-rand); backdrop-filter: blur(16px); }
+  .vraag .bol { width: 44px; height: 44px; }
+  .vraag span.typ { flex: 1; font-size: 17px; color: var(--zacht); }
+  .vraag .pil { height: 40px; background: rgb(var(--wit) / 0.07); font-size: 14px; }
+  .soort { position: absolute; left: 144px; bottom: 100px; display: flex; gap: 6px; }
+  .soort a { height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 11.5px; font-weight: 700; color: var(--zacht); background: rgb(var(--nacht) / 0.5); text-decoration: none; }
+  .soort a[aria-current='true'] { background: var(--tekst); color: var(--tegen); }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" id="wand">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu" style="position: relative; z-index: 2"></nav>
+  <div class="scene" id="scene"></div>
+  <div class="over">
+    <div class="kop">
+      <div class="tijd" id="tijd"></div>
+      <h1 id="kop"></h1>
+      <p id="lead"></p>
+    </div>
+    <div class="pillen"><span class="pil" id="weer"></span><span class="pil">Automatisch ▾</span><span class="pil"><span class="stip" style="background: var(--mint)"></span>Regelt</span></div>
+    <div class="links">
+      <div id="voorstel"></div>
+      <div class="kaartkop"><span>Jouw kaarten</span><a href="#">Aanpassen</a></div>
+      <div class="kaarten" id="kaarten"></div>
+    </div>
+    <div class="vraag"><span class="bol"></span><span class="typ">Zeg <b style="color: var(--tekst)">„Hé huis"</b> of tik om iets te vragen</span><span id="vragen" style="display: flex; gap: 8px"></span></div>
+  </div>
+  <div class="soort" id="soorten"></div>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+
+  /* ---- de kaarten: elk een klein beeld, zelf te kiezen (besluit 182, opgewaardeerd) ---- */
+  const IK = {
+    auto: '<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.4"/><circle cx="16.5" cy="16" r="1.4"/>',
+    batterij: '<rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 1.5h4M10 9h4M10 13h4"/>',
+    maand: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    deurbel: '<rect x="7" y="2.5" width="10" height="19" rx="5"/><circle cx="12" cy="9" r="2.4"/><circle cx="12" cy="16.5" r="1.2"/>',
+    boiler: '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>',
+    weer: '<circle cx="8" cy="9" r="3"/><path d="M9 18h9a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.4 1.7"/>',
+  };
+  const ikoon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IK[n]}</svg>`;
+  const ring = (pct, kleur) => {
+    const o = 2 * Math.PI * 17;
+    return `<svg class="beeld" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="17" fill="none" stroke="rgb(255 255 255 / 0.1)" stroke-width="5"/><circle cx="22" cy="22" r="17" fill="none" stroke="${kleur}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(pct * o).toFixed(1)} ${o.toFixed(1)}" transform="rotate(-90 22 22)"/></svg>`;
+  };
+  const staaf = (pct, kleur) => `<svg class="beeld" width="22" height="46" viewBox="0 0 22 46" aria-hidden="true"><rect x="1" y="3" width="20" height="42" rx="5" fill="none" stroke="rgb(255 255 255 / 0.2)" stroke-width="1.5"/><rect x="7" y="0" width="8" height="3" rx="1" fill="rgb(255 255 255 / 0.3)"/><rect x="4" y="${(42 - 36 * pct).toFixed(0)}" width="14" height="${(36 * pct).toFixed(0)}" rx="3" fill="${kleur}"/></svg>`;
+  const balkjes = (lijst) => `<svg class="beeld" style="top: 10px" width="54" height="24" viewBox="0 0 62 34" aria-hidden="true">${lijst.map((h, i) => `<rect x="${i * 6}" y="${(34 - h * 32).toFixed(0)}" width="4" height="${(h * 32).toFixed(0)}" rx="1.5" fill="${i === lijst.length - 1 ? 'var(--zon)' : 'rgb(255 255 255 / 0.25)'}"/>`).join('')}</svg>`;
+  const tank = (pct) => `<svg class="beeld" width="26" height="46" viewBox="0 0 26 46" aria-hidden="true"><defs><linearGradient id="kt" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4d86c9"/><stop offset="0.6" stop-color="#ff9a6b"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient><clipPath id="kv"><rect x="1" y="1" width="24" height="44" rx="11"/></clipPath></defs><rect x="1" y="1" width="24" height="44" rx="11" fill="rgb(255 255 255 / 0.08)" stroke="rgb(255 255 255 / 0.2)"/><rect clip-path="url(#kv)" x="1" y="${(45 - 44 * pct).toFixed(0)}" width="24" height="44" fill="url(#kt)"/></svg>`;
+  const KAART = {
+    auto: (x) => (x.breed
+      ? `<div class="k"><span class="naam">${ikoon('auto')}Auto</span><span class="waarde">${Math.round(x.pct * 100)}% <small style="font: 600 13px var(--romp); color: var(--zacht)">${x.km ?? ''}</small></span><div class="lijn"><i style="width: ${(x.pct * 100).toFixed(0)}%; background: var(--mint)"></i></div><span class="zin ${x.toon ?? ''}">${x.zin}</span></div>`
+      : `<div class="k"><span class="naam">${ikoon('auto')}Auto</span>${ring(x.pct, 'var(--mint)')}<span class="waarde">${Math.round(x.pct * 100)}%</span><span class="zin ${x.toon ?? ''}">${x.zin}</span></div>`),
+    batterij: (x) => `<div class="k"><span class="naam">${ikoon('batterij')}Batterij</span>${staaf(x.pct, 'var(--mint)')}<span class="waarde">${Math.round(x.pct * 100)}%</span><span class="zin ${x.toon ?? ''}">${x.zin}</span></div>`,
+    maand: (x) => (x.breed
+      ? `<div class="k"><span class="naam">${ikoon('maand')}${x.titel}</span><svg class="beeld" style="top: 12px" width="150" height="40" viewBox="0 0 150 40" aria-hidden="true">${Array.from({ length: 23 }, (_, i) => { const h = (0.25 + 0.75 * Math.abs(Math.sin(i * 1.3 + 0.4))) * (x.schaal ?? 1); return `<rect x="${i * 6.5}" y="${(40 - h * 38).toFixed(0)}" width="4.5" height="${(h * 38).toFixed(0)}" rx="1.5" fill="${i === 22 ? 'var(--zon)' : 'rgb(255 255 255 / 0.22)'}"/>`; }).join('')}</svg><span class="waarde">${x.waarde}</span><span class="zin" style="color: var(--zacht)">${x.zin}${x.extra ? ` · ${x.extra}` : ''}</span></div>`
+      : `<div class="k"><span class="naam">${ikoon('maand')}${x.titel}</span>${balkjes(x.dagen)}<span class="waarde">${x.waarde}</span><span class="zin" style="color: var(--zacht)">${x.zin}</span></div>`),
+    // Vandaag (breed): de zon van de dag en wat er draaide, zoals de oude kaart Vandaag.
+    dag: (x) => `<div class="k"><span class="naam">${ikoon('maand')}Vandaag <span style="margin-left: auto; font-weight: 600; color: var(--gedempt)">${x.waarde}</span></span><svg class="grafiek" viewBox="0 0 260 44" preserveAspectRatio="none" aria-hidden="true"><path d="M0 42 C 60 42 80 8 130 6 L 130 42 Z" fill="rgb(247 181 72 / 0.25)"/><path d="M0 42 C 60 42 80 8 130 6" fill="none" stroke="var(--zon)" stroke-width="2"/><path d="M130 6 C 180 4 210 40 260 42" fill="none" stroke="var(--zon)" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.6"/><line x1="130" y1="0" x2="130" y2="44" stroke="rgb(255 255 255 / 0.5)"/></svg><span></span><span class="zin" style="color: var(--zacht); display: flex; gap: 10px"><span><span class="stip" style="background: var(--ijs)"></span> woonkamer</span><span><span class="stip" style="background: var(--zon)"></span> droger</span><span><span class="stip" style="background: var(--mint)"></span> auto</span></span></div>`,
+    boiler: (x) => `<div class="k"><span class="naam">${ikoon('boiler')}Boiler</span>${tank(x.pct)}<span class="waarde">${x.waarde}</span><span class="zin ${x.toon ?? ''}">${x.zin}</span></div>`,
+    weer: (x) => `<div class="k"><span class="naam">${ikoon('weer')}${x.titel}</span><span class="waarde">${x.waarde}</span><span class="zin" style="color: var(--zacht)">${x.zin}</span></div>`,
+    deurbel: (x) => `<div class="k foto"><div class="plaat"><i style="left: 14px; top: 26px; width: 34px; height: 52px"></i><i style="left: 64px; top: 40px; width: 22px; height: 22px; border-radius: 50%; background: #5f7390"></i><i style="left: 60px; top: 64px; width: 30px; height: 40px; background: #5f7390"></i><i style="left: 104px; top: 34px; width: 38px; height: 30px; background: #3a4a5e"></i></div><span class="naam">${ikoon('deurbel')}Deurbel</span><div class="onder"><span class="zin" style="color: #fff">${x.zin}</span></div></div>`,
+  };
+  const maandDagen = [0.5, 0.7, 0.4, 0.8, 0.9, 0.6, 0.75, 0.85, 1];
+
+  /* ---- de standen ---- */
+  const standen = {
+    dag: {
+      naam: 'Dag', lucht: 'lucht-dag', tijd: 'dag', seizoen: 'zomer', klok: '14:05', datum: 'woensdag 15 juli', zon: 0.74, kracht: 0.85, wolken: 0.15,
+      kop: 'Het huis koelt op zon', lead: 'De zon levert meer dan het huis vraagt.', weer: ['var(--zon)', '26° zonnig'],
+      voorstel: { titel: 'Om 14:30 stoppen met koelen?', zin: 'Dan gaat de zon naar de jacuzzi.' },
+      kaarten: [['auto', { pct: 0.62, zin: 'Vol om 16:30', toon: 'mint-t' }], ['batterij', { pct: 0.78, zin: 'Laadt 0,8 kW', toon: 'mint-t' }], ['dag', { breed: true, waarde: '9,6 kWh' }], ['maand', { titel: 'Juli', waarde: '212 kWh', zin: '71% zelf gebruikt', dagen: maandDagen }], ['deurbel', { zin: 'Aangebeld om 11:02' }]],
+      vragen: ['Wanneer is de auto vol?', 'We gaan weg'],
+    },
+    avond: {
+      naam: 'Avond', lucht: 'lucht-avond', tijd: 'avond', seizoen: 'herfst', klok: '19:12', datum: 'vrijdag 23 oktober', zon: 0.93, kracht: 0.1, wolken: 0.35,
+      kop: 'De jacuzzi is bijna warm', lead: 'Om 20:00 is hij 38°.', weer: ['var(--gloed)', '12° herfst'],
+      kaarten: [['deurbel', { breed: true, zin: 'Pakket bezorgd om 16:40' }], ['auto', { pct: 0.8, zin: 'Klaar voor morgen' }], ['boiler', { pct: 0.72, waarde: '58°', zin: 'Genoeg tot morgen' }], ['maand', { breed: true, titel: 'Oktober', waarde: '96 kWh', zin: '74% zelf gebruikt', extra: '€ 21 gekost', schaal: 0.6 }]],
+      vragen: ['Kunnen de bubbels aan?', 'Welterusten'],
+    },
+    nacht: {
+      naam: 'Nacht', lucht: 'lucht-nacht', tijd: 'nacht', seizoen: 'zomer', klok: '23:48', datum: 'woensdag 15 juli', zon: null, kracht: 0, wolken: 0.1,
+      kop: 'Het huis slaapt', lead: 'De batterij levert aan het huis.', weer: ['var(--violet)', '17° helder'],
+      kaarten: [['auto', { breed: true, pct: 0.94, km: '410 km', zin: 'Klaar voor morgen' }], ['weer', { titel: 'Morgen', waarde: '27° zon', zin: '9,8 kWh verwacht' }], ['deurbel', { zin: 'Rustig sinds 21:10' }], ['maand', { breed: true, titel: 'Juli', waarde: '224 kWh', zin: '72% zelf gebruikt' }]],
+      vragen: ['Is alles dicht?', 'Goedemorgen om 7:00'],
+    },
+    winter: {
+      naam: 'Winter', lucht: 'lucht-winter', tijd: 'dag', seizoen: 'winter', weerSoort: 'sneeuw', klok: '10:20', datum: 'zaterdag 16 januari', zon: 0.3, kracht: 0.25, wolken: 0.6,
+      kop: 'Warm binnen, sneeuw buiten', lead: 'De woonkamer is 20,5°.', weer: ['#ffffff', '−2° sneeuw'],
+      kaarten: [['auto', { pct: 0.45, zin: 'Laadt vannacht' }], ['batterij', { pct: 0.3, zin: 'Wacht op de daluren' }], ['maand', { titel: 'Januari', waarde: '38 kWh', zin: 'Panelen onder sneeuw', dagen: maandDagen.map((x) => x * 0.25) }], ['deurbel', { zin: 'Aangebeld om 9:14' }]],
+      vragen: ['Wanneer is de boiler warm?', 'We gaan weg'],
+    },
+    regen: {
+      naam: 'Regen', lucht: 'lucht-bewolkt', tijd: 'dag', seizoen: 'herfst', weerSoort: 'regen', klok: '15:05', datum: 'dinsdag 3 november', zon: null, kracht: 0.05, wolken: 0.9,
+      kop: 'Een grijze middag', lead: 'De droger wacht op de daluren.', weer: ['var(--net)', '9° regen'],
+      kaarten: [['auto', { pct: 0.55, zin: 'Laadt vannacht' }], ['batterij', { pct: 0.4, zin: 'Rust' }], ['maand', { titel: 'November', waarde: '12 kWh', zin: 'Een grijze start', dagen: [0.2, 0.15, 0.1] }], ['deurbel', { zin: 'Rustig vandaag' }]],
+      vragen: ['Wanneer droogt de was?', 'We gaan weg'],
+    },
+    aanpassen: {
+      naam: 'Aanpassen', lucht: 'lucht-dag', tijd: 'dag', seizoen: 'zomer', klok: '14:05', datum: 'woensdag 15 juli', zon: 0.74, kracht: 0.85, wolken: 0.15,
+      kop: 'Het huis koelt op zon', lead: 'De zon levert meer dan het huis vraagt.', weer: ['var(--zon)', '26° zonnig'], bewerk: true,
+      kaarten: [['auto', { pct: 0.62, zin: 'Vol om 16:30', toon: 'mint-t' }], ['batterij', { pct: 0.78, zin: 'Laadt 0,8 kW', toon: 'mint-t' }], ['dag', { breed: true, waarde: '9,6 kWh' }], ['deurbel', { breed: true, zin: 'Aangebeld om 11:02' }]],
+      vragen: ['Wanneer is de auto vol?', 'We gaan weg'],
+    },
+  };
+  const id = location.hash.slice(1) in standen ? location.hash.slice(1) : 'dag';
+  const s = standen[id];
+  addEventListener('hashchange', () => location.reload());
+  document.getElementById('wand').className = `wand lucht ${s.lucht}`;
+  document.getElementById('tijd').innerHTML = `${s.klok}<small>${s.datum}</small>`;
+  document.getElementById('kop').textContent = s.kop;
+  document.getElementById('lead').textContent = s.lead;
+  document.getElementById('weer').innerHTML = `<span class="stip" style="background: ${s.weer[0]}"></span>${s.weer[1]}`;
+  document.getElementById('voorstel').innerHTML = s.voorstel
+    ? `<section class="voorstel"><small><span class="bol" style="width: 12px; height: 12px"></span>Voorstel van je huis</small><b>${s.voorstel.titel}</b><p class="mini" style="margin: 4px 0 0; color: var(--zacht); font-size: 12.5px">${s.voorstel.zin}</p><div class="knoppen"><button class="licht">Doe maar</button><button>Nee</button></div></section>`
+    : '';
+  /** Een kaart, smal of breed; in de stand Aanpassen met een greep, de keuze smal of breed, en weghalen. */
+  const kaart = (soort, x) => {
+    const html = KAART[soort](x).replace('<div class="k', `<div class="k${x.breed ? ' breed' : ''}`);
+    if (!s.bewerk) return html;
+    const extra = `<span class="greep">⋮⋮</span><span class="weg">✕</span><span class="maat"><span class="${x.breed ? '' : 'aan'}">Smal</span><span class="${x.breed ? 'aan' : ''}">Breed</span></span>`;
+    return html.slice(0, -'</div>'.length) + extra + '</div>';
+  };
+  document.getElementById('kaarten').innerHTML = s.kaarten.map(([soort, x]) => kaart(soort, x)).join('') + (s.bewerk ? '<div class="erbij">+ Kaart toevoegen</div>' : '');
+  if (s.bewerk) {
+    document.querySelector('.links').classList.add('bewerk');
+    document.querySelector('.kaartkop').innerHTML = '<span>Kaarten aanpassen</span><a href="#dag" style="font-weight: 800">Klaar</a>';
+  }
+  document.getElementById('vragen').innerHTML = s.vragen.map((v) => `<span class="pil">${v}</span>`).join('');
+  document.getElementById('soorten').innerHTML = Object.entries(standen).map(([k, x]) => `<a href="#${k}" aria-current="${k === id}">${x.naam}</a>`).join('');
+
+  /* ---- het huis: alleen labels voor wat niet al in de kop of een kaart staat ---- */
+  const zon = id === 'dag' || id === 'aanpassen';
+  const avond = id === 'avond';
+  const nacht = id === 'nacht';
+  const licht = (aan) => (aan ? [{ soort: 'lamp', aan: true }] : []);
+  const kabel = [-2.3, 2.3, -0.32];
+  const model = {
+    tijd: s.tijd, seizoen: s.seizoen, weer: s.weerSoort,
+    zon: { stand: s.zon, aandeel: s.kracht, panelen: 12 }, wolken: s.wolken,
+    kelder: { kamers: [
+      { naam: 'Wasruimte', gewicht: 1, temp: '18,2°', zin: zon ? 'droger draait' : '', stand: zon ? 'wacht' : 'rust', apparaten: [{ soort: 'droger', aan: zon, x: 0.55 }, ...licht(nacht)] },
+      { naam: 'Kelder', gewicht: 1, temp: '16,4°', apparaten: [{ soort: 'boiler', vol: 0.75, aan: zon }] },
+    ] },
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Keuken', gewicht: 0.9, temp: '22,6°', stand: 'goed', apparaten: licht(avond || nacht) },
+        { naam: 'Woonkamer', gewicht: 1.3, temp: id === 'winter' ? '20,5°' : '24,1°', zin: zon ? 'koelt op zon' : id === 'winter' ? 'warmt' : '', stand: zon ? 'koelt' : id === 'winter' ? 'warmt' : 'goed', apparaten: [{ soort: 'airco', aan: zon, stand: id === 'winter' ? 'warmt' : 'koelt' }, { soort: 'bank' }, ...licht(avond)] },
+      ] },
+      { naam: 'Eerste', kamers: [
+        { naam: 'Badkamer', gewicht: 0.8, temp: '23,5°', stand: 'goed', apparaten: [] },
+        { naam: 'Slaapkamer', gewicht: 1.3, temp: '21,0°', stand: 'goed', apparaten: [{ soort: 'screen', dicht: zon ? 0.7 : 0.1 }, ...licht(avond)] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', temp: '25,1°', zin: zon ? 'wacht op zon' : '', stand: zon ? 'wacht' : 'rust', apparaten: [{ soort: 'airco', aan: false }] }] },
+    ],
+    voordeur: {}, net: true, buitenunit: { aan: zon }, batterij: { procent: nacht ? 54 : 78, stand: zon ? 'laadt' : nacht ? 'levert' : 'rust' },
+    oprit: {}, auto: { procent: 62, stand: zon ? 'laadt' : 'rust', bron: 'zon', kleur: '#7f97b0' },
+    garage: { panelen: 6, lampAan: avond },
+    tuin: { tuinhuis: true, tuinhuisAan: avond || nacht, tuinhuisPanelen: 3, jacuzzi: { temp: avond ? 37 : 35, stand: zon || avond ? 'warmt' : 'rust', zon, bubbels: avond }, lampen: [{ aan: avond || nacht }], terrasAan: avond },
+    stromen: zon
+      ? [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'auto', sterkte: 0.55 }, { van: 'zon', naar: 'batterij', sterkte: 0.4 }, { van: 'zon', naar: 'net', sterkte: 0.15 }]
+      : avond ? [{ van: 'net', naar: 'huis', sterkte: 0.55 }] : nacht ? [{ van: 'batterij', naar: 'huis', sterkte: 0.4 }] : [{ van: 'net', naar: 'huis', sterkte: 0.7 }],
+    labels: zon
+      ? [
+          { bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen'], dx: 70, dy: -64 },
+          { bij: 'panelenGarage', titel: '1,4 kW', toon: 'zon', regels: ['garage'], dx: 20, dy: -96 },
+          { bij: kabel, titel: '0,3 kW terug', toon: 'mint', dx: 24, dy: 150 },
+        ]
+      : avond
+        ? [{ bij: kabel, titel: '1,1 kW van het net', toon: 'violet', dx: 24, dy: 150 }]
+        : nacht
+          ? []
+          : [{ bij: kabel, titel: id === 'winter' ? '2,3 kW van het net' : '0,9 kW van het net', toon: 'violet', dx: 24, dy: 150 }],
+  };
+  const scene = document.getElementById('scene');
+  const r = scene.getBoundingClientRect();
+  huis.teken(scene, model, { breedte: r.width, hoogte: r.height, wereld: true, meubels: true, schuifX: -50, schuifY: -40, zoom: 0.7, marge: 0.04 });
+</script>
+</body>
+</html>

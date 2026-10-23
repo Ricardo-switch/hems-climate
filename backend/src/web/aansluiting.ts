@@ -104,6 +104,12 @@ export interface ConnectionAnswers {
    */
   readonly voorkantZon?: VoorkantZon | null;
   readonly dak?: Dak | null;
+  /**
+   * Panelen op een ander dak dan het huis (besluit 187): de garage, de carport
+   * of het tuinhuis, met hun aantal. Voor de tekening en de lijst; de meting
+   * van de ligging blijft over het huis gaan.
+   */
+  readonly elders?: Elders;
   /** De stroommeters zoals bij het bewaren gevonden, zodat de regeling ze bij het starten kent. */
   readonly fasen: readonly FoundPhase[];
   readonly apparaten: readonly (FoundAppliance & { readonly opZon: boolean })[];
@@ -115,6 +121,10 @@ export interface ConnectionAnswers {
    */
   readonly opZonUit?: readonly string[];
 }
+
+/** De andere daken met panelen (besluit 187). */
+export const ELDERS_PLEKKEN = ['garage', 'carport', 'tuinhuis'] as const;
+export type Elders = Partial<Record<(typeof ELDERS_PLEKKEN)[number], number>>;
 
 /* ------------------------------------------------------------ herkennen */
 
@@ -447,6 +457,19 @@ export function validateConnection(
   const uitRaw = b['opZonUit'] ?? [];
   if (!Array.isArray(uitRaw) || uitRaw.length > 20 || uitRaw.some((x) => typeof x !== 'string' || !/^[a-z0-9_-]{1,40}$/.test(x))) return { ok: false, reden: 'opZonUit is een lijst apparaten' };
 
+  // Panelen op de garage, carport of het tuinhuis (besluit 187): per plek een aantal.
+  const eldersRaw = b['elders'] ?? null;
+  const elders: Elders = {};
+  if (eldersRaw !== null) {
+    if (typeof eldersRaw !== 'object' || Array.isArray(eldersRaw)) return { ok: false, reden: 'elders is per plek een aantal panelen' };
+    for (const [plek, n] of Object.entries(eldersRaw as Record<string, unknown>)) {
+      if (!ELDERS_PLEKKEN.includes(plek as (typeof ELDERS_PLEKKEN)[number])) return { ok: false, reden: `onbekende plek voor panelen: ${plek}` };
+      if (n == null || n === 0) continue;
+      if (!Number.isInteger(n) || (n as number) < 1 || (n as number) > 200) return { ok: false, reden: 'het aantal panelen is een heel getal van 1 tot 200' };
+      elders[plek as (typeof ELDERS_PLEKKEN)[number]] = n as number;
+    }
+  }
+
   // De thermostaat van de ketel (besluit 167): een klimaatapparaat uit de app, "geen", of leeg.
   const thermostaat = vw['thermostaat'] ?? null;
   if (thermostaat !== null && (typeof thermostaat !== 'string' || !/^[a-z0-9_.:-]{1,160}$/i.test(thermostaat))) return { ok: false, reden: 'de thermostaat is een apparaat uit Home Assistant' };
@@ -461,6 +484,7 @@ export function validateConnection(
       verwarming: { soort: soort as Heater | null, aanvoerC: aanvoer as number | null, ...(thermostaat ? { thermostaat: thermostaat as string } : {}) },
       voorkantZon: voorkantZon as VoorkantZon | null,
       dak,
+      ...(Object.keys(elders).length ? { elders } : {}),
       fasen: [...found.fasen],
       apparaten: found.apparaten.map((a) => ({ ...a, opZon: opZonRaw[a.id] === true })),
       ...((found.buffers ?? []).length ? { buffers: found.buffers!.map((b) => ({ ...b, opZon: opZonRaw[b.id] === true })) } : {}),
@@ -595,6 +619,8 @@ export interface ConnectionView {
     readonly verwarming: Verwarming;
     readonly voorkantZon: VoorkantZon | null;
     readonly dak: Dak | null;
+    /** Panelen op de garage, carport of het tuinhuis (besluit 187). */
+    readonly elders: Elders;
     readonly opZon: Readonly<Record<string, boolean>>;
     readonly opZonUit: readonly string[];
   } | null;
@@ -650,6 +676,7 @@ export function connectionView(c: ConnectionContext, lang: Lang = 'nl'): Connect
           verwarming: c.answers.verwarming ?? { soort: null, aanvoerC: null },
           voorkantZon: c.answers.voorkantZon ?? null,
           dak: c.answers.dak ?? null,
+          elders: c.answers.elders ?? {},
           opZon: Object.fromEntries([...c.answers.apparaten, ...(c.answers.buffers ?? [])].map((a) => [a.id, a.opZon])),
           opZonUit: c.answers.opZonUit ?? [],
         }

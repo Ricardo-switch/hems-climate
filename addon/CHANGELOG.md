@@ -1,5 +1,47 @@
 # Wat is er nieuw · What is new
 
+## 0.61.0
+
+*24 oktober 2026*
+
+**Nieuw**
+
+- Het huis staat nu op een eigen stukje grond, met de kelder eronder, het weer van nu en de seizoenen: regen en sneeuw vallen, de bomen kleuren mee
+- Panelen kunnen ook op de garage, de carport of het tuinhuis liggen, elk met hun eigen aantal
+- Bij Meldingen wis je alles in één keer
+
+**Beter**
+
+- Zonnepanelen laat het huis zien met hoe de panelen liggen, in graden vanaf het noorden, met per dak het aantal
+- De kaarten op de wand staan in twee kolommen; elke kaart kies je smal of breed
+- Elke stroom op het huis heeft zijn eigen kleur: zon goud, terug naar het net groen, van het net violet
+- Op de telefoon staan de hulp, de bel en het tandwiel op elke tab op dezelfde plek, en onder het huis zie je wat er van of naar het net gaat
+- Wat je huis kan staat in zes groepen, met de boiler, de jacuzzi en wat het huis eerst leert
+
+**Opgelost**
+
+- Een boiler stond in het huis als droger getekend; nu als boiler
+
+*English*
+
+**New**
+
+- The house now stands on its own patch of ground, with the basement below, the weather of now and the seasons: rain and snow fall, the trees change colour
+- Panels can also lie on the garage, the carport or the garden shed, each with its own number
+- Under Notifications you clear everything at once
+
+**Improved**
+
+- Solar panels shows the house with how the panels lie, in degrees from north, with the number per roof
+- The cards on the wall stand in two columns; you choose each card narrow or wide
+- Every flow on the house has its own colour: sun gold, back to the grid green, from the grid violet
+- On the phone help, the bell and the gear sit in the same place on every tab, and below the house you see what goes from or to the grid
+- What your home can do is in six groups, with the water heater, the hot tub and what the house learns first
+
+**Fixed**
+
+- A water heater was drawn in the house as a dryer; now as a water heater
+
 ## 0.60.0
 
 *23 oktober 2026*

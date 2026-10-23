@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.60.0';
+export const VERSIE = '0.61.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,42 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.61.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Het huis staat nu op een eigen stukje grond, met de kelder eronder, het weer van nu en de seizoenen: regen en sneeuw vallen, de bomen kleuren mee',
+      'Panelen kunnen ook op de garage, de carport of het tuinhuis liggen, elk met hun eigen aantal',
+      'Bij Meldingen wis je alles in één keer',
+    ],
+    beter: [
+      'Zonnepanelen laat het huis zien met hoe de panelen liggen, in graden vanaf het noorden, met per dak het aantal',
+      'De kaarten op de wand staan in twee kolommen; elke kaart kies je smal of breed',
+      'Elke stroom op het huis heeft zijn eigen kleur: zon goud, terug naar het net groen, van het net violet',
+      'Op de telefoon staan de hulp, de bel en het tandwiel op elke tab op dezelfde plek, en onder het huis zie je wat er van of naar het net gaat',
+      'Wat je huis kan staat in zes groepen, met de boiler, de jacuzzi en wat het huis eerst leert',
+    ],
+    opgelost: [
+      'Een boiler stond in het huis als droger getekend; nu als boiler',
+    ],
+    en: {
+      nieuw: [
+        'The house now stands on its own patch of ground, with the basement below, the weather of now and the seasons: rain and snow fall, the trees change colour',
+        'Panels can also lie on the garage, the carport or the garden shed, each with its own number',
+        'Under Notifications you clear everything at once',
+      ],
+      beter: [
+        'Solar panels shows the house with how the panels lie, in degrees from north, with the number per roof',
+        'The cards on the wall stand in two columns; you choose each card narrow or wide',
+        'Every flow on the house has its own colour: sun gold, back to the grid green, from the grid violet',
+        'On the phone help, the bell and the gear sit in the same place on every tab, and below the house you see what goes from or to the grid',
+        'What your home can do is in six groups, with the water heater, the hot tub and what the house learns first',
+      ],
+      opgelost: [
+        'A water heater was drawn in the house as a dryer; now as a water heater',
+      ],
+    },
+  },
   {
     versie: '0.60.0',
     datum: '2026-10-23',

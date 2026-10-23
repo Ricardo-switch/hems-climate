@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Huis 3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Huis 3.0 (schets, 23 oktober 2026). Hetzelfde poppenhuis, maar het bouwt
+   * zich op voor elk soort woning: vrijstaand met garage en kelder, een
+   * rijtjeshuis en hoekhuis, twee-onder-een-kap, een appartement. Panelen ook
+   * op een garage, carport of schuur. Buiten een jacuzzi, een schuur, bomen.
+   * En een huis met minder: zonder klimaat, zonder P1, zonder panelen.
+   *
+   * Standen: #vrijstaand (standaard), #rij, #hoek, #tweekap, #appartement, #minder, #zoom.
+   * Allemaal in de wereld van Thuis 3.0 (Wand-Thuis-3): het perceel als eiland. Buren tekent de app niet.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: grid; grid-template-columns: 360px 1fr; gap: 18px; min-height: 0; }
+  .links { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .tijd { font-family: var(--kop); font-size: 64px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .tijd small { font: 500 17px var(--romp); color: var(--zacht); letter-spacing: 0; margin-left: 10px; }
+  .kop-1 { font-size: 40px; }
+  .podium { position: relative; min-height: 0; }
+  .podium > div { position: absolute; inset: 0; }
+  .soort { display: flex; flex-wrap: wrap; gap: 6px; }
+  .soort a { height: 30px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 700; color: var(--zacht); background: rgb(var(--wit) / 0.06); text-decoration: none; }
+  .soort a[aria-current='true'] { background: var(--tekst); color: var(--tegen); }
+  .kaart { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .kaart h3 { margin: 0; font-size: 15px; }
+  .kaart p { margin: 0; font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  .tip { border: 1px dashed rgb(var(--wit) / 0.16); background: transparent; }
+  .tip b { color: var(--zon-t); }
+  .drie { position: absolute; inset: 0; display: grid; grid-template-columns: 1.35fr 1fr; grid-template-rows: 1fr 1fr; gap: 10px; }
+  .drie figure:first-child { grid-row: 1 / 3; }
+  .drie figure { margin: 0; position: relative; border-radius: 22px; background: rgb(var(--wit) / 0.035); border: 1px solid var(--glas-rand); overflow: hidden; display: flex; flex-direction: column; }
+  .drie figure > div { flex: 1; min-height: 0; }
+  .drie figcaption { padding: 10px 14px 14px; font-size: 12.5px; color: var(--zacht); line-height: 1.4; }
+  .drie figcaption b { display: block; color: var(--tekst); font-size: 14px; margin-bottom: 2px; }
+  .drie .pijl { position: absolute; top: 46%; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--tekst); color: var(--tegen); font-weight: 800; z-index: 2; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" id="wand">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="links">
+      <div class="tijd">12:41<small>woensdag 15 juli</small></div>
+      <h1 class="kop-1" id="kop">Het huis koelt op zon</h1>
+      <p class="lead" id="lead" style="font-size: 16px">Je panelen leveren meer dan het huis vraagt.</p>
+      <div id="kaarten" style="display: flex; flex-direction: column; gap: 12px"></div>
+      <div class="soort" id="soorten" style="margin-top: auto"></div>
+    </div>
+    <div class="podium"><div id="podium"></div></div>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'thuis');
+
+  /* De kamers van een gewoon gezinshuis, voor elke stand hetzelfde. */
+  const beneden = [
+    { naam: 'Keuken', gewicht: 0.9, temp: '22,6°', zin: 'goed', stand: 'goed', apparaten: [] },
+    { naam: 'Woonkamer', gewicht: 1.3, temp: '24,1°', zin: 'koelt op zon', stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'bank' }] },
+  ];
+  const boven = [
+    { naam: 'Badkamer', gewicht: 0.8, temp: '23,5°', zin: 'op temperatuur', stand: 'goed', apparaten: [] },
+    { naam: 'Slaapkamer', gewicht: 1.3, temp: '23,0°', zin: 'wordt gemeten', apparaten: [{ soort: 'screen', dicht: 0.7 }] },
+  ];
+  const zolder = { dak: true, kamers: [{ naam: 'Zolder', temp: '25,1°', zin: 'wacht op meer zon', stand: 'wacht', apparaten: [{ soort: 'airco', aan: false }] }] };
+
+  const STANDEN = {
+    vrijstaand: {
+      naam: 'Vrijstaand',
+      kop: 'Het huis koelt op zon',
+      lead: 'Je panelen leveren meer dan het huis vraagt. De woonkamer koelt, de jacuzzi warmt op.',
+      kaarten: [['Garage en kelder', 'Panelen liggen nu ook op de garage, en de kelder ligt opengewerkt in de grond, met de boiler en de wasruimte.']],
+      model: {
+        tijd: 'dag', zon: { stand: 0.56, aandeel: 0.85, panelen: 12 }, wolken: 0.15,
+        kelder: { kamers: [
+          { naam: 'Wasruimte', gewicht: 1, temp: '18,2°', zin: 'droger, nog 34 min', stand: 'wacht', apparaten: [{ soort: 'droger', aan: true, x: 0.55 }] },
+          { naam: 'Kelder', gewicht: 1, temp: '16,4°', zin: 'boiler 58°', apparaten: [{ soort: 'boiler', vol: 0.75, aan: true }] },
+        ] },
+        etages: [{ naam: 'Begane grond', kamers: beneden }, { naam: 'Eerste', kamers: boven }, zolder],
+        buitenunit: { aan: true }, net: true, voordeur: {},
+        oprit: { auto: { kleur: '#7f97b0' } }, garage: { panelen: 6 }, tuin: { tuinhuis: true, jacuzzi: { temp: 35, stand: 'warmt', zon: true } },
+        stromen: [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'net', sterkte: 0.2 }],
+        labels: [
+          { bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 },
+          { bij: 'net', titel: '0,3 kW terug', toon: 'mint', dx: -30, dy: 34 },
+          { bij: 'panelenGarage', titel: '1,4 kW', toon: 'zon', regels: ['op de garage'], dx: -40, dy: -60 },
+          { bij: 'jacuzzi', titel: 'Jacuzzi 35°', toon: 'zon', regels: ['warmt op zon, 38° om 16:10'], dx: 30, dy: -90 },
+          { bij: 'boiler', titel: 'Boiler 58°', toon: 'zon', regels: ['laadt op zon'], dx: 60, dy: 40 },
+        ],
+      },
+    },
+    rij: {
+      naam: 'Rijtjeshuis',
+      kop: 'Op zon, in de rij',
+      lead: 'Ook het tuinhuis levert mee.',
+      kaarten: [['Alleen je eigen huis', 'Buren tekent de app niet.']],
+      model: {
+        woning: 'rij', tijd: 'dag', zon: { stand: 0.48, aandeel: 0.7, panelen: 8 }, wolken: 0.25,
+        etages: [{ naam: 'Begane grond', kamers: [{ naam: 'Woonkamer', gewicht: 1.4, temp: '22,1°', zin: 'goed', stand: 'goed', apparaten: [{ soort: 'bank' }] }, { naam: 'Keuken', gewicht: 0.8, temp: '22,4°', apparaten: [] }] },
+          { naam: 'Eerste', kamers: [{ naam: 'Slaapkamer', gewicht: 1.2, temp: '20,8°', zin: 'goed', stand: 'goed', apparaten: [] }, { naam: 'Badkamer', gewicht: 0.9, temp: '21,5°', apparaten: [{ soort: 'boiler', vol: 0.5 }] }] }, zolder],
+        voordeur: {}, net: true, voortuin: {}, tuin: { tuinhuis: true, tuinhuisPanelen: 4 },
+        stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.5 }],
+        labels: [{ bij: 'panelen', titel: '2,6 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 50, dy: -80 }, { bij: 'panelenSchuur', titel: '0,6 kW', toon: 'zon', regels: ['op het schuurtje'], dx: 40, dy: -50 }],
+      },
+    },
+    hoek: {
+      naam: 'Hoekhuis',
+      kop: 'De jacuzzi warmt op',
+      lead: 'Om 20:00 is hij 38°.',
+      kaarten: [['De tuin', 'Elk ding een vaste plek: tuinhuis, jacuzzi, pad met lampjes, terras en border.']],
+      model: {
+        woning: 'hoek', tijd: 'avond', zon: { stand: 0.86, aandeel: 0.2, panelen: 10 },
+        etages: [{ naam: 'Begane grond', kamers: beneden.map((k) => ({ ...k, apparaten: k.naam === 'Woonkamer' ? [{ soort: 'lamp', aan: true }, { soort: 'bank' }] : k.apparaten, stand: 'goed', zin: 'goed' })) }, { naam: 'Eerste', kamers: boven }, zolder],
+        voordeur: {}, net: true, tuin: { tuinhuis: true, jacuzzi: { temp: 37, stand: 'warmt', bubbels: true }, lampen: [{ aan: true }] }, terras: { lampAan: true },
+        labels: [],
+      },
+    },
+    tweekap: {
+      naam: 'Twee-onder-een-kap',
+      kop: 'De auto laadt onder de carport',
+      lead: 'Vol om 16:30, op zon van de carport.',
+      kaarten: [['Panelen op de carport', 'Panelen liggen waar ze echt liggen: huis, garage, carport of tuinhuis.']],
+      model: {
+        woning: 'tweekap', tijd: 'dag', zon: { stand: 0.4, aandeel: 0.9, panelen: 0 }, wolken: 0.1,
+        etages: [{ naam: 'Begane grond', kamers: beneden }, { naam: 'Eerste', kamers: boven }, zolder],
+        voordeur: {}, net: true, buitenunit: { aan: true },
+        oprit: { carport: { panelen: 8 } }, auto: { procent: 54, stand: 'laadt', bron: 'zon', kleur: '#b06b5a' },
+        tuin: { tuinhuis: true },
+        labels: [{ bij: 'panelenCarport', titel: '2,9 kW', groot: true, toon: 'zon', regels: ['op de carport'], dx: -40, dy: -90 }, { bij: 'auto', titel: 'Auto 54%', toon: 'ijs', regels: ['laadt op zon, 2,1 kW'], dx: -20, dy: 90 }],
+      },
+    },
+    appartement: {
+      naam: 'Appartement',
+      kop: 'Je verdieping, rustig',
+      lead: 'Je verdieping, met de panelen van het gebouw.',
+      kaarten: [['Panelen van het gebouw', 'Wat jij ervan krijgt, komt uit je eigen meter.']],
+      model: {
+        woning: 'appartement', gebouw: { onder: 3, boven: 1, panelen: 10 }, tijd: 'dag', zon: { stand: 0.6, aandeel: 0.6, panelen: 0 },
+        etages: [{ naam: 'Derde', kamers: [
+          { naam: 'Slaapkamer', gewicht: 0.9, temp: '21,2°', zin: 'goed', stand: 'goed', apparaten: [] },
+          { naam: 'Woonkamer', gewicht: 1.5, temp: '23,6°', zin: 'koelt', stand: 'koelt', apparaten: [{ soort: 'airco', aan: true }, { soort: 'bank' }] },
+        ] }],
+        balkon: { lampAan: false },
+        labels: [{ bij: 'panelenGebouw', titel: '3,4 kW', toon: 'zon', regels: ['het dak van het gebouw'], dx: 50, dy: -40 }],
+      },
+    },
+    minder: {
+      naam: 'Huis met minder',
+      kop: 'Rustig thuis',
+      lead: 'Drie lampen aan, de schermen open.',
+      tip: 1,
+      kaarten: [
+        ['Zonder panelen, P1 of thermostaat', 'Licht, schermen, camera, verbruik en de assistent werken gewoon.'],
+        ['Er kan meer bij', '<b>Een P1-meter</b> of <b>een slimme thermostaat</b>: bij Wat je huis kan staat hoe.'],
+      ],
+      model: {
+        woning: 'rij', tijd: 'avond', zon: { stand: 0.9, aandeel: 0, panelen: 0 },
+        etages: [{ naam: 'Begane grond', kamers: [{ naam: 'Woonkamer', gewicht: 1.4, zin: '2 lampen aan', apparaten: [{ soort: 'lamp', aan: true }, { soort: 'bank' }] }, { naam: 'Keuken', gewicht: 0.8, zin: '1 lamp aan', apparaten: [{ soort: 'lamp', aan: true }] }] },
+          { naam: 'Eerste', kamers: [{ naam: 'Slaapkamer', gewicht: 1.2, apparaten: [{ soort: 'screen', dicht: 0 }] }, { naam: 'Badkamer', gewicht: 0.9, apparaten: [] }] },
+          { dak: true, kamers: [{ naam: 'Zolder', apparaten: [] }] }],
+        voordeur: { deurbel: {} }, voortuin: {},
+      },
+    },
+    zoom: {
+      naam: 'Inzoomen',
+      kop: 'Van perceel tot kamer',
+      lead: 'Op de wand zoomt het huis vloeiend in: tik op de garage, het huis of een etage, en de tekening schuift erheen. Terug met een veeg of de knop.',
+      kaarten: [['Zo beweegt het', 'Eén tekening die meeschuift en groter wordt, geen nieuwe pagina. Wat niet meer in beeld past, vervaagt; de labels schuiven mee. Met Minder beweging springt het in plaats van te schuiven.']],
+      drie: true,
+    },
+  };
+
+  const stand = location.hash.slice(1) in STANDEN ? location.hash.slice(1) : 'vrijstaand';
+  const s = STANDEN[stand];
+  document.getElementById('kop').textContent = s.kop;
+  document.getElementById('lead').textContent = s.lead;
+  document.getElementById('kaarten').innerHTML = s.kaarten.map(([t, p], i) => `<section class="glas kaart${s.tip === i ? ' tip' : ''}"><h3>${t}</h3><p>${p.replace(/<b>/g, '<b>')}</p></section>`).join('');
+  document.getElementById('soorten').innerHTML = Object.entries(STANDEN).map(([id, x]) => `<a href="#${id}" aria-current="${id === stand}">${x.naam}</a>`).join('');
+  addEventListener('hashchange', () => location.reload());
+  const podium = document.getElementById('podium');
+  if (s.drie) {
+    // Drie stappen van hetzelfde huis: het perceel, het huis, een etage.
+    const basis = STANDEN.vrijstaand.model;
+    podium.innerHTML = '<div class="drie"><figure><div id="z1"></div><figcaption><b>Het perceel</b>Alles wat het huis heeft: garage met panelen, tuin, jacuzzi.</figcaption></figure><figure><div id="z2"></div><figcaption><b>Het huis</b>Tik op het huis: de kamers groot, met hun temperatuur.</figcaption></figure><figure><div id="z3"></div><figcaption><b>Een etage</b>Tik op een etage: van bovenaf, met wat er in elke kamer staat.</figcaption></figure><span class="pijl" style="left: calc(57.4% - 18px); top: 24%">›</span><span class="pijl" style="left: calc(78.7% - 13px); top: calc(50% - 13px)">⌄</span></div>';
+    const maat = (el) => el.getBoundingClientRect();
+    const z1 = document.getElementById('z1');
+    huis.teken(z1, { ...basis, labels: [] }, { breedte: maat(z1).width, hoogte: maat(z1).height, wereld: true });
+    const z2 = document.getElementById('z2');
+    huis.teken(z2, { ...basis, labels: [], garage: null, oprit: null, tuin: null, kelder: basis.kelder }, { breedte: maat(z2).width, hoogte: maat(z2).height, zoom: 1.05 });
+    const z3 = document.getElementById('z3');
+    huis.teken(z3, { tijd: 'dag', zonderDak: true, etages: [{ naam: 'Begane grond', kamers: basis.etages[0].kamers }] }, { breedte: maat(z3).width, hoogte: maat(z3).height, meubels: true });
+  } else {
+    const r = podium.getBoundingClientRect();
+    huis.teken(podium, s.model, { breedte: r.width, hoogte: r.height, meubels: true, wereld: true, eigenLucht: false });
+  }
+</script>
+</body>
+</html>

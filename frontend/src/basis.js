@@ -900,12 +900,35 @@
     else if (e.target.closest?.('[data-weer-volledig]')) weerVolledig();
   });
 
+  /**
+   * Eén bovenbalk op de telefoon (besluit 187): op elke tab de hulp, de bel en
+   * het tandwiel, even groot (36 px) en op dezelfde plek, rechtsboven, naast de
+   * titel als de tab er een heeft. Thuis heeft ze al in zijn kopregel, met het
+   * weer ervoor. De hulp is de rondleiding, vanaf deze tab.
+   */
+  const TEL_TABS = ['vandaag', 'apparaten', 'opbrengst', 'assistent'];
+  function telBalk(tab) {
+    const tel = document.getElementById('tel');
+    if (!tel || !TEL_TABS.includes(tab) || tel.querySelector('[data-meldbel]')) return;
+    // Elke tab laadt de rondleiding; soms pas na deze regel, dus niet op global.rondleiding wachten.
+    const hulp = `<button type="button" class="pil telknop uitlegknop" aria-label="${esc(global.t('thuis.uitleg'))}" data-tel-hulp>?</button>`;
+    const knoppen = `<span class="telknoppen">${hulp}<button type="button" class="pil telknop meldbel" aria-label="${esc(global.t('nav.meldingen'))}" aria-haspopup="dialog" data-meldbel data-meldicoon><b data-meldaantal hidden></b></button><a class="pil telknop" aria-label="${esc(global.t('nav.instellingen'))}" data-tandwiel></a></span>`;
+    const oud = tel.querySelector('[data-tandwiel]');
+    // Alleen een titel die bovenaan staat; op Opbrengst staat de periode erboven.
+    const titel = tel.querySelector('.inhoud > h1.kop-1:first-child');
+    if (oud) oud.outerHTML = knoppen;
+    else if (titel) titel.outerHTML = `<div class="telbalk metkop">${titel.outerHTML}${knoppen}</div>`;
+    else (tel.querySelector('.inhoud') ?? tel).insertAdjacentHTML('afterbegin', `<div class="telbalk">${knoppen}</div>`);
+  }
+  document.addEventListener('click', (e) => e.target.closest?.('[data-tel-hulp]') && global.rondleiding?.start());
+
   /** Zet de navigatie, de stand en de klok voor een tab. */
   function start(tab) {
     const balk = document.getElementById('balk');
     const tabs = document.getElementById('tabs');
     if (balk) nav.balk(balk, tab, LINKS);
     if (tabs) nav.tabs(tabs, tab, LINKS);
+    telBalk(tab);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
     knoppenNaarHA();
     luchtAchterVak();
@@ -1079,7 +1102,9 @@
       ? `<h3>${esc(global.t('basis.meld.aandacht'))}</h3>${meld.actief.map(kaart).join('')}`
       : `<div class="stil"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mint)" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><b>${esc(global.t('basis.meld.allesWerkt'))}</b>${esc(global.t('basis.meld.allesWerktZin'))}</div>`;
     const eerder = meld.eerder.length ? `<h3>${esc(global.t('basis.meld.eerder'))}</h3>${meld.eerder.slice(0, 5).map(oud).join('')}` : '';
-    return `<div class="kop"><h2 class="kop-2">${esc(global.t('nav.meldingen'))}</h2><button type="button" class="sluit" data-meld-sluit aria-label="${esc(global.t('algemeen.sluiten'))}">×</button></div>
+    // Alles wissen (besluit 187): alleen als er iets te wissen is.
+    const alles = meld.actief.length || meld.eerder.length ? `<button type="button" class="meldalles" data-meld-alles>${esc(global.t('basis.meld.allesWissen'))}</button>` : '';
+    return `<div class="kop"><h2 class="kop-2">${esc(global.t('nav.meldingen'))}</h2>${alles}<button type="button" class="sluit" data-meld-sluit aria-label="${esc(global.t('algemeen.sluiten'))}">×</button></div>
       ${aandacht}${eerder}
       ${onderhoudKnop()}`;
   }
@@ -1342,7 +1367,7 @@
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && void meldLaad());
     setTimeout(() => void watIsErNieuw(), 1200);
     document.addEventListener('click', async (e) => {
-      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-weg], [data-nieuw-dicht], [data-nieuw-achter], a, [data-meld-versie], [data-meld-update], [data-meld-href], [data-bijwerken]');
+      const t = e.target.closest('[data-meldbel], [data-meld-sluit], [data-meld-achter], [data-meld-onderhoud], [data-meld-terug], [data-meld-weg], [data-meld-alles], [data-nieuw-dicht], [data-nieuw-achter], a, [data-meld-versie], [data-meld-update], [data-meld-href], [data-bijwerken]');
       if (!t || (t.matches('a') && !t.closest('[data-meldblad]'))) return;
       if (t.matches('a')) return meldDicht();
       if (t.matches('[data-nieuw-dicht], [data-nieuw-achter]')) {
@@ -1353,7 +1378,13 @@
       } else if (t.matches('[data-meld-sluit], [data-meld-achter]')) meldDicht();
       else if (t.matches('[data-meld-onderhoud]')) await meldOpen('onderhoud');
       else if (t.matches('[data-meld-terug]')) await meldOpen('lijst');
-      else if (t.dataset.meldWeg) {
+      else if (t.matches('[data-meld-alles]')) {
+        $$('[data-meldblad] .melding').forEach((m) => m.classList.add('gaat'));
+        const res = await deur('api/meldingen', { alles: true }).catch(() => null);
+        if (res?.ok) meld = await res.json();
+        meldGetal();
+        await meldOpen('lijst');
+      } else if (t.dataset.meldWeg) {
         t.closest('.melding')?.classList.add('gaat');
         const res = await deur('api/meldingen', { verwijder: t.dataset.meldWeg }).catch(() => null);
         if (res?.ok) meld = await res.json();

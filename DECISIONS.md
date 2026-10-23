@@ -188,6 +188,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel](#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel)
 - [183. Meldingen op de telefoon, via de app van Home Assistant](#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant)
 - [185. Meertalig: het fundament, met Thuis als proef](#185-meertalig-het-fundament-met-thuis-als-proef)
+- [187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak](#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak)
 
 **Veiligheid**
 
@@ -8536,6 +8537,78 @@ lijst Op zon standaard helemaal achteraan.
 programma (ze hebben er geen); alleen op zon, nooit van het net (dan raakt de
 boiler leeg); alle vier de soorten boiler in het instelblad tonen (verwarrend:
 alleen die van de bewoner).
+
+---
+
+## 187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak
+
+*Onderwerp: weergave · Status: geldig*
+
+Het tweede deel van de makeover voor het grote publiek, op 23 en 24 oktober
+2026. De bewoner koos uit schetsen (`design/app2/Wand-Thuis-3.html`,
+`Tel-Huis-3.html`, `Wand-Huis-3.html`, `Wand-Energie-Panelen-3.html` en
+`Wand-Huis-kan-3.html`), in vier rondes met punten tussendoor: een eindbeeld
+met wow, geen kleine uitbreiding van het oude huis, geen doorzichtige buren,
+weinig tekst en niets dubbel.
+
+*Besluit:*
+
+- **Het huis staat op een eiland** (`kit/huis.js`, `opts.wereld`): het perceel
+  zweeft, dun, met de voorkant als doorsnede door huis en grond. De kelder ligt
+  opengewerkt in een nis, de kabel van het net loopt onder de grond naar de
+  meterkast. Bomen, een haag, een lantaarn, de tuin met vaste plekken (tuinhuis
+  achter, jacuzzi op een vlonder, terras, pad met lampjes, border) en een schaduw
+  met de zon. Op de wand en de telefoon van Thuis, bij Zonnepanelen en bij Wat je
+  huis kan; de andere pagina's houden voorlopig het oude huis.
+- **Het weer en de seizoenen** op het huis: vallende regen en sneeuw uit het weer
+  van nu, kale bomen in de winter en oranje in de herfst (oktober en november).
+- **Elke stroom een eigen kleur:** van de zon goud, terug naar het net groen,
+  van het net violet, uit de batterij blauw. Het label van het net heeft de kleur
+  van zijn lijn.
+- **De kelder gaat onder de grond.** Wat Home Assistant onder de begane grond
+  zet, komt in de etage `kelder` (eerst bleef een kelder bij de begane grond,
+  besluit 119). In de tekening van huis 3.0 ligt hij onder de grond
+  (`kelderOnder`); Inrichten en de indeling houden hem als gewone etage.
+- **De boiler is geen droger.** Een boiler of jacuzzi (besluit 186) krijgt bij
+  het huis een veld `warmte` (soort, temperatuur, doel, grenzen, op zon). De
+  boiler staat als ronde tank in de kamer die bij het inrichten gekozen is, geen
+  vaste plek; de jacuzzi in de tuin, en zonder tuin komt er een.
+- **Panelen op elk dak:** naast het huis ook op de garage, de carport of het
+  tuinhuis (`elders` in de antwoorden van de aansluiting, een aantal per plek).
+  Ze staan in de tekening en in de lijst; de meting van de ligging blijft over
+  de panelen op het huis gaan.
+- **Energie › Zonnepanelen opnieuw:** het huis met de gemeten ligging op het dak
+  en per dakvlak een label met de richting in graden en de helling; een lijst
+  "Waar liggen ze?" met per dak het aantal (plus en min) en "Ook panelen op"
+  voor de andere daken; "Wat Smart Climate meet" met de richting in graden vanaf
+  het noorden (met een kompasje), de helling, het vermogen en de omvormer.
+  Klopt het voorstel, dan staan Klopt en Aanpassen naast de kop. Zelf aanpassen
+  opent wat er al was: de kant, het aantal en Aanpassen. Het kompas op het eiland
+  draait zo dat de getekende dakvlakken naar hun gemeten richting wijzen.
+- **De kaarten op de wand in twee kolommen,** elk smal of breed (`breed` in de
+  voorkeuren, bij wiens indeling het is, besluit 181). Standaard breed:
+  Favorieten, Vandaag en Hoe voelt het. In de bewerkstand per kaart Smal en
+  Breed; slepen gaat ook opzij.
+- **Op de telefoon één bovenbalk:** op Thuis, Vandaag, Apparaten, Opbrengst en
+  Assistent de hulp, de bel en het tandwiel, alle drie 36 px, rechtsboven. De
+  hulp start de rondleiding bij deze tab. Onder het huis op Thuis een regel met
+  de zon, het huis en het net, in de kleuren van de lijnen.
+- **Wat je huis kan in zes groepen:** Comfort, Wat het huis eerst leert (op tijd
+  warm of koel, wat jij prettig vindt, de ligging van de panelen), Op zon (met de
+  boiler en de jacuzzi), Kosten, Gemak en Overzicht.
+- **Alles wissen bij de meldingen:** wat nog speelt, laat de app niet meer zien
+  tot het voorbij is; wat voorbij is gaat uit de lijst (`{ alles: true }` op
+  `/api/meldingen`).
+- **Versie 0.61.0.**
+
+*Wat afviel:* de buren tekenen, ook doorzichtig; een groot eiland met veel grond
+eronder; de kaarten in één kolom zonder keuze; een vaste plek voor de boiler
+zonder kelder; nieuwe iconen alleen op de panelenpagina (dat kan later, en dan
+overal tegelijk).
+
+*Nog te doen:* Inrichten opnieuw in stappen (met de klimaatschetsen per merk), de
+andere pagina's op het eiland, een huis zonder slimme regeling, P1-meter of
+panelen, en de film.
 
 ---
 

@@ -574,6 +574,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await wand.getByLabel('Aantal aan de voorkant').press('Tab');
     await wand.getByLabel('Aantal aan de achterkant').fill('6');
     await wand.getByLabel('Aantal aan de achterkant').press('Tab');
+    // Klaar: het overzicht van Zonnepanelen 3.0, met het huis en de daken (besluit 187).
+    await wand.locator('[data-pan-klaar]').click();
+    await wand.locator('.pan3 h3', { hasText: 'Waar liggen ze?' }).waitFor();
+    await wand.locator('[data-pan-podium] svg.sc-huis').waitFor();
     // De zekering uit de configuratie staat voorgekozen, en is te wijzigen (besluit 117).
     await wand.locator('[data-delen] .deel', { hasText: 'Aansluiting' }).click();
     await wand.locator('[data-vorm] h2', { hasText: 'Aansluiting' }).waitFor();
@@ -1084,7 +1088,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['toegang.html', /Residents and access[\s\S]*Version/],
         ['bewoners.html', /Who lives here, in order/],
         // Deel 4: Wat je huis kan, Indeling, Inrichten en het begin.
-        ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*Sun and costs/],
+        ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*What the house learns first[\s\S]*On sun/],
         ['indeling.html', /Rooms and layout[\s\S]*(Add a floor|Name of the floor)/],
         ['inrichten.html', /Your house[\s\S]*Let’s set up your house/],
         ['inrichten.html#warmte', /What heats and cools\?/],
@@ -1950,7 +1954,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
   }, 30_000);
 
   it('past Thuis aan op de telefoon en de wand, met favorieten (besluit 162)', async () => {
-    type Voorkeuren = { tel: { kaarten: string[]; favorieten: { id: string }[] }; wand: { kaarten: string[]; magAanpassen: boolean } };
+    type Voorkeuren = { tel: { kaarten: string[]; favorieten: { id: string }[] }; wand: { kaarten: string[]; breed: string[]; magAanpassen: boolean } };
     const voorkeuren = async () => (await (await fetch(`${baseUrl}/api/voorkeuren`)).json()) as Voorkeuren;
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, timezoneId: 'UTC', locale: 'nl-NL' });
     await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
@@ -2068,7 +2072,13 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.locator('#wand [data-bewerkkop]').waitFor();
       // De greep is alleen een icoon; geen vakken en geen pijltjes meer (besluit 167).
       expect((await p.locator('#wand [data-kaart="vandaag"] [data-greep]').textContent())?.trim()).toBe('');
-      expect(await p.locator('#wand .kaartmaat, #wand .kaartpijl').count()).toBe(0);
+      expect(await p.locator('#wand .kaartpijl').count()).toBe(0);
+      // Twee kolommen, elke kaart smal of breed (besluit 187): Vandaag smal, en weer breed.
+      await p.locator('#wand [data-kaart="vandaag"] [data-maat-zet="smal"]').click();
+      await expect.poll(async () => (await voorkeuren()).wand.breed.includes('vandaag')).toBe(false);
+      expect(await p.locator('#wand [data-kaart="vandaag"]').getAttribute('class')).toContain('smal');
+      await p.locator('#wand [data-kaart="vandaag"] [data-maat-zet="breed"]').click();
+      await expect.poll(async () => (await voorkeuren()).wand.breed.includes('vandaag')).toBe(true);
       // Favorieten en Morgen staan er nog niet: een vak om er een te kiezen.
       expect(await p.locator('#wand [data-vrijvak]').isVisible()).toBe(true);
       await p.locator('#wand [data-kaart="gevoel"] [data-oog]').click();
@@ -2090,7 +2100,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Terug zoals het was, voor de tests hierna.
       const terug = (body: unknown) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify(body) });
       await terug({ plek: 'tel', kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [] });
-      await terug({ plek: 'wand', kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [] });
+      await terug({ plek: 'wand', kaarten: ['vandaag', 'gevoel', 'apparaat'], breed: ['favorieten', 'vandaag', 'gevoel'], favorieten: [] });
       await context.close();
     }
   }, 60_000);
@@ -3195,7 +3205,8 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await p.locator('#wand a.kan').click();
     await p.locator('#wand h1', { hasText: 'Wat je huis kan' }).waitFor();
     await p.locator('#wand svg.sc-huis').first().waitFor();
-    expect(await p.locator('#wand [data-vakken] .vak h3').allTextContents()).toEqual(['Comfort', 'Zon en kosten', 'Gemak', 'Overzicht']);
+    // Zes groepen (besluit 187): wat het huis eerst leert apart, en de kosten ook.
+    expect(await p.locator('#wand [data-vakken] .vak h3').allTextContents()).toEqual(['Comfort', 'Wat het huis eerst leert', 'Op zon', 'Kosten', 'Gemak', 'Overzicht']);
     // Een tik opent het blad, met wat het is en wanneer het werkt.
     await p.locator('#wand [data-vakken] .regel', { hasText: 'Thuisbatterij' }).click();
     await p.locator('#wand [data-blad]', { hasText: 'Wanneer het werkt' }).waitFor();

@@ -62,8 +62,9 @@ function huisModel() {
   const zonKw = s.zonKw ?? 0;
   const netKw = s.netKw ?? 0;
   // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
-  const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon });
-  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = tek;
+  // Huis 3.0 (besluit 187): de kelder onder de grond, op een eiland met het weer van nu.
+  const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon, kelderOnder: true });
+  const { etages, kelder, oprit, tuin, terras, balkon, voortuin, garage } = tek;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
@@ -71,6 +72,8 @@ function huisModel() {
   // Hoe de panelen liggen, zoals bij Inrichten (besluit 166): per kant bij beide kanten.
   const opDak = huismodel.panelenOpDak(aansluiting?.antwoorden?.panelen, piekW);
   const maand = new Date().getMonth() + 1;
+  const elders = aansluiting?.antwoorden?.elders ?? {};
+  const nuWeer = weer?.vandaag?.soort;
 
   const stromen = [];
   const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));
@@ -80,27 +83,61 @@ function huisModel() {
 
   const labels = [];
   if (zonKw > 0.05) labels.push({ bij: 'panelen', titel: `${getal(zonKw)} kW`, groot: true, toon: 'zon', regels: [t('thuis.label.panelen')], dx: 64, dy: -70 });
-  labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'net' : 'mint', dx: -30, dy: 34 });
+  // Van het net in violet, terug in groen: dezelfde kleur als de lijn (besluit 187).
+  labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'violet' : 'mint', dx: 40, dy: 64 });
 
   return {
     beschrijving: `${state?.bewoner?.kop?.titel ?? t('thuis.hetHuis')}. ${state?.bewoner?.kop?.zin ?? ''}`,
     tijd,
-    seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
+    // De seizoenen (besluit 187): kale bomen in de winter, oranje in de herfst.
+    seizoen: maand === 12 || maand <= 2 ? 'winter' : maand >= 10 ? 'herfst' : 'zomer',
+    weer: nuWeer === 'regen' || nuWeer === 'onweer' ? 'regen' : nuWeer === 'sneeuw' ? 'sneeuw' : undefined,
     wolken,
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
     etages,
+    ...(kelder ? { kelder } : {}),
+    // Het kompas op het gras, als de ligging van het huis bekend is.
+    ...(huismodel.kompasVan(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) ? { kompas: huismodel.kompasVan(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) } : {}),
     buitenunit: tek.buitenunit,
     voordeur: tek.voordeur,
     net: true,
-    oprit,
-    tuin,
+    // Panelen op de garage, carport of het tuinhuis (besluit 187).
+    oprit: oprit && elders.carport && oprit.carport ? { ...oprit, carport: { panelen: elders.carport } } : oprit,
+    tuin: tuin && elders.tuinhuis ? { ...tuin, tuinhuisPanelen: elders.tuinhuis } : tuin,
     terras,
     balkon,
     voortuin,
-    garage,
+    garage: garage && elders.garage ? { ...garage, panelen: elders.garage } : garage,
     stromen,
     labels,
   };
+}
+
+/**
+ * Op de telefoon onder het huis (besluit 187): van de zon, naar het huis, en
+ * van of naar het net, in de kleur van de lijnen. Op de wand staat het net als
+ * label bij het huis.
+ */
+function tekenStromenTel() {
+  const el = document.querySelector('#tel [data-stromen]');
+  if (!el) return;
+  const s = state?.bewoner?.stromen;
+  if (!s) return void (el.hidden = true);
+  const vak = (getalKw, woord, kleur = '') => `<div><b class="${kleur}">${esc(getalKw)}</b><span>${esc(woord)}</span></div>`;
+  const pijl = '<i aria-hidden="true">→</i>';
+  const netKw = s.netKw ?? 0;
+  const net = netKw > 0.05
+    ? vak(`${getal(netKw)} kW`, t('thuis.stromen.vanNet'), 'violet-t')
+    : netKw < -0.05
+      ? vak(`${getal(-netKw)} kW`, t('thuis.stromen.terug'), 'mint-t')
+      : vak('0 kW', t('thuis.stromen.net'));
+  const delen = [];
+  if (s.zonKw != null && s.zonKw > 0.05) delen.push(vak(`${getal(s.zonKw)} kW`, t('thuis.stromen.zon'), 'zon-t'));
+  if (s.verbruikKw != null) delen.push(vak(`${getal(s.verbruikKw)} kW`, t('thuis.stromen.huis')));
+  delen.push(net);
+  // Van het net naar het huis: de pijl wijst dan naar het huis.
+  el.innerHTML = netKw > 0.05 && delen.length === 2 ? `${delen[1]}<i aria-hidden="true">←</i>${delen[0]}` : delen.join(pijl);
+  el.hidden = false;
 }
 
 /** Het klimaatapparaat bij een actuator, zoals het huis het noemt. */
@@ -139,9 +176,10 @@ function tekenNu() {
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
-  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
-  // Eenvoudig (besluit 164): geen getallen op het huis.
-  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: 14, tik: true });
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, wereld: true, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
+  // Eenvoudig (besluit 164): geen getallen op het huis. Het kompas is op de telefoon te klein.
+  else huis.teken(document.getElementById('podium-tel'), { ...model, kompas: undefined, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, wereld: true, eigenLucht: false, tik: true });
+  tekenStromenTel();
 
   tekenVandaag();
   tekenStraks();

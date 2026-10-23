@@ -122,8 +122,9 @@ export async function bewonersRoutes(d: Diensten, v: Verzoek): Promise<boolean> 
         return true;
       }
       const vraag = typeof body === 'object' && body != null ? (body as Record<string, unknown>) : {};
-      // "verwijder" haalt elke melding weg; "negeer" blijft voor wat er al was.
-      const gelukt = vraag['verwijder'] != null ? store.verwijder(vraag['verwijder']) : store.negeer(vraag['negeer']);
+      // "verwijder" haalt elke melding weg; "negeer" blijft voor wat er al was; "alles" wist de hele lijst (besluit 187).
+      if (vraag['alles'] === true) store.verwijderAlles();
+      const gelukt = vraag['alles'] === true || (vraag['verwijder'] != null ? store.verwijder(vraag['verwijder']) : store.negeer(vraag['negeer']));
       if (!gelukt) {
         sendJson(res, 400, { fout: 'die melding is er niet' });
         return true;

@@ -564,6 +564,20 @@ export class MeldingenStore {
     return true;
   }
 
+  /**
+   * Alles wissen (besluit 187): wat nog speelt, laat de app niet meer zien tot
+   * het voorbij is, en wat al voorbij is gaat uit de lijst. Komt iets daarna
+   * opnieuw, dan staat het er weer, zoals bij één melding weghalen.
+   */
+  verwijderAlles(): void {
+    const b = this.#bestand;
+    const spelen = b.meldingen.filter((m) => m.opgelostMs == null);
+    const negeer = [...new Set([...b.negeer, ...spelen.map((m) => m.id)])];
+    if (spelen.length === b.meldingen.length && negeer.length === b.negeer.length) return;
+    this.#bestand = { ...b, meldingen: spelen, negeer };
+    this.#vies = true;
+  }
+
   /** Naar het bestand als er iets veranderde; eerst ernaast, dan omwisselen. */
   async bewaar(): Promise<void> {
     if (!this.#vies) return;

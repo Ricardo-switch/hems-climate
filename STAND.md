@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 23 oktober 2026.*
+*Stand: 24 oktober 2026.*
 
 ## Waar het project staat
 
@@ -170,6 +170,11 @@ verwijzing bestaat.
   `nieuw.html` is weg. Zonder verbinding toont elke pagina de laatste stand,
   grijs ([82]). De app blijft dun: alles komt
   kant-en-klaar uit de dienst ([94], [76]).
+- **Huis 3.0:** het huis staat op een eiland met de kelder onder de grond, het
+  weer en de seizoenen; elke stroom een eigen kleur; panelen ook op de garage,
+  carport of het tuinhuis; de kaarten op de wand smal of breed; op de telefoon
+  één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
+  de meldingen ([187]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -615,4 +620,5 @@ verwijzing bestaat.
 [184]: DECISIONS.md#184-de-integratie-smart-climate-assist-zonder-yaml
 [185]: DECISIONS.md#185-meertalig-het-fundament-met-thuis-als-proef
 [186]: DECISIONS.md#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon
+[187]: DECISIONS.md#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak
 <!-- links:einde -->

@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { STANDAARD_MELDINGEN } from '../src/web/push.js';
 
-import { STANDAARD_NIEMAND, STANDAARD_TEL, STANDAARD_WAND, STANDAARD_WEERGAVE, VOORKEUREN_FILE, VoorkeurenStore, leesFavorieten, leesKaarten, leesNiemand, leesWeergave, metWandVolgorde } from '../src/web/voorkeuren.js';
+import { STANDAARD_BREED, STANDAARD_NIEMAND, STANDAARD_TEL, STANDAARD_WAND, STANDAARD_WEERGAVE, VOORKEUREN_FILE, VoorkeurenStore, leesFavorieten, leesKaarten, leesNiemand, leesWeergave, metWandVolgorde } from '../src/web/voorkeuren.js';
 
 const ricardo = { userId: 'u-ricardo', magWand: true };
 const noor = { userId: 'u-noor', magWand: false };
@@ -90,7 +90,18 @@ describe('VoorkeurenStore', () => {
     await store.load();
     const v = store.view(noor);
     expect(v.tel).toEqual({ kaarten: STANDAARD_TEL, favorieten: [], weergave: STANDAARD_WEERGAVE, thema: 'donker', kleur: 'lucht', taal: 'auto', meldingen: STANDAARD_MELDINGEN });
-    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false });
+    expect(v.wand).toEqual({ kaarten: STANDAARD_WAND, breed: STANDAARD_BREED, favorieten: [], magAanpassen: false, niemand: STANDAARD_NIEMAND, kleur: 'lucht', van: null, naam: null, eigen: false });
+  });
+
+  it('bewaart welke kaarten op de wand breed staan, bij wiens indeling het is (besluit 187)', async () => {
+    const store = new VoorkeurenStore(dir);
+    await store.load();
+    const uit = await store.save({ plek: 'tel', breed: ['vandaag', 'maand', 'vandaag'] }, ricardo);
+    expect(uit.ok).toBe(true);
+    const bestand = JSON.parse(await readFile(join(dir, VOORKEUREN_FILE), 'utf-8'));
+    expect(bestand.accounts[ricardo.userId!].breed).toEqual(['vandaag', 'maand']);
+    expect((await store.save({ plek: 'tel', breed: ['kamers'] }, ricardo)).ok).toBe(false);
+    expect((await store.save({ plek: 'tel', breed: 'vandaag' }, ricardo)).ok).toBe(false);
   });
 
   it('bewaart de telefoon per account, en leest het terug na een herstart', async () => {

@@ -175,6 +175,29 @@
     return { etages, W, Ht, heeftDak };
   }
 
+  /** Een appartement (huis 3.0): hoeveel verdiepingen er onder en boven liggen. */
+  const gebouwVan = (model) => ({ onder: model.gebouw?.onder ?? 2, boven: model.gebouw?.boven ?? 1, panelen: model.gebouw?.panelen ?? 0 });
+
+  /**
+   * De wereld (huis 3.0): het perceel als een eiland in de lucht, met de
+   * voorkant als één doorsnede door huis en grond. Alleen met `opts.wereld`,
+   * en niet ingezoomd of bij een appartement. Null: het gewone perceel.
+   */
+  function eilandVan(model, W, opts) {
+    if (!opts.wereld || model.zonderDak || model.woning === 'appartement') return null;
+    const nis = !!model.kelder;
+    return {
+      x0: model.auto || model.oprit || model.garage || spook(model, 'auto') ? -3.35 : -1.3,
+      // Een tuin krijgt ruimte: alles erin moet tegelijk kunnen zonder op elkaar te staan.
+      x1: model.tuin ? W + 3.0 : model.terras ? W + 2.45 : W + 1.35,
+      y0: model.tuin ? -2.9 : model.garage ? -2.6 : -1.1,
+      yF: D + 0.8,
+      nis,
+      // Een dunne plaat grond: net diep genoeg voor de kelder, de kabel en een paar lagen.
+      T: nis ? FH + 0.3 : 0.55,
+    };
+  }
+
   /** Alle punten die in beeld moeten, om de schaal te bepalen. */
   function omtrek(model, g, opts = {}) {
     const { W, Ht } = g;
@@ -197,6 +220,16 @@
     if (model.terras) pts.push([g.W + 2.0, D + 0.4, 0], [g.W + 2.0, 0.4, 0.8]);
     if (model.voortuin) pts.push([W + 0.1, D + 1.7, 0], [1.3, D + 1.7, 0]);
     if (model.zon) pts.push([W / 2, D / 2, Ht + R + 1.6]);
+    // Een appartement (huis 3.0): de verdiepingen eronder en erboven.
+    if (model.woning === 'appartement') {
+      const ge = gebouwVan(model);
+      pts.push([-0.2, D, -ge.onder * FH - 0.1], [W + 0.6, D, -ge.onder * FH - 0.1], [0, 0, Ht + ge.boven * FH + 0.3]);
+    }
+    // Het eiland (huis 3.0): de hoeken en de diepte van de doorsnede.
+    const ei = eilandVan(model, W, opts);
+    if (ei) pts.push([ei.x0, ei.yF, -ei.T - 0.3], [ei.x1, ei.yF, -ei.T * 0.75], [ei.x0, ei.y0, 0], [ei.x1, ei.y0, 0], [ei.x0 + 0.4, ei.y0 + 0.45, 1.6], [ei.x1 - 0.45, ei.y0 + 0.4, 1.8]);
+    // De kelder (huis 3.0): onder de grond, met de aarde eromheen.
+    if (model.kelder) pts.push([-0.4, D, -FH - 0.35], [W + 0.4, D, -FH - 0.35]);
     return pts;
   }
 
@@ -284,6 +317,8 @@
       return wassen.get(kleur);
     }
     const buiten = [];
+    /** Wat buiten achter het huis staat, zoals de bomen en de haag van het eiland (huis 3.0). */
+    const buitenAchter = [];
     const stromen = [];
     const labels = [];
     const kamers = [];
@@ -346,6 +381,34 @@
       <filter id="${id}-gloed" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${(k * 0.05).toFixed(1)}"/></filter>
     `);
 
+    /*
+     * ---- de verte (huis 3.0) ----
+     * In de wereld: heuvels aan de horizon, in lagen die naar achteren lichter
+     * en vager worden, en een gloed van de lucht erachter. Zo krijgt het eiland
+     * diepte zonder dat het de aandacht trekt.
+     * Met `opts.eigenLucht: false` (de telefoon) niet: dan staat het eiland in
+     * de lucht van de pagina.
+     */
+    if (eilandVan(model, W, opts) && opts.eigenLucht !== false) {
+      const horizon = hoog * 0.78;
+      // Een eigen lucht per moment: overdag licht naar de horizon toe, 's avonds warm, 's nachts diep.
+      const bewolkt = (model.wolken ?? 0) > 0.7 || model.weer === 'regen';
+      const verloop = nacht ? ['#060c1c', '#0d1830', '#1a2a4c'] : schemer ? ['#1e1a40', '#5a3a68', '#e88a5e'] : model.weer === 'sneeuw' || (winter && !bewolkt) ? ['#33435a', '#62809e', '#c3d2e0'] : bewolkt ? ['#26323f', '#45566a', '#7d8d9e'] : ['#173563', '#2d68a3', '#8fc6e8'];
+      lucht.push(`<defs><linearGradient id="${id}-hemel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${verloop[0]}"/><stop offset="0.6" stop-color="${verloop[1]}"/><stop offset="1" stop-color="${verloop[2]}"/></linearGradient></defs>`);
+      lucht.push(`<rect x="0" y="0" width="${breed}" height="${hoog}" fill="url(#${id}-hemel)"/>`);
+      const tint = nacht ? ['#101a30', '#16223c', '#1c2a48'] : schemer ? ['#5a3a5a', '#6e4660', '#8a5566'] : winter ? ['#8fa3b8', '#a7b8ca', '#bccbda'] : model.weer === 'regen' ? ['#4a5868', '#5a6878', '#6b7988'] : ['#3d6f8f', '#5a8fae', '#7fb0cb'];
+      lucht.push(`<defs><radialGradient id="${id}-horizon" cx="0.5" cy="1" r="0.8"><stop offset="0" stop-color="${schemer ? '#ff9a6b' : nacht ? '#4a5f9a' : '#8fc0e8'}" stop-opacity="${schemer ? 0.32 : nacht ? 0.18 : 0.22}"/><stop offset="1" stop-color="#8fc0e8" stop-opacity="0"/></radialGradient></defs>`);
+      lucht.push(`<rect x="0" y="${(horizon - hoog * 0.55).toFixed(0)}" width="${breed}" height="${(hoog * 0.7).toFixed(0)}" fill="url(#${id}-horizon)"/>`);
+      [0.0, 0.06, 0.12].forEach((dy, i) => {
+        const y = horizon + dy * hoog;
+        const pts = Array.from({ length: 13 }, (_, j) => {
+          const x = (breed * j) / 12;
+          return `${x.toFixed(0)},${(y - Math.abs(Math.sin(j * 0.9 + i * 1.7)) * hoog * (0.05 - i * 0.012)).toFixed(0)}`;
+        });
+        lucht.push(`<polygon points="0,${hoog} ${pts.join(' ')} ${breed},${hoog}" fill="${tint[2 - i]}" opacity="${(0.55 + i * 0.15).toFixed(2)}"/>`);
+      });
+    }
+
     /* ---- lucht: zon, maan, sterren, wolken (achter het huis) ---- */
     const mid = P(W / 2, D / 2, Ht + R * 0.6);
     const boog = k * Math.max(W, 4.2) * 0.95;
@@ -381,7 +444,7 @@
         const cx = mid[0] + (i / Math.max(1, n - 1) - 0.5) * boog * 1.7;
         const cy = mid[1] - boog * (0.35 + 0.18 * ((i * 37) % 3) / 2);
         const s = k * (0.7 + ((i * 53) % 5) * 0.12);
-        lucht.push(`<g opacity="${((licht ? 0.6 : 0.25) + 0.35 * model.wolken).toFixed(2)}" filter="url(#${id}-zacht)"><ellipse cx="${cx}" cy="${cy}" rx="${s * 1.5}" ry="${s * 0.42}" fill="${licht ? '#ffffff' : winter ? '#9fb0c2' : '#8a9bb0'}"/><ellipse cx="${cx + s * 0.4}" cy="${cy - s * 0.25}" rx="${s * 0.8}" ry="${s * 0.45}" fill="${licht ? '#f4f7fb' : winter ? '#aebdcc' : '#94a5b9'}"/></g>`);
+        lucht.push(`<g opacity="${((licht ? 0.6 : 0.25) + 0.35 * model.wolken).toFixed(2)}" filter="url(#${id}-zacht)"><ellipse cx="${cx}" cy="${cy}" rx="${s * 1.5}" ry="${s * 0.42}" fill="${licht || (opts.wereld && !nacht) ? '#ffffff' : winter ? '#9fb0c2' : '#8a9bb0'}"/><ellipse cx="${cx + s * 0.4}" cy="${cy - s * 0.25}" rx="${s * 0.8}" ry="${s * 0.45}" fill="${licht || (opts.wereld && !nacht) ? '#f4f7fb' : winter ? '#aebdcc' : '#94a5b9'}"/></g>`);
       }
     }
 
@@ -412,8 +475,17 @@
       return { x0: xd, x1: xd + breed, kamer: r, deurbel: model.voordeur.deurbel ?? null };
     })();
 
+    /*
+     * De wereld (huis 3.0): het perceel als een eiland in de lucht, met de
+     * voorkant als één doorsnede door huis en grond. Alleen met `opts.wereld`,
+     * en niet ingezoomd of bij een appartement.
+     */
+    const eiland = eilandVan(model, W, opts);
+    /** Waar de batterij staat: op het eiland (huis 3.0) dun aan de zijgevel achteraan, ver van de buitenunit voorin. */
+    const accuPlek = eiland ? { x: W + 0.02, y: 0.12, wand: true } : { x: W + 0.02, y: D - 0.75 };
+
     /** Waar de kabel van het net het perceel in komt: aan de straat, voor de meterkast. */
-    const netStraat = voordeur ? [Math.max(0.2, voordeur.x0 - 0.35), D + 1.8] : [-0.6, D + 1.1];
+    const netStraat = eiland ? [eiland.x0 + 0.45, eiland.yF - 0.28] : voordeur ? [Math.max(0.2, voordeur.x0 - 0.35), D + 1.8] : [-0.6, D + 1.1];
 
     /* ---- grond: het perceel, de oprit ---- */
     // Ingezoomd op een etage: alleen een smalle rand grond om het huis.
@@ -448,6 +520,91 @@
     }
     // Schaduw onder het huis.
     grond.push(`<g filter="url(#${id}-zacht)" opacity="0.6">${poly([[0.1, 0.1, 0], [W + 0.25, 0.1, 0], [W + 0.25, D + 0.25, 0], [0.1, D + 0.25, 0]], `fill="${licht ? '#3a4a58' : '#05090d'}"`)}</g>`);
+    // De wereld vervangt het perceel (huis 3.0).
+    if (eiland) {
+      grond.length = 0;
+      bouwEiland();
+    }
+
+    /*
+     * ---- de kelder (huis 3.0): opengewerkt in de grond ----
+     * Onder de begane grond, net zo open als de rest. Eromheen de aarde als
+     * doorsnede, met een paar lagen, zodat je ziet dat hij onder de grond ligt.
+     * Geen ramen in de achtermuur; de rechtergevel is aarde.
+     */
+    if (model.kelder && !model.zonderDak) {
+      const kz = -FH;
+      const bodem = kz - 0.3;
+      const aarde = licht ? ['#a08c74', '#8c7963', '#7a6955'] : ['#2b241e', '#231d18', '#1c1713'];
+      // In de wereld ligt de kelder in een nis in de doorsnede: daar is de aarde al.
+      if (!eiland) {
+      // De zijkant van de aarde rechts, dan de voorkant.
+      huis.push(poly([[W + 0.35, D, 0], [W + 0.35, -0.6, 0], [W + 0.35, -0.6, bodem], [W + 0.35, D, bodem]], `fill="${aarde[2]}"`));
+      huis.push(poly([[-0.35, D, 0], [W + 0.35, D, 0], [W + 0.35, D, bodem], [-0.35, D, bodem]], `fill="${aarde[0]}"`));
+      for (const [f, o] of [[0.22, 0.5], [0.55, 0.35], [0.85, 0.25]]) {
+        const zl = bodem * f;
+        huis.push(line([[-0.35, D + 0.002, zl], [W * 0.3, D + 0.002, zl - 0.04], [W * 0.65, D + 0.002, zl + 0.03], [W + 0.35, D + 0.002, zl - 0.02]], `stroke="${aarde[1]}" stroke-opacity="${o}" stroke-width="3"`));
+      }
+      // Een paar steentjes in de aarde.
+      for (const [x, z] of [[-0.2, -0.5], [W + 0.2, -1.1], [-0.15, -1.4], [W + 0.22, -0.35]]) {
+        const c = P(x, D + 0.003, z);
+        huis.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${(k * 0.06).toFixed(1)}" ry="${(k * 0.035).toFixed(1)}" fill="${aarde[1]}"/>`);
+      }
+      }
+      const kamersK = model.kelder.kamers ?? [];
+      const totaalK = kamersK.reduce((s2, k2) => s2 + (k2.gewicht ?? 1), 0) || 1;
+      let xk = 0;
+      erBoven = true;
+      for (const kamer of kamersK) {
+        const x1 = xk + (W * (kamer.gewicht ?? 1)) / totaalK;
+        tekenKamer({ ...kamer, geenRaam: true }, xk, x1, kz, 0, false);
+        xk = x1;
+      }
+      // Het plafond van de kelder als doorsnede, en de grondlijn erboven.
+      huis.push(poly([[0, D, 0], [W, D, 0], [W, D, -0.09], [0, D, -0.09]], `fill="#3c4a5b"`));
+      if (!eiland) huis.push(line([[-0.35, D + 0.004, 0], [W + 0.35, D + 0.004, 0]], `stroke="${licht ? '#6f8a79' : '#3f6b52'}" stroke-width="3"`));
+    }
+
+    // Wat na het huis komt en ervoor ligt, zoals de verdiepingen boven een appartement.
+    const burenVoor = [];
+    const gewoonAantal = g.etages.filter((e) => !e.dak).length;
+    /*
+     * ---- een appartement (huis 3.0) ----
+     * Jouw verdieping in het gebouw: de verdiepingen eronder en erboven als
+     * vage gevels die naar boven en onder vervagen, zonder perceel eromheen.
+     * Panelen op het gezamenlijke dak, als die er zijn.
+     */
+    const appartement = model.woning === 'appartement' && !model.zonderDak ? gebouwVan(model) : null;
+    if (appartement) {
+      grond.length = 0;
+      const gid = `${id}-gebouw`;
+      const kleur = licht ? '#9fb0c2' : '#41536a';
+      defs.push(`<linearGradient id="${gid}-o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${kleur}" stop-opacity="0.8"/><stop offset="1" stop-color="${kleur}" stop-opacity="0.05"/></linearGradient><linearGradient id="${gid}-b" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="${kleur}" stop-opacity="0.75"/><stop offset="1" stop-color="${kleur}" stop-opacity="0.1"/></linearGradient>`);
+      const zo = -appartement.onder * FH;
+      const zb = Ht + appartement.boven * FH;
+      const vlak = (z0v, z1v, verloop) => {
+        grond.push(poly([[W, 0, z0v], [W, D, z0v], [W, D, z1v], [W, 0, z1v]], `fill="url(#${gid}-${verloop})" opacity="0.7"`));
+        grond.push(poly([[0, D, z0v], [W, D, z0v], [W, D, z1v], [0, D, z1v]], `fill="url(#${gid}-${verloop})"`));
+        for (let z = z0v; z < z1v - 0.01; z += FH) {
+          for (const rx of [0.3, W * 0.55]) grond.push(poly([[rx, D + 0.002, z + 0.45], [rx + 0.7, D + 0.002, z + 0.45], [rx + 0.7, D + 0.002, z + FH - 0.35], [rx, D + 0.002, z + FH - 0.35]], `fill="${nacht ? '#F4C27E' : '#8fb1d1'}" opacity="${nacht ? 0.22 : 0.12}"`));
+          grond.push(line([[0, D + 0.003, z], [W, D + 0.003, z]], 'stroke="#C9D6E2" stroke-opacity="0.15" stroke-width="1.2"'));
+        }
+      };
+      if (appartement.onder > 0) vlak(zo, 0, 'o');
+      // Erboven alleen de gevels: het dak van het gebouw ligt erop, de kamers blijven te zien.
+      if (appartement.boven > 0) burenVoor.push((() => {
+        const voor = grond.length;
+        vlak(Ht, zb, 'b');
+        grond.push(poly([[0, 0, zb], [W, 0, zb], [W, D, zb], [0, D, zb]], `fill="${kleur}" opacity="0.35"`));
+        return grond.splice(voor).join('');
+      })());
+      if (appartement.panelen) {
+        const voor = buiten.length;
+        plaatPanelen(0.2, 0.15, W - 0.4, D - 0.3, zb + 0.02, appartement.panelen);
+        burenVoor.push(buiten.splice(voor).join(''));
+        plek.panelenGebouw = [W / 2, D / 2, zb + 0.2];
+      }
+    }
 
     /* ---- het huis, etage voor etage, van onder naar boven ---- */
     let z0 = 0;
@@ -469,7 +626,7 @@
       z0 = z1;
     }
 
-    const dak = !model.zonderDak;
+    const dak = !model.zonderDak && !appartement;
     const zt = z0;
     if (dak) {
     // Het dak, met de kamers eronder; elk met zijn stuk van de schuine wand.
@@ -541,6 +698,8 @@
       const brandt = nacht || schemer ? (laatste?.apparaten ?? []).some((a) => a.soort === 'lamp' && a.aan) : false;
       const ramen = 2;
       for (let i = 0; i < ramen; i++) {
+        // Waar de accu aan de gevel hangt (huis 3.0), zit geen raam.
+        if (accuPlek.wand && (model.batterij || spook(model, 'batterij')) && i === 0 && z0 < 0.01) continue;
         const y0 = 0.22 + i * (D - 0.3) / ramen;
         const y1 = y0 + (D - 0.3) / ramen - 0.22;
         const ra = [[W + 0.001, y0, z0 + 0.35], [W + 0.001, y1, z0 + 0.35], [W + 0.001, y1, z1 - 0.28], [W + 0.001, y0, z1 - 0.28]];
@@ -551,7 +710,7 @@
         const screen = (laatste?.apparaten ?? []).find((a) => a.soort === 'screen');
         if (screen && i === 0) {
           const dicht = screen.dicht ?? 0;
-          const zb = z1 - 0.28 - dicht * (z1 - 0.63);
+          const zb = z1 - 0.28 - dicht * (z1 - 0.28 - (z0 + 0.35));
           huis.push(poly([[W + 0.02, y0 - 0.03, z1 - 0.25], [W + 0.02, y1 + 0.03, z1 - 0.25], [W + 0.02, y1 + 0.03, zb], [W + 0.02, y0 - 0.03, zb]], `fill="#3a4757" opacity="0.92"`));
           for (let s = 1; s < 6; s++) {
             const zz = z1 - 0.25 - (s / 6) * (z1 - 0.25 - zb);
@@ -599,6 +758,8 @@
         huis.push(`<g class="sc-glans">${poly([q(0.1, 0.05), q(0.1, D - 0.05), q(0.92, D - 0.05), q(0.92, 0.05)], `fill="url(#${id}-glans)"`)}</g>`);
       }
     }
+    // Sneeuw op het dak (huis 3.0): een witte laag, ook over de panelen.
+    if (model.weer === 'sneeuw') huis.push(poly([[W / 2, -0.08, zt + R + 0.03], [W + 0.14, -0.08, zt - 0.05], [W + 0.14, D + 0.08, zt - 0.05], [W / 2, D + 0.08, zt + R + 0.03]], 'fill="#eef3f8" opacity="0.9"'));
     }
     // De doorsnede: de omtrek van het huis aan de voorkant, als een snijlijn.
     if (dak) {
@@ -625,16 +786,21 @@
 
     /* ---- buiten: buitenunit, batterij, laadpaal en auto, het net ---- */
     if (model.buitenunit) bouwBuitenunit(model.buitenunit, W);
+    // De garage vóór de batterij: die kan ertegenaan staan (huis 3.0).
+    if (model.garage && !model.zonderDak && eiland) bouwGarage(model.garage);
     if (model.batterij || spook(model, 'batterij')) bouwBatterij(model.batterij, spook(model, 'batterij'));
-    if (model.tuin) bouwTuin(model.tuin);
-    if (model.terras) bouwTerras(model.terras);
+    // Op het eiland (huis 3.0) heeft de tuin een vaste indeling, met het terras erin.
+    if (model.tuin && eiland) bouwTuin3(model.tuin);
+    else if (model.tuin) bouwTuin(model.tuin);
+    if (model.terras && !(model.tuin && eiland)) bouwTerras(model.terras);
     if (model.voortuin) bouwVoortuin(model.voortuin);
     if (model.balkon && g.etages.filter((e) => !e.dak).length >= 2) bouwBalkon(model.balkon);
+    else if (model.balkon && appartement) bouwBalkon(model.balkon, 0);
     if (model.auto || spook(model, 'auto')) bouwAuto(model.auto, spook(model, 'auto'), true);
     else if (model.oprit?.auto) bouwAuto({ stand: 'geparkeerd', kleur: model.oprit.auto.kleur }, false, false);
     if (model.oprit?.camera) bouwCamera(model.oprit.camera);
     // Een losse garage achter de oprit, en een carport boven de auto (besluit 166).
-    if (model.garage && !model.zonderDak) bouwGarage(model.garage);
+    if (model.garage && !model.zonderDak && !eiland) bouwGarage(model.garage);
     if (model.oprit?.carport && !model.zonderDak) bouwCarport();
     if (model.net) bouwNet();
 
@@ -642,7 +808,8 @@
     const hub = [W + 0.25, D + 0.35, 0.02];
     const voetPaneel = [W + 0.12, D - 0.2, zt - 0.05];
     for (const s of model.stromen ?? []) {
-      const kleur = s.van === 'zon' ? KLEUR.zon : s.van === 'batterij' ? KLEUR.mint : s.van === 'net' ? KLEUR.net : KLEUR.zon;
+      // Zon goud, terug naar het net groen, van het net violet, uit de batterij blauw (huis 3.0).
+      const kleur = s.naar === 'net' ? KLEUR.mint : s.van === 'net' ? KLEUR.violet : s.van === 'batterij' ? KLEUR.ijs : KLEUR.zon;
       const pad = route(s.van, s.naar);
       if (!pad) continue;
       const d = pad.map((p) => pt(P(...p))).join(' ');
@@ -652,6 +819,18 @@
     }
     function route(van, naar) {
       const pts = [];
+      const accuY = accuPlek.y + 0.3;
+      /** In de wereld (huis 3.0): van de straat onder de grond, in de doorsnede, naar de meterkast. */
+      const ondergronds = () => {
+        const mkp = voordeur ? plek.meterkast : null;
+        const xm = mkp ? mkp[0] : W * 0.3;
+        const y = eiland.yF + 0.003;
+        const uit = [[netStraat[0], netStraat[1], 0.2], [netStraat[0], y, 0.02], [netStraat[0], y, -0.32], [eiland.nis ? -0.12 : xm, y, -0.32]];
+        if (eiland.nis) uit.push([-0.12, y, -0.05], [-0.12, D + 0.3, 0.02], [xm, D + 0.3, 0.02]);
+        else uit.push([xm, y, 0.02], [xm, D + 0.1, 0.02]);
+        if (mkp) uit.push([mkp[0], mkp[1], 0.02], [mkp[0], mkp[1], 0.2]);
+        return uit;
+      };
       const kamerPunt = (wie) => {
         const k2 = vindKamer(wie);
         return k2 ? [k2.xm, D + 0.02, k2.z0 + 0.03] : [W * 0.5, D + 0.02, 0.03];
@@ -663,8 +842,12 @@
        */
       const mk = voordeur ? plek.meterkast : null;
       const voorlangs = D + 0.14;
-      if (van === 'zon') pts.push(voetPaneel, [W + 0.12, D + 0.02, zt - 0.05], [W + 0.12, D + 0.02, 0.05], hub);
-      else if (van === 'batterij') pts.push([W + 0.2, D - 0.45, 0.4], [W + 0.2, D - 0.45, 0.02], hub);
+      // Liggen de panelen alleen op de garage (huis 3.0), dan komt de zon van daar.
+      if (van === 'zon' && model.garage?.panelen && model.zon?.panelen === 0) pts.push([-1.6, -1.25, 1.15], [-1.12, -1.25, 1.15], [-1.12, -1.25, 0.02], [-1.12, D + 0.35, 0.02], hub);
+      else if (van === 'zon') pts.push(voetPaneel, [W + 0.12, D + 0.02, zt - 0.05], [W + 0.12, D + 0.02, 0.05], hub);
+      else if (van === 'batterij') pts.push([accuPlek.x + 0.18, accuY, 0.4], [accuPlek.x + 0.18, accuY, 0.02], ...(accuPlek.x < 0 ? [[accuPlek.x + 0.18, D + 0.35, 0.02]] : []), hub);
+      // In de wereld (huis 3.0) loopt de kabel zichtbaar onder de grond, in de doorsnede.
+      else if (van === 'net' && eiland) pts.push(...ondergronds());
       else if (van === 'net' && mk) pts.push([netStraat[0], netStraat[1], 0.02], [netStraat[0], voorlangs, 0.02], [mk[0], voorlangs, 0.02], [mk[0], mk[1], 0.02], [mk[0], mk[1], 0.2]);
       else if (van === 'net') pts.push([netStraat[0], netStraat[1], 0.02], [netStraat[0], D + 0.6, 0.02], [W + 0.25, D + 0.6, 0.02], hub);
       else if (van === 'auto') pts.push([-0.95, D + 0.1, 0.4], [-0.95, D + 0.35, 0.02], hub);
@@ -678,9 +861,10 @@
         if (doel && doel.z0 > 0.1) pts.push([x, D + 0.02, 0.03], [x, D + 0.02, doel.z0 + 0.03]);
         return pts;
       }
-      if (naar === 'batterij') pts.push([W + 0.2, D - 0.45, 0.02], [W + 0.2, D - 0.45, 0.4]);
+      if (naar === 'batterij') pts.push(...(accuPlek.x < 0 ? [[accuPlek.x + 0.18, D + 0.35, 0.02]] : []), [accuPlek.x + 0.18, accuY, 0.02], [accuPlek.x + 0.18, accuY, 0.4]);
       else if (naar === 'auto') pts.push([W + 0.25, D + 0.35, 0.02], [-0.95, D + 0.35, 0.02], [-0.95, D + 0.1, 0.4]);
       // Terug naar het net: dezelfde weg andersom, door het huis naar de meterkast en via de voortuin naar de straat.
+      else if (naar === 'net' && eiland) pts.push([W - 0.05, D + 0.3, 0.03], ...ondergronds().reverse());
       else if (naar === 'net' && mk) pts.push([W - 0.05, mk[1], 0.03], [mk[0] + 0.12, mk[1], 0.03], [mk[0], mk[1], 0.02], [mk[0], voorlangs, 0.02], [netStraat[0], voorlangs, 0.02], [netStraat[0], netStraat[1], 0.02]);
       else if (naar === 'net') pts.push([W + 0.25, D + 0.6, 0.02], [netStraat[0], D + 0.6, 0.02], [netStraat[0], netStraat[1], 0.02]);
       else if (naar?.startsWith('kamer:')) {
@@ -694,10 +878,12 @@
     /* ---- labels: getallen op het huis ---- */
     const anker = {
       panelen: [W * 0.76, D * 0.55, zt + R * 0.48],
-      batterij: [W + 0.32, D - 0.47, 1.0],
+      // Het andere dakvlak (huis 3.0): voor een label bij panelen aan die kant.
+      panelenLinks: [W * 0.24, D * 0.55, zt + R * 0.48],
+      batterij: plek.batterij ?? [W + 0.32, D - 0.47, 1.0],
       auto: [-1.95, D - 1.0, 0.86],
       laadpaal: [-0.95, D + 0.1, 0.75],
-      net: voordeur ? [netStraat[0], netStraat[1], 0.02] : [-0.6, D + 1.25, 0.55],
+      net: eiland ? [netStraat[0], netStraat[1], 0.42] : voordeur ? [netStraat[0], netStraat[1], 0.02] : [-0.6, D + 1.25, 0.55],
       buitenunit: [W + 0.15, D - 0.4, 0.4],
       deurbel: plek.deurbel ?? [W / 2, D, 0.7],
       camera: plek.camera ?? [-0.1, D, FH],
@@ -885,6 +1071,10 @@
     }
 
     /* ---- apparaten in een kamer ---- */
+    /** Waar de boiler in zijn kamer staat: achterin, iets rechts van het midden. */
+    function boilerX(x0, x1) {
+      return Math.max(x0 + 0.5, x1 - 0.95);
+    }
     function doos(x0, y0, z0, w, d, h, kleuren) {
       const [boven, voor, zij] = kleuren;
       return [
@@ -1122,6 +1312,28 @@
           const c = P(cx + 0.21, 0.25, z0 + 0.62);
           huis.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${k * 0.12}" fill="${KLEUR.gloed}" class="sc-vlam"/>`);
         }
+      } else if (app.soort === 'boiler') {
+        // Een boiler (besluit 186): een ronde witte tank tegen de achterwand, met een strook die zegt hoe warm hij is.
+        // Niet in de hoek rechts: daar staat buiten de buitenunit er net boven (huis 3.0).
+        const r0 = 0.15;
+        const cx = boilerX(x0, x1);
+        const cy = 0.06 + r0;
+        const bh = Math.min(0.82, (hoog(cx) - z0) * 0.66);
+        plek.boiler = [cx, cy, z0 + bh];
+        blok(cx - r0, cx + r0, cy - r0, cy + r0, z0, z0 + bh);
+        const rand = (z) => Array.from({ length: 24 }, (_, i) => [cx + Math.cos((i / 24) * 2 * Math.PI) * r0, cy + Math.sin((i / 24) * 2 * Math.PI) * r0, z]);
+        const mantel = omhulsel([...rand(z0 + 0.04), ...rand(z0 + bh)].map((q) => P(...q)));
+        huis.push(`<path d="M ${mantel.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ')} Z" fill="#dfe5eb" stroke="#aeb9c4" stroke-width="0.8"/>`);
+        // Licht van links: de rechterhelft iets donkerder.
+        const schaduwkant = [...rand(z0 + 0.04).filter(([x]) => x >= cx), ...rand(z0 + bh).filter(([x]) => x >= cx).reverse()];
+        huis.push(`<path d="M ${schaduwkant.map((q) => P(...q)).map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ')} Z" fill="#b9c4ce" opacity="0.5"/>`);
+        huis.push(poly(rand(z0 + bh), 'fill="#f6f8fa" stroke="#c9d2da" stroke-width="0.8"'));
+        // Twee leidingen naar het plafond.
+        for (const dx of [-0.05, 0.05]) huis.push(line([[cx + dx, cy, z0 + bh], [cx + dx, cy, hoog(cx) - 0.02]], 'stroke="#9aa7b4" stroke-width="1.4"'));
+        const pct = Math.max(0.05, Math.min(1, app.vol ?? 0.6));
+        const yv = cy + r0 + 0.002;
+        huis.push(poly([[cx - 0.035, yv, z0 + 0.14], [cx + 0.035, yv, z0 + 0.14], [cx + 0.035, yv, z0 + bh - 0.1], [cx - 0.035, yv, z0 + bh - 0.1]], 'fill="#9aa7b4"'));
+        huis.push(poly([[cx - 0.035, yv + 0.001, z0 + 0.14], [cx + 0.035, yv + 0.001, z0 + 0.14], [cx + 0.035, yv + 0.001, z0 + 0.14 + (bh - 0.24) * pct], [cx - 0.035, yv + 0.001, z0 + 0.14 + (bh - 0.24) * pct]], `fill="${app.aan ? KLEUR.gloed : '#ff9a6b'}" ${app.aan ? 'class="sc-puls"' : ''}`));
       } else if (app.soort === 'tv') {
         huis.push(poly([[x0 + 0.3, 0.03, z0 + 0.45], [x0 + 1.1, 0.03, z0 + 0.45], [x0 + 1.1, 0.03, z0 + 0.9], [x0 + 0.3, 0.03, z0 + 0.9]], `fill="${app.aan ? '#3d6fb0' : '#0b0f14'}" stroke="#2c3642"`));
       } else if (app.soort === 'bank') {
@@ -1174,6 +1386,7 @@
         bezet.push([r.x - 0.05, r.x + r.b + 0.05, 0]);
       }
       if (apps.some((a) => a.soort === 'cv')) bezet.push([x0 + 0.15, x0 + 0.67, 0.45]);
+      if (apps.some((a) => a.soort === 'boiler')) bezet.push([boilerX(x0, x1) - 0.22, boilerX(x0, x1) + 0.22, 0]);
       if (!plafond && apps.some((a) => a.soort === 'airco')) {
         const p = aircoPlek(kamer, x0, x1, z1);
         if (p.wand === 'achter') bezet.push([p.ax - 0.05, p.ax + AIRCO.b + 0.05, p.az - 0.02 - z0]);
@@ -1489,37 +1702,104 @@
       }
     }
     function bouwBatterij(b, isSpook) {
-      const x = W + 0.02;
-      const y = D - 0.75;
+      // Op het eiland (huis 3.0) naast de garagedeur als er een garage is, anders achteraan
+      // tegen de gevel: voorin staan de buitenunit en het terras, en eronder de boiler.
+      const { x, y } = accuPlek;
+      // Bij de garage staat hij achter het huis: dan eerder getekend.
+      const laag = x < 0 ? buitenAchter : buiten;
+      plek.batterij = accuPlek.wand ? [x + 0.12, y + 0.23, 0.9] : [x + 0.32, y + 0.28, 1.0];
       if (isSpook) {
-        buiten.push(`<g opacity="0.7">${poly([[x + 0.3, y, 0], [x + 0.3, y + 0.55, 0], [x + 0.3, y + 0.55, 1.1], [x + 0.3, y, 1.1]], `fill="none" stroke="${KLEUR.mint}" stroke-dasharray="4 4"`)}</g>`);
+        laag.push(`<g opacity="0.7">${poly([[x + 0.3, y, 0], [x + 0.3, y + 0.55, 0], [x + 0.3, y + 0.55, 1.1], [x + 0.3, y, 1.1]], `fill="none" stroke="${KLEUR.mint}" stroke-dasharray="4 4"`)}</g>`);
         return;
       }
-      buiten.push(doos(x, y, 0, 0.3, 0.55, 1.1, ['#e6ecf1', '#cdd6de', '#eef2f5']));
       const pct = (b.procent ?? 50) / 100;
+      if (accuPlek.wand) {
+        // Aan de muur: dun, iets van de grond, met de strook op de kant die je ziet.
+        laag.push(doos(x, y, 0.12, 0.12, 0.46, 0.82, ['#e6ecf1', '#cdd6de', '#eef2f5']));
+        laag.push(poly([[x + 0.121, y + 0.18, 0.24], [x + 0.121, y + 0.28, 0.24], [x + 0.121, y + 0.28, 0.82], [x + 0.121, y + 0.18, 0.82]], 'fill="#5c6977"'));
+        laag.push(poly([[x + 0.122, y + 0.18, 0.24], [x + 0.122, y + 0.28, 0.24], [x + 0.122, y + 0.28, 0.24 + 0.58 * pct], [x + 0.122, y + 0.18, 0.24 + 0.58 * pct]], `fill="${KLEUR.mint}" ${b.stand !== 'rust' ? 'class="sc-puls"' : ''}`));
+        return;
+      }
+      laag.push(doos(x, y, 0, 0.3, 0.55, 1.1, ['#e6ecf1', '#cdd6de', '#eef2f5']));
       // Het niveau als een lichtstrook op de zijkant.
-      buiten.push(poly([[x + 0.301, y + 0.22, 0.15], [x + 0.301, y + 0.33, 0.15], [x + 0.301, y + 0.33, 0.95], [x + 0.301, y + 0.22, 0.95]], 'fill="#5c6977"'));
-      buiten.push(poly([[x + 0.302, y + 0.22, 0.15], [x + 0.302, y + 0.33, 0.15], [x + 0.302, y + 0.33, 0.15 + 0.8 * pct], [x + 0.302, y + 0.22, 0.15 + 0.8 * pct]], `fill="${KLEUR.mint}" ${b.stand !== 'rust' ? 'class="sc-puls"' : ''}`));
+      laag.push(poly([[x + 0.301, y + 0.22, 0.15], [x + 0.301, y + 0.33, 0.15], [x + 0.301, y + 0.33, 0.95], [x + 0.301, y + 0.22, 0.95]], 'fill="#5c6977"'));
+      laag.push(poly([[x + 0.302, y + 0.22, 0.15], [x + 0.302, y + 0.33, 0.15], [x + 0.302, y + 0.33, 0.15 + 0.8 * pct], [x + 0.302, y + 0.22, 0.15 + 0.8 * pct]], `fill="${KLEUR.mint}" ${b.stand !== 'rust' ? 'class="sc-puls"' : ''}`));
     }
-    /** Een garage achter de oprit, met de deur naar voren; licht achter de deur als er een lamp aan is. */
+    /**
+     * Een garage achter de oprit, met de deur naar voren; licht achter de deur als er een lamp aan is.
+     * Vóór het huis en de auto getekend (huis 3.0): hij staat erachter, en viel er eerst doorheen.
+     */
     function bouwGarage(gar) {
       const x0 = -2.9;
       const y0 = -2.0;
       const b = 1.8;
       const d = 1.5;
       const h = 1.1;
-      buiten.push(doos(x0, y0, 0, b, d, h, ['#3a4656', '#2f3a48', '#46525f']));
+      buitenAchter.push(doos(x0, y0, 0, b, d, h, ['#3a4656', '#2f3a48', '#46525f']));
       // Een plat dak dat iets uitsteekt.
-      buiten.push(poly([[x0 - 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 - 0.05, y0 + d + 0.08, h]], 'fill="#55626f"'));
-      buiten.push(poly([[x0 - 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h + 0.06], [x0 - 0.05, y0 + d + 0.08, h + 0.06]], 'fill="#3d4957"'));
+      buitenAchter.push(poly([[x0 - 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 - 0.05, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 - 0.05, y0 + d + 0.08, h]], `fill="${model.weer === 'sneeuw' ? '#eef3f8' : '#55626f'}"`));
+      buitenAchter.push(poly([[x0 - 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h], [x0 + b + 0.05, y0 + d + 0.08, h + 0.06], [x0 - 0.05, y0 + d + 0.08, h + 0.06]], 'fill="#3d4957"'));
       // De kanteldeur, met lamellen.
       const yd = y0 + d + 0.001;
-      buiten.push(poly([[x0 + 0.22, yd, 0.02], [x0 + b - 0.22, yd, 0.02], [x0 + b - 0.22, yd, h - 0.18], [x0 + 0.22, yd, h - 0.18]], `fill="${gar.lampAan ? '#6b5a3c' : '#4f5c6a'}"`));
-      for (let z = 0.2; z < h - 0.2; z += 0.18) buiten.push(line([[x0 + 0.22, yd + 0.001, z], [x0 + b - 0.22, yd + 0.001, z]], 'stroke="#3b4652" stroke-width="1"'));
+      buitenAchter.push(poly([[x0 + 0.22, yd, 0.02], [x0 + b - 0.22, yd, 0.02], [x0 + b - 0.22, yd, h - 0.18], [x0 + 0.22, yd, h - 0.18]], `fill="${gar.lampAan ? '#6b5a3c' : '#4f5c6a'}"`));
+      for (let z = 0.2; z < h - 0.2; z += 0.18) buitenAchter.push(line([[x0 + 0.22, yd + 0.001, z], [x0 + b - 0.22, yd + 0.001, z]], 'stroke="#3b4652" stroke-width="1"'));
       if (gar.lampAan) {
         const c = P(x0 + b / 2, yd + 0.4, 0.02);
-        buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.28}" fill="#FFD39A" opacity="0.22" filter="url(#${id}-zacht)"/>`);
+        buitenAchter.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.28}" fill="#FFD39A" opacity="0.22" filter="url(#${id}-zacht)"/>`);
       }
+      // Panelen op het platte dak (huis 3.0): schuin op rekken, in rijen.
+      if (gar.panelen && model.weer !== 'sneeuw') {
+        plaatPanelen(x0 + 0.1, y0 + 0.1, b - 0.2, d - 0.15, h + 0.06, gar.panelen, buitenAchter);
+        plek.panelenGarage = [x0 + b / 2, y0 + d / 2, h + 0.3];
+      }
+    }
+    /**
+     * Panelen op een plat dak (huis 3.0): rijen schuine panelen op rekken, naar
+     * de straat gericht. Hoeveel er liggen, bepaalt het aantal rijen en kolommen.
+     */
+    function plaatPanelen(x0, y0, b, d, z, aantal, laag = buiten) {
+      const n = Math.max(1, Math.min(24, Math.round(aantal)));
+      const rijen = Math.max(1, Math.min(4, Math.round(d / 0.42)));
+      const kol = Math.ceil(n / rijen);
+      const pb = b / kol;
+      const pd = d / rijen;
+      for (let r = 0; r < rijen; r++) {
+        for (let c = 0; c < kol && r * kol + c < n; c++) {
+          const px = x0 + c * pb + 0.02;
+          const py = y0 + r * pd + 0.04;
+          const q = [[px, py, z + 0.16], [px + pb - 0.04, py, z + 0.16], [px + pb - 0.04, py + pd - 0.1, z + 0.02], [px, py + pd - 0.1, z + 0.02]];
+          laag.push(poly(q, `fill="url(#${id}-paneel)" stroke="#5b7aa0" stroke-opacity="0.7" stroke-width="0.8"`));
+          if (zonKracht > 0) laag.push(poly(q, `fill="url(#${id}-glans)" opacity="0.6"`));
+        }
+      }
+    }
+    /**
+     * Een jacuzzi (besluit 186): rond, op het terras of in de tuin. Warm is het
+     * water lichter en komt er damp vanaf; op zon een gouden rand.
+     */
+    function bouwJacuzzi(j, xc, yc, r = 0.42, z0 = 0) {
+      const h = z0 + 0.34;
+      const rand = (z, f = 1) => Array.from({ length: 28 }, (_, i) => {
+        const a = (i / 28) * Math.PI * 2;
+        return [xc + Math.cos(a) * r * f, yc + Math.sin(a) * r * f, z];
+      });
+      // De wand: de voorste helft van de cilinder.
+      const voor = rand(z0).filter(([, y]) => y >= yc - 0.02).sort((p1, p2) => p1[0] - p2[0]);
+      const zijde = [...voor, ...[...voor].reverse().map(([x, y]) => [x, y, h])];
+      buiten.push(poly(zijde, `fill="${j.kleur ?? '#4a5a6e'}"`));
+      buiten.push(poly(rand(h), `fill="#5d6e83" stroke="${j.zon ? KLEUR.zon : '#7a8a9d'}" stroke-opacity="${j.zon ? 0.9 : 0.6}" stroke-width="${j.zon ? 2 : 1}"`));
+      const warm = j.stand === 'warmt' || (j.temp ?? 0) >= 34;
+      buiten.push(poly(rand(h - 0.02, 0.8), `fill="${warm ? '#5fb6e0' : '#3d6f96'}" opacity="0.95"`));
+      // Bubbels als hij aan staat.
+      if (j.bubbels) for (const [dx, dy] of [[-0.12, 0.05], [0.1, -0.08], [0.02, 0.14], [0.16, 0.1]]) {
+        const c = P(xc + dx, yc + dy, h - 0.01);
+        buiten.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${(k * 0.025).toFixed(1)}" fill="#e6f6ff" opacity="0.8"/>`);
+      }
+      if (warm && !stilGekozen()) for (let i = 0; i < 3; i++) {
+        const c = P(xc - 0.15 + i * 0.15, yc, h + 0.2 + i * 0.12);
+        buiten.push(`<circle class="sc-damp" style="animation-delay:${i * 0.9}s" cx="${c[0]}" cy="${c[1]}" r="${k * (0.08 + i * 0.03)}" fill="#e2ebf3" opacity="0.2"/>`);
+      }
+      plek.jacuzzi = [xc, yc, h];
     }
     /** Een carport: vier palen en een plat dak boven de oprit. */
     function bouwCarport() {
@@ -1533,19 +1813,29 @@
       buiten.push(poly([[x0 - 0.04, y0 - 0.05, h], [x1 + 0.1, y0 - 0.05, h], [x1 + 0.1, y1 + 0.1, h], [x0 - 0.04, y1 + 0.1, h]], 'fill="#5b6a7a" fill-opacity="0.5" stroke="#9aa7b4" stroke-opacity="0.6" stroke-width="1"'));
       buiten.push(poly([[x0 - 0.04, y1 + 0.1, h], [x1 + 0.1, y1 + 0.1, h], [x1 + 0.1, y1 + 0.1, h + 0.07], [x0 - 0.04, y1 + 0.1, h + 0.07]], 'fill="#4a5868"'));
       for (const [x, y] of [[x0, y1], [x1, y1]]) buiten.push(doos(x, y, 0, 0.06, 0.06, h, ['#9aa7b4', '#8592a0', '#6f7c8a']));
+      // Panelen op de carport (huis 3.0).
+      const cp = model.oprit?.carport;
+      if (cp && typeof cp === 'object' && cp.panelen) {
+        plaatPanelen(x0 + 0.05, y0 + 0.1, x1 - x0 + 0.0, y1 - y0 - 0.2, h + 0.07, cp.panelen);
+        plek.panelenCarport = [(x0 + x1) / 2, (y0 + y1) / 2, h + 0.3];
+      }
     }
     function bouwAuto(a, isSpook, metPaal) {
       // Een laadpaal en een auto op de oprit, links voor het huis.
       const px = -0.95;
       const py = D + 0.1;
-      if (metPaal) buiten.push(doos(px - 0.08, py - 0.08, 0, 0.16, 0.16, 0.75, ['#dfe6ec', '#c5cfd8', '#a7b2bd']));
-      if (!isSpook && metPaal) buiten.push(poly([[px - 0.081, py - 0.04, 0.5], [px - 0.081, py + 0.04, 0.5], [px - 0.081, py + 0.04, 0.62], [px - 0.081, py - 0.04, 0.62]], `fill="${a?.stand === 'laadt' ? KLEUR.mint : '#66727f'}"`));
+      // De laadpaal staat dichter bij je dan de auto: na de auto getekend, anders viel hij erachter (huis 3.0).
+      const paal = () => {
+        if (metPaal) buiten.push(doos(px - 0.08, py - 0.08, 0, 0.16, 0.16, 0.75, ['#dfe6ec', '#c5cfd8', '#a7b2bd']));
+        if (!isSpook && metPaal) buiten.push(poly([[px - 0.081, py - 0.04, 0.5], [px - 0.081, py + 0.04, 0.5], [px - 0.081, py + 0.04, 0.62], [px - 0.081, py - 0.04, 0.62]], `fill="${a?.stand === 'laadt' ? KLEUR.mint : '#66727f'}"`));
+      };
       const x0 = -2.45;
       const y0 = D - 1.75;
       const L = 2.1;
       const B = 0.95;
       if (isSpook) {
         buiten.push(`<g opacity="0.65">${poly([[x0, y0, 0.02], [x0 + B, y0, 0.02], [x0 + B, y0 + L, 0.02], [x0, y0 + L, 0.02]], `fill="none" stroke="${KLEUR.ijs}" stroke-dasharray="5 5"`)}</g>`);
+        paal();
         return;
       }
       const lak = a?.kleur ?? '#8fa3b8';
@@ -1584,6 +1874,7 @@
       }
       // Koplampen als een lichtstreep.
       buiten.push(poly([[x0 + 0.1, y0 + L + 0.002, h1 - 0.16], [x0 + B - 0.1, y0 + L + 0.002, h1 - 0.16], [x0 + B - 0.1, y0 + L + 0.002, h1 - 0.11], [x0 + 0.1, y0 + L + 0.002, h1 - 0.11]], 'fill="#e9f1f8" opacity="0.9"'));
+      paal();
       // De kabel naar de laadpaal.
       if (a?.stand === 'laadt') {
         const p1 = P(px - 0.08, py, 0.55);
@@ -1641,16 +1932,16 @@
     function bouwVoortuin(t) {
       const x0 = 1.3;
       const x1 = W + 0.1;
-      const yh = D + 1.55;
+      // Op het eiland (huis 3.0) staat de haag op de rand van de doorsnede.
+      const yh = eiland ? eiland.yF - 0.16 : D + 1.55;
       buiten.push(doos(x0, yh, 0, x1 - x0, 0.14, 0.18, ['#2f5a3c', '#26492f', '#1f3d27']));
       for (let x = x0 + 0.4; x < x1 - 0.2; x += 0.7) {
-        const c = P(x, D + 0.9, 0.02);
+        const c = P(x, eiland ? D + 0.4 : D + 0.9, 0.02);
         buiten.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${k * 0.06}" fill="${t.lampAan ? '#FFD39A' : '#6e9a6f'}" opacity="0.8"/>`);
       }
     }
     /** Een balkon aan de zijgevel, op de eerste verdieping, met een reling (besluit 113). */
-    function bouwBalkon(b) {
-      const z = FH;
+    function bouwBalkon(b, z = FH) {
       const y0 = 0.35;
       const y1 = 1.15;
       buiten.push(doos(W, y0, z - 0.06, 0.55, y1 - y0, 0.06, ['#9aa7b4', '#7d8a97', '#6b7885']));
@@ -1670,9 +1961,16 @@
       const y0 = -1.75;
       if (t.tuinhuis !== false) {
         buiten.push(doos(x0, y0, 0, 1.05, 0.95, 0.85, ['#3a4656', '#2f3a48', '#46525f']));
-        buiten.push(poly([[x0 - 0.05, y0 + 0.95, 0.88], [x0 + 1.1, y0 + 0.95, 0.88], [x0 + 1.1, y0 + 1.45, 0.82], [x0 - 0.05, y0 + 1.45, 0.82]], 'fill="#55626f"'));
+        buiten.push(poly([[x0 - 0.05, y0 + 0.95, 0.88], [x0 + 1.1, y0 + 0.95, 0.88], [x0 + 1.1, y0 + 1.45, 0.82], [x0 - 0.05, y0 + 1.45, 0.82]], `fill="${model.weer === 'sneeuw' ? '#eef3f8' : '#55626f'}"`));
         buiten.push(poly([[x0 + 1.051, y0 + 0.3, 0.05], [x0 + 1.051, y0 + 0.62, 0.05], [x0 + 1.051, y0 + 0.62, 0.62], [x0 + 1.051, y0 + 0.3, 0.62]], `fill="${t.tuinhuisAan ? '#F4C27E' : '#1b2633'}"`));
       }
+      // Panelen op het schuurtje (huis 3.0): een plat rek op het dak.
+      if (t.tuinhuis !== false && t.tuinhuisPanelen) {
+        plaatPanelen(x0 + 0.05, y0 + 0.05, 0.95, 0.85, 0.89, t.tuinhuisPanelen);
+        plek.panelenSchuur = [x0 + 0.5, y0 + 0.45, 1.1];
+      }
+      // De jacuzzi (besluit 186): op het gras voor het schuurtje.
+      if (t.jacuzzi) bouwJacuzzi(t.jacuzzi, W + 1.25, -0.25, 0.42, 0);
       if (t.tuinhuis !== false && t.overstekAan) {
         const c = P(x0 + 0.5, y0 + 1.2, 0.02);
         buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.7}" ry="${k * 0.3}" fill="${t.overstekKleur ?? '#FFD39A'}" opacity="0.28" filter="url(#${id}-zacht)"/>`);
@@ -1694,6 +1992,13 @@
       }
     }
     function bouwNet() {
+      // In de wereld (huis 3.0): een aansluitkast aan de straat, op de rand.
+      if (eiland) {
+        buiten.push(doos(netStraat[0] - 0.13, netStraat[1] - 0.09, 0, 0.26, 0.18, 0.42, ['#6b7a8a', '#56636f', '#47525d']));
+        const t = P(netStraat[0], netStraat[1] + 0.09, 0.24);
+        buiten.push(`<text x="${t[0]}" y="${t[1] + 4}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="10" font-weight="700" fill="#cfd8e1">⚡</text>`);
+        return;
+      }
       // Met een voordeur zit de aansluiting in de meterkast in de hal (rapport 15 oktober):
       // dan alleen het putje aan de straat. Anders het kastje links voor, zoals eerst.
       if (voordeur) {
@@ -1706,6 +2011,380 @@
       buiten.push(doos(x - 0.2, y - 0.15, 0, 0.4, 0.3, 0.55, ['#59677a', '#4a5769', '#3d495a']));
       const t = P(x, y + 0.15, 0.3);
       buiten.push(`<text x="${t[0]}" y="${t[1] + 4}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="11" font-weight="700" fill="#cfd8e1">⚡</text>`);
+    }
+    /*
+     * ---- het eiland (huis 3.0) ----
+     * Het perceel zweeft in de lucht. De voorkant is een rechte doorsnede: gras
+     * met een rand, dan lagen aarde die naar onder wegvagen. Met een kelder een
+     * nis in die doorsnede, precies onder het huis, zodat de kelder open ligt.
+     * De achterhoeken zijn rond; een haag langs de achterkant, bomen in de
+     * hoeken in het seizoen van nu, en de schaduw van het huis die met de zon
+     * meedraait.
+     */
+    function bouwEiland() {
+      const { x0, x1, y0, yF, nis, T } = eiland;
+      const r = 0.5;
+      const zNis = -FH - 0.12;
+      const boog = (cx, cy, a0, a1) => Array.from({ length: 8 }, (_, i) => {
+        const a = a0 + ((a1 - a0) * i) / 7;
+        return [cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0];
+      });
+      const top = [[x0, yF, 0], ...boog(x0 + r, y0 + r, Math.PI, 1.5 * Math.PI), ...boog(x1 - r, y0 + r, 1.5 * Math.PI, 2 * Math.PI), [x1, yF, 0]];
+      if (nis) top.push([W, yF, 0], [W, D, 0], [0, D, 0], [0, yF, 0]);
+      const sneeuw = model.weer === 'sneeuw';
+      const aardeBoven = licht ? '#9a8165' : '#4a3a2b';
+      const aardeOnder = licht ? '#7d6650' : '#2a2018';
+      defs.push(`
+        <linearGradient id="${id}-aarde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${aardeBoven}"/><stop offset="0.55" stop-color="${aardeOnder}"/><stop offset="1" stop-color="${schaduw(aardeOnder, 0.8)}"/></linearGradient>
+        <linearGradient id="${id}-rots" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${schaduw(aardeOnder, 0.75)}"/><stop offset="1" stop-color="${schaduw(aardeOnder, 0.6)}" stop-opacity="0"/></linearGradient>
+        <linearGradient id="${id}-aarde-zij" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${schaduw(aardeBoven, 0.78)}"/><stop offset="0.55" stop-color="${schaduw(aardeOnder, 0.75)}"/><stop offset="1" stop-color="${schaduw(aardeOnder, 0.6)}"/></linearGradient>
+        <radialGradient id="${id}-gloed-onder"><stop offset="0" stop-color="${nacht ? '#3a4f8a' : '#8fb4e0'}" stop-opacity="${nacht ? 0.35 : 0.28}"/><stop offset="1" stop-color="#8fb4e0" stop-opacity="0"/></radialGradient>
+        <clipPath id="${id}-eiland">${poly(top, '')}</clipPath>`);
+      // Een zachte gloed onder het eiland: het zweeft.
+      const onder = P((x0 + x1) / 2, (y0 + yF) / 2, -T - 0.5);
+      grond.push(`<ellipse cx="${onder[0]}" cy="${onder[1]}" rx="${(k * (x1 - x0) * 0.6).toFixed(1)}" ry="${(k * 1.0).toFixed(1)}" fill="url(#${id}-gloed-onder)"/>`);
+      // De onderkant: rots die naar een punt toe loopt en in de lucht wegvaagt.
+      // Facetten van rots, elk iets anders van tint, die naar onder in de lucht vervagen.
+      const punt = [(x0 + x1) * 0.42, yF - 0.6, -T - 0.55];
+      const facetten = [
+        [[[x0, yF, -T], [x0 + 1.4, yF, -T], punt], 0.95],
+        [[[x0 + 1.4, yF, -T], [(x0 + x1) * 0.62, yF, -T], punt], 1.1],
+        [[[(x0 + x1) * 0.62, yF, -T], [x1, yF, -T], [x1 - 0.8, yF - 1.0, -T - 0.3], punt], 0.85],
+        [[[x1, yF, -T], [x1, y0 + r, -T * 0.8], [x1 - 0.8, yF - 1.0, -T - 0.3]], 0.7],
+      ];
+      for (const [pts, f] of facetten) {
+        const fid = `${id}-rots-${Math.round(f * 100)}`;
+        defs.push(`<linearGradient id="${fid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${schaduw(aardeOnder, f)}"/><stop offset="0.7" stop-color="${schaduw(aardeOnder, f * 0.8)}" stop-opacity="0.55"/><stop offset="1" stop-color="${schaduw(aardeOnder, f * 0.7)}" stop-opacity="0"/></linearGradient>`);
+        grond.push(poly(pts, `fill="url(#${fid})"`));
+      }
+      // De rechterkant en de voorkant: aarde die naar onder wegvaagt.
+      grond.push(poly([[x1, yF, 0], [x1, y0 + r, 0], [x1, y0 + r, -T * 0.8], [x1, yF, -T]], `fill="url(#${id}-aarde-zij)"`));
+      const voor = (xa, xb, za, zb) => grond.push(poly([[xa, yF, za], [xb, yF, za], [xb, yF, zb], [xa, yF, zb]], `fill="url(#${id}-aarde)"`));
+      if (nis) {
+        voor(x0, 0, 0, -T);
+        voor(W, x1, 0, -T);
+        grond.push(poly([[0, yF, zNis], [W, yF, zNis], [W, yF, -T], [0, yF, -T]], `fill="url(#${id}-aarde)"`));
+        // De nis: de linkerwand en de bodem, in het licht van de kelder.
+        grond.push(poly([[0, D, 0], [0, yF, 0], [0, yF, zNis], [0, D, zNis]], `fill="${schaduw(aardeBoven, 0.62)}"`));
+        grond.push(poly([[0, D, zNis], [W, D, zNis], [W, yF, zNis], [0, yF, zNis]], `fill="${schaduw(aardeBoven, 0.9)}"`));
+      } else voor(x0, x1, 0, -T);
+      // Lagen in de aarde, en een paar stenen.
+      for (const [f, o] of [[0.18, 0.45], [0.42, 0.3], [0.7, 0.18]]) {
+        const z = -T * f;
+        const golf = (xa, xb) => Array.from({ length: 9 }, (_, i) => [xa + ((xb - xa) * i) / 8, yF + 0.002, z + Math.sin(i * 1.7 + f * 9) * 0.035]);
+        const stukken = nis && z > zNis ? [[x0, 0], [W, x1]] : [[x0, x1]];
+        for (const [xa, xb] of stukken) grond.push(line(golf(xa, xb), `stroke="${licht ? '#6b5642' : '#5a4634'}" stroke-opacity="${o}" stroke-width="2.4" stroke-linecap="round"`));
+        grond.push(line(Array.from({ length: 7 }, (_, i) => [x1 + 0.002, yF - ((yF - y0 - r) * i) / 6, z * 0.95 + Math.sin(i * 2.1 + f * 7) * 0.03]), `stroke="#3d3026" stroke-opacity="${o}" stroke-width="2" stroke-linecap="round"`));
+      }
+      let zaad = 11;
+      const rnd = () => ((zaad = (zaad * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 16; i++) {
+        const x = x0 + rnd() * (x1 - x0);
+        const z = -0.15 - rnd() * T * 0.6;
+        if (nis && x > -0.05 && x < W + 0.05 && z > zNis) continue;
+        const c = P(x, yF + 0.003, z);
+        grond.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(k * (0.03 + rnd() * 0.05)).toFixed(1)}" ry="${(k * 0.025).toFixed(1)}" fill="${licht ? '#7a6550' : '#5e4a38'}" opacity="0.8"/>`);
+      }
+      // Het gras erop, met een rand die het licht vangt.
+      grond.push(poly(top, `fill="url(#${id}-gras)"`));
+      if (sneeuw) grond.push(poly(top, 'fill="#e8eef5" opacity="0.72"'));
+      const randKleur = sneeuw ? '#f2f6fa' : licht ? '#9cc4a6' : winter ? '#4a5d6e' : nacht ? '#2a4a3a' : '#3f7a58';
+      const rand = (xa, xb) => grond.push(poly([[xa, yF, 0], [xb, yF, 0], [xb, yF, -0.07], [xa, yF, -0.07]], `fill="${randKleur}"`));
+      if (nis) {
+        rand(x0, 0);
+        rand(W, x1);
+      } else rand(x0, x1);
+      grond.push(poly([[x1, yF, 0], [x1, y0 + r, 0], [x1, y0 + r, -0.07], [x1, yF, -0.07]], `fill="${schaduw(randKleur, 0.8)}"`));
+      // Een lijn licht langs de snede, zodat de rand scherp staat.
+      grond.push(line([[x0, yF + 0.004, -0.07], [nis ? 0 : x1, yF + 0.004, -0.07]], `stroke="#ffffff" stroke-opacity="${nacht ? 0.06 : 0.14}" stroke-width="1.2"`));
+      if (nis) grond.push(line([[W, yF + 0.004, -0.07], [x1, yF + 0.004, -0.07]], `stroke="#ffffff" stroke-opacity="${nacht ? 0.06 : 0.14}" stroke-width="1.2"`));
+      // Textuur in het gras: sprietjes en vlekjes; in de zomer bloemen, in de herfst bladeren.
+      {
+        let z2 = 29;
+        const rnd2 = () => ((z2 = (z2 * 16807) % 2147483647) / 2147483647);
+        const bloem = model.seizoen === 'herfst' ? ['#e0a04a', '#c97a36', '#b5652e'] : !winter && !sneeuw ? ['#f6d36b', '#f2a7c3', '#ffffff'] : null;
+        for (let i = 0; i < 90; i++) {
+          const x = x0 + 0.15 + rnd2() * (x1 - x0 - 0.3);
+          const y = y0 + 0.3 + rnd2() * (yF - y0 - 0.45);
+          if (x > -0.1 && x < W + 0.1 && y > -0.1 && y < D + 0.1) continue;
+          if ((model.oprit || model.auto) && x > -2.8 && x < -1.15 && y > -0.45) continue;
+          const c = P(x, y, 0.004);
+          const kleur = bloem && i % 3 === 0 ? bloem[i % bloem.length] : sneeuw ? '#ffffff' : '#000000';
+          const o = bloem && i % 3 === 0 ? 0.75 : sneeuw ? 0.5 : 0.12;
+          grond.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(k * (bloem && i % 3 === 0 ? 0.022 : 0.03)).toFixed(1)}" fill="${kleur}" opacity="${o}"/>`);
+        }
+      }
+      // De tuin lichter, de oprit van klinkers.
+      if (model.tuin) grond.push(poly([[W + 0.3, y0 + 0.3, 0.003], [x1 - 0.12, y0 + 0.3, 0.003], [x1 - 0.12, yF - 0.12, 0.003], [W + 0.3, yF - 0.12, 0.003]], `fill="${sneeuw ? '#f4f7fa' : licht ? (winter ? '#d3dce5' : '#86b294') : winter ? '#33465a' : nacht ? '#173326' : '#26503a'}"`));
+      if (model.auto || model.oprit || spook(model, 'auto')) {
+        grond.push(poly([[-2.75, -0.4, 0.005], [-1.2, -0.4, 0.005], [-1.2, yF, 0.005], [-2.75, yF, 0.005]], `fill="${sneeuw ? '#cfd8e1' : licht ? '#b9c2cb' : '#1d2933'}"`));
+        grond.push(poly([[-2.75, yF, 0], [-1.2, yF, 0], [-1.2, yF, -0.07], [-2.75, yF, -0.07]], `fill="${licht ? '#8d98a3' : '#2a3542'}"`));
+      }
+      // Een pad van tegels naar de voordeur, tot aan de rand.
+      if (voordeur && !nis) {
+        for (let y = D + 0.1; y < yF - 0.15; y += 0.3) grond.push(poly([[voordeur.x0, y, 0.004], [voordeur.x1, y, 0.004], [voordeur.x1, y + 0.22, 0.004], [voordeur.x0, y + 0.22, 0.004]], 'fill="#ffffff" opacity="0.1"'));
+      }
+      // De schaduw van het huis, met de zon mee: op de grond, binnen het eiland.
+      if (!nacht && model.zon?.stand != null) {
+        const f = Math.max(0, Math.min(1, model.zon.stand));
+        const hoog = Math.max(0.3, Math.sin(Math.PI * f));
+        const dx = -Math.cos(Math.PI * f) * 0.75 * (1.25 - hoog);
+        const dy = 0.28 * (1.3 - hoog);
+        const val = (x, y, z) => [x + dx * z, y + dy * z, 0.006];
+        const hoeken = [[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0], [0, 0, Ht], [W, 0, Ht], [W, D, Ht], [0, D, Ht], [W / 2, 0, Ht + R], [W / 2, D, Ht + R]].map(([x, y, z]) => val(x, y, z));
+        const sterkte = (0.22 + 0.3 * zonKracht) * (1 - 0.5 * (model.wolken ?? 0));
+        grond.push(`<g clip-path="url(#${id}-eiland)"><g filter="url(#${id}-zacht)" opacity="${sterkte.toFixed(2)}">${poly(omhulsel(hoeken), `fill="${licht ? '#2c3a48' : '#02050a'}"`)}</g></g>`);
+      }
+      // Een haag langs de achterkant.
+      const haag = sneeuw ? ['#eef3f8', '#d6dee7', '#c3ccd6'] : winter ? ['#3d5262', '#33465a', '#2a3a4c'] : ['#3d7a55', '#2f6446', '#27553b'];
+      buitenAchter.push(doos(x0 + r, y0 + 0.08, 0, x1 - x0 - 2 * r, 0.16, 0.22, haag));
+      // Bomen in de achterhoeken, en een kleine voorin rechts als er plek is.
+      boom(x0 + 0.42, y0 + 0.45, 1.15, buitenAchter);
+      boom(x1 - 0.45, y0 + 0.42, 1.3, buitenAchter);
+      if (!model.terras && !model.tuin) boom(x1 - 0.35, yF - 0.4, 0.85, buiten);
+      // Een lantaarn aan de straat.
+      lantaarn(x0 + 0.22, yF - 0.18);
+      // Een kompas op het gras voor het huis (huis 3.0), als het model de ligging kent.
+      if (model.kompas) {
+        // Groot op de oprit als er geen auto staat (zoals bij Zonnepanelen), anders klein voor het huis.
+        const groot = model.kompas.groot && !model.auto && !model.oprit?.auto;
+        kompas(model.kompas.voorgevelDeg ?? 180, groot ? -2.05 : -0.62, yF - (groot ? 1.05 : 0.42), groot ? 1.0 : 0.34);
+      }
+    }
+    /**
+     * Een kompas op de grond (huis 3.0): een ring met de vier windrichtingen,
+     * gedraaid naar hoe het huis echt ligt. De voorgevel kijkt naar
+     * `voorgevelDeg` (0 is noord); +x in de tekening ligt dan op voorgevel - 90.
+     */
+    function kompas(v, cx, cy, r0 = 0.34) {
+      const rad = (a) => (a * Math.PI) / 180;
+      const richting = (a, r) => [cx - Math.sin(rad(a - v)) * r, cy + Math.cos(rad(a - v)) * r, 0.006];
+      const cirkel = (r) => Array.from({ length: 48 }, (_, i) => richting(i * 7.5, r));
+      // Een plaat op de grond met een rand, streepjes per 30° en een naald: noord in de gloedkleur.
+      grond.push(poly(cirkel(r0), `fill="${nacht ? '#0b1422' : '#132233'}" fill-opacity="0.8" stroke="#E6EEF5" stroke-opacity="0.75" stroke-width="1.6"`));
+      grond.push(poly(cirkel(r0 * 0.72), 'fill="none" stroke="#E6EEF5" stroke-opacity="0.22" stroke-width="1"'));
+      for (let a = 0; a < 360; a += 30) {
+        const [p1, p2] = [P(...richting(a, r0 * (a % 90 ? 0.86 : 0.78))), P(...richting(a, r0 * 0.97))];
+        grond.push(`<path d="M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}" stroke="#E6EEF5" stroke-opacity="${a % 90 ? 0.35 : 0.8}" stroke-width="${a % 90 ? 1 : 1.6}"/>`);
+      }
+      grond.push(poly([richting(0, r0 * 0.7), richting(90, r0 * 0.13), richting(270, r0 * 0.13)], `fill="${KLEUR.gloed}"`));
+      grond.push(poly([richting(180, r0 * 0.7), richting(90, r0 * 0.13), richting(270, r0 * 0.13)], 'fill="#E6EEF5" opacity="0.75"'));
+      const midden = P(cx, cy, 0.006);
+      grond.push(`<circle cx="${midden[0].toFixed(1)}" cy="${midden[1].toFixed(1)}" r="${(k * r0 * 0.07).toFixed(1)}" fill="#E6EEF5"/>`);
+      const maat = r0 > 0.4 ? 18 : 12;
+      for (const [a, letter] of [[0, global.t?.('huis.kompas.n') ?? 'N'], [90, global.t?.('huis.kompas.o') ?? 'O'], [180, global.t?.('huis.kompas.z') ?? 'Z'], [270, global.t?.('huis.kompas.w') ?? 'W']]) {
+        const t = P(...richting(a, r0 + (r0 > 0.4 ? 0.34 : 0.2)));
+        // Een donkere rand om de letter, zodat hij op gras en klinkers leesbaar blijft.
+        labels.push(`<text x="${t[0].toFixed(1)}" y="${(t[1] + maat * 0.36).toFixed(1)}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="${maat}" font-weight="800" fill="${a === 0 ? KLEUR.gloed : '#F2F6FA'}" stroke="#0a1220" stroke-opacity="0.85" stroke-width="4" paint-order="stroke" stroke-linejoin="round">${letter}</text>`);
+      }
+    }
+    /** Het omhulsel van punten op de grond (Andrew's monotone keten), voor een schaduw. */
+    function omhulsel(pts) {
+      const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+      const kruis = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      const keten = (lijst) => {
+        const uit = [];
+        for (const q of lijst) {
+          while (uit.length >= 2 && kruis(uit[uit.length - 2], uit[uit.length - 1], q) <= 0) uit.pop();
+          uit.push(q);
+        }
+        return uit.slice(0, -1);
+      };
+      return [...keten(p), ...keten([...p].reverse())];
+    }
+    /** Een boom: een stam en een kroon van drie bollen, in het seizoen van nu (huis 3.0). */
+    function boom(x, y, s, laag) {
+      const herfst = model.seizoen === 'herfst';
+      const sneeuw = model.weer === 'sneeuw';
+      const stam = P(x, y, 0);
+      const top = P(x, y, 0.62 * s);
+      laag.push(`<g filter="url(#${id}-zacht)" opacity="0.35"><ellipse cx="${stam[0]}" cy="${stam[1]}" rx="${(k * 0.36 * s).toFixed(1)}" ry="${(k * 0.14 * s).toFixed(1)}" fill="#02050a"/></g>`);
+      laag.push(`<path d="M ${stam[0]} ${stam[1]} L ${top[0]} ${top[1]}" stroke="#4a3a2c" stroke-width="${(k * 0.07 * s).toFixed(1)}" stroke-linecap="round"/>`);
+      if (winter && !sneeuw) {
+        // Kaal in de winter: alleen takken.
+        for (const [dx, dz] of [[-0.18, 0.9], [0.2, 0.95], [0.02, 1.05]]) {
+          const t = P(x + dx * s, y, dz * s);
+          laag.push(`<path d="M ${top[0]} ${top[1]} L ${t[0]} ${t[1]}" stroke="#5a4838" stroke-width="${(k * 0.03 * s).toFixed(1)}" stroke-linecap="round"/>`);
+        }
+        return;
+      }
+      const kleuren = herfst ? ['#e0a04a', '#c97a36', '#9b5a2a'] : nacht ? ['#2f5a45', '#244a39', '#1b3a2c'] : ['#6fbf8a', '#4e9a6c', '#3a7a55'];
+      const gid = `${id}-boom-${herfst ? 'h' : nacht ? 'n' : 'z'}`;
+      if (!defs.some((d) => d.includes(`id="${gid}"`))) defs.push(`<radialGradient id="${gid}" cx="0.35" cy="0.3" r="0.75"><stop offset="0" stop-color="${kleuren[0]}"/><stop offset="0.6" stop-color="${kleuren[1]}"/><stop offset="1" stop-color="${kleuren[2]}"/></radialGradient>`);
+      for (const [dx, dz, rr] of [[-0.17, 0.82, 0.3], [0.17, 0.86, 0.28], [0, 1.08, 0.33]]) {
+        const c = P(x + dx * s, y, dz * s);
+        laag.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(k * rr * s).toFixed(1)}" fill="url(#${gid})"/>`);
+        if (sneeuw) laag.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] - k * rr * s * 0.55).toFixed(1)}" rx="${(k * rr * s * 0.75).toFixed(1)}" ry="${(k * rr * s * 0.32).toFixed(1)}" fill="#f4f7fa"/>`);
+      }
+    }
+    /** Een lantaarn aan de straat; 's avonds en 's nachts brandt hij, met een plas licht (huis 3.0). */
+    function lantaarn(x, y) {
+      const aan = nacht || schemer;
+      buiten.push(doos(x - 0.025, y - 0.025, 0, 0.05, 0.05, 1.05, ['#6b7a8a', '#56636f', '#47525d']));
+      buiten.push(doos(x - 0.08, y - 0.08, 1.05, 0.16, 0.16, 0.12, [aan ? '#ffe2a8' : '#8a97a5', aan ? '#f4c27e' : '#6b7885', aan ? '#d9a865' : '#5d6976']));
+      if (aan) {
+        const kop = P(x, y, 1.1);
+        const voet = P(x + 0.15, y + 0.1, 0);
+        buiten.push(`<ellipse cx="${voet[0]}" cy="${voet[1]}" rx="${(k * 0.75).toFixed(1)}" ry="${(k * 0.3).toFixed(1)}" fill="#FFD39A" opacity="0.22" filter="url(#${id}-zacht)"/>`);
+        buiten.push(`<circle cx="${kop[0]}" cy="${kop[1]}" r="${(k * 0.35).toFixed(1)}" fill="#FFD39A" opacity="0.35" filter="url(#${id}-zacht)"/>`);
+      }
+    }
+    /*
+     * ---- de tuin op het eiland (huis 3.0) ----
+     * Elk ding een vaste plek, zodat alles tegelijk kan zonder op elkaar te
+     * staan: achterin het tuinhuis, in het midden de jacuzzi op een vlonder,
+     * voorin het terras tegen de gevel, ertussen een pad van stapstenen met
+     * eigen tuinlampjes, en langs de buitenrand een border met planten. Wat er
+     * niet is, laat zijn plek gewoon gras.
+     */
+    function bouwTuin3(t) {
+      const gx0 = W + 0.3;
+      const gx1 = eiland.x1 - 0.12;
+      const gy0 = eiland.y0 + 0.3;
+      const gy1 = eiland.yF - 0.12;
+      const sneeuw = model.weer === 'sneeuw';
+      const herfst = model.seizoen === 'herfst';
+      const padX = W + 1.78;
+      const dingen = [];
+      // De border: een strook aarde langs de buitenrand, met struiken en bloemen.
+      const bx0 = gx1 - 0.34;
+      grond.push(poly([[bx0, gy0 + 0.95, 0.004], [gx1, gy0 + 0.95, 0.004], [gx1, gy1 - 0.08, 0.004], [bx0, gy1 - 0.08, 0.004]], `fill="${sneeuw ? '#dfe6ee' : licht ? '#8a7560' : '#3a2e24'}"`));
+      grond.push(line([[bx0, gy0 + 0.95, 0.006], [bx0, gy1 - 0.08, 0.006]], `stroke="${sneeuw ? '#c9d3dd' : '#5a4634'}" stroke-width="1.5"`));
+      const bloemen = herfst ? ['#e0a04a', '#c9543a', '#e8c25a'] : winter || sneeuw ? null : ['#f2a7c3', '#f6d36b', '#b7a0f2', '#ffffff'];
+      let z3 = 7;
+      const rnd3 = () => ((z3 = (z3 * 16807) % 2147483647) / 2147483647);
+      for (let y = gy0 + 1.1; y < gy1 - 0.15; y += 0.3) {
+        const x = bx0 + 0.17 + (rnd3() - 0.5) * 0.08;
+        const s = 0.8 + rnd3() * 0.45;
+        dingen.push([y, () => struik(x, y, s, bloemen, sneeuw)]);
+      }
+      // Het terras tegen de gevel, voorin.
+      // Niet tegen de gevel: daar staat de buitenunit.
+      const ter = { x0: W + 0.5, x1: W + 1.5, y0: 0.35, y1: gy1 - 0.05 };
+      if (model.terras || t.terras !== false) {
+        grond.push(poly([[ter.x0, ter.y0, 0.006], [ter.x1, ter.y0, 0.006], [ter.x1, ter.y1, 0.006], [ter.x0, ter.y1, 0.006]], `fill="${sneeuw ? '#e6ecf2' : licht ? '#c3cad2' : '#3b4652'}"`));
+        for (let x = ter.x0 + 0.3; x < ter.x1 - 0.05; x += 0.3) grond.push(line([[x, ter.y0, 0.008], [x, ter.y1, 0.008]], 'stroke="#2c353f" stroke-width="1"'));
+        for (let y = ter.y0 + 0.3; y < ter.y1 - 0.05; y += 0.3) grond.push(line([[ter.x0, y, 0.008], [ter.x1, y, 0.008]], 'stroke="#2c353f" stroke-width="1"'));
+        const tx = (ter.x0 + ter.x1) / 2 - 0.22;
+        const ty = (ter.y0 + ter.y1) / 2 - 0.15;
+        dingen.push([ty, () => {
+          for (const sx of [tx - 0.3, tx + 0.52]) buiten.push(doos(sx, ty + 0.07, 0, 0.2, 0.22, 0.24, ['#55626f', '#46525f', '#3a4552']));
+          buiten.push(doos(tx + 0.19, ty + 0.15, 0, 0.06, 0.06, 0.38, ['#7d8a97', '#6b7885', '#5d6976']));
+          buiten.push(doos(tx, ty, 0.38, 0.44, 0.36, 0.05, ['#c9d3dc', '#9aa7b4', '#7d8a97']));
+          if (model.terras?.lampAan || t.terrasAan) {
+            const c = P(tx + 0.22, ty + 0.18, 0.43);
+            buiten.push(`<ellipse cx="${c[0]}" cy="${c[1]}" rx="${k * 0.55}" ry="${k * 0.25}" fill="#FFD39A" opacity="0.25" filter="url(#${id}-zacht)"/>`);
+          }
+        }]);
+      }
+      // Het pad van stapstenen, van het terras naar het tuinhuis, met tuinlampjes ernaast.
+      for (let y = 0.2; y > gy0 + 0.95; y -= 0.32) {
+        const st = [[padX - 0.13, y - 0.1, 0.007], [padX + 0.13, y - 0.1, 0.007], [padX + 0.13, y + 0.1, 0.007], [padX - 0.13, y + 0.1, 0.007]];
+        grond.push(poly(st, `fill="${sneeuw ? '#ffffff' : '#9aa7b4'}" opacity="${sneeuw ? 0.9 : 0.55}"`));
+      }
+      const padAan = (t.lampen ?? []).some((l) => l.aan) || t.padAan;
+      const padKleur = (t.lampen ?? []).find((l) => l.aan)?.kleur ?? '#FFD39A';
+      for (let y = 0.05, i = 0; y > gy0 + 1.0; y -= 0.55, i++) {
+        const lx = padX + (i % 2 === 0 ? 0.24 : -0.24);
+        dingen.push([y, () => {
+          buiten.push(doos(lx - 0.03, y - 0.03, 0, 0.06, 0.06, 0.2, ['#6b7a8a', '#56636f', '#47525d']));
+          const kop = P(lx, y, 0.22);
+          buiten.push(`<circle cx="${kop[0]}" cy="${kop[1]}" r="${(k * 0.045).toFixed(1)}" fill="${padAan ? padKleur : '#3c4755'}"/>`);
+          if (padAan) {
+            const voet = P(lx, y, 0.01);
+            buiten.push(`<ellipse cx="${voet[0]}" cy="${voet[1]}" rx="${(k * 0.3).toFixed(1)}" ry="${(k * 0.13).toFixed(1)}" fill="${padKleur}" opacity="0.35" filter="url(#${id}-zacht)"/>`);
+          }
+        }]);
+      }
+      // De jacuzzi op een vlonder, in het midden.
+      if (t.jacuzzi) {
+        const vx0 = W + 0.45;
+        const vx1 = W + 1.45;
+        const vy0 = -1.3;
+        const vy1 = -0.25;
+        dingen.push([vy0, () => {
+          buiten.push(doos(vx0, vy0, 0, vx1 - vx0, vy1 - vy0, 0.06, [sneeuw ? '#eef3f8' : '#a07a54', '#7d5c3e', '#6b4e35']));
+          if (!sneeuw) for (let x = vx0 + 0.1; x < vx1 - 0.02; x += 0.1) buiten.push(line([[x, vy0, 0.061], [x, vy1, 0.061]], 'stroke="#7d5c3e" stroke-width="0.8" stroke-opacity="0.7"'));
+          bouwJacuzzi(t.jacuzzi, (vx0 + vx1) / 2, (vy0 + vy1) / 2, 0.38, 0.06);
+        }]);
+      }
+      // Het tuinhuis achterin, met de deur naar het pad.
+      if (t.tuinhuis !== false) dingen.push([gy0, () => tuinhuis3(padX - 0.5, gy0 + 0.02, t)]);
+      dingen.sort((a, b) => a[0] - b[0]).forEach(([, teken]) => teken());
+    }
+    /** Een struik in de border: twee bollen, met bloemen of bladeren in het seizoen (huis 3.0). */
+    function struik(x, y, s, bloemen, sneeuw) {
+      const gid = `${id}-struik`;
+      if (!defs.some((d) => d.includes(`id="${gid}"`))) defs.push(`<radialGradient id="${gid}" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="${nacht ? '#2f5a45' : winter ? '#4a5d55' : '#5fae7a'}"/><stop offset="1" stop-color="${nacht ? '#1b3a2c' : winter ? '#2f3d38' : '#2f6446'}"/></radialGradient>`);
+      for (const [dx, dz, r] of [[-0.05, 0.1, 0.11], [0.05, 0.14, 0.09]]) {
+        const c = P(x + dx * s, y, dz * s);
+        buiten.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(k * r * s).toFixed(1)}" fill="url(#${gid})"/>`);
+        if (sneeuw) buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] - k * r * s * 0.5).toFixed(1)}" rx="${(k * r * s * 0.7).toFixed(1)}" ry="${(k * r * s * 0.3).toFixed(1)}" fill="#f4f7fa"/>`);
+      }
+      if (bloemen) {
+        for (let i = 0; i < 3; i++) {
+          const c = P(x + (i - 1) * 0.06 * s, y + 0.02, (0.16 + (i % 2) * 0.06) * s);
+          buiten.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(k * 0.022).toFixed(1)}" fill="${bloemen[(Math.round(y * 10) + i) % bloemen.length]}"/>`);
+        }
+      }
+    }
+    /**
+     * Het tuinhuis (huis 3.0): houten planken, een puntdak met overstek, een
+     * deur met een raampje naar het pad, een raam aan de zijkant met een
+     * bloembak, en een lamp boven de deur. Panelen op het dakvlak, als die er
+     * liggen.
+     */
+    function tuinhuis3(tx, ty, t) {
+      const b = 1.0;
+      const d = 0.85;
+      const h = 0.7;
+      const nok = 1.08;
+      const sneeuw = model.weer === 'sneeuw';
+      const hout = licht ? ['#b08a62', '#9a7552', '#86643f'] : ['#8a6a4a', '#74583d', '#5e4732'];
+      const aan = t.tuinhuisAan;
+      buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.35">${poly([[tx - 0.05, ty, 0], [tx + b + 0.25, ty, 0], [tx + b + 0.25, ty + d + 0.2, 0], [tx - 0.05, ty + d + 0.2, 0]], 'fill="#02050a"')}</g>`);
+      // Het linker dakvlak eerst: daar zie je alleen de rand van.
+      buiten.push(poly([[tx - 0.08, ty - 0.08, h - 0.04], [tx + b / 2, ty - 0.08, nok], [tx + b / 2, ty + d + 0.1, nok], [tx - 0.08, ty + d + 0.1, h - 0.04]], `fill="${sneeuw ? '#d6dee7' : '#2c3542'}"`));
+      buiten.push(doos(tx, ty, 0, b, d, h, [hout[0], hout[1], hout[2]]));
+      // De planken: verticale lijnen op de voorkant en de zijkant.
+      for (let x = tx + 0.1; x < tx + b - 0.02; x += 0.1) buiten.push(line([[x, ty + d + 0.001, 0.02], [x, ty + d + 0.001, h]], `stroke="${hout[2]}" stroke-width="0.8" stroke-opacity="0.8"`));
+      for (let y = ty + 0.1; y < ty + d - 0.02; y += 0.1) buiten.push(line([[tx + b + 0.001, y, 0.02], [tx + b + 0.001, y, h]], 'stroke="#4a3828" stroke-width="0.8" stroke-opacity="0.7"'));
+      // De punt boven de deur.
+      buiten.push(poly([[tx, ty + d, h], [tx + b, ty + d, h], [tx + b / 2, ty + d, nok - 0.02]], `fill="${hout[1]}"`));
+      // De deur met een raampje, en een lamp erboven.
+      const dx0 = tx + b / 2 - 0.13;
+      buiten.push(poly([[dx0, ty + d + 0.002, 0.01], [dx0 + 0.26, ty + d + 0.002, 0.01], [dx0 + 0.26, ty + d + 0.002, 0.56], [dx0, ty + d + 0.002, 0.56]], `fill="${hout[2]}" stroke="#3e2f22" stroke-width="1"`));
+      buiten.push(poly([[dx0 + 0.07, ty + d + 0.003, 0.38], [dx0 + 0.19, ty + d + 0.003, 0.38], [dx0 + 0.19, ty + d + 0.003, 0.5], [dx0 + 0.07, ty + d + 0.003, 0.5]], `fill="${aan ? '#F4C27E' : '#1b2633'}"`));
+      const lamp = P(tx + b / 2, ty + d + 0.04, 0.64);
+      buiten.push(`<circle cx="${lamp[0]}" cy="${lamp[1]}" r="${(k * 0.035).toFixed(1)}" fill="${t.overstekAan || aan ? '#FFD39A' : '#55626f'}"/>`);
+      if (t.overstekAan || aan) {
+        const voet = P(tx + b / 2, ty + d + 0.25, 0.01);
+        buiten.push(`<ellipse cx="${voet[0]}" cy="${voet[1]}" rx="${(k * 0.45).toFixed(1)}" ry="${(k * 0.2).toFixed(1)}" fill="#FFD39A" opacity="0.3" filter="url(#${id}-zacht)"/>`);
+      }
+      // Een raam aan de zijkant, met een bloembak eronder.
+      const raam = [[tx + b + 0.002, ty + 0.25, 0.3], [tx + b + 0.002, ty + 0.58, 0.3], [tx + b + 0.002, ty + 0.58, 0.55], [tx + b + 0.002, ty + 0.25, 0.55]];
+      buiten.push(poly(raam, `fill="${aan ? '#F4C27E' : nacht ? '#0f1a2a' : '#4d7eac'}" stroke="#3e2f22" stroke-width="1"`));
+      if (aan) buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.5">${poly(raam, 'fill="#FFB765"')}</g>`);
+      buiten.push(doos(tx + b, ty + 0.23, 0.22, 0.06, 0.37, 0.07, ['#5e4732', '#4a3828', '#6b4e35']));
+      if (!winter && !sneeuw) for (let i = 0; i < 4; i++) {
+        const c = P(tx + b + 0.04, ty + 0.28 + i * 0.09, 0.31);
+        buiten.push(`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(k * 0.025).toFixed(1)}" fill="${['#f2a7c3', '#f6d36b', '#e8634a', '#ffffff'][i]}"/>`);
+      }
+      // Het rechter dakvlak, met overstek; panelen of sneeuw erop.
+      const q = (u, v) => [tx + b / 2 + u * (b / 2 + 0.08), ty - 0.08 + v * (d + 0.18), nok - u * (nok - h + 0.04) + 0.005];
+      buiten.push(poly([q(0, 0), q(1, 0), q(1, 1), q(0, 1)], `fill="${sneeuw ? '#eef3f8' : '#3b4654'}"`));
+      buiten.push(line([q(1, 0), q(1, 1)], 'stroke="#2a323d" stroke-width="1.5"'));
+      if (t.tuinhuisPanelen && !sneeuw) {
+        const n = Math.max(1, Math.min(6, Math.round(t.tuinhuisPanelen)));
+        for (let i = 0; i < n; i++) {
+          const v0 = 0.08 + (i * 0.84) / n;
+          const v1 = v0 + 0.84 / n - 0.03;
+          const pan = [q(0.12, v0), q(0.9, v0), q(0.9, v1), q(0.12, v1)].map(([x, y, z]) => [x, y, z + 0.01]);
+          buiten.push(poly(pan, `fill="url(#${id}-paneel)" stroke="#5b7aa0" stroke-opacity="0.7" stroke-width="0.8"`));
+        }
+        plek.panelenSchuur = q(0.5, 0.5);
+      }
+      plek.tuinhuis = [tx + b / 2, ty + d / 2, nok];
     }
     function schaduw(hex, f) {
       const n = parseInt(hex.slice(1), 16);
@@ -1746,14 +2425,51 @@
       if (deel.id) tik(deel, vlak);
     }
 
+    /*
+     * Het weer (huis 3.0): regen als schuine strepen, sneeuw als vlokken, en
+     * 's nachts in de wereld een paar vuurvliegjes boven het gras. Met minder
+     * beweging staan ze stil.
+     */
+    const weer = [];
+    {
+      let zaad = 5;
+      const rnd = () => ((zaad = (zaad * 16807) % 2147483647) / 2147483647);
+      const beweeg = !stilGekozen();
+      if (model.weer === 'regen') {
+        for (let i = 0; i < 70; i++) {
+          const x = rnd() * breed;
+          const y = rnd() * hoog;
+          weer.push(`<line class="${beweeg ? 'sc-regen' : ''}" style="animation-delay:-${(rnd() * 1.2).toFixed(2)}s" x1="${x.toFixed(0)}" y1="${y.toFixed(0)}" x2="${(x - 6).toFixed(0)}" y2="${(y + 18).toFixed(0)}" stroke="#a9c4e0" stroke-opacity="0.35" stroke-width="1.2" stroke-linecap="round"/>`);
+        }
+      }
+      if (model.weer === 'sneeuw') {
+        for (let i = 0; i < 80; i++) {
+          weer.push(`<circle class="${beweeg ? 'sc-sneeuw' : ''}" style="animation-delay:-${(rnd() * 8).toFixed(2)}s" cx="${(rnd() * breed).toFixed(0)}" cy="${(rnd() * hoog).toFixed(0)}" r="${(1 + rnd() * 2).toFixed(1)}" fill="#ffffff" opacity="${(0.45 + rnd() * 0.4).toFixed(2)}"/>`);
+        }
+      }
+      if (eiland && nacht && !winter) {
+        for (let i = 0; i < 9; i++) {
+          const c = P(eiland.x0 + rnd() * (eiland.x1 - eiland.x0), eiland.y0 + rnd() * (eiland.yF - eiland.y0), 0.2 + rnd() * 0.6);
+          weer.push(`<circle class="${beweeg ? 'sc-vlieg' : ''}" style="animation-delay:-${(rnd() * 4).toFixed(2)}s" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="1.8" fill="#f6e7a0" filter="url(#${id}-gloed)"/>`);
+        }
+      }
+    }
+    const weerStijl = weer.length
+      ? '<style>.sc-regen{animation:sc-regen 0.9s linear infinite}@keyframes sc-regen{from{transform:translate(0,-40px)}to{transform:translate(-12px,40px)}}.sc-sneeuw{animation:sc-sneeuw 8s linear infinite}@keyframes sc-sneeuw{from{transform:translate(0,-30px)}to{transform:translate(14px,30px)}}.sc-vlieg{animation:sc-vlieg 4s ease-in-out infinite alternate}@keyframes sc-vlieg{from{transform:translate(0,0);opacity:.2}to{transform:translate(6px,-8px);opacity:1}}</style>'
+      : '';
+
     // Met kamers om op te tikken een groep, geen plaatje: anders ziet een schermlezer de kamers niet (besluit 86, de controle van 22 oktober 2026).
     return `<svg class="sc-huis${opts.meubels ? ' sc-ingericht' : ''}" viewBox="0 0 ${breed} ${hoog}" width="100%" height="100%" role="${tikken.length ? 'group' : 'img'}" aria-label="${esc(model.beschrijving ?? global.t?.('thuis.hetHuis') ?? '')}">
       <defs>${lichter(defs.join(''))}</defs>
       <g>${lucht.join('')}</g>
       <g>${grond.join('')}</g>
+      ${buitenAchter.length ? `<g>${lichter(buitenAchter.join(''))}</g>` : ''}
       <g>${lichter(huis.join(''))}</g>
+      ${burenVoor.length ? `<g>${burenVoor.join('')}</g>` : ''}
+      ${eiland && stromen.length ? `<g filter="url(#${id}-gloed)" opacity="0.7">${stromen.join('')}</g>` : ''}
       <g>${stromen.join('')}</g>
       <g>${lichter(buiten.join(''))}</g>
+      ${weer.length ? `${weerStijl}<g>${weer.join('')}</g>` : ''}
       <g>${labels.join('')}</g>
       ${tikken.length ? `<g>${tikken.join('')}</g>` : ''}
       ${opts.controle ? `<desc class="sc-controle">${esc(JSON.stringify(controle))}</desc>` : ''}

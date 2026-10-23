@@ -116,6 +116,20 @@ describe('meldingen (besluit 136)', () => {
     expect(s.verwijder(42)).toBe(false);
   });
 
+  it('wist alles in één keer: wat speelt tot het voorbij is, wat voorbij is meteen (besluit 187)', async () => {
+    const { s } = await store();
+    s.bij(leeg({ volgen: [droger(T0 - 2 * UUR)], batterijen: [{ id: 'sensor.knop', naam: 'Knop', pct: 5, kamerId: null }] }));
+    s.bij(leeg({ nu: T0 + UUR, volgen: [droger(T0 - 2 * UUR)], batterijen: [{ id: 'sensor.knop', naam: 'Knop', pct: 5, kamerId: null }], versie: { nummer: '0.13.0' } }));
+    s.bij(leeg({ nu: T0 + 2 * UUR, volgen: [droger(T0 - 2 * UUR)], batterijen: [{ id: 'sensor.knop', naam: 'Knop', pct: 5, kamerId: null }], versie: { nummer: '0.14.0' } }));
+    expect(s.lijst(T0 + 2 * UUR).actief.length).toBeGreaterThan(0);
+    expect(s.lijst(T0 + 2 * UUR).eerder.length).toBeGreaterThan(0);
+    s.verwijderAlles();
+    expect(s.lijst(T0 + 2 * UUR)).toEqual({ actief: [], eerder: [] });
+    // Wat nog speelt, blijft weg zolang het speelt.
+    s.bij(leeg({ nu: T0 + 3 * UUR, volgen: [droger(T0 - 2 * UUR)], batterijen: [{ id: 'sensor.knop', naam: 'Knop', pct: 5, kamerId: null }], versie: { nummer: '0.14.0' } }));
+    expect(s.lijst(T0 + 3 * UUR).actief).toEqual([]);
+  });
+
   it('onthoudt het in een eigen bestand', async () => {
     const { dir, s } = await store();
     s.bij(leeg({ volgen: [droger(T0 - 2 * UUR)] }));
