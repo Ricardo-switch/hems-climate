@@ -178,13 +178,13 @@
   /** Zegt het antwoord met Piper in Home Assistant, als die er is; anders alleen tekst. */
   async function zeg(tekst) {
     if (stemNaam === undefined) {
-      const s = await fetch('api/stem').then((r) => r.json()).catch(() => null);
-      // Piper spreekt hier alleen Nederlands (besluit 185): in een andere taal alleen tekst.
-      stemNaam = s?.stem && s?.taal && global.taal.code === 'nl' ? s.stem : null;
+      // Piper in de taal van de app, als die stem er is (besluit 185); anders alleen tekst.
+      const s = await fetch(`api/stem?taal=${global.taal.code}`).then((r) => r.json()).catch(() => null);
+      stemNaam = s?.stem && s?.taal ? s.stem : null;
     }
     if (!stemNaam) return new Promise((ok) => setTimeout(ok, Math.max(1500, tekst.length * 55)));
     return new Promise((ok) => {
-      const a = new Audio(`api/stem?tekst=${encodeURIComponent(tekst)}`);
+      const a = new Audio(`api/stem?tekst=${encodeURIComponent(tekst)}&taal=${global.taal.code}`);
       a.onended = ok;
       a.onerror = ok;
       a.play().catch(() => setTimeout(ok, Math.max(1500, tekst.length * 55)));

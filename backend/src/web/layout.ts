@@ -20,6 +20,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SiteConfig } from '../core/model.js';
+import type { Lang } from './assistant.js';
 import { controleerRollen, doetMee, type Rol, type Rollen } from './regeling.js';
 import { controleerBronnen, type Warmtebron } from './warmte.js';
 
@@ -39,12 +40,20 @@ export const STANDARD_FLOORS: readonly { readonly id: string; readonly naam: str
   { id: 'bg', naam: 'Begane grond' },
   { id: 'kelder', naam: 'Kelder' },
 ];
+/** De standaardnamen in het Engels (besluit 185), Brits: de eerste verdieping is de first floor. */
+const FLOOR_EN: Readonly<Record<string, string>> = { e3: 'Third floor', e2: 'Second floor', e1: 'First floor', bg: 'Ground floor', kelder: 'Basement', [OUTSIDE_FLOOR]: 'Outside' };
+
+/** De vaste etages met hun naam in de taal van de app. */
+export function standardFloors(lang: Lang = 'nl'): { id: string; naam: string }[] {
+  return STANDARD_FLOORS.map((f) => ({ id: f.id, naam: floorName(f.id, lang) }));
+}
 /** Zonder eigen volgorde: de etages van een gewoon huis. */
 const DEFAULT_ORDER = ['e2', 'e1', 'bg'];
 const MAX_FLOORS = 10;
 
-/** De standaardnaam van een etage, of het id als het een eigen etage is. */
-export function floorName(id: string): string {
+/** De standaardnaam van een etage in de taal van de app, of het id als het een eigen etage is. */
+export function floorName(id: string, lang: Lang = 'nl'): string {
+  if (lang === 'en' && FLOOR_EN[id]) return FLOOR_EN[id];
   return id === OUTSIDE_FLOOR ? 'Buiten' : (STANDARD_FLOORS.find((f) => f.id === id)?.naam ?? id);
 }
 

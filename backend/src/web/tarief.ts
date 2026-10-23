@@ -16,6 +16,8 @@
  * zonder de Nederlandse feestdagen, en geen salderen.
  */
 
+import type { Lang } from './assistant.js';
+
 export type DalRegio = 'nl' | 'zuid' | 'eigen';
 
 /** Eigen daltijden (besluit 178): van welk uur tot welk uur, en of het weekend helemaal dal is. */
@@ -166,6 +168,8 @@ export interface Gebruik {
 }
 
 export interface KostenRegel {
+  /** Wat voor regel het is, als vaste code (besluit 185): de naam verschilt per taal. */
+  readonly soort: 'stroom' | 'normaal' | 'dal' | 'terug' | 'terug-na' | 'gas' | 'vast';
   readonly naam: string;
   readonly uitleg: string;
   readonly euro: number | null;
@@ -182,9 +186,55 @@ export interface Kosten {
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+const komma = (s: string, lang: Lang) => (lang === 'nl' ? s.replace('.', ',') : s);
 /** Een prijs zoals op het contract: tot vijf decimalen, minstens twee. */
-const eur = (n: number) => `€ ${(Math.abs(n) < 10 ? n.toFixed(5).replace(/0{1,3}$/, '') : n.toFixed(2)).replace('.', ',')}`;
-const kwh = (n: number) => `${String(Math.round(n * 10) / 10).replace('.', ',')} kWh`;
+const eur = (n: number, lang: Lang) => `€ ${komma(Math.abs(n) < 10 ? n.toFixed(5).replace(/0{1,3}$/, '') : n.toFixed(2), lang)}`;
+const kwh = (n: number, lang: Lang) => `${komma(String(Math.round(n * 10) / 10), lang)} kWh`;
+const m3 = (n: number, lang: Lang) => `${komma(String(r2(n)), lang)} m³`;
+
+/** De namen en uitleg van de kostenregels, per taal (besluit 185). Engels is Brits. */
+const WOORDEN = {
+  nl: {
+    stroom: 'Stroom van het net',
+    normaal: 'Stroom normaal',
+    dal: 'Stroom dal',
+    terug: 'Teruggeleverd',
+    terugNa: 'Teruggeleverd, zonder salderen',
+    gas: 'Gas',
+    vastStroom: 'Vaste kosten stroom',
+    vastGas: 'Vaste kosten gas',
+    vast: 'Vaste kosten',
+    geenPrijs: (wat: string) => `${wat}, prijs nog niet ingesteld`,
+    keer: (wat: string, prijs: string) => `${wat} × ${prijs}`,
+    gesaldeerdGeenPrijs: (wat: string) => `${wat}, gesaldeerd; prijs nog niet ingesteld`,
+    gesaldeerdBoven: (gesaldeerd: string, boven: string, prijs: string) => `${gesaldeerd} gesaldeerd, ${boven} boven je verbruik × ${prijs}`,
+    gesaldeerd: (wat: string) => `${wat}, gesaldeerd tegen je stroomprijs`,
+    geenVergoeding: (wat: string, vanaf2027: boolean) => `${wat}, vergoeding${vanaf2027 ? ' vanaf 2027' : ''} nog niet ingesteld`,
+    vergoeding: (wat: string, prijs: string, kosten: string | null) => `${wat} × ${prijs} vergoeding${kosten ? `, min ${kosten} kosten` : ''}`,
+    perMaand: (prijs: string) => `${prijs} per maand`,
+    nietIngesteld: 'nog niet ingesteld',
+  },
+  en: {
+    stroom: 'Electricity from the grid',
+    normaal: 'Electricity, normal rate',
+    dal: 'Electricity, off-peak',
+    terug: 'Exported',
+    terugNa: 'Exported, without net metering',
+    gas: 'Gas',
+    vastStroom: 'Fixed costs electricity',
+    vastGas: 'Fixed costs gas',
+    vast: 'Fixed costs',
+    geenPrijs: (wat: string) => `${wat}, price not set yet`,
+    keer: (wat: string, prijs: string) => `${wat} × ${prijs}`,
+    gesaldeerdGeenPrijs: (wat: string) => `${wat}, net metered; price not set yet`,
+    gesaldeerdBoven: (gesaldeerd: string, boven: string, prijs: string) => `${gesaldeerd} net metered, ${boven} above your use × ${prijs}`,
+    gesaldeerd: (wat: string) => `${wat}, net metered at your electricity price`,
+    geenVergoeding: (wat: string, vanaf2027: boolean) => `${wat}, payment${vanaf2027 ? ' from 2027' : ''} not set yet`,
+    vergoeding: (wat: string, prijs: string, kosten: string | null) => `${wat} × ${prijs} payment${kosten ? `, minus ${kosten} costs` : ''}`,
+    perMaand: (prijs: string) => `${prijs} a month`,
+    nietIngesteld: 'not set yet',
+  },
+} satisfies Record<Lang, unknown>;
 
 /** Een vaste post over een periode van zoveel dagen. */
 export function vastOver(post: VastePost, dagen: number): number {
@@ -193,7 +243,8 @@ export function vastOver(post: VastePost, dagen: number): number {
   return (post.bedrag * dagen) / 365.25;
 }
 
-export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolean; readonly terug: boolean; readonly gas: boolean }): Kosten {
+export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolean; readonly terug: boolean; readonly gas: boolean }, lang: Lang = 'nl'): Kosten {
+  const w = WOORDEN[lang];
   const regels: KostenRegel[] = [];
   const dubbel = p.stroomDal != null;
   const normaal = p.stroom;
@@ -208,10 +259,10 @@ export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolea
   const af = u.afNormaal + u.afDal;
   if (heeft.net) {
     if (!dubbel) {
-      regels.push({ naam: 'Stroom van het net', uitleg: normaal == null ? `${kwh(af)}, prijs nog niet ingesteld` : `${kwh(af)} × ${eur(normaal)}`, euro: tel(normaal == null ? null : af * normaal) });
+      regels.push({ soort: 'stroom', naam: w.stroom, uitleg: normaal == null ? w.geenPrijs(kwh(af, lang)) : w.keer(kwh(af, lang), eur(normaal, lang)), euro: tel(normaal == null ? null : af * normaal) });
     } else {
-      regels.push({ naam: 'Stroom normaal', uitleg: normaal == null ? `${kwh(u.afNormaal)}, prijs nog niet ingesteld` : `${kwh(u.afNormaal)} × ${eur(normaal)}`, euro: tel(normaal == null ? null : u.afNormaal * normaal) });
-      regels.push({ naam: 'Stroom dal', uitleg: `${kwh(u.afDal)} × ${eur(dal!)}`, euro: tel(u.afDal * dal!) });
+      regels.push({ soort: 'normaal', naam: w.normaal, uitleg: normaal == null ? w.geenPrijs(kwh(u.afNormaal, lang)) : w.keer(kwh(u.afNormaal, lang), eur(normaal, lang)), euro: tel(normaal == null ? null : u.afNormaal * normaal) });
+      regels.push({ soort: 'dal', naam: w.dal, uitleg: w.keer(kwh(u.afDal, lang), eur(dal!, lang)), euro: tel(u.afDal * dal!) });
     }
   }
   const afEuro = normaal == null ? null : u.afNormaal * normaal + u.afDal * (dal ?? normaal);
@@ -222,16 +273,16 @@ export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolea
   if (heeft.terug && terugVoor + u.terugNa > 0) {
     if (terugVoor > 0) {
       if (normaal == null) {
-        regels.push({ naam: 'Teruggeleverd', uitleg: `${kwh(terugVoor)}, gesaldeerd; prijs nog niet ingesteld`, euro: null });
+        regels.push({ soort: 'terug', naam: w.terug, uitleg: w.gesaldeerdGeenPrijs(kwh(terugVoor, lang)), euro: null });
       } else {
         const tegenTarief = u.terugNormaal * normaal + u.terugDal * (dal ?? normaal);
         const gemiddeld = tegenTarief / terugVoor;
         const boven = u.heelJaar && p.teruglevering != null ? Math.max(0, terugVoor - af) : 0;
         if (boven > 0) {
           const gesaldeerd = terugVoor - boven;
-          regels.push({ naam: 'Teruggeleverd', uitleg: `${kwh(gesaldeerd)} gesaldeerd, ${kwh(boven)} boven je verbruik × ${eur(p.teruglevering!)}`, euro: tel(-(gesaldeerd * gemiddeld + boven * p.teruglevering!)) });
+          regels.push({ soort: 'terug', naam: w.terug, uitleg: w.gesaldeerdBoven(kwh(gesaldeerd, lang), kwh(boven, lang), eur(p.teruglevering!, lang)), euro: tel(-(gesaldeerd * gemiddeld + boven * p.teruglevering!)) });
         } else {
-          regels.push({ naam: 'Teruggeleverd', uitleg: `${kwh(terugVoor)}, gesaldeerd tegen je stroomprijs`, euro: tel(-tegenTarief) });
+          regels.push({ soort: 'terug', naam: w.terug, uitleg: w.gesaldeerd(kwh(terugVoor, lang)), euro: tel(-tegenTarief) });
         }
       }
     }
@@ -239,15 +290,16 @@ export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolea
       const v = p.vanaf2027?.vergoeding ?? null;
       const k = p.vanaf2027?.kosten ?? 0;
       regels.push({
-        naam: 'Teruggeleverd, zonder salderen',
-        uitleg: v == null ? `${kwh(u.terugNa)}, vergoeding${p.salderen === false ? '' : ' vanaf 2027'} nog niet ingesteld` : `${kwh(u.terugNa)} × ${eur(v)} vergoeding${k ? `, min ${eur(k)} kosten` : ''}`,
+        soort: 'terug-na',
+        naam: w.terugNa,
+        uitleg: v == null ? w.geenVergoeding(kwh(u.terugNa, lang), p.salderen !== false) : w.vergoeding(kwh(u.terugNa, lang), eur(v, lang), k ? eur(k, lang) : null),
         euro: tel(v == null ? null : u.terugNa * (k - v)),
       });
     }
   }
 
   // Gas.
-  if (heeft.gas) regels.push({ naam: 'Gas', uitleg: p.gas == null ? `${String(r2(u.gasM3)).replace('.', ',')} m³, prijs nog niet ingesteld` : `${String(r2(u.gasM3)).replace('.', ',')} m³ × ${eur(p.gas)}`, euro: tel(p.gas == null ? null : u.gasM3 * p.gas) });
+  if (heeft.gas) regels.push({ soort: 'gas', naam: w.gas, uitleg: p.gas == null ? w.geenPrijs(m3(u.gasM3, lang)) : w.keer(m3(u.gasM3, lang), eur(p.gas, lang)), euro: tel(p.gas == null ? null : u.gasM3 * p.gas) });
 
   // Vaste posten, per soort; zonder posten de oude vaste kosten per maand.
   let vast: number | null = null;
@@ -258,13 +310,13 @@ export function kostenVan(p: Tarieven, u: Gebruik, heeft: { readonly net: boolea
       if (!hier.length) continue;
       const som = hier.reduce((t, x) => t + vastOver(x, u.dagen), 0);
       vast = (vast ?? 0) + som;
-      regels.push({ naam: soort === 'stroom' ? 'Vaste kosten stroom' : 'Vaste kosten gas', uitleg: hier.map((x) => x.naam).join(', '), euro: r2(som) });
+      regels.push({ soort: 'vast', naam: soort === 'stroom' ? w.vastStroom : w.vastGas, uitleg: hier.map((x) => x.naam).join(', '), euro: r2(som) });
     }
   } else if (p.vastPerMaand != null) {
     vast = (p.vastPerMaand * u.dagen) / 30.4375;
-    regels.push({ naam: 'Vaste kosten', uitleg: `${eur(p.vastPerMaand)} per maand`, euro: r2(vast) });
+    regels.push({ soort: 'vast', naam: w.vast, uitleg: w.perMaand(eur(p.vastPerMaand, lang)), euro: r2(vast) });
   } else {
-    regels.push({ naam: 'Vaste kosten', uitleg: 'nog niet ingesteld', euro: null });
+    regels.push({ soort: 'vast', naam: w.vast, uitleg: w.nietIngesteld, euro: null });
   }
 
   return {

@@ -1,0 +1,127 @@
+{
+  "language": "en",
+  "expansion_rules": {
+    "kamer": "[the] {kamer}",
+    "in_kamer": "[in|on|of] [the] {kamer}",
+    "sc": "(you|smart climate|the system|the control|the climate)",
+    "nu": "[now|right now|at the moment|currently]",
+    "panelen": "[the] [solar] panels"
+  },
+  "intents": {
+    "SmartClimateVraag": {
+      "data": [
+        {
+          "sentences": [
+            "what (are you|is smart climate|is the control) doing <nu>",
+            "how (is|are) (the climate|the house|the control|the air conditioners|the heating) doing <nu>",
+            "(give|tell) me [a] [short] (overview|status|update) [of] [the climate|the house]",
+            "climate status",
+            "status of the climate",
+            "what is (running|going on) <nu>",
+            "what is happening [in the house] <nu>"
+          ],
+          "slots": {
+            "vraag": "nu"
+          }
+        },
+        {
+          "sentences": [
+            "why (is|are) <kamer> [not] (running|cooling|heating|on|off) <nu>",
+            "why is the (air conditioner|aircon|heating|thermostat) <in_kamer> [not] (running|cooling|heating|on|off) <nu>",
+            "why is it [so] (warm|cold|hot|chilly) <in_kamer>",
+            "why is (nothing|something) happening <in_kamer>",
+            "why (are you|is smart climate) [not] doing (anything|nothing) <in_kamer>",
+            "what is (happening|going on) <in_kamer>",
+            "how is <kamer> doing",
+            "(explain|tell me) (what|why) [it] is (happening|running) <in_kamer>",
+            "why <kamer>",
+            "explain <kamer>"
+          ],
+          "slots": {
+            "vraag": "waarom"
+          }
+        },
+        {
+          "sentences": [
+            "what (are you|is smart climate|is the control) going to do [later|tonight|next|today]",
+            "what (is|are) [the|your] plan[s] [for] [later|tonight|today]",
+            "what (comes|is) next",
+            "when (are you|is the control) going to [the] (night|day) [mode|setting]",
+            "what is planned"
+          ],
+          "slots": {
+            "vraag": "straks"
+          }
+        },
+        {
+          "sentences": [
+            "how much (sun|solar|solar power|electricity|energy) (have we|did we|did i|has been) (generated|produced|made) [today]",
+            "how much (have|did) <panelen> (produced|produce|generated|generate|delivered|deliver) [today]",
+            "what (are|is) <panelen> (doing|producing) <nu>",
+            "[what is the] (output|yield) [of] <panelen> [today]",
+            "how much (are we|did we|am i) (exporting|export) [today]",
+            "how are <panelen> doing",
+            "solar [power] [today]"
+          ],
+          "slots": {
+            "vraag": "zon"
+          }
+        },
+        {
+          "sentences": [
+            "cool [down] <kamer> [to {temperatuur} [degrees]]",
+            "make <kamer> (cooler|colder)",
+            "(can|will) (you|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]"
+          ],
+          "slots": {
+            "vraag": "doe",
+            "wens": "koelen"
+          }
+        },
+        {
+          "sentences": [
+            "heat [up] <kamer> [to {temperatuur} [degrees]]",
+            "warm up <kamer> [to {temperatuur} [degrees]]",
+            "make <kamer> warmer",
+            "(can|will) (you|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]"
+          ],
+          "slots": {
+            "vraag": "doe",
+            "wens": "verwarmen"
+          }
+        },
+        {
+          "sentences": [
+            "can <kamer> [go] off",
+            "smart climate switch off <kamer>",
+            "(can|may) the air conditioner <in_kamer> [go] off"
+          ],
+          "slots": {
+            "vraag": "doe",
+            "wens": "uit"
+          }
+        }
+      ]
+    }
+  },
+  "lists": {
+    "kamer": {
+      "values": [
+        {
+          "in": "(woonkamer|keuken|zithoek)",
+          "out": "woonkamer"
+        },
+        {
+          "in": "(zolder|hobbykamer boven)",
+          "out": "zolder"
+        }
+      ]
+    },
+    "temperatuur": {
+      "range": {
+        "from": 10,
+        "to": 35
+      }
+    }
+  }
+}

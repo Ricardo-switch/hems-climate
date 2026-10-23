@@ -258,7 +258,7 @@ const ligging = (() => {
   }
 
   /** Voor de rij op Energie en de stip bij Inrichten. */
-  const kort = (v) => (v?.nu ? `${v.nu.richting}, ${v.nu.vermogen.replace(/^Samen /, '')}` : null);
+  const kort = (v) => (v?.nu ? `${v.nu.richting}, ${v.nu.vermogenKort ?? v.nu.vermogen}` : null);
 
   return { kaart, klik, verander, kort, lijn, roos };
 })();

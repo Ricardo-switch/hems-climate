@@ -70,10 +70,26 @@ describe('de kosten met een echt contract (besluit 110)', () => {
   it('rekent normaal en dal elk met hun eigen prijs', () => {
     const k = kostenVan(contract, { ...leeg, afNormaal: 100, afDal: 50 }, heeft);
     expect(k.regels.slice(0, 2)).toEqual([
-      { naam: 'Stroom normaal', uitleg: '100 kWh × € 0,27142', euro: 27.14 },
-      { naam: 'Stroom dal', uitleg: '50 kWh × € 0,269', euro: 13.45 },
+      { soort: 'normaal', naam: 'Stroom normaal', uitleg: '100 kWh × € 0,27142', euro: 27.14 },
+      { soort: 'dal', naam: 'Stroom dal', uitleg: '50 kWh × € 0,269', euro: 13.45 },
     ]);
     expect(k.stroomPerKwh).toBeCloseTo((27.142 + 13.45) / 150, 5);
+  });
+
+  it('zegt de regels in de taal van de app, met dezelfde soort en hetzelfde bedrag (besluit 185)', () => {
+    const gebruik = { ...leeg, afNormaal: 100.5, afDal: 50, terugNa: 100, gasM3: 12.25 };
+    const nl = kostenVan(contract, gebruik, heeft);
+    const en = kostenVan(contract, gebruik, heeft, 'en');
+    expect(en.regels.map((r) => [r.soort, r.euro])).toEqual(nl.regels.map((r) => [r.soort, r.euro]));
+    expect(en.regels.map((r) => [r.naam, r.uitleg])).toEqual([
+      ['Electricity, normal rate', '100.5 kWh × € 0.27142'],
+      ['Electricity, off-peak', '50 kWh × € 0.269'],
+      ['Exported, without net metering', '100 kWh × € 0.06635 payment, minus € 0.06385 costs'],
+      ['Gas', '12.25 m³ × € 1.36568'],
+      ['Fixed costs electricity', 'Vaste leveringskosten, Netbeheer, Vermindering energiebelasting'],
+      ['Fixed costs gas', 'Vaste leveringskosten gas, Netbeheer gas'],
+    ]);
+    expect(kostenVan({ ...contract, vast: [], vastPerMaand: null }, leeg, { net: false, terug: false, gas: false }, 'en').regels).toEqual([{ soort: 'vast', naam: 'Fixed costs', uitleg: 'not set yet', euro: null }]);
   });
 
   it('saldeert teruglevering tegen het eigen tarief, en over een jaar het overschot tegen de vergoeding', () => {
@@ -87,7 +103,7 @@ describe('de kosten met een echt contract (besluit 110)', () => {
 
   it('rekent vanaf 2027 een vergoeding met terugleverkosten, zonder salderen', () => {
     const k = kostenVan(contract, { ...leeg, terugNa: 100 }, heeft);
-    expect(k.regels.find((r) => r.naam === 'Teruggeleverd, zonder salderen')).toEqual({ naam: 'Teruggeleverd, zonder salderen', uitleg: '100 kWh × € 0,06635 vergoeding, min € 0,06385 kosten', euro: -0.25 });
+    expect(k.regels.find((r) => r.naam === 'Teruggeleverd, zonder salderen')).toEqual({ soort: 'terug-na', naam: 'Teruggeleverd, zonder salderen', uitleg: '100 kWh × € 0,06635 vergoeding, min € 0,06385 kosten', euro: -0.25 });
     expect(new Date(SALDEREN_TOT_MS).toISOString()).toBe('2026-12-31T23:00:00.000Z');
   });
 
@@ -104,7 +120,7 @@ describe('de kosten met een echt contract (besluit 110)', () => {
   it('zegt wat er nog niet is ingesteld, en valt terug op de oude vaste kosten per maand', () => {
     const niets = kostenVan({ stroom: null, teruglevering: null, gas: null, vastPerMaand: null }, { ...leeg, afNormaal: 5 }, heeft);
     expect(niets.variabel).toBeNull();
-    expect(niets.regels.at(-1)).toEqual({ naam: 'Vaste kosten', uitleg: 'nog niet ingesteld', euro: null });
+    expect(niets.regels.at(-1)).toEqual({ soort: 'vast', naam: 'Vaste kosten', uitleg: 'nog niet ingesteld', euro: null });
     const oud = kostenVan({ stroom: 0.25, teruglevering: null, gas: null, vastPerMaand: 30 }, { ...leeg, dagen: 30.4375 }, heeft);
     expect(oud.vast).toBe(30);
   });

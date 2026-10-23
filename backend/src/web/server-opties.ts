@@ -27,6 +27,7 @@ import type { Location } from './sun.js';
 import type { ForecastDay, HourColumns, WeatherLog } from './weather.js';
 import type { ComfortView } from './comfort.js';
 import type { HouseReport } from './house.js';
+import type { Lang } from './assistant.js';
 import type { Layout, LayoutStore } from './layout.js';
 import type { CoverSwitch } from './covers.js';
 import type { LightSwitch } from './lights.js';
@@ -138,7 +139,8 @@ export interface WebOptions {
    */
   readonly sleutelAdres?: string;
   /** Wat er in Home Assistant klaarstaat voor de functies van Smart Climate (besluit 179). */
-  readonly klaarzetten?: () => Promise<readonly KlaarPunt[]>;
+  /** In de taal van de app (besluit 185). */
+  readonly klaarzetten?: (lang?: Lang) => Promise<readonly KlaarPunt[]>;
   /** Levert het laatste besluit, of null zolang er nog niet gerekend is. */
   readonly latest: () => LiveSnapshot | null;
   /**
@@ -228,7 +230,8 @@ export interface WebOptions {
    */
   readonly connection?: {
     readonly store: ConnectionStore;
-    readonly view: () => ConnectionView;
+    /** In de taal van de app (besluit 185): de ligging van de panelen staat erin in woorden. */
+    readonly view: (lang?: Lang) => ConnectionView;
     readonly found: () => { readonly fasen: readonly FoundPhase[]; readonly apparaten: readonly FoundAppliance[] };
   };
   /**
@@ -306,7 +309,8 @@ export interface WebOptions {
    * Het huis als navigatie: etages, ruimtes en de apparaten erin (ONTWERP §4),
    * of null zolang de registers van Home Assistant nog niet gelezen zijn.
    */
-  readonly house?: () => HouseReport | null;
+  /** Het huis, met de stand in woorden in de gevraagde taal (besluit 185); zonder taal Nederlands. */
+  readonly house?: (lang?: Lang) => HouseReport | null;
   /**
    * De indeling van het huis (besluit 96), of weg wanneer die niet mag. Zelfde
    * schakelaar als het gevoel: zonder dit object bestaat de route niet, en staat

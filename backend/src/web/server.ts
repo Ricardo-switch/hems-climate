@@ -28,7 +28,7 @@ import type { Geometry, SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import { exportInfo, writeExport } from './export.js';
 import { MAX_BACKUP, backupNaam } from './gegevens.js';
-import { TodayCache, withHistory } from './today.js';
+import { TodayCache, todayInLang, withHistory } from './today.js';
 import { SolarHistory, learnSolar } from './solar-learn.js';
 import { validateConnection } from './aansluiting.js';
 import { importFromPrefs, pricesInPrefs, type DashboardPrice, type MeterOption } from './energy.js';
@@ -42,21 +42,22 @@ import { afsluiter, begrijp, isRuis, MAX_TEKST } from './woordzoeker.js';
 import { gevelsUitOmtrek, haalOmtrek, voorkantUitKaart, type Punt } from './kaart.js';
 import { bedienbaar, herkenOpdracht, type Bedienbaar, type Herkend } from './opdracht.js';
 import { inEigenWoorden, kies, PROEF_MS, WACHT_MS, type Vraag } from './taalmodel.js';
+import { keuzesInTaal } from './onboarding.js';
 import { Luisterpost } from './luisterpost.js';
 import { accepteer, isUpgrade, weiger } from './websocket.js';
 import type { Duplex } from 'node:stream';
 import { residentView, type ResidentView } from './resident.js';
 import { sunReport } from './sun.js';
 import { CAMERA_ID } from './camera.js';
-import { expectedAndActual, expectedTotal, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
+import { expectedAndActual, expectedTotal, weatherInLang, weatherReport, type ExpectedTotal, type WeatherReport } from './weather.js';
 import { kindOfCode } from './open-meteo.js';
-import { OUTSIDE_FLOOR, STANDARD_FLOORS, floorName, floorOrder } from './layout.js';
+import { OUTSIDE_FLOOR, floorName, floorOrder, standardFloors } from './layout.js';
 import { controleer as controleerFuncties, functiesVoorstel, volledig } from './functies.js';
 import { DOOR_ROLES, SESSION_COOKIE, cookieValue, hostAllowed, ingressVisitor, newState, openZonderInlog, safeReturn, sessionCookie, viaTailscale, type Access, type Visitor } from './auth.js';
 import type { Wie } from './bewoners.js';
 import { startOfLocalDay } from './today.js';
 import { MAX_ZEG } from './stem.js';
-import { NIEUW, TERUGKIJKEN, VERSIE } from '../version.js';
+import { NIEUW, TERUGKIJKEN, VERSIE, nieuwInTaal } from '../version.js';
 import { LiveStroom, type AlarmMelder } from './live.js';
 
 export type { AlarmMelder } from './live.js';
@@ -537,7 +538,7 @@ export class WebServer {
     }
 
     if (path === '/api/opbrengst') {
-      await this.#yield(res, url.searchParams);
+      await this.#yield(res, url.searchParams, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']));
       return;
     }
 
@@ -581,6 +582,8 @@ export class WebServer {
       const kijker = { userId: wie.userId, magWand: wie.beheerder || (await this.#hoofd(req)), ...(profiel ? { profielen: profiel.profielen, scherm: profiel.scherm } : {}) };
       // De telefoons voor de meldingen (besluit 183) staan erbij: die komen uit Home Assistant, niet uit het bestand.
       const telefoons = this.#options.telefoons?.(wie.userId) ?? [];
+      // Elke pagina vraagt dit op, met de taal waarin de app opende: die geldt bij Automatisch voor de telefoon (besluit 185).
+      if (req.headers['x-taal'] != null) voorkeuren.zagTaal(wie.userId, taalVan(req.headers['x-taal']));
       if (method !== 'POST') {
         sendJson(res, 200, { ...voorkeuren.view(kijker), telefoons });
         return;
@@ -635,7 +638,7 @@ export class WebServer {
         // Weggehaald op de telefoon: ook weg op de wand.
         this.meldingenVeranderd();
       }
-      sendJson(res, 200, store.lijst(Date.now()));
+      sendJson(res, 200, store.lijst(Date.now(), taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 
@@ -756,7 +759,7 @@ export class WebServer {
           const h = await historie(rapport.vanMs, rapport.totMs).catch(() => null);
           if (h) rapport = withHistory(rapport, h.zon, h.net);
         }
-        sendJson(res, 200, rapport);
+        sendJson(res, 200, todayInLang(rapport, config, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       } catch (error) {
         sendJson(res, 500, { fout: (error as Error).message });
       }
@@ -772,10 +775,12 @@ export class WebServer {
     if (path === '/api/stem') {
       const stem = this.#options.stem;
       const tekst = url.searchParams.get('tekst');
+      // In de taal van de app (besluit 185).
+      const lang = taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']);
       if (tekst == null) {
-        // Welke stem, en of die Nederlands kan; zonder Nederlands gebruikt de pagina de stem van het apparaat.
-        const nl = stem ? await stem.nederlands().catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
-        sendJson(res, 200, { stem: stem?.naam ?? null, taal: nl.taal, voice: nl.voice });
+        // Welke stem, en of die de taal van de app kan; zonder gebruikt de pagina de stem van het apparaat.
+        const t = stem ? await stem.taalVoor(lang).catch(() => ({ taal: null, voice: null })) : { taal: null, voice: null };
+        sendJson(res, 200, { stem: stem?.naam ?? null, taal: t.taal, voice: t.voice });
         return;
       }
       if (stem == null || stem.naam == null) {
@@ -787,7 +792,7 @@ export class WebServer {
         return;
       }
       try {
-        const g = await stem.zeg(tekst);
+        const g = await stem.zeg(tekst, lang);
         res.writeHead(200, { 'content-type': g.type, 'content-length': g.data.length, 'cache-control': 'private, max-age=3600' });
         res.end(g.data);
       } catch (error) {
@@ -841,7 +846,7 @@ export class WebServer {
         }
         const klaar = afsluiter(tekst, lang);
         if (klaar != null) {
-          sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar) });
+          sendJson(res, 200, { vraag: 'klaar', taal: lang, kamer: null, antwoord: klaar, feiten: [], gesproken: uitspraak(klaar, lang) });
           return;
         }
         // Bedienen met een zin (besluit 148): eerst de woordzoeker, en wat die
@@ -863,12 +868,12 @@ export class WebServer {
           if (keuze.soort === 'vraag') b = { soort: 'huis', vraag: keuze.vraag };
         }
         if (b.soort === 'app') {
-          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord) });
+          sendJson(res, 200, { vraag: 'app', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], link: b.link, gesproken: uitspraak(b.antwoord, lang) });
           return;
         }
         if (b.soort === 'onbekend') {
           // Hardop staan de voorbeelden er zelf in (besluit 166); op het scherm zijn het knoppen.
-          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden, gesproken: uitspraak(b.gesproken) });
+          sendJson(res, 200, { vraag: 'onbekend', taal: lang, kamer: null, antwoord: b.antwoord, feiten: [], voorbeelden: b.voorbeelden, gesproken: uitspraak(b.gesproken, lang) });
           return;
         }
         parsed = { question: b.vraag, lang };
@@ -901,8 +906,10 @@ export class WebServer {
       let weer = null;
       const kind = parsed.question.kind;
       if (kind === 'zon' || kind === 'straks' || kind === 'weer' || kind === 'morgen') {
-        const w = await this.weatherNow().catch(() => null);
-        if (w && 'vandaag' in w) {
+        const ruw = await this.weatherNow().catch(() => null);
+        // Het weer in woorden in de taal van de vraag (besluit 185).
+        const w = ruw && 'vandaag' in ruw ? weatherInLang(ruw, parsed.lang) : null;
+        if (w) {
           const m = w.dagen[0];
           const morgen = m ? { tekst: m.tekst, minC: m.minC, maxC: m.maxC, regenkansPct: m.regenkansPct, verwachtKwh: m.verwachtKwh } : null;
           // De rest van vandaag (besluit 166): uit de uren tot middernacht, anders het weer van nu.
@@ -921,7 +928,7 @@ export class WebServer {
         }
       }
       // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.
-      const kosten = kind === 'kosten' ? await this.#kostenDezeMaand(config).catch(() => null) : null;
+      const kosten = kind === 'kosten' ? await this.#kostenDezeMaand(config, parsed.lang).catch(() => null) : null;
       const antwoord = ask(parsed.question, {
         weer,
         kosten,
@@ -937,7 +944,7 @@ export class WebServer {
       // In eigen woorden (besluit 148), met het vaste antwoord als vangnet.
       const eigen = model ? await inEigenWoorden(model, vrijeTekst, antwoord, parsed.lang) : { antwoord: antwoord.antwoord, eigen: false };
       // Hoe het klinkt (besluit 142), voor de stem van het apparaat zelf.
-      sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord) });
+      sendJson(res, 200, { ...antwoord, antwoord: eigen.antwoord, eigen: eigen.eigen, gesproken: uitspraak(eigen.antwoord, parsed.lang) });
       return;
     }
 
@@ -1014,12 +1021,13 @@ export class WebServer {
     if (path === '/api/weer') {
       const uit = await this.weatherNow();
       if ('wachten' in uit) sendJson(res, 503, uit);
-      else sendJson(res, 200, uit);
+      else sendJson(res, 200, weatherInLang(uit, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])));
       return;
     }
 
     if (path === '/api/indeling') {
       const door = this.#options.layout;
+      const taal = taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']);
       const config = this.#config();
       if (door == null || config == null) {
         sendJson(res, 503, { wachten: 'indelen staat niet aan' });
@@ -1044,15 +1052,15 @@ export class WebServer {
         voorstel: door.proposal(),
         // De etages van deze indeling, van boven naar beneden, en buiten (besluit 112);
         // de vaste etages als voorstel om toe te voegen.
-        etages: [...floorOrder(door.store.current ?? door.proposal() ?? { kamers: [] }), OUTSIDE_FLOOR].map((id) => ({ id, standaardNaam: floorName(id) })),
-        standaard: STANDARD_FLOORS,
+        etages: [...floorOrder(door.store.current ?? door.proposal() ?? { kamers: [] }), OUTSIDE_FLOOR].map((id) => ({ id, standaardNaam: floorName(id, taal) })),
+        standaard: standardFloors(taal),
         regelzones: config.zones.map((z) => ({ id: z.id, naam: z.name })),
       });
       return;
     }
 
     if (path === '/api/huis') {
-      const house = this.#options.house?.() ?? null;
+      const house = this.#options.house?.(taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) ?? null;
       if (house == null) {
         sendJson(res, 503, { wachten: 'de etages en ruimtes komen van Home Assistant zodra die verbonden is' });
         return;
@@ -1183,7 +1191,7 @@ export class WebServer {
      */
     // Klaarzetten in Home Assistant (besluit 179): per functie wat er staat en wat er mist.
     if (path === '/api/klaarzetten') {
-      sendJson(res, 200, { punten: this.#options.klaarzetten ? await this.#options.klaarzetten() : [] });
+      sendJson(res, 200, { punten: this.#options.klaarzetten ? await this.#options.klaarzetten(taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) : [] });
       return;
     }
 
@@ -1194,7 +1202,7 @@ export class WebServer {
 
     if (path === '/api/versie') {
       // Hooguit tien versies terug (besluit 133).
-      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: NIEUW.slice(0, TERUGKIJKEN) });
+      sendJson(res, 200, { ...(this.#options.version ?? UNKNOWN_VERSION), nieuw: nieuwInTaal(NIEUW.slice(0, TERUGKIJKEN), taalVan(url.searchParams.get('taal') ?? req.headers['x-taal'])) });
       return;
     }
 
@@ -1324,10 +1332,10 @@ export class WebServer {
       }
       await connection.store.save(checked.answers);
     }
-    sendJson(res, 200, connection.view());
+    sendJson(res, 200, connection.view(taalVan(new URL(req.url ?? '/', 'http://localhost').searchParams.get('taal') ?? req.headers['x-taal'])));
   }
 
-  async #yield(res: ServerResponse, params: URLSearchParams): Promise<void> {
+  async #yield(res: ServerResponse, params: URLSearchParams, lang: Lang): Promise<void> {
     const energy = this.#options.energy;
     const config = this.#config();
     if (energy == null || config == null) {
@@ -1353,7 +1361,8 @@ export class WebServer {
       sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
       return;
     }
-    const key = `${soort}:${range.startMs}`;
+    // Per taal (besluit 185): de namen van de periode en de kostenregels staan erin.
+    const key = `${soort}:${range.startMs}:${lang}`;
     const hit = this.#yieldCache.get(key);
     // Klaar is klaar: uitgerekend na het einde van de periode.
     const fresh = (h: { atMs: number; report: YieldReport }) => h.atMs >= h.report.periode.totMs || now - h.atMs < 120_000;
@@ -1361,18 +1370,18 @@ export class WebServer {
     const verwacht = await this.#expectedIn(range.startMs, range.endMs, config.timezone).catch(() => null);
     if (hit) {
       sendJson(res, 200, { ...hit.report, verwacht });
-      if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now).catch(() => null);
-      this.#yieldWarm(vandaag);
+      if (!fresh(hit)) void this.#yieldCompute(key, soort, datum, now, lang).catch(() => null);
+      this.#yieldWarm(vandaag, lang);
       return;
     }
     try {
-      const report = await this.#yieldCompute(key, soort, datum, now);
+      const report = await this.#yieldCompute(key, soort, datum, now, lang);
       if (report == null) {
         sendJson(res, 400, { fout: 'datum is een dag als "2026-10-07"' });
         return;
       }
       sendJson(res, 200, { ...report, verwacht });
-      this.#yieldWarm(vandaag);
+      this.#yieldWarm(vandaag, lang);
     } catch (error) {
       sendJson(res, 502, { fout: `Home Assistant gaf de statistiek niet: ${(error as Error).message}` });
     }
@@ -1402,13 +1411,13 @@ export class WebServer {
   }
 
   /** Rekent één periode uit, één keer tegelijk per periode, en bewaart hem. */
-  #yieldCompute(key: string, soort: PeriodKind, datum: string, now: number): Promise<YieldReport | null> {
+  #yieldCompute(key: string, soort: PeriodKind, datum: string, now: number, lang: Lang = 'nl'): Promise<YieldReport | null> {
     const busy = this.#yieldBusy.get(key);
     if (busy) return busy;
     const energy = this.#options.energy!;
     const config = this.#config()!;
     const settings = energy.store.current!;
-    const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now)
+    const job = yieldReport(energy.source, settings, soort, datum, config.timezone, now, lang)
       .then((report) => {
         if (report != null) {
           // Hooguit honderd periodes; de oudste eruit.
@@ -1424,7 +1433,7 @@ export class WebServer {
   }
 
   /** Wat de apparaten met een eigen meter deze maand kostten, voor de assistent (besluit 142). */
-  async #kostenDezeMaand(config: SiteConfig): Promise<NonNullable<AskContext['kosten']> | null> {
+  async #kostenDezeMaand(config: SiteConfig, lang: Lang = 'nl'): Promise<NonNullable<AskContext['kosten']> | null> {
     const settings = this.#options.energy?.store.current;
     if (settings == null) return null;
     const now = Date.now();
@@ -1432,11 +1441,14 @@ export class WebServer {
     const datum = `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
     const range = periodRange('maand', datum, config.timezone, yearStartOf(settings.prijzen.contractStart));
     if (range == null) return null;
-    const key = `maand:${range.startMs}`;
+    // De naam van de maand komt uit het rapport, in de taal van de vraag.
+    const key = `maand:${range.startMs}:${lang}`;
     const hit = this.#yieldCache.get(key);
-    const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now);
+    const report = hit && now - hit.atMs < 600_000 ? hit.report : await this.#yieldCompute(key, 'maand', datum, now, lang);
     if (report == null) return null;
-    const maand = report.periode.label.split(' ')[0]!.toLowerCase();
+    const eerste = report.periode.label.split(' ')[0]!;
+    // Een maand midden in een zin: in het Nederlands klein, in het Engels met een hoofdletter.
+    const maand = lang === 'nl' ? eerste.toLowerCase() : eerste;
     // Een apparaat heet zoals in de app, niet zoals zijn meter (het klimaatapparaat bij die meter).
     const apparaten = (this.#options.house?.()?.etages ?? []).flatMap((e) => e.ruimtes).flatMap((r) => r.apparaten);
     const naamVan = (meter: string, terug: string) => apparaten.find((d) => d.klimaat?.energieMeter === meter)?.naam ?? terug;
@@ -1444,7 +1456,7 @@ export class WebServer {
   }
 
   /** Na een vraag: de andere periodes van vandaag alvast uitrekenen, op de achtergrond. */
-  #yieldWarm(vandaag: string): void {
+  #yieldWarm(vandaag: string, lang: Lang): void {
     const config = this.#config();
     const settings = this.#options.energy?.store.current;
     if (config == null || settings == null) return;
@@ -1452,10 +1464,10 @@ export class WebServer {
     for (const soort of PERIODS) {
       const range = periodRange(soort, vandaag, config.timezone, yearStartOf(settings.prijzen.contractStart));
       if (range == null) continue;
-      const key = `${soort}:${range.startMs}`;
+      const key = `${soort}:${range.startMs}:${lang}`;
       const hit = this.#yieldCache.get(key);
       if (hit && (hit.atMs >= hit.report.periode.totMs || now - hit.atMs < 120_000)) continue;
-      void this.#yieldCompute(key, soort, vandaag, now).catch(() => null);
+      void this.#yieldCompute(key, soort, vandaag, now, lang).catch(() => null);
     }
   }
 
@@ -1649,7 +1661,9 @@ export class WebServer {
         // `bestaande` erbij, zodat de pagina kan zeggen dat er al iets staat
         // vóórdat iemand op een knop drukt die toch zou weigeren. En het huis
         // zoals Home Assistant het kent, voor het welkom (besluit 154).
-        sendJson(res, 200, { ...proposal, bestaande: existing, namen: onboarding.namen(), huis: this.#options.welkomHuis?.() ?? null });
+        // De vragen in de taal van de app (besluit 185).
+        const lang = taalVan(new URL(req.url ?? '/', 'http://localhost').searchParams.get('taal') ?? req.headers['x-taal']);
+        sendJson(res, 200, { ...proposal, keuzes: keuzesInTaal(proposal.keuzes, lang), bestaande: existing, namen: onboarding.namen(), huis: this.#options.welkomHuis?.() ?? null });
       } catch (error) {
         // Ontdekken vraagt Home Assistant iets, en dat kan misgaan zonder dat
         // er met deze dienst iets mis is. Geen 500: de pagina hoort te kunnen
@@ -1840,7 +1854,7 @@ export class WebServer {
 
   /** Een opdracht als antwoord: de zin, in eigen woorden als dat kan, en wat de pagina moet sturen. */
   async #opdrachtAntwoord(h: Herkend, tekst: string, lang: Lang, model: Vraag | null): Promise<Record<string, unknown>> {
-    if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord) };
+    if (!h.ok) return { vraag: 'bedien', taal: lang, kamer: null, antwoord: h.antwoord, feiten: [], gesproken: uitspraak(h.antwoord, lang) };
     const o = h.opdracht;
     const eigen = model ? await inEigenWoorden(model, tekst, o, lang) : { antwoord: o.antwoord, eigen: false };
     return {
@@ -1851,7 +1865,7 @@ export class WebServer {
       antwoord: eigen.antwoord,
       eigen: eigen.eigen,
       feiten: o.feiten,
-      gesproken: uitspraak(eigen.antwoord),
+      gesproken: uitspraak(eigen.antwoord, lang),
       opdracht: { pad: o.pad, body: o.body },
       gedaan: o.gedaan,
       beweegt: o.beweegt,

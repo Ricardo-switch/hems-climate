@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { SiteConfig } from '../core/model.js';
+import type { Lang } from './assistant.js';
 import { VOORKANT_ZON, aantalVan, dakUitAanpassing, dakUitMeting, liggingView, type Dak, type LiggingView, type Meting, type VoorkantZon } from './ligging.js';
 
 export const CONNECTION_FILE = 'aansluiting.json';
@@ -259,18 +260,28 @@ export class SensorPace {
 }
 
 /** Merk en weg naar lokaal, uit de integratie van de sensor (besluit 89). */
-export function solarBrand(platform: string | null): { merk: string | null; lokaal: boolean | null; weg: string } {
+export function solarBrand(platform: string | null, lang: Lang = 'nl'): { merk: string | null; lokaal: boolean | null; weg: string } {
   const p = (platform ?? '').toLowerCase();
-  const kwh = 'Een kWh-meter op de groep van de panelen, naast de P1-meter: zelf te doen of door een installateur.';
+  const w = WEG[lang];
   if (p === 'solaredge_modbus_multi' || p === 'solaredge_modbus') return { merk: 'SolarEdge', lokaal: true, weg: '' };
-  if (p === 'solaredge') {
-    return { merk: 'SolarEdge', lokaal: false, weg: 'Zet Modbus TCP aan in SetApp en gebruik de integratie SolarEdge Modbus Multi. Geavanceerd, soms via de installateur.' };
-  }
-  if (p.startsWith('growatt')) {
-    return { merk: 'Growatt', lokaal: p !== 'growatt_server', weg: 'RS485 naar het netwerk (bijvoorbeeld een Elfin EW11) of een USB-stick aan Home Assistant. Geavanceerd.' };
-  }
-  return { merk: null, lokaal: null, weg: kwh };
+  if (p === 'solaredge') return { merk: 'SolarEdge', lokaal: false, weg: w.solaredge };
+  if (p.startsWith('growatt')) return { merk: 'Growatt', lokaal: p !== 'growatt_server', weg: w.growatt };
+  return { merk: null, lokaal: null, weg: w.kwh };
 }
+
+/** Hoe de zon sneller te meten is, per taal (besluit 185). */
+const WEG: Readonly<Record<Lang, { readonly kwh: string; readonly solaredge: string; readonly growatt: string }>> = {
+  nl: {
+    kwh: 'Een kWh-meter op de groep van de panelen, naast de P1-meter: zelf te doen of door een installateur.',
+    solaredge: 'Zet Modbus TCP aan in SetApp en gebruik de integratie SolarEdge Modbus Multi. Geavanceerd, soms via de installateur.',
+    growatt: 'RS485 naar het netwerk (bijvoorbeeld een Elfin EW11) of een USB-stick aan Home Assistant. Geavanceerd.',
+  },
+  en: {
+    kwh: 'A kWh meter on the circuit of the panels, next to the P1 meter: do it yourself or have an installer do it.',
+    solaredge: 'Turn on Modbus TCP in SetApp and use the SolarEdge Modbus Multi integration. Advanced, sometimes through the installer.',
+    growatt: 'RS485 to the network (for example an Elfin EW11) or a USB stick on Home Assistant. Advanced.',
+  },
+};
 
 /* --------------------------------------------------------- de regeling */
 
@@ -544,8 +555,11 @@ export class ConnectionStore {
 
 /* ------------------------------------------------------------ de pagina */
 
-const COMPASS = ['het noorden', 'het noordoosten', 'het oosten', 'het zuidoosten', 'het zuiden', 'het zuidwesten', 'het westen', 'het noordwesten'];
-const compass = (deg: number) => COMPASS[Math.round((((deg % 360) + 360) % 360) / 45) % 8]!;
+const COMPASS: Readonly<Record<Lang, readonly string[]>> = {
+  nl: ['op het noorden', 'op het noordoosten', 'op het oosten', 'op het zuidoosten', 'op het zuiden', 'op het zuidwesten', 'op het westen', 'op het noordwesten'],
+  en: ['facing north', 'facing north-east', 'facing east', 'facing south-east', 'facing south', 'facing south-west', 'facing west', 'facing north-west'],
+};
+const compass = (deg: number, lang: Lang) => COMPASS[lang][Math.round((((deg % 360) + 360) % 360) / 45) % 8]!;
 
 export interface ConnectionView {
   /** Wat de bewoner antwoordde, zonder de entiteiten die de dienst erbij zocht. */
@@ -596,10 +610,10 @@ export interface ConnectionContext {
   readonly omvormerGevonden?: number | null;
 }
 
-export function connectionView(c: ConnectionContext): ConnectionView {
+export function connectionView(c: ConnectionContext, lang: Lang = 'nl'): ConnectionView {
   const grid = c.base.grid;
   const planes = c.base.geometry?.solarPlanes ?? [];
-  const brand = c.solar ? solarBrand(c.solar.platform) : null;
+  const brand = c.solar ? solarBrand(c.solar.platform, lang) : null;
   const relevant = (a: ConnectionAnswers | null) => JSON.stringify(a ? [a.zekering, a.fasen, a.apparaten.filter((x) => x.opZon).map((x) => x.id), [...(a.opZonUit ?? [])].sort()] : null);
   return {
     antwoorden: c.answers
@@ -621,12 +635,12 @@ export function connectionView(c: ConnectionContext): ConnectionView {
       panelen: c.answers?.panelen ?? null,
       voorkantZon: c.answers?.voorkantZon ?? null,
       omvormerGevonden: c.omvormerGevonden ?? null,
-    }),
+    }, lang),
     gevonden: { fasen: c.found.fasen.map((f) => f.id), apparaten: c.found.apparaten.map(({ id, naam, soort }) => ({ id, naam, soort })) },
     configuratie: {
       zekering: grid && grid.phases.length > 0 ? { fasen: grid.phases.length === 3 ? 3 : 1, ampere: grid.phases[0]!.maxA } : null,
       apparaten: (c.base.deferrables ?? []).map((d) => ({ id: d.id, naam: d.name })),
-      panelen: planes.map((pl) => `${(pl.peakW / 1000).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} kWp op ${compass(pl.azimuthDeg)}, ${Math.round(pl.tiltDeg)}°`),
+      panelen: planes.map((pl) => `${(pl.peakW / 1000).toLocaleString(lang === 'nl' ? 'nl-NL' : 'en-GB', { maximumFractionDigits: 1 })} kWp ${compass(pl.azimuthDeg, lang)}, ${Math.round(pl.tiltDeg)}°`),
     },
     zonnesensor: c.solar
       ? {

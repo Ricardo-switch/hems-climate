@@ -118,6 +118,18 @@ describe('wat er wanneer naar de telefoon gaat', () => {
     expect(teSturen(opgelost, [ik()], {}, om(11, 2), TZ).berichten).toEqual([]);
   });
 
+  it('stuurt een melding in de taal die de bewoner koos, ook als hij weer goed is (besluit 185)', () => {
+    const en = { titel: 'Title', tekst: 'Text', klaar: { titel: 'Fine again', tekst: 'Works again.' } };
+    const lijst = [{ ...melding('rook:keuken', 'rook', om(12)), en }];
+    const eerst = teSturen(lijst, [{ ...ik(), taal: 'en' }], {}, om(12, 1), TZ);
+    expect(eerst.berichten.map((b) => [b.titel, b.tekst])).toEqual([['Title', 'Text']]);
+    const daarna = teSturen([{ ...lijst[0]!, opgelostMs: om(13) }], [{ ...ik(), taal: 'en' }], eerst.verstuurd, om(13, 1), TZ);
+    expect(daarna.berichten.map((b) => [b.titel, b.tekst])).toEqual([['Fine again', 'Works again.']]);
+    // Zonder Engelse woorden blijft het Nederlands; zonder keuze ook.
+    expect(teSturen([melding('rook:keuken', 'rook', om(12))], [{ ...ik(), taal: 'en' }], {}, om(12, 1), TZ).berichten[0]?.titel).toBe('Titel rook:keuken');
+    expect(teSturen(lijst, [ik()], {}, om(12, 1), TZ).berichten[0]?.titel).toBe('Titel rook:keuken');
+  });
+
   it('stuurt niets wat al langer dan een dag speelt: geen stapel oude meldingen', () => {
     expect(teSturen([melding('meter:p1', 'meter', om(12) - 2 * 86_400_000)], [ik()], {}, om(12), TZ).berichten).toEqual([]);
   });

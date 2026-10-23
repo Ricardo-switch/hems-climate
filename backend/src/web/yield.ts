@@ -20,7 +20,8 @@
  * De pagina tekent; rekenen gebeurt hier (besluit 94).
  */
 
-import { SALDEREN_TOT_MS, dalAandeel, kostenVan, raadDal, type Gebruik } from './tarief.js';
+import type { Lang } from './assistant.js';
+import { SALDEREN_TOT_MS, dalAandeel, kostenVan, raadDal, type Gebruik, type KostenRegel } from './tarief.js';
 import type { EnergySettings, EnergySource } from './energy.js';
 import { partsIn, zonedMidnight } from './today.js';
 
@@ -115,15 +116,32 @@ export interface YieldReport {
   readonly vergelijk: YieldCompare;
   readonly verschil: Readonly<Record<keyof YieldCompare, YieldDelta>>;
   readonly kosten: {
-    readonly regels: readonly { readonly naam: string; readonly uitleg: string; readonly euro: number | null }[];
+    readonly regels: readonly KostenRegel[];
     readonly totaal: number | null;
     readonly vorige: number | null;
   };
 }
 
-const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-const SHORT_MONTHS = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-const DAYS = ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'];
+/** De namen van maanden en dagen, per taal (besluit 185); Engels is Brits. */
+const NAMEN = {
+  nl: {
+    maanden: ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'],
+    kort: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
+    dagen: ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'],
+    dagErvoor: 'de dag ervoor',
+    vorigeWeek: 'vorige week',
+    rest: 'Rest van het huis',
+  },
+  en: {
+    maanden: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    kort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    dagen: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    dagErvoor: 'the day before',
+    vorigeWeek: 'last week',
+    rest: 'Rest of the house',
+  },
+} satisfies Record<Lang, unknown>;
+const hoofdletter = (s: string) => `${s[0]!.toUpperCase()}${s.slice(1)}`;
 
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -185,10 +203,11 @@ function yearName(y: number, start: YearStart): string {
 }
 
 /** De periode rond een datum, in de tijdzone van het huis. */
-export function periodRange(kind: PeriodKind, date: string, tz: string, start: YearStart = { m: 1, d: 1 }): Range | null {
+export function periodRange(kind: PeriodKind, date: string, tz: string, start: YearStart = { m: 1, d: 1 }, lang: Lang = 'nl'): Range | null {
   const p = parseDate(date);
   if (!p) return null;
   const { y, m, d } = p;
+  const { maanden: MONTHS, dagen: DAYS, dagErvoor, vorigeWeek } = NAMEN[lang];
   if (kind === 'dag') {
     const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
     return {
@@ -197,8 +216,8 @@ export function periodRange(kind: PeriodKind, date: string, tz: string, start: Y
       first: p,
       prev: iso(y, m, d - 1),
       next: iso(y, m, d + 1),
-      label: `${DAYS[wd]![0]!.toUpperCase()}${DAYS[wd]!.slice(1)} ${d} ${MONTHS[m - 1]}`,
-      prevName: 'de dag ervoor',
+      label: `${hoofdletter(DAYS[wd]!)} ${d} ${MONTHS[m - 1]}`,
+      prevName: dagErvoor,
     };
   }
   if (kind === 'week') {
@@ -215,7 +234,7 @@ export function periodRange(kind: PeriodKind, date: string, tz: string, start: Y
       prev: iso(my, mm, md - 7),
       next: iso(my, mm, md + 7),
       label: `Week ${w.week} · ${span}`,
-      prevName: 'vorige week',
+      prevName: vorigeWeek,
     };
   }
   if (kind === 'maand') {
@@ -225,7 +244,7 @@ export function periodRange(kind: PeriodKind, date: string, tz: string, start: Y
       first: { y, m, d: 1 },
       prev: iso(y, m - 1, 1),
       next: iso(y, m + 1, 1),
-      label: `${MONTHS[m - 1]![0]!.toUpperCase()}${MONTHS[m - 1]!.slice(1)} ${y}`,
+      label: `${hoofdletter(MONTHS[m - 1]!)} ${y}`,
       prevName: MONTHS[(m + 10) % 12]!,
     };
   }
@@ -256,11 +275,11 @@ function sumBy(rows: Rows, ids: readonly string[]): Map<number, number> {
 const total = (m: Map<number, number>) => [...m.values()].reduce((a, b) => a + b, 0);
 
 /** De sleutel van het vak in de grafiek: uur, dag of maand in de tijdzone van het huis. */
-function bucketKey(kind: PeriodKind, ms: number, tz: string): string {
+function bucketKey(kind: PeriodKind, ms: number, tz: string, lang: Lang): string {
   const p = partsIn(ms, tz);
   if (kind === 'dag') return String(p.h).padStart(2, '0');
-  if (kind === 'jaar') return SHORT_MONTHS[p.m - 1]!;
-  return kind === 'week' ? DAYS[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()]!.slice(0, 2) : String(p.d);
+  if (kind === 'jaar') return NAMEN[lang].kort[p.m - 1]!;
+  return kind === 'week' ? NAMEN[lang].dagen[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()]!.slice(0, 2) : String(p.d);
 }
 
 /**
@@ -301,6 +320,7 @@ export function verdeel(
 
 /** Wat stroom en gas samen kosten in een periode, de vaste posten erbij. */
 function costOf(s: EnergySettings, g: Gebruik): number | null {
+  // Alleen het bedrag telt hier: de namen van de regels doen er niet toe.
   const p = s.prijzen;
   if (p.stroom == null && p.gas == null) return null;
   const k = kostenVan(p, g, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null });
@@ -314,8 +334,11 @@ export async function yieldReport(
   date: string,
   tz: string,
   nowMs: number,
+  /** De taal van de namen: de periode, de vakken, de kostenregels (besluit 185). */
+  lang: Lang = 'nl',
 ): Promise<YieldReport | null> {
-  const range = periodRange(kind, date, tz, yearStartOf(settings.prijzen.contractStart));
+  const range = periodRange(kind, date, tz, yearStartOf(settings.prijzen.contractStart), lang);
+  const { maanden: MONTHS, dagen: DAYS } = NAMEN[lang];
   if (!range) return null;
   const s = settings;
   const deviceIds = s.apparaten.map((a) => a.id);
@@ -371,7 +394,7 @@ export async function yieldReport(
     const rest = Math.max(0, use - devUse);
     restZon += rest * share;
     restNet += rest * (1 - share);
-    const key = bucketKey(kind, t, tz);
+    const key = bucketKey(kind, t, tz, lang);
     const b = buckets.get(key) ?? { zon: 0, net: 0, gas: 0 };
     b.zon += self;
     b.net += a;
@@ -394,11 +417,11 @@ export async function yieldReport(
   const dagen = (totMs - vanMs) / 86_400_000;
   const vanP = partsIn(vanMs + 3 * 3_600_000, tz);
   const dekking = vanMs > range.startMs ? { vanaf: iso(vanP.y, vanP.m, vanP.d), dagen: Math.round(dagen), vanDagen: Math.round((totMs - range.startMs) / 86_400_000) } : null;
-  const kosten = kostenVan(s.prijzen, { ...gebruik, gasM3, dagen: Math.max(0, dagen), heelJaar: kind === 'jaar' }, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null });
+  const kosten = kostenVan(s.prijzen, { ...gebruik, gasM3, dagen: Math.max(0, dagen), heelJaar: kind === 'jaar' }, { net: s.net.afname.length > 0, terug: s.net.teruglevering.length > 0, gas: s.gas != null }, lang);
   const stroomPrijs = kosten.stroomPerKwh;
 
   // Vakken in de grafiek: ook de lege, zodat een dag zonder meting een gat is.
-  const perBucket = bucketLabels(kind, range, tz).map((label) => {
+  const perBucket = bucketLabels(kind, range, tz, lang).map((label) => {
     const b = buckets.get(label) ?? { zon: 0, net: 0, gas: 0 };
     return { label, zonKwh: r1(b.zon), netKwh: r1(b.net), gasM3: r2(b.gas) };
   });
@@ -421,7 +444,7 @@ export async function yieldReport(
   });
   apparaten.push({
     id: 'rest',
-    naam: 'Rest van het huis',
+    naam: NAMEN[lang].rest,
     kwh: r1(restZon + restNet),
     zonKwh: r1(restZon),
     netKwh: r1(restNet),
@@ -438,7 +461,7 @@ export async function yieldReport(
   if (gasM3 > 0) stromen.push({ van: 'gas', naar: 'cv', kwh: r1(gasM3 * GAS_KWH_PER_M3) });
 
   // Vergelijken: de periodes ervoor, en dezelfde een jaar eerder.
-  const vergelijk = await compareSeries(source, s, kind, range, tz);
+  const vergelijk = await compareSeries(source, s, kind, range, tz, lang);
   const prevPoint = vergelijk.stroom.at(-2);
   const prev = (series: readonly YieldComparePoint[]) => series.at(-2)?.nu ?? null;
 
@@ -499,16 +522,16 @@ function deltaOf(series: readonly YieldComparePoint[]): YieldDelta {
 }
 
 /** De vakken van de grafiek, in volgorde. */
-function bucketLabels(kind: PeriodKind, range: Range, tz: string): string[] {
+function bucketLabels(kind: PeriodKind, range: Range, tz: string, lang: Lang): string[] {
   if (kind === 'dag') return Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
   // Een contractjaar begint bij zijn eigen maand; een maand die het jaar in
   // tweeën deelt, is één vak.
-  if (kind === 'jaar') return Array.from({ length: 12 }, (_, i) => SHORT_MONTHS[(range.first.m - 1 + i) % 12]!);
+  if (kind === 'jaar') return Array.from({ length: 12 }, (_, i) => NAMEN[lang].kort[(range.first.m - 1 + i) % 12]!);
   // Per dag één vak. Een maand met de wintertijd erin is een uur langer; in
   // stappen van 24 uur leverde dat een 32e vak op, met de naam van de eerste dag.
   const out: string[] = [];
   for (let t = range.startMs; t < range.endMs; t += 86_400_000) {
-    const key = bucketKey(kind, t + 3 * 3_600_000, tz);
+    const key = bucketKey(kind, t + 3 * 3_600_000, tz, lang);
     if (!out.includes(key)) out.push(key);
   }
   return out;
@@ -519,7 +542,7 @@ function bucketLabels(kind: PeriodKind, range: Range, tz: string): string[] {
  * jaar: de jaren tot en met dit, zonder "een jaar eerder"). Per stroom, zon,
  * gas en kosten.
  */
-async function compareSeries(source: EnergySource, s: EnergySettings, kind: PeriodKind, range: Range, tz: string): Promise<YieldCompare> {
+async function compareSeries(source: EnergySource, s: EnergySettings, kind: PeriodKind, range: Range, tz: string, lang: Lang): Promise<YieldCompare> {
   const { y, m, d } = range.first;
   const n = kind === 'jaar' ? 5 : 12;
   // De begintijden van de periodes, oudste eerst, en hun naam.
@@ -527,7 +550,7 @@ async function compareSeries(source: EnergySource, s: EnergySettings, kind: Peri
   for (let i = n - 1; i >= 0; i--) {
     if (kind === 'dag') starts.push({ ms: zonedMidnight(y, m, d - i, tz), label: String(new Date(Date.UTC(y, m - 1, d - i)).getUTCDate()) });
     else if (kind === 'week') starts.push({ ms: zonedMidnight(y, m, d - 7 * i, tz), label: `wk ${weekOf(y, m, d - 7 * i).week}` });
-    else if (kind === 'maand') starts.push({ ms: zonedMidnight(y, m - i, 1, tz), label: SHORT_MONTHS[(((m - 1 - i) % 12) + 12) % 12]! });
+    else if (kind === 'maand') starts.push({ ms: zonedMidnight(y, m - i, 1, tz), label: NAMEN[lang].kort[(((m - 1 - i) % 12) + 12) % 12]! });
     else starts.push({ ms: zonedMidnight(y - i, m, d, tz), label: yearName(y - i, { m, d }) });
   }
   const yearBack = (ms: number) => {

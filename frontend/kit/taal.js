@@ -24,11 +24,12 @@
   const KAN = Object.keys(TALEN);
   /**
    * De talen die de hele app spreekt: alleen die kiest de app vanzelf, uit het
-   * account of de browser. Een taal die nog half af is (Engels tot stap 9 klaar
-   * is) kies je zelf bij Jij, als proef; anders zag iemand met een Engels
-   * account op de andere pagina's een mengtaal.
+   * account of de browser. Een taal die nog half af is, kies je zelf bij Jij;
+   * anders zag iemand met zo'n account op de andere pagina's een mengtaal.
+   * Engels sinds stap 9 af is (23 oktober 2026): de app, de dienst en de
+   * assistent spreken het.
    */
-  const HEEL = ['nl'];
+  const HEEL = ['nl', 'en'];
   const SLEUTEL = 'sc-taal';
   /** Engels in Britse stijl (besluit 185): 24-uursklok, punt als decimaalteken. */
   const LOCALE = { nl: 'nl-NL', en: 'en-GB' };

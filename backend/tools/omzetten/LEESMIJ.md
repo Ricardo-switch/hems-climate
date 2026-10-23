@@ -9,33 +9,53 @@ werkplaats: waar het omzetten staat, en hoe je een pagina omzet.
   de assistent (0.59.2), Instellingen en de pagina's erachter (0.59.3), Wat je
   huis kan, Indeling, Inrichten, het begin, het welkom en de film (0.59.4).
   Alles wat af is, staat in `OMGEZET` in `backend/test/taal.test.ts`.
-- **Deel 5:** wat de dienst in woorden geeft: de stand van apparaten in
-  `house.ts`, het weer, de meldingen, de namen van periodes, de ligging van de
-  panelen, de namen van camerabeelden, de standaardnamen van de etages, de
-  vragen bij het begin (`api/onboarding`), Klaarzetten in Home Assistant
-  (`api/klaarzetten`), de rol bij inloggen, en wat er nieuw is (`NIEUW` in
-  `version.ts`). Daarna `huismodel.ACTIEF` en de vaste patronen in `kamer.js`
-  (`BEWEEGT`) naar codes.
-- **Deel 6:** de assistent: Engels verstaan, Engelse zinnen voor Assist
-  (`zinnen.ts`), een Engelse Piper-stem.
+- **Deel 5, wat de dienst zegt (0.59.5):** de stand van apparaten (`api/huis`,
+  met `standCode` en `klimaat.actieCode`), het weer, de meldingen (ook op de
+  telefoon), Opbrengst, de besluiten bij Vandaag, de ligging van de panelen,
+  Klaarzetten, de vragen bij het begin, de standaardnamen van de etages, de
+  rol bij Bewoners en toegang, en wat er nieuw is (`en` in `NIEUW`). De app
+  let nergens meer op een Nederlands woord van de dienst.
+- **Nog Nederlands, klein:** een foutmelding bij het begin (`onboarding.save`),
+  `addon/CHANGELOG.md` (de notities bij een update in Home Assistant), en een
+  paar namen die de dienst als terugval geeft ("je zonnesensor").
+- **Deel 6, de assistent (0.59.6):** Engels verstaan (`woordzoeker.ts`,
+  `opdracht.ts`), Engelse zinnen voor Assist (`zinnenVoor('en', …)`), en Piper
+  per taal (`Stem.taalVoor`, `uitspraak(tekst, lang)`).
 - **Daarna:** `'en'` in `HEEL` in `frontend/kit/taal.js`, zodat Automatisch
   Engels kiest. De uitleg bij Jij (`jij.taal.uitleg`, `jij.taal.enUitleg`)
   dan bijwerken. Duits later ([172]).
 
-## Waar deel 5 begint
+## Hoe de dienst een taal spreekt (deel 5)
 
-1. Na het samenvoegen van PR 52: markeer `v0.59.4` op de merge-commit op main
-   en zet beta erop vooruit (`git merge --ff-only origin/main`).
-2. De dienst kent de taal al: `taalVan()` in `backend/src/web/server.ts`
-   (`?taal=` of de kop `x-taal`), en `residentView` krijgt hem mee. Geef de
-   taal door aan wat tekst maakt, en kies per taal een tekst, net als de
-   uitleg die al tweetalig was.
-3. Begin bij wat de bewoner het meest ziet: de stand van een apparaat in
-   `backend/src/web/house.ts` (`api/huis`), dan het weer (`api/weer`), dan de
-   meldingen. Geef daarbij een vaste code mee (zoals `koelt`), en laat
-   `huismodel.ACTIEF` en `BEWEEGT` in `frontend/src/kamer.js` op die code
-   letten in plaats van op het woord.
-4. Een test per tekst in beide talen, zoals de bestaande tests van de uitleg.
+- `taalVan()` in `backend/src/web/server.ts` leest `?taal=` of de kop `x-taal`;
+  de app stuurt die mee met `haal()` en `stuur()` (`basis.js`). Een eigen
+  `fetch` moet de kop zelf meegeven.
+- Woorden staan per bestand in een tabel `WOORDEN` (of `NAMEN`) met `nl` en
+  `en`. Wat bewaard wordt en duur is om te maken (het huis, Opbrengst), wordt
+  per taal bewaard; wat goedkoop is, wordt per verzoek vertaald
+  (`weatherInLang`, `todayInLang`, `keuzesInTaal`, `nieuwInTaal`).
+- Meldingen staan in een bestand: de dienst maakt ze in beide talen (`en` op
+  de melding) en `inTaal()` kiest. Voor de telefoon geldt de keuze bij Jij
+  (`VoorkeurenStore.taal`): Automatisch is daar Nederlands. Als `'en'` in
+  `HEEL` komt, hoort Automatisch daar de taal van het account in Home
+  Assistant te worden.
+- Elke versie in `NIEUW` krijgt `en` met evenveel regels; de test in
+  `web.test.ts` eist het voor de versies die de app laat zien.
+
+## Wat er nog kan
+
+1. Klaar sinds 0.59.7: `'en'` staat in `HEEL`, dus Automatisch kiest Engels
+   bij een Engels account of een Engelse browser; een melding op de telefoon
+   volgt bij Automatisch de taal waarin de app het laatst opende
+   (`VoorkeurenStore.zagTaal`). Een nieuwe taal komt pas in `HEEL` als de hele
+   app, de dienst en de assistent hem spreken.
+2. Een nieuwe zin voor de assistent: zet hem in beide talen in de woordzoeker
+   of `opdracht.ts`, met een test per taal (`woordzoeker.test.ts`,
+   `praten.test.ts`); een nieuwe zin voor Assist in beide lijsten in
+   `zinnen.ts`, en `HEMS_ZINNEN_SCHRIJF=1` schrijft de voorbeelden voor de test
+   in Home Assistant.
+3. Duits later ([172]): een derde kolom in elke `WOORDEN`-tabel en een
+   `teksten.de.js`.
 
 ## Een pagina omzetten
 

@@ -28,6 +28,7 @@ import {
   type Registers,
 } from '../src/adapters/homeassistant/discovery.js';
 import { parseSiteConfig } from '../src/config/schema.js';
+import { keuzesInTaal } from '../src/web/onboarding.js';
 import { defaultStrategies } from '../src/index.js';
 
 function state(entity_id: string, s: string, attributes: Record<string, unknown> = {}): HaEntityState {
@@ -369,6 +370,18 @@ describe('de antwoorden van de bewoner', () => {
       'gridPower',
       'zone:woonkamer:temperature',
     ]);
+  });
+
+  it('stelt de vragen in de taal van de app, met dezelfde opties (besluit 185)', () => {
+    const v = doubtful();
+    const en = keuzesInTaal(v.keuzes, 'en');
+    expect(en.map((k) => [k.id, k.opties])).toEqual(v.keuzes.map((k) => [k.id, k.opties]));
+    const vraag = (id: string) => en.find((k) => k.id === id)!;
+    expect(vraag('zone:woonkamer:temperature').vraag).toMatch(/^Which thermometer applies to .+\?$/);
+    expect(vraag('gridPower')).toMatchObject({ vraag: 'Which sensor measures what comes from the grid?', toelichting: expect.stringContaining('negative when you export') });
+    expect(vraag('dubbel:airco').vraag).toBe('Which of these two controls this device?');
+    // Nederlands blijft zoals de ontdekking het zegt.
+    expect(keuzesInTaal(v.keuzes, 'nl')).toEqual(v.keuzes);
   });
 
   it('neemt een andere thermometer over', () => {

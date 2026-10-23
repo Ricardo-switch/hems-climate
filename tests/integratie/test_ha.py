@@ -28,7 +28,8 @@ ADRES = "http://abcd1234-hems-climate:8099"
 SLEUTEL = "een-lange-sleutel-voor-de-assistent"
 # De echte zinnen zoals de dienst ze maakt (backend/test/zinnen.test.ts houdt dit voorbeeld bij).
 ZINNEN = json.loads((Path(__file__).parent / "zinnen_voorbeeld.json").read_text(encoding="utf-8"))
-INFO = {"naam": "Smart Climate", "versie": "0.58.0", "talen": ["nl", "en"], "kamers": [{"id": "zolder", "naam": "Zolder", "woorden": ["hobbykamer"]}], "zinnen": {"nl": ZINNEN}}
+ZINNEN_EN = json.loads((Path(__file__).parent / "zinnen_voorbeeld_en.json").read_text(encoding="utf-8"))
+INFO = {"naam": "Smart Climate", "versie": "0.58.0", "talen": ["nl", "en"], "kamers": [{"id": "zolder", "naam": "Zolder", "woorden": ["hobbykamer"]}], "zinnen": {"nl": ZINNEN, "en": ZINNEN_EN}}
 
 
 @pytest.fixture(autouse=True)
@@ -149,4 +150,28 @@ async def test_assist_herkent_een_gesproken_zin_met_de_echte_zinnen(hass: HomeAs
     vraag = str(aioclient_mock.mock_calls[-1][1])
     assert "v=doe" in vraag and "wens=koelen" in vraag and "kamer=woonkamer" in vraag and "temperatuur=21" in vraag
     await zeg("wat doe je nu")
+    assert "v=nu" in str(aioclient_mock.mock_calls[-1][1])
+
+
+async def test_assist_herkent_een_engelse_zin(hass: HomeAssistant, aioclient_mock) -> None:
+    """Assist in het Engels (besluit 185): het Engelse bestand, en de vraag gaat met taal=en naar Smart Climate."""
+    aioclient_mock.get(f"{ADRES}/api/assist", json=INFO)
+    aioclient_mock.get(f"{ADRES}/api/vraag", json={"vraag": "waarom", "antwoord": "The attic is waiting for more sun."})
+    entry = MockConfigEntry(domain=DOMAIN, data={"adres": ADRES, "sleutel": SLEUTEL}, unique_id=DOMAIN)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert await hass.async_add_executor_job(Path(hass.config.path("custom_sentences", "en", "smart_climate.yaml")).exists)
+
+    async def zeg(zin: str) -> str:
+        uit = await hass.services.async_call("conversation", "process", {"text": zin, "language": "en"}, blocking=True, return_response=True)
+        return uit["response"]["speech"]["plain"]["speech"]
+
+    assert await zeg("Why is the zolder cooling?") == "The attic is waiting for more sun."
+    vraag = str(aioclient_mock.mock_calls[-1][1])
+    assert "v=waarom" in vraag and "kamer=zolder" in vraag and "taal=en" in vraag
+    await zeg("cool the keuken to 21 degrees")
+    vraag = str(aioclient_mock.mock_calls[-1][1])
+    assert "v=doe" in vraag and "wens=koelen" in vraag and "kamer=woonkamer" in vraag and "temperatuur=21" in vraag
+    await zeg("what are you doing right now")
     assert "v=nu" in str(aioclient_mock.mock_calls[-1][1])

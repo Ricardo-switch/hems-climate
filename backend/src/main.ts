@@ -20,7 +20,7 @@ import { klaarzetten } from './web/klaarzetten.js';
 import { Stem } from './web/stem.js';
 import { doelenBinnenBereik, rollenUitConfig, withRegeling } from './web/regeling.js';
 import { MeldingenStore } from './web/meldingen.js';
-import { NIEUW, VERSIE } from './version.js';
+import { NIEUW, VERSIE, eersteVan } from './version.js';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 
@@ -64,6 +64,7 @@ import { eigenUpdate, updateView, type UpdateView } from './web/bijwerken.js';
 import { haEnergySource } from './adapters/homeassistant/energy.js';
 import type { DeferrableStateCode } from './core/decision.js';
 import { CoverSwitch } from './web/covers.js';
+import type { Lang } from './web/assistant.js';
 import { LightSwitch } from './web/lights.js';
 import { SessionStore, haBeheerders, homeAssistantLogin, leesOfMaakSleutel, type Access, type HaAccount } from './web/auth.js';
 import { ShadowRunner, type LiveSnapshot } from './adapters/homeassistant/shadow.js';
@@ -932,8 +933,8 @@ function meldingenRonde(): void {
     // De rookmelders (21 oktober 2026): rook, een lege batterij, vervangen.
     rookmelders: h.etages.flatMap((e) => e.ruimtes.flatMap((r) => r.apparaten.filter((d) => d.soort === 'rookmelder' && d.rookmelder).map((d) => ({ id: d.id, naam: d.naam, kamer: r.naam, kamerId: r.id, gevaar: d.rookmelder!.gevaar, sindsMs: d.rookmelder!.sindsMs, batterijProbleem: d.rookmelder!.batterijProbleem, vervangenVoor: d.rookmelder!.vervangenVoor })))),
     drempels: h.drempels,
-    meters: grid ? [{ id: grid.id, naam: 'De slimme meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
-    versie: { nummer: VERSIE, ...(nieuwste ? { eerste: nieuwste.nieuw?.[0] ?? nieuwste.beter?.[0] ?? nieuwste.opgelost?.[0] ?? '' } : {}) },
+    meters: grid ? [{ id: grid.id, naam: 'De slimme meter', naamEn: 'The smart meter', laatsteMs: gst && gst.state !== 'unavailable' && gst.state !== 'unknown' ? Date.parse(gst.last_updated) : null }] : [],
+    versie: { nummer: VERSIE, ...(nieuwste ? { eerste: eersteVan(nieuwste), eersteEn: nieuwste.en ? eersteVan(nieuwste.en) : '' } : {}) },
     // Hoe de panelen liggen (besluit 157): gemeten, en nog niet bevestigd.
     panelen: { voorstel: connectionStore?.current?.dak == null && metingNu() != null },
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
@@ -994,7 +995,7 @@ async function pushRonde(): Promise<void> {
       const x = b.bewoners[id];
       if (!x || x.gast) return [];
       const keus = voorkeuren.meldingen(x.haUser);
-      return [{ account: x.haUser, keus, telefoon: telefoonVan(x.haUser, keus, tel) }];
+      return [{ account: x.haUser, keus, telefoon: telefoonVan(x.haUser, keus, tel), taal: voorkeuren.taal(x.haUser) }];
     });
     const nu = Date.now();
     const l = meldingen.lijst(nu);
@@ -1019,7 +1020,10 @@ async function proefmelding(userId: string | null): Promise<{ ok: true; naam: st
   const t = telefoonVan(userId, voorkeuren.meldingen(userId), telefoons());
   if (!t) return { ok: false, status: 404, reden: 'geen telefoon met de app van Home Assistant gevonden' };
   try {
-    await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.', tag: 'smart-climate-proef', dringend: false, stil: false }, paneelPad), {});
+    const proef = voorkeuren.taal(userId) === 'en'
+      ? { titel: 'Test notification from Smart Climate', tekst: 'This is what a notification on your phone looks like.' }
+      : { titel: 'Proefmelding van Smart Climate', tekst: 'Zo ziet een melding op je telefoon eruit.' };
+    await client.callService('notify', t.dienst, alsMelding({ dienst: t.dienst, ...proef, tag: 'smart-climate-proef', dringend: false, stil: false }, paneelPad), {});
     return { ok: true, naam: t.naam };
   } catch (error) {
     return { ok: false, status: 502, reden: (error as Error).message };
@@ -1084,10 +1088,11 @@ function alarmNu(): AlarmMelder[] {
  * scènes en de meting van de ligging veranderen zonder dat iets hier het ziet.
  */
 const HUIS_HOOGUIT_MS = 10_000;
-let huisBewaard: { sleutel: readonly unknown[]; atMs: number; huis: ReturnType<typeof buildHouse> | null } | null = null;
-const huisNu = () => {
+/** Per taal (besluit 185): de stand en de samenvatting staan erin in woorden. */
+const huisBewaard = new Map<Lang, { sleutel: readonly unknown[]; atMs: number; huis: ReturnType<typeof buildHouse> | null }>();
+const huisNu = (lang: Lang) => {
   const sleutel = [huisVersie, houseRegisters, siteConfig, runner?.latest, layoutStore?.current, functiesStore?.current, connectionStore?.current];
-  const b = huisBewaard;
+  const b = huisBewaard.get(lang);
   if (b && Date.now() - b.atMs < HUIS_HOOGUIT_MS && b.sleutel.every((x, i) => x === sleutel[i])) return b.huis;
   const huis = siteConfig && houseRegisters
     ? buildHouse(
@@ -1102,15 +1107,17 @@ const huisNu = () => {
         functiesStore?.current ? getoondeCameras(functiesStore.current) : null,
         // Wanneer een batterij of filter een melding geeft (besluit 149).
         functiesStore?.current?.meldingen,
+        lang,
       )
     : null;
-  huisBewaard = { sleutel, atMs: Date.now(), huis };
+  huisBewaard.set(lang, { sleutel, atMs: Date.now(), huis });
   return huis;
 };
-const houseReport = () => {
-  const h = huisNu();
+/** Het huis, met de stand in woorden in de taal van de app; zonder taal Nederlands. */
+const houseReport = (lang: Lang = 'nl') => {
+  const h = huisNu(lang);
   // Met de laatste opdracht bij een scherm zonder terugmelding (besluit 128).
-  return coverSwitch ? coverSwitch.withLast(h) : h;
+  return coverSwitch ? coverSwitch.withLast(h, lang) : h;
 };
 
 /*
@@ -1576,7 +1583,7 @@ if (webPort != null) {
       : {}),
     ...(sleutel ? { sleutel } : {}),
     // Klaarzetten in Home Assistant (besluit 179): tellen wat er staat, nooit een entiteit noemen.
-    klaarzetten: async () => {
+    klaarzetten: async (lang?: Lang) => {
       const prefs = (await client.query<{ energy_sources?: { type?: string }[] }>('energy/get_prefs').catch(() => null)) ?? null;
       const grid = baseConfig?.power.gridPower;
       const netWaarde = grid ? Number(allStates.get(grid.id)?.state) : Number.NaN;
@@ -1595,7 +1602,7 @@ if (webPort != null) {
         spraak: spraakLijst,
         addOn: version.installatie === 'add-on',
         eigenPoort: eigenPoort != null,
-      });
+      }, lang);
     },
     // In de add-on stelt Home Assistant de vraag rechtstreeks aan de add-on, op zijn naam in het netwerk (besluit 177).
     ...(sleutel && version.installatie === 'add-on' && webPort != null ? { sleutelAdres: `http://${hostname()}:${webPort}/api/vraag` } : {}),
@@ -1700,7 +1707,7 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
   return {
     store,
     found,
-    view: () =>
+    view: (lang?: Lang) =>
       connectionView({
         base,
         found: found(),
@@ -1716,7 +1723,7 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
               platform: houseRegisters?.entities.find((e) => e.entity_id === solarId)?.platform ?? null,
             }
           : null,
-      }),
+      }, lang),
   };
 }
 

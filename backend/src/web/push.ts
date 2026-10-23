@@ -25,7 +25,8 @@ import { join } from 'node:path';
 
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import type { HaDevice, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
-import type { Melding, MeldingSoort } from './meldingen.js';
+import type { Lang } from './assistant.js';
+import { inTaal, type Melding, type MeldingSoort } from './meldingen.js';
 
 export const PUSH_FILE = 'push.json';
 
@@ -119,7 +120,15 @@ export interface Ontvanger {
   readonly account: string;
   readonly keus: MeldingKeus;
   readonly telefoon: Telefoon | null;
+  /** De taal die hij bij Jij koos (besluit 185); weg is Nederlands. */
+  readonly taal?: Lang;
 }
+
+/** Wat er staat als een melding geen eigen woorden heeft voor weer goed. */
+const WEER_GOED: Readonly<Record<Lang, { titel: (t: string) => string; tekst: string }>> = {
+  nl: { titel: (t) => `${t}: weer goed`, tekst: 'Het is vanzelf weer goed gekomen.' },
+  en: { titel: (t) => `${t}: fine again`, tekst: 'It sorted itself out.' },
+};
 
 export interface Bericht {
   readonly dienst: string;
@@ -150,7 +159,9 @@ export function teSturen(meldingen: readonly Melding[], ontvangers: readonly Ont
   for (const o of ontvangers) {
     if (!o.telefoon) continue;
     const nacht = inNachtrust(o.keus, nu, timeZone);
-    for (const m of meldingen) {
+    const taal = o.taal ?? 'nl';
+    for (const melding of meldingen) {
+      const m = inTaal(melding, taal);
       const g = groepVan(m.soort);
       if (g == null || !o.keus[g]) continue;
       const sleutel = `${o.account}|${m.id}`;
@@ -163,7 +174,7 @@ export function teSturen(meldingen: readonly Melding[], ontvangers: readonly Ont
         berichten.push({ dienst: o.telefoon.dienst, titel: m.titel, tekst: m.tekst, tag, dringend: dringend(g), stil: false });
         uit[sleutel] = { ms: nu, opgelost: false };
       } else if (was && !was.opgelost) {
-        berichten.push({ dienst: o.telefoon.dienst, titel: m.klaar?.titel ?? `${m.titel}: weer goed`, tekst: m.klaar?.tekst ?? 'Het is vanzelf weer goed gekomen.', tag, dringend: false, stil: true });
+        berichten.push({ dienst: o.telefoon.dienst, titel: m.klaar?.titel ?? WEER_GOED[taal].titel(m.titel), tekst: m.klaar?.tekst ?? WEER_GOED[taal].tekst, tag, dringend: false, stil: true });
         uit[sleutel] = { ms: nu, opgelost: true };
       }
     }

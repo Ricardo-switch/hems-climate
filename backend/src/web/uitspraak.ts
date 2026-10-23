@@ -36,8 +36,33 @@ const KLANK: readonly (readonly [RegExp, string])[] = [
   [/\b(voor)?gevel(s?)\b/gi, '$1geevel$2'],
 ];
 
-/** Een zin zoals hij hardop klinkt. */
-export function uitspraak(tekst: string): string {
+/**
+ * Een Engelse zin zoals hij hardop klinkt (besluit 185): eenheden en euro's
+ * voluit. Een tijd als 13:45 leest een Engelse stem zelf goed.
+ */
+function inHetEngels(tekst: string): string {
+  let s = tekst.replace(/€\s?(\d+)(?:[.,](\d{2}))?/g, (_, e: string, c: string | undefined) => {
+    const euro = Number(e);
+    const cent = c == null ? 0 : Number(c);
+    if (euro === 0) return `${cent} cents`;
+    return cent === 0 ? `${euro} euros` : `${euro} euros ${cent}`;
+  });
+  s = s
+    .replace(/(\d)\s?kWh\b/g, '$1 kilowatt hours')
+    .replace(/(\d)\s?kWp\b/g, '$1 kilowatt peak')
+    .replace(/(\d)\s?kW\b/g, '$1 kilowatts')
+    .replace(/(\d)\s?Wh\b/g, '$1 watt hours')
+    .replace(/(\d)\s?W\b/g, '$1 watts')
+    .replace(/(\d)\s?m³/g, '$1 cubic metres')
+    .replace(/(\d)\s?°C?/g, '$1 degrees')
+    .replace(/(\d)\s?%/g, '$1 percent')
+    .replace(/±\s?/g, 'about ');
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+/** Een zin zoals hij hardop klinkt, in de taal van de app. */
+export function uitspraak(tekst: string, lang: 'nl' | 'en' = 'nl'): string {
+  if (lang === 'en') return inHetEngels(tekst);
   let s = tekst;
   // Tijden, maar niet in een reeks cijfers of een datum.
   s = s.replace(/(?<![\d:,.])([01]?\d|2[0-3]):([0-5]\d)(?![\d:])/g, (_, h: string, m: string) => tijdInWoorden(Number(h), Number(m)));

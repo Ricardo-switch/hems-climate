@@ -23,12 +23,12 @@
 import { vindOpslag, type Opslag } from './opslag.js';
 import type { Warmtebron } from './warmte.js';
 import { findCameras } from './camera.js';
-import { GEVAAR_WOORD, melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
+import { melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookmelders.js';
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
 import type { Facade, SiteConfig } from '../core/model.js';
-import { roomStatus, withArticle, type DecisionView, type RoomKind } from './assistant.js';
+import { roomStatus, withArticle, type DecisionView, type Lang, type RoomKind } from './assistant.js';
 import {
   OUTSIDE_FLOOR,
   carryOver,
@@ -85,8 +85,10 @@ export interface HouseClimate {
   readonly filter?: { readonly pct: number | null; readonly uren: number | null };
   /** Het doel dat Home Assistant nu heeft, of null. */
   readonly doelC: number | null;
-  /** Wat het apparaat nu werkelijk doet: "verwarmt", "koelt", "staat stil", of null. */
+  /** Wat het apparaat nu werkelijk doet, in de taal van de app: "verwarmt", "koelt", "staat stil", of null. */
   readonly actie: string | null;
+  /** Hetzelfde als vaste code (besluit 185), om op te letten: de woorden verschillen per taal. */
+  readonly actieCode: ActieCode | null;
   /**
    * Wat de regeling ermee doet (besluit 138): houdt de kamer op temperatuur,
    * helpt op zon, of kijkt alleen.
@@ -106,8 +108,14 @@ export interface HouseDevice {
   /** De naam zoals Home Assistant hem kent, voor wie hem hernoemt. */
   readonly haNaam: string;
   readonly soort: DeviceKind;
-  /** De stand in woorden: "aan · 70%", "60% dicht", "koelen naar 22°". */
+  /** De stand in woorden, in de taal van de app: "aan · 70%", "60% dicht", "koelen naar 22°". */
   readonly stand: string;
+  /**
+   * De stand als vaste code (besluit 185): de app let hierop, niet op de
+   * woorden, die per taal verschillen. Een scherm dat beweegt is `gaat-open`
+   * of `gaat-dicht`.
+   */
+  readonly standCode: StandCode;
   readonly aan: boolean;
   readonly helderheidPct: number | null;
   /** Zoals Home Assistant het zegt: 100 is open, 0 is dicht. */
@@ -408,15 +416,148 @@ const ORDER: Readonly<Record<DeviceKind, number>> = { klimaat: 0, screen: 1, lic
 /** Wat geen kamer meet: het weer, telefoons, schijven, de buitenkant van een apparaat. */
 const NOT_A_ROOM = /\b(weather|weer|buiten|outdoor|outside|grond|gevoels|gevoelstemperatuur|battery|batterij|body|basal|cpu|processor|schijf|schijftemperatuur|disk|drive|nas|track)\b/i;
 
-const HVAC_ACTION: Readonly<Record<string, string>> = {
+/** De stand van een apparaat als vaste code (besluit 185); de woorden staan in `WOORDEN`. */
+export type StandCode =
+  | 'geen-verbinding'
+  | 'onbekend'
+  | 'aan'
+  | 'uit'
+  // Een scherm; bij een zonnescherm is open uitgevouwen en dicht ingeklapt.
+  | 'gaat-open'
+  | 'gaat-dicht'
+  | 'open'
+  | 'dicht'
+  | 'deels'
+  | 'zonder-terugmelding'
+  | 'na-opdracht'
+  // Een klimaatapparaat uit de configuratie: de stand die Home Assistant heeft.
+  | 'koelen'
+  | 'verwarmen'
+  | 'automatisch'
+  | 'drogen'
+  | 'ventileren'
+  // Een radiatorknop: wat hij echt doet.
+  | 'verwarmt'
+  | 'koelt'
+  | 'klaar'
+  // Een uitstelbaar apparaat (besluit 98).
+  | 'draait'
+  | 'zou-starten'
+  | 'klaargezet'
+  | 'meldt-niets'
+  // Een camera, een rookmelder, een meter.
+  | 'live'
+  | 'gevaar'
+  | 'batterij'
+  | 'goed'
+  | 'meting'
+  | 'geen-meting';
+
+/** Wat een klimaatapparaat werkelijk doet (`hvac_action`), als vaste code. */
+export type ActieCode = 'verwarmt' | 'verwarmt-voor' | 'koelt' | 'droogt' | 'ventileert' | 'stil' | 'uit';
+
+const ACTIE_CODE: Readonly<Record<string, ActieCode>> = {
   heating: 'verwarmt',
-  preheating: 'verwarmt voor',
+  preheating: 'verwarmt-voor',
   cooling: 'koelt',
   drying: 'droogt',
   fan: 'ventileert',
-  idle: 'staat stil',
+  idle: 'stil',
   off: 'uit',
 };
+
+/** Een getal met hooguit één decimaal, met de komma van de taal: 20,5 of 20.5. */
+function decimaal(n: number, lang: Lang): string {
+  const r = Math.round(n * 10) / 10;
+  const s = Number.isInteger(r) ? String(r) : r.toFixed(1);
+  return lang === 'nl' ? s.replace('.', ',') : s;
+}
+
+/**
+ * De stand van de apparaten in woorden, per taal (besluit 185, stap 9). De
+ * dienst zegt het in de taal van de app; de app let op de codes ernaast.
+ */
+const WOORDEN = {
+  nl: {
+    geenVerbinding: 'geen verbinding',
+    onbereikbaar: 'onbereikbaar',
+    onbekend: 'onbekend',
+    aan: 'aan',
+    aanPct: (pct: number) => `aan · ${pct}%`,
+    uit: 'uit',
+    scherm: {
+      zonderTerugmelding: 'zonder terugmelding',
+      gaatOpen: 'gaat open',
+      gaatDicht: 'gaat dicht',
+      vouwtUit: 'vouwt uit',
+      klaptIn: 'klapt in',
+      open: 'open',
+      dicht: 'dicht',
+      uitgevouwen: 'uitgevouwen',
+      ingeklapt: 'ingeklapt',
+      pctUitgevouwen: (pct: number) => `${pct}% uitgevouwen`,
+      pctDicht: (pct: number) => `${pct}% dicht`,
+      naOpdracht: (wat: string) => `${wat}, volgens de laatste opdracht`,
+      deelsDicht: 'deels dicht',
+    },
+    modus: { cool: 'koelen', heat: 'verwarmen', heat_cool: 'automatisch', auto: 'automatisch', dry: 'drogen', fan_only: 'ventileren' } as Readonly<Record<string, string>>,
+    naar: (wat: string, graden: string) => `${wat} naar ${graden}°`,
+    actie: { verwarmt: 'verwarmt', 'verwarmt-voor': 'verwarmt voor', koelt: 'koelt', droogt: 'droogt', ventileert: 'ventileert', stil: 'staat stil', uit: 'uit' } satisfies Record<ActieCode, string>,
+    staatKlaar: 'staat klaar',
+    doel: (graden: string) => `doel ${graden}°`,
+    apparaat: { running: 'draait', would_start: 'zou nu starten', waiting: 'klaargezet', not_ready: 'uit' } as Readonly<Record<string, string>>,
+    // Nog geen melding van het apparaat: dat is iets anders dan kapot (besluit 131).
+    meldtNogNiets: 'meldt nog niets',
+    live: 'live te bekijken',
+    nietBereikbaar: 'niet bereikbaar',
+    gezien: { rook: 'rook gezien', co: 'koolmonoxide gezien', hitte: 'hitte gezien' } satisfies Record<Gevaar, string>,
+    batterijVervangen: 'batterij vervangen',
+    allesGoed: 'alles goed',
+    geenMeting: 'geen meting',
+    draaitNiets: 'Er draait niets',
+    nDraaien: (n: number) => `${n} apparaten draaien`,
+    doetMee: (kamer: string) => `Doet mee met de regeling van ${kamer}.`,
+  },
+  en: {
+    geenVerbinding: 'no connection',
+    onbereikbaar: 'unreachable',
+    onbekend: 'unknown',
+    aan: 'on',
+    aanPct: (pct: number) => `on · ${pct}%`,
+    uit: 'off',
+    scherm: {
+      zonderTerugmelding: 'position not reported',
+      gaatOpen: 'opening',
+      gaatDicht: 'closing',
+      vouwtUit: 'extending',
+      klaptIn: 'retracting',
+      open: 'open',
+      dicht: 'closed',
+      uitgevouwen: 'extended',
+      ingeklapt: 'retracted',
+      pctUitgevouwen: (pct: number) => `${pct}% extended`,
+      pctDicht: (pct: number) => `${pct}% closed`,
+      naOpdracht: (wat: string) => `${wat}, going by the last command`,
+      deelsDicht: 'partly closed',
+    },
+    modus: { cool: 'cooling', heat: 'heating', heat_cool: 'automatic', auto: 'automatic', dry: 'drying', fan_only: 'fan only' } as Readonly<Record<string, string>>,
+    naar: (wat: string, graden: string) => `${wat} to ${graden}°`,
+    actie: { verwarmt: 'heating', 'verwarmt-voor': 'preheating', koelt: 'cooling', droogt: 'drying', ventileert: 'ventilating', stil: 'idle', uit: 'off' } satisfies Record<ActieCode, string>,
+    staatKlaar: 'standing by',
+    doel: (graden: string) => `target ${graden}°`,
+    apparaat: { running: 'running', would_start: 'would start now', waiting: 'scheduled', not_ready: 'off' } as Readonly<Record<string, string>>,
+    meldtNogNiets: 'nothing reported yet',
+    live: 'live view',
+    nietBereikbaar: 'unreachable',
+    gezien: { rook: 'smoke detected', co: 'carbon monoxide detected', hitte: 'heat detected' } satisfies Record<Gevaar, string>,
+    batterijVervangen: 'replace battery',
+    allesGoed: 'all good',
+    geenMeting: 'no reading',
+    draaitNiets: 'Nothing running',
+    nDraaien: (n: number) => `${n} devices running`,
+    doetMee: (kamer: string) => `Takes part with the control of ${kamer}.`,
+  },
+} satisfies Record<Lang, unknown>;
 
 /** Een getal uit een toestand, of null als het er niet is of onbereikbaar. */
 function num(v: unknown): number | null {
@@ -424,23 +565,18 @@ function num(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function readingText(r: HouseReading): string {
-  const parts = [r.temperatuurC == null ? null : `${nl1(r.temperatuurC)}°`, r.vochtPct == null ? null : `${Math.round(r.vochtPct)}%`];
-  return parts.filter(Boolean).join(' · ') || 'geen meting';
+function readingText(r: HouseReading, lang: Lang): string {
+  const parts = [r.temperatuurC == null ? null : `${decimaal(r.temperatuurC, lang)}°`, r.vochtPct == null ? null : `${Math.round(r.vochtPct)}%`];
+  return parts.filter(Boolean).join(' · ') || WOORDEN[lang].geenMeting;
 }
 
-const CLIMATE_WORD: Readonly<Record<string, string>> = {
-  cool: 'koelen',
-  heat: 'verwarmen',
-  heat_cool: 'automatisch',
-  auto: 'automatisch',
-  dry: 'drogen',
-  fan_only: 'ventileren',
-};
+/** De stand van een klimaatapparaat in Home Assistant (`hvac_mode`), als code. */
+const MODUS_CODE: Readonly<Record<string, StandCode>> = { cool: 'koelen', heat: 'verwarmen', heat_cool: 'automatisch', auto: 'automatisch', dry: 'drogen', fan_only: 'ventileren' };
 
-function nl1(n: number): string {
-  const r = Math.round(n * 10) / 10;
-  return (Number.isInteger(r) ? String(r) : r.toFixed(1)).replace('.', ',');
+/** Wat een klimaatapparaat werkelijk doet, als code en in woorden. */
+function actieVan(action: unknown, lang: Lang): { actie: string | null; actieCode: ActieCode | null } {
+  const code = typeof action === 'string' ? (ACTIE_CODE[action] ?? null) : null;
+  return { actie: code ? WOORDEN[lang].actie[code] : null, actieCode: code };
 }
 
 /** "Woonkamer plafonnière" in de woonkamer heet daar gewoon "Plafonnière". */
@@ -554,24 +690,20 @@ function scenesPerRoom(
 /** Kleurstanden waarmee Home Assistant ook een kleurtemperatuur kan zetten. */
 const COLOR_MODES: ReadonlySet<string> = new Set(['color_temp', 'hs', 'xy', 'rgb', 'rgbw', 'rgbww']);
 
-function lightOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
+function lightOf(id: string, state: HaEntityState | undefined, name: string, lang: Lang): HouseDevice {
+  const w = WOORDEN[lang];
   const on = state?.state === 'on';
   const b = state?.attributes['brightness'];
   const pct = on && typeof b === 'number' ? Math.round((b / 255) * 100) : null;
-  const stand =
-    state == null || state.state === 'unavailable' || state.state === 'unknown'
-      ? 'onbereikbaar'
-      : on
-        ? pct == null
-          ? 'aan'
-          : `aan · ${pct}%`
-        : 'uit';
+  const weg = state == null || state.state === 'unavailable' || state.state === 'unknown';
+  const stand = weg ? w.onbereikbaar : on ? (pct == null ? w.aan : w.aanPct(pct)) : w.uit;
+  const standCode: StandCode = weg ? 'geen-verbinding' : on ? 'aan' : 'uit';
   // Wat de lamp kan, uit Home Assistant; een uitgezette lamp zonder toestand kan alleen aan en uit.
   const modes = state?.attributes['supported_color_modes'];
   const list = Array.isArray(modes) ? modes.filter((m): m is string => typeof m === 'string') : [];
   const dimbaar = list.some((m) => m !== 'onoff') || typeof b === 'number';
   const kleurtemp = list.some((m) => COLOR_MODES.has(m));
-  return { id, naam: name, haNaam: name, soort: 'licht', stand, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
+  return { id, naam: name, haNaam: name, soort: 'licht', stand, standCode, aan: on, helderheidPct: pct, positiePct: null, actuatorId: null, zone: null, groepen: [], dimbaar, kleurtemp, licht: lightAbilities(state, list), meting: null, klimaat: null, meetKamer: false };
 }
 
 /**
@@ -675,7 +807,8 @@ export function geenScherm(e: HaRegistryEntity, state: HaEntityState | undefined
 /** Kan dit scherm naar een stand (SUPPORT_SET_POSITION, bit 4)? */
 const COVER_SET_POSITION = 4;
 
-function coverOf(id: string, state: HaEntityState | undefined, name: string): HouseDevice {
+function coverOf(id: string, state: HaEntityState | undefined, name: string, lang: Lang): HouseDevice {
+  const w = WOORDEN[lang].scherm;
   const p = state?.attributes['current_position'];
   const pos = typeof p === 'number' ? p : null;
   const features = Number(state?.attributes['supported_features'] ?? 0);
@@ -687,24 +820,28 @@ function coverOf(id: string, state: HaEntityState | undefined, name: string): Ho
   // Zonder terugmelding onthoudt Home Assistant soms de laatste opdracht.
   const laatste: 'open' | 'dicht' | null = !terugmelding && state?.state === 'open' ? 'open' : !terugmelding && state?.state === 'closed' ? 'dicht' : null;
   const scherm = { terugmelding, standKiezen: terugmelding && (features & COVER_SET_POSITION) !== 0, ...(zonnescherm ? { zonnescherm } : {}), ...(laatste ? { laatste } : {}) };
+  // Open en dicht; een zonnescherm is dan uitgevouwen en ingeklapt.
+  const heel = (open: boolean) => (zonnescherm ? (open ? w.uitgevouwen : w.ingeklapt) : open ? w.open : w.dicht);
   let stand: string;
-  if (state == null || state.state === 'unavailable') stand = 'geen verbinding';
-  else if (!terugmelding) stand = laatste ? standNaOpdracht(laatste, zonnescherm) : 'zonder terugmelding';
-  else if (state.state === 'opening') stand = zonnescherm ? 'vouwt uit' : 'gaat open';
-  else if (state.state === 'closing') stand = zonnescherm ? 'klapt in' : 'gaat dicht';
-  else if (pos == null) stand = zonnescherm ? (state.state === 'closed' ? 'ingeklapt' : 'uitgevouwen') : state.state === 'closed' ? 'dicht' : 'open';
-  else if (pos >= 100) stand = zonnescherm ? 'uitgevouwen' : 'open';
-  else if (pos <= 0) stand = zonnescherm ? 'ingeklapt' : 'dicht';
-  else stand = zonnescherm ? `${pos}% uitgevouwen` : `${100 - pos}% dicht`;
+  let standCode: StandCode;
+  if (state == null || state.state === 'unavailable') [stand, standCode] = [WOORDEN[lang].geenVerbinding, 'geen-verbinding'];
+  else if (!terugmelding) [stand, standCode] = laatste ? [standNaOpdracht(laatste, zonnescherm, lang), 'na-opdracht'] : [w.zonderTerugmelding, 'zonder-terugmelding'];
+  else if (state.state === 'opening') [stand, standCode] = [zonnescherm ? w.vouwtUit : w.gaatOpen, 'gaat-open'];
+  else if (state.state === 'closing') [stand, standCode] = [zonnescherm ? w.klaptIn : w.gaatDicht, 'gaat-dicht'];
+  else if (pos == null) [stand, standCode] = state.state === 'closed' ? [heel(false), 'dicht'] : [heel(true), 'open'];
+  else if (pos >= 100) [stand, standCode] = [heel(true), 'open'];
+  else if (pos <= 0) [stand, standCode] = [heel(false), 'dicht'];
+  else [stand, standCode] = [zonnescherm ? w.pctUitgevouwen(pos) : w.pctDicht(100 - pos), 'deels'];
   // "Aan": een screen hangt (deels) voor het raam, een zonnescherm is (deels) uit.
   const down = zonnescherm ? (pos != null ? pos > 0 : state?.state === 'open') : pos != null ? pos < 100 : state?.state === 'closed';
-  return { id, naam: name, haNaam: name, soort: 'screen', stand, aan: terugmelding && down, helderheidPct: null, positiePct: terugmelding ? pos : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm };
+  return { id, naam: name, haNaam: name, soort: 'screen', stand, standCode, aan: terugmelding && down, helderheidPct: null, positiePct: terugmelding ? pos : null, actuatorId: null, zone: null, groepen: [], dimbaar: false, kleurtemp: false, meting: null, klimaat: null, meetKamer: false, scherm };
 }
 
 /** De stand van een scherm zonder terugmelding, naar de laatste opdracht (besluit 128). */
-export function standNaOpdracht(laatste: 'open' | 'dicht', zonnescherm: boolean): string {
-  const wat = zonnescherm ? (laatste === 'open' ? 'uitgevouwen' : 'ingeklapt') : laatste === 'open' ? 'open' : 'dicht';
-  return `${wat}, volgens de laatste opdracht`;
+export function standNaOpdracht(laatste: 'open' | 'dicht', zonnescherm: boolean, lang: Lang = 'nl'): string {
+  const w = WOORDEN[lang].scherm;
+  const wat = zonnescherm ? (laatste === 'open' ? w.uitgevouwen : w.ingeklapt) : laatste === 'open' ? w.open : w.dicht;
+  return w.naOpdracht(wat);
 }
 
 function climateOf(
@@ -712,17 +849,20 @@ function climateOf(
   name: string,
   observed: string | undefined,
   info: { meting: HouseReading | null; klimaat: HouseClimate | null } = { meting: null, klimaat: null },
+  lang: Lang = 'nl',
 ): HouseDevice {
+  const w = WOORDEN[lang];
   const [mode = '', sp] = (observed ?? '').split('@');
-  const word = CLIMATE_WORD[mode];
+  const code = MODUS_CODE[mode];
+  const word = w.modus[mode];
   const setpoint = sp == null ? NaN : Number(sp);
   const stand =
     mode === 'off'
-      ? 'uit'
+      ? w.uit
       : word == null
-        ? 'onbekend'
+        ? w.onbekend
         : Number.isFinite(setpoint)
-          ? `${word} naar ${nl1(setpoint)}°`
+          ? w.naar(word, decimaal(setpoint, lang))
           : word;
   return {
     id: actuatorId,
@@ -730,6 +870,7 @@ function climateOf(
     haNaam: name,
     soort: 'klimaat',
     stand,
+    standCode: mode === 'off' ? 'uit' : (code ?? 'onbekend'),
     aan: word != null,
     helderheidPct: null,
     positiePct: null,
@@ -744,23 +885,17 @@ function climateOf(
   };
 }
 
-const APPLIANCE_WORD: Readonly<Record<string, string>> = {
-  running: 'draait',
-  would_start: 'zou nu starten',
-  waiting: 'klaargezet',
-  not_ready: 'uit',
-  // Nog geen melding van het apparaat: dat is iets anders dan kapot (besluit 131).
-  unknown: 'meldt nog niets',
-};
+const APPARAAT_CODE: Readonly<Record<string, StandCode>> = { running: 'draait', would_start: 'zou-starten', waiting: 'klaargezet', not_ready: 'uit' };
 
 /** Een uitstelbaar apparaat (besluit 98): de droger, met zijn stand van nu. */
-function applianceOf(id: string, name: string, state: string | undefined): HouseDevice {
+function applianceOf(id: string, name: string, state: string | undefined, lang: Lang): HouseDevice {
   return {
     id,
     naam: name,
     haNaam: name,
     soort: 'apparaat',
-    stand: APPLIANCE_WORD[state ?? 'unknown'] ?? 'meldt nog niets',
+    stand: WOORDEN[lang].apparaat[state ?? ''] ?? WOORDEN[lang].meldtNogNiets,
+    standCode: APPARAAT_CODE[state ?? ''] ?? 'meldt-niets',
     aan: state === 'running',
     helderheidPct: null,
     positiePct: null,
@@ -776,13 +911,14 @@ function applianceOf(id: string, name: string, state: string | undefined): House
 }
 
 /** Een camera om te bekijken (besluit 106); de stand zegt alleen of hij bereikbaar is. */
-function cameraOf(id: string, name: string, bereikbaar: boolean): HouseDevice {
+function cameraOf(id: string, name: string, bereikbaar: boolean, lang: Lang): HouseDevice {
   return {
     id,
     naam: name,
     haNaam: name,
     soort: 'camera',
-    stand: bereikbaar ? 'live te bekijken' : 'niet bereikbaar',
+    stand: bereikbaar ? WOORDEN[lang].live : WOORDEN[lang].nietBereikbaar,
+    standCode: bereikbaar ? 'live' : 'geen-verbinding',
     aan: false,
     helderheidPct: null,
     positiePct: null,
@@ -798,14 +934,22 @@ function cameraOf(id: string, name: string, bereikbaar: boolean): HouseDevice {
 }
 
 /** Een rookmelder (21 oktober 2026): wat hij ziet, in woorden; alleen lezen. */
-function rookmelderOf(id: string, name: string, nu: ReturnType<typeof rookmelderNu>): HouseDevice {
-  const stand = !nu.bereikbaar ? 'geen verbinding' : nu.gevaar ? `${GEVAAR_WOORD[nu.gevaar].toLowerCase()} gezien` : nu.batterijProbleem ? 'batterij vervangen' : 'alles goed';
+function rookmelderOf(id: string, name: string, nu: ReturnType<typeof rookmelderNu>, lang: Lang): HouseDevice {
+  const w = WOORDEN[lang];
+  const [stand, standCode]: [string, StandCode] = !nu.bereikbaar
+    ? [w.geenVerbinding, 'geen-verbinding']
+    : nu.gevaar
+      ? [w.gezien[nu.gevaar], 'gevaar']
+      : nu.batterijProbleem
+        ? [w.batterijVervangen, 'batterij']
+        : [w.allesGoed, 'goed'];
   return {
     id,
     naam: name,
     haNaam: name,
     soort: 'rookmelder',
     stand,
+    standCode,
     aan: nu.gevaar != null,
     helderheidPct: null,
     positiePct: null,
@@ -822,13 +966,14 @@ function rookmelderOf(id: string, name: string, nu: ReturnType<typeof rookmelder
 }
 
 /** Een meter: een sensor in een kamer die temperatuur en luchtvochtigheid geeft. */
-function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean): HouseDevice {
+function meterOf(id: string, name: string, meting: HouseReading, meetKamer: boolean, lang: Lang): HouseDevice {
   return {
     id,
     naam: name,
     haNaam: name,
     soort: 'meter',
-    stand: readingText(meting),
+    stand: readingText(meting, lang),
+    standCode: meting.temperatuurC == null && meting.vochtPct == null ? 'geen-meting' : 'meting',
     aan: false,
     helderheidPct: null,
     positiePct: null,
@@ -933,6 +1078,8 @@ function collect(
   snapshot: DecisionView | null,
   /** De camera's die de app toont (besluit 109); null is het voorstel: elke camera. */
   cameras: ReadonlySet<string> | null = null,
+  /** De taal van de stand in woorden (besluit 185). */
+  lang: Lang = 'nl',
 ): Context {
   const deviceArea = new Map(registers.devices.map((d) => [d.id, d.area_id]));
   const registry = new Map(registers.entities.map((e) => [e.entity_id, e]));
@@ -1032,7 +1179,7 @@ function collect(
       ...(modes.includes('dry') ? { kanDrogen: true } : {}),
       ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
-      actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+      ...actieVan(action, lang),
       rol: config.zones.some((z) => z.actuatorIds.includes(a.id)) ? (a.role === 'assist' ? 'zon' : 'houdt') : 'kijken',
       ...vermogenEnMeter(a.power.sensor?.id ?? null, registry.get(a.ref.id)?.device_id ?? null, a.ref.id),
     };
@@ -1040,7 +1187,7 @@ function collect(
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id], {
       meting: hasReading ? meting : null,
       klimaat,
-    });
+    }, lang);
     found.push({ device, haNaam: a.name, haArea: areaOf(a.ref.id), groepen: [] });
   }
 
@@ -1078,7 +1225,7 @@ function collect(
       ...(modes.includes('dry') ? { kanDrogen: true } : {}),
       ...(filter ? { filter } : {}),
       doelC: num(st?.attributes['temperature']),
-      actie: typeof action === 'string' ? (HVAC_ACTION[action] ?? null) : null,
+      ...actieVan(action, lang),
       rol: 'kijken',
     };
     const naam = friendly(st, e.entity_id);
@@ -1086,18 +1233,20 @@ function collect(
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...basis } = climateOf(e.entity_id, naam, st ? `${st.state}${sp != null ? `@${sp}` : ''}` : undefined, {
       meting: meting.temperatuurC != null || meting.vochtPct != null ? meting : null,
       klimaat,
-    });
+    }, lang);
     const dev = e.device_id ? devById.get(e.device_id) : undefined;
     const knop = isRadiatorKnob(dev, modes) ? { koppeling: e.platform === 'zha' ? ('zha' as const) : e.platform === 'mqtt' ? ('zigbee2mqtt' as const) : ('anders' as const), klepPct: valveOf(registers, states, e.device_id ?? null) } : null;
     // Zijn stand is wat hij echt doet: een knop staat altijd op verwarmen, en brandt alleen soms.
     const bezig = action === 'heating' || action === 'cooling';
-    const doel = sp != null ? `doel ${nl1(sp)}°` : null;
-    const stand = st == null || st.state === 'unavailable' || st.state === 'unknown'
-      ? 'geen verbinding'
+    const w = WOORDEN[lang];
+    const doel = sp != null ? w.doel(decimaal(sp, lang)) : null;
+    const doet: StandCode = bezig ? (action === 'heating' ? 'verwarmt' : 'koelt') : 'klaar';
+    const [stand, standCode]: [string, StandCode] = st == null || st.state === 'unavailable' || st.state === 'unknown'
+      ? [w.geenVerbinding, 'geen-verbinding']
       : st.state === 'off'
-        ? 'uit'
-        : [bezig ? (action === 'heating' ? 'verwarmt' : 'koelt') : 'staat klaar', doel].filter(Boolean).join(', ');
-    const device = { ...basis, stand, aan: bezig, actuatorId: null, ...(knop ? { radiatorknop: knop } : {}) };
+        ? [w.uit, 'uit']
+        : [[doet === 'klaar' ? w.staatKlaar : w.actie[doet], doel].filter(Boolean).join(', '), doet];
+    const device = { ...basis, stand, standCode, aan: bezig, actuatorId: null, ...(knop ? { radiatorknop: knop } : {}) };
     found.push({ device, haNaam: naam, haArea: areaOf(e.entity_id), groepen: [] });
   }
 
@@ -1116,7 +1265,7 @@ function collect(
     if (!id) continue;
     const dev = devices.get(deviceId);
     const haNaam = dev?.name_by_user?.trim() || dev?.name?.trim() || friendly(states.get(id), id);
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = meterOf(id, haNaam, readingOf(r), zoneSensors.has(r.temp ?? ''));
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = meterOf(id, haNaam, readingOf(r), zoneSensors.has(r.temp ?? ''), lang);
     found.push({ device, haNaam, haArea: areaOf(id), groepen: [] });
   }
 
@@ -1124,7 +1273,7 @@ function collect(
   // Het gebied komt van het apparaat achter "start op afstand", als Home Assistant het kent.
   for (const d of config.deferrables ?? []) {
     const state = snapshot?.explanation.deferrables?.find((x) => x.id === d.id)?.state;
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = applianceOf(d.id, d.name, state);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = applianceOf(d.id, d.name, state, lang);
     found.push({ device, haNaam: d.name, haArea: areaOf(d.remoteStart.id), groepen: [] });
   }
 
@@ -1143,13 +1292,13 @@ function collect(
   for (const cam of shown) {
     const st = states.get(cam.entityId)?.state;
     const bereikbaar = st != null && st !== 'unavailable' && st !== 'unknown';
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = cameraOf(cam.entityId, cam.naam, bereikbaar);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = cameraOf(cam.entityId, cam.naam, bereikbaar, lang);
     found.push({ device, haNaam: cam.naam, haArea: areaOf(cam.entityId), groepen: [] });
   }
 
   // Rookmelders (21 oktober 2026): één per melder, in de kamer van het apparaat.
   for (const m of vindRookmelders(registers.entities, registers.devices, states)) {
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = rookmelderOf(m.id, m.naam, rookmelderNu(m, (id) => states.get(id)));
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = rookmelderOf(m.id, m.naam, rookmelderNu(m, (id) => states.get(id)), lang);
     found.push({ device, haNaam: m.naam, haArea: areaOf(m.id), groepen: [] });
   }
 
@@ -1164,7 +1313,7 @@ function collect(
     if (prev == null || e.entity_id.length < prev.length) coverPerDevice.set(key, e.entity_id);
   }
   for (const id of coverPerDevice.values()) {
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = coverOf(id, states.get(id), '');
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = coverOf(id, states.get(id), '', lang);
     found.push({ device, haNaam: friendly(states.get(id), id), haArea: areaOf(id), groepen: [] });
   }
 
@@ -1218,7 +1367,7 @@ function collect(
   for (const g of groups) {
     if (!fixtures.has(g.id)) continue;
     const s = states.get(g.id);
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(g.id, s, '');
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(g.id, s, '', lang);
     found.push({
       device,
       haNaam: g.naam,
@@ -1232,7 +1381,7 @@ function collect(
     if (!e.entity_id.startsWith('light.') || e.disabled_by || e.hidden_by) continue;
     if (groupIds.has(e.entity_id)) continue;
     const s = states.get(e.entity_id);
-    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '');
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = lightOf(e.entity_id, s, '', lang);
     found.push({ device, haNaam: friendly(s, e.entity_id), haArea: areaOf(e.entity_id), groepen: memberOf.get(e.entity_id) ?? [] });
   }
   unreachable.sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
@@ -1459,17 +1608,18 @@ export function houseBeforeSetup(registers: HouseRegisters, states: ReadonlyMap<
 }
 
 /** "2 lampen aan", "Screens 60% dicht", "Er draait niets": over een lijst apparaten. */
-export function summarize(devices: readonly HouseDevice[]): HouseSummary {
+export function summarize(devices: readonly HouseDevice[], lang: Lang = 'nl'): HouseSummary {
+  const w = WOORDEN[lang];
   const lampenAan = devices.filter((d) => d.soort === 'licht' && d.aan).length;
   const covers = devices.filter((d) => d.soort === 'screen');
   let screens: string | null = null;
   if (covers.length > 0) {
     const stands = new Set(covers.map((c) => c.stand));
-    screens = stands.size === 1 ? covers[0]!.stand : covers.some((c) => c.aan) ? 'deels dicht' : 'open';
+    screens = stands.size === 1 ? covers[0]!.stand : covers.some((c) => c.aan) ? w.scherm.deelsDicht : w.scherm.open;
   }
   const running = devices.filter((d) => d.soort === 'klimaat' && d.aan);
   const klimaat =
-    running.length === 0 ? 'Er draait niets' : running.length === 1 ? `${running[0]!.naam}: ${running[0]!.stand}` : `${running.length} apparaten draaien`;
+    running.length === 0 ? w.draaitNiets : running.length === 1 ? `${running[0]!.naam}: ${running[0]!.stand}` : w.nDraaien(running.length);
   return { lampenAan, screens, draait: running.length, klimaat };
 }
 
@@ -1487,8 +1637,10 @@ export function buildHouse(
   cameras: ReadonlySet<string> | null = null,
   /** Wanneer een batterij of filter een melding geeft (besluit 149). */
   drempels: Drempels = STANDAARD_DREMPELS,
+  /** De taal van wat er in woorden staat (besluit 185): de stand, de samenvatting, de status van een kamer. */
+  lang: Lang = 'nl',
 ): HouseReport {
-  const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot, cameras);
+  const { found, groups, successors, unreachable } = collect(config, registers, states, snapshot, cameras, lang);
   const base = saved ?? proposeLayout(config, registers, states);
   // Een lamp die sinds het indelen is uitgezet, geeft zijn plek door aan zijn groep.
   const deviceIds = new Set(found.map((f) => f.device.id));
@@ -1582,8 +1734,8 @@ export function buildHouse(
       .map((id) => readTemperature(states.get(id), id))
       .filter((v): v is number => v != null);
     const gekozenC = gekozen.length ? Math.round((gekozen.reduce((a, b) => a + b, 0) / gekozen.length) * 10) / 10 : null;
-    const eigen = zone && snapshot ? roomStatus(config, snapshot, zone, 'nl', true) : null;
-    const status = eigen && doel ? { ...eigen, zin: `Doet mee met de regeling van ${withArticle(doel.naam, 'nl')}. ${eigen.zin}` } : eigen;
+    const eigen = zone && snapshot ? roomStatus(config, snapshot, zone, lang, true) : null;
+    const status = eigen && doel ? { ...eigen, zin: `${WOORDEN[lang].doetMee(withArticle(doel.naam, lang))} ${eigen.zin}` } : eigen;
     // De namen zoals de app ze toont: een sensor heet naar zijn meter, een entiteit van de regeling naar zijn apparaat.
     const naamVan = (entity: string) => {
       const viaApparaat = config.actuators.find((a) => a.ref.id === entity)?.id;
@@ -1613,7 +1765,7 @@ export function buildHouse(
       meetMet: [...new Set(meetMet)],
       status: status ? { soort: status.kind, zin: status.zin } : null,
       lampenAan: devices.filter((d) => d.soort === 'licht' && d.aan).length,
-      samenvatting: summarize(devices),
+      samenvatting: summarize(devices, lang),
       apparaten: devices,
       scenes: scenes.get(k.id) ?? [],
       buiten: k.buiten ?? (k.etage === 'buiten' || OUTSIDE.test(k.naam) ? outsideFromNames(k, devices) : null),
@@ -1633,9 +1785,9 @@ export function buildHouse(
     if (ruimtes.length === 0 && !(saved && (saved.etages[id] || saved.volgorde?.includes(id)))) continue;
     floors.push({
       id,
-      naam: layout.etages[id] ?? floorName(id),
+      naam: layout.etages[id] ?? floorName(id, lang),
       lampenAan: ruimtes.reduce((n, r) => n + r.lampenAan, 0),
-      samenvatting: summarize(ruimtes.flatMap((r) => r.apparaten)),
+      samenvatting: summarize(ruimtes.flatMap((r) => r.apparaten), lang),
       ruimtes,
     });
   }
@@ -1672,7 +1824,7 @@ export function buildHouse(
     rond: layout.rond ?? null,
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
-    samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten))),
+    samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten)), lang),
     zonderRuimte: homeless,
     lampgroepen: groups.map((g) => ({ id: g.id, naam: g.naam, leden: g.leden, hue: g.hue, overzicht: g.overzicht })),
     verborgen: hidden,

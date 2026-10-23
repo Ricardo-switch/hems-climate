@@ -122,8 +122,9 @@ export interface Choice {
   readonly magLeeg: boolean;
   /** Bij `veld`: waar in de configuratie. */
   readonly pad?: string;
-  /** Bij `zoneTemperatuur`: welke zone. */
+  /** Bij `zoneTemperatuur`: welke zone, en hoe de kamer heet (voor de vraag in een andere taal). */
   readonly zoneId?: string;
+  readonly naam?: string;
 }
 
 export interface Proposal {
@@ -465,6 +466,7 @@ export function discover(r: Registers): Proposal {
         id: `zone:${slug(area)}:temperature`,
         soort: 'zoneTemperatuur',
         zoneId: slug(area),
+        naam: name,
         vraag: `Welke thermometer geldt voor ${name}?`,
         toelichting: 'Hierop wordt geregeld, dus dit moet de kamer zijn en niet een apparaat.',
         huidig: thermometer.entity_id,

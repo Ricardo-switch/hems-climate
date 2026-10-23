@@ -70,6 +70,87 @@ const VERWARMEN = [
 ];
 const UIT = ['mag <kamer> uit', 'smart climate zet <kamer> uit', '(kan|mag) de airco <in_kamer> uit'];
 
+/*
+ * Dezelfde vragen in het Engels (besluit 185, stap 9 deel 6). Ook hier geen
+ * zinnen die Home Assistant zelf kent en uitvoert, zoals "turn off the attic"
+ * of "what is the temperature in the attic".
+ */
+const NU_EN = [
+  'what (are you|is smart climate|is the control) doing <nu>',
+  'how (is|are) (the climate|the house|the control|the air conditioners|the heating) doing <nu>',
+  '(give|tell) me [a] [short] (overview|status|update) [of] [the climate|the house]',
+  'climate status',
+  'status of the climate',
+  'what is (running|going on) <nu>',
+  'what is happening [in the house] <nu>',
+];
+const WAAROM_EN = [
+  'why (is|are) <kamer> [not] (running|cooling|heating|on|off) <nu>',
+  'why is the (air conditioner|aircon|heating|thermostat) <in_kamer> [not] (running|cooling|heating|on|off) <nu>',
+  'why is it [so] (warm|cold|hot|chilly) <in_kamer>',
+  'why is (nothing|something) happening <in_kamer>',
+  'why (are you|is smart climate) [not] doing (anything|nothing) <in_kamer>',
+  'what is (happening|going on) <in_kamer>',
+  'how is <kamer> doing',
+  '(explain|tell me) (what|why) [it] is (happening|running) <in_kamer>',
+  'why <kamer>',
+  'explain <kamer>',
+];
+const STRAKS_EN = [
+  'what (are you|is smart climate|is the control) going to do [later|tonight|next|today]',
+  'what (is|are) [the|your] plan[s] [for] [later|tonight|today]',
+  'what (comes|is) next',
+  'when (are you|is the control) going to [the] (night|day) [mode|setting]',
+  'what is planned',
+];
+const ZON_EN = [
+  'how much (sun|solar|solar power|electricity|energy) (have we|did we|did i|has been) (generated|produced|made) [today]',
+  'how much (have|did) <panelen> (produced|produce|generated|generate|delivered|deliver) [today]',
+  'what (are|is) <panelen> (doing|producing) <nu>',
+  '[what is the] (output|yield) [of] <panelen> [today]',
+  'how much (are we|did we|am i) (exporting|export) [today]',
+  'how are <panelen> doing',
+  'solar [power] [today]',
+];
+const KOELEN_EN = [
+  'cool [down] <kamer> [to {temperatuur} [degrees]]',
+  'make <kamer> (cooler|colder)',
+  '(can|will) (you|smart climate) cool [down] <kamer> [to {temperatuur} [degrees]]',
+];
+const VERWARMEN_EN = [
+  'heat [up] <kamer> [to {temperatuur} [degrees]]',
+  'warm up <kamer> [to {temperatuur} [degrees]]',
+  'make <kamer> warmer',
+  '(can|will) (you|smart climate) (heat|warm) [up] <kamer> [to {temperatuur} [degrees]]',
+];
+const UIT_EN = ['can <kamer> [go] off', 'smart climate switch off <kamer>', '(can|may) the air conditioner <in_kamer> [go] off'];
+
+/** De zinnen en de woorden eromheen, per taal. */
+const TAAL = {
+  nl: {
+    regels: {
+      kamer: '[de|het] {kamer}',
+      in_kamer: '[in|op|van] [de|het] {kamer}',
+      sc: '(je|jij|smart climate|het systeem|de regeling|het klimaat)',
+      nu: '[nu|op dit moment|momenteel|eigenlijk]',
+      panelen: '[de] (zonnepanelen|panelen)',
+    },
+    zinnen: { nu: NU, waarom: WAAROM, straks: STRAKS, zon: ZON, koelen: KOELEN, verwarmen: VERWARMEN, uit: UIT },
+    geenKamer: 'geen kamer bekend',
+  },
+  en: {
+    regels: {
+      kamer: '[the] {kamer}',
+      in_kamer: '[in|on|of] [the] {kamer}',
+      sc: '(you|smart climate|the system|the control|the climate)',
+      nu: '[now|right now|at the moment|currently]',
+      panelen: '[the] [solar] panels',
+    },
+    zinnen: { nu: NU_EN, waarom: WAAROM_EN, straks: STRAKS_EN, zon: ZON_EN, koelen: KOELEN_EN, verwarmen: VERWARMEN_EN, uit: UIT_EN },
+    geenKamer: 'no room known',
+  },
+} as const;
+
 /** De lijst `kamer`: per zone de naam en zijn andere woorden, uit naar het id van de zone. Een woord hoort bij één kamer. */
 export function kamerlijst(kamers: readonly AssistKamer[]): { in: string; out: string }[] {
   const gezien = new Set<string>();
@@ -83,36 +164,34 @@ export function kamerlijst(kamers: readonly AssistKamer[]): { in: string; out: s
   return uit;
 }
 
-/** Het zinnenbestand in het Nederlands, als gegevens; de integratie schrijft het weg. */
-export function zinnenNl(kamers: readonly AssistKamer[]): Record<string, unknown> {
+/** Het zinnenbestand in een taal, als gegevens; de integratie schrijft het weg. */
+export function zinnenVoor(lang: keyof typeof TAAL, kamers: readonly AssistKamer[]): Record<string, unknown> {
+  const t = TAAL[lang];
   const lijst = kamerlijst(kamers);
   return {
-    language: 'nl',
-    expansion_rules: {
-      kamer: '[de|het] {kamer}',
-      in_kamer: '[in|op|van] [de|het] {kamer}',
-      sc: '(je|jij|smart climate|het systeem|de regeling|het klimaat)',
-      nu: '[nu|op dit moment|momenteel|eigenlijk]',
-      panelen: '[de] (zonnepanelen|panelen)',
-    },
+    language: lang,
+    expansion_rules: t.regels,
     intents: {
       [INTENTIE]: {
         data: [
-          { sentences: NU, slots: { vraag: 'nu' } },
-          { sentences: WAAROM, slots: { vraag: 'waarom' } },
-          { sentences: STRAKS, slots: { vraag: 'straks' } },
-          { sentences: ZON, slots: { vraag: 'zon' } },
+          { sentences: t.zinnen.nu, slots: { vraag: 'nu' } },
+          { sentences: t.zinnen.waarom, slots: { vraag: 'waarom' } },
+          { sentences: t.zinnen.straks, slots: { vraag: 'straks' } },
+          { sentences: t.zinnen.zon, slots: { vraag: 'zon' } },
           // Een opdracht: tijdens het meekijken zegt Smart Climate wat hij zou doen. Er gaat niets naar de airco.
-          { sentences: KOELEN, slots: { vraag: 'doe', wens: 'koelen' } },
-          { sentences: VERWARMEN, slots: { vraag: 'doe', wens: 'verwarmen' } },
-          { sentences: UIT, slots: { vraag: 'doe', wens: 'uit' } },
+          { sentences: t.zinnen.koelen, slots: { vraag: 'doe', wens: 'koelen' } },
+          { sentences: t.zinnen.verwarmen, slots: { vraag: 'doe', wens: 'verwarmen' } },
+          { sentences: t.zinnen.uit, slots: { vraag: 'doe', wens: 'uit' } },
         ],
       },
     },
     lists: {
       // Zonder kamers een woord dat niemand zegt: een lege lijst laat Home Assistant het bestand weigeren.
-      kamer: { values: lijst.length ? lijst : [{ in: 'geen kamer bekend', out: '' }] },
+      kamer: { values: lijst.length ? lijst : [{ in: t.geenKamer, out: '' }] },
       temperatuur: { range: { from: 10, to: 35 } },
     },
   };
 }
+
+/** Het zinnenbestand in het Nederlands. */
+export const zinnenNl = (kamers: readonly AssistKamer[]): Record<string, unknown> => zinnenVoor('nl', kamers);

@@ -1,6 +1,6 @@
 {
   "name": "@hems/backend",
-  "version": "0.59.4",
+  "version": "0.59.7",
   "private": true,
   "description": "Smart Climate OS - pure decision core plus adapters",
   "type": "module",

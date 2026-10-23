@@ -8382,11 +8382,47 @@ gehouden met meervouden: ja, met de regels per taal.
   LEESMIJ over waar het staat, zodat een andere sessie verder kan. De
   paginatest zet ook deze pagina's en de film in het Engels.
 
-*Wat er nog Nederlands is op Thuis (stap 9):* de teksten uit `api/huis`,
-`api/weer` en de meldingen (de stand van een apparaat, het weer in woorden), en
-wat er nieuw is in een versie. `huismodel.ACTIEF` herkent een stand
-nog aan het Nederlandse woord uit `api/huis`; als die meertalig wordt, wordt dat
-een vaste code.
+- **Stap 9, vijfde deel (0.59.5):** wat de dienst zelf zegt. De stand van een
+  apparaat, wat een klimaatapparaat doet, de samenvatting en de status van een
+  kamer die meedoet (`api/huis`, per taal bewaard), met een vaste code ernaast
+  (`standCode`, `klimaat.actieCode`). De app let op die code in plaats van op
+  het woord, zodat de vaste patronen (`huismodel.ACTIEF`, `BEWEEGT` in
+  `kamer.js`, "Er draait niets") vervallen. Ook het weer, Opbrengst (de
+  periodes, de vakken, de vergelijking en de kostenregels, elke regel met een
+  vaste soort; per taal bewaard), de besluiten bij Vandaag (opnieuw in woorden
+  uit de bewaarde opdrachten; de app haalt de actie en het doel uit de
+  opdracht), de ligging van de panelen, Klaarzetten (met de plekken zoals de
+  Engelse Home Assistant ze noemt), de vragen bij het begin en de
+  standaardnamen van de etages. Meldingen maakt de dienst in beide talen en
+  bewaart de Engelse woorden ernaast: de bel krijgt de taal van de app, een
+  melding op de telefoon de taal die de bewoner bij Jij koos (Automatisch is
+  daar Nederlands, zolang Engels een proef is). Een melding van vóór 0.59.5
+  blijft Nederlands. Wat er nieuw is heeft per versie ook Engelse regels; een
+  test eist ze bij elke versie die de app laat zien. Wat een opgeslagen naam
+  is (een kamer, een vaste post, een apparaat) blijft zoals de bewoner hem
+  noemde.
+
+- **Stap 9, zesde deel (0.59.6):** de assistent. De woordzoeker en bedienen met
+  een zin verstaan Engels, met Engelse kaartjes en een Engels vervolg dat de
+  woordzoeker zelf weer verstaat. De dienst maakt de zinnen voor Assist ook in
+  het Engels (`custom_sentences/en`); de integratie hoefde daarvoor niet te
+  veranderen, en de test in een echte Home Assistant vraagt het nu ook in het
+  Engels. Piper zoekt per taal een stem (Engels: Brits eerst) en zegt een
+  Engelse zin met Engelse eenheden (`uitspraak(tekst, 'en')`); zonder Engelse
+  stem leest de app voor met de stem van het apparaat. Het wekwoord blijft
+  "Hé huis".
+
+- **Engels is geen proef meer (0.59.7):** op 23 oktober 2026 koos de bewoner
+  ervoor dat Automatisch ook Engels kiest, nu de app, de dienst en de assistent
+  het spreken (`'en'` in `HEEL`, `frontend/kit/taal.js`). Een melding op de
+  telefoon volgt bij Automatisch de taal waarin de app van dat account het
+  laatst opende (`VoorkeurenStore.zagTaal`): de dienst kent de taal van het
+  account in Home Assistant niet, de app wel. Dat wordt niet bewaard; na een
+  herstart is het Nederlands tot de app weer opent. De paginatest opent zijn
+  vensters in het Nederlands, tenzij een test anders vraagt.
+
+*Wat er nog Nederlands is (stap 9):* een foutmelding bij het begin, en de
+notities bij een update in Home Assistant (`addon/CHANGELOG.md`, uit `NIEUW`).
 
 ## Wat nog een besluit wacht
 

@@ -111,8 +111,8 @@
   'jij.taal.nl': 'Nederlands',
   'jij.taal.nlUitleg': 'Altijd Nederlands',
   'jij.taal.en': 'English',
-  'jij.taal.enUitleg': 'Proef: nog niet elke pagina',
-  'jij.taal.uitleg': 'Geldt voor jou, op je telefoon. De wand volgt de taal van zijn eigen account. Engels is een proef: de hele app staat erin, behalve een deel van wat de dienst zelf zegt en de assistent.',
+  'jij.taal.enUitleg': 'Altijd Engels',
+  'jij.taal.uitleg': 'Geldt voor jou, op je telefoon, en voor je meldingen. De wand volgt de taal van zijn eigen account. Automatisch kiest Engels bij een Engels account of een Engelse browser, anders Nederlands.',
 
   // Thuis: bovenin
   'thuis.hetHuis': 'Het huis',
@@ -1746,6 +1746,8 @@
   'toegang.delen': 'Delen van Bewoners en toegang',
   'toegang.ingelogd': 'ingelogd',
   'toegang.nietIngelogd': 'niet ingelogd',
+  'toegang.rol.bewoner': 'bewoner',
+  'toegang.rol.beheerder': 'beheerder',
   'toegang.versieNieuw': '{nummer}, wat is er nieuw',
   'toegang.sleutel': 'Sleutel voor de assistent',
   'toegang.voorHA': 'voor Home Assistant',

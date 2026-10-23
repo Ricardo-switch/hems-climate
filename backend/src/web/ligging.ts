@@ -31,6 +31,7 @@
 
 import type { Facade, Geometry, GeometrySource, SolarPlane } from '../core/model.js';
 import { clearSkyOnPlaneWm2, sunPosition, type SunPosition } from '../core/sun.js';
+import type { Lang } from './assistant.js';
 import type { Location } from './sun.js';
 import { partsIn, type PowerRow } from './today.js';
 
@@ -441,8 +442,11 @@ export interface LiggingInput {
   readonly omvormerGevonden: number | null;
 }
 
-const KOMPAS = ['noord', 'noordoost', 'oost', 'zuidoost', 'zuid', 'zuidwest', 'west', 'noordwest'];
-const kompas = (deg: number) => KOMPAS[Math.round(norm(deg) / 45) % 8]!;
+const KOMPAS: Readonly<Record<Lang, readonly string[]>> = {
+  nl: ['noord', 'noordoost', 'oost', 'zuidoost', 'zuid', 'zuidwest', 'west', 'noordwest'],
+  en: ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'],
+};
+const kompas = (deg: number, lang: Lang = 'nl') => KOMPAS[lang][Math.round(norm(deg) / 45) % 8]!;
 
 function gevels(voorgevelDeg: number | null, source: GeometrySource): Facade[] {
   if (voorgevelDeg == null) return [];
@@ -496,7 +500,9 @@ export interface LiggingWoorden {
   readonly hellingDeg: number;
   readonly helling: string;
   readonly peakW: number;
+  /** "Samen 4,2 kWp"; `vermogenKort` is zonder "samen": "4,2 kWp", "zo'n 4,2 kWp". */
   readonly vermogen: string;
+  readonly vermogenKort: string;
   readonly wpPerPaneel: number | null;
   readonly perPaneel: string | null;
   readonly omvormerW: number | null;
@@ -528,22 +534,52 @@ export interface LiggingView {
   readonly vraagVoorkant: readonly VoorkantZon[] | null;
 }
 
-const MAANDEN = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-const kWp = (w: number) => (w / 1000).toLocaleString('nl-NL', { maximumFractionDigits: w >= 10_000 ? 1 : 2, minimumFractionDigits: 0 });
-const kWpGrof = (w: number) => (Math.round(w / 100) / 10).toLocaleString('nl-NL');
+/** De ligging in woorden, per taal (besluit 185). Engels is Brits. */
+const WOORDEN = {
+  nl: {
+    locale: 'nl-NL',
+    maanden: ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'],
+    eenKant: (kant: string) => `Op het ${kant}en`,
+    en: ' en ',
+    bijnaPlat: (r: number) => `Rond ${r}°, bijna plat`,
+    dak: (r: number, deg: number) => `Rond ${r}°, ${deg < 32 ? 'een flauw' : deg < 45 ? 'een gewoon' : 'een steil'} dak`,
+    samen: (kwp: string) => `Samen ${kwp}`,
+    zoEen: (kwp: string) => `zo'n ${kwp}`,
+    perPaneel: (wp: number, zeker: boolean) => (zeker ? `${wp} Wp per paneel` : `ongeveer ${wp} Wp per paneel`),
+    elkeKant: (n: number) => `${n} panelen op elke kant`,
+    voorAchter: (voor: number, achter: number) => `${voor} aan de voorkant, ${achter} aan de achterkant`,
+    panelen: (n: number) => `${n} panelen`,
+  },
+  en: {
+    locale: 'en-GB',
+    maanden: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    eenKant: (kant: string) => `Facing ${kant}`,
+    en: ' and ',
+    bijnaPlat: (r: number) => `Around ${r}°, almost flat`,
+    dak: (r: number, deg: number) => `Around ${r}°, ${deg < 32 ? 'a shallow' : deg < 45 ? 'an ordinary' : 'a steep'} roof`,
+    samen: (kwp: string) => `${kwp} in total`,
+    zoEen: (kwp: string) => `about ${kwp}`,
+    perPaneel: (wp: number, zeker: boolean) => (zeker ? `${wp} Wp per panel` : `about ${wp} Wp per panel`),
+    elkeKant: (n: number) => `${n} panels on each side`,
+    voorAchter: (voor: number, achter: number) => `${voor} on the front, ${achter} on the back`,
+    panelen: (n: number) => `${n} panels`,
+  },
+} satisfies Record<Lang, unknown>;
+const kWp = (w: number, lang: Lang) => (w / 1000).toLocaleString(WOORDEN[lang].locale, { maximumFractionDigits: w >= 10_000 ? 1 : 2, minimumFractionDigits: 0 });
+const kWpGrof = (w: number, lang: Lang) => (Math.round(w / 100) / 10).toLocaleString(WOORDEN[lang].locale);
 
-function richtingIn(vlakken: readonly { azimuthDeg: number; peakW: number }[]): string {
+function richtingIn(vlakken: readonly { azimuthDeg: number; peakW: number }[], lang: Lang): string {
   const echt = vlakken.filter((v) => v.peakW > 0);
   if (echt.length === 0) return '';
-  const woorden = [...new Set([...echt].sort((a, b) => norm(a.azimuthDeg) - norm(b.azimuthDeg)).map((v) => kompas(v.azimuthDeg)))];
-  if (woorden.length === 1) return `Op het ${woorden[0]}en`;
-  return `${woorden[0]![0]!.toUpperCase()}${woorden[0]!.slice(1)} en ${woorden.slice(1).join(' en ')}`;
+  const w = WOORDEN[lang];
+  const woorden = [...new Set([...echt].sort((a, b) => norm(a.azimuthDeg) - norm(b.azimuthDeg)).map((v) => kompas(v.azimuthDeg, lang)))];
+  if (woorden.length === 1) return w.eenKant(woorden[0]!);
+  return `${woorden[0]![0]!.toUpperCase()}${woorden[0]!.slice(1)}${w.en}${woorden.slice(1).join(w.en)}`;
 }
 
-function hellingIn(deg: number): string {
+function hellingIn(deg: number, lang: Lang): string {
   const r = Math.round(deg / 5) * 5;
-  if (deg < 12) return `Rond ${r}°, bijna plat`;
-  return `Rond ${r}°, ${deg < 32 ? 'een flauw' : deg < 45 ? 'een gewoon' : 'een steil'} dak`;
+  return deg < 12 ? WOORDEN[lang].bijnaPlat(r) : WOORDEN[lang].dak(r, deg);
 }
 
 function woorden(
@@ -552,19 +588,22 @@ function woorden(
   omvormerW: number | null,
   aantal: number | null,
   zeker: boolean,
+  lang: Lang,
 ): LiggingWoorden {
+  const w = WOORDEN[lang];
   const echt = vlakken.filter((v) => v.peakW > 0);
   const peakW = echt.reduce((s, v) => s + v.peakW, 0);
   const tilt = echt.length ? echt.reduce((s, v) => s + v.tiltDeg * v.peakW, 0) / Math.max(1, peakW) : 0;
   const wp = aantal ? Math.round(peakW / aantal / 5) * 5 : null;
   return {
-    richting: richtingIn(echt),
+    richting: richtingIn(echt, lang),
     hellingDeg: Math.round(tilt),
-    helling: hellingIn(tilt),
+    helling: hellingIn(tilt, lang),
     peakW,
-    vermogen: zeker ? `Samen ${kWp(peakW)} kWp` : `Samen zo'n ${kWpGrof(peakW)} kWp`,
+    vermogen: w.samen(zeker ? `${kWp(peakW, lang)} kWp` : w.zoEen(`${kWpGrof(peakW, lang)} kWp`)),
+    vermogenKort: zeker ? `${kWp(peakW, lang)} kWp` : w.zoEen(`${kWpGrof(peakW, lang)} kWp`),
     wpPerPaneel: wp,
-    perPaneel: wp == null ? null : zeker ? `${wp} Wp per paneel` : `ongeveer ${wp} Wp per paneel`,
+    perPaneel: wp == null ? null : w.perPaneel(wp, zeker),
     omvormerW,
     voorgevelDeg,
     vlakken: echt.map((v) => ({ azimuthDeg: norm(v.azimuthDeg), tiltDeg: Math.round(v.tiltDeg), peakW: v.peakW })),
@@ -592,7 +631,8 @@ function vraagVoorkant(i: LiggingInput, panelen: PanelenAntwoord): readonly Voor
 }
 
 /** Wat Inrichten en Energie over de ligging laten zien. Zonder entiteiten of plaats. */
-export function liggingView(i: LiggingInput): LiggingView {
+export function liggingView(i: LiggingInput, lang: Lang = 'nl'): LiggingView {
+  const w = WOORDEN[lang];
   const panelen = i.panelen ?? { ligging: null, aantal: null, voorkant: null, achterkant: null };
   const n = aantalVan(panelen);
   const aantal = n?.totaal ?? null;
@@ -600,17 +640,17 @@ export function liggingView(i: LiggingInput): LiggingView {
   const geo = gekozen?.geometry;
   const voorgevel = geo?.facades.find((f) => f.id === 'voorgevel')?.azimuthDeg ?? null;
   const zeker = gekozen?.bron === 'app' && i.dak?.bron === 'bewoner';
-  const nu = geo && geo.solarPlanes.length > 0 ? { ...woorden(geo.solarPlanes, voorgevel, geo.inverterMaxW ?? null, aantal, zeker || gekozen?.bron === 'configuratie'), bron: gekozen!.bron } : null;
-  const voorstel = i.meting ? woorden(i.meting.vlakken, voorgevelVan(i.meting.vlakken, panelen, i.voorkantZon), i.omvormerGevonden, aantal, false) : null;
+  const nu = geo && geo.solarPlanes.length > 0 ? { ...woorden(geo.solarPlanes, voorgevel, geo.inverterMaxW ?? null, aantal, zeker || gekozen?.bron === 'configuratie', lang), bron: gekozen!.bron } : null;
+  const voorstel = i.meting ? woorden(i.meting.vlakken, voorgevelVan(i.meting.vlakken, panelen, i.voorkantZon), i.omvormerGevonden, aantal, false, lang) : null;
   const d = i.meting?.dag;
-  const lijn = d && d.punten.length > 0 ? { ...d, datumTekst: `${Number(d.datum.slice(8, 10))} ${MAANDEN[Number(d.datum.slice(5, 7)) - 1] ?? ''}` } : null;
+  const lijn = d && d.punten.length > 0 ? { ...d, datumTekst: `${Number(d.datum.slice(8, 10))} ${w.maanden[Number(d.datum.slice(5, 7)) - 1] ?? ''}` } : null;
   const kanten =
     panelen.ligging === 'beide' && panelen.voorkant != null && panelen.achterkant != null
       ? panelen.voorkant === panelen.achterkant
-        ? `${panelen.voorkant} panelen op elke kant`
-        : `${panelen.voorkant} aan de voorkant, ${panelen.achterkant} aan de achterkant`
+        ? w.elkeKant(panelen.voorkant)
+        : w.voorAchter(panelen.voorkant, panelen.achterkant)
       : aantal != null
-        ? `${aantal} panelen`
+        ? w.panelen(aantal)
         : null;
   return {
     stand: i.dak ? 'bevestigd' : i.meting ? 'voorstel' : i.configuratie ? 'configuratie' : 'wachten',

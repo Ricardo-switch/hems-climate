@@ -10,6 +10,7 @@
  * gemaakt wordt.
  */
 
+import type { Lang } from './assistant.js';
 import { uitspraak } from './uitspraak.js';
 
 export interface StemOpties {
@@ -25,10 +26,18 @@ export interface StemOpties {
   readonly fetch?: typeof fetch;
 }
 
-/** Nederlands, en anders Vlaams: wat er voor Nederlands is, in welke schrijfwijze ook. */
-export function kiesTaal(talen: readonly string[]): string | null {
-  const nl = talen.filter((t) => /^nl([_-]|$)/i.test(t));
-  return nl.find((t) => /^nl[_-]nl$/i.test(t)) ?? nl.find((t) => /^nl$/i.test(t)) ?? nl[0] ?? null;
+/**
+ * De taal van de stem: Nederlands, en anders Vlaams; Engels Brits eerst, dan
+ * Amerikaans (besluit 185). Wat er voor die taal is, in welke schrijfwijze ook.
+ */
+export function kiesTaal(talen: readonly string[], lang: Lang = 'nl'): string | null {
+  const deze = talen.filter((t) => new RegExp(`^${lang}([_-]|$)`, 'i').test(t));
+  const voorkeur = lang === 'nl' ? [/^nl[_-]nl$/i, /^nl$/i] : [/^en[_-]gb$/i, /^en[_-]us$/i, /^en$/i];
+  for (const re of voorkeur) {
+    const t = deze.find((x) => re.test(x));
+    if (t) return t;
+  }
+  return deze[0] ?? null;
 }
 
 export interface Geluid {
@@ -49,8 +58,8 @@ export class Stem {
   readonly #o: StemOpties;
   readonly #bewaard = new Map<string, Geluid>();
   readonly #bezig = new Map<string, Promise<Geluid>>();
-  /** Per stem de Nederlandse taal en stem, één keer opgezocht. */
-  #nederlands: { stem: string; taal: string | null; voice: string | null } | null = null;
+  /** Per taal de taal en stem van de spraakentiteit, één keer opgezocht. */
+  readonly #talen = new Map<Lang, { stem: string; taal: string | null; voice: string | null }>();
 
   constructor(opties: StemOpties) {
     this.#o = opties;
@@ -61,18 +70,18 @@ export class Stem {
     return kiesStem(this.#o.stemmen());
   }
 
-  async zeg(tekst: string): Promise<Geluid> {
+  async zeg(tekst: string, lang: Lang = 'nl'): Promise<Geluid> {
     // Zoals hij klinkt (besluit 142): eenheden voluit, tijden in woorden.
-    const zin = uitspraak(tekst).slice(0, MAX_ZEG);
+    const zin = uitspraak(tekst, lang).slice(0, MAX_ZEG);
     if (zin === '') throw new Error('niets te zeggen');
     const stem = this.naam;
     if (stem == null) throw new Error('geen lokale stem in Home Assistant');
-    const sleutel = `${stem}|${zin}`;
+    const sleutel = `${stem}|${lang}|${zin}`;
     const al = this.#bewaard.get(sleutel);
     if (al) return al;
     const bezig = this.#bezig.get(sleutel);
     if (bezig) return bezig;
-    const job = this.#maak(stem, zin)
+    const job = this.#maak(stem, zin, lang)
       .then((g) => {
         if (this.#bewaard.size >= BEWAAR) this.#bewaard.delete(this.#bewaard.keys().next().value!);
         this.#bewaard.set(sleutel, g);
@@ -84,17 +93,19 @@ export class Stem {
   }
 
   /**
-   * De Nederlandse taal en stem (opgelost 15 oktober 2026): zonder taal kiest
-   * Piper zijn eerste stem, en dat was Engels; dan klinkt Nederlands vreemd.
+   * De taal en stem voor een taal van de app (opgelost 15 oktober 2026, per
+   * taal sinds besluit 185): zonder taal kiest Piper zijn eerste stem, en dan
+   * klinkt een zin vreemd. Null als de stem die taal niet heeft.
    */
-  async nederlands(): Promise<{ taal: string | null; voice: string | null }> {
+  async taalVoor(lang: Lang): Promise<{ taal: string | null; voice: string | null }> {
     const stem = this.naam;
     if (stem == null) return { taal: null, voice: null };
-    if (this.#nederlands?.stem === stem) return this.#nederlands;
+    const al = this.#talen.get(lang);
+    if (al?.stem === stem) return al;
     let taal: string | null = null;
     let voice: string | null = null;
     try {
-      taal = kiesTaal((await this.#o.talen?.(stem)) ?? []);
+      taal = kiesTaal((await this.#o.talen?.(stem)) ?? [], lang);
       if (taal) {
         const lijst = (await this.#o.stemmenVoor?.(stem, taal)) ?? [];
         voice = lijst[0]?.voice_id ?? null;
@@ -103,19 +114,20 @@ export class Stem {
       // Dan zonder; de volgende keer opnieuw.
       return { taal, voice };
     }
-    this.#nederlands = { stem, taal, voice };
-    return this.#nederlands;
+    const uit = { stem, taal, voice };
+    this.#talen.set(lang, uit);
+    return uit;
   }
 
-  async #maak(stem: string, zin: string): Promise<Geluid> {
+  async #maak(stem: string, zin: string, lang: Lang): Promise<Geluid> {
     const f = this.#o.fetch ?? fetch;
     const kop = { authorization: `Bearer ${this.#o.token}`, 'content-type': 'application/json' };
-    const nl = await this.nederlands();
-    if (this.#o.talen && nl.taal == null) throw new Error('de stem in Home Assistant heeft geen Nederlands');
+    const t = await this.taalVoor(lang);
+    if (this.#o.talen && t.taal == null) throw new Error(lang === 'nl' ? 'de stem in Home Assistant heeft geen Nederlands' : 'de stem in Home Assistant heeft geen Engels');
     const r = await f(`${this.#o.base}/api/tts_get_url`, {
       method: 'POST',
       headers: kop,
-      body: JSON.stringify({ engine_id: stem, message: zin, cache: true, ...(nl.taal ? { language: nl.taal } : {}), ...(nl.voice ? { options: { voice: nl.voice } } : {}) }),
+      body: JSON.stringify({ engine_id: stem, message: zin, cache: true, ...(t.taal ? { language: t.taal } : {}), ...(t.voice ? { options: { voice: t.voice } } : {}) }),
     });
     if (!r.ok) throw new Error(`Home Assistant gaf geen geluid (${r.status})`);
     const { path, url } = (await r.json()) as { path?: string; url?: string };

@@ -466,7 +466,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     const nieuwVenster = browser.newContext.bind(browser);
     browser.newContext = (async (o?: BrowserContextOptions & { zonderInlog?: boolean }) => {
       const { zonderInlog, ...rest } = o ?? {};
-      const c = await nieuwVenster(rest);
+      // Nederlands, tenzij een test anders vraagt: Automatisch kiest sinds besluit 185 ook Engels uit de browser.
+      const c = await nieuwVenster({ locale: 'nl-NL', ...rest });
       if (!zonderInlog) await c.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
       return c;
     }) as typeof browser.newContext;
@@ -993,6 +994,22 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
    * lang="en">. En de toegankelijkheidscontrole van besluit 86 op Thuis: axe,
    * WCAG 2 A en AA.
    */
+  it('kiest bij Automatisch Engels in een Engelse browser, en Nederlands in een Nederlandse (besluit 185)', async () => {
+    for (const [locale, taal, kop] of [['en-GB', 'en', 'Home'], ['nl-NL', 'nl', 'Thuis']] as const) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale });
+      await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+      await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+      const p = await context.newPage();
+      try {
+        await p.goto(`${baseUrl}/thuis.html`);
+        expect(await p.evaluate(() => (globalThis as unknown as { document: { documentElement: { lang: string } } }).document.documentElement.lang)).toBe(taal);
+        expect(await p.evaluate(() => (globalThis as unknown as { taal: { t: (k: string) => string } }).taal.t('nav.thuis'))).toBe(kop);
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
   it('toont Thuis in het Engels als je dat bij Jij kiest, en haalt de toegankelijkheidscontrole', async () => {
     const zet = (taal: string) => fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', taal }) });
     // Een bewoner op zijn eigen telefoon: een scherm, zoals de wand, volgt zijn eigen account.

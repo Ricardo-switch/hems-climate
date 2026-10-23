@@ -106,8 +106,8 @@
   'jij.taal.nl': 'Nederlands',
   'jij.taal.nlUitleg': 'Always Dutch',
   'jij.taal.en': 'English',
-  'jij.taal.enUitleg': 'Trial: not every page yet',
-  'jij.taal.uitleg': 'Applies to you, on your phone. The wall screen follows the language of its own account. English is a trial: the whole app is translated, except part of what the service says itself and the assistant.',
+  'jij.taal.enUitleg': 'Always English',
+  'jij.taal.uitleg': 'Applies to you, on your phone, and to your notifications. The wall screen follows the language of its own account. Automatic chooses English for an English account or browser, otherwise Dutch.',
 
   // Home: the top
   'thuis.hetHuis': 'The house',
@@ -1741,6 +1741,8 @@
   'toegang.delen': 'Parts of Residents and access',
   'toegang.ingelogd': 'signed in',
   'toegang.nietIngelogd': 'not signed in',
+  'toegang.rol.bewoner': 'resident',
+  'toegang.rol.beheerder': 'administrator',
   'toegang.versieNieuw': '{nummer}, what is new',
   'toegang.sleutel': 'Key for the assistant',
   'toegang.voorHA': 'for Home Assistant',

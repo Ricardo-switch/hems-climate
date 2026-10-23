@@ -155,6 +155,21 @@ describe('een maand, en vergelijken', () => {
     expect(r.perBucket.map((b) => b.label)).toEqual(Array.from({ length: 31 }, (_, i) => String(i + 1)));
   });
 
+  it('noemt de periode, de vakken en de vergelijking in de taal van de app (besluit 185)', async () => {
+    const r = (await yieldReport(fakeSource(), SETTINGS, 'maand', '2026-09-20', TZ, Date.UTC(2026, 8, 25), 'en'))!;
+    expect(r.periode).toMatchObject({ label: 'September 2026', vorigeNaam: 'August' });
+    expect(r.zon?.besteDag).toEqual({ label: 'Tuesday 1 September', kwh: 14 });
+    expect(r.vergelijk.stroom.map((p) => p.label)).toEqual(['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']);
+    expect(r.apparaten.at(-1)).toMatchObject({ id: 'rest', naam: 'Rest of the house' });
+    expect(r.kosten.regels.find((x) => x.soort === 'vast')?.naam).toMatch(/^Fixed costs/);
+    expect(periodRange('week', '2026-10-01', TZ, undefined, 'en')).toMatchObject({ label: 'Week 40 · 28 September – 4 October', prevName: 'last week' });
+    expect(periodRange('dag', '2026-10-22', TZ, undefined, 'en')).toMatchObject({ label: 'Thursday 22 October', prevName: 'the day before' });
+    expect(periodRange('jaar', '2026-06-01', TZ, yearStartOf('2024-03-15'), 'en')).toMatchObject({ label: '15 March 2026 – 14 March 2027', prevName: '2025/26' });
+    // Een week: de vakken heten naar de dag.
+    const week = (await yieldReport(fakeSource(), SETTINGS, 'week', '2026-09-16', TZ, Date.UTC(2026, 8, 25), 'en'))!;
+    expect(week.perBucket.map((b) => b.label)).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+  });
+
   it('kent dag, week, maand en jaar in de tijdzone van het huis, ook rond de wintertijd', () => {
     expect(periodRange('week', '2026-10-01', TZ)).toMatchObject({ label: 'Week 40 · 28 september – 4 oktober', prev: '2026-09-21', next: '2026-10-05' });
     const dst = periodRange('dag', '2026-10-25', TZ)!;

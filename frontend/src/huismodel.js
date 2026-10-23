@@ -9,8 +9,8 @@
   /** Een getal in de taal van de app (besluit 185). */
   const nl = (n, d = 1) => global.taal.getal(n, d);
 
-  /** Wat een airco doet, zoals api/huis het nu nog in het Nederlands zegt; een vast patroon tot de dienst meertalig is (besluit 185). */
-  const ACTIEF = /^(koelt|verwarmt|verwarmt voor|droogt|ventileert)$/;
+  /** Wat een airco doet, als vaste code uit api/huis (`klimaat.actieCode`, besluit 185): de woorden verschillen per taal. */
+  const ACTIEF = /^(koelt|verwarmt|verwarmt-voor|droogt|ventileert)$/;
   const BUITEN = /tuin|oprit|terras|balkon|buiten|veranda|carport|garden|driveway|patio|terrace|balcony|outside/i;
   const GANG = /^(hal|gang|overloop|trap|entree|toilet|wc|trapkast|meterkast)\b/i;
 
@@ -90,8 +90,8 @@
     const bronVan = (a) => bronnen.find((b) => b.apparaat && (b.apparaat === a.actuatorId || b.apparaat === a.id));
     const vloer = (b) => b.soorten.some((x) => x === 'vloer' || x === 'vloer-elektrisch');
     for (const a of klimaat) {
-      const aan = a.aan || ACTIEF.test(a.klimaat?.actie ?? '');
-      const warm = /verwarmt/.test(a.klimaat?.actie ?? '');
+      const aan = a.aan || ACTIEF.test(a.klimaat?.actieCode ?? '');
+      const warm = /verwarmt/.test(a.klimaat?.actieCode ?? '');
       const b = bronVan(a);
       if (a.klimaat?.kanKoelen) apparaten.push({ soort: 'airco', aan, naam: a.id, stand: warm ? 'warmt' : 'koelt' });
       else if (b && !b.soorten.includes('radiator')) {
@@ -297,7 +297,7 @@
       buitenRuimtes,
       ...delen,
       voordeur: { deurbel: bel || belZiet ? { beweging: !!belZiet?.meting.beweging.nu } : null },
-      buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.test(a.klimaat?.actie ?? '')), aantal: aircos.length } : null,
+      buitenunit: aircos.length ? { aan: aircos.some((a) => a.aan || ACTIEF.test(a.klimaat?.actieCode ?? '')), aantal: aircos.length } : null,
       piekW,
       panelen: aantalPanelen ?? (piekW > 0 ? Math.max(1, Math.round(piekW / 400)) : 0),
     };

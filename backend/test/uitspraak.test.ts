@@ -42,4 +42,11 @@ describe('de uitspraak (besluit 142)', () => {
     expect(uitspraak(zin)).toBe(zin);
     expect(uitspraak(uitspraak('Om 22:00, 4 kWh.'))).toBe('Om tien uur, 4 kilowattuur.');
   });
+
+  it('zegt een Engelse zin met Engelse eenheden, zonder Nederlandse klanken (besluit 185)', () => {
+    expect(uitspraak('The panels gave 9.3 kWh, it is 21.5° and the airco costs € 0.45.', 'en')).toBe('The panels gave 9.3 kilowatt hours, it is 21.5 degrees and the airco costs 45 cents.');
+    expect(uitspraak('€ 62.18 this month, 40% on, ± 2 kW', 'en')).toBe('62 euros 18 this month, 40 percent on, about 2 kilowatts');
+    // Een tijd leest een Engelse stem zelf: die blijft staan.
+    expect(uitspraak('Until 13:45.', 'en')).toBe('Until 13:45.');
+  });
 });

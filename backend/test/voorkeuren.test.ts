@@ -183,6 +183,24 @@ describe('VoorkeurenStore', () => {
       expect((await store.save({ plek: 'wand', taal: 'en' }, ricardo)).ok).toBe(false);
     });
 
+    it('stuurt een melding in de gekozen taal, of bij Automatisch in de taal waarin de app opende (besluit 185)', async () => {
+      const store = new VoorkeurenStore(dir);
+      await store.load();
+      // Nog niets gezien: Nederlands.
+      expect(store.taal('u-ricardo')).toBe('nl');
+      store.zagTaal('u-ricardo', 'en');
+      expect(store.taal('u-ricardo')).toBe('en');
+      // Zelf gekozen gaat voor wat de app zag.
+      expect((await store.save({ plek: 'tel', taal: 'nl' }, ricardo)).ok).toBe(true);
+      expect(store.taal('u-ricardo')).toBe('nl');
+      expect((await store.save({ plek: 'tel', taal: 'en' }, noor)).ok).toBe(true);
+      store.zagTaal('u-noor', 'nl');
+      expect(store.taal('u-noor')).toBe('en');
+      // Zonder account (de wand zonder inlog) onthoudt hij niets.
+      store.zagTaal(null, 'en');
+      expect(store.taal('')).toBe('nl');
+    });
+
     it('zet de wandvolgorde terug in de telefoon, met de kamers en Straks op hun plek', () => {
       expect(metWandVolgorde(['kamers', 'favorieten', 'straks', 'gevoel'], ['gevoel', 'favorieten'])).toEqual(['kamers', 'gevoel', 'straks', 'favorieten']);
       expect(metWandVolgorde(['kamers', 'favorieten'], ['vandaag', 'favorieten'])).toEqual(['kamers', 'vandaag', 'favorieten']);

@@ -156,6 +156,56 @@ describe('bedienen met een zin', () => {
   });
 });
 
+describe('bedienen met een zin in het Engels (besluit 185, stap 9 deel 6)', () => {
+  function en(tekst: string, laatste: string | null = null): Opdracht {
+    const h = herkenOpdracht(tekst, alles, 'en', laatste);
+    if (!h?.ok) throw new Error(`geen opdracht voor "${tekst}": ${h ? h.antwoord : 'null'}`);
+    return h.opdracht;
+  }
+
+  it('verstaat het licht: aan, uit, zachter, feller, een stand en een tint', () => {
+    expect(en('Turn on the lights in the keuken').body).toEqual({ doel: 'kamer', id: 'keuken', aan: true });
+    expect(en('switch off the plafonnière').body).toEqual({ doel: 'lamp', id: 'light.plafonniere', aan: false });
+    const dim = en('dim the lights in beneden');
+    expect(dim.body).toEqual({ doel: 'kamer', id: 'beneden', aan: true, helderheidPct: 50 });
+    expect(dim.antwoord).toBe('The lights in Beneden are at 50%.');
+    expect(dim.gedaan).toEqual([{ soort: 'licht', waarde: '50%', uitleg: 'Lights Beneden, was on' }]);
+    expect(en('set the plafonnière to 40%').body).toMatchObject({ helderheidPct: 40 });
+    expect(en('make the sfeerverlichting brighter').body).toMatchObject({ doel: 'lamp', id: 'light.sfeer' });
+    expect(en('sfeerverlichting warm white').body).toMatchObject({ kleur: 'warm' });
+    expect(en('turn off all the lights').body).toEqual({ doel: 'huis', id: null, aan: false });
+    expect(en('switch off the plafonnière').gedaan[0]).toEqual({ soort: 'licht', waarde: 'Off', uitleg: 'Plafonnière, was 80%' });
+  });
+
+  it('geeft een Engels vervolg dat het zelf weer verstaat', () => {
+    const o = en('plafonnière dimmer');
+    expect(o.vervolg.map((v) => v.label)).toEqual(['Sfeerverlichting dimmer too', 'Scene Film', 'All off in Beneden']);
+    for (const v of o.vervolg) expect(herkenOpdracht(v.tekst, alles, 'en'), v.tekst).toMatchObject({ ok: true });
+  });
+
+  it('verstaat schermen en het zonnescherm', () => {
+    const dicht = en('close the screen');
+    expect(dicht.body).toMatchObject({ id: 'cover.screen', actie: 'dicht' });
+    expect(dicht.antwoord).toBe('Screen woonkamer is closing. Say stop when it is enough.');
+    expect(dicht.gedaan[0]).toEqual({ soort: 'scherm', waarde: 'Closing', uitleg: 'Screen woonkamer, was open' });
+    expect(en('lower the blinds').body).toMatchObject({ actie: 'dicht' });
+    expect(en('raise the screen').body).toMatchObject({ actie: 'open' });
+    expect(en('screen to 60%').body).toEqual({ id: 'cover.screen', actie: 'stand', standPct: 40 });
+    expect(en('extend the awning').body).toMatchObject({ id: 'cover.zonnescherm', actie: 'open' });
+    expect(en('retract the awning').body).toMatchObject({ id: 'cover.zonnescherm', actie: 'dicht' });
+    expect(en('stop the awning').body).toMatchObject({ id: 'cover.zonnescherm', actie: 'stop' });
+    expect(en('stop', 'cover.zonnescherm').antwoord).toContain('does not report where it is');
+    for (const v of dicht.vervolg) expect(herkenOpdracht(v.tekst, alles, 'en'), v.tekst).toMatchObject({ ok: true });
+  });
+
+  it('zet een scène aan, en laat vragen aan de woordzoeker', () => {
+    expect(en('activate scene film').body).toEqual({ id: 'scene.film' });
+    expect(en('turn on film').pad).toBe('api/scene');
+    for (const t of ['why is the light on', 'is the screen closed?', 'what are you doing now', 'cool the zolder']) expect(herkenOpdracht(t, alles, 'en'), t).toBeNull();
+    expect(herkenOpdracht('turn on the light', alles, 'en')).toMatchObject({ ok: false, antwoord: expect.stringContaining('Which light') });
+  });
+});
+
 describe('in eigen woorden', () => {
   const vast = { antwoord: 'De wasruimte wacht op zon. De airco heeft 0,8 kW nodig en er is nu 0,5 kW over.', feiten: [{ bron: 'a', tekst: '0,8 kW' }, { bron: 'b', tekst: '0,5 kW' }] };
 
