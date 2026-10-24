@@ -193,6 +193,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
 - [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
 - [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
+- [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
 
 **Veiligheid**
 
@@ -8779,6 +8780,54 @@ aanroep.
 *Wat afviel:* een tweede functie naast `huis.teken` (dan kan een pagina nog
 steeds de oude aanroepen); de panelen elders bij de assistent en de film (die
 halen de aansluiting niet op).
+
+---
+
+## 193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. Kamers en indeling had zijn eigen opbouw: links de etages
+als knoppen, in het midden het huis, rechts een blad en onderin een strook. Op
+de telefoon stonden de etages als rij om opzij te schuiven. De andere groepen
+achter het tandwiel (besluiten 130 en 163) hebben één opbouw; de bewoner vroeg
+dezelfde voor Kamers en indeling. Daarbij meldde hij dat een garage of carport
+die hij buiten toevoegde niet leek te werken. Dat klopte: er waren twee
+lijstjes die elkaar overschreven. Wat er rond het huis is (besluit 158, bij
+Inrichten › Buiten) won zodra het er was, en Kamers en indeling keek er niet
+naar.
+
+*Besluit:*
+
+- **Kamers en indeling is een groep zoals Energie** (`groep.js`). De delen zijn
+  de etages van boven naar beneden met Buiten, een stippelregel om een etage
+  toe te voegen, en onder Apparaten Nog in te delen (oranje als er iets mist)
+  en Verborgen. Op de telefoon eerst de lijst; een deel opent als eigen scherm
+  met terug naar de lijst. Op de wand staan de lijst en het deel naast elkaar,
+  met onderaan *Waarvoor is dit?* en Vorige en Volgende.
+- **Een etage** is de tekening zonder dak met het blad ernaast, en eronder de
+  strook met wat nog in te delen is. Slepen, ongedaan maken, zones, het blad
+  per kamer en Verwarmen en koelen blijven zoals ze waren. Sleep je een
+  apparaat boven een etage in de lijst, dan opent die etage.
+- **Buiten** is het huis met zijn dak, zoals Thuis het tekent, met hetzelfde
+  lijstje als Inrichten › Buiten (`huismodel.rondom`): elk deel aan of uit,
+  met de ruimte uit Home Assistant die erbij hoort. Een ruimte die een carport
+  is, hoort nu ook ergens bij.
+- **Eén lijstje rond het huis.** Kies je bij Kamers en indeling een soort
+  (garage, carport, terras), een auto op de oprit of een zone Tuinhuis, of
+  maak je buiten een ruimte die zo heet, dan staat dat deel ook aan bij wat er
+  rond het huis is (`huismodel.rondMet`). Kamer en Kamers en indeling tekenen
+  buiten met dat lijstje, net als Thuis.
+- **De garage en de carport staan ook in een tekening zonder dak**, en de
+  garage is daar aan te tikken.
+- **Het adres blijft werken:** `indeling.html#woonkamer/warmte` opent de etage
+  van de kamer met de kamer gekozen; het adres wordt dan die etage.
+- **Versie 0.65.0.** Besluit 192 en versie 0.64.0 zijn voor het sluipverbruik.
+
+*Wat afviel:* de etages als knoppen naast de groep; een eigen lijstje rond het
+huis bij Kamers en indeling (dan zijn er weer twee); een tweede oprit, terras
+of garage tekenen, de buitenzones zoals moestuin of vijver in de tekening, en
+een balkon bij één etage: dat komt later.
 
 ---
 

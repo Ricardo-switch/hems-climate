@@ -338,6 +338,9 @@ verwijzing bestaat.
   mist bovenaan. Op de telefoon opent een deel als eigen scherm met terug naar
   de lijst, en onderaan Vorige en Volgende; op de wand past elk deel zonder
   scrollen en zit de uitleg achter *Waarvoor is dit?* ([163]).
+- **Kamers en indeling** is ook zo'n groep: de etages met Buiten, Nog in te
+  delen en Verborgen. Buiten heeft hetzelfde lijstje als Inrichten, en wat je
+  bij een buitenruimte kiest, zet dat deel ook aan ([193]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -631,4 +634,5 @@ verwijzing bestaat.
 [189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
 [190]: DECISIONS.md#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland
 [191]: DECISIONS.md#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening
+[193]: DECISIONS.md#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is
 <!-- links:einde -->

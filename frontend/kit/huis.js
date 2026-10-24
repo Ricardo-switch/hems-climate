@@ -791,7 +791,7 @@
     /* ---- buiten: buitenunit, batterij, laadpaal en auto, het net ---- */
     if (model.buitenunit) bouwBuitenunit(model.buitenunit, W);
     // De garage vóór de batterij: die kan ertegenaan staan (huis 3.0).
-    if (model.garage && !model.zonderDak && eiland) bouwGarage(model.garage);
+    if (model.garage && eiland) bouwGarage(model.garage);
     if (model.batterij || spook(model, 'batterij')) bouwBatterij(model.batterij, spook(model, 'batterij'));
     // Op het eiland (huis 3.0) heeft de tuin een vaste indeling, met het terras erin.
     if (model.tuin && eiland) bouwTuin3(model.tuin);
@@ -803,9 +803,9 @@
     if (model.auto || spook(model, 'auto')) bouwAuto(model.auto, spook(model, 'auto'), true);
     else if (model.oprit?.auto) bouwAuto({ stand: 'geparkeerd', kleur: model.oprit.auto.kleur }, false, false);
     if (model.oprit?.camera) bouwCamera(model.oprit.camera);
-    // Een losse garage achter de oprit, en een carport boven de auto (besluit 166).
-    if (model.garage && !model.zonderDak && !eiland) bouwGarage(model.garage);
-    if (model.oprit?.carport && !model.zonderDak) bouwCarport();
+    // Een losse garage achter de oprit, en een carport boven de auto (besluit 166); ook zonder dak (besluit 193).
+    if (model.garage && !eiland) bouwGarage(model.garage);
+    if (model.oprit?.carport) bouwCarport();
     if (model.net) bouwNet();
 
     /* ---- stromen ---- */
@@ -2489,7 +2489,7 @@
       // Na de tuin: het huisje ligt erbovenop.
       [tuinhuis, vlakTuinhuis, [th[0] + 0.5, th[1] + 1.2, 0]],
       // Na de oprit: de garage staat erachter, maar ligt in beeld deels over de oprit.
-      [model.zonderDak ? null : model.garage, vlakGarage, [-2.0, -0.2, 0]],
+      [model.garage, vlakGarage, [-2.0, -0.2, 0]],
     ]) {
       if (!deel) continue;
       if (deel.gekozen) grond.push(poly(vlak, `fill="${KLEUR.ijs}" fill-opacity="0.06" stroke="${KLEUR.ijs}" stroke-width="2" stroke-dasharray="7 5"`));

@@ -13,26 +13,50 @@
 <link rel="apple-touch-icon" href="icoon-192.png">
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var eigen = d.classList.contains('tel-stand') || !t.scherm, c = eigen ? t.kleur : t.wandKleur; var licht = eigen && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
-  /* De wand (schets Wand-Indeling): de etages links, het huis in het midden, het blad rechts, onderin wat nog nergens staat. */
-  #wand main { position: relative; }
-  #wand .kop { position: absolute; left: 22px; right: 26px; top: 22px; display: flex; justify-content: space-between; align-items: end; gap: 16px; }
-  .terugnaar { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
-  .terugnaar:hover { color: var(--tekst); }
-  .acties { display: flex; gap: 10px; align-items: center; }
-  .acties .knop { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; text-decoration: none; }
-  .status { font-size: 12.5px; color: var(--gedempt); max-width: 34ch; text-align: right; }
+  /*
+   * Kamers en indeling als groep (besluit 193, schets Wand-Indeling-Groep), net
+   * als Energie: links de delen (de etages, Buiten, wat nog geen plek heeft en
+   * wat verborgen is), rechts het gekozen deel. Een etage is de tekening zonder
+   * dak met het blad ernaast, en eronder de strook met wat nog in te delen is.
+   */
+  .groep .groepkop .status { margin-left: auto; }
+  .status { font-size: 13.5px; font-weight: 600; color: var(--gedempt); max-width: 46ch; text-align: right; }
   .status.fout { color: var(--gloed-zacht); }
-  #wand .etages { position: absolute; left: 22px; top: 120px; width: 190px; display: flex; flex-direction: column; gap: 8px; }
-  .etage { padding: 12px 14px; border-radius: 16px; border: 1px solid var(--glas-rand); background: var(--glas); display: flex; flex-direction: column; gap: 2px; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-  .etage b { font-size: 15px; }
-  .etage span { font-size: 12.5px; color: var(--gedempt); }
-  .etage[aria-pressed='true'] { border-color: rgba(111, 211, 255, 0.55); background: rgba(111, 211, 255, 0.1); }
-  .etage.nieuw { border-style: dashed; background: transparent; color: var(--ijs-t); font-weight: 700; font-size: 14px; align-items: center; }
-  #wand .etages { max-height: 520px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
-  .etage.doel { border-color: var(--mint); box-shadow: 0 0 0 1px var(--mint); }
-  .etage:focus-visible, .chip:focus-visible, .app:focus-visible, .kamerrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-  #wand .podium { position: absolute; left: 226px; top: 92px; width: 580px; height: 560px; }
-  #wand .blad { position: absolute; right: 26px; top: 96px; bottom: 118px; width: 330px; padding: 18px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  .vormkop { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .vormkop h2 { margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vormkop .mini { margin: 0; white-space: nowrap; }
+  .vormkop [data-ongedaan] { margin-left: auto; flex: none; white-space: nowrap; }
+  #wand .vormvak .vorm { padding: 18px 24px 0; gap: 12px; }
+  #wand .binnen { flex: 1 1 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; min-height: 0; }
+  #wand .links { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  #wand .podium { flex: 1 1 0; position: relative; min-height: 0; overflow: hidden; margin: -6px 0 0 -14px; }
+  #wand .blad { padding: 14px 16px; border-radius: 18px; background: rgb(var(--wit) / 0.045); border: 1px solid rgb(var(--wit) / 0.07); overflow: auto; overscroll-behavior: contain; touch-action: pan-y; min-height: 0; }
+  #wand .bak { flex: none; min-height: 64px; }
+  #wand [data-lijst] { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  /* Nog in te delen en Verborgen: een lijst in plaats van de tekening; een nieuwe etage: alleen het blad. */
+  .binnen.lijstdeel .podium, .binnen.lijstdeel .bak, .binnen.alleenblad .podium, .binnen.alleenblad .bak { display: none; }
+  .binnen:not(.lijstdeel) [data-lijst] { display: none; }
+  #wand .binnen.alleenblad { grid-template-columns: minmax(0, 540px); }
+  #wand .binnen.alleenblad .links { display: none; }
+  .bak.leeg { display: none; }
+  .applijst { display: flex; flex-direction: column; gap: 6px; }
+  .applijst .app { padding: 10px 12px; border: 1px solid transparent; border-radius: 14px; background: rgb(var(--wit) / 0.045); }
+  .applijst .app[aria-pressed='true'] { background: rgb(var(--wit) / 0.1); border-color: rgb(var(--wit) / 0.2); }
+  .applijst .pijl { color: var(--gedempt); font-size: 20px; }
+  .lijstkop { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .lijstkop .chip { align-self: start; }
+  /* Rond het huis (besluit 158, 193): hetzelfde lijstje als Inrichten › Buiten. */
+  .rondrij { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 7px 0; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .rondrij:first-child { border-top: 0; }
+  .rondrij.in { padding-left: 20px; }
+  .rondrij > i { display: grid; color: var(--zacht); }
+  .rondrij > i svg { width: 20px; height: 20px; }
+  .rondrij b { display: block; font-size: 14px; }
+  .rondrij .zin { display: block; font-size: 12px; color: var(--gedempt); }
+  .rondrij .onder { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .rondrij .onder .veld { height: 36px; font-size: 13px; }
+  .schakel[disabled] { opacity: 0.35; cursor: default; }
+  .deel.doel { box-shadow: inset 0 0 0 2px var(--mint); }
   .blad { display: flex; flex-direction: column; gap: 14px; }
   .blad > * { flex-shrink: 0; }
   .bladkop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
@@ -46,6 +70,7 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgb(var(--wit) / 0.07); display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--tekst); border: 0; cursor: pointer; user-select: none; }
   .chip.plus { background: transparent; border: 1px dashed rgba(111, 211, 255, 0.6); color: var(--ijs-t); }
+  .chip:focus-visible, .app:focus-visible, .kamerrij:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   /*
    * Slepen en vegen samen (16 oktober 2026): op een apparaat schuift verticaal
    * vegen de lijst, en zijwaarts trekken pakt het op. In de balk onderaan, die
@@ -68,7 +93,6 @@
   .rijknoppen { display: flex; gap: 8px; flex-wrap: wrap; }
   .gevaar { color: var(--gloed-zacht); border-color: rgba(255, 122, 77, 0.35); }
   .terug { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--zacht); background: none; border: 0; padding: 0; cursor: pointer; font-family: inherit; align-self: start; }
-  #wand .bak { position: absolute; left: 22px; right: 26px; bottom: 20px; height: 82px; }
   .bak { border-radius: 22px; border: 1px dashed rgba(247, 181, 72, 0.5); background: rgba(247, 181, 72, 0.05); display: flex; align-items: center; gap: 16px; padding: 0 20px; }
   .bak .uitleg { flex: 0 0 300px; }
   .bak .chips { flex: 1; flex-wrap: nowrap; overflow-x: auto; padding: 4px 0; }
@@ -152,12 +176,20 @@
   .zonerij .klein-knop { width: 40px; min-width: 40px; height: 40px; padding: 0; justify-content: center; }
   .zonerij .klein-knop[disabled] { opacity: 0.35; }
 
-  /* De telefoon. */
+  #wand .bak { padding: 0 16px; gap: 14px; }
+  #wand .bak .uitleg { flex: 0 1 250px; }
+
+  /* De telefoon: een deel als eigen scherm, de tekening boven het blad. */
   #tel .inhoud { padding: 18px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
-  #tel .etages { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-  #tel .etage { flex: none; padding: 8px 12px; }
-  #tel .podium { width: 100%; height: 260px; }
-  #tel .blad { padding: 16px; }
+  #tel .groepkop .status { text-align: left; }
+  #tel .vorm { padding: 16px; gap: 12px; }
+  #tel .vormkop h2 { font-size: 26px; flex: 1; }
+  /* Wat het deel bevat, staat al in de lijst; op de telefoon is er alleen plek voor de naam en Ongedaan maken. */
+  #tel .vormkop .mini { display: none; }
+  #tel .binnen, #tel .links { display: flex; flex-direction: column; gap: 12px; }
+  #tel .podium { height: 260px; margin: 0 -10px; }
+  #tel .blad { padding-top: 14px; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  #tel .binnen.alleenblad .blad { padding-top: 0; border-top: 0; }
   #tel .bak { flex-direction: column; align-items: stretch; padding: 14px 16px; gap: 10px; }
   #tel .bak .uitleg { flex: none; }
   #tel .bak .chips { flex-wrap: wrap; }
@@ -166,27 +198,53 @@
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
     <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
-    <main>
-      <div class="kop">
-        <div><a class="terugnaar" href="instellingen.html" data-t="jij.terugInstellingen"></a><h1 class="kop-1" style="font-size: 40px; margin-top: 6px" data-t="indeling.kop"></h1></div>
-        <div class="acties"><span class="status" data-status aria-live="polite" data-t="indeling.nietsInHA"></span><button type="button" class="knop" data-ongedaan disabled data-t="indeling.ongedaan"></button><a class="knop knop-licht" href="instellingen.html" data-t="algemeen.klaar"></a></div>
+    <main class="groep">
+      <div class="groepkop">
+        <a class="terugje" href="instellingen.html" data-t="jij.terugInstellingen"></a>
+        <h1 class="kop-1" data-t="indeling.kop"></h1>
+        <span class="samen" data-samen></span>
+        <span class="status" data-status aria-live="polite" data-t="indeling.nietsInHA"></span>
       </div>
-      <div class="etages" role="group" data-t-aria-label="indeling.etages" data-etages></div>
-      <div class="podium" id="podium-wand"></div>
-      <aside class="glas blad" data-blad data-t-aria-label="indeling.gekozenBlad"></aside>
-      <div class="bak" data-bak></div>
+      <div class="groepveld">
+        <nav class="glas delen schuift" data-t-aria-label="indeling.delen" data-delen></nav>
+        <div class="glas vormvak" data-waarvoor-vak>
+          <section class="vorm" data-vorm>
+          <div class="vormkop"><h2 class="kop-2" data-deelkop></h2><span class="mini" data-deelzin></span><button type="button" class="knop" data-ongedaan disabled data-t="indeling.ongedaan"></button></div>
+          <div class="binnen" data-binnen>
+            <div class="links">
+              <div class="podium" id="podium-wand"></div>
+              <div data-lijst></div>
+              <div class="bak" data-bak></div>
+            </div>
+            <aside class="blad" data-blad data-t-aria-label="indeling.gekozenBlad"></aside>
+          </div>
+          </section>
+          <div class="voet"><button type="button" class="waarvoor" data-waarvoor aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.8"/><path d="M12 17h.01"/></svg><span data-t="groep.waarvoor"></span></button><div class="verder" data-verder></div></div>
+          <aside class="naast" data-naast></aside>
+        </div>
+      </div>
     </main>
   </div>
 
   <div id="tel" class="tel">
     <div class="inhoud">
-      <a class="klein" href="instellingen.html" style="font-weight: 600" data-t="jij.terugInstellingen"></a>
-      <h1 class="kop-1" style="font-size: 34px" data-t="indeling.kop"></h1>
-      <div class="acties" style="justify-content: space-between"><span class="status" data-status aria-live="polite" style="text-align: left" data-t="indeling.nietsInHA"></span><button type="button" class="knop" data-ongedaan disabled data-t="indeling.ongedaan"></button></div>
-      <div class="etages" role="group" data-t-aria-label="indeling.etages" data-etages></div>
-      <div class="podium" id="podium-tel"></div>
-      <section class="glas blad" data-blad data-t-aria-label="indeling.gekozenBlad"></section>
-      <section class="bak" data-bak></section>
+      <a class="terugje" href="instellingen.html" data-terug data-t="jij.terugInstellingen"></a>
+      <div class="groepkop"><h1 class="kop-1" style="font-size: 34px" data-t="indeling.kop"></h1><span class="status" data-status aria-live="polite" data-t="indeling.nietsInHA"></span></div>
+      <span class="samen" data-samen></span>
+      <nav class="glas delen" data-t-aria-label="indeling.delen" data-delen></nav>
+      <section class="glas vorm" data-vorm>
+          <div class="vormkop"><h2 class="kop-2" data-deelkop></h2><span class="mini" data-deelzin></span><button type="button" class="knop" data-ongedaan disabled data-t="indeling.ongedaan"></button></div>
+          <div class="binnen" data-binnen>
+            <div class="links">
+              <div class="podium" id="podium-tel"></div>
+              <div data-lijst></div>
+              <div class="bak" data-bak></div>
+            </div>
+            <aside class="blad" data-blad data-t-aria-label="indeling.gekozenBlad"></aside>
+          </div>
+      </section>
+      <div class="naast" data-naast></div>
+      <div class="verder" data-verder></div>
     </div>
     <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
   </div>
@@ -196,6 +254,7 @@
   <script src="kit/nav.js"></script>
   <script src="kit/huis.js"></script>
   <script src="basis.js"></script>
+  <script src="groep.js"></script>
   <script src="huismodel.js"></script>
   <script src="indeling.js"></script>
 </body>

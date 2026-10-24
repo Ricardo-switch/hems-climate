@@ -51,10 +51,17 @@
     bank: ['var(--mint)', '<path d="M4 12V9a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M3 12h18v5H3zM5 17v2M19 17v2"/>'],
     dak: ['var(--mint)', '<path d="M3 13l9-8 9 8"/><path d="M6 11v9h12v-9"/><path d="M10 15h4"/>'],
     kamer: ['var(--mint)', '<path d="M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18"/><path d="M15 12h.01"/>'],
+    // Kamers en indeling (besluit 193): de etages, buiten, en wat nog geen plek heeft of verborgen is.
+    trap: ['var(--mint)', '<path d="M3 20h5v-4h4v-4h4V8h5"/>'],
+    deur: ['var(--mint)', '<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path d="M14.5 12h.01"/>'],
+    kelder: ['var(--mint)', '<path d="M3 4h5v4h4v4h4v4h5"/><path d="M3 20h18"/>'],
+    buiten: ['var(--mint)', '<path d="M12 21v-8M8 13c0-4 4-8 4-8s4 4 4 8a4 4 0 0 1-8 0z"/>'],
+    los: ['var(--zon)', '<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5 13l2-8h10l2 8v6H5z"/>'],
+    verborgen: ['var(--zacht)', '<path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-2.6 3.2M6.4 7.6C4.3 9.2 3 12 3 12s4 6 9 6a8 8 0 0 0 3.6-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'],
   };
   function icoonVan(d) {
     const naam = (d.titel ?? '').toLowerCase();
-    const sleutel = ICOON[d.id] ? d.id : /slaap|logeer/.test(naam) ? 'bed' : /woon|zit/.test(naam) ? 'bank' : /zolder|boven/.test(naam) ? 'dak' : 'kamer';
+    const sleutel = ICOON[d.icoon] ? d.icoon : ICOON[d.id] ? d.id : /slaap|logeer/.test(naam) ? 'bed' : /woon|zit/.test(naam) ? 'bank' : /zolder|boven/.test(naam) ? 'dak' : 'kamer';
     const [kleur, pad] = ICOON[sleutel];
     return `<span class="ik" style="color: ${global.app.tekstKleur(d.stand === 'mist' ? 'var(--gloed)' : kleur)}">${S(pad)}</span>`;
   }
@@ -85,15 +92,17 @@
 
   /** Het deel uit het adres, of het bovenste. */
   function actief(delen) {
-    return gekozen(delen) ?? volgorde(delen).find((d) => !d.kop)?.id ?? null;
+    return gekozen(delen) ?? volgorde(delen).find((d) => !d.kop && !d.erbij)?.id ?? null;
   }
 
   let vorigNu;
   let vanLijst = false;
 
   /**
-   * De delen: [{ id, titel, zin, stand: 'goed' | 'mist' | 'leeg' }], met
-   * tussenkoppen als { kop: 'Kamers' }.
+   * De delen: [{ id, titel, zin, stand: 'goed' | 'mist' | 'leeg', icoon }], met
+   * tussenkoppen als { kop: 'Kamers' }. Een deel met `erbij` is een stippelregel
+   * om iets toe te voegen, zoals "+ Etage erbij" (besluit 193): het telt niet mee
+   * bij wat er mist of klaar is, en niet bij Vorige en Volgende.
    */
   function tekenDelen(delen) {
     const rij = volgorde(delen);
@@ -104,12 +113,14 @@
     const html = rij
       .map((d) => (d.kop
         ? `<h4>${esc(d.kop)}</h4>`
-        : `<a class="deel${d.id === nu ? ' nu' : ''}${d.stand === 'mist' ? ' mist' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}>${icoonVan(d)}<b>${esc(d.titel)}</b><span class="zin">${esc(d.zin ?? '')}</span><span class="eind">${stip(d)}<span class="pijl" aria-hidden="true">›</span></span></a>`))
+        : d.erbij
+          ? `<a class="deel erbij${d.id === nu ? ' nu' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}>${esc(d.titel)}</a>`
+          : `<a class="deel${d.id === nu ? ' nu' : ''}${d.stand === 'mist' ? ' mist' : ''}" href="#${encodeURIComponent(d.id)}" ${d.id === nu ? 'aria-current="page"' : ''}>${icoonVan(d)}<b>${esc(d.titel)}</b><span class="zin">${esc(d.zin ?? '')}</span><span class="eind">${stip(d)}<span class="pijl" aria-hidden="true">›</span></span></a>`))
       .join('');
     $$('[data-delen]').forEach((el) => (el.innerHTML = html));
 
     // Bovenaan in één oogopslag hoe de groep ervoor staat.
-    const echt = rij.filter((d) => !d.kop);
+    const echt = rij.filter((d) => !d.kop && !d.erbij);
     const mist = echt.filter((d) => d.stand === 'mist').length;
     const klaar = echt.filter((d) => d.stand === 'goed').length;
     const samen = echt.every((d) => d.stand == null) ? '' : `${mist ? `<span class="mis">${esc(t('instellingen.mist', { n: mist }))}</span>` : ''}${klaar ? `<span class="goed">${esc(t('groep.klaar', { n: klaar }))}</span>` : ''}`;
@@ -120,7 +131,7 @@
     const stap = (d, soort) => (d
       ? `<a class="${soort}" href="#${encodeURIComponent(d.id)}" data-stap><small>${esc(t(`groep.${soort}`))}</small><b>${esc(d.titel)}${stip(d)}</b></a>`
       : `<span class="${soort}"></span>`);
-    const verder = echt.length > 1 ? `<span class="waar">${esc(t('instellingen.vanTotaal', { a: i + 1, b: echt.length }))}</span>${stap(echt[i - 1], 'vorige')}${stap(echt[i + 1], 'volgende')}` : '';
+    const verder = echt.length > 1 && i >= 0 ? `<span class="waar">${esc(t('instellingen.vanTotaal', { a: i + 1, b: echt.length }))}</span>${stap(echt[i - 1], 'vorige')}${stap(echt[i + 1], 'volgende')}` : '';
     $$('[data-verder]').forEach((el) => (el.innerHTML = verder));
 
     // De telefoon: eerst de lijst, een deel als eigen scherm met terug naar de groep.

@@ -226,7 +226,8 @@ function tekenPodium(etage, kamer) {
   const toon = huismodel.isBuiten(etage, kamer) ? laagste : etage;
   const binnen = toon.ruimtes.filter((r) => !huismodel.isBuiten(toon, r));
   const buitenRuimtes = huismodel.isBuiten(etage, kamer) ? alle.flatMap((e) => (e.ruimtes ?? []).filter((r) => huismodel.isBuiten(e, r))) : [];
-  const buitenDelen = huismodel.buiten(buitenRuimtes);
+  // Met wat er rond het huis is (besluit 193): zoals Thuis, anders ontbraken de garage en de carport uit Inrichten.
+  const buitenDelen = huismodel.isBuiten(etage, kamer) ? huismodel.buiten(buitenRuimtes, huisData.rond ?? null) : {};
   for (const b of Object.values(buitenDelen)) if (b) b.gekozen = b.id === kamer.id;
   const maand = new Date().getMonth() + 1;
   const zonKw = state?.bewoner?.stromen?.zonKw ?? 0;
