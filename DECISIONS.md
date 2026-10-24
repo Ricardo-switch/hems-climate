@@ -190,6 +190,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [185. Meertalig: het fundament, met Thuis als proef](#185-meertalig-het-fundament-met-thuis-als-proef)
 - [187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak](#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak)
 - [188. In de schaduw zegt de app wat er echt gebeurt, als het klopt](#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt)
+- [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
 
 **Veiligheid**
 
@@ -8643,6 +8644,39 @@ verwarmde. Dat klopt niet met wat de bewoner in huis ziet.
 *Wat afviel:* "zou" houden tot het huis zelf regelt (dat zegt iets wat niet
 klopt met wat je ziet); de pijlen tussen zon, huis en net (een pijl naar links
 zei niets).
+
+---
+
+## 189. De kaarten op de wand als tegel, en een kaart Boiler
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. In versie 0.61.0 kwam smal of breed (besluit 187), maar een
+smalle kaart was de oude kaart in een smaller vak: de grafiek van Vandaag liep
+eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
+
+*Besluit:*
+
+- **Een smalle kaart op de wand is een tegel,** zoals in de schets: een kleine
+  kop met het icoon, een groot getal, een zin, en rechtsboven een beeldje. De
+  auto met een ring, de batterij met een staaf, deze maand met balkjes van de
+  laatste dagen, de boiler met een tank, morgen met het weer, Vandaag met een
+  kleine lijn van de zon, en de deurbel met het beeld als achtergrond.
+- **Breed, en op de telefoon,** blijft de kaart zoals hij was: daar is ruimte
+  voor meer (`.kvol` naast `.ktegel`).
+- **Favorieten, Hoe voelt het en het apparaat** blijven kaarten om op te tikken;
+  smal passen ze zich aan (de uitleg van Hoe voelt het valt dan weg).
+- **Alles blijft binnen zijn kaart:** een smalle kaart snijdt af wat niet past,
+  en elke rij in de kolom is zo hoog als zijn inhoud, zodat een volle kolom een
+  kaart niet platdrukt; de kolom schuift zelf (besluit 167).
+- **Een kaart Boiler** (`boiler` bij de kaarten): de boiler, of anders de
+  jacuzzi (besluit 186), met hoe warm hij is en of hij op zon opwarmt; om te
+  kiezen, alleen als het huis er een heeft.
+- **Versie 0.62.0.**
+
+*Wat afviel:* de tegel ook op de telefoon (daar staan de kaarten onder elkaar,
+op de hele breedte); een tegel voor Favorieten en Hoe voelt het (dan moet je
+eerst tikken om iets te doen).
 
 ---
 

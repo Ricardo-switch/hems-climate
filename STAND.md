@@ -175,7 +175,8 @@ verwijzing bestaat.
   carport of het tuinhuis; de kaarten op de wand smal of breed; op de telefoon
   één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
   de meldingen ([187]). In de schaduw zegt een kamer "Verwarmt" als het echte
-  apparaat al doet wat het besluit wil ([188]).
+  apparaat al doet wat het besluit wil ([188]). Een smalle kaart op de wand is
+  een tegel zoals in de schets, en er is een kaart Boiler ([189]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -623,4 +624,5 @@ verwijzing bestaat.
 [186]: DECISIONS.md#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon
 [187]: DECISIONS.md#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak
 [188]: DECISIONS.md#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt
+[189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
 <!-- links:einde -->

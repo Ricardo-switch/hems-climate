@@ -1,5 +1,35 @@
 # Wat is er nieuw · What is new
 
+## 0.62.0
+
+*24 oktober 2026*
+
+**Nieuw**
+
+- Een kaart Boiler: hoe warm de boiler of jacuzzi is, en of hij op zon opwarmt
+
+**Beter**
+
+- Een smalle kaart op de wand is een tegel met een groot getal en een beeldje: een ring voor de auto, een staaf voor de batterij, balkjes voor de maand
+
+**Opgelost**
+
+- In een smalle kaart blijft alles binnen de kaart, ook de grafiek van Vandaag
+
+*English*
+
+**New**
+
+- A water heater card: how warm the water heater or hot tub is, and whether it heats on sun
+
+**Improved**
+
+- A narrow card on the wall is a tile with a large number and a small picture: a ring for the car, a bar for the battery, bars for the month
+
+**Fixed**
+
+- In a narrow card everything stays inside the card, including the chart of Today
+
 ## 0.61.1
 
 *24 oktober 2026*

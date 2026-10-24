@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.61.1';
+export const VERSIE = '0.62.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,30 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.62.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Een kaart Boiler: hoe warm de boiler of jacuzzi is, en of hij op zon opwarmt',
+    ],
+    beter: [
+      'Een smalle kaart op de wand is een tegel met een groot getal en een beeldje: een ring voor de auto, een staaf voor de batterij, balkjes voor de maand',
+    ],
+    opgelost: [
+      'In een smalle kaart blijft alles binnen de kaart, ook de grafiek van Vandaag',
+    ],
+    en: {
+      nieuw: [
+        'A water heater card: how warm the water heater or hot tub is, and whether it heats on sun',
+      ],
+      beter: [
+        'A narrow card on the wall is a tile with a large number and a small picture: a ring for the car, a bar for the battery, bars for the month',
+      ],
+      opgelost: [
+        'In a narrow card everything stays inside the card, including the chart of Today',
+      ],
+    },
+  },
   {
     versie: '0.61.1',
     datum: '2026-10-24',

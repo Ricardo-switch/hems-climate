@@ -2477,7 +2477,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Deze maand: met meters wat er opgewekt en zelf gebruikt is (na de test van Opbrengst), zonder wat er nodig is.
       await expect.poll(() => kaart('maand').textContent()).toMatch(/kWh opgewekt.*zelf gebruikt|Kies eerst je meters/);
       // De deurbel: het laatste beeld, en wanneer er werd aangebeld.
-      await expect.poll(() => kaart('deurbel').locator('img').count()).toBe(1);
+      await expect.poll(() => kaart('deurbel').locator('.kvol img').count()).toBe(1);
       expect(await kaart('deurbel').textContent()).toContain('Aangebeld om');
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten.png'), fullPage: true });
       // In het licht: de tekst in de tint van het lichte thema (besluit 181).
@@ -2488,7 +2488,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten-licht.png'), fullPage: true });
       await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', thema: 'donker' }) });
       await p.reload();
-      await expect.poll(() => kaart('deurbel').locator('img').count()).toBe(1);
+      await expect.poll(() => kaart('deurbel').locator('.kvol img').count()).toBe(1);
       // Een tik op de deurbel: het live beeld groot.
       await kaart('deurbel').click();
       await p.locator('.aanbel', { hasText: 'De deurbel' }).waitFor();
@@ -3475,7 +3475,11 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
       await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-zones.png') });
     }
     // En alles weer terug.
-    for (let n = 0; n < 5; n++) await p.locator('#wand [data-ongedaan]').click(kort);
+    // Elke stap even laten bewaren: vijf klikken vlak achter elkaar lieten er soms één vallen (CI, 24 oktober 2026).
+    for (let n = 0; n < 5; n++) {
+      await p.locator('#wand [data-ongedaan]').click(kort);
+      await p.waitForTimeout(250);
+    }
     await expect.poll(() => zonesVan().length, kort).toBe(voorZones);
     await expect.poll(plek, kort).toBe(plekVoor);
 

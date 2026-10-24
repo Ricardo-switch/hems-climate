@@ -31,7 +31,8 @@
    * Twee kolommen kaarten (besluit 187, schets Wand-Thuis-3): een kaart is smal
    * (een kolom) of breed (de hele breedte). Straks en het vrije vak altijd breed.
    */
-  #wand .rechts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-content: start; }
+  /* Elke rij zo hoog als zijn inhoud: anders drukte een volle kolom een smalle kaart plat; de kolom schuift zelf. */
+  #wand .rechts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: max-content; gap: 12px; align-content: start; }
   #wand .rechts > * { grid-column: 1 / -1; min-width: 0; }
   #wand .rechts > [data-kaart].smal { grid-column: auto; }
   #wand .rechts > .smal.kaart { padding: 14px 14px; }
@@ -317,10 +318,45 @@
   .deurbelbeeld img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .deurbelbeeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
   .morgen { display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; align-items: center; cursor: pointer; }
+  .morgenkaart { cursor: pointer; }
   .morgen svg { grid-row: 1 / 3; width: 44px; height: 44px; }
   .morgen b { font-size: 15.5px; }
   .morgen .graden { grid-row: 1 / 3; grid-column: 3; font-family: var(--kop); font-weight: 600; font-size: 26px; }
   .morgen .graden small { font-size: 15px; color: var(--gedempt); font-family: var(--romp); }
+  .boilerkaart { color: inherit; text-decoration: none; }
+  .boilerkaart .lading { grid-template-columns: auto 1fr; }
+
+  /*
+   * De kaarten als tegel (besluit 189, schets Wand-Thuis-3): op de wand is een
+   * smalle kaart een tegel met een kleine kop, een groot getal, een zin en
+   * rechtsboven een beeldje (een ring, een staaf, balkjes, een tank). Breed, en
+   * op de telefoon, blijft de kaart zoals hij was.
+   */
+  .ktegel { display: none; }
+  #wand .rechts > .smal .kvol { display: none; }
+  #wand .rechts > .smal:has(> .ktegel) { padding: 11px 12px; min-height: 108px; }
+  #wand .rechts > .smal .ktegel { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; height: 100%; min-height: 86px; }
+  .ktegel .tnaam { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--zacht); padding-right: 52px; min-width: 0; }
+  .ktegel .tnaam svg { width: 14px; height: 14px; flex: none; }
+  .ktegel .tnaam span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ktegel .twaarde { font-family: var(--kop); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; margin-top: 10px; white-space: nowrap; }
+  .ktegel .twaarde small { font: 600 13px var(--romp); color: var(--zacht); letter-spacing: 0; }
+  .ktegel .tzin { font-size: 11.5px; font-weight: 600; line-height: 1.25; color: var(--zacht); }
+  .ktegel .beeld { position: absolute; right: 0; top: 18px; }
+  .ktegel span.beeld svg { width: 38px; height: 38px; display: block; }
+  .ktegel .grafiek { position: absolute; left: 0; right: 0; top: 24px; height: 40px; width: 100%; }
+  .ktegel.metgrafiek .twaarde { margin-top: 48px; font-size: 20px; }
+  /* De deurbel: het beeld vult de tegel, de tijd eronder. */
+  #wand .rechts > .smal.deurbelkaart { padding: 0; overflow: hidden; }
+  #wand .rechts > .smal .ktegel.foto { min-height: 108px; padding: 11px 12px; }
+  .ktegel.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .ktegel.foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(9, 15, 28, 0.55), rgba(9, 15, 28, 0) 40%, rgba(9, 15, 28, 0.75)); }
+  .ktegel.foto > * { position: relative; z-index: 1; }
+  .ktegel.foto .tnaam, .ktegel.foto .tzin { color: #eef3f7; }
+  /* Wat in een smalle kaart niet past, blijft erbinnen. */
+  #wand .rechts > .smal { overflow: hidden; }
+  #wand .rechts > .smal [data-dag] svg { width: 100%; height: auto; }
+  #wand .rechts > .smal [data-gevoel-uitleg] { display: none; }
 
   /* De bewerkstand: een greep en een oog op elke kaart; de rest staat even stil. */
   [data-kaart] { position: relative; }
@@ -481,9 +517,12 @@
           <div data-favorieten></div>
         </section>
         <a class="glas kaart kaartlink" href="vandaag.html" data-t-aria-label="thuis.kaart.vandaagLink" data-kaart="vandaag" data-t-data-naam="thuis.kaart.vandaag">
-          <div class="kaart-kop"><h2 class="kop-3"><span data-t="thuis.kaart.vandaag"></span></h2><span class="mini" data-opgewekt></span></div>
-          <div data-dag></div>
-          <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+          <div class="kvol">
+            <div class="kaart-kop"><h2 class="kop-3"><span data-t="thuis.kaart.vandaag"></span></h2><span class="mini" data-opgewekt></span></div>
+            <div data-dag></div>
+            <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+          </div>
+          <div class="ktegel" data-vandaag-tegel></div>
         </a>
         <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart data-kaart="apparaat" data-t-data-naam="thuis.kaart.apparaat" data-t-data-leeg="thuis.leeg.apparaat" hidden><span class="apparaatinhoud" data-apparaat-inhoud></span></a>
         <section class="glas kaart" data-gevoel-kaart data-kaart="gevoel" data-t-data-naam="thuis.gevoel.kop">
@@ -491,11 +530,12 @@
           <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg><span data-t="thuis.gevoel.uitleg"></span></p>
           <div class="gevoelblok" data-gevoel></div>
         </section>
-        <section class="glas kaart morgen" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
+        <section class="glas kaart morgenkaart" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
         <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
         <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
         <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
         <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+        <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
         <button type="button" class="vrijvak" data-vrijvak hidden><span data-t="thuis.kaartKiezen"></span></button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" data-t-aria-label="thuis.weer.kop" hidden data-weer></section>
@@ -548,11 +588,12 @@
         <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
         <p class="dag-eenvoudig" data-dag-eenvoudig></p>
       </a>
-      <section class="glas kaart morgen" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
+      <section class="glas kaart morgenkaart" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
       <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
       <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
       <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
       <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+        <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
       <div class="aanpasrij">
         <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span data-t="thuis.aanpassen"></span></button>
         <button type="button" class="aanpasknop" data-weergave hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-t="thuis.weergave"></span></button>
