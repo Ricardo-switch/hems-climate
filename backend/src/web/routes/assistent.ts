@@ -188,9 +188,12 @@ export async function assistentRoutes(d: Diensten, v: Verzoek): Promise<boolean>
     }
     // Wat de apparaten met een meter deze maand kostten (besluit 142), uit Opbrengst.
     const kosten = kind === 'kosten' ? await kostenDezeMaand(d, config, parsed.lang).catch(() => null) : null;
+    // Het sluipverbruik (besluit 192): wat de dienst al weet, zonder te wachten.
+    const sluip = kind === 'sluip' ? await (d.options.sluipverbruik?.rapport() ?? Promise.resolve(null)).catch(() => null) : null;
     const antwoord = ask(parsed.question, {
       weer,
       kosten,
+      sluip,
       zoninval,
       config,
       snapshot: d.options.latest(),

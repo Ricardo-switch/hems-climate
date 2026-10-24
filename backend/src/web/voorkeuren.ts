@@ -41,11 +41,11 @@ export const VOORKEUREN_FILE = 'voorkeuren.json';
 /** De kaarten van Thuis, onder het huis (telefoon) of rechts ervan (wand). */
 /** De auto, de batterij, deze maand en de deurbel kwamen erbij in besluit 182: om te kiezen, niet standaard. */
 /** De boiler (de boiler of de jacuzzi) kwam erbij in besluit 189. */
-export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler'] as const;
+export const KAARTEN = ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'] as const;
 export type KaartId = (typeof KAARTEN)[number];
 
 /** De kaarten die op de wand kunnen. De kamers staan daar in het huis, Straks komt vanzelf. */
-export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler'];
+export const WAND_KAARTEN: readonly KaartId[] = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'];
 /** Twaalf favorieten, vier per pagina (21 oktober 2026; eerst vier, besluit 162). */
 export const MAX_FAVORIETEN = 12;
 
@@ -357,7 +357,7 @@ export function leesMeldingen(x: unknown, nu: MeldingKeus): { ok: true; meldinge
   if (!isObject(x)) return { ok: false, reden: 'meldingen is een object' };
   const uit: Record<string, unknown> = { ...nu };
   for (const [k, w] of Object.entries(x)) {
-    if (k === 'rook' || k === 'regeling' || k === 'onderhoud' || k === 'versie') {
+    if (k === 'rook' || k === 'regeling' || k === 'onderhoud' || k === 'versie' || k === 'sluip') {
       if (typeof w !== 'boolean') return { ok: false, reden: `${k} is aan of uit` };
     } else if (k === 'van' || k === 'tot') {
       if (typeof w !== 'string' || !TIJD.test(w)) return { ok: false, reden: `${k} is een tijd als 23:00` };

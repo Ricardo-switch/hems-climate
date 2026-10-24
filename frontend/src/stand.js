@@ -194,7 +194,7 @@
   }
 
   /** Hoeveel regels "Zo werkt het" en "Wanneer het werkt" elk onderwerp heeft (kan.<id>.zo.<n>). */
-  const REGELS = { ligging: [3, 3], boiler: [3, 2], jacuzzi: [3, 2], temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
+  const REGELS = { ligging: [3, 3], boiler: [3, 2], jacuzzi: [3, 2], temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], sluip: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
   /** De vaste teksten van een onderwerp: de titel, wat het is, hoe en wanneer. */
   function teksten(id) {
     const t = global.taal.t;
@@ -292,6 +292,8 @@
       { ...teksten('batterij'), groep: 'kosten', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
       ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'kosten', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
       { ...teksten('auto'), groep: 'kosten', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
+      // Het sluipverbruik (besluit 192): elke nacht gemeten uit de slimme meter.
+      { ...teksten('sluip'), groep: 'kosten', stand: d.sluip ? 'werkt' : 'uit', nu: d.sluip ? t(d.sluip.hoog ? 'kan.sluip.hoog' : 'kan.sluip.gewoon', { w: Math.round(d.sluip.vannacht.w), boven: Math.round(d.sluip.bovenW) }) : t('kan.sluip.nog'), href: 'sluipverbruik.html' },
       // Gemak
       { ...teksten('licht'), groep: 'gemak', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit', nu: lampenAan ? t('kan.licht.aan', { n: lampenAan }) : t('kan.licht.uit'), href: 'functies.html#licht' },
       ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),

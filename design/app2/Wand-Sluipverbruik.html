@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Sluipverbruik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Sluipverbruik (schets, 24 oktober 2026). Wat het huis 's nachts gebruikt
+   * als er niets draait: het laagste uur tussen 01:00 en 05:00, uit de
+   * slimme meter. Een eigen scherm onder Opbrengst, met vannacht, het
+   * gemiddelde, wat het per jaar kost, elke nacht als staafje en per maand
+   * sinds februari 2025. Opvallende nachten (50 W of meer boven je gewone
+   * nacht) krijgen een kleur, een melding de ochtend erna (besluit 79), en de
+   * app noemt geen apparaat zonder eigen meter (besluit 88).
+   * Gekozen door Ricardo (24 oktober 2026): op Opbrengst, een kaart op Thuis,
+   * een melding de ochtend erna, en bij de assistent en Wat je huis kan; een
+   * vaste marge van 50 W; terug tot februari 2025.
+   * De getallen zijn echt: de nachten van dit huis uit Home Assistant. De
+   * prijs (€ 0,25 per kWh) is een voorbeeld; de app neemt je eigen prijs.
+   * Standen: #nachten (zonder hash), #maanden, #kaarten (de andere plekken).
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: grid; grid-template-columns: 270px minmax(0, 1fr) 316px; grid-template-rows: auto minmax(0, 1fr); gap: 18px; height: 800px; box-sizing: border-box; min-width: 0; }
+  .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; }
+  .terug { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--zacht); margin-bottom: 6px; }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
+  .wissel button { height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14px; }
+  .wissel button[aria-pressed='true'] { background: var(--tekst); color: #0b1424; }
+  .links { display: flex; flex-direction: column; gap: 22px; padding-top: 4px; min-height: 0; }
+  .cijfer .getal { font-size: 40px; line-height: 1.05; }
+  .cijfer .getal small { font-family: var(--romp); font-size: 15px; color: var(--zacht); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+  .cijfer .klein b { color: var(--gloed-t); }
+  .kaart { padding: 18px 20px; }
+  .midden { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .midden .kaart { display: flex; flex-direction: column; min-height: 0; }
+  .grafiek svg { display: block; width: 100%; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--zacht); }
+  .legenda i { display: inline-block; width: 14px; height: 0; border-top: 2px dashed; vertical-align: middle; margin-right: 6px; }
+  .legenda i.blok { height: 10px; border: 0; border-radius: 3px; }
+  .rechts { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .opgevallen { background: linear-gradient(160deg, rgba(255, 122, 77, 0.14), rgba(255, 122, 77, 0.03)); border-color: rgba(255, 122, 77, 0.35); }
+  .opgevallen h3 { margin: 6px 0 4px; font-family: var(--kop); font-size: 20px; line-height: 1.15; }
+  .knoppen { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .knopje { height: 38px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; background: rgb(var(--wit) / 0.09); font-weight: 700; font-size: 13.5px; }
+  .knopje.licht { background: var(--tekst); color: #0b1424; }
+  .regelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .regelrij b { display: block; font-size: 14.5px; }
+  .regelrij span { font-size: 12.5px; color: var(--gedempt); }
+  .schakel { flex: none; width: 42px; height: 26px; border-radius: 13px; background: var(--mint); position: relative; }
+  .schakel::after { content: ''; position: absolute; left: 19px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #0b2a1f; }
+  .uitleg { font-size: 12.5px; line-height: 1.5; color: var(--zacht); margin: 6px 0 0; }
+
+  /* #kaarten: de andere plekken naast elkaar. */
+  .plekken { grid-column: 1 / -1; display: grid; grid-template-columns: 250px 420px minmax(0, 1fr); grid-auto-rows: min-content; gap: 18px; align-content: start; }
+  .label { font-size: 12px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px 2px; }
+  .tegel { padding: 14px 16px; border-radius: 22px; height: 168px; box-sizing: border-box; display: flex; flex-direction: column; }
+  .tegel .kopje { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--zacht); }
+  .tegel .kopje svg { width: 16px; height: 16px; }
+  .tegel .getal { font-size: 34px; margin-top: 6px; }
+  .tegel .getal small { font-family: var(--romp); font-size: 14px; color: var(--zacht); font-weight: 500; margin-left: 3px; }
+  .tegel .zin { font-size: 12.5px; color: var(--zacht); }
+  .tegel .zin b { color: var(--gloed-t); }
+  .balkjes { display: flex; align-items: end; gap: 3px; height: 34px; margin-top: auto; }
+  .balkjes i { flex: 1; border-radius: 2px; background: rgba(111, 211, 255, 0.45); }
+  .balkjes i.hoog { background: var(--gloed); }
+  .melding { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 0 12px; align-items: start; padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); }
+  .melding .ik { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; background: rgba(255, 122, 77, 0.16); color: var(--gloed-t); }
+  .melding .ik svg { width: 18px; height: 18px; }
+  .melding b { display: block; font-size: 14px; }
+  .melding span { font-size: 12.5px; color: var(--zacht); line-height: 1.4; display: block; }
+  .melding small { font-size: 11.5px; color: var(--gedempt); }
+  .push { padding: 12px 14px; border-radius: 18px; background: rgba(235, 240, 248, 0.92); color: #1b2533; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 0 10px; }
+  .push .app { width: 34px; height: 34px; border-radius: 9px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .push b { font-size: 13.5px; display: flex; justify-content: space-between; }
+  .push b small { font-weight: 500; color: #5d6878; }
+  .push span { font-size: 13px; line-height: 1.35; }
+  .vraag { justify-self: end; max-width: 80%; padding: 10px 14px; border-radius: 16px 16px 4px 16px; background: rgba(111, 211, 255, 0.16); font-size: 14px; }
+  .antwoord { max-width: 92%; padding: 12px 14px; border-radius: 16px 16px 16px 4px; background: rgb(var(--wit) / 0.06); font-size: 14px; line-height: 1.45; margin-top: 8px; }
+  .kanrij { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
+  .kanrij i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); }
+  .kanrij b { font-size: 14px; display: block; }
+  .kanrij span { font-size: 12.5px; color: var(--gedempt); }
+  .kanrij em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--mint-t); }
+  .ingang { padding: 14px 16px; }
+  .ingang .boven { display: flex; justify-content: space-between; align-items: baseline; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-avond">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main id="main"></main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'opbrengst');
+  const stand = location.hash.slice(1) || 'nachten';
+
+  // De nachten van dit huis (Home Assistant, laagste uurgemiddelde 01–05 uur).
+  const NACHTEN = [['09-25', 306], ['09-26', 210], ['09-27', 338], ['09-28', 199], ['09-29', 212], ['09-30', 208], ['10-01', 315], ['10-02', 321], ['10-03', 195], ['10-04', 337], ['10-05', 194], ['10-06', 220], ['10-07', 198], ['10-08', 350], ['10-09', 333], ['10-10', 199], ['10-11', 194], ['10-12', 173], ['10-13', 179], ['10-14', 186], ['10-15', 302], ['10-16', 357], ['10-17', 363], ['10-18', 357], ['10-19', 364], ['10-20', 298], ['10-21', 300], ['10-22', 304], ['10-23', 345], ['10-24', 304]];
+  const MAANDEN = [['2025-02', 185], ['2025-03', 175], ['2025-04', 213], ['2025-05', 214], ['2025-06', 215], ['2025-07', 192], ['2025-08', 208], ['2025-09', 215], ['2025-10', 208], ['2025-11', 211], ['2025-12', 239], ['2026-01', 220], ['2026-02', 224], ['2026-03', 189], ['2026-04', 190], ['2026-05', 208], ['2026-06', 258], ['2026-07', 199], ['2026-08', 271], ['2026-09', 314], ['2026-10', 279]];
+  const GEWOON = 185;
+  const GRENS = GEWOON + 50;
+  const MND = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+
+  /** Staafjes met de lijn van je gewone nacht en de grens van de melding. */
+  function staven(rijen, { breedte, hoogte, max = 400, label, hoogKleur = true, lijnen = true }) {
+    const l = 38, r = 8, b = 26, t = 10;
+    const w = (breedte - l - r) / rijen.length;
+    const y = (v) => t + (1 - v / max) * (hoogte - t - b);
+    let s = '';
+    for (const v of [0, 100, 200, 300, 400].filter((x) => x <= max)) s += `<line x1="${l}" x2="${breedte - r}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,0.07)"/><text x="${l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#8291a6">${v}</text>`;
+    rijen.forEach(([k, v], i) => {
+      const hoog = hoogKleur && v >= GRENS;
+      const x = l + i * w + w * 0.16;
+      s += `<rect x="${x.toFixed(1)}" y="${y(v).toFixed(1)}" width="${(w * 0.68).toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="3" fill="${hoog ? '#ff7a4d' : 'rgba(111,211,255,0.55)'}"/>`;
+      const tekst = label(k, i);
+      if (tekst) s += `<text x="${(x + w * 0.34).toFixed(1)}" y="${hoogte - 8}" text-anchor="middle" font-size="11" fill="#8291a6">${tekst}</text>`;
+    });
+    if (lijnen) {
+      s += `<line x1="${l}" x2="${breedte - r}" y1="${y(GEWOON)}" y2="${y(GEWOON)}" stroke="#6ee7b7" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+      s += `<line x1="${l}" x2="${breedte - r}" y1="${y(GRENS)}" y2="${y(GRENS)}" stroke="#ff7a4d" stroke-width="1.2" stroke-dasharray="2 4" opacity="0.8"/>`;
+    }
+    return `<svg viewBox="0 0 ${breedte} ${hoogte}" role="img" aria-label="Sluipverbruik per nacht">${s}</svg>`;
+  }
+  const nachtLabel = (k, i) => (i % 5 === 0 || i === NACHTEN.length - 1 ? `${Number(k.slice(3))} ${MND[Number(k.slice(0, 2)) - 1]}` : '');
+  const maandLabel = (k, i) => (i % 3 === 0 || i === MAANDEN.length - 1 ? `${MND[Number(k.slice(5)) - 1]}${k.slice(5) === '02' ? ` ’${k.slice(2, 4)}` : ''}` : '');
+
+  const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const MAAN = '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>';
+  const STEKKER = '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>';
+
+  const kop = (titel) => `<div class="kop">
+      <div><div class="terug">‹ Opbrengst</div><h1 class="kop-1" style="font-size: 40px">${titel}</h1></div>
+      <div class="wissel" role="group" aria-label="Periode"><button aria-pressed="${stand === 'nachten'}">Nachten</button><button aria-pressed="${stand === 'maanden'}">Maanden</button></div>
+    </div>`;
+
+  const links = `<div class="links">
+      <div class="cijfer"><div class="mini">Vannacht</div><div class="getal">304<small>W</small></div><div class="klein"><b>119 W</b> boven je gewone nacht van 185 W</div></div>
+      <div class="cijfer"><div class="mini">Gemiddeld, laatste 30 nachten</div><div class="getal">272<small>W</small></div><div class="klein">oktober vorig jaar: 208 W</div></div>
+      <div class="cijfer"><div class="mini">Zo een jaar lang</div><div class="getal">2.660<small>kWh</small></div><div class="klein">± € 665 per jaar, bij € 0,25 per kWh</div></div>
+      <div class="glas kaart">
+        <h2 class="kop-3">Weer naar 185 W?</h2>
+        <p class="klein" style="margin: 6px 0 0">Dan scheelt het zo’n <b class="getal" style="font-size: 18px">1.040 kWh</b> en <b class="getal" style="font-size: 18px">€ 260</b> per jaar.</p>
+      </div>
+    </div>`;
+
+  const rechts = `<div class="rechts">
+      <section class="glas kaart opgevallen">
+        <div class="mini" style="color: var(--gloed-t)">Opgevallen</div>
+        <h3>Sinds 15 oktober elke nacht zo’n 120 W meer</h3>
+        <p class="klein" style="margin: 0">Tien nachten op rij boven je gewone nacht. Staat er iets aan dat eerst uit was?</p>
+        <div class="knoppen"><span class="knopje licht">Ik weet wat het is</span><span class="knopje">Weet ik niet</span></div>
+      </section>
+      <section class="glas kaart">
+        <div class="regelrij"><div><b>Een melding de ochtend erna</b><span>bij 50 W of meer boven je gewone nacht</span></div><span class="schakel" aria-hidden="true"></span></div>
+      </section>
+      <section class="glas kaart">
+        <h2 class="kop-3">Zo meet de app het</h2>
+        <p class="uitleg">Het laagste uur tussen 01:00 en 05:00, uit je slimme meter. Je gewone nacht is het gemiddelde van de vijf laagste van de laatste 30 nachten. Zonder eigen meter per apparaat noemt de app geen apparaat.</p>
+      </section>
+    </div>`;
+
+  const main = document.getElementById('main');
+  if (stand === 'nachten' || stand === 'maanden') {
+    const nachten = stand === 'nachten';
+    main.innerHTML = `${kop(nachten ? '’s Nachts gebruikt je huis 304 W' : 'Sinds augustus hoger dan een jaar eerder')}
+      ${links}
+      <div class="midden">
+        <section class="glas kaart" style="flex: 1">
+          <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 class="kop-2">${nachten ? 'Elke nacht' : 'Per maand, sinds februari 2025'}</h2><span class="mini">${nachten ? '25 september – 24 oktober' : 'gemiddeld per nacht'}</span></div>
+          <div class="grafiek" style="margin-top: 12px">${nachten ? staven(NACHTEN, { breedte: 560, hoogte: 470, label: nachtLabel }) : staven(MAANDEN, { breedte: 560, hoogte: 470, label: maandLabel, hoogKleur: true })}</div>
+          <div class="legenda" style="margin-top: 10px">
+            <span><i class="blok" style="background: rgba(111,211,255,0.55)"></i>gewone nacht</span>
+            <span><i class="blok" style="background: #ff7a4d"></i>50 W of meer erboven</span>
+            <span><i style="color: #6ee7b7"></i>je gewone nacht, 185 W</span>
+            <span><i style="color: #ff7a4d"></i>vanaf hier een melding</span>
+          </div>
+        </section>
+        ${nachten ? `<section class="glas kaart" style="padding: 12px 18px"><div style="display: flex; justify-content: space-between; align-items: center"><span class="klein">Je laagste nachten ooit: <b>122 W</b>, juli 2025</span><span class="klein">17 van de 30 nachten opvallend</span></div></section>` : `<section class="glas kaart" style="padding: 12px 18px"><span class="klein">Sinds augustus elke maand 60 à 100 W meer dan een jaar eerder; je laagste maand was maart 2025, met 175 W.</span></section>`}
+      </div>
+      ${rechts}`;
+  } else {
+    // De andere plekken: de ingang op Opbrengst, de tegel op Thuis, de melding, de assistent en Wat je huis kan.
+    const laatste = NACHTEN.slice(-14);
+    const balk = laatste.map(([, v]) => `<i class="${v >= GRENS ? 'hoog' : ''}" style="height: ${Math.round((v / 380) * 100)}%"></i>`).join('');
+    main.innerHTML = `<div class="kop"><div><h1 class="kop-1" style="font-size: 36px">Sluipverbruik op de andere plekken</h1><p class="klein" style="margin: 6px 0 0">Steeds hetzelfde getal en dezelfde kleur: oranje is 50 W of meer boven je gewone nacht.</p></div></div>
+      <div class="plekken">
+        <div>
+          <div class="label">Thuis · smal</div>
+          <section class="glas tegel"><div class="kopje">${S(MAAN)}Sluipverbruik</div><div class="getal">304<small>W</small></div><div class="zin"><b>+119 W</b> boven je gewone nacht</div><div class="balkjes" aria-hidden="true">${balk}</div></section>
+          <div class="label" style="margin-top: 18px">Opbrengst · de ingang</div>
+          <section class="glas kaart ingang"><div class="boven"><h2 class="kop-3">Sluipverbruik</h2><span class="getal" style="font-size: 22px; color: var(--gloed-t)">304 W</span></div><p class="klein" style="margin: 6px 0 0">Vannacht 119 W meer dan gewoon ›</p></section>
+        </div>
+        <div>
+          <div class="label">Thuis · breed</div>
+          <section class="glas tegel" style="height: auto"><div class="kopje">${S(MAAN)}Sluipverbruik<span style="margin-left: auto; font-weight: 600; color: var(--gedempt)">30 nachten</span></div>
+            <div style="display: flex; align-items: baseline; gap: 10px"><div class="getal">304<small>W</small></div><div class="zin"><b>+119 W</b> boven je gewone nacht · gemiddeld 272 W</div></div>
+            <div class="grafiek" style="margin-top: 6px">${staven(NACHTEN, { breedte: 390, hoogte: 120, label: () => '', max: 400 })}</div></section>
+          <div class="label" style="margin-top: 18px">De bel</div>
+          <div class="melding"><span class="ik">${S(MAAN)}</span><div><b>Vannacht 119 W meer dan gewoon</b><span>304 W tegen je gewone 185 W. Staat er iets aan?</span></div><small>07:00</small></div>
+        </div>
+        <div>
+          <div class="label">Op je telefoon, de ochtend erna</div>
+          <div class="push"><span class="app"></span><div><b>Smart Climate <small>07:00</small></b><span>Vannacht 119 W meer dan gewoon: 304 W tegen 185 W. Staat er iets aan?</span></div></div>
+          <div class="label" style="margin-top: 18px">De assistent</div>
+          <div style="display: grid">
+            <div class="vraag">Wat is mijn sluipverbruik?</div>
+            <div class="antwoord">Vannacht 304 W. Gewoon is 185 W, dus 119 W meer, en dat al sinds 15 oktober. Zo een jaar lang kost het zo’n € 260 extra.</div>
+          </div>
+          <div class="label" style="margin-top: 18px">Wat je huis kan · Kosten</div>
+          <div class="kanrij"><i></i><div><b>Sluipverbruik bewaken</b><span>elke nacht gemeten, een melding als het opvalt</span></div><em>werkt</em></div>
+        </div>
+      </div>`;
+  }
+</script>
+</body>
+</html>

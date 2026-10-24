@@ -101,6 +101,7 @@ import { SessionStore } from '../src/web/auth.js';
 import { BewonersStore, GEEN_BEWONERS, alsScherm, bewonersView, comfortVanBewoner, gastStand, herken, leesActie, personenUit, profielenVan, voegToe, voerUit, type Bewoners } from '../src/web/bewoners.js';
 import { registers as houseRegisters, states as houseStates } from './house-fixture.js';
 import { klaarzetten } from '../src/web/klaarzetten.js';
+import { Sluipverbruik } from '../src/web/sluipverbruik.js';
 import { CoverSwitch } from '../src/web/covers.js';
 import type { HouseBattery, HouseReport } from '../src/web/house.js';
 
@@ -356,6 +357,16 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
           deurbel: () => extraDeurbel,
+          // Het sluipverbruik (besluit 192): 45 dagen uurstatistiek, de laatste vijf nachten 120 W hoger.
+          sluipverbruik: new Sluipverbruik({
+            config: () => configNu,
+            prijs: () => 0.25,
+            logDir: dir,
+            vraag: async () => {
+              const nu = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+              return { 'sensor.p1_meter_power': Array.from({ length: 45 * 24 }, (_, k) => ({ start: nu - k * 3_600_000, mean: (k < 5 * 24 ? 300 : 180) + (Math.floor(k / 24) % 4) * 3 })) };
+            },
+          }),
           // De integratie neerzetten (besluit 184): nagebootst, zonder map.
           integratie: {
             stand: async () => integratieNu,
@@ -1660,7 +1671,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-volgende]').click();
     // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
     await kaart.locator('.waar', { hasText: '7. Je schermen' }).waitFor();
-    expect(await kaart.locator('[data-wkaart]').count()).toBe(10);
+    expect(await kaart.locator('[data-wkaart]').count()).toBe(11);
     await kaart.locator('.wandje [data-mini] svg').waitFor();
     await shot('wand');
     await kaart.locator('[data-volgende]').click();
@@ -1737,6 +1748,43 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(fouten).toEqual([]);
     await context.close();
   }, 40_000);
+
+  it('toont het sluipverbruik onder Opbrengst (besluit 192)', async () => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.addInitScript(() => localStorage.setItem('sc-rondleiding-gezien', '1'));
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    // De ingang op Opbrengst, met vannacht erop; de rest van Opbrengst blijft hetzelfde.
+    await p.goto(`${baseUrl}/opbrengst.html`);
+    const ingang = p.locator('#wand .sluipingang');
+    await ingang.waitFor({ timeout: 10_000 });
+    expect(await ingang.textContent()).toMatch(/Sluipverbruik[\s\S]*W/);
+    await ingang.click();
+    await p.waitForURL(/sluipverbruik\.html$/);
+    const wand = p.locator('#wand');
+    await wand.locator('h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
+    // Dertig nachten als staafjes, en de vijf hoge in oranje.
+    expect(await wand.locator('[data-midden] svg rect').count()).toBe(30);
+    expect(await wand.locator('[data-midden] svg rect[fill="#ff7a4d"]').count()).toBe(5);
+    await wand.locator('.opgevallen', { hasText: 'Opgevallen' }).waitFor();
+    // Wat de bewoner zegt (besluit 88): het weet het niet, en de app houdt het in de gaten.
+    await wand.locator('[data-weet-niet]').click();
+    await wand.locator('.opgevallen', { hasText: 'in de gaten' }).waitFor({ timeout: 5000 });
+    // Per maand.
+    await wand.locator('[data-blik="maanden"]').click();
+    await wand.locator('h2', { hasText: 'Per maand' }).waitFor();
+    expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
+    // Op de telefoon: onder elkaar, binnen het scherm.
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.reload();
+    await p.locator('#tel h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
+    expect(await p.evaluate<boolean>('document.documentElement.scrollWidth <= innerWidth + 1')).toBe(true);
+    expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
 
   it('toont zonder verbinding de laatste stand, grijs', async () => {
     const context = await browser.newContext({ viewport: { width: 1340, height: 800 }, timezoneId: 'UTC', locale: 'nl-NL' });

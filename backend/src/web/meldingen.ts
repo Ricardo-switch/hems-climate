@@ -28,7 +28,7 @@ import { metLidwoord } from './kamerwoorden.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook' | 'update';
+export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook' | 'update' | 'sluip';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -86,6 +86,11 @@ export interface MeldingenBron {
   readonly winterdagen: number | null;
   /** Hoe de panelen liggen (besluit 157): gemeten en nog niet bevestigd. Weg zonder panelen. */
   readonly panelen?: { readonly voorstel: boolean } | null;
+  /**
+   * Een nacht met opvallend sluipverbruik (besluit 192), de laatste nacht van
+   * vandaag of gisteren; weg of null als die nacht gewoon was.
+   */
+  readonly sluip?: { readonly dag: string; readonly w: number; readonly gewoonW: number; readonly bovenW: number; readonly nachten: number } | null;
   /**
    * Wiens comfort er geldt (besluit 147), uit het laatste besluit; weg zonder
    * bewoners. Wisselt het, dan staat het één keer bij de bel.
@@ -190,6 +195,14 @@ const WOORDEN = {
       klaar: 'Je panelen staan erin',
       klaarTekst: 'Zon, het weer en de verwachting rekenen ermee.',
     },
+    // Sluipverbruik (besluit 192, besluit 88): het wat en het hoeveel, geen apparaat.
+    sluip: {
+      titel: (boven: number) => `Vannacht ${boven} W meer dan gewoon`,
+      reeks: (n: number) => `Al ${n} nachten meer dan gewoon`,
+      tekst: (w: number, gewoon: number) => `${w} W tegen je gewone ${gewoon} W. Staat er iets aan?`,
+      klaar: 'Sluipverbruik weer gewoon',
+      klaarTekst: 'De nacht lag weer rond je gewone nacht.',
+    },
     versie: { titel: (nummer: string) => `Versie ${nummer}: wat is er nieuw`, tekst: 'Kijk wat er beter is.', actie: 'Lees' },
     mijlpaal: {
       titel: (n: number) => `${n} winterdagen meegekeken`,
@@ -268,6 +281,13 @@ const WOORDEN = {
       tekst: 'A clear day shows how they lie. Check whether the direction, the tilt and the power are right.',
       klaar: 'Your panels are in',
       klaarTekst: 'The sun, the weather and the forecast take them into account.',
+    },
+    sluip: {
+      titel: (boven: number) => `Last night ${boven} W more than usual`,
+      reeks: (n: number) => `${n} nights in a row more than usual`,
+      tekst: (w: number, gewoon: number) => `${w} W against your usual ${gewoon} W. Is something left on?`,
+      klaar: 'Standby use back to normal',
+      klaarTekst: 'The night was back around your usual night.',
     },
     versie: { titel: (nummer: string) => `Version ${nummer}: what is new`, tekst: 'See what is better.', actie: 'Read' },
     mijlpaal: {
@@ -418,6 +438,14 @@ export function wat(bron: MeldingenBron): (Nieuwe & { en: MeldingWoorden })[] {
     uit.push(tweetalig((lang) => {
       const w = WOORDEN[lang];
       return { id: 'panelen:voorstel', soort: 'panelen', aandacht: true, titel: w.panelen.titel, tekst: w.panelen.tekst, actie: { label: w.bekijk, href: 'energie.html#panelen' }, klaar: { titel: w.panelen.klaar, tekst: w.panelen.klaarTekst } };
+    }));
+  }
+  // Sluipverbruik (besluit 192): één melding per reeks hoge nachten, met de laatste nacht erin.
+  const s = bron.sluip;
+  if (s) {
+    uit.push(tweetalig((lang) => {
+      const w = WOORDEN[lang];
+      return { id: 'sluip', soort: 'sluip', aandacht: true, titel: s.nachten > 1 ? w.sluip.reeks(s.nachten) : w.sluip.titel(s.bovenW), tekst: w.sluip.tekst(s.w, s.gewoonW), actie: { label: w.bekijk, href: 'sluipverbruik.html' }, klaar: { titel: w.sluip.klaar, tekst: w.sluip.klaarTekst } };
     }));
   }
   return uit;

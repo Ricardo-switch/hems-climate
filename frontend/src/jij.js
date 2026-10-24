@@ -161,6 +161,7 @@ function tekenMeldingen() {
       <h2>${esc(t('jij.meld.overdag'))}</h2>
       ${keus('onderhoud', t('jij.meld.onderhoud'), t('jij.meld.onderhoudZin', { tot: m.tot }), false)}
       ${keus('versie', t('jij.meld.versie'), t('jij.meld.versieZin'), false)}
+      ${keus('sluip', t('jij.meld.sluip'), t('jij.meld.sluipZin', { tot: m.tot }), false)}
       <p class="uitleg">${esc(t('jij.meld.weerGoed'))}</p>
     </section>
     ${lijst.length

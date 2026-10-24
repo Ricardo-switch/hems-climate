@@ -27,7 +27,7 @@
     maxFavorieten: 12,
   };
   /** De kaarten met een korte uitleg bij Kaart toevoegen; de zinnen in teksten.*.js (eigen.kort.<kaart>, besluit 185). */
-  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler']);
+  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip']);
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICOON = {
     kamers: S('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>'),
@@ -42,6 +42,8 @@
     maand: S('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
     deurbel: S('<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
     boiler: S('<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>'),
+    // Het sluipverbruik (besluit 192): de maan, want het gaat om de nacht.
+    sluip: S('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
     lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
     scene: S('<path d="M5 19l4-11 4 6 3-4 3 9z"/><circle cx="17" cy="6" r="1.6"/>'),
     screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),

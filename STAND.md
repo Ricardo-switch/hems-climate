@@ -180,7 +180,10 @@ verwijzing bestaat.
   heeft acht hoofdstukken en het huis groeit mee op zijn eiland, met wat voor
   huis, afwezig en vakantie, op zon en klaarzetten ([190]). Het eiland is de
   standaard van de tekening, dus het staat op elke pagina, ook bij Kamer,
-  Indeling, de assistent en het always-on display ([191]).
+  Indeling, de assistent en het always-on display ([191]). Het sluipverbruik
+  staat elke nacht in de app: een eigen scherm onder Opbrengst, een kaart op
+  Thuis, een melding de ochtend erna als een nacht 50 W of meer boven je gewone
+  nacht ligt ([192]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -634,5 +637,6 @@ verwijzing bestaat.
 [189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
 [190]: DECISIONS.md#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland
 [191]: DECISIONS.md#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening
+[192]: DECISIONS.md#192-sluipverbruik-elke-nacht-gemeten-een-eigen-scherm-onder-opbrengst-en-een-melding-als-het-opvalt
 [193]: DECISIONS.md#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is
 <!-- links:einde -->

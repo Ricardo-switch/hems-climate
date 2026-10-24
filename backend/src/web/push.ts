@@ -37,14 +37,16 @@ export interface MeldingKeus {
   readonly regeling: boolean;
   readonly onderhoud: boolean;
   readonly versie: boolean;
+  /** Opvallend sluipverbruik, de ochtend erna (besluit 79 en 192). */
+  readonly sluip: boolean;
   /** De nachtrust, als uu:mm: dan alleen wat dringend is. */
   readonly van: string;
   readonly tot: string;
   /** Het apparaat van de telefoon in Home Assistant, of null: die van je persoon. */
   readonly telefoon: string | null;
 }
-export const STANDAARD_MELDINGEN: MeldingKeus = { rook: true, regeling: true, onderhoud: false, versie: false, van: '23:00', tot: '07:00', telefoon: null };
-export type MeldingGroep = 'rook' | 'regeling' | 'onderhoud' | 'versie';
+export const STANDAARD_MELDINGEN: MeldingKeus = { rook: true, regeling: true, onderhoud: false, versie: false, sluip: true, van: '23:00', tot: '07:00', telefoon: null };
+export type MeldingGroep = 'rook' | 'regeling' | 'onderhoud' | 'versie' | 'sluip';
 
 /** Bij welke keus een melding hoort; null: alleen bij de bel. */
 export function groepVan(soort: MeldingSoort): MeldingGroep | null {
@@ -52,6 +54,7 @@ export function groepVan(soort: MeldingSoort): MeldingGroep | null {
   if (soort === 'stil' || soort === 'meter') return 'regeling';
   if (soort === 'batterij' || soort === 'filter') return 'onderhoud';
   if (soort === 'update') return 'versie';
+  if (soort === 'sluip') return 'sluip';
   return null;
 }
 const dringend = (g: MeldingGroep) => g === 'rook' || g === 'regeling';

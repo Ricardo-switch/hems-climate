@@ -253,6 +253,8 @@ export class WebServer {
       (this.#d.options.meldingen != null && path === '/api/meldingen') ||
       // Thuis naar eigen smaak (besluit 162): alleen wat er gekozen is, in het eigen bestand.
       (this.#d.options.voorkeuren != null && path === '/api/voorkeuren') ||
+      // Wat de bewoner over het sluipverbruik zegt (besluit 88, 192): één korte zin, in het eigen bestand.
+      (this.#d.options.sluipverbruik != null && path === '/api/sluipverbruik') ||
       // De integratie neerzetten (besluit 184): alleen custom_components/smart_climate, na een tik van de beheerder.
       (this.#d.options.integratie != null && path === '/api/integratie') ||
       // Een proefmelding naar je eigen telefoon (besluit 183): alleen notify.mobile_app_…

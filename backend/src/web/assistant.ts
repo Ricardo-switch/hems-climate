@@ -16,6 +16,7 @@
  */
 
 import type { Command, Intent, RejectedIntent } from '../core/decision.js';
+import type { SluipRapport } from './sluipverbruik.js';
 import type { Explanation, ReasonCode, BlockCode } from '../core/decision.js';
 import { actuatorsOf, isHandsOff } from '../core/model.js';
 import type { Actuator, Mode, SiteConfig, Zone } from '../core/model.js';
@@ -37,7 +38,7 @@ export interface DecisionView {
 export const LANGS = ['nl', 'en'] as const;
 export type Lang = (typeof LANGS)[number];
 
-export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'weer', 'morgen', 'kosten'] as const;
+export const QUESTION_KINDS = ['nu', 'waarom', 'straks', 'zon', 'doe', 'vandaag', 'warm', 'weer', 'morgen', 'kosten', 'sluip'] as const;
 export type QuestionKind = (typeof QUESTION_KINDS)[number];
 
 export type Wish = 'koelen' | 'verwarmen' | 'drogen' | 'uit';
@@ -57,6 +58,8 @@ export type Question =
   | { readonly kind: 'morgen' }
   /** Wat de apparaten met een meter deze maand kostten (besluit 142). */
   | { readonly kind: 'kosten' }
+  /** Het sluipverbruik: wat het huis 's nachts gebruikt (besluit 192). */
+  | { readonly kind: 'sluip' }
   | {
       readonly kind: 'doe';
       readonly kamer: string;
@@ -130,6 +133,8 @@ export interface AskContext {
     readonly maand: string;
     readonly apparaten: readonly { readonly id: string; readonly naam: string; readonly kwh: number; readonly zonKwh: number; readonly euro: number | null }[];
   } | null;
+  /** Het sluipverbruik (besluit 192), uit de nachten van de slimme meter. */
+  readonly sluip?: SluipRapport | null;
 }
 
 /** "De zon staat nu op de voorgevel." Zonder getallen: de gevels hebben namen. */
@@ -223,6 +228,7 @@ export function parseQuestion(params: URLSearchParams): Parsed {
     case 'weer':
     case 'morgen':
     case 'kosten':
+    case 'sluip':
       return { ok: true, lang, question: { kind: v } };
     case 'waarom':
       if (kamer === '') return { ok: false, reden: 'waarom vraagt een kamer' };
@@ -304,6 +310,11 @@ class Facts {
   energy(bron: string, wh: number): string {
     const a = Math.abs(wh);
     return this.#add(bron, a < 1000 ? `${Math.round(a / 10) * 10} Wh` : `${this.#num(a / 1000)} kWh`);
+  }
+
+  /** Watt precies, zoals op het scherm Sluipverbruik: "304 W". */
+  watt(bron: string, w: number): string {
+    return this.#add(bron, `${Math.round(Math.abs(w))} W`);
   }
 
   /** Een aantal, zoals "13 keer". */
@@ -1072,6 +1083,34 @@ export function ask(question: Question, ctx: AskContext): Answer {
         out.push(nl ? `Van je panelen verwacht ik ${k}.` : `I expect ${k} from your panels.`);
       }
       return done(out.length ? out.join(' ') : geen);
+    }
+
+    case 'sluip': {
+      // Het wat en het hoeveel, geen apparaat (besluit 88).
+      const s = ctx.sluip;
+      if (s == null) {
+        return done(
+          nl
+            ? 'Dat weet ik nog niet: daarvoor heb ik minstens een week aan nachten van je slimme meter nodig.'
+            : 'I do not know yet: for that I need at least a week of nights from your smart meter.',
+        );
+      }
+      const w = f.watt('sluip.vannacht', s.vannacht.w);
+      const gewoon = f.watt('sluip.gewoon', s.gewoonW);
+      if (!s.hoog) {
+        const gem = f.watt('sluip.gemiddeld', s.gemiddeldW);
+        return done(nl ? `Vannacht ${w}, rond je gewone nacht van ${gewoon}. De laatste 30 nachten gemiddeld ${gem}.` : `Last night ${w}, around your usual night of ${gewoon}. The last 30 nights averaged ${gem}.`);
+      }
+      const boven = f.watt('sluip.boven', s.bovenW);
+      const out = [nl ? `Vannacht ${w}. Gewoon is ${gewoon}, dus ${boven} meer.` : `Last night ${w}. Usual is ${gewoon}, so ${boven} more.`];
+      if (s.reeks && s.reeks.nachten > 1) {
+        const datum = new Date(`${s.reeks.sinds}T12:00:00Z`).toLocaleDateString(nl ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+        out.push(nl ? `Dat al sinds ${datum}.` : `It has been like that since ${datum}.`);
+      }
+      if (s.scheelt?.euro != null) out.push(nl ? `Zo een jaar lang kost het zo’n ${f.euro('sluip.scheelt', s.scheelt.euro)} extra.` : `A whole year like this costs about ${f.euro('sluip.scheelt', s.scheelt.euro)} extra.`);
+      else if (s.scheelt) out.push(nl ? `Zo een jaar lang is dat ${f.energy('sluip.scheelt', s.scheelt.kwh * 1000)} extra.` : `A whole year like this is ${f.energy('sluip.scheelt', s.scheelt.kwh * 1000)} extra.`);
+      if (s.toelichting?.tekst) out.push(nl ? `Jij zei: ${s.toelichting.tekst}.` : `You said: ${s.toelichting.tekst}.`);
+      return done(out.join(' '));
     }
 
     case 'kosten': {

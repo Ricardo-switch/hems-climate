@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.66.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Sluipverbruik: wat je huis elke nacht gebruikt als er niets draait, met een eigen scherm onder Opbrengst, elke nacht en elke maand sinds je meter
+- Een melding de ochtend erna als een nacht 50 W of meer boven je gewone nacht lag, en een kaart Sluipverbruik voor Thuis
+
+**Beter**
+
+- De assistent weet je sluipverbruik, en Wat je huis kan heeft het bij Kosten
+
+*English*
+
+**New**
+
+- Standby use: what your house uses every night when nothing runs, with its own screen under Energy, every night and every month since your meter
+- A notification the morning after when a night was 50 W or more above your usual night, and a Standby use card for Home
+
+**Improved**
+
+- The assistant knows your standby use, and What your house can do lists it under Costs
+
 ## 0.65.0
 
 *24 oktober 2026*

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Sluipverbruik</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Sluipverbruik op de telefoon (schets, 24 oktober 2026): hetzelfde als op
+   * de wand (Wand-Sluipverbruik), onder elkaar. Bovenin de balk van de
+   * telefoon, dan vannacht groot, wat opviel, de grafiek met Nachten en
+   * Maanden, de getallen en de melding. Echte nachten van dit huis.
+   */
+  body { margin: 0; }
+  .tel { width: 390px; padding: 0 16px 110px; box-sizing: border-box; }
+  .bovenbalk { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 6px; }
+  .bovenbalk .terug { font-weight: 700; color: var(--zacht); font-size: 15px; }
+  .rondjes { display: flex; gap: 8px; }
+  .rondjes i { width: 36px; height: 36px; border-radius: 50%; background: rgb(var(--wit) / 0.08); }
+  h1 { margin: 10px 0 4px; font-family: var(--kop); font-size: 30px; line-height: 1.08; letter-spacing: -0.02em; }
+  .zin { font-size: 14.5px; color: var(--zacht); margin: 0 0 14px; }
+  .zin b { color: var(--gloed-t); }
+  .kaart { padding: 16px; margin-bottom: 12px; }
+  .opgevallen { background: linear-gradient(160deg, rgba(255, 122, 77, 0.14), rgba(255, 122, 77, 0.03)); border-color: rgba(255, 122, 77, 0.35); }
+  .opgevallen h3 { margin: 4px 0; font-family: var(--kop); font-size: 18px; line-height: 1.2; }
+  .knoppen { display: flex; gap: 8px; margin-top: 10px; }
+  .knopje { height: 38px; padding: 0 14px; border-radius: 12px; display: inline-flex; align-items: center; background: rgb(var(--wit) / 0.09); font-weight: 700; font-size: 13.5px; }
+  .knopje.licht { background: var(--tekst); color: #0b1424; }
+  .wissel { display: flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); margin-bottom: 10px; }
+  .wissel span { flex: 1; height: 34px; border-radius: 10px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: var(--zacht); }
+  .wissel span.aan { background: var(--tekst); color: #0b1424; }
+  .cijfers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .cijfers > div { padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); }
+  .cijfers b { display: block; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .cijfers b small { font-family: var(--romp); font-size: 13px; color: var(--zacht); font-weight: 500; margin-left: 2px; }
+  .cijfers span { font-size: 12px; color: var(--zacht); }
+  .regelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .regelrij b { display: block; font-size: 14.5px; }
+  .regelrij span { font-size: 12.5px; color: var(--gedempt); }
+  .schakel { flex: none; width: 42px; height: 26px; border-radius: 13px; background: var(--mint); position: relative; }
+  .schakel::after { content: ''; position: absolute; left: 19px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #0b2a1f; }
+  .grafiek svg { display: block; width: 100%; }
+  .tabs { position: fixed; left: 12px; width: 366px; bottom: 14px; height: 64px; border-radius: 22px; background: rgb(11 20 36 / 0.92); border: 1px solid rgb(var(--wit) / 0.08); }
+</style>
+</head>
+<body class="lucht lucht-avond">
+<div class="tel">
+  <div class="bovenbalk"><span class="terug">‹ Opbrengst</span><span class="rondjes"><i></i><i></i><i></i></span></div>
+  <h1>’s Nachts gebruikt je huis 304 W</h1>
+  <p class="zin"><b>119 W</b> boven je gewone nacht van 185 W</p>
+  <section class="glas kaart opgevallen">
+    <div class="mini" style="color: var(--gloed-t)">Opgevallen</div>
+    <h3>Sinds 15 oktober elke nacht zo’n 120 W meer</h3>
+    <p class="klein" style="margin: 0">Tien nachten op rij. Staat er iets aan dat eerst uit was?</p>
+    <div class="knoppen"><span class="knopje licht">Ik weet wat het is</span><span class="knopje">Weet ik niet</span></div>
+  </section>
+  <section class="glas kaart">
+    <div class="wissel"><span class="aan">Nachten</span><span>Maanden</span></div>
+    <div class="grafiek" id="grafiek"></div>
+  </section>
+  <div class="cijfers">
+    <div><b>272<small>W</small></b><span>gemiddeld, 30 nachten</span></div>
+    <div><b>2.660<small>kWh</small></b><span>zo een jaar lang, ± € 665</span></div>
+    <div><b>€ 260</b><span>per jaar minder bij 185 W</span></div>
+    <div><b>122<small>W</small></b><span>je laagste nacht, juli 2025</span></div>
+  </div>
+  <section class="glas kaart">
+    <div class="regelrij"><div><b>Een melding de ochtend erna</b><span>bij 50 W of meer boven je gewone nacht</span></div><span class="schakel" aria-hidden="true"></span></div>
+  </section>
+  <p class="mini" style="margin: 4px 2px 0">Het laagste uur tussen 01:00 en 05:00, uit je slimme meter. De prijs van € 0,25 per kWh is een voorbeeld.</p>
+</div>
+<nav class="tabs" aria-hidden="true"></nav>
+<script>
+  const NACHTEN = [306, 210, 338, 199, 212, 208, 315, 321, 195, 337, 194, 220, 198, 350, 333, 199, 194, 173, 179, 186, 302, 357, 363, 357, 364, 298, 300, 304, 345, 304];
+  const GEWOON = 185;
+  const GRENS = 235;
+  const B = 330, H = 190, l = 30, r = 4, t = 8, b = 20;
+  const w = (B - l - r) / NACHTEN.length;
+  const y = (v) => t + (1 - v / 400) * (H - t - b);
+  let s = '';
+  for (const v of [0, 200, 400]) s += `<line x1="${l}" x2="${B - r}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,0.07)"/><text x="${l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="#8291a6">${v}</text>`;
+  NACHTEN.forEach((v, i) => { s += `<rect x="${(l + i * w + w * 0.15).toFixed(1)}" y="${y(v).toFixed(1)}" width="${(w * 0.7).toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="2" fill="${v >= GRENS ? '#ff7a4d' : 'rgba(111,211,255,0.55)'}"/>`; });
+  [['25 sep', 0, 'start'], ['5 okt', 10, 'middle'], ['15 okt', 20, 'middle'], ['24 okt', 29, 'end']].forEach(([k, i, a]) => { s += `<text x="${(a === 'start' ? l + i * w : a === 'end' ? B - r : l + i * w + w / 2).toFixed(1)}" y="${H - 5}" text-anchor="${a}" font-size="10" fill="#8291a6">${k}</text>`; });
+  s += `<line x1="${l}" x2="${B - r}" y1="${y(GEWOON)}" y2="${y(GEWOON)}" stroke="#6ee7b7" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  document.getElementById('grafiek').innerHTML = `<svg viewBox="0 0 ${B} ${H}" role="img" aria-label="Sluipverbruik per nacht">${s}</svg>`;
+</script>
+</body>
+</html>

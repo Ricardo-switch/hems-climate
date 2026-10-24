@@ -193,6 +193,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
 - [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
 - [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
+- [192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt](#192-sluipverbruik-elke-nacht-gemeten-een-eigen-scherm-onder-opbrengst-en-een-melding-als-het-opvalt)
 - [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
 
 **Veiligheid**
@@ -8780,6 +8781,57 @@ aanroep.
 *Wat afviel:* een tweede functie naast `huis.teken` (dan kan een pagina nog
 steeds de oude aanroepen); de panelen elders bij de assistent en de film (die
 halen de aansluiting niet op).
+
+---
+
+## 192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. Het sluipverbruik zat nog niet in de app: besluit 79 koos
+al een melding de ochtend erna, besluit 88 hoe de app het zegt, maar de meting
+zelf, de geschiedenis en het gemiddelde ontbraken. De nachten van dit huis
+lieten zien waarom het telt: tot 14 oktober rond 185 W, sinds 15 oktober elke
+nacht 300 à 360 W. Gekozen door de bewoner (schets `Wand-Sluipverbruik.html`
+en `Tel-Sluipverbruik.html`): op Opbrengst, een kaart op Thuis, een melding de
+ochtend erna, en bij de assistent en Wat je huis kan; een vaste marge van 50 W;
+terug tot de eerste nacht van de meter.
+
+*Besluit:*
+
+- **De meting:** per nacht het laagste uurgemiddelde van de slimme meter
+  tussen 01:00 en 05:00, uit de uurstatistiek van Home Assistant (alleen
+  lezen). Die gaat terug tot de eerste dag van de meter; bij dit huis februari
+  2025. Een nacht telt pas na 05:00, en niet met minder dan twee uren of met
+  stroom terug naar het net (zoals met een thuisbatterij).
+- **Je gewone nacht** is het gemiddelde van de vijf laagste van de laatste 30
+  nachten. Een nacht **50 W of meer** daarboven valt op, in oranje.
+- **Een eigen scherm onder Opbrengst** (`sluipverbruik.html`), met een kaart op
+  Opbrengst ernaartoe; de rest van Opbrengst blijft zoals het was. Links
+  vannacht, het gemiddelde van 30 nachten (met dezelfde maand een jaar eerder)
+  en wat het een jaar lang is, in kWh en met je stroomprijs in euro's (bij een
+  contract met dag en nacht het daltarief voor zijn deel van de uren); bij een
+  hoge nacht wat het scheelt als het weer gewoon wordt. In het midden elke nacht
+  (30 per keer, terug te bladeren) of elke maand. Rechts wat opviel, de melding
+  en hoe de app meet.
+- **Geen oorzaak zonder meter** (besluit 88): de app zegt het wat, het wanneer en
+  het hoeveel. De bewoner kan zeggen wat het is ("Jij zei: de pc") of dat hij
+  het niet weet; dat hoort bij die reeks hoge nachten (`sluipverbruik.json`,
+  een eigen smalle deur, besluit 42).
+- **De melding:** één melding per reeks hoge nachten bij de bel ("Al 10 nachten
+  meer dan gewoon"), en op de telefoon de ochtend erna, na de nachtrust (een
+  eigen keus `sluip` bij Jij, standaard aan). Een gewone nacht maakt hem stil
+  "weer gewoon".
+- **Een kaart Sluipverbruik** voor Thuis (`sluip`): smal een tegel met vannacht
+  en staafjes van de laatste nachten, breed 30 nachten.
+- **De assistent** weet het ("Wat is mijn sluipverbruik?"), en **Wat je huis
+  kan** heeft het bij Kosten.
+- **Versie 0.66.0.**
+
+*Wat afviel:* een eigen drempel per bewoner (eerst de vaste 50 W); het
+sluipverbruik per uur van de nacht (de uurstatistiek zegt het laagste uur, niet
+wanneer iets aanging); een huis met een thuisbatterij (daar zegt het net 's
+nachts niet wat het huis gebruikt).
 
 ---
 

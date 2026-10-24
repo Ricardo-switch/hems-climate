@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.65.0';
+export const VERSIE = '0.66.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.66.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'Sluipverbruik: wat je huis elke nacht gebruikt als er niets draait, met een eigen scherm onder Opbrengst, elke nacht en elke maand sinds je meter',
+      'Een melding de ochtend erna als een nacht 50 W of meer boven je gewone nacht lag, en een kaart Sluipverbruik voor Thuis',
+    ],
+    beter: [
+      'De assistent weet je sluipverbruik, en Wat je huis kan heeft het bij Kosten',
+    ],
+    en: {
+      nieuw: [
+        'Standby use: what your house uses every night when nothing runs, with its own screen under Energy, every night and every month since your meter',
+        'A notification the morning after when a night was 50 W or more above your usual night, and a Standby use card for Home',
+      ],
+      beter: [
+        'The assistant knows your standby use, and What your house can do lists it under Costs',
+      ],
+    },
+  },
   {
     versie: '0.65.0',
     datum: '2026-10-24',
