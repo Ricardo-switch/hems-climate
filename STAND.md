@@ -174,7 +174,8 @@ verwijzing bestaat.
   weer en de seizoenen; elke stroom een eigen kleur; panelen ook op de garage,
   carport of het tuinhuis; de kaarten op de wand smal of breed; op de telefoon
   één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
-  de meldingen ([187]).
+  de meldingen ([187]). In de schaduw zegt een kamer "Verwarmt" als het echte
+  apparaat al doet wat het besluit wil ([188]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -621,4 +622,5 @@ verwijzing bestaat.
 [185]: DECISIONS.md#185-meertalig-het-fundament-met-thuis-als-proef
 [186]: DECISIONS.md#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon
 [187]: DECISIONS.md#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak
+[188]: DECISIONS.md#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt
 <!-- links:einde -->

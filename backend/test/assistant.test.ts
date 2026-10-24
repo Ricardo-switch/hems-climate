@@ -541,11 +541,21 @@ describe('de stand per kamer voor de kaart (besluit 94)', () => {
   const room = (v: DecisionView, id: string) => residentRooms(config, v).find((r) => r.zoneId === id)!;
 
   it('zegt kort wat Smart Climate zou doen, met het apparaat erbij', () => {
-    const r = room(view({ accepted: [coolOnSun] }), 'zolder');
-    // In de schaduw "zou" (besluit 124); als hij echt schakelt "koelt".
-    expect([r.soort, r.kort, r.actuatorId]).toEqual(['cool', 'Zou koelen op zon', 'ac-zolder']);
+    // De airco staat nog uit: in de schaduw "zou" (besluit 124); als hij echt schakelt "koelt".
+    const uit = { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' };
+    const r = room(view({ accepted: [coolOnSun], observed: uit }), 'zolder');
+    expect([r.soort, r.kort, r.actuatorId, r.klopt]).toEqual(['cool', 'Zou koelen op zon', 'ac-zolder', false]);
     expect(residentRooms(config, view({ accepted: [coolOnSun] }), 'nl', false).find((x) => x.zoneId === 'zolder')!.kort).toBe('Koelt op zon');
     expect(r.zin).toContain('Ik zou de zolder nu laten koelen op zon');
+  });
+
+  it('zegt "koelt" als het apparaat al doet wat het besluit wil, ook in de schaduw (besluit 188)', () => {
+    // In de gewone toestand koelt de airco op zolder al echt (cool@22), door de oude regeling.
+    const r = room(view({ accepted: [coolOnSun] }), 'zolder');
+    expect([r.kort, r.klopt]).toEqual(['Koelt op zon', true]);
+    expect(residentView(config, view({ accepted: [coolOnSun] })).kop.titel).toBe('De zolder wordt gekoeld');
+    const uit = { nest: 'heat@20', badkamer: 'off@18', 'ac-woonkamer': 'off', 'ac-zolder': 'off' };
+    expect(residentView(config, view({ accepted: [coolOnSun], observed: uit })).kop.titel).toBe('De zolder zou koelen');
   });
 
   it('wacht op zon, of zegt waarom het wacht', () => {
@@ -605,7 +615,8 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     const v = view({ accepted: [coolOnSun], explanation: explanation({ modeSource: 'override' }) });
     const kop = residentView(config, v).kop;
     expect(kop.boven).toBe('Nu · Dag (gekozen)');
-    expect(kop.titel).toBe('De zolder zou koelen');
+    // De airco koelt al echt: dan zegt de kop het zoals het is (besluit 188).
+    expect(kop.titel).toBe('De zolder wordt gekoeld');
     // De kop zegt de kamer al; eronder de getallen, niet nog eens hetzelfde (17 oktober 2026).
     expect(kop.zin).toBe('Het is er 24,3°, het doel is 23°. Dat kan op eigen zon.');
     expect(residentView(config, v, 'nl', false).kop.titel).toBe('De zolder wordt gekoeld');
@@ -686,7 +697,7 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
   it('heeft in het Engels dezelfde vorm, zonder interne codes', () => {
     const v = view({ accepted: [coolOnSun] });
     const b = residentView(config, v, 'en');
-    expect(b.kop.titel).toBe('The Zolder would cool');
+    expect(b.kop.titel).toBe('The Zolder is being cooled');
     expect(JSON.stringify(b)).not.toMatch(/undefined|[a-z]+_[a-z_]+"/);
   });
 });

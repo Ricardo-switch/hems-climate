@@ -137,7 +137,7 @@
   'thuis.stromen.zon': 'Zon',
   'thuis.stromen.huis': 'Huis',
   'thuis.stromen.vanNet': 'Van het net',
-  'thuis.stromen.terug': 'Terug naar het net',
+  'thuis.stromen.terug': 'Terug',
   'thuis.stromen.net': 'Net',
 
   // De stand van het huis

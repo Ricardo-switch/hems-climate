@@ -152,14 +152,17 @@
   #tel .titel .lead { font-size: 15px; margin-top: 6px; max-width: none; }
   #tel .podium { position: static; width: 100%; height: 330px; margin-top: -10px; }
   /* Zon, huis en net onder het huis (besluit 187, schets Tel-Huis-3). */
-  #tel .stromen { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 12px 16px; margin: -8px 16px 12px; }
+  #tel .stromen { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; padding: 12px 14px; margin: -8px 16px 12px; }
   #tel .stromen[hidden] { display: none; }
-  #tel .stromen > div { display: flex; flex-direction: column; min-width: 0; }
-  #tel .stromen b { font-family: var(--kop); font-size: 19px; font-weight: 600; white-space: nowrap; }
-  #tel .stromen span { font-size: 12.5px; color: var(--zacht); }
-  #tel .stromen i { font-style: normal; color: var(--gedempt); }
-  #tel .stromen .violet-t { color: #b3adff; }
-  .sc-licht #tel .stromen .violet-t { color: #5a4bd1; }
+  #tel .stromen > div { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 8px; align-items: center; min-width: 0; }
+  #tel .stromen i { grid-row: 1 / 3; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  #tel .stromen i svg { width: 17px; height: 17px; }
+  #tel .stromen b { font-family: var(--kop); font-size: 17px; font-weight: 600; white-space: nowrap; color: var(--tekst); }
+  #tel .stromen span { font-size: 12px; color: var(--zacht); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tel .stromen .zon-t i { color: var(--zon); }
+  #tel .stromen .mint-t i, #tel .stromen .mint-t b { color: var(--mint-t); }
+  #tel .stromen .violet-t i, #tel .stromen .violet-t b { color: #b3adff; }
+  .sc-licht #tel .stromen .violet-t i, .sc-licht #tel .stromen .violet-t b { color: #5a4bd1; }
   /* Ruimte onderin voor de vraagbalk en de tabs. */
   #tel .inhoud { padding: 0 16px 172px; display: flex; flex-direction: column; gap: 12px; }
   /* De kamers in één kaart: een regel per kamer. */

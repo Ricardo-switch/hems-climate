@@ -1257,6 +1257,12 @@ export interface ResidentRoom {
   readonly echt: string;
   /** Het apparaat dat draait volgens het besluit, voor de stromen in de tekening. */
   readonly actuatorId: string | null;
+  /**
+   * Doet het echte apparaat al wat het besluit wil (besluit 188)? Dan zegt de
+   * kamer in de schaduw "Verwarmt" in plaats van "Zou verwarmen": dat klopt met
+   * wat er in huis gebeurt, ook al regelt de oude regeling het.
+   */
+  readonly klopt: boolean;
 }
 
 function shortStatusOf(
@@ -1265,7 +1271,7 @@ function shortStatusOf(
   zone: Zone,
   lang: Lang,
   shadow = true,
-): { soort: RoomKind; kort: string; actuatorId: string | null } {
+): { soort: RoomKind; kort: string; actuatorId: string | null; klopt?: boolean } {
   const w = SHORT[lang];
   const e = snap.explanation;
   const ids = new Set(zone.actuatorIds);
@@ -1286,7 +1292,9 @@ function shortStatusOf(
   const running = mine.find((i) => i.action === 'cool' || i.action === 'heat');
   if (running && (running.action === 'cool' || running.action === 'heat')) {
     const onSun = running.strategyId === 'pv-surplus';
-    return { soort: running.action, kort: `${(shadow ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId };
+    // Doet het apparaat het al echt (de oude regeling), dan geen "zou" (besluit 188).
+    const klopt = (snap.observed[running.actuatorId] ?? '').split('@')[0] === running.action;
+    return { soort: running.action, kort: `${(shadow && !klopt ? w.wouldRun : w.run)[running.action]}${onSun ? w.onSun : ''}`, actuatorId: running.actuatorId, klopt };
   }
   if (mine.some((i) => i.action === 'standby')) return { soort: 'wait', kort: w.parked, actuatorId: null };
   const wanting = pz != null && pz.demand !== 'none';
@@ -1328,6 +1336,7 @@ export function residentRooms(config: SiteConfig, snap: DecisionView, lang: Lang
       zin: roomStatus(config, snap, zone, lang, shadow).zin,
       echt: realShort(config, snap, zone, lang),
       actuatorId: s.actuatorId,
+      klopt: s.klopt === true,
     };
   });
 }

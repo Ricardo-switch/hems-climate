@@ -123,20 +123,23 @@ function tekenStromenTel() {
   if (!el) return;
   const s = state?.bewoner?.stromen;
   if (!s) return void (el.hidden = true);
-  const vak = (getalKw, woord, kleur = '') => `<div><b class="${kleur}">${esc(getalKw)}</b><span>${esc(woord)}</span></div>`;
-  const pijl = '<i aria-hidden="true">→</i>';
+  // Drie vakjes zonder pijlen (24 oktober 2026: een pijl naar links zei niets): de zon, het huis en het net, elk met een icoon in de kleur van zijn lijn.
+  const ik = (pad) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg>`;
+  const ZON = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>';
+  const HUIS = '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>';
+  const NET = '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>';
+  const vak = (pad, kleur, kw, woord) => `<div class="${kleur}"><i>${ik(pad)}</i><b>${esc(kw)}</b><span>${esc(woord)}</span></div>`;
   const netKw = s.netKw ?? 0;
-  const net = netKw > 0.05
-    ? vak(`${getal(netKw)} kW`, t('thuis.stromen.vanNet'), 'violet-t')
-    : netKw < -0.05
-      ? vak(`${getal(-netKw)} kW`, t('thuis.stromen.terug'), 'mint-t')
-      : vak('0 kW', t('thuis.stromen.net'));
   const delen = [];
-  if (s.zonKw != null && s.zonKw > 0.05) delen.push(vak(`${getal(s.zonKw)} kW`, t('thuis.stromen.zon'), 'zon-t'));
-  if (s.verbruikKw != null) delen.push(vak(`${getal(s.verbruikKw)} kW`, t('thuis.stromen.huis')));
-  delen.push(net);
-  // Van het net naar het huis: de pijl wijst dan naar het huis.
-  el.innerHTML = netKw > 0.05 && delen.length === 2 ? `${delen[1]}<i aria-hidden="true">←</i>${delen[0]}` : delen.join(pijl);
+  // De zon alleen als het huis panelen heeft; 's nachts gewoon 0.
+  if (s.zonKw != null) delen.push(vak(ZON, 'zon-t', `${getal(s.zonKw)} kW`, t('thuis.stromen.zon')));
+  if (s.verbruikKw != null) delen.push(vak(HUIS, '', `${getal(s.verbruikKw)} kW`, t('thuis.stromen.huis')));
+  delen.push(netKw > 0.05
+    ? vak(NET, 'violet-t', `${getal(netKw)} kW`, t('thuis.stromen.vanNet'))
+    : netKw < -0.05
+      ? vak(NET, 'mint-t', `${getal(-netKw)} kW`, t('thuis.stromen.terug'))
+      : vak(NET, '', '0 kW', t('thuis.stromen.net')));
+  el.innerHTML = delen.join('');
   el.hidden = false;
 }
 
@@ -176,7 +179,7 @@ function tekenNu() {
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
-  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, wereld: true, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, wereld: true, eigenLucht: false, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
   // Eenvoudig (besluit 164): geen getallen op het huis. Het kompas is op de telefoon te klein.
   else huis.teken(document.getElementById('podium-tel'), { ...model, kompas: undefined, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, wereld: true, eigenLucht: false, tik: true });
   tekenStromenTel();

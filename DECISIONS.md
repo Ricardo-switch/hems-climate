@@ -189,6 +189,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [183. Meldingen op de telefoon, via de app van Home Assistant](#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant)
 - [185. Meertalig: het fundament, met Thuis als proef](#185-meertalig-het-fundament-met-thuis-als-proef)
 - [187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak](#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak)
+- [188. In de schaduw zegt de app wat er echt gebeurt, als het klopt](#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt)
 
 **Veiligheid**
 
@@ -8609,6 +8610,39 @@ overal tegelijk).
 *Nog te doen:* Inrichten opnieuw in stappen (met de klimaatschetsen per merk), de
 andere pagina's op het eiland, een huis zonder slimme regeling, P1-meter of
 panelen, en de film.
+
+---
+
+## 188. In de schaduw zegt de app wat er echt gebeurt, als het klopt
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026, bij het nalopen van versie 0.61.0 op beta. Thuis zei
+"Badkamer: zou verwarmen" terwijl de oude regeling de badkamer al echt
+verwarmde. Dat klopt niet met wat de bewoner in huis ziet.
+
+*Besluit:*
+
+- **Doet het echte apparaat al wat het besluit wil,** dan zegt de kamer ook in
+  de schaduw "Verwarmt" of "Koelt" (met "op zon" als dat zo is), en niet "Zou
+  verwarmen". Het besluit vergelijkt zijn actie met wat het apparaat in Home
+  Assistant werkelijk doet (`observed`, zoals `heat@21`); de kamer krijgt een
+  veld `klopt`.
+- **De kop volgt:** één kamer "De badkamer wordt verwarmd"; meer kamers die
+  allemaal kloppen en hetzelfde doen "De badkamer en beneden worden verwarmd".
+  Wijkt er één af, dan blijft het "zou" (besluit 124).
+- **De lange zin van de assistent** blijft zeggen wat Smart Climate zou doen:
+  daar gaat het om het besluit, niet om wat er al gebeurt.
+- **Ook in deze versie:** de lucht op de wand loopt door achter het huis (het
+  eiland tekende zijn eigen lucht in een vak, dat ophield); op de telefoon onder
+  het huis drie vakjes, zon, huis en net, elk met een icoon in de kleur van zijn
+  lijn, zonder pijl; bij Wat je huis kan staan de labels van de auto en de
+  batterij vrij van het menu en de vakken.
+- **Versie 0.61.1.**
+
+*Wat afviel:* "zou" houden tot het huis zelf regelt (dat zegt iets wat niet
+klopt met wat je ziet); de pijlen tussen zon, huis en net (een pijl naar links
+zei niets).
 
 ---
 

@@ -1,5 +1,31 @@
 # Wat is er nieuw · What is new
 
+## 0.61.1
+
+*24 oktober 2026*
+
+**Beter**
+
+- Doet de oude regeling al wat Smart Climate wil, dan zegt Thuis "De badkamer wordt verwarmd" in plaats van "zou verwarmen"
+- Op de telefoon staan zon, huis en net onder het huis als drie vakjes, zonder pijl
+
+**Opgelost**
+
+- Op de wand loopt de lucht weer door achter het huis
+- Bij Wat je huis kan valt het label van de auto niet meer over het menu
+
+*English*
+
+**Improved**
+
+- When the old system already does what Smart Climate wants, Home says "The bathroom is being heated" instead of "would heat"
+- On the phone sun, home and grid sit below the house as three tiles, without an arrow
+
+**Fixed**
+
+- On the wall the sky runs on behind the house again
+- On What your home can do the car label no longer falls over the menu
+
 ## 0.61.0
 
 *24 oktober 2026*

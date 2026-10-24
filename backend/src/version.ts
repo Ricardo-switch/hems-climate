@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.61.0';
+export const VERSIE = '0.61.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,28 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.61.1',
+    datum: '2026-10-24',
+    beter: [
+      'Doet de oude regeling al wat Smart Climate wil, dan zegt Thuis "De badkamer wordt verwarmd" in plaats van "zou verwarmen"',
+      'Op de telefoon staan zon, huis en net onder het huis als drie vakjes, zonder pijl',
+    ],
+    opgelost: [
+      'Op de wand loopt de lucht weer door achter het huis',
+      'Bij Wat je huis kan valt het label van de auto niet meer over het menu',
+    ],
+    en: {
+      beter: [
+        'When the old system already does what Smart Climate wants, Home says "The bathroom is being heated" instead of "would heat"',
+        'On the phone sun, home and grid sit below the house as three tiles, without an arrow',
+      ],
+      opgelost: [
+        'On the wall the sky runs on behind the house again',
+        'On What your home can do the car label no longer falls over the menu',
+      ],
+    },
+  },
   {
     versie: '0.61.0',
     datum: '2026-10-24',

@@ -132,7 +132,7 @@
   'thuis.stromen.zon': 'Sun',
   'thuis.stromen.huis': 'Home',
   'thuis.stromen.vanNet': 'From the grid',
-  'thuis.stromen.terug': 'Back to the grid',
+  'thuis.stromen.terug': 'Back',
   'thuis.stromen.net': 'Grid',
 
   // The house mode
