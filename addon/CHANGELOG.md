@@ -1,5 +1,31 @@
 # Wat is er nieuw · What is new
 
+## 0.65.0
+
+*24 oktober 2026*
+
+**Nieuw**
+
+- Kamers en indeling werkt zoals Energie: op de telefoon eerst de lijst met etages, Buiten en wat nog in te delen is; op de wand de lijst en het gekozen deel naast elkaar
+- Bij Buiten zet je aan wat er rond het huis is, met hetzelfde lijstje als bij Inrichten
+
+**Opgelost**
+
+- Een garage of carport die je buiten toevoegt, staat nu ook in de tekening, ook bij Kamers en indeling en bij een kamer
+- Een ruimte die een carport is, kun je bij Inrichten nu aan de carport koppelen
+
+*English*
+
+**New**
+
+- Rooms and layout works like Energy: on the phone first the list of floors, Outside and what is still to arrange; on the wall the list and the chosen part side by side
+- At Outside you turn on what is around the house, with the same list as in Set up
+
+**Fixed**
+
+- A garage or carport you add outside now shows in the drawing, also in Rooms and layout and for a room
+- An area that is a carport can now be linked to the carport in Set up
+
 ## 0.63.1
 
 *24 oktober 2026*

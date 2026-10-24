@@ -3442,7 +3442,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
 
     await p.goto(`${baseUrl}/indeling.html#${encodeURIComponent(a.id)}`);
     await p.locator('#wand [data-actie="kamernaam"]').waitFor({ timeout: 10_000 });
-    expect(await p.locator('#wand [data-etages] .etage[data-etage]').count()).toBe(4);
+    // Als groep, net als Energie (besluit 193): de vier etages met Buiten, Nog in te delen en Verborgen, en de etage van de kamer gekozen.
+    expect(await p.locator('#wand [data-delen] .deel:not(.erbij)').count()).toBe(6);
+    expect(new URL(p.url()).hash).toBe(`#${encodeURIComponent(a.etage)}`);
+    expect(await p.locator('#wand [data-delen] .deel.nu').getAttribute('href')).toBe(`#${encodeURIComponent(a.etage)}`);
     // De wand scrolt niet.
     expect(await p.evaluate<boolean>('document.documentElement.scrollHeight <= innerHeight + 1')).toBe(true);
 
@@ -3526,10 +3529,10 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await expect.poll(() => layoutStore.current?.apparaten['cover.screen']?.gevel, kort).toBeUndefined();
 
     // Een etage toevoegen, verschuiven en weer weghalen (besluit 112).
-    await p.locator('#wand [data-etage-erbij]').click(kort);
+    await p.locator('#wand [data-delen] .deel.erbij').click(kort);
     await p.locator('#wand [data-etage-vast]', { hasText: 'Kelder' }).click(kort);
     await expect.poll(() => layoutStore.current?.volgorde?.at(-1), kort).toBe('kelder');
-    await p.locator('#wand .etage[aria-pressed="true"]', { hasText: 'Kelder' }).waitFor(kort);
+    await p.locator('#wand [data-delen] .deel.nu', { hasText: 'Kelder' }).waitFor(kort);
     await p.locator('#wand [data-etage-schuif="-1"]').click(kort);
     await expect.poll(() => layoutStore.current?.volgorde?.at(-2), kort).toBe('kelder');
     await p.locator('#wand [data-etage-weg]').click(kort);
@@ -3564,6 +3567,85 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await zoneLijst.selectOption('tuinhuis');
     await expect.poll(() => layoutStore.current?.kamers.find((k) => k.id === tuin.id)?.zones.find((z) => z.naam === 'Border')?.soort, kort).toBe('tuinhuis');
     expect(fouten).toEqual([]);
+    await context.close();
+  }, 30_000);
+
+  /*
+   * Kamers en indeling als groep (besluit 193): op de telefoon eerst de lijst,
+   * een etage als eigen scherm met terug naar de lijst. Bij Buiten wat er rond
+   * het huis is, zoals bij Inrichten: de garage en de carport gaan aan en staan
+   * in de tekening, ook zonder dak.
+   */
+  it('opent Kamers en indeling op de telefoon met een keuzepagina, en zet buiten een garage en carport aan', async () => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC', locale: 'nl-NL' });
+    await context.addCookies([{ name: 'hems_sessie', value: sessionId, url: baseUrl }]);
+    await context.route((url) => !url.href.startsWith(baseUrl), (route) => route.abort());
+    const p = await context.newPage();
+    const fouten: string[] = [];
+    p.on('pageerror', (e) => fouten.push(e.message));
+    const voor = layoutStore.current ? structuredClone(layoutStore.current) : null;
+    const kort = { timeout: 5000 };
+    const tel = p.locator('#tel');
+    await p.goto(`${baseUrl}/indeling.html`);
+    // Eerst alleen de lijst.
+    const lijst = tel.locator('[data-delen]');
+    await lijst.locator('.deel', { hasText: 'Begane grond' }).waitFor({ timeout: 10_000 });
+    expect(await tel.locator('[data-vorm]').isVisible()).toBe(false);
+    expect(await lijst.locator('.deel.erbij').count()).toBe(1);
+    // Een etage opent als eigen scherm, met de tekening en het blad.
+    await lijst.locator('.deel', { hasText: 'Begane grond' }).click();
+    await tel.locator('[data-deelkop]', { hasText: 'Begane grond' }).waitFor(kort);
+    expect(await lijst.isVisible()).toBe(false);
+    await tel.locator('#podium-tel svg').waitFor(kort);
+    await tel.locator('[data-blad] [data-actie="etagenaam"]').waitFor(kort);
+    expect(await tel.locator('[data-terug]').textContent()).toContain('Kamers en indeling');
+    if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-indeling-tel.png'), fullPage: true });
+    // Terug naar de lijst.
+    await tel.locator('[data-terug]').click();
+    await lijst.waitFor({ state: 'visible', ...kort });
+
+    // Buiten: wat er rond het huis is.
+    await lijst.locator('.deel', { hasText: 'Buiten' }).click();
+    const rond = () => layoutStore.current?.rond;
+    const schakel = (w: string) => tel.locator(`[data-blad] [data-rond="${w}"]`);
+    await schakel('garage').waitFor(kort);
+    for (const w of ['oprit', 'garage', 'carport']) {
+      if ((await schakel(w).getAttribute('aria-checked')) !== 'true') {
+        await schakel(w).click(kort);
+        await expect.poll(() => rond()?.[w as 'oprit'], kort).toBe(true);
+        await tel.locator(`[data-blad] [data-rond="${w}"][aria-checked="true"]`).waitFor(kort);
+      }
+    }
+    expect(rond()).toMatchObject({ oprit: true, garage: true, carport: true });
+    if (process.env.HEMS_PAGE_SHOT) {
+      await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-indeling-tel-buiten.png'), fullPage: true });
+      // En op de wand: Buiten, en Nog in te delen.
+      const wand = await context.newPage();
+      await wand.setViewportSize({ width: 1280, height: 800 });
+      for (const deel of ['buiten', 'los', 'bg']) {
+        await wand.goto(`${baseUrl}/indeling.html#${deel}`);
+        await wand.waitForLoadState('networkidle');
+        await wand.waitForTimeout(400);
+        await wand.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', `-indeling-wand-${deel}.png`) });
+      }
+      await wand.close();
+    }
+    // In de lijst zegt Buiten wat er aan staat.
+    await tel.locator('[data-terug]').click();
+    expect(await lijst.locator('.deel', { hasText: 'Buiten' }).textContent()).toMatch(/garage/i);
+
+    // Een ruimte buiten die je Garage noemt, staat aan bij wat er rond het huis is (besluit 193).
+    const basis = structuredClone(layoutStore.current!);
+    await layoutStore.save({ ...basis, rond: { ...basis.rond!, garage: false } });
+    const huisNu = (await (await fetch(`${baseUrl}/api/huis`)).json()) as HouseReport;
+    expect(huisNu.rond?.garage).toBe(false);
+    await p.goto(`${baseUrl}/indeling.html#buiten`);
+    await p.reload();
+    await tel.locator('[data-blad] [data-nieuwe-kamer]').fill('Garage', { timeout: 10_000 });
+    await tel.locator('[data-blad] [data-kamer-toevoegen]').click();
+    await expect.poll(() => rond()?.garage, kort).toBe(true);
+    expect(fouten).toEqual([]);
+    if (voor) await layoutStore.save(voor);
     await context.close();
   }, 30_000);
 

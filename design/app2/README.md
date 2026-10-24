@@ -42,6 +42,7 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Huis-groeit` (wat je huis kan) | `Instellingen`, `Onboarding-Zon` |
 | `Wand-Assistent` | |
 | `Wand-Indeling` (kamers en indeling, de bewerkstand) | |
+| `Wand-Indeling-Groep` (Kamers en indeling als groep zoals Energie: `#buiten` met wat er rond het huis is, `#los`; besluit 193) | `Tel-Indeling-Groep` (de lijst, `#deel`, `#buiten`) |
 | `Wand-Leren` (leren, meekijken, regelen per apparaat) | |
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 | `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
