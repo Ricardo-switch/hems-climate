@@ -2463,7 +2463,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       batterij: { id: 'sessy', naam: 'De batterij', pct: 54, vermogenW: -900, stand: 'levert' },
       auto: { id: 'tesla', naam: 'Tesla Model 3', pct: 62, aangesloten: true, laadt: true, vermogenW: 3200, bereikKm: 280 },
     };
-    extraDeurbel = { camera: 'camera.deurbel_duidelijk', naam: 'Deurbel', laatsteMs: Date.now() - 30 * 60_000, reserve: ['camera.deurbel_vloeiend'] };
+    // Een half uur geleden, maar niet voor middernacht (UTC, zoals de browser hier): dan zegt de kaart "Laatst aangebeld" met de dag.
+    const nu = Date.now();
+    extraDeurbel = { camera: 'camera.deurbel_duidelijk', naam: 'Deurbel', laatsteMs: Math.max(nu - 30 * 60_000, nu - (nu % 86_400_000)), reserve: ['camera.deurbel_vloeiend'] };
     try {
       expect((await zet([...STANDAARD_TEL, 'auto', 'batterij', 'maand', 'deurbel'])).ok).toBe(true);
       await p.goto(`${baseUrl}/thuis.html`);
