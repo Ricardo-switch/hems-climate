@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.62.1
+
+*24 oktober 2026*
+
+**Beter**
+
+- Het kompas staat niet meer op Thuis; bij Zonnepanelen wel, bij de ligging
+
+*English*
+
+**Improved**
+
+- The compass is no longer on Home; it stays on Solar panels, with how they lie
+
 ## 0.62.0
 
 *24 oktober 2026*

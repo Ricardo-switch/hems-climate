@@ -8672,6 +8672,8 @@ eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
 - **Een kaart Boiler** (`boiler` bij de kaarten): de boiler, of anders de
   jacuzzi (besluit 186), met hoe warm hij is en of hij op zon opwarmt; om te
   kiezen, alleen als het huis er een heeft.
+- **Het kompas** staat niet op Thuis (24 oktober 2026, 0.62.1): het hoort bij
+  Zonnepanelen, bij de ligging.
 - **Versie 0.62.0.**
 
 *Wat afviel:* de tegel ook op de telefoon (daar staan de kaarten onder elkaar,

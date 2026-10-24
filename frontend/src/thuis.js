@@ -96,8 +96,7 @@ function huisModel() {
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
     etages,
     ...(kelder ? { kelder } : {}),
-    // Het kompas op het gras, als de ligging van het huis bekend is.
-    ...(huismodel.kompasVan(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) ? { kompas: huismodel.kompasVan(aansluiting?.ligging, aansluiting?.antwoorden?.panelen) } : {}),
+    // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
     buitenunit: tek.buitenunit,
     voordeur: tek.voordeur,
     net: true,
@@ -180,8 +179,8 @@ function tekenNu() {
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
   if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, wereld: true, eigenLucht: false, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
-  // Eenvoudig (besluit 164): geen getallen op het huis. Het kompas is op de telefoon te klein.
-  else huis.teken(document.getElementById('podium-tel'), { ...model, kompas: undefined, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, wereld: true, eigenLucht: false, tik: true });
+  // Eenvoudig (besluit 164): geen getallen op het huis.
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, wereld: true, eigenLucht: false, tik: true });
   tekenStromenTel();
 
   tekenVandaag();
