@@ -8674,6 +8674,10 @@ eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
   kiezen, alleen als het huis er een heeft.
 - **Het kompas** staat niet op Thuis (24 oktober 2026, 0.62.1): het hoort bij
   Zonnepanelen, bij de ligging.
+- **Het tuinhuis** (0.62.2) heeft een plat dak met een overstek op twee palen,
+  een vlonder en een glazen pui, met de lamp onder het overstek. Heet het een
+  schuur, berging of shed, dan is het het houten schuurtje met puntdak
+  (`tuinhuisSoort`).
 - **Versie 0.62.0.**
 
 *Wat afviel:* de tegel ook op de telefoon (daar staan de kaarten onder elkaar,

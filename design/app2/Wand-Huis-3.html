@@ -121,7 +121,7 @@
       model: {
         woning: 'hoek', tijd: 'avond', zon: { stand: 0.86, aandeel: 0.2, panelen: 10 },
         etages: [{ naam: 'Begane grond', kamers: beneden.map((k) => ({ ...k, apparaten: k.naam === 'Woonkamer' ? [{ soort: 'lamp', aan: true }, { soort: 'bank' }] : k.apparaten, stand: 'goed', zin: 'goed' })) }, { naam: 'Eerste', kamers: boven }, zolder],
-        voordeur: {}, net: true, tuin: { tuinhuis: true, jacuzzi: { temp: 37, stand: 'warmt', bubbels: true }, lampen: [{ aan: true }] }, terras: { lampAan: true },
+        voordeur: {}, net: true, tuin: { tuinhuis: true, tuinhuisSoort: 'schuur', jacuzzi: { temp: 37, stand: 'warmt', bubbels: true }, lampen: [{ aan: true }] }, terras: { lampAan: true },
         labels: [],
       },
     },

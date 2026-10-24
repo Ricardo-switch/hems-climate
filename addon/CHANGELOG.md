@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.62.2
+
+*24 oktober 2026*
+
+**Beter**
+
+- Het tuinhuis heeft een plat dak met een overstek op twee palen, een vlonder en een glazen pui; heet het een schuur of berging, dan blijft het het houten schuurtje met puntdak
+
+*English*
+
+**Improved**
+
+- The garden house has a flat roof with an overhang on two posts, a deck and a glass front; when it is called a shed, it stays the wooden shed with a pitched roof
+
 ## 0.62.1
 
 *24 oktober 2026*

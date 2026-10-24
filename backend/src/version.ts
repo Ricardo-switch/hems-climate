@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.62.1';
+export const VERSIE = '0.62.2';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,18 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.62.2',
+    datum: '2026-10-24',
+    beter: [
+      'Het tuinhuis heeft een plat dak met een overstek op twee palen, een vlonder en een glazen pui; heet het een schuur of berging, dan blijft het het houten schuurtje met puntdak',
+    ],
+    en: {
+      beter: [
+        'The garden house has a flat roof with an overhang on two posts, a deck and a glass front; when it is called a shed, it stays the wooden shed with a pitched roof',
+      ],
+    },
+  },
   {
     versie: '0.62.1',
     datum: '2026-10-24',

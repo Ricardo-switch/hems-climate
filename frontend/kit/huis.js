@@ -2309,7 +2309,8 @@
         }]);
       }
       // Het tuinhuis achterin, met de deur naar het pad.
-      if (t.tuinhuis !== false) dingen.push([gy0, () => tuinhuis3(padX - 0.5, gy0 + 0.02, t)]);
+      // Een schuurtje met puntdak, of een tuinhuis met plat dak en overstek (24 oktober 2026).
+      if (t.tuinhuis !== false) dingen.push([gy0, () => (t.tuinhuisSoort === 'schuur' ? tuinhuis3(padX - 0.5, gy0 + 0.02, t) : tuinhuisPlat(padX - 0.55, gy0 + 0.02, t))]);
       dingen.sort((a, b) => a[0] - b[0]).forEach(([, teken]) => teken());
     }
     /** Een struik in de border: twee bollen, met bloemen of bladeren in het seizoen (huis 3.0). */
@@ -2334,6 +2335,61 @@
      * bloembak, en een lamp boven de deur. Panelen op het dakvlak, als die er
      * liggen.
      */
+    /**
+     * Het tuinhuis (24 oktober 2026): een strakke doos met een plat dak dat aan
+     * de voorkant uitsteekt als overstek, op twee palen, met een vlonder eronder,
+     * een glazen pui en een lamp onder het overstek. Panelen liggen op rekken op
+     * het dak. Het houten huisje met puntdak is het schuurtje (`tuinhuisSoort: 'schuur'`).
+     */
+    function tuinhuisPlat(tx, ty, t) {
+      const b = 1.08;
+      const d = 0.72;
+      const h = 0.8;
+      const dik = 0.07;
+      const over = 0.34;
+      const sneeuw = model.weer === 'sneeuw';
+      const aan = t.tuinhuisAan;
+      const lampAan = t.overstekAan || aan;
+      const gevel = licht ? ['#e9e3d8', '#d8d0c2', '#c4baa9'] : ['#3c4654', '#323b47', '#2a323c'];
+      const latten = licht ? '#bfb4a2' : '#262e38';
+      buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.35">${poly([[tx - 0.06, ty, 0], [tx + b + 0.3, ty, 0], [tx + b + 0.3, ty + d + over + 0.2, 0], [tx - 0.06, ty + d + over + 0.2, 0]], 'fill="#02050a"')}</g>`);
+      // De vlonder onder het overstek.
+      buiten.push(doos(tx - 0.02, ty + d, 0, b + 0.04, over, 0.04, ['#8a6a4a', '#74583d', '#5e4732']));
+      for (let x = tx + 0.08; x < tx + b; x += 0.1) buiten.push(line([[x, ty + d + 0.01, 0.041], [x, ty + d + over - 0.01, 0.041]], 'stroke="#5e4732" stroke-width="0.8" stroke-opacity="0.8"'));
+      // Het huis zelf: donker (of licht) met liggende latten.
+      buiten.push(doos(tx, ty, 0, b, d, h, gevel));
+      for (let z = 0.1; z < h - 0.02; z += 0.075) {
+        buiten.push(line([[tx + 0.01, ty + d + 0.001, z], [tx + b - 0.01, ty + d + 0.001, z]], `stroke="${latten}" stroke-width="0.7" stroke-opacity="0.8"`));
+        buiten.push(line([[tx + b + 0.001, ty + 0.01, z], [tx + b + 0.001, ty + d - 0.01, z]], `stroke="${latten}" stroke-width="0.7" stroke-opacity="0.6"`));
+      }
+      // De glazen pui: een schuifdeur en een groot raam, met licht als er iemand is.
+      const glas = aan ? '#F4C27E' : nacht ? '#0f1a2a' : '#4d7eac';
+      const pui = [[tx + 0.12, ty + d + 0.002, 0.05], [tx + b - 0.12, ty + d + 0.002, 0.05], [tx + b - 0.12, ty + d + 0.002, h - 0.1], [tx + 0.12, ty + d + 0.002, h - 0.1]];
+      buiten.push(poly(pui, `fill="${glas}" stroke="#1c232c" stroke-width="1.4"`));
+      if (aan) buiten.push(`<g filter="url(#${id}-zacht)" opacity="0.55">${poly(pui, 'fill="#FFB765"')}</g>`);
+      if (!aan && !nacht) buiten.push(poly([pui[0], [tx + 0.4, ty + d + 0.002, 0.05], [tx + 0.2, ty + d + 0.002, h - 0.1]], 'fill="#ffffff" opacity="0.12"'));
+      for (const x of [tx + b * 0.42, tx + b * 0.7]) buiten.push(line([[x, ty + d + 0.003, 0.05], [x, ty + d + 0.003, h - 0.1]], 'stroke="#1c232c" stroke-width="1.4"'));
+      // Een smal raam in de zijkant.
+      const zij = [[tx + b + 0.002, ty + 0.2, 0.42], [tx + b + 0.002, ty + 0.52, 0.42], [tx + b + 0.002, ty + 0.52, 0.62], [tx + b + 0.002, ty + 0.2, 0.62]];
+      buiten.push(poly(zij, `fill="${glas}" stroke="#1c232c" stroke-width="1"`));
+      // De palen van het overstek, voor de pui.
+      for (const x of [tx + 0.02, tx + b - 0.06]) buiten.push(doos(x, ty + d + over - 0.06, 0.04, 0.04, 0.04, h - 0.04, ['#2a323c', '#20272f', '#1a2027']));
+      // Het platte dak, met het overstek naar voren; panelen of sneeuw erop.
+      buiten.push(doos(tx - 0.05, ty - 0.05, h, b + 0.1, d + over + 0.05, dik, [sneeuw ? '#eef3f8' : licht ? '#5b6672' : '#4a5562', '#1f262e', '#262e37']));
+      // De lamp onder het overstek, en zijn schijnsel op de vlonder.
+      const lamp = P(tx + b / 2, ty + d + over - 0.08, h - 0.01);
+      buiten.push(`<circle cx="${lamp[0]}" cy="${lamp[1]}" r="${(k * 0.03).toFixed(1)}" fill="${lampAan ? '#FFD39A' : '#55626f'}"/>`);
+      if (lampAan) {
+        const voet = P(tx + b / 2, ty + d + over / 2, 0.05);
+        buiten.push(`<ellipse cx="${voet[0]}" cy="${voet[1]}" rx="${(k * 0.55).toFixed(1)}" ry="${(k * 0.22).toFixed(1)}" fill="#FFD39A" opacity="0.32" filter="url(#${id}-zacht)"/>`);
+      }
+      if (t.tuinhuisPanelen && !sneeuw) {
+        plaatPanelen(tx + 0.04, ty, b - 0.08, d + 0.1, h + dik, Math.min(6, t.tuinhuisPanelen));
+        plek.panelenSchuur = [tx + b / 2, ty + d / 2, h + dik + 0.1];
+      }
+      plek.tuinhuis = [tx + b / 2, ty + d / 2, h + dik];
+    }
+    /** Het schuurtje: het houten huisje met puntdak (het tuinhuis van huis 3.0 tot 24 oktober 2026). */
     function tuinhuis3(tx, ty, t) {
       const b = 1.0;
       const d = 0.85;

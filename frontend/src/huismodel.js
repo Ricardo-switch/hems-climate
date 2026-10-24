@@ -160,6 +160,8 @@
     const n = naam ?? '';
     return /tuinhuis|schuur|huisje|berging|shed/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag|flower|bed|hedge/i.test(n) ? 'border' : /gazon|gras|lawn/i.test(n) ? 'gazon' : /terras|zithoek|lounge|patio|terrace/i.test(n) ? 'terras' : /moestuin|groente|kas|vegetable|greenhouse/i.test(n) ? 'moestuin' : /vijver|water|pond/i.test(n) ? 'vijver' : /pad|tegel|path/i.test(n) ? 'pad' : /speel|schommel|trampoline|play|swing/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : null;
   }
+  /** Een schuurtje, geen tuinhuis: aan de naam (24 oktober 2026). */
+  const SCHUUR = /schuur|berging|shed/i;
   const heeftHuisje = (r) => (r.zones ?? []).some((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis');
   function soortBuiten(r) {
     if (r.buiten) return { ...r.buiten, tuinhuis: r.buiten.tuinhuis || ((r.buiten.soort === 'tuin' || r.buiten.soort === 'zijtuin') && heeftHuisje(r)) };
@@ -227,6 +229,8 @@
           id: r.id,
           naam: r.naam,
           tuinhuis: b.tuinhuis || huisjes.length > 0,
+          // Een schuur, berging of shed is het schuurtje met puntdak; anders het tuinhuis met plat dak (24 oktober 2026).
+          tuinhuisSoort: SCHUUR.test([huisjes[0]?.naam, ...(r.zones ?? []).filter((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis').map((z) => z.naam)].filter(Boolean).join(' ')) ? 'schuur' : 'tuinhuis',
           // Is het tuinhuis een eigen ruimte, dan is het huisje zelf aan te tikken (besluit 166).
           tuinhuisId: huisjes[0]?.id ?? null,
           tuinhuisNaam: huisjes[0]?.naam ?? null,
@@ -239,7 +243,7 @@
       }
     }
     // Alleen een tuinhuis in Home Assistant: dan is er een tuin om hem in te zetten.
-    if (!tuin && huisjes.length) tuin = { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: true, tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
+    if (!tuin && huisjes.length) tuin = { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: true, tuinhuisSoort: SCHUUR.test(huisjes[0].naam ?? '') ? 'schuur' : 'tuinhuis', tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
     if (rond) {
       const leeg = (naam) => ({ id: null, naam, lampAan: false });
       oprit = rond.oprit ? (oprit ?? { id: null, naam: global.t('huis.buiten.oprit'), auto: null, camera: null }) : null;
