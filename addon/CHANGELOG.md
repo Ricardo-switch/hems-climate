@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.67.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- De app werkt ook in een huis zonder slimme verwarming of airco: licht, schermen, energie, op zon en de assistent, en comfort per kamer kan erbij
+
+**Opgelost**
+
+- De test van het sluipverbruik hangt niet meer af van hoe laat hij draait
+
+*English*
+
+**New**
+
+- The app also works in a house without smart heating or air conditioning: lights, blinds, energy, on sun and the assistant, and comfort per room can be added
+
+**Fixed**
+
+- The standby use test no longer depends on the time it runs
+
 ## 0.66.0
 
 *25 oktober 2026*

@@ -130,7 +130,7 @@ function huisModel(lijst) {
     labels: [
       piekW > 0 ? label('panelen', per('ligging') ? 'ligging' : 'opzon', 40, -60) : null,
       label('boiler', 'boiler', -60, 70),
-      kamer ? label(`kamer:${kamer}`, 'temperatuur', -40, 96) : null,
+      kamer ? label(`kamer:${kamer}`, 'temperatuur', 0, 40) : null,
       label('batterij', 'batterij', -60, 150),
       label('auto', 'auto', 30, -120),
     ].filter(Boolean),

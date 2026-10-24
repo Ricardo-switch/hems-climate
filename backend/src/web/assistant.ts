@@ -843,7 +843,8 @@ export function ask(question: Question, ctx: AskContext): Answer {
           ? // Bij een storing zegt elke kamer hetzelfde; één keer is genoeg.
             statuses.slice(0, 1)
           : statuses.filter((s) => s.kind !== 'ok' && s.kind !== 'idle');
-        if (said.length === 0) out.push(nl ? 'Het is rustig: geen kamer heeft nu iets nodig.' : 'All quiet: no room needs anything right now.');
+        // Zonder slimme regeling (besluit 194) zijn er geen kamers om iets te willen.
+        if (said.length === 0) out.push(ctx.config.zones.length === 0 ? (nl ? 'Het is rustig: er draait niets.' : 'All quiet: nothing is running.') : nl ? 'Het is rustig: geen kamer heeft nu iets nodig.' : 'All quiet: no room needs anything right now.');
         for (const s of said) {
           out.push(s.zin);
           f.merge(s.own);

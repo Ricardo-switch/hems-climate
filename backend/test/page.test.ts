@@ -1766,9 +1766,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForURL(/sluipverbruik\.html$/);
     const wand = p.locator('#wand');
     await wand.locator('h1', { hasText: 'gebruikt je huis' }).waitFor({ timeout: 10_000 });
-    // Dertig nachten als staafjes, en de vijf hoge in oranje.
+    // Dertig nachten als staafjes, en de hoge in oranje; hoeveel hangt af van hoe laat het is (de nacht van vandaag telt pas na 05:00).
+    const sluip = (await (await fetch(`${baseUrl}/api/sluipverbruik`)).json()) as { nachten: { hoog: boolean }[] };
     expect(await wand.locator('[data-midden] svg rect').count()).toBe(30);
-    expect(await wand.locator('[data-midden] svg rect[fill="#ff7a4d"]').count()).toBe(5);
+    expect(await wand.locator('[data-midden] svg rect[fill="#ff7a4d"]').count()).toBe(sluip.nachten.slice(-30).filter((n) => n.hoog).length);
+    expect(sluip.nachten.slice(-30).filter((n) => n.hoog).length).toBeGreaterThanOrEqual(4);
     await wand.locator('.opgevallen', { hasText: 'Opgevallen' }).waitFor();
     // Wat de bewoner zegt (besluit 88): het weet het niet, en de app houdt het in de gaten.
     await wand.locator('[data-weet-niet]').click();

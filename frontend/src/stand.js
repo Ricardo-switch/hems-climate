@@ -213,6 +213,8 @@
     const t = global.taal.t;
     const alles = (d.huis?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
     const acts = d.site?.actuators ?? [];
+    // Een huis zonder slimme regeling (besluit 194): geen kamers die de app regelt.
+    const geenRegeling = d.site != null && (d.site.zones ?? []).length === 0;
     const airco = acts.some((x) => x.capabilities?.canCool);
     const panelen = (d.zon?.panelen ?? []).length > 0 || (d.aansluiting?.configuratie?.panelen ?? []).length > 0;
     // Klimaat kijkt mee tot het zelf regelt (besluit 64); dan wordt het "werkt".
@@ -260,10 +262,13 @@
         waar: geregeld.map((r) => ({ naam: r.naam, wat: kamers.find((k) => k.zoneId === r.zoneId)?.kort ?? (r.temperatuurC != null ? `${global.taal.getal(r.temperatuurC, Number.isInteger(r.temperatuurC) ? 0 : 1)}°` : '') })),
         extra: bewijs ? t('kan.temperatuur.extra', { bewijs }) : null,
       },
-      { ...teksten('optijd'), groep: 'leert', stand: 'leert', nu: dagen ? t('kan.optijd.dagen', { n: dagen }) : t('kan.optijd.nu'), href: 'vandaag.html' },
+      // Zonder slimme regeling (besluit 194) is er niets om te leren of per kamer te regelen: het kan erbij.
+      geenRegeling
+        ? { ...teksten('optijd'), groep: 'leert', stand: 'nodig', label: t('kan.temperatuur.nodig'), nu: t('kan.zonderRegeling'), href: 'huis-kan.html#temperatuur' }
+        : { ...teksten('optijd'), groep: 'leert', stand: 'leert', nu: dagen ? t('kan.optijd.dagen', { n: dagen }) : t('kan.optijd.nu'), href: 'vandaag.html' },
       {
-        ...teksten('perkamer'), groep: 'comfort', stand: perKamer.length ? meekijk : 'nodig', label: perKamer.length ? null : t('kan.perkamer.nodig'),
-        nu: perKamer.length ? huismodel.inKamers(perKamer.map((r) => r.naam)) : t('kan.perkamer.nu'), href: 'indeling.html',
+        ...teksten('perkamer'), groep: 'comfort', stand: perKamer.length && !geenRegeling ? meekijk : 'nodig', label: perKamer.length && !geenRegeling ? null : t('kan.perkamer.nodig'),
+        nu: perKamer.length && !geenRegeling ? huismodel.inKamers(perKamer.map((r) => r.naam)) : t('kan.perkamer.nu'), href: 'indeling.html',
         waar: perKamer.map((r) => ({ naam: r.naam, wat: warmteVan(r).join(', ') || t('kan.thermostaat') })),
         idee: idee.find((x) => x.soort === 'koop' && x.id.startsWith('slim-')) ?? null,
       },
@@ -297,7 +302,7 @@
       // Gemak
       { ...teksten('licht'), groep: 'gemak', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit', nu: lampenAan ? t('kan.licht.aan', { n: lampenAan }) : t('kan.licht.uit'), href: 'functies.html#licht' },
       ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),
-      { ...teksten('afwezig'), groep: 'comfort', stand: meekijk, nu: t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
+      { ...teksten('afwezig'), groep: 'comfort', stand: geenRegeling ? 'nodig' : meekijk, ...(geenRegeling ? { label: t('kan.temperatuur.nodig') } : {}), nu: geenRegeling ? t('kan.zonderRegeling') : t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
       { ...teksten('vraag'), groep: 'gemak', stand: 'werkt', nu: t('kan.vraag.nu'), href: 'assistent.html' },
       // Overzicht
       {

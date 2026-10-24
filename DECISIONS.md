@@ -75,6 +75,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
 - [176. Apparaten op zon in de voorrang: een lijst Op zon](#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon)
 - [186. Warmte bewaren: de boiler en de jacuzzi op zon](#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon)
+- [194. Een huis zonder slimme regeling: de app draait ook zonder zones](#194-een-huis-zonder-slimme-regeling-de-app-draait-ook-zonder-zones)
 
 **Configuratie en onboarding**
 
@@ -8880,6 +8881,43 @@ naar.
 huis bij Kamers en indeling (dan zijn er weer twee); een tweede oprit, terras
 of garage tekenen, de buitenzones zoals moestuin of vijver in de tekening, en
 een balkon bij één etage: dat komt later.
+
+---
+
+## 194. Een huis zonder slimme regeling: de app draait ook zonder zones
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Op 25 oktober 2026, voor de makeover naar het grote publiek. De configuratie
+eiste minstens één zone en één klimaatapparaat; zonder slimme verwarming of
+airco startte de dienst niet, terwijl licht, schermen, energie, op zon,
+het sluipverbruik en de assistent daar niets mee te maken hebben. De bewoner
+koos eerder (makeover, 23 oktober): **werkt zonder klimaat**, en klimaat staat
+bij Wat je huis kan als iets dat erbij kan. Dit is de basis; een huis zonder
+slimme meter of zonder panelen volgt na zijn schets.
+
+*Besluit:*
+
+- **Zones en klimaatapparaten zijn niet meer verplicht.** Zonder `zones` en
+  `actuators` (of met lege lijsten) is de configuratie geldig; de regeling
+  draait en heeft dan niets te regelen. Een zone die naar een apparaat wijst dat
+  er niet is, blijft een fout.
+- **Het begin** zegt het niet meer als blokkade: zonder gebied met een
+  klimaatapparaat en een thermometer doet de app licht, schermen, energie en op
+  zon, en kan comfort per kamer later erbij.
+- **Wat de app zegt:** op Thuis "Geen zon, en er hoeft niets te draaien" in
+  plaats van "geen kamer heeft iets nodig"; de assistent zegt "Het is rustig: er
+  draait niets."
+- **Comfort** toont dan alleen "Comfort per kamer kan erbij", met wat het
+  oplevert. **Wat je huis kan** zet Op temperatuur, Verwarmen per kamer, Afwezig
+  en vakantie en Op tijd warm of koel op "Airco of thermostaat nodig" (eerst
+  stonden de laatste drie op "kijkt mee" of "leert nog").
+- **Versie 0.67.0.**
+
+*Wat afviel:* de klimaatstap van Inrichten aanpassen aan een huis met wel
+apparaten in Home Assistant maar zonder zones (dat komt met de klimaatstap per
+merk); een eigen keus "geen slimme regeling" bewaren (een huis zonder zones is
+dat al).
 
 ---
 

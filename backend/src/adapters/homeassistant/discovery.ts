@@ -611,9 +611,11 @@ export function discover(r: Registers): Proposal {
     findings.push({
       soort: 'ontbreekt',
       pad: 'zones',
+      // Zonder slimme regeling werkt de app ook (besluit 194): dit zegt alleen wat er dan niet bij is.
       tekst:
         'geen enkel gebied heeft zowel een klimaatapparaat als een temperatuursensor. ' +
-        'Deel je apparaten in gebieden in bij Instellingen → Gebieden.',
+        'Dat kan: de app doet dan licht, schermen, energie en op zon; comfort per kamer kan er later bij. ' +
+        'Deel je apparaten in gebieden in bij Instellingen → Gebieden als je ze wel hebt.',
     });
   }
 

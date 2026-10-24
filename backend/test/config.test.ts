@@ -366,13 +366,19 @@ describe('wat verplicht blijft', () => {
     expect(messages(parse(c))).toContain('timezone');
   });
 
-  it('minstens één zone, want anders valt er niets te regelen', () => {
+  it('een huis zonder slimme regeling mag: geen zones en geen apparaten (besluit 194)', () => {
     const c = minimal();
     c['zones'] = [];
-    expect(parse(c).ok).toBe(false);
+    c['actuators'] = [];
+    const r = parse(c);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.config.zones).toEqual([]);
+    delete c['zones'];
+    delete c['actuators'];
+    expect(parse(c).ok).toBe(true);
   });
 
-  it('minstens één apparaat, want anders valt er niets mee te regelen', () => {
+  it('een zone zonder zijn apparaten niet, want dan valt er niets mee te regelen', () => {
     const c = minimal();
     c['actuators'] = [];
     expect(parse(c).ok).toBe(false);

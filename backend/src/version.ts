@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.66.0';
+export const VERSIE = '0.67.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,24 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.67.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'De app werkt ook in een huis zonder slimme verwarming of airco: licht, schermen, energie, op zon en de assistent, en comfort per kamer kan erbij',
+    ],
+    opgelost: [
+      'De test van het sluipverbruik hangt niet meer af van hoe laat hij draait',
+    ],
+    en: {
+      nieuw: [
+        'The app also works in a house without smart heating or air conditioning: lights, blinds, energy, on sun and the assistant, and comfort per room can be added',
+      ],
+      opgelost: [
+        'The standby use test no longer depends on the time it runs',
+      ],
+    },
+  },
   {
     versie: '0.66.0',
     datum: '2026-10-25',
