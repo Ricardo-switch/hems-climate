@@ -45,8 +45,10 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Leren` (leren, meekijken, regelen per apparaat) | |
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 | `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
+| `Wand-Inrichten-Klimaat` (wat elk apparaat kan, per koppeling; `#badkamer`, `#keuken`, `#ir`; schets, nog niet besloten) | |
 | `Wand-Thuis` blijft | `Thuis-Tel` (Thuis opnieuw: de Assistent altijd boven de tabs; besluit 159) |
 | `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (avondstand, dagstand `#rust`, uit `#uit`, `#kiezen`; besluiten 164 en 165) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
+| `Wand-Thuis-3` (huis 3.0: het eiland met `#dag`, `#avond`, `#nacht`, `#winter`, `#regen`, en `#aanpassen` met smal of breed), `Wand-Huis-3` (de woningtypes `#rij`, `#hoek`, `#tweekap`, `#appartement`, `#minder`, `#zoom`), `Wand-Energie-Panelen-3` (`#gemeten`, `#leert`, `#garage`, `#zelf`), `Wand-Huis-kan-3` (zes groepen, `#ligging`); besluit 187 | `Tel-Huis-3` (één bovenbalk en het net onder het huis; `#avond`, `#balk`) |
 | `Wand-Favorieten` (twaalf favorieten, vier per pagina, met het icoon van de kamer; `#kiezen` het kiesblad met de volgorde en een filter), `Wand-Rook` (het alarm bij rook; `#onderhoud` de rookmelders bij Onderhoud; besluit 170) | |
 | `Wand-Instellingen-Groep` (een groep op de wand: grote regels links, wat mist bovenaan, het deel zonder scrollen, uitleg achter "Waarvoor is dit?"; `#hulp`) | `Instellingen-Tel-Groep` (een groep instellingen: de delen onder elkaar in plaats van een rij om opzij te schuiven; `#deel`, `#comfort`, `#nu`) |
 | | `Instellingen-Tel-Meldingen` (Jij › Meldingen op je telefoon; `#melding` het slotscherm, `#geen` zonder telefoon; besluit 183) |

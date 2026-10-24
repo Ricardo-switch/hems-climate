@@ -14,30 +14,31 @@
 <script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var eigen = d.classList.contains('tel-stand') || !t.scherm, c = eigen ? t.kleur : t.wandKleur; var licht = eigen && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
 <style>
   /*
-   * Inrichten in één keer (besluit 139, schets Wand-Inrichten): over het hele
-   * scherm, zonder menu. Bovenaan de stappen, links het huis dat meegroeit,
-   * rechts één vraag tegelijk.
+   * Inrichten in één keer (besluit 139 en 190, schets Wand-Inrichten-3): over
+   * het hele scherm, zonder menu. Bovenaan het pad van acht hoofdstukken,
+   * links het eiland dat meegroeit, rechts één vraag tegelijk.
    */
-  #wand { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); padding: 18px 26px 22px; gap: 12px; }
+  #wand { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); padding: 18px 26px 22px; gap: 12px; }
   .veld { height: 38px; padding: 0 10px; border-radius: 12px; border: 1px solid rgb(var(--wit) / 0.14); background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-size: 14px; font-weight: 600; color-scheme: dark; }
   .veld option { background: #14203a; color: var(--tekst); }
-  .bovenbalk { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .bovenbalk { display: flex; align-items: center; gap: 16px; }
+  .bovenbalk .stappen { flex: 1; min-width: 0; }
   .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 20px; color: var(--tekst); text-decoration: none; }
   .merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
   /*
-   * Zes hoofdstukken als kaarten over de hele breedte (schets
-   * Wand-Inrichten-Compleet, besluit 146): de naam, een balkje per stap, en
-   * wat erin zit.
+   * Het pad (besluit 190, schets Wand-Inrichten-3): acht hoofdstukken naast
+   * het logo, elk met zijn naam en een streepje per stap.
    */
-  .stappen { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
-  .stap { display: flex; flex-direction: column; gap: 7px; padding: 11px 13px 12px; border-radius: 16px; border: 1px solid var(--glas-rand, rgb(var(--wit) / 0.12)); background: rgb(var(--wit) / 0.04); color: var(--tekst); font: inherit; cursor: pointer; text-decoration: none; min-width: 0; }
-  .stap .naam { font-size: 14px; font-weight: 700; }
-  .stap .n, .stap .kort { display: none; }
-  .stap .sub { font-size: 12px; line-height: 1.3; color: var(--gedempt); }
-  .stap.nu { border-color: rgb(var(--wit) / 0.42); background: rgb(var(--wit) / 0.09); }
+  .stappen { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .stap { display: flex; flex-direction: column; gap: 6px; padding: 7px 10px 8px; border-radius: 14px; border: 1px solid transparent; background: rgb(var(--wit) / 0.04); color: var(--tekst); font: inherit; cursor: pointer; text-decoration: none; min-width: 0; }
+  .stap .naam { font-size: 12.5px; font-weight: 700; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stap.klaar .naam { color: var(--zacht); }
+  .stap.nu .naam { color: var(--tekst); }
+  .stap .n, .stap .kort, .stap .sub { display: none; }
+  .stap.nu { border-color: rgb(var(--wit) / 0.16); background: rgb(var(--wit) / 0.09); }
   .stap:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
-  .stap .stipjes { display: flex; gap: 4px; }
-  .stap .stipjes i { flex: 1; height: 4px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
+  .stap .stipjes { display: flex; gap: 3px; }
+  .stap .stipjes i { flex: 1; height: 3px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
   .stap .stipjes i.al { background: var(--mint); }
   .stap .stipjes i.nu { background: var(--tekst); }
   /* Al ingevuld uit Home Assistant, nog niet nagelopen (besluit 158): omlijnd. */
@@ -163,25 +164,115 @@
   .prijs input { width: 64px; border: 0; background: none; color: var(--tekst); font: inherit; font-weight: 700; }
   .prijs input:focus { outline: none; }
   .prijs:focus-within { outline: 2px solid var(--ijs); }
-  .filmkaart { position: relative; height: 210px; border-radius: 20px; border: 0; background: radial-gradient(120% 120% at 30% 10%, #1e3157 0%, #0e1830 70%); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: end; padding: 16px 18px; cursor: pointer; text-align: left; }
+  .filmkaart { position: relative; height: 150px; flex: none; border-radius: 20px; border: 0; background: radial-gradient(120% 120% at 30% 10%, #1e3157 0%, #0e1830 70%); color: var(--tekst); font: inherit; font-size: 15px; font-weight: 700; display: flex; align-items: end; padding: 16px 18px; cursor: pointer; text-align: left; }
   .filmkaart .speel { position: absolute; left: 50%; top: 44%; width: 72px; height: 72px; margin: -36px 0 0 -36px; border-radius: 50%; background: var(--tekst); }
   .filmkaart .speel::after { content: ''; position: absolute; left: 29px; top: 22px; border-left: 22px solid #0b1424; border-top: 14px solid transparent; border-bottom: 14px solid transparent; }
   .filmkaart:focus-visible { outline: 2px solid var(--tekst); outline-offset: 3px; }
   .melding-inr { min-height: 18px; font-size: 13px; color: var(--mint-t); }
   .melding-inr.fout { color: var(--gloed-t); }
-  /* De telefoon: de stappen klein bovenaan, het huis klein, de vraag eronder. */
-  #tel .inhoud { padding: 16px 14px 28px; display: flex; flex-direction: column; gap: 12px; }
-  #tel .stappen { display: flex; gap: 4px; overflow-x: auto; }
-  #tel .stap { flex-direction: row; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 6px; border: 0; border-radius: 999px; background: none; flex-shrink: 0; }
-  #tel .stap .naam, #tel .stap .sub, #tel .stap .stipjes { display: none; }
-  #tel .stap .n { display: grid; width: 24px; height: 24px; border-radius: 50%; place-items: center; font-size: 12px; font-weight: 800; background: rgb(var(--wit) / 0.08); color: var(--zacht); }
-  #tel .stap.klaar .n { background: rgba(110, 231, 183, 0.2); color: var(--mint-t); }
-  #tel .stap.nu { background: rgb(var(--wit) / 0.1); }
-  #tel .stap.nu .n { background: var(--accent); color: var(--op-accent); }
-  #tel .stap.nu .kort { display: inline; font-size: 14px; font-weight: 600; }
+  .kaart > .melding-inr:empty { min-height: 0; margin-top: -10px; }
+
+  /*
+   * De bouwstenen van Inrichten 3.0 (besluit 190, schets Wand-Inrichten-3):
+   * regels met een icoon, getallen, tegels met een klein huis, bewoners met
+   * hun kleur, een raster per dagdeel, de wand in het klein en de punten van
+   * Klaarzetten.
+   */
+  .lijst { display: flex; flex-direction: column; gap: 6px; }
+  .etagekop { font-size: 12px; font-weight: 700; color: var(--gedempt); margin: 6px 2px 0; }
+  .etagekop:first-child { margin-top: 0; }
+  .regel { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; width: 100%; box-sizing: border-box; flex: none; padding: 7px 10px; border: 0; border-radius: 13px; background: rgb(var(--wit) / 0.045); color: var(--tekst); font: inherit; text-align: left; text-decoration: none; }
+  button.regel, a.regel { cursor: pointer; }
+  button.regel:hover, a.regel:hover, .regel.open { background: rgb(var(--wit) / 0.08); }
+  .regel:focus-visible, .tegel:focus-visible, .teller:focus-visible, .bewoner:focus-visible, .schakel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .regel .ik { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  .regel .ik svg { width: 18px; height: 18px; }
+  .regel .tekst, .bewoner .tekst, .klaarregel .tekst { min-width: 0; }
+  .regel .tekst b { display: block; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel .tekst span { display: block; font-size: 12px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel .rechts { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--zacht); white-space: nowrap; }
+  .regel .rechts.mint { color: var(--mint-t); }
+  .regel .rechts.ijs { color: var(--ijs-t); }
+  .regel .rechts.zon { color: var(--zon-t); }
+  .regel.uit { background: transparent; border: 1px dashed rgb(var(--wit) / 0.14); }
+  .regel .onder { grid-column: 2 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .regel .onder .koppel { padding: 0; }
+  .regel .onder .koppel .veld { max-width: 200px; }
+  .schakel { position: relative; flex: none; width: 42px; height: 26px; padding: 0; border: 0; border-radius: 13px; background: rgb(var(--wit) / 0.16); cursor: pointer; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+  .schakel[aria-checked="true"] { background: var(--mint); }
+  .schakel[aria-checked="true"]::after { transform: translateX(16px); background: #0b2a1f; }
+  .schakel:disabled { opacity: 0.4; cursor: default; }
+  .tip { flex-shrink: 1; min-height: 0; overflow: hidden; padding: 10px 12px; border-radius: 14px; background: rgba(111, 211, 255, 0.08); color: var(--zacht); font-size: 13px; line-height: 1.45; }
+  .tellen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .teller { padding: 10px 12px; border: 0; border-radius: 14px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; text-align: left; }
+  button.teller { cursor: pointer; }
+  button.teller:hover { background: rgb(var(--wit) / 0.09); }
+  .teller b { display: block; margin-bottom: 4px; font-family: var(--kop); font-size: 26px; font-weight: 600; line-height: 1; }
+  .teller span { font-size: 12px; color: var(--zacht); }
+  .tegels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex: none; }
+  .tegel { position: relative; height: 112px; padding: 0; border: 1.5px solid transparent; border-radius: 16px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; overflow: hidden; cursor: pointer; }
+  .tegel[aria-pressed="true"] { border-color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
+  .tegel .mini { position: absolute; inset: 0 0 30px 0; }
+  .tegel .mini svg { width: 100%; height: 100%; }
+  .tegel b { position: absolute; left: 10px; right: 8px; bottom: 7px; font-size: 12.5px; line-height: 1.15; text-align: left; }
+  .bewoner { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; width: 100%; flex: none; padding: 10px 12px; border: 0; border-radius: 15px; background: rgb(var(--wit) / 0.05); color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .bewoner.open, .bewoner:hover { background: rgb(var(--wit) / 0.09); }
+  .bewoner .tekst b { display: block; font-size: 15px; }
+  .bewoner .tekst span { font-size: 12px; color: var(--gedempt); }
+  .bewoner .rechts { font-size: 18px; color: var(--gedempt); }
+  .gezicht { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--op-accent); font-family: var(--kop); font-weight: 700; }
+  .stapper { display: inline-flex; align-items: center; gap: 6px; }
+  .stapper button { width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgb(var(--wit) / 0.08); color: var(--tekst); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .stapper button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .stapper b { min-width: 44px; text-align: center; font-family: var(--kop); font-size: 16px; color: var(--tekst); }
+  .dagdelen { display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, 62px); gap: 5px; align-items: center; font-size: 12px; }
+  .dagdelen.drie { grid-template-columns: minmax(0, 1fr) repeat(3, 62px); }
+  .dagdelen > small { font-weight: 700; color: var(--gedempt); text-align: center; }
+  .dagdelen > b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dagdelen > span { height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgb(var(--wit) / 0.06); font-family: var(--kop); font-size: 15px; font-weight: 600; color: var(--gedempt); }
+  .dagdelen > span.warm { background: rgba(255, 122, 77, 0.16); color: #ffb090; }
+  .dagdelen > span.nacht { background: rgba(143, 134, 255, 0.16); color: #c1bcff; }
+  .dagdelen > span.koel { background: rgba(111, 211, 255, 0.14); color: var(--ijs-t); }
+  .wandje { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; flex: none; height: 124px; margin-bottom: 6px; padding: 10px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1px solid rgb(var(--wit) / 0.08); box-sizing: border-box; }
+  .wandje .huisvak { position: relative; display: block; border-radius: 10px; background: linear-gradient(160deg, rgb(111 211 255 / 0.12), rgb(255 255 255 / 0.03)); overflow: hidden; }
+  .wandje .huisvak svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .wandje .kaartjes { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 24px; gap: 5px; align-content: start; }
+  .wandje .kaartjes i { border-radius: 7px; background: rgb(var(--wit) / 0.09); }
+  .wandje .kaartjes i.breed { grid-column: span 2; }
+  .klaarlijst { gap: 0; }
+  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; flex: none; padding: 7px 4px; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .klaarregel:first-child { border-top: 0; }
+  .klaarregel > i { width: 8px; height: 8px; border-radius: 50%; }
+  .klaarregel b { display: block; font-size: 13.5px; }
+  .klaarregel .tekst span, .klaarregel small { display: block; font-size: 12px; color: var(--gedempt); }
+  .getal input { width: 5ch; height: 32px; border: 1px solid rgb(var(--wit) / 0.14); border-radius: 10px; background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-family: var(--kop); font-size: 15px; font-weight: 700; text-align: center; }
+  .getal input:focus { outline: 2px solid var(--ijs); }
+  .getal input::placeholder { color: var(--gedempt); }
+
+  /*
+   * De telefoon (schets Tel-Inrichten-3): bovenin het hoofdstuk en hoe ver je
+   * bent, het huis klein, dan de vraag; Terug, Later en Volgende vast onderaan.
+   */
+  #tel .inhoud { padding: 14px 0 0; display: flex; flex-direction: column; }
+  #tel .kop3 { display: flex; align-items: center; gap: 12px; padding: 4px 18px 6px; }
+  #tel .kop3 .logo { flex: none; width: 30px; height: 30px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); }
+  #tel .telwaar { flex: 1; min-width: 0; }
+  #tel .telwaar b { display: block; font-size: 14px; }
+  #tel .telwaar span { font-size: 12px; color: var(--gedempt); }
+  #tel .sluit { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--wit) / 0.08); color: var(--zacht); font-size: 18px; text-decoration: none; }
+  #tel .voortgang { display: flex; gap: 3px; padding: 4px 18px 0; }
+  #tel .voortgang i { flex: 1; height: 4px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
+  #tel .voortgang i.al { background: var(--mint); }
+  #tel .voortgang i.nu { background: var(--tekst); }
+  #tel .voortgang i.half { background: none; box-shadow: inset 0 0 0 1px var(--mint); }
   #tel .toestel { flex-wrap: wrap; }
-  #tel .podium { height: 220px; }
-  #tel .kaart { padding: 20px 18px; overflow: visible; }
+  #tel .podium { height: 250px; margin: 4px 0 -6px; }
+  #tel .kaart { padding: 4px 18px 0; gap: 10px; overflow: visible; background: none; border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  #tel .kaart h1 { font-size: 27px !important; line-height: 1.1 !important; }
+  #tel .kaart .uitleg { font-size: 14.5px; }
+  /* Onderaan vast in beeld, over de hele breedte: de knoppen blijven staan terwijl de vraag schuift. */
+  #tel .kaart > .voet { position: sticky; bottom: 0; z-index: 5; margin: 0 -18px; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, rgb(var(--nacht) / 0.96) 34%); }
   /* Op de telefoon schuift de pagina, niet de lijst: een eigen schuifvak hield de vinger vast. */
   #tel .rijen { overflow: visible; overscroll-behavior: auto; }
   #tel .rij { grid-template-columns: 1fr; gap: 6px; }
@@ -193,8 +284,7 @@
 </head>
 <body class="lucht lucht-dag">
   <div id="wand" class="wand">
-    <div class="bovenbalk"><a class="merk" href="thuis.html"><i aria-hidden="true"></i>Smart Climate</a></div>
-    <nav class="stappen" data-t-aria-label="inr.hoofdstukken" data-stappen></nav>
+    <div class="bovenbalk"><a class="merk" href="thuis.html" aria-label="Smart Climate"><i aria-hidden="true"></i></a><nav class="stappen" data-t-aria-label="inr.hoofdstukken" data-stappen></nav></div>
     <div class="veldje">
       <div class="podium" data-podium="wand"></div>
       <section class="glas kaart" data-kaart aria-live="polite"></section>
@@ -202,10 +292,10 @@
   </div>
   <div id="tel" class="tel">
     <div class="inhoud">
-      <a class="merk" href="thuis.html"><i aria-hidden="true"></i>Smart Climate</a>
-      <nav class="stappen" data-t-aria-label="inr.stappen" data-stappen></nav>
+      <div class="kop3"><span class="logo" aria-hidden="true"></span><div class="telwaar" data-telwaar></div><a class="sluit" href="thuis.html" data-t-aria-label="inr.sluiten"><span aria-hidden="true">×</span></a></div>
+      <div class="voortgang" data-voortgang aria-hidden="true"></div>
       <div class="podium" data-podium="tel" aria-hidden="true"></div>
-      <section class="glas kaart" data-kaart aria-live="polite"></section>
+      <section class="kaart" data-kaart aria-live="polite"></section>
     </div>
   </div>
   <script src="kit/teksten.nl.js"></script>

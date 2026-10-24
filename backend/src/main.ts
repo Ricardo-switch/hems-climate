@@ -47,6 +47,7 @@ import { BewonersStore, GEEN_BEWONERS, bewonersView, comfortVanBewoner, gastStan
 import { BACKUP_DIR, OPNIEUW_STARTEN, beginOpnieuw, bewaarBackup, bewaardeBackups, leesBackup, maakBackup, zetTerug } from './web/gegevens.js';
 import { entiteitenLijst, type AnalyseExtra } from './web/export.js';
 import { UitstelStore } from './web/uitstel.js';
+import { BufferStore, cheapWindows } from './web/warmtebuffers.js';
 import { VoorkeurenStore } from './web/voorkeuren.js';
 import { SceneColorStore, colorsFromLamps } from './web/scene-colors.js';
 import { ScenePictures } from './web/scene-pictures.js';
@@ -61,6 +62,7 @@ import { Pauze } from './web/taalmodel.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
+import { findHeatStores } from './web/buffers-vinden.js';
 import { kiesLigging, meetLigging, omvormerUitType, type Meting } from './web/ligging.js';
 import { alarmSensoren, vindRookmelders } from './web/rookmelders.js';
 import { eigenUpdate, updateView, type UpdateView } from './web/bijwerken.js';
@@ -657,6 +659,13 @@ const uitstelStore: UitstelStore | null =
     : null;
 await uitstelStore?.load();
 
+/* Klaar om, legionella en vol bij de boiler en de jacuzzi (besluit 186): naast de dataset. */
+const bufferStore: BufferStore | null =
+  logDir !== '' && site && (site.config.heatStores ?? []).length > 0
+    ? new BufferStore({ logDir, config: site.config, onChange: () => runner?.nudge('klaarom') })
+    : null;
+await bufferStore?.load();
+
 /* Meters en prijzen voor Opbrengst (besluit 102): naast de dataset, dus alleen met een logmap. */
 const energyStore = logDir !== '' ? new EnergyStore(logDir) : null;
 await energyStore?.load();
@@ -673,12 +682,17 @@ const runner: ShadowRunner | null =
         watchdogMinutes: startup.watchdogMinutes,
         logDir,
         ...(uitstelStore ? { readyBy: () => uitstelStore.readyBy } : {}),
+        // De goedkoopste uren zijn de daluren van het contract, als het er een heeft.
+        ...(bufferStore && site
+          ? { warmte: (nowMs: number) => ({ extra: bufferStore.extra, cheapWindows: cheapWindows(nowMs, site.config.timezone, energyStore?.current?.prijzen ?? null) }) }
+          : {}),
         ...(webPort == null
           ? {}
           : {
               onDecision: (snapshot: LiveSnapshot) => {
                 // Een eindtijd vervalt als het programma klaar is of de deur openging.
                 void uitstelStore?.prune(snapshot.explanation.deferrables);
+                void bufferStore?.observe(snapshot.explanation.heatStores);
                 web?.publish(snapshot);
                 // De stand van de kamers in het huis hangt aan het besluit.
                 web?.huisVeranderd(false);
@@ -1399,6 +1413,7 @@ if (webPort != null) {
       ? { feedback: new FeedbackLog({ logDir, zoneIds: site.config.zones.map((z) => z.id) }) }
       : {}),
     ...(uitstelStore ? { uitstel: uitstelStore } : {}),
+    ...(bufferStore ? { buffers: bufferStore } : {}),
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
     deurbel: deurbelNu,
@@ -1502,7 +1517,7 @@ if (webPort != null) {
         netMeter: Number.isFinite(netWaarde),
         zon: { heeft: baseConfig?.solarProduction != null && Number.isFinite(Number(allStates.get(baseConfig.solarProduction.id)?.state)), intervalS: solarPace.intervalS },
         energieDashboard: (prefs?.energy_sources ?? []).some((b) => b.type === 'grid'),
-        apparatenOpZon: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices).length : 0,
+        apparatenOpZon: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices).length + findHeatStores(allStates, houseRegisters.entities, houseRegisters.devices).length : 0,
         cameras: new Set((gevonden?.cameras ?? []).map((c) => c.naam)).size,
         deurbel: (gevonden?.melders ?? []).length > 0,
         rookmelders: houseRegisters ? vindRookmelders(houseRegisters.entities, houseRegisters.devices, allStates).length : 0,
@@ -1606,6 +1621,8 @@ function connectionDoor(store: ConnectionStore, base: NonNullable<typeof baseCon
   const found = () => ({
     fasen: findPhases(allStates.values()),
     apparaten: houseRegisters ? findAppliances(allStates, houseRegisters.entities, houseRegisters.devices) : [],
+    // De boiler en de jacuzzi (besluit 186).
+    buffers: houseRegisters ? findHeatStores(allStates, houseRegisters.entities, houseRegisters.devices) : [],
     // Hoe de panelen liggen (besluit 157): om "klopt" te kunnen bewaren.
     meting: metingNu(),
     omvormerGevonden: omvormerGevonden(),

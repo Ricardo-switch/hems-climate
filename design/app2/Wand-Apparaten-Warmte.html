@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Apparaten, boiler en jacuzzi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Apparaten met een warmtebuffer (schets, 23 oktober 2026). Naast de droger,
+   * die één programma draait, twee apparaten die warmte bewaren: de boiler en
+   * de jacuzzi. Ze warmen op zon op, houden een ondergrens vast, en halen hun
+   * doel op tijd, zonder zon in de goedkoopste uren.
+   *
+   * Standen: zomermiddag (standaard), #grijs een grijze winterdag zonder zon,
+   * #jacuzzi en #boiler het blad met de instellingen.
+   * Cijfers: Intex PureSpa, 2.200 W, 1,5 à 2,5° per uur; warmtepompboiler 200 l, 0,5 kW.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .kopregel { display: flex; justify-content: space-between; align-items: start; gap: 20px; }
+  .zonpil { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-radius: 20px; background: var(--glas); border: 1px solid var(--glas-rand); }
+  .zonpil b { display: block; font-family: var(--kop); font-size: 18px; }
+  .zonpil span { font-size: 12.5px; color: var(--gedempt); }
+  .kaarten { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .app { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .app .boven { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+  .app b.naam { display: block; font-size: 18px; }
+  .app .stand { font-size: 13.5px; font-weight: 600; }
+  .doel { font-family: var(--kop); font-size: 22px; font-weight: 600; text-align: right; line-height: 1; }
+  .doel span { display: block; font-family: var(--romp); font-size: 11.5px; font-weight: 500; color: var(--gedempt); margin-top: 4px; }
+  .zin { font-size: 13px; color: var(--zacht); line-height: 1.45; margin: 0; }
+  .keuze { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: rgb(var(--wit) / 0.06); }
+  .keuze button { height: 32px; border: 0; border-radius: 9px; background: transparent; color: var(--zacht); font: 700 12.5px var(--romp); white-space: nowrap; }
+  .keuze button[aria-pressed='true'] { background: var(--tekst); color: var(--tegen); }
+  .klein-kop { font-size: 11.5px; font-weight: 700; color: var(--gedempt); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .meer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--gedempt); padding-top: 8px; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .meer a { color: var(--accent); font-weight: 700; text-decoration: none; }
+
+  /* De dag: zon bovenaan, per apparaat een baan. */
+  .dag { padding: 16px 20px 12px; display: grid; grid-template-columns: 120px 1fr; column-gap: 14px; row-gap: 0; flex: 1; min-height: 0; }
+  .dag h2 { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .dag h2 .leg { display: flex; gap: 16px; font: 500 12px var(--romp); color: var(--gedempt); }
+  .dag h2 .leg i { display: inline-block; width: 14px; height: 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .dag .naam { font-size: 13px; color: var(--zacht); height: 26px; display: flex; align-items: center; }
+  .dag .baan { position: relative; height: 26px; }
+  .dag .baan::before { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 6px; border-radius: 3px; background: rgb(var(--wit) / 0.05); }
+  .dag .baan i { position: absolute; top: 9px; height: 8px; border-radius: 4px; }
+  .dag .baan i.plan { opacity: 0.4; }
+  .dag .baan i.net { background: repeating-linear-gradient(45deg, rgb(var(--wit) / 0.55) 0 3px, transparent 3px 6px) !important; }
+  .dag .nu { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--tekst); opacity: 0.8; }
+  .dag .zonkromme { height: 64px; position: relative; }
+  .dag .uren { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+
+  .stroom { padding: 12px 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .stroom .strook { height: 10px; border-radius: 5px; overflow: hidden; display: flex; }
+  .stroom .strook i { display: block; height: 100%; }
+  .stroom .leg { display: flex; gap: 18px; font-size: 12.5px; color: var(--zacht); flex-wrap: wrap; }
+  .stroom .leg span { display: inline-flex; align-items: center; gap: 6px; }
+  .stroom .leg i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+
+  /* Het blad met de instellingen, rechts over de pagina. */
+  .waas { position: absolute; inset: 0; background: rgb(var(--nacht) / 0.55); display: none; }
+  .blad { position: absolute; top: 16px; right: 16px; bottom: 16px; width: 560px; border-radius: 26px; background: #121e31; border: 1px solid var(--glas-rand); box-shadow: -20px 0 60px rgb(0 0 0 / 0.35); padding: 22px 24px; display: none; flex-direction: column; gap: 14px; }
+  .blad .titel { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; }
+  .blad .dicht { width: 38px; height: 38px; border-radius: 50%; background: rgb(var(--wit) / 0.07); display: grid; place-items: center; color: var(--zacht); font-size: 18px; }
+  .rij { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.045); }
+  .rij b { display: block; font-size: 14.5px; }
+  .rij span.uit { font-size: 12.5px; color: var(--gedempt); line-height: 1.4; display: block; margin-top: 2px; }
+  .stapper { display: flex; align-items: center; gap: 10px; }
+  .stapper .rond { width: 34px; height: 34px; border-radius: 50%; background: rgb(var(--wit) / 0.08); display: grid; place-items: center; font-weight: 700; color: var(--zacht); }
+  .stapper b { font-family: var(--kop); font-size: 22px; min-width: 52px; text-align: center; }
+  .sw { width: 46px; height: 28px; border-radius: 14px; background: var(--mint); position: relative; display: block; }
+  .sw::after { content: ''; position: absolute; right: 3px; top: 3px; width: 22px; height: 22px; border-radius: 50%; background: #0b1424; }
+  .sw.uit { background: rgb(var(--wit) / 0.14); }
+  .sw.uit::after { right: auto; left: 3px; background: var(--zacht); }
+  .ha { padding: 12px 14px; border-radius: 16px; border: 1px dashed rgb(var(--wit) / 0.16); font-size: 12.5px; color: var(--zacht); line-height: 1.45; }
+  .ha b { color: var(--tekst); }
+  .ha .tip { display: flex; gap: 8px; margin-top: 6px; color: var(--zon-t); }
+  .soorten { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .soorten div { padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.045); border: 1px solid transparent; font-size: 12.5px; color: var(--gedempt); line-height: 1.35; }
+  .soorten div b { display: block; color: var(--tekst); font-size: 13.5px; margin-bottom: 2px; }
+  .soorten div.ja { border-color: var(--accent); background: var(--accent-vlak); }
+  .band { position: relative; height: 34px; margin: 4px 4px 0; }
+  .band .lijn { position: absolute; left: 0; right: 0; top: 14px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #4d86c9, #ff9a6b 70%, #ff6a3d); opacity: 0.55; }
+  .band .greep { position: absolute; top: 5px; width: 24px; height: 24px; border-radius: 50%; background: var(--tekst); box-shadow: 0 2px 8px rgb(0 0 0 / 0.4); transform: translateX(-12px); }
+  .band .maat { position: absolute; top: -14px; transform: translateX(-50%); font: 700 12px var(--romp); white-space: nowrap; }
+  .band .zonvak { position: absolute; top: 12px; height: 10px; border-radius: 5px; background: repeating-linear-gradient(45deg, rgba(247,181,72,0.55) 0 3px, transparent 3px 6px); }
+  .bandmaat { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin: 0 4px; }
+
+  body[data-toon='jacuzzi'] .waas, body[data-toon='boiler'] .waas { display: block; }
+  body[data-toon='jacuzzi'] #blad-jacuzzi, body[data-toon='boiler'] #blad-boiler { display: flex; }
+  body:not([data-toon='grijs']) [data-grijs], body[data-toon='grijs'] [data-zon] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" id="wand">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main>
+    <div class="kopregel">
+      <div><h1 class="kop-1">Apparaten</h1><p class="lead" style="margin-top: 6px; max-width: 62ch">Wat op zon kan draaien of warmte bewaren. De kamers gaan voor, en nooit meer tegelijk dan je zekering aankan.</p></div>
+      <div class="zonpil" data-zon><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F7B548" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" fill="#F7B548"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><div><b>0,5 kW over</b><span>van 4,6 kW zon, na de woonkamer</span></div></div>
+      <div class="zonpil" data-grijs><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#9aaabb" stroke-width="1.8" stroke-linecap="round"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.6 1.6A3.3 3.3 0 0 0 7 18z"/></svg><div><b>Geen zon vandaag</b><span>goedkoopste uren: 14:00 tot 17:00</span></div></div>
+    </div>
+
+    <div class="kaarten">
+      <!-- De droger: zoals hij al is. -->
+      <section class="glas app">
+        <div class="boven">
+          <svg viewBox="0 0 64 64" width="64" height="64" aria-label="Droger"><circle cx="32" cy="32" r="27" fill="none" stroke="rgb(255 255 255 / 0.08)" stroke-width="6"/><g data-zon><circle cx="32" cy="32" r="27" fill="none" stroke="#F7B548" stroke-width="6" stroke-linecap="round" stroke-dasharray="119 170" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">34m</text></g><g data-grijs><circle cx="32" cy="32" r="11" fill="none" stroke="#7F8E9C" stroke-width="3"/></g></svg>
+          <div><b class="naam">Droger</b><span class="stand zon-t" data-zon>Draait op zon, klaar 14:40</span><span class="stand" data-grijs style="color: var(--gedempt)">Niet klaargezet</span></div>
+          <div class="doel" data-zon>0,7<span>kW nu</span></div>
+          <div class="doel" data-grijs>–<span>kW nu</span></div>
+        </div>
+        <p class="zin" data-zon>Begon 13:10 met 0,9 kW over. Je wilde hem klaar voor 18:00.</p>
+        <p class="zin" data-grijs>Zet hem klaar met "op afstand starten"; dan begint hij in de goedkoopste uren en is hij op tijd klaar.</p>
+        <div class="meer"><span>Wasruimte · start op zon</span><a href="#">Instellen</a></div>
+      </section>
+
+      <!-- De boiler: een warmtepompboiler, met de tank als beeld. -->
+      <section class="glas app">
+        <div class="boven">
+          <svg viewBox="0 0 64 64" width="64" height="64" aria-label="Boiler, 58 graden, doel 65">
+            <defs>
+              <linearGradient id="tank" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4d86c9"/><stop offset="0.55" stop-color="#ff9a6b"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient>
+              <clipPath id="tankvorm"><rect x="18" y="6" width="28" height="52" rx="12"/></clipPath>
+            </defs>
+            <rect x="18" y="6" width="28" height="52" rx="12" fill="rgb(255 255 255 / 0.06)" stroke="rgb(255 255 255 / 0.16)" stroke-width="1.5"/>
+            <g clip-path="url(#tankvorm)"><rect data-zon x="18" y="22" width="28" height="36" fill="url(#tank)"/><rect data-grijs x="18" y="14" width="28" height="44" fill="url(#tank)"/></g>
+            <path data-zon d="M14 13h36" stroke="#F7B548" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <text x="32" y="44" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="13" fill="#fff">58°</text>
+          </svg>
+          <div><b class="naam">Boiler</b><span class="stand zon-t" data-zon>Laadt op zon, 0,5 kW</span><span class="stand mint-t" data-grijs>Vol genoeg voor vandaag</span></div>
+          <div class="doel" data-zon>65°<span>op zon</span></div>
+          <div class="doel" data-grijs>50°<span>ondergrens</span></div>
+        </div>
+        <p class="zin" data-zon>58° nu, rond 15:50 op 65°. Dat warme water gaat tot morgenavond mee, zonder het net.</p>
+        <p class="zin" data-grijs>Vannacht in de daluren even naar 60°, tegen legionella. Valt hij onder 50°, dan warmt hij meteen bij, ook zonder zon.</p>
+        <div class="meer"><span>Zolder · warmtepompboiler</span><a href="#boiler">Instellen</a></div>
+      </section>
+
+      <!-- De jacuzzi: warm houden en klaar om. -->
+      <section class="glas app">
+        <div class="boven">
+          <svg viewBox="0 0 64 64" width="64" height="64" aria-label="Jacuzzi, 35 graden">
+            <circle cx="32" cy="32" r="27" fill="none" stroke="rgb(255 255 255 / 0.08)" stroke-width="6"/>
+            <circle data-zon cx="32" cy="32" r="27" fill="none" stroke="#F7B548" stroke-width="6" stroke-linecap="round" stroke-dasharray="104 170" transform="rotate(-90 32 32)"/>
+            <circle data-grijs cx="32" cy="32" r="27" fill="none" stroke="#ff9a6b" stroke-width="6" stroke-linecap="round" stroke-dasharray="72 170" transform="rotate(-90 32 32)"/>
+            <text data-zon x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">35°</text>
+            <text data-grijs x="32" y="37" text-anchor="middle" font-family="Bricolage Grotesque" font-weight="600" font-size="15" fill="#EEF3F7">34°</text>
+          </svg>
+          <div><b class="naam">Jacuzzi</b><span class="stand zon-t" data-zon>Warmt op zon, 2,2 kW</span><span class="stand gloed-t" data-grijs>Warmt van het net, 2,2 kW</span></div>
+          <div class="doel">38°<span data-zon>rond 16:10</span><span data-grijs>om 20:00</span></div>
+        </div>
+        <div><div class="klein-kop">Klaar om</div><div class="keuze" role="group" aria-label="Klaar om"><button>Vanavond</button><button>Morgen</button><button aria-pressed="true">Vr 20:00</button><button>Kies…</button></div></div>
+        <p class="zin" data-zon>Op zon alvast naar 38°. Vrijdag is hij dan warm, ook als het bewolkt wordt.</p>
+        <p class="zin" data-grijs>Begon om 14:00, in de goedkoopste uren voor vanavond. Daarna weer warm houden op 30°.</p>
+        <div class="meer"><span>Tuin · houdt 30° vast</span><a href="#jacuzzi">Instellen</a></div>
+      </section>
+    </div>
+
+    <!-- Vandaag: de zon, en wanneer elk apparaat draaide. -->
+    <section class="glas dag">
+      <h2><span class="kop-3">Vandaag</span><span class="leg"><span><i style="background: var(--zon)"></i>op zon</span><span><i style="background: repeating-linear-gradient(45deg, rgb(255 255 255 / 0.6) 0 3px, transparent 3px 6px)"></i>van het net</span><span><i style="background: var(--zon); opacity: 0.4"></i>plan</span></span></h2>
+      <div class="naam">Zon</div>
+      <div class="zonkromme">
+        <svg viewBox="0 0 1000 64" preserveAspectRatio="none" width="100%" height="64" data-zon><defs><clipPath id="totnu"><rect x="0" y="0" width="587" height="64"/></clipPath></defs><path d="M0 63 L230 63 C 330 63 420 5 570 5 C 720 5 810 63 900 63 L1000 63" fill="none" stroke="#F7B548" stroke-width="2" stroke-dasharray="4 5" opacity="0.5"/><g clip-path="url(#totnu)"><path d="M0 63 L230 63 C 330 63 420 5 570 5 C 720 5 810 63 900 63 L1000 63 Z" fill="rgba(247,181,72,0.22)"/><path d="M0 63 L230 63 C 330 63 420 5 570 5 C 720 5 810 63 900 63" fill="none" stroke="#F7B548" stroke-width="2.5"/></g></svg>
+        <svg viewBox="0 0 1000 64" preserveAspectRatio="none" width="100%" height="64" data-grijs><path d="M0 63 C 200 63 300 60 420 58 C 520 57 600 60 700 62 L 1000 63" fill="none" stroke="#9aaabb" stroke-width="2" opacity="0.6"/></svg>
+        <span class="nu" data-zon style="left: 58.7%"></span><span class="nu" data-grijs style="left: 71.5%"></span>
+      </div>
+      <div class="naam">Droger</div>
+      <div class="baan"><i data-zon style="left: 54.9%; width: 3.8%; background: var(--zon)"></i><i data-zon class="plan" style="left: 58.7%; width: 2.4%; background: var(--zon)"></i><span class="nu" data-zon style="left: 58.7%"></span><span class="nu" data-grijs style="left: 71.5%"></span></div>
+      <div class="naam">Boiler</div>
+      <div class="baan"><i data-zon style="left: 56.3%; width: 2.4%; background: var(--zon)"></i><i data-zon class="plan" style="left: 58.7%; width: 7.3%; background: var(--zon)"></i><i data-grijs class="net" style="left: 12.5%; width: 3%"></i><span class="nu" data-zon style="left: 58.7%"></span><span class="nu" data-grijs style="left: 71.5%"></span></div>
+      <div class="naam">Jacuzzi</div>
+      <div class="baan"><i data-zon style="left: 50%; width: 8.7%; background: var(--zon)"></i><i data-zon class="plan" style="left: 58.7%; width: 8.7%; background: var(--zon)"></i><i data-grijs class="net" style="left: 58.3%; width: 13.2%"></i><i data-grijs class="plan net" style="left: 71.5%; width: 11.8%"></i><span class="nu" data-zon style="left: 58.7%"></span><span class="nu" data-grijs style="left: 71.5%"></span></div>
+      <div class="naam">Airco woonkamer</div>
+      <div class="baan"><i data-zon style="left: 45.8%; width: 12.9%; background: var(--ijs)"></i><i data-zon class="plan" style="left: 58.7%; width: 12.1%; background: var(--ijs)"></i><span class="nu" data-zon style="left: 58.7%"></span><span class="nu" data-grijs style="left: 71.5%"></span></div>
+      <div></div>
+      <div class="uren"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+    </section>
+
+    <section class="glas stroom">
+      <b style="font-size: 14px">Waar de stroom nu heen gaat</b>
+      <div class="strook" data-zon><i style="width: 17%; background: var(--ijs)"></i><i style="width: 48%; background: #ff9a6b"></i><i style="width: 11%; background: #f2c38a"></i><i style="width: 13%; background: #b8c4cf"></i><i style="width: 11%; background: var(--mint)"></i></div>
+      <div class="leg" data-zon><span><i style="background: var(--ijs)"></i>Airco woonkamer <b>0,8 kW</b></span><span><i style="background: #ff9a6b"></i>Jacuzzi <b>2,2 kW</b></span><span><i style="background: #f2c38a"></i>Boiler <b>0,5 kW</b></span><span><i style="background: #b8c4cf"></i>De rest van het huis <b>0,6 kW</b></span><span><i style="background: var(--mint)"></i>Terug naar het net <b>0,5 kW</b></span></div>
+      <div class="strook" data-grijs><i style="width: 76%; background: #ff9a6b"></i><i style="width: 24%; background: #b8c4cf"></i></div>
+      <div class="leg" data-grijs><span><i style="background: #ff9a6b"></i>Jacuzzi <b>2,2 kW</b></span><span><i style="background: #b8c4cf"></i>De rest van het huis <b>0,7 kW</b></span><span style="color: var(--gedempt)">Alles van het net, € 0,21 per kWh</span></div>
+    </section>
+
+    <div class="waas"></div>
+
+    <!-- Het blad van de jacuzzi. -->
+    <aside class="blad" id="blad-jacuzzi" aria-label="Jacuzzi instellen">
+      <div class="titel">
+        <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true"><ellipse cx="32" cy="36" rx="26" ry="14" fill="#1d3a5c" stroke="rgb(255 255 255 / 0.25)" stroke-width="2"/><ellipse cx="32" cy="34" rx="20" ry="9" fill="#2f78b4"/><g fill="#a9e6ff"><circle cx="24" cy="32" r="1.6"/><circle cx="34" cy="30" r="1.3"/><circle cx="40" cy="35" r="1.6"/><circle cx="29" cy="37" r="1.2"/></g><path d="M22 18c0-3 3-3 3-6M32 18c0-3 3-3 3-6M42 18c0-3 3-3 3-6" stroke="#ffb090" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+        <div><h2 class="kop-2">Jacuzzi</h2><span class="klein">Intex PureSpa · in de tuin · 2,2 kW verwarmen</span></div>
+        <span class="dicht">✕</span>
+      </div>
+      <div>
+        <div class="band">
+          <span class="zonvak" style="left: 50%; width: 40%"></span>
+          <span class="lijn"></span>
+          <span class="maat" style="left: 50%">warm houden 30°</span><span class="greep" style="left: 50%"></span>
+          <span class="maat zon-t" style="left: 90%">op zon 38°</span><span class="greep" style="left: 90%"></span>
+        </div>
+        <div class="bandmaat"><span>20°</span><span>25°</span><span>30°</span><span>35°</span><span>40°</span></div>
+      </div>
+      <div class="rij"><div><b>Klaar om</b><span class="uit">Kies per keer wanneer je erin wilt. Hij begint op tijd: met zon als die er is, anders in de goedkoopste uren ervoor.</span></div><div class="stapper"><b style="font-size: 17px; min-width: 0">vr 20:00</b></div></div>
+      <div class="rij"><div><b>Tussendoor warm houden</b><span class="uit">Een warme jacuzzi is sneller klaar. Uit: hij koelt af tot de vorstbeveiliging, en klaar om duurt een nacht.</span></div><i class="sw"></i></div>
+      <div class="rij"><div><b>Bubbels zetten verwarmen stil</b><span class="uit">Bij deze jacuzzi kan het niet tegelijk. Na de bubbels gaat hij vanzelf verder.</span></div><span class="mini">vast</span></div>
+      <div class="ha">
+        <b>Wat Home Assistant zegt</b> · koppeling Intex Spa (lokaal): temperatuur, doel 20° tot 40°, aan/uit, filter, bubbels en reiniging.
+        <div class="tip"><span>💡</span><span>De jacuzzi meldt niet of hij echt stookt. Met een slimme stekker met meting ziet het huis wanneer hij klaar is en rekent het eerlijk wat op zon ging.</span></div>
+      </div>
+      <p class="mini" style="margin: 0">Van 30° naar 38° duurt ongeveer vier uur; in de kou langer. Dat leert het huis vanzelf.</p>
+    </aside>
+
+    <!-- Het blad van de boiler. -->
+    <aside class="blad" id="blad-boiler" aria-label="Boiler instellen">
+      <div class="titel">
+        <svg viewBox="0 0 64 64" width="56" height="56" aria-hidden="true"><defs><linearGradient id="tank2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4d86c9"/><stop offset="0.55" stop-color="#ff9a6b"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient></defs><rect x="18" y="6" width="28" height="52" rx="12" fill="url(#tank2)" opacity="0.85"/></svg>
+        <div><h2 class="kop-2">Boiler</h2><span class="klein">Op de zolder · 200 liter</span></div>
+        <span class="dicht">✕</span>
+      </div>
+      <!-- Alleen de soort die de bewoner heeft (23-10): de andere drie zijn er alleen bij een andere boiler. -->
+      <div class="rij"><div><b>Warmtepompboiler</b><span class="uit">Met temperatuur, uit Home Assistant. Op zon gaat het doel omhoog; het water bewaart de zon tot de avond.</span></div><span class="mini">gevonden</span></div>
+      <div>
+        <div class="band">
+          <span class="zonvak" style="left: 50%; width: 37.5%"></span>
+          <span class="lijn"></span>
+          <span class="maat" style="left: 50%">minstens 50°</span><span class="greep" style="left: 50%"></span>
+          <span class="maat zon-t" style="left: 87.5%">op zon 65°</span><span class="greep" style="left: 87.5%"></span>
+        </div>
+        <div class="bandmaat"><span>30°</span><span>40°</span><span>50°</span><span>60°</span><span>70°</span></div>
+      </div>
+      <div class="rij"><div><b>Eens per week naar 60°</b><span class="uit">Tegen legionella. Het liefst op een zonnige dag; anders 's nachts in de daluren.</span></div><i class="sw"></i></div>
+      <div class="rij"><div><b>Zonder zon</b><span class="uit">Onder 50° warmt hij meteen bij, zodat er altijd warm water is. Tegen legionella wacht hij op de daluren.</span></div><span class="mini">vast</span></div>
+      <div class="ha">
+        <b>Wat Home Assistant zegt</b> · een boiler met temperatuur: 58°, doel 55°, standen eco en snel. Geen meting van het verbruik; het huis rekent met 0,5 kW.
+      </div>
+    </aside>
+  </main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script>
+  nav.balk(document.getElementById('balk'), 'apparaten');
+  const toon = { '#grijs': 'grijs', '#jacuzzi': 'jacuzzi', '#boiler': 'boiler' }[location.hash] ?? 'zon';
+  document.body.dataset.toon = toon;
+  if (toon === 'grijs') document.getElementById('wand').className = 'wand lucht lucht-bewolkt';
+</script>
+</body>
+</html>

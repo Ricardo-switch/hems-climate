@@ -75,6 +75,12 @@
     return k.kort.charAt(0).toLowerCase() + k.kort.slice(1);
   }
 
+  /** Hoe warm een boiler of jacuzzi is, van zijn ondergrens (0) tot zijn doel op zon (1); zonder meting half. */
+  function hoeVol(w) {
+    if (w?.tempC == null) return 0.5;
+    return Math.max(0.05, Math.min(1, (w.tempC - (w.minC - 10)) / Math.max(1, w.zonC - (w.minC - 10))));
+  }
+
   /** Een kamer uit `api/huis` naar de beschrijving voor de tekenmotor, met de stand uit `api/state`. */
   function kamerModel(r, state) {
     const apps = r.apparaten ?? [];
@@ -82,7 +88,9 @@
     const lampen = apps.filter((a) => a.soort === 'licht');
     const screens = apps.filter((a) => a.soort === 'screen');
     // Uitstelbare apparaten (besluit 98): de droger draait zichtbaar in zijn kamer.
-    const witgoed = apps.filter((a) => a.soort === 'apparaat');
+    // Een boiler of jacuzzi (besluit 186) is geen witgoed: die tekent zichzelf (besluit 187).
+    const witgoed = apps.filter((a) => a.soort === 'apparaat' && !a.warmte);
+    const boilers = apps.filter((a) => a.warmte?.soort === 'boiler');
     const apparaten = [];
     // Wat de bewoner bij de kamer vastlegde (besluit 132): een thermostaat met
     // vloerverwarming eraan tekent de vloer, niet een radiator.
@@ -103,6 +111,7 @@
     // Hooguit twee lampen in beeld: wat aan is eerst.
     [...lampen].sort((a, b) => Number(b.aan) - Number(a.aan)).slice(0, 2).forEach((a, i) => apparaten.push({ soort: 'lamp', aan: a.aan, kleur: kleurVanLicht(a), x: i === 0 ? 0.35 : 0.72 }));
     for (const a of witgoed.slice(0, 2)) apparaten.push({ soort: /vaat/i.test(a.naam) ? 'vaatwasser' : /was/i.test(a.naam) && !/droog|droger/i.test(a.naam) ? 'wasmachine' : 'droger', aan: a.aan });
+    for (const a of boilers.slice(0, 1)) apparaten.push({ soort: 'boiler', aan: a.aan, vol: hoeVol(a.warmte) });
     if (screens[0]) apparaten.push({ soort: 'screen', dicht: screens[0].positiePct == null ? 0 : 1 - screens[0].positiePct / 100 });
     const zid = r.zoneId ?? r.meedoenMet?.zoneId ?? null;
     const gewicht = klimaat.length ? 1.4 : GANG.test(r.naam) ? 0.55 : r.temperatuurC != null ? 1.0 : 0.8;
@@ -151,6 +160,8 @@
     const n = naam ?? '';
     return /tuinhuis|schuur|huisje|berging|shed/i.test(n) ? 'tuinhuis' : /border|bloem|perk|haag|flower|bed|hedge/i.test(n) ? 'border' : /gazon|gras|lawn/i.test(n) ? 'gazon' : /terras|zithoek|lounge|patio|terrace/i.test(n) ? 'terras' : /moestuin|groente|kas|vegetable|greenhouse/i.test(n) ? 'moestuin' : /vijver|water|pond/i.test(n) ? 'vijver' : /pad|tegel|path/i.test(n) ? 'pad' : /speel|schommel|trampoline|play|swing/i.test(n) ? 'speelplek' : /carport/i.test(n) ? 'carport' : /oprit|driveway/i.test(n) ? 'oprit' : null;
   }
+  /** Een schuurtje, geen tuinhuis: aan de naam (24 oktober 2026). */
+  const SCHUUR = /schuur|berging|shed/i;
   const heeftHuisje = (r) => (r.zones ?? []).some((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis');
   function soortBuiten(r) {
     if (r.buiten) return { ...r.buiten, tuinhuis: r.buiten.tuinhuis || ((r.buiten.soort === 'tuin' || r.buiten.soort === 'zijtuin') && heeftHuisje(r)) };
@@ -211,31 +222,39 @@
       } else {
         if (tuin) continue;
         const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
-        const overstek = huisje.find((a) => /overstek|luifel/i.test(a.id + a.naam));
-        const binnenlamp = huisje.find((a) => a !== overstek);
+        const overstekken = huisje.filter((a) => /overstek|luifel/i.test(a.id + a.naam));
+        const overstek = overstekken.find((a) => a.aan) ?? overstekken[0];
+        const binnenlamp = huisje.find((a) => !overstekken.includes(a));
         const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
         tuin = {
           id: r.id,
           naam: r.naam,
           tuinhuis: b.tuinhuis || huisjes.length > 0,
+          // Een schuur, berging of shed is het schuurtje met puntdak; anders het tuinhuis met plat dak (24 oktober 2026).
+          tuinhuisSoort: SCHUUR.test([huisjes[0]?.naam, ...(r.zones ?? []).filter((z) => (z.soort ?? buitenZoneUitNaam(z.naam)) === 'tuinhuis').map((z) => z.naam)].filter(Boolean).join(' ')) ? 'schuur' : 'tuinhuis',
           // Is het tuinhuis een eigen ruimte, dan is het huisje zelf aan te tikken (besluit 166).
           tuinhuisId: huisjes[0]?.id ?? null,
           tuinhuisNaam: huisjes[0]?.naam ?? null,
           tuinhuisAan: !!binnenlamp?.aan,
           overstekAan: !!overstek?.aan,
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
+          // De twee spots onder het overstek (24 oktober 2026): elk in de kleur van zijn lamp; met één lamp schijnen ze samen.
+          overstekLampen: overstekken.slice(0, 2).map((a) => ({ aan: !!a.aan, kleur: kleurVanLicht(a) })),
           lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
           zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
         };
       }
     }
     // Alleen een tuinhuis in Home Assistant: dan is er een tuin om hem in te zetten.
-    if (!tuin && huisjes.length) tuin = { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: true, tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
+    if (!tuin && huisjes.length) tuin = { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: true, tuinhuisSoort: SCHUUR.test(huisjes[0].naam ?? '') ? 'schuur' : 'tuinhuis', tuinhuisId: huisjes[0].id, tuinhuisNaam: huisjes[0].naam, tuinhuisAan: huisjeLampen.some((a) => a.aan), overstekAan: false, lampen: [], zonnescherm: null };
     if (rond) {
       const leeg = (naam) => ({ id: null, naam, lampAan: false });
       oprit = rond.oprit ? (oprit ?? { id: null, naam: global.t('huis.buiten.oprit'), auto: null, camera: null }) : null;
       if (oprit) oprit = { ...oprit, auto: rond.auto ? (oprit.auto ?? {}) : null };
-      tuin = rond.tuin || rond.tuinhuis ? { ...(tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      tuin = rond.tuin || rond.tuinhuis || rond.jacuzzi ? { ...(tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      // Een schuurtje met puntdak in plaats van het tuinhuis, en een jacuzzi zonder koppeling (besluit 190).
+      if (tuin && rond.schuur) tuin = { ...tuin, tuinhuisSoort: 'schuur' };
+      if (tuin && rond.jacuzzi && !tuin.jacuzzi) tuin = { ...tuin, jacuzzi: { stand: 'rust' } };
       // Een plek buiten zonder eigen naam heet zoals de plek (besluit 185: in de taal van de app).
       terras = rond.terras ? (terras ?? leeg(global.t('huis.buiten.terras'))) : null;
       balkon = rond.balkon ? (balkon ?? leeg(global.t('huis.buiten.balkon'))) : null;
@@ -254,7 +273,7 @@
     if (huis?.rond) return { ...huis.rond };
     const ruimtes = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).filter((r) => isBuiten(e, r)));
     const b = buiten(ruimtes);
-    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis, garage: !!b.garage, carport: false };
+    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis, garage: !!b.garage, carport: false, schuur: b.tuin?.tuinhuisSoort === 'schuur', jacuzzi: false };
   }
 
   /**
@@ -262,11 +281,13 @@
    * oktober): de etages van onder naar boven met het dak erop, wat er buiten
    * is, de voordeur met de deurbel, de buitenunits en hoeveel panelen. `kamer`
    * maakt van een ruimte een kamer in de tekening (null laat hem weg);
-   * `aantalPanelen` is wat de bewoner opgaf.
+   * `aantalPanelen` is wat de bewoner opgaf. De kelder komt apart, om onder
+   * de grond te tekenen (besluit 187); `kelderOnder: false` laat hem een etage.
    */
-  function tekening(huis, { kamer = (r) => kamerModel(r, null), aantalPanelen = null, zon = null } = {}) {
+  function tekening(huis, { kamer = (r) => kamerModel(r, null), aantalPanelen = null, zon = null, kelderOnder = true } = {}) {
     const buitenRuimtes = [];
     const etages = [];
+    let kelder = null;
     for (const e of [...(huis?.etages ?? [])].reverse()) {
       const kamers = [];
       for (const r of e.ruimtes ?? []) {
@@ -276,7 +297,9 @@
           if (k) kamers.push(k);
         }
       }
-      if (kamers.length) etages.push({ naam: e.naam, id: e.id, kamers });
+      // In de wereld van huis 3.0 (`kelderOnder`) ligt de kelder opengewerkt in de grond (besluit 187).
+      if (kamers.length && kelderOnder && e.id === 'kelder') kelder = { naam: e.naam, id: e.id, kamers };
+      else if (kamers.length) etages.push({ naam: e.naam, id: e.id, kamers });
     }
     // Onder het schuine dak: zoals de indeling zegt (besluit 111); een oudere dienst raadt het.
     const top = etages.at(-1);
@@ -291,9 +314,20 @@
     const belZiet = alles.find((a) => a.meting?.beweging && isBel(a));
     const camZiet = alles.find((a) => a.meting?.beweging && /camera/i.test(naam(a)) && !isBel(a));
     if (delen.oprit?.camera) delen.oprit.camera.beweging = !!camZiet?.meting.beweging.nu;
+    // De jacuzzi (besluit 186) staat in de tuin, op zijn vlonder; zonder tuin komt er een.
+    const jacuzzi = alles.find((a) => a.warmte?.soort === 'jacuzzi');
+    if (jacuzzi) {
+      const w = jacuzzi.warmte;
+      delen.tuin = { ...(delen.tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: false, tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), jacuzzi: { temp: w.tempC, stand: jacuzzi.aan ? 'warmt' : 'rust', zon: jacuzzi.aan && w.opZon } };
+    }
     const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+    // Wat voor huis het is (besluit 190); een appartement in een gebouw van drie lagen.
+    const woning = huis?.woning ?? 'vrijstaand';
     return {
       etages,
+      kelder,
+      woning,
+      ...(woning === 'appartement' ? { gebouw: { onder: 2, boven: 1 } } : {}),
       buitenRuimtes,
       ...delen,
       voordeur: { deurbel: bel || belZiet ? { beweging: !!belZiet?.meting.beweging.nu } : null },
@@ -321,6 +355,19 @@
     // Alleen aan de achterkant: dan op het andere vlak.
     const aantal = p?.aantal ?? geschat;
     return p?.ligging === 'achterkant' ? { panelen: 0, panelenLinks: aantal } : { panelen: aantal, panelenLinks: 0 };
+  }
+
+  /**
+   * Hoe het kompas op het eiland staat (besluit 187). In de tekening ligt de
+   * voorkant van het dak op het vlak rechts en de achterkant links (zie
+   * panelenOpDak); het kompas draait zo dat die vlakken naar hun gemeten
+   * richting wijzen. Zonder vlakken de richting van de voorgevel; anders null.
+   */
+  function kompasVan(lig, p) {
+    const w = lig?.nu ?? lig?.voorstel;
+    const vlak = w?.vlakken?.[0];
+    if (vlak) return { voorgevelDeg: (vlak.azimuthDeg + (p?.ligging === 'achterkant' ? -90 : 90) + 360) % 360 };
+    return w?.voorgevelDeg != null ? { voorgevelDeg: w.voorgevelDeg } : null;
   }
 
   /**
@@ -354,11 +401,36 @@
     return (keus ? lijst.find((x) => x.sleutel === keus) : lijst[0]) ?? null;
   }
 
+  /**
+   * Het huis zelf uit de tekening, voor het model van elke pagina (besluit 191):
+   * de etages, de kelder, wat voor huis, de voordeur, de buitenunit en wat er
+   * buiten is, met de panelen op de garage, carport of het tuinhuis (`elders`).
+   * Zo tekent elke pagina hetzelfde huis; een pagina zet er alleen overheen
+   * wat bij haar hoort.
+   */
+  function huisDelen(tek, elders = {}) {
+    const e = elders ?? {};
+    return {
+      etages: tek.etages,
+      ...(tek.kelder ? { kelder: tek.kelder } : {}),
+      woning: tek.woning,
+      ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
+      voordeur: tek.voordeur,
+      buitenunit: tek.buitenunit,
+      oprit: tek.oprit && e.carport && tek.oprit.carport ? { ...tek.oprit, carport: { panelen: e.carport } } : tek.oprit,
+      tuin: tek.tuin && e.tuinhuis ? { ...tek.tuin, tuinhuisPanelen: e.tuinhuis } : tek.tuin,
+      terras: tek.terras,
+      balkon: tek.balkon,
+      voortuin: tek.voortuin,
+      garage: tek.garage && e.garage ? { ...tek.garage, panelen: e.garage } : tek.garage,
+    };
+  }
+
   /** Wat een buitenruimte is (besluit 167): een eigen lijst, zoals Soort kamer binnen. */
   const BUITEN_SOORTEN = soorten('buiten', ['tuin', 'voortuin', 'zijtuin', 'oprit', 'carport', 'terras', 'balkon', 'dakterras', 'tuinhuis', 'garage']);
   /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
 })(window);

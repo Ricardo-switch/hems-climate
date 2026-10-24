@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Huis 3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Huis 3.0 op de telefoon (schets, 23 oktober 2026).
+   *
+   * - Wat er van het net komt staat bij het huis, net als op de wand: een
+   *   label bij de aansluiting, en een regel onder het huis met zon, huis en
+   *   net, met de pijl de goede kant op.
+   * - Eén bovenbalk voor alle vijf de tabs: links de titel van de tab (op
+   *   Thuis de klok), rechts altijd dezelfde drie knoppen van 36 px: hulp,
+   *   de bel, het tandwiel. Nu staat het tandwiel alleen op Thuis en
+   *   Apparaten, en daar in twee maten.
+   *
+   * Standen: #zon (standaard, terug naar het net), #avond (van het net),
+   * #balk (de bovenbalk op elke tab).
+   */
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .boven { padding: 16px 18px 0; }
+  .balk3 { display: flex; justify-content: space-between; align-items: center; gap: 10px; height: 44px; }
+  .balk3 .titel { font-family: var(--kop); font-weight: 600; font-size: 30px; letter-spacing: -0.02em; line-height: 1; }
+  .balk3 .tijd { font-size: 40px; letter-spacing: -0.03em; }
+  .knoppen { display: flex; gap: 8px; align-items: center; }
+  .rond { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: rgb(var(--wit) / 0.08); border: 1px solid var(--glas-rand); color: var(--tekst); position: relative; font-weight: 800; font-size: 15px; }
+  .rond svg { width: 18px; height: 18px; }
+  .rond b { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #fff; font-size: 10.5px; line-height: 16px; text-align: center; }
+  .weer { height: 36px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; background: rgb(var(--wit) / 0.08); border: 1px solid var(--glas-rand); font-weight: 600; font-size: 14px; }
+  .kop-1 { font-size: 30px; margin-top: 14px; }
+  .lead { font-size: 15px; margin-top: 6px; max-width: none; }
+  .podium { height: 360px; margin-top: -6px; }
+  .nu { margin: -6px 16px 0; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 6px; }
+  .nu div { text-align: center; }
+  .nu b { display: block; font-family: var(--kop); font-size: 19px; }
+  .nu span { font-size: 11.5px; color: var(--gedempt); font-weight: 600; }
+  .nu i { font-style: normal; color: var(--gedempt); font-size: 16px; }
+  .kamers { margin: 12px 16px 0; padding: 4px 16px; }
+  .kamers a { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 11px 0; color: inherit; text-decoration: none; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  .kamers a:first-child { border-top: 0; }
+  .kamers b { display: block; font-size: 15px; }
+  .kamers small { font-size: 12.5px; font-weight: 600; }
+  .kamers .getal { font-size: 22px; }
+  .stapel { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .stapel .tab { padding: 12px 14px; }
+  .stapel .tab .uitleg { font-size: 12px; color: var(--gedempt); margin-top: 6px; }
+  .nota { margin: 4px 16px 0; padding: 14px 16px; font-size: 13px; color: var(--zacht); line-height: 1.45; }
+  [data-stand] { display: none !important; }
+  body[data-toon='zon'] [data-stand~='zon'], body[data-toon='avond'] [data-stand~='avond'], body[data-toon='balk'] [data-stand~='balk'] { display: revert !important; }
+  body[data-toon='zon'] .nu[data-stand~='zon'], body[data-toon='avond'] .nu[data-stand~='avond'] { display: grid !important; }
+</style>
+</head>
+<body>
+<div class="tel lucht lucht-dag" id="tel">
+  <div class="boven" data-stand="zon avond">
+    <div class="balk3">
+      <span class="titel tijd" id="klok">12:41</span>
+      <span class="knoppen">
+        <span class="weer"><svg viewBox="0 0 36 36" aria-hidden="true" style="width: 20px; height: 20px"><path d="M10 25h15a6 6 0 0 0 .6-12A8 8 0 0 0 10.4 15 5 5 0 0 0 10 25z" fill="#B8C4CF"/></svg>23°</span>
+        <span class="rond">?</span>
+        <span class="rond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><b>1</b></span>
+        <span class="rond" data-tandwiel></span>
+      </span>
+    </div>
+    <h1 class="kop-1" data-stand="zon">Het huis koelt op zon</h1>
+    <h1 class="kop-1" data-stand="avond">Rustige avond</h1>
+    <p class="lead" data-stand="zon">De woonkamer koelt en er gaat 0,3 kW terug naar het net.</p>
+    <p class="lead" data-stand="avond">De zon is weg. Het huis haalt 1,2 kW van het net; de jacuzzi warmt op voor 20:00.</p>
+  </div>
+  <div class="podium" id="podium" data-stand="zon avond"></div>
+  <section class="glas nu" data-stand="zon">
+    <div><b class="zon-t">4,1 kW</b><span>zon</span></div><i>→</i>
+    <div><b>3,8 kW</b><span>huis</span></div><i>→</i>
+    <div><b class="mint-t">0,3 kW</b><span>terug naar het net</span></div>
+  </section>
+  <section class="glas nu" data-stand="avond">
+    <div><b style="color: var(--gedempt)">0 kW</b><span>zon</span></div><i> </i>
+    <div><b>1,2 kW</b><span>huis</span></div><i>←</i>
+    <div><b style="color: var(--net)">1,2 kW</b><span>van het net</span></div>
+  </section>
+  <section class="glas kamers" data-stand="zon">
+    <a><span class="stip" style="background: var(--ijs)"></span><div><b>Woonkamer</b><small class="ijs-t">Koelt op zon, naar 23°</small></div><span class="getal">24,1°</span></a>
+    <a><span class="stip" style="background: var(--zon)"></span><div><b>Zolder</b><small class="zon-t">Wacht op meer zon</small></div><span class="getal">25,1°</span></a>
+  </section>
+  <section class="glas kamers" data-stand="avond">
+    <a><span class="stip" style="background: var(--mint)"></span><div><b>Woonkamer</b><small class="mint-t">Goed, twee lampen aan</small></div><span class="getal">22,4°</span></a>
+    <a><span class="stip" style="background: var(--gloed)"></span><div><b>Jacuzzi</b><small class="gloed-t">Warmt op, 38° om 20:00</small></div><span class="getal">36°</span></a>
+  </section>
+
+  <div data-stand="balk">
+    <div class="boven"><h1 class="kop-1" style="margin-top: 0">Eén bovenbalk</h1><p class="lead">Op elke tab dezelfde drie knoppen, op dezelfde plek, even groot: hulp, de bel en het tandwiel.</p></div>
+    <div class="stapel" id="stapel"></div>
+    <p class="glas nota">Nu staat het tandwiel op Thuis (32 px) en op Apparaten (32 px, andere vorm), en mist het op Vandaag, Opbrengst en Assistent. Op de wand blijft het onderaan de balk, met de bel erboven: daar is het al overal gelijk.</p>
+  </div>
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  nav.tabs(document.getElementById('tabs'), 'thuis');
+  const toon = { '#avond': 'avond', '#balk': 'balk' }[location.hash] ?? 'zon';
+  document.body.dataset.toon = toon;
+  addEventListener('hashchange', () => location.reload());
+  const tandwiel = nav.svg('instellingen');
+  document.querySelectorAll('[data-tandwiel]').forEach((el) => (el.innerHTML = tandwiel));
+  if (toon === 'avond') {
+    document.getElementById('tel').className = 'tel lucht lucht-avond';
+    document.getElementById('klok').textContent = '19:12';
+  }
+
+  // De bovenbalk op elke tab.
+  const bel = '<span class="rond"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><b>1</b></span>';
+  const drie = `<span class="knoppen"><span class="rond">?</span>${bel}<span class="rond">${tandwiel}</span></span>`;
+  document.getElementById('stapel').innerHTML = [
+    ['<span class="titel tijd">12:41</span>', 'Thuis: de klok links, het weer erbij.', true],
+    ['<span class="titel">Vandaag</span>', 'Vandaag: nu zonder tandwiel.'],
+    ['<span class="titel">Apparaten</span>', 'Apparaten: nu een kleiner tandwiel zonder bel.'],
+    ['<span class="titel">Opbrengst</span>', 'Opbrengst: nu zonder tandwiel.'],
+    ['<span class="titel">Assistent</span>', 'Assistent: nu zonder tandwiel.'],
+  ].map(([links, uitleg, weer]) => `<section class="glas tab"><div class="balk3">${links}<span class="knoppen">${weer ? '<span class="weer">23°</span>' : ''}${drie}</span></div><div class="uitleg">${uitleg}</div></section>`).join('');
+
+  const zon = toon === 'zon';
+  huis.teken(document.getElementById('podium'), {
+    tijd: zon ? 'dag' : 'avond',
+    zon: { stand: zon ? 0.56 : 0.97, aandeel: zon ? 0.85 : 0, panelen: 12 },
+    wolken: 0.15,
+    etages: [
+      { naam: 'Begane grond', kamers: [{ naam: 'Keuken', gewicht: 0.9, stil: true, apparaten: zon ? [] : [{ soort: 'lamp', aan: true }] }, { naam: 'Woonkamer', gewicht: 1.3, stil: true, stand: zon ? 'koelt' : 'rust', apparaten: [{ soort: 'airco', aan: zon }, { soort: 'bank' }, ...(zon ? [] : [{ soort: 'lamp', aan: true }])] }] },
+      { naam: 'Eerste', kamers: [{ naam: 'Badkamer', gewicht: 0.8, stil: true, apparaten: [] }, { naam: 'Slaapkamer', gewicht: 1.3, stil: true, apparaten: [] }] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, stand: zon ? 'wacht' : 'rust', apparaten: [] }] },
+    ],
+    net: true, voordeur: {}, buitenunit: { aan: zon }, tuin: { tuinhuis: true, jacuzzi: { temp: zon ? 35 : 36, stand: 'warmt', zon } }, seizoen: zon ? 'zomer' : 'herfst',
+    stromen: zon ? [{ van: 'zon', naar: 'kamer:Woonkamer', sterkte: 0.7 }, { van: 'zon', naar: 'net', sterkte: 0.2 }] : [{ van: 'net', naar: 'huis', sterkte: 0.6 }],
+    labels: zon
+      ? [{ bij: 'panelen', titel: '4,1 kW', groot: true, toon: 'zon', regels: ['je panelen'], dx: 44, dy: -56 }, { bij: [-0.6, 2.3, -0.32], titel: '0,3 kW terug', toon: 'mint', dx: 20, dy: 52 }]
+      : [{ bij: [-0.6, 2.3, -0.32], titel: '1,2 kW van het net', toon: 'net', dx: 20, dy: 52 }],
+  }, { breedte: 390, hoogte: 360, schuifY: -14, wereld: true, eigenLucht: false, marge: 0.03 });
+</script>
+</body>
+</html>

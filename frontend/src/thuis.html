@@ -24,9 +24,31 @@
    * van wat erbij komt naar de rechterkolom, de rest naar het huis, dat er
    * groter en in het midden van zijn vak in staat.
    */
-  .podium { position: absolute; left: 0; top: 96px; right: calc(420px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 612px; }
-  .rechts { position: absolute; right: 26px; top: 96px; bottom: 20px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
+  .podium { position: absolute; left: 0; top: 96px; right: calc(452px + (var(--wandbreedte, 1280px) - 1280px) / 3); height: 612px; }
+  .rechts { position: absolute; right: 26px; top: 96px; bottom: 20px; width: calc(384px + (var(--wandbreedte, 1280px) - 1280px) / 3); display: flex; flex-direction: column; gap: 14px; }
   #wand .rechts > * { flex: none; }
+  /*
+   * Twee kolommen kaarten (besluit 187, schets Wand-Thuis-3): een kaart is smal
+   * (een kolom) of breed (de hele breedte). Straks en het vrije vak altijd breed.
+   */
+  /* Elke rij zo hoog als zijn inhoud: anders drukte een volle kolom een smalle kaart plat; de kolom schuift zelf. */
+  #wand .rechts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: max-content; gap: 12px; align-content: start; }
+  #wand .rechts > * { grid-column: 1 / -1; min-width: 0; }
+  #wand .rechts > [data-kaart].smal { grid-column: auto; }
+  #wand .rechts > .smal.kaart { padding: 14px 14px; }
+  #wand .rechts > .smal .kaart-kop { flex-wrap: wrap; gap: 2px 8px; }
+  #wand .rechts > .smal .kaart-kop .mini { display: none; }
+  #wand .rechts > .smal.apparaatkaart { flex-direction: column; align-items: flex-start; gap: 8px; }
+  #wand .rechts > .smal .tegels { grid-template-columns: 1fr; }
+  #wand .rechts > .smal .maanddrie { grid-template-columns: 1fr; }
+  #wand .rechts > .smal .maanddrie div:nth-child(n + 2) { display: none; }
+  #wand .rechts > .smal .lading { grid-template-columns: 1fr; gap: 6px; }
+  #wand .rechts > .smal .lading .getal { grid-row: auto; font-size: 30px; }
+  #wand .rechts > .smal.morgen { grid-template-columns: 36px 1fr; }
+  #wand .rechts > .smal.morgen svg { width: 36px; height: 36px; }
+  #wand .rechts > .smal.morgen .graden { grid-row: auto; grid-column: 1 / -1; font-size: 22px; }
+  #wand .rechts > .smal.morgen .mini { grid-column: 1 / -1; }
+  #wand .rechts > .smal [data-gevoel-knoppen], #wand .rechts > .smal .gevoelknoppen { flex-wrap: wrap; }
   /*
    * De kolom schuift zelf, zoveel kaarten als je wilt (besluit 167). Staat er
    * meer onder de rand, dan loopt de onderste kaart zacht weg.
@@ -44,7 +66,7 @@
   .apparaatkaart .ring { width: 54px; height: 54px; flex: none; }
   .apparaatkaart b { display: block; font-size: 16px; }
 
-  .dok { position: absolute; left: 22px; right: calc(26px + 352px + 14px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgb(var(--nacht) / 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
+  .dok { position: absolute; left: 22px; right: calc(26px + 384px + 14px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 20px; height: 68px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: rgb(var(--nacht) / 0.6); border: 1px solid var(--glas-rand); backdrop-filter: blur(12px); }
   /* Eén regel (besluit 166): niet de kolom van een vraagkaart uit basis.css, die "Zeg", "Hé huis" en de rest onder elkaar zette. */
   .dok .vraag { flex: 1; min-width: 0; display: block; padding: 0; color: var(--zacht); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
   .dok .vraag b { color: var(--tekst); }
@@ -130,6 +152,18 @@
   #tel .titel .kop-1 { font-size: 32px; margin-top: 4px; }
   #tel .titel .lead { font-size: 15px; margin-top: 6px; max-width: none; }
   #tel .podium { position: static; width: 100%; height: 330px; margin-top: -10px; }
+  /* Zon, huis en net onder het huis (besluit 187, schets Tel-Huis-3). */
+  #tel .stromen { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; padding: 12px 14px; margin: -8px 16px 12px; }
+  #tel .stromen[hidden] { display: none; }
+  #tel .stromen > div { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 0 8px; align-items: center; min-width: 0; }
+  #tel .stromen i { grid-row: 1 / 3; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  #tel .stromen i svg { width: 17px; height: 17px; }
+  #tel .stromen b { font-family: var(--kop); font-size: 17px; font-weight: 600; white-space: nowrap; color: var(--tekst); }
+  #tel .stromen span { font-size: 12px; color: var(--zacht); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #tel .stromen .zon-t i { color: var(--zon); }
+  #tel .stromen .mint-t i, #tel .stromen .mint-t b { color: var(--mint-t); }
+  #tel .stromen .violet-t i, #tel .stromen .violet-t b { color: #b3adff; }
+  .sc-licht #tel .stromen .violet-t i, .sc-licht #tel .stromen .violet-t b { color: #5a4bd1; }
   /* Ruimte onderin voor de vraagbalk en de tabs. */
   #tel .inhoud { padding: 0 16px 172px; display: flex; flex-direction: column; gap: 12px; }
   /* De kamers in één kaart: een regel per kamer. */
@@ -159,7 +193,7 @@
   button.pil:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
   .weerknop svg { width: 20px; height: 20px; margin-left: -4px; }
   .weer { padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; background: rgb(var(--nacht) / 0.94); z-index: 5; }
-  #wand .weer { position: absolute; right: 26px; top: 96px; width: calc(352px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 108px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  #wand .weer { position: absolute; right: 26px; top: 96px; width: calc(384px + (var(--wandbreedte, 1280px) - 1280px) / 3); bottom: 108px; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; }
   #tel .weer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 82vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-y; border-radius: 26px; z-index: 30; }
   .weer-achter { position: fixed; inset: 0; background: rgba(4, 8, 16, 0.55); z-index: 29; }
   /* Niet krimpen: wat niet past, scrolt in het blad. */
@@ -284,10 +318,45 @@
   .deurbelbeeld img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .deurbelbeeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
   .morgen { display: grid; grid-template-columns: 44px 1fr auto; gap: 2px 12px; align-items: center; cursor: pointer; }
+  .morgenkaart { cursor: pointer; }
   .morgen svg { grid-row: 1 / 3; width: 44px; height: 44px; }
   .morgen b { font-size: 15.5px; }
   .morgen .graden { grid-row: 1 / 3; grid-column: 3; font-family: var(--kop); font-weight: 600; font-size: 26px; }
   .morgen .graden small { font-size: 15px; color: var(--gedempt); font-family: var(--romp); }
+  .boilerkaart { color: inherit; text-decoration: none; }
+  .boilerkaart .lading { grid-template-columns: auto 1fr; }
+
+  /*
+   * De kaarten als tegel (besluit 189, schets Wand-Thuis-3): op de wand is een
+   * smalle kaart een tegel met een kleine kop, een groot getal, een zin en
+   * rechtsboven een beeldje (een ring, een staaf, balkjes, een tank). Breed, en
+   * op de telefoon, blijft de kaart zoals hij was.
+   */
+  .ktegel { display: none; }
+  #wand .rechts > .smal .kvol { display: none; }
+  #wand .rechts > .smal:has(> .ktegel) { padding: 11px 12px; min-height: 108px; }
+  #wand .rechts > .smal .ktegel { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 4px; height: 100%; min-height: 86px; }
+  .ktegel .tnaam { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--zacht); padding-right: 52px; min-width: 0; }
+  .ktegel .tnaam svg { width: 14px; height: 14px; flex: none; }
+  .ktegel .tnaam span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ktegel .twaarde { font-family: var(--kop); font-size: 26px; font-weight: 600; letter-spacing: -0.02em; line-height: 1; margin-top: 10px; white-space: nowrap; }
+  .ktegel .twaarde small { font: 600 13px var(--romp); color: var(--zacht); letter-spacing: 0; }
+  .ktegel .tzin { font-size: 11.5px; font-weight: 600; line-height: 1.25; color: var(--zacht); }
+  .ktegel .beeld { position: absolute; right: 0; top: 18px; }
+  .ktegel span.beeld svg { width: 38px; height: 38px; display: block; }
+  .ktegel .grafiek { position: absolute; left: 0; right: 0; top: 24px; height: 40px; width: 100%; }
+  .ktegel.metgrafiek .twaarde { margin-top: 48px; font-size: 20px; }
+  /* De deurbel: het beeld vult de tegel, de tijd eronder. */
+  #wand .rechts > .smal.deurbelkaart { padding: 0; overflow: hidden; }
+  #wand .rechts > .smal .ktegel.foto { min-height: 108px; padding: 11px 12px; }
+  .ktegel.foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+  .ktegel.foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(9, 15, 28, 0.55), rgba(9, 15, 28, 0) 40%, rgba(9, 15, 28, 0.75)); }
+  .ktegel.foto > * { position: relative; z-index: 1; }
+  .ktegel.foto .tnaam, .ktegel.foto .tzin { color: #eef3f7; }
+  /* Wat in een smalle kaart niet past, blijft erbinnen. */
+  #wand .rechts > .smal { overflow: hidden; }
+  #wand .rechts > .smal [data-dag] svg { width: 100%; height: auto; }
+  #wand .rechts > .smal [data-gevoel-uitleg] { display: none; }
 
   /* De bewerkstand: een greep en een oog op elke kaart; de rest staat even stil. */
   [data-kaart] { position: relative; }
@@ -297,6 +366,16 @@
   .kaartoog { right: 10px; width: 36px; background: #1c2840; border: 1px solid rgb(var(--wit) / 0.2); color: var(--tekst); }
   .kaartgreep svg, .kaartoog svg { width: 16px; height: 16px; }
   body.aanpassen .kaartgreep, body.aanpassen .kaartoog { display: inline-flex; }
+  /* Smal of breed, op de wand (besluit 187): links bovenop de kaart. */
+  .kaartmaat { display: none; position: absolute; top: -13px; left: 10px; z-index: 3; height: 30px; padding: 2px; border-radius: 999px; background: #1c2840; border: 1px solid rgb(var(--wit) / 0.2); gap: 2px; }
+  .kaartmaat [data-maat-zet] { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--zacht); cursor: pointer; }
+  .kaartmaat [data-maat-zet][aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
+  .kaartmaat [data-maat-zet]:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
+  body.aanpassen #wand .kaartmaat { display: inline-flex; }
+  #wand .smal .kaartgreep { right: 46px; width: 34px; }
+  #wand .smal .kaartoog { right: 6px; width: 34px; }
+  #wand .smal .kaartmaat { left: 6px; }
+  #wand .smal .kaartmaat [data-maat-zet] { padding: 0 7px; font-size: 11.5px; }
   .bewerkkop [data-kaart-erbij] { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); border-color: transparent; }
   body.aanpassen [data-kaarten] > [data-kaart] { outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 3px; overflow: visible; }
   body.aanpassen [data-kaarten] > [data-kaart].sleept { outline-color: var(--accent); box-shadow: 0 20px 44px rgba(0, 0, 0, 0.5); z-index: 6; transition: none; }
@@ -438,9 +517,12 @@
           <div data-favorieten></div>
         </section>
         <a class="glas kaart kaartlink" href="vandaag.html" data-t-aria-label="thuis.kaart.vandaagLink" data-kaart="vandaag" data-t-data-naam="thuis.kaart.vandaag">
-          <div class="kaart-kop"><h2 class="kop-3"><span data-t="thuis.kaart.vandaag"></span></h2><span class="mini" data-opgewekt></span></div>
-          <div data-dag></div>
-          <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+          <div class="kvol">
+            <div class="kaart-kop"><h2 class="kop-3"><span data-t="thuis.kaart.vandaag"></span></h2><span class="mini" data-opgewekt></span></div>
+            <div data-dag></div>
+            <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
+          </div>
+          <div class="ktegel" data-vandaag-tegel></div>
         </a>
         <a class="glas kaart apparaatkaart" href="apparaten.html" data-apparaatkaart data-kaart="apparaat" data-t-data-naam="thuis.kaart.apparaat" data-t-data-leeg="thuis.leeg.apparaat" hidden><span class="apparaatinhoud" data-apparaat-inhoud></span></a>
         <section class="glas kaart" data-gevoel-kaart data-kaart="gevoel" data-t-data-naam="thuis.gevoel.kop">
@@ -448,11 +530,12 @@
           <p class="mini" style="margin: 2px 0 0" data-gevoel-uitleg><span data-t="thuis.gevoel.uitleg"></span></p>
           <div class="gevoelblok" data-gevoel></div>
         </section>
-        <section class="glas kaart morgen" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
+        <section class="glas kaart morgenkaart" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
         <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
         <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
         <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
         <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+        <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
         <button type="button" class="vrijvak" data-vrijvak hidden><span data-t="thuis.kaartKiezen"></span></button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" data-t-aria-label="thuis.weer.kop" hidden data-weer></section>
@@ -471,16 +554,17 @@
       <div class="kopregel">
         <span class="tijd" data-tijd>--:--</span>
         <span style="display: flex; gap: 8px; align-items: center">
-          <button class="pil weerknop" type="button" style="height: 32px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
-          <button class="pil uitlegknop" type="button" data-uitleg data-t-aria-label="thuis.uitleg" style="height: 32px; width: 32px">?</button>
-          <button type="button" class="pil meldbel" data-t-aria-label="nav.meldingen" aria-haspopup="dialog" style="position: relative; height: 32px; width: 32px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer" data-meldbel data-meldicoon><b data-meldaantal hidden></b></button>
-          <a class="pil" href="instellingen.html" data-t-aria-label="nav.instellingen" style="height: 32px; width: 32px; padding: 0; justify-content: center" data-tandwiel></a>
+          <button class="pil weerknop" type="button" style="height: 36px; font-size: 13px" data-buiten aria-haspopup="dialog" aria-controls="weer-tel"></button>
+          <button class="pil telknop uitlegknop" type="button" data-uitleg data-t-aria-label="thuis.uitleg">?</button>
+          <button type="button" class="pil telknop meldbel" data-t-aria-label="nav.meldingen" aria-haspopup="dialog" data-meldbel data-meldicoon><b data-meldaantal hidden></b></button>
+          <a class="pil telknop" href="instellingen.html" data-t-aria-label="nav.instellingen" data-tandwiel></a>
         </span>
       </div>
       <div class="titel"><div class="groetregel"><span class="groet" data-groet></span><span class="groetrechts"><button type="button" class="pil" data-modus aria-haspopup="dialog" data-t-aria-label="thuis.modus.kop" hidden></button><button type="button" class="wie" data-wie aria-haspopup="dialog" hidden></button></span></div><h1 class="kop-1" data-kop><span data-t="algemeen.laden"></span></h1><p class="lead" data-zin></p></div>
       <span class="onderhoud" data-onderhoud hidden style="align-self: flex-start; max-width: 100%"></span>
     </div>
     <div class="podium" id="podium-tel"></div>
+    <section class="glas stromen" data-stromen data-t-aria-label="thuis.stromen.kop" hidden></section>
     <div class="inhoud" data-kaarten="tel">
       <section class="glas kamers" data-t-aria-label="thuis.kamers" data-kaart="kamers" data-t-data-naam="thuis.kaart.kamers" data-t-data-leeg="thuis.leeg.kamers" hidden><div data-kamers></div></section>
       <section class="glas kaart fav" data-kaart="favorieten" data-t-data-naam="thuis.kaart.favorieten" data-t-data-leeg="thuis.leeg.favorieten">
@@ -504,11 +588,12 @@
         <p class="mini" style="margin: 6px 0 0" data-dag-zin></p>
         <p class="dag-eenvoudig" data-dag-eenvoudig></p>
       </a>
-      <section class="glas kaart morgen" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
+      <section class="glas kaart morgenkaart" data-kaart="morgen" data-t-data-naam="thuis.kaart.morgen" data-t-data-leeg="thuis.leeg.morgen" data-morgen hidden></section>
       <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
       <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
       <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
       <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+        <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
       <div class="aanpasrij">
         <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span data-t="thuis.aanpassen"></span></button>
         <button type="button" class="aanpasknop" data-weergave hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-t="thuis.weergave"></span></button>

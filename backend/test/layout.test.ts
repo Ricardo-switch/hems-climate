@@ -154,7 +154,17 @@ describe('de indeling toetsen', () => {
     expect(validateLayout({ ...good, rond: half }, known).ok).toBe(false);
     expect(validateLayout({ ...good, rond: { ...rond, oprit: 'ja' } }, known).ok).toBe(false);
     const extra = validateLayout({ ...good, rond: { ...rond, zwembad: true } }, known);
-    expect(extra.ok && extra.layout.rond).toEqual(rond);
+    // Het schuurtje en de jacuzzi kwamen later (besluit 190): zonder zijn ze er niet.
+    expect(extra.ok && extra.layout.rond).toEqual({ ...rond, schuur: false, jacuzzi: false });
+  });
+
+  it('bewaart wat voor huis het is, en weigert wat het niet kent (besluit 190)', () => {
+    expect(validateLayout({ ...good, woning: 'hoek' }, known)).toMatchObject({ ok: true, layout: { woning: 'hoek' } });
+    expect(validateLayout({ ...good, woning: 'boerderij' }, known).ok).toBe(false);
+    const zonder = validateLayout(good, known);
+    expect(zonder.ok && 'woning' in zonder.layout).toBe(false);
+    const metSchuur = validateLayout({ ...good, rond: { oprit: true, auto: false, voortuin: false, tuin: true, terras: false, balkon: false, tuinhuis: true, garage: false, carport: false, schuur: true, jacuzzi: true } }, known);
+    expect(metSchuur.ok && metSchuur.layout.rond).toMatchObject({ schuur: true, jacuzzi: true });
   });
 
   it('neemt eigen etages aan in een eigen volgorde, en de vaste als voorstel (besluit 112)', () => {

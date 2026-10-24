@@ -24,6 +24,7 @@ import { isOverridden } from './override.js';
 import { minutesSinceChange } from './state.js';
 import type { ActuatorState } from './state.js';
 import type { ClaimOutcome, SunClaim } from './deferrable.js';
+import { claimKey, vrijVoorDraaiend } from './warmtebuffer.js';
 
 /** De strategie die op zon opwarmt of koelt (strategies/pvSurplus.ts); die voorstellen ordent de volgorde op zon. */
 const PV_SURPLUS = 'pv-surplus';
@@ -211,13 +212,14 @@ type ZonStap = { readonly intent: Intent } | { readonly claim: SunClaim };
 
 function zonVolgorde(sun: readonly Intent[], claims: readonly SunClaim[], ctx: DecisionContext): ZonStap[] {
   const order = ctx.config.sunOrder ?? [];
-  const plek = (kind: 'zone' | 'deferrable', id: string, achteraan: number) => {
+  const plek = (kind: 'zone' | 'deferrable' | 'heatStore', id: string, achteraan: number) => {
     const i = order.findIndex((s) => s.kind === kind && s.id === id);
     return i >= 0 ? i : order.length + achteraan;
   };
   const stappen = [
     ...sun.map((intent, seq) => ({ stap: { intent } as ZonStap, plek: plek('zone', intent.zoneId, 0), seq })),
-    ...claims.map((claim, seq) => ({ stap: { claim } as ZonStap, plek: plek('deferrable', claim.id, 1), seq: sun.length + seq })),
+    // Een warmtebuffer staat zonder keuze helemaal achteraan, na de apparaten met een eindtijd (besluit 186).
+    ...claims.map((claim, seq) => ({ stap: { claim } as ZonStap, plek: claim.kind === 'heatStore' ? plek('heatStore', claim.id, 2) : plek('deferrable', claim.id, 1), seq: sun.length + seq })),
   ];
   return stappen.sort((a, b) => a.plek - b.plek || a.seq - b.seq).map((x) => x.stap);
 }
@@ -409,14 +411,21 @@ export function arbitrate(
 
   /** Een apparaat op zon op zijn plek: het krijgt zijn deel als het past, zoals een start (besluiten 51 en 68). */
   const claim = (c: SunClaim): void => {
-    const startedBefore = startedSomething || claimStarted;
+    const key = c.kind === 'heatStore' ? claimKey(c.id) : c.id;
     const free = ctx.availableW - allocatedW - ctx.config.power.stopImportW;
+    if (c.runningW != null) {
+      // Een buffer die al stookt (besluit 186): zijn verbruik zit al in wat het
+      // net levert. Hij mag door met de tolerantie, en dat is geen start.
+      claims.set(key, { accepted: vrijVoorDraaiend(ctx, allocatedW, c.runningW) >= c.estimatedW, startedBefore: false });
+      return;
+    }
+    const startedBefore = startedSomething || claimStarted;
     const accepted = !startedBefore && !ctx.stabilisationActive && free >= c.estimatedW;
     if (accepted) {
       allocatedW += c.estimatedW;
       claimStarted = true;
     }
-    claims.set(c.id, { accepted, startedBefore });
+    claims.set(key, { accepted, startedBefore });
   };
 
   if (ctx.config.sunOrder && ctx.config.sunOrder.length > 0) {

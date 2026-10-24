@@ -10,6 +10,7 @@
 
 import { arbitrate } from './arbiter.js';
 import { deferrableClaims, deferrableDecisions } from './deferrable.js';
+import { heatStoreClaims, heatStoreDecisions } from './warmtebuffer.js';
 import { buildContext } from './context.js';
 import type { DecisionContext } from './context.js';
 import type {
@@ -144,6 +145,7 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
           gridPowerW: ctx.gridPowerW,
         }, state),
         deferrableDecisions(ctx, 0, []),
+        (d) => heatStoreDecisions(ctx, 0, [], d),
       ),
     };
   }
@@ -155,7 +157,7 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
         .flatMap((s) => s.propose(ctx));
 
   // Met een volgorde op zon vragen de apparaten hun deel op hun plek (besluit 176); zonder alles zoals het was.
-  const sunClaims = config.sunOrder && config.sunOrder.length > 0 && !ctx.failsafeActive ? deferrableClaims(ctx) : [];
+  const sunClaims = config.sunOrder && config.sunOrder.length > 0 && !ctx.failsafeActive ? [...deferrableClaims(ctx), ...heatStoreClaims(ctx)] : [];
   const { accepted, rejected, commands, budget, claims } = arbitrate(proposed, ctx, sunClaims);
 
   return {
@@ -165,11 +167,25 @@ export function decide({ config, state, strategies }: DecideOptions): Decision {
     accepted,
     rejected,
     // De droger krijgt wat de airco's overlaten (besluiten 85 en 98).
-    explanation: withDeferrables(explain(ctx, budget, state), deferrableDecisions(ctx, budget.allocatedW, commands, sunClaims.length > 0 ? claims : undefined)),
+    // De boiler en de jacuzzi daarna (besluit 186).
+    explanation: withDeferrables(
+      explain(ctx, budget, state),
+      deferrableDecisions(ctx, budget.allocatedW, commands, sunClaims.length > 0 ? claims : undefined),
+      (d) => heatStoreDecisions(ctx, budget.allocatedW, commands, d, sunClaims.length > 0 ? claims : undefined),
+    ),
   };
 }
 
-/** Alleen als er uitstelbare apparaten zijn, zodat het logboek anders niet verandert. */
-function withDeferrables(e: Explanation, list: Explanation['deferrables']): Explanation {
-  return list && list.length > 0 ? { ...e, deferrables: list } : e;
+/** Alleen als er uitstelbare apparaten of warmtebuffers zijn, zodat het logboek anders niet verandert. */
+function withDeferrables(
+  e: Explanation,
+  list: Explanation['deferrables'],
+  buffers: (deferrables: NonNullable<Explanation['deferrables']>) => NonNullable<Explanation['heatStores']>,
+): Explanation {
+  const warmte = buffers(list ?? []);
+  return {
+    ...e,
+    ...(list && list.length > 0 ? { deferrables: list } : {}),
+    ...(warmte.length > 0 ? { heatStores: warmte } : {}),
+  };
 }

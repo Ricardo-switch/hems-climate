@@ -23,11 +23,11 @@
   /** Zolang de dienst niets zegt: zoals Thuis altijd was. */
   const STANDAARD = {
     tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } },
-    wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], favorieten: [], magAanpassen: false },
+    wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], breed: ['favorieten', 'vandaag', 'gevoel'], favorieten: [], magAanpassen: false },
     maxFavorieten: 12,
   };
   /** De kaarten met een korte uitleg bij Kaart toevoegen; de zinnen in teksten.*.js (eigen.kort.<kaart>, besluit 185). */
-  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel']);
+  const KORT = new Set(['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler']);
   const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const ICOON = {
     kamers: S('<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>'),
@@ -41,6 +41,7 @@
     batterij: S('<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M9 14h6M9 10h6"/>'),
     maand: S('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
     deurbel: S('<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
+    boiler: S('<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>'),
     lamp: S('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>'),
     scene: S('<path d="M5 19l4-11 4 6 3-4 3 9z"/><circle cx="17" cy="6" r="1.6"/>'),
     screen: S('<path d="M4 4h16"/><path d="M5.5 4v9h13V4"/><path d="M5.5 7h13M5.5 10h13"/><path d="M12 13v3"/>'),
@@ -112,6 +113,27 @@
       }
     }
     for (const k of kaartenIn(plek)) k.toggleAttribute('data-uit', !lijst.includes(k.dataset.kaart));
+    // Op de wand twee kolommen (besluit 187): een kaart is smal of breed.
+    if (plek === 'wand') {
+      const breed = v.wand.breed ?? STANDAARD.wand.breed;
+      for (const k of kaartenIn(plek)) {
+        const isBreed = breed.includes(k.dataset.kaart);
+        k.classList.toggle('breed', isBreed);
+        k.classList.toggle('smal', !isBreed);
+        k.querySelectorAll(':scope > .kaartmaat [data-maat-zet]').forEach((m) => m.setAttribute('aria-pressed', String((m.dataset.maatZet === 'breed') === isBreed)));
+      }
+    }
+  }
+
+  /** Een kaart op de wand smal of breed (besluit 187); bewaard bij wiens indeling het is. */
+  function zetMaat(kaart, maat) {
+    const id = kaart?.dataset.kaart;
+    if (!id) return;
+    const nu = v.wand.breed ?? STANDAARD.wand.breed;
+    const breed = maat === 'breed' ? [...new Set([...nu, id])] : nu.filter((x) => x !== id);
+    v = { ...v, wand: { ...v.wand, breed } };
+    orden('wand');
+    void bewaar('wand', { breed });
   }
 
   /**
@@ -309,16 +331,23 @@
 
   /* ------------------------------------------------------- de bewerkstand */
 
-  /** Een greep en een oog op elke kaart; de greep is alleen een icoon (besluit 167). */
+  /**
+   * Een greep en een oog op elke kaart; de greep is alleen een icoon (besluit 167).
+   * Op de wand ook Smal en Breed (besluit 187).
+   */
   function zetKnoppen() {
     for (const k of $$('[data-kaarten] > [data-kaart]')) {
       if (k.querySelector(':scope > .kaartgreep')) continue;
       const naam = k.dataset.naam ?? k.dataset.kaart;
+      const maat = k.closest('#wand')
+        ? `<span class="kaartmaat" role="group" aria-label="${esc(global.t('eigen.maat', { naam }))}">${['smal', 'breed'].map((m) => `<span role="button" tabindex="0" data-maat-zet="${m}" aria-pressed="false">${esc(global.t(`eigen.${m}`))}</span>`).join('')}</span>`
+        : '';
       k.insertAdjacentHTML(
         'afterbegin',
-        `<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="${esc(global.t('eigen.schuif', { naam }))}">${ICOON.greep}</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="${esc(global.t('eigen.verberg', { naam }))}">${ICOON.oog}</span>`,
+        `${maat}<span class="kaartgreep" data-greep role="button" tabindex="0" aria-label="${esc(global.t('eigen.schuif', { naam }))}">${ICOON.greep}</span><span class="kaartoog" data-oog role="button" tabindex="0" aria-label="${esc(global.t('eigen.verberg', { naam }))}">${ICOON.oog}</span>`,
       );
     }
+    orden('wand');
   }
 
   function wandVanWie() {
@@ -387,6 +416,7 @@
     // Op de wand is alles geschaald: de vinger beweegt in schermpunten.
     const schaal = kaart.getBoundingClientRect().height / (kaart.offsetHeight || 1) || 1;
     let vanY = e.clientY;
+    let vanX = e.clientX;
     try {
       greep.setPointerCapture(e.pointerId);
     } catch {
@@ -409,24 +439,28 @@
         vanY -= (b.scrollTop - was) * schaal;
       }
       const dy = ev.clientY - vanY;
-      kaart.style.transform = `translateY(${dy / schaal}px)`;
+      const dx = plek === 'wand' ? ev.clientX - vanX : 0;
+      kaart.style.transform = `translate(${dx / schaal}px, ${dy / schaal}px)`;
       const r = kaart.getBoundingClientRect();
       // De vinger zit aan de greep, bovenaan de kaart: waar hij is, komt de kaart.
       const midden = ev.clientY;
       const andere = kaartenIn(plek).filter((k) => k !== kaart && !k.hasAttribute('data-uit') && zichtbaar(k));
+      // In twee kolommen (de wand, besluit 187): voor de kaart waar de vinger links van de helft is, of erboven.
       const voor = andere.find((k) => {
         const q = k.getBoundingClientRect();
-        return midden < q.top + q.height / 2;
+        return plek === 'wand' ? midden < q.top || (midden < q.bottom && ev.clientX < q.left + q.width / 2) : midden < q.top + q.height / 2;
       });
       const nu = andere.filter((k) => k.compareDocumentPosition(kaart) & Node.DOCUMENT_POSITION_FOLLOWING).length;
       const straks = voor ? andere.indexOf(voor) : andere.length;
       if (straks === nu) return;
       const was = r.top;
+      const wasX = r.left;
       b.insertBefore(kaart, voor ?? b.querySelector(':scope > .aanpasrij, :scope > [data-vrijvak]'));
       kaart.style.transform = '';
-      const basis = kaart.getBoundingClientRect().top;
-      vanY = ev.clientY - (was - basis);
-      kaart.style.transform = `translateY(${(was - basis) / schaal}px)`;
+      const plekNieuw = kaart.getBoundingClientRect();
+      vanY = ev.clientY - (was - plekNieuw.top);
+      vanX = ev.clientX - (plek === 'wand' ? wasX - plekNieuw.left : 0);
+      kaart.style.transform = `translate(${(plek === 'wand' ? wasX - plekNieuw.left : 0) / schaal}px, ${(was - plekNieuw.top) / schaal}px)`;
     };
     const los = () => {
       document.removeEventListener('pointermove', beweeg);
@@ -639,7 +673,7 @@
       // In de bewerkstand doen de kaarten zelf niets: geen links, geen lampen. De greep en het oog wel.
       if (!bewerk || !e.target.closest('[data-kaarten] > [data-kaart]')) return;
       e.preventDefault();
-      if (!e.target.closest('[data-greep], [data-oog], [data-fav-kies]')) e.stopPropagation();
+      if (!e.target.closest('[data-greep], [data-oog], [data-maat-zet], [data-fav-kies]')) e.stopPropagation();
     },
     true,
   );
@@ -667,6 +701,8 @@
     if (t.closest('[data-blad-dicht]') || t.closest('[data-kies-achter]')) return sluitBlad();
     const oog = t.closest('[data-oog]');
     if (oog && bewerk) return verberg(oog.closest('[data-kaart]'));
+    const maat = t.closest('[data-maat-zet]');
+    if (maat && bewerk) return zetMaat(maat.closest('[data-kaart]'), maat.dataset.maatZet);
     const kies = t.closest('[data-fav-kies]');
     if (kies) return openBlad('favorieten', kies.closest('#wand') ? 'wand' : 'tel');
     const erbij = t.closest('[data-erbij]');
@@ -733,6 +769,9 @@
     } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-oog]')) {
       e.preventDefault();
       verberg(e.target.closest('[data-kaart]'));
+    } else if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('[data-maat-zet]')) {
+      e.preventDefault();
+      zetMaat(e.target.closest('[data-kaart]'), e.target.closest('[data-maat-zet]').dataset.maatZet);
     } else if (e.key === 'Escape') {
       if (blad) sluitBlad();
       else klaar();

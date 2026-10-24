@@ -9,7 +9,7 @@ draai `npm run decisions:index` in `backend/`. Die zet de links onderaan. Een
 test eist dat elk besluit dat nog geldt hier genoemd wordt, en dat elke
 verwijzing bestaat.
 
-*Stand: 21 oktober 2026.*
+*Stand: 24 oktober 2026.*
 
 ## Waar het project staat
 
@@ -108,6 +108,9 @@ verwijzing bestaat.
 - **Uitstelbare apparaten:** de droger staat in de schaduw. Elke beslissing zegt
   of hij nu op zon zou starten, met de airco's voor; echt starten hoort bij B
   ([98]). Voor hoe laat hij klaar moet zijn, kies je per keer ([101]).
+- **Warmte bewaren:** een boiler of jacuzzi warmt op zon op tot een doel, houdt
+  een ondergrens vast en haalt "klaar om" op tijd, zonder zon in de daluren;
+  achteraan in de lijst Op zon, en eerst in de schaduw ([186]).
 - **Terugkijken:** Opbrengst rekent per dag, week, maand of jaar met de meters
   en prijzen die de app bewaart, overgenomen uit het Energie-dashboard of zelf
   ingesteld; de cijfers komen uit de statistiek van Home Assistant ([102]).
@@ -167,6 +170,17 @@ verwijzing bestaat.
   `nieuw.html` is weg. Zonder verbinding toont elke pagina de laatste stand,
   grijs ([82]). De app blijft dun: alles komt
   kant-en-klaar uit de dienst ([94], [76]).
+- **Huis 3.0:** het huis staat op een eiland met de kelder onder de grond, het
+  weer en de seizoenen; elke stroom een eigen kleur; panelen ook op de garage,
+  carport of het tuinhuis; de kaarten op de wand smal of breed; op de telefoon
+  één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
+  de meldingen ([187]). In de schaduw zegt een kamer "Verwarmt" als het echte
+  apparaat al doet wat het besluit wil ([188]). Een smalle kaart op de wand is
+  een tegel zoals in de schets, en er is een kaart Boiler ([189]). Inrichten
+  heeft acht hoofdstukken en het huis groeit mee op zijn eiland, met wat voor
+  huis, afwezig en vakantie, op zon en klaarzetten ([190]). Het eiland is de
+  standaard van de tekening, dus het staat op elke pagina, ook bij Kamer,
+  Indeling, de assistent en het always-on display ([191]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -611,4 +625,10 @@ verwijzing bestaat.
 [183]: DECISIONS.md#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant
 [184]: DECISIONS.md#184-de-integratie-smart-climate-assist-zonder-yaml
 [185]: DECISIONS.md#185-meertalig-het-fundament-met-thuis-als-proef
+[186]: DECISIONS.md#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon
+[187]: DECISIONS.md#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak
+[188]: DECISIONS.md#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt
+[189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
+[190]: DECISIONS.md#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland
+[191]: DECISIONS.md#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening
 <!-- links:einde -->

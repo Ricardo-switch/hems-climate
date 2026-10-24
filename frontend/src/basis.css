@@ -323,6 +323,19 @@ html.tel-stand .meldblad { top: auto; left: 8px; right: 8px; bottom: 8px; width:
 
 /* Naar Home Assistant (besluit 155): boven de bel, alleen als de app volledig scherm draait. */
 .balk .meldbel + .meldbel { margin-top: 0; }
+/* Eén bovenbalk op de telefoon (besluit 187): de bel en het tandwiel overal 36 px, rechtsboven. */
+/* Alles wissen bij de meldingen (besluit 187): naast de kop, voor het kruisje. */
+.meldalles { margin-left: auto; height: 34px; padding: 0 14px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--zacht); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.meldalles:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+.meldalles + .sluit { margin-left: 8px; }
+#tel .telbalk { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: -6px; }
+#tel .telbalk.metkop { justify-content: space-between; margin-bottom: 0; }
+#tel .telbalk.metkop h1 { margin: 0; min-width: 0; }
+#tel .telknop.uitlegknop { font-weight: 800; color: var(--zacht); }
+#tel .telknoppen { display: inline-flex; gap: 8px; align-items: center; flex: none; }
+#tel .telknop { position: relative; height: 36px; width: 36px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer; }
+#tel .telknop svg { width: 18px; height: 18px; flex: none; }
+#tel .telknop b[data-meldaantal] { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--gloed); color: #2a1206; font-size: 10.5px; line-height: 16px; text-align: center; }
 /* Naar Home Assistant op de telefoon, naast het tandwiel (besluit 155). */
 #tel .pil.naarha { height: 32px; width: 32px; padding: 0; justify-content: center; border: 0; color: inherit; cursor: pointer; flex: none; }
 #tel .pil.naarha svg { width: 17px; height: 17px; }

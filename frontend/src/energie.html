@@ -34,6 +34,51 @@
   #tel .kolommen { display: flex; flex-direction: column; gap: 14px; }
   #tel .kolommen > div > .deelvraag:first-child { border-top: 1px solid rgb(var(--wit) / 0.07); padding-top: 14px; }
   #tel .kolommen > div:first-child > .deelvraag:first-child { border-top: 0; padding-top: 0; }
+
+  /* Zonnepanelen 3.0 (besluit 187, schets Wand-Energie-Panelen-3). */
+  .pan3 { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; }
+  .pan-kop { display: flex; align-items: center; gap: 12px; }
+  .pan-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .pan-chip.gemeten, .pan-chip.ingesteld { color: var(--mint-t); background: rgba(110, 231, 183, 0.12); }
+  .pan-chip.zelf, .pan-chip.voorstel, .pan-chip.leert { color: var(--ijs-t); background: rgba(111, 211, 255, 0.12); }
+  .pan-veld { flex: 1; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; min-height: 0; }
+  .pan-podium { position: relative; min-height: 0; overflow: hidden; margin: -6px 0 -6px -10px; }
+  .pan-rechts { display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; }
+  .pan-rechts h3 { margin: 4px 0 0; font-size: 13px; color: var(--zacht); }
+  .pan-kop3 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .pan-kop3 h3 { margin: 0; }
+  .pan-daken { display: flex; flex-direction: column; gap: 6px; }
+  .pan-dak { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 8px 6px 10px; border-radius: 14px; background: rgb(var(--wit) / 0.045); }
+  .pan-dak i { color: var(--zon); display: grid; }
+  .pan-dak i svg { width: 21px; height: 21px; }
+  .pan-dak b { display: block; font-size: 14px; }
+  .pan-dak span { display: block; font-size: 12px; color: var(--gedempt); }
+  .pan-stap { display: flex; align-items: center; gap: 6px; }
+  .pan-stap button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgb(var(--wit) / 0.08); color: var(--tekst); font: inherit; font-weight: 800; cursor: pointer; }
+  .pan-stap b { display: inline; min-width: 24px; text-align: center; font-family: var(--kop); font-size: 18px; }
+  .pan-erbij { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: var(--gedempt); }
+  .pan-erbij button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px dashed rgb(var(--wit) / 0.22); background: none; color: var(--ijs-t); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .pan-erbij button svg { width: 16px; height: 16px; }
+  .pan-feiten { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .pan-feit { padding: 8px 10px; border-radius: 14px; background: rgb(var(--wit) / 0.045); min-width: 0; }
+  .pan-feit.breed { grid-column: 1 / -1; }
+  .pan-feit small { display: flex; justify-content: space-between; gap: 6px; font-size: 11.5px; font-weight: 700; color: var(--gedempt); }
+  .pan-feit small em { font-style: normal; color: var(--mint-t); }
+  .pan-feit small em.nog { color: var(--ijs-t); }
+  .pan-feit b { display: block; font-family: var(--kop); font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pan-feit span { display: block; font-size: 11.5px; color: var(--zacht); line-height: 1.3; }
+  .pan-feit.richting { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .pan-wijzer { width: 72px; height: 72px; }
+  .pan-graden { display: flex; gap: 16px; margin-top: 2px; }
+  .pan-feit.richting p { margin: 4px 0 0; font-size: 11.5px; color: var(--gedempt); }
+  .pan-knoppen { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .pan-leert { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--zacht); }
+  .pan-leert b { color: var(--tekst); font-size: 14px; }
+  #tel .pan-veld { display: flex; flex-direction: column; }
+  #tel .pan-podium { height: 260px; flex: none; margin: 0 -10px; }
+  #tel .pan-rechts { overflow: visible; }
+  #tel .pan-kop { flex-wrap: wrap; }
+  #tel .pan-knoppen { margin-left: 0; }
 </style>
 </head>
 <body class="lucht lucht-dag">
@@ -75,6 +120,7 @@
   <script src="kit/nav.js"></script>
   <script src="basis.js"></script>
   <script src="groep.js"></script>
+  <script src="kit/huis.js"></script>
   <script src="huismodel.js"></script>
   <script src="panelen.js"></script>
   <script src="energie.js"></script>

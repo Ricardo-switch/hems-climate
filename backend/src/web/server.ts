@@ -247,6 +247,8 @@ export class WebServer {
       (this.#d.options.onboarding != null && path === '/api/onboarding') ||
       (this.#d.options.feedback != null && path === '/api/gevoel') ||
       (this.#d.options.uitstel != null && path === '/api/uitstel') ||
+      // Klaar om bij de jacuzzi (besluit 186): alleen in het eigen bestand.
+      (this.#d.options.buffers != null && path === '/api/klaarom') ||
       // Een melding niet meer laten zien (besluit 136): alleen in het eigen bestand.
       (this.#d.options.meldingen != null && path === '/api/meldingen') ||
       // Thuis naar eigen smaak (besluit 162): alleen wat er gekozen is, in het eigen bestand.

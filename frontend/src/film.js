@@ -458,16 +458,10 @@
       tijd: b.tijd,
       wolken: 0.1,
       zon,
-      etages: t.etages,
-      voordeur: t.voordeur,
+      // Het huis zelf, zoals elke pagina het tekent (besluit 191).
+      ...global.huismodel.huisDelen(t),
       buitenunit: t.buitenunit ? { ...t.buitenunit, aan: !!b.zonKamer } : null,
       net: true,
-      oprit: t.oprit,
-      tuin: t.tuin,
-      terras: t.terras,
-      balkon: t.balkon,
-      voortuin: t.voortuin,
-      garage: t.garage,
       stromen: b.zonKamer && c.zonKamer ? [{ van: 'zon', naar: `kamer:${c.zonKamer.naam}`, sterkte: 0.85 }] : b.eind ? [{ van: 'zon', naar: 'huis', sterkte: 0.5 }] : [],
       labels: [],
     };

@@ -14,6 +14,7 @@ import type { Backup } from './gegevens.js';
 import type { PowerRow } from './today.js';
 import type { FeedbackLog } from './feedback.js';
 import type { UitstelStore } from './uitstel.js';
+import type { BufferStore } from './warmtebuffers.js';
 import type { Profielen, VoorkeurenStore } from './voorkeuren.js';
 import type { IntegratieStand } from './integratie.js';
 import type { ConnectionStore, ConnectionView, FoundAppliance, FoundPhase } from './aansluiting.js';
@@ -190,6 +191,8 @@ export interface WebOptions {
   readonly feedback?: FeedbackLog;
   /** "Klaar voor" bij de droger (besluit 101); zonder dit bestaat de route niet. */
   readonly uitstel?: UitstelStore;
+  /** Klaar om bij de boiler en de jacuzzi (besluit 186): alleen naar `warmtebuffers.json`. */
+  readonly buffers?: BufferStore;
   /** Meldingen in de app (besluit 136): wat aandacht vraagt, en Eerder. */
   readonly meldingen?: MeldingenStore;
   /** Thuis naar eigen smaak (besluit 162): kaarten en favorieten per account, en de wand. */

@@ -257,8 +257,131 @@ const ligging = (() => {
     return 'teken';
   }
 
+  /* ---------------------------------------------- het overzicht (besluit 187) */
+
+  const graden = (d) => `${Math.round(((d % 360) + 360) % 360)}°`;
+  const richtingVan = (deg) => RICHTINGEN[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+  /** De vlakken op het huis met hun aantal: bij beide kanten de voorkant eerst (rechts getekend), dan de achterkant. */
+  function vlakkenMetAantal(w, a) {
+    const p = a?.panelen ?? {};
+    const kant = p.ligging;
+    const vlakken = w?.vlakken ?? [];
+    if (kant === 'beide') return vlakken.slice(0, 2).map((v, i) => ({ ...v, sleutel: i ? 'achterkant' : 'voorkant', aantal: p[i ? 'achterkant' : 'voorkant'], plek: i ? 'panelenLinks' : 'panelen' }));
+    if (!vlakken.length || !kant || kant === 'geen' || kant === 'weetniet') return [];
+    return [{ ...vlakken[0], sleutel: 'aantal', aantal: p.aantal, plek: kant === 'achterkant' ? 'panelenLinks' : 'panelen' }];
+  }
+
+  /** Waar het vandaan komt: gemeten, zelf ingesteld, een schatting of de configuratie. */
+  function bronVan(v) {
+    if (!v?.nu) return v?.voorstel ? 'voorstel' : 'leert';
+    if (v.stand === 'voorstel') return 'voorstel';
+    return { gemeten: 'gemeten', app: 'zelf', schatting: 'leert', configuratie: 'ingesteld' }[v.nu.bron] ?? 'gemeten';
+  }
+
+  /** De labels op het huis: per dakvlak de richting in graden en de helling. */
+  function labels(v, a) {
+    const w = v?.nu ?? v?.voorstel;
+    const leert = bronVan(v) === 'leert';
+    return vlakkenMetAantal(w, a).map((vl) => ({
+      bij: vl.plek,
+      titel: `${t(`panelen3.kort.${richtingVan(vl.azimuthDeg)}`)} · ${leert ? '± ' : ''}${graden(vl.azimuthDeg)}`,
+      toon: 'zon',
+      regels: [t('panelen3.labelRegel', { helling: `${leert ? '± ' : ''}${Math.round(vl.tiltDeg)}°`, n: vl.aantal ?? '?' })],
+      dx: vl.plek === 'panelen' ? 24 : 34,
+      dy: vl.plek === 'panelen' ? -64 : -130,
+    }));
+  }
+
+  /** Het kompas in de tegel Richting: het huis met zijn voorkant (groen) en de panelen (geel). */
+  function wijzer(w, vlakken) {
+    const pt = (deg, r) => [Math.sin((deg * Math.PI) / 180) * r, -Math.cos((deg * Math.PI) / 180) * r];
+    const voor = w?.voorgevelDeg;
+    return `<svg class="pan-wijzer" viewBox="-50 -50 100 100" aria-hidden="true">
+      <circle r="46" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+      <g font-size="13" font-weight="800" text-anchor="middle">${[['n', 0], ['o', 90], ['z', 180], ['w', 270]].map(([k, d]) => {
+        const [x, y] = pt(d, 34);
+        return `<text x="${x.toFixed(1)}" y="${(y + 4.5).toFixed(1)}" fill="${k === 'n' ? 'var(--zon)' : 'var(--tekst)'}">${esc(t(`panelen.windroos.${k}`))}</text>`;
+      }).join('')}</g>
+      ${vlakken.map((vl) => {
+        const [x1, y1] = pt(vl.azimuthDeg, 12);
+        const [x2, y2] = pt(vl.azimuthDeg, 22);
+        return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--zon)" stroke-width="4" stroke-linecap="round"/>`;
+      }).join('')}
+      <g transform="rotate(${voor ?? 0})"><path d="M-9 -1 L0 -10 L9 -1 V9 H-9 Z" fill="rgba(255,255,255,0.16)" stroke="var(--tekst)" stroke-width="1.4" stroke-linejoin="round"/>${voor != null ? '<path d="M-5 -13 H5" stroke="var(--mint)" stroke-width="3" stroke-linecap="round"/>' : ''}</g>
+    </svg>`;
+  }
+
+  /**
+   * Zonnepanelen 3.0 (besluit 187, schets Wand-Energie-Panelen-3): het huis met
+   * de gemeten ligging, per dak het aantal panelen, en wat Smart Climate meet.
+   * `o.plekken`: de andere daken die het huis heeft (garage, carport,
+   * tuinhuis); `o.elders`: hoeveel panelen daar liggen. Zelf aanpassen gaat
+   * naar wat er al was: de kant, het aantal, en Aanpassen.
+   */
+  function overzicht(v, a, o = {}) {
+    const w = v?.nu ?? v?.voorstel ?? null;
+    const bron = bronVan(v);
+    const vlakken = vlakkenMetAantal(w, a);
+    const chip = `<span class="pan-chip ${bron}">${esc(t(`panelen3.chip.${bron}`))}</span>`;
+    const stapper = (sleutel, n, plek) => `<div class="pan-stap"><button type="button" data-pan-stap="${sleutel}" data-d="-1" aria-label="${esc(t('panelen3.minder', { plek }))}">−</button><b>${n ?? '?'}</b><button type="button" data-pan-stap="${sleutel}" data-d="1" aria-label="${esc(t('panelen3.meer', { plek }))}">+</button></div>`;
+    const HUIS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>';
+    const PLEK_IK = {
+      garage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v11H3z"/><path d="M6 20v-8h12v8"/></svg>',
+      carport: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8h18M5 8v12M19 8v12"/></svg>',
+      tuinhuis: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6v9H4z"/><path d="M10 20v-5h4v5"/></svg>',
+    };
+    const huisRijen = vlakken.length
+      ? vlakken.map((vl) => {
+        const naam = t('panelen3.huisKant', { kant: t(`panelen3.kant.${richtingVan(vl.azimuthDeg)}`) });
+        return `<div class="pan-dak"><i>${HUIS}</i><div><b>${esc(naam)}</b><span>${esc(t('panelen3.kijkt', { graden: graden(vl.azimuthDeg), helling: `${Math.round(vl.tiltDeg)}°` }))}</span></div>${stapper(vl.sleutel, vl.aantal, naam)}</div>`;
+      }).join('')
+      : `<div class="pan-dak"><i>${HUIS}</i><div><b>${esc(t('panelen3.huis'))}</b><span>${esc(a?.panelen?.aantal ? t('panelen3.aantal', { n: a.panelen.aantal }) : t('panelen3.nogNiet'))}</span></div></div>`;
+    const plekken = o.plekken ?? [];
+    const elders = o.elders ?? {};
+    const eldersRijen = plekken.filter((p) => elders[p]).map((p) => {
+      const naam = t(`panelen3.plek.${p}`);
+      return `<div class="pan-dak"><i>${PLEK_IK[p]}</i><div><b>${esc(naam)}</b><span>${esc(t(`panelen3.plekZin.${p}`))}</span></div>${stapper(`elders:${p}`, elders[p], naam)}</div>`;
+    }).join('');
+    const vrij = plekken.filter((p) => !elders[p]);
+    const erbij = vrij.length ? `<div class="pan-erbij"><span>${esc(t('panelen3.ookOp'))}</span>${vrij.map((p) => `<button type="button" data-pan-erbij="${p}">${PLEK_IK[p]}${esc(t(`panelen3.plek.${p}`))}</button>`).join('')}</div>` : '';
+    const em = bron === 'leert' ? `<em class="nog">${esc(t('panelen3.status.leert'))}</em>` : `<em>${esc(t(`panelen3.status.${bron}`))}</em>`;
+    // De voorkant apart, alleen als hij niet al een van de dakvlakken is.
+    const eigenVoorkant = w?.voorgevelDeg != null && !vlakken.some((vl) => hoek(vl.azimuthDeg, w.voorgevelDeg) < 3);
+    const dichtst = HELLING.reduce((b, y) => (Math.abs(y[1] - (w?.hellingDeg ?? 40)) < Math.abs(b[1] - (w?.hellingDeg ?? 40)) ? y : b));
+    const tegels = w
+      ? `<div class="pan-feiten">
+          <div class="pan-feit breed richting">${wijzer(w, vlakken)}<div><small>${esc(t('panelen.richting'))} ${em}</small>
+            <div class="pan-graden">${eigenVoorkant ? `<div><b>${graden(w.voorgevelDeg)}</b><span>${esc(t('panelen3.voorkant'))}</span></div>` : ''}${vlakken.map((vl) => `<div><b>${graden(vl.azimuthDeg)}</b><span>${esc(t(`panelen3.kant.${richtingVan(vl.azimuthDeg)}`))}</span></div>`).join('')}</div>
+            <p>${esc(t(eigenVoorkant ? 'panelen3.gradenUitleg' : 'panelen3.gradenKort'))}</p></div></div>
+          <div class="pan-feit"><small>${esc(t('panelen.helling'))}</small><b>${Math.round(w.hellingDeg)}°</b><span>${esc(t('panelen3.dak', { soort: t(`panelen.dak.${dichtst[0]}`) }))}</span></div>
+          <div class="pan-feit"><small>${esc(t('panelen.vermogen'))}</small><b>${esc(w.vermogenKort ?? w.vermogen)}</b><span>${esc(w.perPaneel ?? '')}</span></div>
+          <div class="pan-feit"><small>${esc(t('panelen.omvormer'))}</small><b>${w.omvormerW ? `${esc(watt(w.omvormerW))} W` : '–'}</b><span>${esc(v.omvormerGevonden ? t('panelen3.omvormerGevonden') : t('panelen3.omvormerOnbekend'))}</span></div>
+        </div>`
+      : '';
+    // Een voorstel wacht op de bewoner; zonder heldere dag de vraag naar de voorkant.
+    // Klopt het voorstel: de knoppen naast de kop.
+    const kopKnoppen = v?.stand === 'voorstel' ? `<span class="pan-knoppen"><button type="button" class="lig-knop zacht" data-lig-aanpassen>${esc(t('panelen.aanpassen'))}</button><button type="button" class="lig-knop" data-lig-klopt>${esc(t('panelen.klopt'))}</button></span>` : '';
+    const knoppen = v?.stand === 'voorstel'
+      ? ''
+      : bron === 'leert'
+        ? `<div class="pan-leert"><b>${esc(t('panelen.nogEen'))}</b><span>${esc(t('panelen.bewolkt'))}</span>${voorkantVraag(v, a)}</div>`
+        : v?.stand === 'bevestigd' && v.voorstel ? `<button type="button" class="lig-link" data-lig-meten>${esc(t('panelen.opnieuw'))}</button>` : '';
+    return `<div class="pan3">
+      <div class="pan-kop"><h2 class="kop-2">${esc(t('energie.zonnepanelen'))}</h2>${chip}${kopKnoppen}</div>
+      <div class="pan-veld">
+        <div class="pan-podium" data-pan-podium role="img" aria-label="${esc(t('panelen3.huisLabel'))}"></div>
+        <div class="pan-rechts">
+          <div class="pan-kop3"><h3 class="kop-3">${esc(t('panelen3.waar'))}</h3><button type="button" class="lig-link" data-pan-zelf>${esc(t('panelen3.zelf'))}</button></div>
+          <div class="pan-daken">${huisRijen}${eldersRijen}</div>${erbij}
+          ${tegels ? `<h3 class="kop-3">${esc(t('panelen3.meet'))}</h3>${tegels}` : ''}
+          ${knoppen}
+        </div>
+      </div>
+    </div>`;
+  }
+
   /** Voor de rij op Energie en de stip bij Inrichten. */
   const kort = (v) => (v?.nu ? `${v.nu.richting}, ${v.nu.vermogenKort ?? v.nu.vermogen}` : null);
 
-  return { kaart, klik, verander, kort, lijn, roos };
+  return { kaart, klik, verander, kort, lijn, roos, overzicht, labels };
 })();

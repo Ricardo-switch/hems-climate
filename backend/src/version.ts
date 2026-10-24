@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.59.11';
+export const VERSIE = '0.63.1';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,172 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.63.1',
+    datum: '2026-10-24',
+    beter: [
+      'Het huis staat nu overal op zijn eiland: ook bij een kamer, Kamers en indeling, de assistent, het begin, de film, het inlogscherm en het always-on display',
+    ],
+    en: {
+      beter: [
+        'The house now stands on its island everywhere: also for a room, Rooms and layout, the assistant, the start, the film, the sign-in screen and the always-on display',
+      ],
+    },
+  },
+  {
+    versie: '0.63.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Inrichten in acht hoofdstukken, met het huis op zijn eiland dat bij elke stap iets krijgt',
+      'Bij Inrichten: wat voor huis het is, afwezig en vakantie, wat er op zon mag, en wat er in Home Assistant klaar moet staan',
+    ],
+    beter: [
+      'Het tuinhuis heeft twee spots onder het overstek die omlaag schijnen, elk in de kleur van zijn lamp',
+      'Buiten bij Inrichten kent de jacuzzi en het schuurtje; de wand zie je in het klein, met de kaarten om te kiezen',
+    ],
+    opgelost: [
+      'Panelen op de garage, carport of het tuinhuis vielen weg als je Op zon bij Regeling of Inrichten veranderde',
+    ],
+    en: {
+      nieuw: [
+        'Set up in eight chapters, with the house on its island gaining something at every step',
+        'In Set up: what kind of house it is, away and holiday, what may run on sun, and what has to be ready in Home Assistant',
+      ],
+      beter: [
+        'The garden house has two spots under the overhang shining down, each in the colour of its lamp',
+        'Outside in Set up knows the hot tub and the shed; you see the wall screen in miniature, with the cards to choose',
+      ],
+      opgelost: [
+        'Panels on the garage, carport or garden house were dropped when you changed On sun in Control or Set up',
+      ],
+    },
+  },
+  {
+    versie: '0.62.2',
+    datum: '2026-10-24',
+    beter: [
+      'Het tuinhuis heeft een plat dak met een overstek op twee palen, een vlonder en een glazen pui; heet het een schuur of berging, dan blijft het het houten schuurtje met puntdak',
+    ],
+    en: {
+      beter: [
+        'The garden house has a flat roof with an overhang on two posts, a deck and a glass front; when it is called a shed, it stays the wooden shed with a pitched roof',
+      ],
+    },
+  },
+  {
+    versie: '0.62.1',
+    datum: '2026-10-24',
+    beter: [
+      'Het kompas staat niet meer op Thuis; bij Zonnepanelen wel, bij de ligging',
+    ],
+    en: {
+      beter: [
+        'The compass is no longer on Home; it stays on Solar panels, with how they lie',
+      ],
+    },
+  },
+  {
+    versie: '0.62.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Een kaart Boiler: hoe warm de boiler of jacuzzi is, en of hij op zon opwarmt',
+    ],
+    beter: [
+      'Een smalle kaart op de wand is een tegel met een groot getal en een beeldje: een ring voor de auto, een staaf voor de batterij, balkjes voor de maand',
+    ],
+    opgelost: [
+      'In een smalle kaart blijft alles binnen de kaart, ook de grafiek van Vandaag',
+    ],
+    en: {
+      nieuw: [
+        'A water heater card: how warm the water heater or hot tub is, and whether it heats on sun',
+      ],
+      beter: [
+        'A narrow card on the wall is a tile with a large number and a small picture: a ring for the car, a bar for the battery, bars for the month',
+      ],
+      opgelost: [
+        'In a narrow card everything stays inside the card, including the chart of Today',
+      ],
+    },
+  },
+  {
+    versie: '0.61.1',
+    datum: '2026-10-24',
+    beter: [
+      'Doet de oude regeling al wat Smart Climate wil, dan zegt Thuis "De badkamer wordt verwarmd" in plaats van "zou verwarmen"',
+      'Op de telefoon staan zon, huis en net onder het huis als drie vakjes, zonder pijl',
+    ],
+    opgelost: [
+      'Op de wand loopt de lucht weer door achter het huis',
+      'Bij Wat je huis kan valt het label van de auto niet meer over het menu',
+    ],
+    en: {
+      beter: [
+        'When the old system already does what Smart Climate wants, Home says "The bathroom is being heated" instead of "would heat"',
+        'On the phone sun, home and grid sit below the house as three tiles, without an arrow',
+      ],
+      opgelost: [
+        'On the wall the sky runs on behind the house again',
+        'On What your home can do the car label no longer falls over the menu',
+      ],
+    },
+  },
+  {
+    versie: '0.61.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Het huis staat nu op een eigen stukje grond, met de kelder eronder, het weer van nu en de seizoenen: regen en sneeuw vallen, de bomen kleuren mee',
+      'Panelen kunnen ook op de garage, de carport of het tuinhuis liggen, elk met hun eigen aantal',
+      'Bij Meldingen wis je alles in één keer',
+    ],
+    beter: [
+      'Zonnepanelen laat het huis zien met hoe de panelen liggen, in graden vanaf het noorden, met per dak het aantal',
+      'De kaarten op de wand staan in twee kolommen; elke kaart kies je smal of breed',
+      'Elke stroom op het huis heeft zijn eigen kleur: zon goud, terug naar het net groen, van het net violet',
+      'Op de telefoon staan de hulp, de bel en het tandwiel op elke tab op dezelfde plek, en onder het huis zie je wat er van of naar het net gaat',
+      'Wat je huis kan staat in zes groepen, met de boiler, de jacuzzi en wat het huis eerst leert',
+    ],
+    opgelost: [
+      'Een boiler stond in het huis als droger getekend; nu als boiler',
+    ],
+    en: {
+      nieuw: [
+        'The house now stands on its own patch of ground, with the basement below, the weather of now and the seasons: rain and snow fall, the trees change colour',
+        'Panels can also lie on the garage, the carport or the garden shed, each with its own number',
+        'Under Notifications you clear everything at once',
+      ],
+      beter: [
+        'Solar panels shows the house with how the panels lie, in degrees from north, with the number per roof',
+        'The cards on the wall stand in two columns; you choose each card narrow or wide',
+        'Every flow on the house has its own colour: sun gold, back to the grid green, from the grid violet',
+        'On the phone help, the bell and the gear sit in the same place on every tab, and below the house you see what goes from or to the grid',
+        'What your home can do is in six groups, with the water heater, the hot tub and what the house learns first',
+      ],
+      opgelost: [
+        'A water heater was drawn in the house as a dryer; now as a water heater',
+      ],
+    },
+  },
+  {
+    versie: '0.60.0',
+    datum: '2026-10-23',
+    nieuw: [
+      'Een boiler of jacuzzi kan op zon: hij warmt op met wat er over is, houdt een ondergrens vast en is zonder zon op tijd warm in de daluren',
+      'Bij de jacuzzi kies je klaar om: vanavond, morgen of later, en hij is dan op badtemperatuur',
+    ],
+    opgelost: [
+      'Op de telefoon loopt de tekst van de assistent weer mee terwijl hij praat, ook als de browser niet zegt bij welk woord hij is',
+    ],
+    en: {
+      nieuw: [
+        'A water heater or hot tub can run on sun: it heats up with what is spare, keeps a minimum and is warm in time during off-peak hours without sun',
+        'For the hot tub you choose a ready time: tonight, tomorrow or later, and it will be at bath temperature by then',
+      ],
+      opgelost: [
+        'On the phone the text of the assistant follows along again while it speaks, even when the browser does not say which word it is at',
+      ],
+    },
+  },
   {
     versie: '0.59.11',
     datum: '2026-10-23',

@@ -42,10 +42,12 @@
   .idee .wint.zacht { font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
   .idee:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; border-radius: 10px; }
 
-  .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; min-height: 0; }
-  .vak { padding: 12px 16px 6px; display: flex; flex-direction: column; min-height: 0; }
-  .vak h3 { margin: 0 0 2px; font-family: var(--kop); font-size: 16px; font-weight: 600; }
-  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: 100%; }
+  /* Zes groepen in drie rijen (besluit 187, schets Wand-Huis-kan-3). */
+  .vakken { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 12px; min-height: 0; }
+  .vak { padding: 10px 14px 4px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .vak h3 { margin: 0 0 1px; font-family: var(--kop); font-size: 15px; font-weight: 600; }
+  .vak.leren { border-color: rgba(111, 211, 255, 0.28); background: linear-gradient(160deg, rgba(111, 211, 255, 0.08), rgba(255, 255, 255, 0.03)); }
+  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 4px 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.06); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; width: 100%; }
   .regel:first-of-type { border-top: 0; }
   .regel b { display: block; font-size: 14px; font-weight: 600; }
   .regel span.nu { display: block; font-size: 12.5px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

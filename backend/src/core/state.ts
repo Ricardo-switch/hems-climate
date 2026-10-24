@@ -166,6 +166,38 @@ export interface SystemState {
    * configuratie er een kent.
    */
   readonly deferrables?: Readonly<Record<string, DeferrableState>>;
+  /**
+   * De warmtebuffers, op `HeatStore.id` (besluit 186). Alleen als de
+   * configuratie er een kent.
+   */
+  readonly heatStores?: Readonly<Record<string, HeatStoreState>>;
+  /**
+   * De goedkoopste uren van de komende dag, van de dienst: de daluren, of later
+   * de uren met de laagste prijs (besluit 186). Leeg of weg: er zijn geen
+   * goedkopere uren, en wat van het net moet, gebeurt zo laat als het kan.
+   */
+  readonly cheapWindows?: readonly { readonly fromMs: number; readonly toMs: number }[];
+}
+
+/** Wat de dienst bij een buffer onthoudt en bij elk besluit toevoegt (besluit 186). */
+export type HeatStoreExtra = Pick<HeatStoreState, 'readyBy' | 'legionellaAtMs' | 'lastFullMs'>;
+
+export interface HeatStoreState {
+  /** De watertemperatuur; `missing` als er geen meter is. */
+  readonly temperatureC: Reading<number>;
+  /** Wat hij nu trekt, in W, als er een meter is. */
+  readonly powerW?: Reading<number>;
+  /** Staat hij aan: de schakelaar, of de stand van de boiler of thermostaat. */
+  readonly on: Reading<boolean>;
+  /** "Klaar om" van de bewoner: wanneer en hoe warm. Null of weg: geen. */
+  readonly readyBy?: { readonly atMs: number; readonly targetC: number } | null;
+  /** Wanneer hij voor het laatst de temperatuur tegen legionella haalde, in epoch-ms. */
+  readonly legionellaAtMs?: number | null;
+  /**
+   * Bij een boiler zonder temperatuur: wanneer hij voor het laatst vol was (hij
+   * stond aan en trok bijna niets), in epoch-ms. Null: onbekend.
+   */
+  readonly lastFullMs?: number | null;
 }
 
 export interface DeferrableState {

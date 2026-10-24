@@ -62,8 +62,9 @@ function huisModel() {
   const zonKw = s.zonKw ?? 0;
   const netKw = s.netKw ?? 0;
   // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
+  // Huis 3.0 (besluit 187): de kelder onder de grond, op een eiland met het weer van nu.
   const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon });
-  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = tek;
+  const { etages } = tek;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
@@ -71,6 +72,8 @@ function huisModel() {
   // Hoe de panelen liggen, zoals bij Inrichten (besluit 166): per kant bij beide kanten.
   const opDak = huismodel.panelenOpDak(aansluiting?.antwoorden?.panelen, piekW);
   const maand = new Date().getMonth() + 1;
+  const elders = aansluiting?.antwoorden?.elders ?? {};
+  const nuWeer = weer?.vandaag?.soort;
 
   const stromen = [];
   const koelend = etages.flatMap((e) => e.kamers).find((k) => k.apparaten.some((a) => a.soort === 'airco' && a.aan));
@@ -80,27 +83,54 @@ function huisModel() {
 
   const labels = [];
   if (zonKw > 0.05) labels.push({ bij: 'panelen', titel: `${getal(zonKw)} kW`, groot: true, toon: 'zon', regels: [t('thuis.label.panelen')], dx: 64, dy: -70 });
-  labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'net' : 'mint', dx: -30, dy: 34 });
+  // Van het net in violet, terug in groen: dezelfde kleur als de lijn (besluit 187).
+  labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'violet' : 'mint', dx: 40, dy: 64 });
 
   return {
     beschrijving: `${state?.bewoner?.kop?.titel ?? t('thuis.hetHuis')}. ${state?.bewoner?.kop?.zin ?? ''}`,
     tijd,
-    seizoen: maand >= 11 || maand <= 2 ? 'winter' : 'zomer',
+    // De seizoenen (besluit 187): kale bomen in de winter, oranje in de herfst.
+    seizoen: maand === 12 || maand <= 2 ? 'winter' : maand >= 10 ? 'herfst' : 'zomer',
+    weer: nuWeer === 'regen' || nuWeer === 'onweer' ? 'regen' : nuWeer === 'sneeuw' ? 'sneeuw' : undefined,
     wolken,
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
-    etages,
-    buitenunit: tek.buitenunit,
-    voordeur: tek.voordeur,
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak (besluit 187).
+    // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
+    ...huismodel.huisDelen(tek, elders),
     net: true,
-    oprit,
-    tuin,
-    terras,
-    balkon,
-    voortuin,
-    garage,
     stromen,
     labels,
   };
+}
+
+/**
+ * Op de telefoon onder het huis (besluit 187): van de zon, naar het huis, en
+ * van of naar het net, in de kleur van de lijnen. Op de wand staat het net als
+ * label bij het huis.
+ */
+function tekenStromenTel() {
+  const el = document.querySelector('#tel [data-stromen]');
+  if (!el) return;
+  const s = state?.bewoner?.stromen;
+  if (!s) return void (el.hidden = true);
+  // Drie vakjes zonder pijlen (24 oktober 2026: een pijl naar links zei niets): de zon, het huis en het net, elk met een icoon in de kleur van zijn lijn.
+  const ik = (pad) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${pad}</svg>`;
+  const ZON = '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/>';
+  const HUIS = '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>';
+  const NET = '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>';
+  const vak = (pad, kleur, kw, woord) => `<div class="${kleur}"><i>${ik(pad)}</i><b>${esc(kw)}</b><span>${esc(woord)}</span></div>`;
+  const netKw = s.netKw ?? 0;
+  const delen = [];
+  // De zon alleen als het huis panelen heeft; 's nachts gewoon 0.
+  if (s.zonKw != null) delen.push(vak(ZON, 'zon-t', `${getal(s.zonKw)} kW`, t('thuis.stromen.zon')));
+  if (s.verbruikKw != null) delen.push(vak(HUIS, '', `${getal(s.verbruikKw)} kW`, t('thuis.stromen.huis')));
+  delen.push(netKw > 0.05
+    ? vak(NET, 'violet-t', `${getal(netKw)} kW`, t('thuis.stromen.vanNet'))
+    : netKw < -0.05
+      ? vak(NET, 'mint-t', `${getal(-netKw)} kW`, t('thuis.stromen.terug'))
+      : vak(NET, '', '0 kW', t('thuis.stromen.net')));
+  el.innerHTML = delen.join('');
+  el.hidden = false;
 }
 
 /** Het klimaatapparaat bij een actuator, zoals het huis het noemt. */
@@ -139,9 +169,10 @@ function tekenNu() {
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
-  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, schuifX: 18, schuifY: 20, tik: true });
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
   // Eenvoudig (besluit 164): geen getallen op het huis.
-  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: 14, tik: true });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, tik: true });
+  tekenStromenTel();
 
   tekenVandaag();
   tekenStraks();
@@ -232,6 +263,13 @@ function tekenVandaag() {
   const verwacht = weer?.vandaag?.verwachtKwh;
   zet('[data-opgewekt]', vooraf != null ? t('thuis.vandaag.verwacht', { kwh: getal(kwh), verwacht: getal(vooraf) }) : verwacht != null && verwacht > kwh + 0.05 ? t('thuis.vandaag.verwacht', { kwh: getal(kwh), verwacht: getal(verwacht) }) : t('thuis.vandaag.opgewekt', { kwh: getal(kwh) }));
   const terug = (vandaag.netTerugWh ?? 0) / 1000;
+  // De tegel (besluit 189): de zon van vandaag als kleine lijn, het getal eronder.
+  const kx = (tt) => ((tt - t0) / (t1 - t0)) * 260;
+  const ky = (w) => 42 - (w / max) * 38;
+  const kLijn = kw.map((q, i) => `${i ? 'L' : 'M'} ${kx(q.tMs).toFixed(1)} ${ky(q.zonW ?? 0).toFixed(1)}`).join(' ');
+  const kHelder = lijn2.punten.map((q, i) => `${i ? 'L' : 'M'} ${kx(q.tMs).toFixed(1)} ${ky(q.w).toFixed(1)}`).join(' ');
+  const grafiek = `<svg class="grafiek" viewBox="0 0 260 44" preserveAspectRatio="none" aria-hidden="true">${kHelder ? `<path d="${kHelder}" fill="none" stroke="#F7B548" stroke-opacity="0.45" stroke-width="1.5" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>` : ''}<path d="${kLijn} L ${kx(laatste.tMs).toFixed(1)} 42 L 0 42 Z" fill="rgb(247 181 72 / 0.22)"/><path d="${kLijn}" fill="none" stroke="#F7B548" stroke-width="2" vector-effect="non-scaling-stroke"/><line x1="${kx(Date.now()).toFixed(1)}" y1="0" x2="${kx(Date.now()).toFixed(1)}" y2="44" stroke="rgb(255 255 255 / 0.5)" vector-effect="non-scaling-stroke"/></svg>`;
+  $$('[data-vandaag-tegel]').forEach((el) => (el.outerHTML = tegel({ id: 'vandaag', naam: t('thuis.kaart.vandaag'), waarde: `${getal(kwh)} <small>kWh</small>`, zin: kwh > 0.05 ? t('thuis.tegel.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) }) : '', beeld: grafiek, klasse: 'metgrafiek' }).replace('class="ktegel', 'data-vandaag-tegel class="ktegel')));
   const uitleg = t('thuis.vandaag.gestippeld', { lijn: lijn2.naam });
   zet('[data-dag-zin]', kwh > 0.05 ? `${t('thuis.vandaag.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) })} ${uitleg}` : uitleg);
   // Eenvoudig (besluit 164, schets Thuis-Tel-Eigen #eenvoudig): de dag in één zin.
@@ -467,6 +505,32 @@ let deurbelBeeld = null;
 let deurbelOp = 0;
 const staatErin = (id) => $$(`[data-kaart="${id}"]`).some((el) => !el.hasAttribute('data-uit'));
 const kw = (w) => `${getal(Math.abs(w) / 1000, 1)} kW`;
+
+/*
+ * De tegel van een smalle kaart op de wand (besluit 189, schets Wand-Thuis-3):
+ * een kleine kop met het icoon, een groot getal, een zin, en rechtsboven een
+ * beeldje. De kaart zelf (.kvol) blijft voor breed en voor de telefoon.
+ */
+const tegel = ({ id, naam, waarde, zin = '', toon = '', beeld = '', klasse = '' }) =>
+  `<div class="ktegel${klasse ? ` ${klasse}` : ''}"><span class="tnaam">${eigen.icoon(id)}<span>${esc(naam)}</span></span>${beeld}<span class="twaarde">${waarde}</span><span class="tzin"${toon ? ` style="color: ${toon}"` : ''}>${esc(zin)}</span></div>`;
+const vol = (html) => `<div class="kvol">${html}</div>`;
+function ring(pct, kleur) {
+  const o = 2 * Math.PI * 17;
+  const p = Math.max(0, Math.min(1, (pct ?? 0) / 100));
+  return `<svg class="beeld" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="17" fill="none" stroke="rgb(255 255 255 / 0.1)" stroke-width="5"/><circle cx="22" cy="22" r="17" fill="none" stroke="${kleur}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(p * o).toFixed(1)} ${o.toFixed(1)}" transform="rotate(-90 22 22)"/></svg>`;
+}
+function staaf(pct, kleur) {
+  const p = Math.max(0, Math.min(1, (pct ?? 0) / 100));
+  return `<svg class="beeld" width="22" height="46" viewBox="0 0 22 46" aria-hidden="true"><rect x="1" y="3" width="20" height="42" rx="5" fill="none" stroke="rgb(255 255 255 / 0.2)" stroke-width="1.5"/><rect x="7" y="0" width="8" height="3" rx="1" fill="rgb(255 255 255 / 0.3)"/><rect x="4" y="${(42 - 36 * p).toFixed(0)}" width="14" height="${(36 * p).toFixed(0)}" rx="3" fill="${kleur}"/></svg>`;
+}
+function balkjes(waarden) {
+  const max = Math.max(...waarden, 0.001);
+  return `<svg class="beeld" style="top: 8px" width="54" height="26" viewBox="0 0 54 26" aria-hidden="true">${waarden.map((w, i) => `<rect x="${i * 6}" y="${(26 - Math.max(2, (w / max) * 24)).toFixed(0)}" width="4" height="${Math.max(2, (w / max) * 24).toFixed(0)}" rx="1.5" fill="${i === waarden.length - 1 ? 'var(--zon)' : 'rgb(255 255 255 / 0.25)'}"/>`).join('')}</svg>`;
+}
+function tank(pct, id) {
+  const p = Math.max(0.05, Math.min(1, pct));
+  return `<svg class="beeld" width="26" height="46" viewBox="0 0 26 46" aria-hidden="true"><defs><linearGradient id="tank-${id}" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4d86c9"/><stop offset="0.6" stop-color="#ff9a6b"/><stop offset="1" stop-color="#ff6a3d"/></linearGradient><clipPath id="tankvorm-${id}"><rect x="1" y="1" width="24" height="44" rx="11"/></clipPath></defs><rect x="1" y="1" width="24" height="44" rx="11" fill="rgb(255 255 255 / 0.08)" stroke="rgb(255 255 255 / 0.2)"/><rect clip-path="url(#tankvorm-${id})" x="1" y="${(45 - 44 * p).toFixed(0)}" width="24" height="44" fill="url(#tank-${id})"/></svg>`;
+}
 const kaartKop = (id, titel, pijl = true) => `<div class="kaartkop"><span class="ik">${eigen.icoon(id)}</span><h2 class="kop-3">${esc(titel)}</h2>${pijl ? '<span class="pijl" aria-hidden="true">›</span>' : ''}</div>`;
 const lading = (pct, kleur, zin, zinKleur) =>
   `<div class="lading"><span class="getal">${pct == null ? '–' : `${getal(pct, 0)}%`}</span><div class="laadbalk"><i style="width: ${Math.max(0, Math.min(100, pct ?? 0))}%; background: ${kleur}"></i></div><small style="color: ${zinKleur}">${esc(zin)}</small></div>`;
@@ -520,12 +584,13 @@ function tekenLading() {
   const a = huisData?.opslag?.auto ?? null;
   const autoZin = !a ? '' : a.laadt ? (a.vermogenW ? t('thuis.lading.laadtMet', { kw: kw(a.vermogenW) }) : t('thuis.lading.laadt')) : a.aangesloten === true ? t('thuis.lading.aangesloten') : a.aangesloten === false ? t('thuis.lading.nietAangesloten') : '';
   const bereik = a?.bereikKm != null ? `${autoZin ? ' · ' : ''}${getal(a.bereikKm, 0)} km` : '';
-  zetKaart('[data-auto]', 'auto', a ? `${kaartKop('auto', a.naam)}${lading(a.pct, a.laadt ? 'var(--mint)' : 'var(--net)', autoZin + bereik, a.laadt ? 'var(--mint-t)' : 'var(--zacht)')}` : '', !!a);
+  zetKaart('[data-auto]', 'auto', a ? `${vol(`${kaartKop('auto', a.naam)}${lading(a.pct, a.laadt ? 'var(--mint)' : 'var(--net)', autoZin + bereik, a.laadt ? 'var(--mint-t)' : 'var(--zacht)')}`)}${tegel({ id: 'auto', naam: a.naam, waarde: a.pct == null ? '–' : `${getal(a.pct, 0)}%`, zin: autoZin + bereik, toon: a.laadt ? 'var(--mint-t)' : '', beeld: ring(a.pct, a.laadt ? 'var(--mint)' : 'var(--net)') })}` : '', !!a);
   const b = huisData?.opslag?.batterij ?? null;
   const st = b?.stand;
   const bZin = st === 'laadt' ? t('thuis.lading.laadtMet', { kw: kw(b.vermogenW) }) : st === 'levert' ? t('thuis.lading.levert', { kw: kw(b.vermogenW) }) : st === 'rust' ? t('thuis.lading.rust') : '';
   const bKleur = st === 'laadt' ? 'var(--zon)' : st === 'levert' ? 'var(--violet)' : 'var(--net)';
-  zetKaart('[data-batterij]', 'batterij', b ? `${kaartKop('batterij', b.naam)}${lading(b.pct, bKleur, bZin, app.tekstKleur(st === 'rust' || !st ? 'var(--zacht)' : bKleur))}` : '', !!b);
+  zetKaart('[data-batterij]', 'batterij', b ? `${vol(`${kaartKop('batterij', b.naam)}${lading(b.pct, bKleur, bZin, app.tekstKleur(st === 'rust' || !st ? 'var(--zacht)' : bKleur))}`)}${tegel({ id: 'batterij', naam: b.naam, waarde: b.pct == null ? '–' : `${getal(b.pct, 0)}%`, zin: bZin, toon: st === 'rust' || !st ? '' : app.tekstKleur(bKleur), beeld: staaf(b.pct, st === 'levert' ? 'var(--violet)' : 'var(--mint)') })}` : '', !!b);
+  tekenBoiler();
 }
 
 function tekenMaand() {
@@ -533,7 +598,7 @@ function tekenMaand() {
   const naam = taal.datum(Date.now(), { month: 'long' });
   const titel = t('thuis.maand.titel', { maand: `${naam.charAt(0).toUpperCase()}${naam.slice(1)}` });
   let html = '';
-  if (m?.meters === false) html = `${kaartKop('maand', titel)}<p class="klein" style="margin: 8px 0 0">${esc(t('thuis.maand.meters'))}</p>`;
+  if (m?.meters === false) html = `${vol(`${kaartKop('maand', titel)}<p class="klein" style="margin: 8px 0 0">${esc(t('thuis.maand.meters'))}</p>`)}${tegel({ id: 'maand', naam: `${naam.charAt(0).toUpperCase()}${naam.slice(1)}`, waarde: '–', zin: t('thuis.tegel.meters') })}`;
   else if (m?.stroom) {
     const eerste = m.zon ? `<div><b class="zon-t">${getal(m.zon.opgewektKwh, 0)}</b><span>${esc(t('thuis.maand.opgewekt'))}</span></div>` : `<div><b>${getal(m.stroom.verbruikKwh, 0)}</b><span>${esc(t('thuis.maand.gebruikt'))}</span></div>`;
     const tweede = m.zon?.zelfPct != null ? `<div><b>${getal(m.zon.zelfPct, 0)}%</b><span>${esc(t('thuis.maand.zelf'))}</span></div>` : `<div><b>${getal(m.stroom.vanNetKwh, 0)}</b><span>${esc(t('thuis.maand.vanNet'))}</span></div>`;
@@ -541,7 +606,16 @@ function tekenMaand() {
     const derde = kosten != null
       ? `<div><b>€ ${getal(kosten, 0)}</b><span>${esc(m.kosten.vorige != null ? t('thuis.maand.gekostVorige', { vorige: m.periode?.vorigeNaam ?? t('thuis.maand.ervoor'), euro: getal(m.kosten.vorige, 0) }) : t('thuis.maand.gekost'))}</span></div>`
       : `<div><b>–</b><span>${esc(t('thuis.maand.prijzen'))}</span></div>`;
-    html = `${kaartKop('maand', titel)}<div class="maanddrie">${eerste}${tweede}${derde}</div>`;
+    html = vol(`${kaartKop('maand', titel)}<div class="maanddrie">${eerste}${tweede}${derde}</div>`);
+    // De tegel: wat er deze maand opgewekt (of gebruikt) is, met de laatste dagen als balkjes.
+    const dagen = (m.perBucket ?? []).slice(-9).map((d) => (m.zon ? d.zonKwh : d.netKwh + d.zonKwh));
+    html += tegel({
+      id: 'maand',
+      naam: `${naam.charAt(0).toUpperCase()}${naam.slice(1)}`,
+      waarde: `${getal(m.zon ? m.zon.opgewektKwh : m.stroom.verbruikKwh, 0)} <small>kWh</small>`,
+      zin: m.zon?.zelfPct != null ? t('thuis.tegel.zelf', { pct: getal(m.zon.zelfPct, 0) }) : kosten != null ? `€ ${getal(kosten, 0)}` : t(m.zon ? 'thuis.maand.opgewekt' : 'thuis.maand.gebruikt'),
+      beeld: dagen.length > 1 ? balkjes(dagen) : '',
+    });
   }
   zetKaart('[data-maand]', 'maand', html, true);
 }
@@ -555,7 +629,7 @@ function tekenDeurbel() {
     wanneer = vandaag ? t('thuis.deurbel.om', { klok: klokVan(d.laatsteMs) }) : t('thuis.deurbel.laatst', { dag: taal.datum(toen, { weekday: 'long', day: 'numeric', month: 'long' }) });
   }
   const beeld = deurbelBeeld ? `<img alt="${esc(t('thuis.deurbel.beeld', { naam: d?.naam ?? t('thuis.deurbel.deDeurbel') }))}" src="${deurbelBeeld}">` : '';
-  zetKaart('[data-deurbelkaart]', 'deurbel', d ? `${kaartKop('deurbel', t('thuis.deurbel.kop'))}<div class="deurbelbeeld">${beeld}<span class="wanneer">${esc(wanneer)}</span></div>` : '', !!d);
+  zetKaart('[data-deurbelkaart]', 'deurbel', d ? `${vol(`${kaartKop('deurbel', t('thuis.deurbel.kop'))}<div class="deurbelbeeld">${beeld}<span class="wanneer">${esc(wanneer)}</span></div>`)}<div class="ktegel foto">${beeld}<span class="tnaam">${eigen.icoon('deurbel')}<span>${esc(t('thuis.deurbel.kop'))}</span></span><span class="tzin">${esc(wanneer)}</span></div>` : '', !!d);
 }
 
 // Een tik op de deurbel: het live beeld groot, zoals bij aanbellen.
@@ -567,13 +641,28 @@ document.addEventListener('click', (e) => {
 
 /* ------------------------------------------------------------- het weer */
 
+/** De boiler of de jacuzzi (besluit 189): hoe warm, en of hij op zon opwarmt; een tik opent Apparaten. */
+function tekenBoiler() {
+  const alles = (huisData?.etages ?? []).flatMap((e) => e.ruimtes ?? []).flatMap((r) => r.apparaten ?? []);
+  const x = alles.find((a) => a.warmte?.soort === 'boiler') ?? alles.find((a) => a.warmte?.soort === 'jacuzzi');
+  const w = x?.warmte;
+  const vol = !w ? 0 : w.tempC == null ? 0.5 : Math.max(0.05, Math.min(1, (w.tempC - (w.minC - 10)) / Math.max(1, w.zonC - (w.minC - 10))));
+  const zin = !w ? '' : w.tempC == null ? t('thuis.boiler.onbekend') : x.aan ? `${t(w.opZon ? 'thuis.boiler.opZon' : 'thuis.boiler.warmt')}${w.doelC != null ? `, ${t('thuis.boiler.naar', { doel: w.doelC })}` : ''}` : t('thuis.boiler.rust');
+  const waarde = w?.tempC == null ? '–' : `${getal(w.tempC, 0)}°`;
+  const toon = x?.aan ? (w.opZon ? 'var(--zon-t)' : 'var(--gloed-t)') : '';
+  zetKaart('[data-boiler]', 'boiler', x
+    ? `<div class="kvol">${kaartKop('boiler', x.naam)}<div class="lading"><span class="getal">${waarde}</span><div class="laadbalk"><i style="width: ${(vol * 100).toFixed(0)}%; background: linear-gradient(90deg, #4d86c9, #ff9a6b)"></i></div><small style="color: ${toon || 'var(--zacht)'}">${esc(zin)}</small></div></div>${tegel({ id: 'boiler', naam: x.naam, waarde, zin, toon, beeld: tank(vol, 'kaart') })}`
+    : '', !!x);
+}
+
 /** Het weer van morgen (besluit 162): een kaart om te kiezen; een tik opent het weer. */
 function tekenMorgen() {
   const d = weer?.dagen?.[0];
   $$('[data-morgen]').forEach((el) => {
     el.hidden = !d;
     if (!d) return;
-    const html = `${weerIcoon(d.soort)}<b>${esc(t('thuis.weer.morgen'))}</b><span class="graden">${d.maxC == null ? '–' : `${getal(d.maxC, 0)}°`}${d.minC == null ? '' : `<small> / ${getal(d.minC, 0)}°</small>`}</span><span class="mini">${esc([d.regenkansPct != null ? t('thuis.weer.regen', { pct: d.regenkansPct }) : '', d.verwachtKwh != null ? t('thuis.weer.vanPanelen', { kwh: getal(d.verwachtKwh) }) : ''].filter(Boolean).join(', '))}</span>`;
+    const kort = d.verwachtKwh != null ? t('thuis.tegel.vanPanelen', { kwh: getal(d.verwachtKwh) }) : d.regenkansPct != null ? t('thuis.tegel.regen', { pct: d.regenkansPct }) : '';
+    const html = `<div class="kvol morgen">${weerIcoon(d.soort)}<b>${esc(t('thuis.weer.morgen'))}</b><span class="graden">${d.maxC == null ? '–' : `${getal(d.maxC, 0)}°`}${d.minC == null ? '' : `<small> / ${getal(d.minC, 0)}°</small>`}</span><span class="mini">${esc([d.regenkansPct != null ? t('thuis.weer.regen', { pct: d.regenkansPct }) : '', d.verwachtKwh != null ? t('thuis.weer.vanPanelen', { kwh: getal(d.verwachtKwh) }) : ''].filter(Boolean).join(', '))}</span></div>${tegel({ id: 'morgen', naam: t('thuis.weer.morgen'), waarde: `${d.maxC == null ? '–' : `${getal(d.maxC, 0)}°`}${d.minC == null ? '' : ` <small>/ ${getal(d.minC, 0)}°</small>`}`, zin: kort, beeld: `<span class="beeld" style="top: 14px">${weerIcoon(d.soort)}</span>` })}`;
     if (el.dataset.html !== html) {
       el.innerHTML = html;
       el.dataset.html = html;

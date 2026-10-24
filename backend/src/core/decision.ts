@@ -104,6 +104,44 @@ export interface DeferrableExplanation {
   readonly doneSinceMs?: number;
 }
 
+/*
+ * Een warmtebuffer (besluit 186): `would_heat` zou nu stoken, `waiting` wacht
+ * op zon, `full` heeft zijn doel, `unknown` is niet te lezen.
+ */
+export const HEAT_STORE_STATES = ['would_heat', 'waiting', 'full', 'unknown'] as const;
+export type HeatStoreStateCode = (typeof HEAT_STORE_STATES)[number];
+
+export const HEAT_STORE_REASONS = [
+  'reading_unavailable',
+  'failsafe_unreliable_input',
+  'mode_excludes_action',
+  'insufficient_current_budget',
+  'below_minimum',
+  'ready_by',
+  'legionella_due',
+  'cheap_hours',
+  'stabilisation_active',
+  'surplus_available',
+  'surplus_insufficient',
+  'target_reached',
+] as const;
+export type HeatStoreReason = (typeof HEAT_STORE_REASONS)[number];
+
+export interface HeatStoreExplanation {
+  readonly id: string;
+  readonly state: HeatStoreStateCode;
+  readonly reason: HeatStoreReason;
+  /** De watertemperatuur van nu, als die er is. */
+  readonly temperatureC?: number;
+  /** Tot waar hij nu zou stoken, of waar hij op zon heen wil. */
+  readonly targetC?: number;
+  /** Stookt hij nu, gemeten of aan de schakelaar. */
+  readonly heating: boolean;
+  /** "Klaar om" en de start die daarvoor uiterlijk nodig is. */
+  readonly readyByMs?: number;
+  readonly latestStartMs?: number;
+}
+
 export type Command =
   | {
       readonly kind: 'setAction';
@@ -187,6 +225,8 @@ export interface Explanation {
    * als de configuratie er een kent, zodat het logboek anders niet verandert.
    */
   readonly deferrables?: readonly DeferrableExplanation[];
+  /** Wat de warmtebuffers nu zouden doen (besluit 186). Alleen als de configuratie er een kent. */
+  readonly heatStores?: readonly HeatStoreExplanation[];
   /**
    * Apparaten die de bewoner nu zelf bedient, met sinds en tot wanneer
    * (besluit 74). Alleen aanwezig als er iets overgenomen is, zodat het logboek

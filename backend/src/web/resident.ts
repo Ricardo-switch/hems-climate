@@ -20,6 +20,7 @@ import { FALLBACK_PROGRAM_MIN } from '../core/deferrable.js';
 import type { Deferrable, SiteConfig } from '../core/model.js';
 import { SHORT, cap, residentRooms, withArticle, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
 import { clockIn, nextLocalTime } from './today.js';
+import { residentBuffers, type ResidentBuffer } from './buffers-bewoner.js';
 
 export interface ResidentHeadline {
   /** "Nu · Dag", met "(gekozen)" als de bewoner de modus koos. */
@@ -103,6 +104,8 @@ export interface ResidentView {
   readonly besluit: ResidentDecisionWords | null;
   /** De uitstelbare apparaten, voor het scherm Apparaten (besluit 101). */
   readonly uitstelbaar: readonly ResidentDeferrable[];
+  /** De boiler en de jacuzzi, voor het scherm Apparaten (besluit 186). */
+  readonly warmtebuffers: readonly ResidentBuffer[];
 }
 
 const MODE = {
@@ -120,6 +123,8 @@ const HEAD = {
     // Tijdens de schaduw gebeurt het niet echt (besluit 124).
     oneWould: (room: string, cool: boolean) => `${cap(room)} zou ${cool ? 'koelen' : 'verwarmen'}`,
     manyWould: 'Het huis zou regelen',
+    // De schaduw wil wat er al echt gebeurt (besluit 188): zoals het in huis is.
+    manyReal: (rooms: string, cool: boolean) => `${cap(rooms)} worden ${cool ? 'gekoeld' : 'verwarmd'}`,
     // Onder de kop over één kamer de getallen, niet nog eens de kop (17 oktober 2026).
     numbers: (temp: string, goal: string | null) => `Het is er ${temp}°${goal != null ? `, het doel is ${goal}°` : ''}.`,
     ownSun: ' Dat kan op eigen zon.',
@@ -160,6 +165,7 @@ const HEAD = {
     many: 'The house is being managed',
     oneWould: (room: string, cool: boolean) => `${cap(room)} would ${cool ? 'cool' : 'heat'}`,
     manyWould: 'The house would act',
+    manyReal: (rooms: string, cool: boolean) => `${cap(rooms)} are being ${cool ? 'cooled' : 'heated'}`,
     numbers: (temp: string, goal: string | null) => `It is ${temp}° there${goal != null ? `, the target is ${goal}°` : ''}.`,
     ownSun: ' That can run on your own solar.',
     waitSun: 'The house is waiting for sun',
@@ -214,7 +220,17 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   const waiting = named.filter(({ r }) => r.soort === 'wait');
   if (e.failsafe.active) return { boven, titel: w.fault[0], zin: w.fault[1] };
   if (active.length > 0) {
-    const titel = active.length === 1 ? (shadow ? w.oneWould : w.one)(mid(active[0]!.name), active[0]!.r.soort === 'cool') : shadow ? w.manyWould : w.many;
+    // In de schaduw "zou", tenzij het echte apparaat al doet wat het besluit wil (besluit 188).
+    const echt = !shadow || active.every(({ r }) => r.klopt);
+    const zelfde = active.every(({ r }) => r.soort === active[0]!.r.soort);
+    const titel =
+      active.length === 1
+        ? (echt ? w.one : w.oneWould)(mid(active[0]!.name), active[0]!.r.soort === 'cool')
+        : !shadow
+          ? w.many
+          : echt && zelfde
+            ? w.manyReal(joinRooms(active.map(({ name }) => mid(name)), lang), active[0]!.r.soort === 'cool')
+            : w.manyWould;
     // Eén kamer: de kop zegt het al, dus eronder hoe warm het er is en wat het doel is.
     const een = active.length === 1 ? e.perZone.find((z) => z.zoneId === active[0]!.r.zoneId) : undefined;
     const getallen =
@@ -330,6 +346,7 @@ export function residentView(config: SiteConfig, snap: DecisionView, lang: Lang 
     rust,
     besluit: snap.commands.length > 0 ? decisionWords(config, snap.commands, redenen, lang) : null,
     uitstelbaar: residentDeferrables(config, snap.explanation.deferrables ?? [], snap.atMs, lang),
+    warmtebuffers: residentBuffers(config, snap.explanation.heatStores ?? [], snap.atMs, lang),
   };
 }
 

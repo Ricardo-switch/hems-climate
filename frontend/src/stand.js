@@ -194,7 +194,7 @@
   }
 
   /** Hoeveel regels "Zo werkt het" en "Wanneer het werkt" elk onderwerp heeft (kan.<id>.zo.<n>). */
-  const REGELS = { temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
+  const REGELS = { ligging: [3, 3], boiler: [3, 2], jacuzzi: [3, 2], temperatuur: [3, 2], optijd: [3, 2], perkamer: [3, 2], gevoel: [2, 1], opzon: [3, 2], apparaten: [3, 2], batterij: [3, 1], goedkoop: [2, 1], auto: [2, 1], licht: [2, 2], screens: [2, 1], afwezig: [2, 1], vraag: [2, 1], opbrengst: [2, 1], zekering: [2, 1], camera: [2, 1], batterijen: [2, 1], weer: [2, 1] };
   /** De vaste teksten van een onderwerp: de titel, wat het is, hoe en wanneer. */
   function teksten(id) {
     const t = global.taal.t;
@@ -241,6 +241,16 @@
     const perKamer = binnen(d).filter(warmtPerKamer);
     const opZonKamers = binnen(d).filter((r) => aircoIn(r).length || opZonIn(r).length);
     const idee = ideeen(d);
+    // De boiler en de jacuzzi (besluit 186), met hun temperatuur; en hoe de panelen liggen (157).
+    const buffer = (soort) => alles.find((x) => x.warmte?.soort === soort);
+    const warmteNu = (x) => {
+      const w = x.warmte;
+      if (w.tempC == null) return t('kan.warmte.onbekend');
+      return w.doelC != null && w.doelC > w.tempC ? t('kan.warmte.naar', { temp: w.tempC, doel: w.doelC }) : t('kan.warmte.temp', { temp: w.tempC });
+    };
+    const opZonAan = (x) => d.aansluiting?.antwoorden?.opZon?.[x.id] === true || (d.aansluiting?.configuratie?.apparaten ?? []).some((a) => a.id === x.id);
+    const lig = d.aansluiting?.ligging;
+    const ligStand = !lig || !panelen ? null : lig.stand === 'wachten' ? 'leert' : lig.stand === 'voorstel' ? 'mis' : 'werkt';
 
     const lijst = [
       // Comfort
@@ -250,15 +260,20 @@
         waar: geregeld.map((r) => ({ naam: r.naam, wat: kamers.find((k) => k.zoneId === r.zoneId)?.kort ?? (r.temperatuurC != null ? `${global.taal.getal(r.temperatuurC, Number.isInteger(r.temperatuurC) ? 0 : 1)}°` : '') })),
         extra: bewijs ? t('kan.temperatuur.extra', { bewijs }) : null,
       },
-      { ...teksten('optijd'), groep: 'comfort', stand: 'leert', nu: dagen ? t('kan.optijd.dagen', { n: dagen }) : t('kan.optijd.nu'), href: 'vandaag.html' },
+      { ...teksten('optijd'), groep: 'leert', stand: 'leert', nu: dagen ? t('kan.optijd.dagen', { n: dagen }) : t('kan.optijd.nu'), href: 'vandaag.html' },
       {
         ...teksten('perkamer'), groep: 'comfort', stand: perKamer.length ? meekijk : 'nodig', label: perKamer.length ? null : t('kan.perkamer.nodig'),
         nu: perKamer.length ? huismodel.inKamers(perKamer.map((r) => r.naam)) : t('kan.perkamer.nu'), href: 'indeling.html',
         waar: perKamer.map((r) => ({ naam: r.naam, wat: warmteVan(r).join(', ') || t('kan.thermostaat') })),
         idee: idee.find((x) => x.soort === 'koop' && x.id.startsWith('slim-')) ?? null,
       },
-      { ...teksten('gevoel'), groep: 'comfort', stand: 'werkt', nu: t('kan.gevoel.nu'), href: 'thuis.html' },
-      // Zon en kosten
+      { ...teksten('gevoel'), groep: 'leert', stand: 'werkt', nu: t('kan.gevoel.nu'), href: 'thuis.html' },
+      // Wat het huis eerst leert (besluit 187): ook hoe de panelen liggen.
+      ...(ligStand ? [{
+        ...teksten('ligging'), groep: 'leert', stand: ligStand, label: ligStand === 'mis' ? t('kan.ligging.klopt') : null,
+        nu: ligStand === 'leert' ? t('kan.ligging.wacht') : lig.nu ? `${lig.nu.richting}, ${lig.nu.vermogenKort ?? lig.nu.vermogen}` : t('kan.ligging.voorstel'), href: 'energie.html#panelen',
+      }] : []),
+      // Op zon
       ...(airco ? [{
         ...teksten('opzon'), groep: 'zon', stand: panelen ? meekijk : 'nodig', label: panelen ? null : t('kan.opzon.nodig'),
         nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? t('kan.opzon.wacht')) : t('kan.opzon.nu'), href: 'vandaag.html',
@@ -269,13 +284,18 @@
         ...teksten('apparaten'), groep: 'zon', stand: opZon ? meekijk : kanOpZon ? 'uit' : 'nodig', label: opZon || kanOpZon ? null : t('kan.apparaten.nodig'),
         nu: t(opZon ? 'kan.apparaten.start' : kanOpZon ? 'kan.apparaten.zetAan' : 'kan.apparaten.nu'), href: 'regeling.html#opzon',
       },
-      { ...teksten('batterij'), groep: 'zon', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
-      ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'zon', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
-      { ...teksten('auto'), groep: 'zon', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
+      ...['boiler', 'jacuzzi'].flatMap((soort) => {
+        const x = buffer(soort);
+        return x ? [{ ...teksten(soort), groep: 'zon', stand: opZonAan(x) ? meekijk : 'uit', nu: warmteNu(x), href: 'apparaten.html' }] : [];
+      }),
+      // Kosten
+      { ...teksten('batterij'), groep: 'kosten', stand: 'nodig', label: t('kan.batterij.nodig'), nu: accu ? t('kan.batterij.som', { euro: accu.euro }) : t('kan.idee.batterijZin'), href: 'opbrengst.html', som: accu },
+      ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'kosten', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
+      { ...teksten('auto'), groep: 'kosten', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
       // Gemak
       { ...teksten('licht'), groep: 'gemak', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit', nu: lampenAan ? t('kan.licht.aan', { n: lampenAan }) : t('kan.licht.uit'), href: 'functies.html#licht' },
       ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),
-      { ...teksten('afwezig'), groep: 'gemak', stand: meekijk, nu: t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
+      { ...teksten('afwezig'), groep: 'comfort', stand: meekijk, nu: t('kan.afwezig.nu'), href: 'comfort.html#afwezig' },
       { ...teksten('vraag'), groep: 'gemak', stand: 'werkt', nu: t('kan.vraag.nu'), href: 'assistent.html' },
       // Overzicht
       {
@@ -283,8 +303,8 @@
         nu: zonderMeter ? t('kan.opbrengst.kiesMeters') : zonderPrijs ? t('kan.opbrengst.geenEuro') : d.opbrengst?.stroom ? t('kan.opbrengst.eigen', { pct: d.opbrengst.stroom.eigenZonPct }) : t('kan.opbrengst.nu'),
         href: zonderMeter ? 'energie.html#meters' : zonderPrijs ? 'energie.html#prijzen' : 'opbrengst.html',
       },
-      { ...teksten('zekering'), groep: 'overzicht', stand: z ? meekijk : 'mis', label: z ? null : t('kan.zekering.label'), nu: z ? `${z.fasen} × ${z.ampere} A` : t('kan.zekering.nu'), href: 'energie.html#aansluiting' },
-      ...((d.functies?.gevonden?.cameras ?? []).length ? [{ ...teksten('camera'), groep: 'overzicht', stand: f?.cameras?.aan || f?.deurbel?.aan ? 'werkt' : 'uit', nu: t(f?.deurbel?.aan ? 'kan.camera.bel' : 'kan.camera.nu'), href: 'functies.html#cameras' }] : []),
+      { ...teksten('zekering'), groep: 'kosten', stand: z ? meekijk : 'mis', label: z ? null : t('kan.zekering.label'), nu: z ? `${z.fasen} × ${z.ampere} A` : t('kan.zekering.nu'), href: 'energie.html#aansluiting' },
+      ...((d.functies?.gevonden?.cameras ?? []).length ? [{ ...teksten('camera'), groep: 'gemak', stand: f?.cameras?.aan || f?.deurbel?.aan ? 'werkt' : 'uit', nu: t(f?.deurbel?.aan ? 'kan.camera.bel' : 'kan.camera.nu'), href: 'functies.html#cameras' }] : []),
       {
         ...teksten('batterijen'), groep: 'overzicht', stand: 'werkt', let: leegB > 0 || volF > 0, href: 'thuis.html#batterijen',
         nu: leegB || volF ? [leegB ? t('kan.batterijen.leeg', { n: leegB }) : null, volF ? t('kan.batterijen.vol', { n: volF }) : null].filter(Boolean).join(', ') : t('kan.batterijen.orde'),

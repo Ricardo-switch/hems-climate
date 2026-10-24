@@ -27,7 +27,8 @@ import { melderNaam, rookmelderNu, vindRookmelders, type Gevaar } from './rookme
 import type { HaEntityState } from '../adapters/homeassistant/client.js';
 import { defaultSceneColors, whiteScene } from './scene-colors.js';
 import type { HaArea, HaDevice, HaFloor, HaRegistryEntity } from '../adapters/homeassistant/discovery.js';
-import type { Facade, SiteConfig } from '../core/model.js';
+import type { Facade, HeatStore, SiteConfig } from '../core/model.js';
+import type { HeatStoreExplanation } from '../core/decision.js';
 import { roomStatus, withArticle, type DecisionView, type Lang, type RoomKind } from './assistant.js';
 import {
   OUTSIDE_FLOOR,
@@ -38,6 +39,7 @@ import {
   type Layout,
   type LayoutDevice,
   type LayoutAround,
+  type Woning,
   type LayoutKnown,
   type LayoutOutside,
   type LayoutRoom,
@@ -173,6 +175,20 @@ export interface HouseDevice {
   /** De batterij van het apparaat in procenten, als het er een heeft (besluit 122). */
   readonly batterijPct?: number;
   /**
+   * Alleen bij een boiler of jacuzzi (besluit 186, huis 3.0): wat het is, voor
+   * de tekening, en de watertemperatuur met waar hij heen wil. De tekening zet
+   * de boiler in zijn kamer en de jacuzzi in de tuin.
+   */
+  readonly warmte?: {
+    readonly soort: 'boiler' | 'jacuzzi';
+    readonly tempC: number | null;
+    readonly doelC: number | null;
+    readonly minC: number;
+    readonly zonC: number;
+    /** Wacht hij op zon, of warmt hij er nu mee op. */
+    readonly opZon: boolean;
+  };
+  /**
    * Alleen bij een rookmelder (21 oktober 2026): wat hij ziet (rook, koolmonoxide
    * of hitte) en sinds wanneer, of zijn batterij een probleem meldt, wanneer hij
    * vervangen moet en wanneer hij getest is (`JJJJ-MM-DD`).
@@ -284,6 +300,8 @@ export interface HouseReport {
   readonly dakEtage: FloorId | null;
   /** Wat er rond het huis is, zoals de bewoner het zei (besluit 157); null: de buitenruimtes zeggen het. */
   readonly rond: LayoutAround | null;
+  /** Wat voor huis het is (besluit 190): vrijstaand als de bewoner niets koos. */
+  readonly woning: Woning;
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -506,6 +524,8 @@ const WOORDEN = {
     staatKlaar: 'staat klaar',
     doel: (graden: string) => `doel ${graden}°`,
     apparaat: { running: 'draait', would_start: 'zou nu starten', waiting: 'klaargezet', not_ready: 'uit' } as Readonly<Record<string, string>>,
+    // Een boiler of jacuzzi (besluit 186).
+    buffer: { stookt: 'warmt op', would_heat: 'zou nu opwarmen', waiting: 'wacht op zon', full: 'warm', unknown: 'niet te lezen' } as Readonly<Record<string, string>>,
     // Nog geen melding van het apparaat: dat is iets anders dan kapot (besluit 131).
     meldtNogNiets: 'meldt nog niets',
     live: 'live te bekijken',
@@ -546,6 +566,7 @@ const WOORDEN = {
     staatKlaar: 'standing by',
     doel: (graden: string) => `target ${graden}°`,
     apparaat: { running: 'running', would_start: 'would start now', waiting: 'scheduled', not_ready: 'off' } as Readonly<Record<string, string>>,
+    buffer: { stookt: 'heating', would_heat: 'would heat now', waiting: 'waiting for sun', full: 'warm', unknown: 'cannot be read' } as Readonly<Record<string, string>>,
     meldtNogNiets: 'nothing reported yet',
     live: 'live view',
     nietBereikbaar: 'unreachable',
@@ -907,6 +928,41 @@ function applianceOf(id: string, name: string, state: string | undefined, lang: 
     meting: null,
     klimaat: null,
     meetKamer: false,
+  };
+}
+
+/** Een boiler of jacuzzi (besluit 186): de temperatuur en wat hij doet. */
+function bufferOf(h: HeatStore, e: HeatStoreExplanation | undefined, lang: Lang): HouseDevice {
+  const { id, name } = h;
+  const w = WOORDEN[lang].buffer;
+  const wat = e == null ? WOORDEN[lang].meldtNogNiets : e.heating ? w['stookt']! : (w[e.state] ?? e.state);
+  const temp = e?.temperatureC != null ? Math.round(e.temperatureC) : null;
+  return {
+    id,
+    naam: name,
+    haNaam: name,
+    soort: 'apparaat',
+    stand: temp != null ? `${temp}° · ${wat}` : wat,
+    standCode: e == null ? 'meldt-niets' : e.heating ? 'draait' : e.state === 'would_heat' ? 'zou-starten' : e.state === 'waiting' ? 'klaargezet' : 'uit',
+    aan: e?.heating ?? false,
+    helderheidPct: null,
+    positiePct: null,
+    actuatorId: null,
+    zone: null,
+    groepen: [],
+    dimbaar: false,
+    kleurtemp: false,
+    meting: null,
+    klimaat: null,
+    meetKamer: false,
+    warmte: {
+      soort: h.kind === 'jacuzzi' ? 'jacuzzi' : 'boiler',
+      tempC: temp,
+      doelC: e?.targetC != null ? Math.round(e.targetC) : null,
+      minC: h.minC,
+      zonC: h.sunC,
+      opZon: e != null && (e.state === 'waiting' || e.reason === 'surplus_available'),
+    },
   };
 }
 
@@ -1277,6 +1333,13 @@ function collect(
     found.push({ device, haNaam: d.name, haArea: areaOf(d.remoteStart.id), groepen: [] });
   }
 
+  // De boiler en de jacuzzi (besluit 186), in de kamer of de tuin van het apparaat.
+  for (const h of config.heatStores ?? []) {
+    const e = snapshot?.explanation.heatStores?.find((x) => x.id === h.id);
+    const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = bufferOf(h, e, lang);
+    found.push({ device, haNaam: h.name, haArea: areaOf(h.actuator.id), groepen: [] });
+  }
+
   // Camera's (besluit 106): één per camera, in de kamer van het apparaat. Welke,
   // en met welk beeld, legt de bewoner vast (besluit 109); anders het voorstel.
   const deviceNames = new Map(registers.devices.map((d) => [d.id, (d.name_by_user ?? d.name ?? '').trim()]));
@@ -1545,9 +1608,10 @@ export function proposeLayout(
     // Een tuin of oprit is buiten, ook als Home Assistant hem op de begane grond zet.
     if (OUTSIDE.test(area.name)) return 'buiten';
     const f = area.floor_id ? floorById.get(area.floor_id) : undefined;
-    // Een kelder blijft bij de begane grond, net als een trapkast (besluit 119): de
-    // tekening gaat niet onder de grond. Hoger dan de eerste verdieping is de tweede.
-    if (f && f.level != null) return f.level <= 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
+    // Onder de begane grond is de kelder (besluit 187): de tekening gaat nu onder
+    // de grond (eerst bleef een kelder bij de begane grond, besluit 119). Hoger
+    // dan de eerste verdieping is de tweede.
+    if (f && f.level != null) return f.level < 0 ? 'kelder' : f.level === 0 ? 'bg' : f.level === 1 ? 'e1' : 'e2';
     return 'bg';
   };
 
@@ -1822,6 +1886,7 @@ export function buildHouse(
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
     rond: layout.rond ?? null,
+    woning: layout.woning ?? 'vrijstaand',
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten)), lang),

@@ -21,7 +21,10 @@
 import {
   GEOMETRY_SOURCES,
   MODES,
+  HEAT_STORE_CONTROLS,
+  HEAT_STORE_KINDS,
   type Actuator,
+  type HeatStore,
   type ComfortProfile,
   type ProfileHold,
   type ProfileZone,
@@ -1392,6 +1395,60 @@ export function parseSiteConfig(
     }
   }
 
+  // Warmtebuffers, zoals een boiler of een jacuzzi (besluit 186). Optioneel.
+  const heatStores: HeatStore[] = [];
+  const heatStoresRaw = input['heatStores'];
+  if (heatStoresRaw !== undefined) {
+    if (!Array.isArray(heatStoresRaw)) {
+      p.error('heatStores', 'moet een lijst zijn');
+    } else {
+      const seenStore = new Set<string>();
+      heatStoresRaw.forEach((h, i) => {
+        const path = join('heatStores', i);
+        if (!isRecord(h)) {
+          p.error(path, 'moet een object zijn');
+          return;
+        }
+        const id = str(p, h, path, 'id');
+        if (id && seenStore.has(id)) p.error(join(path, 'id'), `buffer "${id}" staat er twee keer`);
+        if (id) seenStore.add(id);
+        const name = str(p, h, path, 'name');
+        const kind = oneOf(p, h, path, 'kind', HEAT_STORE_KINDS);
+        const control = oneOf(p, h, path, 'control', HEAT_STORE_CONTROLS);
+        const actuator = h['actuator'] === undefined ? (p.error(join(path, 'actuator'), 'ontbreekt'), null) : ref(p, h['actuator'], join(path, 'actuator'), defaultAdapter);
+        const temperature = h['temperature'] === undefined ? null : measurementPoint(p, h['temperature'], join(path, 'temperature'), defaultAdapter);
+        const power = h['power'] === undefined ? null : ref(p, h['power'], join(path, 'power'), defaultAdapter);
+        // Wat een jacuzzi en een boiler meestal doen: de Intex trekt 2,2 kW en wint 1,5 tot 2,5° per uur.
+        const std = kind === 'jacuzzi' ? { w: 2200, min: 30, zon: 38, rate: 1.5 } : { w: 2000, min: 50, zon: 65, rate: 8 };
+        const estimatedW = numOr(p, h, path, 'estimatedW', std.w, { min: 50, max: 10_000 });
+        const minC = numOr(p, h, path, 'minC', std.min, { min: 5, max: 70 });
+        const sunC = numOr(p, h, path, 'sunC', std.zon, { min: 10, max: 85 });
+        if (sunC < minC) p.error(join(path, 'sunC'), `moet minstens de ondergrens (${minC}) zijn`);
+        if (kind === 'jacuzzi' && sunC > 40) p.error(join(path, 'sunC'), 'een jacuzzi gaat niet boven 40°');
+        const heatRateCPerHour = numOr(p, h, path, 'heatRateCPerHour', std.rate, { min: 0.1, max: 60 });
+        const legionellaC = h['legionellaC'] === undefined ? null : num(p, h, path, 'legionellaC', { min: 55, max: 75 });
+        if (legionellaC != null && kind !== 'boiler') p.error(join(path, 'legionellaC'), 'alleen bij een boiler');
+        if (control === 'setpoint' && temperature == null) p.error(join(path, 'temperature'), 'een doeltemperatuur zonder meting kan niet');
+        if (id && name && kind && control && actuator) {
+          heatStores.push({
+            id,
+            name,
+            kind,
+            control,
+            actuator,
+            estimatedW,
+            minC,
+            sunC,
+            heatRateCPerHour,
+            ...(temperature ? { temperature } : {}),
+            ...(power ? { power } : {}),
+            ...(legionellaC != null ? { legionellaC } : {}),
+          });
+        }
+      });
+    }
+  }
+
   // De volgorde op zon (besluit 176): zones en uitstelbare apparaten door elkaar. Optioneel.
   const sunOrder: SunSlot[] = [];
   const sunOrderRaw = input['sunOrder'];
@@ -1402,14 +1459,14 @@ export function parseSiteConfig(
       const gezien = new Set<string>();
       sunOrderRaw.forEach((s, i) => {
         const path = join('sunOrder', i);
-        if (!isRecord(s) || (s['kind'] !== 'zone' && s['kind'] !== 'deferrable') || typeof s['id'] !== 'string') {
-          p.error(path, 'moet { kind: "zone" of "deferrable", id } zijn');
+        if (!isRecord(s) || (s['kind'] !== 'zone' && s['kind'] !== 'deferrable' && s['kind'] !== 'heatStore') || typeof s['id'] !== 'string') {
+          p.error(path, 'moet { kind: "zone", "deferrable" of "heatStore", id } zijn');
           return;
         }
         const kind = s['kind'];
         const id = s['id'];
-        const bestaat = kind === 'zone' ? zones.some((z) => z.id === id) : deferrables.some((d) => d.id === id);
-        if (!bestaat) p.error(path, `${kind === 'zone' ? 'zone' : 'apparaat'} "${id}" bestaat niet`);
+        const bestaat = kind === 'zone' ? zones.some((z) => z.id === id) : kind === 'heatStore' ? heatStores.some((h) => h.id === id) : deferrables.some((d) => d.id === id);
+        if (!bestaat) p.error(path, `${kind === 'zone' ? 'zone' : kind === 'heatStore' ? 'buffer' : 'apparaat'} "${id}" bestaat niet`);
         else if (gezien.has(`${kind}:${id}`)) p.error(path, `"${id}" staat er twee keer`);
         else {
           gezien.add(`${kind}:${id}`);
@@ -1690,6 +1747,7 @@ export function parseSiteConfig(
       ...(geometry ? { geometry } : {}),
       ...(grid ? { grid } : {}),
       ...(deferrables.length > 0 ? { deferrables } : {}),
+      ...(heatStores.length > 0 ? { heatStores } : {}),
       ...(sunOrder.length > 0 ? { sunOrder } : {}),
       ...(recordOnly && recordOnly.length > 0 ? { recordOnly } : {}),
       ...(migration ? { migration } : {}),

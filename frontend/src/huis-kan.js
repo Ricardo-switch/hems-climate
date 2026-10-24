@@ -23,7 +23,8 @@ async function laadAlles() {
   teken();
 }
 
-const GROEPEN = ['comfort', 'zon', 'gemak', 'overzicht'].map((g) => [g, t(`kan.groep.${g}`)]);
+/** Zes groepen (besluit 187): wat het huis eerst leert staat apart, en de kosten ook. */
+const GROEPEN = ['comfort', 'leert', 'zon', 'kosten', 'gemak', 'overzicht'].map((g) => [g, t(`kan.groep.${g}`)]);
 const STANDEN = ['werkt', 'kijkt', 'leert', 'mis', 'uit', 'nodig'].map((s) => [s, t(`kan.stand.${s}`)]);
 const STIP = { werkt: 'var(--mint)', kijkt: 'var(--ijs)', leert: 'var(--ijs)', mis: 'var(--gloed)', uit: 'var(--gedempt)', nodig: 'transparent; box-shadow: inset 0 0 0 1.5px var(--zon)' };
 const gekozen = () => decodeURIComponent(location.hash.slice(1));
@@ -40,7 +41,7 @@ function legenda(lijst) {
 function vakken(lijst) {
   return GROEPEN.map(([g, titel]) => {
     const rijen = lijst.filter((x) => x.groep === g).map((x) => `<button type="button" class="regel${gekozen() === x.id ? ' gekozen' : ''}${filter && x.stand !== filter ? ' weg' : ''}" data-open="${x.id}"><div><b>${esc(x.titel)}</b><span class="nu${x.let ? ' let' : ''}">${esc(x.nu)}</span></div><span class="stand ${x.stand}">${esc(x.label)}</span></button>`).join('');
-    return `<div class="glas vak"><h3>${esc(titel)}</h3>${rijen}</div>`;
+    return rijen ? `<div class="glas vak${g === 'leert' ? ' leren' : ''}"><h3>${esc(titel)}</h3>${rijen}</div>` : '';
   }).join('');
 }
 
@@ -119,18 +120,19 @@ function huisModel(lijst) {
   return {
     beschrijving: t('kan.beschrijving'),
     tijd: 'dag',
-    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, panelen: tek.panelen },
-    voordeur: tek.voordeur,
+    zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, ...huismodel.panelenOpDak(d.aansluiting?.antwoorden?.panelen, piekW) },
     wolken: 0.2,
-    etages,
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191): de kelder, de tuin met de jacuzzi en de garage.
+    ...huismodel.huisDelen(tek, d.aansluiting?.antwoorden?.elders),
     buitenunit: per('opzon') ? { aan: false } : null,
     net: true,
     spook: ['batterij', 'auto'],
     labels: [
-      piekW > 0 ? label('panelen', 'opzon', -120, -90) : null,
+      piekW > 0 ? label('panelen', per('ligging') ? 'ligging' : 'opzon', 40, -60) : null,
+      label('boiler', 'boiler', -60, 70),
       kamer ? label(`kamer:${kamer}`, 'temperatuur', -40, 96) : null,
-      label('batterij', 'batterij', -26, 84),
-      label('auto', 'auto', -8, -70),
+      label('batterij', 'batterij', -60, 150),
+      label('auto', 'auto', 30, -120),
     ].filter(Boolean),
   };
 }
@@ -157,7 +159,7 @@ function tekenNu() {
   // Op de telefoon zonder aanwijzers: daar is het huis te smal voor kaartjes ernaast.
   const model = huisModel(lijst);
   if (tel) model.labels = [];
-  huis.teken(podium, model, { breedte: podium.clientWidth || 440, hoogte: tel ? 300 : podium.clientHeight || 470, marge: tel ? 0.03 : 0.08, schuifX: tel ? 0 : 14, schuifY: 0 });
+  huis.teken(podium, model, { breedte: podium.clientWidth || 440, hoogte: tel ? 300 : podium.clientHeight || 470, marge: tel ? 0.03 : 0.04, schuifY: tel ? 0 : 20 });
 }
 
 /* -------------------------------------------------------------- starten */

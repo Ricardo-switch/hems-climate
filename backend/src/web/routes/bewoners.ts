@@ -122,8 +122,9 @@ export async function bewonersRoutes(d: Diensten, v: Verzoek): Promise<boolean> 
         return true;
       }
       const vraag = typeof body === 'object' && body != null ? (body as Record<string, unknown>) : {};
-      // "verwijder" haalt elke melding weg; "negeer" blijft voor wat er al was.
-      const gelukt = vraag['verwijder'] != null ? store.verwijder(vraag['verwijder']) : store.negeer(vraag['negeer']);
+      // "verwijder" haalt elke melding weg; "negeer" blijft voor wat er al was; "alles" wist de hele lijst (besluit 187).
+      if (vraag['alles'] === true) store.verwijderAlles();
+      const gelukt = vraag['alles'] === true || (vraag['verwijder'] != null ? store.verwijder(vraag['verwijder']) : store.negeer(vraag['negeer']));
       if (!gelukt) {
         sendJson(res, 400, { fout: 'die melding is er niet' });
         return true;
@@ -155,6 +156,30 @@ export async function bewonersRoutes(d: Diensten, v: Verzoek): Promise<boolean> 
     }
     const result = await uitstel.set(body);
     if (result.ok) sendJson(res, 200, { id: result.id, klaarVoorMs: result.klaarVoorMs });
+    else sendJson(res, result.status, { fout: result.reden });
+    return true;
+  }
+
+  // Klaar om bij de boiler en de jacuzzi (besluit 186).
+  if (path === '/api/klaarom') {
+    const buffers = d.options.buffers;
+    if (buffers == null) {
+      sendJson(res, 503, { wachten: '"klaar om" staat niet aan' });
+      return true;
+    }
+    if (method !== 'POST') {
+      sendJson(res, 405, { fout: '"klaar om" zet je met een POST' });
+      return true;
+    }
+    let body: unknown;
+    try {
+      body = await readJson(req);
+    } catch (error) {
+      sendJson(res, 400, { fout: (error as Error).message });
+      return true;
+    }
+    const result = await buffers.set(body);
+    if (result.ok) sendJson(res, 200, { id: result.id, klaarOm: result.klaarOm });
     else sendJson(res, result.status, { fout: result.reden });
     return true;
   }

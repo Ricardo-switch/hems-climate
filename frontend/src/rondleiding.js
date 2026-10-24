@@ -281,8 +281,9 @@
     setTimeout(kijk, 400);
   }
 
+  /** Vanaf de eerste stop op deze pagina (de hulp op elke tab, besluit 187), of van het begin. */
   function start() {
-    zodraKlaar(0);
+    zodraKlaar(Math.max(0, STOPS.findIndex((s) => s.pagina === pagina())));
   }
 
   /*

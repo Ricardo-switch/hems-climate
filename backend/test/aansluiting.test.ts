@@ -180,6 +180,15 @@ describe('bewaren', () => {
     expect(geen.ok && geen.answers.verwarming).toEqual({ soort: 'hybride', aanvoerC: null });
   });
 
+  it('bewaart panelen op de garage, carport of het tuinhuis, en laat een lege plek weg (besluit 187)', () => {
+    const c = validateConnection({ panelen: { ligging: 'beide', voorkant: 6, achterkant: 6 }, elders: { garage: 6, tuinhuis: 0 } }, found);
+    expect(c.ok && c.answers.elders).toEqual({ garage: 6 });
+    expect(validateConnection({ elders: { schuur: 2 } }, found).ok).toBe(false);
+    expect(validateConnection({ elders: { carport: 1.5 } }, found).ok).toBe(false);
+    const zonder = validateConnection({ elders: {} }, found);
+    expect(zonder.ok && 'elders' in zonder.answers).toBe(false);
+  });
+
   it('weigert wat niet kan', () => {
     expect(validateConnection({ panelen: { ligging: 'zuid' } }, found).ok).toBe(false);
     expect(validateConnection({ panelen: { aantal: 0 } }, found).ok).toBe(false);

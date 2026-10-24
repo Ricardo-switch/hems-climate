@@ -23,8 +23,11 @@ let e = null;
 let dubbel = false;
 /** Een eigen hoofdzekering invullen; zolang die niet compleet is, staat hij hier. */
 let zelf = null;
-/** Aanpassen van hoe de panelen liggen (besluit 157, panelen.js). */
-const ligStaat = { aanpassen: false, concept: null, na: () => teken() };
+/**
+ * Aanpassen van hoe de panelen liggen (besluit 157, panelen.js). `zelf`: Zelf
+ * aanpassen is open, met de kant en het aantal (besluit 187).
+ */
+const ligStaat = { aanpassen: false, concept: null, zelf: false, na: () => teken() };
 
 const leeg = () => ({ versie: 1, bron: 'zelf', net: { afname: [], teruglevering: [] }, zon: [], gas: null, apparaten: [], prijzen: { stroom: null, teruglevering: null, gas: null, vastPerMaand: null } });
 /** Tarief 1 van een slimme meter is het daltarief (zelfde regel als de dienst, tarief.ts). */
@@ -61,6 +64,8 @@ async function laadAlles() {
       verwarming: { soort: x?.verwarming?.soort ?? null, aanvoerC: x?.verwarming?.aanvoerC ?? null, thermostaat: x?.verwarming?.thermostaat ?? null },
       voorkantZon: x?.voorkantZon ?? null,
       dak: x?.dak ?? null,
+      // Panelen op de garage, carport of het tuinhuis (besluit 187).
+      elders: { ...(x?.elders ?? {}) },
       opZon: { ...(x?.opZon ?? {}) },
       // Apparaten uit de configuratie die van zon zijn gehaald (besluit 167): gaan mee.
       opZonUit: [...(x?.opZonUit ?? [])],
@@ -141,8 +146,49 @@ function elke(s) {
   return t('energie.elkUur', { n: Math.round(s / 3600) });
 }
 
+/** Welke andere daken het huis heeft, zoals de tekening ze kent (besluit 187). */
+function anderePlekken() {
+  const tek = huisData ? huismodel.tekening(huisData) : null;
+  return [tek?.garage ? 'garage' : null, tek?.oprit?.carport ? 'carport' : null, tek?.tuin?.tuinhuis ? 'tuinhuis' : null].filter(Boolean);
+}
+
+/** Het huis bij Zonnepanelen (besluit 187): de gemeten ligging op het dak, met de graden erbij. */
+function tekenPanelenHuis() {
+  const el = document.querySelector(`${app.zicht()} [data-pan-podium]`);
+  if (!el || !huisData || !a) return;
+  const tek = huismodel.tekening(huisData, { zon, kamer: (r) => ({ ...huismodel.kamerModel(r, null), stil: true, temp: null, zin: null, stand: null }) });
+  const v = aInfo?.ligging;
+  const el2 = a.elders ?? {};
+  const delen = huismodel.huisDelen(tek, el2);
+  const leert = !v?.nu || v.nu.bron === 'schatting';
+  // Op de telefoon geen labels: daar passen ze niet, en de lijst eronder zegt hetzelfde.
+  const labels = app.telStand() ? [] : ligging.labels(v, a);
+  if (tek.garage && el2.garage && !app.telStand()) labels.push({ bij: 'panelenGarage', titel: t('panelen3.plek.garage'), toon: 'zon', regels: [t('panelen3.aantal', { n: el2.garage })], dx: -40, dy: -80 });
+  huis.teken(el, {
+    beschrijving: t('panelen3.huisLabel'),
+    tijd: 'dag',
+    seizoen: 'zomer',
+    zon: { stand: 0.68, aandeel: 0.8, ...huismodel.panelenOpDak(a.panelen, tek.piekW) },
+    ...(leert ? { spook: ['panelen'] } : {}),
+    wolken: 0.1,
+    ...(huismodel.kompasVan(v, a.panelen) ? { kompas: { ...huismodel.kompasVan(v, a.panelen), groot: true } } : {}),
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak.
+    ...delen,
+    buitenunit: null,
+    balkon: null,
+    voortuin: null,
+    // Zonder auto op de oprit: daar staat het grote kompas.
+    oprit: delen.oprit ? { ...delen.oprit, auto: null } : null,
+    labels,
+  }, { breedte: el.clientWidth || 440, hoogte: el.clientHeight || 420, marge: 0.05, schuifY: 16 });
+}
+
 function panelenVorm() {
   const kant = a.panelen.ligging;
+  // Zonnepanelen 3.0 (besluit 187): het overzicht, zodra de kant van het dak bekend is.
+  if (!ligStaat.zelf && !ligStaat.aanpassen && kant && kant !== 'geen' && kant !== 'weetniet') {
+    return ligging.overzicht(aInfo.ligging, a, { plekken: anderePlekken(), elders: a.elders });
+  }
   const aantallen = kant === 'beide' ? `<div class="twee">${aantal(t('energie.aantalVoor'), 'voorkant')}${aantal(t('energie.aantalAchter'), 'achterkant')}</div>` : kant && kant !== 'weetniet' && kant !== 'geen' ? aantal(t('energie.aantal'), 'aantal') : '';
   // Hoe ze liggen (besluit 157): gemeten, bevestigd of aangepast, uit panelen.js.
   const lig = ligging.kaart(aInfo.ligging, a, ligStaat);
@@ -156,7 +202,9 @@ function panelenVorm() {
       ${z.snelGenoeg === false && z.weg ? `<p class="mini">${esc(t('energie.sensor.lokaal', { weg: z.weg }))}</p>` : ''}`)
     : '';
   const kanten = ['voorkant', 'achterkant', 'beide', 'plat', 'weetniet', 'geen'].map((k) => [k, t(`energie.kant.${k}`)]);
-  return `${kop(t('energie.zonnepanelen'))}
+  // Uit Zelf aanpassen terug naar het overzicht.
+  const terug = ligStaat.zelf && kant && kant !== 'geen' && kant !== 'weetniet' ? `<button type="button" class="lig-knop" data-pan-klaar>${esc(t('algemeen.klaar'))}</button>` : '';
+  return `${kop(t('energie.zonnepanelen'), terug)}
     ${kolommen(blok(t('energie.welkeKant'), `${zijaanzicht(kant)}
       ${keuzes(t('energie.kantDak'), 'ligging', kanten, kant)}
       ${aantallen}${aantallen ? `<p class="mini">${esc(t('energie.metAantal'))}</p>` : ''}`), `${liggingBlok}${sensor}`)}`;
@@ -358,6 +406,7 @@ function tekenNu() {
   }[nu]?.() ?? wacht;
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
+  if (nu === 'panelen') tekenPanelenHuis();
 }
 
 /* ------------------------------------------------------------ bewaren */
@@ -365,7 +414,7 @@ function tekenNu() {
 function bewaarAansluiting() {
   groep.bewaarStraks(async () => {
     const opZon = Object.fromEntries(Object.entries(a.opZon).filter(([, v]) => typeof v === 'boolean'));
-    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, opZon, opZonUit: a.opZonUit });
+    const uit = await groep.stuur('api/aansluiting', { panelen: a.panelen, zekering: a.zekering, tarief: a.tarief, verwarming: a.verwarming, voorkantZon: a.voorkantZon, dak: a.dak, elders: a.elders, opZon, opZonUit: a.opZonUit });
     if (uit?.ok) {
       aInfo = uit.antwoord;
       // Het dak zoals de dienst het bewaarde: "klopt" en "aanpassen" worden een gewoon dak.
@@ -412,6 +461,27 @@ function netDalBij() {
 document.addEventListener('click', (ev) => {
   const knop = ev.target.closest('button');
   if (!knop || knop.disabled) return;
+  // Het overzicht van de panelen (besluit 187): een paneel erbij of eraf, een ander dak, zelf aanpassen.
+  if (a && knop.dataset.panStap) {
+    const d = Number(knop.dataset.d);
+    const [s, plek] = knop.dataset.panStap.split(':');
+    if (s === 'elders') {
+      const n = Math.min(200, (a.elders[plek] ?? 0) + d);
+      if (n > 0) a.elders[plek] = n;
+      else delete a.elders[plek];
+    } else a.panelen[s] = Math.min(200, Math.max(1, (a.panelen[s] ?? 0) + d));
+    teken();
+    return bewaarAansluiting();
+  }
+  if (a && knop.dataset.panErbij) {
+    a.elders[knop.dataset.panErbij] = 1;
+    teken();
+    return bewaarAansluiting();
+  }
+  if (knop.hasAttribute('data-pan-zelf') || knop.hasAttribute('data-pan-klaar')) {
+    ligStaat.zelf = knop.hasAttribute('data-pan-zelf');
+    return teken();
+  }
   // Hoe de panelen liggen (besluit 157).
   if (a && Object.keys(knop.dataset).some((k) => k.startsWith('lig'))) {
     const wat = ligging.klik(knop, aInfo?.ligging, a, ligStaat);
@@ -424,7 +494,11 @@ document.addEventListener('click', (ev) => {
     const s = knop.dataset.kies;
     // De aansluiting.
     if (a && ['ligging', 'zekering', 'contract', 'verwarming'].includes(s)) {
-      if (s === 'ligging') a.panelen.ligging = w;
+      // Wie hier de kant kiest, blijft in dit formulier tot Klaar (besluit 187): eerst het aantal.
+      if (s === 'ligging') {
+        a.panelen.ligging = w;
+        ligStaat.zelf = true;
+      }
       else if (s === 'zekering') {
         if (w === 'anders') {
           zelf = { fasen: a.zekering?.fasen ?? 1, ampere: a.zekering?.ampere ?? null };

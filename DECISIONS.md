@@ -74,6 +74,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [134. Voorrang per richting, en Hoe voelt het met een antwoord](#134-voorrang-per-richting-en-hoe-voelt-het-met-een-antwoord)
 - [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
 - [176. Apparaten op zon in de voorrang: een lijst Op zon](#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon)
+- [186. Warmte bewaren: de boiler en de jacuzzi op zon](#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon)
 
 **Configuratie en onboarding**
 
@@ -187,6 +188,11 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [182. Vier kaarten voor Thuis: de auto, de batterij, deze maand en de deurbel](#182-vier-kaarten-voor-thuis-de-auto-de-batterij-deze-maand-en-de-deurbel)
 - [183. Meldingen op de telefoon, via de app van Home Assistant](#183-meldingen-op-de-telefoon-via-de-app-van-home-assistant)
 - [185. Meertalig: het fundament, met Thuis als proef](#185-meertalig-het-fundament-met-thuis-als-proef)
+- [187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak](#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak)
+- [188. In de schaduw zegt de app wat er echt gebeurt, als het klopt](#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt)
+- [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
+- [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
+- [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
 
 **Veiligheid**
 
@@ -8474,6 +8480,307 @@ gehouden met meervouden: ja, met de regels per taal.
   de app leest het deel in de taal van wie kijkt, en het Nederlands bij een
   versie zonder Engels. Ook wat het begin zegt als bewaren niet lukt, staat nu
   in beide talen.
+
+## 186. Warmte bewaren: de boiler en de jacuzzi op zon
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Het eerste deel van de makeover voor het grote publiek, op 23 oktober 2026.
+Het volgende proefhuis heeft een Intex-jacuzzi op wifi. De bewoner koos uit
+opties en een schets (`design/app2/Wand-Apparaten-Warmte.html`): warm houden
+plus "klaar om" bij de jacuzzi, vier soorten boiler herkennen maar alleen de
+eigen soort laten zien, zonder zon van het net in de goedkoopste uren, en in de
+lijst Op zon standaard helemaal achteraan.
+
+*Besluit:*
+
+- **Een nieuwe soort naast de droger:** een warmtebuffer (`heatStores` in de
+  configuratie, `core/warmtebuffer.ts`). Een droger draait één programma en
+  stopt; een buffer mag aan zolang er zon is en uit als die wegvalt. Hij heeft
+  een ondergrens (`minC`), een doel op zon (`sunC`), een snelheid in graden per
+  uur, en bij een boiler eens per week een temperatuur tegen legionella.
+- **Wat hij zou doen,** in deze volgorde: onder de ondergrens altijd bijwarmen;
+  "klaar om" uiterlijk zo laat dat hij het met zijn snelheid haalt (met een
+  half uur speling), en eerder in de goedkoopste uren, maar hooguit vier uur
+  vóór die uiterlijke start, anders koelt het water weer af; tegen legionella
+  een dag over de week in de goedkoopste uren; een boiler zonder temperatuur
+  (aan een stekker) elke dag een keer vol; verder op zon tot het doel.
+- **Op zon zoals de droger:** hooguit één start per beslissing (besluit 68),
+  de hoofdzekering gaat voor (78), comfort gaat voor (85). Een buffer die al
+  stookt mag door met de tolerantie van een draaiend apparaat (51), zonder de
+  afkapping op nul van het budget, want zijn eigen verbruik komt er weer bij;
+  doorgaan is geen start. In de volgorde op zon (176) heet hij `heatStore` en
+  staat hij zonder keuze achter de kamers en de apparaten met een eindtijd.
+- **De goedkoopste uren** zijn voorlopig de daluren van het contract, als het
+  een daltarief heeft (`cheapWindows`, uit de dienst). Dynamische prijzen komen
+  met stap E. Zonder goedkopere uren gebeurt wat van het net moet zo laat als
+  het kan.
+- **Herkennen** (`web/buffers-vinden.ts`): een jacuzzi aan zijn naam of de
+  koppeling Intex Spa, als thermostaat of, via Tuya Local, als boiler; een
+  `water_heater` als boiler met temperatuur (een warmtepompboiler trekt 0,5 kW
+  en warmt 6° per uur, een elektrische 2 kW en 10°); een schakelaar die boiler
+  heet, met de meter van hetzelfde apparaat; een regelaar als AC·THOR. Ze komen
+  in de lijst van de zon en je aansluiting, naast de droger.
+- **Wat de dienst onthoudt** staat in `warmtebuffers.json` naast de dataset:
+  klaar om, wanneer de boiler warm genoeg was tegen legionella, en wanneer een
+  boiler aan een stekker vol was. Een zesde smalle deur (`/api/klaarom`); er
+  gaat niets naar Home Assistant.
+- **In de app:** een kaart op Apparaten (de boiler als tank, de jacuzzi als
+  ring met de temperatuur) met een kop en een zin uit de dienst, bij de
+  jacuzzi de keuzes voor klaar om; een rij op Vandaag; een plek in het huis en
+  de indeling; en een plek in de lijst Op zon.
+- **Eerst in de schaduw:** elke beslissing zegt wat hij zou doen, en het
+  logboek legt het vast (`warmte`). Echt schakelen hoort bij stap B, net als bij
+  de droger.
+- **Wat de Intex niet zegt:** of hij echt stookt. De koppeling meldt
+  "verwarmen" zodra hij aan staat. Met een slimme stekker met meting ziet het
+  huis het wel, en die neemt de app mee als hij bij hetzelfde apparaat hoort.
+- **Versie 0.60.0.**
+
+*Wat afviel:* de boiler en de jacuzzi als uitstelbaar apparaat met een
+programma (ze hebben er geen); alleen op zon, nooit van het net (dan raakt de
+boiler leeg); alle vier de soorten boiler in het instelblad tonen (verwarrend:
+alleen die van de bewoner).
+
+---
+
+## 187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak
+
+*Onderwerp: weergave · Status: geldig*
+
+Het tweede deel van de makeover voor het grote publiek, op 23 en 24 oktober
+2026. De bewoner koos uit schetsen (`design/app2/Wand-Thuis-3.html`,
+`Tel-Huis-3.html`, `Wand-Huis-3.html`, `Wand-Energie-Panelen-3.html` en
+`Wand-Huis-kan-3.html`), in vier rondes met punten tussendoor: een eindbeeld
+met wow, geen kleine uitbreiding van het oude huis, geen doorzichtige buren,
+weinig tekst en niets dubbel.
+
+*Besluit:*
+
+- **Het huis staat op een eiland** (`kit/huis.js`, `opts.wereld`): het perceel
+  zweeft, dun, met de voorkant als doorsnede door huis en grond. De kelder ligt
+  opengewerkt in een nis, de kabel van het net loopt onder de grond naar de
+  meterkast. Bomen, een haag, een lantaarn, de tuin met vaste plekken (tuinhuis
+  achter, jacuzzi op een vlonder, terras, pad met lampjes, border) en een schaduw
+  met de zon. Op de wand en de telefoon van Thuis, bij Zonnepanelen en bij Wat je
+  huis kan; de andere pagina's houden voorlopig het oude huis.
+- **Het weer en de seizoenen** op het huis: vallende regen en sneeuw uit het weer
+  van nu, kale bomen in de winter en oranje in de herfst (oktober en november).
+- **Elke stroom een eigen kleur:** van de zon goud, terug naar het net groen,
+  van het net violet, uit de batterij blauw. Het label van het net heeft de kleur
+  van zijn lijn.
+- **De kelder gaat onder de grond.** Wat Home Assistant onder de begane grond
+  zet, komt in de etage `kelder` (eerst bleef een kelder bij de begane grond,
+  besluit 119). In de tekening van huis 3.0 ligt hij onder de grond
+  (`kelderOnder`); Inrichten en de indeling houden hem als gewone etage.
+- **De boiler is geen droger.** Een boiler of jacuzzi (besluit 186) krijgt bij
+  het huis een veld `warmte` (soort, temperatuur, doel, grenzen, op zon). De
+  boiler staat als ronde tank in de kamer die bij het inrichten gekozen is, geen
+  vaste plek; de jacuzzi in de tuin, en zonder tuin komt er een.
+- **Panelen op elk dak:** naast het huis ook op de garage, de carport of het
+  tuinhuis (`elders` in de antwoorden van de aansluiting, een aantal per plek).
+  Ze staan in de tekening en in de lijst; de meting van de ligging blijft over
+  de panelen op het huis gaan.
+- **Energie › Zonnepanelen opnieuw:** het huis met de gemeten ligging op het dak
+  en per dakvlak een label met de richting in graden en de helling; een lijst
+  "Waar liggen ze?" met per dak het aantal (plus en min) en "Ook panelen op"
+  voor de andere daken; "Wat Smart Climate meet" met de richting in graden vanaf
+  het noorden (met een kompasje), de helling, het vermogen en de omvormer.
+  Klopt het voorstel, dan staan Klopt en Aanpassen naast de kop. Zelf aanpassen
+  opent wat er al was: de kant, het aantal en Aanpassen. Het kompas op het eiland
+  draait zo dat de getekende dakvlakken naar hun gemeten richting wijzen.
+- **De kaarten op de wand in twee kolommen,** elk smal of breed (`breed` in de
+  voorkeuren, bij wiens indeling het is, besluit 181). Standaard breed:
+  Favorieten, Vandaag en Hoe voelt het. In de bewerkstand per kaart Smal en
+  Breed; slepen gaat ook opzij.
+- **Op de telefoon één bovenbalk:** op Thuis, Vandaag, Apparaten, Opbrengst en
+  Assistent de hulp, de bel en het tandwiel, alle drie 36 px, rechtsboven. De
+  hulp start de rondleiding bij deze tab. Onder het huis op Thuis een regel met
+  de zon, het huis en het net, in de kleuren van de lijnen.
+- **Wat je huis kan in zes groepen:** Comfort, Wat het huis eerst leert (op tijd
+  warm of koel, wat jij prettig vindt, de ligging van de panelen), Op zon (met de
+  boiler en de jacuzzi), Kosten, Gemak en Overzicht.
+- **Alles wissen bij de meldingen:** wat nog speelt, laat de app niet meer zien
+  tot het voorbij is; wat voorbij is gaat uit de lijst (`{ alles: true }` op
+  `/api/meldingen`).
+- **Versie 0.61.0.**
+
+*Wat afviel:* de buren tekenen, ook doorzichtig; een groot eiland met veel grond
+eronder; de kaarten in één kolom zonder keuze; een vaste plek voor de boiler
+zonder kelder; nieuwe iconen alleen op de panelenpagina (dat kan later, en dan
+overal tegelijk).
+
+*Nog te doen:* Inrichten opnieuw in stappen (met de klimaatschetsen per merk), de
+andere pagina's op het eiland, een huis zonder slimme regeling, P1-meter of
+panelen, en de film.
+
+---
+
+## 188. In de schaduw zegt de app wat er echt gebeurt, als het klopt
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026, bij het nalopen van versie 0.61.0 op beta. Thuis zei
+"Badkamer: zou verwarmen" terwijl de oude regeling de badkamer al echt
+verwarmde. Dat klopt niet met wat de bewoner in huis ziet.
+
+*Besluit:*
+
+- **Doet het echte apparaat al wat het besluit wil,** dan zegt de kamer ook in
+  de schaduw "Verwarmt" of "Koelt" (met "op zon" als dat zo is), en niet "Zou
+  verwarmen". Het besluit vergelijkt zijn actie met wat het apparaat in Home
+  Assistant werkelijk doet (`observed`, zoals `heat@21`); de kamer krijgt een
+  veld `klopt`.
+- **De kop volgt:** één kamer "De badkamer wordt verwarmd"; meer kamers die
+  allemaal kloppen en hetzelfde doen "De badkamer en beneden worden verwarmd".
+  Wijkt er één af, dan blijft het "zou" (besluit 124).
+- **De lange zin van de assistent** blijft zeggen wat Smart Climate zou doen:
+  daar gaat het om het besluit, niet om wat er al gebeurt.
+- **Ook in deze versie:** de lucht op de wand loopt door achter het huis (het
+  eiland tekende zijn eigen lucht in een vak, dat ophield); op de telefoon onder
+  het huis drie vakjes, zon, huis en net, elk met een icoon in de kleur van zijn
+  lijn, zonder pijl; bij Wat je huis kan staan de labels van de auto en de
+  batterij vrij van het menu en de vakken.
+- **Versie 0.61.1.**
+
+*Wat afviel:* "zou" houden tot het huis zelf regelt (dat zegt iets wat niet
+klopt met wat je ziet); de pijlen tussen zon, huis en net (een pijl naar links
+zei niets).
+
+---
+
+## 189. De kaarten op de wand als tegel, en een kaart Boiler
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. In versie 0.61.0 kwam smal of breed (besluit 187), maar een
+smalle kaart was de oude kaart in een smaller vak: de grafiek van Vandaag liep
+eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
+
+*Besluit:*
+
+- **Een smalle kaart op de wand is een tegel,** zoals in de schets: een kleine
+  kop met het icoon, een groot getal, een zin, en rechtsboven een beeldje. De
+  auto met een ring, de batterij met een staaf, deze maand met balkjes van de
+  laatste dagen, de boiler met een tank, morgen met het weer, Vandaag met een
+  kleine lijn van de zon, en de deurbel met het beeld als achtergrond.
+- **Breed, en op de telefoon,** blijft de kaart zoals hij was: daar is ruimte
+  voor meer (`.kvol` naast `.ktegel`).
+- **Favorieten, Hoe voelt het en het apparaat** blijven kaarten om op te tikken;
+  smal passen ze zich aan (de uitleg van Hoe voelt het valt dan weg).
+- **Alles blijft binnen zijn kaart:** een smalle kaart snijdt af wat niet past,
+  en elke rij in de kolom is zo hoog als zijn inhoud, zodat een volle kolom een
+  kaart niet platdrukt; de kolom schuift zelf (besluit 167).
+- **Een kaart Boiler** (`boiler` bij de kaarten): de boiler, of anders de
+  jacuzzi (besluit 186), met hoe warm hij is en of hij op zon opwarmt; om te
+  kiezen, alleen als het huis er een heeft.
+- **Het kompas** staat niet op Thuis (24 oktober 2026, 0.62.1): het hoort bij
+  Zonnepanelen, bij de ligging.
+- **Het tuinhuis** (0.62.2) heeft een plat dak met een overstek op twee palen,
+  een vlonder en een glazen pui, met de lamp onder het overstek. Heet het een
+  schuur, berging of shed, dan is het het houten schuurtje met puntdak
+  (`tuinhuisSoort`).
+- **Versie 0.62.0.**
+
+*Wat afviel:* de tegel ook op de telefoon (daar staan de kaarten onder elkaar,
+op de hele breedte); een tegel voor Favorieten en Hoe voelt het (dan moet je
+eerst tikken om iets te doen).
+
+## 190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026, voor de makeover naar het grote publiek. Inrichten had zes
+hoofdstukken (besluit 144) en tekende het oude perceel; wat het huis nu kan
+(huis 3.0, besluit 187; de boiler en de jacuzzi, besluit 186) kwam er niet in
+voorbij. De schets is `Wand-Inrichten-3.html` met `Tel-Inrichten-3.html`;
+gekozen door de bewoner: het huis groeit mee, deze volgorde, op de telefoon
+dezelfde stappen, en erbij afwezig en vakantie, een huis zonder slimme
+regeling en klaarzetten in Home Assistant.
+
+*Besluit:*
+
+- **Acht hoofdstukken,** bovenin als een pad met een streepje per stap: Je huis
+  (wat voor huis, kamers, per kamer), Buiten, Wie woont hier, Klimaat (wat elk
+  apparaat doet, meten met, comfort, afwezig en vakantie), Energie (zekering,
+  panelen, hoe ze liggen, op zon, prijzen), Gemak, Je schermen, en Klaar
+  (klaarzetten en de film).
+- **Links het eiland van Thuis** (`wereld`, zonder eigen lucht, met de kelder
+  in de grond en meubels in de kamers). Het groeit mee: eerst de vorm, bij de
+  kamers de namen, dan de apparaten, buiten, de temperatuur, de panelen; bij
+  Klaarzetten en Klaar is het avond.
+- **Wat voor huis** is nieuw: vrijstaand, rijtjeshuis, hoekhuis,
+  twee-onder-een-kap of appartement (`woning` in de indeling; weg is
+  vrijstaand), elk met een klein huis erin; een kelder (een kamer op de etage
+  Kelder) en schuin of plat dak (`dak`). Een appartement tekent het gebouw van
+  drie lagen.
+- **Buiten** krijgt de jacuzzi en de keus tussen het tuinhuis en het schuurtje
+  (`rond.jacuzzi`, `rond.schuur`; een oudere indeling heeft ze niet).
+- **Afwezig en vakantie:** voor het hele huis hoe warm het blijft als niemand
+  thuis is, en met de vakantiestand; koelen erbij als het huis kan koelen. Per
+  kamer anders blijft bij Comfort.
+- **Op zon:** elk apparaat dat kan wachten, ook de boiler en de jacuzzi, met
+  een schakelaar (dezelfde antwoorden als bij Regeling, besluit 167).
+- **Zonder slimme verwarming** laat Klimaat zien wat de app wel doet (licht,
+  schermen, op zon, camera's, de assistent); vanzelf als er niets is om te
+  verwarmen of koelen, en anders met "Geen slimme regeling".
+- **Klaarzetten** toont wat de app in Home Assistant gebruikt, zoals bij Wat je
+  huis kan (besluit 179); in Home Assistant opent een tik dat scherm.
+- **De wand** in het klein, met de kaarten om aan of uit te zetten, 's nachts
+  uit en de taal; dezelfde indeling als op de telefoon.
+- **Klaar** zegt wat nog te doen is (niet nagelopen, of wat in Home Assistant
+  mist), met Wat je huis kan en de film.
+- **Onderaan Terug, Later en Volgende.** Later gaat door zonder te bewaren; de
+  stap staat dan bij Nog te doen.
+- **De regels uit de schets:** een icoon, een naam met een zin en rechts een
+  waarde of schakelaar. Op de telefoon bovenin het hoofdstuk en een streepje per
+  stap, het huis klein zonder namen, en de knoppen vast onderaan.
+- **De panelen op een ander dak** gaan mee als Inrichten of Regeling de
+  aansluiting bewaart; eerst vielen ze dan weg.
+- **Het tuinhuis** heeft twee spots onder het overstek die omlaag schijnen,
+  elk in de kleur van zijn lamp.
+- **Versie 0.63.0.**
+
+*Wat afviel:* comfort per bewoner per dagdeel in Inrichten (dat staat bij
+Comfort per bewoner, besluit 147); "licht als je weg bent" en "op tijd terug"
+bij afwezig (de app kan dat nog niet); buren naast een rijtjeshuis (besluit
+187: geen buren tekenen); de klimaatstap per merk (schets
+Wand-Inrichten-Klimaat, nog niet gebouwd).
+
+## 191. Huis 3.0 overal: het eiland is de standaard van de tekening
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. De tekening van het huis is één stuk code (`kit/huis.js`),
+maar elke pagina zei zelf of het het eiland van huis 3.0 wilde. Thuis,
+Zonnepanelen, Wat je huis kan en Inrichten deden dat; Kamer, Indeling, de
+assistent, het begin, de film, het inlogscherm en het always-on display niet.
+Daardoor stond het nieuwe ontwerp niet overal. De bewoner vroeg om één gedeelde
+aanroep.
+
+*Besluit:*
+
+- **Het eiland is de standaard** van `huis.teken`, zonder eigen lucht (de pagina
+  heeft die al). Een pagina die het oude perceel wil, zegt `wereld: false`; dat
+  doen alleen de kleine huisjes bij Wat voor huis. Een nieuw ontwerp van de
+  tekening staat zo vanzelf op elke pagina.
+- **Eén etage zonder dak** (Kamer, Indeling) staat ook op het eiland; eerst
+  sloeg de motor het daar over.
+- **Het huis zelf komt uit één plek** (`huismodel.huisDelen`): de etages, de
+  kelder, wat voor huis, de voordeur, de buitenunit en wat er buiten is, met de
+  panelen op een ander dak. Een pagina zet er alleen overheen wat bij haar
+  hoort: de assistent laat buiten weg (naast de bol is het vak smal), het begin
+  laat buiten pas zien als alle etages er staan, Zonnepanelen zet de auto weg
+  voor het kompas.
+- **De kelder ligt standaard in de grond** (`kelderOnder` is weg als keuze die
+  je moet maken; `kelderOnder: false` maakt hem weer een etage).
+- **Versie 0.63.1.**
+
+*Wat afviel:* een tweede functie naast `huis.teken` (dan kan een pagina nog
+steeds de oude aanroepen); de panelen elders bij de assistent en de film (die
+halen de aansluiting niet op).
+
+---
 
 ## Wat nog een besluit wacht
 
