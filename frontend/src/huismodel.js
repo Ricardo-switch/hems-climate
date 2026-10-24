@@ -281,10 +281,10 @@
    * oktober): de etages van onder naar boven met het dak erop, wat er buiten
    * is, de voordeur met de deurbel, de buitenunits en hoeveel panelen. `kamer`
    * maakt van een ruimte een kamer in de tekening (null laat hem weg);
-   * `aantalPanelen` is wat de bewoner opgaf. Met `kelderOnder` komt de kelder
-   * apart, om onder de grond te tekenen (besluit 187).
+   * `aantalPanelen` is wat de bewoner opgaf. De kelder komt apart, om onder
+   * de grond te tekenen (besluit 187); `kelderOnder: false` laat hem een etage.
    */
-  function tekening(huis, { kamer = (r) => kamerModel(r, null), aantalPanelen = null, zon = null, kelderOnder = false } = {}) {
+  function tekening(huis, { kamer = (r) => kamerModel(r, null), aantalPanelen = null, zon = null, kelderOnder = true } = {}) {
     const buitenRuimtes = [];
     const etages = [];
     let kelder = null;
@@ -401,11 +401,36 @@
     return (keus ? lijst.find((x) => x.sleutel === keus) : lijst[0]) ?? null;
   }
 
+  /**
+   * Het huis zelf uit de tekening, voor het model van elke pagina (besluit 191):
+   * de etages, de kelder, wat voor huis, de voordeur, de buitenunit en wat er
+   * buiten is, met de panelen op de garage, carport of het tuinhuis (`elders`).
+   * Zo tekent elke pagina hetzelfde huis; een pagina zet er alleen overheen
+   * wat bij haar hoort.
+   */
+  function huisDelen(tek, elders = {}) {
+    const e = elders ?? {};
+    return {
+      etages: tek.etages,
+      ...(tek.kelder ? { kelder: tek.kelder } : {}),
+      woning: tek.woning,
+      ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
+      voordeur: tek.voordeur,
+      buitenunit: tek.buitenunit,
+      oprit: tek.oprit && e.carport && tek.oprit.carport ? { ...tek.oprit, carport: { panelen: e.carport } } : tek.oprit,
+      tuin: tek.tuin && e.tuinhuis ? { ...tek.tuin, tuinhuisPanelen: e.tuinhuis } : tek.tuin,
+      terras: tek.terras,
+      balkon: tek.balkon,
+      voortuin: tek.voortuin,
+      garage: tek.garage && e.garage ? { ...tek.garage, panelen: e.garage } : tek.garage,
+    };
+  }
+
   /** Wat een buitenruimte is (besluit 167): een eigen lijst, zoals Soort kamer binnen. */
   const BUITEN_SOORTEN = soorten('buiten', ['tuin', 'voortuin', 'zijtuin', 'oprit', 'carport', 'terras', 'balkon', 'dakterras', 'tuinhuis', 'garage']);
   /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, panelenOpDak, kompasVan, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
 })(window);

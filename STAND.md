@@ -178,7 +178,9 @@ verwijzing bestaat.
   apparaat al doet wat het besluit wil ([188]). Een smalle kaart op de wand is
   een tegel zoals in de schets, en er is een kaart Boiler ([189]). Inrichten
   heeft acht hoofdstukken en het huis groeit mee op zijn eiland, met wat voor
-  huis, afwezig en vakantie, op zon en klaarzetten ([190]).
+  huis, afwezig en vakantie, op zon en klaarzetten ([190]). Het eiland is de
+  standaard van de tekening, dus het staat op elke pagina, ook bij Kamer,
+  Indeling, de assistent en het always-on display ([191]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -628,4 +630,5 @@ verwijzing bestaat.
 [188]: DECISIONS.md#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt
 [189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
 [190]: DECISIONS.md#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland
+[191]: DECISIONS.md#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening
 <!-- links:einde -->

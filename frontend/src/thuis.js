@@ -63,8 +63,8 @@ function huisModel() {
   const netKw = s.netKw ?? 0;
   // De tekening zelf komt uit huismodel, net als op de andere pagina's (5S).
   // Huis 3.0 (besluit 187): de kelder onder de grond, op een eiland met het weer van nu.
-  const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon, kelderOnder: true });
-  const { etages, kelder, oprit, tuin, terras, balkon, voortuin, garage } = tek;
+  const tek = huismodel.tekening(huisData, { kamer: kamerModel, zon });
+  const { etages } = tek;
   const tijd = tijdVanDeDag(zon);
   const helder = zon?.heldereLuchtW ?? 0;
   const wolken = zon?.zon?.boven && helder > 300 ? (zonKw * 1000 < helder * 0.35 ? 0.8 : zonKw * 1000 < helder * 0.7 ? 0.4 : 0.1) : tijd === 'nacht' ? 0 : 0.3;
@@ -94,21 +94,10 @@ function huisModel() {
     weer: nuWeer === 'regen' || nuWeer === 'onweer' ? 'regen' : nuWeer === 'sneeuw' ? 'sneeuw' : undefined,
     wolken,
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
-    etages,
-    ...(kelder ? { kelder } : {}),
-    woning: tek.woning,
-    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak (besluit 187).
     // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
-    buitenunit: tek.buitenunit,
-    voordeur: tek.voordeur,
+    ...huismodel.huisDelen(tek, elders),
     net: true,
-    // Panelen op de garage, carport of het tuinhuis (besluit 187).
-    oprit: oprit && elders.carport && oprit.carport ? { ...oprit, carport: { panelen: elders.carport } } : oprit,
-    tuin: tuin && elders.tuinhuis ? { ...tuin, tuinhuisPanelen: elders.tuinhuis } : tuin,
-    terras,
-    balkon,
-    voortuin,
-    garage: garage && elders.garage ? { ...garage, panelen: elders.garage } : garage,
     stromen,
     labels,
   };
@@ -180,9 +169,9 @@ function tekenNu() {
   tekenOnderhoud();
   if (blad === 'batterij' && $$('[data-weer]').some((x) => !x.hidden)) tekenBatterijen();
   const wandPodium = document.getElementById('podium-wand');
-  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, wereld: true, eigenLucht: false, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
+  if (!app.telStand()) huis.teken(wandPodium, model, { breedte: wandPodium.clientWidth || 860, hoogte: 612, marge: 0.04, schuifX: 10, schuifY: 10, tik: true });
   // Eenvoudig (besluit 164): geen getallen op het huis.
-  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, wereld: true, eigenLucht: false, tik: true });
+  else huis.teken(document.getElementById('podium-tel'), { ...model, etages: model.etages.map((et) => ({ ...et, kamers: et.kamers.map((k) => ({ ...k, stil: true })) })), labels: app.weergave().eenvoudig ? [] : model.labels.filter((l) => l.bij === 'panelen').map((l) => ({ ...l, dx: -40, dy: -84 })) }, { breedte: 390, hoogte: 330, marge: 0.03, schuifY: -6, tik: true });
   tekenStromenTel();
 
   tekenVandaag();

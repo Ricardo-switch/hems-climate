@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.63.1
+
+*24 oktober 2026*
+
+**Beter**
+
+- Het huis staat nu overal op zijn eiland: ook bij een kamer, Kamers en indeling, de assistent, het begin, de film, het inlogscherm en het always-on display
+
+*English*
+
+**Improved**
+
+- The house now stands on its island everywhere: also for a room, Rooms and layout, the assistant, the start, the film, the sign-in screen and the always-on display
+
 ## 0.63.0
 
 *24 oktober 2026*

@@ -620,9 +620,15 @@ function tekenHuis() {
     beschrijving: kamer ? taal.t('assistent.uitgelicht', { kamer: zoneNaam(kamer) }) : `${taal.t('thuis.hetHuis')}.`,
     tijd: app.tijdVanDeDag(zon),
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: overZon ? 0.9 : 0.4, panelen: t.panelen } : { aandeel: 0, panelen: t.panelen },
-    etages,
-    voordeur: t.voordeur,
-    buitenunit: t.buitenunit,
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191); zonder buiten, want naast
+    // de bol is het vak smal en gaat het hier om de kamers.
+    ...huismodel.huisDelen(t),
+    oprit: null,
+    tuin: null,
+    terras: null,
+    balkon: null,
+    voortuin: null,
+    garage: null,
     net: true,
     stromen: kamer && zonKw > 0.05 ? [{ van: 'zon', naar: `kamer:${etages.flatMap((e) => e.kamers).find((k) => k.doel)?.naam ?? ''}`, sterkte: 0.5 }] : [],
     labels: overZon && zonKw > 0.05 ? [{ bij: 'panelen', titel: `${nl(zonKw)} kW`, groot: true, toon: 'zon', regels: [taal.t('thuis.label.panelen')], dx: 40, dy: -60 }] : [],

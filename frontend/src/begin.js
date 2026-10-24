@@ -128,7 +128,10 @@ function tekenHuis() {
   const etages = alle.slice(0, n).map((e, i) => ({ ...e, dak: i === alle.length - 1 ? e.dak : false }));
   const zon = tijd === 'nacht' ? { aandeel: 0, panelen: tekening.panelen } : { stand, hoogte: Math.sin(Math.PI * stand) * 0.9, aandeel: 0.3, panelen: tekening.panelen };
   const tel = app.telStand();
-  huis.teken(podium, { tijd, zon, etages, voordeur: tekening.voordeur, buitenunit: n === alle.length ? tekening.buitenunit : null, net: true }, {
+  // Het huis zelf, zoals elke pagina het tekent (besluit 191); buiten en de buitenunit als alle etages er staan.
+  const delen = huismodel.huisDelen(tekening);
+  const af = n === alle.length;
+  huis.teken(podium, { ...delen, ...(af ? {} : { oprit: null, tuin: null, terras: null, balkon: null, voortuin: null, garage: null, kelder: undefined, buitenunit: null }), tijd, zon, etages, net: true }, {
     breedte: podium.clientWidth || (tel ? 390 : 660),
     hoogte: tel ? 300 : podium.clientHeight || 640,
     marge: tel ? 0.04 : 0.06,

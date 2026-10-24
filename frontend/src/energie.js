@@ -156,9 +156,10 @@ function anderePlekken() {
 function tekenPanelenHuis() {
   const el = document.querySelector(`${app.zicht()} [data-pan-podium]`);
   if (!el || !huisData || !a) return;
-  const tek = huismodel.tekening(huisData, { zon, kelderOnder: true, kamer: (r) => ({ ...huismodel.kamerModel(r, null), stil: true, temp: null, zin: null, stand: null }) });
+  const tek = huismodel.tekening(huisData, { zon, kamer: (r) => ({ ...huismodel.kamerModel(r, null), stil: true, temp: null, zin: null, stand: null }) });
   const v = aInfo?.ligging;
   const el2 = a.elders ?? {};
+  const delen = huismodel.huisDelen(tek, el2);
   const leert = !v?.nu || v.nu.bron === 'schatting';
   // Op de telefoon geen labels: daar passen ze niet, en de lijst eronder zegt hetzelfde.
   const labels = app.telStand() ? [] : ligging.labels(v, a);
@@ -171,18 +172,15 @@ function tekenPanelenHuis() {
     ...(leert ? { spook: ['panelen'] } : {}),
     wolken: 0.1,
     ...(huismodel.kompasVan(v, a.panelen) ? { kompas: { ...huismodel.kompasVan(v, a.panelen), groot: true } } : {}),
-    etages: tek.etages,
-    ...(tek.kelder ? { kelder: tek.kelder } : {}),
-    woning: tek.woning,
-    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
-    voordeur: tek.voordeur,
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191), met de panelen op een ander dak.
+    ...delen,
+    buitenunit: null,
+    balkon: null,
+    voortuin: null,
     // Zonder auto op de oprit: daar staat het grote kompas.
-    oprit: tek.oprit ? { ...tek.oprit, auto: null, ...(el2.carport && tek.oprit.carport ? { carport: { panelen: el2.carport } } : {}) } : null,
-    tuin: tek.tuin ? { ...tek.tuin, ...(el2.tuinhuis ? { tuinhuisPanelen: el2.tuinhuis } : {}) } : null,
-    terras: tek.terras,
-    garage: tek.garage ? { ...tek.garage, ...(el2.garage ? { panelen: el2.garage } : {}) } : null,
+    oprit: delen.oprit ? { ...delen.oprit, auto: null } : null,
     labels,
-  }, { breedte: el.clientWidth || 440, hoogte: el.clientHeight || 420, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 16 });
+  }, { breedte: el.clientWidth || 440, hoogte: el.clientHeight || 420, marge: 0.05, schuifY: 16 });
 }
 
 function panelenVorm() {

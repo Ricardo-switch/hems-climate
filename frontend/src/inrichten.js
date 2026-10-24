@@ -179,7 +179,6 @@ function model(stap) {
   const a = antwoorden();
   const tek = huismodel.tekening(d.huis, {
     zon: d.zon,
-    kelderOnder: true,
     kamer: (r) => {
       const k = huismodel.kamerModel(r, null);
       if (!na('huis')) k.stil = true;
@@ -189,7 +188,6 @@ function model(stap) {
       return k;
     },
   });
-  const { etages, oprit, tuin, terras, balkon, voortuin, garage } = tek;
   const metZon = na('zon');
   const buiten = na('buiten');
   // Wat de bewoner net koos, ook voordat de dienst het terugzegt.
@@ -202,19 +200,13 @@ function model(stap) {
     tijd: stap === 'ha' || stap === 'klaar' ? 'nacht' : app.tijdVanDeDag(d.zon),
     wolken: 0.3,
     zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, ...opDak },
-    etages,
-    ...(tek.kelder ? { kelder: tek.kelder } : {}),
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191); buiten pas vanaf de stap Buiten.
+    ...huismodel.huisDelen(tek, elders),
+    ...(buiten ? {} : { oprit: null, tuin: null, terras: null, balkon: null, voortuin: null, garage: null }),
     woning,
     ...(woning === 'appartement' ? { gebouw: { onder: 2, boven: 1 } } : {}),
-    voordeur: tek.voordeur,
     buitenunit: na('apparaten') && tek.buitenunit ? { ...tek.buitenunit, aan: false } : null,
     net: true,
-    oprit: !buiten ? null : oprit && elders.carport && oprit.carport ? { ...oprit, carport: { panelen: elders.carport } } : oprit,
-    tuin: !buiten ? null : tuin && elders.tuinhuis ? { ...tuin, tuinhuisPanelen: elders.tuinhuis } : tuin,
-    terras: buiten ? terras : null,
-    balkon: buiten ? balkon : null,
-    voortuin: buiten ? voortuin : null,
-    garage: !buiten ? null : garage && elders.garage ? { ...garage, panelen: elders.garage } : garage,
     stromen: [],
     // Hoe ze liggen (besluit 157): op de panelen, zoals de schets.
     labels: stap === 'ligging' && d.aans?.ligging?.nu ? [{ bij: 'panelen', titel: d.aans.ligging.nu.richting, toon: 'zon', regels: [`${Math.round(d.aans.ligging.nu.hellingDeg / 5) * 5}° · ${(d.aans.ligging.nu.peakW / 1000).toLocaleString(taal.locale, { maximumFractionDigits: 1 })} kWp`], dx: -40, dy: -60 }] : [],
@@ -395,7 +387,7 @@ function tekenMini(el) {
   const m = w === 'appartement'
     ? { woning: w, gebouw: { onder: 2, boven: 1 }, etages: [laag()] }
     : { woning: w, etages: [laag(), laag(), { dak: true, kamers: [] }], voordeur: {} };
-  huis.teken(el, { tijd: app.tijdVanDeDag(d.zon), ...m }, { breedte: el.clientWidth || 120, hoogte: el.clientHeight || 84, marge: 0.12, eigenLucht: false });
+  huis.teken(el, { tijd: app.tijdVanDeDag(d.zon), ...m }, { breedte: el.clientWidth || 120, hoogte: el.clientHeight || 84, marge: 0.12, wereld: false });
 }
 
 /*
@@ -1268,7 +1260,7 @@ const terugKnop = () => `<button type="button" class="zachtknop" data-terug>${es
 const volgendeKnoppen = () => `<span class="rechts"><button type="button" class="zachtknop" data-later>${esc(t('inr.later'))}</button><button type="button" class="knop knop-licht" data-volgende>${esc(t('inr.volgende'))}</button></span>`;
 /** De wand in het klein bij De wand: dit huis, zoals het nu getekend is. */
 function tekenWandje(el, m) {
-  huis.teken(el, { ...m, labels: [], etages: m.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: el.clientWidth || 200, hoogte: el.clientHeight || 120, marge: 0.06, wereld: true, eigenLucht: false });
+  huis.teken(el, { ...m, labels: [], etages: m.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: el.clientWidth || 200, hoogte: el.clientHeight || 120, marge: 0.06 });
 }
 function tekenNu() {
   app.schaal();
@@ -1323,9 +1315,9 @@ function tekenNu() {
   // Zo groot als het vak echt is (besluit 166): op een breder scherm is het vak breder. Het eiland van Thuis (besluit 190).
   const vak = document.querySelector('[data-podium="wand"]');
   // Bij Klopt je huis? zijn de kamers in het huis aan te tikken en te slepen (besluit 166).
-  if (!app.telStand()) huis.teken(vak, m, { breedte: vak.clientWidth || 700, hoogte: vak.clientHeight || 640, wereld: true, eigenLucht: false, meubels: true, marge: 0.04, zoom: 1, schuifY: 10, tik: nu === 'huis' });
+  if (!app.telStand()) huis.teken(vak, m, { breedte: vak.clientWidth || 700, hoogte: vak.clientHeight || 640, meubels: true, marge: 0.04, zoom: 1, schuifY: 10, tik: nu === 'huis' });
   // Op de telefoon zonder namen in het kleine huis, zoals op Thuis.
-  else huis.teken(document.querySelector('[data-podium="tel"]'), { ...m, etages: m.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 250, wereld: true, eigenLucht: false, marge: 0.03, zoom: 1 });
+  else huis.teken(document.querySelector('[data-podium="tel"]'), { ...m, etages: m.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: 390, hoogte: 250, marge: 0.03, zoom: 1 });
 }
 const teken = app.gebundeld(tekenNu);
 

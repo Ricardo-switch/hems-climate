@@ -109,7 +109,7 @@ function klaarBlad() {
 function huisModel(lijst) {
   const per = (id) => lijst.find((x) => x.id === id);
   // De tekening uit huismodel, net als op Thuis (5S).
-  const tek = huismodel.tekening(d.huis, { zon: d.zon, kelderOnder: true, kamer: (r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null }) });
+  const tek = huismodel.tekening(d.huis, { zon: d.zon, kamer: (r) => ({ ...huismodel.kamerModel(r, d.state), stil: true, temp: null, zin: null }) });
   const { etages } = tek;
   const piekW = tek.piekW;
   const label = (bij, id, dx, dy) => {
@@ -121,16 +121,9 @@ function huisModel(lijst) {
     beschrijving: t('kan.beschrijving'),
     tijd: 'dag',
     zon: { stand: 0.62, hoogte: 0.8, aandeel: 0.6, ...huismodel.panelenOpDak(d.aansluiting?.antwoorden?.panelen, piekW) },
-    voordeur: tek.voordeur,
     wolken: 0.2,
-    etages,
-    // Huis 3.0 (besluit 187): de kelder, de tuin met de jacuzzi en de garage erbij.
-    ...(tek.kelder ? { kelder: tek.kelder } : {}),
-    woning: tek.woning,
-    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
-    tuin: tek.tuin,
-    garage: tek.garage,
-    oprit: tek.oprit,
+    // Het huis zelf, zoals elke pagina het tekent (besluit 191): de kelder, de tuin met de jacuzzi en de garage.
+    ...huismodel.huisDelen(tek, d.aansluiting?.antwoorden?.elders),
     buitenunit: per('opzon') ? { aan: false } : null,
     net: true,
     spook: ['batterij', 'auto'],
@@ -166,7 +159,7 @@ function tekenNu() {
   // Op de telefoon zonder aanwijzers: daar is het huis te smal voor kaartjes ernaast.
   const model = huisModel(lijst);
   if (tel) model.labels = [];
-  huis.teken(podium, model, { breedte: podium.clientWidth || 440, hoogte: tel ? 300 : podium.clientHeight || 470, marge: tel ? 0.03 : 0.04, schuifY: tel ? 0 : 20, wereld: true, eigenLucht: false });
+  huis.teken(podium, model, { breedte: podium.clientWidth || 440, hoogte: tel ? 300 : podium.clientHeight || 470, marge: tel ? 0.03 : 0.04, schuifY: tel ? 0 : 20 });
 }
 
 /* -------------------------------------------------------------- starten */

@@ -184,7 +184,7 @@
    * en niet ingezoomd of bij een appartement. Null: het gewone perceel.
    */
   function eilandVan(model, W, opts) {
-    if (!opts.wereld || model.zonderDak || model.woning === 'appartement') return null;
+    if (!opts.wereld || model.woning === 'appartement') return null;
     const nis = !!model.kelder;
     return {
       x0: model.auto || model.oprit || model.garage || spook(model, 'auto') ? -3.35 : -1.3,
@@ -243,7 +243,11 @@
     el.innerHTML = svg(model, opts);
   }
 
-  function svg(model, opts = {}) {
+  function svg(model, kies = {}) {
+    // Huis 3.0 overal (besluit 191): het eiland is de standaard, met de lucht van
+    // de pagina erachter. Een pagina die het oude perceel wil, zegt `wereld: false`;
+    // een eigen lucht achter het eiland is `eigenLucht: true`.
+    const opts = { wereld: true, eigenLucht: false, ...kies };
     const id = `h${++uid}`;
     R = (model.etages ?? []).some((e) => e.dak && (e.kamers ?? []).length > 0) ? 2.0 : 1.15;
     const breed = opts.breedte ?? 760;

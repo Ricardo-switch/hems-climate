@@ -192,6 +192,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [188. In de schaduw zegt de app wat er echt gebeurt, als het klopt](#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt)
 - [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
 - [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
+- [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
 
 **Veiligheid**
 
@@ -8745,6 +8746,39 @@ Comfort per bewoner, besluit 147); "licht als je weg bent" en "op tijd terug"
 bij afwezig (de app kan dat nog niet); buren naast een rijtjeshuis (besluit
 187: geen buren tekenen); de klimaatstap per merk (schets
 Wand-Inrichten-Klimaat, nog niet gebouwd).
+
+## 191. Huis 3.0 overal: het eiland is de standaard van de tekening
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. De tekening van het huis is één stuk code (`kit/huis.js`),
+maar elke pagina zei zelf of het het eiland van huis 3.0 wilde. Thuis,
+Zonnepanelen, Wat je huis kan en Inrichten deden dat; Kamer, Indeling, de
+assistent, het begin, de film, het inlogscherm en het always-on display niet.
+Daardoor stond het nieuwe ontwerp niet overal. De bewoner vroeg om één gedeelde
+aanroep.
+
+*Besluit:*
+
+- **Het eiland is de standaard** van `huis.teken`, zonder eigen lucht (de pagina
+  heeft die al). Een pagina die het oude perceel wil, zegt `wereld: false`; dat
+  doen alleen de kleine huisjes bij Wat voor huis. Een nieuw ontwerp van de
+  tekening staat zo vanzelf op elke pagina.
+- **Eén etage zonder dak** (Kamer, Indeling) staat ook op het eiland; eerst
+  sloeg de motor het daar over.
+- **Het huis zelf komt uit één plek** (`huismodel.huisDelen`): de etages, de
+  kelder, wat voor huis, de voordeur, de buitenunit en wat er buiten is, met de
+  panelen op een ander dak. Een pagina zet er alleen overheen wat bij haar
+  hoort: de assistent laat buiten weg (naast de bol is het vak smal), het begin
+  laat buiten pas zien als alle etages er staan, Zonnepanelen zet de auto weg
+  voor het kompas.
+- **De kelder ligt standaard in de grond** (`kelderOnder` is weg als keuze die
+  je moet maken; `kelderOnder: false` maakt hem weer een etage).
+- **Versie 0.63.1.**
+
+*Wat afviel:* een tweede functie naast `huis.teken` (dan kan een pagina nog
+steeds de oude aanroepen); de panelen elders bij de assistent en de film (die
+halen de aansluiting niet op).
 
 ---
 
