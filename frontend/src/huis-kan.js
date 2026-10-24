@@ -126,6 +126,8 @@ function huisModel(lijst) {
     etages,
     // Huis 3.0 (besluit 187): de kelder, de tuin met de jacuzzi en de garage erbij.
     ...(tek.kelder ? { kelder: tek.kelder } : {}),
+    woning: tek.woning,
+    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
     tuin: tek.tuin,
     garage: tek.garage,
     oprit: tek.oprit,

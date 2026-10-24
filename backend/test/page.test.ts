@@ -1542,10 +1542,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.locator('#wand a[href="inrichten.html"]').click();
     const kaart = p.locator('#wand [data-kaart]');
     await kaart.locator('h1', { hasText: 'Laten we je huis neerzetten' }).waitFor({ timeout: 10_000 });
-    await kaart.locator('.cijfers').waitFor();
+    await kaart.locator('.tellen').waitFor();
     await p.waitForTimeout(400);
-    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(6);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(14);
+    // Acht hoofdstukken met hun stappen (besluit 190).
+    expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(18);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1554,9 +1555,17 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kaart.locator('.rij').count()).toBeGreaterThan(0);
     await shot('welkom-lijst');
     await kaart.locator('button[data-lijst=""]').click();
-    await kaart.locator('.cijfers').waitFor();
+    await kaart.locator('.tellen').waitFor();
     await kaart.locator('a', { hasText: 'Begin' }).click();
-    await kaart.locator('h1', { hasText: 'Klopt je huis?' }).waitFor();
+    // Wat voor huis (besluit 190): vijf soorten, elk met een klein huis erin.
+    await kaart.locator('h1', { hasText: 'Wat voor huis is het?' }).waitFor();
+    expect(await kaart.locator('.tegel').count()).toBe(5);
+    await kaart.locator('.tegel [data-mini] svg').first().waitFor();
+    await kaart.locator('[data-woning="hoek"]').click();
+    await kaart.locator('[data-woning="hoek"][aria-pressed="true"]').waitFor({ timeout: 5000 });
+    await shot('woning');
+    await kaart.locator('[data-volgende]').click();
+    await kaart.locator('h1', { hasText: 'Klopt de indeling?' }).waitFor();
     // Een kamer aantikken: de naam, de etage en de zones, elk met zijn naam erboven.
     await kaart.locator('[data-kamer]').first().click();
     await kaart.locator('[data-naam]').waitFor();
@@ -1568,33 +1577,30 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     expect(await kaart.locator('[data-schuifkamer]').count()).toBe(2);
     expect(await p.locator('#wand [data-podium="wand"] .sc-tik').count()).toBeGreaterThan(0);
     await shot('huis');
-    // Onderaan overal Terug en Volgende; Volgende bewaart het voorstel als eigen indeling.
+    // Onderaan overal Terug, Later en Volgende; Volgende bewaart het voorstel als eigen indeling.
     expect(await kaart.locator('[data-terug]').count()).toBe(1);
-    await kaart.locator('[data-volgende]').click();
-    // Zes hoofdstukken met kleine stappen (besluit 144).
-    await p.waitForURL(/#buiten$/);
-    await kaart.locator('h1', { hasText: 'Wat is er rond je huis?' }).waitFor();
-    // Elk deel rond het huis apart aan of uit (besluit 158), met garage en carport (besluit 166).
-    expect(await kaart.locator('[data-rond]').count()).toBe(9);
-    expect(await kaart.locator('[data-bsoort]').count()).toBe(0);
-    await expect.poll(async () => p.evaluate<number>('document.querySelectorAll("#wand .stap .stipjes i.al").length')).toBe(1);
-    await shot('buiten');
-    await kaart.locator('[data-volgende]').click();
-    // Wie woont hier (besluit 147): wie al ingelogd is, en de code om anderen te laten inloggen.
-    await kaart.locator('h1', { hasText: 'Wie woont hier?' }).waitFor();
-    await kaart.locator('.qr svg').waitFor();
-    await shot('bewoners');
+    expect(await kaart.locator('[data-later]').count()).toBe(1);
     await kaart.locator('[data-volgende]').click();
     await p.waitForURL(/#apparaten$/);
-    await kaart.locator('.waar', { hasText: '2. Apparaten' }).waitFor();
+    await kaart.locator('.waar', { hasText: '1. Je huis · Per kamer' }).waitFor();
     // Alles in de stap zelf (besluit 166): een apparaat aantikken geeft verplaatsen en weghalen.
     expect(await kaart.locator('[data-bekijk]').count()).toBe(0);
     await kaart.locator('[data-apparaat]').first().click();
     await kaart.locator('[data-verplaats]').waitFor({ timeout: 5000 });
     await shot('apparaten');
     await kaart.locator('[data-volgende]').click();
-    await kaart.locator('h1', { hasText: 'Welke thermometer telt per kamer?' }).waitFor();
-    await shot('meten');
+    await p.waitForURL(/#buiten$/);
+    await kaart.locator('h1', { hasText: 'Wat is er rond je huis?' }).waitFor();
+    // Elk deel rond het huis apart aan of uit (besluit 158), met garage en carport (besluit 166) en de jacuzzi (besluit 190).
+    expect(await kaart.locator('[data-rond]').count()).toBe(10);
+    expect(await kaart.locator('[data-bsoort]').count()).toBe(0);
+    await expect.poll(async () => p.evaluate<number>('document.querySelectorAll("#wand .stap .stipjes i.al").length')).toBe(3);
+    await shot('buiten');
+    await kaart.locator('[data-volgende]').click();
+    // Wie woont hier (besluit 147): wie al ingelogd is, en de code om anderen te laten inloggen.
+    await kaart.locator('h1', { hasText: 'Wie woont hier?' }).waitFor();
+    await kaart.locator('.qr svg').waitFor();
+    await shot('bewoners');
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Wat verwarmt en koelt er?' }).waitFor();
     expect(await kaart.locator('[data-rol]').count()).toBeGreaterThan(0);
@@ -1605,21 +1611,20 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator(`[data-rol] [data-rolwaarde="${doel}"][aria-pressed="true"]`).first().waitFor({ timeout: 5000 });
     await shot('warmte');
     await kaart.locator('[data-volgende]').click();
+    await kaart.locator('h1', { hasText: 'Welke thermometer telt per kamer?' }).waitFor();
+    await shot('meten');
+    await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Hoe warm wil je het?' }).waitFor();
     await kaart.locator('[data-comfort="warm"]').waitFor();
+    // Per kamer wat het wordt, overdag en 's nachts (besluit 190).
+    await kaart.locator('.dagdelen').waitFor();
     await shot('comfort');
     await kaart.locator('[data-volgende]').click();
-    await kaart.locator('h1', { hasText: 'Je zonnepanelen' }).waitFor();
-    await kaart.locator('[data-panelen="ja"]').click();
-    await kaart.locator('[data-dakkant="beide"]').click();
-    await kaart.locator('[data-aantal="voorkant"]').waitFor({ timeout: 5000 });
-    await shot('zon');
+    // Afwezig en vakantie (besluit 190): een halve graad per tik.
+    await kaart.locator('h1', { hasText: 'Als niemand thuis is' }).waitFor();
+    expect(await kaart.locator('[data-afw]').count()).toBeGreaterThanOrEqual(4);
+    await shot('afwezig');
     await kaart.locator('[data-volgende]').click();
-    // Hoe ze liggen (besluit 157): door met Volgende, of met Klopt bij een voorstel.
-    await kaart.locator('.waar', { hasText: '4. Energie · Hoe ze liggen' }).waitFor();
-    await kaart.locator('[data-volgende], [data-lig-klopt]').first().waitFor();
-    await shot('ligging');
-    await kaart.locator('[data-volgende], [data-lig-klopt]').first().click();
     await kaart.locator('h1', { hasText: 'Hoe zwaar is je aansluiting?' }).waitFor();
     // Eerst de fasen, dan de ampère in een vak.
     await kaart.locator('[data-fasen="3"]').click();
@@ -1628,17 +1633,40 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await expect.poll(async () => ((await (await fetch(`${baseUrl}/api/aansluiting`, { headers: { cookie: `hems_sessie=${sessionId}` } })).json()) as { antwoorden?: { zekering?: unknown } }).antwoorden?.zekering, { timeout: 5000 }).toEqual({ fasen: 3, ampere: 40 });
     await shot('zekering');
     await kaart.locator('[data-volgende]').click();
+    await kaart.locator('h1', { hasText: 'Je zonnepanelen' }).waitFor();
+    await kaart.locator('[data-panelen="ja"]').click();
+    await kaart.locator('[data-dakkant="beide"]').click();
+    await kaart.locator('[data-aantal="voorkant"]').waitFor({ timeout: 5000 });
+    await shot('zon');
+    await kaart.locator('[data-volgende]').click();
+    // Hoe ze liggen (besluit 157): door met Volgende, of met Klopt bij een voorstel.
+    await kaart.locator('.waar', { hasText: '5. Energie · Hoe ze liggen' }).waitFor();
+    await kaart.locator('[data-volgende], [data-lig-klopt]').first().waitFor();
+    await shot('ligging');
+    await kaart.locator('[data-volgende], [data-lig-klopt]').first().click();
+    // Op zon (besluit 190): elk apparaat met een schakelaar.
+    await kaart.locator('h1', { hasText: 'Wat mag er op zon?' }).waitFor();
+    await shot('opzon');
+    await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Wat betaal je?' }).waitFor();
     // Eerst het contract, dan de velden die erbij horen (besluit 158).
     await kaart.locator('[data-contract="dagnacht"]').click();
     await kaart.locator('[data-prijs="stroomDal"]').waitFor({ timeout: 5000 });
     await shot('prijzen');
     await kaart.locator('[data-volgende]').click();
-    await kaart.locator('h1', { hasText: "Licht en camera's" }).waitFor();
+    await kaart.locator('h1', { hasText: 'Wat mag de app doen?' }).waitFor();
+    expect(await kaart.locator('.schakel').count()).toBeGreaterThan(0);
     await shot('functies');
     await kaart.locator('[data-volgende]').click();
-    await kaart.locator('.waar', { hasText: '5. Gemak · De wand' }).waitFor();
+    // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
+    await kaart.locator('.waar', { hasText: '7. Je schermen' }).waitFor();
+    expect(await kaart.locator('[data-wkaart]').count()).toBe(10);
+    await kaart.locator('.wandje [data-mini] svg').waitFor();
     await shot('wand');
+    await kaart.locator('[data-volgende]').click();
+    // Klaarzetten (besluit 190): wat er in Home Assistant klaar moet staan.
+    await kaart.locator('h1', { hasText: 'Staat alles klaar?' }).waitFor();
+    await shot('ha');
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');

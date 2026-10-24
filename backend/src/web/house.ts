@@ -39,6 +39,7 @@ import {
   type Layout,
   type LayoutDevice,
   type LayoutAround,
+  type Woning,
   type LayoutKnown,
   type LayoutOutside,
   type LayoutRoom,
@@ -299,6 +300,8 @@ export interface HouseReport {
   readonly dakEtage: FloorId | null;
   /** Wat er rond het huis is, zoals de bewoner het zei (besluit 157); null: de buitenruimtes zeggen het. */
   readonly rond: LayoutAround | null;
+  /** Wat voor huis het is (besluit 190): vrijstaand als de bewoner niets koos. */
+  readonly woning: Woning;
   readonly etages: readonly HouseFloor[];
   readonly lampenAan: number;
   readonly samenvatting: HouseSummary;
@@ -1883,6 +1886,7 @@ export function buildHouse(
     indeling: saved ? 'eigen' : 'voorstel',
     dakEtage,
     rond: layout.rond ?? null,
+    woning: layout.woning ?? 'vrijstaand',
     etages: floors,
     lampenAan: floors.reduce((n, f) => n + f.lampenAan, 0),
     samenvatting: summarize(floors.flatMap((f) => f.ruimtes.flatMap((r) => r.apparaten)), lang),

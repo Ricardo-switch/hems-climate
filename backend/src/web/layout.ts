@@ -105,13 +105,18 @@ export interface LayoutOutside {
  * zo tekent het huis zijn buitenkant. Een ruimte buiten zegt alleen nog bij
  * welk deel zijn lampen en camera horen.
  */
-export const AROUND_PARTS = ['oprit', 'auto', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis', 'garage', 'carport'] as const;
+export const AROUND_PARTS = ['oprit', 'auto', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis', 'garage', 'carport', 'schuur', 'jacuzzi'] as const;
 export type AroundPart = (typeof AROUND_PARTS)[number];
 /**
- * Garage en carport kwamen er later bij (besluit 166): een indeling van
- * daarvoor kent ze niet, en heeft ze dan niet.
+ * Garage en carport kwamen er later bij (besluit 166), het schuurtje (het
+ * tuinhuis is een schuur met puntdak) en de jacuzzi in besluit 190: een
+ * indeling van daarvoor kent ze niet, en heeft ze dan niet.
  */
-const AROUND_LATER: readonly AroundPart[] = ['garage', 'carport'];
+const AROUND_LATER: readonly AroundPart[] = ['garage', 'carport', 'schuur', 'jacuzzi'];
+
+/** Wat voor huis het is (besluit 190), voor de tekening. Weg: vrijstaand. */
+export const WONINGEN = ['vrijstaand', 'rij', 'hoek', 'tweekap', 'appartement'] as const;
+export type Woning = (typeof WONINGEN)[number];
 export type LayoutAround = Readonly<Record<AroundPart, boolean>>;
 
 /**
@@ -185,6 +190,8 @@ export interface Layout {
   readonly dak?: FloorId | 'geen';
   /** Wat er rond het huis is (besluit 157). Weg: de buitenruimtes zeggen het. */
   readonly rond?: LayoutAround;
+  /** Wat voor huis het is (besluit 190). Weg: vrijstaand. */
+  readonly woning?: Woning;
 }
 
 export interface LayoutKnown {
@@ -451,9 +458,12 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     if (AROUND_PARTS.some((x) => typeof r[x] !== 'boolean' && !(AROUND_LATER.includes(x) && r[x] === undefined))) return { ok: false, reden: `rond zegt per deel ja of nee: ${AROUND_PARTS.join(', ')}` };
     rond = Object.fromEntries(AROUND_PARTS.map((x) => [x, r[x] === true])) as LayoutAround;
   }
+  // Wat voor huis het is (besluit 190).
+  const woning = b['woning'];
+  if (woning !== undefined && !WONINGEN.includes(woning as Woning)) return { ok: false, reden: `woning is ${WONINGEN.join(', ')}` };
   return {
     ok: true,
-    layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}), ...(rond ? { rond } : {}) },
+    layout: { versie: 1, etages, ...(volgorde ? { volgorde } : {}), kamers, apparaten, verborgen, ...(dak !== undefined ? { dak: dak as FloorId | 'geen' } : {}), ...(rond ? { rond } : {}), ...(woning !== undefined ? { woning: woning as Woning } : {}) },
   };
 }
 

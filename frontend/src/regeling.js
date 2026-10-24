@@ -151,6 +151,8 @@ document.addEventListener('click', (e) => {
     verwarming: x.verwarming ?? { soort: null, aanvoerC: null },
     voorkantZon: x.voorkantZon ?? null,
     dak: x.dak ?? null,
+    // Panelen op de garage, carport of het tuinhuis (besluit 187): anders vallen ze weg.
+    ...(x.elders ? { elders: x.elders } : {}),
     opZon: Object.fromEntries(Object.entries(opZon).filter(([, v]) => typeof v === 'boolean')),
     opZonUit,
   };

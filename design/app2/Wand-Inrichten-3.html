@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten 3.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Inrichten 3.0 (schets, 24 oktober 2026, makeover voor het grote publiek).
+   * Het huis bouwt zich op terwijl je inricht: links het eiland dat bij elk
+   * hoofdstuk iets krijgt (de vorm, de kamers, buiten, de apparaten, de
+   * energie, het licht), rechts één vraag. Bovenin het pad: acht hoofdstukken,
+   * met per hoofdstuk zijn stappen als streepjes. Wat Home Assistant al weet,
+   * staat klaar; de bewoner kijkt of het klopt. Alles wat de app nu kan, komt
+   * voorbij: het woningtype, de kelder, buiten met tuinhuis of schuurtje en de
+   * jacuzzi, de bewoners met hun telefoon, wat elk klimaatapparaat kan (de
+   * schets Wand-Inrichten-Klimaat), panelen op elk dak, de boiler en de
+   * jacuzzi op zon, de assistent met "Hé huis", en de wand met zijn kaarten.
+   * Standen: #welkom (zonder hash), #woning, #kamers, #buiten, #bewoners,
+   * #klimaat, #comfort, #afwezig, #zon, #opzon, #gemak, #scherm, #ha, #klaar,
+   * en #zonderklimaat (de route zonder slimme regeling).
+   * Gekozen (Ricardo, 24 oktober 2026): het huis groeit mee; deze volgorde;
+   * op de telefoon dezelfde stappen (Tel-Inrichten-3); erbij: afwezig en
+   * vakantie, een huis zonder slimme regeling, en klaarzetten in Home Assistant.
+   */
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .boven { position: absolute; left: 28px; right: 28px; top: 20px; display: flex; align-items: center; gap: 16px; }
+  .logo { width: 34px; height: 34px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); flex: none; }
+  .pad { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+  .h { padding: 7px 10px 8px; border-radius: 14px; background: rgb(var(--wit) / 0.04); border: 1px solid transparent; min-width: 0; }
+  .h b { display: block; font-size: 12.5px; font-weight: 700; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h .streep { display: flex; gap: 3px; margin-top: 6px; }
+  .h .streep i { flex: 1; height: 3px; border-radius: 2px; background: rgb(var(--wit) / 0.12); }
+  .h.klaar b { color: var(--zacht); }
+  .h.klaar .streep i, .h .streep i.klaar { background: var(--mint); }
+  .h.nu { background: rgb(var(--wit) / 0.09); border-color: rgb(var(--wit) / 0.16); }
+  .h.nu b { color: var(--tekst); }
+  .h .streep i.nu { background: var(--tekst); }
+
+  .podium { position: absolute; left: 0; top: 78px; width: 790px; height: 706px; }
+  .vraag { position: absolute; right: 28px; top: 84px; bottom: 26px; width: 452px; padding: 22px 24px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .vraag .waar { font-size: 12.5px; font-weight: 700; color: var(--gedempt); }
+  .vraag h1 { margin: 0; font-family: var(--kop); font-size: 30px; font-weight: 600; line-height: 1.08; letter-spacing: -0.02em; }
+  .vraag .lead { margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--zacht); max-width: none; }
+  .vraag .inhoud { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+  .voet { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid rgb(var(--wit) / 0.07); }
+  .voet .terug { color: var(--zacht); font-weight: 700; font-size: 14px; }
+  .voet .later { margin-left: auto; color: var(--gedempt); font-size: 13px; font-weight: 600; }
+  .knop { height: 44px; padding: 0 20px; border-radius: 14px; display: inline-flex; align-items: center; font-weight: 700; font-size: 15px; background: rgb(var(--wit) / 0.08); }
+  .knop.licht { background: var(--ijs); color: #072033; }
+  .voet .knop.licht { margin-left: 8px; }
+
+  /* Bouwstenen voor de vragen. */
+  .tellen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .teller { padding: 10px 12px; border-radius: 14px; background: rgb(var(--wit) / 0.05); }
+  .teller b { display: block; font-family: var(--kop); font-size: 26px; font-weight: 600; line-height: 1; }
+  .teller span { font-size: 12px; color: var(--zacht); }
+  .tegels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tegel { position: relative; height: 112px; border-radius: 16px; background: rgb(var(--wit) / 0.05); border: 1.5px solid transparent; overflow: hidden; }
+  .tegel.aan { border-color: var(--ijs); background: rgba(111, 211, 255, 0.1); }
+  .tegel .mini { position: absolute; inset: 0 0 22px 0; }
+  .tegel b { position: absolute; left: 10px; right: 8px; bottom: 7px; font-size: 12.5px; }
+  .rij { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .rij > small { font-size: 12.5px; font-weight: 700; color: var(--zacht); width: 100%; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 13px; border-radius: 999px; background: rgb(var(--wit) / 0.06); font-size: 13.5px; font-weight: 700; color: var(--zacht); }
+  .chip.aan { background: var(--tekst); color: #0b1424; }
+  .chip svg { width: 16px; height: 16px; }
+  .lijst { display: flex; flex-direction: column; gap: 5px; }
+  .regel { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 7px 10px; border-radius: 13px; background: rgb(var(--wit) / 0.045); }
+  .regel .ik { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgb(var(--wit) / 0.07); color: var(--zacht); }
+  .regel .ik svg { width: 18px; height: 18px; }
+  .regel b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel span { display: block; font-size: 12px; color: var(--gedempt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .regel span.rij { display: flex; gap: 4px; }
+  .regel span.chip { display: inline-flex; }
+  .regel .rechts { font-size: 12.5px; font-weight: 700; color: var(--zacht); white-space: nowrap; }
+  .regel .rechts.mint { color: var(--mint-t); }
+  .regel .rechts.ijs { color: var(--ijs-t); }
+  .regel .rechts.zon { color: var(--zon); }
+  .regel.uit { background: transparent; border: 1px dashed rgb(var(--wit) / 0.14); }
+  .regel.uit b { color: var(--zacht); }
+  .schakel { width: 40px; height: 24px; border-radius: 12px; background: rgb(var(--wit) / 0.14); position: relative; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c8d2dc; }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 19px; background: #0b2a1f; }
+  .etagekop { font-size: 12px; font-weight: 700; color: var(--gedempt); margin: 4px 2px 0; }
+  .erbij { display: inline-flex; align-items: center; height: 34px; padding: 0 13px; border-radius: 999px; border: 1px dashed rgb(111 211 255 / 0.5); color: var(--ijs-t); font-size: 13.5px; font-weight: 700; }
+  .tip { padding: 10px 12px; border-radius: 14px; background: rgba(111, 211, 255, 0.08); color: var(--ijs-zacht); font-size: 12.5px; line-height: 1.4; }
+  .gezicht { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-family: var(--kop); font-weight: 700; color: #0b1424; }
+  .bewoner { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 10px 12px; border-radius: 15px; background: rgb(var(--wit) / 0.05); }
+  .bewoner b { font-size: 15px; display: block; }
+  .bewoner span { font-size: 12px; color: var(--gedempt); }
+  .kleuren { display: flex; gap: 6px; }
+  .kleuren i { width: 18px; height: 18px; border-radius: 50%; }
+  .kleuren i.aan { box-shadow: 0 0 0 2px #0b1424, 0 0 0 4px var(--tekst); }
+  .wandje { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; padding: 10px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1px solid rgb(var(--wit) / 0.08); height: 172px; }
+  .wandje .huisvak { border-radius: 10px; background: linear-gradient(160deg, rgb(111 211 255 / 0.12), rgb(255 255 255 / 0.03)); position: relative; overflow: hidden; }
+  .wandje .kaartjes { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 36px; gap: 5px; }
+  .wandje .kaartjes i { border-radius: 8px; background: rgb(var(--wit) / 0.08); }
+  .wandje .kaartjes i.breed { grid-column: span 2; }
+  .stand { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .stand::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .stand.werkt { color: var(--mint-t); background: rgba(110, 231, 183, 0.1); }
+  .stand.kijkt { color: var(--ijs-t); background: rgba(111, 211, 255, 0.1); }
+  .stand.nodig { color: var(--zon); box-shadow: inset 0 0 0 1px rgba(247, 181, 72, 0.45); }
+  .dagdelen { display: grid; grid-template-columns: 84px repeat(4, minmax(0, 1fr)); gap: 5px; align-items: center; font-size: 12px; }
+  .dagdelen > small { font-weight: 700; color: var(--gedempt); text-align: center; }
+  .dagdelen > b { font-size: 13px; }
+  .dagdelen > span { height: 34px; border-radius: 10px; display: grid; place-items: center; font-family: var(--kop); font-size: 15px; font-weight: 600; background: rgb(var(--wit) / 0.06); }
+  .dagdelen > span.warm { background: rgba(255, 122, 77, 0.16); color: #ffb090; }
+  .dagdelen > span.koel { background: rgba(111, 211, 255, 0.14); color: var(--ijs-t); }
+  .klaarregel { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 6px 4px; border-top: 1px solid rgb(var(--wit) / 0.06); }
+  .klaarregel:first-child { border-top: 0; }
+  .klaarregel i { width: 8px; height: 8px; border-radius: 50%; }
+  .klaarregel b { font-size: 13.5px; display: block; }
+  .klaarregel span { font-size: 12px; color: var(--gedempt); display: block; }
+  .klaarregel em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--ijs-t); }
+  .groot { font-family: var(--kop); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  [data-stand] { display: none; }
+</style>
+</head>
+<body class="lucht lucht-avond">
+<div class="scherm">
+  <div class="boven">
+    <span class="logo"></span>
+    <div class="pad" id="pad"></div>
+  </div>
+  <div class="podium" id="podium"></div>
+  <section class="glas vraag" id="vraag"></section>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const IK = {
+    huis: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>', oprit: '<path d="M5 21l3-18M19 21L16 3M12 6v2M12 11v2M12 16v2"/>',
+    auto: '<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/>', laadpaal: '<rect x="6" y="3" width="9" height="18" rx="2"/><path d="M15 8h2a2 2 0 0 1 2 2v5"/><path d="M11 8l-2 4h3l-2 4"/>',
+    carport: '<path d="M3 8h18M5 8v12M19 8v12"/>', garage: '<path d="M3 9l9-5 9 5v11H3z"/><path d="M6 20v-8h12v8"/>', tuin: '<path d="M12 21v-8M8 13c0-4 4-8 4-8s4 4 4 8a4 4 0 0 1-8 0z"/>',
+    tuinhuis: '<path d="M4 9h16M5 9v11h14V9M3 9l2-3h14l2 3"/><path d="M10 20v-5h4v5"/>', schuur: '<path d="M4 11l8-6 8 6v9H4z"/><path d="M10 20v-5h4v5"/>',
+    terras: '<path d="M3 17h18M6 17v4M18 17v4M5 13h14l-1-5H6z"/>', jacuzzi: '<path d="M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/><path d="M8 8c0-1.5 1-2 1-3M12 8c0-1.5 1-2 1-3M16 8c0-1.5 1-2 1-3"/>',
+    balkon: '<path d="M4 12h16v8H4zM8 12v8M12 12v8M16 12v8M6 4h12v8"/>', airco: '<rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c0-1.5 1-2 1-3M12 19c0-1.5 1-2 1-3"/>',
+    thermo: '<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>', knop: '<circle cx="12" cy="12" r="7"/><path d="M12 5v3"/>', droger: '<rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="13" r="4"/>',
+    vaat: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 8h14M9 13h6"/>', boiler: '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>', accu: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M12 9l-2 4h4l-2 4"/>',
+    lamp: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>', screen: '<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M6 8v9h12V8"/>', camera: '<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/>',
+    praat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/>', zon: '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/>', stekker: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/>',
+    meter: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/>', bel: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>', tel: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/>',
+  };
+  const ik = (n) => S(IK[n]);
+  const regel = (i, titel, zin, rechts = '', klasse = '', rk = '') => `<div class="regel ${klasse}"><span class="ik">${ik(i)}</span><div><b>${titel}</b><span>${zin}</span></div><span class="rechts ${rk}">${rechts}</span></div>`;
+
+  /* ---- het pad: acht hoofdstukken, elk met zijn stappen ---- */
+  const HOOFDSTUKKEN = [
+    ['Je huis', ['woning', 'kamers']],
+    ['Buiten', ['buiten']],
+    ['Wie woont hier', ['bewoners']],
+    ['Klimaat', ['klimaat', 'comfort', 'afwezig']],
+    ['Energie', ['aansluiting', 'zon', 'opzon']],
+    ['Gemak', ['gemak']],
+    ['Je schermen', ['scherm']],
+    ['Klaar', ['ha', 'klaar']],
+  ];
+  const ALLE = HOOFDSTUKKEN.flatMap(([, s]) => s);
+
+  /* ---- het huis van dit huis, zoals Home Assistant het kent ---- */
+  const k = (naam, gewicht = 1, apparaten = []) => ({ naam, gewicht, stil: true, apparaten });
+  const etagesKaal = [
+    { naam: 'Begane grond', kamers: [k('Entree', 0.55), k('Keuken', 0.9), k('Woonkamer', 1.4, [{ soort: 'bank' }])] },
+    { naam: 'Eerste', kamers: [k('Badkamer', 0.8), k('Hobbykamer', 0.9), k('Slaapkamer Matts', 0.9), k('Slaapkamer Mylan', 0.9)] },
+    { dak: true, kamers: [k('Slaapkamer', 1), k('Zolder', 1)] },
+  ];
+  const etagesApparaten = [
+    { naam: 'Begane grond', kamers: [k('Entree', 0.55), k('Keuken', 0.9, [{ soort: 'radiator', aan: true }]), k('Woonkamer', 1.4, [{ soort: 'airco', aan: false }, { soort: 'radiator' }, { soort: 'bank' }, { soort: 'screen', dicht: 0.3 }])] },
+    { naam: 'Eerste', kamers: [k('Badkamer', 0.8, [{ soort: 'vloer', aan: true }]), k('Hobbykamer', 0.9), k('Slaapkamer Matts', 0.9), k('Slaapkamer Mylan', 0.9)] },
+    { dak: true, kamers: [k('Slaapkamer', 1), k('Zolder', 1, [{ soort: 'airco', aan: false }, { soort: 'droger', aan: false }])] },
+  ];
+  const lampen = (e) => e.map((et) => ({ ...et, kamers: et.kamers.map((x, i) => ({ ...x, apparaten: [...x.apparaten, ...(i % 2 === 0 ? [{ soort: 'lamp', aan: true }] : [])] })) }));
+  const buiten = { oprit: {}, auto: { kleur: '#7f97b0', procent: 60, stand: 'rust' }, garage: {}, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis', lampen: [{ aan: false }] }, terras: {} };
+
+  const STANDEN = {
+    welkom: {
+      waar: 'Welkom', kop: 'Laten we je huis neerzetten', lead: 'Smart Climate vond je Home Assistant. Wat het daar al weet, staat klaar; jij kijkt of het klopt. Zo’n tien minuten.',
+      inhoud: `<div class="tellen">${[['3', 'etages'], ['10', 'kamers'], ['32', 'apparaten'], ['5', 'om te verwarmen of koelen'], ['12', 'panelen'], ['2', 'camera’s']].map(([g, w]) => `<div class="teller"><b>${g}</b><span>${w}</span></div>`).join('')}</div>
+        <div class="tip">Het huis links groeit mee: bij elk hoofdstuk komt er iets bij. Wat je overslaat, staat aan het eind bij Nog te doen.</div>`,
+      knop: 'Begin', terugTekst: '',
+      model: { tijd: 'avond', etages: etagesKaal, voordeur: {}, spook: ['panelen'] },
+    },
+    woning: {
+      waar: '1. Je huis · Wat voor huis', kop: 'Wat voor huis is het?', lead: 'Dan tekent de app het zoals het er staat.',
+      inhoud: `<div class="tegels">${[['vrijstaand', 'Vrijstaand', true], ['rij', 'Rijtjeshuis'], ['hoek', 'Hoekhuis'], ['tweekap', 'Twee-onder-een-kap'], ['appartement', 'Appartement'], ['plat', 'Plat dak']].map(([id, n, aan]) => `<div class="tegel${aan ? ' aan' : ''}"><div class="mini" data-mini="${id}"></div><b>${n}</b></div>`).join('')}</div>
+        <div class="rij"><small>Een kelder?</small><span class="chip">Ja, opengewerkt</span><span class="chip aan">Nee</span></div>
+        <div class="rij"><small>Onder het dak</small><span class="chip aan">Kamers</span><span class="chip">Alleen opslag</span><span class="chip">Geen zolder</span></div>`,
+      model: { tijd: 'avond', etages: etagesKaal, voordeur: {} },
+    },
+    kamers: {
+      waar: '1. Je huis · Kamers', kop: 'Klopt de indeling?', lead: 'Uit Home Assistant, per etage. Tik een kamer om de naam of soort te veranderen, of sleep hem.',
+      inhoud: `<div class="lijst">
+        <div class="etagekop">Zolder</div>${regel('huis', 'Slaapkamer en zolder', 'met de wasruimte', 'airco, droger')}
+        <div class="etagekop">Eerste verdieping</div>${regel('huis', 'Badkamer', 'badkamer', 'vloer, thermostaat')}${regel('huis', 'Hobbykamer en twee kinderkamers', 'Matts en Mylan', '5 lampen')}
+        <div class="etagekop">Begane grond</div>${regel('huis', 'Woonkamer', 'met de zithoek', 'airco, Nest, 3 screens')}${regel('huis', 'Keuken', 'keuken', 'radiatorknop')}${regel('huis', 'Entree', 'hal', 'deurbel')}
+        </div><div class="rij"><span class="erbij">+ Kamer</span><span class="erbij">+ Etage</span></div>`,
+      // Bij de kamers staan de namen in het huis.
+      model: { tijd: 'avond', etages: etagesKaal.map((e) => ({ ...e, kamers: e.kamers.map((x) => ({ ...x, stil: false })) })), voordeur: {}, labels: [] },
+    },
+    buiten: {
+      waar: '2. Buiten', kop: 'Wat is er rond je huis?', lead: 'Aan wat Home Assistant buiten heeft, vooraf gekozen.',
+      inhoud: `<div class="lijst">
+        ${regel('oprit', 'Oprit', 'met de camera', '<span class="schakel aan"></span>')}
+        ${regel('auto', 'Een auto', 'geen laadpaal gevonden', '<span class="schakel aan"></span>')}
+        ${regel('garage', 'Garage', 'achter de oprit', '<span class="schakel aan"></span>')}
+        ${regel('carport', 'Carport', '', '<span class="schakel"></span>')}
+        ${regel('tuin', 'Tuin', 'met verlichting en de border', '<span class="schakel aan"></span>')}
+        <div class="regel"><span class="ik">${ik('tuinhuis')}</span><div><b>In de tuin</b><span>met de lamp onder het overstek</span></div><span class="rij" style="flex-wrap: nowrap"><span class="chip aan" style="height: 30px">Tuinhuis</span><span class="chip" style="height: 30px">Schuurtje</span></span></div>
+        ${regel('terras', 'Terras', 'bij de woonkamer', '<span class="schakel aan"></span>')}
+        ${regel('jacuzzi', 'Jacuzzi', 'niet gevonden in Home Assistant', '<span class="schakel"></span>')}
+        </div>`,
+      model: { tijd: 'avond', etages: etagesKaal, voordeur: {}, ...buiten, labels: [] },
+    },
+    bewoners: {
+      waar: '3. Wie woont hier', kop: 'Wie woont hier?', lead: 'Ieder zijn eigen comfort, kleur en telefoon. Op de wand geldt wie er thuis is.',
+      inhoud: `<div class="lijst" style="gap: 8px">
+        <div class="bewoner"><span class="gezicht" style="background: #6fd3ff">R</span><div><b>Ricardo</b><span>hoofdgebruiker · iPhone · meldingen aan</span></div><span class="kleuren"><i class="aan" style="background: #6fd3ff"></i><i style="background: #f2a7c3"></i><i style="background: #6ee7b7"></i></span></div>
+        <div class="bewoner"><span class="gezicht" style="background: #f2a7c3">S</span><div><b>S.</b><span>bewoner · Android · meldingen aan</span></div><span class="kleuren"><i style="background: #6fd3ff"></i><i class="aan" style="background: #f2a7c3"></i><i style="background: #6ee7b7"></i></span></div>
+        <div class="bewoner" style="opacity: 0.8"><span class="gezicht" style="background: #3a4757; color: var(--zacht)">+</span><div><b>Matts en Mylan</b><span>gevonden in Home Assistant, zonder account</span></div><span class="erbij" style="height: 30px">Erbij</span></div>
+        </div>
+        <div class="rij"><small>Wie volgt de wand?</small><span class="chip aan">Wie er thuis is</span><span class="chip">Altijd Ricardo</span></div>
+        <div class="tip">Een gast kan later, bij Instellingen › Bewoners; die krijgt een eigen comfort tot hij weggaat.</div>`,
+      model: { tijd: 'avond', etages: etagesKaal, voordeur: {}, ...buiten, labels: [] },
+    },
+    klimaat: {
+      waar: '4. Klimaat · Wat elk apparaat kan', kop: 'Wat verwarmt en koelt er?', lead: 'Per apparaat wat het kan en wat het huis ermee doet. Een open vraag mag; die staat bij Nog te doen.',
+      inhoud: `<div class="rij"><small>Je verwarming</small><span class="chip aan">Cv-ketel</span><span class="chip">Warmtepomp</span><span class="chip">Hybride</span><span class="chip">Geen slimme regeling ›</span></div>
+        <div class="lijst">
+        ${regel('thermo', 'Nest', 'woonkamer · stuurt de ketel', 'zegt wat hij doet', '', 'mint')}
+        ${regel('airco', 'Airco woonkamer', 'LG ThinQ · koelt en verwarmt', 'stroom gemeten', '', 'mint')}
+        ${regel('airco', 'Airco zolder', 'LG ThinQ · koelt en verwarmt', 'stroom gemeten', '', 'mint')}
+        ${regel('thermo', 'Thermostaat badkamer', 'Tuya · vloer', '? stookt hij', '', 'zon')}
+        ${regel('knop', 'Radiatorknop keuken', 'Zigbee2MQTT · klep en batterij', 'kijkt mee', '', 'ijs')}
+        </div>
+        <div class="tip">Tik een apparaat voor alles wat Home Assistant ervan zegt, per koppeling (zie de schets Wat elk apparaat kan).</div>`,
+      model: { tijd: 'avond', etages: etagesApparaten, voordeur: {}, buitenunit: { aan: false, aantal: 2 }, ...buiten, labels: [{ bij: 'kamer:Badkamer', titel: 'Badkamer', toon: 'zon', regels: ['stookt hij?'], dx: -40, dy: -70 }] },
+    },
+    comfort: {
+      waar: '4. Klimaat · Comfort', kop: 'Wat vind je prettig?', lead: 'Per bewoner, per dagdeel. Geldt wie er thuis is; met twee de zachtste van beiden.',
+      inhoud: `<div class="rij"><span class="chip aan"><span class="gezicht" style="width: 20px; height: 20px; font-size: 11px; background: #6fd3ff">R</span>Ricardo</span><span class="chip"><span class="gezicht" style="width: 20px; height: 20px; font-size: 11px; background: #f2a7c3">S</span>S.</span></div>
+        <div class="dagdelen"><small></small><small>Ochtend</small><small>Dag</small><small>Avond</small><small>Nacht</small>
+          <b>Woonkamer</b><span class="warm">20°</span><span>19,5°</span><span class="warm">21°</span><span class="koel">17°</span>
+          <b>Badkamer</b><span class="warm">22°</span><span>18°</span><span class="warm">21°</span><span class="koel">17°</span>
+          <b>Slaapkamers</b><span>18°</span><span>17°</span><span>18°</span><span class="koel">16°</span>
+          <b>Zolder</b><span>19°</span><span class="koel">≤ 24°</span><span>19°</span><span class="koel">17°</span></div>
+        <div class="rij"><small>In de zomer</small><span class="chip aan">Koelen boven 24°</span><span class="chip">Alleen op zon</span></div>
+        <div class="tip">Tik later op Thuis "te koud" of "te warm": daar leert het huis van.</div>`,
+      model: { tijd: 'avond', etages: etagesApparaten.map((e) => ({ ...e, kamers: e.kamers.map((x) => ({ ...x, stil: false, temp: { Woonkamer: '20°', Badkamer: '21°', Keuken: '20°', Zolder: '19°' }[x.naam] ?? '18°', stand: 'goed' })) })), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, ...buiten, labels: [] },
+    },
+    afwezig: {
+      waar: '4. Klimaat · Afwezig en vakantie', kop: 'Als niemand thuis is', lead: 'Het huis ziet het aan de telefoons van de bewoners. Wat het dan doet, kies je hier.',
+      inhoud: `<div class="lijst">
+        ${regel('huis', 'Even weg', 'na 30 minuten zonder iemand', '1° lager', '', 'ijs')}
+        ${regel('tel', 'Op tijd terug', 'warmt op als iemand onderweg naar huis is', '<span class="schakel aan"></span>')}
+        ${regel('zon', 'Vakantie', 'langer dan een dag weg', 'vorstvrij 15°', '', 'ijs')}
+        ${regel('lamp', 'Licht als je weg bent', 'een paar lampen ’s avonds, alsof er iemand is', '<span class="schakel"></span>')}
+        ${regel('boiler', 'Boiler en jacuzzi', 'op de ondergrens tot je terug bent', '<span class="schakel aan"></span>')}
+        </div>
+        <div class="tip">Wie als laatste weggaat, krijgt op de telefoon: “Het huis staat op weg.” Terugzetten kan met één tik.</div>`,
+      model: { tijd: 'dag', zon: { stand: 0.5, aandeel: 0.5, panelen: 6, panelenLinks: 6 }, etages: etagesApparaten, voordeur: {}, buitenunit: { aan: false, aantal: 2 }, ...buiten, auto: null, oprit: {}, labels: [{ bij: 'kamer:Woonkamer', titel: 'Niemand thuis', toon: 'ijs', regels: ['19°, een graad lager'], dx: 30, dy: 110 }] },
+    },
+    zonderklimaat: {
+      waar: '4. Klimaat', kop: 'Geen slimme verwarming?', lead: 'Dat kan. De app regelt dan niet de temperatuur, maar doet de rest wel.',
+      inhoud: `<div class="lijst">
+        ${regel('lamp', 'Licht en scènes', 'met één tik, ook op de wand', 'werkt', '', 'mint')}
+        ${regel('screen', 'Screens en zonnescherm', 'open, dicht of half', 'werkt', '', 'mint')}
+        ${regel('zon', 'Energie en op zon', 'de droger, boiler of jacuzzi als er zon over is', 'werkt', '', 'mint')}
+        ${regel('camera', 'Camera’s en de deurbel', 'beeld op de wand bij de bel', 'werkt', '', 'mint')}
+        ${regel('praat', 'De assistent', 'vraag het je huis', 'werkt', '', 'mint')}
+        ${regel('thermo', 'Comfort per kamer', 'met een slimme thermostaat of radiatorknop', 'kan erbij', 'uit', 'zon')}
+        </div>
+        <div class="tip">Komt er later een slimme thermostaat bij, dan staat hij bij Wat je huis kan, met wat hij oplevert.</div>`,
+      model: { tijd: 'avond', etages: lampen(etagesKaal), voordeur: {}, ...buiten, labels: [] },
+    },
+    ha: {
+      waar: '8. Klaar · Klaarzetten', kop: 'Staat alles klaar?', lead: 'Wat Smart Climate in Home Assistant gebruikt. Oranje mist nog; een tik opent dat scherm van Home Assistant.',
+      inhoud: `<div class="lijst" style="gap: 0">
+        ${[['var(--mint)', 'Locatie en tijdzone', 'voor de zon, het weer en de gevels', ''], ['var(--gloed)', 'Etages en ruimtes', '7 apparaten staan nog in geen ruimte', 'Open'], ['var(--gloed)', 'Een persoon per bewoner', '3 personen hebben nog geen account', 'Open'], ['var(--mint)', 'Thermostaten en airco’s', '7 apparaten voor verwarmen of koelen', ''], ['var(--mint)', 'De slimme meter en de omvormer', 'van en naar het net, en de opbrengst', ''], ['var(--mint)', 'Lampen, screens en camera’s', '29 lampen, 5 schermen, 2 camera’s', ''], ['var(--mint)', 'Het wekwoord', '“Hé huis” staat bij een spraakassistent', ''], ['var(--mint)', 'Een bewegingsmelder', 'de wand wordt wakker als er iemand langsloopt', '']]
+          .map(([kleur, t1, t2, knop]) => `<div class="klaarregel"><i style="background: ${kleur}"></i><div><b>${t1}</b><span>${t2}</span></div><em>${knop}</em></div>`).join('')}
+        </div>
+        <div class="tip">Wat oranje is, staat daarna bij Nog te doen; de app werkt al.</div>`,
+      model: { tijd: 'nacht', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true } },
+    },
+    zon: {
+      waar: '5. Energie · Panelen', kop: 'Waar liggen je panelen?', lead: 'Smart Climate meet zelf naar welke kant ze liggen. Jij zegt op welk dak en hoeveel.',
+      inhoud: `<div class="lijst">
+        ${regel('huis', 'Huis, oostkant', 'kijkt naar 97°, helling 47°', '6', '', 'mint')}
+        ${regel('huis', 'Huis, westkant', 'kijkt naar 277°, helling 47°', '6', '', 'mint')}
+        ${regel('garage', 'Garage', 'plat dak', '+ Panelen', 'uit', 'ijs')}
+        ${regel('tuinhuis', 'Tuinhuis', 'plat dak', '+ Panelen', 'uit', 'ijs')}
+        </div>
+        <div class="rij"><small>Omvormer</small><span class="chip aan">✓ SolarEdge 3.000 W, gevonden</span></div>
+        <div class="tip">Gemeten op een heldere dag, 20 oktober: oost en west, 4,68 kWp. Klopt het niet, dan pas je het later aan bij Energie.</div>`,
+      model: { tijd: 'dag', zon: { stand: 0.6, aandeel: 0.7, panelen: 6, panelenLinks: 6 }, etages: etagesApparaten, voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.5 }],
+        labels: [{ bij: 'panelen', titel: 'West · 277°', toon: 'zon', regels: ['helling 47°, 6 panelen'], dx: 40, dy: -70 }, { bij: 'panelenLinks', titel: 'Oost · 97°', toon: 'zon', regels: ['helling 47°, 6 panelen'], dx: 30, dy: -130 }] },
+    },
+    opzon: {
+      waar: '5. Energie · Op zon', kop: 'Wat mag er op zon?', lead: 'Wat het huis kan uitstellen tot er zon over is. Eerst kijkt het mee; schakelen komt later.',
+      inhoud: `<div class="lijst">
+        ${regel('droger', 'Droger', 'Home Connect · zolder', '<span class="schakel aan"></span>')}
+        ${regel('vaat', 'Vaatwasser', 'Home Connect · keuken', '<span class="schakel"></span>')}
+        ${regel('boiler', 'Boiler', 'niet gevonden', '+ Erbij', 'uit', 'ijs')}
+        ${regel('jacuzzi', 'Jacuzzi', 'niet gevonden', '+ Erbij', 'uit', 'ijs')}
+        ${regel('accu', 'Thuisbatterij', 'niet gevonden · ± € 10 per maand', 'idee', 'uit', 'zon')}
+        ${regel('laadpaal', 'De auto laden', 'geen laadpaal gevonden', 'idee', 'uit', 'zon')}
+        </div>
+        <div class="rij"><small>Je aansluiting</small><span class="chip aan">1 × 35 A</span><span class="chip aan">P1-meter: HomeWizard</span><span class="chip">Daltarief</span></div>`,
+      model: { tijd: 'dag', zon: { stand: 0.6, aandeel: 0.8, panelen: 6, panelenLinks: 6 }, etages: etagesApparaten.map((e) => (e.dak ? { ...e, kamers: e.kamers.map((x) => (x.naam === 'Zolder' ? { ...x, apparaten: [{ soort: 'droger', aan: true }, { soort: 'airco', aan: false }] } : x)) } : e)), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten,
+        spook: ['batterij'], stromen: [{ van: 'zon', naar: 'kamer:Zolder', sterkte: 0.6 }, { van: 'zon', naar: 'net', sterkte: 0.2 }], labels: [{ bij: 'kamer:Zolder', titel: 'Droger op zon', toon: 'zon', regels: ['start als er zon over is'], dx: 40, dy: -90 }] },
+    },
+    gemak: {
+      waar: '6. Gemak', kop: 'Wat mag de app doen?', lead: 'Licht, schermen en camera’s, via dezelfde knoppen als in Home Assistant. En de assistent.',
+      inhoud: `<div class="lijst">
+        ${regel('lamp', 'Licht en scènes', '32 lampen, 8 scènes', '<span class="schakel aan"></span>')}
+        ${regel('screen', 'Screens en zonnescherm', '3 met terugmelding', '<span class="schakel aan"></span>')}
+        ${regel('camera', 'Camera’s en deurbel', 'beeld op de wand bij de bel', '<span class="schakel aan"></span>')}
+        ${regel('praat', 'De assistent', '“Hé huis” op de wand, Nederlandse stem', '<span class="schakel aan"></span>')}
+        ${regel('bel', 'Meldingen op je telefoon', 'rook, de regeling, onderhoud', '<span class="schakel aan"></span>')}
+        </div>
+        <div class="tip">Zeg op de wand “Hé huis, waarom koelt de zolder?”, of tik op de bol.</div>`,
+      model: { tijd: 'avond', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: { deurbel: { beweging: true } }, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true, lampen: [{ aan: true }] }, terras: { lampAan: true } },
+    },
+    scherm: {
+      waar: '7. Je schermen · De wand', kop: 'Hoe ziet de wand eruit?', lead: 'Kies de kaarten, smal of breed. Op je telefoon staat dezelfde indeling.',
+      inhoud: `<div class="wandje"><div class="huisvak" data-mini="wand"></div><div class="kaartjes"><i class="breed"></i><i></i><i></i><i class="breed"></i><i></i><i></i></div></div>
+        <div class="rij"><small>Kaarten</small><span class="chip aan">Vandaag</span><span class="chip aan">Hoe voelt het</span><span class="chip aan">Morgen</span><span class="chip aan">Deurbel</span><span class="chip">Auto</span><span class="chip">Deze maand</span></div>
+        <div class="rij"><small>Als niemand kijkt</small><span class="chip aan">Klok en het huis</span><span class="chip aan">’s Nachts uit, 23:00–07:00</span></div>
+        <div class="rij"><small>Taal</small><span class="chip aan">Automatisch</span><span class="chip">Nederlands</span><span class="chip">English</span></div>`,
+      model: { tijd: 'avond', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true } },
+    },
+    klaar: {
+      waar: '8. Klaar', kop: 'Je huis staat erin', lead: 'Smart Climate kijkt nu mee en leert je huis kennen. Na dertig winterdagen kan het zelf regelen.',
+      inhoud: `<div style="display: flex; gap: 8px; flex-wrap: wrap"><span class="stand werkt">Werkt 9</span><span class="stand kijkt">Kijkt mee 8</span><span class="stand kijkt">Leert nog 2</span><span class="stand nodig">Iets nodig 3</span></div>
+        <div class="lijst">${regel('thermo', 'Nog te doen', 'Thermostaat badkamer: stookt hij?', '1', '', 'zon')}${regel('meter', 'Wat je huis kan', 'alles op een rij, met wat er nog bij kan', '›')}</div>
+        <div class="tip">Kijk de film van een minuut: de assistent praat, de etages schuiven open en de apparaten komen voorbij.</div>`,
+      knop: 'Bekijk de film',
+      model: { tijd: 'nacht', zon: { panelen: 6, panelenLinks: 6 }, etages: lampen(etagesApparaten), voordeur: {}, buitenunit: { aan: false, aantal: 2 }, net: true, ...buiten, tuin: { ...buiten.tuin, tuinhuisAan: true, overstekAan: true, lampen: [{ aan: true }] }, terras: { lampAan: true } },
+    },
+  };
+
+  const id = location.hash.slice(1) in STANDEN ? location.hash.slice(1) : 'welkom';
+  const s = STANDEN[id];
+  document.body.className = `lucht lucht-${s.model.tijd === 'dag' ? 'dag' : s.model.tijd === 'nacht' ? 'nacht' : 'avond'}`;
+
+  // Het pad: wat voor deze stap ligt is klaar.
+  // Zonder slimme regeling is de stap Klimaat, maar dan de andere route.
+  const nu = ALLE.indexOf(id === 'zonderklimaat' ? 'klimaat' : id);
+  document.getElementById('pad').innerHTML = HOOFDSTUKKEN.map(([naam, st], h) => {
+    const ix = st.map((x) => ALLE.indexOf(x));
+    const klaar = id !== 'welkom' && ix.every((x) => x < nu);
+    const hier = ix.includes(nu);
+    return `<div class="h${klaar ? ' klaar' : ''}${hier ? ' nu' : ''}"><b>${h + 1}. ${naam}</b><div class="streep">${ix.map((x) => `<i class="${id !== 'welkom' && x < nu ? 'klaar' : x === nu ? 'nu' : ''}"></i>`).join('')}</div></div>`;
+  }).join('');
+
+  document.getElementById('vraag').innerHTML = `<span class="waar">${s.waar}</span><h1>${s.kop}</h1><p class="lead">${s.lead}</p><div class="inhoud">${s.inhoud}</div>
+    <div class="voet">${id === 'welkom' ? '' : '<span class="terug">Terug</span>'}${id === 'welkom' || id === 'klaar' ? '' : '<span class="later">Later</span>'}<span class="knop licht"${id === 'welkom' || id === 'klaar' ? ' style="margin-left: auto"' : ''}>${s.knop ?? 'Volgende'}</span></div>`;
+
+  const podium = document.getElementById('podium');
+  const r = podium.getBoundingClientRect();
+  huis.teken(podium, s.model, { breedte: r.width, hoogte: r.height, wereld: true, eigenLucht: false, marge: 0.05, schuifY: 20, meubels: true });
+
+  // De kleine huizen bij Wat voor huis, en de wand in het klein.
+  const MINI = {
+    vrijstaand: { etages: etagesKaal.slice(0, 2).concat([{ dak: true, kamers: [] }]), voordeur: {} },
+    rij: { woning: 'rij', etages: [{ naam: '', kamers: [k('', 1)] }, { naam: '', kamers: [k('', 1)] }, { dak: true, kamers: [] }], voordeur: {} },
+    hoek: { woning: 'hoek', etages: [{ naam: '', kamers: [k('', 1)] }, { naam: '', kamers: [k('', 1)] }, { dak: true, kamers: [] }], voordeur: {} },
+    tweekap: { woning: 'tweekap', etages: [{ naam: '', kamers: [k('', 1)] }, { naam: '', kamers: [k('', 1)] }, { dak: true, kamers: [] }], voordeur: {} },
+    appartement: { woning: 'appartement', gebouw: { onder: 2, boven: 1 }, etages: [{ naam: '', kamers: [k('', 1)] }] },
+    plat: { zonderDak: true, etages: [{ naam: '', kamers: [k('', 1)] }, { naam: '', kamers: [k('', 1)] }] },
+    wand: { tijd: 'avond', etages: etagesKaal, voordeur: {} },
+  };
+  document.querySelectorAll('[data-mini]').forEach((el) => {
+    const b = el.getBoundingClientRect();
+    const m = MINI[el.dataset.mini];
+    huis.teken(el, { tijd: 'avond', ...m, etages: m.etages.map((e) => ({ ...e, kamers: e.kamers.map((x) => ({ ...x, naam: '' })) })) }, { breedte: b.width, hoogte: b.height, marge: 0.12, eigenLucht: false });
+  });
+</script>
+</body>
+</html>

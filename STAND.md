@@ -176,7 +176,9 @@ verwijzing bestaat.
   één bovenbalk; Zonnepanelen en Wat je huis kan opnieuw, en Alles wissen bij
   de meldingen ([187]). In de schaduw zegt een kamer "Verwarmt" als het echte
   apparaat al doet wat het besluit wil ([188]). Een smalle kaart op de wand is
-  een tegel zoals in de schets, en er is een kaart Boiler ([189]).
+  een tegel zoals in de schets, en er is een kaart Boiler ([189]). Inrichten
+  heeft acht hoofdstukken en het huis groeit mee op zijn eiland, met wat voor
+  huis, afwezig en vakantie, op zon en klaarzetten ([190]).
 - **Gebouwd met Tailwind,** met een bouwstap ([24]). De terugblik is een andere
   waarheid dan de live stand ([26]) en gaat verder waar hij was ([63]).
 - **Voor de bewoner:** nooit een entity-ID ([45]); alleen een oorzaak die
@@ -625,4 +627,5 @@ verwijzing bestaat.
 [187]: DECISIONS.md#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak
 [188]: DECISIONS.md#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt
 [189]: DECISIONS.md#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler
+[190]: DECISIONS.md#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland
 <!-- links:einde -->

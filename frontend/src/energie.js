@@ -173,6 +173,8 @@ function tekenPanelenHuis() {
     ...(huismodel.kompasVan(v, a.panelen) ? { kompas: { ...huismodel.kompasVan(v, a.panelen), groot: true } } : {}),
     etages: tek.etages,
     ...(tek.kelder ? { kelder: tek.kelder } : {}),
+    woning: tek.woning,
+    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
     voordeur: tek.voordeur,
     // Zonder auto op de oprit: daar staat het grote kompas.
     oprit: tek.oprit ? { ...tek.oprit, auto: null, ...(el2.carport && tek.oprit.carport ? { carport: { panelen: el2.carport } } : {}) } : null,

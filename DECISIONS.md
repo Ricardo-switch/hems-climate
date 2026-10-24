@@ -191,6 +191,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [187. Huis 3.0: het huis als eiland, kaarten smal of breed, en de panelen op elk dak](#187-huis-30-het-huis-als-eiland-kaarten-smal-of-breed-en-de-panelen-op-elk-dak)
 - [188. In de schaduw zegt de app wat er echt gebeurt, als het klopt](#188-in-de-schaduw-zegt-de-app-wat-er-echt-gebeurt-als-het-klopt)
 - [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
+- [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
 
 **Veiligheid**
 
@@ -8683,6 +8684,67 @@ eruit. De bewoner verwachtte de kaarten uit de schets (`Wand-Thuis-3.html`).
 *Wat afviel:* de tegel ook op de telefoon (daar staan de kaarten onder elkaar,
 op de hele breedte); een tegel voor Favorieten en Hoe voelt het (dan moet je
 eerst tikken om iets te doen).
+
+## 190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026, voor de makeover naar het grote publiek. Inrichten had zes
+hoofdstukken (besluit 144) en tekende het oude perceel; wat het huis nu kan
+(huis 3.0, besluit 187; de boiler en de jacuzzi, besluit 186) kwam er niet in
+voorbij. De schets is `Wand-Inrichten-3.html` met `Tel-Inrichten-3.html`;
+gekozen door de bewoner: het huis groeit mee, deze volgorde, op de telefoon
+dezelfde stappen, en erbij afwezig en vakantie, een huis zonder slimme
+regeling en klaarzetten in Home Assistant.
+
+*Besluit:*
+
+- **Acht hoofdstukken,** bovenin als een pad met een streepje per stap: Je huis
+  (wat voor huis, kamers, per kamer), Buiten, Wie woont hier, Klimaat (wat elk
+  apparaat doet, meten met, comfort, afwezig en vakantie), Energie (zekering,
+  panelen, hoe ze liggen, op zon, prijzen), Gemak, Je schermen, en Klaar
+  (klaarzetten en de film).
+- **Links het eiland van Thuis** (`wereld`, zonder eigen lucht, met de kelder
+  in de grond en meubels in de kamers). Het groeit mee: eerst de vorm, bij de
+  kamers de namen, dan de apparaten, buiten, de temperatuur, de panelen; bij
+  Klaarzetten en Klaar is het avond.
+- **Wat voor huis** is nieuw: vrijstaand, rijtjeshuis, hoekhuis,
+  twee-onder-een-kap of appartement (`woning` in de indeling; weg is
+  vrijstaand), elk met een klein huis erin; een kelder (een kamer op de etage
+  Kelder) en schuin of plat dak (`dak`). Een appartement tekent het gebouw van
+  drie lagen.
+- **Buiten** krijgt de jacuzzi en de keus tussen het tuinhuis en het schuurtje
+  (`rond.jacuzzi`, `rond.schuur`; een oudere indeling heeft ze niet).
+- **Afwezig en vakantie:** voor het hele huis hoe warm het blijft als niemand
+  thuis is, en met de vakantiestand; koelen erbij als het huis kan koelen. Per
+  kamer anders blijft bij Comfort.
+- **Op zon:** elk apparaat dat kan wachten, ook de boiler en de jacuzzi, met
+  een schakelaar (dezelfde antwoorden als bij Regeling, besluit 167).
+- **Zonder slimme verwarming** laat Klimaat zien wat de app wel doet (licht,
+  schermen, op zon, camera's, de assistent); vanzelf als er niets is om te
+  verwarmen of koelen, en anders met "Geen slimme regeling".
+- **Klaarzetten** toont wat de app in Home Assistant gebruikt, zoals bij Wat je
+  huis kan (besluit 179); in Home Assistant opent een tik dat scherm.
+- **De wand** in het klein, met de kaarten om aan of uit te zetten, 's nachts
+  uit en de taal; dezelfde indeling als op de telefoon.
+- **Klaar** zegt wat nog te doen is (niet nagelopen, of wat in Home Assistant
+  mist), met Wat je huis kan en de film.
+- **Onderaan Terug, Later en Volgende.** Later gaat door zonder te bewaren; de
+  stap staat dan bij Nog te doen.
+- **De regels uit de schets:** een icoon, een naam met een zin en rechts een
+  waarde of schakelaar. Op de telefoon bovenin het hoofdstuk en een streepje per
+  stap, het huis klein zonder namen, en de knoppen vast onderaan.
+- **De panelen op een ander dak** gaan mee als Inrichten of Regeling de
+  aansluiting bewaart; eerst vielen ze dan weg.
+- **Het tuinhuis** heeft twee spots onder het overstek die omlaag schijnen,
+  elk in de kleur van zijn lamp.
+- **Versie 0.63.0.**
+
+*Wat afviel:* comfort per bewoner per dagdeel in Inrichten (dat staat bij
+Comfort per bewoner, besluit 147); "licht als je weg bent" en "op tijd terug"
+bij afwezig (de app kan dat nog niet); buren naast een rijtjeshuis (besluit
+187: geen buren tekenen); de klimaatstap per merk (schets
+Wand-Inrichten-Klimaat, nog niet gebouwd).
 
 ---
 

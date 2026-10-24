@@ -96,6 +96,8 @@ function huisModel() {
     zon: zon?.dag ? { stand: zon.dag.fractie, hoogte: zon.dag.hoogteDeel, aandeel: Math.min(1, (zonKw * 1000) / Math.max(helder, 1500)), ...opDak } : { aandeel: 0, ...opDak },
     etages,
     ...(kelder ? { kelder } : {}),
+    woning: tek.woning,
+    ...(tek.gebouw ? { gebouw: tek.gebouw } : {}),
     // Geen kompas op Thuis (24 oktober 2026): dat hoort bij Zonnepanelen.
     buitenunit: tek.buitenunit,
     voordeur: tek.voordeur,

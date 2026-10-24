@@ -2376,13 +2376,28 @@
       for (const x of [tx + 0.02, tx + b - 0.06]) buiten.push(doos(x, ty + d + over - 0.06, 0.04, 0.04, 0.04, h - 0.04, ['#2a323c', '#20272f', '#1a2027']));
       // Het platte dak, met het overstek naar voren; panelen of sneeuw erop.
       buiten.push(doos(tx - 0.05, ty - 0.05, h, b + 0.1, d + over + 0.05, dik, [sneeuw ? '#eef3f8' : licht ? '#5b6672' : '#4a5562', '#1f262e', '#262e37']));
-      // De lamp onder het overstek, en zijn schijnsel op de vlonder.
-      const lamp = P(tx + b / 2, ty + d + over - 0.08, h - 0.01);
-      buiten.push(`<circle cx="${lamp[0]}" cy="${lamp[1]}" r="${(k * 0.03).toFixed(1)}" fill="${lampAan ? '#FFD39A' : '#55626f'}"/>`);
-      if (lampAan) {
-        const voet = P(tx + b / 2, ty + d + over / 2, 0.05);
-        buiten.push(`<ellipse cx="${voet[0]}" cy="${voet[1]}" rx="${(k * 0.55).toFixed(1)}" ry="${(k * 0.22).toFixed(1)}" fill="#FFD39A" opacity="0.32" filter="url(#${id}-zacht)"/>`);
-      }
+      /*
+       * Twee spots onder het overstek (24 oktober 2026): elk schijnt omlaag in een
+       * bundel, in de kleur van zijn lamp, met een plas licht op de vlonder. Met
+       * één lamp in Home Assistant schijnen ze samen; zonder lamp onder het
+       * overstek gaan ze mee met het licht binnen.
+       */
+      const spots = t.overstekLampen?.length ? t.overstekLampen : [{ aan: lampAan, kleur: t.overstekKleur ?? '#FFD39A' }];
+      [0.27, 0.73].forEach((f, i) => {
+        const s = spots[i] ?? spots[0];
+        const kleur = s.kleur ?? '#FFD39A';
+        const x = tx + b * f;
+        const lamp = P(x, ty + d + over - 0.1, h - 0.005);
+        const voet = P(x, ty + d + over * 0.55, 0.045);
+        if (s.aan) {
+          const rx = k * 0.26;
+          const ry = k * 0.1;
+          buiten.push(`<defs><linearGradient id="${id}-spot${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: ${kleur}" stop-opacity="0.75"/><stop offset="1" style="stop-color: ${kleur}" stop-opacity="0.08"/></linearGradient></defs>`);
+          buiten.push(`<polygon points="${[[lamp[0] - k * 0.025, lamp[1]], [lamp[0] + k * 0.025, lamp[1]], [voet[0] + rx, voet[1]], [voet[0] - rx, voet[1]]].map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}" fill="url(#${id}-spot${i})" opacity="0.55" filter="url(#${id}-zacht)"/>`);
+          buiten.push(`<ellipse cx="${voet[0].toFixed(1)}" cy="${voet[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" style="fill: ${kleur}" opacity="0.5" filter="url(#${id}-zacht)"/>`);
+        }
+        buiten.push(`<rect x="${(lamp[0] - k * 0.03).toFixed(1)}" y="${(lamp[1] - k * 0.012).toFixed(1)}" width="${(k * 0.06).toFixed(1)}" height="${(k * 0.024).toFixed(1)}" rx="${(k * 0.01).toFixed(1)}" style="fill: ${s.aan ? kleur : '#55626f'}"/>`);
+      });
       if (t.tuinhuisPanelen && !sneeuw) {
         plaatPanelen(tx + 0.04, ty, b - 0.08, d + 0.1, h + dik, Math.min(6, t.tuinhuisPanelen));
         plek.panelenSchuur = [tx + b / 2, ty + d / 2, h + dik + 0.1];

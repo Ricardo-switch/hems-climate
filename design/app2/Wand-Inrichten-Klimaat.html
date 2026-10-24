@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten, wat elk apparaat kan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Wat elk apparaat kan (schets, 23 oktober 2026). Hoofdstuk Klimaat van
+   * Inrichten, de stap "Wat elk apparaat doet". Smart Climate kijkt per
+   * apparaat wat Home Assistant ervan geeft (de standen, het bereik, of hij
+   * zegt wat hij doet, of hij de kamer meet, een eigen stroommeter, een
+   * filter) en wat het van de koppeling weet (LG ThinQ, Google Nest, ZHA,
+   * Zigbee2MQTT, Tuya, infrarood). Groen werkt; een halve stip werkt met een
+   * omweg, en de zin zegt welke; een vraagteken vraagt iets dat Home
+   * Assistant niet weet; een streep kan dat apparaat niet. Per apparaat de rol.
+   * Links de lijst, rechts het apparaat dat open staat.
+   * De gegevens zijn van dit huis, gelezen uit Home Assistant op 23 oktober
+   * 2026: de LG's staan er twee keer in (lg_thinq 7°-35°, smartthinq 16°-30°)
+   * en zeggen niet wat ze doen; de Tuya in de badkamer geeft "heat_cool" en
+   * 0°-80° op en zegt niet of hij stookt; de TRVZB in de keuken wel.
+   * Standen: zonder hash de airco in de woonkamer, #badkamer (de thermostaat
+   * met een vraag), #keuken (de radiatorknop die meekijkt), #ir (een
+   * voorbeeld uit een ander huis: een airco via infrarood, die niets
+   * terugzegt).
+   * Gekozen (Ricardo, 23 oktober 2026): lijst links en details rechts (op de
+   * telefoon één lijst die openklapt); met een open vraag mag je door, en die
+   * komt bij Nog te doen; wat Home Assistant zegt plus een vaste tip per
+   * koppeling, in beide talen; een bereik dat niet kan kloppen (onder 5° of
+   * boven 35°) wordt een voorstel dat de bewoner aanpast. Nog niet gebouwd.
+   */
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .boven { position: absolute; left: 32px; right: 32px; top: 24px; display: flex; align-items: center; gap: 18px; }
+  .boven .logo { width: 36px; height: 36px; border-radius: 11px; background: conic-gradient(from 200deg, #6fd3ff, #8f86ff, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff); }
+  .boven b { font-family: var(--kop); font-size: 18px; }
+  .stappen { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .stap { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--gedempt); }
+  .stap i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 700; background: rgba(255, 255, 255, 0.08); }
+  .stap.klaar { color: var(--zacht); }
+  .stap.klaar i { background: rgba(110, 231, 183, 0.2); color: var(--mint); }
+  .stap.nu { background: rgba(255, 255, 255, 0.1); color: var(--tekst); }
+  .stap.nu i { background: var(--tekst); color: var(--inkt); }
+  .podium { position: absolute; left: 0; top: 110px; width: 500px; height: 640px; }
+  .kaart { position: absolute; right: 32px; top: 92px; bottom: 32px; width: 724px; padding: 24px 26px; display: flex; flex-direction: column; gap: 12px; }
+  .kaart .klein { font-size: 13px; font-weight: 700; color: var(--gedempt); }
+  .kaart h1 { margin: 0; }
+  .kaart .lead { margin: 0; font-size: 15px; max-width: none; }
+  .midden { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; }
+
+  /* Links: de apparaten, met per apparaat in één woord hoe het ervoor staat. */
+  .lijst { display: flex; flex-direction: column; gap: 4px; }
+  .app { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 14px; }
+  .app.open { background: rgba(255, 255, 255, 0.09); }
+  .app .ik { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; }
+  .app .ik.koel { background: rgba(111, 211, 255, 0.14); color: var(--ijs); }
+  .app .ik.warm { background: rgba(255, 122, 77, 0.14); color: var(--gloed); }
+  .app b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app small { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gedempt); margin-top: 1px; }
+  .app small .st { font-weight: 700; }
+  .st.ok { color: var(--mint); }
+  .st.om { color: var(--zon); }
+  .st.mee { color: var(--zacht); }
+  .st.beperkt { color: var(--gloed-zacht); }
+  .lijst .mist { margin-top: 6px; padding: 9px 12px; border-radius: 14px; border: 1px dashed rgba(111, 211, 255, 0.45); color: var(--ijs); font-size: 13px; font-weight: 600; }
+  .lijst .samen { margin-top: auto; font-size: 12.5px; color: var(--gedempt); line-height: 1.5; padding: 0 4px; }
+
+  /* Rechts: het apparaat dat open staat. */
+  .los { display: none; flex-direction: column; gap: 8px; padding: 14px 18px; border-radius: 18px; background: rgba(255, 255, 255, 0.04); min-height: 0; }
+  .los .kop { display: flex; align-items: baseline; gap: 10px; }
+  .los .kop b { font-family: var(--kop); font-size: 21px; white-space: nowrap; }
+  .los .kop span { font-size: 13px; color: var(--gedempt); }
+  .punten { display: flex; flex-direction: column; }
+  .punt { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .punt:first-child { border-top: 0; }
+  .punt i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; margin-top: 1px; }
+  .punt.ok i { background: rgba(110, 231, 183, 0.18); color: var(--mint); }
+  .punt.om i { background: conic-gradient(var(--zon) 0 50%, rgba(247, 181, 72, 0.18) 0); }
+  .punt.vraag i { background: rgba(111, 211, 255, 0.18); color: var(--ijs); }
+  .punt.nee i { background: rgba(255, 255, 255, 0.07); color: var(--gedempt); }
+  .punt.nee > span > b { color: var(--zacht); }
+  .punt small { display: block; color: var(--gedempt); font-size: 12.5px; line-height: 1.4; margin-top: 1px; }
+  .punt .chips { margin-top: 5px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 30px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+  .chip.aan { background: var(--tekst); color: var(--inkt); }
+  .chip.veld { background: transparent; border: 1px solid rgba(255, 255, 255, 0.22); }
+  .weet { padding: 9px 12px; border-radius: 12px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.22); font-size: 12.5px; color: var(--zacht); line-height: 1.45; }
+  .weet b { color: var(--violet-t); }
+  .rol { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+  .rol > b { font-size: 13px; color: var(--zacht); margin-right: 4px; }
+  .seg { display: inline-flex; padding: 3px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .seg span { height: 30px; padding: 0 12px; border-radius: 9px; display: inline-flex; align-items: center; font-size: 12.5px; font-weight: 600; color: var(--zacht); }
+  .seg span.aan { background: var(--tekst); color: var(--inkt); }
+
+  .onder { display: flex; align-items: center; gap: 10px; }
+  .onder .later { color: var(--zacht); font-weight: 600; font-size: 14px; margin-right: auto; }
+  .onder .knop-groot { height: 48px; padding: 0 22px; border-radius: 15px; display: inline-flex; align-items: center; font-weight: 700; font-size: 15px; background: var(--tekst); color: var(--inkt); }
+  body[data-toon='airco'] [data-los='airco'], body[data-toon='badkamer'] [data-los='badkamer'], body[data-toon='keuken'] [data-los='keuken'], body[data-toon='ir'] [data-los='ir'] { display: flex; }
+  [data-alleen='ir'] { display: none; }
+  body[data-toon='ir'] [data-alleen='ir'] { display: grid; }
+</style>
+</head>
+<body>
+<div class="scherm lucht lucht-dag">
+  <div class="boven">
+    <span class="logo"></span><b>Smart Climate</b>
+    <div class="stappen" id="stappen"></div>
+  </div>
+  <div class="podium" id="podium"></div>
+
+  <section class="glas kaart">
+    <span class="klein">3. Klimaat · Wat elk apparaat doet</span>
+    <h1 class="kop-2">Wat elk apparaat kan</h1>
+    <p class="lead">Wat Home Assistant van elk apparaat weet, en wat het in jouw huis gaat doen.</p>
+
+    <div class="midden">
+      <div class="lijst" id="lijst"></div>
+
+      <!-- De airco in de woonkamer: werkt, met een omweg. -->
+      <div class="los" data-los="airco">
+        <div class="kop"><b>Airco woonkamer</b><span>LG ThinQ</span></div>
+        <div class="punten">
+          <div class="punt ok"><i>✓</i><span><b>Koelen en verwarmen</b><small>Van 16° tot 30°, en ook drogen.</small></span></div>
+          <div class="punt ok"><i>✓</i><span><b>Eigen stroommeter</b><small>Nu 5 W: hij staat uit. Zo klopt wat hij kost.</small></span></div>
+          <div class="punt om"><i></i><span><b>Zegt niet wat hij doet</b><small>Smart Climate ziet aan de stroommeter of hij draait.</small></span></div>
+          <div class="punt ok"><i>✓</i><span><b>Filter</b><small>Nog 650 uur draaien tot de volgende schoonmaak.</small></span></div>
+          <div class="punt ok"><i>✓</i><span><b>Meet de kamer</b><small>Hij meet zelf 19°; de woonkamer meet met de Nest.</small></span></div>
+        </div>
+        <div class="weet"><b>Goed om te weten:</b> hij staat twee keer in Home Assistant. Smart Climate stuurt via LG ThinQ en leest de stroom uit SmartThinQ. Een opdracht gaat via de cloud van LG en duurt soms een paar seconden.</div>
+        <div class="rol"><b>Wat hij doet</b><span class="seg"><span>Op temperatuur</span><span class="aan">Op zon</span><span>Kijkt mee</span></span></div>
+      </div>
+
+      <!-- De thermostaat in de badkamer: werkt, met een vraag. -->
+      <div class="los" data-los="badkamer">
+        <div class="kop"><b>Thermostaat badkamer</b><span>Tuya</span></div>
+        <div class="punten">
+          <div class="punt ok"><i>✓</i><span><b>Meet de kamer</b><small>Nu 17,5°.</small></span></div>
+          <div class="punt om"><i></i><span><b>Zegt dat hij ook koelt</b><small>Aan heet bij hem "verwarmen en koelen". Smart Climate gebruikt hem alleen om te verwarmen.</small></span></div>
+          <div class="punt om"><i></i><span><b>Geeft 0° tot 80° op</b><small>Dat kan niet kloppen. Smart Climate houdt 16° tot 22° aan.</small>
+            <div class="chips"><span class="chip veld">16° ▾</span><span class="chip veld">22° ▾</span></div></span></div>
+          <div class="punt om"><i></i><span><b>Zegt niet of hij stookt</b><small>Smart Climate leidt het af uit de temperatuur. Dat werkt, alleen een paar minuten later.</small></span></div>
+          <div class="punt vraag"><i>?</i><span><b>Wat verwarmt hij?</b><small>Dat zegt hij niet. Bij elektrisch rekent Smart Climate de stroom mee.</small>
+            <div class="chips"><span class="chip">De cv-ketel</span><span class="chip">Elektrisch</span><span class="chip">Weet ik niet</span></div></span></div>
+        </div>
+        <div class="rol"><b>Wat hij doet</b><span class="seg"><span class="aan">Op temperatuur</span><span>Op zon</span><span>Kijkt mee</span></span></div>
+      </div>
+
+      <!-- De radiatorknop in de keuken: kijkt mee. -->
+      <div class="los" data-los="keuken">
+        <div class="kop"><b>Sonoff thermostaat</b><span>radiatorknop TRVZB, via Zigbee2MQTT</span></div>
+        <div class="punten">
+          <div class="punt ok"><i>✓</i><span><b>Verwarmen</b><small>Van 4° tot 35°, met warm water van de cv.</small></span></div>
+          <div class="punt ok"><i>✓</i><span><b>Zegt wat hij doet</b><small>Nu wacht hij; de klep mag 100% open.</small></span></div>
+          <div class="punt ok"><i>✓</i><span><b>Batterij</b><small>100%. Bijna leeg zegt de bel op tijd.</small></span></div>
+          <div class="punt om"><i></i><span><b>Meet vlak bij de radiator</b><small>Nu 19,8°. Daar is het warmer dan midden in de keuken.</small></span></div>
+          <div class="punt nee"><i>–</i><span><b>Stroommeter</b><small>Niet nodig: de warmte komt van de cv-ketel, en die telt bij gas.</small></span></div>
+        </div>
+        <div class="weet"><b>Goed om te weten bij een radiatorknop:</b> hij stookt alleen als de cv-ketel brandt. Die schakelt de Nest in de woonkamer.</div>
+        <div class="rol"><b>Wat hij doet</b><span class="seg"><span>Op temperatuur</span><span>Op zon</span><span class="aan">Kijkt mee</span></span></div>
+      </div>
+
+      <!-- Een voorbeeld uit een ander huis: een airco via infrarood. -->
+      <div class="los" data-los="ir">
+        <div class="kop"><b>Airco hobbykamer</b><span>via infrarood (SmartIR)</span></div>
+        <div class="punten">
+          <div class="punt ok"><i>✓</i><span><b>Koelen en verwarmen</b><small>Van 16° tot 30°.</small></span></div>
+          <div class="punt nee"><i>–</i><span><b>Zegt niets terug</b><small>Of de airco een opdracht hoorde, weet Smart Climate niet. Het stuurt hooguit eens per kwartier en kijkt aan de kamer of het werkte.</small></span></div>
+          <div class="punt om"><i></i><span><b>Meet de kamer niet</b><small>Kies een thermometer in de hobbykamer.</small>
+            <div class="chips"><span class="chip veld">Thermometer hobbykamer ▾</span></div></span></div>
+          <div class="punt om"><i></i><span><b>Geen eigen stroommeter</b><small>Smart Climate rekent met 0,8 kW als hij draait.</small></span></div>
+        </div>
+        <div class="weet"><b>Goed om te weten bij infrarood:</b> pak je de afstandsbediening, dan weet Smart Climate dat niet. Op zon helpen werkt goed; op temperatuur houden kan, maar minder precies.</div>
+        <div class="rol"><b>Wat hij doet</b><span class="seg"><span>Op temperatuur</span><span class="aan">Op zon</span><span>Kijkt mee</span></span></div>
+      </div>
+    </div>
+
+    <div class="onder"><span class="later">Terug</span><span class="knop-groot">Volgende</span></div>
+  </section>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = { '#badkamer': 'badkamer', '#keuken': 'keuken', '#ir': 'ir' }[location.hash] ?? 'airco';
+  document.body.dataset.toon = toon;
+  const STAPPEN = ['Je huis', 'Apparaten', 'Klimaat', 'Energie', 'Gemak'];
+  const nu = 2;
+  document.getElementById('stappen').innerHTML = STAPPEN.map((s, i) => `<span class="stap ${i < nu ? 'klaar' : i === nu ? 'nu' : ''}"><i>${i < nu ? '✓' : i + 1}</i>${s}</span>`).join('');
+
+  const SNEEUW = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5"/></svg>';
+  const VLAM = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 14.5c2.8 0 4.5-1.9 4.5-4.4 0-2.8-2.2-4.3-3-7.6-1.7 1.3-2.4 3-2.3 4.5-.8-.4-1.4-1.2-1.6-2.1C4.2 6.2 3.5 7.7 3.5 10.1c0 2.5 1.7 4.4 4.5 4.4z"/></svg>';
+  // De apparaten van dit huis; het infrarood-voorbeeld komt alleen bij #ir.
+  const APPARATEN = [
+    { id: 'airco', naam: 'Airco woonkamer', waar: 'Woonkamer', ik: 'koel', st: ['ok', 'Werkt, 1 omweg'] },
+    { id: 'nest', naam: 'Nest thermostaat', waar: 'Woonkamer', ik: 'warm', st: ['ok', 'Werkt helemaal'] },
+    { id: 'keuken', naam: 'Sonoff thermostaat', waar: 'Keuken', ik: 'warm', st: ['mee', 'Kijkt mee'] },
+    { id: 'badkamer', naam: 'Thermostaat badkamer', waar: 'Badkamer', ik: 'warm', st: ['om', '1 vraag'] },
+    { id: 'zolder', naam: 'Airco zolder', waar: 'Zolder', ik: 'koel', st: ['ok', 'Werkt, 1 omweg'] },
+    ...(toon === 'ir' ? [{ id: 'ir', naam: 'Airco hobbykamer', waar: 'Hobbykamer', ik: 'koel', st: ['beperkt', 'Hoort niets terug'] }] : []),
+  ];
+  document.getElementById('lijst').innerHTML =
+    APPARATEN.map((a) => `<div class="app ${a.id === toon ? 'open' : ''}"><span class="ik ${a.ik}">${a.ik === 'koel' ? SNEEUW : VLAM}</span><span><b>${a.naam}</b><small>${a.waar} · <span class="st ${a.st[0]}">${a.st[1]}</span></small></span></div>`).join('') +
+    '<div class="mist">+ Mist er een?</div>' +
+    `<div class="samen">${toon === 'ir' ? '6 apparaten. 3 werken al, 1 kijkt mee, 1 heeft nog een vraag, 1 hoort niets terug.' : '5 apparaten. 3 werken al, 1 kijkt mee, 1 heeft nog een vraag.'}</div>`;
+
+  huis.teken(document.getElementById('podium'), {
+    beschrijving: 'Je huis, met wat er verwarmt en koelt.',
+    tijd: 'dag',
+    zon: { stand: 0.6, hoogte: 0.8, aandeel: 0, panelen: 0 },
+    wolken: 0.2,
+    etages: [
+      { naam: 'Begane grond', kamers: [
+        { naam: 'Woonkamer', gewicht: 1.5, stil: toon !== 'airco', apparaten: [{ soort: 'airco' }, { soort: 'radiator' }, { soort: 'bank' }] },
+        { naam: 'Keuken', stil: toon !== 'keuken', apparaten: [{ soort: 'radiator' }] },
+        { naam: 'Hal', gewicht: 0.6, stil: true, apparaten: [] },
+      ] },
+      { naam: '1e verdieping', kamers: [
+        { naam: 'Badkamer', stil: toon !== 'badkamer', apparaten: [{ soort: 'radiator' }] },
+        { naam: 'Hobbykamer', stil: toon !== 'ir', apparaten: toon === 'ir' ? [{ soort: 'airco' }] : [] },
+        { naam: 'Slaapkamer', stil: true, apparaten: [] },
+      ] },
+      { dak: true, kamers: [{ naam: 'Zolder', stil: true, apparaten: [{ soort: 'airco' }, { soort: 'droger' }] }] },
+    ],
+    buitenunit: { aan: false },
+    net: true,
+  }, { breedte: 500, hoogte: 640, marge: 0.08, schuifX: 10, schuifY: 0 });
+</script>
+</body>
+</html>

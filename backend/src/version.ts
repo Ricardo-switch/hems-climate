@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.62.2';
+export const VERSIE = '0.63.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,34 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.63.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Inrichten in acht hoofdstukken, met het huis op zijn eiland dat bij elke stap iets krijgt',
+      'Bij Inrichten: wat voor huis het is, afwezig en vakantie, wat er op zon mag, en wat er in Home Assistant klaar moet staan',
+    ],
+    beter: [
+      'Het tuinhuis heeft twee spots onder het overstek die omlaag schijnen, elk in de kleur van zijn lamp',
+      'Buiten bij Inrichten kent de jacuzzi en het schuurtje; de wand zie je in het klein, met de kaarten om te kiezen',
+    ],
+    opgelost: [
+      'Panelen op de garage, carport of het tuinhuis vielen weg als je Op zon bij Regeling of Inrichten veranderde',
+    ],
+    en: {
+      nieuw: [
+        'Set up in eight chapters, with the house on its island gaining something at every step',
+        'In Set up: what kind of house it is, away and holiday, what may run on sun, and what has to be ready in Home Assistant',
+      ],
+      beter: [
+        'The garden house has two spots under the overhang shining down, each in the colour of its lamp',
+        'Outside in Set up knows the hot tub and the shed; you see the wall screen in miniature, with the cards to choose',
+      ],
+      opgelost: [
+        'Panels on the garage, carport or garden house were dropped when you changed On sun in Control or Set up',
+      ],
+    },
+  },
   {
     versie: '0.62.2',
     datum: '2026-10-24',

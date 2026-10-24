@@ -222,8 +222,9 @@
       } else {
         if (tuin) continue;
         const huisje = b.tuinhuis || huisjes.length ? [...lampen.filter((a) => /tuinhuis|schuur|berging|huisje/i.test(`${a.id} ${a.naam} ${zoneNaam(a)}`)), ...huisjeLampen] : [];
-        const overstek = huisje.find((a) => /overstek|luifel/i.test(a.id + a.naam));
-        const binnenlamp = huisje.find((a) => a !== overstek);
+        const overstekken = huisje.filter((a) => /overstek|luifel/i.test(a.id + a.naam));
+        const overstek = overstekken.find((a) => a.aan) ?? overstekken[0];
+        const binnenlamp = huisje.find((a) => !overstekken.includes(a));
         const scherm = (r.apparaten ?? []).find((a) => a.soort === 'screen');
         tuin = {
           id: r.id,
@@ -237,6 +238,8 @@
           tuinhuisAan: !!binnenlamp?.aan,
           overstekAan: !!overstek?.aan,
           overstekKleur: overstek ? kleurVanLicht(overstek) : undefined,
+          // De twee spots onder het overstek (24 oktober 2026): elk in de kleur van zijn lamp; met één lamp schijnen ze samen.
+          overstekLampen: overstekken.slice(0, 2).map((a) => ({ aan: !!a.aan, kleur: kleurVanLicht(a) })),
           lampen: lampen.filter((a) => !huisje.includes(a)).slice(0, 3).map((a) => ({ aan: a.aan, kleur: kleurVanLicht(a) })),
           zonnescherm: scherm ? { dicht: scherm.positiePct == null ? 0 : 1 - scherm.positiePct / 100 } : null,
         };
@@ -248,7 +251,10 @@
       const leeg = (naam) => ({ id: null, naam, lampAan: false });
       oprit = rond.oprit ? (oprit ?? { id: null, naam: global.t('huis.buiten.oprit'), auto: null, camera: null }) : null;
       if (oprit) oprit = { ...oprit, auto: rond.auto ? (oprit.auto ?? {}) : null };
-      tuin = rond.tuin || rond.tuinhuis ? { ...(tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      tuin = rond.tuin || rond.tuinhuis || rond.jacuzzi ? { ...(tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), tuinhuis: rond.tuinhuis } : null;
+      // Een schuurtje met puntdak in plaats van het tuinhuis, en een jacuzzi zonder koppeling (besluit 190).
+      if (tuin && rond.schuur) tuin = { ...tuin, tuinhuisSoort: 'schuur' };
+      if (tuin && rond.jacuzzi && !tuin.jacuzzi) tuin = { ...tuin, jacuzzi: { stand: 'rust' } };
       // Een plek buiten zonder eigen naam heet zoals de plek (besluit 185: in de taal van de app).
       terras = rond.terras ? (terras ?? leeg(global.t('huis.buiten.terras'))) : null;
       balkon = rond.balkon ? (balkon ?? leeg(global.t('huis.buiten.balkon'))) : null;
@@ -267,7 +273,7 @@
     if (huis?.rond) return { ...huis.rond };
     const ruimtes = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).filter((r) => isBuiten(e, r)));
     const b = buiten(ruimtes);
-    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis, garage: !!b.garage, carport: false };
+    return { oprit: !!b.oprit, auto: !!b.oprit?.auto, voortuin: !!b.voortuin, tuin: !!b.tuin, terras: !!b.terras, balkon: !!b.balkon, tuinhuis: !!b.tuin?.tuinhuis, garage: !!b.garage, carport: false, schuur: b.tuin?.tuinhuisSoort === 'schuur', jacuzzi: false };
   }
 
   /**
@@ -315,9 +321,13 @@
       delen.tuin = { ...(delen.tuin ?? { id: null, naam: global.t('huis.buiten.tuin'), tuinhuis: false, tuinhuisAan: false, overstekAan: false, lampen: [], zonnescherm: null }), jacuzzi: { temp: w.tempC, stand: jacuzzi.aan ? 'warmt' : 'rust', zon: jacuzzi.aan && w.opZon } };
     }
     const piekW = (zon?.panelen ?? []).reduce((t, p) => t + (p.wattpiek ?? 0), 0);
+    // Wat voor huis het is (besluit 190); een appartement in een gebouw van drie lagen.
+    const woning = huis?.woning ?? 'vrijstaand';
     return {
       etages,
       kelder,
+      woning,
+      ...(woning === 'appartement' ? { gebouw: { onder: 2, boven: 1 } } : {}),
       buitenRuimtes,
       ...delen,
       voordeur: { deurbel: bel || belZiet ? { beweging: !!belZiet?.meting.beweging.nu } : null },

@@ -1,5 +1,39 @@
 # Wat is er nieuw · What is new
 
+## 0.63.0
+
+*24 oktober 2026*
+
+**Nieuw**
+
+- Inrichten in acht hoofdstukken, met het huis op zijn eiland dat bij elke stap iets krijgt
+- Bij Inrichten: wat voor huis het is, afwezig en vakantie, wat er op zon mag, en wat er in Home Assistant klaar moet staan
+
+**Beter**
+
+- Het tuinhuis heeft twee spots onder het overstek die omlaag schijnen, elk in de kleur van zijn lamp
+- Buiten bij Inrichten kent de jacuzzi en het schuurtje; de wand zie je in het klein, met de kaarten om te kiezen
+
+**Opgelost**
+
+- Panelen op de garage, carport of het tuinhuis vielen weg als je Op zon bij Regeling of Inrichten veranderde
+
+*English*
+
+**New**
+
+- Set up in eight chapters, with the house on its island gaining something at every step
+- In Set up: what kind of house it is, away and holiday, what may run on sun, and what has to be ready in Home Assistant
+
+**Improved**
+
+- The garden house has two spots under the overhang shining down, each in the colour of its lamp
+- Outside in Set up knows the hot tub and the shed; you see the wall screen in miniature, with the cards to choose
+
+**Fixed**
+
+- Panels on the garage, carport or garden house were dropped when you changed On sun in Control or Set up
+
 ## 0.62.2
 
 *24 oktober 2026*
