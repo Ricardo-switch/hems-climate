@@ -110,13 +110,16 @@ function kaart(d) {
   }
   void rest;
   const draaide = (spans?.draaide ?? []).reduce((som, x) => som + (x.totMs - x.vanMs), 0);
+  // Draait hij, dan zette de bewoner hem aan: Smart Climate start nog niets zelf (de schaduw,
+  // besluit 64). Dan niet "Start op zon", dat las alsof de zon hem startte (25 oktober 2026).
+  const label = d.stand === 'running' && !d.doorSmartClimate ? `<span class="label">${esc(t('apparaten.zelfGestart'))}</span>` : `<span class="label zon">${esc(t('apparaten.startOpZon'))}</span>`;
   const el = document.createElement('section');
   el.className = 'glas app';
   el.dataset.actief = String(d.stand === 'running' || d.stand === 'would_start' || d.stand === 'waiting');
   el.innerHTML = `
     <div class="boven">${boven}<div><b>${esc(d.naam)}</b><span class="klein ${toon}">${esc(d.kop)}</span></div></div>
     <p class="mini zin">${esc(zin)}</p>
-    <div class="labels"><span class="label zon">${esc(t('apparaten.startOpZon'))}</span></div>
+    <div class="labels">${label}</div>
     <div class="vandaag"><span>${esc(t('thuis.kaart.vandaag'))}</span><b>${esc(draaide > 0 ? t('apparaten.gedraaid', { duur: uren(draaide) }) : t('apparaten.nietGedraaid'))}</b></div>`;
 
   if (d.kanKiezen) {

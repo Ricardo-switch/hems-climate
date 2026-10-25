@@ -22,7 +22,7 @@
 
   /** Zolang de dienst niets zegt: zoals Thuis altijd was. */
   const STANDAARD = {
-    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } },
+    tel: { kaarten: ['kamers', 'favorieten', 'straks', 'apparaat', 'gevoel', 'vandaag'], favorieten: [], weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true } },
     wand: { kaarten: ['vandaag', 'gevoel', 'apparaat'], breed: ['favorieten', 'vandaag', 'gevoel'], favorieten: [], magAanpassen: false },
     maxFavorieten: 12,
   };
@@ -655,7 +655,7 @@
   function tekenWeergave(el) {
     const w = v.tel.weergave ?? STANDAARD.tel.weergave;
     const keuze = (eenvoudig, naam, zin, tel) => `<button type="button" role="radio" aria-checked="${w.eenvoudig === eenvoudig}" data-wg-eenvoudig="${eenvoudig}"><span class="mini-tel" aria-hidden="true">${tel}</span><b>${naam}</b><p>${zin}</p></button>`;
-    const schakel = (id, naam, zin) => `<button type="button" class="schakel" role="switch" aria-checked="${!!w[id]}" data-wg-schakel="${id}"><div><b>${naam}</b><span>${zin}</span></div><span class="knopje" aria-hidden="true"></span></button>`;
+    const schakel = (id, naam, zin) => `<button type="button" class="schakel" role="switch" aria-checked="${w[id] !== false && (w[id] === true || ['seizoen', 'weer', 'feestdagen'].includes(id))}" data-wg-schakel="${id}"><div><b>${naam}</b><span>${zin}</span></div><span class="knopje" aria-hidden="true"></span></button>`;
     const t = global.t;
     el.setAttribute('aria-label', t('thuis.weergave'));
     el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(t('thuis.weergave'))}</h2><button type="button" class="knop knop-licht" data-blad-dicht>${esc(t('algemeen.klaar'))}</button></div>
@@ -664,7 +664,9 @@
         ${keuze(true, esc(t('eigen.wg.eenvoudig')), esc(t('eigen.wg.eenvoudigZin')), '<i style="width: 70%; height: 10px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 92%; height: 8px"></i><i style="width: 60%; height: 8px"></i>')}
         ${keuze(false, esc(t('eigen.wg.uitgebreid')), esc(t('eigen.wg.uitgebreidZin')), '<i style="width: 60%; height: 7px; background: rgb(var(--wit) / 0.45)"></i><i style="width: 90%"></i><i style="width: 80%"></i><i style="width: 45%; background: rgba(247,181,72,0.55)"></i><i style="width: 70%"></i>')}
       </div>
-      <div style="margin-top: 10px">${schakel('groteLetters', esc(t('eigen.wg.letters')), esc(t('eigen.wg.lettersZin')))}${schakel('minderBeweging', esc(t('eigen.wg.beweging')), esc(t('eigen.wg.bewegingZin')))}</div>`;
+      <div style="margin-top: 10px">${schakel('groteLetters', esc(t('eigen.wg.letters')), esc(t('eigen.wg.lettersZin')))}${schakel('minderBeweging', esc(t('eigen.wg.beweging')), esc(t('eigen.wg.bewegingZin')))}</div>
+      <p class="mini" style="margin: 14px 0 2px">${esc(t('eigen.wg.huis'))}</p>
+      <div>${schakel('seizoen', esc(t('eigen.wg.seizoen')), esc(t('eigen.wg.seizoenZin')))}${schakel('weer', esc(t('eigen.wg.weer')), esc(t('eigen.wg.weerZin')))}${schakel('feestdagen', esc(t('eigen.wg.feest')), esc(t('eigen.wg.feestZin')))}</div>`;
   }
 
   /* --------------------------------------------------------------- tikken */

@@ -508,10 +508,48 @@
   let belVers = null;
   /** Het live beeld dat nog laadt; buiten de pagina, dus apart stoppen. */
   let belStroom = null;
+  /** Het live beeld opnieuw starten, bijvoorbeeld als het scherm net aanging. */
+  let belOpnieuw = null;
+  /*
+   * Meteen het vloeiende beeld (25 oktober 2026): het live beeld start tegelijk
+   * met het plaatje, niet erna, en met voorrang (`bel=1`): telefoons met een
+   * camera open tellen dan niet mee in de grens van vier. Valt het weg of komt
+   * het niet, dan opnieuw; tot dan na anderhalve tel elke seconde een vers
+   * plaatje. Gaat het scherm net aan (een tablet die sliep), dan begint het
+   * live beeld opnieuw: de oude stroom is dan dood.
+   */
   async function belBeeld(laag, ids, naam) {
     const vak = laag.querySelector('.aanbel-beeld');
+    let live = false;
+    let id = encodeURIComponent(ids[0]);
+    let pogingen = 0;
+    const startLive = () => {
+      if (!laag.isConnected) return;
+      belStroom?.removeAttribute('src');
+      const stroom = new Image();
+      belStroom = stroom;
+      live = false;
+      stroom.alt = global.t('basis.bel.liveVan', { naam });
+      stroom.onload = () => {
+        if (!laag.isConnected || belStroom !== stroom) return void stroom.removeAttribute('src');
+        live = true;
+        const nu = vak.querySelector('img');
+        if (nu && nu !== stroom) nu.replaceWith(stroom);
+        else if (!nu) vak.replaceChildren(stroom);
+      };
+      stroom.onerror = () => {
+        if (belStroom !== stroom || !laag.isConnected || pogingen >= 4) return;
+        pogingen += 1;
+        setTimeout(startLive, 1500);
+      };
+      stroom.src = `api/camera?id=${id}&live=1&bel=1&t=${Date.now()}`;
+    };
+    belOpnieuw = () => {
+      pogingen = 0;
+      startLive();
+    };
+    startLive();
     let res = null;
-    let id = null;
     for (const kandidaat of ids) {
       id = encodeURIComponent(kandidaat);
       res = await fetch(`api/camera?id=${id}`, { cache: 'no-store' }).catch(() => null);
@@ -519,33 +557,27 @@
       if (res?.ok || res?.status === 401) break;
     }
     if (!res?.ok) {
+      if (live) return;
       vak.innerHTML = res?.status === 401
         ? `<p>${esc(global.t('basis.bel.inloggen'))} <a href="auth/login?terug=${encodeURIComponent(location.pathname + location.hash)}">${esc(global.t('basis.bel.inlogKnop'))}</a></p>`
         : `<p>${esc(global.t('basis.bel.geenBeeld'))}</p>`;
       return;
     }
+    // Het eerste beeld gaf niets: het live beeld van het beeld dat wel werkt.
+    if (id !== encodeURIComponent(ids[0])) startLive();
     const url = URL.createObjectURL(await res.blob());
     if (!laag.isConnected) return URL.revokeObjectURL(url);
-    vak.innerHTML = `<img alt="${esc(global.t('basis.bel.beeldVan', { naam }))}" src="${url}">`;
-    const img = vak.querySelector('img');
-    let live = false;
-    const stroom = new Image();
-    belStroom = stroom;
-    stroom.alt = global.t('basis.bel.liveVan', { naam });
-    stroom.onload = () => {
-      if (!laag.isConnected) return void stroom.removeAttribute('src');
-      live = true;
-      clearInterval(belVers);
-      vak.querySelector('img')?.replaceWith(stroom);
-    };
-    stroom.src = `api/camera?id=${id}&live=1`;
-    // Komt het live beeld niet binnen vijf tellen: elke seconde een vers plaatje.
+    // Is het live beeld er al, dan het plaatje niet eroverheen.
+    if (!live) vak.innerHTML = `<img alt="${esc(global.t('basis.bel.beeldVan', { naam }))}" src="${url}">`;
+    else URL.revokeObjectURL(url);
     clearInterval(belVers);
     let bezig = false;
     setTimeout(() => {
       if (live || !laag.isConnected) return;
       belVers = setInterval(async () => {
         if (live || bezig || !laag.isConnected) return;
+        const img = vak.querySelector('img');
+        if (!img || img === belStroom) return;
         bezig = true;
         const r = await fetch(`api/camera?id=${id}`, { cache: 'no-store' }).catch(() => null);
         bezig = false;
@@ -554,8 +586,12 @@
         img.src = URL.createObjectURL(await r.blob());
         URL.revokeObjectURL(oud);
       }, 1000);
-    }, 5000);
+    }, 1500);
   }
+  // Het scherm gaat aan terwijl het beeld er staat: het live beeld opnieuw.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && document.querySelector('.aanbel')) belOpnieuw?.();
+  });
   function sluitBel() {
     clearTimeout(belTimer);
     clearInterval(belVers);
@@ -568,6 +604,7 @@
     clearInterval(belVers);
     belStroom?.removeAttribute('src');
     belStroom = null;
+    belOpnieuw = null;
     laag.querySelectorAll('img').forEach((img) => img.removeAttribute('src'));
   }
 
@@ -1012,7 +1049,7 @@
    * meteen goed staat; de dienst heeft het laatste woord.
    */
   const WEERGAVE = 'sc-weergave';
-  const GEEN_WEERGAVE = { eenvoudig: false, groteLetters: false, minderBeweging: false };
+  const GEEN_WEERGAVE = { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true };
   let weergaveNu = GEEN_WEERGAVE;
   function zetWeergave(w, onthoud = true) {
     weergaveNu = { ...GEEN_WEERGAVE, ...w };
@@ -1020,6 +1057,10 @@
     d.toggle('sc-eenvoudig', weergaveNu.eenvoudig);
     d.toggle('sc-groot', weergaveNu.groteLetters);
     d.toggle('sc-stil', weergaveNu.minderBeweging);
+    // Het seizoen, het weer en de feestdagen in het huis (25 oktober 2026): de tekening leest het.
+    d.toggle('sc-geen-seizoen', weergaveNu.seizoen === false);
+    d.toggle('sc-geen-weer', weergaveNu.weer === false);
+    d.toggle('sc-geen-feest', weergaveNu.feestdagen === false);
     if (onthoud) {
       try {
         localStorage.setItem(WEERGAVE, JSON.stringify(weergaveNu));

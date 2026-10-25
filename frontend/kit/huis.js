@@ -306,11 +306,51 @@
     basis.after(laag);
   }
 
+  /**
+   * Welke feestdag het is (25 oktober 2026): Halloween (24 oktober tot en met
+   * 1 november), Kerst (6 december tot en met 6 januari), Oud en Nieuw (31
+   * december vanaf 18:00 tot 1 januari 03:00) of Pasen (Goede Vrijdag tot en
+   * met tweede paasdag). Null op een gewone dag.
+   */
+  function feestdagVan(ms) {
+    const d = new Date(ms);
+    const m = d.getMonth() + 1;
+    const dag = d.getDate();
+    const u = d.getHours();
+    if ((m === 12 && dag === 31 && u >= 18) || (m === 1 && dag === 1 && u < 3)) return 'oudnieuw';
+    if ((m === 12 && dag >= 6) || (m === 1 && dag <= 6)) return 'kerst';
+    if ((m === 10 && dag >= 24) || (m === 11 && dag === 1)) return 'halloween';
+    const tot = Math.round((Date.UTC(d.getFullYear(), m - 1, dag) - paasdag(d.getFullYear())) / 86_400_000);
+    if (tot >= -2 && tot <= 1) return 'pasen';
+    return null;
+  }
+  /** Eerste paasdag (de berekening van Meeus voor de gregoriaanse kalender), als UTC-middernacht. */
+  function paasdag(y) {
+    const a = y % 19;
+    const b = Math.floor(y / 100);
+    const c = y % 100;
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - Math.floor(b / 4) - g + 15) % 30;
+    const l = (32 + 2 * e + 2 * Math.floor(c / 4) - h - (c % 4)) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const maand = Math.floor((h + l - 7 * m + 114) / 31);
+    const dag = ((h + l - 7 * m + 114) % 31) + 1;
+    return Date.UTC(y, maand - 1, dag);
+  }
+
   function svg(model, kies = {}) {
     // Huis 3.0 overal (besluit 191): het eiland is de standaard, met de lucht van
     // de pagina erachter. Een pagina die het oude perceel wil, zegt `wereld: false`;
     // een eigen lucht achter het eiland is `eigenLucht: true`.
     const opts = { wereld: true, eigenLucht: false, ...kies };
+    // Bij Weergave (25 oktober 2026): het seizoen en het weer kunnen uit; dan een gewone groene dag.
+    const klassen = typeof document !== 'undefined' ? document.documentElement.classList : null;
+    if (klassen?.contains('sc-geen-seizoen')) model = { ...model, seizoen: undefined };
+    if (klassen?.contains('sc-geen-weer')) model = { ...model, weer: undefined };
+    // De feestdag: wat het model zegt (een schets), anders vandaag, op het eiland, als het aan staat.
+    const feest = model.feest !== undefined ? model.feest : opts.wereld && !klassen?.contains('sc-geen-feest') ? feestdagVan(Date.now()) : null;
     const id = `h${++uid}`;
     R = (model.etages ?? []).some((e) => e.dak && (e.kamers ?? []).length > 0) ? 2.0 : 1.15;
     const breed = opts.breedte ?? 760;
@@ -398,6 +438,8 @@
     };
     // Waar apparaten staan, voor de labels.
     const plek = {};
+    /** Waar het tuinhuis echt getekend is, om erop te tikken (25 oktober 2026: het vak stond ernaast). */
+    let tuinhuisVak = null;
     /**
      * Onder het dak: waar de airco hangt (besluit 166), tegen de linkermuur of
      * op de achtermuur bij de nok; de droger staat er niet onder.
@@ -479,16 +521,24 @@
     /* ---- lucht: zon, maan, sterren, wolken (achter het huis) ---- */
     const mid = P(W / 2, D / 2, Ht + R * 0.6);
     const boog = k * Math.max(W, 4.2) * 0.95;
+    /*
+     * Waar de zon opkomt (25 oktober 2026): aan de kant van het oosten. Rechts
+     * in de tekening ligt de richting van het kompas min 90° (zie kompas);
+     * `zon.opRechts` zegt het, anders het kompas van het model, anders links.
+     * Eerst kwam hij altijd links op, ook als daar het westen lag.
+     */
+    const opRechts = model.zon?.opRechts ?? (model.kompas?.voorgevelDeg != null ? Math.cos(((180 - model.kompas.voorgevelDeg) * Math.PI) / 180) > 0 : false);
+    const opkomst = opRechts ? 1 : -1;
     if (model.zon?.stand != null && !nacht) {
-      // De zon staat óp de boog: een halve ellips van opkomst (links) tot
-      // ondergang (rechts), en `stand` is de hoek erlangs. Zo valt hij nooit
-      // naast de stippellijn, ook niet halverwege de ochtend.
+      // De zon staat óp de boog: een halve ellips van opkomst tot ondergang,
+      // en `stand` is de hoek erlangs. Zo valt hij nooit naast de stippellijn,
+      // ook niet halverwege de ochtend.
       const f = Math.max(0, Math.min(1, model.zon.stand));
       const voet = mid[1] + boog * 0.12;
       // Nooit boven de tekening uit: daar staat op een pagina de tekst (15 oktober).
       // Dan wordt de hele boog lager, niet alleen de zon: zo blijft hij op de lijn (16 oktober).
       const ry = Math.min(boog * 0.74, voet - k * 0.3);
-      const sx = mid[0] - boog * Math.cos(Math.PI * f);
+      const sx = mid[0] + opkomst * boog * Math.cos(Math.PI * f);
       const sy = voet - ry * Math.sin(Math.PI * f);
       lucht.push(`<path d="M ${mid[0] - boog} ${voet} A ${boog} ${ry} 0 0 1 ${mid[0] + boog} ${voet}" fill="none" stroke="${KLEUR.zon}" stroke-opacity="0.16" stroke-width="1.5" stroke-dasharray="2 7"/>`);
       const r = k * 0.22;
@@ -2259,7 +2309,8 @@
       if (!nacht && model.zon?.stand != null) {
         const f = Math.max(0, Math.min(1, model.zon.stand));
         const hoog = Math.max(0.3, Math.sin(Math.PI * f));
-        const dx = -Math.cos(Math.PI * f) * 0.75 * (1.25 - hoog);
+        // Van de zon af: komt hij rechts op, dan valt de schaduw 's ochtends naar links.
+        const dx = -opkomst * Math.cos(Math.PI * f) * 0.75 * (1.25 - hoog);
         const dy = 0.28 * (1.3 - hoog);
         const val = (x, y, z) => [x + dx * z, y + dy * z, 0.006];
         const hoeken = [[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0], [0, 0, Ht], [W, 0, Ht], [W, D, Ht], [0, D, Ht], [W / 2, 0, Ht + R], [W / 2, D, Ht + R]].map(([x, y, z]) => val(x, y, z));
@@ -2535,6 +2586,7 @@
         plek.panelenSchuur = [tx + b / 2, ty + d / 2, h + dik + 0.1];
       }
       plek.tuinhuis = [tx + b / 2, ty + d / 2, h + dik];
+      tuinhuisVak = { x0: tx - 0.1, y0: ty - 0.1, x1: tx + b + 0.1, y1: ty + d + over, h: h + dik + 0.1 };
     }
     /** Het schuurtje: het houten huisje met puntdak (het tuinhuis van huis 3.0 tot 24 oktober 2026). */
     function tuinhuis3(tx, ty, t) {
@@ -2588,6 +2640,7 @@
         plek.panelenSchuur = q(0.5, 0.5);
       }
       plek.tuinhuis = [tx + b / 2, ty + d / 2, nok];
+      tuinhuisVak = { x0: tx - 0.1, y0: ty - 0.1, x1: tx + b + 0.1, y1: ty + d + 0.1, h: nok + 0.05 };
     }
     function schaduw(hex, f) {
       const n = parseInt(hex.slice(1), 16);
@@ -2597,14 +2650,18 @@
 
     // Buiten om op te tikken: de oprit en de tuin, als ze een kamer in de indeling zijn.
     // Gekozen (in Kamer): een omlijning; zonder dak staat de naam erbij op de grond.
-    const vlakOprit = [[-2.9, -0.4, 0.01], [-1.15, -0.4, 0.01], [-1.15, D + 1.7, 0.01], [-2.9, D + 1.7, 0.01]];
-    const vlakTuin = [[W + 0.3, -1.95, 0.01], [W + 2.05, -1.95, 0.01], [W + 2.05, 0.25, 0.01], [W + 0.3, 0.25, 0.01]];
+    // Op het eiland zo groot als wat er getekend is (25 oktober 2026): de tuin loopt tot de rand.
+    const vlakOprit = eiland ? [[-2.9, -0.4, 0.01], [-1.15, -0.4, 0.01], [-1.15, eiland.yF, 0.01], [-2.9, eiland.yF, 0.01]] : [[-2.9, -0.4, 0.01], [-1.15, -0.4, 0.01], [-1.15, D + 1.7, 0.01], [-2.9, D + 1.7, 0.01]];
+    const vlakTuin = eiland
+      ? [[W + 0.3, eiland.y0 + 0.3, 0.01], [eiland.x1 - 0.12, eiland.y0 + 0.3, 0.01], [eiland.x1 - 0.12, eiland.yF - 0.12, 0.01], [W + 0.3, eiland.yF - 0.12, 0.01]]
+      : [[W + 0.3, -1.95, 0.01], [W + 2.05, -1.95, 0.01], [W + 2.05, 0.25, 0.01], [W + 0.3, 0.25, 0.01]];
     const vlakTerras = [[W + 0.3, 0.45, 0.01], [W + 2.05, 0.45, 0.01], [W + 2.05, D + 0.4, 0.01], [W + 0.3, D + 0.4, 0.01]];
     const vlakVoortuin = [[1.3, D + 0.3, 0.01], [W + 0.1, D + 0.3, 0.01], [W + 0.1, D + 1.7, 0.01], [1.3, D + 1.7, 0.01]];
     const vlakBalkon = [[W, 0.35, FH], [W + 0.55, 0.35, FH], [W + 0.55, 1.15, FH], [W, 1.15, FH]];
     // Het tuinhuis zelf, als het een eigen ruimte in Home Assistant is (besluit 166): de omtrek van het huisje.
     const th = [W + 0.85, -1.75];
-    const vlakTuinhuis = [[th[0], th[1] + 0.95, 0], [th[0] + 1.05, th[1] + 0.95, 0], [th[0] + 1.05, th[1], 0], [th[0] + 1.05, th[1], 0.88], [th[0], th[1], 0.88], [th[0], th[1] + 0.95, 0.88]];
+    const tv = tuinhuisVak ?? { x0: th[0], y0: th[1], x1: th[0] + 1.05, y1: th[1] + 0.95, h: 0.88 };
+    const vlakTuinhuis = [[tv.x0, tv.y1, 0], [tv.x1, tv.y1, 0], [tv.x1, tv.y0, 0], [tv.x1, tv.y0, tv.h], [tv.x0, tv.y0, tv.h], [tv.x0, tv.y1, tv.h]];
     const tuinhuis = model.tuin && model.tuin.tuinhuis !== false && model.tuin.tuinhuisId ? { id: model.tuin.tuinhuisId, naam: model.tuin.tuinhuisNaam ?? 'Tuinhuis', gekozen: model.tuin.tuinhuisGekozen } : null;
     const vlakGarage = [[-2.9, -0.5, 0], [-1.1, -0.5, 0], [-1.1, -2.0, 0], [-1.1, -2.0, 1.1], [-2.9, -2.0, 1.1], [-2.9, -0.5, 1.1]];
     const metBalkon = model.balkon && g.etages.filter((e) => !e.dak).length >= 2 ? model.balkon : null;
@@ -2615,7 +2672,7 @@
       [model.voortuin, vlakVoortuin, [(1.3 + W) / 2, D + 1.0, 0]],
       [metBalkon, vlakBalkon, [W + 0.28, 0.75, FH]],
       // Na de tuin: het huisje ligt erbovenop.
-      [tuinhuis, vlakTuinhuis, [th[0] + 0.5, th[1] + 1.2, 0]],
+      [tuinhuis, vlakTuinhuis, [(tv.x0 + tv.x1) / 2, tv.y1 + 0.25, 0]],
       // Na de oprit: de garage staat erachter, maar ligt in beeld deels over de oprit.
       [model.garage, vlakGarage, [-2.0, -0.2, 0]],
     ]) {
@@ -2626,6 +2683,73 @@
         labels.push(`<text x="${t[0]}" y="${t[1] + 30}" text-anchor="middle" font-family="Figtree, sans-serif" font-size="13" font-weight="700" fill="${deel.gekozen ? KLEUR.ijs : KLEUR.zacht}">${esc(deel.naam)}</text>`);
       }
       if (deel.id) tik(deel, vlak);
+    }
+
+    /*
+     * De feestdagen (25 oktober 2026), alleen bij het hele huis: een pompoen bij
+     * de deur met Halloween, lichtjes langs de gevel met Kerst, vuurwerk in de
+     * lucht met Oud en Nieuw, eieren in het gras met Pasen. Stil, zonder
+     * beweging: dat kost een oude tablet niets.
+     */
+    if (feest && dak) {
+      const avond = nacht || schemer;
+      if (feest === 'halloween') {
+        // Op het pad, net naast de deur.
+        const px = voordeur ? Math.min(W - 0.2, voordeur.x1 + 0.22) : 0.45;
+        const py = D + 0.45;
+        const c = P(px, py, 0.11);
+        const rx = k * 0.19;
+        const ry = k * 0.135;
+        if (avond) buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${(c[1] + ry * 0.6).toFixed(1)}" rx="${(rx * 2.2).toFixed(1)}" ry="${(ry * 1.4).toFixed(1)}" fill="#FF9A3C" opacity="0.28" filter="url(#${id}-zacht)"/>`);
+        buiten.push(`<ellipse cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="#E8792B"/>`);
+        for (const f of [-0.45, 0, 0.45]) buiten.push(`<ellipse cx="${(c[0] + rx * f).toFixed(1)}" cy="${c[1].toFixed(1)}" rx="${(rx * 0.32).toFixed(1)}" ry="${(ry * 0.96).toFixed(1)}" fill="none" stroke="#C25E1A" stroke-width="1"/>`);
+        buiten.push(`<path d="M ${c[0].toFixed(1)} ${(c[1] - ry).toFixed(1)} q ${(rx * 0.15).toFixed(1)} ${(-ry * 0.5).toFixed(1)} ${(rx * 0.35).toFixed(1)} ${(-ry * 0.55).toFixed(1)}" stroke="#4E6B2F" stroke-width="${(k * 0.025).toFixed(1)}" fill="none" stroke-linecap="round"/>`);
+        // Het gezicht: 's avonds brandt er een kaarsje in.
+        const oog = avond ? '#FFD36B' : '#5A2A0E';
+        const ox = rx * 0.38;
+        const oy = ry * 0.22;
+        const s = rx * 0.17;
+        buiten.push(`<path d="M ${(c[0] - ox - s).toFixed(1)} ${(c[1] - oy + s).toFixed(1)} l ${s.toFixed(1)} ${(-2 * s).toFixed(1)} l ${s.toFixed(1)} ${(2 * s).toFixed(1)} z M ${(c[0] + ox - s).toFixed(1)} ${(c[1] - oy + s).toFixed(1)} l ${s.toFixed(1)} ${(-2 * s).toFixed(1)} l ${s.toFixed(1)} ${(2 * s).toFixed(1)} z" fill="${oog}"/>`);
+        buiten.push(`<path d="M ${(c[0] - rx * 0.45).toFixed(1)} ${(c[1] + ry * 0.3).toFixed(1)} q ${(rx * 0.45).toFixed(1)} ${(ry * 0.45).toFixed(1)} ${(rx * 0.9).toFixed(1)} 0" fill="none" stroke="${oog}" stroke-width="${(k * 0.022).toFixed(1)}" stroke-linecap="round"/>`);
+      }
+      if (feest === 'kerst') {
+        // Lichtjes langs de voorgevel en de dakgoot rechts; 's avonds met een gloed.
+        const KLEUREN = ['#FF5A4A', '#FFD36B', '#6EE7B7', '#6FD3FF'];
+        const langs = [[[0, D, zt], [W / 2, D, zt + R]], [[W / 2, D, zt + R], [W, D, zt]], [[W, D, zt], [W, 0, zt]]];
+        let i = 0;
+        for (const [a, b] of langs) {
+          const lengte = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+          const n = Math.max(2, Math.round(lengte / 0.17));
+          for (let j = 0; j < n; j++, i++) {
+            const f = (j + 0.5) / n;
+            // Een slinger: elk lampje net onder de lijn, om en om iets lager.
+            const q = P(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f + 0.01, a[2] + (b[2] - a[2]) * f - 0.05 - (j % 2) * 0.03);
+            const kl = KLEUREN[i % KLEUREN.length];
+            if (avond) buiten.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(k * 0.07).toFixed(1)}" fill="${kl}" opacity="0.35" filter="url(#${id}-zacht)"/>`);
+            buiten.push(`<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="${(k * 0.026).toFixed(1)}" fill="${kl}"/>`);
+          }
+        }
+      }
+      if (feest === 'oudnieuw') {
+        // Drie pijlen vuurwerk boven het huis, 's avonds.
+        for (const [fx, fz, kl] of [[W * 0.1, zt + R + 1.4, '#FFD36B'], [W * 0.85, zt + R + 1.8, '#FF6FA0'], [W * 0.5, zt + R + 2.3, '#6FD3FF']]) {
+          const c = P(fx, D / 2, fz);
+          const r = k * 0.42;
+          const stralen = Array.from({ length: 14 }, (_, j) => {
+            const h = (j / 14) * Math.PI * 2;
+            return `M ${(c[0] + Math.cos(h) * r * 0.25).toFixed(1)} ${(c[1] + Math.sin(h) * r * 0.25).toFixed(1)} L ${(c[0] + Math.cos(h) * r).toFixed(1)} ${(c[1] + Math.sin(h) * r).toFixed(1)}`;
+          }).join(' ');
+          lucht.push(`<g opacity="${avond ? 0.95 : 0.6}"><path d="${stralen}" stroke="${kl}" stroke-width="2" stroke-linecap="round"/><circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${(r * 1.1).toFixed(1)}" fill="${kl}" opacity="0.12"/></g>`);
+        }
+      }
+      if (feest === 'pasen') {
+        // Zes eieren in het gras voor het huis, rechts van de voordeur.
+        const EI = ['#F6D36B', '#F2A7C3', '#9FD3EA', '#B5E3B0', '#C4BCFF', '#FFB088'];
+        for (let j = 0; j < 6; j++) {
+          const q = P(W + 0.25 + (j % 3) * 0.32, D + 0.2 + Math.floor(j / 3) * 0.28 + (j % 2) * 0.06, 0.04);
+          buiten.push(`<ellipse cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" rx="${(k * 0.045).toFixed(1)}" ry="${(k * 0.06).toFixed(1)}" fill="${EI[j]}" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1"/>`);
+        }
+      }
     }
 
     /*

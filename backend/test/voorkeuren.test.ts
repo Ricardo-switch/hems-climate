@@ -136,7 +136,7 @@ describe('VoorkeurenStore', () => {
     await store.load();
     expect((await store.save({ plek: 'tel', weergave: { eenvoudig: true, groteLetters: true } }, noor)).ok).toBe(true);
     expect((await store.save({ plek: 'tel', weergave: { groteLetters: false } }, noor)).ok).toBe(true);
-    expect(store.view(noor).tel.weergave).toEqual({ eenvoudig: true, groteLetters: false, minderBeweging: false });
+    expect(store.view(noor).tel.weergave).toEqual({ eenvoudig: true, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true });
     expect(store.view(ricardo).tel.weergave).toEqual(STANDAARD_WEERGAVE);
     // De wand: alleen wie hem mag aanpassen, en voor iedereen.
     expect((await store.save({ plek: 'wand', niemand: { rustMin: 2 } }, noor)).ok).toBe(false);

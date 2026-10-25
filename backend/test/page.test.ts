@@ -2391,7 +2391,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await blad.locator('[data-wg-eenvoudig="true"]').click();
       await blad.locator('[data-wg-schakel="groteLetters"]').click();
       await blad.locator('[data-wg-schakel="minderBeweging"]').click();
-      await expect.poll(weergave).toEqual({ eenvoudig: true, groteLetters: true, minderBeweging: true });
+      await expect.poll(weergave).toEqual({ eenvoudig: true, groteLetters: true, minderBeweging: true, seizoen: true, weer: true, feestdagen: true });
       expect(await blad.locator('[data-wg-schakel="groteLetters"]').getAttribute('aria-checked')).toBe('true');
       await blad.locator('[data-blad-dicht]').click();
       await blad.waitFor({ state: 'hidden' });
@@ -2438,7 +2438,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await p.evaluate('document.scrollingElement.scrollHeight <= innerHeight')).toBe(true);
       expect(fouten).toEqual([]);
     } finally {
-      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false } }) });
+      await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', weergave: { eenvoudig: false, groteLetters: false, minderBeweging: false, seizoen: true, weer: true, feestdagen: true } }) });
       await context.close();
     }
   }, 60_000);
