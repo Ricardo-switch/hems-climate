@@ -22,7 +22,7 @@
 
 import type { Lang } from './assistant.js';
 import { SALDEREN_TOT_MS, dalAandeel, kostenVan, raadDal, type Gebruik, type KostenRegel } from './tarief.js';
-import type { EnergySettings, EnergySource } from './energy.js';
+import { BASIS_ZONDER_METER_W, type EnergySettings, type EnergySource } from './energy.js';
 import { partsIn, zonedMidnight } from './today.js';
 
 export const PERIODS = ['dag', 'week', 'maand', 'jaar'] as const;
@@ -91,6 +91,12 @@ export interface YieldReport {
   readonly dekking: { readonly vanaf: string; readonly dagen: number; readonly vanDagen: number } | null;
   /** Welke meters er zijn; wat ontbreekt, laat de pagina weg. */
   readonly heeft: { readonly net: boolean; readonly zon: boolean; readonly gas: boolean; readonly prijzen: boolean };
+  /**
+   * Panelen zonder slimme meter (besluit 196): wat je zelf gebruikte en wat er
+   * naar het net ging, is geschat. Per uur hooguit wat de apparaten met een
+   * eigen meter gebruikten plus een gewoon huis (`BASIS_ZONDER_METER_W`).
+   */
+  readonly geschat: boolean;
   readonly stroom: {
     readonly verbruikKwh: number;
     readonly eigenZonKwh: number;
@@ -107,6 +113,8 @@ export interface YieldReport {
     readonly zelfPct: number | null;
     readonly besteDag: { readonly label: string; readonly kwh: number } | null;
     readonly vorigeKwh: number | null;
+    /** Wat de zelf gebruikte zon scheelde tegen je stroomprijs; null zonder prijs. */
+    readonly bespaardEuro: number | null;
   } | null;
   readonly gas: { readonly m3: number; readonly kwh: number; readonly vorigeM3: number | null } | null;
   readonly apparaten: readonly YieldDevice[];
@@ -345,7 +353,10 @@ export async function yieldReport(
   const all = [...s.net.afname, ...s.net.teruglevering, ...s.zon, ...(s.gas ? [s.gas] : []), ...deviceIds];
 
   // Per uur, of per dag voor een heel jaar: fijn genoeg om zon per apparaat toe te rekenen.
-  const fine = kind === 'jaar' ? 'day' : 'hour';
+  // Panelen zonder slimme meter (besluit 196): zelf gebruikt en terug zijn geschat, en dat
+  // kan alleen per uur; per dag viel alle zon weg tegen het verbruik van de hele dag.
+  const geschat = s.zon.length > 0 && s.net.afname.length === 0 && s.net.teruglevering.length === 0;
+  const fine = kind === 'jaar' && !geschat ? 'day' : 'hour';
   const rows = await source.changes(all, range.startMs, range.endMs, fine);
   const afname = sumBy(rows, s.net.afname);
   const terug = sumBy(rows, s.net.teruglevering);
@@ -358,6 +369,8 @@ export async function yieldReport(
   const zon = sumBy(rows, s.zon);
   const gas = s.gas ? sumBy(rows, [s.gas]) : new Map<number, number>();
   const hasSun = s.zon.length > 0;
+  const basisKwh = (BASIS_ZONDER_METER_W / 1000) * (stap / 3_600_000);
+  let terugGeschat = 0;
 
   const times = [...new Set([...afname.keys(), ...terug.keys(), ...zon.keys(), ...gas.keys(), ...deviceIds.flatMap((id) => (rows[id] ?? []).map((r) => r.startMs))])].sort((a, b) => a - b);
   const dev = new Map(s.apparaten.map((a) => [a.id, { zon: 0, net: 0 }]));
@@ -377,10 +390,15 @@ export async function yieldReport(
     const v = verdeel(s, a, afnameDal ? (afnameDal.get(t) ?? 0) : null, tr, terugDal ? (terugDal.get(t) ?? 0) : null, t, t + stap, tz);
     for (const k of Object.keys(gebruik) as (keyof typeof gebruik)[]) gebruik[k] += v[k];
     const z = zon.get(t) ?? 0;
-    const self = hasSun ? Math.max(0, z - tr - tekort) : 0;
-    tekort = hasSun ? Math.max(0, tr + tekort - z) : 0;
+    let devNu = 0;
+    for (const [, m] of devRows) devNu += m.get(t) ?? 0;
+    // Zonder meter: de zon dekt eerst de apparaten en een gewoon huis, de rest ging naar het net.
+    const nodig = devNu + basisKwh;
+    const self = geschat ? Math.min(z, nodig) : hasSun ? Math.max(0, z - tr - tekort) : 0;
+    tekort = hasSun && !geschat ? Math.max(0, tr + tekort - z) : 0;
+    if (geschat) terugGeschat += z - self;
     const use = a + self;
-    const share = use > 0 ? self / use : 0;
+    const share = geschat ? (nodig > 0 ? self / nodig : 0) : use > 0 ? self / use : 0;
     selfTotal += self;
     let devUse = 0;
     for (const [id, m] of devRows) {
@@ -391,9 +409,10 @@ export async function yieldReport(
       acc.net += k * (1 - share);
     }
     // Wat de apparaten niet verklaren; nooit negatief, ook niet bij een meter die achterloopt.
-    const rest = Math.max(0, use - devUse);
-    restZon += rest * share;
-    restNet += rest * (1 - share);
+    // Zonder meter is alleen de zon bekend: wat hij buiten de apparaten dekte.
+    const rest = geschat ? Math.max(0, self - devUse * share) : Math.max(0, use - devUse);
+    restZon += geschat ? rest : rest * share;
+    restNet += geschat ? 0 : rest * (1 - share);
     const key = bucketKey(kind, t, tz, lang);
     const b = buckets.get(key) ?? { zon: 0, net: 0, gas: 0 };
     b.zon += self;
@@ -403,7 +422,7 @@ export async function yieldReport(
   }
 
   const afnameKwh = total(afname);
-  const terugKwh = total(terug);
+  const terugKwh = geschat ? terugGeschat : total(terug);
   const zonKwh = total(zon);
   const gasM3 = total(gas);
   const use = afnameKwh + selfTotal;
@@ -455,7 +474,8 @@ export async function yieldReport(
   const stromen: YieldReport['stromen'][number][] = [];
   for (const d of apparaten) {
     if (d.zonKwh > 0) stromen.push({ van: 'zon', naar: d.id, kwh: d.zonKwh });
-    if (d.netKwh > 0) stromen.push({ van: 'net', naar: d.id, kwh: d.netKwh });
+    // Zonder meter weet het huis niet wat er van het net kwam: alleen de zon in het schema.
+    if (d.netKwh > 0 && !geschat) stromen.push({ van: 'net', naar: d.id, kwh: d.netKwh });
   }
   if (terugKwh > 0) stromen.push({ van: 'zon', naar: 'terug', kwh: r1(terugKwh) });
   if (gasM3 > 0) stromen.push({ van: 'gas', naar: 'cv', kwh: r1(gasM3 * GAS_KWH_PER_M3) });
@@ -482,6 +502,7 @@ export async function yieldReport(
     },
     dekking,
     heeft: { net: s.net.afname.length > 0, zon: hasSun, gas: s.gas != null, prijzen: p.stroom != null || p.gas != null },
+    geschat,
     stroom: {
       verbruikKwh: r1(use),
       eigenZonKwh: r1(selfTotal),
@@ -498,6 +519,7 @@ export async function yieldReport(
           zelfPct: zonKwh > 0 ? Math.round((selfTotal / zonKwh) * 100) : null,
           besteDag,
           vorigeKwh: prev(vergelijk.zon),
+          bespaardEuro: stroomPrijs == null ? null : r2(selfTotal * stroomPrijs),
         }
       : null,
     gas: s.gas ? { m3: r2(gasM3), kwh: r1(gasM3 * GAS_KWH_PER_M3), vorigeM3: prev(vergelijk.gas) } : null,

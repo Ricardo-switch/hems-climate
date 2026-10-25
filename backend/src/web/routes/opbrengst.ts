@@ -17,6 +17,7 @@ import { expectedAndActual, expectedTotal, weatherInLang, type ExpectedTotal } f
 import { startOfLocalDay } from '../today.js';
 import { readJson, sendJson } from '../http.js';
 import { leesToelichting } from '../sluipverbruik.js';
+import { isDal } from '../tarief.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
 
 /** De routes van dit onderwerp; waar als het verzoek hier is afgehandeld. */
@@ -25,6 +26,20 @@ export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean>
   const logDir = d.options.logDir;
   if (path === '/api/opbrengst') {
     await opbrengstRoute(d, res, url.searchParams, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']));
+    return true;
+  }
+
+  /*
+   * De goedkope uren van vandaag (besluit 196): de daluren van het contract,
+   * per uur, met beide prijzen. Leeg zonder daltarief.
+   */
+  if (path === '/api/goedkoop') {
+    const config = d.config();
+    if (config == null) {
+      sendJson(res, 503, { wachten: 'nog geen configuratie' });
+      return true;
+    }
+    sendJson(res, 200, goedkoopVandaag(config.timezone, d.options.energy?.store.current?.prijzen ?? null, Date.now()));
     return true;
   }
 
@@ -272,4 +287,20 @@ export function yieldWarm(d: Diensten, vandaag: string, lang: Lang): void {
     if (hit && (hit.atMs >= hit.report.periode.totMs || now - hit.atMs < 120_000)) continue;
     void yieldCompute(d, key, soort, vandaag, now, lang).catch(() => null);
   }
+}
+
+/** De daluren van vandaag, per uur (besluit 196); `dal` is leeg zonder daltarief. */
+export function goedkoopVandaag(
+  timeZone: string,
+  prijzen: { readonly stroom?: number | null; readonly stroomDal?: number | null; readonly dalUren?: Parameters<typeof isDal>[2]; readonly dalEigen?: Parameters<typeof isDal>[3] } | null,
+  nowMs: number,
+): { dagStartMs: number; dal: boolean[]; normaal: number | null; dalPrijs: number | null } {
+  const p = partsIn(nowMs, timeZone);
+  const start = zonedMidnight(p.y, p.m, p.d, timeZone);
+  const dalPrijs = prijzen?.stroomDal ?? null;
+  // Een dag met de klokwissel heeft 23 of 25 uur; per uur vanaf middernacht tot de volgende.
+  const eind = zonedMidnight(...(() => { const q = partsIn(start + 30 * 3_600_000, timeZone); return [q.y, q.m, q.d] as const; })(), timeZone);
+  const dal: boolean[] = [];
+  if (dalPrijs != null) for (let t = start; t < eind; t += 3_600_000) dal.push(isDal(t, timeZone, prijzen?.dalUren ?? 'nl', prijzen?.dalEigen ?? null));
+  return { dagStartMs: start, dal, normaal: prijzen?.stroom ?? null, dalPrijs };
 }

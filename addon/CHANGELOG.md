@@ -1,5 +1,29 @@
 # Wat is er nieuw · What is new
 
+## 0.68.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Een huis zonder panelen: de tab heet Verbruik, en de kaart Vandaag zegt wat het huis gebruikte en kostte, met de daluren van vandaag
+- Een huis zonder slimme meter: de app schat wat je panelen over hebben en wat je zelf gebruikte, en zegt het erbij
+
+**Beter**
+
+- Wat je huis kan zegt wat er zonder slimme meter of zonder panelen bij kan
+
+*English*
+
+**New**
+
+- A house without solar panels: the tab is called Usage, and the Today card shows what the house used and cost, with the off-peak hours of today
+- A house without a smart meter: the app estimates what your panels have spare and what you used yourself, and says so
+
+**Improved**
+
+- What your house can do says what can be added without a smart meter or solar panels
+
 ## 0.67.2
 
 *25 oktober 2026*

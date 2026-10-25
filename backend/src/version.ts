@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.67.2';
+export const VERSIE = '0.68.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,26 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.68.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'Een huis zonder panelen: de tab heet Verbruik, en de kaart Vandaag zegt wat het huis gebruikte en kostte, met de daluren van vandaag',
+      'Een huis zonder slimme meter: de app schat wat je panelen over hebben en wat je zelf gebruikte, en zegt het erbij',
+    ],
+    beter: [
+      'Wat je huis kan zegt wat er zonder slimme meter of zonder panelen bij kan',
+    ],
+    en: {
+      nieuw: [
+        'A house without solar panels: the tab is called Usage, and the Today card shows what the house used and cost, with the off-peak hours of today',
+        'A house without a smart meter: the app estimates what your panels have spare and what you used yourself, and says so',
+      ],
+      beter: [
+        'What your house can do says what can be added without a smart meter or solar panels',
+      ],
+    },
+  },
   {
     versie: '0.67.2',
     datum: '2026-10-25',

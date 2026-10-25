@@ -18,6 +18,15 @@ import { raadDal, type DalEigen, type DalRegio, type Tarieven, type VastePost } 
 
 export const ENERGY_FILE = 'energie.json';
 
+/**
+ * Zonder slimme meter (besluit 196): wat een huis overdag gewoon gebruikt naast
+ * de apparaten met een eigen meter, om te schatten hoeveel zon je zelf gebruikte
+ * en hoeveel er over is. Een gemiddeld huis gebruikt rond 310 W, overdag meer.
+ * Liever te zuinig dan te mooi: bij het huis van de bewoner (gemiddeld 625 W)
+ * schatte dit oktober 47% zelf gebruikt, met de meter was het 63%.
+ */
+export const BASIS_ZONDER_METER_W = 400;
+
 export interface EnergyDevice {
   /** Het statistiek-id, meestal de entiteit: `sensor.airconditioning_woonkamer_energie_kwh`. */
   readonly id: string;

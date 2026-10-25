@@ -10,7 +10,7 @@
  */
 'use strict';
 
-const { $$, nl, esc, haal } = app;
+const { $$, nl, esc, haal, zet } = app;
 // De teksten staan in kit/teksten.*.js (besluit 185). De namen van de periodes komen nog van de dienst.
 const { t } = taal;
 
@@ -58,7 +58,11 @@ async function laad() {
 
 /* ------------------------------------------------------------ de delen */
 
+/** Panelen zonder slimme meter (besluit 196): zelf gebruikt en terug zijn geschat. */
+const geschatLabel = () => `<span class="geschat">${esc(t('opbrengst.geschat'))}</span>`;
+
 function titel(r) {
+  if (r.geschat && r.zon) return t('opbrengst.panelenLeverden', { kwh: getal(r.zon.opgewektKwh) });
   if (r.heeft.zon && r.stroom.eigenZonPct != null) return t('opbrengst.eigenPanelen', { pct: r.stroom.eigenZonPct });
   return t('opbrengst.gebruikte', { kwh: getal(r.stroom.verbruikKwh) });
 }
@@ -71,11 +75,34 @@ function periode(r) {
   // Begint de meting later dan de periode, dan zegt de regel dat eerst.
   const vorige = r.dekking
     ? `<span class="mini" style="margin-left: 6px" data-dekking>${esc(t('opbrengst.gemetenVanaf', { datum: datumNl(r.dekking.vanaf), dagen: r.dekking.dagen, van: r.dekking.vanDagen }))}</span>`
+    : r.geschat ? `<span class="mini" style="margin-left: 6px">${esc(t('opbrengst.zelfGeschat'))}</span>`
     : r.stroom.vorigeKwh != null ? `<span class="mini" style="margin-left: 6px">${esc(t('opbrengst.vorigeGebruikt', { naam: p.vorigeNaam, kwh: getal(r.stroom.vorigeKwh) }))}</span>` : '';
   return `<button type="button" aria-label="${esc(t('vandaag.eerder'))}" data-naar="${esc(p.vorige)}">‹</button><span class="kop-3" style="font-size: 17px">${esc(p.label)}</span><button type="button" aria-label="${esc(t('vandaag.later'))}" ${p.volgende ? `data-naar="${esc(p.volgende)}"` : 'disabled'}>›</button>${vorige}`;
 }
 
+/** Panelen zonder slimme meter (besluit 196): opgewekt is gemeten, zelf gebruikt en bespaard geschat. */
+function cijfersGeschat(r, klein) {
+  const z = r.zon;
+  const bespaard = z.bespaardEuro == null ? null : `± ${euro(z.bespaardEuro)}`;
+  const gas = r.gas ? `<div class="cijfer"><div class="mini">${esc(t('opbrengst.gas'))}</div><div class="getal">${getal(r.gas.m3)}<small>m³</small></div></div>` : '';
+  if (klein) {
+    const blok = (naam, waarde, onder) => `<div class="glas-klein"><span class="mini">${naam}</span><span class="getal">${waarde}</span><span class="mini">${onder}</span></div>`;
+    return `<div class="drie">${blok(esc(t('opbrengst.opgewekt')), getal(z.opgewektKwh), 'kWh')}${blok(esc(t('opbrengst.zelfGebruikt')), `± ${getal(z.zelfKwh)}`, `kWh, ${esc(t('opbrengst.geschat'))}`)}${bespaard ? blok(esc(t('opbrengst.bespaard')), `± € ${nl(z.bespaardEuro, 0)}`, esc(t('opbrengst.geschat'))) : ''}</div>`;
+  }
+  return `<div class="cijfer"><div class="mini">${esc(t('opbrengst.opgewekt'))}</div><div class="getal">${getal(z.opgewektKwh)}<small>kWh</small></div><div class="klein">${esc(t('opbrengst.gemetenOmvormer'))}</div></div>
+    <div class="cijfer"><div class="mini">${esc(t('opbrengst.zelfGebruikt'))}</div><div class="getal">± ${getal(z.zelfKwh)}<small>kWh</small></div><div class="klein">${geschatLabel()}</div></div>
+    ${bespaard ? `<div class="cijfer"><div class="mini">${esc(t('opbrengst.bespaard'))}</div><div class="getal">${bespaard}</div><div class="klein">${esc(t('opbrengst.bespaardOnder'))}</div></div>` : ''}${gas}`;
+}
+
+/** Een kaart die een slimme meter aanraadt, of panelen (besluit 196). */
+function erbijKaart(r) {
+  if (r.geschat) return `<section class="glas kaart meterkaart"><h2 class="kop-3">${esc(t('opbrengst.meter.titel'))}</h2><p class="klein" style="margin: 6px 0 12px">${esc(t('opbrengst.meter.zin'))}</p><a class="pil" href="energie.html#meters">${esc(t('opbrengst.meter.knop'))}</a></section>`;
+  if (!r.heeft.zon) return `<section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.panelenErbij.titel'))}</h2><p class="klein" style="margin: 6px 0 12px">${esc(t('opbrengst.panelenErbij.zin'))}</p><a class="pil" href="huis-kan.html">${esc(t('opbrengst.panelenErbij.knop'))}</a></section>`;
+  return '';
+}
+
 function cijfers(r, klein = false) {
+  if (r.geschat && r.zon) return cijfersGeschat(r, klein);
   const s = r.stroom;
   const k = r.kosten;
   const stroom = `<div class="cijfer"><div class="mini">${esc(t('opbrengst.stroomGebruikt'))}</div><div class="getal">${getal(s.verbruikKwh)}<small>kWh</small></div><div class="klein">${esc(r.heeft.zon ? t('opbrengst.vanNetRest', { kwh: getal(s.vanNetKwh) }) : t('opbrengst.vanNet'))}</div></div>`;
@@ -91,7 +118,7 @@ function cijfers(r, klein = false) {
 }
 
 function panelen(r) {
-  if (!r.zon) return '';
+  if (!r.zon || r.geschat) return '';
   const z = r.zon;
   const zelf = z.opgewektKwh > 0 ? (z.zelfKwh / z.opgewektKwh) * 100 : 0;
   return `<section class="glas kaart">
@@ -121,25 +148,28 @@ function sankeyVan(r, breedte, hoogte, links, rechts, vul = false) {
   const namen = new Map(r.apparaten.map((a) => [a.id, a.rest ? t('opbrengst.rest') : kort(a.naam)]));
   const doelen = [...new Set(stroom.map((s) => s.naar))].map((id, i) => ({
     id,
-    naam: id === 'terug' ? t('opbrengst.naarHetNet') : namen.get(id) ?? id,
+    naam: id === 'terug' ? (r.geschat ? t('opbrengst.naarHetNetGeschat') : t('opbrengst.naarHetNet')) : namen.get(id) ?? id,
     kleur: id === 'terug' ? TERUG : id === 'rest' ? NET : KLEUREN[i % KLEUREN.length],
   }));
   const bronnen = [
     ...(stroom.some((s) => s.van === 'zon') ? [{ id: 'zon', naam: t('vandaag.zon'), kleur: ZON }] : []),
     ...(stroom.some((s) => s.van === 'net') ? [{ id: 'net', naam: t('opbrengst.net'), kleur: NET }] : []),
   ];
-  return sankey.svg({ breedte, hoogte, links, rechts, vul, bronnen, doelen, stromen: stroom, beschrijving: t('opbrengst.sankey') });
+  const schema = sankey.svg({ breedte, hoogte, links, rechts, vul, bronnen, doelen, stromen: stroom, beschrijving: t('opbrengst.sankey') });
+  // Zonder meter (besluit 196): zeggen hoe het geschat is.
+  return r.geschat ? `${schema}<p class="mini" style="margin: 14px 0 0">${esc(t('opbrengst.geschatUitleg'))}</p>` : schema;
 }
 
 function perApparaat(r) {
-  const lijst = r.apparaten.filter((a) => a.kwh >= 0.05 || a.rest);
+  // Zonder meter (besluit 196) is van de rest van het huis alleen de zon bekend: die staat in het schema, niet hier.
+  const lijst = r.apparaten.filter((a) => (a.kwh >= 0.05 || a.rest) && !(a.rest && r.geschat));
   if (!lijst.length) return `<h2 class="kop-3">${esc(t('opbrengst.perApparaat'))}</h2><p class="mini" style="margin: 6px 0 0">${esc(t('opbrengst.geenMeters'))}</p>`;
   const rij = (a) => {
     const zonPct = a.kwh > 0 ? (a.zonKwh / a.kwh) * 100 : 0;
     return `<div class="rij"><div class="boven"><b>${esc(a.rest ? t('opbrengst.rest') : kort(a.naam))}</b><span>${getal(a.kwh)} kWh${a.kosten != null ? `, ${euro(a.kosten)}` : ''}</span></div><div class="verdeel"><i style="width: ${zonPct.toFixed(1)}%; background: var(--zon)"></i><i style="width: ${(100 - zonPct).toFixed(1)}%; background: ${NET}"></i></div></div>`;
   };
   return `<h2 class="kop-3" style="margin-bottom: 4px">${esc(t('opbrengst.perApparaat'))}</h2>${lijst.map(rij).join('')}
-    <p class="mini legenda">${legendaZonNet()}</p>`;
+    <p class="mini legenda">${legendaZonNet(r)}</p>`;
 }
 
 /*
@@ -150,7 +180,8 @@ function perApparaat(r) {
 const grafiek = { blik: 'periode', maat: 'stroom', gekozen: null };
 /** Wat je vergelijkt, met zijn eenheid; de naam in teksten.*.js (opbrengst.maat.*). */
 const MATEN = { stroom: 'kWh', zon: 'kWh', gas: 'm³', kosten: '€' };
-const legendaZonNet = () => `<span><span class="stip" style="background: var(--zon)"></span>${esc(t('opbrengst.zonKlein'))}</span><span><span class="stip" style="background: ${NET}"></span>${esc(t('opbrengst.netKlein'))}</span>`;
+/** Zonder panelen (besluit 196) alleen het net. */
+const legendaZonNet = (r) => `${r?.heeft?.zon === false ? '' : `<span><span class="stip" style="background: var(--zon)"></span>${esc(t('opbrengst.zonKlein'))}</span>`}<span><span class="stip" style="background: ${NET}"></span>${esc(t('opbrengst.netKlein'))}</span>`;
 const waarde = (n, eenheid) => (n == null ? '–' : eenheid === '€' ? euro(n) : `${getal(n)} ${eenheid}`);
 
 function staven(r) {
@@ -162,7 +193,7 @@ function staven(r) {
       as: b.map((x) => x.label),
       html: b.map((x, i) => `<button type="button" class="staaf" data-staaf="${i}" aria-pressed="${grafiek.gekozen === i}" aria-label="${esc(t('opbrengst.staaf', { label: x.label, zon: getal(x.zonKwh), net: getal(x.netKwh) }))}"><i class="net" style="height: ${((x.netKwh / max) * 100).toFixed(1)}%"></i><i class="zon" style="height: ${((x.zonKwh / max) * 100).toFixed(1)}%"></i></button>`),
       detail: (i) => t('opbrengst.staafDetail', { label: b[i].label, zon: getal(b[i].zonKwh), net: getal(b[i].netKwh) }),
-      legenda: legendaZonNet(),
+      legenda: legendaZonNet(r),
     };
   }
   const reeks = r.vergelijk[grafiek.maat] ?? [];
@@ -221,12 +252,13 @@ function tekenNu() {
   const r = data;
   $$('[data-titel]').forEach((el) => (el.textContent = titel(r)));
   $$('[data-periode]').forEach((el) => (el.innerHTML = periode(r)));
-  document.querySelector('[data-links]').innerHTML = `${cijfers(r)}${panelen(r)}${sluipIngang()}`;
+  document.querySelector('[data-links]').innerHTML = `${cijfers(r)}${panelen(r)}${sluipIngang()}${erbijKaart(r)}`;
   document.querySelector('[data-sankey]').innerHTML = sankeyVan(r, 500, 540, 70, 230);
+  zet('[data-waarheen]', t(r.geschat ? 'opbrengst.waarHeenZon' : 'opbrengst.waarHeen'));
   document.querySelector('[data-apparaten]').innerHTML = perApparaat(r);
   document.querySelector('[data-perdag]').innerHTML = perDag(r);
-  document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}${sluipIngang()}
-    <section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.waarHeen'))}</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
+  document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}${sluipIngang()}${erbijKaart(r)}
+    <section class="glas kaart"><h2 class="kop-3">${esc(t(r.geschat ? 'opbrengst.waarHeenZon' : 'opbrengst.waarHeen'))}</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
     <section class="glas kaart">${perApparaat(r)}</section>
     <section class="glas kaart">${perDag(r)}</section>`;
 }

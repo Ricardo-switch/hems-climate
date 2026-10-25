@@ -25,7 +25,9 @@
     const uit = [];
     const e = d.energie?.instellingen;
     const p = e?.prijzen;
-    if (d.energie && (e == null || (e.net?.afname ?? []).length === 0)) {
+    // Een huis zonder slimme meter (besluit 196) mist geen meter van het net: dan alleen als er helemaal niets gekozen is.
+    const geenP1 = d.site?.meter === false;
+    if (d.energie && (e == null || ((e.net?.afname ?? []).length === 0 && !(geenP1 && ((e.zon ?? []).length || (e.apparaten ?? []).length))))) {
       uit.push({ id: 'meters', groep: 'energie', wat: t('stand.meters'), waarom: t('stand.metersZin'), knop: t('stand.kiezen'), href: 'energie.html#meters' });
     }
     if (e && p?.stroom == null) {
@@ -236,7 +238,10 @@
     const kop = d.state?.bewoner?.kop?.titel;
     const weerNaam = (d.functies?.gevonden?.weerbronnen ?? []).find((b) => b.id === f?.weer?.bron)?.naam?.replace(' (via internet)', '');
     const dagen = d.divergence?.dataset?.dagenOpgenomen != null ? Math.round(d.divergence.dataset.dagenOpgenomen) : null;
-    const zonderMeter = d.energie && (e?.net?.afname ?? []).length === 0;
+    // Zonder slimme meter (besluit 196): op zon en het sluipverbruik kunnen erbij; Opbrengst schat.
+    const geenP1 = d.site?.meter === false;
+    const geschat = geenP1 && (e?.zon ?? []).length > 0;
+    const zonderMeter = d.energie && (e?.net?.afname ?? []).length === 0 && !geschat;
     const zonderPrijs = d.energie && !zonderMeter && p?.stroom == null;
     // Waar het werkt (besluit 132).
     const geregeld = binnen(d).filter((r) => r.zoneId);
@@ -280,14 +285,15 @@
       }] : []),
       // Op zon
       ...(airco ? [{
-        ...teksten('opzon'), groep: 'zon', stand: panelen ? meekijk : 'nodig', label: panelen ? null : t('kan.opzon.nodig'),
-        nu: panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? t('kan.opzon.wacht')) : t('kan.opzon.nu'), href: 'vandaag.html',
+        ...teksten('opzon'), groep: 'zon', stand: panelen && !geenP1 ? meekijk : 'nodig', label: !panelen ? t('kan.opzon.nodig') : geenP1 ? t('kan.meterNodig') : null,
+        nu: geenP1 && panelen ? t('kan.zonderMeter') : panelen && opZonKamers.length ? huismodel.inKamers(opZonKamers.map((r) => r.naam)) : panelen ? (kop ?? t('kan.opzon.wacht')) : t('kan.opzon.nu'), href: 'vandaag.html',
         waar: opZonKamers.map((r) => ({ naam: r.naam, wat: [...aircoIn(r).map((a) => t(a.klimaat?.kanVerwarmen ? 'kan.opzon.koeltWarmt' : 'kan.opzon.koelt')), ...opZonIn(r).map((b) => t('kan.opzon.warmtOpZon', { bron: huismodel.bronNaam(b).toLowerCase() }))].join(' · ') })),
         idee: idee.find((x) => x.soort === 'aan') ?? null,
       }] : []),
       {
-        ...teksten('apparaten'), groep: 'zon', stand: opZon ? meekijk : kanOpZon ? 'uit' : 'nodig', label: opZon || kanOpZon ? null : t('kan.apparaten.nodig'),
-        nu: t(opZon ? 'kan.apparaten.start' : kanOpZon ? 'kan.apparaten.zetAan' : 'kan.apparaten.nu'), href: 'regeling.html#opzon',
+        // Zonder panelen of zonder slimme meter kan dit niet (besluit 196).
+        ...teksten('apparaten'), groep: 'zon', stand: !panelen || geenP1 ? 'nodig' : opZon ? meekijk : kanOpZon ? 'uit' : 'nodig', label: !panelen ? t('kan.opzon.nodig') : geenP1 ? t('kan.meterNodig') : opZon || kanOpZon ? null : t('kan.apparaten.nodig'),
+        nu: !panelen ? t('kan.zonderPanelen') : geenP1 ? t('kan.zonderMeter') : t(opZon ? 'kan.apparaten.start' : kanOpZon ? 'kan.apparaten.zetAan' : 'kan.apparaten.nu'), href: geenP1 ? 'energie.html#meters' : 'regeling.html#opzon',
       },
       ...['boiler', 'jacuzzi'].flatMap((soort) => {
         const x = buffer(soort);
@@ -298,7 +304,7 @@
       ...(d.aansluiting?.antwoorden?.tarief !== 'dynamisch' ? [{ ...teksten('goedkoop'), groep: 'kosten', stand: 'nodig', label: t('kan.goedkoop.nodig'), nu: t('kan.goedkoop.nu'), href: 'energie.html#prijzen' }] : []),
       { ...teksten('auto'), groep: 'kosten', stand: 'nodig', label: t('kan.auto.nodig'), nu: t('kan.auto.nu'), href: 'opbrengst.html' },
       // Het sluipverbruik (besluit 192): elke nacht gemeten uit de slimme meter.
-      { ...teksten('sluip'), groep: 'kosten', stand: d.sluip ? 'werkt' : 'uit', nu: d.sluip ? t(d.sluip.hoog ? 'kan.sluip.hoog' : 'kan.sluip.gewoon', { w: Math.round(d.sluip.vannacht.w), boven: Math.round(d.sluip.bovenW) }) : t('kan.sluip.nog'), href: 'sluipverbruik.html' },
+      { ...teksten('sluip'), groep: 'kosten', stand: d.sluip ? 'werkt' : geenP1 ? 'nodig' : 'uit', ...(geenP1 && !d.sluip ? { label: t('kan.meterNodig') } : {}), nu: geenP1 && !d.sluip ? t('kan.zonderMeter') : d.sluip ? t(d.sluip.hoog ? 'kan.sluip.hoog' : 'kan.sluip.gewoon', { w: Math.round(d.sluip.vannacht.w), boven: Math.round(d.sluip.bovenW) }) : t('kan.sluip.nog'), href: geenP1 && !d.sluip ? 'energie.html#meters' : 'sluipverbruik.html' },
       // Gemak
       { ...teksten('licht'), groep: 'gemak', stand: d.functies?.lichtMogelijk && f?.licht?.bedienen !== false ? 'werkt' : 'uit', nu: lampenAan ? t('kan.licht.aan', { n: lampenAan }) : t('kan.licht.uit'), href: 'functies.html#licht' },
       ...(screens.length ? [{ ...teksten('screens'), groep: 'gemak', stand: d.functies?.schermMogelijk && f?.schermen?.bedienen !== false ? 'werkt' : 'uit', nu: t('kan.screens.n', { n: screens.length }), href: 'functies.html#licht' }] : []),
@@ -307,7 +313,7 @@
       // Overzicht
       {
         ...teksten('opbrengst'), groep: 'overzicht', stand: zonderMeter || zonderPrijs ? 'mis' : 'werkt', label: zonderMeter ? t('kan.opbrengst.meters') : zonderPrijs ? t('kan.opbrengst.prijs') : null,
-        nu: zonderMeter ? t('kan.opbrengst.kiesMeters') : zonderPrijs ? t('kan.opbrengst.geenEuro') : d.opbrengst?.stroom ? t('kan.opbrengst.eigen', { pct: d.opbrengst.stroom.eigenZonPct }) : t('kan.opbrengst.nu'),
+        nu: zonderMeter ? t('kan.opbrengst.kiesMeters') : zonderPrijs ? t('kan.opbrengst.geenEuro') : geschat ? t('kan.opbrengst.geschat') : d.opbrengst?.stroom && d.opbrengst.stroom.eigenZonPct == null ? t('kan.opbrengst.verbruik', { kwh: Math.round(d.opbrengst.stroom.verbruikKwh) }) : d.opbrengst?.stroom ? t('kan.opbrengst.eigen', { pct: d.opbrengst.stroom.eigenZonPct }) : t('kan.opbrengst.nu'),
         href: zonderMeter ? 'energie.html#meters' : zonderPrijs ? 'energie.html#prijzen' : 'opbrengst.html',
       },
       { ...teksten('zekering'), groep: 'kosten', stand: z ? meekijk : 'mis', label: z ? null : t('kan.zekering.label'), nu: z ? `${z.fasen} × ${z.ampere} A` : t('kan.zekering.nu'), href: 'energie.html#aansluiting' },

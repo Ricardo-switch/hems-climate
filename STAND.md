@@ -347,7 +347,10 @@ verwijzing bestaat.
   slimme verwarming of airco draait ook: dan doet de app de rest, en comfort
   per kamer kan erbij ([194]). Wat in de tekening beweegt, staat in een eigen
   laag, zodat een oudere tablet aan de wand het bijhoudt; een verdieping staat
-  in de kamer op hoogte, met de etages eromheen vaag ([195]).
+  in de kamer op hoogte, met de etages eromheen vaag ([195]). Een huis zonder
+  slimme meter of zonder panelen werkt ook: zonder panelen heet Opbrengst
+  Verbruik met de daluren op Thuis, zonder meter schat de app wat je zelf
+  gebruikte ([196]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -645,4 +648,5 @@ verwijzing bestaat.
 [193]: DECISIONS.md#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is
 [194]: DECISIONS.md#194-een-huis-zonder-slimme-regeling-de-app-draait-ook-zonder-zones
 [195]: DECISIONS.md#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand
+[196]: DECISIONS.md#196-een-huis-zonder-slimme-meter-of-zonder-panelen
 <!-- links:einde -->
