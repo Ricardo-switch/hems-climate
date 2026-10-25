@@ -24,6 +24,13 @@ export async function cameraRoutes(d: Diensten, v: Verzoek): Promise<boolean> {
     return true;
   }
 
+  // De kaart Camera's (besluit 201): de camera's met wat ze nu zien of wanneer het laatst.
+  if (path === '/api/cameras') {
+    const lijst = d.options.cameras?.() ?? [];
+    sendJson(res, 200, { aan: lijst.length > 0, cameras: lijst });
+    return true;
+  }
+
   // De deurbel als kaart op Thuis (besluit 182): welk beeld, en wanneer er het laatst werd aangebeld.
   if (path === '/api/deurbel') {
     const bel = d.options.deurbel?.() ?? null;

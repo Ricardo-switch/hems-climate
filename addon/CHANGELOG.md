@@ -1,5 +1,35 @@
 # Wat is er nieuw · What is new
 
+## 0.73.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- De kaart Deurbel is de kaart Camera’s: kies zoveel camera’s als je wilt, ze schikken zich naar de maat van de kaart, en een tik maakt het beeld groot en live, met de andere camera’s eronder
+- Bij elk beeld wat de camera nu ziet (een persoon, een voertuig, een dier of beweging) of wanneer het laatst; bij de deurbel wanneer er werd aangebeld
+
+*English*
+
+**New**
+
+- The Doorbell card is now the Cameras card: choose as many cameras as you like, they arrange themselves to the size of the card, and a tap makes the picture large and live, with the other cameras below
+- With each picture what the camera sees now (a person, a vehicle, an animal or motion) or when it last did; with the doorbell when someone rang
+
+## 0.72.1
+
+*25 oktober 2026*
+
+**Opgelost**
+
+- Bij Inrichten › Je schermen blijft de kleine wand met het huis binnen zijn kader, ook met veel kaarten
+
+*English*
+
+**Fixed**
+
+- In Setup › Your screens the small wall with the house stays inside its frame, also with many cards
+
 ## 0.72.0
 
 *25 oktober 2026*

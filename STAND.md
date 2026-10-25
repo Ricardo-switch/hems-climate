@@ -359,6 +359,8 @@ verwijzing bestaat.
   De wand neemt de weergave, het thema en de taal over van wie hij volgt ([199]).
   De film is een trailer van acht shots met een camera over het huis, en
   Inrichten begint met een groot welkom waarin het huis zich opbouwt ([200]).
+  De kaart Camera's toont zoveel camera's als je kiest, met wat ze nu zien of
+  wanneer het laatst, en een tik maakt het beeld groot en live ([201]).
 - **Meldingen** staan achter de bel in het menu, met Onderhoud en na een update
   wat er nieuw is ([136]). Wanneer een batterij of filter een melding geeft,
   kies je bij Functies › Meldingen; standaard onder de 10% ([149]).
@@ -661,4 +663,5 @@ verwijzing bestaat.
 [198]: DECISIONS.md#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis
 [199]: DECISIONS.md#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt
 [200]: DECISIONS.md#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten
+[201]: DECISIONS.md#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien
 <!-- links:einde -->

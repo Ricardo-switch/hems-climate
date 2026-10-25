@@ -283,10 +283,11 @@
   .dagdelen > span.warm { background: rgba(255, 122, 77, 0.16); color: #ffb090; }
   .dagdelen > span.nacht { background: rgba(143, 134, 255, 0.16); color: #c1bcff; }
   .dagdelen > span.koel { background: rgba(111, 211, 255, 0.14); color: var(--ijs-t); }
-  .wandje { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; flex: none; height: 124px; margin-bottom: 6px; padding: 10px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1px solid rgb(var(--wit) / 0.08); box-sizing: border-box; }
+  .wandje { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; flex: none; height: 124px; grid-template-rows: minmax(0, 1fr); margin-bottom: 6px; padding: 10px; border-radius: 16px; background: rgb(var(--wit) / 0.04); border: 1px solid rgb(var(--wit) / 0.08); box-sizing: border-box; }
   .wandje .huisvak { position: relative; display: block; border-radius: 10px; background: linear-gradient(160deg, rgb(111 211 255 / 0.12), rgb(255 255 255 / 0.03)); overflow: hidden; }
   .wandje .huisvak svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .wandje .kaartjes { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 24px; gap: 5px; align-content: start; }
+  /* Zoveel kaartjes als er passen: met meer kaarten groeide de rij eerst onder het kader uit (25 oktober 2026). */
+  .wandje .kaartjes { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 24px; gap: 5px; align-content: start; min-height: 0; overflow: hidden; }
   .wandje .kaartjes i { border-radius: 7px; background: rgb(var(--wit) / 0.09); }
   .wandje .kaartjes i.breed { grid-column: span 2; }
   .klaarlijst { gap: 0; }

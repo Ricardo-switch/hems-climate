@@ -202,6 +202,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [198. Wat de wand zegt, de zon op zijn plek, de deurbel meteen, en feestdagen in het huis](#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis)
 - [199. De wand neemt alle persoonlijke instellingen over van wie hij volgt](#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt)
 - [200. De film als trailer, en een groot welkom bij Inrichten](#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten)
+- [201. De kaart Camera's: zoveel camera's als je wilt, met wat ze zien](#201-de-kaart-cameras-zoveel-cameras-als-je-wilt-met-wat-ze-zien)
 
 **Veiligheid**
 
@@ -9208,6 +9209,51 @@ groot welkom bij Inrichten; de film komt na Inrichten, zoals nu.
 - Een echte video: die moet geladen worden en kent je huis niet.
 - Wat de assistent echt zou antwoorden: in de film staat alleen wat vaststaat.
 - De film meteen na het welkom: eerst inrichten, dan de film als beloning.
+
+---
+
+## 201. De kaart Camera's: zoveel camera's als je wilt, met wat ze zien
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026, met de schets Wand-Cameras. De bewoner wilde de kaart
+Deurbel uitgebreider: een kaart Camera's waarop je zoveel camera's kiest als je
+wilt, geschikt naar de maat van de kaart, en een tik maakt het beeld groter.
+De deurbel zegt nog steeds wanneer er het laatst werd aangebeld; een camera
+wanneer hij het laatst beweging zag, of dat er nu iets beweegt. Zijn camera's
+herkennen ook personen, voertuigen en dieren: dat moest erin.
+
+*Besluit:*
+
+- **De kaart Deurbel wordt de kaart Camera's.** In de code blijft hij
+  `deurbel` heten, zodat ieders indeling blijft staan.
+- **Zoveel als je wilt**: bij Kies op de kaart zet je camera's aan of uit; wat
+  je erbij zet komt achteraan. De keuze hoort bij je indeling, voor telefoon en
+  wand samen (zoals de favorieten); zonder keuze staan ze er allemaal, de
+  deurbel voorop.
+- **Geschikt naar de maat**: breed één beeld groot, twee naast elkaar, drie met
+  de eerste breed, vier en meer twee aan twee. Smal één beeld; de andere
+  wisselen elke zes tellen, met een stipje per camera.
+- **Wat beweegt, gaat voor**: dat beeld komt vooraan met een gloeiende rand en
+  "Persoon, nu", en zijn plaatje ververst elke tien tellen (anders elke
+  minuut). Bovenaan de kaart staat dan bijvoorbeeld "Persoon bij Camera oprit".
+- **Per beeld een regel**: bij de deurbel wanneer er werd aangebeld; bij een
+  camera wat hij nu ziet, of wanneer het laatst ("Beweging om 17:16", "Persoon,
+  zondag 25 oktober"); zonder melders alleen de naam.
+- **De melders zoekt de dienst zelf**: bewegingsmelders op hetzelfde apparaat
+  als de camera, en uit hun sleutel of naam wat ze herkennen: een persoon, een
+  voertuig of een dier. Een persoon gaat voor een dier, voor een voertuig, voor
+  gewone beweging. Wanneer het laatst komt uit de historie van Home Assistant
+  (`history/history_during_period`, lezen; de laatste twee dagen) en daarna
+  uit wat de dienst ziet (`api/cameras`).
+- **Een tik maakt het groot**: live, met de andere camera's eronder om te
+  wisselen; na twee minuten dicht. Alleen de deurbel heeft voorrang in de grens
+  van vier live beelden.
+- **Versie 0.73.0.**
+
+*Wat afviel:* beweging live op de kaart zelf (kost een oude tablet te veel); de
+melder per camera zelf kiezen (de dienst vindt hem op het apparaat); een
+melding op de telefoon bij een persoon (kan later bij Meldingen).
 
 ---
 

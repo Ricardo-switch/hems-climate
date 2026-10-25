@@ -20,7 +20,7 @@ const entities: HaRegistryEntity[] = [
   { entity_id: 'camera.buienradar', platform: 'buienradar', translation_key: null },
   // Reolink: een melder voor een bezoeker, op het apparaat van de deurbel.
   { entity_id: 'binary_sensor.deurbel_bezoeker', platform: 'reolink', device_id: 'reo2', translation_key: 'visitor' },
-  { entity_id: 'binary_sensor.deurbel_persoon', platform: 'reolink', device_id: 'reo2', translation_key: 'person' },
+  { entity_id: 'binary_sensor.deurbel_persoon', platform: 'reolink', device_id: 'reo2', translation_key: 'person', original_device_class: 'motion' },
   // Ring: een gebeurtenis met de klasse deurbel, zonder camera in Home Assistant.
   { entity_id: 'event.voordeur_ding', platform: 'ring', device_id: 'ring1', original_device_class: 'doorbell' },
   // Iets wat alleen zo heet: een kandidaat, geen zekerheid.
@@ -29,10 +29,10 @@ const entities: HaRegistryEntity[] = [
   // Een sensor die "Spring" heet is geen deurbel.
   { entity_id: 'binary_sensor.spring_sensor', platform: 'zha', device_id: 'zig2' },
   // Beweging op de deurbel, zonder sleutel van het merk: geen bel.
-  { entity_id: 'binary_sensor.deurbel_beweging', platform: 'reolink', device_id: 'reo2' },
+  { entity_id: 'binary_sensor.deurbel_beweging', platform: 'reolink', device_id: 'reo2', original_device_class: 'motion' },
   // Een mens of een huisdier gezien bij de deurbel: ook geen bel.
   { entity_id: 'binary_sensor.deurbel_mens', platform: 'reolink', device_id: 'reo2' },
-  { entity_id: 'binary_sensor.deurbel_pet', platform: 'reolink', device_id: 'reo2' },
+  { entity_id: 'binary_sensor.deurbel_pet', platform: 'reolink', device_id: 'reo2', original_device_class: 'motion' },
   // Dezelfde camera via de Synology: een tweede beeld, geen tweede camera.
   { entity_id: 'camera.camera_oprit', platform: 'synology_dsm', device_id: 'syn1' },
 ];
@@ -57,8 +57,18 @@ describe('camera’s en de deurbel vinden (besluit 109)', () => {
           { id: 'camera.camera_oprit_duidelijk', naam: 'scherp', voorkeur: false },
           { id: 'camera.camera_oprit_vloeiend', naam: 'vloeiend', voorkeur: true },
         ],
+        melders: [],
       },
-      { naam: 'Deurbel', beelden: [{ id: 'camera.deurbel_vloeiend', naam: 'vloeiend', voorkeur: true }] },
+      // De bewegingsmelders op hetzelfde apparaat (besluit 201), met wat ze herkennen.
+      {
+        naam: 'Deurbel',
+        beelden: [{ id: 'camera.deurbel_vloeiend', naam: 'vloeiend', voorkeur: true }],
+        melders: [
+          { id: 'binary_sensor.deurbel_persoon', soort: 'persoon' },
+          { id: 'binary_sensor.deurbel_beweging', soort: 'beweging' },
+          { id: 'binary_sensor.deurbel_pet', soort: 'dier' },
+        ],
+      },
     ]);
   });
 

@@ -43,10 +43,12 @@ const READ_COMMANDS: ReadonlySet<string> = new Set([
   'manifest/get',
   // Of de integratie Smart Climate ook is toegevoegd (22 oktober 2026).
   'config_entries/get',
+  // Wanneer de camera's het laatst beweging zagen (besluit 201): de historie van hun melders.
+  'history/history_during_period',
 ]);
 
 /** Alleen deze leesopdrachten krijgen velden mee; de rest gaat zonder. */
-const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes', 'manifest/get', 'config_entries/get']);
+const READ_WITH_FIELDS: ReadonlySet<string> = new Set(['recorder/list_statistic_ids', 'recorder/statistics_during_period', 'tts/engine/voices', 'update/release_notes', 'manifest/get', 'config_entries/get', 'history/history_during_period']);
 
 /**
  * Zo lang wacht een vraag aan Home Assistant op antwoord, en een nieuwe

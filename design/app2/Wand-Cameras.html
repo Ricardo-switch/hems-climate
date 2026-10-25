@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · De kaart Camera's (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De kaart Camera's (schets, 25 oktober 2026). De kaart Deurbel wordt de
+   * kaart Camera's: je kiest zoveel camera's als je wilt, en ze schikken zich
+   * naar de maat van de kaart. Een tik maakt een beeld groot, live. Per beeld
+   * een regel: bij de deurbel wanneer er het laatst is aangebeld, bij een
+   * camera wanneer er voor het laatst beweging was, of dat er nu iets beweegt
+   * (met wat: een persoon, een voertuig, een dier, als de camera dat zegt).
+   *
+   * Standen: zonder hash de kaart breed en smal met twee camera's; #vier met
+   * vier camera's; #groot een beeld groot; #kies welke camera's.
+   */
+  body { margin: 0; }
+  .wand { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  .links { position: absolute; left: 96px; top: 96px; right: 440px; bottom: 120px; border-radius: 28px; background: radial-gradient(80% 70% at 50% 60%, rgba(255, 255, 255, 0.04), transparent); display: grid; place-items: center; color: var(--gedempt); font-size: 14px; }
+  .rechts { position: absolute; right: 24px; top: 96px; width: 384px; bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: min-content; gap: 12px; align-content: start; }
+  .kaart { padding: 16px 18px; border-radius: 22px; }
+  .breed { grid-column: span 2; }
+  .kop { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+  .kop svg { width: 16px; height: 16px; }
+  .kop .rechtsaf { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
+
+  /* De beelden, geschikt naar hoeveel het er zijn. */
+  .beelden { margin-top: 12px; display: grid; gap: 8px; }
+  .beelden.n1 { grid-template-columns: 1fr; }
+  .beelden.n2 { grid-template-columns: 1fr 1fr; }
+  .beelden.n3 { grid-template-columns: 1fr 1fr; }
+  .beelden.n3 .beeld:first-child { grid-column: span 2; }
+  .beelden.n4 { grid-template-columns: 1fr 1fr; }
+  .beeld { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; cursor: pointer; background: #1b2533; }
+  .beeld svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .beeld .naam { position: absolute; left: 8px; top: 8px; display: flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px; border-radius: 999px; background: rgba(9, 15, 28, 0.62); font-size: 11.5px; font-weight: 700; color: #eef3f7; }
+  .beeld .naam svg { width: 13px; height: 13px; }
+  .beeld .wanneer { position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); font-size: 11.5px; font-weight: 700; color: #eef3f7; }
+  .beeld .wanneer i { width: 7px; height: 7px; border-radius: 50%; background: var(--gedempt); }
+  .beeld.nu { box-shadow: inset 0 0 0 2px var(--gloed); }
+  .beeld.nu .wanneer { background: rgba(255, 122, 77, 0.92); }
+  .beeld.nu .wanneer i { background: #fff; animation: puls 1.2s infinite; }
+  .beeld.bel .wanneer i { background: var(--zon); }
+  .beelden.n1 .beeld .naam, .beelden.n1 .beeld .wanneer { font-size: 12.5px; }
+  @keyframes puls { 50% { opacity: 0.35; } }
+
+  /* Smal: één beeld groot, de andere als stipjes; ze wisselen elke paar tellen, wat beweegt eerst. */
+  .smal .beelden { margin-top: 10px; }
+  .smal .stipjes { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }
+  .smal .stipjes i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); }
+  .smal .stipjes i.aan { background: var(--tekst); }
+  .smal .stipjes i.nu { background: var(--gloed); }
+  .uitleg { grid-column: span 2; font-size: 12px; color: var(--gedempt); line-height: 1.45; padding: 0 4px; }
+
+  /* Groot: het beeld live over de wand, de andere eronder om te wisselen. */
+  .groot { position: absolute; inset: 0; background: rgba(5, 10, 20, 0.82); backdrop-filter: blur(6px); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 5; }
+  .groot.aan { display: flex; }
+  .groot .vak { position: relative; width: 980px; aspect-ratio: 16 / 9; border-radius: 26px; overflow: hidden; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+  .groot .vak svg.scene { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .groot .boven { position: absolute; left: 18px; right: 18px; top: 16px; display: flex; align-items: center; gap: 10px; }
+  .groot .boven .naam { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(9, 15, 28, 0.66); font-weight: 700; font-size: 16px; }
+  .groot .boven .live { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: rgba(255, 90, 90, 0.92); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; }
+  .groot .boven .live i { width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: puls 1.2s infinite; }
+  .groot .boven .dicht { margin-left: auto; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: rgba(9, 15, 28, 0.66); font-size: 22px; }
+  .groot .onder { position: absolute; left: 18px; bottom: 16px; padding: 8px 14px; border-radius: 999px; background: rgba(9, 15, 28, 0.66); font-weight: 700; font-size: 14px; }
+  .groot .rij { display: flex; gap: 12px; }
+  .groot .rij .beeld { width: 170px; }
+  .groot .rij .beeld.gekozen { box-shadow: inset 0 0 0 3px var(--tekst); }
+
+  /* Kiezen: bij Aanpassen op de kaart, welke camera's en in welke volgorde. */
+  .blad { position: absolute; right: 24px; top: 96px; width: 420px; padding: 22px; border-radius: 26px; display: none; z-index: 5; background: rgba(14, 24, 40, 0.97); }
+  .blad.aan { display: block; }
+  .blad h2 { margin: 0; font-family: var(--kop); font-size: 22px; }
+  .blad p { margin: 6px 0 14px; font-size: 13.5px; color: var(--zacht); }
+  .keus { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.04); margin-top: 8px; }
+  .keus .beeld { aspect-ratio: 16 / 9; border-radius: 10px; cursor: default; }
+  .keus b { display: block; font-size: 15px; }
+  .keus span { font-size: 12.5px; color: var(--zacht); }
+  .vink { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; border: 2px solid rgba(255, 255, 255, 0.25); font-weight: 800; }
+  .vink.aan { background: var(--accent, #6fd3ff); border-color: transparent; color: #08131f; }
+  .blad .greep { color: var(--gedempt); font-size: 18px; margin-right: 4px; }
+  .blad .knoppen { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .blad .knoppen .knop { height: 46px; padding: 0 22px; border-radius: 14px; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag" style="display: block">
+  <div class="links">het huis</div>
+  <div class="rechts" id="rechts"></div>
+  <div class="groot" id="groot"></div>
+  <div class="glas blad" id="blad"></div>
+</div>
+<script>
+  /*
+   * Een beeld als tekening, in de plaats van het echte plaatje (de schets staat
+   * in een openbare repository; de app toont het echte beeld van de camera).
+   */
+  const SCENE = {
+    deurbel: '<svg class="scene" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#cfd6dc"/><rect y="0" width="320" height="38" fill="#e9edf0"/><rect x="0" y="38" width="190" height="142" fill="#8a4a3a"/><g stroke="#6f3a2d" stroke-width="1">' + Array.from({ length: 12 }, (_, i) => `<line x1="0" y1="${48 + i * 11}" x2="190" y2="${48 + i * 11}"/>`).join('') + '</g><rect x="196" y="44" width="124" height="136" fill="#eef1f3"/><g stroke="#cfd6dc">' + Array.from({ length: 11 }, (_, i) => `<line x1="${206 + i * 11}" y1="44" x2="${206 + i * 11}" y2="180"/>`).join('') + '</g><rect x="122" y="104" width="38" height="66" rx="4" fill="#3d7a46"/><rect x="0" y="120" width="34" height="60" fill="#3c6b3a"/><rect x="0" y="168" width="320" height="12" fill="#7d6f62"/></svg>',
+    oprit: '<svg class="scene" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#9fb4c4"/><rect y="70" width="320" height="110" fill="#6d6a66"/><polygon points="0,180 120,70 200,70 320,180" fill="#8d8781"/><rect x="0" y="40" width="80" height="70" fill="#7a4536"/><rect x="250" y="36" width="70" height="74" fill="#7a4536"/><rect x="132" y="96" width="70" height="34" rx="8" fill="#c9d3dc"/><rect x="140" y="84" width="52" height="18" rx="6" fill="#a9b6c2"/><circle cx="148" cy="132" r="7" fill="#2a2f36"/><circle cx="188" cy="132" r="7" fill="#2a2f36"/><rect x="0" y="100" width="22" height="80" fill="#3c6b3a"/><rect x="300" y="96" width="20" height="84" fill="#3c6b3a"/></svg>',
+    tuin: '<svg class="scene" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#a8c3d6"/><rect y="90" width="320" height="90" fill="#5d8a4c"/><rect x="200" y="50" width="96" height="70" fill="#4a4f57"/><rect x="214" y="66" width="30" height="40" fill="#8fb3d1"/><circle cx="70" cy="70" r="34" fill="#3f7a3a"/><rect x="66" y="96" width="8" height="30" fill="#6b4a2e"/><rect x="0" y="150" width="320" height="30" fill="#8d8781"/></svg>',
+    achter: '<svg class="scene" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice"><rect width="320" height="180" fill="#2a3340"/><rect x="40" y="30" width="110" height="150" fill="#3a4452"/><rect x="62" y="56" width="66" height="124" fill="#1d242e"/><rect x="190" y="70" width="90" height="60" fill="#3a4452"/><rect y="160" width="320" height="20" fill="#454b52"/></svg>',
+  };
+  const IK = {
+    camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/></svg>',
+    bel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>',
+  };
+  // Twee camera's zoals in dit huis, en twee erbij om te zien hoe de kaart schikt.
+  const TWEE = [
+    { id: 'deurbel', naam: 'Deurbel', bel: true, wanneer: 'Aangebeld om 13:07' },
+    { id: 'oprit', naam: 'Oprit', nu: true, wanneer: 'Persoon, nu' },
+  ];
+  const VIER = [...TWEE, { id: 'tuin', naam: 'Tuin', wanneer: 'Beweging om 12:40' }, { id: 'achter', naam: 'Achterdeur', wanneer: 'Geen beweging vandaag' }];
+  const beeld = (c, klein = false) => `<div class="beeld${c.nu ? ' nu' : ''}${c.bel ? ' bel' : ''}">${SCENE[c.id]}<span class="naam">${c.bel ? IK.bel : IK.camera}${c.naam}</span>${klein ? '' : `<span class="wanneer"><i></i>${c.wanneer}</span>`}</div>`;
+  const kop = (rechts = '') => `<div class="kop">${IK.camera}<span>Camera's</span>${rechts ? `<span class="rechtsaf">${rechts}</span>` : ''}</div>`;
+
+  function kaarten(lijst) {
+    // Wat nu beweegt eerst; daarna de volgorde die je koos.
+    const volg = [...lijst].sort((a, b) => Number(!!b.nu) - Number(!!a.nu));
+    const n = Math.min(4, volg.length);
+    const breed = `<section class="glas kaart breed">${kop(volg.some((c) => c.nu) ? 'Beweging op de oprit' : '')}<div class="beelden n${n}">${volg.slice(0, 4).map((c) => beeld(c)).join('')}</div></section>`;
+    const smal = `<section class="glas kaart smal">${kop()}<div class="beelden n1">${beeld(volg[0])}</div><div class="stipjes">${volg.map((c, i) => `<i class="${i === 0 ? 'aan' : ''}${c.nu && i ? ' nu' : ''}"></i>`).join('')}</div></section>`;
+    return `${breed}${smal}<section class="glas kaart smal" style="opacity: 0.5"><div class="kop">Morgen</div><div style="font-family: var(--kop); font-size: 28px; font-weight: 700; margin-top: 18px">15° <span style="font-size: 15px; color: var(--zacht)">/ 9°</span></div></section>
+      <div class="uitleg">Breed: elke camera een eigen vak, wat beweegt eerst en met een gloeiende rand. Smal: één beeld, de andere wisselen; een stipje per camera. Tik op een beeld: groot en live.</div>`;
+  }
+  const rechts = document.getElementById('rechts');
+  const stand = location.hash.slice(1);
+  rechts.innerHTML = kaarten(stand === 'vier' ? VIER : TWEE);
+
+  if (stand === 'groot') {
+    const g = document.getElementById('groot');
+    g.classList.add('aan');
+    g.innerHTML = `<div class="vak">${SCENE.oprit}<div class="boven"><span class="naam">${IK.camera}Oprit</span><span class="live"><i></i>LIVE</span><span class="dicht">×</span></div><span class="onder">Persoon, nu · beweging sinds 14:46</span></div>
+      <div class="rij">${TWEE.map((c, i) => beeld(c, true).replace('class="beeld', `class="beeld${i === 1 ? ' gekozen' : ''}`)).join('')}</div>`;
+  }
+  if (stand === 'kies') {
+    const b = document.getElementById('blad');
+    b.classList.add('aan');
+    const rij = (c, aan, zin) => `<div class="keus"><div class="beeld">${SCENE[c]}</div><div><b>${{ deurbel: 'Deurbel', oprit: 'Camera oprit', tuin: 'Tuin', achter: 'Achterdeur' }[c]}</b><span>${zin}</span></div><div style="display: flex; align-items: center"><span class="greep">⋮⋮</span><span class="vink${aan ? ' aan' : ''}">${aan ? '✓' : ''}</span></div></div>`;
+    b.innerHTML = `<h2>Welke camera's?</h2><p>Zoveel als je wilt, in deze volgorde. Wat beweegt, komt vanzelf vooraan.</p>${rij('deurbel', true, 'Aangebeld om 13:07')}${rij('oprit', true, 'Beweging om 13:47')}<div class="knoppen"><button class="knop knop-licht">Klaar</button></div>`;
+  }
+</script>
+</body>
+</html>

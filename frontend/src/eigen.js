@@ -40,7 +40,10 @@
     auto: S('<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.5"/><circle cx="16.5" cy="16" r="1.5"/>'),
     batterij: S('<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M10 2h4M9 14h6M9 10h6"/>'),
     maand: S('<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>'),
-    deurbel: S('<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
+    // De kaart Camera's (besluit 201) heeft het camera-icoon; de bel staat bij de deurbel zelf.
+    deurbel: S('<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/>'),
+    camera: S('<rect x="3" y="7" width="13" height="10" rx="2"/><path d="m16 11 5-3v8l-5-3"/>'),
+    bel: S('<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 20a2 2 0 0 0 4 0"/>'),
     boiler: S('<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M10 15h4"/>'),
     // Het sluipverbruik (besluit 192): de maan, want het gaat om de nacht.
     sluip: S('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>'),
@@ -483,7 +486,7 @@
   let blad = null;
 
   function openBlad(soort, plek) {
-    blad = { soort, plek, keuze: soort === 'favorieten' ? [...deel(plek).favorieten] : null, open: new Set() };
+    blad = { soort, plek, keuze: soort === 'favorieten' ? [...deel(plek).favorieten] : soort === 'cameras' ? [...(deel(plek).cameras ?? camerasAlle().map((c) => c.id))] : null, open: new Set() };
 
     // Het blad van Thuis zelf (de stand, wie er thuis is) is dit niet meer.
     delete document.querySelector('[data-kiesblad]').dataset.blad;
@@ -509,6 +512,7 @@
     if (!blad || !el) return;
     const { soort, plek } = blad;
     if (soort === 'weergave') return tekenWeergave(el);
+    if (soort === 'cameras') return tekenCameras(el);
     if (soort === 'erbij') {
       // Welke kaarten er nog niet staan, met wat ze laten zien.
       const weg = kaartenIn(plek).filter((k) => k.hasAttribute('data-uit') && !k.hasAttribute('data-niet-hier'));
@@ -584,6 +588,27 @@
       ${chips ? `<div class="favchips tegels" data-favchips>${chips}</div>` : ''}
       ${filters}
       ${ruimtes}`;
+  }
+
+  /*
+   * Welke camera's op de kaart (besluit 201): zoveel als je wilt. Wat je koos
+   * staat bovenaan met zijn plek; een tik zet hem aan of uit, en wat je erbij
+   * zet, komt achteraan. Wat beweegt, komt op de kaart vanzelf vooraan.
+   */
+  let camerasAlle = () => [];
+  function tekenCameras(el) {
+    const alle = camerasAlle();
+    const gekozen = blad.keuze;
+    const rij = (c) => {
+      const plek = gekozen.indexOf(c.id);
+      const aan = plek >= 0;
+      return keus({ ik: c.deurbel ? ICOON.bel : ICOON.camera, naam: c.naam, klein: aan ? global.t('eigen.cam.plek', { nr: plek + 1 }) : global.t('eigen.cam.uit'), rechts: aan ? '✓' : '', data: `data-cam-keus="${esc(c.id)}"`, aan });
+    };
+    const volg = [...gekozen.map((id) => alle.find((c) => c.id === id)).filter(Boolean), ...alle.filter((c) => !gekozen.includes(c.id))];
+    el.setAttribute('aria-label', global.t('eigen.cam.kop'));
+    el.innerHTML = `<div class="bladkop"><h2 class="kop-2">${esc(global.t('eigen.cam.kop'))}</h2><button type="button" class="knop knop-licht" data-cam-klaar>${esc(global.t('algemeen.klaar'))}</button></div>
+      <p class="mini" style="margin: 0">${esc(global.t('eigen.cam.zin'))}</p>
+      ${volg.length ? volg.map(rij).join('') : `<p class="mini">${esc(global.t('thuis.cam.leeg'))}</p>`}`;
   }
 
   /** De lampen, screens en scènes per kamer, in de volgorde van het huis; dezelfde scènenaam in een kamer één keer. */
@@ -680,7 +705,7 @@
       // In de bewerkstand doen de kaarten zelf niets: geen links, geen lampen. De greep en het oog wel.
       if (!bewerk || !e.target.closest('[data-kaarten] > [data-kaart]')) return;
       e.preventDefault();
-      if (!e.target.closest('[data-greep], [data-oog], [data-maat-zet], [data-fav-kies]')) e.stopPropagation();
+      if (!e.target.closest('[data-greep], [data-oog], [data-maat-zet], [data-fav-kies], [data-cam-kies]')) e.stopPropagation();
     },
     true,
   );
@@ -714,6 +739,26 @@
     if (maat && bewerk) return zetMaat(maat.closest('[data-kaart]'), maat.dataset.maatZet);
     const kies = t.closest('[data-fav-kies]');
     if (kies) return openBlad('favorieten', kies.closest('#wand') ? 'wand' : 'tel');
+    const camKies = t.closest('[data-cam-kies]');
+    if (camKies) return openBlad('cameras', camKies.closest('#wand') ? 'wand' : 'tel');
+    const camKeus = t.closest('[data-cam-keus]');
+    if (camKeus && blad?.soort === 'cameras') {
+      const id = camKeus.dataset.camKeus;
+      const i = blad.keuze.indexOf(id);
+      if (i >= 0) blad.keuze.splice(i, 1);
+      else blad.keuze.push(id);
+      tekenBlad();
+      document.querySelector(`[data-kiesblad] [data-cam-keus="${CSS.escape(id)}"]`)?.focus();
+      return;
+    }
+    if (t.closest('[data-cam-klaar]') && blad?.soort === 'cameras') {
+      const { plek, keuze } = blad;
+      sluitBlad();
+      // Wie camera's kiest, wil de kaart ook zien.
+      const kaarten = deel(plek).kaarten.includes('deurbel') ? deel(plek).kaarten : [...deel(plek).kaarten, 'deurbel'];
+      void bewaar(plek, { cameras: keuze, kaarten });
+      return;
+    }
     const erbij = t.closest('[data-erbij]');
     if (erbij && blad) {
       const plek = blad.plek;
@@ -822,6 +867,12 @@
     vanInstellingen,
     na,
     tekenFavorieten,
+    /** De camera's op de kaart (besluit 201): wat je koos, of null voor alle. */
+    cameras: (plek) => (kan ? (deel(plek).cameras ?? null) : null),
+    /** Of je hier de camera's mag kiezen: je eigen telefoon, of de wand als je die mag aanpassen. */
+    magKiezen: (plek) => kan && (plek === 'tel' || v.wand.magAanpassen),
+    /** Alle camera's die het huis toont, voor het kiesblad; thuis.js geeft ze. */
+    metCameras: (fn) => (camerasAlle = fn),
     /** Wat thuis.js doet als er iets veranderde; `huisOok` haalt ook het huis opnieuw. */
     bij: (fn) => (opnieuw = fn),
     get bewerkt() {

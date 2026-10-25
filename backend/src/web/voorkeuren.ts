@@ -152,6 +152,8 @@ interface Eigen {
   /** Welke kaarten op de wand breed staan (besluit 187). */
   readonly breed?: readonly KaartId[];
   readonly favorieten?: readonly Favoriet[];
+  /** De camera's op de kaart Camera's (besluit 201), in deze volgorde; weg is alle. */
+  readonly cameras?: readonly string[];
   readonly weergave?: Weergave;
   readonly thema?: Thema;
   readonly kleur?: Kleur;
@@ -165,19 +167,19 @@ interface Bestand {
   /** Per account van Home Assistant; '' is zonder inlog (de NAS op het thuisnetwerk). */
   readonly accounts: Readonly<Record<string, Eigen>>;
   /** De wand. Kaarten en favorieten hier gelden alleen zonder bewoners (besluit 181). */
-  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly breed?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[]; readonly niemand?: Niemand };
+  readonly wand?: { readonly kaarten?: readonly KaartId[]; readonly breed?: readonly KaartId[]; readonly favorieten?: readonly Favoriet[]; readonly cameras?: readonly string[]; readonly niemand?: Niemand };
 }
 
 const LEEG: Bestand = { versie: 1, accounts: {} };
 
 export interface VoorkeurenView {
-  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly taal: TaalKeus; readonly meldingen: MeldingKeus };
+  readonly tel: { readonly kaarten: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly cameras: readonly string[] | null; readonly weergave: Weergave; readonly thema: Thema; readonly kleur: Kleur; readonly taal: TaalKeus; readonly meldingen: MeldingKeus };
   /**
    * De wand: de kaarten, favorieten en kleur van wiens profiel geldt (`van`,
    * een account), zoals op zijn telefoon; zonder bewoners die van het huis.
    * `eigen`: wie kijkt is zelf die bewoner, en niet een scherm.
    */
-  readonly wand: { readonly kaarten: readonly KaartId[]; readonly breed: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean;
+  readonly wand: { readonly kaarten: readonly KaartId[]; readonly breed: readonly KaartId[]; readonly favorieten: readonly Favoriet[]; readonly cameras: readonly string[] | null; readonly magAanpassen: boolean; readonly niemand: Niemand; readonly kleur: Kleur; readonly van: string | null; readonly naam: string | null; readonly eigen: boolean;
     /**
      * Wat de wand overneemt van wie hij volgt (25 oktober 2026): de weergave, het
      * thema en de taal van diens account, net als de kaarten en de kleur. Null
@@ -259,6 +261,19 @@ export function leesBreed(x: unknown): { ok: true; breed: KaartId[] } | { ok: fa
   return { ok: true, breed };
 }
 
+/** De camera's op de kaart (besluit 201): hooguit twaalf beelden van Home Assistant, geen dubbele. */
+export function leesCameras(x: unknown): { ok: true; cameras: string[] } | { ok: false; reden: string } {
+  if (!Array.isArray(x)) return { ok: false, reden: 'cameras is een lijst' };
+  if (x.length > MAX_FAVORIETEN) return { ok: false, reden: `hooguit ${MAX_FAVORIETEN} camera's` };
+  const cameras: string[] = [];
+  for (const id of x) {
+    if (typeof id !== 'string' || !/^camera\.[a-z0-9_]+$/.test(id)) return { ok: false, reden: 'een camera is een camera.… uit Home Assistant' };
+    if (cameras.includes(id)) return { ok: false, reden: `${id} staat er twee keer in` };
+    cameras.push(id);
+  }
+  return { ok: true, cameras };
+}
+
 /** Hooguit twaalf favorieten, elk een lamp, een scène of een scherm, en geen dubbele. */
 export function leesFavorieten(x: unknown): { ok: true; favorieten: Favoriet[] } | { ok: false; reden: string } {
   if (!Array.isArray(x)) return { ok: false, reden: 'favorieten is een lijst' };
@@ -331,11 +346,12 @@ export function voorkeurenView(b: Bestand, wie: VoorkeurWie): VoorkeurenView {
   const thema = themaVan(eigen);
   const taal = taalVan(eigen);
   return {
-    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
+    tel: { kaarten: eigen.tel ?? STANDAARD_TEL, favorieten: eigen.favorieten ?? [], cameras: eigen.cameras ?? null, weergave: { ...STANDAARD_WEERGAVE, ...eigen.weergave }, thema, kleur: kleurVan(b, wie.userId, wie.profielen), taal, meldingen: { ...STANDAARD_MELDINGEN, ...eigen.meldingen } },
     wand: {
       kaarten: profiel ? (profiel.tel ?? STANDAARD_TEL).filter((k) => WAND_KAARTEN.includes(k)) : (b.wand?.kaarten ?? STANDAARD_WAND),
       breed: (profiel ? profiel.breed : b.wand?.breed) ?? STANDAARD_BREED,
       favorieten: profiel ? (profiel.favorieten ?? []) : (b.wand?.favorieten ?? []),
+      cameras: profiel ? (profiel.cameras ?? null) : (b.wand?.cameras ?? null),
       // Zonder bewoners past de hoofdgebruiker of een beheerder de wand aan; met bewoners je eigen indeling, of op een scherm die van wie er geldt.
       magAanpassen: van == null ? wie.magWand : true,
       niemand: { ...STANDAARD_NIEMAND, ...b.wand?.niemand },
@@ -413,7 +429,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   const r = isObject(body) ? body : null;
   const plek = r?.['plek'];
   if (plek !== 'tel' && plek !== 'wand') return { ok: false, status: 400, reden: 'plek is tel of wand' };
-  if (!['kaarten', 'breed', 'favorieten', 'weergave', 'niemand', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, breed, favorieten, weergave, thema, kleur, taal, meldingen of niemand' };
+  if (!['kaarten', 'breed', 'favorieten', 'cameras', 'weergave', 'niemand', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'geef kaarten, breed, favorieten, cameras, weergave, thema, kleur, taal, meldingen of niemand' };
   if (plek === 'wand' && ['weergave', 'thema', 'kleur', 'taal', 'meldingen'].some((k) => r![k] !== undefined)) return { ok: false, status: 400, reden: 'de weergave, het thema, de kleur, de taal en de meldingen zijn per account: plek tel' };
   if (plek === 'tel' && r!['niemand'] !== undefined) return { ok: false, status: 400, reden: 'als niemand kijkt hoort bij de wand: plek wand' };
   const { van } = wandVan(wie);
@@ -424,6 +440,8 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
   if (favorieten && !favorieten.ok) return { ok: false, status: 400, reden: favorieten.reden };
   const breed = r!['breed'] === undefined ? null : leesBreed(r!['breed']);
   if (breed && !breed.ok) return { ok: false, status: 400, reden: breed.reden };
+  const cameras = r!['cameras'] === undefined ? null : leesCameras(r!['cameras']);
+  if (cameras && !cameras.ok) return { ok: false, status: 400, reden: cameras.reden };
   const nu = voorkeurenView(b, wie);
   if (plek === 'wand') {
     const niemand = r!['niemand'] === undefined ? null : leesNiemand(r!['niemand'], nu.wand.niemand);
@@ -432,10 +450,11 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
       ...(kaarten ? { kaarten: kaarten.kaarten } : {}),
       ...(breed ? { breed: breed.breed } : {}),
       ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+      ...(cameras ? { cameras: cameras.cameras } : {}),
     };
     const wand = { ...b.wand, ...(van == null ? indeling : {}), ...(niemand ? { niemand: niemand.niemand } : {}) };
     const profiel = van == null ? null : (b.accounts[van] ?? {});
-    const accounts = profiel == null || (!kaarten && !favorieten && !breed)
+    const accounts = profiel == null || (!kaarten && !favorieten && !breed && !cameras)
       ? b.accounts
       : {
           ...b.accounts,
@@ -444,6 +463,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
             ...(kaarten ? { tel: metWandVolgorde(profiel.tel ?? STANDAARD_TEL, kaarten.kaarten) } : {}),
             ...(breed ? { breed: breed.breed } : {}),
             ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+            ...(cameras ? { cameras: cameras.cameras } : {}),
           },
         };
     return { ok: true, bestand: { ...b, accounts, wand } };
@@ -464,6 +484,7 @@ export function pasToe(b: Bestand, body: unknown, wie: VoorkeurWie): { ok: true;
     ...(kaarten ? { tel: kaarten.kaarten } : {}),
     ...(breed ? { breed: breed.breed } : {}),
     ...(favorieten ? { favorieten: favorieten.favorieten } : {}),
+    ...(cameras ? { cameras: cameras.cameras } : {}),
     ...(weergave ? { weergave: weergave.weergave } : {}),
     ...(thema ? { thema: thema.thema } : {}),
     ...(kleur ? { kleur: kleur.kleur } : {}),
