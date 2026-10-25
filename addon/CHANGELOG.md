@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.73.1
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Bij de bel een melding als een apparaat uit Home Assistant verdwijnt, net als bij een nieuw apparaat; wat je zelf verbergt telt niet, en komt het terug, dan gaat de melding weg
+
+*English*
+
+**New**
+
+- The bell now also tells you when a device disappears from Home Assistant, just like a new device; what you hide yourself does not count, and if it comes back the notification goes away
+
 ## 0.73.0
 
 *25 oktober 2026*

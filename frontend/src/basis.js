@@ -1178,6 +1178,8 @@
   let meldZicht = 'lijst';
   const MELDICOON = {
     nieuw: ['blauw', '<path d="M12 5v14M5 12h14"/>'],
+    // Weg uit Home Assistant (25 oktober 2026): een min in een rondje.
+    weg: ['geel', '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>'],
     stil: ['rood', '<path d="M2 8.8a15 15 0 0 1 20 0M5 12.6a10 10 0 0 1 14 0M8.5 16.4a5 5 0 0 1 7 0"/><path d="M3 3l18 18"/>'],
     batterij: ['geel', '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 11v2M5 10v4"/>'],
     filter: ['geel', '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>'],

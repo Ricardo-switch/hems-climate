@@ -5,6 +5,8 @@
  * vraagt. Wat er een melding krijgt, is wat de bewoner koos:
  *
  * - nieuw in Home Assistant: een apparaat dat in geen kamer staat;
+ * - weg uit Home Assistant: een apparaat dat het huis kende en dat er al tien
+ *   minuten niet meer is (25 oktober 2026); komt het terug, dan gaat het weg;
  * - reageert niet meer: een apparaat in een kamer dat al een uur onbereikbaar
  *   is, en "weer goed" als het terug is;
  * - een batterij of een airco-filter onder de 10%, of wat de bewoner koos
@@ -28,7 +30,7 @@ import { metLidwoord } from './kamerwoorden.js';
 
 export const MELDINGEN_FILE = 'meldingen.json';
 
-export type MeldingSoort = 'nieuw' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook' | 'update' | 'sluip';
+export type MeldingSoort = 'nieuw' | 'weg' | 'stil' | 'batterij' | 'filter' | 'meter' | 'versie' | 'mijlpaal' | 'comfort' | 'panelen' | 'rook' | 'update' | 'sluip';
 
 export interface Melding {
   /** Vast per onderwerp, zoals `stil:light.hal`: zo komt hetzelfde niet dubbel. */
@@ -66,6 +68,8 @@ export interface MeldingenBron {
   readonly nu: number;
   /** Apparaten zonder kamer: nieuw in Home Assistant. */
   readonly zonderRuimte: readonly { readonly id: string; readonly naam: string }[];
+  /** Wat je zelf verborg bij Indeling: dat is niet weg (25 oktober 2026). Weg: niets verborgen. */
+  readonly verborgen?: readonly string[];
   /** Apparaten in een kamer om te volgen, met hun toestand in Home Assistant. */
   readonly volgen: readonly { readonly id: string; readonly naam: string; readonly kamer: string; readonly kamerId: string; readonly onbereikbaarSindsMs: number | null }[];
   readonly batterijen: readonly { readonly id: string; readonly naam: string; readonly pct: number; readonly kamerId: string | null }[];
@@ -102,6 +106,10 @@ export interface MeldingenBron {
 export const STIL_NA_MS = 60 * 60_000;
 /** Zo lang nieuw voor het een melding is: wie net iets koppelt, deelt het vaak meteen in. */
 export const NIEUW_NA_MS = 10 * 60_000;
+/** Zo lang weg voor het een melding is: een apparaat dat opnieuw gekoppeld wordt, is even weg. */
+export const WEG_NA_MS = 10 * 60_000;
+/** Na zoveel tijd weg vergeet de bel een apparaat; de melding gaat dan stil weg. */
+const VERGEET_MS = 30 * 86_400_000;
 /** Zo lang geen meting van een meter. */
 export const METER_STIL_NA_MS = 30 * 60_000;
 /** Zo lang blijft iets onder Eerder staan. */
@@ -116,6 +124,12 @@ interface Bestand {
   readonly mijlpalen: number[];
   /** Wiens comfort er het laatst gold (besluit 147). */
   readonly laatsteComfort?: string | null;
+  /**
+   * De apparaten die het huis kent, met hun kamer (25 oktober 2026), en sinds
+   * wanneer er een weg is: zo weet de bel wat er uit Home Assistant verdween.
+   */
+  readonly bekend?: Readonly<Record<string, { readonly naam: string; readonly kamer: string | null }>>;
+  readonly vermist?: Readonly<Record<string, number>>;
 }
 
 const LOCALE: Readonly<Record<Lang, string>> = { nl: 'nl-NL', en: 'en-GB' };
@@ -139,6 +153,12 @@ const WOORDEN = {
     dagen: (n: number) => `${n} dagen`,
     bekijk: 'Bekijk',
     nieuw: { titel: (naam: string) => `Nieuw in Home Assistant: ${naam}`, tekst: 'Zet het in een kamer, dan staat het in het huis en kun je het bedienen.', actie: 'Zet in een kamer' },
+    weg: {
+      titel: (naam: string) => `Weg uit Home Assistant: ${naam}`,
+      inKamer: (kamer: string) => `Het stond in ${kamer}. Haalde je het zelf weg, dan kun je deze melding weghalen; komt het terug, dan staat het er weer.`,
+      los: 'Haalde je het zelf weg, dan kun je deze melding weghalen; komt het terug, dan staat het er weer.',
+      actie: 'Bekijk de indeling',
+    },
     stil: {
       titel: (naam: string) => `${naam} reageert niet meer`,
       tekst: (duur: string, kamer: string) => `Al ${duur} geen bericht, in ${kamer}. Staat de stekker erin, of is de verbinding weg?`,
@@ -226,6 +246,12 @@ const WOORDEN = {
     dagen: (n: number) => `${n} days`,
     bekijk: 'View',
     nieuw: { titel: (naam: string) => `New in Home Assistant: ${naam}`, tekst: 'Put it in a room, then it is in the house and you can control it.', actie: 'Put in a room' },
+    weg: {
+      titel: (naam: string) => `Gone from Home Assistant: ${naam}`,
+      inKamer: (kamer: string) => `It was in ${kamer}. If you removed it yourself, you can clear this notification; if it comes back, it is there again.`,
+      los: 'If you removed it yourself, you can clear this notification; if it comes back, it is there again.',
+      actie: 'View the layout',
+    },
     stil: {
       titel: (naam: string) => `${naam} no longer responds`,
       tekst: (duur: string, kamer: string) => `No message for ${duur}, in ${kamer}. Is it plugged in, or has the connection gone?`,
@@ -451,6 +477,57 @@ export function wat(bron: MeldingenBron): (Nieuwe & { en: MeldingWoorden })[] {
   return uit;
 }
 
+/**
+ * Wat er uit Home Assistant verdween (25 oktober 2026): de apparaten die het
+ * huis kent, in een kamer of nog zonder, en sinds wanneer er een niet meer is.
+ * Na tien minuten een melding. Wat je zelf verborg bij Indeling telt niet; is
+ * er ineens meer dan de helft weg, dan is het huis even niet te lezen en telt
+ * het ook niet. Na dertig dagen vergeet de bel het apparaat.
+ */
+export function wegUit(
+  bron: MeldingenBron,
+  bekendWas: Readonly<Record<string, { readonly naam: string; readonly kamer: string | null }>>,
+  vermistWas: Readonly<Record<string, number>>,
+): { bekend: Record<string, { naam: string; kamer: string | null }>; vermist: Record<string, number>; weg: (Nieuwe & { en: MeldingWoorden })[] } {
+  const nu = bron.nu;
+  const huidig = new Map<string, { naam: string; kamer: string | null }>([
+    ...bron.zonderRuimte.map((d) => [d.id, { naam: d.naam, kamer: null }] as const),
+    ...bron.volgen.map((d) => [d.id, { naam: d.naam, kamer: d.kamer }] as const),
+  ]);
+  const verborgen = new Set(bron.verborgen ?? []);
+  const bekend: Record<string, { naam: string; kamer: string | null }> = { ...bekendWas };
+  const vermist: Record<string, number> = { ...vermistWas };
+  for (const [id, d] of huidig) {
+    bekend[id] = d;
+    delete vermist[id];
+  }
+  for (const id of verborgen) {
+    delete bekend[id];
+    delete vermist[id];
+  }
+  const nieuwWeg = Object.keys(bekend).filter((id) => !huidig.has(id) && vermist[id] == null);
+  const leesbaar = huidig.size > 0 && nieuwWeg.length <= Math.max(2, Object.keys(bekend).length / 2);
+  if (leesbaar) for (const id of nieuwWeg) vermist[id] = nu;
+  const weg: (Nieuwe & { en: MeldingWoorden })[] = [];
+  for (const [id, sinds] of Object.entries(vermist)) {
+    const d = bekend[id];
+    if (!d || nu - sinds > VERGEET_MS) {
+      delete bekend[id];
+      delete vermist[id];
+      continue;
+    }
+    if (nu - sinds < WEG_NA_MS) continue;
+    weg.push({
+      ...tweetalig((lang) => {
+        const w = WOORDEN[lang].weg;
+        return { id: `weg:${id}`, soort: 'weg', aandacht: true, titel: w.titel(d.naam), tekst: d.kamer ? w.inKamer(inKamer(d.kamer, lang)) : w.los, actie: { label: w.actie, href: 'indeling.html' } };
+      }),
+      sindsMs: sinds,
+    });
+  }
+  return { bekend, vermist, weg };
+}
+
 export class MeldingenStore {
   readonly #path: string;
   #bestand: Bestand = { versie: 1, meldingen: [], negeer: [], laatsteVersie: null, mijlpalen: [] };
@@ -464,7 +541,7 @@ export class MeldingenStore {
     try {
       const b = JSON.parse(await readFile(this.#path, 'utf-8')) as Partial<Bestand>;
       if (b.versie === 1 && Array.isArray(b.meldingen)) {
-        this.#bestand = { versie: 1, meldingen: b.meldingen, negeer: Array.isArray(b.negeer) ? b.negeer : [], laatsteVersie: b.laatsteVersie ?? null, mijlpalen: Array.isArray(b.mijlpalen) ? b.mijlpalen : [], laatsteComfort: typeof b.laatsteComfort === 'string' ? b.laatsteComfort : null };
+        this.#bestand = { versie: 1, meldingen: b.meldingen, negeer: Array.isArray(b.negeer) ? b.negeer : [], laatsteVersie: b.laatsteVersie ?? null, mijlpalen: Array.isArray(b.mijlpalen) ? b.mijlpalen : [], laatsteComfort: typeof b.laatsteComfort === 'string' ? b.laatsteComfort : null, ...(b.bekend && typeof b.bekend === 'object' ? { bekend: b.bekend } : {}), ...(b.vermist && typeof b.vermist === 'object' ? { vermist: b.vermist } : {}) };
       }
     } catch {
       // Nog geen bestand, of niet te lezen: dan begint de lijst leeg.
@@ -475,7 +552,8 @@ export class MeldingenStore {
   bij(bron: MeldingenBron): void {
     const nu = bron.nu;
     const b = this.#bestand;
-    const nuSpeelt = wat(bron);
+    const { bekend, vermist, weg } = wegUit(bron, b.bekend ?? {}, b.vermist ?? {});
+    const nuSpeelt = [...wat(bron), ...weg];
     const ids = new Set(nuSpeelt.map((m) => m.id));
     const meldingen = [...b.meldingen];
     for (const m of nuSpeelt) {
@@ -547,7 +625,7 @@ export class MeldingenStore {
     // Wat lang geleden opgelost is, gaat weg; zo blijft het bestand klein.
     const bewaar = meldingen.filter((m) => m.opgelostMs == null || nu - m.opgelostMs < EERDER_MS);
     const negeer = b.negeer.filter((id) => ids.has(id) || bewaar.some((m) => m.id === id));
-    const nieuw: Bestand = { versie: 1, meldingen: bewaar, negeer, laatsteVersie, mijlpalen, laatsteComfort };
+    const nieuw: Bestand = { versie: 1, meldingen: bewaar, negeer, laatsteVersie, mijlpalen, laatsteComfort, bekend, vermist };
     if (JSON.stringify(nieuw) !== JSON.stringify(b)) {
       this.#bestand = nieuw;
       this.#vies = true;
@@ -558,9 +636,10 @@ export class MeldingenStore {
   lijst(nu: number, lang: Lang = 'nl'): { actief: Melding[]; eerder: Melding[] } {
     const b = this.#bestand;
     const wacht = (m: Melding) => m.soort === 'nieuw' && nu - m.sindsMs < NIEUW_NA_MS;
+    // Nieuw en weg gaan stil weg: een apparaat in een kamer gezet, of terug, hoeft niet onder Eerder.
     const actief = b.meldingen.filter((m) => m.opgelostMs == null && m.aandacht && !b.negeer.includes(m.id) && !wacht(m)).sort((x, y) => y.sindsMs - x.sindsMs).map((m) => inTaal(m, lang));
     const eerder = b.meldingen
-      .filter((m) => m.opgelostMs != null && m.soort !== 'nieuw' && (m.klaar != null || !m.aandacht) && !b.negeer.includes(m.id))
+      .filter((m) => m.opgelostMs != null && m.soort !== 'nieuw' && m.soort !== 'weg' && (m.klaar != null || !m.aandacht) && !b.negeer.includes(m.id))
       .sort((x, y) => (y.opgelostMs ?? 0) - (x.opgelostMs ?? 0))
       .slice(0, 10)
       .map((m) => inTaal(m, lang))

@@ -9255,6 +9255,15 @@ herkennen ook personen, voertuigen en dieren: dat moest erin.
 melder per camera zelf kiezen (de dienst vindt hem op het apparaat); een
 melding op de telefoon bij een persoon (kan later bij Meldingen).
 
+
+*Aanvulling (25 oktober 2026, versie 0.73.1):* de bel meldde een nieuw apparaat,
+maar niet als er een verdween. Nu onthoudt hij welke apparaten het huis kent;
+is er een tien minuten weg uit Home Assistant, dan staat er "Weg uit Home
+Assistant: …", met de kamer waar het stond. Wat je zelf verbergt bij Indeling
+telt niet, en is meer dan de helft tegelijk weg, dan is het huis even niet te
+lezen en telt het ook niet. Komt het apparaat terug, dan gaat de melding stil
+weg; na dertig dagen vergeet de bel het. Alleen bij de bel, niet op de
+telefoon.
 ---
 
 ## Wat nog een besluit wacht

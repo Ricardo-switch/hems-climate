@@ -55,6 +55,8 @@ export function meldingenBron(i: BronInvoer): MeldingenBron | null {
   return {
     nu: i.nu,
     zonderRuimte: h.zonderRuimte.map((d) => ({ id: d.id, naam: d.naam })),
+    // Wat je zelf verborg, is niet weg uit Home Assistant (25 oktober 2026).
+    verborgen: (h.verborgen ?? []).map((d) => d.id),
     volgen,
     batterijen: h.batterijen,
     filters: h.filters,
