@@ -1,5 +1,77 @@
 # Wat is er nieuw · What is new
 
+## 0.67.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- De app werkt ook in een huis zonder slimme verwarming of airco: licht, schermen, energie, op zon en de assistent, en comfort per kamer kan erbij
+
+**Opgelost**
+
+- De test van het sluipverbruik hangt niet meer af van hoe laat hij draait
+
+*English*
+
+**New**
+
+- The app also works in a house without smart heating or air conditioning: lights, blinds, energy, on sun and the assistant, and comfort per room can be added
+
+**Fixed**
+
+- The standby use test no longer depends on the time it runs
+
+## 0.66.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Sluipverbruik: wat je huis elke nacht gebruikt als er niets draait, met een eigen scherm onder Opbrengst, elke nacht en elke maand sinds je meter
+- Een melding de ochtend erna als een nacht 50 W of meer boven je gewone nacht lag, en een kaart Sluipverbruik voor Thuis
+
+**Beter**
+
+- De assistent weet je sluipverbruik, en Wat je huis kan heeft het bij Kosten
+
+*English*
+
+**New**
+
+- Standby use: what your house uses every night when nothing runs, with its own screen under Energy, every night and every month since your meter
+- A notification the morning after when a night was 50 W or more above your usual night, and a Standby use card for Home
+
+**Improved**
+
+- The assistant knows your standby use, and What your house can do lists it under Costs
+
+## 0.65.0
+
+*24 oktober 2026*
+
+**Nieuw**
+
+- Kamers en indeling werkt zoals Energie: op de telefoon eerst de lijst met etages, Buiten en wat nog in te delen is; op de wand de lijst en het gekozen deel naast elkaar
+- Bij Buiten zet je aan wat er rond het huis is, met hetzelfde lijstje als bij Inrichten
+
+**Opgelost**
+
+- Een garage of carport die je buiten toevoegt, staat nu ook in de tekening, ook bij Kamers en indeling en bij een kamer
+- Een ruimte die een carport is, kun je bij Inrichten nu aan de carport koppelen
+
+*English*
+
+**New**
+
+- Rooms and layout works like Energy: on the phone first the list of floors, Outside and what is still to arrange; on the wall the list and the chosen part side by side
+- At Outside you turn on what is around the house, with the same list as in Set up
+
+**Fixed**
+
+- A garage or carport you add outside now shows in the drawing, also in Rooms and layout and for a room
+- An area that is a carport can now be linked to the carport in Set up
+
 ## 0.63.1
 
 *24 oktober 2026*

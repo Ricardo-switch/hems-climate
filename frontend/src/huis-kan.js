@@ -15,7 +15,7 @@ const d = { site: null, huis: null, functies: null, energie: null, aansluiting: 
 let filter = null;
 
 async function laadAlles() {
-  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon', klaar: 'api/klaarzetten' };
+  const deuren = { site: 'api/site', huis: 'api/huis', functies: 'api/functies', energie: 'api/energie', aansluiting: 'api/aansluiting', state: 'api/state', divergence: 'api/divergence', opbrengst: 'api/opbrengst?soort=maand', zon: 'api/zon', klaar: 'api/klaarzetten', sluip: 'api/sluipverbruik' };
   const r = await Promise.allSettled(Object.values(deuren).map((p) => haal(p)));
   Object.keys(deuren).forEach((k, i) => {
     if (r[i].status === 'fulfilled') d[k] = r[i].value;
@@ -130,7 +130,7 @@ function huisModel(lijst) {
     labels: [
       piekW > 0 ? label('panelen', per('ligging') ? 'ligging' : 'opzon', 40, -60) : null,
       label('boiler', 'boiler', -60, 70),
-      kamer ? label(`kamer:${kamer}`, 'temperatuur', -40, 96) : null,
+      kamer ? label(`kamer:${kamer}`, 'temperatuur', 0, 40) : null,
       label('batterij', 'batterij', -60, 150),
       label('auto', 'auto', 30, -120),
     ].filter(Boolean),

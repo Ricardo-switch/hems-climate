@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefoon · Kamers en indeling als groep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Kamers en indeling op de telefoon (schets, 24 oktober 2026), zoals Energie:
+   * eerst de lijst met de etages, Buiten en de apparaten zonder plek. Een deel
+   * opent als eigen scherm, met terug naar de lijst en onderaan Vorige en
+   * Volgende.
+   *   (zonder)   de lijst
+   *   #deel      Begane grond geopend, de woonkamer aangetikt
+   *   #buiten    Buiten geopend: het huis en wat er rond het huis is
+   */
+  body { margin: 0; width: 390px; min-height: 844px; }
+  .tel { overflow: hidden; }
+  .tel .tabs { position: fixed; }
+  .scherm { display: none; padding: 18px 16px 110px; flex-direction: column; gap: 14px; }
+  body[data-toon='lijst'] #s-lijst, body[data-toon='deel'] #s-deel, body[data-toon='buiten'] #s-buiten { display: flex; }
+
+  .terugje { font-size: 14px; font-weight: 600; color: var(--zacht); text-decoration: none; }
+  .groepkop { display: flex; flex-direction: column; gap: 6px; }
+  .groepkop .kop-1 { font-size: 34px; }
+  .bewaard { font-size: 13.5px; font-weight: 600; color: var(--gedempt); }
+  .samen { display: flex; gap: 8px; flex-wrap: wrap; }
+  .samen span { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+  .samen span::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .samen .mis { color: var(--gloed); background: rgba(255, 122, 77, 0.12); }
+  .samen .goed { color: var(--mint); background: rgba(110, 231, 183, 0.1); }
+
+  .lijst { padding: 4px; border-radius: 22px; }
+  .lijst h4 { margin: 12px 14px 4px; font-size: 12px; font-weight: 700; color: var(--gedempt); }
+  .rij { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 1px 12px; align-items: center; min-height: 64px; padding: 8px 12px; border-top: 1px solid rgba(255, 255, 255, 0.07); color: var(--tekst); text-decoration: none; }
+  .lijst h4 + .rij { border-top: 0; }
+  .rij .ik { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .rij .ik svg { width: 20px; height: 20px; }
+  .rij b { font-size: 16px; font-weight: 600; align-self: end; }
+  .rij small { grid-column: 2; font-size: 13px; color: var(--gedempt); align-self: start; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rij .pijl { grid-row: 1 / 3; grid-column: 3; display: flex; align-items: center; gap: 8px; color: var(--gedempt); font-size: 22px; }
+  .rij.mist small { color: var(--gloed); }
+  .rij.mist .ik { background: rgba(255, 122, 77, 0.14); }
+  .rij.erbij { min-height: 48px; display: flex; justify-content: center; color: var(--ijs); font-weight: 700; font-size: 14.5px; }
+
+  .vorm { padding: 16px; display: flex; flex-direction: column; gap: 12px; border-radius: 22px; }
+  .vormkop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .vormkop h2 { margin: 0; font-size: 26px; }
+  .knop { display: inline-flex; align-items: center; justify-content: center; height: 40px; white-space: nowrap; padding: 0 14px; }
+  .tel .tabs { display: none; }
+  .podium { height: 250px; margin: 0 -10px; }
+  .strook { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 18px; border: 1px dashed rgba(247, 181, 72, 0.5); background: rgba(247, 181, 72, 0.05); }
+  .strook .boven { display: flex; align-items: center; gap: 12px; }
+  .strook .getal { font-size: 26px; }
+  .strook .uitleg { font-size: 12.5px; color: var(--gedempt); line-height: 1.35; }
+  .strook .uitleg b { display: block; font-size: 14px; color: var(--tekst); }
+  .blad { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .blad .terugblad { font-size: 13.5px; font-weight: 700; color: var(--zacht); }
+  .bladkop { display: flex; justify-content: space-between; align-items: baseline; }
+  .bladkop h3 { margin: 0; font-size: 20px; }
+  .tabs2 { display: grid; grid-template-columns: 0.7fr 1.3fr; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); }
+  .tabs2 span { height: 32px; display: grid; place-items: center; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--zacht); }
+  .tabs2 span.aan { background: var(--tekst); color: var(--inkt); }
+  .label { font-size: 12px; color: var(--gedempt); margin-bottom: 4px; display: block; }
+  .invoer { height: 42px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 15px; font-weight: 600; }
+  .invoer .pijl { color: var(--gedempt); font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; }
+  .chip.plus { background: transparent; border: 1px dashed rgba(111, 211, 255, 0.6); color: var(--ijs); }
+  .chip.zon { background: transparent; border: 1px dashed var(--zon); }
+  .app { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 14px; }
+  .app:first-of-type { border-top: 0; }
+  .greep { color: var(--gedempt); letter-spacing: -2px; font-weight: 700; }
+  .app .l { flex: 1; display: flex; flex-direction: column; }
+  .app .l span { font-size: 12px; color: var(--gedempt); }
+  .gevaar { color: #ffb090; border-color: rgba(255, 122, 77, 0.35); }
+  .rondrij { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 0 10px; align-items: center; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+  .rondrij.in { padding-left: 20px; }
+  .rondrij i { display: grid; color: var(--zacht); }
+  .rondrij i svg { width: 20px; height: 20px; }
+  .rondrij b { display: block; font-size: 14.5px; }
+  .rondrij span { display: block; font-size: 12px; color: var(--gedempt); }
+  .schakel { position: relative; width: 44px; height: 26px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #c9d3dc; }
+  .schakel.aan { background: var(--mint); }
+  .schakel.aan::after { left: 21px; background: #fff; }
+  .naast { padding: 16px 18px; border-radius: 22px; }
+  .naast h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--zacht); }
+  .naast ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .naast li { display: flex; gap: 8px; font-size: 13.5px; color: var(--zacht); line-height: 1.45; }
+  .naast li::before { content: '›'; color: var(--ijs); font-weight: 700; }
+  .verder { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .verder a { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 16px; background: var(--glas); border: 1px solid var(--glas-rand); color: var(--tekst); text-decoration: none; }
+  .verder a small { font-size: 12px; color: var(--gedempt); font-weight: 600; }
+  .verder a b { font-size: 15px; font-weight: 600; }
+  .verder a.volgende { text-align: right; }
+</style>
+</head>
+<body class="lucht lucht-dag">
+<div class="tel">
+
+  <!-- De lijst -->
+  <section class="scherm" id="s-lijst">
+    <a class="terugje" href="#">‹ Instellingen</a>
+    <div class="groepkop">
+      <h1 class="kop-1">Kamers en indeling</h1>
+      <span class="bewaard">Verandert niets in Home Assistant</span>
+    </div>
+    <div class="samen"><span class="mis">1 mist</span><span class="goed">4 klaar</span></div>
+    <nav class="glas lijst" aria-label="Delen van Kamers en indeling">
+      <h4>Etages</h4>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="dak" style="color: var(--mint)"></span><b>Zolder</b><small>1 kamer, 2 apparaten</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="trap" style="color: var(--mint)"></span><b>Eerste verdieping</b><small>3 kamers, 9 apparaten</small><span class="pijl">›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="deur" style="color: var(--mint)"></span><b>Begane grond</b><small>3 kamers, 11 apparaten</small><span class="pijl">›</span></a>
+      <a class="rij" href="#buiten"><span class="ik" data-icoon="boom" style="color: var(--mint)"></span><b>Buiten</b><small>oprit, garage, tuin met tuinhuis</small><span class="pijl">›</span></a>
+      <a class="rij erbij" href="#">+ Etage erbij</a>
+      <h4>Apparaten</h4>
+      <a class="rij mist" href="#deel"><span class="ik" data-icoon="bak" style="color: var(--gloed)"></span><b>Nog in te delen</b><small>1 apparaat zonder kamer</small><span class="pijl"><span class="stip" style="background: var(--gloed)"></span>›</span></a>
+      <a class="rij" href="#deel"><span class="ik" data-icoon="oog" style="color: var(--zacht)"></span><b>Verborgen</b><small>2 apparaten</small><span class="pijl">›</span></a>
+    </nav>
+  </section>
+
+  <!-- Begane grond geopend -->
+  <section class="scherm" id="s-deel">
+    <a class="terugje" href="#">‹ Kamers en indeling</a>
+    <span class="bewaard" style="color: var(--mint)">Woonkamer bewaard</span>
+    <section class="glas vorm">
+      <div class="vormkop"><h2 class="kop-2">Begane grond</h2><span class="knop">Ongedaan maken</span></div>
+      <div class="podium" id="podium-deel"></div>
+      <div class="strook"><div class="boven"><span class="getal zon-t">1</span><div class="uitleg"><b>Nog in te delen</b>Sleep naar een kamer, of tik en kies de kamer.</div></div><div class="chips"><span class="chip zon">Lamp tuinhuis</span></div></div>
+      <div class="blad">
+        <span class="terugblad">‹ Begane grond</span>
+        <div class="bladkop"><h3 class="kop-3">Woonkamer</h3><span class="mini">20,5°</span></div>
+        <div class="tabs2"><span class="aan">Kamer</span><span>Verwarmen en koelen</span></div>
+        <div><span class="label">Naam</span><div class="invoer">Woonkamer</div></div>
+        <div><span class="label">Soort kamer</span><div class="invoer">Woonkamer<span class="pijl">▾</span></div></div>
+        <div><span class="label">Zones, van links naar rechts</span><div class="chips"><span class="chip">Zithoek</span><span class="chip">Eethoek</span><span class="chip plus">+ Zone</span></div></div>
+        <div><span class="label">Apparaten, sleep om te verplaatsen</span>
+          <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Airco woonkamer</b><span>klimaat</span></div></div>
+          <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Plafondlamp</b><span>eethoek</span></div></div>
+          <div class="app"><span class="greep">⋮⋮</span><div class="l"><b>Leeslamp</b><span>zithoek</span></div></div>
+        </div>
+        <span class="knop gevaar">Kamer weghalen</span>
+      </div>
+    </section>
+    <div class="glas naast"><h3>Waarvoor dit nodig is</h3><ul><li>Thuis en de wand tekenen je huis met elke kamer op zijn etage</li><li>Comfort en de regeling werken per kamer</li></ul></div>
+    <div class="verder"><a href="#"><small>‹ Vorige</small><b>Eerste verdieping</b></a><a class="volgende" href="#buiten"><small>Volgende ›</small><b>Buiten</b></a></div>
+  </section>
+
+  <!-- Buiten geopend -->
+  <section class="scherm" id="s-buiten">
+    <a class="terugje" href="#">‹ Kamers en indeling</a>
+    <span class="bewaard">Verandert niets in Home Assistant</span>
+    <section class="glas vorm">
+      <div class="vormkop"><h2 class="kop-2">Buiten</h2><span class="knop">Ongedaan maken</span></div>
+      <div class="podium" id="podium-buiten"></div>
+      <div class="blad">
+        <div class="bladkop"><h3 class="kop-3">Rond het huis</h3></div>
+        <div>
+          <div class="rondrij" style="border-top: 0"><i data-icoon="oprit"></i><div><b>Oprit</b><span>Ruimte: Oprit</span></div><span class="schakel aan"></span></div>
+          <div class="rondrij in"><i data-icoon="auto"></i><div><b>Auto op de oprit</b></div><span class="schakel aan"></span></div>
+          <div class="rondrij in"><i data-icoon="carport"></i><div><b>Carport</b></div><span class="schakel aan"></span></div>
+          <div class="rondrij"><i data-icoon="garage"></i><div><b>Garage</b><span>Ruimte: Garage</span></div><span class="schakel aan"></span></div>
+          <div class="rondrij"><i data-icoon="boom"></i><div><b>Voortuin</b></div><span class="schakel"></span></div>
+          <div class="rondrij"><i data-icoon="boom"></i><div><b>Tuin</b><span>Ruimte: Achtertuin</span></div><span class="schakel aan"></span></div>
+          <div class="rondrij in"><i data-icoon="tuinhuis"></i><div><b>Tuinhuis</b></div><span class="schakel aan"></span></div>
+          <div class="rondrij"><i data-icoon="terras"></i><div><b>Terras</b></div><span class="schakel"></span></div>
+          <div class="rondrij"><i data-icoon="balkon"></i><div><b>Balkon</b></div><span class="schakel"></span></div>
+          <div class="rondrij"><i data-icoon="jacuzzi"></i><div><b>Jacuzzi</b><span>niet in Home Assistant</span></div><span class="schakel"></span></div>
+        </div>
+      </div>
+    </section>
+    <div class="verder"><a href="#deel"><small>‹ Vorige</small><b>Begane grond</b></a><a class="volgende" href="#"><small>Volgende ›</small><b>Nog in te delen</b></a></div>
+  </section>
+
+  <nav class="tabs" id="tabs" aria-label="Hoofdmenu"></nav>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  const toon = location.hash.slice(1) || 'lijst';
+  document.body.dataset.toon = toon;
+  const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICOON = {
+    dak: S('<path d="M3 13l9-8 9 8"/><path d="M6 11v9h12v-9"/><path d="M10 15h4"/>'),
+    trap: S('<path d="M3 20h5v-4h4v-4h4V8h5"/>'),
+    deur: S('<path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17"/><path d="M3 21h18"/><path d="M14.5 12h.01"/>'),
+    boom: S('<path d="M12 21v-8M8 13c0-4 4-8 4-8s4 4 4 8a4 4 0 0 1-8 0z"/>'),
+    bak: S('<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5 13l2-8h10l2 8v6H5z"/>'),
+    oog: S('<path d="M3 3l18 18"/><path d="M10.6 6.2A9.6 9.6 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-2.6 3.2M6.4 7.6C4.3 9.2 3 12 3 12s4 6 9 6a8 8 0 0 0 3.6-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+    oprit: S('<path d="M5 21l3-18M19 21L16 3M12 6v2M12 11v2M12 16v2"/>'),
+    auto: S('<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>'),
+    carport: S('<path d="M3 8h18M5 8v12M19 8v12"/>'),
+    garage: S('<path d="M3 9l9-5 9 5v11H3z"/><path d="M6 20v-8h12v8"/>'),
+    tuinhuis: S('<path d="M4 10h16M6 10v10h12V10"/><path d="M10 20v-5h4v5"/>'),
+    terras: S('<path d="M3 14h18M5 14v6M19 14v6M12 4v10M7 8h10"/>'),
+    balkon: S('<path d="M4 12h16v8H4zM8 12v8M12 12v8M16 12v8"/><path d="M7 12V4h10v8"/>'),
+    jacuzzi: S('<ellipse cx="12" cy="15" rx="9" ry="4"/><path d="M8 9c0-1.5 1-2 1-3.5M12 9c0-1.5 1-2 1-3.5M16 9c0-1.5 1-2 1-3.5"/>'),
+  };
+  document.querySelectorAll('[data-icoon]').forEach((el) => el.insertAdjacentHTML('afterbegin', ICOON[el.dataset.icoon]));
+  nav.tabs(document.getElementById('tabs'), null);
+  const k = (naam, gewicht, apparaten = [], extra = {}) => ({ naam, gewicht, apparaten, ...extra });
+  if (toon === 'deel') {
+    huis.teken(document.getElementById('podium-deel'), {
+      beschrijving: 'De begane grond zonder dak, de woonkamer gekozen.',
+      tijd: 'dag', zonderDak: true,
+      etages: [{ kamers: [k('Hal', 0.45), k('Keuken', 0.9, [{ soort: 'lamp', aan: true }]), k('Woonkamer', 1.6, [{ soort: 'airco' }, { soort: 'bank' }, { soort: 'lamp', aan: true, x: 0.25 }], { gekozen: true, zones: ['Zithoek', 'Eethoek'] }), { naam: 'Kamer toevoegen', gewicht: 0.7, nieuw: true }] }],
+    }, { breedte: 370, hoogte: 250, marge: 0.03 });
+  }
+  if (toon === 'buiten') {
+    huis.teken(document.getElementById('podium-buiten'), {
+      beschrijving: 'Het huis met de oprit, carport, garage en de tuin met het tuinhuis.',
+      tijd: 'dag',
+      etages: [{ kamers: [k('Hal', 0.55), k('Keuken', 0.9), k('Woonkamer', 1.4)] }, { kamers: [k('Badkamer', 0.8), k('Slaapkamer', 1), k('Werkkamer', 0.9)] }, { dak: true, kamers: [k('Zolder', 1)] }],
+      voordeur: {}, oprit: { auto: {}, carport: true }, garage: { naam: 'Garage' }, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis', lampen: [] },
+    }, { breedte: 370, hoogte: 250, marge: 0.03 });
+  }
+</script>
+</body>
+</html>

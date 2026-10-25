@@ -172,6 +172,9 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 .deel.nu { background: rgb(var(--wit) / 0.1); }
 .deel.nu::before { content: ''; position: absolute; left: -2px; top: 18px; bottom: 18px; width: 4px; border-radius: 2px; background: var(--tekst); }
 .deel:focus-visible { outline: 2px solid var(--tekst); outline-offset: -2px; }
+/* Iets toevoegen, zoals "+ Etage erbij" (besluit 193): een stippelregel tussen de delen. */
+.deel.erbij { display: flex; justify-content: center; min-height: 48px; margin: 4px 2px 2px; border: 1px dashed rgba(111, 211, 255, 0.4); color: var(--ijs-t); font-size: 14.5px; font-weight: 700; }
+.deel.erbij.nu { background: rgba(111, 211, 255, 0.08); }
 
 /* Het gekozen deel. */
 .vormvak { position: relative; display: flex; flex-direction: column; min-height: 0; }
@@ -216,6 +219,7 @@ body.offline #wand main, body.offline #tel .inhoud { filter: grayscale(0.85); op
 #tel .deel { min-height: 64px; border-radius: 0; border-top: 1px solid rgb(var(--wit) / 0.07); }
 #tel .delen > .deel:first-child, #tel .delen h4 + .deel { border-top: 0; }
 #tel .deel.nu { background: none; }
+#tel .deel.erbij { min-height: 52px; margin: 0; border: 0; border-top: 1px solid rgb(var(--wit) / 0.07); border-radius: 0; }
 #tel .deel.nu::before { display: none; }
 #tel .deel .pijl { display: block; }
 #tel .verder { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

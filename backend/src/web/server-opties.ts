@@ -5,6 +5,7 @@
  */
 
 import { VERSIE } from '../version.js';
+import type { Sluipverbruik } from './sluipverbruik.js';
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
@@ -178,6 +179,8 @@ export interface WebOptions {
    * nog niet heeft (17 oktober 2026). Null als die statistiek er niet is.
    */
   readonly historie?: (vanMs: number, totMs: number) => Promise<{ zon: readonly PowerRow[]; net: readonly PowerRow[] } | null>;
+  /** Het sluipverbruik (besluit 192): de nachten uit de statistiek van Home Assistant. */
+  readonly sluipverbruik?: Sluipverbruik;
   /**
    * Na het opslaan van de configuratie: opnieuw starten, zodat de regeling
    * hem leest (besluit 154). De add-on start dan vanzelf weer (besluit 151).

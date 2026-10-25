@@ -1016,12 +1016,14 @@ export function parseSiteConfig(
     ? (input['defaultAdapter'] as string)
     : 'homeassistant';
 
-  const actuatorsRaw = arr(p, input, '', 'actuators', { minLength: 1 });
+  // Een huis zonder slimme verwarming of airco (besluit 194): dan geen apparaten en geen zones,
+  // en doet de app de rest (licht, schermen, energie, op zon, de assistent).
+  const actuatorsRaw = input['actuators'] === undefined ? [] : arr(p, input, '', 'actuators');
   const actuators = (actuatorsRaw ?? [])
     .map((v, i) => actuator(p, v, `actuators[${i}]`, defaultAdapter))
     .filter((a): a is Actuator => a != null);
 
-  const zonesRaw = arr(p, input, '', 'zones', { minLength: 1 });
+  const zonesRaw = input['zones'] === undefined ? [] : arr(p, input, '', 'zones');
   const zones = (zonesRaw ?? [])
     .map((v, i) =>
       zone(p, v, `zones[${i}]`, defaultAdapter, i + 1, new Map(actuators.map((a) => [a.id, a]))),
@@ -1714,8 +1716,8 @@ export function parseSiteConfig(
    * stond, en dan staat die fout al in `errors`.
    */
   const errors = p.errors;
-  const incomplete =
-    !timezone || zones.length === 0 || actuators.length === 0 || !power || !schedule;
+  // Zonder zones en apparaten is het een huis zonder slimme regeling (besluit 194): dat mag.
+  const incomplete = !timezone || !power || !schedule;
 
   if (errors.length > 0 || incomplete) {
     const problems: ConfigProblem[] =

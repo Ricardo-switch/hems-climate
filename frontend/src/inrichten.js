@@ -494,13 +494,13 @@ function samenvoegen(next, hoofdId, anderId) {
  * lampen en camera vandaan. Het losse blok met ruimtes is weg.
  */
 const buitenKamers = () => (concept()?.kamers ?? []).filter((k) => k.etage === 'buiten');
-/** [deel, naam, soort van een ruimte die erbij hoort]; auto en carport horen bij de oprit. */
-const RONDOM = [
-  ['oprit', t('soort.buiten.oprit'), 'oprit', 'oprit'], ['auto', t('indeling.autoOprit'), null, 'auto'], ['carport', t('soort.buiten.carport'), null, 'carport'], ['garage', t('soort.buiten.garage'), 'garage', 'garage'],
-  ['voortuin', t('soort.buiten.voortuin'), 'voortuin', 'tuin'], ['tuin', t('soort.buiten.tuin'), 'tuin', 'tuin'], ['terras', t('soort.buiten.terras'), 'terras', 'terras'], ['balkon', t('soort.buiten.balkon'), 'balkon', 'balkon'],
-  ['tuinhuis', t('inr.inDeTuin'), 'tuinhuis', 'tuinhuis'], ['jacuzzi', t('inr.jacuzzi'), null, 'jacuzzi'],
-];
-const OP_OPRIT = new Set(['auto', 'carport']);
+/**
+ * [deel, naam, soort van een ruimte die erbij hoort]; auto en carport horen bij
+ * de oprit. Hetzelfde lijstje als Kamers en indeling › Buiten (besluit 193),
+ * waar een ruimte nu ook bij de carport kan horen.
+ */
+const RONDOM = huismodel.rondom();
+const { OP_OPRIT } = huismodel;
 function buitenNu(k) {
   const r = buitenRuimtes().find((x) => x.id === k.id);
   return k.buiten ?? r?.buiten ?? huismodel.soortBuiten(k);
@@ -1090,7 +1090,7 @@ function schermRij(s) {
  * kaarten om aan of uit te zetten; 's nachts uit en de taal. Dezelfde indeling
  * als op je telefoon (niet dubbel). Daaronder elk scherm.
  */
-const WAND_KAARTEN = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler'];
+const WAND_KAARTEN = ['favorieten', 'vandaag', 'apparaat', 'gevoel', 'morgen', 'auto', 'batterij', 'maand', 'deurbel', 'boiler', 'sluip'];
 function wandStap() {
   const schermen = d.bewoners?.schermen ?? [];
   const inlog = d.sessie?.toegang === 'sessions';
@@ -1856,6 +1856,7 @@ document.addEventListener('change', async (e) => {
     if (!k) return;
     const b = buitenNu(k);
     k.buiten = { soort: el.dataset.bkoppel, auto: !!b.auto, tuinhuis: !!b.tuinhuis };
+    next.rond = huismodel.rondMet(next.rond, el.dataset.bkoppel);
     await bewaarIndeling(next, t('inr.hoortBij', { naam: k.naam, deel: RONDOM.find(([, , s]) => s === el.dataset.bkoppel)?.[1].toLowerCase() ?? el.dataset.bkoppel }));
   } else if (el.dataset.plek) {
     const next = concept();

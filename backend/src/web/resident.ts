@@ -137,6 +137,9 @@ const HEAD = {
     done: (names: string, many: boolean) => `${cap(names)} ${many ? 'zijn' : 'is'} klaar`,
     nothingSun: 'Geen kamer heeft iets nodig.',
     nothingDark: 'Geen zon, en geen kamer heeft iets nodig.',
+    // Zonder slimme regeling (besluit 194): geen kamers om naar te kijken.
+    nothingSunNoRooms: 'De zon schijnt, en er hoeft niets te draaien.',
+    nothingDarkNoRooms: 'Geen zon, en er hoeft niets te draaien.',
     and: ' en de ',
     comma: ', de ',
     towards: 'naar',
@@ -176,6 +179,8 @@ const HEAD = {
     done: (names: string, many: boolean) => `${cap(names)} ${many ? 'are' : 'is'} done`,
     nothingSun: 'No room needs anything.',
     nothingDark: 'No sun, and no room needs anything.',
+    nothingSunNoRooms: 'The sun is shining, and nothing needs to run.',
+    nothingDarkNoRooms: 'No sun, and nothing needs to run.',
     and: ' and the ',
     comma: ', the ',
     towards: 'at',
@@ -245,7 +250,8 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
     return { boven, titel: w.waitSun, zin: w.waitSunWhy(joinRooms(waiting.map(({ name }) => mid(name)), lang), waiting.length > 1) };
   }
   const solar = e.solarProductionW;
-  const zin = solar != null && solar > 30 ? w.nothingSun : w.nothingDark;
+  const zonder = config.zones.length === 0;
+  const zin = solar != null && solar > 30 ? (zonder ? w.nothingSunNoRooms : w.nothingSun) : zonder ? w.nothingDarkNoRooms : w.nothingDark;
   // Geen kamer heeft iets nodig, maar de droger draait: dan niet "Er draait niets" (besluit 166).
   const naam = (id: string) => config.deferrables?.find((x) => x.id === id)?.name ?? id;
   const draait = (e.deferrables ?? []).filter((d) => d.state === 'running' && d.doneSinceMs == null).map((d) => naam(d.id));

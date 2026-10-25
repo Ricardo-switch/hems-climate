@@ -288,6 +288,8 @@ const ZON = ['zon', 'zonnig', 'zonne*', 'zonnestroom', 'opgewekt', 'opwek*', 'zo
 const MORGEN = ['morgen', 'overmorgen', 'regen', 'regent', 'regenen', 'bui', 'buien', 'weer', 'weersverwachting', 'weerbericht', 'tomorrow', 'rain', 'raining', 'shower*', 'weather', 'forecast'];
 /** Wat iets kost (besluit 142). */
 const KOSTEN = ['kost', 'kosten', 'kostte', 'kostten', 'geld', 'euro', 'cost', 'costs', 'costing', 'money', 'euros', 'how much do', 'how much does', 'how much did'];
+/** Het sluipverbruik (besluit 192). */
+const SLUIP = ['sluipverbruik', 'sluip*', 'sluimer*', 'standby', 'stand by', 'basislast', 'nachtverbruik', 'verbruik vannacht', 'nachts verbruik', 'baseload', 'base load', 'phantom*', 'vampire', 'idle power', 'overnight use', 'night use'];
 const WAAROM = ['waarom', 'hoe komt', 'warm', 'warmer', 'koud', 'kouder', 'heet', 'temperatuur', 'graden', 'wacht', 'why', 'how come', 'hot', 'cold', 'colder', 'temperature', 'degrees', 'waiting'];
 
 /** Koel, verwarm of zet uit; null als er geen wens in staat. */
@@ -418,6 +420,8 @@ export function begrijp(ruw: string, config: SiteConfig, lang: Lang): Begrepen {
   if (morgen && kamer == null) huis.push({ vraag: { kind: overMorgen ? 'morgen' : 'weer' }, score: 3 * morgen });
   const kosten = telt(KOSTEN, tekst, los);
   if (kosten) huis.push({ vraag: { kind: 'kosten' }, score: 3 * kosten });
+  const sluip = telt(SLUIP, tekst, los);
+  if (sluip) huis.push({ vraag: { kind: 'sluip' }, score: 6 * sluip });
   const nu = telt(NU, tekst, los);
   // "Waarom staat de airco aan?" zonder kamer gaat over wat hij nu doet.
   if (nu || (waarom && kamer == null)) huis.push({ vraag: { kind: 'nu' }, score: Math.max(1, 2 * nu - 1) });

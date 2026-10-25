@@ -55,6 +55,8 @@ function delen() {
   if (!comfort) return [];
   const leeg = (k) => MODI.every((m) => k.modi[m].heat == null && k.modi[m].cool == null);
   const d = comfort.dagdelen;
+  // Een huis zonder slimme regeling (besluit 194): comfort per kamer kan erbij, meer niet.
+  if (!comfort.kamers.length) return [{ id: 'erbij', titel: t('comfort.erbij.titel'), zin: t('comfort.erbij.kort'), stand: 'leeg' }];
   return [
     { kop: t('comfort.kamers') },
     ...comfort.kamers.map((k) => ({ id: k.id, titel: k.naam, zin: samenvatting(k), stand: leeg(k) ? 'leeg' : 'goed' })),
@@ -189,6 +191,13 @@ function dagdelenVorm() {
     ${dagbalk()}`;
 }
 
+/** Zonder slimme regeling (besluit 194): wat comfort per kamer zou doen, en hoe het erbij komt. */
+function erbijVorm() {
+  return `<h2 class="kop-2">${esc(t('comfort.erbij.titel'))}</h2>
+    <p class="klein" style="margin: 0">${esc(t('comfort.erbij.zin'))}</p>
+    <div><a class="knop knop-licht" href="huis-kan.html#temperatuur">${esc(t('comfort.erbij.knop'))}</a></div>`;
+}
+
 function afwezigVorm() {
   const k = comfort.kamers.find((x) => x.id === afwezigKamer) ?? comfort.kamers[0];
   if (!k) return `<h2 class="kop-2">${esc(t('comfort.afwezig'))}</h2>`;
@@ -285,7 +294,7 @@ function tekenNu() {
   tekenWie();
   const nu = groep.tekenDelen(delen());
   const k = comfort.kamers.find((x) => x.id === nu);
-  const vorm = k ? kamerVorm(k) : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : afwezigVorm();
+  const vorm = k ? kamerVorm(k) : nu === 'erbij' ? erbijVorm() : nu === 'dagdelen' ? dagdelenVorm() : nu === 'voorrang' ? voorrangVorm() : afwezigVorm();
   $$('[data-vorm]').forEach((el) => (el.innerHTML = vorm));
   $$('[data-naast]').forEach((el) => (el.innerHTML = naast(nu)));
 }

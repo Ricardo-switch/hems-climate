@@ -28,6 +28,12 @@ const NET = '#9AAABB';
 const TERUG = '#6EE7B7';
 const KLEUREN = ['#6FD3FF', '#8FD9FF', '#FFB088', '#C4BCFF', '#9EE6FF', '#FFD08A'];
 
+/** Het sluipverbruik (besluit 192): een kaart naar zijn eigen scherm, met vannacht erop. */
+let sluip = null;
+const sluipIngang = () => (sluip
+  ? `<a class="glas kaart sluipingang" href="sluipverbruik.html"><div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px"><h2 class="kop-3">${esc(t('sluip.titel'))}</h2><span class="getal" style="font-size: 22px${sluip.hoog ? '; color: var(--gloed-t)' : ''}">${nl(sluip.vannacht.w, 0)} W</span></div><p class="klein" style="margin: 6px 0 0">${esc(sluip.hoog ? t('sluip.ingangHoog', { boven: nl(sluip.bovenW, 0) }) : t('sluip.ingangGewoon', { gewoon: nl(sluip.gewoonW, 0) }))} ›</p></a>`
+  : '');
+
 async function laad() {
   const q = new URLSearchParams({ soort: keuze.soort, ...(keuze.datum ? { datum: keuze.datum } : {}) });
   try {
@@ -206,8 +212,8 @@ function tekenNu() {
       ? `<section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.eerstMeters'))}</h2><p class="klein" style="margin: 8px 0 12px">${esc(t('opbrengst.metersUitleg'))}</p><a class="pil" href="energie.html#meters">${esc(t('opbrengst.metersInstellen'))}</a></section>`
       : `<p class="klein">${esc(melding ?? t('kamer.camera.laden'))}</p>`;
     $$('[data-titel]').forEach((el) => (el.textContent = melding ? t('nav.opbrengst') : t('algemeen.laden')));
-    document.querySelector('[data-links]').innerHTML = tekst;
-    document.querySelector('[data-telinhoud]').innerHTML = tekst;
+    document.querySelector('[data-links]').innerHTML = tekst + sluipIngang();
+    document.querySelector('[data-telinhoud]').innerHTML = tekst + sluipIngang();
     ['[data-sankey]', '[data-apparaten]', '[data-perdag]'].forEach((s) => (document.querySelector(s).innerHTML = ''));
     $$('[data-periode]').forEach((el) => (el.innerHTML = ''));
     return;
@@ -215,11 +221,11 @@ function tekenNu() {
   const r = data;
   $$('[data-titel]').forEach((el) => (el.textContent = titel(r)));
   $$('[data-periode]').forEach((el) => (el.innerHTML = periode(r)));
-  document.querySelector('[data-links]').innerHTML = `${cijfers(r)}${panelen(r)}`;
+  document.querySelector('[data-links]').innerHTML = `${cijfers(r)}${panelen(r)}${sluipIngang()}`;
   document.querySelector('[data-sankey]').innerHTML = sankeyVan(r, 500, 540, 70, 230);
   document.querySelector('[data-apparaten]').innerHTML = perApparaat(r);
   document.querySelector('[data-perdag]').innerHTML = perDag(r);
-  document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}
+  document.querySelector('[data-telinhoud]').innerHTML = `${cijfers(r, true)}${panelen(r)}${sluipIngang()}
     <section class="glas kaart"><h2 class="kop-3">${esc(t('opbrengst.waarHeen'))}</h2><div style="margin-top: 10px">${sankeyVan(r, 380, 340, 0, 200, true)}</div></section>
     <section class="glas kaart">${perApparaat(r)}</section>
     <section class="glas kaart">${perDag(r)}</section>`;
@@ -269,4 +275,5 @@ document.addEventListener('click', (e) => {
 });
 void laad();
 haal('api/zon').then((z) => ((zon = z), teken())).catch(() => {});
+haal('api/sluipverbruik').then((s) => ((sluip = s), teken())).catch(() => {});
 setInterval(() => void laad(), 5 * 60_000);

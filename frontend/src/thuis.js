@@ -182,6 +182,7 @@ function tekenNu() {
   tekenMorgen();
   tekenLading();
   tekenMaand();
+  tekenSluip();
   tekenDeurbel();
   // Thuis naar eigen smaak (besluit 162): favorieten, en de kaarten op hun plek.
   eigen.tekenFavorieten(huisData);
@@ -503,6 +504,9 @@ let maandOp = 0;
 let deurbel = null;
 let deurbelBeeld = null;
 let deurbelOp = 0;
+/** Het sluipverbruik (besluit 192): hooguit elk half uur; de dienst haalt het uit Home Assistant. */
+let sluip = null;
+let sluipOp = 0;
 const staatErin = (id) => $$(`[data-kaart="${id}"]`).some((el) => !el.hasAttribute('data-uit'));
 const kw = (w) => `${getal(Math.abs(w) / 1000, 1)} kW`;
 
@@ -552,6 +556,16 @@ async function kaartGegevens() {
   } catch {
     deurbel = null;
   }
+  // Ook als de kaart er niet staat: anders weet Kaart toevoegen niet of dit huis hem heeft.
+  if (nu - sluipOp > 30 * 60_000) {
+    sluipOp = nu;
+    try {
+      const res = await fetch('api/sluipverbruik', { cache: 'no-store' });
+      sluip = res.ok ? await res.json() : null;
+    } catch {
+      // De volgende keer.
+    }
+  }
   // Het beeld van de deurbel: hooguit elke minuut een nieuw plaatje.
   if (deurbel?.aan && staatErin('deurbel') && nu - deurbelOp > 60_000) {
     deurbelOp = nu;
@@ -591,6 +605,19 @@ function tekenLading() {
   const bKleur = st === 'laadt' ? 'var(--zon)' : st === 'levert' ? 'var(--violet)' : 'var(--net)';
   zetKaart('[data-batterij]', 'batterij', b ? `${vol(`${kaartKop('batterij', b.naam)}${lading(b.pct, bKleur, bZin, app.tekstKleur(st === 'rust' || !st ? 'var(--zacht)' : bKleur))}`)}${tegel({ id: 'batterij', naam: b.naam, waarde: b.pct == null ? '–' : `${getal(b.pct, 0)}%`, zin: bZin, toon: st === 'rust' || !st ? '' : app.tekstKleur(bKleur), beeld: staaf(b.pct, st === 'levert' ? 'var(--violet)' : 'var(--mint)') })}` : '', !!b);
   tekenBoiler();
+}
+
+/** Het sluipverbruik (besluit 192): vannacht, hoeveel boven je gewone nacht, en de laatste nachten. */
+function tekenSluip() {
+  const s = sluip;
+  if (!s) return zetKaart('[data-sluip]', 'sluip', '', false);
+  const naam = t('thuis.kaart.sluip');
+  const zin = s.hoog ? t('thuis.sluip.boven', { boven: getal(s.bovenW, 0) }) : t('thuis.sluip.gewoon', { gewoon: getal(s.gewoonW, 0) });
+  const toon = s.hoog ? 'var(--gloed-t)' : '';
+  const staven = (n, max) => s.nachten.slice(-n).map((x) => `<i class="${x.hoog ? 'hoog' : ''}" style="height: ${Math.max(6, Math.round((x.w / max) * 100))}%"></i>`).join('');
+  const max = Math.max(...s.nachten.slice(-30).map((x) => x.w), s.gewoonW + 50);
+  const beeld = `<span class="beeld sluipstaven" style="top: 10px; width: 64px; height: 26px; gap: 2px" aria-hidden="true">${staven(14, max)}</span>`;
+  zetKaart('[data-sluip]', 'sluip', `${vol(`${kaartKop('sluip', naam)}<div class="sluipnu"><span class="getal" style="font-size: 30px">${getal(s.vannacht.w, 0)} <small>W</small></span><small style="color: ${toon || 'var(--zacht)'}">${esc(zin)} · ${esc(t('thuis.sluip.gemiddeld', { w: getal(s.gemiddeldW, 0) }))}</small></div><div class="sluipstaven" aria-hidden="true">${staven(30, max)}</div>`)}${tegel({ id: 'sluip', naam, waarde: `${getal(s.vannacht.w, 0)} <small>W</small>`, zin, toon, beeld })}`, true);
 }
 
 function tekenMaand() {

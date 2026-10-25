@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only dark">
+<title>Sluipverbruik · Smart Climate</title>
+<link rel="stylesheet" href="kit/kit.css">
+<link rel="stylesheet" href="basis.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1424">
+<link rel="icon" href="icoon-192.png">
+<link rel="apple-touch-icon" href="icoon-192.png">
+<script>(function () { var d = document.documentElement, w0 = 0, h0 = 0, t = {}, m = matchMedia('(prefers-color-scheme: light)'); try { t = JSON.parse(localStorage.getItem('sc-thema')) || {}; } catch (e) {} function k() { var eigen = d.classList.contains('tel-stand') || !t.scherm, c = eigen ? t.kleur : t.wandKleur; var licht = eigen && (t.thema === 'licht' || (t.thema === 'systeem' && m.matches)), tc = document.querySelector('meta[name="theme-color"]'); d.classList.toggle('sc-licht', licht); if (tc) tc.setAttribute('content', licht ? '#e9eff6' : '#0b1424'); if (c && c !== 'lucht') d.setAttribute('data-kleur', c); else d.removeAttribute('data-kleur'); } window.scThema = function (n) { if (n) { t = n; try { localStorage.setItem('sc-thema', JSON.stringify(n)); } catch (e) {} } k(); }; function s() { var a = document.activeElement; if (w0 === innerWidth && innerHeight < h0 && a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return; w0 = innerWidth; h0 = innerHeight; var b = Math.min(1700, Math.max(1280, Math.round(800 * innerWidth / innerHeight))); d.classList.toggle('tel-stand', innerHeight > innerWidth || innerWidth < 560); d.style.setProperty('--wandbreedte', b + 'px'); d.style.setProperty('--wandschaal', Math.min(innerWidth / b, innerHeight / 800)); k(); } s(); addEventListener('resize', s); m.addEventListener('change', k); })();</script>
+<style>
+  /*
+   * Sluipverbruik (besluit 192, schets Wand-Sluipverbruik en Tel-Sluipverbruik):
+   * een eigen scherm onder Opbrengst. Links vannacht, het gemiddelde en wat het
+   * per jaar is; in het midden elke nacht of elke maand; rechts wat opviel, de
+   * melding en hoe de app meet.
+   */
+  #wand main { display: grid; grid-template-columns: 270px minmax(0, 1fr) 316px; grid-template-rows: auto minmax(0, 1fr); gap: 18px; height: 100%; min-width: 0; }
+  .kop { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+  .terug { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; color: var(--zacht); text-decoration: none; margin-bottom: 6px; }
+  .terug:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
+  .wissel button { height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--zacht); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .wissel button[aria-pressed='true'] { background: var(--accent); color: var(--op-accent); }
+  .wissel button:focus-visible, .blader button:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+  .links { display: flex; flex-direction: column; gap: 22px; padding-top: 4px; min-height: 0; }
+  .cijfer .getal { font-size: 40px; line-height: 1.05; }
+  .cijfer .getal small { font-family: var(--romp); font-size: 15px; color: var(--zacht); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+  .cijfer .klein b, .zin b { color: var(--gloed-t); }
+  .kaart { padding: 18px 20px; min-height: 0; }
+  .midden { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .midden > .grafiekkaart { flex: 1; display: flex; flex-direction: column; }
+  .grafiekkop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .blader { display: inline-flex; align-items: center; gap: 8px; }
+  .blader button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--glas-rand); background: transparent; color: var(--tekst); font-size: 15px; cursor: pointer; }
+  .blader button:disabled { opacity: 0.3; cursor: default; }
+  .grafiek { flex: 1; min-height: 0; margin-top: 10px; display: flex; align-items: center; }
+  .grafiek svg { display: block; width: 100%; height: auto; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--zacht); margin-top: 10px; }
+  .legenda i { display: inline-block; width: 14px; height: 0; border-top: 2px dashed; vertical-align: middle; margin-right: 6px; }
+  .legenda i.blok { height: 10px; border: 0; border-radius: 3px; }
+  .onderregel { display: flex; justify-content: space-between; gap: 12px; padding: 12px 18px; }
+  .rechts { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .opgevallen { background: linear-gradient(160deg, rgba(255, 122, 77, 0.14), rgba(255, 122, 77, 0.03)); border-color: rgba(255, 122, 77, 0.35); }
+  .opgevallen .mini { color: var(--gloed-t); }
+  .gewoon .mini { color: var(--mint-t); }
+  .opvallend h3 { margin: 6px 0 4px; font-family: var(--kop); font-size: 20px; line-height: 1.15; }
+  .knoppen { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .knoppen .knop { height: 38px; padding: 0 13px; font-size: 13.5px; }
+  .zeg { display: flex; gap: 8px; margin-top: 12px; }
+  .zeg input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border-radius: 12px; border: 1px solid rgb(var(--wit) / 0.16); background: rgb(var(--wit) / 0.06); color: var(--tekst); font: inherit; font-size: 14px; }
+  .zeg input:focus { outline: 2px solid var(--ijs); }
+  .regelrij { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .regelrij b { display: block; font-size: 14.5px; }
+  .regelrij span { font-size: 12.5px; color: var(--gedempt); }
+  .uitleg { font-size: 12.5px; line-height: 1.5; color: var(--zacht); margin: 6px 0 0; }
+  .schakel { position: relative; flex: none; width: 42px; height: 26px; padding: 0; border: 0; border-radius: 13px; background: rgb(var(--wit) / 0.16); cursor: pointer; }
+  .schakel::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+  .schakel[aria-checked='true'] { background: var(--mint); }
+  .schakel[aria-checked='true']::after { transform: translateX(16px); background: #0b2a1f; }
+  .schakel:focus-visible { outline: 2px solid var(--tekst); outline-offset: 2px; }
+
+  /* De telefoon (schets Tel-Sluipverbruik). */
+  #tel .inhoud { padding: 14px 16px 110px; display: flex; flex-direction: column; gap: 12px; }
+  #tel h1 { margin: 6px 0 0; font-size: 30px; line-height: 1.08; }
+  #tel .zin { font-size: 14.5px; color: var(--zacht); margin: -4px 0 2px; }
+  #tel .kaart { padding: 16px; }
+  #tel .wissel { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 4px; }
+  #tel .opvallend h3 { font-size: 18px; }
+  .vier { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .vier > div { padding: 12px 14px; border-radius: 16px; background: rgb(var(--wit) / 0.05); }
+  .vier b { display: block; font-family: var(--kop); font-size: 24px; font-weight: 600; }
+  .vier b small { font-family: var(--romp); font-size: 13px; color: var(--zacht); font-weight: 500; margin-left: 2px; }
+  .vier span { font-size: 12px; color: var(--zacht); }
+</style>
+</head>
+<body class="lucht lucht-dag">
+  <div id="wand" class="wand">
+    <nav class="balk" id="balk" data-t-aria-label="nav.hoofdmenu"></nav>
+    <main data-wandinhoud>
+      <div class="kop">
+        <div>
+          <a class="terug" href="opbrengst.html">‹ <span data-t="nav.opbrengst"></span></a>
+          <h1 class="kop-1" style="font-size: 40px" data-titel><span data-t="algemeen.laden"></span></h1>
+        </div>
+        <div class="wissel" role="group" data-t-aria-label="sluip.weergave" data-wissel></div>
+      </div>
+      <div class="links schuift" data-links></div>
+      <div class="midden" data-midden></div>
+      <div class="rechts schuift" data-rechts></div>
+    </main>
+  </div>
+
+  <div id="tel" class="tel">
+    <div class="inhoud">
+      <a class="terug" href="opbrengst.html">‹ <span data-t="nav.opbrengst"></span></a>
+      <h1 class="kop-1" data-titel><span data-t="algemeen.laden"></span></h1>
+      <div data-telinhoud style="display: flex; flex-direction: column; gap: 12px"></div>
+    </div>
+    <nav class="tabs" id="tabs" data-t-aria-label="nav.hoofdmenu"></nav>
+  </div>
+  <script src="kit/teksten.nl.js"></script>
+  <script src="kit/teksten.en.js"></script>
+  <script src="kit/taal.js"></script>
+  <script src="kit/nav.js"></script>
+  <script src="basis.js"></script>
+  <script src="rondleiding.js"></script>
+  <script src="sluipverbruik.js"></script>
+</body>
+</html>

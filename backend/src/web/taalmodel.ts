@@ -221,6 +221,7 @@ const VRAGEN: readonly [Question['kind'], string][] = [
   ['weer', 'het weer en de zon van vandaag'],
   ['morgen', 'het weer en de zon van morgen'],
   ['kosten', 'wat apparaten deze maand kostten'],
+  ['sluip', 'het sluipverbruik: wat het huis vannacht en gemiddeld gebruikte als er niets draaide'],
 ];
 
 const VELDEN: Readonly<Record<string, AiTaskField>> = {

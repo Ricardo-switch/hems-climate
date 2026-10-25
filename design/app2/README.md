@@ -42,10 +42,12 @@ Te bekijken als overzicht op claude.ai (privé): <https://claude.ai/artifact/19g
 | `Wand-Huis-groeit` (wat je huis kan) | `Instellingen`, `Onboarding-Zon` |
 | `Wand-Assistent` | |
 | `Wand-Indeling` (kamers en indeling, de bewerkstand) | |
+| `Wand-Indeling-Groep` (Kamers en indeling als groep zoals Energie: `#buiten` met wat er rond het huis is, `#los`; besluit 193) | `Tel-Indeling-Groep` (de lijst, `#deel`, `#buiten`) |
 | `Wand-Leren` (leren, meekijken, regelen per apparaat) | |
 | `Wand-Uitleg` (de rondleiding de eerste keer) | |
 | `Wand-Inrichten-Panelen` (hoe de panelen liggen: voorstel, `#aanpassen`, `#wachten`; besluit 157) | `Panelen-Tel` |
 | `Wand-Inrichten-Klimaat` (wat elk apparaat kan, per koppeling; `#badkamer`, `#keuken`, `#ir`; schets, nog niet besloten) | |
+| `Wand-Sluipverbruik` (Opbrengst › Sluipverbruik: `#maanden`, en `#kaarten` met de tegel, de melding, de assistent en Wat je huis kan; schets, nog niet besloten) | `Tel-Sluipverbruik` |
 | `Wand-Thuis` blijft | `Thuis-Tel` (Thuis opnieuw: de Assistent altijd boven de tabs; besluit 159) |
 | `Wand-Thuis-Eigen` (de wand naar eigen smaak: `#aanpassen`, `#kiezen`), `Wand-Nacht` (avondstand, dagstand `#rust`, uit `#uit`, `#kiezen`; besluiten 164 en 165) | `Thuis-Tel-Eigen` (favorieten, `#aanpassen`, `#toevoegen`, `#favorieten`, `#weergave`, `#eenvoudig`) |
 | `Wand-Thuis-3` (huis 3.0: het eiland met `#dag`, `#avond`, `#nacht`, `#winter`, `#regen`, en `#aanpassen` met smal of breed), `Wand-Huis-3` (de woningtypes `#rij`, `#hoek`, `#tweekap`, `#appartement`, `#minder`, `#zoom`), `Wand-Energie-Panelen-3` (`#gemeten`, `#leert`, `#garage`, `#zelf`), `Wand-Huis-kan-3` (zes groepen, `#ligging`); besluit 187 | `Tel-Huis-3` (één bovenbalk en het net onder het huis; `#avond`, `#balk`) |

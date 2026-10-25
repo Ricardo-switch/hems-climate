@@ -55,6 +55,7 @@ import { EnergyStore } from './web/energy.js';
 import { partsIn, zonedMidnight, type PowerRow } from './web/today.js';
 import { WeatherLog, type EntityForecast } from './web/weather.js';
 import { Historie } from './web/historie.js';
+import { Sluipverbruik, jaarPrijs, sluipVoorBel } from './web/sluipverbruik.js';
 import { verwachtingVan, weerNaamVan } from './web/weerbron.js';
 import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
@@ -897,6 +898,17 @@ const webConfig = () => (siteConfig ? metLigging(withLayoutNames(siteConfig, lay
  * Meldingen in de app (besluit 136): elke minuut uit wat de dienst weet, naar
  * een eigen bestand naast de dataset. Niets naar Home Assistant.
  */
+// Het sluipverbruik (besluit 192): de nachten uit dezelfde statistiek, met de prijs van Energie.
+const sluipverbruik = new Sluipverbruik({
+  config: () => siteConfig,
+  vraag: (type, velden) => client.query<Record<string, { start: number | string; mean?: number | null }[]>>(type, velden),
+  prijs: () => jaarPrijs(energyStore?.current?.prijzen ?? null),
+  ...(logDir !== '' ? { logDir } : {}),
+});
+await sluipverbruik.load();
+// Elk half uur de nachten bij, zodat de bel de ochtend erna weet of de nacht opviel.
+setTimeout(() => void sluipverbruik.rapport().catch(() => null), 20_000).unref();
+setInterval(() => void sluipverbruik.rapport().catch(() => null), 30 * 60_000).unref();
 const meldingen = logDir !== '' ? new MeldingenStore({ logDir }) : null;
 // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, naast de dataset.
 const voorkeuren = logDir !== '' ? new VoorkeurenStore(logDir) : null;
@@ -917,6 +929,7 @@ function meldingenRonde(): void {
     winterdagen: analyse?.latest?.dataset?.seizoenen?.find((s) => s.seizoen === 'winter')?.dagen ?? null,
     profiel: runner?.latest?.explanation.profile ?? null,
     hoofd: bewonersStore ? hoofdVan(bewonersStore.current) : null,
+    sluip: sluipVoorBel(sluipverbruik.laatste(), Date.now(), cfg.timezone),
   });
   if (bron == null) return;
   meldingen.bij(bron);
@@ -1396,6 +1409,7 @@ if (webPort != null) {
       : {}),
     location: () => location,
     historie: historieVan,
+    sluipverbruik,
     house: houseReport,
     ...(lightSwitch ? { lights: lightSwitch } : {}),
     ...(coverSwitch ? { covers: coverSwitch } : {}),

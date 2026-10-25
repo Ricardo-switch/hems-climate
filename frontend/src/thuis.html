@@ -324,6 +324,14 @@
   .morgen .graden { grid-row: 1 / 3; grid-column: 3; font-family: var(--kop); font-weight: 600; font-size: 26px; }
   .morgen .graden small { font-size: 15px; color: var(--gedempt); font-family: var(--romp); }
   .boilerkaart { color: inherit; text-decoration: none; }
+  /* Het sluipverbruik (besluit 192): vannacht, en de laatste nachten als staafjes. */
+  .sluipkaart { color: inherit; text-decoration: none; }
+  .sluipkaart .sluipnu { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .sluipkaart .sluipnu small { color: var(--zacht); }
+  .sluipkaart .sluipnu small b { color: var(--gloed-t); }
+  .sluipkaart .sluipstaven { display: flex; align-items: end; gap: 3px; height: 40px; margin-top: 10px; }
+  .sluipkaart .sluipstaven i { flex: 1; border-radius: 2px; background: rgba(111, 211, 255, 0.45); }
+  .sluipkaart .sluipstaven i.hoog { background: var(--gloed); }
   .boilerkaart .lading { grid-template-columns: auto 1fr; }
 
   /*
@@ -536,6 +544,7 @@
         <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
         <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
         <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
+        <a class="glas kaart sluipkaart" href="sluipverbruik.html" data-kaart="sluip" data-t-data-naam="thuis.kaart.sluip" data-t-data-leeg="thuis.leeg.sluip" data-sluip hidden></a>
         <button type="button" class="vrijvak" data-vrijvak hidden><span data-t="thuis.kaartKiezen"></span></button>
       </aside>
       <section class="glas weer" id="weer-wand" role="dialog" data-t-aria-label="thuis.weer.kop" hidden data-weer></section>
@@ -594,6 +603,7 @@
       <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
       <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
         <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
+        <a class="glas kaart sluipkaart" href="sluipverbruik.html" data-kaart="sluip" data-t-data-naam="thuis.kaart.sluip" data-t-data-leeg="thuis.leeg.sluip" data-sluip hidden></a>
       <div class="aanpasrij">
         <button type="button" class="aanpasknop" data-aanpassen><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg><span data-t="thuis.aanpassen"></span></button>
         <button type="button" class="aanpasknop" data-weergave hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-t="thuis.weergave"></span></button>

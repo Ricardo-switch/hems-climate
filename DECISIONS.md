@@ -75,6 +75,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [138. De regeling per kamer in de app](#138-de-regeling-per-kamer-in-de-app)
 - [176. Apparaten op zon in de voorrang: een lijst Op zon](#176-apparaten-op-zon-in-de-voorrang-een-lijst-op-zon)
 - [186. Warmte bewaren: de boiler en de jacuzzi op zon](#186-warmte-bewaren-de-boiler-en-de-jacuzzi-op-zon)
+- [194. Een huis zonder slimme regeling: de app draait ook zonder zones](#194-een-huis-zonder-slimme-regeling-de-app-draait-ook-zonder-zones)
 
 **Configuratie en onboarding**
 
@@ -193,6 +194,8 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [189. De kaarten op de wand als tegel, en een kaart Boiler](#189-de-kaarten-op-de-wand-als-tegel-en-een-kaart-boiler)
 - [190. Inrichten 3.0: acht hoofdstukken, en het huis groeit mee op zijn eiland](#190-inrichten-30-acht-hoofdstukken-en-het-huis-groeit-mee-op-zijn-eiland)
 - [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
+- [192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt](#192-sluipverbruik-elke-nacht-gemeten-een-eigen-scherm-onder-opbrengst-en-een-melding-als-het-opvalt)
+- [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
 
 **Veiligheid**
 
@@ -8779,6 +8782,142 @@ aanroep.
 *Wat afviel:* een tweede functie naast `huis.teken` (dan kan een pagina nog
 steeds de oude aanroepen); de panelen elders bij de assistent en de film (die
 halen de aansluiting niet op).
+
+---
+
+## 192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. Het sluipverbruik zat nog niet in de app: besluit 79 koos
+al een melding de ochtend erna, besluit 88 hoe de app het zegt, maar de meting
+zelf, de geschiedenis en het gemiddelde ontbraken. De nachten van dit huis
+lieten zien waarom het telt: tot 14 oktober rond 185 W, sinds 15 oktober elke
+nacht 300 à 360 W. Gekozen door de bewoner (schets `Wand-Sluipverbruik.html`
+en `Tel-Sluipverbruik.html`): op Opbrengst, een kaart op Thuis, een melding de
+ochtend erna, en bij de assistent en Wat je huis kan; een vaste marge van 50 W;
+terug tot de eerste nacht van de meter.
+
+*Besluit:*
+
+- **De meting:** per nacht het laagste uurgemiddelde van de slimme meter
+  tussen 01:00 en 05:00, uit de uurstatistiek van Home Assistant (alleen
+  lezen). Die gaat terug tot de eerste dag van de meter; bij dit huis februari
+  2025. Een nacht telt pas na 05:00, en niet met minder dan twee uren of met
+  stroom terug naar het net (zoals met een thuisbatterij).
+- **Je gewone nacht** is het gemiddelde van de vijf laagste van de laatste 30
+  nachten. Een nacht **50 W of meer** daarboven valt op, in oranje.
+- **Een eigen scherm onder Opbrengst** (`sluipverbruik.html`), met een kaart op
+  Opbrengst ernaartoe; de rest van Opbrengst blijft zoals het was. Links
+  vannacht, het gemiddelde van 30 nachten (met dezelfde maand een jaar eerder)
+  en wat het een jaar lang is, in kWh en met je stroomprijs in euro's (bij een
+  contract met dag en nacht het daltarief voor zijn deel van de uren); bij een
+  hoge nacht wat het scheelt als het weer gewoon wordt. In het midden elke nacht
+  (30 per keer, terug te bladeren) of elke maand. Rechts wat opviel, de melding
+  en hoe de app meet.
+- **Geen oorzaak zonder meter** (besluit 88): de app zegt het wat, het wanneer en
+  het hoeveel. De bewoner kan zeggen wat het is ("Jij zei: de pc") of dat hij
+  het niet weet; dat hoort bij die reeks hoge nachten (`sluipverbruik.json`,
+  een eigen smalle deur, besluit 42).
+- **De melding:** één melding per reeks hoge nachten bij de bel ("Al 10 nachten
+  meer dan gewoon"), en op de telefoon de ochtend erna, na de nachtrust (een
+  eigen keus `sluip` bij Jij, standaard aan). Een gewone nacht maakt hem stil
+  "weer gewoon".
+- **Een kaart Sluipverbruik** voor Thuis (`sluip`): smal een tegel met vannacht
+  en staafjes van de laatste nachten, breed 30 nachten.
+- **De assistent** weet het ("Wat is mijn sluipverbruik?"), en **Wat je huis
+  kan** heeft het bij Kosten.
+- **Versie 0.66.0.**
+
+*Wat afviel:* een eigen drempel per bewoner (eerst de vaste 50 W); het
+sluipverbruik per uur van de nacht (de uurstatistiek zegt het laagste uur, niet
+wanneer iets aanging); een huis met een thuisbatterij (daar zegt het net 's
+nachts niet wat het huis gebruikt).
+
+---
+
+## 193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 24 oktober 2026. Kamers en indeling had zijn eigen opbouw: links de etages
+als knoppen, in het midden het huis, rechts een blad en onderin een strook. Op
+de telefoon stonden de etages als rij om opzij te schuiven. De andere groepen
+achter het tandwiel (besluiten 130 en 163) hebben één opbouw; de bewoner vroeg
+dezelfde voor Kamers en indeling. Daarbij meldde hij dat een garage of carport
+die hij buiten toevoegde niet leek te werken. Dat klopte: er waren twee
+lijstjes die elkaar overschreven. Wat er rond het huis is (besluit 158, bij
+Inrichten › Buiten) won zodra het er was, en Kamers en indeling keek er niet
+naar.
+
+*Besluit:*
+
+- **Kamers en indeling is een groep zoals Energie** (`groep.js`). De delen zijn
+  de etages van boven naar beneden met Buiten, een stippelregel om een etage
+  toe te voegen, en onder Apparaten Nog in te delen (oranje als er iets mist)
+  en Verborgen. Op de telefoon eerst de lijst; een deel opent als eigen scherm
+  met terug naar de lijst. Op de wand staan de lijst en het deel naast elkaar,
+  met onderaan *Waarvoor is dit?* en Vorige en Volgende.
+- **Een etage** is de tekening zonder dak met het blad ernaast, en eronder de
+  strook met wat nog in te delen is. Slepen, ongedaan maken, zones, het blad
+  per kamer en Verwarmen en koelen blijven zoals ze waren. Sleep je een
+  apparaat boven een etage in de lijst, dan opent die etage.
+- **Buiten** is het huis met zijn dak, zoals Thuis het tekent, met hetzelfde
+  lijstje als Inrichten › Buiten (`huismodel.rondom`): elk deel aan of uit,
+  met de ruimte uit Home Assistant die erbij hoort. Een ruimte die een carport
+  is, hoort nu ook ergens bij.
+- **Eén lijstje rond het huis.** Kies je bij Kamers en indeling een soort
+  (garage, carport, terras), een auto op de oprit of een zone Tuinhuis, of
+  maak je buiten een ruimte die zo heet, dan staat dat deel ook aan bij wat er
+  rond het huis is (`huismodel.rondMet`). Kamer en Kamers en indeling tekenen
+  buiten met dat lijstje, net als Thuis.
+- **De garage en de carport staan ook in een tekening zonder dak**, en de
+  garage is daar aan te tikken.
+- **Het adres blijft werken:** `indeling.html#woonkamer/warmte` opent de etage
+  van de kamer met de kamer gekozen; het adres wordt dan die etage.
+- **Versie 0.65.0.** Besluit 192 en versie 0.64.0 zijn voor het sluipverbruik.
+
+*Wat afviel:* de etages als knoppen naast de groep; een eigen lijstje rond het
+huis bij Kamers en indeling (dan zijn er weer twee); een tweede oprit, terras
+of garage tekenen, de buitenzones zoals moestuin of vijver in de tekening, en
+een balkon bij één etage: dat komt later.
+
+---
+
+## 194. Een huis zonder slimme regeling: de app draait ook zonder zones
+
+*Onderwerp: kern en regeling · Status: geldig*
+
+Op 25 oktober 2026, voor de makeover naar het grote publiek. De configuratie
+eiste minstens één zone en één klimaatapparaat; zonder slimme verwarming of
+airco startte de dienst niet, terwijl licht, schermen, energie, op zon,
+het sluipverbruik en de assistent daar niets mee te maken hebben. De bewoner
+koos eerder (makeover, 23 oktober): **werkt zonder klimaat**, en klimaat staat
+bij Wat je huis kan als iets dat erbij kan. Dit is de basis; een huis zonder
+slimme meter of zonder panelen volgt na zijn schets.
+
+*Besluit:*
+
+- **Zones en klimaatapparaten zijn niet meer verplicht.** Zonder `zones` en
+  `actuators` (of met lege lijsten) is de configuratie geldig; de regeling
+  draait en heeft dan niets te regelen. Een zone die naar een apparaat wijst dat
+  er niet is, blijft een fout.
+- **Het begin** zegt het niet meer als blokkade: zonder gebied met een
+  klimaatapparaat en een thermometer doet de app licht, schermen, energie en op
+  zon, en kan comfort per kamer later erbij.
+- **Wat de app zegt:** op Thuis "Geen zon, en er hoeft niets te draaien" in
+  plaats van "geen kamer heeft iets nodig"; de assistent zegt "Het is rustig: er
+  draait niets."
+- **Comfort** toont dan alleen "Comfort per kamer kan erbij", met wat het
+  oplevert. **Wat je huis kan** zet Op temperatuur, Verwarmen per kamer, Afwezig
+  en vakantie en Op tijd warm of koel op "Airco of thermostaat nodig" (eerst
+  stonden de laatste drie op "kijkt mee" of "leert nog").
+- **Versie 0.67.0.**
+
+*Wat afviel:* de klimaatstap van Inrichten aanpassen aan een huis met wel
+apparaten in Home Assistant maar zonder zones (dat komt met de klimaatstap per
+merk); een eigen keus "geen slimme regeling" bewaren (een huis zonder zones is
+dat al).
 
 ---
 

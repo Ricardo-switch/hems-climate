@@ -277,6 +277,38 @@
   }
 
   /**
+   * Wat er rond het huis kan zijn (besluit 158), één lijstje voor Inrichten ›
+   * Buiten en Kamers en indeling › Buiten (besluit 193): [deel, naam, soort
+   * van een ruimte die erbij hoort, icoon]. De auto en de carport horen bij de
+   * oprit; een ruimte die een carport is, hoort bij de carport.
+   */
+  function rondom() {
+    const t = global.t;
+    return [
+      ['oprit', t('soort.buiten.oprit'), 'oprit', 'oprit'], ['auto', t('indeling.autoOprit'), null, 'auto'], ['carport', t('soort.buiten.carport'), 'carport', 'carport'], ['garage', t('soort.buiten.garage'), 'garage', 'garage'],
+      ['voortuin', t('soort.buiten.voortuin'), 'voortuin', 'tuin'], ['tuin', t('soort.buiten.tuin'), 'tuin', 'tuin'], ['terras', t('soort.buiten.terras'), 'terras', 'terras'], ['balkon', t('soort.buiten.balkon'), 'balkon', 'balkon'],
+      ['tuinhuis', t('inr.inDeTuin'), 'tuinhuis', 'tuinhuis'], ['jacuzzi', t('inr.jacuzzi'), null, 'jacuzzi'],
+    ];
+  }
+  const OP_OPRIT = new Set(['auto', 'carport']);
+
+  /**
+   * Een buitenruimte krijgt een soort (besluit 193): dan staat dat deel ook aan
+   * bij wat er rond het huis is. Eerst won dat lijstje, en viel een garage of
+   * carport die je bij Kamers en indeling koos weg zodra Inrichten › Buiten
+   * één keer was ingevuld. Zonder lijstje (null) zeggen de ruimtes het al.
+   */
+  function rondMet(rond, soort) {
+    if (!rond || !soort) return rond;
+    const r = { ...rond };
+    if (soort === 'carport') Object.assign(r, { oprit: true, carport: true });
+    else if (soort === 'dakterras') r.balkon = true;
+    else if (soort === 'zijtuin') r[r.tuin ? 'voortuin' : 'tuin'] = true;
+    else if (['oprit', 'garage', 'voortuin', 'tuin', 'terras', 'balkon', 'tuinhuis'].includes(soort)) r[soort] = true;
+    return r;
+  }
+
+  /**
    * De tekening van het huis, één keer voor alle pagina's (5S, rapport 15
    * oktober): de etages van onder naar boven met het dak erop, wat er buiten
    * is, de voordeur met de deurbel, de buitenunits en hoeveel panelen. `kamer`
@@ -432,5 +464,5 @@
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
   global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
 
- BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
+ BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
 })(window);

@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.63.1';
+export const VERSIE = '0.67.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,66 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.67.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'De app werkt ook in een huis zonder slimme verwarming of airco: licht, schermen, energie, op zon en de assistent, en comfort per kamer kan erbij',
+    ],
+    opgelost: [
+      'De test van het sluipverbruik hangt niet meer af van hoe laat hij draait',
+    ],
+    en: {
+      nieuw: [
+        'The app also works in a house without smart heating or air conditioning: lights, blinds, energy, on sun and the assistant, and comfort per room can be added',
+      ],
+      opgelost: [
+        'The standby use test no longer depends on the time it runs',
+      ],
+    },
+  },
+  {
+    versie: '0.66.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'Sluipverbruik: wat je huis elke nacht gebruikt als er niets draait, met een eigen scherm onder Opbrengst, elke nacht en elke maand sinds je meter',
+      'Een melding de ochtend erna als een nacht 50 W of meer boven je gewone nacht lag, en een kaart Sluipverbruik voor Thuis',
+    ],
+    beter: [
+      'De assistent weet je sluipverbruik, en Wat je huis kan heeft het bij Kosten',
+    ],
+    en: {
+      nieuw: [
+        'Standby use: what your house uses every night when nothing runs, with its own screen under Energy, every night and every month since your meter',
+        'A notification the morning after when a night was 50 W or more above your usual night, and a Standby use card for Home',
+      ],
+      beter: [
+        'The assistant knows your standby use, and What your house can do lists it under Costs',
+      ],
+    },
+  },
+  {
+    versie: '0.65.0',
+    datum: '2026-10-24',
+    nieuw: [
+      'Kamers en indeling werkt zoals Energie: op de telefoon eerst de lijst met etages, Buiten en wat nog in te delen is; op de wand de lijst en het gekozen deel naast elkaar',
+      'Bij Buiten zet je aan wat er rond het huis is, met hetzelfde lijstje als bij Inrichten',
+    ],
+    opgelost: [
+      'Een garage of carport die je buiten toevoegt, staat nu ook in de tekening, ook bij Kamers en indeling en bij een kamer',
+      'Een ruimte die een carport is, kun je bij Inrichten nu aan de carport koppelen',
+    ],
+    en: {
+      nieuw: [
+        'Rooms and layout works like Energy: on the phone first the list of floors, Outside and what is still to arrange; on the wall the list and the chosen part side by side',
+        'At Outside you turn on what is around the house, with the same list as in Set up',
+      ],
+      opgelost: [
+        'A garage or carport you add outside now shows in the drawing, also in Rooms and layout and for a room',
+        'An area that is a carport can now be linked to the carport in Set up',
+      ],
+    },
+  },
   {
     versie: '0.63.1',
     datum: '2026-10-24',

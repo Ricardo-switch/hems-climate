@@ -15,7 +15,8 @@ import type { AskContext, Lang } from '../assistant.js';
 import { sunReport } from '../sun.js';
 import { expectedAndActual, expectedTotal, weatherInLang, type ExpectedTotal } from '../weather.js';
 import { startOfLocalDay } from '../today.js';
-import { sendJson } from '../http.js';
+import { readJson, sendJson } from '../http.js';
+import { leesToelichting } from '../sluipverbruik.js';
 import { taalVan, type Diensten, type Verzoek } from '../diensten.js';
 
 /** De routes van dit onderwerp; waar als het verzoek hier is afgehandeld. */
@@ -24,6 +25,40 @@ export async function opbrengstRoutes(d: Diensten, v: Verzoek): Promise<boolean>
   const logDir = d.options.logDir;
   if (path === '/api/opbrengst') {
     await opbrengstRoute(d, res, url.searchParams, taalVan(url.searchParams.get('taal') ?? req.headers['x-taal']));
+    return true;
+  }
+
+  /*
+   * Het sluipverbruik (besluit 192): elke nacht, het gemiddelde, wat het kost,
+   * en wat opviel. POST bewaart wat de bewoner over een reeks zegt (besluit 88).
+   */
+  if (path === '/api/sluipverbruik') {
+    const s = d.options.sluipverbruik;
+    if (s == null) {
+      sendJson(res, 503, { wachten: 'zonder slimme meter is er geen sluipverbruik' });
+      return true;
+    }
+    if (v.method === 'POST') {
+      let body: unknown;
+      try {
+        body = await readJson(req);
+      } catch (error) {
+        sendJson(res, 400, { fout: (error as Error).message });
+        return true;
+      }
+      const t = leesToelichting(body);
+      if (!t.ok) {
+        sendJson(res, 400, { fout: t.reden });
+        return true;
+      }
+      await s.zeg(t.toelichting);
+    }
+    const rapport = await s.rapport().catch(() => null);
+    if (rapport == null) {
+      sendJson(res, 503, { wachten: 'nog geen week aan nachten van de slimme meter' });
+      return true;
+    }
+    sendJson(res, 200, rapport);
     return true;
   }
 
