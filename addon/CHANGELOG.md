@@ -1,5 +1,31 @@
 # Wat is er nieuw · What is new
 
+## 0.67.1
+
+*25 oktober 2026*
+
+**Beter**
+
+- Een verdieping staat in de kamer op hoogte, met de verdieping eronder en erboven vaag erbij
+
+**Opgelost**
+
+- Thuis loopt weer vlot op een oudere tablet aan de wand: wat beweegt in het huis, kost het beeld eronder geen schilderwerk meer
+- In de grafiek Vandaag loopt een blokje van de airco niet meer door de naam
+- Bij Aanpassen op de wand staan de knoppen van een smalle kaart weer heel in beeld, ook bij Sluipverbruik
+
+*English*
+
+**Improved**
+
+- A floor sits at its height in the room view, with the floors below and above faintly shown
+
+**Fixed**
+
+- Home runs smoothly again on an older tablet on the wall: what moves in the house no longer repaints the picture underneath
+- In the Today chart an air conditioning block no longer runs through its name
+- When customising the wall, the buttons of a narrow card are fully visible again, Standby use included
+
 ## 0.67.0
 
 *25 oktober 2026*

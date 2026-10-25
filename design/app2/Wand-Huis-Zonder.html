@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Een huis met minder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Een huis met minder (schets, 25 oktober 2026, makeover). Wat de app laat
+   * zien zonder panelen of zonder slimme meter. Gekozen bij de makeover
+   * (23 oktober): zonder P1 schatten en eerlijk zeggen, met één regel dat een
+   * slimme meter beter is; zonder panelen wordt Opbrengst Verbruik, het huis
+   * zonder panelen en zonnestraal, en wat kan wachten draait in de goedkoopste
+   * uren. Een huis zonder slimme regeling werkt sinds 0.67.0 (besluit 194).
+   * Standen: #zonderpanelen (Thuis), #verbruik (Opbrengst wordt Verbruik),
+   * #zondermeter (Thuis met panelen, zonder meter), #zondermeter-opbrengst.
+   */
+  main { position: relative; padding: 22px 26px 20px 22px; display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 18px; height: 800px; box-sizing: border-box; min-width: 0; }
+  .links { position: relative; min-width: 0; }
+  .klok { font-family: var(--kop); font-size: 56px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; }
+  .klok small { font-family: var(--romp); font-size: 16px; font-weight: 500; color: var(--zacht); margin-left: 12px; letter-spacing: 0; }
+  .groet { margin-top: 26px; font-size: 15px; color: var(--zacht); }
+  h1.kop { margin: 4px 0 6px; font-family: var(--kop); font-size: 46px; font-weight: 600; line-height: 1.02; letter-spacing: -0.03em; max-width: 620px; }
+  .zin { font-size: 17px; color: var(--zacht); max-width: 560px; }
+  .podium { position: absolute; left: 0; right: 0; top: 190px; bottom: 76px; }
+  .vraagbalk { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; border-radius: 22px; display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+  .vraagbalk .bol { width: 40px; height: 40px; }
+  .rechts { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  .kaart { padding: 18px 20px; }
+  .kaart h2 { margin: 0; font-family: var(--kop); font-size: 19px; font-weight: 600; }
+  .kaart .rechtsboven { float: right; font-size: 13px; color: var(--gedempt); }
+  .tip { padding: 10px 12px; border-radius: 14px; background: rgba(111, 211, 255, 0.08); color: var(--zacht); font-size: 13px; line-height: 1.45; }
+  .tip b { color: var(--ijs-t); }
+  .uren { display: flex; align-items: end; gap: 3px; height: 70px; margin-top: 12px; }
+  .uren i { flex: 1; border-radius: 3px 3px 0 0; background: rgb(var(--wit) / 0.16); }
+  .uren i.goedkoop { background: var(--mint); }
+  .uren i.nu { outline: 2px solid var(--tekst); outline-offset: 1px; }
+  .as { display: flex; justify-content: space-between; font-size: 11px; color: var(--gedempt); margin-top: 4px; }
+  .regel { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 9px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 14px; }
+  .regel:first-of-type { border-top: 0; }
+  .regel span { color: var(--gedempt); font-size: 12.5px; grid-column: 1; }
+  .regel em { font-style: normal; font-weight: 700; grid-row: 1 / 3; grid-column: 2; align-self: center; }
+  .geschat { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; border: 1px dashed rgba(247, 181, 72, 0.6); color: var(--zon); font-size: 12px; font-weight: 700; }
+  .meterkaart { background: linear-gradient(160deg, rgba(111, 211, 255, 0.12), rgba(111, 211, 255, 0.03)); border-color: rgba(111, 211, 255, 0.3); }
+  .wissel { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: rgb(var(--wit) / 0.06); }
+  .wissel span { height: 36px; padding: 0 14px; border-radius: 10px; display: inline-flex; align-items: center; color: var(--zacht); font-weight: 600; font-size: 14px; }
+  .wissel span.aan { background: var(--tekst); color: #0b1424; }
+  .opb { grid-template-columns: 270px minmax(0, 1fr) 316px; grid-template-rows: auto minmax(0, 1fr); }
+  .opb .kopregel { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; }
+  .cijfer .getal { font-size: 40px; line-height: 1.05; }
+  .cijfer .getal small { font-family: var(--romp); font-size: 15px; color: var(--zacht); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+  .stroom { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .staafrij { display: grid; grid-template-columns: 150px minmax(0, 1fr) 90px; gap: 10px; align-items: center; font-size: 14px; }
+  .staafrij i { height: 14px; border-radius: 7px; display: block; }
+  .staafrij em { font-style: normal; text-align: right; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-dag">
+  <nav class="balk" id="balk" aria-label="Hoofdmenu"></nav>
+  <main id="main"></main>
+</div>
+<script src="../../frontend/kit/teksten.nl.js"></script>
+<script src="../../frontend/kit/teksten.en.js"></script>
+<script src="../../frontend/kit/taal.js"></script>
+<script src="../../frontend/kit/nav.js"></script>
+<script src="../../frontend/kit/huis.js"></script>
+<script src="../../frontend/kit/sankey.js"></script>
+<script>
+  const stand = location.hash.slice(1) || 'zonderpanelen';
+  const panelen = stand.startsWith('zondermeter');
+  const thuis = stand === 'zonderpanelen' || stand === 'zondermeter';
+  nav.balk(document.getElementById('balk'), thuis ? 'thuis' : 'opbrengst');
+  // Op de wand zonder panelen heet de tab Verbruik.
+  if (!panelen) document.querySelectorAll('#balk a').forEach((el) => el.childNodes.forEach((n) => { if (n.nodeType === 3 && n.textContent.trim() === 'Opbrengst') n.textContent = 'Verbruik'; }));
+
+  const k = (naam, temp, apparaten = []) => ({ naam, temp, gewicht: 1, apparaten });
+  const etages = [
+    { naam: 'Begane grond', kamers: [k('Keuken', '19,8°', [{ soort: 'lamp', aan: true }]), k('Woonkamer', '20,4°', [{ soort: 'lamp', aan: true }, { soort: 'bank' }])] },
+    { naam: 'Eerste', kamers: [k('Badkamer', '19,0°'), k('Slaapkamer', '18,2°'), k('Kamer Mylan', '18,6°')] },
+    { dak: true, kamers: [k('Zolder', '17,4°', [{ soort: 'droger', aan: !panelen }])] },
+  ];
+  const buiten = { oprit: { auto: {} }, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis', lampen: [] }, terras: {} };
+
+  const main = document.getElementById('main');
+  const uren = (goedkoop, nu) => `<div class="uren">${Array.from({ length: 24 }, (_, u) => `<i class="${goedkoop.includes(u) ? 'goedkoop' : ''}${u === nu ? ' nu' : ''}" style="height: ${Math.round(30 + 60 * Math.abs(Math.sin((u + 3) / 4)))}%"></i>`).join('')}</div><div class="as"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>`;
+
+  if (thuis) {
+    const model = panelen
+      ? { tijd: 'dag', zon: { stand: 0.55, hoogte: 0.9, aandeel: 0.6, panelen: 6, panelenLinks: 6 }, etages, voordeur: {}, net: true, ...buiten, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.4 }],
+          labels: [{ bij: 'panelen', titel: '1,2 kW', groot: true, toon: 'zon', regels: ['je panelen, nu'], dx: 64, dy: -70 }, { bij: 'net', titel: '± 0,8 kW over', toon: 'zon', regels: ['geschat, zonder slimme meter'], dx: 40, dy: 64 }] }
+      : { tijd: 'dag', zon: { stand: 0.55, hoogte: 0.9, aandeel: 0, panelen: 0 }, etages, voordeur: {}, net: true, ...buiten, stromen: [{ van: 'net', naar: 'huis', sterkte: 0.4 }],
+          labels: [{ bij: 'net', titel: '0,4 kW van het net', toon: 'violet', dx: 40, dy: 64 }] };
+    main.innerHTML = `<div class="links">
+        <div class="klok">13:40<small>zondag 25 oktober</small></div>
+        <div class="groet">Goedemiddag</div>
+        <h1 class="kop">${panelen ? 'De zon is er, de droger mag' : 'De droger wacht op 14:00'}</h1>
+        <div class="zin">${panelen ? 'Je panelen leveren 1,2 kW; volgens de schatting is er genoeg over.' : 'Dan is stroom het goedkoopst van de middag.'}</div>
+        <div class="podium" id="podium"></div>
+        <div class="glas vraagbalk"><span class="bol"></span><span class="klein" style="font-size: 15px">Tik om iets te vragen over je huis</span></div>
+      </div>
+      <div class="rechts">
+        ${panelen
+          ? `<section class="glas kaart"><h2>Vandaag<span class="rechtsboven">geschat</span></h2>
+              <div style="display: flex; gap: 18px; margin-top: 10px"><div class="cijfer"><div class="mini">Opgewekt</div><div class="getal" style="font-size: 30px">3,1<small>kWh</small></div></div><div class="cijfer"><div class="mini">Zelf gebruikt</div><div class="getal" style="font-size: 30px">± 1,9<small>kWh</small></div></div></div>
+              <p class="klein" style="margin: 8px 0 0"><span class="geschat">geschat</span> uit je panelen min wat de apparaten met een meter gebruiken</p></section>
+             <section class="glas kaart meterkaart"><h2>Met een slimme meter weet het huis het precies</h2><p class="klein" style="margin: 6px 0 10px">Een P1-meter, zoals die van HomeWizard, in je meterkast. Dan ziet het huis wat er van en naar het net gaat, en start de droger op het juiste moment.</p><span class="knop">Hoe werkt dat?</span></section>`
+          : `<section class="glas kaart"><h2>Goedkope uren vandaag<span class="rechtsboven">dynamisch contract</span></h2>${uren([2, 3, 4, 13, 14, 15], 13)}<p class="klein" style="margin: 8px 0 0">De droger start om 14:00, de vaatwasser vannacht om 03:00.</p></section>
+             <section class="glas kaart"><h2>Vandaag</h2><div style="display: flex; gap: 18px; margin-top: 10px"><div class="cijfer"><div class="mini">Verbruikt</div><div class="getal" style="font-size: 30px">6,4<small>kWh</small></div></div><div class="cijfer"><div class="mini">Kosten</div><div class="getal" style="font-size: 30px">€ 1,52</div></div></div></section>`}
+        <section class="glas kaart"><h2>Sluipverbruik</h2><div class="getal" style="font-size: 30px; margin-top: 6px">${panelen ? '–' : '186'}<small style="font-family: var(--romp); font-size: 14px; color: var(--zacht); margin-left: 4px">${panelen ? '' : 'W'}</small></div><p class="klein" style="margin: 4px 0 0">${panelen ? 'Kan erbij met een slimme meter' : 'rond je gewone nacht'}</p></section>
+      </div>`;
+    const p = document.getElementById('podium');
+    const r = p.getBoundingClientRect();
+    huis.teken(p, model, { breedte: r.width, hoogte: r.height, marge: 0.04 });
+  } else {
+    // Opbrengst: zonder panelen heet het Verbruik; zonder meter geschat, met een zachte lijn.
+    main.className = 'opb';
+    main.innerHTML = panelen
+      ? `<div class="kopregel"><div><h1 class="kop" style="font-size: 40px">Je panelen leverden 96 kWh</h1><div class="klein" style="margin-top: 6px">Oktober 2026 · wat je zelf gebruikte is geschat</div></div><div class="wissel"><span>Dag</span><span>Week</span><span class="aan">Maand</span><span>Jaar</span></div></div>
+        <div style="display: flex; flex-direction: column; gap: 22px">
+          <div class="cijfer"><div class="mini">Opgewekt</div><div class="getal">96<small>kWh</small></div><div class="klein">uit je omvormer, gemeten</div></div>
+          <div class="cijfer"><div class="mini">Zelf gebruikt</div><div class="getal">± 61<small>kWh</small></div><div class="klein"><span class="geschat">geschat</span></div></div>
+          <div class="cijfer"><div class="mini">Bespaard</div><div class="getal">± € 16</div><div class="klein">bij € 0,26 per kWh</div></div>
+        </div>
+        <section class="glas kaart"><h2>Waar je zonnestroom heen ging</h2>
+          <div id="sankey" style="margin-top: 14px; display: grid; place-items: center"></div>
+          <p class="klein" style="margin: 18px 0 0">Geschat is de opbrengst min wat de apparaten met een eigen meter gebruikten. Wat er van het net kwam, weet het huis niet.</p></section>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <section class="glas kaart meterkaart"><h2>Precies weten?</h2><p class="klein" style="margin: 6px 0 10px">Met een slimme meter (P1) ziet het huis wat er van en naar het net gaat: dan staan hier je kosten, je sluipverbruik en wat de app scheelde.</p><span class="knop">Hoe werkt dat?</span></section>
+          <section class="glas kaart"><h2>Per apparaat</h2><div class="regel">Droger<span>met een eigen meter</span><em>21 kWh</em></div><div class="regel">Vaatwasser<span>met een eigen meter</span><em>14 kWh</em></div></section>
+        </div>`
+      : `<div class="kopregel"><div><h1 class="kop" style="font-size: 40px">Je huis gebruikte 312 kWh</h1><div class="klein" style="margin-top: 6px">Oktober 2026 · september: 298 kWh</div></div><div class="wissel"><span>Dag</span><span>Week</span><span class="aan">Maand</span><span>Jaar</span></div></div>
+        <div style="display: flex; flex-direction: column; gap: 22px">
+          <div class="cijfer"><div class="mini">Stroom</div><div class="getal">312<small>kWh</small></div><div class="klein">allemaal van het net</div></div>
+          <div class="cijfer"><div class="mini">Kosten</div><div class="getal">€ 78,40</div><div class="klein">september € 76,10, zonder vaste kosten</div></div>
+          <div class="cijfer"><div class="mini">Gas</div><div class="getal">64<small>m³</small></div><div class="klein">september 41 m³</div></div>
+        </div>
+        <section class="glas kaart"><h2>Waar je stroom heen ging</h2>
+          <div id="sankey" style="margin-top: 14px; display: grid; place-items: center"></div>
+          <p class="klein" style="margin: 18px 0 0">Zonder panelen telt het uur: de droger en de vaatwasser draaiden 31 keer in de goedkoopste uren.</p></section>
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <section class="glas kaart" style="background: linear-gradient(160deg, rgba(143,134,255,0.14), rgba(111,211,255,0.05)); border-color: rgba(143,134,255,0.3)"><div class="klein">Wat Smart Climate scheelde</div><div class="getal" style="font-size: 30px; margin-top: 8px">€ 4,30</div><p class="klein" style="margin: 4px 0 0">Door de droger en de vaatwasser in de goedkoopste uren te laten draaien. Berekend.</p></section>
+          <section class="glas kaart"><h2>Panelen erbij?</h2><p class="klein" style="margin: 6px 0 0">Bij Wat je huis kan staat wat panelen hier zouden opleveren, met het dak en de ligging die de app al kent.</p></section>
+        </div>`;
+    // Waar het heen ging, zoals Opbrengst het tekent: alleen het net zonder panelen; zonder meter alleen de zon, en geschat.
+    const sk = document.getElementById('sankey');
+    sk.innerHTML = panelen
+      ? sankey.svg({ breedte: 470, hoogte: 520, links: 80, rechts: 214, beschrijving: 'Zon naar de droger, de vaatwasser, de rest van het huis en het net; de laatste twee geschat.',
+          bronnen: [{ id: 'zon', naam: 'Zon', kleur: '#F7B548' }],
+          doelen: [{ id: 'droger', naam: 'Droger', kleur: '#F7B548' }, { id: 'vaat', naam: 'Vaatwasser', kleur: '#F7B548' }, { id: 'rest', naam: 'Rest, geschat', kleur: '#9AAABB' }, { id: 'terug', naam: 'Naar het net, geschat', kleur: '#6EE7B7' }],
+          stromen: [{ van: 'zon', naar: 'droger', kwh: 18 }, { van: 'zon', naar: 'vaat', kwh: 11 }, { van: 'zon', naar: 'rest', kwh: 32 }, { van: 'zon', naar: 'terug', kwh: 35 }] })
+      : sankey.svg({ breedte: 470, hoogte: 520, links: 80, rechts: 204, beschrijving: 'Het net naar de droger, de vaatwasser, het sluipverbruik en de rest van het huis.',
+          bronnen: [{ id: 'net', naam: 'Net', kleur: '#9AAABB' }],
+          doelen: [{ id: 'droger', naam: 'Droger', kleur: '#6FD3FF' }, { id: 'vaat', naam: 'Vaatwasser', kleur: '#6FD3FF' }, { id: 'sluip', naam: 'Sluipverbruik', kleur: '#8F86FF' }, { id: 'rest', naam: 'Rest van het huis', kleur: '#9AAABB' }],
+          stromen: [{ van: 'net', naar: 'droger', kwh: 38 }, { van: 'net', naar: 'vaat', kwh: 24 }, { van: 'net', naar: 'sluip', kwh: 134 }, { van: 'net', naar: 'rest', kwh: 116 }] });
+  }
+</script>
+</body>
+</html>

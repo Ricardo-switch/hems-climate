@@ -198,9 +198,23 @@
     };
   }
 
+  /**
+   * Ingezoomd op één etage (zonder dak): de etages eronder en erboven als vage
+   * lagen (25 oktober 2026), zodat een verdieping niet op het gras staat. Het
+   * eiland zakt één etage; eronder één vage etage die naar het gras wegloopt,
+   * erboven de omtrek van de volgende etage of het dak. Null: zoals het was.
+   */
+  function lagenVan(model) {
+    if (!model.zonderDak || !model.lagen) return null;
+    const onder = Math.max(0, model.lagen.onder ?? 0);
+    const boven = Math.max(0, model.lagen.boven ?? 0);
+    return { onder, boven, zak: onder > 0 ? FH : 0, dak: boven === 0 && model.lagen.dak !== false };
+  }
+
   /** Alle punten die in beeld moeten, om de schaal te bepalen. */
   function omtrek(model, g, opts = {}) {
     const { W, Ht } = g;
+    const lagen = lagenVan(model);
     const pts = [
       [0, 0, Ht + (model.zonderDak ? 0.1 : R + 0.1)],
       [W, 0, Ht],
@@ -227,7 +241,11 @@
     }
     // Het eiland (huis 3.0): de hoeken en de diepte van de doorsnede.
     const ei = eilandVan(model, W, opts);
-    if (ei) pts.push([ei.x0, ei.yF, -ei.T - 0.3], [ei.x1, ei.yF, -ei.T * 0.75], [ei.x0, ei.y0, 0], [ei.x1, ei.y0, 0], [ei.x0 + 0.4, ei.y0 + 0.45, 1.6], [ei.x1 - 0.45, ei.y0 + 0.4, 1.8]);
+    // Een etage hoger (de vage lagen): het eiland een etage lager, en alleen de bovenkant in beeld; de rots loopt toch weg.
+    if (ei && lagen?.zak) pts.push([ei.x0, ei.yF, -lagen.zak - 0.4], [ei.x1, ei.yF, -lagen.zak - 0.4], [ei.x0, ei.y0, -lagen.zak], [ei.x1, ei.y0, -lagen.zak]);
+    else if (ei) pts.push([ei.x0, ei.yF, -ei.T - 0.3], [ei.x1, ei.yF, -ei.T * 0.75], [ei.x0, ei.y0, 0], [ei.x1, ei.y0, 0], [ei.x0 + 0.4, ei.y0 + 0.45, 1.6], [ei.x1 - 0.45, ei.y0 + 0.4, 1.8]);
+    // Erboven de vage etage of het dak, tot waar hij wegloopt.
+    if (lagen) pts.push([0, 0, Ht + (lagen.dak ? R : FH * 0.6)], [W, 0, Ht + (lagen.dak ? 0.2 : FH * 0.6)]);
     // De kelder (huis 3.0): onder de grond, met de aarde eromheen.
     if (model.kelder) pts.push([-0.4, D, -FH - 0.35], [W + 0.4, D, -FH - 0.35]);
     return pts;
@@ -241,6 +259,46 @@
 
   function teken(el, model, opts = {}) {
     el.innerHTML = svg(model, opts);
+    beweegApart(el);
+  }
+
+  /** Wat in de tekening beweegt: de stroom, een ventilator, damp, regen; en wat met SMIL beweegt, zoals de ring van een camera. */
+  const BEWEEGT = '.sc-stroom, .sc-trommel, .sc-fan, .sc-damp, .sc-puls, .sc-vlam, .sc-lucht, .sc-regen, .sc-sneeuw, .sc-vlieg';
+
+  /**
+   * Wat beweegt in een eigen laag (25 oktober 2026). Beweegt er iets in de
+   * tekening, dan schildert de browser bij elk beeldje alles eronder opnieuw:
+   * het eiland, de bomen, de verlopen. Op een oudere tablet aan de wand liep de
+   * pagina daar op vast (gemeten op een pc: 316 ms schilderwerk per seconde,
+   * zo 15 ms). Nu staat wat beweegt in een tweede, doorzichtige tekening
+   * erboven, die de browser apart houdt; het huis eronder staat stil.
+   */
+  function beweegApart(el) {
+    const basis = el.querySelector(':scope > svg.sc-huis');
+    if (!basis) return;
+    const alles = [...basis.querySelectorAll(BEWEEGT), ...[...basis.querySelectorAll('animate, animateTransform, animateMotion')].map((a) => a.parentElement)];
+    // Alleen het buitenste: wat in iets bewegends zit, gaat al mee.
+    const stukken = [...new Set(alles)].filter((x) => !alles.some((y) => y !== x && y.contains(x)));
+    if (!stukken.length) return;
+    const laag = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    laag.setAttribute('viewBox', basis.getAttribute('viewBox'));
+    laag.setAttribute('class', 'sc-beweegt');
+    laag.setAttribute('aria-hidden', 'true');
+    for (const stuk of stukken) {
+      // Met de groepen eromheen: een verschuiving, doorzichtigheid of een filter blijft zo gelden.
+      let doel = laag;
+      const keten = [];
+      for (let p = stuk.parentElement; p && p !== basis; p = p.parentElement) keten.unshift(p);
+      for (const g of keten) {
+        const kopie = g.cloneNode(false);
+        kopie.removeAttribute('id');
+        doel.appendChild(kopie);
+        doel = kopie;
+      }
+      doel.appendChild(stuk);
+    }
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    basis.after(laag);
   }
 
   function svg(model, kies = {}) {
@@ -525,9 +583,22 @@
     // Schaduw onder het huis.
     grond.push(`<g filter="url(#${id}-zacht)" opacity="0.6">${poly([[0.1, 0.1, 0], [W + 0.25, 0.1, 0], [W + 0.25, D + 0.25, 0], [0.1, D + 0.25, 0]], `fill="${licht ? '#3a4a58' : '#05090d'}"`)}</g>`);
     // De wereld vervangt het perceel (huis 3.0).
+    const lagen = lagenVan(model);
     if (eiland) {
       grond.length = 0;
+      const [vanAchter, vanBuiten, vanLabels] = [buitenAchter.length, buiten.length, labels.length];
       bouwEiland();
+      // Een etage hoger (de vage lagen): het hele eiland, met zijn bomen en lantaarn, een etage omlaag.
+      if (lagen?.zak) {
+        const omlaag = (lijst, van) => {
+          const stuk = lijst.splice(van).join('');
+          if (stuk) lijst.push(`<g transform="translate(0 ${(lagen.zak * k).toFixed(1)})">${stuk}</g>`);
+        };
+        omlaag(grond, 0);
+        omlaag(buitenAchter, vanAchter);
+        omlaag(buiten, vanBuiten);
+        omlaag(labels, vanLabels);
+      }
     }
 
     /*
@@ -571,6 +642,7 @@
 
     // Wat na het huis komt en ervoor ligt, zoals de verdiepingen boven een appartement.
     const burenVoor = [];
+    if (lagen) bouwLagen();
     const gewoonAantal = g.etages.filter((e) => !e.dak).length;
     /*
      * ---- een appartement (huis 3.0) ----
@@ -2025,6 +2097,56 @@
      * hoeken in het seizoen van nu, en de schaduw van het huis die met de zon
      * meedraait.
      */
+    /**
+     * De vage lagen (25 oktober 2026): ingezoomd op een verdieping de etage
+     * eronder, die naar het eiland wegloopt, en erboven de omtrek van de
+     * volgende etage of het dak, die naar boven vervaagt. Vaag genoeg dat de
+     * kamers van deze etage het beeld blijven.
+     */
+    function bouwLagen() {
+      const kleur = licht ? '#9fb0c2' : '#41536a';
+      const rand = licht ? '#5d6f83' : '#C9D6E2';
+      const gid = `${id}-laag`;
+      const verloop = (naam, ya, yb, c, o0, o1) =>
+        defs.push(`<linearGradient id="${gid}-${naam}" gradientUnits="userSpaceOnUse" x1="0" y1="${ya.toFixed(1)}" x2="0" y2="${yb.toFixed(1)}"><stop offset="0" stop-color="${c}" stop-opacity="${o0}"/><stop offset="1" stop-color="${c}" stop-opacity="${o1}"/></linearGradient>`);
+      // Eronder: de gevels van één etage, die naar het gras wegloopt.
+      if (lagen.zak && eiland) {
+        const z0 = -lagen.zak;
+        const [ya, yb] = [P(0, D, 0)[1], P(W, D, z0)[1]];
+        verloop('o', ya, yb, kleur, 0.5, 0.06);
+        verloop('or', ya, yb, rand, 0.3, 0.02);
+        // Na de haag en de bomen achterin, die op het gezakte eiland staan; voor het huis.
+        const onder = [];
+        onder.push(poly([[W, 0, z0], [W, D, z0], [W, D, 0], [W, 0, 0]], `fill="url(#${gid}-o)" opacity="0.75"`));
+        onder.push(poly([[0, D, z0], [W, D, z0], [W, D, 0], [0, D, 0]], `fill="url(#${gid}-o)"`));
+        for (const rx of [0.35, W * 0.55]) onder.push(poly([[rx, D + 0.002, z0 + 0.45], [rx + 0.7, D + 0.002, z0 + 0.45], [rx + 0.7, D + 0.002, -0.35], [rx, D + 0.002, -0.35]], `fill="${nacht ? '#F4C27E' : '#8fb1d1'}" opacity="${nacht ? 0.12 : 0.1}"`));
+        onder.push(line([[0, D, 0], [0, D, z0]], `stroke="url(#${gid}-or)" stroke-width="1.6"`));
+        onder.push(line([[W, 0, 0], [W, 0, z0]], `stroke="url(#${gid}-or)" stroke-width="1.2"`));
+        onder.push(line([[W, D, 0], [W, D, z0]], `stroke="url(#${gid}-or)" stroke-width="1.6"`));
+        buitenAchter.push(onder.join(''));
+      }
+      // Erboven: de omtrek van de volgende etage, of het dak als dit de bovenste is.
+      const z1 = Ht;
+      const top = lagen.dak ? z1 + R : z1 + FH;
+      const [ya, yb] = [P(0, D, z1)[1], P(W, 0, lagen.dak ? top : z1 + FH * 0.6)[1]];
+      verloop('b', ya, yb, rand, 0.42, lagen.dak ? 0.1 : 0);
+      verloop('bv', ya, yb, kleur, 0.45, 0);
+      const stijl = `stroke="url(#${gid}-b)" stroke-width="1.6" stroke-linejoin="round" stroke-dasharray="6 5"`;
+      const voor = [];
+      if (lagen.dak) {
+        voor.push(poly([[W / 2, 0, top], [W, 0, z1], [W, D, z1], [W / 2, D, top]], `fill="url(#${gid}-bv)"`));
+        voor.push(line([[0, D, z1], [W / 2, D, top], [W, D, z1]], stijl));
+        voor.push(line([[W / 2, D, top], [W / 2, 0, top], [W, 0, z1]], stijl));
+      } else {
+        voor.push(poly([[W, 0, z1], [W, D, z1], [W, D, top], [W, 0, top]], `fill="url(#${gid}-bv)"`));
+        voor.push(line([[0, D, z1], [0, D, top]], stijl));
+        voor.push(line([[0, 0, z1], [0, 0, top]], stijl));
+        voor.push(line([[W, D, z1], [W, D, top]], stijl));
+        voor.push(line([[W, 0, z1], [W, 0, top]], stijl));
+      }
+      burenVoor.push(lichter(voor.join('')));
+    }
+
     function bouwEiland() {
       const { x0, x1, y0, yF, nis, T } = eiland;
       const r = 0.5;
@@ -2141,7 +2263,8 @@
       }
       // Een haag langs de achterkant.
       const haag = sneeuw ? ['#eef3f8', '#d6dee7', '#c3ccd6'] : winter ? ['#3d5262', '#33465a', '#2a3a4c'] : ['#3d7a55', '#2f6446', '#27553b'];
-      buitenAchter.push(doos(x0 + r, y0 + 0.08, 0, x1 - x0 - 2 * r, 0.16, 0.22, haag));
+      // Niet onder een opgetilde etage (de vage lagen): daar schijnt hij als een groene band door de etage eronder.
+      if (!lagen?.zak) buitenAchter.push(doos(x0 + r, y0 + 0.08, 0, x1 - x0 - 2 * r, 0.16, 0.22, haag));
       // Bomen in de achterhoeken, en een kleine voorin rechts als er plek is.
       boom(x0 + 0.42, y0 + 0.45, 1.15, buitenAchter);
       boom(x1 - 0.45, y0 + 0.42, 1.3, buitenAchter);
@@ -2541,7 +2664,7 @@
       ${buitenAchter.length ? `<g>${lichter(buitenAchter.join(''))}</g>` : ''}
       <g>${lichter(huis.join(''))}</g>
       ${burenVoor.length ? `<g>${burenVoor.join('')}</g>` : ''}
-      ${eiland && stromen.length ? `<g filter="url(#${id}-gloed)" opacity="0.7">${stromen.join('')}</g>` : ''}
+      ${eiland && stromen.length ? `<g filter="url(#${id}-gloed)" opacity="0.7">${stromen.join('').replace(/ class="sc-stroom"/g, '')}</g>` : ''}
       <g>${stromen.join('')}</g>
       <g>${lichter(buiten.join(''))}</g>
       ${weer.length ? `${weerStijl}<g>${weer.join('')}</g>` : ''}

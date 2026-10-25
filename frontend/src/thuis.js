@@ -239,16 +239,18 @@ function tekenVandaag() {
   const nuX = x(Date.now());
   // De apparaten die op zon kunnen koelen of verwarmen: de airco's en warmtepompen.
   const banen = (vandaag.apparaten ?? []).filter((a) => apparaatVan(a.actuatorId)?.klimaat?.kanKoelen).slice(0, 3);
+  // Per apparaat de naam op een eigen regel en de baan eronder: een blokje vroeg op de dag liep anders door de naam.
+  const BAAN = 24;
   const banenSvg = banen
     .map((a, i) => {
-      const yy = 104 + i * 15;
+      const yy = 102 + i * BAAN;
       const naam = apparaatVan(a.actuatorId)?.naam ?? a.actuatorId;
-      const stukken = (a.smartClimate ?? []).map((s) => `<rect x="${x(s.vanMs).toFixed(1)}" y="${yy - 7}" width="${Math.max(3, x(s.totMs) - x(s.vanMs)).toFixed(1)}" height="7" rx="3.5" fill="#6FD3FF"/>`).join('');
-      return `<text x="8" y="${yy}">${esc(naam)}</text>${stukken}`;
+      const stukken = (a.smartClimate ?? []).map((s) => `<rect x="${x(s.vanMs).toFixed(1)}" y="${yy + 5}" width="${Math.max(3, x(s.totMs) - x(s.vanMs)).toFixed(1)}" height="7" rx="3.5" fill="#6FD3FF"/>`).join('');
+      return `<text x="8" y="${yy}">${esc(naam)}</text><rect x="8" y="${yy + 5}" width="${B - 16}" height="7" rx="3.5" fill="#ffffff" fill-opacity="0.05"/>${stukken}`;
     })
     .join('');
-  const uren = [6, 12, 18, 22].map((u) => `<text x="${x(t0 + u * 3600_000).toFixed(1)}" y="${104 + banen.length * 15 + 12}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
-  const hoog = 104 + banen.length * 15 + 16;
+  const uren = [6, 12, 18, 22].map((u) => `<text x="${x(t0 + u * 3600_000).toFixed(1)}" y="${104 + banen.length * BAAN}" text-anchor="middle">${String(u).padStart(2, '0')}</text>`).join('');
+  const hoog = 110 + banen.length * BAAN;
   // Elk een eigen verloop: een verloop in de verborgen weergave tekent niet.
   boxen.forEach((box, i) => (box.innerHTML = `<svg viewBox="0 0 ${B} ${hoog}" width="${B}" height="${hoog}" aria-label="${esc(t('thuis.vandaag.grafiek'))}">
     <defs><linearGradient id="zonvlak-${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7B548" stop-opacity="0.55"/><stop offset="1" stop-color="#F7B548" stop-opacity="0.02"/></linearGradient></defs>

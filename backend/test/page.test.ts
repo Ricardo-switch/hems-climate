@@ -1672,7 +1672,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // De wand (besluit 190): de kaarten om aan of uit te zetten, en de wand in het klein.
     await kaart.locator('.waar', { hasText: '7. Je schermen' }).waitFor();
     expect(await kaart.locator('[data-wkaart]').count()).toBe(11);
-    await kaart.locator('.wandje [data-mini] svg').waitFor();
+    await kaart.locator('.wandje [data-mini] svg.sc-huis').waitFor();
     await shot('wand');
     await kaart.locator('[data-volgende]').click();
     // Klaarzetten (besluit 190): wat er in Home Assistant klaar moet staan.
@@ -1685,7 +1685,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('button', { hasText: 'Speel af' }).click();
     const film = p.locator('.film');
     await film.locator('.groot').waitFor({ timeout: 10_000 });
-    await film.locator('[data-film-huis] svg').waitFor();
+    await film.locator('[data-film-huis] svg.sc-huis').waitFor();
     await shot('film-0');
     await film.locator('[data-film-pauze]').click();
     expect(await film.locator('[data-film-pauze]').getAttribute('aria-label')).toBe('Verder afspelen');
@@ -2226,7 +2226,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.clock.setFixedTime(new Date('2026-10-19T14:10:30Z'));
       await expect.poll(stand, { timeout: 10_000 }).toBe(aanStand);
       expect(await laag.locator('[data-nk-tijd]').textContent()).toBe('14:10');
-      expect(await laag.locator('[data-nk-huis] svg').count()).toBe(1);
+      expect(await laag.locator('[data-nk-huis] svg.sc-huis').count()).toBe(1);
       // Zonder getallen op het huis.
       expect(await laag.locator('[data-nk-huis] .sc-label').count()).toBe(0);
       if (aanStand === 'dag') expect(await laag.locator('[data-nk-kop]').textContent()).toBe(await p.locator('#wand [data-kop]').textContent());
@@ -2370,7 +2370,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.goto(`${baseUrl}/thuis.html`);
       await p.locator('#tel [data-kop]').filter({ hasNotText: 'Even laden' }).waitFor();
       // Uitgebreid: kW op het huis (als er zon is) en de grafiek van vandaag.
-      await p.locator('#podium-tel svg').waitFor();
+      await p.locator('#podium-tel svg.sc-huis').waitFor();
       const labelsVoor = await p.locator('#podium-tel .sc-label').count();
       expect(await p.locator('#tel [data-kaart="vandaag"] [data-dag] svg').isVisible()).toBe(true);
       const kopVoor = await stijl('#tel .titel .kop-1', 'fontSize');
@@ -3646,7 +3646,7 @@ return { x, y, wat: wat.slice(-3).join(' > ') };
     await lijst.locator('.deel', { hasText: 'Begane grond' }).click();
     await tel.locator('[data-deelkop]', { hasText: 'Begane grond' }).waitFor(kort);
     expect(await lijst.isVisible()).toBe(false);
-    await tel.locator('#podium-tel svg').waitFor(kort);
+    await tel.locator('#podium-tel svg.sc-huis').waitFor(kort);
     await tel.locator('[data-blad] [data-actie="etagenaam"]').waitFor(kort);
     expect(await tel.locator('[data-terug]').textContent()).toContain('Kamers en indeling');
     if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-indeling-tel.png'), fullPage: true });

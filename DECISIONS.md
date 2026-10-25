@@ -196,6 +196,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [191. Huis 3.0 overal: het eiland is de standaard van de tekening](#191-huis-30-overal-het-eiland-is-de-standaard-van-de-tekening)
 - [192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt](#192-sluipverbruik-elke-nacht-gemeten-een-eigen-scherm-onder-opbrengst-en-een-melding-als-het-opvalt)
 - [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
+- [195. Wat beweegt in een eigen laag: het huis weer licht genoeg voor een tablet aan de wand](#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand)
 
 **Veiligheid**
 
@@ -8918,6 +8919,50 @@ slimme meter of zonder panelen volgt na zijn schets.
 apparaten in Home Assistant maar zonder zones (dat komt met de klimaatstap per
 merk); een eigen keus "geen slimme regeling" bewaren (een huis zonder zones is
 dat al).
+
+---
+
+## 195. Wat beweegt in een eigen laag: het huis weer licht genoeg voor een tablet aan de wand
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026. Op de Galaxy Tab A7 Lite aan de wand (Fully Kiosk) werd
+Thuis erg traag: bij Aanpassen schoof de kolom niet mee en reageerde niets meer
+tot een herstart. De bewoner dacht aan de regen en vroeg eerst na te gaan waar
+het aan lag, voordat er een lichte stand kwam. Gemeten in Edge op het formaat van
+de tablet: de processor was het niet (ook tien keer vertraagd 1 tot 6% bezig,
+een tik wachtte 2 tot 20 ms, opnieuw tekenen 150 tot 200 ms), en het geheugen
+liep niet op (150 keer opnieuw tekenen: evenveel knopen en luisteraars). Wel het
+schilderen: 60 keer per seconde de hele tekening, 316 ms schilderwerk per seconde
+op een pc. De oorzaak waren de bewegende stroomlijnen: elke beweging in de
+tekening laat de browser alles eronder opnieuw schilderen, en sinds huis 3.0
+(besluit 187) is dat het eiland, de bomen, de verlopen en een vervaagde gloed om
+die lijnen. De regen, het glas achter de kaarten en het masker van de kolom
+maakten bijna geen verschil.
+
+*Besluit:*
+
+- **Wat beweegt, staat in een eigen laag.** `huis.teken` zet de stroom, een
+  draaiende ventilator, damp, regen, sneeuw en vuurvliegjes (en wat met SMIL
+  beweegt) in een tweede, doorzichtige tekening boven het huis, met de groepen
+  eromheen. Het huis eronder staat stil en wordt één keer geschilderd. Gemeten:
+  van 316 naar 15 ms per seconde, met regen van 307 naar 12. Het geldt op elke
+  pagina met het huis.
+- **De gloed om de stroom staat stil**; alleen de stipjes erop bewegen.
+- **Geen lichte stand.** Met de oorzaak weg is die niet nodig; Minder beweging
+  bij Weergave blijft er voor wie geen beweging wil.
+- **De verdiepingen niet meer op het gras** (kamerweergave): bij een verdieping
+  hoger zakt het eiland één etage, staat de etage eronder er vaag onder en loopt
+  naar het gras weg, en staat erboven de omtrek van de volgende etage of het dak.
+  De begane grond blijft op het gras, de kelder zoals hij was.
+- **Kleiner:** in de grafiek Vandaag staat elk apparaat op een eigen regel met
+  de baan eronder (een blokje vroeg op de dag liep door de naam); op de wand
+  staan bij Aanpassen de knoppen van een smalle kaart in de kaart (ze vielen half
+  weg), en een kaart die opnieuw gevuld wordt, houdt zijn knoppen.
+- **Versie 0.67.1.**
+
+*Wat afviel:* een lichte stand die zware delen uitzet (de oorzaak bleek één
+ding, en dat is nu weg); de stroom stilzetten op een oudere tablet.
 
 ---
 

@@ -384,6 +384,9 @@
   #wand .smal .kaartoog { right: 6px; width: 34px; }
   #wand .smal .kaartmaat { left: 6px; }
   #wand .smal .kaartmaat [data-maat-zet] { padding: 0 7px; font-size: 11.5px; }
+  /* Een smalle kaart houdt zijn inhoud binnen (overflow hidden), dus erboven vielen de knoppen half weg: in de bewerkstand staan ze in de kaart, met ruimte erboven. */
+  body.aanpassen #wand .rechts > .smal { padding-top: 46px; }
+  #wand .rechts > .smal > .kaartgreep, #wand .rechts > .smal > .kaartoog, #wand .rechts > .smal > .kaartmaat { top: 8px; }
   .bewerkkop [data-kaart-erbij] { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); border-color: transparent; }
   body.aanpassen [data-kaarten] > [data-kaart] { outline: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 3px; overflow: visible; }
   body.aanpassen [data-kaarten] > [data-kaart].sleept { outline-color: var(--accent); box-shadow: 0 20px 44px rgba(0, 0, 0, 0.5); z-index: 6; transition: none; }
