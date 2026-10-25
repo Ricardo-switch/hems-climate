@@ -297,7 +297,12 @@
       }
       doel.appendChild(stuk);
     }
-    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    // Een vak dat nergens stond, gaat de laag dragen; zonder verschuiving, want een top of left
+    // uit een regel voor de wand telde eerst niet (25 oktober 2026: op de telefoon zakte het huis 96 px).
+    if (getComputedStyle(el).position === 'static') {
+      el.style.position = 'relative';
+      el.style.inset = 'auto';
+    }
     basis.after(laag);
   }
 

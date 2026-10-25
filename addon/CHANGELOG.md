@@ -1,5 +1,19 @@
 # Wat is er nieuw · What is new
 
+## 0.67.2
+
+*25 oktober 2026*
+
+**Opgelost**
+
+- Op de telefoon staat het huis op Thuis weer boven de stroombalk; sinds 0.67.1 zakte het eronder
+
+*English*
+
+**Fixed**
+
+- On the phone the house on Home sits above the power bar again; since 0.67.1 it slid underneath
+
 ## 0.67.1
 
 *25 oktober 2026*
