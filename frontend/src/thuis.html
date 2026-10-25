@@ -180,6 +180,16 @@
   #tel .apparaatkaart { padding: 12px 16px; }
   #tel .apparaatkaart .ring { width: 50px; height: 50px; }
   #tel [data-dag] svg { width: 100%; height: auto; display: block; }
+  /* Een huis zonder panelen (besluit 196): wat het vandaag gebruikte, en de goedkope uren van het contract. */
+  .dagcijfers { display: flex; gap: 22px; margin-top: 6px; }
+  .dagcijfer { display: flex; flex-direction: column; gap: 2px; }
+  .dagcijfer .getal { font-size: 28px; line-height: 1.1; }
+  .dagcijfer .getal small { font-family: var(--romp); font-size: 13px; color: var(--zacht); font-weight: 500; }
+  .dalstrook { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 16px; margin-top: 14px; }
+  .dalstrook i { border-radius: 3px; background: rgb(var(--wit) / 0.08); }
+  .dalstrook i.dal { background: var(--mint); opacity: 0.75; }
+  .dalstrook i.nu { box-shadow: 0 0 0 2px var(--tekst); }
+  .dalas { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--gedempt); margin-top: 4px; }
   /* De vraagbalk (besluit 159): altijd boven de tabs, met de microfoon die meteen luistert. */
   #tel .vraagbalk { position: fixed; left: 12px; right: 12px; bottom: 90px; height: 58px; border-radius: 22px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 10px; background: rgb(var(--nacht) / 0.86); border: 1px solid var(--glas-rand); backdrop-filter: blur(14px); z-index: 4; }
   #tel .vraagbalk .typ { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; gap: 12px; font-size: 15.5px; color: var(--zacht); text-decoration: none; }

@@ -659,7 +659,7 @@ describe('het bewonerscontract voor Thuis en Waarom (besluit 94)', () => {
     for (let i = 0; i < 300; i++) {
       const d = decide({ config, state: entityState(k, config), strategies });
       const f = residentFlows({ atMs: d.atMs, explanation: d.explanation, commands: d.commands, accepted: d.accepted, rejected: d.rejected, observed: {} });
-      if (f.zonKw == null || f.verbruikKw == null || f.huisKw == null) continue;
+      if (f.zonKw == null || f.verbruikKw == null || f.huisKw == null || f.netKw == null) continue;
       // In tienden van een kW, zodat afronding van de som zelf geen rol speelt.
       const tenths = (n: number) => Math.round(n * 10);
       expect(tenths(f.verbruikKw), `${i}`).toBe(Math.max(0, tenths(f.zonKw) + tenths(f.netKw)));

@@ -82,9 +82,11 @@ function huisModel() {
   if (netKw > 0.05) stromen.push({ van: 'net', naar: 'huis', sterkte: Math.min(1, netKw / 3) });
 
   const labels = [];
-  if (zonKw > 0.05) labels.push({ bij: 'panelen', titel: `${getal(zonKw)} kW`, groot: true, toon: 'zon', regels: [t('thuis.label.panelen')], dx: 64, dy: -70 });
+  // Zonder slimme meter (besluit 196): bij de panelen wat er geschat over is, en geen label bij het net.
+  const over = s.geschat && zonKw > 0.05 ? [t('thuis.label.overGeschat', { kw: getal(s.overKw ?? 0) })] : [];
+  if (zonKw > 0.05) labels.push({ bij: 'panelen', titel: `${getal(zonKw)} kW`, groot: true, toon: 'zon', regels: [t('thuis.label.panelen'), ...over], dx: 64, dy: -70 });
   // Van het net in violet, terug in groen: dezelfde kleur als de lijn (besluit 187).
-  labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'violet' : 'mint', dx: 40, dy: 64 });
+  if (!s.geschat) labels.push({ bij: 'net', titel: netKw > 0.05 ? t('thuis.label.vanNet', { kw: getal(netKw) }) : netKw < -0.05 ? t('thuis.label.terug', { kw: getal(-netKw) }) : t('thuis.label.nietsNet'), toon: netKw > 0.05 ? 'violet' : 'mint', dx: 40, dy: 64 });
 
   return {
     beschrijving: `${state?.bewoner?.kop?.titel ?? t('thuis.hetHuis')}. ${state?.bewoner?.kop?.zin ?? ''}`,
@@ -123,6 +125,13 @@ function tekenStromenTel() {
   const delen = [];
   // De zon alleen als het huis panelen heeft; 's nachts gewoon 0.
   if (s.zonKw != null) delen.push(vak(ZON, 'zon-t', `${getal(s.zonKw)} kW`, t('thuis.stromen.zon')));
+  // Zonder slimme meter (besluit 196): wat er geschat over is, en geen net.
+  if (s.geschat) {
+    if (s.overKw != null) delen.push(vak(HUIS, '', `± ${getal(s.overKw)} kW`, t('thuis.stromen.overGeschat')));
+    el.innerHTML = delen.join('');
+    el.hidden = !delen.length;
+    return;
+  }
   if (s.verbruikKw != null) delen.push(vak(HUIS, '', `${getal(s.verbruikKw)} kW`, t('thuis.stromen.huis')));
   delen.push(netKw > 0.05
     ? vak(NET, 'violet-t', `${getal(netKw)} kW`, t('thuis.stromen.vanNet'))
@@ -218,7 +227,44 @@ function tekenOnderhoud() {
 }
 
 /** Vandaag staat op de wand rechts, en op de telefoon onderaan (besluit 159). */
+/*
+ * Een huis zonder panelen (besluit 196, schets Wand-Huis-Zonder): de kaart
+ * Vandaag zegt wat het huis vandaag gebruikte en kostte, met de goedkope uren
+ * van het contract eronder.
+ */
+let verbruikDag = null;
+let goedkoop = null;
+function tekenVerbruikVandaag() {
+  const s = verbruikDag?.stroom;
+  const euroNu = verbruikDag?.kosten?.totaal;
+  const dal = goedkoop?.dal ?? [];
+  const nuUur = goedkoop ? Math.floor((Date.now() - goedkoop.dagStartMs) / 3_600_000) : -1;
+  const strook = dal.length
+    ? `<div class="dalstrook" role="img" aria-label="${esc(t('thuis.goedkoop.label'))}">${dal.map((d, i) => `<i class="${d ? 'dal' : ''}${i === nuUur ? ' nu' : ''}"></i>`).join('')}</div><div class="dalas"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>`
+    : '';
+  // De daluren als tekst: het eerste blok van vandaag dat nog komt, of het eerste.
+  const blokken = [];
+  dal.forEach((d, i) => {
+    if (!d) return;
+    const laatst = blokken.at(-1);
+    if (laatst && laatst.tot === i) laatst.tot = i + 1;
+    else blokken.push({ van: i, tot: i + 1 });
+  });
+  // Op de klok, niet geteld: een dag met de klokwissel heeft 23 of 25 uur.
+  const uur = (h) => app.klokVan(goedkoop.dagStartMs + h * 3_600_000);
+  const blok = blokken.find((b) => b.tot > nuUur) ?? blokken[0];
+  const prijzen = { dal: goedkoop?.dalPrijs != null ? `€ ${getal(goedkoop.dalPrijs, 2)}` : '', normaal: goedkoop?.normaal != null ? `€ ${getal(goedkoop.normaal, 2)}` : '' };
+  const zin = !dal.length ? t('thuis.goedkoop.geen') : !blokken.length ? t('thuis.goedkoop.vandaagNiet') : t(blok.van <= nuUur ? 'thuis.goedkoop.nu' : 'thuis.goedkoop.vanaf', { van: uur(blok.van), tot: uur(blok.tot), ...prijzen });
+  const cijfer = (naam, waarde) => `<div class="dagcijfer"><span class="mini">${esc(naam)}</span><b class="getal">${waarde}</b></div>`;
+  $$('[data-dag]').forEach((box) => (box.innerHTML = `<div class="dagcijfers">${cijfer(t('thuis.verbruik.gebruikt'), s ? `${getal(s.verbruikKwh)} <small>kWh</small>` : '–')}${euroNu != null ? cijfer(t('thuis.verbruik.kosten'), `€ ${getal(euroNu, 2)}`) : ''}</div>${strook}`));
+  zet('[data-opgewekt]', '');
+  zet('[data-dag-zin]', zin);
+  $$('[data-vandaag-tegel]').forEach((el) => (el.outerHTML = tegel({ id: 'vandaag', naam: t('thuis.kaart.vandaag'), waarde: s ? `${getal(s.verbruikKwh)} <small>kWh</small>` : '–', zin: euroNu != null ? t('thuis.verbruik.tegel', { euro: getal(euroNu, 2) }) : '' }).replace('class="ktegel', 'data-vandaag-tegel class="ktegel')));
+  $$('[data-dag-eenvoudig]').forEach((el) => (el.innerHTML = s ? `${vet('thuis.verbruik.eenvoudig', { kwh: getal(s.verbruikKwh) })} ${esc(zin)}` : esc(zin)));
+}
+
 function tekenVandaag() {
+  if (app.huisSoort()?.zon === false) return tekenVerbruikVandaag();
   const boxen = $$('[data-dag]');
   if (!vandaag?.kwartieren?.length) {
     boxen.forEach((box) => (box.innerHTML = `<p class="mini">${esc(t('thuis.vandaag.geen'))}</p>`));
@@ -272,9 +318,11 @@ function tekenVandaag() {
   const kLijn = kw.map((q, i) => `${i ? 'L' : 'M'} ${kx(q.tMs).toFixed(1)} ${ky(q.zonW ?? 0).toFixed(1)}`).join(' ');
   const kHelder = lijn2.punten.map((q, i) => `${i ? 'L' : 'M'} ${kx(q.tMs).toFixed(1)} ${ky(q.w).toFixed(1)}`).join(' ');
   const grafiek = `<svg class="grafiek" viewBox="0 0 260 44" preserveAspectRatio="none" aria-hidden="true">${kHelder ? `<path d="${kHelder}" fill="none" stroke="#F7B548" stroke-opacity="0.45" stroke-width="1.5" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"/>` : ''}<path d="${kLijn} L ${kx(laatste.tMs).toFixed(1)} 42 L 0 42 Z" fill="rgb(247 181 72 / 0.22)"/><path d="${kLijn}" fill="none" stroke="#F7B548" stroke-width="2" vector-effect="non-scaling-stroke"/><line x1="${kx(Date.now()).toFixed(1)}" y1="0" x2="${kx(Date.now()).toFixed(1)}" y2="44" stroke="rgb(255 255 255 / 0.5)" vector-effect="non-scaling-stroke"/></svg>`;
-  $$('[data-vandaag-tegel]').forEach((el) => (el.outerHTML = tegel({ id: 'vandaag', naam: t('thuis.kaart.vandaag'), waarde: `${getal(kwh)} <small>kWh</small>`, zin: kwh > 0.05 ? t('thuis.tegel.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) }) : '', beeld: grafiek, klasse: 'metgrafiek' }).replace('class="ktegel', 'data-vandaag-tegel class="ktegel')));
+  $$('[data-vandaag-tegel]').forEach((el) => (el.outerHTML = tegel({ id: 'vandaag', naam: t('thuis.kaart.vandaag'), waarde: `${getal(kwh)} <small>kWh</small>`, zin: kwh > 0.05 && app.huisSoort()?.meter !== false ? t('thuis.tegel.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) }) : '', beeld: grafiek, klasse: 'metgrafiek' }).replace('class="ktegel', 'data-vandaag-tegel class="ktegel')));
   const uitleg = t('thuis.vandaag.gestippeld', { lijn: lijn2.naam });
-  zet('[data-dag-zin]', kwh > 0.05 ? `${t('thuis.vandaag.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) })} ${uitleg}` : uitleg);
+  // Zonder slimme meter (besluit 196) weet het huis niet wat er terugging: dan geen deel zelf gebruikt.
+  const metMeter = app.huisSoort()?.meter !== false;
+  zet('[data-dag-zin]', kwh > 0.05 && metMeter ? `${t('thuis.vandaag.zelf', { pct: getal(Math.max(0, Math.min(100, ((kwh - terug) / kwh) * 100)), 0) })} ${uitleg}` : uitleg);
   // Eenvoudig (besluit 164, schets Thuis-Tel-Eigen #eenvoudig): de dag in één zin.
   const zelf = kwh > 0.05 ? (kwh - terug) / kwh : 0;
   $$('[data-dag-eenvoudig]').forEach((el) => (el.innerHTML = kwh > 0.05 ? `${vet('thuis.vandaag.eenvoudig', { kwh: getal(kwh) })} ${esc(t(zelf >= 0.9 ? 'thuis.vandaag.bijnaAlles' : zelf >= 0.5 ? 'thuis.vandaag.meeste' : 'thuis.vandaag.naarNet'))}` : esc(t('thuis.vandaag.niets'))));
@@ -509,6 +557,7 @@ let deurbelOp = 0;
 /** Het sluipverbruik (besluit 192): hooguit elk half uur; de dienst haalt het uit Home Assistant. */
 let sluip = null;
 let sluipOp = 0;
+let verbruikOp = 0;
 const staatErin = (id) => $$(`[data-kaart="${id}"]`).some((el) => !el.hasAttribute('data-uit'));
 const kw = (w) => `${getal(Math.abs(w) / 1000, 1)} kW`;
 
@@ -557,6 +606,13 @@ async function kaartGegevens() {
     deurbel = await haal('api/deurbel');
   } catch {
     deurbel = null;
+  }
+  // Zonder panelen (besluit 196): wat het huis vandaag gebruikte, en de goedkope uren; hooguit elke tien minuten.
+  if (app.huisSoort()?.zon === false && staatErin('vandaag') && nu - verbruikOp > 10 * 60_000) {
+    verbruikOp = nu;
+    const [v, g] = await Promise.allSettled([fetch('api/opbrengst?soort=dag', { cache: 'no-store', headers: { 'x-taal': taal.code } }).then((r) => (r.ok ? r.json() : null)), haal('api/goedkoop')]);
+    if (v.status === 'fulfilled') verbruikDag = v.value;
+    if (g.status === 'fulfilled') goedkoop = g.value;
   }
   // Ook als de kaart er niet staat: anders weet Kaart toevoegen niet of dit huis hem heeft.
   if (nu - sluipOp > 30 * 60_000) {
@@ -612,6 +668,14 @@ function tekenLading() {
 /** Het sluipverbruik (besluit 192): vannacht, hoeveel boven je gewone nacht, en de laatste nachten. */
 function tekenSluip() {
   const s = sluip;
+  // Zonder slimme meter (besluit 196): het sluipverbruik kan erbij, met een meter.
+  // Zonder meter wijst de kaart naar de meters, anders naar het eigen scherm.
+  const zonderMeter = !s && app.huisSoort()?.meter === false;
+  $$('[data-sluip]').forEach((el) => el.setAttribute('href', zonderMeter ? 'energie.html#meters' : 'sluipverbruik.html'));
+  if (zonderMeter) {
+    const naam = t('thuis.kaart.sluip');
+    return zetKaart('[data-sluip]', 'sluip', `${vol(`${kaartKop('sluip', naam, false)}<p class="klein" style="margin: 6px 0 10px">${esc(t('thuis.sluip.metMeter'))}</p><span class="pil">${esc(t('thuis.sluip.meterKnop'))}</span>`)}${tegel({ id: 'sluip', naam, waarde: '–', zin: t('thuis.sluip.kanErbij') })}`, true);
+  }
   if (!s) return zetKaart('[data-sluip]', 'sluip', '', false);
   const naam = t('thuis.kaart.sluip');
   const zin = s.hoog ? t('thuis.sluip.boven', { boven: getal(s.bovenW, 0) }) : t('thuis.sluip.gewoon', { gewoon: getal(s.gewoonW, 0) });
@@ -847,6 +911,8 @@ addEventListener('standwissel', teken);
 // Een andere weergave (besluit 164): opnieuw tekenen, met of zonder getallen op het huis.
 addEventListener('weergave', teken);
 addEventListener('sc-kleuren', teken);
+// Weet de pagina pas na het laden of het huis panelen en een meter heeft (besluit 196): de gegevens erbij en opnieuw.
+addEventListener('huissoort', () => void kaartGegevens().then(teken));
 // De wand als niemand kijkt (besluit 164): het huis, de stand en het weer van deze pagina.
 niemand.bij({ model: () => (state && huisData ? huisModel() : null), state: () => state, huis: () => huisData, weer: () => weer, zon: () => zon });
 // Na een keuze of een tik op een favoriet: opnieuw tekenen, en zo nodig het huis opnieuw lezen.

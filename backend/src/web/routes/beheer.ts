@@ -36,6 +36,9 @@ function siteInfo(config: SiteConfig): unknown {
       name: a.name,
       capabilities: a.capabilities,
     })),
+    /** Of het huis een slimme meter en een zonnemeting heeft (besluit 196): zonder past de app zich aan. */
+    meter: config.power?.gridPower != null,
+    zonMeter: config.solarProduction != null,
     /** Zolang dit er staat, draait de vergelijking met het oude systeem nog. */
     migrating: config.migration?.legacyExplanation != null,
   };

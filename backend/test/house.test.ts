@@ -351,7 +351,7 @@ describe('het voorstel uit Home Assistant', () => {
     expect(nest.klimaat).toMatchObject({ kanKoelen: false, kanVerwarmen: true });
     const ac = wk.apparaten.find((d) => d.id === 'ac-woonkamer')!;
     expect(ac.meting).toEqual({ temperatuurC: 22.4, vochtPct: null });
-    expect(ac.klimaat).toEqual({ kanKoelen: true, kanVerwarmen: true, doelC: 22, actie: 'koelt', actieCode: 'koelt', rol: 'zon', vermogenW: null });
+    expect(ac.klimaat).toEqual({ kanKoelen: true, kanVerwarmen: true, doelC: 22, actie: 'koelt', actieCode: 'koelt', rol: 'zon', vermogenW: null, ha: { koppeling: null, minC: null, maxC: null, standen: [], zegtActie: true } });
     // Wat de regeling ermee doet (besluit 138): de Nest houdt de kamer op temperatuur.
     expect(nest.klimaat?.rol).toBe('houdt');
     // Met een regelgebied komt de temperatuur van de kamer daarvandaan, niet van een meter.

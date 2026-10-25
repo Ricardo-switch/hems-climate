@@ -922,12 +922,51 @@
   }
   document.addEventListener('click', (e) => e.target.closest?.('[data-tel-hulp]') && global.rondleiding?.start());
 
-  /** Zet de navigatie, de stand en de klok voor een tab. */
-  function start(tab) {
+  /*
+   * Wat het huis heeft (besluit 196): een slimme meter en een zonnemeting.
+   * Zonder panelen heet Opbrengst Verbruik, zonder meter is wat er over is
+   * geschat. Onthouden, zodat de navigatie het bij de volgende pagina meteen
+   * goed zegt; null zolang de dienst het nog niet zei.
+   */
+  let soort = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('sc-huissoort')) ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  const huisSoort = () => soort;
+  function zetNav(tab) {
     const balk = document.getElementById('balk');
     const tabs = document.getElementById('tabs');
     if (balk) nav.balk(balk, tab, LINKS);
     if (tabs) nav.tabs(tabs, tab, LINKS);
+  }
+  async function leesHuisSoort(tab) {
+    let s;
+    try {
+      s = await haal('api/site');
+    } catch {
+      return;
+    }
+    const nieuw = { meter: s.meter !== false, zon: s.zonMeter !== false };
+    if (JSON.stringify(nieuw) === JSON.stringify(soort)) return;
+    soort = nieuw;
+    try {
+      localStorage.setItem('sc-huissoort', JSON.stringify(nieuw));
+    } catch {
+      // Dan zegt de navigatie het pas na het laden goed.
+    }
+    // De bel staat in de navigatie: zijn getal opnieuw.
+    zetNav(tab);
+    void meldLaad();
+    dispatchEvent(new Event('huissoort'));
+  }
+
+  /** Zet de navigatie, de stand en de klok voor een tab. */
+  function start(tab) {
+    zetNav(tab);
+    void leesHuisSoort(tab);
     telBalk(tab);
     // Volledig scherm in Home Assistant (besluit 155): de weg terug staat boven de bel.
     knoppenNaarHA();
@@ -1503,5 +1542,5 @@
     return lw ? `${lw} ${naam.charAt(0).toLowerCase()}${naam.slice(1)}` : naam;
   }
 
-  global.app = { $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
+  global.app = { huisSoort, $$, metLidwoord, nl, zet, esc, bijnaOp, klokVan, wanneer, LINKS, telStand, schaal, haal, deur, tijdVanDeDag, lucht, luchtVan, klok, live, start, verwachting, gebundeld, zicht, aanbellen, offline, online, inHA, volledigGekozen, zetVolledig, naarHA, zetWeergave, weergave: () => weergaveNu, zetThema, kleurVan, tekstKleur, houToegang, updateKlaar, bijwerkVenster, bijVerandering, kanInstalleren, geinstalleerd, installeer, naarHAScherm };
 })(window);

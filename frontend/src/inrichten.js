@@ -37,7 +37,7 @@ const HOOFDSTUKKEN = [
   ['huis', ['woning', 'huis', 'apparaten']],
   ['buiten', ['buiten']],
   ['bewoners', ['bewoners']],
-  ['klimaat', ['warmte', 'meten', 'comfort', 'afwezig']],
+  ['klimaat', ['warmte', 'apparaat', 'meten', 'comfort', 'afwezig']],
   ['energie', ['zekering', 'zon', 'ligging', 'opzon', 'prijzen']],
   ['gemak', ['functies']],
   ['schermen', ['wand']],
@@ -68,6 +68,8 @@ function gedaan(id) {
   if (id === 'huis') return d.huis?.indeling === 'eigen';
   if (id === 'apparaten') return d.huis != null && (d.huis.zonderRuimte ?? []).length === 0;
   if (id === 'warmte') return binnen().some((r) => klimaatIn(r).some((a) => a.klimaat?.rol && a.klimaat.rol !== 'kijken'));
+  // Wat elk apparaat kan (besluit 197): geen open vraag meer.
+  if (id === 'apparaat') return kanToestellen().length > 0 && !kanToestellen().some(({ a }) => kanVraagOpen(a));
   if (id === 'comfort' || id === 'afwezig') return (d.comfort?.kamers ?? []).some((k) => k.uitApp);
   // Op zon (besluit 167): iets mag al op zon. Klaarzetten: niets mist meer in Home Assistant.
   if (id === 'opzon') return Object.values(d.aans?.antwoorden?.opZon ?? {}).some(Boolean) || (d.aans?.configuratie?.apparaten ?? []).length > 0;
@@ -184,6 +186,8 @@ function model(stap) {
       if (!na('huis')) k.stil = true;
       if (!na('apparaten')) k.apparaten = [];
       if (!na('comfort')) k.temp = null;
+      // Bij Wat elk apparaat kan: de kamer van het apparaat dat open staat.
+      if (stap === 'apparaat' && kanToestellen().find(({ a }) => sleutel(a) === kanOpen)?.r.id === r.id) k.gekozen = true;
       if (stap === 'comfort' && r.zoneId) k.stand = 'goed';
       return k;
     },
@@ -749,6 +753,137 @@ function warmteStap() {
   };
 }
 
+/*
+ * Wat elk apparaat kan (besluit 197, schets Wand-Inrichten-Klimaat): per
+ * klimaatapparaat wat Home Assistant ervan zegt en wat de koppeling betekent.
+ * Groen werkt; een halve stip werkt met een omweg, en de zin zegt welke; een
+ * vraagteken vraagt iets dat Home Assistant niet weet; een streep kan dat
+ * apparaat niet. Links de lijst, rechts het apparaat dat open staat; op de
+ * telefoon klapt het open in de lijst. Een bereik dat niet kan kloppen (onder
+ * 4° of boven 35°) wordt een voorstel dat de bewoner aanpast; een open vraag
+ * staat bij Nog te doen.
+ */
+// Wat kan kloppen: 4° is de vorstbeveiliging van een radiatorknop; daaronder of boven 35° niet.
+const BEREIK = [4, 35];
+const IR = new Set(['smartir', 'broadlink', 'ir', 'irblaster', 'tuya_ir']);
+const KOPPELING = { lg_thinq: 'LG ThinQ', smartthinq_sensors: 'SmartThinQ', nest: 'Google Nest', zha: 'ZHA', mqtt: 'Zigbee2MQTT', tuya: 'Tuya', smartir: t('inr.kan.ir'), broadlink: t('inr.kan.ir'), daikin: 'Daikin', midea_ac_lan: 'Midea', tado: 'tado°', netatmo: 'Netatmo', honeywell: 'Honeywell', generic_thermostat: t('inr.kan.generiek') };
+const koppelingNaam = (k) => (k ? KOPPELING[k] ?? k : t('inr.kan.onbekend'));
+/** De tip per koppeling; de LG's staan er vaak twee keer in. */
+const TIP = { lg_thinq: 'lg', smartthinq_sensors: 'lg', nest: 'nest', tuya: 'tuya', smartir: 'ir', broadlink: 'ir' };
+let kanOpen = null;
+const kanToestellen = () => binnen().flatMap((r) => klimaatIn(r).map((a) => ({ a, r })));
+const kanKeus = (a) => concept()?.apparaten?.[sleutel(a)] ?? {};
+/** Een voorstel binnen wat een kamer kan zijn, als Home Assistant iets opgeeft wat niet kan kloppen. */
+function kanBereik(a) {
+  const h = a.klimaat?.ha ?? {};
+  const eigen = kanKeus(a).bereik;
+  if (eigen) return { min: eigen[0], max: eigen[1], fout: false, eigen: true, ha: [h.minC, h.maxC] };
+  const fout = (h.minC != null && h.minC < BEREIK[0]) || (h.maxC != null && h.maxC > BEREIK[1]);
+  if (!fout) return { min: h.minC, max: h.maxC, fout: false, eigen: false, ha: [h.minC, h.maxC] };
+  const koel = a.klimaat?.kanKoelen;
+  return { min: Math.max(h.minC ?? 0, koel ? 16 : 10), max: Math.min(h.maxC ?? 99, koel ? 30 : 25), fout: true, eigen: false, ha: [h.minC, h.maxC] };
+}
+const isKetel = (a) => huismodel.isKetelKoppeling(a) || huismodel.cvThermostaat(d.huis, antwoorden().verwarming)?.sleutel === sleutel(a);
+/** Of een thermostaat moet zeggen wat hij verwarmt: niet de airco, niet de radiatorknop of de ketel, en zonder stroommeter. */
+const vraagtWarmte = (a) => !a.klimaat?.kanKoelen && !a.radiatorknop && a.klimaat?.kanVerwarmen && a.klimaat?.vermogenW === undefined && !a.klimaat?.energieMeter && !isKetel(a);
+const kanVraagOpen = (a) => vraagtWarmte(a) && !kanKeus(a).warmte;
+
+/** Wat een apparaat kan, als punten, met de tip en hoe het ervoor staat. */
+function kanVan(a, r) {
+  const k = a.klimaat ?? {};
+  const h = k.ha ?? {};
+  const ir = IR.has(h.koppeling);
+  const airco = !!k.kanKoelen;
+  const meter = k.vermogenW !== undefined || !!k.energieMeter;
+  const warmte = kanKeus(a).warmte;
+  const p = [];
+  const punt = (soort, titel, zin, extra = '') => p.push({ soort, titel, zin, extra });
+  const graden = (x) => (x == null ? '?' : nl(x, Number.isInteger(x) ? 0 : 1));
+  const b = kanBereik(a);
+  // Wat hij kan, en van hoe laag tot hoe hoog.
+  const wat = airco && k.kanVerwarmen ? t('inr.kan.koelWarm') : airco ? t('inr.kan.koel') : t('inr.kan.warm');
+  const bereikZin = b.min != null && b.max != null ? t('inr.kan.vanTot', { min: graden(b.min), max: graden(b.max) }) : t('inr.kan.geenBereik');
+  if (b.fout || b.eigen) {
+    const opties = (w) => Array.from({ length: BEREIK[1] - BEREIK[0] + 1 }, (_, i) => BEREIK[0] + i).map((x) => `<option value="${x}" ${x === w ? 'selected' : ''}>${x}°</option>`).join('');
+    const kiezen = `<div class="chips"><select class="veld klein" data-kan-bereik="${esc(sleutel(a))}" data-kant="min" aria-label="${esc(t('inr.kan.laagst'))}">${opties(b.min)}</select><select class="veld klein" data-kan-bereik="${esc(sleutel(a))}" data-kant="max" aria-label="${esc(t('inr.kan.hoogst'))}">${opties(b.max)}</select></div>`;
+    // Wat hij kan en het bereik in één regel, zodat de rest in beeld blijft.
+    punt('om', `${wat} · ${t('inr.kan.geeftOp', { min: graden(b.ha[0]), max: graden(b.ha[1]) })}`, t(b.eigen ? 'inr.kan.houdtEigen' : 'inr.kan.kanNiet', { min: graden(b.min), max: graden(b.max) }), kiezen);
+  } else punt('ok', wat, `${bereikZin}${k.kanDrogen ? t('inr.kan.drogen') : ''}${a.radiatorknop ? t('inr.kan.cvWater') : ''}`);
+  // "Verwarmen en koelen" bij een thermostaat die alleen verwarmt.
+  if (!airco && (h.standen ?? []).includes('heat_cool') && !(h.standen ?? []).includes('cool')) punt('om', t('inr.kan.ookKoelen'), t('inr.kan.ookKoelenZin'));
+  // Zegt hij wat hij doet?
+  if (ir) punt('nee', t('inr.kan.irNiets'), t('inr.kan.irNietsZin'));
+  else if (h.zegtActie) punt('ok', t('inr.kan.zegt'), k.actie ? t('inr.kan.zegtNu', { actie: k.actie }) : t('inr.kan.zegtZin'));
+  else if (meter) punt('om', t('inr.kan.zegtNiet'), t('inr.kan.zegtNietMeter'));
+  else punt('om', airco ? t('inr.kan.zegtNiet') : t('inr.kan.stooktNiet'), t('inr.kan.zegtNietTemp'));
+  // De stroom.
+  if (meter) punt('ok', t('inr.kan.meter'), k.vermogenW != null ? t('inr.kan.meterNu', { w: Math.round(k.vermogenW) }) : t('inr.kan.meterZin'));
+  else if (a.radiatorknop || warmte === 'cv' || isKetel(a)) punt('nee', t('inr.kan.meterNiet'), t('inr.kan.meterNietCv'));
+  else if (airco) punt('om', t('inr.kan.geenMeter'), t('inr.kan.geenMeterAirco'));
+  else if (warmte === 'elektrisch') punt('om', t('inr.kan.geenMeter'), t('inr.kan.geenMeterElektrisch'));
+  // Filter en batterij.
+  if (k.filter) punt('ok', t('inr.kan.filter'), k.filter.uren != null ? t('inr.kan.filterUren', { n: Math.round(k.filter.uren) }) : t('inr.kan.filterPct', { pct: Math.round(k.filter.pct) }));
+  if (a.batterijPct != null) punt(app.bijnaOp(a.batterijPct, 'batterij', d.huis) ? 'om' : 'ok', t('inr.kan.batterij'), t('inr.kan.batterijZin', { pct: Math.round(a.batterijPct) }));
+  // Meet hij de kamer?
+  const temp = a.meting?.temperatuurC;
+  if (temp == null) punt('om', t('inr.kan.meetNiet'), t('inr.kan.meetNietZin', { kamer: r.naam }), `<div class="chips"><a class="chip" href="#meten">${esc(t('inr.kan.naarMeten'))}</a></div>`);
+  else if (a.radiatorknop) punt('om', t('inr.kan.meetRadiator'), t('inr.kan.meetRadiatorZin', { c: graden(temp) }));
+  else punt('ok', t('inr.kan.meet'), t('inr.kan.meetZin', { c: graden(temp) }));
+  // Wat verwarmt hij? Alleen als hij het niet zegt.
+  if (vraagtWarmte(a)) {
+    const chips = ['cv', 'elektrisch', 'weetniet'].map((w) => knop(`data-kan-warmte="${esc(sleutel(a))}" data-waarde="${w}"`, t(`inr.kan.warmte.${w}`), warmte === w)).join('');
+    punt(warmte ? 'ok' : 'vraag', t('inr.kan.watWarmt'), t('inr.kan.watWarmtZin'), `<div class="chips">${chips}</div>`);
+  }
+  // De tip: een tweede koppeling, of wat bij deze koppeling hoort.
+  const tweede = h.tweede ? t('inr.kan.tweemaal', { een: koppelingNaam(h.koppeling), twee: koppelingNaam(h.tweede.koppeling) }) : '';
+  const soort = ir ? 'ir' : a.radiatorknop ? 'knop' : TIP[h.koppeling] ?? null;
+  const weet = [tweede, soort ? t(`inr.kan.tip.${soort}`) : ''].filter(Boolean).join(' ');
+  const omwegen = p.filter((x) => x.soort === 'om').length;
+  const vragen = p.filter((x) => x.soort === 'vraag').length;
+  const rol = rolVan(concept()?.kamers.find((x) => x.id === r.id), r, sleutel(a));
+  const stand = ir ? ['beperkt', t('inr.kan.st.ir')] : vragen ? ['om', t(vragen === 1 ? 'inr.kan.st.vraag' : 'inr.kan.st.vragen', { n: vragen })] : rol === 'kijken' ? ['mee', t('inr.kan.st.mee')] : omwegen ? ['ok', t(omwegen === 1 ? 'inr.kan.st.omweg' : 'inr.kan.st.omwegen', { n: omwegen })] : ['ok', t('inr.kan.st.helemaal')];
+  return { punten: p, weet, stand, rol, ir, vragen };
+}
+
+function kanStap() {
+  const lijst = kanToestellen();
+  if (!lijst.length) return { waar: waarVan('apparaat'), kop: t('inr.kan.kop'), uitleg: t('inr.kan.zin'), inhoud: `<p class="zacht">${esc(t('inr.kan.geen'))}</p>` };
+  if (!lijst.some((x) => sleutel(x.a) === kanOpen)) kanOpen = sleutel(lijst[0].a);
+  const al = lijst.map((x) => ({ ...x, kan: kanVan(x.a, x.r) }));
+  const los = ({ a, r, kan }) => {
+    const punten = kan.punten.map((x) => `<div class="kpunt ${x.soort}"><i aria-hidden="true">${x.soort === 'ok' ? '✓' : x.soort === 'vraag' ? '?' : x.soort === 'nee' ? '–' : ''}</i><span><b>${esc(x.titel)}</b>${x.zin ? `<small>${esc(x.zin)}</small>` : ''}${x.extra}</span></div>`).join('');
+    const knoppen = ROLLEN.map(([w, lang, kort]) => `<button type="button" class="${w === 'zon' ? 'zon' : ''}" data-rolwaarde="${w}" aria-pressed="${w === kan.rol}" title="${esc(lang)}">${esc(kort)}</button>`).join('');
+    return `<div class="klos" data-klos="${esc(sleutel(a))}">
+      <div class="kkop"><b>${esc(a.naam)}</b><span>${esc(a.radiatorknop ? t('inr.kan.knopVia', { via: koppelingNaam(a.klimaat?.ha?.koppeling) }) : koppelingNaam(a.klimaat?.ha?.koppeling))}</span></div>
+      <div class="kpunten">${punten}</div>
+      ${kan.weet ? `<div class="kweet"><b>${esc(t('inr.kan.goedOmTeWeten'))}</b> ${esc(kan.weet)}</div>` : ''}
+      <div class="krol"><b>${esc(t('inr.kan.watDoetHij'))}</b><div class="seg" role="group" aria-label="${esc(t('inr.watMet', { naam: a.naam }))}" data-rol="${esc(sleutel(a))}" data-rolkamer="${esc(r.id)}">${knoppen}</div></div>
+    </div>`;
+  };
+  const rij = (x) => {
+    const open = sleutel(x.a) === kanOpen;
+    const koel = !!x.a.klimaat?.kanKoelen;
+    return `<button type="button" class="kapp${open ? ' open' : ''}" data-kan-open="${esc(sleutel(x.a))}" aria-expanded="${open}"><span class="kik ${koel ? 'koel' : 'warm'}" aria-hidden="true">${koel ? '❄' : '♨'}</span><span><b>${esc(x.a.naam)}</b><small>${esc(x.r.naam)} · <span class="kst ${x.kan.stand[0]}">${esc(x.kan.stand[1])}</span></small></span></button>${app.telStand() && open ? los(x) : ''}`;
+  };
+  // Samen in één zin: hoeveel er werken, meekijken, een vraag hebben of niets terugzeggen.
+  const tel = (f) => al.filter(f).length;
+  const delen = [
+    t('inr.kan.samen.ok', { n: tel((x) => !x.kan.ir && !x.kan.vragen && x.kan.rol !== 'kijken') }),
+    tel((x) => !x.kan.ir && !x.kan.vragen && x.kan.rol === 'kijken') ? t('inr.kan.samen.mee', { n: tel((x) => !x.kan.ir && !x.kan.vragen && x.kan.rol === 'kijken') }) : '',
+    tel((x) => x.kan.vragen) ? t('inr.kan.samen.vraag', { n: tel((x) => x.kan.vragen) }) : '',
+    tel((x) => x.kan.ir) ? t('inr.kan.samen.ir', { n: tel((x) => x.kan.ir) }) : '',
+  ].filter(Boolean);
+  const samen = `${t('inr.kan.samen.n', { n: al.length })} ${lijstje(delen)}.`;
+  const lijstHtml = `<div class="klijst">${al.map(rij).join('')}<button type="button" class="kmist" data-kan-mist>${esc(t('inr.kan.mist'))}</button><p class="ksamen">${esc(samen)}</p></div>`;
+  const open = al.find((x) => sleutel(x.a) === kanOpen);
+  return {
+    waar: waarVan('apparaat'),
+    kop: t('inr.kan.kop'),
+    uitleg: t('inr.kan.zin'),
+    inhoud: app.telStand() ? lijstHtml : `<div class="kanstap">${lijstHtml}${open ? los(open) : ''}</div>`,
+  };
+}
+
 /** Wat de meeste kamers zeggen, of een gewone waarde. */
 function meest(lijst, anders) {
   const tel = new Map();
@@ -1173,9 +1308,11 @@ async function bewaarPrijzen(wijzig) {
 function klaarStap() {
   const open = STAPPEN.filter(([id]) => id !== 'klaar' && !nagelopen.has(id));
   const mist = (d.klaar?.punten ?? []).filter((p) => p.stand === 'mist');
-  const n = open.length + mist.length;
+  // Een open vraag bij Wat elk apparaat kan (besluit 197): je mocht door, en hij staat hier.
+  const vragen = kanToestellen().filter(({ a }) => kanVraagOpen(a)).map(({ a }) => t('inr.kan.nogVraag', { naam: a.naam }));
+  const n = open.length + mist.length + vragen.length;
   const nogTeDoen = n
-    ? regel({ tag: 'a', attrs: `href="#${open[0]?.[0] ?? 'ha'}"`, ik: 'huis', titel: t('inr.nogTeDoen'), zin: lijstje([...open.map(([, naam]) => naam.toLowerCase()), ...mist.map((p) => p.titel.toLowerCase())]), rechts: String(n), toon: 'zon' })
+    ? regel({ tag: 'a', attrs: `href="#${open[0]?.[0] ?? (vragen.length ? 'apparaat' : 'ha')}"`, ik: 'huis', titel: t('inr.nogTeDoen'), zin: lijstje([...open.map(([, naam]) => naam.toLowerCase()), ...vragen, ...mist.map((p) => p.titel.toLowerCase())]), rechts: String(n), toon: 'zon' })
     : regel({ ik: 'zon', titel: t('inr.allesNagelopen'), zin: t('inr.allesNagelopenZin'), rechts: '✓', toon: 'mint' });
   const kan = regel({ tag: 'a', attrs: 'href="huis-kan.html"', ik: 'meter', titel: t('inr.kanTitel'), zin: t('inr.kanZin'), rechts: '›' });
   return {
@@ -1226,6 +1363,19 @@ const BEVESTIG = {
       if (!el.value) continue;
       if (el.value === '-') next.verborgen = [...new Set([...(next.verborgen ?? []), el.dataset.plek])];
       else next.apparaten[el.dataset.plek] = { ...(next.apparaten[el.dataset.plek] ?? {}), kamer: el.value, zone: null };
+      anders = true;
+    }
+    return !anders || bewaarIndeling(next);
+  },
+  // Wat elk apparaat kan (besluit 197): een voorgesteld bereik geldt pas als het bewaard is.
+  async apparaat() {
+    const next = concept();
+    if (!next) return true;
+    let anders = false;
+    for (const { a, r } of kanToestellen()) {
+      const b = kanBereik(a);
+      if (!b.fout) continue;
+      next.apparaten[sleutel(a)] = { ...(next.apparaten[sleutel(a)] ?? { kamer: r.id, zone: null }), bereik: [b.min, b.max] };
       anders = true;
     }
     return !anders || bewaarIndeling(next);
@@ -1286,7 +1436,7 @@ function tekenNu() {
   $$('[data-voortgang]').forEach((el) => {
     el.innerHTML = STAPPEN.map(([id]) => `<i class="${id === nu ? 'nu' : nagelopen.has(id) ? 'al' : gedaan(id) ? 'half' : ''}"></i>`).join('');
   });
-  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, klaar: klaarStap }[nu]();
+  const v = { welkom, woning: woningStap, huis: huisStap, buiten: buitenStap, bewoners: bewonersStap, apparaten: apparatenStap, meten: metenStap, warmte: warmteStap, apparaat: kanStap, comfort: comfortStap, afwezig: afwezigStap, zon: zonStap, ligging: liggingStap, zekering: zekeringStap, opzon: opzonStap, prijzen: prijzenStap, functies: functiesStap, wand: wandStap, ha: haStap, klaar: klaarStap }[nu]();
   // Onderaan overal hetzelfde (besluit 158): Terug, Later en Volgende, tenzij de stap iets anders zegt.
   const [links, rechts] = v.voet ?? [terugKnop(), volgendeKnoppen()];
   const actief = document.activeElement;
@@ -1310,6 +1460,8 @@ function tekenNu() {
   // Een kamer die open gaat, schuift in beeld.
   document.querySelector(`${app.zicht()} [data-kaart] .bewerk`)?.scrollIntoView({ block: 'nearest' });
   const m = model(nu);
+  // Wat elk apparaat kan (besluit 197): lijst en details naast elkaar, dus een bredere kaart.
+  document.querySelector('#wand .veldje')?.classList.toggle('breed', nu === 'apparaat');
   // De kleine huisjes bij Wat voor huis, en de wand in het klein.
   document.querySelectorAll(`${app.zicht()} [data-kaart] [data-mini]`).forEach((el) => (el.dataset.mini === 'wand' ? tekenWandje(el, m) : tekenMini(el)));
   // Zo groot als het vak echt is (besluit 166): op een breder scherm is het vak breder. Het eiland van Thuis (besluit 190).
@@ -1663,6 +1815,26 @@ document.addEventListener('click', async (e) => {
     else teken();
     return;
   }
+  if (el.dataset.kanOpen) {
+    // Wat elk apparaat kan: een ander apparaat open; op de telefoon dicht als het al open was.
+    kanOpen = app.telStand() && kanOpen === el.dataset.kanOpen ? null : el.dataset.kanOpen;
+    teken();
+    return;
+  }
+  if (el.hasAttribute('data-kan-mist')) {
+    // Iets toevoegen kan bij Verwarmen en koelen, per kamer.
+    naar('warmte');
+    return;
+  }
+  if (el.dataset.kanWarmte) {
+    const key = el.dataset.kanWarmte;
+    const x = kanToestellen().find(({ a }) => sleutel(a) === key);
+    const next = concept();
+    if (!x || !next) return;
+    next.apparaten[key] = { ...(next.apparaten[key] ?? { kamer: x.r.id, zone: null }), warmte: el.dataset.waarde };
+    await bewaarIndeling(next);
+    return;
+  }
   if (el.dataset.rolwaarde) {
     // Wat de regeling met een apparaat doet (besluit 138), met de knoppen van de schets.
     const seg = el.closest('[data-rol]');
@@ -1773,6 +1945,21 @@ document.addEventListener('change', async (e) => {
   if (ligging.verander(e.target, ligStaat)) return teken();
   const el = e.target;
   const kamerNu = (next) => next?.kamers.find((x) => x.id === open);
+  if (el.dataset.kanBereik) {
+    // Wat elk apparaat kan: het bereik dat de regeling aanhoudt; de laagste blijft onder de hoogste.
+    const key = el.dataset.kanBereik;
+    const x = kanToestellen().find(({ a }) => sleutel(a) === key);
+    const next = concept();
+    if (!x || !next) return;
+    const b = kanBereik(x.a);
+    let [lo, hi] = [b.min, b.max];
+    if (el.dataset.kant === 'min') lo = Number(el.value);
+    else hi = Number(el.value);
+    if (lo >= hi) return void zeg(t('inr.kan.laagOnderHoog'), true);
+    next.apparaten[key] = { ...(next.apparaten[key] ?? { kamer: x.r.id, zone: null }), bereik: [lo, hi] };
+    await bewaarIndeling(next);
+    return;
+  }
   if (el.dataset.naam) {
     const v = el.value.trim();
     const next = concept();

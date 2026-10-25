@@ -115,6 +115,29 @@ export function binnenBereik(zone: Record<string, unknown>, actuators: readonly 
   return { ...zone, setpoints };
 }
 
+/**
+ * Het bereik dat de bewoner koos bij Wat elk apparaat kan (besluit 197): voor
+ * een apparaat dat iets opgeeft wat niet kan kloppen, zoals een thermostaat met
+ * 0° tot 80°. Op het id van het apparaat of zijn entiteit; de stand-by blijft
+ * erbinnen. Zonder keuze verandert er niets.
+ */
+export function withBereik(raw: Record<string, unknown>, apparaten: Readonly<Record<string, { readonly bereik?: readonly [number, number] }>> | null): { raw: Record<string, unknown>; toegevoegd: string[] } {
+  const toegevoegd: string[] = [];
+  if (!apparaten || !Array.isArray(raw['actuators'])) return { raw, toegevoegd };
+  const actuators = (raw['actuators'] as Record<string, unknown>[]).map((a) => {
+    const ref = typeof a['ref'] === 'string' ? a['ref'] : (a['ref'] as { id?: unknown } | undefined)?.id;
+    const bereik = apparaten[String(a['id'])]?.bereik ?? (typeof ref === 'string' ? apparaten[ref]?.bereik : undefined);
+    const caps = a['capabilities'] as Record<string, unknown> | undefined;
+    if (!bereik || !caps) return a;
+    const [lo, hi] = bereik;
+    const sb = caps['standby'] as { heat?: number; cool?: number } | undefined;
+    const binnen = (x: number) => Math.min(hi, Math.max(lo, x));
+    toegevoegd.push(`${String(a['name'] ?? a['id'])} houdt ${lo}° tot ${hi}° aan`);
+    return { ...a, capabilities: { ...caps, setpointRange: [lo, hi], ...(sb ? { standby: { ...sb, ...(sb.heat != null ? { heat: binnen(sb.heat) } : {}), ...(sb.cool != null ? { cool: binnen(sb.cool) } : {}) } } : {}) } };
+  });
+  return { raw: { ...raw, actuators }, toegevoegd };
+}
+
 /** Alle zones binnen het bereik van hun apparaten: als laatste stap, na Comfort. */
 export function doelenBinnenBereik(raw: Record<string, unknown>): Record<string, unknown> {
   const zones = Array.isArray(raw['zones']) ? (raw['zones'] as Record<string, unknown>[]) : null;

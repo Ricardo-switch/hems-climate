@@ -105,6 +105,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
 - [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
 - [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
+- [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
 
 **Meten, data en analyse**
 
@@ -197,6 +198,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [192. Sluipverbruik: elke nacht gemeten, een eigen scherm onder Opbrengst, en een melding als het opvalt](#192-sluipverbruik-elke-nacht-gemeten-een-eigen-scherm-onder-opbrengst-en-een-melding-als-het-opvalt)
 - [193. Kamers en indeling als groep, en één lijstje voor wat er rond het huis is](#193-kamers-en-indeling-als-groep-en-één-lijstje-voor-wat-er-rond-het-huis-is)
 - [195. Wat beweegt in een eigen laag: het huis weer licht genoeg voor een tablet aan de wand](#195-wat-beweegt-in-een-eigen-laag-het-huis-weer-licht-genoeg-voor-een-tablet-aan-de-wand)
+- [196. Een huis zonder slimme meter of zonder panelen](#196-een-huis-zonder-slimme-meter-of-zonder-panelen)
 
 **Veiligheid**
 
@@ -8966,6 +8968,110 @@ maakten bijna geen verschil.
 
 *Wat afviel:* een lichte stand die zware delen uitzet (de oorzaak bleek één
 ding, en dat is nu weg); de stroom stilzetten op een oudere tablet.
+
+---
+
+## 196. Een huis zonder slimme meter of zonder panelen
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026, voor de makeover naar het grote publiek, na besluit 194 (een
+huis zonder slimme regeling). Zonder slimme meter (P1) gaf de app "0 kW van het
+net" en telde Opbrengst alle opgewekte stroom als zelf gebruikt; zonder panelen
+stond er een zongrafiek zonder zon en heette de tab Opbrengst. Gekozen door de
+bewoner (schets `Wand-Huis-Zonder.html`, "1 en 2 pakken we weer op").
+
+*Besluit:*
+
+- **Wat het huis heeft**, staat in `api/site`: `meter` (een netmeter in de
+  configuratie) en `zonMeter` (de opbrengst van de panelen). Elke pagina leest
+  het één keer en onthoudt het, zodat de navigatie het meteen goed zegt.
+- **Zonder panelen** heet de tab **Verbruik**, met de kop "Je gebruikte …
+  kWh stroom" en een kaart "Panelen erbij?" naar Wat je huis kan. De kaart
+  Vandaag op Thuis zegt wat het huis vandaag gebruikte en kostte, met de
+  **daluren van vandaag** eronder (`api/goedkoop`, uit het contract; op de dag
+  van de klokwissel 23 of 25 uur). Bij Wat je huis kan staan op zon en
+  apparaten op zon op "Zonnepanelen nodig".
+- **Zonder slimme meter** schat de app: per uur gaat de zon eerst naar de
+  apparaten met een eigen meter en wat een gewoon huis overdag gebruikt
+  (`BASIS_ZONDER_METER_W`, 400 W), de rest naar het net. Liever te zuinig dan
+  te mooi: bij het huis van de bewoner schatte dit oktober 47% zelf gebruikt,
+  met de meter was het 63%; over het contractjaar 53% tegen 55%. Een jaar
+  rekent dan per uur, niet per dag.
+  - **Thuis:** bij de panelen "± 0,6 kW over, geschat", geen label en geen
+    lijn van het net, op de telefoon zon en "over, geschat". Geen deel "zelf
+    gebruikt" bij Vandaag. De kaart Sluipverbruik zegt dat het erbij kan met
+    een slimme meter en wijst naar de meters.
+  - **Opbrengst:** "Je panelen leverden … kWh"; opgewekt (gemeten), zelf
+    gebruikt en bespaard met "±" en een label geschat; het schema "Waar je
+    zonnestroom heen ging" alleen met de zon, naar het net "(geschat)", met hoe
+    het geschat is; een kaart "Precies weten?" naar de meters.
+  - **Wat je huis kan:** op zon, apparaten op zon en het sluipverbruik op
+    "Slimme meter nodig"; Opbrengst werkt, met zelf gebruikt geschat. Instellingen
+    vraagt niet meer om een meter van het net als het huis er geen heeft.
+- **De regeling zelf** verandert niet: zonder netmeter viel op zon al weg
+  (degraderen in de configuratie); de schatting is alleen om te tonen.
+- **Versie 0.68.0.**
+
+*Wat afviel:* "Wat Smart Climate scheelde" op Verbruik (in de schaduw valt er
+niets te schelen, stap B); een eigen kaart Goedkope uren (de kaart Vandaag doet
+het, zonder een nieuwe keuze); dynamische tarieven (de app kent alleen
+dag en nacht); op zon sturen op de schatting.
+
+---
+
+## 197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, na besluit 196. De schets `Wand-Inrichten-Klimaat.html`
+lag er sinds 23 oktober, met de keuzes van de bewoner: lijst links en details
+rechts (op de telefoon één lijst die openklapt); met een open vraag mag je door,
+en die staat bij Nog te doen; wat Home Assistant zegt plus een vaste tip per
+koppeling, in beide talen; een bereik dat niet kan kloppen wordt een voorstel
+dat de bewoner aanpast. Gelezen uit dit huis: de LG's staan er twee keer in
+(LG ThinQ 7° tot 35°, SmartThinQ 16° tot 30°) en zeggen niet wat ze doen; de
+Tuya in de badkamer geeft 0° tot 80° en "heat_cool" op; de radiatorknop en de
+Nest zeggen wel wat ze doen.
+
+*Besluit:*
+
+- **Een nieuwe stap in Klimaat**, na Verwarmen en koelen (zo heet de stap
+  ervoor nu): **Wat elk apparaat kan**.
+- **De dienst geeft per klimaatapparaat `ha`**: de koppeling (het platform),
+  het bereik, de standen, of het `hvac_action` geeft, en een tweede koppeling
+  van hetzelfde apparaat.
+- **Per apparaat punten**, elk werkt (✓), werkt met een omweg (halve stip, de
+  zin zegt welke), een vraag (?), of kan niet (–):
+  - wat het kan, met het bereik en of het droogt;
+  - of het zegt wat het doet, of hoe Smart Climate het anders ziet (de
+    stroommeter, of de temperatuur, een paar minuten later); infrarood zegt
+    niets terug;
+  - de stroommeter, of waarom die niet nodig is (de cv);
+  - het filter, de batterij, en of het de kamer meet (een radiatorknop vlak bij
+    de radiator);
+  - "Zegt dat hij ook koelt" bij een thermostaat met alleen "heat_cool".
+- **Een bereik onder 4° of boven 35°** kan niet kloppen: Smart Climate stelt 10°
+  tot 25° voor (16° tot 30° bij een airco), de bewoner kiest anders. Volgende
+  bewaart het voorstel. Het bereik staat in de indeling (`apparaten[].bereik`)
+  en geldt in de regeling (`setpointRange`, de stand-by erbinnen).
+- **De vraag "Wat verwarmt hij?"** bij een thermostaat zonder stroommeter die
+  niet de ketel aanzet: de cv-ketel, elektrisch of weet ik niet
+  (`apparaten[].warmte`). Open staat hij bij Nog te doen.
+- **Een tip per koppeling**: LG (de cloud, een paar seconden), Nest (zijn eigen
+  schema), Tuya (de cloud), infrarood, en een radiatorknop (stookt alleen als
+  de ketel brandt); en wie er twee keer in staat, zegt via welke het stuurt.
+- **De rol** (op temperatuur, op zon, kijkt mee) staat er ook, dezelfde als bij
+  Verwarmen en koelen.
+- **De thermostaat van de ketel**: in het voorstel gaat een thermostaat van een
+  ketelkoppeling (Nest, tado, Netatmo, Honeywell en zo) voor; eerst was het de
+  eerste in het huis, hier de badkamer.
+- **Versie 0.69.0.**
+
+*Wat afviel:* zelf kiezen via welke van twee koppelingen gestuurd wordt (dat
+volgt de configuratie); een wattage per airco zonder meter kiezen (eerst 0,8 kW
+zoals de regeling rekent); meer merken met een eigen tip (wat Home Assistant
+zegt, staat er al).
 
 ---
 

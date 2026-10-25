@@ -20,6 +20,17 @@
   /** De vijf plekken; hun namen staan in teksten.*.js (besluit 185). */
   const NAMEN = ['thuis', 'vandaag', 'apparaten', 'opbrengst', 'assistent'];
   const t = (k) => global.t(k);
+  /** Zonder panelen heet Opbrengst Verbruik (besluit 196); basis.js onthoudt wat het huis heeft. */
+  const naam = (id) => {
+    if (id === 'opbrengst') {
+      try {
+        if (JSON.parse(global.localStorage.getItem('sc-huissoort'))?.zon === false) return t('nav.verbruik');
+      } catch {
+        // Dan de gewone naam.
+      }
+    }
+    return t(`nav.${id}`);
+  };
   const svg = (id) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICOON[id]}</svg>`;
 
   /** `links` geeft per plek het adres; zonder staat er "#". */
@@ -27,10 +38,10 @@
     const href = (id) => links[id] ?? '#';
     // De bel boven het tandwiel (besluit 136): op elke pagina, met een getal als er iets is.
     const bel = `<button type="button" class="meldbel" data-meldbel aria-label="${t('nav.meldingen')}" aria-haspopup="dialog">${svg('meldingen')}<b data-meldaantal hidden></b></button>`;
-    el.innerHTML = `<span class="logo" aria-hidden="true"></span>${NAMEN.map((id) => `<a href="${href(id)}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${t(`nav.${id}`)}</a>`).join('')}${bel}<a href="${href('instellingen')}" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="${t('nav.instellingen')}">${svg('instellingen')}</a>`;
+    el.innerHTML = `<span class="logo" aria-hidden="true"></span>${NAMEN.map((id) => `<a href="${href(id)}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam(id)}</a>`).join('')}${bel}<a href="${href('instellingen')}" class="onder" ${actief === 'instellingen' ? 'aria-current="page"' : ''} aria-label="${t('nav.instellingen')}">${svg('instellingen')}</a>`;
   }
   function tabs(el, actief, links = {}) {
-    el.innerHTML = NAMEN.map((id) => `<a href="${links[id] ?? '#'}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${t(`nav.${id}`)}</a>`).join('');
+    el.innerHTML = NAMEN.map((id) => `<a href="${links[id] ?? '#'}" ${id === actief ? 'aria-current="page"' : ''}>${svg(id)}${naam(id)}</a>`).join('');
   }
   global.nav = { balk, tabs, svg };
 })(window);

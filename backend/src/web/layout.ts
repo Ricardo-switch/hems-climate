@@ -170,7 +170,22 @@ export interface LayoutDevice {
   readonly zone: string | null;
   /** Alleen bij een scherm: de gevel waar het hangt, op het id uit de configuratie (besluit 145). Weg is: het voorstel uit de naam. */
   readonly gevel?: string;
+  /**
+   * Een klimaatapparaat (besluit 197): het bereik dat de regeling aanhoudt, als
+   * dat van Home Assistant niet kan kloppen (zoals 0° tot 80°). Weg: wat Home
+   * Assistant zegt.
+   */
+  readonly bereik?: readonly [min: number, max: number];
+  /** Wat een thermostaat verwarmt, als hij het niet zelf zegt (besluit 197). */
+  readonly warmte?: ApparaatWarmte;
 }
+
+/** Wat een thermostaat verwarmt (besluit 197): de cv-ketel, elektrisch, of de bewoner weet het niet. */
+export const APPARAAT_WARMTE = ['cv', 'elektrisch', 'weetniet'] as const;
+export type ApparaatWarmte = (typeof APPARAAT_WARMTE)[number];
+/** Een bereik binnen wat een kamer kan zijn; daarbuiten kan het niet kloppen (besluit 197). */
+export const BEREIK_MIN_C = 4;
+export const BEREIK_MAX_C = 35;
 
 export interface Layout {
   readonly versie: 1;
@@ -440,7 +455,17 @@ export function validateLayout(body: unknown, known: LayoutKnown): { ok: true; l
     if (hasName && naam == null) return { ok: false, reden: `de naam van apparaat ${id} is te lang` };
     const gevel = d['gevel'] ?? null;
     if (gevel !== null && (typeof gevel !== 'string' || !(known.gevelIds ?? new Set()).has(gevel))) return { ok: false, reden: `apparaat ${id} hangt aan een gevel die het huis niet kent` };
-    apparaten[id] = { ...(naam ? { naam } : {}), kamer: room.id, zone: zone as string | null, ...(gevel ? { gevel } : {}) };
+    // Wat elk apparaat kan (besluit 197): een eigen bereik, en wat een thermostaat verwarmt.
+    const bereikIn = d['bereik'] ?? null;
+    let bereik: [number, number] | null = null;
+    if (bereikIn !== null) {
+      const ok = Array.isArray(bereikIn) && bereikIn.length === 2 && bereikIn.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= BEREIK_MIN_C && x <= BEREIK_MAX_C) && (bereikIn[0] as number) < (bereikIn[1] as number);
+      if (!ok) return { ok: false, reden: `het bereik van apparaat ${id} is twee temperaturen van ${BEREIK_MIN_C}° tot ${BEREIK_MAX_C}°, de laagste eerst` };
+      bereik = [Math.round((bereikIn[0] as number) * 2) / 2, Math.round((bereikIn[1] as number) * 2) / 2];
+    }
+    const warmte = d['warmte'] ?? null;
+    if (warmte !== null && !APPARAAT_WARMTE.includes(warmte as ApparaatWarmte)) return { ok: false, reden: `wat apparaat ${id} verwarmt is ${APPARAAT_WARMTE.join(', ')}` };
+    apparaten[id] = { ...(naam ? { naam } : {}), kamer: room.id, zone: zone as string | null, ...(gevel ? { gevel } : {}), ...(bereik ? { bereik } : {}), ...(warmte ? { warmte: warmte as ApparaatWarmte } : {}) };
   }
 
   // Verbergen kan alleen wat het huis kent; wat het niet meer kent, valt weg, net als hierboven.

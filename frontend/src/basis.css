@@ -441,3 +441,7 @@ html.sc-stil .sc-stroom, html.sc-stil .sc-trommel, html.sc-stil .sc-fan, html.sc
 html.sc-stil, html.sc-stil * { scroll-behavior: auto !important; }
 html.sc-stil #wand { transition: none; }
 html.sc-stil::view-transition-group(*), html.sc-stil::view-transition-old(*), html.sc-stil::view-transition-new(*) { animation: none !important; }
+
+/* Een huis zonder slimme meter (besluit 196): wat geschat is, met een gestippeld labeltje; de kaart die een meter aanraadt in ijsblauw. */
+.geschat { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: 999px; border: 1px dashed color-mix(in srgb, var(--zon) 60%, transparent); color: var(--zon-t); font-size: 11.5px; font-weight: 700; vertical-align: middle; }
+.meterkaart { background: linear-gradient(160deg, rgba(111, 211, 255, 0.12), rgba(111, 211, 255, 0.03)); border-color: rgba(111, 211, 255, 0.3); }

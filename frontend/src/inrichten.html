@@ -92,6 +92,55 @@
   .koppel { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px 0 14px; font-size: 12.5px; font-weight: 600; color: var(--gedempt); }
   .koppel .veld { height: 32px; min-width: 0; flex: 1; max-width: 150px; font-size: 13px; }
   .veldje { display: grid; grid-template-columns: minmax(0, 1fr) 470px; gap: 20px; min-height: 0; }
+  .veldje.breed { grid-template-columns: minmax(0, 1fr) 724px; }
+  /* De kop zegt het al; zo past een apparaat met veel punten, met zijn rol onderaan, in beeld. */
+  .veldje.breed .uitleg { display: none; }
+  /*
+   * Wat elk apparaat kan (besluit 197, schets Wand-Inrichten-Klimaat): links de
+   * apparaten met in een paar woorden hoe het ervoor staat, rechts het apparaat
+   * dat open staat. Groen werkt, een halve stip werkt met een omweg, een
+   * vraagteken vraagt iets, een streep kan dat apparaat niet.
+   */
+  .kanstap { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; }
+  .klijst { display: flex; flex-direction: column; gap: 4px; min-height: 0; overflow: auto; }
+  .kapp { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border: 0; border-radius: 14px; background: none; color: var(--tekst); font: inherit; text-align: left; cursor: pointer; }
+  .kapp.open { background: rgb(var(--wit) / 0.09); }
+  .kapp:focus-visible { outline: 2px solid var(--tekst); outline-offset: 1px; }
+  .kik { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-size: 15px; }
+  .kik.koel { background: rgba(111, 211, 255, 0.14); color: var(--ijs); }
+  .kik.warm { background: rgba(255, 122, 77, 0.14); color: var(--gloed); }
+  .kapp b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kapp small { display: block; font-size: 12px; color: var(--gedempt); margin-top: 1px; }
+  .kst { font-weight: 700; }
+  .kst.ok { color: var(--mint-t); }
+  .kst.om { color: var(--zon-t); }
+  .kst.mee { color: var(--zacht); }
+  .kst.beperkt { color: var(--gloed); }
+  .kmist { margin-top: 6px; padding: 9px 12px; border-radius: 14px; border: 1px dashed rgba(111, 211, 255, 0.45); background: none; color: var(--ijs); font: inherit; font-size: 13px; font-weight: 600; text-align: left; cursor: pointer; }
+  .ksamen { margin: auto 0 0; padding: 8px 4px 0; font-size: 12.5px; color: var(--gedempt); line-height: 1.5; }
+  .klos { display: flex; flex-direction: column; gap: 4px; padding: 10px 16px; border-radius: 18px; background: rgb(var(--wit) / 0.04); min-height: 0; overflow: auto; }
+  .kkop { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .kkop b { font-family: var(--kop); font-size: 19px; }
+  .kkop span { font-size: 13px; color: var(--gedempt); }
+  .kpunten { display: flex; flex-direction: column; }
+  .kpunt { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; padding: 3px 0; border-top: 1px solid rgb(var(--wit) / 0.06); font-size: 14px; }
+  .kpunt:first-child { border-top: 0; }
+  .kpunt i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 800; margin-top: 1px; }
+  .kpunt.ok i { background: rgba(110, 231, 183, 0.18); color: var(--mint); }
+  .kpunt.om i { background: conic-gradient(var(--zon) 0 50%, rgba(247, 181, 72, 0.18) 0); }
+  .kpunt.vraag i { background: rgba(111, 211, 255, 0.18); color: var(--ijs); }
+  .kpunt.nee i { background: rgb(var(--wit) / 0.07); color: var(--gedempt); }
+  .kpunt.nee > span > b { color: var(--zacht); }
+  .kpunt small { display: block; color: var(--gedempt); font-size: 12.5px; line-height: 1.35; margin-top: 1px; }
+  .kpunt .chips { margin-top: 4px; }
+  .veld.klein { height: 32px; font-size: 13px; padding: 0 8px; }
+  .kweet { padding: 7px 11px; border-radius: 12px; background: rgba(143, 134, 255, 0.08); border: 1px solid rgba(143, 134, 255, 0.22); font-size: 12.5px; color: var(--zacht); line-height: 1.45; }
+  .kweet b { color: var(--violet-t, #b3adff); }
+  .krol { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 6px; border-top: 1px solid rgb(var(--wit) / 0.08); }
+  .krol > b { font-size: 13px; color: var(--zacht); white-space: nowrap; }
+  .krol .seg { flex: 1; }
+  #tel .klos { margin: 2px 0 8px; }
+  #tel .krol { flex-direction: column; align-items: stretch; }
   /* Het huis vult zijn vak, hoe breed het scherm ook is (besluit 166): eerst groeide de tekening op 16:9 onder de rand uit. */
   .podium { min-height: 0; display: grid; place-items: center; position: relative; }
   #wand .podium > svg { position: absolute; inset: 0; }

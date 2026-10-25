@@ -423,8 +423,13 @@
    * Verwarming; anders het voorstel: een thermostaat uit Home Assistant die
    * verwarmt en niet koelt, en geen radiatorknop is. "geen": er is er geen.
    */
+  /** Koppelingen van thermostaten die de cv-ketel aanzetten (besluit 197): die gaan voor in het voorstel. */
+  const KETEL_KOPPELING = new Set(['nest', 'tado', 'netatmo', 'honeywell', 'honeywell_tcc', 'evohome', 'opentherm_gw', 'plugwise', 'toon', 'quatt', 'remeha_home', 'bosch']);
+  const isKetelKoppeling = (a) => KETEL_KOPPELING.has(a?.klimaat?.ha?.koppeling);
   function thermostaten(huis) {
-    return (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !a.radiatorknop && a.klimaat?.kanVerwarmen && !a.klimaat?.kanKoelen).map((a) => ({ sleutel: a.actuatorId ?? a.id, naam: a.naam, kamerId: r.id, kamer: r.naam }))));
+    const lijst = (huis?.etages ?? []).flatMap((e) => (e.ruimtes ?? []).flatMap((r) => (r.apparaten ?? []).filter((a) => a.soort === 'klimaat' && !a.radiatorknop && a.klimaat?.kanVerwarmen && !a.klimaat?.kanKoelen).map((a) => ({ sleutel: a.actuatorId ?? a.id, naam: a.naam, kamerId: r.id, kamer: r.naam, ketel: isKetelKoppeling(a) }))));
+    // Een Nest of tado zet de ketel aan; een losse thermostaat in de badkamer meestal niet.
+    return [...lijst.filter((x) => x.ketel), ...lijst.filter((x) => !x.ketel)];
   }
   function cvThermostaat(huis, verwarming) {
     const keus = verwarming?.thermostaat ?? null;
@@ -462,7 +467,7 @@
   const BUITEN_SOORTEN = soorten('buiten', ['tuin', 'voortuin', 'zijtuin', 'oprit', 'carport', 'terras', 'balkon', 'dakterras', 'tuinhuis', 'garage']);
   /** De delen van een buitenruimte (besluit 167). Een tuinhuis tekent het huisje in de tuin. */
   const BUITEN_ZONES = soorten('buitenZone', ['gazon', 'border', 'terras', 'tuinhuis', 'moestuin', 'vijver', 'pad', 'speelplek', 'oprit', 'carport']);
-  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, ACTIEF,
+  global.huismodel = { KAMER_SOORTEN, ZONE_SOORTEN, BUITEN_SOORTEN, BUITEN_ZONES, buitenUitNaam, buitenZoneUitNaam, thermostaten, cvThermostaat, isKetelKoppeling, ACTIEF,
 
  BUITEN, GANG, kleurVanLicht, zoneNaam, metLidwoord, metHoofdletter, etagesNaast, BRON_NAAM, ELEKTRISCH, bronNaam, opsomming, isElektrischSlim, inKamers, standVan, kortVan, kamerModel, isBuiten, soortBuiten, buiten, rondNu, rondom, OP_OPRIT, rondMet, tekening, huisDelen, panelenOpDak, kompasVan, groetNamen, groetWie };
 })(window);

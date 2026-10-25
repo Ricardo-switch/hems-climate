@@ -21,6 +21,7 @@ import type { Deferrable, SiteConfig } from '../core/model.js';
 import { SHORT, cap, residentRooms, withArticle, type DecisionView, type Lang, type ResidentRoom } from './assistant.js';
 import { clockIn, nextLocalTime } from './today.js';
 import { residentBuffers, type ResidentBuffer } from './buffers-bewoner.js';
+import { BASIS_ZONDER_METER_W } from './energy.js';
 
 export interface ResidentHeadline {
   /** "Nu · Dag", met "(gekozen)" als de bewoner de modus koos. */
@@ -36,8 +37,8 @@ export interface ResidentHeadline {
  */
 export interface ResidentFlows {
   readonly zonKw: number | null;
-  /** Positief van het net, negatief terug. 0 als het minder dan 0,05 kW is. */
-  readonly netKw: number;
+  /** Positief van het net, negatief terug. 0 als het minder dan 0,05 kW is; null zonder slimme meter. */
+  readonly netKw: number | null;
   /** Wat het hele huis nu gebruikt, de airco's meegeteld. */
   readonly verbruikKw: number | null;
   /** Wat de airco's werkelijk opnemen, gemeten. */
@@ -46,6 +47,12 @@ export interface ResidentFlows {
   readonly huisKw: number | null;
   /** Wat Smart Climate voor de airco's op zon gepland heeft. */
   readonly geplandKw: number;
+  /**
+   * Zonder slimme meter (besluit 196): wat er van de zon over is, geschat als
+   * de zon min de airco's en een gewoon huis. Alleen dan staat het erin.
+   */
+  readonly overKw?: number | null;
+  readonly geschat?: true;
 }
 
 export interface ResidentDevice {
@@ -262,9 +269,15 @@ export function residentHeadline(config: SiteConfig, snap: DecisionView, rooms: 
   return { boven, titel: w.nothing, zin };
 }
 
-export function residentFlows(snap: DecisionView): ResidentFlows {
+export function residentFlows(snap: DecisionView, metMeter = true): ResidentFlows {
   const e = snap.explanation;
   const zonKw = e.solarProductionW == null ? null : round1(Math.max(0, e.solarProductionW) / 1000);
+  // Zonder slimme meter is het net onbekend (besluit 196): niet "0 kW van het net", maar wat er geschat over is.
+  if (!metMeter) {
+    const aircoKw = round1((e.budget.reclaimableW ?? 0) / 1000);
+    const overKw = zonKw == null ? null : Math.max(0, round1(zonKw - aircoKw - BASIS_ZONDER_METER_W / 1000));
+    return { zonKw, netKw: null, verbruikKw: null, aircoKw, huisKw: null, geplandKw: round1((e.budget.allocatedW ?? 0) / 1000), overKw, geschat: true };
+  }
   // -0 wordt 0: "0 kW terug" bestaat niet.
   const netKw = round1(e.budget.gridPowerW / 1000) || 0;
   const verbruikKw = zonKw == null ? null : Math.max(0, round1(zonKw + netKw));
@@ -347,7 +360,7 @@ export function residentView(config: SiteConfig, snap: DecisionView, lang: Lang 
   return {
     kamers,
     kop: residentHeadline(config, snap, kamers, lang, shadow),
-    stromen: residentFlows(snap),
+    stromen: residentFlows(snap, config.power?.gridPower != null),
     apparaten,
     rust,
     besluit: snap.commands.length > 0 ? decisionWords(config, snap.commands, redenen, lang) : null,

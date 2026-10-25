@@ -14,6 +14,9 @@ import { HaClient } from '../src/adapters/homeassistant/client.js';
 import { EnergyStore, importFromPrefs, meterRole, pricesInPrefs, validateEnergy, type EnergySettings, type EnergySource } from '../src/web/energy.js';
 import { partsIn, zonedMidnight } from '../src/web/today.js';
 import { periodRange, verdeel, yearStartOf, yieldReport } from '../src/web/yield.js';
+import { goedkoopVandaag } from '../src/web/routes/opbrengst.js';
+import { residentFlows } from '../src/web/resident.js';
+import type { DecisionView } from '../src/web/assistant.js';
 
 const TZ = 'Europe/Amsterdam';
 
@@ -129,6 +132,54 @@ describe('een dag terugkijken', () => {
     expect(r.zon).toBeNull();
     expect(r.stroom).toMatchObject({ verbruikKwh: 6.8, eigenZonKwh: 0, eigenZonPct: null });
     expect(r.apparaten[0]).toMatchObject({ zonKwh: 0, netKwh: 1.2 });
+  });
+});
+
+describe('panelen zonder slimme meter (besluit 196)', () => {
+  const ZONDER = { ...SETTINGS, net: { afname: [], teruglevering: [] } };
+
+  it('schat per uur wat je zelf gebruikte: eerst de apparaten met een meter en een gewoon huis, de rest naar het net', async () => {
+    const r = (await yieldReport(fakeSource(), ZONDER, 'dag', '2026-09-15', TZ, Date.UTC(2026, 9, 7)))!;
+    expect(r.geschat).toBe(true);
+    expect(r.heeft.net).toBe(false);
+    // Zeven zonuren van 2 kWh; vijf uur 0,4 (een gewoon huis), twee uur 0,4 + 0,5 airco.
+    expect(r.zon).toMatchObject({ opgewektKwh: 14, zelfKwh: 3.8, terugKwh: 10.2, zelfPct: 27, bespaardEuro: 0.95 });
+    // De airco draaide op zon; 's avonds is het net onbekend, dus alleen de zon in het schema.
+    expect(r.apparaten[0]).toMatchObject({ zonKwh: 1, netKwh: 0.2 });
+    expect(r.stromen.filter((s) => s.van === 'net')).toEqual([]);
+    const zon = r.stromen.filter((s) => s.van === 'zon').reduce((a, s) => a + s.kwh, 0);
+    expect(zon).toBeCloseTo(14);
+  });
+
+  it('rekent ook een jaar per uur, anders viel de zon weg tegen het verbruik van de hele dag', async () => {
+    const bron = fakeSource();
+    await yieldReport(bron, ZONDER, 'jaar', '2026-09-15', TZ, Date.UTC(2026, 9, 7));
+    expect(bron.calls[0]).toBe('hour');
+    const metMeter = fakeSource();
+    await yieldReport(metMeter, SETTINGS, 'jaar', '2026-09-15', TZ, Date.UTC(2026, 9, 7));
+    expect(metMeter.calls[0]).toBe('day');
+  });
+
+  it('zegt op Thuis wat er geschat over is, en geen net', () => {
+    const snap = { atMs: 0, explanation: { solarProductionW: 1500, budget: { gridPowerW: 0, reclaimableW: 300, allocatedW: 0 } }, commands: [], accepted: [], rejected: [], observed: {} } as unknown as DecisionView;
+    expect(residentFlows(snap, false)).toEqual({ zonKw: 1.5, netKw: null, verbruikKw: null, aircoKw: 0.3, huisKw: null, geplandKw: 0, overKw: 0.8, geschat: true });
+    expect(residentFlows(snap)).toMatchObject({ netKw: 0, verbruikKw: 1.5 });
+  });
+});
+
+describe('de goedkope uren van vandaag (besluit 196)', () => {
+  const prijzen = { stroom: 0.28, stroomDal: 0.24, dalUren: 'nl' as const };
+  it('geeft per uur of het daluur is, ook op de dag met 25 uur', () => {
+    // Zondag 25 oktober 2026: de wintertijd, en het weekend is helemaal dal.
+    const zondag = goedkoopVandaag(TZ, prijzen, Date.UTC(2026, 9, 25, 10));
+    expect(zondag.dal).toHaveLength(25);
+    expect(zondag.dal.every(Boolean)).toBe(true);
+    // Maandag: 's nachts tot 07:00 en vanaf 23:00.
+    const maandag = goedkoopVandaag(TZ, prijzen, Date.UTC(2026, 9, 26, 10));
+    expect(maandag.dal.map((d, h) => (d ? h : null)).filter((h) => h != null)).toEqual([0, 1, 2, 3, 4, 5, 6, 23]);
+    expect(maandag).toMatchObject({ normaal: 0.28, dalPrijs: 0.24 });
+    // Zonder daltarief niets.
+    expect(goedkoopVandaag(TZ, { stroom: 0.28, stroomDal: null }, Date.UTC(2026, 9, 26, 10)).dal).toEqual([]);
   });
 });
 
