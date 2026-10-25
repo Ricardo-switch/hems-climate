@@ -6,6 +6,7 @@
 
 import { VERSIE } from '../version.js';
 import type { Sluipverbruik } from './sluipverbruik.js';
+import type { CameraNu } from './cameras.js';
 import type { SiteConfig } from '../core/model.js';
 import type { LiveSnapshot } from '../adapters/homeassistant/shadow.js';
 import type { DivergenceReport } from './divergence.js';
@@ -218,6 +219,11 @@ export interface WebOptions {
     readonly zetNeer: () => Promise<{ readonly ok: true; readonly stand: IntegratieStand } | { readonly ok: false; readonly reden: string }>;
   };
   readonly deurbel?: () => { readonly camera: string; readonly naam: string; readonly laatsteMs: number | null; readonly reserve?: readonly string[] } | null;
+  /**
+   * De kaart Camera's (besluit 201): elke camera die het huis toont, met wat hij
+   * nu ziet of wanneer het laatst; de deurbel met wanneer er werd aangebeld.
+   */
+  readonly cameras?: () => readonly CameraNu[];
   /**
    * Het profiel (besluit 181): de bewoners op volgorde en wiens comfort geldt,
    * en of een account een scherm is. Zonder dit is de wand van het huis.

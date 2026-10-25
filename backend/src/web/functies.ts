@@ -86,6 +86,32 @@ export interface Functies {
 export interface CameraKeuze {
   readonly naam: string;
   readonly beelden: readonly { readonly id: string; readonly naam: string; readonly voorkeur: boolean }[];
+  /**
+   * De bewegingsmelders van hetzelfde apparaat (25 oktober 2026): gewone
+   * beweging, of wat de camera herkent (een persoon, een voertuig, een dier).
+   * Weg in een oudere vorm: geen.
+   */
+  readonly melders?: readonly CameraMelder[];
+}
+
+/** Wat een melder op een camera ziet: beweging, of wat hij herkent. */
+export type BewegingSoort = 'beweging' | 'persoon' | 'voertuig' | 'dier';
+export interface CameraMelder {
+  readonly id: string;
+  readonly soort: BewegingSoort;
+}
+/** De klassen van een melder die beweging ziet. */
+const BEWEGING_KLASSE = new Set(['motion', 'occupancy', 'presence', 'moving']);
+/**
+ * Wat een melder herkent, uit zijn sleutel, id of naam: Reolink heet ze
+ * person, vehicle, pet en animal (hier "persoon", "voertuig", "huisdier",
+ * "dier"); de rest is gewone beweging.
+ */
+export function bewegingSoort(tekst: string): BewegingSoort {
+  if (/person|persoon|mens|human|people|face|gezicht/i.test(tekst)) return 'persoon';
+  if (/vehicle|voertuig|(?<![a-z])auto(?![a-z])|car(?![a-z])/i.test(tekst)) return 'voertuig';
+  if (/(?<![a-z])pet(?![a-z])|dier|animal|dog|cat(?![a-z])|hond|kat(?![a-z])/i.test(tekst)) return 'dier';
+  return 'beweging';
 }
 
 /** Een melder die een deurbel kan zijn. */
@@ -185,7 +211,17 @@ export function functiesGevonden(entities: readonly HaRegistryEntity[], devices:
   for (const [sleutel, groep] of perCamera) {
     if (eigenBeeld.has(sleutel)) groep.beelden = groep.beelden.filter((b) => !via.has(b.id));
   }
-  const cameras = [...perCamera.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+  // De bewegingsmelders bij hun camera, op hetzelfde apparaat (25 oktober 2026).
+  const meldersVan = new Map<string, CameraMelder[]>();
+  for (const e of entities) {
+    // De klasse uit het register, en anders uit de toestand: het register noemt hem niet altijd.
+    const klasse = e.device_class ?? e.original_device_class ?? String(states.get(e.entity_id)?.attributes['device_class'] ?? '');
+    if (e.disabled_by != null || !e.entity_id.startsWith('binary_sensor.') || !BEWEGING_KLASSE.has(klasse) || !e.device_id) continue;
+    const sleutel = camVanApparaat.get(e.device_id);
+    if (!sleutel) continue;
+    meldersVan.set(sleutel, [...(meldersVan.get(sleutel) ?? []), { id: e.entity_id, soort: bewegingSoort(`${e.translation_key ?? ''} ${e.entity_id} ${e.original_name ?? ''}`) }]);
+  }
+  const cameras = [...perCamera.entries()].map(([sleutel, g]) => ({ ...g, melders: meldersVan.get(sleutel) ?? [] })).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
 
   const cameraVan = (deviceId: string | null | undefined) => {
     const sleutel = deviceId ? camVanApparaat.get(deviceId) : undefined;

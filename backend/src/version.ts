@@ -9,7 +9,7 @@
  * krijgt in git een markering `v<nummer>`.
  */
 
-export const VERSIE = '0.72.1';
+export const VERSIE = '0.73.0';
 
 export interface Nieuw {
   readonly versie: string;
@@ -44,6 +44,20 @@ export const TERUGKIJKEN = 10;
 
 /** De nieuwste versie eerst. Per versie kort en voor de bewoner, het belangrijkste eerst. */
 export const NIEUW: readonly Nieuw[] = [
+  {
+    versie: '0.73.0',
+    datum: '2026-10-25',
+    nieuw: [
+      'De kaart Deurbel is de kaart Camera’s: kies zoveel camera’s als je wilt, ze schikken zich naar de maat van de kaart, en een tik maakt het beeld groot en live, met de andere camera’s eronder',
+      'Bij elk beeld wat de camera nu ziet (een persoon, een voertuig, een dier of beweging) of wanneer het laatst; bij de deurbel wanneer er werd aangebeld',
+    ],
+    en: {
+      nieuw: [
+        'The Doorbell card is now the Cameras card: choose as many cameras as you like, they arrange themselves to the size of the card, and a tap makes the picture large and live, with the other cameras below',
+        'With each picture what the camera sees now (a person, a vehicle, an animal or motion) or when it last did; with the doorbell when someone rang',
+      ],
+    },
+  },
   {
     versie: '0.72.1',
     datum: '2026-10-25',

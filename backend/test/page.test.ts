@@ -120,6 +120,8 @@ const proefmeldingen: (string | null)[] = [];
 let extraOpslag: Opslag | null = null;
 /** De deurbel als kaart (besluit 182); null is: geen deurbel. */
 let extraDeurbel: { camera: string; naam: string; laatsteMs: number | null; reserve?: string[] } | null = null;
+/** Nog een camera naast de deurbel, voor de kaart Camera's (besluit 201); hij ziet nu een persoon. */
+let extraOprit = false;
 const metBatterijen = (h: HouseReport): HouseReport => ({ ...(extraBatterijen.length ? { ...h, batterijen: extraBatterijen } : h), ...(extraOpslag ? { opslag: extraOpslag } : {}) });
 import { onUsablePort } from './ports.js';
 import { exampleSite, exampleSitePath } from './site.js';
@@ -357,6 +359,11 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           // Thuis naar eigen smaak (besluit 162): kaarten en favorieten, in de tijdelijke map.
           voorkeuren: new VoorkeurenStore(dir),
           deurbel: () => extraDeurbel,
+          // De kaart Camera's (besluit 201): de deurbel, en zo nodig de oprit die nu een persoon ziet.
+          cameras: () => [
+            ...(extraDeurbel ? [{ id: extraDeurbel.camera, naam: extraDeurbel.naam, reserve: extraDeurbel.reserve ?? [], deurbel: true, aangebeldMs: extraDeurbel.laatsteMs, melders: true, nu: null, sindsMs: null, laatsteMs: null, laatsteSoort: null }] : []),
+            ...(extraOprit ? [{ id: 'camera.camera_oprit_vloeiend', naam: 'Camera oprit', reserve: [], deurbel: false, aangebeldMs: null, melders: true, nu: 'persoon' as const, sindsMs: Date.now() - 20_000, laatsteMs: Date.now() - 20_000, laatsteSoort: 'persoon' as const }] : []),
+          ],
           // Het sluipverbruik (besluit 192): 45 dagen uurstatistiek, de laatste vijf nachten 120 W hoger.
           sluipverbruik: new Sluipverbruik({
             config: () => configNu,
@@ -2562,6 +2569,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     // Een half uur geleden, maar niet voor middernacht (UTC, zoals de browser hier): dan zegt de kaart "Laatst aangebeld" met de dag.
     const nu = Date.now();
     extraDeurbel = { camera: 'camera.deurbel_duidelijk', naam: 'Deurbel', laatsteMs: Math.max(nu - 30 * 60_000, nu - (nu % 86_400_000)), reserve: ['camera.deurbel_vloeiend'] };
+    extraOprit = true;
     try {
       expect((await zet([...STANDAARD_TEL, 'auto', 'batterij', 'maand', 'deurbel'])).ok).toBe(true);
       await p.goto(`${baseUrl}/thuis.html`);
@@ -2572,9 +2580,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       expect(await kaart('batterij').textContent()).toContain('Levert 0,9 kW aan het huis');
       // Deze maand: met meters wat er opgewekt en zelf gebruikt is (na de test van Opbrengst), zonder wat er nodig is.
       await expect.poll(() => kaart('maand').textContent()).toMatch(/kWh opgewekt.*zelf gebruikt|Kies eerst je meters/);
-      // De deurbel: het laatste beeld, en wanneer er werd aangebeld.
-      await expect.poll(() => kaart('deurbel').locator('.kvol img').count()).toBe(1);
-      expect(await kaart('deurbel').textContent()).toContain('Aangebeld om');
+      // De kaart Camera's (besluit 201): de oprit die nu een persoon ziet vooraan, dan de deurbel met wanneer er werd aangebeld.
+      await expect.poll(() => kaart('deurbel').locator('.kvol .cambeeld img').count()).toBe(2);
+      expect(await kaart('deurbel').locator('.kvol .camnaam').allTextContents()).toEqual(['Camera oprit', 'Deurbel']);
+      expect(await kaart('deurbel').locator('.kvol .camzin').allTextContents()).toEqual(['Persoon, nu', expect.stringMatching(/^Aangebeld om \d\d:\d\d$/)]);
+      expect(await kaart('deurbel').locator('.kvol .cambeeld.nu').count()).toBe(1);
+      expect(await kaart('deurbel').locator('.camnu').textContent()).toBe('Persoon bij Camera oprit');
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten.png'), fullPage: true });
       // In het licht: de tekst in de tint van het lichte thema (besluit 181).
       await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', thema: 'licht' }) });
@@ -2584,11 +2595,21 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       if (process.env.HEMS_PAGE_SHOT) await p.screenshot({ path: process.env.HEMS_PAGE_SHOT.replace('.png', '-kaarten-licht.png'), fullPage: true });
       await fetch(`${baseUrl}/api/voorkeuren`, { method: 'POST', headers: { 'content-type': 'application/json', origin: baseUrl }, body: JSON.stringify({ plek: 'tel', thema: 'donker' }) });
       await p.reload();
-      await expect.poll(() => kaart('deurbel').locator('.kvol img').count()).toBe(1);
-      // Een tik op de deurbel: het live beeld groot.
-      await kaart('deurbel').click();
-      await p.locator('.aanbel', { hasText: 'De deurbel' }).waitFor();
+      await expect.poll(() => kaart('deurbel').locator('.kvol .cambeeld img').count()).toBe(2);
+      // Een tik op de deurbel: het live beeld groot, met de andere camera's eronder om te wisselen.
+      await kaart('deurbel').locator('.cambeeld.bel').click();
+      await p.locator('.aanbel', { hasText: 'Deurbel · Aangebeld om' }).waitFor();
+      expect(await p.locator('.aanbel [data-bel-wissel]').count()).toBe(2);
+      await p.locator('.aanbel [data-bel-wissel="0"]').click();
+      await p.locator('.aanbel', { hasText: 'Camera oprit · Persoon, nu' }).waitFor();
+      expect(await p.locator('.aanbel [data-bel-wissel="0"]').getAttribute('aria-pressed')).toBe('true');
       await p.locator('.aanbel [data-bel-dicht]').click();
+      // Kiezen (besluit 201): alleen de deurbel, en dan staat alleen die op de kaart.
+      await kaart('deurbel').locator('[data-cam-kies]').click();
+      await p.locator('[data-kiesblad] [data-cam-keus="camera.camera_oprit_vloeiend"]').click();
+      await p.locator('[data-kiesblad] [data-cam-klaar]').click();
+      await expect.poll(() => kaart('deurbel').locator('.kvol .cambeeld').count()).toBe(1);
+      expect((await (await fetch(`${baseUrl}/api/voorkeuren`)).json() as { tel: { cameras: string[] } }).tel.cameras).toEqual(['camera.deurbel_duidelijk']);
       // Een tik op de auto: bij Apparaten, op de kaart van de auto, met de batterij ernaast.
       await kaart('auto').click();
       await p.waitForURL(/apparaten\.html#auto$/);
@@ -2603,6 +2624,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // Zonder auto en deurbel: die kaarten staan er niet, en worden niet aangeboden.
       extraOpslag = { batterij: extraOpslag.batterij, auto: null };
       extraDeurbel = null;
+      extraOprit = false;
       expect((await zet(STANDAARD_TEL)).ok).toBe(true);
       await p.reload();
       await p.locator('#tel [data-aanpassen]').click();
@@ -2616,6 +2638,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     } finally {
       extraOpslag = null;
       extraDeurbel = null;
+      extraOprit = false;
       await zet(STANDAARD_TEL);
       await context.close();
     }

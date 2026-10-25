@@ -551,9 +551,18 @@ function tekenKamersTel() {
  */
 let maand = null;
 let maandOp = 0;
-let deurbel = null;
-let deurbelBeeld = null;
-let deurbelOp = 0;
+/*
+ * De kaart Camera's (besluit 201, schets Wand-Cameras): eerst de kaart Deurbel
+ * (besluit 182); zijn id blijft `deurbel`, zodat ieders indeling blijft staan.
+ * Per camera een plaatje, hooguit elke minuut, en elke tien tellen bij een
+ * camera die nu beweging ziet.
+ */
+let cameras = null;
+const camBeeld = new Map();
+const camOp = new Map();
+/** Alle camera's die het huis toont, de deurbel voorop: zo staat de kaart zonder keuze, en zo begint het kiesblad. */
+const camerasAlle = () => [...(cameras?.aan ? cameras.cameras : [])].sort((a, b) => Number(b.deurbel) - Number(a.deurbel));
+eigen.metCameras(camerasAlle);
 /** Het sluipverbruik (besluit 192): hooguit elk half uur; de dienst haalt het uit Home Assistant. */
 let sluip = null;
 let sluipOp = 0;
@@ -603,9 +612,9 @@ async function kaartGegevens() {
     }
   }
   try {
-    deurbel = await haal('api/deurbel');
+    cameras = await haal('api/cameras');
   } catch {
-    deurbel = null;
+    cameras = null;
   }
   // Zonder panelen (besluit 196): wat het huis vandaag gebruikte, en de goedkope uren; hooguit elke tien minuten.
   if (app.huisSoort()?.zon === false && staatErin('vandaag') && nu - verbruikOp > 10 * 60_000) {
@@ -624,20 +633,34 @@ async function kaartGegevens() {
       // De volgende keer.
     }
   }
-  // Het beeld van de deurbel: hooguit elke minuut een nieuw plaatje.
-  if (deurbel?.aan && staatErin('deurbel') && nu - deurbelOp > 60_000) {
-    deurbelOp = nu;
-    // Geeft het gekozen beeld niets, dan een ander beeld van dezelfde camera, zoals bij aanbellen.
-    let res = null;
-    for (const id of [deurbel.camera, ...(deurbel.reserve ?? [])]) {
-      res = await fetch(`api/camera?id=${encodeURIComponent(id)}`, { cache: 'no-store' }).catch(() => null);
-      if (res?.ok) break;
-    }
-    if (res?.ok) {
-      if (deurbelBeeld) URL.revokeObjectURL(deurbelBeeld);
-      deurbelBeeld = URL.createObjectURL(await res.blob());
-    }
+  // De plaatjes van de gekozen camera's: hooguit elke minuut, bij beweging elke tien tellen.
+  if (cameras?.aan && staatErin('deurbel')) await Promise.all(camerasGekozen().map((c) => camPlaatje(c, nu)));
+}
+
+/** Een vers plaatje van een camera; geeft het beeld niets, dan een ander beeld van dezelfde camera, zoals bij aanbellen. */
+async function camPlaatje(c, nu) {
+  if (nu - (camOp.get(c.id) ?? 0) < (c.nu ? 10_000 : 60_000)) return;
+  camOp.set(c.id, nu);
+  let res = null;
+  for (const id of [c.id, ...(c.reserve ?? [])]) {
+    res = await fetch(`api/camera?id=${encodeURIComponent(id)}`, { cache: 'no-store' }).catch(() => null);
+    if (res?.ok) break;
   }
+  if (!res?.ok) return;
+  const oud = camBeeld.get(c.id);
+  camBeeld.set(c.id, URL.createObjectURL(await res.blob()));
+  if (oud) URL.revokeObjectURL(oud);
+}
+
+/**
+ * De camera's op de kaart: wat je koos, in jouw volgorde, of anders alle met de
+ * deurbel voorop. Wat nu beweging ziet, gaat voor (besluit 201).
+ */
+function camerasGekozen() {
+  const alle = camerasAlle();
+  const keuze = eigen.cameras(app.telStand() ? 'tel' : 'wand');
+  const lijst = keuze ? keuze.map((id) => alle.find((c) => c.id === id)).filter(Boolean) : alle;
+  return [...lijst.filter((c) => c.nu), ...lijst.filter((c) => !c.nu)];
 }
 
 function zetKaart(sel, id, html, hier) {
@@ -713,23 +736,70 @@ function tekenMaand() {
   zetKaart('[data-maand]', 'maand', html, true);
 }
 
+/** Wat er onder een beeld staat: wat het nu ziet, bij de deurbel wanneer er werd aangebeld, anders wanneer het laatst. */
+function camZin(c) {
+  const dag = (ms) => taal.datum(new Date(ms), { weekday: 'long', day: 'numeric', month: 'long' });
+  const vandaag = (ms) => new Date().toDateString() === new Date(ms).toDateString();
+  if (c.nu) return t('thuis.cam.nu', { wat: t(`thuis.cam.soort.${c.nu}`) });
+  if (c.deurbel) return c.aangebeldMs ? (vandaag(c.aangebeldMs) ? t('thuis.deurbel.om', { klok: klokVan(c.aangebeldMs) }) : t('thuis.deurbel.laatst', { dag: dag(c.aangebeldMs) })) : t('thuis.deurbel.nooit');
+  if (!c.melders) return '';
+  if (!c.laatsteMs) return t('thuis.cam.geen');
+  const wat = t(`thuis.cam.soort.${c.laatsteSoort ?? 'beweging'}`);
+  return vandaag(c.laatsteMs) ? t('thuis.cam.om', { wat, klok: klokVan(c.laatsteMs) }) : t('thuis.cam.laatst', { wat, dag: dag(c.laatsteMs) });
+}
+/** Hoe de beelden liggen: één groot, twee naast elkaar, drie met de eerste breed, vier en meer twee aan twee. */
+const camSchik = (n) => (n <= 1 ? 'n1' : n === 2 ? 'n2' : n === 3 ? 'n3' : 'n4');
+function camVak(c, i) {
+  const src = camBeeld.get(c.id);
+  const zin = camZin(c);
+  return `<button type="button" class="cambeeld${c.nu ? ' nu' : ''}${c.deurbel ? ' bel' : ''}" data-cam="${i}" aria-label="${esc(t('thuis.cam.groot', { naam: c.naam }))}">${src ? `<img alt="" src="${src}">` : ''}<span class="camnaam">${eigen.icoon(c.deurbel ? 'bel' : 'camera')}${esc(c.naam)}</span>${zin ? `<span class="camzin"><i></i>${esc(zin)}</span>` : ''}</button>`;
+}
 function tekenDeurbel() {
-  const d = deurbel?.aan ? deurbel : null;
-  let wanneer = t('thuis.deurbel.nooit');
-  if (d?.laatsteMs) {
-    const toen = new Date(d.laatsteMs);
-    const vandaag = new Date().toDateString() === toen.toDateString();
-    wanneer = vandaag ? t('thuis.deurbel.om', { klok: klokVan(d.laatsteMs) }) : t('thuis.deurbel.laatst', { dag: taal.datum(toen, { weekday: 'long', day: 'numeric', month: 'long' }) });
+  const lijst = camerasGekozen();
+  const hier = !!cameras?.aan;
+  let html = '';
+  if (hier) {
+    const beweegt = lijst.find((c) => c.nu);
+    const rechts = beweegt ? `<span class="kaartrechts camnu">${esc(t('thuis.cam.bij', { wat: t(`thuis.cam.soort.${beweegt.nu}`), naam: beweegt.naam }))}</span>` : '';
+    const kies = eigen.magKiezen(app.telStand() ? 'tel' : 'wand') ? `<button type="button" class="camkies" data-cam-kies>${esc(t('thuis.cam.kies'))}</button>` : '';
+    const vakken = lijst.length ? `<div class="cambeelden ${camSchik(lijst.length)}">${lijst.map(camVak).join('')}</div>` : `<p class="mini">${esc(t('thuis.cam.leeg'))}</p>`;
+    html = vol(`<div class="camkop">${kaartKop('deurbel', t('thuis.cam.kop'), false)}${rechts}${kies}</div>${vakken}`);
+    // Smal (besluit 201): één beeld, de andere wisselen; wat beweegt blijft staan. Een stipje per camera.
+    const eerste = lijst[0];
+    const tegels = lijst.map((c, i) => {
+      const src = camBeeld.get(c.id);
+      return `<div class="camtegel${i === 0 ? ' aan' : ''}" data-camtegel="${i}">${src ? `<img alt="" src="${src}">` : ''}</div>`;
+    }).join('');
+    if (eerste) html += `<div class="ktegel foto cam" role="button" tabindex="0" aria-label="${esc(t('thuis.cam.groot', { naam: eerste.naam }))}" data-cam="0" data-cam-wissel="${lijst.length > 1 && !eerste.nu ? '1' : '0'}">${tegels}<span class="tnaam" data-camtnaam>${eigen.icoon(eerste.deurbel ? 'bel' : 'camera')}<span>${esc(eerste.naam)}</span></span><span class="tzin" data-camtzin>${esc(camZin(eerste))}</span>${lijst.length > 1 ? `<span class="camstip" aria-hidden="true">${lijst.map((c, i) => `<i class="${i === 0 ? 'aan' : ''}${c.nu ? ' nu' : ''}"></i>`).join('')}</span>` : ''}</div>`;
   }
-  const beeld = deurbelBeeld ? `<img alt="${esc(t('thuis.deurbel.beeld', { naam: d?.naam ?? t('thuis.deurbel.deDeurbel') }))}" src="${deurbelBeeld}">` : '';
-  zetKaart('[data-deurbelkaart]', 'deurbel', d ? `${vol(`${kaartKop('deurbel', t('thuis.deurbel.kop'))}<div class="deurbelbeeld">${beeld}<span class="wanneer">${esc(wanneer)}</span></div>`)}<div class="ktegel foto">${beeld}<span class="tnaam">${eigen.icoon('deurbel')}<span>${esc(t('thuis.deurbel.kop'))}</span></span><span class="tzin">${esc(wanneer)}</span></div>` : '', !!d);
+  zetKaart('[data-deurbelkaart]', 'deurbel', html, hier);
 }
 
-// Een tik op de deurbel: het live beeld groot, zoals bij aanbellen.
+// Smal: elke zes tellen het volgende beeld, met zijn naam en zijn regel.
+setInterval(() => {
+  const lijst = camerasGekozen();
+  for (const k of document.querySelectorAll('[data-cam-wissel="1"]')) {
+    if (!k.getClientRects().length || lijst.length < 2) continue;
+    const i = (Number(k.dataset.cam) + 1) % lijst.length;
+    const c = lijst[i];
+    k.dataset.cam = String(i);
+    k.querySelectorAll('[data-camtegel]').forEach((x) => x.classList.toggle('aan', Number(x.dataset.camtegel) === i));
+    k.querySelectorAll('.camstip i').forEach((x, j) => x.classList.toggle('aan', j === i));
+    k.querySelector('[data-camtnaam]').innerHTML = `${eigen.icoon(c.deurbel ? 'bel' : 'camera')}<span>${esc(c.naam)}</span>`;
+    k.setAttribute('aria-label', t('thuis.cam.groot', { naam: c.naam }));
+    k.querySelector('[data-camtzin]').textContent = camZin(c);
+  }
+}, 6_000);
+
+// Een tik op een beeld: groot en live, met de andere camera's eronder om te wisselen (besluit 201).
 document.addEventListener('click', (e) => {
-  const k = e.target.closest('[data-deurbelkaart]');
-  if (!k || document.body.classList.contains('aanpassen') || !deurbel?.aan) return;
-  app.aanbellen({ camera: deurbel.camera, reserve: deurbel.reserve, naam: deurbel.naam, titel: t('thuis.deurbel.kop'), schermAan: false, seconden: 120 });
+  const vak = e.target.closest('[data-deurbelkaart] [data-cam]');
+  if (!vak || document.body.classList.contains('aanpassen') || e.target.closest('[data-cam-kies]')) return;
+  const lijst = camerasGekozen();
+  const c = lijst[Number(vak.dataset.cam)] ?? lijst[0];
+  if (!c) return;
+  const andere = lijst.map((x) => ({ camera: x.id, reserve: x.reserve, naam: x.naam, zin: camZin(x), plaatje: camBeeld.get(x.id) ?? null, voorrang: x.deurbel }));
+  app.aanbellen({ camera: c.id, reserve: c.reserve, naam: c.naam, zin: camZin(c), titel: t('thuis.cam.kop'), schermAan: false, seconden: 120, voorrang: c.deurbel, andere });
 });
 
 /* ------------------------------------------------------------- het weer */

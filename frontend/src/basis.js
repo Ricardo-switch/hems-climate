@@ -485,14 +485,27 @@
       laag.setAttribute('aria-label', m.titel ?? global.t('basis.bel.titel'));
       laag.addEventListener('click', (e) => {
         if (e.target.closest('[data-bel-dicht]')) sluitBel();
+        // Een andere camera kiezen (besluit 201): dat beeld groot, de rij blijft.
+        const w = e.target.closest('[data-bel-wissel]');
+        const m0 = laag.camera;
+        if (w && m0?.andere) {
+          const a = m0.andere[Number(w.dataset.belWissel)];
+          if (a) aanbellen({ ...m0, camera: a.camera, reserve: a.reserve, naam: a.naam, zin: a.zin, voorrang: a.voorrang });
+        }
       });
       document.body.append(laag);
     }
     // Belt er opnieuw iemand terwijl het beeld er staat: eerst het oude beeld stoppen.
     stopBeelden(laag);
-    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>${esc(m.titel ?? global.t('basis.bel.titel'))}</b><span>${esc(m.naam ?? global.t('basis.bel.deurbel'))}, ${klokVan(m.tMs ?? Date.now())}</span></div><button type="button" class="knop" data-bel-dicht>${esc(global.t('algemeen.sluiten'))}</button></div>
-      <div class="aanbel-beeld"><p class="zacht">${esc(global.t('basis.bel.komt'))}</p></div>`;
-    void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? global.t('thuis.deurbel.deDeurbel'));
+    laag.camera = m;
+    // Van de kaart Camera's (besluit 201): de regel van de camera, en de andere camera's eronder om te wisselen.
+    const onder = m.zin ? `${esc(m.naam ?? '')} · ${esc(m.zin)}` : `${esc(m.naam ?? global.t('basis.bel.deurbel'))}, ${klokVan(m.tMs ?? Date.now())}`;
+    const rij = Array.isArray(m.andere) && m.andere.length > 1
+      ? `<div class="aanbel-rij" role="group" aria-label="${esc(global.t('basis.bel.andere'))}">${m.andere.map((a, i) => `<button type="button" data-bel-wissel="${i}" aria-pressed="${a.camera === m.camera}">${a.plaatje ? `<img alt="" src="${a.plaatje}">` : ''}<span>${esc(a.naam)}</span></button>`).join('')}</div>`
+      : '';
+    laag.innerHTML = `<div class="aanbel-kop"><span class="bol adem" style="width: 34px; height: 34px"></span><div><b>${esc(m.titel ?? global.t('basis.bel.titel'))}</b><span>${onder}</span></div><button type="button" class="knop" data-bel-dicht>${esc(global.t('algemeen.sluiten'))}</button></div>
+      <div class="aanbel-beeld"><p class="zacht">${esc(global.t('basis.bel.komt'))}</p></div>${rij}`;
+    void belBeeld(laag, [m.camera, ...(Array.isArray(m.reserve) ? m.reserve : [])], m.naam ?? global.t('thuis.deurbel.deDeurbel'), m.voorrang !== false);
     laag.querySelector('[data-bel-dicht]').focus();
     clearTimeout(belTimer);
     belTimer = setTimeout(sluitBel, Math.max(30, Math.min(600, Number(m.seconden) || 120)) * 1000);
@@ -518,7 +531,7 @@
    * plaatje. Gaat het scherm net aan (een tablet die sliep), dan begint het
    * live beeld opnieuw: de oude stroom is dan dood.
    */
-  async function belBeeld(laag, ids, naam) {
+  async function belBeeld(laag, ids, naam, voorrang = true) {
     const vak = laag.querySelector('.aanbel-beeld');
     let live = false;
     let id = encodeURIComponent(ids[0]);
@@ -542,7 +555,8 @@
         pogingen += 1;
         setTimeout(startLive, 1500);
       };
-      stroom.src = `api/camera?id=${id}&live=1&bel=1&t=${Date.now()}`;
+      // Voorrang alleen voor de deurbel; een andere camera telt mee in de grens van vier live beelden.
+      stroom.src = `api/camera?id=${id}&live=1${voorrang ? '&bel=1' : ''}&t=${Date.now()}`;
     };
     belOpnieuw = () => {
       pogingen = 0;

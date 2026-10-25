@@ -61,6 +61,7 @@ import { OPEN_METEO, OpenMeteo } from './web/open-meteo.js';
 import { httpBase } from './web/camera.js';
 import { Pauze } from './web/taalmodel.js';
 import { spraakKeuzes, type SpraakKeuze } from './web/functies.js';
+import { cameraMelders, camerasNu, laatsteAanUitHistorie } from './web/cameras.js';
 import { FunctiesStore, aangebeld, functiesGevonden, functiesVoorstel, getoondeCameras, volledig, type Functies, type FunctiesGevonden } from './web/functies.js';
 import { ConnectionStore, SensorPace, connectionView, findAppliances, findPhases, withConnection, type Applied } from './web/aansluiting.js';
 import { findHeatStores } from './web/buffers-vinden.js';
@@ -577,7 +578,47 @@ const deurbelNu = () => {
   const uitMelder = melder ? Date.parse(melder.entity_id.startsWith('event.') ? melder.state : melder.last_changed) : NaN;
   return { camera, naam, laatsteMs: aangebeldMs ?? (Number.isFinite(uitMelder) ? uitMelder : null), reserve: reserveBeelden(camera) };
 };
+/*
+ * De kaart Camera's (besluit 201): wanneer elke bewegingsmelder van een camera
+ * het laatst aanging. Eén keer uit de historie van de laatste twee dagen (en
+ * opnieuw als de melders veranderen), daarna wat de dienst zelf ziet.
+ */
+const bewegingAan = new Map<string, number>();
+let bewegingGeladen = '';
+let bewegingMelders: { van: FunctiesGevonden | null; f: Functies | null; ids: ReadonlySet<string> } = { van: null, f: null, ids: new Set() };
+const camMelders = (): ReadonlySet<string> => {
+  const f = functiesNu();
+  // Opnieuw als wat er gevonden of gekozen is verandert; niet bij elke toestand.
+  if (bewegingMelders.van !== gevondenNu || bewegingMelders.f !== f) {
+    const g = functiesKeuzes();
+    bewegingMelders = { van: gevondenNu, f, ids: new Set(f ? cameraMelders(f, g) : []) };
+  }
+  return bewegingMelders.ids;
+};
+async function bewegingHistorie(): Promise<void> {
+  const ids = [...camMelders()];
+  const sleutel = ids.join(',');
+  if (!ids.length || sleutel === bewegingGeladen) return;
+  bewegingGeladen = sleutel;
+  try {
+    const antwoord = await client.query('history/history_during_period', { start_time: new Date(Date.now() - 2 * 86_400_000).toISOString(), entity_ids: ids, minimal_response: true, no_attributes: true, significant_changes_only: false });
+    for (const [id, ms] of laatsteAanUitHistorie(antwoord)) if (ms > (bewegingAan.get(id) ?? 0)) bewegingAan.set(id, ms);
+  } catch {
+    // Zonder historie (een oudere Home Assistant): dan vanaf nu.
+    bewegingGeladen = '';
+  }
+}
+// Bij het verbinden alvast, zodat de kaart het meteen weet; de registers zijn er dan net.
+client.on('ready', () => setTimeout(() => void bewegingHistorie(), 5_000).unref());
+const camerasLijst = () => {
+  const f = functiesNu();
+  if (!f) return [];
+  void bewegingHistorie();
+  return camerasNu(f, functiesKeuzes(), allStates, bewegingAan, deurbelNu()?.laatsteMs ?? null);
+};
 client.on('stateChanged', (state: HaEntityState) => {
+  // Een camera ziet beweging (besluit 201): onthouden wanneer, voor de kaart Camera's.
+  if (state.entity_id.startsWith('binary_sensor.') && state.state === 'on' && allStates.get(state.entity_id)?.state !== 'on' && camMelders().has(state.entity_id)) bewegingAan.set(state.entity_id, Date.now());
   // Aanbellen: de melder van de deurbel gaat af. Dan toont elke open pagina het beeld.
   const f = functiesNu();
   if (f && aangebeld(f, state, allStates.get(state.entity_id))) {
@@ -1431,6 +1472,7 @@ if (webPort != null) {
     ...(meldingen ? { meldingen } : {}),
     ...(voorkeuren ? { voorkeuren } : {}),
     deurbel: deurbelNu,
+    cameras: camerasLijst,
     // Meldingen op de telefoon (besluit 183): welke telefoons er zijn, en een proefmelding.
     telefoons: (userId: string | null) => telefoons().map((t) => ({ id: t.id, naam: t.naam, eigen: userId != null && t.account === userId })),
     proefmelding,

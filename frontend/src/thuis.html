@@ -324,6 +324,40 @@
   .maanddrie b { display: block; font-family: var(--kop); font-size: 20px; font-weight: 600; }
   .maanddrie span { font-size: 12px; color: var(--zacht); }
   .deurbelkaart { display: block; width: 100%; border: 1px solid var(--glas-rand); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  /*
+   * De kaart Camera's (besluit 201, schets Wand-Cameras): de beelden geschikt
+   * naar hoeveel het er zijn, elk met zijn naam en een regel; wat nu beweging
+   * ziet met een gloeiende rand. Smal: één beeld, de andere wisselen.
+   */
+  .camkop { display: flex; align-items: center; gap: 10px; }
+  .camkop .kaartkop { flex: 1; min-width: 0; }
+  .camkop .camnu { font-size: 12.5px; font-weight: 700; color: var(--gloed-t); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .camkies { flex: none; height: 30px; padding: 0 12px; border-radius: 999px; border: 0; background: rgb(var(--wit) / 0.08); color: var(--zacht); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+  .cambeelden { margin-top: 12px; display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+  .cambeelden.n1 { grid-template-columns: 1fr; }
+  .cambeelden.n3 > :first-child { grid-column: span 2; }
+  .cambeeld { position: relative; aspect-ratio: 16 / 9; border: 0; padding: 0; border-radius: 14px; overflow: hidden; cursor: pointer; background: linear-gradient(160deg, #3b4a5c, #1b2533); font: inherit; color: #eef3f7; text-align: left; }
+  .cambeeld img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cambeeld .camnaam, .cambeeld .camzin { position: absolute; left: 8px; display: inline-flex; align-items: center; gap: 5px; max-width: calc(100% - 16px); padding: 4px 9px; border-radius: 999px; background: rgba(9, 15, 28, 0.68); font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cambeeld .camnaam { top: 8px; padding-left: 7px; }
+  .cambeeld .camnaam svg { width: 13px; height: 13px; flex: none; }
+  .cambeeld .camzin { bottom: 8px; }
+  .cambeeld .camzin i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #8796a8; }
+  .cambeeld.bel .camzin i { background: var(--zon); }
+  .cambeeld.nu { box-shadow: inset 0 0 0 2px var(--gloed); }
+  .cambeeld.nu .camzin { background: rgba(255, 122, 77, 0.92); }
+  .cambeeld.nu .camzin i { background: #fff; animation: campuls 1.2s infinite; }
+  .cambeelden.n1 .camnaam, .cambeelden.n1 .camzin { font-size: 12.5px; }
+  @keyframes campuls { 50% { opacity: 0.35; } }
+  .ktegel.foto.cam { cursor: pointer; }
+  .ktegel.foto .camtegel { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; opacity: 0; transition: opacity 0.6s; z-index: 0; }
+  .ktegel.foto .camtegel.aan { opacity: 1; }
+  .ktegel.foto .camstip { position: absolute; right: 10px; top: 12px; display: flex; gap: 4px; }
+  .ktegel.foto .camstip i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.35); }
+  .ktegel.foto .camstip i.aan { background: #fff; }
+  .ktegel.foto .camstip i.nu { background: var(--gloed); }
+  @media (prefers-reduced-motion: reduce) { .cambeeld.nu .camzin i { animation: none; } .ktegel.foto .camtegel { transition: none; } }
+  html.sc-stil .cambeeld.nu .camzin i { animation: none; }
   .deurbelbeeld { margin-top: 12px; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; position: relative; background: linear-gradient(160deg, #3b4a5c, #1b2533); }
   .deurbelbeeld img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .deurbelbeeld .wanneer { position: absolute; left: 10px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: rgba(9, 15, 28, 0.72); color: #eef3f7; font-size: 12.5px; font-weight: 700; }
@@ -555,7 +589,7 @@
         <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
         <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
         <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
-        <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+        <section class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.cam.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></section>
         <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
         <a class="glas kaart sluipkaart" href="sluipverbruik.html" data-kaart="sluip" data-t-data-naam="thuis.kaart.sluip" data-t-data-leeg="thuis.leeg.sluip" data-sluip hidden></a>
         <button type="button" class="vrijvak" data-vrijvak hidden><span data-t="thuis.kaartKiezen"></span></button>
@@ -614,7 +648,7 @@
       <a class="glas kaart ladingkaart" href="apparaten.html#auto" data-kaart="auto" data-t-data-naam="thuis.kaart.auto" data-t-data-leeg="thuis.leeg.auto" data-auto hidden></a>
       <a class="glas kaart ladingkaart" href="apparaten.html#batterij" data-kaart="batterij" data-t-data-naam="thuis.kaart.batterij" data-t-data-leeg="thuis.leeg.batterij" data-batterij hidden></a>
       <a class="glas kaart maandkaart" href="opbrengst.html" data-kaart="maand" data-t-data-naam="thuis.kaart.maand" data-t-data-leeg="thuis.leeg.maand" data-maand hidden></a>
-      <button type="button" class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.deurbel.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></button>
+      <section class="glas kaart deurbelkaart" data-kaart="deurbel" data-t-data-naam="thuis.cam.kop" data-t-data-leeg="thuis.leeg.deurbel" data-deurbelkaart hidden></section>
         <a class="glas kaart boilerkaart" href="apparaten.html" data-kaart="boiler" data-t-data-naam="thuis.kaart.boiler" data-t-data-leeg="thuis.leeg.boiler" data-boiler hidden></a>
         <a class="glas kaart sluipkaart" href="sluipverbruik.html" data-kaart="sluip" data-t-data-naam="thuis.kaart.sluip" data-t-data-leeg="thuis.leeg.sluip" data-sluip hidden></a>
       <div class="aanpasrij">
