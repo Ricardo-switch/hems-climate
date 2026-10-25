@@ -50,6 +50,15 @@ describe('de indeling toetsen', () => {
     expect('extra' in r.layout).toBe(false);
   });
 
+  it('bewaart per klimaatapparaat een eigen bereik en wat het verwarmt (besluit 197)', () => {
+    const met = (nest: Record<string, unknown>) => validateLayout({ ...good, apparaten: { ...good.apparaten, nest: { kamer: 'woonkamer', zone: null, ...nest } } }, known);
+    const r = met({ bereik: [10, 25], warmte: 'elektrisch' });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.layout.apparaten['nest']).toMatchObject({ bereik: [10, 25], warmte: 'elektrisch' });
+    // Wat niet kan kloppen of niet bestaat, gaat niet door.
+    for (const fout of [{ bereik: [0, 80] }, { bereik: [25, 10] }, { bereik: [10] }, { warmte: 'hout' }]) expect(met(fout).ok, JSON.stringify(fout)).toBe(false);
+  });
+
   it('bewaart de gevel van een scherm (besluit 145)', () => {
     const r = validateLayout({ ...good, apparaten: { ...good.apparaten, 'cover.screen': { kamer: 'woonkamer', zone: null, gevel: 'achtergevel' } } }, known);
     expect(r.ok).toBe(true);

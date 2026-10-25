@@ -1,5 +1,27 @@
 # Wat is er nieuw · What is new
 
+## 0.69.0
+
+*25 oktober 2026*
+
+**Nieuw**
+
+- Inrichten zegt per airco en thermostaat wat hij kan: wat Home Assistant zegt, met een tip per merk, een voorstel als het bereik niet kan kloppen, en een vraag als hij iets niet zegt
+
+**Beter**
+
+- Als thermostaat van de ketel stelt de app eerst een Nest, tado of Netatmo voor
+
+*English*
+
+**New**
+
+- Setup shows for each air conditioner and thermostat what it can do: what Home Assistant says, with a tip per brand, a suggestion when the range cannot be right, and a question when it does not say something
+
+**Improved**
+
+- As the boiler thermostat the app now suggests a Nest, tado or Netatmo first
+
 ## 0.68.0
 
 *25 oktober 2026*

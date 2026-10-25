@@ -10,7 +10,7 @@ import { parseSiteConfig } from '../src/config/schema.js';
 import { defaultStrategies } from '../src/index.js';
 import { herstelMeedoen, validateLayout, type LayoutRoom } from '../src/web/layout.js';
 import { withMeasurement } from '../src/web/meten.js';
-import { controleerRollen, rollenUitConfig, vermogensVan, withRegeling, type RegelKamer } from '../src/web/regeling.js';
+import { controleerRollen, rollenUitConfig, vermogensVan, withBereik, withRegeling, type RegelKamer } from '../src/web/regeling.js';
 import { exampleSite } from './site.js';
 
 const raw = () => JSON.parse(JSON.stringify(exampleSite)) as Record<string, unknown>;
@@ -35,6 +35,23 @@ function overgezet(r = raw()): RegelKamer[] {
     { id: 'zolder', naam: 'Wasruimte', regelzone: 'zolder', rollen: rollenUitConfig(r, 'zolder')! },
   ];
 }
+
+describe('het bereik per apparaat (besluit 197)', () => {
+  it('houdt het gekozen bereik aan, met de stand-by erbinnen, op het id of de entiteit', () => {
+    const raw = { actuators: [
+      { id: 'badkamer', name: 'Thermostaat badkamer', ref: 'climate.badkamer', capabilities: { canHeat: true, canCool: false, setpointRange: [0, 80] } },
+      { id: 'ac', name: 'Airco', ref: { id: 'climate.ac' }, capabilities: { canHeat: true, canCool: true, setpointRange: [7, 35], standby: { heat: 18, cool: 25 } } },
+      { id: 'nest', name: 'Nest', ref: 'climate.nest', capabilities: { canHeat: true, canCool: false, setpointRange: [10, 32] } },
+    ] };
+    const uit = withBereik(raw, { badkamer: { bereik: [10, 25] }, 'climate.ac': { bereik: [19, 24] } });
+    const caps = (uit.raw['actuators'] as { capabilities: Record<string, unknown> }[]).map((a) => a.capabilities);
+    expect(caps[0]!['setpointRange']).toEqual([10, 25]);
+    expect(caps[1]).toMatchObject({ setpointRange: [19, 24], standby: { heat: 19, cool: 24 } });
+    expect(caps[2]!['setpointRange']).toEqual([10, 32]);
+    expect(uit.toegevoegd).toHaveLength(2);
+    expect(withBereik(raw, null).raw).toBe(raw);
+  });
+});
 
 describe('de regeling per kamer (besluit 138)', () => {
   it('zet het bestand eenmalig om in rollen: houdt op temperatuur en helpt op zon', () => {

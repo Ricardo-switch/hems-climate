@@ -1103,6 +1103,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         ['indeling.html', /Rooms and layout[\s\S]*(Add a floor|Name of the floor)/],
         ['inrichten.html', /Your house[\s\S]*Let’s set up your house/],
         ['inrichten.html#warmte', /What heats and cools\?/],
+        ['inrichten.html#apparaat', /What each device can do/],
         ['inrichten.html#klaar', /Your house is set up/],
       ];
       for (const [pagina, tekst] of paginas) {
@@ -1557,7 +1558,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.waitForTimeout(400);
     // Acht hoofdstukken met hun stappen (besluit 190).
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
-    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(18);
+    expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(19);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
@@ -1621,6 +1622,12 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await seg.locator(`[data-rolwaarde="${doel}"]`).click();
     await kaart.locator(`[data-rol] [data-rolwaarde="${doel}"][aria-pressed="true"]`).first().waitFor({ timeout: 5000 });
     await shot('warmte');
+    await kaart.locator('[data-volgende]').click();
+    // Wat elk apparaat kan (besluit 197): per apparaat de punten, met de rol onderaan.
+    await kaart.locator('h1', { hasText: 'Wat elk apparaat kan' }).waitFor();
+    expect(await kaart.locator('.kapp').count()).toBeGreaterThan(0);
+    expect(await kaart.locator('.klos .kpunt').count()).toBeGreaterThan(0);
+    await shot('apparaat');
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Welke thermometer telt per kamer?' }).waitFor();
     await shot('meten');
@@ -3225,7 +3232,8 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
           const x = Math.round(innerWidth / 2), y = Math.round(innerHeight * ${deel});
           const raak = document.elementFromPoint(x, y);
           if (!raak || !raak.closest('#tel') || raak.closest('.tabs')) return null;
-          for (let el = raak; el; el = el.parentElement) if (getComputedStyle(el).touchAction === 'none') return null;
+          // Ook niet op een apparaat in de bak van Indeling: dat sleep je omhoog naar een kamer (alleen opzij schuift de bak, pan-x).
+          for (let el = raak; el; el = el.parentElement) if (getComputedStyle(el).touchAction === 'none' || getComputedStyle(el).touchAction === 'pan-x') return null;
           // Alles waarin de vinger landt: één daarvan moet schuiven.
           for (let el = raak; el; el = el.parentElement) el.setAttribute('data-veegketen', '');
           const wat = [];

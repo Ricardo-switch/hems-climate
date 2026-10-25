@@ -105,6 +105,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [147. Comfort per bewoner, en inloggen voor de hele app](#147-comfort-per-bewoner-en-inloggen-voor-de-hele-app)
 - [178. Universeel, deel 2: regels per land, meer merken, en het typeplaatje](#178-universeel-deel-2-regels-per-land-meer-merken-en-het-typeplaatje)
 - [179. Klaarzetten in Home Assistant, bij Wat je huis kan](#179-klaarzetten-in-home-assistant-bij-wat-je-huis-kan)
+- [197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten](#197-wat-elk-apparaat-kan-de-klimaatstap-per-merk-in-inrichten)
 
 **Meten, data en analyse**
 
@@ -9016,6 +9017,61 @@ bewoner (schets `Wand-Huis-Zonder.html`, "1 en 2 pakken we weer op").
 niets te schelen, stap B); een eigen kaart Goedkope uren (de kaart Vandaag doet
 het, zonder een nieuwe keuze); dynamische tarieven (de app kent alleen
 dag en nacht); op zon sturen op de schatting.
+
+---
+
+## 197. Wat elk apparaat kan: de klimaatstap per merk in Inrichten
+
+*Onderwerp: configuratie en onboarding · Status: geldig*
+
+Op 25 oktober 2026, na besluit 196. De schets `Wand-Inrichten-Klimaat.html`
+lag er sinds 23 oktober, met de keuzes van de bewoner: lijst links en details
+rechts (op de telefoon één lijst die openklapt); met een open vraag mag je door,
+en die staat bij Nog te doen; wat Home Assistant zegt plus een vaste tip per
+koppeling, in beide talen; een bereik dat niet kan kloppen wordt een voorstel
+dat de bewoner aanpast. Gelezen uit dit huis: de LG's staan er twee keer in
+(LG ThinQ 7° tot 35°, SmartThinQ 16° tot 30°) en zeggen niet wat ze doen; de
+Tuya in de badkamer geeft 0° tot 80° en "heat_cool" op; de radiatorknop en de
+Nest zeggen wel wat ze doen.
+
+*Besluit:*
+
+- **Een nieuwe stap in Klimaat**, na Verwarmen en koelen (zo heet de stap
+  ervoor nu): **Wat elk apparaat kan**.
+- **De dienst geeft per klimaatapparaat `ha`**: de koppeling (het platform),
+  het bereik, de standen, of het `hvac_action` geeft, en een tweede koppeling
+  van hetzelfde apparaat.
+- **Per apparaat punten**, elk werkt (✓), werkt met een omweg (halve stip, de
+  zin zegt welke), een vraag (?), of kan niet (–):
+  - wat het kan, met het bereik en of het droogt;
+  - of het zegt wat het doet, of hoe Smart Climate het anders ziet (de
+    stroommeter, of de temperatuur, een paar minuten later); infrarood zegt
+    niets terug;
+  - de stroommeter, of waarom die niet nodig is (de cv);
+  - het filter, de batterij, en of het de kamer meet (een radiatorknop vlak bij
+    de radiator);
+  - "Zegt dat hij ook koelt" bij een thermostaat met alleen "heat_cool".
+- **Een bereik onder 4° of boven 35°** kan niet kloppen: Smart Climate stelt 10°
+  tot 25° voor (16° tot 30° bij een airco), de bewoner kiest anders. Volgende
+  bewaart het voorstel. Het bereik staat in de indeling (`apparaten[].bereik`)
+  en geldt in de regeling (`setpointRange`, de stand-by erbinnen).
+- **De vraag "Wat verwarmt hij?"** bij een thermostaat zonder stroommeter die
+  niet de ketel aanzet: de cv-ketel, elektrisch of weet ik niet
+  (`apparaten[].warmte`). Open staat hij bij Nog te doen.
+- **Een tip per koppeling**: LG (de cloud, een paar seconden), Nest (zijn eigen
+  schema), Tuya (de cloud), infrarood, en een radiatorknop (stookt alleen als
+  de ketel brandt); en wie er twee keer in staat, zegt via welke het stuurt.
+- **De rol** (op temperatuur, op zon, kijkt mee) staat er ook, dezelfde als bij
+  Verwarmen en koelen.
+- **De thermostaat van de ketel**: in het voorstel gaat een thermostaat van een
+  ketelkoppeling (Nest, tado, Netatmo, Honeywell en zo) voor; eerst was het de
+  eerste in het huis, hier de badkamer.
+- **Versie 0.69.0.**
+
+*Wat afviel:* zelf kiezen via welke van twee koppelingen gestuurd wordt (dat
+volgt de configuratie); een wattage per airco zonder meter kiezen (eerst 0,8 kW
+zoals de regeling rekent); meer merken met een eigen tip (wat Home Assistant
+zegt, staat er al).
 
 ---
 

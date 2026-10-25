@@ -100,6 +100,24 @@ export interface HouseClimate {
   readonly vermogenW?: number | null;
   /** De kWh-meter van hetzelfde apparaat in Home Assistant, om het verbruik van vandaag te vinden. */
   readonly energieMeter?: string;
+  /** Wat Home Assistant van het apparaat zegt (besluit 197), voor Inrichten › Wat elk apparaat kan. */
+  readonly ha?: HouseClimateHa;
+}
+
+/**
+ * Wat Home Assistant van een klimaatapparaat zegt (besluit 197): via welke
+ * koppeling, welk bereik en welke standen het opgeeft, en of het zegt wat het
+ * doet (`hvac_action`). Staat hetzelfde apparaat er via een tweede koppeling,
+ * dan die erbij, zoals een LG via LG ThinQ en via SmartThinQ.
+ */
+export interface HouseClimateHa {
+  /** Het platform in Home Assistant: `lg_thinq`, `nest`, `zha`, `mqtt`, `tuya`, `smartir`; null als het onbekend is. */
+  readonly koppeling: string | null;
+  readonly minC: number | null;
+  readonly maxC: number | null;
+  readonly standen: readonly string[];
+  readonly zegtActie: boolean;
+  readonly tweede?: { readonly id: string; readonly koppeling: string | null; readonly minC: number | null; readonly maxC: number | null };
 }
 
 export interface HouseDevice {
@@ -1217,6 +1235,30 @@ function collect(
     return { ...(stroomId ? { vermogenW: watt == null ? null : Math.round(watt) } : {}), ...(meter ? { energieMeter: meter.entity_id } : {}) };
   };
 
+  /** Wat Home Assistant van een klimaatapparaat zegt (besluit 197). */
+  const haVan = (entityId: string): HouseClimateHa => {
+    const st = states.get(entityId);
+    const eigen = registry.get(entityId);
+    const dev = eigen?.device_id ? registers.devices.find((x) => x.id === eigen.device_id) : undefined;
+    // Hetzelfde apparaat via een tweede koppeling (besluit 127).
+    const twin = dev
+      ? registers.entities.find((x) => {
+          if (x.entity_id === entityId || !x.entity_id.startsWith('climate.') || x.disabled_by || !x.device_id) return false;
+          const d2 = registers.devices.find((y) => y.id === x.device_id);
+          return d2 != null && (d2.id === dev.id || sameDevice(dev, d2));
+        })
+      : undefined;
+    const tst = twin ? states.get(twin.entity_id) : undefined;
+    return {
+      koppeling: eigen?.platform ?? null,
+      minC: num(st?.attributes['min_temp']),
+      maxC: num(st?.attributes['max_temp']),
+      standen: Array.isArray(st?.attributes['hvac_modes']) ? (st!.attributes['hvac_modes'] as unknown[]).map(String) : [],
+      zegtActie: typeof st?.attributes['hvac_action'] === 'string',
+      ...(twin ? { tweede: { id: twin.entity_id, koppeling: twin.platform ?? null, minC: num(tst?.attributes['min_temp']), maxC: num(tst?.attributes['max_temp']) } } : {}),
+    };
+  };
+
   // Klimaat: de apparaten uit de configuratie, met wat ze werkelijk doen en meten.
   for (const a of config.actuators) {
     const st = states.get(a.ref.id);
@@ -1238,6 +1280,7 @@ function collect(
       ...actieVan(action, lang),
       rol: config.zones.some((z) => z.actuatorIds.includes(a.id)) ? (a.role === 'assist' ? 'zon' : 'houdt') : 'kijken',
       ...vermogenEnMeter(a.power.sensor?.id ?? null, registry.get(a.ref.id)?.device_id ?? null, a.ref.id),
+      ha: haVan(a.ref.id),
     };
     const hasReading = meting.temperatuurC != null || meting.vochtPct != null;
     const { naam: _n, haNaam: _h, zone: _z, groepen: _g, ...device } = climateOf(a.id, a.name, snapshot?.observed[a.id], {
@@ -1283,6 +1326,7 @@ function collect(
       doelC: num(st?.attributes['temperature']),
       ...actieVan(action, lang),
       rol: 'kijken',
+      ha: haVan(e.entity_id),
     };
     const naam = friendly(st, e.entity_id);
     const sp = num(st?.attributes['temperature']);

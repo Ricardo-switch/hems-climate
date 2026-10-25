@@ -17,7 +17,7 @@ import { profielenVoor, type Bewoners } from './bewoners.js';
 import { withComfort, type Comfort } from './comfort.js';
 import type { Layout } from './layout.js';
 import { withMeasurement } from './meten.js';
-import { doelenBinnenBereik, withRegeling } from './regeling.js';
+import { doelenBinnenBereik, withBereik, withRegeling } from './regeling.js';
 import { withHeatSources } from './warmte.js';
 
 export interface UitDeApp {
@@ -47,8 +47,10 @@ export function configUitDeApp(base: Record<string, unknown>, i: UitDeApp): { ok
     kamerVan: (id) => layout?.apparaten[id]?.kamer ?? null,
   });
   for (const t of metRegeling.overgeslagen) i.waarschuw?.(`Regeling uit de app: ${t}`);
+  // Het bereik per apparaat (besluit 197), als de bewoner een ander koos dan Home Assistant opgeeft.
+  const metBereik = withBereik(metRegeling.raw, layout?.apparaten ?? null);
   // Meten met (besluit 123) uit de indeling van nu: de regeling neemt een andere sensor meteen over (138).
-  const metMeten = withMeasurement(metRegeling.raw, layout).raw;
+  const metMeten = withMeasurement(metBereik.raw, layout).raw;
   // De bronnen per kamer (besluit 132): uit de indeling van nu, want op zon gaat meteen in.
   const metBronnen = withHeatSources(metMeten, layout?.kamers ?? null);
   const metComfort = withComfort(metBronnen.raw, i.comfort);
@@ -60,7 +62,7 @@ export function configUitDeApp(base: Record<string, unknown>, i: UitDeApp): { ok
     metComfort.toegevoegd.push(`comfort per bewoner: ${profiles.map((x) => x.name).join(', ')}`);
   }
   // Een kamer die een apparaat kwijtraakte (besluit 138): doelen binnen wat de apparaten kunnen.
-  const checked = parseSiteConfig(metRegeling.toegevoegd.length || (layout?.kamers ?? []).some((k) => k.rollen) ? doelenBinnenBereik(metComfort.raw) : metComfort.raw, { knownStrategies: i.strategieen });
+  const checked = parseSiteConfig(metRegeling.toegevoegd.length || metBereik.toegevoegd.length || (layout?.kamers ?? []).some((k) => k.rollen) ? doelenBinnenBereik(metComfort.raw) : metComfort.raw, { knownStrategies: i.strategieen });
   if (!checked.ok) return { ok: false, reden: `${checked.problems[0]?.path ?? ''} ${checked.problems[0]?.message ?? 'past niet'}`.trim() };
-  return { ok: true, config: checked.config, toegevoegd: [...metRegeling.toegevoegd, ...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
+  return { ok: true, config: checked.config, toegevoegd: [...metRegeling.toegevoegd, ...metBereik.toegevoegd, ...metBronnen.toegevoegd, ...metComfort.toegevoegd] };
 }
