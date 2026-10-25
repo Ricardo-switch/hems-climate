@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · Inrichten, groot welkom (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * Groot welkom (schets, 25 oktober 2026). Het eerste wat een nieuwe bewoner
+   * van Inrichten ziet, over het hele scherm en nog zonder de stappenbalk: die
+   * komt pas na Begin. Rechts staat het huis groot op het eiland, en het bouwt
+   * zich op uit wat Home Assistant al weet: etage na etage, dan het dak met
+   * de panelen. Wat er gevonden is, hangt als labels aan het huis zelf (de
+   * etages naast de gevel, de panelen bij het dak, de camera's bij de deur);
+   * tik op een label voor de lijst, zoals nu bij de getallen.
+   * Links het welkom, drie beloftes en één knop. Na Inrichten volgt de film.
+   * Met #speel bouwt het huis zich op; zonder hash de eindstand.
+   */
+  body { margin: 0; }
+  .wand { position: relative; width: 1280px; height: 800px; overflow: hidden; }
+  #podium { position: absolute; left: 380px; top: 20px; width: 920px; height: 800px; }
+  .links { position: absolute; left: 56px; top: 40px; bottom: 40px; width: 470px; display: flex; flex-direction: column; z-index: 2; }
+  .merk { display: flex; align-items: center; gap: 12px; font-family: var(--kop); font-weight: 600; font-size: 19px; color: var(--tekst); }
+  .merk i { width: 34px; height: 34px; border-radius: 10px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); display: block; }
+  .midden { margin: auto 0; display: flex; flex-direction: column; gap: 22px; }
+  .hallo { font-size: 17px; font-weight: 700; color: var(--mint); letter-spacing: 0.02em; }
+  h1 { margin: -8px 0 0; font-family: var(--kop); font-size: 92px; font-weight: 700; line-height: 0.95; letter-spacing: -0.035em; }
+  h1 em { font-style: normal; background: linear-gradient(90deg, #f7b548, #ff7a4d 50%, #8f86ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lead { margin: 0; max-width: 34ch; font-size: 19px; line-height: 1.5; color: var(--zacht); }
+  .lead b { color: var(--tekst); font-weight: 600; }
+  .beloof { list-style: none; padding: 0; margin: 2px 0 0; display: grid; gap: 12px; }
+  .beloof li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 14px; align-items: center; }
+  .beloof .ik { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.07); }
+  .beloof .ik svg { width: 22px; height: 22px; }
+  .beloof b { display: block; font-size: 16px; }
+  .beloof span { font-size: 14px; color: var(--zacht); }
+  .doen { display: flex; align-items: center; gap: 22px; margin-top: 8px; }
+  .doen .knop { height: 60px; padding: 0 30px; font-size: 18px; border-radius: 18px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 10px 40px rgba(111, 211, 255, 0.35); }
+  .doen .knop svg { width: 20px; height: 20px; }
+  .doen .terug { font-size: 15px; font-weight: 600; color: var(--zacht); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.25); }
+  .voet { font-size: 13px; color: var(--gedempt); }
+
+  /* De labels aan het huis: wat er in Home Assistant gevonden is. */
+  .labels { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  .label { position: absolute; display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 10px; border-radius: 999px; white-space: nowrap; pointer-events: auto; cursor: pointer; transform: translate(-50%, -50%); animation: label 0.6s cubic-bezier(0.2, 0.9, 0.25, 1.3) both; }
+  .label .ik { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); }
+  .label .ik svg { width: 17px; height: 17px; }
+  .label b { font-family: var(--kop); font-size: 22px; font-weight: 700; color: var(--tekst); }
+  .label span { font-size: 14px; color: var(--zacht); font-weight: 600; }
+  .lijn { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+  @keyframes label { from { opacity: 0; transform: translate(-50%, -30%) scale(0.85); } to { opacity: 1; transform: translate(-50%, -50%); } }
+  .zoekt { position: absolute; right: 48px; bottom: 34px; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 13.5px; font-weight: 700; color: var(--mint); }
+  .zoekt i { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); animation: puls 1.6s infinite; }
+  .zoekt.klaar i { animation: none; }
+  @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.6); } 70% { box-shadow: 0 0 0 9px rgba(110, 231, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(110, 231, 183, 0); } }
+</style>
+</head>
+<body>
+<div class="wand lucht lucht-ochtend" style="display: block">
+  <div id="podium"></div>
+  <svg class="lijn" id="lijn" width="1280" height="800"></svg>
+  <div class="labels" id="labels"></div>
+  <div class="links">
+    <span class="merk"><i aria-hidden="true"></i>Smart Climate</span>
+    <div class="midden">
+      <span class="hallo">Hallo Ricardo</span>
+      <h1>Welkom <em>thuis.</em></h1>
+      <p class="lead">Je huis staat er al: Smart Climate las het uit Home Assistant. <b>Jij kijkt of het klopt.</b></p>
+      <ul class="beloof">
+        <li><span class="ik" style="color: var(--gloed)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></span><div><b>Warm in elke kamer</b><span>Op tijd, en koel als het nodig is.</span></div></li>
+        <li><span class="ik" style="color: var(--zon)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><div><b>Op je eigen zon</b><span>Zon over gaat eerst naar je huis.</span></div></li>
+        <li><span class="ik" style="color: var(--paars, #8f86ff)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></span><div><b>Zegt altijd waarom</b><span>Bij elk besluit, of vraag het je huis.</span></div></li>
+      </ul>
+      <div class="doen">
+        <button class="knop knop-licht">Begin <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <a class="terug" href="#">Ik heb een back-up</a>
+      </div>
+    </div>
+    <span class="voet">19 stappen, zo'n tien minuten. Alles blijft in je eigen huis.</span>
+  </div>
+  <div class="glas zoekt" id="zoekt"><i aria-hidden="true"></i><span id="zoektTekst">Gevonden in Home Assistant</span></div>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  // Het huis van deze bewoner; in de app uit de gebieden en apparaten in Home Assistant.
+  const k = (naam, o = {}) => ({ naam, gewicht: o.gewicht ?? 1, apparaten: o.apparaten ?? [] });
+  const ALLE = [
+    { naam: 'Begane grond', kamers: [k('Entree', { gewicht: 0.6 }), k('Keuken', { apparaten: [{ soort: 'radiator' }] }), k('Woonkamer', { gewicht: 1.5, apparaten: [{ soort: 'airco' }, { soort: 'radiator' }, { soort: 'bank' }] })] },
+    { naam: '1e verdieping', kamers: [k('Badkamer', { apparaten: [{ soort: 'radiator' }] }), k('Hobbykamer'), k('Slaapkamer Matts'), k('Slaapkamer Mylan')] },
+    { dak: true, kamers: [k('Slaapkamer'), k('Zolder', { gewicht: 1.4, apparaten: [{ soort: 'airco' }, { soort: 'droger' }] })] },
+  ];
+  const buiten = { oprit: { auto: { laadt: false } }, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis', tuinhuisPanelen: 4 }, voordeur: {}, buitenunit: { aan: false }, net: true };
+  const IK = {
+    etage: '<path d="M3 10l9-6 9 6M5 9v10h14V9"/>',
+    kamer: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/>',
+    apparaat: '<rect x="3" y="6" width="18" height="10" rx="2"/><path d="M8 20h8M12 16v4"/>',
+    klimaat: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>',
+    zon: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+    camera: '<rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/>',
+  };
+  const podium = document.getElementById('podium');
+  // Waar een kamer op het scherm staat, voor het puntje van zijn label.
+  function plek(naam) {
+    const el = podium.querySelector(`.sc-tik[data-kamer="${naam}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2, r };
+  }
+  function labels(n, panelen) {
+    const lijst = [];
+    const woon = plek('Woonkamer'), mylan = plek('Slaapkamer Mylan'), zolder = plek('Zolder'), entree = plek('Entree');
+    if (n >= 1 && entree) lijst.push({ ik: 'etage', kleur: 'var(--tekst)', b: String(n), span: n === 1 ? 'etage' : 'etages', punt: entree, x: entree.r.left - 80, y: entree.y + 20 });
+    if (n >= 1 && woon) lijst.push({ ik: 'klimaat', kleur: 'var(--gloed)', b: '5', span: 'om te verwarmen of koelen', punt: woon, x: woon.x + 150, y: woon.r.bottom + 70 });
+    if (n >= 2 && mylan) lijst.push({ ik: 'kamer', kleur: 'var(--ijs)', b: '9', span: 'kamers, en 3 buiten', punt: mylan, x: mylan.r.right + 120, y: mylan.y - 10 });
+    if (n >= 3 && zolder) lijst.push({ ik: 'apparaat', kleur: 'var(--mint)', b: '32', span: 'apparaten', punt: zolder, x: zolder.r.right + 110, y: zolder.y - 30 });
+    if (panelen && zolder) lijst.push({ ik: 'zon', kleur: 'var(--zon)', b: '12', span: 'panelen', punt: { x: zolder.r.right - 30, y: zolder.r.top + 30 }, x: zolder.r.right + 40, y: zolder.r.top - 70 });
+    if (panelen && entree) lijst.push({ ik: 'camera', kleur: 'var(--tekst)', b: '2', span: "camera's", punt: { x: entree.r.left + 6, y: entree.r.bottom - 10 }, x: entree.r.left + 30, y: entree.r.bottom + 100 });
+    document.getElementById('labels').innerHTML = lijst.map((l, i) => `<div class="glas label" style="left: ${l.x}px; top: ${l.y}px; animation-delay: ${(i * 0.12).toFixed(2)}s"><span class="ik" style="color: ${l.kleur}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${IK[l.ik]}</svg></span><b>${l.b}</b><span>${l.span}</span></div>`).join('');
+    document.getElementById('lijn').innerHTML = lijst.map((l) => `<line x1="${l.x}" y1="${l.y}" x2="${l.punt.x}" y2="${l.punt.y}" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" stroke-dasharray="3 4"/><circle cx="${l.punt.x}" cy="${l.punt.y}" r="4.5" fill="#EEF3F7"/><circle cx="${l.punt.x}" cy="${l.punt.y}" r="10" fill="none" stroke="rgba(255,255,255,0.25)"/>`).join('');
+  }
+  function toon(n) {
+    const panelen = n > ALLE.length;
+    const etages = ALLE.slice(0, Math.min(n, ALLE.length));
+    huis.teken(podium, { tijd: 'ochtend', wolken: 0.2, zon: { stand: 0.22, hoogte: 0.6, aandeel: 0.3, panelen: panelen ? 6 : 0, panelenLinks: panelen ? 6 : 0, opRechts: true }, etages, ...(panelen ? buiten : { net: true }) }, { breedte: 920, hoogte: 800, marge: 0.1, tik: true });
+    labels(etages.length, panelen);
+    const klaar = n > ALLE.length;
+    document.getElementById('zoekt').classList.toggle('klaar', klaar);
+    document.getElementById('zoektTekst').textContent = klaar ? 'Gevonden in Home Assistant · tik voor de lijst' : 'Je huis lezen uit Home Assistant…';
+  }
+  // De opbouw: met #speel groeit het huis etage voor etage, dan het dak en buiten.
+  if (location.hash === '#speel') {
+    let n = 0;
+    const klok = setInterval(() => { n += 1; toon(n); if (n > ALLE.length) clearInterval(klok); }, 1100);
+  } else {
+    toon(ALLE.length + 1);
+  }
+</script>
+</body>
+</html>

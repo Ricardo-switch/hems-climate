@@ -176,7 +176,9 @@ function idVan(naam, bezet) {
  */
 function model(stap) {
   const i = ALLE.indexOf(stap);
-  const na = (id) => i >= ALLE.indexOf(id);
+  // Bij het grote welkom (besluit 200) staat alles er al wat Home Assistant weet: de namen, de apparaten, buiten en de panelen.
+  const groot = stap === 'welkom' && !lijst;
+  const na = (id) => groot || i >= ALLE.indexOf(id);
   // De tekening uit huismodel, net als op Thuis (5S), met de kelder in de grond.
   const a = antwoorden();
   const tek = huismodel.tekening(d.huis, {
@@ -185,7 +187,7 @@ function model(stap) {
       const k = huismodel.kamerModel(r, null);
       if (!na('huis')) k.stil = true;
       if (!na('apparaten')) k.apparaten = [];
-      if (!na('comfort')) k.temp = null;
+      if (!na('comfort') || groot) k.temp = null;
       // Bij Wat elk apparaat kan: de kamer van het apparaat dat open staat.
       if (stap === 'apparaat' && kanToestellen().find(({ a }) => sleutel(a) === kanOpen)?.r.id === r.id) k.gekozen = true;
       if (stap === 'comfort' && r.zoneId) k.stand = 'goed';
@@ -201,7 +203,7 @@ function model(stap) {
   const elders = metZon ? a.elders : {};
   return {
     beschrijving: t('inr.beschrijving'),
-    tijd: stap === 'ha' || stap === 'klaar' ? 'nacht' : app.tijdVanDeDag(d.zon),
+    tijd: stap === 'ha' || stap === 'klaar' ? 'nacht' : groot ? 'ochtend' : app.tijdVanDeDag(d.zon),
     wolken: 0.3,
     zon: { stand: d.zon?.dag?.fractie ?? 0.4, hoogte: d.zon?.dag?.hoogteDeel ?? 0.6, aandeel: metZon ? 0.6 : 0.2, opRechts: huismodel.zonOpRechts(d.aans?.ligging, a.panelen) ?? undefined, ...opDak },
     // Het huis zelf, zoals elke pagina het tekent (besluit 191); buiten pas vanaf de stap Buiten.
@@ -288,6 +290,164 @@ function welkom() {
     voet: ['', `<a class="knop knop-licht" href="#woning">${esc(t('inr.begin'))}</a>`],
   };
 }
+/*
+ * Groot welkom (besluit 200, schets Wand-Inrichten-Welkom): het eerste wat een
+ * nieuwe bewoner ziet, over het hele scherm en nog zonder de stappen; die
+ * komen na Begin. Het huis bouwt zich op uit wat Home Assistant al weet, etage
+ * na etage, dan buiten en de panelen. Wat er gevonden is, hangt op de wand als
+ * labels aan het huis zelf en staat op de telefoon als een rij getallen; een
+ * tik geeft de lijst, zoals eerst bij de getallen.
+ */
+let opbouw = null; // hoeveel etages er al staan tijdens het opbouwen
+let opgebouwd = false;
+const stilGewenst = () => document.documentElement.classList.contains('sc-stil') || (matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+const PIJL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const WK_IK = {
+  etages: '<path d="M3 10l9-6 9 6M5 9v10h14V9"/>', kamers: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/>',
+  apparaten: '<rect x="3" y="6" width="18" height="10" rx="2"/><path d="M8 20h8M12 16v4"/>', klimaat: IK.thermo, panelen: IK.zon, cameras: IK.camera,
+};
+function welkomSkelet(tel) {
+  const belofte = (ik, kleur, b, zin) => `<li><span class="wk-ik" style="color: ${kleur}">${S(IK[ik])}</span><div><b>${esc(t(b))}</b><span>${esc(t(zin))}</span></div></li>`;
+  const beloftes = `<ul class="wk-beloof">${belofte('thermo', 'var(--gloed)', 'inr.wk.b1', 'inr.wk.b1z')}${belofte('zon', 'var(--zon)', 'inr.wk.b2', 'inr.wk.b2z')}${belofte('praat', 'var(--violet)', 'inr.wk.b3', 'inr.wk.b3z')}</ul>`;
+  const woorden = `<span class="wk-hallo" data-wk-hallo></span><h1 class="wk-kop">${esc(t('inr.wk.kop1'))} <em>${esc(t('inr.wk.kop2'))}</em></h1><p class="wk-zin">${esc(t('inr.wk.zin'))} <b>${esc(t('inr.wk.klopt'))}</b></p>${beloftes}`;
+  const begin = `<a class="knop knop-licht wk-begin" href="#woning">${esc(t('inr.begin'))}${PIJL}</a>`;
+  const terug = `<a class="wk-terug" href="toegang.html">${esc(t('inr.wk.backup'))}</a>`;
+  if (tel) {
+    return `<span class="wk-merk"><i aria-hidden="true"></i>Smart Climate</span><div class="wk-podium" data-wk-podium aria-hidden="true"></div><div class="wk-getallen" data-wk-getallen></div>
+      <div class="wk-tekst">${woorden}</div>
+      <div class="wk-doen">${begin}<div class="wk-onder"><span>${esc(t('inr.telStappen', { n: STAPPEN.length }))}</span>${terug}</div></div>`;
+  }
+  return `<div class="wk-podium" data-wk-podium aria-hidden="true"></div><svg class="wk-lijn" data-wk-lijn aria-hidden="true"></svg><div class="wk-labels" data-wk-labels></div>
+    <div class="wk-links"><span class="wk-merk"><i aria-hidden="true"></i>Smart Climate</span><div class="wk-midden">${woorden}<div class="wk-doen">${begin}${terug}</div></div><span class="wk-voet">${esc(t('inr.wk.voet', { n: STAPPEN.length }))}</span></div>
+    <div class="glas wk-zoekt" data-wk-zoekt aria-live="polite"><i aria-hidden="true"></i><span></span></div>`;
+}
+/** Wat er gevonden is, met hoeveel er tijdens het opbouwen al staat. */
+function welkomGetallen(n, m, zoveel, klaar) {
+  const staan = m.etages.slice(0, zoveel);
+  const etages = klaar ? n.etages : Math.min(n.etages, staan.length);
+  const kamers = klaar ? n.kamers : staan.reduce((s, e) => s + e.kamers.length, 0);
+  return [
+    { soort: 'etages', getal: etages, tekst: t(klaar && n.buiten ? 'inr.tel.etagesBuiten' : 'inr.tel.etages', { n: etages }) },
+    { soort: 'kamers', getal: kamers, tekst: klaar && n.buiten ? t('inr.tel.kamersBuiten', { n: kamers, buiten: n.buiten }) : t('inr.tel.kamers', { n: kamers }) },
+    klaar && { soort: 'apparaten', getal: n.apparaten, tekst: t('inr.tel.apparaten', { n: n.apparaten }) },
+    klaar && n.klimaat > 0 && { soort: 'klimaat', getal: n.klimaat, tekst: t('inr.tel.klimaat') },
+    klaar && n.panelen > 0 && { soort: 'panelen', getal: n.panelen, tekst: t('inr.tel.panelen', { n: n.panelen }), vast: true },
+    klaar && n.cameras > 0 && { soort: 'cameras', getal: n.cameras, tekst: t('inr.tel.cameras', { n: n.cameras }), vast: true },
+  ].filter((x) => x && (x.getal > 0 || x.soort === 'etages'));
+}
+function tekenWelkom(m) {
+  const tel = app.telStand();
+  const box = document.querySelector(`${tel ? '#tel' : '#wand'} [data-welkom]`);
+  if (!box) return;
+  if (!box.dataset.klaar) {
+    box.innerHTML = welkomSkelet(tel);
+    box.dataset.klaar = '1';
+  }
+  const ik = (d.bewoners?.bewoners ?? []).find((x) => x.ik)?.naam;
+  box.querySelector('[data-wk-hallo]').textContent = ik ? t('inr.wk.hallo', { naam: ik }) : t('inr.wk.halloLeeg');
+  const alle = m.etages ?? [];
+  // Eén keer per bezoek bouwt het huis zich op, etage na etage; met minder beweging staat het er meteen.
+  if (d.huis && alle.length && !opgebouwd && opbouw == null) {
+    opgebouwd = true;
+    if (!stilGewenst()) {
+      opbouw = 1;
+      const klok = setInterval(() => {
+        opbouw += 1;
+        if (opbouw > alle.length) {
+          opbouw = null;
+          clearInterval(klok);
+        }
+        teken();
+      }, 1100);
+    }
+  }
+  const zoveel = opbouw ?? alle.length + 1;
+  const klaar = !!d.huis && zoveel > alle.length;
+  const mm = klaar ? m : { ...m, etages: alle.slice(0, zoveel), zon: { ...m.zon, panelen: 0, panelenLinks: 0 }, oprit: null, tuin: null, terras: null, balkon: null, voortuin: null, garage: null, buitenunit: null };
+  const podium = box.querySelector('[data-wk-podium]');
+  const getallen = welkomGetallen(tellingen(), m, zoveel, klaar);
+  const vak = (x) => `<span class="wk-ik">${S(WK_IK[x.soort])}</span><b>${x.getal}</b><span>${esc(x.tekst)}</span>`;
+  if (tel) {
+    huis.teken(podium, { ...mm, etages: mm.etages.map((e) => ({ ...e, kamers: e.kamers.map((k) => ({ ...k, stil: true })) })) }, { breedte: podium.clientWidth || 410, hoogte: podium.clientHeight || 300, marge: 0.04 });
+    box.querySelector('[data-wk-getallen]').innerHTML = d.huis
+      ? getallen.map((x) => (x.vast ? `<span class="glas wk-getal">${vak(x)}</span>` : `<button type="button" class="glas wk-getal" data-lijst="${x.soort}">${vak(x)}</button>`)).join('')
+      : `<span class="wk-lezen">${esc(t('inr.huisLezen'))}</span>`;
+    return;
+  }
+  huis.teken(podium, mm, { breedte: podium.clientWidth || 900, hoogte: podium.clientHeight || 760, marge: 0.1, meubels: true, tik: true });
+  const zoekt = box.querySelector('[data-wk-zoekt]');
+  zoekt.classList.toggle('klaar', klaar);
+  zoekt.querySelector('span').textContent = t(klaar ? 'inr.wk.gevonden' : 'inr.huisLezen');
+  // De labels aan het huis: elk met een puntje op zijn plek in de tekening.
+  const br = box.getBoundingClientRect();
+  const sch = br.width / (box.offsetWidth || br.width) || 1;
+  const plek = (k) => {
+    const el = k && podium.querySelector(`.sc-tik[data-kamer="${CSS.escape(String(k.id ?? k.naam))}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const v = { l: (r.left - br.left) / sch, t: (r.top - br.top) / sch, r: (r.right - br.left) / sch, b: (r.bottom - br.top) / sch };
+    return { ...v, x: (v.l + v.r) / 2, y: (v.t + v.b) / 2 };
+  };
+  const staan = mm.etages;
+  const onder = plek(staan[0]?.kamers[0]);
+  const midden = plek((staan[1] ?? staan[0])?.kamers.at(-1));
+  const boven = plek(staan.at(-1)?.kamers.at(-1));
+  const klimaatKamer = binnen().find((r) => klimaatIn(r).length);
+  const warm = plek(staan.flatMap((e) => e.kamers).find((k) => k.id === klimaatKamer?.id)) ?? onder;
+  // Het hele huis, voor waar de labels komen: rechts ervan onder elkaar, en twee eronder.
+  const alleVakken = staan.flatMap((e) => e.kamers).map(plek).filter(Boolean);
+  const hb = alleVakken.length ? { l: Math.min(...alleVakken.map((v) => v.l)), t: Math.min(...alleVakken.map((v) => v.t)), r: Math.max(...alleVakken.map((v) => v.r)), b: Math.max(...alleVakken.map((v) => v.b)) } : null;
+  podium.querySelectorAll('.sc-tik').forEach((x) => x.remove());
+  const waar = {
+    panelen: boven && { punt: [boven.r - 30, boven.t + 30], kant: 'rechts' },
+    apparaten: boven && { punt: [boven.x, boven.y], kant: 'rechts' },
+    kamers: midden && { punt: [midden.x, midden.y], kant: 'rechts' },
+    klimaat: warm && { punt: [warm.x, warm.y + 10], kant: 'rechts' },
+    etages: onder && { punt: [onder.l + 14, onder.y], kant: 'onder' },
+    cameras: onder && { punt: [onder.l + 8, onder.b - 10], kant: 'onder' },
+  };
+  const labels = getallen.filter((x) => waar[x.soort]);
+  const laag = box.querySelector('[data-wk-labels]');
+  laag.innerHTML = labels.map((x, i) => {
+    const w = waar[x.soort];
+    const attr = `class="glas wk-label" style="animation-delay: ${(i * 0.12).toFixed(2)}s"`;
+    return x.vast ? `<span ${attr}>${vak(x)}</span>` : `<button type="button" ${attr} data-lijst="${x.soort}">${vak(x)}</button>`;
+  }).join('');
+  // Binnen het scherm, en niet over de woorden links.
+  const W = box.offsetWidth, H = box.offsetHeight;
+  const links = (box.querySelector('.wk-links')?.offsetLeft ?? 0) + (box.querySelector('.wk-links')?.offsetWidth ?? 0) + 16;
+  const els = [...laag.children];
+  // Rechts van boven naar onder zoals het huis: de panelen bij het dak, wat verwarmt onderaan.
+  const VOLG = ['panelen', 'apparaten', 'kamers', 'klimaat'];
+  const rechts = els.filter((el, i) => waar[labels[i].soort].kant === 'rechts').sort((a, b) => VOLG.indexOf(labels[els.indexOf(a)].soort) - VOLG.indexOf(labels[els.indexOf(b)].soort));
+  let onderX = Math.max(links, hb?.l ?? links);
+  els.forEach((el, i) => {
+    const w = waar[labels[i].soort];
+    const half = el.offsetWidth / 2, hoog = el.offsetHeight / 2;
+    if (!hb) return;
+    if (w.kant === 'rechts') {
+      const j = rechts.indexOf(el);
+      const van = hb.t - 30, tot = hb.b + 10;
+      w.x = Math.min(W - half - 16, hb.r + 30 + half);
+      w.y = rechts.length > 1 ? van + (j * (tot - van)) / (rechts.length - 1) : (van + tot) / 2;
+    } else {
+      w.x = onderX + half;
+      w.y = Math.min(H - 110, hb.b + 130);
+      onderX += el.offsetWidth + 16;
+    }
+    w.x = Math.max(links + half, Math.min(W - half - 16, w.x));
+    w.y = Math.max(hoog + 16, Math.min(H - hoog - 80, w.y));
+    el.style.left = `${Math.round(w.x)}px`;
+    el.style.top = `${Math.round(w.y)}px`;
+  });
+  const lijn = box.querySelector('[data-wk-lijn]');
+  lijn.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  lijn.innerHTML = labels.map((x) => {
+    const w = waar[x.soort];
+    return `<line x1="${Math.round(w.x)}" y1="${Math.round(w.y)}" x2="${Math.round(w.punt[0])}" y2="${Math.round(w.punt[1])}" stroke="rgba(255,255,255,0.35)" stroke-width="1.2" stroke-dasharray="3 4"/><circle cx="${Math.round(w.punt[0])}" cy="${Math.round(w.punt[1])}" r="4.5" fill="#EEF3F7"/><circle cx="${Math.round(w.punt[0])}" cy="${Math.round(w.punt[1])}" r="10" fill="none" stroke="rgba(255,255,255,0.25)"/>`;
+  }).join('');
+}
+
 /**
  * Een apparaat dat je weghaalt, staat daarna bij Indeling onder Verborgen. Wat
  * verwarmt of koelt, staat in een eigen lijst (besluit 166): dat hoort bij de
@@ -1460,6 +1620,13 @@ function tekenNu() {
   // Een kamer die open gaat, schuift in beeld.
   document.querySelector(`${app.zicht()} [data-kaart] .bewerk`)?.scrollIntoView({ block: 'nearest' });
   const m = model(nu);
+  // Het grote welkom (besluit 200) over het hele scherm, zonder de stappen.
+  const groot = nu === 'welkom' && !lijst;
+  document.body.classList.toggle('inr-groot', groot);
+  if (groot) {
+    tekenWelkom(m);
+    return;
+  }
   // Wat elk apparaat kan (besluit 197): lijst en details naast elkaar, dus een bredere kaart.
   document.querySelector('#wand .veldje')?.classList.toggle('breed', nu === 'apparaat');
   // De kleine huisjes bij Wat voor huis, en de wand in het klein.

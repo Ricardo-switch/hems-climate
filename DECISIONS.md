@@ -201,6 +201,7 @@ Gemaakt met `npm run decisions:index`; een test bewaakt dat hij klopt.
 - [196. Een huis zonder slimme meter of zonder panelen](#196-een-huis-zonder-slimme-meter-of-zonder-panelen)
 - [198. Wat de wand zegt, de zon op zijn plek, de deurbel meteen, en feestdagen in het huis](#198-wat-de-wand-zegt-de-zon-op-zijn-plek-de-deurbel-meteen-en-feestdagen-in-het-huis)
 - [199. De wand neemt alle persoonlijke instellingen over van wie hij volgt](#199-de-wand-neemt-alle-persoonlijke-instellingen-over-van-wie-hij-volgt)
+- [200. De film als trailer, en een groot welkom bij Inrichten](#200-de-film-als-trailer-en-een-groot-welkom-bij-inrichten)
 
 **Veiligheid**
 
@@ -9162,6 +9163,51 @@ Op 25 oktober 2026, na 0.70.0. Twee dingen die de bewoner zag:
 *Wat afviel:* de weergave op de wand zelf veranderen voor iemand anders (dat is
 diens keuze, op diens telefoon); grotere letters op de wand (die schuift nooit,
 besluit 164).
+
+---
+
+## 200. De film als trailer, en een groot welkom bij Inrichten
+
+*Onderwerp: weergave · Status: geldig*
+
+Op 25 oktober 2026, met de schetsen Wand-Film-3 en Wand- en
+Tel-Inrichten-Welkom. De bewoner koos voor de film een trailer met wow. Wat
+stoorde: het huis stond stil (klein rechts, steeds op dezelfde plek) en het
+einde was saai. Eerder gevraagd (16 en 23 oktober): een mooie intro en
+afsluiting, niet te snel, muziek die opbouwt, en stukken uit de app zoals de
+etages, de apparaten en de assistent die praat. Voor wie nieuw is, koos hij een
+groot welkom bij Inrichten; de film komt na Inrichten, zoals nu.
+
+*Besluit:*
+
+- **De film is een trailer** van acht shots op de maat (112 per minuut, twee
+  maten per shot, het slot vier), zo'n veertig seconden. Een camera beweegt
+  over het getekende huis, over het hele scherm:
+  1. de opkomst, van nacht naar ochtend;
+  2. je huis, met het aantal kamers en apparaten;
+  3. een etage op hoogte, de andere vaag eromheen, zoals Kamer;
+  4. je dak, met wat de panelen gisteren gaven;
+  5. de apparaten, als kaarten uit de app naast de zolder, met wat ze nu doen;
+  6. de assistent die praat: een vraag aan "Hé huis", en het antwoord loopt
+     woord voor woord mee (de temperatuur van een kamer, en de zon van morgen);
+  7. de drop, met wat deze maand van je eigen dak kwam;
+  8. het slot: het logo, "Je huis kijkt mee", en Naar je huis of Nog een keer.
+- **Alleen echte cijfers**: een shot zonder zijn cijfer valt weg. De muziek
+  blijft dezelfde en volgt de shots: de drop valt op het getal van de maand.
+- **Minder beweging** (bij de browser of bij Weergave): dezelfde shots, zonder
+  vliegen en zonder meelopende woorden.
+- **Groot welkom**: het eerste wat Inrichten laat zien, over het hele scherm
+  en nog zonder de stappen. Links "Welkom thuis", drie beloftes, Begin en "Ik
+  heb een back-up" (naar Toegang). Rechts bouwt het huis zich op uit wat Home
+  Assistant al weet, etage na etage, dan buiten en de panelen. Op de wand hangt
+  wat er gevonden is als labels aan het huis; op de telefoon staat het als een
+  rij getallen onder het huis. Een tik geeft de lijst, zoals eerst.
+- **Versie 0.72.0.**
+
+*Wat afviel:*
+- Een echte video: die moet geladen worden en kent je huis niet.
+- Wat de assistent echt zou antwoorden: in de film staat alleen wat vaststaat.
+- De film meteen na het welkom: eerst inrichten, dan de film als beloning.
 
 ---
 

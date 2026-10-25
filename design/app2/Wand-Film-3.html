@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Wand · De film, een trailer met een camera (schets)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="../../frontend/kit/kit.css">
+<style>
+  /*
+   * De film, als trailer met een camera (schets, 25 oktober 2026). Gekozen door
+   * de bewoner: een trailer met wow van zo'n dertig seconden; wat stoorde was dat
+   * het huis stilstond (klein rechts, steeds op dezelfde plek) en het saaie
+   * einde (hij bleef op 30% hangen met een knop). Hij speelt na Inrichten,
+   * zoals nu, en daarna de rondleiding op Thuis.
+   *
+   * Eerder gevraagd (16 en 23 oktober): een mooie intro en afsluiting, niet te
+   * snel, opbouwende muziek, en niet alleen een huis met tekst maar stukken uit
+   * de app: de etages, de apparaten, en de assistent die praat.
+   *
+   * Acht shots op de maat (112 per minuut, twee maten per shot, samen 34
+   * tellen). Het hele scherm is het beeld: de camera vliegt het eiland op en
+   * duwt naar het huis; duikt in de 1e verdieping (op hoogte, de etages
+   * eromheen vaag, zoals Kamer); zakt naar het dak; zoomt op de zolder met de
+   * apparaten als kaarten uit de app ernaast (de droger, de jacuzzi, de
+   * airco); de assistent praat, met de woorden die meelopen; wijd bij de drop
+   * met het getal van de maand; en stijgt op naar het slot. Het slot is een
+   * eigen kaart: het logo, "Je huis kijkt mee", en Naar je huis of Nog een keer.
+   *
+   * De camera is een vergroting van de getekende wereld, dus altijd scherp;
+   * geen video. Met minder beweging: dezelfde shots, zonder vliegen.
+   *
+   * Standen: zonder hash speelt hij af; #s1 tot #s7 is het eind van elk shot.
+   */
+  body { margin: 0; }
+  .scherm { position: relative; width: 1280px; height: 800px; overflow: hidden; background: #050a14; }
+  .lucht { position: absolute; inset: 0; transition: opacity 1.2s; }
+  .cam { position: absolute; inset: 0; transform-origin: 640px 400px; will-change: transform; }
+  .cam .podium { position: absolute; inset: 0; }
+  .woord { position: absolute; left: 72px; top: 50%; transform: translateY(-50%); max-width: 470px; z-index: 2; }
+  .woord .kicker { font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zacht); }
+  .woord .groot { margin-top: 8px; font-family: var(--kop); font-weight: 800; font-size: 132px; line-height: 0.9; letter-spacing: -0.045em; }
+  .woord .zin { margin-top: 16px; font-family: var(--kop); font-weight: 600; font-size: 32px; line-height: 1.12; letter-spacing: -0.01em; color: var(--tekst); }
+  .woord > * { animation: in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .woord .groot { animation-delay: 0.08s; }
+  .woord .zin { animation-delay: 0.2s; }
+  @keyframes in { from { opacity: 0; transform: translateY(22px); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+  /* Achter de tekst een zachte schaduw, zodat hij over het beeld leesbaar blijft. */
+  .waas { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5, 10, 20, 0.72) 0%, rgba(5, 10, 20, 0.35) 38%, rgba(5, 10, 20, 0) 60%); z-index: 1; pointer-events: none; transition: opacity 0.8s; }
+  .flits { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 3; }
+  .flits.aan { animation: flits 0.4s ease-out; }
+  @keyframes flits { from { opacity: 0.3; } to { opacity: 0; } }
+  .filmbalk { position: absolute; left: 72px; right: 72px; bottom: 30px; display: flex; align-items: center; gap: 14px; z-index: 4; }
+  .filmbalk .maten { flex: 1; display: flex; gap: 6px; }
+  .filmbalk .maten i { flex: 1; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.14); }
+  .filmbalk .maten i.al { background: var(--tekst); }
+  .filmbalk .pil { height: 36px; }
+  /* Het slot: een eigen kaart in het midden, het eiland klein eronder in de nacht. */
+  .slot { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 150px; z-index: 2; text-align: center; }
+  .slot.aan { display: flex; }
+  .slot .merk { display: flex; align-items: center; gap: 22px; animation: in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .slot .merk i { width: 84px; height: 84px; border-radius: 26px; background: conic-gradient(from 200deg, #ff7a4d, #f7b548, #6ee7b7, #6fd3ff, #8f86ff, #ff7a4d); box-shadow: 0 0 80px rgba(111, 211, 255, 0.35); }
+  .slot .merk b { font-family: var(--kop); font-weight: 800; font-size: 104px; letter-spacing: -0.045em; line-height: 1; }
+  .slot p { margin: 20px 0 0; font-family: var(--kop); font-weight: 600; font-size: 34px; color: var(--zacht); animation: in 0.9s 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .slot .knoppen { margin-top: 34px; display: flex; gap: 12px; animation: in 0.9s 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .slot .knop-groot { height: 56px; padding: 0 28px; border-radius: 18px; display: inline-flex; align-items: center; font-weight: 700; font-size: 17px; background: var(--tekst); color: var(--inkt); }
+  .slot .knop-zacht { height: 56px; padding: 0 24px; border-radius: 18px; display: inline-flex; align-items: center; font-weight: 700; font-size: 17px; background: rgba(255, 255, 255, 0.08); color: var(--tekst); border: 1px solid rgba(255, 255, 255, 0.16); }
+  /* Stukken uit de app: de kaarten van de apparaten, en de assistent die praat. */
+  .ui { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  .appkaart { position: absolute; width: 300px; padding: 16px 18px; border-radius: 22px; background: rgba(14, 24, 40, 0.82); border: 1px solid rgba(255, 255, 255, 0.12); backdrop-filter: blur(12px); display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 14px; align-items: center; animation: kaart 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .appkaart:nth-child(3) { animation-delay: 0.35s; }
+  .appkaart:nth-child(4) { animation-delay: 0.7s; }
+  @keyframes kaart { from { opacity: 0; transform: translateX(40px) scale(0.96); } to { opacity: 1; transform: none; } }
+  .appkaart b { display: block; font-size: 17px; }
+  .appkaart span { display: block; font-size: 13.5px; margin-top: 2px; }
+  .ringje { width: 54px; height: 54px; }
+  .assistent { position: absolute; left: 72px; top: 50%; transform: translateY(-50%); width: 560px; z-index: 2; }
+  .assistent .vraag { font-size: 18px; color: var(--zacht); font-weight: 600; animation: in 0.6s both; }
+  .assistent .bolrij { display: flex; align-items: center; gap: 26px; margin-top: 22px; }
+  .assistent .bol { width: 120px; height: 120px; flex: none; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #ffffff 0%, #bfe3ff 16%, #6fb7ff 40%, #6a5cff 72%, #2a1f6b 100%); box-shadow: 0 0 80px rgba(111, 170, 255, 0.75), 0 0 200px rgba(143, 134, 255, 0.5), inset -18px -24px 40px rgba(20, 10, 70, 0.55); animation: praat 0.5s ease-in-out infinite alternate; }
+  @keyframes praat { from { transform: scale(1); } to { transform: scale(1.06); } }
+  .assistent .zegt { font-family: var(--kop); font-weight: 600; font-size: 38px; line-height: 1.12; letter-spacing: -0.01em; }
+  .assistent .zegt .w { color: rgba(255, 255, 255, 0.24); animation: woord 0.2s forwards; }
+  @keyframes woord { to { color: var(--tekst); } }
+  .shotnaam { position: absolute; right: 24px; top: 20px; z-index: 5; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, 0.35); }
+</style>
+</head>
+<body>
+<div class="scherm">
+  <div class="lucht lucht-nacht" id="lucht"></div>
+  <div class="cam" id="cam"><div class="podium" id="podium"></div></div>
+  <div class="waas" id="waas"></div>
+  <div class="woord" id="woord"></div>
+  <div class="ui" id="ui"></div>
+  <div class="slot" id="slot">
+    <div class="merk"><i aria-hidden="true"></i><b>Smart Climate</b></div>
+    <p>Je huis kijkt mee.</p>
+    <div class="knoppen"><span class="knop-groot">Naar je huis</span><span class="knop-zacht">Nog een keer</span></div>
+  </div>
+  <div class="flits" id="flits"></div>
+  <div class="filmbalk"><span class="pil">❚❚</span><div class="maten" id="maten"></div><span class="pil">Geluid uit</span><span class="pil">Overslaan</span></div>
+  <div class="shotnaam" id="shotnaam"></div>
+</div>
+<script src="../../frontend/kit/huis.js"></script>
+<script>
+  // Het huis van deze bewoner, zoals Thuis het tekent.
+  const k = (naam, o = {}) => ({ naam, gewicht: o.gewicht ?? 1, temp: o.temp, stand: o.stand, stil: o.stil, apparaten: o.apparaten ?? [] });
+  function etages({ licht = false, zolder = null, temps = true } = {}) {
+    const t = (c) => (temps ? `${c}°` : null);
+    const lamp = licht ? [{ soort: 'lamp', aan: true }] : [];
+    return [
+      { naam: 'Begane grond', kamers: [k('Entree', { gewicht: 0.6, temp: t('20,8'), apparaten: [...lamp] }), k('Keuken', { temp: t('19,8'), apparaten: [{ soort: 'radiator' }, ...lamp] }), k('Woonkamer', { gewicht: 1.5, temp: t('20,7'), apparaten: [{ soort: 'airco' }, { soort: 'radiator' }, { soort: 'bank' }, ...lamp] })] },
+      { naam: '1e verdieping', kamers: [k('Badkamer', { temp: t('18,5'), apparaten: [{ soort: 'radiator' }, ...lamp] }), k('Hobbykamer', { apparaten: [...(licht ? [] : [])] }), k('Slaapkamer Matts', { apparaten: [...lamp] }), k('Slaapkamer Mylan', { apparaten: [] })] },
+      { dak: true, kamers: [k('Slaapkamer', { apparaten: [...lamp] }), k('Zolder', { gewicht: 1.4, temp: t(zolder === 'warmt' ? '19,9' : '18,9'), stand: zolder ?? undefined, apparaten: [{ soort: 'airco', aan: zolder === 'warmt' }, { soort: 'droger' }] })] },
+    ];
+  }
+  const buiten = { oprit: { auto: { laadt: false } }, tuin: { tuinhuis: true, tuinhuisSoort: 'tuinhuis', tuinhuisPanelen: 4 }, voordeur: {}, buitenunit: { aan: false }, net: true };
+  const zon = (stand, aandeel) => ({ stand, hoogte: Math.sin(Math.PI * stand), aandeel, panelen: 6, panelenLinks: 6, opRechts: true });
+
+  /*
+   * De zeven shots: tijd, lucht, het huis, de tekst, en de camera van begin
+   * naar eind (s is de vergroting, [x, y] het punt van de tekening dat op [qx, qy]
+   * in beeld komt). Twee maten per shot: 4,29 tellen.
+   */
+  const MAAT = (60 / 112) * 4;
+  const SHOTS = [
+    { naam: '1 · Opkomst', lucht: 'nacht', huis: { tijd: 'nacht', zon: zon(0, 0), etages: etages({ temps: false }), ...buiten }, tekst: null, cam: [[0.42, [640, 420], [640, 600]], [0.7, [640, 420], [640, 440]]] },
+    { naam: '2 · Je huis', lucht: 'ochtend', huis: { tijd: 'ochtend', zon: zon(0.18, 0.2), etages: etages(), ...buiten }, tekst: { kicker: 'Dit is je huis', groot: '9', zin: 'kamers, 36 apparaten. Gevonden in Home Assistant.' }, cam: [[0.75, [640, 420], [760, 460]], [0.95, [640, 410], [880, 470]]] },
+    // De etages: de 1e verdieping op hoogte, de begane grond vaag eronder en de zolder erboven, zoals Kamer.
+    { naam: '3 · De etages', lucht: 'ochtend', huis: { tijd: 'ochtend', zon: zon(0.25, 0.3), zonderDak: true, lagen: { onder: 1, boven: 1 }, etages: [{ naam: '1e verdieping', erBoven: true, kamers: [k('Badkamer', { temp: '18,5°', stand: 'warmt', apparaten: [{ soort: 'radiator' }] }), k('Hobbykamer', { temp: '19,2°', apparaten: [] }), k('Slaapkamer Matts', { temp: '18,9°', apparaten: [] }), k('Slaapkamer Mylan', { temp: '19,0°', apparaten: [] })] }] }, tekst: { kicker: 'Elke etage', groot: 'Elke kamer', zin: 'zijn eigen temperatuur, op zijn eigen tijd.' }, cam: [[0.8, [640, 400], [930, 470]], [0.95, [640, 390], [960, 470]]] },
+    { naam: '4 · Je dak', lucht: 'dag', huis: { tijd: 'dag', zon: zon(0.5, 0.9), etages: etages(), ...buiten, stromen: [{ van: 'zon', naar: 'huis', sterkte: 0.8 }] }, tekst: { kicker: 'Gisteren, van je eigen dak', groot: '4,8 kWh', kleur: 'var(--zon)', zin: 'Smart Climate weet wat je panelen doen.' }, cam: [[1.3, [640, 300], [960, 470]], [1.7, [650, 290], [990, 470]]] },
+    // De apparaten: de kaarten uit de app zweven naast de zolder.
+    { naam: '5 · De apparaten', lucht: 'dag', huis: { tijd: 'dag', zon: zon(0.62, 0.8), etages: etages({ zolder: 'warmt' }), ...buiten, stromen: [{ van: 'zon', naar: 'kamer:Zolder', sterkte: 0.8 }] }, tekst: null, apparaten: true, cam: [[1.6, [660, 320], [470, 470]], [1.9, [670, 330], [450, 480]]] },
+    // De assistent praat: de bol, en de woorden lopen mee met wat hij zegt.
+    { naam: '6 · De assistent', lucht: 'avond', huis: { tijd: 'avond', zon: zon(0.92, 0.15), etages: etages({ licht: true }), ...buiten }, tekst: null, assistent: { vraag: '“Hé huis, waarom wordt de zolder warm?”', zegt: 'Er was 1,0 kW zon over. Zo werd hij gratis warm.' }, cam: [[1.2, [640, 400], [1010, 460]], [1.05, [640, 410], [1000, 470]]] },
+    { naam: '7 · De drop', lucht: 'avond', flits: true, huis: { tijd: 'avond', zon: zon(0.98, 0.05), etages: etages({ licht: true }), ...buiten, stromen: [{ van: 'net', naar: 'huis', sterkte: 0.5 }] }, tekst: { kicker: 'Deze maand', groot: '30%', kleur: 'var(--mint)', zin: 'van je stroom kwam van je eigen dak.' }, cam: [[1.1, [640, 420], [900, 460]], [0.9, [640, 420], [880, 470]]] },
+    { naam: '8 · Slot', lucht: 'nacht', slot: true, huis: { tijd: 'nacht', zon: zon(0, 0), etages: etages({ licht: true, temps: false }), ...buiten }, tekst: null, cam: [[0.92, [640, 420], [640, 520]], [0.5, [640, 420], [640, 640]]] },
+  ];
+  const cam = document.getElementById('cam');
+  const zet = ([s, [px, py], [qx, qy]], duur) => {
+    cam.style.transition = duur ? `transform ${duur}s cubic-bezier(0.45, 0, 0.2, 1)` : 'none';
+    cam.style.transform = `translate(${qx - 640 - s * (px - 640)}px, ${qy - 400 - s * (py - 400)}px) scale(${s})`;
+  };
+  document.getElementById('maten').innerHTML = SHOTS.map(() => '<i></i><i></i>').join('');
+  function shot(i, stil = false) {
+    const s = SHOTS[i];
+    document.getElementById('shotnaam').textContent = s.naam;
+    document.getElementById('lucht').className = `lucht lucht-${s.lucht}`;
+    huis.teken(document.getElementById('podium'), { beschrijving: 'Je huis', wolken: 0.25, ...s.huis }, { breedte: 1280, hoogte: 800, marge: 0.12 });
+    const w = document.getElementById('woord');
+    w.innerHTML = s.tekst ? `<div class="kicker">${s.tekst.kicker}</div><div class="groot" style="color: ${s.tekst.kleur ?? 'var(--tekst)'}">${s.tekst.groot}</div><div class="zin">${s.tekst.zin}</div>` : '';
+    document.getElementById('waas').style.opacity = s.tekst || s.assistent ? 1 : 0;
+    document.getElementById('slot').classList.toggle('aan', !!s.slot);
+    // Stukken uit de app.
+    const ring = (deel, kleur, tekst) => { const o = 2 * Math.PI * 22; return `<svg class="ringje" viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="5"/><circle cx="27" cy="27" r="22" fill="none" stroke="${kleur}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(deel * o).toFixed(1)} ${o.toFixed(1)}" transform="rotate(-90 27 27)"/><text x="27" y="31" text-anchor="middle" font-family="Figtree" font-size="12" font-weight="700" fill="#EEF3F7">${tekst}</text></svg>`; };
+    const ui = document.getElementById('ui');
+    ui.innerHTML = s.apparaten
+      ? `<div class="kopje" style="position: absolute; right: 70px; top: 96px; width: 300px"><div class="kicker" style="font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--zacht)">Op je eigen zon</div><div style="font-family: var(--kop); font-weight: 800; font-size: 46px; letter-spacing: -0.03em; color: var(--zon); margin-top: 4px">1,0 kW over</div></div>
+         <div class="appkaart" style="right: 70px; top: 200px">${ring(0.62, '#F7B548', '1u20')}<div><b>Droger</b><span class="zon-t">Draait op zon, klaar rond 14:22</span></div></div>
+         <div class="appkaart" style="right: 70px; top: 330px">${ring(0.8, '#FF7A4D', '36°')}<div><b>Jacuzzi</b><span class="gloed-t">Op zon naar 38°, klaar om 19:00</span></div></div>
+         <div class="appkaart" style="right: 70px; top: 460px">${ring(1, '#6FD3FF', '19,9°')}<div><b>Airco zolder</b><span class="ijs-t">Verwarmt op eigen zon, 0,9 kW</span></div></div>`
+      : s.assistent
+        ? `<div class="assistent"><div class="vraag">${s.assistent.vraag}</div><div class="bolrij"><span class="bol"></span><div class="zegt">${s.assistent.zegt.split(' ').map((w, j) => `<span class="w" style="animation-delay: ${(0.9 + j * 0.28).toFixed(2)}s">${w}</span>`).join(' ')}</div></div></div>`
+        : '';
+    [...document.querySelectorAll('#maten i')].forEach((el, j) => el.classList.toggle('al', j < (i + 1) * 2));
+    if (stil) return zet(s.cam[1], 0);
+    zet(s.cam[0], 0);
+    requestAnimationFrame(() => requestAnimationFrame(() => zet(s.cam[1], MAAT * 2)));
+    if (s.flits) {
+      const f = document.getElementById('flits');
+      f.classList.remove('aan');
+      void f.offsetWidth;
+      f.classList.add('aan');
+    }
+  }
+  const vast = /^#s(\d)$/.exec(location.hash);
+  if (vast) shot(Number(vast[1]) - 1, true);
+  else {
+    let i = 0;
+    shot(0);
+    setInterval(() => { i = (i + 1) % SHOTS.length; shot(i); }, MAAT * 2000);
+  }
+</script>
+</body>
+</html>

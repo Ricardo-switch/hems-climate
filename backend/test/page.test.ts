@@ -1101,7 +1101,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
         // Deel 4: Wat je huis kan, Indeling, Inrichten en het begin.
         ['huis-kan.html', /What your house can do[\s\S]*Comfort[\s\S]*What the house learns first[\s\S]*On sun/],
         ['indeling.html', /Rooms and layout[\s\S]*(Add a floor|Name of the floor)/],
-        ['inrichten.html', /Your house[\s\S]*Let’s set up your house/],
+        ['inrichten.html', /Welcome[\s\S]*home\.[\s\S]*Always says why/],
         ['inrichten.html#warmte', /What heats and cools\?/],
         ['inrichten.html#apparaat', /What each device can do/],
         ['inrichten.html#klaar', /Your house is set up/],
@@ -1122,8 +1122,9 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       // De film in het Engels: het eerste beeld, pauzeren en overslaan.
       await p.locator('#wand [data-kaart] button', { hasText: 'Play' }).click();
       const film = p.locator('.film');
-      await film.locator('.titel', { hasText: 'A day in your house' }).waitFor({ timeout: 10_000 });
-      expect(await film.getAttribute('aria-label')).toBe('A day in your house, a 45-second film');
+      await film.locator('[data-film-huis] svg.sc-huis').waitFor({ timeout: 10_000 });
+      expect(await film.getAttribute('aria-label')).toBe('The film of your house');
+      expect(await film.locator('[data-film-opnieuw]').textContent()).toBe('Play again');
       await film.locator('[data-film-pauze]').click();
       expect(await film.locator('[data-film-pauze]').getAttribute('aria-label')).toBe('Continue playing');
       expect(await film.locator('[data-film-klaar]').innerText()).toBe('Skip');
@@ -1553,22 +1554,25 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.goto(`${baseUrl}/instellingen.html`);
     await p.locator('#wand a[href="inrichten.html"]').click();
     const kaart = p.locator('#wand [data-kaart]');
-    await kaart.locator('h1', { hasText: 'Laten we je huis neerzetten' }).waitFor({ timeout: 10_000 });
-    await kaart.locator('.tellen').waitFor();
-    await p.waitForTimeout(400);
+    // Groot welkom (besluit 200): over het hele scherm, het huis bouwt zich op en de labels hangen eraan.
+    const welkom = p.locator('#wand [data-welkom]');
+    await welkom.locator('h1', { hasText: 'Welkom' }).waitFor({ timeout: 10_000 });
+    await welkom.locator('.wk-label[data-lijst="apparaten"]').waitFor({ timeout: 10_000 });
+    expect(await p.locator('#wand .bovenbalk').isVisible()).toBe(false);
+    await p.waitForTimeout(800);
     // Acht hoofdstukken met hun stappen (besluit 190).
     expect(await p.locator('#wand [data-stappen] .stap').count()).toBe(8);
     expect(await p.locator('#wand [data-stappen] .stipjes i').count()).toBe(19);
     expect(await p.locator('#wand #balk').count()).toBe(0);
     await shot('welkom');
     // De getallen tikken open tot een lijst, en weer terug (besluit 158).
-    await kaart.locator('[data-lijst="apparaten"]').click();
+    await welkom.locator('[data-lijst="apparaten"]').click();
     await kaart.locator('.waar', { hasText: 'wat er gevonden is' }).waitFor();
     expect(await kaart.locator('.rij').count()).toBeGreaterThan(0);
     await shot('welkom-lijst');
     await kaart.locator('button[data-lijst=""]').click();
-    await kaart.locator('.tellen').waitFor();
-    await kaart.locator('a', { hasText: 'Begin' }).click();
+    await welkom.locator('h1', { hasText: 'Welkom' }).waitFor();
+    await welkom.locator('a', { hasText: 'Begin' }).click();
     // Wat voor huis (besluit 190): vijf soorten, elk met een klein huis erin.
     await kaart.locator('h1', { hasText: 'Wat voor huis is het?' }).waitFor();
     expect(await kaart.locator('.tegel').count()).toBe(5);
@@ -1688,11 +1692,10 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await kaart.locator('[data-volgende]').click();
     await kaart.locator('h1', { hasText: 'Je huis staat erin' }).waitFor();
     await shot('klaar');
-    // De film (besluit 144): je eigen huis, beelden van drie tellen, pauzeren, het geluid uit en overslaan.
+    // De film als trailer (besluit 200): je eigen huis, pauzeren, het geluid uit en overslaan.
     await kaart.locator('button', { hasText: 'Speel af' }).click();
     const film = p.locator('.film');
-    await film.locator('.groot').waitFor({ timeout: 10_000 });
-    await film.locator('[data-film-huis] svg.sc-huis').waitFor();
+    await film.locator('[data-film-huis] svg.sc-huis').waitFor({ timeout: 10_000 });
     await shot('film-0');
     await film.locator('[data-film-pauze]').click();
     expect(await film.locator('[data-film-pauze]').getAttribute('aria-label')).toBe('Verder afspelen');
@@ -1706,28 +1709,36 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
     await p.evaluate(`film.speel({}).then((f) => (window.__film = f))`);
     await p.waitForFunction('window.__film != null');
     const aantal = await p.evaluate<number>('window.__film.aantal');
+    const soorten = await p.evaluate<string[]>('window.__film.soorten');
     expect(aantal).toBeGreaterThanOrEqual(3);
-    // Zo'n 45 seconden: een intro, de beelden en een slot (besluit 146).
+    // Acht shots van twee maten en een slot van vier; wat geen cijfer heeft, valt weg.
     const lengte = await p.evaluate<number>('window.__film.lengteS');
-    expect(lengte).toBeGreaterThan(30);
-    expect(lengte).toBeLessThan(55);
-    const titels: string[] = [];
+    expect(lengte).toBeGreaterThan(15);
+    expect(lengte).toBeLessThan(45);
+    expect(soorten[0]).toBe('opkomst');
+    expect(soorten[1]).toBe('huis');
+    expect(soorten.at(-1)).toBe('slot');
     for (let i = 0; i < aantal; i++) {
       await p.evaluate(`window.__film.pauze(true); window.__film.naar(${i}); window.__film.pauze(false)`);
-      // De intro laat zijn woorden later komen, met de zon.
-      await p.waitForTimeout(i === 0 ? 5200 : 1300);
-      titels.push((await p.locator('.film .titel').textContent()) ?? '');
-      // Elk beeld een groot getal of woord en een zin, en nooit iets leegs.
-      expect(((await p.locator('.film .groot').textContent()) ?? '').trim()).not.toBe('');
-      expect(await p.locator('.film h2').textContent()).not.toMatch(/undefined|NaN|null/);
+      await p.waitForTimeout(1300);
+      // Elk shot zijn eigen stuk, en nooit iets leegs.
+      const tekst = (await p.locator('.film').innerText()) ?? '';
+      expect(tekst).not.toMatch(/undefined|NaN|null/);
+      if (soorten[i] === 'apparaten') expect(await p.locator('.film .film-kaart').count()).toBeGreaterThan(0);
+      else if (soorten[i] === 'assistent') expect(((await p.locator('.film .film-ass .zegt').textContent()) ?? '').trim()).not.toBe('');
+      else if (soorten[i] === 'slot') expect(await p.locator('.film [data-film-thuis]').isVisible()).toBe(true);
+      else if (soorten[i] !== 'opkomst') expect(((await p.locator('.film .film-woord .groot').textContent()) ?? '').trim()).not.toBe('');
       await shot(`film-${i}`);
     }
+    // Nog een keer: terug naar het begin.
+    await p.locator('.film [data-film-opnieuw]').click();
+    await p.waitForTimeout(300);
+    expect(await p.locator('.film [data-film-slot]').isVisible()).toBe(false);
     await p.evaluate('window.__film.stop(); window.__film = null');
-    expect(titels).toContain('Vraag het je huis');
-    expect(titels.at(-1)).toBe('Klaar');
     // De muziek bouwt op: stil begin, voller in de opbouw, het hardst in de drop, en hij kraakt nergens.
     const luid = await p.evaluate<{ intro: number; opbouw: number; drop: number; slot: number; piek: number }>(`(async () => {
-      const plan = { intro: 4, drop: 10, slot: 16, eind: 21 };
+      // Zoals de trailer met alle shots: de drop op het getal van de maand.
+      const plan = { intro: 4, drop: 12, slot: 14, eind: 18 };
       const buf = await film.opname(plan);
       const kan = buf.getChannelData(0);
       const rms = (vanMaat, totMaat) => {
@@ -1738,7 +1749,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       };
       let piek = 0;
       for (let i = 0; i < kan.length; i++) piek = Math.max(piek, Math.abs(kan[i]));
-      return { intro: rms(0, 4), opbouw: rms(4, 9), drop: rms(10, 16), slot: rms(16, 19), piek };
+      return { intro: rms(0, 4), opbouw: rms(4, 11), drop: rms(12, 14), slot: rms(14, 17), piek };
     })()`);
     expect(luid.intro).toBeGreaterThan(0.005);
     expect(luid.opbouw).toBeGreaterThan(luid.intro);
@@ -3220,7 +3231,7 @@ describe.skipIf(!ENABLED)('de pagina in een browser (besluit 69)', () => {
       await p.waitForTimeout(1500);
       // In Inrichten de lijst met alle apparaten: die was het langst.
       if (pagina === 'inrichten.html#welkom') {
-        await p.locator('#tel [data-lijst="apparaten"]').click();
+        await p.locator('#tel [data-welkom] [data-lijst="apparaten"]').click();
         await p.waitForTimeout(500);
       }
       if (!(await p.evaluate<boolean>('document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 120'))) continue;
